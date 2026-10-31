@@ -3,10 +3,10 @@
 
 use super::livelli::con;
 use super::{
-    cerca, digest, errors_json, from_csv, from_json, hits_json, record_json, to_csv, to_json,
-    Molecola, RowError,
+    cerca, cerca_ampia, digest, errors_json, from_csv, from_json, hits_json, ione, record_json,
+    to_csv, to_json, Molecola, RowError,
 };
-use crate::elements::ion_mz;
+use crate::elements::{adducts, ion_mz};
 use crate::error::{Error, Result};
 use crate::json::{parse, round, Out, Value};
 
@@ -60,7 +60,15 @@ fn search(v: &Value) -> String {
         .and_then(|x| x.f64())
         .map_or(8, |x| x as usize);
     let ppm = v.get("ppm").and_then(|x| x.f64()).unwrap_or(10.0);
-    con(|a| hits_json(&a.tutte, &cerca(&a.tutte, q, limite, ppm)))
+    let ampia = v.get("ampia").is_some_and(|x| x.bool() == Some(true));
+    con(|a| {
+        let hits = if ampia {
+            cerca_ampia(&a.tutte, q, limite, ppm)
+        } else {
+            cerca(&a.tutte, q, limite, ppm)
+        };
+        hits_json(&a.tutte, &hits)
+    })
 }
 
 fn one(v: &Value) -> String {
@@ -123,7 +131,7 @@ fn bad(op: &str) -> Error {
     Error::new("error.badMolecules").with("op", op)
 }
 
-/// `op` is `carica` (`{"catalogo": csv, "utente": document}`, each optional: what is missing stays), `cerca` (`{"q","limite","ppm"}`), `get` (`{"id"}`), `elenca` (`{"catalogo"|"raccolta","addotti"}`),
+/// `op` is `carica` (`{"catalogo": csv, "utente": document}`, each optional: what is missing stays), `cerca` (`{"q","limite","ppm","ampia"}`), `ione` (`{"q","adduct"}`), `addotti` (the names of the adduct table), `get` (`{"id"}`), `elenca` (`{"catalogo"|"raccolta","addotti"}`),
 /// `da_csv` (`{"csv","file","livello","raccolta"}` to a document), `valida` (`{"csv"}`), or, on a `molecules/1` document, `a_csv`, `a_json`, `digest`.
 pub fn route(op: &str, input: &str) -> Result<String> {
     let v = || parse(input.as_bytes()).map_err(|_| bad(op));
@@ -132,6 +140,19 @@ pub fn route(op: &str, input: &str) -> Result<String> {
         "carica" => carica(&v()?),
         "cerca" => Ok(search(&v()?)),
         "get" => Ok(one(&v()?)),
+        "addotti" => {
+            let mut j = Out::default();
+            j.raw("[");
+            for (i, (a, _)) in adducts().iter().enumerate() {
+                j.raw(if i > 0 { "," } else { "" }).str(a);
+            }
+            Ok(j.raw("]").0.clone())
+        }
+        "ione" => {
+            let v = v()?;
+            let s = |k: &str| v.get(k).and_then(|x| x.str()).unwrap_or("");
+            ione(s("q"), s("adduct"))
+        }
         "elenca" => Ok(list(&v()?).unwrap_or_else(|e| errors_doc(&e))),
         "da_csv" | "valida" => {
             let v = v()?;

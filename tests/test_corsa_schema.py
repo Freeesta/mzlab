@@ -67,3 +67,17 @@ def test_an_input_that_changes_changes_its_sha256(corsa):
     one, two = (json.loads(c[0]) for c in corsa)
     assert one["inputs"][0]["sha256"] != two["inputs"][0]["sha256"]
     assert one["plan_sha256"] == two["plan_sha256"]
+
+
+def test_old_and_new_engine_both_validate():
+    """The build keys of `engine` are optional: a report written before them is still valid, and one with all of them too."""
+    old = {"schema": "corsa/1", "engine": {"name": "mzLab", "version": "1.0.0", "commit": "abc1234", "platform": "native"},
+           "inputs": [], "lists": [], "steps": [], "total_ms": 0, "levels": {"files": 0, "rows": 0, "auto": {}, "other": {}}}
+    sha = "a" * 64
+    new = json.loads(json.dumps(old))
+    new["engine"].update(commit="0123456789abcdef0123456789abcdef01234567", target="x86_64-linux", rustc="rustc 1.97.0", cargo_lock_sha256=sha, modules={"mzlab-cli": sha})
+    bad = json.loads(json.dumps(new))
+    bad["engine"]["modules"] = {"mzlab-cli": "not-a-hash"}
+    v = Draft202012Validator(SCHEMA)
+    assert not list(v.iter_errors(old)) and not list(v.iter_errors(new))
+    assert list(v.iter_errors(bad))

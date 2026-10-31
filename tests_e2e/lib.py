@@ -70,18 +70,53 @@ def _sif(self, selector, files, **k):
         _tempi(self)
 AUTO_TEMPI = True       # False: the test looks at the raw proposals (e2e_ruoli_tempi)
 def _tempi(self):
-    """Two or more samples: «Open» wants every time written and confirmed (roles and times of the loading table). The tests that are not about it do it here, before they open."""
+    """Two or more samples: the tests that are not about roles and times write the missing times here (in the table, then quietly in the open files, as the old opening did)."""
     if not AUTO_TEMPI: return
     try:
-        if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && !document.getElementById('start').hidden && ST.files.length >= 2"): return
+        if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && ST.files.length >= 2"): return
         self.wait_for_function("RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
-        self.evaluate("""() => { let t = 0; ST.files.forEach(f => { if (RUOLI.timed(f)) { if (f.time == null) { t += 10; f.time = t; } } }); renderFiles(); }""")
+        self.evaluate("""() => { let t = 0; const e = []; ST.files.forEach(f => { if (RUOLI.timed(f) && f.time == null) { t += 10; f.time = t; if (OPENNOW.isOpen(f.name)) e.push({ file: f.name, role: RUOLI.roleOf(f), time: t, tconf: true }); } });
+          if (e.length) CAMPIONI.apply(e, true); renderFiles(); }""")
     except Exception: pass
+LOADED = "typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')"
+def loaded(pg, timeout=120000):
+    """Waits until nothing is read or opened any more; on a timeout the message says what is still busy."""
+    try: pg.wait_for_function(LOADED, timeout=timeout)
+    except Exception as e:
+        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state) })")
+        raise TimeoutError(f"{e} | still busy: {st}") from None
+def open_first(pg, timeout=120000):
+    """The first file shown: the files open as soon as they are read, hidden, and the landing stays until the student shows one.
+    Waits until nothing is read or opened any more, then clicks the row of the first file of the sample table that is not a blank (firstOpenK) in the side list, unless a file is already shown."""
+    loaded(pg, timeout)
+    _tempi(pg)
+    # in the order of the sample table (by time), not the order the files were read
+    k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const at = f => ST.files.findIndex(r => r.name === f.file.split('#')[0]);
+      const fs = E.files.filter(f => !f.gone).sort((a, b) => at(a) - at(b)); if (!fs.length) return -1;
+      return fs[firstOpenK(fs.map(f => ({ file: f.file, type: f.type })))].k; }""")
+    if k < 0: return
+    row = pg.locator(f"#flst .fl .nm[data-k='{k}']")
+    if row.count() and row.first.is_visible(): _real_click(pg, f"#flst .fl .nm[data-k='{k}']")
+    else: pg.evaluate("k => soloFile(E.files[k])", k)
+    pg.wait_for_function("E.files.some(f => f.vis && !f.gone)", timeout=timeout)
+def show_table(pg):
+    """The sample table in place of the panels («Sample table», #samptab), after the first file is shown (open_first)."""
+    open_first(pg)
+    if pg.is_hidden("#wtable"): _real_click(pg, "#samptab")
+    pg.wait_for_selector("#wtable", state="visible", timeout=10000)
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
-    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): _tempi(self)
+    # «Load data» is gone: the files are open already, the click is the first click on a file
+    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
+_real_wfs = _Page.wait_for_selector
+def _wfs(self, selector, *a, **k):
+    # waiting for «Load data» = waiting for the end of the loading (the button is gone)
+    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector):
+        return loaded(self, k.get("timeout", 120000))
+    return _real_wfs(self, selector, *a, **k)
+_Page.wait_for_selector = _wfs
 _real_ast = _Page.add_script_tag
 def _add_script_tag(self, *a, **k):
     """The page forbids inline scripts (CSP script-src without 'unsafe-inline'): a file or a text is run with evaluate, as from the console, not as a <script> tag."""
@@ -113,8 +148,32 @@ def _new_context(self, *a, **k):
     if _sito(): c.add_init_script(_sito())
     return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
+
+
+class _PersistentWebKit:
+    """Stand-in for a WebKit Browser: every context is a persistent one (temporary profile directory, removed on close).
+    The ephemeral context of Browser.new_page() has no website data store on disk and OPFS (the engine's file store) throws there (macOS)."""
+    def __init__(self, bt, kw):
+        self._bt, self._kw, self._open = bt, kw, []
+    def new_context(self, **k):
+        import tempfile
+        k.setdefault("locale", "it-IT")
+        d = tempfile.mkdtemp(prefix="mzlab-wkprofile-")
+        c = self._bt.launch_persistent_context(d, **self._kw, **k)
+        self._open.append((c, d)); c.add_init_script(_TRACK)
+        if _sito(): c.add_init_script(_sito())
+        return c
+    def new_page(self, **k):
+        c = self.new_context(**k)
+        return c.pages[0] if c.pages else c.new_page()
+    def close(self):
+        for c, d in self._open:
+            try: c.close()
+            except Exception: pass
+            shutil.rmtree(d, ignore_errors=True)
+        self._open = []
 def stage(pg, files, timeout=90000):
-    """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
+    """Give the files to the start screen and wait until ALL of them are in the sample table (they open as soon as they are read)."""
     pg.set_input_files("#pick", [str(f) for f in files])
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
 
@@ -161,6 +220,12 @@ def ready(pg, timeout=90000, settle=400):
 def drawer(pg, tab="file", pin=True):
     """Open a tool of the toolbar drawer (the file list by default). Docked next to the charts. `pin` is kept for old callers."""
     pg.evaluate(f"(()=>{{BARRA.setTab('{tab}',{{noFocus:true,instant:true}})}})()"); pg.wait_for_timeout(300)
+def pick_kind(pg, value, panel="E.panels.find(q=>q.type==='chrom')"):
+    """Chooses what a chromatogram panel plots (pda, press, an:<id>, reg) with the picker, as a user does."""
+    pg.evaluate(f"{panel}.el.querySelector('[data-o=kind]').click()")
+    pg.wait_for_function(f"!!{panel}.el.querySelector('.can-pop:not([hidden]) [data-kind=\"{value}\"]')")
+    pg.evaluate(f"{panel}.el.querySelector('.can-pop [data-kind=\"{value}\"]').click()")
+
 def open_kind(pg, kind):
     """As a student does: click, in the file list, the first file of an experiment type ('full', 'ms2', 'mrm'): that type becomes the current one."""
     k = pg.evaluate("kind => (E.files.find(f => f.kind === kind && !f.gone) || {}).k", kind)
@@ -187,6 +252,10 @@ BROWSER = get_env("BROWSER", "chromium")
 if BROWSER != "chromium":
     from playwright.sync_api import Playwright as _PW
     _PW.chromium = property(lambda self: getattr(self, BROWSER))
+    if BROWSER == "webkit":
+        from playwright.sync_api import BrowserType as _BT
+        _launch = _BT.launch
+        _BT.launch = lambda self, **kw: _PersistentWebKit(self, kw) if self.name == "webkit" else _launch(self, **kw)
 FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MRM-t0"]
 # Paths are relative to this folder: code = parent of tests_e2e; the lab files come from the private data repository
 # (tools/dati_percorsi.py finds it), or from $MZLAB_MZML / $MZLAB_DAM (QQQ_* aliases)
@@ -277,13 +346,14 @@ class Run:
     def page(s, p, tour=False, qaqc=False):
         s.b = p.chromium.launch()
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
+        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         else:          # the tour tests want the invitation of the tour, but not the hint of the side-by-side panels: it shows up after a few seconds (later under load) over the spectrum and takes the clicks of the test
             pg.add_init_script("try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         if qaqc:       # QA/QC is dormant: only this switch (as ?qaqc=1) makes it visible
             pg.add_init_script("try{localStorage.setItem('mzlab.dev.qaqc','1');}catch(_){}")
-        pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
+        pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e) + " @ " + " | ".join((getattr(e, "stack", "") or "").split("\n")[1:5]))))          # diagnostics: the first stack frames say which script threw
         pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text else None)       # software-GL performance hints of the 3D viewer are not page errors
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
         pg.on("response", lambda r: s.errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)

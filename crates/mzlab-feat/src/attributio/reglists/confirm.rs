@@ -8,6 +8,7 @@
 use super::screen::Hit;
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::tox::vocab::canon;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, HashMap};
 
 pub const COSMIC_HIGH: f64 = 0.64;
@@ -121,35 +122,7 @@ pub struct Verdict {
     pub sirius_input: String,
 }
 
-/// Element counts of a molecular formula (`C9H10N2O` and `N2OC9H10` are equal); anything that is not an element symbol is skipped.
-pub fn parse_formula(f: &str) -> BTreeMap<String, u64> {
-    let c: Vec<char> = f.chars().collect();
-    let mut d = BTreeMap::new();
-    let mut i = 0;
-    while i < c.len() {
-        if !c[i].is_ascii_uppercase() {
-            i += 1;
-            continue;
-        }
-        let mut el = c[i].to_string();
-        i += 1;
-        if i < c.len() && c[i].is_ascii_lowercase() {
-            el.push(c[i]);
-            i += 1;
-        }
-        let start = i;
-        while i < c.len() && c[i].is_ascii_digit() {
-            i += 1;
-        }
-        let n = if i > start {
-            c[start..i].iter().collect::<String>().parse().unwrap_or(0)
-        } else {
-            1
-        };
-        *d.entry(el).or_insert(0) += n;
-    }
-    d
-}
+pub use mzlab_core::elements::parse_formula_lenient as parse_formula;
 
 fn rank_of(r: Option<i64>) -> i64 {
     r.unwrap_or(1)
@@ -170,13 +143,13 @@ fn gather(h: &Hit, sir: &SiriusIn) -> Evidence3 {
         .iter()
         .filter(|x| x.id == h.feature_id)
         .collect();
-    s.sort_by_key(|x| rank_of(x.rank));
+    s.sortc_by_key(|x| rank_of(x.rank));
     let mut f: Vec<&FormulaIn> = sir
         .formulas
         .iter()
         .filter(|x| x.id == h.feature_id)
         .collect();
-    f.sort_by_key(|x| rank_of(x.rank));
+    f.sortc_by_key(|x| rank_of(x.rank));
     let want = parse_formula(&h.formula);
     let mut lib: Option<(f64, i64)> = None;
     let matches = sir.matches.iter().filter(|m| {
@@ -339,7 +312,7 @@ pub fn evaluate(
             decisions,
         ));
     }
-    rows.sort_by(|a, b| {
+    rows.sortc_by(|a, b| {
         (order_of(&a.verdict), &a.suspect, a.feature_id).cmp(&(
             order_of(&b.verdict),
             &b.suspect,

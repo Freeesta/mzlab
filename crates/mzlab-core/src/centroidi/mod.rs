@@ -16,6 +16,8 @@ mod smooth;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_veloci;
 
 pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
 pub use params::{estimate, Estimate};
@@ -90,8 +92,9 @@ pub struct Buf {
     pub(crate) v: Vec<f64>,
     pub(crate) s: Vec<f64>,
     pub(crate) b: Vec<f64>,
-    pub(crate) tmp: Vec<f64>,
     pub(crate) pad: Vec<f64>,
+    /// True when `x` is non-decreasing (set by `grid::fill`), so a window of m/z can be found by bisection.
+    pub(crate) sorted: bool,
 }
 
 /// The centroids of one scan (m/z ascending), from its non-zero points.

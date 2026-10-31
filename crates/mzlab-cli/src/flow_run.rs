@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::Error;
 use mzlab_core::flow::{
-    canonical, execute, parse, plan_order, prov_json, Agent, Job, Plan, Platform, Problem, Run,
+    build_agent, canonical, execute, parse, plan_order, prov_json, Agent, Job, Plan, Platform,
+    Problem, Run,
 };
 use mzlab_core::step::Step;
 
@@ -16,6 +17,7 @@ use crate::flow::{executable, steps, FileRunner, Meter};
 pub(crate) use crate::flow_apply::apply_set;
 use crate::flow_json::{fail as jfail, invalid, Style, JSONL_MARK};
 use crate::Outcome;
+use mzlab_core::flow::apply_sets;
 
 pub(crate) const HELP: &str = "mzlab-cli flow run: runs a whole mzflow/2 plan (the plan of the Flow page) on files.
 
@@ -194,14 +196,17 @@ pub(crate) fn problem_text(p: &Problem) -> String {
     format!("{}{dot}{}:{}", p.instance, p.port, p.error_key)
 }
 
-/// The program that ran: version of the crate and, when the build knows it (`MZLAB_COMMIT`), the commit.
+/// The program that ran: the keys of `build_agent` and the SHA-256 of this executable as module `mzlab-cli` (left out when it can't be read).
 fn agent() -> Agent {
-    Agent {
-        name: "mzLab".into(),
-        version: env!("CARGO_PKG_VERSION").into(),
-        commit: option_env!("MZLAB_COMMIT").map(str::to_string),
-        platform: Platform::current().name(),
+    let mut a = build_agent("mzLab");
+    if let Some(sha) = std::env::current_exe()
+        .ok()
+        .and_then(|p| std::fs::read(p).ok())
+        .map(|b| sha256_hex(&b))
+    {
+        a.modules.push(("mzlab-cli".into(), sha));
     }
+    a
 }
 
 /// Runs a checked `plan` with `runner`; returns the run and its `prov/1` text (`plan_sha256` of the text the plan was read from).
@@ -308,15 +313,23 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
     })?;
     let hint = "the plan must be the mzflow/2 file the Flow page downloads";
     let mut plan = parse(&text).map_err(|e| jfail(st, 3, &e, &e.to_string(), hint))?;
-    let (setting, plain): (Vec<&String>, Vec<&String>) = a
-        .sets
-        .iter()
-        .partition(|s| s.contains(".algorithm=") || s.contains(".preset="));
-    for s in setting.into_iter().chain(plain) {
-        let err = Error::new("err.cli.set").with("set", s);
-        apply_set(&mut plan, reg, s)
-            .map_err(|e| jfail(st, 2, &err, &e, "mzlab-cli flow run --help"))?;
-    }
+    apply_sets(&mut plan, reg, &a.sets).map_err(|e| {
+        // the CLI keeps the text apart from the error: the page reads it from the parameters
+        let of = |k: &str| {
+            e.params
+                .iter()
+                .find(|(n, _)| *n == k)
+                .map(|(_, v)| v.as_str())
+        };
+        let err = Error::new("err.cli.set").with("set", of("set").unwrap_or(""));
+        jfail(
+            st,
+            2,
+            &err,
+            of("message").unwrap_or(""),
+            "mzlab-cli flow run --help",
+        )
+    })?;
     let plan_dir = plan_path
         .parent()
         .map_or(PathBuf::from("."), Path::to_path_buf);
@@ -388,7 +401,8 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
     crate::flow_out::write_run(&plan, &ready, found, out, a.workers, meter, opts)
 }
 
-/// The inputs of the plan that name no hash get it from the file `locate` gives; one that names a hash must match it.
+/// The inputs of the plan that name no hash get it from the file `locate` gives (one that names a hash must match it), and the scan inputs the facets
+/// their file gives where the plan writes none (`mzlab_feat::nature::fill_facets`).
 pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> mzlab_core::Result<()> {
     for f in &mut plan.inputs {
         let (bytes, sha) =
@@ -399,7 +413,25 @@ pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> mzlab_c
         f.sha256 = sha;
         f.bytes = Some(bytes);
     }
+    mzlab_feat::nature::fill_facets(plan, |n| scan_facts(&locate(n)));
     Ok(())
+}
+
+/// The (polarity, high resolution) of a scan file, from its index or from the scan headers of an mzML; None for a file read by another reader or
+/// that does not open (its facets stay unknown and the step checks them when it starts).
+fn scan_facts(path: &Path) -> Option<(i8, Option<bool>)> {
+    let ext = path.extension()?.to_str()?.to_ascii_lowercase();
+    let mut f = std::fs::File::open(path).ok()?;
+    let size = f.metadata().ok()?.len();
+    match ext.as_str() {
+        "mzidx" => mzlab_core::idxread::Index::open(f, size)
+            .ok()
+            .map(|ix| mzlab_feat::nature::index_facts(&ix)),
+        "mzml" => mzlab_core::scantable::read(&mut f, size)
+            .ok()
+            .map(|t| mzlab_feat::nature::table_facts(&t)),
+        _ => None,
+    }
 }
 
 /// Reads, checks and runs a workflow file; returns the run and its `prov/1` text. Files of the plan are read from `dir`, outputs written to `work`.

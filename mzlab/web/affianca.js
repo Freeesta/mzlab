@@ -256,7 +256,7 @@ if (typeof AZIONI !== "undefined") {
     esegui: (/** @type {any} */ c) => { if (c.p._grip) affOpenMenu(c.p, c.p._grip); },
     voci: (/** @type {any} */ c) => {
       const p = c.p, o = affOthers(p);
-      if (!o.length) return [{ nome: AFF_T("aff.menu.beside"), dim: true, esegui: () => 0 }];
+      if (!o.length) return [{ nome: AFF_T("aff.menu.beside"), dim: true, info: true, esegui: () => 0 }];
       return o.map(q => { const d = { k: p.y < q.y || p.y === q.y && p.x < q.x ? "sx" : "dx", t: q.id }; return { nome: AFF_T("aff.menu.beside") + " " + affRowOf(q), dim: !affOkFor(p, d), esegui: () => { affFai(p, d, false); } }; });
     } });
   // only Move up / Move down are in the context menu (one row); the rest is the grip menu, the palette and dragging
@@ -280,3 +280,4 @@ function affAccanto(/** @type {any} */ s, /** @type {any} */ from) {
 
 const AFFIANCA = { accanto: affAccanto, grip: affGrip, sync: affSync, annulla: affAnnulla, ultimo: affUltimo, fai: affFai, rifai: affRifai, ripristina: affRipristina, eligible: affEligible };
 window.AFFIANCA = AFFIANCA;
+if (window.BARRA && BARRA.late) BARRA.late();

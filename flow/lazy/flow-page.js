@@ -6,9 +6,29 @@
   const F = /** @type {any} */ (globalThis).FLOW;
   const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"];
 
+  /** the plan with the facets of the files (`F.fileFacets`) on each scan input that does not write them, as `flow run` fills them (`mzlab_feat::nature::fill_facets`) */
+  F.withFileFacets = (/** @type {any} */ plan) => {
+    const got = F.fileFacets, scan = (/** @type {any} */ f) => ["raw", "mzml", "mzidx"].includes(f.type);
+    return got ? { ...plan, inputs: (plan.inputs || []).map((/** @type {any} */ f) => (scan(f) ? { ...f, facets: { ...got, ...(f.facets || {}) } } : f)) } : plan;
+  };
+
+  /** the facets of the indexes of OPFS (op `series_facets` of feat-worker.js: `series_estimates` of the proofs .wasm asked for `?facets`, the Rust rule of `flow run`) into `F.fileFacets`; `changed` runs when they differ @param {() => void} changed */
+  F.learnFacets = async changed => {
+    const kit = F.runners && F.runners.web && F.runners.web.kit;
+    // the runner of the web comes with the late modules: ask again until it is there
+    if (!kit) { if ((F.facetTries = (F.facetTries || 0) + 1) < 120) setTimeout(() => F.learnFacets(changed), 1000); return; }
+    try {
+      const files = await kit.listIdx(), key = files.map((/** @type {any} */ f) => f.name + f.key).join();
+      if (key === F.facetKey) return;
+      F.facetKey = key;
+      const got = files.length ? JSON.parse(await (await kit.getPool()).ident("proofs", "series_facets", { paths: files.map((/** @type {any} */ f) => f.path) })) : null;
+      if (JSON.stringify(got) !== JSON.stringify(F.fileFacets || null)) { F.fileFacets = got; changed(); }
+    } catch (_) { F.facetKey = ""; }
+  };
+
   /** every problem of the plan as the Rust checker would report it (F.validateExtra adds the checks of what the checker does not know yet) @param {any} plan @param {any} reg */
   F.validate = (plan, reg) => {
-    try { return [...F.check(F.normalize(F.cleanRefs(F.withoutCompare ? F.withoutCompare(plan) : plan)), reg, "native"), ...(F.validateExtra ? F.validateExtra(plan, reg) : [])]; }
+    try { return [...F.check(F.normalize(F.cleanRefs(F.withoutCompare ? F.withoutCompare(F.withFileFacets(plan)) : F.withFileFacets(plan))), reg, "native"), ...(F.validateExtra ? F.validateExtra(plan, reg) : [])]; }
     catch (e) { const x = /** @type {any} */ (e); return [{ instance: "", port: "", key: x.key || "err.flow.json", params: x.params || {} }]; }
   };
 
@@ -45,7 +65,7 @@
       inputs.append(el("strong", { text: "Inputs" }));
       for (const f of S.plan.inputs) {
         const res = ["raw", "mzml", "mzidx"].includes(f.type) ? el("select", { "aria-label": `Resolution of ${f.name}`, onchange: (/** @type {any} */ e) => { if (e.target.value) f.facets = { ...(f.facets || {}), resolution: [e.target.value] }; else delete f.facets; refresh(); } },
-          ...[["", "resolution: any"], ["hr", "high resolution"], ["lr", "unit resolution"]].map(([v, t]) => el("option", { value: v, text: t, selected: (f.facets && f.facets.resolution && f.facets.resolution[0] || "") === v }))) : null;
+          ...[["", "resolution: from the files"], ["hr", "high resolution"], ["lr", "unit resolution"]].map(([v, t]) => el("option", { value: v, text: t, selected: (f.facets && f.facets.resolution && f.facets.resolution[0] || "") === v }))) : null;
         inputs.append(el("span", { class: "fl-chip" }, F.mark(f.type), el("span", { text: f.name }), res, btn("x", `Remove input ${f.name}`, () => { F.removeInput(S.plan, f.name); refresh(); })));
       }
       inputs.append(el("select", { id: "fl-add-input", "aria-label": "Add an input file", onchange: (/** @type {any} */ e) => { if (e.target.value) { F.addInput(S.plan, e.target.value); refresh(); } } },
@@ -98,6 +118,7 @@
       for (const [n, y] of held) n.scrollTop = y;
       if (key) { const t = root.querySelector(`[data-fk="${CSS.escape(key)}"], #${CSS.escape(key)}`); if (t instanceof HTMLElement) t.focus({ preventScroll: !key.startsWith("fl-card-") }); }
       sec.dispatchEvent(new CustomEvent("flow:changed", { bubbles: true }));
+      F.learnFacets(() => refresh(null, true));
     }
     S.refresh = refresh; S.undo = doUndo; S.redo = doRedo; S.download = download;
     /** @type {any} */ (sec).__flow = S;

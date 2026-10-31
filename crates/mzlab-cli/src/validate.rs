@@ -6,7 +6,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use mzlab_core::json::Out;
-use mzlab_core::mzmlvalida::{valida, Problem, Report, Severity};
+use mzlab_core::mzmlvalida::{json_file, valida, Problem, Report, Severity};
 
 use crate::Outcome;
 
@@ -54,33 +54,6 @@ fn line(file: Option<&str>, p: &Problem) -> String {
         p.code,
         p.message
     )
-}
-
-fn json_file(o: &mut Out, file: &str, r: &Report) {
-    o.raw("{\"file\":").str(file);
-    o.raw(&format!(
-        ",\"valid\":{},\"indexed\":{},\"spectra\":{},\"chromatograms\":{},\"problems\":[",
-        r.is_valid(),
-        r.indexed,
-        r.spectra,
-        r.chromatograms
-    ));
-    for (i, p) in r.problems.iter().enumerate() {
-        o.raw(if i == 0 {
-            "{\"severity\":"
-        } else {
-            ",{\"severity\":"
-        })
-        .str(p.severity.as_str());
-        o.raw(",\"path\":")
-            .str(&p.path)
-            .raw(",\"code\":")
-            .str(p.code)
-            .raw(",\"message\":")
-            .str(&p.message)
-            .raw("}");
-    }
-    o.raw("]}");
 }
 
 fn summary(file: &str, r: &Report) -> String {

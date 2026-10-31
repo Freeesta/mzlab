@@ -7,16 +7,20 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use self::screen_suspects::{regulatory_job, screen_job};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
+use mzlab_core::flow::{Artifact, Job, Mem, Outcome, Runner};
 use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_digl::uv::uv_job;
 use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
+use crate::flow_insilico::insilico_job;
 use crate::flow_level::level_job;
+pub(crate) use crate::flow_made::Made;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
 use crate::flow_pace::Watch;
@@ -31,6 +35,8 @@ pub mod live;
 mod plausible;
 #[path = "flow_rtpredict.rs"]
 mod rtpredict;
+#[path = "flow_screen_suspects.rs"]
+mod screen_suspects;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -67,6 +73,17 @@ pub fn table_step() -> Step {
     }
 }
 
+// The two steps of `docs/agenti/flow-web.md` (qc.run_order, report.methods) live in files of their own, declared here so that lib.rs stays within its limit.
+#[path = "flow_export_annot.rs"]
+mod flow_export_annot;
+#[path = "flow_methods.rs"]
+mod flow_methods;
+#[cfg(test)]
+#[path = "flow_qcreport_tests.rs"]
+mod flow_qcreport_tests;
+#[path = "flow_runorder.rs"]
+mod flow_runorder;
+
 /// The steps a plan can use here, every family of descriptors: the registry of the flagship chain, `features.table`, Attributio, the whole Tabui
 /// family, `spectra.ms2` and `meta.compare`. Whether a step also runs here is `executable`.
 pub fn steps() -> Vec<Step> {
@@ -76,7 +93,12 @@ pub fn steps() -> Vec<Step> {
     all.extend(mzlab_chem::step::tabui());
     all.push(crate::flow_centroid::centroid_step());
     all.extend(crate::flow_digl::cli_steps());
-    all.push(crate::flow_quant::quant_step());
+    all.extend([
+        crate::flow_quant::quant_step(),
+        crate::flow_massacc::massacc_step(),
+    ]);
+    all.extend([mzlab_feat::steps::run_order(), mzlab_feat::steps::methods()]);
+    all.push(mzlab_feat::steps::export_annotations());
     all
 }
 
@@ -211,28 +233,6 @@ pub(crate) struct Lineage {
     pub peaks: Vec<PathBuf>,
 }
 
-/// What an executor made: the output port, its file and the values it measured (name, value, proof).
-pub(crate) struct Made {
-    pub port: &'static str,
-    pub artifact: Artifact,
-    pub estimates: Vec<(String, Value, Value)>,
-    pub warnings: Vec<String>,
-    /// What a per-file step says of its file (`{"via": "centroided" | "passthrough", ...}`).
-    pub file: Option<Value>,
-}
-
-impl Made {
-    pub fn new(port: &'static str, artifact: Artifact) -> Made {
-        Made {
-            port,
-            artifact,
-            estimates: Vec::new(),
-            warnings: Vec::new(),
-            file: None,
-        }
-    }
-}
-
 /// The lineage of the files the run makes (what the feature steps hand on).
 impl FileRunner {
     pub(crate) fn trace(&self, a: &Artifact, l: Lineage) {
@@ -308,13 +308,8 @@ pub(crate) fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> 
 }
 
 fn formula_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text = if job.step.id == "formula.ms1" {
-        let (table, index) = (read_one(r, job, "features")?, read_all(r, job, "index")?);
-        crate::flow_formula::ms1_text(job, &table.1, &named(&index))?
-    } else {
-        let (spectra, formulas) = (read_one(r, job, "spectra")?, read_all(r, job, "formulas")?);
-        crate::flow_formula::ms2_text(job, (&spectra.0, &spectra.1), &blobs(&formulas))?
-    };
+    let (spectra, formulas) = (read_one(r, job, "spectra")?, read_all(r, job, "formulas")?);
+    let text = crate::flow_formula::ms2_text(job, (&spectra.0, &spectra.1), &blobs(&formulas))?;
     write_made(r, job, text, DataType::Formulas)
 }
 
@@ -349,22 +344,22 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("features.align", Exec::Made(crate::flow_base::align_job)),
     ("features.gapfill", Exec::Made(crate::flow_base::align_job)),
     ("features.table", Exec::File("report", table_job)),
-    ("features.estimate", Exec::File("estimates", estimate_job)),
+    ("features.estimate", Exec::Made(estimate_job)),
     ("table.stats", Exec::File("report", stats_job)),
     ("table.kmd", Exec::File("report", crate::flow_kmd::kmd_job)),
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
     ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
-    (
-        "spectra.insilico",
-        Exec::File("candidates", crate::flow_insilico::insilico_job),
-    ),
-    ("formula.ms1", Exec::File("formulas", formula_job)),
+    ("spectra.insilico", Exec::File("candidates", insilico_job)),
+    ("formula.ms1", Exec::Made(crate::flow_formula::ms1_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
+    ("chrom.uv_peaks", Exec::File("peaks", uv_job)),
     ("annot.level", Exec::File("annot", level_job)),
+    ("screen.suspects", Exec::File("screen", screen_job)),
+    ("annot.regulatory", Exec::File("annot", regulatory_job)),
     (
         "tp.network",
         Exec::File("network", crate::flow_network::network_job),
@@ -376,7 +371,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ),
     (
         "tp.generate",
-        Exec::File("hypotheses", crate::flow_generate::generate_job),
+        Exec::Made(crate::flow_generate::generate_job),
     ),
     (
         "tp.filter",
@@ -425,6 +420,10 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(crate::flow_lookup::EXECUTORS)
         .chain(rtpredict::EXECUTORS)
         .chain(plausible::EXECUTORS)
+        .chain(crate::flow_massacc::EXECUTORS)
+        .chain(flow_runorder::EXECUTORS)
+        .chain(flow_methods::EXECUTORS)
+        .chain(flow_export_annot::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?
@@ -482,15 +481,17 @@ impl Runner for FileRunner {
                 made.as_ref().err().map(|e| e.to_string()),
             );
         }
-        let made = made?;
-        let mem = crate::flow_base::align_mem(self, job);
+        let mut made = made?;
+        let mut outputs = vec![(made.port.to_string(), made.artifact)];
+        outputs.extend(made.extra.take().map(|(p, a)| (p.to_string(), a)));
         Ok(Outcome {
-            outputs: vec![(made.port.to_string(), made.artifact)],
+            outputs,
             estimates: made.estimates,
             ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
-            mem,
+            mem: crate::flow_base::align_mem(self, job, made.mem.take()),
             warnings: made.warnings,
+            preset: made.preset.map(str::to_string),
             file: made.file,
             cached,
         })

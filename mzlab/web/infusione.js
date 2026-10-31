@@ -8,9 +8,12 @@ const INF = (() => {
   const O = { tol: "nom", ce: true, sum: false, lv: 0 };
   const isInf = (/** @type {any} */ f) => !!f && !f.gone && f.kind === "infusion";
   const any = () => E.files.some(isInf);
-  const treeUrl = (/** @type {number} */ k) => `api/msn_albero?k=${k}&tol=${O.tol}&ce=${O.ce ? 1 : 0}`;
+  const treeUrl = (/** @type {number} */ k, /** @type {string} */ tol, /** @type {boolean} */ ce) => `api/msn_albero?k=${k}&tol=${tol}&ce=${ce ? 1 : 0}`;
+  const treeFor = (/** @type {number} */ k, /** @type {string} */ tol, /** @type {boolean} */ ce) => memo(`msn|${k}|${tol}|${ce}`, () => J(treeUrl(k, tol, ce)));
   /** The tree of a file for the options in force. @returns {Promise<any>} */
-  const tree = k => memo(`msn|${k}|${O.tol}|${O.ce}`, () => J(treeUrl(k)));
+  const tree = (/** @type {number} */ k) => treeFor(k, O.tol, O.ce);
+  /** The same where only text fits (the options of a list): superscript digits. */
+  const msTxt = (/** @type {number | string} */ l) => "MS" + String(l).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[+d]);
   const prec = (/** @type {any} */ n) => `${+n.prec.toFixed(4)}`;
   /** Nodes of a tree in the order of the display (depth first), each with its depth and the path of precursors from the survey. */
   function rows(/** @type {any} */ j) {
@@ -30,7 +33,7 @@ const INF = (() => {
   /** The nodes as the entries of the scan-filter menu of a cell: [{key, level, n, label, msn}] (the survey is the empty choice of the menu). */
   async function groups(/** @type {number} */ k) {
     const j = await tree(k);
-    return rows(j).map(r => ({ key: "msn:" + r.n.id, level: r.n.livello, n: r.n.n, label: `MS${r.n.livello} ${r.path}${r.n.ce != null ? ` · CE ${r.n.ce}` : ""}`, msn: r.n }));
+    return rows(j).map(r => ({ key: "msn:" + r.n.id, level: r.n.livello, n: r.n.n, label: `${msTxt(r.n.livello)} ${r.path}${r.n.ce != null ? ` · CE ${r.n.ce}` : ""}`, msn: r.n }));
   }
   /** Adds the grouping (and the sum) of the tree to a request that names a node: the one place that knows the options. */
   const qs = (/** @type {string} */ url) => {
@@ -63,23 +66,11 @@ const INF = (() => {
     try { const j = await tree(f.k), n = richest(j); if (n) await pick(c, n.id); } catch (e) { console.info("INF layout", e); }
   }
   function reset() {
-    CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
+    for (const k of [...CACHE.keys()]) if (!k.startsWith("msn|")) CACHE.delete(k);       // the trees are kept: they do not change with the cells if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
     E.panels.forEach(p => { if (p.filt && p.filt.startsWith("msn:")) { p.filt = null; p.flv = null; } });
-  }
-  /** Changes an option of the tree. A new grouping makes every node id of the cells meaningless: they go back to the richest node. */
-  async function setOpt(/** @type {"tol" | "ce" | "sum" | "lv"} */ key, /** @type {any} */ v) {
-    const regroup = key === "tol" || key === "ce";
-    /** @type {any} */ (O)[key] = v;
-    if (key === "sum") { CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); } }
-    if (regroup) reset();
-    const cs = regroup ? E.panels.filter(q => q.type === "chrom" && isInf(E.files[q.k ?? E.cur]) || q.tab === "infusion" && q.type === "chrom") : [];
-    for (const c of cs) { const f = E.files.find(isInf); if (f) await layout(c, null, f); }
-    E.panels.forEach(q => draw(q));
-    if (window.BANCO) BANCO.renderInfo();
-    uiSave();
   }
   const state = () => (any() ? { ...O } : undefined);
   const restore = (/** @type {any} */ s) => { if (s && typeof s === "object") Object.assign(O, { tol: String(s.tol || "nom"), ce: s.ce !== false, sum: !!s.sum, lv: +s.lv || 0 }); };
-  return { O, isInf, any, tree, rows, groups, qs, node, richest, cells, pick, layout, setOpt, state, restore, prec };
+  return { O, isInf, any, tree, rows, groups, qs, node, richest, cells, pick, layout, reset, treeFor, state, restore, prec, msTxt };
 })();
 window.INF = INF;

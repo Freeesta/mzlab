@@ -2,7 +2,7 @@
 //! the three codecs an mzML array may carry, linear prediction (MS:1002312), positive integer (MS:1002313) and short logged float (MS:1002314), alone or followed by zlib
 //! (MS:1002746, MS:1002747, MS:1002748). Served only by the readers modules (feature `estesi`): the engine of the page keeps the error `err.file.numpress`.
 //! Every count that comes from the file is bounded by `max`, the number of values the spectrum declares: a hostile array is an error with a key, never an allocation.
-//! The encoders are here for the tests (and for a writer to come): they follow the reference byte for byte.
+//! The encoders follow the reference byte for byte; `mzmlwrite` writes with the `_into` forms (linear prediction and short logged float), the others serve the tests.
 
 use crate::error::{Error, Result};
 
@@ -236,36 +236,50 @@ fn slof(data: &[u8], max: usize) -> Result<Vec<f64>> {
         .collect())
 }
 
-// ---- encoders (the reference, for the tests) ----
+// ---- encoders (the reference, for the tests; `mzmlwrite` writes with the `_into` forms) ----
 
-fn put_int(x: u32, halves: &mut Vec<u8>) {
+/// The half bytes of an integer sequence, packed two to a byte (high first) straight into the output; `end` pads an odd number with the half byte 0x8.
+struct Halves<'a> {
+    out: &'a mut Vec<u8>,
+    pending: Option<u8>,
+}
+
+impl Halves<'_> {
+    fn push(&mut self, h: u8) {
+        match self.pending.take() {
+            Some(hi) => self.out.push((hi << 4) | h),
+            None => self.pending = Some(h),
+        }
+    }
+    fn end(self) {
+        if let Some(hi) = self.pending {
+            self.out.push((hi << 4) | 0x8);
+        }
+    }
+}
+
+fn put_int(x: u32, halves: &mut Halves) {
     let mask = 0xf000_0000u32;
     let init = x & mask;
     if init == 0 {
         let l = (0..8).find(|&i| x & (mask >> (4 * i)) != 0).unwrap_or(8);
         halves.push(l as u8);
-        halves.extend((l..8).map(|i| ((x >> (4 * (i - l))) & 0xf) as u8));
+        (l..8).for_each(|i| halves.push(((x >> (4 * (i - l))) & 0xf) as u8));
     } else if init == mask {
         let l = (0..8)
             .find(|&i| x & (mask >> (4 * i)) != mask >> (4 * i))
             .unwrap_or(7);
         halves.push((l + 8) as u8);
-        halves.extend((l..8).map(|i| ((x >> (4 * (i - l))) & 0xf) as u8));
+        (l..8).for_each(|i| halves.push(((x >> (4 * (i - l))) & 0xf) as u8));
     } else {
         halves.push(0);
-        halves.extend((0..8).map(|i| ((x >> (4 * i)) & 0xf) as u8));
-    }
-}
-
-fn pack(halves: &[u8], out: &mut Vec<u8>) {
-    for p in halves.chunks(2) {
-        out.push((p[0] << 4) | p.get(1).copied().unwrap_or(0x8));
+        (0..8).for_each(|i| halves.push(((x >> (4 * i)) & 0xf) as u8));
     }
 }
 
 /// The best fixed point for linear prediction of values up to `max` (the reference: the largest that keeps the integers in 31 bits).
 pub fn linear_fixed_point(values: &[f64]) -> f64 {
-    let max = values.iter().cloned().fold(1.0, f64::max);
+    let max = values.iter().copied().fold(1.0, f64::max);
     (f64::from(i32::MAX) / max)
         .floor()
         .max(1.0)
@@ -274,44 +288,82 @@ pub fn linear_fixed_point(values: &[f64]) -> f64 {
 
 /// Linear prediction encoding with fixed point `fp`.
 pub fn encode_linear(values: &[f64], fp: f64) -> Vec<u8> {
-    let mut out = fp.to_be_bytes().to_vec();
-    let ints: Vec<i64> = values.iter().map(|v| (v * fp + 0.5) as i64).collect();
-    for v in ints.iter().take(2) {
-        out.extend((*v as u32).to_le_bytes());
-    }
-    let mut halves = Vec::new();
-    for i in 2..ints.len() {
-        let extra = ints[i - 1] + (ints[i - 1] - ints[i - 2]);
-        put_int((ints[i] - extra) as i32 as u32, &mut halves);
-    }
-    pack(&halves, &mut out);
+    let mut out = Vec::new();
+    encode_linear_into(&mut out, values, fp);
     out
+}
+
+/// `encode_linear` appended to `out` (same bytes, no intermediate vectors).
+pub fn encode_linear_into(out: &mut Vec<u8>, values: &[f64], fp: f64) {
+    out.reserve(8 + 8 + values.len() * 2);
+    out.extend_from_slice(&fp.to_be_bytes());
+    let q = |v: f64| (v * fp + 0.5) as i64;
+    for v in values.iter().take(2) {
+        out.extend_from_slice(&(q(*v) as u32).to_le_bytes());
+    }
+    let mut halves = Halves { out, pending: None };
+    if values.len() > 2 {
+        let (mut a, mut b) = (q(values[0]), q(values[1]));
+        for v in &values[2..] {
+            let c = q(*v);
+            put_int((c - (b + (b - a))) as i32 as u32, &mut halves);
+            (a, b) = (b, c);
+        }
+    }
+    halves.end();
 }
 
 /// Positive integer encoding (each value rounded to the nearest integer).
 pub fn encode_pic(values: &[f64]) -> Vec<u8> {
-    let mut halves = Vec::new();
+    let mut out = Vec::new();
+    let mut halves = Halves {
+        out: &mut out,
+        pending: None,
+    };
     for v in values {
         put_int((v + 0.5) as u32, &mut halves);
     }
-    let mut out = Vec::new();
-    pack(&halves, &mut out);
+    halves.end();
     out
 }
 
 /// Short logged float encoding with fixed point `fp`.
 pub fn encode_slof(values: &[f64], fp: f64) -> Vec<u8> {
-    let mut out = fp.to_be_bytes().to_vec();
+    let mut out = Vec::new();
+    encode_slof_into(&mut out, values, fp);
+    out
+}
+
+/// `encode_slof` appended to `out`.
+pub fn encode_slof_into(out: &mut Vec<u8>, values: &[f64], fp: f64) {
+    slof_into(out, values.iter().copied(), values.len(), fp);
+}
+
+/// `encode_slof_into` of 32-bit values (each widened as it is encoded, no copy of the array).
+pub fn encode_slof_f32_into(out: &mut Vec<u8>, values: &[f32], fp: f64) {
+    slof_into(out, values.iter().map(|&x| f64::from(x)), values.len(), fp);
+}
+
+fn slof_into(out: &mut Vec<u8>, values: impl Iterator<Item = f64>, n: usize, fp: f64) {
+    out.reserve(8 + 2 * n);
+    out.extend_from_slice(&fp.to_be_bytes());
     for v in values {
         let x = ((v + 1.0).ln() * fp + 0.5) as u16;
-        out.extend(x.to_le_bytes());
+        out.extend_from_slice(&x.to_le_bytes());
     }
-    out
 }
 
 /// The fixed point of slof for values up to `max`: the largest that keeps `ln(max+1) * fp` inside 16 bits.
 pub fn slof_fixed_point(values: &[f64]) -> f64 {
-    let max = values.iter().cloned().fold(0.0, f64::max);
+    slof_fp(values.iter().copied().fold(0.0, f64::max))
+}
+
+/// `slof_fixed_point` of 32-bit values.
+pub fn slof_fixed_point_f32(values: &[f32]) -> f64 {
+    slof_fp(values.iter().map(|&x| f64::from(x)).fold(0.0, f64::max))
+}
+
+fn slof_fp(max: f64) -> f64 {
     (65535.0 / (max + 1.0).ln().max(1e-9))
         .floor()
         .clamp(1.0, 65535.0)
@@ -319,3 +371,5 @@ pub fn slof_fixed_point(values: &[f64]) -> f64 {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_into;

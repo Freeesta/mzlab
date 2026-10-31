@@ -50,7 +50,7 @@ function attach(p) {
     });
   }
   cv.onmousemove = e => {
-    const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
+    const a = p._a; if (!a) return; const bb = cv.getBoundingClientRect(), px = e.clientX - bb.left, py = e.clientY - bb.top, x = xd(px);     // one layout read per event
     if (p.type === "spec" && a.markN != null) hoverMark(p, px);
     if (drag && drag.pan) {                                   // Shift + drag: pans the view
       const c = a.map ? ASSE.clip(drag.g, e, px - drag.x0, py - drag.y0) : { dx: px - drag.x0, dy: py - drag.y0, ax: null }; drag.ax = c.ax; if (a.map && window.MAPPA) MAPPA.guide(p, c.ax && { ax: c.ax, x: drag.x0, y: drag.y0 });     // map: Ctrl/⌘ + Shift or X / Y = one direction only (asse.js)
@@ -77,9 +77,9 @@ function attach(p) {
     } else { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
     else axisHint(yAxisZone(px, py) ? "v" : xAxisZone(px, py) ? "h" : null, e);
     if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair";
-    const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
+    const lh = !drag && ((a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) || (window.ETPK && ETPK.hit(p, px, py)));
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
-    if (p.rd) p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) + ASSE.tag(drag) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
+    if (p.rd) p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : (a.map ? "RT " : "") + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) + ASSE.tag(drag) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
     showHover(p, px, py); if (drag) p.tip.hidden = true; if (p.type === "spec" && window.XICLENS) XICLENS.move(p, px, py, !!drag);
     if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py, e);
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
@@ -105,7 +105,7 @@ function attach(p) {
   cv.addEventListener("mousemove", e => pendHint(p, e));
   cv.onmouseleave = e => { if (p.type === "spec" && window.XICLENS) XICLENS.leave(p, e); if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
-    if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
+    if (e.button !== 0 || !p._a) return; const bb = cv.getBoundingClientRect(), px = e.clientX - bb.left, py = e.clientY - bb.top, a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null, zo: p.zoom ? [...p.zoom] : null, zyo: p.zoomY ? [...p.zoomY] : null }; return; }
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
@@ -129,6 +129,7 @@ function attach(p) {
     if (d.xa) { if (a && Math.abs(d.x - d.x0) > 4) { const u = xd(d.x0), v = xd(d.x); zoomTo(p, Math.min(u, v), Math.max(u, v)); } return; }
     const x0 = xd(d.x0), x1 = xd(d.x);
     if (!a || x0 == null) return;
+    const pk = !p.imode && !p._pickNoise && !p._pickIbk && Math.abs(d.x - d.x0) <= 4 && window.ETPK ? ETPK.hit(p, d.x0, d.y0) : null;       // a click on the label of a peak (or just beside it) means the apex of that peak
     if (p.type === "map" && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
     if (p.type === "map" && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
@@ -137,7 +138,7 @@ function attach(p) {
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }
-    if (p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects
+    if (!pk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects
       if (p.imode === "idel") {
         const hit = intAt(p, d.x0, d.y0) || p.ints.find(it => x0 >= iLo(it) && x0 <= iHi(it));
         if (hit) delInts(p, [hit]);
@@ -153,7 +154,7 @@ function attach(p) {
         if (Math.abs(d.x - d.x0) > 4) { if (canYZ(a) && Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0)), true); zoomTo(p, Math.min(x0, x1), Math.max(x0, x1)); } else draw(p);
         return;
       }
-      if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => autoInt(p, s, x0)); return; }
+      if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => hrTrace(s) ? autoAll(p, s) : autoInt(p, s, x0)); return; }
       if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) t.forEach(s => addInt(p, s, x0, x1)); else draw(p); return; }
     }
     if (Math.abs(d.x - d.x0) > 4) {
@@ -163,7 +164,7 @@ function attach(p) {
     else if (p.type !== "spec") {
       const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 6 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { if (window.DDA && DDA.onTri(p, tt)) return; goMs2(tt); return; }          // a triangle: that MS2 scan (in the DDA trio, or in the MS2 tab)
-      pickTrace(p, x0, d.y0); p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, x0); pushLinked(p, x0 - dt / 2, x0 + dt / 2, k0); nearScan(k0, x0).then(n => { if (n && p.cur === x0) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
+      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); p.sel = null; p.cur = xs; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }
   };
   addEventListener("mouseup", p._up, { signal: p._ac.signal });
@@ -208,7 +209,7 @@ function attach(p) {
     if (e.target !== cv || p.type === "map" || !(e.key === "ContextMenu" || e.key === "F10" && e.shiftKey)) return;
     e.preventDefault(); e.stopPropagation(); kbdMenu(p);
   });
-  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; if (p.type === "spec" && p._a && measCtx(p, rect(e), recty(e))) { e.preventDefault(); hideHover(p); return; } hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
+  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; if (p.type === "spec" && p._a && measCtx(p, rect(e), recty(e))) { e.preventDefault(); hideHover(p); return; } hideHover(p); const pk = window.ETPK && ETPK.hit(p, rect(e), recty(e)); if (pk) ctxFor(p, e, pk.rt, pk.ax, pk.ay); else ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
   if (p.type === "map" && window.MAPPA) MAPPA.init(p);
 }
 // high resolution only: the scan of the file (survey or product ions) closest in time to x, found by the server; null for any other file (the window around x is used)
@@ -367,11 +368,11 @@ function ctxFor(p, e, x, px, py) {
   const V = ["chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
   /** @param {any} o */
   const reg = o => AZIONI.registra({ viste: V, ...o });
-  // the spectra of a trace: not for the MRM (it has no scans to average)
+  // the spectra of a trace: not for the MRM (it has no scans to average); not in the menu: a click or drag, the double click and Enter already do it
   /** @param {any} c */
   const spettri = c => ESP.spettri(c.p);
-  reg({ id: "chrom.avgSel", gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
-  reg({ id: "chrom.specAtRt", gruppo: "extract", visibile: spettri, scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettro" }, nome: () => T("ctx.spec.atRt"),
+  reg({ id: "chrom.avgSel", menu: false, gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
+  reg({ id: "chrom.specAtRt", menu: false, gruppo: "extract", visibile: spettri, scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettro" }, nome: () => T("ctx.spec.atRt"),
     doppio: /** @param {any} c */ c => !!c.p._a && !!E.files[c.k] && E.files[c.k].kind !== "mrm" && !c.p.el.classList.contains("max"),      // a MRM file has no spectra; full screen: nobody would see the new panel
     esegui: /** @param {any} c */ async c => {
       const { p, x, k } = c, dt = scanStep(), sn = ESP.di(p) === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null;
@@ -443,7 +444,7 @@ async function showMethod(sel) {
   const again = () => showMethod(sel);
   const f = E.files[E.cur], held = METODO_M.any();      // the Agilent *.m method folders loaded outside any run (metodo-m.js) show here too
   if (!f) return held ? showHeldMethods("") : info(I18N.t("method.none"));
-  let m; try { m = await J("api/method?k=" + f.k); } catch (e) { return held ? showHeldMethods(I18N.t("method.error", { message: EH(e.message) })) : info(I18N.t("method.error", { message: EH(e.message) })); }
+  let m; try { m = await J("api/method?k=" + f.k); } catch (e_) { const e = /** @type {Lanciato} */ (e_); return held ? showHeldMethods(I18N.t("method.error", { message: EH(e.message) })) : info(I18N.t("method.error", { message: EH(e.message) })); }
   const row = (a, b) => b == null || b === "" ? "" : `<tr><td class="muted">${EH(a)}</td><td>${EH(String(b))}</td></tr>`;   // values come from the file: always escaped here
   const pol = ["positive", "negative", "mixed", "unknown"].includes(m.polarity) ? I18N.t(`method.pol.${m.polarity}`) : m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
@@ -509,7 +510,7 @@ function loadDam() {
       if (j.error) throw I18N.err(j);
       if (typeof ST !== "undefined") { ST.methods = j.methods || ST.methods; renderMethods(); }
       methodWarn(); showMethod();
-    } catch (e) { info(I18N.t("method.error", { message: EH(e.message) })); }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); info(I18N.t("method.error", { message: EH(e.message) })); }
   };
   inp.click();
 }
@@ -605,7 +606,6 @@ document.addEventListener("keydown", e => {
   const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close
 });
 const CALC = { ans: 0, tape: /** @type {{ e: any, r: any }[]} */ ([]), fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
-let CALC_MORE = false;       // the calculator shows the adducts of the other polarity too
 // the field holds a CALCULATION (digits and + - x / ( )) -> big result, keypad and tape; or a chemical FORMULA -> table of the adducts
 function calcTape() {
   const tp = Q("#calctape"); tp.hidden = !CALC.tape.length || !Q("#calcpad") || Q("#calcpad").hidden;
@@ -629,63 +629,31 @@ Q("#calcpad").querySelectorAll("button").forEach(b => { b.onmousedown = ev => ev
 Q("#calcin").onkeydown = ev => {
   if (ev.key === "Enter" && calcIsExpr(ev.target.value)) { ev.preventDefault(); calcEquals(); return; }
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
-  if (ev.key.length === 1 || ev.key === "Backspace") CALC.fresh = false;
+  if ((ev.key || "").length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
-// the optional field «m/z osservata» of the calculator: only with a high-resolution file loaded (the field stays outside #calcout, so what is typed survives the redraws)
-function calcObs(on) {
-  let w = Q("#calcobsw");
-  if (!w && on) {
-    Q("#calcsum").insertAdjacentHTML("afterend", '<label id="calcobsw" class="sm muted" style="display:block;margin:4px 0" title="' + I18N.t("calc.obs.title") + '">' + I18N.t("calc.obs") + ' <input id="calcobs" inputmode="decimal" autocomplete="off" style="width:130px;margin:0 0 0 6px"></label>');
-    Q("#calcobs").oninput = calcRun; w = Q("#calcobsw");
-  }
-  if (w) w.hidden = !on;
-}
-async function calcRun() {
-  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
+// the groups under the calculator («what can this number be?», calc-qui*.js) follow the field
+function calcRun() {
+  const t = Q("#calcin").value.trim(), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
   const ex = !t || calcIsExpr(t);
   pad.hidden = !ex; res.hidden = !ex || !t; if (nlBtn) nlBtn.hidden = true; calcTape();
-  if (!t) { out.innerHTML = ""; sum.innerHTML = ""; res.textContent = ""; return; }
-  if (ex) {
-    out.innerHTML = ""; const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
-    if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) {
-      nlBtn.hidden = false;
-      const vabs = calcFmt(Math.abs(r.v));
-      nlBtn.title = I18N.t("calc.toLosses", { v: vabs });
-      nlBtn.onclick = () => {
-        if (window.BARRA && BARRA.isDataView()) {
-          BARRA.setTab("losses", { q: vabs });
-        } else {
-          calcBox.close();
-          if (window.QQQRef) QQQRef.open("ls", { q: vabs });
-        }
-      };
-    }
-    sum.innerHTML = r.err ? EH(r.err) : ""; return;
+  if (CALCQUI.calc) CALCQUI.later(CALCQUI.calc);
+  if (!t) { sum.innerHTML = ""; res.textContent = ""; return; }
+  if (!ex) return;
+  const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
+  if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) {
+    nlBtn.hidden = false;
+    const vabs = calcFmt(Math.abs(r.v));
+    nlBtn.title = I18N.t("calc.toLosses", { v: vabs });
+    nlBtn.onclick = () => {
+      if (window.BARRA && BARRA.isDataView()) {
+        BARRA.setTab("losses", { q: vabs });
+      } else {
+        calcBox.close();
+        if (window.QQQRef) QQQRef.open("ls", { q: vabs });
+      }
+    };
   }
-  try {
-    const r = await getFormula(t, "");
-    const want = defAdduct();
-    sum.innerHTML = t.replace(/\s+/g, "") !== r.formula ? I18N.t("calc.interpreted", { formula: fmtFormula(r.formula) }) : "";      // what was calculated, when the capitals were fixed
-    // only the adducts of the polarity of the files shown (positive files: [M+H]+, [M+Na]+...; negative: [M-H]-...); no files or mixed: both, under ESI+ / ESI-; a small link shows the other polarity
-    const fl = shown().length ? shown() : E.files.filter(f => f.vis), pos = fl.some(f => f.polarity === "positive"), neg = fl.some(f => f.polarity === "negative");
-    const mine = pos && !neg ? "+" : neg && !pos ? "-" : "", both = !mine || CALC_MORE;
-    const ent = Object.entries(r.adducts), isPos = a => a.endsWith("+");
-    // high resolution (an Orbitrap / Q-TOF file is loaded): m/z with the decimals of the profile and, if the student writes the m/z measured, the error in ppm of each adduct (the program does not guess which one it is)
-    const hrf = window.HR ? E.files.filter(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))) : [], hr = hrf.length > 0, dd = hr ? Math.max(HR.dec(hrf, 1), HR.dec(hrf, 2)) : 4;
-    calcObs(hr); const ob = hr ? numIt(Q("#calcobs").value) : NaN, hasObs = hr && Number.isFinite(ob) && ob > 0;
-    const rowOf = ([a, v]) => `<tr${a === want ? ' style="font-weight:600"' : ""}><td>${fmtAdduct(a)}</td><td>${hr ? v.mz5.toFixed(dd) : v.mz.toFixed(4)}</td>${hasObs ? `<td title="${((ob - v.mz5) * 1000).toFixed(1)} mDa">${HR.ppm(ob, v.mz5).toFixed(1)}</td>` : ""}<td>${v.nominal}</td><td><button data-a="${EH(a)}" data-m="${v.mz1}" title="${I18N.t("calc.xic.title")}">XIC</button></td></tr>`;
-    const grp = (lab, rows) => rows.length ? `<tr class="pg"><td colspan="${hasObs ? 5 : 4}"><b>${lab}</b></td></tr>` + rows.map(rowOf).join("") : "";
-    const P = ent.filter(([a]) => isPos(a)), N = ent.filter(([a]) => !isPos(a));
-    const body = !both ? (mine === "+" ? P : N).map(rowOf).join("") : !mine ? grp("ESI+", P) + grp("ESI\u2212", N) : mine === "+" ? grp("ESI+", P) + grp("ESI\u2212", N) : grp("ESI\u2212", N) + grp("ESI+", P);
-    const more = mine ? `<p class="sm"><a href="#" id="calcmore">${CALC_MORE ? I18N.t("calc.moreOnly", { pol: mine === "+" ? "ESI+" : "ESI\u2212" }) : I18N.t("calc.moreAlso", { pol: mine === "+" ? "ESI\u2212" : "ESI+" })}</a></p>` : "";
-    out.innerHTML = `<p>${I18N.t("calc.neutral", { formula: fmtFormula(r.formula), mass: r.neutral.toFixed(4), nominal: r.nominal_neutral })}</p>
-      <table><tr><th>${I18N.t("calc.col.adduct")}</th><th>${I18N.t("calc.col.exact")}</th>${hasObs ? `<th>${I18N.t("calc.col.ppm")}</th>` : ""}<th>${I18N.t("calc.col.nominal")}</th><th></th></tr>${body}</table>${more}`;
-    const mo = out.querySelector("#calcmore"); if (mo) mo.onclick = e => { e.preventDefault(); CALC_MORE = !CALC_MORE; calcRun(); };
-    out.querySelectorAll("button[data-m]").forEach(b => b.onclick = () => {
-      Q("#calcdlg").close();
-      openXic([...tabPanels()].reverse().find(q => q.type === "xic") || null, { formula: r.formula, adduct: b.dataset.a });
-    });
-  } catch (e) { sum.innerHTML = ""; out.innerHTML = `<p class="muted">${EH(e.message)}</p>`; }
+  sum.innerHTML = r.err ? EH(r.err) : "";
 }
 Q("#calcin").oninput = calcRun;
 
@@ -696,6 +664,18 @@ Q("#calcin").oninput = calcRun;
   const SEL = "[title], [data-tip], [data-tiph]";
   let timer = null, cur = null;
   const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; cur = null; };
+  // draws the tooltip of t: below, else above, else beside it (never over the element it describes); a tooltip made of HTML (data-tiph) wins over the plain text
+  const show = (/** @type {HTMLElement} */ t) => {
+    const txt = t.dataset.tip, html = t.dataset.tiph;
+    if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
+    tip.hidden = false;
+    // a control of a toolbar keeps the tooltip clear of the whole toolbar (the outermost one), not only of itself: it must not hide the neighbouring buttons
+    let zone = /** @type {HTMLElement} */ (t); for (let e = t.parentElement; e; e = e.parentElement) if (e.matches("#stbar, #tools, [role=toolbar]")) zone = e;
+    const r = t.getBoundingClientRect(), z = zone.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 6, below = z.bottom + m + h + m <= innerHeight, above = z.top - m - h >= m;
+    let x = Math.max(m, Math.min(innerWidth - w - m, r.left + r.width / 2 - w / 2)), y = below ? z.bottom + m : z.top - m - h;
+    if (!below && !above) { y = Math.max(m, Math.min(innerHeight - h - m, r.top)); x = z.right + m + w + m <= innerWidth ? z.right + m : Math.max(m, z.left - m - w); }
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  };
   document.addEventListener("mouseover", e => {
     const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
     if (t === cur) return;
@@ -705,16 +685,27 @@ Q("#calcin").oninput = calcRun;
     const txt = t.dataset.tip, html = t.dataset.tiph; if (!txt && !html) return;
     cur = t;
     const delay = t.closest(".fl") ? 1000 : TIP_DELAY;
-    timer = setTimeout(() => {
-      if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
-      tip.hidden = false;
-      const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
-      tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";
-      tip.style.top = (r.bottom + h + 10 < innerHeight ? r.bottom + 6 : Math.max(6, r.top - h - 6)) + "px";
-    }, delay);
+    timer = setTimeout(() => show(t), delay);
   });
   document.addEventListener("mouseout", e => { if (cur && !(e.relatedTarget && cur.contains(e.relatedTarget))) hide(); });
   ["mousedown", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, hide, true));
+  // touch has no hover: a long press (0.6 s) on a button or control shows its tooltip for a moment; the click that follows the release is swallowed. Graphs and file rows keep their long press = right click (touch.js)
+  let lpT = null, lpX = 0, lpY = 0, lpDone = 0;
+  const lpStop = () => clearTimeout(lpT);
+  document.addEventListener("pointerdown", e => {
+    lpStop(); if (e.pointerType !== "touch") return;
+    const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
+    if (!t || t.closest("dialog[open], canvas, .fl, .pnl .cv")) return;
+    lpX = e.clientX; lpY = e.clientY;
+    lpT = setTimeout(() => {
+      if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
+      if (!t.dataset.tip && !t.dataset.tiph) return;
+      show(t); lpDone = Date.now(); cur = t; clearTimeout(timer); timer = setTimeout(hide, 2800);
+    }, 600);
+  }, true);
+  document.addEventListener("pointermove", e => { if (lpT && Math.hypot(e.clientX - lpX, e.clientY - lpY) > 10) lpStop(); }, true);
+  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, lpStop, true));
+  document.addEventListener("click", e => { if (Date.now() - lpDone < 700) { e.stopPropagation(); e.preventDefault(); lpDone = 0; } }, true);
   addEventListener("scroll", hide, true);
 })();
 // the notes of a graph (spectrum, chromatogram, XIC, MRM) are one undoable action (comandi.js)

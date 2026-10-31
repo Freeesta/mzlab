@@ -4,12 +4,14 @@
 
 mod cerca;
 mod csv;
+mod ione;
 mod json;
 mod livelli;
 mod rotte;
 
-pub use cerca::cerca;
+pub use cerca::{cerca, cerca_ampia};
 pub use csv::{from_csv, to_csv};
+pub use ione::ione;
 pub use json::{digest, errors_json, from_json, hits_json, record_json, to_json};
 pub use livelli::unisci;
 pub use rotte::route;

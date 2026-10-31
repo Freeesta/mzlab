@@ -11,7 +11,7 @@
   const kit = () => F.runners.web.kit;
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
   /** true when this browser does the step (the MSn search in a library is for the `tree` algorithm only) */
-  const here = (/** @type {any} */ inst) => kit().KNOWN.includes(base(inst)) && (base(inst) !== "spectra.match" || inst.algorithm === "tree");
+  const here = (/** @type {any} */ inst) => kit().KNOWN.includes(base(inst)) && (base(inst) !== "spectra.match" || inst.algorithm === "tree" || !!F.webIdent);
   const budgetMb = () => Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0;
   /** @type {any} */ let x = null;
   // the two switches of the bar: Live (the plan is followed and its jobs start by themselves, on by default) and the user's Pause
@@ -87,8 +87,14 @@
     const stemOf = (/** @type {string} */ n) => n.replace(/\.[^.]+$/, "");
     // `mode`: how Data classed the file (profile | centroid | mixed), the base of the choice of the centroid step; `cen`: the index of its centroids, when Data holds one
     const modeOf = (/** @type {string} */ n) => { const f = (typeof ST !== "undefined" && Array.isArray(ST.files) ? ST.files : []).find((/** @type {any} */ g) => g.name === n); return f && f.spectrum_mode ? String(f.spectrum_mode) : ""; };
-    const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""), input = open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML"; return { input, stem, idx: f, cen: f.cen || null, mode: modeOf(input) }; });
-    for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null, cen: null, mode: modeOf(stem + ".mzML") });
+    // `hr`: a high-resolution profile file (heavy: stays with the desktop app); `size`: its bytes, for the room the centroid copy needs
+    const sizeOf = (/** @type {string} */ n) => { const f = (typeof ST !== "undefined" && Array.isArray(ST.files) ? ST.files : []).find((/** @type {any} */ g) => g.name === n); return { hr: !!(f && f.hr_profile), size: f && f.size || 0 }; };
+    const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""), input = open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML"; return { input, stem, idx: f, cen: f.cen || null, mode: modeOf(input), ...sizeOf(input) }; });
+    for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null, cen: null, mode: modeOf(stem + ".mzML"), ...sizeOf(stem + ".mzML") });
+    // the files in the order of the plan's scan inputs, the order `flow run` aligns them in (a file the plan does not name follows, by name: the sort is stable)
+    const named = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml").map((/** @type {any} */ i) => stemOf(i.name));
+    const rank = (/** @type {any} */ i) => { const k = named.indexOf(i.stem); return k < 0 ? named.length : k; };
+    items.sort((a, b) => rank(a) - rank(b));
     // an MSn step reads the infusion open in Data, not the first file of the series: its key follows that file
     const infusion = (() => { try { return F.runPlanFromData(S).names[0]; } catch (_) { return ""; } })(), msnSteps = F.webMsn ? F.webMsn.STEPS : [];
     const scan = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml"), first = scan[0];
@@ -194,9 +200,11 @@
       for (const inst of b.plan.steps) emitWeb(x, { passo: inst.id, stato: "waiting", via: here(inst) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
       return;
     }
-    for (const [name, id] of Object.entries(b.ids)) if (x.ids[name] !== id) await call(x, "set_identity", { name, text: id });
+    // a changed fingerprint (an index that was loading is now in OPFS) re-keys the jobs only at the next `update`, even when the plan text is the same
+    let rekey = false;
+    for (const [name, id] of Object.entries(b.ids)) if (x.ids[name] !== id) { await call(x, "set_identity", { name, text: id }); rekey = true; }
     x.ids = b.ids;
-    if (text === x.sent) return;
+    if (text === x.sent && !rekey) return;
     x.sent = text;
     for (const c of await call(x, "update", { plan: JSON.parse(text) })) {
       const key = jk(c);
@@ -297,8 +305,10 @@
     live.logFrom = live.log.length;
     const al = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.align"), key = al && live.keys.get(`${al.id}|`);
     const table = key ? await (await kit().getPool()).fs.read(F.liveJobs.DIR + key + ".mzfeat") : null;
+    // the record of the run (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run
+    const record = F.webProv ? await F.webProv.record(live, /** @type {any[]} */ (await call(live, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
     // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})
-    return { steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.map((/** @type {any} */ i) => live.files.get(i.id)).filter(Boolean), llm: S.llmRef || null };
+    return { record, steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.map((/** @type {any} */ i) => live.files.get(i.id)).filter(Boolean), llm: S.llmRef || null };
   };
 
   /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null @param {any} S */
@@ -356,11 +366,11 @@
   });
   /** how Data classed a file of the live session (profile | centroid | mixed), or "" @param {string} name */
   const modeOf = name => { const it = x && x.ok ? x.item(name) : null; return it ? it.mode : ""; };
-  /** the words of the card «Centroid spectra»: how many files it centroided and how many were centroids already; "" for another card or before the files are known @param {string[]} ids */
+  /** the words of the card «Centroid spectra»: how many files are ready and why (centroided earlier, already centroided); "" for another card or before any file is listed @param {string[]} ids */
   const centroidNote = ids => {
     if (!x || !x.ok || !x.items.length || !ids.some(id => { const i = instOf(x, id); return i && base(i) === "spectra.centroid"; })) return "";
     const n = x.items.length, mode = x.items.filter((/** @type {any} */ i) => i.mode), done = mode.filter((/** @type {any} */ i) => x.profile(i) && i.cen).length, already = mode.filter((/** @type {any} */ i) => !x.profile(i)).length;
-    return mode.length ? `${done} of ${n} files centroided, ${already} already centroided` : "";
+    return F.liveView.centroidWords(n, mode.length, done, already);
   };
   F.live = { isCentroidStep: id => { const i = x && instOf(x, id); return !!i && base(i) === "spectra.centroid"; }, modeOf, centroidNote, run, preflight, attach, change, state: () => x, following: () => following, held: () => held, setLive, setHeld, runNow, active: () => !!(x && x.ok) };
   change();

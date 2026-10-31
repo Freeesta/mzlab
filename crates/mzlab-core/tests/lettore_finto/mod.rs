@@ -46,7 +46,7 @@ fn con_totali(extra: &mut SpectrumExtra, k: usize, level: u8, precursor: Option<
                 "beam-type collision-induced dissociation".into(),
             )],
             energy: Some(("MS:1000138".into(), 30.0)),
-            spectrum_ref: Some(format!("controllerType=0 controllerNumber=1 scan={}", k)),
+            spectrum_ref: Some(format!("controllerType=0 controllerNumber=1 scan={k}")),
         });
     }
 }

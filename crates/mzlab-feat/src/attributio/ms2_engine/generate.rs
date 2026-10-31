@@ -6,6 +6,7 @@
 use super::hits::EngineHitRow;
 use super::matcher::{Ms2Library, Query, SearchOpts};
 use crate::attributio::sources::Sources;
+use crate::sortc::SortC;
 
 /// The rows of a polarity (`"POS"` / `"NEG"`), by feature id; features without a spectrum, without a precursor or without a hit are left out.
 pub fn generate_hits(
@@ -18,7 +19,7 @@ pub fn generate_hits(
         return Vec::new();
     };
     let mut keys = p.feature_keys();
-    keys.sort_by_key(|k| k.id);
+    keys.sortc_by_key(|k| k.id);
     let sign = if pol == "POS" { 1 } else { -1 };
     let mut out = Vec::new();
     for k in keys {

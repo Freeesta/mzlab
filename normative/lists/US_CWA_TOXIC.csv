@@ -1,0 +1,66 @@
+list_id;list_version;access_date;source;name;cas;pubchem_cid;inchikey;inchikey_skeleton;smiles;formula;mono_mass;list_attribute;is_tp;parent;tp_reference;lc_esi_amenable;amenability_rule;xlogp;resolved_by;entry_ref;ec;dtxsid;form;status
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Acenaphthene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 1;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Beryllium and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 10;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Cadmium and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 11;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Carbon tetrachloride;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 12;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Chlordane (technical mixture and metabolites);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 13;;;;uvcb
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Chlorinated benzenes (other than di-chlorobenzenes);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 14;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Chlorinated ethanes (including 1,2-di-chloroethane, 1,1,1-trichloroethane, and hexachloroethane);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 15;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Chloroalkyl ethers (chloroethyl and mixed ethers);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 16;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Chlorinated naphthalene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 17;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);"Chlorinated phenols (other than those listed elsewhere; includes trichlorophenols and chlorinated cresols)";;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 18;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Chloroform;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 19;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Acrolein;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 2;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);2-chlorophenol;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 20;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Chromium and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 21;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Copper and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 22;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Cyanides;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 23;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);DDT and metabolites;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 24;;;;group
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Dichlorobenzenes (1,2-, 1,3-, and 1,4-di-chlorobenzenes);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 25;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Dichlorobenzidine;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 26;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Dichloroethylenes (1,1-, and 1,2-dichloroethylene);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 27;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);2,4-dichlorophenol;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 28;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Dichloropropane and dichloropropene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 29;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Acrylonitrile;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 3;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);2,4-dimethylphenol;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 30;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Dinitrotoluene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 31;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Diphenylhydrazine;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 32;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Endosulfan and metabolites;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 33;;;;group
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Endrin and metabolites;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 34;;;;group
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Ethylbenzene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 35;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Fluoranthene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 36;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);"Haloethers (other than those listed elsewhere; includes chlorophenylphenyl ethers, bromophenylphenyl ether, bis(dichloroisopropyl) ether, bis-(chloroethoxy) methane and polychlorinated diphenyl ethers)";;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 37;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);"Halomethanes (other than those listed elsewhere; includes methylene chloride, methylchloride, methylbromide, bromoform, dichlorobromomethane";;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 38;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Heptachlor and metabolites;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 39;;;;group
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Aldrin/Dieldrin;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 4;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Hexachlorobutadiene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 40;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Hexachlorocyclohexane;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 41;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Hexachlorocyclopentadiene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 42;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Isophorone;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 43;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Lead and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 44;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Mercury and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 45;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Naphthalene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 46;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Nickel and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 47;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Nitrobenzene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 48;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Nitrophenols (including 2,4-dinitrophenol, dinitrocresol);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 49;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Antimony and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 5;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Nitrosamines;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 50;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Pentachlorophenol;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 51;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Phenol;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 52;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Phthalate esters;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 53;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Polychlorinated biphenyls (PCBs);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 54;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Polynuclear aromatic hydrocarbons (including benzanthracenes, benzopyrenes, benzofluoranthene, chrysenes, dibenz-anthracenes, and indenopyrenes);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 55;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Selenium and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 56;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Silver and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 57;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);2,3,7,8-tetrachlorodibenzo-p-dioxin (TCDD);;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 58;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Tetrachloroethylene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 59;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Arsenic and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 6;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Thallium and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 60;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Toluene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 61;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Toxaphene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 62;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Trichloroethylene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 63;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Vinyl chloride;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 64;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Zinc and compounds;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 65;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Asbestos;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 7;;;;inorganic
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Benzene;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 8;;;;unresolved
+US_CWA_TOXIC;2026-10-01;2026-10-30;40 CFR 401.15 (toxic pollutants);Benzidine;;;;;;;;;;;;;;;unresolved;40 CFR 401.15, no. 9;;;;unresolved

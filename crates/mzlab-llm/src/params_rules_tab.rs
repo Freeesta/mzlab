@@ -86,7 +86,7 @@ fn gradient_min(sig: &Sig) -> Option<f64> {
         .filter_map(|p| p.get("t_min")?.f64())
         .collect();
     let span = |a: &[f64]| {
-        a.iter().cloned().fold(f64::MIN, f64::max) - a.iter().cloned().fold(f64::MAX, f64::min)
+        a.iter().copied().fold(f64::MIN, f64::max) - a.iter().copied().fold(f64::MAX, f64::min)
     };
     if times.len() >= 2 {
         return Some(span(&times));
@@ -192,7 +192,7 @@ fn detected(sig: &Sig, answers: &Value, acc: &mut Acc) {
         .iter()
         .filter_map(Value::f64)
         .collect();
-    let smallest = sizes.iter().cloned().fold(f64::MAX, f64::min);
+    let smallest = sizes.iter().copied().fold(f64::MAX, f64::min);
     let (size, proof) = if sizes.is_empty() {
         (sig.role_count("sample"), "roles")
     } else {

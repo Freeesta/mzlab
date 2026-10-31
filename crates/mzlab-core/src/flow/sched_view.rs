@@ -77,9 +77,16 @@ impl Sched {
     pub(super) fn push<F: FnOnce(u64, u64) -> String>(&mut self, make: F) {
         self.seq += 1;
         self.log.push((self.seq, make(self.seq, self.rev)));
-        if self.log.len() > LOG_CAP {
-            self.log.remove(0);
+        // trimmed in one go at twice the cap (amortised O(1) per event, no VecDeque code in every .wasm); readers see the last LOG_CAP
+        if self.log.len() > 2 * LOG_CAP {
+            self.log.drain(..self.log.len() - LOG_CAP);
         }
+    }
+
+    fn kept(&self) -> &[(u64, String)] {
+        self.log
+            .get(self.log.len().saturating_sub(LOG_CAP)..)
+            .unwrap_or_default()
     }
 
     /// Writes an event for every job and card that differs from what was last written.
@@ -113,7 +120,7 @@ impl Sched {
     /// The events with `seq` above the given one, as a JSON array of `flowlive/1` objects (`seq` grows by one, `rev` = number of `update` calls so far).
     pub fn events_since(&self, seq: u64) -> String {
         let texts: Vec<&str> = self
-            .log
+            .kept()
             .iter()
             .filter(|e| e.0 > seq)
             .map(|e| e.1.as_str())
@@ -123,7 +130,7 @@ impl Sched {
 
     /// The same events, one text and its `seq` each.
     pub fn event_texts(&self, seq: u64) -> Vec<(u64, String)> {
-        let after = self.log.iter().filter(|e| e.0 > seq);
+        let after = self.kept().iter().filter(|e| e.0 > seq);
         after.map(|e| (e.0, e.1.clone())).collect()
     }
 

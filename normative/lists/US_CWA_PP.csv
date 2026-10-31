@@ -1,0 +1,127 @@
+list_id;list_version;access_date;source;name;cas;pubchem_cid;inchikey;inchikey_skeleton;smiles;formula;mono_mass;list_attribute;is_tp;parent;tp_reference;lc_esi_amenable;amenability_rule;xlogp;resolved_by;entry_ref;ec;dtxsid;form;status
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Acenaphthene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 1;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2-dichloroethane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 10;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Heptachlor;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 100;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Heptachlor epoxide (BHC-hexachlorocyclohexane);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 101;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Alpha-BHC;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 102;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Beta-BHC;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 103;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Gamma-BHC (lindane);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 104;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Delta-BHC (PCB-polychlorinated biphenyls);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 105;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);PCB-1242 (Arochlor 1242);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 106;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);PCB-1254 (Arochlor 1254);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 107;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);PCB-1221 (Arochlor 1221);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 108;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);PCB-1232 (Arochlor 1232);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 109;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,1,1-trichloreothane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 11;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);PCB-1248 (Arochlor 1248);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 110;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);PCB-1260 (Arochlor 1260);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 111;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);PCB-1016 (Arochlor 1016);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 112;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Toxaphene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 113;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Antimony;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 114;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Arsenic;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 115;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Asbestos;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 116;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Beryllium;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 117;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Cadmium;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 118;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Chromium;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 119;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Hexachloroethane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 12;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Copper;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 120;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Cyanide, Total;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 121;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Lead;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 122;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Mercury;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 123;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Nickel;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 124;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Selenium;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 125;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Silver;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 126;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Thallium;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 127;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Zinc;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 128;;;;inorganic
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2,3,7,8-tetrachloro-dibenzo-p-dioxin (TCDD);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 129;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,1-dichloroethane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 13;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,1,2-trichloroethane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 14;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,1,2,2-tetrachloroethane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 15;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Chloroethane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 16;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Bis(2-chloroethyl) ether;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 18;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2-chloroethyl vinyl ether (mixed);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 19;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Acrolein;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 2;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2-chloronaphthalene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 20;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2,4, 6-trichlorophenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 21;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Parachlorometa cresol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 22;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Chloroform (trichloromethane);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 23;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2-chlorophenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 24;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2-dichlorobenzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 25;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,3-dichlorobenzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 26;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,4-dichlorobenzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 27;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);3,3-dichlorobenzidine;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 28;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,1-dichloroethylene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 29;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Acrylonitrile;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 3;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2-trans-dichloroethylene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 30;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2,4-dichlorophenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 31;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2-dichloropropane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 32;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2-dichloropropylene (1,3-dichloropropene);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 33;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2,4-dimethylphenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 34;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2,4-dinitrotoluene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 35;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2,6-dinitrotoluene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 36;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2-diphenylhydrazine;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 37;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Ethylbenzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 38;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Fluoranthene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 39;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Benzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 4;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);4-chlorophenyl phenyl ether;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 40;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);4-bromophenyl phenyl ether;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 41;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Bis(2-chloroisopropyl) ether;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 42;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Bis(2-chloroethoxy) methane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 43;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Methylene chloride (dichloromethane);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 44;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Methyl chloride (dichloromethane);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 45;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Methyl bromide (bromomethane);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 46;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Bromoform (tribromomethane);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 47;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Dichlorobromomethane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 48;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Benzidine;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 5;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Chlorodibromomethane;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 51;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Hexachlorobutadiene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 52;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Hexachloromyclopentadiene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 53;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Isophorone;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 54;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Naphthalene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 55;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Nitrobenzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 56;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2-nitrophenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 57;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);4-nitrophenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 58;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);2,4-dinitrophenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 59;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Carbon tetrachloride (tetrachloromethane);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 6;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);4,6-dinitro-o-cresol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 60;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);N-nitrosodimethylamine;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 61;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);N-nitrosodiphenylamine;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 62;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);N-nitrosodi-n-propylamin;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 63;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Pentachlorophenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 64;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Phenol;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 65;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Bis(2-ethylhexyl) phthalate;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 66;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Butyl benzyl phthalate;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 67;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Di-N-Butyl Phthalate;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 68;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Di-n-octyl phthalate;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 69;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Chlorobenzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 7;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Diethyl Phthalate;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 70;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Dimethyl phthalate;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 71;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2-benzanthracene (benzo(a) anthracene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 72;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Benzo(a)pyrene (3,4-benzo-pyrene);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 73;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);3,4-Benzofluoranthene (benzo(b) fluoranthene);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 74;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);11,12-benzofluoranthene (benzo(b) fluoranthene);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 75;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Chrysene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 76;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Acenaphthylene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 77;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Anthracene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 78;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,12-benzoperylene (benzo(ghi) perylene);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 79;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2,4-trichlorobenzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 8;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Fluorene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 80;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Phenanthrene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 81;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);1,2,5,6-dibenzanthracene (dibenzo(,h) anthracene);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 82;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Indeno (,1,2,3-cd) pyrene (2,3-o-pheynylene pyrene);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 83;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Pyrene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 84;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Tetrachloroethylene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 85;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Toluene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 86;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Trichloroethylene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 87;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Vinyl chloride (chloroethylene);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 88;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Aldrin;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 89;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Hexachlorobenzene;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 9;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Dieldrin;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 90;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Chlordane (technical mixture and metabolites);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 91;;;;uvcb
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);4,4-DDT;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 92;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);4,4-DDE (p,p-DDX);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 93;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);4,4-DDD (p,p-TDE);;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 94;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Alpha-endosulfan;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 95;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Beta-endosulfan;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 96;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Endosulfan sulfate;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 97;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Endrin;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 98;;;;unresolved
+US_CWA_PP;2026-10-01;2026-10-30;40 CFR 423 Appendix A (126 Priority Pollutants);Endrin aldehyde;;;;;;;;;;;;;;;unresolved;40 CFR 423 App. A, no. 99;;;;unresolved

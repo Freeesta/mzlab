@@ -3,6 +3,7 @@
 //! This layer only wires them and explains the choice: the program chooses (the candidate with the best score), the caller can always change it and sees why.
 //! The confidence of a candidate is its share of the sum of the scores of the list, never an identification. Used by mzFinder (Tabui, administrator mode).
 
+use crate::sortc::SortC;
 use mzlab_core::composition::{compose, parse_elements, Opts as ComposeOpts, Ranges};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
@@ -262,7 +263,7 @@ fn search(mz: f64, z: i32, obs: Vec<(f64, f64)>, r: &Ranges, o: &Opts) -> Result
 /// Confidence (share of the scores), the reasons and the choice. Without a pattern the score is 0 and the mass term ranks and weighs.
 fn judge(cands: &mut [Candidate], with_pattern: bool) -> (Option<usize>, Vec<usize>) {
     let key = |c: &Candidate| if with_pattern { c.score } else { c.mass_term };
-    cands.sort_by(|a, b| key(b).total_cmp(&key(a)));
+    cands.sortc_by(|a, b| key(b).total_cmp(&key(a)));
     let sum: f64 = cands.iter().map(key).sum();
     for c in cands.iter_mut() {
         c.confidence = if sum > 0.0 { key(c) / sum } else { 0.0 };

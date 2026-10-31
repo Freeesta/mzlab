@@ -1,0 +1,26 @@
+/* Channel picker of the chromatogram (what to plot: channels of scans, detectors, log) and MRM panels (canali.js): a button and a popover with grouped rows; colours only from the page variables. */
+.can{position:relative;display:inline-flex}
+.can-pop{min-width:440px;max-width:min(560px,92vw);max-height:60vh;overflow:auto;padding:6px 8px;gap:2px}
+.can-hd,.can-row{display:grid;grid-template-columns:minmax(120px,1fr) 52px 54px 76px;gap:6px;align-items:center}
+.can-pop:has(.can-fl) .can-hd,.can-pop:has(.can-fl) .can-row{grid-template-columns:minmax(120px,1fr) 52px 54px 76px 32px}
+.can-hd{color:var(--muted);font-size:11px;border-bottom:1px solid var(--line);padding:0 4px 3px}
+.can-row{min-height:28px;padding:0 4px;border-radius:5px;cursor:pointer;font-size:12px}
+.can-row:hover{background:var(--hover,var(--line))}
+.can-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.can-row[aria-selected=true]{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.can-in{display:flex;align-items:center;gap:6px;min-width:0}
+.can-car{width:16px;text-align:center;color:var(--muted);flex:none}
+.can-ck{width:14px;height:14px;border:1.5px solid var(--muted);border-radius:3px;flex:none;display:inline-block;position:relative}
+.can-row[aria-selected=true] .can-ck{background:var(--accent);border-color:var(--accent)}
+.can-row[aria-selected=true] .can-ck::after{content:"";position:absolute;left:3px;top:0;width:4px;height:8px;border:solid var(--panel);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.can-et{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.can-sg,.can-n,.can-rt,.can-fl{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.can-n,.can-fl{text-align:right}
+@media(pointer:coarse){.can-row{min-height:40px}}
+.pnl .canb,.canb{display:inline-flex;align-items:center;justify-content:space-between;gap:6px;min-width:10em;max-width:16em;min-height:24px}
+.can-bt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.can-dn{color:var(--muted);flex:none}
+.can-gh{color:var(--muted);font-size:11px;font-weight:600;padding:6px 4px 2px}
+.can-rd{border-radius:50%}
+.can-row[aria-selected=true] .can-rd::after{left:2px;top:2px;width:6px;height:6px;border:0;border-radius:50%;background:var(--panel);transform:none}
+.ibkc{display:inline-flex;align-items:center;gap:2px}.ibkc button{min-height:24px;min-width:24px;background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0 4px}.ibkc button:focus-visible{outline:2px solid var(--accent)}

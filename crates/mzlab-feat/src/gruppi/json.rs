@@ -178,7 +178,23 @@ fn cell_json(o: &mut Out, c: &super::CondRow) {
             .fint(p.n as i64)
             .raw("}");
     }
-    o.raw("],\"prev\":");
+    o.raw("]");
+    if !c.dark.is_empty() {
+        o.raw(",\"dark\":[");
+        for (i, p) in c.dark.iter().enumerate() {
+            if i > 0 {
+                o.raw(",");
+            }
+            o.raw("{\"t\":").fnum(p.t).raw(",\"area\":").fnum(p.area);
+            o.raw(",\"sd\":")
+                .fopt(p.sd)
+                .raw(",\"n\":")
+                .fint(p.n as i64)
+                .raw("}");
+        }
+        o.raw("]");
+    }
+    o.raw(",\"prev\":");
     match &c.prev {
         None => {
             o.raw("null");

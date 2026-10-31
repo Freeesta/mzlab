@@ -1,0 +1,32 @@
+# By hand only: the sizes of engine, hr and attributio-all built with the stable toolchain and with a dated nightly (-Zlocation-detail=none, build-std with
+# panic=immediate-abort), tools/wasm_nightly.sh. An experiment: the production build never uses it; the table goes to the summary of the run.
+name: wasm-nightly
+
+on:
+  workflow_dispatch:
+    inputs:
+      nightly:
+        description: "dated nightly toolchain"
+        default: "nightly-2026-10-20"
+
+permissions:
+  contents: read
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+      - name: Build and measure
+        env:
+          NIGHTLY: ${{ inputs.nightly }}
+        run: |
+          tools/wasm_nightly.sh "$RUNNER_TEMP/nightly" "$NIGHTLY" | tee table.md
+          { echo "### wasm-nightly ($NIGHTLY, bytes after wasm-opt -O3 @motore)"; cat table.md; } >> "$GITHUB_STEP_SUMMARY"

@@ -17,21 +17,23 @@ export const packXic = (mz, tol, list) => {
 export async function indexXicBin(/** @type {any} */ b, /** @type {URL} */ u, /** @type {number} */ level, /** @type {number} */ t0) {
   const { slots, rpc, recycle, stats } = b, q = u.searchParams;
   const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), mz = Number(q.get("mz") ?? NaN), tol = q.get("tol") === null || q.get("tol") === "" ? 0.35 : Number(q.get("tol"));
-  if (!ks.length || !isFinite(mz) || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
+  if (!ks.length || !isFinite(mz) || !isFinite(tol) || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
   await Promise.all(ks.map(k => slots[k].opening));
   if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) {
     const r = await b.handle("GET", "/api/xic" + u.search);
     return r && r.text ? { status: 200, buf: packXic(mz, tol, JSON.parse(r.text).traces), ms: performance.now() - t0 } : r;
   }
-  const list = [];
-  for (const k of ks) {
-    const r = await rpc({ op: "idxxicbin", slot: k, level, mz, tol });
-    if (r.dead || r.error) return null;
-    const a = r.n ? new Float64Array(r.buf, 0, r.len) : new Float64Array(0);
-    list.push({ k, rt: a.subarray(0, r.n), y: a.subarray(r.n, 2 * r.n), back: r.buf });
-  }
-  const buf = packXic(mz, tol, list);
-  for (const t of list) if (t.back) recycle(t.back);                  // the worker's buffers go back once copied into the answer
+  // the worker answers in order, so the requests go out together and the answers come back in the order of `ks`
+  const rs = await Promise.all(ks.map(k => rpc({ op: "idxxicbin", slot: k, level, mz, tol })));
+  let buf;
+  try {
+    if (rs.some(r => r.dead || r.error)) return null;
+    const list = rs.map((r, i) => {
+      const a = r.n ? new Float64Array(r.buf, 0, r.len) : new Float64Array(0);
+      return { k: ks[i], rt: a.subarray(0, r.n), y: a.subarray(r.n, 2 * r.n) };
+    });
+    buf = packXic(mz, tol, list);
+  } finally { for (const r of rs) if (r.buf) recycle(r.buf); }   // the worker's buffers go back once copied into the answer, also when one answer failed
   stats.rust++;
   return { status: 200, buf, ms: performance.now() - t0 };
 }

@@ -13,8 +13,8 @@ const BIANCO = (() => {
   let res = null;
   Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
-  const fmt = (v, d = 4) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
-  const num = v => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(2) : v.toFixed(1));
+  const fmt = (v, d = 4) => I18N.dash(v, d);
+  const num = v => I18N.sci(v, 1);
 
   async function run() {
     const tb = TABELLA.table;
@@ -61,7 +61,7 @@ ${tb ? "" : `<p class="sm">${t("blank.err.table")}</p>`}<div id="blank-msg" clas
       e.preventDefault();
       const f = numIt(box.querySelector("#blank-f").value), n = parseInt(box.querySelector("#blank-n").value, 10), msg = box.querySelector("#blank-msg");
       st.factor = f; st.stat = box.querySelector("#blank-s").value; st.min = n; save(); msg.textContent = "";
-      try { await run(); paintRes(box); } catch (err) { msg.textContent = String(err && err.message || err); res = null; paintRes(box); }
+      try { await run(); paintRes(box); } catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); res = null; paintRes(box); }
     };
     box.onclick = e => {
       if (e.target.id === "blank-xlsx" && res) dlx("blank-subtraction.xlsx", [{ name: "Kept", head: head(), rows: body(res.r.kept), widths: [10, 12, 8, 14, 14, 14, 8] }, { name: "Discarded", head: head(), rows: body(res.r.discarded), widths: [10, 12, 8, 14, 14, 14, 8] }], { table: "blank" });

@@ -146,7 +146,7 @@ impl<R: ReadAt> Routes<R> {
             mz = cm;
             y = cy;
         }
-        Ok(Some(Binned { mz, y, n, sel, in_win, scan_ids: ar.scan_ids.iter().map(|&v| v as i64).collect() }))
+        Ok(Some(Binned { mz, y, n, sel, in_win, scan_ids: ar.scan_ids.clone() }))
     }
 }
 

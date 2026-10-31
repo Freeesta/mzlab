@@ -5,6 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import ci_metrics as s  # noqa: E402
+import ci_metrics_file  # noqa: E402
+s.ci_metrics_file = ci_metrics_file
 
 
 def job(nome, concl, t0, t1, steps=()):
@@ -137,7 +139,7 @@ def test_wasm_dimensioni(tmp_path):
     (tmp_path / "wasm-feat" / "hr").mkdir(parents=True)
     (tmp_path / "wasm-feat" / "hr" / "x.wasm").write_bytes(b"0" * 1000)
     m = w.misura(tmp_path)
-    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1339392}
+    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1605632}
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("wasm-dimensioni.json", json.dumps(m))
@@ -165,8 +167,8 @@ def test_recenti_cursore_carico_compatta_esporta(tmp_path):
     assert cur == "2026-10-21T10:30:30Z" and {r["run_id"] for r in righe if r["tipo"] == "run"} == {2}
     car = [r for r in righe if r["tipo"] == "carico"][0]
     assert (car["job_in_coda"], car["job_in_corso"]) == (2, 2)
-    assert s.accoda(righe, str(dati)) == len(righe) and s.leggi(str(dati))[0]["v"] == 1
-    ev = s.leggi(str(dati))
+    assert s.accoda(righe, str(dati)) == len(righe) and s.leggi_tutti(str(dati))[0]["v"] == 1
+    ev = s.leggi_tutti(str(dati))
     comp = s.dati_ci.compatta(ev, s.datetime(2026, 12, 1, tzinfo=s.timezone.utc))
     assert all("passi" not in r for r in comp) and any("passi_n" in r for r in comp)
     files = s.dati_ci.esporta(ev, str(tmp_path / "csv"))
@@ -262,3 +264,45 @@ def test_riempi_verde_una_volta_sola():
     assert s.riempi_verde(righe, api) == 2
     assert [r["verde_a_unione_s"] for r in righe] == [1800, 5, None] and righe[2]["verde_provato"]
     assert s.riempi_verde(righe, api) == 0 and len(chiamate) == 2
+
+
+def _riga(i, **kw):
+    return {"tipo": "run", "run_id": i, "run_attempt": 1, "ts_utc": "2026-10-01T00:00:00Z", **kw}
+
+
+def test_rotazione_mensile_e_file_vecchio_congelato(tmp_path, monkeypatch):
+    dati = str(tmp_path / "eventi.jsonl")
+    s.scrivi_righe(dati, [_riga(1), _riga(2)])           # legacy single file
+    ottobre = s.datetime(2026, 10, 30, tzinfo=s.timezone.utc)
+    novembre = s.datetime(2026, 11, 1, tzinfo=s.timezone.utc)
+    assert s.attivo(dati, ottobre).endswith("eventi-2026-10.jsonl")
+    assert s.attivo(dati, novembre).endswith("eventi-2026-11.jsonl")
+    monkeypatch.setattr(s.dati_ci, "adesso_dt", lambda: ottobre)
+    assert s.accoda([_riga(2), _riga(3)], dati) == 1      # run 2 is already in the legacy file
+    assert len(s.leggi(dati)) == 2                        # legacy file untouched
+    assert [r["run_id"] for r in s.leggi_tutti(dati)] == [1, 2, 3]
+    monkeypatch.setattr(s.dati_ci, "adesso_dt", lambda: novembre)
+    assert s.accoda([_riga(3), _riga(4)], dati) == 1      # dedup across months
+    assert [Path(p).name for p in s.segmenti(dati)] == ["eventi.jsonl", "eventi-2026-10.jsonl", "eventi-2026-11.jsonl"]
+
+
+def test_parte_successiva_oltre_il_limite(tmp_path, monkeypatch):
+    dati = str(tmp_path / "eventi.jsonl")
+    mese = s.datetime(2026, 10, 5, tzinfo=s.timezone.utc)
+    monkeypatch.setattr(s.ci_metrics_file, "LIMITE_B", 100)
+    s.scrivi_righe(str(tmp_path / "eventi-2026-10.jsonl"), [_riga(i, x="y" * 50) for i in range(5)])
+    assert s.attivo(dati, mese).endswith("eventi-2026-10-2.jsonl")
+    s.scrivi_righe(str(tmp_path / "eventi-2026-10-2.jsonl"), [_riga(9, x="y" * 200)])
+    assert s.attivo(dati, mese).endswith("eventi-2026-10-3.jsonl")
+    assert [Path(p).name for p in s.segmenti(dati)] == ["eventi-2026-10.jsonl", "eventi-2026-10-2.jsonl"]
+
+
+def test_comandi_saltano_i_file_congelati(tmp_path, monkeypatch):
+    dati = tmp_path / "eventi.jsonl"
+    s.scrivi_righe(str(dati), [{"tipo": "pr", "azione": "unita", "pr": 1, "sha": "a", "ts_utc": "2026-10-01T00:00:00Z"}])
+    monkeypatch.setattr(s.ci_metrics_file, "LIMITE_B", 10)                # the legacy file counts as oversized
+    chiamate = []
+    monkeypatch.setattr(s, "riempi_verde", lambda righe, massimo=30: chiamate.append(1) or 0)
+    monkeypatch.setattr(sys, "argv", ["ci_metrics.py", "riempi-verde", "--dati", str(dati)])
+    before = dati.read_bytes()
+    assert s.main() == 0 and not chiamate and dati.read_bytes() == before

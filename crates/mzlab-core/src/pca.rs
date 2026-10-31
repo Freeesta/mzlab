@@ -33,7 +33,7 @@ impl Default for PcaOpts {
 fn impute(x: &mut [Vec<f64>]) -> usize {
     let mut n = 0;
     for r in x.iter_mut() {
-        let min = r.iter().cloned().filter(|&v| v > 0.0).fold(f64::INFINITY, f64::min);
+        let min = r.iter().copied().filter(|&v| v > 0.0).fold(f64::INFINITY, f64::min);
         if r.iter().all(|&v| v > 0.0) {
             continue;
         }
@@ -47,7 +47,7 @@ fn impute(x: &mut [Vec<f64>]) -> usize {
 
 /// Column `j` of a row-major matrix with `p` columns.
 fn col(z: &[f64], p: usize, j: usize) -> impl Iterator<Item = f64> + '_ {
-    z.iter().skip(j).step_by(p).cloned()
+    z.iter().skip(j).step_by(p).copied()
 }
 
 /// `std(axis=0, ddof=1)` of the columns of an `n × p` matrix: rows added in order, as numpy does along the first axis.
@@ -188,7 +188,7 @@ pub fn pca_analysis(matrix: &[Vec<f64>], roles: &[String], groups: Option<&[Opti
     if matrix.is_empty() {
         return user("err.stat.pca.nofeatures", "no feature in the table");
     }
-    if sm.iter().any(|&c| c >= ncols(matrix)) || groups.map_or(false, |g| g.len() != roles.len()) {
+    if sm.iter().any(|&c| c >= ncols(matrix)) || groups.is_some_and(|g| g.len() != roles.len()) {
         return bad("index out of bounds: the table has fewer columns than files");
     }
     let mut steps = vec![step("table", matrix.len())];
@@ -201,7 +201,7 @@ pub fn pca_analysis(matrix: &[Vec<f64>], roles: &[String], groups: Option<&[Opti
     steps.push(step("blank", keep.iter().filter(|k| **k).count()).b("applied", has_blank));
     let x: Vec<Vec<f64>> = matrix.iter().map(|r| sm.iter().map(|&c| r[c]).collect()).collect();
     let floor = o.min_intensity.max(f64::MIN_POSITIVE);
-    keep.iter_mut().zip(&x).for_each(|(k, r)| *k = *k && r.iter().cloned().fold(f64::NEG_INFINITY, f64::max) >= o.min_intensity);
+    keep.iter_mut().zip(&x).for_each(|(k, r)| *k = *k && r.iter().copied().fold(f64::NEG_INFINITY, f64::max) >= o.min_intensity);
     steps.push(step("intensity", keep.iter().filter(|k| **k).count()).n("min", o.min_intensity));
     keep.iter_mut().zip(&x).for_each(|(k, r)| *k = *k && r.iter().filter(|&&v| v >= floor).count() as i64 >= o.min_samples);
     steps.push(step("presence", keep.iter().filter(|k| **k).count()).i("min_samples", o.min_samples));
@@ -232,7 +232,7 @@ fn analyse(sm: &[usize], idx: Vec<usize>, filled: Vec<Vec<f64>>, n_imp: usize, s
     let stab: Vec<f64> = (0..p).map(|f| {
         let w: Vec<f64> = (0..ks).map(|j| full.loadings[f * full.k + j].powi(2)).collect();
         let sw: f64 = w.iter().sum();
-        if sw > 0.0 { w.iter().zip(&stab_pc[f * ks..]).map(|(a, b)| a * b).sum::<f64>() / sw.max(1e-300) } else { stab_pc[f * ks..(f + 1) * ks].iter().cloned().fold(f64::INFINITY, f64::min) }
+        if sw > 0.0 { w.iter().zip(&stab_pc[f * ks..]).map(|(a, b)| a * b).sum::<f64>() / sw.max(1e-300) } else { stab_pc[f * ks..(f + 1) * ks].iter().copied().fold(f64::INFINITY, f64::min) }
     }).collect();
     let ell = groups.map_or(Obj::new().done(), |g| ellipses(g, sm, &full, n));
     let features = Value::Arr(live.iter().map(|&f| int(idx[f] as i64)).collect());

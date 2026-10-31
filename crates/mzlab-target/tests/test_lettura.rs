@@ -12,7 +12,7 @@ fn path_sostanze_csv() -> PathBuf {
 #[test]
 fn test_caricamento_e_validazione_645_sostanze() {
     let path = path_sostanze_csv();
-    assert!(path.exists(), "Target CSV file not found at {:?}", path);
+    assert!(path.exists(), "Target CSV file not found at {path:?}");
 
     let file = File::open(&path).expect("Failed to open target CSV");
     let entries = parse_target_csv(file).expect("Failed to parse target CSV");
@@ -142,4 +142,77 @@ fn test_rfc4180_parsing_casi_limite() {
     let bad_csv = "id,name_en\n1,test\n";
     let res = parse_target_csv(Cursor::new(bad_csv));
     assert!(res.is_err());
+}
+
+#[test]
+fn test_formula_mass_warnings() {
+    let entries = parse_target_csv(File::open(path_sostanze_csv()).unwrap()).unwrap();
+    assert!(validate_entries(&entries).warnings.is_empty());
+
+    let base = entries[0].clone();
+    let with = |formula: &str, mass: f64| {
+        let mut e = base.clone();
+        e.neutral_formula = formula.to_string();
+        e.monoisotopic_mass = mass;
+        e.mz_mh = mass + AdductType::MH.delta_mass();
+        e.mz_mna = mass + AdductType::MNa.delta_mass();
+        e.mz_mnh4 = mass + AdductType::MNH4.delta_mass();
+        e
+    };
+    // right formula, within 1 mDa, parenthesised and lower-case written: no warning
+    let good = vec![
+        with("C6H12O6", 180.063388),
+        with("C6H12O6", 180.0640),
+        with("C(OH)2", 46.005479),
+        with("c6h12o6", 180.063388),
+    ];
+    let r = validate_entries(&good);
+    assert!(r.is_valid() && r.warnings.is_empty(), "{:?}", r.warnings);
+
+    // a formula that weighs 2 H less than the stated mass: kept as valid, flagged once
+    let r = validate_entries(&[with("C6H10O6", 180.063388)]);
+    assert!(r.is_valid());
+    assert_eq!(r.warnings.len(), 1);
+    assert_eq!(r.warnings[0].entry_id, base.id);
+    assert!(r.warnings[0].message.contains("C6H10O6"));
+
+    // unreadable formulas (isotope marks, ionic charges, unsupported elements) cannot be weighed: no warning
+    let r = validate_entries(&[
+        with("[13C]C5H12O6", 181.067),
+        with("C10H12N+", 146.0964),
+        with("C6H12FeO6", 180.063388),
+    ]);
+    assert!(r.warnings.is_empty());
+}
+
+const HEADER: &str = "id,name_en,name_it,neutral_formula,monoisotopic_mass,mz_MH,mz_MNa,mz_MNH4,smiles,inchikey,inchikey_connectivity,cas,pubchem_cid,effect_class,chemical_class,role,psychoactive,synonyms,check";
+
+fn row(mass: &str, mh: &str) -> String {
+    format!("{HEADER}\nx,X,X,C7H17N,{mass},{mh},138.12532,133.169923,CCC(C)CC(C)N,YAHRDLICUYEDAU-UHFFFAOYSA-N,YAHRDLICUYEDAU,,7753,stimulant,others,active_principle,yes,,\n")
+}
+
+#[test]
+fn test_valori_non_finiti_rifiutati_dal_csv() {
+    assert!(parse_target_csv(Cursor::new(row("115.1361", "116.143376"))).is_ok());
+    for bad in ["NaN", "nan", "-nan", "inf", "-inf", "infinity"] {
+        for text in [row(bad, "116.143376"), row("115.1361", bad)] {
+            assert!(
+                parse_target_csv(Cursor::new(text)).is_err(),
+                "{bad} must be rejected"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_valori_non_finiti_rifiutati_dalla_validazione() {
+    let mut entries = parse_target_csv(Cursor::new(row("115.1361", "116.143376"))).unwrap();
+    assert!(validate_entries(&entries).is_valid());
+    entries[0].monoisotopic_mass = f64::NAN;
+    assert!(!validate_entries(&entries).is_valid());
+    entries[0].monoisotopic_mass = f64::INFINITY;
+    assert!(!validate_entries(&entries).is_valid());
+    entries[0].monoisotopic_mass = 115.1361;
+    entries[0].mz_mh = f64::NAN;
+    assert!(!validate_entries(&entries).is_valid());
 }

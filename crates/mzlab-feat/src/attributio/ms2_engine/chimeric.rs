@@ -3,6 +3,8 @@
 //! were co-isolated, so their fragments may be in the spectrum. The window is the instrument's (`isolation_window` of the campaign, otherwise 3.0 for a Fusion
 //! and 1.5 for the others). The intruders are shown to the chemist; nothing is removed from the spectrum.
 
+use crate::sortc::SortC;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FeaturePoint {
     pub pol: String,
@@ -58,7 +60,7 @@ pub fn intruders(
             delta_rt: round(f.rt - target.rt, 2),
         })
         .collect();
-    out.sort_by(|a, b| a.delta_mz.abs().total_cmp(&b.delta_mz.abs()));
+    out.sortc_by(|a, b| a.delta_mz.abs().total_cmp(&b.delta_mz.abs()));
     out
 }
 

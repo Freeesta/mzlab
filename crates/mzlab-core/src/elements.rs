@@ -21,6 +21,12 @@ pub const MASS: [(&str, f64); 14] = [
     ("Se", 79.9165218),
 ];
 pub const ELECTRON: f64 = 0.000548579909;
+/// Proton mass (CODATA); the neutral-to-ion shift of `[M+H]+` is this, not H.
+pub const PROTON: f64 = 1.00727646688;
+/// Proton mass rounded to 6 decimals: the value the Python reference and the pinned goldens use.
+pub const PROTON_6DP: f64 = 1.007276;
+/// Mass step of one 13C isotopologue (13C - 12C, rounded to 6 decimals).
+pub const C13_STEP: f64 = 1.003355;
 const COMMON2: [&str; 16] = [
     "Cl", "Br", "Si", "Na", "Se", "Li", "Mg", "Ca", "Al", "Fe", "Zn", "Cu", "Mn", "As", "Hg", "Cd",
 ];
@@ -108,6 +114,34 @@ fn num_at(c: &[char], i: &mut usize) -> Option<u64> {
             .parse()
             .unwrap_or(u64::MAX / 4)
     })
+}
+
+/// Lenient element counts of a formula text, for reading what other tools wrote (`C9H10N2O` and `N2OC9H10` are equal).
+/// Anything that is not an element symbol (charge signs, brackets, spaces) is skipped, a missing or unreadable count (too many
+/// digits for `u64`) is 1, repeated symbols add up, and symbols are not checked against the element table.
+pub fn parse_formula_lenient(s: &str) -> std::collections::BTreeMap<String, u64> {
+    let b = s.as_bytes();
+    let mut d = std::collections::BTreeMap::new();
+    let mut i = 0;
+    while i < b.len() {
+        if !b[i].is_ascii_uppercase() {
+            i += 1;
+            continue;
+        }
+        let mut j = i + 1;
+        if j < b.len() && b[j].is_ascii_lowercase() {
+            j += 1;
+        }
+        let k = j;
+        while j < b.len() && b[j].is_ascii_digit() {
+            j += 1;
+        }
+        let n = s[k..j].parse().unwrap_or(1);
+        let c = d.entry(s[i..k].to_string()).or_insert(0u64);
+        *c = c.saturating_add(n);
+        i = j;
+    }
+    d
 }
 
 /// 'C15H12N2O' -> [("C",15),("H",12),("N",2),("O",1)]. Parentheses are allowed: 'C(OH)2'.
@@ -268,6 +302,24 @@ pub(crate) fn embedded_adduct(text: &str) -> (String, Option<&'static str>) {
         }
     }
     (t, None)
+}
+
+/// The m/z and the polarity of an ion written as text: a neutral formula with its adduct (`C8H10N4O2+H`, `C9H10Cl2N2O [M+Na]+`) or the formula of the ion with its charge sign (`C8H11N4O2+`, `C7H5O2-`).
+/// A formula with neither is refused (`err.formula.noIon`): the charge decides the mass of an electron.
+pub fn ion_text_mz(text: &str) -> Result<(f64, i8)> {
+    let (head, adduct) = embedded_adduct(text);
+    if let Some(a) = adduct {
+        let mz = ion_mz(mass(&parse_formula(&head)?), a).expect("an adduct of the table");
+        return Ok((mz, if a.ends_with('-') { -1 } else { 1 }));
+    }
+    let t = head.trim();
+    if let Some(f) = t.strip_suffix('+') {
+        Ok((mass(&parse_formula(f)?) - ELECTRON, 1))
+    } else if let Some(f) = t.strip_suffix('-') {
+        Ok((mass(&parse_formula(f)?) + ELECTRON, -1))
+    } else {
+        Err(Error::new("err.formula.noIon").with("formula", t))
+    }
 }
 
 /// `/api/formula`: neutral mass and ion m/z of every adduct, exact, at 1 decimal and nominal. With the adduct `none` the text is an ion: an adduct written in it (`+H`, `[M+H]+`) is the one used, otherwise the mass of the formula is the m/z.

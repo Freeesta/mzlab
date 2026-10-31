@@ -55,7 +55,7 @@ pub(super) fn estimate() -> Step {
 }
 
 pub(super) fn detect() -> Step {
-    let params = vec![
+    let mut params = vec![
         polarity(),
         Param::number("floor", "Noise floor")
             .min(0.0)
@@ -68,10 +68,34 @@ pub(super) fn detect() -> Step {
             .default_num(200_000.0)
             .unit("counts"),
         axis(),
+        Param::pair("rt_range", "RT range", 0.0)
+            .unit("min")
+            .doc("Optional [min, max]: only rows eluting inside are kept, for every file; left empty, all rows"),
         Param::number("mass_defect", "Mass defect")
             .unit("Da")
             .estimate()
             .doc("Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty")
+            .advanced(),
+        Param::integer("min_points", "Minimum points")
+            .min(2.0)
+            .default_num(5.0)
+            .advanced(),
+        Param::integer("max_gap", "Maximum gap")
+            .min(0.0)
+            .default_num(2.0)
+            .unit("scans")
+            .advanced(),
+        Param::integer("long_trace", "Long trace")
+            .min(1.0)
+            .default_num(400.0)
+            .unit("scans")
+            .doc("A trace longer than this is background and is not taken")
+            .advanced(),
+        Param::number("merge_overlap", "Merge overlap")
+            .min(0.0)
+            .max(1.0)
+            .default_num(0.0)
+            .doc("Rows within the mass tolerance are one ion when their scans overlap by this share of the shorter trace")
             .advanced(),
         Param::integer("budget", "Working memory")
             .min(1.0)
@@ -80,6 +104,7 @@ pub(super) fn detect() -> Step {
             .noresult()
             .advanced(),
     ];
+    params.extend(noise_gates());
     Step {
         cv: Some("MS:1000035"),
         ins: vec![Port::new("index", DataType::Mzidx, "Scan index")
@@ -100,6 +125,22 @@ pub(super) fn detect() -> Step {
             "Finds the chromatographic peaks of the MS1 scans of each file, with their quality, isotopologues and families. The parameters are common to every algorithm; each algorithm adds its own.",
         )
     }
+}
+
+/// The two gates against noise rows (`lrnoise`): the S/N gate is on by default only in the unit profile, the width gate is a choice.
+fn noise_gates() -> Vec<Param> {
+    vec![
+        Param::number("min_width", "Minimum width")
+            .min(0.0)
+            .default_num(0.0)
+            .doc("Drops features narrower than this share of the typical peak width of the file; 0 = off")
+            .advanced(),
+        Param::number("min_snr", "Minimum S/N")
+            .min(0.0)
+            .default_num(0.0)
+            .doc("A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off")
+            .advanced(),
+    ]
 }
 
 fn preset_hr() -> Preset {
@@ -132,8 +173,9 @@ fn preset_lr() -> Preset {
             ("axis", text("Da")),
             ("floor", num(3_000.0)),
             ("min_height", num(7_000.0)),
+            ("min_snr", num(3.0)),
         ],
-        evidence: "LR_FLOOR and LR_MIN_HEIGHT of recipe_lr.rs; the preview proposes the values of each file",
+        evidence: "LR_FLOOR, LR_MIN_HEIGHT and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file; on profile scans the floor is the mode of the noise lump",
         algorithm: Some("masstrace"),
     }
 }
@@ -154,29 +196,7 @@ fn masstrace() -> Algorithm {
             spectrum_mode: vec!["centroid", "profile"],
             ..Applicability::default()
         },
-        params: vec![
-            Param::integer("min_points", "Minimum points")
-                .min(2.0)
-                .default_num(5.0)
-                .advanced(),
-            Param::integer("max_gap", "Maximum gap")
-                .min(0.0)
-                .default_num(2.0)
-                .unit("scans")
-                .advanced(),
-            Param::integer("long_trace", "Long trace")
-                .min(1.0)
-                .default_num(400.0)
-                .unit("scans")
-                .doc("A trace longer than this is background and is not taken")
-                .advanced(),
-            Param::number("merge_overlap", "Merge overlap")
-                .min(0.0)
-                .max(1.0)
-                .default_num(0.0)
-                .doc("Two rows of the two grids within the mass tolerance are one ion when their scans overlap by this share of the shorter trace; 0 keeps only the test of apex and edges")
-                .advanced(),
-        ],
+        params: Vec::new(),
         status: Status::Available,
     }
 }
@@ -257,6 +277,7 @@ pub(super) fn ms2_link() -> Step {
                 .default_num(6.0)
                 .unit("ppm")
                 .doc("Window of the peak in the MS1 scan of the precursor; at unit resolution the engine reads a negative value as Da"),
+            super::table::tol_da(),
             Param::number("weak", "Weak purity")
                 .min(0.0)
                 .max(1.0)

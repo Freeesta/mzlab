@@ -71,7 +71,7 @@ try:
             assert pg.locator("#hrbar .hl").first.inner_text().strip() != "", "words next to the icons when there is room"
         step("one row, one pair of arrows per meaning, one undo/redo, words next to the icons", one_row)
         def narrow():
-            pg.set_viewport_size({"width": 760, "height": 1400}); pg.wait_for_timeout(600)
+            pg.set_viewport_size({"width": 600, "height": 1400}); pg.wait_for_timeout(600)
             tops = pg.evaluate("(()=>{const t=[...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>b.getBoundingClientRect().top);return Math.max(...t)-Math.min(...t)<12?[0]:t})()")
             assert len(tops) == 1, tops
             assert pg.is_visible("#hr-more"), "what does not fit goes into the «⋯» menu"
@@ -82,7 +82,10 @@ try:
         def no_dup():
             # a button of the bar above must not repeat a button of the header of a cell: the bar keeps global actions or actions on several cells
             bar = set(pg.evaluate("[...document.querySelectorAll('#hrbar [data-hb]')].map(b=>b.dataset.hb)"))
-            assert bar == {"zall", "add", "type", "lib", "tree"}, bar
+            assert bar - {"tree"} == {"add", "type"}, bar
+            # the MSn tree belongs to every file with MS2 or higher scans (infusion or DDA), not to an MS1-only file
+            assert ("tree" in bar) == pg.evaluate("tabFiles('ms2').length>0"), bar
+            assert pg.evaluate("!!document.querySelector('#hrbar [data-hb=tree]') && !document.querySelector('#hrbar [data-hb=tree]').hidden") == ("tree" in bar), bar
             same = {"pin": "pin", "del": "x", "norm": "disp", "peaks": "iauto", "copy": "dl", "xls": "dl", "zundo": "undo", "zredo": "redo", "zoom": "fit"}
             hd = set(pg.evaluate("[...document.querySelectorAll('.pnl .hd [data-a],.pnl .hd [data-bf]')].map(b=>b.dataset.a||b.dataset.bf)")) | {"x"}
             assert not [k for k in same if k in bar and same[k] in hd], bar

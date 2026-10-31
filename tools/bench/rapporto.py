@@ -111,6 +111,22 @@ def a_markdown(r: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+def identificazione_affiancata(verita: list[dict], tabelle: list[dict], strutture: dict[str, str]) -> dict:
+    """Identification endpoints of every table side by side. Each tool keeps its own levels (`livelli`: standards per level reached): they are never converted."""
+    out = {}
+    for t in tabelle:
+        m = metriche.identificazione(verita, t, strutture)
+        out[f"{t['strumento']}/{t['config']}"] = {k: m[k] for k in ("n", "richiamo_colpi", "mrr", "falsi", "livelli")}
+    return out
+
+
+def identificazione_markdown(r: dict) -> str:
+    L = ["| tool | standards | suspect-hit recall | mean reciprocal rank | decoy false positives | levels reached (own scale) |", "|---|---|---|---|---|---|"]
+    for nome, e in r.items():
+        L.append(f"| {nome} | {e['n']} | {_f(e['richiamo_colpi'])} | {_f(e['mrr'])} | {_f(e['falsi'])} | {', '.join(f'{k}: {v}' for k, v in e['livelli'].items())} |")
+    return "\n".join(L) + "\n"
+
+
 def verita_di(path, tipo: str, solo_visti: bool = True) -> list[dict]:
     """The truth of a file of the private repository: `d1` (`bench/verita/1`, the compounds seen in the data: the others cannot be measured), `d2`/`d3` (`da_json`)."""
     if tipo == "d1":

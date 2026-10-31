@@ -19,6 +19,7 @@ use crate::axis::half;
 use crate::evid::HYPOTHESIS_PPM;
 use crate::hypo::{Dir, Hypothesis, SRC_NETWORK};
 use crate::rowident::RowIdent;
+use crate::sortc::SortC;
 use crate::table::Aligned;
 use mzlab_core::elements::{adducts, ion_mz};
 
@@ -128,10 +129,10 @@ pub fn ident(t: &Aligned, iso: &IsoGroups, polarity: i8, p: &IdentParams) -> Ide
     }
     let mut free: Vec<bool> = follows.iter().map(|&f| f == usize::MAX).collect();
     let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&a, &b| t.rt[a].total_cmp(&t.rt[b]));
+    order.sortc_by(|&a, &b| t.rt[a].total_cmp(&t.rt[b]));
     let mut by_height: Vec<usize> = (0..n).collect();
     let height = items_of(t);
-    by_height.sort_by(|&a, &b| height[b].height.total_cmp(&height[a].height));
+    by_height.sortc_by(|&a, &b| height[b].height.total_cmp(&height[a].height));
     let (mut family, mut hyps) = (vec![0u32; n], Vec::new());
     let mut next = 0u32;
     for a in by_height {

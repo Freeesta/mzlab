@@ -136,8 +136,8 @@ pub(crate) fn mrm_section(src: &Value, items: &[Value]) -> Option<Value> {
     for key in ["q1", "q3"] {
         let xs: Vec<f64> = list.iter().filter_map(|t| num(t.get(key))).collect();
         if !xs.is_empty() {
-            let lo = xs.iter().cloned().fold(f64::INFINITY, f64::min);
-            let hi = xs.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let lo = xs.iter().copied().fold(f64::INFINITY, f64::min);
+            let hi = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
             o.put(key, Some(Value::Arr(vec![n(lo), n(hi)])));
         }
     }

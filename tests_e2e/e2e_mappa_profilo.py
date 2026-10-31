@@ -20,7 +20,7 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#pick", state="attached")
-        pg.set_input_files("#pick", [str(D / "P_FullMass-t15.mzML")]); pg.wait_for_selector("#opbtn")
+        pg.set_input_files("#pick", [str(D / "P_FullMass-t15.mzML")])
         pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg)
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); ready(pg)
@@ -34,7 +34,7 @@ try:
         step("profile scan: continuous line, many points", whole)
         def zoom():
             for _ in range(25):
-                pg.mouse.wheel(0, -300); ready(pg)
+                ctrl_wheel(pg, 0, -300); ready(pg)
                 n, full, h = pts()
                 if n == full: break
             assert full >= 5 and n == full, (n, full)                                             # zoomed in: every original point is drawn

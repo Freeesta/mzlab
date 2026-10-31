@@ -3,6 +3,7 @@
 //! [1, t, t^2, G(t)] from one trace by asymmetric least squares. Used by `broad::detect_broad` and by the collectors of `trace` and `untargeted`.
 //! Sums run in a fixed order and no transcendental is used: native and WASM give the same bits.
 
+use crate::sortc::SortC;
 use std::fmt;
 use std::sync::Arc;
 
@@ -60,17 +61,27 @@ impl TraceBank {
 
     /// Offers the trace `y` starting at scan `scan0`; only persistent ones (see `MIN_SCANS`) count. Missing scans of the run are `NaN` blocks.
     pub fn add(&mut self, scan0: usize, y: &[f64]) -> Result<()> {
-        let len = y.len();
+        if self.offer(scan0, y.len()) {
+            self.push_row(scan0, y)?;
+        }
+        Ok(())
+    }
+
+    /// Counts a trace of `len` scans from `scan0` as `add` would: true when the caller must build it and hand it to [`push_row`](Self::push_row), false when
+    /// the bank leaves it out (not persistent, outside the run, or skipped by the stride), so the caller can spare the work of building it.
+    pub fn offer(&mut self, scan0: usize, len: usize) -> bool {
         if len < MIN_SCANS && (len as f64) < MIN_COVER * self.n_scans as f64 {
-            return Ok(());
+            return false;
         }
         if scan0 + len > self.n_scans {
-            return Ok(());
+            return false;
         }
         self.seen += 1;
-        if !(self.seen - 1).is_multiple_of(self.stride) {
-            return Ok(());
-        }
+        (self.seen - 1).is_multiple_of(self.stride)
+    }
+
+    /// Stores the trace that [`offer`](Self::offer) asked for.
+    pub fn push_row(&mut self, scan0: usize, y: &[f64]) -> Result<()> {
         let Some(row) = normalised_row(scan0, y, self.n_scans, self.k)? else {
             return Ok(());
         };
@@ -92,27 +103,31 @@ impl TraceBank {
         if self.rows.len() < MIN_ROWS {
             return Ok(None);
         }
-        let m = self.n_scans.div_ceil(self.k);
-        let mut gb = filled(m, f64::NAN)?;
-        let mut col = Vec::new();
-        reserve(&mut col, self.rows.len())?;
-        for (b, out) in gb.iter_mut().enumerate() {
-            col.clear();
-            col.extend(
-                self.rows
-                    .iter()
-                    .map(|r| r[b])
-                    .filter(|v| !v.is_nan())
-                    .map(f64::from),
-            );
-            if col.len() >= MIN_ROWS {
-                *out = median(&mut col);
-            }
-        }
+        let gb = block_medians(&self.rows, self.n_scans.div_ceil(self.k))?;
         // a narrow peak that the traces happen to share must not enter G: running median over `SMOOTH` blocks
         let gb = smooth(&gb)?;
         interpolate(&gb, self.k, self.n_scans)
     }
+}
+
+/// The pointwise median of the rows per block (`NaN` where fewer than `MIN_ROWS` rows have a value).
+fn block_medians(rows: &[Vec<f32>], m: usize) -> Result<Vec<f64>> {
+    let mut gb = filled(m, f64::NAN)?;
+    let mut col = Vec::new();
+    reserve(&mut col, rows.len())?;
+    for (b, out) in gb.iter_mut().enumerate() {
+        col.clear();
+        col.extend(
+            rows.iter()
+                .map(|r| r[b])
+                .filter(|v| !v.is_nan())
+                .map(f64::from),
+        );
+        if col.len() >= MIN_ROWS {
+            *out = median(&mut col);
+        }
+    }
+    Ok(gb)
 }
 
 /// The trace `y` (from scan `scan0`) as block means over the run (`NaN` where it has no scan) divided by their median; `None` when that is not positive.
@@ -197,7 +212,7 @@ pub(crate) fn median(v: &mut [f64]) -> f64 {
     if v.is_empty() {
         return 0.0;
     }
-    v.sort_by(|a, b| a.total_cmp(b));
+    v.sortc_by(|a, b| a.total_cmp(b));
     let m = v.len() / 2;
     if v.len() % 2 == 1 {
         v[m]

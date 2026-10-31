@@ -143,18 +143,22 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         let i1 = (i1 as usize).min(sel.len() - 1);
-        let ar = self.idx.arrays(si)?.clone();
         let positions: Vec<usize> = sel[i0 as usize..=i1].to_vec();
+        // only the picked scans' ids and times are copied, not the arrays of the whole section
+        let picks: Vec<(i64, f64)> = {
+            let ar = self.idx.arrays(si)?;
+            positions.iter().map(|&p| (ar.scan_ids[p], ar.rt[p])).collect()
+        };
         let pts = match mzml.as_mut() {
-            Some(m) => positions.iter().map(|&p| m.spettro(&self.idx.scans[ar.scan_ids[p] as usize])).collect::<Result<Vec<_>>>()?,
+            Some(m) => picks.iter().map(|&(sid, _)| m.spettro(&self.idx.scans[sid as usize])).collect::<Result<Vec<_>>>()?,
             None => self.scan_points(si, &positions)?,
         };
         let mut o = Out::default();
         o.raw("{\"n\":").int(sel.len() as i64).raw(",\"scans\":[");
         for (k, (mz, y)) in pts.iter().enumerate() {
             let (mz, y) = merge_cells(mz, y, step);
-            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(i0 + k as i64).raw(",\"sid\":").int(ar.scan_ids[positions[k]]);
-            o.raw(",\"rt\":").num(round(ar.rt[positions[k]], 4)).raw(",");
+            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(i0 + k as i64).raw(",\"sid\":").int(picks[k].0);
+            o.raw(",\"rt\":").num(round(picks[k].1, 4)).raw(",");
             spec_json(&mut o, &mz, &y, step);
             o.raw("}");
         }

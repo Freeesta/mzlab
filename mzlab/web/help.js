@@ -21,10 +21,8 @@ const HELP = {
   "origine": [I18N.t("help.origine.title"), I18N.t("help.origine.body")],
   "liste": [I18N.t("help.liste.title"), I18N.t("help.liste.body")],
   "losses": [I18N.t("help.losses.title"), I18N.t("help.losses.body")],
-  "adducts": [I18N.t("help.adducts.title"), I18N.t("help.adducts.body")],
   "language": [I18N.t("help.language.title"), I18N.t("help.language.body")],
-  // the download link is pointless inside the desktop app
-  "header": ["", I18N.t("help.header.body") + (window.__TAURI__ || !SITO_PUBBLICO.scaricaApp ? "" : I18N.t("help.header.app"))],
+  "header": ["", I18N.t("help.header.body")],
 };
 
 (() => {
@@ -52,10 +50,3 @@ const HELP = {
   addEventListener("scroll", e => { if (!pop.contains(/** @type {Node} */ (e.target))) close(); }, true);
 })();
 const shortHelp = key => { const h = HELP[key]; if (!h) return ""; const t = h[1].replace(/<br>.*/s, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim(); return t.length > 190 ? t.slice(0, t.lastIndexOf(" ", 187)) + "…" : t; };
-function guideHtml() {
-  const sec = (title, keys) => `<details open><summary><b>${title}</b></summary>${keys.filter(k => HELP[k]).map(k => `<div class="hp-s"><b>${HELP[k][0]}</b><div>${HELP[k][1]}</div></div>`).join("")}</details>`;
-  let modes = "";
-  try { modes = `<details><summary><b>${I18N.t("help.guide.modes")}</b></summary>${ESP.ids.map(t => QMODI.html(ESP.didattica(t))).join("")}</details>`; } catch (e) { /* the modes text is optional */ }
-  const credits = `<details><summary><b>${I18N.t("help.guide.credits.title")}</b></summary><div class="hp-s">${I18N.t("help.guide.credits.body")}</div></details>`;
-  return sec(I18N.t("help.guide.open"), ["start", "filegrandi", "files"]) + sec(I18N.t("help.guide.charts"), ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map", "mappa"]) + sec(I18N.t("help.guide.method"), ["tools", "prop", "language"]) + modes + credits;
-}

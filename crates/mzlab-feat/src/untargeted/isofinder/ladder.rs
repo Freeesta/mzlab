@@ -3,6 +3,7 @@
 //! After `engine/CarbonLadder.java`, `engine/OffsetSpan.java` and `engine/CarbonRatio.java` (MIT, (c) 2004-2022 The mzmine Development Team);
 //! rewritten, no code copied. An offset is the number of grid steps (`spacing` = 13C distance / charge) from the base peak.
 
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 use super::envelope::jround;
@@ -206,7 +207,7 @@ impl Ladder {
                 }
             }
         }
-        sorted_mz.sort_by(f64::total_cmp);
+        sorted_mz.sortc_by(f64::total_cmp);
         Ladder {
             base_mz,
             spacing,

@@ -6,7 +6,7 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{Limiti, VoceCromatogramma};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
-use super::netcdf::Cdf;
+use super::netcdf::{scala, Cdf};
 
 /// A text the file keeps as a global attribute or as a `char` variable.
 fn testo(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti, nome: &str) -> Option<String> {
@@ -68,16 +68,16 @@ pub(super) fn traccia(
         .ok_or_else(|| Error::new("error.badIndex").with("id", nome))?;
     let n = limiti.voci_ok(cdf.elementi(v))? as u64;
     let mut y = cdf.leggi(dati, limiti, v, 0, n)?;
-    let (f, o) = (
-        v.numero("scale_factor").unwrap_or(1.0),
-        v.numero("add_offset").unwrap_or(0.0),
-    );
-    y.iter_mut().for_each(|x| *x = *x * f + o);
+    scala(&mut y, v);
     let ritenzione = cdf
         .trova("raw_data_retention")
         .filter(|r| cdf.elementi(r) == n);
     let secondi: Vec<f64> = match ritenzione {
-        Some(r) => cdf.leggi(dati, limiti, r, 0, n)?,
+        Some(r) => {
+            let mut t = cdf.leggi(dati, limiti, r, 0, n)?;
+            scala(&mut t, r);
+            t
+        }
         None => {
             let (d, p) = (
                 scalare(cdf, dati, limiti, "actual_delay_time").unwrap_or(0.0),

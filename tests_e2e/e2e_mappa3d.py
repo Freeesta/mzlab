@@ -15,10 +15,6 @@ M = "E.panels.find(q=>q.type==='map')"
 BTN = ".pnl.map [data-o=view][data-v='3d']"
 D = synth("m3d")
 r = Run(port=8838, wd="/tmp/wd_mappa3d")
-def still(pg, expr, n=8):
-    """Wait until `expr` (a JavaScript expression) has given the same JSON for `n` consecutive frames (an animation is over)."""
-    pg.evaluate("window.__still = null")
-    pg.wait_for_function("function (n) { const k = JSON.stringify(" + expr + "); const s = window.__still; if (!s || s.k !== k) { window.__still = {k: k, n: 0}; return false; } return ++s.n >= n; }", arg=n)
 INK = "(()=>{const c=document.querySelector('.m3d-gl');window.__m3d.frame();const o=document.createElement('canvas');o.width=c.width;o.height=c.height;const g=o.getContext('2d');g.drawImage(c,0,0);const d=g.getImageData(0,0,o.width,o.height).data;const s=new Set();for(let i=0;i<d.length;i+=4*97)s.add((d[i]>>4)+','+(d[i+1]>>4)+','+(d[i+2]>>4));return s.size})()"
 
 
@@ -46,7 +42,7 @@ def viewer(pg, tag, hr):
         assert pg.evaluate("window.__m3d.V.cam.d") < d0
         pg.keyboard.press("1"); attendi(pg, "window.__m3d.V.cam.el > 80"); assert pg.evaluate("window.__m3d.V.cam.el") > 80
         pg.keyboard.press("2"); attendi(pg, "window.__m3d.V.cam.el === 0"); assert pg.evaluate("window.__m3d.V.cam.el") == 0
-        pg.keyboard.press("r"); still(pg, "window.__m3d.V.cam")
+        pg.keyboard.press("r"); attendi(pg, "window.__m3d.V.cam.az === 35 && window.__m3d.V.cam.el === 32")          # the reset view is set at once (nothing animates the camera); counting frames timed out where a frame of the big surface takes seconds
     step(f"{tag}: drag rotates, wheel zooms, keys 1-2 and R", rotate)
     def modes():
         modes = ["fall", "cont", "surf"] + (["sticks"] if hr else [])

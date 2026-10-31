@@ -2,6 +2,8 @@ I18N.add("en", {
   "zoom.mz": "m/z {lo}–{hi}",
   "zoom.rt": "RT {lo}–{hi} min",
   "xicbtn.title": "Extracts at once the XIC of the ion chosen in the spectrum and shows it in the panel below. With no ion chosen: click a peak (or keys , and .). Shift: adds the ion as one more trace",
+  "xicbtn.n": "XIC of {n} files",
+  "xicbtn.infusion": "Infusion: no chromatogram",
   "xicbtn.aria": "Extract the XIC of the chosen ion",
   "xicbtn.pend": "Click a peak: its XIC is extracted · Esc cancels",
   "xicbtn.ion.title": "Ion and tolerance of the XIC: click or press Enter to write them",

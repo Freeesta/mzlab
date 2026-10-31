@@ -17,7 +17,7 @@ impl AdductType {
     #[inline]
     pub fn delta_mass(&self) -> f64 {
         match self {
-            Self::MH => 1.007276,
+            Self::MH => mzlab_core::elements::PROTON_6DP,
             Self::MNa => 22.989218,
             Self::MNH4 => 18.033823,
         }

@@ -58,14 +58,14 @@ pub const TARGETS: &[(&str, &[Target])] = &[
     (
         "R-pts-1",
         &[
-            ("features.detect", "masstrace", "min_points"),
+            ("features.detect", "", "min_points"),
             ("features.gapfill", "", "min_points"),
         ],
     ),
     (
         "R-gap-1",
         &[
-            ("features.detect", "masstrace", "max_gap"),
+            ("features.detect", "", "max_gap"),
             ("features.gapfill", "", "max_gap"),
         ],
     ),

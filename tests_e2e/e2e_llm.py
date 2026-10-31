@@ -64,6 +64,7 @@ try:
             pg.add_init_script("try{%slocalStorage.setItem('mzlab.lang','en');localStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consenso',%s);}catch(_){}"
                                % ("localStorage.setItem('mzlab.admin','1');" if profile == "ricerca" else "", json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
+            if profile == "corso": return pg      # no administrator mode: no Flow at all, so no assistant either
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
             if profile == "ricerca" and on:
                 pg.wait_for_selector("#flx-assistant", timeout=30000)
@@ -81,8 +82,8 @@ try:
 
         def corso():
             pg = fresh(profile="corso"); reqs.clear()
-            attendi(pg, "!!document.querySelector('#flx-root')")
-            assert pg.locator("#flx-assistant").count() == 0 and pg.locator("#flx-llm").count() == 0
+            attendi(pg, "document.readyState === 'complete' && !!document.querySelector('#nav')")
+            assert pg.locator(TAB).count() == 0 and pg.locator("#flx-assistant").count() == 0 and pg.locator("#flx-llm").count() == 0
             assert not [r for r in reqs if "/llm/" in r or "flow-llm" in r], "nothing of the assistant is downloaded with the profile corso"
             pg.context.close()
         step("profile corso: no button, no file of the assistant", corso)

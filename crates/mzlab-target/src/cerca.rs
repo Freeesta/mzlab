@@ -4,11 +4,15 @@
 
 use serde::{Deserialize, Serialize};
 
+use mzlab_core::composition::Counts;
 use mzlab_core::elements::parse_formula;
 use mzlab_core::mzml::Spectrum;
 
 use crate::entry::AdductType;
 use crate::indice::TargetList;
+
+mod aiuti;
+use aiuti::*;
 
 /// A confirmed or proposed match for a target substance in chromatographic HRMS data.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -84,36 +88,6 @@ struct DetectedPeak {
     sn_ratio: f64,
 }
 
-/// Estimate chromatographic baseline noise using Median Absolute Deviation (MAD).
-fn estimate_noise(y: &[f64]) -> f64 {
-    if y.is_empty() {
-        return 1.0;
-    }
-    let mut sorted = y.to_vec();
-    mzlab_core::sortc::by(&mut sorted, |a, b| a.total_cmp(b));
-    let mid = sorted.len() / 2;
-    let med = if sorted.len().is_multiple_of(2) && sorted.len() > 1 {
-        (sorted[mid - 1] + sorted[mid]) * 0.5
-    } else {
-        sorted[mid]
-    };
-
-    let mut dev: Vec<f64> = y.iter().map(|v| (v - med).abs()).collect();
-    mzlab_core::sortc::by(&mut dev, |a, b| a.total_cmp(b));
-    let dev_mid = dev.len() / 2;
-    let mad = if dev.len().is_multiple_of(2) && dev.len() > 1 {
-        (dev[dev_mid - 1] + dev[dev_mid]) * 0.5
-    } else {
-        dev[dev_mid]
-    };
-    let n = mad * 1.4826;
-    if n > 1e-6 {
-        n
-    } else {
-        1.0
-    }
-}
-
 /// Detect local chromatographic peak maxima that exceed the noise threshold.
 fn detect_chrom_peaks(
     rt: &[f64],
@@ -184,40 +158,16 @@ fn detect_chrom_peaks(
     peaks
 }
 
-/// Helper to add an element count to the Counts vector.
-fn add_count(counts: &mut Vec<(String, i64)>, el: &str, delta: i64) {
-    if let Some(entry) = counts.iter_mut().find(|(e, _)| e == el) {
-        entry.1 += delta;
-    } else {
-        counts.push((el.to_string(), delta));
-    }
-}
-
 /// Compute isotope pattern score by comparing theoretical and observed isotopologues.
 fn compute_isotope_score(
-    neutral_formula: &str,
-    adduct: AdductType,
+    counts: &Counts,
     target_mz: f64,
     spec: &Spectrum,
+    sorted: bool,
     tolerance_ppm: f64,
 ) -> Option<f64> {
-    let parsed = parse_formula(neutral_formula).ok()?;
-    let mut counts: Vec<(String, i64)> = parsed.into_iter().map(|(el, n)| (el, n as i64)).collect();
-    match adduct {
-        AdductType::MH => add_count(&mut counts, "H", 1),
-        AdductType::MNa => add_count(&mut counts, "Na", 1),
-        AdductType::MNH4 => {
-            add_count(&mut counts, "N", 1);
-            add_count(&mut counts, "H", 4);
-        }
-    }
-
-    let obs: Vec<(f64, f64)> = spec
-        .mz
-        .iter()
-        .zip(&spec.intensity)
-        .filter(|(&m, _)| m >= target_mz - 0.5 && m <= target_mz + 3.5)
-        .map(|(&m, &i)| (m, i as f64))
+    let obs: Vec<(f64, f64)> = window(spec, sorted, target_mz - 0.5, target_mz + 3.5)
+        .map(|(m, i)| (m, i as f64))
         .collect();
 
     let opts = mzlab_core::isoscore::IsoOpts {
@@ -229,7 +179,7 @@ fn compute_isotope_score(
         norm: "mono",
     };
 
-    if let Ok(iso) = mzlab_core::isoscore::isotope_score(&counts, 1, &obs, &opts) {
+    if let Ok(iso) = mzlab_core::isoscore::isotope_score(counts, 1, &obs, &opts) {
         if iso.score > 0.0 {
             return Some((iso.score * 100.0).round() / 100.0);
         }
@@ -247,16 +197,15 @@ fn compute_isotope_score(
         .map(|(_, k)| *k as f64)
         .unwrap_or(0.0);
     let exp_m1_ratio = (n_c * 0.0108 + n_n * 0.0037).max(0.01);
-    let exp_m1_mz = target_mz + 1.003355;
+    let exp_m1_mz = target_mz + mzlab_core::elements::C13_STEP;
     let tol = exp_m1_mz * tolerance_ppm * 1e-6;
 
-    let m0_peak = obs
-        .iter()
-        .find(|(m, _)| (m - target_mz).abs() <= target_mz * tolerance_ppm * 1e-6);
-    let m1_peak = obs.iter().find(|(m, _)| (m - exp_m1_mz).abs() <= tol);
+    let m0_tol = target_mz * tolerance_ppm * 1e-6;
+    let m0_peak = strongest(&obs, target_mz, |m| (m - target_mz).abs() <= m0_tol);
+    let m1_peak = strongest(&obs, exp_m1_mz, |m| (m - exp_m1_mz).abs() <= tol);
 
     match (m0_peak, m1_peak) {
-        (Some((_, i0)), Some((m1_obs, i1))) if *i0 > 0.0 => {
+        (Some((_, i0)), Some((m1_obs, i1))) if i0 > 0.0 => {
             let obs_ratio = i1 / i0;
             let d_ppm = (m1_obs - exp_m1_mz) / exp_m1_mz * 1e6;
             let tm = (-0.5 * (d_ppm / tolerance_ppm).powi(2)).exp();
@@ -300,16 +249,14 @@ fn proposal_rank(p: &str) -> u8 {
     }
 }
 
-/// Fast XIC extraction over MS1 spectra for a given m/z window.
-fn extract_xic(ms1_spectra: &[&Spectrum], lo: f64, hi: f64) -> (Vec<f64>, f64) {
+/// Fast XIC extraction over MS1 spectra for a given m/z window; `sorted[k]` says that spectrum k can be bisected.
+fn extract_xic(ms1_spectra: &[&Spectrum], sorted: &[bool], lo: f64, hi: f64) -> (Vec<f64>, f64) {
     let mut y_trace = Vec::with_capacity(ms1_spectra.len());
     let mut max_y = 0.0f64;
-    for s in ms1_spectra {
+    for (s, &asc) in ms1_spectra.iter().zip(sorted) {
         let mut sum_i = 0.0f64;
-        for (&m, &inten) in s.mz.iter().zip(&s.intensity) {
-            if m >= lo && m <= hi {
-                sum_i += inten as f64;
-            }
+        for (_, inten) in window(s, asc, lo, hi) {
+            sum_i += inten as f64;
         }
         if sum_i > max_y {
             max_y = sum_i;
@@ -339,8 +286,8 @@ fn format_proposal_and_motif(
     };
 
     let iso_str = match isotope_score {
-        Some(s) if s >= 0.7 => format!("isotope pattern confirmed (score {:.2})", s),
-        Some(s) => format!("isotope pattern unconfirmed (score {:.2})", s),
+        Some(s) if s >= 0.7 => format!("isotope pattern confirmed (score {s:.2})"),
+        Some(s) => format!("isotope pattern unconfirmed (score {s:.2})"),
         None => "isotope pattern unconfirmed".to_string(),
     };
     let ms2_str = if ms2_matched {
@@ -356,24 +303,28 @@ fn format_proposal_and_motif(
 }
 
 /// Evaluate a chromatographic peak against target entry and assign proposal.
+#[allow(clippy::too_many_arguments)]
 fn evaluate_peak(
     entry: &crate::entry::TargetEntry,
     adduct: AdductType,
     target_mz: f64,
+    counts: Option<&Counts>,
     ms1_spectra: &[&Spectrum],
+    sorted: &[bool],
     ms2_spectra: &[&Spectrum],
     peak: DetectedPeak,
     opts: &TargetSearchOptions,
 ) -> Option<TargetMatch> {
     let spec = ms1_spectra[peak.apex_idx];
+    let asc = sorted[peak.apex_idx];
     let tol_da = target_mz * opts.tolerance_ppm * 1e-6;
     let lo = target_mz - tol_da;
     let hi = target_mz + tol_da;
 
     let mut observed_mz = target_mz;
     let mut max_apex_i = 0.0f32;
-    for (&m, &inten) in spec.mz.iter().zip(&spec.intensity) {
-        if m >= lo && m <= hi && inten > max_apex_i {
+    for (m, inten) in window(spec, asc, lo, hi) {
+        if inten > max_apex_i {
             max_apex_i = inten;
             observed_mz = m;
         }
@@ -388,13 +339,8 @@ fn evaluate_peak(
         ms2_spectra,
         opts.tolerance_ppm,
     );
-    let isotope_score = compute_isotope_score(
-        &entry.neutral_formula,
-        adduct,
-        target_mz,
-        spec,
-        opts.tolerance_ppm,
-    );
+    let isotope_score =
+        counts.and_then(|c| compute_isotope_score(c, target_mz, spec, asc, opts.tolerance_ppm));
 
     let (proposal, motif) = format_proposal_and_motif(
         &peak,
@@ -439,27 +385,42 @@ pub fn cerca_targets(
     }
 
     let ms1_rts: Vec<f64> = ms1_spectra.iter().map(|s| s.rt).collect();
+    let sorted: Vec<bool> = ms1_spectra.iter().map(|s| is_ascending(s)).collect();
+    let mut noise_buf = Vec::with_capacity(ms1_spectra.len());
     let mut matches = Vec::new();
 
     for entry in list.entries() {
+        let neutral: Option<Counts> = parse_formula(&entry.neutral_formula)
+            .ok()
+            .map(|p| p.into_iter().map(|(el, n)| (el, n as i64)).collect());
         for &adduct in &opts.adducts {
             let target_mz = entry.mz_for_adduct(adduct);
             let tol_da = target_mz * opts.tolerance_ppm * 1e-6;
-            let (y_trace, max_y) =
-                extract_xic(&ms1_spectra, target_mz - tol_da, target_mz + tol_da);
+            let (y_trace, max_y) = extract_xic(
+                &ms1_spectra,
+                &sorted,
+                target_mz - tol_da,
+                target_mz + tol_da,
+            );
             if max_y <= 0.0 {
                 continue;
             }
 
-            let noise = estimate_noise(&y_trace);
+            let noise = estimate_noise(&y_trace, &mut noise_buf);
             let peaks = detect_chrom_peaks(&ms1_rts, &y_trace, opts.min_sn, opts.min_area, noise);
 
+            if peaks.is_empty() {
+                continue;
+            }
+            let counts = neutral.as_ref().map(|n| adduct_counts(n, adduct));
             for peak in peaks {
                 if let Some(m) = evaluate_peak(
                     entry,
                     adduct,
                     target_mz,
+                    counts.as_ref(),
                     &ms1_spectra,
+                    &sorted,
                     &ms2_spectra,
                     peak,
                     opts,
@@ -471,7 +432,7 @@ pub fn cerca_targets(
     }
 
     // Sort matches: Prev. 1 in front, then Prev. 2, then Prev. 3, ordered by descending S/N
-    mzlab_core::sortc::any_by(&mut matches, |a, b| {
+    mzlab_core::sortc::slice_by(&mut matches, |a, b| {
         proposal_rank(&a.proposal)
             .cmp(&proposal_rank(&b.proposal))
             .then_with(|| b.sn_ratio.total_cmp(&a.sn_ratio))
@@ -480,3 +441,7 @@ pub fn cerca_targets(
 
     matches
 }
+
+#[cfg(test)]
+#[path = "cerca_tests.rs"]
+mod tests;

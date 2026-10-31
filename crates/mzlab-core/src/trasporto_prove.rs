@@ -162,3 +162,18 @@ fn una_scansione_di_misura_sbagliata_si_rifiuta() {
         0
     );
 }
+
+/// The buffer of the index is allocated once at its exact size (7 columns of f64 per row, not 6).
+#[test]
+fn the_index_buffer_is_sized_exactly() {
+    let b = encode_indice(&voci());
+    assert_eq!(b.capacity(), b.len());
+}
+
+/// An index that declares `u32::MAX` filters is refused as corrupt (on wasm32 `nf + 1` wrapped to 0 before the offsets were read).
+#[test]
+fn an_index_with_a_filter_count_at_the_limit_is_refused() {
+    let mut b = encode_indice(&voci());
+    b[8..12].copy_from_slice(&u32::MAX.to_le_bytes());
+    assert!(decode_indice(&b).is_err());
+}

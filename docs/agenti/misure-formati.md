@@ -21,3 +21,27 @@ Come si leggono le colonne: i secondi per passo sono la somma sulle 12 istanze (
 
 ## Non misurato (servono i file del Mac di Federico)
 Thermo .raw (lettore nostro), Agilent .D, Bruker .d, SCIEX .wiff/.wiff.scan, .cdf di strumento e MGF: nel contenitore non ci sono file veri né i convertitori. Il rapporto con mzmine (serie 23-29: 0.56-0.64) non ha un numero nel repository, per cui non è riportato.
+
+## Caricamento di file SCIEX (.wiff + .wiff.scan) multi-campione
+Coppie sintetiche di `tools/wiff_grande.py` (3000 scansioni × 3333 punti di profilo per campione, 16 MB di `.wiff.scan` ciascuno); 4 CPU, 16 GB, Chromium con profilo su disco (una finestra normale), motore Rust del sito, `tests_e2e/e2e_wiff_240.py` (`MZLAB_CARICO_DIR=CARTELLA` misura una cartella con `counts.json` {file: campioni}). Il browser vuoto occupa già ≈1,1 GB; il picco è la somma dei processi Chromium.
+
+| carico (sito) | campioni | s | s/campione | picco MB | OPFS GB |
+|---|---|---|---|---|---|
+| 1 file × 24 campioni | 24 | 49 | 2,0 | 1868 | 5,2 |
+| 4 file × 11 campioni | 44 | 84 | 1,9 | 1969 | 9,6 |
+| 11 file (10 × 11 + 1 × 24) | 134 | ≈240 | 1,8 | — | 26 (disco pieno) |
+| 240 coppie piccole (60 × 300) | 240 | 41 | 0,17 | 2200-2900 | 0,14 |
+
+- **Spazio**: l'indice di un campione a profilo pesa 191-218 MB (circa 12 volte il suo `.wiff.scan`): 240 campioni chiedono ≈46 GB di OPFS. Con 134 campioni il disco del contenitore si è riempito a 25,7 GB: 117 caricati, 17 con `error.quota` al 96-99 % del loro indice (ogni campione fallisce da solo, nessun ricaricamento).
+- Il messaggio dice «ne restano 10240 MB» perché la quota del browser supera lo spazio vero del disco. Una finestra privata di Chromium regge circa 200 MB di OPFS.
+- **Costruttori**: al più 3 insieme (picco osservato con 4 CPU); la memoria della pagina (heap JS) resta sotto 230 MB.
+- **Riapertura**: 0,15 s per campione salvato (240 campioni: 36 s); il limite della schermata di avvio (`?ripresa=ms`) è 30 s più 1 s per file salvato (era fisso a 30 s: con 240 campioni la pagina non si riapriva).
+- **Elenco**: l'ordine è quello di `ordine.js` (tempo, concentrazione o ordine naturale dei nomi) applicato a tutta la lista, non quello d'arrivo: lo stesso con i file lasciati in ordine inverso.
+
+| carico (`mzlab-cli convert --peaks mzlab`) | `--workers` | s | s/file (mediana) | RSS massimo MB |
+|---|---|---|---|---|
+| 240 coppie da 1 campione (1200 × 3333) | 1 / 2 / 4 | 498 / 249 / 133,5 | 2,05 / 2,04 / 2,15 | 23 / 37 / 53 |
+| 1 file × 11 campioni | 1 / 4 | 58,5 / 18,8 | — | 31 / 102 |
+| 11 file, 134 campioni, 1,7 GB di mzML | 4 | 220,7 | — | 174 |
+
+I byte degli mzML sono identici con 1, 2 e 4 worker (SHA-256 di tutti i file). Buchi: desktop (nessun build nel contenitore), PDA Shimadzu (il generatore non lo scrive), 3333 punti per scansione invece dei ≈3900 reali.

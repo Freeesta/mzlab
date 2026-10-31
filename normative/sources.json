@@ -1,0 +1,700 @@
+{
+  "schema": "normative-sources/1",
+  "resolve": {
+    "susdat": {
+      "url": "https://zenodo.org/api/records/15741861/files/susdat_2025-06-03-092022.csv/content",
+      "sha256": "8b8c4b43e900b752c2e7ba0aa7adb3454617205034f9da5baffdf41250decda9"
+    },
+    "pubchem_ids": {
+      "url": "https://ftp.ncbi.nlm.nih.gov/pubchem/Compound/Extras/CID-Identifiers.tsv.gz",
+      "sha256": null
+    },
+    "pubchem_parent": {
+      "url": "https://ftp.ncbi.nlm.nih.gov/pubchem/Compound/Extras/CID-Parent.gz",
+      "sha256": null
+    },
+    "pubchem_props": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cids}/property/InChIKey,MolecularFormula,MonoisotopicMass,SMILES,Charge/CSV"
+  },
+  "lists": [
+    {
+      "id": "EU_PS_2013_39",
+      "reader": "eu_water",
+      "urls": [
+        {
+          "url": "https://publications.europa.eu/resource/celex/02008L0105-20130913",
+          "sha256": "2ed233725970fbba328d509afb90dbe2bbbc04a19d5757960172bdd1c2eaa79a"
+        }
+      ],
+      "params": {
+        "annexes": [
+          "ANNEX I"
+        ],
+        "prefix": "Dir. 2008/105/EC",
+        "columns": {
+          "ref": [
+            "No",
+            "Entry No"
+          ],
+          "name": [
+            "Name of substance"
+          ],
+          "cas": [
+            "CAS number"
+          ],
+          "ec": [
+            "EU number"
+          ],
+          "attr": [
+            {
+              "match": "AA-EQS Inland",
+              "label": "AA-EQS inland [ug/l]"
+            },
+            {
+              "match": "AA-EQS Other",
+              "label": "AA-EQS other [ug/l]"
+            },
+            {
+              "match": "MAC-EQS Inland",
+              "label": "MAC-EQS inland [ug/l]"
+            },
+            {
+              "match": "MAC-EQS Other",
+              "label": "MAC-EQS other [ug/l]"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Directive 2013/39/EU",
+        "citation": "Dir. 2008/105/EC Annex I as amended by Dir. 2013/39/EU",
+        "annex": "Annex I",
+        "status": "in_force",
+        "in_force_from": "2013-09-13",
+        "applies_from": "",
+        "version_date": "2013-09-13",
+        "licence": "Reuse with acknowledgement under Commission Decision 2011/833/EU",
+        "attribution": "Source: EUR-Lex, European Union, https://eur-lex.europa.eu"
+      }
+    },
+    {
+      "id": "EU_PS_2026_805",
+      "reader": "eu_water",
+      "urls": [
+        {
+          "url": "https://publications.europa.eu/resource/celex/02008L0105-20260510",
+          "sha256": "63874ec5c4c20c949c338121acf295831c1d7862dfb7240aa065158ef0175081"
+        }
+      ],
+      "params": {
+        "annexes": [
+          "ANNEX I"
+        ],
+        "prefix": "Dir. 2008/105/EC",
+        "columns": {
+          "ref": [
+            "Entry No",
+            "No"
+          ],
+          "name": [
+            "Name of substance"
+          ],
+          "cas": [
+            "CAS number"
+          ],
+          "ec": [
+            "EU number"
+          ],
+          "attr": [
+            {
+              "match": "AA-EQS Inland",
+              "label": "AA-EQS inland [ug/l]"
+            },
+            {
+              "match": "AA-EQS Other",
+              "label": "AA-EQS other [ug/l]"
+            },
+            {
+              "match": "MAC-EQS Inland",
+              "label": "MAC-EQS inland [ug/l]"
+            },
+            {
+              "match": "MAC-EQS Other",
+              "label": "MAC-EQS other [ug/l]"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Directive (EU) 2026/805",
+        "citation": "Dir. 2008/105/EC Annex I Part A as amended by Dir. (EU) 2026/805",
+        "annex": "Annex I Part A",
+        "status": "adopted_not_applicable",
+        "in_force_from": "2026-05-10",
+        "applies_from": "2027-12-21",
+        "version_date": "2026-05-10",
+        "licence": "Reuse with acknowledgement under Commission Decision 2011/833/EU",
+        "attribution": "Source: EUR-Lex, European Union, https://eur-lex.europa.eu"
+      }
+    },
+    {
+      "id": "EU_WL_2025_439",
+      "reader": "eu_water",
+      "urls": [
+        {
+          "url": "https://publications.europa.eu/resource/celex/32025D0439",
+          "sha256": "e3e4600935ae90411fc92f5d8f430470f3e42f7e68fa7d6868d9fcbe429c8081"
+        }
+      ],
+      "params": {
+        "prefix": "Impl. Dec. (EU) 2025/439",
+        "columns": {
+          "name": [
+            "Name of substance"
+          ],
+          "cas": [
+            "CAS"
+          ],
+          "ec": [
+            "EC number"
+          ],
+          "attr": [
+            {
+              "match": "Maximum acceptable",
+              "label": "max LOQ [ng/l]"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Implementing Decision (EU) 2025/439",
+        "citation": "Commission Implementing Decision (EU) 2025/439 (surface water Watch List)",
+        "annex": "Annex",
+        "status": "in_force",
+        "in_force_from": "2025-02-28",
+        "applies_from": "",
+        "version_date": "2025-02-28",
+        "licence": "Reuse with acknowledgement under Commission Decision 2011/833/EU",
+        "attribution": "Source: EUR-Lex, European Union, https://eur-lex.europa.eu"
+      }
+    },
+    {
+      "id": "EU_DWD_WL",
+      "reader": "eu_water",
+      "urls": [
+        {
+          "url": "https://publications.europa.eu/resource/celex/32022D0679",
+          "sha256": "86c70f0271e5f3fbcd4e089c45ac621b5c51dd84aaa557481aac2887bae4e274"
+        }
+      ],
+      "params": {
+        "prefix": "Impl. Dec. (EU) 2022/679",
+        "columns": {
+          "name": [
+            "Name of substance"
+          ],
+          "cas": [
+            "CAS number"
+          ],
+          "ec": [
+            "EU number"
+          ],
+          "attr": [
+            {
+              "match": "Guidance value",
+              "label": "guidance value [ng/L]"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Commission Decision (EU) 2022/679",
+        "citation": "Commission Decision (EU) 2022/679 (drinking water Watch List)",
+        "annex": "Annex",
+        "status": "in_force",
+        "in_force_from": "2022-04-27",
+        "applies_from": "",
+        "version_date": "2022-04-27",
+        "licence": "Reuse with acknowledgement under Commission Decision 2011/833/EU",
+        "attribution": "Source: EUR-Lex, European Union, https://eur-lex.europa.eu"
+      }
+    },
+    {
+      "id": "EU_GWD",
+      "reader": "eu_water",
+      "urls": [
+        {
+          "url": "https://publications.europa.eu/resource/celex/02006L0118-20260510",
+          "sha256": "8b4b75b107b98ad0f4dae8e0cd7143c2c76250665e49bbbd335b0321fdf5257e"
+        }
+      ],
+      "params": {
+        "annexes": [
+          "ANNEX I",
+          "ANNEX II"
+        ],
+        "prefix": "Dir. 2006/118/EC",
+        "columns": {
+          "ref": [
+            "Entry No"
+          ],
+          "name": [
+            "Name of substance"
+          ],
+          "cas": [
+            "CAS number"
+          ],
+          "ec": [
+            "EU number"
+          ],
+          "attr": [
+            {
+              "match": "Quality Standard",
+              "label": "quality standard [ug/l]"
+            },
+            {
+              "match": "Threshold value",
+              "label": "threshold value [ug/l]"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Directive (EU) 2026/805",
+        "citation": "Dir. 2006/118/EC Annexes I and II as amended by Dir. (EU) 2026/805",
+        "annex": "Annexes I-II",
+        "status": "adopted_not_applicable",
+        "in_force_from": "2026-05-10",
+        "applies_from": "2027-12-21",
+        "version_date": "2026-05-10",
+        "licence": "Reuse with acknowledgement under Commission Decision 2011/833/EU",
+        "attribution": "Source: EUR-Lex, European Union, https://eur-lex.europa.eu"
+      }
+    },
+    {
+      "id": "EU_POPS_2019_1021",
+      "reader": "eu_chem",
+      "urls": [
+        {
+          "url": "https://publications.europa.eu/resource/celex/02019R1021-20260930",
+          "sha256": "779996051079f5602a67af95c2b63caaacf75cc19c11bc704472d9719d669f21"
+        }
+      ],
+      "params": {
+        "annexes": [
+          "ANNEX I",
+          "ANNEX IV"
+        ],
+        "prefix": "Reg. (EU) 2019/1021",
+        "columns": {
+          "name": [
+            "Substance"
+          ],
+          "cas": [
+            "CAS No"
+          ],
+          "ec": [
+            "EC No"
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Regulation (EU) 2019/1021",
+        "citation": "Reg. (EU) 2019/1021 Annexes I and IV (consolidated 2026-09-30)",
+        "annex": "Annexes I, IV",
+        "status": "in_force",
+        "in_force_from": "2026-09-30",
+        "applies_from": "",
+        "version_date": "2026-09-30",
+        "licence": "Reuse with acknowledgement under Commission Decision 2011/833/EU",
+        "attribution": "Source: EUR-Lex, European Union, https://eur-lex.europa.eu"
+      }
+    },
+    {
+      "id": "EU_FCM_10_2011",
+      "reader": "eu_chem",
+      "urls": [
+        {
+          "url": "https://publications.europa.eu/resource/celex/02011R0010-20260714",
+          "sha256": "57fc47b42d80754ac1c81c472a8ab43ca9c050318572a958f732d63510f77c52"
+        }
+      ],
+      "params": {
+        "annexes": [
+          "ANNEX I"
+        ],
+        "prefix": "Reg. (EU) 10/2011",
+        "columns": {
+          "ref": [
+            "FCM substance No"
+          ],
+          "name": [
+            "Substance name"
+          ],
+          "cas": [
+            "CAS No"
+          ],
+          "attr": [
+            {
+              "match": "SML [mg/kg]",
+              "label": "SML [mg/kg]"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Regulation (EU) No 10/2011",
+        "citation": "Reg. (EU) 10/2011 Annex I Table 1 (consolidated 2026-07-14)",
+        "annex": "Annex I Table 1",
+        "status": "in_force",
+        "in_force_from": "2026-07-14",
+        "applies_from": "",
+        "version_date": "2026-07-14",
+        "licence": "Reuse with acknowledgement under Commission Decision 2011/833/EU",
+        "attribution": "Source: EUR-Lex, European Union, https://eur-lex.europa.eu"
+      }
+    },
+    {
+      "id": "EU_TOYS",
+      "reader": "eu_chem",
+      "urls": [
+        {
+          "url": "https://publications.europa.eu/resource/celex/02009L0048-20260829",
+          "sha256": "345027f096e89b0cb50bb3df85e9d9a6ed5a16b20aef924dd1d52332a3f4c482"
+        }
+      ],
+      "params": {
+        "annexes": [
+          "Appendix C"
+        ],
+        "prefix": "Dir. 2009/48/EC",
+        "columns": {
+          "name": [
+            "Substance"
+          ],
+          "cas": [
+            "CAS No"
+          ],
+          "attr": [
+            {
+              "match": "Limit value",
+              "label": "limit value"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Directive 2009/48/EC",
+        "citation": "Dir. 2009/48/EC Annex II Part III Appendix C (consolidated 2026-08-29)",
+        "annex": "Appendix C",
+        "status": "in_force",
+        "in_force_from": "2026-08-29",
+        "applies_from": "",
+        "version_date": "2026-08-29",
+        "licence": "Reuse with acknowledgement under Commission Decision 2011/833/EU",
+        "attribution": "Source: EUR-Lex, European Union, https://eur-lex.europa.eu"
+      }
+    },
+    {
+      "id": "EU_PPP",
+      "reader": "eu_ppp",
+      "urls": [
+        {
+          "url": "https://api.datalake.sante.service.ec.europa.eu/sante/pesticides/active-substances?format=json&api-version=v3.0",
+          "sha256": "732e9b5e103239b7a3a9f5cc40f1cb91837d88c53d8a383c82abb942a7c36374"
+        }
+      ],
+      "params": {},
+      "tags": {
+        "jurisdiction": "EU",
+        "instrument": "Regulation (EC) No 1107/2009",
+        "citation": "EU Pesticides Database, active substances (Reg. (EC) No 1107/2009, Impl. Reg. (EU) No 540/2011)",
+        "annex": "",
+        "status": "in_force",
+        "in_force_from": "",
+        "applies_from": "",
+        "version_date": "",
+        "licence": "CC BY 4.0",
+        "attribution": "Source: European Commission, EU Pesticides Database (no legal value), https://ec.europa.eu/food/plant/pesticides/eu-pesticides-database"
+      }
+    },
+    {
+      "id": "US_CWA_PP",
+      "reader": "us_ecfr",
+      "urls": [
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=423",
+          "sha256": "60cadc14b8fc25c39238a9d55cede55743d6b349ca20c8f8158b0f7e5d98fd64"
+        }
+      ],
+      "params": {
+        "mode": "lines",
+        "section": "126 priority pollutants",
+        "prefix": "40 CFR 423 App. A"
+      },
+      "tags": {
+        "jurisdiction": "US",
+        "instrument": "Clean Water Act section 307(a)",
+        "citation": "40 CFR 423 Appendix A (126 Priority Pollutants)",
+        "annex": "Appendix A",
+        "status": "in_force",
+        "in_force_from": "1981-01-01",
+        "applies_from": "",
+        "version_date": "2026-10-01",
+        "licence": "Public domain (17 USC 105)",
+        "attribution": "Source: eCFR, https://www.ecfr.gov"
+      }
+    },
+    {
+      "id": "US_CWA_TOXIC",
+      "reader": "us_ecfr",
+      "urls": [
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=401&section=401.15",
+          "sha256": "4cfa3fe359808a7cc5ee6996566833adae8431df0a9b2cff0ef2834bb6c46a96"
+        }
+      ],
+      "params": {
+        "mode": "lines",
+        "section": "toxic pollutants",
+        "prefix": "40 CFR 401.15"
+      },
+      "tags": {
+        "jurisdiction": "US",
+        "instrument": "Clean Water Act section 307(a)(1)",
+        "citation": "40 CFR 401.15 (toxic pollutants)",
+        "annex": "",
+        "status": "in_force",
+        "in_force_from": "1979-07-30",
+        "applies_from": "",
+        "version_date": "2026-10-01",
+        "licence": "Public domain (17 USC 105)",
+        "attribution": "Source: eCFR, https://www.ecfr.gov"
+      }
+    },
+    {
+      "id": "US_SDWA_MCL",
+      "reader": "us_ecfr",
+      "urls": [
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=141&section=141.61",
+          "sha256": "e26060ce11962fc042bb24cfa36762b98d9e8bb72ed2a83db506d64ee36de8dd"
+        }
+      ],
+      "params": {
+        "prefix": "40 CFR 141.61",
+        "columns": {
+          "name": [
+            "Contaminant"
+          ],
+          "cas": [
+            "CAS No"
+          ],
+          "attr": [
+            {
+              "match": "MCL",
+              "label": "MCL"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "US",
+        "instrument": "Safe Drinking Water Act section 1412",
+        "citation": "40 CFR 141.61 (maximum contaminant levels for organic contaminants)",
+        "annex": "",
+        "status": "in_force",
+        "in_force_from": "",
+        "applies_from": "",
+        "version_date": "2026-10-01",
+        "licence": "Public domain (17 USC 105)",
+        "attribution": "Source: eCFR, https://www.ecfr.gov"
+      }
+    },
+    {
+      "id": "US_UCMR5",
+      "reader": "us_ecfr",
+      "urls": [
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=141&section=141.40",
+          "sha256": "0fd3fc444293ccd0f6891b23385560c0de5a9897ab318a09fc1e846b760020c7"
+        }
+      ],
+      "params": {
+        "prefix": "40 CFR 141.40",
+        "columns": {
+          "name": [
+            "Contaminant"
+          ],
+          "cas": [
+            "CASRN"
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "US",
+        "instrument": "86 FR 73131",
+        "citation": "40 CFR 141.40 (UCMR 5)",
+        "annex": "",
+        "status": "in_force",
+        "in_force_from": "2021-12-27",
+        "applies_from": "",
+        "version_date": "2026-10-01",
+        "licence": "Public domain (17 USC 105)",
+        "attribution": "Source: eCFR, https://www.ecfr.gov"
+      }
+    },
+    {
+      "id": "US_CERCLA",
+      "reader": "us_ecfr",
+      "urls": [
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=302&section=302.4",
+          "sha256": "654689b50cbf2e96916bb060fe2a35a4823429ac2d6a0046cb97c40e43884047"
+        }
+      ],
+      "params": {
+        "prefix": "40 CFR 302.4",
+        "columns": {
+          "name": [
+            "Hazardous substance"
+          ],
+          "cas": [
+            "CASRN"
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "US",
+        "instrument": "CERCLA section 102(a)",
+        "citation": "40 CFR 302.4 (list of hazardous substances)",
+        "annex": "",
+        "status": "in_force",
+        "in_force_from": "",
+        "applies_from": "",
+        "version_date": "2026-10-01",
+        "licence": "Public domain (17 USC 105)",
+        "attribution": "Source: eCFR, https://www.ecfr.gov"
+      }
+    },
+    {
+      "id": "US_UCMR6_PROP",
+      "reader": "us_epa_html",
+      "urls": [
+        {
+          "url": "https://www.epa.gov/dwucmr/proposed-sixth-unregulated-contaminant-monitoring-rule",
+          "sha256": "29976a8b7b2d15250641949de6ccdd5c1a91fb162bfb9ae03449781bcbfbeb45"
+        }
+      ],
+      "params": {
+        "prefix": "UCMR 6 proposal",
+        "columns": {
+          "name": [
+            "Contaminant"
+          ],
+          "cas": [
+            "CASRN"
+          ],
+          "attr": [
+            {
+              "match": "Minimum Reporting Level",
+              "label": "MRL"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "US",
+        "instrument": "91 FR 39952 (proposal)",
+        "citation": "EPA proposed Sixth Unregulated Contaminant Monitoring Rule (1 July 2026)",
+        "annex": "",
+        "status": "proposal",
+        "in_force_from": "",
+        "applies_from": "",
+        "version_date": "2026-07-01",
+        "licence": "Public domain (17 USC 105)",
+        "attribution": "Source: US EPA, https://www.epa.gov/dwucmr"
+      }
+    },
+    {
+      "id": "EPA_CCL5",
+      "reader": "us_epa_html",
+      "urls": [
+        {
+          "url": "https://www.epa.gov/ccl/ccl-5-chemical-contaminants",
+          "sha256": "e67a138703d569e7af2b4b36fd7a83d4ea6b89b2eddf49a57218a3616fac7f72"
+        }
+      ],
+      "params": {
+        "prefix": "CCL 5",
+        "columns": {
+          "name": [
+            "Chemical Name"
+          ],
+          "cas": [
+            "CASRN"
+          ],
+          "dtxsid": [
+            "DTXSID"
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "US",
+        "instrument": "FR Doc 2022-23963",
+        "citation": "US EPA Contaminant Candidate List 5 (14 November 2022), chemicals",
+        "annex": "",
+        "status": "in_force",
+        "in_force_from": "2022-11-14",
+        "applies_from": "",
+        "version_date": "2022-11-14",
+        "licence": "Public domain (17 USC 105)",
+        "attribution": "Source: US EPA, https://www.epa.gov/ccl"
+      }
+    },
+    {
+      "id": "EPA_CCL6_DRAFT",
+      "reader": "us_epa_html",
+      "urls": [
+        {
+          "url": "https://www.epa.gov/ccl/draft-ccl-6-chemical-contaminants",
+          "sha256": "5ef31da80e65ddccdaa5df3384484968489430bd81e2b91e17d7605cf0d34af0"
+        }
+      ],
+      "params": {
+        "prefix": "CCL 6 draft",
+        "columns": {
+          "name": [
+            "Chemical Name",
+            "Contaminant"
+          ],
+          "cas": [
+            "CASRN"
+          ],
+          "dtxsid": [
+            "DTXSID"
+          ]
+        }
+      },
+      "tags": {
+        "jurisdiction": "US",
+        "instrument": "91 FR 17186 (draft)",
+        "citation": "US EPA draft Contaminant Candidate List 6 (6 April 2026), chemicals",
+        "annex": "",
+        "status": "draft",
+        "in_force_from": "",
+        "applies_from": "",
+        "version_date": "2026-04-06",
+        "licence": "Public domain (17 USC 105)",
+        "attribution": "Source: US EPA, https://www.epa.gov/ccl"
+      }
+    }
+  ]
+}

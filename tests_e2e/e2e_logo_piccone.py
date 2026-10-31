@@ -40,7 +40,7 @@ def run(p, reduced):
         assert pg.evaluate("localStorage.getItem('mzlab.admin')") == "1"      # the same gesture switches the administrator mode on
     step(tag + "5 clicks: logo gold", five)
     def reload():
-        pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
+        pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_selector(LOGO + "[role=button]", timeout=60000)      # logo-piccone.js loads after the drop zone shows: its role mark says the stored gold was applied
         g = gold(pg); assert g[0] and g[2] != "none", g
     step(tag + "gold after reload", reload)
     def bright(): return pg.evaluate("parseFloat((getComputedStyle(document.querySelector('header img.logo')).filter.match(/brightness\\(([\\d.]+)\\)/)||[0,0])[1])")
@@ -57,7 +57,7 @@ def run(p, reduced):
         pg.wait_for_function("localStorage.getItem('mzlab.admin') === null", timeout=5000)      # the same gesture leaves the administrator mode (and reloads the page)
     step(tag + "second round (Enter x5): original logo back, administrator mode off", keyboard)
     def reload2():
-        pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
+        pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_selector(LOGO + "[role=button]", timeout=60000)      # logo-piccone.js loads after the drop zone shows: its role mark says the stored gold was applied
         g = gold(pg); assert g[0] is False and g[2] == "none" and not tab(pg), g
     step(tag + "original logo after a reload", reload2)
     def third():

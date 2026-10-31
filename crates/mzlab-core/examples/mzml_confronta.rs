@@ -123,7 +123,7 @@ fn compare_spectrum(a: &SpecInfo, b: &SpecInfo, tol: &Tol, s: &mut Stats) {
 
 /// Type, Q1 and Q3 (rounded to 1e-4) of a chromatogram, and its order among the ones with the same key.
 fn chrom_key(c: &ChromInfo, seen: &mut HashMap<String, usize>) -> String {
-    let q = |v: Option<f64>| v.map_or(String::new(), |x| format!("{:.4}", x));
+    let q = |v: Option<f64>| v.map_or(String::new(), |x| format!("{x:.4}"));
     let base = format!("{}|{}|{}", c.kind, q(c.q1), q(c.q3));
     let n = seen.entry(base.clone()).or_insert(0);
     *n += 1;

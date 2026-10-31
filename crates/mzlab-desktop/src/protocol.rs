@@ -5,7 +5,7 @@
 //!
 //! Routes (all GET): `open?slot&id`, `close?slot`, `reset`, `tic?slot&level&px`, `xic?slot&level&mz&tol&px`,
 //! `spectra?slot&level&i0&i1&bin`, `lookup?name&size` (the number of a file known by name and size),
-//! `rawprogress?id` (how far an mzML being written has got), `file?id&off&len` (also an mzML written by `nat2mzml`), and the folder of the libraries under `lib/` (see `lib_route`).
+//! `rawprogress?id` (how far an mzML being written has got), `file?id&off&len` (also an mzML written by `nat2mzml`), and the folder of the libraries under `lib/` (see `lib_route`), and the regulatory-lists package under `normative/` (see `normative_route`).
 
 use std::collections::HashMap;
 
@@ -36,19 +36,7 @@ fn json(status: u16, text: String) -> Response {
 }
 
 fn error(e: &Error) -> Response {
-    let params: Vec<String> = e
-        .params
-        .iter()
-        .map(|(k, v)| format!("\"{}\":{:?}", k, v))
-        .collect();
-    json(
-        400,
-        format!(
-            "{{\"error_key\":\"{}\",\"params\":{{{}}}}}",
-            e.key,
-            params.join(",")
-        ),
-    )
+    json(400, e.to_json())
 }
 
 fn query(q: &str) -> HashMap<&str, &str> {
@@ -195,6 +183,113 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
         "rpc" => rpc_route(state, body).unwrap_or_else(bad),
         "lr/upload" => upload_route(state, &q, body).unwrap_or_else(bad),
         r if r.starts_with("lib/") => lib_route(state, &r[4..], &q, body),
+        r if r.starts_with("normative/") => normative_route(state, &r[10..], &q, body),
+        r if r.starts_with("insilico/") => insilico_route(state, &r[9..]),
+        _ => json(404, "{}".into()),
+    }
+}
+
+/// Set by `normative/cancel`, cleared when an install starts.
+static NORM_CANCEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Set by `insilico/cancel`, cleared when an install starts.
+static INSILICO_CANCEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The in-silico candidate package in the folder of the libraries (`insilico.rs`): `insilico/status`, `insilico/install` (from the site), `insilico/check` (none|current|update),
+/// `insilico/cancel`.
+fn insilico_route(state: &State, route: &str) -> Response {
+    use crate::insilico as ins;
+    use std::sync::atomic::Ordering;
+    let lib = &state.libs;
+    let fail = |e: ins::InsilicoError| json(400, e.to_json());
+    let status = |s: ins::Status| json(200, serde_json::to_string(&s).unwrap_or_default());
+    match route {
+        "status" => status(ins::status(lib)),
+        "install" => {
+            INSILICO_CANCEL.store(false, Ordering::Relaxed);
+            match ins::install(
+                lib,
+                &crate::update::Http::new(),
+                &INSILICO_CANCEL,
+                &mut |_, _| {},
+            ) {
+                Ok(s) => status(s),
+                Err(e) => fail(e),
+            }
+        }
+        "check" => match ins::check(lib, &crate::update::Http::new()) {
+            Ok(c) => json(200, serde_json::json!({ "state": c }).to_string()),
+            Err(e) => fail(e),
+        },
+        "cancel" => {
+            INSILICO_CANCEL.store(true, Ordering::Relaxed);
+            json(200, "{}".into())
+        }
+        _ => json(404, "{}".into()),
+    }
+}
+
+/// The regulatory-lists package in the folder of the libraries: `normative/status`, `normative/catalog` (the installed `catalogo.json`), `normative/listings` (the `listings` JSON),
+/// `normative/install` (from the site), `normative/check` (none|current|update), `normative/cancel`, `normative/import?path` (a `.mzsus` or a package folder),
+/// `normative/import-official?reader&file&date` (POST, the CSV as body: the private `.mzsus` of the user's own official file) and `normative/imported` (the lists imported so far).
+fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>, body: &[u8]) -> Response {
+    use crate::normative as nm;
+    use std::sync::atomic::Ordering;
+    let lib = &state.libs;
+    let fail = |e: nm::NormError| json(400, e.to_json());
+    let status = |s: nm::Status| json(200, serde_json::to_string(&s).unwrap_or_default());
+    match route {
+        "status" => status(nm::status(lib)),
+        "catalog" => match nm::catalog_text(lib) {
+            Ok(t) => json(200, t),
+            Err(e) => fail(e),
+        },
+        "listings" => match nm::listings_json(lib) {
+            Ok(t) => json(200, t),
+            Err(e) => fail(e),
+        },
+        "install" => {
+            NORM_CANCEL.store(false, Ordering::Relaxed);
+            match nm::install(
+                lib,
+                &crate::update::Http::new(),
+                &NORM_CANCEL,
+                &mut |_, _| {},
+            ) {
+                Ok(s) => status(s),
+                Err(e) => fail(e),
+            }
+        }
+        "check" => match nm::check(lib, &crate::update::Http::new()) {
+            Ok(c) => json(200, serde_json::json!({ "state": c }).to_string()),
+            Err(e) => fail(e),
+        },
+        "cancel" => {
+            NORM_CANCEL.store(true, Ordering::Relaxed);
+            json(200, "{}".into())
+        }
+        "imported" => json(200, nm::imported(lib)),
+        "import-official" => match (q.get("reader"), q.get("file"), q.get("date")) {
+            (Some(r), Some(f), Some(d)) => {
+                match nm::import_official(
+                    lib,
+                    &crate::update::Http::new(),
+                    (&decode(r), &decode(f), &decode(d)),
+                    body,
+                ) {
+                    Ok(t) => json(200, t),
+                    Err(e) => fail(e),
+                }
+            }
+            _ => error(&Error::new("lib.err.io").with("detail", "bad request")),
+        },
+        "import" => match q.get("path") {
+            Some(p) => match nm::import(lib, std::path::Path::new(&decode(p))) {
+                Ok(s) => status(s),
+                Err(e) => fail(e),
+            },
+            None => error(&Error::new("lib.err.io").with("detail", "bad request")),
+        },
         _ => json(404, "{}".into()),
     }
 }
@@ -255,18 +350,46 @@ fn lib_route(state: &State, route: &str, q: &HashMap<&str, &str>, body: &[u8]) -
 fn rpc_route(state: &State, body: &[u8]) -> Option<Response> {
     let v: serde_json::Value = serde_json::from_slice(body).ok()?;
     Some(match state.rpc(v["op"].as_str()?, &v, body) {
-        Ok(crate::rpc::Answer::Text(t)) => Response { status: 200, content_type: "text/plain; charset=utf-8", body: t.into_bytes() },
-        Ok(crate::rpc::Answer::Bytes(b)) => Response { status: 200, content_type: "application/octet-stream", body: b },
+        Ok(crate::rpc::Answer::Text(t)) => Response {
+            status: 200,
+            content_type: "text/plain; charset=utf-8",
+            body: t.into_bytes(),
+        },
+        Ok(crate::rpc::Answer::Bytes(b)) => Response {
+            status: 200,
+            content_type: "application/octet-stream",
+            body: b,
+        },
         Err(e) => error(&e),
     })
 }
 
 /// `lr/upload?name&off&total`: a piece of a file that reaches the app as bytes; the answer holds the number of the file once the last piece is in.
 fn upload_route(state: &State, q: &HashMap<&str, &str>, body: &[u8]) -> Option<Response> {
-    let (name, off, total) = (q.get("name")?, q.get("off")?.parse().ok()?, q.get("total")?.parse().ok()?);
+    let (name, off, total) = (
+        q.get("name")?,
+        q.get("off")?.parse().ok()?,
+        q.get("total")?.parse().ok()?,
+    );
     Some(match state.upload_chunk(&decode(name), off, total, body) {
         Ok(Some(id)) => json(200, format!("{{\"id\":{id}}}")),
         Ok(None) => json(200, "{}".into()),
         Err(e) => error(&e),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A parameter with quotes, a backslash, a newline, a control character and non-ASCII text must still reach the page as valid JSON.
+    #[test]
+    fn error_body_is_valid_json_for_awkward_params() {
+        let text = "a\"b\\c\nd\u{1}e\u{200b}é";
+        let r = error(&Error::new("err.file.raw").with("detail", text));
+        assert_eq!(r.status, 400);
+        let v: serde_json::Value = serde_json::from_slice(&r.body).expect("valid JSON");
+        assert_eq!(v["error_key"], "err.file.raw");
+        assert_eq!(v["params"]["detail"], text);
+    }
 }

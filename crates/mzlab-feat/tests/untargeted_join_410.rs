@@ -72,8 +72,7 @@ fn rows_like_mzmine() {
                     rt_end: num(r, "rt_end"),
                     height: num(r, "height"),
                     area: num(r, "area"),
-                    filled: false,
-                    broad: false,
+                    ..Feature::default()
                 })
                 .collect()
         })

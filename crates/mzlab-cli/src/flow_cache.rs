@@ -22,8 +22,38 @@ struct Entry {
     ty: DataType,
     estimates: Vec<(String, Value, Value)>,
     warnings: Vec<String>,
+    preset: Option<String>,
     said: Option<Value>,
     lineage: Option<Lineage>,
+    /// The second output, when the step has one: (port, file, SHA-256, type).
+    extra: Option<(String, String, String, DataType)>,
+}
+
+/// The second output of a cached job, kept again and checked against its SHA-256: `Some(None)` when the entry has none, `None` when a missing or changed file fails the whole entry.
+fn take_extra(
+    r: &FileRunner,
+    job: &Job,
+    work: &Path,
+    extra: &Option<(String, String, String, DataType)>,
+) -> Option<Option<(&'static str, Artifact)>> {
+    let Some((port, file, sha, ty)) = extra else {
+        return Some(None);
+    };
+    let a = r
+        .keep(work.join(file), *ty)
+        .ok()
+        .filter(|a| a.sha256 == *sha)?;
+    Some(Some((
+        job.step.outs.iter().find(|p| p.name == *port)?.name,
+        a,
+    )))
+}
+
+/// Deletes the files of a cache entry that is no longer used.
+fn forget(work: &Path, e: &Entry) {
+    for file in std::iter::once(&e.file).chain(e.extra.iter().map(|x| &x.1)) {
+        let _ = std::fs::remove_file(work.join(file));
+    }
 }
 
 fn s(v: &str) -> Value {
@@ -94,16 +124,17 @@ impl Cache {
             r.trace(&a, l);
         }
         let port = job.step.outs.iter().find(|p| p.name == e.port)?.name;
-        self.now
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .push((key.to_string(), e.clone()));
+        let mut now = self.now.lock().unwrap_or_else(|p| p.into_inner());
+        now.push((key.to_string(), e.clone()));
         Some(Made {
             port,
             artifact: a,
             estimates: e.estimates.clone(),
             warnings: e.warnings.clone(),
+            preset: e.preset.as_deref().and_then(crate::flow_made::preset_id),
             file: e.said.clone(),
+            mem: None,
+            extra: take_extra(r, job, &self.work, &e.extra)?,
         })
     }
 }
@@ -124,8 +155,17 @@ impl Cache {
             ty: made.artifact.ty,
             estimates: made.estimates.clone(),
             warnings: made.warnings.clone(),
+            preset: made.preset.map(str::to_string),
             said: made.file.clone(),
             lineage,
+            extra: made.extra.as_ref().map(|(p, a)| {
+                (
+                    p.to_string(),
+                    a.label.clone().unwrap_or_default(),
+                    a.sha256.clone(),
+                    a.ty,
+                )
+            }),
         };
         self.now
             .lock()
@@ -139,7 +179,7 @@ impl Cache {
         mzlab_core::sortc::slice_by(&mut now, |a, b| a.0.cmp(&b.0));
         for (k, e) in &self.old {
             if !now.iter().any(|(n, x)| n == k || x.file == e.file) {
-                let _ = std::fs::remove_file(self.work.join(&e.file));
+                forget(&self.work, e);
             }
         }
         let entries: Vec<Value> = now
@@ -236,7 +276,19 @@ fn write_entry(work: &Path, key: &str, e: &Entry) -> Value {
             "warnings".into(),
             Value::Arr(e.warnings.iter().map(|w| s(w)).collect()),
         ),
+        ("preset".into(), e.preset.as_deref().map_or(Value::Null, s)),
         ("file_info".into(), e.said.clone().unwrap_or(Value::Null)),
+        (
+            "extra".into(),
+            e.extra.as_ref().map_or(Value::Null, |(p, f, h, t)| {
+                Value::Obj(vec![
+                    ("port".into(), s(p)),
+                    ("file".into(), s(f)),
+                    ("sha256".into(), s(h)),
+                    ("type".into(), s(t.name())),
+                ])
+            }),
+        ),
         (
             "lineage".into(),
             e.lineage
@@ -273,8 +325,18 @@ fn read_entry(work: &Path, v: &Value) -> Option<(String, Entry)> {
             .iter()
             .filter_map(|w| w.str().map(str::to_string))
             .collect(),
+        preset: text("preset"),
         said: v.get("file_info").filter(|f| !f.is_null()).cloned(),
         lineage,
+        extra: v.get("extra").filter(|x| !x.is_null()).and_then(|x| {
+            let t = |k: &str| x.get(k).and_then(Value::str).map(str::to_string);
+            Some((
+                t("port")?,
+                t("file")?,
+                t("sha256")?,
+                DataType::from_name(&t("type")?)?,
+            ))
+        }),
     };
     Some((text("key")?, e))
 }

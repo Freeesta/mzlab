@@ -16,7 +16,7 @@
      "file": {"type": "string"},
      "sha256": {"type": "string", "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"},
      "tipo": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc"]},
-     "tipo_bianco": {"enum": ["solvent", "procedure", null], "description": "optional, only for a blank: every blank is subtracted the same way"},
+     "tipo_bianco": {"enum": ["solvent", "procedure", "wash", null], "description": "optional, only for a blank: solvent and procedure blanks are subtracted the same way; a wash is no reference"},
      "tempo": {"type": ["number", "null"], "description": "the time as written or confirmed, in unita_tempo"},
      "unita_tempo": {"enum": ["s", "min", "h", "d"]},
      "tempo_min": {"type": ["number", "null"], "description": "derived from tempo and unita_tempo: the only time used in the computations; 0 for a t0"},

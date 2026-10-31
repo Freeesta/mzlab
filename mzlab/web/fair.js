@@ -135,7 +135,7 @@ const FAIR = (() => {
     const f = (id, label, val, extra = "") => `<label class="fr"><span>${T(label)}</span><input id="fa-${id}" value="${EHt(val == null ? "" : val)}" ${extra}></label>`;
     const sel = (id, label, opts, val) => `<label class="fr"><span>${T(label)}</span><select id="fa-${id}">${opts.map(v => `<option${v === val ? " selected" : ""}>${EHt(v)}</option>`).join("")}</select></label>`;
     const pol = spec.polarity < 0 ? "-" : "+";
-    d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${T(mb ? "fair.mb.title" : "fair.si.title")}</h3><button class="x" id="fa-x" aria-label="${T("common.close")}">&times;</button></div>
+    d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${T(mb ? "fair.mb.title" : "fair.si.title")}</h3><button class="x" id="fa-x" aria-label="${T("common.close")}" title="${T("common.close")}">&times;</button></div>
       <div class="sm muted" style="margin:4px 0 8px">${T(mb ? "fair.mb.note" : "fair.si.note")}</div>
       <div class="sm muted">${EHt(spec.file)} · scan ${EHt(spec.sid)} · m/z ${num(spec.prec, 4)} · ${spec.ce != null ? "CE " + EHt(spec.ce) + (spec.nce ? " %" : " eV") : T("fair.noCe")}${spec.act ? " · " + EHt(spec.act) : ""}</div>
       <fieldset class="fa"><legend>${T("fair.compound")}</legend>${f("name", "fair.name", mem0.lastName || "")}
@@ -183,7 +183,7 @@ if (typeof window !== "undefined") window.FAIR = FAIR;
 if (typeof AZIONI !== "undefined") {
   /** @param {any} c */
   const ok = c => c.p.level === 2, can = c => FAIR.available(c.p);
-  AZIONI.registra({ id: "spec.exportMassbank", gruppo: "lib", ordine: 3, viste: ["spec"], visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportMassbank"), esegui: /** @param {any} c */ c => FAIR.massbank(c.p) });
-  AZIONI.registra({ id: "spec.exportSirius", gruppo: "lib", ordine: 3, viste: ["spec"], visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportSirius"), esegui: /** @param {any} c */ c => FAIR.sirius(c.p) });
+  AZIONI.registra({ id: "spec.exportMassbank", gruppo: "lib", ordine: 3, viste: ["spec"], menu: false, scarico: true, visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportMassbank"), esegui: /** @param {any} c */ c => FAIR.massbank(c.p) });
+  AZIONI.registra({ id: "spec.exportSirius", gruppo: "lib", ordine: 3, viste: ["spec"], menu: false, scarico: true, visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportSirius"), esegui: /** @param {any} c */ c => FAIR.sirius(c.p) });
 }
 if (typeof module !== "undefined") module.exports = FAIR;

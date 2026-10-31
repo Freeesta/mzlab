@@ -24,6 +24,7 @@ const AVVIO = (function () {
   if (typeof window !== "undefined") {
     if (window.QQQ_PHONE || !window.QQQ_BROWSER) {
       stato = "ready";
+    finisciRiga();
     } else {
       bootTimer = setTimeout(() => {
         if (stato !== "pending") return;
@@ -70,7 +71,9 @@ const AVVIO = (function () {
       return;
     }
     const ph = typeof window !== "undefined" && window.qqPhaseCur ? window.qqPhaseCur : null;
-    if (!ph && !timedOut) {
+    // the way out of a stuck start shows only when files are actually waiting for the engine
+    const stuck = timedOut && attesa.length > 0;
+    if (!ph && !stuck) {
       el.hidden = true;
       el.textContent = "";
       return;
@@ -85,7 +88,7 @@ const AVVIO = (function () {
     span.textContent = txt;
     el.appendChild(span);
 
-    if (timedOut) {
+    if (stuck) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn sec sm";
@@ -101,6 +104,51 @@ const AVVIO = (function () {
       };
       el.appendChild(btn);
     }
+  }
+
+  const BOTTONI_RIGA = ["np-chrom", "np-spec", "np-map", "np-xic", "np-mrm"];
+
+  function chiaveRiga() {
+    return typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione.riga") : "mzlab.sessione.riga";
+  }
+
+  /**
+   * Remembers the second toolbar row of the Dati view, so that the next restore draws it at its final size in the first paint.
+   * Partial objects are merged into what is stored; `null` forgets it (high-resolution bench, no session).
+   * @param {{a?: number[], f?: string, fw?: number, s?: string, o?: string} | null} riga a: which "+ panel" buttons, f: file selector label, fw: its width, s: side panel width, o: its side l|r or empty when closed
+   */
+  function segnaRiga(riga) {
+    if (typeof window === "undefined" || !window.localStorage) return;
+    try {
+      if (riga) window.localStorage.setItem(chiaveRiga(), JSON.stringify({ ...JSON.parse(window.localStorage.getItem(chiaveRiga()) || "{}"), ...riga }));
+      else window.localStorage.removeItem(chiaveRiga());
+    } catch (_) {}
+  }
+
+  function leggiRiga() {
+    try {
+      const r = JSON.parse(window.localStorage.getItem(chiaveRiga()) || "null");
+      if (r && Array.isArray(r.a) && r.a.length === BOTTONI_RIGA.length && r.a.every(/** @param {any} x */ x => x === 0 || x === 1) && typeof r.f === "string" && typeof r.fw === "number" && /^\d{2,4}px$/.test(r.s || "") && ["", "l", "r"].includes(r.o)) return r;
+    } catch (_) {}
+    return null;
+  }
+
+  // The row of «+ panel» buttons is drawn in the first paint of a restore, as the last session left it; its buttons stay disabled until the session is back
+  function mostraRigaRipristino() {
+    const g = (/** @type {string} */ id) => document.getElementById(id), v = g("v-data"), riga = leggiRiga();
+    if (!v || !g("tools") || !riga) return;
+    BOTTONI_RIGA.forEach((id, i) => { const b = g(id); if (b) b.hidden = !riga.a[i]; });
+    const sel = /** @type {HTMLSelectElement | null} */ (g("fsel"));
+    if (sel && !sel.options.length) { sel.add(new Option(riga.f)); sel.style.width = riga.fw + "px"; }
+    document.documentElement.style.setProperty("--sb-w", riga.s);
+    v.classList.add("riga");
+  }
+
+  function finisciRiga() {
+    if (typeof document === "undefined") return;
+    const v = document.getElementById("v-data"), sel = document.getElementById("fsel");
+    if (v) v.classList.remove("riga");
+    if (sel) sel.style.width = "";
   }
 
   function segnaSessione(attiva) {
@@ -120,84 +168,28 @@ const AVVIO = (function () {
     } catch (_) { return false; }
   }
 
-  const BOTTONI_RIGA = ["np-chrom", "np-spec", "np-map", "np-xic", "np-mrm"];
-
-  function chiaveRiga() {
-    return typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione.riga") : "mzlab.sessione.riga";
-  }
-
-  /**
-   * Remembers the second toolbar row of the Dati view (which "+ panel" buttons it has and the label of the file selector), so that the
-   * next restore draws it at its final size in the first paint. `null` forgets it (high-resolution bench, no session).
-   * @param {{a?: number[], f?: string, fw?: number, s?: string, o?: string} | null} riga a: which buttons, f: file selector label, fw: its width, s: side panel width, o: its side l|r or empty when closed (merged into what is stored)
-   */
-  function segnaRiga(riga) {
-    if (typeof window === "undefined" || !window.localStorage) return;
-    try {
-      if (riga) window.localStorage.setItem(chiaveRiga(), JSON.stringify({ ...JSON.parse(window.localStorage.getItem(chiaveRiga()) || "{}"), ...riga }));
-      else window.localStorage.removeItem(chiaveRiga());
-    } catch (_) {}
-  }
-
-  function leggiRiga() {
-    try {
-      const r = JSON.parse(window.localStorage.getItem(chiaveRiga()) || "null");
-      if (r && Array.isArray(r.a) && r.a.length === BOTTONI_RIGA.length && r.a.every(/** @param {any} x */ x => x === 0 || x === 1) && typeof r.f === "string" && typeof r.fw === "number" && /^\d{2,4}px$/.test(r.s || "") && ["", "l", "r"].includes(r.o)) return r;
-    } catch (_) {}
-    return null;
-  }
-
-  // The work area of a saved session is in the first paint, with the row of "+ panel" buttons at its final size; it ignores clicks until the session is back
-  function mostraAreaRipristino() {
-    if (typeof document === "undefined" || !haSessione()) return false;
-    const v = document.getElementById("v-data"), st = document.getElementById("start"), t = document.getElementById("tools");
-    const riga = leggiRiga();
-    if (!v || !st || !t || !riga) return false;
-    BOTTONI_RIGA.forEach((id, i) => { const b = document.getElementById(id); if (b) b.hidden = !riga.a[i]; });
-    const sel = /** @type {HTMLSelectElement | null} */ (document.getElementById("fsel"));
-    if (sel && !sel.options.length) { sel.add(new Option(riga.f)); sel.style.width = riga.fw + "px"; }
-    document.documentElement.style.setProperty("--sb-w", riga.s);
-    // the side panel as the last session left it (barra.js applyLayout: below 900 px an open panel is a sheet)
-    const aside = document.getElementById("dfiles");
-    v.classList.toggle("sb-open", !!riga.o); v.classList.toggle("sb-right", riga.o === "r"); v.classList.toggle("sb-sheet", !!riga.o && window.innerWidth < 900);
-    if (aside) aside.toggleAttribute("inert", !riga.o);
-    st.hidden = true; v.hidden = false; v.classList.add("ripristino"); t.setAttribute("inert", "");
-    return true;
-  }
-
-  // `torna`: the session did not come back, so the start screen takes the place of the area drawn in advance
-  function finisciRipristino(torna) {
-    if (typeof document === "undefined") return;
-    const v = document.getElementById("v-data"), t = document.getElementById("tools"), st = document.getElementById("start");
-    if (torna && v && v.classList.contains("ripristino")) { v.hidden = true; if (st) st.hidden = false; }
-    if (v) v.classList.remove("ripristino");
-    const sel = document.getElementById("fsel");
-    if (sel) sel.style.width = "";
-    if (t) t.removeAttribute("inert");
-  }
-
+  // saved session: «restoring», not the landing
   function applicaIndizioSessione() {
-    if (typeof document === "undefined") return;
-    const d = document.getElementById("drop");
-    const s = document.getElementById("drop-skeleton");
-    const ha = haSessione();
-    // the skeleton takes the height of the drop box it replaces: when the session turns out not to exist, nothing moves
-    if (d && ha && !d.hidden && d.getBoundingClientRect().height > 0 && s) s.style.minHeight = d.getBoundingClientRect().height + "px";
-    mostraAreaRipristino();
-    if (d) d.hidden = ha;
-    if (s) {
-      s.hidden = !ha;
-      if (ha && !s.textContent) s.textContent = typeof window !== "undefined" && window.I18N ? window.I18N.t("load.session.restoring") : "Restoring session…";
-    }
+    if (typeof document === "undefined" || !haSessione()) return;
+    const g = id => document.getElementById(id), o = g("opening"), w = g("wdata"), v = g("v-data"), m = g("opn-msg");
+    if (!o || !w) return;
+    w.hidden = true;
+    o.hidden = false;
+    o.classList.add("restoring");
+    if (v) v.classList.add("opn");
+    if (m && !m.textContent) m.textContent = window.I18N ? I18N.t("load.session.restoring") : "Restoring…";
+    mostraRigaRipristino();
   }
 
   function rimuoviScheletro() {
     if (typeof document === "undefined") return;
-    const d = document.getElementById("drop");
-    const s = document.getElementById("drop-skeleton");
-    if (d) d.hidden = false;
-    if (s) s.hidden = true;
-    finisciRipristino(true);
+    const g = id => document.getElementById(id), o = g("opening"), w = g("wdata"), v = g("v-data"), m = g("opn-msg");
+    finisciRiga();
+    if (!o || !o.classList.contains("restoring")) return;
+    o.classList.remove("restoring"); o.hidden = true;
+    if (w) w.hidden = false;
+    if (v) v.classList.remove("opn");
+    if (m) m.textContent = "";
   }
 
   /**
@@ -210,6 +202,7 @@ const AVVIO = (function () {
     return new Promise(resolve => {
       attesa.push(resolve);
       renderDropStato();
+      renderFase();
     });
   }
 
@@ -219,7 +212,6 @@ const AVVIO = (function () {
   function segnaPronto() {
     if (stato !== "pending") return;
     stato = "ready";
-    finisciRipristino(false);
     if (bootTimer) { clearTimeout(bootTimer); bootTimer = null; }
     timedOut = false;
     const coda = attesa;

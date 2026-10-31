@@ -340,12 +340,12 @@ try:
         assert pg.is_visible("#uip-tour") and "Fai il tour con un file di esempio" in pg.inner_text("#uip-tour")
         pg.click("#uip-tour")
 
-        # Wait for file to open and tour to start at step 1
+        # Wait for the file and the tour at step 1: the tour example does not open by itself (the tour opens the file at its step), so the tour starts on the sample table and the first file (PASSI_INIZIALI, 7 + 2 steps)
         pg.wait_for_selector("#tour-dialog", timeout=35000)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 1 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Qui ci sono i file caricati", ttl
+        assert "Passo 1 di 9 · I tuoi dati" in hd, hd
+        assert ttl == "Qui scegli i campioni", ttl
         assert pg.evaluate("E.files.length") == 1, f"expected 1 file, got {pg.evaluate('E.files.length')}"
         pg.click("#tour-btn-skip")
         steps.append(("without data: loads single example file and starts tour at step 1", "ok"))

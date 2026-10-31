@@ -145,3 +145,50 @@ fn the_duplicate_window_keeps_the_strongest_row_and_matches_the_page() {
     assert!(few.contains("\"tenute\":4"), "{few}");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
+    let d = dir("nts");
+    let t = table();
+    std::fs::write(d.join("table.mzfeat"), &t).unwrap();
+    // two blanks (one per batch) and three samples; the samples file is campioni/3 with the batch of each file
+    let named: Vec<_> = files()
+        .into_iter()
+        .map(|(n, s)| (n, s, String::new()))
+        .collect();
+    let mut cs = campioni::proponi(&named);
+    for (c, b) in cs.iter_mut().zip(["B1", "B1", "B2", "B2"]) {
+        c.batch = b.into();
+    }
+    let samples = campioni::to_json3(&campioni::Tabella {
+        campioni: cs,
+        colonne: Vec::new(),
+    });
+    std::fs::write(d.join("samples.json"), &samples).unwrap();
+    let params = r#"{"blank_ratio":3,"blank_stat":"max","blank_match":"batch","min_replicate_fraction":0.5,"normalize":"istd","istd_id":1,"blank_keep_istd":true}"#;
+    let got = run(&d, params).unwrap();
+    // the spec the page builds: the rules in the order of the descriptor, the labels of the files read from the same document
+    let spec = r#"{"normalizza":{"metodo":"istd","istd":{"id":1}},"filtra":[{"regola":"repliche_min","valore":0.5},{"regola":"bianco","valore":3,"statistica":"massimo","abbinamento":"lotto","istd_esente":true}],"etichette":{"lotto":["B1","B1","B2","B2"],"matrice":["","","",""],"serie":["","","",""],"gruppo":["","","",""]}}"#;
+    let want = page(&t, &samples_text_v1(&samples), spec);
+    assert_eq!(got, want);
+    assert!(got.contains("\"bianco_ripiego\":["), "{got}");
+    // the same through the entry the page calls
+    let via =
+        mzlab_feat_table_wasm::filterspec::spec_from_json_with_samples(params, samples.as_bytes())
+            .unwrap();
+    assert_eq!(page(&t, &samples_text_v1(&samples), &via), got);
+    // defaults: the new parameters off give the bytes of the old plan
+    assert_eq!(
+        run(&d, r#"{"blank_ratio":3}"#).unwrap(),
+        page(
+            &t,
+            &samples_text_v1(&samples),
+            r#"{"normalizza":{"metodo":"nessuna"},"filtra":[{"regola":"bianco","valore":3}]}"#
+        )
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+fn samples_text_v1(doc: &str) -> String {
+    mzlab_feat_table_wasm::pol::samples_v1(doc.as_bytes()).unwrap()
+}

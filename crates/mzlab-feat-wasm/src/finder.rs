@@ -171,3 +171,13 @@ pub fn finder_transf_rows(text: &str) -> String {
 pub fn finder_progress(kind: &str, phase: &str, done: u32, total: u32) -> String {
     legacy::progress::json(kind, phase, done, total)
 }
+
+/// The `listings` JSON of a raw `.mzsus` of the regulatory package (`Suspects::listings_json`), the same text as the native `mzlab-cli normative listings`;
+/// a file without the extension or a damaged one is an English `Error`. The lists are data downloaded on a click, never code.
+#[wasm_bindgen]
+pub fn normative_listings(raw: &[u8]) -> Result<String, JsValue> {
+    let s = mzlab_feat::suspects::Suspects::open(raw)
+        .map_err(|e| js_sys::Error::new(&format!("{e:?}")))?;
+    s.listings_json()
+        .ok_or_else(|| js_sys::Error::new("the file has no listings extension").into())
+}

@@ -25,18 +25,22 @@
   /** @param {any} x @param {any} spec @param {any} inst @param {() => Promise<void>} body the work after the claim */
   const detached = (x, spec, inst, body) => ({ done: body().catch((/** @type {any} */ e) => fail(x, spec, inst, e)) });
 
-  /** spectra.centroid: a file of centroids is reused as it is («already centroided»); a profile file has the index of its centroids that Data builds (`<name>.cen.mzidx`, the existing route of the engine, nothing is
-   * computed here): reused when it is there, else asked for. The browser builds it for the files it reads as a maker's file; an mzML in profile stays with the computer (blocked by platform.computer) */
+  /** spectra.centroid: a file of centroids is reused as it is («already centroided»). A profile file has the index of its centroids (`<name>.cen.mzidx`, where features.detect reads its peaks). A maker's file gets it from
+   * the engine (nothing is computed here). A low-resolution profile mzML gets it from the centroid copy of the engine, the call of Settings (`rb.flowCentroid`), reused when its source, parameters and engine are the same.
+   * Still with the desktop app: a high-resolution profile mzML (memory) and a plan that sets `fwhm` or `threshold` (the engine call has no parameters) */
   const centroid = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
     const it = x.item(spec.item), j = job(spec);
     if (!it || !it.idx) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
-    if (!x.profile(it) || it.cen) { await x.call("cached", { job: j }); return {}; }
-    const rb = await G.MZLAB_RUST_READY;
-    if (!rb || !rb.nativeCentroidIndex || !rb.isNative || !rb.isNative(it.input)) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    if (!x.profile(it)) { await x.call("cached", { job: j }); return {}; }
+    const rb = await G.MZLAB_RUST_READY, native = !!(rb && rb.isNative && rb.isNative(it.input));
+    if (native && it.cen) { await x.call("cached", { job: j }); return {}; }
+    const given = inst.params || {}, custom = given.fwhm != null || given.threshold != null;
+    if (native ? !rb.nativeCentroidIndex : !rb || !rb.flowCentroid || it.hr || custom) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      await rb.nativeCentroidIndex(it.input);
+      if (native) await rb.nativeCentroidIndex(it.input);
+      else await rb.flowCentroid(it.input, it.size || 0, "");
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
       F.live.change();
     });
@@ -61,9 +65,12 @@
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      const out = (await p.detectAll([{ name: src.name, path: src.path, id: x.jk(spec) }], k.recipeOf(x.plan, inst)))[0];
+      const out = (await p.detectAll([{ name: it.input || src.name, path: src.path, id: x.jk(spec) }], k.recipeOf(x.plan, inst)))[0];
       await p.fs.write(path, out.slice());
-      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+      // the record names the preset the files decided (unit resolution runs `lr`), as `flow run` does
+      const seen = ((x.plan.inputs || []).find((/** @type {any} */ i) => i.name === (it.input || src.name)) || {}).observed;
+      const unit = !!seen && seen.resolution.length === 1 && seen.resolution[0] === "lr";
+      await x.call("finished", { job: j, result: unit ? { ms: performance.now() - t0, preset: "lr" } : { ms: performance.now() - t0 } });
     });
   };
 
@@ -148,6 +155,7 @@
     if (hit) {
       x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text });
       await M.keep(hit.name, hit.text);
+      F.webMsnAfterRun(x.S, [x.files.get(inst.id)]);
       await x.call("cached", { job: j });
       return {};
     }
@@ -157,6 +165,7 @@
       const r = await M.one(inst, { plan: x.plan, k: M.infusion(x.S), graph: null, phase: (/** @type {number} */ frac) => { x.call("progress", { job: j, frac }).catch(() => {}); } });
       await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
+      F.webMsnAfterRun(x.S, [x.files.get(inst.id)]);
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
     });
   };
@@ -169,9 +178,9 @@
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      const r = await F.webTp.generate(x.S, inst);
+      const est = await F.webTp.estimates(p, inst, F.webTp.indexPaths(x)), r = await F.webTp.generate(x.S, inst, est);
       await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
-      x.files.set(inst.id, { id: inst.id, ...r });
+      x.files.set(inst.id, { id: inst.id, ...r, estimates: est });
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
     });
   };
@@ -192,13 +201,74 @@
     });
   };
 
+  /** tp.dig_lr (flow-web-tp.js `digInputs`): the Dig of a unit-resolution series over the table of its alignment, the stored peaks and the indexes of the files (one call to the pool, the same Rust as `flow run`);
+   * the JSON is kept like the MSn results under the key of the job. A parent or samples that are not this plan's stay with the computer @param {any} x @param {any} spec @param {any} inst */
+  const tpDig = async (x, spec, inst) => {
+    const j = job(spec), k = kit(), p = await k.getPool(), key = await sha(spec.key), hit = await recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
+    /** @type {any} */ let inp = null;
+    try { inp = F.webTp ? await F.webTp.digInputs(x.S, inst) : null; } catch (e) { await x.call("started", { job: j }); await fail(x, spec, inst, e); return {}; }
+    if (!inp || !alKey || !up.length || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return detached(x, spec, inst, async () => {
+      const table = await p.fs.read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(async u => p.fs.read(DIR + u.key + ".mzfeatf")));
+      const text = await p.digLr({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, samples: inp.samples, names: x.items.map((/** @type {any} */ i) => i.input), recipe: k.recipeOf(x.plan), settings: JSON.stringify(inst.params || {}), peaks, paths: up.map(u => u.path) });
+      const r = { name: inst.id + ".dig.json", text };
+      await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
+  /** export.table_csv, export.mztab: the table file of the alignment (the table of a gap filling is the alignment's) with the polarity its recipe and its files give and the roles of the samples, from the `table` .wasm
+   * (`export_table_auto`, the Rust `flow run` calls); kept like the MSn results under the key of the job. A table that is not this plan's alignment (a filter view) or without samples stays with the computer
+   * @param {any} x @param {any} spec @param {any} inst */
+  const tableExport = async (x, spec, inst) => {
+    const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
+    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null })), up = al ? x.upstream(al) : [];
+    const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
+    if (!alKey || !samples || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now(), csv = base(inst) === "export.table_csv", kind = csv ? ({ ...F.defaults(inst, F.stepOf(x.S.reg, inst)), ...(inst.params || {}) }).kind || "full" : "mztab";
+    return detached(x, spec, inst, async () => {
+      const table = await p.fs.read(DIR + alKey + ".mzfeat"), hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", table))].map(b => b.toString(16).padStart(2, "0")).join("");
+      const r = { name: inst.id + (csv ? ".csv" : ".mzTab"), text: await p.tableFile({ table, samples, sha: hex, kind, paths: up.map((/** @type {any} */ u) => u.path) }) };
+      await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
+  /** table.filter: the view of the table of the alignment under the rules the step spells (`table_view_auto` of the `table` .wasm, the Rust `flow run` calls), kept like the MSn results under the key of the job.
+   * A table that is not this plan's alignment, or without samples, stays with the computer @param {any} x @param {any} spec @param {any} inst */
+  const tableFilter = async (x, spec, inst) => {
+    const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
+    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
+    if (!alKey || !samples || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst)), ...(inst.params || {}) });
+    return detached(x, spec, inst, async () => {
+      const r = { name: inst.id + ".json", text: await p.tableView({ table: await p.fs.read(DIR + alKey + ".mzfeat"), samples, params }) };
+      await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
   /** tp.link@2 (flow-web-tp.js): the hypotheses searched in the series, the proofs on the table of the alignment and the interpretation of the rows, in two calls to the pool (the same Rust as `flow run`); the `.mzfeat`
    * is kept in OPFS under the plan_key of the job. A file of hypotheses or a table that is not this plan's stays with the computer @param {any} x @param {any} spec @param {any} inst */
   const tpLink = async (x, spec, inst) => {
     const j = job(spec), k = kit(), p = await k.getPool(), path = DIR + spec.key + ".tp.mzfeat";
     if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
     const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
-    const inp = F.webTp ? await F.webTp.linkInputs(x.S, inst, x.inst).catch(/** @param {any} e */ e => { x.errors.set(inst.id, e); return e; }) : null;
+    const inp = F.webTp ? await F.webTp.linkInputs(x, p, inst).catch(/** @param {any} e */ e => { x.errors.set(inst.id, e); return e; }) : null;
     if (inp instanceof Error) { await x.call("started", { job: j }); await fail(x, spec, inst, inp); return {}; }
     if (!inp || !alKey || !up.length) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
@@ -214,5 +284,5 @@
     });
   };
 
-  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "export.annotations": (...a) => F.webExportAnnot.run(...a), "export.inclusion": (...a) => F.webInclusion.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings, "qc.run_order": (...a) => F.webQcReport.runOrder(...a), "report.methods": (...a) => F.webQcReport.methods(...a) };
 })();

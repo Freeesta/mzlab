@@ -97,6 +97,9 @@ jobs:
         run: python tools/build_site.py
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the identity of the build for option_env! (prov/1, corsa/1): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
+      - name: Build identity of the WASM modules
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
@@ -112,14 +115,14 @@ jobs:
           if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then
             cargo install wasm-bindgen-cli --version "$ver" --locked --force
           fi
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+          tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 1884160 engine
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2744320 engine @motore
       - name: Build the libraries WASM engine (a .wasm of its own, fetched only when the libraries are opened; never committed)
         run: |
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
+          tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
+          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
       - name: Build the mzFinder WASM engines (the .wasm of their own, under 500 KB each, with their SHA-256; never committed)
         run: tools/build_feat_wasm.sh site/static
       - name: Restore the spectral-library packages from the cache (pinned MassBank release, built with the Rust builder, never committed)
@@ -212,6 +215,8 @@ jobs:
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
+      - name: Record the .wasm modules in static/build.json (they are in place now)
+        run: python3 tools/build_site.py --build-json
       # The same steps as pages.yml (build job): a release ships exactly the site that would be published.
       - name: Zip of the site
         run: |

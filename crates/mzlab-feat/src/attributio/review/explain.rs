@@ -9,7 +9,7 @@ use super::settings::ReviewSettings;
 use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
-pub const C13: f64 = 1.003355;
+pub const C13: f64 = mzlab_core::elements::C13_STEP;
 
 /// Elements of the review (`ATOM` of the reference tool), in the order they are listed there.
 const ATOMS: [&str; 16] = [
@@ -59,35 +59,12 @@ fn adducts(pol: &str) -> &'static [(&'static str, &'static [(&'static str, i64)]
 
 // ------------------------------------------------------------------------------ formulas
 
-/// `C10H22O6` → `{C: 10, H: 22, O: 6}` (charge signs and brackets ignored; text that is not an element symbol is skipped).
+/// `C10H22O6` → `{C: 10, H: 22, O: 6}` (see `elements::parse_formula_lenient`).
 pub fn parse_formula(s: &str) -> Formula {
-    let t = s.trim().trim_start_matches('[');
-    let t = t.trim_end_matches(['+', '-']).trim_end_matches(']');
-    let b = t.as_bytes();
-    let mut d = Formula::new();
-    let mut i = 0;
-    while i < b.len() {
-        if !b[i].is_ascii_uppercase() {
-            i += 1;
-            continue;
-        }
-        let mut j = i + 1;
-        if j < b.len() && b[j].is_ascii_lowercase() {
-            j += 1;
-        }
-        let k = j;
-        while j < b.len() && b[j].is_ascii_digit() {
-            j += 1;
-        }
-        let n = if j > k {
-            t[k..j].parse().unwrap_or(1)
-        } else {
-            1
-        };
-        *d.entry(t[i..k].to_string()).or_insert(0) += n;
-        i = j;
-    }
-    d
+    mzlab_core::elements::parse_formula_lenient(s)
+        .into_iter()
+        .map(|(e, n)| (e, i64::try_from(n).unwrap_or(i64::MAX)))
+        .collect()
 }
 
 /// Hill order (C, H, then alphabetical), plain ASCII: `{C: 10, H: 22, O: 6}` → `C10H22O6`. Elements with a count of 0 or less are left out.
@@ -306,38 +283,10 @@ pub fn assign(mzs: &[f64], table: &SubTable, ppm: f64) -> Vec<Option<(usize, f64
         .collect()
 }
 
-/// (M+1/M, M+2/M) of an ion formula (nominal-mass isotopologue sums of the elements the reference tool lists; the others count as monoisotopic).
+/// (M+1/M, M+2/M) of an ion formula at the natural abundances (`composition::isotope_ratios`).
 pub fn iso_pattern(ion: &Formula) -> (f64, f64) {
-    fn table(e: &str) -> [f64; 3] {
-        match e {
-            "C" => [0.9893, 0.0107, 0.0],
-            "H" => [0.999885, 0.000115, 0.0],
-            "N" => [0.99636, 0.00364, 0.0],
-            "O" => [0.99757, 0.00038, 0.00205],
-            "S" => [0.9493, 0.0076, 0.0429],
-            "Cl" => [0.7576, 0.0, 0.2424],
-            "Br" => [0.5069, 0.0, 0.4931],
-            "K" => [0.932581, 0.0, 0.067302],
-            "Si" => [0.9223, 0.0468, 0.0309],
-            _ => [1.0, 0.0, 0.0],
-        }
-    }
-    let mut dist = [1.0, 0.0, 0.0];
-    for (e, n) in ion {
-        let a = table(e);
-        for _ in 0..*n {
-            let mut next = [0.0; 3];
-            for (i, d) in dist.iter().enumerate() {
-                for (j, x) in a.iter().enumerate() {
-                    if i + j < 3 {
-                        next[i + j] += d * x;
-                    }
-                }
-            }
-            dist = next;
-        }
-    }
-    (dist[1] / dist[0], dist[2] / dist[0])
+    let counts: Vec<(String, i64)> = ion.iter().map(|(e, n)| (e.clone(), *n)).collect();
+    mzlab_core::composition::isotope_ratios(&counts)
 }
 
 // ------------------------------------------------------------------------------ spectra

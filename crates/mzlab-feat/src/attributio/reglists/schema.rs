@@ -6,6 +6,7 @@ use crate::attributio::error::Result;
 use crate::attributio::frame::Frame;
 use crate::attributio::tox::snapshot::MembershipRow;
 use crate::attributio::tox::vocab::canon;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Columns of a list file (schema A1), in order.
@@ -124,7 +125,7 @@ fn csv_text(header: &[&str], rows: impl Iterator<Item = Vec<String>>) -> String 
 /// The text of a list file: normalised, sorted by first block then name (stable).
 pub fn write_list(rows: &[ListRow]) -> String {
     let mut n = normalise(rows);
-    n.sort_by(|a, b| {
+    n.sortc_by(|a, b| {
         (a.get("inchikey_skeleton"), a.get("name"))
             .cmp(&(b.get("inchikey_skeleton"), b.get("name")))
     });
@@ -205,7 +206,7 @@ pub fn membership(
             });
         }
     }
-    out.sort_by(|a, b| (&a.first_block, &a.list_id).cmp(&(&b.first_block, &b.list_id)));
+    out.sortc_by(|a, b| (&a.first_block, &a.list_id).cmp(&(&b.first_block, &b.list_id)));
     out
 }
 
@@ -292,6 +293,6 @@ pub fn membership_wide(long: &[MembershipRow], order: &[&str]) -> Wide {
             }
         })
         .collect();
-    rows.sort_by(|a, b| b.n_lists.cmp(&a.n_lists).then_with(|| a.name.cmp(&b.name)));
+    rows.sortc_by(|a, b| b.n_lists.cmp(&a.n_lists).then_with(|| a.name.cmp(&b.name)));
     Wide { lists, rows }
 }

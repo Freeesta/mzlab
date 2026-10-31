@@ -33,7 +33,7 @@ idx = sorted(ser.glob("*.mzidx"))
 files = [f.with_suffix(".mzML") for f in idx]
 nat.mkdir()
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "finder", "--", str(nat), *map(str, idx), "--parent", PARENT["neutral"],
-                "--rules", str(ROOT / "TP_Mine" / "data" / "regole_tp.json")], cwd=ROOT, check=True, capture_output=True)
+                "--rules", str(ROOT / "TP_Mine" / "data" / "regole_tp_2.json")], cwd=ROOT, check=True, capture_output=True)
 native = {"run": json.loads((nat / "run.json").read_text()), "detail": json.loads((nat / "detail.json").read_text())}
 # the MSn file of the standard (a structure with the formula of the parent) and the frozen answers of the former Python engine on it
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(ROOT / "TP_Mine" / "tests"))
@@ -83,7 +83,7 @@ LR_PARENT = {"name": "parent", "neutral": "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O", "a
 (tmp / "lr_files.json").write_text(json.dumps(LR_FILES)); (tmp / "lr_parent.json").write_text(json.dumps(LR_PARENT))
 (tmp / "lr_nat").mkdir()
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-finder-lr-wasm", "--example", "finder_lr", "--", str(tmp / "lr_nat"), str(tmp / "lr_files.json"), str(tmp / "lr_parent.json"),
-                str(ROOT / "TP_Mine" / "data" / "regole_tp.json"), *[f["path"] for f in lrs]], cwd=ROOT, check=True, capture_output=True)
+                str(ROOT / "TP_Mine" / "data" / "regole_tp_2.json"), *[f["path"] for f in lrs]], cwd=ROOT, check=True, capture_output=True)
 lr_native = {"run": json.loads((tmp / "lr_nat" / "run.json").read_text()), "detail": json.loads((tmp / "lr_nat" / "detail.json").read_text())}
 subprocess.run(["cargo", "build", "-q", "-p", "mzlab-desktop", "--example", "serve"], cwd=ROOT, check=True)
 eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT)], stdout=subprocess.PIPE, text=True,
@@ -167,7 +167,7 @@ try:
                 const csv = await pool.table('export', { samples: smp, spec: '', sha256: sha, polarity: 1, export_kind: 'full_mzmine' });
                 let wrong = ''; try { await pool.table('qc', { samples: smp, spec: '', sha256: '0'.repeat(64), polarity: 1 }); } catch (x) { wrong = x.key || String(x); }
                 return { qc: Array.isArray(qc.file) ? qc.file.length : -1, csv: csv.length, wrong, list, crate: await pool.crateVersion(), prev: Object.keys(prev), n: stored.length, table: table.length, evid: e.table.length, tried: h.tried, reg: !!h.registry };
-            }""", [[f.name for f in files], "/static/mzfinder/regole_tp.json", PARENT["neutral"]])
+            }""", [[f.name for f in files], "/static/mzfinder/regole_tp_2.json", PARENT["neutral"]])
             assert all(f.name + ".mzidx" in r["list"] for f in files), r["list"]
             assert r["n"] == len(files) and r["table"] > 100 and r["evid"] >= r["table"] and r["reg"] and r["crate"], r
             assert r["qc"] == len(files) and r["csv"] > 100 and r["wrong"] == "error.featState", (r["qc"], r["csv"], r["wrong"])

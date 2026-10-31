@@ -1,0 +1,117 @@
+{
+ "schema": "normative-prov/1",
+ "lists": [
+  {
+   "id": "T_LIST_A",
+   "tags": {
+    "jurisdiction": "EU",
+    "instrument": "Invented Act A",
+    "citation": "Invented Act A, invented for tests",
+    "status": "in_force",
+    "version_date": "2000-01-01",
+    "attribution": "Invented"
+   },
+   "inputs": [
+    {
+     "url": "file:invented",
+     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+     "retrieved": "2000-01-02"
+    }
+   ],
+   "coverage": {
+    "entries": 4,
+    "screenable": 3,
+    "groups": 1,
+    "uvcb": 0,
+    "inorganic": 0,
+    "unresolved": 0
+   },
+   "csv_sha256": "75f67417535a8f08a758a0a3f92b6eb8dbccce1a370317fba0867d034d03853b",
+   "stale": false
+  },
+  {
+   "id": "T_LIST_B",
+   "tags": {
+    "jurisdiction": "EU",
+    "instrument": "Invented Act B",
+    "citation": "Invented Act B, invented for tests",
+    "status": "in_force",
+    "version_date": "2000-01-01",
+    "attribution": "Invented"
+   },
+   "inputs": [
+    {
+     "url": "file:invented",
+     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+     "retrieved": "2000-01-02"
+    }
+   ],
+   "coverage": {
+    "entries": 3,
+    "screenable": 2,
+    "groups": 1,
+    "uvcb": 0,
+    "inorganic": 0,
+    "unresolved": 0
+   },
+   "csv_sha256": "9ae4f171e828240311d1c506fe9b1d8daa5a479f21b6a5cde8cc74dfc1c312db",
+   "stale": false
+  },
+  {
+   "id": "T_LIST_C",
+   "tags": {
+    "jurisdiction": "US",
+    "instrument": "Invented Rule C",
+    "citation": "Invented Rule C, invented for tests",
+    "status": "in_force",
+    "version_date": "2000-01-01",
+    "attribution": "Invented"
+   },
+   "inputs": [
+    {
+     "url": "file:invented",
+     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+     "retrieved": "2000-01-02"
+    }
+   ],
+   "coverage": {
+    "entries": 3,
+    "screenable": 2,
+    "groups": 1,
+    "uvcb": 0,
+    "inorganic": 0,
+    "unresolved": 0
+   },
+   "csv_sha256": "cff4880e9607704016f1e793e2414b80226c47bfd2dd8fc5f8c9607a63b3bcc0",
+   "stale": false
+  },
+  {
+   "id": "T_LIST_P",
+   "tags": {
+    "jurisdiction": "EU",
+    "instrument": "Invented Proposal P",
+    "citation": "Invented Proposal P, invented for tests",
+    "status": "proposal",
+    "version_date": "2000-01-01",
+    "attribution": "Invented"
+   },
+   "inputs": [
+    {
+     "url": "file:invented",
+     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+     "retrieved": "2000-01-02"
+    }
+   ],
+   "coverage": {
+    "entries": 2,
+    "screenable": 1,
+    "groups": 1,
+    "uvcb": 0,
+    "inorganic": 0,
+    "unresolved": 0
+   },
+   "csv_sha256": "3ab83355fb0ea18d35ff527da674c5c065f7374785cfaf1fda6e1dfa792bf858",
+   "stale": false
+  }
+ ]
+}

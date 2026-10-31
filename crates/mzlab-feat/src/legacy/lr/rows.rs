@@ -12,9 +12,9 @@ use super::super::Res;
 use super::labels::{crit, score, status, Cell, GROWS, PERSISTS};
 use super::plan::{ParentLr, Settings};
 use super::{Entry, Offset};
-use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED};
+use crate::aligned::{no_peak, Aligned, CELL_DETECTED};
 
-/// The calibration offset is measured on a parent row within this many Da of its [M+H]+ and applied up to the same limit.
+/// The calibration offset is measured on a parent row within this many Da of its ion and applied up to the same limit.
 pub const OFFSET_MAX: f64 = 0.6;
 /// Isomers of one hypothesis: a peak with at least this share of the strongest area, at most this many peaks.
 const ISOMER_FRAC: f64 = 0.10;
@@ -22,7 +22,7 @@ const ISOMER_MAX: usize = 4;
 pub const ISOTOPE: &str = "not an isotope peak";
 
 pub const ISOTOPE_SHIFTS: [(f64, &str); 3] = [
-    (1.00335, "13C (M+1)"),
+    (mzlab_core::elements::C13_STEP, "13C (M+1)"),
     (2.0067, "M+2"),
     (1.99580, "34S (M+2)"),
 ];
@@ -43,8 +43,8 @@ pub struct Hyp {
     pub pred: u8,
 }
 
-/// The hypotheses of the rules ([M+H]+, at least one step), sorted by steps and m/z.
-pub fn hypotheses(registry: &str) -> Res<Vec<Hyp>> {
+/// The hypotheses of the rules (in `adduct`, the one of the parent; at least one step), sorted by steps and m/z.
+pub fn hypotheses(registry: &str, adduct: &str) -> Res<Vec<Hyp>> {
     if registry.trim().is_empty() {
         return Ok(Vec::new());
     }
@@ -69,7 +69,7 @@ pub fn hypotheses(registry: &str) -> Res<Vec<Hyp>> {
         .map(Value::arr)
         .unwrap_or_default()
         .iter()
-        .filter(|h| text(h, "adduct") == "[M+H]+")
+        .filter(|h| text(h, "adduct") == adduct)
         .filter(|h| {
             strs(h, "sources")
                 .iter()
@@ -93,12 +93,15 @@ pub fn hypotheses(registry: &str) -> Res<Vec<Hyp>> {
             .cmp(&out[b].steps)
             .then(out[a].mz.total_cmp(&out[b].mz))
     });
-    Ok(ord.into_iter().map(|i| promote(out[i].clone())).collect())
+    Ok(ord
+        .into_iter()
+        .map(|i| promote(out[i].clone(), adduct))
+        .collect())
 }
 
 /// The merge by nominal mass orders the formulas of one ion by their text, so its leader may be a way of two steps while an alternative takes one: the
 /// shortest way leads (the Dig names the row after it); the rest stay as alternatives.
-fn promote(h: Hyp) -> Hyp {
+fn promote(h: Hyp, adduct: &str) -> Hyp {
     let steps = |l: &str| l.matches('+').count() as u32 + 1;
     let parsed = |a: &String| {
         let (f, rest) = a.split_once(" (")?;
@@ -109,7 +112,7 @@ fn promote(h: Hyp) -> Hyp {
             f.to_string(),
             label.to_string(),
             neutral,
-            ion_mz(neutral, "[M+H]+")?,
+            ion_mz(neutral, adduct)?,
         ))
     };
     let best = h
@@ -145,7 +148,7 @@ pub fn cells(t: &Aligned, r: usize) -> Vec<Cell> {
     (0..t.n_files)
         .map(|k| {
             let c = t.cell(r, k);
-            if t.state[c] == CELL_ABSENT || !t.area[c].is_finite() {
+            if no_peak(t.state[c]) || !t.area[c].is_finite() {
                 return Cell::default();
             }
             let (a, w) = (f64::from(t.apex_rt[c]), f64::from(t.width[c]));

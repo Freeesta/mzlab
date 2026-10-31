@@ -1,0 +1,63 @@
+# By hand only: `twiggy` report (top items, dominators, and a diff against another ref) of the engine, hr and attributio-all .wasm, built with their name section
+# (tools/twiggy_wasm.sh, before wasm-opt: the attribution is what counts, not the exact bytes). Report only: it gates nothing and is not a check of any pull request.
+name: twiggy-wasm
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "ref to diff against (branch, tag or SHA); empty = top and dominators only"
+        default: ""
+      righe:
+        description: "rows per table"
+        default: "30"
+
+permissions:
+  contents: read
+
+jobs:
+  twiggy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - name: wasm-bindgen CLI (the version of Cargo.lock) and twiggy
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+          cargo install twiggy --version 0.8.0 --locked --force
+      - name: Build the head
+        run: tools/twiggy_wasm.sh "$RUNNER_TEMP/head"
+      - name: Build the base
+        if: inputs.base != ''
+        env:
+          BASE: ${{ inputs.base }}
+        run: |
+          git worktree add "$RUNNER_TEMP/basetree" "$BASE"
+          (cd "$RUNNER_TEMP/basetree" && tools/twiggy_wasm.sh "$RUNNER_TEMP/base")
+      - name: Report
+        env:
+          N: ${{ inputs.righe }}
+          BASE: ${{ inputs.base }}
+        run: |
+          mkdir -p twiggy-out
+          for m in engine hr attributio-all; do
+            f="$RUNNER_TEMP/head/$m.wasm"
+            {
+              echo "### $m ($(stat -c %s "$f") bytes before wasm-opt)"
+              echo '#### top'; echo '```'; twiggy top -n "$N" "$f"; echo '```'
+              echo '#### dominators'; echo '```'; twiggy dominators -r "$N" "$f"; echo '```'
+              if [ -n "$BASE" ]; then
+                echo "#### diff against $BASE"; echo '```'
+                twiggy diff -n "$N" "$RUNNER_TEMP/base/$m.wasm" "$f"; echo '```'
+              fi
+            } | tee "twiggy-out/$m.md" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: twiggy
+          path: twiggy-out

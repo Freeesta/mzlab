@@ -83,7 +83,7 @@ function series(cv, o, quiet) {
   const n = (o.series || []).length, xs = (o.series || []).flatMap(s => s.x).filter(isFinite), ys = (o.series || []).flatMap(s => s.y).filter(isFinite);
   const title = o.title || [o.yl, o.xl].filter(Boolean).join(" / ") || T("a11y.chart");
   if (!cv.hasAttribute("aria-label")) cv.setAttribute("aria-label", title);
-  describe(cv, T("a11y.small", { title, n, xl: o.xl || "x", yl: o.yl || "y", a: xs.length ? num(Math.min(...xs), 2) : "", b: xs.length ? num(Math.max(...xs), 2) : "", c: ys.length ? num(Math.min(...ys), 2) : "", d: ys.length ? num(Math.max(...ys), 2) : "" }));
+  describe(cv, T("a11y.small", { title, n, xl: o.xl || "x", yl: o.yl || "y", a: xs.length ? num(minOf(xs), 2) : "", b: xs.length ? num(maxOf(xs), 2) : "", c: ys.length ? num(minOf(ys), 2) : "", d: ys.length ? num(maxOf(ys), 2) : "" }));
   addButton(cv, () => {
     const rows = [];
     (o.series || []).forEach((s, k) => {

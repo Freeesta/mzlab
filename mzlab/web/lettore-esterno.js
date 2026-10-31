@@ -49,7 +49,8 @@ export function createEsterno(native_external) {
   return {
     /** loads the module of the family that reads the dataset with these members (nothing for the others) and registers `open` on the engine; rejects with the JSON `err.file.wiffLoad` */
     async prepara(/** @type {string[]} */ names, /** @type {{ name: string, size: number, sha1?: string }[] | undefined} */ members) {
-      for (const m of members || []) if (m.sha1) known.set(m.name + "\0" + m.size, m.sha1);
+      // a member without a SHA-1 must not inherit the one of an earlier member with the same name and size
+      for (const m of members || []) { const k = m.name + "\0" + m.size; if (m.sha1) known.set(k, m.sha1); else known.delete(k); }
       const fam = famigliaEsterna(names);
       if (!fam) return;
       if (!registered) { native_external(open); registered = true; }

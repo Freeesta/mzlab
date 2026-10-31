@@ -14,6 +14,13 @@ use mzlab_feat::attributio::table::{self, Run};
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "all")]
+mod flow_level;
+#[cfg(feature = "all")]
+mod flow_regulatory;
+#[cfg(feature = "all")]
+mod insilico_web;
+
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with. The build with the feature `rev` (the Banco 2b) is the
 /// `.wasm` `attributio-rev`: it exports the review, the decision and the evidence export; the build with `export` is the `.wasm` `attributio-export`: the four spreadsheet exports only; the one without them exports the table only.
 #[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
@@ -259,13 +266,7 @@ pub fn render_to(run: &Run, kind: &str, write: &mut dyn FnMut(u64, &[u8]) -> boo
 }
 
 fn js_err(e: Error) -> JsValue {
-    let mut o = Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    JsValue::from_str(&o.0)
+    JsValue::from_str(&e.to_json())
 }
 
 fn js_fetch(read: &Function, k: usize, off: u64, len: u64) -> Option<Vec<u8>> {
@@ -469,4 +470,20 @@ pub fn rt_descriptors_json(smiles: &str) -> String {
 #[wasm_bindgen]
 pub fn rt_descriptors(smiles: &str) -> String {
     rt_descriptors_json(smiles)
+}
+
+/// `formula.ms2` in the browser: the text `flow run` writes (`mzlab_feat::flow_formula_ms2::ms2_text`). `algorithm` is the id of the plan ("" = the default), `params_json` the
+/// parameters of the step merged with its defaults, `mgf` the spectra and `formulas` the `formulas/1` text of the candidates. Errors are JSON `{"error_key","params"}` texts.
+#[cfg(feature = "all")]
+#[wasm_bindgen]
+pub fn flow_formula_ms2(
+    algorithm: &str,
+    params_json: &str,
+    name: &str,
+    mgf: &[u8],
+    formulas: &[u8],
+) -> Result<String, JsValue> {
+    let params = mzlab_feat::flow_ms2::json_params(params_json).map_err(js_err)?;
+    mzlab_feat::flow_formula_ms2::ms2_text(algorithm, &params, (name, mgf), &[formulas])
+        .map_err(js_err)
 }

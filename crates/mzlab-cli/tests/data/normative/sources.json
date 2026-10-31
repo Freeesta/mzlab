@@ -1,0 +1,181 @@
+{
+ "schema": "normative-sources/1",
+ "resolve": {
+  "susdat": {
+   "url": "https://fixture.test/susdat",
+   "sha256": null
+  },
+  "pubchem_ids": {
+   "url": "https://fixture.test/ids",
+   "sha256": null
+  },
+  "pubchem_parent": {
+   "url": "https://fixture.test/parent",
+   "sha256": null
+  },
+  "pubchem_props": "https://fixture.test/props/{cids}",
+  "dsstox": {
+   "url": "https://fixture.test/dsstox",
+   "sha256": null
+  }
+ },
+ "lists": [
+  {
+   "id": "T_EU_WATER",
+   "reader": "eu_water",
+   "urls": [
+    {
+     "url": "https://fixture.test/cellar",
+     "sha256": null
+    }
+   ],
+   "params": {
+    "annexes": [
+     "ANNEX I"
+    ],
+    "prefix": "Act 1",
+    "columns": {
+     "ref": [
+      "No"
+     ],
+     "name": [
+      "Name of substance"
+     ],
+     "cas": [
+      "CAS number"
+     ],
+     "ec": [
+      "EU number"
+     ],
+     "attr": [
+      {
+       "match": "AA-EQS Inland",
+       "label": "AA-EQS inland"
+      }
+     ]
+    }
+   },
+   "tags": {
+    "jurisdiction": "XX",
+    "instrument": "Act 1",
+    "citation": "Act 1",
+    "annex": "",
+    "status": "in_force",
+    "in_force_from": "2000-01-01",
+    "applies_from": "",
+    "version_date": "2000-01-01",
+    "licence": "test",
+    "attribution": "invented"
+   }
+  },
+  {
+   "id": "T_EU_PPP",
+   "reader": "eu_ppp",
+   "urls": [
+    {
+     "url": "https://fixture.test/ppp?page=1",
+     "sha256": null
+    }
+   ],
+   "params": {},
+   "tags": {
+    "jurisdiction": "XX",
+    "instrument": "Act 2",
+    "citation": "Act 2",
+    "annex": "",
+    "status": "in_force",
+    "in_force_from": "2000-01-01",
+    "applies_from": "",
+    "version_date": "2000-01-01",
+    "licence": "test",
+    "attribution": "invented"
+   }
+  },
+  {
+   "id": "T_US_ECFR",
+   "reader": "us_ecfr",
+   "urls": [
+    {
+     "url": "https://fixture.test/ecfr",
+     "sha256": null
+    }
+   ],
+   "params": {
+    "mode": "lines",
+    "section": "second section",
+    "prefix": "P2"
+   },
+   "tags": {
+    "jurisdiction": "XX",
+    "instrument": "Act 3",
+    "citation": "Act 3",
+    "annex": "",
+    "status": "in_force",
+    "in_force_from": "2000-01-01",
+    "applies_from": "",
+    "version_date": "2000-01-01",
+    "licence": "test",
+    "attribution": "invented"
+   }
+  },
+  {
+   "id": "T_US_EPA",
+   "reader": "us_epa_html",
+   "urls": [
+    {
+     "url": "https://fixture.test/epa",
+     "sha256": null
+    }
+   ],
+   "params": {
+    "prefix": "Page",
+    "columns": {
+     "name": [
+      "Chemical Name"
+     ],
+     "cas": [
+      "CASRN"
+     ],
+     "dtxsid": [
+      "DTXSID"
+     ]
+    }
+   },
+   "tags": {
+    "jurisdiction": "XX",
+    "instrument": "Act 4",
+    "citation": "Act 4",
+    "annex": "",
+    "status": "in_force",
+    "in_force_from": "2000-01-01",
+    "applies_from": "",
+    "version_date": "2000-01-01",
+    "licence": "test",
+    "attribution": "invented"
+   }
+  },
+  {
+   "id": "T_VOCI",
+   "reader": "voci",
+   "urls": [
+    {
+     "url": "https://fixture.test/voci",
+     "sha256": null
+    }
+   ],
+   "params": {},
+   "tags": {
+    "jurisdiction": "XX",
+    "instrument": "Act 5",
+    "citation": "Act 5",
+    "annex": "",
+    "status": "in_force",
+    "in_force_from": "2000-01-01",
+    "applies_from": "",
+    "version_date": "2000-01-01",
+    "licence": "test",
+    "attribution": "invented"
+   }
+  }
+ ]
+}

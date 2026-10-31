@@ -33,7 +33,7 @@ pub fn clean_matrix(rows: &[Vec<Option<f64>>]) -> R<Vec<Vec<f64>>> {
     if rows.iter().any(|r| r.len() != w) {
         return bad("the rows of the table must have the same length");
     }
-    Ok(rows.iter().map(|r| r.iter().map(|v| v.filter(|x| *x == *x).unwrap_or(0.0).max(0.0)).collect()).collect())
+    Ok(rows.iter().map(|r| r.iter().map(|v| v.filter(|x| !x.is_nan()).unwrap_or(0.0).max(0.0)).collect()).collect())
 }
 
 pub fn ncols(m: &[Vec<f64>]) -> usize {
@@ -84,7 +84,7 @@ pub fn time_profile(points: &[Value], metric: &str, istd: Option<&Value>) -> R<V
         a.0.is_none().cmp(&b.0.is_none()).then(by_time).then_with(|| if a.0.is_some() { a.1.cmp(&b.1) } else { Equal }).then(a.2.cmp(&b.2))
     });
     let field = if istd.is_some() { "norm" } else { "value" };
-    let series: Vec<f64> = rows.iter().enumerate().filter(|(_, r)| r.0.is_some() && !r.3.get(field).map_or(true, Value::is_null)).map(|(i, _)| i as f64).collect();
+    let series: Vec<f64> = rows.iter().enumerate().filter(|(_, r)| r.0.is_some() && !r.3.get(field).is_none_or(Value::is_null)).map(|(i, _)| i as f64).collect();
     let out: Vec<Value> = rows.into_iter().map(|r| r.3).collect();
     Ok(Obj::new().put("metric", text(metric)).b("normalized", istd.is_some()).put("rows", Value::Arr(out)).put("series", floats(&series)).done())
 }
@@ -128,12 +128,12 @@ pub fn blank_filter(m: &[Vec<f64>], roles: &[String], factor: f64, stat: &str, m
     let (mut kept, mut discarded, mut rows) = (Vec::new(), Vec::new(), Vec::new());
     for (f, row) in m.iter().enumerate() {
         let b = pick(row, &bl);
-        let lvl = if stat == "max" { b.iter().cloned().fold(f64::NEG_INFINITY, f64::max) } else { mean(&b) };
+        let lvl = if stat == "max" { b.iter().copied().fold(f64::NEG_INFINITY, f64::max) } else { mean(&b) };
         let thr = lvl * factor;
         let s = pick(row, &sm);
         let n_above = s.iter().filter(|&&v| v > thr && v > 0.0).count();
         if n_above as i64 >= min_detect { kept.push(f) } else { discarded.push(f) }
-        rows.push(BlankRow { blank: lvl, threshold: thr, n_above, n_samples: sm.len(), max_sample: s.iter().cloned().fold(f64::NEG_INFINITY, f64::max) });
+        rows.push(BlankRow { blank: lvl, threshold: thr, n_above, n_samples: sm.len(), max_sample: s.iter().copied().fold(f64::NEG_INFINITY, f64::max) });
     }
     Ok(BlankOut { kept, discarded, rows, n_blank: bl.len(), n_sample: sm.len() })
 }

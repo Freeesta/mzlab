@@ -1,0 +1,308 @@
+Materiale di partenza di DEV-5 (banco dello studio ARCH-F, non compilato dal repository). File separati da righe «==== nome ====».
+==== bench/Cargo.toml ====
+[package]
+name = "wbench"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+zlibrs = ["mzlab-core/banco-zlib-rs"]
+
+[dependencies]
+mzlab-core = { path = "../../crates/mzlab-core", default-features = false, features = ["mappa-dad"] }
+wasm-bindgen = "0.2"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+
+[workspace]
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = true
+codegen-units = 1
+
+[profile.o3]
+inherits = "release"
+opt-level = 3
+
+[profile.os]
+inherits = "release"
+opt-level = "s"
+
+[profile.mix]
+inherits = "release"
+[profile.mix.package.mzlab-core]
+opt-level = 3
+[profile.mix.package.miniz_oxide]
+opt-level = 3
+[profile.mix.package.quick-xml]
+opt-level = 3
+[profile.mix.package.base64]
+opt-level = 3
+
+[profile.o2]
+inherits = "release"
+opt-level = 2
+==== bench/src/lib.rs ====
+//! Bench harness: real mzlab-core functions behind tiny wasm-bindgen entry points; JS times each call.
+use mzlab_core::{centroidi, composition, entropy, idxread, mzidx, mzml, peaks, routes, upload};
+use std::cell::RefCell;
+use std::io::Cursor;
+use wasm_bindgen::prelude::*;
+
+thread_local! {
+    static FILE: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static RUN: RefCell<Option<mzml::Run>> = RefCell::new(None);
+    static IDX: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static Z: RefCell<(Vec<u8>, usize)> = RefCell::new((Vec::new(), 0));
+}
+
+#[wasm_bindgen]
+pub fn load(b: &[u8]) { FILE.with(|f| *f.borrow_mut() = b.to_vec()); }
+
+/// XML + base64 + zlib of every spectrum.
+#[wasm_bindgen]
+pub fn parse() -> f64 {
+    let run = FILE.with(|f| mzml::read(Cursor::new(f.borrow().as_slice())).unwrap());
+    let n: usize = run.spectra.iter().map(|s| s.mz.len()).sum();
+    RUN.with(|r| *r.borrow_mut() = Some(run));
+    n as f64
+}
+
+/// Scan table + .mzidx in memory (the index pool's job for one file).
+#[wasm_bindgen]
+pub fn index() -> f64 {
+    FILE.with(|f| {
+        let mut v = f.borrow().clone();
+        let size = v.len() as u64;
+        let p = upload::prepare(&mut v, size, "x.mzML").unwrap();
+        let (out, _) = mzidx::build_mzml_to_vec(&p.table, &f.borrow(), 256 << 20).unwrap();
+        let n = out.len();
+        IDX.with(|i| *i.borrow_mut() = out);
+        n as f64
+    })
+}
+
+/// `k` XICs from the index, m/z spread over the range.
+#[wasm_bindgen]
+pub fn xic(k: u32, lo: f64, hi: f64, tol: f64) -> f64 {
+    IDX.with(|i| {
+        let v = i.borrow().clone();
+        let size = v.len() as u64;
+        let mut r = routes::Routes::new(idxread::Index::open(v, size).unwrap());
+        let mut s = 0.0;
+        for j in 0..k {
+            let mz = lo + (hi - lo) * (j as f64 + 0.5) / k as f64;
+            let (_, y) = r.xic_raw(mz, tol, 1).unwrap();
+            s += y.iter().sum::<f64>();
+        }
+        s
+    })
+}
+
+/// Centroids of every MS1 spectrum (continuous mode).
+#[wasm_bindgen]
+pub fn centroid(step: f64, w: f64, maxn: u32) -> f64 {
+    let p = centroidi::Params { mode: centroidi::Mode::Continuous, unit: 1.0, step, w, k: 3.0, vmax: 0.0, area: false };
+    let mut buf = centroidi::Buf::default();
+    RUN.with(|r| {
+        let r = r.borrow();
+        let mut n = 0usize;
+        for s in r.as_ref().unwrap().spectra.iter().filter(|s| s.level == 1).take(maxn as usize) {
+            let y: Vec<f64> = s.intensity.iter().map(|&x| x as f64).collect();
+            n += centroidi::centroids(&s.mz, &y, &p, &mut buf).len();
+        }
+        n as f64
+    })
+}
+
+/// Peak picking (AsLS baseline) on `k` XICs taken from the decoded run.
+#[wasm_bindgen]
+pub fn pick(k: u32, lo: f64, hi: f64, tol: f64) -> f64 {
+    RUN.with(|r| {
+        let r = r.borrow();
+        let sp: Vec<&mzml::Spectrum> = r.as_ref().unwrap().spectra.iter().filter(|s| s.level == 1).collect();
+        let rt: Vec<f64> = sp.iter().map(|s| s.rt).collect();
+        let mut n = 0;
+        for j in 0..k {
+            let mz = lo + (hi - lo) * (j as f64 + 0.5) / k as f64;
+            let y: Vec<f64> = sp.iter().map(|s| {
+                let a = s.mz.partition_point(|&m| m < mz - tol);
+                let b = s.mz.partition_point(|&m| m <= mz + tol);
+                s.intensity[a..b].iter().map(|&x| x as f64).sum()
+            }).collect();
+            n += peaks::detect_peaks(&rt, &y, peaks::Params::default()).len();
+        }
+        n as f64
+    })
+}
+
+/// Elemental composition of `k` masses (CHNOPS default, 5 ppm).
+#[wasm_bindgen]
+pub fn compose(k: u32, max_results: u32) -> f64 {
+    let o = composition::Opts { max_results: max_results as usize, ..Default::default() };
+    let mut n = 0;
+    for j in 0..k {
+        let mz = 150.0 + 450.0 * j as f64 / k as f64 + 0.0123;
+        n += composition::compose(mz, &o).map(|s| s.len()).unwrap_or(0);
+    }
+    n as f64
+}
+
+/// Spectral entropy similarity: each MS2 spectrum against every other one (library-style matching).
+#[wasm_bindgen]
+pub fn entropy(maxn: u32) -> f64 {
+    RUN.with(|r| {
+        let r = r.borrow();
+        let sp: Vec<(Vec<f64>, Vec<f64>)> = r.as_ref().unwrap().spectra.iter().filter(|s| s.level == 2 && !s.mz.is_empty())
+            .take(maxn as usize).map(|s| (s.mz.clone(), s.intensity.iter().map(|&x| x as f64).collect())).collect();
+        let mut t = 0.0;
+        for a in &sp { for b in &sp { t += entropy::entropy_similarity(&a.0, &a.1, &b.0, &b.1, 0.02); } }
+        t
+    })
+}
+
+/// zlib inflate of a buffer made by `deflate_setup` (flate2: miniz_oxide, or zlib-rs with the feature).
+#[wasm_bindgen]
+pub fn deflate_setup(mb: u32) -> f64 {
+    use std::io::Write;
+    let n = (mb as usize) << 20;
+    let mut raw = Vec::with_capacity(n);
+    let mut x = 100.0f64; let mut seed = 1u64;
+    while raw.len() < n {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        x += 0.001 + (seed >> 40) as f64 * 1e-9;
+        raw.extend_from_slice(&x.to_le_bytes());
+        raw.extend_from_slice(&(((seed >> 33) % 1000) as f32).to_le_bytes());
+    }
+    let mut e = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::new(1));
+    e.write_all(&raw).unwrap();
+    let z = e.finish().unwrap();
+    let l = z.len();
+    Z.with(|c| *c.borrow_mut() = (z, raw.len()));
+    l as f64
+}
+
+#[wasm_bindgen]
+pub fn inflate() -> f64 {
+    use std::io::Read;
+    Z.with(|c| {
+        let c = c.borrow();
+        let mut out = Vec::with_capacity(c.1);
+        flate2::read::ZlibDecoder::new(c.0.as_slice()).read_to_end(&mut out).unwrap();
+        out.len() as f64
+    })
+}
+==== bench/examples/gen.rs ====
+//! Synthetic Orbitrap-like profile mzML: gen OUT MS1_SCANS PEAKS_PER_SCAN (every 4th scan is followed by 3 MS2 centroid scans).
+use mzlab_core::mzml::Spectrum;
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+fn main() {
+    let a: Vec<String> = std::env::args().collect();
+    let out = &a[1];
+    let n1: usize = a[2].parse().unwrap();
+    let np: usize = a[3].parse().unwrap();
+    let mut seed = 7u64;
+    let mut rnd = move || { seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407); (seed >> 11) as f64 / (1u64 << 53) as f64 };
+    // fixed feature list: (mz, rt apex, width, height)
+    let feats: Vec<(f64, f64, f64, f64)> = (0..np).map(|_| (100.0 + 900.0 * rnd(), 20.0 * rnd(), 0.05 + 0.2 * rnd(), 1e4 + 1e7 * rnd() * rnd())).collect();
+    let mut sp = Vec::new();
+    let mut idx = 0;
+    for i in 0..n1 {
+        let rt = 20.0 * i as f64 / n1 as f64;
+        let mut pk: Vec<(f64, f64)> = feats.iter().map(|&(m, r, w, h)| (m, h * (-(rt - r) * (rt - r) / (2.0 * w * w)).exp() + 500.0 * rnd())).collect();
+        pk.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        let (mut mz, mut it) = (Vec::new(), Vec::new());
+        for &(m, h) in &pk {
+            let s = m / 140000.0 / 2.355 * 2.0; // FWHM at R=70k
+            for k in -7i32..=7 { let x = m + k as f64 * s * 0.5; mz.push(x); it.push((h * (-(k as f64 * 0.5).powi(2) / 2.0).exp()) as f32); }
+        }
+        sp.push(Spectrum { index: idx, id: format!("scan={}", idx + 1), level: 1, rt, polarity: 1, profile: true, mz, intensity: it, ..Default::default() });
+        idx += 1;
+        if i % 4 == 0 {
+            for _ in 0..3 {
+                let prec = 150.0 + 700.0 * rnd();
+                let mut m: Vec<f64> = (0..80).map(|_| 50.0 + (prec - 50.0) * rnd()).collect();
+                m.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                let it: Vec<f32> = m.iter().map(|_| (1e5 * rnd() * rnd()) as f32).collect();
+                sp.push(Spectrum { index: idx, id: format!("scan={}", idx + 1), level: 2, rt, polarity: 1, profile: false, precursor: Some(prec), mz: m, intensity: it, ..Default::default() });
+                idx += 1;
+            }
+        }
+    }
+    let mut w = MzmlWriter::con_opzioni(Vec::new(), &Header { run: "x".into(), ..Default::default() }, Opzioni { livello: 1, numpress: false, ..Opzioni::default() }).unwrap();
+    w.open_spectra(sp.len()).unwrap();
+    for s in &sp { w.spectrum(s).unwrap(); }
+    w.close_spectra().unwrap();
+    std::fs::write(out, w.finish().unwrap()).unwrap();
+}
+==== suite.js ====
+// Shared bench suite: runs in Node and in the browser. m = wasm-bindgen module (already initialised), files = {hr, ms2lr}
+async function suite(m, files, reps, log) {
+  const now = () => performance.now();
+  const res = {};
+  const T = (name, f, r = reps) => { const t = []; let v; for (let i = 0; i < r; i++) { const a = now(); v = f(); t.push(now() - a); } t.sort((a, b) => a - b); res[name] = { ms: +t[Math.floor(t.length / 2)].toFixed(1), min: +t[0].toFixed(1), v }; log(name, res[name]); };
+  m.load(files.hr);
+  T("parse_hr", () => m.parse());
+  T("index_hr", () => m.index());
+  T("xic200_hr", () => m.xic(200, 120, 980, 0.005));
+  T("centroid_hr", () => m.centroid(0.0015, 0.0036, 100));
+  T("pick50_hr", () => m.pick(50, 120, 980, 0.005));
+  T("entropy300_hr", () => m.entropy(300));
+  m.load(files.lr);
+  T("parse_lr", () => m.parse());
+  T("index_lr", () => m.index());
+  T("xic200_lr", () => m.xic(200, 130, 470, 0.5));
+  T("pick50_lr", () => m.pick(50, 130, 470, 0.5));
+  T("compose200", () => m.compose(200, 10));
+  m.deflate_setup(64);
+  T("inflate64MB", () => m.inflate());
+  return res;
+}
+if (typeof module !== "undefined") module.exports = { suite };
+==== node_bench.mjs ====
+import fs from "fs"; import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { suite } = require(process.argv[2] + "/../../suite.js");
+const dir = process.argv[2], reps = +process.argv[3] || 5;
+const bytes = fs.readFileSync(dir + "/wbench_bg.wasm");
+let a = performance.now(); const mod = await WebAssembly.compile(bytes); const tc = performance.now() - a;
+const m = await import(dir + "/wbench.js");
+a = performance.now(); m.initSync({ module: mod }); const ti = performance.now() - a;
+const S = process.argv[4];
+const files = { hr: fs.readFileSync(S + "/hr_prof.mzML"), lr: fs.readFileSync(S + "/dati/B_FullMass-t15.mzML") };
+const r = await suite(m, files, reps, () => {});
+console.log(JSON.stringify({ variant: dir.split("/").pop(), compile_ms: +tc.toFixed(1), inst_ms: +ti.toFixed(1), ...Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.ms])) }));
+==== run.html ====
+<!doctype html><meta charset="utf-8"><script src="suite.js"></script>
+<script type="module">
+const q = new URLSearchParams(location.search), v = q.get("v"), reps = +q.get("reps") || 5;
+const url = `v/${v}/wbench_bg.wasm`;
+let a = performance.now(); const mod = await WebAssembly.compileStreaming(fetch(url)); const tc = performance.now() - a;
+const m = await import(`./v/${v}/wbench.js`);
+a = performance.now(); m.initSync({ module: mod }); const ti = performance.now() - a;
+const get = async p => new Uint8Array(await (await fetch(p)).arrayBuffer());
+const files = { hr: await get("hr_prof.mzML"), lr: await get("dati/B_FullMass-t15.mzML") };
+const r = await suite(m, files, reps, () => {});
+window.RESULT = { variant: v, compile_ms: +tc.toFixed(1), inst_ms: +ti.toFixed(1), coi: self.crossOriginIsolated, ...Object.fromEntries(Object.entries(r).map(([k, x]) => [k, x.ms])) };
+</script>
+==== build.sh ====
+#!/usr/bin/env bash
+# build.sh NAME PROFILE "EXTRA_RUSTFLAGS" "FEATURES" WASMOPT "WASMOPT_FLAGS"
+set -e
+S=$S
+name=$1; prof=$2; rf=$3; feat=$4; wo=$5; wof=$6
+cd $S/bench
+export CARGO_TARGET_DIR=$S/tgt/$name
+RUSTFLAGS="-C link-arg=--initial-memory=33554432 -C link-arg=--max-memory=4294967296 $rf" cargo build -q --profile $prof --target wasm32-unknown-unknown ${feat:+--features $feat} 2>/dev/null
+d=$([ $prof = release ] && echo release || echo $prof)
+mkdir -p $S/v/$name
+wasm-bindgen --target web --no-typescript --out-dir $S/v/$name $CARGO_TARGET_DIR/wasm32-unknown-unknown/$d/wbench.wasm
+raw=$(stat -c %s $S/v/$name/wbench_bg.wasm)
+t0=$(date +%s.%N)
+$wo $wof -o $S/v/$name/wbench_bg.wasm $S/v/$name/wbench_bg.wasm
+t1=$(date +%s.%N)
+echo "$name raw=$raw opt=$(stat -c %s $S/v/$name/wbench_bg.wasm) gz=$(gzip -9c $S/v/$name/wbench_bg.wasm | wc -c) wasmopt_s=$(echo "$t1-$t0"|bc)"

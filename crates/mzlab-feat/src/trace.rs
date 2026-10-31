@@ -45,34 +45,16 @@ pub struct Params {
     pub long_trace: u32,
     /// Two rows of different grids are one ion when their scans overlap by this share of the shorter one (0 = only the apex and edges test of `merge_grids`).
     pub merge_overlap: f64,
+    /// Noise rows of the unit profile: a row narrower than this share of the typical peak width of its file is dropped (0 = off, `lrnoise`).
+    pub min_width: f64,
+    /// A row whose apex is below this many times the noise of its flanks is dropped (0 = off, `lrnoise`).
+    pub min_snr: f64,
     /// Axis of the channels of m/z (`Da` = unit resolution).
     pub axis: MassAxis,
     /// Working memory of the detection, bytes: it sets the size of the slabs (at most `SLAB_PEAKS` peaks).
     pub budget: usize,
     /// How the traces become peaks; only the wavelet model shows in the text of the recipe.
     pub peak: Peak,
-}
-
-// The text of the recipe is built from this: the default peak model adds nothing, so the fingerprints of the files made before it exist keep their name.
-impl std::fmt::Debug for Params {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut d = f.debug_struct("Params");
-        d.field("polarity", &self.polarity)
-            .field("floor", &self.floor)
-            .field("min_points", &self.min_points)
-            .field("min_height", &self.min_height)
-            .field("max_gap", &self.max_gap)
-            .field("long_trace", &self.long_trace)
-            .field("axis", &self.axis)
-            .field("budget", &self.budget);
-        if self.merge_overlap != 0.0 {
-            d.field("merge_overlap", &self.merge_overlap);
-        }
-        if self.peak != Peak::Minima {
-            d.field("peak", &self.peak);
-        }
-        d.finish()
-    }
 }
 
 impl Default for Params {
@@ -85,6 +67,8 @@ impl Default for Params {
             max_gap: MAX_GAP,
             long_trace: LONG_TRACE,
             merge_overlap: 0.0,
+            min_width: 0.0,
+            min_snr: 0.0,
             axis: MassAxis::Ppm,
             budget: SLAB_PEAKS * BYTES_PER_PEAK,
             peak: Peak::Minima,
@@ -365,9 +349,11 @@ fn common_mode_params<R: ReadAt>(
             &lmz, &slab.mz, &slab.it, &slab.pos, &order, 0.0, p, &mut segs,
         )?;
         for s in stitch(segs, p)? {
-            if (s.z - s.a + 1) as usize >= min_len {
+            let len = (s.z - s.a + 1) as usize;
+            // the series is built only for the traces that the bank keeps (a stride of them)
+            if len >= min_len && bank.offer(s.a as usize, len) {
                 let (y, _) = centwave::series_of(&s, &slab.mz, &slab.it, &slab.pos, p, cw)?;
-                bank.add(s.a as usize, &y)?;
+                bank.push_row(s.a as usize, &y)?;
             }
         }
         Ok(())

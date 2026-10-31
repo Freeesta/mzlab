@@ -6,22 +6,18 @@
 use js_sys::{Function, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
-use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 pub mod core;
+pub mod filterspec;
+pub mod pol;
+pub mod rows_mgf;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-table/1";
 
 fn js_err(e: Error) -> JsValue {
-    let mut o = Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    JsValue::from_str(&o.0)
+    JsValue::from_str(&e.to_json())
 }
 
 #[wasm_bindgen]
@@ -44,7 +40,15 @@ struct JsReader {
 impl ReadAt for JsReader {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         let io = || Error::new("error.io");
-        let v = self.read.call3(&JsValue::NULL, &self.k.into(), &(off as f64).into(), &(buf.len() as f64).into()).map_err(|_| io())?;
+        let v = self
+            .read
+            .call3(
+                &JsValue::NULL,
+                &self.k.into(),
+                &(off as f64).into(),
+                &(buf.len() as f64).into(),
+            )
+            .map_err(|_| io())?;
         let a: Uint8Array = v.dyn_into().map_err(|_| io())?;
         if a.length() as usize != buf.len() {
             return Err(Error::new("error.badIndex"));
@@ -60,27 +64,55 @@ fn table_reader(read: Function) -> JsReader {
 
 /// The view of a table: `{"digest", "righe":[id of every row kept], "fattori":[per file], "conteggi":{...}}`.
 #[wasm_bindgen]
-pub fn table_view(table_read: Function, size: f64, samples_json: &str, spec: &str) -> std::result::Result<String, JsValue> {
-    core::view_json(&mut table_reader(table_read), size as u64, samples_json, spec).map_err(js_err)
+pub fn table_view(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    spec: &str,
+) -> std::result::Result<String, JsValue> {
+    core::view_json(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json,
+        spec,
+    )
+    .map_err(js_err)
 }
 
 /// The `report/1` of a table under the view `spec` (empty = the whole table).
 #[wasm_bindgen]
-pub fn table_report(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str) -> std::result::Result<String, JsValue> {
-    core::report_json(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256).map_err(js_err)
+pub fn table_report(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    spec: &str,
+    table_sha256: &str,
+) -> std::result::Result<String, JsValue> {
+    core::report_json(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json,
+        spec,
+        table_sha256,
+    )
+    .map_err(js_err)
 }
 
 /// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/1`; areas, t0 and blank.
 #[wasm_bindgen]
-pub fn tp_table(table_read: Function, size: f64, samples_json: &str, rows_json: &str) -> std::result::Result<String, JsValue> {
-    core::tp_table_json(&mut table_reader(table_read), size as u64, samples_json, rows_json).map_err(js_err)
-}
-
-/// `tp_table` with the conditions of the series: `campioni_json` = the `campioni/2` of the files, `infos_json` = `[{"row","neutral_formula","ion_formula","ppm"}]`.
-/// With two or more conditions the `tptab/1` carries `gruppi` (`gruppi/1`); with fewer it is the one of `tp_table`.
-#[wasm_bindgen]
-pub fn tp_table_cond(table_read: Function, size: f64, samples_json: &str, rows_json: &str, campioni_json: &str, infos_json: &str) -> std::result::Result<String, JsValue> {
-    core::tp_table_cond_json(&mut table_reader(table_read), size as u64, samples_json, rows_json, campioni_json, infos_json).map_err(js_err)
+pub fn tp_table(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    rows_json: &str,
+) -> std::result::Result<String, JsValue> {
+    core::tp_table_json(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json,
+        rows_json,
+    )
+    .map_err(js_err)
 }
 
 /// The network of the products (`rete/1`): `table_read` is the `.mzfeat` with the block `tp/1` (`size` bytes), `interp_read` the one with the block `interp/1`
@@ -98,7 +130,10 @@ pub fn rete_build(
     ppm: f64,
     min_fragments: u32,
 ) -> std::result::Result<String, JsValue> {
-    let params = mzlab_feat::rete::ReteParams { ppm, min_fragments: min_fragments as usize };
+    let params = mzlab_feat::rete::ReteParams {
+        ppm,
+        min_fragments: min_fragments as usize,
+    };
     mzlab_feat::rete::network_text(
         (&mut table_reader(table_read), size as u64),
         (&mut table_reader(interp_read), interp_size as u64),
@@ -117,50 +152,241 @@ pub fn table_samples(files_json: &str) -> std::result::Result<String, JsValue> {
 
 /// The `qc/1` of a table under the view `spec` (empty = the whole table).
 #[wasm_bindgen]
-pub fn table_qc(table_read: Function, size: f64, samples_json: &str, spec: &str) -> std::result::Result<String, JsValue> {
-    core::qc_json(&mut table_reader(table_read), size as u64, samples_json, spec).map_err(js_err)
+pub fn table_qc(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    spec: &str,
+) -> std::result::Result<String, JsValue> {
+    core::qc_json(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json,
+        spec,
+    )
+    .map_err(js_err)
 }
 
 /// The `plausible/1` of a table; `options_json` is empty or `{"mz_tol_da","mz_min","mz_max","rt_max","width_max","ppm_max"}` (see `core::plausible_json`).
 #[wasm_bindgen]
-pub fn table_plausible(table_read: Function, size: f64, options_json: &str) -> std::result::Result<String, JsValue> {
+pub fn table_plausible(
+    table_read: Function,
+    size: f64,
+    options_json: &str,
+) -> std::result::Result<String, JsValue> {
     core::plausible_json(&mut table_reader(table_read), size as u64, options_json).map_err(js_err)
 }
 
 /// The `tabcheck/1` of a table under the view `spec` (empty = the whole table); see `core::tabcheck_json` for `polarity` and `options_json`.
 #[wasm_bindgen]
-pub fn table_check(table_read: Function, size: f64, samples_json: &str, spec: &str, polarity: i32, options_json: &str) -> std::result::Result<String, JsValue> {
-    core::tabcheck_json(&mut table_reader(table_read), size as u64, samples_json, spec, polarity, options_json).map_err(js_err)
+pub fn table_check(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    spec: &str,
+    polarity: i32,
+    options_json: &str,
+) -> std::result::Result<String, JsValue> {
+    core::tabcheck_json(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json,
+        spec,
+        polarity,
+        options_json,
+    )
+    .map_err(js_err)
 }
 
 /// A table file: `kind` is `full`, `full_mzmine`, `quant`, `csv_semicolon`, `xlsx_rows` or `mztab` (see `core::table_file`).
 #[wasm_bindgen]
-pub fn export_table(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> std::result::Result<String, JsValue> {
-    core::table_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind).map_err(js_err)
+pub fn export_table(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    spec: &str,
+    table_sha256: &str,
+    polarity: i32,
+    kind: &str,
+) -> std::result::Result<String, JsValue> {
+    core::table_file(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json,
+        spec,
+        table_sha256,
+        polarity,
+        kind,
+    )
+    .map_err(js_err)
+}
+
+/// A table file as `export_table`, written in the polarity the table and the files of its lineage give (`pol::of_table`), the one `flow run` uses; the view is the whole table.
+/// The `.mzidx` of the files are read as `index_read(k, offset, length)`, `index_sizes[k]` bytes each (none when they are not at hand).
+#[wasm_bindgen]
+pub fn export_table_auto(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    table_sha256: &str,
+    kind: &str,
+    index_read: Function,
+    index_sizes: Vec<f64>,
+) -> std::result::Result<String, JsValue> {
+    let mut ix = Vec::new();
+    for (k, s) in index_sizes.iter().enumerate() {
+        if let Ok(i) = Index::open(
+            JsReader {
+                read: index_read.clone(),
+                k: k as u32,
+            },
+            *s as u64,
+        ) {
+            ix.push(i);
+        }
+    }
+    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let pol =
+        pol::of_table(&mut table_reader(table_read.clone()), size as u64, &ix).map_err(js_err)?;
+    core::table_file(
+        &mut table_reader(table_read),
+        size as u64,
+        &samples,
+        "",
+        table_sha256,
+        pol,
+        kind,
+    )
+    .map_err(js_err)
+}
+
+/// The `view/1` of the whole table under the rules a `table.filter` step spells in `params_json` (`filterspec::spec_from_json`), the one `flow run` writes; `samples_json` may be `campioni/2`.
+#[wasm_bindgen]
+pub fn table_view_auto(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    params_json: &str,
+) -> std::result::Result<String, JsValue> {
+    let samples_json = pol::samples_like(
+        &mut table_reader(table_read.clone()),
+        size as u64,
+        samples_json.as_bytes(),
+    )
+    .map_err(js_err)?;
+    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let spec = filterspec::spec_from_json_with_samples(params_json, samples_json.as_bytes())
+        .map_err(js_err)?;
+    core::view_json(&mut table_reader(table_read), size as u64, &samples, &spec).map_err(js_err)
 }
 
 /// An MS2 file: `kind` is `mgf` (FBMN) or `sirius` (`.ms`). The spectra are read from the `.mzidx` of the file that holds the best MS2 of each row
 /// (`index_read(k, offset, length)`, `index_sizes[k]` bytes).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
-pub fn export_ms2(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str, index_read: Function, index_sizes: Vec<f64>) -> std::result::Result<String, JsValue> {
+pub fn export_ms2(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    spec: &str,
+    table_sha256: &str,
+    polarity: i32,
+    kind: &str,
+    index_read: Function,
+    index_sizes: Vec<f64>,
+) -> std::result::Result<String, JsValue> {
     let open = |k: usize| {
-        let size = *index_sizes.get(k).ok_or_else(|| Error::new("error.badIndex"))?;
-        Index::open(JsReader { read: index_read.clone(), k: k as u32 }, size as u64)
+        let size = *index_sizes
+            .get(k)
+            .ok_or_else(|| Error::new("error.badIndex"))?;
+        Index::open(
+            JsReader {
+                read: index_read.clone(),
+                k: k as u32,
+            },
+            size as u64,
+        )
     };
-    core::ms2_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind, open).map_err(js_err)
+    core::ms2_file(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json,
+        spec,
+        table_sha256,
+        polarity,
+        kind,
+        open,
+    )
+    .map_err(js_err)
+}
+
+/// The query of `table.match`: the MGF of the rows of the table that have an MS2 spectrum, the id of the row as the accession (`rows_mgf::rows_mgf`, the one `flow run` calls). `params_json` is the object of
+/// the resolved parameters of the step (`ms2_spectrum`, `ms2_background`); the `.mzidx` of the files are read as in `export_ms2`. A missing index is `err.flow.tablematch.files`.
+#[wasm_bindgen]
+pub fn table_match_rows(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    params_json: &str,
+    table_sha256: &str,
+    index_read: Function,
+    index_sizes: Vec<f64>,
+) -> std::result::Result<String, JsValue> {
+    let params = match mzlab_core::json::parse(params_json.as_bytes()).map_err(js_err)? {
+        mzlab_core::json::Value::Obj(o) => o,
+        _ => Vec::new(),
+    };
+    let open = |k: usize| {
+        let size = *index_sizes
+            .get(k)
+            .ok_or_else(|| Error::new("err.flow.tablematch.files"))?;
+        Index::open(
+            JsReader {
+                read: index_read.clone(),
+                k: k as u32,
+            },
+            size as u64,
+        )
+    };
+    rows_mgf::rows_mgf(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json.as_bytes(),
+        &params,
+        table_sha256,
+        open,
+    )
+    .map_err(js_err)
 }
 
 /// The `polpair/1` of two `.mzfeat` of the same files, one per polarity: the rows of the positive table that have the same neutral mass, RT and course in
 /// the negative one. Files that differ are `error.polpair.files`; `params_json` may be empty.
 #[wasm_bindgen]
-pub fn cross_polarity(read_pos: Function, size_pos: f64, read_neg: Function, size_neg: f64, params_json: &str) -> std::result::Result<String, JsValue> {
-    mzlab_feat::polpair::cross_polarity(&mut table_reader(read_pos), size_pos as u64, &mut table_reader(read_neg), size_neg as u64, params_json).map_err(js_err)
+pub fn cross_polarity(
+    read_pos: Function,
+    size_pos: f64,
+    read_neg: Function,
+    size_neg: f64,
+    params_json: &str,
+) -> std::result::Result<String, JsValue> {
+    mzlab_feat::polpair::cross_polarity(
+        &mut table_reader(read_pos),
+        size_pos as u64,
+        &mut table_reader(read_neg),
+        size_neg as u64,
+        params_json,
+    )
+    .map_err(js_err)
 }
 
 /// The `riga/1` of the row with `id`: summaries, identity and one cell per file. An id the table does not have is `error.rowNotFound`.
 #[wasm_bindgen]
-pub fn table_row(table_read: Function, size: f64, samples_json: &str, id: u32) -> std::result::Result<String, JsValue> {
+pub fn table_row(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    id: u32,
+) -> std::result::Result<String, JsValue> {
     core::row_json(&mut table_reader(table_read), size as u64, samples_json, id).map_err(js_err)
 }
 
@@ -168,16 +394,77 @@ pub fn table_row(table_read: Function, size: f64, samples_json: &str, id: u32) -
 /// (`index_read(k, offset, length)`, `index_sizes[k]` bytes) within `ppm` of the m/z of the row.
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
-pub fn table_row_traces(table_read: Function, size: f64, samples_json: &str, id: u32, index_read: Function, index_sizes: Vec<f64>, ppm: f64) -> std::result::Result<String, JsValue> {
+pub fn table_row_traces(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    id: u32,
+    index_read: Function,
+    index_sizes: Vec<f64>,
+    ppm: f64,
+) -> std::result::Result<String, JsValue> {
     let open = |k: usize| {
-        let size = *index_sizes.get(k).ok_or_else(|| Error::new("error.badIndex"))?;
-        Index::open(JsReader { read: index_read.clone(), k: k as u32 }, size as u64)
+        let size = *index_sizes
+            .get(k)
+            .ok_or_else(|| Error::new("error.badIndex"))?;
+        Index::open(
+            JsReader {
+                read: index_read.clone(),
+                k: k as u32,
+            },
+            size as u64,
+        )
     };
-    core::row_traces_json(&mut table_reader(table_read), size as u64, samples_json, id, ppm, open).map_err(js_err)
+    core::row_traces_json(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json,
+        id,
+        ppm,
+        open,
+    )
+    .map_err(js_err)
 }
 
 /// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp`; JSON in, JSON out.
 #[wasm_bindgen]
 pub fn campioni(op: &str, input: &str) -> std::result::Result<String, JsValue> {
     core::campioni_json(op, input).map_err(js_err)
+}
+
+/// `screen.suspects` in the browser: the `screen/1` text `flow run` writes (`mzlab_feat::flow_screen_suspects::screen_text`). `params_json` is the parameters of the step merged with its
+/// defaults, `table` the alignment `.mzfeat`, `names_json` the names of the suspect files (a JSON list) and `lists` their bytes joined as `u64 length (little-endian) + bytes` per file,
+/// `names_json` may also be `{"suspects":[...],"imported":[...]}`: `lists` then holds the suspect files followed by the imported lists (`.mzsus`), `mgf` the spectra (empty: none) and `formulas` a `formulas/1` text (empty: none).
+/// Errors are JSON `{"error_key","params"}` texts.
+#[wasm_bindgen]
+pub fn flow_screen_suspects(
+    params_json: &str,
+    table: &[u8],
+    names_json: &str,
+    lists: &[u8],
+    mgf: &[u8],
+    formulas: &[u8],
+) -> std::result::Result<String, JsValue> {
+    use mzlab_core::json::{self, Value};
+    fn opt(b: &[u8]) -> Option<&[u8]> {
+        (!b.is_empty()).then_some(b)
+    }
+    let params = match json::parse(params_json.as_bytes()).map_err(js_err)? {
+        Value::Obj(o) => o,
+        _ => Vec::new(),
+    };
+    let (named, imp) =
+        mzlab_feat::flow_screen_suspects::unpack_split(names_json, lists).map_err(js_err)?;
+    fn view<'a>(v: &'a [(String, &'a [u8])]) -> Vec<(&'a str, &'a [u8])> {
+        v.iter().map(|(n, b)| (n.as_str(), *b)).collect()
+    }
+    let formulas: Vec<&[u8]> = opt(formulas).into_iter().collect();
+    mzlab_feat::flow_screen_suspects::screen_text(
+        &mzlab_feat::flow_screen_suspects::Params::from_params(&params),
+        table,
+        (&view(&named), &view(&imp)),
+        opt(mgf),
+        &formulas,
+    )
+    .map_err(js_err)
 }

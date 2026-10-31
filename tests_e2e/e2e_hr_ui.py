@@ -17,7 +17,7 @@ try:
         def calc_qqq():
             pg.click("#np-calc2"); pg.wait_for_timeout(400)
             pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
-            t = pg.inner_text("#calcdlg"); assert "364.0737" in t and not pg.locator("#calcobsw").count(), t       # QqQ: 4 decimals as before, no field for the observed value
+            t = pg.inner_text("#calcdlg"); assert "364.1" in t and "364.0737" not in t, t       # QqQ (low resolution): one decimal, the observed m/z is an optional field of the zone below
             assert "errore (ppm)" not in t
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with a QqQ file only: as before", calc_qqq)
@@ -32,9 +32,9 @@ try:
         step("window «Metodo» of a QqQ file: as before", method_qqq)
         def losses_qqq():
             pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
-            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')")
+            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=g28] .nlm small')")
             print(hit, ex)
-            assert "CO" in hit and "C2H4" in hit and ex is None, (hit, ex)                       # QqQ: ±0.5 Da and no exact masses
+            assert hit == ["g28"] and ex is None, (hit, ex)                                      # QqQ: ±0.5 Da and no exact masses (CO and C2H4 share the row of nominal mass 28)
             pg.evaluate("document.querySelector('#refdlg').close()")
         step("neutral losses with a QqQ file: ±0.5 Da and no exact masses", losses_qqq)
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
@@ -45,15 +45,12 @@ try:
         def calc_hr():
             pg.click("#np-calc2"); pg.wait_for_timeout(400)
             pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
-            assert pg.is_visible("#calcobs"), "no field for the observed m/z"
+            assert pg.locator("#calcobs").count() == 0 and pg.locator("#calcctl [data-r]").count() == 0, "no observed field, no High/Low switch"
             t = pg.inner_text("#calcdlg"); assert "364.0737" in t and "errore (ppm)" not in t, t
-            pg.fill("#calcobs", "364.0740"); pg.wait_for_timeout(1500)
-            t = pg.inner_text("#calcdlg"); print(t[:400])
-            assert "errore (ppm)" in t, t
-            e = pg.evaluate("[...document.querySelectorAll('#calcout tr')].map(r=>[...r.children].map(c=>c.textContent))[1]"); print(e)
-            assert abs(float(e[2]) - 0.8) < 0.15, e                                         # (364.0740 - 364.07374) / 364.07374 = 0.7 ppm
+            m = pg.inner_text("#calcctl .cq-mode"); assert "alta" in m and "Exploris" in m, m          # the Orbitrap file decides: high resolution, named
+            assert pg.input_value("#calctol") == "5"
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
-        step("calculator with an Orbitrap file: 4 decimals and the error in ppm of the observed m/z", calc_hr)
+        step("calculator with an Orbitrap file: 4 decimals, high resolution detected from the file", calc_hr)
         def method():
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_function("document.querySelector('#bigdlg') && document.querySelector('#bigdlg').innerText.includes('Parametri delle scansioni')", timeout=30000)
             t = pg.inner_text("#bigdlg"); print(t[:600].replace("\n", " | "))
@@ -63,10 +60,10 @@ try:
         step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans", method)
         def losses():
             pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
-            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')?.textContent")
+            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=g28] .nlm small')?.textContent")
             print(hit, ex)
-            assert hit == ["CO"] and ex == "27.9949", (hit, ex)                                  # 3 mDa: CO yes, C2H4 (28.0313) no
-            assert "Stessa massa nominale (28)" in pg.inner_text("#refdlg")      # the sentence about equal nominal masses stays
+            assert hit == ["g28"] and ex == "27.9949", (hit, ex)                                 # the shared row of mass 28 is hit by CO (3 mDa); C2H4 (28.0313) is not what matches
+            assert "stesso Δm, risoluzione unitaria" in pg.inner_text("#refdlg")      # the shared row of equal nominal mass says so
             pg.evaluate("document.querySelector('#refdlg').close()")
         step("neutral losses with an Orbitrap file: exact masses and «Cerca Δm» within 3 mDa", losses)
     r.close()

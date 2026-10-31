@@ -85,7 +85,7 @@ impl Ole {
     }
 
     fn sector(&self, sid: u32) -> Vec<u8> {
-        let off = (sid as usize + 1).saturating_mul(self.ss);
+        let off = (sid as usize).saturating_add(1).saturating_mul(self.ss);
         let a = off.min(self.data.len());
         self.data
             .get(a..off.saturating_add(self.ss).min(self.data.len()))
@@ -186,11 +186,7 @@ impl Ole {
 
     /// SHA-1 (lower-case hex) of the whole container file.
     pub fn sha1_hex(&self) -> String {
-        use sha1::{Digest as _, Sha1};
-        Sha1::digest(&self.data)
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect()
+        crate::metodo::sha1_hex_bytes(&self.data)
     }
 
     pub fn has(&self, path: &str) -> bool {

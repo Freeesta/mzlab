@@ -1,33 +1,17 @@
-//! The native executor of `export.inclusion`: the expected products (a JSON array of `{formula, rt, priority?}`) become the inclusion list
+//! The native executor of `export.inclusion`: the expected products (a JSON array of `{formula, rt, priority?}`, or the `.mzfeat` of `tp.link`) become the inclusion list
 //! of `mzlab_feat::export_inclusione`, in the columns of the list of mzFinder.
 
-use mzlab_core::error::{Error, Result};
+use mzlab_core::error::Result;
 use mzlab_core::flow::{Artifact, Job};
-use mzlab_core::json;
 use mzlab_core::step::DataType;
-use mzlab_feat::export_inclusione::{adduct_shifts, inclusion_expected_by, Expected};
+use mzlab_feat::export_inclusione_tp::inclusion_csv_of;
 
 use crate::flow::{io, read_one, FileRunner};
 
-/// The CSV of the list from the products, the adducts (comma separated names, or a list of the user as CSV) and the half window of RT in minutes.
+/// The CSV of the list from the products (a JSON list or the `.mzfeat` of `tp.link`), the adducts (comma separated names, or a list of the user as CSV;
+/// empty = the default of the polarity of the products) and the half window of RT in minutes.
 pub(crate) fn inclusion_text(products: &[u8], adducts: &str, half_window: f64) -> Result<String> {
-    let v = json::parse(products)?;
-    let mut list = Vec::new();
-    for p in v.arr() {
-        let formula = p.get("formula").and_then(|x| x.str());
-        let rt = p.get("rt").and_then(|x| x.f64());
-        let (Some(formula), Some(rt)) = (formula, rt) else {
-            return Err(Error::new("err.flow.inclusion.product"));
-        };
-        let priority = p.get("priority").and_then(|x| x.f64()).unwrap_or(0.0);
-        list.push(Expected {
-            formula: formula.to_string(),
-            rt,
-            priority,
-        });
-    }
-    let shifts = adduct_shifts(adducts)?;
-    inclusion_expected_by(&list, &shifts, half_window)
+    inclusion_csv_of(products, Some(adducts), half_window)
 }
 
 /// The executor: the adducts and the half window come from the parameters, the products from the port `tp`.
@@ -41,7 +25,7 @@ pub(crate) fn inclusion_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     };
     let adducts = find("adducts")
         .and_then(|v| v.str())
-        .unwrap_or("[M+H]+")
+        .unwrap_or_default()
         .to_string();
     let half = find("rt_window").and_then(|v| v.f64()).unwrap_or(0.5);
     let products = read_one(r, job, "tp")?;

@@ -10,98 +10,24 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{analysis, budget::MemBudget, mzidx, mzml, peakq, peaks};
 use std::collections::HashMap;
-use std::io::{BufReader, Read, Seek, SeekFrom, Write};
+use std::io::Write;
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca;
+mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca; mod adduct;
 pub mod esterno;
 mod contato;
 mod zip;
 mod nativi;
+mod corriere;
 mod nativi_motore;
+mod blocchi;
+pub(crate) use blocchi::{js_blocks, BLOCK};
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
 pub fn version() -> String {
     mzlab_core::version().to_string()
-}
-
-/// Reads a file in blocks asked to JS: `read(offset, length) -> Uint8Array` (a slice of the Blob read synchronously in the worker).
-/// It also seeks (the `.raw` reader jumps from packet to packet): the last block stays in memory, so scans that follow each
-/// other cost one JS call per block, never one per read.
-struct BlockReader {
-    read: Function,
-    pos: u64,
-    size: u64,
-    block: Vec<u8>,
-    block_start: u64,
-}
-
-impl BlockReader {
-    fn new(read: Function, size: u64) -> Self {
-        BlockReader {
-            read,
-            pos: 0,
-            size,
-            block: Vec::new(),
-            block_start: 0,
-        }
-    }
-
-    fn fill(&mut self) -> std::io::Result<()> {
-        let want = (BLOCK as u64).min(self.size - self.pos);
-        let block = self
-            .read
-            .call2(
-                &JsValue::NULL,
-                &(self.pos as f64).into(),
-                &(want as f64).into(),
-            )
-            .map_err(|_| std::io::Error::other("block read failed"))?;
-        let block: Uint8Array = block
-            .dyn_into()
-            .map_err(|_| std::io::Error::other("block is not a Uint8Array"))?;
-        self.block.clear();
-        self.block.resize(block.length() as usize, 0);
-        block.copy_to(&mut self.block);
-        self.block_start = self.pos;
-        Ok(())
-    }
-}
-
-const BLOCK: usize = 1 << 20;
-
-impl Read for BlockReader {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        if buf.is_empty() || self.pos >= self.size {
-            return Ok(0);
-        }
-        let end = self.block_start + self.block.len() as u64;
-        if self.pos < self.block_start || self.pos >= end {
-            self.fill()?;
-            if self.block.is_empty() {
-                return Ok(0);
-            }
-        }
-        let off = (self.pos - self.block_start) as usize;
-        let n = buf.len().min(self.block.len() - off);
-        buf[..n].copy_from_slice(&self.block[off..off + n]);
-        self.pos += n as u64;
-        Ok(n)
-    }
-}
-
-impl Seek for BlockReader {
-    fn seek(&mut self, to: SeekFrom) -> std::io::Result<u64> {
-        let p = match to {
-            SeekFrom::Start(p) => Some(p),
-            SeekFrom::End(d) => self.size.checked_add_signed(d),
-            SeekFrom::Current(d) => self.pos.checked_add_signed(d),
-        };
-        self.pos = p.ok_or_else(|| std::io::Error::other("seek before the start"))?;
-        Ok(self.pos)
-    }
 }
 
 /// Sends what is written to JS in blocks: `sink(Uint8Array)`; the page keeps the pieces as Blob parts (outside the WASM memory).
@@ -127,7 +53,7 @@ impl BlockWriter {
 impl Write for BlockWriter {
     fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
         self.buf.extend_from_slice(data);
-        if self.buf.len() >= 4 * BLOCK {
+        if self.buf.len() >= BLOCK {
             self.flush_block()?;
         }
         Ok(data.len())
@@ -137,17 +63,13 @@ impl Write for BlockWriter {
     }
 }
 
+/// The error as the JSON text the page parses.
+fn error_text(e: &mzlab_core::Error) -> String {
+    e.to_json()
+}
+
 pub(crate) fn error_json(e: &mzlab_core::Error) -> JsValue {
-    let params: Vec<String> = e
-        .params
-        .iter()
-        .map(|(k, v)| format!("\"{}\":{:?}", k, v))
-        .collect();
-    JsValue::from_str(&format!(
-        "{{\"error_key\":\"{}\",\"params\":{{{}}}}}",
-        e.key,
-        params.join(",")
-    ))
+    JsValue::from_str(&error_text(e))
 }
 
 fn r1(v: f64) -> f64 {
@@ -210,8 +132,7 @@ impl Engine {
     /// `{"spectra": n, "levels": {"1": [scans, profile scans], ...}, "unit": bool, "chromatograms": m}`.
     pub fn open(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
         self.runs.remove(&slot);
-        let reader = BufReader::with_capacity(1 << 20, BlockReader::new(read, size as u64));
-        let mut run = mzml::read(reader).map_err(|e| error_json(&e))?;
+        let mut run = mzml::read(js_blocks(read, size as u64)).map_err(|e| error_json(&e))?;
         self.fits_work(&run)?;
         // No `Engine::runs` route reads the 64-bit intensities (tic/xic/spectra use the f32 `intensity`): drop them.
         for s in &mut run.spectra {
@@ -369,9 +290,9 @@ impl Engine {
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
     }
 
-    /// Number of scans of one level (the capacity a trace needs).
+    /// Number of scans of one level (the capacity a trace needs); `u32::MAX` when no run is open at `slot` (the worker answers `err.file.raw`, as the desktop engine).
     pub fn count(&self, slot: u32, level: u8) -> u32 {
-        self.runs.get(&slot).map_or(0, |r| {
+        self.runs.get(&slot).map_or(u32::MAX, |r| {
             r.spectra.iter().filter(|s| s.level == level).count() as u32
         })
     }
@@ -399,10 +320,10 @@ impl Engine {
         }
     }
 
-    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range).
+    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range, `u32::MAX` when no run is open at `slot`).
     pub fn spectra_len(&self, slot: u32, level: u8, i0: u32, i1: u32) -> u32 {
         let Some(r) = self.runs.get(&slot) else {
-            return 0;
+            return u32::MAX;
         };
         let mut len = 2usize;
         let mut pos = 0u32;
@@ -506,17 +427,7 @@ fn f64s(b: &[u8]) -> Vec<f64> {
 
 /// The files of the session as the page describes them: `[{slot, label, time, full}]`, in session order.
 pub(crate) fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>, JsValue> {
-    use mzlab_core::json::{self, Value};
-    let v = json::parse(items.as_bytes()).map_err(|e| error_json(&e))?;
-    Ok(v.arr()
-        .iter()
-        .map(|i| mzlab_core::originroute::ItemMeta {
-            slot: i.get("slot").and_then(Value::f64).unwrap_or(-1.0) as u32,
-            label: i.get("label").and_then(Value::str).unwrap_or("").to_string(),
-            time: i.get("time").and_then(Value::f64),
-            full: matches!(i.get("full"), Some(Value::Bool(true))),
-        })
-        .collect())
+    mzlab_core::originroute::session_items(items).map_err(|e| error_json(&e))
 }
 
 /// The routes over the files of the session (evidence of origin, maps).
@@ -549,7 +460,7 @@ impl Engine {
 
 /// Builds the `.mzidx` of an mzML of `size` bytes (read through `read(offset, length)`, decoded again for every pass) and writes it with
 /// `write(offset, bytes)`. The scan table (levels, polarities as signed bytes, RT and TIC as little-endian `f64`, the JSON rows,
-/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`). Returns the statistics as JSON;
+/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`); `aiuti` ({send, take, window} or undefined) gives the arrays to helper workers (`corriere.rs`), same bytes. Returns the statistics as JSON;
 /// errors are JSON with a key (`error.memoryBudget` when memory cannot be reserved).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
@@ -569,6 +480,7 @@ pub fn build_mzidx(
     spill_put: Option<Function>,
     spill_get: Option<Function>,
     cap_mb: f64,
+    aiuti: JsValue,
 ) -> Result<String, JsValue> {
     mzlab_core::stima::check_index(&MemBudget::from_request(cap_mb), levels.len(), scans_json.len(), (budget_mb as usize) << 20).map_err(|e| error_json(&e))?;
     let table = mzidx::ScanTable {
@@ -583,17 +495,15 @@ pub fn build_mzidx(
     };
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
-    let mut spill = spill_put
-        .zip(spill_get)
-        .map(|(put, get)| nativi::JsSpill { put, get });
-    let st = mzidx::build_mzml_spill(
+    let mut spill = spill_put.zip(spill_get).map(|(put, get)| nativi::JsSpill { put, get });
+    let st = mzidx::build_mzml_corriere(
         &table,
-        BlockReader::new(read, size as u64),
+        js_blocks(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
         spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
-    )
-    .map_err(|e| error_json(&e))?;
+        &mut corriere::JsCorriere::new(&aiuti),
+    ).map_err(|e| error_json(&e))?;
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes
@@ -612,6 +522,12 @@ pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {
     mzlab_core::elements::formula_mz(formula, if adduct.is_empty() { None } else { Some(adduct) }).map_err(|e| error_json(&e))
 }
 
+/// `api/isotope_fine` from its query string (`?n=C:13,H:25&z=1&min=0.1`): the fine isotope structure of one ion as JSON; an error is JSON with a key.
+#[wasm_bindgen]
+pub fn isotope_fine(query: &str) -> Result<String, JsValue> {
+    mzlab_core::isofine::isotope_fine_route(query).map_err(|e| error_json(&e))
+}
+
 /// `api/composition` from its query string (`?mz=...&elements=...`): the JSON of the formulas that fit, or empty when Python must answer.
 #[wasm_bindgen]
 pub fn composition(query: &str) -> String {
@@ -627,10 +543,11 @@ pub fn prepare_upload(size: f64, read: Function, name: &str, sha256: Option<Stri
     // the scan table is estimated before it is kept: a file that does not fit is refused in order (`error.memoryBudget`, phase `table`)
     let p = mzlab_core::upload::prepare_in(&mut r, size as u64, name, known, Some(&MemBudget::from_request(budget_mb))).map_err(|e| error_json(&e))?;
     let t = &p.table;
-    let f8 = |v: &[f64]| Uint8Array::from(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()[..]);
+    // copied straight from the wasm memory into JS typed arrays, seen as bytes (little-endian, as wasm is): no byte copy in the wasm memory
+    let f8 = |v: &[f64]| Uint8Array::new(&js_sys::Float64Array::from(v).buffer());
     let out = js_sys::Array::new();
     out.push(&Uint8Array::from(&t.level[..]));
-    out.push(&Uint8Array::from(&t.polarity.iter().map(|&v| v as u8).collect::<Vec<u8>>()[..]));
+    out.push(&Uint8Array::new(&js_sys::Int8Array::from(&t.polarity[..]).buffer()));
     out.push(&f8(&t.rt));
     out.push(&f8(&t.tic));
     out.push(&Uint8Array::from(&t.scans_json[..]));
@@ -667,7 +584,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
     let n = rt.len().min(y.len());
     let (rt, y) = (&rt[..n], &y[..n]);
     let found = if mode == 1 {
-        peakq::detect_prominence(rt, y, peakq::ProminenceParams::default())
+        peakq::detect_prominence(rt, y, peakq::ProminenceParams { local_snr: 5.0, ..Default::default() })
     } else {
         peaks::detect_peaks(rt, y, peaks::Params::default())
     };
@@ -677,6 +594,42 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
         put_peak(rt, y, noise, p, &mut out[i * PEAK_FIELDS..]);
     }
     found.len().min(room) as u32
+}
+
+/// Every peak whose apex is between `x0` and `x1` (minutes), by RT, into `out` as `[lo, hi, baseline at lo, baseline at hi, area]` (indices,
+/// counts, counts x min): the one-click integration of high-resolution traces (`peakq_auto`). `smooth` = Savitzky-Golay window of the apex
+/// picking (points), `snr` = prominence over the noise, `rel` = prominence over the highest point (fraction), `min_scans` = narrowest peak,
+/// `half_window` = smoothing of the edges (0 = from the peak width), `slope` = flat-flank stop (fraction). Returns the number of peaks written.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, rel: f64, min_scans: u32, half_window: u32, slope: f64, out: &mut [f64]) -> u32 {
+    let pick = peakq::ProminenceParams { snr, rel_prominence: rel, min_scans: min_scans as usize, smooth: smooth as usize, local_snr: 5.0, ..Default::default() };
+    let p = mzlab_core::peakq_auto::AutoParams { pick, half_window: half_window as usize, slope, ..Default::default() };
+    let found = mzlab_core::peakq_auto::auto_integrate(rt, y, x0, x1, p);
+    let room = out.len() / 5;
+    for (i, k) in found.iter().take(room).enumerate() {
+        out[5 * i..5 * i + 5].copy_from_slice(&[k.lo as f64, k.hi as f64, k.base_lo, k.base_hi, k.area]);
+    }
+    found.len().min(room) as u32
+}
+
+/// Limits (min) of the peak at time `at` on a low-resolution trace into `out[0..2]` (`peakq_lr`, the page's `autoEdges`): `params` = the 11 numbers
+/// of `LrParams::from_slice`. Returns 2, or 0 when the peak is under the S/N threshold or the arguments do not fit.
+#[wasm_bindgen]
+pub fn lr_edges(rt: &[f64], y: &[f64], at: f64, reference: f64, mrm: bool, params: &[f64], out: &mut [f64]) -> u32 {
+    let Some(pk) = mzlab_core::peakq_lr::LrParams::from_slice(params) else { return 0 };
+    let n = rt.len().min(y.len());
+    if out.len() < 2 || n == 0 {
+        return 0;
+    }
+    match mzlab_core::peakq_lr::lr_edges(&rt[..n], &y[..n], at, reference, mrm, &pk) {
+        Some((a, b)) => {
+            out[0] = a;
+            out[1] = b;
+            2
+        }
+        None => 0,
+    }
 }
 
 /// Quality of the peak between the indices `lo` and `hi` of a trace: `[gaussian, asymmetry (NaN = not measurable), noise score]` into `out`;
@@ -713,6 +666,24 @@ fn write_trace(rt: &[f64], y: &[f64], px: u32, out: &mut [f64]) -> u32 {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn auto_integrate_is_the_core_result() {
+        // three Gaussians on a flat baseline; the rows written are those of mzlab-core, and a short buffer keeps the first ones
+        use mzlab_core::peakq_auto::{auto_integrate, AutoParams};
+        let rt: Vec<f64> = (0..400).map(|i| f64::from(i) * 0.015).collect();
+        let g = |t: f64, c: f64, h: f64| h * (-((t - c) / 0.05).powi(2) / 2.0).exp();
+        let y: Vec<f64> = rt.iter().enumerate().map(|(i, &t)| g(t, 1.0, 8.0e4) + g(t, 2.5, 2.0e4) + g(t, 4.5, 1.0e5) + 500.0 + f64::from(i as u32 % 7) * 20.0).collect();
+        let core = auto_integrate(&rt, &y, 0.0, 6.0, AutoParams::default());
+        assert_eq!(core.len(), 3);
+        let row = |k: &mzlab_core::peakq_auto::AutoPeak| vec![k.lo as f64, k.hi as f64, k.base_lo, k.base_hi, k.area];
+        let mut out = vec![0.0; 5 * 64];
+        let n = super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, 0, 0.03, &mut out) as usize;
+        assert_eq!(out[..5 * n].to_vec(), core.iter().flat_map(row).collect::<Vec<f64>>());
+        let mut short = vec![0.0; 10];
+        assert_eq!(super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, 0, 0.03, &mut short), 2);
+        assert_eq!(short, core[..2].iter().flat_map(row).collect::<Vec<f64>>());
+    }
+
     #[test]
     fn version_matches_core() {
         assert_eq!(super::version(), mzlab_core::version());

@@ -101,6 +101,8 @@ I18N.add("it", {
   "mappa.show.title": "La mappa mostra gli aumenti (A più alto di B, arancio) e le diminuzioni (blu); togliendo la spunta restano solo gli aumenti. Il 3D mostra sempre entrambi i segni",
   "mappa.show.upOnly": "Solo aumenti",
   "mappa.show.neg": "Mostra anche le diminuzioni",
+  "mappa.fix": "scala fissa",
+  "mappa.fix.title": "Stessa scala dei colori su tutti i file aperti: il massimo è il più alto fra i file, così i campioni si confrontano a colpo d'occhio",
   "mappa.thr": "soglia",
   "mappa.rend.title": "Resa della mappa quando si ingrandisce: Liscia (le macchie restano continue) o Dettaglio (una cella per ogni valore dei dati)",
   "mappa.rend.smooth": "Liscia",

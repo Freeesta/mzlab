@@ -18,12 +18,18 @@ use mzlab_feat::tp::TpRoles;
 
 use crate::run::{self, RowSources};
 
+// `lib.rs` is at its line limit, so the Dig inputs of `tp.dig_lr` (shared by the CLI and the browser) hang here.
+#[path = "run_dig.rs"]
+pub mod dig;
+
 /// The parent file as written: a JSON `{"formula"|"neutral", "smiles", "rt"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
 /// `formula` is empty when the file gives only a SMILES.
 pub struct ParentFile {
     pub formula: String,
     pub smiles: String,
     pub rt: Option<f64>,
+    /// The adduct of the parent ion when the file says a valid one, else `[M+H]+` (its sign is the polarity of the products).
+    pub adduct: String,
 }
 
 pub fn read_parent(bytes: &[u8]) -> ParentFile {
@@ -47,10 +53,14 @@ pub fn read_parent(bytes: &[u8]) -> ParentFile {
             .find(|x| !x.is_empty())
             .unwrap_or_default();
         let rt = v.get("rt").and_then(Value::f64).filter(|t| t.is_finite());
+        let adduct = Some(s("adduct"))
+            .filter(|a| elements::ion_mz(0.0, a).is_some())
+            .unwrap_or_else(|| "[M+H]+".into());
         return ParentFile {
             formula,
             smiles: s("smiles"),
             rt,
+            adduct,
         };
     }
     let line = text.lines().next().unwrap_or("").trim().to_string();
@@ -61,12 +71,14 @@ pub fn read_parent(bytes: &[u8]) -> ParentFile {
             formula: line,
             smiles: String::new(),
             rt: None,
+            adduct: "[M+H]+".into(),
         }
     } else {
         ParentFile {
             formula: String::new(),
             smiles: line,
             rt: None,
+            adduct: "[M+H]+".into(),
         }
     }
 }
@@ -169,6 +181,34 @@ pub fn tp_generate(
     run().map_err(crate::js_err)
 }
 
+/// The parameters of `tp.generate` the files decide when the plan does not write them (`mzlab_feat::nature`, the rule of `flow run`): the names the plan writes
+/// and the `.mzidx` of the series read as `index_read(k, offset, length)`; `[{"name","value","proof"}]`. The name `?facets` asks the facets of the
+/// files for the check of the Flow page instead: `{"resolution":[...],"polarity":[...]}` (one export for both keeps the hr `.wasm` under its cap).
+#[cfg(feature = "proofs")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn series_estimates(
+    written: Vec<String>,
+    index_read: js_sys::Function,
+    index_sizes: Vec<f64>,
+) -> std::result::Result<String, wasm_bindgen::JsValue> {
+    let run = || -> Result<String> {
+        let indexes = (0..index_sizes.len())
+            .map(|k| crate::open_one(&index_read, k, index_sizes[k]))
+            .collect::<Result<Vec<_>>>()?;
+        // the rule `flow run` puts on the scan inputs before the check
+        if written.iter().any(|w| w == "?facets") {
+            let files = indexes.iter().map(mzlab_feat::nature::index_facts);
+            return Ok(mzlab_feat::nature::facets_json(
+                &mzlab_feat::nature::facets(files),
+            ));
+        }
+        let nature = mzlab_feat::nature::of_indexes(&indexes);
+        let list = mzlab_feat::nature::estimates(&|n| written.iter().any(|w| w == n), &nature);
+        Ok(mzlab_feat::nature::estimates_json(&list))
+    };
+    run().map_err(crate::js_err)
+}
+
 /// The parent of a link: neutral formula, SMILES (empty for a formula), the structure text of the SMILES and the time the parent file gives.
 pub struct LinkParent<'a> {
     pub formula: &'a str,
@@ -247,7 +287,7 @@ fn parent_rt(table: &[u8], mz: f64) -> Result<f64> {
 }
 
 /// The hypotheses, the search in the series and the proofs on `table` for the parent `p`; `hypotheses` has to be the `ipotesi/1` of `tp.generate` for this
-/// parent in this polarity. `given` is the polarity the plan sets, if it does; the recipe takes the polarity that results. `lap(name)` is called after each phase.
+/// parent in this polarity. `given` is the polarity the plan sets, if it does, else the files' when the detection took both; the recipe takes the polarity that results. `lap(name)` is called after each phase.
 #[allow(clippy::too_many_arguments)]
 pub fn link_evidence<I: ReadAt>(
     rules: &[u8],
@@ -261,13 +301,25 @@ pub fn link_evidence<I: ReadAt>(
     budget: &MemBudget,
     lap: &mut dyn FnMut(&str),
 ) -> Result<LinkRun> {
-    let polarity = polarity_of(given, recipe);
+    // a plan that does not write the polarity over a detection that took both: the files decide (`mzlab_feat::nature`, as `flow run`)
+    let open = mzlab_feat::nature::open_polarity(
+        recipe.detect.polarity,
+        &mzlab_feat::nature::of_indexes(series_of.indexes),
+    );
+    let polarity = polarity_of(given.or(open.map(f64::from)), recipe);
     recipe.detect.polarity = Some(polarity);
-    let hp = HypoParams {
-        polarity,
-        ..HypoParams::default()
+    // the engine searches the hypotheses of the recipe (merged by nominal m/z at unit resolution): the registry of `tp.generate` has to be that one
+    // (`nominal` taken from the files) or, as before the step read the files, the exact-mass one
+    let unit = recipe.align.ion.ppm < 0.0;
+    let same = |nominal: bool| -> Result<bool> {
+        let hp = HypoParams {
+            polarity,
+            nominal,
+            ..HypoParams::default()
+        };
+        Ok(hypotheses.trim() == generate_text(rules, p.formula, p.structure, &hp)?)
     };
-    if hypotheses.trim() != generate_text(rules, p.formula, p.structure, &hp)? {
+    if !same(unit)? && !(unit && same(false)?) {
         return Err(Error::new("err.flow.link.hypotheses").with("parent", p.formula));
     }
     let mz = parent_mz(p, polarity)?;
@@ -368,7 +420,7 @@ pub fn tp_link_evidence(
             structure,
             rt: file.rt,
         };
-        let roles = TpRoles::from_json(samples)?;
+        let roles = TpRoles::for_table(samples, table)?;
         let mut indexes = (0..index_sizes.len())
             .map(|k| crate::open_one(&index_read, k, index_sizes[k]))
             .collect::<Result<Vec<_>>>()?;

@@ -1,5 +1,6 @@
 //! `rete/1` as JSON, and the words of an arc: the change of the ion formula and the reason, in English (Tabui is English only).
 
+use crate::sortc::SortC;
 use mzlab_core::json::{round, Out};
 
 use super::{Arc, Ms2Share, Node, Rete};
@@ -11,7 +12,7 @@ pub const SCHEMA: &str = "rete/1";
 pub(super) fn delta_label(a: &Counts, b: &Counts) -> String {
     let get = |c: &Counts, e: &str| c.get(e).copied().unwrap_or(0);
     let mut elements: Vec<&String> = a.keys().chain(b.keys()).collect();
-    elements.sort();
+    elements.sortc();
     elements.dedup();
     let diff: Vec<(&String, i64)> = elements
         .into_iter()

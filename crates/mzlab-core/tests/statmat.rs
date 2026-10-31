@@ -3,7 +3,7 @@
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
-use mzlab_core::statmat::{eigh, svd};
+use mzlab_core::statmat::{eigh, singular_values, svd};
 
 fn lcg(seed: &mut u64) -> f64 {
     *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
@@ -53,7 +53,7 @@ fn svd_rank_deficient() {
     }
     check(&a, m, n);
     assert!(svd(&a, m, n).s[m - 1] < 1e-12);
-    check(&vec![0.0; 12], 3, 4);
+    check(&[0.0; 12], 3, 4);
 }
 
 #[test]
@@ -70,4 +70,20 @@ fn eigh_symmetric() {
             }
         }
     }
+}
+
+#[test]
+fn singular_values_are_those_of_svd_bit_for_bit() {
+    for (m, n, seed) in [(1, 1, 1), (9, 4, 2), (4, 9, 3), (30, 30, 4), (60, 12, 5), (12, 60, 6)] {
+        let a = matrix(m, n, seed);
+        let (want, got) = (svd(&a, m, n).s, singular_values(&a, m, n));
+        assert_eq!(got.iter().map(|x| x.to_bits()).collect::<Vec<_>>(), want.iter().map(|x| x.to_bits()).collect::<Vec<_>>(), "{m}x{n}");
+    }
+    // a rank-deficient matrix: the null values are zero in both
+    let mut a = matrix(8, 5, 7);
+    for i in 0..8 {
+        a[i * 5 + 4] = 2.0 * a[i * 5];
+    }
+    assert_eq!(singular_values(&a, 8, 5).iter().map(|x| x.to_bits()).collect::<Vec<_>>(), svd(&a, 8, 5).s.iter().map(|x| x.to_bits()).collect::<Vec<_>>());
+    assert!(singular_values(&[], 0, 3).is_empty());
 }

@@ -2,7 +2,7 @@
 //
 // Only what the library index needs: a comparable form of an adduct string.
 
-pub const ELECTRON: f64 = 0.000548579909;
+pub const ELECTRON: f64 = mzlab_core::elements::ELECTRON;
 
 const MASS: [(&str, f64); 36] = [
     ("H", 1.00782503207),

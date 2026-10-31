@@ -29,7 +29,7 @@ fn key(z: &[u8]) -> (String, String) {
         .params
         .iter()
         .find(|(k, _)| *k == "detail")
-        .map(|(_, v)| v.to_string())
+        .map(|(_, v)| v.clone())
         .unwrap_or_default();
     (e.key.to_string(), detail)
 }
@@ -118,4 +118,71 @@ fn helpers_give_the_items_of_one_thread_in_the_same_order() {
             assert_eq!(items(&xml, helpers), want, "{helpers} helpers, bad {bad:?}");
         }
     }
+}
+
+/// The same file with its data type, compression and polarity once as inline cvParams and once in shared `referenceableParamGroup`s.
+fn shared(groups: bool) -> String {
+    let enc = |raw: Vec<u8>| base64::engine::general_purpose::STANDARD.encode(deflate(&raw));
+    let mz = enc([100.5f32, 200.25, 300.0]
+        .iter()
+        .flat_map(|v| v.to_le_bytes())
+        .collect());
+    let it = enc([10.0f32, 20.0, 30.0]
+        .iter()
+        .flat_map(|v| v.to_le_bytes())
+        .collect());
+    let (head, pol, ty, zl) = if groups {
+        (
+            r#"<referenceableParamGroupList count="3"><referenceableParamGroup id="neg"><cvParam accession="MS:1000129" name="negative scan"/></referenceableParamGroup><referenceableParamGroup id="f32z"><cvParam accession="MS:1000521" name="32-bit float"/><cvParam accession="MS:1000574" name="zlib compression"/></referenceableParamGroup><referenceableParamGroup id="prof"><cvParam accession="MS:1000128" name="profile spectrum"/></referenceableParamGroup></referenceableParamGroupList>"#,
+            r#"<referenceableParamGroupRef ref="neg"/><referenceableParamGroupRef ref="prof"/>"#,
+            r#"<referenceableParamGroupRef ref="f32z"/>"#,
+            "",
+        )
+    } else {
+        (
+            "",
+            r#"<cvParam accession="MS:1000129" name="negative scan"/><cvParam accession="MS:1000128" name="profile spectrum"/>"#,
+            r#"<cvParam accession="MS:1000521" name="32-bit float"/>"#,
+            r#"<cvParam accession="MS:1000574" name="zlib compression"/>"#,
+        )
+    };
+    format!(
+        r#"<mzML>{head}<run><spectrumList count="1"><spectrum index="0" id="scan=1" defaultArrayLength="3"><cvParam accession="MS:1000511" name="ms level" value="1"/>{pol}<binaryDataArrayList><binaryDataArray>{ty}{zl}<cvParam accession="MS:1000514" name="m/z array"/><binary>{mz}</binary></binaryDataArray><binaryDataArray>{ty}{zl}<cvParam accession="MS:1000515" name="intensity array"/><binary>{it}</binary></binaryDataArray></binaryDataArrayList></spectrum></spectrumList></run></mzML>"#
+    )
+}
+
+#[test]
+fn shared_param_groups_read_like_inline_cvparams() {
+    let inline = read(shared(false).as_bytes()).unwrap();
+    let grouped = read(shared(true).as_bytes()).unwrap();
+    assert_eq!(inline.spectra, grouped.spectra);
+    let s = &grouped.spectra[0];
+    assert_eq!((s.polarity, s.profile), (-1, true));
+    assert_eq!(s.mz, vec![100.5, 200.25, 300.0]);
+    assert_eq!(s.intensity, vec![10.0, 20.0, 30.0]);
+}
+
+#[test]
+fn base64_split_by_white_space_and_character_references_reads_the_same() {
+    let plain = shared(false);
+    for gap in ["\r\n", "&#10;", " &#13;\n "] {
+        let split = plain
+            .replace("<binary>", &format!("<binary>{gap}"))
+            .replace("</binary>", &format!("{gap}</binary>"));
+        let (a, b) = (
+            read(plain.as_bytes()).unwrap(),
+            read(split.as_bytes()).unwrap(),
+        );
+        assert_eq!(a.spectra, b.spectra, "{gap:?}");
+    }
+}
+
+#[test]
+fn seconds_by_unit_name_or_accession_alone() {
+    use super::is_seconds;
+    assert!(is_seconds(Some("second"), None));
+    assert!(is_seconds(None, Some("UO:0000010")));
+    assert!(is_seconds(Some("second"), Some("UO:0000010")));
+    assert!(!is_seconds(Some("minute"), Some("UO:0000031")));
+    assert!(!is_seconds(None, None));
 }

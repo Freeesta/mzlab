@@ -4,6 +4,7 @@
 use std::io::{Cursor, Write};
 
 mod downstream;
+mod raw_records;
 use std::time::Instant;
 
 use flate2::{write::GzEncoder, Compression};
@@ -196,6 +197,9 @@ fn scan_row(
         m.insert("trailer".into(), Value::Object(values_of(p.record())));
     }
     put(&mut m, "faims_cv", meta.faims_cv);
+    if let Some(r) = ev.as_ref().and_then(raw_records::raw_records) {
+        m.insert("raw_records".into(), r);
+    }
     Some((Value::Object(m), meta))
 }
 

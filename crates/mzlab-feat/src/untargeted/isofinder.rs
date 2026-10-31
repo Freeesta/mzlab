@@ -13,6 +13,7 @@ pub mod ladder;
 mod score;
 pub mod select;
 
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 use envelope::{jround, m1_bounds, CarbonModel, Envelope};
@@ -209,7 +210,7 @@ fn isotope_diffs(elements: &[String], max_charge: i32) -> Result<Vec<Vec<f64>>, 
             }
         }
     }
-    out.iter_mut().for_each(|d| d.sort_by(f64::total_cmp));
+    out.iter_mut().for_each(|d| d.sortc_by(f64::total_cmp));
     Ok(out)
 }
 
@@ -268,7 +269,7 @@ pub fn find_candidates(
         }
         dp -= 1;
     }
-    cands.sort_by(|a, b| a.0.total_cmp(&b.0));
+    cands.sortc_by(|a, b| a.0.total_cmp(&b.0));
     m = mz[t];
     let mut max_mz = m;
     dp += 1;
@@ -285,7 +286,7 @@ pub fn find_candidates(
         }
         dp += 1;
     }
-    cands.sort_by(|a, b| a.0.total_cmp(&b.0));
+    cands.sortc_by(|a, b| a.0.total_cmp(&b.0));
     cands
 }
 

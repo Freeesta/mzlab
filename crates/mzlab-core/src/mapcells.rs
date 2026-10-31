@@ -37,7 +37,7 @@ impl<R: ReadAt> Routes<R> {
     /// `ionmap`: the map of the level on the common grid of the session, `nrt × nmz` (the last six of a file are kept, and the engine trims all the files to its byte budget). A section in single precision
     /// puts its peaks in the cells with float32 arithmetic, as numpy does on a float32 array.
     pub(crate) fn ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Arc<Vec<f32>>> {
-        let key = format!("{level}|{mean}|{:?}", g);
+        let key = format!("{level}|{mean}|{g:?}");
         if let Some(i) = self.maps.iter().position(|(k, _, _)| *k == key) {
             self.maps[i].2 = super::routes::next_tick();
             return Ok(self.maps[i].1.clone());
@@ -53,11 +53,15 @@ impl<R: ReadAt> Routes<R> {
     fn build_ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Vec<f32>> {
         let Some((si, rt)) = self.map_level(level)? else { return Ok(vec![0.0; g.nrt * g.nmz]) };
         let bins = scan_bins(&rt, g.rt0, (g.rt1 - g.rt0).max(1e-9), g.nrt);
-        let n_scans = counts(bins.iter().cloned(), g.nrt);
+        let n_scans = counts(bins.iter().copied(), g.nrt);
         let n = self.idx.sections[si].n_peaks;
         let f4 = self.idx.sections[si].f4;
         let at = |mz: f64| if f4 { ((mz as f32 - g.mz0 as f32) / g.dmz as f32) as f64 } else { (mz - g.mz0) / g.dmz };
-        let acc = self.accumulate(si, (0, n), g.nrt * g.nmz, mean, |p, mz| cell_of(bins[p], at(mz), g.nmz))?;
+        let from_cells = if mean { None } else { self.session_from_cells(level, g, &bins, &at)? };
+        let acc = match from_cells {
+            Some(acc) => acc,
+            None => self.accumulate(si, (0, n), g.nrt * g.nmz, mean, |p, mz| cell_of(bins[p], at(mz), g.nmz))?,
+        };
         Ok(finish(acc, mean, &n_scans, g.nmz))
     }
 
@@ -72,7 +76,11 @@ impl<R: ReadAt> Routes<R> {
         let bins = scan_bins(&rt, rt0, rt1 - rt0, nrt);
         let inside: Vec<bool> = rt.iter().map(|&r| r >= rt0 && r < rt1).collect();
         let n_scans = counts((0..rt.len()).filter(|&p| inside[p]).map(|p| bins[p]), nrt);
-        let acc = self.accumulate(si, (a, b.max(a)), nrt * nmz, mean, |p, mz| inside[p].then(|| clipped_cell(bins[p], frac(mz, mz0, mz1, log) * nmz as f64, nmz)))?;
+        let from_cells = if mean || log { None } else { self.region_from_cells(level, (mz0, mz1), (nrt, nmz), (a, b.max(a)), (&bins, &inside))? };
+        let acc = match from_cells {
+            Some(acc) => acc,
+            None => self.accumulate(si, (a, b.max(a)), nrt * nmz, mean, |p, mz| inside[p].then(|| clipped_cell(bins[p], frac(mz, mz0, mz1, log) * nmz as f64, nmz)))?,
+        };
         Ok(finish(acc, mean, &n_scans, nmz))
     }
 
@@ -96,7 +104,11 @@ impl<R: ReadAt> Routes<R> {
         let ng = ns.div_ceil(grp);
         let (a, b) = (self.idx.search(si, mz0, false)?, self.idx.search(si, mz1, false)?);
         let n_scans = counts((0..ns).map(|p| p / grp), ng);
-        let acc = self.accumulate(si, (a, b.max(a)), ng * nmz, mean, |p, mz| Some(clipped_cell(p / grp, frac(mz, mz0, mz1, log) * nmz as f64, nmz)))?;
+        let from_cells = if mean || log { None } else { self.background_from_cells(level, (mz0, mz1), nmz, (a, b.max(a)), grp)? };
+        let acc = match from_cells {
+            Some(acc) => acc,
+            None => self.accumulate(si, (a, b.max(a)), ng * nmz, mean, |p, mz| Some(clipped_cell(p / grp, frac(mz, mz0, mz1, log) * nmz as f64, nmz)))?,
+        };
         Ok(median_cols(&finish(acc, mean, &n_scans, nmz), ng, nmz))
     }
 
@@ -163,7 +175,7 @@ pub struct Sticks {
 }
 
 /// Fraction of the m/z axis `[mz0, mz1]` at `mz`: linear, or by ln(m/z) for cells of equal ppm.
-fn frac(mz: f64, mz0: f64, mz1: f64, log: bool) -> f64 {
+pub(crate) fn frac(mz: f64, mz0: f64, mz1: f64, log: bool) -> f64 {
     if log {
         (mz / mz0).ln() / (mz1 / mz0).ln()
     } else {
@@ -172,29 +184,29 @@ fn frac(mz: f64, mz0: f64, mz1: f64, log: bool) -> f64 {
 }
 
 /// Map cell of the scan position `p` (`scan_bin[p] * nmz + j`) from the fraction `f` of the m/z axis, or None outside the axis.
-fn cell_of(bin: usize, f: f64, nmz: usize) -> Option<usize> {
+pub(crate) fn cell_of(bin: usize, f: f64, nmz: usize) -> Option<usize> {
     let j = f.floor();
     (j >= 0.0 && j < nmz as f64).then(|| bin * nmz + j as usize)
 }
 
 /// The same with the cell clipped to the axis (a region holds only peaks inside it; a rounding at the edge must not drop one).
-fn clipped_cell(bin: usize, f: f64, nmz: usize) -> usize {
+pub(crate) fn clipped_cell(bin: usize, f: f64, nmz: usize) -> usize {
     bin * nmz + f.floor().clamp(0.0, (nmz - 1) as f64) as usize
 }
 
 /// RT bin of every scan: `clip(floor((rt - rt0) / span * n), 0, n - 1)`.
-fn scan_bins(rt: &[f64], rt0: f64, span: f64, n: usize) -> Vec<usize> {
+pub(crate) fn scan_bins(rt: &[f64], rt0: f64, span: f64, n: usize) -> Vec<usize> {
     rt.iter().map(|&r| ((r - rt0) / span * n as f64).floor().clamp(0.0, (n - 1) as f64) as usize).collect()
 }
 
-fn counts(bins: impl Iterator<Item = usize>, n: usize) -> Vec<usize> {
+pub(crate) fn counts(bins: impl Iterator<Item = usize>, n: usize) -> Vec<usize> {
     let mut c = vec![0; n];
     bins.for_each(|b| c[b] += 1);
     c
 }
 
 /// Cells to float32: the maximum as it is, the mean per scan of the RT bin (`n_scans[row]`, at least 1) for the sums.
-fn finish(acc: Vec<f64>, mean: bool, n_scans: &[usize], nmz: usize) -> Vec<f32> {
+pub(crate) fn finish(acc: Vec<f64>, mean: bool, n_scans: &[usize], nmz: usize) -> Vec<f32> {
     if mean {
         acc.iter().enumerate().map(|(i, v)| (v / n_scans[i / nmz].max(1) as f64) as f32).collect()
     } else {
@@ -206,7 +218,7 @@ fn finish(acc: Vec<f64>, mean: bool, n_scans: &[usize], nmz: usize) -> Vec<f32> 
 pub fn apex(points: &[(f64, f64, f64)], rt: f64, drt: f64) -> Option<(f64, f64)> {
     let mut best: Option<(f64, f64, f64)> = None;
     for &(r, m, y) in points {
-        if (r - rt).abs() <= drt && best.map_or(true, |b| y > b.0) {
+        if (r - rt).abs() <= drt && best.is_none_or(|b| y > b.0) {
             best = Some((y, r, m));
         }
     }

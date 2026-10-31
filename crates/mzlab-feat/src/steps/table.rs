@@ -3,6 +3,7 @@
 
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
+use super::tabui::{INTERP_CEILING, INTERP_WASM};
 use super::{FEAT_CEILING, FEAT_WASM};
 
 /// The steps that run in the `feat (detect)` module.
@@ -38,6 +39,17 @@ fn family_link_params() -> Vec<Param> {
     ]
 }
 
+/// `tol_da` of the steps that match m/z (`features.align`, `features.gapfill`, `features.ms2_link`): the tolerance on the unit axis, in Da.
+pub(super) fn tol_da() -> Param {
+    Param::number("tol_da", "m/z tolerance (Da)")
+        .min(0.05)
+        .max(1.0)
+        .unit("Da")
+        .doc("Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)")
+        .estimate()
+        .advanced()
+}
+
 /// `features.align`: joins the features of the files into the rows of the table (`famalign::align_families`, `align::align`).
 pub(super) fn align() -> Step {
     let mut params = vec![
@@ -49,6 +61,7 @@ pub(super) fn align() -> Step {
             .default_num(5.0)
             .unit("ppm")
             .doc("At unit resolution the engine reads a negative value as Da"),
+        tol_da(),
         Param::number("rt_gap", "RT gap")
             .min(0.0)
             .default_num(0.1)
@@ -124,6 +137,7 @@ pub(super) fn gapfill() -> Step {
             .default_num(5.0)
             .unit("ppm")
             .doc("At unit resolution the engine reads a negative value as Da"),
+        tol_da(),
         Param::number("rt_tol", "RT tolerance")
             .min(0.0)
             .default_num(0.1)
@@ -164,11 +178,17 @@ pub(super) fn gapfill() -> Step {
 
 /// `table.filter`: the rules of `filters::Rule` and the normalisation of `norm::Method` as a view over the table; the table is not changed.
 pub(super) fn filter() -> Step {
-    let params = vec![
+    let mut params = vec![
         Param::integer("min_detected", "Minimum files")
             .min(0.0)
             .unit("files")
             .doc("Peaks found by the detection in at least this many files that are not blanks; left empty, the rule is off"),
+        Param::number("min_replicate_fraction", "Minimum replicate fraction")
+            .min(0.0)
+            .max(1.0)
+            .unit("fraction")
+            .doc("A row is kept if, in at least one group of replicates (same series, role, time and concentration, or the same group when it is set), it is detected in at least this fraction of the files, rounded to a whole file and at least one; left empty, the rule is off")
+            .tip("Kept if some replicate group has the row detected in at least this fraction of its files."),
         Param::number("min_area", "Minimum area")
             .min(0.0)
             .unit("counts")
@@ -192,6 +212,12 @@ pub(super) fn filter() -> Step {
             .doc("max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"),
         Param::boolean("blank_subtract", "Subtract the blank")
             .doc("The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"),
+        Param::choice("blank_match", "Blank matching", &["all", "batch", "matrix"])
+            .default_str("all")
+            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction")
+            .tip("Compare each sample only with the blanks of its batch or matrix; others use all blanks."),
+        Param::boolean("blank_keep_istd", "Keep the internal standard")
+            .doc("The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"),
         Param::boolean("qc_zero", "Count missing QC as 0")
             .doc("The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"),
         Param::number("qc_cv_max", "Maximum QC CV")
@@ -203,20 +229,8 @@ pub(super) fn filter() -> Step {
             .default_num(3.0)
             .unit("files")
             .doc("QC files with a peak that the row needs for the QC rule, and QC files that the series needs"),
-        Param::number("dup_ppm", "Duplicate m/z window")
-            .min(0.0)
-            .unit("ppm")
-            .doc("Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"),
-        Param::number("dup_rt", "Duplicate RT window")
-            .min(0.0)
-            .default_num(0.1)
-            .unit("min")
-            .doc("RT distance under which two rows may be duplicates; used with the duplicate m/z window only"),
-        Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
-        Param::choice("normalize", "Normalisation", &["none", "sum", "median"])
-            .default_str("none")
-            .doc("Scale of the areas of each file: total area or median area"),
     ];
+    params.extend(filter_tail_params());
     Step {
         ins: vec![
             Port::new("table", DataType::Table, "Feature table"),
@@ -236,6 +250,43 @@ pub(super) fn filter() -> Step {
             "Keeps the rows that pass an ordered list of rules over the samples (campioni/2); blanks and dark files never count as samples, and a rule that cannot be evaluated is an error.",
         )
     }
+}
+
+/// The last parameters of `table.filter`: duplicates, MS2, normalisation and its internal standard.
+fn filter_tail_params() -> Vec<Param> {
+    vec![
+        Param::number("dup_ppm", "Duplicate m/z window")
+            .min(0.0)
+            .unit("ppm")
+            .doc("Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"),
+        Param::number("dup_da", "Duplicate m/z window (Da)")
+            .min(0.05)
+            .max(1.0)
+            .unit("Da")
+            .doc("Unit axis only: of the rows within this many Da in m/z and the duplicate RT window of each other only the one with the largest area is kept; dup_ppm on a unit-resolution table is an error; left empty, the rule is off")
+            .tip("Of rows this many Da apart in m/z and close in RT, only the strongest is kept."),
+        Param::number("dup_rt", "Duplicate RT window")
+            .min(0.0)
+            .default_num(0.1)
+            .unit("min")
+            .doc("RT distance under which two rows may be duplicates; used with the duplicate m/z window only"),
+        Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
+        Param::choice("normalize", "Normalisation", &["none", "sum", "median", "istd"])
+            .default_str("none")
+            .doc("Scale of the areas of each file: total area or median area")
+            .tip("Scale each file by its total area, its median area or the area of the internal standard."),
+        Param::integer("istd_id", "Internal standard row")
+            .min(0.0)
+            .doc("Id of the row of the internal standard; used with the normalisation istd"),
+        Param::number("istd_mz", "Internal standard m/z")
+            .min(0.0)
+            .doc("m/z of the internal standard, with its RT: the nearest row (5 ppm, 0.2 min) is the standard; used with the normalisation istd when no row id is set")
+            .tip("m/z of the internal standard; with its RT, the nearest row is the standard."),
+        Param::number("istd_rt", "Internal standard RT")
+            .min(0.0)
+            .unit("min")
+            .doc("RT of the internal standard; used with its m/z"),
+    ]
 }
 
 /// `table.drift`: the correction of the drift of the areas along the order of injection (`drift::correct`), a view over the table.
@@ -260,7 +311,7 @@ pub(super) fn drift() -> Step {
         outs: vec![Port::new("table", DataType::Table, "Table view with a factor for every cell")],
         params,
         runs_in: RunsIn {
-            wasm: Some("table"),
+            wasm: Some("flowtab"),
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
@@ -303,6 +354,49 @@ pub(super) fn export_csv() -> Step {
     }
 }
 
+/// `export.annotations`: one CSV with the candidates of every identification method of the plan beside each feature, with the level and the evidence (`flow_export_annot`).
+pub(super) fn export_annotations() -> Step {
+    let optional = |p: Port| Port {
+        optional: true,
+        ..p
+    };
+    let params = vec![
+        Param::integer("top_per_method", "Candidates per method")
+            .default_num(10.0)
+            .min(1.0)
+            .doc("The most candidates written for each feature and method, best first by the score of that method")
+            .tip("Candidates kept per feature and method."),
+        Param::text("min_level", "Lowest level")
+            .doc("Only features whose annot.level decision is at this level or better are written, for example 3a (order 1, 2a, 2b, 3a, 3b, 4, 5, 0); left empty every feature is written")
+            .tip("Write only features at this level or better; empty = all."),
+        Param::choice("separator", "Separator", &["comma", "semicolon"])
+            .default_str("comma")
+            .doc("comma: the usual CSV; semicolon: for spreadsheets with a decimal comma"),
+    ];
+    Step {
+        ins: vec![
+            Port::new("table", DataType::Table, "Aligned feature table (.mzfeat)"),
+            optional(Port::new("candidates", DataType::Candidates, "Library and in silico candidates (candidates/1)").many()),
+            optional(Port::new("screen", DataType::Candidates, "Suspect candidates (screen/1 of screen.suspects)").many()),
+            optional(Port::new("formulas", DataType::Formulas, "Candidate formulas (formula.ms1, formula.ms2)").many()),
+            optional(Port::new("annot", DataType::Annot, "Level and evidence per feature (annot.level)")),
+        ],
+        outs: vec![Port::new("report", DataType::Report, "Annotations as CSV")],
+        params,
+        runs_in: RunsIn {
+            wasm: Some("flowtab"),
+            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            native: true,
+        },
+        errors: vec!["err.flow.annotations.level", "err.flow.annotations.manifest"],
+        ..Step::core(
+            "export.annotations",
+            "Export annotations",
+            "Writes one CSV with, for every feature, the candidates of every identification method of the plan side by side (standard, library, in silico, suspect, formula), each with its own score and name, and the level and reason annot.level gave. It adds no identity and raises no level.",
+        )
+    }
+}
+
 /// `export.inclusion`: the inclusion list of the products expected in the plan, to inject the samples again in targeted MS2 (`export_inclusione`).
 pub(super) fn export_inclusion() -> Step {
     let params = vec![
@@ -310,8 +404,7 @@ pub(super) fn export_inclusion() -> Step {
             list: Some("adducts"),
             ..Param::text("adducts", "Adducts")
         }
-        .default_str("[M+H]+")
-            .doc("Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct"),
+            .doc("Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct; left empty it is [M-H]- for products linked in negative mode and [M+H]+ otherwise"),
         Param::number("rt_window", "RT half window")
             .min(0.0)
             .default_num(0.5)
@@ -319,15 +412,15 @@ pub(super) fn export_inclusion() -> Step {
             .doc("Each row spans the expected RT of the product plus and minus this; the start is never below 0"),
     ];
     Step {
-        ins: vec![Port::new("tp", DataType::Tp, "Expected products with their RT")],
+        ins: vec![Port::new("tp", DataType::Tp, "Expected products with their RT (a JSON list, or the table of tp.link)")],
         outs: vec![Port::new("report", DataType::Report, "Inclusion list as CSV")],
         params,
         runs_in: RunsIn {
-            wasm: Some("table"),
-            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            wasm: Some(INTERP_WASM),
+            wasm_ceiling_bytes: Some(INTERP_CEILING),
             native: true,
         },
-        errors: vec!["error.export.adduct", "error.newerFormat"],
+        errors: vec!["error.export.adduct", "error.newerFormat", "error.tpNoBlock", "error.rete.noInterp"],
         ..Step::core(
             "export.inclusion",
             "Export inclusion list",

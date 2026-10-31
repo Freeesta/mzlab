@@ -7,7 +7,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
   /** the steps this runner knows, and the ones that need a computer */
-  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill", ...(F.webMsn ? F.webMsn.STEPS : []), ...(F.webTp ? F.webTp.STEPS : [])];
+  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill", ...(F.webMsn ? F.webMsn.STEPS : []), ...(F.webTp ? F.webTp.STEPS : []), ...(F.webIdent ? F.webIdent.STEPS : []), ...(F.webQc ? F.webQc.STEPS : []), ...(F.webSuspects ? F.webSuspects.STEPS : []), ...(F.webInsilico ? F.webInsilico.STEPS : []), ...(F.webDrift ? F.webDrift.STEPS : []), ...(F.webInclusion ? F.webInclusion.STEPS : []), ...(F.webQcReport ? F.webQcReport.STEPS : []), ...(F.webExportAnnot ? F.webExportAnnot.STEPS : []), "export.table_csv", "export.mztab", "table.filter"];
   const LAYERED = ["features.detect", "features.align", "features.gapfill"];
   /** @type {any} */ let pool = null;
   /** @type {any} */ let estimator = null;
@@ -41,15 +41,27 @@
     return held.length ? held : out;
   };
 
+  /** the context of the Tabui package once it holds the data files: the Flow tab runs from the early scripts, before the loader has filled `ctx.files`, so a run started at once would find the rules and the worker missing @param {string} name a file that must be there */
+  const tpCtx = async name => {
+    for (let i = 0; i < 600; i++) {
+      const c = G.QTOOLS && G.QTOOLS.ctx;
+      if (c && c.files && c.files[name]) return c;
+      await (G.TPLAZY && G.TPLAZY.whenLoaded ? G.TPLAZY.whenLoaded().catch(() => {}) : Promise.resolve());
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return G.QTOOLS && G.QTOOLS.ctx;
+  };
+  F.tpCtx = tpCtx;
+
   /** the pool of feat-worker.js with the `feat` .wasm of the site; made once */
   const getPool = async () => {
     if (pool) return pool;
-    const c = G.QTOOLS.ctx, u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, c.base).href;
+    const c = await tpCtx("feat-worker.js"), u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, c.base).href;
     const man = await (await fetch(u("manifest.json"))).json();
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(/* webpackIgnore: true */ url);
     const w = (/** @type {any} */ m) => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
-    pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.interp ? { interp: w(man.interp) } : {}), ...(man.table ? { table: w(man.table) } : {}) } });
+    pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.interp ? { interp: w(man.interp) } : {}), ...(man.table ? { table: w(man.table) } : {}), ...(man.finder_lr ? { finder_lr: w(man.finder_lr) } : {}), ...(man.attributio_ms2 ? { attributio_ms2: w(man.attributio_ms2) } : {}), ...(man.formula ? { formula: w(man.formula) } : {}), ...(man.flowtab ? { flowtab: w(man.flowtab) } : {}) } });
     pool.featWasm = w(man.feat);
     pool.limit = Math.max(1, mod.poolSize(false, navigator.hardwareConcurrency));
     return pool;
@@ -76,7 +88,8 @@
     const layers = [];
     for (const inst of plan.steps) {
       const id = base(inst);
-      if (LAYERED.includes(id)) layers.push({ step: id, params: inst.params || {} });
+      // the algorithm of the detection is a parameter of its layer (as `flow run` writes it): without it the pool computes the default one
+      if (LAYERED.includes(id)) layers.push({ step: id, params: id === "features.detect" && inst.algorithm ? { algorithm: inst.algorithm, ...inst.params } : inst.params || {} });
       if (inst === upto) break;
     }
     return JSON.stringify({ fill: plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill"), layers });

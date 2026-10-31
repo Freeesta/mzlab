@@ -94,7 +94,7 @@ async function centroidAll(btn, stop, st, refresh) {
     try {
       const blob = await rb.convertCentroids(f.name, sizeOf(f), p => { if (p.scansTotal) line(p.scans / p.scansTotal); }, ctl.signal);
       if (blob) { await upload([new File([blob], name, { type: "application/xml" })], "data"); made++; }
-    } catch (e) {
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       if (e && e.cancelled) break;
       failed++; st.textContent = I18N.t("settings.cen.fail", { name: f.name });
     }
@@ -204,7 +204,7 @@ function uipOpen(btn) {
     if (typeof redrawAll === "function") redrawAll();
   });
   on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
-  on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (!UIP.xicLens && window.XICLENS) XICLENS.closeAll(); });
+  on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (window.XICBTN) XICBTN.setLens(UIP.xicLens); });
   uipPriv(d, on);
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
@@ -230,7 +230,7 @@ function uipOpen(btn) {
   const close = () => { d.remove(); if (btn.isConnected) btn.focus(); };
   on("#uip-x", "click", close);
   document.addEventListener("keydown", function esc(e) { if (!d.isConnected) return document.removeEventListener("keydown", esc); if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); } });       // Esc closes the settings and gives the focus back to the gear
-  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.isConnected) return document.removeEventListener("mousedown", h); if (!d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target) && !/** @type {Element} */ (e.target).closest("dialog")) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.isConnected) return document.removeEventListener("mousedown", h); if (!TEMASOFT.busy() && !d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target) && !/** @type {Element} */ (e.target).closest("dialog")) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
   (d.querySelector("input:checked") || d.querySelector("input,button")).focus();
 }
 
@@ -238,7 +238,7 @@ uipLoad();
 (() => {
   const nav = Q("#nav"), b = document.getElementById("np-set") || document.createElement("button"); b.id = "np-set"; b.className = "ib gear"; b.title = I18N.t("settings.gear.title"); b.setAttribute("aria-label", I18N.t("settings.title"));
   b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
-  if (!b.isConnected) nav.insertAdjacentElement("afterend", b); b.onclick = e => {      // in the Teoria the gear opens the settings of the Teoria, elsewhere the ones of the program
+  if (!b.isConnected) { const hq = Q("header .hq"); if (hq) hq.insertAdjacentElement("beforebegin", b); else nav.insertAdjacentElement("afterend", b); } b.onclick = e => {      // in the Teoria the gear opens the settings of the Teoria, elsewhere the ones of the program
     e.stopPropagation();
     const tw = /** @type {any} */ (document.documentElement.classList.contains("in-theory") && /** @type {HTMLIFrameElement} */ (document.getElementById("tframe")).contentWindow);
     if (tw && tw.TEORIA && tw.TEORIA.settings) tw.TEORIA.settings(); else uipOpen(b);

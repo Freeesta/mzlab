@@ -26,12 +26,21 @@ fn pearson(a: &[f64], b: &[f64]) -> Option<f64> {
         v.iter().map(|x| x - m).collect()
     };
     let (da, db) = (centred(a), centred(b));
-    let sq = |d: &[f64]| psum(&d.iter().map(|x| x * x).collect::<Vec<_>>());
-    if sq(&da) / n as f64 == 0.0 || sq(&db) / n as f64 == 0.0 {
+    // one scratch buffer for every product vector; each sum is the same pairwise sum as before
+    let mut prod = Vec::with_capacity(n);
+    let mut sq = |d: &[f64]| {
+        prod.clear();
+        prod.extend(d.iter().map(|x| x * x));
+        psum(&prod)
+    };
+    let (sqa, sqb) = (sq(&da), sq(&db));
+    if sqa / n as f64 == 0.0 || sqb / n as f64 == 0.0 {
         return None;
     }
-    let cov = psum(&da.iter().zip(&db).map(|(x, y)| x * y).collect::<Vec<_>>()) / (n - 1) as f64;
-    let (sa, sb) = ((sq(&da) / (n - 1) as f64).sqrt(), (sq(&db) / (n - 1) as f64).sqrt());
+    prod.clear();
+    prod.extend(da.iter().zip(&db).map(|(x, y)| x * y));
+    let cov = psum(&prod) / (n - 1) as f64;
+    let (sa, sb) = ((sqa / (n - 1) as f64).sqrt(), (sqb / (n - 1) as f64).sqrt());
     Some((cov / sa / sb).clamp(-1.0, 1.0))
 }
 
@@ -112,7 +121,7 @@ pub fn subxic<R: ReadAt>(r: &mut Routes<R>, k: i64, q: &Query) -> Result<Option<
         let w = read_win(&mut r.idx, si, a as u64, b as u64)?;
         rows.push(row(&subs[i].0, subs[i].1, &w, &rt, &full, Some(i) == full_i));
     }
-    let mut merged: Vec<(usize, usize)> = spans.iter().filter(|s| s.1 > s.0).cloned().collect();
+    let mut merged: Vec<(usize, usize)> = spans.iter().filter(|s| s.1 > s.0).copied().collect();
     crate::sortc::slice_ord(&mut merged);
     let mut comb = vec![0.0; rt.len()];
     let mut done = 0;
@@ -133,3 +142,6 @@ pub fn subxic<R: ReadAt>(r: &mut Routes<R>, k: i64, q: &Query) -> Result<Option<
     let o = o.i("n_sub", subs.len() as i64).i("n_hit", n_hit as i64).put("rows", Value::Arr(rows.into_iter().take(MAX_ROWS).map(|r| r.1).collect()));
     Ok(Some(crate::jsonb::write(&o.done())))
 }
+
+#[cfg(test)]
+mod tests;

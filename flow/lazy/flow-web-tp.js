@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const STEPS = ["tp.generate", "tp.link", "tp.filter", "tp.position", "tp.network", "tp.review"];
+  const STEPS = ["tp.generate", "tp.link", "tp.filter", "tp.position", "tp.network", "tp.review", "tp.dig_lr"];
   /** @type {Promise<any> | null} */ let loaded = null;
   const fail = (/** @type {string} */ key, /** @type {any} */ params = {}) => Object.assign(new Error(key), { key, params });
 
@@ -21,7 +21,7 @@
   const engine = async () => {
     if (loaded) return loaded;
     loaded = (async () => {
-      const c = G.QTOOLS.ctx, man = await (await fetch(new URL("wasm-feat/manifest.json", c.base).href)).json();
+      const c = await F.tpCtx("regole_tp_2.json"), man = await (await fetch(new URL("wasm-feat/manifest.json", c.base).href)).json();
       const rules = c.files["regole_tp_2.json"];
       if (!rules || !man.proofs) throw fail("error.featFailed");
       return { hr: await open(c.base, man.proofs), grafo: man.grafo ? await open(c.base, man.grafo) : null, rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules };
@@ -40,22 +40,40 @@
     return { ...e, text, structure: smiles ? (e.grafo ? e.grafo.analyse(smiles) : (() => { throw fail("error.featFailed"); })()) : "" };
   };
 
-  /** tp.generate: the registry of the hypotheses of the parent the plan holds, under the parameters of the step @param {any} S @param {any} inst @returns {Promise<{ name: string, text: string }>} */
-  const generate = async (S, inst) => {
+  /** the indexes of the series of the live session `x`, in the order of its items (the centroids of a profile file when the plan centroids) @param {any} x @returns {string[]} */
+  const indexPaths = x => x.items.map((/** @type {any} */ it) => x.source(it)).filter(Boolean).map((/** @type {any} */ s) => s.path);
+
+  /** the parameters of a tp.generate the plan leaves unwritten that the indexes decide (polarity, unit mass: `series_estimates` of the proofs .wasm, the rule of `flow run`)
+   * @param {any} pool @param {any} inst @param {string[]} paths @returns {Promise<{ name: string, value: any, proof: any }[]>} */
+  const estimates = async (pool, inst, paths) => (paths.length ? JSON.parse(await pool.ident("proofs", "series_estimates", { written: Object.keys(inst.params || {}), paths })) : []);
+
+  /** tp.generate: the registry of the hypotheses of the parent the plan holds, under the parameters of the step and the ones the files decide (`est`)
+   * @param {any} S @param {any} inst @param {{ name: string, value: any }[]} [est] @returns {Promise<{ name: string, text: string }>} */
+  const generate = async (S, inst, est = []) => {
     try {
-      const { hr, rules, text, structure } = await parentOf(S, inst);
-      return { name: inst.id + ".ipotesi.json", text: hr.tp_generate(rules, text, structure, JSON.stringify({ ...F.defaults(inst, F.stepOf(S.reg, inst)), ...(inst.params || {}) })) };
+      const { hr, rules, text, structure } = await parentOf(S, inst), decided = Object.fromEntries(est.map(e => [e.name, e.value]));
+      return { name: inst.id + ".ipotesi.json", text: hr.tp_generate(rules, text, structure, JSON.stringify({ ...F.defaults(inst, F.stepOf(S.reg, inst)), ...decided, ...(inst.params || {}) })) };
     } catch (e) { throw asError(e); }
   };
 
+  /** the hypotheses of the tp.generate `gen` of the live session `x` as its job made them @param {any} x @param {any} pool @param {any} gen */
+  const generateIn = async (x, pool, gen) => generate(x.S, gen, await estimates(pool, gen, indexPaths(x)));
+
   /** the inputs of tp.link@2 that are text: the parent with its structure, the samples and the hypotheses (made again by the tp.generate step they come from; a file of hypotheses stays with the computer, null)
-   * @param {any} S @param {any} inst @param {(id: string) => any} instOf */
-  const linkInputs = async (S, inst, instOf) => {
+   * @param {any} x the live session @param {any} pool @param {any} inst */
+  const linkInputs = async (x, pool, inst) => {
+    const S = x.S, sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = S.samplesJson && S.samplesJson[sref];
+    if (!samples) throw fail("err.flow.input.missing", { input: sref });
+    const href = F.refs(inst, "hypotheses")[0] || "", gen = href.startsWith("file:") ? null : x.inst(href.split(".")[0]);
+    if (!gen || String(gen.step).split("@")[0] !== "tp.generate") return null;
+    try { return { ...await parentOf(S, inst), samples, hypotheses: (await generateIn(x, pool, gen)).text }; } catch (e) { throw asError(e); }
+  };
+
+  /** the inputs of tp.dig_lr that are text: the parent with its structure and the samples (the table, the peaks and the indexes come from the files of the series) @param {any} S @param {any} inst */
+  const digInputs = async (S, inst) => {
     const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = S.samplesJson && S.samplesJson[sref];
     if (!samples) throw fail("err.flow.input.missing", { input: sref });
-    const href = F.refs(inst, "hypotheses")[0] || "", gen = href.startsWith("file:") ? null : instOf(href.split(".")[0]);
-    if (!gen || String(gen.step).split("@")[0] !== "tp.generate") return null;
-    try { return { ...await parentOf(S, inst), samples, hypotheses: (await generate(S, gen)).text }; } catch (e) { throw asError(e); }
+    try { return { ...await parentOf(S, inst), samples }; } catch (e) { throw asError(e); }
   };
 
   const NAMES = /** @type {Record<string, string>} */ ({ "tp.filter": ".filtri.json", "tp.position": ".sites.json", "tp.network": ".rete.json", "tp.review": ".review.json" });
@@ -77,7 +95,7 @@
       if (kind === "tp.filter") {
         const href = F.refs(inst, "hypotheses")[0] || "", gen = href.startsWith("file:") ? null : c.x.inst(href.split(".")[0]);
         if (!gen || step(gen) !== "tp.generate") return null;
-        m.hypotheses = (await generate(S, gen)).text;
+        m.hypotheses = (await generateIn(c.x, c.p, gen)).text;
       } else if (kind === "tp.review") {
         const dref = (F.refs(inst, "decisions")[0] || "").replace(/^file:/, "");
         m.decisions = S.samplesJson && S.samplesJson[dref];
@@ -91,12 +109,12 @@
         if (!m.table) return null;
         const pr = JSON.parse(params); m.ppm = pr.ppm ?? 10; m.minFragments = pr.min_fragments ?? 0;
         m.samples = (sref && S.samplesJson && S.samplesJson[sref]) || "";
-        const rules = G.QTOOLS.ctx.files["regole_tp.json"];
+        const rules = G.QTOOLS.ctx.files["regole_tp_2.json"];
         m.rules = typeof rules === "string" ? new TextEncoder().encode(rules) : rules;
       }
       return { name: inst.id + NAMES[kind], text: await c.p.tpPost(m) };
     } catch (e) { throw asError(e); }
   };
 
-  F.webTp = { STEPS, generate, linkInputs, post };
+  F.webTp = { STEPS, generate, estimates, indexPaths, linkInputs, digInputs, post };
 })();

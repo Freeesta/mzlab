@@ -3,6 +3,7 @@
 //! hid it. Used by `interp::build`.
 
 use crate::legacy::series::Hyp;
+use crate::sortc::SortC;
 use crate::tp::{ST_CONTROL, ST_ISF, ST_PARENT};
 
 pub const SCHEMA: &str = "filtri/1";
@@ -169,7 +170,7 @@ pub fn table_decoys_with(
 /// Median of a slice (NaN when empty).
 pub fn median(v: &[f64]) -> f64 {
     let mut s: Vec<f64> = v.iter().copied().filter(|x| x.is_finite()).collect();
-    s.sort_by(f64::total_cmp);
+    s.sortc_by(f64::total_cmp);
     match s.len() {
         0 => f64::NAN,
         n if n % 2 == 1 => s[n / 2],

@@ -5,11 +5,11 @@ window.RAPPORTO_FLOW = (() => {
   /** @typedef {{name:string,bytes:number,sha256:string,type:string}} RFFile */
   /** @typedef {{name:string,value:unknown,state:string,proof?:unknown}} RFParam */
   /** @typedef {{instance:string,step:string,algorithm?:string,preset?:string,status:string,error_key?:string,warnings?:string[],ms:number,params_sha256:string,params:RFParam[]}} RFStep */
-  /** @typedef {{schema:string,engine:Record<string,string>,plan_sha256?:string,inputs:RFFile[],lists:RFFile[],steps:RFStep[],total_ms:number,levels:{files:number,rows:number,auto:Record<string,number>,other:Record<string,number>},report?:any}} Corsa */
+  /** @typedef {{schema:string,engine:Record<string,string>,plan_sha256?:string,inputs:RFFile[],lists:RFFile[],steps:RFStep[],total_ms:number,levels:{files:number,rows:number,auto:Record<string,number>,other:Record<string,number>},report?:any,regulatory?:any}} Corsa */
 
   const SECTIONS = [
     ["summary", "Summary"], ["inputs", "Inputs and lists"], ["plan", "Plan and parameters"],
-    ["timing", "Timing"], ["counts", "Counts"], ["qc", "Quality control"],
+    ["timing", "Timing"], ["counts", "Counts"], ["qc", "Quality control"], ["regulatory", "Regulatory lists"],
   ];
   const STYLE = `
 .rf{max-width:60rem;margin:0 auto;padding:0 16px;color:var(--ink);font:14px/1.45 system-ui,sans-serif}
@@ -75,7 +75,9 @@ window.RAPPORTO_FLOW = (() => {
 
   /** @param {Corsa} c */
   function timing(c) {
-    const max = Math.max(1, ...c.steps.map(s => s.ms)), row = 22, left = 150, w = 520;
+    // No numeri.js here (this file is loaded alone, lazily): a plain loop, no spread into Math.max.
+    let max = 1; for (const s of c.steps) if (s.ms > max) max = s.ms;
+    const row = 22, left = 150, w = 520;
     const bars = c.steps.map((s, i) => {
       const bw = Math.max(1, Math.round((s.ms / max) * (w - left - 70)));
       return `<text class="tx" x="${left - 6}" y="${i * row + 15}" text-anchor="end">${esc(s.instance)}</text><rect class="bk${s.status === "error" ? " err" : ""}" x="${left}" y="${i * row + 3}" width="${bw}" height="${row - 8}"/>` +
@@ -113,8 +115,18 @@ window.RAPPORTO_FLOW = (() => {
     return h;
   }
 
+  // The words are Rust's (`corsa_reg.rs`, study §7): this only lays them out. A row is a candidate with its evidence, never a finding about the sample.
+  /** @param {any} g */
+  function regulatory(g) {
+    let h = `<p>${esc(g.header)}</p><ul>${(g.coverage || []).map((/** @type {string} */ x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    const rows = (g.rows || []).map((/** @type {any} */ r) => [esc(val(r.feature)), esc(r.formula || ""), num(r.delta_ppm), esc(r.level ?? "–"), esc(r.listed_in),
+      (r.candidates || []).map((/** @type {any} */ c) => `${esc(c.name)} <span class="h">${esc(c.inchikey)}</span><ul>${(c.memberships || []).map((/** @type {string} */ m) => `<li>${esc(m)}</li>`).join("")}</ul>`).join("")]);
+    h += rows.length ? table(["Feature", "Candidate formula", "Δ ppm", "Level", g.column, "Candidates and lists"], rows, g.title, [2]) : "<p>No candidate of this run is named by these lists.</p>";
+    return h + `<p><em>${esc(g.disclaimer)}</em></p>`;
+  }
+
   /** @param {Corsa} c */
-  const bodies = c => ({ summary: summary(c), inputs: files(c.inputs, "Input files") + files(c.lists, "Lists"), plan: plan(c), timing: timing(c), counts: counts(c), qc: qc(c.report) });
+  const bodies = c => ({ summary: summary(c), inputs: files(c.inputs, "Input files") + files(c.lists, "Lists"), plan: plan(c), timing: timing(c), counts: counts(c), qc: qc(c.report), regulatory: c.regulatory ? regulatory(c.regulatory) : "" });
 
   /**
    * Draws the report into `el`. `opts.sections` turns a section off (all on by default); the checkboxes of the toolbar do the same by hand.
@@ -126,11 +138,12 @@ window.RAPPORTO_FLOW = (() => {
     }
     const on = (/** @type {string} */ k) => !opts.sections || opts.sections[k] !== false;
     const b = bodies(corsa);
+    const secs = SECTIONS.filter(([k]) => k !== "regulatory" || corsa.regulatory);
     // every piece is escaped by esc() where it is built (this module also runs alone, without html-sicuro.js)
     const html = `<article class="rf"><h1>Flow run report</h1><div class="bar"><fieldset><legend>Sections</legend>${
-      SECTIONS.map(([k, t]) => `<label><input type="checkbox" data-sec="${k}"${on(k) ? " checked" : ""}> ${esc(t)}</label>`).join(" ")}</fieldset>` +
+      secs.map(([k, t]) => `<label><input type="checkbox" data-sec="${k}"${on(k) ? " checked" : ""}> ${esc(t)}</label>`).join(" ")}</fieldset>` +
       `<button type="button" data-rf="json">Download JSON</button><button type="button" data-rf="print">Print</button></div>` +
-      SECTIONS.map(([k, t]) => `<section id="rf-${k}" aria-labelledby="rf-${k}-h"${on(k) ? "" : " hidden"}><h2 id="rf-${k}-h">${esc(t)}</h2>${b[/** @type {keyof typeof b} */ (k)]}</section>`).join("") + `</article>`;
+      secs.map(([k, t]) => `<section id="rf-${k}" aria-labelledby="rf-${k}-h"${on(k) ? "" : " hidden"}><h2 id="rf-${k}-h">${esc(t)}</h2>${b[/** @type {keyof typeof b} */ (k)]}</section>`).join("") + `</article>`;
     el.innerHTML = html;
     for (const cb of el.querySelectorAll("input[data-sec]")) {
       cb.addEventListener("change", () => { const s = el.querySelector("#rf-" + /** @type {HTMLElement} */ (cb).dataset.sec); if (s) /** @type {HTMLElement} */ (s).hidden = !/** @type {HTMLInputElement} */ (cb).checked; });

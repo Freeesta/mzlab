@@ -1,8 +1,8 @@
 // @ts-strict
 "use strict";
 // Roles and times in the loading table (`campioni/2`, the Rust of mzlab-core). The proposals from the file names (`proponi`) come from the engine through `api/campioni/<op>`;
-// nothing is decided here. The time is optional and written in the table: nothing holds back «Load data», which is the confirmation.
-// An entry of ST.files keeps `type` (the base type the other routes know: sample | blank | standard) and, for this table, `role` (campioni/2 `tipo`), `prop` (the proposal was asked), `ed` (the student chose the role: a late proposal does not overwrite it). The time `f.time` is in minutes. A sample at time 0 is the t0 (no role of its own); the time of a dark is negative (minutes before the time zero).
+// nothing is decided here. The time is optional and written in the table: the files open as soon as they are read, and the table writes through to them (OPENNOW).
+// An entry of ST.files keeps `type` (the base type the other routes know: sample | blank | standard) and, for this table, `role` (campioni/2 `tipo`), `prop` (the proposal was asked), `ed` (the student chose the role: a late proposal does not overwrite it), `gR` / `gT` (role / time from a proposal, untouched: yellow `guess` cells). The time `f.time` is in minutes. A sample at time 0 is the t0 (no role of its own); the time of a dark is negative (minutes before the time zero).
 // The cells are in ruoli-celle.js (it adds its functions to RUOLI).
 const RUOLI = /** @type {any} */ ((() => {
   /** @type {(k: string, p?: any) => string} */
@@ -46,8 +46,8 @@ const RUOLI = /** @type {any} */ ((() => {
       const f = get().find(x => x.name === c.file);
       if (!f || f.ed) continue;
       const r = c.tipo === "calibration" ? "std" : c.tipo === "t0" ? "sample" : c.tipo;
-      setRole(f, r);
-      if (TIMED.has(r) && c.tempo_min != null) f.time = r === "dark" ? darkTime(c.tempo_min) : c.tempo_min;
+      setRole(f, r); f.gR = true;
+      if (TIMED.has(r) && c.tempo_min != null) { f.time = r === "dark" ? darkTime(c.tempo_min) : c.tempo_min; f.gT = true; }
       changed = true;
     }
     return changed;
@@ -56,5 +56,20 @@ const RUOLI = /** @type {any} */ ((() => {
   function commit(/** @type {Voce[]} */ F) {
     CAMPIONI.apply(F.filter(f => f.use).map(f => { const r = roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r }); if (TIMED.has(r)) { e.time = f.time ?? null; e.tconf = true; } return e; }), true);
   }
-  return { commit, t, eh, post, OPTS, BASE, TIMED, val, roleOf, timed, label, cellLabel, setRole, propose, busy: () => busy };
+  /** Repaints and proposals for a table fed by many merges. `soon()` asks one repaint per animation frame (a hidden tab has no frame: `flush()` paints it); `flush(force)` paints now and asks
+   *  the proposals once for every entry merged since (only when something was merged, unless `force`). `raf`/`caf` default to FRAME.next/FRAME.cancel. The table of a loading repaints per frame and asks the proposals once when the loading flushes; a merge outside a loading flushes at once. */
+  function coalesce(/** @type {() => void} */ paint, /** @type {() => unknown} */ propose, /** @type {any} */ raf, /** @type {any} */ caf) {
+    const ask = raf || ((/** @type {() => void} */ f) => FRAME.next(f)), drop = caf || ((/** @type {any} */ h) => FRAME.cancel(h));
+    let h = /** @type {any} */ (null), dirty = false;
+    return {
+      soon() { dirty = true; if (h == null) h = ask(() => { h = null; paint(); }); },
+      flush(/** @type {boolean} */ force = false) {
+        if (h != null) { drop(h); h = null; }
+        if (!dirty && !force) return undefined;
+        dirty = false; paint();
+        return propose();
+      },
+    };
+  }
+  return { commit, coalesce, t, eh, post, OPTS, BASE, TIMED, val, roleOf, timed, label, cellLabel, setRole, propose, busy: () => busy };
 })());

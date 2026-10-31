@@ -3,14 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-pub const PROTON: f64 = 1.007276;
-pub const POS_ADDUCTS: [(&str, f64); 3] = [
-    ("[M+H]+", PROTON),
-    ("[M+NH4]+", 18.033823),
-    ("[M+Na]+", 22.989218),
-];
-pub const NEG_ADDUCTS: [(&str, f64); 2] = [("[M-H]-", -PROTON), ("[M+Cl]-", 34.969402)];
-pub const PPM: f64 = 5.0;
+pub use crate::adducts::{NEG_ADDUCTS, POS_ADDUCTS, PPM, PROTON};
 pub const RT_SD_K: f64 = 2.5;
 pub const ISOLATED_RT_MIN: f64 = 0.15;
 pub const YES: &str = "yes";

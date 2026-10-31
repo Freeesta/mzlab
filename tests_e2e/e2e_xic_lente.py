@@ -28,6 +28,7 @@ try:
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         K = pg.evaluate("E.files[0].k")
+        pg.evaluate("window.__ok = XICBTN.lens.ok; XICBTN.lens.ok = () => true; 0")          # the lens belongs to HR MS1 spectra only: these steps check the lens itself on the low-resolution synthetic file, which has many peaks; the gate is checked apart
         pg.evaluate(TRACK)
         def pk(): return pg.evaluate(PEAKS % SPEC)
         def hover_lr():
@@ -50,9 +51,9 @@ try:
                 assert not (r["l"] - 1 <= t["x"] <= r["r"] + 1 and r["t"] - 1 <= t["y"] <= r["b"] + 1), ("the lens is over the pointer", r, t)
                 assert not (r["l"] - 1 <= t["x"] <= r["r"] + 1 and t["y"] - 8 <= r["b"]), ("the lens is over the peak", r, t)
                 rects.append(round(r["l"] - r["cl"]))
-            lab = pg.evaluate("(()=>{const l=document.querySelector('.pnl .xl .xl-f');return [l.textContent,l.title,document.querySelector('.pnl .xl').getAttribute('aria-label')]})()")
-            assert lab[0] and lab[1] == lab[0] and lab[0] in lab[2], lab
-        step("the lens is in a fixed corner of the plot (the other one when the peak or the pointer is in it), with the file name", fixed_place)
+            lab = pg.evaluate("(()=>{const e=document.querySelector('.pnl .xl');return [e.title,e.getAttribute('aria-label'),!!e.querySelector('.xl-t,.xl-x')]})()")
+            assert lab[0] and "\u00b7" in lab[0] and lab[0] in lab[1] and not lab[2], lab    # ion and file are the tooltip: no title row, no DOM axis
+        step("the lens is in a fixed corner of the plot (the other one when the peak or the pointer is in it), with the file name as tooltip", fixed_place)
         def right_click():
             t = pk()[2]; pg.keyboard.press("Escape"); pg.mouse.move(2, 2); frames(pg, 2)
             pg.mouse.move(t["x"] - 30, t["y"]); pg.mouse.move(t["x"], t["y"], steps=3); pg.wait_for_selector(LENS, timeout=10000)
@@ -117,10 +118,25 @@ try:
             assert pg.evaluate(f"{XP}.traces.length") == 1
         step("keyboard only: the key chooses, the lens is reached with Tab, T gives the data table, Enter opens the panel; axe", key_only)
         def pref():
-            pg.evaluate("UIP.xicLens=false"); ps = pk(); t = ps[1]
+            pg.evaluate("XICBTN.setLens(false)"); ps = pk(); t = ps[1]
             pg.mouse.move(2, 2); pg.mouse.move(t["x"], t["y"], steps=3); frames(pg, 5); assert not pg.query_selector(LENS)
-            pg.evaluate("UIP.xicLens=true")
+            pg.evaluate("XICBTN.setLens(true)")
         step("the preference switches the lens off", pref)
+        pg.evaluate("XICBTN.lens.ok = window.__ok; E.panels.forEach(p => { if (p.type === 'spec' && p.el) XICBTN.sync(p) }); 0")          # the real resolution test again
+        def gate():
+            # the lens and its switch exist only on the MS1 spectrum of a high-resolution file: none on MS2 or low resolution
+            assert pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.el).every(p=>p.el.querySelector('[data-a=xicp]').hidden&&!XICBTN.lens.ok(p))"), "a low-resolution spectrum shows the lens switch"
+            ps = pk(); t = ps[1]; pg.mouse.move(2, 2); pg.mouse.move(t["x"], t["y"], steps=3); frames(pg, 6)
+            assert not pg.query_selector(LENS), "the lens opened on a low-resolution spectrum"
+        step("LR: no lens switch, no lens on hover", gate)
+        pg.evaluate("XICBTN.lens.ok = () => true; E.panels.forEach(p => { if (p.type === 'spec' && p.el) XICBTN.sync(p) }); 0")
+        def toggle():
+            B = ".pnl [data-a=xicp]"; v = [pg.get_attribute(B, "aria-pressed"), pg.get_attribute(B, "title")]; assert v == ["true", pg.evaluate("I18N.t('xiclens.toggle')")], v
+            pg.evaluate(f"document.querySelector('{B}').click()"); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "false" and not pg.evaluate("UIP.xicLens")
+            ps = pk(); t = ps[1]; pg.mouse.move(2, 2); pg.mouse.move(t["x"], t["y"], steps=3); frames(pg, 5); assert not pg.query_selector(LENS)
+            pg.evaluate(f"document.querySelector('{B}').click()"); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "true" and pg.evaluate("UIP.xicLens")
+            pg.keyboard.press("Escape")
+        step("the button of the bar switches the lens on and off (aria-pressed), on by default", toggle)
         def touch():
             ps = pk(); t = ps[0]; pg.mouse.move(2, 2); frames(pg, 2)
             pg.mouse.click(t["x"], t["y"]); pg.wait_for_selector(LENS, timeout=10000)
@@ -132,19 +148,35 @@ try:
         step("the cache keeps at most 64 traces", mem)
         assert not pg.evaluate("window.MZLAB_LR_MISS&&window.MZLAB_LR_MISS.length"), pg.evaluate("window.MZLAB_LR_MISS")
 
+        def narrow_peak():
+            # a 0.05 min peak on a 20 min axis at 160 px: a visible peak (tall, filled, 1.5 px line), round equidistant ticks, no "min" on them
+            r = pg.evaluate("""(()=>{const n=4000,rt=[],y=[];for(let i=0;i<n;i++){const t=20*i/(n-1);rt.push(t);y.push(Math.exp(-(((t-14.3)/0.015)**2)/2)*1000+1)}
+              const c=document.createElement('canvas');c.width=160;c.height=96;const g=c.getContext('2d');
+              const d=XICDRAW.draw(g,160,96,{rt,y},{line:'#888',ink:'#000',muted:'#444',accent:'#d00',scanRt:null,label:true});
+              const im=g.getImageData(0,0,160,96).data;let top=96,fill=0;
+              for(let yy=0;yy<96;yy++)for(let xx=0;xx<160;xx++){const i=(yy*160+xx)*4;if(im[i]>150&&im[i+1]<150&&im[i+2]<150&&im[i+3]>60){if(yy<top)top=yy;fill++}}
+              return {d,top,fill,ticks:XICDRAW.ticks(rt[0],rt[n-1])}})()""")
+            h = (r["d"]["y1"] - r["top"]) / (r["d"]["y1"] - r["d"]["y0"]); assert h >= .6, ("the narrow peak is too low", h, r)
+            assert r["fill"] >= 6, ("the peak is a hairline", r["fill"]); assert r["ticks"]["vals"] == [0, 5, 10, 15, 20], r["ticks"]
+        step("a 0.05 min peak on 20 min at 160 px is drawn as a tall filled peak; the axis has round equidistant ticks", narrow_peak)
+
         # ---- high resolution
         D = synth("xicbtn")
         pg2 = r.page(p)
         load(pg2, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); pg2.evaluate("setTab('full')"); ready(pg2)
         S1 = "E.panels.find(p=>p.type==='spec'&&p.level===1)"
         KH = pg2.evaluate("E.files.find(f=>f.file.endsWith('#MS1')).k")
+        def hr_gate():
+            assert pg2.evaluate("XICBTN.lens.ok(E.panels.find(p=>p.type==='spec'&&p.level===1))") is True and pg2.evaluate("!E.panels.find(p=>p.type==='spec'&&p.level===1).el.querySelector('[data-a=xicp]').hidden")
+            assert pg2.evaluate("XICBTN.lens.ok({...E.panels.find(p=>p.type==='spec'&&p.level===1),level:2})") is False, "an MS2 spectrum has no lens"
+        step("HR MS1 keeps the lens switch; an MS2 spectrum has none", hr_gate)
         def hr_lens():
             ps = pg2.evaluate(PEAKS % S1); assert ps, "no labelled peak"
             t = max(ps, key=lambda o: -o["y"]); pg2.mouse.move(t["x"] - 30, t["y"]); pg2.mouse.move(t["x"], t["y"], steps=3)
             pg2.wait_for_selector(LENS, timeout=15000); frames(pg2, 3)
             got = lens_trace(pg2, S1); assert got and got["m"] == t["mz"]
             assert same(got, api_trace(pg2, S1, t["mz"], KH)), "HR: the lens differs from api/xic"
-            lab = pg2.inner_text(".pnl .xl .xl-t"); print(lab); assert "ppm" in lab, lab
+            lab = pg2.get_attribute(".pnl .xl", "title"); print(lab); assert "ppm" in lab, lab
         step("HR: the lens shows the XIC with the ppm window of the profile, same numbers as api/xic", hr_lens)
         print([e for e in r.errs if e[0] != "console.warning"])
         assert not pg2.evaluate("window.MZLAB_LR_MISS&&window.MZLAB_LR_MISS.length")

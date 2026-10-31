@@ -32,6 +32,10 @@ fn register_index_open_and_route() {
     let tic = text(r("route", json!({"slot": 0, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"})).unwrap());
     assert!(tic.starts_with("{\"rt\":["), "{tic}");
     assert_eq!(text(r("route", json!({"slot": 9, "path": "/api/chrom", "query": ""})).unwrap()), "", "a slot that is not open is not answered");
+    // api/canali reads the chromatograms of the mzML too (op `canali`, as the wasm engine); the plain route then serves the same channels from the cache
+    let canali = text(r("canali", json!({"slot": 0, "name": name, "fid": id})).unwrap());
+    assert!(canali.starts_with("{\"v\":\"canali/1\""), "{canali}");
+    assert_eq!(text(r("route", json!({"slot": 0, "path": "/api/canali", "query": "?k=0"})).unwrap()), canali);
     assert!(r("nope", json!({})).is_err());
     let tic_of = |pol: i64| {
         r("idxopen", json!({"slot": 1, "name": name, "pol": pol})).unwrap();
@@ -56,6 +60,23 @@ fn register_index_open_and_route() {
 }
 
 #[test]
+fn validate_mzml_gives_the_bytes_of_the_command_line_report() {
+    let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    st.set_index_folder(data.path().join("idx")).unwrap();
+    let (id, _) = st.pick(ex.clone()).unwrap();
+    let name = "FullScan_t10.mzML";
+    st.rpc("lr_put", &json!({"name": name, "fid": id}), &[]).unwrap();
+    let got = text(st.rpc("lr_valida", &json!({"name": name}), &[]).unwrap());
+    let report = mzlab_core::mzmlvalida::valida(std::fs::File::open(&ex).unwrap()).unwrap();
+    assert_eq!(got, mzlab_core::mzmlvalida::json_un_file(name, &report));
+    assert!(got.starts_with("[{\"file\":\"FullScan_t10.mzML\",\"valid\":"), "{got}");
+    assert!(st.rpc("lr_valida", &json!({"name": "absent.mzML"}), &[]).is_err(), "a file that is not in the list");
+}
+
+#[test]
 fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone() {
     let data = tempfile::tempdir().unwrap();
     let st = State::new();
@@ -72,4 +93,44 @@ fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone(
     st2.set_data_folder(data.path().join("app"));
     assert_eq!(text(st2.rpc("lr_molecole_archivio", &json!({"mop": "leggi", "body": ""}), &[]).unwrap()), file, "a new run reads it back");
     assert!(st2.rpc("lr_molecole_archivio", &json!({"mop": "scrivi", "body": "{}"}), &[]).is_err(), "a document that is not molecules/1 is refused");
+}
+
+#[test]
+fn uploading_the_same_name_again_is_found_by_its_new_size() {
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    let first = st.upload_chunk("again.mzML", 0, 3, b"abc").unwrap().unwrap();
+    assert_eq!(st.find("again.mzML", 3), Some(first));
+    let second = st.upload_chunk("again.mzML", 0, 5, b"abcde").unwrap().unwrap();
+    assert_eq!(second, first, "same path, same number");
+    assert_eq!(st.find("again.mzML", 5), Some(first), "the lookup by the new size works");
+    assert_eq!(st.find("again.mzML", 3), None, "the old size is gone");
+}
+
+/// Registers the example, builds its index and opens it in the first slot of the page's list (1_000_001); returns the engine, the name and the keep-alive folders.
+fn indexed_example() -> (State, tempfile::TempDir, &'static str) {
+    let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    st.set_index_folder(data.path().join("idx")).unwrap();
+    let (id, _) = st.pick(ex).unwrap();
+    let name = "FullScan_t10.mzML";
+    st.rpc("lr_put", &json!({"name": name, "fid": id}), &[]).unwrap();
+    st.rpc("lr_index", &json!({"name": name}), &[]).unwrap();
+    st.rpc("lr_entry", &json!({"name": name}), &[]).unwrap();      // opens the index in the first slot of the page's list
+    (st, data, name)
+}
+
+fn slot_answers(st: &State) -> bool {
+    matches!(st.rpc("route", &json!({"slot": 1_000_001, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"}), &[]).unwrap(), Answer::Text(t) if !t.is_empty())
+}
+
+#[test]
+fn freeing_derived_indexes_closes_them_first() {
+    let (st, _keep, _) = indexed_example();
+    assert!(slot_answers(&st));
+    st.rpc("lr_space", &json!({"free": "derived"}), &[]).unwrap();
+    assert!(!slot_answers(&st), "the index is unmapped before its file is deleted");
 }

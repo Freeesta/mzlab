@@ -16,13 +16,13 @@ export async function rawSink(dest) {
     const parts = [];
     return { write: p => parts.push(p), abort: async () => {}, error: () => null, finish: async () => ({ parts }) };
   }
-  let at = 0, full = false;
+  let at = 0, need = 0, full = false;      // `at` = bytes really written, `need` = bytes the file needs once the failing block is counted
   return {
     // a full disk makes write() return less than asked (or throw): the mzML would be cut short, so the conversion stops with `error` (error.quota) instead of ending "well"
-    write: p => { if (full) throw new Error("storage full"); const n = writeFull(ah, p, at); at += n; if (n < p.length) { full = true; throw new Error("storage full"); } },
+    write: p => { if (full) throw new Error("storage full"); const n = writeFull(ah, p, at); at += n; need = at; if (n < p.length) { need = at + (p.length - n); full = true; throw new Error("storage full"); } },
     abort: async () => { try { ah.close(); } catch (_) { /* closed */ } await dir.removeEntry(dest).catch(() => {}); },
     // the error the page shows if the disk filled up, else null; the mzML must also END as an mzML (a cut-short file is the cause of "cannot be read" later)
-    error: () => full ? quotaError(at) : null,
+    error: () => full ? quotaError(need) : null,
     finish: async () => {
       ah.flush(); ah.close();
       const file = await fh.getFile();

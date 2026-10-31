@@ -15,6 +15,8 @@ const formulaText = ({ error_key: k, params: p = /** @type {any} */ ({}) }) => (
   "err.formula.element": `unknown element '${p.element}' in '${p.formula}'`,
   "err.formula.parens": `unbalanced parentheses in '${p.formula}'`,
   "err.adduct.unknown": `unknown adduct '${p.adduct}'`,
+  "err.iso.element": `no isotope data for '${p.symbol}'`,
+  "err.iso.adductTooMany": "the adduct removes more atoms than there are",
 }[k] || k);
 
 import { originRoute } from "./lr-origin.js";
@@ -22,6 +24,7 @@ import { engineRoute, statRoute } from "./lr-map.js";
 import { createMethodRoutes } from "./lr-method.js";
 import { mixesResolutions, sessionFiles } from "./lr-sessione.js";
 import { W } from "./nativo-fasi.js";
+import { validaMzml } from "./valida-mzml.js";
 
 /** @type {Map<string, any>} */
 const earlyTics = new Map();
@@ -96,12 +99,12 @@ export function createLr({ rb }) {
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
       else { fase = "index"; const ix = JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : 0.4 + 0.585 * p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, ix.missing || 0); }
-    } catch (e) {
-      let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_);
+      let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (__) { const _ = /** @type {Lanciato} */ (__); /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
       if (key === "err.load.cancelled") { try { await rpc({ op: "lr_remove", name: n }); } catch (_) { /* nothing was kept */ } files.delete(n); }      // «Cancel»: no half file stays to be indexed at the next start
       return fail(key, { name: n, ...params, fase, raw }, `cannot read the file: ${n}`);
-    }
+    } finally { earlyTics.delete(n); }      // the index ends below 100%: the early TIC is not needed once the real one is served
     return json({ files: sorted(), methods: mr.list() });
   }
 
@@ -115,7 +118,7 @@ export function createLr({ rb }) {
       rows.push({ file: n, label: s.label ?? null, type: s.type ?? "sample", time: num(s.time), conc: num(s.conc), cunit: s.cunit ?? null, rep: s.rep ?? null });
     }
     if (!rows.length) return fail("err.session.noFiles", {}, "add at least one file");
-    if (Array.isArray(body.all) && body.all.length > rows.length && !body.append && await mixesResolutions(rpc, body.all.map(safeName), n => n && files.has(n))) return fail("err.hr.mix", {}, "low- and high-resolution files cannot be mixed");
+    if (Array.isArray(body.all) && body.all.length > rows.length && !body.append && await mixesResolutions(rpc, body.all.map(safeName), n => n && files.has(n), n => files.get(n))) return fail("err.hr.mix", {}, "low- and high-resolution files cannot be mixed");
     const add = [], appended = !!(body.append && items);
     let h = appended ? hr : false, l = appended ? lr : false;
     for (const r of rows) {
@@ -154,7 +157,7 @@ export function createLr({ rb }) {
     await rpc({ op: "lr_remove", name: n });
     files.delete(n); earlyTics.delete(n); await mr.refresh();
     if (items) {
-      items = items.filter(it => base(it.file) !== n);
+      items = items.filter(it => base(it.file.split("#")[0]) !== n);      // a mixed file's items are named `file#tag`
       if (!items.length) { items = null; hr = lr = false; }
     }
     rb.noteRemove(n); rb.noteExplore(null);
@@ -165,7 +168,7 @@ export function createLr({ rb }) {
     items = null; hr = lr = false;
     earlyTics.clear();
     if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); if (rb.clearNative) rb.clearNative(); }
-    rb.noteNew();
+    rb.noteNew(!!body.fresh);
     return json(state());
   }
 
@@ -180,12 +183,23 @@ export function createLr({ rb }) {
         { const r = await mr.get(path, u.searchParams); if (r !== undefined) return r; }          // method, analog traces, delay, PDA, gradient
         if (path === "/api/formula") {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }
-          catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
+          catch (e_) { const e = /** @type {Lanciato} */ (e_); let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
+        }
+        const chem = path === "/api/adduct_table" ? { op: "lr_adduct_table", f: u.searchParams.get("f") || "", obs: u.searchParams.get("obs") || "", tol: u.searchParams.get("tol") || "", delta: u.searchParams.get("delta") || "" }
+          : path === "/api/ion_pattern" ? { op: "lr_ion_pattern", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" }
+          : path === "/api/isotope_fine" ? { op: "lr_isotope_fine", query: "?" + u.searchParams.toString() } : null;
+        if (chem) {
+          try { return { status: 200, text: (await rpc(chem)).info }; }
+          catch (e_) { const e = /** @type {Lanciato} */ (e_); let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items });
         { const r = await engineRoute(path, u.searchParams, { rb, rpc, items }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = unavailable)
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };
+        if (path === "/api/mzml_valida") {          // «Validate mzML»: the report of `mzlab-cli validate --json` (the `valida` module in the browser, the native engine in the app)
+          const n = safeName(u.searchParams.get("name") || ""), r = n ? await validaMzml(n, rpc) : null;
+          return r === null ? fail("err.file.unknown", { detail: u.searchParams.get("name") || "" }) : { status: 200, text: r };
+        }
         return null;
       }
       if (method !== "POST") return null;
@@ -202,8 +216,8 @@ export function createLr({ rb }) {
       if (path === "/api/remove") return await remove(body);
       if (path === "/api/new") return await fresh(body);
       return null;
-    } catch (e) {
-      let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_);
+      let j = null; try { j = JSON.parse(e.raw); } catch (__) { const _ = /** @type {Lanciato} */ (__); /* not an engine error */ }
       if (j && j.error_key) return json({ error: j.error || j.error_key, error_key: j.error_key, params: j.params || {} }, 400);
       // not an engine error: a JS exception while serving a route that exists. It is a failure of the data (cause and original text in the diagnosis), never "route unavailable"
       const raw = String(e && e.message || e).slice(0, 600);

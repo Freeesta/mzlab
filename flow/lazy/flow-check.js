@@ -171,18 +171,22 @@
       facets(i, declared, seen);
     };
     const facets = (/** @type {any} */ i, /** @type {FlowPort[]} */ declared, /** @type {any[]} */ seen) => {
-      const have = observedBy(plan, i, seen);
-      /** known and not all of what is required is in it (unknown = checked when the step starts) */
-      const misses = (/** @type {any[]} */ want, /** @type {any[]} */ h, /** @type {(w: any) => boolean} */ has) => h.length > 0 && !want.every(has);
-      for (const port of declared) {
-        const w = port.requires;
-        if (misses(w.ms_levels || [], have.ms_levels, x => have.ms_levels.includes(x))) add(i, port.name, "err.flow.facet", { facet: "ms_levels" });
-        if (misses(w.polarity || [], have.polarity, x => x === 0 || have.polarity.includes(x))) add(i, port.name, "err.flow.facet", { facet: "polarity" });
-        if (misses(w.resolution || [], have.resolution, x => have.resolution.includes(x))) add(i, port.name, "err.flow.facet", { facet: "resolution" });
-      }
+      for (const port of declared) for (const [facet, want, h] of F.facetMisses(port.requires, observedBy(plan, i, seen))) add(i, port.name, "err.flow.facet", { facet, step: i.step, want, have: h });
     };
 
     return { st, add, stepLevel, paramsOf, portsOf };
+  };
+
+  /** the facets the data miss for a port, [facet, wanted, what the data have] with the values joined by «|» (unknown = checked when the step starts):
+   * `ms_levels` and `polarity` must all be in the data; `resolution` lists what the port takes, every resolution of the data must be one of them @param {any} w @param {any} have */
+  F.facetMisses = (w, have) => {
+    const list = (/** @type {any[]} */ v) => [...new Set(v.map(String))].join("|"), out = /** @type {string[][]} */ ([]);
+    const misses = (/** @type {any[]} */ want, /** @type {any[]} */ h, /** @type {(w: any) => boolean} */ has) => h.length > 0 && !want.every(has);
+    if (misses(w.ms_levels || [], have.ms_levels, x => have.ms_levels.includes(x))) out.push(["ms_levels", list(w.ms_levels), list(have.ms_levels)]);
+    if (misses(w.polarity || [], have.polarity, x => x === 0 || have.polarity.includes(x))) out.push(["polarity", list(w.polarity), list(have.polarity)]);
+    const res = w.resolution || [];
+    if (res.length && have.resolution.some((/** @type {string} */ x) => !res.includes(x))) out.push(["resolution", list(res), list(have.resolution)]);
+    return out;
   };
 
   /** the check of a plan for a platform; returns every problem in file order, cycles last
@@ -198,8 +202,10 @@
       const i = plan.steps[k], before = st.problems.length, step = stepLevel(i);
       if (step) {
         paramsOf(i, step); portsOf(i, step, seen);
-        // the facets of the data pass through an instance unchanged, to the outputs that still are the scans
-        if (Object.values(step.out || {}).some((/** @type {any} */ o) => ["raw", "mzml", "mzidx"].includes(o.type))) seen[k] = observedBy(plan, i, seen);
+        // the resolution and the polarity of the series pass to everything made from it; the MS levels only to the outputs that still are scans
+        const o = observedBy(plan, i, seen);
+        if (!Object.values(step.out || {}).some((/** @type {any} */ x) => ["raw", "mzml", "mzidx"].includes(x.type))) o.ms_levels = [];
+        seen[k] = o;
       }
       byInstance[k] = st.problems.splice(before);
     }

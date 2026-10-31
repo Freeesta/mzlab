@@ -143,10 +143,13 @@ class Case:
         pg = s.pg; pg.goto(f"http://127.0.0.1:{port}/?riparti=1"); pg.wait_for_selector("#drop", timeout=120000)
         wait(pg, "window.MZLAB_LR !== undefined", timeout=120000)
         t0 = time.time(); pg.set_input_files("#pick", [str(f) for f in files])
-        wait(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=1800000)
-        pg.click("#opbtn"); wait(pg, "typeof E!=='undefined' && E.files.length >= 2 && E.pending.length === 0", timeout=1800000)
+        wait(pg, "typeof E!=='undefined' && E.files.length >= 2 && E.pending.length === 0", timeout=1800000)      # the files open by themselves, hidden
+        pg.evaluate("() => { if (!E.files.some(f => f.vis && !f.gone)) soloFile(E.files.find(f => !f.gone)); }")   # the first click on a file
+        wait(pg, "E.files.some(f => f.vis && !f.gone)", timeout=600000)
         s.out["open_s"] = round(time.time() - t0, 1)
         s.ev("__B.wrap()")
+        if os.environ.get("MZLAB_PREWARM"):      # build the per-scan cells of every file before the map exists: splits the table build from the rest of the first map
+            s.out["warm_ms"] = s.ev("(async () => { const t = performance.now(); for (const f of E.files) await (await fetch(`api/map?k=${f.k}&level=1&warm=1`)).json(); return Math.round(performance.now() - t); })()")
 
     def first(s):
         """from the new panel to the first map drawn; then full screen and the split of one whole-map answer (bytes, JSON.parse, base64, colour pass)"""
@@ -171,7 +174,7 @@ class Case:
     def gesture(s, label, act):
         """frames during the gesture, then the time from its end to the sharp region (zoomImg true) and the cost of the region request"""
         rd0 = s.ev("(__B.rd || {ms: 0}).ms"); s.ev("__B.frames(true)"); t = s.mark(); act(); te = s.mark(); fr = s.ev("__B.frames(false)")
-        try: wait(s.pg, f"__B.z.some(r => r.t > {te} && r.sharp)")
+        try: wait(s.pg, f"__B.z.some(r => r.t > {te} && r.sharp)", timeout=8000)
         except TimeoutError: pass
         s.quiet()
         z = [r for r in s.since(te, "z") if r["sharp"]]; fq = [r for r in s.since(t, "f") if "rt0=" in r["u"]]
@@ -242,6 +245,7 @@ def run_case(pg, port, name, kind, nscan, npk, wd):
 def table(o):
     rows = [("points (M) / mzML (MB) / open (s)", f'{o["points_total_M"]} / {o["mzML_MB"]} / {o["open_s"]}'),
             ("first drawing: total / api/map / colour pass (ms)", f'{o["first_draw_ms"]} / {o["first_map_request_ms"]} / {o["first_mapImage_ms"]}')]
+    if "warm_ms" in o: rows.insert(1, ("per-scan cells built before the map (ms)", str(o["warm_ms"])))
     w = o["whole_split"]; rows.append(("whole map: cells / JSON kB / request / parse / base64 / colour (ms)", f'{w["nrt"]}x{w["nmz"]} / {w["json_kB"]} / {w["request_ms"]} / {w["parse_ms"]} / {w["b64_ms"]} / {w["colour_ms"]}'))
     for k in ("zoom_wheel", "pan_zoomed", "zoom_rt_only", "zoom_deep"):
         g = o[k]; rows.append((f"{k}: frame p50/p95/max, long tasks, draws (n, p50, max), to sharp, region (n, ms)",

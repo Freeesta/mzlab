@@ -14,14 +14,37 @@ use mzlab_feat::tabcheck;
 use mzlab_feat::table::Aligned;
 use mzlab_feat::view::{self, View};
 
-/// The table and the samples; the samples must be one per file.
+/// The table and the samples, put in the order of its files by name; the samples must be one per file.
 fn load<R: ReadAt>(r: &mut R, size: u64, samples_json: &str) -> Result<(Aligned, Vec<Sample>)> {
-    let (t, _) = read_table_from(r, size)?;
-    let s = samples::from_json(samples_json.as_bytes())?;
+    let (t, meta) = read_table_from(r, size)?;
+    let text =
+        mzlab_core::campioni::order_like(samples_json, &mzlab_feat::store::input_names(&meta))?;
+    let s = samples::from_json(text.as_bytes())?;
     if s.len() != t.n_files {
         return Err(Error::new("error.badView"));
     }
     Ok((t, s))
+}
+
+/// The duplicate window of the rules in `spec` is in Da on a unit-resolution table (`dup_da`) and in ppm on the other (`dup_ppm`); the wrong one is `err.flow.param.axis`.
+fn duplicate_axis(spec: &str, unit: bool) -> Result<()> {
+    let Ok(v) = mzlab_core::json::parse(spec.as_bytes()) else {
+        return Ok(());
+    };
+    let rules = v.get("filtra").map_or(&[][..], |f| f.arr());
+    for rule in rules
+        .iter()
+        .filter(|r| r.get("regola").and_then(|x| x.str()) == Some("duplicati"))
+    {
+        let (wrong, axis) = if unit { ("ppm", "Da") } else { ("da", "ppm") };
+        if rule.get(wrong).is_some() {
+            let param = if unit { "dup_ppm" } else { "dup_da" };
+            return Err(Error::new("err.flow.param.axis")
+                .with("param", param)
+                .with("axis", axis));
+        }
+    }
+    Ok(())
 }
 
 /// The view of the parameters `spec` (`{"normalizza":..., "filtra":[...]}`); an empty text is no view.
@@ -55,6 +78,12 @@ pub fn view_json<R: ReadAt>(
     samples_json: &str,
     spec: &str,
 ) -> Result<String> {
+    let (_, meta) = read_table_from(r, size)?;
+    let unit = meta
+        .get("recipe")
+        .and_then(|v| v.str())
+        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    duplicate_axis(spec, unit)?;
     let (t, s) = load(r, size, samples_json)?;
     let spec = if spec.trim().is_empty() { "{}" } else { spec };
     let v = view::from_spec(&t, &s, spec.as_bytes())?;
@@ -128,6 +157,8 @@ pub fn tp_table_cond_json<R: ReadAt>(
                 .collect(),
         )
     };
+    let names = mzlab_feat::store::table_names(r, size)?;
+    let campioni_json = mzlab_core::campioni::order_like(campioni_json, &names)?;
     let cs = mzlab_core::campioni::from_json(campioni_json.as_bytes())?;
     let infos = mzlab_feat::tp::infos_from_json(infos_json)?;
     mzlab_feat::tp::table_json_cond(&t, &s, rows.as_deref(), Some((&cs, &infos)))
@@ -311,7 +342,7 @@ pub fn row_traces_json<R: ReadAt, I: ReadAt>(
     riga::traces(&t, &s, id, open, ppm)
 }
 
-/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp` (`mzlab_core::campioni::route`).
+/// `campioni/2` and `/3`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest` or `migra` (`mzlab_core::campioni::route`: no name models or CSV, they are over the cap of this .wasm).
 pub fn campioni_json(op: &str, input: &str) -> Result<String> {
     mzlab_core::campioni::route(op, input)
 }

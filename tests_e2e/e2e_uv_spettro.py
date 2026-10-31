@@ -61,7 +61,7 @@ try:
             pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
         step("the wavelength labels can be hidden and shown again", uv_labels_off)
         def header_rt():
-            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(fermo a )?RT \d+\.\d\d min", t.strip()), t
+            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(fermo a )?\d+\.\d\d min", t.strip()), t
         step("the header of the UV spectrum says the RT it comes from", header_rt)
         def sheet():
             s = pg.evaluate(f"plotSheets({UV})")
@@ -73,7 +73,7 @@ try:
         step("the keyboard zoom works on the UV spectrum", zoom_keys)
         def chrom_dbl():
             n0 = pg.evaluate("E.panels.filter(q=>q.uv).length")
-            pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); const s=c.el.querySelector('select[data-o=kind]'); s.value='pda'; s.dispatchEvent(new Event('change',{bubbles:true}))})()")
+            pick_kind(pg, "pda")
             ready(pg); attendi(pg, "E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'")
             dbl(pg, "E.panels.find(q=>q.type==='chrom')", 0.5)
             attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
@@ -83,20 +83,20 @@ try:
             c = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')"; u = f"E.panels.filter(q=>q.uv&&q.src==={c}.id).pop()"
             attendi(pg, f"!!({u}._a && {u}.link === {c}.id)")
             assert pg.evaluate(f"{u}.link === {c}.id") and pg.evaluate(f"{c}.cur != null"), "linked and the vertical line is drawn"
-            fol = pg.evaluate(f"(()=>{{const b={u}.el.querySelector('.fol'); return b && b.offsetParent ? b.textContent : null}})()"); assert fol and fol.startswith("Segue"), fol
+            fol = pg.evaluate(f"(()=>{{const b={u}.el.querySelector('.fol'); return b && b.offsetParent ? b.textContent : null}})()"); assert fol and fol.startswith("\u2190"), fol
             lg = pg.evaluate(f"{u}.leg.textContent"); assert " \u00b7 RT " in lg, lg
             assert pg.evaluate(f"{u}.el.querySelector('.rtl').getAttribute('aria-live')") == "polite"
-            assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "RT %.2f min" % pg.evaluate(f"{u}._a.uvd.rt"), "rtl"
+            assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "%.2f min" % pg.evaluate(f"{u}._a.uvd.rt"), "rtl"
             pg.evaluate("(()=>{window.__n=0; if(!window.__f){window.__f=window.fetch; window.fetch=function(u,...a){ if(/api\\/(uvspec|map)/.test(String(u))) window.__n++; return window.__f.call(this,u,...a)}}})()")
             for rt in (1.0, 1.5):
                 pg.evaluate(f"(()=>{{const c={c}; c.cur={rt}; pushLinked(c,{rt},{rt},0,true)}})()")
                 attendi(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
-                assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "RT %.2f min" % pg.evaluate(f"{u}._a.uvd.rt")
+                assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "%.2f min" % pg.evaluate(f"{u}._a.uvd.rt")
                 assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in pg.evaluate(f"{u}.leg.textContent")
                 tx = pg.evaluate(f"TDATI_P.text({u})"); assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in tx, tx
             assert pg.evaluate("window.__n") == 0, "no uvspec/map request while the line moves"
             pg.evaluate(f"spLinkFreeze({u})"); frames(pg, 2)
-            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("fermo a RT")
+            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("fermo a ")
             pg.evaluate(f"(()=>{{const c={c}; c.cur=0.5; pushLinked(c,0.5,0.5,0,true)}})()"); frames(pg, 3)
             assert abs(pg.evaluate(f"{u}._a.uvd.rt") - 1.5) < 0.06, "frozen: the UV spectrum does not follow"
             pg.evaluate(f"spLinkFollow({u}, {c})"); attendi(pg, f"{u}.link === {c}.id && Math.abs({u}._a.uvd.rt - 0.5) < 0.06")
@@ -197,7 +197,7 @@ try:
         stage(pg, [T0]); pg.click("text=Carica dati"); ready(pg)
         def no_matrix():
             assert pg.evaluate("E.files[0].pda") is True
-            pg.select_option("body select[data-o=kind]", "pda"); ready(pg)
+            pick_kind(pg, "pda"); ready(pg)
             attendi(pg, "E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'")
             dbl(pg, "E.panels.find(q=>q.type==='chrom')", 10)
             attendi(pg, "/DAD/.test(document.body.innerText)")
@@ -213,11 +213,12 @@ try:
         UVS = "E.panels.filter(q=>q.uv&&q._a)"
         def demo_uv_at(rt, nm):
             dbl(pg, CH, rt)
-            attendi(pg, f"(()=>{{const u={UVS}.pop(); return !!u && Math.abs(u._a.uvd.rt - {rt}) < 0.15}})()")
-            a = pg.evaluate(f"(()=>{{const u={UVS}.pop()._a.uvd; return {{n: u.nm.length, nm0: u.nm[0], nm1: u.nm[u.nm.length-1], rt: u.rt, mx: u.nm[u.y.indexOf(Math.max(...u.y))]}}}})()")
+            AT = f"{UVS}.filter(q=>Math.abs(q._a.uvd.rt - {rt}) < 0.15)"      # a new spectrum goes under the graph, above the older ones: pick the one of this time, not the last
+            attendi(pg, f"{AT}.length > 0")
+            a = pg.evaluate(f"(()=>{{const u={AT}[0]._a.uvd; return {{n: u.nm.length, nm0: u.nm[0], nm1: u.nm[u.nm.length-1], rt: u.rt, mx: u.nm[u.y.indexOf(Math.max(...u.y))]}}}})()")
             assert a["n"] == 201 and a["nm0"] == 200 and a["nm1"] == 400 and abs(a["rt"] - rt) < 0.1 and abs(a["mx"] - nm) <= 4, a
         def demo_open():
-            pg.select_option("body select[data-o=kind]", "pda"); ready(pg)
+            pick_kind(pg, "pda"); ready(pg)
             attendi(pg, f"{CH}._a && {CH}.kind==='pda'")
             demo_uv_at(14.30, 224)
         step("FullScan_t10 demo: double click on the PDA trace at 14.30 min opens the UV spectrum, maximum near 224 nm", demo_open)

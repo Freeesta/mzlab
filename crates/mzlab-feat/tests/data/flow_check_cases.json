@@ -537,7 +537,7 @@
   },
   {
     "expect": [
-      "f|features|err.flow.facet|facet=resolution"
+      "f|features|err.flow.facet|facet=resolution,step=formula.ms1,want=hr,have=lr"
     ],
     "name": "facets: low resolution data into a step that wants high resolution",
     "plan": {
@@ -666,6 +666,180 @@
       "steps": [
         {
           "step": "index.mzidx@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "facets: a unit-resolution series into tp.link, which takes either resolution",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "facets": {
+            "polarity": [
+              -1
+            ],
+            "resolution": [
+              "lr"
+            ]
+          },
+          "name": "a.mzidx",
+          "sha256": "",
+          "type": "mzidx"
+        },
+        {
+          "name": "t.mzfeat",
+          "sha256": "",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "sha256": "",
+          "type": "samples"
+        },
+        {
+          "name": "p.json",
+          "sha256": "",
+          "type": "structure"
+        },
+        {
+          "name": "h.json",
+          "sha256": "",
+          "type": "transform"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "l",
+          "in": {
+            "hypotheses": "file:h.json",
+            "index": [
+              "file:a.mzidx"
+            ],
+            "parent": "file:p.json",
+            "samples": "file:s.json",
+            "table": "file:t.mzfeat"
+          },
+          "step": "tp.link@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "f|features|err.flow.facet|facet=resolution,step=formula.ms1,want=hr,have=hr|lr"
+    ],
+    "name": "facets: a series of both resolutions into a step that wants high resolution",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "facets": {
+            "resolution": [
+              "hr"
+            ]
+          },
+          "name": "a.mzML",
+          "sha256": "",
+          "type": "mzml"
+        },
+        {
+          "facets": {
+            "resolution": [
+              "lr"
+            ]
+          },
+          "name": "b.mzML",
+          "sha256": "",
+          "type": "mzml"
+        },
+        {
+          "name": "t.mzfeat",
+          "sha256": "",
+          "type": "table"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "f",
+          "in": {
+            "features": "file:t.mzfeat",
+            "index": [
+              "file:a.mzML",
+              "file:b.mzML"
+            ]
+          },
+          "step": "formula.ms1@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "s|table|err.flow.facet|facet=resolution,step=screen.suspects,want=hr,have=lr"
+    ],
+    "name": "facets: the resolution of the files reaches the table made from them",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "facets": {
+            "resolution": [
+              "lr"
+            ]
+          },
+          "name": "a.mzidx",
+          "sha256": "",
+          "type": "mzidx"
+        },
+        {
+          "name": "l.csv",
+          "sha256": "",
+          "type": "library"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "d",
+          "in": {
+            "index": [
+              "file:a.mzidx"
+            ]
+          },
+          "step": "features.detect@1"
+        },
+        {
+          "id": "al",
+          "in": {
+            "peaks": [
+              "d.peaks"
+            ]
+          },
+          "step": "features.align@1"
+        },
+        {
+          "id": "s",
+          "in": {
+            "suspects": [
+              "file:l.csv"
+            ],
+            "table": "al.table"
+          },
+          "step": "screen.suspects@1"
         }
       ]
     }

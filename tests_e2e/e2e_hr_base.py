@@ -30,7 +30,7 @@ try:
         step("HR.prof / tolDa / dec / label", hrjs)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(300)
-            assert "ppm" in pg.inner_text("#uipset")
+            pg.click("#uip-g-data > summary"); assert "ppm" in pg.inner_text("#uipset")           # the group «Dati e calcolo» is folded by default
             pg.fill("#uip-ppm", "8"); pg.dispatch_event("#uip-ppm", "change"); pg.fill("#uip-hdec", "5"); pg.dispatch_event("#uip-hdec", "change"); pg.wait_for_timeout(300)
             v = pg.evaluate("(()=>{const ex=E.files.find(f=>f.file.includes('Exploris')&&f.lv===1);return [HR.prof(ex,1),JSON.parse(localStorage.getItem('mzlab.prefs'))]})()"); print(v)
             assert v[0]["tol"] == 8 and v[0]["dec"] == 5 and v[1]["hrPpm"] == 8 and v[1]["hrDec"] == 5 and "hr" not in v[1]
@@ -38,7 +38,7 @@ try:
         step("gear: «Masse» row (ppm, decimals) changes the profile and is saved", gear)
         def notice():
             pg.evaluate("HR.notice([{file:'prova.mzML',label:'prova',hr_err:'ValueError: prova'}])"); pg.wait_for_timeout(200)
-            t = pg.inner_text("#hrerr"); print(t)
+            t = pg.inner_text("#qnote"); print(t)
             assert "Alta risoluzione non disponibile per prova: aperto come bassa risoluzione" in t
         step("fallback notice (once per file)", notice)
         def reload():
@@ -51,16 +51,14 @@ try:
             drawer(pg); pg.click("#addf"); pg.wait_for_timeout(500)
             pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"])
             pg.wait_for_timeout(500)
-            pg.click("#opbtn")
-            pg.wait_for_selector("#hrmix-replace", timeout=30000)
-            assert pg.is_visible("#hrmix-replace") and pg.is_visible("#hrmix-cancel")
-            pg.click("#hrmix-replace")
-            pg.wait_for_function("E.files.length === 1 && E.files[0].file.includes('B_FullMass-t0.mzML')", timeout=60000); ready(pg)
-            v = pg.evaluate("E.files.map(f=>f.file)")
+            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#hrmix').hidden", 30000)          # LR and HR in the table: the open world (HR) stays, the LR file is set aside
+            assert pg.evaluate("ST.files.find(f => f.name === 'B_FullMass-t0.mzML').use") is False and pg.evaluate("OPENNOW.world()") is True
+            assert pg.get_attribute("#hrmix-lr", "hidden") is None and pg.get_attribute("#hrmix-hr", "hidden") is not None, "one «Switch» button"
+            pg.evaluate("document.querySelector('#hrmix-lr').click()")             # «Switch to low resolution» replaces the open files: no refusal, no second dialog
+            pg.wait_for_function("E.files.filter(f => !f.gone).length === 1 && E.files.find(f => !f.gone).file.includes('B_FullMass-t0.mzML')", timeout=60000); ready(pg)
+            v = pg.evaluate("E.files.filter(f => !f.gone).map(f=>f.file)")
             assert len(v) == 1 and "B_FullMass-t0.mzML" in v[0]
-        step("mix LR and HR: shows choice dialog and replaces files", test_mix)
-        # the refusal of the mixed list (400 err.hr.mix) is what opens the choice dialog: not an error of the page
-        r.errs = [e for e in r.errs if not (e[0] == "http400" and e[1].endswith("/api/explore")) and "status of 400" not in str(e)]
+        step("mix LR and HR: the LR file is set aside and «Switch» replaces the open files", test_mix)
     r.close()
     cuts = real_cuttings()
     if cuts:                                                  # the real Orbitrap cuttings (private data repository), in a clean session

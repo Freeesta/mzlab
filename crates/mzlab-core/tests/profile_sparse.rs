@@ -15,7 +15,7 @@ const STEP: f64 = 0.06;
 
 fn scan(i: usize, prec: f64, dense: bool) -> Spectrum {
     let n = if dense { 30 } else { 1 + i % 4 };
-    let first = 100 + (i % 7) as usize;
+    let first = 100 + (i % 7);
     let mz: Vec<f64> = (0..n).map(|b| 50.0 + (first + b) as f64 * STEP).collect();
     let intensity: Vec<f32> = (0..n).map(|b| 10.0 + (i + b) as f32).collect();
     Spectrum {

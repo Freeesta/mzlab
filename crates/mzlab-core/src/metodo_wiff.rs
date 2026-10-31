@@ -208,12 +208,6 @@ pub fn run_facts_full(
     (model, created, serial, st)
 }
 
-/// The instrument model and creation time of sample `n`.
-pub fn run_facts(ole: &Ole, n: u32) -> (Option<String>, Option<String>) {
-    let (m, c, _, _) = run_facts_full(ole, n);
-    (m, c)
-}
-
 fn user_and_computer<'a>(
     driver: Option<&'a str>,
     cfr: &'a [String],

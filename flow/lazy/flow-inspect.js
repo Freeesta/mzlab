@@ -13,8 +13,9 @@
   };
 
   /** the files open in the Data tab, as the Import data card shows them: «No file loaded» with a way to Data, or the count and the first names @param {any} el */
-  const dataState = el => {
+  const dataState = (el, type = "") => {
     const names = F.dataFiles();
+    if (type === "raw" && names.length && F.rawFiles) return F.rawFiles();
     if (!names.length) return el("p", { class: "fl-note fl-data" }, el("span", { text: "No file loaded. " }), F.btn("import", "Go to the Data tab to open files", () => { const b = document.querySelector('#nav [data-v="data"]'); if (b) /** @type {HTMLElement} */ (b).click(); }, "Open Data"));
     return el("p", { class: "fl-note fl-data", text: `${names.length} file${names.length > 1 ? "s" : ""} in Data: ${names.slice(0, 3).join(", ")}${names.length > 3 ? ", …" : ""}` });
   };
@@ -34,7 +35,7 @@
       box.append(ul);
     }
     if (node.key === "import") box.append(dataState(el), ...(F.importBox ? [F.importBox(S)] : []));
-    if (node.kind === "input") { box.append(node.file && node.file.type === "samples" && F.samplesEditor ? F.samplesEditor(S, node.file) : node.file && node.file.type === "structure" && F.parentEditor ? F.parentEditor(S, node.file) : node.file && node.file.type === "transform" && F.decisionsEditor ? F.decisionsEditor(S, node.file) : F.addFilesBox ? el("div", {}, dataState(el), F.addFilesBox(S)) : dataState(el));
+    if (node.kind === "input") { box.append(node.file && node.file.type === "samples" && F.samplesEditor ? F.samplesEditor(S, node.file) : node.file && node.file.type === "structure" && F.parentEditor ? F.parentEditor(S, node.file) : node.file && node.file.type === "transform" && F.decisionsEditor ? F.decisionsEditor(S, node.file) : F.addFilesBox ? el("div", {}, dataState(el, node.file && node.file.type), F.addFilesBox(S)) : dataState(el));
       if (!c.simple) box.append(F.btn("x", `Remove ${node.title}`, () => c.remove(node), "Remove")); return box; }
     for (const id of node.ids) {
       const inst = F.instanceOf(S.plan, id), step = inst && (F.stepOf ? F.stepOf(S.reg, inst) : S.reg.byId.get(inst.step.split("@")[0]));
@@ -42,6 +43,7 @@
       if (node.ids.length > 1) box.append(el("h4", { text: F.nameOf(step.id)[0] }), el("p", { class: "fl-note", text: F.nameOf(step.id)[2] }));
       if (!c.simple) { const src = sources(S, inst, c.done); if (src) box.append(src); }
       box.append(F.compareBody && inst.step.startsWith("meta.compare@") ? F.compareBody(S, inst, c.done) : F.form(inst, step, c.done));
+      if (F.importedLists && /^(screen\.suspects|annot\.regulatory)@/.test(inst.step)) box.append(F.importedLists(S, inst, step, c.done));
       if (!c.simple && F.compareButton) box.append(F.compareButton(S, inst, step, c.done));
     }
     const filesTable = F.liveCard ? F.liveCard.files(node) : null;

@@ -2319,6 +2319,7 @@ dependencies = [
 name = "mzlab-cli"
 version = "1.0.0"
 dependencies = [
+ "flate2",
  "mzlab-chem",
  "mzlab-core",
  "mzlab-feat",
@@ -2330,7 +2331,11 @@ dependencies = [
  "mzlab-mol",
  "mzlab-tutor",
  "resvg",
+ "rustls",
  "serde_json",
+ "sha2 0.11.1",
+ "ureq",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]
@@ -2339,6 +2344,7 @@ version = "1.0.0"
 dependencies = [
  "base64 0.23.1",
  "flate2",
+ "mzlab-picchi",
  "opentfraw",
  "quick-xml",
  "serde",
@@ -2351,6 +2357,7 @@ dependencies = [
 name = "mzlab-desktop"
 version = "1.0.0"
 dependencies = [
+ "flate2",
  "memmap2",
  "mzlab-chem",
  "mzlab-cli",
@@ -2466,6 +2473,7 @@ name = "mzlab-lib"
 version = "1.0.0"
 dependencies = [
  "mzlab-core",
+ "mzlab-picchi",
  "ruzstd",
  "serde_json",
 ]
@@ -2535,6 +2543,19 @@ dependencies = [
  "mzlab-feat",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "mzlab-normative-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-picchi"
+version = "1.0.0"
 
 [[package]]
 name = "mzlab-target"

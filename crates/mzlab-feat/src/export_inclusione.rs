@@ -2,6 +2,7 @@
 //! with an RT window around the expected RT, in the columns of the list of mzFinder (`legacy::out::inclusion_row`), sorted by RT. Used by the
 //! `export.inclusion` step; it never raises a level and adds no verdict.
 
+use crate::sortc::SortC;
 use mzlab_core::elements;
 use mzlab_core::error::Result;
 
@@ -13,6 +14,8 @@ pub struct Expected {
     pub formula: String,
     pub rt: f64,
     pub priority: f64,
+    /// The observed ion m/z of a row that has no formula (a unit-resolution product): listed as it is, once, whatever the adducts; `formula` is then its label.
+    pub ion_mz: Option<f64>,
 }
 
 /// The inclusion list: every product in every adduct of `adducts` (names of `elements::adducts`), RT window `rt ± half_window` minutes (start not
@@ -84,8 +87,12 @@ pub fn inclusion_expected_by(
 ) -> Result<String> {
     let mut rows: Vec<(f64, f64, String, String)> = Vec::new();
     for p in products {
-        let neutral = elements::mass(&elements::parse_formula(&p.formula)?);
-        for shift in shifts {
+        let neutral = match p.ion_mz {
+            Some(_) => 0.0,
+            None => elements::mass(&elements::parse_formula(&p.formula)?),
+        };
+        let own = p.ion_mz.map(|m| [m - neutral]);
+        for shift in own.as_ref().map_or(shifts, |o| &o[..]) {
             let mz = neutral + shift;
             let (start, end) = ((p.rt - half_window).max(0.0), p.rt + half_window);
             rows.push((
@@ -96,7 +103,7 @@ pub fn inclusion_expected_by(
             ));
         }
     }
-    rows.sort_by(|a, b| {
+    rows.sortc_by(|a, b| {
         a.0.total_cmp(&b.0)
             .then(a.1.total_cmp(&b.1))
             .then_with(|| a.2.cmp(&b.2))
@@ -116,6 +123,7 @@ mod tests {
             formula: "C13H24N4O3S".into(),
             rt,
             priority: 1.0,
+            ion_mz: None,
         }
     }
 
@@ -127,6 +135,7 @@ mod tests {
                 formula: "C13H24N4O4S".into(),
                 rt: 2.0,
                 priority: 2.5,
+                ion_mz: None,
             },
         ];
         let csv = inclusion_expected(&ps, &["[M+H]+"], 0.5).unwrap();

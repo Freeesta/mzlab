@@ -66,7 +66,7 @@ pub fn ms2_membership(mz_x: f64, mz_p: f64, spec_p: (&[f64], &[f64])) -> Value {
     let ap: Vec<f64> = keep.iter().map(|&i| spec_p.0[i]).collect();
     let ip: Vec<f64> = keep.iter().map(|&i| spec_p.1[i]).collect();
     let j = argmin(&ap.iter().map(|v| (v - mz_x).abs()).collect::<Vec<_>>());
-    let imax = ip.iter().cloned().fold(f64::MIN, f64::max);
+    let imax = ip.iter().copied().fold(f64::MIN, f64::max);
     Obj::new()
         .b("x_in_p", (ap[j] - mz_x).abs() <= tol)
         .n("nearest_product", ap[j])

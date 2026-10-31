@@ -252,3 +252,24 @@ fn baseline_in_the_recipe_changes_the_features_of_the_synthetic_files() {
         with.iter().map(|f| f.height).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn polarity_of_the_recipe_is_one_minus_one_or_null() {
+    let polarity = |text: &str| UntParams::from_json(text).map(|p| (p.polarity, p.gap.polarity));
+    assert_eq!(polarity(r#"{"polarity":1}"#).unwrap(), (Some(1), Some(1)));
+    assert_eq!(
+        polarity(r#"{"polarity":-1}"#).unwrap(),
+        (Some(-1), Some(-1))
+    );
+    assert_eq!(polarity(r#"{"polarity":1.0}"#).unwrap(), (Some(1), Some(1)));
+    assert_eq!(polarity(r#"{"polarity":null}"#).unwrap(), (None, None));
+    assert_eq!(
+        polarity(r#"{"engine":"untargeted"}"#).unwrap(),
+        (None, None)
+    );
+    assert_eq!(polarity("").unwrap(), (None, None));
+    for bad in ["0", "2", "-2", "0.5", "\"+\"", "\"1\"", "true", "[1]", "{}"] {
+        let e = UntParams::from_json(&format!(r#"{{"polarity":{bad}}}"#)).unwrap_err();
+        assert_eq!(e.key, "error.badRecipe", "polarity {bad}");
+    }
+}

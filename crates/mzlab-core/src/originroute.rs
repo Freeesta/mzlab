@@ -19,6 +19,25 @@ pub struct ItemMeta {
     pub full: bool,
 }
 
+/// The session `items` as the page sends them (`[{slot, label, time, full}]`). A missing, negative or non-integer `slot` maps to `u32::MAX`,
+/// a slot no file has, so the item can never alias the file in slot 0.
+pub fn session_items(items: &str) -> Result<Vec<ItemMeta>> {
+    let v = crate::json::parse(items.as_bytes())?;
+    let slot = |x: Option<f64>| match x {
+        Some(f) if f >= 0.0 && f < u32::MAX as f64 && f.fract() == 0.0 => f as u32,
+        _ => u32::MAX,
+    };
+    Ok(v.arr()
+        .iter()
+        .map(|i| ItemMeta {
+            slot: slot(i.get("slot").and_then(Value::f64)),
+            label: i.get("label").and_then(Value::str).unwrap_or("").to_string(),
+            time: i.get("time").and_then(Value::f64),
+            full: matches!(i.get("full"), Some(Value::Bool(true))),
+        })
+        .collect())
+}
+
 /// What the page asks: the ion `mz` against `parent`, from the file of item `k`.
 pub struct Ask<'a> {
     pub k: i64,
@@ -107,4 +126,18 @@ pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Rou
         out.set("ms2_peaks", Obj::new().put("x", x).put("p", strongest(&m.p)).done());
     }
     Ok(Some(out.done()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::session_items;
+
+    #[test]
+    fn missing_or_bad_slot_never_aliases_slot_zero() {
+        let m = session_items(r#"[{"label":"a","full":true},{"slot":-1},{"slot":1.5},{"slot":2,"time":3.5}]"#).unwrap();
+        let slots: Vec<u32> = m.iter().map(|i| i.slot).collect();
+        assert_eq!(slots, vec![u32::MAX, u32::MAX, u32::MAX, 2]);
+        assert!(m[0].full && m[0].label == "a");
+        assert_eq!(m[3].time, Some(3.5));
+    }
 }

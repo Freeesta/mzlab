@@ -6,7 +6,7 @@ const KMDVIEW = (() => {
   const MAX_ROWS = 200;
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
-  const fmt = (v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
+  const fmt = (v, d = 3) => I18N.dash(v, d);
   // ---------------------------------------------------------------- the plot: Kendrick mass (x) against KMD (y); a series has its colour AND its shape
   const W = 320, H = 250, L = 52, R = 10, T = 10, B = 34;
   const SHAPES = ["circle", "square", "triangle", "diamond"];
@@ -21,7 +21,7 @@ const KMDVIEW = (() => {
     const rows = res.rows;
     if (!rows.length) return "";
     const xs = rows.map(r => r.km), ys = rows.map(r => r.kmd);
-    let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    let x0 = minOf(xs), x1 = maxOf(xs), y0 = minOf(ys), y1 = maxOf(ys);
     const px = (x1 - x0 || 1) * 0.06, py = (y1 - y0 || 0.01) * 0.12;
     x0 -= px; x1 += px; y0 -= py; y1 += py;
     const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);

@@ -27,7 +27,7 @@ fn known_unit(u: &str) -> bool {
 
 /// File name without a REAL extension: 'std_0.5ppm' keeps its decimals.
 fn stem(name: &str) -> String {
-    let base = name.rsplit('/').next().unwrap_or(name);
+    let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
     if let Some(i) = base.rfind('.') {
         if i > 0 && i + 1 < base.len() {
             let suf = base[i..].to_lowercase();
@@ -55,8 +55,13 @@ fn skip_ws(s: &[char], mut i: usize) -> usize {
     i
 }
 fn starts(s: &[char], i: usize, w: &str) -> bool {
-    let w: Vec<char> = w.chars().collect();
-    s.len() >= i + w.len() && s[i..i + w.len()] == w[..]
+    // `w` is ASCII: compare in place, no allocation
+    let w = w.as_bytes();
+    s.len() >= i + w.len()
+        && s[i..i + w.len()]
+            .iter()
+            .zip(w)
+            .all(|(c, b)| *c == char::from(*b))
 }
 fn lookbehind_ok(s: &[char], i: usize) -> bool {
     i == 0 || !(s[i - 1].is_ascii_digit() || s[i - 1] == '.')
@@ -66,20 +71,12 @@ fn not_lower(s: &[char], i: usize) -> bool {
 }
 
 /// `\d+(?:[.,p]\d+)?`: end positions in the order the engine tries them (with the fraction first).
-fn number_ends(s: &[char], i: usize, frac: &[char]) -> Vec<usize> {
+fn number_ends(s: &[char], i: usize, frac: &[char]) -> impl Iterator<Item = usize> {
     let d = digits(s, i);
-    if d == i {
-        return vec![];
-    }
-    let mut v = vec![];
-    if d < s.len() && frac.contains(&s[d]) {
-        let f = digits(s, d + 1);
-        if f > d + 1 {
-            v.push(f);
-        }
-    }
-    v.push(d);
-    v
+    let with_fraction = (d < s.len() && frac.contains(&s[d]))
+        .then(|| digits(s, d + 1))
+        .filter(|f| *f > d + 1);
+    [with_fraction, (d > i).then_some(d)].into_iter().flatten()
 }
 fn num(s: &[char]) -> f64 {
     s.iter()
@@ -143,22 +140,16 @@ fn std_word_at(s: &[char], p: usize) -> Option<usize> {
     None
 }
 /// Word positions where `(^|[_\-\s])` can sit, in the order the engine tries them.
-fn after_prefix(s: &[char]) -> Vec<usize> {
-    let mut v = vec![];
-    for i in 0..=s.len() {
-        if i == 0 {
-            v.push(0);
-        }
-        if i < s.len() && is_sep(s[i]) {
-            v.push(i + 1);
-        }
-    }
-    v
+fn after_prefix(s: &[char]) -> impl Iterator<Item = usize> + '_ {
+    std::iter::once(0).chain(
+        s.iter()
+            .enumerate()
+            .filter(|(_, c)| is_sep(**c))
+            .map(|(i, _)| i + 1),
+    )
 }
 fn has_std(s: &[char]) -> bool {
-    after_prefix(s)
-        .into_iter()
-        .any(|p| std_word_at(s, p).is_some())
+    after_prefix(s).any(|p| std_word_at(s, p).is_some())
 }
 
 /// Concentration read from a file name (`guess_conc`): value and unit key (None when only a number follows a standard word).
@@ -225,7 +216,7 @@ fn guess_conc_std(s: &[char]) -> Option<(f64, Option<String>)> {
             while j < s.len() && is_sep(s[j]) {
                 j += 1;
             }
-            if let Some(&n) = number_ends(s, j, &['.', ',', 'p']).first() {
+            if let Some(n) = number_ends(s, j, &['.', ',', 'p']).next() {
                 return Some((num(&s[j..n]), None));
             }
         }
@@ -235,35 +226,22 @@ fn guess_conc_std(s: &[char]) -> Option<(f64, Option<String>)> {
 
 /// (label, time in minutes, type) guessed from a file name: 'blank', 'std_5', 't30', '120min', '2h', '1d'.
 pub fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
-    let base = stem(name);
+    let (base, kind) = guess_type(name);
+    if kind != "sample" {
+        return (base, None, kind);
+    }
     let low: Vec<char> = base.to_lowercase().chars().collect();
     let s = &low[..];
-    for p in after_prefix(s) {
-        for w in ["blank", "blk", "bianco"] {
-            if starts(s, p, w) {
-                let e = p + w.len();
-                if e >= s.len() || is_sep(s[e]) || s[e].is_ascii_digit() {
-                    return (base, None, "blank");
-                }
-            }
-        }
-    }
-    let t_digit = after_prefix(s)
-        .into_iter()
-        .any(|p| p < s.len() && s[p] == 't' && p + 1 < s.len() && s[p + 1].is_ascii_digit());
-    if has_std(s) || (guess_conc(name).is_some() && !t_digit) {
-        return (base, None, "standard");
-    }
     for p in after_prefix(s) {
         let mut i = p;
         if i < s.len() && s[i] == 't' {
             i += 1;
         }
-        for e in number_ends(s, i, &['.', ',']) {
+        for e in number_ends(s, i, if i > p { &['.', ',', 'p'] } else { &['.', ','] }) {
             if let Some(m) = time_tail(s, e) {
                 let v: f64 = s[i..e]
                     .iter()
-                    .map(|c| if *c == ',' { '.' } else { *c })
+                    .map(|c| if *c == ',' || *c == 'p' { '.' } else { *c })
                     .collect::<String>()
                     .parse()
                     .unwrap_or(0.0);
@@ -277,6 +255,29 @@ pub fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
         }
     }
     (base, None, "sample")
+}
+
+/// The stem of a name and what it is by its words: `blank`, `standard` or `sample` (the time of a sample is read by `guess_sample`).
+pub fn guess_type(name: &str) -> (String, &'static str) {
+    let base = stem(name);
+    let low: Vec<char> = base.to_lowercase().chars().collect();
+    let s = &low[..];
+    for p in after_prefix(s) {
+        for w in ["blank", "blk", "bianco"] {
+            if starts(s, p, w) {
+                let e = p + w.len();
+                if e >= s.len() || is_sep(s[e]) || s[e].is_ascii_digit() {
+                    return (base, "blank");
+                }
+            }
+        }
+    }
+    let t_digit = after_prefix(s)
+        .any(|p| p < s.len() && s[p] == 't' && p + 1 < s.len() && s[p + 1].is_ascii_digit());
+    if has_std(s) || (guess_conc(name).is_some() && !t_digit) {
+        return (base, "standard");
+    }
+    (base, "sample")
 }
 
 /// `\s*(min|m|h|ore|d|days?|gg|giorni|giorno)?(?:[_\-\s]|$)` after the number: the unit text ("" when none), or None when the tail does not fit.

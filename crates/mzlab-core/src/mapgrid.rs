@@ -27,8 +27,8 @@ pub fn session_grid(rts: &[f64], mzs: &[f64], hr: bool) -> Grid {
     if rts.is_empty() || mzs.is_empty() {
         return Grid { rt0: 0.0, rt1: 1.0, nrt: 1, mz0: 0.0, dmz: 1.0, nmz: 1 };
     }
-    let lo = |v: &[f64]| v.iter().cloned().fold(f64::INFINITY, f64::min);
-    let hi = |v: &[f64]| v.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let lo = |v: &[f64]| v.iter().copied().fold(f64::INFINITY, f64::min);
+    let hi = |v: &[f64]| v.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let (rt0, rt1) = (lo(rts).floor(), hi(rts).ceil());
     let nrt = py_round((rt1 - rt0) / 0.04).clamp(50.0, 600.0) as usize;
     let mz0 = lo(mzs).floor() - if hr { 0.0 } else { 0.2 };
@@ -147,7 +147,7 @@ pub fn rt_groups(points: &mut [Point], tol: f64) {
     order.sort_by(|&a, &b| points[a].rt.total_cmp(&points[b].rt));
     let (mut g, mut last) = (0, None::<f64>);
     for &i in &order {
-        if last.map_or(true, |l| points[i].rt - l > tol) {
+        if last.is_none_or(|l| points[i].rt - l > tol) {
             g += 1;
         }
         points[i].g = g;

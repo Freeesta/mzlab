@@ -2,9 +2,28 @@
 //! The role and the minutes follow `project::guess_sample` (the same names give the same minutes), plus seconds (`90 s`), the replicate `(2)`,
 //! the infusion (`infusion`, `infusione`, `direct-infusion`, `FIA` or an MSn file), the dark control (`dark`, `buio`, `adsorption`) and the series.
 
+use super::parole_bianco::is_blank_name;
 use super::posizioni::{self, Proposta};
-use super::{number_replicates, Campione};
-use crate::project::{guess_conc, guess_sample};
+use super::{minutes_per, number_replicates, Campione};
+use crate::project::{guess_conc, guess_sample as guess_stem, guess_type};
+
+/// `project::guess_sample` plus the blank words of `data/nomi-bianco.json` (`MQ_Wash_1`), which the parity with `project.py` does not carry.
+/// The stem and the type of a name (`blank`, `standard`, `sample`) without reading its time, with the blank words of `nomi-bianco.json`.
+fn guess_kind(name: &str) -> (String, &'static str) {
+    let (stem, guess) = guess_type(name);
+    if guess == "sample" && is_blank_name(&stem.to_lowercase()) {
+        return (stem, "blank");
+    }
+    (stem, guess)
+}
+
+fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
+    let (stem, time, guess) = guess_stem(name);
+    if guess == "sample" && is_blank_name(&stem.to_lowercase()) {
+        return (stem, None, "blank");
+    }
+    (stem, time, guess)
+}
 
 const CAL_WORDS: [&str; 6] = [
     "cal",
@@ -47,29 +66,27 @@ fn skip_ws(s: &[char], mut i: usize) -> usize {
     i
 }
 fn starts(s: &[char], i: usize, w: &str) -> bool {
-    let w: Vec<char> = w.chars().collect();
-    s.len() >= i + w.len() && s[i..i + w.len()] == w[..]
+    // `w` is ASCII: compare in place, no allocation
+    let w = w.as_bytes();
+    s.len() >= i + w.len()
+        && s[i..i + w.len()]
+            .iter()
+            .zip(w)
+            .all(|(c, b)| *c == char::from(*b))
 }
 
-/// `\d+(?:[.,]\d+)?`: the end positions, the one with the fraction first.
-fn number_ends(s: &[char], i: usize) -> Vec<usize> {
+/// `\d+(?:[.,]\d+)?` (also `\d+p\d+` after a `t`, as `T2p5`): the end positions, the one with the fraction first.
+fn number_ends(s: &[char], i: usize, p_point: bool) -> impl Iterator<Item = usize> {
     let d = digits(s, i);
-    if d == i {
-        return vec![];
-    }
-    let mut v = vec![];
-    if d < s.len() && (s[d] == '.' || s[d] == ',') && digits(s, d + 1) > d + 1 {
-        v.push(digits(s, d + 1));
-    }
-    v.push(d);
-    v
+    let with_fraction = (d < s.len() && (s[d] == '.' || s[d] == ',' || (p_point && s[d] == 'p')))
+        .then(|| digits(s, d + 1))
+        .filter(|f| *f > d + 1);
+    [with_fraction, (d > i).then_some(d)].into_iter().flatten()
 }
 
 /// The start of the name and every position after a separator.
-fn after_prefix(s: &[char]) -> Vec<usize> {
-    let mut v = vec![0];
-    v.extend((0..s.len()).filter(|&i| is_sep(s[i])).map(|i| i + 1));
-    v
+fn after_prefix(s: &[char]) -> impl Iterator<Item = usize> + '_ {
+    std::iter::once(0).chain((0..s.len()).filter(|&i| is_sep(s[i])).map(|i| i + 1))
 }
 
 /// The unit of the time that ends at `e` (`min` when none is written) and where the time ends, or None when what follows is not a time.
@@ -107,11 +124,11 @@ fn time_of(s: &[char]) -> Option<Time> {
     for p in after_prefix(s) {
         let after_t = p < s.len() && s[p] == 't';
         let i = if after_t { p + 1 } else { p };
-        for e in number_ends(s, i) {
+        for e in number_ends(s, i, after_t) {
             if let Some((unit, end)) = time_tail(s, e, after_t) {
                 let text: String = s[i..e]
                     .iter()
-                    .map(|c| if *c == ',' { '.' } else { *c })
+                    .map(|c| if *c == ',' || *c == 'p' { '.' } else { *c })
                     .collect();
                 return Some(Time {
                     value: text.parse().unwrap_or(0.0),
@@ -125,10 +142,13 @@ fn time_of(s: &[char]) -> Option<Time> {
     None
 }
 
-/// A word of the name with its folders (letters and digits) equal to `word`, or `word` followed by digits only.
-fn has_word(low: &str, word: &str) -> bool {
+/// A word of the name with its folders (letters and digits) equal to one of `words`, or one followed by digits only (one pass over the name).
+fn has_any(low: &str, words: &[&str]) -> bool {
     low.split(|c: char| !c.is_ascii_alphanumeric()).any(|w| {
-        w == word || (w.starts_with(word) && w[word.len()..].chars().all(|c| c.is_ascii_digit()))
+        words.iter().any(|word| {
+            w == *word
+                || (w.starts_with(word) && w[word.len()..].chars().all(|c| c.is_ascii_digit()))
+        })
     })
 }
 
@@ -136,12 +156,10 @@ fn has_word(low: &str, word: &str) -> bool {
 fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
     match guess {
         "blank" => "blank",
-        "standard" => CAL_WORDS
-            .iter()
-            .find(|w| has_word(low, w))
-            .map_or("std", |_| "calibration"),
-        _ if DARK_WORDS.iter().any(|w| has_word(low, w)) => "dark",
-        _ if has_word(low, "qc") => "qc",
+        "standard" if has_any(low, &CAL_WORDS) => "calibration",
+        "standard" => "std",
+        _ if has_any(low, &DARK_WORDS) => "dark",
+        _ if has_any(low, &["qc"]) => "qc",
         _ if time_min == Some(0.0) => "t0",
         _ => "sample",
     }
@@ -154,7 +172,7 @@ pub fn tipo_v1(name: &str) -> &'static str {
 }
 
 fn kind_of(low: &str, guess: &str, time_min: Option<f64>, msn: bool) -> &'static str {
-    if guess != "blank" && (msn || INFUSION_WORDS.iter().any(|w| has_word(low, w))) {
+    if guess != "blank" && (msn || has_any(low, &INFUSION_WORDS)) {
         return "infusion";
     }
     base_kind(low, guess, time_min)
@@ -165,7 +183,9 @@ fn blank_kind(low: &str) -> Option<String> {
         low.split(|c: char| !c.is_ascii_alphanumeric())
             .any(|w| w.starts_with(pre))
     };
-    if word("solv") {
+    if word("wash") {
+        Some("wash".into())
+    } else if word("solv") {
         Some("solvent".into())
     } else if word("proc") {
         Some("procedure".into())
@@ -230,19 +250,66 @@ fn assign_series(out: &mut [Campione], prefixes: &[Option<String>]) {
     }
 }
 
+/// The first word of a stem when it can be a matrix: 2-4 letters followed by more name (`TW` in `TW_PMS_T05`).
+fn matrix_word(stem: &str) -> Option<&str> {
+    let (w, rest) = stem.split_once(is_sep)?;
+    let ok = (2..=4).contains(&w.len()) && w.chars().all(|c| c.is_ascii_alphabetic());
+    (ok && !rest.is_empty()).then_some(w)
+}
+
+/// The matrix and the group proposed from the shape `MAT_COND_Tnn`: the first word of the names when at least two different words each start
+/// two or more files (`TW`, `MQ`), whatever they are. The group of a timed file is `MAT-COND` (its series without the matrix). Nothing is
+/// proposed with a single word: one matrix says nothing the series does not.
+fn assign_matrix(out: &mut [Campione]) {
+    let words: Vec<Option<String>> = out
+        .iter()
+        .map(|c| matrix_word(&guess_sample(&c.file).0).map(String::from))
+        .collect();
+    let mut counts: Vec<(&String, usize)> = Vec::new();
+    for w in words.iter().flatten() {
+        match counts.iter_mut().find(|(k, _)| *k == w) {
+            Some(e) => e.1 += 1,
+            None => counts.push((w, 1)),
+        }
+    }
+    counts.retain(|e| e.1 >= 2);
+    if counts.len() < 2 {
+        return;
+    }
+    for (c, w) in out.iter_mut().zip(&words) {
+        let Some(w) = w.as_ref().filter(|w| counts.iter().any(|e| e.0 == *w)) else {
+            continue;
+        };
+        c.matrix = w.clone();
+        let cond = c
+            .series
+            .get(w.len()..)
+            .map(|r| r.trim_start_matches(is_sep));
+        if let (true, Some(cond)) = (
+            c.series.starts_with(w.as_str()),
+            cond.filter(|r| !r.is_empty()),
+        ) {
+            c.group = format!("{w}-{cond}");
+        }
+    }
+}
+
+/// The role (`proponi` names) and the time of one name as `(minutes, start, end)`, the span in characters of the file stem: what `variabili` needs.
+pub(crate) fn ruolo_e_tempo(name: &str) -> (&'static str, Option<(f64, usize, usize)>) {
+    let (stem, guess) = guess_kind(name);
+    let lowc: Vec<char> = stem.to_lowercase().chars().collect();
+    let time = (guess == "sample").then(|| time_of(&lowc)).flatten();
+    let minutes = time.as_ref().map(|t| t.value * minutes_per(t.unit));
+    let kind = kind_of(&name.to_lowercase(), guess, minutes, false);
+    let keep = kind != "infusion" && kind != "qc";
+    let span = time.filter(|_| keep).zip(minutes);
+    (kind, span.map(|(t, m)| (m, t.start, t.end)))
+}
+
 /// The role (`proponi` names) and the minutes of one name, without the series, replicates and positions: what a caller that only classifies a name needs.
 pub fn ruolo_e_minuti(name: &str) -> (&'static str, Option<f64>) {
-    let (stem, _, guess) = guess_sample(name);
-    let lowc: Vec<char> = stem.to_lowercase().chars().collect();
-    let mut c = Campione::new(name, "", 1);
-    if let Some(t) = (guess == "sample").then(|| time_of(&lowc)).flatten() {
-        c.set_time(Some(t.value), t.unit);
-    }
-    let kind = kind_of(&name.to_lowercase(), guess, c.time_min, false);
-    let time = (kind != "infusion" && kind != "qc")
-        .then_some(c.time_min)
-        .flatten();
-    (kind, time)
+    let (kind, time) = ruolo_e_tempo(name);
+    (kind, time.map(|t| t.0))
 }
 
 /// The metadata proposed for `files` (`(name, SHA-256, kind of the file)`, in the order of injection; kind `msn` = an infusion); an infusion and a QC have no time.
@@ -295,6 +362,7 @@ pub fn proponi_spiegato(files: &[(String, String, String)]) -> Vec<Proposta> {
         out.push(c);
     }
     assign_series(&mut out, &prefixes);
+    assign_matrix(&mut out);
     number_replicates(&mut out);
     for (c, w) in out.iter_mut().zip(&written) {
         if let Some(n) = w {

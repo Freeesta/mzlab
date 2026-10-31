@@ -7,7 +7,11 @@ use super::ident::{algorithm, attributio_step, hr};
 
 /// `annot.level`: the Schymanski level of each feature from the evidence of the sources (`annotate::annotate`, scale of `data/livelli-1.json`).
 pub(super) fn level() -> Step {
-    let params = vec![
+    let optional = |p: Port| Port {
+        optional: true,
+        ..p
+    };
+    let mut params = vec![
         Param::number("spec_sim_min", "Library cosine")
             .min(0.0)
             .max(1.0)
@@ -52,10 +56,13 @@ pub(super) fn level() -> Step {
             .doc("Library entries named Spectral Match to ... (propagated annotations) are taken to Level 3")
             .advanced(),
     ];
+    params.extend(standard_params());
     Step {
         ins: vec![
-            Port::new("candidates", DataType::Candidates, "Library, in silico and suspect candidates").requires(hr()),
+            Port::new("candidates", DataType::Candidates, "Library, in silico and suspect candidates (candidates/1; screen/1 of screen.suspects gives suspect fragments)").requires(hr()).many(),
             Port::new("formulas", DataType::Formulas, "Candidate formulas"),
+            optional(Port::new("standards", DataType::Library, "Your standards, CSV: name, InChIKey, RT in min, optional precursor m/z and adduct: a library hit on one with the RT, score and mass in range is Level 1")),
+            optional(Port::new("spectra", DataType::Spectra, "MS2 spectra of the same run (spectra.ms2): the RT of each query, needed for the standards")),
         ],
         outs: vec![Port::new("annot", DataType::Annot, "Chosen annotation with its level and evidence")],
         params,
@@ -67,13 +74,38 @@ pub(super) fn level() -> Step {
             citation_key: "schymanski2014identifying",
             note: "the five-level scale of identification confidence",
         }],
-        errors: Vec::new(),
+        errors: vec!["err.flow.level.standards"],
         ..attributio_step(
             "annot.level",
             "Identification level",
-            "Gives each feature the level its evidence reaches (1, 2a, 2b, 3a, 3b, 4, 5; 0 = detected, not annotated), with the basis and the reasons. Level 2b is never given by the program: the chemist decides it. A CANOPUS class gives no level: it is a separate annotation.",
+            "Gives each feature the level its evidence reaches (1, 2a, 2b, 3a, 3b, 4, 5; 0 = detected, not annotated), with the basis and the reasons. Level 1 only with a standards file of yours; suspect fragments of screen.suspects give 3a. Level 2b is never given by the program: the chemist decides it. A CANOPUS class gives no level: it is a separate annotation.",
         )
     }
+}
+
+/// The Level 1 thresholds and the suspect fragments of the Flow: they replace the thresholds of the same gates in `data/livelli-1.json`.
+fn standard_params() -> Vec<Param> {
+    vec![
+        Param::number("std_rt_max", "Standard RT window")
+            .min(0.0)
+            .default_num(0.20)
+            .unit("min")
+            .doc("Level 1: the feature RT is within this of the RT of the standard you gave"),
+        Param::number("std_score_min", "Standard MS2 score")
+            .min(0.0)
+            .max(1.0)
+            .default_num(0.70)
+            .doc("Level 1: the MS2 score (entropy similarity, or cosine for a cosine hit) of the hit on the standard"),
+        Param::number("std_ppm_max", "Standard mass tolerance")
+            .min(0.0)
+            .default_num(5.0)
+            .unit("ppm")
+            .doc("Level 1: the precursor of the hit on the standard"),
+        Param::integer("suspect_fragments_min", "Suspect fragments")
+            .min(1.0)
+            .default_num(2.0)
+            .doc("Level 3a: at least this many fragments listed for a suspect are found in the feature MS2"),
+    ]
 }
 
 fn cascade() -> Algorithm {
@@ -100,19 +132,30 @@ fn cascade() -> Algorithm {
 /// `annot.regulatory`: membership of the identities in the regulatory and priority lists, and the screening of the lists as suspects.
 pub(super) fn regulatory() -> Step {
     Step {
-        ins: vec![Port::new("annot", DataType::Annot, "Annotated rows").requires(hr())],
+        ins: vec![
+            Port::new("annot", DataType::Annot, "Annotated rows").requires(hr()),
+            Port::new("lists", DataType::Library, "Regulatory package: a .mzsus with the listings extension (normative.mzsus)"),
+            Port {
+                optional: true,
+                ..Port::new("imported_lists", DataType::Library, "Regulatory lists you imported from an official file: .mzsus files (Library, Import an official file); each is compared whole, apart from the package, and a list never raises a level by itself").many()
+            },
+        ],
         outs: vec![Port::new("annot", DataType::Annot, "Rows with the list memberships")],
-        params: vec![Param::pair("window", "Mass window", 0.0)
-            .unit("Da")
-            .doc("Entries of the lists outside this range of monoisotopic mass are left out; absent: all the entries")],
+        params: vec![
+            Param::pair("window", "Mass window", 0.0)
+                .unit("Da")
+                .doc("Entries of the lists outside this range of monoisotopic mass are left out; absent: all the entries"),
+            Param::text("lists", "Regulatory lists").doc("Ids of the lists to compare, comma-separated; empty: every list in force"),
+            Param::text("include", "Also compare").doc("Statuses added to the lists in force: proposal, draft, reference; empty: none"),
+        ],
         algorithms: vec![list_membership(), suspect_screen(), ms2_confirm()],
         default_algorithm: Some("list_membership"),
         per_item: true,
-        errors: Vec::new(),
+        errors: vec!["err.flow.regulatory.package", "err.flow.regulatory.annot", "err.flow.regulatory.list", "err.flow.regulatory.include", "err.flow.regulatory.imported", "err.flow.regulatory.algorithm"],
         ..attributio_step(
             "annot.regulatory",
             "Regulatory lists",
-            "Compares the identities (and the suspects) with versioned snapshots of regulatory and priority lists. A list entry says what a compound is on a list, nothing about this sample; the snapshots are read from the campaign folder with their hash, no network.",
+            "Compares the identities with the regulatory package by InChIKey: the same full key is a match, the same first block a flagged match, a name or a formula never. A list entry says what a compound is on a list, nothing about this sample; no network.",
         )
     }
 }

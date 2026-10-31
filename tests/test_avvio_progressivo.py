@@ -355,7 +355,9 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
     const CartCarica = {{ note: () => {{}} }};
     let UPBUSY = 0;
     const CONVROWS = {{ clearDone: () => {{}}, paint: () => {{}}, onCancel: null }};
-    function checkGo() {{}}
+    const FILETAB = {{ flush: () => {{}} }};
+    function syncWork() {{}}
+    const OPENNOW = {{ note: () => {{}} }};
     function fail() {{}}
     const IDLE = [];
     const processed = [];
@@ -413,13 +415,14 @@ def test_segna_fallito_object_and_fallback_without_i18n():
     assert res["withoutI18N"] == "Calculation engine startup failed"
 
 
-def test_render_fase_dom_and_sessione_scheletro():
+def test_render_fase_dom_and_sessione_ripristino():
     code = f"""
     {DOM_HELPERS}
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     const faseEl = makeEl('avvio-fase');
-    const dropEl = makeEl('drop');
-    const skelEl = makeEl('drop-skeleton');
+    const openEl = makeEl('opening'), wdataEl = makeEl('wdata'), vEl = makeEl('v-data'), msgEl = makeEl('opn-msg');
+    for (const e of [openEl, vEl]) {{ const set = new Set(); e.classList = {{ add: c => set.add(c), remove: c => set.delete(c), contains: c => set.has(c) }}; }}
+    openEl.hidden = true;
     const store = {{}};
     global.window.localStorage = {{
       getItem: k => store[k] || null,
@@ -428,8 +431,10 @@ def test_render_fase_dom_and_sessione_scheletro():
     }};
     global.document.getElementById = id => {{
       if (id === 'avvio-fase') return faseEl;
-      if (id === 'drop') return dropEl;
-      if (id === 'drop-skeleton') return skelEl;
+      if (id === 'opening') return openEl;
+      if (id === 'wdata') return wdataEl;
+      if (id === 'v-data') return vEl;
+      if (id === 'opn-msg') return msgEl;
       return null;
     }};
 
@@ -448,24 +453,24 @@ def test_render_fase_dom_and_sessione_scheletro():
     AVVIO.segnaSessione(true);
     const haSess1 = AVVIO.haSessione();
     AVVIO.applicaIndizioSessione();
-    const dropHidden1 = dropEl.hidden, skelHidden1 = skelEl.hidden;
+    const wdataHidden1 = wdataEl.hidden, openHidden1 = openEl.hidden, opn1 = vEl.classList.contains('opn');
 
     AVVIO.rimuoviScheletro();
-    const dropHidden2 = dropEl.hidden, skelHidden2 = skelEl.hidden;
+    const wdataHidden2 = wdataEl.hidden, openHidden2 = openEl.hidden, opn2 = vEl.classList.contains('opn');
 
     AVVIO.segnaSessione(false);
     const haSess2 = AVVIO.haSessione();
 
     console.log(JSON.stringify({{
       faseTxt, faseHidden, faseAfterReady,
-      haSess1, dropHidden1, skelHidden1,
-      dropHidden2, skelHidden2, haSess2
+      haSess1, wdataHidden1, openHidden1, opn1,
+      wdataHidden2, openHidden2, opn2, haSess2
     }}));
     """
     res = run_node(code)
     assert "46%" in res["faseTxt"] and not res["faseHidden"]
     assert res["faseAfterReady"] is True
-    assert res["haSess1"] is True and res["dropHidden1"] is True and res["skelHidden1"] is False
-    assert res["dropHidden2"] is False and res["skelHidden2"] is True
+    assert res["haSess1"] is True and res["wdataHidden1"] is True and res["openHidden1"] is False and res["opn1"] is True
+    assert res["wdataHidden2"] is False and res["openHidden2"] is True and res["opn2"] is False
     assert res["haSess2"] is False
 

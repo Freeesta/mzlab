@@ -209,7 +209,7 @@ mod tests {
             e.params
                 .iter()
                 .find(|(n, _)| *n == k)
-                .map(|(_, v)| v.to_string())
+                .map(|(_, v)| v.clone())
         };
         assert_eq!(p("budget_mb").as_deref(), Some("192"));
         assert_eq!(p("libero_mb").as_deref(), Some("178"));

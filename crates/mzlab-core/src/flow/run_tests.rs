@@ -115,6 +115,7 @@ fn record(seed: u64, workers: usize) -> (String, Vec<String>) {
         version: "x".into(),
         commit: None,
         platform: "native",
+        ..Default::default()
     };
     (
         prov_json(&agent, Some("p"), &run),

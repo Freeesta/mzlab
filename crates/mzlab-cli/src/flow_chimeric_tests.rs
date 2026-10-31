@@ -56,10 +56,7 @@ fn dda_mzml_window(half: f64) -> Vec<u8> {
     w.close_spectra().unwrap();
     let text = String::from_utf8(w.finish().unwrap()).unwrap();
     let cv = |acc: &str, name: &str| {
-        format!(
-            "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{}\"/>",
-            half
-        )
+        format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{half}\"/>")
     };
     let mut parts = text
         .split("</isolationWindow>")

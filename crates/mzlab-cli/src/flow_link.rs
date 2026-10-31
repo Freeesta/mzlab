@@ -21,16 +21,20 @@ use mzlab_feat_wasm::run_tp::{link_evidence, LinkParent, Series as LinkSeries};
 
 use crate::flow::{all_inputs, io, read_one, FileRunner, Lineage, Made};
 use crate::flow_base::{open, rebuild, Files};
+use crate::flow_nature::of_files;
 use mzlab_core::step::DataType;
+use mzlab_feat::nature::{open_polarity, polarity_estimate};
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
-/// The parent of the file: neutral formula, SMILES when there is one, and the retention time when the file says it.
+/// The parent of the file: neutral formula, SMILES when there is one, and the retention time and the adduct when the file says them.
 pub struct Parent {
     pub formula: String,
     pub smiles: String,
     pub structure: String,
     pub rt: Option<f64>,
+    /// The adduct of the parent ion when the file says it (`[M-H]-`): its sign is the polarity of the products; `[M+H]+` otherwise.
+    pub adduct: String,
 }
 
 fn param(job: &Job, name: &str) -> Option<f64> {
@@ -46,7 +50,7 @@ pub fn link_params(job: &Job) -> LinkParams {
     mzlab_feat_wasm::interp::link_params(&|n| param(job, n))
 }
 
-/// The parent file: a JSON `{"formula"|"neutral", "smiles", "rt"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
+/// The parent file: a JSON `{"formula"|"neutral", "smiles", "rt", "adduct"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
 pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
     let text = String::from_utf8_lossy(bytes);
     let text = text.trim();
@@ -96,11 +100,18 @@ pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
     if formula.is_empty() {
         return Err(Error::new("error.hypo.noParent"));
     }
+    let adduct = json
+        .as_ref()
+        .and_then(|v| v.get("adduct").and_then(Value::str))
+        .map(|a| a.trim().to_string())
+        .filter(|a| elements::ion_mz(0.0, a).is_some())
+        .unwrap_or_else(|| "[M+H]+".into());
     Ok(Parent {
         formula,
         smiles,
         structure,
         rt,
+        adduct,
     })
 }
 
@@ -151,12 +162,13 @@ pub fn link_bytes(
     check_series(series_of)?;
     let mut recipe = rebuild(lin)?;
     let p = parent_of(parent)?;
-    let roles = TpRoles::from_json(&String::from_utf8_lossy(samples))?;
+    let roles = TpRoles::for_table(&String::from_utf8_lossy(samples), table)?;
     let mut ix = series_of
         .indexes
         .iter()
         .map(open)
         .collect::<Result<Vec<_>>>()?;
+    let polarity = given_polarity(job);
     let clock = Instant::now();
     let (mut stored, mut again) = (Files(lin.peaks.clone()), Files(lin.peaks.clone()));
     let mut reopen = |k: usize| open(&series_of.indexes[k]);
@@ -173,7 +185,7 @@ pub fn link_bytes(
         table,
         &roles,
         &mut recipe,
-        given_polarity(job),
+        polarity,
         LinkSeries {
             indexes: &mut ix,
             peaks: &mut stored,
@@ -224,11 +236,16 @@ pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Made> {
         &parent.1[..],
         &hypotheses.1[..],
     ];
-    let roles = TpRoles::from_json(&String::from_utf8_lossy(files[1]))?;
+    let roles = TpRoles::for_table(&String::from_utf8_lossy(files[1]), files[0])?;
     let bytes = link_bytes(r, job, &series, files)?;
     let out = r.work.join(format!("{}.mzfeat", job.instance.id));
     std::fs::write(&out, bytes).map_err(io)?;
     let mut made = Made::new("tp", r.keep(out, DataType::Tp)?);
+    if given_polarity(job).is_none() {
+        let detect = rebuild(&series.lineage)?.detect.polarity;
+        made.estimates
+            .extend(open_polarity(detect, &of_files(&series.indexes)).map(polarity_estimate));
+    }
     if no_t0(&roles) {
         made.warnings.push(WARN_NO_T0.into());
     }

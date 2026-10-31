@@ -2,6 +2,7 @@
 //! the MSn tree of the parent (`localize_sites`) when there is one, otherwise from the cleavages of `posizioni::match_spectrum`. It declares how sure it
 //! is (`site`, `region`, `uncertain`, `cannot_say`) with the reasons, and never gives an identity: the sublevel is the one of `posiz/1`.
 
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 use mzlab_core::elements::{self, Formula};
@@ -360,7 +361,7 @@ fn decide(
     let mut out = undetermined("", vec![]);
     out.informative = informative;
     let mut alive: Vec<&Vote> = votes.iter().filter(|v| v.status != "excluded").collect();
-    alive.sort_by(|a, b| b.ll.total_cmp(&a.ll));
+    alive.sortc_by(|a, b| b.ll.total_cmp(&a.ll));
     let reasons = &mut out.reasons;
     if informative < p.min_informative {
         reasons.push("few_fragments");

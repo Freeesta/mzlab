@@ -10,7 +10,7 @@ const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("pfas") : "qqq.pfas";
 const MAX_FEATURES = 300, MAX_ROWS = 200, POOL = 4;
 const t = (/** @type {string} */ k, /** @type {any} */ p = undefined) => I18N.t(k, p);
 const eh = (/** @type {any} */ s) => EH(s == null ? "" : s);
-const fmt = (/** @type {any} */ v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
+const fmt = (/** @type {any} */ v, d = 3) => I18N.dash(v, d);
 const ELEMENTS = "C:1-30,H:0-10,F:3-40,O:0-6,N:0-1,S:0-1";
 const st = Object.assign({ ion: "[M-H]-", tol: 3, ms2tol: 5, minRel: 1 }, lsObj(KEY));
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
@@ -83,7 +83,7 @@ function plotSvg(/** @type {NonNullable<typeof res>} */ rs) {
   const pts = rs.rows.filter(r => r.mc != null);
   if (!pts.length) return "";
   const xs = pts.map(r => /** @type {number} */ (r.mc)), ys = pts.map(r => /** @type {number} */ (r.mdc));
-  let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  let x0 = minOf(xs), x1 = maxOf(xs), y0 = minOf(ys), y1 = maxOf(ys);
   const px = (x1 - x0 || 1) * 0.06, py = (y1 - y0 || 0.01) * 0.12;
   x0 -= px; x1 += px; y0 -= py; y1 += py;
   const X = (/** @type {number} */ v) => L + (v - x0) / (x1 - x0) * (W - L - R), Y = (/** @type {number} */ v) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);

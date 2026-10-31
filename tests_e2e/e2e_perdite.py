@@ -87,7 +87,7 @@ try:
             d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "Levsen" not in d, d
             assert "(" in pg.inner_text("#nl-res") and "." in pg.inner_text("#nl-res"), "decimals in HR"
             pg.evaluate("window.HR.isHr=()=>false"); pg.fill("#nl-q", "62")
-            import re; assert not re.search(r"\d\.\d", pg.inner_text("#nl-res")), pg.inner_text("#nl-res")      # LR: rounded to the unit
+            import re; assert not re.search(r"\d\.\d{2,}", pg.inner_text("#nl-res")), pg.inner_text("#nl-res")      # LR: masses to one decimal at most (and the error in Da), never the four decimals of HR
             pg.fill("#nl-q", "")
         step("LR rounded to the unit / HR with four decimals, no references in both", hr_version)
         def narrow_axe():
@@ -96,12 +96,22 @@ try:
             pg.locator("#nl-pol [data-p='-']").click(); pg.locator('#nl-list [data-d="g28"]').click()
             RUN = """() => axe.run(document.querySelector('#sb-panel-losses'), {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.map(v => [v.id, v.impact, v.nodes.length]))"""
             v = pg.evaluate(RUN); assert not v, v
-            for w, h in [(1440, 900), (400, 800)]:
-                pg.set_viewport_size({"width": w, "height": h})
-                if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')")
-                sw = pg.evaluate("(()=>{const r=document.querySelector('#sb-panel-losses');return [r.scrollWidth>r.clientWidth+1,document.documentElement.scrollWidth>innerWidth]})()"); assert not any(sw), (w, sw)
-                tgt = pg.evaluate("[...document.querySelectorAll('#nl-list .nlrow')].every(b=>{const q=b.getBoundingClientRect();return q.width>=24&&q.height>=24})"); assert tgt, w
-            pg.set_viewport_size({"width": 1400, "height": 1000})
+            SW = "(()=>{const r=document.querySelector('#sb-panel-losses');return [r.scrollWidth>r.clientWidth+1,document.documentElement.scrollWidth>innerWidth]})()"
+            try:
+                for w, h in [(1440, 900), (400, 800)]:
+                    pg.set_viewport_size({"width": w, "height": h})
+                    if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')")
+                    # the layout settles after the resize event; wait for the state, then report who overflows
+                    try: attendi(pg, f"!({SW}).some(Boolean)", 5000)
+                    except TimeoutError: pass
+                    sw = pg.evaluate(SW)
+                    if any(sw):
+                        wide = pg.evaluate("[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,6).map(e=>e.tagName+'#'+e.id+'.'+e.className+' '+Math.round(e.getBoundingClientRect().right))")
+                        raise AssertionError(f"horizontal overflow {(w, sw, pg.evaluate('innerWidth'), wide)}")
+                    tgt = pg.evaluate("[...document.querySelectorAll('#nl-list .nlrow')].every(b=>{const q=b.getBoundingClientRect();return q.width>=24&&q.height>=24})"); assert tgt, w
+            finally:
+                # later steps assume the desktop viewport even when this one fails
+                pg.set_viewport_size({"width": 1400, "height": 1000})
             pg.locator('#nl-list [data-d="g28"]').click(); pg.locator("#nl-pol [data-p='-']").click(); shut(pg, "#refx")
         step("axe without violations on the panel; 1440 and 400 px without horizontal scroll; targets ≥ 24 px", narrow_axe)
         def ruler():
@@ -126,7 +136,7 @@ try:
             shut(pg, "#refx")
             l = lbl_pos(300, 321.9819); assert l and l[3] and "[M+Na]" in l[2] and "[M+H]" in l[2], l
             pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)
-            assert pg.evaluate("BARRA.curTab === 'adducts'"), "right click on an adduct label: adducts tab"
+            assert pg.evaluate("BARRA.curTab === 'calc'"), "right click on an adduct label: the calculator tab, which holds the adducts table"
             shut(pg, "#refx")
         step("4.8: ruler label: right click straight to losses / adducts, short adduct symbol with the full form in the tip", ruler_label)
     r.close()
