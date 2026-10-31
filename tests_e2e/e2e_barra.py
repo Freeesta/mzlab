@@ -56,8 +56,8 @@ try:
         def narrow():
             pg.set_viewport_size({"width": 700, "height": 900}); pg.wait_for_timeout(600)
             h = pg.evaluate("Q('#tools').offsetHeight"); s = sel()
-            assert h > 45 and s["w"] <= 700 * 0.6 + 2, (h, s)
-        step("narrow window: the bar wraps", narrow)
+            assert h < 45 and s["w"] <= 700 * 0.6 + 2, (h, s)       # one row at any width: the selector shrinks, the «+ panel» group scrolls (e2e_toolbar_wrap)
+        step("narrow window: the bar stays on one row", narrow)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
