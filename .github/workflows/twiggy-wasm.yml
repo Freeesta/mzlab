@@ -29,7 +29,7 @@ jobs:
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
           wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
-          cargo install twiggy --version 0.7.0 --locked --force
+          cargo install twiggy --version 0.8.0 --locked --force
       - name: Build the head
         run: tools/twiggy_wasm.sh "$RUNNER_TEMP/head"
       - name: Build the base
