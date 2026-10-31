@@ -6,14 +6,20 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:260]))
+def poll(cond, n=40):
+    for _ in range(n):
+        if cond(): return
+        frames(pg, 15)
+    raise AssertionError("state not reached")
 r = Run(port=8865, wd="/tmp/wd_desporta")
 try:
     with sync_playwright() as p:
+        global pg
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
-        pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=90000); pg.wait_for_timeout(800)
+        pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=90000)
         K = "document.querySelector('#kframe').contentWindow.ketcher"
-        pg.evaluate("TPDraw.load('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1500)       # paracetamol: 11 heavy atoms
+        pg.evaluate("TPDraw.load('CC(=O)Nc1ccc(O)cc1')"); poll(lambda: len(pg.evaluate("TPDraw.smiles()")) > 5)       # paracetamol: 11 heavy atoms
         def smiles():
             smi = pg.evaluate("TPDraw.smiles()")
             assert smi.count("c") == 6 and smi.count("N") == 1 and smi.count("O") == 2, smi
@@ -24,7 +30,7 @@ try:
             n = int(mol.split("\n")[3][:3]); assert n == 11, ("heavy atoms", n)
         step("molfile export", molfile)
         def draw_more():
-            pg.evaluate(f"{K}.addFragment('CCO')"); pg.wait_for_timeout(1200)
+            pg.evaluate(f"{K}.addFragment('CCO')"); poll(lambda: "." in pg.evaluate("TPDraw.smiles()"))
             smi = pg.evaluate("TPDraw.smiles()")
             assert len(smi.split(".")) == 2, smi
             ket = pg.evaluate(f"{K}.getKet()")
