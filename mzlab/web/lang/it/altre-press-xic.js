@@ -135,7 +135,6 @@ I18N.add("it", {
   "tbl.loss.searchPh": "Δm, es. 62",
   "tbl.loss.searchTitle": "Scrivi la differenza di massa osservata: evidenzia le perdite con quel valore (secondo la tolleranza scelta) e mostra coppie e ripetizioni che la compongono, i contaminanti e gli addotti",
   "tbl.loss.polTitle": "Polarità tipica della perdita",
-  "tbl.iso.unavailable": "abbondanze isotopiche non disponibili per {s}",
   "tbl.iso.adductTooMany": "l'addotto toglie più atomi di quanti ce ne sono",
   "side.addf": "Carica altri file",
   "side.info.aria": "Barra informazioni del banco",
