@@ -58,6 +58,8 @@ function syncWork(/** @type {boolean} */ force = false) {
   workQ("#wtable").hidden = !(w === "table" || w === "add" || land);
   // never inert: on the landing with a session (panels closed by the X) it brings the table back; before a session it scrolls the table under the drop area into view
   const sb = workQ("#samptab"); sb.hidden = !tab; sb.setAttribute("aria-pressed", String(w === "table")); sb.disabled = false;
+  // the add buttons scroll sideways in a narrow window: with every button disabled the strip has no stop of its own, so the keyboard reaches it directly (axe scrollable-region-focusable)
+  const ga = workQ("#g-add"); if (none) ga.tabIndex = 0; else ga.removeAttribute("tabindex");
   TOOLS_OFF.forEach(q => { const b = workQ(q); b.disabled = none; b.setAttribute("aria-disabled", String(none)); });
   NAV_OFF.forEach(q => { const b = workQ(q); if (none) b.disabled = true; b.setAttribute("aria-disabled", String(b.disabled)); });
   // the empty side list shows a plain hint (it still takes a drop: the dashed box of #fl-dz appears only while a drag is over it)

@@ -73,7 +73,7 @@ try:
                 q = r.b.new_page(viewport={"width": w, "height": 900}, reduced_motion="reduce", locale="it-IT")
                 q.add_init_script(init)
                 try:
-                    q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_selector("#drop", state="attached"); attendi(q, "!document.querySelector('#v-data').hidden && document.querySelector('#sb-toggle').innerText.trim().length > 0")
+                    q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_selector("#drop", state="attached"); attendi(q, "!document.querySelector('#v-data').hidden && document.querySelector('#sb-toggle').innerText.trim().length > 0 && !!document.querySelector('#v-workspace').dataset.work")   # the work area has taken its state
                     axe(q)
                     small = q.evaluate("[...document.querySelectorAll('#stbar button:not([disabled]), #sb-toggle, #drop')].filter(e => { const b = e.getBoundingClientRect(); return b.width && (b.width < 24 || b.height < 24); }).length")
                     assert not small, ("targets below 24 px on the landing", w, small)
