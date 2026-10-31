@@ -58,9 +58,9 @@ SMOKE = ["e2e3", "e2e_opfs_promote", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spe
 # Tabui and the guided tour (about a minute together) join the smoke round on Chromium Linux only (the PR job): not yet measured on Firefox, WebKit and Windows.
 SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_esporta_dati", "e2e_lab"]
 # Console messages that are known and harmless (not counted as browser errors).
-BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400",
+BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"NS_BINDING_ABORTED", r"A ServiceWorker intercepted the request and encountered an unexpected error", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded", r"cross-world service worker resource mismatch",
-          r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests = page reloaded or closed by the test
+          r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests (Chromium ERR_ABORTED, Firefox NS_BINDING_ABORTED and its service-worker notice) = page reloaded or closed by the test
 
 
 def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, float]:
