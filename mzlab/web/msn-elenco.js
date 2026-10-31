@@ -59,7 +59,7 @@ function headHtml(V, all) {
     <label>RT ${inp("rt0", "msnl.f.min", "msnl.f.rt0", 64)}</label><label>– ${inp("rt1", "msnl.f.max", "msnl.f.rt1", 64)}</label>${raw(lvOpt)}
     <label><input type="checkbox" data-f="all"${raw(all ? " checked" : "")}> ${T("msnl.expand")}</label></div>
     <div class="muted sm" style="margin:4px 0" aria-live="polite" data-n></div>
-    <div class="msnl" role="grid" tabindex="0" aria-label="${T("msnl.grid")}" aria-description="${T("msnl.hint")}" aria-rowcount="0"><div class="msnl-r msnl-h" role="row" aria-rowindex="1">${hd}</div><div class="msnl-b" role="rowgroup"></div></div>
+    <div class="msnl" role="treegrid" tabindex="0" aria-label="${T("msnl.grid")}" aria-description="${T("msnl.hint")}" aria-rowcount="0"><div class="msnl-r msnl-h" role="row" aria-rowindex="1">${hd}</div><div class="msnl-b" role="rowgroup"></div></div>
     <div class="muted sm" style="margin-top:4px">${T("msnl.hint")}</div>`;
 }
 
@@ -175,7 +175,7 @@ css.textContent = `.msnl{position:relative;overflow:auto;height:min(60vh,560px);
 .msnl-r{display:grid;grid-template-columns:72px 92px 40px minmax(130px,1.4fr) 32px minmax(90px,1fr) 78px 104px;align-items:center;height:${H}px;line-height:${H}px;white-space:nowrap;cursor:pointer;position:absolute;left:0;right:0;min-width:640px}
 .msnl-r>span{overflow:hidden;text-overflow:ellipsis;padding:0 4px;text-align:right}.msnl-r>span:nth-child(6){text-align:left}.msnl-r:hover,.msnl-r.cur{background:var(--sel)}.msnl-r.cur{box-shadow:inset 2px 0 var(--accent)}
 .msnl-g{font-weight:500;border-top:1px solid var(--line)}.msnl-g>span:first-child{text-align:left}.msnl-r button{min-height:22px;min-width:40px;padding:0 6px;margin-left:4px;font-size:.85em;line-height:20px}
-.msnl-h{position:sticky;top:0;z-index:1;background:var(--panel);border-bottom:1px solid var(--line);cursor:default}.msnl-h button{background:none;border:0;font-weight:600;padding:0;color:inherit;cursor:pointer;margin:0;min-width:0}
+.msnl-h{position:sticky;top:0;z-index:1;background:var(--panel);border-bottom:1px solid var(--line);cursor:default}.msnl-h button{background:none;border:0;font-weight:600;padding:0;color:inherit;cursor:pointer;margin:0;min-width:24px;min-height:24px}
 .msnl-h [aria-sort=ascending] button::after{content:" ▲"}.msnl-h [aria-sort=descending] button::after{content:" ▼"}.msnl-b{position:relative}
 .mt-tabs{display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid var(--line)}.mt-tabs [role=tab]{border:1px solid var(--line);border-bottom:0;border-radius:6px 6px 0 0;min-height:28px;padding:2px 12px;background:none;color:inherit}.mt-tabs [aria-selected=true]{background:var(--sel);font-weight:600}`;
 document.head.appendChild(css);
