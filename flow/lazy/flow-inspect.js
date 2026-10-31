@@ -43,6 +43,7 @@
       if (node.ids.length > 1) box.append(el("h4", { text: F.nameOf(step.id)[0] }), el("p", { class: "fl-note", text: F.nameOf(step.id)[2] }));
       if (!c.simple) { const src = sources(S, inst, c.done); if (src) box.append(src); }
       box.append(F.compareBody && inst.step.startsWith("meta.compare@") ? F.compareBody(S, inst, c.done) : F.form(inst, step, c.done));
+      if (F.importedLists && /^(screen\.suspects|annot\.regulatory)@/.test(inst.step)) box.append(F.importedLists(S, inst, step, c.done));
       if (!c.simple && F.compareButton) box.append(F.compareButton(S, inst, step, c.done));
     }
     const filesTable = F.liveCard ? F.liveCard.files(node) : null;
