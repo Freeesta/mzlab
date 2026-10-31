@@ -85,6 +85,18 @@ def loaded(pg, timeout=120000):
     except Exception as e:
         st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), up: (document.querySelector('#up') || {}).innerText })")
         raise TimeoutError(f"{e} | still busy: {st}") from None
+def diag(pg):
+    """What the page holds right now, for the message of a failed step: conversion rows, the files of the Data tab, the notice line, and mzlab/files/ in OPFS (name, size, age)."""
+    try:
+        return pg.evaluate("""async () => {
+          const o = { conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), files: (ST.files || []).map(f => f.name), up: (document.querySelector('#up') || {}).innerText, busy: [UPBUSY, OPENNOW.busy()] };
+          try {
+            const d = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab').then(r => r.getDirectoryHandle('files')), out = [];
+            for await (const [n, h] of d.entries()) { try { const f = await h.getFile(); out.push(n + ':' + f.size + ':' + (Date.now() - f.lastModified) + 'ms'); } catch (e) { out.push(n + ':' + e.name); } }
+            o.opfs = out;
+          } catch (e) { o.opfs = String(e); }
+          return o; }""")
+    except Exception as e: return f"diag failed: {str(e)[:80]}"
 def open_first(pg, timeout=120000):
     """The first file shown: the files open as soon as they are read, hidden, and the landing stays until the student shows one.
     Waits until nothing is read or opened any more, then clicks the row of the first file of the sample table that is not a blank (firstOpenK) in the side list, unless a file is already shown."""

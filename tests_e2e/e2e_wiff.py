@@ -5,13 +5,13 @@ Needs the site and the .wasm: python tools/build_site.py; the .wasm is built her
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT
+from lib import diag, ROOT
 
 from lib import free_port; PORT = free_port()
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
-    except Exception as e: print("  ", (name, "FAIL " + str(e)[:600]))
+    except Exception as e: print("  ", (name, "FAIL " + str(e)[:1500]))
 
 wasm = ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js"
 if not (ROOT / "site" / "index.html").exists():
@@ -62,8 +62,8 @@ try:
         step("a .wiff with two samples gives one mzML per sample (either order of the files)", several)
         def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
             seen = set(pg.evaluate("Array.from(window.__rows)"))
-            assert {"two.wiff", "serie.wiff"} <= seen, seen
-            assert pg.locator("#fl-up [aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.running().length") == 0
+            assert {"two.wiff", "serie.wiff"} <= seen, (seen, diag(pg))
+            assert pg.locator("#fl-up [aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.running().length") == 0, diag(pg)
         step("the pairs and the samples are listed (in conversion) before their mzML is ready", rows_while_converting)
         def rows_progress():                             # the bar of a row moves without drawing the list again
             pg.evaluate("CONVROWS.add('x_s1.mzML', 'wait'); CONVROWS.add('x_s2.mzML', 'wait'); CONVROWS.set('x_s1.mzML', 'run', 0)")
@@ -129,7 +129,7 @@ try:
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)
-            except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"))
+            except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"), diag(pg))
         step("mzFinder lists the converted Full Scan file", mzfinder)
         def variante():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
