@@ -6,7 +6,7 @@ Sì, ci conteniamo, ma **per il peso, non per la compatibilità**. Il freno è `
 Il prezzo è +32-37 % sul motore (1,77 → 2,34-2,42 MB). La compatibilità costa poco: SIMD128 vale solo +5-15 % (lo supportano tutti i browser bersaglio), zlib-rs al posto di miniz vale 1,5-2× sull'inflate. I tempi di compilazione dei moduli sono trascurabili (10-19 ms per modulo, anche a O3). Thread wasm, memory64 e relaxed SIMD oggi non convengono (§5).
 
 ## 2. Come costruiamo oggi (audit)
-- **Toolchain**: Rust 1.97.0 stabile (`rust-toolchain.toml`), solo `wasm32-unknown-unknown`, niente nightly né `-Zbuild-std`. `wasm-bindgen` 0.2.129 (`--target web`). `wasm-opt` = **binaryen version_132** dal tarball ufficiale GitHub con SHA-256 fissato (`tools/wasm_opt.sh`; ripiego npm `wasm-opt@1.4.0` = version_112 solo se il tarball non è utilizzabile).
+- **Toolchain**: Rust 1.97.0 stabile (`rust-toolchain.toml`), solo `wasm32-unknown-unknown`, niente nightly né `-Zbuild-std`. `wasm-bindgen` 0.2.129 (`--target web`). `wasm-opt` = **binaryen version_133** dal tarball ufficiale GitHub con SHA-256 fissato (`tools/wasm_opt.sh`; ripiego npm `wasm-opt@1.4.0` = version_112 solo se il tarball non è utilizzabile).
 - **Profilo** (`Cargo.toml`): `release` = `opt-level = "z"`, `lto = true` (fat), `codegen-units = 1`, `panic = "abort"`; niente `strip` (non serve: `wasm-opt` toglie la sezione `name`, 352 KB su 850 KB nel banco; DWARF assente). `desktop` e `cli` ereditano con `opt-level = 3`, ma non costruiscono `.wasm`.
 - **wasm-opt**: `-Oz --enable-bulk-memory --enable-sign-ext --enable-mutable-globals --enable-nontrapping-float-to-int --enable-reference-types --enable-multivalue --enable-simd`; i lettori aggiungono `--converge --low-memory-unused --vacuum --dae …` (−2,5 %).
 - **Target-feature attive** (`rustc --print cfg --target wasm32-unknown-unknown`, Rust 1.97): `bulk-memory`, `multivalue`, `mutable-globals`, `nontrapping-fptoint`, `reference-types`, `sign-ext` (predefinite del target, non scelte da noi). **Accesa da `.cargo/config.toml`**: `simd128` (`+simd128`, tutti i moduli). **Spente**: `extended-const`, `tail-call`, `exception-handling`, `relaxed-simd`, `atomics`. Nessun `-C target-cpu`. `.cargo/config.toml` dà memoria iniziale 32 MB, massima 4 GiB e `+simd128`.
@@ -48,7 +48,7 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 - **O2 / Os**: O2 come O3 (centroidi più lenti, 547 KB); Os a metà (499 KB, lettura HR 1168 ms in Node). Non convengono.
 - **SIMD128 (autovettorizzazione)**: −1,5 % di peso con `z`, +0,6 % con O3; +5-15 % su lettura e indice, nullo sul resto. Coerente con `ottimizzazioni-tentate.md` (22/10, 20 Full Scan LR: 9,1 contro 9,3 s): il guadagno è piccolo ma gratuito.
 - **zlib-rs** (feature `zlib-rs` di `flate2`, già nel `Cargo.lock` 0.6.8): +42-43 KB (+8 %) sul banco; inflate ×1,35-2,3, indice HR −9 % (Chromium).
-- **binaryen 132 contro 112**: stesso peso (−0,1 %), stessa velocità, `wasm-opt` **8× più veloce** (1,5 contro 12,8 s per il banco).
+- **binaryen 132/133 contro 112**: stesso peso (−0,1 %), stessa velocità, `wasm-opt` **8× più veloce** (1,5 contro 12,8 s per il banco).
 - **Compilazione e istanza** (Chromium 153, `compileStreaming`, mediana di 5, a freddo, senza cache HTTP): motore 14-19 ms, HR 11-14 ms, Attributio 11-14 ms a `z` e a O3; `new WebAssembly.Module` sincrono 4-8 ms; istanza < 1 ms. V8 compila con Liftoff e ottimizza in background: il «costo di compilazione del modulo pesante» non esiste alle nostre taglie; conta solo il download (+205-225 KB gzip per il motore a O3, una volta: poi `sw.js`).
 - **Pool di worker** (Chromium, 4 vCPU, modulo O3, lavori indipendenti): 1, 2, 4 worker in 444, 449, 456 ms (scala ×4), 8 worker 941 ms. Il parallelismo fra file c'è già e scala lineare fino ai core.
 
@@ -103,7 +103,7 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 **Un solo build, quello veloce**: SIMD128 attivo, `opt-level = 3` dove il tempo si spende, `-Oz` di binaryen recente per il peso, nessun ripiego (coerente con «un solo motore, nessun ripiego»). Due build (baseline + veloce) costerebbero un secondo giro di `sito-wasm-*` (~600 s di CPU in CI per PR), il doppio dei byte in `site/` e il doppio delle prove e2e, per servire browser fuori dal bersaglio. Un browser senza SIMD128 riceve l'errore di compilazione e la pagina dice di aggiornarlo (chiave i18n nuova).
 
 **Ordine per guadagno/costo**:
-1. **binaryen 132** in `tools/wasm_opt.sh` (DEV-1): stesso peso, `wasm-opt` 8× più veloce (≈ 11 s risparmiati per modulo, ~20 moduli, in parallelo con cargo). Rischio basso.
+1. **binaryen 133** in `tools/wasm_opt.sh` (DEV-1): stesso peso, `wasm-opt` 8× più veloce (≈ 11 s risparmiati per modulo, ~20 moduli, in parallelo con cargo). Rischio basso.
 2. **`+simd128`** (DEV-3): +5-15 % su lettura e indice, peso −1,5 %/+0,6 %, browser minimi Chrome 91 / Firefox 89 / Safari 16.4.
 3. **O3 sui crate caldi** (DEV-2): lettura ×1,5, indice ×1,4, picchi ×2,7 (Chromium; ×1,6-2,9 in Node); peso motore +32 % (+570 KB, +205 KB gzip), HR +3 %, Attributio +1 %. Richiede di alzare i tetti.
 4. **zlib-rs** (DEV-4): inflate ×1,35-2,3, indice HR −9 %, +43 KB per modulo che legge mzML; cambia i byte del gzip/zlib che scriviamo (convertitore) se usato anche per comprimere.
@@ -115,7 +115,7 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 - **Lettori**: peso a O3 da misurare in DEV-2 (`opentfraw` e `mzlab-lettori` fra i crate caldi).
 - **Browser minimi dichiarati**: Chrome/Edge 91, Firefox 89, Safari 16.4 desktop (con SIMD128).
 - **zlib-rs**: è una feature di un crate già presente (non una dipendenza nuova), ma cambia i byte compressi del convertitore: o solo decompressione (zlib-rs diretto per l'inflate, miniz per scrivere) o `conv/1` nuova con prima/dopo (già previsto in `docs/studi/raw-mzml-immediato/DUBBI.md` punto 5).
-- **binaryen da GitHub** al posto di npm (`wasm-opt@1.4.0` è fermo dal 2023; `wasm-opt@2.0.1` è del 17 ott 2026, troppo nuovo e con pacchetti per piattaforma): tarball `version_132` con SHA-256 fissato.
+- **binaryen da GitHub** al posto di npm (`wasm-opt@1.4.0` è fermo dal 2023; `wasm-opt@2.0.1` è del 17 ott 2026, troppo nuovo e con pacchetti per piattaforma): tarball `version_133` con SHA-256 fissato.
 
 ## 9. Come rifare le misure
 Il banco (DEV-5) costruisce lo stesso crate nelle varianti `base` (`z`, `-Oz`), `o3`, `o3simd`, `o3simd_zrs`, `mix` e lo esegue in Node (`initSync`) e in Chromium (Playwright, `compileStreaming`) con il mzML HR sintetico da 87 MB generato da `mzmlwrite` (seme fisso) e `B_FullMass-t15` di `dati_sintetici.py`. Ogni variante deve dare le stesse somme di controllo; i tempi si confrontano solo sulla stessa macchina, mediana di 5 giri.
