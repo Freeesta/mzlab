@@ -1,4 +1,4 @@
-# Modulo «aperti»: formati aperti (mzML con numpress, mzXML)
+# Modulo «aperti»: formati aperti (mzML con numpress, mzML gzip, mzXML)
 
 Famiglia `aperti` (`crates/mzlab-lettori/src/aperti/`, feature `aperti`, tetto 393 216 B, `.wasm` in `wasm-lettori/aperti/`). Contratto dei lettori e caricamento a richiesta: `lettori-modulo.md`, `estendere.md`.
 
@@ -11,6 +11,10 @@ Famiglia `aperti` (`crates/mzlab-lettori/src/aperti/`, feature `aperti`, tetto 3
 - Pagina: `LETTORI_FAM.aperti` (`lettori-famiglie.js`) e `LETTORI_MOD.variante` (`lettori-modulo.js`: legge 64 KB di un `.mzML` e poi raddoppia fino a 16 MB, come `riconosci`, fino alla fine del primo `</spectrum>`) fanno arrivare al modulo, da `moduloWants` (`shell.js`), gli mzML che portano numpress; gli altri vanno al motore.
 - Prove: `crates/mzlab-lettori/tests/aperti_numpress.rs` (file sintetici; costruttori in `tests/comune/`), `aperti_numpress_ostili.rs` (casi ostili e dati veri se c'è `MZLAB_DATI`), unit in `numpress/tests.rs`, `tests_e2e/e2e_lettori_modulo.py` (mzML numpress e gemello zlib).
 - Limiti noti: i cvParam dello spettro che la riscrittura non conosce diventano userParam «ACC nome» nell'mzML riscritto; `dataProcessing`, `referenceableParamGroup` e `scanSettings` non passano (`grezzi-non-estratti.md`).
+
+## mzML gzip (`aperti/mzml_gz.rs`)
+- `VOCE` `id "mzml-gz"`, `.mzml.gz`: `riconosci` vuole i byte magici gzip e `<mzML`/`<indexedmzML` nei primi 4 KB decompressi (`Fiducia::Si`). `apri` decomprime TUTTO in memoria (`MultiGzDecoder`, tetto `Limiti::byte`, `error.memoryBudget` oltre; gzip rotto `err.file.zlib`) e passa il file a `mzml_numpress::apri`, che legge anche gli array piani. La pagina lo manda sempre al modulo (`soloModulo`). Un gzip più grande del tetto non si apre: leggerlo a flusso su OPFS è lavoro a parte.
+- Prove: `crates/mzlab-lettori/tests/aperti_gz.rs`, `mzml_varianti_tests.rs` (CLI).
 
 ## mzXML (`aperti/mzxml.rs`)
 - `VOCE` `id "mzxml"`, `.mzxml`: `riconosci` vuole `<mzXML` nei primi 4 KB (`Fiducia::Si`). Il lettore decodifica da sé (nessuna riscrittura in mzML): `mzxml_indice.rs` (offset), `mzxml_scan.rs` (una scansione), `mzxml_testata.rs` (testata, `metodo/1`, `Header`). Il motore non lo legge: `LETTORI_FAM.aperti.soloModulo` contiene `.mzxml`, quindi la pagina lo manda sempre al modulo.
