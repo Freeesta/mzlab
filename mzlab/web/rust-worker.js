@@ -222,12 +222,13 @@ async function lrMigrate() {                                              // wha
     try { await ARCH.put("files", n, buf instanceof Blob ? buf : new Uint8Array(buf)); await safe(() => tx("files", "readwrite", s => s.delete(n))); } catch (e) { /* it stays where it is */ }
   }
 }
+let scaldaP = null; const scalda = () => scaldaP || (scaldaP = import("./rust-scalda.js").then(M => M.createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } })));      // the warm-up of the pointed folder (rust-scalda.js): loaded on first use, never at start-up
 const CANCELLED = new Set();                                              // names whose loading the page cancelled (lr_cancel): the copy and the index stop, a new lr_put starts afresh
 const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params: {} });
 const plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree() });      // the copy of a plain upload (rust-carica.js)
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
   CANCELLED.delete(m.name);
-  if (!m.nat) await ARCH.ensureRoom(m.blob.size, m.name);                 // room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
+  if (!m.nat) { if (!m.warm && m.blob.size >= ARCH.BIG) await (await scalda()).makeRoom(m.blob.size * ARCH.ROOM); await ARCH.ensureRoom(m.blob.size, m.name); }      // a real load wins over the files warmed ahead; room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
   idxPool().cancel(m.name);
   engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name));
   for (const ix of [m.name + ".mzidx", m.name + ".cen.mzidx"]) {         // an index of a newer program stays where it is (lr_index then answers error.newerFormat)
@@ -304,9 +305,9 @@ const flowCen = () => flowCenOps || (flowCenOps = createFlowCentroid({ ARCH, inf
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
-      if (!m.fresh) await lrMigrate(); const out = [];
+      if (!m.fresh) await lrMigrate(); const out = [], warm = new Set((await safe(() => ARCH.list("warm")) || []).map(e => e.name.replace(/\.json$/, "")));      // warm: built ahead, not opened, not in the list
       for (const e of await ARCH.list("files")) {
-        if (/\.part$/.test(e.name)) continue;
+        if (/\.part$/.test(e.name) || warm.has(e.name)) continue;
         const f = await ARCH.get("files", e.name); if (!f) continue;
         lrFile.set(e.name, f);
         const ok = /\.mzml$/i.test(e.name) ? await safe(() => lrOpen(e.name)) : false;
@@ -315,7 +316,7 @@ async function lrOp(m) {
       }
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
-    case "lr_put": return lrPut(m);
+    case "lr_put": return lrPut(m); case "lr_warm": case "lr_warm_claim": return (await scalda())[m.op](m);
     case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); idxPool().cancel(n); ARCH.release(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
     case "lr_index": try { return await lrIndex(m); } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
@@ -359,7 +360,7 @@ async function lrOp(m) {
     case "lr_clear": {                                                    // «New session» with fresh = true: files, indexes, notebook
       for (const n of [...lrFile.keys()]) engine.close(slotOf(n));
       lrFile.clear(); openGate.clear(); nativo.forgetAll();
-      await safe(async () => { await ARCH.clear("files"); await ARCH.clear("idx"); await tilesDrop(null, null); });
+      await safe(async () => { await ARCH.clear("files"); await ARCH.clear("idx"); await ARCH.clear("warm"); await tilesDrop(null, null); });
       await within(safe(() => tx("files", "readwrite", s => s.clear())), 5000); await within(safe(() => tx("kv", "readwrite", s => s.clear())), 5000);
       return { info: "{}" };
     }
