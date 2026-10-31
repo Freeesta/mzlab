@@ -8,7 +8,10 @@ window.GRUTAB = (() => {
     const o = E.ugOrder || [], at = (/** @type {string} */ g) => { const i = o.indexOf(g); return i < 0 ? 1e9 : i; };
     return [...seen].sort((a, b) => at(a) - at(b));
   };
-  return {
+  /** A row's HTML with its name, grip and «Move to group» button. @param {{ f: any }} x @param {string} h @param {boolean} shut */
+  const deco = (x, h, shut) => h.replace("<tr ", `<tr data-nm="${EH(x.f.name)}"${shut ? " hidden" : ""} `).replace("<td>", `<td><span class="tg-grip" draggable="true" title="${EH(t("groups.tab.grip"))}" aria-hidden="true">⠿</span>`)
+    .replace("<button data-rm=", `<button type="button" class="sec sm" data-mv="${EH(x.f.name)}" aria-label="${EH(t("groups.move.menu"))}" title="${EH(t("groups.move.menu"))}">⇄</button> <button data-rm=`);
+  const api = {
     /** Before renderFiles builds its rows: true = a drag holds the table (the repaint waits); dropped files take their label, a running «Group by» key reaches the new rows. */
     pre() {
       if (window.GDND && GDND.busy()) { GDND.defer(); return true; }
@@ -16,25 +19,31 @@ window.GRUTAB = (() => {
       if (E.ugBy && E.ugBy.by !== "custom") window.GRUPPI?.follow();
       return false;
     },
-    /** The rows of the table body: `ents` = [{ f, i, h }] in table order (`h` = the row's HTML); with no label anywhere the rows are returned as they are. @param {{ f: any, i: number, h: string }[]} ents @param {number} ncol */
+    /** The rows of the table body: `ents` = [{ f, i, h }] in table order (`h` = the row's HTML): every row of a table of two or more gets its grip and «Move» button, the headers come with the first label. @param {{ f: any, i: number, h: string }[]} ents @param {number} ncol */
     rows(ents, ncol) {
-      if (!ents.some(x => x.f.ugrp)) return ents.map(x => x.h);
+      const lab = (/** @type {{ f: any, h: string }} */ x) => x.h.replace('data-k="use"', `data-k="use" aria-label="${EH(x.f.name)}"`);
+      if (ents.length < 2) return ents.map(lab);
+      if (!ents.some(x => x.f.ugrp)) return ents.map(x => deco(x, lab(x), false));
       const by = /** @type {Map<string, typeof ents>} */ (new Map());
       ents.forEach(x => { const g = x.f.ugrp || ""; (by.get(g) || by.set(g, []).get(g))?.push(x); });
       const named = order([...by.keys()].filter(Boolean)), keys = by.has("") ? [...named, ""] : named, out = /** @type {string[]} */ ([]);
-      const grip = `<span class="tg-grip" draggable="true" title="${EH(t("groups.tab.grip"))}" aria-hidden="true">⠿</span>`;
       keys.forEach(g => {
         const rs = by.get(g) || [], shut = folded.has(g), name = g || t("groups.move.none");
         out.push(`<tr class="tg-head" data-ug="${EH(g)}"><th scope="colgroup" colspan="${ncol}"><button type="button" class="tg-fold" data-fold="${EH(g)}" aria-expanded="${!shut}" aria-label="${EH(t(shut ? "groups.tab.open" : "groups.tab.fold", { g: name }))}">${shut ? "▸" : "▾"}</button> <b>${EH(name)}</b> <span class="muted sm">${t("groups.tab.count", { n: rs.length })}</span></th></tr>`);
-        rs.forEach(x => out.push(x.h.replace("<tr ", `<tr data-nm="${EH(x.f.name)}"${shut ? " hidden" : ""} `).replace("<td>", "<td>" + grip)
-          .replace("<button data-rm=", `<button type="button" class="sec sm" data-mv="${EH(x.f.name)}" aria-label="${EH(t("groups.move.menu"))}" title="${EH(t("groups.move.menu"))}">⇄</button> <button data-rm=`)));
+        rs.forEach(x => out.push(deco(x, lab(x), shut)));
       });
       return out;
     },
     /** The handlers of the table, once: fold, «Move to group», the grip's drag; the table takes the room of the grip while it has groups. @param {HTMLElement} el */
     wire(el) {
-      el.querySelector(".ldtab")?.classList.toggle("tg-on", !!el.querySelector(".tg-head"));
-      // files dragged in from the desktop onto a header need gruppi-dnd.js: it is there as soon as the table has headers
+      el.querySelector(".ldtab")?.classList.toggle("tg-on", !!el.querySelector("tr[data-nm]"));
+      // «Group by ▾» sits at the end of the sample heading
+      const head = el.querySelector(".samphead");
+      if (head && !head.querySelector("#tb-by")) {
+        const b = document.createElement("button"); b.type = "button"; b.className = "sec sm"; b.id = "tb-by"; b.setAttribute("aria-haspopup", "menu"); b.setAttribute("aria-expanded", "false"); b.textContent = t("groups.by.btn") + " \u25be";
+        b.onclick = () => api.by(); head.append(b);
+      }
+      // files dragged in from the desktop onto a header (and the grips) need gruppi-dnd.js: it is there as soon as the table has headers
       if (el.querySelector(".tg-head")) carica("gruppi-dnd.js");
       if (el.dataset.tg) return; el.dataset.tg = "1";
       el.addEventListener("click", e => {
@@ -55,4 +64,5 @@ window.GRUTAB = (() => {
     /** «Group by ▾» of the table: the menu of the side list, anchored to the button above the table. */
     async by() { await carica("gruppi.js"); await carica("gruppi-per.js"); GRUPPIPER.open("tb-by"); },
   };
+  return api;
 })();

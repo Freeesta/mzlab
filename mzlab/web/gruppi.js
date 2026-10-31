@@ -1,24 +1,9 @@
 // @ts-check
 // The writer of the user groups of the side list («Group by», gruppi-per.js) and the cache of the engine's answer about the file names (`api/campioni/variabili`).
 // Lazy (carica("gruppi.js")). The page never splits a name: the engine answers, this file maps the answer to `ugrp` (one undoable files.view step).
-window.GRUPPI = (() => {
+// Pure label maths of GRUPPI (the answer of the engine → the label of every file); same lazy file.
+window.GRUPPI_ETI = (() => {
   const MAX = 40;
-  // the files of the side list and the rows of the loading table (ST.files: a row keeps its label until the file opens, adopt() hands it over)
-  const rowsT = () => /** @type {any[]} */ (typeof ST === "undefined" ? [] : ST.files);
-  const names = () => [...new Set([...flSide().map(/** @param {any} f */ f => fileBase(f.file)), ...rowsT().map(f => f.name)])];
-  /** Labels the files the user dropped on a group header will take when their rows arrive (name → label). @type {Map<string, { g: string, at: number }>} */
-  const pend = new Map();
-  /** @type {{ key: string, ans: any } | null} */ let cache = null;
-  let followed = "", timer = 0;
-  /** The `nomivar/1` answer for the files of the list and an optional manual rule; null when the engine refuses (more than 5 000 names...). @param {any} [manuale] */
-  async function vars(manuale) {
-    const ns = names(), key = JSON.stringify([ns, manuale ?? null]);
-    if (cache?.key === key) return cache.ans;
-    const body = JSON.stringify({ files: ns.map(name => ({ name })), manuale: manuale || undefined });
-    const ans = await fetch("api/campioni/variabili", { method: "POST", body }).then(r => r.json()).catch(() => null);
-    cache = { key, ans: ans && !ans.error ? ans : null };
-    return cache.ans;
-  }
   /** The value of every file of a variable as its label ("" = no value), by index of `ans.files`. @param {any} ans @param {any} v @param {string} other */
   const column = (ans, v, other) => {
     const m = /** @type {string[]} */ (new Array(ans.files.length).fill(""));
@@ -40,12 +25,51 @@ window.GRUPPI = (() => {
     va.forEach((/** @type {string} */ x) => vb.forEach((/** @type {string} */ y) => { const l = clip(y ? x + " · " + y : x); if (l && [...out.values()].includes(l) && !order.includes(l)) order.push(l); }));
     return { out, order };
   }
+  return { clip, labelsOf };
+})();
+window.GRUPPI = (() => {
+  /** The label of an undo step (comandi.js shows it in «Undone: …») per group action. */
+  const UNDO = /** @type {Record<string, string>} */ ({ by: "groups.undo.by", then: "groups.undo.then", token: "groups.undo.token", contains: "groups.undo.contains", none: "groups.undo.none", move: "groups.undo.move",
+    join: "groups.undo.join", new: "groups.undo.new", rename: "groups.undo.rename", ungroup: "groups.undo.ungroup" });
+  // the files of the side list and the rows of the loading table (ST.files: a row keeps its label until the file opens, adopt() hands it over)
+  const rowsT = () => /** @type {any[]} */ (typeof ST === "undefined" ? [] : ST.files);
+  const names = () => [...new Set([...flSide().map(/** @param {any} f */ f => fileBase(f.file)), ...rowsT().map(f => f.name)])];
+  /** Labels the files the user dropped on a group header will take when their rows arrive (name → label). @type {Map<string, { g: string, at: number }>} */
+  const pend = new Map();
+  /** @type {{ key: string, ans: any } | null} */ let cache = null;
+  let followed = "", timer = 0;
+  /** The `nomivar/1` answer for the files of the list and an optional manual rule; null when the engine refuses (more than 5 000 names...). @param {any} [manuale] */
+  async function vars(manuale) {
+    const ns = names(), key = JSON.stringify([ns, manuale ?? null]);
+    if (cache?.key === key) return cache.ans;
+    const body = JSON.stringify({ files: ns.map(name => ({ name })), manuale: manuale || undefined });
+    const ans = await fetch("api/campioni/variabili", { method: "POST", body }).then(r => r.json()).catch(() => null);
+    cache = { key, ans: ans && !ans.error ? ans : null };
+    return cache.ans;
+  }
+  const { clip, labelsOf } = GRUPPI_ETI;
   /** Writes the labels (`map`: physical file name → label) and the key; `undo` makes it one files.view step. @param {Map<string, string>} map @param {any} by @param {string[]} order @param {boolean} undo */
-  function write(map, by, order, undo) {
+  function write(map, by, order, undo, action = "move") {
     const go = () => { E.files.forEach(/** @param {any} f */ f => { f.ugrp = map.get(fileBase(f.file)) || undefined; }); rowsT().forEach(f => { f.ugrp = map.get(f.name) || undefined; }); E.ugBy = by; E.ugOrder = order.length ? order : undefined; };
-    if (undo) fileViewDo(go); else go();
+    if (undo) step(go, action); else go();
     renderFileList(); if (typeof carica === "function") carica("gruppi-tab.js").then(() => renderFiles()); uiSave();
   }
+  /** Runs `go` as one files.view step and names the step after the group action (`groups.undo.<action>`) in the undo notice. @param {() => void} go @param {string} action */
+  function step(go, action) {
+    const top = () => STORIA?.pila.v[STORIA.pila.v.length - 1], was = top(); fileViewDo(go);
+    const l = top(); if (l && l !== was && l.cmd === "files.view") l.w = UNDO[action];
+  }
+  /** The name of a new group: the common tokens of the names (engine) when no group has it yet, else «Group N». @param {string[]} files */
+  async function newName(files) {
+    const used = new Set([...flSide().map(/** @param {any} x */ x => x.ugrp), ...rowsT().map(x => x.ugrp)]);
+    const ans = await fetch("api/campioni/nome_gruppo", { method: "POST", body: JSON.stringify({ names: files }) }).then(r => r.json()).catch(() => null);
+    const nome = ans && !ans.error && ans.nome ? clip(String(ans.nome)) : "";
+    if (nome && !used.has(nome)) return nome;
+    let n = 1; while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
+    return I18N.t("files.ugrp.name", { n });
+  }
+  /** The label of the file `base` in the side list or the table ("" = none). @param {string} base */
+  const labelOf = base => flSide().find(/** @param {any} f */ f => fileBase(f.file) === base)?.ugrp || rowsT().find(f => f.name === base)?.ugrp || "";
   const note = (/** @type {string} */ key) => {
     const n = document.getElementById("fl-note"); if (!n) return;
     n.textContent = I18N.t(key) + " · "; n.hidden = false;
@@ -53,24 +77,54 @@ window.GRUPPI = (() => {
     b.onclick = () => { if (STORIA) STORIA.annulla(); n.hidden = true; };
     n.append(b); setTimeout(() => { n.hidden = true; }, 9000);
   };
-  const hasGroups = () => E.files.some(/** @param {any} f */ f => f.ugrp) || rowsT().some(f => f.ugrp);
-  return {
+  /** Every file name of the list and the table with the label `fn(its label)` gives. @param {(l: string) => string} fn */
+  const remap = fn => new Map([...rowsT().map(f => /** @type {[string, string]} */ ([f.name, fn(f.ugrp || "")])), ...flSide().map(/** @param {any} f */ f => /** @type {[string, string]} */ ([fileBase(f.file), fn(f.ugrp || "")]))]);
+  function hasGroups() { return E.files.some(/** @param {any} f */ f => f.ugrp) || rowsT().some(f => f.ugrp); }
+  /** Puts the files `bases` (physical file names) into group `label` ("" = out of every group): a manual edit, one undo step. @param {string[]} bases @param {string} label */
+  function set(bases, label, action = "move") {
+    const map = remap(l => l);
+    bases.forEach(b => map.set(b, clip(label)));
+    write(map, { by: "custom" }, E.ugOrder || [], true, action);
+  }
+  /** A file dropped ONTO another one: both (and the dragged files' companions) join the group of the target, or make a new one; returns the group. @param {string[]} bases @param {string} target */
+  async function onto(bases, target) {
+    const g = labelOf(target);
+    if (g) { set(bases, g, "join"); return g; }
+    const v = await newName([...new Set([...bases, target])]);
+    set([...new Set([...bases, target])], v, "new"); rename(v); return v;
+  }
+  /** Renames group `old` in the side list and the table (one undo step); asks for the name. @param {string} old */
+  async function rename(old) {
+    const v = clip((await ask(I18N.t("files.group.prompt"), old)) || "");
+    if (!v || v === old) return;
+    E._grpOpen = E._grpOpen || {}; if (E._grpOpen["u:" + old] !== undefined) E._grpOpen["u:" + v] = E._grpOpen["u:" + old];
+    const map = remap(l => l === old ? v : l);
+    write(map, { by: "custom" }, (E.ugOrder || []).map(x => x === old ? v : x), true, "rename");
+  }
+  /** Frees every file of group `old` (side list and table); one undo step. @param {string} old */
+  function ungroup(old) {
+    const map = remap(l => l === old ? "" : l);
+    write(map, { by: "custom" }, (E.ugOrder || []).filter(x => x !== old), true, "ungroup");
+  }
+  /** Names the undo step that a start-up file (lista-file.js) has just recorded. @param {string} action */
+  function lab(action) {
+    const l = STORIA?.pila.v[STORIA.pila.v.length - 1];
+    if (l && l.cmd === "files.view" && Date.now() - l.t < 2000) l.w = UNDO[action];
+  }
+  const api = {
     vars, labelsOf, names, has: hasGroups,
-    /** Puts the files `bases` (physical file names) into group `label` ("" = out of every group): a manual edit, one undo step. @param {string[]} bases @param {string} label */
-    set(bases, label) {
-      const map = new Map([...rowsT().map(f => /** @type {[string, string]} */ ([f.name, f.ugrp || ""])), ...flSide().map(/** @param {any} f */ f => /** @type {[string, string]} */ ([fileBase(f.file), f.ugrp || ""]))]);
-      bases.forEach(b => map.set(b, clip(label)));
-      write(map, { by: "custom" }, E.ugOrder || [], true);
-    },
+    set,
+    newName, labelOf,
+    onto, rename, ungroup, lab,
     /** «Group by»: every file takes the label of its value of the key `spec` (a manual group set is replaced, undo brings it back); null = None. @param {any} spec */
     async by(spec) {
       const replaced = hasGroups();
-      if (!spec) { write(new Map(), undefined, [], true); return true; }
+      if (!spec) { write(new Map(), undefined, [], true, "none"); return true; }
       const ans = await vars(spec.manuale);
       if (!ans) return false;
       const { out, order } = labelsOf(ans, spec, I18N.t("groups.other"));
       followed = names().join("\n");
-      write(out, spec, order, true);
+      write(out, spec, order, true, spec.manuale?.has ? "contains" : spec.manuale ? "token" : spec.then ? "then" : "by");
       if (replaced) note("groups.replaced");
       return true;
     },
@@ -116,4 +170,5 @@ window.GRUPPI = (() => {
       let i = 0; groups.forEach((G, j) => { if (G.g.startsWith("u:")) groups[j] = us[i++]; });
     },
   };
+  return api;
 })();

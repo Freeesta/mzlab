@@ -44,6 +44,7 @@ declare var GDND: any;
 declare var GRADIENTE: any;
 declare var GRUPPI: any;
 declare var GRUPPIPER: any;
+declare var GRUPPI_ETI: any;
 declare var GRUTAB: any;
 declare var I18N: any;
 declare var IDP: any;

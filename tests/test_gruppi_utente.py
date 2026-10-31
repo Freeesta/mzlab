@@ -25,8 +25,10 @@ globalThis.renderFileList = () => {}; globalThis.uiSave = () => {}; globalThis.S
 
 def run(code):
     lf = (WEB / "lista-file.js").read_text(encoding="utf-8")
+    gr = (WEB / "gruppi.js").read_text(encoding="utf-8")
     js = STUBS + f"""
-const vm = require("vm"); vm.runInThisContext({json.dumps(lf)});
+const vm = require("vm"); globalThis.carica = async () => {{}}; globalThis.renderFiles = () => {{}}; globalThis.flush = () => new Promise(r => setTimeout(r, 0));
+vm.runInThisContext({json.dumps(lf)}); vm.runInThisContext({json.dumps(gr)});
 globalThis.fileRemoval = f => ({{ take() {{ f.gone = true; removed.push(f.file); }}, back() {{}}, free() {{}} }});
 globalThis.E = {{ files: [
   {{ file: "a.mzML", kind: "full", vis: true }}, {{ file: "b.mzML", kind: "full", vis: true }},
@@ -43,20 +45,20 @@ G = "E.files.map(f => f.ugrp || null)"
 
 @needs_node
 def test_group_takes_the_ticked_files_and_ddas_other_part():
-    assert run(f"groupFiles(); console.log(JSON.stringify({G}))") == ["Group 1", "Group 1", "Group 1", "Group 1", None, "Group 1"]
+    assert run(f"groupFiles(); await flush(); console.log(JSON.stringify({G}))") == ["Group 1", "Group 1", "Group 1", "Group 1", None, "Group 1"]
 
 
 @needs_node
 def test_bench_never_groups_mrm_and_the_next_name_is_free():
-    out = run(f"BENCH = true; E.files[0].ugrp = 'Group 1'; groupFiles(); console.log(JSON.stringify({G}))")
+    out = run(f"BENCH = true; E.files[0].ugrp = 'Group 1'; groupFiles(); await flush(); console.log(JSON.stringify({G}))")
     assert out == ["Group 2", "Group 2", "Group 2", "Group 2", None, None]
 
 
 @needs_node
 def test_rename_and_ungroup_move_the_whole_group():
-    out = run(f"""groupFiles(); E._grpOpen = {{ "u:Group 1": false }}; globalThis.ask = async () => " Blanks ";
+    out = run(f"""groupFiles(); await flush(); E._grpOpen = {{ "u:Group 1": false }}; globalThis.ask = async () => " Blanks ";
 await renameGroup("Group 1"); const a = {G}, open = E._grpOpen["u:Blanks"];
-ugSet(ugFiles("Blanks"), ""); console.log(JSON.stringify([a, open, {G}]))""")
+GRUPPI.ungroup("Blanks"); console.log(JSON.stringify([a, open, {G}]))""")
     assert out[0] == ["Blanks", "Blanks", "Blanks", "Blanks", None, "Blanks"] and out[1] is False and out[2] == [None] * 6
 
 
