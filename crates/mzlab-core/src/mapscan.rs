@@ -20,6 +20,7 @@ static TABLE_CAP: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsiz
 pub fn set_table_cap(bytes: usize) {
     TABLE_CAP.store(bytes, std::sync::atomic::Ordering::Relaxed);
 }
+
 /// The phases a session grid has: high resolution cells start at whole numbers, unit resolution ones at `n - 0.2`.
 const PHASES: [f64; 2] = [0.0, 0.8];
 
@@ -36,6 +37,10 @@ pub struct Edge {
 pub struct CellStore {
     pub(crate) tables: Vec<(u8, u8, Arc<ScanCells>, u64)>,
     pub(crate) off: bool,
+    /// The columns of the last big region window (`mapzoom`).
+    pub(crate) zoom: Option<crate::mapzoom::ZoomCols>,
+    /// The last big region window asked (`mapzoom`).
+    pub(crate) zoom_seen: Option<crate::mapzoom::Key>,
 }
 
 pub struct ScanCells {
@@ -113,6 +118,8 @@ impl<R: ReadAt> Routes<R> {
     pub fn set_scan_cells(&mut self, on: bool) {
         self.cells.off = !on;
         self.cells.tables.clear();
+        self.cells.zoom = None;
+        self.cells.zoom_seen = None;
     }
 
     /// Number of per-scan tables held.
@@ -125,9 +132,16 @@ impl<R: ReadAt> Routes<R> {
 pub fn cells_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
     files
         .values()
-        .flat_map(|r| r.cells.tables.iter())
-        .map(|c| c.2.bytes())
+        .map(|r| {
+            r.cells.tables.iter().map(|c| c.2.bytes()).sum::<usize>()
+                + r.cells.zoom.as_ref().map_or(0, |z| z.bytes())
+        })
         .sum()
+}
+
+/// The largest table the engine may build (bytes).
+pub(crate) fn table_cap() -> usize {
+    TABLE_CAP.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 impl<R: ReadAt> Routes<R> {

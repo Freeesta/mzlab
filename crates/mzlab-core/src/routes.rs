@@ -414,12 +414,14 @@ pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R
         let tiles = files.iter().flat_map(|(k, r)| r.tiles.iter().enumerate().filter(|(_, t)| t.1.is_some()).map(move |(i, t)| (t.2, 1u8, *k, i)));
         let cells = files.iter().flat_map(|(k, r)| r.cells.tables.iter().enumerate().map(move |(i, c)| (c.3, 2u8, *k, i)));
         let blocks = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, 3u8, *k, 0)));
-        let Some((_, kind, k, i)) = maps.chain(tiles).chain(cells).chain(blocks).min_by_key(|e| (e.0, e.1)) else { break };
+        let zooms = files.iter().filter_map(|(k, r)| r.cells.zoom.as_ref().map(|z| (z.tick, 4u8, *k, 0)));
+        let Some((_, kind, k, i)) = maps.chain(tiles).chain(cells).chain(blocks).chain(zooms).min_by_key(|e| (e.0, e.1)) else { break };
         if let Some(r) = files.get_mut(&k) {
             match kind {
                 0 => drop(r.maps.remove(i)),
                 1 => drop(r.tiles.remove(i)),
                 2 => drop(r.cells.tables.remove(i)),
+                4 => drop(r.cells.zoom.take()),
                 _ => drop(r.idx.evict_oldest()),
             }
         }
