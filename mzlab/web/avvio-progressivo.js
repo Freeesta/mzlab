@@ -115,7 +115,7 @@ const AVVIO = (function () {
   /**
    * Remembers the second toolbar row of the Dati view, so that the next restore draws it at its final size in the first paint.
    * Partial objects are merged into what is stored; `null` forgets it (high-resolution bench, no session).
-   * @param {{a?: number[], f?: string, fw?: number, s?: string, o?: string} | null} riga a: which "+ panel" buttons, f: file selector label, fw: its width, s: side panel width, o: its side l|r or empty when closed
+   * @param {{a?: number[], f?: string, fw?: number, s?: string} | null} riga a: which "+ panel" buttons, f: file selector label, fw: its width, s: side panel width
    */
   function segnaRiga(riga) {
     if (typeof window === "undefined" || !window.localStorage) return;
@@ -128,7 +128,7 @@ const AVVIO = (function () {
   function leggiRiga() {
     try {
       const r = JSON.parse(window.localStorage.getItem(chiaveRiga()) || "null");
-      if (r && Array.isArray(r.a) && r.a.length === BOTTONI_RIGA.length && r.a.every(/** @param {any} x */ x => x === 0 || x === 1) && typeof r.f === "string" && typeof r.fw === "number" && /^\d{2,4}px$/.test(r.s || "") && ["", "l", "r"].includes(r.o)) return r;
+      if (r && Array.isArray(r.a) && r.a.length === BOTTONI_RIGA.length && r.a.every(/** @param {any} x */ x => x === 0 || x === 1) && typeof r.f === "string" && typeof r.fw === "number" && /^\d{2,4}px$/.test(r.s || "")) return r;
     } catch (_) {}
     return null;
   }
@@ -142,6 +142,15 @@ const AVVIO = (function () {
     if (sel && !sel.options.length) { sel.add(new Option(riga.f)); sel.style.width = riga.fw + "px"; }
     document.documentElement.style.setProperty("--sb-w", riga.s);
     v.classList.add("riga");
+  }
+
+  // On leaving the page, the row as the last session left it: the next restore draws it in the first paint
+  function ricordaRiga() {
+    const g = (/** @type {string} */ id) => document.getElementById(id), v = g("v-data"), sel = /** @type {HTMLSelectElement | null} */ (g("fsel"));
+    if (!v || v.hidden || v.classList.contains("riga") || !sel || !haSessione()) return;
+    const a = BOTTONI_RIGA.map(id => (g(id) && !g(id).hidden ? 1 : 0));
+    if (!a.some(Boolean) || (window.BANCO && window.BANCO.on())) segnaRiga(null);
+    else segnaRiga({ a, f: (sel.selectedOptions[0] || { text: "" }).text.slice(0, 120), fw: Math.round(sel.getBoundingClientRect().width), s: document.documentElement.style.getPropertyValue("--sb-w") });
   }
 
   function finisciRiga() {
@@ -327,6 +336,8 @@ const AVVIO = (function () {
     if (bootTimer) { clearTimeout(bootTimer); bootTimer = null; }
     timedOut = false;
   }
+
+  if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("pagehide", ricordaRiga);
 
   if (typeof document !== "undefined") {
     applicaIndizioSessione();

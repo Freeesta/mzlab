@@ -205,9 +205,7 @@ const BARRA = (() => {
 
   // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
-    if (!_appliedW && Q1("#v-data.riga")) return;       // the first paint of a restore keeps the width the last session had (avvio-progressivo.js); the real one is applied when the session is back
-    document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");
-    if (typeof AVVIO !== "undefined" && AVVIO.segnaRiga && inData()) AVVIO.segnaRiga({ s: _appliedW + "px" });
+    if (_appliedW || !Q1("#v-data.riga")) document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");     // the first paint of a restore keeps the width the last session had (avvio-progressivo.js)
   }
 
   // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized
@@ -264,7 +262,6 @@ const BARRA = (() => {
       v.classList.toggle("sb-sheet", shown && sheet());
       aside.toggleAttribute("inert", !shown);
       aside.setAttribute("aria-hidden", shown ? "false" : "true");
-      if (inData() && typeof AVVIO !== "undefined" && AVVIO.segnaRiga) AVVIO.segnaRiga({ o: shown ? (_side === "right" ? "r" : "l") : "" });
       if (change) { applyWidth(); refitNow(); }
     };
     if (change && inData() && window.TRANS) TRANS.layout({ aside, was, shown, moved }, apply); else apply();

@@ -900,8 +900,6 @@ function toolbar() {
   const has = (/** @type {string} */ t) => tabFiles(t).length > 0, scan = has("full") || has("ms2") || has("infusion"), mrm = has("mrm"), empty = !scan && !mrm;
   Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = !has("full"); Q("#np-xic").hidden = !scan;
   Q("#np-mrm").hidden = !mrm;
-  // the row as it is now is drawn in the first paint of the next restore (avvio-progressivo.js)
-  if (typeof AVVIO !== "undefined" && AVVIO.segnaRiga) AVVIO.segnaRiga(!empty && !(window.BANCO && BANCO.on()) ? { a: ["#np-chrom", "#np-spec", "#np-map", "#np-xic", "#np-mrm"].map(i => (Q(i).hidden ? 0 : 1)), f: (Q("#fsel").selectedOptions[0] || { text: "" }).text.slice(0, 120), fw: Math.round(Q("#fsel").getBoundingClientRect().width) } : null);
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
 }
 // ------------------------------------------------------------------ piccole finestre e menu
