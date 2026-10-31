@@ -18,7 +18,7 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def tabs_gone():
             assert pg.is_visible("#hrbar") and pg.locator("#dtabs").count() == 0, "the toolbar of the bench is the only bar"
-            n = pg.locator("#hrbar button[data-hb]").count(); assert n == 5, n
+            ids = pg.evaluate("[...document.querySelectorAll('#hrbar button[data-hb]')].map(b => b.dataset.hb)"); assert ids == ["add", "type", "tree"], ids      # the other tools of the old bar live elsewhere now
             assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
         def no_badges():
