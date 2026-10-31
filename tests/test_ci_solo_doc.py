@@ -11,7 +11,7 @@ import ci_solo_doc as ci  # noqa: E402
 
 DOCS = ["AGENTS.md", "CHANGELOG.md", "docs/agenti/ci-veloce.md", "docs/studi/ottimizza/x.md", ".claude/settings.json", ".claude/agents/cercatore.md"]
 OTHER = ["tools/x.py", "tests/test_x.py", "docs/schemi/strumenti-1.json", "docs/agenti/mappa.png", "docs/agenti/ci-veloce.md.py", "docs/../tools/x.md", "x/AGENTS.md",
-         "tools/libro/fixtures/a.md", "crates/mzlab-x/README.md", "mzlab/web/index.html", ".github/workflows/test.yml",
+         "tools/lab/fixtures/a.md", "crates/mzlab-x/README.md", "mzlab/web/index.html", ".github/workflows/test.yml",
          "docs", ".claudeX/a.md", "Cargo.toml", "mzlab/web/lang/it.js", "doc/a.md"]
 
 

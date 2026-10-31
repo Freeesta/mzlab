@@ -20,7 +20,7 @@ Tutto il lavoro dell'utente sta nel SUO browser; l'esportazione lo raccoglie in 
 
 ## Regole di raccolta
 - **Si prende** tutto ciò che crea l'utente: preferenze e viste (localStorage `mzlab.*`, `mzlab-theme`, `mzlab-labels`; i vecchi `qqq.*` solo se non c'è il corrispondente `mzlab.*`), taccuino, liste utente, molecole, librerie spettrali, sessione. I file mzML/raw e gli indici (`idx/`, `tiles/`) NON si includono se non sono già salvati dall'app come dato dell'utente: sono ricostruibili dai file originali.
-- **Esclusi, elencati nel manifesto con il motivo**: segreti (token sigillati del Libro `mzlab.libro.token`, `mzlab.libro.teoria.token`; ogni chiave il cui nome contiene `token`, `key` o `secret`; la chiave dell'assistente non è mai salvata, vive solo nell'iframe `llm/trasporto.html`); stato di esecuzione (`mzlab.run`, `mzlab.avvii`, `mzlab.migrato`, `mzlab.memProbe`, `mzlab.memBudget*`, `mzlab.memLevel`, `mzlab.kprefetch`, sessionStorage); cache dell'app (Cache API `mzlab-app-*`, `mzlab-big-*`, service worker); flag di sviluppo e amministratore (`mzlab.admin`, `mzlab.dev.*`).
+- **Esclusi, elencati nel manifesto con il motivo**: segreti (ogni chiave il cui nome contiene `token`, `key` o `secret`; la chiave dell'assistente non è mai salvata, vive solo nell'iframe `llm/trasporto.html`); stato di esecuzione (`mzlab.run`, `mzlab.avvii`, `mzlab.migrato`, `mzlab.memProbe`, `mzlab.memBudget*`, `mzlab.memLevel`, `mzlab.kprefetch`, sessionStorage); cache dell'app (Cache API `mzlab-app-*`, `mzlab-big-*`, service worker); flag di sviluppo e amministratore (`mzlab.admin`, `mzlab.dev.*`).
 
 ## Inventario
 | Dove | Chiave / nome | Significato | Formato |
@@ -35,7 +35,6 @@ Tutto il lavoro dell'utente sta nel SUO browser; l'esportazione lo raccoglie in 
 | localStorage | `mzlab.disegno.font`, `.riquadri`, `.strumenti`, `mzlab.pal.recent` | pagina Disegno: font, riquadri, strumenti, colori recenti | JSON |
 | localStorage | `mzlab.tour.lr`, `mzlab.upd.last`, `mzlab.upd.seen`, `mzlab.rel.last`, `mzlab.rel.seen`, `mzlab.reset.note`, `mzlab.logo.gold` | tour, avvisi di aggiornamento già visti | stringa / JSON |
 | localStorage | `mzlab.llm`, `mzlab.llm.consenso` | assistente: impostazioni e consensi per fornitore (senza chiavi) | JSON |
-| localStorage | `mzlab.libro.teoria.draft.<capitolo>` | bozza non inviata di un capitolo (mai il token) | JSON |
 | localStorage | `mzlab.attributio.reviewer`, `mzlab.tabui.*`, `mzlab.pipeline.draft` | admin: revisore e decisioni (non esportati dall'interfaccia degli studenti) | JSON |
 | IndexedDB `mzlab_lab` | `notebook`, `kv` | taccuino; coppie chiave-valore | oggetti |
 | IndexedDB `mzlab_lab` | `liste_utente`, `molecole`, `manifest` | liste dell'utente, archivio molecole, elenco dei file in OPFS | oggetti |

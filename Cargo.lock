@@ -2353,7 +2353,6 @@ dependencies = [
  "mzlab-lib",
  "mzlab-llm",
  "mzlab-mol",
- "mzlab-tutor",
  "resvg",
  "rustls",
  "serde_json",
@@ -2513,18 +2512,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mzlab-libro"
-version = "1.0.0"
-
-[[package]]
-name = "mzlab-libro-wasm"
-version = "1.0.0"
-dependencies = [
- "mzlab-libro",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "mzlab-llm"
 version = "1.0.0"
 dependencies = [
@@ -2587,16 +2574,6 @@ version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "serde",
-]
-
-[[package]]
-name = "mzlab-tutor"
-version = "1.0.0"
-dependencies = [
- "mzlab-core",
- "mzlab-libro",
- "mzlab-llm",
- "serde_json",
 ]
 
 [[package]]
