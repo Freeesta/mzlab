@@ -38,6 +38,7 @@ I18N.add("en", {
   "ctx.chrom.ms2AtRt": "MS2 at this RT…",
   "ctx.chrom.ms2AtRt.tip": "Opens the MS2 scan closest to this retention time. To choose a precursor yourself, click its triangle on the chromatogram or its flag ▼ in the Full Scan.",
   "ctx.chrom.tree": "MSn tree of the file…",
+  "ctx.chrom.masscal": "Check calibration (contaminants)…",
   "ctx.chrom.addIon": "Add another ion…",
   "ctx.annotate.point": "Annotate this point…",
   "ctx.annotate.prompt": "Annotation at RT {rt}",

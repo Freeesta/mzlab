@@ -19,6 +19,7 @@ import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca } from "./rust-msngrafo.js";
+import { masscal } from "./rust-masscal.js";
 import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
 let engine = null, wasmMem = null;
@@ -463,7 +464,7 @@ async function handle(ev) {
       case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
-      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
+      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;   case "masscal": info = await masscal(m.name || tileName.get(m.slot) || "", m.params, readerFor); break;        // api/mrm with ref, from the transitions of the files; api/masscal: the mass error of the background ions (massacc/1)
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await msnGrafoOp(m, id); break;   // api/msn_grafo over the .mzidx and the mzML of the slot (of a maker's sample: the mzML made from it)
       case "down": lowerBudget(m); break; case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;   // down: one level lower by Rust's rule; budget: the value the supervisor sends at startup
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); openGate.clear(); blobs.clear(); tileName.clear(); break;

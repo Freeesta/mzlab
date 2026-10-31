@@ -214,6 +214,7 @@ impl State {
                 text(mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, if s("kind").is_empty() { "tic" } else { s("kind") })?)
             }
             "msngrafo" => self.op_msngrafo(eng, p),
+            "masscal" => self.op_masscal(p),
             "canali" => self.op_canali(eng, p),
             "fileinfo" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;

@@ -136,6 +136,18 @@ fn a_constant_error_is_the_offset_and_is_flagged() {
 }
 
 #[test]
+fn each_point_says_in_how_many_scans_the_ion_was_seen() {
+    let (doc, _) = check(|_, _| 3.0, 8, &Params::default(), None);
+    let pts = doc.get("files").unwrap().arr()[0]
+        .get("points")
+        .unwrap()
+        .arr()
+        .to_vec();
+    assert_eq!(pts.len(), 8);
+    assert!(pts.iter().all(|p| num(p, &["scans"]) == SCANS as f64));
+}
+
+#[test]
 fn a_linear_error_is_recovered() {
     let p = Params {
         model: Model::LinearMz,

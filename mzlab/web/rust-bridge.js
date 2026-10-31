@@ -185,7 +185,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       stats.rust++;
       return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
-    if (/^\/api\/(ms2tr|fileinfo|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
+    if (/^\/api\/(ms2tr|fileinfo|masscal|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
     if (path === "/api/scaninfo") {
       const s = slots[k0], sid = num(q, "sid", NaN);
       if (!s) return null;

@@ -6,7 +6,7 @@
 /** @type {Record<string, Promise<any>>} */ const loading = {};
 
 /** the module `key` of wasm-feat/manifest.json, fetched on first use and checked against its SHA-256 @param {string} key */
-function load(key) {
+export function load(key) {
   if (!loading[key]) loading[key] = (async () => {
     const base = new URL("./wasm-feat/", import.meta.url);
     const man = (await (await fetch(new URL("manifest.json", base))).json())[key];

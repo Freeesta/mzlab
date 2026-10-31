@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "massacc/1",
  "title": "massacc/1: mass accuracy of each file, measured on ions that are known to be there",
- "description": "Format \u00abmassacc/1\u00bb (crates/mzlab-feat/src/massacc/report.rs, docs/agenti/qc-massa.md), the output of the Flow step qc.mass_accuracy@1: per file the offset and spread in ppm of the reference ions (lab background list, internal standards, CSV of the user), the points of the two charts, the standards and the warnings; over the files the offsets, the spread of the standard areas and the tolerance that holds. Numbers only, no verdict. Native command and browser write the same bytes.",
+ "description": "Format «massacc/1» (crates/mzlab-feat/src/massacc/report.rs, docs/agenti/qc-massa.md), the output of the Flow step qc.mass_accuracy@1: per file the offset and spread in ppm of the reference ions (lab background list, internal standards, CSV of the user), the points of the two charts, the standards and the warnings; over the files the offsets, the spread of the standard areas and the tolerance that holds. Numbers only, no verdict. Native command and browser write the same bytes.",
  "type": "object",
  "additionalProperties": false,
  "required": [
@@ -223,6 +223,7 @@
         "rt",
         "err_ppm",
         "intensity",
+        "scans",
         "outlier"
        ],
        "properties": {
@@ -252,6 +253,9 @@
          "type": "number"
         },
         "intensity": {
+         "type": "number"
+        },
+        "scans": {
          "type": "number"
         },
         "outlier": {
