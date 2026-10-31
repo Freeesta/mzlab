@@ -52,8 +52,8 @@ function syncWork(/** @type {boolean} */ force = false) {
   const rows = workRows(typeof E !== "undefined" ? E.files : []), land = w === "landing" && rows;
   if (w === "landing") S.table = false;
   workQ("#wdata").hidden = w === "panels" || w === "opening";
-  // «Back to work!» waits for a file to go back to
-  workQ("#backwork").hidden = !(S.sess && !none && (w === "add" || w === "landing"));
+  // «Back to work!» waits for a file to go back to, and for the reading to end (it would push the drop area down while the files load)
+  workQ("#backwork").hidden = !(S.sess && !none && !up && (w === "add" || w === "landing"));
   workQ("#start").hidden = !(w === "landing" || w === "add" || (w === "table" && !S.sess));
   workQ("#wtable").hidden = !(w === "table" || w === "add" || land);
   // never inert: on the landing with a session (panels closed by the X) it brings the table back; before a session it scrolls the table under the drop area into view
