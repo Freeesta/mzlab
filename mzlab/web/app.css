@@ -533,7 +533,7 @@ html.in-draw #sb-toggle{display:none}
 @media (pointer:coarse){.fl-x{opacity:1;min-width:40px;min-height:40px}}
 /* drop anywhere on the work area while files are open */
 #v-workspace{position:relative}#v-workspace.ws-drop::after{content:attr(data-dz);position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;border:3px dashed var(--accent);border-radius:8px;background:color-mix(in srgb,var(--sel) 88%,transparent);color:var(--ink);font-weight:600;pointer-events:none}
-#sb-by{display:inline-flex;align-items:center;gap:4px;flex:none;width:92px;padding:2px 6px;min-height:24px;overflow:hidden;white-space:nowrap}#sb-by span{flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left}
+#sb-by{display:inline-flex;align-items:center;gap:4px;flex:none;width:92px;padding:2px 6px;min-height:24px;overflow:hidden;white-space:nowrap}#sb-by[hidden]{display:none}#sb-by span{flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .gby-menu{position:fixed;z-index:10000;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(60,45,10,.18);padding:3px;width:272px;max-height:70vh;overflow:auto}
 .gby-menu [role=menuitemradio]{display:flex;flex-direction:column;padding:4px 10px 4px 26px;border-radius:4px;cursor:pointer;min-height:24px;position:relative}.gby-menu [role=menuitemradio] small{color:var(--muted)}
 .gby-menu [role=menuitemradio]:hover,.gby-menu [role=menuitemradio]:focus{background:var(--sel);outline:2px solid var(--accent);outline-offset:-2px}.gby-menu [aria-checked=true]::before{content:"\2713";position:absolute;left:8px}.gby-menu [aria-disabled=true]{color:var(--muted);cursor:default}
@@ -546,3 +546,6 @@ html.in-draw #sb-toggle{display:none}
 #flist .tg-head th{text-align:left;font-weight:600;padding:4px 8px;background:var(--surface-2,var(--bg))}#flist .tg-fold{min-width:24px;min-height:24px;padding:0;background:none;border:0;color:inherit;cursor:pointer}
 #flist .tg-head.gdnd-over th,#flist tr.gdnd-onto td{outline:2px solid var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 14%,transparent)}#flist.gdnd-gap{outline:2px dashed var(--accent);outline-offset:-2px}
 #flist .tg-grip{display:inline-block;min-width:24px;min-height:24px;line-height:24px;text-align:center;cursor:grab;color:var(--muted)}.ldtab.tg-on col.c-use{width:64px}#tb-by{margin-left:10px}
+/* below 900 px the sample table is the file list: it keeps its columns and scrolls inside its box (the page never scrolls sideways) */
+@media(max-width:900px){#flist .ldtab{min-width:1060px}#wtable{min-width:0;max-width:100%}}
+@media(pointer:coarse){#sb-toggle{min-height:40px}}

@@ -1,10 +1,12 @@
 """Cargo helpers shared by the tests that drive the Rust examples: `run` reports the stderr of a failed command, `build_example` builds an example once per machine even when several xdist workers ask at the same time."""
-import fcntl
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+from flock_util import lock_exclusive  # noqa: E402
 
 
 class CommandError(subprocess.CalledProcessError):
@@ -25,5 +27,5 @@ def run(*a):
 def build_example(package, example):
     """`cargo build --release --locked -p PACKAGE --example EXAMPLE`, serialised across processes by a lock file so that a cold cache is filled by one worker while the others wait."""
     with open(Path(tempfile.gettempdir()) / f"mzlab-cargo-{package}-{example}.lock", "w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        lock_exclusive(lock)
         run("cargo", "build", "--release", "--locked", "-q", "-p", package, "--example", example)

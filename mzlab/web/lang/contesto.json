@@ -841,6 +841,7 @@
   "normative.dl.progress": "Avanzamento dello scaricamento delle liste normative; {piece} = pezzo in corso, {pieces} = pezzi in tutto.",
   "load.samples.head": "Header line of the sample table in the work area; {n} = files in the table.",
   "load.samples.click": "Second part of that header line, once files are open: a click on a file name opens it.",
+  "cmd.panel.files": "Label of the side-panel toggle in a window narrower than 900 px; {n} = number of files in the sample table.",
   "load.table.open": "aria-label of the file name button in the sample table; {name} = file name.",
   "load.hrmix.asideHr": "Note under the sample table: the session is low resolution, {n} high-resolution files wait unticked.",
   "load.hrmix.asideLr": "Same note, the session is high resolution and {n} low-resolution files wait.",
