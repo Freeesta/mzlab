@@ -74,17 +74,8 @@ async function build(m) {
         if (now - tp > 200) { tp = now; postMessage({ op: "progress", frac: blob.size ? Math.min(1, off / blob.size) : 0 }); }
         return fonte.read(off, len);
       };
-      // the scan table of the file (prepare_upload) is made here, in this worker, so that two files prepare at the same time; the page gets the first TIC at once
-      let ins = m.inputs;
-      declared = m.declared || 0;
-      if (!ins) {
-        const [sha, probe] = m.prep.prints;
-        const prepared = Array.from(prepare_upload(blob.size, fonte.read, m.name, sha, probe, m.cap || 0));
-        ins = prepared.slice(0, 8);
-        declared = prepared[9] || 0;      // spectra the file says it holds
-        const early = earlyTicInputs(ins);
-        if (early) postMessage({ op: "progress", frac: 0.05, phase: "scan", done: 0, total: early.rt.length, early_tic: early });
-      }
+      const { ins, declared: dec } = scanTable(m, blob, fonte);
+      declared = dec;
       const [levels, pols, rt, tic, rows, source, run, hr1] = ins;
       // helpers only where workers can share memory; without them the builder decodes alone (same code, same bytes)
       if (m.aiuti > 0 && self.crossOriginIsolated) aiuti = await creaAiuti(m.aiuti, wasmModule);
@@ -113,4 +104,15 @@ async function build(m) {
     // a JSON string {"error_key", "params"} is an error of the builder itself; anything else (RuntimeError: unreachable, out of memory) lost the instance
     postMessage({ op: "error", text, fatal: !fullAt && !(typeof e === "string" && e.startsWith("{")) });
   }
+}
+
+// The scan table of the file (prepare_upload) is made here, in the pool worker, so that two files prepare at the same time; the page gets the first TIC at once.
+// declared: the spectra the file says it holds (a truncated mzML lists more than it has).
+function scanTable(m, blob, fonte) {
+  if (m.inputs) return { ins: m.inputs, declared: m.declared || 0 };
+  const [sha, probe] = m.prep.prints;
+  const prepared = Array.from(prepare_upload(blob.size, fonte.read, m.name, sha, probe, m.cap || 0));
+  const early = earlyTicInputs(prepared.slice(0, 8));
+  if (early) postMessage({ op: "progress", frac: 0.05, phase: "scan", done: 0, total: early.rt.length, early_tic: early });
+  return { ins: prepared.slice(0, 8), declared: prepared[9] || 0 };
 }
