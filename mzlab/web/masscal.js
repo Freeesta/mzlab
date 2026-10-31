@@ -28,8 +28,8 @@ const sg = v => (Number.isFinite(v) ? (v > 0 ? "+" : v < 0 ? "−" : "") + Math.
  * @param {{ xs: number[], ys: number[], names: string[], thr: number, xl: string, title: string }} o
  */
 function plot(o) {
-  const ymax = Math.max(o.thr, ...o.ys.map(Math.abs)) * 1.15 || 1;
-  const lo = Math.min(...o.xs), hi = Math.max(...o.xs), span = hi > lo ? hi - lo : 1;
+  const ymax = maxOf(o.ys.map(Math.abs), o.thr) * 1.15 || 1;
+  const lo = minOf(o.xs), hi = maxOf(o.xs), span = hi > lo ? hi - lo : 1;
   const px = (/** @type {number} */ x) => M.l + (hi > lo ? (x - lo) / span : 0.5) * (W - M.l - M.r);
   const py = (/** @type {number} */ y) => M.t + (1 - (y + ymax) / (2 * ymax)) * (H - M.t - M.b);
   const yt = [-ymax, -ymax / 2, 0, ymax / 2, ymax].map(v => `<text x="${M.l - 6}" y="${py(v) + 4}" text-anchor="end" class="mc-tk">${fx(v, 1)}</text>`).join("");
@@ -100,7 +100,7 @@ export async function open(k) {
       const svg = out.querySelector(`[data-plot="${i}"] svg`);
       if (!svg || !window.TDATI) return;
       svg.setAttribute("aria-label", T(p.key));
-      TDATI.describe(/** @type {any} */ (svg), T("masscal.plot.desc", { title: T(p.key), n, a: sg(Math.min(...errs)), b: sg(Math.max(...errs)) }));
+      TDATI.describe(/** @type {any} */ (svg), T("masscal.plot.desc", { title: T(p.key), n, a: sg(minOf(errs)), b: sg(maxOf(errs)) }));
       TDATI.addButton(/** @type {any} */ (svg), () => ({ title: T(p.key), head: [T("masscal.col.ion"), p.xl, T("masscal.col.err")], rowHeader: true, rows: pts.map((q, j) => [q.name, TDATI.num(p.xs[j], 4), TDATI.num(q.err_ppm, 3)]) }));
     });
   }
