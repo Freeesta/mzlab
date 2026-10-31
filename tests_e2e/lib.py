@@ -83,7 +83,7 @@ def loaded(pg, timeout=120000):
     """Waits until nothing is read or opened any more; on a timeout the message says what is still busy."""
     try: pg.wait_for_function(LOADED, timeout=timeout)
     except Exception as e:
-        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state) })")
+        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), up: (document.querySelector('#up') || {}).innerText })")
         raise TimeoutError(f"{e} | still busy: {st}") from None
 def open_first(pg, timeout=120000):
     """The first file shown: the files open as soon as they are read, hidden, and the landing stays until the student shows one.
@@ -132,9 +132,9 @@ def hold(pg, ms):
     _real_wft(pg, ms)
 from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
 _np, _nc = _Br.new_page, _Br.new_context
-# The public site hides the desktop-app download and the Teoria (sito.js); the tests run with both on, as the code still offers them.
+# The public site hides the desktop-app download (sito.js); the tests run with it on, as the code still offers it.
 # MZLAB_SITO_PRODUZIONE=1 (e2e_sito_pubblico) leaves the production values.
-_SITO = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true,teoria:true})"
+_SITO = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true})"
 def _sito():
     return None if os.environ.get("MZLAB_SITO_PRODUZIONE") else _SITO
 def _new_page(self, *a, **k):
@@ -361,10 +361,6 @@ class Run:
         pg.goto(f"http://127.0.0.1:{s.port}/")
         pg.wait_for_timeout(800)
         return pg
-    def teoria(s, pg, name="12-dati.html", wait=800):
-        """Text of a Teoria chapter, opened in a second tab of the same browser."""
-        q = s.b.new_page(); q.goto(f"http://127.0.0.1:{s.port}/static/teoria/{name}"); q.wait_for_timeout(wait)
-        t = q.inner_text("body"); q.close(); return t
     def close(s):
         try: s.b.close()
         except Exception: pass

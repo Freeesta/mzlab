@@ -54,10 +54,8 @@ try:
         step("reload resumes the session from the browser storage", reload)
         def tabs():
             pg.click("#nav button[data-v=draw]"); pg.wait_for_function("window.TPDraw !== undefined || document.querySelector('#kframe')", timeout=60000); pg.wait_for_timeout(1500)
-            pg.click("#nav button[data-v=theory]"); pg.wait_for_timeout(1500)
-            assert "static/teoria/index.html" in pg.evaluate("document.getElementById('tframe').src")
             pg.click("#nav button[data-v=data]")
-        step("Disegno and Teoria tabs work from the static site", tabs)
+        step("Disegno tab works from the static site", tabs)
         def mrm_spec():
             pg.wait_for_function("E.panels.some(p=>p.type==='spec' && p._a)", timeout=60000)      # the spectrum is made after the chromatogram, also after a reload
             open_kind(pg, "mrm")      # as a student does: at the first load only the first file is open, a click on the MRM file in the list opens it

@@ -1,16 +1,16 @@
-"""The theme snippet that opens the <head> of every page of the site (app and Teoria): inline, synchronous, before any script or stylesheet,
+"""The theme snippet that opens the <head> of the page of the site: inline, synchronous, before any script or stylesheet,
 so the very first frame already has the right background (no white flash in the dark theme, no dark flash in the light one).
-`python3 tools/tema_testa.py` rewrites the block between the markers in every page; `--check` only verifies (used by tests/test_tema_testa.py)."""
+`python3 tools/tema_testa.py` rewrites the block between the markers in the page; `--check` only verifies (used by tests/test_tema_testa.py)."""
 import re
 import sys
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 OPEN, CLOSE = "<!--tema-->", "<!--/tema-->"
-LIGHT = {"app": "#f7f8fa", "teoria": "#fbfbf9"}   # the --bg of each page in the light theme (the dark one is #14171b in both)
+LIGHT = {"app": "#f7f8fa", "teoria": "#fbfbf9"}   # the --bg of each page in the light theme (the dark one is #14171b); "teoria" is the page style of tools/libro
 DARK = "#14171b"
 
-# data-theme comes from the parent page (Teoria inside the app) or from the saved preference «mzlab.prefs» (the old «qqq.prefs» until migrated); «auto» sets
+# data-theme comes from the parent page (when embedded) or from the saved preference «mzlab.prefs» (the old «qqq.prefs» until migrated); «auto» sets
 # nothing and the prefers-color-scheme rules decide. «no-tr» switches the colour transitions off until the second frame after load.
 JS = ('(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}'
       'if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}'
@@ -28,8 +28,6 @@ def snippet(kind: str) -> str:
 
 def pages():
     yield WEB / "index.html", "app"
-    for p in sorted((WEB / "teoria").glob("*.html")):
-        yield p, "teoria"
 
 
 def inject(text: str, kind: str) -> str:

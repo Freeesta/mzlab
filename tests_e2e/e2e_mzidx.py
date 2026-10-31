@@ -113,9 +113,9 @@ try:
             for _ in range(120):
                 if len(q.evaluate(LIST, "idx")) == 2: break
                 q.wait_for_timeout(500)
-            # the read files open at once and the engine holds them: the old store is written from a page without the engine (the Teoria), once both are open
+            # the read files open at once and the engine holds them: the old store is written from a page without the engine (a plain static file), once both are open
             q.wait_for_function("UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === 2", timeout=120000)
-            q.goto(URL + "static/teoria/index.html"); q.wait_for_load_state("load")
+            q.goto(URL + "static/appname.js"); q.wait_for_load_state("load")
             assert q.evaluate(TO_IDB) == 2
             assert q.evaluate(IDBCOUNT) == 2 and q.evaluate(LIST, "files") == []
         step("an older visit left the files in IndexedDB", old_way)

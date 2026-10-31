@@ -6,8 +6,6 @@ mzlab/web/index.html	MS2_t
 mzlab/web/index.html	MRM_std_
 mzlab/web/index.html	HRMS_t
 mzlab/web/index.html	static/esempi/
-mzlab/web/index.html	static/teoria/glossario-dati.js
-mzlab/web/index.html	static/teoria/tema.js
 mzlab/web/draw.js	qqq.disegno.strumenti
 mzlab/web/pannelli.js	Cromatogramma
 mzlab/web/pannelli.js	Spettro di massa

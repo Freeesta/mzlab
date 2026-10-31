@@ -144,7 +144,7 @@ def part_export(p, r):
     mod = "/static/esporta-dati.js"
     b, ctx, pg = launch(p)                                                                       # fresh browser: empty HTTP cache
     try:
-        pg.goto(f"http://127.0.0.1:{r.port}/static/teoria/12-dati.html")                          # same origin, no engine, no worker of the engine
+        pg.goto(f"http://127.0.0.1:{r.port}/static/appname.js")                          # same origin, no engine, no worker of the engine
         pg.wait_for_load_state("load")
         o["worker_cold_ms"] = round(pg.evaluate(PACK, [mod, 0]), 1)
         w = [pg.evaluate(PACK, [mod, 0]) for _ in range(5)]; o["worker_warm_ms"] = med(w)
@@ -152,7 +152,7 @@ def part_export(p, r):
         b.close()
     b, ctx, pg = launch(p)                                                                       # a home connection: 10 Mbit/s, 40 ms; the test server does not compress (the site does)
     try:
-        pg.goto(f"http://127.0.0.1:{r.port}/static/teoria/12-dati.html"); pg.wait_for_load_state("load")
+        pg.goto(f"http://127.0.0.1:{r.port}/static/appname.js"); pg.wait_for_load_state("load")
         c = ctx.new_cdp_session(pg); c.send("Network.enable"); c.send("Network.emulateNetworkConditions", {"offline": False, "latency": 40, "downloadThroughput": 10e6 / 8, "uploadThroughput": 10e6 / 8})
         o["worker_cold_10mbit_ms"] = round(pg.evaluate(PACK, [mod, 0]), 1)
     finally:

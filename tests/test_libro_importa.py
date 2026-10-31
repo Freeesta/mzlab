@@ -12,7 +12,6 @@ from tools.libro.importa import find  # noqa: E402
 from tools.libro.importa import importa  # noqa: E402
 from tools.libro.pagina import converti  # noqa: E402
 
-TEORIA = ROOT / "mzlab" / "web" / "teoria"
 
 PAGINA = """<!doctype html>
 <html lang="it"><head><meta charset="utf-8">

@@ -306,7 +306,7 @@ I18N.add("en", {
   "lr.mirror.exp": "Experimental",
   "lr.mirror.lib": "Library",
   "help.language.title": "Language of the interface",
-  "help.language.body": "The interface is in <b>Italian</b> or in <b>English</b>. It starts from the language of the browser (Italian if the browser is in Italian, otherwise English) and is changed from the <b>gear</b> at the top, item «Lingua / Language»: the choice is remembered and the open files are not lost. Theory and Practice are in Italian only.",
+  "help.language.body": "The interface is in <b>Italian</b> or in <b>English</b>. It starts from the language of the browser (Italian if the browser is in Italian, otherwise English) and is changed from the <b>gear</b> at the top, item «Lingua / Language»: the choice is remembered and the open files are not lost.",
   "hint.testo": "The tools are here: click an icon to open the panel, or use the “Panel” button.",
   "hint.chiudi": "Close the hint",
   "feat.title": "Feature table",

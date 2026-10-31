@@ -5,7 +5,7 @@
 //     controls their own browser (clock, devtools, offline copy) can get round it. It only keeps the lab page from living on by itself.
 //  2. no examples: see below (the build deletes static/esempi and the example drawings; here their buttons go).
 //  3. only Data and Draw: window.MZLAB_LAB tells the Tabui loader (tpmine-loader.js, which brings Tabui and mzFlow) and carica.js not to start, so no
-//     package is downloaded and no tab is drawn; addresses of any other view go back to #/data. The administrator flag (Teoria editor and the like)
+//     package is downloaded and no tab is drawn; addresses of any other view go back to #/data. The administrator flag (the Libro editor and the like)
 //     reads as «off» and cannot be written. Nothing is deleted from the program: the normal build is untouched.
 (function () {
   "use strict";
@@ -42,8 +42,8 @@
   if (expired()) { showExpired(); return; }
 
   w.MZLAB_LAB = Object.freeze({ expires: EXPIRES });
-  // no Teoria and no app download in the lab, whatever ?sito= says or was set before (sito.js keeps a value that is already there)
-  w.SITO_PUBBLICO = Object.freeze({ scaricaApp: false, teoria: false });
+  // no app download in the lab, whatever ?sito= says or was set before (sito.js keeps a value that is already there)
+  w.SITO_PUBBLICO = Object.freeze({ scaricaApp: false });
 
   // the administrator flag (and its older name) reads as off and cannot be written: one choke point for every current and future reader
   try {

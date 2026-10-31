@@ -1,5 +1,5 @@
 """Search box (palette, Ctrl/⌘K): a number is matched in Rust against the neutral losses, the adducts and the lab contaminants (the chip says
-«compatible», never a verdict); a formula gives its mass and ions; a word gives commands and Teoria. Keyboard, it/en, axe, 400 px, no engine miss."""
+«compatible», never a verdict); a formula gives its mass and ions; a word gives commands. Keyboard, it/en, axe, 400 px, no engine miss."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

@@ -27,7 +27,7 @@ const BARRA = (() => {
 
   let _tab = "file";
   let _open = false;
-  let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, Teoria, loading)
+  let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, loading)
   let _restore = false;             // hidden by the narrow window, not by the user: it comes back when the window widens
   let _forced = false;              // the user opened it in a narrow window: it stays until the window widens
   let _side = "left";
@@ -57,10 +57,6 @@ const BARRA = (() => {
   const inDataOrOpening = () => inData() || typeof S !== "undefined" && S.view === "data" && (!!S.opening && !S.sess || !!S.sess && !!S.adding);
   /** A text field (or an open dialog) keeps its own keys: Alt+Shift+arrows select words there, like Ctrl/Cmd+Z undoes text. @param {EventTarget | null} t */
   const inCampo = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
-  // context «theory»: the bar shows the commands of the Teoria (window.TCMD of the same-origin iframe), not the ones of the data
-  let _ctx = "data";
-  const inTheory = () => typeof S !== "undefined" && S.view === "theory";
-  const tcmd = () => { try { const f = /** @type {HTMLIFrameElement | null} */ (Q1("#tframe")); return (f && f.contentWindow && /** @type {Bag} */ (f.contentWindow).TCMD) || null; } catch (_) { return null; } };
   const sheet = () => window.innerWidth < SHEET;
   const seen = () => (_seen = typeof S !== "undefined" && !S.sess ? false
     : _seen || (typeof E !== "undefined" && E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)));
@@ -164,9 +160,9 @@ const BARRA = (() => {
   const shown = (/** @type {string} */ sel) => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
   /** @param {Bag} c @returns {boolean} */
   const visible = c => (!c.feature || !!/** @type {Record<string, boolean>} */ (FEATURES)[c.feature]) && (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
-  const lab = (/** @type {Bag} */ c) => (c.teo ? c.etichetta : t(`cmd.${c.id}.lab`));
-  const name = (/** @type {Bag} */ c) => (c.teo ? c.etichetta : t(`cmd.${c.id}.name`));
-  const tip = (/** @type {Bag} */ c) => t(`cmd.${c.id}.tip` + (c.id === "search" && !SITO_PUBBLICO.teoria ? ".nt" : ""));
+  const lab = (/** @type {Bag} */ c) => t(`cmd.${c.id}.lab`);
+  const name = (/** @type {Bag} */ c) => t(`cmd.${c.id}.name`);
+  const tip = (/** @type {Bag} */ c) => t(`cmd.${c.id}.tip`);
 
   // ---------------------------------------------------------------- state
   function loadState() {
@@ -479,49 +475,9 @@ const BARRA = (() => {
       `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
 
-  // the commands of the Teoria as the bar and the palette use them: {id, teo, etichetta, ic, run, items}
-  // administrator mode: the chapter editor of the Teoria (embedded, the frame has no button of its own: the bar here gives it)
-  const theoryEditor = () => { try { const w = /** @type {Bag} */ (/** @type {HTMLIFrameElement} */ (Q1("#tframe")).contentWindow); return w.QADMIN && w.QADMIN.on() && w.TEORIA_EDITOR ? w.TEORIA_EDITOR : null; } catch (_) { return null; } };
-  const EDIT_IC = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L6.5 16.5l-4 1 1-4L13.5 3.5z"/><path d="M11.5 5.5l3 3"/></svg>';
-  function theoryCmds() {
-    const T = tcmd(); if (!T) return [];
-    const ed = theoryEditor();
-    return /** @type {any[]} */ (ed ? [{ id: "editor", teo: true, end: false, group: "tools", etichetta: I18N.t("theory.editor"), titolo: I18N.t("theory.editor.title"), chiave: "Alt+E", off: false, ic: () => EDIT_IC, run: () => ed.toggle() }] : []).concat(T.lista.map((/** @type {Bag} */ c) => ({ id: c.id, teo: true, end: c.gruppo === "fine", lat: c.posto === "side", premuto: c.premuto, group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato, hide: !!c.nascosto, testo: c.testo, after: !!c.dopo,
-      ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map((/** @type {Bag} */ f) => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) })));
-  }
-  const theoryAll = () => theoryCmds().filter(c => !c.hide).flatMap(c => (c.items ? c.items : [c]));       // the palette finds the tools one by one
-  function buildTheoryBar(/** @type {HTMLElement} */ bar) {
-    const sep = '<span class="tb-sep" role="separator"></span>';
-    const cs = theoryCmds().filter(c => !c.end && !c.lat && !c.hide);
-    const gear = theoryCmds().find(c => c.end);
-    const one = (/** @type {Bag} */ c) => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""}${c.premuto ? ` aria-pressed="${c.premuto()}"` : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.testo ? c.titolo : c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}>${c.after ? `<span class="tl">${EHs(c.testo || c.etichetta)}</span><span class="ti">${c.ic()}</span>` : `<span class="ti">${c.ic()}</span><span class="tl">${EHs(c.testo || c.etichetta)}</span>`}</button>`;
-    bar.innerHTML = cs.filter(c => c.id === "indice" || c.id === "prec" || c.id === "succ").map(one).join("") + [cs.filter(c => c.id !== "indice" && c.id !== "prec" && c.id !== "succ").map(one).join(""), gear ? one(gear) : ""].filter(Boolean).map(g => sep + g).join("");   // one separator between groups, none at the ends or doubled
-    bar.querySelectorAll("button[data-tcmd]").forEach((/** @type {HTMLElement} */ b) => {
-      const c = cs.concat(gear || []).find(x => x.id === b.dataset.tcmd);
-      b.tabIndex = -1;
-      b.onclick = () => {
-        if (c.off) return;
-        if (c.items) { if (Q1("#stmenu") && /** @type {Bag} */ (Q1("#stmenu"))._anchor === b) return closeMenu(true); openMenu(b, c.items.map((/** @type {Bag} */ f) => ({ label: f.etichetta, ic: f.ic(), dom: null, fn: () => f.run() }))); b.setAttribute("aria-expanded", "true"); }
-        else { c.run(); if (c.premuto) b.setAttribute("aria-pressed", String(c.premuto())); }
-      };
-      if (c.premuto) { try { /** @type {Document} */ (/** @type {HTMLIFrameElement} */ (Q1("#tframe")).contentDocument).addEventListener("tcmd-stato", () => b.setAttribute("aria-pressed", String(c.premuto()))); } catch (_) { /* frame not reachable */ } }
-    });
-    setRover(firstItem());
-    fit();
-  }
-  // the bar follows the view: Teoria commands in the Teoria, the data ones elsewhere
-  function syncContext() {
-    const c = inTheory() ? "theory" : "data";
-    document.documentElement.classList.toggle("in-theory", c === "theory");
-    if (c === _ctx) return false;
-    _ctx = c; closeMenu(false); buildBar();
-    return true;
-  }
-
   function buildBar() {
     const bar = Q1("#stbar");
     if (!bar) return;
-    if (_ctx === "theory") return buildTheoryBar(bar);
     const hadFocus = bar.contains(document.activeElement) ? /** @type {Element} */ (document.activeElement).getAttribute("data-cmd") || /** @type {Element} */ (document.activeElement).getAttribute("data-cmd-main") || /** @type {Element} */ (document.activeElement).getAttribute("data-cmd-car") : null;
     const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end" && (!c.feature || /** @type {Record<string, boolean>} */ (FEATURES)[c.feature]));
     const hr = CMD.filter(c => c.hr);
@@ -557,7 +513,7 @@ const BARRA = (() => {
 
   function syncVisibility() {
     const bar = Q1("#stbar");
-    if (!bar || _ctx === "theory") return;
+    if (!bar) return;
     CMD.forEach(c => {
       if (c.item || c.more || c.bar === false) return;
       const el = bar.querySelector(`[data-cmd="${c.id}"]`);
@@ -573,7 +529,7 @@ const BARRA = (() => {
 
   function updateButtons() {
     const bar = Q1("#stbar");
-    if (!bar || _ctx === "theory") return;
+    if (!bar) return;
     const open = _open && inData();
     bar.querySelectorAll("button[data-cmd]").forEach((/** @type {HTMLElement} */ b) => {
       const c = byId(b.dataset.cmd);
@@ -612,11 +568,6 @@ const BARRA = (() => {
   function fit() {
     const bar = Q1("#stbar");
     if (!bar || !bar.offsetParent) return;
-    if (_ctx === "theory") {          // words next to the icons while they fit, else the icons alone
-      setLevel("all");
-      if (bar.scrollWidth > bar.clientWidth) setLevel("none");
-      return;
-    }
     const t0 = performance.now();
     _dropped = new Set();
     syncVisibility();
@@ -947,10 +898,7 @@ const BARRA = (() => {
       schedFit();
     });
     let wasData = false;
-    const tf = Q1("#tframe");
-    if (tf) tf.addEventListener("load", () => { if (_ctx === "theory") { buildBar(); if (!tcmd()) setTimeout(() => _ctx === "theory" && buildBar(), 400); } });
     document.addEventListener("tpview", () => {
-      syncContext();
       const sc = Q1("#sb-panels");
       if (wasData && !inDataOrOpening()) { _away = { open: _open, top: sc ? sc.scrollTop : 0 }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
       else if (!wasData && inDataOrOpening() && _away) {                                                          // back in Dati: the panel returns as it was left (width and tool are kept in _w / _tab)
@@ -1042,7 +990,7 @@ const BARRA = (() => {
     _mode = isHrMode() ? "hr" : "lr";
     loadState();
     window.CMD = CMD;
-    if (!syncContext()) buildBar();
+    buildBar();
     const x = Q1("#sb-x");
     if (x) x.onclick = () => close(true);
     const tg = Q1("#sb-toggle");
@@ -1116,9 +1064,7 @@ const BARRA = (() => {
     name,
     lab,
     visible,
-    kw: (/** @type {Bag} */ c) => (c.teo ? "" : t(`cmd.${c.id}.kw`)),
-    get inTheory() { return _ctx === "theory"; },
-    theoryCommands: theoryAll
+    kw: (/** @type {Bag} */ c) => t(`cmd.${c.id}.kw`),
   };
 })();
 

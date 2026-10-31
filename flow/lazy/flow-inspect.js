@@ -26,7 +26,7 @@
     if (!node) return el("div", { class: "fl-insp-empty", text: "Select a step to see what it does and change its settings." });
     const cat = F.CATS[node.cat], probs = F.nodeProblems(S, node);
     const box = el("div", { class: "fl-insp", style: `--cc:${cat.color}` },
-      el("div", { class: "fl-insp-hd" }, el("span", { class: "fln-ic" }, icon(cat.icon, 20)), el("h3", { text: node.title }), el("span", { class: "fl-pk", text: cat.word }), (node.ids || []).length && F.theoryLink ? F.theoryLink(((F.instanceOf(S.plan, node.ids[0]) || {}).step) || "") : null),
+      el("div", { class: "fl-insp-hd" }, el("span", { class: "fln-ic" }, icon(cat.icon, 20)), el("h3", { text: node.title }), el("span", { class: "fl-pk", text: cat.word })),
       el("p", { class: "fl-insp-why", text: node.why }));
     if (probs.length) {
       const ul = el("ul", { class: "fl-needs", "aria-label": "What this step needs" });

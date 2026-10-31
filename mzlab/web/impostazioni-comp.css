@@ -1,5 +1,5 @@
-/* Shared building blocks of the settings panels (Teoria: teoria/impostazioni.js; program: settings.js), built by impostazioni-comp.js: sections with a small-caps title,
-   big option buttons (segmented, font, background), wide switches, groups that fold. Imported by teoria.css and app.css; every rule is under .impset. */
+/* Building blocks of the settings panel (settings.js), built by impostazioni-comp.js: sections with a small-caps title,
+   big option buttons (segmented, font, background), wide switches, groups that fold. Linked from index.html; every rule is under .impset. */
 .impset{font-size:15px;line-height:1.5;letter-spacing:normal;word-spacing:normal}
 .impset fieldset{border:0;margin:0;padding:10px 0 0;min-width:0}.impset legend{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0;margin:0 0 6px}
 .impset details.imp-g{border-top:1px solid var(--line);margin-top:12px;padding-top:6px}

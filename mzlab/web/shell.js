@@ -2,7 +2,6 @@
 // @ts-noany
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
 const $=(/** @type {string} */ s)=>document.querySelector(s);
-// addresses of the views: #/data, #/draw (and #/theory, which the head script above sends to the standalone Teoria on a cold start)
 const fmt=(/** @type {number} */ v)=>v===0?"0":(Math.abs(v)>=1e4||Math.abs(v)<.01)?v.toExponential(1):(+v.toPrecision(3)).toString();
 const css=(/** @type {string} */ n)=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc=(/** @type {unknown} */ t)=>String(t).replace(/[&<>"]/g,c=>(/** @type {Record<string, string>} */ ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}))[c]);
@@ -28,25 +27,17 @@ async function init(){try{await bootSession();await Promise.all(E.panels.map((/*
   const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);if(typeof AVVIO!=="undefined")AVVIO.segnaSessione(!!S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{if(!$("#loading").hidden)loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (landing, loading table or panels), Disegno
-let _lastV="",_itNoted=false;
-// true only the first time: remembered in localStorage (the reset of the settings of the Teoria clears it), per session when there is no storage
-function itNoteOnce(){const k="mzlab.teoria.itnote";try{if(localStorage.getItem(k))return false;localStorage.setItem(k,"1");return true}catch(e){const r=!_itNoted;_itNoted=true;return r}}
 let _addY=/** @type {number | null} */ (null),_wasAdd=false;
 function applyView(){const v=S.view,d=v==="data";
   // the scroll of the data view, kept for the way back to the work (backToWork)
   if(S.adding&&!_wasAdd)_addY=window.scrollY;_wasAdd=!!S.adding;
   const op=!!S.opening;$("#v-data").hidden=!d;syncWork();openingView(op);
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
-  $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
-  // The Teoria is Italian only: in English it opens at once in Italian, with a short toast the first time the student enters it (once per session without storage)
-  // theory module, loaded on first open
-  if(v==="theory"&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html";
-  if(v==="theory"&&_lastV!=="theory"&&I18N.lang==="en"&&window.toast&&itNoteOnce())toast(I18N.t("theory.onlyItalian"));
-  _lastV=v;
+  $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   // one title per view (WCAG 2.4.2)
   // tool tabs (Flow, Tabui, ...) carry their own name on the nav button
-  { const tb=document.querySelector('#nav button[data-v="'+v+'"]'),tn=tb&&tb.dataset.tname,T=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||""}):(tn||I18N.t("nav."+(v==="draw"?"draw":"theory")))+" · "+(window.APP_NAME||"")); if(document.title!==T)document.title=T; }
+  { const tb=document.querySelector('#nav button[data-v="'+v+'"]'),tn=tb&&tb.dataset.tname,T=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||""}):(tn||I18N.t("nav.draw"))+" · "+(window.APP_NAME||"")); if(document.title!==T)document.title=T; }
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
 // the header stays in view (sticky): --hh is its real height (it can wrap on a narrow window), used by the file list, the full-screen panel and the scrolls to a panel
 {const hd=document.querySelector("header"),hh=()=>{document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");hd.classList.toggle("scrolled",scrollY>4)};
@@ -55,10 +46,10 @@ window.hdrH=()=>document.querySelector("header").offsetHeight;
 // Back and Forward walk through the views
 /** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){v=VIEW_ALIAS[v]||v;STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
 document.querySelectorAll("#nav button:not([data-late])").forEach(b=>b.onclick=()=>setView(b.dataset.v));
-// Back/Forward and typed addresses: the view follows the hash (a cold #/theory never gets here: the head script leaves the page)
+// Back/Forward and typed addresses: the view follows the hash
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
 // a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)
-if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";$("#v-theory").hidden=S.view!=="theory";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
+if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
 
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
 const sz=(/** @type {number | null | undefined} */ b)=>b==null?"—":b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
@@ -143,7 +134,7 @@ function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
         if(nk){const i=F.findIndex((/** @type {FileRiga} */ q)=>q.name===nk.name),b=el.querySelector(nk.rm?`[data-rm="${i}"]`:`[data-i="${i}"][data-k="${nk.k}"]`);if(b){b.focus();if(b.type==="text")b.setSelectionRange(b.value.length,b.value.length)}}};
       if(keep)go();else setTimeout(go,0)};
     if(x.dataset.k==="conc")x.addEventListener("keydown",(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"){F[+x.dataset.i].gC=false;x.classList.remove("guess");x.title="";modeNote()}})});
-  el.querySelectorAll("[data-dl]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>CONV.download(b.dataset.dl));const npc=$("#cvcomp");if(npc)npc.onchange=()=>{CONV.compression=npc.value;const e=$("#cvest");if(e)e.textContent=CONV.estimate()};const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();const sva=$("#saveall");if(sva)sva.onclick=()=>CONVQ.saveAll();
+  el.querySelectorAll("[data-dl]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>CONV.download(b.dataset.dl));const npc=$("#cvcomp");if(npc)npc.onchange=()=>{CONV.compression=npc.value;CONV.paintSizes();const e=$("#cvest");if(e)e.textContent=CONV.estimate()};const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();const sva=$("#saveall");if(sva)sva.onclick=()=>CONVQ.saveAll();
   const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach((/** @type {FileRiga} */ f)=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});modeNote()}
@@ -410,18 +401,15 @@ document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.datas
   // the header icons sit next to their text label (the icon names are Italian)
   if(e.closest("header"))e.querySelectorAll("svg").forEach((/** @type {Element} */ v)=>{v.removeAttribute("aria-label");v.removeAttribute("role");v.setAttribute("aria-hidden","true")})});
 // What is downloaded when (decided 8/10/2026, measured on the site): the engine (~10 MB compressed) at once, because Dati needs it;
-// after it, one step per idle moment: OpenChemLib ~340 kB, then the Teoria ~60 kB; Ketcher is warmed by first-paint.js (one policy: low priority, once loaded and no file loading,
+// after it, one step per idle moment: OpenChemLib ~340 kB; Ketcher is warmed by first-paint.js (one policy: low priority, once loaded and no file loading,
 // not with data saving on) or at once when the mouse goes on «Disegno»; the example files (~28 MB) only with their button.
 /** @param {string} [as] */ function prefetch(/** @type {string[]} */ urls,as){urls.forEach(u=>{const l=document.createElement("link");l.rel=as==="module"?"modulepreload":"prefetch";l.href=u;if(as&&as!=="module")l.as=as;document.head.appendChild(l)})}
 function prefetchIdle(){const idle=/** @type {any} */ (window).requestIdleCallback;
   const c=/** @type {any} */ (navigator).connection||{};if(c.saveData)return;
-  // one step per idle moment, in this order: Disegno (OpenChemLib), then the Teoria (the Dati scripts are all in carica.js's list; the other language is fetched only when chosen)
-  const steps=[()=>prefetch(["static/vendor/openchemlib.js"],"module"),
-    ()=>{if(SITO_PUBBLICO.teoria)prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/tema.js","static/teoria/glossario-dati.js"])}];
+  // one step per idle moment, in this order: Disegno (OpenChemLib) (the Dati scripts are all in carica.js's list; the other language is fetched only when chosen)
+  const steps=[()=>prefetch(["static/vendor/openchemlib.js"],"module")];
   const next=()=>{const f=steps.shift();if(!f)return;f();idle?idle(next,{timeout:8000}):setTimeout(next,2000)};
   idle?idle(next,{timeout:8000}):setTimeout(next,2000)}
 {const b=document.querySelector('#nav button[data-v="draw"]');if(b){const warm=()=>{const w=/** @type {any} */ (window).MZLAB_WARM_KETCHER;if(w)w()};b.addEventListener("pointerenter",warm,{once:true});b.addEventListener("focus",warm,{once:true})}}
 // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
 {const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}
-// Five logo hits turn the administrator mode on without a reload: the Teoria already open in the frame reloads, so its editor button and Alt+E appear
-document.addEventListener("mzlab:admin",()=>{const f=$("#tframe");if(f&&f.getAttribute("src")&&f.contentWindow)try{f.contentWindow.location.reload()}catch(_){}});

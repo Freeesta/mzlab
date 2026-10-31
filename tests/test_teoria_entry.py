@@ -1,4 +1,4 @@
-"""site/theory/index.html (build_site.theory_entry): short address of the Teoria, forwards the hash to the real page."""
+"""site/theory/index.html (build_site.theory_entry): the old address of the Teoria forwards to the Teoria site (BasePeak)."""
 import sys
 from pathlib import Path
 
@@ -6,8 +6,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import build_site  # noqa: E402
 
 
-def test_theory_entry_forwards_with_hash():
+def test_theory_entry_forwards_to_basepeak():
     html = build_site.theory_entry()
-    assert 'location.replace("../static/teoria/index.html"+location.hash)' in html
-    assert 'http-equiv="refresh"' in html and "<title>Teoria" in html
-    assert "pyodide" not in html.lower() and "<script src" not in html
+    assert 'http-equiv="refresh" content="0;url=https://freeesta.github.io/BasePeak/"' in html
+    assert "<title>Teoria" in html and "static/teoria" not in html
+    assert "<script" not in html.lower()

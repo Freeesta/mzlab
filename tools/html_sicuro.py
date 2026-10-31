@@ -26,7 +26,7 @@ def misura() -> dict[str, int]:
     """Per file, the number of lines with an HTML sink and a `${` that do not use the tag `h`."""
     out: dict[str, int] = {}
     for f in indice.tracked():
-        if not (f.startswith("mzlab/web/") and f.endswith(".js")) or "/vendor/" in f or "/teoria/" in f or "/esempi/" in f:
+        if not (f.startswith("mzlab/web/") and f.endswith(".js")) or "/vendor/" in f or "/esempi/" in f:
             continue
         n = sum(1 for line in (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n")
                 if SINK.search(line) and "${" in line and not TAGGED.search(line))
