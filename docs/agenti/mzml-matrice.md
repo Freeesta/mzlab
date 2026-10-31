@@ -16,7 +16,7 @@ Fixture: `tools/mzml_varianti.py OUT_DIR` (20 file sintetici, numeri inventati);
 | file vuoto, non XML | `empty`, `notxml` | `err.file.notMzml` |
 | base64 rotta | `badb64` | `err.file.base64` |
 | gzip (`.mzML.gz`) | `gz.mzML.gz`, `aperti_gz.rs` | si apre dal lettore `mzml-gz` (`aperti/mzml_gz.rs`): decomprime in memoria fino a `Limiti::byte` (`error.memoryBudget` oltre), poi lo legge `mzml-numpress`; gzip troncato `err.file.zlib` |
-| file troncato | `truncated` | si apre con gli spettri che ha, senza avviso (buco noto; `validate` lo segnala INVALID) |
+| file troncato | `truncated` | si apre con gli spettri che ha; `Table::declared` (conteggio di `<spectrumList>`) meno le righe lette dà `stats.missing` e la riga del caricamento dice «N scansioni mancanti» (`conv.row.missing`); la CLI scrive `warn.file.truncated` su stderr; `validate` lo segnala INVALID |
 | mzMLb, imzML | – | non letti |
 
 Non provato qui: il motore `.wasm` del sito e l'app desktop sulle stesse fixture (stesso codice del core, ma senza e2e per variante).

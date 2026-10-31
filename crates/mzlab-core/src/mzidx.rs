@@ -55,6 +55,8 @@ pub struct ScanTable {
     pub run_json: String,
     /// MS1 peaks as `f32` (high-resolution file).
     pub hr1: bool,
+    /// Spectra the mzML declares in `<spectrumList count>` (0 when unknown or not an mzML): more than `level.len()` means the file is truncated.
+    pub declared: usize,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]

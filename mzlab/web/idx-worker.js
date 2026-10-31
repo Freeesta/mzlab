@@ -87,7 +87,9 @@ async function build(m) {
     ah.close(); ah = null;
     if (ac) { ac.flush(); ac.close(); ac = null; }
     await dropSpill();
-    postMessage({ op: "done", stats: JSON.parse(stats), ms: Math.round(performance.now() - t0) });
+    const st = JSON.parse(stats);
+    if (m.declared > st.scans) st.missing = m.declared - st.scans;      // a truncated mzML: the spectra its list declares beyond the ones it holds
+    postMessage({ op: "done", stats: st, ms: Math.round(performance.now() - t0) });
   } catch (e_) { const e = /** @type {Lanciato|string} */ (e_);
     if (ah) { try { ah.close(); } catch (_) { /* already closed */ } }
     if (ac) { try { ac.close(); } catch (_) { /* already closed */ } }
