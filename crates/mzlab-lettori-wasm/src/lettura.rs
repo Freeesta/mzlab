@@ -359,6 +359,11 @@ pub fn cromatogramma(h: u32, c: u32, id: &str) -> Result<String, JsValue> {
 pub fn metodo(h: u32, c: u32) -> Result<String, JsValue> {
     con(|s| s.metodo(h, c as usize))
 }
+/// The spectra of the sample that a truncated file declares but does not hold.
+#[wasm_bindgen]
+pub fn mancanti(h: u32, c: u32) -> Result<u32, JsValue> {
+    con(|s| s.mancanti(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
+}
 /// The header of the mzML of the sample as JSON (`null` when the reader has none).
 #[wasm_bindgen]
 pub fn testata(h: u32, c: u32) -> Result<String, JsValue> {

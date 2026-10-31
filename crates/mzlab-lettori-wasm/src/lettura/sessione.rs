@@ -77,6 +77,11 @@ impl Sessioni {
         self.lettore(h)?.metodo(c)
     }
 
+    /// The spectra of sample `c` that a truncated file declares but does not hold (`Lettore::mancanti`).
+    pub fn mancanti(&mut self, h: u32, c: usize) -> Result<usize> {
+        Ok(self.lettore(h)?.mancanti(c))
+    }
+
     /// The header of the mzML of sample `c` (`Lettore::testata_mzml`), `null` when the reader has none: `{run, sources, instrument:[acc,name]|null, components:[[kind,acc,name]],
     /// software:[name,version], acquired, serial, source_sha1, source_cv:[[acc,name]], sample:[id,name]|null, run_params:[[name,value]], content:[[acc,name]],
     /// extra_software:[[acc,name,version]], centroided}`.

@@ -28,6 +28,10 @@ pub trait Modulo {
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String>;
     fn metodo(&mut self, c: usize) -> Result<String>;
     fn testata(&mut self, c: usize) -> Result<String>;
+    /// The spectra a truncated file declares but does not hold (a module of an older build knows none: 0).
+    fn mancanti(&mut self, _c: usize) -> Result<u32> {
+        Ok(0)
+    }
 }
 
 fn guasto(what: &str) -> Error {
@@ -324,12 +328,15 @@ impl<M: Modulo> Lettore for LettoreEsterno<M> {
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.m.metodo(c)
     }
+    fn mancanti(&mut self, c: usize) -> usize {
+        self.m.mancanti(c).unwrap_or(0) as usize
+    }
     fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
         RisposteTracce::testata(&self.m.testata(c)?)
     }
 }
 
-/// The functions of a session of the module, as an object of JS functions `{campioni, indice, scansione, intestazione, cromatogrammi, cromatogramma, metodo, testata}`
+/// The functions of a session of the module, as an object of JS functions `{campioni, indice, scansione, intestazione, cromatogrammi, cromatogramma, metodo, testata, mancanti}`
 /// that already hold the handle of the session: `campioni()`, `indice(c)`, `scansione(c, k)`, ...
 pub(crate) struct ModuloJs {
     sessione: JsValue,
@@ -406,6 +413,14 @@ impl Modulo for ModuloJs {
     }
     fn testata(&mut self, c: usize) -> Result<String> {
         self.testo("testata", &[(c as f64).into()])
+    }
+    fn mancanti(&mut self, c: usize) -> Result<u32> {
+        // a session of an older module has no such function
+        Ok(self
+            .chiama("mancanti", &[(c as f64).into()])
+            .ok()
+            .and_then(|v| v.as_f64())
+            .map_or(0, |v| v as u32))
     }
 }
 
