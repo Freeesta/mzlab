@@ -139,12 +139,11 @@ impl State {
         let t0 = std::time::Instant::now();
         // the mapped old index goes before the build replaces its file (a mapped file cannot be replaced on Windows); the next request opens the new one
         self.drop_lr_index(name);
-        let mut missing = 0;
-        if let Some(nat) = &e.nat {
-            self.indexer()?.build_nat(nat, name)?;
+        let missing = if let Some(nat) = &e.nat {
+            self.indexer()?.build_nat(nat, name)?.missing
         } else {
-            missing = self.indexer()?.build(&e.path, name, None)?.missing;
-        }
+            self.indexer()?.build(&e.path, name, None)?.missing
+        };
         self.drop_lr_index(name);
         // missing: the spectra the file declares beyond the ones it holds (the row of the loading warns, as on the site)
         text(format!("{{\"ms\":{},\"missing\":{missing}}}", t0.elapsed().as_millis()))

@@ -44,6 +44,8 @@ export function createEsterno(native_external) {
       cromatogramma: (/** @type {number} */ c, /** @type {string} */ id) => w.cromatogramma(h, c, id),
       metodo: (/** @type {number} */ c) => w.metodo(h, c),
       testata: (/** @type {number} */ c) => w.testata(h, c),
+      // the spectra a truncated file declares but does not hold (a module of an older build has none)
+      mancanti: (/** @type {number} */ c) => (w.mancanti ? w.mancanti(h, c) : 0),
       chiudi: () => w.chiudi(h),
     };
   };

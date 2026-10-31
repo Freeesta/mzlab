@@ -25,7 +25,7 @@ impl IdxBuilder {
             upload::con_impronte_parallele(
                 move || nativi::fileset(&members),
                 |impronte| {
-                    upload::indicizza_lettore_con(
+                    let (mut st, _) = upload::indicizza_lettore_con(
                         &mut *l,
                         nat.c,
                         impronte,
@@ -34,8 +34,10 @@ impl IdxBuilder {
                         DEFAULT_BUDGET,
                         Some(spill),
                         &mut |_| {},
-                    )
-                    .map(|(st, _)| st)
+                    )?;
+                    // the spectra a truncated file declares beyond the ones it holds
+                    st.missing = l.mancanti(nat.c);
+                    Ok(st)
                 },
             )
         })

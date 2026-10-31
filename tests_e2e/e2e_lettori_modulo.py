@@ -123,6 +123,8 @@ lc_top = tmp / "lc"
 agilent_sintetico.write_lcms(lc_top, "mrm.D", "mrm"); agilent_sintetico.write_lcms(lc_top, "perfil.D", "profile")
 for nm, flag in (("npa", True), ("npb", False)):   # two folders of one mzML each: numpress and its zlib twin
     (tmp / nm).mkdir(); mzml_file(tmp / nm / "np.mzML", flag)
+(tmp / "npt").mkdir()   # a numpress mzML cut after three quarters of its bytes: it opens with the spectra it holds and says how many are missing
+(tmp / "npt" / "np.mzML").write_bytes((tmp / "npa" / "np.mzML").read_bytes()[:(tmp / "npa" / "np.mzML").stat().st_size * 3 // 4])
 (tmp / "xml").mkdir(); XTIC = mzxml_file(tmp / "xml" / "x.mzXML")
 (tmp / "cdf").mkdir(); CTIC = cdf_file(tmp / "cdf" / "c.cdf")
 
@@ -241,6 +243,15 @@ try:
             r = pg.evaluate(MZNP)
             assert r == {"writer": False, "spectra": 40, "numpress": False, "plain": True}, r
         step("a numpress mzML is read as it is (the module writes no mzML) and «Download .mzML» gives the plain one", numpress_as_is)
+        def numpress_truncated():
+            pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / "npt"))
+            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            pg.click("#opbtn")
+            pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
+            li = pg.locator("#flist .cvsum li[data-cvmiss]")
+            assert li.count() == 1, pg.inner_text("#flist")
+            n = int(li.get_attribute("data-cvmiss")); assert 0 < n < 40, n
+        step("a truncated numpress mzML opens with the spectra it holds and its row says how many are missing", numpress_truncated)
         def mzxml_opens():
             r = one("xml"); assert r["files"] == ["x.mzML"], r["files"]
             y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, XTIC)), (y and y[:3], XTIC[:3])
