@@ -13,7 +13,8 @@ Famiglia `aperti` (`crates/mzlab-lettori/src/aperti/`, feature `aperti`, tetto 3
 - Limiti noti: i cvParam dello spettro che la riscrittura non conosce diventano userParam «ACC nome» nell'mzML riscritto; `dataProcessing`, `referenceableParamGroup` e `scanSettings` non passano (`grezzi-non-estratti.md`).
 
 ## mzML gzip (`aperti/mzml_gz.rs`)
-- `VOCE` `id "mzml-gz"`, `.mzml.gz`: `riconosci` vuole i byte magici gzip e `<mzML`/`<indexedmzML` nei primi 4 KB decompressi (`Fiducia::Si`). `apri` decomprime TUTTO in memoria (`MultiGzDecoder`, tetto `Limiti::byte`, `error.memoryBudget` oltre; gzip rotto `err.file.zlib`) e passa il file a `mzml_numpress::apri`, che legge anche gli array piani. La pagina lo manda sempre al modulo (`soloModulo`). Un gzip più grande del tetto non si apre: leggerlo a flusso su OPFS è lavoro a parte.
+- `VOCE` `id "mzml-gz"`, `.mzml.gz`: `riconosci` vuole i byte magici gzip e `<mzML`/`<indexedmzML` nei primi 4 KB decompressi (`Fiducia::Si`). `apri` decomprime TUTTO in memoria (`MultiGzDecoder`, tetto `Limiti::byte`, `error.memoryBudget` oltre; gzip rotto `err.file.zlib`; un gzip troncato con qualche byte già gonfiato si apre con gli spettri che ha e `Lettore::mancanti` conta gli altri) e passa il file a `mzml_numpress::apri`, che legge anche gli array piani.
+- La pagina lo manda sempre al modulo (`soloModulo`). Un gzip più grande del tetto non si apre: leggerlo a flusso su OPFS è lavoro a parte.
 - Prove: `crates/mzlab-lettori/tests/aperti_gz.rs`, `mzml_varianti_tests.rs` (CLI).
 
 ## mzXML (`aperti/mzxml.rs`)

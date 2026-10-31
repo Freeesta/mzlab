@@ -71,14 +71,19 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let m = fs.membri.swap_remove(i);
     let nome = m.nome[..m.nome.len() - ".gz".len()].to_string();
     let mut fuori = Vec::new();
-    let lette = MultiGzDecoder::new(Flusso {
+    let letto = MultiGzDecoder::new(Flusso {
         dati: m.dati,
         pos: 0,
         dim: m.dim,
     })
     .take(limiti.byte + 1)
-    .read_to_end(&mut fuori)
-    .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
+    .read_to_end(&mut fuori);
+    // a cut stream (download stopped) keeps what it inflated; the spectra it lacks are counted by `mancanti`
+    let lette = match letto {
+        Ok(n) => n,
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof && !fuori.is_empty() => fuori.len(),
+        Err(e) => return Err(Error::new("err.file.zlib").with("detail", e)),
+    };
     if lette as u64 > limiti.byte {
         return Err(Error::memory_budget());
     }

@@ -252,7 +252,7 @@ fn apri_campione(
     mzlab_lettori::apri(fs, &Limiti::sito())
 }
 
-/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written.
+/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::mancanti`).
 #[wasm_bindgen]
 pub fn to_mzml(
     names: js_sys::Array,
@@ -261,9 +261,10 @@ pub fn to_mzml(
     c: u32,
     sink: Function,
     progress: Function,
-) -> Result<(), JsValue> {
+) -> Result<f64, JsValue> {
     let m = Membri::new(names, sizes, read)?;
     let mut l = apri_campione(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
+    let lacking = l.mancanti(c as usize);
     let mut out = BlockWriter {
         sink,
         buf: Vec::new(),
@@ -284,7 +285,8 @@ pub fn to_mzml(
         .map_err(|e| error_json(&e))?;
     out.flush().map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
-    })
+    })?;
+    Ok(lacking as f64)
 }
 
 // ---- session interface (for the external reader of the engine): a reader stays open under a handle ----

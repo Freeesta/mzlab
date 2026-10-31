@@ -28,13 +28,13 @@ async function run(m) {
     sink = await rawSink(/** @type {string} */ (m.dest));
     const s = sink;
     let written = 0, last = 0;
-    w.to_mzml(names, sizes, read, m.c || 0, (/** @type {Uint8Array} */ p) => { written += p.length; s.write(p); }, (/** @type {number} */ scans, /** @type {number} */ scansTotal) => {
+    const missing = w.to_mzml(names, sizes, read, m.c || 0, (/** @type {Uint8Array} */ p) => { written += p.length; s.write(p); }, (/** @type {number} */ scans, /** @type {number} */ scansTotal) => {
       const t = performance.now(); if (t - last < 100 && scans < scansTotal) return; last = t;
       post({ progress: { scans, scansTotal, written } });
     });
     const q = s.error(); if (q) throw q;
     const r = await s.finish(); sink = null;
-    post(r.file ? { file: r.file } : { parts: r.parts });
+    post(r.file ? { file: r.file, missing } : { parts: r.parts, missing });
   } catch (e) {
     if (sink) await sink.abort().catch(() => {});
     post({ error: errOf(e, m.fam) });
