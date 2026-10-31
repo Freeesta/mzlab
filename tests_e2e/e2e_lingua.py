@@ -18,15 +18,16 @@ try:
             c = b.new_context(locale=locale, viewport={"width": 1500, "height": 1400}); pg = c.new_page()
             pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
             pg.goto(url + query); pg.wait_for_timeout(800); return pg
-        nav = lambda pg: pg.evaluate("[...document.querySelectorAll('#nav button')].map(b => b.textContent)")
+        # the tabs Tabui and Flow follow Data and Drawing (they carry the same name in both languages)
+        nav = lambda pg: pg.evaluate("[...document.querySelectorAll('#nav button')].map(b => b.textContent.trim())")
         def italian():
             pg = page("it-IT"); assert pg.evaluate("I18N.lang") == "it" and pg.evaluate("document.documentElement.lang") == "it"
-            assert nav(pg) == ["Dati", "Disegno"], nav(pg)
+            assert nav(pg) == ["Dati", "Disegno", "Tabui", "Flow"], nav(pg)
         step("it-IT browser -> Italian", italian)
         def english():
             for loc in ("en-US", "fr-FR", "de-DE"):
                 pg = page(loc); assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("document.documentElement.lang") == "en", loc
-                assert nav(pg) == ["Data", "Drawing"], (loc, nav(pg))
+                assert nav(pg) == ["Data", "Drawing", "Tabui", "Flow"], (loc, nav(pg))
         step("en-US, fr-FR, de-DE browsers -> English", english)
         def query():
             pg = page("it-IT", "?lang=en"); assert pg.evaluate("I18N.lang") == "en"
@@ -43,7 +44,7 @@ try:
             with pg.expect_navigation(): pg.click("input[name=uip-lang][value=en]", force=True)
             attendi(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
             assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
-            assert nav(pg) == ["Data", "Drawing"]
+            assert nav(pg) == ["Data", "Drawing", "Tabui", "Flow"]
             attendi(pg, f"E.files.length === {n}", 60000)
             assert pg.evaluate("E.files.length") == n, "open files must come back after the language change"
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "en"

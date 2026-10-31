@@ -156,11 +156,12 @@ try:
         pg.evaluate(HOLD, NAMES); pg.evaluate(PUT, NAMES)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
+        # the gap filling takes the table of the alignment (the pool aligns and fills in one call): its job ends «reused», the others «done»
         IDS = ["det", "ali", "gap", "ms2", "mat", "f1", "sus", "lv", "ex"]
 
         def first():
             r = pg.evaluate(RUN, [WEB, SAMPLES, LIB, LIST]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
-            for i in IDS: assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, [e for e in r["ev"] if e["passo"] == i][-3:])
+            for i in IDS: assert any(e["passo"] == i and e["stato"] in (("done", "reused") if i == "gap" else ("done",)) and e["via"] == "browser" for e in r["ev"]), (i, [e for e in r["ev"] if e["passo"] == i][-3:])
             assert asked, "the flowtab module was not fetched when export.annotations ran"
             web = pg.evaluate(KEPT).get("ex.csv"); assert web is not None
             at = next((i for i, (x, y) in enumerate(zip(NAT.decode(), web)) if x != y), min(len(NAT), len(web)))

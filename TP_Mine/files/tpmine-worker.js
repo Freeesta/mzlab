@@ -69,9 +69,9 @@ async function openIdx(names) {
   try {
     for (const n of names) {
       const fh = /** @type {any} */ (await d.getFileHandle(idxBase(n) + ".mzidx"));
-      for (let i = 0; ; i++) {          // the index builder of the Data tab (a short-lived worker) releases its handle a moment after it ends
+      for (let i = 0; ; i++) {          // the Data tab's engine parks its read lease after 2 s idle, re-armed once: up to ~4 s (archivio.js LEASE_IDLE); wait longer than that
         try { hs.push(await fh.createSyncAccessHandle()); break; }
-        catch (e) { if (i >= 40 || /** @type {any} */ (e).name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
+        catch (e) { if (i >= 120 || /** @type {any} */ (e).name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
       }
     }
   } catch (e) { for (const h of hs) h.close(); throw e; }

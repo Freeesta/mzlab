@@ -373,7 +373,7 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 #phinfo{display:none}
 html.phone header{flex-wrap:nowrap;transition:transform .2s}html.phone header.away{transform:translateY(-110%)}
 html.phone header>:not(.logo):not(#nav):not(#phinfo){display:none!important}
-html.phone #nav button{display:none}
+html.phone #nav button{display:none!important}
 html.phone #phinfo{display:inline-flex;margin-left:auto;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font:700 16px Georgia,serif;color:var(--accent)}
 html.phone #loading{display:none}
 html.phone body>:not(header):not(#phone):not(script):not(style){display:none!important}
@@ -566,3 +566,5 @@ html.in-draw #sb-toggle{display:none}
 @container tools (max-width:1180px){#tools>#g-add{mask-image:linear-gradient(to right,#000 calc(100% - 14px),transparent)}}
 /* the show/hide box of a file in the side list is a 24 px target (WCAG 2.2 target size); the checkboxes of the precursor rows keep their own size */
 #flst .fl>input[type=checkbox][data-k]{width:24px;height:24px;margin:0;flex:none}
+/* narrow screens: tighter tab padding so the four tabs plus the tools still fit two header rows; #nav keeps one fixed width (widest label set measured: 250 px) */
+@media (max-width:600px){html:not(.phone) #nav button{padding:6px 7px}html:not(.phone) #nav{min-width:calc(250px*var(--z,1));order:1}html:not(.phone) header .hq{order:2}html:not(.phone) header #fs-btn{order:3}html:not(.phone) header #sb-toggle{order:4}html:not(.phone) header #np-set{order:5}html:not(.phone) #stbar{flex-basis:80px}html:not(.phone) #g-tools button{min-height:24px}}
