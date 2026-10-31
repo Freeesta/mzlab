@@ -225,6 +225,9 @@ impl Lettore for SrmDaScansioni {
     fn campioni(&self) -> &[Campione] {
         self.inner.campioni()
     }
+    fn mancanti(&mut self, c: usize) -> usize {
+        self.inner.mancanti(c)
+    }
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.inner.indice(c)
     }

@@ -62,19 +62,34 @@ fn un_mzml_gz_con_numpress_si_apre() {
     assert_eq!(l.scansione(0, 0).unwrap().mz.len(), scan[0].mz.len());
 }
 
+/// A download stopped midway: the spectra that inflated open, and `mancanti` counts those the run header declared and the cut took.
+#[test]
+fn un_gz_troncato_si_apre_con_gli_spettri_che_ha() {
+    let scan = scansioni();
+    let buono = gz(&mzml_di(&scan, Cod::Piano, None));
+    let mut intero = abre("a.mzML.gz", buono.clone(), &Limiti::sito()).unwrap();
+    assert_eq!(intero.mancanti(0), 0);
+    let mut l = abre(
+        "a.mzML.gz",
+        buono[..buono.len() * 3 / 4].to_vec(),
+        &Limiti::sito(),
+    )
+    .unwrap();
+    let ha = l.campioni()[0].scansioni;
+    assert!(ha > 0 && ha < scan.len(), "{ha} of {}", scan.len());
+    assert_eq!(ha + l.mancanti(0), scan.len());
+    assert_eq!(l.scansione(0, 0).unwrap().mz, scan[0].mz);
+}
+
 #[test]
 fn i_casi_ostili_danno_una_chiave() {
     let scan = scansioni();
     let buono = gz(&mzml_di(&scan, Cod::Piano, None));
     let chiave = |nome: &str, b: Vec<u8>, l: &Limiti| abre(nome, b, l).err();
-    // cut in the middle of the stream
+    // cut before anything inflated: nothing to open
     assert_eq!(
-        chiave(
-            "a.mzML.gz",
-            buono[..buono.len() / 2].to_vec(),
-            &Limiti::sito()
-        ),
-        Some("err.file.zlib")
+        chiave("a.mzML.gz", buono[..12].to_vec(), &Limiti::sito()),
+        Some("err.file.notAccepted")
     );
     // not gzip at all, and gzip of something that is not an mzML
     assert_eq!(

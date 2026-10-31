@@ -6,6 +6,7 @@
 mod comune;
 
 use comune::*;
+use mzlab_core::lettori::Limiti;
 use mzlab_core::mzml;
 use mzlab_core::numpress::{self, Np};
 
@@ -243,4 +244,25 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
         let (x, y) = (a.scansione(0, k).unwrap(), b.scansione(0, k).unwrap());
         assert!(x.mz == y.mz && x.intensity == y.intensity && x.rt == y.rt && x.id == y.id);
     }
+}
+
+/// A numpress mzML cut in the middle of the spectrum list opens with the spectra it holds, and `mancanti` counts those the run header declared.
+#[test]
+fn un_numpress_troncato_dichiara_gli_spettri_mancanti() {
+    let scan = scansioni();
+    let cod = Cod::Np {
+        intensita: Np::Slof,
+        zlib: false,
+    };
+    let b = mzml_di(&scan, cod, None);
+    let mut intero = mzlab_lettori::apri(insieme("a.mzML", b.clone()), &Limiti::sito()).unwrap();
+    assert_eq!(intero.mancanti(0), 0);
+    let mut l = mzlab_lettori::apri(
+        insieme("a.mzML", b[..b.len() * 3 / 4].to_vec()),
+        &Limiti::sito(),
+    )
+    .unwrap();
+    let ha = l.campioni()[0].scansioni;
+    assert!(ha > 0 && ha < scan.len(), "{ha} of {}", scan.len());
+    assert_eq!(ha + l.mancanti(0), scan.len());
 }

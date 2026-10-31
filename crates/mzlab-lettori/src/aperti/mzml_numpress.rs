@@ -56,6 +56,8 @@ pub struct LettoreNumpress {
     limiti: Limiti,
     campioni: Vec<Campione>,
     righe: Vec<Row>,
+    /// Spectra the run header declares (0: not declared), to count those a truncated file lacks.
+    dichiarati: usize,
     indice: Vec<VoceScansione>,
     tracce: Option<Vec<Chrom>>,
     /// SHA-1 of the file, read the first time the header of the mzML is asked for (`Some(None)`: it could not be read).
@@ -269,6 +271,13 @@ impl Lettore for LettoreNumpress {
         &self.campioni
     }
 
+    fn mancanti(&mut self, c: usize) -> usize {
+        if c != 0 {
+            return 0;
+        }
+        self.dichiarati.saturating_sub(self.righe.len())
+    }
+
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         Ok(&self.indice)
@@ -377,6 +386,7 @@ pub(super) fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>>
         }],
         nome,
         limiti: *limiti,
+        dichiarati: tabella.declared,
         righe: tabella.rows,
         indice,
         tracce: None,
