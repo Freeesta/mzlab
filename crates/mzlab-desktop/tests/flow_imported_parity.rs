@@ -49,6 +49,7 @@ fn the_app_gives_the_bytes_of_the_native_run_with_imported_lists() {
     let data = tempfile::tempdir().unwrap();
     let st = State::new();
     st.set_data_folder(data.path().join("app"));
+    st.set_flow_folder(data.path().join("flow"));
     let a = st
         .rpc("flow/run", &json!({ "plan": PLAN, "files": files }), &[])
         .unwrap();
