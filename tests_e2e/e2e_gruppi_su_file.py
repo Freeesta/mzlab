@@ -48,11 +48,14 @@ def table(pg):
     if pg.get_attribute("#samptab", "aria-pressed") != "true": pg.click("#samptab")
     attendi(pg, "!!document.querySelector('#flist').offsetParent", 10000); fermo(pg, "#flist")
 def drag(pg, src, dst, where=0.5, rest=0.8, hold=None):
-    """A real mouse drag from the centre of `src` to the point `where` (0 top … 1 bottom) of the height of `dst`; it rests `rest` s there (the 600 ms of the middle third), `hold` runs before the drop."""
+    """A real mouse drag from the centre of `src` to the point `where` (0 top … 1 bottom) of the height of `dst`; it rests there (`rest`: the middle third waits for its `.gdnd-onto` mark, the 600 ms dwell), `hold` runs before the drop."""
     x, y = centre(src); pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x + 4, y + 4); pg.mouse.move(x + 8, y + 8)
     b = box(dst); tx, ty = b["x"] + b["width"] / 2, b["y"] + b["height"] * where
     pg.mouse.move(tx, ty, steps=10); pg.mouse.move(tx + 1, ty, steps=2)
-    if rest: time.sleep(rest); pg.mouse.move(tx, ty, steps=2)
+    if rest:
+        if 0.34 < where < 0.66: attendi(pg, "!!document.querySelector('.gdnd-onto')", 5000)
+        else: frames(pg, 3)
+        pg.mouse.move(tx, ty, steps=2)
     if hold: hold()
     pg.mouse.up()
 def undo(pg): pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Control+z")
@@ -178,7 +181,7 @@ try:
         step("axe: the table with its grips has no serious or critical violation", ax)
         def reload():
             table(pg); drag(pg, trow(pg, "MQ_N2_T01").locator(".tg-grip"), trow(pg, "MQ_N2_T02")); esc_rename(pg, "MQ_N2")
-            attendi(pg, "E.files.some(f => f.ugrp === 'MQ_N2')", 10000); pg.evaluate("uiSave()"); time.sleep(0.6)
+            attendi(pg, "E.files.some(f => f.ugrp === 'MQ_N2')", 10000); pg.evaluate("uiSave()"); frames(pg, 3)
             pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.some(f => f.ugrp)", 120000); ready(pg)
             assert slabel(pg, "MQ_N2_T01") == "MQ_N2" == slabel(pg, "MQ_N2_T02")
         step("a reload keeps the group made by a drop onto", reload)
