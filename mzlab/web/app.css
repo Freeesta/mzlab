@@ -538,3 +538,6 @@ html.in-draw #sb-toggle{display:none}
 @media (pointer:coarse){.gby-menu [role=menuitemradio],#sb-by{min-height:40px}}
 /* a restored session shows the last toolbar row at once (buttons disabled until the session is back) */
 #v-data.opn.riga #tools{visibility:visible}
+#flist .tg-head th{text-align:left;font-weight:600;padding:4px 8px;background:var(--surface-2,var(--bg))}#flist .tg-fold{min-width:24px;min-height:24px;padding:0;background:none;border:0;color:inherit;cursor:pointer}
+#flist .tg-head.gdnd-over th{outline:2px solid var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 14%,transparent)}#flist.gdnd-gap{outline:2px dashed var(--accent);outline-offset:-2px}
+#flist .tg-grip{display:inline-block;min-width:24px;min-height:24px;line-height:24px;text-align:center;cursor:grab;color:var(--muted)}.ldtab.tg-on col.c-use{width:64px}#tb-by{margin-left:10px}

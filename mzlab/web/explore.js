@@ -774,7 +774,7 @@ function modeTag(/** @type {FileAperto} */ f) {
 // short tag of a standard / blank file (3 letters, the full word in the tooltip)
 const typeTag = (/** @type {boolean} */ blank) => `<abbr class="ftag" title="${blank ? I18N.t("files.type.blk.title") : I18N.t("files.type.std.title")}">${blank ? I18N.t("files.type.blk") : I18N.t("files.type.std")}</abbr>`;
 function renderFileList() {
-  if (window.GDND && GDND.busy()) return GDND.defer();
+  if (window.GDND && GDND.busy()) return GDND.defer(); if (window.GRUPPI) GRUPPI.adopt();
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed, all of them live
   const groups = /** @type {{ g: string, fs: FileAperto[] }[]} */ ([]);
   // both worlds list the files of every experiment, all of them live

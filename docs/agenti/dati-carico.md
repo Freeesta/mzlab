@@ -24,7 +24,10 @@
 - **Tabella grande** (`renderFiles`): oltre 500 righe il corpo arriva a blocchi di 200 per fotogramma (`FRAME.next`, `FILECHUNK`).
 
 ## Gruppi della riga e riepilogo
-- La tabella di carico non ha righe di gruppo: le righe restano nell'ordine di arrivo (`CONVROWS.rank`; una modifica dello studente lo scioglie e la tabella torna ordinata da `sortFiles`). Il gruppo di una riga (`loadGrp` in `shell.js`: bassa risoluzione, poi alta risoluzione `f.hr`, poi esperimento; un file con più parti Full Scan + DDA/IDA ha il suo, mai quello dell'MS2 puro) sta in `data-grp` e nell'etichetta «HR». Test: `e2e_carico_gruppi`.
+- **Gruppi della tabella** (`gruppi-tab.js`, `GRUTAB`; `e2e_carico_gruppi_trascina`): senza etichette la tabella è quella di sempre, righe nell'ordine di arrivo (`CONVROWS.rank`; una modifica dello studente lo scioglie e `sortFiles` la riordina). Il gruppo è `ugrp` sulla riga di `ST.files`, scritto da `GRUPPI` insieme ai file aperti: un solo scrittore, un solo passo di annulla (`stg()` sta nello snapshot di `files.view`); `mergeFiles` lo conserva e un file che si apre prende l'etichetta della sua riga (`GRUPPI.adopt`, in `renderFileList`).
+  Con almeno un'etichetta `renderFiles` (`GRUTAB.rows`) mette una riga `tr.tg-head[data-ug]` (nome, numero, pulsante di piega 24 px) prima delle sue righe e «Senza gruppo» (`data-ug=""`) in fondo; ogni riga ha `data-nm`, la maniglia `.tg-grip` (si trascina su un'intestazione, `GDND.startT`) e il pulsante «Sposta nel gruppo ▸» (`data-mv`, lo stesso menu dell'elenco laterale, `GDND.moveMenuT`).
+  Sopra la tabella `#tb-by` apre lo stesso menu «Raggruppa per» (`GRUPPIPER.open("tb-by")`).
+- **Rilascio dal desktop su un'intestazione** (tabella o elenco laterale): `gruppi-dnd.js` evidenzia l'intestazione di un gruppo e `GRUPPI.expect(nomi, gruppo)` promette l'etichetta; il rilascio prosegue come sempre e `GRUPPI.arrive()` (da `GRUTAB.pre`, in cima a `renderFiles`) la mette sulle righe appena arrivano (chiave «custom», nessun passo di annulla). Su `#drop` o fuori dalle intestazioni nulla cambia.
 - Il riquadro sotto la tabella (`CONVROWS.summary()`, `conv.sum.aria`) elenca solo errori, annullati e file con scansioni mancanti, con il totale e «Chiudi»; se è andato tutto bene non compare, e a fine lotto non resta nessun testo «finito» né anello.
 
 ## Bassa e alta risoluzione insieme

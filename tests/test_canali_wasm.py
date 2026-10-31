@@ -2,12 +2,12 @@
 the MSn infusion of the repository, an SRM acquisition and an SRM + product-ion one. Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
+from cargo_util import build_example, run
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -17,16 +17,13 @@ MSN = ROOT / "tests" / "golden" / "ref" / "msntree_rotta" / "msn.mzML"
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
 
 
-def run(*a):
-    return subprocess.run(a, cwd=ROOT, check=True, capture_output=True, encoding="utf-8")
-
-
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("canali")
     run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
-    run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli", "-p", "mzlab-core", "--example", "mzidx")
+    run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli")
+    build_example("mzlab-core", "mzidx")
     ds.mrm(d / "srm.mzML", 2.0e5, np.random.default_rng(7), 1)
     ds.mixed_mrm_epi(d / "srm_epi.mzML", np.random.default_rng(7))
     return d

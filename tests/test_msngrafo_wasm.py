@@ -7,14 +7,11 @@ import urllib.parse
 from pathlib import Path
 
 import pytest
+from cargo_util import build_example, run
 
 ROOT = Path(__file__).resolve().parents[1]
 MZML = ROOT / "tests" / "golden" / "ref" / "msntree_rotta" / "msn.mzML"
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
-
-
-def run(*a):
-    return subprocess.run(a, cwd=ROOT, check=True, capture_output=True, encoding="utf-8")
 
 
 @pytest.fixture(scope="module")
@@ -22,6 +19,7 @@ def pkg(tmp_path_factory):
     d = tmp_path_factory.mktemp("msngrafo")
     run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-msngrafo-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_msngrafo_wasm.wasm")
+    build_example("mzlab-core", "mzidx")
     run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-core", "--example", "mzidx", "--", str(MZML), str(d / "msn.mzidx"))
     return d
 

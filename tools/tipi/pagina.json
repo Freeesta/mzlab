@@ -68,6 +68,7 @@
     "../../mzlab/web/gruppi.js",
     "../../mzlab/web/gruppi-per.js",
     "../../mzlab/web/gruppi-dnd.js",
+    "../../mzlab/web/gruppi-tab.js",
     "../../mzlab/web/layout.js",
     "../../mzlab/web/fondo.js",
     "../../mzlab/web/fondo-spettro.js",
