@@ -36,6 +36,11 @@ export async function importFile(o) {
   return JSON.parse(r.summary);
 }
 
+/** The bytes of the imported file `id` (`ID.mzsus`), or null. */
+export async function bytes(/** @type {string} */ id) {
+  try { return new Uint8Array(await (await (await (await dir()).getFileHandle(`${id}.mzsus`)).getFile()).arrayBuffer()); } catch (_) { return null; }
+}
+
 /** The lists imported so far, in the shape of the catalogue of the package. */
 export async function imported() {
   /** @type {any[]} */ const lists = [];
