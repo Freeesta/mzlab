@@ -8,7 +8,7 @@ const IDLE_MS = 10000;
 
 /** @typedef {{ add: (b: Uint8Array) => Promise<void> | void, end: () => Promise<string[] | null> }} Presa */
 
-/** @param {{ Passata: new (size: number) => { aggiorna: (b: Uint8Array) => void, fine: () => string[] | undefined }, workerUrl: URL, module: () => WebAssembly.Module | null, mode?: string }} h */
+/** @param {{ Passata: new (size: number, noSha1?: boolean) => { aggiorna: (b: Uint8Array) => void, fine: () => string[] | undefined }, workerUrl: URL, module: () => WebAssembly.Module | null, mode?: string }} h */
 export function createImpronte({ Passata, workerUrl, module, mode }) {
   /** @type {Worker | null} */ let w = null;
   let dead = mode === "qui", seq = 0;
@@ -34,13 +34,13 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
   }
   return {
     /** the fingerprints of a member of `size` bytes: `add(piece)` in file order (the piece goes to the worker: do not use it afterwards), then `end()` gives [sha256, sha1, probe] or null */
-    start(/** @type {number} */ size) {
+    start(/** @type {number} */ size, /** @type {boolean=} */ noSha1) {
       clearTimeout(idle);
       const wk = worker();
       if (wk) {
         const id = ++seq, j = { ack: /** @type {(() => void) | null} */ (null), out: /** @type {((v: string[] | null) => void) | null} */ (null), open: 0 };
         jobs.set(id, j);
-        wk.postMessage({ op: "new", id, size });
+        wk.postMessage({ op: "new", id, size, noSha1 });
         return /** @type {Presa} */ ({
           add(b) {
             if (dead) return;
@@ -51,7 +51,7 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
           end() { return dead ? Promise.resolve(null) : new Promise(r => { j.out = r; wk.postMessage({ op: "end", id }); }); },
         });
       }
-      let p = new Passata(size);
+      let p = new Passata(size, noSha1);
       return /** @type {Presa} */ ({
         add(b) { p.aggiorna(b); },
         async end() { const o = p.fine(); return o ? Array.from(o) : null; },

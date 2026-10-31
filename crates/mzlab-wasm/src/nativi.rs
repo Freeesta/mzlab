@@ -266,8 +266,8 @@ pub struct Passata(Option<upload::Passata>);
 #[wasm_bindgen]
 impl Passata {
     #[wasm_bindgen(constructor)]
-    pub fn new(size: f64) -> Passata {
-        Passata(Some(upload::Passata::new(size as u64)))
+    pub fn new(size: f64, senza_sha1: Option<bool>) -> Passata {
+        Passata(Some(upload::Passata::scelta(size as u64, senza_sha1)))
     }
     pub fn aggiorna(&mut self, piece: &[u8]) {
         self.0.as_mut().unwrap().aggiorna(piece);
