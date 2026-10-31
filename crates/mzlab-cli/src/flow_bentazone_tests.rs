@@ -212,10 +212,10 @@ fn case(tag: &str, pol: i8, hr: bool) {
     let d = fixture(tag, pol, hr);
     let prov = run(&d, &plan(&|_| String::new(), !hr)).unwrap();
     // the files decide: the plan writes neither the polarity nor the unit resolution of the hypotheses
-    let gen = &prov[prov.find("\"gen\":{").unwrap()..];
-    let gen = &gen[..gen.find("\"params_sha256\"").unwrap()];
-    assert!(gen.contains(&format!("\"nominal\":{}", !hr)), "{gen}");
-    assert!(gen.contains(&format!("\"polarity\":{pol}")), "{gen}");
+    let genv = &prov[prov.find("\"gen\":{").unwrap()..];
+    let genv = &genv[..genv.find("\"params_sha256\"").unwrap()];
+    assert!(genv.contains(&format!("\"nominal\":{}", !hr)), "{genv}");
+    assert!(genv.contains(&format!("\"polarity\":{pol}")), "{genv}");
     let hyp = std::fs::read_to_string(d.join("work/gen.json")).unwrap();
     let ion = |m: f64| m + f64::from(pol) * PROTON;
     let adduct = if pol < 0 { "[M-H]-" } else { "[M+H]+" };

@@ -142,9 +142,17 @@ impl Finto {
             let it: Vec<f32> = (0..np).map(|_| (r.unit() * 1e6) as f32).collect();
             let filter = match k % 5 {
                 0 => "FTMS + p ESI Full ms [100.0000-1000.0000]".to_string(),
-                1 => format!("ITMS + c ESI d Full ms2 {:.4}@cid35.00 [50.0000-500.0000]", 300.0 + k as f64),
-                2 => format!("FTMS + c ESI d Full ms2 {:.4}@hcd30.00 [50.0000-500.0000]", 400.5 + k as f64),
-                3 => format!("ITMS + c ESI d Full ms3 500.1000@cid35.00 250.2000@hcd25.00 [50.0000-300.0000]"),
+                1 => format!(
+                    "ITMS + c ESI d Full ms2 {:.4}@cid35.00 [50.0000-500.0000]",
+                    300.0 + k as f64
+                ),
+                2 => format!(
+                    "FTMS + c ESI d Full ms2 {:.4}@hcd30.00 [50.0000-500.0000]",
+                    400.5 + k as f64
+                ),
+                3 => format!(
+                    "ITMS + c ESI d Full ms3 500.1000@cid35.00 250.2000@hcd25.00 [50.0000-300.0000]"
+                ),
                 _ => String::new(),
             };
             let precursor = match (level, k % 3) {

@@ -1,0 +1,2 @@
+# Keeps the 2021 formatting: the 2024 style edition would reorder imports and rewrap code across the workspace.
+style_edition = "2021"

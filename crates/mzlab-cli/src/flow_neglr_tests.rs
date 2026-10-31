@@ -87,14 +87,14 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
             assert_eq!(error_of(&prov, id), None, "{tag} {id}");
         }
         // the files decide the polarity of the hypotheses, of the link and of the Dig, and the unit mass of the hypotheses
-        let gen = activity(&prov, "gen").get("params").unwrap();
+        let genv = activity(&prov, "gen").get("params").unwrap();
         assert_eq!(
-            gen.get("polarity").and_then(|v| v.f64()),
+            genv.get("polarity").and_then(|v| v.f64()),
             Some(f64::from(pol)),
             "{tag}"
         );
         assert_eq!(
-            gen.get("nominal").and_then(|v| v.bool()),
+            genv.get("nominal").and_then(|v| v.bool()),
             Some(!hr),
             "{tag}"
         );

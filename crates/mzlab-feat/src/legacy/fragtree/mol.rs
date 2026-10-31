@@ -334,7 +334,7 @@ impl Writer<'_> {
     }
 }
 
-fn gen(w: &Writer, i: usize) -> String {
+fn gen_str(w: &Writer, i: usize) -> String {
     let mut s = w.tok(i);
     for &(n, k, opening) in &w.rings[i] {
         if opening {
@@ -348,7 +348,7 @@ fn gen(w: &Writer, i: usize) -> String {
     }
     let parts: Vec<String> = w.kids[i]
         .iter()
-        .map(|&(j, k)| w.sym(k).to_string() + &gen(w, j))
+        .map(|&(j, k)| w.sym(k).to_string() + &gen_str(w, j))
         .collect();
     if let Some((last, rest)) = parts.split_last() {
         for p in rest {
@@ -386,7 +386,7 @@ pub fn mask_smiles(g: &Graph, mask: u64) -> String {
     for i in (0..n).filter(|&i| ins[i]) {
         if !w.seen[i] {
             w.dfs(i, None);
-            out.push(gen(&w, i));
+            out.push(gen_str(&w, i));
         }
     }
     out.join(".")

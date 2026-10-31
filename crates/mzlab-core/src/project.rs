@@ -71,7 +71,7 @@ fn not_lower(s: &[char], i: usize) -> bool {
 }
 
 /// `\d+(?:[.,p]\d+)?`: end positions in the order the engine tries them (with the fraction first).
-fn number_ends(s: &[char], i: usize, frac: &[char]) -> impl Iterator<Item = usize> {
+fn number_ends(s: &[char], i: usize, frac: &[char]) -> impl Iterator<Item = usize> + use<> {
     let d = digits(s, i);
     let with_fraction = (d < s.len() && frac.contains(&s[d]))
         .then(|| digits(s, d + 1))
