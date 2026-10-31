@@ -53,8 +53,8 @@ const BARRA = (() => {
   const storageKey = () => (isHrMode() ? K_HR : K_LR);
   const defaultW = () => (isHrMode() ? 340 : 300);
   const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
-  // while the files are being opened (skeleton on screen, no session yet) the side panel and its toolbar button already have their final place: nothing moves when the session arrives
-  const inDataOrOpening = () => inData() || typeof S !== "undefined" && S.view === "data" && !!S.opening && !S.sess;
+  // the side panel and its toolbar button have their place also while the files are being opened (skeleton, no session yet: nothing moves when the session arrives) and while «+» shows the drop area (S.adding)
+  const inDataOrOpening = () => inData() || typeof S !== "undefined" && S.view === "data" && (!!S.opening && !S.sess || !!S.sess && !!S.adding);
   /** A text field (or an open dialog) keeps its own keys: Alt+Shift+arrows select words there, like Ctrl/Cmd+Z undoes text. @param {EventTarget | null} t */
   const inCampo = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
   // context «theory»: the bar shows the commands of the Teoria (window.TCMD of the same-origin iframe), not the ones of the data
@@ -377,7 +377,7 @@ const BARRA = (() => {
   function show(/** @type {string} */ id, /** @type {Bag} */ opt = {}) {
     hintClose(true);
     if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
-    if (!(inData() || landing()) || !validTab(id)) return false;
+    if (!(inDataOrOpening() || landing()) || !validTab(id)) return false;
     const wasOpen = _open;
     _tab = id;
     _open = true; _restore = false; _forced = innerWidth < AUTO_W;
@@ -428,7 +428,7 @@ const BARRA = (() => {
 
   // the header button: show the last tool used (first start: File) or hide the panel
   function toggleDrawer() {
-    if (_open && (inData() || landing())) close(true);
+    if (_open && (inDataOrOpening() || landing())) close(true);
     else if (landing() && !inData()) { _open = true; applyLayout(); updateButtons(); }
     else show(validTab(_tab) ? _tab : "file", { opener: Q1("#sb-toggle") });
   }
@@ -958,13 +958,13 @@ const BARRA = (() => {
     document.addEventListener("tpview", () => {
       syncContext();
       const sc = Q1("#sb-panels");
-      if (wasData && !inData()) { _away = { open: _open, top: sc ? sc.scrollTop : 0 }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
-      else if (!wasData && inData() && _away) {                                                          // back in Dati: the panel returns as it was left (width and tool are kept in _w / _tab)
+      if (wasData && !inDataOrOpening()) { _away = { open: _open, top: sc ? sc.scrollTop : 0 }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
+      else if (!wasData && inDataOrOpening() && _away) {                                                          // back in Dati: the panel returns as it was left (width and tool are kept in _w / _tab)
         _open = _away.open; _forced = false; _restore = false; autoNarrow();
         const top = _away.top; _away = null;
         FRAME.next(() => { const e = Q1("#sb-panels"); if (e) e.scrollTop = top; });
       }
-      wasData = inData();
+      wasData = inDataOrOpening();
       syncMode();
       if (_open && inData() && validTab(_tab) && _painted !== _tab) renderPane(_tab);
       applyLayout();
