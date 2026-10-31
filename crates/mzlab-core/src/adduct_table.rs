@@ -60,6 +60,14 @@ const CATALOG: [Def; 20] = [
     d("[M]-", "man", 1, "", "", -1, false),
 ];
 
+/// Composition of a catalogue adduct: molecules `k` of M, the formula added, the formula removed (both may be empty) and the charge.
+pub fn composition(name: &str) -> Option<(u8, &'static str, &'static str, i8)> {
+    CATALOG
+        .iter()
+        .find(|a| a.name == name)
+        .map(|a| (a.k, a.add, a.sub, a.z))
+}
+
 /// Pairs worth knowing by heart (same compound, same RT): label, adduct, reference adduct.
 const PAIRS: [(&str, &str, &str); 7] = [
     ("Na − H", "[M+Na]+", "[M+H]+"),
