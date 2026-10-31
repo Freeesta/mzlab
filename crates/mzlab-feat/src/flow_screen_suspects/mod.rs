@@ -12,11 +12,48 @@ use crate::sortc::SortC;
 use crate::store::{origin_from_meta, read_meta_mz_rt};
 use evidence::{formula_set, fragments_of, matched, read_scans, supports};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{round, Out, Value};
+use mzlab_core::json::{self, round, Out, Value};
 pub use source::{Entry, Source};
 
 /// A file the step reads: its name and its bytes.
 pub type Named<'a> = (&'a str, &'a [u8]);
+
+/// The files of a browser call: `names_json` is a JSON list of names, `packed` the bytes joined as `u64 length (little-endian) + bytes` per file.
+pub fn unpack<'a>(names_json: &str, packed: &'a [u8]) -> Result<Vec<(String, &'a [u8])>> {
+    Ok(unpack_split(names_json, packed)?.0)
+}
+
+/// Like `unpack`, for `screen.suspects`: `names_json` may also be `{"suspects":[...],"imported":[...]}`, the files of `packed` following in that order.
+#[allow(clippy::type_complexity)]
+pub fn unpack_split<'a>(
+    names_json: &str,
+    packed: &'a [u8],
+) -> Result<(Vec<(String, &'a [u8])>, Vec<(String, &'a [u8])>)> {
+    let strs = |v: Option<&Value>| -> Vec<String> {
+        v.map_or(&[][..], Value::arr)
+            .iter()
+            .filter_map(|v| v.str().map(String::from))
+            .collect()
+    };
+    let v = json::parse(names_json.as_bytes())?;
+    let (own, imported) = match &v {
+        Value::Obj(_) => (strs(v.get("suspects")), strs(v.get("imported"))),
+        _ => (strs(Some(&v)), Vec::new()),
+    };
+    let (mut files, mut at) = (Vec::new(), 0usize);
+    while at + 8 <= packed.len() {
+        let n = u64::from_le_bytes(packed[at..at + 8].try_into().unwrap_or([0; 8])) as usize;
+        let end = (at + 8).saturating_add(n).min(packed.len());
+        files.push(&packed[at + 8..end]);
+        at = end;
+    }
+    let mut files = files.into_iter();
+    let mut take = |names: Vec<String>| -> Vec<(String, &'a [u8])> {
+        names.into_iter().zip(files.by_ref()).collect()
+    };
+    let first = take(own);
+    Ok((first, take(imported)))
+}
 
 /// The default adducts: the five of the Attributio screening, cut to the polarity of the table.
 pub const DEFAULT_ADDUCTS: &str = "[M+H]+,[M+NH4]+,[M+Na]+,[M-H]-,[M+Cl]-";
@@ -133,21 +170,24 @@ fn cand_key(e: &Entry) -> String {
     }
 }
 
-/// Runs the step on the alignment `table` (`.mzfeat`), the suspect files, the optional MGF of `spectra.ms2` and `formulas/1` files; returns the `screen/1` text.
+/// Runs the step on the alignment `table` (`.mzfeat`), the suspect files, the imported lists (`.mzsus` each, after the suspect files), the optional MGF of `spectra.ms2` and `formulas/1` files; returns the `screen/1` text.
 pub fn screen_text(
     p: &Params,
     table: &[u8],
-    suspects: &[Named],
+    (suspects, imported): (&[Named], &[Named]),
     spectra: Option<&[u8]>,
     formulas: &[&[u8]],
 ) -> Result<String> {
     if suspects.is_empty() {
         return Err(Error::new("err.flow.port.missing").with("port", "suspects"));
     }
-    let sources: Vec<Source> = suspects
+    let mut sources: Vec<Source> = suspects
         .iter()
         .map(|(n, b)| Source::open(n, b, (&p.lists, &p.include)))
         .collect::<Result<_>>()?;
+    for (n, b) in imported {
+        sources.push(Source::open_imported(n, b)?);
+    }
     let (meta, mzs, rts) = read_meta_mz_rt(table)?;
     let sign: i32 = origin_from_meta(&meta)
         .facts
@@ -258,6 +298,11 @@ fn feature_groups(
                 match g.cands.iter_mut().find(|c| cand_key(&c.entry) == key) {
                     Some(c) => {
                         c.files.push(si);
+                        for m in e.memberships {
+                            if !c.entry.memberships.contains(&m) {
+                                c.entry.memberships.push(m);
+                            }
+                        }
                         c.entry.name = if c.entry.name.is_empty() {
                             e.name.clone()
                         } else {
@@ -345,6 +390,9 @@ fn head(o: &mut Out, p: &Params, polarity: i8, adducts: &[(&str, f64)], sources:
             .str(&s.sha256)
             .raw(",\"kind\":")
             .str(s.kind());
+        if s.imported {
+            o.raw(",\"imported\":true");
+        }
         o.raw(",\"rows\":")
             .int(s.len() as i64)
             .raw(",\"skipped_rows\":")

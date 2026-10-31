@@ -18,6 +18,7 @@ pub(super) fn suspects() -> Step {
         ins: vec![
             Port::new("table", DataType::Table, "Aligned feature table (.mzfeat)").requires(hr()),
             Port::new("suspects", DataType::Library, "Suspect lists: .mzsus files or CSV (name, InChIKey or SMILES, formula or neutral mass, optional RT and fragment m/z separated by ;)").many(),
+            optional(Port::new("imported_lists", DataType::Library, "Regulatory lists you imported from an official file: .mzsus files (Library, Import an official file); each is screened whole, apart from the package, and a list never raises a level by itself").many()),
             optional(Port::new("spectra", DataType::Spectra, "MS2 spectra of the same run (spectra.ms2): fragment evidence")),
             optional(Port::new("formulas", DataType::Formulas, "Candidate formulas (formula.ms1): a supported formula gives Level 4")),
         ],
@@ -33,7 +34,7 @@ pub(super) fn suspects() -> Step {
             Param::number("ms2_rt_min", "MS2 RT tolerance").min(0.0).default_num(0.2).unit("min").doc("Without feature ids in the spectra: largest RT distance between a scan and the feature").advanced(),
         ],
         runs_in: RunsIn { wasm: Some(TABLE_WASM), wasm_ceiling_bytes: Some(TABLE_CEILING), native: true },
-        errors: vec!["err.flow.screen.mzsus", "err.flow.screen.csv", "err.flow.screen.adduct", "err.flow.screen.polarity", "err.flow.regulatory.list", "err.flow.regulatory.include", "err.flow.port.missing", "error.badMzfeat"],
+        errors: vec!["err.flow.screen.mzsus", "err.flow.screen.csv", "err.flow.screen.adduct", "err.flow.screen.polarity", "err.flow.regulatory.list", "err.flow.regulatory.include", "err.flow.regulatory.imported", "err.flow.port.missing", "error.badMzfeat"],
         ..attributio_step(
             "screen.suspects",
             "Find suspects",

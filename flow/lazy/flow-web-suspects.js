@@ -7,8 +7,8 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   const STEPS = ["screen.suspects", "annot.regulatory"];
-  /** the file port of each step that takes a suspect list or a regulatory package */
-  const PORTS = /** @type {Record<string, string>} */ ({ "screen.suspects": "suspects", "annot.regulatory": "lists" });
+  /** the file ports of each step that take a suspect list, a regulatory package or the lists the user imported */
+  const PORTS = /** @type {Record<string, string[]>} */ ({ "screen.suspects": ["suspects", "imported_lists"], "annot.regulatory": ["lists", "imported_lists"] });
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
   const enc = (/** @type {string} */ s) => new TextEncoder().encode(s);
   const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -28,26 +28,34 @@
     return refs.length && got.every(Boolean) ? got : null;
   };
 
+  /** the imported lists of the step: [] when none is wired, null when the browser does not hold one of them @param {any} x @param {any} inst */
+  const imported = (x, inst) => (F.refs(inst, "imported_lists").length ? lists(x, inst, "imported_lists") : []);
+  /** the names (a JSON list) and the bytes (`u64 length (little-endian) + bytes` per file) of the files, as the .wasm exports take them @param {{name: string, text: string}[]} files */
+  const pack = files => {
+    const bytes = files.map(f => bytesOf(f.text)), packed = new Uint8Array(bytes.reduce((n, b) => n + 8 + b.length, 0)), view = new DataView(packed.buffer);
+    let at = 0;
+    for (const b of bytes) { view.setBigUint64(at, BigInt(b.length), true); packed.set(b, at + 8); at += 8 + b.length; }
+    return { names: JSON.stringify(files.map(f => f.name)), packed };
+  };
+
   /** screen.suspects @param {any} x @param {any} spec @param {any} inst */
   const run = async (x, spec, inst) => {
-    const W = F.webIdent, j = J().job(spec), p = await kit().getPool(), files = lists(x, inst);
+    const W = F.webIdent, j = J().job(spec), p = await kit().getPool(), files = lists(x, inst), imp = imported(x, inst);
     const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
     const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
     const wired = (/** @type {string} */ port) => F.refs(inst, port).length > 0;
     const spectra = wired("spectra") ? await W.textOf(x, p, inst, "spectra") : null, formulas = wired("formulas") ? await W.textOf(x, p, inst, "formulas") : null;
-    if (!files || !alKey || (wired("spectra") && !spectra) || (wired("formulas") && !formulas) || !await J().has(p, J().DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
-    const key = await J().sha(spec.key + "\n" + alKey + "\n" + (await Promise.all(files.map(f => J().sha(f.text)))).join(",") + "\n" + await J().sha(spectra ? spectra.text : "") + "\n" + await J().sha(formulas ? formulas.text : "")), hit = await J().recall(p, key);
+    if (!files || !imp || !alKey || (wired("spectra") && !spectra) || (wired("formulas") && !formulas) || !await J().has(p, J().DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha(spec.key + "\n" + alKey + "\n" + (await Promise.all(files.map(f => J().sha(f.text)))).join(",") + "\n" + (await Promise.all(imp.map(f => J().sha(f.text)))).join(",") + "\n" + await J().sha(spectra ? spectra.text : "") + "\n" + await J().sha(formulas ? formulas.text : "")), hit = await J().recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return J().detached(x, spec, inst, async () => {
       const params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
-      const bytes = files.map(f => bytesOf(f.text)), packed = new Uint8Array(bytes.reduce((n, b) => n + 8 + b.length, 0)), view = new DataView(packed.buffer);
-      let at = 0;
-      for (const b of bytes) { view.setBigUint64(at, BigInt(b.length), true); packed.set(b, at + 8); at += 8 + b.length; }
+      const both = pack([...files, ...imp]), names = imp.length ? JSON.stringify({ suspects: files.map(f => f.name), imported: imp.map(f => f.name) }) : both.names;
       let text;
       try {
-        text = await p.ident("table", "flow_screen_suspects", { params, table: await p.fs.read(J().DIR + alKey + ".mzfeat"), names: JSON.stringify(files.map(f => f.name)), lists: packed,
+        text = await p.ident("table", "flow_screen_suspects", { params, table: await p.fs.read(J().DIR + alKey + ".mzfeat"), names, lists: both.packed,
           mgf: spectra ? enc(spectra.text) : null, formulas: formulas ? enc(formulas.text) : null });
       } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text };
@@ -59,16 +67,17 @@
 
   /** annot.regulatory (list_membership): the annot/1 text of a step of this plan against the regulatory package @param {any} x @param {any} spec @param {any} inst */
   const regulatory = async (x, spec, inst) => {
-    const j = J().job(spec), p = await kit().getPool(), pkg = lists(x, inst, "lists"), annot = await F.webIdent.textOf(x, p, inst, "annot");
-    if (!pkg || pkg.length !== 1 || !annot) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
-    const key = await J().sha([spec.key, await J().sha(annot.text), await J().sha(pkg[0].text)].join("\n")), hit = await J().recall(p, key);
+    const j = J().job(spec), p = await kit().getPool(), pkg = lists(x, inst, "lists"), imp = imported(x, inst), annot = await F.webIdent.textOf(x, p, inst, "annot");
+    if (!pkg || pkg.length !== 1 || !imp || !annot) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha([spec.key, await J().sha(annot.text), await J().sha(pkg[0].text), ...await Promise.all(imp.map(f => J().sha(f.text)))].join("\n")), hit = await J().recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return J().detached(x, spec, inst, async () => {
       const params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
+      const more = pack(imp);
       let text;
-      try { text = await p.ident("attributio_ms2", "flow_regulatory", { params, annot: enc(annot.text), package: bytesOf(pkg[0].text) }); } catch (e) { throw asError(e); }
+      try { text = await p.ident("attributio_ms2", "flow_regulatory", { params, annot: enc(annot.text), package: bytesOf(pkg[0].text), importedNames: more.names, imported: more.packed }); } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text };
       await F.webMsn.keep(r.name, r.text); await J().remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
@@ -79,7 +88,7 @@
   // a suspect list per file input of the plan: a .mzsus or a CSV (name, InChIKey or SMILES, formula or neutral mass, optional RT and fragments), kept in S.samplesJson with the SHA-256 of its bytes
   F.extraResults.push((/** @type {any} */ S, /** @type {any} */ node) => {
     const insts = (node.ids || []).map((/** @type {string} */ id) => F.instanceOf(S.plan, id)).filter((/** @type {any} */ i) => i && PORTS[base(i)]);
-    const refs = [...new Set(insts.flatMap((/** @type {any} */ i) => F.refs(i, PORTS[base(i)])).filter((/** @type {string} */ r) => r.startsWith("file:")))];
+    const refs = [...new Set(insts.flatMap((/** @type {any} */ i) => PORTS[base(i)].flatMap((/** @type {string} */ port) => F.refs(i, port))).filter((/** @type {string} */ r) => r.startsWith("file:")))];
     if (!refs.length) return null;
     const { el } = F, say = el("p", { class: "fl-note", role: "status" });
     const row = refs.map((/** @type {string} */ ref) => {

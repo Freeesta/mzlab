@@ -137,3 +137,31 @@ fn names_each_regulatory_list_once() {
     assert!(j.contains(crate::flow::corsa_reg::DISCLAIMER));
     assert!(!corsa().json().contains("\"regulatory\""));
 }
+
+#[test]
+fn cites_each_imported_list_file_once_with_its_sha256() {
+    let prov = parse(PROV.as_bytes()).unwrap();
+    let list = r#"{"id":"SVHC","tags":{"status":"in_force","citation":"imported by you on 2026-10-01 from svhc.csv"},"csv_sha256":"c1c1c1c1c1"}"#;
+    let screen = format!(
+        r#"{{"format":"screen/1","suspect_files":[{{"name":"imp.mzsus","sha256":"abcdef0123456789","imported":true,"lists":[{list}]}}],"hits":[]}}"#
+    );
+    let annot = format!(
+        r#"{{"format":"annot/1","regulatory":{{"lists":[],"imported":[{{"name":"imp.mzsus","sha256":"abcdef0123456789","lists":[{list}]}}]}},"rows":[]}}"#
+    );
+    let u = [
+        Uscita {
+            name: "s.json",
+            bytes: screen.as_bytes(),
+        },
+        Uscita {
+            name: "r.json",
+            bytes: annot.as_bytes(),
+        },
+    ];
+    let c = build(&prov, &u).unwrap();
+    assert_eq!(c.regulatory.lists.len(), 1);
+    assert_eq!(c.regulatory.imported.len(), 1);
+    let j = c.json();
+    assert!(j.contains("Lists you imported: imp.mzsus (SHA-256 abcdef01…)."));
+    assert!(j.contains(r#""imported":[{"name":"imp.mzsus","sha256":"abcdef0123456789"}]"#));
+}

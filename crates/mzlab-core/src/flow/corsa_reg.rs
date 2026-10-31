@@ -16,6 +16,8 @@ pub struct Regulatory {
     pub lists: Vec<Value>,
     /// One JSON row per hit or annotated row that a list names.
     pub rows: Vec<String>,
+    /// Name and SHA-256 of each list file the user imported from an official file, each once.
+    pub imported: Vec<(String, String)>,
 }
 
 fn text<'a>(v: &'a Value, k: &str) -> &'a str {
@@ -142,7 +144,7 @@ fn candidate(o: &mut Out, k: usize, name: &str, key: &str, lines: &[String]) {
 }
 
 /// "Screened against: <list> (version <date>, retrieved <date>, SHA-256 <8 hex>…); … N lists in force, M proposals."
-fn header(lists: &[Value]) -> String {
+fn header(lists: &[Value], imported: &[(String, String)]) -> String {
     let one = |l: &Value| {
         let mut bits = Vec::new();
         for (word, v) in [
@@ -171,12 +173,20 @@ fn header(lists: &[Value]) -> String {
         status(&["proposal", "draft"]),
     );
     let plural = |n: usize, w: &str| format!("{n} {w}{}", if n == 1 { "" } else { "s" });
-    format!(
+    let mut text = format!(
         "Screened against: {}. {} in force, {}.",
         parts.join("; "),
         plural(force, "list"),
         plural(prop, "proposal")
-    )
+    );
+    if !imported.is_empty() {
+        let files: Vec<String> = imported
+            .iter()
+            .map(|(n, h)| format!("{n} (SHA-256 {}…)", &h[..h.len().min(8)]))
+            .collect();
+        text.push_str(&format!(" Lists you imported: {}.", files.join("; ")));
+    }
+    text
 }
 
 /// One coverage line per list.
@@ -201,52 +211,95 @@ fn coverage(lists: &[Value]) -> Vec<String> {
         .collect()
 }
 
+/// The files the user imported, each with its SHA-256; nothing without one.
+fn write_imported(reg: &Regulatory, o: &mut Out) {
+    if reg.imported.is_empty() {
+        return;
+    }
+    o.raw(",\"imported\":[");
+    for (k, (name, sha)) in reg.imported.iter().enumerate() {
+        o.raw(if k > 0 { ",{\"name\":" } else { "{\"name\":" })
+            .str(name)
+            .raw(",\"sha256\":")
+            .str(sha)
+            .raw("}");
+    }
+    o.raw("]");
+}
+
+/// Reads one output file of the run.
+fn read_into(reg: &mut Regulatory, v: &Value) {
+    let block = v.get("regulatory");
+    let screened = v.get("suspect_files").map_or(&[][..], Value::arr);
+    let from_annot = block
+        .and_then(|r| r.get("imported"))
+        .map_or(&[][..], Value::arr);
+    // the files the user imported: the ones the mass path flags, the ones the structure path lists
+    for f in screened
+        .iter()
+        .filter(|f| f.get("imported").is_some())
+        .chain(from_annot)
+    {
+        let one = (text(f, "name").to_string(), text(f, "sha256").to_string());
+        if !reg.imported.contains(&one) {
+            reg.imported.push(one);
+        }
+    }
+    let lists = screened
+        .iter()
+        .chain(from_annot)
+        .filter_map(|f| f.get("lists"))
+        .chain(block.and_then(|r| r.get("lists")));
+    for l in lists.flat_map(Value::arr) {
+        if !reg.lists.contains(l) {
+            reg.lists.push(l.clone());
+        }
+    }
+    if text(v, "format") == "screen/1" {
+        for h in v.get("hits").map_or(&[][..], Value::arr) {
+            reg.rows.extend(screen_row(&reg.lists, h));
+        }
+    }
+    if text(v, "format") == "annot/1" && v.get("regulatory").is_some() {
+        for r in v.get("rows").map_or(&[][..], Value::arr) {
+            reg.rows.extend(annot_row(&reg.lists, r));
+        }
+    }
+}
+
+/// The section as `corsa/1` writes it; nothing when the run used no regulatory list.
+fn write_into(reg: &Regulatory, o: &mut Out) {
+    if reg.lists.is_empty() {
+        return;
+    }
+    o.raw(",\"regulatory\":{\"title\":\"Regulatory lists\",\"header\":")
+        .str(&header(&reg.lists, &reg.imported))
+        .raw(",\"lists\":[");
+    for (k, l) in reg.lists.iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" });
+        write_value(o, l);
+    }
+    o.raw("]");
+    write_imported(reg, o);
+    o.raw(",\"coverage\":[");
+    for (k, c) in coverage(&reg.lists).iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" }).str(c);
+    }
+    o.raw("],\"column\":")
+        .str(COLUMN)
+        .raw(",\"rows\":[")
+        .raw(&reg.rows.join(","));
+    o.raw("],\"disclaimer\":").str(DISCLAIMER).raw("}");
+}
+
 impl Regulatory {
     /// Reads one output file of the run.
     pub fn read(&mut self, v: &Value) {
-        let screen = v
-            .get("suspect_files")
-            .map_or(&[][..], Value::arr)
-            .iter()
-            .filter_map(|f| f.get("lists"));
-        let annot = v.get("regulatory").and_then(|r| r.get("lists"));
-        for l in screen.chain(annot).flat_map(Value::arr) {
-            if !self.lists.contains(l) {
-                self.lists.push(l.clone());
-            }
-        }
-        if text(v, "format") == "screen/1" {
-            for h in v.get("hits").map_or(&[][..], Value::arr) {
-                self.rows.extend(screen_row(&self.lists, h));
-            }
-        }
-        if text(v, "format") == "annot/1" && v.get("regulatory").is_some() {
-            for r in v.get("rows").map_or(&[][..], Value::arr) {
-                self.rows.extend(annot_row(&self.lists, r));
-            }
-        }
+        read_into(self, v);
     }
 
     /// The section as `corsa/1` writes it; nothing when the run used no regulatory list.
     pub fn write(&self, o: &mut Out) {
-        if self.lists.is_empty() {
-            return;
-        }
-        o.raw(",\"regulatory\":{\"title\":\"Regulatory lists\",\"header\":")
-            .str(&header(&self.lists))
-            .raw(",\"lists\":[");
-        for (k, l) in self.lists.iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" });
-            write_value(o, l);
-        }
-        o.raw("],\"coverage\":[");
-        for (k, c) in coverage(&self.lists).iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" }).str(c);
-        }
-        o.raw("],\"column\":")
-            .str(COLUMN)
-            .raw(",\"rows\":[")
-            .raw(&self.rows.join(","));
-        o.raw("],\"disclaimer\":").str(DISCLAIMER).raw("}");
+        write_into(self, o);
     }
 }
