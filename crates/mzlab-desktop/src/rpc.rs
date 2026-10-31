@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use mzlab_core::gradient::Gradient;
 use mzlab_core::idxread::{Index, ReadAt};
-use mzlab_core::json::{self, Out};
+use mzlab_core::json::Out;
 use mzlab_core::labmethods::Lab;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::routes::{Query, Routes};
