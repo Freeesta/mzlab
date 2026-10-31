@@ -15,17 +15,18 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
-        PAT = "(()=>{const i=QQQRef.ionCounts('C13H24N4O3S','[M+H]+');return HR.isoFine(i.n,i.z)})()"
+        FINE = "(await HR.isoFine(QQQRef.ionCounts('C13H24N4O3S','[M+H]+').n,1))"           # asked of the engine (api/isotope_fine)
+        merged = lambda R: f"HR.mergeBy({FINE},m=>m/HR.resAt({R},m))"
         def counts():
-            n = lambda R, lo, hi: pg.evaluate(f"HR.mergeRes({PAT},{R}).filter(r=>r.mz>{lo}&&r.mz<{hi}).length")
-            fine = pg.evaluate(f"{PAT}.filter(r=>r.mz>318.6&&r.mz<319.4).length")
+            n = lambda R, lo, hi: pg.evaluate(f"(async()=>{merged(R)}.filter(r=>r.mz>{lo}&&r.mz<{hi}).length)()")
+            fine = pg.evaluate(f"(async()=>{FINE}.filter(r=>r.mz>318.6&&r.mz<319.4).length)()")
             assert fine >= 3, fine                                    # M+2 has 34S, 13C2, 18O (and more): several exact masses
             a = n(35000, 318.6, 319.4); assert a == 1, a             # R200 35000 -> about 27 700 at m/z 319: one peak
             b = n(300000, 318.6, 319.4); assert b >= 3, b            # at R 240 000 and more they separate
-            assert pg.evaluate("HR.mergeRes(" + PAT + ", 0).length") == pg.evaluate(PAT + ".length")      # R = 0: whole fine structure
+            assert pg.evaluate(f"(async()=>HR.mergeBy({FINE},null).length==={FINE}.length)()")      # no width: whole fine structure
         step("M+2 of C13H25N4O3S: one peak at R 27 000 (m/z 319), separated at high resolution", counts)
         def ratio():
-            v = pg.evaluate(f"(()=>{{const m=HR.mergeRes({PAT},35000);return m[1].rel/m[0].rel}})()")
+            v = pg.evaluate(f"(async()=>{{const m={merged(35000)};return m[1].rel/m[0].rel}})()")
             assert abs(v - 0.167) < 0.01, v
         step("M+1/M of the simulated ion is 0.167", ratio)
         def menu():
@@ -35,7 +36,7 @@ try:
             leg = pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.innerText"); assert "profilo teorico" in leg and "R " in leg, leg[-300:]
         step("the legend of the simulation says the resolving power used", menu)
         def curve():
-            v = pg.evaluate("(()=>{const i=QQQRef.ionCounts('C13H24N4O3S','[M+H]+');const pat=HR.mergeBy(HR.isoFine(i.n,i.z),m=>0.01);const c=HR.isoCurve(pat,m=>0.01,10);const mx=Math.max(...c.y);const k=c.y.indexOf(mx);return {mx,mz:c.x[k],n:c.x.length,top:pat.reduce((a,b)=>b.rel>a.rel?b:a).mz,w10:HR.WDEF['10']}})()")
+            v = pg.evaluate("(async()=>{const i=QQQRef.ionCounts('C13H24N4O3S','[M+H]+');const pat=HR.mergeBy(await HR.isoFine(i.n,i.z),m=>0.01);const c=HR.isoCurve(pat,m=>0.01,10);const mx=Math.max(...c.y);const k=c.y.indexOf(mx);return {mx,mz:c.x[k],n:c.x.length,top:pat.reduce((a,b)=>b.rel>a.rel?b:a).mz,w10:HR.WDEF['10']}})()")
             assert abs(v["mx"] - 100) < 1e-6 and abs(v["mz"] - v["top"]) < 0.005 and v["n"] > 100, v
             assert abs(v["w10"] - 1.8227) < 1e-3
         step("Gaussian profile: maximum 100 on the most intense peak", curve)

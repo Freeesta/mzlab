@@ -58,12 +58,12 @@ try:
             assert pg.locator(".hri-ad").count() == 2
             pg.evaluate("document.querySelector('#hri-go').click()"); pg.wait_for_timeout(1500)
             o = pg.evaluate("E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso"); assert o and o["adds"] and len(o["adds"]) == 2 and o["adds"][1]["c"] == 10, o
-            n = pg.evaluate("HR.isoPat(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso, 0).filter(r=>r.tag).length"); assert n > 3
+            n = pg.evaluate("HR.isoPat(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso, 0).then(a=>a.filter(r=>r.tag).length)"); assert n > 3
         step("isotope simulation with two adducts (concentration 100 % and 10 %)", iso)
         def charge():
             pg.fill("#hri-z0", "3"); pg.fill("#hri-hw", "2"); pg.evaluate("document.querySelector('#hri-go').click()"); pg.wait_for_timeout(1500)
             o = pg.evaluate("E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso"); assert o["cd"] == {"z0": 3, "hw": 2}, o
-            tags = pg.evaluate("[...new Set(HR.isoPat(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso, 0).map(r=>r.tag))]"); assert "3+" in tags and "2+" in tags, tags
+            tags = pg.evaluate("HR.isoPat(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso, 0).then(a=>[...new Set(a.map(r=>r.tag))])"); assert "3+" in tags and "2+" in tags, tags
             pg.locator("#dfiles").screenshot(path=os.path.join(SHOTS, "hr_isotopi.png"))
         step("charge distribution: several charge states weighted around the most abundant", charge)
         def clip():

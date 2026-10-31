@@ -19,7 +19,7 @@ required-features = ["app"]
 app = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-single-instance", "dep:tauri-build"]
 
 [dependencies]
-mzlab-core = { path = "../mzlab-core" }
+mzlab-core = { path = "../mzlab-core", features = ["isotopi-tutti"] }
 mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
 # mzFinder natively: the same steps and adapter that the .wasm of mzFinder runs (`run`, `legacy`) and the table views of the Pipeline panel
 mzlab-chem = { path = "../mzlab-chem" }
