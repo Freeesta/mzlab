@@ -1,7 +1,7 @@
 // @ts-strict
 // Loader of Tabui (internal name "TP Mine", also called mzFinder in the code): the search for transformation products, shown in the header as a normal tab.
 // This file is small and contains NO tool code. The tools are in the site in plain text (static/mzfinder/, written by tools/build_site.py
-// from TP_Mine/) and are downloaded and run when the page starts (the tab shows a loading note until they are ready). No switch, no password.
+// from TP_Mine/) and are downloaded and run once the page is usable (idle after qqReady) or on the first use of a tool tab (the tab shows a loading note until they are ready). No switch, no password.
 // static/mzfinder/indice.json = {early: [names, run first, before the data files], js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
 // The scripts register their tools with window.QTOOLS.register(...). A tool registered with nav:true gets its own tab in the page header
 // (next to Teoria) and a full page; others get a button in the floating bar.
@@ -147,10 +147,10 @@
     for (const t of tools) if (t.nav) addTab(t);
     render();
   }
-  async function turnOn() {
-    on = true; ensureUi();
+  // one promise for the whole package: the idle start, a tab click and a tpview event all land here, so the downloads happen once
+  async function ensureLoaded() {
+    if (!on) return;
     if (!loaded) loaded = load();
-    if (!tabs.size) addTab(PLACEHOLDER);
     try { await loaded; } catch (e) {
       loaded = null; console.error("Tabui failed to load:", e);
       const x = tabs.get(PLACEHOLDER.id); if (x && x.ph) x.sec.textContent = "Tabui failed to load. Reload the page to try again.";
@@ -158,6 +158,17 @@
     }
     if (!on) return;
     showTabs();
+  }
+  // the package downloads after the page is usable (qqReady, then an idle moment), or at once when a tool tab is used first
+  const BUILTIN = new Set(["data", "draw", "theory"]);
+  function turnOn() {
+    on = true; ensureUi();
+    if (!tabs.size) addTab(PLACEHOLDER);
+    // tabs written in index.html that have no section yet (Flow): a click loads the package, then opens the view
+    document.querySelectorAll("#nav [data-late]").forEach(b => { const el = /** @type {HTMLElement} */ (b); if (!el.dataset.v || tabs.has(el.dataset.v)) return; el.onclick = () => { const id = /** @type {string} */ (el.dataset.v); ensureLoaded().then(() => { if (tabs.has(id)) openView(id); }); }; });
+    document.addEventListener("tpview", ev => { const v = /** @type {CustomEvent} */ (ev).detail.view; if (!BUILTIN.has(v)) ensureLoaded(); });
+    const idle = () => { const run = () => { ensureLoaded(); }; if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 3000 }); else setTimeout(run, 1000); };
+    const wait = setInterval(() => { if (window.qqReady) { clearInterval(wait); idle(); } }, 200);
   }
   const start = () => {
     if ((window.MZLAB_BROWSER || window.MZLAB_DESKTOP) && !window.MZLAB_LAB) { if (!on) turnOn(); }
