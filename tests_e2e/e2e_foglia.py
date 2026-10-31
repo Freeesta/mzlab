@@ -1,4 +1,4 @@
-"""The leaf of the empty file list (#fl-hint): one still line drawing, tinted from the accent token, inside its box, never animated, in both themes."""
+"""The leaf of the empty file list (#fl-hint): one line drawing tilted near-horizontal, tinted from the accent token, inside its box in both themes; still under reduced motion (the test page), falling and swaying otherwise."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -19,14 +19,16 @@ try:
             v = pg.evaluate(f"""(() => {{ const s = document.querySelector('{S}'), g = s.querySelector('g'), b = g.getBBox(), sw = parseFloat(getComputedStyle(s.querySelector('path:not(.lf)')).strokeWidth);
               return {{w: s.getBoundingClientRect().width, h: s.getBoundingClientRect().height, hid: s.getAttribute('aria-hidden'), b: [b.x, b.y, b.x + b.width, b.y + b.height], sw, paths: s.querySelectorAll('path').length}}; }})()""")
             assert 64 <= v["w"] <= 80 and v["w"] == v["h"] and v["hid"] == "true" and v["sw"] == 1.5, v
-            m = v["sw"] / 2 + .5      # the stroke reaches half its width past the geometry
-            assert v["b"][0] >= m and v["b"][1] >= m and v["b"][2] <= 80 - m and v["b"][3] <= 80 - m, ("the leaf does not fit its box", v)
+            r = pg.evaluate(f"(() => {{ const b = document.querySelector('{S} g').getBoundingClientRect(), s = document.querySelector('{S}').getBoundingClientRect(); return [b.left - s.left, b.top - s.top, b.right - s.left, b.bottom - s.top]; }})()")
+            m = v["sw"] / 2
+            assert r[0] >= m and r[1] >= m and r[2] <= 80 - m and r[3] <= 80 - m, ("the tilted leaf does not fit its box", r)
+            assert (r[2] - r[0]) > 1.4 * (r[3] - r[1]), ("the leaf is not lying near-horizontal", r)
         step("one svg of 64-80 px, aria-hidden, 1.5 px stroke, the whole leaf inside its box", shape)
         def still():
             v = pg.evaluate(f"""[...document.querySelectorAll('{S}, {S} *')].map(e => {{ const c = getComputedStyle(e); return [e.tagName, c.animationName, c.transitionDuration, e.getAnimations().length]; }})""")
             assert all(a[1] == "none" and set(a[2].split(", ")) <= {"0s"} and a[3] == 0 for a in v), v
             assert pg.evaluate(f"document.querySelectorAll('{S} animate, {S} animateTransform, {S} set').length") == 0
-        step("no animation and no transition on the leaf or inside it", still)
+        step("still under reduced motion: no animation, no transition", still)
         def tokens():
             for th in ("light", "dark"):
                 pg.evaluate(f"document.documentElement.setAttribute('data-theme', '{th}')"); frames(pg, 2)
