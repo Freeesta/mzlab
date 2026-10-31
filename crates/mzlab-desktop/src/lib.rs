@@ -35,6 +35,7 @@ pub mod release;
 pub mod rpc;
 mod rpc_lr;
 mod rpc_nat;
+mod rpc_warm;
 pub mod scarica;
 pub mod store;
 pub mod update;

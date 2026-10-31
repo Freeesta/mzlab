@@ -6,6 +6,9 @@
 // under «Data», the others under «Others». The list follows the folder: FileSystemObserver where it exists, otherwise a light rescan when the tab is shown again and every 20 s.
 // Pure parts (kindOf, collect, pairScan, visible) have no DOM and are tested in node (tests/test_cartella_puntata.py). Desktop app: cartella-puntata-desktop.js.
 
+// the warm-up of the folder (riscalda.js), once it is loaded
+const riscaldaDi = () => /** @type {any} */ (window).RISCALDA;
+
 const CartPP = (() => {
   const KEY = "cartella.puntata", MAXD = 3, CAP = 3000, POLL = 20000;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
@@ -82,6 +85,7 @@ const CartPuntApri = (() => {
   async function open(x) {
     const T = (k, p) => I18N.t(k, p);
     try {
+      if (riscaldaDi()) await riscaldaDi().claim(x.path);       // a warm-up of this very file under way finishes first; one waiting for its turn is dropped
       const f = CartCarica.setDir(await fileOf(x), x.dir);
       const sc = /\.wiff$/i.test(x.name) ? pairScan(S.items, x) : null;
       await upload(sc ? [f, CartCarica.setDir(await fileOf(sc), x.dir)] : [f], "data");
@@ -90,7 +94,13 @@ const CartPuntApri = (() => {
     CartPuntVista.render();
   }
 
-  return { open };
+  // the mzML of the folder are prepared in the background once the list is shown and the access is granted (riscalda.js, loaded here on first use)
+  function warm() {
+    if (window.QQQ_PHONE || !(S.native || S.perm === "granted") || !S.items.length) return;
+    const items = CartPP.visible(S.items).filter(x => x.kind === "data" && /\.mzml$/i.test(x.name)).map(x => ({ key: x.path, name: x.name, size: (S.stats.get(x.path) || {}).size, get: () => fileOf(x) }));
+    if (items.length) carica("m:riscalda.js").then(() => riscaldaDi().offer(items)).catch(() => {});
+  }
+  return { open, warm };
 })();
 
 // state, permission, scan, follow and loading
@@ -112,7 +122,7 @@ const CartPunt = (() => {
     } catch (e) { return "denied"; }
   }
   async function rescan() {
-    if (S.native) return S.native.rescan();
+    if (S.native) { await S.native.rescan(); return CartPuntApri.warm(); }
     if (!S.handle || S.busy) return;
     S.busy = true;
     try {
@@ -124,7 +134,7 @@ const CartPunt = (() => {
         await fillStats(items);
       } else S.items = [];
     } catch (e) { S.items = []; S.perm = "denied"; }
-    finally { S.busy = false; render(); }
+    finally { S.busy = false; render(); CartPuntApri.warm(); }
   }
   // size and date of the files seen for the first time (getFile reads no content)
   async function fillStats(items) {
@@ -148,7 +158,7 @@ const CartPunt = (() => {
 
   async function start() {
     if (S.native === null) S.native = (typeof CartPuntDesk !== "undefined" && CartPuntDesk.available()) ? CartPuntDesk : false;
-    if (S.native) { await S.native.start(S, render); return render(); }
+    if (S.native) { await S.native.start(S, render); render(); return CartPuntApri.warm(); }
     if (supported()) { S.handle = await saved(); if (S.handle) { S.name = S.handle.name; await rescan(); follow(); } }
     render();
   }
@@ -159,7 +169,7 @@ const CartPunt = (() => {
       S.handle = h; S.name = h.name; S.items = []; S.stats.clear(); S.opened.clear(); await keep(h); await rescan(); follow();
     } catch (e) { /* cancelled */ }
   }
-  async function forget() { stop(); if (S.native) await S.native.forget(); S.handle = null; S.name = ""; S.items = []; S.perm = "none"; S.stats.clear(); S.opened.clear(); await keep(null); render(); }
+  async function forget() { stop(); if (riscaldaDi()) riscaldaDi().stop(); if (S.native) await S.native.forget(); S.handle = null; S.name = ""; S.items = []; S.perm = "none"; S.stats.clear(); S.opened.clear(); await keep(null); render(); }
   async function grant() { S.perm = await perm(true); if (S.perm === "granted") { await rescan(); follow(); } else render(); }
 
   if (typeof document !== "undefined") {

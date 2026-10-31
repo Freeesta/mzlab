@@ -26,6 +26,15 @@ import { W } from "./nativo-fasi.js";
 /** @type {Map<string, any>} */
 const earlyTics = new Map();
 
+// the warm-up (riscalda.js) asks the engine to copy and index a file of the pointed folder ahead; the answer says why it did nothing, if so. Never an error for the page.
+async function warmRun(rpc, n, blob) {
+  try { return JSON.parse((await rpc({ op: "lr_warm", name: n, blob, mtime: /** @type {any} */ (blob).lastModified || 0 })).info || "{}"); } catch (_) { return { skipped: "failed" }; }
+}
+/** the engine's answer to «is this file warm already?»: { files, missing } when its copy and index are there, else null */
+async function warmClaim(rpc, /** @type {string} */ n, /** @type {Blob} */ blob) {
+  try { const r = await rpc({ op: "lr_warm_claim", name: n, blob, mtime: /** @type {any} */ (blob).lastModified || 0 }), j = JSON.parse(r.info || "{}"); return j.hit ? { files: r.files, missing: j.missing || 0 } : null; } catch (_) { return null; }
+}
+
 /** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload); `p` = { done, total } scans of the sample, `wait` = queued for a free builder */
 const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase, /** @type {any} */ p = {}) => {
   if (p && p.early_tic) earlyTics.set(name, p.early_tic);
@@ -91,11 +100,12 @@ export function createLr({ rb }) {
     if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
     let fase = "copy";                                                 // where it fails, for the diagnosis (diagnosi.js): copy → index → open
     try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
-      const put = await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : p => tellIndex(n, 0.4 * p.frac, "load", p));
+      const hit = nat || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob);   // built ahead by the warm-up: no copy, no index
+      const put = hit || await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : p => tellIndex(n, 0.4 * p.frac, "load", p));
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { fase = "index"; const ix = JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : 0.4 + 0.585 * p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, ix.missing || 0); }
+      else { fase = "index"; const ix = hit ? { missing: hit.missing } : JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : 0.4 + 0.585 * p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, ix.missing || 0); }
     } catch (e) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
@@ -189,6 +199,7 @@ export function createLr({ rb }) {
         return null;
       }
       if (method !== "POST") return null;
+      if (path === "/api/warm") { const wn = safeName(u.searchParams.get("name") || ""); return init.body instanceof Blob ? json(wn && /\.mzml$/i.test(wn) && !files.has(wn) ? await warmRun(rpc, wn, init.body) : { skipped: "loaded" }) : null; }
       if (path === "/api/upload") return init.body instanceof Blob ? await upload(u.searchParams.get("name") || "", init.body) : null;
       const t = text();
       if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space", free: u.searchParams.get("derivati") ? "derived" : true })).info };

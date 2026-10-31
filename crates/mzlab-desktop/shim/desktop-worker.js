@@ -54,7 +54,7 @@ let line = Promise.resolve();
 onmessage = ev => {
   const m = ev.data;
   if (m.op === "recycle") return;
-  if (m.op === "lr_index" || m.op === "nat2mzml") { handle(m); return; }
+  if (m.op === "lr_index" || m.op === "lr_warm" || m.op === "nat2mzml") { handle(m); return; }
   line = line.then(() => handle(m));
 };
 
@@ -90,7 +90,7 @@ async function handle(m) {
         const p = {};
         for (const [k, v] of Object.entries(m)) if (k !== "id" && k !== "blob" && k !== "nat" && k !== "members") p[k] = v;
         if (m.nat) p.nat = { key: m.nat.key, c: m.nat.c, id: m.nat.id, centroid: m.nat.centroid, members: await members(m.nat.members) };      // a sample of a maker's file: its members stay on the disk
-        else if (m.blob) p.fid = await fileId(m.blob, m.op === "lr_put" ? m.name : undefined);
+        else if (m.blob) p.fid = await fileId(m.blob, m.op === "lr_put" || m.op === "lr_warm" || m.op === "lr_warm_claim" ? m.name : undefined);
         if (m.op === "natsamples") p.members = await members(m.members);
         const r = await post("rpc", undefined, JSON.stringify(p));
         if (m.op === "scanbin") {
@@ -106,6 +106,7 @@ async function handle(m) {
         info = await r.text();
         if (m.op === "lr_boot") files = JSON.parse(info).map(f => [f.name, stub(f.name, f.id)]);
         else if (m.op === "lr_put") files = [[m.name, stub(m.name, JSON.parse(info).id)]];
+        else if (m.op === "lr_warm_claim") { const j = JSON.parse(info); if (j.hit) files = [[m.name, stub(m.name, j.id)]]; }
       }
     }
     postMessage({ id, op: m.op, n, info, buf, len, files }, buf ? [buf] : []);

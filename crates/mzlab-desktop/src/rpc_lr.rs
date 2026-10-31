@@ -51,7 +51,11 @@ impl State {
             "lr_boot" => {
                 let list = self.store.lock().unwrap_or_else(|e| e.into_inner()).list();
                 let mut rows = Vec::new();
+                let warm = self.warm_names();
                 for (name, e, changed) in list {
+                    if warm.contains(&name) {
+                        continue;
+                    }
                     let mzml = e.nat.is_some() || name.to_ascii_lowercase().ends_with(".mzml");
                     if changed {
                         self.indexer()?.remove(&name);
@@ -149,6 +153,7 @@ impl State {
                     eng.nat.forget(slot);
                 }
                 self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
+                self.warm_forget(Some(name));
                 text("{}")
             }
             "lr_composition" => text(mzlab_core::comproute::composition_route(&q()).unwrap_or_default()),
@@ -172,6 +177,7 @@ impl State {
                 text("{}")
             }
             "lr_clear" => {
+                self.warm_forget(None);
                 eng.idx.retain(|k, _| *k < LR_BASE);
                 eng.nat.clear();
                 eng.lr_slot.clear();

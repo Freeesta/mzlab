@@ -83,6 +83,8 @@ pub struct State {
     pub(crate) feat: Mutex<crate::feat::FeatState>,
     /// the background conversion of the maker's files to mzML (`conv_coda.rs`)
     pub(crate) coda: crate::conv_coda::Coda,
+    /// the indexes built ahead for the files of the pointed folder, waiting for their file to be opened (`rpc_warm.rs`)
+    pub(crate) warm: Mutex<std::collections::HashMap<String, crate::rpc_warm::Warm>>,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

@@ -215,7 +215,7 @@ pub fn clean(name: &str) -> Result<&str> {
     Ok(name)
 }
 
-fn stamp(path: &Path) -> Option<(u64, u64)> {
+pub(crate) fn stamp(path: &Path) -> Option<(u64, u64)> {
     let m = std::fs::metadata(path).ok()?;
     let t = m.modified().ok()?.duration_since(UNIX_EPOCH).ok()?.as_millis() as u64;
     Some((m.len(), t))
