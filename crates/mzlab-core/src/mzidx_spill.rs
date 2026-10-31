@@ -53,9 +53,11 @@ impl Spill for Meta<'_, '_> {
 
 /// Bytes of one slot of the scratch file.
 const CHUNK: usize = 128 << 10;
-/// One peak: m/z (f64), intensity (f64), number of the scan (u32), little endian.
-const REC: usize = 20;
-const PER_CHUNK: usize = CHUNK / REC;
+/// One peak, little endian: m/z, intensity, number of the scan (u32). Two kinds, kept in separate partitions: 64-bit values (20 B) and the 32-bit
+/// values of an MS1 section of high resolution (12 B, already rounded as the section writes them). A scan only has one kind, so the order of the
+/// scans is kept within each kind.
+const REC: [usize; 2] = [20, 12];
+const PER_CHUNK: [usize; 2] = [CHUNK / REC[0], CHUNK / REC[1]];
 /// Partitions of the m/z axis (8 MB of write buffers).
 const PARTS: usize = 64;
 
@@ -64,6 +66,7 @@ pub(crate) struct Parti {
     /// The first bucket of every partition (`PARTS + 1` values, the last is `NB`).
     first: Vec<usize>,
     of_bucket: Vec<u8>,
+    /// Index `kind * PARTS + partition`.
     bufs: Vec<Vec<u8>>,
     /// The slots of the scratch file that hold each partition, in writing order.
     slots: Vec<Vec<u32>>,
@@ -104,13 +107,14 @@ impl Parti {
         Parti {
             first,
             of_bucket,
-            bufs: (0..PARTS).map(|_| Vec::new()).collect(),
-            slots: vec![Vec::new(); PARTS],
-            records: vec![0; PARTS],
+            bufs: (0..2 * PARTS).map(|_| Vec::new()).collect(),
+            slots: vec![Vec::new(); 2 * PARTS],
+            records: vec![0; 2 * PARTS],
             next_slot: 0,
         }
     }
 
+    /// `p`: `kind * PARTS + partition`.
     fn flush(&mut self, sp: &mut dyn Spill, p: usize) -> Result<()> {
         let buf = &mut self.bufs[p];
         if buf.is_empty() {
@@ -123,26 +127,47 @@ impl Parti {
         Ok(())
     }
 
-    pub(crate) fn push(&mut self, sp: &mut dyn Spill, mz: f64, it: f64, pos: u32) -> Result<()> {
-        let p = usize::from(self.of_bucket[bucket(mz)]);
-        let buf = &mut self.bufs[p];
+    fn buffer(&mut self, kind: usize, p: usize) -> Result<&mut Vec<u8>> {
+        let buf = &mut self.bufs[kind * PARTS + p];
         if buf.capacity() == 0 {
             buf.try_reserve_exact(CHUNK)
                 .map_err(|_| Error::memory_budget())?;
         }
+        Ok(buf)
+    }
+
+    pub(crate) fn push(&mut self, sp: &mut dyn Spill, mz: f64, it: f64, pos: u32) -> Result<()> {
+        let p = usize::from(self.of_bucket[bucket(mz)]);
+        let buf = self.buffer(0, p)?;
         buf.extend_from_slice(&mz.to_le_bytes());
         buf.extend_from_slice(&it.to_le_bytes());
         buf.extend_from_slice(&pos.to_le_bytes());
+        let full = buf.len() >= PER_CHUNK[0] * REC[0];
         self.records[p] += 1;
-        if buf.len() >= PER_CHUNK * REC {
+        if full {
             self.flush(sp, p)?;
+        }
+        Ok(())
+    }
+
+    /// A peak of an MS1 section kept in 32 bits: the partition is the one of the rounded m/z.
+    pub(crate) fn push32(&mut self, sp: &mut dyn Spill, mz: f32, it: f32, pos: u32) -> Result<()> {
+        let p = usize::from(self.of_bucket[bucket(f64::from(mz))]);
+        let buf = self.buffer(1, p)?;
+        buf.extend_from_slice(&mz.to_le_bytes());
+        buf.extend_from_slice(&it.to_le_bytes());
+        buf.extend_from_slice(&pos.to_le_bytes());
+        let full = buf.len() >= PER_CHUNK[1] * REC[1];
+        self.records[PARTS + p] += 1;
+        if full {
+            self.flush(sp, PARTS + p)?;
         }
         Ok(())
     }
 
     /// The end of pass 1: the partial slots go to the scratch file.
     pub(crate) fn fine(&mut self, sp: &mut dyn Spill) -> Result<()> {
-        for p in 0..PARTS {
+        for p in 0..2 * PARTS {
             self.flush(sp, p)?;
             self.bufs[p] = Vec::new();
         }
@@ -169,22 +194,45 @@ pub(crate) fn leggi_parti(
         {
             continue;
         }
-        let mut left = parti.records[p];
-        for &slot in &parti.slots[p] {
-            let n = left.min(PER_CHUNK as u64) as usize;
-            let bytes = &mut buf[..n * REC];
-            sp.get(u64::from(slot) * CHUNK as u64, bytes)?;
-            for r in bytes.chunks_exact(REC) {
-                let (mz, rest) = r.split_at(8);
-                let (it, pos) = rest.split_at(8);
-                f(
-                    f64::from_le_bytes(mz.try_into().unwrap_or([0; 8])),
-                    f64::from_le_bytes(it.try_into().unwrap_or([0; 8])),
-                    u32::from_le_bytes(pos.try_into().unwrap_or([0; 4])),
-                )?;
+        for kind in 0..2 {
+            let q = kind * PARTS + p;
+            let mut left = parti.records[q];
+            for &slot in &parti.slots[q] {
+                let n = left.min(PER_CHUNK[kind] as u64) as usize;
+                let bytes = &mut buf[..n * REC[kind]];
+                sp.get(u64::from(slot) * CHUNK as u64, bytes)?;
+                for r in bytes.chunks_exact(REC[kind]) {
+                    if kind == 0 {
+                        f(f64_at(r, 0), f64_at(r, 8), u32_at(r, 16))?;
+                    } else {
+                        f(
+                            f64::from(f32_at(r, 0)),
+                            f64::from(f32_at(r, 4)),
+                            u32_at(r, 8),
+                        )?;
+                    }
+                }
+                left -= n as u64;
             }
-            left -= n as u64;
         }
     }
     Ok(())
+}
+
+fn f64_at(r: &[u8], at: usize) -> f64 {
+    r.get(at..at + 8)
+        .and_then(|b| b.try_into().ok())
+        .map_or(0.0, f64::from_le_bytes)
+}
+
+fn f32_at(r: &[u8], at: usize) -> f32 {
+    r.get(at..at + 4)
+        .and_then(|b| b.try_into().ok())
+        .map_or(0.0, f32::from_le_bytes)
+}
+
+fn u32_at(r: &[u8], at: usize) -> u32 {
+    r.get(at..at + 4)
+        .and_then(|b| b.try_into().ok())
+        .map_or(0, u32::from_le_bytes)
 }
