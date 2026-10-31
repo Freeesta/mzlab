@@ -54,7 +54,7 @@ enum Col<'a> {
 pub(crate) const PIECE: usize = 8192;
 
 macro_rules! put_le {
-    ($seq:expr, $v:expr) => {
+    ($seq:expr_2021, $v:expr_2021) => {
         for part in $v.chunks(PIECE) {
             $seq.buf.clear();
             $seq.buf.extend(part.iter().flat_map(|x| x.to_le_bytes()));

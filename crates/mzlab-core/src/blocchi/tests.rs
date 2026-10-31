@@ -67,8 +67,8 @@ fn two_streams_in_turn_cost_one_block_each_with_two_slots_and_a_block_per_read_w
             c.read_at(k * 100, &mut b).unwrap(); // the packets, forward
             c.read_at(900_000 + k * 50, &mut b).unwrap(); // the trailer, far away, forward
         }
-        let n = log.borrow().len();
-        n
+
+        log.borrow().len()
     };
     assert_eq!(run(1), 400);
     assert_eq!(run(2), 2);

@@ -71,7 +71,7 @@ pub fn fixture_overlay(names: &[&str]) -> Fixture {
 
 #[macro_export]
 macro_rules! with_io {
-    ($fx:expr, $io:ident) => {
+    ($fx:expr_2021, $io:ident) => {
         let read = |p: &str| $fx.files.read(p);
         let list = |d: &str| $fx.files.list(d);
         let $io = Io::new(&read, &list);

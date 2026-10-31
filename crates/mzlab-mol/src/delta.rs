@@ -48,7 +48,7 @@ pub fn print(counts: &Counts) -> String {
     let part = |gain: bool| {
         let mut els: Vec<(&String, i64)> = counts
             .iter()
-            .filter(|(_, &n)| (n > 0) == gain && n != 0)
+            .filter(|&(_, &n)| (n > 0) == gain && n != 0)
             .map(|(e, &n)| (e, n.abs()))
             .collect();
         els.sort_by_key(|(e, _)| hill(e));

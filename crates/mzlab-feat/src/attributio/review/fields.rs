@@ -9,7 +9,7 @@ pub enum Value {
 }
 
 macro_rules! settings {
-    ($( $(#[$doc:meta])* $name:ident : $ty:ty = $def:expr ;)*) => {
+    ($( $(#[$doc:meta])* $name:ident : $ty:ty = $def:expr_2021 ;)*) => {
         #[derive(Debug, Clone, PartialEq)]
         pub struct ReviewSettings { $( $(#[$doc])* pub $name: $ty, )* }
 

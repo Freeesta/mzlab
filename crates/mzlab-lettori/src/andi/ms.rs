@@ -73,7 +73,8 @@ impl LettoreAndi {
             .cdf
             .testo("experiment_type")
             .is_some_and(|t| t.to_ascii_lowercase().contains("continuum"));
-        let pol = match self
+
+        match self
             .cdf
             .testo("test_ionization_polarity")
             .map(str::to_ascii_lowercase)
@@ -81,8 +82,7 @@ impl LettoreAndi {
             Some(p) if p.contains("pos") => 1,
             Some(p) if p.contains("neg") => -1,
             _ => 0,
-        };
-        pol
+        }
     }
 
     fn scansioni(&mut self) -> Result<usize> {
