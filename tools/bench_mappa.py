@@ -143,8 +143,9 @@ class Case:
         pg = s.pg; pg.goto(f"http://127.0.0.1:{port}/?riparti=1"); pg.wait_for_selector("#drop", timeout=120000)
         wait(pg, "window.MZLAB_LR !== undefined", timeout=120000)
         t0 = time.time(); pg.set_input_files("#pick", [str(f) for f in files])
-        wait(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=1800000)
-        pg.click("#opbtn"); wait(pg, "typeof E!=='undefined' && E.files.length >= 2 && E.pending.length === 0", timeout=1800000)
+        wait(pg, "typeof E!=='undefined' && E.files.length >= 2 && E.pending.length === 0", timeout=1800000)      # the files open by themselves, hidden
+        pg.evaluate("() => { if (!E.files.some(f => f.vis && !f.gone)) soloFile(E.files.find(f => !f.gone)); }")   # the first click on a file
+        wait(pg, "E.files.some(f => f.vis && !f.gone)", timeout=600000)
         s.out["open_s"] = round(time.time() - t0, 1)
         s.ev("__B.wrap()")
 
