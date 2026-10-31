@@ -70,6 +70,9 @@ async function tilesDrop(/** @type {string | null} */ name, /** @type {Set<strin
 // `held` = [kind, name] of a file with a read lease in archivio.js (the index in use): read straight from its SyncAccessHandle into a buffer reused by the next read (the WASM
 // copies it at once); no handle, or a short read -> the FileReaderSync of the Blob. `rdStat` counts the time spent inside the readers (sent with every answer: tools/bench_mappa.py)
 const rdStat = { ms: 0, n: 0, bytes: 0, hand: 0 };
+// `rdStat.ops`: the last 300 requests as [op, path or name, ms from start to answer, ms in the readers, reads]; the other requests' reads interleave at every await, so read it as a profile (tools/bench_mappa.py)
+rdStat.ops = [];
+const opDone = (/** @type {any} */ m) => { const o = rdStat.ops; if (m.__t0 === undefined) return rdStat; if (o.length >= 300) o.shift(); o.push([m.op, m.path || m.name || "", Math.round(performance.now() - m.__t0), Math.round(rdStat.ms - m.__ms), rdStat.n - m.__n]); return rdStat; };
 const frSync = new FileReaderSync();   // one reader for every file: it holds no state between reads
 function readerFor(blob, held) {
   const fr = frSync;
@@ -397,6 +400,7 @@ function lowerBudget(/** @type {any} */ m) {                                    
 
 // the read handles parked while idle are reopened before the request reads: only those it will read (none for an op that reads no index)
 function wakeFor(/** @type {any} */ m) {
+  m.__t0 = performance.now(); m.__ms = rdStat.ms; m.__n = rdStat.n;         // start of the request, for rdStat.ops
   const plan = leasePlan(m, slot => tileName.get(slot) ?? (blobs.has(slot) ? "" : lrNameOf(slot)));
   return ARCH.wake(plan ? plan.map(n => n + ".mzidx") : undefined);
 }
@@ -412,7 +416,7 @@ async function handle(ev) {
     let out = null, n = 0, info = null;
     if (m.op.startsWith("lr_")) {
       const r = /** @type {any} */ (await labOp(m) || await lrOp(m));
-      postMessage({ id, op: m.op, n: 0, info: r.info, buf: null, len: 0, files: r.files || null, mem: memNow(), rd: rdStat });
+      postMessage({ id, op: m.op, n: 0, info: r.info, buf: null, len: 0, files: r.files || null, mem: memNow(), rd: opDone(m) });
       return;
     }
     switch (m.op) {
@@ -473,7 +477,7 @@ async function handle(ev) {
       }
       default: throw new Error("unknown operation " + m.op);
     }
-    postMessage({ id, op: m.op, n, info, buf: out ? out.buffer : null, len: out ? out.length : 0, mem: memNow(), rd: rdStat }, out ? [out.buffer] : []);
+    postMessage({ id, op: m.op, n, info, buf: out ? out.buffer : null, len: out ? out.length : 0, mem: memNow(), rd: opDone(m) }, out ? [out.buffer] : []);
   } catch (e_) { const e = /** @type {Lanciato|string} */ (e_);
     const text = typeof e === "string" ? e : String(e && e.message || e);
     // a JSON string {"error_key", "params"} is an error of the engine itself (the file is not readable, memory budget); anything else
