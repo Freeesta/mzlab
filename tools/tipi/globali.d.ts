@@ -236,7 +236,6 @@ declare var toast: any;
 declare var tunitGet: any;
 declare var tunitLabel: any;
 declare var tunitSet: any;
-declare var uipSetTheme: any;
 declare var wiffName: any;
 declare var xlsxBuild: any;
 declare var xlsxCrc32: any;

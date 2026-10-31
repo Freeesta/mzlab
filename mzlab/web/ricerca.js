@@ -3,7 +3,7 @@
 "use strict";
 // Search box, results part (the palette is paletta.js): reads what was typed and says what it is compatible with, never a verdict.
 // A number -> neutral loss, adduct shift or contaminant (Rust, ricerca/1); a formula -> its mass and m/z of the common adducts (Rust, formula);
-// a word -> pages of the Teoria. The tables are the ones of the panels (LOSSES, QADD, QADD_VIEW, api/contaminants): nothing is copied here.
+// a word -> nothing (the commands of the palette answer). The tables are the ones of the panels (LOSSES, QADD, QADD_VIEW, api/contaminants): nothing is copied here.
 
 /** @typedef {{ic: string, chip: string, html: string, detail: string, aria: string, run: () => void}} RicRow */
 /** @typedef {{id: string, title: string, rows: RicRow[]}} RicGroup */
@@ -14,16 +14,13 @@ const RIC_ICON = {
   loss: RIC_IC('<path d="M3 5h10M3 8h6M3 11h3"/>'),
   adduct: RIC_IC('<path d="M8 3v10M3 8h10"/>'),
   cont: RIC_IC('<path d="M6 2.5h4M7 2.5v4L3.5 12.5a1 1 0 0 0 .9 1.5h7.2a1 1 0 0 0 .9-1.5L9 6.5v-4"/>'),
-  formula: RIC_IC('<circle cx="8" cy="8" r="2"/><path d="M8 2v3M8 11v3M2.5 5l2.6 1.5M10.9 9.5l2.6 1.5M2.5 11l2.6-1.5M10.9 6.5l2.6-1.5"/>'),
-  theory: RIC_IC('<path d="M3 3.5h4.5a1 1 0 0 1 1 1V13a1 1 0 0 0-1-1H3zM13 3.5H8.5v9.5a1 1 0 0 1 1-1H13z"/>')
+  formula: RIC_IC('<circle cx="8" cy="8" r="2"/><path d="M8 2v3M8 11v3M2.5 5l2.6 1.5M10.9 9.5l2.6 1.5M2.5 11l2.6-1.5M10.9 6.5l2.6-1.5"/>')
 };
 const RIC_MAX_ADDUCTS = 4;
-const RIC_MAX_THEORY = 5;
 
 const RIC_NUMBER = /^[+\-−]?\s*\d+(?:[.,]\d+)?$/;
 // strict formula (element symbols with their digits, groups in brackets) with an optional adduct: C6H12O6, C6H12O6+Na, C9H8O4 [M-H]-
 const RIC_FORMULA = /^(?:[A-Z][a-z]?\d*|\([A-Za-z0-9()]*\)\d*)+(?:\s*\[?M?[+-][A-Za-z0-9]+\]?[+-]?)?$/;
-const ricFold = (/** @type {string} */ s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 /** @param {string} q  @returns {"number" | "formula" | "word" | "empty"} */
 function ricClassify(q) {
@@ -133,54 +130,6 @@ async function ricForFormula(q) {
   return [{ id: "formula", title: ricT("pal.res.formula"), rows }];
 }
 
-// ------------------------------------------------------------------ Teoria (the generated index, read on first use)
-/** @type {Promise<string[][]> | null} */
-let ricTheoryP = null;
-function ricTheoryIndex() {
-  if (!ricTheoryP) {
-    ricTheoryP = new Promise(res => {
-      if (!window.SITO_PUBBLICO.teoria) return res([]);
-      const s = document.createElement("script");
-      s.src = "static/teoria/indice-ricerca.js";
-      s.onload = () => res(typeof INDICE_RICERCA !== "undefined" ? INDICE_RICERCA : []);
-      s.onerror = () => res([]);
-      document.head.appendChild(s);
-    });
-  }
-  return ricTheoryP;
-}
-// every typed word must start a word of the entry; the title counts more than the rest
-const ricWords = (/** @type {string} */ s) => " " + ricFold(s).replace(/[^a-z0-9+/.]+/g, " ").trim() + " ";
-/** @param {string} q  @param {string[][]} index  @returns {string[][]} */
-function ricTheoryMatch(q, index) {
-  const toks = ricFold(q).split(/[^a-z0-9+/.]+/).filter(Boolean);
-  if (!toks.length || toks.join("").length < 3) return [];
-  const hits = [];
-  for (const e of index) {
-    const title = ricWords(e[0]), all = " " + e[4] + " ";
-    let s = 0;
-    for (const k of toks) {
-      if (title.includes(" " + k)) s += 2; else if (ricWords(all).includes(" " + k)) s += 1; else { s = 0; break; }
-    }
-    if (s) hits.push({ s: s + (e[1] === "glossario" ? 0.5 : e[1] === "capitolo" ? 0.3 : 0), e });
-  }
-  hits.sort((a, b) => b.s - a.s);
-  return hits.slice(0, RIC_MAX_THEORY).map(h => h.e);
-}
-const ricOpenTheory = (/** @type {string} */ url) => {
-  const f = /** @type {HTMLIFrameElement | null} */ (document.getElementById("tframe"));
-  if (f) f.src = "static/teoria/" + url;
-  if (typeof setView === "function") setView("theory");
-};
-
-/** @param {string} q  @returns {Promise<RicGroup[]>} */
-async function ricForWord(q) {
-  const hits = ricTheoryMatch(q, await ricTheoryIndex());
-  /** @type {RicRow[]} */
-  const rows = hits.map(e => ({ ic: RIC_ICON.theory, chip: ricT("pal.k.theory"), html: EH(e[0]) + ` <span class="pal-d">${EH(e[3] ?? "")}</span>`, detail: "", aria: `${ricT("pal.k.theory")}: ${e[0]}, ${e[3]}`, run: () => ricOpenTheory(e[2]) }));
-  return rows.length ? [{ id: "theory", title: ricT("pal.res.theory"), rows }] : [];
-}
-
 /** What the text is compatible with, as groups of rows; the palette shows them above or below the commands. A failure is an empty answer.
  * @param {string} q  @returns {Promise<{kind: string, groups: RicGroup[]}>} */
 async function ricRisultati(q) {
@@ -190,12 +139,11 @@ async function ricRisultati(q) {
       const x = Number(q.trim().replace(/\s+/g, "").replace(",", ".").replace("−", "-"));
       return { kind, groups: Number.isFinite(x) ? await ricForNumber(Math.abs(x)) : [] };
     }
-    if (kind === "formula") return { kind, groups: [...await ricForFormula(q), ...await ricForWord(q)] };
-    if (kind === "word") return { kind, groups: await ricForWord(q) };
+    if (kind === "formula") return { kind, groups: await ricForFormula(q) };
   } catch (_) { /* no engine for this route (reference engine of the tests): no results, the commands remain */ }
   return { kind, groups: [] };
 }
 
-const RICERCA = { classify: ricClassify, risultati: ricRisultati, theoryMatch: ricTheoryMatch };
+const RICERCA = { classify: ricClassify, risultati: ricRisultati };
 
 if (typeof window !== "undefined") window.RICERCA = RICERCA;

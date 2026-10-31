@@ -22,9 +22,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import tema_testa  # noqa: E402
-
 ROOT = Path(__file__).resolve().parent.parent
 # The visible name of the program lives only in mzlab/web/appname.js
 APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
@@ -186,14 +183,13 @@ def write_build_json(out: Path, version: str, commit: str | None = None) -> None
 
 
 def theory_entry() -> str:
-    """site/theory/index.html: the short address of the Teoria (theory/, theory/#5 for a chapter). It only forwards to static/teoria/, the real
-    page (no second copy to download, same files in the service-worker cache); teoria.js turns #5, #cap-5 or #09-quadrupolo into the chapter."""
+    """site/theory/index.html: the old address of the Teoria, kept so that bookmarks still work. It forwards to the Teoria site (BasePeak)."""
+    url = "https://freeesta.github.io/BasePeak/"
     return (
-        '<!doctype html>\n<html lang="it"><head><meta charset="utf-8">' + tema_testa.snippet("teoria") + '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
-        f"<title>Teoria · {APP_NAME}</title>\n"
-        '<script>location.replace("../static/teoria/index.html"+location.hash)</script>\n'
-        '<noscript><meta http-equiv="refresh" content="0;url=../static/teoria/index.html"></noscript></head>\n'
-        '<body><p><a href="../static/teoria/index.html">Teoria</a></p></body></html>\n'
+        '<!doctype html>\n<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+        f'<title>Teoria · {APP_NAME}</title>\n'
+        f'<meta http-equiv="refresh" content="0;url={url}"><link rel="canonical" href="{url}"></head>\n'
+        f'<body><p><a href="{url}">Teoria (BasePeak)</a></p></body></html>\n'
     )
 
 
@@ -258,7 +254,7 @@ def main() -> None:
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
-    if not lab:                                                  # the lab has no Teoria entry (its address goes back to #/data)
+    if not lab:                                                  # the lab site has no Teoria address
         (out / "theory").mkdir()
         (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")

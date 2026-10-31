@@ -55,7 +55,7 @@
     }
     return out;
   }
-  // THE number format of the whole program (not the Teoria): decimal point in every language, no thousands separator (a comma would be read as a decimal one)
+  // THE number format of the whole program: decimal point in every language, no thousands separator (a comma would be read as a decimal one)
   const NF = dec => new Intl.NumberFormat("en-US", dec === undefined ? { useGrouping: false } : { useGrouping: false, minimumFractionDigits: dec, maximumFractionDigits: dec });
   function format(msg, params, lg) {
     params = params || {}; let out = "", i = 0;
@@ -136,7 +136,7 @@
   }
 
   const loc = typeof location !== "undefined" ? location : {}, nav = typeof navigator !== "undefined" ? navigator : {};
-  // I18N_LANG: set before this script by pages that exist in one language only (the Teoria)
+  // I18N_LANG: set before this script by pages that exist in one language only
   lang = LANGS.includes(root.I18N_LANG) ? root.I18N_LANG : detect(loc.search, store.get(), nav.languages && nav.languages.length ? Array.from(nav.languages) : nav.language);
   setLangAttr();
   if (typeof document !== "undefined") {

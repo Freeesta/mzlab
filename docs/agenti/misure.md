@@ -126,7 +126,7 @@ Lettore mzML nativo (`.wasm` del motore 1.703.705 → 1.703.558 B; `cargo run --
 | | valore |
 |---|---|
 | primo disegno (FCP), ms | 88 |
-| byte scaricati fino a rete ferma | 330 178 (comprende ~85 KB di Teoria scaldata) |
+| byte scaricati fino a rete ferma | 330 178 |
 
 ## Rust legge l'indice (`python3 tools/bench.py --files 6 --json`, Chromium cloud con WASM, 6 Full Scan sintetici, un giro)
 Il motore Rust risponde dall'indice `.mzidx` (TIC, XIC, filtri, elenco scansioni, scansione più vicina) e apre l'mzML solo per le scansioni singole.
@@ -137,9 +137,6 @@ Il motore Rust risponde dall'indice `.mzidx` (TIC, XIC, filtri, elenco scansioni
 | apertura dei file fino al primo TIC, s | 2.27 | 2.24 |
 | TIC + 5 XIC di ogni file, s | 0.11 | 0.35 | 2.17 |
 | RSS del browser, MB | 1033 | 1073 |
-
-## Teoria da telefono (`tests_e2e/e2e_teoria_mobile.py`, `e2e_indirizzi.py`)
-Chromium Linux, 390×844 con tocco, server di sviluppo, un giro, dati stampati come `MEASURE`: capitolo 4 ≈ 45 kB e LCP ≈ 0,18 s, capitolo 20 ≈ 140 kB (le due raster ridotte da 1400 px, 88 + 57 kB, caricate «lazy»; i file grandi da 384 + 182 kB solo all'apertura della figura), LCP ≈ 0,07 s. Apertura a freddo di `#/theory` 11 richieste ≈ 160 kB, senza Pyodide, WASM, `api/` né script di Dati o Disegno (verificato). Rifare la misura: lanciare i due script (stampano le righe `MEASURE`).
 
 ## Mirino della mappa (`python3 tools/bench_mirino.py [lr|hr] [--site]`, Chromium Linux)
 Mappa a schermo intero con il mirino acceso. LR: un Full Scan sintetico di 1500 scansioni × 500 centroidi (750 000 picchi); HR: le scansioni Full Scan di un Orbitrap sintetico (poche, ~600 scansioni). «site» = sito costruito (Pyodide in un worker; `python_ms` = tempo in Python dalla intestazione `X-Py-Ms`, il resto è andata e ritorno e copie JS↔worker); «dev» = server di sviluppo. Un giro; tempi in ms, mediana / p95.

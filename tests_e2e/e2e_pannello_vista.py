@@ -1,4 +1,4 @@
-"""Side panel: leaving Dati for Disegno and Teoria and coming back gives the panel as it was left (open or shut, width, scroll)."""
+"""Side panel: leaving Dati for Disegno and coming back gives the panel as it was left (open or shut, width, scroll)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -9,7 +9,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 r = Run(port=8995, wd="/tmp/wd_pannello_vista")
 def round_trip(pg):
-    for v in ("draw", "theory", "data"):
+    for v in ("draw", "data"):
         pg.evaluate(f"setView('{v}')")
         attendi(pg, f"S.view === '{v}'")
 try:
@@ -27,7 +27,7 @@ try:
             assert pg.is_visible("#dfiles"), "the panel must be open again"
             assert pg.evaluate("BARRA.width") == 380, pg.evaluate("BARRA.width")
             attendi(pg, f"document.querySelector('#sb-panels').scrollTop === {top}")
-        step("open: Data → Drawing → Theory → Data gives it back open (width, scroll)", aperto)
+        step("open: Data → Drawing → Data gives it back open (width, scroll)", aperto)
         def chiuso():
             pg.evaluate("BARRA.close(true)"); attendi(pg, "!BARRA.open")
             round_trip(pg)

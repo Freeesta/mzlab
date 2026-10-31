@@ -4,7 +4,7 @@
 // from TP_Mine/) and are downloaded and run once the page is usable (idle after qqReady) or on the first use of a tool tab (the tab shows a loading note until they are ready). No switch, no password.
 // static/mzfinder/indice.json = {early: [names, run first, before the data files], js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
 // The scripts register their tools with window.QTOOLS.register(...). A tool registered with nav:true gets its own tab in the page header
-// (next to Teoria) and a full page; others get a button in the floating bar.
+// and a full page; others get a button in the floating bar.
 // The tools are always on in the built site and the desktop app. The lab build (window.MZLAB_LAB, set by tools/lab/lab.js) never starts the loader: the package is
 // not even downloaded, no tab or button is made and nothing in the page points to the tools.
 (() => {
@@ -94,7 +94,7 @@
   /** the text of the tab button: icon and name */
   const label = t => (t.icon ? t.icon + " " : "") + esc(t.name);
   function addTab(t) {
-    const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
+    const nav = document.getElementById("nav"), anchor = document.getElementById("v-draw");
     const old = tabs.get(t.id);
     if (old && old.ph && !t.ph) {                                    // the real tool replaces the placeholder shown while loading
       old.t = t; old.ph = false; old.b.title = t.desc || t.name; old.b.dataset.tname = t.name; if (!old.late) old.b.innerHTML = label(t);
@@ -162,7 +162,7 @@
   // for callers (tests, tools) that need the package without opening a tab: same promise as the idle start
   /** @type {any} */ (reg).ensure = ensureLoaded;
   // the package downloads after the page is usable (qqReady, then an idle moment), or at once when a tool tab is used first
-  const BUILTIN = new Set(["data", "draw", "theory"]);
+  const BUILTIN = new Set(["data", "draw"]);
   function turnOn() {
     on = true; ensureUi();
     if (!tabs.size) addTab(PLACEHOLDER);

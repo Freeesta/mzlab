@@ -1,9 +1,9 @@
 // @ts-check
 // @ts-strict
 "use strict";
-// The three acquisition modes explained once (used by the "?" next to each Dati tab and by the Teoria chapter 9): what each quadrupole does,
+// The three acquisition modes explained once (used by the "?" next to each Dati tab): what each quadrupole does,
 // what the mode is for in the lab, a thumbnail of the typical output, and a comparison table. Classic script; needs icons-modi.js (QICON).
-// Text for students, from the catalogs (the Teoria pages load i18n.js with the Italian catalog only). Thumbnails are small inline SVGs (colour = currentColor).
+// Text for students, from the catalogs. Thumbnails are small inline SVGs (colour = currentColor).
 const QMODI = (() => {
   const sticks = (xs, hs, hi) => xs.map((x, i) => `<path d="M${x} 52V${52 - hs[i]}" stroke-width="${i === hi ? 3 : 2}" ${i === hi ? 'stroke="var(--accent,#2b5c8a)"' : ""}/>`).join("");
   const frame = body => `<svg viewBox="0 0 150 62" width="150" height="62" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="background:var(--panel);border:1px solid var(--line);border-radius:6px;flex:none"><path d="M6 52H144M6 52V6" stroke-width="1"/>${body}</svg>`;
@@ -23,7 +23,7 @@ const QMODI = (() => {
       what: t("modi.mrm.what"), use: t("modi.mrm.use"), out: t("modi.mrm.out"), sel: t("modi.mrm.sel"), res: t("modi.mrm.res") },
   };
   M.msn = { name: t("inf.name"), short: "MSn", ico: "prod", q: [t("modi.msn.q1"), t("modi.msn.q2"), t("modi.msn.q3")],
-    // not in ORDER: the Teoria table keeps the three modes of the 3200
+    // not in ORDER: the table keeps the three modes of the 3200
     what: t("modi.msn.what"), use: t("modi.msn.use"), out: t("modi.msn.out"), sel: t("modi.msn.sel"), res: t("modi.msn.res") };
   const ORDER = ["full", "prod", "mrm"];
   const th = "padding:3px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-weight:600";
@@ -42,9 +42,5 @@ const QMODI = (() => {
       `<p style="margin:6px 0 0"><b>${t("modi.useHeading")}</b> ${m.use}</p>` +
       `<div style="margin-top:6px;font-size:11px;color:var(--muted)">${t("modi.legend")}</div>` + table(key);
   }
-  // all three modes together (Teoria, chapter 9)
-  function all() {
-    return ORDER.map(k => `<div style="margin:0 0 14px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)">${html(k).replace(/<table[\s\S]*$/, "")}</div>`).join("") + table("");
-  }
-  return { M, ORDER, html, all, table };
+  return { M, ORDER, html, table };
 })();

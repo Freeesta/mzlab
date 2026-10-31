@@ -1,5 +1,5 @@
 """Interface language: default from the browser (it-IT -> Italian, en-US/fr-FR -> English), ?lang=, choice from the gear (remembered in
-mzlab.lang, files stay open after the reload), the Teoria in English is a courtesy page with a button to the Italian one. Synthetic data."""
+mzlab.lang, files stay open after the reload). Synthetic data."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth
@@ -21,28 +21,17 @@ try:
         nav = lambda pg: pg.evaluate("[...document.querySelectorAll('#nav button')].map(b => b.textContent)")
         def italian():
             pg = page("it-IT"); assert pg.evaluate("I18N.lang") == "it" and pg.evaluate("document.documentElement.lang") == "it"
-            assert nav(pg) == ["Dati", "Disegno", "Teoria"], nav(pg)
+            assert nav(pg) == ["Dati", "Disegno"], nav(pg)
         step("it-IT browser -> Italian", italian)
         def english():
             for loc in ("en-US", "fr-FR", "de-DE"):
                 pg = page(loc); assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("document.documentElement.lang") == "en", loc
-                assert nav(pg) == ["Data", "Drawing", "Theory"], (loc, nav(pg))
+                assert nav(pg) == ["Data", "Drawing"], (loc, nav(pg))
         step("en-US, fr-FR, de-DE browsers -> English", english)
         def query():
             pg = page("it-IT", "?lang=en"); assert pg.evaluate("I18N.lang") == "en"
             pg = page("en-US", "?lang=it"); assert pg.evaluate("I18N.lang") == "it"
         step("?lang= forces the language for the tab", query)
-        def theory():
-            pg = page("en-US"); pg.click("#nav [data-v=theory]")
-            pg.wait_for_function("document.querySelector('#tframe').src.includes('teoria')")
-            assert pg.is_visible("#tframe") and pg.locator("#theory-sorry").count() == 0, "no courtesy page: the Theory opens at once"
-            pg.wait_for_function("[...document.querySelectorAll('#toast-container *')].some(e => e.textContent.trim() === 'Sorry! For now the theory is only in Italian.')")
-        step("Theory in English: opens at once in Italian, with the «only in Italian» toast", theory)
-        def italian_theory():
-            pg = page("it-IT"); pg.click("#nav [data-v=theory]"); pg.wait_for_timeout(500)
-            pg.wait_for_function("document.querySelector('#tframe').src.includes('teoria')")
-            assert pg.is_visible("#tframe") and not pg.locator("#toast-container *").count(), "no toast in Italian"
-        step("Theory in Italian: no toast", italian_theory)
         def gear():
             pg = page("it-IT"); shutil.rmtree("/tmp/s_lingua", ignore_errors=True)
             stage(pg, synth.make_series("/tmp/s_lingua", [0, 15, 60])); pg.click("text=Carica dati"); ready(pg)
@@ -54,7 +43,7 @@ try:
             with pg.expect_navigation(): pg.click("input[name=uip-lang][value=en]", force=True)
             attendi(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
             assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
-            assert nav(pg) == ["Data", "Drawing", "Theory"]
+            assert nav(pg) == ["Data", "Drawing"]
             attendi(pg, f"E.files.length === {n}", 60000)
             assert pg.evaluate("E.files.length") == n, "open files must come back after the language change"
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "en"

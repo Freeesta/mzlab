@@ -56,7 +56,7 @@ with sync_playwright() as p:
     def tabs():
         for w in (360, 1500):
             pg.set_viewport_size({"width": w, "height": 800})
-            for v in ("draw", "theory", "data"):
+            for v in ("draw", "data"):
                 pg.click(f"#nav button[data-v={v}]"); frames(pg, 4)
                 sw, iw = overflow(pg); assert sw <= iw + 2, (v, w, sw, iw)
     step("tabs at 360 and 1500", tabs)

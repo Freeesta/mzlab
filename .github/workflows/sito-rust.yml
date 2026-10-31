@@ -1,7 +1,7 @@
 # The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
 # Runs on pull requests that touch the engine, the page or the build, and by hand. Not a required check of the protected main branch.
 # `sito-wasm-core`, `sito-wasm-feat-a` and `sito-wasm-feat-b` build the .wasm in parallel and hand them over as artifacts; `sito-e2e` runs the quick checks of tools/verifica.py
-# (JS syntax with Teoria and the shell, i18n, code map, sizes), builds the site, adds the artifacts and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
+# (JS syntax and the shell, i18n, code map, sizes), builds the site, adds the artifacts and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
 # (3.11 and 3.14, with the wasm32 toolchain, so also the tests this job would skip).
 # The run on main fills the Rust caches (core, feat, e2e) when the Rust sources changed (every run restores the newest one); a cache saved on a pull request is not visible to the other pull requests.
 name: sito-rust

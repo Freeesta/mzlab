@@ -206,11 +206,10 @@ try:
             pg.click('.flx-issues button:has-text("Add “Match to library”")'); attendi(pg, "document.querySelectorAll('.flx-issues li').length === 0")
             assert pg.locator(".flx-issues").is_hidden(), "no needs: the Issues box is not shown"
             pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
-            q = pg.locator(".fl-insp-hd a.flx-q"); assert q.count() == 1 and q.get_attribute("href").startswith("teoria/21-glossario.html#g-"), q.count()
             for m in pg.locator('.fl-insp summary:has-text("More")').all(): m.click()
             assert pg.locator('.fl-insp .flx-est').count() >= 1, pg.inner_text(".fl-insp")[:400]
             pg.locator('.fl-insp .flx-est button:has-text("Use fixed")').first.click(); attendi(pg, "FLOW.current.plan.steps.some(s => s.params && Object.values(s.params).length)")
-        step("canvas: Issues lists the needs with their remedy; an estimated value says how and can be fixed; «?» opens the Theory", issues_and_hints)
+        step("canvas: Issues lists the needs with their remedy; an estimated value says how and can be fixed", issues_and_hints)
         def advanced_and_keys():
             pg.click('[data-mode="advanced"]'); attendi(pg, "!document.querySelector('.flx-pal').offsetParent === false")
             assert pg.locator(".flx-pal").is_visible() and pg.locator(".fln").count() > 3

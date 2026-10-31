@@ -1,6 +1,5 @@
-/* Building blocks of the settings panels, shared by the Teoria (impostazioni.js) and the program (settings.js): option buttons (segmented, font, background),
-   wide switches, sections and folding groups. They only return HTML; each panel binds its own events. Labels come from the caller (the Teoria is Italian only,
-   the program is bilingual), so nothing here is text for the user. Styles: impostazioni-comp.css. Classic script, no library. */
+/* Building blocks of the settings panel (settings.js): option buttons (segmented, font, background), wide switches, sections and folding groups. They only return HTML;
+   the panel binds its own events and the labels come from the caller, so nothing here is text for the user. Styles: impostazioni-comp.css. Classic script, no library. */
 (function () {
   "use strict";
   const ico = d => `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
