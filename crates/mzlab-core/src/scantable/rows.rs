@@ -18,6 +18,8 @@ pub(super) struct Head {
     nce: bool,
     ic: Vec<(String, &'static str)>,
     default_ic: Option<String>,
+    /// `count` of the `<spectrumList` that follows the `<run ` tag: what the file says it holds (0 when absent).
+    declared: usize,
 }
 
 impl Head {
@@ -55,10 +57,12 @@ impl Head {
             })
             .filter(|d| ic.iter().any(|(k, _)| k == d))
             .or_else(|| ic.first().map(|(k, _)| k.clone()));
+        let declared = super::head_read::declared_count(run_text);
         Head {
             nce,
             ic,
             default_ic,
+            declared,
         }
     }
 
@@ -97,6 +101,7 @@ impl Head {
             nce: has_nce,
             ic: vec![("IC1".to_string(), analyzer_from_components(&names))],
             default_ic: Some("IC1".to_string()),
+            declared: 0,
         })
     }
 
@@ -287,6 +292,7 @@ impl Rows {
             hr1,
             n_chromatograms,
             window: window.span,
+            declared: head.declared,
         }
     }
 }

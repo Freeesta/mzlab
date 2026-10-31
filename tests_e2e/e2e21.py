@@ -35,7 +35,7 @@ try:
         def files():
             drawer(pg); nm = pg.locator("#flst .fl .nm").first
             nm.click(button="right"); attendi(pg, "document.querySelectorAll('#ctx div').length>0")
-            assert pg.locator("#ctx div", has_text="Rinomina").count() == 1 and pg.locator("#ctx div", has_text="Cambia colore").count() == 1 and pg.locator("#ctx div", has_text="Rimuovi").count() == 1
+            assert pg.locator("#ctx div", has_text="Rinomina").count() == 1 and pg.locator("#ctx div", has_text="Cambia colore").count() == 1 and pg.locator("#ctx div", has_text="Rimuovi dalla sessione").count() == 1
             pg.locator("#ctx div", has_text="Rinomina").click(); pg.wait_for_selector("#askin")
             pg.fill("#askin", "Campione prova"); pg.click("#askok"); attendi(pg, "document.querySelector('#flst').innerText.includes('Campione prova')")
             assert "Campione prova" in pg.inner_text("#flst") and pg.evaluate("E.files[0].file").endswith(".mzML") is True
@@ -43,10 +43,11 @@ try:
             pg.locator("#colpop [data-c]").nth(3).click(); attendi(pg, "E.files[0].color==='#D55E00'")
             assert pg.evaluate("E.files[0].color") == "#D55E00" and pg.evaluate("E.files[0].colorSet")
             n0 = pg.locator("#flst .fl").count()
-            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Rimuovi").click(); attendi(pg, "!!E.files[0].gone")
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Rimuovi dalla sessione").click(); attendi(pg, "!!E.files[0].gone")
             # no confirmation and no notice: the removal is done at once and Undo / Ctrl+Z take it back
             assert not pg.is_visible("#askok") and pg.evaluate("document.getElementById('tolto-box')") is None
             assert pg.locator("#flst .fl").count() == n0 - 1 and pg.evaluate("E.files[0].gone")
+            pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Control+z"); attendi(pg, "!E.files[0].gone")      # Undo brings the file back for the next steps
         step("right click on a file: rename, colour, remove (no confirmation, no notice)", files)
         def areas():
             pg.evaluate("setTab('full',true)"); attendi(pg, "E.panels.some(q=>q.tab==='full'&&q.type==='chrom'&&q._a&&q._a.sr&&q._a.sr.length>0)")

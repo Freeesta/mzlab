@@ -140,12 +140,12 @@ try:
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=5000)
             assert pg.locator("#uip-cont").count() == 0, "contaminant switch removed from settings modal"
-            pg.click("#np-set")
+            pg.keyboard.press("Escape")   # the settings dialog covers the gear: Escape closes it
         step("gear: contaminant switch removed from settings modal", gear)
         def gear_lab():
             pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=5000)
             assert pg.locator("#uip-lab").count() == 0 and "aboratorio" not in pg.inner_text("#uipset"), "the laboratory contaminants are not in the settings"
-            pg.click("#np-set")
+            pg.keyboard.press("Escape")   # the settings dialog covers the gear: Escape closes it
             pg.keyboard.press("Control+k"); pg.wait_for_selector("#pal-in", timeout=5000); pg.fill("#pal-in", "contaminanti"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
             pg.fill("#pal-in", "lab contaminants"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
             pg.keyboard.press("Enter"); pg.wait_for_selector("#bigdlg[open] #lab-add", timeout=5000); pg.evaluate("document.querySelector('#bigdlg').close()")

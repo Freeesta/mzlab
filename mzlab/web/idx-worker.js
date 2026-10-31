@@ -30,7 +30,7 @@ onmessage = async ev => {
 
 // One index: the source read in slices, the index and its scratch file written to OPFS; the answer is a "done" or "error" message.
 async function build(m) {
-  let ah = null, ac = null, sh = null, fonte = null, spName = null, fullAt = 0, endAt = 0, dir = null, aiuti = null;
+  let declared = 0, ah = null, ac = null, sh = null, fonte = null, spName = null, fullAt = 0, endAt = 0, dir = null, aiuti = null;
   const dropSpill = async () => {                                   // the scratch file is never kept
     if (sh) { try { sh.truncate(0); sh.close(); } catch (_) { /* already closed */ } sh = null; }
     if (spName && dir) { try { await dir.removeEntry(spName); } catch (_) { /* not there */ } spName = null; }
@@ -76,9 +76,12 @@ async function build(m) {
       };
       // the scan table of the file (prepare_upload) is made here, in this worker, so that two files prepare at the same time; the page gets the first TIC at once
       let ins = m.inputs;
+      declared = m.declared || 0;
       if (!ins) {
         const [sha, probe] = m.prep.prints;
-        ins = Array.from(prepare_upload(blob.size, fonte.read, m.name, sha, probe, m.cap || 0)).slice(0, 8);
+        const prepared = Array.from(prepare_upload(blob.size, fonte.read, m.name, sha, probe, m.cap || 0));
+        ins = prepared.slice(0, 8);
+        declared = prepared[9] || 0;      // spectra the file says it holds
         const early = earlyTicInputs(ins);
         if (early) postMessage({ op: "progress", frac: 0.05, phase: "scan", done: 0, total: early.rt.length, early_tic: early });
       }
@@ -96,7 +99,9 @@ async function build(m) {
     ah.close(); ah = null;
     if (ac) { ac.flush(); ac.close(); ac = null; }
     await dropSpill();
-    postMessage({ op: "done", stats: JSON.parse(stats), ms: Math.round(performance.now() - t0) });
+    const st = JSON.parse(stats);
+    if (declared > st.scans) st.missing = declared - st.scans;      // a truncated mzML: the spectra its list declares beyond the ones it holds
+    postMessage({ op: "done", stats: st, ms: Math.round(performance.now() - t0) });
   } catch (e_) { const e = /** @type {Lanciato|string} */ (e_);
     if (ah) { try { ah.close(); } catch (_) { /* already closed */ } }
     if (ac) { try { ac.close(); } catch (_) { /* already closed */ } }
