@@ -5,6 +5,17 @@
 // Called by applyView, renderFiles and upload (shell.js) and by every refit of the panels (syncWorkEmpty, lista-file.js).
 "use strict";
 
+// Below 900 px the toggle of the side panel (#sb-toggle, barra.js) is the way to the file list: it says «Files (N)», N = rows of the sample table.
+// paint() returns true when it wrote that label; false leaves barra.js to write the usual one (and gives back the usual accessible name).
+const SHEETLBL = {
+  paint(/** @type {HTMLElement} */ tg, /** @type {HTMLElement} */ tl, /** @type {boolean} */ narrow) {
+    if (!narrow || S.view !== "data") { if (tg.dataset.sheet) { delete tg.dataset.sheet; tg.setAttribute("aria-label", I18N.t("cmd.panel.name")); } return false; }
+    const txt = I18N.t("cmd.panel.files", { n: ST.files.length });
+    delete tl.dataset.i18n; tl.textContent = txt; tg.dataset.sheet = "1"; tg.setAttribute("aria-label", txt);
+    return true;
+  },
+  refresh() { const tg = document.getElementById("sb-toggle"), tl = tg && tg.querySelector(".tl"); if (tg && tl) this.paint(tg, /** @type {HTMLElement} */ (tl), window.innerWidth < 900); }
+};
 const workQ = (/** @type {string} */ s) => /** @type {HTMLElement & { disabled: boolean }} */ (document.querySelector(s));
 // every panel was closed with the X of the toolbar: the files stay ticked but the landing shows until a panel or a file is opened again
 let closedAll = false;
@@ -31,6 +42,7 @@ const TOOLS_OFF = ["#np-chrom", "#np-spec", "#np-map", "#np-xic", "#np-mrm", "#n
 let _workSig = "";
 /** Shows the part of the work area that the state asks for; nothing is written when nothing changed (`force` writes anyway). */
 function syncWork(/** @type {boolean} */ force = false) {
+  SHEETLBL.refresh();
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
   const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
   if (sig === _workSig && !force) return;
@@ -67,10 +79,15 @@ workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   if (!t.closest("input")) queueMicrotask(() => { if (!E.panels.some((/** @type {Pannello} */ p) => p.el)) soloFile(E.files[+((/** @type {HTMLElement} */ (nm)).dataset.k || 0)]); });
 }, true);
 // «Sample table» of the side panel: the table in place of the panels and back; a click on a file of the side list goes back to the panels
-workQ("#samptab").onclick = () => { S.table = !S.table; syncWork(); };
+workQ("#samptab").onclick = () => { S.table = !S.table; if (S.table && window.innerWidth < 900 && window.BARRA) { BARRA.close(false); document.getElementById("sb-toggle")?.focus({ preventScroll: true }); } syncWork(); };
 workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   const t = /** @type {HTMLElement} */ (e.target);
   if (S.table && t.closest(".fl:not(.up)")) { S.table = false; queueMicrotask(() => syncWork()); }
+}, true);
+
+// a file name of the sample table itself opens the file: the table gives way to the panels
+workQ("#flist").addEventListener("click", (/** @type {MouseEvent} */ e) => {
+  if (S.table && /** @type {HTMLElement} */ (e.target).closest("[data-open]")) { S.table = false; queueMicrotask(() => syncWork()); }
 }, true);
 
 // before a session the side panel takes a drop as the landing does (with a session shell.js takes it): the files open as soon as they are read

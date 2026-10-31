@@ -205,6 +205,7 @@ declare var SC: any;
 declare var SCARICA: any;
 declare var SC_AHEAD: any;
 declare var SEEN_GROUPS: any;
+declare var SHEETLBL: any;
 declare var SMOOTHED: any;
 declare var SORGENTE: any;
 declare var SPEC_DEF: any;
