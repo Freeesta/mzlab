@@ -36,6 +36,22 @@ try:
             return go
         step("«+» reopens the single landing; «Back to work!» returns", plus_and_back("button"))
         step("«+» then Esc returns", plus_and_back("esc"))
+        def upload_view_layout():
+            pg.evaluate("document.querySelector('#addf').click()"); attendi(pg, f"{WORK} === 'add'")
+            vis = lambda: pg.evaluate("(() => { const a = document.querySelector('#dfiles'); return getComputedStyle(a).display !== 'none' && !a.hasAttribute('inert') && document.querySelector('#v-data').classList.contains('sb-open') })()")
+            assert vis(), "the side panel stays visible with the drop area"
+            assert pg.locator("#flst .fl").count() >= 2 and pg.is_visible("#flst .fl >> nth=0"), "the files are listed in the side panel"
+            assert pg.locator("#drop .leaf, #drop .leaf-fall").count() == 0, "no leaf in the drop area"
+            gap = pg.evaluate("document.querySelector('#drop').getBoundingClientRect().top - document.querySelector('#backwork').getBoundingClientRect().bottom")
+            assert gap >= 8, f"«Back to work!» keeps a gap from the drop area: {gap}"
+            assert pg.evaluate("[...document.querySelectorAll('#v-data .card')].every(c => c.hidden || c.getBoundingClientRect().height === 0 || c.textContent.trim() !== '' || c.querySelector('canvas,svg,table'))"), "no empty bar"
+            pg.click("#backwork"); attendi(pg, f"{WORK} === 'panels'")
+            pg.click("#sb-x"); attendi(pg, "!document.querySelector('#v-data').classList.contains('sb-open')")
+            pg.evaluate("STATO.aggiunta(true, 'add-files'); applyView()"); attendi(pg, f"{WORK} === 'add'")
+            assert not vis(), "the user's own collapse of the side panel is kept"
+            pg.click("#backwork"); attendi(pg, f"{WORK} === 'panels'")
+            pg.click("#sb-toggle"); attendi(pg, "document.querySelector('#v-data').classList.contains('sb-open')")
+        step("the upload view keeps the side panel with the files, no leaf, a gap under «Back to work!», no empty bar", upload_view_layout)
         def add_then_upload():
             pg.evaluate("document.querySelector('#addf').click()"); attendi(pg, f"{WORK} === 'add'")
             pg.set_input_files("#pick", [str(EX / "FullScan_t10.mzML")] if (EX / "FullScan_t10.mzML").exists() else FILES[:1])
