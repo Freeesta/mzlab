@@ -16,7 +16,6 @@
     "../../mzlab/web/export-worker.js",
     "../../mzlab/web/idx-worker.js",
     "../../mzlab/web/idx-spill.js",
-    "../../mzlab/web/idx-early.js",
     "../../mzlab/web/impronta-worker.js",
     "../../mzlab/web/lettori-worker.js",
     "../../mzlab/web/lettura-sync.js",
