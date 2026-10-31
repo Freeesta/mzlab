@@ -172,7 +172,7 @@ class Case:
     def gesture(s, label, act):
         """frames during the gesture, then the time from its end to the sharp region (zoomImg true) and the cost of the region request"""
         rd0 = s.ev("(__B.rd || {ms: 0}).ms"); s.ev("__B.frames(true)"); t = s.mark(); act(); te = s.mark(); fr = s.ev("__B.frames(false)")
-        try: wait(s.pg, f"__B.z.some(r => r.t > {te} && r.sharp)")
+        try: wait(s.pg, f"__B.z.some(r => r.t > {te} && r.sharp)", timeout=8000)
         except TimeoutError: pass
         s.quiet()
         z = [r for r in s.since(te, "z") if r["sharp"]]; fq = [r for r in s.since(t, "f") if "rt0=" in r["u"]]
