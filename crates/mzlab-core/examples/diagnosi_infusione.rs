@@ -108,7 +108,7 @@ fn tic_report(scans: &[mzlab_core::idxread::Scan]) {
     let n = tic.len() as f64;
     let mean = tic.iter().sum::<f64>() / n.max(1.0);
     let sd = (tic.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n.max(1.0)).sqrt();
-    let max = tic.iter().cloned().fold(0.0, f64::max);
+    let max = tic.iter().copied().fold(0.0, f64::max);
     let peaks = (1..tic.len().saturating_sub(1))
         .filter(|&i| tic[i] > tic[i - 1] && tic[i] >= tic[i + 1] && tic[i] > 0.2 * max)
         .count();

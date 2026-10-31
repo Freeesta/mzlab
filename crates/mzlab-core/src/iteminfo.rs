@@ -770,8 +770,8 @@ pub fn facts_from<M: ReadAt>(
                     (t[0], t[t.len() - 1])
                 } else {
                     (
-                        t.iter().cloned().fold(f64::INFINITY, f64::min),
-                        t.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+                        t.iter().copied().fold(f64::INFINITY, f64::min),
+                        t.iter().copied().fold(f64::NEG_INFINITY, f64::max),
                     )
                 };
                 lo = Some(lo.map_or(a, |x| x.min(a)));

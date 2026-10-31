@@ -38,7 +38,7 @@ fn unit_and_mode(scans: &[(&[f64], &[f64])]) -> (f64, Mode) {
         .iter()
         .filter_map(|(_, y)| {
             y.iter()
-                .cloned()
+                .copied()
                 .filter(|&v| v > 0.0)
                 .fold(None, |m: Option<f64>, v| Some(m.map_or(v, |m| m.min(v))))
         })
@@ -139,7 +139,7 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
     let (step, regular) = step_and_grid(scans);
     let vmax = scans
         .iter()
-        .flat_map(|(_, y)| y.iter().cloned())
+        .flat_map(|(_, y)| y.iter().copied())
         .fold(0.0, f64::max);
     let mut p = Params {
         mode,

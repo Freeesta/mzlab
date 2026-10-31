@@ -19,9 +19,11 @@ const t = require(table), a = require(attr);
 const prov = JSON.parse(fs.readFileSync(dir + '/prov.json'));
 const read = f => fs.readFileSync(dir + '/' + f);
 const pkg = read('normative.mzsus');
-const packed = Buffer.concat([Buffer.alloc(8), pkg]); packed.writeBigUInt64LE(BigInt(pkg.length), 0);
-const s = t.flow_screen_suspects(JSON.stringify(prov.activity.s.params), read('table.mzfeat'), JSON.stringify(['normative.mzsus']), packed, new Uint8Array(0), new Uint8Array(0));
-const r = a.flow_regulatory(JSON.stringify(prov.activity.r.params), read('annot.json'), pkg);
+const imp = read('imp.mzsus');
+const pack = fs_ => Buffer.concat(fs_.flatMap(f => { const h = Buffer.alloc(8); h.writeBigUInt64LE(BigInt(f.length), 0); return [h, f]; }));
+const names = JSON.stringify({ suspects: ['normative.mzsus'], imported: ['imp.mzsus'] });
+const s = t.flow_screen_suspects(JSON.stringify(prov.activity.s.params), read('table.mzfeat'), names, pack([pkg, imp]), new Uint8Array(0), new Uint8Array(0));
+const r = a.flow_regulatory(JSON.stringify(prov.activity.r.params), read('annot.json'), pkg, JSON.stringify(['imp.mzsus']), pack([imp]));
 fs.writeFileSync(dir + '/s.wasm.json', s); fs.writeFileSync(dir + '/r.wasm.json', r);
 """
 

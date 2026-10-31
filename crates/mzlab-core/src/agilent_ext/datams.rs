@@ -201,7 +201,7 @@ impl AgilentD {
                 bytes: 16 * n,
                 uncompressed: None,
                 points: n,
-                max_y: s.y.iter().cloned().fold(0.0, f64::max),
+                max_y: s.y.iter().copied().fold(0.0, f64::max),
                 extra: Vec::new(),
             });
             inline.push((s.mz.clone(), s.y.clone()));

@@ -44,7 +44,7 @@ fn screen(p: &str) -> Value {
     let text = screen_text(
         &Params::from_params(&obj(p)),
         &table_bytes(1),
-        &[("normative.mzsus", &pk)],
+        (&[("normative.mzsus", &pk)], &[]),
         None,
         &[],
     )
@@ -170,7 +170,7 @@ fn the_mask_keeps_the_named_lists_only_and_refuses_an_unknown_one() {
         let e = screen_text(
             &Params::from_params(&obj(p)),
             &table_bytes(1),
-            &[("n.mzsus", &pk)],
+            (&[("n.mzsus", &pk)], &[]),
             None,
             &[],
         )
@@ -232,6 +232,7 @@ fn regulatory(p: &str) -> Value {
         &RegParams::from_params(&obj(p)),
         ANNOT.as_bytes(),
         &package(),
+        &[],
     )
     .unwrap();
     json::parse(text.as_bytes()).unwrap()
@@ -300,9 +301,16 @@ fn the_structure_path_runs_in_a_plan_and_refuses_a_package_without_lists() {
             .unwrap();
     assert!(!prov.contains("\"error\""), "{prov}");
     let made = std::fs::read(d.join("work/r.json")).unwrap();
-    let want = regulatory_text(&RegParams::from_params(&[]), ANNOT.as_bytes(), &package()).unwrap();
+    let want = regulatory_text(
+        &RegParams::from_params(&[]),
+        ANNOT.as_bytes(),
+        &package(),
+        &[],
+    )
+    .unwrap();
     assert_eq!(String::from_utf8(made).unwrap(), want);
-    let e = regulatory_text(&RegParams::from_params(&[]), ANNOT.as_bytes(), b"MZSU").unwrap_err();
+    let e =
+        regulatory_text(&RegParams::from_params(&[]), ANNOT.as_bytes(), b"MZSU", &[]).unwrap_err();
     assert_eq!(e.key, "err.flow.regulatory.package");
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -316,19 +324,29 @@ fn both_paths_run_in_one_plan_for_the_wasm_parity() {
     std::fs::write(d.join("table.mzfeat"), table_bytes(1)).unwrap();
     std::fs::write(d.join("normative.mzsus"), package()).unwrap();
     std::fs::write(d.join("annot.json"), ANNOT).unwrap();
-    let plan = r#"{"format":"mzflow/2","inputs":[{"name":"table.mzfeat","type":"table"},{"name":"annot.json","type":"annot"},{"name":"normative.mzsus","type":"regulatory"}],"steps":[
-        {"id":"s","step":"screen.suspects@1","in":{"table":"file:table.mzfeat","suspects":["file:normative.mzsus"]},"params":{"include":"proposal"}},
-        {"id":"r","step":"annot.regulatory@1","in":{"annot":"file:annot.json","lists":"file:normative.mzsus"},"params":{"lists":"T_LIST_A,T_LIST_C"}}]}"#;
+    let imp = super::imported_tests::imported();
+    std::fs::write(d.join("imp.mzsus"), &imp).unwrap();
+    let plan = r#"{"format":"mzflow/2","inputs":[{"name":"table.mzfeat","type":"table"},{"name":"annot.json","type":"annot"},{"name":"normative.mzsus","type":"regulatory"},{"name":"imp.mzsus","type":"regulatory"}],"steps":[
+        {"id":"s","step":"screen.suspects@1","in":{"table":"file:table.mzfeat","suspects":["file:normative.mzsus"],"imported_lists":["file:imp.mzsus"]},"params":{"include":"proposal"}},
+        {"id":"r","step":"annot.regulatory@1","in":{"annot":"file:annot.json","lists":"file:normative.mzsus","imported_lists":["file:imp.mzsus"]},"params":{"lists":"T_LIST_A,T_LIST_C"}}]}"#;
     let (_, prov) =
         crate::flow::run_plan_cached(plan.as_bytes(), &d, &d.join("work"), 1, None, Some(false))
             .unwrap();
     assert!(!prov.contains("\"error\""), "{prov}");
+    // the run record names the imported file by its SHA-256, and the outputs carry it
+    assert!(
+        prov.contains(&mzlab_core::budget::sha256_hex(&imp)),
+        "{prov}"
+    );
+    let out = std::fs::read_to_string(d.join("work/s.json")).unwrap();
+    assert!(out.contains("\"imported\":true"), "{out}");
     if let Some(out) = std::env::var_os("MZLAB_PARITA_NORMATIVE") {
         let out = PathBuf::from(out);
         std::fs::create_dir_all(&out).unwrap();
         for f in [
             "table.mzfeat",
             "normative.mzsus",
+            "imp.mzsus",
             "annot.json",
             "work/s.json",
             "work/r.json",

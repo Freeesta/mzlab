@@ -41,7 +41,7 @@ impl Query {
     /// `None` when nothing is left after the cleaning (or there is no peak).
     pub fn new(prec: f64, pol: i8, mz: &[f64], it: &[f64]) -> Option<Query> {
         let (m, i) = clean(prec, mz, it, &CleanOpts::default());
-        let mx = i.iter().cloned().fold(0.0, f64::max);
+        let mx = i.iter().copied().fold(0.0, f64::max);
         if m.is_empty() || mx <= 0.0 {
             return None;
         }

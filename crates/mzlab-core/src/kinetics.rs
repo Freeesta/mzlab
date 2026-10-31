@@ -31,7 +31,7 @@ fn best_on_grid(ks: &[f64], yy: &[f64], shape: &dyn Fn(f64) -> Vec<f64>, clamp0:
 }
 
 fn solve_decay(t: &[f64], yy: &[f64]) -> (f64, f64, f64) {
-    let span = (t.iter().cloned().fold(f64::MIN, f64::max) - t.iter().cloned().fold(f64::MAX, f64::min)).max(1e-9);
+    let span = (t.iter().copied().fold(f64::MIN, f64::max) - t.iter().copied().fold(f64::MAX, f64::min)).max(1e-9);
     let mut ks = vec![0.0];
     ks.extend(geomspace(1e-3 / span, 50.0 / span, 160));
     let shape = |k: f64| t.iter().map(|x| (-k * x).exp()).collect::<Vec<f64>>();
@@ -85,7 +85,7 @@ fn solve_consecutive(t: &[f64], k1: f64, k2s: &[f64], yy: &[f64]) -> (f64, f64, 
 
 /// Formation-decay of an intermediate B in A -> B -> C with `k1` known (the decay of the parent), scale and `k2` free.
 pub fn fit_consecutive(t: &[f64], y: &[f64], k1: f64, n_boot: usize, seed: u32) -> (Obj, f64) {
-    let span = (t.iter().cloned().fold(f64::MIN, f64::max) - t.iter().cloned().fold(f64::MAX, f64::min)).max(1e-9);
+    let span = (t.iter().copied().fold(f64::MIN, f64::max) - t.iter().copied().fold(f64::MAX, f64::min)).max(1e-9);
     let k2s = geomspace(1e-3 / span, 50.0 / span, 500);
     let (s, k2, sse) = solve_consecutive(t, k1, &k2s, y);
     let fit: Vec<f64> = consecutive_shape(t, k1, k2).iter().map(|v| s * v).collect();
@@ -137,7 +137,7 @@ pub fn kinetics(times: &[f64], parent_area: &[f64], ion_area: &[f64]) -> Value {
     if n < 5 {
         warnings.push(msg("of.warn.fewSamplesCi", &[("n", int(n as i64))]));
     }
-    let mx = |v: &[f64]| v.iter().cloned().fold(f64::MIN, f64::max).max(1e-12);
+    let mx = |v: &[f64]| v.iter().copied().fold(f64::MIN, f64::max).max(1e-12);
     let (pn, xn): (Vec<f64>, Vec<f64>) = (p.iter().map(|v| v / mx(&p)).collect(), x.iter().map(|v| v / mx(&x)).collect());
     let ratio: Vec<f64> = p.iter().zip(&x).map(|(a, b)| if *a > 0.0 { b / a } else { f64::NAN }).collect();
     out = out

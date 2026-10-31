@@ -42,6 +42,8 @@ pub struct Source {
     pub skipped: usize,
     /// The lists of a regulatory package and the mask; `None` for any other file.
     pub package: Option<Package>,
+    /// A list the user imported from an official file (`imported_lists`): a separate `.mzsus`, never merged into the package.
+    pub imported: bool,
 }
 
 impl Source {
@@ -63,6 +65,7 @@ impl Source {
                 provenance,
                 skipped: 0,
                 package,
+                imported: false,
             });
         }
         let (rows, skipped) = read_csv(name, bytes)?;
@@ -73,7 +76,22 @@ impl Source {
             provenance: "null".into(),
             skipped,
             package: None,
+            imported: false,
         })
+    }
+
+    /// An imported list: a `.mzsus` with the `listings` extension, every list of it screened (the user chose the file, not the lists).
+    pub fn open_imported(name: &str, bytes: &[u8]) -> Result<Source> {
+        let bad = || Error::new("err.flow.regulatory.imported").with("file", name);
+        if !bytes.starts_with(b"MZSU") {
+            return Err(bad());
+        }
+        let mut s = Source::open(name, bytes, ("", ""))?;
+        if s.package.is_none() {
+            return Err(bad());
+        }
+        s.imported = true;
+        Ok(s)
     }
 
     pub fn kind(&self) -> &'static str {

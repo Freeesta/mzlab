@@ -124,8 +124,40 @@ fn find(rows: &[Value], s: &Suspects, pk: &Package, window: Option<(f64, f64)>) 
     out
 }
 
-/// Runs the step on an `annot/1` text and the package bytes; returns the `annot/1` text with the `regulatory` field of every row.
-pub fn regulatory_text(p: &Params, annot: &[u8], package: &[u8]) -> Result<String> {
+/// The `imported` record of the `regulatory` block: name, SHA-256 and lists of each imported file; nothing without one.
+fn write_imported(o: &mut Out, files: &[(&str, &[u8])], opened: &[(Suspects, Package)]) {
+    if opened.is_empty() {
+        return;
+    }
+    o.raw(",\"imported\":[");
+    for (k, ((name, bytes), (_, ipk))) in files.iter().zip(opened).enumerate() {
+        o.raw(if k > 0 { "," } else { "" })
+            .raw("{\"name\":")
+            .str(name)
+            .raw(",\"sha256\":")
+            .str(&mzlab_core::budget::sha256_hex(bytes))
+            .raw(",\"lists\":");
+        ipk.write_lists(o);
+        o.raw("}");
+    }
+    o.raw("]");
+}
+
+/// An imported list file, opened: every list of it is compared (the user chose the file, not the lists).
+fn open_imported(name: &str, bytes: &[u8]) -> Result<(Suspects, Package)> {
+    let bad = || Error::new("err.flow.regulatory.imported").with("file", name);
+    let s = Suspects::open(bytes).map_err(|_| bad())?;
+    let pk = Package::open(&s, "", "")?.ok_or_else(bad)?;
+    Ok((s, pk))
+}
+
+/// Runs the step on an `annot/1` text, the package bytes and the imported list files (`.mzsus` each, after the package); returns the `annot/1` text with the `regulatory` field of every row.
+pub fn regulatory_text(
+    p: &Params,
+    annot: &[u8],
+    package: &[u8],
+    imported: &[(&str, &[u8])],
+) -> Result<String> {
     let s = Suspects::open(package)
         .map_err(|e| Error::new("err.flow.regulatory.package").with("reason", format!("{e:?}")))?;
     let pk = Package::open(&s, &p.lists, &p.include)?
@@ -135,7 +167,16 @@ pub fn regulatory_text(p: &Params, annot: &[u8], package: &[u8]) -> Result<Strin
         return Err(Error::new("err.flow.regulatory.annot"));
     }
     let rows = v.get("rows").map(Value::arr).unwrap_or(&[]);
-    let found = find(rows, &s, &pk, p.window);
+    let mut found = find(rows, &s, &pk, p.window);
+    let opened: Vec<(Suspects, Package)> = imported
+        .iter()
+        .map(|(n, b)| open_imported(n, b))
+        .collect::<Result<_>>()?;
+    for (is, ipk) in &opened {
+        for (all, more) in found.iter_mut().zip(find(rows, is, ipk, p.window)) {
+            all.extend(more);
+        }
+    }
     let mut o = Out::default();
     o.raw("{");
     let mut first = true;
@@ -155,6 +196,7 @@ pub fn regulatory_text(p: &Params, annot: &[u8], package: &[u8]) -> Result<Strin
         .str(&mzlab_core::budget::sha256_hex(package))
         .raw(",\"lists\":");
     pk.write_lists(&mut o);
+    write_imported(&mut o, imported, &opened);
     o.raw("},\"rows\":[");
     for (k, row) in rows.iter().enumerate() {
         o.raw(if k > 0 { ",{" } else { "{" });

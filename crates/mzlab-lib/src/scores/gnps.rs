@@ -15,7 +15,7 @@ pub struct GnpsMatch {
 
 /// Peaks at or above `precursor - 0.5` and below 1% of the base peak are removed; intensities become square roots.
 pub fn gnps_prepare(mz: &[f64], it: &[f64], prec: f64) -> (Vec<f64>, Vec<f64>) {
-    let mx = it.iter().cloned().fold(0.0, f64::max);
+    let mx = it.iter().copied().fold(0.0, f64::max);
     let (mut m, mut v) = (Vec::new(), Vec::new());
     for (x, y) in mz.iter().zip(it) {
         if *y > 0.0 && *x < prec - 0.5 && *y >= 0.01 * mx {

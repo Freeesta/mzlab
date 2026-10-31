@@ -146,7 +146,7 @@ impl<R: ReadAt> Routes<R> {
             mz = cm;
             y = cy;
         }
-        Ok(Some(Binned { mz, y, n, sel, in_win, scan_ids: ar.scan_ids.to_vec() }))
+        Ok(Some(Binned { mz, y, n, sel, in_win, scan_ids: ar.scan_ids.clone() }))
     }
 }
 

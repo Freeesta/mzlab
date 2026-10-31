@@ -19,6 +19,7 @@ import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca } from "./rust-msngrafo.js";
+import { masscal } from "./rust-masscal.js";
 import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
 let engine = null, wasmMem = null;
@@ -375,7 +376,17 @@ async function lrOp(m) {
 // linear memory of the WASM (it only grows): the page recycles the worker when it is large and idle (rust-bridge.js). The cache is trimmed to its budget first (one LRU).
 const memNow = () => { try { if (engine) engine.trim_cache(); } catch (_) { /* the answer goes out anyway */ } return wasmMem ? wasmMem.buffer.byteLength : 0; };
 let active = 0;                                                                   // requests in flight: the read handles are exclusive, so they are released when the worker is idle
-onmessage = async ev => { active++; try { await handle(ev); } finally { if (--active === 0) await ARCH.parkAll(); } };
+// A request the user waits for (map, route, xic) is served before the lab ops (the read-only per-item lr_* ops, background): those wait while one is in flight, at most LAB_WAIT_MS so a stream of them never starves the lab.
+const FG_OPS = new Set(["map", "route", "idxxic", "subxic", "specexact", "idxopen"]), LAB_WAIT_MS = 1500, LAB_BG = /^lr_(metodo|method|method_warnings|gradient|analog|pda\w*|delay)$/;
+let fgActive = 0, fgIdle = /** @type {Array<() => void>} */ ([]);
+const fgDone = () => { if (--fgActive === 0) { const w = fgIdle; fgIdle = []; w.forEach(f => f()); } };
+const labTurn = () => fgActive === 0 ? null : new Promise(r => { const go = () => r(null); fgIdle.push(go); setTimeout(go, LAB_WAIT_MS); });
+onmessage = async ev => {
+  const op = String(ev.data?.op ?? ""), fg = FG_OPS.has(op);
+  if (fg) fgActive++; else if (LAB_BG.test(op)) await labTurn();
+  active++;
+  try { await handle(ev); } finally { if (fg) fgDone(); if (--active === 0) await ARCH.parkAll(); }
+};
 /** the names among `m.names` of samples of the same files as `m.members` with a current index in OPFS */
 async function natSame(/** @type {any} */ m) {
   const out = [];
@@ -469,7 +480,7 @@ async function handle(ev) {
       case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
-      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
+      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;   case "masscal": info = await masscal(m.name || tileName.get(m.slot) || "", m.params, readerFor); break;        // api/mrm with ref, from the transitions of the files; api/masscal: the mass error of the background ions (massacc/1)
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await msnGrafoOp(m, id); break;   // api/msn_grafo over the .mzidx and the mzML of the slot (of a maker's sample: the mzML made from it)
       case "down": lowerBudget(m); break; case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;   // down: one level lower by Rust's rule; budget: the value the supervisor sends at startup
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); openGate.clear(); blobs.clear(); tileName.clear(); break;

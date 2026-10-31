@@ -100,7 +100,7 @@ fn generate_chromatogram(
 
         spectra.push(Spectrum {
             index: i,
-            id: format!("scan_{}", i),
+            id: format!("scan_{i}"),
             level: 1,
             rt,
             polarity: 1,
@@ -117,12 +117,12 @@ fn generate_chromatogram(
     for (idx, &(ms2_rt, prec_mz)) in ms2_precursors.iter().enumerate() {
         spectra.push(Spectrum {
             index: num_scans + idx,
-            id: format!("ms2_scan_{}", idx),
+            id: format!("ms2_scan_{idx}"),
             level: 2,
             rt: ms2_rt,
             polarity: 1,
             profile: false,
-            filter: format!("FTMS + p ESI d Full ms2 {:.4}@hcd", prec_mz),
+            filter: format!("FTMS + p ESI d Full ms2 {prec_mz:.4}@hcd"),
             precursor: Some(prec_mz),
             mz: vec![prec_mz - 58.0, prec_mz - 18.0],
             intensity: vec![8000.0, 15000.0],

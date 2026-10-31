@@ -37,7 +37,7 @@ impl<R: ReadAt> Routes<R> {
     /// `ionmap`: the map of the level on the common grid of the session, `nrt × nmz` (the last six of a file are kept, and the engine trims all the files to its byte budget). A section in single precision
     /// puts its peaks in the cells with float32 arithmetic, as numpy does on a float32 array.
     pub(crate) fn ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Arc<Vec<f32>>> {
-        let key = format!("{level}|{mean}|{:?}", g);
+        let key = format!("{level}|{mean}|{g:?}");
         if let Some(i) = self.maps.iter().position(|(k, _, _)| *k == key) {
             self.maps[i].2 = super::routes::next_tick();
             return Ok(self.maps[i].1.clone());
@@ -53,7 +53,7 @@ impl<R: ReadAt> Routes<R> {
     fn build_ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Vec<f32>> {
         let Some((si, rt)) = self.map_level(level)? else { return Ok(vec![0.0; g.nrt * g.nmz]) };
         let bins = scan_bins(&rt, g.rt0, (g.rt1 - g.rt0).max(1e-9), g.nrt);
-        let n_scans = counts(bins.iter().cloned(), g.nrt);
+        let n_scans = counts(bins.iter().copied(), g.nrt);
         let n = self.idx.sections[si].n_peaks;
         let f4 = self.idx.sections[si].f4;
         let at = |mz: f64| if f4 { ((mz as f32 - g.mz0 as f32) / g.dmz as f32) as f64 } else { (mz - g.mz0) / g.dmz };

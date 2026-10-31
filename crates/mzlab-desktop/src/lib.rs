@@ -37,6 +37,7 @@ mod ram;
 pub mod release;
 pub mod rpc;
 mod rpc_lr;
+mod rpc_masscal;
 mod rpc_msn;
 mod rpc_nat;
 mod rpc_warm;

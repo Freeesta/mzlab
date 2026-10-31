@@ -21,6 +21,8 @@ pub struct Point {
     pub rt: f64,
     pub err_ppm: f64,
     pub intensity: f64,
+    /// MS1 scans the ion was seen in (inside the search window, over the intensity floor).
+    pub scans: usize,
     pub outlier: bool,
 }
 
@@ -132,6 +134,7 @@ pub fn analyse_file(spec: &FileSpec, m: &FileMeasure, refs: &[RefIon], p: &Param
             rt: o.rt,
             err_ppm: o.err,
             intensity: t.inten[apex(t)],
+            scans: t.rt.len(),
             outlier: false,
         })
         .collect();

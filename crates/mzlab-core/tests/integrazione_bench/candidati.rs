@@ -92,7 +92,7 @@ pub fn auto_edges(xs: &[f64], ys: &[f64], x: f64) -> (usize, usize) {
     let lo = near_idx(xs, x - 0.25) - a0;
     let hi = (near_idx(xs, x + 0.25) - a0).min(nn - 1);
     let m0 = (lo..=hi).fold(lo, |b, j| if co[j] > co[b] { j } else { b });
-    let cmin = co.iter().cloned().fold(f64::INFINITY, f64::min);
+    let cmin = co.iter().copied().fold(f64::INFINITY, f64::min);
     let half = cmin + (co[m0] - cmin) / 2.0;
     let (mut hl, mut hr) = (m0, m0);
     while hl > 0 && co[hl] > half {

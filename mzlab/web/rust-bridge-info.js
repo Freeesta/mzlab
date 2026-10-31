@@ -24,6 +24,20 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
   await Promise.all(ks.map(k => slots[k].opening));
   if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) return null;
   const done = text => { stats.rust++; return { status: 200, text, ms: performance.now() - t0 }; };
+  if (path === "/api/masscal") {                                       // the mass error of the background ions of one file (massacc/1, the .wasm proofs, rust-masscal.js)
+    if (ks.length !== 1) return null;
+    const num = (n, d) => { const v = Number(q.get(n)); return q.get(n) && Number.isFinite(v) && v >= 0 ? v : d; };
+    const params = JSON.stringify({ search_ppm: num("ppm", 20), min_intensity: num("min_intensity", 1e4), min_refs: 3, model: "linear_mz_rt" });
+    const r = await rpc({ op: "masscal", slot: ks[0], name: slots[ks[0]].name, params });
+    if (r.dead) return null;
+    if (r.error) {
+      let e = null;
+      try { e = JSON.parse(r.error); } catch (_) { /* not an error of the module */ }
+      if (!e || !e.error_key) e = { error_key: "err.load.failed", params: { fase: "decode", raw: String(r.error).slice(0, 600) } };
+      return { status: 400, text: JSON.stringify({ error: e.error_key, error_key: e.error_key, params: e.params || {} }), ms: performance.now() - t0 };
+    }
+    return done(r.info);
+  }
   // instrument and software from the head of the mzML, counts and m/z range from the index
   if (path === "/api/fileinfo") {
     const s = slots[ks[0]];

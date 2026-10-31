@@ -128,12 +128,12 @@ pub fn blank_filter(m: &[Vec<f64>], roles: &[String], factor: f64, stat: &str, m
     let (mut kept, mut discarded, mut rows) = (Vec::new(), Vec::new(), Vec::new());
     for (f, row) in m.iter().enumerate() {
         let b = pick(row, &bl);
-        let lvl = if stat == "max" { b.iter().cloned().fold(f64::NEG_INFINITY, f64::max) } else { mean(&b) };
+        let lvl = if stat == "max" { b.iter().copied().fold(f64::NEG_INFINITY, f64::max) } else { mean(&b) };
         let thr = lvl * factor;
         let s = pick(row, &sm);
         let n_above = s.iter().filter(|&&v| v > thr && v > 0.0).count();
         if n_above as i64 >= min_detect { kept.push(f) } else { discarded.push(f) }
-        rows.push(BlankRow { blank: lvl, threshold: thr, n_above, n_samples: sm.len(), max_sample: s.iter().cloned().fold(f64::NEG_INFINITY, f64::max) });
+        rows.push(BlankRow { blank: lvl, threshold: thr, n_above, n_samples: sm.len(), max_sample: s.iter().copied().fold(f64::NEG_INFINITY, f64::max) });
     }
     Ok(BlankOut { kept, discarded, rows, n_blank: bl.len(), n_sample: sm.len() })
 }

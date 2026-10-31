@@ -35,5 +35,15 @@ I18N.add("it", {
   "groups.has.title": "Raggruppa per parole contenute",
   "groups.has.terms": "Parole da cercare, separate da virgole",
   "groups.has.sub": "Anche dentro le parole",
-  "groups.has.multi": "{n, plural, one {# file contiene più di una parola e va nella prima} other {# file contengono più di una parola e vanno nella prima}}"
+  "groups.has.multi": "{n, plural, one {# file contiene più di una parola e va nella prima} other {# file contengono più di una parola e vanno nella prima}}",
+  "groups.dnd.over": "Sposta in {g} · {n, plural, one {# file} other {# file}}",
+  "groups.dnd.overNone": "Togli dai gruppi · {n, plural, one {# file} other {# file}}",
+  "groups.dnd.done": "Spostato in {g}",
+  "groups.dnd.doneNone": "Tolto dai gruppi",
+  "groups.dnd.cancel": "Spostamento annullato",
+  "groups.dnd.edge": "Nessun altro gruppo in questa direzione",
+  "groups.move.menu": "Sposta nel gruppo ▸",
+  "groups.move.new": "Nuovo gruppo…",
+  "groups.move.none": "Senza gruppo",
+  "groups.move.prompt": "Nome del nuovo gruppo"
 });

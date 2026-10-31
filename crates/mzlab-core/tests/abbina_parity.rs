@@ -76,13 +76,11 @@ fn parity_against_python_reference() {
 
         assert_eq!(
             got_a, want_a,
-            "case #{idx} '{name}': out_a mismatch (got {:?}, want {:?})",
-            got_a, want_a
+            "case #{idx} '{name}': out_a mismatch (got {got_a:?}, want {want_a:?})"
         );
         assert_eq!(
             got_b, want_b,
-            "case #{idx} '{name}': out_b mismatch (got {:?}, want {:?})",
-            got_b, want_b
+            "case #{idx} '{name}': out_b mismatch (got {got_b:?}, want {want_b:?})"
         );
     }
 }

@@ -49,7 +49,7 @@ impl Engine {
             Some(s) => o.int(s as i64),
             None => o.raw("null"),
         };
-        Ok(o.raw("}").0.to_string())
+        Ok(o.raw("}").0.clone())
     }
 
     /// The `metodo/1` document an mzML carries in its `<run>` (`""` when it has none).

@@ -57,7 +57,9 @@ fn points(o: &mut Out, f: &FileResult, refs: &[RefIon]) {
             .num(round(pt.err_ppm, 4))
             .raw(",\"intensity\":")
             .num(round(pt.intensity, 0));
-        o.raw(",\"outlier\":")
+        o.raw(",\"scans\":")
+            .int(pt.scans as i64)
+            .raw(",\"outlier\":")
             .raw(if pt.outlier { "true" } else { "false" })
             .raw("}");
     }

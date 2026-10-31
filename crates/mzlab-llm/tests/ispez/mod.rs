@@ -75,7 +75,7 @@ pub fn signals(idx: &mut Index<Vec<u8>>) -> Vec<[f64; 3]> {
             idx.search(si, lo as f64 + 1.0, false).unwrap(),
         );
         let y = idx.max_window(si, a, b).unwrap();
-        let top = y.iter().cloned().fold(0.0, f64::max);
+        let top = y.iter().copied().fold(0.0, f64::max);
         if top < 5.0e4 {
             continue;
         }

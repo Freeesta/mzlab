@@ -173,7 +173,7 @@ fn sibling(r: &mut Rng, s: &Spectrum, tag: &str) -> Spectrum {
             *m = (r.range(50.0, hi) * 1e4).round() / 1e4;
         }
     }
-    let mut pk: Vec<(f64, f64)> = x.mz.iter().cloned().zip(x.it.iter().cloned()).collect();
+    let mut pk: Vec<(f64, f64)> = x.mz.iter().copied().zip(x.it.iter().copied()).collect();
     pk.sort_by(|a, b| a.0.total_cmp(&b.0));
     pk.dedup_by(|a, b| (a.0 - b.0).abs() < 0.2);
     x.mz = pk.iter().map(|p| p.0).collect();
