@@ -138,6 +138,8 @@ pub(crate) struct Coda {
     folder: Mutex<Option<PathBuf>>,
     /// threads at most; 0 = cores - 1
     workers: usize,
+    /// the re-check pause of `wait_for_indexing` in ms; 0 = `RECHECK_MS`
+    recheck_ms: u64,
 }
 
 impl Coda {
@@ -145,6 +147,16 @@ impl Coda {
     pub(crate) fn with_workers(n: usize) -> Coda {
         Coda {
             workers: n,
+            ..Coda::default()
+        }
+    }
+
+    /// A one-worker queue whose job waits `ms` before it re-checks for an index that started after it was queued.
+    #[cfg(test)]
+    pub(crate) fn with_recheck(ms: u64) -> Coda {
+        Coda {
+            workers: 1,
+            recheck_ms: ms,
             ..Coda::default()
         }
     }
@@ -182,7 +194,12 @@ impl Coda {
     pub(crate) fn add(&self, name: &str, id: u32, root: &Path) {
         if self.enqueue(name, id, root, stamp(root)) {
             let inner = self.inner.clone();
-            std::thread::spawn(move || work(inner));
+            let recheck = Duration::from_millis(if self.recheck_ms > 0 {
+                self.recheck_ms
+            } else {
+                RECHECK_MS
+            });
+            std::thread::spawn(move || work(inner, recheck));
         }
     }
 
@@ -339,13 +356,16 @@ fn convert(root: &Path, out: &Path) -> std::result::Result<Vec<PathBuf>, String>
     Ok(files)
 }
 
+/// Default pause of the re-check in `wait_for_indexing`.
+const RECHECK_MS: u64 = 50;
+
 /// Holds back until no index of Data is being built; the short re-check catches an index that starts just after the job was queued.
-fn wait_for_indexing() {
+fn wait_for_indexing(recheck: Duration) {
     loop {
         while INDEXING.load(Ordering::SeqCst) > 0 {
             std::thread::sleep(Duration::from_millis(100));
         }
-        std::thread::sleep(Duration::from_millis(50));
+        std::thread::sleep(recheck);
         if INDEXING.load(Ordering::SeqCst) == 0 {
             return;
         }
@@ -381,9 +401,9 @@ pub(crate) fn convert_fresh(
     Ok(files)
 }
 
-fn work(inner: Arc<Mutex<Inner>>) {
+fn work(inner: Arc<Mutex<Inner>>, recheck: Duration) {
     loop {
-        wait_for_indexing();
+        wait_for_indexing(recheck);
         let s = {
             let mut g = lock(&inner);
             let Some(s) = g.take() else {
