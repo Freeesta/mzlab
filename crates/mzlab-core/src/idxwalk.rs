@@ -3,16 +3,6 @@
 use crate::error::{Error, Result};
 use crate::idxread::{Index, ReadAt};
 
-/// The scan of a peak from its 4 bytes; a position outside the section's scans is a damaged index.
-#[inline(always)]
-fn pos_of(b: &[u8], n_scans: u64) -> Result<usize> {
-    let pos = u32::from_le_bytes(b.try_into().unwrap());
-    if u64::from(pos) >= n_scans {
-        return Err(Error::new("error.badIndex"));
-    }
-    Ok(pos as usize)
-}
-
 impl<R: ReadAt> Index<R> {
     /// `pos`, m/z and `inten` of the peaks `a..b`, handed to `f` in pieces of at most 64 K peaks, in table order.
     pub fn each_peak(
@@ -122,4 +112,14 @@ impl<R: ReadAt> Index<R> {
         })?;
         Ok(out)
     }
+}
+
+/// The scan of a peak from its 4 bytes; a position outside the section's scans is a damaged index.
+#[inline(always)]
+fn pos_of(b: &[u8], n_scans: u64) -> Result<usize> {
+    let pos = u32::from_le_bytes(b.try_into().unwrap());
+    if u64::from(pos) >= n_scans {
+        return Err(Error::new("error.badIndex"));
+    }
+    Ok(pos as usize)
 }
