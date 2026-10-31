@@ -3,7 +3,9 @@
 // dialogs of the manual rules. Lazy (carica("gruppi-per.js") from lista-file.js); the engine's answer and the writer are in gruppi.js, nothing here splits a name.
 window.GRUPPIPER = (() => {
   const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
-  const btn = () => /** @type {HTMLButtonElement} */ (document.getElementById("sb-by"));
+  // the button the menu hangs from: the side list's, or another one given to open() (the table's «Group by»)
+  let anchor = "sb-by";
+  const btn = () => /** @type {HTMLButtonElement} */ (document.getElementById(anchor) || document.getElementById("sb-by"));
   /** @type {HTMLElement | null} */ let box = null;
   let view = "main";
   const close = (/** @type {boolean} */ focus = true) => {
@@ -23,7 +25,7 @@ window.GRUPPIPER = (() => {
       vs.filter((/** @type {any} */ v) => v.id !== ub?.by).forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.then === v.id, fn: () => pick({ by: ub.by, then: ub.then === v.id ? undefined : v.id, manuale: ub.manuale }) }));
       return list;
     }
-    list.push({ label: t("groups.none"), checked: !ub && !E.files.some((/** @type {any} */ f) => f.ugrp), fn: () => pick(null) });
+    list.push({ label: t("groups.none"), checked: !ub && !GRUPPI.has(), fn: () => pick(null) });
     vs.forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.by === v.id, fn: () => pick({ by: v.id }) }));
     if (ub && ub.by !== "custom" && ub.by !== "manuale" && vs.length > 1) list.push({ label: t("groups.then"), sub: ub.then ? t(`groups.var.${ub.then}`) : "", fn: () => draw("then") });
     list.push({ label: t("groups.pos"), checked: ub?.by === "manuale" && !!ub.manuale?.pos, fn: () => { close(false); dialogPos(); } });
@@ -51,8 +53,10 @@ window.GRUPPIPER = (() => {
     });
     /** @type {HTMLElement | null} */ (box.querySelector("[role=menuitemradio]:not([aria-disabled])"))?.focus();
   }
-  function open() {
-    if (box) { close(); return; }
+  /** @param {string} [from] id of the button to hang from */
+  function open(from = "sb-by") {
+    if (box) { const same = anchor === from; close(); if (same) return; }
+    anchor = from;
     box = document.createElement("div"); box.className = "gby-menu"; box.setAttribute("role", "menu"); box.setAttribute("aria-label", t("groups.menu"));
     const r = btn().getBoundingClientRect();
     box.style.top = r.bottom + 2 + "px"; box.style.left = Math.max(4, Math.min(r.left, innerWidth - 280)) + "px";

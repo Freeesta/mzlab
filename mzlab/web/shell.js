@@ -75,7 +75,7 @@ const concFrom=(/** @type {FileRiga} */ f)=>f.conc==null||f.kind!=="mrm"?null:ro
 function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=false){const old=Object.fromEntries(ST.files.map((/** @type {FileRiga} */ f)=>[f.name,f]));
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...TIPOF.apply(f,f.name),time,type,conc,use:o?o.use:true,
     // gC: concentration read from the name (yellow in the table until the student edits or confirms them)
-    gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed}});
+    gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed,ugrp:o&&o.ugrp}});
   if(list.some(f=>!old[f.name]))hrMixPreselect();
   // roles and times proposed from the names by the engine (campioni/2)
   if(defer)FILETAB.soon();else FILETAB.flush(true)}
@@ -106,27 +106,28 @@ const expSel=(/** @type {FileRiga} */ f,/** @type {string} */ attr,/** @type {st
 const expCell=(/** @type {FileRiga} */ f)=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind in GORD?expSel(f,`data-exp="${esc(f.name)}"`,TIPOF.manual(f.name),f.kindAuto||f.kind,TIPOF.why(f))+(f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""):f.kind?`<b>${expn(f.kind)}</b>`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
 // the types of the files change in place (table, viewer, XIC button) and the table is sorted again
 function expSet(/** @type {string[]} */ names,/** @type {string | null | undefined} */ kind){names.forEach(n=>TIPOF.set(n,kind||null));ST.files.forEach((/** @type {FileRiga} */ f)=>{if(names.includes(f.name))Object.assign(f,TIPOF.apply(f,f.name))});TIPOF.viewer(names);CONVROWS.thaw();sortFiles();renderFiles()}
-function renderFiles(){const F=ST.files,el=$("#flist");
+function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el=$("#flist");
   const hasCal=true,tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
   // GUESS: concentration cells
   const ncol=7+(hasCal?1:0),GUESS=` title="${I18N.t("load.guess.title")}"`;
   let rows="";
   // the rows keep the order of arrival (CONVROWS.rank): no group lines, no reorder when the loading ends (the files still being read are rows of the side list, upload-rows.js); the group of a file is the experiment cell and the HR tag
-  const R=/** @type {string[]} */ ([]);F.map((/** @type {FileRiga} */ f,/** @type {number} */ i)=>({f,i})).sort((/** @type {{ f: FileRiga }} */ a,/** @type {{ f: FileRiga }} */ b)=>CONVROWS.rank(a.f.name)-CONVROWS.rank(b.f.name)).forEach((/** @type {{ f: FileRiga, i: number }} */ {f,i})=>{
-    R.push(`<tr data-grp="${loadGrp(f).key}"><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${OPENNOW.isOpen(f.name)?`<button type="button" class="lnk" data-open="${esc(f.name)}" aria-label="${esc(I18N.t("load.table.open",{name:f.name}))}">${esc(f.name)}</button>`:esc(f.name)}${f.hr?` <span class="muted sm">${I18N.t("load.row.hr")}</span>`:""}${CONVQ.label(f.name)?` <span class="muted sm" data-cvq="${esc(f.name)}">${esc(CONVQ.label(f.name))}</span>`:""} ${typeof polSign==="function"?polSign(f,F):""}</td><td>${expCell(f)}</td>`+
+  const ents=/** @type {{ f: FileRiga, i: number, h: string }[]} */ ([]);F.map((/** @type {FileRiga} */ f,/** @type {number} */ i)=>({f,i})).sort((/** @type {{ f: FileRiga }} */ a,/** @type {{ f: FileRiga }} */ b)=>CONVROWS.rank(a.f.name)-CONVROWS.rank(b.f.name)).forEach((/** @type {{ f: FileRiga, i: number }} */ {f,i})=>{
+    ents.push({f,i,h:`<tr data-grp="${loadGrp(f).key}"><td><input type="checkbox" data-i="${i}" data-k="use" aria-label="${esc(f.name)}" ${f.use?"checked":""}></td><td>${OPENNOW.isOpen(f.name)?`<button type="button" class="lnk" data-open="${esc(f.name)}" aria-label="${esc(I18N.t("load.table.open",{name:f.name}))}">${esc(f.name)}</button>`:esc(f.name)}${f.hr?` <span class="muted sm">${I18N.t("load.row.hr")}</span>`:""}${CONVQ.label(f.name)?` <span class="muted sm" data-cvq="${esc(f.name)}">${esc(CONVQ.label(f.name))}</span>`:""} ${typeof polSign==="function"?polSign(f,F):""}</td><td>${expCell(f)}</td>`+
    RUOLI.roleCell(f,i)+RUOLI.timeCell(f,i,tu)+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
-   `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`)});
+   `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`})});
+  const R=window.GRUTAB?GRUTAB.rows(ents,ncol):ents.map(x=>x.h);
   // above 500 rows the body comes in chunks of 200 per frame (1000 rows in one go cost 150 ms); the handlers are wired once the last chunk is in
   const tok=FILECHUNK.t={},big=R.length>500;rows=(big?R.slice(0,200):R).join("");
-  const head=F.length?`<p class="sm samphead"><b>${I18N.t("load.samples.head",{n:F.length})}</b>${S.sess?" · "+I18N.t("load.samples.click"):""}</p>`:"";
+  const head=F.length?`<p class="sm samphead"><b>${I18N.t("load.samples.head",{n:F.length})}</b>${S.sess?" · "+I18N.t("load.samples.click"):""}<button type="button" class="sec sm" id="tb-by" aria-haspopup="menu" aria-expanded="false">${I18N.t("groups.by.btn")} \u25be</button></p>`:"";
   // the columns, the unit menus and the buttons over the table are there from the first row (CONVROWS.table, tools): the phases of the loading move nothing
   el.innerHTML=(F.length?head+CONVROWS.tools()+CONVROWS.table(`<tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")} ${tuSel}</th><th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th><th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`,rows):"")+CONVROWS.summary();
   if(big){let at=200;const more=()=>{if(FILECHUNK.t!==tok)return;const tb=el.querySelector("tbody");if(tb)tb.insertAdjacentHTML("beforeend",R.slice(at,at+200).join(""));at+=200;if(at<R.length)FRAME.next(more);else wireFiles(el,F)};FRAME.next(more)}else wireFiles(el,F);
   UPROWS.paint();syncWork()}
 const FILECHUNK={t:{}};
 function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
-  CONVROWS.wire(el);
+  CONVROWS.wire(el);const tb=$("#tb-by");if(tb)tb.onclick=()=>carica("gruppi-tab.js").then(()=>GRUTAB.by());if(window.GRUTAB)GRUTAB.wire(el);
   el.querySelectorAll("[data-open]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>soloFile(E.files.find((/** @type {FileAperto} */ x)=>!x.gone&&x.file.split("#")[0]===b.dataset.open)));
   el.querySelectorAll("[data-exp]").forEach((/** @type {CampoDati} */ x)=>x.onchange=()=>expSet([x.dataset.exp],x.value===x.dataset.auto?null:x.value));
   el.querySelectorAll("[data-k]").forEach((/** @type {CampoDati} */ x)=>{
@@ -380,7 +381,7 @@ const dropHasFiles=(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)
   if(key==="files.drop.done"){DIRECT.tm=setTimeout(()=>{n.style.opacity="0";DIRECT.tm=setTimeout(()=>directNote(""),600)},900)}else if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
 function dropZone(/** @type {boolean} */ on){$("#sb-pane").classList.toggle("dz-over",on);if(on)$("#fl-dz").hidden=false;else syncWork(true)}
 (()=>{const dz=$("#dfiles");
-  ["dragenter","dragover"].forEach(t=>dz.addEventListener(t,(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();dropZone(true)}));
+  ["dragenter","dragover"].forEach(t=>dz.addEventListener(t,(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();dropZone(true);carica("gruppi-dnd.js")}));
   dz.addEventListener("dragleave",(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{if(!dz.contains(e.relatedTarget))dropZone(false)});
   dz.addEventListener("drop",(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{dropZone(false);if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();e.stopPropagation();
     if(!CartCarica.fromDrop(e))upload([...e.dataTransfer.files],"data")});
