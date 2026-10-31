@@ -8,7 +8,7 @@ declare var MZLAB_PHONE: boolean;
 declare var QQQ_PHONE: boolean;
 declare var MZLAB_DESKTOP: boolean;
 declare var MZLAB_LAB: any;
-declare var SITO_PUBBLICO: { readonly scaricaApp: boolean; readonly teoria: boolean };
+declare var SITO_PUBBLICO: { readonly scaricaApp: boolean };
 declare var MZLAB_TOFILE: ((f: { id: number; name: string; size: number }) => File) | undefined;
 declare var __TAURI__: any;
 declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
@@ -16,8 +16,6 @@ declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 declare var FileSystemObserver: any;
 declare var MAPFEAT: any;
 declare var IMPCOMP: any;
-// generated index of the Teoria search (teoria/indice-ricerca.js), loaded on demand by ricerca.js
-declare var INDICE_RICERCA: string[][];
 declare var TPMINE: any;
 
 /** An entry of the loading table (ST.files) as ruoli-*.js reads it: `role`/`sub` are campioni/2 `tipo` and `tipo_bianco`, `time` is in minutes, `gR`, `gT` = role and time proposed from the name (until the student edits them). */

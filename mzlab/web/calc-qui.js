@@ -4,7 +4,7 @@
 // «What can this number be?» (block under the m/z calculator, the Adducts panel and the Neutral losses panel): the choices (tolerance, polarity; the
 // resolution is never chosen: it comes from the open files, or from the number itself when none is open) and the groups of candidates for ONE number or formula. Pure functions of (argument, options, dependencies), also
 // run by node in tests/test_calc_qui.py; the page parts are calc-qui-html.js (markup) and calc-qui-ui.js (the three places that show it).
-// Candidates only: at unit resolution a match is a coincidence to check, never an identification (Teoria).
+// Candidates only: at unit resolution a match is a coincidence to check, never an identification.
 
 const CALCQUI = (() => {
   const C = typeof calcIsExpr === "function" ? { calcIsExpr, calcEval } : require("./calcola.js");

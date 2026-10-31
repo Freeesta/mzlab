@@ -45,8 +45,8 @@ try:
             assert [u for u in reqs if u.endswith("/mzfinder/indice.json")]
             pg.click(TAB); pg.wait_for_selector("#tp-go")
             assert not pg.evaluate("document.getElementById('v-draw').offsetParent")
-            pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
-            pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/theory opens the standalone Teoria page
+            pg.click('#nav button[data-v="draw"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
+            pg.click('#nav button[data-v="data"]')
         step("the Tabui tab is in the header at first load", visible)
         def after_ready():
             # Tabui downloads after the page is usable: nothing of static/mzfinder/ is requested up to qqReady, and the first click on the tab still opens it

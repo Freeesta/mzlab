@@ -183,30 +183,6 @@ def test_spectrum_background_subtraction(tmp_path):
     assert mz[0] == pytest.approx(100.2, abs=0.01) and y[0] == pytest.approx(400.0)
 
 
-def test_theory_module_is_served_and_self_contained():
-    """The Teoria pages are static: every local link, script and stylesheet must exist, no external scripts."""
-    import re
-    from importlib import resources
-    web = resources.files("mzlab") / "web"
-
-    def _static(rel):          # (bytes, type) of a file of the site, None if it does not exist
-        f = web.joinpath(*[p for p in rel.split("/") if p])
-        return (f.read_bytes(), "text/html" if rel.endswith(".html") else "other") if f.is_file() else None
-    base = web / "teoria"
-    pages = sorted(p.name for p in base.iterdir() if p.name.endswith(".html"))
-    assert "index.html" in pages and len(pages) >= 10
-    body, ctype = _static("teoria/index.html")
-    assert ctype == "text/html" and b"QqQ lab" in body
-    for name in pages:
-        html = (base / name).read_text(encoding="utf-8")
-        assert not re.search(r'<script[^>]+src="https?:', html), name
-        for ref in re.findall(r'(?:src|href)="([^"#:?]+)(?:[?#][^"]*)?"', html):
-            if "${" in ref:          # built by the page script (template literal), checked by the e2e tests
-                continue
-            target = "teoria/" + ref if not ref.startswith("../") else ref[3:]
-            assert _static(target) is not None, (name, ref)
-
-
 def test_vector_logo():
     """The logo exists as SVG (the Mac launcher app was removed on 6 Oct 2026: students use the website only)."""
     from pathlib import Path

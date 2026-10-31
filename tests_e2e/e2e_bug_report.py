@@ -86,9 +86,8 @@ try:
             assert pg.evaluate("document.activeElement.id") == "np-set", "Esc closes the settings and gives the focus back to the gear"
         step("keyboard: Tab moves through the panel, Esc closes it and returns the focus to the gear", keys)
         def other_views():
-            for v in ("draw", "theory"):
-                pg.click(f"#nav button[data-v={v}]"); attendi(pg, f"document.querySelector('#nav button[data-v={v}]').classList.contains('on')")
-                assert pg.locator("#bug-btn").count() == 0, v
+            pg.click("#nav button[data-v=draw]"); attendi(pg, "document.querySelector('#nav button[data-v=draw]').classList.contains('on')")
+            assert pg.locator("#bug-btn").count() == 0
             pg.click("#nav button[data-v=draw]"); attendi(pg, "document.querySelector('#nav button[data-v=draw]').classList.contains('on')")
             opengroup(); assert "draw" in report(); closepanel()
             pg.click("#nav button[data-v=data]")

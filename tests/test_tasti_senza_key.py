@@ -9,7 +9,7 @@ UNSAFE = re.compile(r"\b(?:e|ev|evt|event)\.key\.(?:toLowerCase|toUpperCase|leng
 def test_no_unguarded_key_reads():
     bad = []
     for f in WEB.rglob("*.js"):
-        if "vendor" in f.parts or "teoria" in f.parts and f.name.endswith("-dati.js"):
+        if "vendor" in f.parts:
             continue
         for n, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
             if UNSAFE.search(line):

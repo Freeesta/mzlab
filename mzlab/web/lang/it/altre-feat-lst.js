@@ -306,7 +306,7 @@ I18N.add("it", {
   "lr.mirror.exp": "Sperimentale",
   "lr.mirror.lib": "Libreria",
   "help.language.title": "Lingua dell'interfaccia",
-  "help.language.body": "L'interfaccia è in <b>italiano</b> o in <b>inglese</b>. Si parte dalla lingua del browser (italiano se il browser è in italiano, altrimenti inglese) e si cambia dall'<b>ingranaggio</b> in alto, voce «Lingua / Language»: la scelta resta ricordata e i file aperti non si perdono. Teoria e Pratica sono solo in italiano.",
+  "help.language.body": "L'interfaccia è in <b>italiano</b> o in <b>inglese</b>. Si parte dalla lingua del browser (italiano se il browser è in italiano, altrimenti inglese) e si cambia dall'<b>ingranaggio</b> in alto, voce «Lingua / Language»: la scelta resta ricordata e i file aperti non si perdono.",
   "hint.testo": "Gli strumenti sono qui: clicca un'icona per aprire il pannello, o usa il pulsante «Pannello».",
   "hint.chiudi": "Chiudi il suggerimento",
   "feat.title": "Tabella delle feature",

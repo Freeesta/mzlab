@@ -110,7 +110,7 @@ def guard(expires="2026-12-29", now="2026-10-29T12:00:00Z", hash="", stored=None
 @needs_node
 def test_guard_before_the_date_hides_the_admin_mode_and_adds_no_banner():
     r = guard(stored={"mzlab.admin": "1", "qqq.teoria.esteso": "1", "mzlab.prefs": "{}"})
-    assert r["calls"] == [] and r["lab"] and r["sito"] == {"scaricaApp": False, "teoria": False}
+    assert r["calls"] == [] and r["lab"] and r["sito"] == {"scaricaApp": False}
     assert r["adminViaStorage"] is None and r["legacy"] is None and r["prefs"] == "{}" and r["written"] is None
     assert r.get("banner") is None
 

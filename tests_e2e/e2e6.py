@@ -34,11 +34,10 @@ try:
             assert pg.locator(".hq:visible").count() == 1, "only the general (i) is left"
             pg.locator('button.hq[data-help=header]').click(); shown("#helppop")
             tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "fedecrista@gmail.com" in tx, tx[:200]
-            tg = r.teoria(pg); assert "MRM" in tg and len(tg) > 1000, tg[:200]      # a real chapter of the Teoria opens
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); gone("#helppop"); assert not pg.is_visible("#helppop")
             assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
-        step("only the general (i) is left: it opens the info box; the guide is the first Teoria chapter; panel titles carry the short explanation", helpq)
+        step("only the general (i) is left: it opens the info box; panel titles carry the short explanation", helpq)
         def xlsxexcel():
             open_kind(pg, "mrm"); ready(pg)
             with pg.expect_download() as d: dlmenu(pg, ".pnl.mrm", "xlsx")

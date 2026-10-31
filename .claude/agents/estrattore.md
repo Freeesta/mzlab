@@ -1,6 +1,6 @@
 ---
 name: estrattore
-description: Estrae da file lunghi (sbobine, schede, piano della Teoria) solo i passaggi su un argomento dato, con file:riga, senza riassumere né riscrivere.
+description: Estrae da file lunghi (sbobine, schede, piani) solo i passaggi su un argomento dato, con file:riga, senza riassumere né riscrivere.
 tools: Read, Grep, Glob
 model: haiku
 effort: low

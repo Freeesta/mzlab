@@ -1,7 +1,7 @@
 """Finds links and `backticked/paths` in the tracked .md files that point to a file that does not exist.
 
 A path counts as broken only if it has a file extension and no tracked file ends with it (crate-relative
-paths such as `tests/x.rs` match any crate). Historical documents (docs/studi, docs/archivio), test fixtures and
+paths such as `tests/x.rs` match any crate). Historical documents (docs/studi, docs/archivio, the measurement diary), test fixtures and
 vendored READMEs are skipped, and so are generated files that are not tracked. Run from the repository root; prints
 one line per document and exits 1 when something is broken (part of pre_pr)."""
 import os
@@ -9,7 +9,7 @@ import re
 import subprocess
 import sys
 
-SKIP = ("docs/studi/", "docs/archivio/", "tests/data/", "tools/libro/LEGGIMI.md", "vendor/", "mzlab/web/vendor")
+SKIP = ("docs/studi/", "docs/archivio/", "docs/agenti/misure-diario.md", "tests/data/", "tools/libro/LEGGIMI.md", "vendor/", "mzlab/web/vendor")
 # produced by a tool and not tracked (tools/indice.py)
 GENERATED = {"docs/agenti/mappa.md"}
 TICK = re.compile(r"`((?:docs|tools|crates|mzlab|tests|tests_e2e|TP_Mine|flow|fuzz|esperimenti|\.github|\.claude)/[A-Za-z0-9_./\-]+)`")

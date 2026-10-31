@@ -4,8 +4,8 @@
 name: test
 
 # No paths-ignore: these 4 jobs are the required checks of the "main protetto" ruleset, so they must run on every pull request.
-# A pull request that changes ONLY Teoria chapters (tools/ci_solo_teoria.py: every file on its list) skips the Rust/wasm toolchain and runs the Teoria/Libro tests and 4 Teoria e2e
-# instead; the jobs stay green for the ruleset. A pull request that changes ONLY documents (tools/ci_solo_doc.py) runs a few document tests and no e2e. Any other file, even one, runs everything.
+# A pull request that changes ONLY documents (tools/ci_solo_doc.py) skips the Rust/wasm toolchain, runs a few document tests and no e2e; the jobs stay green for the ruleset.
+# Any other file, even one, runs everything.
 on:
   push:
     branches: [main]
@@ -40,13 +40,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # pull request only: is every changed file a Teoria chapter, or a document? (a push to main gets no base, so solo=false)
+      # pull request only: is every changed file a document? (a push to main gets no base, so nothing is written)
       - id: solo
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
-          python3 tools/ci_solo_teoria.py "$BASE"
           python3 tools/ci_solo_doc.py "$BASE"   # documents only: appends solo=true and kind=doc
       # test files that rust.yml (rust-wasm) runs on the same diff are left out here (tools/ci_pytest_doppi.py); a push to main uses the previous head as base
       - id: doppi
@@ -142,10 +141,10 @@ jobs:
             tempi-test.json
           if-no-files-found: ignore
           retention-days: 3
-      # Teoria-only pull request: the chapter, Libro and example-size tests (the list is in tools/ci_solo_teoria.py); documents-only: tools/ci_solo_doc.py
-      - name: Unit tests (Teoria or documents only)
+      # documents-only pull request: the document tests (the list is in tools/ci_solo_doc.py)
+      - name: Unit tests (documents only)
         if: steps.solo.outputs.solo == 'true' && matrix.parte != 'solo311'
-        run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_doc.py --pytest "${{ steps.solo.outputs.kind }}")
+        run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_doc.py --pytest)
       - name: Record the tree of the cache
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
@@ -184,13 +183,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # pull request only: is every changed file a Teoria chapter, or a document? (a push to main gets no base, so solo=false)
+      # pull request only: is every changed file a document? (a push to main gets no base, so nothing is written)
       - id: solo
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
-          python3 tools/ci_solo_teoria.py "$BASE"
           python3 tools/ci_solo_doc.py "$BASE"   # documents only: appends solo=true and kind=doc
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -228,9 +226,6 @@ jobs:
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
         run: python tools/verifica.py --browser chromium --fumo
-      - name: Teoria e2e (Teoria-only pull request)
-        if: steps.solo.outputs.solo == 'true' && steps.solo.outputs.kind != 'doc'
-        run: python tools/verifica.py --browser chromium --fumo --solo "$(python tools/ci_solo_teoria.py --e2e)"
       # size of every built .wasm against its cap, for tools/ci_metrics.py (small, kept 3 days)
       - name: Size of the .wasm
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' }}
@@ -303,8 +298,6 @@ jobs:
         run: |
           python3 tools/indice.py --controlla
           python3 tools/controlla.py
-      - name: Teoria chapters (no private data)
-        run: python3 tools/controlla_teoria.py
 
   # Types without a build step: tsc on the projects of tools/tipi/ (pagina, moduli, worker); the errors per file may only go down (tools/tipi/base_errori.json).
   tipi:

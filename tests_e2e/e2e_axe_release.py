@@ -1,4 +1,4 @@
-"""axe-core on the areas not covered by e2e_axe_grafici / e2e_a11y_dati: the HR bench, Disegno (Ketcher's own iframe excluded), Pratica and the guided tour.
+"""axe-core on the areas not covered by e2e_axe_grafici / e2e_a11y_dati: the HR bench, Disegno (Ketcher's own iframe excluded) and the guided tour.
 Same rule as e2e_axe_grafici: no serious or critical violation (wcag2a/2aa/21a/21aa/22aa). axe comes from axe-playwright-python or $AXE_JS; without either: SKIP."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
@@ -41,11 +41,6 @@ try:
             attendi(pg, "!!(window.TPDraw && TPDraw.ready())", 60000)
             attendi(pg, "!!document.querySelector('#kframe')?.contentDocument?.querySelector('#tp-bar')", 60000); axe(pg, "'body'", ["#kframe"])
         step("axe: Disegno, outside the Ketcher iframe", draw)
-        base = f"http://127.0.0.1:{r.port}/static/teoria/"
-        for pr in ("pratica-ei", "pratica-orale", "pratica-perdite", "pratica-isotopi", "pratica-formula", "pratica-strumento"):
-            def pra(pr=pr):
-                pg.goto(base + pr + ".html"); attendi(pg, "document.readyState === 'complete' && document.body.innerText.length > 200"); axe(pg)
-            step("axe: " + pr, pra)
         def tour():
             q = r.b.new_page(viewport={"width": 1500, "height": 1100}, reduced_motion="reduce")
             try:

@@ -1,16 +1,16 @@
 // @ts-strict
 // @ts-check
 "use strict";
-// Search box (the 🔍 button of the toolbar, Ctrl+K / ⌘K): one field for commands, numbers, formulas and the Teoria.
+// Search box (the 🔍 button of the toolbar, Ctrl+K / ⌘K): one field for commands, numbers and formulas.
 // Words are looked up among the commands of BARRA.commands (by name, in Italian and English, without accents, by partial words); a number or a
-// formula also gets "compatible with" rows from ricerca.js (shown above the commands) and words get pages of the Teoria (below). Empty: the recent commands.
+// formula also gets "compatible with" rows from ricerca.js (shown above the commands). Empty: the recent commands.
 // Enter runs, ↑ ↓ move, Esc closes. The list of commands is the one of barra.js: nothing is registered here.
 
 // Pure helpers of the box, outside the module closure (the closure keeps only the state and the DOM).
 const PAL_GROUPS = ["tools", "hr", "panel", "graphs", "app"], PAL_RECENT = "mzlab.pal.recent", PAL_RECENT_N = 5;
 const palNorm = (/** @type {unknown} */ s) => String(s == null ? "" : s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const palGroupOf = (/** @type {any} */ c) => (c.group || (c.item || c.hr ? "hr" : "tools"));
-const palKw = (/** @type {any} */ c) => (c.teo ? "" : I18N.t(`cmd.${c.id}.kw`));
+const palKw = (/** @type {any} */ c) => I18N.t(`cmd.${c.id}.kw`);
 
 // every word of the query must be inside the name, the short label or the keywords; names count more than keywords
 function palSearch(/** @type {string} */ q, /** @type {any[]} */ cands) {
@@ -70,8 +70,6 @@ const PALETTE = (() => {
   const t = (k, p) => I18N.t(k, p);
 
   function candidates() {
-    // in the Teoria the palette searches the commands of the Teoria
-    if (BARRA.inTheory) return BARRA.theoryCommands().filter(c => !c.off);
     return BARRA.commands.filter(c => c.run && !c.items && c.id !== "search" && BARRA.visible(c));
   }
   const search = q => palSearch(q, candidates());
@@ -115,16 +113,15 @@ const PALETTE = (() => {
     sel = 0;
     const cmds = s ? search(q).slice(0, MAX_CMD).map(palCmdRow) : palRecentIds().map(id => candidates().find(c => c.id === id)).filter(Boolean).map(palCmdRow);
     const cmdBlock = { title: t(s ? "pal.grp.commands" : "pal.grp.recent"), rows: cmds };
-    const rich = s && !BARRA.inTheory && window.RICERCA;
+    const rich = s && window.RICERCA && RICERCA.classify(s) !== "word";
     paint([cmdBlock], !!rich);
     if (!rich) return;
     // numbers and formulas ask the engine: a short wait so that a fast typist does not send every key
     timer = window.setTimeout(async () => {
       const r = await RICERCA.risultati(s);
       if (my !== seq) return;
-      const above = r.groups.filter(g => g.id !== "theory"), below = r.groups.filter(g => g.id === "theory");
       const blk = g => ({ title: g.title, rows: g.rows.map(palResRow) });
-      paint([...above.map(blk), cmdBlock, ...below.map(blk)], false);
+      paint([...r.groups.map(blk), cmdBlock], false);
     }, 150);
   }
 

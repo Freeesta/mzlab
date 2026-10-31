@@ -26,7 +26,6 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |
 | motore di confronto spettrale con più librerie per mzFlow (nodo «Attribution», `table.attribute`) e pannello laterale MSⁿ: `libset`, `libmatch/1`, preset, analoghi con ΔFormula, catalogo `librerie/2` | `docs/agenti/match-spettrale.md` (prompt dei lavori: `docs/archivio/prompt-match/`) |
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
-| Teoria e Pratica (`mzlab/web/teoria/`) | `docs/agenti/teoria.md` (assistente: `assistente-teoria.md`; `teoria/LEGGIMI.md` se scrivi capitoli) |
 | accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |

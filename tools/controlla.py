@@ -199,7 +199,7 @@ def confronti_esperimenti() -> dict[str, int]:
     rx = re.compile(r'[=!]==?\s*"(?:full|ms2|mrm)"|"(?:full|ms2|mrm)"\s*[=!]==?')
     out = {}
     for f in indice.tracked():
-        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and "/teoria/" not in f and f != "mzlab/web/esperimenti.js":
+        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and f != "mzlab/web/esperimenti.js":
             n = sum(len(rx.findall(l)) for l in (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n") if not l.lstrip().startswith("//"))
             if n:
                 out[f] = n
@@ -223,7 +223,7 @@ def chiamate_frame() -> dict[str, int]:
     rx = re.compile(r"\b(?:requestAnimationFrame|cancelAnimationFrame)\(|new ResizeObserver\(")
     out = {}
     for f in indice.tracked():
-        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and "/teoria/" not in f and f != "mzlab/web/frame.js":
+        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and f != "mzlab/web/frame.js":
             n = sum(len(rx.findall(l)) for l in (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n") if not l.lstrip().startswith("//"))
             if n:
                 out[f] = n

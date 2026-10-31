@@ -17,7 +17,7 @@
   }
   const sub = (/** @type {string} */ f) => H(f).replace(/(\d+)/g, "<sub>$1</sub>");
 
-  // periodic table: markup, layout and behaviour live in tavola-periodica.js (shared with the Teoria)
+  // periodic table: markup, layout and behaviour live in tavola-periodica.js 
   const { periodic, bindPeriodic } = TAVOLA.create({ elements: ELEMENTS, t: (/** @type {string} */ k, /** @type {Bag | undefined} */ p) => I18N.t(k, p), nome: (/** @type {Bag} */ e) => I18N.t(`el.${e.s}`) });
 
 

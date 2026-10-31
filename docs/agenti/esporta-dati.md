@@ -33,7 +33,7 @@ Tutto il lavoro dell'utente sta nel SUO browser; l'esportazione lo raccoglie in 
 | localStorage | `mzlab.barra.lato`, `mzlab.barra.lr`, `mzlab.barra.hr`, `mzlab.barra.hint`, `mzlab.banco.info` | layout della barra laterale e avvisi già visti | stringa / JSON |
 | localStorage | `mzlab.lib.soglie`, `mzlab.lib.cartella`, `mzlab.liste.attive`, `mzlab.contaminanti`, `.esclusi`, `.on` | librerie, liste e contaminanti scelti | JSON |
 | localStorage | `mzlab.disegno.font`, `.riquadri`, `.strumenti`, `mzlab.pal.recent` | pagina Disegno: font, riquadri, strumenti, colori recenti | JSON |
-| localStorage | `mzlab.tour.lr`, `mzlab.upd.last`, `mzlab.upd.seen`, `mzlab.rel.last`, `mzlab.rel.seen`, `mzlab.reset.note`, `mzlab.logo.gold`, `mzlab.teoria.esteso`, `mzlab.teoria.itnote`, `mzlab.pratica` | tour, avvisi di aggiornamento già visti, Teoria e Pratica | stringa / JSON |
+| localStorage | `mzlab.tour.lr`, `mzlab.upd.last`, `mzlab.upd.seen`, `mzlab.rel.last`, `mzlab.rel.seen`, `mzlab.reset.note`, `mzlab.logo.gold` | tour, avvisi di aggiornamento già visti | stringa / JSON |
 | localStorage | `mzlab.llm`, `mzlab.llm.consenso` | assistente: impostazioni e consensi per fornitore (senza chiavi) | JSON |
 | localStorage | `mzlab.libro.teoria.draft.<capitolo>` | bozza non inviata di un capitolo (mai il token) | JSON |
 | localStorage | `mzlab.attributio.reviewer`, `mzlab.tabui.*`, `mzlab.pipeline.draft` | admin: revisore e decisioni (non esportati dall'interfaccia degli studenti) | JSON |
@@ -44,6 +44,6 @@ Tutto il lavoro dell'utente sta nel SUO browser; l'esportazione lo raccoglie in 
 | OPFS | `librerie/` | librerie spettrali salvate (`<id>.mzlib`) | binario |
 | OPFS | `mzlab/` (radice del motore), `idx/`, `tiles/`, `conv/`, `export/` | file importati, indici, mappe e conversioni: ricostruibili | binario |
 | Cache API | `mzlab-app-*`, `mzlab-big-*`, `mzlab-libs` | copia offline dell'app | risposte HTTP |
-| sessionStorage | `mzlab.run`, `mzlab.telefono*`, `mzlab.unopen`, `mzlab.convopen`, `mzlab.teoria.y/.side`, `mzlab.tour.step` | stato di questa esecuzione | stringa |
+| sessionStorage | `mzlab.run`, `mzlab.telefono*`, `mzlab.unopen`, `mzlab.convopen`, `mzlab.tour.step` | stato di questa esecuzione | stringa |
 
 Nota: le chiavi e le cartelle si leggono per NOME dal browser (come `reset.js`, nessuna lista fissa): la tabella spiega le famiglie, la raccolta prende tutto ciò che inizia per `mzlab`/`qqq` meno gli esclusi.

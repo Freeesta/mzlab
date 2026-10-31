@@ -1,4 +1,4 @@
-"""Layout stability of the first load: Disegno (direct #/draw) and a Teoria chapter (mouse and touch header sizes) must not shift after the first paint
+"""Layout stability of the first load: Disegno (direct #/draw) must not shift after the first paint
 (layout-shift sum without recent input <= 0.02), with the CPU slowed 4x so that late scripts really land after the first paint."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -25,12 +25,8 @@ try:
             q.goto(url); attendi(q, ready, timeout=90000); frames(q, 30)
             cls, shifts = q.evaluate("() => [window.__cls, window.__shifts]"); c.close()
             assert cls <= LIMIT, f"CLS {cls:.4f} > {LIMIT}: {shifts}"
-        T = f"http://127.0.0.1:{r.port}/static/teoria/09-quadrupolo.html"
-        TREADY = "!!document.querySelector('#sidecmd') && !!document.querySelector('#a11y-btn') && !!document.querySelector('#tbar')"
         step("Disegno at #/draw: no shift after the first paint", lambda: cold(f"http://127.0.0.1:{r.port}/#/draw",
              "document.getElementById('kframe').classList.contains('kwait') === false && !!(window.TPDraw && TPDraw.ready())"))
-        step("Teoria (mouse): header and index tools in their final place", lambda: cold(T, TREADY))
-        step("Teoria (touch): header and index tools in their final place", lambda: cold(T, TREADY, has_touch=True))
 finally:
     r.close()
 r.report()

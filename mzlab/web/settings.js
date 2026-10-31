@@ -52,13 +52,9 @@ COMANDI.gestore("app.settings", {
 });
 /** @param {() => void} f */
 const uipDo = f => COMANDI.fai("app.settings", COMANDI.GLOBALE, f);
-// the settings panel of the Teoria (inside the iframe) changes the theme of the whole program through here
-window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { uipDo(() => { UIP.theme = t; }); uipSave(); TEMASOFT.run(uipApply); } };
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
-  const tf = /** @type {HTMLIFrameElement | null} */ (document.getElementById("tframe"));                // the Teoria (iframe) follows the theme too (it reads it itself when it loads; this is for a change while it is open)
-  if (tf && tf.contentWindow) { try { tf.contentWindow.postMessage({ type: NOMI.KEY("theme"), theme: UIP.theme }, location.origin); } catch (_) { /* not loaded yet */ } }
   if (typeof setPal === "function") setPal(UIP.pal);
   if (typeof paintFiles === "function" && typeof E !== "undefined") {
     paintFiles();
@@ -110,8 +106,8 @@ function uipReset(d) {
   if (cen) cen.onclick = () => centroidAll(cen, d.querySelector("#uip-cen-x"), d.querySelector("#uip-cen-st"), () => {});
 }
 
-// Administrator mode (5 clicks on the logo): the exit row shows only while it is on; the flag is shared with the Teoria
-function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } }
+// Administrator mode (5 clicks on the logo): the exit row shows only while it is on; 
+function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1"; } catch (_) { return false; } }
 
 // Profile of the program, never a setting: «ricerca» (the assistant can be turned on) when the administrator mode is on or in the desktop app, else «corso» (the assistant does not exist: no element, nothing downloaded).
 // The old explicit choice `mzlab.profilo` ("corso"/"ricerca", a plain string) is dropped; the same key now also holds the JSON state of the time profile (profilo.js), which is left alone.
@@ -121,7 +117,7 @@ try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v === "corso" || 
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
 function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
 
-// --- settings panel (same look as the one of the Teoria: shared pieces in teoria/impostazioni-comp.js)
+// --- settings panel (shared pieces in impostazioni-comp.js)
 const UIP_GROUP_KEY = id => NOMI.KEY(id === "uip-a11y" ? "set.a11y" : "set." + id);      // the group «Accessibility» keeps the key it always had
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
@@ -238,10 +234,9 @@ uipLoad();
 (() => {
   const nav = Q("#nav"), b = document.getElementById("np-set") || document.createElement("button"); b.id = "np-set"; b.className = "ib gear"; b.title = I18N.t("settings.gear.title"); b.setAttribute("aria-label", I18N.t("settings.title"));
   b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
-  if (!b.isConnected) { const hq = Q("header .hq"); if (hq) hq.insertAdjacentElement("beforebegin", b); else nav.insertAdjacentElement("afterend", b); } b.onclick = e => {      // in the Teoria the gear opens the settings of the Teoria, elsewhere the ones of the program
+  if (!b.isConnected) { const hq = Q("header .hq"); if (hq) hq.insertAdjacentElement("beforebegin", b); else nav.insertAdjacentElement("afterend", b); } b.onclick = e => {
     e.stopPropagation();
-    const tw = /** @type {any} */ (document.documentElement.classList.contains("in-theory") && /** @type {HTMLIFrameElement} */ (document.getElementById("tframe")).contentWindow);
-    if (tw && tw.TEORIA && tw.TEORIA.settings) tw.TEORIA.settings(); else uipOpen(b);
+    uipOpen(b);
   };
   uipApply();
 })();
