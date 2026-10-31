@@ -25,7 +25,7 @@ for u in (LAB, NORMAL):          # wait for the servers to listen (state, not a 
     while True:
         try: socket.create_connection(("127.0.0.1", port), timeout=1).close(); break
         except OSError: pass
-ADMIN = "try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}"      # the administrator mode stays off in the lab (Teoria editor and the like); Tabui and mzFlow no longer depend on it
+ADMIN = "try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}"      # the administrator mode stays off in the lab; Tabui and mzFlow no longer depend on it
 CLOCK = "(()=>{const R=Date,t=R.parse('%s');class D extends R{constructor(...a){a.length?super(...a):super(t)}static now(){return t}};window.Date=D})()"      # fake clock
 NAV = "[...document.querySelectorAll('#nav button')].map(b => b.dataset.v)"
 try:

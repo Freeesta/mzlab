@@ -11,7 +11,7 @@ def step(name, fn):
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.evaluate("localStorage.setItem('mzlab.profilo','ricerca'); localStorage.removeItem('mzlab.admin'); localStorage.removeItem('mzlab.teoria.esteso'); localStorage.setItem('mzlab.lang','en')")
+        pg.evaluate("localStorage.setItem('mzlab.profilo','ricerca'); localStorage.removeItem('mzlab.admin'); localStorage.setItem('mzlab.lang','en')")
         pg.reload(); ready(pg)
         def no_profile():
             assert pg.evaluate("localStorage.getItem('mzlab.profilo')") is None, "the old explicit profile is dropped"

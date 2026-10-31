@@ -47,7 +47,7 @@
 
   // the administrator flag (and its older name) reads as off and cannot be written: one choke point for every current and future reader
   try {
-    var HIDDEN = /^(mzlab|qqq)\.(admin|teoria\.esteso)$/;
+    var HIDDEN = /^(mzlab|qqq)\.admin$/;
     var P = Storage.prototype, get = P.getItem, set = P.setItem;
     P.getItem = function (k) { return HIDDEN.test(String(k)) ? null : get.call(this, k); };
     P.setItem = function (k, v) { if (!HIDDEN.test(String(k))) set.call(this, k, v); };
