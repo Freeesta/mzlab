@@ -1,0 +1,33 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "annotations/1",
+ "title": "annotations/1: the CSV of export.annotations@1, every annotation of every feature",
+ "description": "A CSV (text/csv, no header comment) with one row per feature x method x candidate rank, sorted by feature id, then method (standard, library, in silico, suspect, formula), then rank. It writes what the upstream steps found, with their levels and evidence; it adds no identity and raises no level. Rows that cannot be joined to a feature of the table have an empty feature_id and the query id in source_file (name:query). Native flow run and the browser (flowtab .wasm) write the same bytes. The separator is a comma, or a semicolon with the parameter separator; a cell with the separator, a quote or a line break is quoted.",
+ "type": "object",
+ "x-format": "csv",
+ "x-columns": [
+  {"name": "feature_id", "type": "integer", "description": "1-based row of the alignment table; empty when the query id could not be joined"},
+  {"name": "mz", "type": "number", "description": "m/z of the feature, 6 decimals"},
+  {"name": "rt_min", "type": "number", "description": "RT of the feature in minutes, 4 decimals"},
+  {"name": "level", "type": "string", "description": "the annot/1 decision of the feature, repeated on every row of the feature; empty without annot"},
+  {"name": "level_why", "type": "string", "description": "the annot/1 basis of that decision"},
+  {"name": "method", "enum": ["standard", "library", "in silico", "suspect", "formula"]},
+  {"name": "rank", "type": "integer", "description": "1 = best by the score of the method, within the feature; at most top_per_method"},
+  {"name": "name", "type": "string"},
+  {"name": "inchikey", "type": "string"},
+  {"name": "formula", "type": "string", "description": "neutral formula of the candidate"},
+  {"name": "adduct", "type": "string"},
+  {"name": "score", "type": "number", "description": "the own score of the method, 6 decimals; scores of different methods are never compared, score_name says which it is"},
+  {"name": "score_name", "type": "string", "description": "spectral_entropy, cosine, modified_cosine (library), insilico, fragments (suspect: listed fragments found), formula_ms1, formula_ms2; standard: the score of the gate of the standard"},
+  {"name": "delta_ppm", "type": "number", "description": "mass error of the candidate in ppm, 3 decimals"},
+  {"name": "delta_rt_min", "type": "number", "description": "RT difference in minutes, 3 decimals (library with an RT, suspect with a listed RT, standard)"},
+  {"name": "matched_fragments", "type": "integer", "description": "shared peaks (library, in silico), listed fragments found (suspect), peaks explained (formula.ms2)"},
+  {"name": "listed_in", "type": "string", "description": "ids of the lists of screen/1 that name the structure, joined by |; empty when none"},
+  {"name": "source_file", "type": "string", "description": "name of the upstream file the row came from"}
+ ],
+ "x-parameters": {
+  "top_per_method": "integer >= 1, default 10",
+  "min_level": "empty = all; else only features whose annot level is at or above it (order 1, 2a, 2b, 3a, 3b, 4, 5, 0)",
+  "separator": "comma | semicolon"
+ }
+}

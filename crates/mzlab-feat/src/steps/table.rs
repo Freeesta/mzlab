@@ -354,6 +354,49 @@ pub(super) fn export_csv() -> Step {
     }
 }
 
+/// `export.annotations`: one CSV with the candidates of every identification method of the plan beside each feature, with the level and the evidence (`flow_export_annot`).
+pub(super) fn export_annotations() -> Step {
+    let optional = |p: Port| Port {
+        optional: true,
+        ..p
+    };
+    let params = vec![
+        Param::integer("top_per_method", "Candidates per method")
+            .default_num(10.0)
+            .min(1.0)
+            .doc("The most candidates written for each feature and method, best first by the score of that method")
+            .tip("Candidates kept per feature and method."),
+        Param::text("min_level", "Lowest level")
+            .doc("Only features whose annot.level decision is at this level or better are written, for example 3a (order 1, 2a, 2b, 3a, 3b, 4, 5, 0); left empty every feature is written")
+            .tip("Write only features at this level or better; empty = all."),
+        Param::choice("separator", "Separator", &["comma", "semicolon"])
+            .default_str("comma")
+            .doc("comma: the usual CSV; semicolon: for spreadsheets with a decimal comma"),
+    ];
+    Step {
+        ins: vec![
+            Port::new("table", DataType::Table, "Aligned feature table (.mzfeat)"),
+            optional(Port::new("candidates", DataType::Candidates, "Library and in silico candidates (candidates/1)").many()),
+            optional(Port::new("screen", DataType::Candidates, "Suspect candidates (screen/1 of screen.suspects)").many()),
+            optional(Port::new("formulas", DataType::Formulas, "Candidate formulas (formula.ms1, formula.ms2)").many()),
+            optional(Port::new("annot", DataType::Annot, "Level and evidence per feature (annot.level)")),
+        ],
+        outs: vec![Port::new("report", DataType::Report, "Annotations as CSV")],
+        params,
+        runs_in: RunsIn {
+            wasm: Some("flowtab"),
+            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            native: true,
+        },
+        errors: vec!["err.flow.annotations.level", "err.flow.annotations.manifest"],
+        ..Step::core(
+            "export.annotations",
+            "Export annotations",
+            "Writes one CSV with, for every feature, the candidates of every identification method of the plan side by side (standard, library, in silico, suspect, formula), each with its own score and name, and the level and reason annot.level gave. It adds no identity and raises no level.",
+        )
+    }
+}
+
 /// `export.inclusion`: the inclusion list of the products expected in the plan, to inject the samples again in targeted MS2 (`export_inclusione`).
 pub(super) fn export_inclusion() -> Step {
     let params = vec![

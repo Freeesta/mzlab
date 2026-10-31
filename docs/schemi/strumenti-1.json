@@ -15,6 +15,7 @@
           "annot.regulatory",
           "chrom.uv_peaks",
           "convert.mzml",
+          "export.annotations",
           "export.inclusion",
           "export.mztab",
           "export.table_csv",
@@ -78,6 +79,7 @@
               "annot.regulatory@1",
               "chrom.uv_peaks@1",
               "convert.mzml@1",
+              "export.annotations@1",
               "export.inclusion@1",
               "export.mztab@1",
               "export.table_csv@1",
@@ -177,6 +179,7 @@
               "annot.regulatory@1",
               "chrom.uv_peaks@1",
               "convert.mzml@1",
+              "export.annotations@1",
               "export.inclusion@1",
               "export.mztab@1",
               "export.table_csv@1",
@@ -456,6 +459,32 @@
                     "type":"boolean",
                     "default":false,
                     "description":"Also write the UV / PDA matrix of the sample as MS:1000804 spectra (one per instant, wavelengths in nm) after the scans; off: the file is the one written without the option"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"export.annotations@1"},
+              "name":{"enum":["top_per_method","min_level","separator"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"The most candidates written for each feature and method, best first by the score of that method"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only features whose annot.level decision is at this level or better are written, for example 3a (order 1, 2a, 2b, 3a, 3b, 4, 5, 0); left empty every feature is written"
+                  },
+                  {
+                    "enum":["comma","semicolon"],
+                    "default":"comma",
+                    "description":"comma: the usual CSV; semicolon: for spreadsheets with a decimal comma"
                   }
                 ]
               }
@@ -2574,6 +2603,7 @@
                 "annot.regulatory@1",
                 "chrom.uv_peaks@1",
                 "convert.mzml@1",
+                "export.annotations@1",
                 "export.inclusion@1",
                 "export.mztab@1",
                 "export.table_csv@1",

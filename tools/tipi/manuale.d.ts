@@ -60,7 +60,7 @@ type Pendiente = { file: string; label: string; state: string; msg?: string };
 /** A file as the loading code handles it: the File of the picker or of a converter, plus the records that makers (Rust engine, readers module) attach. */
 type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { motivi: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any } };
 /** What one loading collects for the notice after it (shell.js reportLoad). */
-type CaricaRep = { unopen: { name: string; ext: string }[]; other: string[]; errs: Record<string, string[]>; moved: { dam: string[]; data: string[] }; notes: string[]; diag?: Record<string, any>; [k: string]: any };
+type CaricaRep = { unopen: { name: string; ext: string; label: string; st: string }[]; other: string[]; errs: Record<string, string[]>; moved: { dam: string[]; data: string[] }; notes: string[]; diag?: Record<string, any>; [k: string]: any };
 
 /** Loose record from the untyped engine: a panel, a session entry or a JSON reply (explore.js). */
 type Bag = Record<string, any>;
