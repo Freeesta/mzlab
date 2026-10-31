@@ -3,6 +3,16 @@
 use crate::error::{Error, Result};
 use crate::idxread::{Index, ReadAt};
 
+/// The scan of a peak from its 4 bytes; a position outside the section's scans is a damaged index.
+#[inline(always)]
+fn pos_of(b: &[u8], n_scans: u64) -> Result<usize> {
+    let pos = u32::from_le_bytes(b.try_into().unwrap());
+    if u64::from(pos) >= n_scans {
+        return Err(Error::new("error.badIndex"));
+    }
+    Ok(pos as usize)
+}
+
 impl<R: ReadAt> Index<R> {
     /// `pos`, m/z and `inten` of the peaks `a..b`, handed to `f` in pieces of at most 64 K peaks, in table order.
     pub fn each_peak(
@@ -63,19 +73,25 @@ impl<R: ReadAt> Index<R> {
                 }
                 let pb = &mut pb[..c * 4];
                 self.r.read_at(off[9] + i * 4, pb)?;
-                for j in 0..c {
-                    let pos = u32::from_le_bytes(pb[j * 4..j * 4 + 4].try_into().unwrap());
-                    if u64::from(pos) >= n_scans {
-                        return Err(Error::new("error.badIndex"));
+                let (ib, mb, pb) = (&ib[..cw], &mb[..cw], &pb[..c * 4]);
+                // the three arrays walked in step by iterators: no index arithmetic or bounds check per peak
+                let mut ps = pb.chunks_exact(4);
+                if f4 {
+                    let (mut is, mut ms) = (ib.chunks_exact(4), mb.chunks_exact(4));
+                    for _ in 0..c {
+                        let pos = pos_of(ps.next().unwrap(), n_scans)?;
+                        let y = f64::from(f32::from_le_bytes(is.next().unwrap().try_into().unwrap()));
+                        let mz = if MZ { f64::from(f32::from_le_bytes(ms.next().unwrap().try_into().unwrap())) } else { 0.0 };
+                        f(pos, mz, y);
                     }
-                    let at = |x: &[u8]| {
-                        if f4 {
-                            f64::from(f32::from_le_bytes(x[j * 4..j * 4 + 4].try_into().unwrap()))
-                        } else {
-                            f64::from_le_bytes(x[j * 8..j * 8 + 8].try_into().unwrap())
-                        }
-                    };
-                    f(pos as usize, if MZ { at(mb) } else { 0.0 }, at(ib));
+                } else {
+                    let (mut is, mut ms) = (ib.chunks_exact(8), mb.chunks_exact(8));
+                    for _ in 0..c {
+                        let pos = pos_of(ps.next().unwrap(), n_scans)?;
+                        let y = f64::from_le_bytes(is.next().unwrap().try_into().unwrap());
+                        let mz = if MZ { f64::from_le_bytes(ms.next().unwrap().try_into().unwrap()) } else { 0.0 };
+                        f(pos, mz, y);
+                    }
                 }
                 i += c as u64;
             }
