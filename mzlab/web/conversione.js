@@ -7,8 +7,21 @@
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
 const CONV = {
   files: new Map(),
-  numpress: false,       // «Download .mzML» with MS-Numpress (lossy, smaller): off unless the user ticks it
-  key(/** @type {string} */ name) { return (this.numpress ? "np:" : "") + name; },
+  compression: "standard", // «Download .mzML»: "standard" (zlib), "smallest" (zlib and MS-Numpress) or "none"; the same names as `convert --compression`
+  // rough size of the mzML as a fraction of the maker's file, by kind of compression (shown as an estimate before the conversion; the real size is shown after)
+  RATIO: /** @type {Record<string, number>} */ ({ standard: 1, smallest: 0.55, none: 1.6 }),
+  key(/** @type {string} */ name) { return this.compression + ":" + name; },
+  // the estimate of the mzML files still to be written, "" when there is nothing to write
+  estimate() {
+    const todo = (typeof ST !== "undefined" && ST.files || []).filter((/** @type {Bag} */ x) => this.native().includes(x.name) && !this.made.has(this.key(x.name)));
+    const total = todo.reduce((/** @type {number} */ a, /** @type {Bag} */ x) => a + (x.size || 0), 0) * (this.RATIO[this.compression] || 1);
+    return total ? "≈ " + (total > 1e6 ? (total / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1e3)) + " kB") : "";
+  },
+  // the real size of the mzML already written for `name` ("" if unknown: in the desktop app the file stays on the disk)
+  realSize(/** @type {string} */ name) {
+    const b = this.files.get(name) || this.made.get(this.key(name));
+    return b && b.size ? (b.size > 1e6 ? (b.size / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(b.size / 1e3)) + " kB") : "";
+  },
   made: new Map(),        // name -> mzML written on request for a sample of a maker's file (nativo.js)
   add(/** @type {string} */ name, /** @type {Blob} */ blob) { this.files.set(name, blob); },
   // the samples of the maker's files of this page: their mzML is written when it is asked for
@@ -20,7 +33,7 @@ const CONV = {
     const rb = window.MZLAB_RUST, box = document.getElementById("up");
     if (!rb || !rb.nativeToMzml || !rb.isNative(name) || !box) return null;
     const f = (typeof ST !== "undefined" && ST.files || []).find((/** @type {Bag} */ x) => x.name === name), g = await ConvUI.card(box, [1]), ui = g.start(1, name);
-    try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, (/** @type {Bag} */ p) => ui.update(p), g.signal, this.numpress); ui.done(); g.end(); this.made.set(this.key(name), blob); return blob; }
+    try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, (/** @type {Bag} */ p) => ui.update(p), g.signal, this.compression); ui.done(); g.end(); this.made.set(this.key(name), blob); return blob; }
     catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
   },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
@@ -221,7 +234,7 @@ const CONVROWS = {
   tools() {
     /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p);
     const st = this.toolState(), off = (/** @type {boolean} */ on) => (on ? "" : " data-off inert");
-    return `<div class="cvtool"><div class="cvr2"><details class="muted sm" id="advconv" data-cvtool="adv"${off(st.adv)}><summary>${T("conv.adv")}</summary><label><input type="checkbox" id="npress" ${CONV.numpress ? "checked" : ""}> ${T("conv.np")}</label><button type="button" class="hq" data-help="numpress" aria-label="${T("help.numpress.title")}" title="${T("help.numpress.title")}">?</button></details>` +
+    return `<div class="cvtool"><div class="cvr2"><details class="muted sm" id="advconv" data-cvtool="adv"${off(st.adv)}><summary>${T("conv.adv")}</summary><label>${T("conv.comp")} <select id="cvcomp">${[["standard", T("conv.comp.standard")], ["smallest", T("conv.comp.smallest")], ["none", T("conv.comp.none")]].map(([k, t]) => `<option value="${k}"${CONV.compression === k ? " selected" : ""}>${t}</option>`).join("")}</select></label> <span id="cvest" class="muted" aria-live="polite">${CONV.estimate()}</span></details>` +
       `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm" id="dlall" data-cvtool="dl"${off(st.dl)} title="${T("conv.dl.title")}">${T("conv.dlall")}</button></div></div>`;
   },
   // the table of the loading: the columns have a fixed width from the first row, so no phase moves them; `head` = the row of headings, `body` = the rows

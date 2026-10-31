@@ -4,8 +4,6 @@ I18N.add("en", {
   "header.newRun.short": "New",
   "header.about": "About {app}",
   "header.calc.long": "m/z calculator",
-  "help.numpress.title": "MS-Numpress compression",
-  "help.numpress.body": "<p style=\"margin:0\">The compression is lossy: m/z and intensity values are rounded (relative error about 1e-4). It only affects the mzML files converted here.</p>",
   "kind.empty": "empty",
   "files.group.standard": "Standards",
   "files.group.sample": "Samples",

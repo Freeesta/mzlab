@@ -4,8 +4,6 @@ I18N.add("it", {
   "header.newRun.short": "Nuova",
   "header.about": "Informazioni su {app}",
   "header.calc.long": "Calcolatrice m/z",
-  "help.numpress.title": "Compressione MS-Numpress",
-  "help.numpress.body": "<p style=\"margin:0\">La compressione è con perdita: i valori di m/z e intensità sono arrotondati (errore relativo circa 1e-4). Riguarda solo i file mzML convertiti qui.</p>",
   "kind.empty": "vuoto",
   "files.group.standard": "Standard",
   "files.group.sample": "Campioni",
