@@ -338,9 +338,9 @@ async function dirOf(parts, create) {
 }
 async function openSync(path) {
   const parts = path.split("/").filter(Boolean), name = parts.pop(), fh = await (await dirOf(parts, false)).getFileHandle(name);
-  for (let i = 0; ; i++) {   // a handle of a worker that has just died is released a moment later
+  for (let i = 0; ; i++) {   // a handle of a worker that has just died, or the Data tab's read lease (parked after 2 s idle, re-armed once: up to ~4 s), is released later
     try { const h = await fh.createSyncAccessHandle(); return { h, size: h.getSize() }; }
-    catch (e) { if (i >= 40 || e.name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
+    catch (e) { if (i >= 120 || e.name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
   }
 }
 // the readers of a list of files: read(k, offset, length) -> Uint8Array (a view of a buffer that is reused: the .wasm copies it at once)
