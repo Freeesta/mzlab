@@ -20,6 +20,8 @@ def misura(sito: Path) -> dict[str, dict]:
     cap = tetti()
     out = {}
     for w in sorted(sito.rglob("*.wasm")):
+        if "vendor" in w.relative_to(sito).parts:          # third-party modules (Ketcher's Indigo) have no cap of ours
+            continue
         # the cap of a module is the limit_<name> whose name appears in its folder or file name
         chiavi = [k for k in cap if k in (w.parent.name, w.stem) or k == w.parent.name.replace("-", "_")]
         out[w.relative_to(sito).as_posix()] = {"byte": w.stat().st_size, "tetto": cap[chiavi[0]] if chiavi else None}

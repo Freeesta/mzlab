@@ -112,9 +112,26 @@ try:
             pg.click("#stbar [data-cmd=file]"); shown("#dfiles")
             b = pg.locator("#sb-title").bounding_box(); x0, y0 = b["x"] + 4, b["y"] + b["height"] / 2
             pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x0 + 40, y0, steps=3)
-            assert pg.is_visible(".sb-dz.l") and pg.is_visible(".sb-dz.r") and pg.is_visible(".sb-dz-prev"), "drop zones and preview while dragging"
+            assert pg.is_visible(".sb-dz.l") and pg.is_visible(".sb-dz.r") and pg.is_visible(".sb-ghost"), "two strips and a small ghost while dragging"
+            assert pg.locator(".sb-dz-prev").count() == 0, "no full-size overlay"
+            pw = pg.evaluate("Math.round(document.querySelector('#dfiles').getBoundingClientRect().width)")
+            for sel in (".sb-dz.l", ".sb-dz.r"):
+                assert abs(pg.evaluate(f"document.querySelector('{sel}').getBoundingClientRect().width") - pw) <= 2, "strip = the panel's real width"
+            assert pg.locator(".sb-dz.hot").count() == 1, "exactly one highlighted target"
             pg.mouse.move(1300, 300, steps=6); attendi(pg, "document.querySelector('.sb-dz.r').classList.contains('hot')")
-            assert "hot" in pg.get_attribute(".sb-dz.r", "class") and "hot" not in pg.get_attribute(".sb-dz.l", "class")
+            assert "hot" in pg.get_attribute(".sb-dz.r", "class") and "hot" not in pg.get_attribute(".sb-dz.l", "class") and pg.locator(".sb-dz.hot").count() == 1
+            attendi(pg, "document.body.dataset.sbShift === 'l'")
+            attendi(pg, "document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1")
+            assert pg.evaluate("document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1"), "the plots are not covered by the target strip"
+            pg.mouse.move(750, 300, steps=4); attendi(pg, "document.querySelectorAll('.sb-dz.hot').length === 0")
+            assert pg.evaluate("document.body.dataset.sbShift") == "", "outside the strips: preview back, nothing to drop"
+            pg.mouse.up(); attendi(pg, "document.querySelectorAll('.sb-dz').length === 0")
+            assert pg.evaluate("BARRA.side") == "left" and pg.locator(".sb-dz").count() == 0, "release outside the strips cancels"
+            pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x0 + 40, y0, steps=3); pg.mouse.move(1300, 300, steps=4)
+            pg.keyboard.press("Escape"); attendi(pg, "document.querySelectorAll('.sb-dz').length === 0"); pg.mouse.up()
+            assert pg.evaluate("BARRA.side") == "left" and pg.locator(".sb-dz").count() == 0, "Esc cancels the drag"
+            pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x0 + 40, y0, steps=3)
+            pg.mouse.move(1300, 300, steps=6); attendi(pg, "document.querySelector('.sb-dz.r').classList.contains('hot')")
             pg.mouse.up(); attendi(pg, "BARRA.side === 'right' && document.querySelector('#dfiles').getBoundingClientRect().right > 1480")
             assert pg.evaluate("BARRA.side") == "right" and pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().right") > 1480, pg.evaluate("BARRA.side")
             assert pg.locator(".sb-dz").count() == 0

@@ -58,9 +58,9 @@ SMOKE = ["e2e3", "e2e_opfs_promote", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spe
 # Tabui and the guided tour (about a minute together) join the smoke round on Chromium Linux only (the PR job): not yet measured on Firefox, WebKit and Windows.
 SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_esporta_dati", "e2e_lab"]
 # Console messages that are known and harmless (not counted as browser errors).
-BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400",
+BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"'reqfail', '[^']*/static/vendor/ketcher/[^']*', 'NS_BINDING_ABORTED'", r"JavaScript Error: \"Failed to load \S*\. A ServiceWorker intercepted the request and encountered an unexpected error\.\" \{file: \"[^\"]*/sw\.js\"", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded", r"cross-world service worker resource mismatch",
-          r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests = page reloaded or closed by the test
+          r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests (Chromium ERR_ABORTED, Firefox NS_BINDING_ABORTED and its service-worker notice) = page reloaded or closed by the test
 
 
 def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, float]:
@@ -313,7 +313,7 @@ AREE = [
     ("mzlab/web/transizioni", {"e2e_transizioni", "e2e_pannello", "e2e_cassetto", "e2e_pannelli_stabili"}),
     ("mzlab/web/paletta.js", {"e2e_strumenti", "e2e_teoria_contesto"}), ("mzlab/web/barra.js", {"e2e_barra_fit", "e2e_barra_split", "e2e_teoria_contesto", "e2e_strumenti", "e2e_pannello", "e2e_cassetto", "e2e_barra_hint", "e2e_barra", "e2e_calc", "e2e_perdite", "e2e_contaminanti", "e2e_banco_info", "e2e_tour", "e2e_spettro_hr"}), ("tests_e2e/e2e_strumenti.py", {"e2e_strumenti"}), ("tests_e2e/e2e_spettro_hr.py", {"e2e_spettro_hr"}),
     ("mzlab/web/rapporto-flow.js", {"e2e_rapporto_flow", "e2e_normative_screen"}), ("tests_e2e/e2e_rapporto_flow.py", {"e2e_rapporto_flow"}), ("tests_e2e/e2e_normative_screen.py", {"e2e_normative_screen"}), ("crates/mzlab-core/src/flow/corsa", {"e2e_normative_screen"}), ("mzlab/web/etichette-picchi.js", {"e2e_etichette_picchi", "e2e_axe_grafici", "e2e_legende"}), ("tests_e2e/e2e_etichette_picchi.py", {"e2e_etichette_picchi"}), ("mzlab/web/legende.js", {"e2e_legende", "e2e_axe_grafici", "e2e_spettro_hr", "e2e20", "e2e16"}), ("tests_e2e/e2e_legende.py", {"e2e_legende"}), ("tests_e2e/e2e_axe_release.py", {"e2e_axe_release"}),
-    ("tests_e2e/e2e_mrm_layout.py", {"e2e_mrm_layout"}),
+    ("tests_e2e/e2e_mrm_layout.py", {"e2e_mrm_layout"}), ("tests_e2e/e2e_toolbar_wrap.py", {"e2e_toolbar_wrap"}), ("mzlab/web/app.css", {"e2e_toolbar_wrap"}),
     ("mzlab/web/affianca.js", {"e2e_spettro_accanto", "e2e_affianca", "e2e_menu_coerenti", "e2e_tour", "e2e_righe", "e2e_pannelli", "e2e_pannelli2", "e2e_blocco2", "e2e16", "e2e20", "e2e_a11y_dati"}), ("tests_e2e/e2e_affianca.py", {"e2e_affianca"}), ("tests_e2e/e2e_spettro_accanto.py", {"e2e_spettro_accanto"}), ("mzlab/web/suggerimenti.js", {"e2e_barra_hint", "e2e_tour"}),
     ("mzlab/web/layout.js", {"e2e_righe", "e2e_pannelli", "e2e_pannelli2", "e2e_blocco2", "e2e16", "e2e20", "e2e_hr_dda"}), ("tests_e2e/e2e_righe.py", {"e2e_righe"}),
     ("mzlab/web/pannelli.js", {"e2e_pannelli_stabili", "e2e_sottrazione", "e2e_intestazioni", "e2e_intestazione_cromato", "e2e_header", "e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco", "e2e_cursore", "e2e_asse_x"}),
