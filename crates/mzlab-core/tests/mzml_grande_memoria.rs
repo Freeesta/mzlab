@@ -93,7 +93,7 @@ fn mzml_grande_entra_nel_budget() {
 
     // the index with a small budget: the peak stays inside it besides the table the caller holds
     let budget = 16 * MB;
-    let mut costruisci = |budget: usize, scratch: bool| {
+    let costruisci = |budget: usize, scratch: bool| {
         let out_path = path.with_extension(format!("idx{scratch}{budget}"));
         let mut out = ASuFile(File::create(&out_path).unwrap());
         let mut sp = scratch.then(|| {

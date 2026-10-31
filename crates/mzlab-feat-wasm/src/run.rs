@@ -13,10 +13,8 @@ use mzlab_feat::evid::PointsTable;
 use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::recipe::{Mode, Recipe};
-use mzlab_feat::series::{
-    align_and_fill, analyse_file, analyse_file_with, source_sha256, weak_candidates,
-};
-use mzlab_feat::slabs::{align_and_fill_spilling, align_and_fill_stored, Stored};
+use mzlab_feat::series::{align_and_fill, analyse_file_with, source_sha256, weak_candidates};
+use mzlab_feat::slabs::{align_and_fill_spilling, Stored};
 use mzlab_feat::spill::Spill;
 use mzlab_feat::store::{
     origin_from_meta, read_file, read_meta_mz, write_file_to, write_table_to,

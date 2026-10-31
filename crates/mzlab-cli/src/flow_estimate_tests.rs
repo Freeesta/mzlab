@@ -8,7 +8,6 @@ use mzlab_core::upload::prepare;
 use mzlab_feat_wasm::run;
 
 use crate::flow_run_tests::fixture;
-use crate::tests::mzml;
 
 const PLAN: &str = r#"{"format":"mzflow/2","inputs":[{"name":"s_t000.mzML","type":"raw"},{"name":"s_t010.mzML","type":"raw"},{"name":"s_t030.mzML","type":"raw"}],"steps":[
 {"id":"idx","step":"index.mzidx@1","in":{"source":["file:s_t000.mzML","file:s_t010.mzML","file:s_t030.mzML"]}},

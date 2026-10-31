@@ -7,8 +7,8 @@ pub fn start() {
     install();
 }
 
+#[cfg(target_arch = "wasm32")]
 fn install() {
-    #[cfg(target_arch = "wasm32")]
     std::panic::set_hook(Box::new(|info| {
         let _ = js_sys::Reflect::set(
             &js_sys::global(),
