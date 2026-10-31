@@ -32,13 +32,13 @@ pub fn from_method(t: &str) -> Option<FromMethod> {
     let mut out = FromMethod::default();
     let mut lines = t.lines().map(|l| l.trim_end_matches('\r')).peekable();
     while let Some(l) = lines.next() {
-        if out.mode.is_none() {
-            if let Some(v) = value_of(l, "Use lock masses") {
-                out.mode = text(v.trim_matches('―').trim()).and_then(|v| match v {
-                    V::Str(s) => Some(s),
-                    _ => None,
-                });
-            }
+        if out.mode.is_none()
+            && let Some(v) = value_of(l, "Use lock masses")
+        {
+            out.mode = text(v.trim_matches('―').trim()).and_then(|v| match v {
+                V::Str(s) => Some(s),
+                _ => None,
+            });
         }
         if l.trim() != "Lock Masses:" {
             continue;

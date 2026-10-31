@@ -219,13 +219,12 @@ fn read_one(rows: &[Row], cfg: &Cfg, heading: &str, counter: &mut usize) -> Vec<
         e.dtxsid = text_at(row, cols.dtxsid);
         e.attr = attr_text(row, &cols);
         // rows under a numbered row that spans them are its members: "(28) PAH" then its five PAHs
-        if carried {
-            if let Some(head) = out
+        if carried
+            && let Some(head) = out
                 .iter()
                 .find(|o: &&Entry| o.entry_ref == e.entry_ref && o.group_entry.is_empty())
-            {
-                e.group_entry = head.name.clone();
-            }
+        {
+            e.group_entry = head.name.clone();
         }
         out.push(e);
     }

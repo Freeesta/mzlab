@@ -285,10 +285,10 @@ pub const NO_ADDUCT: &str = "none";
 pub(crate) fn embedded_adduct(text: &str) -> (String, Option<&'static str>) {
     let t: String = text.split_whitespace().collect();
     let names: Vec<&'static str> = adducts().iter().map(|(a, _)| *a).collect();
-    if let Some(i) = t.find("[M") {
-        if let Some(a) = names.iter().find(|a| t[i..] == ***a) {
-            return (t[..i].to_string(), Some(*a));
-        }
+    if let Some(i) = t.find("[M")
+        && let Some(a) = names.iter().find(|a| t[i..] == ***a)
+    {
+        return (t[..i].to_string(), Some(*a));
     }
     if let Some(i) = t.rfind(['+', '-']) {
         let (head, tail) = (&t[..i], &t[i..]);

@@ -448,8 +448,8 @@ pub fn deconvolve_isomers(
     let mut k = est.k;
     let mut s0: Option<Vec<f64>> = None;
 
-    if let Some((xr, xy)) = xic {
-        if let Some((k_seed, s0_seed)) = find_seeds(
+    if let Some((xr, xy)) = xic
+        && let Some((k_seed, s0_seed)) = find_seeds(
             xr,
             xy,
             &rts_sorted,
@@ -457,10 +457,10 @@ pub fn deconvolve_isomers(
             (n, m),
             params.max_components,
             params.subpeak_tol,
-        ) {
-            k = k_seed;
-            s0 = Some(s0_seed);
-        }
+        )
+    {
+        k = k_seed;
+        s0 = Some(s0_seed);
     }
 
     if k < 2 {

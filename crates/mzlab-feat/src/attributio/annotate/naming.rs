@@ -83,10 +83,10 @@ fn names_conflict(named: &[(Option<&str>, Option<&str>)], cur: &dyn Curation) ->
 }
 
 fn same_structure(a: &LibraryHit, b: &LibraryHit, cur: &dyn Curation) -> bool {
-    if let (Some(x), Some(y)) = (&a.block, &b.block) {
-        if x == y {
-            return true;
-        }
+    if let (Some(x), Some(y)) = (&a.block, &b.block)
+        && x == y
+    {
+        return true;
     }
     let (ca, cb) = (
         cur.match_cec(&[Some(&a.name)]).map(|c| c.0),

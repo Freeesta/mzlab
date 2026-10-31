@@ -91,26 +91,25 @@ fn check_sample(ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
     );
     let mut checked = 0;
     // the .dam named by the sample, when the repository has it: every parameter of the method the same
-    if let (Some(name), true) = (text("campione", "metodo_file"), v.get("ms").is_some()) {
-        if let Some(dam) = dati_percorsi::percorso(&format!("dati/3200 qtrap/dam/{name}"))
+    if let (Some(name), true) = (text("campione", "metodo_file"), v.get("ms").is_some())
+        && let Some(dam) = dati_percorsi::percorso(&format!("dati/3200 qtrap/dam/{name}"))
             .and_then(|p| std::fs::read(p).ok())
-        {
-            let m = read_methods(dam, &name).unwrap().remove(0);
-            let source = Source {
-                format: "sciex-dam",
-                files: vec![SrcFile {
-                    name: name.clone(),
-                    ..Default::default()
-                }],
+    {
+        let m = read_methods(dam, &name).unwrap().remove(0);
+        let source = Source {
+            format: "sciex-dam",
+            files: vec![SrcFile {
+                name: name.clone(),
                 ..Default::default()
-            };
-            assert_eq!(
-                ms_of(&doc),
-                ms_of(&metodo::from_dam(&m, &source)),
-                "{wiff} sample {sample}: ms differs from {name}"
-            );
-            checked = 1;
-        }
+            }],
+            ..Default::default()
+        };
+        assert_eq!(
+            ms_of(&doc),
+            ms_of(&metodo::from_dam(&m, &source)),
+            "{wiff} sample {sample}: ms differs from {name}"
+        );
+        checked = 1;
     }
     checked
 }

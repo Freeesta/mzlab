@@ -19,10 +19,10 @@ fn per_peak(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
     loop {
         let mut best: Option<(usize, (f64, f64, u32))> = None;
         for (i, g) in gruppi.iter().enumerate() {
-            if let Some(p) = g.picco(next[i]) {
-                if best.is_none_or(|(_, b)| p.2 < b.2) {
-                    best = Some((i, p));
-                }
+            if let Some(p) = g.picco(next[i])
+                && best.is_none_or(|(_, b)| p.2 < b.2)
+            {
+                best = Some((i, p));
             }
         }
         let Some((i, (mz, it, pos))) = best else {

@@ -74,11 +74,11 @@ fn add_header(b: &mut Block, line: &str) {
 
 fn add_peak(b: &mut Block, line: &str) {
     let mut p = line.split_whitespace();
-    if let (Some(a), Some(i)) = (p.next(), p.next()) {
-        if let (Some(a), Some(i)) = (py_float(a), py_float(i)) {
-            b.mz.push(a);
-            b.it.push(i);
-        }
+    if let (Some(a), Some(i)) = (p.next(), p.next())
+        && let (Some(a), Some(i)) = (py_float(a), py_float(i))
+    {
+        b.mz.push(a);
+        b.it.push(i);
     }
 }
 
@@ -94,18 +94,18 @@ pub fn read_feature_spectra(text: &str) -> HashMap<i64, Spectrum> {
         if line == "BEGIN IONS" {
             cur = Block::new();
         } else if line == "END IONS" {
-            if let (Some(fid), 2, false) = (cur.fid, cur.level, cur.mz.is_empty()) {
-                if out.get(&fid).is_none_or(|s| cur.mz.len() > s.mz.len()) {
-                    let b = std::mem::replace(&mut cur, Block::new());
-                    out.insert(
-                        fid,
-                        Spectrum {
-                            mz: b.mz,
-                            intensity: b.it,
-                            precursor: b.prec.unwrap_or(f64::INFINITY),
-                        },
-                    );
-                }
+            if let (Some(fid), 2, false) = (cur.fid, cur.level, cur.mz.is_empty())
+                && out.get(&fid).is_none_or(|s| cur.mz.len() > s.mz.len())
+            {
+                let b = std::mem::replace(&mut cur, Block::new());
+                out.insert(
+                    fid,
+                    Spectrum {
+                        mz: b.mz,
+                        intensity: b.it,
+                        precursor: b.prec.unwrap_or(f64::INFINITY),
+                    },
+                );
             }
         } else if line.contains('=') && !line.starts_with(|c: char| c.is_ascii_digit()) {
             add_header(&mut cur, line);

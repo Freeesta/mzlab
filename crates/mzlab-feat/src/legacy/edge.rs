@@ -369,11 +369,11 @@ fn adduct_evidence(
             f.neg = f.neg || s_lo.is_none();
         }
     }
-    if let (true, Some(up)) = (NO_FRAG_ADDUCTS.contains(&name), s_up) {
-        if peaks_besides(up, e.mz_up) == 0 {
-            let text = format!("{name} does not fragment in its MS2 (a hint, not a proof)");
-            out.push(ev("no_fragmentation", text, "hint", String::new()));
-        }
+    if let (true, Some(up)) = (NO_FRAG_ADDUCTS.contains(&name), s_up)
+        && peaks_besides(up, e.mz_up) == 0
+    {
+        let text = format!("{name} does not fragment in its MS2 (a hint, not a proof)");
+        out.push(ev("no_fragmentation", text, "hint", String::new()));
     }
 }
 

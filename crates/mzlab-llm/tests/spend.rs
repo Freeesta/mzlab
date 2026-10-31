@@ -118,11 +118,11 @@ fn spent_plus_reserved_stays_under_the_cap_for_any_sequence() {
         if let Ok(t) = m.admit("claude-sonnet-5-5", est, max) {
             open.push((t, est, max));
         }
-        if i % 3 == 0 {
-            if let Some((t, est, max)) = open.pop() {
-                // the real call stays within what it was admitted for
-                m.charge(t, "claude-sonnet-5-5", &usage(est, max)).unwrap();
-            }
+        if i % 3 == 0
+            && let Some((t, est, max)) = open.pop()
+        {
+            // the real call stays within what it was admitted for
+            m.charge(t, "claude-sonnet-5-5", &usage(est, max)).unwrap();
         }
         assert!(m.spent() <= m.cap(), "round {i}");
     }

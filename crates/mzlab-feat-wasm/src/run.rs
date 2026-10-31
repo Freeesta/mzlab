@@ -476,12 +476,10 @@ pub use crate::run_evid::{evidence_roles_to, evidence_sources_to, RowSources};
 /// Preview of one file (see `mzlab_feat::params`): the floor of the recipe is used if it was given, else the one estimated from the intensities.
 pub fn preview<R: ReadAt>(index: &mut Index<R>, r: &Recipe, floor_given: bool) -> Result<String> {
     let mut p = r.detect.clone();
-    if !floor_given {
-        if let Some(si) = index.section_of(1, p.polarity) {
-            let h = mzlab_feat::params::intensity_hist(index, si)?;
-            if let Some(n) = mzlab_feat::params::noise_from_hist(&h) {
-                p.floor = n.floor;
-            }
+    if !floor_given && let Some(si) = index.section_of(1, p.polarity) {
+        let h = mzlab_feat::params::intensity_hist(index, si)?;
+        if let Some(n) = mzlab_feat::params::noise_from_hist(&h) {
+            p.floor = n.floor;
         }
     }
     mzlab_feat::params::preview(index, &p)

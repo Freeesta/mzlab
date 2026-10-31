@@ -19,16 +19,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BASE = ROOT / "tools" / "clippy_base.json"
 LOWERED = ["clippy::eq_op", "clippy::unused_io_amount"]
-# In edition 2024 collapsible_if proposes let chains; they arrive in their own change, not with the migration.
-MUTED = ["clippy::collapsible_if"]
 
 
 def clippy() -> dict[str, int]:
     cmd = ["cargo", "clippy", "--locked", "--workspace", "--all-targets", "--keep-going", "--message-format=json", "--"]
     for lint in LOWERED:
         cmd += ["-W", lint]
-    for lint in MUTED:
-        cmd += ["-A", lint]
     out = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True).stdout
     seen: set[tuple[str, int, int, str]] = set()
     for line in out.splitlines():

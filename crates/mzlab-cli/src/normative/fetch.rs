@@ -185,10 +185,10 @@ impl Http {
         if let Some(n) = resp
             .header("Content-Length")
             .and_then(|v| v.parse::<u64>().ok())
+            && n > limit
+            && resp.header("Content-Encoding").is_none()
         {
-            if n > limit && resp.header("Content-Encoding").is_none() {
-                return Err((false, NormError::large(url, limit)));
-            }
+            return Err((false, NormError::large(url, limit)));
         }
         let gz = resp
             .header("Content-Encoding")

@@ -241,10 +241,10 @@ pub fn of_file(name: &str, c: &Campione, stem: &str, time: Option<(usize, usize)
     if let Some((a, b)) = by_time {
         push(&mut items, "tempo", a, b);
     }
-    if let Some(v) = c.conc {
-        if let Some((a, b)) = conc_span(&stem_low, v, c.unit.as_deref()) {
-            push(&mut items, "concentrazione", a + off, b + off);
-        }
+    if let Some(v) = c.conc
+        && let Some((a, b)) = conc_span(&stem_low, v, c.unit.as_deref())
+    {
+        push(&mut items, "concentrazione", a + off, b + off);
     }
     Spans {
         ok,

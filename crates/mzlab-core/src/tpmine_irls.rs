@@ -35,10 +35,10 @@ fn validate_inputs(
     if y.len() != n {
         return Err("y length mismatch");
     }
-    if let Some(w) = weights {
-        if w.len() != n {
-            return Err("weights length mismatch");
-        }
+    if let Some(w) = weights
+        && w.len() != n
+    {
+        return Err("weights length mismatch");
     }
     Ok((n, m))
 }

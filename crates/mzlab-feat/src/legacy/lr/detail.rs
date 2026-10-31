@@ -283,14 +283,14 @@ fn alternative(a: &str, own: &str) -> (String, String) {
         t.chars().next().is_some_and(|c| c.is_ascii_uppercase())
             && t.chars().all(|c| c.is_ascii_alphanumeric())
     };
-    if let Some((head, rest)) = a.split_once(" (") {
-        if let Some(inner) = rest.strip_suffix(')') {
-            if let Some((f, _)) = inner.split_once(", m/z ") {
-                return (head.to_string(), f.to_string());
-            }
-            if is_formula(head) {
-                return (inner.to_string(), head.to_string());
-            }
+    if let Some((head, rest)) = a.split_once(" (")
+        && let Some(inner) = rest.strip_suffix(')')
+    {
+        if let Some((f, _)) = inner.split_once(", m/z ") {
+            return (head.to_string(), f.to_string());
+        }
+        if is_formula(head) {
+            return (inner.to_string(), head.to_string());
         }
     }
     (a.to_string(), own.to_string())

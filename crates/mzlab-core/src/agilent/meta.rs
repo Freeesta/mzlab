@@ -44,12 +44,11 @@ fn attrs_of(e: &quick_xml::events::BytesStart) -> Vec<(String, String)> {
 }
 
 fn close(stack: &mut Vec<Node>) {
-    if stack.len() > 1 {
-        if let Some(n) = stack.pop() {
-            if let Some(p) = stack.last_mut() {
-                p.kids.push(n);
-            }
-        }
+    if stack.len() > 1
+        && let Some(n) = stack.pop()
+        && let Some(p) = stack.last_mut()
+    {
+        p.kids.push(n);
     }
 }
 
@@ -203,16 +202,16 @@ fn tune(text: &str, origin: &str, out: &mut Vec<Item>) {
             on = true;
         } else if l.contains("END OF TUNE PARAMETERS") {
             on = false;
-        } else if on {
-            if let Some((v, n)) = l.split_once(':') {
-                if !n.trim().is_empty() && !v.trim().is_empty() {
-                    out.push(Item {
-                        origin: origin.into(),
-                        name: format!("tune {}", n.trim()),
-                        value: v.trim().to_string(),
-                    });
-                }
-            }
+        } else if on
+            && let Some((v, n)) = l.split_once(':')
+            && !n.trim().is_empty()
+            && !v.trim().is_empty()
+        {
+            out.push(Item {
+                origin: origin.into(),
+                name: format!("tune {}", n.trim()),
+                value: v.trim().to_string(),
+            });
         }
     }
 }
