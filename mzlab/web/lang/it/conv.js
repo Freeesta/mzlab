@@ -76,6 +76,8 @@ I18N.add("it", {
   "conv.comp.standard": "Standard",
   "conv.comp.smallest": "Il più piccolo",
   "conv.comp.none": "Non compresso",
+  "help.compressione.title": "Compressione dell'mzML",
+  "help.compressione.body": "<b>Standard</b> (consigliata): zlib, senza perdita, si legge ovunque. <b>Il più piccolo</b>: zlib più MS-Numpress, circa metà dello spazio di Standard (stima ≈ 0,55×); Numpress arrotonda m/z e intensità, quindi i valori cambiano di pochissimo (differenza relativa sotto 10<sup>-3</sup> sul TIC) e non si recuperano; alcuni programmi non lo leggono. Su un file molto grande (circa 1 GB) si scrive un po' più in fretta (35 s contro 43 s) ma lo si riapre un po' più lentamente (27 s contro 21 s). <b>Non compresso</b>: senza perdita e senza lavoro di compressione, ma il file è circa 1,6× Standard; serve se il disco è veloce e lo spazio non conta. Per i file a centroidi la differenza tra Standard e Non compresso è di pochi percento (circa 5 % su un file di 113 MB). Da riga di comando: <code>--compression standard|smallest|none</code> (app e sito scrivono gli stessi byte).",
   "conv.adv": "Avanzate",
   "conv.dl.needsApp": "Per salvare l'mzML aggiorna l'app desktop",
   "conv.help.summary": "Non hai file mzML?",
