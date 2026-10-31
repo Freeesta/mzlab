@@ -836,44 +836,37 @@ const BARRA = (() => {
     if (!head) return;
     /** @type {any} */
     let st = null;
-    const zones = () => {
-      let l = Q1(".sb-dz.l"), r = Q1(".sb-dz.r"), pv = Q1(".sb-dz-prev");
-      if (!l) {
-        l = document.createElement("div"); l.className = "sb-dz l"; l.textContent = t("side.dropLeft");
-        r = document.createElement("div"); r.className = "sb-dz r"; r.textContent = t("side.dropRight");
-        pv = document.createElement("div"); pv.className = "sb-dz-prev";
-        [l, r, pv].forEach(z => { z.setAttribute("aria-hidden", "true"); document.body.appendChild(z); });
-      }
-      return /** @type {{ l: HTMLElement, r: HTMLElement, pv: HTMLElement }} */ ({ l, r, pv });
-    };
-    const hot = (/** @type {number} */ x) => {
-      const z = zones(), side = x < innerWidth / 2 ? "left" : "right";
-      z.l.classList.toggle("hot", side === "left");
-      z.r.classList.toggle("hot", side === "right");
-      const w = sheet() ? innerWidth : effW();
-      z.pv.style.width = w + "px";
-      z.pv.style.left = side === "left" ? "0" : "auto";
-      z.pv.style.right = side === "right" ? "0" : "auto";
-      return side;
-    };
+    // two edge strips as wide as the panel really is (barra-lato.js): the one under the pointer is the target, anywhere else cancels
+    const hot = (/** @type {number} */ x, /** @type {number} */ y) => BARRA_LATO.show({
+      x, y, width: effW(), sheet: sheet(), side: _side, title: (Q1("#sb-title") || {}).textContent || "",
+      texts: { l: t("side.dropLeft"), r: t("side.dropRight"), no: t("side.dropCancel") },
+    });
     const end = () => {
       document.body.classList.remove("sb-dragging");
-      document.querySelectorAll(".sb-dz,.sb-dz-prev").forEach(z => z.remove());
+      if (window.BARRA_LATO) BARRA_LATO.clear();
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("keydown", key, true);
       if (st && st.timer) clearTimeout(st.timer);
       st = null;
     };
     const begin = () => {
+      if (!window.BARRA_LATO) return;                 // still loading: the next move (or the long press) tries again
       st.active = true;
       document.body.classList.add("sb-dragging");
+      window.addEventListener("keydown", key, true);
       try { head.setPointerCapture(st.id); } catch (_) { /* gone */ }
-      hot(st.x);
+      hot(st.x, st.y);
+    };
+    const key = (/** @type {KeyboardEvent} */ e) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault(); e.stopPropagation();
+      end();
     };
     const move = (/** @type {PointerEvent} */ e) => {
       if (!st || e.pointerId !== st.id) return;
-      st.x = e.clientX;
+      st.x = e.clientX; st.y = e.clientY;
       if (!st.active) {
         const d = Math.hypot(e.clientX - st.x0, e.clientY - st.y0);
         if (st.touch) { if (d > 10) end(); return; }       // a finger that moves before the long press is a scroll
@@ -881,18 +874,19 @@ const BARRA = (() => {
         begin();
       }
       e.preventDefault();
-      hot(e.clientX);
+      if (st.active) hot(e.clientX, e.clientY);
     };
     const up = (/** @type {PointerEvent} */ e) => {
       if (!st || e.pointerId !== st.id) return;
-      const was = st.active, side = was ? (e.clientX < innerWidth / 2 ? "left" : "right") : null;
+      const was = st.active, side = was ? hot(e.clientX, e.clientY) : null;
       end();
       if (was && side) setSide(side);
     };
     const cancel = () => end();
     head.addEventListener("pointerdown", (/** @type {PointerEvent} */ e) => {
       if (e.button !== 0 || /** @type {Element} */ (e.target).closest("button,input,a,select")) return;
-      st = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, active: false, touch: e.pointerType === "touch" || e.pointerType === "pen" };
+      carica("m:barra-lato.js").catch(() => { /* the drag simply does not start */ });
+      st = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, active: false, touch: e.pointerType === "touch" || e.pointerType === "pen" };
       window.addEventListener("pointermove", move, { passive: false });
       window.addEventListener("pointerup", up);
       window.addEventListener("pointercancel", cancel);

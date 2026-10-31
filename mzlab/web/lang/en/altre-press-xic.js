@@ -11,6 +11,7 @@ I18N.add("en", {
   "side.movedRight": "Panel on the right",
   "side.dropLeft": "Drop here: panel on the left",
   "side.dropRight": "Drop here: panel on the right",
+  "side.dropCancel": "Release outside the strips to cancel",
   "unit.t.min": "min",
   "unit.t.h": "h",
   "unit.t.d": "d",

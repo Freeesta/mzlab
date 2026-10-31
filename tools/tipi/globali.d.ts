@@ -5,6 +5,7 @@ declare var ATTRIBUTIO_MS2: any;
 declare var AVVIO: any;
 declare var AZIONI_ICONE: any;
 declare var AgilentD: any;
+declare var BARRA_LATO: any;
 declare var BFIL: any;
 declare var BrukerD: any;
 declare var CALCQUI: any;
