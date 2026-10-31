@@ -3,6 +3,7 @@
 
 use crate::attributio::frame::to_csv;
 use crate::attributio::reglists::schema::SCHEMA;
+use mzlab_core::sortc;
 
 use super::entry::{cas_tokens, Entry, Kind};
 use super::resolve::{Found, Res, Resolver};
@@ -189,9 +190,9 @@ pub fn build_list(
             r[5].clone(),
         )
     };
-    rows.sort_by_key(key);
+    sortc::any_by_key(&mut rows, key);
     rows.dedup();
-    unresolved.sort();
+    sortc::any_by(&mut unresolved, |a, b| a.cmp(b));
     unresolved.dedup();
     let cols: Vec<String> = SCHEMA
         .iter()

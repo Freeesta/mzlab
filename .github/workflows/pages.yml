@@ -6,6 +6,19 @@ name: pages
 on:
   push:
     branches: [main]
+    # a push that changes only documents, tests, agent settings or other workflows leaves the published site as it is (the later patterns put back what the build reads:
+    # docs/schemi/ and tests/golden/ are copied into the site / hashed by its caches; a push by hand with workflow_dispatch always builds)
+    paths:
+      - "**"
+      - "!docs/**"
+      - "docs/schemi/**"
+      - "!tests/**"
+      - "tests/golden/**"
+      - "!tests_e2e/**"
+      - "!AGENTS.md"
+      - "!.claude/**"
+      - "!.github/workflows/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
