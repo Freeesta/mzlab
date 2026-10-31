@@ -44,7 +44,7 @@ window.GRUPPI = (() => {
   function write(map, by, order, undo) {
     const go = () => { E.files.forEach(/** @param {any} f */ f => { f.ugrp = map.get(fileBase(f.file)) || undefined; }); rowsT().forEach(f => { f.ugrp = map.get(f.name) || undefined; }); E.ugBy = by; E.ugOrder = order.length ? order : undefined; };
     if (undo) fileViewDo(go); else go();
-    renderFileList(); carica("gruppi-tab.js").then(() => renderFiles()); uiSave();
+    renderFileList(); if (typeof carica === "function") carica("gruppi-tab.js").then(() => renderFiles()); uiSave();
   }
   const note = (/** @type {string} */ key) => {
     const n = document.getElementById("fl-note"); if (!n) return;
