@@ -182,17 +182,6 @@ def write_build_json(out: Path, version: str, commit: str | None = None) -> None
     (static / "build.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
 
 
-def theory_entry() -> str:
-    """site/theory/index.html: the old address of the Teoria, kept so that bookmarks still work. It forwards to the Teoria site (BasePeak)."""
-    url = "https://freeesta.github.io/BasePeak/"
-    return (
-        '<!doctype html>\n<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
-        f'<title>Teoria · {APP_NAME}</title>\n'
-        f'<meta http-equiv="refresh" content="0;url={url}"><link rel="canonical" href="{url}"></head>\n'
-        f'<body><p><a href="{url}">Teoria (BasePeak)</a></p></body></html>\n'
-    )
-
-
 def lab_expiry() -> str | None:
     """The expiry date (YYYY-MM-DD, UTC) of the lab variant, or None for the normal build. A lab build without a valid date is refused."""
     if os.environ.get("MZLAB_LAB") != "1":
@@ -254,9 +243,6 @@ def main() -> None:
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
-    if not lab:                                                  # the lab site has no Teoria address
-        (out / "theory").mkdir()
-        (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     # program version and git commit for reproducibility (.mzflow)
     commit = git_commit()

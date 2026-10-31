@@ -1,5 +1,5 @@
-"""Smartphone (telefono.js): in portrait and landscape the site shows only the header (logo, info) and the card with the plain link to
-the Teoria site; nothing heavy is downloaded (no drawing module, OpenChemLib, Ketcher, example files). On a computer nothing changes."""
+"""Smartphone (telefono.js): in portrait and landscape the site shows only the header (logo, info) and the card with the
+"open anyway" button; nothing heavy is downloaded (no drawing module, OpenChemLib, Ketcher, example files). On a computer nothing changes."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -35,8 +35,8 @@ try:
             step(f"{tag}: header with logo and info only, nothing heavy downloaded", home)
             q.screenshot(path=SH + f"tel_{tag}_home.png")
             def link():
-                assert q.get_attribute("#phone .phb", "href") == "https://freeesta.github.io/BasePeak/" and q.get_attribute("#phone .phb", "rel") == "noopener"
-            step(f"{tag}: the card links to the Teoria site", link)
+                assert q.evaluate("document.querySelectorAll('#phone a').length") == 0 and q.is_visible("#phopen")
+            step(f"{tag}: the card has the open-anyway button and no link", link)
             ctx.close()
 
         def look(scheme):
@@ -46,7 +46,7 @@ try:
             vals = q.evaluate("""() => { const lum = c => { const m = c.match(/[\\d.]+/g).map(Number); const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4 }; return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]) };
                 const bgOf = e => { for (; e; e = e.parentElement) { const c = getComputedStyle(e).backgroundColor; if (!/rgba\\(.*, 0\\)|transparent/.test(c)) return c } return "rgb(255,255,255)" };
                 const ratio = e => { const a = lum(getComputedStyle(e).color), b = lum(bgOf(e)); return (Math.max(a, b) + .05) / (Math.min(a, b) + .05) };
-                return [...document.querySelectorAll("#phone h1, #phone .phw, #phone .phb, #phone .pho")].map(e => { const b = e.getBoundingClientRect(); return [e.className || e.tagName, ratio(e), b.height] }) }""")
+                return [...document.querySelectorAll("#phone h1, #phone .phw, #phone .pho")].map(e => { const b = e.getBoundingClientRect(); return [e.className || e.tagName, ratio(e), b.height] }) }""")
             for name, ratio, h in vals: assert ratio >= 4.5, (scheme, name, ratio)
             for name, ratio, h in vals[2:]: assert h >= 44, (scheme, name, h)
             assert q.evaluate("document.documentElement.scrollWidth") <= 390
@@ -54,7 +54,6 @@ try:
             q.screenshot(path=SH + f"tel_scheda_{scheme}.png")
             heavy = [u for u in reqs if any(k in u for k in ("pyodide", ".wasm", "explore.js", "draw.js", "openchemlib"))]
             assert not heavy, heavy
-            assert not any("static/teoria" in u for u in reqs), "no local Teoria is fetched"
             ctx.close()
         step("phone: card readable in light theme (contrast >= 4.5, targets >= 44 px), no engine", lambda: look("light"))
         step("phone: card readable in dark theme (contrast >= 4.5, targets >= 44 px), no engine", lambda: look("dark"))

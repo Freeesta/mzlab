@@ -29,7 +29,6 @@ I18N.add("it", {
   "phone.title": "Siete su uno smartphone",
   "phone.line": "Per Dati e Disegno serve uno schermo grande.",
   "phone.open": "Apri comunque",
-  "phone.go": "Vai alla Teoria",
   "phone.about.title": "Che cos'è {app}",
   "phone.about.text": "Piattaforma interattiva per l'analisi di dati LC-MS/MS a triplo quadrupolo: apre i file dello spettrometro, mostra cromatogrammi e spettri e aiuta a identificare i prodotti di trasformazione. Funziona nel browser, senza installare nulla, e i file restano sul vostro computer.",
   "phone.info": "Informazioni",

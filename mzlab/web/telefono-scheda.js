@@ -1,7 +1,7 @@
 // @ts-strict
 // @ts-check
 // The smartphone card (index.html, #phone). Loaded only on a phone (telefono.js sets window.QQQ_PHONE): the Dati and Disegno scripts,
-// the page shell and the engine are never fetched there. Shows the card (a plain link to the Teoria site, BasePeak) and wires "info" and "Apri comunque".
+// the page shell and the engine are never fetched there. Shows the card and wires "info" and "Apri comunque".
 (function () {
   const $ = s => document.querySelector(s);
   $("#phone").hidden = false;

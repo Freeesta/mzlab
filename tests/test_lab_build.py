@@ -34,7 +34,7 @@ def test_normal_build_has_no_trace_of_the_lab(sites):
     _, normal = sites
     assert not (normal / "static" / "lab.js").exists() and not (normal / "robots.txt").exists()
     html = (normal / "index.html").read_text(encoding="utf-8")
-    assert "lab.js" not in html and "noindex" not in html and "og:title" in html and (normal / "theory" / "index.html").is_file()
+    assert "lab.js" not in html and "noindex" not in html and "og:title" in html and not (normal / "theory").exists()
 
 
 def test_lab_build_head(sites):
