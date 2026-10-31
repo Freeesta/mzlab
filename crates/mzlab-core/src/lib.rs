@@ -67,6 +67,7 @@ pub mod mapcells;
 pub mod mapgrid;
 pub mod mapscan;
 pub mod mapscan_read;
+pub mod mapzoom;
 pub mod maproute;
 pub mod maptiles;
 pub mod ms2sim;

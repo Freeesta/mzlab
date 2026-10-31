@@ -54,13 +54,15 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uipset", state="visible"); pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
             assert pg.evaluate("(() => { const e = document.querySelector('#uipset'); return !e || e.hidden || e.offsetParent === null; })()"), "Esc must close the settings"
         step("keyboard: Esc closes the data table and the settings", esc_closes)
+        # Safari (and WebKit on macOS) moves Tab only between form fields; Alt+Tab visits every control, like Tab elsewhere
+        TAB_KEY = "Alt+Tab" if BROWSER == "webkit" else "Tab"
         def tab_reach():
             pg.evaluate("""() => { document.activeElement && document.activeElement.blur(); window.scrollTo(0, 0);
                 // Firefox resumes Tab from the last focused element after a blur; put the starting point back at the top of the document
                 const b = document.body; b.tabIndex = -1; b.focus(); b.removeAttribute('tabindex'); }""")
             want = pg.evaluate("(" + VISIBLE + ")().length"); seen, bad, trap = set(), [], False
             for i in range(want * 3 + 40):
-                pg.keyboard.press("Tab")
+                pg.keyboard.press(TAB_KEY)
                 info = pg.evaluate("""() => { const e = document.activeElement; if (!e || e === document.body) return null;
                     const s = getComputedStyle(e), r = e.getBoundingClientRect();
                     const ring = (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || (s.boxShadow && s.boxShadow !== 'none');

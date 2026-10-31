@@ -91,6 +91,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | misure dei motori | `docs/agenti/misure.md` (misure Rust e dei moduli: `misure-rust.md`; clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
+| metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | Dependabot, CodeQL, impostazioni di sicurezza da accendere a mano | `docs/agenti/sicurezza.md` |
 | sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`) |
 | contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |

@@ -270,7 +270,7 @@ const BARRA = (() => {
       tg.hidden = !(inDataOrOpening() || landing());
       tg.setAttribute("aria-pressed", shown ? "true" : "false");
       tg.classList.toggle("on", shown);
-      const tl = tg.querySelector(".tl"); if (tl) { tl.dataset.i18n = shown ? "cmd.panel.hide" : "cmd.panel.show"; tl.textContent = I18N.t(tl.dataset.i18n); }
+      const tl = tg.querySelector(".tl"); if (tl && !(typeof SHEETLBL !== "undefined" && SHEETLBL.paint(tg, tl, sheet()))) { tl.dataset.i18n = shown ? "cmd.panel.hide" : "cmd.panel.show"; tl.textContent = I18N.t(tl.dataset.i18n); }
     }
     const h = Q1("#sidebar-resize-handle");
     if (h) { h.setAttribute("aria-valuemin", String(MIN_W)); h.setAttribute("aria-valuemax", String(maxW())); h.setAttribute("aria-valuenow", String(effW())); }
