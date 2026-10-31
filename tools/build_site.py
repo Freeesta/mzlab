@@ -177,10 +177,10 @@ def lock_sha256() -> str | None:
 
 def write_build_json(out: Path, version: str, commit: str | None = None) -> None:
     """static/build.json: the exact build of the site, {commit, version, rustc, cargo_lock_sha256, modules}; `modules` maps the path (under static/) of every
-    .wasm to its SHA-256 (the hashes of `file_hashes`), sorted. The .wasm files are built after this script in pages.yml, so
+    .wasm to its SHA-256 (the hashes of `file_hashes`), sorted (the third-party ones under vendor/, e.g. Ketcher's Indigo, are not engine modules). The .wasm files are built after this script in pages.yml, so
     `python3 tools/build_site.py --build-json` writes it again once they are in place."""
     static = out / "static"
-    modules = {rel[len("static/"):]: h["sha256"] for rel, h in file_hashes(out).items() if rel.startswith("static/") and rel.endswith(".wasm")}
+    modules = {rel[len("static/"):]: h["sha256"] for rel, h in file_hashes(out).items() if rel.startswith("static/") and not rel.startswith("static/vendor/") and rel.endswith(".wasm")}
     doc = {"commit": commit or git_commit(), "version": version, "rustc": rustc_version(), "cargo_lock_sha256": lock_sha256(), "modules": dict(sorted(modules.items()))}
     (static / "build.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
 

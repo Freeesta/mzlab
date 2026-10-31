@@ -167,6 +167,15 @@ fn prepare_unknown(
     }
 }
 
+/// An mzML with MS-Numpress arrays: the scan table of the core reader refuses it, so it goes through the reader `mzml-numpress` of the registry, the one the
+/// site's module and the app use.
+fn is_numpress_mzml(path: &Path) -> bool {
+    flow_set::file_set(path)
+        .ok()
+        .and_then(|mut fs| mzlab_lettori::riconosci(&mut fs).map(|v| v.id == "mzml-numpress"))
+        .unwrap_or(false)
+}
+
 /// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
 pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
     build_index_with(path, label, idx, budget, &mut |_, _| {}, &None)
@@ -187,7 +196,7 @@ pub(crate) fn build_index_with(
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let mut out = File::create(idx).map_err(io)?;
-    if !path.is_dir() && name.to_lowercase().ends_with(".mzml") {
+    if !path.is_dir() && name.to_lowercase().ends_with(".mzml") && !is_numpress_mzml(path) {
         let size = std::fs::metadata(path).map_err(io)?.len();
         let mut file = File::open(path).map_err(io)?;
         let (table, mut late) = match flow_set::known_sha(path) {

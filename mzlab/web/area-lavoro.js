@@ -56,8 +56,8 @@ function syncWork(/** @type {boolean} */ force = false) {
   workQ("#backwork").hidden = !(S.sess && !none && (w === "add" || w === "landing"));
   workQ("#start").hidden = !(w === "landing" || w === "add" || (w === "table" && !S.sess));
   workQ("#wtable").hidden = !(w === "table" || w === "add" || land);
-  // on the landing the table is already in view under the drop area: the button stays in place, pressed and inert
-  const sb = workQ("#samptab"); sb.hidden = !tab; sb.setAttribute("aria-pressed", String(w === "table" || land)); sb.disabled = land;
+  // never inert: on the landing with a session (panels closed by the X) it brings the table back; before a session it scrolls the table under the drop area into view
+  const sb = workQ("#samptab"); sb.hidden = !tab; sb.setAttribute("aria-pressed", String(w === "table")); sb.disabled = false;
   TOOLS_OFF.forEach(q => { const b = workQ(q); b.disabled = none; b.setAttribute("aria-disabled", String(none)); });
   NAV_OFF.forEach(q => { const b = workQ(q); if (none) b.disabled = true; b.setAttribute("aria-disabled", String(b.disabled)); });
   // the empty side list shows a plain hint (it still takes a drop: the dashed box of #fl-dz appears only while a drag is over it)
@@ -79,7 +79,7 @@ workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   if (!t.closest("input")) queueMicrotask(() => { if (!E.panels.some((/** @type {Pannello} */ p) => p.el)) soloFile(E.files[+((/** @type {HTMLElement} */ (nm)).dataset.k || 0)]); });
 }, true);
 // «Sample table» of the side panel: the table in place of the panels and back; a click on a file of the side list goes back to the panels
-workQ("#samptab").onclick = () => { S.table = !S.table; if (S.table && window.innerWidth < 900 && window.BARRA) { BARRA.close(false); document.getElementById("sb-toggle")?.focus({ preventScroll: true }); } syncWork(); };
+workQ("#samptab").onclick = () => { if (!S.sess && workState() === "landing") { workQ("#wtable").scrollIntoView({ block: "nearest" }); return; } S.table = !S.table; if (S.table && window.innerWidth < 900 && window.BARRA) { BARRA.close(false); document.getElementById("sb-toggle")?.focus({ preventScroll: true }); } syncWork(); };
 workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   const t = /** @type {HTMLElement} */ (e.target);
   if (S.table && t.closest(".fl:not(.up)")) { S.table = false; queueMicrotask(() => syncWork()); }

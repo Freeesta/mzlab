@@ -57,7 +57,9 @@ try:
         # Safari (and WebKit on macOS) moves Tab only between form fields; Alt+Tab visits every control, like Tab elsewhere
         TAB_KEY = "Alt+Tab" if BROWSER == "webkit" else "Tab"
         def tab_reach():
-            pg.evaluate("document.activeElement && document.activeElement.blur(); window.scrollTo(0,0)")
+            pg.evaluate("""() => { document.activeElement && document.activeElement.blur(); window.scrollTo(0, 0);
+                // Firefox resumes Tab from the last focused element after a blur; put the starting point back at the top of the document
+                const b = document.body; b.tabIndex = -1; b.focus(); b.removeAttribute('tabindex'); }""")
             want = pg.evaluate("(" + VISIBLE + ")().length"); seen, bad, trap = set(), [], False
             for i in range(want * 3 + 40):
                 pg.keyboard.press(TAB_KEY)

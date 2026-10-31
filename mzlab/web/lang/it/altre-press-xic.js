@@ -11,6 +11,7 @@ I18N.add("it", {
   "side.movedRight": "Pannello a destra",
   "side.dropLeft": "Rilascia qui: pannello a sinistra",
   "side.dropRight": "Rilascia qui: pannello a destra",
+  "side.dropCancel": "Rilascia fuori dalle strisce per annullare",
   "unit.t.min": "min",
   "unit.t.h": "h",
   "unit.t.d": "gg",

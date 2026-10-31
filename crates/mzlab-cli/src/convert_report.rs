@@ -88,3 +88,10 @@ pub(crate) fn report(items: &[Item]) -> String {
     o.raw("\n]\n");
     o.0
 }
+
+/// The name of a gzip-compressed mzML without the `.gz` (`x.mzML.gz` -> `x.mzML`), any other name as it is.
+pub(crate) fn sans_gz(name: &str) -> &str {
+    name.strip_suffix(".gz")
+        .filter(|n| n.to_lowercase().ends_with(".mzml"))
+        .unwrap_or(name)
+}
