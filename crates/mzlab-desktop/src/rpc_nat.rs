@@ -61,10 +61,10 @@ impl State {
             pr.scans.store(done as u64, Ordering::Relaxed);
             pr.scans_total.store(total as u64, Ordering::Relaxed);
         };
-        let opz = mzlab_core::mzmlwrite::Opzioni {
-            numpress: p["numpress"].as_bool().unwrap_or(false),
-            ..Default::default()
-        };
+        let opz = mzlab_core::mzmlwrite::opzioni_compressione(
+            p["compression"].as_str().unwrap_or("standard"),
+        )
+        .ok_or_else(|| Error::new("err.file.mzmlWrite"))?;
         lettori_mzml::scrivi_con(&mut *l, nat.c, &mut out, &mut tell, opz)?;
         std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
         drop(out);
