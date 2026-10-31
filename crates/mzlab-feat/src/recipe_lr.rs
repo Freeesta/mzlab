@@ -98,15 +98,13 @@ impl Recipe {
         polarity: Option<i8>,
     ) -> Result<Recipe> {
         let mut r = Recipe::for_index_in(index, polarity)?;
-        if index.hr1() {
-            if let Some(si) = index.section_of(1, r.detect.polarity) {
-                if let Some((h, n)) = crate::params_height::estimated_min_height(index, si)? {
-                    if h != r.detect.min_height {
-                        r.detect.min_height = h;
-                        r.min_height_basis = Some((n.mode, n.sigma));
-                    }
-                }
-            }
+        if index.hr1()
+            && let Some(si) = index.section_of(1, r.detect.polarity)
+            && let Some((h, n)) = crate::params_height::estimated_min_height(index, si)?
+            && h != r.detect.min_height
+        {
+            r.detect.min_height = h;
+            r.min_height_basis = Some((n.mode, n.sigma));
         }
         Ok(r)
     }

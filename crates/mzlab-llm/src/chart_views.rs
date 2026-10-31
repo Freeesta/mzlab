@@ -164,12 +164,12 @@ fn mzrt(rows: &[Vec<String>], areas: &[(usize, String)], mz: usize, rt: usize) -
             .iter()
             .filter_map(|(c, _)| num(row, *c))
             .fold(f64::NAN, f64::max);
-        if let (Some(x), Some(y)) = (num(row, mz), num(row, rt)) {
-            if best.is_finite() {
-                m.push(x);
-                t.push(y);
-                a.push(best);
-            }
+        if let (Some(x), Some(y)) = (num(row, mz), num(row, rt))
+            && best.is_finite()
+        {
+            m.push(x);
+            t.push(y);
+            a.push(best);
         }
     }
     View {

@@ -253,10 +253,12 @@ fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
             } else {
                 f32_at(&d, 44)
             };
-            if let Some(b) = b {
-                if 10.0 <= a && a < b && b <= 3000.0 {
-                    range = Some([round(a, 2), round(b, 2)]);
-                }
+            if let Some(b) = b
+                && 10.0 <= a
+                && a < b
+                && b <= 3000.0
+            {
+                range = Some([round(a, 2), round(b, 2)]);
             }
         }
         out.push(Experiment {
@@ -318,15 +320,15 @@ fn compound(ole: &Ole, base: &str) -> Vec<Param> {
         }
         let end = at + 2 + 2 * n;
         let id = ascii(&d[at + 2..end]);
-        if let (Some(nm), true) = (named(&id), !out.iter().any(|p| p.id == id)) {
-            if let Some(v) = f32_at(&d, end) {
-                out.push(Param {
-                    id,
-                    label: nm.1,
-                    value: num_param(v),
-                    unit: nm.2,
-                });
-            }
+        if let (Some(nm), true) = (named(&id), !out.iter().any(|p| p.id == id))
+            && let Some(v) = f32_at(&d, end)
+        {
+            out.push(Param {
+                id,
+                label: nm.1,
+                value: num_param(v),
+                unit: nm.2,
+            });
         }
         at = end;
     }

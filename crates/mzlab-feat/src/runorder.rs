@@ -62,24 +62,24 @@ struct Warning {
 fn read_samples(bytes: &[u8]) -> Result<(Vec<Campione>, Vec<bool>)> {
     let mut doc = parse(bytes)?;
     let mut missing = Vec::new();
-    if let Value::Obj(fields) = &mut doc {
-        if let Some((_, Value::Arr(items))) = fields.iter_mut().find(|(k, _)| k == "campioni") {
-            for item in items {
-                let Value::Obj(f) = item else {
-                    missing.push(false);
-                    continue;
-                };
-                let usable = f
-                    .iter()
-                    .find(|(k, _)| k == "ordine_iniezione")
-                    .and_then(|(_, v)| v.f64())
-                    .is_some_and(|x| x >= 1.0 && x.fract() == 0.0 && x < 4e9);
-                if !usable {
-                    f.retain(|(k, _)| k != "ordine_iniezione");
-                    f.push(("ordine_iniezione".into(), Value::Num(1.0)));
-                }
-                missing.push(!usable);
+    if let Value::Obj(fields) = &mut doc
+        && let Some((_, Value::Arr(items))) = fields.iter_mut().find(|(k, _)| k == "campioni")
+    {
+        for item in items {
+            let Value::Obj(f) = item else {
+                missing.push(false);
+                continue;
+            };
+            let usable = f
+                .iter()
+                .find(|(k, _)| k == "ordine_iniezione")
+                .and_then(|(_, v)| v.f64())
+                .is_some_and(|x| x >= 1.0 && x.fract() == 0.0 && x < 4e9);
+            if !usable {
+                f.retain(|(k, _)| k != "ordine_iniezione");
+                f.push(("ordine_iniezione".into(), Value::Num(1.0)));
             }
+            missing.push(!usable);
         }
     }
     Ok((campioni::from_value(&doc)?, missing))

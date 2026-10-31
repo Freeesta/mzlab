@@ -203,13 +203,13 @@ fn names_vs_synonyms(ctx: &Context, out: &mut Vec<Finding>) {
 fn name_vs_loader(ctx: &Context, out: &mut Vec<Finding>) {
     let mut groups: BTreeMap<(&str, &str), Vec<&Evidence>> = BTreeMap::new();
     for e in &ctx.evidence {
-        if let (Some(n), Some(l)) = (&e.name_block, &e.loader_block) {
-            if n != l {
-                groups
-                    .entry((e.campaign.as_str(), e.identity.as_str()))
-                    .or_default()
-                    .push(e);
-            }
+        if let (Some(n), Some(l)) = (&e.name_block, &e.loader_block)
+            && n != l
+        {
+            groups
+                .entry((e.campaign.as_str(), e.identity.as_str()))
+                .or_default()
+                .push(e);
         }
     }
     for ((camp, name), g) in groups {

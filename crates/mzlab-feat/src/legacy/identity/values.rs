@@ -71,10 +71,10 @@ pub(super) fn feats_of(list: &[Value], s: usize) -> Res<Vec<Feat<'_>>> {
             for p in f.get("a").map(Value::arr).unwrap_or(&[]) {
                 if let (Some(i), Some(a)) =
                     (p.at(0).and_then(Value::f64), p.at(1).and_then(Value::f64))
+                    && i >= 0.0
+                    && (i as usize) < s
                 {
-                    if i >= 0.0 && (i as usize) < s {
-                        areas[i as usize] = a;
-                    }
+                    areas[i as usize] = a;
                 }
             }
             let ms2 = f.get("ms2").filter(|m| !m.is_null()).and_then(|m| {

@@ -414,23 +414,23 @@ impl<F: FnMut(Spectrum)> Parser<F> {
             return;
         }
         let Some(c) = self.cur.as_mut() else { return };
-        if !t.starts_with(|ch: char| ch == '-' || ch == '+' || ch == '.' || ch.is_ascii_digit()) {
-            if let Some((k, v)) = split_key(t, '=') {
-                let mut kb = [0u8; 32];
-                let key = norm_key(k, &mut kb);
-                if key == "pepmass" {
-                    // the first number only (the second is the intensity of the precursor)
-                    let vt = v.trim();
-                    let mut pos = 0;
-                    let first = find_number(vt.as_bytes(), &mut pos)
-                        .map(|(st, _)| &vt[st..pos])
-                        .unwrap_or(vt);
-                    c.field(K::PrecursorMz, first);
-                } else {
-                    c.field_str(key, v.trim());
-                }
-                return;
+        if !t.starts_with(|ch: char| ch == '-' || ch == '+' || ch == '.' || ch.is_ascii_digit())
+            && let Some((k, v)) = split_key(t, '=')
+        {
+            let mut kb = [0u8; 32];
+            let key = norm_key(k, &mut kb);
+            if key == "pepmass" {
+                // the first number only (the second is the intensity of the precursor)
+                let vt = v.trim();
+                let mut pos = 0;
+                let first = find_number(vt.as_bytes(), &mut pos)
+                    .map(|(st, _)| &vt[st..pos])
+                    .unwrap_or(vt);
+                c.field(K::PrecursorMz, first);
+            } else {
+                c.field_str(key, v.trim());
             }
+            return;
         }
         self.in_peaks = true;
         c.peaks_text(t);
@@ -650,10 +650,10 @@ fn peaks_from(v: &Value, rec: &mut Rec) {
         Value::String(s) => {
             let t = s.trim();
             if t.starts_with('[') {
-                if let Ok(j) = serde_json::from_str::<Value>(t) {
-                    if j.is_array() {
-                        peaks_from(&j, rec);
-                    }
+                if let Ok(j) = serde_json::from_str::<Value>(t)
+                    && j.is_array()
+                {
+                    peaks_from(&j, rec);
                 }
             } else {
                 for seg in t.split([' ', ';', '\n', '\t']).filter(|x| !x.is_empty()) {
@@ -697,21 +697,21 @@ fn flatten(v: &Value, rec: &mut Rec, depth: u32) {
     for (k, val) in o {
         let key = key_of(k);
         if let Value::Array(a) = val {
-            if key == "names" {
-                if let Some(n) = a.iter().find_map(|x| x.get("name").and_then(scalar)) {
-                    rec.field(K::Name, &n);
-                }
+            if key == "names"
+                && let Some(n) = a.iter().find_map(|x| x.get("name").and_then(scalar))
+            {
+                rec.field(K::Name, &n);
             }
             for item in a {
-                if let Value::Object(m) = item {
-                    if let (Some(n), Some(val)) = (
+                if let Value::Object(m) = item
+                    && let (Some(n), Some(val)) = (
                         m.get("name").and_then(scalar),
                         m.get("value").and_then(scalar),
-                    ) {
-                        if m.len() <= 6 && m.contains_key("value") {
-                            rec.field_str(&key_of(&n), &val);
-                        }
-                    }
+                    )
+                    && m.len() <= 6
+                    && m.contains_key("value")
+                {
+                    rec.field_str(&key_of(&n), &val);
                 }
             }
         }

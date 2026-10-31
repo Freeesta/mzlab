@@ -77,10 +77,11 @@ fn parse_line(line: &str) -> Option<Setting> {
 pub fn parse(blocks: &[&str]) -> Vec<Setting> {
     let mut out: Vec<Setting> = Vec::new();
     for l in blocks.iter().flat_map(|b| b.lines()).take(20_000) {
-        if let Some(s) = parse_line(l) {
-            if !out.contains(&s) && out.len() < 64 {
-                out.push(s);
-            }
+        if let Some(s) = parse_line(l)
+            && !out.contains(&s)
+            && out.len() < 64
+        {
+            out.push(s);
         }
     }
     out

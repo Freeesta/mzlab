@@ -123,12 +123,12 @@ fn provenance_text(
         .filter(|x| !x.url.contains("/property/"))
         .collect();
     ri.dedup_by(|a, b| a.url == b.url);
-    if resolver_inputs.is_empty() {
-        if let Some(Value::Arr(a)) = prev.and_then(|p| p.get("resolvers")).cloned() {
-            for (i, v) in a.iter().enumerate() {
-                o_json.raw(if i > 0 { "," } else { "" });
-                json::write_value(&mut o_json, v);
-            }
+    if resolver_inputs.is_empty()
+        && let Some(Value::Arr(a)) = prev.and_then(|p| p.get("resolvers")).cloned()
+    {
+        for (i, v) in a.iter().enumerate() {
+            o_json.raw(if i > 0 { "," } else { "" });
+            json::write_value(&mut o_json, v);
         }
     }
     for (i, x) in ri.iter().enumerate() {

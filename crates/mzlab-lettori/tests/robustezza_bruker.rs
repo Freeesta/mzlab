@@ -122,10 +122,10 @@ fn ogni_troncamento_e_un_errore_o_un_risultato() {
     let t = foglia(&[vec![V::N, V::T("a")]]);
     let b = db(&[("T", "CREATE TABLE T (Id INTEGER PRIMARY KEY, X TEXT)", t)]);
     for n in (0..b.len()).step_by(37) {
-        if let Ok(mut s) = apri_db(b[..n].to_vec(), None) {
-            if s.tabella("T").is_some() {
-                let _ = tutte(&mut s, "T");
-            }
+        if let Ok(mut s) = apri_db(b[..n].to_vec(), None)
+            && s.tabella("T").is_some()
+        {
+            let _ = tutte(&mut s, "T");
         }
     }
 }

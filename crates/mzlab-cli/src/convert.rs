@@ -486,14 +486,14 @@ pub fn run(args: Vec<String>) -> Outcome {
         .enumerate()
         .map(|(k, e)| item(&roots[k], e, ended[k].as_ref(), (&work, &out)))
         .collect();
-    if let Some(path) = &a.report {
-        if let Err(e) = std::fs::write(path, report(&items)) {
-            return fail(
-                2,
-                &format!("{}: {e}", path.display()),
-                "--report must be a file that can be written",
-            );
-        }
+    if let Some(path) = &a.report
+        && let Err(e) = std::fs::write(path, report(&items))
+    {
+        return fail(
+            2,
+            &format!("{}: {e}", path.display()),
+            "--report must be a file that can be written",
+        );
     }
     summary(&items, &out)
 }

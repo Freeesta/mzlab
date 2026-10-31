@@ -12,11 +12,11 @@ fn headings(md: &str) -> Vec<(usize, String, String)> {
     let mut i = 0;
     while i < lines.len() {
         let l = lines[i];
-        if l.trim_end() == "```html" {
-            if let Some(j) = (i + 1..lines.len()).find(|&k| lines[k].trim_end() == "```") {
-                i = j + 1;
-                continue;
-            }
+        if l.trim_end() == "```html"
+            && let Some(j) = (i + 1..lines.len()).find(|&k| lines[k].trim_end() == "```")
+        {
+            i = j + 1;
+            continue;
         }
         if let Some((level, text)) = head(l) {
             out.push((level, text, l.trim_end().to_string()));

@@ -92,10 +92,11 @@ impl Mol {
                     .filter_map(|t| t.parse().ok())
                     .collect();
                 for p in v.get(1..).unwrap_or(&[]).chunks(2) {
-                    if let [i, c] = p {
-                        if *i >= 1 && (*i as usize) <= na {
-                            raw[*i as usize - 1].charge = *c;
-                        }
+                    if let [i, c] = p
+                        && *i >= 1
+                        && (*i as usize) <= na
+                    {
+                        raw[*i as usize - 1].charge = *c;
                     }
                 }
             }

@@ -332,13 +332,12 @@ pub fn source_sha1s(head: &str) -> Vec<(String, String)> {
                 .and_then(|a| block[a + k.len()..].split('"').next())
                 .map(String::from)
         };
-        if let (Some(name), Some(a)) = (attr(" name=\""), block.find("MS:1000569")) {
-            if let Some(v) = block[a..]
+        if let (Some(name), Some(a)) = (attr(" name=\""), block.find("MS:1000569"))
+            && let Some(v) = block[a..]
                 .find("value=\"")
                 .and_then(|b| block[a + b + 7..].split('"').next())
-            {
-                out.push((name, v.to_ascii_lowercase()));
-            }
+        {
+            out.push((name, v.to_ascii_lowercase()));
         }
         rest = &t[end..];
     }

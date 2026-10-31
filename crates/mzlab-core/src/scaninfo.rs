@@ -47,13 +47,12 @@ fn attrs(body: &str) -> Vec<(String, String)> {
         while j < s.len() && is_word(s[j]) {
             j += 1;
         }
-        if j + 1 < s.len() && s[j] == '=' && s[j + 1] == '"' {
-            if let Some(k) = s[j + 2..].iter().position(|&c| c == '"') {
+        if j + 1 < s.len() && s[j] == '=' && s[j + 1] == '"'
+            && let Some(k) = s[j + 2..].iter().position(|&c| c == '"') {
                 out.push((s[i..j].iter().collect(), s[j + 2..j + 2 + k].iter().collect()));
                 i = j + 2 + k + 1;
                 continue;
             }
-        }
         i = j;
     }
     out

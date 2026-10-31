@@ -59,10 +59,10 @@ pub fn structures_of(f: &Feature) -> Vec<(&'static str, String)> {
     ];
     let mut out: Vec<(&'static str, String)> = Vec::new();
     for (label, s) in cols {
-        if let Some(s) = s.filter(|s| !s.trim().is_empty()) {
-            if out.iter().all(|x| x.1 != s) {
-                out.push((label, s.to_string()));
-            }
+        if let Some(s) = s.filter(|s| !s.trim().is_empty())
+            && out.iter().all(|x| x.1 != s)
+        {
+            out.push((label, s.to_string()));
         }
     }
     out

@@ -214,10 +214,10 @@ pub fn substructures(g: Graph) -> Option<Subs> {
         .map(|&(m, _)| {
             let mut row = vec![0i64; els.len()];
             for (i, a) in g.atoms.iter().enumerate() {
-                if (m >> i) & 1 == 1 {
-                    if let Some(p) = els.iter().position(|e| e == a) {
-                        row[p] += 1;
-                    }
+                if (m >> i) & 1 == 1
+                    && let Some(p) = els.iter().position(|e| e == a)
+                {
+                    row[p] += 1;
                 }
             }
             row[ih] = (0..n).filter(|&i| (m >> i) & 1 == 1).map(|i| g.h[i]).sum();

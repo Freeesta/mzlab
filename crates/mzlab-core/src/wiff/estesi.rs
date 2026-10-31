@@ -149,10 +149,10 @@ impl Wiff {
             h.run_params.clear();
         }
         for e in &self.experiments {
-            if let Some((acc, term)) = spectrum_term(e.code) {
-                if !h.content.iter().any(|(a, _)| a == acc) {
-                    h.content.push((acc.to_string(), term.to_string()));
-                }
+            if let Some((acc, term)) = spectrum_term(e.code)
+                && !h.content.iter().any(|(a, _)| a == acc)
+            {
+                h.content.push((acc.to_string(), term.to_string()));
             }
         }
         h

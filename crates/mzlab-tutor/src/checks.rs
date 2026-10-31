@@ -48,18 +48,18 @@ fn cites(s: &str) -> (Vec<u32>, String) {
     let mut i = 0;
     while i < s.len() {
         let tail = &s[i..];
-        if tail.starts_with('[') {
-            if let Some(end) = tail.find(']').filter(|&e| e <= 14) {
-                let inner = &tail[1..end];
-                let nums: Option<Vec<u32>> = inner
-                    .split(',')
-                    .map(|x| x.trim().parse::<u32>().ok())
-                    .collect();
-                if let Some(n) = nums.filter(|n| !n.is_empty()) {
-                    found.extend(n);
-                    i += end + 1;
-                    continue;
-                }
+        if tail.starts_with('[')
+            && let Some(end) = tail.find(']').filter(|&e| e <= 14)
+        {
+            let inner = &tail[1..end];
+            let nums: Option<Vec<u32>> = inner
+                .split(',')
+                .map(|x| x.trim().parse::<u32>().ok())
+                .collect();
+            if let Some(n) = nums.filter(|n| !n.is_empty()) {
+                found.extend(n);
+                i += end + 1;
+                continue;
             }
         }
         let c = tail.chars().next().unwrap_or(' ');
@@ -93,12 +93,12 @@ fn push(out: &mut Vec<String>, piece: String) {
         return;
     }
     let (_, bare) = cites(&piece);
-    if !bare.chars().any(char::is_alphanumeric) {
-        if let Some(last) = out.last_mut() {
-            last.push(' ');
-            last.push_str(&piece);
-            return;
-        }
+    if !bare.chars().any(char::is_alphanumeric)
+        && let Some(last) = out.last_mut()
+    {
+        last.push(' ');
+        last.push_str(&piece);
+        return;
     }
     out.push(piece);
 }
