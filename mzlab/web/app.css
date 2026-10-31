@@ -552,7 +552,7 @@ html.in-draw #sb-toggle{display:none}
 /* Second toolbar of Data (#tools): ONE row at every width, so the work area below never moves. The row never wraps (a wrapped group dragged its divider and «Method» to a second row);
    its height is reserved (also empty, in the upload view); the file selector shrinks first (container width, not viewport), then the «+ panel» group scrolls sideways (keyboard focus scrolls it);
    the groups keep the order file | add | undo-redo-close ... Method, the dividers sit between groups only */
-#tools{flex-wrap:nowrap;align-items:center;min-height:32px;container:tools/inline-size}
+#tools{flex-wrap:nowrap;align-items:center;min-height:32px;container:tools/inline-size;min-width:0;overflow-x:auto;scrollbar-width:none}#tools::-webkit-scrollbar{display:none}
 @media (pointer:coarse){#tools{min-height:40px}}
 #tools>*{flex:none}
 #tools>.sp{flex:1 1 0;min-width:0}
