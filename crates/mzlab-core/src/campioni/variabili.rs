@@ -338,7 +338,10 @@ fn variables(fs: &[Fl]) -> Vec<Var> {
             .filter(|(i, t)| t.a < ts && !(*i == 0 && f.matrix.is_some()))
             .map(|(_, t)| t.text.as_str())
             .collect();
-        (!words.is_empty()).then(|| (fold(&words.join("_")), words.join("_")))
+        (!words.is_empty()).then(|| {
+            let joined = words.join("_");
+            (fold(&joined), joined)
+        })
     };
     let matrix = |f: &Fl| f.matrix.map(|_| f.toks[0].text.clone());
     let mut all: Vec<Var> = Vec::new();
