@@ -55,7 +55,9 @@ try:
             assert pg.evaluate("(() => { const e = document.querySelector('#uipset'); return !e || e.hidden || e.offsetParent === null; })()"), "Esc must close the settings"
         step("keyboard: Esc closes the data table and the settings", esc_closes)
         def tab_reach():
-            pg.evaluate("document.activeElement && document.activeElement.blur(); window.scrollTo(0,0)")
+            pg.evaluate("""() => { document.activeElement && document.activeElement.blur(); window.scrollTo(0, 0);
+                // Firefox resumes Tab from the last focused element after a blur; put the starting point back at the top of the document
+                const b = document.body; b.tabIndex = -1; b.focus(); b.removeAttribute('tabindex'); }""")
             want = pg.evaluate("(" + VISIBLE + ")().length"); seen, bad, trap = set(), [], False
             for i in range(want * 3 + 40):
                 pg.keyboard.press("Tab")
