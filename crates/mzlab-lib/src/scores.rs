@@ -10,8 +10,8 @@
 
 use crate::clean::weighted;
 use crate::frag_tol::FragTol;
-use crate::sortutil;
 pub use crate::stein::{hybrid_entropy, ri_factor, stein_cosine, SteinOpts, SteinScore};
+use mzlab_picchi::sortc;
 
 /// A spectrum for scoring.
 #[derive(Debug, Clone, Default)]
@@ -67,7 +67,7 @@ pub fn match_peaks_into(
             j += 1;
         }
     }
-    sortutil::sort_by(&mut s.cand, |x, y| y.2.total_cmp(&x.2));
+    sortc::by(&mut s.cand, |x, y| y.2.total_cmp(&x.2));
     s.ua.clear();
     s.ua.resize(a_mz.len(), false);
     s.ub.clear();
@@ -183,7 +183,7 @@ pub fn hybrid_pairs(a: &Spec, b: &Spec, tol: f64) -> Vec<(usize, usize)> {
             }
         }
     }
-    sortutil::sort_by(&mut c, |x, y| y.2.total_cmp(&x.2));
+    sortc::by(&mut c, |x, y| y.2.total_cmp(&x.2));
     let (mut ua, mut ub) = (vec![false; a.mz.len()], vec![false; b.mz.len()]);
     let mut out = Vec::new();
     for (i, j, _) in c {
@@ -228,7 +228,7 @@ pub fn common_losses_with(a: &Spec, b: &Spec, tol: f64, s: &mut MatchScratch) ->
             j += 1;
         }
     }
-    sortutil::sort_by(&mut s.cand, |x, y| y.2.total_cmp(&x.2));
+    sortc::by(&mut s.cand, |x, y| y.2.total_cmp(&x.2));
     s.ua.clear();
     s.ua.resize(na, false);
     s.ub.clear();
@@ -256,10 +256,10 @@ pub fn top32(s: &Spec) -> Spec {
         .filter(|&i| s.mz[i] < s.prec - 1.5 && s.it[i] >= 0.01 * mx && s.it[i] > 0.0)
         .collect();
     if idx.len() > AN_TOP {
-        sortutil::sort_by(&mut idx, |&a, &b| s.it[b].total_cmp(&s.it[a]));
+        sortc::by(&mut idx, |&a, &b| s.it[b].total_cmp(&s.it[a]));
         idx.truncate(AN_TOP);
     }
-    sortutil::sort_by(&mut idx, |a, b| a.cmp(b));
+    sortc::by(&mut idx, |a, b| a.cmp(b));
     Spec {
         mz: idx.iter().map(|&i| s.mz[i]).collect(),
         it: idx.iter().map(|&i| s.it[i]).collect(),
@@ -302,7 +302,7 @@ pub fn modified_cosine(q: &Spec, lib: &Spec, tol: impl Into<FragTol>) -> ModCosi
             }
         }
     }
-    sortutil::sort_by(&mut c, |x, y| y.2.total_cmp(&x.2));
+    sortc::by(&mut c, |x, y| y.2.total_cmp(&x.2));
     let (mut ua, mut ub) = (vec![false; a.mz.len()], vec![false; b.mz.len()]);
     let (mut dot, mut shifted) = (0.0, 0usize);
     let mut pairs = Vec::new();

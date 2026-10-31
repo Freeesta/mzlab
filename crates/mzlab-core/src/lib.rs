@@ -49,8 +49,10 @@ pub mod idxread;
 pub mod idxsearch;
 pub mod idxwalk;
 pub mod ionpattern;
-mod isotab;
+pub mod isofine;
 pub mod isoscore;
+#[cfg(feature = "isotopi-tutti")]
+pub mod isotable;
 pub mod itemroutes;
 pub mod infusione;
 pub mod iteminfo;

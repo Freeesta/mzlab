@@ -13,7 +13,9 @@ No learned model. The weights that combine the terms are the user's.
 """
 from __future__ import annotations
 
+import json
 import math
+from pathlib import Path
 
 import numpy as np
 
@@ -37,6 +39,7 @@ ISO = {
     "Br": [(78.9183376, 0.5069), (80.9162897, 0.4931)],
     "I": [(126.9044719, 1.0)],
 }
+ISO.update({el: [tuple(i) for i in row] for el, row in json.loads((Path(__file__).parent / "isotable.json").read_text()).items()})   # the elements beyond the core 13 (tools/genera_isotopi.py)
 MERGE_TOL = 0.0005            # Da: isotopologues closer than this are one peak (as in hr.js)
 WEIGHT_POW = 0.0              # a peak weighs rel ** WEIGHT_POW in the score (0: every peak the same, the monoisotopic one is fitted by construction; 1: its share of the theory)
 MAX_SHIFT = 6                 # nominal mass units above the monoisotopic peak that are considered
@@ -53,14 +56,13 @@ def _join(items: list[tuple[float, float]]) -> list[tuple[float, float]]:
     return [(s / p, p) for s, p, _ in out]
 
 
-def _conv(a: list[tuple[float, float]], b: list[tuple[float, float]], floor: float, mono: float) -> list[tuple[float, float]]:
+def _conv(a: list[tuple[float, float]], b: list[tuple[float, float]], floor: float, cut: float) -> list[tuple[float, float]]:
     r = [(ma + mb, pa * pb) for ma, pa in a for mb, pb in b if pa * pb > floor]
-    r = _join(r)
-    return [(m, p) for m, p in r if m - mono <= MAX_SHIFT + 0.5 - 0.0]
+    return [(m, p) for m, p in _join(r) if m <= cut]
 
 
-def fine_pattern(counts: dict[str, int], z: int = 1, min_rel: float = 0.001) -> list[dict]:
-    """Fine isotope structure of an ion formula: [{mz, rel}] (rel: % of the most intense isotopologue), sorted by m/z."""
+def fine_pattern(counts: dict[str, int], z: int = 1, min_rel: float = 0.001, cut: float = MAX_SHIFT + 0.5) -> list[dict]:
+    """Fine isotope structure of an ion formula: [{mz, rel}] (rel: % of the most intense isotopologue), sorted by m/z; `cut` = Da above the lightest isotopologue kept (inf: all)."""
     dist = [(0.0, 1.0)]
     floor = 1e-12
     for el, k in counts.items():
@@ -71,18 +73,18 @@ def fine_pattern(counts: dict[str, int], z: int = 1, min_rel: float = 0.001) -> 
         base, res, c = [(m - ISO[el][0][0], p) for m, p in ISO[el]], [(0.0, 1.0)], int(k)
         while c:
             if c & 1:
-                res = _conv(res, base, floor, 0.0)
+                res = _conv(res, base, floor, cut)
             c >>= 1
             if c:
-                base = _conv(base, base, floor, 0.0)
-        dist = _conv(dist, res, floor, 0.0)
+                base = _conv(base, base, floor, cut)
+        dist = _conv(dist, res, floor, cut)
     mono = sum(ISO[el][0][0] * k for el, k in counts.items() if k > 0)
     top = max(p for _, p in dist)
     return [{"mz": (mono + m - z * ELECTRON) / abs(z), "rel": 100.0 * p / top} for m, p in dist if 100.0 * p / top >= min_rel]
 
 
 def merge_res(pat: list[dict], r200: float) -> list[dict]:
-    """Fuse the peaks that the instrument does not resolve (twin of ``HR.mergeRes``); r200 <= 0 keeps the fine structure."""
+    """Fuse the peaks that the instrument does not resolve (``HR.mergeBy`` with the width m / R(m)); r200 <= 0 keeps the fine structure."""
     if not (r200 > 0) or not pat:
         return pat
     out: list[list[float]] = []

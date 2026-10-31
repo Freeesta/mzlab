@@ -172,6 +172,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "isotopi-tutti")]
     #[test]
     fn elements_beyond_the_formula_parser_are_in_the_table() {
         assert!(element_dist("Fe").is_ok() && element_dist("Hg").is_ok());

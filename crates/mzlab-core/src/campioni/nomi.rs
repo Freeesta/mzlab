@@ -4,10 +4,19 @@
 
 use super::parole_bianco::is_blank_name;
 use super::posizioni::{self, Proposta};
-use super::{number_replicates, Campione};
-use crate::project::{guess_conc, guess_sample as guess_stem};
+use super::{minutes_per, number_replicates, Campione};
+use crate::project::{guess_conc, guess_sample as guess_stem, guess_type};
 
 /// `project::guess_sample` plus the blank words of `data/nomi-bianco.json` (`MQ_Wash_1`), which the parity with `project.py` does not carry.
+/// The stem and the type of a name (`blank`, `standard`, `sample`) without reading its time, with the blank words of `nomi-bianco.json`.
+fn guess_kind(name: &str) -> (String, &'static str) {
+    let (stem, guess) = guess_type(name);
+    if guess == "sample" && is_blank_name(&stem.to_lowercase()) {
+        return (stem, "blank");
+    }
+    (stem, guess)
+}
+
 fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
     let (stem, time, guess) = guess_stem(name);
     if guess == "sample" && is_blank_name(&stem.to_lowercase()) {
@@ -57,32 +66,27 @@ fn skip_ws(s: &[char], mut i: usize) -> usize {
     i
 }
 fn starts(s: &[char], i: usize, w: &str) -> bool {
-    let w: Vec<char> = w.chars().collect();
-    s.len() >= i + w.len() && s[i..i + w.len()] == w[..]
+    // `w` is ASCII: compare in place, no allocation
+    let w = w.as_bytes();
+    s.len() >= i + w.len()
+        && s[i..i + w.len()]
+            .iter()
+            .zip(w)
+            .all(|(c, b)| *c == char::from(*b))
 }
 
 /// `\d+(?:[.,]\d+)?` (also `\d+p\d+` after a `t`, as `T2p5`): the end positions, the one with the fraction first.
-fn number_ends(s: &[char], i: usize, p_point: bool) -> Vec<usize> {
+fn number_ends(s: &[char], i: usize, p_point: bool) -> impl Iterator<Item = usize> {
     let d = digits(s, i);
-    if d == i {
-        return vec![];
-    }
-    let mut v = vec![];
-    if d < s.len()
-        && (s[d] == '.' || s[d] == ',' || (p_point && s[d] == 'p'))
-        && digits(s, d + 1) > d + 1
-    {
-        v.push(digits(s, d + 1));
-    }
-    v.push(d);
-    v
+    let with_fraction = (d < s.len() && (s[d] == '.' || s[d] == ',' || (p_point && s[d] == 'p')))
+        .then(|| digits(s, d + 1))
+        .filter(|f| *f > d + 1);
+    [with_fraction, (d > i).then_some(d)].into_iter().flatten()
 }
 
 /// The start of the name and every position after a separator.
-fn after_prefix(s: &[char]) -> Vec<usize> {
-    let mut v = vec![0];
-    v.extend((0..s.len()).filter(|&i| is_sep(s[i])).map(|i| i + 1));
-    v
+fn after_prefix(s: &[char]) -> impl Iterator<Item = usize> + '_ {
+    std::iter::once(0).chain((0..s.len()).filter(|&i| is_sep(s[i])).map(|i| i + 1))
 }
 
 /// The unit of the time that ends at `e` (`min` when none is written) and where the time ends, or None when what follows is not a time.
@@ -138,10 +142,13 @@ fn time_of(s: &[char]) -> Option<Time> {
     None
 }
 
-/// A word of the name with its folders (letters and digits) equal to `word`, or `word` followed by digits only.
-fn has_word(low: &str, word: &str) -> bool {
+/// A word of the name with its folders (letters and digits) equal to one of `words`, or one followed by digits only (one pass over the name).
+fn has_any(low: &str, words: &[&str]) -> bool {
     low.split(|c: char| !c.is_ascii_alphanumeric()).any(|w| {
-        w == word || (w.starts_with(word) && w[word.len()..].chars().all(|c| c.is_ascii_digit()))
+        words.iter().any(|word| {
+            w == *word
+                || (w.starts_with(word) && w[word.len()..].chars().all(|c| c.is_ascii_digit()))
+        })
     })
 }
 
@@ -149,12 +156,10 @@ fn has_word(low: &str, word: &str) -> bool {
 fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
     match guess {
         "blank" => "blank",
-        "standard" => CAL_WORDS
-            .iter()
-            .find(|w| has_word(low, w))
-            .map_or("std", |_| "calibration"),
-        _ if DARK_WORDS.iter().any(|w| has_word(low, w)) => "dark",
-        _ if has_word(low, "qc") => "qc",
+        "standard" if has_any(low, &CAL_WORDS) => "calibration",
+        "standard" => "std",
+        _ if has_any(low, &DARK_WORDS) => "dark",
+        _ if has_any(low, &["qc"]) => "qc",
         _ if time_min == Some(0.0) => "t0",
         _ => "sample",
     }
@@ -167,7 +172,7 @@ pub fn tipo_v1(name: &str) -> &'static str {
 }
 
 fn kind_of(low: &str, guess: &str, time_min: Option<f64>, msn: bool) -> &'static str {
-    if guess != "blank" && (msn || INFUSION_WORDS.iter().any(|w| has_word(low, w))) {
+    if guess != "blank" && (msn || has_any(low, &INFUSION_WORDS)) {
         return "infusion";
     }
     base_kind(low, guess, time_min)
@@ -291,16 +296,13 @@ fn assign_matrix(out: &mut [Campione]) {
 
 /// The role (`proponi` names) and the time of one name as `(minutes, start, end)`, the span in characters of the file stem: what `variabili` needs.
 pub(crate) fn ruolo_e_tempo(name: &str) -> (&'static str, Option<(f64, usize, usize)>) {
-    let (stem, _, guess) = guess_sample(name);
+    let (stem, guess) = guess_kind(name);
     let lowc: Vec<char> = stem.to_lowercase().chars().collect();
-    let mut c = Campione::new(name, "", 1);
     let time = (guess == "sample").then(|| time_of(&lowc)).flatten();
-    if let Some(t) = &time {
-        c.set_time(Some(t.value), t.unit);
-    }
-    let kind = kind_of(&name.to_lowercase(), guess, c.time_min, false);
+    let minutes = time.as_ref().map(|t| t.value * minutes_per(t.unit));
+    let kind = kind_of(&name.to_lowercase(), guess, minutes, false);
     let keep = kind != "infusion" && kind != "qc";
-    let span = time.filter(|_| keep).zip(c.time_min);
+    let span = time.filter(|_| keep).zip(minutes);
     (kind, span.map(|(t, m)| (m, t.start, t.end)))
 }
 

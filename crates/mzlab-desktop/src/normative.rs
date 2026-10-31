@@ -87,11 +87,15 @@ fn hex(b: &[u8]) -> String {
 }
 
 pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, NormError> {
+    parse_with(bytes, FORMAT)
+}
+
+fn parse_with(bytes: &[u8], format: &str) -> Result<Catalog, NormError> {
     let bad = |d: &str| NormError::new("normative.dl.err.catalog", d);
     let c: Catalog = serde_json::from_slice(bytes).map_err(|e| bad(&e.to_string()))?;
     let plain =
         |f: &str| f.len() == 7 && f.ends_with(".bin") && f[..3].bytes().all(|b| b.is_ascii_digit());
-    if c.format != FORMAT || c.sha256.len() != 64 || c.size > MAX_RAW {
+    if c.format != format || c.sha256.len() != 64 || c.size > MAX_RAW {
         return Err(bad(&c.format));
     }
     if c.pieces
@@ -107,7 +111,15 @@ pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, NormError> {
 }
 
 fn fetch_catalog(src: &dyn Source) -> Result<(Catalog, Vec<u8>), NormError> {
-    let b = src.get(CATALOG).map_err(|e| {
+    fetch_catalog_at(src, CATALOG, FORMAT)
+}
+
+fn fetch_catalog_at(
+    src: &dyn Source,
+    path: &str,
+    format: &str,
+) -> Result<(Catalog, Vec<u8>), NormError> {
+    let b = src.get(path).map_err(|e| {
         NormError::new(
             if e.key == "update.error.offline" {
                 "normative.dl.err.offline"
@@ -117,7 +129,7 @@ fn fetch_catalog(src: &dyn Source) -> Result<(Catalog, Vec<u8>), NormError> {
             e.detail,
         )
     })?;
-    Ok((parse_catalog(&b)?, b))
+    Ok((parse_with(&b, format)?, b))
 }
 
 /// A raw `.mzsus` that carries the `listings` extension.
@@ -179,15 +191,15 @@ pub fn check(folder: &Folder, src: &dyn Source) -> Result<Check, NormError> {
     })
 }
 
-/// Downloads the package of the site into the folder: every piece checked (size and SHA-256), the inflated file checked as a whole; the old file stays until
-/// the new one is complete. `progress(piece, pieces)` after each piece.
-pub fn install(
-    folder: &Folder,
+/// Downloads a package of the site (`catalog` and `pieces` under `static/`): every piece checked (size and SHA-256), the inflated file checked as a whole.
+/// `progress(piece, pieces)` after each piece. Returns the raw file and the catalogue text.
+fn download(
     src: &dyn Source,
+    (catalog, pieces, format): (&str, &str, &str),
     cancel: &AtomicBool,
     progress: &mut dyn FnMut(usize, usize),
-) -> Result<Status, NormError> {
-    let (cat, text) = fetch_catalog(src)?;
+) -> Result<(Vec<u8>, Vec<u8>), NormError> {
+    let (cat, text) = fetch_catalog_at(src, catalog, format)?;
     let mut z = Vec::with_capacity(cat.size_compressed as usize);
     for (i, p) in cat.pieces.iter().enumerate() {
         if cancel.load(Ordering::Relaxed) {
@@ -196,7 +208,7 @@ pub fn install(
         let mut got = None;
         for _ in 0..2 {
             let b = src
-                .get(&format!("{PIECES}{}", p.file))
+                .get(&format!("{pieces}{}", p.file))
                 .map_err(|e| NormError::new("normative.dl.err.offline", e.detail))?;
             if b.len() as u64 == p.size && hex(&b) == p.sha256 {
                 got = Some(b);
@@ -212,8 +224,19 @@ pub fn install(
         .read_to_end(&mut raw)
         .map_err(|e| NormError::new("normative.dl.err.hash", e.to_string()))?;
     if raw.len() as u64 != cat.size || hex(&raw) != cat.sha256 {
-        return Err(NormError::new("normative.dl.err.hash", FILE));
+        return Err(NormError::new("normative.dl.err.hash", format));
     }
+    Ok((raw, text))
+}
+
+/// Downloads the package of the site into the folder; the old file stays until the new one is complete.
+pub fn install(
+    folder: &Folder,
+    src: &dyn Source,
+    cancel: &AtomicBool,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<Status, NormError> {
+    let (raw, text) = download(src, (CATALOG, PIECES, FORMAT), cancel, progress)?;
     check_raw(&raw)?;
     write(folder, &raw, &text)?;
     Ok(status(folder))
@@ -262,6 +285,82 @@ pub fn listings_json(folder: &Folder) -> Result<String, NormError> {
         .map_err(|e| NormError::new("normative.dl.err.hash", format!("{e:?}")))?;
     s.listings_json()
         .ok_or_else(|| NormError::new("normative.dl.err.hash", "no listings extension"))
+}
+
+/// The CAS sidecar the import reads (`mzlab-cas/1`), next to the package of the lists on the site; kept in the folder of the libraries.
+const CAS_CATALOG: &str = "static/mzfinder/sospetti/cas/catalogo.json";
+const CAS_PIECES: &str = "static/mzfinder/sospetti/cas/";
+pub const CAS_FORMAT: &str = "mzlab-cas/1";
+pub const CAS_FILE: &str = "normative-cas.tsv";
+/// The lists the user imported, in the root of the folder of the libraries: `normative-imported-ID.mzsus` and `normative-imported-ID.json` (the summary of the import).
+pub const IMPORT_PREFIX: &str = "normative-imported-";
+
+fn cas_text(folder: &Folder, src: &dyn Source) -> Result<String, NormError> {
+    if let Ok(st) = folder.stat(CAS_FILE) {
+        let b = folder.read(CAS_FILE, 0, st.size).map_err(NormError::io)?;
+        return String::from_utf8(b).map_err(NormError::io);
+    }
+    let never = AtomicBool::new(false);
+    let (raw, _) = download(
+        src,
+        (CAS_CATALOG, CAS_PIECES, CAS_FORMAT),
+        &never,
+        &mut |_, _| {},
+    )?;
+    folder
+        .put(CAS_FILE, 0, raw.len() as u64, &raw)
+        .map_err(NormError::io)?;
+    String::from_utf8(raw).map_err(NormError::io)
+}
+
+/// `normative/import-official`: the CSV the user picked becomes `normative-imported-ID.mzsus` (never uploaded); the answer is the summary JSON.
+pub fn import_official(
+    folder: &Folder,
+    src: &dyn Source,
+    (reader, file, date): (&str, &str, &str),
+    csv: &[u8],
+) -> Result<String, NormError> {
+    let side = cas_text(folder, src)?;
+    let label = serde_json::json!({"file": file, "date": date}).to_string();
+    let b = mzlab_feat::normative::official::import_official(reader, csv, &side, &label)
+        .map_err(|e| NormError::new("normative.import.err.parse", e.to_string()))?;
+    let n = u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize;
+    let (summary, raw) = (&b[4..4 + n], &b[4 + n..]);
+    let id = serde_json::from_slice::<serde_json::Value>(summary)
+        .ok()
+        .and_then(|v| v["id"].as_str().map(str::to_string))
+        .unwrap_or_default();
+    for (ext, body) in [("mzsus", raw), ("json", summary)] {
+        folder
+            .put(
+                &format!("{IMPORT_PREFIX}{id}.{ext}"),
+                0,
+                body.len() as u64,
+                body,
+            )
+            .map_err(NormError::io)?;
+    }
+    String::from_utf8(summary.to_vec()).map_err(NormError::io)
+}
+
+/// `normative/imported`: `{"lists": [...]}` with the lists of the imported files, in the shape of the catalogue of the package (`official::lists_of`, as in the browser).
+pub fn imported(folder: &Folder) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for e in folder.list("").unwrap_or_default() {
+        if !e.name.starts_with(IMPORT_PREFIX) || !e.name.ends_with(".mzsus") {
+            continue;
+        }
+        let Ok(raw) = folder.read(&e.name, 0, e.size) else {
+            continue;
+        };
+        if let Some(l) = mzlab_feat::normative::official::lists_of(&raw) {
+            let inner = l.trim_start_matches('[').trim_end_matches(']');
+            if !inner.is_empty() {
+                parts.push(inner.to_string());
+            }
+        }
+    }
+    format!("{{\"lists\":[{}]}}", parts.join(","))
 }
 
 #[cfg(test)]

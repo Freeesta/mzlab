@@ -12,7 +12,7 @@ use crate::read::Library;
 use crate::scores::{
     common_losses_with, modified_cosine, pair_scores, MatchScratch, ModCosine, Spec,
 };
-use crate::sortutil;
+use mzlab_picchi::sortc;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Tol {
@@ -144,12 +144,12 @@ pub fn identity_with<S: Source>(
             });
             // amortised pruning keeps at most 2 * top candidates alive
             if light.len() >= top.saturating_mul(2).saturating_add(64) {
-                sortutil::sort_any_by(&mut light, order);
+                sortc::any_by(&mut light, order);
                 light.truncate(top);
             }
         }
     }
-    sortutil::sort_any_by(&mut light, order);
+    sortc::any_by(&mut light, order);
     light.truncate(top);
     let mut scratch = MatchScratch::default();
     for h in light.iter_mut() {
@@ -253,7 +253,7 @@ pub fn analogs_with<S: Source>(
             spec,
         });
     }
-    sortutil::sort_any_by(&mut out, |a, b| {
+    sortc::any_by(&mut out, |a, b| {
         b.mc.cosine
             .total_cmp(&a.mc.cosine)
             .then(a.index.cmp(&b.index))

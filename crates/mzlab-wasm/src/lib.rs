@@ -522,6 +522,12 @@ pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {
     mzlab_core::elements::formula_mz(formula, if adduct.is_empty() { None } else { Some(adduct) }).map_err(|e| error_json(&e))
 }
 
+/// `api/isotope_fine` from its query string (`?n=C:13,H:25&z=1&min=0.1`): the fine isotope structure of one ion as JSON; an error is JSON with a key.
+#[wasm_bindgen]
+pub fn isotope_fine(query: &str) -> Result<String, JsValue> {
+    mzlab_core::isofine::isotope_fine_route(query).map_err(|e| error_json(&e))
+}
+
 /// `api/composition` from its query string (`?mz=...&elements=...`): the JSON of the formulas that fit, or empty when Python must answer.
 #[wasm_bindgen]
 pub fn composition(query: &str) -> String {

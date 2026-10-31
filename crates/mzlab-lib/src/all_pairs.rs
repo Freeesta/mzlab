@@ -3,6 +3,7 @@
 //! Provides dense fragment/loss binning (`bin_matrices`), upper-bound prefilter
 //! matrix products (`upper_bound`), candidate pair extraction (`pairs_above`),
 //! and greedy plain cosine scoring (`plain_cosine`).
+use mzlab_picchi::sortc::SortC;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinnedMatrices {
@@ -233,7 +234,7 @@ fn score_single_pair(m_a: &[f64], w_a: &[f64], m_b: &[f64], w_b: &[f64], tol: f6
         }
     }
 
-    candidates.sort_by(|x, y| {
+    candidates.sortc_by(|x, y| {
         y.weight
             .total_cmp(&x.weight)
             .then_with(|| x.u.cmp(&y.u))

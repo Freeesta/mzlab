@@ -46,6 +46,28 @@
     await deliver(files.filter(f => /\.dam$/i.test(f.name)), "dam");
   });
 
+  // macOS: the title bar is an overlay, so the header is the title bar (desktop-titlebar.css): the empty part of it drags the window, a double click zooms it,
+  // and in full screen (traffic lights hidden) the room kept for them is given back
+  if (/Macintosh/.test(navigator.userAgent)) {
+    const de = document.documentElement, W = T.window && T.window.getCurrentWindow();
+    de.classList.add("desk-mac");
+    const fs = async () => {
+      let on = !!document.fullscreenElement;
+      try { on = on || await W.isFullscreen(); } catch (_) { /* optional */ }
+      de.classList.toggle("desk-fs", on);
+    };
+    document.addEventListener("fullscreenchange", fs);
+    try { W.onResized(fs); } catch (_) { /* optional */ }
+    fs();
+    const bare = e => e.target === e.currentTarget || !(e.target.closest && e.target.closest("button,a,input,select,textarea,label,nav,#stbar,.hq"));
+    addEventListener("DOMContentLoaded", () => {
+      const h = document.querySelector("header");
+      if (!h) return;
+      h.addEventListener("mousedown", e => { if (e.button === 0 && e.detail === 1 && bare(e)) W.startDragging().catch(() => {}); });
+      h.addEventListener("dblclick", e => { if (bare(e)) W.toggleMaximize().catch(() => {}); });
+    });
+  }
+
   // the window title is the page's (the name is written only in appname.js)
   const title = () => { try { T.window.getCurrentWindow().setTitle(document.title); } catch (_) { /* optional */ } };
   addEventListener("DOMContentLoaded", () => {

@@ -4,10 +4,10 @@
 // name, colour, group, visibility and order of the files are one undoable action (comandi.js): the snapshot is the list of all the files
 COMANDI.gestore("files.view", {
   // the panels are part of the snapshot: hiding a file closes the panels that only showed it, and the undo opens them again
-  leggi: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]),
+  leggi: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]), u: [E.ugBy ?? null, E.ugOrder ?? null],
     p: E.panels.map((/** @type {any} */ q) => [q.id, panelRec(q), { link: q.link, src: q.src, dda: q.dda, dock: q.dock, duo: q.duo }]) }),
   applica: (_p, snap) => {
-    const { f: rows, p: panels } = JSON.parse(snap);
+    const { f: rows, p: panels, u } = JSON.parse(snap); [E.ugBy, E.ugOrder] = u || [];
     rows.forEach((/** @type {any[]} */ [file, vis, label, color, colorSet, ugrp]) => { const f = E.files.find((/** @type {any} */ x) => x.file === file); if (f) Object.assign(f, { vis, label, color, colorSet, ugrp: ugrp || undefined }); });
     rows.map((/** @type {any[]} */ r) => r[0]).filter((/** @type {string} */ n) => E.files.some((/** @type {any} */ f) => f.file === n)).forEach((/** @type {string} */ n, /** @type {number} */ i) => {      // the order back, one move at a time (reorderFiles renumbers the panels)
       if (E.files[i].file !== n) { const j = E.files.findIndex((/** @type {any} */ f) => f.file === n); reorderFiles(E.files[j].k, E.files[i].k, true); }
@@ -97,6 +97,11 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
 }
 function bindListaFile() {
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
+  // the × of a row: removes the file (Undo within 6 s)
+  if (!L.dataset.cap) L.addEventListener("click", e => {
+    const x = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".fl-x")); if (!x) return;
+    e.stopPropagation(); e.preventDefault(); const g = E.files[+(x.dataset.rm || -1)]; if (g && !g.gone) removeFile(g);
+  }, true);
   L.ondblclick = e => {
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
     const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");
@@ -118,6 +123,7 @@ function bindListaFile() {
     if (hd) groupCtx(ev, hd.dataset.ug || ""); else fileCtx(ev, fileOf(row?.querySelector(".nm") || null, ".nm"));
   });
   L.dataset.cap = "1";
+  const by = document.getElementById("sb-by"); if (by && !by.onclick) by.onclick = () => carica("gruppi.js").then(() => carica("gruppi-per.js")).then(() => GRUPPIPER.open());
   // a user group header: its menu; a double click renames it (the first click folds and redraws the list, so the second click, not dblclick, carries it)
   L.querySelectorAll(".fgh[data-ug]").forEach(x => {
     const el = /** @type {HTMLElement} */ (x), fold = el.onclick, n = el.dataset.ug || "";
@@ -180,7 +186,7 @@ function migrateBrowse(/** @type {any} */ u) {
 // the files of the side list: the bench lists only the experiments with spectra (its MRM files have their own list)
 const flSide = () => E.files.filter(x => !x.gone && (lrTog() || (ESP.voce(x.kind) || { spettri: true }).spettri));
 const ugFiles = (/** @type {string} */ n) => E.files.filter(x => !x.gone && x.ugrp === n);
-const ugSet = (/** @type {any[]} */ fs, /** @type {string} */ v) => { fileViewDo(() => fs.forEach(x => { x.ugrp = v || undefined; })); renderFileList(); uiSave(); };
+const ugSet = (/** @type {any[]} */ fs, /** @type {string} */ v) => { fileViewDo(() => { fs.forEach(x => { x.ugrp = v || undefined; }); E.ugBy = { by: "custom" }; }); renderFileList(); uiSave(); };
 // the physical files ticked in the list (a DDA file brings both its parts)
 const ugBases = () => new Set(flSide().filter(x => x.vis).map(x => fileBase(x.file)));
 function groupFiles() {

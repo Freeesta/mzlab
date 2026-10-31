@@ -246,8 +246,7 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
   out.panel=g;return out}
 // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 let CONVERT_RAW=false;
-const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcdx)$/i;
-function fileKind(/** @type {string} */ name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return null;const m=UNOPEN_RE.exec(n);return m?m[0]:"other"}
+function fileKind(/** @type {string} */ name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return null;return window.FORMATI_NOTI.classify(n)||"other"}
 function ssGet(/** @type {string} */ k){try{return sessionStorage.getItem(k)}catch(e){return null}}
 function ssSet(/** @type {string} */ k,/** @type {string} */ v){try{sessionStorage.setItem(k,v)}catch(e){}}
 const SEEN_GROUPS=new Set();
@@ -261,9 +260,10 @@ function openConvHelp(/** @type {boolean} */ focus){const d=$("#convhelp");d.hid
 function reportLoad(/** @type {CaricaRep} */ rep){
   const u=$("#unopen"),L=/** @type {string[]} */ ([]),T=/** @type {(k: string, p?: unknown) => string} */ ((k,p)=>I18N.t(k,p));let conv=/** @type {string[]} */ ([]);
   if(rep.unopen.length){
-    const by=/** @type {Record<string, number>} */ ({});rep.unopen.forEach(x=>{by[x.ext]=(by[x.ext]||0)+1;conv.push(x.ext)});
-    const types=Object.keys(by).join(", "),n=rep.unopen.length,names=rep.unopen.map(x=>x.name);
-    L.push(`<p><b>${T(n===1?"unopen.head.one":"unopen.head",{n,types})}</b></p>`);
+    // a known vendor format, one line per format: «SCIEX .wiff2 — recognised, not supported yet»
+    const by=/** @type {Record<string, { x: { label: string, st: string }, n: number }>} */ ({}),names=rep.unopen.map(x=>x.name);
+    rep.unopen.forEach(x=>{(by[x.label+x.st]=by[x.label+x.st]||{x,n:0}).n++;conv.push(x.ext)});
+    for(const {x,n} of Object.values(by))L.push(`<p><b>${T(x.st==="read"?(n===1?"unopen.known.conv.one":"unopen.known.conv"):(n===1?"unopen.known.no.one":"unopen.known.no"),{n,label:esc(x.label)})}</b></p>`);
     L.push(`<details class="unopen-names"><summary>${T("unopen.names")}</summary><ul>${names.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join("")}${names.length>5?`<li class="muted">${T("unopen.more",{n:names.length-5})}</li>`:""}</ul></details>`)}
   if(rep.other.length)L.push(`<p>${T("unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
   const DG=/** @type {unknown[]} */ ([]);
@@ -346,7 +346,9 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   if(files.some(f=>/\.json$/i.test(f.name))){await carica("m:infusione-grafo-apri.js");files=await INFGAPRI.take(files,rep)}
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
   const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await moduloToMzml(files,box,rep);panel=/** @type {FileCarica[] & { panel?: typeof panel }} */ (files).panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
-  files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
+  files=files.filter(f=>!CartCarica.byproduct(f.name));
+  if(files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");
+  files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false});
   // the same group dropped again: no second notice
   if(rep.unopen.length){const h=groupHash(/** @type {FileCarica[]} */ (rep.unopen.map(x=>rejected.find(f=>f.name===x.name))));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}
   // a folder of more than 50 data files asks once: «Choose» brings them in unticked

@@ -155,6 +155,7 @@ impl State {
                 text("{}")
             }
             "lr_valida" => self.validate_mzml(s("name")),
+            "lr_isotope_fine" => text(mzlab_core::isofine::isotope_fine_route(s("query"))?),
             "lr_composition" => text(mzlab_core::comproute::composition_route(&q()).unwrap_or_default()),
             "lr_stat" => match mzlab_core::statroute::stat_route(s("path"), s("body")) {
                 None => text(""),

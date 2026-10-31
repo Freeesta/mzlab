@@ -6,8 +6,8 @@ use crate::frag_tol::FragTol;
 use crate::io::Source;
 use crate::read::Library;
 use crate::search::{identity_with, IdentityOpts, Query};
-use crate::sortutil;
 use crate::spec::Spectrum;
+use mzlab_picchi::sortc;
 
 /// Accession prefix that marks a decoy entry in the metadata.
 pub const DECOY_PREFIX: &str = "DECOY:";
@@ -222,8 +222,8 @@ pub fn lib_fdr(scores_target: &[f32], scores_decoy: &[f32], kind: DecoyKind) -> 
     let finite = |v: &[f32]| -> Vec<f32> { v.iter().cloned().filter(|x| x.is_finite()).collect() };
     let mut t = finite(scores_target);
     let mut d = finite(scores_decoy);
-    sortutil::sort_by(&mut t, |a, b| b.total_cmp(a));
-    sortutil::sort_by(&mut d, |a, b| b.total_cmp(a));
+    sortc::by(&mut t, |a, b| b.total_cmp(a));
+    sortc::by(&mut d, |a, b| b.total_cmp(a));
     // distinct target scores from the lowest: running minimum of the FDR; both counts move with linear pointers (`t[..i]` and `d[..j]` hold the
     // scores >= the current one)
     let mut q_of: Vec<(f32, LibFdr)> = Vec::new();

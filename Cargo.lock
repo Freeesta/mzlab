@@ -2473,6 +2473,7 @@ name = "mzlab-lib"
 version = "1.0.0"
 dependencies = [
  "mzlab-core",
+ "mzlab-picchi",
  "ruzstd",
  "serde_json",
 ]
@@ -2536,6 +2537,15 @@ dependencies = [
 
 [[package]]
 name = "mzlab-msnregole-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-normative-wasm"
 version = "1.0.0"
 dependencies = [
  "mzlab-core",

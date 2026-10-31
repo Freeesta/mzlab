@@ -26,6 +26,7 @@ jobs:
       rust: ${{ steps.diff.outputs.rust }}
       core: ${{ steps.diff.outputs.core }}
       deny: ${{ steps.diff.outputs.deny }}
+      misca: ${{ steps.diff.outputs.misca }}
     steps:
       # the diff compares two trees, so the head commit and the base commit are enough (a full clone took 130-215 s); a base that cannot be fetched falls through to "run everything"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -35,7 +36,7 @@ jobs:
         run: |
           if [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$'; then git fetch --no-tags --depth=1 origin "$BASE" || true; fi
           if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$' || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            echo "rust=true" >> "$GITHUB_OUTPUT"; echo "core=true" >> "$GITHUB_OUTPUT"; echo "deny=true" >> "$GITHUB_OUTPUT"; exit 0
+            echo "rust=true" >> "$GITHUB_OUTPUT"; echo "core=true" >> "$GITHUB_OUTPUT"; echo "deny=true" >> "$GITHUB_OUTPUT"; echo "misca=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|vendor/|Cargo\.|rust-toolchain\.toml|\.cargo/|\.github/workflows/rust\.yml|deny\.toml|tools/controlla_rust\.py|tools/ci_binari_test\.py|tools/ci_cargo_mtime\.py|tools/clippy_base\.json|tools/feat_mirato\.py|tests/test_feat_wasm\.py|tests/feat_wasm_node\.js|tests/test_guardie_memoria\.py)'; then
             echo "rust=true" >> "$GITHUB_OUTPUT"
@@ -47,6 +48,15 @@ jobs:
             echo "core=true" >> "$GITHUB_OUTPUT"
           else
             echo "core=false" >> "$GITHUB_OUTPUT"
+          fi
+          # rust-misc-a tests Attributio, chem, tutor, llm: it runs only when one of those crates, or a crate they depend on, changed (tools/ci_crates_toccati.py; the stable toolchain
+          # of the runner is enough for `cargo metadata`, the pinned one is not installed here). Any doubt (script failure, workflow or test-runner change) runs it.
+          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(\.github/workflows/rust\.yml|tools/ci_binari_test\.py|tools/ci_crates_toccati\.py)$'; then
+            echo "misca=true" >> "$GITHUB_OUTPUT"
+          else
+            aff=$(RUSTUP_TOOLCHAIN=stable python3 tools/ci_crates_toccati.py "$BASE" "$GITHUB_SHA") || aff=ALL
+            echo "affected crates: $aff"
+            if [ "$aff" = ALL ] || echo " $aff " | grep -qE ' mzlab-(attributio-wasm|chem|chem-wasm|tutor|llm|llm-wasm) '; then echo "misca=true" >> "$GITHUB_OUTPUT"; else echo "misca=false" >> "$GITHUB_OUTPUT"; fi
           fi
           # deny checks licences and sources of the dependencies: it runs only when manifests, lockfile, deny.toml, vendor/ or this workflow changed
           if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '(^|/)Cargo\.(toml|lock)$|^deny\.toml$|^vendor/|^\.github/workflows/rust\.yml$'; then
@@ -398,7 +408,7 @@ jobs:
 
   rust-misc-a:
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    if: needs.changes.outputs.rust == 'true' && needs.changes.outputs.misca == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -541,14 +551,17 @@ jobs:
           CORE: ${{ needs.rust-core.result }}
           DENY_DIFF: ${{ needs.changes.outputs.deny }}
           DENY: ${{ needs.deny.result }}
-          JOBS: ${{ needs.rust.result }} ${{ needs.rust-misc-a.result }} ${{ needs.rust-misc-b.result }} ${{ needs.rust-wasm.result }} ${{ needs.rust-wasm-guardie.result }} ${{ needs.rust-det.result }} ${{ needs.rust-lint.result }}
+          MISCA_DIFF: ${{ needs.changes.outputs.misca }}
+          MISCA: ${{ needs.rust-misc-a.result }}
+          JOBS: ${{ needs.rust.result }} ${{ needs.rust-misc-b.result }} ${{ needs.rust-wasm.result }} ${{ needs.rust-wasm-guardie.result }} ${{ needs.rust-det.result }} ${{ needs.rust-lint.result }}
         run: |
-          echo "changes: $CHANGES (rust=$RUST_DIFF core=$CORE_DIFF); rust-core: $CORE; rust rust-misc-a rust-misc-b rust-wasm rust-wasm-guardie rust-det rust-lint: $JOBS; deny: $DENY (deny=$DENY_DIFF)"
+          echo "changes: $CHANGES (rust=$RUST_DIFF core=$CORE_DIFF); rust-core: $CORE; rust-misc-a: $MISCA (misca=$MISCA_DIFF); rust rust-misc-b rust-wasm rust-wasm-guardie rust-det rust-lint: $JOBS; deny: $DENY (deny=$DENY_DIFF)"
           [ "$CHANGES" = "success" ] || exit 1
-          case "$JOBS $CORE $DENY" in *failure*|*cancelled*) exit 1;; esac
+          case "$JOBS $CORE $DENY $MISCA" in *failure*|*cancelled*) exit 1;; esac
           # with a Rust diff nothing may be skipped, except rust-core when none of its paths changed
           if [ "$RUST_DIFF" = "true" ]; then
             case "$JOBS" in *skipped*) exit 1;; esac
             if [ "$CORE_DIFF" = "true" ]; then [ "$CORE" = "success" ] || exit 1; else [ "$CORE" = "skipped" ] || exit 1; fi
             if [ "$DENY_DIFF" = "true" ]; then [ "$DENY" = "success" ] || exit 1; else [ "$DENY" = "skipped" ] || exit 1; fi
+            if [ "$MISCA_DIFF" = "true" ]; then [ "$MISCA" = "success" ] || exit 1; else [ "$MISCA" = "skipped" ] || exit 1; fi
           fi

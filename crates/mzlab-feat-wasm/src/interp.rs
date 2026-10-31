@@ -20,6 +20,7 @@ use mzlab_feat::store::{read_table_from, Slice};
 use wasm_bindgen::prelude::*;
 
 use crate::{js_err, to_sink, JsReader};
+use mzlab_feat::sortc::SortC;
 
 /// The `.mzfeat` of `table_read` (`size` bytes) with the block `interp`, written to `write(offset, bytes)`: `{"bytes", "sha256"}`. The `.mzidx` of the
 /// series come as `index_read(k, offset, length)` with `index_sizes[k]` bytes; `infusion` is the position of the infusion file in the series (-1 when there
@@ -184,7 +185,7 @@ pub fn refilter_text(
     let (hyps, _, _) = series::registry(hypotheses)
         .map_err(|e| Error::new("error.interp.failed").with("detail", e))?;
     let mut hyps: Vec<_> = hyps.into_iter().collect();
-    hyps.sort_by_key(|h| h.0);
+    hyps.sortc_by_key(|h| h.0);
     let hyps: Vec<_> = hyps.into_iter().map(|h| h.1).collect();
     let reg = refilter(&mut Slice(tp), tp.len() as u64, &hyps, &filter_params(get))?;
     Ok(filtri_json(&reg))

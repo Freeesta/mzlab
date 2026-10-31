@@ -8,6 +8,7 @@ mod source;
 
 use crate::adducts::{NEG_ADDUCTS, POS_ADDUCTS, PPM};
 use crate::regulatory::{write_member, write_words};
+use crate::sortc::SortC;
 use crate::store::{origin_from_meta, read_meta_mz_rt};
 use evidence::{formula_set, fragments_of, matched, read_scans, supports};
 use mzlab_core::error::{Error, Result};
@@ -175,7 +176,7 @@ pub fn screen_text(
                 .map(|s| fragments_of(s, &id, mz, rt, (p.ppm * mz * 1e-6).max(0.01), p.ms2_rt_min)),
         );
         let mut own = own;
-        own.sort_unstable_by(|a, b| {
+        own.sortc_by(|a, b| {
             a.delta()
                 .abs()
                 .total_cmp(&b.delta().abs())
@@ -187,7 +188,7 @@ pub fn screen_text(
         own.truncate(p.max_hits_per_feature);
         groups.extend(own);
     }
-    groups.sort_unstable_by(|a, b| {
+    groups.sortc_by(|a, b| {
         (a.feature.cmp(&b.feature))
             .then_with(|| a.adduct.cmp(b.adduct))
             .then_with(|| a.delta().total_cmp(&b.delta()))
@@ -302,7 +303,7 @@ fn group_at(
 /// The candidates of every group in a fixed order, whatever the order the files gave them.
 fn sort_cands(out: &mut [Group]) {
     for g in out {
-        g.cands.sort_unstable_by(|a, b| {
+        g.cands.sortc_by(|a, b| {
             a.entry
                 .skeleton
                 .cmp(&b.entry.skeleton)

@@ -9,6 +9,7 @@ use crate::libinfo::Kind;
 use crate::libset::LibSet;
 use crate::search::{AnalogHit, AnalogOpts, Hit, IdentityOpts, Query, Tol};
 use crate::spec::Meta;
+use mzlab_picchi::sortc::SortC;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Badge {
@@ -367,14 +368,14 @@ fn group_by_compound<S: Source>(
         }
     }
     for c in &mut compounds {
-        c.spectra.sort_by(|a, b| {
+        c.spectra.sortc_by(|a, b| {
             b.score
                 .total_cmp(&a.score)
                 .then(a.lib.cmp(&b.lib))
                 .then(a.index.cmp(&b.index))
         });
     }
-    compounds.sort_by(|a, b| {
+    compounds.sortc_by(|a, b| {
         a.badge
             .rank()
             .cmp(&b.badge.rank())

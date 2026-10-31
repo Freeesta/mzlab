@@ -1,7 +1,7 @@
 //! GNPS-style cosine and its matching on prepared peaks (windowed over sorted m/z).
 
 use super::{ascending, window_of, Spec};
-use crate::sortutil;
+use mzlab_picchi::sortc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GnpsMatch {
@@ -66,7 +66,7 @@ pub fn gnps_match_prepared(
             }
         }
     }
-    sortutil::sort_by(&mut c, |x, y| {
+    sortc::by(&mut c, |x, y| {
         y.2.total_cmp(&x.2)
             .then(x.3.cmp(&y.3))
             .then(y.0.cmp(&x.0))

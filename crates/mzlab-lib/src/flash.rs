@@ -10,7 +10,8 @@ use crate::frag_tol::FragTol;
 use crate::io::Source;
 use crate::read::{Library, Light, LightRec};
 use crate::search::Query;
-use crate::sortutil;
+use crate::topk;
+use mzlab_picchi::sortc;
 use std::ops::Range;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -372,8 +373,8 @@ pub fn flash_top<S: Source>(
     acc.reset();
     let mut out = r?;
     match keep {
-        Some(k) => sortutil::keep_first(&mut out, k, by_score),
-        None => sortutil::sort_by(&mut out, by_score),
+        Some(k) => topk::keep_first(&mut out, k, by_score),
+        None => sortc::by(&mut out, by_score),
     }
     Ok(out)
 }

@@ -165,6 +165,9 @@ fn descriptor_export_is_up_to_date() {
         crate::flow_digl::uv::uv_step(),
         crate::flow_quant::quant_step(),
         crate::flow_massacc::massacc_step(),
+        mzlab_feat::steps::run_order(),
+        mzlab_feat::steps::methods(),
+        mzlab_feat::steps::export_annotations(),
         crate::flow_lookup::lookup_step(),
         mzlab_feat::steps::table_match(),
     ]);
