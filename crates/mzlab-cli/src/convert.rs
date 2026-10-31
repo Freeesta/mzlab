@@ -175,6 +175,10 @@ fn sample_ids(p: &Path) -> Vec<u32> {
 
 /// `NAME.mzML` or `NAME-ID.mzML`, NAME without its extension unless `long`.
 fn out_name(name: &str, id: Option<u32>, long: bool) -> String {
+    let name = name
+        .strip_suffix(".gz")
+        .filter(|_| name.to_lowercase().ends_with(".mzml.gz"))
+        .unwrap_or(name);
     let base = if long {
         name
     } else {
