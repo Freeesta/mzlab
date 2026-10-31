@@ -159,6 +159,8 @@
     if (!on) return;
     showTabs();
   }
+  // for callers (tests, tools) that need the package without opening a tab: same promise as the idle start
+  /** @type {any} */ (reg).ensure = ensureLoaded;
   // the package downloads after the page is usable (qqReady, then an idle moment), or at once when a tool tab is used first
   const BUILTIN = new Set(["data", "draw", "theory"]);
   function turnOn() {
@@ -168,7 +170,9 @@
     document.querySelectorAll("#nav [data-late]").forEach(b => { const el = /** @type {HTMLElement} */ (b); if (!el.dataset.v || tabs.has(el.dataset.v)) return; el.onclick = () => { const id = /** @type {string} */ (el.dataset.v); ensureLoaded().then(() => { if (tabs.has(id)) openView(id); }); }; });
     document.addEventListener("tpview", ev => { const v = /** @type {CustomEvent} */ (ev).detail.view; if (!BUILTIN.has(v)) ensureLoaded(); });
     const idle = () => { const run = () => { ensureLoaded(); }; if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 3000 }); else setTimeout(run, 1000); };
-    const wait = setInterval(() => { if (window.qqReady) { clearInterval(wait); idle(); } }, 200);
+    // without an engine qqReady never comes (plain web folder, failed engine): start anyway after a long delay
+    const t0 = Date.now();
+    const wait = setInterval(() => { if (window.qqReady || Date.now() - t0 > 15000) { clearInterval(wait); idle(); } }, 200);
   }
   const start = () => {
     if ((window.MZLAB_BROWSER || window.MZLAB_DESKTOP) && !window.MZLAB_LAB) { if (!on) turnOn(); }
