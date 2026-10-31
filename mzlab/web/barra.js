@@ -190,6 +190,7 @@ const BARRA = (() => {
   // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
     document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");
+    if (typeof AVVIO !== "undefined" && AVVIO.segnaRiga && inData()) AVVIO.segnaRiga({ s: _appliedW + "px" });
   }
 
   // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized
@@ -245,6 +246,7 @@ const BARRA = (() => {
       v.classList.toggle("sb-sheet", shown && sheet());
       aside.toggleAttribute("inert", !shown);
       aside.setAttribute("aria-hidden", shown ? "false" : "true");
+      if (inData() && typeof AVVIO !== "undefined" && AVVIO.segnaRiga) AVVIO.segnaRiga({ o: shown ? (_side === "right" ? "r" : "l") : "" });
       if (change) { applyWidth(); refitNow(); }
     };
     if (change && inData() && window.TRANS) TRANS.layout({ aside, was, shown, moved }, apply); else apply();

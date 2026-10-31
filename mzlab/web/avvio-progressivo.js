@@ -108,7 +108,7 @@ const AVVIO = (function () {
     try {
       const k = typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione") : "mzlab.sessione";
       if (attiva) window.localStorage.setItem(k, "1");
-      else window.localStorage.removeItem(k);
+      else { window.localStorage.removeItem(k); segnaRiga(null); }
     } catch (_) {}
   }
 
@@ -120,6 +120,62 @@ const AVVIO = (function () {
     } catch (_) { return false; }
   }
 
+  const BOTTONI_RIGA = ["np-chrom", "np-spec", "np-map", "np-xic", "np-mrm"];
+
+  function chiaveRiga() {
+    return typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione.riga") : "mzlab.sessione.riga";
+  }
+
+  /**
+   * Remembers the second toolbar row of the Dati view (which "+ panel" buttons it has and the label of the file selector), so that the
+   * next restore draws it at its final size in the first paint. `null` forgets it (high-resolution bench, no session).
+   * @param {{a?: number[], f?: string, fw?: number, s?: string, o?: string} | null} riga a: which buttons, f: file selector label, fw: its width, s: side panel width, o: its side l|r or empty when closed (merged into what is stored)
+   */
+  function segnaRiga(riga) {
+    if (typeof window === "undefined" || !window.localStorage) return;
+    try {
+      if (riga) window.localStorage.setItem(chiaveRiga(), JSON.stringify({ ...JSON.parse(window.localStorage.getItem(chiaveRiga()) || "{}"), ...riga }));
+      else window.localStorage.removeItem(chiaveRiga());
+    } catch (_) {}
+  }
+
+  function leggiRiga() {
+    try {
+      const r = JSON.parse(window.localStorage.getItem(chiaveRiga()) || "null");
+      if (r && Array.isArray(r.a) && r.a.length === BOTTONI_RIGA.length && r.a.every(/** @param {any} x */ x => x === 0 || x === 1) && typeof r.f === "string" && typeof r.fw === "number" && /^\d{2,4}px$/.test(r.s || "") && ["", "l", "r"].includes(r.o)) return r;
+    } catch (_) {}
+    return null;
+  }
+
+  // The work area of a saved session is in the first paint, with the row of "+ panel" buttons at its final size; it ignores clicks until the session is back
+  function mostraAreaRipristino() {
+    if (typeof document === "undefined" || !haSessione()) return false;
+    const v = document.getElementById("v-data"), st = document.getElementById("start"), t = document.getElementById("tools");
+    const riga = leggiRiga();
+    if (!v || !st || !t || !riga) return false;
+    BOTTONI_RIGA.forEach((id, i) => { const b = document.getElementById(id); if (b) b.hidden = !riga.a[i]; });
+    const sel = /** @type {HTMLSelectElement | null} */ (document.getElementById("fsel"));
+    if (sel && !sel.options.length) { sel.add(new Option(riga.f)); sel.style.width = riga.fw + "px"; }
+    document.documentElement.style.setProperty("--sb-w", riga.s);
+    // the side panel as the last session left it (barra.js applyLayout: below 900 px an open panel is a sheet)
+    const aside = document.getElementById("dfiles");
+    v.classList.toggle("sb-open", !!riga.o); v.classList.toggle("sb-right", riga.o === "r"); v.classList.toggle("sb-sheet", !!riga.o && window.innerWidth < 900);
+    if (aside) aside.toggleAttribute("inert", !riga.o);
+    st.hidden = true; v.hidden = false; v.classList.add("ripristino"); t.setAttribute("inert", "");
+    return true;
+  }
+
+  // `torna`: the session did not come back, so the start screen takes the place of the area drawn in advance
+  function finisciRipristino(torna) {
+    if (typeof document === "undefined") return;
+    const v = document.getElementById("v-data"), t = document.getElementById("tools"), st = document.getElementById("start");
+    if (torna && v && v.classList.contains("ripristino")) { v.hidden = true; if (st) st.hidden = false; }
+    if (v) v.classList.remove("ripristino");
+    const sel = document.getElementById("fsel");
+    if (sel) sel.style.width = "";
+    if (t) t.removeAttribute("inert");
+  }
+
   function applicaIndizioSessione() {
     if (typeof document === "undefined") return;
     const d = document.getElementById("drop");
@@ -127,6 +183,7 @@ const AVVIO = (function () {
     const ha = haSessione();
     // the skeleton takes the height of the drop box it replaces: when the session turns out not to exist, nothing moves
     if (d && ha && !d.hidden && d.getBoundingClientRect().height > 0 && s) s.style.minHeight = d.getBoundingClientRect().height + "px";
+    mostraAreaRipristino();
     if (d) d.hidden = ha;
     if (s) {
       s.hidden = !ha;
@@ -140,6 +197,7 @@ const AVVIO = (function () {
     const s = document.getElementById("drop-skeleton");
     if (d) d.hidden = false;
     if (s) s.hidden = true;
+    finisciRipristino(true);
   }
 
   /**
@@ -161,6 +219,7 @@ const AVVIO = (function () {
   function segnaPronto() {
     if (stato !== "pending") return;
     stato = "ready";
+    finisciRipristino(false);
     if (bootTimer) { clearTimeout(bootTimer); bootTimer = null; }
     timedOut = false;
     const coda = attesa;
@@ -299,6 +358,7 @@ const AVVIO = (function () {
     renderDropStato,
     renderFase,
     segnaSessione,
+    segnaRiga,
     haSessione,
     applicaIndizioSessione,
     rimuoviScheletro,
