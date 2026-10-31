@@ -67,7 +67,7 @@ export function makeNativo(h) {
       if (r.cancelled || signal && signal.aborted) { drop(); throw cancelled(); }
       if (r.dead || r.error) { drop(); throw fail(r, "err.file.mzmlWrite"); }
       // desktop app: the mzML is on the disk, saved from there (conversione.js download)
-      if (r.tid != null) return Object.assign(new Blob([]), { mzlabId: r.tid });
+      if (r.tid != null) return Object.assign(new Blob([]), { mzlabId: r.tid, mzlabSize: r.size });
       return r.file || new Blob(r.parts, { type: "application/xml" });
     },
   };

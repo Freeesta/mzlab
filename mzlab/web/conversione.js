@@ -17,10 +17,11 @@ const CONV = {
     const total = todo.reduce((/** @type {number} */ a, /** @type {Bag} */ x) => a + (x.size || 0), 0) * (this.RATIO[this.compression] || 1);
     return total ? "≈ " + (total > 1e6 ? (total / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1e3)) + " kB") : "";
   },
-  // the real size of the mzML already written for `name` ("" if unknown: in the desktop app the file stays on the disk)
+  // the real size of the mzML already written for `name` (in the desktop app the file stays on the disk and its size comes from the native side)
   realSize(/** @type {string} */ name) {
     const b = this.files.get(name) || this.made.get(this.key(name));
-    return b && b.size ? (b.size > 1e6 ? (b.size / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(b.size / 1e3)) + " kB") : "";
+    const n = b ? b.size || /** @type {any} */ (b).mzlabSize || 0 : 0;
+    return n ? (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " kB") : "";
   },
   made: new Map(),        // name -> mzML written on request for a sample of a maker's file (nativo.js)
   add(/** @type {string} */ name, /** @type {Blob} */ blob) { this.files.set(name, blob); },

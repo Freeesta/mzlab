@@ -71,9 +71,9 @@ async function handle(m) {
           try { const p = await (await get("rawprogress", { id })).json(); if (p.scansTotal) postMessage({ id, op: "progress", written: p.written, scans: p.scans, scansTotal: p.scansTotal }); } catch (_) { /* optional */ }
         }, 300);
         let out;
-        try { out = await (await post("rpc", undefined, JSON.stringify({ op: m.op, name: m.name, pid: id, numpress: !!m.numpress }))).json(); } finally { clearInterval(poll); }
+        try { out = await (await post("rpc", undefined, JSON.stringify({ op: m.op, name: m.name, pid: id, compression: m.compression || "standard" }))).json(); } finally { clearInterval(poll); }
         if (out.none) { postMessage({ id, op: m.op, none: true }); return; }          // mzml2cen: no profile spectrum, nothing to reduce
-        postMessage({ id, op: m.op, n: 0, parts: [], tid: out.id });
+        postMessage({ id, op: m.op, n: 0, parts: [], tid: out.id, size: out.size });
         return;
       }
       case "close": await get("close", { slot: m.slot }); await post("rpc", undefined, JSON.stringify({ op: "close", slot: m.slot })); break;

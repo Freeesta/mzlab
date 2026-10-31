@@ -135,8 +135,8 @@ impl State {
         let table = crate::idxbuild::decode_inputs(body)?;
         let st = self.indexer()?.build(&p.path, name, Some(&table))?;
         Ok(format!(
-            "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"size\":{}}}",
-            st.scans, st.peaks, st.sections, st.passes, st.bytes
+            "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"size\":{},\"missing\":{}}}",
+            st.scans, st.peaks, st.sections, st.passes, st.bytes, st.missing
         ))
     }
 

@@ -21,6 +21,37 @@ fn state(dir: &std::path::Path) -> State {
     st
 }
 
+/// The three compressions of the download dialog: the files differ, Uncompressed is the largest, a name it does not know is refused. Three scans are too few
+/// for Numpress to win (the order Smallest < Standard is shown by the site test).
+fn check_compressions(st: &State) {
+    let r = |op: &str, p: Value| st.rpc(op, &p, &[]);
+    let size_of = |kind: &str, pid: u32| -> u64 {
+        let o: Value = serde_json::from_str(&text(
+            r(
+                "nat2mzml",
+                json!({"name": "x", "pid": pid, "compression": kind}),
+            )
+            .unwrap(),
+        ))
+        .unwrap();
+        o["size"].as_u64().unwrap()
+    };
+    let (standard, smallest, none) = (
+        size_of("standard", 8),
+        size_of("smallest", 9),
+        size_of("none", 10),
+    );
+    assert!(
+        none > standard && smallest != standard,
+        "{none} {standard} {smallest}"
+    );
+    assert!(r(
+        "nat2mzml",
+        json!({"name": "x", "pid": 11, "compression": "zip"})
+    )
+    .is_err());
+}
+
 #[test]
 fn a_native_d_is_listed_indexed_read_and_written_as_mzml() {
     let dir = tempfile::tempdir().unwrap();
@@ -65,6 +96,7 @@ fn a_native_d_is_listed_indexed_read_and_written_as_mzml() {
     ))
     .unwrap();
     assert!(out["size"].as_u64().unwrap() > 500, "{out}");
+    check_compressions(&st);
 
     let st2 = state(dir.path()); // a new run of the app on the same folders
     let boot = text(st2.rpc("lr_boot", &json!({}), &[]).unwrap());

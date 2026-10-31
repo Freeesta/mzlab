@@ -67,6 +67,8 @@ pub struct Stats {
     /// Times the stream was decoded.
     pub passes: usize,
     pub bytes: u64,
+    /// Spectra the file declares beyond the ones it holds (a truncated mzML; 0 when the count is not known).
+    pub missing: usize,
 }
 
 pub(crate) trait Num: Copy + Default + Send {
@@ -983,6 +985,7 @@ pub(crate) fn build_dopo(
         sections: infos.len(),
         passes,
         bytes: total,
+        missing: table.declared.saturating_sub(n_scans),
     })
 }
 
