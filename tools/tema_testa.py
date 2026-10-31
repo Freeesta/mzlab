@@ -7,7 +7,7 @@ from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 OPEN, CLOSE = "<!--tema-->", "<!--/tema-->"
-LIGHT = {"app": "#f7f8fa", "teoria": "#fbfbf9"}   # the --bg of each page in the light theme (the dark one is #14171b); "teoria" is the page style of tools/libro
+LIGHT = {"app": "#f7f8fa"}   # the --bg of each page in the light theme (the dark one is #14171b)
 DARK = "#14171b"
 
 # data-theme comes from the parent page (when embedded) or from the saved preference «mzlab.prefs» (the old «qqq.prefs» until migrated); «auto» sets

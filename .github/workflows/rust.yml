@@ -44,19 +44,19 @@ jobs:
             echo "rust=false" >> "$GITHUB_OUTPUT"
           fi
           # rust-core covers crates with no other project dependency: it runs only when one of them, the toolchain, the lockfile or the golden data changed
-          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/mzlab-(core|lettori|lib|libro|mol|target)/|Cargo\.|rust-toolchain\.toml|vendor/|\.cargo/|tests/golden/|tools/ci_binari_test\.py|tools/ci_cargo_mtime\.py|\.github/workflows/rust\.yml)'; then
+          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/mzlab-(core|lettori|lib|mol|target)/|Cargo\.|rust-toolchain\.toml|vendor/|\.cargo/|tests/golden/|tools/ci_binari_test\.py|tools/ci_cargo_mtime\.py|\.github/workflows/rust\.yml)'; then
             echo "core=true" >> "$GITHUB_OUTPUT"
           else
             echo "core=false" >> "$GITHUB_OUTPUT"
           fi
-          # rust-misc-a tests Attributio, chem, tutor, llm: it runs only when one of those crates, or a crate they depend on, changed (tools/ci_crates_toccati.py; the stable toolchain
+          # rust-misc-a tests Attributio, chem, llm: it runs only when one of those crates, or a crate they depend on, changed (tools/ci_crates_toccati.py; the stable toolchain
           # of the runner is enough for `cargo metadata`, the pinned one is not installed here). Any doubt (script failure, workflow or test-runner change) runs it.
           if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(\.github/workflows/rust\.yml|tools/ci_binari_test\.py|tools/ci_crates_toccati\.py)$'; then
             echo "misca=true" >> "$GITHUB_OUTPUT"
           else
             aff=$(RUSTUP_TOOLCHAIN=stable python3 tools/ci_crates_toccati.py "$BASE" "$GITHUB_SHA") || aff=ALL
             echo "affected crates: $aff"
-            if [ "$aff" = ALL ] || echo " $aff " | grep -qE ' mzlab-(attributio-wasm|chem|chem-wasm|tutor|llm|llm-wasm) '; then echo "misca=true" >> "$GITHUB_OUTPUT"; else echo "misca=false" >> "$GITHUB_OUTPUT"; fi
+            if [ "$aff" = ALL ] || echo " $aff " | grep -qE ' mzlab-(attributio-wasm|chem|chem-wasm|llm|llm-wasm) '; then echo "misca=true" >> "$GITHUB_OUTPUT"; else echo "misca=false" >> "$GITHUB_OUTPUT"; fi
           fi
           # deny checks licences and sources of the dependencies: it runs only when manifests, lockfile, deny.toml, vendor/ or this workflow changed
           if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '(^|/)Cargo\.(toml|lock)$|^deny\.toml$|^vendor/|^\.github/workflows/rust\.yml$'; then
@@ -65,7 +65,7 @@ jobs:
             echo "deny=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # The Rust jobs run in parallel (own caches, own target/): lint (fmt, clippy), wasm (builds, guards), det (determinism, native vs WASI), and the native tests in groups of crates (rust: mzlab-feat, rust-core: engine, readers, libraries, rust-misc-a: Attributio, chem, tutor, llm, rust-misc-b: all the others).
+  # The Rust jobs run in parallel (own caches, own target/): lint (fmt, clippy), wasm (builds, guards), det (determinism, native vs WASI), and the native tests in groups of crates (rust: mzlab-feat, rust-core: engine, readers, libraries, rust-misc-a: Attributio, chem, llm, rust-misc-b: all the others).
   rust-lint:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
@@ -391,7 +391,7 @@ jobs:
           CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
         run: |
           # one build, then the test binaries four at a time (tools/ci_binari_test.py), one log group per binary
-          python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-core -p mzlab-lettori -p mzlab-lib -p mzlab-libro -p mzlab-mol -p mzlab-target
+          python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-core -p mzlab-lettori -p mzlab-lib -p mzlab-mol -p mzlab-target
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
         if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
@@ -440,7 +440,7 @@ jobs:
         run: python -m pip install numpy
       # The native test binaries are optimised (opt-level 3) but without the LTO and the single codegen unit of the .wasm profile:
       # these two settings only make the .wasm small, and on ~150 test binaries they cost ~10 minutes of linking.
-      - name: Tests of Attributio, chem, tutor and llm (parity with tests/golden/)
+      - name: Tests of Attributio, chem and llm (parity with tests/golden/)
         env:
           MZLAB_GOLDEN_STRICT: "1"
           MZLAB_IDX_STRICT: "1"
@@ -449,7 +449,7 @@ jobs:
           CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
         run: |
           # each build once, then its test binaries four at a time (tools/ci_binari_test.py), one log group per binary
-          python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-attributio-wasm -p mzlab-chem -p mzlab-chem-wasm -p mzlab-tutor -p mzlab-llm -p mzlab-llm-wasm
+          python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-attributio-wasm -p mzlab-chem -p mzlab-chem-wasm -p mzlab-llm -p mzlab-llm-wasm
           # the fused .wasm of Attributio (feature all) is not a default feature: its own tests run here
           python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-attributio-wasm --features all
           python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-chem --features record --test mol3d_record
@@ -510,7 +510,7 @@ jobs:
           CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
         run: |
           # every other crate of the workspace (a new crate lands here unless it is added to a list above or to rust-misc-a)
-          python3 tools/ci_binari_test.py -j 4 -- --locked --release --workspace --exclude mzlab-feat --exclude mzlab-core --exclude mzlab-lettori --exclude mzlab-lib --exclude mzlab-libro --exclude mzlab-mol --exclude mzlab-target --exclude mzlab-attributio-wasm --exclude mzlab-chem --exclude mzlab-chem-wasm --exclude mzlab-tutor --exclude mzlab-llm --exclude mzlab-llm-wasm
+          python3 tools/ci_binari_test.py -j 4 -- --locked --release --workspace --exclude mzlab-feat --exclude mzlab-core --exclude mzlab-lettori --exclude mzlab-lib --exclude mzlab-mol --exclude mzlab-target --exclude mzlab-attributio-wasm --exclude mzlab-chem --exclude mzlab-chem-wasm --exclude mzlab-llm --exclude mzlab-llm-wasm
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
         if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}

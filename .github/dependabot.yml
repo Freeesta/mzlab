@@ -35,18 +35,6 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "deps"
-  - package-ecosystem: npm
-    directory: /tools/libro/editor
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    labels: ["dependencies", "javascript"]
-    groups:
-      npm:
-        patterns: ["*"]
-    commit-message:
-      prefix: "deps"
   - package-ecosystem: github-actions
     directory: /
     schedule:

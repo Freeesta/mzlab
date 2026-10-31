@@ -19,7 +19,6 @@ limit_interp=623200   # interp (cap +10 % over the 566463 measured with tp.revie
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
 limit_msnregole=196608   # msnregole: SMILES -> the expectations of the structure rules (mzlab-feat chem::regole), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES; measured 163480 (+3 %)
 limit_msngrafo=790528   # zlib-rs +30 KB (was 575000), mzlab-picchi at O3 +1.1 KB (peaks 3.1x); msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 537129 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
-limit_libro=159744   # libro: the Markdown converter, the preview edits and the search index of the Teoria editor; measured 152008 (+3 %)
 limit_llm=344064   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent), the context builder, the charts (grafico/1: views, validation, reduction) and the readers of the data assistant (Assist: requests, lettura/1 and param-scelte/1 validation against the step registry), loaded only after the user turned it on and agreed; measured 309824 (x 1.10, multiple of 4 KiB); 265264 before the readers, the plan checker is the page's
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
@@ -56,9 +55,6 @@ wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo" @mo
 # the reactivity of the parent (crates/mzlab-chem-wasm: reatt/1), loaded only in administrator mode
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-chem-wasm
 wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem" @motore
-# the Libro converter (crates/mzlab-libro-wasm: Markdown chapter -> Teoria HTML), loaded only by the administrator Teoria editor
-tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-libro-wasm
-wasm_pack "$out/libro" $R/mzlab_libro_wasm.wasm $limit_libro "Libro converter" @motore
 # the fragmentation graph of an MSn infusion (crates/mzlab-msngrafo-wasm: msngrafo/1), loaded by the worker of the engine on the first request of /api/msn_grafo
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-msngrafo-wasm
 wasm_pack "$out/msngrafo" $R/mzlab_msngrafo_wasm.wasm $limit_msngrafo "msngrafo" @motore
@@ -129,8 +125,6 @@ m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["chem"] = {"js": "chem/mzlab_chem_wasm.js", "wasm": "chem/mzlab_chem_wasm_bg.wasm",
              "sha256": hashlib.sha256(open(f"{o}/chem/mzlab_chem_wasm_bg.wasm", "rb").read()).hexdigest()}
-m["libro"] = {"js": "libro/mzlab_libro_wasm.js", "wasm": "libro/mzlab_libro_wasm_bg.wasm",
-              "sha256": hashlib.sha256(open(f"{o}/libro/mzlab_libro_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["llm"] = {"js": "llm/mzlab_llm_wasm.js", "wasm": "llm/mzlab_llm_wasm_bg.wasm",
             "sha256": hashlib.sha256(open(f"{o}/llm/mzlab_llm_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzlab_msngrafo_wasm_bg.wasm",

@@ -9,7 +9,7 @@ import re
 import subprocess
 import sys
 
-SKIP = ("docs/studi/", "docs/archivio/", "docs/agenti/misure-diario.md", "tests/data/", "tools/libro/LEGGIMI.md", "vendor/", "mzlab/web/vendor")
+SKIP = ("docs/studi/", "docs/archivio/", "docs/agenti/misure-diario.md", "tests/data/", "vendor/", "mzlab/web/vendor")
 # produced by a tool and not tracked (tools/indice.py)
 GENERATED = {"docs/agenti/mappa.md"}
 TICK = re.compile(r"`((?:docs|tools|crates|mzlab|tests|tests_e2e|TP_Mine|flow|fuzz|esperimenti|\.github|\.claude)/[A-Za-z0-9_./\-]+)`")

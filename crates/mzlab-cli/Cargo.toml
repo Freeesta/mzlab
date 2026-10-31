@@ -14,7 +14,6 @@ mzlab-core = { path = "../mzlab-core", features = ["isotopi-tutti"] }
 mzlab-lib = { path = "../mzlab-lib", features = ["flow"] }
 mzlab-chem = { path = "../mzlab-chem" }
 mzlab-llm = { path = "../mzlab-llm" }
-mzlab-tutor = { path = "../mzlab-tutor" }
 mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
 # the same features as mzlab-desktop: one build of each crate in the workspace
 mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "flow_formula", "interp", "record"] }

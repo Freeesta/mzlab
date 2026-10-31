@@ -21,7 +21,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn-grafo.md`).
 - `mzlab-chem` + `mzlab-chem-wasm`: 3D geometry from SMILES and reactivity (`reatt/1`), administrator mode only.
 - `mzlab-mol`: the `mol/1` structure record (SMILES/CXSMILES, molfile, deterministic JSON, core hash); in no `.wasm` (`mol.md`).
-- `mzlab-target`: target and suspect lists (RFC 4180 CSV). `mzlab-libro` + `-wasm`: Libro Markdown to Teoria HTML. `mzlab-tutor`: Teoria blocks and BM25 search. `mzlab-llm` + `-wasm`: the assistant's tool catalog and streams.
+- `mzlab-target`: target and suspect lists (RFC 4180 CSV). `mzlab-llm` + `-wasm`: the assistant's tool catalog and streams.
 - `mzlab-cli`: the native command line and the Flow runner (`flow.rs` registry, one `flow_*.rs` per step; `cli.md`, `cli-passi.md`, `rust-flow.md`, `rust-step.md`). Never in a WASM graph.
 - `mzlab-desktop`: the Tauri v2 app, the page behind `mzlab://` with a native engine (`rust-desktop.md`).
 
@@ -62,7 +62,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - Load time of a file: `cargo run --release --example carico -- FILE.mzML`; other timing examples sit in `crates/mzlab-core/examples/*_tempi.rs`; WASM benches across browsers: `tools/banco_wasm.py` (`banco-wasm.yml`).
 
 ## Build and test
-- Native: `cargo test --release -p mzlab-core` (or `-p <crate>`); CI splits the workspace into `rust` (mzlab-feat), `rust-core` (core, lettori, lib, libro, mol, target), `rust-misc-a` (Attributio, chem, tutor, llm), `rust-misc-b` (the rest).
+- Native: `cargo test --release -p mzlab-core` (or `-p <crate>`); CI splits the workspace into `rust` (mzlab-feat), `rust-core` (core, lettori, lib, mol, target), `rust-misc-a` (Attributio, chem, llm), `rust-misc-b` (the rest).
 - WASM: `cargo build --release --target wasm32-unknown-unknown -p mzlab-wasm`; check the graph with `cargo tree -e no-dev --target wasm32-unknown-unknown -p mzlab-wasm`.
 - Before pushing: `python3 tools/pre_pr.py`; full: `python3 tools/verifica.py` (`--senza-e2e` without the browser).
 - The site with the real `.wasm`: `sito-rust.yml` (PRs touching `crates/`, the page or the build; by hand with `workflow_dispatch` and `solo=e2e_lr,e2e13,…`). It is not required, and it is the engine's test bench when the container cannot build the `.wasm`.
