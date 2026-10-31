@@ -120,10 +120,10 @@ pub fn gather<R: ReadAt>(
     let n = index.sections[si].n_peaks;
     let cap = rules.max_peaks;
     index.each_peak(si, 0, n, |pos, mz, it| {
-        if let Some(&s) = pos_slot.get(pos) {
-            if s != NONE {
-                top[s as usize].push(cap, mz, it);
-            }
+        if let Some(&s) = pos_slot.get(pos)
+            && s != NONE
+        {
+            top[s as usize].push(cap, mz, it);
         }
     })?;
     out.specs = top
@@ -132,10 +132,10 @@ pub fn gather<R: ReadAt>(
         .map(|t| rules.strongest(&t.mz, &t.it).unwrap_or_default())
         .collect();
     for &(scan, row) in &want {
-        if let Ok(k) = scans.binary_search(&scan) {
-            if !out.specs[k].mz.is_empty() {
-                out.slot[row as usize] = k as u32;
-            }
+        if let Ok(k) = scans.binary_search(&scan)
+            && !out.specs[k].mz.is_empty()
+        {
+            out.slot[row as usize] = k as u32;
         }
     }
     Ok(out)

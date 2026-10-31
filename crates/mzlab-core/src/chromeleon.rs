@@ -243,11 +243,10 @@ pub fn parse(text: &str) -> Result<Gradient> {
     let pt = |t: f64, b: f64, flow: Option<f64>, curve: Option<i64>| Raw { t: Some(t), b: Some(b), flow, curve, shown: (t.to_string(), b.to_string()) };
     let (mut b, mut flow_v) = (initial.b, initial.flow);
     let mut pts = Vec::new();
-    if let (Some(first), Some(b0)) = (rows.first(), b) {
-        if first.0 > 0.0 {
+    if let (Some(first), Some(b0)) = (rows.first(), b)
+        && first.0 > 0.0 {
             pts.push(pt(0.0, b0, flow_v, None));
         }
-    }
     for (t, r) in &rows {
         b = r.b.or(b);
         flow_v = r.flow.or(flow_v);

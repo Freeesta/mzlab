@@ -39,7 +39,7 @@ def test_a_header_a_row_with_its_thirds_and_the_gap_are_told_apart():
     assert out == [
         ["head", "MQ", None],
         ["row", "a", "before"],
-        ["row", "a", "onto"],  # the middle third: 03 treats it as «insert», 05 will drop ONTO the file
+        ["row", "a", "onto"],  # the middle third: the drop ONTO the file
         ["row", "a", "after"],
         ["row", "b", "onto"],
         ["head", "TW", None],
@@ -92,3 +92,51 @@ def test_a_drag_that_went_silent_no_longer_holds_the_list():
       Date.now = () => now() + 5000; const b = GDND.busy(); Date.now = now;
       console.log(JSON.stringify([a, b]));""")
     assert out == [True, False]
+
+
+# a bound list of rows `h` px high (a: 0-h, b: h-2h): the live region is where the node tests read what is said
+ONTO = """
+const LIVE = { setAttribute() {} }; document.createElement = () => LIVE; document.addEventListener = () => {};
+globalThis.GRUPPI = { labelOf: k => k === "b" ? "G" : "" };
+const rows = h => ["a", "b", "c"].map((k, i) => ({ dataset: { nm: k }, matches: () => false, classList: { add() {}, remove() {} }, getBoundingClientRect: () => ({ top: i * h, bottom: (i + 1) * h }) }));
+const list = h => ({ querySelectorAll: () => rows(h), addEventListener() {}, classList: { add() {}, remove() {} }, getBoundingClientRect: () => ({ top: 0, bottom: 3 * h }) });
+const bindAt = h => { GDND.bind(list(h), { host: list(h), rowSel: "tr", headSel: "tr.none", keyOf: r => r.dataset.nm, ticked: () => [], onDrop() {} }); };
+"""
+
+
+def run_onto(code):
+    return run(ONTO + code)
+
+
+@needs_node
+def test_the_middle_third_of_a_tall_row_is_an_onto_target_at_once_and_the_outer_thirds_reorder():
+    out = run_onto("""
+      bindAt(60); GDND.begin("a");
+      const top = GDND.over(61, false), mid = GDND.over(130, false), onto = GDND.over(190, false);   // c: 120-180 -> its middle is 150
+      console.log(JSON.stringify([GDND.over(125, false), GDND.over(150, false), LIVE.textContent]));""")
+    assert out[:2] == [False, True]
+    assert out[2].startswith("groups.dnd.overOnto") and '"f":"c"' in out[2]
+
+
+@needs_node
+def test_onto_a_grouped_file_says_it_joins_the_group_and_the_dragged_file_is_never_its_own_target():
+    out = run_onto("""
+      bindAt(60); GDND.begin("a");
+      const own = GDND.over(30, false), grouped = GDND.over(90, false);     // a is the dragged file; b (60-120, middle 90) is in G
+      console.log(JSON.stringify([own, grouped, LIVE.textContent]));""")
+    assert out[:2] == [False, True] and out[2].startswith('groups.dnd.over{"g":"G"')
+
+
+@needs_node
+def test_a_low_row_or_a_finger_needs_a_600_ms_rest_in_the_middle_before_it_is_onto():
+    out = run_onto("""
+      const now = Date.now, t0 = now(), at = d => { Date.now = () => t0 + d; };
+      const seen = [];
+      for (const touch of [false, true]) {
+        bindAt(touch ? 60 : 24); GDND.begin("a", touch); const y = touch ? 90 : 36;                      // 24 px rows are lower than 40; touch is always slow
+        at(0); seen.push(GDND.over(y, touch)); at(300); seen.push(GDND.over(y, touch)); at(650); seen.push(GDND.over(y, touch));
+        at(660); GDND.over(y === 90 ? 65 : 5, touch); at(700); seen.push(GDND.over(y, touch));          // leaving the middle starts the rest again
+        GDND.cancel();
+      }
+      Date.now = now; console.log(JSON.stringify(seen));""")
+    assert out == [False, False, True, False, False, False, True, False]

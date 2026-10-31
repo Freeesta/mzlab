@@ -12,18 +12,21 @@ needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 STUBS = """
 globalThis.window = globalThis;
-globalThis.I18N = { t: (k, p) => ({ "groups.other": "Other" }[k] || k) };
+globalThis.I18N = { t: (k, p) => ({ "groups.other": "Other" }[k] || k) + (p && p.n ? " " + p.n : "") };
 globalThis.EH = s => String(s);
 globalThis.fileBase = n => String(n).split("#")[0];
 globalThis.document = { getElementById: () => null };
 globalThis.steps = 0; globalThis.renders = 0; globalThis.fetched = [];
 globalThis.fileViewDo = fn => { steps++; fn(); };
-globalThis.renderFileList = () => { renders++; }; globalThis.uiSave = () => {}; globalThis.STORIA = null;
+globalThis.renderFileList = () => { renders++; }; globalThis.uiSave = () => {};
 globalThis.lrTog = () => true; globalThis.ESP = { voce: () => ({ spettri: true }) };
 globalThis.E = { files: ["MQ_H2O2_T00.mzML", "MQ_N2_T00.mzML", "TW_H2O2_T00.mzML", "QC_std.mzML"].map(file => ({ file })) };
 // the engine stub: the first token of the name is the matrix (none for QC), the second the condition; shaped as `nomivar/1`
 const NAMES = n => n.replace(/\\.mzML$/, "").split("_");
+globalThis.ask = async () => null; globalThis.STORIA = null;
 globalThis.fetch = async (_url, { body }) => {
+  // the engine's group name: the first token the names share
+  if (_url.endsWith("nome_gruppo")) { const t = JSON.parse(body).names.map(n => n.split("_")[0]); return { json: async () => ({ nome: t.every(x => x === t[0]) ? t[0] : "" }) }; }
   const { files, manuale } = JSON.parse(body); fetched.push(files.map(f => f.name));
   const col = (i, skip) => { const by = new Map(), senza = []; files.forEach((f, k) => { const t = NAMES(f.name)[i]; if (!t || skip(t)) senza.push(k); else by.set(t, [...(by.get(t) || []), k]); });
     return { valori: [...by].sort((a, b) => b[1].length - a[1].length).map(([etichetta, file]) => ({ etichetta, file })), senza }; };
@@ -95,3 +98,38 @@ def test_the_user_groups_follow_the_order_of_the_key():
     out = run("""E.ugOrder = ["TW", "MQ"]; const gs = [{ g: "Full Scan" }, { g: "u:MQ" }, { g: "u:TW" }, { g: "u:Mine" }];
 GRUPPI.order(gs); console.log(JSON.stringify(gs.map(x => x.g)))""")
     assert out == ["Full Scan", "u:TW", "u:MQ", "u:Mine"]
+
+
+@needs_node
+def test_a_file_dropped_onto_an_ungrouped_file_makes_a_group_named_by_the_engine_and_onto_a_grouped_one_joins_it():
+    out = run("""
+      const g1 = await GRUPPI.onto(["MQ_N2_T00.mzML"], "MQ_H2O2_T00.mzML");            // new group of the two, named by the common token
+      const a = [g1, G(), steps];
+      const g2 = await GRUPPI.onto(["QC_std.mzML"], "MQ_N2_T00.mzML");                 // the target is grouped: the file joins, no nesting
+      console.log(JSON.stringify([a, g2, G(), steps]));""")
+    assert out == [["MQ", ["MQ", "MQ", None, None], 1], "MQ", ["MQ", "MQ", None, "MQ"], 2]
+
+
+@needs_node
+def test_the_name_of_a_new_group_falls_back_to_group_n_when_the_engine_has_none_or_it_is_taken():
+    out = run("""
+      const a = await GRUPPI.newName(["MQ_H2O2_T00.mzML", "TW_H2O2_T00.mzML"]);        // no common token
+      await GRUPPI.set(["MQ_H2O2_T00.mzML"], "MQ");
+      const b = await GRUPPI.newName(["MQ_N2_T00.mzML", "MQ_H2O2_T00.mzML"]);          // «MQ» exists
+      await GRUPPI.set(["QC_std.mzML"], b);
+      console.log(JSON.stringify([a, b, await GRUPPI.newName(["MQ_N2_T00.mzML", "MQ_H2O2_T00.mzML"])]));""")
+    assert out == ["files.ugrp.name 1", "files.ugrp.name 1", "files.ugrp.name 2"]
+
+
+@needs_node
+def test_every_group_action_is_one_step_named_after_the_action():
+    out = run("""
+      const pila = { v: [] }; globalThis.STORIA = { pila };
+      COMANDI.fai = (_a, _b, fn) => { fn(); pila.v.push({ cmd: "files.view", w: "storia.campi", t: Date.now() }); };
+      await GRUPPI.by({ by: "matrix" }); const w = [pila.v.at(-1).w];
+      GRUPPI.set(["QC_std.mzML"], "MQ"); w.push(pila.v.at(-1).w);
+      await GRUPPI.onto(["QC_std.mzML"], "TW_H2O2_T00.mzML"); w.push(pila.v.at(-1).w);
+      GRUPPI.ungroup("MQ"); w.push(pila.v.at(-1).w);
+      await GRUPPI.by(null); w.push(pila.v.at(-1).w);
+      console.log(JSON.stringify([w, pila.v.length]));""")
+    assert out == [["groups.undo.by", "groups.undo.move", "groups.undo.join", "groups.undo.ungroup", "groups.undo.none"], 5]

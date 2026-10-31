@@ -43,6 +43,7 @@ fn a_plan_runs_on_the_registered_files_and_an_unregistered_one_is_refused() {
     let data = tempfile::tempdir().unwrap();
     let st = State::new();
     st.set_data_folder(data.path().join("app"));
+    st.set_flow_folder(data.path().join("flow"));
     let r = |p: Value| st.rpc("flow/run", &p, &[]);
     let missing = r(json!({ "plan": PLAN }))
         .err()

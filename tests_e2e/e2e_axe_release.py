@@ -1,6 +1,7 @@
 """axe-core on the areas not covered by e2e_axe_grafici / e2e_a11y_dati: the HR bench, Disegno (Ketcher's own iframe excluded), Pratica and the guided tour.
 Same rule as e2e_axe_grafici: no serious or critical violation (wcag2a/2aa/21a/21aa/22aa). axe comes from axe-playwright-python or $AXE_JS; without either: SKIP."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lib
 from lib import *
 from lib_hr import synth, load
 
@@ -62,6 +63,42 @@ try:
                     q.click("#tour-btn-next"); attendi(q, "document.querySelector('#tour-dialog .tour-hd')?.textContent !== %r" % hd)
             finally: q.close()
         step("axe: the invitation and the steps of the tour", tour)
+        def landing_states():
+            # the landing, files arriving, the sample table and the first panel, at a wide and at a narrow window
+            import tempfile, numpy as np
+            sys.path.insert(0, str(ROOT / "tools")); import dati_sintetici as ds
+            d = Path(tempfile.mkdtemp()); rng = np.random.default_rng(3)
+            files = []
+            for t in (0, 15, 30, 45, 60):
+                ds.full_scan(d / f"B_FullMass-t{t}.mzML", t, rng); files.append(str(d / f"B_FullMass-t{t}.mzML"))
+            init = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}"
+            drop = """(sel) => { const i = document.querySelector('#__tmpdrop'), t = document.querySelector(sel), dt = new DataTransfer(); for (const f of i.files) dt.items.add(f);
+              for (const ty of ['dragenter', 'dragover', 'drop']) t.dispatchEvent(new DragEvent(ty, {bubbles: true, cancelable: true, dataTransfer: dt})); i.remove(); }"""
+            for w in (1440, 820):
+                q = r.b.new_page(viewport={"width": w, "height": 900}, reduced_motion="reduce", locale="it-IT")
+                q.add_init_script(init)
+                try:
+                    q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_selector("#drop", state="attached"); attendi(q, "!document.querySelector('#v-data').hidden && document.querySelector('#sb-toggle').innerText.trim().length > 0")
+                    axe(q)
+                    small = q.evaluate("[...document.querySelectorAll('#stbar button:not([disabled]), #sb-toggle, #drop')].filter(e => { const b = e.getBoundingClientRect(); return b.width && (b.width < 24 || b.height < 24); }).length")
+                    assert not small, ("targets below 24 px on the landing", w, small)
+                    dis = q.evaluate("[...document.querySelectorAll('#stbar button[disabled], #np-chrom[disabled], #np-spec[disabled]')].filter(e => e.getAttribute('aria-disabled') !== 'true').length")
+                    assert not dis, ("disabled toolbar buttons without aria-disabled", w, dis)
+                    q.evaluate("() => { const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.id = '__tmpdrop'; i.style.display = 'none'; document.body.appendChild(i); }")
+                    lib._real_sif(q, "#__tmpdrop", files); q.evaluate(drop, "#drop")
+                    q.wait_for_function("document.querySelectorAll('#flist tbody tr, #flst .fl').length >= 1", timeout=60000)
+                    axe(q)
+                    live = q.evaluate("[...document.querySelectorAll('[role=status],[aria-live]:not([aria-live=off])')].filter(e => !e.hidden && e.getBoundingClientRect().width > 0 && (e.textContent || '').trim()).length")
+                    assert live <= 1, ("more than one live region speaks", w, live)
+                    q.wait_for_function("document.querySelectorAll('#flist tbody tr').length >= 5", timeout=90000); ready(q)
+                    if w < 900:
+                        q.click("#sb-toggle"); attendi(q, "document.querySelector('#v-data').classList.contains('sb-open')")
+                    q.click("#samptab"); q.wait_for_function("document.querySelector('#v-workspace').dataset.work === 'table'"); attendi(q, "document.querySelector('#v-workspace').dataset.work === 'table'")
+                    axe(q)
+                    q.locator("#flist .ldtab button[data-open]").nth(1).click(); q.wait_for_selector(".pnl", timeout=60000); ready(q)
+                    axe(q)
+                finally: q.close()
+        step("axe: landing, files arriving, sample table and first panel at 1440 and 820 px", landing_states)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

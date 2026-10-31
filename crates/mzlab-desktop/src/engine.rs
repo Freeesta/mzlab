@@ -83,6 +83,10 @@ pub struct State {
     pub(crate) feat: Mutex<crate::feat::FeatState>,
     /// the background conversion of the maker's files to mzML (`conv_coda.rs`)
     pub(crate) coda: crate::conv_coda::Coda,
+    /// the indexes built ahead for the files of the pointed folder, waiting for their file to be opened (`rpc_warm.rs`)
+    pub(crate) warm: Mutex<std::collections::HashMap<String, crate::rpc_warm::Warm>>,
+    /// where the Flow keeps its `in`, `out` and `probe` folders (`set_flow_folder`; `mzlab-flow` in the system temp dir until then)
+    flow_dir: Mutex<Option<std::path::PathBuf>>,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -90,6 +94,17 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl State {
     pub fn new() -> State {
         State::default()
+    }
+
+    /// Moves the folders of the Flow runs to `dir`, so that processes sharing the system temp dir (parallel test binaries) do not overwrite each other's outputs.
+    pub fn set_flow_folder(&self, dir: PathBuf) {
+        *self.flow_dir.lock().unwrap_or_else(|e| e.into_inner()) = Some(dir);
+    }
+
+    /// The root of the Flow folders: the one set by `set_flow_folder`, else `mzlab-flow` in the system temp dir.
+    pub(crate) fn flow_root(&self) -> PathBuf {
+        let set = self.flow_dir.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        set.unwrap_or_else(|| std::env::temp_dir().join("mzlab-flow"))
     }
 
     /// The cache folder of the app for the indexes (the page asks for the builder through `idx/...`).

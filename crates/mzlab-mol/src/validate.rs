@@ -195,13 +195,12 @@ impl Mol {
 
     fn check_layers(&self) -> Res {
         let n = self.atoms.len();
-        if let Some(c) = &self.coords {
-            if !(2..=3).contains(&c.dim)
+        if let Some(c) = &self.coords
+            && (!(2..=3).contains(&c.dim)
                 || c.xy.len() != n
-                || c.xy.iter().any(|r| r.len() != c.dim as usize)
-            {
-                return bad(format!("coords needs {n} rows of {} numbers", c.dim));
-            }
+                || c.xy.iter().any(|r| r.len() != c.dim as usize))
+        {
+            return bad(format!("coords needs {n} rows of {} numbers", c.dim));
         }
         for p in &self.props {
             if p.v.len() != n {

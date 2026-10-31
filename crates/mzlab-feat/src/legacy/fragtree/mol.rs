@@ -214,10 +214,10 @@ pub fn substructures(g: Graph) -> Option<Subs> {
         .map(|&(m, _)| {
             let mut row = vec![0i64; els.len()];
             for (i, a) in g.atoms.iter().enumerate() {
-                if (m >> i) & 1 == 1 {
-                    if let Some(p) = els.iter().position(|e| e == a) {
-                        row[p] += 1;
-                    }
+                if (m >> i) & 1 == 1
+                    && let Some(p) = els.iter().position(|e| e == a)
+                {
+                    row[p] += 1;
                 }
             }
             row[ih] = (0..n).filter(|&i| (m >> i) & 1 == 1).map(|i| g.h[i]).sum();
@@ -334,7 +334,7 @@ impl Writer<'_> {
     }
 }
 
-fn gen(w: &Writer, i: usize) -> String {
+fn gen_str(w: &Writer, i: usize) -> String {
     let mut s = w.tok(i);
     for &(n, k, opening) in &w.rings[i] {
         if opening {
@@ -348,7 +348,7 @@ fn gen(w: &Writer, i: usize) -> String {
     }
     let parts: Vec<String> = w.kids[i]
         .iter()
-        .map(|&(j, k)| w.sym(k).to_string() + &gen(w, j))
+        .map(|&(j, k)| w.sym(k).to_string() + &gen_str(w, j))
         .collect();
     if let Some((last, rest)) = parts.split_last() {
         for p in rest {
@@ -386,7 +386,7 @@ pub fn mask_smiles(g: &Graph, mask: u64) -> String {
     for i in (0..n).filter(|&i| ins[i]) {
         if !w.seen[i] {
             w.dfs(i, None);
-            out.push(gen(&w, i));
+            out.push(gen_str(&w, i));
         }
     }
     out.join(".")

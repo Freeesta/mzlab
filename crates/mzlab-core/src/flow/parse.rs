@@ -143,10 +143,11 @@ pub fn parse(bytes: &[u8]) -> Result<Plan> {
     // mzflow/1 keys: formato, programma, operazioni
     let format = text(&v, "format").or_else(|| text(&v, "formato"));
     let legacy = format.as_deref() == Some("mzflow/1");
-    if let Some(f) = &format {
-        if f != "mzflow/2" && !legacy {
-            return Err(Error::new("err.flow.format").with("format", f));
-        }
+    if let Some(f) = &format
+        && f != "mzflow/2"
+        && !legacy
+    {
+        return Err(Error::new("err.flow.format").with("format", f));
     }
     let list = |k: &str| v.get(k).map(Value::arr).unwrap_or_default();
     let mut plan = Plan {

@@ -97,7 +97,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #sb-toggle{display:inline-flex;align-items:center;gap:5px;flex:none;padding:4px 10px 4px 8px;min-height:30px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);font-size:13px;cursor:pointer}
 #sb-toggle[hidden]{display:none}#sb-toggle:hover{background:var(--soft)}#sb-toggle .ti{display:inline-flex;color:var(--accent)}
 #sb-toggle[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
-#samptab{margin:6px 8px;min-height:32px}#samptab[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
+#samptab{display:block;box-sizing:border-box;width:calc(100% - 16px);margin:6px 8px 0;min-height:32px;position:sticky;bottom:0;z-index:1;background:var(--panel)}#samptab[hidden]{display:none}#samptab[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
 #sb-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #sidebar-resize-handle:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent);opacity:.6}
 #bar-hint{position:fixed;z-index:6000;display:flex;gap:8px;align-items:flex-start;max-width:min(340px,calc(100vw - 16px));box-sizing:border-box;padding:9px 10px 9px 12px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:13px;line-height:1.4}#bar-hint::before{content:"";position:absolute;top:-6px;left:var(--ha,18px);width:10px;height:10px;background:var(--panel);border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}#bar-hint button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;cursor:pointer}#bar-hint button:hover{color:var(--ink)}#bar-hint button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media (prefers-reduced-motion:no-preference){#bar-hint{animation:hint-in .25s ease}@keyframes hint-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}}
@@ -107,11 +107,16 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #sb-header{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #sb-header button,#sb-header input{cursor:pointer;touch-action:manipulation}
 body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!important}
-.sb-dz{position:fixed;top:var(--hh,40px);bottom:0;width:50vw;z-index:5200;display:flex;align-items:center;justify-content:center;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);font-weight:700;pointer-events:none;box-sizing:border-box}
+.sb-dz{position:fixed;top:var(--hh,40px);bottom:0;z-index:5200;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 8px;border:2px dashed var(--accent);border-radius:8px;background:none;color:transparent;opacity:.45;font-weight:700;pointer-events:none;box-sizing:border-box}
 .sb-dz.l{left:0}.sb-dz.r{right:0}
-.sb-dz.hot{background:color-mix(in srgb,var(--accent) 26%,transparent);border-style:solid}
-.sb-dz-prev{position:fixed;top:var(--hh,40px);bottom:0;z-index:5201;pointer-events:none;border:2px solid var(--accent);background:color-mix(in srgb,var(--panel) 70%,transparent);box-sizing:border-box;border-radius:8px}
-@media (prefers-reduced-motion:no-preference){.sb-dz{transition:background .12s}}
+.sb-dz.hot{background:color-mix(in srgb,var(--accent) 22%,transparent);border-style:solid;color:var(--accent);opacity:1}
+.sb-ghost{position:fixed;left:0;top:0;z-index:5300;max-width:220px;padding:4px 10px;border:1px solid var(--accent);border-radius:999px;background:var(--panel);color:var(--ink);font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-ghost.no{border-style:dashed;border-color:var(--bad);color:var(--bad)}
+body.sb-dragging #dfiles{opacity:.3}
+body.sb-dragging #v-data.sb-open:not(.sb-sheet) #v-workspace{position:relative;z-index:50}
+body[data-sb-shift=l] #v-workspace{transform:translateX(calc(-1 * var(--sb-dz-w,0px)))}
+body[data-sb-shift=r] #v-workspace{transform:translateX(var(--sb-dz-w,0px))}
+@media (prefers-reduced-motion:no-preference){.sb-dz{transition:opacity .12s,background .12s}body.sb-dragging #v-workspace{transition:transform .18s ease-out}}
 /* the button of the session is always in the header (hidden = invisible, space kept): when it comes nothing moves */
 header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 /* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
@@ -235,7 +240,7 @@ body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 .fl.drop-before{border-top:2px solid var(--accent)!important}
 .fl.drop-after{border-bottom:2px solid var(--accent)!important}
 /* the group under a dragged file: outline and tint only, nothing changes size (gruppi-dnd.js) */
-#flst .fgh.gdnd-over{outline:2px solid var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 14%,transparent)}
+#flst .fgh.gdnd-over,#flst .fl.gdnd-onto{outline:2px solid var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 14%,transparent)}
 #flst.gdnd-gap{outline:2px dashed var(--accent);outline-offset:-2px}
 .chv,.pr-tog{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;color:var(--ink);cursor:pointer;user-select:none}.chv::before,.pr-tog::before{content:"";width:9px;height:9px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--t-fast)}.chv.on::before,.pr-tog.on::before{transform:rotate(45deg) translate(-2px,-2px)}.pr-tog:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:4px}@media (prefers-reduced-motion:reduce){.chv::before,.pr-tog::before{transition:none}}.fgh{display:flex;align-items:center;gap:6px;margin:6px 0 2px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.sp-pop{position:absolute;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:8px 10px;display:flex;flex-direction:column;gap:6px;font-size:12px;min-width:230px}.sp-pop label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.sp-pop input[type=number]{width:54px}sup,sub{font-size:.72em;line-height:0;position:relative;vertical-align:baseline}sup{top:-.45em}sub{top:.25em}.pol{display:inline-block;flex:none;font-size:10.5px;line-height:1.5;padding:0 6px;border-radius:9px;background:var(--sel,#e8ecf2);color:var(--muted);margin-left:4px;cursor:help;white-space:nowrap}.pol.pos{background:#e8f0fe;color:#1a56db;border:1px solid rgba(26,86,219,.25);font-weight:600}.pol.neg{background:#fde8e8;color:#c81e1e;border:1px solid rgba(200,30,30,.25);font-weight:600}.pol.both{background:#f3e8ff;color:#6b21a8;border:1px solid rgba(107,33,168,.25);font-weight:600}:root[data-theme=dark] .pol.pos{background:rgba(59,130,246,.2);color:#93c5fd;border-color:rgba(147,197,253,.3)}:root[data-theme=dark] .pol.neg{background:rgba(239,68,68,.2);color:#fca5a5;border-color:rgba(252,165,165,.3)}:root[data-theme=dark] .pol.both{background:rgba(168,85,247,.2);color:#d8b4fe;border-color:rgba(216,180,254,.3)}.fl .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fgh.sub{margin:4px 0 0 14px;font-weight:600;font-size:10.5px}.fgh em{font-style:normal;font-weight:400;margin-left:auto}#flst .fl:not(.pr){padding-left:9px}.fl.cur{background:var(--sel);border-radius:4px;box-shadow:inset 5px 0 0 var(--accent),inset 0 0 0 1px var(--accent);padding-left:9px}.fl.cur .nm{font-weight:800}.fl.cur.pr{box-shadow:none;padding-left:0}.tag{background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:0 6px;color:var(--ink)}.fl i:empty{width:12px;height:12px;border-radius:3px;margin-top:3px;flex:none}.fl small{display:block;color:var(--muted)}.fl .fi{flex:1;min-width:0;display:flex;gap:6px;align-items:baseline;justify-content:space-between}.fl .pn{cursor:pointer}.fl .pn:hover{text-decoration:underline}.fl .fi small{display:inline;white-space:nowrap;flex:none}.fl.pr{border-bottom-style:dotted}.pnl .ctl label.dis{opacity:.45}.pnl .ctl :disabled{opacity:.5;cursor:not-allowed}.parr{position:absolute;left:34px;width:14px;z-index:4999;pointer-events:none;color:var(--accent)}
 .cmp-grid{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}.cmp-grid label{display:inline-flex;gap:5px;align-items:center}
@@ -505,7 +510,7 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .fl.up .fi{flex:1;min-width:0}.fl.up .prog{margin-top:2px}.fl.up .diag{display:block}
 
 /* landing: a big central drop zone; the empty side list says a plain sentence; the toolbar buttons that wait for data are plainly grey */
-#start{max-width:none}#start #drop{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;align-items:baseline;gap:6px .35em;min-height:clamp(220px,48vh,520px);box-sizing:border-box;padding:32px 14px}#start #drop b{font-size:calc(1.25em + 2px)}#start #drop .fmts{flex:0 0 100%;margin-top:14px}
+#start{max-width:none}#backwork{margin-bottom:12px}#v-workspace[data-work=add] #start #drop{min-height:clamp(160px,30vh,360px)}#start #drop{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;align-items:baseline;gap:6px .35em;min-height:clamp(220px,48vh,520px);box-sizing:border-box;padding:32px 14px}#start #drop b{font-size:calc(1.25em + 2px)}#start #drop .fmts{flex:0 0 100%;margin-top:14px}
 #fl-hint{margin:14px 12px;min-height:4.5em;width:0;min-width:calc(100% - 24px);box-sizing:border-box;text-align:center;line-height:1.5}#fl-hint[hidden]{display:none}#sb-pane.dz-over #fl-hint{display:none}
 #tools :is(button,select):disabled{color:var(--muted);background:var(--soft);border-color:var(--line);cursor:not-allowed;opacity:1;box-shadow:none}#tools :is(button,select):disabled:hover{border-color:var(--line);background:var(--soft)}
 /* landing: the progress box floats over the gap above the drop zone, so the zone never moves or resizes when it appears */
@@ -521,6 +526,9 @@ html.in-draw #sb-toggle{display:none}
 #drop .drop-tx{display:contents}#drop .drop-ic{flex:0 0 100%;margin:0 auto 10px;color:var(--muted)}
 /* empty side panel: a still drawing above the text, no motion */
 #fl-hint .leaf{display:block;margin:0 auto 6px;color:var(--muted)}#fl-hint .leaf .lf{fill:var(--accent);fill-opacity:.1}
+/* side-panel leaf: decorative sway, transform only; still unless motion is allowed */
+@media (prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) #fl-hint .leaf{animation:leaf-sway 6s ease-in-out infinite;transform-origin:50% 0}}
+@keyframes leaf-sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
 
 /* × of a file row: shown on hover and focus, always on touch; the row keeps its height */
 .fl-x{margin-left:auto;flex:none;min-width:24px;min-height:24px;padding:0 4px;border:0;border-radius:4px;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;opacity:0}
@@ -528,7 +536,7 @@ html.in-draw #sb-toggle{display:none}
 @media (pointer:coarse){.fl-x{opacity:1;min-width:40px;min-height:40px}}
 /* drop anywhere on the work area while files are open */
 #v-workspace{position:relative}#v-workspace.ws-drop::after{content:attr(data-dz);position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;border:3px dashed var(--accent);border-radius:8px;background:color-mix(in srgb,var(--sel) 88%,transparent);color:var(--ink);font-weight:600;pointer-events:none}
-#sb-by{display:inline-flex;align-items:center;gap:4px;flex:none;width:92px;padding:2px 6px;min-height:24px;overflow:hidden;white-space:nowrap}#sb-by span{flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left}
+#sb-by{display:inline-flex;align-items:center;gap:4px;flex:none;width:92px;padding:2px 6px;min-height:24px;overflow:hidden;white-space:nowrap}#sb-by[hidden]{display:none}#sb-by span{flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .gby-menu{position:fixed;z-index:10000;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(60,45,10,.18);padding:3px;width:272px;max-height:70vh;overflow:auto}
 .gby-menu [role=menuitemradio]{display:flex;flex-direction:column;padding:4px 10px 4px 26px;border-radius:4px;cursor:pointer;min-height:24px;position:relative}.gby-menu [role=menuitemradio] small{color:var(--muted)}
 .gby-menu [role=menuitemradio]:hover,.gby-menu [role=menuitemradio]:focus{background:var(--sel);outline:2px solid var(--accent);outline-offset:-2px}.gby-menu [aria-checked=true]::before{content:"\2713";position:absolute;left:8px}.gby-menu [aria-disabled=true]{color:var(--muted);cursor:default}
@@ -536,6 +544,11 @@ html.in-draw #sb-toggle{display:none}
 .gby-dlg{width:min(92vw,420px)}.gby-dlg fieldset{border:0;padding:0;margin:0 0 8px}.gby-f{display:block;margin:6px 0}.gby-f input{margin:4px 0 8px}.gby-c{display:block;padding:2px 0}.gby-c input,.gby-dlg input[type=checkbox]{width:auto;margin:0 6px 0 0}
 .gby-prev{margin:6px 0;padding-left:18px;max-height:30vh;overflow:auto}
 @media (pointer:coarse){.gby-menu [role=menuitemradio],#sb-by{min-height:40px}}
+/* a restored session shows the last toolbar row at once (buttons disabled until the session is back) */
+#v-data.opn.riga #tools{visibility:visible}
 #flist .tg-head th{text-align:left;font-weight:600;padding:4px 8px;background:var(--surface-2,var(--bg))}#flist .tg-fold{min-width:24px;min-height:24px;padding:0;background:none;border:0;color:inherit;cursor:pointer}
-#flist .tg-head.gdnd-over th{outline:2px solid var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 14%,transparent)}#flist.gdnd-gap{outline:2px dashed var(--accent);outline-offset:-2px}
+#flist .tg-head.gdnd-over th,#flist tr.gdnd-onto td{outline:2px solid var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 14%,transparent)}#flist.gdnd-gap{outline:2px dashed var(--accent);outline-offset:-2px}
 #flist .tg-grip{display:inline-block;min-width:24px;min-height:24px;line-height:24px;text-align:center;cursor:grab;color:var(--muted)}.ldtab.tg-on col.c-use{width:64px}#tb-by{margin-left:10px}
+/* below 900 px the sample table is the file list: it keeps its columns and scrolls inside its box (the page never scrolls sideways) */
+@media(max-width:900px){#flist .ldtab{min-width:1060px}#wtable{min-width:0;max-width:100%}}
+@media(pointer:coarse){#sb-toggle{min-height:40px}}

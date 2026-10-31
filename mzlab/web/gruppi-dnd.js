@@ -4,15 +4,15 @@
 // explore.js fetches it on the first pointer down and starts a drag when it is there (a mouse drag that began earlier joins at once); a native mouse drag also fires pointercancel, so
 // only finger drags are cancelled by it; over a group header the header takes the highlight, not a row; a drag held by the finger or Esc ends without a reorder.
 window.GDND = (() => {
-  const EDGE = 40, STEP = 14, STALE = 4000;
+  const EDGE = 40, STEP = 14, STALE = 4000, DWELL = 600, TALL = 40;
   /** @typedef {{ kind: string, key: string, el: Element | null, top: number, bottom: number }} Box */
   /** @typedef {{ list: HTMLElement, host: HTMLElement, rowSel: string, headSel: string, keyOf: (row: Element) => string, headKey: (head: Element) => string, valid: (head: Element, bases: string[]) => boolean, ticked: () => string[], onDrop: (d: { bases: string[], target: { kind: string, key: string } }) => any }} Cfg */
-  /** @type {{ base: string, touch: boolean, last: number, shown: string, cancelled: boolean } | null} */ let drag = null;
+  /** @type {{ base: string, touch: boolean, last: number, shown: string, cancelled: boolean, y: number, dwell: { key: string, t0: number } | null } | null} */ let drag = null;
   /** @type {Cfg | null} */ let cfg = null;
   let pending = false, scrollTimer = 0, scrollDir = 0, docBound = false;
   const hosts = new WeakSet();
 
-  /** «before» / «onto» / «after»: the thirds of a row (03 reorders on the outer two and on the middle one alike; 05 will drop ONTO the file). @param {number} top @param {number} bottom @param {number} y */
+  /** «before» / «onto» / «after»: the thirds of a row (the outer two reorder as ever, the middle one drops ONTO the file). @param {number} top @param {number} bottom @param {number} y */
   const zone = (top, bottom, y) => { const h = (bottom - top) / 3; return y < top + h ? "before" : y >= bottom - h ? "after" : "onto"; };
   /** What is under height `y` of a list: boxes (headers and rows in document order, folded ones have no height) → a header, a row with its zone, the gap after the last box, or null above the list. @param {Box[]} boxes @param {number} y */
   function resolve(boxes, y) {
@@ -46,16 +46,29 @@ window.GDND = (() => {
   const basesNow = () => companions(/** @type {NonNullable<typeof drag>} */ (drag).base, /** @type {Cfg} */ (cfg).ticked());
   /** The drop target under height `y`: a header the files may join, or the gap after the last group (not with a finger); null for a row or an invalid header. @param {number} y @param {boolean} touch */
   function hit(y, touch) {
-    const t = resolve(boxes(), y), c = /** @type {Cfg} */ (cfg);
-    if (!t || t.kind === "row" || (t.kind === "gap" && touch)) return null;
+    const t = resolve(boxes(), y), c = /** @type {Cfg} */ (cfg), d = /** @type {NonNullable<typeof drag>} */ (drag);
+    d.y = y;
+    if (t?.kind === "row") return onto(t, touch);
+    d.dwell = null;
+    if (!t || (t.kind === "gap" && touch)) return null;
     if (t.kind === "head" && !c.valid(/** @type {Element} */ (t.box?.el), basesNow())) return null;
     return t;
   }
+  /** The middle third of another file's row is a drop ONTO it; a finger, or a row lower than TALL px, must rest DWELL ms there first (a reorder passes over it). @param {{ key: string, zone?: string, box?: Box }} t @param {boolean} touch */
+  function onto(t, touch) {
+    const d = /** @type {NonNullable<typeof drag>} */ (drag), b = /** @type {Box} */ (t.box);
+    if (t.zone !== "onto" || basesNow().includes(t.key)) { d.dwell = null; return null; }
+    if (touch || b.bottom - b.top < TALL) {
+      if (d.dwell?.key !== t.key) { d.dwell = { key: t.key, t0: Date.now() }; setTimeout(() => { if (drag === d && d.dwell?.key === t.key) show(hit(d.y, d.touch)); }, DWELL + 30); }
+      if (Date.now() - /** @type {{ t0: number }} */ (d.dwell).t0 < DWELL) return null;
+    }
+    return { kind: "onto", key: t.key, box: b };
+  }
   /** @param {{ kind: string, key: string, box?: Box } | null} t */
   function mark(t, c = /** @type {Cfg} */ (cfg)) {
-    c.list.querySelectorAll(".gdnd-over").forEach(x => x.classList.remove("gdnd-over")); c.list.classList.remove("gdnd-gap");
+    c.list.querySelectorAll(".gdnd-over,.gdnd-onto").forEach(x => x.classList.remove("gdnd-over", "gdnd-onto")); c.list.classList.remove("gdnd-gap");
     if (!t) return;
-    if (t.kind === "gap") c.list.classList.add("gdnd-gap"); else t.box?.el?.classList.add("gdnd-over");
+    if (t.kind === "gap") c.list.classList.add("gdnd-gap"); else t.box?.el?.classList.add(t.kind === "onto" ? "gdnd-onto" : "gdnd-over");
   }
   /** Highlights the target and says it once per change. @param {{ kind: string, key: string, box?: Box } | null} t */
   function show(t) {
@@ -64,6 +77,7 @@ window.GDND = (() => {
     if (id === drag.shown) return;
     drag.shown = id; if (!t) return;
     const n = basesNow().length;
+    if (t.kind === "onto") { const g = window.GRUPPI?.labelOf(t.key); say(g ? I18N.t("groups.dnd.over", { g, n }) : I18N.t("groups.dnd.overOnto", { f: t.key.replace(/\.[^.]+$/, "") })); return; }
     say(t.key ? I18N.t("groups.dnd.over", { g: t.key, n }) : I18N.t("groups.dnd.overNone", { n }));
   }
   /** Scrolls the list while the pointer is within EDGE px of the top or the bottom of its scroll box. @param {number} y */
@@ -85,13 +99,13 @@ window.GDND = (() => {
   /** @param {{ kind: string, key: string }} t */
   async function finish(t) {
     const bases = basesNow(); drag = null; pending = false; stopScroll(); mark(null);
-    await /** @type {Cfg} */ (cfg).onDrop({ bases, target: { kind: t.kind, key: t.key } });
-    say(t.key ? I18N.t("groups.dnd.done", { g: t.key }) : I18N.t("groups.dnd.doneNone"));
+    const g = await /** @type {Cfg} */ (cfg).onDrop({ bases, target: { kind: t.kind, key: t.key } });
+    say(t.kind === "onto" ? I18N.t("groups.dnd.done", { g }) : t.key ? I18N.t("groups.dnd.done", { g: t.key }) : I18N.t("groups.dnd.doneNone"));
   }
   function cancel() { if (!drag) return; release(); say(I18N.t("groups.dnd.cancel")); }
   /** Highlights what is under `y` and says whether it is a target. @param {number} y @param {boolean} touch */
   function over(y, touch) { const t = hit(y, touch); show(t); return !!t; }
-  function begin(/** @type {string} */ base, /** @type {boolean} */ touch = false) { drag = { base, touch, last: Date.now(), shown: "", cancelled: false }; }
+  function begin(/** @type {string} */ base, /** @type {boolean} */ touch = false) { drag = { base, touch, last: Date.now(), shown: "", cancelled: false, y: 0, dwell: null }; }
 
   /** @param {HTMLElement} list @param {Partial<Cfg> & Pick<Cfg, "rowSel" | "headSel" | "keyOf" | "onDrop">} o @returns {Cfg} */
   const mkCfg = (list, o) => /** @type {Cfg} */ ({ list, host: list, headKey: h => /** @type {HTMLElement} */ (h).dataset.ug || "", valid: () => true, ticked: () => [...list.querySelectorAll(o.rowSel)].filter(r => r.querySelector("input[type=checkbox]:checked")).map(o.keyOf), ...o });
@@ -109,13 +123,15 @@ window.GDND = (() => {
       const t = hit(e.clientY, false);
       if (!t) { show(null); return; }
       e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; show(t);
-    });
+      // ONTO a file: the row's own reorder handlers (explore.js) stay out of it
+      if (t.kind === "onto") { e.stopPropagation(); t.box?.el?.classList.remove("drop-before", "drop-after"); }
+    }, true);
     host.addEventListener("drop", e => {
       if (!mine()) return;
       const t = hit(e.clientY, false);
       if (!t) { release(); return; }
-      e.preventDefault(); finish(t);
-    });
+      e.preventDefault(); if (t.kind === "onto") e.stopPropagation(); finish(t);
+    }, true);
     host.addEventListener("dragleave", e => { if (mine() && !host.contains(/** @type {Node | null} */ (e.relatedTarget))) show(null); });
     if (docBound) return; docBound = true;
     document.addEventListener("dragend", e => { if (!drag) return; if (e.dataTransfer && e.dataTransfer.dropEffect === "none") cancel(); else release(); });
@@ -128,6 +144,12 @@ window.GDND = (() => {
     if (cfg && cfg.list === list) return;
     carica("gruppi.js"); bind(list, sideOpts());
   }
+  /** A drop (or a keyboard move): ONTO a file = new group or join, else into the header's group; returns the group. @param {{ bases: string[], target: { kind?: string, key: string } }} d */
+  const drop = async d => {
+    await carica("gruppi.js");
+    if (d.target.kind === "onto") return GRUPPI.onto(d.bases, d.target.key);
+    GRUPPI.set(d.bases, d.target.key); return d.target.key;
+  };
   const sideOpts = () => {
     const autoKey = (/** @type {string} */ b) => { const f = E.files.find(/** @param {any} x */ x => !x.gone && fileBase(x.file) === b); return f ? grpOf({ ...f, ugrp: undefined }) : ""; };
     return {
@@ -135,26 +157,29 @@ window.GDND = (() => {
       keyOf: row => { const f = E.files[+(/** @type {HTMLElement} */ (row.querySelector(".nm"))).dataset.k]; return f ? fileBase(f.file) : ""; },
       // a user group takes any file; an automatic header (Full Scan, MRM...) only the files that belong there, so a file never changes its experiment type
       valid: (head, bases) => !!(/** @type {HTMLElement} */ (head)).dataset.ug || bases.every(b => autoKey(b) === /** @type {HTMLElement | null} */ (head.querySelector(".gall"))?.dataset.g),
-      onDrop: async (/** @type {{ bases: string[], target: { key: string } }} */ d) => { await carica("gruppi.js"); GRUPPI.set(d.bases, d.target.key); },
+      onDrop: drop,
     };
   };
   /** The loading table: a row is dragged alone (the ticks there mean «open it»), any group header takes it, «Ungrouped» (key "") frees it. */
   const tabOpts = () => ({
     host: /** @type {HTMLElement} */ (Q("#flist")), rowSel: "tr[data-nm]", headSel: "tr.tg-head", ticked: () => /** @type {string[]} */ ([]),
     keyOf: (/** @type {Element} */ row) => /** @type {HTMLElement} */ (row).dataset.nm || "",
-    onDrop: async (/** @type {{ bases: string[], target: { key: string } }} */ d) => { await carica("gruppi.js"); GRUPPI.set(d.bases, d.target.key); },
+    onDrop: drop,
   });
   function tab() {
     const list = /** @type {HTMLElement} */ (Q("#flist"));
     if (cfg && cfg.list === list) return;
     carica("gruppi.js"); bind(list, tabOpts());
   }
-  /** The name of a new group: the common tokens of the names (engine), else «Group N». @param {string[]} names */
-  async function newName(names) {
-    const used = new Set([...E.files, ...ST.files].map(/** @param {any} x */ x => x.ugrp));
-    const ans = await fetch("api/campioni/nome_gruppo", { method: "POST", body: JSON.stringify({ names }) }).then(r => r.json()).catch(() => null);
-    let n = 1; while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
-    return ans && !ans.error && ans.nome ? String(ans.nome) : I18N.t("files.ugrp.name", { n });
+  /** «Group with…»: the keyboard way to a drop ONTO a file; the file is typed with the help of the browser's own type-ahead (a datalist on the prompt). @param {string[]} bases @param {string[]} pool */
+  async function groupWith(bases, pool) {
+    const names = [...new Set(pool)].filter(n => !bases.includes(n)), dl = document.createElement("datalist"), i = Q("#askin");
+    dl.id = "gwith-list"; names.forEach(n => { const o = document.createElement("option"); o.value = n; dl.appendChild(o); });
+    document.body.appendChild(dl); i.setAttribute("list", dl.id);
+    const v = ((await ask(I18N.t("groups.with.prompt"), "")) || "").toLowerCase(); i.removeAttribute("list"); dl.remove();
+    const hits = v ? names.filter(n => n.toLowerCase() === v) : [], part = v ? names.filter(n => n.toLowerCase().includes(v)) : [], to = hits[0] || (part.length === 1 ? part[0] : "");
+    if (!to) { if (v) say(I18N.t("groups.with.none")); return; }
+    await carica("gruppi.js"); say(I18N.t("groups.dnd.done", { g: await GRUPPI.onto(bases, to) }));
   }
   /** The groups of both lists: the labels of the side list's files and of the table's rows, in the order they were first met. */
   const labels = () => [...new Set([...E.files, ...ST.files].map(/** @param {any} x */ x => x.ugrp).filter(Boolean))];
@@ -190,7 +215,7 @@ window.GDND = (() => {
   }, true);
   }
   return {
-    zone, resolve, companions, pick,
+    zone, resolve, companions, pick, bind,
     /** The drag of the row of file `k` starts (mouse dragstart or touch long press). @param {number} k @param {boolean} [touch] */
     start(k, touch) { side(); begin(fileBase(E.files[k].file), !!touch); },
     begin, over,
@@ -224,7 +249,8 @@ window.GDND = (() => {
     async moveMenuT(ev, name) {
       tab(); await carica("gruppi.js"); const groups = labels(), some = ST.files.some(/** @param {any} x */ x => x.name === name && x.ugrp);
       menu(ev, [...groups.map(g => ({ label: g, fn: () => { GRUPPI.set([name], g); say(I18N.t("groups.dnd.done", { g })); } })), ...(groups.length ? ["-"] : []),
-        { label: I18N.t("groups.move.new"), fn: async () => { const v = ((await ask(I18N.t("groups.move.prompt"), await newName([name]))) || "").trim(); if (v) { GRUPPI.set([name], v); say(I18N.t("groups.dnd.done", { g: v })); } } },
+        { label: I18N.t("groups.with.menu"), fn: () => groupWith([name], ST.files.map(/** @param {any} x */ x => x.name)) },
+        { label: I18N.t("groups.move.new"), fn: async () => { const v = ((await ask(I18N.t("groups.move.prompt"), await GRUPPI.newName([name]))) || "").trim(); if (v) { GRUPPI.set([name], v); say(I18N.t("groups.dnd.done", { g: v })); } } },
         ...(some ? [{ label: I18N.t("groups.move.none"), fn: () => { GRUPPI.set([name], ""); say(I18N.t("groups.dnd.doneNone")); } }] : [])]);
     },
     /** The «Move to group ▸» entries of a row menu, as a second menu at the same place (the menu has no sub-menus). @param {any} ev @param {any} f */
@@ -232,7 +258,8 @@ window.GDND = (() => {
       side(); await carica("gruppi.js"); const c = /** @type {Cfg} */ (cfg), base = fileBase(f.file), bases = companions(base, f.vis ? c.ticked() : []), groups = [...new Set(flSide().map(/** @param {any} x */ x => x.ugrp).filter(Boolean))];
       const some = flSide().some(/** @param {any} x */ x => bases.includes(fileBase(x.file)) && x.ugrp);
       menu(ev, [...groups.map(g => ({ label: g, fn: () => { GRUPPI.set(bases, g); say(I18N.t("groups.dnd.done", { g })); } })), ...(groups.length ? ["-"] : []),
-        { label: I18N.t("groups.move.new"), fn: async () => { const v = ((await ask(I18N.t("groups.move.prompt"), await newName(bases))) || "").trim(); if (v) { GRUPPI.set(bases, v); say(I18N.t("groups.dnd.done", { g: v })); } } },
+        { label: I18N.t("groups.with.menu"), fn: () => groupWith(bases, flSide().map(/** @param {any} x */ x => fileBase(x.file))) },
+        { label: I18N.t("groups.move.new"), fn: async () => { const v = ((await ask(I18N.t("groups.move.prompt"), await GRUPPI.newName(bases))) || "").trim(); if (v) { GRUPPI.set(bases, v); say(I18N.t("groups.dnd.done", { g: v })); } } },
         ...(some ? [{ label: I18N.t("groups.move.none"), fn: () => { GRUPPI.set(bases, ""); say(I18N.t("groups.dnd.doneNone")); } }] : [])]);
     },
   };

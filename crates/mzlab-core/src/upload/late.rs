@@ -44,7 +44,7 @@ pub fn prepare_late<R: ReadAt, R2: ReadAt + Send + 'static>(
     mut r2: R2,
     size: u64,
     name: &str,
-) -> Result<(ScanTable, impl FnMut() -> Result<String>)> {
+) -> Result<(ScanTable, impl FnMut() -> Result<String> + use<R, R2>)> {
     non_mzml::refuse(r, size, name)?;
     let prints = std::thread::spawn(move || fingerprint(&mut r2, size, Passata::senza_sha1(size)));
     let t = scantable::read(&mut Windowed::new(r, size), size)?;

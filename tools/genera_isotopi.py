@@ -1,7 +1,7 @@
 """Write the isotope table of the elements beyond the core 13 of isoscore (Rust: crates/mzlab-core/src/isotable.rs; Python reference: mzlab/chem/isotable.json).
 
 Same sources as tools/genera_elementi.py (exact masses from OpenChemLib, natural abundances typed there); an element with an isotope without a known mass is left out.
-Run from the project root:  python3 tools/genera_isotopi.py && rustfmt --edition 2021 crates/mzlab-core/src/isotable.rs
+Run from the project root:  python3 tools/genera_isotopi.py && rustfmt --edition 2024 crates/mzlab-core/src/isotable.rs
 """
 import json
 from pathlib import Path

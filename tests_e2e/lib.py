@@ -312,14 +312,15 @@ def scrivi(dst, text):
     t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)
 def build_feat(static, env=None):
     """Give the copy of the site the .wasm of mzFinder: copied from site/static when built there, else tools/build_feat_wasm.sh, one process at a time: it shares cargo's target/ and its artefacts, so parallel tests would clash."""
-    import fcntl, subprocess, tempfile
+    import subprocess, tempfile
+    from flock_util import lock_exclusive
     ready = ROOT / "site" / "static"
     if (ready / "wasm-feat" / "manifest.json").exists():          # already built in the shared site (CI, local runs): copy it instead of building again
         for d in ("wasm-feat", "wasm-lettori"):
             if (ready / d).is_dir(): shutil.copytree(ready / d, Path(static) / d, dirs_exist_ok=True)
         return
     with open(os.path.join(tempfile.gettempdir(), "mzlab-build-feat.lock"), "w") as lk:
-        fcntl.flock(lk, fcntl.LOCK_EX)
+        lock_exclusive(lk)
         subprocess.run(["tools/build_feat_wasm.sh", str(static)], cwd=ROOT, check=True, env=env, capture_output=True)
 
 
@@ -346,7 +347,7 @@ class Run:
     def page(s, p, tour=False, qaqc=False):
         s.b = p.chromium.launch()
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
-        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
+        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         else:          # the tour tests want the invitation of the tour, but not the hint of the side-by-side panels: it shows up after a few seconds (later under load) over the spectrum and takes the clicks of the test
@@ -354,7 +355,7 @@ class Run:
         if qaqc:       # QA/QC is dormant: only this switch (as ?qaqc=1) makes it visible
             pg.add_init_script("try{localStorage.setItem('mzlab.dev.qaqc','1');}catch(_){}")
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e) + " @ " + " | ".join((getattr(e, "stack", "") or "").split("\n")[1:5]))))          # diagnostics: the first stack frames say which script threw
-        pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text else None)       # software-GL performance hints of the 3D viewer are not page errors
+        pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text and "using link preload but not used" not in m.text else None)       # not page errors: software-GL hints of the 3D viewer, and WebKit's note that a preloaded script was injected later than a few seconds after load
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
         pg.on("response", lambda r: s.errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)
         pg.goto(f"http://127.0.0.1:{s.port}/")

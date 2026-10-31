@@ -49,12 +49,13 @@ fn decode(v: &str) -> String {
     let mut out = Vec::with_capacity(b.len());
     let mut i = 0;
     while i < b.len() {
-        if b[i] == b'%' && i + 2 < b.len() {
-            if let Ok(h) = u8::from_str_radix(&v[i + 1..i + 3], 16) {
-                out.push(h);
-                i += 3;
-                continue;
-            }
+        if b[i] == b'%'
+            && i + 2 < b.len()
+            && let Ok(h) = u8::from_str_radix(&v[i + 1..i + 3], 16)
+        {
+            out.push(h);
+            i += 3;
+            continue;
         }
         out.push(b[i]);
         i += 1;

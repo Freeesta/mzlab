@@ -276,10 +276,10 @@ impl State {
             .unwrap_or_else(|e| e.into_inner())
             .get(name)
             .and_then(|e| e.nat);
-        if let Some(nat) = nat {
-            if let Some(root) = dataset_root(&nat.members) {
-                self.coda.add(name, nat.id, &root);
-            }
+        if let Some(nat) = nat
+            && let Some(root) = dataset_root(&nat.members)
+        {
+            self.coda.add(name, nat.id, &root);
         }
         text(self.coda.list().to_string())
     }

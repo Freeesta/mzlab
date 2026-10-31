@@ -153,19 +153,19 @@ fn a_batch_without_qc_is_reported_and_the_limits_are_parameters() {
 fn a_table_without_order_and_one_with_repeated_orders_are_reported() {
     let cs = batch("A", 1, 10, 5, true, &[1.0, 2.0]);
     let mut doc = parse(&v2(&cs)).unwrap();
-    if let Value::Obj(fields) = &mut doc {
-        if let Some((_, Value::Arr(items))) = fields.iter_mut().find(|(k, _)| k == "campioni") {
-            for (k, item) in items.iter_mut().enumerate() {
-                if let Value::Obj(f) = item {
-                    if k == 3 {
-                        f.retain(|(key, _)| key != "ordine_iniezione");
-                    }
-                    if k == 5 || k == 6 {
-                        f.iter_mut()
-                            .find(|(key, _)| key == "ordine_iniezione")
-                            .unwrap()
-                            .1 = Value::Num(8.0);
-                    }
+    if let Value::Obj(fields) = &mut doc
+        && let Some((_, Value::Arr(items))) = fields.iter_mut().find(|(k, _)| k == "campioni")
+    {
+        for (k, item) in items.iter_mut().enumerate() {
+            if let Value::Obj(f) = item {
+                if k == 3 {
+                    f.retain(|(key, _)| key != "ordine_iniezione");
+                }
+                if k == 5 || k == 6 {
+                    f.iter_mut()
+                        .find(|(key, _)| key == "ordine_iniezione")
+                        .unwrap()
+                        .1 = Value::Num(8.0);
                 }
             }
         }

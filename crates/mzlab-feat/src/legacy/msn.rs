@@ -144,7 +144,7 @@ fn calibration(
         all.extend(
             mz.iter()
                 .zip(rel)
-                .filter(|(_, &r)| r >= 0.05 * mx)
+                .filter(|&(_, &r)| r >= 0.05 * mx)
                 .map(|(&m, _)| m),
         );
     }

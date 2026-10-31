@@ -27,13 +27,13 @@ flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 
 
 # the PNG of a figure of the MSn graph (`mzlab-cli msn-graph --figura png`): rasterises the SVG, pure Rust; not in the default build, never in a .wasm
-resvg = { version = "0.48", default-features = false, features = ["text", "system-fonts"], optional = true }
+resvg = { version = "0.49", default-features = false, features = ["text", "system-fonts"], optional = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 ureq = { version = "2", default-features = false, features = ["tls"] }
 # the trust store of `normative build` behind a proxy that re-signs HTTPS (SSL_CERT_FILE); the same versions as ureq uses
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
-webpki-roots = "0.26"
+webpki-roots = "1.0"
 
 [features]
 png = ["dep:resvg"]

@@ -87,10 +87,10 @@ fn f2_scansione(
     d: &mut Vec<String>,
     m: &mut Vec<String>,
 ) {
-    if let Some(rt) = num(&t["rt_min"]) {
-        if (s.rt - rt).abs() > tol.rt_min {
-            d.push(format!("scan {k}: RT {} vs {rt}", s.rt));
-        }
+    if let Some(rt) = num(&t["rt_min"])
+        && (s.rt - rt).abs() > tol.rt_min
+    {
+        d.push(format!("scan {k}: RT {} vs {rt}", s.rt));
     }
     if t["livello"].as_u64() != Some(u64::from(s.livello)) {
         d.push(format!("scan {k}: level {} vs {}", s.livello, t["livello"]));
@@ -224,10 +224,10 @@ fn f4_traccia(
         ("sum", somma, num(&t["somma"])),
         ("maximum", massimo, num(&t["massimo"])),
     ] {
-        if let Some(b) = theirs {
-            if !rel_ok(ours, b, tol.cromatogramma_rel) {
-                d.push(format!("chromatogram {id}: {nome} {ours} vs {b}"));
-            }
+        if let Some(b) = theirs
+            && !rel_ok(ours, b, tol.cromatogramma_rel)
+        {
+            d.push(format!("chromatogram {id}: {nome} {ours} vs {b}"));
         }
     }
     let n = ch.intensity.len();

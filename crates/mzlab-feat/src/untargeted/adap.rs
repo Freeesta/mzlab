@@ -274,10 +274,10 @@ fn zeros(c: &Building, nscans: usize) -> Vec<u32> {
         if gap >= 1 {
             add.push(d - 1);
             gap -= 1;
-            if gap > 0 {
-                if let Some(q) = prev {
-                    add.push(q + 1);
-                }
+            if gap > 0
+                && let Some(q) = prev
+            {
+                add.push(q + 1);
             }
         }
         gap = 0;

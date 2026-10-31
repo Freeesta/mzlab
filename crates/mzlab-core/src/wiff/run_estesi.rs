@@ -74,10 +74,11 @@ impl Wiff {
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
-            } else if !self.is_empty_row(r) && !self.scan_experiment(r.experiment) {
-                if let Some(c) = scan::read_mrm_cols(scan, self.scan_len, r.at, r.size as usize)? {
-                    blocks.add(r, c);
-                }
+            } else if !self.is_empty_row(r)
+                && !self.scan_experiment(r.experiment)
+                && let Some(c) = scan::read_mrm_cols(scan, self.scan_len, r.at, r.size as usize)?
+            {
+                blocks.add(r, c);
             }
         }
         let mut chroms = self.chromatograms_of(blocks);

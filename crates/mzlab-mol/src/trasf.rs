@@ -86,10 +86,10 @@ impl Trasf {
         {
             return invalid("sites: distinct atoms, p in (0, 1]");
         }
-        if let Some(r) = &self.region {
-            if !ascending(&r.atoms, usize::MAX) || !atoms.iter().all(|a| r.atoms.contains(a)) {
-                return invalid("region: ascending atoms that include every site");
-            }
+        if let Some(r) = &self.region
+            && (!ascending(&r.atoms, usize::MAX) || !atoms.iter().all(|a| r.atoms.contains(a)))
+        {
+            return invalid("region: ascending atoms that include every site");
         }
         Ok(())
     }

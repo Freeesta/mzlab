@@ -198,17 +198,23 @@ const ugBases = () => new Set(flSide().filter(x => x.vis).map(x => fileBase(x.fi
 function groupFiles() {
   const used = new Set(E.files.map(x => x.ugrp)); let n = 1;
   while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
-  const b = ugBases(); ugSet(flSide().filter(x => b.has(fileBase(x.file))), I18N.t("files.ugrp.name", { n }));
+  carica("gruppi.js").then(() => GRUPPI.set([...ugBases()], I18N.t("files.ugrp.name", { n }), "new"));
 }
-async function renameGroup(/** @type {string} */ n) {
-  const v = ((await ask(I18N.t("files.group.prompt"), n)) || "").trim();
-  if (!v || v === n) return;
-  E._grpOpen = E._grpOpen || {}; if (E._grpOpen["u:" + n] !== undefined) E._grpOpen["u:" + v] = E._grpOpen["u:" + n];
-  ugSet(ugFiles(n), v);
+/** True when the list has user groups and every one is a single file: their headers (a count of 1 each) are left out. @param {{ g: string, fs: any[] }[]} groups */
+const ugFlat = groups => groups.some(G => G.g.startsWith("u:")) && groups.every(G => !G.g.startsWith("u:") || G.fs.length < 2);
+/** «Group by» is shown only while some grouping gives a group of 2+ files (one the list already has, or a variable of the names); the chosen key stays and applies again when it is useful. */
+let _byTick = 0;
+function syncGroupBy() {
+  const by = document.getElementById("sb-by"); if (!by) return;
+  const my = ++_byTick, show = (/** @type {boolean} */ on) => { if (my !== _byTick || by.hidden === !on) return; by.hidden = !on; if (!on) window.GRUPPIPER?.close(false); };
+  if (new Set(flSide().map((/** @type {any} */ f) => fileBase(f.file))).size < 2) return show(false);
+  carica("gruppi.js").then(() => GRUPPI.useful()).then(show);
 }
+// rename and ungroup also reach the labels of the loading table's rows: gruppi.js writes both
+const renameGroup = (/** @type {string} */ n) => carica("gruppi.js").then(() => GRUPPI.rename(n));
 function groupCtx(/** @type {any} */ e, /** @type {string} */ n) {
   e.stopPropagation();
-  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => ugSet(ugFiles(n), "") }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
+  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => carica("gruppi.js").then(() => GRUPPI.ungroup(n)) }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
 }
 /** Header of a user group: the markup of the automatic headers of renderFileList, plus the name for its menu (right click, Menu key, Shift+F10) and rename (double click, F2). */
 function ugHead(/** @type {{ g: string, fs: any[] }} */ G, /** @type {boolean} */ open) {

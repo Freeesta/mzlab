@@ -170,10 +170,11 @@ impl Folder {
         let m = fs::metadata(p).map_err(|e| io(&e))?;
         let (size, mtime) = (m.len(), mtime_ms(&m));
         let mut maps = self.maps.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(c) = maps.get(p) {
-            if c.size == size && c.mtime == mtime {
-                return Ok(c.map.clone());
-            }
+        if let Some(c) = maps.get(p)
+            && c.size == size
+            && c.mtime == mtime
+        {
+            return Ok(c.map.clone());
         }
         let map = Arc::new(Mapped::open(p).map_err(|e| io(&e))?);
         if maps.len() > 16 {

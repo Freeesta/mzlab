@@ -108,7 +108,7 @@ impl<R: ReadAt> Routes<R> {
         let in_win: Vec<usize> = sel
             .iter()
             .enumerate()
-            .filter(|(_, &j)| ar.rt[j] >= lo && ar.rt[j] <= hi)
+            .filter(|&(_, &j)| ar.rt[j] >= lo && ar.rt[j] <= hi)
             .map(|(i, _)| i)
             .collect();
         let (mut mz, mut y) = (vec![], vec![]);

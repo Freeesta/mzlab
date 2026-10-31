@@ -35,5 +35,6 @@ pub mod spend;
 mod subcall;
 pub mod subcheck;
 mod text;
+pub use text::numbers;
 pub mod tools;
 mod tools_assist;

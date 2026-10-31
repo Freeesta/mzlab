@@ -160,7 +160,7 @@ fn uv_spettri<W: Write>(
     w: &mut MzmlWriter<W>,
     dad: Option<&crate::wiff::dad::DadData>,
 ) -> Result<()> {
-    for d in dad {
+    if let Some(d) = dad {
         for (i, &t) in d.time_min.iter().enumerate() {
             w.uv_spectrum(i, t, &d.wavelengths_nm, d.spectrum_at(i).unwrap_or(&[]))?;
         }

@@ -1,8 +1,9 @@
 """A true reset: what a student loads stays in the browser after a reload (the page says so once); «Full reset» removes files, session, notebook, OPFS, IndexedDB,
 caches, service workers and preferences by NAME (also folders and databases that this test invents, as other parts of the program do); «Files and session only» keeps the
-preferences, the language and the saved libraries. The one entry is the header button «New session» (dialog with both and Cancel), also ?reset=all|1|files."""
+preferences, the language and the saved libraries. The one entry is the header button «New session» (dialog with both and Cancel), also ?reset=all|1|files. Full reset also drops the program's own caches and worker (it is the guaranteed way to fetch the new version) and the page it reloads ends isolated by itself."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+import time
 EX = ROOT / "mzlab" / "web" / "esempi"
 steps = []
 def step(name, fn):
@@ -73,6 +74,27 @@ try:
             assert all(c.startswith("mzlab-app") or c.startswith("mzlab-big-") and c != "mzlab-big-x" for c in s["caches"]), s["caches"]
             assert "mzlab.lang" not in s["ls"] and "mzlab.invented" not in s["ls"] and "mzlab.mappa" not in s["ls"], s["ls"]
         step("Header «New session» → Full reset: dialog, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
+        def isolated_after():
+            # a visitor's tab (no guard preset by the harness): first visit isolates itself, a Full reset must end isolated again with no manual reload
+            c2 = b.new_context(locale="en-US", viewport={"width": 1280, "height": 900}); q = c2.new_page()
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            loads = []; q.on("framenavigated", lambda f: loads.append(f.url) if f == q.main_frame else None)
+            try:
+                q.goto(base); q.wait_for_function("crossOriginIsolated === true && window.qqReady", timeout=60000)
+                def warm_ms():
+                    t0 = time.time(); q.reload(); q.wait_for_function("window.qqReady", timeout=60000); return (time.time() - t0) * 1000
+                warm = min(warm_ms(), warm_ms())
+                n = len(loads); q.evaluate("QQRESET.run('all')")
+                q.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn')", timeout=30000)
+                q.wait_for_function("crossOriginIsolated === true && window.qqReady", timeout=60000)
+                q.wait_for_timeout(1500)
+                assert q.evaluate("crossOriginIsolated") and q.evaluate("!!navigator.serviceWorker.controller"), "isolated and controlled by the new worker after the reset"
+                made = [u for u in loads[n:] if "ripn" in u]; assert len(made) == 2, ("the reset load plus ONE isolating reload (the engine then cleans the address, which is no load)", loads[n:])
+                after = min(warm_ms(), warm_ms())
+                assert after <= max(2 * warm, warm + 1500), ("a reload after a reset is as fast as a warm one", round(warm), round(after))
+                print("   warm reload ms:", round(warm), "after reset ms:", round(after))
+            finally: c2.close()
+        step("after a Full reset the page is isolated with no manual reload, and the next reload is warm", isolated_after)
         def gear():
             load_files(); pg.click("#np-set"); pg.wait_for_timeout(400)
             txt = pg.inner_text("#uipset"); assert "Full reset" not in txt and "Reset completo" not in txt and "Storage in the browser" not in txt, txt

@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use self::screen_suspects::{regulatory_job, screen_job};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{Artifact, Job, Mem, Outcome, Runner};
+use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
 use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
