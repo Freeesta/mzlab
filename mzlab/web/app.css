@@ -505,7 +505,7 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .fl.up .fi{flex:1;min-width:0}.fl.up .prog{margin-top:2px}.fl.up .diag{display:block}
 
 /* landing: a big central drop zone; the empty side list says a plain sentence; the toolbar buttons that wait for data are plainly grey */
-#start{max-width:none}#start #drop{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;align-items:baseline;gap:6px .35em;min-height:clamp(220px,48vh,520px);box-sizing:border-box;padding:32px 14px}#start #drop b{font-size:calc(1.25em + 2px)}#start #drop .fmts{flex:0 0 100%;margin-top:14px}
+#start{max-width:none}#backwork{margin-bottom:12px}#v-workspace[data-work=add] #start #drop{min-height:clamp(160px,30vh,360px)}#start #drop{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;align-items:baseline;gap:6px .35em;min-height:clamp(220px,48vh,520px);box-sizing:border-box;padding:32px 14px}#start #drop b{font-size:calc(1.25em + 2px)}#start #drop .fmts{flex:0 0 100%;margin-top:14px}
 #fl-hint{margin:14px 12px;min-height:4.5em;width:0;min-width:calc(100% - 24px);box-sizing:border-box;text-align:center;line-height:1.5}#fl-hint[hidden]{display:none}#sb-pane.dz-over #fl-hint{display:none}
 #tools :is(button,select):disabled{color:var(--muted);background:var(--soft);border-color:var(--line);cursor:not-allowed;opacity:1;box-shadow:none}#tools :is(button,select):disabled:hover{border-color:var(--line);background:var(--soft)}
 /* landing: the progress box floats over the gap above the drop zone, so the zone never moves or resizes when it appears */
@@ -521,10 +521,8 @@ html.in-draw #sb-toggle{display:none}
 #drop .drop-tx{display:contents}#drop .drop-ic{flex:0 0 100%;margin:0 auto 10px;color:var(--muted)}
 /* empty side panel: a still drawing above the text, no motion */
 #fl-hint .leaf{display:block;margin:0 auto 6px;color:var(--muted)}#fl-hint .leaf .lf{fill:var(--accent);fill-opacity:.1}
-/* falling leaf: decorative, transform/opacity only inside its own box (no layout shift); still unless motion is allowed */
-#drop{position:relative;overflow:hidden}#drop .leaf-fall{position:absolute;top:10%;left:12%;margin:0;color:var(--muted);opacity:.55;pointer-events:none}#drop .leaf-fall .lf{fill:var(--accent);fill-opacity:.15}
-@media (prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) #drop .leaf-fall{top:-48px;animation:leaf-drop 16s linear infinite}:root:not([data-a11y-reduce]) #fl-hint .leaf{animation:leaf-sway 6s ease-in-out infinite;transform-origin:50% 0}}
-@keyframes leaf-drop{0%{top:-48px;opacity:0;transform:translateX(0) rotate(-20deg)}8%{opacity:.55}25%{transform:translateX(28px) rotate(25deg)}50%{transform:translateX(-12px) rotate(-30deg)}75%{transform:translateX(24px) rotate(30deg)}92%{opacity:.55}100%{top:100%;opacity:0;transform:translateX(0) rotate(-15deg)}}
+/* side-panel leaf: decorative sway, transform only; still unless motion is allowed */
+@media (prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) #fl-hint .leaf{animation:leaf-sway 6s ease-in-out infinite;transform-origin:50% 0}}
 @keyframes leaf-sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
 
 /* × of a file row: shown on hover and focus, always on touch; the row keeps its height */
