@@ -35,5 +35,15 @@ I18N.add("en", {
   "groups.has.title": "Group by words contained",
   "groups.has.terms": "Words to look for, separated by commas",
   "groups.has.sub": "Also inside words",
-  "groups.has.multi": "{n, plural, one {# file matches more than one word and goes to the first} other {# files match more than one word and go to the first}}"
+  "groups.has.multi": "{n, plural, one {# file matches more than one word and goes to the first} other {# files match more than one word and go to the first}}",
+  "groups.dnd.over": "Move to {g} · {n, plural, one {# file} other {# files}}",
+  "groups.dnd.overNone": "Remove from groups · {n, plural, one {# file} other {# files}}",
+  "groups.dnd.done": "Moved to {g}",
+  "groups.dnd.doneNone": "Removed from groups",
+  "groups.dnd.cancel": "Move cancelled",
+  "groups.dnd.edge": "No more groups in this direction",
+  "groups.move.menu": "Move to group ▸",
+  "groups.move.new": "New group…",
+  "groups.move.none": "Ungrouped",
+  "groups.move.prompt": "Name of the new group"
 });

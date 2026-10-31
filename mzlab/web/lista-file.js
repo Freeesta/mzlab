@@ -122,6 +122,12 @@ function bindListaFile() {
     const r = t.getBoundingClientRect(), ev = { preventDefault() { /* already done */ }, stopPropagation() { /* already done */ }, clientX: r.left, clientY: r.bottom, kbd: true };
     if (hd) groupCtx(ev, hd.dataset.ug || ""); else fileCtx(ev, fileOf(row?.querySelector(".nm") || null, ".nm"));
   });
+  // Ctrl+Shift+↑/↓ on a row moves its file (and the ticked ones) to the previous / next group (WCAG 2.5.7: the keyboard way of the drag)
+  if (!L.dataset.cap) L.addEventListener("keydown", e => {
+    const row = /** @type {HTMLElement} */ (e.target).closest(".fl:not(.pr)");
+    if (!row || !(e.ctrlKey || e.metaKey) || !e.shiftKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault(); e.stopPropagation(); carica("gruppi-dnd.js").then(() => GDND.step(row, e.key === "ArrowDown" ? 1 : -1));
+  });
   L.dataset.cap = "1";
   const by = document.getElementById("sb-by"); if (by && !by.onclick) by.onclick = () => carica("gruppi.js").then(() => carica("gruppi-per.js")).then(() => GRUPPIPER.open());
   // a user group header: its menu; a double click renames it (the first click folds and redraws the list, so the second click, not dblclick, carries it)
