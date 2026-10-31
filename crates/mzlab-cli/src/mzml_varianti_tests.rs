@@ -44,8 +44,8 @@ const REFUSED: [(&str, &str); 3] = [
     ("badb64.mzML", "err.file.base64"),
 ];
 
-/// Known gap, stated here so that closing it fails this test and updates the matrix: a truncated file opens with the spectra it has and says nothing.
-const GAPS: [&str; 1] = ["truncated.mzML"];
+/// Opens with the spectra it has; its scan table says how many its list declares (`table_of_truncated_file_declares_more_than_it_holds`).
+const PARTIAL: [&str; 1] = ["truncated.mzML"];
 
 #[test]
 fn every_variant_opens_or_fails_with_its_key() {
@@ -70,7 +70,7 @@ fn every_variant_opens_or_fails_with_its_key() {
     }
     let o = cli(&["canali", p("truncated.mzML").to_str().unwrap()]);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    assert_eq!(GAPS.len() + OPEN.len() + REFUSED.len(), 20);
+    assert_eq!(PARTIAL.len() + OPEN.len() + REFUSED.len(), 20);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -86,5 +86,26 @@ fn validate_flags_the_truncated_file_and_the_garbage() {
         let all = format!("{}{}", String::from_utf8_lossy(&o.stdout), o.stderr);
         assert!(all.contains("INVALID"), "{n}: {all}");
     }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The warning of the page and of the CLI rests on this: the declared count of the list against the rows read.
+#[test]
+fn the_table_of_a_truncated_file_declares_more_than_it_holds() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_trunc_{}", std::process::id()));
+    if !generate(&dir) {
+        eprintln!("skipped: python3 with numpy not available");
+        return;
+    }
+    let count = |n: &str| {
+        let f = dir.join(n);
+        let size = std::fs::metadata(&f).unwrap().len();
+        let t = mzlab_core::scantable::read(&mut std::fs::File::open(&f).unwrap(), size).unwrap();
+        (t.rows.len(), t.declared)
+    };
+    let (read, declared) = count("truncated.mzML");
+    assert!(declared > read && read > 0, "{read} of {declared}");
+    let (read, declared) = count("plain_64_z.mzML");
+    assert_eq!(read, declared);
     let _ = std::fs::remove_dir_all(&dir);
 }

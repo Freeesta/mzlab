@@ -64,7 +64,7 @@ export function createPool({ workerUrl, size, budget = 64, isolated = false, aiu
     w.onmessage = ev => {
       const m = ev.data;
       if (job.done || ended) return;
-      if (m.op === "ready") { inited = true; w.postMessage(job.msg || { blob: job.blob, inputs: job.inputs, part: job.part, partCen: job.partCen, budget: job.budget || budget, cap: job.cap, nat: job.nat, name: job.name, aiuti: job.nat ? 0 : aiuti ?? aiutiPer(limit, gate ? gate.used : active, isolated) }, job.transfer || []); return; }   // aiuti: the helpers of an mzML builder (aiutiPer)
+      if (m.op === "ready") { inited = true; w.postMessage(job.msg || { blob: job.blob, inputs: job.inputs, prep: job.prep, part: job.part, partCen: job.partCen, budget: job.budget || budget, cap: job.cap, nat: job.nat, name: job.name, aiuti: job.nat ? 0 : aiuti ?? aiutiPer(limit, gate ? gate.used : active, isolated) }, job.transfer || []); return; }   // aiuti: the helpers of an mzML builder (aiutiPer)
       if (m.op === "progress") { if (job.onProgress) job.onProgress(m); return; }
       if (m.op === "unavailable") { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: m.text }); wake(); return; }
       if (m.op === "done") { end(); finish(job, { ok: true, stats: m.stats, ms: m.ms, parts: m.parts }); wake(); return; }
@@ -86,7 +86,7 @@ export function createPool({ workerUrl, size, budget = 64, isolated = false, aiu
 
   if (gate) gate.pumps.push(pump);
   return {
-    // job: { name, blob, inputs, part, budget? } or { name, nat, part } (a dataset of a maker, rust-nativo.js) or { name, msg, transfer?, onProgress? }
+    // job: { name, blob, inputs | prep: { size, prints }, part, budget? } (prep: the worker makes the scan table itself) or { name, nat, part } (a dataset of a maker, rust-nativo.js) or { name, msg, transfer?, onProgress? }
     build(job) {
       return new Promise(resolve => {
         const j = { ...job, resolve, tried: false, done: false };

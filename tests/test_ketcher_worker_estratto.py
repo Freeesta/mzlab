@@ -5,7 +5,7 @@ from pathlib import Path
 
 KET = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "vendor" / "ketcher"
 ASSETS = KET / "assets"
-MAX_PAGE_BUNDLE = 12_000_000          # was 29 MB with the worker inline
+MAX_PAGE_BUNDLE = 6_000_000           # was 29 MB with the worker inline, 7.9 MB with the monomer library
 
 
 def test_page_bundle_has_no_inline_worker():
@@ -27,3 +27,11 @@ def test_worker_and_wasm_files_exist_and_match():
     assert f'"./{workers[0].name}"' in main, "the page bundle does not load the worker by URL"
     html = (KET / "index.html").read_text("utf8")
     assert workers[0].name in html and wasms[0].name in html, "index.html lost the prefetch hints used by first-paint.js"
+
+
+def test_macromolecules_mode_is_off_and_the_monomer_library_is_empty():
+    """tools/ketcher_senza_monomeri.py: the 3.5 MB default monomer library was parsed on every editor creation (seconds of long task)."""
+    main = next(p for p in ASSETS.glob("index-*.js") if p.stat().st_size > 1_000_000).read_text("utf8")
+    assert "disableMacromoleculesEditor:!0," in main, "macromolecules mode is on again"
+    assert '`{"root":{"nodes":[],"connections":[],"templates":[]}}`' in main, "the default monomer library is back"
+    assert len(main) < 6_000_000, len(main)

@@ -492,6 +492,7 @@ pub fn build_mzidx(
         source_json,
         run_json,
         hr1,
+        declared: 0,
     };
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
@@ -555,6 +556,8 @@ pub fn prepare_upload(size: f64, read: Function, name: &str, sha256: Option<Stri
     out.push(&JsValue::from_str(&t.run_json));
     out.push(&JsValue::from_bool(t.hr1));
     out.push(&JsValue::from_str(&p.sha256));
+    // the spectra the file declares: the page compares them with the ones the index holds (a truncated file lacks the rest)
+    out.push(&JsValue::from_f64(p.table.declared as f64));
     Ok(out)
 }
 

@@ -206,6 +206,13 @@ pub(crate) fn build_index_with(
             }
             None => prepare_unknown(path, &mut file, size, &name)?,
         };
+        if table.declared > table.level.len() {
+            eprintln!(
+                "warn.file.truncated: {name}: {} of {} spectra read, the file ends before the rest",
+                table.level.len(),
+                table.declared
+            );
+        }
         // the peaks that do not fit in `budget` go to a scratch file, so the mzML is decoded once and not once per round
         let scratch_path = idx.with_extension("mzidx.scratch");
         let mut scratch = std::fs::OpenOptions::new()

@@ -52,12 +52,12 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 47, pg.locator(".fl-it").count()
+            assert pg.locator(".fl-it").count() == 52, pg.locator(".fl-it").count()
             assert pg.locator(".fl-pal details").count() == 3
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 47
+            assert pg.locator(".fl-it:visible").count() < 52
             pg.fill("#fl-filter", "")
-        step("palette: 47 steps in three packages, the filter narrows it", palette)
+        step("palette: 52 steps in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
@@ -149,7 +149,7 @@ try:
         def first_screen():
             attendi(pg, "document.querySelectorAll('.fln').length === 2")
             assert "Import data" in pg.inner_text(".fln") and pg.locator(".fl-lines path").count() == 1
-            assert pg.locator(".fln .fln-chip").count() == 2 and pg.locator(".fln .fln-chip.warn").count() == 1 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 9 and pg.locator(".flx-tpl > .flx-tpls > .flx-tc").count() == 4 and pg.locator(".flx-more .flx-tc").count() == 5 and pg.locator(".flx-more[open]").count() == 0 and pg.inner_text(".flx-more summary") == "More templates" and pg.inner_text(".fl-insp h3") == "Build feature table"
+            assert pg.locator(".fln .fln-chip").count() == 2 and pg.locator(".fln .fln-chip.warn").count() == 1 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 10 and pg.locator(".flx-tpl > .flx-tpls > .flx-tc").count() == 5 and pg.locator(".flx-more .flx-tc").count() == 5 and pg.locator(".flx-more[open]").count() == 0 and pg.inner_text(".flx-more summary") == "More templates" and pg.inner_text(".fl-insp h3") == "Build feature table"
             assert pg.get_attribute('[data-mode="simple"]', "aria-pressed") == "true"
             assert pg.locator(".flx-pal").is_hidden()
         step("canvas: the base is already there and connected, templates are offered, Simple is the default", first_screen)
@@ -169,7 +169,7 @@ try:
             assert "Ready" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
             n = pg.evaluate("window.__n"); total = n["click"] + n["key"]
             print(f"MISURA clic_canvas: tab 1 + template 1 = {total} clicks to a complete valid chain; with the {ADMIN} clicks of the logo {total + ADMIN}")
-            print(f"MISURA clic_modello: {total} clicks from the empty sheet to a ready plan (3 templates on the first row, 5 under More templates)")
+            print(f"MISURA clic_modello: {total} clicks from the empty sheet to a ready plan (5 templates on the first row, 5 under More templates)")
             assert total <= 3, n
         step("canvas: one template click gives a complete valid chain", template)
         def inspector():
@@ -177,7 +177,8 @@ try:
             attendi(pg, "document.querySelector('.fl-insp h3') && document.querySelector('.fl-insp h3').textContent === 'Match to library'")
             assert "What this step does" not in pg.inner_text(".fl-insp") and "Ready." not in pg.inner_text(".fl-insp") and pg.locator(".fl-insp button:has-text('Remove step')").count() == 1
             pg.click('.fln:has-text("Import data")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Import data'")
-            assert pg.locator(".fl-insp button:has-text('Remove')").count() == 0 and "cannot remove" not in pg.inner_text(".fl-insp") and "part of the base" not in pg.inner_text(".fl-insp")
+            # the Import inspector holds the sample table, whose «Remove rows» is not a step removal
+            assert pg.locator(".fl-insp button:has-text('Remove step')").count() == 0 and "cannot remove" not in pg.inner_text(".fl-insp") and "part of the base" not in pg.inner_text(".fl-insp")
         step("canvas: the inspector explains the step; the base cannot be removed", inspector)
         def needs_and_fix():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Regulatory lists")')
