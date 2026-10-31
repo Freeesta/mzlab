@@ -197,3 +197,24 @@ console.log(JSON.stringify({ la: a.length, lb: b.length, lc: c.length, b0: b[0],
     r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, encoding="utf-8")
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout) == {"la": 10, "lb": 4, "lc": 50, "b0": 10, "same": True, "grew": True}
+
+
+def test_spill_put_turns_silent_loss_of_written_bytes_into_storage_full():
+    # a handle that accepts every write but keeps only the first 1000 bytes of the file (an ephemeral window past its real limit)
+    code = """
+import { makeSpill } from %r;
+const keep = 1000, file = new Uint8Array(4000);
+const sh = { write(b, o) { for (let i = 0; i < b.length; i++) if (o.at + i < keep) file[o.at + i] = b[i]; return b.length; },
+             read(b, o) { for (let i = 0; i < b.length; i++) b[i] = file[o.at + i]; return b.length; } };
+let full = null;
+const s = makeSpill(sh, (off, n) => { full = [off, n]; }, (h, d, at) => h.write(d, { at }));
+const data = o => new Uint8Array(500).fill(o / 500 + 1);
+const out = [];
+for (const off of [0, 500, 1000, 1500]) {
+  try { s.put(off, data(off)); out.push("ok"); } catch (e) { out.push(String(e.message)); }
+}
+console.log(JSON.stringify({ out, full }));
+""" % (JS.with_name("idx-spill.js").as_uri(),)
+    r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, encoding="utf-8")
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == {"out": ["ok", "ok", "storage full", "storage full"], "full": [1500, 500]}
