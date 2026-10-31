@@ -52,16 +52,17 @@ try:
                     assert abs(g["h"] - 32 * z) < 2, (z, w, "row height", g["h"])
             pg.evaluate("document.documentElement.style.removeProperty('--z')")
         step("loaded file, long names, zoom 1 and 1.5: one row, order, dividers, Method right", loaded)
+        # the bottom edge of the row sampled on every frame while `fn` runs in the page (the side panel animates its width): it must be the same on all of them
+        SAMPLE = """n => new Promise(ok => { const t = document.getElementById('tools'), seen = new Set(); const f = () => { const r = t.getBoundingClientRect(); seen.add(Math.round((r.top + scrollY) * 10) + ':' + Math.round(r.height * 10)); if (--n > 0) requestAnimationFrame(f); else ok([...seen]); }; document.getElementById('sb-toggle').click(); requestAnimationFrame(f); })"""
         def stable():
             for w in WIDTHS:
                 pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 2)
-                a = geo(pg); pg.wait_for_timeout(500); b = geo(pg)
+                a = geo(pg); frames(pg, 40); b = geo(pg)            # ~600 ms of frames, not a fixed pause
                 assert (a["top"], a["bottom"]) == (b["top"], b["bottom"]), (w, "the row moved after first paint", a["bottom"], b["bottom"])
-                pg.click("#sb-toggle"); frames(pg, 3); pg.wait_for_timeout(450)
-                c = geo(pg); check_row(c, ("panel toggled", w))
-                assert (c["top"], c["bottom"]) == (a["top"], a["bottom"]), (w, "the row moved when the side panel toggled", a["bottom"], c["bottom"])
-                pg.click("#sb-toggle"); frames(pg, 3); pg.wait_for_timeout(450)
-                d = geo(pg); assert d["bottom"] == a["bottom"], (w, "the row moved when the side panel toggled back")
+                for k in ("closed", "open"):
+                    seen = pg.evaluate(SAMPLE, 45); assert len(seen) == 1, (w, "the row moved while the side panel went", k, seen)
+                    fermo(pg, "#tools", 200); c = geo(pg); check_row(c, ("panel", k, w))
+                    assert (c["top"], c["bottom"]) == (a["top"], a["bottom"]), (w, "the row moved when the side panel toggled", a["bottom"], c["bottom"])
         step("work area does not move after first paint nor when the side panel toggles", stable)
         def resize_sweep():
             # continuous resize: a row never doubles at any intermediate width
