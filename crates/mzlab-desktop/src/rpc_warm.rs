@@ -44,7 +44,9 @@ impl State {
             }
         }
     }
+}
 
+impl State {
     /// `lr_warm`: the index of the mzML `fid` under the name `name`. `{"skipped":true}` when one built from this very file is already there.
     pub(crate) fn lr_warm(&self, p: &Value) -> Result<Answer> {
         let name = clean(p["name"].as_str().unwrap_or(""))?;

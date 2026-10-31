@@ -46,7 +46,7 @@ try:
         step("the files are prepared in list order and nothing shows", background)
         def hidden_after_reload():
             pg.reload(); pg.wait_for_selector("#cartbody .cprow", timeout=60000)
-            pg.wait_for_function("typeof ST !== 'undefined' && window.MZLAB_LR", timeout=60000); pg.wait_for_timeout(1500)
+            pg.wait_for_function("typeof ST !== 'undefined' && window.MZLAB_LR", timeout=60000); frames(pg, 90)
             assert shown(pg) == [0, 0, 0], shown(pg)
         step("warm files stay out of the list after a reload", hidden_after_reload)
         def click_hit():
@@ -69,7 +69,7 @@ try:
         b2 = p.chromium.launch(); pc = b2.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce"); pc.add_init_script(NOSTART)
         pc.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         def cold_same():
-            pc.goto(f"http://127.0.0.1:{r.port}/"); pc.wait_for_selector("#pick", state="attached", timeout=60000); pc.wait_for_timeout(2500)
+            pc.goto(f"http://127.0.0.1:{r.port}/"); pc.wait_for_selector("#pick", state="attached", timeout=60000); frames(pc, 150)
             pc.set_input_files("#pick", [str(D / "a.mzML")]); pc.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=90000)
             pc.click("#opbtn"); ready(pc); pc.wait_for_function("typeof E !== 'undefined' && E.files && E.files.length>=1", timeout=60000)
             assert pc.evaluate(SHA, "idx/a.mzML.mzidx") == hot["a.mzML"], "index bytes differ, cold against warm"
