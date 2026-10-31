@@ -132,7 +132,7 @@ def hold(pg, ms):
     _real_wft(pg, ms)
 from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
 _np, _nc = _Br.new_page, _Br.new_context
-# The public site hides the desktop-app download and the Teoria (sito.js); the tests run with both on, as the code still offers them.
+# The public site shows the Teoria and hides the desktop-app download (sito.js); the tests run with both on, as the code still offers the app.
 # MZLAB_SITO_PRODUZIONE=1 (e2e_sito_pubblico) leaves the production values.
 _SITO = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true,teoria:true})"
 def _sito():

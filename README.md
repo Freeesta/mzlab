@@ -1,6 +1,6 @@
 # mzLab
 
-Programma didattico per esplorare dati LC-MS e cercare i **prodotti di trasformazione (TP)** di un inquinante degradato nel tempo (esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti, UniTO). Lo studente sceglie cosa estrarre, integra, annota e disegna: il programma mostra i dati, **non dà le risposte**. <!-- SITO-LIVE (sito.js: SITO_PUBBLICO.teoria): Comprende la Teoria (spettrometria di massa a bassa e alta risoluzione, GC, LC) e la Pratica per preparare l'orale. -->
+Programma didattico per esplorare dati LC-MS e cercare i **prodotti di trasformazione (TP)** di un inquinante degradato nel tempo (esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti, UniTO). Lo studente sceglie cosa estrarre, integra, annota e disegna: il programma mostra i dati, **non dà le risposte**. Comprende la Teoria (spettrometria di massa a bassa e alta risoluzione, GC, LC) e la Pratica per preparare l'orale.
 
 *(English: a light teaching tool that runs in the browser to explore LC-MS data and look for transformation products, with theory chapters and practice games. It shows the data; the student does the reasoning.)*
 
@@ -12,17 +12,15 @@ Apri **https://freeesta.github.io/mzlab/** in un browser recente (Chrome, Edge, 
 - Trascina i file `.mzML` (e, se vuoi, il `.dam` del metodo), controlla tempi e tipi, premi **Carica dati**. Senza file: **«Prova con i file di esempio»**.
 - Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent, sia nel sito sia nell'app desktop. I file Waters (cartelle `.raw`), Shimadzu (`.qgd`/`.lcd`) e Bruker (cartelle `.d` timsTOF/TSF) sono supportati tramite i moduli lettori nativi Rust dedicati (`crates/mzlab-lettori/`, scaricati on-demand nel browser o integrati nell'app desktop).
   *(English: Thermo `.raw`, SCIEX `.wiff` + `.wiff.scan` and Agilent `.D` folders open directly, in the site and in the desktop app. Waters `.raw` folders, Shimadzu `.qgd`/`.lcd` and Bruker `.d` timsTOF/TSF folders are supported via dedicated native Rust reader modules (`crates/mzlab-lettori/`), fetched on demand in the browser or built into the desktop app.)*
-<!-- SITO-LIVE (sito.js: SITO_PUBBLICO.teoria): - **Da smartphone** il sito mostra solo la Teoria; Dati, Disegno e giochi vanno usati da computer o tablet. -->
-- **Da smartphone** Dati e Disegno vanno usati da computer o tablet.
+- **Da smartphone** il sito mostra solo la Teoria; Dati, Disegno e giochi vanno usati da computer o tablet.
 
 ## Le schede
 
 - **Dati**: cromatogrammi (TIC, BPC, XIC, MRM), spettri, mappa RT×m/z, schede separate Full Scan / MS2 / MRM, file ad alta risoluzione (Orbitrap, Q-TOF) e DDA; integrazione dei picchi con tabella esportabile in Excel (.xlsx), correzione del fondo, calcolatrice m/z, tavola periodica, addotti, perdite neutre, confronto delle MS2 con librerie di spettri. Le tabelle e i grafici della relazione si costruiscono in Excel.
 - **Disegno**: editor chimico Ketcher per molecole, frammenti e vie di trasformazione, con formula e massa sotto ogni struttura e Δm sopra ogni freccia; gli strumenti visibili si scelgono in «Strumenti dell'editor»; esportazione PNG, JPEG, SVG e .ket.
-<!-- SITO-LIVE (sito.js: SITO_PUBBLICO.teoria): - **Teoria**: 22 capitoli in sei parti (dal problema dei TP alla cromatografia, alla ionizzazione, agli analizzatori, alla lettura degli spettri EI e MS2), glossario, bibliografia e formulario per l'orale, con figure interattive. Si apre anche da sola, con doppio clic su `mzlab/web/teoria/index.html`. -->
-<!-- SITO-LIVE (sito.js: SITO_PUBBLICO.teoria): - **Pratica**: dallo spettro EI alla struttura (con Modalità orale), domande dell'orale con simulazione d'esame, perdite neutre, isotopi, formula esatta, scelta dello strumento, quadrupolo. Correzione immediata e ripasso distanziato. -->
-- La **«i»** in alto apre le informazioni.
-<!-- SITO-LIVE (sito.js: SITO_PUBBLICO.teoria): - La **«i»** in alto apre le informazioni; la guida completa è il capitolo A della Teoria («Come si usa mzLab»). -->
+- **Teoria**: 22 capitoli in sei parti (dal problema dei TP alla cromatografia, alla ionizzazione, agli analizzatori, alla lettura degli spettri EI e MS2), glossario, bibliografia e formulario per l'orale, con figure interattive. Si apre anche da sola, con doppio clic su `mzlab/web/teoria/index.html`.
+- **Pratica**: dallo spettro EI alla struttura (con Modalità orale), domande dell'orale con simulazione d'esame, perdite neutre, isotopi, formula esatta, scelta dello strumento, quadrupolo. Correzione immediata e ripasso distanziato.
+- La **«i»** in alto apre le informazioni; la guida completa è il capitolo A della Teoria («Come si usa mzLab»).
 
 Con risoluzione unitaria **un m/z è un candidato, non un'identificazione**.
 

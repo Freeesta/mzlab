@@ -1,20 +1,20 @@
 // @ts-check
-// The one switch of the public site: what is shown to visitors. Both values are off for the live site; the Teoria, the desktop app
-// and its releases stay in the code and come back by turning a value on. Classic script, loaded in the head (before the address
+// The one switch of the public site: what is shown to visitors. The Teoria is always open; the desktop app and its releases
+// stay in the code and come back by turning scaricaApp on. Classic script, loaded in the head (before the address
 // check of index.html), right after <nav> (the tab of the Teoria goes in before the gear is drawn) and again before the i18n pass, when the rest of the markup exists.
-// Tests turn the values on with ?sito=teoria,app (or ?sito=tutto) in the address.
+// Tests turn the app on with ?sito=app (or ?sito=tutto) and the Teoria off with ?sito=senza-teoria.
 (function () {
   const w = /** @type {any} */ (window);
   if (!w.SITO_PUBBLICO) {
-    const SITO = { scaricaApp: false, teoria: false };
-    const q = /[?&]sito=([\w,]+)/.exec(location.search);
-    if (q) { SITO.teoria = /tutto|teoria/.test(q[1]); SITO.scaricaApp = /tutto|app/.test(q[1]); }
+    const SITO = { scaricaApp: false, teoria: true };
+    const q = /[?&]sito=([\w,-]+)/.exec(location.search);
+    if (q) { SITO.teoria = !/senza-teoria/.test(q[1]); SITO.scaricaApp = /tutto|app/.test(q[1]); }
     w.SITO_PUBBLICO = Object.freeze(SITO);
   }
   // a typed #/theory or #/practice must not reach the Teoria: the address goes back to the main page before index.html reads it
   if (!w.SITO_PUBBLICO.teoria && /^#\/(theory|practice)(\/|$)/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
   if (!w.SITO_PUBBLICO.teoria) return;
-  // with the Teoria on, its entrances are added here: the served page carries no link to it while it is off. The tab goes in right after <nav> (index.html
+  // its entrances are added here: the served page carries no link to it while it is off. The tab goes in right after <nav> (index.html
   // loads this file there too) and is translated at once, so the gear that follows it is where it stays at first paint
   const nav = () => {
     const n = document.getElementById("nav");
