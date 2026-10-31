@@ -36,7 +36,7 @@ globalThis.E = {{ files: [
   {{ file: "c.mzML", kind: "full", vis: false }}, {{ file: "m.wiff", kind: "mrm", vis: true }} ] }};
 (async () => {{ {code} }})().catch(e => {{ console.error(e); process.exit(1); }});
 """
-    out = subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout
+    out = subprocess.run(["node", "-"], input=js, check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out)
 
 
