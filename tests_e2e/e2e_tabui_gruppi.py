@@ -84,7 +84,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         def page():
-            ctx = b.new_context(viewport={"width": 1280, "height": 1100}, reduced_motion="reduce", accept_downloads=True)
+            ctx = b.new_context(viewport={"width": 1280, "height": 1100}, reduced_motion="reduce", accept_downloads=True, service_workers="block")      # the service worker fills its cache with every file of the site in the background: only the page's own requests count here
             pg = ctx.new_page()
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
