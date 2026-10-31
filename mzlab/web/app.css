@@ -97,7 +97,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #sb-toggle{display:inline-flex;align-items:center;gap:5px;flex:none;padding:4px 10px 4px 8px;min-height:30px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);font-size:13px;cursor:pointer}
 #sb-toggle[hidden]{display:none}#sb-toggle:hover{background:var(--soft)}#sb-toggle .ti{display:inline-flex;color:var(--accent)}
 #sb-toggle[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
-#samptab{margin:6px 8px;min-height:32px}#samptab[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
+#samptab{display:block;box-sizing:border-box;width:calc(100% - 16px);margin:6px 8px 0;min-height:32px;position:sticky;bottom:0;z-index:1;background:var(--panel)}#samptab[hidden]{display:none}#samptab[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
 #sb-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #sidebar-resize-handle:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent);opacity:.6}
 #bar-hint{position:fixed;z-index:6000;display:flex;gap:8px;align-items:flex-start;max-width:min(340px,calc(100vw - 16px));box-sizing:border-box;padding:9px 10px 9px 12px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:13px;line-height:1.4}#bar-hint::before{content:"";position:absolute;top:-6px;left:var(--ha,18px);width:10px;height:10px;background:var(--panel);border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}#bar-hint button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;cursor:pointer}#bar-hint button:hover{color:var(--ink)}#bar-hint button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media (prefers-reduced-motion:no-preference){#bar-hint{animation:hint-in .25s ease}@keyframes hint-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}}
@@ -107,11 +107,16 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #sb-header{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #sb-header button,#sb-header input{cursor:pointer;touch-action:manipulation}
 body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!important}
-.sb-dz{position:fixed;top:var(--hh,40px);bottom:0;width:50vw;z-index:5200;display:flex;align-items:center;justify-content:center;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);font-weight:700;pointer-events:none;box-sizing:border-box}
+.sb-dz{position:fixed;top:var(--hh,40px);bottom:0;z-index:5200;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 8px;border:2px dashed var(--accent);border-radius:8px;background:none;color:transparent;opacity:.45;font-weight:700;pointer-events:none;box-sizing:border-box}
 .sb-dz.l{left:0}.sb-dz.r{right:0}
-.sb-dz.hot{background:color-mix(in srgb,var(--accent) 26%,transparent);border-style:solid}
-.sb-dz-prev{position:fixed;top:var(--hh,40px);bottom:0;z-index:5201;pointer-events:none;border:2px solid var(--accent);background:color-mix(in srgb,var(--panel) 70%,transparent);box-sizing:border-box;border-radius:8px}
-@media (prefers-reduced-motion:no-preference){.sb-dz{transition:background .12s}}
+.sb-dz.hot{background:color-mix(in srgb,var(--accent) 22%,transparent);border-style:solid;color:var(--accent);opacity:1}
+.sb-ghost{position:fixed;left:0;top:0;z-index:5300;max-width:220px;padding:4px 10px;border:1px solid var(--accent);border-radius:999px;background:var(--panel);color:var(--ink);font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-ghost.no{border-style:dashed;border-color:var(--bad);color:var(--bad)}
+body.sb-dragging #dfiles{opacity:.3}
+body.sb-dragging #v-data.sb-open:not(.sb-sheet) #v-workspace{position:relative;z-index:50}
+body[data-sb-shift=l] #v-workspace{transform:translateX(calc(-1 * var(--sb-dz-w,0px)))}
+body[data-sb-shift=r] #v-workspace{transform:translateX(var(--sb-dz-w,0px))}
+@media (prefers-reduced-motion:no-preference){.sb-dz{transition:opacity .12s,background .12s}body.sb-dragging #v-workspace{transition:transform .18s ease-out}}
 /* the button of the session is always in the header (hidden = invisible, space kept): when it comes nothing moves */
 header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 /* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
