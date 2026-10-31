@@ -40,6 +40,7 @@ declare var EXPORT_PEZZI: any;
 declare var EventSource: any;
 declare var FAIR: any;
 declare var FORMATI_NOTI: any;
+declare var GDND: any;
 declare var GRADIENTE: any;
 declare var GRUPPI: any;
 declare var GRUPPIPER: any;
