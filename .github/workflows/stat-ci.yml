@@ -77,3 +77,26 @@ jobs:
           done
           echo "::warning::stat-ci: events not published"
           exit 0
+
+  # Every commit rewrites a JSONL part, so the history of `stat-ci` grows without bound while the tip stays small.
+  # Nothing reads the history (readers use the tip), so once it passes a threshold the branch is replaced by one commit with the same tree.
+  # --force-with-lease makes a concurrent publish win: the squash then fails harmlessly and is retried by the next poll.
+  poda:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: registra
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Squash the history of stat-ci
+        continue-on-error: true
+        run: |
+          git config user.name "stat-ci"
+          git config user.email "stat-ci@users.noreply.github.com"
+          git fetch -q --filter=blob:none --no-tags origin stat-ci || exit 0
+          tip=$(git rev-parse FETCH_HEAD)
+          n=$(git rev-list --count "$tip")
+          echo "stat-ci history: $n commits"
+          [ "$n" -gt 200 ] || exit 0
+          new=$(git commit-tree "$tip^{tree}" -m "stat-ci: history squashed (was $n commits)")
+          git push --force-with-lease="refs/heads/stat-ci:$tip" origin "$new:refs/heads/stat-ci"
