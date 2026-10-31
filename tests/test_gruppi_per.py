@@ -47,7 +47,7 @@ vm.runInThisContext({json.dumps(lf)});
 const G = () => E.files.map(f => f.ugrp || null);
 (async () => {{ {code} }})().catch(e => {{ console.error(e); process.exit(1); }});
 """
-    out = subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout
+    out = subprocess.run(["node", "-"], input=js, check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out)
 
 

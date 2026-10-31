@@ -1,6 +1,8 @@
 // Loading in the worker of the engine (rust-carica.js, rust-nativo.js), with a fake OPFS archive and synthetic members; argv[2] = folder with the copied modules. Exit code 1 on the first failure.
 import assert from "assert";
-const dir = process.argv[2];
+import { pathToFileURL } from "url";
+// a file:// URL: on Windows an absolute path (C:\...) is not a valid ESM specifier
+const dir = pathToFileURL(process.argv[2]).href;
 let quota = 0, usage = 0;
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { storage: { estimate: async () => ({ quota, usage }) } } });
 globalThis.self = globalThis;

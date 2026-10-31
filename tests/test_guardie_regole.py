@@ -217,7 +217,7 @@ def test_guardia_costanti_di_massa_solo_in_elements():
     pat = re.compile(r"1\.00727|1\.007_276|0\.00054858|1\.00335|1\.003_35")
     trovati = []
     for f in sorted(ROOT.glob("crates/*/src/**/*.rs")):
-        rel = str(f.relative_to(ROOT))
+        rel = f.relative_to(ROOT).as_posix()
         if rel.endswith("mzlab-core/src/elements.rs") or "tests" in f.name or "/tests" in rel:
             continue
         for n, riga in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
