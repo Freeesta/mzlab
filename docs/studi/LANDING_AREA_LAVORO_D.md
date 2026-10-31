@@ -92,7 +92,7 @@ The probe (drop through a real `DataTransfer` on `#dfiles`, a rAF timeline of th
 
 | Piece | From | To |
 |---|---|---|
-| `#drop` (+ `#pick`, `#pickdir`, `.fmts` ⓘ), `#cartpick`, `#cartbody`, `#demobtn`, `#convhelp` | `#start` card «1.» | the landing box `#start` inside `#v-workspace`, centred (state 3) |
+| `#drop` (+ `#pick`, `#pickdir`, `.fmts`), `#cartpick`, `#cartbody`, `#demobtn`, `#convhelp` | `#start` card «1.» | the landing box `#start` inside `#v-workspace`, centred (state 3) |
 | `#dropdam` / `#mlist` (method `.dam`) | `#start` second card | one secondary line under the drop zone; with files open the toolbar «Method» `#np-method` exists |
 | `#flist` (the table) + `#hrmix`, `#hrnote`, `#modenote`, `#unopen`, `#gomsg` | `#start` | the sample-table box inside `#v-workspace` (state 2), same ids |
 | `#up` (upload errors), `#err` | `#start` | above the sample table / landing (one `role=status` region, §4 f) |

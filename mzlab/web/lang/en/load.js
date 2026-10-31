@@ -36,7 +36,7 @@ I18N.add("en", {
   "load.phrase.15": "Contaminating with PEG",
   "load.phrase.16": "Don't panic",
   "load.phrase.17": "Fouling the source",
-  "load.drop": "<b>Drop files here</b> or <u>browse</u><small class=\"fmts\">.mzML · .raw · .wiff (with .wiff.scan) · .D (folder) <span class=\"fmt-i\" role=\"img\" title=\"Drop a .D folder whole, not its files one by one.\" aria-label=\"Drop a .D folder whole, not its files one by one.\">ⓘ</span></small>",
+  "load.drop": "<b>Drop files here</b> or <u>browse</u><small class=\"fmts\">.mzML · .raw · .wiff (+ .wiff.scan) · .D (folder)</small>",
   "load.drop.aria": "Choose the data files: .mzML, .raw, .wiff with its .wiff.scan, a whole .D folder",
   "files.hint.empty": "Your files will land here!",
   "load.backwork": "Back to work!",
