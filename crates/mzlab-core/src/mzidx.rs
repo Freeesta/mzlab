@@ -492,7 +492,7 @@ impl Gruppo {
             if keep {
                 self.kept32.push(Peak { mz, it, pos });
             } else if let Some((parti, spill)) = scorta {
-                parti.push(spill, f64::from(mz), f64::from(it), pos)?;
+                parti.push32(spill, mz, it, pos)?;
             }
         } else if keep {
             self.kept.push(Peak { mz, it, pos });
@@ -594,7 +594,7 @@ impl<'a> Prima<'a> {
 }
 
 /// The budget ran out with a scratch file: what is kept goes to it in the order of the scans (the groups merged by scan number), and the next scans follow it.
-#[allow(clippy::indexing_slicing)] // the indexes come from the groups just counted
+#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the groups just counted; `f32` groups hold widened `f32` values
 fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
     let mut counts = vec![0u64; NB];
     for g in gruppi.iter() {
@@ -622,7 +622,12 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
                 break;
             }
             next[i] += 1;
-            parti.push(sp, mz, it, pos)?;
+            if gruppi[i].f32 {
+                // the kept values are `f32` widened: narrowing them back is exact
+                parti.push32(sp, mz as f32, it as f32, pos)?;
+            } else {
+                parti.push(sp, mz, it, pos)?;
+            }
         }
     }
     Ok(parti)
