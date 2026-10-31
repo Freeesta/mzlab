@@ -292,3 +292,35 @@ fn the_same_name_in_two_folders_gives_two_files() {
     assert_eq!(String::from_utf8(o.stdout).unwrap().lines().count(), 3);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_compression_kinds_are_the_short_forms_of_zlib_and_numpress() {
+    let Some((dir, src)) = series("kinds", false) else {
+        return;
+    };
+    let run = |name: &str, extra: &[&str]| {
+        let out = dir.join(name);
+        let mut a = vec![p(&src), "--out", p(&out)];
+        a.extend_from_slice(extra);
+        let o = convert(&a);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        mzmls(&out)
+    };
+    assert_eq!(run("std", &["--compression", "standard"]), run("def", &[]));
+    assert_eq!(
+        run("none", &["--compression", "none"]),
+        run("z0", &["--zlib", "0"])
+    );
+    let small = run("small", &["--compression", "smallest"]);
+    assert_eq!(small, run("np", &["--numpress"]));
+    assert_ne!(small, run("std2", &[]));
+    let o = convert(&[
+        p(&src),
+        "--out",
+        p(&dir.join("bad")),
+        "--compression",
+        "tiny",
+    ]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}
