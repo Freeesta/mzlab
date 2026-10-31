@@ -18,10 +18,19 @@ const desktop = () => !!G.MZLAB_DESKTOP;
 const BASE = () => (/Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/");
 const status = (/** @type {any} */ l) => String((l.tags && l.tags.status) || "in_force");
 /** The lists imported by the user: OPFS in the browser, the libraries folder in the app. */
-async function importedLists() {
+export async function importedLists() {
   if (!desktop()) return imp.imported();
   const r = await fetch(BASE() + "normative/imported");
   return r.ok ? (await r.json()).lists || [] : [];
+}
+
+/** The bytes of the imported file of list `id` (the private `.mzsus`), or null: OPFS in the browser, the libraries folder in the app. */
+export async function importedBytes(/** @type {string} */ id) {
+  if (!desktop()) return imp.bytes(id);
+  const name = encodeURIComponent(`normative-imported-${id}.mzsus`), st = await fetch(`${BASE()}lib/stat?name=${name}`);
+  if (!st.ok) return null;
+  const r = await fetch(`${BASE()}lib/read?name=${name}&off=0&len=${Number((await st.json()).size)}`);
+  return r.ok ? new Uint8Array(await r.arrayBuffer()) : null;
 }
 
 /** Imports the CSV `file` as `reader`; the summary comes back the same in both places. */
