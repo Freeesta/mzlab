@@ -4,7 +4,7 @@ Codice: `crates/mzlab-lettori/src/shimadzu/` (feature `shimadzu`, tetto 327 680 
 
 ## Cosa legge
 - `.qgd` (GC/MS, GCMSsolution): scansioni EI e SIM; record MRM (GC-TQ) come cromatogrammi SRM. `.lcd` di un quadrupolo singolo (LCMS-2020/2050, storage `Mass Raw Data`): scansioni e SIM per evento. `.lcd` di un triplo quadrupolo (8030/8040/8050/8060, storage `TLM Raw Data`): MRM come cromatogrammi SRM, nessuno spettro.
-- `.lcd` Q-TOF / IT-TOF / 9030 (`QTFL RawData`): riconosciuto e rifiutato con `err.file.shimadzu` (`detail`): senza un mzML di msconvert non si può dimostrare che gli m/z siano entro 5 ppm. Un `.lcd` con solo `LSS Raw Data` (PDA) è `Fiducia::Forse` e viene rifiutato come «nessun dato di spettrometro». `.lcdx` non è letto (non verificato che sia lo stesso formato) e resta in `UNOPEN_RE`.
+- `.lcd` Q-TOF / IT-TOF / 9030 (`QTFL RawData`): riconosciuto e rifiutato con `err.file.shimadzu` (`detail`): senza un mzML di msconvert non si può dimostrare che gli m/z siano entro 5 ppm. Un `.lcd` con solo `LSS Raw Data` (PDA) è `Fiducia::Forse` e viene rifiutato come «nessun dato di spettrometro». `.lcdx` non è letto (non verificato che sia lo stesso formato) e resta in `formati-noti.js` (non supportato).
 - `riconosci` guarda i nomi della directory OLE (`dir.rs` legge pochi settori: intestazione, DIFAT, FAT, fino a 256 settori di directory; mai il file intero) e cerca `GCMS Raw Data`, `TLM Raw Data`, `Mass Raw Data` o `QTFL RawData` con la firma OLE: mai l'estensione sola. `scegli` prende il primo storage il cui `MS Raw Data` ha byte (gli altri esistono vuoti in ogni `.lcd`).
 
 ## Flussi (stessi nomi in tutti e tre gli storage dei dati)

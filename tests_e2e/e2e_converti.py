@@ -66,6 +66,16 @@ try:
             pg.focus("#unopen [data-a=close]")
             pg.keyboard.press("Escape"); assert pg.locator("#unopen").is_hidden(), "Esc closes"
         step("mixed .wiff/.d/.lcd and unknown formats: one notice, one line per kind; Esc closes", wiff_mixed)
+        def known_vs_unknown():
+            pg.set_input_files("#pick", [blob("k1.wiff2"), blob("k2.lcdx"), blob("k3.baf"), blob("u1.xyz"), blob("u2.docx"), blob("s_t0.mzML", mzbuf)])
+            pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
+            ps = pg.locator("#unopen p").all_inner_texts()
+            known = [x for x in ps if "riconosciuto" in x]
+            assert len(known) == 3 and any("SCIEX .wiff2" in x for x in known) and any("Shimadzu .lcdx" in x for x in known) and any("Bruker .baf" in x for x in known), ps
+            unk = [x for x in ps if "ignorati" in x]
+            assert len(unk) == 1 and "2 file" in unk[0] and "u1.xyz" in unk[0] and "k1.wiff2" not in unk[0] and "riconosciuto" not in unk[0], ps
+            assert pg.locator("#unopen[aria-live=polite]").count() == 1 and pg.locator("#unopen [data-a=help]").count() == 1
+        step("mixed drop: wiff2 + lcdx + baf named by vendor and format, unknown files in their own line, one notice", known_vs_unknown)
         def more():
             pg.set_input_files("#pick", [blob(f"m{i}.lcdx") for i in range(8)])
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
@@ -78,7 +88,9 @@ try:
             pg.evaluate("document.querySelector('#convhelp').open=true"); assert "press Add" in pg.inner_text("#convhelp ol"), pg.inner_text("#convhelp ol")
             pg.set_input_files("#pick", [blob(f"e{i}.lcdx") for i in range(5)])
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
-            t = pg.inner_text("#unopen"); assert "5 .lcdx files can't be opened in the browser" in t, t
+            t = pg.inner_text("#unopen"); assert "5 Shimadzu .lcdx files: recognised, not supported yet" in t, t
+            pg.set_input_files("#pick", [blob("w.wiff2"), blob("w.xyz")]); pg.wait_for_function("document.querySelector('#unopen').innerText.includes('SCIEX .wiff2')", timeout=10000)
+            t = pg.inner_text("#unopen"); assert "SCIEX .wiff2 file: recognised, not supported yet" in t and "1 file ignored" in t, t
         step("English text", en)
         def contrast():
             for th in ("light", "dark"):
