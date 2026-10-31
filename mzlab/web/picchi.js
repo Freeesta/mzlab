@@ -332,8 +332,8 @@ async function drawSpec(p, snapped) {
   const data = await Promise.all(reqs.map(q => (isDda ? DDA.scanData(p) : one ? scData(p, q.f.k) : getSpec(q.f.k, p.r0, p.r1, p.level, prk(q.prec, p.filt), bgOf(q.f))).then((/** @type {Bag} */ d) => ({ f: q.f, prec: q.prec, multi: q.multi, idx: q.idx, d: rel && !d.diff ? relScale(d) : d }))));
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
   if (p.iso && p.iso.only && hrp && window.QQQRef) for (const x of data) { try { x.d = await HR.isoAsSpectrum(p, x.f, x.d); } catch (e) { /* the observed spectrum stays */ } }      // «Sostituisci»: the simulation takes the place of the spectrum
-  /** @type {Bag[] | null} */ let isoSim = null, isoErr = null;      // the fine pattern drawn over the spectrum, asked of the engine before the (synchronous) painting
-  if (p.iso && !p.iso.only && hrp && window.QQQRef) { try { isoSim = await HR.isoPat(p.iso, HR.fwhmFn(p.iso, files[0], p.level)); } catch (e) { isoErr = e; } if (tok !== p._tok) return false; }
+  /** @type {Bag[] | null} */ let isoSim = null, isoErr = null;      // the pattern drawn over the spectrum (fine structure, or the unit-resolution groups of api/ion_pattern), asked of the engine before the (synchronous) painting
+  if (p.iso && !p.iso.only && window.QQQRef) { try { isoSim = hrp ? await HR.isoPat(p.iso, HR.fwhmFn(p.iso, files[0], p.level)) : (await QQQRef.unitIon(p.iso.formula, p.iso.ad)).peaks; } catch (e) { isoErr = e; } if (tok !== p._tok) return false; }
   p._nCont = 0;
   if (p.noCont && hrp && window.LISTE) {                  // «remove contaminants»: centroids compatible with the Keller list leave the peaks shown (tolerance = ppm of the Banco)
     const km = LISTE.keller(files[0].polarity, UIP.hrPpm);
@@ -350,9 +350,6 @@ async function drawSpec(p, snapped) {
     if (!snapped && !isDda && files.length === 1 && p.r0 != null && await snapNearest(p, files[0])) return drawSpec(p, true);      // the cursor fell between two scans of this kind: the nearest one is shown
     return say(I18N.t("spec.noScan"));
   }
-  // the simulated pattern of a unit-resolution file comes from the engine: asked before the canvas is touched
-  /** @type {Bag | null} */ let isoUnit = null, isoErr = "";
-  if (p.iso && !p.iso.only && window.QQQRef && !hrp) { try { isoUnit = await QQQRef.unitIon(p.iso.formula, p.iso.ad); } catch (e_) { isoErr = /** @type {Lanciato} */ (e_).message; } }
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
   const { g, W, H: HF } = setup(p.cv);
   const H = HF;
@@ -458,8 +455,8 @@ async function drawSpec(p, snapped) {
     try {
       if (hrp) { if (!isoSim) throw isoErr; isoNote = HR.drawIso(p, g, X, Y, d0, ymax, W, files[0], isoSim); }          // high resolution: fine structure, error in ppm (hr.js)
       else {
-      if (!isoUnit) throw new Error(isoErr);
-      isoNote = drawIsoUnit(p, g, X, Y, d0, ymax, W, M, isoUnit.peaks);
+      if (!isoSim) throw isoErr;
+      isoNote = drawIsoUnit(p, g, X, Y, d0, ymax, W, M, isoSim);
       }
     } catch (e_) { const e = /** @type {Lanciato} */ (e_); isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }
