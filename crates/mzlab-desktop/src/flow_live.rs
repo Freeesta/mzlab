@@ -73,7 +73,7 @@ impl State {
         let parsed = parse(plan.as_bytes())?;
         // the last run ends first: its threads stop and its folders are free
         *lock() = None;
-        let root = std::env::temp_dir().join("mzlab-flow");
+        let root = self.flow_root();
         let (inputs, work) = (root.join("in"), root.join("out"));
         let _ = std::fs::remove_dir_all(&inputs);
         if p["fresh"].as_bool().unwrap_or(false) {
