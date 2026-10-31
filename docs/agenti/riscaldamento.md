@@ -2,7 +2,7 @@
 Dopo che la cartella puntata (`CartPunt`, `CartPuntDesk`) è elencata, i file mzML vengono preparati di nascosto così che il clic successivo sia un colpo di cache. Niente cambia in ciò che lo studente vede.
 
 ## Costo di apertura misurato (sito, Chromium headless, file sintetici)
-- Cartella TRASCINATA o scelta con il dialogo: `upload()` copia in OPFS, indicizza e riempie già tutto in modo visibile; lo studente preme «Carica dati» (`#opbtn`). Qui non manca nulla.
+- Cartella TRASCINATA o scelta con il dialogo: `upload()` copia in OPFS, indicizza e riempie già tutto in modo visibile; ogni file si apre appena letto (`OPENNOW`) e il primo si mostra da solo. Qui non manca nulla.
 - Cartella PUNTATA: la copia in OPFS e l'indice partono solo al clic. Clic → file in tabella: 11 MB 1179 ms a freddo, 125 ms a caldo; 40 MB 2443 ms a freddo, 123 ms a caldo. Il costo a freddo cresce con i MB (lettura, copia in OPFS, SHA-256/SHA-1, indice con TIC dentro il `.mzidx`); a caldo resta solo `lr_entry`.
 - `.raw` nativo: ~0,2-0,3 s per 32 MB, `.wiff(+.scan)` e `.D` non misurabili senza dati veri: non vengono riscaldati (guadagno piccolo o ignoto).
 
