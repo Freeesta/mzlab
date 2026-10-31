@@ -197,3 +197,18 @@ console.log(JSON.stringify({ la: a.length, lb: b.length, lc: c.length, b0: b[0],
     r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, encoding="utf-8")
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout) == {"la": 10, "lb": 4, "lc": 50, "b0": 10, "same": True, "grew": True}
+
+
+def test_write_full_turns_silent_loss_of_written_bytes_into_a_short_write():
+    # a handle that accepts every write but keeps only the first 1000 bytes of the file (an ephemeral window past its real limit)
+    code = """
+import { writeFull } from %r;
+const keep = 1000, file = new Uint8Array(4000);
+const sh = { write(b, o) { for (let i = 0; i < b.length; i++) if (o.at + i < keep) file[o.at + i] = b[i]; return b.length; },
+             read(b, o) { for (let i = 0; i < b.length; i++) b[i] = file[o.at + i]; return b.length; } };
+const data = o => new Uint8Array(500).map((_, i) => 1 + ((o + i) %% 250));
+console.log(JSON.stringify([0, 500, 1000, 1500, 100].map(off => writeFull(sh, data(off), off))));
+""" % (JS.with_name("archivio.js").as_uri(),)
+    r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, encoding="utf-8")
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == [500, 500, 499, 499, 500]

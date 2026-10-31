@@ -76,6 +76,12 @@ export function writeFull(/** @type {FileSystemSyncAccessHandle} */ ah, /** @typ
   let done = 0;
   try { while (done < data.length) { const n = ah.write(data.subarray(done), { at: at + done }); if (!(n > 0)) break; done += n; } }
   catch (e_) { const e = /** @type {Lanciato} */ (e_); if (!(e && e.name === "QuotaExceededError")) throw e; }
+  // a private window (ephemeral storage) can report a full write and keep nothing past its real limit (about 1 GiB of the origin, whatever `estimate().quota` says):
+  // the last bytes are read back, and a mismatch counts as a short write
+  if (done === data.length && done > 0) {
+    const k = Math.min(done, 8), back = new Uint8Array(k);
+    if (ah.read(back, { at: at + done - k }) < k || back.some((v, i) => v !== data[done - k + i])) return done - 1;
+  }
   return done;
 }
 // the error.quota of the page (as a string, like the other errors of the engine): `needed` bytes in all, the room left asked to the browser
