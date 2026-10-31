@@ -18,11 +18,7 @@ fn cli(args: &[&str]) -> crate::Outcome {
 }
 
 /// Variants that open: `canali` lists the channels and `features` builds the table.
-<<<<<<< HEAD
 const OPEN: [&str; 16] = [
-=======
-const OPEN: [&str; 15] = [
->>>>>>> origin/main
     "plain_64_raw.mzML",
     "plain_64_z.mzML",
     "plain_32_raw.mzML",
@@ -38,10 +34,7 @@ const OPEN: [&str; 15] = [
     "rpg.mzML",
     "scansettings.mzML",
     "chroms_all.mzML",
-<<<<<<< HEAD
     "gz.mzML.gz",
-=======
->>>>>>> origin/main
 ];
 
 /// Variants that fail cleanly, with the key of the error.
@@ -51,14 +44,8 @@ const REFUSED: [(&str, &str); 3] = [
     ("badb64.mzML", "err.file.base64"),
 ];
 
-<<<<<<< HEAD
 /// Known gap, stated here so that closing it fails this test and updates the matrix: a truncated file opens with the spectra it has and says nothing.
 const GAPS: [&str; 1] = ["truncated.mzML"];
-=======
-/// Known gaps, stated here so that closing one fails this test and updates the matrix: a gzip file is not accepted; a truncated file opens with the spectra it
-/// has and says nothing.
-const GAPS: [&str; 2] = ["gz.mzML.gz", "truncated.mzML"];
->>>>>>> origin/main
 
 #[test]
 fn every_variant_opens_or_fails_with_its_key() {
@@ -81,11 +68,6 @@ fn every_variant_opens_or_fails_with_its_key() {
         assert_ne!(o.code, 0, "{n}");
         assert!(o.stderr.contains(key), "{n}: {}", o.stderr);
     }
-<<<<<<< HEAD
-=======
-    let o = cli(&["canali", p("gz.mzML.gz").to_str().unwrap()]);
-    assert!(o.stderr.contains("err.file.notAccepted"), "{}", o.stderr);
->>>>>>> origin/main
     let o = cli(&["canali", p("truncated.mzML").to_str().unwrap()]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert_eq!(GAPS.len() + OPEN.len() + REFUSED.len(), 20);
