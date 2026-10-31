@@ -2,7 +2,7 @@
 
 Programma didattico per esplorare dati LC-MS e cercare i **prodotti di trasformazione (TP)** di un inquinante degradato nel tempo (esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti, UniTO). Lo studente sceglie cosa estrarre, integra, annota e disegna: il programma mostra i dati, **non dà le risposte**.
 
-*(English: a light teaching tool that runs in the browser to explore LC-MS data and look for transformation products. The theory lives at https://freeesta.github.io/BasePeak/. It shows the data; the student does the reasoning.)*
+*(English: a light teaching tool that runs in the browser to explore LC-MS data and look for transformation products. It shows the data; the student does the reasoning.)*
 
 ## Uso
 

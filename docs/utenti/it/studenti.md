@@ -5,7 +5,7 @@ mzLab serve a guardare i dati LC-MS dell'esperienza 3 e a cercare i prodotti di 
 ## Aprire il programma
 1. Apri <https://freeesta.github.io/mzlab/> con un browser recente (Chrome, Edge, Firefox o Safari) su **computer o tablet**. Non si installa nulla.
 2. La prima volta il browser scarica il motore di calcolo (qualche decina di secondi, serve la rete); poi resta in memoria e le volte successive è più rapido.
-3. Da **smartphone** si apre solo la Teoria: per Dati, Disegno e Pratica usa un computer o un tablet.
+3. Su **smartphone** il programma non è pensato per lo schermo piccolo: usa un computer o un tablet.
 
 ## Caricare i dati
 - Trascina i file `.mzML` (e, se ce l'hai, il `.dam` del metodo) nella schermata di caricamento, controlla tempi e tipi, premi **Carica dati**.
@@ -16,7 +16,6 @@ mzLab serve a guardare i dati LC-MS dell'esperienza 3 e a cercare i prodotti di 
 ## Cosa trovi
 - **Dati**: cromatogrammi (TIC, XIC, MRM), spettri MS e MS2, mappa RT×m/z, integrazione dei picchi con tabella esportabile.
 - **Disegno**: editor chimico per molecole e vie di trasformazione.
-- **Teoria** e **Pratica**: capitoli, glossario, esercizi con correzione. La guida completa è il capitolo A della Teoria («Come si usa mzLab»).
 - Il pulsante **«i»** in alto apre le informazioni; il **tour guidato** mostra i comandi principali.
 
 ## Se qualcosa non va

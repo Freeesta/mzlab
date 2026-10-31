@@ -1,5 +1,5 @@
 """Public site (mzlab/web/sito.js): with the production value (desktop-app download off) the served page, the DOM and the
-help carry no link to releases or installers, no local Teoria (only the plain link to the Teoria site), and #/theory, #/practice stay on the main page; ?sito=tutto brings the download back."""
+help carry no link to releases or installers, no Teoria, and #/theory, #/practice stay on the main page; ?sito=tutto brings the download back."""
 import sys, os, urllib.request; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ["MZLAB_SITO_PRODUZIONE"] = "1"      # lib.py then leaves the values of sito.js alone (the other tests turn it on)
 from lib import *
@@ -19,7 +19,7 @@ try:
             for bad in ("releases", 'data-v="theory"', 'id="tframe"', "static/teoria"):
                 assert bad not in html, bad
             import re
-            assert not re.search(r'<a [^>]*href="(?!https://freeesta\.github\.io/BasePeak/)[^"]*teoria', html), "link to a local Teoria"
+            assert not re.search(r'<a [^>]*href="[^"]*(teoria|BasePeak)', html), "link to the Teoria"
         step("the served page has no link to releases or the Teoria", served)
         def values():
             assert pg.evaluate("JSON.stringify(window.SITO_PUBBLICO)") == '{"scaricaApp":false}'
@@ -28,7 +28,7 @@ try:
             ready(pg)
             assert pg.evaluate("""document.querySelectorAll('[data-v="theory"], #tframe, a[href*="releases"], a[href*="static/teoria"], a[href*="installer"]').length""") == 0
             assert pg.evaluate("[...document.querySelectorAll('#nav button')].every(b => !/teoria|theory/i.test(b.dataset.v + b.textContent))")
-        step("no button, link or frame leads to a local Teoria in the DOM", dom)
+        step("no button, link or frame leads to a Teoria in the DOM", dom)
         def help_():
             pg.click("button.hq[data-help=header]"); pg.wait_for_timeout(400)
             html = pg.evaluate("document.body.innerHTML")
