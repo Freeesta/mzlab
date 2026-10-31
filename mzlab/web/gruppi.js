@@ -36,16 +36,24 @@ window.GRUPPI = (() => {
   const names = () => [...new Set([...flSide().map(/** @param {any} f */ f => fileBase(f.file)), ...rowsT().map(f => f.name)])];
   /** Labels the files the user dropped on a group header will take when their rows arrive (name → label). @type {Map<string, { g: string, at: number }>} */
   const pend = new Map();
-  /** @type {{ key: string, ans: any } | null} */ let cache = null;
+  /** @type {{ key: string, ans: Promise<any> } | null} */ let cache = null;
   let followed = "", timer = 0;
   /** The `nomivar/1` answer for the files of the list and an optional manual rule; null when the engine refuses (more than 5 000 names...). @param {any} [manuale] */
   async function vars(manuale) {
     const ns = names(), key = JSON.stringify([ns, manuale ?? null]);
     if (cache?.key === key) return cache.ans;
     const body = JSON.stringify({ files: ns.map(name => ({ name })), manuale: manuale || undefined });
-    const ans = await fetch("api/campioni/variabili", { method: "POST", body }).then(r => r.json()).catch(() => null);
-    cache = { key, ans: ans && !ans.error ? ans : null };
-    return cache.ans;
+    // the promise is cached, so renders that arrive while the engine answers share one request
+    const p = fetch("api/campioni/variabili", { method: "POST", body }).then(r => r.json()).then(a => a && !a.error ? a : null).catch(() => null);
+    cache = { key, ans: p };
+    return p;
+  }
+  /** True when «Group by» can give a group of 2+ files: the list already has one, or a variable of the names has a value shared by two files. */
+  async function useful() {
+    const n = new Map(); E.files.forEach(/** @param {any} f */ f => { if (!f.gone && f.ugrp) n.set(f.ugrp, (n.get(f.ugrp) || 0) + 1); });
+    if ([...n.values()].some(c => c > 1)) return true;
+    const ans = await vars();
+    return !!ans && ans.variabili.some((/** @type {any} */ v) => v.valori.some((/** @type {any} */ x) => x.file.length > 1));
   }
   const { clip, labelsOf } = GRUPPI_ETI;
   /** Writes the labels (`map`: physical file name → label) and the key; `undo` makes it one files.view step. @param {Map<string, string>} map @param {any} by @param {string[]} order @param {boolean} undo */
@@ -112,7 +120,7 @@ window.GRUPPI = (() => {
     if (l && l.cmd === "files.view" && Date.now() - l.t < 2000) l.w = UNDO[action];
   }
   const api = {
-    vars, labelsOf, names, has: hasGroups,
+    vars, useful, labelsOf, names, has: hasGroups,
     set,
     newName, labelOf,
     onto, rename, ungroup, lab,

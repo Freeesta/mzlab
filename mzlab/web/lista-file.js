@@ -200,6 +200,16 @@ function groupFiles() {
   while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
   carica("gruppi.js").then(() => GRUPPI.set([...ugBases()], I18N.t("files.ugrp.name", { n }), "new"));
 }
+/** True when the list has user groups and every one is a single file: their headers (a count of 1 each) are left out. @param {{ g: string, fs: any[] }[]} groups */
+const ugFlat = groups => groups.some(G => G.g.startsWith("u:")) && groups.every(G => !G.g.startsWith("u:") || G.fs.length < 2);
+/** «Group by» is shown only while some grouping gives a group of 2+ files (one the list already has, or a variable of the names); the chosen key stays and applies again when it is useful. */
+let _byTick = 0;
+function syncGroupBy() {
+  const by = document.getElementById("sb-by"); if (!by) return;
+  const my = ++_byTick, show = (/** @type {boolean} */ on) => { if (my !== _byTick || by.hidden === !on) return; by.hidden = !on; if (!on) window.GRUPPIPER?.close(false); };
+  if (new Set(flSide().map((/** @type {any} */ f) => fileBase(f.file))).size < 2) return show(false);
+  carica("gruppi.js").then(() => GRUPPI.useful()).then(show);
+}
 // rename and ungroup also reach the labels of the loading table's rows: gruppi.js writes both
 const renameGroup = (/** @type {string} */ n) => carica("gruppi.js").then(() => GRUPPI.rename(n));
 function groupCtx(/** @type {any} */ e, /** @type {string} */ n) {
