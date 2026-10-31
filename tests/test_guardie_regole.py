@@ -224,3 +224,20 @@ def test_guardia_costanti_di_massa_solo_in_elements():
             if pat.search(riga) and not riga.lstrip().startswith("//"):
                 trovati.append(f"{rel}:{n}")
     assert not trovati, f"mass constant literals outside elements.rs: {trovati}"
+
+
+def test_guardia_rustc_bootstrap_solo_nelle_build_wasm_del_sito():
+    """RUSTC_BOOTSTRAP / -Z flags live only in tools/cargo_wasm.sh; native builds and the repo config never see them,
+    and the site workflows and scripts build their .wasm through it."""
+    assert "RUSTC_BOOTSTRAP" not in (ROOT / ".cargo" / "config.toml").read_text(encoding="utf-8")
+    assert not re.search(r'"-Z', (ROOT / ".cargo" / "config.toml").read_text(encoding="utf-8"))
+    assert not re.search(r"RUSTC_BOOTSTRAP\s*[:=]\s*[\"']?1", (ROOT / "rust-toolchain.toml").read_text(encoding="utf-8"))
+    users = [".github/workflows/pages.yml", ".github/workflows/sito-rust.yml", ".github/workflows/release.yml",
+             ".github/workflows/notte.yml", "tools/lab/qqq-pages.yml", "tools/build_feat_wasm.sh", "tools/build_lettori_wasm.sh"]
+    for rel in users:
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert not re.search(r"(?<![\w/.-])cargo build [^\n]*wasm32-unknown-unknown", text), rel
+        assert "tools/cargo_wasm.sh build" in text, rel
+    others = [p for p in list((ROOT / ".github").rglob("*.yml")) + list((ROOT / "tools").rglob("*.sh"))
+              if p.name != "cargo_wasm.sh" and "RUSTC_BOOTSTRAP" in p.read_text(encoding="utf-8")]
+    assert not others, others
