@@ -299,7 +299,7 @@ function addPanel(type, o, after) {
     if (skip > 0) { skip--; return; }
     if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
     FRAME.cancel(p._raf); p._raf = FRAME.next(() => draw(p));
-    fitHdSoon(p);
+    fitHdNow(p);
   };
   const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap to more lines
   // full screen of THIS panel (any panel, also the ones added later): the button, Esc, and the graph is redrawn at the new size on the way in and out
@@ -836,6 +836,8 @@ function fitHd(/** @type {Pannello} */ p) {
   } finally { p._fitBusy = false; }
 }
 function fitHdSoon(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); p._fitRaf = FRAME.next(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }  // a second pass: widgets that settle after the first layout (fonts, async parts of the header) must not leave it too wide
+// Fit in the same frame as the width change (observer callbacks run after layout and before paint): no frame shows the header at the old arrangement.
+function fitHdNow(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); fitHd(p); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }
 function hdMorePlace(/** @type {Pannello} */ p) { const hd = p.el.querySelector(".hd"), m = p.el.querySelector(".hmore"); if (hd && m) { m.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; m.style.maxHeight = Math.max(80, p.el.clientHeight - hd.offsetHeight - 16) + "px"; } }
 function hdMoreInit(/** @type {Pannello} */ p) {
   const mb = p.el.querySelector('[data-a="more"]'), m = p.el.querySelector(".hmore"); if (!mb || !m) return;
