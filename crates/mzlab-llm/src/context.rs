@@ -92,7 +92,7 @@ fn file(v: &Value, k: usize, hide: bool) -> Value {
     Value::Obj(head)
 }
 
-fn cells(line: &str) -> Vec<String> {
+pub(crate) fn cells(line: &str) -> Vec<String> {
     let (mut out, mut cur, mut quoted) = (Vec::new(), String::new(), false);
     let mut chars = line.chars().peekable();
     while let Some(c) = chars.next() {

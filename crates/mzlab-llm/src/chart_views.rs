@@ -6,6 +6,7 @@ use mzlab_core::error::Result;
 use mzlab_core::json::{parse, Out, Value};
 
 use crate::chart::{make, Col, Field, Kind, View};
+use crate::context::cells;
 
 const fn f(name: &'static str, kind: Kind, unit: &'static str) -> Field {
     Field { name, kind, unit }
@@ -71,24 +72,6 @@ fn curves(src: &Value, key: &str, name: &str, out: &mut Vec<View>) {
             cols: vec![Col::Num(rt), Col::Num(y), Col::Text(who)],
         });
     }
-}
-
-fn cells(line: &str) -> Vec<String> {
-    let (mut out, mut cur, mut quoted) = (Vec::new(), String::new(), false);
-    let mut chars = line.chars().peekable();
-    while let Some(c) = chars.next() {
-        match c {
-            '"' if quoted && chars.peek() == Some(&'"') => {
-                cur.push('"');
-                chars.next();
-            }
-            '"' => quoted = !quoted,
-            ',' if !quoted => out.push(std::mem::take(&mut cur)),
-            c => cur.push(c),
-        }
-    }
-    out.push(cur);
-    out
 }
 
 /// `features:area` (row, file, area) and `features:mzrt` (mz, rt, area) from the table: columns `id` (or `row`), `mz`, `rt`, then `area` or one numeric column per file.
