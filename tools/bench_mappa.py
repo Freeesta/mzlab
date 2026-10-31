@@ -150,6 +150,7 @@ class Case:
         s.ev("__B.wrap()")
         if os.environ.get("MZLAB_PREWARM"):      # build the per-scan cells of every file before the map exists: splits the table build from the rest of the first map
             s.out["warm_ms"] = s.ev("(async () => { const t = performance.now(); for (const f of E.files) await (await fetch(`api/map?k=${f.k}&level=1&warm=1`)).json(); return Math.round(performance.now() - t); })()")
+            s.out["warm_ops"] = s.ev("((__B.rd || {}).ops || []).filter(o => o[0] === 'map').slice(-2)")      # [op, path, total ms, read ms, reads] of the per-scan table builds
 
     def first(s):
         """from the new panel to the first map drawn; then full screen and the split of one whole-map answer (bytes, JSON.parse, base64, colour pass)"""
@@ -245,7 +246,7 @@ def run_case(pg, port, name, kind, nscan, npk, wd):
 def table(o):
     rows = [("points (M) / mzML (MB) / open (s)", f'{o["points_total_M"]} / {o["mzML_MB"]} / {o["open_s"]}'),
             ("first drawing: total / api/map / colour pass (ms)", f'{o["first_draw_ms"]} / {o["first_map_request_ms"]} / {o["first_mapImage_ms"]}')]
-    if "warm_ms" in o: rows.insert(1, ("per-scan cells built before the map (ms)", str(o["warm_ms"])))
+    if "warm_ms" in o: rows.insert(1, ("per-scan cells built before the map (ms)", str(o["warm_ms"]) + "  ops [total, read ms, reads]: " + ", ".join(f"{w[2]}/{w[3]}/{w[4]}" for w in o.get("warm_ops", []))))
     w = o["whole_split"]; rows.append(("whole map: cells / JSON kB / request / parse / base64 / colour (ms)", f'{w["nrt"]}x{w["nmz"]} / {w["json_kB"]} / {w["request_ms"]} / {w["parse_ms"]} / {w["b64_ms"]} / {w["colour_ms"]}'))
     for k in ("zoom_wheel", "pan_zoomed", "zoom_rt_only", "zoom_deep"):
         g = o[k]; rows.append((f"{k}: frame p50/p95/max, long tasks, draws (n, p50, max), to sharp, region (n, ms)",
