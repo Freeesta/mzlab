@@ -40,7 +40,7 @@ def test_no_book_text_files_in_the_public_tree():
 
 
 def test_no_text_of_the_private_libro_in_this_repository():
-    libro = percorso("Libro_Untargeted")
+    libro = percorso("libro/testo")
     if not libro:
         pytest.skip("private data repository not available")
     lines = {re.sub(r"\s+", " ", ln).strip() for f in libro.rglob("*.md") for ln in f.read_text(encoding="utf-8", errors="replace").splitlines()}

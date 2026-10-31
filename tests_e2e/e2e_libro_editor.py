@@ -8,7 +8,7 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent.parent
 TOKEN = "github_pat_TESTTOKEN_0123456789"
 BODY = "# S1 — Prova\n\nCiao mondo.\n"
-F = {"Libro_Untargeted/A_algoritmi/A2_prova.md": {"text": BODY, "sha": "sha1"}}
+F = {"libro/testo/A_algoritmi/A2_prova.md": {"text": BODY, "sha": "sha1"}}
 STATE = {"puts": [], "calls": [], "conflict": False}
 CORS = {"access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,PUT,OPTIONS"}
 steps = []
@@ -36,7 +36,7 @@ def gh(route):
     STATE["calls"].append((r.method, r.url, r.headers.get("authorization")))
     path = r.url.split("api.github.com/repos/Freeesta/mzlab-dati/")[1]
     def ok(obj, status=200): route.fulfill(status=status, headers={**CORS, "content-type": "application/json"}, body=json.dumps(obj))
-    if path.startswith("git/trees/"): return ok({"tree": [{"path": p, "type": "blob"} for p in F] + [{"path": "Libro_Untargeted/LEGGIMI.md"}, {"path": "Libro_Untargeted/A_algoritmi/A2_prova.qa.md"}, {"path": "README.md"}]})
+    if path.startswith("git/trees/"): return ok({"tree": [{"path": p, "type": "blob"} for p in F] + [{"path": "libro/testo/LEGGIMI.md"}, {"path": "libro/testo/A_algoritmi/A2_prova.qa.md"}, {"path": "README.md"}]})
     if path.startswith("commits"): return ok([{"sha": "c1", "html_url": "https://github.com/x/c1", "commit": {"message": "Prima versione\n\ndettagli", "committer": {"date": "2026-10-20T09:00:00Z"}}}])
     p = path.split("contents/")[1].split("?")[0]
     if r.method == "PUT":
@@ -85,7 +85,7 @@ with sync_playwright() as p:
         path, body = STATE["puts"][-1]
         assert path.endswith("A2_prova.md") and body["sha"] == "sha1" and body["branch"] == "main"
         assert "Nuovo testo." in base64.b64decode(body["content"]).decode() and "edit text from the editor" in body["message"]
-        assert F["Libro_Untargeted/A_algoritmi/A2_prova.md"]["text"].startswith("# S1 — Prova") and F["Libro_Untargeted/A_algoritmi/A2_prova.md"]["text"].endswith("\n")
+        assert F["libro/testo/A_algoritmi/A2_prova.md"]["text"].startswith("# S1 — Prova") and F["libro/testo/A_algoritmi/A2_prova.md"]["text"].endswith("\n")
     step("Ctrl+S commits the file with the sha it was read with", save)
     def conflict():
         STATE["conflict"] = True

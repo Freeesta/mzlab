@@ -2,7 +2,7 @@
 // GitHub Contents API client for the private Libro repository. Admin tool of the editor page: the token and the text live in memory only.
 // Every call goes to api.github.com (the only host the page CSP allows); fetch is injectable so the logic is tested in Node.
 
-export const REPO = { owner: "Freeesta", repo: "mzlab-dati", branch: "main", dir: "Libro_Untargeted" };
+export const REPO = { owner: "Freeesta", repo: "mzlab-dati", branch: "main", dir: "libro/testo" };
 const API = "https://api.github.com";
 
 export class GhError extends Error {
@@ -75,17 +75,14 @@ export function makeClient({ token, fetchFn = (...a) => fetch(...a), repo = REPO
 
   /** @param {string} p */
   const enc = (p) => p.split("/").map(encodeURIComponent).join("/");
-  // The data repository moved the book from Libro_Untargeted/ to libro/testo/: sections() looks at the tree and keeps whichever exists.
-  let dir = repo.dir;
-  const fp = (/** @type {string} */ p) => enc(`${dir}/${p}`);
+  const fp = (/** @type {string} */ p) => enc(`${repo.dir}/${p}`);
 
   return {
     /** Paths of the section files under the Libro folder (relative to it), sorted. */
     async sections() {
       const t = await call(`${base}/git/trees/${encodeURIComponent(repo.branch)}?recursive=1`);
       const paths = /** @type {{path: string}[]} */ (t.tree).map((n) => n.path);
-      if (paths.some((p) => p.startsWith("libro/testo/"))) dir = "libro/testo";
-      const pre = `${dir}/`;
+      const pre = `${repo.dir}/`;
       return paths
         .filter((p) => p.startsWith(pre))
         .map((p) => p.slice(pre.length))
