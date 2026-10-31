@@ -55,6 +55,7 @@ fn table_of(reference: &[u8]) -> ScanTable {
         source_json: meta.source.get().to_string(),
         run_json: meta.run.get().to_string(),
         hr1: meta.sections.iter().any(|s| s.dtype == "<f4"),
+        declared: 0,
     }
 }
 

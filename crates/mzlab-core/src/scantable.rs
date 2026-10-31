@@ -131,6 +131,8 @@ pub struct Table {
     pub n_chromatograms: usize,
     /// Lowest and highest m/z of the scan windows the method declares for the first 50 survey scans (`Run.scan_window_ms1`).
     pub window: Option<(f64, f64)>,
+    /// Spectra the file declares in `<spectrumList count>` (0 when it does not say); more than `rows.len()` means the file is truncated.
+    pub declared: usize,
 }
 
 /// The scan windows of the first 50 survey scans, as their union.

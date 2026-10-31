@@ -33,6 +33,7 @@ pub(super) fn tabella_con(mut t: Table, source_json: String) -> ScanTable {
         source_json,
         run_json: run,
         hr1: t.hr1,
+        declared: t.declared,
     }
 }
 
