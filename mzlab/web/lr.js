@@ -183,8 +183,10 @@ export function createLr({ rb }) {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }
           catch (e_) { const e = /** @type {Lanciato} */ (e_); let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
-        if (path === "/api/adduct_table") {
-          try { return { status: 200, text: (await rpc({ op: "lr_adduct_table", f: u.searchParams.get("f") || "", obs: u.searchParams.get("obs") || "", tol: u.searchParams.get("tol") || "", delta: u.searchParams.get("delta") || "" })).info }; }
+        const chem = path === "/api/adduct_table" ? { op: "lr_adduct_table", f: u.searchParams.get("f") || "", obs: u.searchParams.get("obs") || "", tol: u.searchParams.get("tol") || "", delta: u.searchParams.get("delta") || "" }
+          : path === "/api/isotope_fine" ? { op: "lr_isotope_fine", query: "?" + u.searchParams.toString() } : null;
+        if (chem) {
+          try { return { status: 200, text: (await rpc(chem)).info }; }
           catch (e_) { const e = /** @type {Lanciato} */ (e_); let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items });
