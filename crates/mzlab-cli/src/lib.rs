@@ -119,8 +119,6 @@ mod flow_set;
 mod flow_stats;
 mod flow_table;
 #[cfg(test)]
-mod mzml_varianti_tests;
-#[cfg(test)]
 mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
@@ -137,6 +135,8 @@ mod msn_lib;
 mod msn_png;
 mod msn_rules;
 pub mod msn_uscite;
+#[cfg(test)]
+mod mzml_varianti_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
