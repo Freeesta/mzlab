@@ -135,6 +135,8 @@ mod msn_lib;
 mod msn_png;
 mod msn_rules;
 pub mod msn_uscite;
+#[cfg(test)]
+mod mzml_varianti_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
