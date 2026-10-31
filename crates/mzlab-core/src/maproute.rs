@@ -84,8 +84,8 @@ fn grid_of<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, level: u8) -> R
             continue;
         }
         hr |= group_is_hr(&r.idx.scans, level == 1);
-        rts.push(at.iter().cloned().fold(f64::INFINITY, f64::min));
-        rts.push(at.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+        rts.push(at.iter().copied().fold(f64::INFINITY, f64::min));
+        rts.push(at.iter().copied().fold(f64::NEG_INFINITY, f64::max));
         if let Some(si) = r.idx.section_of(level, None) {
             if let Some((lo, hi)) = r.idx.mz_range(si)? {
                 mzs.extend([lo, hi]);
@@ -145,7 +145,7 @@ fn norm_factor<R: ReadAt>(r: &mut Routes<R>, a: &Ask, sg: &Grid, norm: &str) -> 
         return Ok(1.0);
     }
     let m = r.ion_map(a.level, sg, a.mean)?;
-    let t = if norm == "max" { m.iter().cloned().fold(0.0f32, f32::max) as f64 } else { psum32(&m) as f64 };
+    let t = if norm == "max" { m.iter().copied().fold(0.0f32, f32::max) as f64 } else { psum32(&m) as f64 };
     Ok(if t > 0.0 { ((if norm == "max" { 1.0 } else { 1000.0 }) / t) as f32 } else { 1.0 })
 }
 

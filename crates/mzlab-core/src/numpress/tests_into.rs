@@ -63,7 +63,7 @@ mod reference {
     }
 
     pub fn slof_fixed_point(values: &[f64]) -> f64 {
-        let max = values.iter().cloned().fold(0.0, f64::max);
+        let max = values.iter().copied().fold(0.0, f64::max);
         (65535.0 / (max + 1.0).ln().max(1e-9))
             .floor()
             .clamp(1.0, 65535.0)

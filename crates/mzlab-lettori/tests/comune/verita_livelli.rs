@@ -186,7 +186,7 @@ pub fn f3_punti(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol) -> Esito {
             d3.push(format!("scan {k}: {} points vs {}", s.mz.len(), mz.len()));
             continue;
         }
-        let massimo = it.iter().cloned().fold(0.0f64, f64::max).max(1e-300);
+        let massimo = it.iter().copied().fold(0.0f64, f64::max).max(1e-300);
         for (i, (&a, &b)) in s.mz.iter().zip(&mz).enumerate() {
             let y = s.intensity_f64(i);
             if !tol.mz_ok(a, b) {
@@ -219,7 +219,7 @@ fn f4_traccia(
         return;
     }
     let somma: f64 = ch.intensity.iter().sum();
-    let massimo = ch.intensity.iter().cloned().fold(0.0f64, f64::max);
+    let massimo = ch.intensity.iter().copied().fold(0.0f64, f64::max);
     for (nome, ours, theirs) in [
         ("sum", somma, num(&t["somma"])),
         ("maximum", massimo, num(&t["massimo"])),

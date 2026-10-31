@@ -96,7 +96,7 @@ fn tic_e_bpc_si_calcolano_dai_picchi_quando_il_file_non_li_dice() {
         assert!((tic.time[i] - x.rt_s / 60.0).abs() < 1e-12);
     }
     let bpc = l.cromatogramma(0, "BPC").unwrap();
-    assert!((bpc.intensity[0] - uno[0].it.iter().cloned().fold(0.0, f64::max)).abs() < 1e-9);
+    assert!((bpc.intensity[0] - uno[0].it.iter().copied().fold(0.0, f64::max)).abs() < 1e-9);
     assert!(l.cromatogramma(0, "XIC").is_err());
 }
 

@@ -57,7 +57,7 @@ pub fn ripeti<R>(giri: usize, mut f: impl FnMut() -> R) -> (Vec<Giro>, R) {
         let t = Instant::now();
         let r = f();
         let s = t.elapsed().as_secs_f64();
-        eprintln!("  run {:.2} s", s);
+        eprintln!("  run {s:.2} s");
         let (g1, m1) = conta::guasti();
         out.push(Giro {
             s,

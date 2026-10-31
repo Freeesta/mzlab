@@ -279,7 +279,7 @@ fn put_int(x: u32, halves: &mut Halves) {
 
 /// The best fixed point for linear prediction of values up to `max` (the reference: the largest that keeps the integers in 31 bits).
 pub fn linear_fixed_point(values: &[f64]) -> f64 {
-    let max = values.iter().cloned().fold(1.0, f64::max);
+    let max = values.iter().copied().fold(1.0, f64::max);
     (f64::from(i32::MAX) / max)
         .floor()
         .max(1.0)
@@ -355,7 +355,7 @@ fn slof_into(out: &mut Vec<u8>, values: impl Iterator<Item = f64>, n: usize, fp:
 
 /// The fixed point of slof for values up to `max`: the largest that keeps `ln(max+1) * fp` inside 16 bits.
 pub fn slof_fixed_point(values: &[f64]) -> f64 {
-    slof_fp(values.iter().cloned().fold(0.0, f64::max))
+    slof_fp(values.iter().copied().fold(0.0, f64::max))
 }
 
 /// `slof_fixed_point` of 32-bit values.

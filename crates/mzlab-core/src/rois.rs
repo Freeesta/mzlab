@@ -194,8 +194,8 @@ pub fn build_rois<R: ReadAt>(
         }
     }
     let n_roi = r_mz.len();
-    let mz_min = mz.iter().cloned().fold(f64::INFINITY, f64::min);
-    let mz_max = mz.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let mz_min = mz.iter().copied().fold(f64::INFINITY, f64::min);
+    let mz_max = mz.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     if n_roi == 0 || a_roi.is_empty() {
         return Ok(Window {
             rt,

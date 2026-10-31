@@ -355,7 +355,7 @@ pub fn fwhm_walk(x: &[f64], y: &[f64], apex: usize) -> f64 {
 pub fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize) -> Vec<f64> {
     let n = y.len();
     if n < 5 {
-        let m = y.iter().cloned().fold(f64::INFINITY, f64::min);
+        let m = y.iter().copied().fold(f64::INFINITY, f64::min);
         return vec![if n == 0 { 0.0 } else { m }; n];
     }
     if n > 20000 {

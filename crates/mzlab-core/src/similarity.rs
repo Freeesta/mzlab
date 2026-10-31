@@ -123,8 +123,8 @@ pub fn profile_similarity(rt: &[f64], x: &[f64], p: &[f64], p_apex_rt: Option<f6
     }
     let (xw, pw) = (&xc[lo..=hi], &pc[lo..=hi]);
     let (xsw, psw) = (&xs[lo..=hi], &ps[lo..=hi]);
-    let mx = xsw.iter().cloned().fold(f64::MIN, f64::max).max(1e-12);
-    let mp = psw.iter().cloned().fold(f64::MIN, f64::max).max(1e-12);
+    let mx = xsw.iter().copied().fold(f64::MIN, f64::max).max(1e-12);
+    let mp = psw.iter().copied().fold(f64::MIN, f64::max).max(1e-12);
     let wts: Vec<f64> = xsw.iter().zip(psw).map(|(a, b)| 0.5 * (a / mx + b / mp) + 1e-3).collect();
     let obs = wpearson(xw, pw, None);
     res.set("pearson", num(obs));

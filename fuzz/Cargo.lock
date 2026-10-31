@@ -175,6 +175,7 @@ version = "1.0.0"
 dependencies = [
  "base64",
  "flate2",
+ "mzlab-picchi",
  "opentfraw",
  "quick-xml",
  "sha1",
@@ -205,9 +206,14 @@ dependencies = [
 name = "mzlab-lib"
 version = "1.0.0"
 dependencies = [
+ "mzlab-picchi",
  "ruzstd",
  "serde_json",
 ]
+
+[[package]]
+name = "mzlab-picchi"
+version = "1.0.0"
 
 [[package]]
 name = "openmassspec-core"

@@ -163,7 +163,7 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     }
     let ys: Vec<f64> = savgol(&y[..n], p.smooth, 2).into_iter().map(|v| v.max(0.0)).collect();
     let noise = noise_level(&y[..n]).max(1e-9);
-    let top = ys.iter().cloned().fold(0.0, f64::max);
+    let top = ys.iter().copied().fold(0.0, f64::max);
     let need = (p.snr * noise).max(p.rel_prominence * top);
     // local maxima and their prominence
     let (left_min, right_min) = (reach_min(&ys, false), reach_min(&ys, true));

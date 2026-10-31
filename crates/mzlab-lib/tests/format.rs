@@ -40,7 +40,7 @@ fn round_trip_small() {
         let (cmz, cit) = clean(s.prec, &s.mz, &s.it, &CleanOpts::default());
         let (mz, it) = lib.peaks(i as u32).unwrap();
         assert_eq!(mz.len(), cmz.len());
-        let mx = cit.iter().cloned().fold(0.0, f64::max);
+        let mx = cit.iter().copied().fold(0.0, f64::max);
         for j in 0..mz.len() {
             assert!((mz[j] - cmz[j]).abs() <= 5.1e-6, "m/z quantum");
             assert!(

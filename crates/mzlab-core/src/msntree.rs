@@ -240,7 +240,7 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
         let mx = if c.rel.is_empty() {
             1.0
         } else {
-            c.rel.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+            c.rel.iter().copied().fold(f64::NEG_INFINITY, f64::max)
         };
         let mut peaks = vec![];
         for &j in &top {

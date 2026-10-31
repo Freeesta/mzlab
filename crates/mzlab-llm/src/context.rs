@@ -126,8 +126,8 @@ fn column(rows: &[Vec<String>], k: usize) -> Value {
     let num: Vec<f64> = filled.iter().filter_map(|c| c.parse().ok()).collect();
     let mut o = vec![("filled".to_string(), Value::Num(filled.len() as f64))];
     if !num.is_empty() && num.len() == filled.len() {
-        let lo = num.iter().cloned().fold(f64::INFINITY, f64::min);
-        let hi = num.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let lo = num.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = num.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         o.push(("min".into(), Value::Num(sig4(lo))));
         o.push(("max".into(), Value::Num(sig4(hi))));
     }

@@ -60,7 +60,7 @@ fn median(mut v: Vec<f64>) -> f64 {
 }
 
 fn ptp(v: &[f64]) -> f64 {
-    v.iter().cloned().fold(f64::NEG_INFINITY, f64::max) - v.iter().cloned().fold(f64::INFINITY, f64::min)
+    v.iter().copied().fold(f64::NEG_INFINITY, f64::max) - v.iter().copied().fold(f64::INFINITY, f64::min)
 }
 
 /// `_spearman`: Pearson of the ranks (`np.corrcoef`); None below three points or when a series is constant.
@@ -79,7 +79,7 @@ fn spearman(x: &[f64], y: &[f64]) -> Option<f64> {
 
 /// `_shape`: a descriptive label of a time course, only to sort and filter.
 fn shape(y: &[f64], rho: Option<f64>, floor: f64, rho_min: f64, drop: f64) -> Option<&'static str> {
-    let top = y.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let top = y.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let rho = rho?;
     if y.len() < 3 || top <= floor {
         return None;
@@ -143,7 +143,7 @@ fn pseudocount(inp: &RefIn, ref_cols: &[usize], o: &RefOpts) -> (f64, &'static s
     if let Some(p) = o.pseudo {
         return (p, "given");
     }
-    let mut bl: Vec<usize> = ref_cols.iter().cloned().filter(|&i| inp.roles[i] == "blank").collect();
+    let mut bl: Vec<usize> = ref_cols.iter().copied().filter(|&i| inp.roles[i] == "blank").collect();
     if bl.is_empty() {
         bl = (0..inp.roles.len()).filter(|&i| inp.roles[i] == "blank").collect();
     }
@@ -186,7 +186,7 @@ impl Ctx<'_> {
     /// The replicates of file `i0`: same label, or (both unlabelled) same time; else the file alone.
     fn replicates(&self, i0: usize) -> Vec<usize> {
         let (lab, tm) = (&self.lab, self.inp.times);
-        let same: Vec<usize> = self.tr.iter().cloned().filter(|&i| {
+        let same: Vec<usize> = self.tr.iter().copied().filter(|&i| {
             (lab[i0].is_some() && lab[i] == lab[i0]) || (lab[i0].is_none() && lab[i].is_none() && tm[i0].is_some() && tm[i] == tm[i0])
         }).collect();
         if same.is_empty() { vec![i0] } else { same }
@@ -194,7 +194,7 @@ impl Ctx<'_> {
 
     fn feature(&self, f: usize) -> Value {
         let (a, q) = (&self.inp.matrix[f], &self.bf.rows[f]);
-        let top_i = self.tr.iter().cloned().fold(self.tr[0], |b, i| if a[i] > a[b] { i } else { b });
+        let top_i = self.tr.iter().copied().fold(self.tr[0], |b, i| if a[i] > a[b] { i } else { b });
         let top = a[top_i];
         let y: Vec<f64> = self.cols_at.iter().map(|c| mean(&c.iter().map(|&i| a[i]).collect::<Vec<_>>())).collect();
         let rho = spearman(&self.ser, &y);
@@ -211,7 +211,7 @@ impl Ctx<'_> {
         } else {
             "too_few_files"
         };
-        let ytop = y.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let ytop = y.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let cv = (rg.len() > 1 && m > 0.0).then(|| {
             let ss = psum(&rg.iter().map(|v| (v - m) * (v - m)).collect::<Vec<_>>());
             (ss / (rg.len() - 1) as f64).sqrt() / m * 100.0

@@ -12,7 +12,7 @@ fn path_sostanze_csv() -> PathBuf {
 #[test]
 fn test_caricamento_e_validazione_645_sostanze() {
     let path = path_sostanze_csv();
-    assert!(path.exists(), "Target CSV file not found at {:?}", path);
+    assert!(path.exists(), "Target CSV file not found at {path:?}");
 
     let file = File::open(&path).expect("Failed to open target CSV");
     let entries = parse_target_csv(file).expect("Failed to parse target CSV");

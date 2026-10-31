@@ -40,7 +40,7 @@ fn trace(rng: &mut Rng, n: usize, scale: f64) -> Vec<f64> {
 fn old_asls(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize) -> Vec<f64> {
     let n = y.len();
     if n < 5 {
-        let m = y.iter().cloned().fold(f64::INFINITY, f64::min);
+        let m = y.iter().copied().fold(f64::INFINITY, f64::min);
         return vec![if n == 0 { 0.0 } else { m }; n];
     }
     if n > 20000 {

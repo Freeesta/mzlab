@@ -286,8 +286,8 @@ fn format_proposal_and_motif(
     };
 
     let iso_str = match isotope_score {
-        Some(s) if s >= 0.7 => format!("isotope pattern confirmed (score {:.2})", s),
-        Some(s) => format!("isotope pattern unconfirmed (score {:.2})", s),
+        Some(s) if s >= 0.7 => format!("isotope pattern confirmed (score {s:.2})"),
+        Some(s) => format!("isotope pattern unconfirmed (score {s:.2})"),
         None => "isotope pattern unconfirmed".to_string(),
     };
     let ms2_str = if ms2_matched {

@@ -336,7 +336,7 @@ pub(crate) fn mix_fixture(tag: &str) -> PathBuf {
         mgf += &format!("BEGIN IONS\nTITLE=q{k}\nPEPMASS={prec}\nCHARGE=1+\nIONMODE=Positive\n");
         for (m, it) in src.iter().filter(|(m, _)| *m < prec - 4.0) {
             let (m, it) = (m + (next() - 0.5) * 0.004, it * (0.7 + next() * 0.6));
-            mgf += &format!("{:.4} {:.2}\n", m, it);
+            mgf += &format!("{m:.4} {it:.2}\n");
         }
         mgf += "END IONS\n";
     }
