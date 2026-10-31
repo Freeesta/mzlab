@@ -370,7 +370,17 @@ async function lrOp(m) {
 // linear memory of the WASM (it only grows): the page recycles the worker when it is large and idle (rust-bridge.js). The cache is trimmed to its budget first (one LRU).
 const memNow = () => { try { if (engine) engine.trim_cache(); } catch (_) { /* the answer goes out anyway */ } return wasmMem ? wasmMem.buffer.byteLength : 0; };
 let active = 0;                                                                   // requests in flight: the read handles are exclusive, so they are released when the worker is idle
-onmessage = async ev => { active++; try { await handle(ev); } finally { if (--active === 0) await ARCH.parkAll(); } };
+// A request the user waits for (map, route, xic) is served before the lab ops (the read-only per-item lr_* ops, background): those wait while one is in flight, at most LAB_WAIT_MS so a stream of them never starves the lab.
+const FG_OPS = new Set(["map", "route", "idxxic", "subxic", "specexact", "idxopen"]), LAB_WAIT_MS = 1500, LAB_BG = /^lr_(metodo|method|method_warnings|gradient|analog|pda\w*|delay)$/;
+let fgActive = 0, fgIdle = /** @type {Array<() => void>} */ ([]);
+const fgDone = () => { if (--fgActive === 0) { const w = fgIdle; fgIdle = []; w.forEach(f => f()); } };
+const labTurn = () => fgActive === 0 ? null : new Promise(r => { const go = () => r(null); fgIdle.push(go); setTimeout(go, LAB_WAIT_MS); });
+onmessage = async ev => {
+  const op = String(ev.data?.op ?? ""), fg = FG_OPS.has(op);
+  if (fg) fgActive++; else if (LAB_BG.test(op)) await labTurn();
+  active++;
+  try { await handle(ev); } finally { if (fg) fgDone(); if (--active === 0) await ARCH.parkAll(); }
+};
 /** the names among `m.names` of samples of the same files as `m.members` with a current index in OPFS */
 async function natSame(/** @type {any} */ m) {
   const out = [];
