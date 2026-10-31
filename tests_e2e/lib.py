@@ -346,7 +346,7 @@ class Run:
     def page(s, p, tour=False, qaqc=False):
         s.b = p.chromium.launch()
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
-        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
+        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         else:          # the tour tests want the invitation of the tour, but not the hint of the side-by-side panels: it shows up after a few seconds (later under load) over the spectrum and takes the clicks of the test
