@@ -70,8 +70,13 @@ impl<R: ReadAt> Index<R> {
                     let (mut is, mut ms) = (ib.chunks_exact(4), mb.chunks_exact(4));
                     for _ in 0..c {
                         let pos = pos_of(ps.next().unwrap(), n_scans)?;
-                        let y = f64::from(f32::from_le_bytes(is.next().unwrap().try_into().unwrap()));
-                        let mz = if MZ { f64::from(f32::from_le_bytes(ms.next().unwrap().try_into().unwrap())) } else { 0.0 };
+                        let y =
+                            f64::from(f32::from_le_bytes(is.next().unwrap().try_into().unwrap()));
+                        let mz = if MZ {
+                            f64::from(f32::from_le_bytes(ms.next().unwrap().try_into().unwrap()))
+                        } else {
+                            0.0
+                        };
                         f(pos, mz, y);
                     }
                 } else {
@@ -79,7 +84,11 @@ impl<R: ReadAt> Index<R> {
                     for _ in 0..c {
                         let pos = pos_of(ps.next().unwrap(), n_scans)?;
                         let y = f64::from_le_bytes(is.next().unwrap().try_into().unwrap());
-                        let mz = if MZ { f64::from_le_bytes(ms.next().unwrap().try_into().unwrap()) } else { 0.0 };
+                        let mz = if MZ {
+                            f64::from_le_bytes(ms.next().unwrap().try_into().unwrap())
+                        } else {
+                            0.0
+                        };
                         f(pos, mz, y);
                     }
                 }
