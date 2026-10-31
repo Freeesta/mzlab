@@ -77,3 +77,15 @@ jobs:
             cd ..
           done
           echo "::warning::metriche: not published"
+      # the trend table in the job summary and the HTML page (sparklines) as an artifact
+      - name: Trend report
+        continue-on-error: true
+        run: |
+          { echo '```'; python3 tools/metriche.py --rapporto --dati dati --html metriche.html; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Trend report (artifact)
+        if: ${{ !cancelled() && hashFiles('metriche.html') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: metriche-rapporto
+          path: metriche.html
+          retention-days: 30

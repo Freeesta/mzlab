@@ -4,6 +4,7 @@
     python3 tools/metriche.py --registra --sito SITE --dati DIR [--sha SHA] [--ci]   # measure and append one line to DIR/metriche-YYYY-MM.jsonl
     python3 tools/metriche.py --aggiungi nome=valore ... --dati DIR [--sha SHA]       # hand-measured numbers (private-data benches) for a commit
     python3 tools/metriche.py --bench FILE.json ...                                    # synthetic bench numbers {name: number} with --registra/--aggiungi
+    python3 tools/metriche.py --rapporto [--dati DIR] [--html FILE]                    # trend table and HTML page (tools/metriche_trend.py)
 
 A line is `{v, sha, ts, part, ...}`; a commit may have several lines (parts `site`, `ci`, `manual`) and readers merge them by sha
 (`leggi_commit`). Lines are only appended; the data live on the branch `stat-ci`, never in main. The report is tools/metriche_trend.py."""
@@ -140,9 +141,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bench", metavar="FILE", help="JSON {name: number} of synthetic bench results")
     ap.add_argument("--sito", help="built site directory (static/ with the .wasm files)")
     ap.add_argument("--ci", action="store_true", help="also read the CI facts of the commit from the GitHub API")
+    ap.add_argument("--rapporto", action="store_true", help="print the trend table (better/worse than 7 and 30 days ago)")
+    ap.add_argument("--html", metavar="FILE", help="with --rapporto: also write a self-contained HTML page with sparklines")
     ap.add_argument("--sha", help="commit (default HEAD)")
     ap.add_argument("--dati", default="metriche", help="directory with the monthly files (the worktree of stat-ci)")
     a = ap.parse_args(argv)
+    if a.rapporto:
+        import metriche_trend as t
+        rows = t.analyse(leggi_commit(a.dati))
+        print(t.text_report(rows))
+        if a.html:
+            Path(a.html).write_text(t.html_report(rows, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")), encoding="utf-8")
+        return 0
     sha = git("rev-parse", a.sha or "HEAD")
     # commit time in UTC, so lines sort correctly whatever the committer's offset
     ts = datetime.fromisoformat(git("show", "-s", "--format=%cI", sha)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
