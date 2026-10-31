@@ -19,17 +19,17 @@ r = Run(port=8980, wd="/tmp/wd_riga")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in FILES[:2]]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz(f) for f in FILES[:2]]); ready(pg)
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#np-chrom"); ready(pg); pg.wait_for_timeout(1000)
+        pg.click("#np-chrom"); ready(pg)
         pg.add_init_script(TRACE)
         pg.context.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": 4})
         def restore(name, w, panels):
             def run():
                 if not panels:
-                    pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#np-closeall"); ready(pg); pg.wait_for_timeout(600)
+                    pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#np-closeall"); ready(pg)
                 pg.set_viewport_size({"width": w, "height": 900})
-                pg.reload(); pg.wait_for_function("window.qqReady === true", timeout=120000); pg.wait_for_timeout(1500)
+                pg.reload(); pg.wait_for_function("window.qqReady === true", timeout=120000); ready(pg); frames(pg, 20)
                 first = json.loads(pg.evaluate("window.__first")); last = json.loads(pg.evaluate("window.__geo()"))
                 assert not first["ready"], "the work area must be drawn before the engine is ready: " + str(first)
                 assert first["top"] == last["top"] and first["h"] == last["h"], f"row moved or resized: {first} -> {last}"
