@@ -83,6 +83,7 @@ I18N.add("en", {
   "err.formula.parens": "Unbalanced parentheses in {formula}.",
   "err.adduct.unknown": "Unknown adduct: {adduct}",
   "err.iso.element": "No isotope data for the element {symbol}.",
+  "err.iso.adductTooMany": "The adduct removes more atoms than there are.",
   "err.comp.element": "Cannot read the element «{part}» (write C:0-13).",
   "err.comp.unknown": "Unknown element: {symbol}.",
   "err.comp.range": "{symbol}: the maximum is below the minimum.",

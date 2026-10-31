@@ -155,6 +155,7 @@ impl State {
                 text("{}")
             }
             "lr_valida" => self.validate_mzml(s("name")),
+            "lr_isotope_fine" => text(mzlab_core::isofine::isotope_fine_route(s("query"))?),
             "lr_composition" => text(mzlab_core::comproute::composition_route(&q()).unwrap_or_default()),
             "lr_stat" => match mzlab_core::statroute::stat_route(s("path"), s("body")) {
                 None => text(""),
@@ -168,6 +169,7 @@ impl State {
                 let ad = s("adduct");
                 text(mzlab_core::elements::formula_mz(s("f"), if ad.is_empty() { None } else { Some(ad) })?)
             }
+            "lr_ion_pattern" => text(mzlab_core::ionpattern::route(s("f"), s("adduct"))?),
             "lr_adduct_table" => text(mzlab_core::adduct_table::table(s("f"), s("obs"), s("tol"), s("delta"))?),
             "lr_flow_command" => text(mzlab_core::flow::command_route(s("body"))?),   // the copyable shell command of a mzflow/2 plan, as the `.wasm` of the site and `mzlab-cli flow command`
             "lr_ricerca" => text(mzlab_core::ricerca::match_number(s("body"))?),

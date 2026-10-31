@@ -147,7 +147,7 @@ pub fn rt_groups(points: &mut [Point], tol: f64) {
     order.sort_by(|&a, &b| points[a].rt.total_cmp(&points[b].rt));
     let (mut g, mut last) = (0, None::<f64>);
     for &i in &order {
-        if last.map_or(true, |l| points[i].rt - l > tol) {
+        if last.is_none_or(|l| points[i].rt - l > tol) {
             g += 1;
         }
         points[i].g = g;

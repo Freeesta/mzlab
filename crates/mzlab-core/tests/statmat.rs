@@ -53,7 +53,7 @@ fn svd_rank_deficient() {
     }
     check(&a, m, n);
     assert!(svd(&a, m, n).s[m - 1] < 1e-12);
-    check(&vec![0.0; 12], 3, 4);
+    check(&[0.0; 12], 3, 4);
 }
 
 #[test]

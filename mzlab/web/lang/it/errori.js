@@ -83,6 +83,7 @@ I18N.add("it", {
   "err.formula.parens": "Parentesi non bilanciate in {formula}.",
   "err.adduct.unknown": "Addotto sconosciuto: {adduct}",
   "err.iso.element": "Non ho i dati isotopici dell'elemento {symbol}.",
+  "err.iso.adductTooMany": "L'addotto toglie più atomi di quanti ce ne siano.",
   "err.comp.element": "Non riesco a leggere l'elemento «{part}» (scrivi C:0-13).",
   "err.comp.unknown": "Elemento sconosciuto: {symbol}.",
   "err.comp.range": "{symbol}: il massimo è sotto il minimo.",

@@ -36,7 +36,7 @@ I18N.add("it", {
   "load.phrase.15": "Contaminando con PEG",
   "load.phrase.16": "Niente panico",
   "load.phrase.17": "Sporcando la sorgente",
-  "load.drop": "<b>Trascina qui i file</b> o <u>sfoglia</u><small class=\"fmts\">.mzML · .raw · .wiff (con .wiff.scan) · .D (cartella) <span class=\"fmt-i\" role=\"img\" title=\"Una cartella .D va trascinata intera, non i suoi file uno per uno.\" aria-label=\"Una cartella .D va trascinata intera, non i suoi file uno per uno.\">ⓘ</span></small>",
+  "load.drop": "<b>Trascina qui i file</b> o <u>sfoglia</u><small class=\"fmts\">.mzML · .raw · .wiff (+ .wiff.scan) · .D (cartella)</small>",
   "load.drop.aria": "Scegli i file dei dati: .mzML, .raw, .wiff con il suo .wiff.scan, cartella .D intera",
   "files.hint.empty": "I tuoi file atterreranno qui!",
   "load.backwork": "Torna al lavoro!",

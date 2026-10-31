@@ -37,7 +37,7 @@ try:
         step("header in English", header)
         def start():
             t = pg.inner_text("#start")
-            for w in ("1. Data files", "Drop files here", ".mzML · .raw · .wiff (with .wiff.scan) · .D (folder)", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
+            for w in ("1. Data files", "Drop files here", ".mzML · .raw · .wiff (+ .wiff.scan) · .D (folder)", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("start screen in English, no Italian words", start)
         def demo():
