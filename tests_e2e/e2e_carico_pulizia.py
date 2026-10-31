@@ -1,5 +1,4 @@
-"""Loading screen tidy-up: no «drag here to place side by side» bubble; the folder button keeps its distance from the drop zone and is centred on
-the title (1440 and 400 px, light and dark); the file selector (arrows + name menu) is aligned and the menu is as wide as its content, truncated with the full name in the tooltip."""
+"""Loading screen tidy-up: no «drag here to place side by side» bubble; the folder button keeps its distance from the drop zone and stays on screen (1440 and 400 px, light and dark); the file selector (arrows + name menu) is aligned and the menu is as wide as its content, truncated with the full name in the tooltip."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 r = Run(port=8913, wd="/tmp/wd913")
@@ -10,12 +9,12 @@ try:
         for scheme in ("light", "dark"):
             for w in (1440, 400):
                 pg.emulate_media(color_scheme=scheme); pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_selector("#cartpick", state="visible")
-                g = pg.evaluate("""() => { const b = document.querySelector('#cartpick').getBoundingClientRect(), h = document.querySelector('.cardhd h3').getBoundingClientRect(), d = document.querySelector('#drop').getBoundingClientRect(), c = document.querySelector('.cardhd').closest('.card').getBoundingClientRect();
-                    return { gap: d.top - b.bottom, dy: (b.top + b.bottom) / 2 - (h.top + h.bottom) / 2, over: Math.max(0, h.right - b.left), w: b.width, h: b.height, right: c.right - b.right } }""")
+                # the landing no longer has a titled card: the folder button sits in the row under the drop zone
+                g = pg.evaluate("""() => { const b = document.querySelector('#cartpick').getBoundingClientRect(), d = document.querySelector('#drop').getBoundingClientRect(), v = document.documentElement.clientWidth;
+                    return { gap: b.top - d.bottom, w: b.width, h: b.height, left: b.left, right: v - b.right } }""")
                 assert g["gap"] >= 8, (scheme, w, g)
-                assert abs(g["dy"]) <= 1.5, (scheme, w, g)
-                assert g["over"] == 0 and g["w"] >= 24 and g["h"] >= 24 and g["right"] >= 4, (scheme, w, g)
-        steps.append(("folder button: >= 8 px from the drop zone, centred on the title, clear of it, light/dark at 1440 and 400 px", "ok"))
+                assert g["w"] >= 24 and g["h"] >= 24 and g["left"] >= 0 and g["right"] >= 0, (scheme, w, g)
+        steps.append(("folder button: >= 8 px from the drop zone, at least 24 px, inside the viewport, light/dark at 1440 and 400 px", "ok"))
         pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=full]")
         pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=30000)
