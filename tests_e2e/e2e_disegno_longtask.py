@@ -1,8 +1,8 @@
 """Disegno opens and stays responsive at CPU x4: the longest main-thread long task (Ketcher's iframe shares the page thread) stays under a ceiling.
-The ceiling only goes down: every Ketcher start-up improvement lowers it toward 200 ms (the inline worker removal brought the longest task from 4.1 s to below it)."""
+The ceiling only goes down: every Ketcher start-up improvement lowers it toward 200 ms (from 4.1 s: the inline worker removed, then the monomer library)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-CEILING_MS = 6000          # CI headroom over the measured ~4.2 s; lower it with each step
+CEILING_MS = 3600          # CI headroom over the measured ~2.2 s (module evaluation); lower it with each step
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
