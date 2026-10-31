@@ -38,18 +38,15 @@ const RESET = (function () {
   async function idb(mode, rep) {
     let names = KNOWN_IDB.slice();
     try { if (indexedDB.databases) names = [...new Set([...names, ...(await indexedDB.databases()).map(d => /** @type {string} */ (d.name))])]; } catch (e) { /* the fixed names only */ }
-    for (const n of names) {
-      if (mode !== "all" && KEEP_IDB.includes(n)) continue;
+    // all databases at once, each with its own short timeout
+    await Promise.all(names.filter(n => mode === "all" || !KEEP_IDB.includes(n)).map(async n => {
       const ok = await wait(delDb(n), 3000);
       // blocked: another connection is open; the deletion is queued and finishes when the page reloads
       (ok ? rep.idb : rep.blocked).push(n);
-    }
+    }));
   }
   async function caches_(mode, rep) {
-    for (const k of await caches.keys()) {
-      if (mode !== "all" && !k.startsWith(NOMI.CACHE_BIG) && !k.startsWith("qqq-big-")) continue;
-      if (await caches.delete(k)) rep.caches.push(k);
-    }
+    await Promise.all((await caches.keys()).filter(k => mode === "all" || k.startsWith(NOMI.CACHE_BIG) || k.startsWith("qqq-big-")).map(async k => { if (await caches.delete(k)) rep.caches.push(k); }));
   }
   async function wipe(mode = "all") {
     const rep = { mode, opfs: [], idb: [], blocked: [], caches: [], sw: 0, keys: 0, errors: /** @type {string[]} */ ([]) };
@@ -57,11 +54,14 @@ const RESET = (function () {
     try { if (window.qqEngineStop) window.qqEngineStop(); } catch (e) { /* no engine */ }
     // the development server keeps the session in memory
     if (!window.QQQ_BROWSER) await wait(fetch("api/new", { method: "POST", body: JSON.stringify({ fresh: true }) }));
-    if (navigator.storage && /** @type {any} */ (navigator.storage).getDirectory) await wait(opfs(mode, rep), OPFS_RETRY_MS + 4000);
-    if (window.indexedDB) await wait(idb(mode, rep), 12000);
-    if (window.caches) await wait(caches_(mode, rep));
+    // OPFS, IndexedDB, caches and the worker registration are independent: they go at the same time, each with its own timeout
+    await Promise.all([
+      navigator.storage && /** @type {any} */ (navigator.storage).getDirectory ? wait(opfs(mode, rep), OPFS_RETRY_MS + 4000) : null,
+      window.indexedDB ? wait(idb(mode, rep), 12000) : null,
+      window.caches ? wait(caches_(mode, rep)) : null,
+      mode === "all" && navigator.serviceWorker ? wait((async () => { await Promise.all((await navigator.serviceWorker.getRegistrations()).map(async r => { await r.unregister(); rep.sw++; })); })(), 2500) : null,
+    ]);
     if (mode === "all") {
-      if (navigator.serviceWorker) await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) { await r.unregister(); rep.sw++; } })());
       try {
         localStorage.clear(); sessionStorage.clear();
       } catch (e) { rep.errors.push("storage"); }
@@ -79,7 +79,7 @@ const RESET = (function () {
     window.QQRESET.last = rep;
     return rep;
   }
-  // wipe, then load the page again from the network without the ?reset parameter; ?riparti=1 makes the new engine delete saved files itself when a database was blocked
+  // wipe, then load the page again from the network without the ?reset parameter; ?riparti=1 makes the new engine delete saved files itself when a database was blocked; ?ripn=<nonce> tells browser.js that this page follows a reset (see isolateOnce)
   async function run(mode, opt = {}) {
     window.QQ_RESETTING = true;
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
@@ -87,7 +87,7 @@ const RESET = (function () {
     try { rep = await wipe(mode); } catch (e) { window.QQ_RESETTING = false; throw e; }
     if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.setItem(RUN_KEY_OLD, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
-    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1"; u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1"); }
+    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1"); }
     // the same address (a "#/data" hash and no parameter to drop) would only be a same-page jump: reload for real
     if (u.href === location.href) location.reload(); else location.replace(u.href);
     return rep;
