@@ -138,12 +138,14 @@ try:
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
+            pg.add_init_script("window.MZLAB_TRACE = [];")      # the requests the page makes, with their timing: said by the message of a red run
             pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "variante.wiff"), str(D / "variante.wiff.scan")])
             shown(pg, 1)
             assert names(pg) == ["variante.mzML"], names(pg)
             assert any("wasm-lettori/sciex" in u for u in asked), "the sciex module was not requested"
-            assert not pyodide(asked) and not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS || []")
+            miss = pg.evaluate("window.MZLAB_LR_MISS || []")
+            assert not pyodide(asked) and not miss, (miss, pg.evaluate("(window.MZLAB_TRACE || []).slice(-40)"), pg.evaluate("window.MZLAB_LR_ERR || null"), diag(pg))
             assert not errs, errs
             c3.close()
         step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variante)
