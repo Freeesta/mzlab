@@ -533,15 +533,15 @@ fn find(h: &[u8], pat: &[u8]) -> Option<usize> {
     let first = pat[0];
     let mut i = 0;
     while i + pat.len() <= h.len() {
-        match h[i..=h.len() - pat.len()].iter().position(|c| *c == first) {
-            None => return None,
-            Some(p) => {
-                i += p;
-                if &h[i..i + pat.len()] == pat {
-                    return Some(i);
-                }
-                i += 1;
+        {
+            let p = h[i..=h.len() - pat.len()]
+                .iter()
+                .position(|c| *c == first)?;
+            i += p;
+            if &h[i..i + pat.len()] == pat {
+                return Some(i);
             }
+            i += 1;
         }
     }
     None

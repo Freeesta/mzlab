@@ -120,7 +120,7 @@ fn pick_index(labs: &[Lab], rows: &[Vec<&'static str>], kind: &str, file: &str) 
         let diffs: Vec<usize> = rows.iter().map(|r| r.iter().filter(|s| **s == "diff").count()).collect();
         let best = diffs.iter().copied().min().unwrap_or(0);
         if pick.is_some_and(|p| diffs[p] > best) {
-            pick = (0..diffs.len()).filter(|&i| diffs[i] == best).last();
+            pick = (0..diffs.len()).rfind(|&i| diffs[i] == best);
         }
     }
     let s = stem(file.split('#').next().unwrap_or(file));

@@ -218,7 +218,7 @@ pub(crate) fn finish(acc: Vec<f64>, mean: bool, n_scans: &[usize], nmz: usize) -
 pub fn apex(points: &[(f64, f64, f64)], rt: f64, drt: f64) -> Option<(f64, f64)> {
     let mut best: Option<(f64, f64, f64)> = None;
     for &(r, m, y) in points {
-        if (r - rt).abs() <= drt && best.map_or(true, |b| y > b.0) {
+        if (r - rt).abs() <= drt && best.is_none_or(|b| y > b.0) {
             best = Some((y, r, m));
         }
     }
