@@ -27,7 +27,8 @@ try:
                     assert q.evaluate(TABS) == names, (lang, q.evaluate(TABS)); hs[adm] = q.evaluate(HEIGHT); c.close()
                 assert abs(hs[0] - hs[1]) <= 2, ("admin on/off", hs)
                 c, q = new(1440, lang, 0); q.goto(U); q.wait_for_function("window.qqReady===true", timeout=60000)
-                assert q.evaluate(TABS) == names, (lang, q.evaluate(TABS)); app = q.evaluate(HEIGHT); c.close()
+                # the program also has Tabui and Flow (same name in both languages); the Teoria header carries only Dati, Disegno, Teoria
+                assert q.evaluate(TABS) == names[:2] + ["Tabui", "Flow"] + names[2:], (lang, q.evaluate(TABS)); app = q.evaluate(HEIGHT); c.close()
                 assert abs(app - hs[0]) <= 2, (lang, "program", app, "Teoria", hs)
         step("1440 px: the Teoria header has the height and the tab language of the program, admin off and on", same)
         def narrow():
