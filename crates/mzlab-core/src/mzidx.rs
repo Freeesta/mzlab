@@ -594,7 +594,7 @@ impl<'a> Prima<'a> {
 }
 
 /// The budget ran out with a scratch file: what is kept goes to it in the order of the scans (the groups merged by scan number), and the next scans follow it.
-#[allow(clippy::indexing_slicing)] // the indexes come from the groups just counted
+#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the groups just counted; `f32` groups hold widened `f32` values
 fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
     let mut counts = vec![0u64; NB];
     for g in gruppi.iter() {
