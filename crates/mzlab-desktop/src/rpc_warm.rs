@@ -11,14 +11,6 @@ use crate::engine::State;
 use crate::rpc::{text, Answer};
 use crate::store::{clean, stamp};
 
-/// What an index built ahead was built from.
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Warm {
-    pub path: PathBuf,
-    pub size: u64,
-    pub mtime: u64,
-}
-
 impl State {
     pub(crate) fn warm_names(&self) -> Vec<String> {
         self.warm
@@ -112,4 +104,12 @@ impl State {
             .put(name, w.path)?;
         text(json!({ "hit": true, "size": e.size, "id": self.pick_path(&e.path) }).to_string())
     }
+}
+
+/// What an index built ahead was built from.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Warm {
+    pub path: PathBuf,
+    pub size: u64,
+    pub mtime: u64,
 }
