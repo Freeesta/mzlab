@@ -13,7 +13,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
 use mzlab_core::mzidx::build_mzml_late;
-use mzlab_core::upload::{impronte, indicizza_lettore, prepare_con, probe};
+use mzlab_core::upload::{impronte, indicizza_lettore_con, prepare_con, probe};
 
 use crate::{flow_set, io};
 
@@ -237,16 +237,53 @@ pub(crate) fn build_index_with(
         let _ = std::fs::remove_file(&scratch_path);
         built?;
     } else {
-        let mut fs = flow_set::file_set(path)?;
-        let imp = impronte(&mut fs)?;
-        let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-        let ids: Vec<u32> = l.campioni().iter().map(|s| s.id).collect();
-        let sample = flow_set::sample_index(label, &ids)?;
-        let mut l = Scans::new(l, sample, &mut pace).stopping(stop);
-        indicizza_lettore(&mut l, sample, &imp, &name, &mut out, budget, &mut |_| {})?;
+        index_reader(path, label, idx, &mut out, budget, &mut pace, stop)?;
     }
     pace.at(1, 1);
     Ok(())
+}
+
+/// The index of a file read through the registry (maker's files, Numpress, gzip). The peaks that do not fit in `budget` wait in a scratch file, so the
+/// scans are decoded once and not once per round (a Numpress file decodes slowly: rounds made it quadratic).
+fn index_reader(
+    path: &Path,
+    label: &str,
+    idx: &Path,
+    out: &mut File,
+    budget: usize,
+    pace: &mut Pace<'_>,
+    stop: &Stop,
+) -> Result<()> {
+    let name = path
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let mut fs = flow_set::file_set(path)?;
+    let imp = impronte(&mut fs)?;
+    let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
+    let ids: Vec<u32> = l.campioni().iter().map(|s| s.id).collect();
+    let sample = flow_set::sample_index(label, &ids)?;
+    let mut l = Scans::new(l, sample, pace).stopping(stop);
+    let scratch_path = idx.with_extension("mzidx.scratch");
+    let mut scratch = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&scratch_path)
+        .map_err(io)?;
+    let built = indicizza_lettore_con(
+        &mut l,
+        sample,
+        &mut || Ok(imp.clone()),
+        &name,
+        out,
+        budget,
+        Some(&mut scratch),
+        &mut |_| {},
+    );
+    drop(scratch);
+    let _ = std::fs::remove_file(&scratch_path);
+    built.map(|_| ())
 }
 
 /// A reader that tells `pace` how many scans of sample `c` it has decoded (as many as the sample has in pass 1; a later pass counts past the total and is clamped).
