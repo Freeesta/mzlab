@@ -2,7 +2,7 @@
 with Standard, Smallest and Uncompressed (the select of the Advanced block), the files saved are ordered Smallest < Standard < Uncompressed, the size estimate is shown before and
 the real size on the button after, and each saved file is opened again by the program: its TIC equals the Standard one (Uncompressed exactly, Smallest within the Numpress precision).
 Needs the site and the .wasm: python tools/build_site.py (the .wasm is built by the CI in site/static/wasm)."""
-import subprocess, sys, tempfile, time
+import socket, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port
@@ -19,7 +19,9 @@ if not (ROOT / "site" / "index.html").exists() or not (ROOT / "site" / "static" 
 D = Path(tempfile.mkdtemp(prefix="comp_e2e_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(D)], check=True, capture_output=True)
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+for _ in range(300000):      # wait for the server to listen (connection attempts, not a fixed pause)
+    try: socket.create_connection(("127.0.0.1", PORT), timeout=0.2).close(); break
+    except OSError: pass
 INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 JSON = """async u => { const r = await fetch(u); return { status: r.status, j: await r.json() }; }"""
 
