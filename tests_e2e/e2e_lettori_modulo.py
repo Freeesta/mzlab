@@ -230,6 +230,17 @@ try:
             for k in ka:   # the spectrum: m/z to 1e-7, intensity to the precision of slof (1e-3 relative)
                 assert len(a["sp"][k]) == len(c["sp"][k]) and all(abs(x - y) <= 1e-3 * max(abs(y), 1) for x, y in zip(a["sp"][k], c["sp"][k])), k
         step("its TIC equals the twin's within the codec precision and nothing misses the engine", numpress_same)
+        # the numpress mzML is a sample read as it is (rust-nativo.js, the engine reads it through the module): the module never writes an mzML for it, «Download .mzML» writes the plain one on request
+        MZNP = """async () => { const rb = await window.MZLAB_RUST_READY, f = await rb.nativeToMzml("np.mzML", 1 << 20, undefined, undefined), t = await f.text();
+          return { writer: window.LETTORI_MOD.loaded, spectra: (t.match(/<spectrum /g) || []).length, numpress: /accession="MS:10027/.test(t), plain: t.includes("MS:1000574") }; }"""
+        def numpress_as_is():
+            pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / "npa"))
+            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
+            pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
+            r = pg.evaluate(MZNP)
+            assert r == {"writer": False, "spectra": 40, "numpress": False, "plain": True}, r
+        step("a numpress mzML is read as it is (the module writes no mzML) and «Download .mzML» gives the plain one", numpress_as_is)
         def mzxml_opens():
             r = one("xml"); assert r["files"] == ["x.mzML"], r["files"]
             y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, XTIC)), (y and y[:3], XTIC[:3])
