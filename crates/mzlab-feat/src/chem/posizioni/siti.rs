@@ -1,5 +1,6 @@
 //! Where a transformation can act: the atoms of the parent that can take it, with the formula of the product.
 
+use crate::sortc::SortC;
 use mzlab_core::elements::{self, Formula};
 use mzlab_core::error::{Error, Result};
 
@@ -271,7 +272,7 @@ fn dehydro_sites(mol: &Mol, cls: &[u32], parent: &Formula) -> Result<Vec<Site>> 
             }
         })
         .collect();
-    out.sort_by_key(|s| (s.atom, s.partner));
+    out.sortc_by_key(|s| (s.atom, s.partner));
     Ok(out)
 }
 

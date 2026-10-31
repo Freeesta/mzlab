@@ -4,6 +4,8 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::Outcome;
+
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
@@ -411,6 +413,51 @@ pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String
     let made = crate::msn_uscite::scrivi(graph, &a.figura, a.vista, &out.with_extension(""))
         .map_err(|e| e.to_string())?;
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
+}
+
+/// `mzlab-cli msn-graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
+pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
+    let mut args = args.peekable();
+    if args.next_if(|a| a == "compare").is_some() {
+        return match crate::msn_graph_compare::esegui(args) {
+            Ok((t, out)) => crate::emit(t, &out),
+            Err(e) => Outcome::fail(&e.to_string()),
+        };
+    }
+    if args.next_if(|a| a == "complete").is_some() {
+        return match completa_cmd(args) {
+            Ok((t, out)) => crate::emit(t, &out),
+            Err(e) => Outcome::fail(&e),
+        };
+    }
+    if args.next_if(|a| a == "figure").is_some() {
+        return crate::msn_uscite::figure_cmd(args)
+            .map_or_else(|e| Outcome::fail(&e), |t| Outcome::ok(t.into_bytes()));
+    }
+    let a = match parse_args(args) {
+        Ok(Some(a)) => a,
+        Ok(None) => return Outcome::ok(format!("{}\n", HELP).into_bytes()),
+        Err(e) => return Outcome::fail(&e),
+    };
+    // one folder per call: the tests run several in one process
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-msn{k}", std::process::id()));
+    let r = std::fs::create_dir_all(&tmp)
+        .map_err(crate::io)
+        .and_then(|_| esegui(&a, &tmp));
+    let _ = std::fs::remove_dir_all(&tmp);
+    let r = r
+        .map_err(|e| e.to_string())
+        .and_then(|t| figure_files(&a, &t).map(|f| (t, f)));
+    match r {
+        Err(e) => Outcome::fail(&e),
+        Ok((t, files)) => {
+            let mut o = crate::emit(t, &a.out);
+            o.stdout.extend(files.into_bytes());
+            o
+        }
+    }
 }
 
 #[cfg(test)]

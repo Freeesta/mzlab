@@ -240,7 +240,7 @@ fn main() {
     let (ions, parent, parent_rt) = truth(&val("--truth").expect("--truth verita.json"));
     let rules_path = val("--rules").unwrap_or_else(|| {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../TP_Mine/data/regole_tp.json")
+            .join("../../TP_Mine/data/regole_tp_2.json")
             .display()
             .to_string()
     });

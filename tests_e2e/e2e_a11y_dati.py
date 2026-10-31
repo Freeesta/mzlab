@@ -76,7 +76,7 @@ try:
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_timeout(1500)
-                q.set_input_files("#pick", [mz("B_FullMass-t0")]); q.wait_for_timeout(800); (q.click("#opbtn") if q.locator("#opbtn").is_visible() else None); ready(q)
+                q.set_input_files("#pick", [mz("B_FullMass-t0")]); q.wait_for_timeout(800); open_first(q); ready(q)
                 w = q.evaluate("[document.documentElement.scrollWidth, document.documentElement.clientWidth]"); assert w[0] <= w[1] + 1, f"horizontal scroll at 320 px: {w}"
             finally: ctx.close()
         step("WCAG 1.4.10 reflow: 320 CSS px without horizontal page scroll", reflow)

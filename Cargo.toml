@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/mzlab-core", "crates/mzlab-wasm", "crates/mzlab-desktop", "crates/mzlab-lib", "crates/mzlab-lib-wasm", "crates/mzlab-feat", "crates/mzlab-feat-wasm", "crates/mzlab-feat-table-wasm", "crates/mzlab-feat-grafo-wasm", "crates/mzlab-feat-import-wasm", "crates/mzlab-attributio-wasm", "crates/mzlab-finder-lr-wasm", "crates/mzlab-lettori", "crates/mzlab-lettori-wasm", "crates/mzlab-cli", "crates/mzlab-chem", "crates/mzlab-chem-wasm", "crates/mzlab-target", "crates/mzlab-mol", "crates/mzlab-libro", "crates/mzlab-libro-wasm", "crates/mzlab-tutor", "crates/mzlab-llm", "crates/mzlab-llm-wasm", "crates/mzlab-msngrafo-wasm", "crates/mzlab-msnregole-wasm"]
+members = ["crates/mzlab-core", "crates/mzlab-picchi", "crates/mzlab-wasm", "crates/mzlab-desktop", "crates/mzlab-lib", "crates/mzlab-lib-wasm", "crates/mzlab-feat", "crates/mzlab-feat-wasm", "crates/mzlab-feat-table-wasm", "crates/mzlab-feat-grafo-wasm", "crates/mzlab-feat-import-wasm", "crates/mzlab-attributio-wasm", "crates/mzlab-finder-lr-wasm", "crates/mzlab-lettori", "crates/mzlab-lettori-wasm", "crates/mzlab-cli", "crates/mzlab-chem", "crates/mzlab-chem-wasm", "crates/mzlab-target", "crates/mzlab-mol", "crates/mzlab-libro", "crates/mzlab-libro-wasm", "crates/mzlab-tutor", "crates/mzlab-llm", "crates/mzlab-llm-wasm", "crates/mzlab-msngrafo-wasm", "crates/mzlab-msnregole-wasm", "crates/mzlab-normative-wasm"]
 exclude = ["vendor/opentfraw"]
 
 [workspace.package]
@@ -14,6 +14,27 @@ panic = "abort"
 opt-level = "z"
 lto = true
 codegen-units = 1
+
+# Peak picking is the one hot spot worth the size at opt-level 3 (3.1x on detect_peaks, ~+4 KB); the rest of the .wasm builds stays at "z".
+[profile.release.package.mzlab-picchi]
+opt-level = 3
+
+# mzlab-core is the hot code of every wasm (centroids x1.5, compositions x1.3 in WebKit, entropy x1.2 in Firefox; tools/banco_wasm.py sol_core).
+[profile.release.package.mzlab-core]
+opt-level = 3
+
+# The crates that parse and inflate the files, at 3 together (tools/banco_wasm.py site_d vs site_z, median of 9, Chromium 153 / Firefox 157 / WebKit 27.2): mzML HR read x1.23 / x1.33 / x1.01, HR index x1.05 / x1.10 / x1.06, check values identical, +12.8 KB on the bench; alone each crate gains under 5 % or loses in one engine, the gain comes from the whole chain.
+[profile.release.package.quick-xml]
+opt-level = 3
+
+[profile.release.package.base64]
+opt-level = 3
+
+[profile.release.package.zlib-rs]
+opt-level = 3
+
+[profile.release.package.miniz_oxide]
+opt-level = 3
 
 # Desktop app only (`cargo tauri build --features app -- --profile desktop`): speed over size; the .wasm builds keep `release`.
 [profile.desktop]

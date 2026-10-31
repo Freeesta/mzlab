@@ -3,28 +3,45 @@
 use crate::elements::{mass_of, parse_formula, Formula};
 use crate::error::{Error, Result};
 
-const ELECTRON: f64 = 0.00054858;
+const ELECTRON: f64 = crate::elements::ELECTRON;
 pub const MAX_COMBINATIONS: u64 = 300_000;
 
-fn total(f: &Formula) -> Result<u64> {
+/// Number of sub-formulas of `f` (the product of its counts plus one), or None past `MAX_COMBINATIONS`.
+fn total_checked(f: &Formula) -> Option<u64> {
     let mut t: u64 = 1;
     for (_, n) in f {
         t = t.saturating_mul(n + 1);
     }
-    if t > MAX_COMBINATIONS {
-        return Err(Error::new("err.subxic.many").with("n", t));
-    }
-    Ok(t)
+    (t <= MAX_COMBINATIONS).then_some(t)
+}
+
+fn total(f: &Formula) -> Result<u64> {
+    total_checked(f).ok_or_else(|| {
+        let t = f.iter().fold(1u64, |t, (_, n)| t.saturating_mul(n + 1));
+        Error::new("err.subxic.many").with("n", t)
+    })
+}
+
+/// `submasses` for the callers that only need to know whether it worked (no error text built, which keeps the size-capped .wasm small);
+/// the elements are summed in the order of the formula, not sorted, so the last bit can differ from `submasses`.
+pub fn submasses_opt(formula: &str, z: i32, min_mz: f64) -> Option<Vec<f64>> {
+    let f = parse_formula(formula).ok()?;
+    total_checked(&f)?;
+    Some(masses_of(&f, z, min_mz))
 }
 
 /// Sorted m/z of every sub-formula of the ion `formula` (without the names).
 pub fn submasses(formula: &str, z: i32, min_mz: f64) -> Result<Vec<f64>> {
     let mut f = parse_formula(formula)?;
-    let z = if z == 0 { 1 } else { z };
-    crate::sortc::slice_by(&mut f, |a, b| a.0.cmp(&b.0));
     total(&f)?;
+    crate::sortc::slice_by(&mut f, |a, b| a.0.cmp(&b.0));
+    Ok(masses_of(&f, z, min_mz))
+}
+
+fn masses_of(f: &Formula, z: i32, min_mz: f64) -> Vec<f64> {
+    let z = if z == 0 { 1 } else { z };
     let mut mass = vec![0.0f64];
-    for (e, n) in &f {
+    for (e, n) in f {
         let m = mass_of(e).unwrap();
         mass = mass
             .iter()
@@ -37,7 +54,7 @@ pub fn submasses(formula: &str, z: i32, min_mz: f64) -> Result<Vec<f64>> {
         .filter(|&v| v >= min_mz)
         .collect();
     crate::sortc::by(&mut mz, f64::total_cmp);
-    Ok(mz)
+    mz
 }
 
 /// (parsed formula, [(sub-formula, ion m/z)]) for every sub-formula whose ion m/z is at least `min_mz`, sorted by m/z (stable).

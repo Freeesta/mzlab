@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 // The window «Molecules» (the «Manage» link of the search box loads this module on the first click and opens it): search the
 // database, add a molecule, edit one (a catalogue molecule is edited as a copy of the user, the catalogue stays), delete the ones of the user, import a CSV or JSON
 // file (one error per wrong row) and export CSV or JSON. Everything that is computed is computed by the engine (molecole-archivio.js); this file is the interface.
@@ -97,7 +98,7 @@ function costruisci() {
   q("#mol-json").onclick = () => scarica("json");
   q("#mol-cancel").onclick = tornaElenco;
   q("#mol-conf-no").onclick = chiudiConferma;
-  q("#mol-form").onsubmit = ev => { ev.preventDefault(); salvaModulo(); };
+  q("#mol-form").onsubmit = (/** @type {Event} */ ev) => { ev.preventDefault(); salvaModulo(); };
   return d;
 }
 
@@ -231,13 +232,7 @@ async function importaFileOra() {
 
 async function scarica(/** @type {"csv" | "json"} */ formato) {
   const f = await A.esporta(formato);
-  const url = URL.createObjectURL(new Blob([f.testo], { type: f.tipo }));
-  const a = document.createElement("a");
-  a.href = url; a.download = f.nome;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(new Blob([f.testo], { type: f.tipo }), f.nome, 1000);
   stato(t("mol.exported", { file: f.nome }));
 }
 

@@ -16,7 +16,7 @@ const RIFERIMENTO = (() => {
   Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
   const fmt = (v, d = 4) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
-  const num = v => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(2) : v.toFixed(1));
+  const num = v => I18N.sci(v, 1);
 
   // ---------------------------------------------------------------- the numbers
   async function run() {
@@ -144,6 +144,8 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
       const apex = row && row.rt != null ? row.rt : rt;
       if (!f || typeof newSpec !== "function" || !np) return;
       const near = await nearScan(f.k, apex);
+      // a hidden file would send the spectrum to a visible one: the file of the apex is shown first
+      if (!f.vis && typeof setVisOf === "function") setVisOf([f], true);
       const s1 = newSpec(np, near ? near.rt - NEAR : apex - NEAR, near ? near.rt + NEAR : apex + NEAR, f.k);
       // a data-dependent file: the MS2 scans of this ion, if the instrument took any
       if (window.DDA && f.dda && s1) {
@@ -165,7 +167,7 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
         }
       }
       say("ref.opened");
-    } catch (err) { if (note) note.textContent = String(err && err.message || err); }
+    } catch (err_) { const err = /** @type {Lanciato} */ (err_); if (note) note.textContent = String(err && err.message || err); }
   }
 
   // ---------------------------------------------------------------- export (parameters and reference included: reproducibility)
@@ -216,6 +218,8 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
   document.addEventListener("tabella", again);
   document.addEventListener("campioni", again);
   if (typeof STAT !== "undefined") STAT.add({ id: "reference", title: "ref.title", hr: true, visible: () => true, mount });
+  // the PCA section keeps its place; pca.js is fetched when the section is first shown (it registers the same id, which STAT ignores)
+  if (typeof STAT !== "undefined") STAT.add({ id: "pca", title: "pca.title", hr: true, visible: () => true, mount: box => { carica("pca.js").then(() => PCA.mount(box)).catch(console.error); } });
   return { mount, run, inspect, tsv, get params() { return st; }, get result() { return res; } };
 })();
 window.RIFERIMENTO = RIFERIMENTO;

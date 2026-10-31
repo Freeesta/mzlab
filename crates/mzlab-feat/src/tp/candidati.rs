@@ -25,8 +25,7 @@ const EXTRA_H: i64 = 8;
 /// Tolerance (Da) between a peak of the MS2 and a sub-formula.
 const FRAG_TOL: f64 = 0.01;
 /// Most sub-formulas listed for one candidate, and the mass of the electron.
-const MAX_SUBS: usize = 300_000;
-const ELECTRON: f64 = 0.00054858;
+const ELECTRON: f64 = mzlab_core::elements::ELECTRON;
 
 /// A formula candidate of a row.
 #[derive(Debug, Clone, PartialEq)]
@@ -54,29 +53,9 @@ pub fn element_fit(parent: &[(String, u64)], cand: &[(String, u64)]) -> f64 {
     (shared as f64 / c as f64).max(shared as f64 / p as f64)
 }
 
-/// Sorted m/z of the ion of every sub-formula of `ion` (a formula without charge, ion charge `z`); None past `MAX_SUBS` combinations.
+/// Sorted m/z of the ion of every sub-formula of `ion` (a formula without charge, ion charge `z`); None past the combination cap or on a bad formula.
 fn sub_masses(ion: &str, z: i32) -> Option<Vec<f64>> {
-    let f = parse_formula(ion).ok()?;
-    let total = f
-        .iter()
-        .try_fold(1usize, |t, x| t.checked_mul(x.1 as usize + 1))?;
-    if total > MAX_SUBS {
-        return None;
-    }
-    let mut mass = vec![0.0f64];
-    for (e, n) in &f {
-        let m = mass_of(e)?;
-        mass = mass
-            .iter()
-            .flat_map(|&b| (0..=*n).map(move |j| b + m * j as f64))
-            .collect();
-    }
-    let mut mz: Vec<f64> = mass[1..]
-        .iter()
-        .map(|&m| (m - f64::from(z) * ELECTRON) / f64::from(z.abs()))
-        .collect();
-    mzlab_core::sortc::by(&mut mz, f64::total_cmp);
-    Some(mz)
+    mzlab_core::subformulas::submasses_opt(ion, z, 0.0)
 }
 
 /// Share of the intensity of the peaks of an MS2 (`mz`, `it`), the precursor `mz0` excluded, that a sub-formula of the ion explains.

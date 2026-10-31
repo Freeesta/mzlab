@@ -4,6 +4,7 @@
 //! ions (the original had no such gate: two peaks can score high on a sparse spectrum).
 
 use super::compile::EngineEntry;
+use crate::sortc::SortC;
 use mzlab_lib::clean::{clean, CleanOpts};
 use mzlab_lib::scores::{pair_scores, Spec};
 
@@ -105,8 +106,8 @@ impl Ms2Library {
             }
         }
         let key = |p: &Prepared| p.prec;
-        pos.sort_by(|a, b| key(a).total_cmp(&key(b)).then(a.entry_ix.cmp(&b.entry_ix)));
-        neg.sort_by(|a, b| key(a).total_cmp(&key(b)).then(a.entry_ix.cmp(&b.entry_ix)));
+        pos.sortc_by(|a, b| key(a).total_cmp(&key(b)).then(a.entry_ix.cmp(&b.entry_ix)));
+        neg.sortc_by(|a, b| key(a).total_cmp(&key(b)).then(a.entry_ix.cmp(&b.entry_ix)));
         Ms2Library { entries, pos, neg }
     }
 
@@ -145,7 +146,7 @@ impl Ms2Library {
                 });
             }
         }
-        hits.sort_by(|a, b| b.score.total_cmp(&a.score).then(a.id.cmp(&b.id)));
+        hits.sortc_by(|a, b| b.score.total_cmp(&a.score).then(a.id.cmp(&b.id)));
         hits.truncate(o.top.max(1));
         hits
     }

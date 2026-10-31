@@ -21,6 +21,8 @@ use mzlab_core::error::{Error, Result};
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
 use mzlab_core::idxread::Index;
 use mzlab_core::idxread::ReadAt;
+#[cfg(feature = "proofs")]
+use mzlab_feat::{store::Slice, tp::TpRoles};
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
@@ -38,10 +40,12 @@ pub mod interp;
 pub mod msn;
 pub mod progress_js;
 pub mod run;
-pub mod spill_js;
-pub mod run_evid;
-pub mod run_tp;
-pub mod stima;
+pub mod spill_js; pub mod run_evid; pub mod series_js;
+#[cfg(any(feature = "flow_ms2", feature = "flow_formula"))]
+pub mod run_ms2;
+#[cfg(feature = "flow_tab")]
+pub mod run_tab;
+pub mod run_tp; pub mod stima;
 #[cfg(feature = "proofs")]
 pub mod state;
 #[cfg(feature = "untargeted")]
@@ -50,13 +54,7 @@ pub mod untargeted;
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
 fn js_err(e: Error) -> JsValue {
-    let mut o = Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    JsValue::from_str(&o.0)
+    JsValue::from_str(&e.to_json())
 }
 
 /// Version of the bridge and of the feature engine: `mzfeat-wasm/1 feat=3`.
@@ -251,8 +249,7 @@ pub fn align_series_to(
     budget_mb: f64,
     spill: Option<js_sys::Object>,
 ) -> std::result::Result<String, JsValue> {
-    let r = run::recipe_for(recipe, &mut open_one(&read, 0, sizes[0]).map_err(js_err)?)
-        .map_err(js_err)?;
+    let r = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
     let (open, mut spill) = (|k| open_one(&read, k, sizes[k]), spill_js::of(spill.as_ref())?);
@@ -268,8 +265,7 @@ pub fn align_series(
     sizes: Vec<f64>,
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let r = run::recipe_for(recipe, &mut open_one(&read, 0, sizes[0]).map_err(js_err)?)
-        .map_err(js_err)?;
+    let r = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut src = JsStored { files };
@@ -409,19 +405,6 @@ pub fn run_hypotheses(
 }
 
 #[cfg(feature = "proofs")]
-/// The roles of the files from a `campioni/2` (None or empty = only the minutes, as before).
-fn roles_of(
-    campioni: Option<&str>,
-) -> std::result::Result<Option<mzlab_feat::tp::TpRoles>, JsValue> {
-    match campioni.filter(|c| !c.is_empty()) {
-        Some(c) => mzlab_feat::tp::TpRoles::from_json(c)
-            .map(Some)
-            .map_err(js_err),
-        None => Ok(None),
-    }
-}
-
-#[cfg(feature = "proofs")]
 /// L8-L9: the graph of the proofs on the `.mzfeat` of the series, read by offsets with `table_read(offset, length)`, written to `write(offset, bytes)`:
 /// `{"bytes", "sha256"}` of the `.mzfeat` with the `evid` section. `minutes[k]` is the treatment time of file `k` (NaN = a control); `parent_mz` NaN = no
 /// parent in the table. `campioni` (optional) is a `campioni/2`: gate 1 of the products then reads the roles of the files. `stored` (the `.mzfeatf` of the series, in the order of
@@ -445,13 +428,14 @@ pub fn build_evidence_to(
     mzidx_sizes: Option<Vec<f64>>,
 ) -> std::result::Result<String, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let roles = roles_of(campioni.as_deref())?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
     let budget = MemBudget::from_request(budget_mb);
     let mut table = JsReader {
         read: table_read,
         k: 0,
     };
+    let roles = TpRoles::opt_for_table(campioni.as_deref(), &mut table, table_size as u64);
+    let roles = roles.map_err(js_err)?;
     to_sink(write, |sink| {
         let size = table_size as u64;
         let mut files = stored.map(|files| JsStored { files });
@@ -492,7 +476,8 @@ pub fn build_evidence(
     campioni: Option<String>,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let roles = roles_of(campioni.as_deref())?;
+    let roles = TpRoles::opt_for_table(campioni.as_deref(), &mut Slice(table), table.len() as u64);
+    let roles = roles.map_err(js_err)?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();

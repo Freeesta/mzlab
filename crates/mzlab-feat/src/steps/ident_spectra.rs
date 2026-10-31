@@ -164,9 +164,10 @@ fn match_params() -> Vec<Param> {
     vec![
             Param::number("tol_da", "Fragment tolerance")
                 .min(0.0)
-                .default_num(0.02)
+                .default_num(0.0)
                 .unit("Da")
-                .doc("Fragment matching between spectra, the GNPS convention"),
+                .doc("Fragment matching between spectra, the GNPS convention")
+                .tip("Fragment window in Da; 0 follows the query: 0.02 Da, or 0.5 Da for a unit-resolution file."),
             Param::number("tol_ppm", "Fragment tolerance (ppm)")
                 .min(0.0)
                 .default_num(0.0)
@@ -181,7 +182,8 @@ fn match_params() -> Vec<Param> {
                 .min(0.0)
                 .default_num(0.0)
                 .unit("Da")
-                .doc("Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"),
+                .doc("Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window")
+                .tip("Precursor window in Da for unit-resolution data; 0 keeps the ppm window, or 0.7 Da for a unit-resolution file."),
             Param::text("name_contains", "Library name contains")
                 .doc("Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"),
             Param::number("rt_tol", "RT tolerance")
@@ -349,12 +351,12 @@ fn modified_cosine() -> Algorithm {
     }
 }
 
-/// `spectra.insilico`: ranks the candidate structures of a local list by the fragments they explain (`ms2_engine::insilico`).
+/// `spectra.insilico`: ranks the candidate structures of a list or of the downloadable PubChemLite package by the fragments they explain (`ms2_engine::insilico`).
 pub(super) fn insilico() -> Step {
     Step {
         ins: vec![
             Port::new("spectra", DataType::Spectra, "MS2 spectra").requires(hr_ms2()),
-            Port::new("suspects", DataType::Candidates, "Candidate structures (local list)"),
+            Port::new("suspects", DataType::Candidates, "Candidate structures (CSV list, screen.suspects result or in-silico package)"),
         ],
         outs: vec![Port::new("candidates", DataType::Candidates, "Structures ranked by the fragments they explain")],
         params: vec![
@@ -385,7 +387,7 @@ pub(super) fn insilico() -> Step {
         ..attributio_step(
             "spectra.insilico",
             "In silico fragmentation",
-            "Breaks each candidate structure of a local list bond by bond and ranks it by the weight of the peaks its fragments explain. The result is a hypothesis with its proofs (peaks explained, mass error), never an identity. No network: the list is read from the campaign folder.",
+            "Breaks each candidate structure of a local list bond by bond and ranks it by the weight of the peaks its fragments explain. The candidates are a CSV list with PubChemLite columns, the structures of a screen.suspects result, or the in-silico package (PubChemLite, CC BY 4.0) downloaded once on a click and read by mass window. The result is a hypothesis with its proofs (peaks explained, mass error), never an identity. No network at analysis time.",
         )
     }
 }
@@ -438,7 +440,7 @@ pub fn table_match() -> Step {
         outs: vec![Port::new("hits", DataType::Candidates, "Library candidates per row (query = id of the row)")],
         params,
         runs_in: RunsIn {
-            wasm: None,
+            wasm: Some("table + lib"),
             wasm_ceiling_bytes: None,
             native: true,
         },

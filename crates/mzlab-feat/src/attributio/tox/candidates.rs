@@ -6,6 +6,7 @@ use super::ecosar::{as_pairs, sorted_values, taxon_values, Taxa};
 use super::ghs;
 use super::hazard::{fmt_gn, Curated, HazardData, NOT_ASSESSABLE};
 use super::snapshot::EcotoxValue;
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 pub(super) const ACUTE_ORDER: [&str; 5] = [
@@ -73,7 +74,7 @@ pub(super) fn measured(d: &HazardData, blocks: &[String]) -> (Taxa, Taxa, String
                 .filter(|v| v.kind == kind && v.taxon == t)
                 .collect();
             // stable sort, NaN last (pandas): the first of the lowest values
-            h.sort_by(|a, b| {
+            h.sortc_by(|a, b| {
                 a.value_mg_l
                     .unwrap_or(f64::INFINITY)
                     .total_cmp(&b.value_mg_l.unwrap_or(f64::INFINITY))

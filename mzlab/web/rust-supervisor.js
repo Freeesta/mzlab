@@ -1,14 +1,22 @@
 // @ts-strict
 // Helpers of the supervisor of the Rust engine (rust-bridge.js).
 
-// The .wasm of the engine compiled once: `compileOnce(url)()` gives the same promise of a WebAssembly.Module every time (null when it cannot be compiled here:
-// the worker then compiles it by itself).
+// The .wasm of the engine compiled once per page: `compileOnce(url)()` gives the same promise of a WebAssembly.Module every time, from every caller that asks for the same `url.href`
+// (null when it cannot be compiled here: the worker then compiles it by itself). A failure drops the entry, so the next call tries again.
+const compiled = /** @type {Map<string, Promise<WebAssembly.Module | null>>} */ (new Map());
 export function compileOnce(/** @type {URL} */ url) {
-  /** @type {Promise<WebAssembly.Module | null> | null} */ let compiled = null;
-  return () => compiled || (compiled = (async () => {
-    try { return await WebAssembly.compileStreaming(fetch(url)); }
-    catch (_) { try { return await WebAssembly.compile(await (await fetch(url)).arrayBuffer()); } catch (e) { compiled = null; return null; } }
-  })());
+  const key = url.href;
+  return () => {
+    let p = compiled.get(key);
+    if (!p) {
+      p = (async () => {
+        try { return await WebAssembly.compileStreaming(fetch(url)); }
+        catch (_) { try { return await WebAssembly.compile(await (await fetch(url)).arrayBuffer()); } catch (e) { if (compiled.get(key) === p) compiled.delete(key); return null; } }
+      })();
+      compiled.set(key, p);
+    }
+    return p;
+  };
 }
 
 // A death with the signature of a lack of memory: a trap or `rust_oom` after the memory had grown past 64 MB (`peak` = the largest memory the worker reported):
@@ -17,13 +25,14 @@ export function oomSign(/** @type {{ panic?: string | null, text?: string, mem?:
   return /unreachable|rust_oom|out of memory|memory access|memoryBudget/i.test(String((info && (info.panic || info.text)) || "")) && Math.max(peak, (info && info.mem) || 0) > 64 * 1048576;
 }
 
-// Orders the messages to a worker: the compiled module goes first (null = it compiles by itself), then the policy of the memory budget (what the engine decides it from),
+// Orders the messages to a worker: the compiled module goes first (null = it compiles by itself), then (once the growth probe is known) the policy of the memory budget (what the engine decides it from),
 // then the budget when the supervisor lowered it (the level of the session), then the step down after a death by lack of memory (`down()`: {current, strikes} or null,
 // asked once from Rust's `budget_down`), then everything else in the order sent. `ready` resolves when the growth probe is known, so the policy carries it.
 export function ordered(/** @type {any} */ w, /** @type {() => Promise<WebAssembly.Module | null>} */ compile, /** @type {() => number} */ budget, /** @type {() => number} */ nextId, /** @type {() => object | null} */ policy = () => null, /** @type {() => Promise<unknown>} */ ready = () => Promise.resolve(), /** @type {() => object | null} */ down = () => null) {
   let sent = false;
-  const first = Promise.all([compile(), ready()]).then(([module]) => {
-    w.postMessage({ op: "module", module }); const p = policy(); if (p) w.postMessage({ op: "policy", ...p });
+  // The module is posted as soon as it is compiled so the worker instantiates the .wasm while the probe runs; only the policy (which carries the probe) waits for `ready`.
+  const first = compile().then(module => { w.postMessage({ op: "module", module }); return ready(); }).then(() => {
+    const p = policy(); if (p) w.postMessage({ op: "policy", ...p });
     if (budget()) w.postMessage({ op: "budget", mb: budget(), id: nextId() });
     const d = down(); if (d) w.postMessage({ op: "down", ...d });
     sent = true;

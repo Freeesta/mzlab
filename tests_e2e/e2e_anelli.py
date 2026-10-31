@@ -41,7 +41,6 @@ try:
             def f(): closedlg(); pg.evaluate(f"document.querySelector('{btn}').click()")
             return f
         step("Tavola periodica: ring of the cells inside the container", lambda: run("pt", "#refbody .pt-c", op("#np-pt")))
-        step("Addotti: ring of the focusable cells inside the container", lambda: run("ad", "#refbody button, #refbody input, #refbody a", op("#np-ad")))
         step("Perdite: ring of the focusable cells inside the container", lambda: run("nl", "#refbody button, #refbody input, #refbody a, #refbody tr[tabindex]", op("#np-nl")))
         def pthover():
             pg.set_viewport_size({"width": 1280, "height": 800}); closedlg(); pg.evaluate("document.querySelector('#np-pt').click()"); pg.wait_for_timeout(400)

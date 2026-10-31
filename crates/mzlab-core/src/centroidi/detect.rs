@@ -57,15 +57,30 @@ fn bounds(buf: &Buf, apex: usize, wb: usize) -> (usize, usize) {
     (lo, hi)
 }
 
-/// Index of the first minimum of the smoothed signal in [a, b].
-fn valley(buf: &Buf, a: usize, b: usize) -> usize {
-    let mut v = a;
-    for j in a..=b {
-        if buf.s[j] < buf.s[v] {
-            v = j;
+/// Running first minimum of the smoothed signal from the apex of the open group up to the last candidate seen, so a long run of merged candidates
+/// is scanned once instead of once per candidate.
+struct Valley {
+    min: usize,
+    upto: usize,
+}
+
+impl Valley {
+    fn start(apex: usize) -> Self {
+        Valley {
+            min: apex,
+            upto: apex,
         }
     }
-    v
+    /// Extends the range to `c` and returns the first minimum of [apex, c].
+    fn extend(&mut self, buf: &Buf, c: usize) -> usize {
+        for j in self.upto + 1..=c {
+            if buf.s[j] < buf.s[self.min] {
+                self.min = j;
+            }
+        }
+        self.upto = self.upto.max(c);
+        self.min
+    }
 }
 
 /// Sum of the raw intensities within `h` bins of `c`.
@@ -76,8 +91,7 @@ fn raw_near(buf: &Buf, c: usize, h: usize) -> f64 {
 
 /// True when the valley between two apexes is not significant: counts (a - v) / sqrt(a + v) < k on 0.5 w around the lower apex and around the valley;
 /// continuous: the lower apex stands less than k sigma over the valley.
-fn insignificant(buf: &Buf, p: &Params, sigma: f64, a: usize, c: usize) -> bool {
-    let v = valley(buf, a, c);
+fn insignificant(buf: &Buf, p: &Params, sigma: f64, a: usize, c: usize, v: usize) -> bool {
     let lower_apex = if buf.s[c] < buf.s[a] { c } else { a };
     match p.mode {
         Mode::Counts => {
@@ -93,6 +107,7 @@ fn insignificant(buf: &Buf, p: &Params, sigma: f64, a: usize, c: usize) -> bool 
 pub(super) fn groups(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
     let wb = p.wb();
     let mut out: Vec<Group> = Vec::new();
+    let mut valley = Valley::start(0);
     for c in candidates(buf) {
         let (lo, hi) = bounds(buf, c, wb);
         let g = Group {
@@ -103,8 +118,55 @@ pub(super) fn groups(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
         };
         let merge = match out.last() {
             Some(last) => {
+                let v = valley.extend(buf, c);
                 ((c - last.apex) as f64) < 0.5 * wb as f64
-                    || insignificant(buf, p, sigma, last.apex, c)
+                    || insignificant(buf, p, sigma, last.apex, c, v)
+            }
+            None => false,
+        };
+        if merge {
+            let last = out.last_mut().unwrap();
+            if buf.s[c] > buf.s[last.apex] {
+                last.apex = c;
+                valley = Valley::start(c);
+            }
+            last.lo = last.lo.min(lo);
+            last.hi = last.hi.max(hi);
+            last.members += 1;
+        } else {
+            out.push(g);
+            valley = Valley::start(c);
+        }
+    }
+    for i in 1..out.len() {
+        let prev = out[i - 1].hi;
+        if out[i].lo <= prev {
+            out[i].lo = (prev + 1).min(out[i].apex);
+        }
+    }
+    out
+}
+
+/// The grouping as it was before the running valley: the valley is searched again from the apex for every candidate. Reference for the equivalence test.
+#[cfg(test)]
+pub(super) fn groups_reference(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
+    let valley = |a: usize, b: usize| {
+        let mut v = a;
+        for j in a..=b {
+            if buf.s[j] < buf.s[v] {
+                v = j;
+            }
+        }
+        v
+    };
+    let wb = p.wb();
+    let mut out: Vec<Group> = Vec::new();
+    for c in candidates(buf) {
+        let (lo, hi) = bounds(buf, c, wb);
+        let merge = match out.last() {
+            Some(last) => {
+                ((c - last.apex) as f64) < 0.5 * wb as f64
+                    || insignificant(buf, p, sigma, last.apex, c, valley(last.apex, c))
             }
             None => false,
         };
@@ -117,7 +179,12 @@ pub(super) fn groups(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
             last.hi = last.hi.max(hi);
             last.members += 1;
         } else {
-            out.push(g);
+            out.push(Group {
+                apex: c,
+                lo,
+                hi,
+                members: 1,
+            });
         }
     }
     for i in 1..out.len() {

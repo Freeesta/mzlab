@@ -20,7 +20,7 @@ def many_scans():
             pg.wait_for_function("UPBUSY === 0 && (ST.files.length > 0 || QQQ_LOADFAIL.size > 0)", timeout=600000)
             assert pg.evaluate("QQQ_LOADFAIL.size") == 0, pg.evaluate("[...QQQ_LOADFAIL]")
             assert pg.evaluate("document.querySelector('#unopen .diag') === null"), pg.inner_text("#unopen")
-            if pg.evaluate("!document.getElementById('start').hidden && document.getElementById('loading').hidden"): pg.click("#opbtn")
+            open_first(pg)
             ready(pg, timeout=600000)
             assert pg.evaluate("E.files.length") >= 1, f"{size} B: no file open"
             assert not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS")

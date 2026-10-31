@@ -1,9 +1,9 @@
 use super::*;
 
 /// Small deterministic generator (xorshift64*), so the tests need no crate and give the same scans every time.
-struct Rng(u64);
+pub(super) struct Rng(pub(super) u64);
 impl Rng {
-    fn next(&mut self) -> f64 {
+    pub(super) fn next(&mut self) -> f64 {
         self.0 ^= self.0 >> 12;
         self.0 ^= self.0 << 25;
         self.0 ^= self.0 >> 27;
@@ -26,10 +26,10 @@ impl Rng {
     }
 }
 
-const STEP: f64 = 0.06;
-const W: f64 = 0.7;
+pub(super) const STEP: f64 = 0.06;
+pub(super) const W: f64 = 0.7;
 
-fn params(unit: f64) -> Params {
+pub(super) fn params(unit: f64) -> Params {
     Params {
         mode: Mode::Counts,
         unit,
@@ -42,7 +42,7 @@ fn params(unit: f64) -> Params {
 }
 
 /// A scan on the 0.06 grid (only the points above zero) with Gaussian peaks `(centre, height in counts, fwhm)` and Poisson counts; `bg` counts per bin.
-fn scan(
+pub(super) fn scan(
     rng: &mut Rng,
     start: f64,
     bins: usize,

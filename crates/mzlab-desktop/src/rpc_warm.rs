@@ -12,12 +12,12 @@ use crate::rpc::{text, Answer};
 use crate::store::{clean, stamp};
 
 impl State {
-    pub(crate) fn warm_names(&self) -> Vec<String> {
-        self.warm
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .keys()
-            .cloned()
+    /// The files of the store the page lists: the ones built ahead are not there until they are opened.
+    pub(crate) fn visible_list(&self) -> Vec<(String, crate::store::Entry, bool)> {
+        let warm = self.warm.lock().unwrap_or_else(|e| e.into_inner());
+        let list = self.store.lock().unwrap_or_else(|e| e.into_inner()).list();
+        list.into_iter()
+            .filter(|(n, _, _)| !warm.contains_key(n))
             .collect()
     }
 

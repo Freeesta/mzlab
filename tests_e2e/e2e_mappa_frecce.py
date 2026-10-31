@@ -17,7 +17,7 @@ try:
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "!!document.querySelector('#pick')")
         fl = lambda n, f: {"name": n, "mimeType": "application/xml", "buffer": (EX / f).read_bytes()}      # paths and buffers cannot be mixed
-        pg.set_input_files("#pick", [fl("FullScan_t0.mzML", "FullScan_t0.mzML"), fl("FullScan_t5.mzML", "FullScan_t0.mzML"), fl("FullScan_t30.mzML", "FullScan_t30.mzML")]); attendi(pg, "!!document.querySelector('#opbtn')")
+        pg.set_input_files("#pick", [fl("FullScan_t0.mzML", "FullScan_t0.mzML"), fl("FullScan_t5.mzML", "FullScan_t0.mzML"), fl("FullScan_t30.mzML", "FullScan_t30.mzML")])
         pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, "!!E.panels.find(q=>q.type==='map')")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         lab = lambda: pg.evaluate("E.files[E.cur].label")           # one file shown: the map follows the bar

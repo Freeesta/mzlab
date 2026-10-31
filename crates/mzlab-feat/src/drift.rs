@@ -6,6 +6,7 @@
 //! (blanks and dark files apart) is not a QC: a curve that is extrapolated at either end is not a correction. A row with too few QC peaks in a batch has NaN
 //! factors there (no guess). Sums run in a fixed order, so equal inputs give equal bytes. Reference: `tools/deriva_riferimento.py` (golden `deriva.json`).
 
+use crate::sortc::SortC;
 use mzlab_core::disegno::{Disegno, LOTTO_PREDEFINITO};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{round, Out};
@@ -49,7 +50,7 @@ impl Drift {
     pub fn summary_json(&self, samples: &[Sample]) -> String {
         let n = self.n_files;
         let mut labels: Vec<&String> = self.batch.iter().collect();
-        labels.sort();
+        labels.sortc();
         labels.dedup();
         let mut o = Out::default();
         o.raw("{\"schema\":").str(SCHEMA).raw(",\"method\":");
@@ -115,12 +116,7 @@ pub fn batches_of(samples: &[Sample], d: &Disegno) -> Vec<String> {
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
-    crate::sortc::by(&mut v, f64::total_cmp);
-    match v.len() {
-        0 => f64::NAN,
-        n if n % 2 == 1 => v[n / 2],
-        n => (v[n / 2 - 1] + v[n / 2]) / 2.0,
-    }
+    mzlab_core::signal::median_or_in(&mut v, f64::NAN)
 }
 
 impl Drift {
@@ -226,7 +222,7 @@ fn loess_at(x: &[f64], y: &[f64], span: f64, at: f64) -> f64 {
 /// Checks the QC files of each batch (`error.drift.tooFewQc`, `error.drift.qcNotAtEnds`).
 fn check(samples: &[Sample], batch: &[String]) -> Result<()> {
     let mut labels: Vec<&String> = batch.iter().collect();
-    labels.sort();
+    labels.sortc();
     labels.dedup();
     for b in labels {
         let mut files: Vec<&Sample> = (0..samples.len())
@@ -333,7 +329,7 @@ pub fn correct(t: &Aligned, samples: &[Sample], batch: &[String], method: Method
     }
     check(samples, batch)?;
     let mut labels: Vec<&String> = batch.iter().collect();
-    labels.sort();
+    labels.sortc();
     labels.dedup();
     let qc: Vec<Vec<usize>> = labels
         .iter()

@@ -124,3 +124,48 @@ def test_every_worker_is_told_first_which_module_to_use():
   console.log(JSON.stringify([modules, log]));
 """)
     assert got == [["null", "null"], ["start a#1 b64", "start b#1 b64"]]
+
+
+def test_a_late_event_of_an_ended_worker_does_not_end_it_twice():
+    got = run("""
+await out(async () => {
+  const made = [];
+  const Cls = class extends fake((n, a) => a === 1 ? "die" : "done") { constructor(...a) { super(...a); made.push(this); } };
+  const p = createPool({ workerUrl: "x", size: 1, WorkerClass: Cls });
+  const r = p.build(job("a"));
+  await new Promise(s => setTimeout(s, 8));          // first worker died, second one is running
+  made[0].onmessage({ data: { op: "error", text: "late", fatal: true } });
+  const res = await r;
+  return { ok: res.ok, active: p.active };
+});""")
+    assert got == {"ok": True, "active": 0}
+
+
+def test_an_early_failure_of_the_second_worker_is_unavailable_not_a_crash():
+    got = run("""
+await out(async () => {
+  let n = 0;
+  const Cls = class {
+    constructor() { this.k = ++n; setTimeout(() => { if (this.k === 1) this.onmessage({ data: { op: "ready" } }); else this.onerror({ message: "boom" }); }, 1); }
+    postMessage(m) { if (m.op !== "module" && this.k === 1) setTimeout(() => this.onmessage({ data: { op: "error", text: "x", fatal: true } }), 2); }
+    terminate() {}
+  };
+  const p = createPool({ workerUrl: "x", size: 1, WorkerClass: Cls });
+  const res = await p.build(job("a"));
+  return { reason: res.reason, off: p.unavailable() };
+});""")
+    assert got == {"reason": "unavailable", "off": True}
+
+
+def test_spill_get_reuses_one_buffer_and_returns_exact_lengths():
+    code = """
+import { makeSpill } from %r;
+const data = new Uint8Array(100).map((_, i) => i);
+const sh = { read(b, o) { b.set(data.subarray(o.at, o.at + b.length)); return b.length; } };
+const s = makeSpill(sh, () => {}, () => 0);
+const a = s.get(0, 10), b = s.get(10, 4), c = s.get(0, 50);
+console.log(JSON.stringify({ la: a.length, lb: b.length, lc: c.length, b0: b[0], same: a.buffer === b.buffer, grew: c.buffer !== a.buffer }));
+""" % (JS.with_name("idx-spill.js").as_uri(),)
+    r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, encoding="utf-8")
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == {"la": 10, "lb": 4, "lc": 50, "b0": 10, "same": True, "grew": True}

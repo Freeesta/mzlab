@@ -10,14 +10,17 @@
 import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
-import { makeConvertCentroids } from "./rust-centroidi.js";
+import { makeConvertCentroids, makeFlowCentroid } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
 import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
 import { indexXicBin } from "./rust-xicbin.js";
+import { ha, stato, nota, serve } from "./capacita.js";
 import { compileOnce, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
 import * as BUD from "./rust-budget.js";
 
+// plain Array from doubles (the answer is stringified next): the loop beats Array.from on a typed array
+const arr = a => { const o = new Array(a.length); for (let i = 0; i < o.length; i++) o[i] = a[i]; return o; };
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
@@ -32,8 +35,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy, BUD.whenProbed, () => takeDown(api));
     w.onmessage = ev => {
       const m = ev.data;
-      if (m.op === "ready") return; if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
-      if (m.op === "notice") { notify(m.key); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; } if (m.op === "budget-down") { if (lowerTo(api, stats, m, BUD.lowered)) notify("error.engineLowered"); else { stop(worker, { dead: true }); off(api, slots, notify, "error.memoryBudget"); } return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
+      if (m.op === "ready") { if (m.cap) { nota(m.cap); if (stato("motore") === "no") off(api, slots, notify, "cap.engine"); } return; } if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
+      if (m.op === "notice") { notify(m.key); return; }  if (m.op === "cap-off") { serve(m.fn); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; } if (m.op === "budget-down") { if (lowerTo(api, stats, m, BUD.lowered)) notify("error.engineLowered"); else { stop(worker, { dead: true }); off(api, slots, notify, "error.memoryBudget"); } return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
@@ -58,7 +61,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   function respawn() {
     spawn();
-    slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
+    slots.forEach((s, k) => { if (s) { s.gen = (s.gen || 0) + 1; s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session; a bumped generation retires the opens still waiting on the dead worker
   }
   function died(w, info) {
     if (w !== worker) return;
@@ -73,7 +76,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   function openMzml(k, s) {
     stats.mzml++; (stats.mzmlOf = stats.mzmlOf || []).push(s.name);
     if (!s.blob) { s.bad = true; return Promise.resolve(); }
+    const gen = s.gen;
     return rpc({ op: "open", slot: k, blob: s.blob }).then(r => {
+      if (s.gen !== gen) return;                                              // answered for a worker that was replaced since: the new open owns the slot
       if (r.dead || r.error) {
         s.bad = true;
         let key = ""; try { key = JSON.parse(r.error).error_key; } catch (_) { /* not an engine error */ }
@@ -85,15 +90,18 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   const needMzml = (k, s) => s.mzml || (s.mzml = s.info ? Promise.resolve() : openMzml(k, s));
   function open(k, s) {
+    const gen = s.gen;
     return rpc({ op: "idxopen", slot: k, name: s.name, pol: s.pol }).then(r => {
+      if (s.gen !== gen) return;                                              // the worker died and respawn() started a new open: this stale answer must not touch the slot
       s.idx = r.dead || r.error ? null : JSON.parse(r.info);                 // { scans, hr1 }
       if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
     });
   }
-  api.start = () => { if (!worker && !api.disabled) spawn(); }; BUD.wire(api, () => worker);
-  api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
+  api.start = () => { if (!worker && !api.disabled) { if (stato("motore") !== "no") spawn(); else { serve("motore"); off(api, slots, notify, ha("simd128") ? "cap.engine" : "error.noSimd"); } } }; BUD.wire(api, () => worker);
+  api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } }; api.blobOf = name => blobs.get(base(name)) || null;   // the file as the page was given it (the Export mzML of Flow)
   api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
-  api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
+  // a new session keeps the uploaded files (and their blobs) unless it starts afresh
+  api.noteNew = (/** @type {boolean} */ fresh) => { if (fresh) blobs.clear(); api.noteExplore(null); };
   // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, the MRM part and a polarity part have their own slot on the same file (a polarity part reads the sections of its polarity)
   api.noteExplore = body => {
     const more = !!(body && body.append);                           // a file added to the session that is open: the others stay where they are
@@ -110,7 +118,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   };
   // a worker busy in one long call cannot hear a message: cancelling stops it and starts a new one (not a fault). the files of a maker are read as they are, in the browser and in the desktop app (rust-nativo-pagina.js)
   const cancelable = { rpc, base, current: () => worker, abort: (/** @type {any} */ w) => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } };
-  Object.assign(api, wiffApi(rpc, base), { convertCentroids: makeConvertCentroids(cancelable) }, makeNativo(cancelable));
+  const convertCentroids = makeConvertCentroids(cancelable);
+  Object.assign(api, wiffApi(rpc, base), { convertCentroids, flowCentroid: makeFlowCentroid(cancelable, convertCentroids) }, makeNativo(cancelable));
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;
@@ -128,19 +137,19 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     const r = await rpc({ op, slot: k, level, px, ...extra });
     if (r.dead || r.error) return null;
     const a = new Float64Array(r.buf, 0, r.len), n = r.n;
-    const out = { rt: Array.from(a.subarray(0, n)), y: Array.from(a.subarray(n, 2 * n)) };
+    const out = { rt: arr(a.subarray(0, n)), y: arr(a.subarray(n, 2 * n)) };
     recycle(r.buf);
     return out;
   };
 
   async function indexRoute(s, k, path, u, t0) {
-    let r = await rpc({ op: "route", slot: k, path, query: u.search });
+    let r = await rpc(path === "/api/canali" && s.blob ? { op: "canali", slot: k, name: base(s.name).split("#")[0], blob: s.blob } : { op: "route", slot: k, path, query: u.search });      // the channels also read the chromatograms of the mzML (SRM, UV)
     if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
     if (r.dead || r.error || !r.info) return null;
     stats.rust++;
     return { status: 200, text: r.info, ms: performance.now() - t0 };
   }
-  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero)$/;
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero|canali)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {
@@ -158,7 +167,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (r) { stats.rust++; return { ...r, ms: performance.now() - t0 }; }
       return null;
     }
-    if (INDEX_ROUTES.test(path) && !hasRef(q)) {
+    if ((INDEX_ROUTES.test(path) || (path === "/api/xic" && q.get("canale"))) && !hasRef(q)) {       // a trace or a list inside a channel: the engine of the index builds the channels itself
       const s = slots[k0];
       if (!s) return null;
       await s.opening;
@@ -170,12 +179,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
       await Promise.all(ks.map(k => slots[k].opening));
       if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad && slots[k].blob)) return null;
-      const parts = [];
-      for (const k of ks) {
-        const r = await rpc({ op: "mrm", slot: k, blob: slots[k].blob });
-        if (r.dead || r.error || !r.info) return null;
-        parts.push(`{"k":${k},"transitions":${r.info}}`);
-      }
+      const rs = await Promise.all(ks.map(k => rpc({ op: "mrm", slot: k, blob: slots[k].blob })));     // all requests in flight at once, the parts keep the order of ks
+      if (rs.some(r => r.dead || r.error || !r.info)) return null;
+      const parts = ks.map((k, i) => `{"k":${k},"transitions":${rs[i].info}}`);
       stats.rust++;
       return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
@@ -196,12 +202,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (ks.length && isFinite(mz) && ks.every(k => Number.isInteger(k) && slots[k])) {
         await Promise.all(ks.map(k => slots[k].opening));
         if (ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) {
-          const parts = [];
-          for (const k of ks) {
-            const r = await rpc({ op: "idxxic", slot: k, level, mz, tol });
-            if (r.dead || r.error || !r.info) return null;
-            parts.push(`{"k":${k},${r.info.slice(1)}`);
-          }
+          const rs = await Promise.all(ks.map(k => rpc({ op: "idxxic", slot: k, level, mz, tol })));
+          if (rs.some(r => r.dead || r.error || !r.info)) return null;
+          const parts = ks.map((k, i) => `{"k":${k},${rs[i].info.slice(1)}`);
           stats.rust++;
           return { status: 200, text: `{"mz":${JSON.stringify(mz)},"tol":${JSON.stringify(tol)},"traces":[${parts.join(",")}]}`, ms: performance.now() - t0 };
         }
@@ -241,7 +244,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       let w = 2;
       for (let c = 0; c < a[1]; c++) {
         const sid = a[w], rt = a[w + 1], n = a[w + 2]; w += 3;
-        scans.push({ i: i0 + c, sid, rt, mode: "centroid", mz: Array.from(a.subarray(w, w + n)), y: Array.from(a.subarray(w + n, w + 2 * n)) });
+        scans.push({ i: i0 + c, sid, rt, mode: "centroid", mz: arr(a.subarray(w, w + n)), y: arr(a.subarray(w + n, w + 2 * n)) });
         w += 2 * n;
       }
       body = { n: a[0], scans };

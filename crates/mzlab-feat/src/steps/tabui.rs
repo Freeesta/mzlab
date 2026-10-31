@@ -54,10 +54,10 @@ pub(super) fn tabui_step(
     }
 }
 
-/// High resolution data (Tabui names every product by a formula, so unit resolution has no hypothesis to prove).
-pub(super) fn hr() -> Facets {
+/// Scan data of either resolution: the tp.* steps read nominal masses at unit resolution (`nominal`, `mzlab_feat::nature`) and are proven on both.
+pub(super) fn any_resolution() -> Facets {
     Facets {
-        resolution: vec!["hr"],
+        resolution: vec!["hr", "lr"],
         ..Facets::default()
     }
 }
@@ -90,6 +90,10 @@ fn generate() -> Step {
             Port {
                 optional: true,
                 ..Port::new("features", DataType::Table, "Feature table (families already found)")
+            },
+            Port {
+                optional: true,
+                ..Port::new("index", DataType::Mzidx, "Scan index of each file: gives the polarity and the unit resolution the plan leaves unwritten").many()
             },
         ],
         outs: vec![Port::new("hypotheses", DataType::Transform, "Hypotheses: formula, m/z, adduct, source and weakest prediction level")],
@@ -145,7 +149,7 @@ fn rule_chain() -> Algorithm {
         ..algorithm(
             "rule_chain",
             "Rules, suspects, families and lists",
-            "Parent times the rules of TP_Mine/data/regole_tp.json (profile of the campaign), merged with the other sources by net formula change; ids follow the order of m/z (crates/mzlab-feat/src/hypo/sources.rs). Prediction level 2 literature, 3 class, 4 generic.",
+            "Parent times the rules of TP_Mine/data/regole_tp_2.json (profile of the campaign), merged with the other sources by net formula change; ids follow the order of m/z (crates/mzlab-feat/src/hypo/sources.rs). Prediction level 2 literature, 3 class, 4 generic.",
             Status::Available,
         )
     }
@@ -158,7 +162,7 @@ fn filter() -> Step {
     Step {
         version: 2,
         ins: vec![
-            Port::new("tp", DataType::Tp, "Table of the products with the interpretation of its rows (tp.link)").requires(hr()),
+            Port::new("tp", DataType::Tp, "Table of the products with the interpretation of its rows (tp.link)").requires(any_resolution()),
             Port::new("hypotheses", DataType::Transform, "Hypotheses of the parent (tp.generate): the rule masses of the decoys and the masses F5 compares with"),
         ],
         outs: vec![Port::new("table", DataType::Table, "Registry filtri/1: the rows hidden by each of F1-F5 and the decoys that passed")],

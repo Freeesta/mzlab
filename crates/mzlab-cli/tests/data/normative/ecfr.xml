@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<ECFR><DIV5 N="1" TYPE="PART"><HEAD>PART 1 - FIRST SECTION</HEAD>
+<FP-1>1. Notaname</FP-1></DIV5>
+<DIV5 N="2" TYPE="PART"><HEAD>PART 2 - SECOND SECTION</HEAD>
+<EXTRACT><FP-1>1. Ecfrol</FP-1><FP-1>2. Curatol</FP-1><FP-2>3. Ecfrane<SU>1</SU></FP-2></EXTRACT></DIV5>
+<DIV5 N="3" TYPE="PART"><HEAD>PART 3 - THIRD SECTION</HEAD>
+<FP-1>1. Otherthing</FP-1></DIV5></ECFR>

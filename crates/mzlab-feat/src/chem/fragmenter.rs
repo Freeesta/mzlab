@@ -4,6 +4,7 @@
 //! RDKit; the drawing of a fragment is not made here (the page draws the atoms listed in `atoms`).
 
 use super::grafo::Mol;
+use crate::sortc::SortC;
 use mzlab_core::elements::{self, Formula};
 
 /// Python-like `round(x, nd)`: correctly rounded on the exact binary value, ties to even (the decimal formatting of Rust does the same).
@@ -14,7 +15,7 @@ pub fn round_to(x: f64, nd: i32) -> f64 {
     format!("{:.*}", nd as usize, x).parse().unwrap_or(x)
 }
 
-const ION_H: f64 = 1.00727646677;
+const ION_H: f64 = mzlab_core::elements::PROTON;
 const LOSS_H2O: f64 = 18.010564684;
 const LOSS_CO: f64 = 27.994914622;
 const LOSS_CO2: f64 = 43.989829244;
@@ -261,6 +262,6 @@ pub fn fragment_molecule(
         });
     }
     out.explained
-        .sort_by(|x, y| x.peak.partial_cmp(&y.peak).unwrap());
+        .sortc_by(|x, y| x.peak.partial_cmp(&y.peak).unwrap());
     Ok(out)
 }

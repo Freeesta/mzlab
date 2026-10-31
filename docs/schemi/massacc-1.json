@@ -1,0 +1,397 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "massacc/1",
+ "title": "massacc/1: mass accuracy of each file, measured on ions that are known to be there",
+ "description": "Format \u00abmassacc/1\u00bb (crates/mzlab-feat/src/massacc/report.rs, docs/agenti/qc-massa.md), the output of the Flow step qc.mass_accuracy@1: per file the offset and spread in ppm of the reference ions (lab background list, internal standards, CSV of the user), the points of the two charts, the standards and the warnings; over the files the offsets, the spread of the standard areas and the tolerance that holds. Numbers only, no verdict. Native command and browser write the same bytes.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "format",
+  "params",
+  "references",
+  "correction",
+  "files",
+  "batch"
+ ],
+ "properties": {
+  "format": {
+   "const": "massacc/1"
+  },
+  "params": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "robust",
+    "model",
+    "search_ppm",
+    "min_intensity",
+    "min_refs",
+    "warn_offset_ppm",
+    "warn_spread_ppm",
+    "warn_is_rt_min",
+    "warn_is_area_rsd"
+   ],
+   "properties": {
+    "robust": {
+     "enum": [
+      "huber",
+      "ransac",
+      "plain"
+     ]
+    },
+    "model": {
+     "enum": [
+      "none",
+      "offset",
+      "linear_mz",
+      "linear_mz_rt"
+     ]
+    },
+    "search_ppm": {
+     "type": "number"
+    },
+    "min_intensity": {
+     "type": "number"
+    },
+    "min_refs": {
+     "type": "number"
+    },
+    "warn_offset_ppm": {
+     "type": "number"
+    },
+    "warn_spread_ppm": {
+     "type": "number"
+    },
+    "warn_is_rt_min": {
+     "type": "number"
+    },
+    "warn_is_area_rsd": {
+     "type": "number"
+    }
+   }
+  },
+  "references": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "background",
+    "user"
+   ],
+   "properties": {
+    "background": {
+     "type": "integer"
+    },
+    "user": {
+     "type": "integer"
+    }
+   }
+  },
+  "correction": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "model",
+    "table",
+    "applied"
+   ],
+   "properties": {
+    "model": {
+     "type": "string"
+    },
+    "table": {
+     "type": "boolean"
+    },
+    "applied": {
+     "type": "boolean"
+    }
+   }
+  },
+  "files": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "file",
+     "polarity",
+     "istd_file",
+     "ms1_scans",
+     "searched",
+     "n_refs",
+     "assessable",
+     "offset_ppm",
+     "spread_ppm",
+     "residual_ppm",
+     "tolerance_ppm",
+     "model",
+     "coef",
+     "corrected",
+     "warnings",
+     "lock_mass",
+     "points",
+     "istd"
+    ],
+    "properties": {
+     "file": {
+      "type": "string"
+     },
+     "polarity": {
+      "type": "integer"
+     },
+     "istd_file": {
+      "type": "boolean"
+     },
+     "ms1_scans": {
+      "type": "integer"
+     },
+     "searched": {
+      "type": "integer"
+     },
+     "n_refs": {
+      "type": "integer"
+     },
+     "assessable": {
+      "type": "boolean"
+     },
+     "offset_ppm": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "spread_ppm": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "residual_ppm": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "tolerance_ppm": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "model": {
+      "enum": [
+       "offset",
+       "linear_mz",
+       "linear_mz_rt",
+       null
+      ]
+     },
+     "coef": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": {
+       "type": "number"
+      }
+     },
+     "corrected": {
+      "type": "boolean"
+     },
+     "warnings": {
+      "type": "array",
+      "items": {
+       "enum": [
+        "warn.qc.mass.offset",
+        "warn.qc.mass.spread",
+        "warn.qc.mass.is_rt",
+        "warn.qc.mass.is_area",
+        "warn.qc.mass.few_refs"
+       ]
+      }
+     },
+     "lock_mass": {},
+     "points": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "name",
+        "role",
+        "source",
+        "mz",
+        "rt",
+        "err_ppm",
+        "intensity",
+        "outlier"
+       ],
+       "properties": {
+        "name": {
+         "type": "string"
+        },
+        "role": {
+         "enum": [
+          "reference",
+          "istd",
+          "standard"
+         ]
+        },
+        "source": {
+         "enum": [
+          "background",
+          "user"
+         ]
+        },
+        "mz": {
+         "type": "number"
+        },
+        "rt": {
+         "type": "number"
+        },
+        "err_ppm": {
+         "type": "number"
+        },
+        "intensity": {
+         "type": "number"
+        },
+        "outlier": {
+         "type": "boolean"
+        }
+       }
+      }
+     },
+     "istd": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "name",
+        "role",
+        "rt",
+        "declared_rt",
+        "rt_shift",
+        "area",
+        "fwhm"
+       ],
+       "properties": {
+        "name": {
+         "type": "string"
+        },
+        "role": {
+         "type": "string"
+        },
+        "rt": {
+         "type": "number"
+        },
+        "declared_rt": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "rt_shift": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "area": {
+         "type": "number"
+        },
+        "fwhm": {
+         "type": [
+          "number",
+          "null"
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "batch": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "offsets",
+    "istd_area",
+    "tolerance_ppm",
+    "warnings"
+   ],
+   "properties": {
+    "offsets": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "file",
+       "offset_ppm"
+      ],
+      "properties": {
+       "file": {
+        "type": "string"
+       },
+       "offset_ppm": {
+        "type": [
+         "number",
+         "null"
+        ]
+       }
+      }
+     }
+    },
+    "istd_area": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "name",
+       "files",
+       "median_area",
+       "rsd"
+      ],
+      "properties": {
+       "name": {
+        "type": "string"
+       },
+       "files": {
+        "type": "integer"
+       },
+       "median_area": {
+        "type": "number"
+       },
+       "rsd": {
+        "type": [
+         "number",
+         "null"
+        ]
+       }
+      }
+     }
+    },
+    "tolerance_ppm": {
+     "type": [
+      "number",
+      "null"
+     ]
+    },
+    "warnings": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "warn.qc.mass.offset",
+       "warn.qc.mass.spread",
+       "warn.qc.mass.is_rt",
+       "warn.qc.mass.is_area",
+       "warn.qc.mass.few_refs"
+      ]
+     }
+    }
+   }
+  }
+ }
+}

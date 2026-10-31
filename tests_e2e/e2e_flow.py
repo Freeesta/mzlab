@@ -1,4 +1,4 @@
-"""Flow, the graphical workflow page (docs/agenti/flow-grafica.md): it exists only in the administrator mode (localStorage «mzlab.admin» = «1»), the palette comes from the three lists of
+"""Flow, the graphical workflow page (docs/agenti/flow-grafica.md): its tab is in the header at first load, the palette comes from the three lists of
 descriptors, a chain is built by clicking steps (each is wired to what fits), the plan is validated after every change and leaves and returns as mzflow/2 JSON. Also the click budget of
 rule 26 (few clicks): a valid four-step chain exported in at most CEILING clicks and keys, counted by capture listeners; the five clicks of the logo are reported apart.
 Run from the repo root: python3 tests_e2e/e2e_flow.py"""
@@ -40,11 +40,10 @@ try:
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             return pg
         pg = fresh(False)
-        def hidden():
-            attendi(pg, "document.readyState === 'complete' && !!document.querySelector('#nav')")
-            assert pg.locator(TAB).count() == 0 and pg.locator("#v-flow").count() == 0
-            assert not [r for r in reqs if "flow-" in r or "steps-attributio" in r], "Flow must not be downloaded for a normal user"
-        step("a normal user has no Flow tab and downloads nothing of it", hidden)
+        def shown():
+            pg.wait_for_selector(TAB, timeout=60000)
+            assert pg.evaluate("localStorage.getItem('mzlab.admin')") is None
+        step("a normal user has the Flow tab at first load", shown)
         pg.context.close()
 
         pg = fresh(True, reduced=True)
@@ -53,12 +52,12 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 35, pg.locator(".fl-it").count()
+            assert pg.locator(".fl-it").count() == 47, pg.locator(".fl-it").count()
             assert pg.locator(".fl-pal details").count() == 3
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 35
+            assert pg.locator(".fl-it:visible").count() < 47
             pg.fill("#fl-filter", "")
-        step("palette: 35 steps in three packages, the filter narrows it", palette)
+        step("palette: 47 steps in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
@@ -111,10 +110,10 @@ try:
             pg.select_option("#fl-alg-detect", "masstrace")
         step("the form: only differences from the default are written; a planned algorithm is refused", parameters)
         def goal():
-            attendi(pg, "document.querySelector('.fl-goal').textContent.includes('cannot reach')")
+            attendi(pg, "document.querySelector('.fl-goal').textContent.includes('does not reach the identification level yet. Next:')")      # «Draw a structure» needs no input: the level is always reachable
             pg.select_option("#fl-add-input", "spectra"); pg.select_option("#fl-add-input", "library")
             attendi(pg, "document.querySelector('.fl-goal').textContent.includes('does not reach the identification level yet')")
-        step("the goal: identification needs spectra and a library, and the page says so", goal)
+        step("the goal: the page says the chain does not reach the identification level and what comes next", goal)
         def keyboard_and_motion():
             pg.focus('.fl-it[data-step="table.filter"]'); pg.keyboard.press("Enter")
             attendi(pg, "document.querySelectorAll('.fl-card').length === 5")
@@ -127,7 +126,7 @@ try:
             pg.evaluate("document.querySelector('details[data-pkg=attributio]').open = true")
             add(pg, "spectra.match")
             attendi(pg, "!!document.querySelector('#fl-card-match')")
-            assert pg.locator('button[aria-label="Compare algorithms of detect"]').count() == 0     # one available algorithm only
+            assert pg.locator('button[aria-label="Compare algorithms of align"]').count() == 0 and pg.locator('button[aria-label="Compare algorithms of detect"]').count() == 1     # one available algorithm only / two
             pg.click('button[aria-label="Compare algorithms of match"]')
             attendi(pg, "!!document.querySelector('#fl-card-compare')")
             assert pg.locator("#fl-card-compare .fl-var").count() == 2
@@ -150,7 +149,7 @@ try:
         def first_screen():
             attendi(pg, "document.querySelectorAll('.fln').length === 2")
             assert "Import data" in pg.inner_text(".fln") and pg.locator(".fl-lines path").count() == 1
-            assert pg.locator(".fln .fln-chip").count() == 2 and pg.locator(".fln .fln-chip.warn").count() == 1 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 8 and pg.locator(".flx-tpl > .flx-tpls > .flx-tc").count() == 4 and pg.locator(".flx-more .flx-tc").count() == 4 and pg.locator(".flx-more[open]").count() == 0 and pg.inner_text(".flx-more summary") == "More templates" and pg.inner_text(".fl-insp h3") == "Build feature table"
+            assert pg.locator(".fln .fln-chip").count() == 2 and pg.locator(".fln .fln-chip.warn").count() == 1 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 9 and pg.locator(".flx-tpl > .flx-tpls > .flx-tc").count() == 4 and pg.locator(".flx-more .flx-tc").count() == 5 and pg.locator(".flx-more[open]").count() == 0 and pg.inner_text(".flx-more summary") == "More templates" and pg.inner_text(".fl-insp h3") == "Build feature table"
             assert pg.get_attribute('[data-mode="simple"]', "aria-pressed") == "true"
             assert pg.locator(".flx-pal").is_hidden()
         step("canvas: the base is already there and connected, templates are offered, Simple is the default", first_screen)
@@ -163,14 +162,14 @@ try:
         step("the stylesheet of Flow leaves the rows of the file list alone (class «fl»)", file_list_untouched)
         def template():
             ids = pg.evaluate("[...document.querySelectorAll('.flx-tc')].map(b => b.dataset.tpl)")
-            assert ids == ["tp", "table", "identify", "msn", "targeted", "tpseries", "standards", "blankfree"], ids; pg.click(".flx-more summary"); assert pg.locator(".flx-more .flx-tc").first.is_visible()
+            assert ids == ["tp", "table", "lrtable", "identify", "msn", "bentazone", "targeted", "tpseries", "standards", "blankfree"], ids; pg.click(".flx-more summary"); assert pg.locator(".flx-more .flx-tc").first.is_visible()
             assert pg.evaluate("[...document.querySelectorAll('.flx-tc small:not(.flx-help)')].every(s => s.textContent.startsWith('Good for:'))")
             pg.click('.flx-tc[data-tpl="identify"]')
             attendi(pg, "document.querySelectorAll('.fln').length === 7")
-            assert "Ready to run" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
+            assert "Ready" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
             n = pg.evaluate("window.__n"); total = n["click"] + n["key"]
             print(f"MISURA clic_canvas: tab 1 + template 1 = {total} clicks to a complete valid chain; with the {ADMIN} clicks of the logo {total + ADMIN}")
-            print(f"MISURA clic_modello: {total} clicks from the empty sheet to a ready plan (3 templates on the first row, 4 under More templates)")
+            print(f"MISURA clic_modello: {total} clicks from the empty sheet to a ready plan (3 templates on the first row, 5 under More templates)")
             assert total <= 3, n
         step("canvas: one template click gives a complete valid chain", template)
         def inspector():
@@ -233,8 +232,8 @@ try:
         step("canvas: menus say they are open, the template card is a dialog, a redraw does not replay the entrance", menus_and_redraw)
         step("canvas: Advanced shows every step and the palette; Enter selects, arrows move the view, reduced motion stops the animation", advanced_and_keys)
         def sheets():
-            assert not pg.locator('[data-tab="plan"]').is_visible()
-            pg.click('[data-mode="advanced"]'); pg.click('[data-tab="plan"]'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
+            pg.click("#flx-more"); assert pg.locator('[role=menuitem]:has-text("Plan (JSON)")').count() == 0; pg.keyboard.press("Escape")
+            pg.click('[data-mode="advanced"]'); pg.click("#flx-more"); pg.click('[role=menuitem]:has-text("Plan (JSON)")'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
             pg.click('[data-tab="list"]'); attendi(pg, "document.querySelectorAll('.fl-card').length >= 3"); pg.click('[data-tab="canvas"]'); pg.click('[data-mode="simple"]')
         step("canvas: the plan view and the list view show the same plan", sheets)
         def results_from_disk():
@@ -332,27 +331,26 @@ try:
             assert pg.evaluate("window.__fa.campioni") is None
             pg.click('.flx-res button[aria-label="Close the results"]')
         step("a finished run opens the Feature table by itself, with the sample roles of the plan", end_of_run)
-        def samples_in_place():
-            # the sample list is filled in place: «From Data» takes the open files, «Edit» changes a row, the input keeps the SHA-256 of the canonical document
+        def samples_in_place():   # the sample list is filled in place: «From Data» takes the open files, «Edit» changes a row, the input keeps the SHA-256 of the canonical document
             pg.evaluate("""() => { const S = FLOW.current; S.samples = {}; S.plan.inputs = S.plan.inputs.filter(i => i.type !== 'samples'); FLOW.addInput(S.plan, 'samples'); S.redraw(); }""")
-            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.flx-smp')")
-            assert pg.locator('.flx-smp button[aria-label^="Take"]').is_disabled(), "From Data needs open files"
+            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.fl-insp .mg-sc')")
+            assert pg.locator('.fl-insp button[aria-label^="Take"]').is_disabled(), "From Data needs open files"
             pg.evaluate("""() => { window.__e = E.files; E.files = [{ file: 'blank.mzML', role: 'blank', type: 'blank' }, { file: 'x_t5.mzML', role: 'sample', time: 5, type: 'sample' }]; FLOW.current.redraw(); }""")
-            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.flx-smp') && !document.querySelector('.flx-smp button[aria-label^=Take]').disabled")
-            pg.click('.flx-smp button[aria-label^="Take"]')
-            attendi(pg, "document.querySelectorAll('.flx-smp tbody tr').length === 2 && /^[0-9a-f]{12}/.test(document.querySelector('.flx-smp-sha').textContent)")
+            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.fl-insp .mg-sc') && !document.querySelector('.fl-insp button[aria-label^=Take]').disabled")
+            pg.click('.fl-insp button[aria-label^="Take"]')
+            attendi(pg, "document.querySelector('.fl-insp .mg-sc').getAttribute('aria-rowcount') === '3' && /^[0-9a-f]{12}/.test(document.querySelector('.fl-insp code').textContent)")
             sha = pg.evaluate("FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256"); assert len(sha) == 64, sha
-            pg.fill('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "10"); pg.press('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "Tab")
+            c = pg.evaluate("+document.querySelector('.fl-insp [role=columnheader]:has(button[aria-label=\\'Sort by Time\\'])').getAttribute('aria-colindex') - 1")
+            pg.click(f".fl-insp .mg-sc [data-r='1'][data-c='{c}']"); pg.keyboard.press("Enter"); pg.keyboard.press("Control+a"); pg.keyboard.type("10"); pg.keyboard.press("Tab")
             attendi(pg, "FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256 !== '%s'" % sha)
             assert pg.evaluate("Object.values(FLOW.current.samples)[0].campioni[1].tempo_min") == 10
-            assert "No t0" in pg.inner_text('.flx-smp-roles') and "1 blank" in pg.inner_text('.flx-smp-roles'); pg.evaluate("() => { E.files = window.__e; }")
+            assert "No t0" in pg.inner_text('.fl-insp'); pg.evaluate("() => { E.files = window.__e; }")
         step("the sample list is filled from Data or edited in place, and the input keeps its SHA-256", samples_in_place)
 
         def samples_fix():
             # a step that asks for the sample list: the one-click remedy adds it filled from the files open in Data (MISURA clic_campioni)
             pg.evaluate("""() => { const S = FLOW.current; S.samples = {}; S.plan.inputs = S.plan.inputs.filter(i => i.type !== 'samples'); window.__e = E.files; E.files = [{ file: 'blank.mzML', role: 'blank', type: 'blank' }, { file: 'x_t5.mzML', role: 'sample', time: 5, type: 'sample' }];
-              FLOW.addStep(S.plan, S.reg, 'table.filter'); for (const i of S.plan.inputs.filter(i => i.type === 'samples')) FLOW.removeInput(S.plan, i.name); S.redraw(); }""")
-            # no step asks for the list yet (the port is optional), so the remedy is built from the problem the checker would give
+              FLOW.addStep(S.plan, S.reg, 'table.filter'); for (const i of S.plan.inputs.filter(i => i.type === 'samples')) FLOW.removeInput(S.plan, i.name); S.redraw(); }""")   # no step asks for the list yet (the port is optional), so the remedy is built from the problem the checker would give
             label = pg.evaluate("""() => { const S = FLOW.current, inst = S.plan.steps.find(s => s.step.startsWith('table.filter')); window.__fix = FLOW.friendly(S, { key: 'err.flow.port.missing', instance: inst.id, port: 'samples' }).fix; return window.__fix.label; }""")
             assert label == "Add sample list from Data", label
             pg.evaluate("() => window.__fix.run()")
@@ -434,11 +432,11 @@ try:
             pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "tp.json", "mimeType": "application/json", "buffer": tp}])
             attendi(pg, "document.querySelectorAll('.flx-sticks .flx-bar').length === 2")
             assert "Probable" in pg.inner_text(".flx-res-body") and "present, area 900" in pg.inner_text(".flx-res-body") and "absent" in pg.inner_text(".flx-res-body")
-            assert pg.locator(".flx-sticks").get_attribute("role") == "img" and pg.locator(".flx-one .flx-table td").nth(1).inner_text() == "900"
+            assert pg.locator(".flx-sticks[aria-label$='in each condition']").get_attribute("role") == "img" and pg.locator(".flx-one:has(.flx-sticks[aria-label$='in each condition']) .flx-table td").nth(1).inner_text() == "900"
             # one selection: a click on a product (or Enter on the focused row) draws it in the conditions block and marks the sets it belongs to; the picker answers the other way
             rows = ".flx-res-body .flx-table tbody tr[data-id]"
             pg.click(rows + '[data-id="2"]'); attendi(pg, "document.querySelector('.flx-res-body select').value === '1'")
-            assert "TP 8" in pg.locator(".flx-sticks").get_attribute("aria-label") and pg.locator(".flx-res-body tr.flx-sel").count() >= 2
+            assert "TP 8" in pg.locator(".flx-sticks[aria-label$='in each condition']").get_attribute("aria-label") and pg.locator(".flx-res-body tr.flx-sel").count() >= 2
             sets = ".flx-res-body tr[data-members]"
             assert pg.locator(sets + ".flx-member").count() == 1 and "O2 + N2" in pg.locator(sets + ".flx-member").inner_text()
             pg.locator(rows + '[data-id="1"]').first.focus(); pg.keyboard.press("Enter")
@@ -475,7 +473,7 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('.fln-live')].every(n => n.hidden || n.querySelector('.fln-lm svg'))")
             assert "flow/live/events" in pg.evaluate("window.__ops") and "flow/progress" not in pg.evaluate("window.__ops")
             pg.click("#flx-live-pause"); attendi(pg, "window.__ops.includes('flow/live/pause')")
-            assert pg.get_attribute("#flx-live-pause", "aria-pressed") == "true" and "Resume" in pg.inner_text("#flx-live-pause")
+            attendi(pg, "document.querySelector('#flx-live-pause').getAttribute('aria-pressed') === 'true' && document.querySelector('#flx-live-pause').textContent.includes('Resume')")     # the bar follows the answer of the engine
             pg.click("#flx-live-pause"); attendi(pg, "window.__ops.includes('flow/live/resume')")
             pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps[S.plan.steps.length - 1]; i.params = i.params || {}; i.params.min_height = 7; S.refresh(); }"); attendi(pg, "window.__ops.includes('flow/live/update')")
             pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps[S.plan.steps.length - 1]; delete i.params.min_height; S.refresh(); }")

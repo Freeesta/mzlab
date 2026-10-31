@@ -13,6 +13,7 @@
 //! pass the shape filter on both edges, otherwise it is dropped and the walk goes on from the minimum.
 
 use crate::broad::{detect_broad, BroadParams};
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 /// Parameters of the resolver (mzmine names in the comments; values of `tools/bench/parametri/mzmine/predefinita.json`).
@@ -88,6 +89,14 @@ pub struct Feature {
     pub area_s: f64,
     /// First and last scan of the peak, both included.
     pub scans: (usize, usize),
+    /// Scan of the most intense point (the first on a tie; the apex block's centre for a broad band).
+    pub apex_scan: usize,
+    /// Points of the peak with a signal (above 0).
+    pub npts: usize,
+    /// Height over the noise of the bridge for a broad band; 0 for a narrow peak (the resolver has no noise estimate).
+    pub snr: f64,
+    /// Half-height width in scans for a broad band; 0 for a narrow peak.
+    pub fwhm_scans: f64,
     /// From the broad-band pass.
     pub broad: bool,
 }
@@ -101,7 +110,7 @@ pub fn quantile(values: &[f64], q: f64) -> f64 {
         _ => {}
     }
     let mut v = values.to_vec();
-    v.sort_by(|a, b| a.total_cmp(b));
+    v.sortc_by(|a, b| a.total_cmp(b));
     let pos = (v.len() - 1) as f64 * q.clamp(0.0, 1.0);
     (v[pos.floor() as usize] + v[pos.ceil() as usize]) / 2.0
 }
@@ -249,6 +258,10 @@ fn make_feature(rt: &[f64], c: &Chrom, s: usize, e: usize) -> Feature {
         area,
         area_s: area * 60.0,
         scans: (s, e),
+        apex_scan: apex,
+        npts: c.y[s..=e].iter().filter(|&&v| v > 0.0).count(),
+        snr: 0.0,
+        fwhm_scans: 0.0,
         broad: false,
     }
 }
@@ -294,6 +307,13 @@ pub fn resolve_with_broad(
             area: b.area_s / 60.0,
             area_s: b.area_s,
             scans: (b.scan_lo, b.scan_hi),
+            apex_scan: b.scan_apex,
+            npts: c.y[b.scan_lo..=b.scan_hi]
+                .iter()
+                .filter(|&&v| v > 0.0)
+                .count(),
+            snr: b.snr,
+            fwhm_scans: b.fwhm_scans,
             broad: true,
         });
     }

@@ -3,7 +3,11 @@
 // Peak measures from the Rust engine (crates/mzlab-core/src/peakq.rs): quality of an integrated peak and the two methods of finding peaks.
 // Loaded as a module after the classic scripts; picchi.js uses window.QUALITA. Every call resolves to null when the .wasm is not there
 // (the local development server does not build it) or the worker dies: the page then shows an empty cell, never an error.
+import { compileOnce } from "./rust-supervisor.js";
 const URL_WORKER = new URL("peaks-worker.js", import.meta.url);
+// The engine compiled once for the page (shared with the engine worker's supervisor): the worker instantiates it instead of fetching and compiling the .wasm again.
+const compile = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", import.meta.url));
+let setup = null;
 let worker = null, dead = false, seq = 0;
 const pending = new Map();
 
@@ -12,6 +16,8 @@ function start() {
   try {
     worker = new Worker(URL_WORKER, { type: "module" });
   } catch (_) { dead = true; return; }
+  const w = worker;
+  setup = compile().then(module => { w.postMessage({ op: "module", module }); });
   worker.onmessage = ev => { const p = pending.get(ev.data.id); if (p) { pending.delete(ev.data.id); p(ev.data.error ? null : ev.data.v); } };
   worker.onerror = () => { dead = true; worker = null; for (const p of pending.values()) p(null); pending.clear(); };
 }
@@ -22,7 +28,9 @@ function call(msg) {
     if (!worker) return res(null);
     const id = ++seq;
     pending.set(id, res);
-    worker.postMessage({ ...msg, id });
+    // The module message goes first; the operations queue behind it.
+    const w = worker;
+    setup.then(() => w.postMessage({ ...msg, id }));
   });
 }
 
@@ -36,6 +44,15 @@ window.QUALITA = {
   },
   /** Peaks of the trace: mode 0 = CWT, 1 = prominence + local minimum. Each: { apex, lo, hi, area, height, snr, n, gaussian, asymmetry, noise } (indices into the trace), or null. */
   detect(x, y, mode) { return call({ op: "detect", rt: f64(x), y: f64(y), mode }); },
+  /** Every peak with its apex between the times x0 and x1, by RT, as { lo, hi (indices into the trace), b0, b1 (baseline at lo and hi), area }: the one-click integration of HR traces.
+   * o = { smooth (points), snr, rel (fraction of the highest point), scans, half (edge smoothing, 0 = auto), slope }; null without the engine. */
+  autoIntegrate(x, y, x0, x1, o) { return call({ op: "auto", rt: f64(x), y: f64(y), x0, x1, ...o }); },
+  /** Limits [t0, t1] (min) of the low-resolution peak at time `at` (the click), with the detector parameters `pk` (PK of picchi.js) and the base width `ref` of the peaks already integrated (0 = none);
+   * [] below the S/N threshold, null without the engine. */
+  edges(x, y, at, ref, mrm, pk) {
+    const params = [pk.win, pk.areaNoise, pk.edgeFrac, pk.snMin, pk.noise === "rms" ? 1 : pk.noise === "manual" ? 2 : 0, pk.minHalf, pk.multi, pk.tail, pk.constrain, pk.nr0, pk.nr1];
+    return call({ op: "edges", rt: f64(x), y: f64(y), at, ref, mrm: !!mrm, params: f64(params) });
+  },
   /** The peaks worth a label (at most maxN, height >= rel of the tallest, S/N >= snr), by RT: [{ apex, rt, height, snr }] (apex = index into the trace), or null. */
   labels(x, y, maxN, rel, snr, ends) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr, ends: !!ends }); },
   /** The tallest point of a spectrum { x, y } (m/z or nm; refine = parabola through the apex), null when none or without the engine. */

@@ -18,6 +18,8 @@ record = ["chem", "dep:mzlab-mol"]
 crippen = ["dep:mzlab-mol"]
 # `attributio`: reading of the campaign folders of Attributio (campaign.toml, mzMine/SIRIUS/GNPS2 tables, decisions), its review matching on top of `mzlab-lib` and its level cascade and table (`docs/agenti/attributio.md`). Off by default; the `.wasm` `attributio` (`crates/mzlab-attributio-wasm`) and the desktop app carry it.
 attributio = ["dep:mzlab-lib", "chem"]
+# `flow_formula`: the text of `formula.ms2@1` (`flow_formula_ms2`), which reads the MGF with the reader of `mzlab-lib` (`flowmatch`). Off by default; the `.wasm` `attributio` (feature `all`) and the CLI carry it.
+flow_formula = ["attributio", "mzlab-lib/flow"]
 # `untargeted`: detection of the features from the raw data after the algorithms of mzmine 3.9.0 (`src/untargeted/`), rewritten from scratch. Off by default.
 untargeted = []
 # `interp`: the interpretation of each row of the feature table of the products (`interp/1`, `filtri/1`; `docs/agenti/interp.md`). Off by default; the `.wasm` `interp` carries it.
@@ -157,3 +159,7 @@ required-features = ["interp"]
 [[test]]
 name = "rt_descriptors"
 required-features = ["record", "attributio"]
+
+[[example]]
+name = "perf_lotto5"
+required-features = ["untargeted"]

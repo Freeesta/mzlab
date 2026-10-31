@@ -2,7 +2,7 @@
 // @ts-strict
 // TPMINE-PRIVATE  Web Worker of mzFinder: it routes the calls of the page to the Rust engine. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
 // pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
-// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx and any list of transformations (finder_transformations merges the user text into regole_tp.json),
+// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx and any list of transformations (finder_transformations merges the user text into regole_tp_2.json),
 // then detail, inclusion_csv, msn_tree, frag_tree and frag_tree_compare of that run. With an MSn file of the standard the `finder_msn` .wasm, loaded only
 // then, adds its tree, calibration and the localisation of the products (FinderMsn) to what the Dig gives; run on low-resolution full-scan, MS2 and MRM files with their .mzidx, any parent and any list of transformations (finder-lr.js, then detail, frag_tree
 // and frag_tree_compare of that run). A call the engine cannot serve, or a site without wasm-feat/, answers with an error. In the desktop app (init.desktop) every call goes to finder-desktop.js, i.e. to the native engine of the app.
@@ -171,7 +171,7 @@ async function runRust(a) {
   const table = await p.align(stored, paths, recipe); lap("align", t); t = performance.now(); check();
   step("candidates");
   say("Searching the products of the parent...");
-  let rules = new Uint8Array(await (await fetch(base() + "mzfinder/regole_tp.json")).arrayBuffer());
+  let rules = new Uint8Array(await (await fetch(base() + "mzfinder/regole_tp_2.json")).arrayBuffer());
   const tr = (a[3] || "").trim();
   if (tr) rules = f.finder_transformations(rules, tr);      // the user's list of transformations: its rows become rules of the hypotheses
   const h = await p.hypotheses({ stored, paths, rules, parent: plan.formula, parentRt: plan.rt ?? NaN, recipe, structure: plan.structure });

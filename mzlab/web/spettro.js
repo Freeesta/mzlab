@@ -53,8 +53,9 @@ const specPol = p => { const f = p._a && p._a.data && p._a.data[0] && p._a.data[
 // opens the sidebar tab of the neutral losses filtered on |dm|, or the adducts when dm is a usual adduct exchange
 function dmOpen(dm, hr, polarity, losses) {
   const ad = !losses && !!adductPair(dm, hr, polarity), q = String(+Math.abs(dm).toFixed(hr ? 4 : 1));
-  if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "adducts" : "losses", ad ? {} : { q });
+  if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "calc" : "losses", ad ? {} : { q });
   else if (window.QQQRef) QQQRef.open(ad ? "ad" : "ls", ad ? {} : { q });
+  if (ad) setTimeout(() => CALCADD.showDelta(+Math.abs(dm).toFixed(hr ? 4 : 1)), 150);
 }
 /** right click on the label of a measure: straight to the losses or adducts tab; true when the click was on a label */
 function measCtx(p, px, py) {
@@ -62,33 +63,60 @@ function measCtx(p, px, py) {
   if (l) dmOpen(l.dm, l.hr, specPol(p));
   return !!l;
 }
+// theoretical isotope pattern of a unit-resolution spectrum (red circles aligned on the nearest observed peak); pat = the peaks of api/ion_pattern; returns the legend note
+function drawIsoUnit(/** @type {any} */ p, /** @type {any} */ g, /** @type {any} */ X, /** @type {any} */ Y, /** @type {any} */ d0, /** @type {number} */ ymax, /** @type {number} */ W, /** @type {any} */ M, /** @type {Bag[]} */ pat) {
+  const top = pat.reduce((/** @type {Bag} */ a, /** @type {Bag} */ b) => (b.rel > a.rel ? b : a));
+  /** @type {any} */ let obs = null; d0.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (Math.abs(m - top.mz) <= 1.5 && d0.y[j] > 0 && (!obs || d0.y[j] > obs.y)) obs = { m, y: d0.y[j] }; });
+  if (obs) {                                         // profile data: several points per peak -> use the centroid of the peak (+-0.5 Da)
+    let sw = 0, sm = 0; d0.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (Math.abs(m - obs.m) <= 0.5 && d0.y[j] > 0) { sw += d0.y[j]; sm += m * d0.y[j]; } });
+    if (sw > 0) obs.c = sm / sw;
+  }
+  const shift = obs ? (obs.c ?? obs.m) - top.mz : 0, h = obs ? obs.y : ymax / 1.12 * 0.9;
+  g.save(); g.strokeStyle = g.fillStyle = "#d62728"; g.lineWidth = 1.5;
+  for (const r of pat) {
+    const px = X(r.mz + shift) + 3, py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
+    g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
+    g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
+    if (r.rel >= 1) { g.font = fpx(12); g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
+  }
+  g.restore(); g.font = fpx(12);
+  return `<span><i style="background:#d62728"></i>${I18N.t("iso.note", { formula: fmtFormula(p.iso.formula), adduct: fmtAdduct(p.iso.ad), align: obs ? I18N.t("iso.align", { mz: (obs.c ?? obs.m).toFixed(mzd(p, p.level)), shift: Math.abs(shift) >= 0.05 ? I18N.t("iso.shift", { v: (shift > 0 ? "+" : "") + shift.toFixed(1) }) : "" }) : I18N.t("iso.noPeak", { mz: top.mz.toFixed(mzd(p)) }) })}</span>`;
+}
 function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
   // zoom or scan changed: the measure is cancelled
   if (m.key == null) m.key = measKey(p); else if (m.key !== measKey(p)) { p.meas = null; return; }
-  const ac = ecss("--accent"), x0 = M.l, x1 = W - M.r;
+  const ac = ecss("--accent"), x0 = M.l, x1 = W - M.r, hr = !!(p._a && p._a.hrp), lh = 13 * fz();
   g.save(); g.beginPath(); g.rect(x0, M.t - 1, x1 - x0, 400); g.clip();
   g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "center";
-  if (m.ref != null && X(m.ref) >= x0 && X(m.ref) <= x1) {
-    g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m.ref), Y(0)); g.lineTo(X(m.ref), M.t + 2); g.stroke(); g.setLineDash([]);
-    g.textAlign = "left"; g.fillText("rif.", X(m.ref) + 3, M.t + 10);
-  }
-  m.list.forEach((q, i) => {
-    const xa = X(q.a), xb = X(q.b), y = M.t + 26 + (i % 6) * 17;
-    g.setLineDash([2, 3]); g.globalAlpha = .55; g.beginPath(); g.moveTo(xa, y); g.lineTo(xa, Y(0)); g.moveTo(xb, y); g.lineTo(xb, Y(0)); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
-    g.lineWidth = 1.4; g.beginPath(); g.moveTo(xa, y - 4); g.lineTo(xa, y + 4); g.moveTo(xa, y); g.lineTo(xb, y); g.moveTo(xb, y - 4); g.lineTo(xb, y + 4); g.stroke(); g.lineWidth = 1;
-    const dd = Math.abs(q.b - q.a), hr = !!(p._a && p._a.hrp), ap = adductPair(dd, hr, specPol(p)), mid = (xa + xb) / 2;
+  const refIn = m.ref != null && X(m.ref) >= x0 && X(m.ref) <= x1, refW = g.measureText("rif.").width;
+  // the labels of the peaks (already drawn) keep their place; the ruler looks for free ones
+  const items = m.list.map((/** @type {Record<string, any>} */ q) => {
+    const dd = Math.abs(q.b - q.a), ap = adductPair(dd, hr, specPol(p));
     const num = dd.toFixed(hr ? p._a.dec : 1) + (hr ? ` (${(dd * 1000).toFixed(1)} mDa)` : "");
     // «m/z» is a symbol of a quantity: italic, with the Δ and the number upright
     /** @type {[string, string][]} */ const parts = ap ? [[ap.short, ""]] : [["Δ", ""], ["m/z", "italic "], [" " + num, ""]];
-    const ws = parts.map(([t, st]) => { g.font = fpx(12, st); return g.measureText(t).width; }), wt = ws.reduce((u, v) => u + v, 0);
-    const bx = Math.max(x0 + 2, Math.min(x1 - wt - 2, mid - wt / 2)); let cx = bx;
-    g.textAlign = "left"; g.lineJoin = "round";
-    parts.forEach(([t, st], j) => { g.font = fpx(12, st); g.lineWidth = 3; g.strokeStyle = ecss("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); cx += ws[j]; });
+    const ws = parts.map(([t, st]) => { g.font = fpx(12, st); return g.measureText(t).width; });
+    return { q, dd, ap, num, parts, ws, w: ws.reduce((u, v) => u + v, 0) };
+  });
+  g.font = fpx(12);
+  const obs = (p._a.lbls || []).filter((/** @type {Record<string, any>} */ l) => l.m != null).map((/** @type {Record<string, any>} */ l) => ({ x: l.x, y: l.y, w: l.w, h: l.h }));
+  const L = RIGHELLO.layout({ obs, x0, x1, top: M.t, base: Y(0), lh, ref: refIn ? { x: X(m.ref), w: refW } : null, items: items.map(it => ({ xa: X(it.q.a), xb: X(it.q.b), w: it.w })) });
+  const vert = (/** @type {number} */ x, /** @type {[number, number][]} */ segs) => { g.beginPath(); for (const [a, b] of segs) { g.moveTo(x, a); g.lineTo(x, b); } g.stroke(); };
+  if (refIn && L.ref) {
+    g.setLineDash([4, 3]); vert(X(m.ref), RIGHELLO.pieces(X(m.ref), M.t + 2, Y(0), obs)); g.setLineDash([]);
+    g.textAlign = "left"; g.fillText("rif.", L.ref.x, L.ref.y);
+  }
+  items.forEach((it, i) => {
+    const q = it.q, xa = X(q.a), xb = X(q.b), { y, bx, va, vb } = L.items[i];
+    g.setLineDash([2, 3]); g.globalAlpha = .55; vert(xa, va); vert(xb, vb); g.setLineDash([]); g.globalAlpha = 1;
+    g.lineWidth = 1.4; g.beginPath(); g.moveTo(xa, y - 4); g.lineTo(xa, y + 4); g.moveTo(xa, y); g.lineTo(xb, y); g.moveTo(xb, y - 4); g.lineTo(xb, y + 4); g.stroke(); g.lineWidth = 1;
+    let cx = bx; g.textAlign = "left"; g.lineJoin = "round";
+    it.parts.forEach(([t, st], j) => { g.font = fpx(12, st); g.lineWidth = 3; g.strokeStyle = ecss("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); cx += it.ws[j]; });
     g.font = fpx(12); g.strokeStyle = ac; g.lineWidth = 1;
     // the label is a target of the hover box and of the right click (eventi.js)
-    const fv = `<i>m/z</i> ${num}`;
-    (p._a.lbls = p._a.lbls || []).push({ x: bx - 3, y: y - 5 - 13 * fz(), w: wt + 6, h: 5 + 13 * fz(), dm: dd, ap, hr, tip: ap ? `<b>${ap.full}</b> · Δ${fv}<div class="sm">${I18N.t("spec.dm.tip.ad")}</div>` : `Δ${fv}<div class="sm">${I18N.t("spec.dm.tip.ls")}</div>` });
+    const fv = `<i>m/z</i> ${it.num}`;
+    (p._a.lbls = p._a.lbls || []).push({ x: bx - 3, y: y - 5 - 13 * fz(), w: it.w + 6, h: 5 + 13 * fz(), dm: it.dd, ap: it.ap, hr, tip: it.ap ? `<b>${it.ap.full}</b> · Δ${fv}<div class="sm">${I18N.t("spec.dm.tip.ad")}</div>` : `Δ${fv}<div class="sm">${I18N.t("spec.dm.tip.ls")}</div>` });
   });
   g.restore();
 }
@@ -223,10 +251,10 @@ async function isoAsk(p) {
   // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
   const chg = ftxt.match(/^(.+?)([+\-−])$/);
   if (chg) { ftxt = chg[1]; if (!adt) adt = chg[2] === "+" ? "[M]+" : "[M]-"; }
-  try { const r = await getFormula(ftxt, "");
+  try { const r = await getFormula(ftxt, ""), ad = (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim();
+    const pat = (await QQQRef.unitIon(r.formula, ad)).peaks;
     COMANDI.fai("spec.isotopes", p, () => {
-      p.iso = { formula: r.formula, ad: (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim() };
-      const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
+      p.iso = { formula: r.formula, ad };
       // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
       p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom);
     });

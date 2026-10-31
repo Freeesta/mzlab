@@ -2,6 +2,7 @@
 //! rebuilt as an intensity series per scan and cut into peaks with a continuous wavelet transform (Ricker wavelet) over the expected widths.
 //! Sums run in a fixed order and `exp` comes from `libm`: native and WASM give the same bits.
 
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 use crate::broad::{detect_broad_at, BroadParams};
@@ -107,11 +108,19 @@ impl Wavelet {
     }
 }
 
-/// Responses of the Ricker wavelet `w` over `y`.
-fn response(y: &[f64], w: &Wavelet) -> Result<Vec<f64>> {
+/// Sets `v` to `n` zeros, keeping its allocation when it is big enough.
+fn zeroed<T: Clone + Default>(v: &mut Vec<T>, n: usize) -> Result<()> {
+    v.clear();
+    reserve(v, n)?;
+    v.resize(n, T::default());
+    Ok(())
+}
+
+/// Responses of the Ricker wavelet `w` over `y`, into `r`. Each response is one sequential sum in the order of the kernel.
+fn response(y: &[f64], w: &Wavelet, r: &mut Vec<f64>) -> Result<()> {
     let n = y.len();
     let (half, kernel, norm) = (w.half, &w.kernel, w.norm);
-    let mut r = filled(n, 0.0f64)?;
+    zeroed(r, n)?;
     for (t, out) in r.iter_mut().enumerate() {
         // the taps that fall inside the series, in the order of the kernel
         let (i0, i1) = (
@@ -125,17 +134,26 @@ fn response(y: &[f64], w: &Wavelet) -> Result<Vec<f64>> {
         }
         *out = acc * norm;
     }
-    Ok(r)
+    Ok(())
+}
+
+/// Buffers `peaks` reuses from one series to the next.
+#[derive(Default)]
+struct Scratch {
+    /// Response of the wavelet being tried.
+    r: Vec<f64>,
+    /// Difference array of the points the peaks cover.
+    cover: Vec<i32>,
 }
 
 /// Apexes (index, scale) of the series: the local maxima of the response at each scale, narrowest scale first; a wider scale adds only what the narrower
 /// ones did not find nearby. The apex is the highest point of `y` within one standard deviation of the maximum.
-fn apexes(y: &[f64], wavelets: &[Wavelet]) -> Result<Vec<(usize, f64)>> {
+fn apexes(y: &[f64], wavelets: &[Wavelet], r: &mut Vec<f64>) -> Result<Vec<(usize, f64)>> {
     let n = y.len();
     let mut found: Vec<(usize, f64)> = Vec::new();
     for w in wavelets {
         let s = w.s;
-        let r = response(y, w)?;
+        response(y, w, r)?;
         let reach = libm::ceil(s) as usize;
         for t in 0..n {
             let left = t == 0 || r[t] >= r[t - 1];
@@ -154,7 +172,7 @@ fn apexes(y: &[f64], wavelets: &[Wavelet]) -> Result<Vec<(usize, f64)>> {
             }
         }
     }
-    found.sort_by_key(|f| f.0);
+    found.sortc_by_key(|f| f.0);
     Ok(found)
 }
 
@@ -181,9 +199,10 @@ fn peaks(
     wavelets: &[Wavelet],
     snr: f64,
     floor: f64,
+    work: &mut Scratch,
 ) -> Result<Vec<(usize, usize, usize)>> {
     let n = y.len();
-    let found = resolve(y, apexes(y, wavelets)?);
+    let found = resolve(y, apexes(y, wavelets, &mut work.r)?);
     let mut out: Vec<(usize, usize, usize)> = Vec::new();
     for (k, &(apex, s)) in found.iter().enumerate() {
         let reach = libm::ceil(REACH * s) as usize;
@@ -198,13 +217,13 @@ fn peaks(
         out.push((lo, apex, hi));
     }
     let skirt = wavelets.iter().fold(0.0f64, |m, w| m.max(w.s));
-    Ok(keep_above_noise(
+    keep_above_noise(
         y,
         out,
-        snr,
-        floor,
+        (snr, floor),
         libm::ceil(REACH * skirt) as usize,
-    ))
+        &mut work.cover,
+    )
 }
 
 /// Index of the lowest point of `y` between two apexes (the first one if several).
@@ -223,16 +242,27 @@ fn valley(y: &[f64], a: usize, b: usize) -> usize {
 fn keep_above_noise(
     y: &[f64],
     found: Vec<(usize, usize, usize)>,
-    snr: f64,
-    floor: f64,
+    (snr, floor): (f64, f64),
     skirt: usize,
-) -> Vec<(usize, usize, usize)> {
+    cover: &mut Vec<i32>,
+) -> Result<Vec<(usize, usize, usize)>> {
+    let n = y.len();
+    // one pass over the series: the points a peak covers (its edges, or `skirt` scans around its apex) are counted on a difference array
+    zeroed(cover, n + 1)?;
+    for &(lo, apex, hi) in &found {
+        for (from, to) in [(lo, hi), (apex.saturating_sub(skirt), apex + skirt)] {
+            let to = to.min(n - 1);
+            if from <= to {
+                cover[from] += 1;
+                cover[to + 1] -= 1;
+            }
+        }
+    }
     let (mut sum, mut sum2, mut m) = (0.0, 0.0, 0.0);
+    let mut open = 0;
     for (i, &v) in y.iter().enumerate() {
-        if !found
-            .iter()
-            .any(|&(lo, apex, hi)| (i >= lo && i <= hi) || i.abs_diff(apex) <= skirt)
-        {
+        open += cover[i];
+        if open == 0 {
             sum += v;
             sum2 += v * v;
             m += 1.0;
@@ -244,10 +274,10 @@ fn keep_above_noise(
         0.0
     };
     let noise = sd.max(floor);
-    found
+    Ok(found
         .into_iter()
         .filter(|&(lo, apex, hi)| (y[apex] - y[lo].min(y[hi])) >= snr * noise)
-        .collect()
+        .collect())
 }
 
 /// The series of `s`: the intensities of the slab inside the window of m/z of the segment summed per scan, and the same weighted by m/z.
@@ -259,6 +289,21 @@ pub(crate) fn series_of(
     p: &Params,
     cw: &CentWave,
 ) -> Result<(Vec<f64>, Vec<f64>)> {
+    let (mut y, mut weighted) = (Vec::new(), Vec::new());
+    series_into(s, mz, it, pos, p, cw, (&mut y, &mut weighted))?;
+    Ok((y, weighted))
+}
+
+/// `series_of` into buffers that keep their allocation from one segment to the next.
+fn series_into(
+    s: &Seg,
+    mz: &[f64],
+    it: &[f64],
+    pos: &[u32],
+    p: &Params,
+    cw: &CentWave,
+    (y, weighted): (&mut Vec<f64>, &mut Vec<f64>),
+) -> Result<()> {
     let half = match p.axis {
         crate::axis::MassAxis::Ppm => s.mzc * cw.ppm * 1e-6,
         crate::axis::MassAxis::Da { .. } => 0.5,
@@ -266,8 +311,8 @@ pub(crate) fn series_of(
     let from = mz.partition_point(|&m| m < s.mzc - half);
     let to = mz.partition_point(|&m| m <= s.mzc + half);
     let len = (s.z - s.a + 1) as usize;
-    let mut y = filled(len, 0.0f64)?;
-    let mut weighted = filled(len, 0.0f64)?;
+    zeroed(y, len)?;
+    zeroed(weighted, len)?;
     for i in from..to {
         if pos[i] >= s.a && pos[i] <= s.z {
             let k = (pos[i] - s.a) as usize;
@@ -275,7 +320,7 @@ pub(crate) fn series_of(
             weighted[k] += it[i] * mz[i];
         }
     }
-    Ok((y, weighted))
+    Ok(())
 }
 
 /// Cuts every segment into the peaks of its series: the intensities of the slab inside the window of m/z of the segment, summed per scan.
@@ -294,15 +339,16 @@ pub(crate) fn refine(
         .map(Wavelet::new)
         .collect();
     let mut out: Vec<Seg> = Vec::new();
+    let (mut y, mut weighted, mut work) = (Vec::new(), Vec::new(), Scratch::default());
     for s in segs {
-        let (y, weighted) = series_of(&s, mz, it, pos, p, cw)?;
+        series_into(&s, mz, it, pos, p, cw, (&mut y, &mut weighted))?;
         let len = y.len();
         // no peak can pass the height of the row or the signal-to-noise bar: the series is not worth the transform
         let top = y.iter().fold(0.0f64, |m, &v| m.max(v));
         if top < p.min_height.max(cw.snr * p.floor) {
             continue;
         }
-        let found = peaks(&y, &wavelets, cw.snr, p.floor)?;
+        let found = peaks(&y, &wavelets, cw.snr, p.floor, &mut work)?;
         if cw.broad.enabled && len >= cw.broad.min_scans {
             broad_segs(&s, &y, &weighted, &found, dt, &cw.broad, &mut out)?;
         }
@@ -365,3 +411,9 @@ fn broad_segs(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod before;
+
+#[cfg(test)]
+mod tests;

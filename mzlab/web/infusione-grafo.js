@@ -12,8 +12,10 @@ import { filtered, arcCells } from "./infusione-grafo-regole.js";
 import { addStyle } from "./infusione-grafo-css.js";
 import { guarda, mostraErrore } from "./infusione-grafo-avanza.js";
 import { openRow, dropZone } from "./infusione-grafo-apri.js";
+import { wireGestures } from "./infusione-grafo-gesti.js";
+import { fullButton, leaveFull } from "./infusione-grafo-schermo.js";
 import { prepareMolfile } from "./infusione-grafo-mol.js";
-import { prettyFormula, splitCharge, vistaOf } from "./msngrafo-vista.js";
+import { formulaHtml, prettyFormula, splitCharge, vistaOf } from "./msngrafo-vista.js";
 
 /** @type {{ el: HTMLElement | null, svg: SVGSVGElement | null, scale: number }} */
 const V = { el: null, svg: null, scale: 1 };
@@ -95,8 +97,6 @@ function syncBar(/** @type {HTMLElement} */ b) {
   const kids = !!G.sel && vistaOf(j).nodi.some((/** @type {any} */ x) => x.best.da === G.sel), shut = !!G.sel && G.collapsed.has(G.sel), btn = q("ig-collapse");
   btn.disabled = !(kids || shut); btn.textContent = I18N.t(shut ? "msngrafo.v.open" : "msngrafo.v.close"); btn.setAttribute("aria-pressed", String(shut));
   /** @type {HTMLElement} */ (b.querySelector("#ig-structs-l")).hidden = !G.molfile;
-  const bp = b.querySelector("#ig-bp");
-  if (bp) bp.innerHTML = h`<b>${I18N.t("msngrafo.v.bp.title")}</b> · ${I18N.t("msngrafo.v.bp.rule")}`;
 }
 
 function setScale(/** @type {number} */ s) {
@@ -120,8 +120,11 @@ function warnLines() {
 function summary() {
   const j = G.j; if (!j) return "";
   const i = j.ione, c = j.conteggi;
-  const ion = i ? I18N.t("msngrafo.ion.line", { f: i.formula, mz: i.mz_teorico.toFixed(5), ppm: i.ppm }) : I18N.t("msngrafo.masses");
-  return h`<p class="sm" id="ig-sum">${ion} · ${I18N.t("msngrafo.counts", { nodes: c.nodi, arcs: c.archi })}</p>`;
+  const counts = I18N.t("msngrafo.counts", { nodes: c.nodi, arcs: c.archi });
+  if (!i) return h`<p class="sm" id="ig-sum">${I18N.t("msngrafo.masses")} · ${counts}</p>`;
+  // the formula is drawn with subscripts and the charge as a superscript: the line is split at the place of the formula
+  const [pre, post] = I18N.t("msngrafo.ion.line", { f: "\u0001", mz: i.mz_teorico.toFixed(5), ppm: i.ppm }).split("\u0001"), [f, ch] = splitCharge(i.formula, j.polarita === -1 ? "-" : "+");
+  return h`<p class="sm" id="ig-sum">${pre}${raw(formulaHtml(f, ch))}${post} · ${counts}</p>`;
 }
 
 function settings(/** @type {any} */ file) {
@@ -171,10 +174,16 @@ async function run(/** @type {HTMLElement} */ b, /** @type {any} */ file) {
   await prepareMolfile();
   const ok = await fetchGraph(file.k);
   stop();
-  if (hung || !ok || mine !== tokenNow || !b.isConnected) return;
+  if (hung || !ok || mine !== tokenNow || !b.isConnected || b.querySelector("#ig-msg") !== msg) return;       // the tab was redrawn (another tab took the body) while the answer travelled
   if (G.error) mostraErrore(msg, G.error, G.errorObj, file);
   else msg.innerHTML = summary() + warnLines();
   drawBody(b, file, false);
+}
+
+/** Gestures on the canvas, and (in the tab) the full screen button at the end of the first toolbar. */
+function wireStage(/** @type {HTMLElement} */ b, /** @type {boolean} */ full) {
+  wireGestures(/** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), { get: () => V.scale, set: setScale });
+  if (full) fullButton(/** @type {HTMLElement} */ (b.querySelector("#ig-stage")), /** @type {HTMLElement} */ (b.querySelector("#ig-bar")));
 }
 
 /** Body of the tab: called by banco.js with the node to fill, the active cell and the token of the render. */
@@ -183,14 +192,15 @@ async function render(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @t
   const focusId = (document.activeElement instanceof Element && document.activeElement.closest(".ig-node")?.getAttribute("data-id")) || null;
   const file = E.files.find(INF.isInf);
   if (!file) { b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`; return; }
-  b.innerHTML = h`<div id="ig-open"></div><div id="ig-field"></div><div id="ig-set">${raw(settings(file))}</div><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-bar" id="ig-bar2" role="toolbar" aria-label="${I18N.t("msngrafo.v.view.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><p class="sm ig-bp" id="ig-bp"></p><div id="ig-node" aria-live="polite"></div><div id="ig-exp"></div><div id="ig-find"></div>`;
-  V.el = b;
+  b.innerHTML = h`<div id="ig-open"></div><div id="ig-field"></div><div id="ig-set">${raw(settings(file))}</div><div class="ig-stage" id="ig-stage"><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-bar" id="ig-bar2" role="toolbar" aria-label="${I18N.t("msngrafo.v.view.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><div id="ig-node" aria-live="polite"></div></div><div id="ig-exp"></div><div id="ig-find"></div>`;
+  V.el = b; leaveFull();
   openRow(/** @type {HTMLElement} */ (b.querySelector("#ig-open"))); dropZone(b);
   const go = () => { G.scelte = []; run(b, file); };
   drawField(/** @type {HTMLElement} */ (b.querySelector("#ig-field")), file, go);
   wireSettings(b, () => run(b, file));
   zoomBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar")), /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), () => drawBody(b, file, false));
   viewBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar2")), () => drawBody(b, file, false));
+  wireStage(b, true);
   if (G.j && G.k === file.k) { const msg = /** @type {HTMLElement} */ (b.querySelector("#ig-msg")); msg.innerHTML = summary() + warnLines(); drawBody(b, file, !!focusId); return; }
   await run(b, file);
   void tok; void p;
@@ -199,10 +209,11 @@ async function render(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @t
 /** Body of the window of a graph file opened without raw data: the same graph and panel of a node, read-only (G.ro), no field, settings, export or search. */
 async function renderRo(/** @type {HTMLElement} */ b, /** @type {string} */ name) {
   addStyle();
-  b.innerHTML = h`<p class="muted sm" id="ig-ro-note">${I18N.t("msngrafo.file.ro", { name })}</p><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-bar" id="ig-bar2" role="toolbar" aria-label="${I18N.t("msngrafo.v.view.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><p class="sm ig-bp" id="ig-bp"></p><div id="ig-node" aria-live="polite"></div><div id="ig-exp"></div><div id="ig-find"></div>`;
+  b.innerHTML = h`<p class="muted sm" id="ig-ro-note">${I18N.t("msngrafo.file.ro", { name })}</p><div class="ig-stage" id="ig-stage"><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-bar" id="ig-bar2" role="toolbar" aria-label="${I18N.t("msngrafo.v.view.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><div id="ig-node" aria-live="polite"></div></div><div id="ig-exp"></div><div id="ig-find"></div>`;
   V.el = b;
   viewBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar2")), () => drawBody(b, null, false));
   zoomBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar")), /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), () => drawBody(b, null, false));
+  wireStage(b, false);
   /** @type {HTMLElement} */ (b.querySelector("#ig-msg")).innerHTML = summary() + warnLines();
   drawBody(b, null, false);
 }

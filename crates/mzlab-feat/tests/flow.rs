@@ -46,7 +46,6 @@ fn paper_block_a_mzmine() {
         "md1||err.flow.step.unknown|step=spectra.centroid",
         "md2||err.flow.step.unknown|step=spectra.centroid",
         "eic||err.flow.param.unknown|param=mz_tol",
-        "eic||err.flow.param.unknown|param=rt_range",
         "res||err.flow.step.unknown|step=features.resolve",
         "iso||err.flow.step.unknown|step=features.isotopes",
         "aln||err.flow.param.unknown|param=mz_tol",
@@ -142,7 +141,7 @@ fn types_cardinality_facets_cycles_and_ranges() {
         "det||err.flow.param.range|param=axis",
         "det||err.flow.param.range|param=polarity",
         // the file only has MS2 scans: detection needs MS1
-        "det|index|err.flow.facet|facet=ms_levels",
+        "det|index|err.flow.facet|facet=ms_levels,step=features.detect,want=1,have=2",
         "bad|table|err.flow.cardinality|port=table,count=2",
         "bad|samples|err.flow.cardinality|port=samples,count=many",
         "bad|samples|err.flow.type|from=peaks,to=samples",
@@ -269,6 +268,7 @@ fn agent() -> Agent {
         version: "x".into(),
         commit: None,
         platform: "native",
+        ..Default::default()
     }
 }
 

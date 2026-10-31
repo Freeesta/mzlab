@@ -81,3 +81,59 @@ fn refuses_what_is_not_prov() {
         .to_string()
         .contains("err.corsa.prov"));
 }
+
+#[test]
+fn engine_copies_the_build_keys_of_the_agent() {
+    let prov = PROV.replace(
+        r#""platform":"native"}"#,
+        r#""commit":"0123456789012345678901234567890123456789","platform":"native","target":"x86_64-linux","rustc":"rustc 1.90.0","cargo_lock_sha256":"ab","modules":{"mzlab-cli":"cd"}}"#,
+    );
+    let c = build(&parse(prov.as_bytes()).unwrap(), &[]).unwrap();
+    let keys: Vec<&str> = c.engine.iter().map(|(k, _)| k.as_str()).collect();
+    assert_eq!(
+        keys,
+        [
+            "name",
+            "version",
+            "commit",
+            "platform",
+            "target",
+            "rustc",
+            "cargo_lock_sha256"
+        ]
+    );
+    assert_eq!(c.modules, vec![("mzlab-cli".to_string(), "cd".to_string())]);
+    assert!(c
+        .json()
+        .contains(r#""cargo_lock_sha256":"ab","modules":{"mzlab-cli":"cd"}}"#));
+    assert!(corsa().modules.is_empty());
+}
+
+#[test]
+fn names_each_regulatory_list_once() {
+    let prov = parse(PROV.as_bytes()).unwrap();
+    let list = r#"{"id":"T_A","tags":{"status":"in_force","version_date":"2000-01-01"},"csv_sha256":"c1"}"#;
+    let screen = format!(
+        r#"{{"format":"screen/1","suspect_files":[{{"name":"n.mzsus","lists":[{list}]}},{{"name":"u.csv","lists":null}}],"hits":[]}}"#
+    );
+    let annot = format!(r#"{{"format":"annot/1","regulatory":{{"lists":[{list}]}},"rows":[]}}"#);
+    let u = [
+        Uscita {
+            name: "s.json",
+            bytes: screen.as_bytes(),
+        },
+        Uscita {
+            name: "r.json",
+            bytes: annot.as_bytes(),
+        },
+    ];
+    let c = build(&prov, &u).unwrap();
+    assert_eq!(c.regulatory.lists.len(), 1);
+    let j = c.json();
+    assert!(j.contains("\"title\":\"Regulatory lists\""));
+    assert!(j.contains(
+        "Screened against: T_A (version 2000-01-01, SHA-256 c1…). 1 list in force, 0 proposals."
+    ));
+    assert!(j.contains(crate::flow::corsa_reg::DISCLAIMER));
+    assert!(!corsa().json().contains("\"regulatory\""));
+}

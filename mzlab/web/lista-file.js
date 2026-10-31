@@ -4,10 +4,10 @@
 // name, colour, group, visibility and order of the files are one undoable action (comandi.js): the snapshot is the list of all the files
 COMANDI.gestore("files.view", {
   // the panels are part of the snapshot: hiding a file closes the panels that only showed it, and the undo opens them again
-  leggi: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]),
+  leggi: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]), u: [E.ugBy ?? null, E.ugOrder ?? null],
     p: E.panels.map((/** @type {any} */ q) => [q.id, panelRec(q), { link: q.link, src: q.src, dda: q.dda, dock: q.dock, duo: q.duo }]) }),
   applica: (_p, snap) => {
-    const { f: rows, p: panels } = JSON.parse(snap);
+    const { f: rows, p: panels, u } = JSON.parse(snap); [E.ugBy, E.ugOrder] = u || [];
     rows.forEach((/** @type {any[]} */ [file, vis, label, color, colorSet, ugrp]) => { const f = E.files.find((/** @type {any} */ x) => x.file === file); if (f) Object.assign(f, { vis, label, color, colorSet, ugrp: ugrp || undefined }); });
     rows.map((/** @type {any[]} */ r) => r[0]).filter((/** @type {string} */ n) => E.files.some((/** @type {any} */ f) => f.file === n)).forEach((/** @type {string} */ n, /** @type {number} */ i) => {      // the order back, one move at a time (reorderFiles renumbers the panels)
       if (E.files[i].file !== n) { const j = E.files.findIndex((/** @type {any} */ f) => f.file === n); reorderFiles(E.files[j].k, E.files[i].k, true); }
@@ -34,7 +34,9 @@ const setVisOf = (/** @type {any[]} */ fs, /** @type {boolean} */ on) => {
 function soloFile(/** @type {any} */ f0) {
   if (!f0) return;
   fileViewDo(() => { E.files.forEach(f => { f.vis = false; }); sibsOf(f0).forEach(f => { f.vis = true; }); });
-  STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind);
+  // the panels area shows before the layout is built, so the panels take its real width (not the estimate of hostWidth)
+  syncWork();
+  STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind, false, "file");
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
 // The three steps of taking one file out: take (hide it), back (undo) and free (release its copy in OPFS and its indexes, only in the browser, when the notice closes without an undo).
@@ -46,15 +48,23 @@ function fileRemoval(/** @type {any} */ f) {
     // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
   };
+  /** @type {any[]} */ let closed = [];
   const take = () => {
+    const before = E.panels.map(q => /** @type {[any, any]} */ ([q, panelRec(q)]));
     f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k);
     E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
     if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
+    // a panel left with no file of its tab closes (the undo opens it again)
+    cleanupOrphanPanels();
+    closed = before.filter(([q]) => !E.panels.includes(q)).map(([, rec]) => rec);
+    if (closed.length) { relayout(); fitHost(); }
     show();
   };
   const back = () => {
     f.gone = false; f.vis = was.vis; was.ks.forEach(([q, k]) => { if (E.panels.includes(q)) q.k = k; });
     if (was.cur === f.k) STATO.file(f.k, "file-restored");
+    closed.forEach(rec => riapriPannello(rec)); if (closed.length) { relayout(); fitHost(); }
+    closed = [];
     show();
   };
   const free = () => {
@@ -68,14 +78,14 @@ function removeFile(/** @type {any} */ f) {
   if (STORIA) STORIA.tolto({ what: f.label, tab: f.kind, dati: f.label, undo: r.back, redo: r.take, scade: window.MZLAB_BROWSER ? r.free : null });
   else r.free();
 }
-/** Removes every file of the list with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). */
-function removeAllFiles() {
-  const rs = E.files.filter(f => !f.gone).map(fileRemoval); if (!rs.length) return;
+/** Removes every file of the list (or of `fs`, a user group named `what`) with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). */
+function removeAllFiles(fs = E.files.filter(f => !f.gone), /** @type {string | null} */ what = null) {
+  const rs = fs.map(fileRemoval); if (!rs.length) return;
   rs.forEach(r => r.take());
   // removed from a hidden side bar (palette, shortcut): bring it back so the notice and the empty list are in view
   if (window.BARRA && BARRA.isDataView() && !BARRA.open) BARRA.show("file");
   const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach(r => r[k]());
-  if (STORIA) STORIA.tolto({ what: I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => rs.forEach(r => r.free()) : null });
+  if (STORIA) STORIA.tolto({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => rs.forEach(r => r.free()) : null });
   else rs.forEach(r => r.free());
 }
 let _lastBox = /** @type {number | null} */ (null);
@@ -87,6 +97,11 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
 }
 function bindListaFile() {
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
+  // the × of a row: removes the file (Undo within 6 s)
+  if (!L.dataset.cap) L.addEventListener("click", e => {
+    const x = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".fl-x")); if (!x) return;
+    e.stopPropagation(); e.preventDefault(); const g = E.files[+(x.dataset.rm || -1)]; if (g && !g.gone) removeFile(g);
+  }, true);
   L.ondblclick = e => {
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
     const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");
@@ -98,7 +113,23 @@ function bindListaFile() {
     if (!(e.ctrlKey || e.metaKey) || !lrTog() || !row || /** @type {Element} */ (e.target).closest("input")) return;
     const f = fileOf(row.querySelector(".nm"), ".nm"); if (f) { e.stopPropagation(); setVisOf([f], !f.vis); }
   }, true);
+  // the keyboard way to the right-click menus of a row or of a user group header (WCAG 2.1.1); F2 renames a user group
+  if (!L.dataset.cap) L.addEventListener("keydown", e => {
+    const t = /** @type {HTMLElement} */ (e.target), hd = /** @type {HTMLElement | null} */ (t.closest(".fgh[data-ug]")), row = t.closest(".fl:not(.pr)");
+    if (!(e.key === "ContextMenu" || e.key === "F10" && e.shiftKey || e.key === "F2" && hd) || !(hd || row)) return;
+    e.preventDefault(); e.stopPropagation();
+    if (hd && e.key === "F2") { renameGroup(hd.dataset.ug || ""); return; }
+    const r = t.getBoundingClientRect(), ev = { preventDefault() { /* already done */ }, stopPropagation() { /* already done */ }, clientX: r.left, clientY: r.bottom, kbd: true };
+    if (hd) groupCtx(ev, hd.dataset.ug || ""); else fileCtx(ev, fileOf(row?.querySelector(".nm") || null, ".nm"));
+  });
   L.dataset.cap = "1";
+  const by = document.getElementById("sb-by"); if (by && !by.onclick) by.onclick = () => carica("gruppi.js").then(() => carica("gruppi-per.js")).then(() => GRUPPIPER.open());
+  // a user group header: its menu; a double click renames it (the first click folds and redraws the list, so the second click, not dblclick, carries it)
+  L.querySelectorAll(".fgh[data-ug]").forEach(x => {
+    const el = /** @type {HTMLElement} */ (x), fold = el.onclick, n = el.dataset.ug || "";
+    el.oncontextmenu = e => groupCtx(e, n);
+    el.onclick = e => { fold?.call(el, e); if (e.detail === 2 && !/** @type {Element} */ (e.target).closest("input")) renameGroup(n); };
+  });
   L.querySelectorAll(".fl:not(.pr) > input[data-k]").forEach(x => { x.onclick = e => { if (boxRange(/** @type {HTMLInputElement} */ (x), e)) e.stopPropagation(); }; });
 }
 
@@ -133,9 +164,9 @@ function pickTrace(/** @type {Pannello} */ p, /** @type {number} */ x, /** @type
 function activeFile(k) {
   const f = E.files[k]; if (!f) return;
   const alone = E.browse; if (alone) tabFiles(f.kind).forEach(g => { g.vis = false; });
-  sibsOf(f).forEach(g => { g.vis = true; }); STATO.file(f.k, "file");
+  sibsOf(f).forEach(g => { g.vis = true; }); STATO.file(f.k, "file"); syncWork();
   followSpectra(f);
-  if (f.kind !== E.tab) setTab(f.kind);
+  if (f.kind !== E.tab) setTab(f.kind, false, "file");
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave();
 }
 /** ‹ ›: the next file of the tab, among the ticked ones when several are shown. */
@@ -150,23 +181,44 @@ function migrateBrowse(/** @type {any} */ u) {
   E.files.forEach(f => { if (f.vis && !keep.has(f.k) && E.files.some(g => g.kind === f.kind && keep.has(g.k) && g.vis)) f.vis = false; });
 }
 
-// HR list: the shown files (or this one) go into a group named by the user; with `off` the whole group is dissolved
-async function groupFiles(f, off = false) {
-  const set = (/** @type {any} */ fs, /** @type {any} */ v) => { fileViewDo(() => fs.forEach((/** @type {any} */ x) => { x.ugrp = v || undefined; })); renderFileList(); uiSave(); };
-  if (off) return set(E.files.filter(x => x.ugrp === f.ugrp), "");
-  const v = await ask(I18N.t("files.group.prompt"), f.ugrp || ""), name = v && v.trim();
-  if (!name) return;
-  const bases = new Set((f.vis ? E.files.filter(x => x.vis && !x.gone) : [f]).map(x => fileBase(x.file)));
-  set(E.files.filter(x => !x.gone && grpOf(x).startsWith("hr.") && bases.has(fileBase(x.file))), name);
+// user groups (both worlds): «Group files» puts the ticked files into a new «Group N» at once, renamed later from its header; a file is in one user group
+// at most and the group takes the place of its automatic header (Full Scan, MS2...). The group is the field `ugrp` of the files (session, undo of files.view).
+// the files of the side list: the bench lists only the experiments with spectra (its MRM files have their own list)
+const flSide = () => E.files.filter(x => !x.gone && (lrTog() || (ESP.voce(x.kind) || { spettri: true }).spettri));
+const ugFiles = (/** @type {string} */ n) => E.files.filter(x => !x.gone && x.ugrp === n);
+const ugSet = (/** @type {any[]} */ fs, /** @type {string} */ v) => { fileViewDo(() => { fs.forEach(x => { x.ugrp = v || undefined; }); E.ugBy = { by: "custom" }; }); renderFileList(); uiSave(); };
+// the physical files ticked in the list (a DDA file brings both its parts)
+const ugBases = () => new Set(flSide().filter(x => x.vis).map(x => fileBase(x.file)));
+function groupFiles() {
+  const used = new Set(E.files.map(x => x.ugrp)); let n = 1;
+  while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
+  const b = ugBases(); ugSet(flSide().filter(x => b.has(fileBase(x.file))), I18N.t("files.ugrp.name", { n }));
+}
+async function renameGroup(/** @type {string} */ n) {
+  const v = ((await ask(I18N.t("files.group.prompt"), n)) || "").trim();
+  if (!v || v === n) return;
+  E._grpOpen = E._grpOpen || {}; if (E._grpOpen["u:" + n] !== undefined) E._grpOpen["u:" + v] = E._grpOpen["u:" + n];
+  ugSet(ugFiles(n), v);
+}
+function groupCtx(/** @type {any} */ e, /** @type {string} */ n) {
+  e.stopPropagation();
+  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => ugSet(ugFiles(n), "") }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
+}
+/** Header of a user group: the markup of the automatic headers of renderFileList, plus the name for its menu (right click, Menu key, Shift+F10) and rename (double click, F2). */
+function ugHead(/** @type {{ g: string, fs: any[] }} */ G, /** @type {boolean} */ open) {
+  const n = G.g.slice(2);
+  return `<div class="fgh" data-gt="${EH(G.g)}" data-ug="${EH(n)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${EH(I18N.t("files.ugrp.toggle", { g: n }))}"></span><span>${EH(n)}</span><em>${G.fs.length}</em></div>`;
 }
 /** Side bar width that holds the longest file name (label + box, colour square and padding); the default width when no file is open. */
 let _nameCtx = /** @type {CanvasRenderingContext2D | null} */ (null);
 function namesWidth(/** @type {number} */ dflt) {
-  const names = E.files.filter((/** @type {any} */ f) => !f.gone).map((/** @type {any} */ f) => String(f.label || ""));
+  let names = E.files.filter((/** @type {any} */ f) => !f.gone).map((/** @type {any} */ f) => String(f.label || ""));
+  // while the files are being opened the panel already has its final width: the labels are the ticked file names without extension
+  if (!names.length && S.opening) names = ST.files.filter(usable).map((/** @type {FileRiga} */ f) => f.name.replace(/\.[^.]+$/, ""));
   if (!names.length) return dflt;
   const g = (_nameCtx ||= /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d"))), nm = document.querySelector("#flst .nm");
   g.font = nm ? getComputedStyle(nm).font : "600 13px system-ui, sans-serif";
-  return Math.ceil(Math.max(...names.map(n => g.measureText(n).width)) + 110);
+  return Math.ceil(maxOf(names.map(n => g.measureText(n).width)) + 110);
 }
 
 // index of the file opened first: the first one that is not a blank (the list order stays), the first of all when every file is a blank
@@ -183,12 +235,5 @@ function followSpectra(/** @type {any} */ f) {
   E.panels.forEach(q => { if (q.type === "spec" && q.link != null && q.dda == null && !q.all && !q.kSet && q.tab === f.kind && q.k !== f.k) { q.k = f.k; if (q.el && f.vis) { ctl(q); draw(q); } } });
 }
 
-// Work area with no ticked file and no panel: a muted, centered hint (the box fills the area and ignores the pointer, so nothing moves when the text comes or goes)
-function syncWorkEmpty() {
-  const host = document.getElementById("dpanels"); if (!host) return;
-  let el = document.getElementById("work-empty");
-  if (!el) { el = document.createElement("div"); el.id = "work-empty"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); host.prepend(el); }
-  const empty = !E.files.some(f => f.vis && !f.gone) && !E.panels.some(p => p.el);
-  const t = empty ? I18N.t("work.empty") : "";
-  if (el.textContent !== t) el.textContent = t;
-}
+// the work area follows the files shown and the panels open: panels, loading table or landing (area-lavoro.js, syncWork)
+function syncWorkEmpty() { if (typeof syncWork === "function") syncWork(); }

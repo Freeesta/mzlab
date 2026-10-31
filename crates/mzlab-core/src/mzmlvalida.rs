@@ -1,8 +1,8 @@
 //! The mzML validator: structure (required elements, `count`, array lengths, order of m/z), the PSI-MS vocabulary (accession, name, unit, required
 //! terms) and, for `indexedmzML`, the offsets, `indexListOffset` and the SHA-1 `fileChecksum`. One streaming pass, nothing of the file kept but the
 //! spectrum being read (and the index, which is as long as the list of spectra). The same pass hands each spectrum and chromatogram to the caller
-//! (`analizza`), which is how `examples/mzml_confronta.rs` reads two files. Native only: the page never validates.
-//! `mzlab-cli validate` is the command; the vocabulary is `data/psims-cv.json` (`tools/psims_tabella.py`).
+//! (`analizza`), which is how `examples/mzml_confronta.rs` reads two files. Native, and in the `aperti` readers module of the page (feature `valida`).
+//! `mzlab-cli validate` is the command, the action «Validate mzML» of the page and the app prints the same JSON (`json_file`); the vocabulary is `data/psims-cv.json` (`tools/psims_tabella.py`).
 
 mod array;
 mod cv;
@@ -17,6 +17,7 @@ mod tests_rotti;
 use std::io::Read;
 
 use crate::error::Result;
+use crate::json::Out;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
@@ -111,4 +112,41 @@ pub fn valida<R: Read>(reader: R) -> Result<Report> {
 /// The number of terms in the vocabulary table.
 pub fn termini() -> usize {
     cv::get().len()
+}
+
+/// The JSON object of one file as `mzlab-cli validate --json` prints it (and the page shows it): `{file, valid, indexed, spectra, chromatograms, problems: [{severity, path, code, message}]}`.
+pub fn json_file(o: &mut Out, file: &str, r: &Report) {
+    o.raw("{\"file\":").str(file);
+    o.raw(&format!(
+        ",\"valid\":{},\"indexed\":{},\"spectra\":{},\"chromatograms\":{},\"problems\":[",
+        r.is_valid(),
+        r.indexed,
+        r.spectra,
+        r.chromatograms
+    ));
+    for (i, p) in r.problems.iter().enumerate() {
+        o.raw(if i == 0 {
+            "{\"severity\":"
+        } else {
+            ",{\"severity\":"
+        })
+        .str(p.severity.as_str());
+        o.raw(",\"path\":")
+            .str(&p.path)
+            .raw(",\"code\":")
+            .str(p.code)
+            .raw(",\"message\":")
+            .str(&p.message)
+            .raw("}");
+    }
+    o.raw("]}");
+}
+
+/// What `mzlab-cli validate FILE --json` prints for one file that could be read: the array of its object and a newline.
+pub fn json_un_file(file: &str, r: &Report) -> String {
+    let mut o = Out::default();
+    o.raw("[");
+    json_file(&mut o, file, r);
+    o.raw("]\n");
+    o.0
 }

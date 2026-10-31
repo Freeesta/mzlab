@@ -58,11 +58,12 @@ try:
             assert pg.evaluate(SHA, "warm/a.mzML.json") is None, "the marker stays after the click"
         step("a click on a warm file loads it with no copy and no index", click_hit)
         def waiting():
+            pg.evaluate("document.querySelector('#addf').click()"); pg.wait_for_selector('#cartbody .cprow', timeout=30000)      # the first click opened the session: «+» brings the folder back
             pg.evaluate(PUT, ["c.mzML", B64["c.mzML"]]); pg.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
             pg.wait_for_function("document.querySelectorAll('#cartbody .cprow').length>=3", timeout=30000)
             pg.click('.cprow:has-text("c.mzML")'); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=2", timeout=90000)
             assert pg.evaluate("window.RISCALDA.state().queued.indexOf('c.mzML')") == -1
-            pg.click("#opbtn"); ready(pg); pg.wait_for_function("typeof E !== 'undefined' && E.files && E.files.length>=1", timeout=60000)
+            ready(pg); pg.wait_for_function("typeof E !== 'undefined' && E.files && E.files.length>=1", timeout=60000)
             hot["tic"] = pg.evaluate("(async()=>{const c=await getChrom(E.files[0].k,'tic',1);return JSON.stringify([Array.from(c.rt),Array.from(c.y)])})()")
         step("a click on a file still waiting takes it out of the queue", waiting)
         r.b.close()

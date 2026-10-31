@@ -21,8 +21,8 @@ try:
         def listed():
             a = pg.evaluate("E.files[0].analog"); assert len(a) == 1 and a[0]["kind"] == "pressure" and a[0]["unit"] == "pascal" and a[0]["n"] == 6000, a
             j = pg.evaluate("(async () => await (await fetch('api/analog?k=0&i=%d&n=300')).json())()" % a[0]["i"])
-            assert j["unit"] == "bar" and j["unit_note"]["key"] == "analog.unit.tenfold" and abs(np.interp(1.0, j["t"], j["y"]) - 278) < 12, j["unit_note"]
-        step("the file lists its pressure trace; the unit is corrected", listed)
+            assert j["unit"] == "bar" and "unit_note" not in j and abs(np.interp(1.0, j["t"], j["y"]) - 278) < 12, j
+        step("the file lists its pressure trace, in bar, with no unit note", listed)
         def section():
             pg.click("#np-method"); pg.wait_for_selector("#grad-sec"); 
             assert pg.is_visible("#grad-course") and pg.is_visible("#grad-raw") and pg.is_visible("#grad-csv") and pg.is_visible("#grad-new")
@@ -76,6 +76,12 @@ try:
             pg.evaluate(f"(()=>{{{TIC}.cur=11.5;cursorLine({TIC})}})()")
             assert "57.5" in pg.evaluate(f"{TIC}.ch.getAttribute('aria-valuetext')")
         step("right axis, %B at 11.5 min and in the cursor reading", reading)
+        def title_inside():
+            # the rotated axis title (baseline + ascent to the right) must lie inside the canvas, right of the tick labels
+            r = pg.evaluate(f"(()=>{{const p={TIC},a=p._a,fp=12*fz(),L=GRADIENTE.rightLayout(['0','25','50','75','100'],fp),g=p.cv.getContext('2d');g.font=fpx(12);return {{W:a.W,mr:window.MARG_R,need:GRADIENTE.needR(p),right:a.W-L.r+L.titleX+.8*fp,left:a.W-L.r+L.titleX-.2*fp,ticks:a.W-L.r+7+g.measureText('100').width}}}})()")
+            assert r["mr"] >= r["need"] and r["right"] <= r["W"], r
+            assert r["left"] >= r["ticks"], r
+        step("the right axis title lies inside the panel and clear of the tick labels", title_inside)
         def aligned():
             pg.evaluate("addPanel('chrom',{tab:'full',kind:'pda'})"); ready(pg)
             LN = "E.panels.filter(p=>p.type==='chrom'&&p.tab==='full')"
@@ -101,7 +107,7 @@ try:
             pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}")
             pg.evaluate("addPanel('chrom',{tab:'full',kind:'press'})"); ready(pg)
             P = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='press')"
-            opts = pg.evaluate(f"[...{P}.el.querySelectorAll('select[data-o=kind] option')].map(o=>o.textContent)"); assert "Pressione della pompa" in opts, opts
+            opts = pg.evaluate(f"[...{P}.el.querySelectorAll('.can-row[data-kind]')].map(o=>o.getAttribute('aria-label'))"); assert "Pressione della pompa" in opts, opts
             v = pg.evaluate(f"(()=>{{const a={P}._a;return {{n:a.sr.length,unit:a.sr[0].unit,y1:a.sr[0].y[a.sr[0].x.findIndex(t=>t>=1)],lab:{P}.leg.textContent+{P}.corrbar.textContent}}}})()")
             assert v["n"] == 1 and v["unit"] == "bar" and abs(v["y1"] - 278) < 12 and "10 volte" in v["lab"], v
             e = pg.evaluate(f"(()=>{{const q={P}, o=E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic'), r=q.cv.getBoundingClientRect(), s=o.cv.getBoundingClientRect();return [r.left+q._a.X(q._a.x0)-(s.left+o._a.X(o._a.x0)), r.left+q._a.X(q._a.x1)-(s.left+o._a.X(o._a.x1)), q._a.x0-o._a.x0, q._a.x1-o._a.x1]}})()")

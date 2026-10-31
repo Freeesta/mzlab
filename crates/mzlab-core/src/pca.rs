@@ -188,7 +188,7 @@ pub fn pca_analysis(matrix: &[Vec<f64>], roles: &[String], groups: Option<&[Opti
     if matrix.is_empty() {
         return user("err.stat.pca.nofeatures", "no feature in the table");
     }
-    if sm.iter().any(|&c| c >= ncols(matrix)) || groups.map_or(false, |g| g.len() != roles.len()) {
+    if sm.iter().any(|&c| c >= ncols(matrix)) || groups.is_some_and(|g| g.len() != roles.len()) {
         return bad("index out of bounds: the table has fewer columns than files");
     }
     let mut steps = vec![step("table", matrix.len())];

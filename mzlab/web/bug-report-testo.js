@@ -7,7 +7,7 @@
 export const REPO = "https://github.com/Freeesta/mzlab";
 /** longest link we open (characters, already percent-encoded); the rest of the report is only in «Copy report» */
 export const URL_MAX = 6000;
-const FILE_LIKE = /[^\s"'<>()[\]{}|,;]*\.(?:mzml|mzxml|raw|wiff2?|scan|d|qgd|lcd|cdf|dam|mzlib|mzidx|mzfeatf?|csv|tsv|xlsx|json|zip|txt)\b/gi;
+const FILE_LIKE = /[^\s"'<>()[\]{}|,;]*\.(?:mzml|mzxml|raw|wiff2?|scan|d|qgd|lcdx?|baf|tdf|tsf|yep|peg|smp|mzdata|cdf|dam|mzlib|mzidx|mzfeatf?|csv|tsv|xlsx|json|zip|txt)\b/gi;
 
 /** @param {string} s */
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

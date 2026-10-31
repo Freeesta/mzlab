@@ -70,7 +70,9 @@ const AVVIO = (function () {
       return;
     }
     const ph = typeof window !== "undefined" && window.qqPhaseCur ? window.qqPhaseCur : null;
-    if (!ph && !timedOut) {
+    // the way out of a stuck start shows only when files are actually waiting for the engine
+    const stuck = timedOut && attesa.length > 0;
+    if (!ph && !stuck) {
       el.hidden = true;
       el.textContent = "";
       return;
@@ -85,7 +87,7 @@ const AVVIO = (function () {
     span.textContent = txt;
     el.appendChild(span);
 
-    if (timedOut) {
+    if (stuck) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn sec sm";
@@ -120,26 +122,26 @@ const AVVIO = (function () {
     } catch (_) { return false; }
   }
 
+  // saved session: «restoring», not the landing
   function applicaIndizioSessione() {
-    if (typeof document === "undefined") return;
-    const d = document.getElementById("drop");
-    const s = document.getElementById("drop-skeleton");
-    const ha = haSessione();
-    // the skeleton takes the height of the drop box it replaces: when the session turns out not to exist, nothing moves
-    if (d && ha && !d.hidden && d.getBoundingClientRect().height > 0 && s) s.style.minHeight = d.getBoundingClientRect().height + "px";
-    if (d) d.hidden = ha;
-    if (s) {
-      s.hidden = !ha;
-      if (ha && !s.textContent) s.textContent = typeof window !== "undefined" && window.I18N ? window.I18N.t("load.session.restoring") : "Restoring session…";
-    }
+    if (typeof document === "undefined" || !haSessione()) return;
+    const g = id => document.getElementById(id), o = g("opening"), w = g("wdata"), v = g("v-data"), m = g("opn-msg");
+    if (!o || !w) return;
+    w.hidden = true;
+    o.hidden = false;
+    o.classList.add("restoring");
+    if (v) v.classList.add("opn");
+    if (m && !m.textContent) m.textContent = window.I18N ? I18N.t("load.session.restoring") : "Restoring…";
   }
 
   function rimuoviScheletro() {
     if (typeof document === "undefined") return;
-    const d = document.getElementById("drop");
-    const s = document.getElementById("drop-skeleton");
-    if (d) d.hidden = false;
-    if (s) s.hidden = true;
+    const g = id => document.getElementById(id), o = g("opening"), w = g("wdata"), v = g("v-data"), m = g("opn-msg");
+    if (!o || !o.classList.contains("restoring")) return;
+    o.classList.remove("restoring"); o.hidden = true;
+    if (w) w.hidden = false;
+    if (v) v.classList.remove("opn");
+    if (m) m.textContent = "";
   }
 
   /**
@@ -152,6 +154,7 @@ const AVVIO = (function () {
     return new Promise(resolve => {
       attesa.push(resolve);
       renderDropStato();
+      renderFase();
     });
   }
 

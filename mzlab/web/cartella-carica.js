@@ -7,9 +7,35 @@
 
 // members of a .D run (Agilent, Bruker): dropped without their folder they cannot be read as a run
 const LOOSE_D = /^(MSScan\.bin|MSPeak\.bin|MSProfile\.bin|analysis\.(tdf|tsf|baf)(_bin)?)$/i;
+const CART_CAP = 16;
+const cartCall = (o, m, ...a) => new Promise((ok, ko) => o[m](...a, ok, ko));
+// The entries are read in parallel (one IPC per file in the desktop app) with at most CART_CAP calls in flight; each walk returns its own array and the
+// arrays are flattened in order, so the result is the same as a sequential walk (uniqueNames depends on that order). One unreadable entry rejects the walk.
+async function cartWalkEntries(entries, onFile, HIDDEN, setDir) {
+  let live = 0, done = 0, failed = false;
+  const waiting = [];
+  // a freed slot goes straight to the first waiter, so the count never passes CART_CAP
+  const slot = async () => { if (live < CART_CAP) live++; else await new Promise(r => waiting.push(r)); };
+  const free = () => { const w = waiting.shift(); if (w) w(); else live--; };
+  const limited = async (o, m) => { await slot(); try { if (failed) return []; return await cartCall(o, m); } catch (x) { failed = true; throw x; } finally { free(); } };
+  async function walk(e, d) {
+    if (e.isFile) { if (HIDDEN(e.name)) return []; const f = setDir(await limited(e, "file"), d); if (onFile) onFile(++done); return [f]; }
+    if (!e.isDirectory || HIDDEN(e.name)) return [];
+    const rd = e.createReader(), parts = [];
+    for (;;) {                                  // readEntries gives the folder in batches until an empty one
+      const batch = await limited(rd, "readEntries");
+      if (!batch.length) break;
+      parts.push(...batch.map(x => walk(x, d + e.name + "/")));
+    }
+    return (await Promise.all(parts)).flat();
+  }
+  return (await Promise.all(entries.map(e => walk(e, "")))).flat();
+}
 const CartCarica = (() => {
   const OK = /\.(mzml|mzxml|cdf|nc|dam|raw|wiff|wiff\.scan)$/i;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
+  // by-products of the tools (msconvert logs, notes, temp files): skipped silently, never counted or reported
+  const BYPRODUCT = /\.(log|txt|tmp|bak|ini|lnk)$|^(thumbs\.db|desktop\.ini)$/i;
 
   // folder of a file: «a/b/» (empty for a file chosen alone); webkitRelativePath starts with the chosen folder, a dropped entry sets `_dir` itself
   function dir(f) {
@@ -23,7 +49,7 @@ const CartCarica = (() => {
   // compatible files go on, the others are counted
   function split(files) {
     const ok = [], ignored = [];
-    for (const f of files) (OK.test(f.name) && !hiddenIn(f) ? ok : ignored).push(f);
+    for (const f of files) if (!BYPRODUCT.test(f.name)) (OK.test(f.name) && !hiddenIn(f) ? ok : ignored).push(f);
     return { ok, ignored };
   }
 
@@ -47,22 +73,7 @@ const CartCarica = (() => {
     const es = (dt?.items ? [...dt.items] : []).map(i => (i.kind === "file" && i.webkitGetAsEntry ? i.webkitGetAsEntry() : null)).filter(Boolean);
     return es.some(e => e.isDirectory) ? es : null;
   }
-  const call = (o, m, ...a) => new Promise((ok, ko) => o[m](...a, ok, ko));
-  async function readEntries(entries, onFile) {
-    const out = [];
-    async function walk(e, d) {
-      if (e.isFile) { if (HIDDEN(e.name)) return; const f = setDir(await call(e, "file"), d); out.push(f); if (onFile) onFile(out.length); return; }
-      if (!e.isDirectory || HIDDEN(e.name)) return;
-      const rd = e.createReader();
-      for (;;) {                                  // readEntries gives the folder in batches until an empty one
-        const batch = await call(rd, "readEntries");
-        if (!batch.length) break;
-        for (const x of batch) await walk(x, d + e.name + "/");
-      }
-    }
-    for (const e of entries) await walk(e, "");
-    return out;
-  }
+  const readEntries = (entries, onFile) => cartWalkEntries(entries, onFile, HIDDEN, setDir);
   const rootName = (entries, files) => (entries && entries.length === 1 && entries[0].isDirectory ? entries[0].name : (files[0] && dir(files[0]).split("/")[0]) || "");
   // ---- page part (only where there is a DOM)
   function note(text) { const n = document.getElementById("cartinfo"); if (!n) return; n.textContent = text; n.hidden = !text; }
@@ -80,10 +91,11 @@ const CartCarica = (() => {
     const es = entriesOf(e.dataTransfer);
     if (!es) { const n = [...(e.dataTransfer?.files || [])].filter(f => LOOSE_D.test(f.name)).length; if (n) note(I18N.t("cart.loose", { n })); return false; }
     note(I18N.t("cart.reading", { n: 0 }));
-    readEntries(es, n => { if (n % 50 === 0) note(I18N.t("cart.reading", { n })); }).then(files => load(files, rootName(es, files)), x => note(String(x.message || x))).then(() => { if (done) done(); });
+    // a failure of the walk or of the load shows its message; done() runs either way
+    readEntries(es, n => { if (n % 50 === 0) note(I18N.t("cart.reading", { n })); }).then(files => load(files, rootName(es, files))).catch(x => note(String(x.message || x))).then(() => { if (done) done(); });
     return true;
   }
   async function fromInput(list) { const files = [...list]; await load(files, rootName(null, files)); }
-  return { dir, setDir, pairKey, split, uniqueNames, entriesOf, readEntries, fromDrop, fromInput, note, load };
+  return { dir, setDir, pairKey, split, byproduct: n => BYPRODUCT.test(n), uniqueNames, entriesOf, readEntries, fromDrop, fromInput, note, load };
 })();
 if (typeof module !== "undefined") module.exports = CartCarica;

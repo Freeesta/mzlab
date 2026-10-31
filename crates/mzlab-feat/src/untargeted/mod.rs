@@ -12,6 +12,7 @@ pub mod isotopes;
 pub mod join;
 pub mod localmax;
 pub mod pipeline;
+mod pipeline_stream;
 pub mod resolve;
 pub mod smooth;
 pub mod table;
@@ -31,4 +32,13 @@ pub struct Feature {
     pub filled: bool,
     /// Found by the broad-band pass; written as `REASON_BROAD` in the table of the file.
     pub broad: bool,
+    /// Position of the apex scan and the first and last scan of the peak in the MS1 section; 0 for a filled cell (the gap filler has no scans).
+    pub apex: u32,
+    pub scan_lo: u32,
+    pub scan_hi: u32,
+    /// Points with a signal between the limits.
+    pub npts: u16,
+    /// Height over the noise of the bridge (broad bands only; 0 where the resolver has no noise estimate) and half-height width in scans (broad bands only).
+    pub snr: f32,
+    pub fwhm: f32,
 }

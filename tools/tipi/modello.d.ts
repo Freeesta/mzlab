@@ -45,7 +45,7 @@ interface PannelloBase {
   _a?: any;                 // axes and geometry of the last draw
   [campo: string]: any;
 }
-interface PannelloChrom extends PannelloBase { type: "chrom"; kind: string; prec: number | null; smooth: boolean; traces: Traccia[] }
+interface PannelloChrom extends PannelloBase { type: "chrom"; kind: string; prec: number | null; ptol?: number | null; smooth: boolean; traces: Traccia[] }
 interface PannelloXic extends PannelloBase { type: "xic"; traces: Traccia[]; tol: number; smooth: boolean; adduct: any }
 interface PannelloMrm extends PannelloBase { type: "mrm"; tr: string; smooth: false; _trs: any[] }
 interface PannelloSpec extends PannelloBase { type: "spec"; k: number; all: boolean; r0: number | null; r1: number | null; level: number; prec: number | null; lock: any; rel: boolean | null }
@@ -61,3 +61,12 @@ type Sessione = Array<Partial<MzFile> & { file: string }> | null;
 
 /** UIP (explore.js, saved in localStorage «qqq.prefs» by settings.js uipSave). */
 interface Preferenze { theme: "auto" | "light" | "dark"; pal: string; merge: boolean; hrPpm: number; hrDec: number; tog: boolean }
+
+/** One row of api/adduct_table (calc-addotti.js, calc-addotti-html.js). */
+type AdRow = { n: string, id: string, pol: number, common: boolean, k: number, z: number, add: string, sub: string, shift: number, mz4: number | null, mz5: number | null, mz1: number | null, nominal: number | null, ppm: number | null, m_if: number | null };
+
+/** The answer of api/adduct_table. */
+type AdTable = { formula: string | null, neutral: number | null, tol: number, rows: AdRow[], best: number | null, diffs: { pair: string, a: string, b: string, pol: number, d: number }[], delta?: { value: number, hits: { a: string, b: string, d: number, err_mda: number }[] } };
+/** «What can this number be?» (calc-qui*.js): the choices and a group of candidates. */
+type CqState = { ppm: string, da: string, pol: 1 | -1 | null };
+type CqGroup = { id: string, n: number, near: number, items: any[], tab?: any, formula?: boolean, obs?: boolean, catalogue?: boolean };

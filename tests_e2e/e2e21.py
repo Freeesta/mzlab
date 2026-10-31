@@ -20,7 +20,7 @@ try:
             assert pos["n"] > 0, pos
             pg.mouse.move(pos["px"], pos["py"]); attendi(pg, f"!E.panels.find(q=>q.id==={sp}).el.querySelector('.lbbox').hidden")
             assert pg.evaluate("id=>!E.panels.find(q=>q.id===id).el.querySelector('.lbbox').hidden", sp)
-            assert "Tasto destro" in pg.evaluate("id=>E.panels.find(q=>q.id===id).tip.textContent", sp)
+            tt = pg.evaluate("id=>E.panels.find(q=>q.id===id).tip.textContent", sp); assert "m/z" in tt and "intensit" in tt and "Tasto destro" not in tt, tt      # the label tooltip is the peak's values; no mouse-hint wording in tooltips
             assert pg.evaluate("id=>E.panels.find(q=>q.id===id).cv.style.cursor", sp) == "pointer"
             pg.mouse.move(pos["px"], pos["py"] + 120); attendi(pg, f"E.panels.find(q=>q.id==={sp}).el.querySelector('.lbbox').hidden")
             assert pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.lbbox').hidden", sp)

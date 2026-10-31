@@ -101,6 +101,8 @@ I18N.add("en", {
   "mappa.show.title": "The map shows the increases (A higher than B, orange) and the decreases (blue); untick to keep only the increases. The 3D always shows both signs",
   "mappa.show.upOnly": "Increases only",
   "mappa.show.neg": "Show decreases too",
+  "mappa.fix": "fixed scale",
+  "mappa.fix.title": "Same colour scale on all the open files: the top is the highest among the files, so samples compare at a glance",
   "mappa.thr": "threshold",
   "mappa.rend.title": "How the map is drawn when zoomed in: Smooth (blobs stay continuous) or Detail (one cell per data value)",
   "mappa.rend.smooth": "Smooth",

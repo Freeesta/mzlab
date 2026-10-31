@@ -14,13 +14,18 @@ for i, n in enumerate(["s_1d", "s_t30", "s_2h", "s_t5"]): write_full(D / f"{n}.m
 for i, n in enumerate(["campione10", "campione2"]): write_full(D / f"{n}.mzML", 0, seed=10 + i)
 r = Run(port=8921, wd="/tmp/wd_ordine"); r2 = None
 NAMES = "Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.children[1].textContent.trim().split(' ')[0])"
+def thaw(pg):
+    """The rows keep the order of arrival until the student commits a value; ticking a box and back is such a commit and changes nothing."""
+    pg.click("#flist input[data-k=use] >> nth=0"); pg.click("#flist input[data-k=use] >> nth=0")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [D / "s_1d.mzML", D / "s_t30.mzML", D / "s_2h.mzML", D / "s_t5.mzML"])
         def order():
+            assert pg.evaluate(NAMES) == ["s_1d.mzML", "s_t30.mzML", "s_2h.mzML", "s_t5.mzML"], pg.evaluate(NAMES)      # order of arrival while nothing is edited
+            thaw(pg)
             assert pg.evaluate(NAMES) == ["s_t5.mzML", "s_t30.mzML", "s_2h.mzML", "s_1d.mzML"], pg.evaluate(NAMES)
-        step("the table is in growing time, units mixed (5 min, 30 min, 2 h, 1 d)", order)
+        step("the rows keep the arrival order, then the table is in growing time, units mixed (5 min, 30 min, 2 h, 1 d)", order)
         def field():
             t = pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>[i.type,i.inputMode,i.value])")
             assert all(x[0] == "text" and x[1] == "decimal" for x in t), t
@@ -53,9 +58,10 @@ try:
         def nolabel():
             import lib; lib.AUTO_TEMPI = False       # the test is about names with no time: nothing is written for it
             stage(pg2, [D / "campione10.mzML", D / "campione2.mzML"])
+            thaw(pg2)
             assert pg2.evaluate(NAMES) == ["campione2.mzML", "campione10.mzML"], pg2.evaluate(NAMES)
-            assert not pg2.is_visible("#tunit"), "no time in the names: no unit"
-        step("names without time: natural alphabetical order and no unit", nolabel)
+            assert pg2.is_visible("#tunit"), "the unit menu is in the header from the first row, even when no name gives a time"
+        step("names without time: natural alphabetical order", nolabel)
 finally:
     r.close(); r2 and r2.close()
 bad = [s for s in steps if s[1] != "ok"]

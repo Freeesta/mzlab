@@ -13,7 +13,7 @@ use crate::mzidx_ordine::ordina_secchi;
 use crate::mzidx_spill::{leggi_parti, Parti, Spill};
 use crate::mzml::Spectrum;
 mod late;
-pub use late::build_mzml_late;
+pub use late::{build_mzml_corriere, build_mzml_late};
 
 pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;
@@ -601,22 +601,31 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
     let mut parti = Parti::new(&counts);
     let mut next = vec![0usize; gruppi.len()];
     loop {
-        let mut best: Option<(usize, (f64, f64, u32))> = None;
+        // the group whose next scan comes first (the first group on a tie); its peaks of that scan follow one another, so they go as a run
+        let mut best: Option<(usize, u32)> = None;
         for (i, g) in gruppi.iter().enumerate() {
             if let Some(p) = g.picco(next[i]) {
-                if best.is_none_or(|(_, b)| p.2 < b.2) {
-                    best = Some((i, p));
+                if best.is_none_or(|(_, b)| p.2 < b) {
+                    best = Some((i, p.2));
                 }
             }
         }
-        let Some((i, (mz, it, pos))) = best else {
+        let Some((i, pos)) = best else {
             break;
         };
-        next[i] += 1;
-        parti.push(sp, mz, it, pos)?;
+        while let Some((mz, it, p)) = gruppi[i].picco(next[i]) {
+            if p != pos {
+                break;
+            }
+            next[i] += 1;
+            parti.push(sp, mz, it, pos)?;
+        }
     }
     Ok(parti)
 }
+
+#[cfg(test)]
+mod tests_avvia;
 
 fn pad(n: u64) -> u64 {
     (ALIGN - n % ALIGN) % ALIGN
@@ -994,26 +1003,6 @@ pub fn build_mzml_spill<R: std::io::Read + Seek>(
     spill: Option<&mut dyn Spill>,
 ) -> Result<Stats> {
     build_mzml_late(table, src, out, budget, spill, None)
-}
-
-/// The same for a Thermo `.raw` file.
-#[cfg(feature = "thermo")]
-pub fn build_raw<R: std::io::Read + Seek>(
-    table: &ScanTable,
-    mut src: R,
-    out: &mut dyn Output,
-    budget: usize,
-) -> Result<Stats> {
-    build(
-        table,
-        &mut |on| {
-            src.seek(SeekFrom::Start(0)).map_err(io_error)?;
-            crate::raw::parse(&mut src, |s| on(s))
-        },
-        out,
-        budget,
-        false,
-    )
 }
 
 /// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::indice(c)` in order (`mzidx_lettore`).

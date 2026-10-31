@@ -1,7 +1,7 @@
 //! What a spectrum header carries beyond the points: the precursor chain (`<precursorList>`) and the cvParams of `<spectrum>` and `<scan>`.
 //! Used by `spectrum_head` and filled by the readers through `SpectrumExtra` (`Lettore::extra_mzml`, `Lettore::extra_scansione`).
 
-use super::{cv, esc, mz_cv, unit_cv_str};
+use super::{cv_into, esc_into, mz_cv_into, unit_cv_str_into};
 
 /// A cvParam with an optional unit: accession, name, value and (accession, name) of the unit (`UO:` units get `unitCvRef="UO"`, the others `MS`).
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -27,31 +27,34 @@ impl CvPar {
         self
     }
 
-    pub(super) fn xml(&self) -> String {
-        let value = esc(&self.value);
+    /// Appends the cvParam; the name and the value come from files and are escaped.
+    pub(super) fn xml_into(&self, s: &mut String) {
+        s.push_str("<cvParam cvRef=\"MS\" accession=\"");
+        s.push_str(&self.accession);
+        s.push_str("\" name=\"");
+        esc_into(s, &self.name);
+        s.push_str("\" value=\"");
+        esc_into(s, &self.value);
         match &self.unit {
-            Some((ua, un)) => unit_cv_str(
-                &self.accession,
-                &esc(&self.name),
-                &value,
-                if ua.starts_with("UO:") { "UO" } else { "MS" },
-                ua,
-                un,
-            ),
-            None => cv(&self.accession, &esc(&self.name), value),
+            Some((ua, un)) => {
+                s.push_str("\" unitCvRef=\"");
+                s.push_str(if ua.starts_with("UO:") { "UO" } else { "MS" });
+                s.push_str("\" unitAccession=\"");
+                s.push_str(ua);
+                s.push_str("\" unitName=\"");
+                s.push_str(un);
+                s.push_str("\"/>");
+            }
+            None => s.push_str("\"/>"),
         }
     }
 }
 
-/// The cvParams of `list` in order (nothing without the `precursori` feature).
-#[cfg(feature = "precursori")]
-pub(super) fn params_xml(list: &[CvPar]) -> String {
-    // about 150 bytes a parameter: one allocation instead of the doublings of a string that starts empty
-    let mut s = String::with_capacity(160 * list.len());
+/// Appends the cvParams of `list` in order.
+pub(super) fn params_into(s: &mut String, list: &[CvPar]) {
     for p in list {
-        s += &p.xml();
+        p.xml_into(s);
     }
-    s
 }
 
 /// One precursor of a spectrum: where the ion was isolated, which ion it was, and how it was fragmented.
@@ -78,15 +81,7 @@ pub struct Precursore {
 
 /// The dissociation term of a method named as the file formats name it (`CID`, `HCD`, ...); `None` for a name without a PSI-MS term.
 pub fn attivazione_da_nome(nome: &str) -> Option<(&'static str, &'static str)> {
-    Some(match nome.trim().to_ascii_uppercase().as_str() {
-        "CID" => ("MS:1000133", "collision-induced dissociation"),
-        "HCD" => ("MS:1000422", "beam-type collision-induced dissociation"),
-        "ETD" => ("MS:1000598", "electron transfer dissociation"),
-        "ECD" => ("MS:1000250", "electron capture dissociation"),
-        "PQD" => ("MS:1000599", "pulsed q dissociation"),
-        "IRMPD" => ("MS:1000262", "infrared multiphoton dissociation"),
-        _ => return None,
-    })
+    crate::attivazioni::da_nome(nome)
 }
 
 /// (name, unit accession, unit name) of the energy terms a precursor can carry; an accession not listed here is not written.
@@ -99,58 +94,57 @@ fn energy_term(accession: &str) -> Option<(&'static str, &'static str, &'static 
     }
 }
 
-/// The `<precursorList>` of `list` (empty for none).
-#[cfg(feature = "precursori")]
-pub(super) fn precursor_list(list: &[Precursore]) -> String {
+/// Appends the `<precursorList>` of `list` (nothing for none).
+pub(super) fn precursor_list_into(s: &mut String, list: &[Precursore]) {
     if list.is_empty() {
-        return String::new();
+        return;
     }
-    let mut s = String::with_capacity(768 * list.len() + 64);
+    s.reserve(768 * list.len() + 64);
     s.push_str("<precursorList count=\"");
-    s += &list.len().to_string();
-    s += "\">";
+    s.push_str(&list.len().to_string());
+    s.push_str("\">");
     for p in list {
-        s += "<precursor";
+        s.push_str("<precursor");
         if let Some(r) = &p.spectrum_ref {
-            s += " spectrumRef=\"";
-            s += &esc(r);
-            s += "\"";
+            s.push_str(" spectrumRef=\"");
+            esc_into(s, r);
+            s.push('"');
         }
-        s += ">";
+        s.push('>');
         if p.iso_target.is_some() || p.iso_lower.is_some() || p.iso_upper.is_some() {
-            s += "<isolationWindow>";
+            s.push_str("<isolationWindow>");
             if let Some(v) = p.iso_target {
-                s += &mz_cv("MS:1000827", "isolation window target m/z", v);
+                mz_cv_into(s, "MS:1000827", "isolation window target m/z", v);
             }
             if let Some(v) = p.iso_lower {
-                s += &mz_cv("MS:1000828", "isolation window lower offset", v);
+                mz_cv_into(s, "MS:1000828", "isolation window lower offset", v);
             }
             if let Some(v) = p.iso_upper {
-                s += &mz_cv("MS:1000829", "isolation window upper offset", v);
+                mz_cv_into(s, "MS:1000829", "isolation window upper offset", v);
             }
-            s += "</isolationWindow>";
+            s.push_str("</isolationWindow>");
         }
         if let Some(mz) = p.selected_mz {
-            s += "<selectedIonList count=\"1\"><selectedIon>";
-            s += &mz_cv("MS:1000744", "selected ion m/z", mz);
+            s.push_str("<selectedIonList count=\"1\"><selectedIon>");
+            mz_cv_into(s, "MS:1000744", "selected ion m/z", mz);
             if let Some(z) = p.charge {
-                s += &cv("MS:1000041", "charge state", z.to_string());
+                cv_into(s, "MS:1000041", "charge state", z);
             }
             if let Some(i) = p.intensity {
-                s += &cv("MS:1000042", "peak intensity", i);
+                cv_into(s, "MS:1000042", "peak intensity", i);
             }
-            s += "</selectedIon></selectedIonList>";
+            s.push_str("</selectedIon></selectedIonList>");
         }
-        s += "<activation>";
+        s.push_str("<activation>");
         for (a, n) in &p.activation {
-            s += &cv(a, n, "");
+            cv_into(s, a, n, "");
         }
         if let Some((a, v)) = &p.energy {
             if let Some((n, ua, un)) = energy_term(a) {
-                s += &unit_cv_str(a, n, &v.to_string(), "UO", ua, un);
+                unit_cv_str_into(s, a, n, &v.to_string(), "UO", ua, un);
             }
         }
-        s += "</activation></precursor>";
+        s.push_str("</activation></precursor>");
     }
-    s + "</precursorList>"
+    s.push_str("</precursorList>");
 }

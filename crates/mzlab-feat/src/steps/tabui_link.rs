@@ -6,7 +6,7 @@ use mzlab_core::step::{
 };
 
 use super::tabui::{
-    algorithm, hr, tabui_step, INTERP_CEILING, INTERP_WASM, TABLE_CEILING, TABLE_WASM,
+    algorithm, any_resolution, tabui_step, INTERP_CEILING, INTERP_WASM, TABLE_CEILING, TABLE_WASM,
 };
 
 /// `tp.link` (version 2): the series searched for the hypotheses, the view of the products (`tp/1`) and the interpretation of each row (`interp/1`):
@@ -16,11 +16,11 @@ pub(super) fn link() -> Step {
     Step {
         version: 2,
         ins: vec![
-            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(hr()),
+            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(any_resolution()),
             Port::new("samples", DataType::Samples, "Roles and times of the files (treated, t0, blanks, infusion)"),
             Port::new("parent", DataType::Structure, "Parent compound: formula or SMILES, with its retention time"),
             Port::new("index", DataType::Mzidx, "Scan index of each file of the series, in the order of the table").many().requires(Facets {
-                resolution: vec!["hr"],
+                resolution: vec!["hr", "lr"],
                 ms_levels: vec![2],
                 ..Facets::default()
             }),
@@ -112,7 +112,8 @@ fn isomer_traces() -> Algorithm {
 pub(super) fn position() -> Step {
     Step {
         ins: vec![
-            Port::new("tp", DataType::Tp, "Product row with its consensus MS2").requires(hr()),
+            // HR only: the fragments are matched at 5 ppm (`interp::sito`), so unit-resolution data would find no site instead of being refused
+            Port::new("tp", DataType::Tp, "Product row with its consensus MS2").requires(Facets { resolution: vec!["hr"], ..Facets::default() }),
             Port::new("parent", DataType::Structure, "Parent compound with its structure"),
         ],
         outs: vec![Port::new("sites", DataType::Transform, "Classes of sites with their support and the declared confidence")],
@@ -206,8 +207,8 @@ fn cleavage_likelihood() -> Algorithm {
 pub(super) fn network() -> Step {
     Step {
         ins: vec![
-            Port::new("tp", DataType::Tp, "Rows with their modification and the MS2 compared with the parent (interp/1)").requires(hr()),
-            Port::new("table", DataType::Table, "Feature table with the view of the products (tp/1)").requires(hr()).accepts(&[DataType::Tp]),
+            Port::new("tp", DataType::Tp, "Rows with their modification and the MS2 compared with the parent (interp/1)").requires(any_resolution()),
+            Port::new("table", DataType::Table, "Feature table with the view of the products (tp/1)").requires(any_resolution()).accepts(&[DataType::Tp]),
             Port {
                 optional: true,
                 ..Port::new("samples", DataType::Samples, "Roles and times of the files (campioni/2), for the time course")
@@ -250,7 +251,7 @@ fn rule_arcs() -> Algorithm {
 pub(super) fn review() -> Step {
     Step {
         ins: vec![
-            Port::new("tp", DataType::Tp, "Rows with the level the interpretation proposes (interp/1)").requires(hr()),
+            Port::new("tp", DataType::Tp, "Rows with the level the interpretation proposes (interp/1)").requires(any_resolution()),
             Port::new("decisions", DataType::Transform, "The decisions of the chemist by row (tpdec/1): level and note, kept with the plan"),
         ],
         outs: vec![Port::new("review", DataType::Transform, "Each decision with its row, the proposed level and whether the rules of the levels allow it")],

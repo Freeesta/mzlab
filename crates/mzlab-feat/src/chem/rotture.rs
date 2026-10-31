@@ -4,13 +4,14 @@
 //! `msngrafo` (`rotture_testo`, the same bytes); the types of the answer are in `mzlab_core::msngrafo`. Hypotheses, never identifications.
 
 use super::grafo::Mol;
+use crate::sortc::SortC;
 use mzlab_core::elements::{self, Formula};
 use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{
     con_rotture, Grafo, Ipotesi, RotturaArco, RotturaNodo, RotturaSpettro, Rotture,
 };
 
-const ION_H: f64 = 1.00727646677;
+const ION_H: f64 = mzlab_core::elements::PROTON;
 const MASSA_H: f64 = 1.00782503207;
 /// Single bonds cut at most (as the one-bond cleavages of `strutture`).
 const MAX_LEGAMI: usize = 400;
@@ -99,7 +100,7 @@ pub fn rotture(g: &Grafo, smiles: &str, p: Parametri) -> Result<Rotture, String>
         enumera(g, &m, &mut out, &mut ipotesi, p);
     }
     for (k, v) in ipotesi.iter_mut().enumerate() {
-        v.sort_by(|a, b| {
+        v.sortc_by(|a, b| {
             a.ppm
                 .abs()
                 .total_cmp(&b.ppm.abs())
@@ -255,7 +256,7 @@ fn enumera(g: &Grafo, m: &Mol, out: &mut Rotture, ipotesi: &mut [Vec<Ipotesi>], 
         .collect();
     cand.truncate(MAX_LEGAMI);
     let mut ordine: Vec<usize> = (0..g.nodi.len()).collect();
-    ordine.sort_by(|&a, &b| g.nodi[a].mz.total_cmp(&g.nodi[b].mz));
+    ordine.sortc_by(|&a, &b| g.nodi[a].mz.total_cmp(&g.nodi[b].mz));
     let ctx = Ctx {
         g,
         m,

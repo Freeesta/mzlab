@@ -4,6 +4,10 @@
 // The rules and the thresholds are in the data file livelli-1.js (format «livelli/1»); here only the cascade that reads them. Always «candidate, level N, evidence», never «it is X».
 // Every result has two distinct fields: `proposed` (what the programme computes) and `decided` (empty until the chemist decides; 2b can only be written there).
 // The user's thresholds are in localStorage `qqq.lib.soglie` and in the workflow file. Pure functions: no DOM, so that node can test them (tests/test_livelli.py).
+// a standard hit with only a cosine is read on the same threshold and its gate names the score
+const stdGate = (g, std) => (g.id === "stdscore" && std.ent == null ? { ...g, id: "stdscore_cos" } : g);
+// 3a from the listed fragments of a suspect of screen.suspects found in the MS2: never in a capped profile (unit resolution); null when the evidence is short
+const suspectFragments = (sp, P, TT) => (sp && !P.tetto && sp.matched > 0 && sp.matched >= (TT.sospetto_frammenti_min ?? 2) ? sp : null);
 const LIVELLI = (() => {
   const D = (typeof window !== "undefined" ? window : globalThis).LIVELLI_DATI;
   const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("lib.soglie") : "qqq.lib.soglie", ORDER = D.livelli;
@@ -40,7 +44,7 @@ const LIVELLI = (() => {
 
   // ------------------------------------------------------------ the gates
   const num = (v, d) => (v == null || !isFinite(v) ? "–" : (typeof I18N !== "undefined" ? I18N.fix(v, d) : Number(v).toFixed(d)));
-  const dec = g => (g.id === "score" || g.id === "distinct" || g.id === "stdscore" ? 2 : g.unita === "ppm" || g.unita === "min" ? 1 : 0);
+  const dec = g => (g.id === "score" || g.id === "distinct" || (g.id === "stdscore" || g.id === "stdscore_cos") ? 2 : g.unita === "ppm" || g.unita === "min" ? 1 : 0);
   function evalGate(g, vals, T) {
     let thr = T[g.soglia]; const r = g.ridotta;
     if (r && vals[r.se_campo] != null && vals[r.se_campo] < r.minore_di) thr = T[r.soglia];
@@ -60,8 +64,7 @@ const LIVELLI = (() => {
     return o ? list[0][field] - o[field] : Infinity;
   }
 
-  /** input: { cands: [{name, ik, ent, cos, shared, dprec (ppm), nlib, lib, q (decoy q-value, optional)}], analogs: [{name, mcos, matched, delta}], nScans, std: {drt, ent, dprec, name} | null, formulaUnique }
-   *  → { proposed, decided: null, why, best, gates, lines, decisive, std } */
+  /** input: { cands: [{name, ik, ent, cos, shared, dprec (ppm), nlib, lib, q}], analogs: [{name, mcos, matched, delta}], nScans, std: {drt, ent, cos, dprec, name} | null, suspect: {name, matched} | null, formulaUnique } → { proposed, decided: null, why, best, gates, lines, decisive, std } */
   function assess(input, name, T) {
     const P = profile(name), TT = T || thresholds(name), inp = input || {};
     const sf = (P.cancelli.find(g => g.id === "score") || { campo: "ent" }).campo, list = ranked(inp.cands, sf), best = list[0] || null;
@@ -69,8 +72,8 @@ const LIVELLI = (() => {
     const fin = (lv, why, decisive) => { res.proposed = lv; res.why = why; res.decisive = decisive; return res; };
     const nm = c => c.name || "?", lb = c => (c.lib ? " " + c.lib : "");
     if (inp.std && P.standard.length) {                // level 1 only with the standard marked by the user
-      const vals = { drt: inp.std.drt, ent: inp.std.ent, ppm: inp.std.dprec };
-      res.std = P.standard.map(g => evalGate(g, vals, TT));
+      const vals = { drt: inp.std.drt, ent: inp.std.ent ?? inp.std.cos, ppm: inp.std.dprec };
+      res.std = P.standard.map(g => evalGate(stdGate(g, inp.std), vals, TT));
       if (res.std.every(x => x.ok)) { res.lines = res.std.map(x => x.txt); return fin("1", "standard", t("lv.dec.1", { name: inp.std.name || "" })); }
     }
     if (best) {
@@ -82,6 +85,7 @@ const LIVELLI = (() => {
       if (!srcBad.length) return fin("3a", "confirm", t("lv.dec.3conf", { name: nm(best), lib: lb(best), gates: fl(conf) }));
       if (P.provvisorio && best[P.provvisorio.campo] >= TT[P.provvisorio.soglia]) return fin("3a", "provvisorio", t("lv.dec.3prov", { name: nm(best), lib: lb(best), gates: fl(srcBad) }));
     }
+    const sp = suspectFragments(inp.suspect, P, TT); if (sp) { res.suspect = sp; return fin("3a", "suspect_fragments", t("lv.dec.3susp", { name: nm(sp), n: sp.matched })); }
     const an = ranked(inp.analogs, "mcos")[0];
     if (an && TT.analogo_mcos_min != null && an.mcos >= TT.analogo_mcos_min) {
       res.analog = an; return fin("3b", "analogo", t("lv.dec.3an", { name: nm(an), cos: num(an.mcos, 2), delta: (an.delta >= 0 ? "+" : "−") + num(Math.abs(an.delta), 4) }));

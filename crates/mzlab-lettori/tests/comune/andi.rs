@@ -222,6 +222,8 @@ pub struct Corsa {
     pub tipo_mz: u32,
     pub tipo_it: u32,
     pub scala_mz: Option<f64>,
+    /// `(scale_factor, add_offset)` stored on `scan_acquisition_time`; the file holds `(t - offset) / factor`.
+    pub scala_tempo: Option<(f64, f64)>,
     pub sim: bool,
     pub profilo: bool,
     pub polarita: &'static str,
@@ -232,6 +234,7 @@ pub const PIATTA: Corsa = Corsa {
     tipo_mz: 5,
     tipo_it: 5,
     scala_mz: None,
+    scala_tempo: None,
     sim: false,
     profilo: false,
     polarita: "Positive Polarity",
@@ -251,7 +254,7 @@ pub fn punti(k: usize) -> Vec<(f64, f64)> {
 
 pub const SCANSIONI: usize = 6;
 
-fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
+pub fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
     vec![
         ("experiment_title".to_string(), t("run one")),
         (
@@ -311,12 +314,22 @@ pub fn andi_ms(c: &Corsa) -> Vec<u8> {
     let mut vi = var("intensity_values", &[0], c.tipo_it, it.clone());
     vi.att
         .push(("units".into(), t("Arbitrary Intensity Units")));
+    let mut tempo = per_scan(
+        "scan_acquisition_time",
+        6,
+        (0..SCANSIONI)
+            .map(|k| {
+                let t = 60.0 + 1.5 * k as f64;
+                c.scala_tempo.map_or(t, |(f, o)| (t - o) / f)
+            })
+            .collect(),
+    );
+    if let Some((f, o)) = c.scala_tempo {
+        tempo.att.push(("scale_factor".into(), At::N(6, vec![f])));
+        tempo.att.push(("add_offset".into(), At::N(6, vec![o])));
+    }
     let vars = vec![
-        per_scan(
-            "scan_acquisition_time",
-            6,
-            (0..SCANSIONI).map(|k| 60.0 + 1.5 * k as f64).collect(),
-        ),
+        tempo,
         per_scan(
             "total_intensity",
             6,

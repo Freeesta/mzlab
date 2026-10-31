@@ -12,7 +12,7 @@ use crate::sortc;
 const LR_TOL: f64 = 0.5;
 /// Most contaminants listed (the list holds over a thousand entries).
 const MAX_CONT: usize = 8;
-const ELECTRON: f64 = 0.000548579909;
+const ELECTRON: f64 = crate::elements::ELECTRON;
 
 #[derive(Clone, Copy, PartialEq)]
 enum Kind {

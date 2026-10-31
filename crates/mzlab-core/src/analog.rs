@@ -14,7 +14,8 @@ fn to_i64(x: f64) -> i64 {
     x as i64
 }
 
-const TO_BAR: [(&str, f64); 9] = [
+/// Bar in one unit of a pressure, by the exact name the file gives (compared in lower case).
+const TO_BAR: [(&str, f64); 12] = [
     ("megapascal", 10.0),
     ("mpa", 10.0),
     ("kilopascal", 0.01),
@@ -22,22 +23,19 @@ const TO_BAR: [(&str, f64); 9] = [
     ("pascal", 1e-5),
     ("pa", 1e-5),
     ("psi", 0.0689476),
-    ("pound", 0.0689476),
+    ("pound per square inch", 0.0689476),
+    ("pounds per square inch", 0.0689476),
+    ("millibar", 0.001),
+    ("mbar", 0.001),
     ("bar", 1.0),
 ];
-/// No HPLC pump reaches this: values above it come from a unit written ten times too small.
-const BAR_MAX: f64 = 2000.0;
 
-/// (values in bar, true when the unit had to be corrected by a factor of ten).
-pub fn pressure_to_bar(y: &[f64], unit: &str) -> (Vec<f64>, bool) {
+/// The values in bar when the file declares a pressure unit; `None` when it declares none or another one (e.g. `number of detector counts`, which only says
+/// "a number"): the scale is then unknown and the values are shown as they are.
+pub fn pressure_to_bar(y: &[f64], unit: &str) -> Option<Vec<f64>> {
     let u = unit.trim().to_lowercase();
-    let f = TO_BAR.iter().find(|(n, _)| *n == u).or_else(|| TO_BAR.iter().find(|(n, _)| u.contains(n))).map_or(1.0, |x| x.1);
-    let out: Vec<f64> = y.iter().map(|v| v * f).collect();
-    let top = out.iter().filter(|v| !v.is_nan()).map(|v| v.abs()).fold(0.0, f64::max);
-    if top > BAR_MAX {
-        return (out.iter().map(|v| v / 10.0).collect(), true);
-    }
-    (out, false)
+    let f = TO_BAR.iter().find(|(n, _)| *n == u)?.1;
+    Some(y.iter().map(|v| v * f).collect())
 }
 
 /// (t, y) with at most about 2 n points: per interval of equal width the lowest and the highest value, in time order.
@@ -80,20 +78,17 @@ pub fn reduce_minmax(t: &[f64], y: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
     (tt, yy)
 }
 
-/// `{"i", "kind", "id", "unit", "t", "y", "unit_note"?}` of one analog trace, reduced for drawing.
+/// `{"i", "kind", "id", "unit", "t", "y"}` of one analog trace, reduced for drawing; a pressure with a declared pressure unit is in bar, otherwise as the file has it.
 pub fn analog_json(i: i64, kind: &str, id: &str, unit: &str, t: &[f64], y: &[f64], n: usize) -> String {
-    let (mut y, mut unit, mut note) = (y.to_vec(), unit.to_string(), None);
+    let (mut y, mut unit) = (y.to_vec(), unit.to_string());
     if kind == "pressure" {
-        let (v, fixed) = pressure_to_bar(&y, &unit);
-        note = fixed.then(|| std::mem::take(&mut unit));
-        (y, unit) = (v, "bar".into());
+        if let Some(v) = pressure_to_bar(&y, &unit) {
+            (y, unit) = (v, "bar".into());
+        }
     }
     let (t, y) = reduce_minmax(t, &y, n);
     let mut o = Out::default();
     o.raw("{\"i\":").int(i).raw(",\"kind\":").str(kind).raw(",\"id\":").str(id).raw(",\"unit\":").str(&unit).raw(",\"t\":").rounded(&t, 4).raw(",\"y\":").rounded(&y, 3);
-    if let Some(u) = note {
-        o.raw(",\"unit_note\":{\"key\":\"analog.unit.tenfold\",\"params\":{\"unit\":").str(&u).raw("}}");
-    }
     o.raw("}");
     o.0
 }
@@ -120,15 +115,7 @@ fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
 }
 
 fn median(v: &[f64]) -> f64 {
-    let mut s = v.to_vec();
-    crate::sortc::by(&mut s, f64::total_cmp);
-    let n = s.len();
-    let at = |i: usize| s.get(i).copied().unwrap_or(f64::NAN);
-    if n % 2 == 1 {
-        at(n / 2)
-    } else {
-        (at((n / 2).saturating_sub(1)) + at(n / 2)) / 2.0
-    }
+    crate::signal::median_or(v, f64::NAN)
 }
 
 /// `np.interp(np.arange(t0, t1, dt), t, y)`.

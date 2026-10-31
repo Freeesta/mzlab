@@ -49,11 +49,13 @@ fn corse(it: impl Iterator<Item = Option<char>>, out: &mut Vec<String>) {
         match c {
             Some(c) => cur.push(c),
             None => {
-                if cur.trim().len() >= 4
-                    && out.len() < TESTI_MAX
-                    && !out.iter().any(|o| *o == cur.trim())
-                {
-                    out.push(cur.trim().to_string());
+                let t = cur.trim();
+                // at most `TESTI_MAX` strings, so a linear look-up is a few dozen comparisons
+                if t.len() >= 4 && !out.iter().any(|o| o == t) {
+                    out.push(t.to_string());
+                    if out.len() >= TESTI_MAX {
+                        return;
+                    }
                 }
                 cur.clear();
             }
@@ -67,6 +69,9 @@ fn testi(b: &[u8]) -> Vec<String> {
     let mut out = Vec::new();
     corse(b.iter().map(|&c| ascii(c)), &mut out);
     for da in [0, 1] {
+        if out.len() >= TESTI_MAX {
+            break;
+        }
         let pari = b.get(da..).unwrap_or(&[]).chunks_exact(2);
         corse(
             pari.map(|p| if p[1] == 0 { ascii(p[0]) } else { None }),

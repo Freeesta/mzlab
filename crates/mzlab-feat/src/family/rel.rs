@@ -4,48 +4,24 @@
 //! Y is an adduct of X, Y is the dimer of X, or X is an in-source fragment of Y (Y minus a neutral loss). Several readings can fit one step
 //! (+17.0265 is `[M+NH4]+` and also the loss of NH3; +46.0055 is formate and also the loss of HCOOH): all are returned.
 
-use mzlab_core::elements::{mass, mass_of, parse_formula, ELECTRON};
+use crate::legacy::edge::{Iimn, ISOTOPES};
 
 impl Tables {
     pub fn new(pol: i8) -> Self {
-        let m = |e: &str| mass_of(e).expect("fixed element");
-        let proton = m("H") - ELECTRON;
-        let adducts = if pol >= 0 {
-            vec![
-                ("[M+Na]+".to_string(), m("Na") - ELECTRON - proton),
-                ("[M+K]+".to_string(), m("K") - ELECTRON - proton),
-                (
-                    NH4_NAME.to_string(),
-                    m("N") + 4.0 * m("H") - ELECTRON - proton,
-                ),
-                ("[M+H+ACN]+".to_string(), neutral("C2H3N")),
-            ]
-        } else {
-            vec![
-                (FORMATE_NAMES[0].to_string(), neutral("CH2O2")),
-                ("[M+Cl]-".to_string(), m("Cl") + ELECTRON + proton),
-                ("[M+Na-2H]-".to_string(), m("Na") - ELECTRON - proton),
-            ]
-        };
-        let losses = LOSSES.iter().map(|n| (n.to_string(), neutral(n))).collect();
+        let mut t = Iimn::new();
+        let positive = pol >= 0;
         Tables {
-            pol: if pol >= 0 { 1 } else { -1 },
-            adducts,
-            losses,
-            proton,
+            pol: if positive { 1 } else { -1 },
+            adducts: std::mem::take(&mut t.adducts[usize::from(!positive)]),
+            losses: std::mem::take(&mut t.losses),
+            proton: t.proton,
         }
     }
 
     /// Positive steps (Y minus X) that an adduct or a loss can give, with their names, in the order of the tables.
     pub fn steps(&self) -> impl Iterator<Item = (&str, RKind, f64)> + '_ {
-        let a = self
-            .adducts
-            .iter()
-            .map(|(n, d)| (n.as_str(), RKind::Adduct, *d));
-        let l = self
-            .losses
-            .iter()
-            .map(|(n, d)| (n.as_str(), RKind::Loss, *d));
+        let a = self.adducts.iter().map(|(n, d)| (*n, RKind::Adduct, *d));
+        let l = self.losses.iter().map(|(n, d)| (*n, RKind::Loss, *d));
         a.chain(l)
     }
 
@@ -128,14 +104,6 @@ impl Tables {
     }
 }
 
-/// Isotope steps of `iimn.ISOTOPES` (only read by `readings`; the isotopologues of the file come from `isotopes`).
-const ISOTOPES: [(&str, f64); 3] = [("13C", 1.003355), ("34S/13C2", 1.99580), ("13C2", 2.00671)];
-/// `ionfamily.NEUTRAL_LOSSES`, then the alkene losses of `iimn.EXTRA_LOSSES` that are not already there, in the order of `iimn.LOSSES`.
-const LOSSES: [&str; 23] = [
-    "H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF",
-    "HCl", "HBr", "SO2", "SO3", "H2S", "CH3", "NO2", "C6H6", "C4H8", "C4H9N", "C4H8O",
-];
-
 pub const NH3_NAME: &str = "NH3";
 pub const NH4_NAME: &str = "[M+NH4]+";
 pub const FORMATE_NAMES: [&str; 2] = ["[M+FA-H]-", "HCOOH"];
@@ -161,13 +129,9 @@ pub struct Reading {
 pub struct Tables {
     /// +1 or -1: sign of the proton in the base ion.
     pub pol: i8,
-    adducts: Vec<(String, f64)>,
-    losses: Vec<(String, f64)>,
+    adducts: Vec<(&'static str, f64)>,
+    losses: Vec<(&'static str, f64)>,
     pub proton: f64,
-}
-
-fn neutral(f: &str) -> f64 {
-    mass(&parse_formula(f).expect("fixed formula"))
 }
 
 #[cfg(test)]

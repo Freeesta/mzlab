@@ -260,7 +260,9 @@ impl RawFileInfoPreamble {
             // The entries of the controllers beyond the second (12 bytes each: address and two words) follow the second entry's two words, inside the unknown area (744 bytes).
             let mut run_header_addrs = vec![run_header_addr, run_header_addr_2];
             r.skip(8)?;
-            let extra = (controller_count as usize).saturating_sub(2).min(744 / 12);
+            let extra = (controller_count as usize)
+                .saturating_sub(2)
+                .min((744 - 8) / 12);
             for _ in 0..extra {
                 run_header_addrs.push(r.read_u32()? as u64);
                 let _unk_a = r.read_u32()?;

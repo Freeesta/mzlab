@@ -13,7 +13,7 @@ pub fn no_scans(path: &str, q: &Query) -> Option<String> {
             q.level()
         ),
         "/api/spectrum" => "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}".to_string(),
-        "/api/dda" => "{\"sid\":[],\"rt\":[],\"no\":[],\"prec\":[],\"tgt\":[],\"parent\":[],\"prt\":[],\"lo\":[],\"hi\":[],\"act\":[],\"ce\":[],\"pint\":[],\"ms1\":{\"sid\":[],\"rt\":[]},\"nce\":false}".to_string(),
+        "/api/dda" => "{\"sid\":[],\"rt\":[],\"no\":[],\"prec\":[],\"tgt\":[],\"parent\":[],\"prt\":[],\"lo\":[],\"hi\":[],\"lev\":[],\"z\":[],\"act\":[],\"ce\":[],\"pint\":[],\"ms1\":{\"sid\":[],\"rt\":[]},\"nce\":false}".to_string(),
         _ => return None,
     })
 }

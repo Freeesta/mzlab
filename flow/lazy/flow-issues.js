@@ -46,6 +46,8 @@
         n ? el("button", { type: "button", class: "fl-b", onclick: () => show(n) }, el("span", { text: "Show" })) : null));
     }
     box.append(ul);
+    const det = F.findStep(S.plan, "features.detect");
+    if (det && det.preset === "lr") box.append(el("p", { class: "fl-note", text: F.UNIT_NOTE }));
     return box;
   };
 })();

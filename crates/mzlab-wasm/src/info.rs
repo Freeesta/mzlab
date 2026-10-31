@@ -15,6 +15,19 @@ impl Engine {
         let head = m.info_head().map_err(|e| error_json(&e))?;
         mzlab_core::fileroutes::fileinfo(r, &mut m, name, &head).map_err(|e| error_json(&e))
     }
+
+    /// `api/canali` of the file at `slot`: the channels of its scans and of the SRM/SIC chromatograms of its mzML (`read`, `size` bytes), as JSON.
+    pub fn canali(&mut self, slot: u32, name: &str, size: f64, read: Function) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Ok(String::new());
+        };
+        let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
+        let mut m = self.nat.mzml(slot, read, size)?;
+        let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
+        let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true).map_err(|e| error_json(&e))?;
+        r.pon_cromatogrammi(name, &chroms, &facts);
+        Ok(r.canali().json())
+    }
 }
 
 /// Bytes of the linear memory of this WASM instance (0 off wasm32): the CI guards its peak per phase (`tests/test_guardie_memoria.py`).

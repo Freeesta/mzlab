@@ -335,11 +335,6 @@ pub fn write_kmd_with_ids(r: &KmdOut, ids: &[Option<Value>]) -> String {
     o.0
 }
 
-/// JSON output of `KmdOut` with default integer ids.
-pub fn write_kmd(r: &KmdOut) -> String {
-    write_kmd_with_ids(r, &[])
-}
-
 /// Parses the JSON body of a Kendrick request: `{"features": [{id, mz, rt}], unit, tol_mda/tolMDa, min_members/minMembers}`.
 pub fn kendrick_json(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;

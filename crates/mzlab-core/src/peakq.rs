@@ -106,6 +106,9 @@ pub fn quality(rt: &[f64], y: &[f64], lo: usize, hi: usize, noise: f64) -> Quali
     Quality { gaussian, asymmetry, noise_score }
 }
 
+/// Half width (points) of the window that measures the scatter of the raw points around a maximum.
+const LOCAL_NOISE_HALF: usize = 4;
+
 #[derive(Debug, Clone, Copy)]
 pub struct ProminenceParams {
     /// A peak must stand out of its valleys by at least `snr` times the noise.
@@ -117,11 +120,14 @@ pub struct ProminenceParams {
     pub frac: f64,
     /// Window of the light Savitzky-Golay smoothing used to find the maxima (odd).
     pub smooth: usize,
+    /// ... and by at least this many times the scatter of the raw points around the smoothed ones near the maximum (counting noise grows
+    /// with the height), so that a ripple on the top or the shoulder of one peak is not a peak of its own; 0 = off.
+    pub local_snr: f64,
 }
 
 impl Default for ProminenceParams {
     fn default() -> Self {
-        ProminenceParams { snr: 5.0, rel_prominence: 0.01, min_scans: 3, frac: 0.05, smooth: 5 }
+        ProminenceParams { snr: 5.0, rel_prominence: 0.01, min_scans: 3, frac: 0.05, smooth: 5, local_snr: 0.0 }
     }
 }
 
@@ -169,7 +175,16 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
         // lowest point between the apex and the next higher point on each side (or the trace end)
         let (left, rm) = (left_min[j], right_min[j]);
         let prom = ys[j] - left.max(rm);
-        if prom >= need {
+        if prom < need {
+            continue;
+        }
+        if p.local_snr <= 0.0 {
+            cand.push((j, prom));
+            continue;
+        }
+        let (a, b) = (j.saturating_sub(LOCAL_NOISE_HALF), (j + LOCAL_NOISE_HALF + 1).min(n));
+        let local = ((a..b).map(|i| (y[i] - ys[i]).powi(2)).sum::<f64>() / (b - a) as f64).sqrt();
+        if prom >= p.local_snr * local {
             cand.push((j, prom));
         }
     }
@@ -196,9 +211,9 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
         if hi2 - lo2 + 1 < p.min_scans {
             continue;
         }
-        // a limit shared with a neighbour sits on a valley, not on the baseline: the baseline there is a vertical drop to the level of the other limit
+        // a limit that IS the valley shared with a neighbour (not merely next to one) sits on a valley, not on the baseline: the baseline there is a vertical drop to the level of the other limit
         let (mut yl, mut yh) = (y[lo2], y[hi2]);
-        match (left_stop.is_some(), right_stop.is_some()) {
+        match (left_stop == Some(lo2), right_stop == Some(hi2)) {
             (true, false) => yl = yh,
             (false, true) => yh = yl,
             (true, true) => {
@@ -214,7 +229,7 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
         let area = (1..seg.len()).map(|i| (seg[i] + seg[i - 1]) / 2.0 * (rt[lo2 + i] - rt[lo2 + i - 1])).sum();
         out.push(Peak { apex_i: apex, height: parabola_height(rt, &ys, apex), area, lo: lo2, hi: hi2, n_scans: hi2 - lo2 + 1, snr: prom / noise });
     }
-    crate::sortc::by(&mut out, |a, b| b.height.partial_cmp(&a.height).unwrap_or(std::cmp::Ordering::Equal));
+    crate::sortc::by(&mut out, |a, b| crate::sortc::desc_nan_last(a.height, b.height));
     out
 }
 

@@ -164,7 +164,7 @@ fn subtract_unit(mz: &[f64], y: &[f64], rmz: &[f64], ry: &[f64]) -> (Vec<f64>, V
         let (ma, ya) = a.get(&c).copied().unzip();
         let (mb, yb) = b.get(&c).copied().unzip();
         let (va, vb) = (ya.unwrap_or(0.0), yb.unwrap_or(0.0));
-        om.push(if ma.is_some() && (mb.is_none() || va >= vb) { ma.unwrap() } else { mb.unwrap() });
+        om.push(ma.filter(|_| mb.is_none() || va >= vb).unwrap_or_else(|| mb.unwrap()));
         oy.push(va - vb);
     }
     (om, oy)

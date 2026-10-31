@@ -2,6 +2,8 @@
 #![allow(dead_code)]
 use mzlab_lib::spec::{Meta, Spectrum};
 
+pub mod flash_pairs;
+
 pub struct Rng(pub u64);
 impl Rng {
     pub fn next(&mut self) -> u64 {
@@ -57,13 +59,15 @@ pub fn synth(r: &mut Rng, i: usize, n: usize) -> Spectrum {
             smiles: "C".into(),
             accession: format!("SYN{i:06}"),
             authors: "A. Author".into(),
-            license: if i % 3 == 0 {
+            license: if i.is_multiple_of(3) {
                 "CC BY".into()
             } else {
                 "CC0".into()
             },
         },
         rt: None,
+        ri: None,
+        ei: false,
     }
 }
 

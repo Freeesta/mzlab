@@ -2,7 +2,7 @@
 //! then the noise (< 1% of the highest peak), then peaks closer than 0.05 Da are merged (the most intense one takes the neighbours: m/z is the
 //! intensity-weighted mean, intensity the sum), then at most `max_peaks` are kept. Intensities are not normalised here.
 
-use crate::sortutil;
+use mzlab_picchi::sortc;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CleanOpts {
@@ -46,16 +46,16 @@ pub fn clean(prec: f64, mz: &[f64], it: &[f64], o: &CleanOpts) -> (Vec<f64>, Vec
         })
         .map(|(m, i)| (*m, *i))
         .collect();
-    sortutil::sort_by(&mut p, |a, b| a.0.total_cmp(&b.0));
+    sortc::by(&mut p, |a, b| a.0.total_cmp(&b.0));
     let mx = p.iter().fold(0.0f64, |a, x| a.max(x.1));
     p.retain(|x| x.1 >= o.noise * mx);
     if o.centroid_da > 0.0 {
         p = centroid(&p, o.centroid_da);
     }
     if p.len() > o.max_peaks {
-        sortutil::sort_by(&mut p, |a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+        sortc::by(&mut p, |a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
         p.truncate(o.max_peaks);
-        sortutil::sort_by(&mut p, |a, b| a.0.total_cmp(&b.0));
+        sortc::by(&mut p, |a, b| a.0.total_cmp(&b.0));
     }
     p.into_iter().unzip()
 }
@@ -64,7 +64,7 @@ pub fn clean(prec: f64, mz: &[f64], it: &[f64], o: &CleanOpts) -> (Vec<f64>, Vec
 fn centroid(p: &[(f64, f64)], tol: f64) -> Vec<(f64, f64)> {
     let n = p.len();
     let mut order: Vec<usize> = (0..n).collect();
-    sortutil::sort_by(&mut order, |&a, &b| {
+    sortc::by(&mut order, |&a, &b| {
         p[b].1.total_cmp(&p[a].1).then(a.cmp(&b))
     });
     let mut used = vec![false; n];
@@ -95,7 +95,7 @@ fn centroid(p: &[(f64, f64)], tol: f64) -> Vec<(f64, f64)> {
         }
         out.push((wm / sum, sum));
     }
-    sortutil::sort_by(&mut out, |a, b| a.0.total_cmp(&b.0));
+    sortc::by(&mut out, |a, b| a.0.total_cmp(&b.0));
     out
 }
 

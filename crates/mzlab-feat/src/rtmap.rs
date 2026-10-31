@@ -42,18 +42,7 @@ pub struct RtMap {
 
 /// `np.interp`: clamped outside the grid.
 fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
-    let n = xp.len();
-    if x <= xp[0] {
-        return fp[0];
-    }
-    if x >= xp[n - 1] {
-        return fp[n - 1];
-    }
-    let j = xp.partition_point(|&v| v <= x) - 1;
-    if x == xp[j] {
-        return fp[j];
-    }
-    (fp[j + 1] - fp[j]) / (xp[j + 1] - xp[j]) * (x - xp[j]) + fp[j]
+    mzlab_core::signal::interp(x, xp, fp)
 }
 
 /// Median of the non-NaN values (NaN when there are none), like `np.nanmedian`.
@@ -62,12 +51,17 @@ pub(crate) fn nanmedian(v: impl Iterator<Item = f64>) -> f64 {
     if a.is_empty() {
         return f64::NAN;
     }
-    sortc::by(&mut a, f64::total_cmp);
     let n = a.len();
+    let (lower, mid, _) = a.select_nth_unstable_by(n / 2, f64::total_cmp);
     if n % 2 == 1 {
-        a[n / 2]
+        *mid
     } else {
-        (a[n / 2 - 1] + a[n / 2]) / 2.0
+        let below = lower
+            .iter()
+            .copied()
+            .max_by(f64::total_cmp)
+            .unwrap_or(f64::NAN);
+        (below + *mid) / 2.0
     }
 }
 

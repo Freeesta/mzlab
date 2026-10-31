@@ -26,8 +26,8 @@ import urllib.request
 for _ in range(50):
     try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
     except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
-# what the student sees of the loading: the rows of the table, the list of the ended ones, the bar of the card; the bar of PROGRESSO; the rows of CONVROWS
-LOOK = """JSON.stringify({see: [...document.querySelectorAll('#flist [data-cvrow], #up .loadbar')].map(e => e.innerText).join('|'), pc: PROGRESSO.state().pc, busy: UPBUSY,
+# what the student sees of the loading: the rows of the side list, the list of the ended ones; the bar of PROGRESSO; the rows of CONVROWS
+LOOK = """JSON.stringify({see: [...document.querySelectorAll('#fl-up [data-up], #flist [data-cvrow], #up .loadbar')].map(e => e.innerText + ' ' + e.title).join('|'), pc: PROGRESSO.state().pc, busy: UPBUSY,
   rows: CONVROWS.rows.map(r => [r.name, r.state]), files: ST.files.map(f => f.name)})"""
 
 def follow(pg, until, limit=300):
@@ -64,10 +64,10 @@ try:
         step("the visible text never stays the same for more than 5 s", alive)
         def loaded():
             assert pg.locator("#flist .cvsum").count() == 0, "a loading that went well shows no summary box"
-            assert pg.locator("#flist tr[aria-busy=true]").count() == 0
+            assert pg.locator("#fl-up [aria-busy=true]").count() == 0
             assert pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 4
             pg.evaluate("CONVROWS.clearDone()")
-        step("a loading that went well leaves no «Loading finished» box", loaded)
+        step("a loading that went well leaves no box of the loading", loaded)
         def again():                                    # the same pair again: its samples come from the browser storage, nothing is copied or indexed again and the list has no duplicates
             t0 = pg.evaluate("Date.now()")
             pg.set_input_files("#pick", [str(D / "lotto.wiff"), str(D / "lotto.wiff.scan")])
@@ -76,7 +76,8 @@ try:
             assert pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 4
             assert sorted(n for n in pg.evaluate("ST.files.map(f => f.name)") if n.startswith("lotto")) == [f"lotto_s{i}.mzML" for i in range(1, 5)]
             assert pg.evaluate("Date.now()") - t0 < 10000
-            pg.locator("#flist .cvsum [data-cvact=close]").click()
+            assert pg.evaluate("CONVROWS.rows.every(r => r.cached)"), "the samples are not marked as loaded from cache"
+            pg.evaluate("CONVROWS.clearDone()")
         step("the same pair again is «Loaded from cache»: no copy, no new index, no duplicate", again)
 
         def many():                                     # one .wiff with 48 samples: each builder opens only its own sample (wiff::lettore::apri_solo), none waits on the others
@@ -84,9 +85,10 @@ try:
             seen, still = follow(pg, lambda s: s["busy"] == 0 and sum(n.startswith("molti_s") for n in s["files"]) == 48)
             assert sum(n.startswith("molti_s") for n in seen[-1]["files"]) == 48, seen[-1]
             assert still <= 5, f"the loading was still for {still:.1f} s"
-            items = pg.locator("#flist .cvsum li").all_inner_texts()
-            assert len(items) == 48 and all("Loaded ✓ (40 scans," in t for t in items), items[:3]
-            pg.locator("#flist .cvsum [data-cvact=close]").click()
+            assert pg.locator("#flist .cvsum").count() == 0, "a loading that went well shows no summary box"
+            items = pg.evaluate("CONVROWS.rows.map(r => r.state + '|' + CONVROWS.label(r))")
+            assert len(items) == 48 and all(t.startswith("done|") and "Loaded ✓ (40 scans," in t for t in items), items[:3]
+            pg.evaluate("CONVROWS.clearDone()")
         step("a container of 48 samples loads them all, never still for more than 5 s", many)
         def truncated():                                # a truncated .wiff.scan: the sample loads with the scans it has, and its row and the totals say how many are missing
             pg.set_input_files("#pick", [str(D / "corto.wiff"), str(D / "corto.wiff.scan")])
@@ -97,13 +99,13 @@ try:
             assert li.count() == 1 and pg.locator("#flist .cvsum li").count() == 1, "only the file with a warning is listed"
             assert 0 < n < 200 and f"{n} scans missing: the .wiff.scan ends before them" in t and "Loaded ✓" in t, t
             assert "1 with scans missing" in pg.inner_text("#flist .cvsum [data-cvtot]")
-            pg.locator("#flist .cvsum [data-cvact=close]").click()
+            pg.evaluate("document.querySelector('#flist .cvsum [data-cvact=close]')?.click()")      # the table may stand behind the first file shown
         step("a truncated .wiff.scan loads what it has and says how many scans are missing", truncated)
 
         def cancel():
             pg.set_input_files("#pick", [str(D / "ferma.wiff"), str(D / "ferma.wiff.scan")])
             pg.wait_for_function("CONVROWS.rows.some(r => r.state === 'nscan')", timeout=120000)
-            pg.locator("#flist [data-cvact=cancel]").click(); t0 = time.time()
+            pg.evaluate("document.querySelector('#fl-up [data-up-all]').click()"); t0 = time.time()      # «Cancel» of the side list
             pg.wait_for_function("UPBUSY === 0", timeout=30000)
             assert time.time() - t0 < 15, f"Cancel took {time.time() - t0:.1f} s"
             end = dict(pg.evaluate("CONVROWS.rows.map(r => [r.name, r.state])"))
@@ -114,11 +116,11 @@ try:
         step("«Cancel» stops the samples running: they end as Cancelled and do not enter the list", cancel)
 
         def broken():
-            pg.locator("#flist .cvsum [data-cvact=close]").click()
+            pg.evaluate("document.querySelector('#flist .cvsum [data-cvact=close]')?.click()")      # the table may stand behind the first file shown
             pg.set_input_files("#pick", [str(D / "rotto.wiff"), str(D / "rotto.wiff.scan")])
             pg.wait_for_function("UPBUSY === 0", timeout=120000)
-            box = "#flist .cvsum"
-            assert pg.locator(f"{box} [data-cvend=fail] .diag [data-a=diagdet]").count() == 1, pg.inner_text("#flist")[-800:]
+            box = "#fl-up .fl.up.err"      # the error stays as a row of the side list, with «Details» and «Copy diagnosis»
+            assert pg.locator(f"{box} .diag [data-a=diagdet]").count() == 1, pg.inner_text("#flst")[-800:]
             pg.locator(f"{box} [data-a=diagdet]").first.click()
             pg.locator(f"{box} [data-a=diagcopy]").first.click()
             pg.wait_for_function("async () => (await navigator.clipboard.readText()).includes('phase:')")      # the button may be drawn again (the list of the files changes): the clipboard is the proof
@@ -126,18 +128,18 @@ try:
             assert "phase:" in txt and "rotto" not in txt and str(D) not in txt, txt
             assert "loading:" in txt and ".wiff.scan" in txt and "phases:" in txt, txt
         step("a damaged pair leaves the error with «Details» and «Copy diagnosis» (trace of the loading, no file name)", broken)
-        def overlay():                                  # «Load data» while the samples are still loading: the overlay says the phase and the time, and has its «Cancel»
-            pg.locator("#flist .cvsum [data-cvact=close]").click()
+        def side_row():                                 # while the samples are read: a progress row in the side list with the phase, and its × stops the loading
+            pg.evaluate("document.querySelector('#flist .cvsum [data-cvact=close]')?.click()")      # the table may stand behind the first file shown
             pg.set_input_files("#pick", [str(D / "ferma.wiff"), str(D / "ferma.wiff.scan")])
-            pg.wait_for_function("UPBUSY > 0"); pg.locator("#opbtn").click()
-            pg.wait_for_function("document.querySelector('#ldact button') && /\\d:\\d\\d/.test(document.querySelector('#ldmsg').textContent)")
-            t1 = pg.inner_text("#ldmsg")
-            pg.wait_for_function("t => document.querySelector('#ldmsg').textContent !== t", arg=t1, timeout=3000)       # the elapsed time moves every second
-            assert "Indexing 0%" not in t1, t1
-            pg.locator("#ldact button").click()
+            pg.wait_for_function("UPBUSY > 0")
+            pg.wait_for_selector("#flst .fl.up:not(.err) [data-up-x]", timeout=10000)
+            t1 = pg.inner_text("#flst .fl.up:not(.err) [data-uptxt]")
+            assert t1.strip() and "Indexing 0%" not in t1, t1
+            pg.locator("#flst .fl.up:not(.err) [data-up-x]").first.click()
             pg.wait_for_function("UPBUSY === 0", timeout=30000)
             assert pg.locator("#ldact").is_hidden()
-        step("the overlay of «Load data» shows the phase and the time, and «Cancel» stops the loading", overlay)
+            assert pg.evaluate("!E.files.some(f => !f.gone && f.file.startsWith('ferma'))"), "a cancelled file is not opened"
+        step("a progress row in the side list shows the phase, and its × stops the loading", side_row)
         assert not errs, errs
         b.close()
 finally:

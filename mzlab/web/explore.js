@@ -1,10 +1,11 @@
 // @ts-strict
+// @ts-noany
 // @ts-check
 // Data view base: notices (toast), theme and colours, notebook save and sync, session boot and UI restore, file list (order, groups, colours, drag and drop).
 // Data exploration starts from the total chromatogram; the student decides what to extract.
 // Classic script: its functions are page globals used by the other Dati scripts (pannelli.js, grafici.js, ...).
 
-window.toast = function(msg) {
+window.toast = function(/** @type {string} */ msg) {
   let t = document.getElementById("toast-container");
   if (!t) {
     t = document.createElement("div");
@@ -55,8 +56,8 @@ window.avvisoAuto = function(el, o = {}) {
 // merge = join the centroids of the same nominal mass (centroid files only)
 const UIP = { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true };
 // areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
-const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
-const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString() : "";
+const fmtA = (/** @type {number} */ v) => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
+const fmtFull = (/** @type {number} */ v) => Number.isFinite(v) ? Math.round(v).toString() : "";
 let EXPORTING = false;          // true while a plot is drawn for a saved image
 // ---- chart colours (settings: "Colori dei grafici"). PAL = categorical colours of the current palette (filled in place by setPal, so every user of PAL follows it);
 // files of the Full Scan tab that have a time get a SEQUENTIAL scale ordered by time (seqColor), see paintFiles.
@@ -76,7 +77,7 @@ const CIVIDIS = ["#00204d", "#00336f", "#39486b", "#575c6d", "#707173", "#8a8779
 const CIVIDIS_DARK = ["#7dd3fc", "#93c5fd", "#c7d2fe", "#e0e7ff", "#fef08a", "#fde047"];
 const OKABE = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#7a3b9b", "#8a8a8a"];
 const OKABE_DARK = ["#56B4E9", "#F0E442", "#34d399", "#fb923c", "#f472b6", "#38bdf8", "#fde047", "#f8fafc", "#c084fc", "#cbd5e1"];
-const PALS = {
+const PALS = /** @type {Record<string, Palette>} */ ({
   // viridis cut at 72% (the yellow end is almost invisible on white); in dark mode uses luminous tones
   time: {
     seq: VIRIDIS, seqDark: VIRIDIS_DARK, a: 0, b: 0.72, aDark: 0, bDark: 1.0,
@@ -99,7 +100,7 @@ const PALS = {
   },
   // well separated hues; on time series the hue order still follows the time
   rainbow: {
-    hue: u => isDark() ? `hsl(${Math.round(265 - 250 * u)} 85% 65%)` : `hsl(${Math.round(265 - 250 * u)} 80% 40%)`,
+    hue: (/** @type {number} */ u) => isDark() ? `hsl(${Math.round(265 - 250 * u)} 85% 65%)` : `hsl(${Math.round(265 - 250 * u)} 80% 40%)`,
     cat: ["#d62728", "#1f77b4", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#e377c2", "#bcbd22", "#8c564b", "#0b6e4f", "#f2a900", "#5b5fc7"],
     catDark: ["#f87171", "#60a5fa", "#4ade80", "#c084fc", "#fb923c", "#38bdf8", "#f472b6", "#facc15", "#2dd4bf", "#a3e635", "#fbbf24", "#818cf8"],
     blank: "#8a8a8a", blankDark: "#9ca3af", std: "#4d4d4d", stdDark: "#cbd5e1"
@@ -113,11 +114,11 @@ const PALS = {
     catDark: ["#ffffff", "#e0e0e0", "#b8b8b8", "#909090", "#f0f0f0", "#d0d0d0", "#a8a8a8", "#808080"],
     dash: true, blank: "#777777", blankDark: "#aaaaaa", std: "#333333", stdDark: "#dddddd"
   },
-};
+});
 // default: one categorical colour per file, no time scale, no neutral greys, continuous lines
 PALS.file = { ...PALS.time, plain: true };
-const PAL = [];
-function setPal(mode) {
+const PAL = /** @type {string[]} */ ([]);
+function setPal(/** @type {string} */ mode) {
   UIP.pal = PALS[mode] ? mode : "file";
   const P = PALS[UIP.pal], dark = isDark();
   PAL.length = 0; PAL.push(...(dark && P.catDark ? P.catDark : P.cat));
@@ -125,14 +126,14 @@ function setPal(mode) {
 }
 setPal(UIP.pal);
 // u in 0..1 -> colour of the current palette's sequential scale
-function seqColor(u) {
+function seqColor(/** @type {number} */ u) {
   const P = PALS[UIP.pal], dark = isDark();
   if (P.hue) return P.hue(u);
-  const seq = dark && P.seqDark ? P.seqDark : P.seq;
-  const a = dark && P.aDark != null ? P.aDark : P.a;
-  const b = dark && P.bDark != null ? P.bDark : P.b;
+  const seq = /** @type {string[]} */ (dark && P.seqDark ? P.seqDark : P.seq);
+  const a = /** @type {number} */ (dark && P.aDark != null ? P.aDark : P.a);
+  const b = /** @type {number} */ (dark && P.bDark != null ? P.bDark : P.b);
   const x = (a + (b - a) * u) * (seq.length - 1), i = Math.min(Math.floor(x), seq.length - 2), f = x - i;
-  const c = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16)), A = c(seq[i]), B = c(seq[i + 1]);
+  const c = (/** @type {string} */ h) => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16)), A = c(seq[i]), B = c(seq[i + 1]);
   return "#" + A.map((v, k) => Math.round(v + (B[k] - v) * f).toString(16).padStart(2, "0")).join("");
 }
 const DASHES = [[], [6, 3], [2, 3], [10, 3, 2, 3]];
@@ -143,32 +144,32 @@ const LWX = () => PALS[UIP.pal].lw || 0;                      // extra line widt
 // high-contrast palettes the files of the time scale are also told apart by line style (second code besides the colour)
 // true while every file takes a categorical colour (palette "file", or "time" with no file that has a time)
 let PLAIN = false;
-function fdash(f) {
+function fdash(/** @type {FileAperto} */ f) {
   if (PLAIN) return [];
   return PALS[UIP.pal].dash && f.rank != null ? DASHES[f.rank % 4] : [];
 }
 /** @type {(s: string) => any} */
 const Q = s => document.querySelector(s);
-const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const fmtFormula = f => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>");
-const fmtAdduct = a => !a ? "" : fmtFormula(a).replace(/([+-]+)$/, "<sup>$1</sup>");
+const EH = (/** @type {unknown} */ t) => String(t).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]);
+const fmtFormula = (/** @type {string | undefined} */ f) => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>");
+const fmtAdduct = (/** @type {string|undefined} */ a) => !a ? "" : fmtFormula(a).replace(/([+-]+)$/, "<sup>$1</sup>");
 // formula in plain text for the canvas (subscript digits)
-const subText = f => String(f || "").replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[d]);
+const subText = (/** @type {unknown} */ f) => String(f || "").replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[+d]);
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
-const KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" };
-const kindOf = f => f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
+const KIND = /** @type {Record<string, string>} */ ({ full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" });
+const kindOf = (/** @type {FileAperto} */ f) => f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
 // the three kinds of experiment never share a graph: Dati has one block of panels for each (Full Scan, MS2, MRM); panels and files belong to one
 // f.gone = removed from the session (the file on disk is untouched)
-const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);
+const tabFiles = (t = E.tab) => E.files.filter((/** @type {FileAperto} */ f) => f.kind === t && !f.gone);
 // the blocks of every experiment type are on the same page (one block per type in the low-resolution world, the cells of the bench in the high-resolution one):
 // tabPanels() without an argument is all the panels. A panel still holds ONE experiment type; E.tab is the type of the current file.
 const lrTog = () => !(window.BANCO && BANCO.on());
-const tabPanels = t => (t === undefined ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
-// group of a file in the list: in LR strictly the experiment name (Full Scan, MS2, MRM); in HR bench sub-groups
-const grpOf = f => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
-const GRP_HR = { "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }; const grpLabel = g => g.startsWith("hr.u:") ? g.slice(5) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+/** @param {string} [t] */ const tabPanels = t => (t === undefined ? E.panels : E.panels.filter((/** @type {Bag} */ p) => p.tab === (t ?? E.tab)));
+// group of a file in the list: a user group (lista-file.js) first; otherwise in LR strictly the experiment name (Full Scan, MS2, MRM), in HR bench sub-groups
+const grpOf = (/** @type {FileAperto} */ f) => f.ugrp ? "u:" + f.ugrp : (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
+const GRP_HR = /** @type {Record<string, () => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }); const grpLabel = (/** @type {string} */ g) => g.startsWith("u:") ? g.slice(2) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
 // the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
-const sibsOf = f => E.files.filter(x => fileBase(x.file) === fileBase(f.file));
+const sibsOf = (/** @type {FileAperto} */ f) => E.files.filter((/** @type {FileAperto} */ x) => fileBase(x.file) === fileBase(f.file));
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
 
 // ------------------------------------------------------------------ schermata di caricamento
@@ -194,7 +195,7 @@ const IC_LOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" str
 const IC_UNLOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 4.8-1"/></svg>';
 // the loading phrases (ldNext, ldShow, ldRefresh) are in avvio.js: the first one shows at once, then one every 5 s; a status text or loading(true) never swaps the phrase early
 let ldSlow = 0;
-function loading(on, msg) {
+/** @param {boolean} on @param {string} [msg] */ function loading(on, msg) {
   const L = Q("#loading");
   if (on) {
     ldSince = Date.now(); ldMsg = msg ? { text: msg, pct: null } : null; ldRefresh();
@@ -210,7 +211,8 @@ function loading(on, msg) {
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
     clearTimeout(ldSlow); setTimeout(() => {
       L.classList.add("fade-out"); ldMsg = null;
-      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
+      // the button of a stuck start goes with its veil (it would come back with the next one)
+      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); ldAction(""); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
     }, wait);
   }
 }
@@ -229,24 +231,24 @@ function loading(on, msg) {
 })();
 
 // ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
-let nbTimer = null, nbLast = "", nbBase = {}, nbRemote = null;
+let nbTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null), nbLast = "", nbBase = /** @type {Bag} */ ({}), nbRemote = /** @type {Bag | null} */ (null);
 // schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format campioni/2)
 const NB_V = 2;
-const nbPlain = v => !!v && typeof v === "object" && !Array.isArray(v);
+const nbPlain = (/** @type {unknown} */ v) => !!v && typeof v === "object" && !Array.isArray(v);
 // what comes back from the storage can be old, empty or damaged: only a plain object is accepted and the fields the program iterates over must have the right type
-function nbClean(j) {
+function nbClean(/** @type {Bag} */ j) {
   if (!nbPlain(j) || j.error) return {};
   const o = { ...j };
   if ("session" in o && o.session != null && !Array.isArray(o.session)) delete o.session;
   if ("ui" in o && o.ui != null && !nbPlain(o.ui)) delete o.ui;
-  if (o.session) o.session = o.session.filter(f => nbPlain(f) && typeof f.file === "string");
+  if (o.session) o.session = o.session.filter((/** @type {Bag} */ f) => nbPlain(f) && typeof f.file === "string");
   if (o.ui && !Array.isArray(o.ui.panels)) o.ui.panels = [];
   if (o.ui && !Array.isArray(o.ui.files)) o.ui.files = [];
   return o;
 }
 // two tabs (or a stale tab after the browser was closed and reopened) must not overwrite each other: only the fields THIS tab changed since it read the notebook win over the stored copy
-function nbMerge(remote) {
-  const out = { ...nbClean(remote) }, same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function nbMerge(/** @type {Bag} */ remote) {
+  const out = { ...nbClean(remote) }, same = (/** @type {unknown} */ a, /** @type {unknown} */ b) => a === b || JSON.stringify(a) === JSON.stringify(b);
   for (const k of new Set([...Object.keys(NB), ...Object.keys(nbBase)])) {
     if (same(NB[k], nbBase[k])) continue;
     if (NB[k] === undefined) delete out[k]; else out[k] = NB[k];
@@ -254,14 +256,14 @@ function nbMerge(remote) {
   out._v = NB_V; return out;
 }
 function nbSave(now = false) {
-  clearTimeout(nbTimer);
+  clearTimeout(/** @type {number} */ (nbTimer));
   const go = async () => {
     // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
     if (!nbEverLoaded || JSON.stringify(NB) === nbLast) return;
     let remote = nbRemote;
     if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } }
     const out = nbMerge(remote || nbBase), body = JSON.stringify(out);
-    nbLast = JSON.stringify(NB); nbBase = JSON.parse(JSON.stringify(NB)); nbRemote = out;
+    const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out;
     fetch("api/notebook", { method: "POST", body, keepalive: true }).catch(() => { nbLast = ""; });
   };
   if (now) go(); else nbTimer = setTimeout(go, 500);
@@ -270,7 +272,7 @@ let nbEverLoaded = false;
 async function nbLoad() {
   let j = {};
   try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
-  Object.assign(NB, j); nbBase = JSON.parse(JSON.stringify(NB)); nbRemote = j; nbLast = JSON.stringify(NB);
+  Object.assign(NB, j); const snap = JSON.stringify(NB); nbBase = JSON.parse(snap); nbRemote = j; nbLast = snap;
   nbEverLoaded = true;
   // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
   if (CDOC.isOld(NB.session)) {
@@ -294,24 +296,25 @@ window.nbEnsure = async () => { if (!nbEverLoaded) await nbLoad(); };
 function panelRec(p) {
   return {
     type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
-    traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
-    k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
-    link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
-    dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
+    traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, canale: t.canale || undefined })),
+    canali: p.canali && p.canali.length ? p.canali : undefined,
+    k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, ks: p.ks ? p.ks.map((/** @type {number} */ k) => E.files[k]?.file).filter(Boolean) : undefined, ptol: p.ptol ?? undefined, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
+    link: p.link ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.link) : -1, src: p.src ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.src) : -1,
+    dda: p.dda != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
     uv: p.uv || undefined, lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, dots: p.type === "spec" && p.dots ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, etpk: typeof p.etpk === "boolean" ? p.etpk : undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined, clipDraw: p.clipDraw || undefined, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, bwi: p.bwi || undefined, scale: p.scale, gamma: p.scale === "gamma" ? p.gamma : undefined, norm: p.norm, corr: p.type === "map" ? p.corr : undefined, bgr: p.type === "map" && p.bgr ? p.bgr : undefined, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
   };
 }
-let uiTimer = null;
+let uiTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null);
 function uiSave(now = false) {
-  clearTimeout(uiTimer);
+  clearTimeout(/** @type {number} */ (uiTimer));
   const run = () => {
     if (!E.files.length) return;
     if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(true);
-    NB.session = CDOC.session(E.files.filter(f => !f.gone));
+    NB.session = CDOC.session(E.files.filter((/** @type {FileAperto} */ f) => !f.gone));
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
-      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined, ugrp: f.ugrp || undefined })),
+      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map((/** @type {FileAperto} */ f) => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined, ugrp: f.ugrp || undefined })), ugBy: E.ugBy, ugOrder: E.ugOrder,
       panels: E.panels.map(panelRec)
     };
     nbSave(now);
@@ -319,52 +322,56 @@ function uiSave(now = false) {
   if (now) run(); else uiTimer = setTimeout(run, 800);
 }
 // when the page closes (or the tab goes to the background) save at once: the last change is not lost
-addEventListener("pagehide", () => uiSave(true));
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(true); });
+// (nbSave too: with no file open uiSave has nothing to write, but the Disegno or Flow fields of NB may still be waiting in the 500 ms timer)
+const flushAll = () => { uiSave(true); nbSave(true); };
+addEventListener("pagehide", flushAll);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
 
 // colours of the saved images: always the light theme, whatever the page theme is (so a PNG is the same in light and dark); css() everywhere else
-const EXPORT_LIGHT = { "--panel": "#ffffff", "--line": "#e2e5ea", "--ink": "#25282c", "--muted": "#5e6676", "--accent": "#2b5c8a", "--warn": "#92400e", "--sel": "#edf2f8", "--soft": "#f0f3f6", "--bg": "#ffffff", "--diff-pos": "#D55E00", "--diff-neg": "#0072B2" };
+const EXPORT_LIGHT = /** @type {Record<string, string>} */ ({ "--panel": "#ffffff", "--line": "#e2e5ea", "--ink": "#25282c", "--muted": "#5e6676", "--accent": "#2b5c8a", "--warn": "#92400e", "--sel": "#edf2f8", "--soft": "#f0f3f6", "--bg": "#ffffff", "--diff-pos": "#D55E00", "--diff-neg": "#0072B2" });
 // opaque pale version of a trace colour (85% towards white): the area under a saved cascade trace
-const lightTint = c => { const m = /^#([0-9a-f]{6})$/i.exec(c); if (!m) return "#ffffff"; const v = parseInt(m[1], 16); return "#" + [v >> 16, v >> 8 & 255, v & 255].map(x => Math.round(x + (255 - x) * .85).toString(16).padStart(2, "0")).join(""); };
-const ecss = n => EXPORTING && n in EXPORT_LIGHT ? EXPORT_LIGHT[n] : css(n);
+const lightTint = (/** @type {string} */ c) => { const m = /^#([0-9a-f]{6})$/i.exec(c); if (!m) return "#ffffff"; const v = parseInt(m[1], 16); return "#" + [v >> 16, v >> 8 & 255, v & 255].map(x => Math.round(x + (255 - x) * .85).toString(16).padStart(2, "0")).join(""); };
+/** @param {string} n @returns {any} kept loose: picchi.js builds [sign, colour] pairs from it */ const ecss = n => EXPORTING && n in EXPORT_LIGHT ? EXPORT_LIGHT[n] : css(n);
 const fz = () => 1;        // (the text size of the graphs follows the browser zoom: Ctrl/Cmd + and −)
-const fpx = (n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
+const fpx = (/** @type {number} */ n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
 // ------------------------------------------------------------------ data (cached)
-const CACHE = new Map();
-const memo = (key, fn) => { if (!CACHE.has(key)) CACHE.set(key, fn().catch(e => { CACHE.delete(key); throw e; })); return CACHE.get(key); };
-const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw I18N.err(j); return j; });
+const J = (/** @type {string} */ u) => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw I18N.err(j); return j; });
 // precursor + scan filter (high-resolution bench: the type of scan chosen in a cell) travel together in the "precursor" slot of the caches and the requests
-const prk = (pr, ft) => ft ? `${pr ?? ""}~${ft}` : pr;
-const prSplit = pr => { const t = String(pr ?? ""), i = t.indexOf("~"); return i < 0 ? [pr ?? "", ""] : [t.slice(0, i), t.slice(i + 1)]; };
-const FT = ft => ft ? `&filt=${encodeURIComponent(ft)}` : "";
+const prk = (/** @type {unknown} */ pr, /** @type {string | undefined} */ ft) => ft ? `${pr ?? ""}~${ft}` : pr;
+const prSplit = (/** @type {unknown} */ pr) => { const t = String(pr ?? ""), i = t.indexOf("~"); return i < 0 ? [/** @type {string} */ (pr ?? ""), ""] : [t.slice(0, i), t.slice(i + 1)]; };
+const FT = (/** @type {string | undefined} */ ft) => ft ? `&filt=${encodeURIComponent(ft)}` : "";
 // precursor > fragment pairs of an MS2 file (unit resolution)
-const getMs2Tr = k => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then(d => d.files[0].transitions);
+const getMs2Tr = (/** @type {string | number} */ k) => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then((/** @type {Bag} */ d) => d.files[0].transitions);
 (() => {
   addEventListener("mzlab-index", (/** @type {any} */ e) => {
     const d = e && e.detail;
     if (!d || !d.name) return;
+    // keyed by the base name: the parts of a multi-part file (x.mzML#full) share the early TIC of their file
+    const base = fileBase(d.name), parts = E.files.filter((/** @type {FileAperto} */ x) => fileBase(x.file) === base);
     if (d.early_tic) {
-      (E.earlyTic || (E.earlyTic = new Map())).set(d.name, d.early_tic);
-      const f = E.files.find(x => x.file === d.name || fileBase(x.file) === fileBase(d.name));
-      if (f) {
-        f._provisional = true;
+      (E.earlyTic || (E.earlyTic = new Map())).set(base, d.early_tic);
+      if (parts.length) {
+        parts.forEach((/** @type {FileAperto} */ f) => { f._provisional = true; });
         redrawAll();
       }
     } else if (d.phase === "open" || d.frac >= 1) {
-      if (E.earlyTic) E.earlyTic.delete(d.name);
-      const f = E.files.find(x => x.file === d.name || fileBase(x.file) === fileBase(d.name));
-      if (f && f._provisional) {
-        delete f._provisional;
+      if (E.earlyTic) E.earlyTic.delete(base);
+      const shown = parts.filter((/** @type {FileAperto} */ f) => f._provisional);
+      if (shown.length) {
+        shown.forEach((/** @type {FileAperto} */ f) => { delete f._provisional; });
         redrawAll();
       }
     }
   });
 })();
-const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => {
-  const key = `c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`;
+// the provisional TIC is the MS1 one: only a level 1 TIC of the whole file may show it
+const earlyTicFor = (/** @type {string | null} */ name, /** @type {number} */ lv, /** @type {Map<string, any> | undefined} */ local, /** @type {((n: string) => any) | undefined} */ lr) =>
+  lv === 1 && name ? (local && local.get(fileBase(name))) || (lr && lr(fileBase(name))) : null;
+/** @param {string | number} k @param {string} kind @param {number} lv @param {number | string} [mz0] @param {number | string} [mz1] @param {unknown} [prec] @param {string} [filt] @param {number | null} [ptol] the precursor window in Da (default 0.6) */ const getChrom = (k, kind, lv, mz0, mz1, prec, filt, ptol) => {
+  const key = `c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}|${ptol ?? ""}`;
   const f = E.files[k], name = f ? f.file : null;
-  const early = (kind === "tic" && mz0 == null && mz1 == null && prec == null && !filt && name) ? ((E.earlyTic && E.earlyTic.get(name)) || (/** @type {any} */ (window).MZLAB_LR?.earlyTic?.(name))) : null;
-  const url = `api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt);
+  const early = (kind === "tic" && mz0 == null && mz1 == null && prec == null && !filt && name) ? earlyTicFor(name, lv, E.earlyTic, (/** @type {any} */ (window).MZLAB_LR)?.earlyTic) : null;
+  const url = `api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` + (ptol ? `&ptol=${ptol}` : "") : "") + FT(filt);
   if (early && !CACHE.has(key)) {
     CHROM1.once(key, () => J(url).then(res => {
       if (f) delete f._provisional;
@@ -376,34 +383,37 @@ const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => {
   return CHROM1.sent(memo(key, () => J(url)));
 };
 // api/xicbin: 4 bytes = length of the JSON header {mz, tol, traces:[{k, n}]}, the header, zeros up to a multiple of 8, then per trace rt and y as float64; the same {k, rt, y} as api/xic
-async function xicBin(url) {
+async function xicBin(/** @type {string} */ url) {
   const r = await fetch(url);
   if (!r.ok) { let m = new Error(I18N.t("err.http", { status: r.status })); try { const j = await r.json(); if (j && j.error) m = I18N.err(j); } catch (e) { /* not JSON */ } throw m; }
   const buf = await r.arrayBuffer(), hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
   let off = (4 + hl + 7) & ~7;
-  const traces = head.traces.map(t => { const rt = Array.from(new Float64Array(buf, off, t.n)), y = Array.from(new Float64Array(buf, off + 8 * t.n, t.n)); off += 16 * t.n; return { k: t.k, rt, y }; });
+  const traces = head.traces.map((/** @type {Bag} */ t) => { const rt = f64Arr(new Float64Array(buf, off, t.n)), y = f64Arr(new Float64Array(buf, off + 8 * t.n, t.n)); off += 16 * t.n; return { k: t.k, rt, y }; });
   return { mz: head.mz, tol: head.tol, traces };
 }
-const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
+// the caller in grafici.js spreads [mz, tol] from HR.xicArgs, so the middle arguments are a rest list for tsc
+// canale: the XIC inside the scans of a channel (api/xic, canali.js), otherwise the whole level
+const getXic = /** @type {(k: string | number, ...rest: (number | string | null | undefined)[]) => Promise<Bag>} */ ((k, mz, tol, lv, canale) => canale
+  ? memo(`x${k}|${mz}|${tol}|${lv}|${canale}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}&canale=${encodeURIComponent(canale)}`).then(j => j.traces ? j.traces[0] : j))
+  : memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0])));
 // + "&hr=0" when high resolution is switched off (hr.js)
 const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");
-const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));
-const getFormula = (f, ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
+const getSpec = (/** @type {string | number} */ k, /** @type {number | string} */ a, /** @type {number | string} */ b, /** @type {number} */ lv, /** @type {unknown} */ pr, /** @type {number[] | null | undefined} */ bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));
+const getFormula = (/** @type {string} */ f, /** @type {string | undefined} */ ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
 // default adduct from the polarity of the visible files
 // polarity of the files (read from the mzML): a small sign next to the name, the default adduct of a graph follows ITS files
-const POLS = { positive: ["+", "pol.positive"], negative: ["−", "pol.negative"], mixed: ["±", "pol.mixed"], unknown: ["?", "pol.unknown"] };
+const POLS = /** @type {Record<string, string[]>} */ ({ positive: ["+", "pol.positive"], negative: ["−", "pol.negative"], mixed: ["±", "pol.mixed"], unknown: ["?", "pol.unknown"] });
 // the polarity as a small readable badge "ESI+" / "ESI−" (never a bare sign); in lists it appears ONLY when the files of the session do not all have the same polarity
-const polKnown = list => new Set((list || []).map(f => f && f.polarity).filter(x => x && x !== "unknown"));
-const polAll = () => polKnown(E.files.filter(f => !f.gone));
-const polLabel = f => ({ positive: "ESI+", negative: "ESI\u2212", mixed: "ESI\u00b1" }[f && f.polarity] || "ESI?");
-const polSign = (f, list) => { const q = POLS[f && f.polarity] || POLS.unknown; if ((list ? polKnown(list) : polAll()).size < 2) return ""; return `<span class="pol" title="${I18N.t(q[1])}">${polLabel(f)}</span>`; };
+const polKnown = (/** @type {FileAperto[] | null | undefined} */ list) => new Set((list || []).map((/** @type {FileAperto} */ f) => f && f.polarity).filter((/** @type {unknown} */ x) => x && x !== "unknown"));
+const polAll = () => polKnown(E.files.filter((/** @type {FileAperto} */ f) => !f.gone));
+const polLabel = (/** @type {Bag | null | undefined} */ f) => (/** @type {Record<string, string>} */ ({ positive: "ESI+", negative: "ESI\u2212", mixed: "ESI\u00b1" })[f && f.polarity] || "ESI?");
+const polSign = /** @type {(f: Bag | null | undefined, list?: FileAperto[] | null) => string} */ ((f, list) => { const q = POLS[f && f.polarity] || POLS.unknown; if ((list ? polKnown(list) : polAll()).size < 2) return ""; return `<span class="pol" title="${I18N.t(q[1])}">${polLabel(f)}</span>`; });
 // the polarity written once in the heading of a group when all its files share it: " · ESI+"
-const polHead = list => { const s = polKnown(list); return s.size === 1 && list.every(f => f.polarity && f.polarity !== "unknown") ? " \u00b7 " + polLabel(list[0]) : ""; };
-const polMixed = () => new Set(shown().map(f => f.polarity).filter(x => x && x !== "unknown")).size > 1;
+const polMixed = () => new Set(shown().map((/** @type {FileAperto} */ f) => f.polarity).filter((/** @type {unknown} */ x) => x && x !== "unknown")).size > 1;
 // the legend shows the sign only when positive and negative files are drawn together
-const legPol = f => polMixed() && f ? " " + polSign(f, shown()) : "";
-const defAdduct = fs => { const l = fs || (shown().length ? shown() : E.files.filter(f => f.vis)); return l.some(f => f.polarity === "negative") && !l.some(f => f.polarity === "positive") ? "[M-H]-" : "[M+H]+"; };
-const getMrm = k => memo(`m${k}`, () => J(`api/mrm?k=${k}`).then(j => j.files[0].transitions));
+const legPol = (/** @type {FileAperto | null | undefined} */ f) => polMixed() && f ? " " + polSign(f, shown()) : "";
+/** @param {FileAperto[]} [fs] */ const defAdduct = fs => { const l = fs || (shown().length ? shown() : E.files.filter((/** @type {FileAperto} */ f) => f.vis)); return l.some((/** @type {FileAperto} */ f) => f.polarity === "negative") && !l.some((/** @type {FileAperto} */ f) => f.polarity === "positive") ? "[M-H]-" : "[M+H]+"; };
+const getMrm = (/** @type {string | number} */ k) => memo(`m${k}`, () => J(`api/mrm?k=${k}`).then(j => j.files[0].transitions));
 
 // a method (.dam) of another experiment type than the open files (MRM against Full Scan...): a visible notice above the panels, not a toast
 async function methodWarn() {
@@ -411,58 +421,54 @@ async function methodWarn() {
   try {
     const j = await J("api/method_warnings");
     if (!j.warnings.length) { el.hidden = true; el.innerHTML = ""; return; }
-    el.innerHTML = I18N.t("methwarn.title") + " " + j.warnings.map(w => I18N.t("methwarn.item", { method: EH(w.method), expects: EH(w.expects), files: EH(w.files.length === 2 ? I18N.t("methwarn.and", { a: w.files[0], b: w.files[1] }) : w.files.join(", ")) })).join(" ") + ` <button type="button" id="methwarn-x" title="${I18N.t("methwarn.hide")}">&times;</button>`;
+    el.innerHTML = I18N.t("methwarn.title") + " " + j.warnings.map((/** @type {Bag} */ w) => I18N.t("methwarn.item", { method: EH(w.method), expects: EH(w.expects), files: EH(w.files.length === 2 ? I18N.t("methwarn.and", { a: w.files[0], b: w.files[1] }) : w.files.join(", ")) })).join(" ") + ` <button type="button" id="methwarn-x" title="${I18N.t("methwarn.hide")}">&times;</button>`;
     el.hidden = false; Q("#methwarn-x").onclick = () => { el.hidden = true; };
   } catch (_) { /* no session or no method: nothing to say */ }
 }
 async function bootSession() { await bootSession0(); methodWarn(); window.TOUR && TOUR.offri(); }
 const PEND = new WeakMap();      // object -> { key: { k: placeholder index, name: file name } }
+/** A file index follows its file name; a file not back yet (list reopened file by file) keeps its name in PEND and is found at a later step.
+ *  @param {any} o @param {string} key @param {any} none value while the file is missing @param {string[]} oldNames @param {{file: string}[]} files */
+function remapFileIndex(o, key, none, oldNames, files) {
+  const v = o[key], pend = (PEND.get(o) || {})[key];
+  // the placeholder written at an earlier step (even "") is still in place: the file may be back now
+  const pending = !!pend && String(pend.k) === String(v);
+  if (!pending && (v == null || v === "" || isNaN(+v))) return;
+  const name = pending ? pend.name : oldNames[+v], i = files.findIndex(f => f.file === name);
+  const out = i >= 0 ? (typeof v === "string" ? String(i) : i) : none;
+  if (i >= 0) { if (pend) delete PEND.get(o)[key]; } else if (name != null) PEND.set(o, { ...(PEND.get(o) || {}), [key]: { k: out, name } });
+  o[key] = out;
+}
 async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;
   if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(!!j.session);
-  if (!j.session) { E.files = []; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
-  const key = JSON.stringify(j.session.map(s => s.file));
+  if (!j.session) { E.files = []; E.ugBy = E.ugOrder = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
+  const key = JSON.stringify(j.session.map((/** @type {Bag} */ s) => s.file));
   if (key === E.key) return;
-  const oldNames = E.files.map(f => f.file), mem = E._mem || {};
+  const oldNames = E.files.map((/** @type {FileAperto} */ f) => f.file), mem = E._mem || {};
   // a list reopened file by file: the files not back yet keep their state (visibility, label, role) until they return
-  E.files.forEach(f => { mem[f.file] = f; });
+  E.files.forEach((/** @type {FileAperto} */ f) => { mem[f.file] = f; });
   const oldVis = mem;
   E.key = key;
   CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
   // seq: a list opened file by file, this is not its first step
-  const seq = !!E._seq, waiting = !!(E.pending && E.pending.some(x => x.state === "wait"));
+  const seq = !!E._seq, waiting = !!(E.pending && E.pending.some((/** @type {Pendiente} */ x) => x.state === "wait"));
   E._seq = waiting; E._mem = waiting ? mem : null;
   // while a list is opened file by file the new ones follow the rules of the first load
   const isFirstLoad = !oldNames.length || seq || waiting, first = firstOpenK(j.session);
-  const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
-  // a low-resolution IDA file is not high resolution
-  const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));
-  E.files = j.session.map((s, k) => {
-    let vis = true;
-    if (oldVis[s.file]) {
-      vis = oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file));
-    } else if (isFirstLoad && trueHr && new Set(j.session.map(x => fileBase(x.file))).size > 1) {
-      // high resolution: only the first file (in the order of the list) is open, a click opens the others
-      vis = fileBase(s.file) === fileBase(j.session[first].file);
-    } else if (isFirstLoad && !isHr && j.session.length > 1) {
-      // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
-      vis = (k === first);
-    }
-    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: s.kind === "ms2" ? 2 : 1 };
+  E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
+    // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
+    const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
+    const t = TIPOF.apply(s, s.file);
+    return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: t.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
   // a file index follows its file name; a file not back yet (list reopened file by file) keeps its name in PEND and is found at a later step
-  const remap = (/** @type {any} */ o, /** @type {string} */ key, /** @type {any} */ none) => {
-    const v = o[key]; if (v == null || v === "" || isNaN(+v)) return;
-    const pend = (PEND.get(o) || {})[key], name = pend && String(pend.k) === String(v) ? pend.name : oldNames[+v], i = E.files.findIndex(f => f.file === name);
-    const out = i >= 0 ? (typeof v === "string" ? String(i) : i) : none;
-    if (i >= 0) { if (pend) delete PEND.get(o)[key]; } else if (name != null) PEND.set(o, { ...(PEND.get(o) || {}), [key]: { k: out, name } });
-    o[key] = out;
-  };
+  const remap = (/** @type {any} */ o, /** @type {string} */ key, /** @type {any} */ none) => remapFileIndex(o, key, none, oldNames, E.files);
   if (E.panels.length && oldNames.length) {                // later load: the panels stay
-    E.panels.forEach(p => { remap(p, "k", 0); remap(p, "ref", 0); remap(p, "bk", ""); if (p.bg !== "w" && p.bg !== "x") remap(p, "bg", ""); });
+    E.panels.forEach((/** @type {Bag} */ p) => { remap(p, "k", 0); remap(p, "ref", 0); remap(p, "bk", ""); if (p.bg !== "w" && p.bg !== "x") remap(p, "bg", ""); });
     remap(E, "cur", 0);
     if (S.ref.k !== "auto") remap(S.ref, "k", 0);
     STATO.file(Math.min(E.cur, E.files.length - 1), "reload");
@@ -470,7 +476,8 @@ async function bootSession0() {
     renderFileList();
     // @ts-ignore toolbar() below is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll();
-    const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
+    const added = E.files.filter((/** @type {FileAperto} */ f) => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && !(typeof OPENNOW !== "undefined" && OPENNOW.batchShown()) && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
+    if (added.length && window.INF && INF.autoOpen) INF.autoOpen(added);
     return;
   }
   if (first > 0 && isFirstLoad) STATO.file(first, "first"); renderFileList();
@@ -481,11 +488,12 @@ async function bootSession0() {
   ensureLayout();
   // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
   toolbar(); uiSave();
+  if (window.INF && INF.autoOpen) INF.autoOpen(E.files);
 }
 // the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
-async function apexSpectrum(c, sp) {
+async function apexSpectrum(/** @type {Bag} */ c, /** @type {Pannello} */ sp) {
   try {
-    const all = (await rawSeries(c)).filter(s => E.files[s.k] && E.files[s.k].kind !== "mrm");
+    const all = (await rawSeries(c)).filter((/** @type {Bag} */ s) => E.files[s.k] && E.files[s.k].kind !== "mrm");
     let best = null;
     for (const s of all) for (let i = 0; i < s.y.length; i++) if (!best || s.y[i] > best.v) best = { v: s.y[i], rt: s.x[i], k: s.k };
     if (!best) return;
@@ -503,39 +511,41 @@ function hostWidth() {
 function fitWidth() {
   const w = Q("#dpanels").clientWidth; if (w < 100) return;
   const st = stackOrder();
-  E.panels.forEach(p => { if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
+  E.panels.forEach((/** @type {Pannello} */ p) => { if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
   // panels side by side follow the width too (and stack when it is too narrow)
-  const rows = st.some(q => LAYOUT.inRiga(q, st));
+  const rows = st.some((/** @type {Bag} */ q) => LAYOUT.inRiga(q, st));
   // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
-  if (rows || window.DDA && E.panels.some(q => q.dock != null)) { relayout(); if (window.DDA) DDA.sync(); }
+  if (rows || window.DDA && E.panels.some((/** @type {Bag} */ q) => q.dock != null)) { relayout(); if (window.DDA) DDA.sync(); }
 }
 /** Opens a panel from its notebook record (restoreUi, and the Undo of a closed panel); the links to other panels are set by the caller. @param {any} sp */
 function riapriPannello(sp) {
-  const kof = (/** @type {string} */ n) => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
+  const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
   return addPanel(sp.type, {
-    ...sp, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" || sp.bg === "x" ? sp.bg : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map((/** @type {any} */ t) => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
+    ...sp, ks: sp.ks ? sp.ks.map(kof) : undefined, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" || sp.bg === "x" ? sp.bg : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map((/** @type {any} */ t) => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
   });
 }
 function restoreUi() {
-  const u = NB.ui;
+  const u = NB.ui; if (u) { E.ugBy = u.ugBy; E.ugOrder = u.ugOrder; }
   // the contaminant exclusions travel with the session
   if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);
   // the grouping of the MSn tree travels with the session
   if (u && u.msn && window.INF) INF.restore(u.msn);
   if (!u || !u.panels || !u.panels.length) return false;
-  const names = new Set(E.files.map(f => f.file));
-  if (!u.files.every(f => names.has(f.file))) return false;
-  u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
+  const names = new Set(E.files.map((/** @type {FileAperto} */ f) => f.file));
+  // removed files are not in the restored session (their entry only records the removal): they must not make the whole restore fail
+  const saved = u.files.filter((/** @type {Bag} */ sf) => !sf.gone || names.has(sf.file));
+  if (!saved.every((/** @type {FileAperto} */ f) => names.has(f.file))) return false;
+  saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
-  const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
-  if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex(f => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
-  const made = u.panels.map(sp => riapriPannello(sp));
-  u.panels.forEach((sp, i) => { if (sp.link >= 0 && made[sp.link]) made[i].link = made[sp.link].id; if (sp.src >= 0 && made[sp.src]) made[i].src = made[sp.src].id; });
+  const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
+  if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex((/** @type {FileAperto} */ f) => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
+  const made = u.panels.map((/** @type {Bag} */ sp) => riapriPannello(sp));
+  u.panels.forEach((/** @type {Bag} */ sp, /** @type {number} */ i) => { if (sp.link >= 0 && made[sp.link]) made[i].link = made[sp.link].id; if (sp.src >= 0 && made[sp.src]) made[i].src = made[sp.src].id; });
   // DDA trio: Full Scan / MS2 side by side (dda.js)
-  u.panels.forEach((sp, i) => { for (const k of ["dda", "dock", "duo"]) if (sp[k] != null) made[i][k] = sp[k] >= 0 && made[sp[k]] ? made[sp[k]].id : null; });
+  u.panels.forEach((/** @type {Bag} */ sp, /** @type {number} */ i) => { for (const k of ["dda", "dock", "duo"]) if (sp[k] != null) made[i][k] = sp[k] >= 0 && made[sp[k]] ? made[sp[k]].id : null; });
   if (window.DDA) DDA.restored(made);
   // one live spectrum per chromatogram, even in an old notebook
-  made.forEach(q => { if (q.type === "spec" && q.link) ctl(q); });
+  made.forEach((/** @type {Pannello} */ q) => { if (q.type === "spec" && q.link) ctl(q); });
   if (E.files[E.cur]?.kind !== E.tab) STATO.file((tabFiles()[0] || { k: 0 }).k, "notebook");
   // a session saved with one type at a time: the blocks go one under the other
   if (typeof stackBlocks === "function") stackBlocks();
@@ -551,21 +561,21 @@ function paintFiles() {
   const P = PALS[UIP.pal], dark = isDark();
   const blankCol = dark && P.blankDark ? P.blankDark : P.blank;
   const stdCol = dark && P.stdDark ? P.stdDark : P.std;
-  const byTime = kind => E.files.filter(f => !f.gone && f.kind === kind && f.type === "sample" && f.time != null && !(window.CDOC && CDOC.kindOf(f) === "dark")).sort((a, b) => a.time - b.time || a.k - b.k);
+  const byTime = (/** @type {string} */ kind) => E.files.filter((/** @type {FileAperto} */ f) => !f.gone && f.kind === kind && f.type === "sample" && f.time != null && !(window.CDOC && CDOC.kindOf(f) === "dark")).sort((/** @type {FileAperto} */ a, /** @type {FileAperto} */ b) => a.time - b.time || a.k - b.k);
   const scales = [byTime("full"), byTime("mrm")], inScale = new Set(scales.flat());
-  E.files.forEach(f => { f.rank = null; });
-  const cal = E.files.filter(f => !f.gone && f.kind === "mrm" && f.type === "standard" && f.conc != null).sort((a, b) => a.conc - b.conc || a.k - b.k), inCal = new Set(cal);
+  E.files.forEach((/** @type {FileAperto} */ f) => { f.rank = null; });
+  const cal = E.files.filter((/** @type {FileAperto} */ f) => !f.gone && f.kind === "mrm" && f.type === "standard" && f.conc != null).sort((/** @type {FileAperto} */ a, /** @type {FileAperto} */ b) => a.conc - b.conc || a.k - b.k), inCal = new Set(cal);
   PLAIN = !!P.plain || (UIP.pal === "time" && !inScale.size && !cal.length);
   // nothing to draw on a time scale: a different colour per file, never grey or black
   if (PLAIN) {
     let m = 0;
-    E.files.forEach(f => { if (f.type === "blank") { if (!f.colorSet) f.color = blankCol; } else if (!f.colorSet) f.color = PAL[m++ % PAL.length]; else m++; });
+    E.files.forEach((/** @type {FileAperto} */ f) => { if (f.type === "blank") { if (!f.colorSet) f.color = blankCol; } else if (!f.colorSet) f.color = PAL[m++ % PAL.length]; else m++; });
     return;
   }
-  scales.forEach(scale => scale.forEach((f, i) => { f.rank = i; if (!f.colorSet) f.color = seqColor(scale.length > 1 ? i / (scale.length - 1) : 0.5); }));
-  cal.forEach((f, i) => { if (!f.colorSet) f.color = stdColor(cal.length > 1 ? i / (cal.length - 1) : 0.6); });
+  scales.forEach(scale => scale.forEach((/** @type {FileAperto} */ f, /** @type {number} */ i) => { f.rank = i; if (!f.colorSet) f.color = seqColor(scale.length > 1 ? i / (scale.length - 1) : 0.5); }));
+  cal.forEach((/** @type {FileAperto} */ f, /** @type {number} */ i) => { if (!f.colorSet) f.color = stdColor(cal.length > 1 ? i / (cal.length - 1) : 0.6); });
   let n = 0;
-  E.files.forEach(f => {
+  E.files.forEach((/** @type {FileAperto} */ f) => {
     if (inScale.has(f) || inCal.has(f)) return;
     const own = f.colorSet;
     if (f.type === "blank") { if (!own) f.color = blankCol; }
@@ -574,24 +584,24 @@ function paintFiles() {
   });
 }
 // back to the automatic colours of the current palette (the student's own colours are dropped)
-function resetColors() { E.files.forEach(f => { f.colorSet = false; }); paintFiles(); renderFileList(); redrawAll(); uiSave(); }
+function resetColors() { E.files.forEach((/** @type {FileAperto} */ f) => { f.colorSet = false; }); paintFiles(); renderFileList(); redrawAll(); uiSave(); }
 // a file of another experiment type: that type becomes the current one (toolbar, precursor list) and the page goes to its block
-function goToFileTab(f) {
+function goToFileTab(/** @type {FileAperto} */ f) {
   setTab(f.kind); STATO.file(f.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f.kind);
 }
-const reorderFiles = (fromK, toK, isBefore) => fileViewDo(() => reorderFilesRaw(fromK, toK, isBefore));
-function reorderFilesRaw(fromK, toK, isBefore) {
+const reorderFiles = (/** @type {number} */ fromK, /** @type {number} */ toK, /** @type {boolean | undefined} */ isBefore) => fileViewDo(() => reorderFilesRaw(fromK, toK, isBefore));
+function reorderFilesRaw(/** @type {number} */ fromK, /** @type {number} */ toK, /** @type {boolean | undefined} */ isBefore) {
   if (fromK == null || toK == null || fromK === toK) return;
-  const srcIdx = E.files.findIndex(f => f.k === fromK);
-  const dstIdx = E.files.findIndex(f => f.k === toK);
+  const srcIdx = E.files.findIndex((/** @type {FileAperto} */ f) => f.k === fromK);
+  const dstIdx = E.files.findIndex((/** @type {FileAperto} */ f) => f.k === toK);
   if (srcIdx < 0 || dstIdx < 0) return;
   const [src] = E.files.splice(srcIdx, 1);
-  let insertAt = E.files.findIndex(f => f.k === toK);
+  let insertAt = E.files.findIndex((/** @type {FileAperto} */ f) => f.k === toK);
   if (!isBefore) insertAt++;
   E.files.splice(insertAt, 0, src);
 
   const oldKToNewK = new Map();
-  E.files.forEach((f, newIdx) => {
+  E.files.forEach((/** @type {FileAperto} */ f, /** @type {number} */ newIdx) => {
     oldKToNewK.set(f.k, newIdx);
     f.k = newIdx;
   });
@@ -604,13 +614,13 @@ function reorderFilesRaw(fromK, toK, isBefore) {
     }
   }
 
-  E.panels.forEach(p => {
+  E.panels.forEach((/** @type {Bag} */ p) => {
     if (p.k != null && oldKToNewK.has(p.k)) p.k = oldKToNewK.get(p.k);
     if (p.ref !== "" && p.ref != null && oldKToNewK.has(+p.ref)) p.ref = oldKToNewK.get(+p.ref);
     if (p.bk !== "" && p.bk != null && oldKToNewK.has(+p.bk)) p.bk = oldKToNewK.get(+p.bk);
     if (p.bg !== "" && p.bg != null && p.bg !== "w" && p.bg !== "x" && oldKToNewK.has(+p.bg)) p.bg = oldKToNewK.get(+p.bg);
     if (Array.isArray(p.traces)) {
-      p.traces.forEach(tr => {
+      p.traces.forEach((/** @type {Bag} */ tr) => {
         if (tr.k != null && oldKToNewK.has(tr.k)) tr.k = oldKToNewK.get(tr.k);
       });
     }
@@ -623,42 +633,45 @@ function reorderFilesRaw(fromK, toK, isBefore) {
 
 const flCompact = () => !!(/** @type {any} */ (window).matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
 function flGrpGet() { return lsObj(NOMI.KEY("flgrp")); }
-function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem(NOMI.KEY("flgrp"), JSON.stringify(m)); } catch (_) { /* no storage */ } }
+function flGrpSet(/** @type {Bag} */ m) { E._flgrp = m; try { localStorage.setItem(NOMI.KEY("flgrp"), JSON.stringify(m)); } catch (_) { /* no storage */ } }
 // the rows of the list: a click selects the file (the active one), a double click on the name shows only that file (rename: right click), on the colour square it opens the colour picker (called by renderFileList)
 function bindFileRows() {
   bindListaFile();
   // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
-  Q("#flst").querySelectorAll(".fl:not(.pr)").forEach(row => {
+  Q("#flst").querySelectorAll(".fl:not(.pr)").forEach((/** @type {ElementoDati} */ row) => {
     const nm = row.querySelector(".nm"); if (!nm) return;
-    row.onclick = e => {
-      if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
-      const f0 = E.files[+nm.dataset.k]; if (f0 && f0.kind !== "mrm") followSpectra(f0);
+    row.onclick = (/** @type {PointerEvent} */ e) => {
+      if (/** @type {HTMLElement} */ (e.target).closest("input") || /** @type {HTMLElement} */ (e.target).closest(".pr-tog")) return;
+      const f0 = E.files[+nm.dataset.k];
+      // the first click (nothing shown yet, the work area holds the sample table): only this file, with the starting layout of its type
+      if (f0 && !E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) { soloFile(f0); return; }
+      if (f0 && f0.kind !== "mrm") followSpectra(f0);
       // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {
-        sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
+        sibsOf(f0).forEach((/** @type {FileAperto} */ f) => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
       }
       // a hidden file (or an empty work area): the file opens with the starting layout of its type (MRM: its chromatograms; Full Scan: TIC + spectrum...); panels left without a visible file are closed, none stays empty
       if (lrTog() && f0 && (!E.panels.length || !f0.vis)) {
         const far = E.panels.length && f0.kind !== E.tab;
-        sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); setTab(f0.kind); ensureLayout(); cleanupOrphanPanels(); renderFileList(); renderNav(); redrawAll(); uiSave();
+        sibsOf(f0).forEach((/** @type {FileAperto} */ f) => { f.vis = true; }); STATO.file(f0.k, "file"); setTab(f0.kind); ensureLayout(); cleanupOrphanPanels(); renderFileList(); renderNav(); redrawAll(); uiSave();
         if (far) scrollToBlock(f0.kind); return;
       }
       if (lrTog() && f0 && f0.kind !== E.tab) return goToFileTab(f0);
-      STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => { r.classList.toggle("cur", r === row); if (r === row) r.setAttribute("aria-current", "true"); else r.removeAttribute("aria-current"); }); renderNav(); if (E.browse) redrawAll();
+      STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach((/** @type {ElementoDati} */ r) => { r.classList.toggle("cur", r === row); if (r === row) r.setAttribute("aria-current", "true"); else r.removeAttribute("aria-current"); }); renderNav(); if (E.browse) redrawAll();
     };
   });
 }
 
 // HTML5 drag and drop of one row of the file list
-function bindDragDrop(el, k) {
-  el.ondragstart = e => {
-    e.dataTransfer.setData("text/plain", String(k));
-    e.dataTransfer.effectAllowed = "move";
+function bindDragDrop(/** @type {ElementoDati} */ el, /** @type {number} */ k) {
+  el.ondragstart = (/** @type {DragEvent} */ e) => {
+    /** @type {DataTransfer} */ (e.dataTransfer).setData("text/plain", String(k));
+    /** @type {DataTransfer} */ (e.dataTransfer).effectAllowed = "move";
     el.classList.add("fl-dragging");
   };
-  el.ondragover = e => {
+  el.ondragover = (/** @type {DragEvent} */ e) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+    /** @type {DataTransfer} */ (e.dataTransfer).dropEffect = "move";
     const rect = el.getBoundingClientRect();
     if (e.clientY < rect.top + rect.height / 2) {
       el.classList.add("drop-before");
@@ -671,9 +684,9 @@ function bindDragDrop(el, k) {
   el.ondragleave = () => {
     el.classList.remove("drop-before", "drop-after");
   };
-  el.ondrop = e => {
+  el.ondrop = (/** @type {DragEvent} */ e) => {
     e.preventDefault();
-    const fromK = +e.dataTransfer.getData("text/plain");
+    const fromK = +/** @type {DataTransfer} */ (e.dataTransfer).getData("text/plain");
     const isBefore = el.classList.contains("drop-before");
     el.classList.remove("drop-before", "drop-after");
     if (!isNaN(fromK) && fromK !== k) {
@@ -688,14 +701,14 @@ function bindDragDrop(el, k) {
 // drag and drop (and long press on touch screens) to reorder the files of the list (called by renderFileList)
 function bindFileReorder() {
   // Reorder files via HTML5 drag & drop and touch long-press
-  let touchTimer = null, touchDragging = null, touchStartX = 0, touchStartY = 0;
-  Q("#flst").querySelectorAll(".fl[data-k]:not(.pr)").forEach(el => {
+  let touchTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null), touchDragging = /** @type {number | null} */ (null), touchStartX = 0, touchStartY = 0;
+  Q("#flst").querySelectorAll(".fl[data-k]:not(.pr)").forEach((/** @type {ElementoDati} */ el) => {
     const k = +el.dataset.k;
 
     bindDragDrop(el, k);
 
-    el.onpointerdown = e => {
-      if (e.target.closest("input") || e.target.closest(".pr-tog") || e.button !== 0) return;
+    el.onpointerdown = (/** @type {PointerEvent} */ e) => {
+      if (/** @type {HTMLElement} */ (e.target).closest("input") || /** @type {HTMLElement} */ (e.target).closest(".pr-tog") || e.button !== 0) return;
       touchStartX = e.clientX;
       touchStartY = e.clientY;
       touchTimer = setTimeout(() => {
@@ -705,7 +718,7 @@ function bindFileReorder() {
       }, 350);
     };
 
-    el.onpointermove = e => {
+    el.onpointermove = (/** @type {PointerEvent} */ e) => {
       if (!touchDragging && touchTimer) {
         if (Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY) > 8) {
           clearTimeout(touchTimer);
@@ -730,7 +743,7 @@ function bindFileReorder() {
       }
     };
 
-    const endTouch = e => {
+    const endTouch = (/** @type {PointerEvent} */ e) => {
       if (touchTimer) {
         clearTimeout(touchTimer);
         touchTimer = null;
@@ -753,113 +766,118 @@ function bindFileReorder() {
 }
 
 // «Profilo» on the card of a low-resolution full-scan file written as a profile (a centroid file, the usual one, says nothing)
-function modeTag(f) {
+function modeTag(/** @type {FileAperto} */ f) {
   if (!(ESP.voce(f.kind) || {}).spettri || f.hr_profile || (window.HR && HR.isHr(f)) || f.spectrum_mode !== "profile") return "";
   return `<small class="muted">${I18N.t("files.mode.profile")}</small>`;
 }
 // short tag of a standard / blank file (3 letters, the full word in the tooltip)
-const typeTag = blank => `<abbr class="ftag" title="${blank ? I18N.t("files.type.blk.title") : I18N.t("files.type.std.title")}">${blank ? I18N.t("files.type.blk") : I18N.t("files.type.std")}</abbr>`;
+const typeTag = (/** @type {boolean} */ blank) => `<abbr class="ftag" title="${blank ? I18N.t("files.type.blk.title") : I18N.t("files.type.std.title")}">${blank ? I18N.t("files.type.blk") : I18N.t("files.type.std")}</abbr>`;
 function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed, all of them live
-  const groups = [];
+  const groups = /** @type {{ g: string, fs: FileAperto[] }[]} */ ([]);
   // both worlds list the files of every experiment, all of them live
-  const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : E.files.filter(f => !f.gone);
-  side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
+  const side = window.BANCO && BANCO.on() ? E.files.filter((/** @type {FileAperto} */ f) => !f.gone && f.kind !== "mrm") : E.files.filter((/** @type {FileAperto} */ f) => !f.gone);
+  side.forEach((/** @type {FileAperto} */ f) => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   // a DDA file is ONE row (its Full Scan and MS2 parts open together)
-  groups.forEach(G => { G.fs = G.fs.filter((f, i, a) => !f.dda || a.findIndex(x => x.dda && fileBase(x.file) === fileBase(f.file)) === i); });
+  groups.forEach(G => { G.fs = G.fs.filter((/** @type {FileAperto} */ f, /** @type {number} */ i, /** @type {FileAperto[]} */ a) => !f.dda || a.findIndex((/** @type {FileAperto} */ x) => x.dda && fileBase(x.file) === fileBase(f.file)) === i); });
+  if (E.ugBy && E.ugBy.by !== "custom") carica("gruppi.js").then(() => GRUPPI.follow());
+  if (window.GRUPPI) GRUPPI.order(groups);
   if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
-  const sub = f => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
-  const row = f => {
+  const sub = (/** @type {FileAperto} */ f) => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
+  const row = (/** @type {FileAperto} */ f) => {
     const hasPr = lrTog() && f.kind === "ms2" && f.precursors && f.precursors.length;
     const prOpen = f._prOpen !== false;
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
     return `<div class="fl ${f.k === E.cur ? "cur" : ""}"${f.k === E.cur ? ' aria-current="true"' : ""} data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
       <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="${I18N.t("files.showHide")}">
       <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${modeTag(f)}${f._provisional ? `<span class="sm muted provvisorio" title="${I18N.t("load.ph.index")}"> ⏳</span>` : ""}${hasPr ? `<span class="pr-tog${prOpen ? " on" : ""}" role="button" tabindex="0" aria-expanded="${prOpen}" aria-label="${I18N.t("files.showHidePrec")}" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}"></span>` : ""}</span></div>
+      <button type="button" class="fl-x" data-rm="${f.k}" aria-label="${EH(I18N.t("files.row.remove", { name: f.label }))}" title="${EH(I18N.t("files.row.remove", { name: f.label }))}">×</button>
       ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
-        prList.map(pr => `<div class="fl pr" style="padding-left:0;min-height:0;margin-bottom:2px;border-bottom:none"><input type="checkbox" data-pr="${pr}" ${ms2PairOf(pr) ? "checked" : ""} title="${I18N.t("files.addPair.title")}"><div class="fi"><b class="pn" data-pg="${pr}" title="${I18N.t("files.precGo.title")}"><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") +
+        prList.map(pr => `<div class="fl pr" style="padding-left:0;min-height:0;margin-bottom:2px;border-bottom:none"><input type="checkbox" data-pr="${pr}" data-pk="${f.k}" id="pr-${f.k}-${EH(pr)}" ${ms2RowOn(pr, f.k) ? "checked" : ""} title="${I18N.t("files.addPair.title")}" aria-label="${EH(f.label)} · m/z ${EH(pr)}"><div class="fi"><b class="pn" data-pg="${pr}" data-pk="${f.k}" title="${I18N.t("files.precGo.title")}"><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") +
         '</div>' : ""}
     </div>`;
   };
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : "";
   E._grpOpen = E._grpOpen || {};
-  const isExpOpen = t => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (t === E.tab || lrTog());
+  const isExpOpen = (/** @type {string} */ t) => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (t === E.tab || lrTog() || t.startsWith("u:"));
   // the open/closed state of a group: one per experiment type in the low-resolution list (its files are of one type), one for the whole list in the bench
-  const gkOf = G => lrTog() ? G.fs[0].kind : E.tab;
+  const gkOf = (/** @type {{ g: string, fs: FileAperto[] }} */ G) => G.g.startsWith("u:") ? G.g : lrTog() ? G.fs[0].kind : E.tab;
   // compact list (iPad, narrow window), high resolution: lower rows and groups that fold, remembered in qqq.flgrp
   const compact = !!(window.BANCO && BANCO.on() && flCompact());
-  const grpClosed = g => compact && flGrpGet()[g] === 1;
-  const gh = (G, label) => {
+  const grpClosed = (/** @type {string} */ g) => compact && flGrpGet()[g] === 1;
+  const gh = (/** @type {{ g: string, fs: FileAperto[] }} */ G, /** @type {string} */ label) => {
+    if (G.g.startsWith("u:")) return ugHead(G, isExpOpen(G.g));
     const gk = gkOf(G), open = isExpOpen(gk), tip = lrTog() && window.modeSchema ? ` data-tiph="${EH(modeSchema(gk))}"` : "";
-    if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${grpClosed(G.g) ? "" : " on"}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
-    return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
+    if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${grpClosed(G.g) ? "" : " on"}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
+    return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type
-  // the files still being read (E.pending): a bar that stays while one is missing, then their rows (grey and not selectable; red with the message if one failed)
-  const pend = E.pending || [], waiting = pend.filter(x => x.state === "wait").length;
-  const pendBar = waiting ? `<div class="pendbar" role="progressbar" aria-label="${EH(I18N.t("files.pendingBar", { done: E.pendN - waiting, n: E.pendN }))}" aria-valuemin="0" aria-valuemax="${E.pendN}" aria-valuenow="${E.pendN - waiting}"><i style="width:${Math.round(100 * (E.pendN - waiting) / E.pendN)}%"></i></div>` : "";
-  const pendRows = pend.map((x, i) => `<div class="fl pend ${x.state === "err" ? "err" : ""}" data-pend="${i}" ${x.state === "wait" ? 'aria-busy="true"' : ""}><input type="checkbox" disabled aria-label="${EH(x.label)}"><i></i><div class="fi"><b class="nm">${EH(x.label)}</b><small>${EH(x.state === "err" ? x.msg : I18N.t("files.pending"))}</small></div><button type="button" class="sec sm" data-pend-rm="${i}" aria-label="${EH(I18N.t("files.pendingRemove", { name: x.label }))}">×</button></div>`).join("");
   const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isExpOpen(gkOf(G)) && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
-  Q("#flst").setAttribute("aria-busy", waiting ? "true" : "false");
-  Q("#flst").innerHTML = pendBar + pre + body + pendRows;
+  // the files still being read or converted: one progress row each, under the open ones (upload-rows.js)
+  Q("#flst").innerHTML = pre + body + UPROWS.html();
+  UPROWS.wire(Q("#fl-up")); UPROWS.paint();
   if (window.BARRA) BARRA.fitNames();
-  Q("#flst").querySelectorAll("[data-pend-rm]").forEach(b => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
-  Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
+  Q("#flst").querySelectorAll("input[data-pr]").forEach((/** @type {CampoDati} */ x) => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked, +(/** @type {string} */ (x.dataset.pk))));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
-  Q("#flst").querySelectorAll("[data-pg]").forEach(x => { x.onclick = () => ms2Goto(x.dataset.pg); x.ondblclick = () => ms2Spectrum(x.dataset.pg); });
-  Q("#flst").querySelectorAll(".fgh[data-gt]").forEach(el => {
+  Q("#flst").querySelectorAll("[data-pg]").forEach((/** @type {ElementoDati} */ x) => { x.onclick = () => ms2Goto(x.dataset.pg); x.ondblclick = () => ms2Spectrum(x.dataset.pg); });
+  Q("#flst").querySelectorAll(".fgh[data-gt]").forEach((/** @type {ElementoDati} */ el) => {
     const flip = () => { const t = el.dataset.gt; E._grpOpen[t] = !isExpOpen(t); renderFileList(); };
-    el.onclick = e => { if (!e.target.closest("input")) flip(); };
-    const cv = el.querySelector(".chv"); if (cv) cv.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
+    el.onclick = (/** @type {PointerEvent} */ e) => { if (!(/** @type {HTMLElement} */ (e.target)).closest("input")) flip(); };
+    const cv = el.querySelector(".chv"); if (cv) cv.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
   });
-  Q("#flst").querySelectorAll(".pr-tog").forEach(tog => {
+  Q("#flst").querySelectorAll(".pr-tog").forEach((/** @type {ElementoDati} */ tog) => {
     const flip = () => { const f = E.files[+tog.dataset.prk]; if (f) { f._prOpen = f._prOpen === false; renderFileList(); } };
-    tog.onclick = e => { e.stopPropagation(); flip(); };
-    tog.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
+    tog.onclick = (/** @type {MouseEvent} */ e) => { e.stopPropagation(); flip(); };
+    tog.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
   });
-  Q("#flst").querySelectorAll(".fgh[data-gg]").forEach(el => {
+  Q("#flst").querySelectorAll(".fgh[data-gg]").forEach((/** @type {ElementoDati} */ el) => {
     const flip = () => { const m = flGrpGet(); m[el.dataset.gg] = m[el.dataset.gg] === 1 ? 0 : 1; flGrpSet(m); renderFileList(); };
-    el.onclick = e => { if (!e.target.closest("input")) flip(); };
-    const cv = el.querySelector(".chv"); if (cv) cv.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
+    el.onclick = (/** @type {PointerEvent} */ e) => { if (!(/** @type {HTMLElement} */ (e.target)).closest("input")) flip(); };
+    const cv = el.querySelector(".chv"); if (cv) cv.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
   });
-  Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
-    fileViewDo(() => side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked));
+  Q("#flst").querySelectorAll(".gall").forEach((/** @type {CampoDati} */ x) => x.onchange = () => {
+    fileViewDo(() => side.filter((/** @type {FileAperto} */ f) => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach((/** @type {FileAperto} */ f) => f.vis = x.checked));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
     renderFileList(); renderNav();
     redrawAll();
     uiSave();
   });
-  Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => {
-    fileViewDo(() => sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; }));
+  Q("#flst").querySelectorAll("input[data-k]").forEach((/** @type {CampoDati} */ x) => x.onchange = () => {
+    fileViewDo(() => sibsOf(E.files[+x.dataset.k]).forEach((/** @type {FileAperto} */ f) => { f.vis = x.checked; }));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
     renderNav(); redrawAll();
     uiSave();
   });
-  Q("#flst").querySelectorAll(".fl").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
+  Q("#flst").querySelectorAll(".fl").forEach((/** @type {ElementoDati} */ el) => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = (/** @type {MouseEvent} */ e) => fileCtx(e, E.files[+nm.dataset.k]); });
   bindFileRows();
 
   bindFileReorder();
   renderNav();
   syncWorkEmpty();
 }
-const vis = () => tabFiles().filter(f => f.vis);
+const vis = () => tabFiles().filter((/** @type {FileAperto} */ f) => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off
-const follow = tab => !!(E.browse && E.files[E.cur] && E.files[E.cur].kind === tab);
+const follow = (/** @type {string} */ tab) => !!(E.browse && E.files[E.cur] && E.files[E.cur].kind === tab);
 const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab ? [E.files[E.cur]] : vis();
 // the files a cell draws: those of ITS tab (the same as shown() unless, in the bench, the cell is not of the tab of the active cell)
-const shownFor = p => (p && p.tab && p.tab !== E.tab ? tabFiles(p.tab).filter(f => f.vis) : shown());
-const scanFiles = l => l.filter(f => f.kind !== "mrm");
+const shownFor = (/** @type {Bag} */ p) => {
+  const l = p && p.tab && p.tab !== E.tab ? tabFiles(p.tab).filter((/** @type {FileAperto} */ f) => f.vis) : shown();
+  // an MS2 precursor chromatogram ticked file by file (the sidebar rows) draws only the files ticked
+  return p && p.type === "chrom" && p.ks ? l.filter((/** @type {FileAperto} */ f) => !(f.precursors || []).length || p.ks.includes(f.k)) : l;
+};
+/** @template {{ kind?: unknown }} T @param {T[]} l */ const scanFiles = l => l.filter(f => f.kind !== "mrm");
 
 // ------------------------------------------------------------------ barra: frecce tra i file, metodo, esporta
 function renderNav() {
   const s = Q("#fsel"); if (!s) return;
   // a very long name is cut in the middle, so the final time stays visible
-  const shortName = n => n.length > 34 ? n.slice(0, 20) + "…" + n.slice(-13) : n;
-  s.innerHTML = tabFiles().map(f => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""} title="${EH(f.label)}">${EH(shortName(f.label))}</option>`).join("");
-  const cur = tabFiles().find(f => f.k === E.cur);
+  const shortName = (/** @type {string} */ n) => n.length > 34 ? n.slice(0, 20) + "…" + n.slice(-13) : n;
+  s.innerHTML = tabFiles().map((/** @type {FileAperto} */ f) => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""} title="${EH(f.label)}">${EH(shortName(/** @type {string} */ (f.label)))}</option>`).join("");
+  const cur = tabFiles().find((/** @type {FileAperto} */ f) => f.k === E.cur);
   const g = /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d")), cs = getComputedStyle(s); g.font = `${cs.fontSize} ${cs.fontFamily}`;
   // as wide as the longest name (CSS sets the minimum and the maximum)
-  s.style.width = Math.ceil(Math.max(0, ...[...s.options].map(o => g.measureText(o.textContent).width)) + 36) + "px";
+  // (the files still being read count too: the bar does not grow as they arrive)
+  s.style.width = Math.ceil(maxOf([...[...s.options].map(o => o.textContent), ...(E.pending || []).filter((/** @type {Pendiente} */ x) => x.state !== "err").map((/** @type {Pendiente} */ x) => shortName(x.label === x.file ? x.file.replace(/\.[^.]+$/, "") : x.label))].map(n => g.measureText(n).width), 0) + 36) + "px";
   // with a single file nothing here has a meaning
   const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");
   // one file shown (ticked) = the graphs follow it; several = overlaid, the active one drives the spectrum
@@ -867,10 +885,10 @@ function renderNav() {
   [Q("#fprev"), Q("#fnext"), Q("#fsel")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.title = one ? why : b.dataset.t0; });
   if (cur && !s.disabled) s.title = cur.label;                       // the whole name, also when it had to be cut
   // the graphs' own file choosers depend on the mode
-  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach(q => q.el && ctl(q)); }
+  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach((/** @type {Pannello} */ q) => q.el && ctl(q)); }
 }
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
-Q("#fsel").onchange = e => activeFile(+e.target.value);
+Q("#fsel").onchange = (/** @type {Event & { target: HTMLSelectElement }} */ e) => activeFile(+e.target.value);
 // ← → (scan by scan or file by file), Maiusc + ← →, Spazio and Esc: see scroll.js (scrollKeys)
 document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
 // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
@@ -883,42 +901,42 @@ function toolbar() {
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
 }
 // ------------------------------------------------------------------ piccole finestre e menu
-function ask(title, def = "") {
+function ask(/** @type {string} */ title, def = "") {
   return new Promise(res => {
     const d = Q("#askdlg"), i = Q("#askin");
     i.hidden = false; Q("#askno").hidden = false;
     Q("#asktxt").innerHTML = title; i.value = def;
-    const done = v => { d.close(); Q("#askok").onclick = Q("#askno").onclick = i.onkeydown = null; res(v); };
+    const done = (/** @type {string | null} */ v) => { d.close(); Q("#askok").onclick = Q("#askno").onclick = i.onkeydown = null; res(v); };
     Q("#askok").onclick = () => done(i.value.trim());
     Q("#askno").onclick = () => done(null);
-    i.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); done(i.value.trim()); } };
+    i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") { e.preventDefault(); done(i.value.trim()); } };
     d.oncancel = () => done(null);
     d.showModal(); i.focus(); i.select();
   });
 }
-function yesno(html) {
+function yesno(/** @type {string} */ html) {
   return new Promise(res => {
     const d = Q("#askdlg"); Q("#asktxt").innerHTML = html; Q("#askin").hidden = true; Q("#askno").hidden = false;
-    const done = v => { d.close(); Q("#askin").hidden = false; Q("#askok").onclick = Q("#askno").onclick = null; res(v); };
+    const done = (/** @type {boolean} */ v) => { d.close(); Q("#askin").hidden = false; Q("#askok").onclick = Q("#askno").onclick = null; res(v); };
     Q("#askok").onclick = () => done(true); Q("#askno").onclick = () => done(false); d.oncancel = () => done(false); d.showModal();
   });
 }
-function info(html) {
+function info(/** @type {string} */ html) {
   const d = Q("#askdlg");
   Q("#asktxt").innerHTML = html; Q("#askin").hidden = true; Q("#askno").hidden = true;
   Q("#askok").onclick = () => { d.close(); Q("#askin").hidden = false; Q("#askno").hidden = false; };
   d.showModal();
 }
-function big(title, html, onopen) {
+/** @param {string} title @param {string} html @param {() => void} [onopen] */ function big(title, html, onopen) {
   Q("#bigtt").textContent = title; Q("#bigbody").innerHTML = html;
   const d = Q("#bigdlg"); Q("#bigx").onclick = () => d.close(); d.showModal(); if (onopen) onopen();
 }
-function menu(ev, items) {
-  ev.preventDefault();
+function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
+  ev.preventDefault(); items = AZIONI.pulisci(items);
   const m = Q("#ctx");
   m.innerHTML = "";
   // one entry; `fila` groups two or more entries in a single row (icons only, split in equal columns)
-  const mk = it => {
+  const mk = (/** @type {Bag} */ it) => {
     const d = document.createElement("div");
     if (it.icon) {
       // decorative icon on the left (currentColor, so it follows the theme and the grey of a disabled entry); a checkable entry keeps its mark on the right
@@ -943,20 +961,20 @@ function menu(ev, items) {
     else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
     return d;
   };
-  items.forEach(it => {
+  items.forEach((/** @type {Bag | string} */ it) => {
     if (it === "-") { m.appendChild(document.createElement("hr")); return; }
-    if (it.fila) {
+    if (/** @type {Bag} */ (it).fila) {
       const r = document.createElement("div");
       r.className = "mrow"; r.setAttribute("role", "group");
-      it.fila.forEach(x => r.appendChild(mk(x)));
+      /** @type {Bag} */ (it).fila.forEach((/** @type {Bag} */ x) => r.appendChild(mk(x)));
       m.appendChild(r);
       return;
     }
-    m.appendChild(mk(it));
+    m.appendChild(mk(/** @type {Bag} */ (it)));
   });
   m.hidden = false; m.setAttribute("role", "menu");
   // keyboard: arrows move, Enter/Space choose, Esc closes
-  if (!m._kb) { m._kb = true; m.addEventListener("keydown", e => {
+  if (!m._kb) { m._kb = true; m.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => {
     const its = [...m.querySelectorAll('div[role^=menuitem]:not(.dim), div[aria-disabled=true]')], i = its.indexOf(document.activeElement);
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (its.length) its[(i + (e.key === "ArrowDown" ? 1 : -1) + its.length) % its.length].focus(); }
     else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); if (!its[i].hasAttribute("aria-disabled")) its[i].click(); } }
@@ -979,41 +997,41 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") document.que
 document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; if (/** @type {any} */ (e)._ctxWas) e.preventDefault(); Q("#ctx").hidden = true; } });
 // CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).
 // `text` is a string, a Blob/Uint8Array or an (async) iterable of those: an iterable, or a string/Blob over 8 MB, goes piece by piece through OPFS (export-pezzi.js) with the same bytes.
-async function dl(name, text, type = "application/octet-stream", prov = undefined) {
+async function dl(/** @type {string} */ name, /** @type {string | Blob | Uint8Array | Iterable<string | Uint8Array> | AsyncIterable<string | Uint8Array>} */ text, type = "application/octet-stream", prov = undefined) {
   const iter = typeof text !== "string" && !(text instanceof Blob) && !(text instanceof Uint8Array) && !!text && (Symbol.asyncIterator in text || Symbol.iterator in text);
-  const size = iter ? 0 : typeof text === "string" ? text.length : text.size || text.byteLength || 0;
+  const size = iter ? 0 : typeof text === "string" ? text.length : /** @type {{ size?: number, byteLength?: number }} */ (text).size || /** @type {{ byteLength?: number }} */ (text).byteLength || 0;
   // the piece-by-piece writer is loaded on the first big export
   if ((iter || size >= 8 << 20) && window.carica) await window.carica("m:export-pezzi.js").catch(console.error);
   const EP = /** @type {any} */ (window).EXPORT_PEZZI, tab = /csv|tab-separated/.test(type);
   if (prov !== false && tab && typeof text === "string") text = await PROV.tsv(text, prov || {});
-  else if (prov !== false && tab && EP && EP.isIter(text)) { const src = text; text = (async function* () { let first = true; for await (const p of src) { yield first && typeof p === "string" ? await PROV.tsv(p, prov || {}) : p; first = false; } })(); }
-  const big = EP && (EP.isIter(text) || (typeof text === "string" ? text.length : text.size || text.byteLength || 0) >= EP.MIN_STREAM);
+  else if (prov !== false && tab && EP && EP.isIter(text)) { const src = /** @type {AsyncIterable<string | Uint8Array>} */ (text); text = (async function* () { let first = true; for await (const p of src) { yield first && typeof p === "string" ? await PROV.tsv(p, prov || {}) : p; first = false; } })(); }
+  const big = EP && (EP.isIter(text) || (typeof text === "string" ? text.length : /** @type {{ size?: number }} */ (text).size || /** @type {{ byteLength?: number }} */ (text).byteLength || 0) >= EP.MIN_STREAM);
   if (big) { try { await EP.save(name, text, type); } catch (e) { console.error(e); if (window.toast) toast(I18N.t("export.stream.fail")); } return; }
-  saveBlob(new Blob([text], { type }), name);
+  saveBlob(new Blob([/** @type {BlobPart} */ (text)], { type }), name);
 }
 const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files
 // data of a plot as columns side by side (each trace has its own x), one sheet with the units in the headers: for graphs and tables made in Excel
-function plotSheets(p) {
+function plotSheets(/** @type {Pannello} */ p) {
   const a = p._a; if (!a) return null;
-  const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") : I18N.t("export.col.intensity");
+  const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") + (a.sr && a.sr[0] && a.sr[0].unit ? ` (${a.sr[0].unit})` : "") : I18N.t("export.col.intensity");
   if (p.type === "spec" && a.uvd) cols.push(["nm", a.uvd.nm], [I18N.t("tdati.col.mau"), a.uvd.y]);
-  else if (p.type === "spec") a.data.forEach(x => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
+  else if (p.type === "spec") a.data.forEach((/** @type {Bag} */ x) => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
   else if (a.sr) {
     // total chromatograms of one run type share the time axis: one RT column
-    const same = p.type === "chrom" && a.sr.length > 1 && a.sr.every(q => q.x.length === a.sr[0].x.length && q.x.every((v, i) => v === a.sr[0].x[i]));
-    if (same) { cols.push(["RT (min)", a.sr[0].x]); a.sr.forEach(sr => cols.push([`${yt} - ${sr.name}`, sr.y])); }
-    else a.sr.forEach(sr => { cols.push([`RT (min) - ${sr.name}`, sr.x], [`${yt} - ${sr.name}`, sr.y]); });
+    const same = p.type === "chrom" && a.sr.length > 1 && a.sr.every((/** @type {Bag} */ q) => q.x.length === a.sr[0].x.length && q.x.every((/** @type {number} */ v, /** @type {number} */ i) => v === a.sr[0].x[i]));
+    if (same) { cols.push(["RT (min)", a.sr[0].x]); a.sr.forEach((/** @type {Bag} */ sr) => cols.push([`${yt} - ${sr.name}`, sr.y])); }
+    else a.sr.forEach((/** @type {Bag} */ sr) => { cols.push([`RT (min) - ${sr.name}`, sr.x], [`${yt} - ${sr.name}`, sr.y]); });
   }
   if (!cols.length) return null;
-  const n = Math.max(...cols.map(c => c[1].length)), rows = [];
+  const n = maxOf(cols.map(c => c[1].length)), rows = [];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? c[1][i] : null)));
   /** @type {any[]} */
   const out = [{ name: ptitle(p.title) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
   const metaRows = [
     [{ v: I18N.t("export.meta.property"), b: true }, { v: I18N.t("export.meta.value"), b: true }],
     [{ v: I18N.t("export.meta.title"), b: true }, ptitle(p.title) || I18N.t("export.meta.chart")],
-    [{ v: I18N.t("export.meta.type"), b: true }, { chrom: I18N.t("export.type.chrom", { kind: (p.kind || "").toUpperCase() }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: p.level === 2 ? "MS²" : "MS¹" }), map: I18N.t("panel.title.map") }[p.type] || p.type],
-    [{ v: I18N.t("export.meta.samples"), b: true }, plotFiles(p).map(f => f.label).join(", ")],
+    [{ v: I18N.t("export.meta.type"), b: true }, (/** @type {Record<string, string>} */ ({ chrom: I18N.t("export.type.chrom", { kind: (p.kind || "").toUpperCase() }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: p.level === 2 ? "MS²" : "MS¹" }), map: I18N.t("panel.title.map") }))[p.type] || p.type],
+    [{ v: I18N.t("export.meta.samples"), b: true }, plotFiles(p).map((/** @type {FileAperto} */ f) => f.label).join(", ")],
     [{ v: I18N.t("export.meta.caption"), b: true }, plotCaption(p)],
     [{ v: I18N.t("export.meta.date"), b: true }, new Date().toLocaleString(LOCALE)],
     [{ v: "Software", b: true }, APP_NAME]

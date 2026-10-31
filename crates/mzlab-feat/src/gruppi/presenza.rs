@@ -27,6 +27,8 @@ pub(crate) struct CondModel {
     pub files: Vec<usize>,
     pub groups: Vec<Group>,
     pub ctrl: Controls,
+    /// The dark controls grouped by time (a dark course along the treatment).
+    pub dark: Vec<Group>,
 }
 
 impl CondModel {
@@ -128,9 +130,11 @@ pub(crate) fn conditions(cs: &[Campione]) -> Vec<CondModel> {
                 .filter(|&f| is_treated(&cs[f]) && cs[f].series == id)
                 .collect();
             sort_files(&mut files, cs);
+            let ctrl = controls_of(cs, &id);
             CondModel {
                 groups: groups_of(&files, cs),
-                ctrl: controls_of(cs, &id),
+                dark: groups_of(&ctrl.dark, cs),
+                ctrl,
                 files,
                 id,
             }
@@ -179,6 +183,22 @@ pub(crate) fn group_stat(tb: &GroupTable, r: usize, g: &Group) -> GStat {
         mean,
         sd,
     }
+}
+
+/// The mean area of the dark controls at each of their known times.
+pub(crate) fn dark_course(cx: &Ctx, r: usize, c: &CondModel) -> Vec<super::KinPt> {
+    c.dark
+        .iter()
+        .filter_map(|g| {
+            let s = group_stat(cx.tb, r, g);
+            s.t.map(|t| super::KinPt {
+                t,
+                area: s.mean,
+                sd: s.sd,
+                n: s.n_used,
+            })
+        })
+        .collect()
 }
 
 /// Replicates needed to call a group present: `ceil(frac * n)`, at least one.

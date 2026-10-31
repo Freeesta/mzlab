@@ -38,6 +38,34 @@ fn precursor_da_matches_a_unit_resolution_query() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A query that carries the note of the unit-resolution MGF takes the Da windows (fragment 0.5, precursor 0.7) when the plan writes none; the same query without the note keeps ppm.
+#[test]
+fn a_unit_resolution_query_follows_its_resolution_by_default() {
+    let dir = fixture("lrdef");
+    let mgf = std::fs::read_to_string(dir.join("q.mgf"))
+        .unwrap()
+        .replace("PEPMASS=300.1235", "PEPMASS=300.4");
+    let found = |dir: &std::path::Path| {
+        hits(dir).get("hits").unwrap().arr().iter().any(|x| {
+            x.get("query").unwrap().str() == Some("q0")
+                && x.get("name").unwrap().str() == Some("Alpha")
+        })
+    };
+    std::fs::write(dir.join("q.mgf"), &mgf).unwrap();
+    run(&dir, "spectral_entropy", "{}");
+    assert!(!found(&dir), "no note: the 10 ppm window stays");
+    std::fs::write(
+        dir.join("q.mgf"),
+        format!("# unit resolution, tolerance 0.5 Da\n{mgf}"),
+    )
+    .unwrap();
+    run(&dir, "spectral_entropy", "{}");
+    assert!(found(&dir), "the note: 0.7 Da around the precursor");
+    run(&dir, "spectral_entropy", r#"{"precursor_da":0.1}"#);
+    assert!(!found(&dir), "a window the plan writes is kept");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A `.mzlib` library takes decoys too: it is read back to spectra, so the q-values exist and no decoy is listed.
 #[test]
 fn decoys_work_on_an_mzlib_library() {
@@ -348,5 +376,59 @@ fn tol_ppm_replaces_the_fragment_window_in_da() {
     // tol_da is ignored once tol_ppm is set
     assert_eq!(score(r#"{"tol_da":0.0001,"tol_ppm":30}"#), Some(da));
     assert_eq!(score(r#"{"tol_da":0.01,"tol_ppm":1}"#), None);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// With a ppm fragment tolerance the modified cosine pairs the peaks in ppm, so the list of `matched_peaks` is the one `shared` counts (it was paired in Da, with `tol_da`).
+#[test]
+fn modified_cosine_lists_the_pairs_of_the_ppm_tolerance() {
+    let dir = fixture("peaks_ppm");
+    // the query peaks are 1-2 mDa off the library ones: inside 50 ppm, outside 0.5 mDa
+    run(
+        &dir,
+        "modified_cosine",
+        r#"{"precursor_da":150,"tol_da":0.0005,"tol_ppm":50,"top_n":10,"matched_peaks":true}"#,
+    );
+    let h = hits(&dir);
+    let alpha = h
+        .get("hits")
+        .unwrap()
+        .arr()
+        .iter()
+        .find(|x| x.get("name").unwrap().str() == Some("Alpha"))
+        .unwrap();
+    assert_eq!(alpha.get("shared").unwrap().f64(), Some(5.0));
+    assert_eq!(alpha.get("matched_peaks").unwrap().arr().len(), 5);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The q-value is read on the window of the candidates: a query inside `exact_ppm` but outside `precursor_ppm` still gets the q-value of its best candidate.
+#[test]
+fn the_q_value_follows_the_exact_window_of_the_modified_cosine() {
+    let dir = fixture("fdr_exact");
+    let mgf = std::fs::read_to_string(dir.join("q.mgf")).unwrap();
+    // 30 ppm from Alpha
+    std::fs::write(
+        dir.join("q.mgf"),
+        mgf.replace("PEPMASS=300.1235", "PEPMASS=300.1324"),
+    )
+    .unwrap();
+    run(
+        &dir,
+        "modified_cosine",
+        r#"{"tol_da":0.5,"decoys":"spectrum","top_n":10,"exact_ppm":50}"#,
+    );
+    let h = hits(&dir);
+    let alpha = h
+        .get("hits")
+        .unwrap()
+        .arr()
+        .iter()
+        .find(|x| {
+            x.get("query").unwrap().str() == Some("q0")
+                && x.get("name").unwrap().str() == Some("Alpha")
+        })
+        .unwrap();
+    assert!(alpha.get("decoy_q").unwrap().f64().is_some());
     let _ = std::fs::remove_dir_all(&dir);
 }

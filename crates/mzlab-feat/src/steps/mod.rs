@@ -6,10 +6,13 @@ mod detect;
 mod ident;
 mod ident_annot;
 mod ident_formula;
+mod ident_screen;
 mod ident_spectra;
 pub use ident_spectra::table_match;
+mod qcreport;
 pub mod recipe_map;
 pub mod records;
+pub use qcreport::{methods, run_order};
 mod stats;
 mod table;
 mod tabui;
@@ -25,6 +28,11 @@ pub(crate) const FEAT_CEILING: u64 = 512_000;
 /// The steps of the identification chain (package `attributio`), apart from `registry` so that the export of the core package stays as it is.
 pub fn attributio() -> Vec<Step> {
     ident::registry()
+}
+
+/// `export.annotations`, exported with the steps of `mzlab-cli` (`steps-cli-1.json`) like `qc.run_order`.
+pub fn export_annotations() -> Step {
+    table::export_annotations()
 }
 
 /// The steps of the Tabui chain that `mzlab-feat` owns (package `tabui`); `mzlab_chem::step::tabui()` adds `structure.reactivity`.
@@ -58,7 +66,7 @@ pub fn registry() -> Vec<Step> {
 mod tests {
     use super::*;
     use crate::recipe::Recipe;
-    use crate::recipe_lr::{LR_FLOOR, LR_MIN_HEIGHT};
+    use crate::recipe_lr::{LR_FLOOR, LR_MIN_HEIGHT, LR_MIN_SNR};
     use mzlab_core::step::find;
 
     /// The two presets of `features.detect` hold the constants of the two profiles (`Params::default`, `LR_FLOOR`, `LR_MIN_HEIGHT`).
@@ -78,6 +86,7 @@ mod tests {
         assert_eq!(preset("lr", "floor").f64(), Some(lr.floor));
         assert_eq!(preset("lr", "min_height").f64(), Some(lr.min_height));
         assert!(lr.axis.is_da());
+        assert_eq!(preset("lr", "min_snr").f64(), Some(LR_MIN_SNR));
         assert_eq!(preset("lr", "axis").str(), Some("Da"));
         assert_eq!(detect.default_preset, Some("hr"));
     }

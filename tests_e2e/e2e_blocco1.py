@@ -52,23 +52,23 @@ try:
             for fr in (0.4, 0.6):
                 b = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return [q.left+p._a.X(p._a.full[0]+(p._a.full[1]-p._a.full[0])*{fr}),q.top+q.height*0.4]}})()")
                 pg.mouse.dblclick(b[0], b[1]); frames(pg, 2)
-            attendi(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>p.el.querySelector('.lk')||p.el.querySelector('.rtl').textContent.startsWith('fermo a RT '))})()")
+            attendi(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>p.el.querySelector('.lk')||p.el.querySelector('.rtl').textContent.startsWith('fermo a '))})()")
             info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>[!!p.link,!!p.el.querySelector('.lk'),p.el.querySelector('.rtl').textContent])"); print(info)
             assert sum(1 for i in info if i[1]) == 1 and sum(1 for i in info if i[0]) == 1, info
-            assert all(i[2].startswith("fermo a RT ") for i in info if not i[1]), info
+            assert all(i[2].startswith("fermo a ") for i in info if not i[1]), info
             # a spectrum linked by hand to the same chromatogram (an old notebook): only the newest stays live
             pg.evaluate(f"(()=>{{const c={CH},s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');s.forEach(x=>x.link=c.id);s.forEach(ctl)}})()")
             info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>!!p.el.querySelector('.lk'))"); assert sum(info) == 1, info
         step("1.1: one live spectrum per chromatogram, the others 'fermo a RT'", live)
         def zoom_first():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
-            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Ripristina zoom" in its and pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") == "true", its      # no zoom: there, grey
+            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Ripristina zoom" not in its, its      # no zoom: not shown
             pg.keyboard.press("Escape")
             pg.evaluate(f"(()=>{{const p={SPEC},a=p._a;p.zoom=[a.x0+(a.x1-a.x0)*0.4,a.x0+(a.x1-a.x0)*0.6];draw(p)}})()"); frames(pg, 2)
             its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", its
             pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); attendi(pg, f"{SPEC}.zoom==null")
             assert pg.evaluate(f"{SPEC}.zoom") is None
-        step("1.5: 'Ripristina zoom' is always there, grey without a zoom", zoom_first)
+        step("1.5: 'Ripristina zoom' is shown only with a zoom", zoom_first)
         def annot():
             pg.evaluate("""(()=>{const o=CanvasRenderingContext2D.prototype.stroke;window.__st=[];CanvasRenderingContext2D.prototype.stroke=function(){window.__st.push([String(this.strokeStyle),this.getLineDash().join()]);return o.apply(this,arguments)}})()""")
             lb = label_box(0); m = lb["m"]
@@ -85,8 +85,9 @@ try:
         step("1.6: grey dashed line, hidden out of the zoom, back in view", annot)
         def rt2():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()")
-            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); attendi(pg, r"/RT \d+\.\d{2} min/.test(document.querySelector('.pnl.spec .rtl').textContent)")
-            t = pg.inner_text(".pnl.spec .rtl"); import re; assert re.search(r"RT \d+\.\d{2} min", t) and not re.search(r"RT \d+\.\d{3}", t), t
+            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); LIVE = "[...document.querySelectorAll('.pnl.spec .rtl')].map(e => e.textContent).filter(t => !t.startsWith('fermo a'))[0]"      # the pinned spectra read «fermo a RT», the order of the panels is not fixed
+            attendi(pg, r"/^\d+\.\d{2} min/.test(" + LIVE + ")")
+            t = pg.evaluate(LIVE); import re; assert re.search(r"^\d+\.\d{2} min", t) and not re.search(r"^\d+\.\d{3}", t), t
         step("1.7: RT with 2 decimals", rt2)
     r.close()
 except Exception as e:

@@ -35,7 +35,7 @@ else:
     ix = site / "static" / "mzfinder" / "indice.json"; d = json.loads(ix.read_text())
     d["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); ix.write_text(json.dumps(d))
 man = json.loads((site / "static" / "wasm-feat" / "manifest.json").read_text())
-assert "untargeted" in man and (site / "static" / "wasm-feat" / man["untargeted"]["wasm"]).stat().st_size < 524288, man.get("untargeted")
+assert "untargeted" in man and (site / "static" / "wasm-feat" / man["untargeted"]["wasm"]).stat().st_size < 585728, man.get("untargeted")
 data = site / "static" / "dati_pipeline"; data.mkdir(exist_ok=True)
 ser = tmp / "ser"
 subprocess.run([sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)

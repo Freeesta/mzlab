@@ -34,7 +34,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--zlib N] [--numpress] [--peaks 
   --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1; or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
-  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks); the options above are the short forms
+  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
 progress goes to stderr, one line per file; stdout lists the mzML files, one per line
@@ -205,19 +205,21 @@ fn entries(units: &[PathBuf]) -> Vec<Entry> {
         .iter()
         .map(|(_, n, id)| out_name(n, *id, false))
         .collect();
+    let clash = |k: usize| short.iter().filter(|s| **s == short[k]).count() > 1;
+    let outs: Vec<String> = (0..all.len())
+        .map(|k| out_name(&all[k].1, all[k].2, clash(k)))
+        .collect();
     let mut made = Vec::new();
     for (k, (input, name, id)) in all.iter().enumerate() {
-        let clash = short.iter().filter(|s| **s == short[k]).count() > 1;
-        let label = id.map_or(name.clone(), |i| format!("{name}@{i}"));
+        let plain = id.map_or(name.clone(), |i| format!("{name}@{i}"));
         let unique = all.iter().filter(|(_, n, i)| (n, i) == (name, id)).count() == 1;
+        // two inputs of one name (two folders) keep their position in it, or the second file would replace the first
+        let taken = outs.iter().filter(|o| **o == outs[k]).count() > 1;
+        let (lead, mark) = (format!("{k}/"), format!("{k}-"));
         made.push(Entry {
             input: input.clone(),
-            label: if unique {
-                label
-            } else {
-                format!("{k}/{label}")
-            },
-            out: out_name(name, *id, clash),
+            label: format!("{}{plain}", if unique { "" } else { &lead }),
+            out: format!("{}{}", if taken { &mark } else { "" }, outs[k]),
         });
     }
     made

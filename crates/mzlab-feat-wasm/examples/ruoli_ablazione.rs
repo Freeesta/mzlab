@@ -3,7 +3,7 @@
 //!
 //!     cargo run --release -p mzlab-feat-wasm --example ruoli_ablazione -- SPEC.json [--ruoli]
 //!
-//! `SPEC.json`: `parent` {`formula` (neutral), `mz`, `rt` (the row of the table nearest to them, within `tol`, is the parent), `smiles`?}, `rules` (path of regole_tp.json), `tol` {`ppm` | `da`, `rt`} (matching with the truth),
+//! `SPEC.json`: `parent` {`formula` (neutral), `mz`, `rt` (the row of the table nearest to them, within `tol`, is the parent), `smiles`?}, `rules` (path of regole_tp_2.json), `tol` {`ppm` | `da`, `rt`} (matching with the truth),
 //! `files` [{`path` (.mzidx), `role` (treated | t0 | blank | dark | infusion), `minutes` (treated)}], `truth`? (a `verita_tp/1` document or the `verita.json` of
 //! the synthetic series: `ioni`), `probes`? [{`mz`, `rt`}] (status of the rows around a point). Prints one JSON document with a line per configuration.
 //! The configurations: `completa` (every file as given: the infusion counts as a control, as the Pipeline panel does), `senza_t0`, `senza_bianco`,

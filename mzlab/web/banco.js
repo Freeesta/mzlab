@@ -16,26 +16,28 @@ const BANCO = (() => {
 #hrbar button{min-width:32px;height:30px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:4px}#hrbar button:disabled{opacity:.35;cursor:default}#tools.nolab #hrbar .hl{display:none}
 #tools.one{flex-wrap:nowrap;overflow:hidden;align-items:center}#tools.one .tbx{flex-wrap:nowrap}#tools.one #fsel{min-width:110px;max-width:min(34vw,340px)}#tools.one .sp{flex:1 1 0;min-width:0}#tools.one #navfile{display:inline-flex;align-items:center;gap:var(--sp-2);flex-wrap:nowrap}#tools.one .tbx,#tools.one #hrbar,#tools.one #np-method{flex:none}#tools.one #g-file{flex:0 1 auto}#tools.one #fsel{flex:0 1 auto}
 #hrinfo{margin-top:10px;display:flex;flex-direction:column;resize:vertical;overflow:hidden;height:340px;min-height:170px;max-height:80vh;padding:0}
-#hrinfo[hidden]{display:none}#sb-panels>#hrinfo{height:auto!important;min-height:100%;max-height:none;resize:none;margin:0;border:0;border-radius:0}
+#hrinfo[hidden]{display:none}#sb-panels>#hrinfo{height:100%!important;min-height:0;max-height:none;resize:none;margin:0;border:0;border-radius:0}
 #hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#sb-panels>#hrinfo #hri-ttl{display:none}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;user-select:text}
-#hri-body .row label{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}#hri-body .row input[type=text],#hri-body .row input:not([type]){min-width:0;padding:2px 6px}#hri-body select{padding:2px 4px;max-width:100%;min-width:0}#hri-body button{padding:2px 8px}#hri-body .muted.sm{font-size:11px;line-height:1.35}
-#hri-body table{border-collapse:collapse;width:100%}#hri-body td,#hri-body th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}#hri-body td.num,#hri-body th.num{text-align:right}
-#hri-body td.v{white-space:normal;word-break:break-all}#hri-body h4{margin:8px 0 2px;font-size:12px}#hri-body .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
-#hri-list{position:relative;overflow:auto;height:100%}#hri-list .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
-#hri-list .hd span{cursor:pointer;padding:2px 2px}#hri-list .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap}
-#hri-list .r:hover{background:var(--sel)}#hri-list .r.cur{background:var(--sel);font-weight:600}
+:is(#hri-body,.hri-body) .row label{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}:is(#hri-body,.hri-body) .row input[type=text],:is(#hri-body,.hri-body) .row input:not([type]){min-width:0;padding:2px 6px}:is(#hri-body,.hri-body) select{padding:2px 4px;max-width:100%;min-width:0}:is(#hri-body,.hri-body) button{padding:2px 8px}:is(#hri-body,.hri-body) .muted.sm{font-size:11px;line-height:1.35}
+:is(#hri-body,.hri-body) table{border-collapse:collapse;width:100%}:is(#hri-body,.hri-body) td,:is(#hri-body,.hri-body) th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}:is(#hri-body,.hri-body) td.num,:is(#hri-body,.hri-body) th.num{text-align:right}
+:is(#hri-body,.hri-body) td.v{white-space:normal;word-break:break-all}:is(#hri-body,.hri-body) h4{margin:8px 0 2px;font-size:12px}:is(#hri-body,.hri-body) .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
+:is(#hri-list,.hri-list){position:relative;overflow:auto;height:100%}:is(#hri-list,.hri-list) .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
+:is(#hri-list,.hri-list) .hd span{cursor:pointer;padding:2px 2px;text-align:right}:is(#hri-list,.hri-list) .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}:is(#hri-list,.hri-list) .r span{text-align:right;padding-right:2px}.sb-n{font-weight:400;color:var(--muted)}
+:is(#hri-list,.hri-list) .r:hover{background:var(--sel)}:is(#hri-list,.hri-list) .r.cur{background:var(--sel);font-weight:600}
 .hrw #flst{max-height:34vh;overflow:auto}
 .bsp{position:fixed;z-index:10005;width:min(420px,94vw);max-height:70vh;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:12px}
 .bsp .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.bsp select{min-height:24px;max-width:100%}
 .bsp .lst{position:relative;overflow:auto;height:264px;border:1px solid var(--line);border-radius:4px}.bsp .lst:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .bsp .r{position:absolute;left:0;right:0;height:22px;line-height:22px;padding:0 6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bsp .r:hover,.bsp .r.on{background:var(--sel)}.bsp .r.on{font-weight:600}
-.mslv{margin-left:8px;padding:0 8px;border:1px solid var(--accent);border-radius:4px;color:var(--accent);font-size:14px;line-height:20px}`;
+`;
   document.head.appendChild(st);
   const on = () => !!window.HR && E.files.some(f => f && !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2)));
   const sync = () => { try { document.body.classList.toggle("hrw", on()); } catch (e) { /* page not ready */ } return on(); };
   // an MSn infusion lists the nodes of its precursor tree instead of the scan types (infusione.js)
-  const groupsOf = k => memo(`flt|${k}|${window.INF && INF.isInf(E.files[k]) ? INF.O.tol + INF.O.ce : ""}`, () => (window.INF && INF.isInf(E.files[k]) ? INF.groups(k) : J(`api/filters?k=${k}`).then(j => j.filters)));
+  // the scan filter lists the channels of the file (api/canali); an MSn infusion lists the nodes of its precursor tree instead (infusione.js)
+  const channelsOf = k => J(`api/canali?k=${k}`).then(j => j.canali.filter(c => (c.fam === "ms" || c.fam === "dd") && c.n > 0).map(c => ({ key: "canale:" + c.id, level: c.liv, n: c.n, label: c.et })));
+  const groupsOf = k => memo(`flt|${k}|${window.INF && INF.isInf(E.files[k]) ? INF.O.tol + INF.O.ce : ""}`, () => (window.INF && INF.isInf(E.files[k]) ? INF.groups(k) : channelsOf(k).catch(() => J(`api/filters?k=${k}`).then(j => j.filters))));
   const nfmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const IC_PIN = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 1.8l4.7 4.7-2 .6-2.4 2.6.1 3-1 1-2.6-3.1-3.6 3.6-.4-.4 3.6-3.6-3.1-2.6 1-1 3 .1 2.6-2.4z"/></svg>';
   // which cells have a scan filter: not the product-ion spectrum of the DDA trio (its scan is the one the survey scan started) nor the MRM ones
@@ -81,7 +83,8 @@ const BANCO = (() => {
   /** @returns {Promise<{sid: number, no: number, rt: number, prec: number | null, level: number}[]>} */
   const scansOf = (f, gs, filt) => memo(`scn|${f.k}|${filt || ""}`, async () => {
     const g = filt ? gs.find(x => x.key === filt) : null, levels = g ? [g.level] : [...new Set(gs.map(x => x.level))];
-    const parts = await Promise.all(levels.map(lv => J(`api/scanlist?k=${f.k}&level=${lv}${g ? "&filt=" + encodeURIComponent(g.key) : ""}`)));
+    const url = (/** @type {number} */ lv) => g && g.key.startsWith("canale:") ? `api/scanlist?k=${f.k}&canale=${encodeURIComponent(g.key.slice(7))}` : `api/scanlist?k=${f.k}&level=${lv}${g ? "&filt=" + encodeURIComponent(g.key) : ""}`;
+    const parts = await Promise.all(levels.map(lv => J(url(lv))));
     const out = [];
     parts.forEach((t, i) => t.sid.forEach((/** @type {number} */ sid, /** @type {number} */ j) => out.push({ sid, no: t.no[j], rt: t.rt[j], prec: t.prec[j], level: levels[i] })));
     return out.sort((a, b) => a.rt - b.rt || a.no - b.no);
@@ -114,8 +117,11 @@ const BANCO = (() => {
     const H = 22; /** @type {any[]} */ let rows = []; let cur = 0;
     const cur0 = () => { const c = p.link != null ? E.panels.find(q => q.id === p.link) : null; return c && c.cur != null ? c.cur : p.r0 != null && p.r1 != null ? (p.r0 + p.r1) / 2 : null; };
     const txt = (/** @type {any} */ s) => `${s.no} · ${s.rt.toFixed(3)} min · MS${s.level}${s.prec != null ? " → " + s.prec.toFixed(2) : ""}`;
+    let pk = "", pr = rows;                 // what is on the screen: rebuilt only when the interval, the selected row or the list changes
     const paint = () => {
-      const a = Math.max(0, Math.floor(L.scrollTop / H) - 2), z = Math.min(rows.length, a + Math.ceil(L.clientHeight / H) + 5);
+      const a = Math.max(0, Math.floor(L.scrollTop / H) - 2), z = Math.min(rows.length, a + Math.ceil(L.clientHeight / H) + 5), k = a + "|" + z + "|" + cur;
+      if (k === pk && rows === pr) return;
+      pk = k; pr = rows;
       L.innerHTML = h`<div style="height:${rows.length * H}px"></div>${raw(rows.slice(a, z).map((s, j) => h`<div class="r${a + j === cur ? " on" : ""}" role="option" id="bsp-${a + j}" aria-selected="${a + j === cur}" data-i="${a + j}" style="top:${(a + j) * H}px">${txt(s)}</div>`).join(""))}`;
       L.setAttribute("aria-activedescendant", "bsp-" + cur);
     };
@@ -218,7 +224,7 @@ const BANCO = (() => {
           $("#bs-out").innerHTML = `<div class="muted sm">${I18N.t("bn.sub.count", { hit: d.n_hit, n: d.n_sub })}</div>` + (d.rows.length ? `<table><thead><tr><th>${I18N.t("bn.sub.th.formula")}</th>${["mz", "ppm", "int", "rt", "r"].map(th).join("")}</tr></thead><tbody>`
             + d.rows.map(x => `<tr><td>${EH(x.formula)}</td><td class="num">${x.mz.toFixed(dec)}</td><td class="num">${n(x.ppm, 1)}</td><td class="num">${x.int.toExponential(2).replace("e+", "E")}</td><td class="num">${x.rt.toFixed(2)}</td><td class="num">${n(x.r, 2)}</td></tr>`).join("") + "</tbody></table>" : `<div class="muted">${I18N.t("bn.sub.none")}</div>`);
           $("#bs-add").hidden = false;
-        } catch (e) { $("#bs-err").textContent = e && e.message || String(e); }
+        } catch (e_) { const e = /** @type {Lanciato} */ (e_); $("#bs-err").textContent = e && e.message || String(e); }
       };
       $("#bs-f").onkeydown = e => { if (e.key === "Enter") $("#bs-go").click(); };
       $("#bs-add").onclick = () => {
@@ -239,11 +245,9 @@ const BANCO = (() => {
     if (ac && (p === ac || (p.type === "spec" && p.link === ac.id)) && ist.tab === "hdr") { clearTimeout(ist.t); ist.t = setTimeout(renderInfo, 250); }
     if (p.type !== "spec") return;
     const rl = p.el.querySelector(".rtl"); if (!rl) return;
-    // the stage of the spectrum, well visible: MS1 / MS2
-    let lv = p.el.querySelector(".mslv"); if (!lv) { lv = document.createElement("b"); lv.className = "mslv"; rl.before(lv); }
-    const stage = p.level > 1 ? p.level : 1; if (lv.dataset.n !== String(stage)) { lv.dataset.n = String(stage); lv.innerHTML = `MS<sup>${stage}</sup>`; }
+    SPECBAR.title(p, p.el.querySelector(".ttl"));
     let h = p.el.querySelector(".bnl"); if (!h) { h = document.createElement("span"); h.className = "bnl muted sm"; h.style.marginLeft = "8px"; rl.after(h); }
-    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? Math.max(...d.y) : null;
+    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? maxOf(d.y) : null;
     h.textContent = nl == null ? "" : `${p.filt ? p.filt + " · " : ""}NL: ${nl.toExponential(2).replace("e+", "E")}`;
   }
   function decorate(p, c) {
@@ -275,7 +279,7 @@ const BANCO = (() => {
       const add = document.createElement("button"); add.type = "button"; add.dataset.bf = "range"; add.textContent = "+"; add.title = I18N.t("bn.addBtn.title"); add.setAttribute("aria-label", I18N.t("bn.addBtn.title"));
       add.onclick = e => { e.stopPropagation(); addRange(p); }; wrap.appendChild(add);
       if (p.ranges && p.ranges.length) {
-        const ks = c.querySelector('[data-o="kind"]'); if (ks) { const t = document.createElement("b"); t.className = "ttl"; t.textContent = I18N.t("bn.stack"); t.title = I18N.t("bn.stack.title"); ks.replaceWith(t); }
+        const ks = c.querySelector('[data-o="kind"]'); if (ks) { const t = document.createElement("b"); t.className = "ttl"; t.textContent = I18N.t("bn.stack"); t.title = I18N.t("bn.stack.title"); (ks.closest(".can") || ks).replaceWith(t); }
         const n = document.createElement("label"); n.className = "muted"; n.title = I18N.t("bn.norm.title");
         n.innerHTML = `<input type="checkbox" data-bf="norm"${p.norm100 ? " checked" : ""}> 0-100`; n.querySelector("input").onchange = e => { p.norm100 = e.target.checked; draw(p); uiSave(); }; wrap.appendChild(n);
         p.ranges.forEach(r => { const b = document.createElement("button"); b.type = "button"; b.className = "bt"; b.dataset.bf = "drop"; b.dataset.id = r.id; b.textContent = "\u00d7 " + (rangeLabel(r).length > 18 ? rangeLabel(r).slice(0, 17) + "…" : rangeLabel(r)); b.title = I18N.t("bn.drop", { name: rangeLabel(r) }); b.onclick = e => { e.stopPropagation(); dropRange(p, r.id); }; wrap.appendChild(b); });
@@ -292,7 +296,6 @@ const BANCO = (() => {
   // ---------------------------------------------------------------- the toolbar of the bench (WP-H3b, master-prompt §3.3): in the place of the tabs of the experiments
   const svg = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICON = {
-    zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
     add: svg('<path d="M8 3v10M3 8h10"/>'), type: svg('<path d="M3 5h8M3 11h8"/><path d="M9 3l2 2-2 2M7 9l-2 2 2 2"/>'), lib: svg('<circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/>'), tree: svg('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
   };
   const act = () => (E.active && E.panels.includes(E.active) ? E.active : E.panels[0] || null);
@@ -327,8 +330,6 @@ const BANCO = (() => {
     o.el.querySelector(".x").click(); setActive(n); relayout(); fitHost(); uiSave();
   }
   const FN = {
-    zall: () => { E.panels.forEach(q => { pushZh(q); q.zoom = null; q.zoomY = null; if (q.type === "spec") q.lock = null; draw(q); }); uiSave(); },
-    lib: () => { let a = act(); if (a && a.type !== "spec") a = E.panels.find(q => q.type === "spec" && q.link === a.id); if (a && window.LIB && a.level === 2) LIB.searchFrom(a); else info(I18N.t("bn.pickMs2")); },
     tree: () => { const f = tabFiles("ms2")[0]; if (f && window.COMP) COMP.tree(f.k); else info(I18N.t("bn.treeOnly")); },
   };
   function sync2() {
@@ -368,7 +369,8 @@ const BANCO = (() => {
     const f = cFile(p), rt = cRt(p); if (!f || rt == null) return null;
     return J(`api/nearest_scan?k=${f.k}&rt=${rt}&level=${cLevel(p)}${p.filt ? "&filter=" + encodeURIComponent(p.filt) : ""}`).catch(() => null);
   }
-  const kv = rows => `<table>${rows.map(([a, b]) => `<tr><td class="muted">${esc(a)}</td><td class="v">${esc(b)}</td></tr>`).join("")}</table>`;
+  // a value is text, or {h} for HTML built here (MS levels with their superscript)
+  const kv = rows => `<table>${rows.map(([a, b]) => `<tr><td class="muted">${esc(a)}</td><td class="v">${b && b.h != null ? b.h : esc(b)}</td></tr>`).join("")}</table>`;
   async function tHdr(b, p, tok) {
     const n = await cScan(p);
     if (tok !== ist.tok) return;
@@ -376,12 +378,15 @@ const BANCO = (() => {
     const h = await J(`api/scaninfo?k=${cFile(p).k}&sid=${n.sid}`).catch(e => ({ error: e.message }));
     if (tok !== ist.tok) return;
     if (h.error) return void (b.innerHTML = `<span class="fail">${esc(h.error)}</span>`);
-    const top = [[I18N.t("bn.h.scan"), h.no], ["RT (min)", num(h.rt)], [I18N.t("bn.h.level"), "MS" + h.level], [I18N.t("lib.col.polarity"), h.polarity === "positive" || h.polarity === "negative" ? I18N.t(`bn.h.pol.${h.polarity}`) : h.polarity], [I18N.t("bn.h.filter"), h.filter], [I18N.t("bn.add.kind"), h.key], [I18N.t("bn.h.prec"), num(h.prec, 5)],
+    await carica("m:banco-file.js");
+    if (tok !== ist.tok) return;
+    const top = [[I18N.t("bn.h.scan"), h.no], ["RT (min)", num(h.rt)], [I18N.t("bn.h.level"), { h: BFIL.msLv(h.level) }], [I18N.t("lib.col.polarity"), h.polarity === "positive" || h.polarity === "negative" ? I18N.t(`bn.h.pol.${h.polarity}`) : h.polarity], [I18N.t("bn.h.filter"), h.filter], [I18N.t("bn.add.kind"), h.key], [I18N.t("bn.h.prec"), num(h.prec, 5)],
       [I18N.t("bn.h.isoWin"), h.iso ? `${num(h.iso[0])} – ${num(h.iso[1])}` : ""], [I18N.t("bn.h.act"), [h.act, h.ce != null ? I18N.t("bn.h.energy") + " " + h.ce : ""].filter(Boolean).join(" ")], [I18N.t("bn.h.res"), h.res ? Math.round(h.res) : ""],
       [I18N.t("bn.h.analyzer"), h.analyzer || ""], [I18N.t("bn.h.spectrum"), h.profile ? I18N.t("hr.mode.profile") : I18N.t("hr.mode.centroid")], ["TIC", h.tic != null ? (+h.tic).toExponential(3) : ""]].filter(x => x[1] !== "" && x[1] != null);
     b.innerHTML = `<div class="row"><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h4>${I18N.t("bn.h.all")}</h4>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
   }
   function goScan(p, sid, rt, k) {
+    if (p.stand) return;
     const c = p.type === "spec" ? E.panels.find(q => q.id === p.link) : p;
     if (c && c.type !== "spec") { c.cur = rt; if (c.zoom && (rt < c.zoom[0] || rt > c.zoom[1])) { const w = c.zoom[1] - c.zoom[0]; c.zoom = clampView(rt - w / 2, rt + w / 2, c._a.full[0], c._a.full[1]); draw(c); } else cursorLine(c); pushLinked(c, rt - NEAR, rt + NEAR, k, true, {}); }
     else if (p.type === "spec") { p.r0 = rt - NEAR; p.r1 = rt + NEAR; p.si = null; draw(p); }
@@ -394,16 +399,27 @@ const BANCO = (() => {
     if (t.error) return void (b.innerHTML = `<span class="fail">${esc(t.error)}</span>`);
     const cols = [["no", "N"], ["rt", "RT"], ["prec", I18N.t("bn.l.prec")], ["tic", "TIC"], ["bpmz", I18N.t("bn.l.bp")], ["bpint", I18N.t("bn.l.int")]], H = 20;
     let idx = t.sid.map((_, i) => i), sk = null, sd = 1;
-    b.innerHTML = `<div class="muted" style="margin-bottom:3px">${I18N.t("bn.l.count", { n: t.n })}${p.filt ? " · " + esc(p.filt) : ` · MS${cLevel(p)}`}. ${I18N.t("bn.l.click")}</div><div id="hri-list"><div class="hd">${cols.map(c => `<span data-c="${c[0]}">${c[1]}</span>`).join("")}</div><div class="rows" style="height:${t.n * H}px;position:relative"></div></div>`;
-    const L = b.querySelector("#hri-list"), R = L.querySelector(".rows"), cur = cRt(p);
-    const fx = { no: v => v, rt: v => num(v, 3), prec: v => (v == null ? "" : num(v, 3)), tic: v => (+v).toExponential(2), bpmz: v => num(v, 4), bpint: v => (+v).toExponential(2) };
-    const paint = () => {
+    // the count sits in the header of the side panel (readable by screen readers as «976 scans»); the click is explained by the title of the table
+    const ttl = p.stand ? null : Q("#sb-title");
+    if (ttl) {
+      ttl.querySelectorAll(".sb-n,.sr-only").forEach(x => x.remove());
+      ttl.insertAdjacentHTML("beforeend", `<span class="sb-n" aria-hidden="true"> · ${t.n}</span><span class="sr-only"> ${esc(I18N.t("bn.l.count", { n: t.n }))}</span>`);
+    }
+    b.innerHTML = `<div class="hri-list"${p.stand ? "" : ' id="hri-list"'} title="${esc(I18N.t("bn.l.click"))}" aria-description="${esc(I18N.t("bn.l.click"))}"><div class="hd">${cols.map(c => `<span data-c="${c[0]}">${c[1]}</span>`).join("")}</div><div class="rows" style="height:${t.n * H}px;position:relative"></div></div>`;
+    const L = b.querySelector(".hri-list"), R = L.querySelector(".rows"), cur = cRt(p);
+    // fixed decimals per column, so the digits line up
+    const fx = { no: v => v, rt: v => (+v).toFixed(3), prec: v => (v == null ? "" : (+v).toFixed(3)), tic: v => (+v).toExponential(2), bpmz: v => (+v).toFixed(4), bpint: v => (+v).toExponential(2) };
+    // the rows are rebuilt only when the visible interval (a, z) changes (or the order does): a click that starts during a scroll is not lost under a fresh row
+    let pa = -1, pz = -1;
+    const paint = (/** @type {boolean} */ force = false) => {
       const a = Math.max(0, Math.floor((L.scrollTop - H) / H)), z = Math.min(idx.length, a + Math.ceil(L.clientHeight / H) + 3);
+      if (!force && a === pa && z === pz) return;
+      pa = a; pz = z;
       R.innerHTML = idx.slice(a, z).map((i, j) => `<div class="r${cur != null && Math.abs(t.rt[i] - cur) < 1e-4 ? " cur" : ""}" data-i="${i}" style="position:absolute;top:${(a + j) * H}px;left:0;right:0">${cols.map(c => `<span>${esc(fx[c[0]](t[c[0]][i]))}</span>`).join("")}</div>`).join("");
-      R.querySelectorAll(".r").forEach(r => { r.onclick = () => { const i = +r.dataset.i; goScan(p, t.sid[i], t.rt[i], f.k); R.querySelectorAll(".r").forEach(x => x.classList.toggle("cur", x === r)); }; });
     };
-    L.onscroll = paint;
-    L.querySelectorAll(".hd span").forEach(h => { h.onclick = () => { const c = h.dataset.c; sd = sk === c ? -sd : 1; sk = c; idx.sort((x, y) => sd * ((t[c][x] ?? -Infinity) - (t[c][y] ?? -Infinity)) || x - y); L.scrollTop = 0; paint(); }; });
+    R.onclick = e => { const r = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".r")); if (!r) return; const i = +(r.dataset.i || 0); goScan(p, t.sid[i], t.rt[i], f.k); R.querySelectorAll(".r").forEach(x => x.classList.toggle("cur", x === r)); };
+    L.onscroll = () => paint();
+    L.querySelectorAll(".hd span").forEach(h => { h.onclick = () => { const c = h.dataset.c; sd = sk === c ? -sd : 1; sk = c; idx.sort((x, y) => sd * ((t[c][x] ?? -Infinity) - (t[c][y] ?? -Infinity)) || x - y); L.scrollTop = 0; paint(true); }; });
     paint();
     if (cur != null) { const i0 = t.rt.findIndex(v => v >= cur - 1e-4); if (i0 >= 0) { L.scrollTop = Math.max(0, i0 * H - 40); paint(); } }
   }
@@ -412,24 +428,25 @@ const BANCO = (() => {
     const j = await J(`api/fileinfo?k=${f.k}`).catch(e => ({ error: e.message }));
     if (tok !== ist.tok) return;
     if (j.error) return void (b.innerHTML = `<span class="fail">${esc(j.error)}</span>`);
-    const rg = Object.entries(j.mz_range || {}).map(([l, v]) => `MS${l}: ${num(v[0], 2)} – ${num(v[1], 2)}`).join(" · ");
-    b.innerHTML = `<h4 style="margin-top:0">${I18N.t("side.file")}</h4>` + kv([[I18N.t("lib.col.name"), j.file], [I18N.t("bn.f.date"), j.start || I18N.t("bn.f.noDate")], [I18N.t("bn.f.rtRange"), `${num(j.rt[0], 2)} – ${num(j.rt[1], 2)}`], [I18N.t("bn.f.mzRange"), rg], [I18N.t("lib.all.scans"), `${j.scans} (${Object.entries(j.levels).map(([l, n]) => `MS${l}: ${n}`).join(", ")})`]])
-      + `<h4>${I18N.t("bn.f.instrument")}</h4>` + kv([[I18N.t("bn.f.model"), j.instrument], [I18N.t("bn.f.serial"), j.serial], [I18N.t("bn.f.analyzers"), (j.analyzers || []).join(", ")], [I18N.t("bn.f.components"), (j.components || []).join(", ")]])
-      + `<h4>${I18N.t("bn.f.software")}</h4>` + kv([["Software", (j.software || []).join(", ")], [I18N.t("bn.f.source"), (j.source_files || []).join(", ")], [I18N.t("bn.f.conversion"), (j.conversion || []).join(", ")]])
-      + `<h4>${I18N.t("bn.f.byType")}</h4>` + kv(j.filters.map(g => [g.key, `${g.n} · RT ${num(g.rt0, 2)}–${num(g.rt1, 2)}`])) + `<div class="muted" style="margin-top:6px">${I18N.t("bn.f.note")}</div>`;
+    await carica("m:banco-file.js");
+    if (tok !== ist.tok) return;
+    b.innerHTML = BFIL.fileHtml(j);
   }
   // the spectra already drawn by the cell: m/z of its highest peak, for the launchers
   const topMz = p => { const d = p && p._a && p._a.data && p._a.data[0] && p._a.data[0].d; if (!d || !d.y || !d.y.length) return null; let j = 0; d.y.forEach((v, i) => { if (v > d.y[j]) j = i; }); return d.mz[j]; };
   const specOf = p => (p.type === "spec" ? p : E.panels.find(q => q.type === "spec" && q.link === p.id));
+  // what the composition panel was built from: a click that leaves it unchanged must not rebuild the panel (the typed mass and the results stay)
+  const cmpKey = p => { const sp = specOf(p), d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d; return `${sp && sp.id}|${topMz(sp)}|${d ? d.mz.length : 0}|${(cFile(p) || {}).polarity}`; };
   function tCmp(b, p) {
     const g = window.ELEM && ELEM.takeCtx(), sp0 = specOf(p), sp = (g && g.sp) || sp0, d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d;
-    ELEM.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
+    b._cmpKey = g ? null : cmpKey(p);
+    ELEMP.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
   }
   const ISO_AD = ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+", "[M]+", "[M-H]-", "[M]-"];
   function tIso(b, p) {
     const sp = specOf(p), iso = (sp && sp.iso) || {}, fw = iso.fw || {}, cd = iso.cd || {};
     const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}>${l}</option>`).join("")}</select>`;
-    const adRow = (a, c, k) => `<div class="row hri-ad"><label>${k ? "" : I18N.t("lib.col.adduct")} <select data-ad aria-label="${I18N.t("lib.col.adduct")}">${ISO_AD.map(x => `<option${x === a ? " selected" : ""}>${x}</option>`).join("")}</select></label><label>${I18N.t("bn.iso.conc")} <input data-conc type="number" min="0" max="1000" step="any" value="${c}" style="width:56px"></label>${k ? `<button type="button" data-delad aria-label="${I18N.t("bn.iso.delAd")}">×</button>` : ""}</div>`;
+    const adRow = (a, c, k) => `<div class="row hri-ad"><label>${k ? "" : I18N.t("lib.col.adduct")} <select data-ad aria-label="${I18N.t("lib.col.adduct")}">${ISO_AD.map(x => `<option${x === a ? " selected" : ""}>${x}</option>`).join("")}</select></label><label>${I18N.t("bn.iso.conc")} <input data-conc type="number" min="0" max="1000" step="any" value="${c}" style="width:56px"></label>${k ? `<button type="button" data-delad aria-label="${I18N.t("bn.iso.delAd")}" title="${I18N.t("bn.iso.delAd")}">×</button>` : ""}</div>`;
     const adds = iso.adds && iso.adds.length ? iso.adds : [{ ad: iso.ad || "[M+H]+", c: 100 }];
     b.innerHTML = `<div class="muted">${I18N.t("bn.iso.note")}</div>
       <div class="row"><label>${I18N.t("bn.iso.formula")} <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:130px"></label></div>
@@ -453,7 +470,7 @@ const BANCO = (() => {
     };
     const read = async () => {
       const f = b.querySelector("#hri-f").value.trim(); if (!f) { nearMsg(I18N.t("bn.iso.typeFormula")); return null; }
-      let r; try { r = await getFormula(f, ""); } catch (e) { nearMsg(I18N.t("bn.iso.failed", { message: e.message })); return null; }
+      let r; try { r = await getFormula(f, ""); } catch (e_) { const e = /** @type {Lanciato} */ (e_); nearMsg(I18N.t("bn.iso.failed", { message: e.message })); return null; }
       const ads = [...b.querySelectorAll(".hri-ad")].map(w => ({ ad: w.querySelector("[data-ad]").value, c: Math.max(0, numIt(w.querySelector("[data-conc]").value) || 0) })).filter(a => a.c > 0);
       if (!ads.length) { nearMsg(I18N.t("bn.iso.noSeries")); return null; }
       const o = { formula: r.formula, ad: ads[0].ad, style: b.querySelector("#hri-st").value, def: b.querySelector("#hri-df").value, pts: Math.max(3, parseInt(b.querySelector("#hri-pts").value) || 10) };
@@ -464,23 +481,26 @@ const BANCO = (() => {
       if (rv !== "" && x >= 0) { if (mode === "R") o.R = x; else if (x > 0) o.fw = { mode, v: x }; }
       return o;
     };
-    const apply = (s2, o, only) => { let pat; try { pat = HR.isoPat(o, 0); } catch (e) { return nearMsg(e.message); } COMANDI.fai("spec.isotopes", s2, () => { s2.iso = { ...o, only: !!only }; s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); }); draw(s2); };
-    b.querySelector("#hri-go").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, false); };
-    b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, true); };
+    const apply = async (s2, o, only) => { let pat; try { pat = await HR.isoPat(o, 0); } catch (e_) { const e = /** @type {Lanciato} */ (e_); return nearMsg(e.message); } COMANDI.fai("spec.isotopes", s2, () => { s2.iso = { ...o, only: !!only }; s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); }); draw(s2); };
+    b.querySelector("#hri-go").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) await apply(sp, o, false); };
+    b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) await apply(sp, o, true); };
     b.querySelector("#hri-new").onclick = async () => {
       if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (!o) return;
       const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: PT.isosim, link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0), w: hostWidth(), h: 300, full: true });
-      relayout(); fitHost(); apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
+      relayout(); fitHost(); await apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
     };
     b.querySelector("#hri-off").onclick = () => { if (sp) { COMANDI.fai("spec.isotopes", sp, () => { sp.iso = null; }); draw(sp); } };
   }
-  function tIdn(b, p) {
-    const sp = specOf(p), f = cFile(p);
-    b.innerHTML = `<div class="muted">${I18N.t("bn.idn.note")}</div><div class="row"><button type="button" id="hri-s">${I18N.t("bn.idn.search")}</button><button type="button" id="hri-a">${I18N.t("bn.idn.all")}</button></div><div class="muted sm">${I18N.t("bn.idn.hint")}</div>`;
-    b.querySelector("#hri-s").onclick = () => { if (sp && sp.level === 2 && window.LIB) LIB.searchFrom(sp); else nearMsg(I18N.t("bn.idn.needMs2")); };
-    b.querySelector("#hri-a").onclick = () => { const f2 = f && (f.kind === "ms2" ? f : E.files.find(x => !x.gone && baseOf(x) === baseOf(f) && x.kind === "ms2")); if (f2 && window.LIB) LIB.identifyAll(f2.k); else nearMsg(I18N.t("lib.noMs2")); };
+  // TODO mzFlow: identificazione su feature table — the «identify all the MS2 of the file» button left this tab (LIB.identifyAll stays for the Flow work)
+  const tIdn = async (b, p, tok) => { await carica("m:ident-pannello.js"); const sp = specOf(p); return IDP.render(b, sp && sp.level === 2 ? sp : null, () => tok !== ist.tok); };
+  // the tabs «File and instrument», «Scans» and «Precursor tree» of the bar for file k in a container of the caller (Flow's Explore): the same functions on a stand-in cell that moves no panel
+  const FILE_TABS = { fil: tFil, lst: tLst, alb: (b, p, tok) => INF.render(b, p, tok) };
+  async function fileView(host, k, tab) {
+    const p = { type: "spec", k, level: 1, stand: true }, tok = ist.tok = (ist.tok || 0) + 1;
+    host.classList.add("hri-body"); host.innerHTML = `<div class="muted">…</div>`;
+    try { await FILE_TABS[tab](host, p, tok); } catch (e) { if (tok === ist.tok) host.innerHTML = `<span class="fail">${esc(/** @type {any} */ (e).message)}</span>`; }
   }
-  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await carica("m:infusione-grafo.js"); return INFG.render(b, p, tok); } };
+  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await carica("m:infusione-grafo.js"); if (tok !== ist.tok) return; return INFG.render(b, p, tok); } };
   let infoRaf = 0;
   function renderInfo() {
     const card = Q("#hrinfo"); if (!card || card.hidden) return;
@@ -489,7 +509,8 @@ const BANCO = (() => {
       const p = act(), b = Q("#hri-body"); if (!b) return;
       Q("#hri-ttl").textContent = (I9.find(x => x[0] === ist.tab) || [])[1] + (p ? "" : "");
       if (!p) return void (b.innerHTML = `<div class="muted">${I18N.t("bn.noCellText")}</div>`);
-      const tok = ist.tok = (ist.tok || 0) + 1; b.innerHTML = `<div class="muted">…</div>`;
+      if (ist.tab === "cmp" && b._cmpKey && b._cmpKey === cmpKey(p) && b.querySelector(".cx") && !(window.ELEM && ELEM.hasCtx())) return;
+      const tok = ist.tok = (ist.tok || 0) + 1; if (ist.tab !== "alb") b.innerHTML = `<div class="muted">…</div>`;       // the tree tab keeps its controls and rows while it refreshes (infusione-albero.js)
       Promise.resolve(BODY[ist.tab](b, p, tok)).catch(e => { if (tok === ist.tok) b.innerHTML = `<span class="fail">${esc(e.message)}</span>`; });
     });
   }
@@ -524,13 +545,16 @@ const BANCO = (() => {
     renderInfo();
   }
   // one row: when the bench buttons do not fit, first the words go, then the last buttons move into «⋯», each with its name
-  const DROP = ["tree", "lib", "type", "add", "zall"];
+  const DROP = ["tree", "type", "add"];
+  // the MSn tree is one tool for every file with MS2 or higher scans (infusion or chromatographic); an MS1-only file has none, so the button is not there
+  const hasMsn = () => tabFiles("ms2").length > 0;
+  const noTree = x => x.dataset.hb === "tree" && !hasMsn();
   const nameOf = x => { const l = x.querySelector(".hl"); return l ? l.textContent : (x.getAttribute("aria-label") || x.title); };
   function fitRow() {
     const t = Q("#tools"), b = Q("#hrbar"); if (!t || !b || b.hidden) return;
     t.classList.add("one"); t.classList.remove("nolab");
     const btns = [...b.querySelectorAll("button[data-hb]")], mg = b.querySelector("#hr-moreg"), groups = [...b.querySelectorAll(".hg:not(#hr-moreg)")];
-    btns.forEach(x => { x.hidden = false; }); mg.hidden = true; groups.forEach(g => { g.hidden = false; });
+    btns.forEach(x => { x.hidden = noTree(x); }); mg.hidden = true; groups.forEach(g => { g.hidden = [...g.querySelectorAll("button")].every(y => y.hidden); });
     const over = () => t.scrollWidth > t.clientWidth + 1;
     if (!over()) return;
     t.classList.add("nolab"); if (!over()) return;
@@ -539,7 +563,7 @@ const BANCO = (() => {
   }
   function moreMenu(e, mb) {
     const r = mb.getBoundingClientRect();
-    const items = [...Q("#hrbar").querySelectorAll("button[data-hb]")].filter(x => x.hidden && !x.disabled).map(x => ({ label: nameOf(x), fn: () => x.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: r.left, clientY: r.bottom })) }));
+    const items = [...Q("#hrbar").querySelectorAll("button[data-hb]")].filter(x => x.hidden && !x.disabled && !noTree(x)).map(x => ({ label: nameOf(x), fn: () => x.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: r.left, clientY: r.bottom })) }));
     if (items.length) menu(e, items);
   }
   function bar() {
@@ -550,9 +574,9 @@ const BANCO = (() => {
       b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", I18N.t("bn.toolbar"));
       // one row: the buttons of the bench sit in #tools, between the file arrows and «Method»
       const sp = host.querySelector(":scope > .sp"); host.insertBefore(b, sp);
-      b.innerHTML = h`${raw(`<span class="hg">${barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall, null, I18N.t("bn.lab.zall"))}</span>` +
+      b.innerHTML = h`${raw(
         `<span class="hg">${barBtn("add", I18N.t("bn.bar.addcell"), ICON.add, null, I18N.t("bn.cell"))}${barBtn("type", I18N.t("bn.bar.type"), ICON.type, null, I18N.t("bn.lab.type"))}</span>` +
-        `<span class="hg">${barBtn("lib", I18N.t("bn.bar.lib"), ICON.lib, null, I18N.t("bn.lab.lib"))}${barBtn("tree", I18N.t("bn.bar.tree"), ICON.tree, null, I18N.t("bn.lab.tree"))}</span>` +
+        `<span class="hg">${barBtn("tree", I18N.t("bn.bar.tree"), ICON.tree, null, I18N.t("bn.lab.tree"))}</span>` +
         `<span class="hg" id="hr-moreg" hidden><button type="button" id="hr-more" aria-haspopup="menu" title="${EH(I18N.t("bn.more"))}" aria-label="${EH(I18N.t("bn.more"))}">\u22EF</button></span>`)}`;
       b.querySelectorAll("button[data-hb]").forEach(x => {
         const id = x.dataset.hb;
@@ -568,6 +592,6 @@ const BANCO = (() => {
     if (!b._ro && typeof FRAME !== "undefined" && FRAME.ro) { b._ro = true; FRAME.ro(host, fitRow); }
     b.hidden = false; sync2(); infoBar(); fitRow();
   }
-  return { token: () => ist.tok, copyPng, copyText, fitRow, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
+  return { token: () => ist.tok, fileView, copyPng, copyText, fitRow, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
 })();
 window.BANCO = BANCO;

@@ -23,6 +23,7 @@ async function run(m) {
   let sink = null;
   try {
     const w = await load(m.fam), names = m.members.map(x => x.name), sizes = Float64Array.from(m.members.map(x => x.blob.size)), read = reader(m.members.map(x => x.blob));
+    if (m.op === "valida") return post({ text: w.valida_mzml(names[0], sizes[0], read) });
     if (m.op === "probe") return post({ info: JSON.parse(w.probe(names, sizes, read)) });
     sink = await rawSink(/** @type {string} */ (m.dest));
     const s = sink;

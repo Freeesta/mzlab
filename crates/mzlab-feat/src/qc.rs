@@ -4,7 +4,7 @@
 use mzlab_core::json::Out;
 
 use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_FILLED, CELL_TARGETED};
-use crate::norm::{measured, Method, Reference};
+use crate::norm::{measured, Method};
 use crate::samples::Sample;
 use crate::view::View;
 
@@ -56,12 +56,7 @@ fn cv(v: &[f64]) -> f64 {
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
-    crate::sortc::by(&mut v, f64::total_cmp);
-    match v.len() {
-        0 => f64::NAN,
-        n if n % 2 == 1 => v[n / 2],
-        n => (v[n / 2 - 1] + v[n / 2]) / 2.0,
-    }
+    mzlab_core::signal::median_or_in(&mut v, f64::NAN)
 }
 
 /// Conditions with at least two replicates, in the order of their first file. Areas are the ones of the view (normalised) when there is one.
@@ -98,10 +93,7 @@ pub fn groups(t: &Aligned, samples: &[Sample], view: Option<&View>) -> Vec<Group
 /// Coefficient of variation of the area of the standard over the files that decide the scale (None without a standard or with fewer than two peaks).
 pub fn standard_cv(t: &Aligned, samples: &[Sample], method: &Method) -> Option<f64> {
     let Method::Istd(r) = method else { return None };
-    let row = match r {
-        Reference::Id(id) => t.row_of_id(*id),
-        Reference::Nearest { mz, rt, ppm, rt_tol } => (0..t.len()).find(|&i| (t.mz[i] - mz).abs() <= mz * ppm * 1e-6 && (t.rt[i] - rt).abs() <= *rt_tol),
-    }?;
+    let row = crate::norm::standard(t, r).ok()?;
     let v: Vec<f64> = (0..t.n_files).filter(|&k| crate::norm::decides(&samples[k])).filter_map(|k| measured(t, row, k)).collect();
     (v.len() >= 2).then(|| cv(&v))
 }

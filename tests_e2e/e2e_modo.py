@@ -44,10 +44,10 @@ try:
         step("«Open in 3D» button opens the viewer, Esc closes it", toggle)
         def adding():
             drawer(pg); pg.click("#addf"); pg.wait_for_timeout(600)
-            assert pg.is_visible("#loaded") and "B_FullMass-t0" in pg.inner_text("#loaded")
-            pg.click("#backdata"); pg.wait_for_timeout(600)
+            assert pg.is_visible("#backwork") and pg.is_visible("#drop")
+            pg.click("#backwork"); pg.wait_for_timeout(600)
             assert pg.is_visible("#v-data")
-        step("loading page lists loaded files and goes back", adding)
+        step("«+» shows the landing with «Back to work!», which goes back", adding)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

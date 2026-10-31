@@ -19,11 +19,10 @@ pub struct Svd {
 
 const EPS: f64 = 1e-15;
 
-/// Hestenes' one-sided Jacobi on the columns of a tall matrix (`m >= n`, column-major as `Vec<Vec<f64>>`). Returns (columns scaled to
-/// unit norm, norms, right vectors as columns of an n×n matrix).
-fn jacobi_columns(mut c: Vec<Vec<f64>>) -> (Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64>>) {
+/// Hestenes' one-sided Jacobi sweeps on the columns of a tall matrix (`m >= n`, column-major as `Vec<Vec<f64>>`): `c` is rotated in place and
+/// `on_rotate(p, q, cs, sn)` is called for every rotation so that a caller can accumulate the right vectors. Returns the norms of the columns.
+fn jacobi_sweeps(c: &mut [Vec<f64>], mut on_rotate: impl FnMut(usize, usize, f64, f64)) -> Vec<f64> {
     let n = c.len();
-    let mut v: Vec<Vec<f64>> = (0..n).map(|j| (0..n).map(|i| if i == j { 1.0 } else { 0.0 }).collect()).collect();
     for _sweep in 0..60 {
         let mut rotated = false;
         for p in 0..n {
@@ -42,15 +41,22 @@ fn jacobi_columns(mut c: Vec<Vec<f64>>) -> (Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64
                 let t = zeta.signum() / (zeta.abs() + (1.0 + zeta * zeta).sqrt());
                 let cs = 1.0 / (1.0 + t * t).sqrt();
                 let sn = cs * t;
-                rotate(&mut c, p, q, cs, sn);
-                rotate(&mut v, p, q, cs, sn);
+                rotate(c, p, q, cs, sn);
+                on_rotate(p, q, cs, sn);
             }
         }
         if !rotated {
             break;
         }
     }
-    let norms: Vec<f64> = c.iter().map(|x| x.iter().map(|y| y * y).sum::<f64>().sqrt()).collect();
+    c.iter().map(|x| x.iter().map(|y| y * y).sum::<f64>().sqrt()).collect()
+}
+
+/// Returns (columns scaled to unit norm, norms, right vectors as columns of an n×n matrix).
+fn jacobi_columns(mut c: Vec<Vec<f64>>) -> (Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64>>) {
+    let n = c.len();
+    let mut v: Vec<Vec<f64>> = (0..n).map(|j| (0..n).map(|i| if i == j { 1.0 } else { 0.0 }).collect()).collect();
+    let norms = jacobi_sweeps(&mut c, |p, q, cs, sn| rotate(&mut v, p, q, cs, sn));
     (c, norms, v)
 }
 
@@ -94,6 +100,31 @@ fn complete(cols: &mut [Vec<f64>], null: &[bool]) {
     }
 }
 
+/// The columns of the tall form of `a` (`a` itself, or its transpose when it has more columns than rows), one `Vec` per column.
+fn columns(a: &[f64], (m, n): (usize, usize)) -> Vec<Vec<f64>> {
+    if m >= n {
+        (0..n).map(|j| a.iter().skip(j).step_by(n).copied().collect()).collect()
+    } else {
+        a.chunks_exact(n).map(<[f64]>::to_vec).collect()
+    }
+}
+
+/// The singular values of the row-major `m × n` matrix `a`, bit for bit those of `svd(a, m, n).s` without the vectors (no right vectors
+/// accumulated, no completion, no `u`).
+pub fn singular_values(a: &[f64], m: usize, n: usize) -> Vec<f64> {
+    if m.min(n) == 0 {
+        return Vec::new();
+    }
+    let mut c = columns(a, (m, n));
+    let norms = jacobi_sweeps(&mut c, |_, _, _, _| {});
+    let mut order: Vec<usize> = (0..norms.len()).collect();
+    // std on purpose: see `svd`
+    #[allow(clippy::disallowed_methods)]
+    order.sort_by(|&x, &y| norms[y].partial_cmp(&norms[x]).unwrap_or(std::cmp::Ordering::Equal));
+    let top = norms[order[0]];
+    order.iter().map(|&j| if norms[j] <= top * 1e-14 { 0.0 } else { norms[j] }).collect()
+}
+
 /// Thin SVD of the row-major `m × n` matrix `a`.
 pub fn svd(a: &[f64], m: usize, n: usize) -> Svd {
     let k = m.min(n);
@@ -103,7 +134,7 @@ pub fn svd(a: &[f64], m: usize, n: usize) -> Svd {
     let tall = m >= n;
     // work on a matrix with at least as many rows as columns: a itself, or its transpose
     let (rows, cols) = if tall { (m, n) } else { (n, m) };
-    let c: Vec<Vec<f64>> = (0..cols).map(|j| (0..rows).map(|i| if tall { a[i * n + j] } else { a[j * n + i] }).collect()).collect();
+    let c = columns(a, (m, n));
     let (left, norms, mut right) = jacobi_columns(c);
     let mut order: Vec<usize> = (0..cols).collect();
     // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently

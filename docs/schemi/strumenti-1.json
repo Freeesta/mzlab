@@ -12,7 +12,10 @@
         "required":[],
         "x-executable-native":[
           "annot.level",
+          "annot.regulatory",
+          "chrom.uv_peaks",
           "convert.mzml",
+          "export.annotations",
           "export.inclusion",
           "export.mztab",
           "export.table_csv",
@@ -29,8 +32,12 @@
           "msn.figure",
           "msn.library_export",
           "msn.table_export",
+          "qc.mass_accuracy",
+          "qc.run_order",
           "quant.calibrate",
+          "report.methods",
           "rt.predict",
+          "screen.suspects",
           "spectra.centroid",
           "spectra.chimeric",
           "spectra.insilico",
@@ -70,7 +77,9 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.uv_peaks@1",
               "convert.mzml@1",
+              "export.annotations@1",
               "export.inclusion@1",
               "export.mztab@1",
               "export.table_csv@1",
@@ -88,8 +97,12 @@
               "msn.figure@1",
               "msn.library_export@1",
               "msn.table_export@1",
+              "qc.mass_accuracy@1",
+              "qc.run_order@1",
               "quant.calibrate@1",
+              "report.methods@1",
               "rt.predict@1",
+              "screen.suspects@1",
               "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
@@ -164,7 +177,9 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.uv_peaks@1",
               "convert.mzml@1",
+              "export.annotations@1",
               "export.inclusion@1",
               "export.mztab@1",
               "export.table_csv@1",
@@ -182,8 +197,12 @@
               "msn.figure@1",
               "msn.library_export@1",
               "msn.table_export@1",
+              "qc.mass_accuracy@1",
+              "qc.run_order@1",
               "quant.calibrate@1",
+              "report.methods@1",
               "rt.predict@1",
+              "screen.suspects@1",
               "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
@@ -249,7 +268,11 @@
                   "cosmic_min",
                   "canopus_min",
                   "rt_group_tol_min",
-                  "putative_library_level3"
+                  "putative_library_level3",
+                  "std_rt_max",
+                  "std_score_min",
+                  "std_ppm_max",
+                  "suspect_fragments_min"
                 ]
               },
               "value":{
@@ -305,6 +328,31 @@
                     "type":"boolean",
                     "default":false,
                     "description":"Library entries named Spectral Match to ... (propagated annotations) are taken to Level 3"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Level 1: the feature RT is within this of the RT of the standard you gave"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.7,
+                    "description":"Level 1: the MS2 score (entropy similarity, or cosine for a cosine hit) of the hit on the standard"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Level 1: the precursor of the hit on the standard"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":2,
+                    "description":"Level 3a: at least this many fragments listed for a suspect are found in the feature MS2"
                   }
                 ]
               }
@@ -314,7 +362,7 @@
           {
             "properties":{
               "step":{"const":"annot.regulatory@1"},
-              "name":{"enum":["algorithm","window"]},
+              "name":{"enum":["algorithm","window","lists","include"]},
               "value":{
                 "anyOf":[
                   {"enum":["list_membership","suspect_screen","ms2_confirm"]},
@@ -324,6 +372,60 @@
                     "minItems":2,
                     "maxItems":2,
                     "description":"Entries of the lists outside this range of monoisotopic mass are left out; absent: all the entries"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Ids of the lists to compare, comma-separated; empty: every list in force"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Statuses added to the lists in force: proposal, draft, reference; empty: none"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"chrom.uv_peaks@1"},
+              "name":{"enum":["wavelength_nm","band_nm","broad","broad_min_s","broad_max_s","broad_snr"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":254,
+                    "description":"The trace is the matrix at this wavelength; the nearest column when none is inside the band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":4,
+                    "description":"The columns within half of this around the wavelength are averaged"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also look for bands too wide for the narrow peak finder"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":30,
+                    "description":"Smallest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":300,
+                    "description":"Largest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":8,
+                    "description":"Smallest height of a band over its bridge, in noise units"
                   }
                 ]
               }
@@ -333,7 +435,7 @@
           {
             "properties":{
               "step":{"const":"convert.mzml@1"},
-              "name":{"enum":["peaks","zlib_level","numpress"]},
+              "name":{"enum":["peaks","zlib_level","numpress","dad"]},
               "value":{
                 "anyOf":[
                   {
@@ -345,13 +447,44 @@
                     "type":"integer",
                     "minimum":0,
                     "maximum":9,
-                    "default":1,
+                    "default":2,
                     "description":"zlib level of the binary arrays, 0 (none) to 9 (smallest)"
                   },
                   {
                     "type":"boolean",
                     "default":false,
                     "description":"Lossy MS-Numpress linear prediction of m/z and short logged float of intensities, smaller files"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also write the UV / PDA matrix of the sample as MS:1000804 spectra (one per instant, wavelengths in nm) after the scans; off: the file is the one written without the option"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"export.annotations@1"},
+              "name":{"enum":["top_per_method","min_level","separator"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"The most candidates written for each feature and method, best first by the score of that method"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only features whose annot.level decision is at this level or better are written, for example 3a (order 1, 2a, 2b, 3a, 3b, 4, 5, 0); left empty every feature is written"
+                  },
+                  {
+                    "enum":["comma","semicolon"],
+                    "default":"comma",
+                    "description":"comma: the usual CSV; semicolon: for spreadsheets with a decimal comma"
                   }
                 ]
               }
@@ -366,8 +499,7 @@
                 "anyOf":[
                   {
                     "type":"string",
-                    "default":"[M+H]+",
-                    "description":"Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct"
+                    "description":"Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct; left empty it is [M-H]- for products linked in negative mode and [M+H]+ otherwise"
                   },
                   {
                     "type":"number",
@@ -399,6 +531,7 @@
                 "enum":[
                   "mode",
                   "ppm",
+                  "tol_da",
                   "rt_gap",
                   "max_ppm_span",
                   "drop_artefacts",
@@ -425,6 +558,12 @@
                     "minimum":0,
                     "default":5,
                     "description":"At unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
                   },
                   {
                     "type":"number",
@@ -504,12 +643,15 @@
                   "floor",
                   "min_height",
                   "axis",
+                  "rt_range",
                   "mass_defect",
-                  "budget",
                   "min_points",
                   "max_gap",
                   "long_trace",
                   "merge_overlap",
+                  "budget",
+                  "min_width",
+                  "min_snr",
                   "ppm",
                   "peak_width_s",
                   "snr",
@@ -531,10 +673,16 @@
                   {"type":"number","minimum":0,"default":200000,"description":"Minimum height"},
                   {"enum":["ppm","Da"],"default":"ppm","description":"m/z axis"},
                   {
+                    "type":"array",
+                    "items":{"type":"number","minimum":0},
+                    "minItems":2,
+                    "maxItems":2,
+                    "description":"Optional [min, max]: only rows eluting inside are kept, for every file; left empty, all rows"
+                  },
+                  {
                     "type":"number",
                     "description":"Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty"
                   },
-                  {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
                   {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
                   {
@@ -548,7 +696,20 @@
                     "minimum":0,
                     "maximum":1,
                     "default":0,
-                    "description":"Two rows of the two grids within the mass tolerance are one ion when their scans overlap by this share of the shorter trace; 0 keeps only the test of apex and edges"
+                    "description":"Rows within the mass tolerance are one ion when their scans overlap by this share of the shorter trace"
+                  },
+                  {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Drops features narrower than this share of the typical peak width of the file; 0 = off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
                   },
                   {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
                   {
@@ -587,7 +748,7 @@
           {
             "properties":{
               "step":{"const":"features.gapfill@1"},
-              "name":{"enum":["floor","ppm","rt_tol","min_points","max_gap","long_trace"]},
+              "name":{"enum":["floor","ppm","tol_da","rt_tol","min_points","max_gap","long_trace"]},
               "value":{
                 "anyOf":[
                   {"type":"number","minimum":0,"default":20000,"description":"Noise floor"},
@@ -596,6 +757,12 @@
                     "minimum":0,
                     "default":5,
                     "description":"At unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
                   },
                   {"type":"number","minimum":0,"default":0.1,"description":"Half width added to the window of RT"},
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
@@ -614,7 +781,7 @@
           {
             "properties":{
               "step":{"const":"features.ms2_link@1"},
-              "name":{"enum":["default_half_window","tol_ppm","weak"]},
+              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak"]},
               "value":{
                 "anyOf":[
                   {
@@ -628,6 +795,12 @@
                     "minimum":0,
                     "default":6,
                     "description":"Window of the peak in the MS1 scan of the precursor; at unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
                   },
                   {
                     "type":"number",
@@ -846,6 +1019,75 @@
           },
           {
             "properties":{
+              "step":{"const":"qc.mass_accuracy@1"},
+              "name":{
+                "enum":[
+                  "search_ppm",
+                  "min_intensity",
+                  "min_refs",
+                  "robust",
+                  "model",
+                  "warn_offset_ppm",
+                  "warn_spread_ppm",
+                  "warn_is_rt_min",
+                  "warn_is_area_rsd"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":1,"default":20,"description":"Search window around each reference ion"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10000,
+                    "description":"Lowest peak intensity taken for a reference"
+                  },
+                  {"type":"integer","minimum":1,"default":5,"description":"References a file needs to be assessed"},
+                  {
+                    "enum":["huber","ransac","none"],
+                    "default":"huber",
+                    "description":"How outlying references are handled"
+                  },
+                  {
+                    "enum":["none","offset","linear_mz","linear_mz_rt"],
+                    "default":"none",
+                    "description":"Correction of the table m/z"
+                  },
+                  {"type":"number","minimum":0,"default":3,"description":"Offset above which the file is flagged"},
+                  {"type":"number","minimum":0,"default":2,"description":"Spread above which the file is flagged"},
+                  {"type":"number","minimum":0,"default":0.1,"description":"RT shift limit of internal standards"},
+                  {"type":"number","minimum":0,"default":0.2,"description":"Area spread limit of internal standards"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"qc.run_order@1"},
+              "name":{"enum":["qc_every_max","std_levels_min","blank_per_batch"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"A gap of more injections between two QC files of the same batch is reported; the gap is the difference of their injection positions"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":2,
+                    "description":"A batch whose standards and calibration files have fewer distinct concentrations is reported; 0 turns the check off"
+                  },
+                  {"type":"boolean","default":true,"description":"Report a batch without a blank file"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"quant.calibrate@1"},
               "name":{"enum":["mz_tol","rt_tol","signal","kinds"]},
               "value":{
@@ -855,6 +1097,18 @@
                   {"enum":["area","height"],"default":"area","description":"Signal the curve was made with"},
                   {"type":"string","default":"sample","description":"Sample types to quantify, comma separated"}
                 ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"report.methods@1"},
+              "name":{"enum":["style"]},
+              "value":{
+                "enum":["paragraph","list"],
+                "default":"paragraph",
+                "description":"paragraph: one English paragraph per step; list: one bullet per step with every parameter"
               }
             },
             "required":["step","name","value"]
@@ -940,6 +1194,64 @@
                     "minimum":0,
                     "default":42,
                     "description":"Seed of the bootstrap; 100 trees over a 2048-bit fingerprint of radius 2 (N_TREES, N_BITS)"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"screen.suspects@1"},
+              "name":{
+                "enum":[
+                  "ppm",
+                  "adducts",
+                  "rt_window_min",
+                  "min_fragments",
+                  "max_hits_per_feature",
+                  "lists",
+                  "include",
+                  "ms2_rt_min"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":0,"default":5,"description":"Mass tolerance"},
+                  {
+                    "type":"string",
+                    "default":"[M+H]+,[M+NH4]+,[M+Na]+,[M-H]-,[M+Cl]-",
+                    "description":"Comma-separated; the ones of the polarity of the table are searched"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Drops a candidate whose listed RT is farther than this from the feature; off when empty"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "description":"Keeps a candidate only if this many of its listed fragments are in the MS2; off when empty"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"Most formula groups kept per feature, the closest in mass first"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Ids of the lists of a regulatory package to screen, comma-separated; empty: every list in force"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Statuses added to the lists in force: proposal, draft, reference; empty: none"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Without feature ids in the spectra: largest RT distance between a scan and the feature"
                   }
                 ]
               }
@@ -1134,7 +1446,7 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "default":0.02,
+                    "default":0,
                     "description":"Fragment matching between spectra, the GNPS convention"
                   },
                   {
@@ -1255,7 +1567,18 @@
           {
             "properties":{
               "step":{"const":"spectra.ms2@1"},
-              "name":{"enum":["min_intensity","max_isolation","tol_da","rt_tol"]},
+              "name":{
+                "enum":[
+                  "min_intensity",
+                  "max_isolation",
+                  "tol_da",
+                  "rt_tol",
+                  "dia_pseudo",
+                  "dia_min_corr",
+                  "dia_min_points",
+                  "dia_frag_ppm"
+                ]
+              },
               "value":{
                 "anyOf":[
                   {
@@ -1280,6 +1603,30 @@
                     "minimum":0,
                     "default":0.2,
                     "description":"With a feature table: largest distance between the scan and the RT of the feature"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"For data-independent runs (SWATH, MSE): one pseudo MS2 spectrum per feature of the table, made of the fragments whose trace follows that of the precursor; needs the feature table, and the DDA scans are not written"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.9,
+                    "description":"With `dia_pseudo`: least Pearson correlation between the trace of a fragment and that of the precursor"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":3,
+                    "default":5,
+                    "description":"With `dia_pseudo`: fewest cycles of the RT range of a feature; a feature with fewer has no spectrum"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"With `dia_pseudo`: window around an m/z to follow its trace"
                   }
                 ]
               }
@@ -1506,6 +1853,7 @@
               "name":{
                 "enum":[
                   "min_detected",
+                  "min_replicate_fraction",
                   "min_area",
                   "min_height",
                   "blank_ratio",
@@ -1513,13 +1861,19 @@
                   "blank_stat",
                   "blank_scope",
                   "blank_subtract",
+                  "blank_match",
+                  "blank_keep_istd",
                   "qc_zero",
                   "qc_cv_max",
                   "qc_min_files",
                   "dup_ppm",
+                  "dup_da",
                   "dup_rt",
                   "require_ms2",
-                  "normalize"
+                  "normalize",
+                  "istd_id",
+                  "istd_mz",
+                  "istd_rt"
                 ]
               },
               "value":{
@@ -1528,6 +1882,12 @@
                     "type":"integer",
                     "minimum":0,
                     "description":"Peaks found by the detection in at least this many files that are not blanks; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "description":"A row is kept if, in at least one group of replicates (same series, role, time and concentration, or the same group when it is set), it is detected in at least this fraction of the files, rounded to a whole file and at least one; left empty, the rule is off"
                   },
                   {
                     "type":"number",
@@ -1564,6 +1924,15 @@
                     "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"
                   },
                   {
+                    "enum":["all","batch","matrix"],
+                    "default":"all",
+                    "description":"all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"
+                  },
+                  {
                     "type":"boolean",
                     "description":"The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"
                   },
@@ -1585,16 +1954,33 @@
                   },
                   {
                     "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only: of the rows within this many Da in m/z and the duplicate RT window of each other only the one with the largest area is kept; dup_ppm on a unit-resolution table is an error; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
                     "minimum":0,
                     "default":0.1,
                     "description":"RT distance under which two rows may be duplicates; used with the duplicate m/z window only"
                   },
                   {"type":"boolean","description":"An MS2 is linked to the peak; left empty, the rule is off"},
                   {
-                    "enum":["none","sum","median"],
+                    "enum":["none","sum","median","istd"],
                     "default":"none",
                     "description":"Scale of the areas of each file: total area or median area"
-                  }
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "description":"Id of the row of the internal standard; used with the normalisation istd"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"m/z of the internal standard, with its RT: the nearest row (5 ppm, 0.2 min) is the standard; used with the normalisation istd when no row id is set"
+                  },
+                  {"type":"number","minimum":0,"description":"RT of the internal standard; used with its m/z"}
                 ]
               }
             },
@@ -1655,7 +2041,7 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "default":0.02,
+                    "default":0,
                     "description":"Fragment matching between spectra, the GNPS convention"
                   },
                   {
@@ -2215,7 +2601,9 @@
                 "annot.hazard@1",
                 "annot.level@1",
                 "annot.regulatory@1",
+                "chrom.uv_peaks@1",
                 "convert.mzml@1",
+                "export.annotations@1",
                 "export.inclusion@1",
                 "export.mztab@1",
                 "export.table_csv@1",
@@ -2233,8 +2621,12 @@
                 "msn.figure@1",
                 "msn.library_export@1",
                 "msn.table_export@1",
+                "qc.mass_accuracy@1",
+                "qc.run_order@1",
                 "quant.calibrate@1",
+                "report.methods@1",
                 "rt.predict@1",
+                "screen.suspects@1",
                 "spectra.centroid@1",
                 "spectra.chimeric@1",
                 "spectra.insilico@1",

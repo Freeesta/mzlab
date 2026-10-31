@@ -111,7 +111,7 @@ export async function collect() {
 /** manifesto.json as bytes. @param {Entry[]} files @param {Left[]} left @param {Date} when */
 export function manifest(files, left, when) {
   return text(JSON.stringify({
-    format: FORMAT, app: W.APP_NAME || "mzLab", version: W.MZLAB_VERSION || null, created: when.toISOString(),
+    format: FORMAT, app: W.APP_NAME || "", version: W.MZLAB_VERSION || null, created: when.toISOString(),
     files: files.map(f => ({ name: f.name, bytes: f.bytes.length, what: f.what })), excluded: left,
   }, null, 1));
 }
@@ -145,9 +145,7 @@ export async function run() {
   const all = [{ name: "manifesto.json", bytes: manifest(files, left, when) }, ...files];
   const zip = await zipIt(pack(all));
   const name = `mzlab-dati-${when.toISOString().slice(0, 10)}.zip`;
-  const url = URL.createObjectURL(new Blob([/** @type {BlobPart} */ (zip)], { type: "application/zip" }));
-  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  saveBlob(new Blob([/** @type {BlobPart} */ (zip)], { type: "application/zip" }), name, 30000);
   return { name, n: all.length };
 }
 

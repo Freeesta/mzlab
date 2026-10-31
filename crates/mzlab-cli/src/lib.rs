@@ -13,11 +13,17 @@ use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
+mod campioni_cmd;
+mod canali_cmd;
 pub mod convert;
 mod convert_report;
 pub mod flow;
 mod flow_apply;
 mod flow_base;
+#[cfg(test)]
+mod flow_bentazone_export_tests;
+#[cfg(test)]
+mod flow_bentazone_tests;
 mod flow_cache;
 mod flow_centroid;
 #[cfg(test)]
@@ -26,6 +32,8 @@ mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
 mod flow_compare;
+#[cfg(test)]
+mod flow_detect_algorithm_tests;
 mod flow_digl;
 mod flow_drift;
 #[cfg(test)]
@@ -36,6 +44,8 @@ mod flow_export;
 #[cfg(test)]
 mod flow_export_tests;
 mod flow_formula;
+#[cfg(test)]
+mod flow_formula_web_tests;
 mod flow_generate;
 mod flow_hash;
 #[cfg(test)]
@@ -44,9 +54,9 @@ mod flow_import;
 #[cfg(test)]
 mod flow_import_tests;
 mod flow_inclusion;
-mod flow_insilico;
 #[cfg(test)]
-mod flow_insilico_tests;
+mod flow_inclusion_tests;
+mod flow_insilico;
 mod flow_json;
 mod flow_kmd;
 mod flow_level;
@@ -57,13 +67,19 @@ mod flow_lookup;
 #[cfg(test)]
 mod flow_lookup_tests;
 #[cfg(test)]
+mod flow_lr_bench_tests;
+#[cfg(test)]
 mod flow_lr_tests;
+mod flow_made;
+mod flow_massacc;
+#[cfg(test)]
+mod flow_massacc_tests;
 mod flow_match;
-mod flow_match_evidence;
-mod flow_match_filter;
 #[cfg(test)]
 mod flow_match_tests;
 mod flow_match_tree;
+#[cfg(test)]
+mod flow_match_web_tests;
 mod flow_ms2;
 mod flow_msnfigura;
 mod flow_msngraph;
@@ -72,6 +88,9 @@ mod flow_msnlib;
 mod flow_msnlib_tests;
 #[cfg(test)]
 mod flow_msnraw_tests;
+mod flow_nature;
+#[cfg(test)]
+mod flow_neglr_tests;
 mod flow_network;
 mod flow_out;
 mod flow_pace;
@@ -104,6 +123,8 @@ mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
+pub mod insilico_pack;
+mod ion_pattern_cmd;
 pub mod llm;
 mod llm_ctx;
 pub mod msn_figura;
@@ -114,7 +135,10 @@ mod msn_lib;
 mod msn_png;
 mod msn_rules;
 pub mod msn_uscite;
+#[cfg(not(target_family = "wasm"))]
+pub mod normative;
 mod par;
+mod peaks_edges_cmd;
 mod steps_cmd;
 mod tutor;
 #[cfg(not(target_family = "wasm"))]
@@ -132,11 +156,16 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli tutor eval CASES --blocchi F (--replay DIR | --solo-recupero)   score the Teoria tutor on the eval cases (tutor --help)
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli canali FILE [--out PATH]   the channels of a file as JSON (canali --help)
+       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help)
+       mzlab-cli campioni variabili|nome-gruppo ...   how the file names split the files, as JSON (campioni --help)
+       mzlab-cli peaks-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peaks-edges --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
        mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
+       mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help); insilico pack CSV OUT   the spectra.insilico candidate package
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
@@ -273,51 +302,6 @@ impl Outcome {
     }
 }
 
-/// `mzlab-cli msn-graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
-fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
-    let mut args = args.peekable();
-    if args.next_if(|a| a == "compare").is_some() {
-        return match msn_graph_compare::esegui(args) {
-            Ok((t, out)) => emit(t, &out),
-            Err(e) => Outcome::fail(&e.to_string()),
-        };
-    }
-    if args.next_if(|a| a == "complete").is_some() {
-        return match msn_graph::completa_cmd(args) {
-            Ok((t, out)) => emit(t, &out),
-            Err(e) => Outcome::fail(&e),
-        };
-    }
-    if args.next_if(|a| a == "figure").is_some() {
-        return msn_uscite::figure_cmd(args)
-            .map_or_else(|e| Outcome::fail(&e), |t| Outcome::ok(t.into_bytes()));
-    }
-    let a = match msn_graph::parse_args(args) {
-        Ok(Some(a)) => a,
-        Ok(None) => return Outcome::ok(format!("{}\n", msn_graph::HELP).into_bytes()),
-        Err(e) => return Outcome::fail(&e),
-    };
-    // one folder per call: the tests run several in one process
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-msn{k}", std::process::id()));
-    let r = std::fs::create_dir_all(&tmp)
-        .map_err(io)
-        .and_then(|_| msn_graph::esegui(&a, &tmp));
-    let _ = std::fs::remove_dir_all(&tmp);
-    let r = r
-        .map_err(|e| e.to_string())
-        .and_then(|t| msn_graph::figure_files(&a, &t).map(|f| (t, f)));
-    match r {
-        Err(e) => Outcome::fail(&e),
-        Ok((t, files)) => {
-            let mut o = emit(t, &a.out);
-            o.stdout.extend(files.into_bytes());
-            o
-        }
-    }
-}
-
 /// The text to the standard output, or to the file of `--out`.
 fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
     match out {
@@ -326,25 +310,6 @@ fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
             |e| Outcome::fail(&e.to_string()),
             |_| Outcome::ok(Vec::new()),
         ),
-    }
-}
-
-/// `mzlab-cli msn-lib ...`: the library of MSn trees; the data on stdout, the notices on stderr.
-fn msn_lib_cmd(args: Vec<String>) -> Outcome {
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-lib{k}", std::process::id()));
-    let r = std::fs::create_dir_all(&tmp)
-        .map_err(io)
-        .and_then(|_| msn_lib::run(args, &tmp));
-    let _ = std::fs::remove_dir_all(&tmp);
-    match r {
-        Ok((data, note)) => Outcome {
-            code: 0,
-            stdout: data,
-            stderr: note,
-        },
-        Err(e) => Outcome::fail(&e.to_string()),
     }
 }
 
@@ -367,7 +332,9 @@ fn features_cmd(args: impl Iterator<Item = String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}", std::process::id()));
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-feat{k}", std::process::id()));
     let r = std::fs::create_dir_all(&tmp)
         .map_err(io)
         .and_then(|_| features(&a.files, &a.params, &tmp));
@@ -404,7 +371,17 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 5] = ["llm", "steps", "tutor", "explain-missing", "msn-rules"];
+const PLAIN: [&str; 9] = [
+    "llm",
+    "steps",
+    "tutor",
+    "explain-missing",
+    "msn-rules",
+    "canali",
+    "ion-pattern",
+    "campioni",
+    "peaks-edges",
+];
 
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
     match command {
@@ -412,8 +389,27 @@ fn run_plain(command: &str, args: Vec<String>) -> Outcome {
         "steps" => steps_cmd::run(args),
         "explain-missing" => flow_explain::run(args),
         "msn-rules" => msn_rules::run(args),
+        "canali" => canali_cmd::run(args),
+        "ion-pattern" => ion_pattern_cmd::run(args),
+        "campioni" => campioni_cmd::run(args),
+        "peaks-edges" => peaks_edges_cmd::run(args),
         _ => tutor::run(args),
     }
+}
+
+/// The commands that exist only in the native build (they read the disk or the network).
+#[cfg(not(target_family = "wasm"))]
+fn native_cmd(name: &str, args: impl Iterator<Item = String>) -> Outcome {
+    match name {
+        "normative" => normative::run(args.collect()),
+        "insilico" => insilico_pack::run(args.collect()),
+        _ => validate::run(args),
+    }
+}
+
+#[cfg(target_family = "wasm")]
+fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
+    Outcome::fail(&format!("unknown command {name}"))
 }
 
 /// `mzlab-cli <args>`: `args` without the program name.
@@ -423,11 +419,10 @@ pub fn execute(args: &[String]) -> Outcome {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
         Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
-        Some("msn-graph") => return msn_graph_cmd(args),
-        Some("msn-lib") => return msn_lib_cmd(args.collect()),
+        Some("msn-graph") => return msn_graph::cmd(args),
+        Some("msn-lib") => return msn_lib::cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
-        #[cfg(not(target_family = "wasm"))]
-        Some("validate") => return validate::run(args),
+        Some(c @ ("normative" | "insilico" | "validate")) => return native_cmd(c, args),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown command {c}")),
     }

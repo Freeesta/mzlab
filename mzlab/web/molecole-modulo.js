@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 // The form of the window «Molecules» (molecole-ui.js): builds the fields of a molecule, fills them from a record and reads them back. The record goes to the engine
 // (molecole-archivio.js), which checks it, computes the mass and gives the id: the form only collects text.
 

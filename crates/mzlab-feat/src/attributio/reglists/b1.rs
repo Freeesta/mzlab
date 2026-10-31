@@ -5,9 +5,10 @@
 
 use super::catalog;
 use crate::attributio::tox::snapshot::MembershipRow;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet};
 
-const PROTON: f64 = 1.007276;
+const PROTON: f64 = mzlab_core::elements::PROTON_6DP;
 pub const MATCH_FULL: &str = "InChIKey";
 pub const MATCH_BLOCK: &str = "first block";
 
@@ -366,7 +367,7 @@ pub fn match_campaign(
         })
         .collect();
     fill_labels(&mut ident, &lists, &long);
-    ident.sort_by(|a, b| {
+    ident.sortc_by(|a, b| {
         b.n_lists
             .cmp(&a.n_lists)
             .then_with(|| a.group.cmp(&b.group))

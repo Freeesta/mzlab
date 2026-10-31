@@ -9,7 +9,6 @@
 // Pure helpers of the box, outside the module closure (the closure keeps only the state and the DOM).
 const PAL_GROUPS = ["tools", "hr", "panel", "graphs", "app"], PAL_RECENT = "mzlab.pal.recent", PAL_RECENT_N = 5;
 const palNorm = (/** @type {unknown} */ s) => String(s == null ? "" : s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const palEsc = (/** @type {unknown} */ s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 const palGroupOf = (/** @type {any} */ c) => (c.group || (c.item || c.hr ? "hr" : "tools"));
 const palKw = (/** @type {any} */ c) => (c.teo ? "" : I18N.t(`cmd.${c.id}.kw`));
 
@@ -38,21 +37,21 @@ const palRecentIds = () => { try { const a = JSON.parse(localStorage.getItem(PAL
 const palRemember = (/** @type {string} */ id) => { try { localStorage.setItem(PAL_RECENT, JSON.stringify([id, ...palRecentIds().filter(x => x !== id)].slice(0, PAL_RECENT_N))); } catch (_) { /* no storage */ } };
 
 // the key of a command that is also an action of the registry (field `azione`): the text of its shortcut, as the system writes it
-const palKey = (/** @type {any} */ c) => { const a = c.azione && typeof AZIONI !== "undefined" ? AZIONI.voce(c.azione) : null; return a && a.scorciatoia ? `<kbd class="pal-k">${palEsc(AZIONI.testo(a.scorciatoia))}</kbd>` : ""; };
+const palKey = (/** @type {any} */ c) => { const a = c.azione && typeof AZIONI !== "undefined" ? AZIONI.voce(c.azione) : null; return a && a.scorciatoia ? `<kbd class="pal-k">${EH(AZIONI.testo(a.scorciatoia))}</kbd>` : ""; };
 
 // a selectable row: icon, text (html), tail (html), accessible name, action
-const palCmdRow = (/** @type {any} */ c) => ({ ic: c.ic(), html: palEsc(BARRA.name(c)), tail: palKey(c) + `<span class="pal-g">${palEsc(I18N.t(`pal.grp.${palGroupOf(c)}`))}</span>`, aria: "", run: () => { if (!c.teo) palRemember(c.id); c.run(); } });
-const palResRow = (/** @type {any} */ r) => ({ ic: r.ic, html: r.html, tail: `<span class="pal-c">${palEsc(r.chip)}</span>` + (r.detail ? `<span class="pal-g">${palEsc(r.detail)}</span>` : ""), aria: r.aria, run: r.run });
+const palCmdRow = (/** @type {any} */ c) => ({ ic: c.ic(), html: EH(BARRA.name(c)), tail: palKey(c) + `<span class="pal-g">${EH(I18N.t(`pal.grp.${palGroupOf(c)}`))}</span>`, aria: "", run: () => { if (!c.teo) palRemember(c.id); c.run(); } });
+const palResRow = (/** @type {any} */ r) => ({ ic: r.ic, html: r.html, tail: `<span class="pal-c">${EH(r.chip)}</span>` + (r.detail ? `<span class="pal-g">${EH(r.detail)}</span>` : ""), aria: r.aria, run: r.run });
 
 // blocks [{title, rows}] -> the html of the list (group titles only with several blocks or an empty query) and its selectable rows
 function palList(/** @type {{title: string, rows: any[]}[]} */ blocks, /** @type {string} */ query, /** @type {boolean} */ pending) {
   const full = blocks.filter(b => b.rows.length), rows = [];
   let html = "";
   for (const b of full) {
-    if (full.length > 1 || !query) html += `<li class="pal-h" role="presentation">${palEsc(b.title)}</li>`;
+    if (full.length > 1 || !query) html += `<li class="pal-h" role="presentation">${EH(b.title)}</li>`;
     for (const r of b.rows) {
       const i = rows.push(r) - 1;
-      html += `<li role="option" id="pal-o-${i}" data-i="${i}" aria-selected="false"${r.aria ? ` aria-label="${palEsc(r.aria)}"` : ""}><span class="pal-i" aria-hidden="true">${r.ic}</span><span class="pal-t">${r.html}</span>${r.tail}</li>`;
+      html += `<li role="option" id="pal-o-${i}" data-i="${i}" aria-selected="false"${r.aria ? ` aria-label="${EH(r.aria)}"` : ""}><span class="pal-i" aria-hidden="true">${r.ic}</span><span class="pal-t">${r.html}</span>${r.tail}</li>`;
     }
   }
   // the hint or the «nothing found» line lives outside the listbox, which must hold options only
@@ -84,8 +83,8 @@ const PALETTE = (() => {
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
     box.setAttribute("aria-label", t("pal.title"));
-    box.innerHTML = `<div class="pal-b"><input type="text" id="pal-in" role="combobox" aria-expanded="false" aria-controls="pal-l" aria-autocomplete="list" aria-label="${palEsc(t("pal.title"))}" placeholder="${palEsc(t("pal.placeholder"))}" autocomplete="off" autocapitalize="off" spellcheck="false">` +
-      `<ul id="pal-l" role="listbox" aria-label="${palEsc(t("pal.title"))}"></ul><div id="pal-e" class="pal-e"></div><div class="pal-f"><span>${palEsc(t("pal.hint"))}</span><span id="pal-n" role="status" aria-live="polite" class="pal-sr"></span></div></div>`;
+    box.innerHTML = `<div class="pal-b"><input type="text" id="pal-in" role="combobox" aria-expanded="false" aria-controls="pal-l" aria-autocomplete="list" aria-label="${EH(t("pal.title"))}" placeholder="${EH(t("pal.placeholder"))}" autocomplete="off" autocapitalize="off" spellcheck="false">` +
+      `<ul id="pal-l" role="listbox" aria-label="${EH(t("pal.title"))}"></ul><div id="pal-e" class="pal-e"></div><div class="pal-f"><span>${EH(t("pal.hint"))}</span><span id="pal-n" role="status" aria-live="polite" class="pal-sr"></span></div></div>`;
     document.body.appendChild(box);
     input = box.querySelector("#pal-in");
     list = box.querySelector("#pal-l");

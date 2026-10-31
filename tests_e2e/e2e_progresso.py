@@ -26,11 +26,11 @@ for _ in range(50):
 MZ = sorted(str(p) for p in D.glob("*.mzML"))[:3]
 WIFF = [str(D / n) for n in ["serie.wiff", "serie.wiff.scan"]]
 RECORD = """() => { window.__pc = {}; window.__over = false;
-  const read = () => { for (const c of document.querySelectorAll('#flist td[data-cvrow]')) { const b = c.querySelector('[role=progressbar]'); if (b) (window.__pc[c.dataset.cvrow] = window.__pc[c.dataset.cvrow] || []).push(Number(b.getAttribute('aria-valuenow'))); } };
-  new MutationObserver(read).observe(document.querySelector('#flist'), { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'], childList: true });
+  const read = () => { for (const c of document.querySelectorAll('#fl-up [data-up]')) { const b = c.querySelector('[role=progressbar]'); if (b) (window.__pc[c.dataset.up] = window.__pc[c.dataset.up] || []).push(Number(b.getAttribute('aria-valuenow'))); } };
+  new MutationObserver(read).observe(document.querySelector('#flst'), { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'], childList: true });
   window.__tx = new Set(); window.__head = new Set(); window.__live = 0;
-  new MutationObserver(() => { for (const x of document.querySelectorAll('#flist [data-cvtxt]')) window.__tx.add(x.textContent.trim()); for (const h of document.querySelectorAll('#flist [data-cvhead]')) window.__head.add(h.textContent);
-    window.__live += document.querySelectorAll('#flist [aria-live]').length; }).observe(document.querySelector('#flist'), { subtree: true, characterData: true, childList: true });
+  new MutationObserver(() => { for (const x of document.querySelectorAll('#fl-up [data-up]')) window.__tx.add(x.title.trim());   /* the long text of a row is its title */ for (const h of document.querySelectorAll('#fl-up [data-cvhead]')) window.__head.add(h.textContent);
+    window.__live += document.querySelectorAll('#flst [aria-live]').length; }).observe(document.querySelector('#flst'), { subtree: true, characterData: true, childList: true, attributes: true, attributeFilter: ['title'] });
   window.__ph = []; addEventListener('mzlab-index', e => window.__ph.push([e.detail.name, e.detail.phase || '', e.detail.frac, performance.now()])); }"""
 
 try:
@@ -58,7 +58,7 @@ try:
         step("the bar of each row only goes forward and is not 100 before the end of its file", forward)
         def one_bar():
             assert pg.evaluate("document.querySelectorAll('#up .loadbar').length") == 0, "the card has no bar of its own: the rows carry the progress"
-            assert pg.evaluate("document.querySelectorAll('#up .prog').length") == 0, "a second bar is left"
+            assert pg.evaluate("[...document.querySelectorAll('#up .prog')].filter(b => !b.closest('.convprog')).length") == 0, "a second bar is left"
         step("one system: no bar in the card", one_bar)
         def texts():
             tx = pg.evaluate("[...window.__tx]"); head = pg.evaluate("[...window.__head]"); print("   texts:", tx, "heads:", head[:3])

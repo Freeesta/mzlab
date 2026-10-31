@@ -9,7 +9,6 @@
 /** @typedef {{id: string, title: string, rows: RicRow[]}} RicGroup */
 
 const ricT = (/** @type {string} */ k, /** @type {any} */ p = {}) => I18N.t(k, p);
-const ricEsc = (/** @type {any} */ s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const RIC_IC = (/** @type {string} */ d) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
 const RIC_ICON = {
   loss: RIC_IC('<path d="M3 5h10M3 8h6M3 11h3"/>'),
@@ -36,7 +35,7 @@ function ricClassify(q) {
 }
 
 const ricHrNow = () => (typeof window.TBL_HR === "function" ? !!window.TBL_HR() : true);
-const ricSub = (/** @type {string} */ f) => ricEsc(f).replace(/(\d+)/g, "<sub>$1</sub>");
+const ricSub = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 const ricSg = (/** @type {number} */ x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(4);
 const ricLang = () => (I18N.lang === "it" ? "it" : "en");
 
@@ -55,7 +54,7 @@ function ricContaminants() {
 // ------------------------------------------------------------------ number
 const RIC_GO = {
   loss: (/** @type {number} */ x) => { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses", { q: String(x) }); else if (window.QQQRef) QQQRef.open("ls", { q: String(x) }); },
-  adduct: () => { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("adducts"); else if (window.QQQRef) QQQRef.open("ad"); },
+  adduct: () => { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("calc"); else if (window.QQQRef) QQQRef.open("ad"); },
   cont: (/** @type {number} */ x, /** @type {any} */ it) => { if (window.LISTE) LISTE.open({ mz: x, polarity: it && it.pol > 0 ? "positive" : "negative", hr: ricHrNow() }); }
 };
 
@@ -71,7 +70,7 @@ async function ricForNumber(x) {
   };
   const r = await (await fetch("api/ricerca", { method: "POST", body: JSON.stringify(body) })).json();
   if (!r || r.error || !Array.isArray(r.hits)) return [];
-  const view = window.QADD_VIEW ? window.QADD_VIEW(hr, null) : [];
+  const cat = await CALCADD.catalog();
   const lossName = (/** @type {string} */ f) => { const l = (typeof LOSSES !== "undefined" ? LOSSES : []).find((/** @type {any} */ z) => z.f === f); return l ? ricT(l.name) : ""; };
   const detail = (/** @type {any} */ h) => (hr ? ricT("pal.d.hr", { d: ricSg(h.delta_da), ppm: (h.ppm >= 0 ? "+" : "−") + Math.abs(h.ppm).toFixed(1) }) : ricT("pal.d.lr"));
   /** @type {RicRow[]} */
@@ -79,19 +78,19 @@ async function ricForNumber(x) {
     const d = detail(h);
     if (h.kind === "loss") {
       const nm = lossName(h.id);
-      return { ic: RIC_ICON.loss, chip: ricT("pal.k.loss"), html: ricSub(h.id) + (nm ? ` <span class="pal-d">${ricEsc(nm)}</span>` : ""), detail: d, aria: `${ricT("pal.k.loss")}: ${h.id} ${nm}, ${d}`, run: () => RIC_GO.loss(x) };
+      return { ic: RIC_ICON.loss, chip: ricT("pal.k.loss"), html: ricSub(h.id) + (nm ? ` <span class="pal-d">${EH(nm)}</span>` : ""), detail: d, aria: `${ricT("pal.k.loss")}: ${h.id} ${nm}, ${d}`, run: () => RIC_GO.loss(x) };
     }
     if (h.kind === "adduct") {
-      const v = view.find((/** @type {any} */ a) => a.n === h.id);
-      const sh = v ? ` <span class="pal-d">${v.shift}</span>` : "";
-      return { ic: RIC_ICON.adduct, chip: ricT("pal.k.adduct"), html: ricEsc(h.id) + sh, detail: d, aria: `${ricT("pal.k.adduct")}: ${h.id}, ${d}`, run: () => RIC_GO.adduct() };
+      const v = cat.find(a => a.n === h.id);
+      const sh = v ? ` <span class="pal-d">${CALCADD.shiftText(v)}</span>` : "";
+      return { ic: RIC_ICON.adduct, chip: ricT("pal.k.adduct"), html: EH(h.id) + sh, detail: d, aria: `${ricT("pal.k.adduct")}: ${h.id}, ${d}`, run: () => RIC_GO.adduct() };
     }
     const it = items[+h.id] || {};
     const nm = (ricLang() === "en" && it.name_en) || it.name || "";
     const mz = hr ? Number(it.mz).toFixed(4) : String(Math.round(it.mz));
-    return { ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: ricEsc(nm) + ` <span class="pal-d">${ricEsc(it.adduct || "")} m/z ${mz}</span>`, detail: d, aria: `${ricT("pal.k.cont")}: ${nm} ${it.adduct || ""}, ${d}`, run: () => RIC_GO.cont(x, it) };
+    return { ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(nm) + ` <span class="pal-d">${EH(it.adduct || "")} m/z ${mz}</span>`, detail: d, aria: `${ricT("pal.k.cont")}: ${nm} ${it.adduct || ""}, ${d}`, run: () => RIC_GO.cont(x, it) };
   });
-  if (r.more > 0) rows.push({ ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: ricEsc(ricT("pal.more", { n: r.more })), detail: "", aria: ricT("pal.more", { n: r.more }), run: () => RIC_GO.cont(x, null) });
+  if (r.more > 0) rows.push({ ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(ricT("pal.more", { n: r.more })), detail: "", aria: ricT("pal.more", { n: r.more }), run: () => RIC_GO.cont(x, null) });
   return rows.length ? [{ id: "compat", title: ricT("pal.res.compat"), rows }] : [];
 }
 
@@ -108,8 +107,8 @@ async function ricForFormula(q) {
     return j && !j.error ? j : null;
   };
   const go = (/** @type {string} */ f) => () => {
-    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("adducts"); else if (window.QQQRef) QQQRef.open("ad");
-    setTimeout(() => { const i = /** @type {HTMLInputElement | null} */ (document.querySelector("#ad-in")); if (i) { i.value = f; i.dispatchEvent(new Event("input", { bubbles: true })); } }, 120);
+    RIC_GO.adduct();
+    setTimeout(() => { const i = /** @type {HTMLInputElement | null} */ (document.querySelector("#calcin")); if (i) { i.value = f; i.dispatchEvent(new Event("input", { bubbles: true })); } }, 120);
   };
   /** @type {RicRow[]} */
   const rows = [];
@@ -118,18 +117,18 @@ async function ricForFormula(q) {
     if (j && j.adduct) {
       const mz = hr ? Number(j.mz).toFixed(4) : String(j.nominal);
       const d = ricT("pal.formula.ion", { adduct: j.adduct });
-      rows.push({ ic: RIC_ICON.formula, chip: ricT("pal.k.ion"), html: `${ricSub(j.formula)} <span class="pal-d">${ricEsc(j.adduct)}</span> · m/z <b>${mz}</b>`, detail: d, aria: `${ricT("pal.k.ion")}: ${j.formula} ${j.adduct}, m/z ${mz}`, run: go(j.formula) });
+      rows.push({ ic: RIC_ICON.formula, chip: ricT("pal.k.ion"), html: `${ricSub(j.formula)} <span class="pal-d">${EH(j.adduct || "")}</span> · m/z <b>${mz}</b>`, detail: d, aria: `${ricT("pal.k.ion")}: ${j.formula} ${j.adduct}, m/z ${mz}`, run: go(j.formula) });
       return [{ id: "formula", title: ricT("pal.res.formula"), rows }];
     }
   }
   const j = await call("");
   if (!j) return [];
   const M = hr ? Number(j.neutral).toFixed(4) : String(j.nominal_neutral);
-  rows.push({ ic: RIC_ICON.formula, chip: ricT("pal.k.formula"), html: `${ricSub(j.formula)} <span class="pal-d">${ricEsc(ricT("pal.formula.mass", { m: M }))}</span>`, detail: "", aria: `${ricT("pal.k.formula")}: ${j.formula}, ${ricT("pal.formula.mass", { m: M })}`, run: go(j.formula) });
-  const view = window.QADD_VIEW ? window.QADD_VIEW(hr, Number(j.neutral)) : [];
+  rows.push({ ic: RIC_ICON.formula, chip: ricT("pal.k.formula"), html: `${ricSub(j.formula)} <span class="pal-d">${EH(ricT("pal.formula.mass", { m: M }))}</span>`, detail: "", aria: `${ricT("pal.k.formula")}: ${j.formula}, ${ricT("pal.formula.mass", { m: M })}`, run: go(j.formula) });
+  const view = (await CALCADD.table(j.formula, "", "", "")).rows.map(a => ({ ...a, mz: hr ? String(a.mz4) : String(a.nominal) }));
   const pol = typeof E !== "undefined" && E.files.some((/** @type {any} */ f) => !f.gone && f.polarity === "negative") && !E.files.some((/** @type {any} */ f) => !f.gone && f.polarity === "positive") ? -1 : 1;
   view.filter((/** @type {any} */ a) => a.common && a.pol === pol).slice(0, RIC_MAX_ADDUCTS).forEach((/** @type {any} */ a) => {
-    rows.push({ ic: RIC_ICON.adduct, chip: ricT("pal.k.ion"), html: `${ricEsc(a.n)} · m/z <b>${a.mz}</b>`, detail: "", aria: `${a.n}, m/z ${a.mz}`, run: go(j.formula) });
+    rows.push({ ic: RIC_ICON.adduct, chip: ricT("pal.k.ion"), html: `${EH(a.n)} · m/z <b>${a.mz}</b>`, detail: "", aria: `${a.n}, m/z ${a.mz}`, run: go(j.formula) });
   });
   return [{ id: "formula", title: ricT("pal.res.formula"), rows }];
 }
@@ -178,7 +177,7 @@ const ricOpenTheory = (/** @type {string} */ url) => {
 async function ricForWord(q) {
   const hits = ricTheoryMatch(q, await ricTheoryIndex());
   /** @type {RicRow[]} */
-  const rows = hits.map(e => ({ ic: RIC_ICON.theory, chip: ricT("pal.k.theory"), html: ricEsc(e[0]) + ` <span class="pal-d">${ricEsc(e[3])}</span>`, detail: "", aria: `${ricT("pal.k.theory")}: ${e[0]}, ${e[3]}`, run: () => ricOpenTheory(e[2]) }));
+  const rows = hits.map(e => ({ ic: RIC_ICON.theory, chip: ricT("pal.k.theory"), html: EH(e[0]) + ` <span class="pal-d">${EH(e[3] ?? "")}</span>`, detail: "", aria: `${ricT("pal.k.theory")}: ${e[0]}, ${e[3]}`, run: () => ricOpenTheory(e[2]) }));
   return rows.length ? [{ id: "theory", title: ricT("pal.res.theory"), rows }] : [];
 }
 

@@ -24,12 +24,13 @@ Oracolo RFR (RawFileReader di Thermo, solo sul Mac, mai nel repository) e nostro
 - `error`: `rt`, `message` (una per voce del registro errori).
 - `sequence`: la riga di sequenza (`row_number`, `injection_vial`, `injection_volume`, `sample_weight`, `sample_volume`, `istd_amount`, `dilution_factor`, `id`, `comment`, `instrument_method`, `processing_method`, `raw_file_name`, `path`, `vial`, `user_text[]`).
   Il nostro lettore aggiunge `unknown_numbers{}` e `unknown_texts{}` per posizione (campi di cui non si conosce il significato, extra per il comparatore: servono ad accoppiarli con Sample Type, Level, calibrazione del dump RFR). `asinfo`: `preamble` (24 byte in esadecimale), `text`.
+  Per scansione il nostro lettore aggiunge `raw_records[]` (extra del banco): tutti i record dell'evento grezzo in ordine, anche con precursore ≤ 0, `{precursor, energy, flags, double, long2}`; scritta solo con almeno 2 record.
 - `method`: `block` (indice del blocco di testo), `length`, `sha256`, e `text` solo con `--text`.
 - `tune`: `values{etichetta: testo}` (il nostro lettore non la espone ancora: omessa; il punto del file con i valori di tune per segmento non è stato trovato senza un dump RFR).
 
 ## Soglie del confronto (F.2)
 RT 1e-4 min; m/z 0,5 ppm (`--tol hr`) o 1e-3 Da (`--tol lr`); intensità 1e-5 relativo; testo uguale dopo normalizzazione (spazi, maiuscole, due punti finali delle etichette). Un campo presente solo in B (nostro) è `extra`, non un errore. Le righe che non sono scansioni (`sequence`, `asinfo`, `error`, `status`, `tune`) si confrontano chiave per chiave come il trailer (`<tipo>.<chiave>`; `status` per istante campionato).
-La reazione che RFR dà alle MS1 Q Exactive (precursore = centro del range, isolamento = ampiezza del range, HCD, energia 0) non è un precursore: il comparatore la omette da entrambi i lati (`reactions_of`).
+La reazione che RFR dà alle MS1 Orbitrap/Q Exactive (precursore = centro di un range, isolamento = ampiezza, HCD, energia 0) non è un precursore: il comparatore la omette da entrambi i lati (`reactions_of`) quando una MS1 con UNA reazione coincide (entro 0,5) con `[mz_low-mz_high]` o con uno dei range `[a-b]` del testo `filter`; per MS2+ la regola non vale.
 
 ## Comandi
 ```

@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use js_sys::Function;
 use mzlab_core::lettori_mzml;
+use mzlab_core::lettori_sessione::{attacca, stacca};
 use wasm_bindgen::prelude::*;
 
 use crate::nativi::{reader, Dataset, Membri, Nativi, Src, SHELLS};
@@ -11,13 +12,15 @@ use mzlab_core::mzmlhead::Mzml;
 
 impl Nativi {
     pub(crate) fn forget(&mut self, slot: u32) {
-        if let Some((ds, _)) = self.slots.remove(&slot) {
-            if !self.slots.values().any(|(d, _)| *d == ds) {
-                self.sets.remove(&ds);
-                self.shells.retain(|(d, _), _| *d != ds);
-                self.order.retain(|(d, _)| *d != ds);
-            }
+        if let Some(ds) = stacca(&mut self.sets, &mut self.slots, slot) {
+            self.drop_shells(&ds);
         }
+    }
+
+    /// The cached `guscio` of a dataset that is gone.
+    fn drop_shells(&mut self, ds: &str) {
+        self.shells.retain(|(d, _), _| d != ds);
+        self.order.retain(|(d, _)| d != ds);
     }
 
     pub(crate) fn clear(&mut self) {
@@ -89,26 +92,26 @@ impl Engine {
         {
             return Ok(()); // already attached (the page opens the index of a file again for each route)
         }
-        self.nat.forget(slot);
-        if !self.nat.sets.contains_key(ds) {
-            let membri = Membri::new(names, sizes, read)?;
-            self.nat.sets.insert(
-                ds.to_string(),
-                Dataset {
-                    membri,
+        // a slot that moves to another sample of the same dataset keeps the dataset and its open reader (`lettori_sessione`)
+        let left = attacca(
+            &mut self.nat.sets,
+            &mut self.nat.slots,
+            slot,
+            ds,
+            c as usize,
+            || {
+                Ok::<_, JsValue>(Dataset {
+                    membri: Membri::new(names, sizes, read)?,
                     centroid,
                     l: None,
                     used: 0,
-                },
-            );
+                })
+            },
+        )?;
+        if let Some(old) = left {
+            self.nat.drop_shells(&old);
         }
-        self.nat.slots.insert(slot, (ds.to_string(), c as usize));
         Ok(())
-    }
-
-    /// Forgets the dataset of `slot` (with the index: `close`).
-    pub fn native_detach(&mut self, slot: u32) {
-        self.nat.forget(slot);
     }
 
     /// `metodo/1` of the sample of `slot` from its reader; `""` when `slot` is not native.

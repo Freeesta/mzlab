@@ -72,7 +72,9 @@ def test_features_detect_agrees_with_the_study_sketch():
         assert detect["params"]["properties"][name]["default"] == SKETCH["params"]["properties"][name]["default"]
     assert detect["presets"]["hr"]["params"] == SKETCH["presets"]["hr"]["params"]
     assert detect["presets"]["lr"]["params"] == SKETCH["presets"]["lr"]["params"]
-    mine = {a["id"]: a["params"]["properties"] for a in detect["algorithms"]}
+    # the sketch has the parameters of the trace stage under masstrace; the descriptor declares them for the step, so every algorithm can set them
+    common = detect["params"]["properties"]
+    mine = {a["id"]: {**common, **a["params"]["properties"]} for a in detect["algorithms"]}
     for a in SKETCH["algorithms"]:
         for name, p in a["params"]["properties"].items():
             assert mine[a["id"]][name]["default"] == p["default"], (a["id"], name)

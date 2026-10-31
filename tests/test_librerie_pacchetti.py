@@ -92,9 +92,13 @@ def test_the_catalog_file_and_the_external_sources(tmp_path, zip_path):
     out = tmp_path / "out"
     lp.run(out, zip_path, stand_in(tmp_path))
     cat = json.loads((out / "catalogo.json").read_text(encoding="utf-8"))
-    assert cat["formato"] == "librerie/1" and cat["pezzo"] == lp.PIECE
-    assert {e["id"] for e in cat["esterne"]} == {"gnps-cc0", "massbank-msp"}
+    assert cat["formato"] == "librerie/2" and cat["pezzo"] == lp.PIECE
+    assert {"gnps-cc0", "massbank-msp"} <= {e["id"] for e in cat["esterne"]}
     assert all(e["url"].startswith("https://") for e in cat["esterne"])
+    modes = {f["id"]: f["modo"] for f in cat["fonti"]}
+    assert modes["massbank-pos"] == "site" and modes["massbank-msp"] == "external" and modes["mona-gcms"] == "link"
+    site = [f for f in cat["fonti"] if f["modo"] == "site"]
+    assert {f["id"] for f in site} <= {p["id"] for p in cat["librerie"]} and all(f["sha256"] and f["dimensione"] for f in site)
     assert len(lp.ZIP_SHA256) == 64 and lp.VERSION in lp.ZIP_URL
 
 
@@ -115,3 +119,14 @@ def test_an_unreachable_source_publishes_nothing_and_does_not_fail(tmp_path, mon
     assert lp.run(tmp_path / "out", None, stand_in(tmp_path)) is None
     assert "::warning::" in capsys.readouterr().out
     assert not (tmp_path / "out").exists()
+
+
+def test_the_hand_written_catalog_passes_its_check_and_the_check_catches_mistakes():
+    fonti = lp.load_sources()
+    assert lp.check_sources(fonti) == []
+    first = fonti[0]
+    for change, text in (({"modo": "site", "licenza": "CC-BY-NC-4.0"}, "free licence"), ({"modo": "external", "download": None}, "https download"),
+                         ({"verificato": None}, "date"), ({"id": fonti[1]["id"]}, "repeated"), ({"sha256": "abc"}, "malformed")):
+        bad = lp.check_sources([{**first, **change}, *fonti[1:]])
+        assert any(text in b for b in bad), (change, bad)
+    assert lp.check_sources([{k: v for k, v in first.items() if k != "kind"}]) != []

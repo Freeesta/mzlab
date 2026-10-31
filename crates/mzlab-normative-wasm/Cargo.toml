@@ -1,0 +1,14 @@
+[package]
+name = "mzlab-normative-wasm"
+description = "wasm-bindgen bridge of the import of an official regulatory file (ECHA Candidate List, Proposition 65) into a private .mzsus; a .wasm of its own, loaded by the Library window only when the user imports a file"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }
+mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["attributio"] }
+wasm-bindgen = "0.2"

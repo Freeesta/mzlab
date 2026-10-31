@@ -49,13 +49,9 @@ impl State {
         let q = || Query::parse(s("query"));
         match op {
             "lr_boot" => {
-                let list = self.store.lock().unwrap_or_else(|e| e.into_inner()).list();
+                let list = self.visible_list();
                 let mut rows = Vec::new();
-                let warm = self.warm_names();
                 for (name, e, changed) in list {
-                    if warm.contains(&name) {
-                        continue;
-                    }
                     let mzml = e.nat.is_some() || name.to_ascii_lowercase().ends_with(".mzml");
                     if changed {
                         self.indexer()?.remove(&name);
@@ -138,6 +134,9 @@ impl State {
                     if names.contains(&name) && !derived {
                         idx += size;
                     } else if derived || p["free"].as_bool().unwrap_or(false) {
+                        if let Some(slot) = eng.lr_slot.get(&name).copied() {
+                            eng.idx.remove(&slot);                                             // unmapped first: a mapped file cannot be deleted on Windows
+                        }
                         b.remove(&name);
                     } else {
                         gone += size;
@@ -153,22 +152,26 @@ impl State {
                     eng.nat.forget(slot);
                 }
                 self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
-                self.warm_forget(Some(name));
                 text("{}")
             }
+            "lr_valida" => self.validate_mzml(s("name")),
+            "lr_isotope_fine" => text(mzlab_core::isofine::isotope_fine_route(s("query"))?),
             "lr_composition" => text(mzlab_core::comproute::composition_route(&q()).unwrap_or_default()),
             "lr_stat" => match mzlab_core::statroute::stat_route(s("path"), s("body")) {
                 None => text(""),
                 Some(Ok(j)) => text(j),
                 Some(Err(j)) => text(format!("E{j}")),
             },
-            "lr_campioni" => text(mzlab_core::campioni::route(s("cop"), s("body"))?),
+            "lr_campioni" => text(mzlab_core::campioni::route_tutto(s("cop"), s("body"))?),
             "lr_molecole_archivio" => text(self.store.lock().unwrap_or_else(|e| e.into_inner()).molecules(s("mop"), s("body"))?),
             "lr_molecules" => text(mzlab_core::molecules::route(s("mop"), s("body"))?),
             "lr_formula" => {
                 let ad = s("adduct");
                 text(mzlab_core::elements::formula_mz(s("f"), if ad.is_empty() { None } else { Some(ad) })?)
             }
+            "lr_ion_pattern" => text(mzlab_core::ionpattern::route(s("f"), s("adduct"))?),
+            "lr_adduct_table" => text(mzlab_core::adduct_table::table(s("f"), s("obs"), s("tol"), s("delta"))?),
+            "lr_flow_command" => text(mzlab_core::flow::command_route(s("body"))?),   // the copyable shell command of a mzflow/2 plan, as the `.wasm` of the site and `mzlab-cli flow command`
             "lr_ricerca" => text(mzlab_core::ricerca::match_number(s("body"))?),
             "lr_provenance" => text(mzlab_core::provenance::build(s("ctx"))),
             "lr_kv_get" => text(json!({ "value": self.store.lock().unwrap_or_else(|e| e.into_inner()).kv_get(s("key")) }).to_string()),
@@ -177,7 +180,6 @@ impl State {
                 text("{}")
             }
             "lr_clear" => {
-                self.warm_forget(None);
                 eng.idx.retain(|k, _| *k < LR_BASE);
                 eng.nat.clear();
                 eng.lr_slot.clear();
@@ -193,6 +195,15 @@ impl State {
             // ---- the methods (.dam) and how an item was acquired
             _ => Err(Error::new("rpc.unknown")),
         }
+    }
+
+    /// «Validate mzML»: the report of `mzlab-cli validate --json` for a registered mzML (the page's `valida` module gives the same bytes).
+    fn validate_mzml(&self, name: &str) -> Result<Answer> {
+        let entry = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).filter(|e| e.nat.is_none());
+        let entry = entry.ok_or_else(|| Error::new("err.file.unknown").with("detail", name))?;
+        let file = std::fs::File::open(&entry.path).map_err(|e| Error::new("err.file.unknown").with("detail", e.to_string()))?;
+        let report = mzlab_core::mzmlvalida::valida(std::io::BufReader::new(file))?;
+        text(mzlab_core::mzmlvalida::json_un_file(name, &report))
     }
 
     fn method_or_gradient(&self, eng: &mut Eng, op: &str, item: &str) -> Result<Answer> {

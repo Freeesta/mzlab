@@ -23,12 +23,31 @@
     for (const id of addon.steps) if (!F.findStep(S.plan, id)) made = F.addStep(S.plan, S.reg, id);
     return made;
   };
+  /** the filter of the rows reads the table of the alignment, not the registry of the filters of the TP chain (the last table the add-ons made) @param {any} plan @param {any} reg */
+  const wireReliable = (plan, reg) => {
+    const rel = F.findStep(plan, "table.filter"), gap = F.findStep(plan, "features.gapfill"), rstep = rel && reg.byId.get("table.filter");
+    const tport = rstep && F.ports(rstep.in).find((/** @type {FlowPort} */ x) => x.name === "table");
+    if (rel && gap && tport) F.setPort(rel, tport, [`${gap.id}.table`]);
+  };
   /** a plan for a template: the base, then its add-ons @param {any} reg @param {any} tpl */
   F.templatePlan = (reg, tpl) => {
     // a template with its own steps (the MSn infusion) does not start from the feature-table base
     const S = { plan: tpl.steps ? F.newPlan() : F.basePlan(reg), reg };
     for (const id of tpl.steps || []) F.addStep(S.plan, reg, id);
     for (const a of tpl.addons) F.addAddon(S, F.ADDONS.find((/** @type {any} */ x) => x.id === a));
+    // the hypotheses read the polarity and the resolution of the files unless the plan writes them: the index goes in
+    const gen = F.findStep(S.plan, "tp.generate"), idx = F.findStep(S.plan, "index.mzidx"), gstep = gen && reg.byId.get("tp.generate");
+    const iport = gstep && F.ports(gstep.in).find((/** @type {FlowPort} */ x) => x.name === "index");
+    if (gen && idx && iport && !gen.in.index) F.setPort(gen, iport, [`${idx.id}.index`]);
+    // the network reads the rows of the link (a filter keeps a view, not a table) and the same sample list, for the time course
+    const net = F.findStep(S.plan, "tp.network"), link = F.findStep(S.plan, "tp.link"), nstep = net && reg.byId.get("tp.network");
+    if (net && link && nstep) for (const [name, ref] of [["table", link.id + ".tp"], ["samples", link.in.samples]]) {
+      const port = F.ports(nstep.in).find((/** @type {FlowPort} */ x) => x.name === name);
+      if (port && ref) F.setPort(net, port, [].concat(ref));
+    }
+    wireReliable(S.plan, reg);
+    for (const id of tpl.tail || []) if (!F.findStep(S.plan, id)) F.addStep(S.plan, reg, id);
+    for (const [stepId, preset] of Object.entries(tpl.presets || {})) { const inst = F.findStep(S.plan, stepId); if (inst) F.setPreset(inst, preset); }
     // the settings a template starts with, by step id: {"table.filter": {blank_ratio: 3}}
     for (const [stepId, values] of Object.entries(tpl.params || {})) {
       const inst = F.findStep(S.plan, stepId), step = inst && reg.byId.get(stepId);
@@ -63,10 +82,15 @@
     const inst = F.instanceOf(S.plan, p.instance), step = inst && (F.stepOf ? F.stepOf(S.reg, inst) : S.reg.byId.get(inst.step.split("@")[0]));
     if (p.key === "err.flow.port.missing" && step) {
       const port = F.ports(step.in).find((/** @type {FlowPort} */ x) => x.name === p.port);
-      if (port) return { text: `Needs ${F.INPUT_NAMES[port.type] ? F.INPUT_NAMES[port.type].toLowerCase() : port.title.toLowerCase()}.`, fix: fixFor(S, inst, port) };
+      if (port) {
+        const what = F.INPUT_NAMES[port.type] ? F.INPUT_NAMES[port.type].toLowerCase() : port.title.toLowerCase(), prod = F.INPUT_TYPES.includes(port.type) ? null : producerOf(S, port);
+        return { text: prod ? `Needs ${what}: it comes from “${F.nameOf(prod.id)[0]}”, which this plan does not have yet.` : `Needs ${what}.`, fix: fixFor(S, inst, port) };
+      }
     }
     return { text: F.message(p), fix: null };
   };
+  /** the first step the plan lacks that makes what the port reads @param {any} S @param {FlowPort} port */
+  const producerOf = (S, port) => S.reg.steps.find((/** @type {any} */ s) => s.id !== "meta.compare" && !F.findStep(S.plan, s.id) && F.ports(s.out).some((/** @type {FlowPort} */ o) => F.fit(S.reg, o.type, port) === "ok"));
   /** @param {any} S @param {any} inst @param {FlowPort} port */
   const fixFor = (S, inst, port) => {
     if (F.INPUT_TYPES.includes(port.type)) {
@@ -77,7 +101,7 @@
         if (data) void F.samplesSet(S, input, data).then(() => { if (S.redraw) S.redraw(); });
       } };
     }
-    const prod = S.reg.steps.find((/** @type {any} */ s) => s.id !== "meta.compare" && !F.findStep(S.plan, s.id) && F.ports(s.out).some((/** @type {FlowPort} */ o) => F.fit(S.reg, o.type, port) === "ok"));
+    const prod = producerOf(S, port);
     if (!prod) return null;
     return { label: `Add “${F.nameOf(prod.id)[0]}”`, run() {
       const made = F.addStep(S.plan, S.reg, prod.id), o = F.ports(prod.out).find((/** @type {FlowPort} */ x) => F.fit(S.reg, x.type, port) === "ok");
@@ -122,11 +146,12 @@
     const present = (/** @type {any} */ g) => g.steps.some((/** @type {string} */ s) => F.findStep(plan, s));
     const lone = (/** @type {any} */ f) => !(simple && (f.type === "raw" || f.type === "mzml") && present(F.BASE[0]));
     for (const f of plan.inputs.filter(lone)) { nodes.push({ key: "file:" + f.name, kind: "input", title: F.INPUT_NAMES[f.type] || f.type, why: "Your data files.", cat: "input", ids: [], file: f }); owner.set("file:" + f.name, "file:" + f.name); }
-    const groups = simple ? F.BASE : [];
+    const groups = simple ? [...F.BASE, ...F.GROUPS] : [];
     for (const g of groups) {
       const insts = g.steps.map((/** @type {string} */ s) => F.findStep(plan, s)).filter(Boolean);
       if (!insts.length) continue;
-      nodes.push({ key: g.key, kind: "group", title: g.title, why: g.why, cat: g.key === "import" ? "input" : "process", ids: insts.map((/** @type {any} */ i) => i.id), locked: true });
+      const base = F.BASE.includes(g);
+      nodes.push({ key: g.key, kind: "group", title: g.title, why: g.why, cat: g.cat || (g.key === "import" ? "input" : "process"), ids: insts.map((/** @type {any} */ i) => i.id), locked: base });
       for (const i of insts) owner.set(i.id, g.key);
     }
     for (const inst of plan.steps) {
@@ -135,17 +160,31 @@
       nodes.push({ key: inst.id, kind: "step", title: name, why, cat, ids: [inst.id], locked: baseSteps.has(id) });
       owner.set(inst.id, inst.id);
     }
-    if (simple) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw" || x.type === "mzml")) owner.set("file:" + f.name, "import");
+    if (simple && present(F.BASE[0])) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw" || x.type === "mzml")) owner.set("file:" + f.name, "import");
     for (const inst of plan.steps) for (const [, v] of Object.entries(inst.in || {})) for (const r of [].concat(/** @type {any} */ (v))) {
       const src = r.startsWith("file:") ? owner.get(r) : owner.get(r.split(".")[0]), dst = owner.get(inst.id);
       if (src && dst && src !== dst) edges.add(src + "\u0000" + dst);
+    }
+    // a step that reads the infusion open in Data has no `file:` in the plan: the raw files still lead to it
+    for (const inst of plan.steps) if (F.INFUSION_STEPS.includes(inst.step.split("@")[0]) && !(inst.in && inst.in.source)) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw" || x.type === "mzml")) {
+      const src = owner.get("file:" + f.name), dst = owner.get(inst.id);
+      if (src && dst && src !== dst) edges.add(src + "\u0000" + dst);
+    }
+    // the view cards: beside a step that has a view, joined to it
+    for (const inst of plan.steps) {
+      const view = F.STEP_VIEWS[inst.step.split("@")[0]], from = owner.get(inst.id);
+      if (!view || !from) continue;
+      const key = "view:" + inst.id;
+      nodes.push({ key, kind: "view", title: view.title, why: view.why, cat: "output", ids: [], of: inst.id, result: view.result, locked: true });
+      edges.add(from + "\u0000" + key);
     }
     const keys = new Set(nodes.map(n => n.key));
     return { nodes, edges: [...edges].map(e => /** @type {[string, string]} */ (e.split("\u0000"))).filter(([a, b]) => keys.has(a) && keys.has(b)) };
   };
   /** left-to-right layout: the column is the longest path from the left, the row the order inside the column @param {any[]} nodes @param {[string, string][]} edges */
   F.layout = (nodes, edges) => {
-    const depth = new Map(nodes.map(n => [n.key, 0])), W = 280, H = 96;
+    // few cards: a tighter grid
+    const small = nodes.length <= 5, depth = new Map(nodes.map(n => [n.key, 0])), W = small ? 250 : 280, H = small ? 88 : 96;
     for (let k = 0; k < nodes.length; k++) for (const [a, b] of edges) depth.set(b, Math.max(/** @type {number} */ (depth.get(b)), /** @type {number} */ (depth.get(a)) + 1));
     const rows = new Map();
     for (const n of nodes) { const d = /** @type {number} */ (depth.get(n.key)), r = rows.get(d) || 0; rows.set(d, r + 1); n.x = 40 + d * W; n.y = 40 + r * H; }

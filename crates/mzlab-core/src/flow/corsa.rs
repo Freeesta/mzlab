@@ -64,6 +64,8 @@ pub struct Livelli {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Corsa {
     pub engine: Vec<(String, String)>,
+    /// `engine.modules` of the record: name -> SHA-256, in the order of the record.
+    pub modules: Vec<(String, String)>,
     pub plan_sha256: Option<String>,
     pub inputs: Vec<Ingresso>,
     pub lists: Vec<Ingresso>,
@@ -71,10 +73,12 @@ pub struct Corsa {
     pub levels: Livelli,
     /// The `report/1` text of the table, as the table wrote it.
     pub report: Option<String>,
+    /// The lists the run screened against and the candidates they name (`screen/1`, `annot/1`).
+    pub regulatory: super::corsa_reg::Regulatory,
 }
 
 /// Types of file that are lists the run used (libraries, transformation and structure lists), reported apart from the data files.
-const LIST_TYPES: [&str; 3] = ["library", "transform", "structure"];
+const LIST_TYPES: [&str; 4] = ["library", "transform", "structure", "regulatory"];
 
 fn text(v: &Value, key: &str) -> Option<String> {
     v.get(key).and_then(|x| x.str()).map(str::to_string)
@@ -141,6 +145,47 @@ fn passo(name: &str, a: &Value) -> Passo {
     }
 }
 
+/// The string keys of `agent` that `engine` copies, in this order.
+const ENGINE_KEYS: [&str; 7] = [
+    "name",
+    "version",
+    "commit",
+    "platform",
+    "target",
+    "rustc",
+    "cargo_lock_sha256",
+];
+
+/// `agent.modules` of the record: name -> SHA-256.
+fn modules_of(agent: Option<&Value>) -> Vec<(String, String)> {
+    match agent.and_then(|a| a.get("modules")) {
+        Some(Value::Obj(m)) => m
+            .iter()
+            .filter_map(|(k, v)| v.str().map(|v| (k.clone(), v.to_string())))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// `"modules":{...}` inside `engine`, when there are any.
+fn modules_json(o: &mut Out, modules: &[(String, String)], comma: bool) {
+    if modules.is_empty() {
+        return;
+    }
+    o.raw(if comma {
+        ",\"modules\":{"
+    } else {
+        "\"modules\":{"
+    });
+    for (k, (name, v)) in modules.iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" })
+            .str(name)
+            .raw(":")
+            .str(v);
+    }
+    o.raw("}");
+}
+
 /// Builds the report from the `prov/1` of a run and the output files that go with it; a file that is not JSON of a known format is ignored.
 pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     if prov.get("schema").and_then(|s| s.str()) != Some("prov/1") {
@@ -148,11 +193,12 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     }
     let agent = prov.get("agent");
     let mut engine = Vec::new();
-    for k in ["name", "version", "commit", "platform"] {
+    for k in ENGINE_KEYS {
         if let Some(v) = agent.and_then(|a| text(a, k)) {
             engine.push((k.to_string(), v));
         }
     }
+    let modules = modules_of(agent);
     let (mut inputs, mut lists) = (Vec::new(), Vec::new());
     if let Some(Value::Obj(entities)) = prov.get("entity") {
         for (key, e) in entities {
@@ -177,9 +223,10 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
         _ => Vec::new(),
     };
     let mut levels = Livelli::default();
-    let mut report = None;
+    let (mut report, mut regulatory) = (None, super::corsa_reg::Regulatory::default());
     for u in uscite {
         let Ok(v) = parse(u.bytes) else { continue };
+        regulatory.read(&v);
         if v.get("schema").and_then(|s| s.str()) == Some("report/1") {
             report = Some(String::from_utf8_lossy(u.bytes).trim_end().to_string());
         }
@@ -206,12 +253,14 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     crate::sortc::slice_ord(&mut levels.other);
     Ok(Corsa {
         engine,
+        modules,
         plan_sha256: text(prov, "plan_sha256"),
         inputs,
         lists,
         steps,
         levels,
         report,
+        regulatory,
     })
 }
 
@@ -321,6 +370,7 @@ impl Corsa {
                 .raw(":")
                 .str(v);
         }
+        modules_json(&mut o, &self.modules, !self.engine.is_empty());
         o.raw("}");
         if let Some(p) = &self.plan_sha256 {
             o.raw(",\"plan_sha256\":").str(p);
@@ -349,6 +399,7 @@ impl Corsa {
         if let Some(r) = &self.report {
             o.raw(",\"report\":").raw(r);
         }
+        self.regulatory.write(&mut o);
         o.raw("}\n");
         o.0
     }
