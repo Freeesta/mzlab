@@ -51,7 +51,10 @@ try:
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def folder():
             pg.set_input_files("#pickdir", str(top))
-            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 4", timeout=120000)
+            try: pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 4", timeout=120000)
+            except Exception as e:      # say why a row is missing (a failed conversion keeps its message in CONVROWS and in the loading box)
+                st = pg.evaluate("() => ({ files: ST.files.map(f => f.name), conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), up: (document.querySelector('#up') || {}).innerText })")
+                raise AssertionError(f"{str(e)[:120]} | {st}") from None
             n = sorted(names(pg)); assert n == ["due.mzML", "mix.mzML", "uno.mzML", "vecchia.mzML"], n
         step("a folder with two .D runs, an older .D with only data.ms and an mzML lists four files", folder)
         def notice():
