@@ -222,7 +222,7 @@ async function lrMigrate() {                                              // wha
     try { await ARCH.put("files", n, buf instanceof Blob ? buf : new Uint8Array(buf)); await safe(() => tx("files", "readwrite", s => s.delete(n))); } catch (e) { /* it stays where it is */ }
   }
 }
-let scaldaP = null; const scalda = () => scaldaP || (scaldaP = import("./rust-scalda.js").then(M => M.createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot: n => engine.close(slotOf(n)) })));      // the warm-up of the pointed folder (rust-scalda.js): loaded on first use, never at start-up
+let scaldaP = null; const scalda = () => scaldaP || (scaldaP = import("./rust-scalda.js").then(M => M.createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } })));      // the warm-up of the pointed folder (rust-scalda.js): loaded on first use, never at start-up
 const CANCELLED = new Set();                                              // names whose loading the page cancelled (lr_cancel): the copy and the index stop, a new lr_put starts afresh
 const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params: {} });
 const plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree() });      // the copy of a plain upload (rust-carica.js)

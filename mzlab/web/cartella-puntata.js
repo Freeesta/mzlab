@@ -124,7 +124,7 @@ const CartPuntApri = (() => {
   function warm() {
     if (window.QQQ_PHONE || !(S.native || S.perm === "granted") || !S.items.length) return;
     const items = CartPP.visible(S.items).filter(x => x.kind === "data" && /\.mzml$/i.test(x.name)).map(x => ({ key: x.path, name: x.name, size: (S.stats.get(x.path) || {}).size, get: () => fileOf(x) }));
-    if (items.length) carica("m:riscalda.js").then(() => riscaldaDi().offer(items)).catch(() => {});
+    if (items.length && typeof carica === "function") carica("m:riscalda.js").then(() => riscaldaDi().offer(items)).catch(() => {});
   }
   return { open, warm };
 })();
