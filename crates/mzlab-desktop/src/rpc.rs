@@ -354,7 +354,12 @@ impl State {
         if op == "lr_index" {
             return self.lr_index(p["name"].as_str().unwrap_or(""));                 // the build takes its time: it does not hold the engine
         }
+        if op == "lr_clear" {
+            self.warm_forget(None);                                                         // the indexes built ahead go with the session
+        }
         match op {
+            "lr_warm" => return self.lr_warm(p),                                            // the index of a file of the pointed folder, built ahead (`rpc_warm.rs`): it does not hold the engine
+            "lr_warm_claim" => return self.lr_warm_claim(p),
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
             "nat2mzml" => return self.nat_to_mzml(p),
             "natsrm" => return self.nat_srm(p),                                             // the traces of a sample for mzFinder (no mzML)

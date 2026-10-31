@@ -213,6 +213,7 @@
     "../../mzlab/web/xic-lente-disegno.js",
     "../../mzlab/web/xic-lente.js",
     "../../mzlab/web/rust-nativo.js",
+    "../../mzlab/web/riscalda.js",
     "../../mzlab/web/lettore-esterno.js",
     "../../mzlab/web/impronta.js",
     "../../mzlab/web/carica-modulo.js",

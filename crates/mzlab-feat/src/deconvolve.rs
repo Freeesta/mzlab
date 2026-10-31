@@ -307,7 +307,7 @@ fn find_seeds(
         let ix: Vec<usize> = rts
             .iter()
             .enumerate()
-            .filter(|(_, &rt)| (rt - p).abs() <= subpeak_tol)
+            .filter(|&(_, &rt)| (rt - p).abs() <= subpeak_tol)
             .map(|(i, _)| i)
             .collect();
         if !ix.is_empty() {

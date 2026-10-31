@@ -27,6 +27,7 @@
     "../../mzlab/web/rust-flow-centroid.js",
     "../../mzlab/web/rust-worker-lab.js",
     "../../mzlab/web/rust-worker.js",
+    "../../mzlab/web/rust-scalda.js",
     "../../mzlab/web/sw.js",
     "../../TP_Mine/files/feat-run.js",
     "../../TP_Mine/files/chem-worker.js",

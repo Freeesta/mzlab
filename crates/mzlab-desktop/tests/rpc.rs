@@ -77,6 +77,29 @@ fn validate_mzml_gives_the_bytes_of_the_command_line_report() {
 }
 
 #[test]
+fn a_file_warmed_ahead_is_hidden_and_claimed_with_the_same_index() {
+    let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    st.set_index_folder(data.path().join("idx")).unwrap();
+    let (id, _) = st.pick(ex).unwrap();
+    let name = "FullScan_t10.mzML";
+    let r = |op: &str, p: serde_json::Value| st.rpc(op, &p, &[]);
+    let w: serde_json::Value = serde_json::from_str(&text(r("lr_warm", json!({"name": name, "fid": id})).unwrap())).unwrap();
+    assert!(w["size"].as_u64().unwrap() > 1000, "{w}");
+    assert_eq!(text(r("lr_boot", json!({})).unwrap()), "[]", "a warm file is not in the list");
+    assert!(text(r("lr_warm", json!({"name": name, "fid": id})).unwrap()).contains("skipped"), "same file, nothing to redo");
+    let hit: serde_json::Value = serde_json::from_str(&text(r("lr_warm_claim", json!({"name": name, "fid": id})).unwrap())).unwrap();
+    assert_eq!(hit["hit"], true, "{hit}");
+    let entry = text(r("lr_entry", json!({"name": name})).unwrap());
+    assert!(entry.contains("\"kind\":\"full\""), "{entry}");
+    assert!(text(r("lr_boot", json!({})).unwrap()).contains(name), "after the claim it is a normal file");
+    let miss = text(r("lr_warm_claim", json!({"name": name, "fid": id})).unwrap());
+    assert_eq!(miss, "{\"hit\":false}", "a claim is used once");
+}
+
+#[test]
 fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone() {
     let data = tempfile::tempdir().unwrap();
     let st = State::new();
