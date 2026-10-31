@@ -33,7 +33,7 @@ pub fn clean_matrix(rows: &[Vec<Option<f64>>]) -> R<Vec<Vec<f64>>> {
     if rows.iter().any(|r| r.len() != w) {
         return bad("the rows of the table must have the same length");
     }
-    Ok(rows.iter().map(|r| r.iter().map(|v| v.filter(|x| *x == *x).unwrap_or(0.0).max(0.0)).collect()).collect())
+    Ok(rows.iter().map(|r| r.iter().map(|v| v.filter(|x| !x.is_nan()).unwrap_or(0.0).max(0.0)).collect()).collect())
 }
 
 pub fn ncols(m: &[Vec<f64>]) -> usize {
@@ -84,7 +84,7 @@ pub fn time_profile(points: &[Value], metric: &str, istd: Option<&Value>) -> R<V
         a.0.is_none().cmp(&b.0.is_none()).then(by_time).then_with(|| if a.0.is_some() { a.1.cmp(&b.1) } else { Equal }).then(a.2.cmp(&b.2))
     });
     let field = if istd.is_some() { "norm" } else { "value" };
-    let series: Vec<f64> = rows.iter().enumerate().filter(|(_, r)| r.0.is_some() && !r.3.get(field).map_or(true, Value::is_null)).map(|(i, _)| i as f64).collect();
+    let series: Vec<f64> = rows.iter().enumerate().filter(|(_, r)| r.0.is_some() && !r.3.get(field).is_none_or(Value::is_null)).map(|(i, _)| i as f64).collect();
     let out: Vec<Value> = rows.into_iter().map(|r| r.3).collect();
     Ok(Obj::new().put("metric", text(metric)).b("normalized", istd.is_some()).put("rows", Value::Arr(out)).put("series", floats(&series)).done())
 }

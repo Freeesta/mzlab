@@ -131,10 +131,7 @@ fn rust_origin_matches_python() {
             .enumerate()
             .map(|(k, idx)| Sample { label: labels[k].as_str().unwrap().to_string(), time: times[k].as_f64(), idx, si: si[k] })
             .collect();
-        let ms2 = match pa["ms2"].as_str() {
-            Some(kind) => Some(Ms2 { x: (kind == "xp").then(|| spec(&c["ms2_x"])), p: spec(&c["ms2_p"]) }),
-            None => None,
-        };
+        let ms2 = pa["ms2"].as_str().map(|kind| Ms2 { x: (kind == "xp").then(|| spec(&c["ms2_x"])), p: spec(&c["ms2_p"]) });
         let formula = pa["formula"].as_str();
         let req = Request { mz: pa["mz"].as_f64().unwrap(), parent_mz: pa["parent"].as_f64().unwrap(), rt0: pa["rt0"].as_f64(), rt1: pa["rt1"].as_f64(), reference: pa["ref"].as_u64().map(|v| v as usize), formula_p: formula, top: 25 };
         let t = std::time::Instant::now();
