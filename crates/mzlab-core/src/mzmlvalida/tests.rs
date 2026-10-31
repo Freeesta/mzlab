@@ -259,3 +259,25 @@ fn scan_start_time_in_seconds_by_unit_name_or_accession() {
         assert_eq!(in_min(&rts(unit)), minutes, "{unit}");
     }
 }
+
+/// A numpress m/z array whose last point sits exactly where the line through the two before it puts it ends with a zero residual: only the declared
+/// length tells it from the padding, so the validator must hand that length to the decoder.
+#[test]
+fn a_numpress_array_ending_on_its_prediction_has_all_its_values() {
+    let h = Header::default();
+    let opz = Opzioni {
+        numpress: true,
+        ..Opzioni::default()
+    };
+    let mut w = MzmlWriter::con_opzioni(Vec::new(), &h, opz).unwrap();
+    w.open_spectra(8).unwrap();
+    for t in 0..8 {
+        let mz: Vec<f64> = (0..40)
+            .map(|i| 100.0 + i as f64 * 3.17 + t as f64 * 0.013)
+            .collect();
+        w.spectrum(&spectrum(t, 1, mz)).unwrap();
+    }
+    w.close_spectra().unwrap();
+    let r = report(&w.finish().unwrap());
+    assert!(r.is_valid(), "{}", show_all(&r));
+}
