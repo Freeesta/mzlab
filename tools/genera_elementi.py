@@ -64,7 +64,8 @@ def layout(z):
         return period, i - 14 + 1
     raise ValueError(z)
 
-def main():
+def ocl_masses():
+    """Exact isotope masses by atomic number - 1: {neutron count: mass}, read from the table inside OpenChemLib."""
     ocl = (WEB / "vendor" / "openchemlib.js").read_text()
     pos = ocl.index("Bl=b(k(Ht,2),fA,16,0,[null,") + len("Bl=b(k(Ht,2),fA,16,0,[null,")
     pat, iso = re.compile(r"b\(k\(Ht,1\),Vt,3,0,\[(.*?)\]\)"), []
@@ -72,6 +73,10 @@ def main():
         iso.append({int(n): float(x) for n, x in re.findall(r"new u\((\d+),([\d.]+)\)", m.group(1))})
         pos = m.end() + 1
         if ocl[m.end()] != ",": break
+    return iso
+
+def main():
+    iso = ocl_masses()
     ket = Path(glob.glob(str(WEB / "vendor" / "ketcher" / "assets" / "index-*.js"))[0]).read_text()
     a = ket.index('eu=[{number:1,label:"H"'); b = ket.index("}]", a)
     weight = {int(n): float(w) for n, w in re.findall(r"\{number:(\d+),[^}]*?mass:([\d.]+)", ket[a:b])}

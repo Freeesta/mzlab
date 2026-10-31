@@ -13,6 +13,7 @@ use super::pack::{build_rows, raw_of, sorted};
 use super::resolve::Resolver;
 use super::rows::{build_list, Built, ListSrc};
 use super::{sidecar, Error};
+use crate::suspects::Suspects;
 
 /// What the import gives back: the package bytes and what the panel shows.
 pub struct Imported {
@@ -140,4 +141,15 @@ pub fn import_official(
     out.extend_from_slice(o.0.as_bytes());
     out.extend_from_slice(&r.mzsus);
     Ok(out)
+}
+
+/// The lists of an imported file as a JSON array (the `lists` of `normative/1` in its manifest, the shape of the catalogue of the package); `None` when `raw` is not a
+/// readable `.mzsus`. The Library window shows them next to the installed lists, in the app and in the browser.
+pub fn lists_of(raw: &[u8]) -> Option<String> {
+    let s = Suspects::open(raw).ok()?;
+    let m = json::parse(s.manifest().as_bytes()).ok()?;
+    let l = m.get("normative/1")?.get("lists")?;
+    let mut o = Out::default();
+    json::write_value(&mut o, l);
+    Some(o.0)
 }

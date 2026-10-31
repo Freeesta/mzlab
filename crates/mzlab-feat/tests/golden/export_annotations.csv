@@ -1,0 +1,23 @@
+feature_id,mz,rt_min,level,level_why,method,rank,name,inchikey,formula,adduct,score,score_name,delta_ppm,delta_rt_min,matched_fragments,listed_in,source_file
+1,200.1,1.5,1,standard,standard,1,Std,ZZZZZZZZZZZZZZ-YYYYYYYYYY-N,,[M+H]+,0.95,spectral_entropy,1.1,0.05,,,annot.json
+1,200.1,1.5,1,standard,library,1,lib1-0,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.9,spectral_entropy,1.25,,5,,match.json
+1,200.1,1.5,1,standard,library,2,lib1-1,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.8,spectral_entropy,1.25,,5,,match.json
+1,200.1,1.5,1,standard,library,3,lib1-2,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.7,spectral_entropy,1.25,,5,,match.json
+1,200.1,1.5,1,standard,in silico,1,sil-b,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.5,insilico,1.25,,5,,insilico.json
+1,200.1,1.5,1,standard,in silico,2,sil-a,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.4,insilico,1.25,,5,,insilico.json
+1,200.1,1.5,1,standard,formula,1,,,C2H6,[M+H]+,0.8,formula_ms1,0.75,,,,formulas.json
+2,250.2,2.5,2a,2a,library,1,lib2-00,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.99,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,2,lib2-01,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.98,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,3,lib2-02,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.97,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,4,lib2-03,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.96,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,5,lib2-04,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.95,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,6,lib2-05,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.94,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,7,lib2-06,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.93,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,8,lib2-07,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.92,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,9,lib2-08,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.91,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,library,10,lib2-09,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.9,spectral_entropy,1.25,,5,,match.json
+2,250.2,2.5,2a,2a,formula,1,,,C3H8,[M+H]+,0.8,formula_ms1,0.75,,,,formulas.json
+3,300.3,3.5,3a,suspect_fragments,suspect,1,iso-b,EEEEEEEEEEEEEE-FFFFFFFFFF-N,C3H8O,[M+H]+,2,fragments,-0.5,0.1,2,eu-pfas,screen.json
+3,300.3,3.5,3a,suspect_fragments,suspect,2,iso-a,CCCCCCCCCCCCCC-DDDDDDDDDD-N,C3H8O,[M+H]+,1,fragments,-0.5,0.1,1,,screen.json
+3,300.3,3.5,3a,suspect_fragments,formula,1,,,C3H8O,[M+H]+,0.8,formula_ms1,0.75,,,,formulas.json
+4,350.4,4.5,5,none,library,1,lib4,AAAAAAAAAAAAAA-BBBBBBBBBB-N,C2H6,,0.65,spectral_entropy,1.25,,5,,match.json

@@ -1,31 +1,59 @@
-# Monthly update proposals for the three ecosystems of the repository, one grouped pull request per ecosystem. Security updates are separate and always on.
+# Weekly update proposals, one grouped pull request per ecosystem; never auto-merged. Security updates are separate and always on.
+# wasm-bindgen / js-sys / web-sys and tauri are pinned on purpose: no major or minor bump is proposed (the CLI is built from Cargo.lock, so patch bumps are fine).
 version: 2
 updates:
   - package-ecosystem: cargo
     directory: /
     schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "rust"]
     groups:
       cargo:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "wasm-bindgen*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "js-sys"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "web-sys"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "tauri*"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "deps"
   - package-ecosystem: pip
     directory: /
     schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "python"]
     groups:
       pip:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"
+  - package-ecosystem: npm
+    directory: /tools/libro/editor
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "javascript"]
+    groups:
+      npm:
         patterns: ["*"]
     commit-message:
       prefix: "deps"
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "github-actions"]
     groups:
       actions:
         patterns: ["*"]

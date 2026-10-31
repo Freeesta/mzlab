@@ -30,6 +30,11 @@ pub fn attributio() -> Vec<Step> {
     ident::registry()
 }
 
+/// `export.annotations`, exported with the steps of `mzlab-cli` (`steps-cli-1.json`) like `qc.run_order`.
+pub fn export_annotations() -> Step {
+    table::export_annotations()
+}
+
 /// The steps of the Tabui chain that `mzlab-feat` owns (package `tabui`); `mzlab_chem::step::tabui()` adds `structure.reactivity`.
 pub fn tabui() -> Vec<Step> {
     tabui::registry()
