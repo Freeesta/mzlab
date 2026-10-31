@@ -20,3 +20,6 @@ Fixture: `tools/mzml_varianti.py OUT_DIR` (20 file sintetici, numeri inventati);
 | mzMLb, imzML | – | non letti |
 
 Non provato qui: il motore `.wasm` del sito e l'app desktop sulle stesse fixture (stesso codice del core, ma senza e2e per variante).
+
+## Misure (file grande sintetico, 700 scansioni × 100 000 punti, profilo)
+`tools/mzml_grande.py` scrive il file zlib (893 MB); `mzlab-cli convert x.mzML.gz --compression smallest|standard` ne fa i gemelli; `mzlab-cli canali FILE` costruisce l'indice (CLI nativa, release, 4 CPU). Tempi e picco di memoria: Standard 1003 MB, 20,5 s, 109 MB; Smallest (zlib + Numpress) 180 MB, 26,9 s, 67 MB; scrittura Standard 43 s / 940 MB, Smallest 35 s / 916 MB (il `.gz` si gonfia in memoria). Numpress è con perdita; il dato è sintetico (rumore e picchi inventati), il rapporto reale dipende dal file.
