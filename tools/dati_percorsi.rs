@@ -105,10 +105,10 @@ fn gemelli(rel: &str) -> Vec<String> {
             if ok(&first_name(rest, old)) {
                 out.push(format!("{new}{rest}"));
             }
-        } else if let Some(rest) = rel.strip_prefix(new) {
-            if ok(&first_name(rest, new)) {
-                out.push(format!("{old}{rest}"));
-            }
+        } else if let Some(rest) = rel.strip_prefix(new)
+            && ok(&first_name(rest, new))
+        {
+            out.push(format!("{old}{rest}"));
         }
     }
     out

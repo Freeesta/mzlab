@@ -70,10 +70,9 @@ pub(super) fn testata(t: &str) -> Testata {
         if let Some(n) = k
             .strip_prefix("Cal Function ")
             .and_then(|n| n.trim().parse::<u32>().ok())
+            && let Some(t) = Taratura::da_testo(v)
         {
-            if let Some(t) = Taratura::da_testo(v) {
-                h.tarature.insert(n, t);
-            }
+            h.tarature.insert(n, t);
         }
         h.voci.push((k.to_string(), v.to_string()));
     }
@@ -228,10 +227,10 @@ pub(super) fn extern_inf(t: &str) -> Extern {
         }
     }
     for (n, (a, z)) in rampe {
-        if let (Some(f), Some(a), Some(z)) = (e.funzioni.get_mut(&n), a, z) {
-            if z > a {
-                f.rampa = Some((a, z));
-            }
+        if let (Some(f), Some(a), Some(z)) = (e.funzioni.get_mut(&n), a, z)
+            && z > a
+        {
+            f.rampa = Some((a, z));
         }
     }
     e

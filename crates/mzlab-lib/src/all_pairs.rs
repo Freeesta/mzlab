@@ -108,15 +108,15 @@ pub fn bin_matrices(
             } else {
                 (lb_raw as usize).min(nb.saturating_sub(1))
             };
-            if let Some(row) = f.get_mut(i) {
-                if let Some(val) = row.get_mut(fb) {
-                    *val = val.max(weight);
-                }
+            if let Some(row) = f.get_mut(i)
+                && let Some(val) = row.get_mut(fb)
+            {
+                *val = val.max(weight);
             }
-            if let Some(row) = l.get_mut(i) {
-                if let Some(val) = row.get_mut(lb) {
-                    *val = val.max(weight);
-                }
+            if let Some(row) = l.get_mut(i)
+                && let Some(val) = row.get_mut(lb)
+            {
+                *val = val.max(weight);
             }
         }
     }
@@ -164,10 +164,10 @@ pub fn upper_bound(
             if let (Some(f_row), Some(l_row), Some(fs_row), Some(ls_row)) = (f_r, l_r, fs_c, ls_c) {
                 let dot_f: f32 = f_row.iter().zip(fs_row.iter()).map(|(&a, &b)| a * b).sum();
                 let dot_l: f32 = l_row.iter().zip(ls_row.iter()).map(|(&a, &b)| a * b).sum();
-                if let Some(row_mut) = u.get_mut(i) {
-                    if let Some(cell) = row_mut.get_mut(j) {
-                        *cell = dot_f + dot_l;
-                    }
+                if let Some(row_mut) = u.get_mut(i)
+                    && let Some(cell) = row_mut.get_mut(j)
+                {
+                    *cell = dot_f + dot_l;
                 }
             }
         }

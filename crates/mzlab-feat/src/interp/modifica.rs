@@ -50,7 +50,7 @@ pub fn label(d: &BTreeMap<String, i64>) -> String {
     items.sortc_by_key(|(e, _)| rank(e));
     let mut out = String::new();
     for sign in [1i64, -1] {
-        for (e, &n) in items.iter().filter(|(_, n)| n.signum() == sign) {
+        for &(e, &n) in items.iter().filter(|(_, n)| n.signum() == sign) {
             out.push(if sign > 0 { '+' } else { MINUS });
             if n.abs() != 1 {
                 out.push_str(&n.abs().to_string());

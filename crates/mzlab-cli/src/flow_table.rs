@@ -10,11 +10,6 @@ use mzlab_feat::store::Slice;
 use mzlab_feat_table_wasm::core::view_json;
 use mzlab_feat_table_wasm::filterspec;
 
-/// `{"normalizza":..., "filtra":[...]}` of the parameters of the job (the rule is shared with the browser).
-pub fn spec_text(job: &Job) -> String {
-    filterspec::spec_text(&job.resolved.params)
-}
-
 /// The samples as `campioni/1` text, whichever of the two schemas the file has (the rule is shared with the browser).
 pub(crate) fn samples_text(bytes: &[u8]) -> Result<String> {
     mzlab_feat_table_wasm::pol::samples_v1(bytes)

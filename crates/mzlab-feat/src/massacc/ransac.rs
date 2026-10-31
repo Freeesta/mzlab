@@ -97,7 +97,7 @@ pub(super) fn fit(model: Model, obs: &[Obs]) -> Option<Fit> {
         let keep: Vec<Obs> = obs
             .iter()
             .zip(&now)
-            .filter(|(_, &k)| k)
+            .filter(|&(_, &k)| k)
             .map(|(o, _)| *o)
             .collect();
         let w: Vec<f64> = keep.iter().map(|o| o.w).collect();
@@ -113,7 +113,7 @@ pub(super) fn fit(model: Model, obs: &[Obs]) -> Option<Fit> {
     let kept: Vec<f64> = r
         .iter()
         .zip(&inlier)
-        .filter(|(_, &k)| k)
+        .filter(|&(_, &k)| k)
         .map(|(x, _)| *x)
         .collect();
     let dof = kept.len() as f64 - p as f64;

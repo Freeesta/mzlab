@@ -26,10 +26,10 @@ impl<R: ReadAt> Routes<R> {
         let first = (g.mz0 - sc.phase).round() as i64;
         let mut acc = sc.fold(g.nrt, (g.nmz, w), first, |p| Some(bins[p]));
         for e in &sc.edge {
-            if let Some(c) = cell_of(bins[e.pos], at(e.mz), g.nmz) {
-                if (e.y as f32) as f64 > acc[c] {
-                    acc[c] = (e.y as f32) as f64;
-                }
+            if let Some(c) = cell_of(bins[e.pos], at(e.mz), g.nmz)
+                && (e.y as f32) as f64 > acc[c]
+            {
+                acc[c] = (e.y as f32) as f64;
             }
         }
         Ok(Some(acc))

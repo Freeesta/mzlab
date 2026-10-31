@@ -89,11 +89,11 @@ fn upstream(ctx: &Ctx, plan: &Plan, inst: &Instance) -> Vec<Layer> {
     let mut line: Vec<&str> = Vec::new();
     let mut todo = inst.sources();
     while let Some(id) = todo.pop() {
-        if let Some(i) = plan.steps.iter().find(|s| s.id == id) {
-            if !line.contains(&id) {
-                line.push(id);
-                todo.extend(i.sources());
-            }
+        if let Some(i) = plan.steps.iter().find(|s| s.id == id)
+            && !line.contains(&id)
+        {
+            line.push(id);
+            todo.extend(i.sources());
         }
     }
     plan.steps

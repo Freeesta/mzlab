@@ -179,10 +179,10 @@ fn compute_isotope_score(
         norm: "mono",
     };
 
-    if let Ok(iso) = mzlab_core::isoscore::isotope_score(counts, 1, &obs, &opts) {
-        if iso.score > 0.0 {
-            return Some((iso.score * 100.0).round() / 100.0);
-        }
+    if let Ok(iso) = mzlab_core::isoscore::isotope_score(counts, 1, &obs, &opts)
+        && iso.score > 0.0
+    {
+        return Some((iso.score * 100.0).round() / 100.0);
     }
 
     // Fallback: estimate M+1 presence at ~+1.00335 Da
@@ -227,12 +227,12 @@ fn check_ms2_match(
 ) -> bool {
     let window_rt = peak_width.max(0.05);
     for s in ms2_spectra {
-        if (s.rt - rt_apex).abs() <= window_rt {
-            if let Some(prec) = s.precursor {
-                let diff_ppm = ((prec - target_mz) / target_mz * 1e6).abs();
-                if diff_ppm <= tolerance_ppm {
-                    return true;
-                }
+        if (s.rt - rt_apex).abs() <= window_rt
+            && let Some(prec) = s.precursor
+        {
+            let diff_ppm = ((prec - target_mz) / target_mz * 1e6).abs();
+            if diff_ppm <= tolerance_ppm {
+                return true;
             }
         }
     }

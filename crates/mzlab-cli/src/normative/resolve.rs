@@ -41,23 +41,22 @@ pub fn load(
         .collect();
     if let (Some(ids), Some(par), Some(props)) =
         (&plan.pubchem_ids, &plan.pubchem_parent, &plan.pubchem_props)
+        && !missing.is_empty()
     {
-        if !missing.is_empty() {
-            let p = grab(ids, inputs)?;
-            read_ids(&mut r, &p, &missing)?;
-            let want: BTreeSet<String> = r.ids.values().flatten().cloned().collect();
-            let p = grab(par, inputs)?;
-            read_parents(&mut r, &p, &want)?;
-            let mut all: BTreeSet<String> = want.clone();
-            all.extend(r.parent.values().cloned());
-            read_props(&mut r, loader, props, &all, inputs)?;
-        }
+        let p = grab(ids, inputs)?;
+        read_ids(&mut r, &p, &missing)?;
+        let want: BTreeSet<String> = r.ids.values().flatten().cloned().collect();
+        let p = grab(par, inputs)?;
+        read_parents(&mut r, &p, &want)?;
+        let mut all: BTreeSet<String> = want.clone();
+        all.extend(r.parent.values().cloned());
+        read_props(&mut r, loader, props, &all, inputs)?;
     }
-    if let Some(u) = &plan.dsstox {
-        if !plan.dtxsid.is_empty() {
-            let p = grab(u, inputs)?;
-            read_dsstox(&mut r, &p, plan.dtxsid)?;
-        }
+    if let Some(u) = &plan.dsstox
+        && !plan.dtxsid.is_empty()
+    {
+        let p = grab(u, inputs)?;
+        read_dsstox(&mut r, &p, plan.dtxsid)?;
     }
     Ok(r)
 }

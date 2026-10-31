@@ -11,10 +11,10 @@ impl<S: Source> Library<S> {
         for i in 0..n {
             let r = self.rec(i)?;
             let k = (pol_key(r.pol), r.prec);
-            if let Some(p) = prev {
-                if p.0 > k.0 || (p.0 == k.0 && p.1 > k.1) || r.first_peak as u64 != peaks {
-                    return Err(Error::corrupt("table"));
-                }
+            if let Some(p) = prev
+                && (p.0 > k.0 || (p.0 == k.0 && p.1 > k.1) || r.first_peak as u64 != peaks)
+            {
+                return Err(Error::corrupt("table"));
             }
             prev = Some(k);
             peaks += r.n_peaks as u64;

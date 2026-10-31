@@ -54,10 +54,10 @@ fn hr_profile<R: ReadAt, M: Scansioni + ?Sized>(
     }
     // _cv(head, "MS:1000800"): the value of the resolution of the scan header
     let res = src.intestazione(s)?;
-    if let Some(f) = res.iter().find(|f| f.cv.as_deref() == Some("MS:1000800")) {
-        if f.valore.trim().parse::<f64>().is_ok_and(|r| r >= 10000.0) {
-            return Ok(true);
-        }
+    if let Some(f) = res.iter().find(|f| f.cv.as_deref() == Some("MS:1000800"))
+        && f.valore.trim().parse::<f64>().is_ok_and(|r| r >= 10000.0)
+    {
+        return Ok(true);
     }
     let low = instrument.to_lowercase();
     Ok([

@@ -311,28 +311,28 @@ fn filter_path(f: &str) -> Option<Vec<(f64, String, f64)>> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < b.len() {
-        if b[i].is_ascii_digit() {
-            if let Some((s, e)) = num(i) {
-                if b.get(e) == Some(&b'@') {
-                    let mut j = e + 1;
-                    while j < b.len() && b[j].is_ascii_alphabetic() {
-                        j += 1;
-                    }
-                    if j > e + 1 {
-                        if let Some((s2, e2)) = num(j) {
-                            out.push((
-                                f[s..e].parse().unwrap_or(0.0),
-                                f[e + 1..j].to_uppercase(),
-                                f[s2..e2].parse().unwrap_or(0.0),
-                            ));
-                            i = e2;
-                            continue;
-                        }
-                    }
+        if b[i].is_ascii_digit()
+            && let Some((s, e)) = num(i)
+        {
+            if b.get(e) == Some(&b'@') {
+                let mut j = e + 1;
+                while j < b.len() && b[j].is_ascii_alphabetic() {
+                    j += 1;
                 }
-                i = e;
-                continue;
+                if j > e + 1
+                    && let Some((s2, e2)) = num(j)
+                {
+                    out.push((
+                        f[s..e].parse().unwrap_or(0.0),
+                        f[e + 1..j].to_uppercase(),
+                        f[s2..e2].parse().unwrap_or(0.0),
+                    ));
+                    i = e2;
+                    continue;
+                }
             }
+            i = e;
+            continue;
         }
         i += 1;
     }
@@ -384,10 +384,11 @@ fn immediate<'a>(
         }
     }
     for e in precs {
-        if let Some(r) = &e.refer {
-            if !r.is_empty() && level_of.get(r).copied() == Some(level.wrapping_sub(1)) {
-                return Some(e);
-            }
+        if let Some(r) = &e.refer
+            && !r.is_empty()
+            && level_of.get(r).copied() == Some(level.wrapping_sub(1))
+        {
+            return Some(e);
         }
     }
     precs.first()
@@ -659,10 +660,11 @@ fn read_walked<R: ReadAt>(
         // find "<spectrum " from pos
         let a = loop {
             let rel = pos.saturating_sub(buf_off) as usize;
-            if buf_off <= pos && rel <= buf.len() {
-                if let Some(p) = find(&buf[rel..], b"<spectrum ") {
-                    break Some(pos + p as u64);
-                }
+            if buf_off <= pos
+                && rel <= buf.len()
+                && let Some(p) = find(&buf[rel..], b"<spectrum ")
+            {
+                break Some(pos + p as u64);
             }
             if buf_off <= pos && buf_off + buf.len() as u64 >= size {
                 break None;

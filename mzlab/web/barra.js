@@ -205,7 +205,7 @@ const BARRA = (() => {
 
   // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
-    document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");
+    if (_appliedW || !Q1("#v-data.riga")) document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");     // the first paint of a restore keeps the width the last session had (avvio-progressivo.js)
   }
 
   // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized

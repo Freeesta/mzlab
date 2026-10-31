@@ -112,10 +112,10 @@ pub fn pcl_categories(counts: &[Option<f64>; 10]) -> String {
 pub fn predicted_lowest_lc50_mg_l(ug_l: &[Option<f64>; 3]) -> (Option<f64>, &'static str) {
     let (mut best, mut which) = (None, "");
     for ((_, label), v) in NORMAN_TOX_COLUMNS.iter().zip(ug_l) {
-        if let Some(v) = v.filter(|v| !v.is_nan()).map(|v| v / 1000.0) {
-            if best.is_none_or(|b| v < b) {
-                (best, which) = (Some(v), *label);
-            }
+        if let Some(v) = v.filter(|v| !v.is_nan()).map(|v| v / 1000.0)
+            && best.is_none_or(|b| v < b)
+        {
+            (best, which) = (Some(v), *label);
         }
     }
     (best, which)

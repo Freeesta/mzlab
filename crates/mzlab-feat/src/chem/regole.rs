@@ -72,10 +72,10 @@ pub fn nomi_sconosciuti(t: &Tabella) -> Vec<String> {
                 v.push(format!("{}:{g}", r.id));
             }
         }
-        if let Some(s) = &r.site {
-            if !SITI.contains(&s.as_str()) {
-                v.push(format!("{}:{s}", r.id));
-            }
+        if let Some(s) = &r.site
+            && !SITI.contains(&s.as_str())
+        {
+            v.push(format!("{}:{s}", r.id));
         }
     }
     v
@@ -120,10 +120,10 @@ const GRUPPI_BASE: [&str; 31] = [
 /// that does not parse: the page and the command report that where they read it) come back unchanged.
 pub fn con_attese(o: &Opzioni) -> Opzioni {
     let mut o = o.clone();
-    if o.regole.is_some() {
-        if let Some(Ok(a)) = o.smiles.as_deref().map(|s| attese(s, tabella_regole())) {
-            o.attese = a;
-        }
+    if o.regole.is_some()
+        && let Some(Ok(a)) = o.smiles.as_deref().map(|s| attese(s, tabella_regole()))
+    {
+        o.attese = a;
     }
     o
 }

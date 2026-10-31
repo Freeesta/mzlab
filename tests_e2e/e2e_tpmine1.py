@@ -48,6 +48,18 @@ try:
             pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
             pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/theory opens the standalone Teoria page
         step("the Tabui tab is in the header at first load", visible)
+        def after_ready():
+            # Tabui downloads after the page is usable: nothing of static/mzfinder/ is requested up to qqReady, and the first click on the tab still opens it
+            c = b.new_context(viewport={"width": 1400, "height": 900}); q = c.new_page()
+            q.add_init_script("""(() => { try { performance.setResourceTimingBufferSize(5000); } catch (_) {} const t = setInterval(() => { if (window.qqReady) { clearInterval(t);
+              window.__mzfAtReady = performance.getEntriesByType('resource').filter(e => e.name.includes('/mzfinder/')).length; } }, 5); })()""")
+            q.goto(f"http://127.0.0.1:{PORT}/"); q.wait_for_selector("#drop", timeout=120000)
+            q.wait_for_function("window.__mzfAtReady !== undefined", timeout=60000)
+            n = q.evaluate("window.__mzfAtReady"); assert n == 0, f"{n} mzfinder resources requested before qqReady"
+            q.click(TAB); q.wait_for_selector("#tp-go", timeout=60000)
+            assert q.evaluate("performance.getEntriesByType('resource').filter(e => e.name.includes('/mzfinder/')).length") > 20
+            c.close()
+        step("no static/mzfinder/ request before qqReady; the first Tabui click opens it", after_ready)
         def reload_on():
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector(TAB, timeout=30000)

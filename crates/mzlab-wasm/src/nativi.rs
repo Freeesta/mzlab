@@ -204,15 +204,15 @@ impl ReadAt for Src<'_> {
 pub(crate) fn reader(n: &mut Nativi, ds: String) -> Result<&mut dyn Lettore, JsValue> {
     n.clock += 1;
     let open = n.sets.values().filter(|d| d.l.is_some()).count();
-    if open >= OPEN && n.sets.get(&ds).is_some_and(|d| d.l.is_none()) {
-        if let Some(old) = n
+    if open >= OPEN
+        && n.sets.get(&ds).is_some_and(|d| d.l.is_none())
+        && let Some(old) = n
             .sets
             .values_mut()
             .filter(|d| d.l.is_some())
             .min_by_key(|d| d.used)
-        {
-            old.l = None;
-        }
+    {
+        old.l = None;
     }
     let d = n
         .sets

@@ -50,15 +50,15 @@ pub fn pairwise_windowed_corr(traces: &[Vec<f64>], thr: f64, min_overlap: usize)
                 None => continue,
             };
             let r = calc_pair_corr(row_i, row_j, thr, min_overlap);
-            if let Some(r_row) = r_mat.get_mut(i) {
-                if let Some(cell) = r_row.get_mut(j) {
-                    *cell = r;
-                }
+            if let Some(r_row) = r_mat.get_mut(i)
+                && let Some(cell) = r_row.get_mut(j)
+            {
+                *cell = r;
             }
-            if let Some(r_row) = r_mat.get_mut(j) {
-                if let Some(cell) = r_row.get_mut(i) {
-                    *cell = r;
-                }
+            if let Some(r_row) = r_mat.get_mut(j)
+                && let Some(cell) = r_row.get_mut(i)
+            {
+                *cell = r;
             }
         }
     }
@@ -172,35 +172,35 @@ fn update_linkage_step(
                 .copied()
                 .unwrap_or(f64::INFINITY);
             let new_dist = (dak * na as f64 + dbk * nb as f64) / total_n;
-            if let Some(row_a) = d_mat.get_mut(a) {
-                if let Some(cell) = row_a.get_mut(k) {
-                    *cell = new_dist;
-                }
+            if let Some(row_a) = d_mat.get_mut(a)
+                && let Some(cell) = row_a.get_mut(k)
+            {
+                *cell = new_dist;
             }
-            if let Some(row_k) = d_mat.get_mut(k) {
-                if let Some(cell) = row_k.get_mut(a) {
-                    *cell = new_dist;
-                }
+            if let Some(row_k) = d_mat.get_mut(k)
+                && let Some(cell) = row_k.get_mut(a)
+            {
+                *cell = new_dist;
             }
         }
     }
 
-    if let Some(row_a) = d_mat.get_mut(a) {
-        if let Some(cell) = row_a.get_mut(a) {
-            *cell = f64::INFINITY;
-        }
+    if let Some(row_a) = d_mat.get_mut(a)
+        && let Some(cell) = row_a.get_mut(a)
+    {
+        *cell = f64::INFINITY;
     }
 
     for k in 0..m {
-        if let Some(row_b) = d_mat.get_mut(b) {
-            if let Some(cell) = row_b.get_mut(k) {
-                *cell = f64::INFINITY;
-            }
+        if let Some(row_b) = d_mat.get_mut(b)
+            && let Some(cell) = row_b.get_mut(k)
+        {
+            *cell = f64::INFINITY;
         }
-        if let Some(row_k) = d_mat.get_mut(k) {
-            if let Some(cell) = row_k.get_mut(b) {
-                *cell = f64::INFINITY;
-            }
+        if let Some(row_k) = d_mat.get_mut(k)
+            && let Some(cell) = row_k.get_mut(b)
+        {
+            *cell = f64::INFINITY;
         }
     }
 
@@ -229,10 +229,10 @@ pub fn average_linkage(dist: &[Vec<f64>], cut: f64) -> (Vec<usize>, Vec<f64>) {
 
     let mut d_mat = dist.to_vec();
     for i in 0..m {
-        if let Some(row) = d_mat.get_mut(i) {
-            if let Some(cell) = row.get_mut(i) {
-                *cell = f64::INFINITY;
-            }
+        if let Some(row) = d_mat.get_mut(i)
+            && let Some(cell) = row.get_mut(i)
+        {
+            *cell = f64::INFINITY;
         }
     }
 
@@ -294,17 +294,16 @@ pub fn cluster_rois(
     for (i, row_r) in r.iter().enumerate().take(m) {
         for (j, &val) in row_r.iter().enumerate().take(m) {
             if i == j {
-                if let Some(d_row) = dist.get_mut(i) {
-                    if let Some(cell) = d_row.get_mut(j) {
-                        *cell = 0.0;
-                    }
+                if let Some(d_row) = dist.get_mut(i)
+                    && let Some(cell) = d_row.get_mut(j)
+                {
+                    *cell = 0.0;
                 }
-            } else if val.is_finite() {
-                if let Some(d_row) = dist.get_mut(i) {
-                    if let Some(cell) = d_row.get_mut(j) {
-                        *cell = (1.0 - val) / 2.0;
-                    }
-                }
+            } else if val.is_finite()
+                && let Some(d_row) = dist.get_mut(i)
+                && let Some(cell) = d_row.get_mut(j)
+            {
+                *cell = (1.0 - val) / 2.0;
             }
         }
     }
