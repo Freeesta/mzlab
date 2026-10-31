@@ -23,6 +23,9 @@ fn voce(k: usize, rt: f64, filtro: &str, q1: f64) -> VoceScansione {
 }
 
 impl Lettore for Finto {
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        &[("campo finto", "motivo finto")]
+    }
     fn formato(&self) -> Formato {
         Formato::Altro("finto")
     }
@@ -184,4 +187,9 @@ fn senza_filtro_srm_niente_tracce() {
     let mut l = finto("+ c Full ms2 300.0@cid25.0 [50.0-400.0]");
     assert!(l.cromatogrammi(0).unwrap().is_empty());
     assert!(!ha_scansioni_srm(&mut l, 0));
+}
+
+#[test]
+fn il_resoconto_dei_non_portati_e_quello_del_lettore_avvolto() {
+    assert_eq!(finto("").non_portati(), &[("campo finto", "motivo finto")]);
 }
