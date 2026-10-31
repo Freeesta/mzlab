@@ -148,7 +148,7 @@ const AVVIO = (function () {
   function ricordaRiga() {
     const g = (/** @type {string} */ id) => document.getElementById(id), v = g("v-data"), sel = /** @type {HTMLSelectElement | null} */ (g("fsel"));
     if (!v || v.hidden || v.classList.contains("riga") || !sel || !haSessione()) return;
-    const a = BOTTONI_RIGA.map(id => (g(id) && !g(id).hidden ? 1 : 0));
+    const a = BOTTONI_RIGA.map(id => { const b = g(id); return b && !b.hidden ? 1 : 0; });
     if (!a.some(Boolean) || (window.BANCO && window.BANCO.on())) segnaRiga(null);
     else segnaRiga({ a, f: (sel.selectedOptions[0] || { text: "" }).text.slice(0, 120), fw: Math.round(sel.getBoundingClientRect().width), s: document.documentElement.style.getPropertyValue("--sb-w") });
   }
