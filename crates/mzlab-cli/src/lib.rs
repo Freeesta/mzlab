@@ -119,6 +119,8 @@ mod flow_set;
 mod flow_stats;
 mod flow_table;
 #[cfg(test)]
+mod mzml_varianti_tests;
+#[cfg(test)]
 mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]

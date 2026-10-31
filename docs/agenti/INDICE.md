@@ -94,6 +94,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`) |
 | contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
 | modulo «aperti» (mzML con numpress, mzXML: `crates/mzlab-lettori/src/aperti/`, `numpress.rs`) | `docs/agenti/lettori-aperti.md` |
+| matrice di conformità mzML (varianti, fixture `tools/mzml_varianti.py`, buchi noti) | `docs/agenti/mzml-matrice.md` |
 | modulo «andi» (netCDF/ANDI `.cdf`: `crates/mzlab-lettori/src/andi/`) | `docs/agenti/lettori-andi.md` |
 | moduli lettori, uno per famiglia (`crates/mzlab-lettori*`, `.wasm` a parte in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, regola R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, tetti) | `docs/agenti/lettori-modulo.md` |
 | rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`cancello_rilascio.py`) | `docs/agenti/rilascio.md` |
