@@ -318,7 +318,7 @@ impl Lettore for LettoreNumpress {
     }
 }
 
-fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+pub(super) fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let i = fs
         .trova(".mzml")
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;

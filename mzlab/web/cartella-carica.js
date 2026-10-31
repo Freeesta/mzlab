@@ -32,7 +32,7 @@ async function cartWalkEntries(entries, onFile, HIDDEN, setDir) {
   return (await Promise.all(entries.map(e => walk(e, "")))).flat();
 }
 const CartCarica = (() => {
-  const OK = /\.(mzml|mzxml|cdf|nc|dam|raw|wiff|wiff\.scan)$/i;
+  const OK = /\.(mzml(\.gz)?|mzxml|cdf|nc|dam|raw|wiff|wiff\.scan)$/i;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
   // by-products of the tools (msconvert logs, notes, temp files): skipped silently, never counted or reported
   const BYPRODUCT = /\.(log|txt|tmp|bak|ini|lnk)$|^(thumbs\.db|desktop\.ini)$/i;

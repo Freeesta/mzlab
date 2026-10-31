@@ -15,7 +15,7 @@ Fixture: `tools/mzml_varianti.py OUT_DIR` (20 file sintetici, numeri inventati);
 | MS-Numpress linear/pic/slof, con e senza zlib | `Opzioni::numpress`, `aperti_numpress*.rs` | si apre dal lettore `aperti` (sito, app, CLI) |
 | file vuoto, non XML | `empty`, `notxml` | `err.file.notMzml` |
 | base64 rotta | `badb64` | `err.file.base64` |
-| gzip (`.mzML.gz`) | `gz.mzML.gz` | NON accettato: `err.file.notAccepted` (buco noto) |
+| gzip (`.mzML.gz`) | `gz.mzML.gz`, `aperti_gz.rs` | si apre dal lettore `mzml-gz` (`aperti/mzml_gz.rs`): decomprime in memoria fino a `Limiti::byte` (`error.memoryBudget` oltre), poi lo legge `mzml-numpress`; gzip troncato `err.file.zlib` |
 | file troncato | `truncated` | si apre con gli spettri che ha, senza avviso (buco noto; `validate` lo segnala INVALID) |
 | mzMLb, imzML | – | non letti |
 

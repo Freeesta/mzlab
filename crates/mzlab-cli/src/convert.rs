@@ -163,9 +163,7 @@ struct Entry {
 /// The ids of the samples of a dataset with more than one, else none (a dataset the reader cannot open is converted as one and fails there).
 fn sample_ids(p: &Path) -> Vec<u32> {
     let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limiti::desktop()));
-    let ids: Vec<u32> = opened
-        .map(|l| l.campioni().iter().map(|s| s.id).collect())
-        .unwrap_or_default();
+    let ids: Vec<u32> = opened.map_or(Vec::new(), |l| l.campioni().iter().map(|s| s.id).collect());
     if ids.len() > 1 {
         ids
     } else {
@@ -175,6 +173,7 @@ fn sample_ids(p: &Path) -> Vec<u32> {
 
 /// `NAME.mzML` or `NAME-ID.mzML`, NAME without its extension unless `long`.
 fn out_name(name: &str, id: Option<u32>, long: bool) -> String {
+    let name = crate::convert_report::sans_gz(name);
     let base = if long {
         name
     } else {

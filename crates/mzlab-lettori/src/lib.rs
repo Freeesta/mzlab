@@ -22,6 +22,8 @@ pub mod waters;
 static VOCE_MZML_NUMPRESS: VoceLettore = aperti::mzml_numpress::VOCE;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 static VOCE_MZXML: VoceLettore = aperti::mzxml::VOCE;
+#[cfg(any(feature = "aperti", feature = "tutte"))]
+static VOCE_MZML_GZ: VoceLettore = aperti::mzml_gz::VOCE;
 #[cfg(any(feature = "andi", feature = "tutte"))]
 static VOCE_ANDI: VoceLettore = andi::ms::VOCE;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
@@ -71,6 +73,8 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         Some(&VOCE_MZML_NUMPRESS),
         #[cfg(any(feature = "aperti", feature = "tutte"))]
         Some(&VOCE_MZXML),
+        #[cfg(any(feature = "aperti", feature = "tutte"))]
+        Some(&VOCE_MZML_GZ),
         #[cfg(any(feature = "andi", feature = "tutte"))]
         Some(&VOCE_ANDI),
         #[cfg(any(feature = "agilent", feature = "tutte"))]
