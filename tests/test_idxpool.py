@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 PRELUDE = f"""
 import {{ createPool, poolSize }} from {JS.as_uri()!r};
-const log = [], modules = [];
+const log = [], modules = [], seen = [];
 let live = 0, maxLive = 0;
 // script(job name, attempt) -> "done" | "die" | "mem" | "unavail" | "fail"
 function fake(script) {{
@@ -21,7 +21,9 @@ function fake(script) {{
     postMessage(m) {{
       if (m.op === "module") {{ modules.push(m.module === null ? "null" : "set"); return; }}
       const n = m.blob; attempts[n] = (attempts[n] || 0) + 1; log.push("start " + n + "#" + attempts[n] + " b" + m.budget);
+      seen.push(m.prep);
       const act = script(n, attempts[n]);
+      if (act === "hang") return;
       setTimeout(() => {{
         if (this.dead) return;
         const msg = {{ done: {{ op: "done", stats: {{ passes: 1 }} }}, mem: {{ op: "error", text: '{{"error_key":"error.memoryBudget","params":{{}}}}', fatal: false }},
@@ -115,6 +117,32 @@ await out(async () => {
   return { rs: rs.map(r => r.ok ? "ok" : r.reason), started: log.map(l => l.split("#")[0].slice(6)) };
 });""")
     assert got == {"rs": ["error", "cancelled", "ok"], "started": ["a", "c"]}
+
+
+def test_the_scan_table_request_reaches_the_worker_and_a_prepare_failure_is_a_file_error():
+    got = run("""
+await out(async () => {
+  const p = createPool({ workerUrl: "x", size: 2, WorkerClass: fake((n) => n === "a" ? "fail" : "done") });
+  const mk = n => ({ name: n, blob: n, prep: { size: 5, prints: [n, "p"] }, part: n + ".part" });
+  const rs = await Promise.all([p.build(mk("a")), p.build(mk("b"))]);
+  return { rs: rs.map(r => r.ok ? "ok" : r.reason), seen, tries: log.filter(l => l.startsWith("start a")).length };
+});""")
+    assert got["rs"] == ["error", "ok"] and got["tries"] == 1
+    assert got["seen"] == [{"size": 5, "prints": ["a", "p"]}, {"size": 5, "prints": ["b", "p"]}]
+
+
+def test_cancel_while_the_worker_prepares_ends_it_and_frees_the_slot():
+    got = run("""
+await out(async () => {
+  const p = createPool({ workerUrl: "x", size: 1, WorkerClass: fake((n) => n === "a" ? "hang" : "done") });
+  const ra = p.build({ name: "a", blob: "a", prep: { size: 5, prints: [] }, part: "a.part" });
+  await new Promise(r => setTimeout(r, 20));
+  const rb = p.build(job("b"));
+  p.cancel("a");
+  const rs = await Promise.all([ra, rb]);
+  return { rs: rs.map(r => r.ok ? "ok" : r.reason), live, active: p.active };
+});""")
+    assert got == {"rs": ["cancelled", "ok"], "live": 0, "active": 0}
 
 
 def test_every_worker_is_told_first_which_module_to_use():
