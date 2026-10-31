@@ -55,7 +55,7 @@ fn sum_range(v: &[f64], a: usize, b: usize) -> f64 {
     if a < b { psum(&v[a..b]) } else { 0.0 }
 }
 fn vmax(v: &[f64]) -> f64 {
-    v.iter().cloned().fold(f64::MIN, f64::max)
+    v.iter().copied().fold(f64::MIN, f64::max)
 }
 
 /// `ionfamily._area_in`: trapezoid area of the baseline-corrected trace between two times.

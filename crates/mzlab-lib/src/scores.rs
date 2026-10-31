@@ -251,7 +251,7 @@ pub const AN_TOP: usize = 32;
 
 /// The precursor region (within 1.5 of it) and the noise (< 1% of the highest) are left out, then the 32 most intense, sorted by m/z.
 pub fn top32(s: &Spec) -> Spec {
-    let mx = s.it.iter().cloned().fold(0.0, f64::max);
+    let mx = s.it.iter().copied().fold(0.0, f64::max);
     let mut idx: Vec<usize> = (0..s.mz.len())
         .filter(|&i| s.mz[i] < s.prec - 1.5 && s.it[i] >= 0.01 * mx && s.it[i] > 0.0)
         .collect();

@@ -412,7 +412,7 @@ fn check_attributio(quantise: bool, tol_score: f64) {
                 (0..s.mz.len())
                     .filter(|&i| {
                         s.mz[i] < s.prec - 0.5
-                            && s.it[i] >= 0.01 * s.it.iter().cloned().fold(0.0, f64::max)
+                            && s.it[i] >= 0.01 * s.it.iter().copied().fold(0.0, f64::max)
                     })
                     .collect()
             };

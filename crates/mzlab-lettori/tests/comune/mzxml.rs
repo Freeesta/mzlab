@@ -96,7 +96,7 @@ fn picchi(mz: &[f64], it: &[f64], o: Opz) -> String {
 fn emetti(s: &mut String, x: &Sc, o: Opz, pos: &mut Vec<usize>) {
     pos.push(s.len());
     let tic: f64 = x.it.iter().sum();
-    let bpi = x.it.iter().cloned().fold(0.0, f64::max);
+    let bpi = x.it.iter().copied().fold(0.0, f64::max);
     let extra = if o.attributi {
         format!(
             " peaksCount=\"{}\" totIonCurrent=\"{tic}\" basePeakIntensity=\"{bpi}\"",

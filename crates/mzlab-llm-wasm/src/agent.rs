@@ -116,7 +116,7 @@ fn drive(a: &mut Agent, first: Vec<Output>) -> String {
                 params: e
                     .params
                     .iter()
-                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .map(|(k, v)| (k.to_string(), v.clone()))
                     .collect(),
             }]
         });

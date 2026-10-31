@@ -121,7 +121,7 @@ pub fn subxic<R: ReadAt>(r: &mut Routes<R>, k: i64, q: &Query) -> Result<Option<
         let w = read_win(&mut r.idx, si, a as u64, b as u64)?;
         rows.push(row(&subs[i].0, subs[i].1, &w, &rt, &full, Some(i) == full_i));
     }
-    let mut merged: Vec<(usize, usize)> = spans.iter().filter(|s| s.1 > s.0).cloned().collect();
+    let mut merged: Vec<(usize, usize)> = spans.iter().filter(|s| s.1 > s.0).copied().collect();
     crate::sortc::slice_ord(&mut merged);
     let mut comb = vec![0.0; rt.len()];
     let mut done = 0;

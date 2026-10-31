@@ -83,7 +83,7 @@ pub fn profile_peaks(mz: &[f64], y: &[f64], min_rel: f64) -> (Vec<f64>, Vec<f64>
             jg.push((i, g[i]));
         }
     }
-    let smax = s.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let smax = s.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let thr = min_rel * smax.max(1e-12);
     jg.retain(|&(j, _)| s[j] >= thr);
     if jg.is_empty() {

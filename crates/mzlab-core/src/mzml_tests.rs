@@ -29,7 +29,7 @@ fn key(z: &[u8]) -> (String, String) {
         .params
         .iter()
         .find(|(k, _)| *k == "detail")
-        .map(|(_, v)| v.to_string())
+        .map(|(_, v)| v.clone())
         .unwrap_or_default();
     (e.key.to_string(), detail)
 }

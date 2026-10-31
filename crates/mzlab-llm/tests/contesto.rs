@@ -99,7 +99,7 @@ fn names_are_hidden_on_request_and_a_small_budget_says_what_it_cut() {
 fn a_table_summary_has_counts_ranges_and_the_top_rows_by_area() {
     let mut csv = String::from("id,area\n");
     for i in 0..120 {
-        csv += &format!("r{i},{}\n", i);
+        csv += &format!("r{i},{i}\n");
     }
     let s = table_summary(&csv);
     assert_eq!(s.get("rows").and_then(Value::f64), Some(120.0));

@@ -114,8 +114,8 @@ pub fn make_decoy(s: &Spectrum, kind: DecoyKind, seed: u64) -> Spectrum {
     let mut d = s.clone();
     match kind {
         DecoyKind::Fragments => {
-            let lo = s.mz.iter().cloned().fold(f64::INFINITY, f64::min);
-            let hi = s.mz.iter().cloned().fold(0.0, f64::max);
+            let lo = s.mz.iter().copied().fold(f64::INFINITY, f64::min);
+            let hi = s.mz.iter().copied().fold(0.0, f64::max);
             // stay below the precursor region that the cleaning removes; a spectrum with a narrow range (one or two peaks) gets a wider one
             let top = (s.prec - 2.0).max(lo);
             let (lo, hi) = if hi - lo < 20.0 {
@@ -219,7 +219,7 @@ pub fn best_scores_with<S: Source>(
 /// One value per target, in the order given; equal scores get equal values, so the result does not depend on the order of the input.
 /// A score that is not finite gets q = 1.
 pub fn lib_fdr(scores_target: &[f32], scores_decoy: &[f32], kind: DecoyKind) -> Vec<LibFdr> {
-    let finite = |v: &[f32]| -> Vec<f32> { v.iter().cloned().filter(|x| x.is_finite()).collect() };
+    let finite = |v: &[f32]| -> Vec<f32> { v.iter().copied().filter(|x| x.is_finite()).collect() };
     let mut t = finite(scores_target);
     let mut d = finite(scores_decoy);
     sortc::by(&mut t, |a, b| b.total_cmp(a));
@@ -347,8 +347,8 @@ mod tests {
         let t = [0.5f32, 0.9, 0.7, 0.7, 0.8];
         let d = [0.7f32, 0.3, 0.75];
         let a = qvalues(&t, &d);
-        let tr: Vec<f32> = t.iter().rev().cloned().collect();
-        let dr: Vec<f32> = d.iter().rev().cloned().collect();
+        let tr: Vec<f32> = t.iter().rev().copied().collect();
+        let dr: Vec<f32> = d.iter().rev().copied().collect();
         let mut b = qvalues(&tr, &dr);
         b.reverse();
         assert_eq!(a, b);

@@ -436,7 +436,7 @@ pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
     }
     let a = match parse_args(args) {
         Ok(Some(a)) => a,
-        Ok(None) => return Outcome::ok(format!("{}\n", HELP).into_bytes()),
+        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
     // one folder per call: the tests run several in one process

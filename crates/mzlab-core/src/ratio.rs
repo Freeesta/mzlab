@@ -45,7 +45,7 @@ pub fn ratio_fit(x: &[f64], p: &[f64], window: (usize, usize), n_boot: usize, se
     let cut = |v: &'_ [f64]| -> std::ops::Range<usize> { window.0.min(v.len())..window.1.min(v.len()).max(window.0.min(v.len())) };
     let (pw, fw) = (&pc[cut(&pc)], &xc[cut(&xc)]);
     let fail = Obj::new().b("ok", false).done();
-    let pmax = pw.iter().cloned().fold(f64::MIN, f64::max);
+    let pmax = pw.iter().copied().fold(f64::MIN, f64::max);
     if pw.len() < 4 || pmax <= 0.0 {
         return fail;
     }
@@ -78,8 +78,8 @@ pub fn ratio_fit(x: &[f64], p: &[f64], window: (usize, usize), n_boot: usize, se
             deming_origin(&g(&pv), &g(&fv), &g(&sp), &g(&sf))
         })
         .collect();
-    let fmax = fv.iter().cloned().fold(f64::MIN, f64::max);
-    let rpmax = r * pv.iter().cloned().fold(f64::MIN, f64::max);
+    let fmax = fv.iter().copied().fold(f64::MIN, f64::max);
+    let rpmax = r * pv.iter().copied().fold(f64::MIN, f64::max);
     let rm = mean(&ratios);
     let pts = Obj::new().put("p", floats(&pv)).put("f", floats(&fv)).put("fit", floats(&fit)).done();
     Obj::new()
@@ -116,7 +116,7 @@ pub fn ratio_constancy(ratios: &[f64], ses: &[f64], labels: &[String]) -> Value 
     let rm = mean(&r);
     let n = r.len() as f64;
     let sd1 = (psum(&r.iter().map(|v| (v - rm) * (v - rm)).collect::<Vec<_>>()) / (n - 1.0)).sqrt();
-    let (mx, mn) = (r.iter().cloned().fold(f64::MIN, f64::max), r.iter().cloned().fold(f64::MAX, f64::min));
+    let (mx, mn) = (r.iter().copied().fold(f64::MIN, f64::max), r.iter().copied().fold(f64::MAX, f64::min));
     out = out
         .n("r_weighted", rw)
         .n("q", q)

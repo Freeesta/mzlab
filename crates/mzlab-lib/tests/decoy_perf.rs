@@ -6,7 +6,7 @@ use mzlab_lib::spec::Spectrum;
 
 /// Reference of the previous implementation (binary searches for both counts).
 fn lib_fdr_old(t: &[f32], d: &[f32]) -> Vec<(f32, u32, u32)> {
-    let fin = |v: &[f32]| -> Vec<f32> { v.iter().cloned().filter(|x| x.is_finite()).collect() };
+    let fin = |v: &[f32]| -> Vec<f32> { v.iter().copied().filter(|x| x.is_finite()).collect() };
     let (mut ts, mut ds) = (fin(t), fin(d));
     ts.sort_by(|a, b| b.total_cmp(a));
     ds.sort_by(|a, b| b.total_cmp(a));

@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-chem"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "mzlab-feat",
@@ -209,10 +209,11 @@ dependencies = [
 
 [[package]]
 name = "mzlab-core"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "base64",
  "flate2",
+ "mzlab-picchi",
  "opentfraw",
  "quick-xml",
  "sha1",
@@ -221,11 +222,15 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat"
-version = "1.0.1"
+version = "1.0.0"
 dependencies = [
  "libm",
  "mzlab-core",
 ]
+
+[[package]]
+name = "mzlab-picchi"
+version = "1.0.0"
 
 [[package]]
 name = "nalgebra"
