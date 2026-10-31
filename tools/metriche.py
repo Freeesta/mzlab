@@ -4,6 +4,7 @@
     python3 tools/metriche.py --registra --sito SITE --dati DIR [--sha SHA] [--ci]   # measure and append one line to DIR/metriche-YYYY-MM.jsonl
     python3 tools/metriche.py --aggiungi nome=valore ... --dati DIR [--sha SHA]       # hand-measured numbers (private-data benches) for a commit
     python3 tools/metriche.py --bench FILE.json ...                                    # synthetic bench numbers {name: number} with --registra/--aggiungi
+    python3 tools/metriche.py --copilot [--giorni N] --dati DIR                          # Copilot and chat PR rows (tools/metriche_copilot.py)
     python3 tools/metriche.py --rapporto [--dati DIR] [--html FILE]                    # trend table and HTML page (tools/metriche_trend.py)
 
 A line is `{v, sha, ts, part, ...}`; a commit may have several lines (parts `site`, `ci`, `manual`) and readers merge them by sha
@@ -19,7 +20,7 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 RADICE = Path(__file__).resolve().parent.parent
@@ -96,8 +97,27 @@ def riga(part: str, sha: str, ts: str, **sezioni) -> dict:
     return {"v": VERSIONE, "sha": sha, "ts": ts, "part": part, "recorded": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), **sezioni}
 
 
-def file_attivo(dati: str, ora: datetime | None = None) -> str:
-    return f"{dati}/{STEM}-{(ora or datetime.now(timezone.utc)).strftime('%Y-%m')}.jsonl"
+def file_attivo(dati: str, ora: datetime | None = None, stem: str = STEM) -> str:
+    return f"{dati}/{stem}-{(ora or datetime.now(timezone.utc)).strftime('%Y-%m')}.jsonl"
+
+
+def copilot_righe(dati: str) -> list[dict]:
+    """Rows of the Copilot section (one per PR, the latest line of a PR wins when the report reads them)."""
+    return leggi_righe(dati, "copilot")
+
+
+def registra_copilot(dati: str, api, giorni: int = 14, root: Path = RADICE, now: datetime | None = None) -> int:
+    """Append a row for every PR closed in the last `giorni` days that has none yet (Copilot PRs and our chat PRs, the baseline)."""
+    import metriche_copilot as mcp
+    now = now or datetime.now(timezone.utc)
+    known = {r["pr"]: r for r in copilot_righe(dati)}
+    wf = mcp.secret_workflows(root)
+    righe = [r for n in mcp.recent_closed(api, now - timedelta(days=giorni), known) if (r := mcp.pr_row(n, api, wf, now))]
+    os.makedirs(dati, exist_ok=True)
+    with open(file_attivo(dati, now, "copilot"), "a", encoding="utf-8") as f:
+        for r in righe:
+            f.write(json.dumps({**r, "recorded": now.strftime("%Y-%m-%dT%H:%M:%SZ")}, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return len(righe)
 
 
 def accoda(righe: list[dict], dati: str) -> int:
@@ -111,9 +131,9 @@ def accoda(righe: list[dict], dati: str) -> int:
     return len(nuove)
 
 
-def leggi_righe(dati: str) -> list[dict]:
+def leggi_righe(dati: str, stem: str = STEM) -> list[dict]:
     out = []
-    for p in sorted(glob.glob(f"{dati}/{STEM}-????-??.jsonl")):
+    for p in sorted(glob.glob(f"{dati}/{stem}-????-??.jsonl")):
         with open(p, encoding="utf-8") as f:
             out += [json.loads(r) for r in f if r.strip()]
     return out
@@ -141,6 +161,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bench", metavar="FILE", help="JSON {name: number} of synthetic bench results")
     ap.add_argument("--sito", help="built site directory (static/ with the .wasm files)")
     ap.add_argument("--ci", action="store_true", help="also read the CI facts of the commit from the GitHub API")
+    ap.add_argument("--copilot", action="store_true", help="record the PRs closed in the last --giorni days (Copilot and our chat PRs) from the GitHub API")
+    ap.add_argument("--giorni", type=int, default=14, help="with --copilot: how far back to look")
     ap.add_argument("--rapporto", action="store_true", help="print the trend table (better/worse than 7 and 30 days ago)")
     ap.add_argument("--html", metavar="FILE", help="with --rapporto: also write a self-contained HTML page with sparklines")
     ap.add_argument("--sha", help="commit (default HEAD)")
@@ -150,8 +172,14 @@ def main(argv: list[str] | None = None) -> int:
         import metriche_trend as t
         rows = t.analyse(leggi_commit(a.dati))
         print(t.text_report(rows))
+        import metriche_copilot as mcp
+        print("\n" + mcp.summary(copilot_righe(a.dati)))
         if a.html:
             Path(a.html).write_text(t.html_report(rows, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")), encoding="utf-8")
+        return 0
+    if a.copilot:
+        from ci_metrics import api_get
+        print(f"{registra_copilot(a.dati, api_get, a.giorni)} PR row(s) appended")
         return 0
     sha = git("rev-parse", a.sha or "HEAD")
     # commit time in UTC, so lines sort correctly whatever the committer's offset
