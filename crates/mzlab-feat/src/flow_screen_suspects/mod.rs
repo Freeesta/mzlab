@@ -20,9 +20,25 @@ pub type Named<'a> = (&'a str, &'a [u8]);
 
 /// The files of a browser call: `names_json` is a JSON list of names, `packed` the bytes joined as `u64 length (little-endian) + bytes` per file.
 pub fn unpack<'a>(names_json: &str, packed: &'a [u8]) -> Result<Vec<(String, &'a [u8])>> {
-    let names: Vec<String> = match json::parse(names_json.as_bytes())? {
-        Value::Arr(a) => a.iter().filter_map(|v| v.str().map(String::from)).collect(),
-        _ => Vec::new(),
+    Ok(unpack_split(names_json, packed)?.0)
+}
+
+/// Like `unpack`, for `screen.suspects`: `names_json` may also be `{"suspects":[...],"imported":[...]}`, the files of `packed` following in that order.
+#[allow(clippy::type_complexity)]
+pub fn unpack_split<'a>(
+    names_json: &str,
+    packed: &'a [u8],
+) -> Result<(Vec<(String, &'a [u8])>, Vec<(String, &'a [u8])>)> {
+    let strs = |v: Option<&Value>| -> Vec<String> {
+        v.map_or(&[][..], Value::arr)
+            .iter()
+            .filter_map(|v| v.str().map(String::from))
+            .collect()
+    };
+    let v = json::parse(names_json.as_bytes())?;
+    let (own, imported) = match &v {
+        Value::Obj(_) => (strs(v.get("suspects")), strs(v.get("imported"))),
+        _ => (strs(Some(&v)), Vec::new()),
     };
     let (mut files, mut at) = (Vec::new(), 0usize);
     while at + 8 <= packed.len() {
@@ -31,7 +47,12 @@ pub fn unpack<'a>(names_json: &str, packed: &'a [u8]) -> Result<Vec<(String, &'a
         files.push(&packed[at + 8..end]);
         at = end;
     }
-    Ok(names.into_iter().zip(files).collect())
+    let mut files = files.into_iter();
+    let mut take = |names: Vec<String>| -> Vec<(String, &'a [u8])> {
+        names.into_iter().zip(files.by_ref()).collect()
+    };
+    let first = take(own);
+    Ok((first, take(imported)))
 }
 
 /// The default adducts: the five of the Attributio screening, cut to the polarity of the table.

@@ -52,10 +52,10 @@
     const t0 = performance.now();
     return J().detached(x, spec, inst, async () => {
       const params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
-      const own = pack(files), more = pack(imp);
+      const both = pack([...files, ...imp]), names = imp.length ? JSON.stringify({ suspects: files.map(f => f.name), imported: imp.map(f => f.name) }) : both.names;
       let text;
       try {
-        text = await p.ident("table", "flow_screen_suspects", { params, table: await p.fs.read(J().DIR + alKey + ".mzfeat"), names: own.names, lists: own.packed, importedNames: more.names, imported: more.packed,
+        text = await p.ident("table", "flow_screen_suspects", { params, table: await p.fs.read(J().DIR + alKey + ".mzfeat"), names, lists: both.packed,
           mgf: spectra ? enc(spectra.text) : null, formulas: formulas ? enc(formulas.text) : null });
       } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text };

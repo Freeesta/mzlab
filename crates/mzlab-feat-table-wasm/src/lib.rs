@@ -434,7 +434,7 @@ pub fn campioni(op: &str, input: &str) -> std::result::Result<String, JsValue> {
 
 /// `screen.suspects` in the browser: the `screen/1` text `flow run` writes (`mzlab_feat::flow_screen_suspects::screen_text`). `params_json` is the parameters of the step merged with its
 /// defaults, `table` the alignment `.mzfeat`, `names_json` the names of the suspect files (a JSON list) and `lists` their bytes joined as `u64 length (little-endian) + bytes` per file,
-/// `imported_names_json` and `imported` the same for the imported lists (`.mzsus` files, empty: none), `mgf` the spectra (empty: none) and `formulas` a `formulas/1` text (empty: none).
+/// `names_json` may also be `{"suspects":[...],"imported":[...]}`: `lists` then holds the suspect files followed by the imported lists (`.mzsus`), `mgf` the spectra (empty: none) and `formulas` a `formulas/1` text (empty: none).
 /// Errors are JSON `{"error_key","params"}` texts.
 #[wasm_bindgen]
 pub fn flow_screen_suspects(
@@ -442,8 +442,6 @@ pub fn flow_screen_suspects(
     table: &[u8],
     names_json: &str,
     lists: &[u8],
-    imported_names_json: &str,
-    imported: &[u8],
     mgf: &[u8],
     formulas: &[u8],
 ) -> std::result::Result<String, JsValue> {
@@ -455,11 +453,8 @@ pub fn flow_screen_suspects(
         Value::Obj(o) => o,
         _ => Vec::new(),
     };
-    use mzlab_feat::flow_screen_suspects::unpack;
-    let (named, imp) = (
-        unpack(names_json, lists).map_err(js_err)?,
-        unpack(imported_names_json, imported).map_err(js_err)?,
-    );
+    let (named, imp) =
+        mzlab_feat::flow_screen_suspects::unpack_split(names_json, lists).map_err(js_err)?;
     fn view<'a>(v: &'a [(String, &'a [u8])]) -> Vec<(&'a str, &'a [u8])> {
         v.iter().map(|(n, b)| (n.as_str(), *b)).collect()
     }
