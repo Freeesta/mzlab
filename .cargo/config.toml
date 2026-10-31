@@ -2,4 +2,7 @@
 # WASM memory: 32 MB at start, 4 GiB at most (the wasm32 maximum; it reserves nothing, it only lets memory.grow go that far: the budget of
 # `mzlab-core::budget_auto` decides how much the engine really uses).
 [target.wasm32-unknown-unknown]
-rustflags = ["-C", "link-arg=--initial-memory=33554432", "-C", "link-arg=--max-memory=4294967296", "-C", "target-feature=+simd128"]
+rustflags = ["-C", "link-arg=--initial-memory=33554432", "-C", "link-arg=--max-memory=4294967296", "-C", "target-feature=+simd128", "-Zlocation-detail=none"]
+
+[env]
+RUSTC_BOOTSTRAP = "1"
