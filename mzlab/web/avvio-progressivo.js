@@ -24,6 +24,7 @@ const AVVIO = (function () {
   if (typeof window !== "undefined") {
     if (window.QQQ_PHONE || !window.QQQ_BROWSER) {
       stato = "ready";
+    finisciRiga();
     } else {
       bootTimer = setTimeout(() => {
         if (stato !== "pending") return;
@@ -105,12 +106,66 @@ const AVVIO = (function () {
     }
   }
 
+  const BOTTONI_RIGA = ["np-chrom", "np-spec", "np-map", "np-xic", "np-mrm"];
+
+  function chiaveRiga() {
+    return typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione.riga") : "mzlab.sessione.riga";
+  }
+
+  /**
+   * Remembers the second toolbar row of the Dati view, so that the next restore draws it at its final size in the first paint.
+   * Partial objects are merged into what is stored; `null` forgets it (high-resolution bench, no session).
+   * @param {{a?: number[], f?: string, fw?: number, s?: string} | null} riga a: which "+ panel" buttons, f: file selector label, fw: its width, s: side panel width
+   */
+  function segnaRiga(riga) {
+    if (typeof window === "undefined" || !window.localStorage) return;
+    try {
+      if (riga) window.localStorage.setItem(chiaveRiga(), JSON.stringify({ ...JSON.parse(window.localStorage.getItem(chiaveRiga()) || "{}"), ...riga }));
+      else window.localStorage.removeItem(chiaveRiga());
+    } catch (_) {}
+  }
+
+  function leggiRiga() {
+    try {
+      const r = JSON.parse(window.localStorage.getItem(chiaveRiga()) || "null");
+      if (r && Array.isArray(r.a) && r.a.length === BOTTONI_RIGA.length && r.a.every(/** @param {any} x */ x => x === 0 || x === 1) && typeof r.f === "string" && typeof r.fw === "number" && /^\d{2,4}px$/.test(r.s || "")) return r;
+    } catch (_) {}
+    return null;
+  }
+
+  // The row of «+ panel» buttons is drawn in the first paint of a restore, as the last session left it; its buttons stay disabled until the session is back
+  function mostraRigaRipristino() {
+    const g = (/** @type {string} */ id) => document.getElementById(id), v = g("v-data"), riga = leggiRiga();
+    if (!v || !g("tools") || !riga) return;
+    BOTTONI_RIGA.forEach((id, i) => { const b = g(id); if (b) b.hidden = !riga.a[i]; });
+    const sel = /** @type {HTMLSelectElement | null} */ (g("fsel"));
+    if (sel && !sel.options.length) { sel.add(new Option(riga.f)); sel.style.width = riga.fw + "px"; }
+    document.documentElement.style.setProperty("--sb-w", riga.s);
+    v.classList.add("riga");
+  }
+
+  // On leaving the page, the row as the last session left it: the next restore draws it in the first paint
+  function ricordaRiga() {
+    const g = (/** @type {string} */ id) => document.getElementById(id), v = g("v-data"), sel = /** @type {HTMLSelectElement | null} */ (g("fsel"));
+    if (!v || v.hidden || v.classList.contains("riga") || !sel || !haSessione()) return;
+    const a = BOTTONI_RIGA.map(id => { const b = g(id); return b && !b.hidden ? 1 : 0; });
+    if (!a.some(Boolean) || (window.BANCO && window.BANCO.on())) segnaRiga(null);
+    else segnaRiga({ a, f: (sel.selectedOptions[0] || { text: "" }).text.slice(0, 120), fw: Math.round(sel.getBoundingClientRect().width), s: document.documentElement.style.getPropertyValue("--sb-w") });
+  }
+
+  function finisciRiga() {
+    if (typeof document === "undefined") return;
+    const v = document.getElementById("v-data"), sel = document.getElementById("fsel");
+    if (v) v.classList.remove("riga");
+    if (sel) sel.style.width = "";
+  }
+
   function segnaSessione(attiva) {
     if (typeof window === "undefined" || !window.localStorage) return;
     try {
       const k = typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione") : "mzlab.sessione";
       if (attiva) window.localStorage.setItem(k, "1");
-      else window.localStorage.removeItem(k);
+      else { window.localStorage.removeItem(k); segnaRiga(null); }
     } catch (_) {}
   }
 
@@ -132,11 +187,13 @@ const AVVIO = (function () {
     o.classList.add("restoring");
     if (v) v.classList.add("opn");
     if (m && !m.textContent) m.textContent = window.I18N ? I18N.t("load.session.restoring") : "Restoring…";
+    mostraRigaRipristino();
   }
 
   function rimuoviScheletro() {
     if (typeof document === "undefined") return;
     const g = id => document.getElementById(id), o = g("opening"), w = g("wdata"), v = g("v-data"), m = g("opn-msg");
+    finisciRiga();
     if (!o || !o.classList.contains("restoring")) return;
     o.classList.remove("restoring"); o.hidden = true;
     if (w) w.hidden = false;
@@ -280,6 +337,8 @@ const AVVIO = (function () {
     timedOut = false;
   }
 
+  if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("pagehide", ricordaRiga);
+
   if (typeof document !== "undefined") {
     applicaIndizioSessione();
     renderFase();
@@ -302,6 +361,7 @@ const AVVIO = (function () {
     renderDropStato,
     renderFase,
     segnaSessione,
+    segnaRiga,
     haSessione,
     applicaIndizioSessione,
     rimuoviScheletro,

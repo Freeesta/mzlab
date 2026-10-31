@@ -99,10 +99,10 @@ impl Instance {
         let mut v: Vec<&str> = Vec::new();
         for (_, refs) in &self.ins {
             for r in refs {
-                if let Ref::Out { instance, .. } = r {
-                    if !v.contains(&instance.as_str()) {
-                        v.push(instance);
-                    }
+                if let Ref::Out { instance, .. } = r
+                    && !v.contains(&instance.as_str())
+                {
+                    v.push(instance);
                 }
             }
         }

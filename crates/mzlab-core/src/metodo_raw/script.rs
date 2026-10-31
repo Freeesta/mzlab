@@ -104,14 +104,14 @@ pub fn experiments(items: &[Item]) -> Vec<V> {
         };
         if rest == "@id" {
             out.push((it.value.parse().unwrap_or(0.0), Vec::new()));
-        } else if let (Some(leaf), Some(cur)) = (rest.strip_prefix('/'), out.last_mut()) {
-            if let Ok(v) = it.value.parse::<f64>() {
-                let unit = units
-                    .iter()
-                    .find(|(b, _)| *b == it.name)
-                    .map_or("", |u| u.1);
-                cur.1.push((leaf.to_string(), v, unit.to_string()));
-            }
+        } else if let (Some(leaf), Some(cur)) = (rest.strip_prefix('/'), out.last_mut())
+            && let Ok(v) = it.value.parse::<f64>()
+        {
+            let unit = units
+                .iter()
+                .find(|(b, _)| *b == it.name)
+                .map_or("", |u| u.1);
+            cur.1.push((leaf.to_string(), v, unit.to_string()));
         }
     }
     out.into_iter()

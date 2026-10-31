@@ -139,10 +139,10 @@ impl Resolver {
                 Some(Res::Unresolved(w)) => why.push(w),
                 None => why.push("not in PubChem".into()),
             }
-        } else if let Some(recs) = self.sus_dtx.get(dtxsid) {
-            if let Res::Found(f) = self.pick_susdat(recs) {
-                return Res::Found(f);
-            }
+        } else if let Some(recs) = self.sus_dtx.get(dtxsid)
+            && let Res::Found(f) = self.pick_susdat(recs)
+        {
+            return Res::Found(f);
         }
         if let Some(f) = self
             .dss

@@ -122,10 +122,10 @@ impl SrmDaScansioni {
         }
         let righe: Vec<VoceScansione> = self.inner.indice(c)?.to_vec();
         let mut tr = transizioni_dalle_scansioni(&mut *self.inner, c, &righe)?;
-        if tr.iter().any(|t| t.ce.is_none()) {
-            if let Ok(m) = self.inner.metodo(c) {
-                completa_dal_metodo(&m, &mut tr);
-            }
+        if tr.iter().any(|t| t.ce.is_none())
+            && let Ok(m) = self.inner.metodo(c)
+        {
+            completa_dal_metodo(&m, &mut tr);
         }
         Ok(tr.into_iter().enumerate().map(cromatogramma_di).collect())
     }

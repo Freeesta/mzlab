@@ -76,7 +76,7 @@ fn starts(s: &[char], i: usize, w: &str) -> bool {
 }
 
 /// `\d+(?:[.,]\d+)?` (also `\d+p\d+` after a `t`, as `T2p5`): the end positions, the one with the fraction first.
-fn number_ends(s: &[char], i: usize, p_point: bool) -> impl Iterator<Item = usize> {
+fn number_ends(s: &[char], i: usize, p_point: bool) -> impl Iterator<Item = usize> + use<> {
     let d = digits(s, i);
     let with_fraction = (d < s.len() && (s[d] == '.' || s[d] == ',' || (p_point && s[d] == 'p')))
         .then(|| digits(s, d + 1))

@@ -16,6 +16,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | barra di caricamento unica per ogni formato (`progresso.js`, `PROGRESSO`, evento `mzlab-index`, pesi delle fasi, prove di monotonia) | `docs/agenti/progresso.md` |
 | mappa del percorso di apertura di ogni file (clic → schermo, sito e app, per formato), strategie presenti/assenti, lotti di file per assistenti esterni (`tools/lotto_gemini.py`) | `docs/agenti/caricamento-mappa.md` |
 | carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop) | `docs/agenti/dati-cartella.md` |
+| riscaldamento in background dei file della cartella puntata (coda, `lr_warm`, `lr_warm_claim`) | `docs/agenti/riscaldamento.md` |
 | mappa RT×m/z, mirino, navigazione | `docs/agenti/dati-mappa.md` (visore 3D: `dati-mappa-3d.md`) |
 | velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |

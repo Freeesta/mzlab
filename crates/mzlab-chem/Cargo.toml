@@ -12,7 +12,7 @@ crate-type = ["rlib"]
 mzlab-core = { path = "../mzlab-core" }
 mzlab-feat = { path = "../mzlab-feat", features = ["chem"] }
 mzlab-mol = { path = "../mzlab-mol", optional = true }
-nalgebra = { version = "0.32", default-features = false, features = ["std"] }
+nalgebra = { version = "0.35", default-features = false, features = ["std"] }
 sci-form = { version = "=0.15.2", default-features = false }
 
 [features]

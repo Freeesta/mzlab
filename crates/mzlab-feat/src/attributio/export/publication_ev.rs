@@ -247,23 +247,23 @@ pub(super) fn adduct_in_name(name: &str) -> Option<String> {
 /// The ion type reported for the representative feature: the reference standard (Level 1), the source of the name, then the other exact-mass library hits.
 pub(super) fn reported_adduct(p: &PFeat, lv: i32) -> Option<String> {
     let f = p.f();
-    if lv == 1 {
-        if let Some(s) = &f.std {
-            return Some(s.adduct.clone());
-        }
+    if lv == 1
+        && let Some(s) = &f.std
+    {
+        return Some(s.adduct.clone());
     }
     if let Some(a) = p.ev.adduct.as_deref().filter(|a| !a.trim().is_empty()) {
         return Some(a.to_string());
     }
-    if f.mzlib.exact {
-        if let Some(a) = &f.mzlib.adduct {
-            return Some(a.clone());
-        }
+    if f.mzlib.exact
+        && let Some(a) = &f.mzlib.adduct
+    {
+        return Some(a.clone());
     }
-    if f.gnps.exact {
-        if let Some(a) = f.gnps.name.as_deref().and_then(adduct_in_name) {
-            return Some(a);
-        }
+    if f.gnps.exact
+        && let Some(a) = f.gnps.name.as_deref().and_then(adduct_in_name)
+    {
+        return Some(a);
     }
     None
 }
@@ -278,10 +278,12 @@ pub(super) fn common_adduct(adduct: &str, pol: &str) -> Option<String> {
         return Some(a);
     };
     for c in common_adducts(pol) {
-        if let Some(q) = parse_adduct(c) {
-            if q.0 == p.0 && q.2 == p.2 && (q.1 - p.1).abs() < 1e-6 {
-                return Some((*c).to_string());
-            }
+        if let Some(q) = parse_adduct(c)
+            && q.0 == p.0
+            && q.2 == p.2
+            && (q.1 - p.1).abs() < 1e-6
+        {
+            return Some((*c).to_string());
         }
     }
     Some(a)

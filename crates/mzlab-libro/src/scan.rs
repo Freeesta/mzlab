@@ -78,13 +78,14 @@ pub(crate) fn kicker(text: &str) -> Option<(usize, String)> {
     while let Some(p) = text[from..].find("{kicker:") {
         let at = from + p;
         let after = &text[at + 8..];
-        if let Some(close) = after.find('}') {
-            if after[close + 1..].trim().is_empty() && close > 0 {
-                let raw = &after[..close];
-                let k = raw.trim_start_matches(' ');
-                let k = if k.is_empty() { " " } else { k };
-                return Some((text[..at].trim_end().len(), k.to_string()));
-            }
+        if let Some(close) = after.find('}')
+            && after[close + 1..].trim().is_empty()
+            && close > 0
+        {
+            let raw = &after[..close];
+            let k = raw.trim_start_matches(' ');
+            let k = if k.is_empty() { " " } else { k };
+            return Some((text[..at].trim_end().len(), k.to_string()));
         }
         from = at + 1;
     }
@@ -138,11 +139,11 @@ pub(crate) fn fig_line(ln: &str) -> Option<(String, String, Option<String>, Stri
     let src = &rest[..n];
     let mut rest = &rest[n..];
     let mut cap = None;
-    if let Some(r) = rest.strip_prefix(" \"") {
-        if let Some(q) = r.find('"') {
-            cap = Some(r[..q].to_string());
-            rest = &r[q + 1..];
-        }
+    if let Some(r) = rest.strip_prefix(" \"")
+        && let Some(q) = r.find('"')
+    {
+        cap = Some(r[..q].to_string());
+        rest = &r[q + 1..];
     }
     let rest = rest
         .strip_prefix(')')?

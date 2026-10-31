@@ -18,7 +18,7 @@ impl State {
             .as_str()
             .ok_or_else(|| Error::new("err.flow.json"))?;
         let plan = parse(plan_text.as_bytes())?;
-        let root = std::env::temp_dir().join("mzlab-flow");
+        let root = self.flow_root();
         let (inputs, work) = (root.join("probe"), root.join("out"));
         let _ = std::fs::remove_dir_all(&inputs);
         std::fs::create_dir_all(&inputs).map_err(|e| io_error(&e))?;

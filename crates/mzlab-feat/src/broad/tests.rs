@@ -1,5 +1,6 @@
 use super::*;
 use crate::broad_blank::BlankBank;
+use crate::centwave::ricker;
 use std::sync::Arc;
 
 /// Deterministic noise: sum of twelve uniforms of an LCG, mean 0, sd `sd`.

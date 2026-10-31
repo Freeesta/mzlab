@@ -1,5 +1,4 @@
 //! Tests of `chrom_fondo`: synthetic trace with a flat floor, a ramp and a peak on it.
-use super::*;
 use crate::chrom_fondo::*;
 
 /// Deterministic pseudo-noise in [-1, 1].

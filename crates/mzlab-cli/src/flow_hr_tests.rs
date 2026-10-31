@@ -13,11 +13,11 @@ fn full(dir: &Path) -> Result<(), String> {
         r#""hypotheses":"file:hyp.json""#,
         r#""hypotheses":"gen.hypotheses""#,
     );
-    let gen = r#"{"id":"gen","step":"tp.generate@1","in":{"parent":"file:parent.json"}},"#;
+    let genv = r#"{"id":"gen","step":"tp.generate@1","in":{"parent":"file:parent.json"}},"#;
     let cut = base.find(r#"{"id":"lnk""#).unwrap();
     let rest = base[cut..].strip_suffix("]}").unwrap();
     let text = format!(
-        r#"{}{gen}{rest},{{"id":"flt","step":"tp.filter@2","in":{{"tp":"lnk.tp","hypotheses":"gen.hypotheses"}}}},{{"id":"net","step":"tp.network@1","in":{{"tp":"lnk.tp","table":"lnk.tp","samples":"file:samples.json"}}}}]}}"#,
+        r#"{}{genv}{rest},{{"id":"flt","step":"tp.filter@2","in":{{"tp":"lnk.tp","hypotheses":"gen.hypotheses"}}}},{{"id":"net","step":"tp.network@1","in":{{"tp":"lnk.tp","table":"lnk.tp","samples":"file:samples.json"}}}}]}}"#,
         &base[..cut]
     );
     let (done, prov) = crate::flow::run_plan(text.as_bytes(), dir, &dir.join("work"), 2, None)

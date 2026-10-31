@@ -805,6 +805,7 @@ declare var ricTheoryIndex: any;
 declare var ricTheoryMatch: any;
 declare var ricTheoryP: any;
 declare var ricWords: any;
+declare var riscaldaDi: any;
 declare var rngIsOn: any;
 declare var roundc: any;
 declare var rowPc: any;

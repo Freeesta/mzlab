@@ -81,11 +81,10 @@ pub fn reduce_minmax(t: &[f64], y: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
 /// `{"i", "kind", "id", "unit", "t", "y"}` of one analog trace, reduced for drawing; a pressure with a declared pressure unit is in bar, otherwise as the file has it.
 pub fn analog_json(i: i64, kind: &str, id: &str, unit: &str, t: &[f64], y: &[f64], n: usize) -> String {
     let (mut y, mut unit) = (y.to_vec(), unit.to_string());
-    if kind == "pressure" {
-        if let Some(v) = pressure_to_bar(&y, &unit) {
+    if kind == "pressure"
+        && let Some(v) = pressure_to_bar(&y, &unit) {
             (y, unit) = (v, "bar".into());
         }
-    }
     let (t, y) = reduce_minmax(t, &y, n);
     let mut o = Out::default();
     o.raw("{\"i\":").int(i).raw(",\"kind\":").str(kind).raw(",\"id\":").str(id).raw(",\"unit\":").str(&unit).raw(",\"t\":").rounded(&t, 4).raw(",\"y\":").rounded(&y, 3);

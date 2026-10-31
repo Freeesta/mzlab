@@ -107,11 +107,12 @@ pub fn applica(c: &mut Campione, skip: &[&str]) {
     if let (true, Some(m), Some(cond)) = (free("gruppo"), i.matrix, &i.cond) {
         c.group = format!("{m}-{cond}");
     }
-    if free("tempo") && free("unita_tempo") {
-        if let Some(t) = i.time_min {
-            c.set_time(Some(t), "min");
-            c.time_confirmed = false;
-        }
+    if free("tempo")
+        && free("unita_tempo")
+        && let Some(t) = i.time_min
+    {
+        c.set_time(Some(t), "min");
+        c.time_confirmed = false;
     }
     if let (true, Some(x)) = (free("concentrazione"), i.conc) {
         c.conc = Some(x);

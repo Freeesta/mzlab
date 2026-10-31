@@ -155,10 +155,10 @@ pub fn applica(
 ) -> Vec<(usize, &'static str, String, String)> {
     let mut out = Vec::new();
     let mut note = |field, before: Option<String>, after: &Option<String>| {
-        if let (Some(b), Some(a)) = (before, after) {
-            if b != *a {
-                out.push((i, field, b, a.clone()));
-            }
+        if let (Some(b), Some(a)) = (before, after)
+            && b != *a
+        {
+            out.push((i, field, b, a.clone()));
         }
     };
     if r.polarity.is_some() {

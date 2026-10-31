@@ -37,11 +37,11 @@ impl Parser<'_> {
         .trim()
         .to_string();
         let nxt = (j + 1..(j + 3).min(lines.len())).find(|&k| !lines[k].trim().is_empty());
-        if eid.is_none() {
-            if let Some(f) = nxt.and_then(|k| follow_id(lines[k]).map(|id| (k, id))) {
-                eid = Some(f.1);
-                j = f.0;
-            }
+        if eid.is_none()
+            && let Some(f) = nxt.and_then(|k| follow_id(lines[k]).map(|id| (k, id)))
+        {
+            eid = Some(f.1);
+            j = f.0;
         }
         let mut label = String::new();
         if let Some(id) = &eid {

@@ -79,13 +79,13 @@ fn profile(name: &str, over: &[(&str, f64)]) -> Result<Value> {
         .and_then(|p| p.get(name))
         .cloned()
         .ok_or_else(|| Error::new("err.flow.level.profile").with("profile", name))?;
-    if let Value::Obj(o) = &mut p {
-        if let Some((_, Value::Obj(s))) = o.iter_mut().find(|(k, _)| k == "soglie") {
-            for (k, v) in over {
-                match s.iter_mut().find(|(n, _)| n == k) {
-                    Some((_, slot)) => *slot = Value::Num(*v),
-                    None => s.push(((*k).to_string(), Value::Num(*v))),
-                }
+    if let Value::Obj(o) = &mut p
+        && let Some((_, Value::Obj(s))) = o.iter_mut().find(|(k, _)| k == "soglie")
+    {
+        for (k, v) in over {
+            match s.iter_mut().find(|(n, _)| n == k) {
+                Some((_, slot)) => *slot = Value::Num(*v),
+                None => s.push(((*k).to_string(), Value::Num(*v))),
             }
         }
     }
@@ -208,10 +208,10 @@ pub fn assess_with(e: &Evidence, name: &str, over: &[(&str, f64)]) -> Result<Ass
         std: None,
         suspect: None,
     };
-    if let Some(s) = &e.std {
-        if extra::by_standard(&p, s, &mut res) {
-            return Ok(res);
-        }
+    if let Some(s) = &e.std
+        && extra::by_standard(&p, s, &mut res)
+    {
+        return Ok(res);
     }
     if by_best(&p, e, &list, &score, &mut res) {
         return Ok(res);

@@ -13,16 +13,20 @@ static PEAK: AtomicUsize = AtomicUsize::new(0);
 // SAFETY: forwards every call to the system allocator and only counts the bytes.
 unsafe impl GlobalAlloc for Counter {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        let p = System.alloc(l);
-        if !p.is_null() {
-            let v = LIVE.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-            PEAK.fetch_max(v, Ordering::Relaxed);
+        unsafe {
+            let p = System.alloc(l);
+            if !p.is_null() {
+                let v = LIVE.fetch_add(l.size(), Ordering::Relaxed) + l.size();
+                PEAK.fetch_max(v, Ordering::Relaxed);
+            }
+            p
         }
-        p
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        System.dealloc(p, l);
-        LIVE.fetch_sub(l.size(), Ordering::Relaxed);
+        unsafe {
+            System.dealloc(p, l);
+            LIVE.fetch_sub(l.size(), Ordering::Relaxed);
+        }
     }
 }
 #[global_allocator]

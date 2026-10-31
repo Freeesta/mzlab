@@ -167,12 +167,11 @@ impl Totals {
             self.have.get_mut(pos),
             self.bpy.get_mut(pos),
             self.bpm.get_mut(pos),
-        ) {
-            if !*have || it >= *bpy {
-                *bpm = mz;
-                *bpy = it;
-                *have = true;
-            }
+        ) && (!*have || it >= *bpy)
+        {
+            *bpm = mz;
+            *bpy = it;
+            *have = true;
         }
     }
 }
@@ -366,13 +365,14 @@ impl<T: Num> Sect for Sec<T> {
             pos,
         };
         let b = bucket(p.mz.to64());
-        if b >= self.lo && b < self.hi {
-            if let Some(c) = self.cursor.get_mut(b) {
-                if let Some(slot) = self.round.get_mut(*c) {
-                    *slot = p;
-                }
-                *c += 1;
+        if b >= self.lo
+            && b < self.hi
+            && let Some(c) = self.cursor.get_mut(b)
+        {
+            if let Some(slot) = self.round.get_mut(*c) {
+                *slot = p;
             }
+            *c += 1;
         }
         Ok(())
     }
@@ -604,10 +604,10 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
         // the group whose next scan comes first (the first group on a tie); its peaks of that scan follow one another, so they go as a run
         let mut best: Option<(usize, u32)> = None;
         for (i, g) in gruppi.iter().enumerate() {
-            if let Some(p) = g.picco(next[i]) {
-                if best.is_none_or(|(_, b)| p.2 < b) {
-                    best = Some((i, p.2));
-                }
+            if let Some(p) = g.picco(next[i])
+                && best.is_none_or(|(_, b)| p.2 < b)
+            {
+                best = Some((i, p.2));
             }
         }
         let Some((i, pos)) = best else {

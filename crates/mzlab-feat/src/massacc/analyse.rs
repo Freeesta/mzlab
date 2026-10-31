@@ -204,7 +204,7 @@ fn describe(res: &mut FileResult, m: &FileMeasure, refs: &[RefIon], obs: &[Obs],
             let r: Vec<f64> = obs
                 .iter()
                 .zip(&keep)
-                .filter(|(_, &k)| k)
+                .filter(|&(_, &k)| k)
                 .map(|(o, _)| o.err - f.model.predict(&f.coef, o.mz, o.rt))
                 .collect();
             residual = Some(rms(r));
@@ -215,7 +215,7 @@ fn describe(res: &mut FileResult, m: &FileMeasure, refs: &[RefIon], obs: &[Obs],
         rms(obs
             .iter()
             .zip(&flat_in)
-            .filter(|(_, &k)| k)
+            .filter(|&(_, &k)| k)
             .map(|(o, _)| o.err)
             .collect())
     });

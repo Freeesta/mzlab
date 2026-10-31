@@ -293,7 +293,7 @@ fn log_likelihood(r: &[u64], ev: &[Evidence], lib: &Library, subs: &Subs) -> Vec
             let p = idx
                 .iter()
                 .zip(w)
-                .filter(|(&f, _)| {
+                .filter(|&(&f, _)| {
                     if e.shifted {
                         site & !subs.masks[f] == 0
                     } else {
