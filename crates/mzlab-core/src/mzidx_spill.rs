@@ -135,7 +135,27 @@ impl Parti {
         }
         Ok(buf)
     }
+}
 
+fn f64_at(r: &[u8], at: usize) -> f64 {
+    r.get(at..at + 8)
+        .and_then(|b| b.try_into().ok())
+        .map_or(0.0, f64::from_le_bytes)
+}
+
+fn f32_at(r: &[u8], at: usize) -> f32 {
+    r.get(at..at + 4)
+        .and_then(|b| b.try_into().ok())
+        .map_or(0.0, f32::from_le_bytes)
+}
+
+fn u32_at(r: &[u8], at: usize) -> u32 {
+    r.get(at..at + 4)
+        .and_then(|b| b.try_into().ok())
+        .map_or(0, u32::from_le_bytes)
+}
+
+impl Parti {
     pub(crate) fn push(&mut self, sp: &mut dyn Spill, mz: f64, it: f64, pos: u32) -> Result<()> {
         let p = usize::from(self.of_bucket[bucket(mz)]);
         let buf = self.buffer(0, p)?;
@@ -217,22 +237,4 @@ pub(crate) fn leggi_parti(
         }
     }
     Ok(())
-}
-
-fn f64_at(r: &[u8], at: usize) -> f64 {
-    r.get(at..at + 8)
-        .and_then(|b| b.try_into().ok())
-        .map_or(0.0, f64::from_le_bytes)
-}
-
-fn f32_at(r: &[u8], at: usize) -> f32 {
-    r.get(at..at + 4)
-        .and_then(|b| b.try_into().ok())
-        .map_or(0.0, f32::from_le_bytes)
-}
-
-fn u32_at(r: &[u8], at: usize) -> u32 {
-    r.get(at..at + 4)
-        .and_then(|b| b.try_into().ok())
-        .map_or(0, u32::from_le_bytes)
 }
