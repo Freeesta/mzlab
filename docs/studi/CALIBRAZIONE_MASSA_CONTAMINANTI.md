@@ -6,7 +6,7 @@ Study behind the TIC menu entry «Check calibration (contaminants)…» (`mzlab/
 - **List**: `mzlab/web/contaminanti.json`, 1272 ions (Keller 2008 background list: PEG/PPG/PTFE-like series, siloxanes, phthalates, plasticisers, solvent clusters, with `pol`). Read by `massacc::refs::background`; the exact m/z of a singly charged ion comes from the engine (`elements::ion_mz`), the listed one only where the adduct table has none.
 - **Matcher**: `massacc::measure` (window `search_ppm` = 20, intensity floor, a listed background ion must stay in at least half of the MS1 scans of the file, so an analyte or a one-off peak is not taken for background).
 - **Estimates**: `massacc::analyse` (Huber offset and scale; fits `linear_mz`, `linear_mz_rt` over the scans of each ion). The panel calls it with `model = linear_mz_rt`, so the slopes per 100 m/z and per minute come from the same fit that corrects a table in Flow.
-- Browser: `mass_accuracy` of the `.wasm` `proofs` (no new export, no size change except the additive field `points[].scans` of `massacc/1`); desktop: op `masscal` (`rpc_masscal.rs`), the same call.
+- Browser: `mass_accuracy` of the `.wasm` `proofs` (no new export, no size change except the additive field `points[].scans` of `massacc/1`); desktop: op `masscal` (`rpc_masscal.rs`), the same call. `parita_masscal.rs` holds the app equal to the shared `massacc::check`.
 
 ## Ideas weighed
 | Idea | Verdict |
