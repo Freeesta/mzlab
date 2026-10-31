@@ -109,7 +109,6 @@ jobs:
       - name: Unit tests
         if: steps.solo.outputs.solo != 'true'
         env:
-          MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
           PYTHONPATH: tools
           PARTE: ${{ matrix.parte }}
         run: |
@@ -143,11 +142,9 @@ jobs:
             tempi-test.json
           if-no-files-found: ignore
           retention-days: 3
-      # Teoria-only pull request: the chapter, Libro and forbidden-names tests (the list is in tools/ci_solo_teoria.py); documents-only: tools/ci_solo_doc.py
+      # Teoria-only pull request: the chapter, Libro and example-size tests (the list is in tools/ci_solo_teoria.py); documents-only: tools/ci_solo_doc.py
       - name: Unit tests (Teoria or documents only)
         if: steps.solo.outputs.solo == 'true' && matrix.parte != 'solo311'
-        env:
-          MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
         run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_doc.py --pytest "${{ steps.solo.outputs.kind }}")
       - name: Record the tree of the cache
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
