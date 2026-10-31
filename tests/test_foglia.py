@@ -1,4 +1,4 @@
-"""Leaf decoration: only the side-panel hint keeps it (decorative, tilted near-horizontal, falling and swaying just when motion is allowed); the drop area has none and no dead CSS is left."""
+"""Leaf decoration: only the side-panel hint keeps it (decorative, drawn horizontal, gliding down once just when motion is allowed); the drop area has none and no dead CSS is left."""
 import re
 from pathlib import Path
 
@@ -20,15 +20,19 @@ def test_drop_area_has_no_leaf():
 
 def test_animation_only_when_motion_allowed():
     outside = re.sub(r"@media \(prefers-reduced-motion:no-preference\)\{.*?\}\}\n", "", CSS, flags=re.S)
-    assert "leaf-fall 9s" not in outside
-    assert "prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) #fl-hint .leaf{animation:leaf-fall 9s" in CSS
+    assert "leaf-fall 3.4s" not in outside
+    assert "prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) #fl-hint .leaf{animation:leaf-fall 3.4s ease-in-out 1 forwards}" in CSS
 
 
-def test_leaf_is_tilted_near_horizontal_and_falls():
-    m = re.search(r'<svg class="leaf".*?<g transform="rotate\((-?[\d.]+) ', HTML, re.S)
-    assert m and 65 <= abs(float(m.group(1))) <= 90
+def test_leaf_is_horizontal_and_glides():
+    m = re.search(r'<svg class="leaf"[^>]*viewBox="0 0 (\d+) (\d+)"', HTML)
+    assert m and int(m.group(1)) > 1.4 * int(m.group(2)) and "rotate(" not in re.search(r'<svg class="leaf".*?</svg>', HTML, re.S).group(0)
     kf = re.search(r"@keyframes leaf-fall\{(.*)\}\}", CSS).group(1)
-    ys = [int(v) for v in re.findall(r"translate\(-?\d+px,(-?\d+)px\)", kf)]
-    xs = [int(v) for v in re.findall(r"translate\((-?\d+)px", kf)]
-    assert ys[0] < ys[-1] and min(xs) < 0 < max(xs), "drifts down while swaying side to side"
+    pts = [(int(x), int(y), int(r)) for x, y, r in re.findall(r"translate\((-?\d+)(?:px)?,(-?\d+)(?:px)?\) rotate\((-?\d+)(?:deg)?\)", kf)]
+    assert pts[0][1] < pts[-1][1] and pts[-1] == (0, 0, 0), "falls down and settles flat"
+    assert max(abs(x) for x, _, _ in pts) <= 45, "the swing fits the 280px minimum panel"
+    for (x, _, r) in pts[1:-1]:
+        assert x * r < 0, "angle is opposite to the side"
+    xs = [x for x, _, _ in pts]
+    assert all(abs(xs[i]) > abs(xs[i + 1]) for i in range(1, len(xs) - 1)), "swings are damped"
     assert not re.search(r"(width|height|top|left|margin)\s*:", kf), "transform/opacity only: no layout shift"
