@@ -72,3 +72,19 @@ fn un_mzml_numpress_vero_e_i_suoi_troncamenti_ritornano() {
     }
     ingressi_lettori::lettori_aperti(&file);
 }
+
+// the stored crashes of the coverage-guided runs (`fuzz/regressioni/lettori_<family>/*`) return too
+#[test]
+fn i_crash_salvati_non_crashano_piu() {
+    let radice = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fuzz/regressioni");
+    for (nome, f) in entrate() {
+        let Ok(dir) = std::fs::read_dir(radice.join(format!("lettori_{nome}"))) else {
+            continue;
+        };
+        for e in dir.flatten() {
+            if let Ok(b) = std::fs::read(e.path()) {
+                f(&b);
+            }
+        }
+    }
+}
