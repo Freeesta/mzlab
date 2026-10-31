@@ -11,7 +11,7 @@ use mzlab_core::flow::{file_roots, parse, plan_json};
 use mzlab_core::json::Out;
 use mzlab_core::lettori::Limiti;
 
-use crate::convert_report::{head_of, report, Item};
+use crate::convert_report::{compression_sets, head_of, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
@@ -20,14 +20,14 @@ use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
 
-usage: mzlab-cli convert INPUT... --out FOLDER [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
+usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
 
   INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
                        with several samples gives one mzML per sample
   --out FOLDER         where the mzML files are written: NAME.mzML (NAME-ID.mzML for the sample ID of a dataset with several); the cache is in
                        FOLDER/.convert
-  --zlib N             zlib level of the binary arrays, 0 (none) to 9 (smallest); default 1
-  --numpress           lossy MS-Numpress linear prediction of m/z and short logged float of intensities, smaller files
+  --compression KIND   standard (zlib level 2, default), smallest (zlib and MS-Numpress) or none (uncompressed): the short form of the two options below
+  --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
   --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default 1; the bytes written do not depend on it)
@@ -37,8 +37,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--zlib N] [--numpress] [--peaks 
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
-progress goes to stderr, one line per file; stdout lists the mzML files, one per line
-exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 4 an input is missing or holds nothing to convert";
+progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 4 an input is missing or holds nothing to convert";
 
 #[derive(Default)]
 struct Args {
@@ -69,6 +68,7 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                 .sets
                 .push(format!("conv.zlib_level={}", value(&mut it, &x)?)),
             "--numpress" => a.sets.push("conv.numpress=true".into()),
+            "--compression" => a.sets.extend(compression_sets(&value(&mut it, &x)?)?),
             "--peaks" => {
                 let v = value(&mut it, &x)?;
                 if !["file", "profile", "mzlab"].contains(&v.as_str()) {

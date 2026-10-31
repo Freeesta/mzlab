@@ -276,13 +276,13 @@ async function lrIndex(m) {
   const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
   if (CANCELLED.has(m.name)) throw cancelled();
   const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic });      // wait: the pool has no free worker yet
-  const inputs = job ? null : Array.from(prepare_upload(f.size, readerFor(f), m.name, ...prints(m.name, f.size), BUDGET_MB)).slice(0, 8);
+  const prep = job ? null : Array.from(prepare_upload(f.size, readerFor(f), m.name, ...prints(m.name, f.size), BUDGET_MB)), inputs = prep && prep.slice(0, 8), declared = prep ? prep[9] : 0;      // declared: spectra the file says it holds
   const early_tic = earlyTicOf(job, inputs);
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
   const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
-    : { name: m.name, blob: f, inputs, part, cap: BUDGET_MB, onProgress });      // frac: how far the builder has read
+    : { name: m.name, blob: f, inputs, declared, part, cap: BUDGET_MB, onProgress });      // frac: how far the builder has read
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
   }

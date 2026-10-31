@@ -462,6 +462,7 @@ declare var fileViewDo: any;
 declare var firstOpenK: any;
 declare var firstTab: any;
 declare var fitHd: any;
+declare var fitHdNow: any;
 declare var fitHdSoon: any;
 declare var fitHost: any;
 declare var fitWidth: any;
