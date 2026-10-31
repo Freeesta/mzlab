@@ -813,8 +813,8 @@ function renderFileList() {
     if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${grpClosed(G.g) ? "" : " on"}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
     return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
-  // files grouped strictly by experiment type
-  const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isExpOpen(gkOf(G)) && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
+  // files grouped strictly by experiment type; user groups that are all single files are listed flat (ugFlat, lista-file.js)
+  const flatUg = ugFlat(groups), body = groups.map(G => { const flat = flatUg && G.g.startsWith("u:"); return (flat ? "" : gh(G, grpLabel(G.g))) + `<div class="grp-files" style="${flat || (isExpOpen(gkOf(G)) && !grpClosed(G.g)) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`; }).join("");
   // the files still being read or converted: one progress row each, under the open ones (upload-rows.js)
   Q("#flst").innerHTML = pre + body + UPROWS.html();
   UPROWS.wire(Q("#fl-up")); UPROWS.paint();
@@ -852,8 +852,7 @@ function renderFileList() {
   });
   Q("#flst").querySelectorAll(".fl").forEach((/** @type {ElementoDati} */ el) => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = (/** @type {MouseEvent} */ e) => fileCtx(e, E.files[+nm.dataset.k]); });
   bindFileRows();
-
-  bindFileReorder();
+  bindFileReorder(); syncGroupBy();
   renderNav();
   syncWorkEmpty();
 }
