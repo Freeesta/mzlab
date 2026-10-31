@@ -24,7 +24,7 @@ r = Run(port=8868, wd="/tmp/wd_tipo_file")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "B_FullMass-t0.mzML", D / "B_FullMass-t1.mzML"]); frames(pg, 6)
+        stage(pg, [D / "B_FullMass-t0.mzML", D / "B_FullMass-t1.mzML"]); frames(pg, 6); show_table(pg)
         def auto():
             assert pg.locator(SEL).count() == 2
             first = pg.evaluate(f"(() => {{ const s = document.querySelector('{SEL}'); return [s.selectedOptions[0].textContent, s.value, s.title, Array.from(s.options).map(o => o.value)]; }})()")

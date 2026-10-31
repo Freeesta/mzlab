@@ -16,11 +16,13 @@ r = Run(port=8921, wd="/tmp/wd_ordine"); r2 = None
 NAMES = "Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.children[1].textContent.trim().split(' ')[0])"
 def thaw(pg):
     """The rows keep the order of arrival until the student commits a value; ticking a box and back is such a commit and changes nothing."""
-    pg.click("#flist input[data-k=use] >> nth=0"); pg.click("#flist input[data-k=use] >> nth=0")
+    # the same file twice, by its index in the list: the first click commits and sorts the table, so «the first row» is another file for the second click
+    BOX = "#flist input[data-k=use][data-i='0']"
+    pg.click(BOX); pg.click(BOX)
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "s_1d.mzML", D / "s_t30.mzML", D / "s_2h.mzML", D / "s_t5.mzML"])
+        stage(pg, [D / "s_1d.mzML", D / "s_t30.mzML", D / "s_2h.mzML", D / "s_t5.mzML"]); show_table(pg)
         def order():
             assert pg.evaluate(NAMES) == ["s_1d.mzML", "s_t30.mzML", "s_2h.mzML", "s_t5.mzML"], pg.evaluate(NAMES)      # order of arrival while nothing is edited
             thaw(pg)
@@ -57,7 +59,7 @@ try:
         r2 = Run(port=8922, wd="/tmp/wd_ordine2"); pg2 = r2.page(p)
         def nolabel():
             import lib; lib.AUTO_TEMPI = False       # the test is about names with no time: nothing is written for it
-            stage(pg2, [D / "campione10.mzML", D / "campione2.mzML"])
+            stage(pg2, [D / "campione10.mzML", D / "campione2.mzML"]); show_table(pg2)
             thaw(pg2)
             assert pg2.evaluate(NAMES) == ["campione2.mzML", "campione10.mzML"], pg2.evaluate(NAMES)
             assert pg2.is_visible("#tunit"), "the unit menu is in the header from the first row, even when no name gives a time"
