@@ -120,7 +120,7 @@ try:
                 x, y = centre(row(pg, name)); tx, ty = centre(pg.locator(target))
                 ev = lambda t, px, py: f"el.dispatchEvent(new PointerEvent('{t}', {{bubbles: true, clientX: {px}, clientY: {py}, button: 0, pointerId: 7, pointerType: 'touch'}}))"
                 pg.evaluate(f"(() => {{ const el = document.querySelector('#flst .nm[data-k=\"{k}\"]').closest('.fl'); {ev('pointerdown', x, y)}; }})()")
-                pg.wait_for_timeout(500)
+                attendi(pg, "window.GDND && GDND.busy()", 5000)
                 pg.evaluate(f"(() => {{ const el = document.querySelector('#flst .nm[data-k=\"{k}\"]').closest('.fl'); {ev('pointermove', tx, ty)}; }})()")
                 assert pg.evaluate(f"document.querySelector('{target}').classList.contains('gdnd-over')"), "the header is not highlighted"
                 if esc: pg.keyboard.press("Escape")
@@ -164,7 +164,7 @@ try:
             press("MQ_N2_T00", "Control+Shift+ArrowUp"); assert label(pg, "MQ_N2_T00") == "TW", label(pg, "MQ_N2_T00")
             press("MQ_N2_T00", "Control+Shift+ArrowUp"); assert label(pg, "MQ_N2_T00") == "MQ", label(pg, "MQ_N2_T00")
             press("MQ_N2_T00", "Control+Shift+ArrowUp"); assert pg.evaluate(LIVE) == "No more groups in this direction", pg.evaluate(LIVE)
-            for _ in range(4): undo(pg); pg.wait_for_timeout(150)
+            for _ in range(4): undo(pg); fermo(pg, "#flst")
             attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
         step("Ctrl+Shift+↓/↑ on a row moves its file to the next / previous group, said in the live region, the focus stays; four undos", keyboard)
         def still():

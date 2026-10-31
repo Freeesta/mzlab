@@ -1,6 +1,8 @@
 // @ts-check
 // Dragging files between the user groups of a list (side list now; the loading table binds the same helper later), the «Move to group» menu and the keyboard move.
 // Lazy (carica("gruppi-dnd.js")): explore.js and lista-file.js call it on the first pointer down, drag or Ctrl+Shift+Arrow. The pure parts (hit test, companions) are tested by node.
+// explore.js fetches it on the first pointer down and starts a drag when it is there (a mouse drag that began earlier joins at once); a native mouse drag also fires pointercancel, so
+// only finger drags are cancelled by it; over a group header the header takes the highlight, not a row; a drag held by the finger or Esc ends without a reorder.
 window.GDND = (() => {
   const EDGE = 40, STEP = 14, STALE = 4000;
   /** @typedef {{ kind: string, key: string, el: Element | null, top: number, bottom: number }} Box */

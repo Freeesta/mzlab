@@ -667,9 +667,7 @@ function bindDragDrop(/** @type {ElementoDati} */ el, /** @type {number} */ k) {
   el.ondragstart = (/** @type {DragEvent} */ e) => {
     /** @type {DataTransfer} */ (e.dataTransfer).setData("text/plain", String(k));
     /** @type {DataTransfer} */ (e.dataTransfer).effectAllowed = "move";
-    el.classList.add("fl-dragging");
-    // the file is fetched on the first pointer down; a drag that starts before it arrived joins it as soon as it does
-    carica("gruppi-dnd.js").then(() => GDND.start(k));
+    el.classList.add("fl-dragging"); carica("gruppi-dnd.js").then(() => GDND.start(k));
   };
   el.ondragover = (/** @type {DragEvent} */ e) => {
     e.preventDefault();
@@ -711,12 +709,9 @@ function bindFileReorder() {
 
     el.onpointerdown = (/** @type {PointerEvent} */ e) => {
       if (/** @type {HTMLElement} */ (e.target).closest("input") || /** @type {HTMLElement} */ (e.target).closest(".pr-tog") || e.button !== 0) return;
-      touchStartX = e.clientX;
-      touchStartY = e.clientY;
-      carica("gruppi-dnd.js");
+      touchStartX = e.clientX; touchStartY = e.clientY; carica("gruppi-dnd.js");
       touchTimer = setTimeout(() => {
-        touchDragging = k;
-        carica("gruppi-dnd.js").then(() => GDND.start(k, true));
+        touchDragging = k; carica("gruppi-dnd.js").then(() => GDND.start(k, true));
         el.classList.add("fl-dragging");
         try { el.setPointerCapture(e.pointerId); } catch (_) { /* the pointer is already gone: dragging still works without capture */ }
       }, 350);
@@ -730,7 +725,6 @@ function bindFileReorder() {
         }
       }
       if (touchDragging != null) {
-        // over a group header the group takes the highlight, not a row
         if (window.GDND && GDND.move(e.clientY)) { document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("drop-before", "drop-after")); return; }
         const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.pr)"));
         document.querySelectorAll("#flst .fl").forEach(f => {
@@ -758,7 +752,6 @@ function bindFileReorder() {
         const fromK = touchDragging;
         touchDragging = null;
         try { el.releasePointerCapture(e.pointerId); } catch (_) { /* capture already released with the pointer */ }
-        // dropped on a group header (or cancelled with Esc): the group code did it, nothing to reorder
         if (e.type === "pointerup" && window.GDND && GDND.end(e.clientY)) { document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after")); return; }
         const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.pr)"));
         const isBefore = target?.classList.contains("drop-before");
@@ -769,7 +762,6 @@ function bindFileReorder() {
       }
     };
     el.onpointerup = endTouch;
-    // the browser also fires pointercancel when a native mouse drag starts: only a finger drag is cancelled here
     el.onpointercancel = (/** @type {PointerEvent} */ e) => { if (touchDragging != null && window.GDND) GDND.cancel(); endTouch(e); };
   });
 }
@@ -782,8 +774,7 @@ function modeTag(/** @type {FileAperto} */ f) {
 // short tag of a standard / blank file (3 letters, the full word in the tooltip)
 const typeTag = (/** @type {boolean} */ blank) => `<abbr class="ftag" title="${blank ? I18N.t("files.type.blk.title") : I18N.t("files.type.std.title")}">${blank ? I18N.t("files.type.blk") : I18N.t("files.type.std")}</abbr>`;
 function renderFileList() {
-  // a drag holds the list (the dragged row must stay in the page): file arrivals repaint once it ends (gruppi-dnd.js)
-  if (window.GDND && GDND.busy()) { GDND.defer(); return; }
+  if (window.GDND && GDND.busy()) return GDND.defer();
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed, all of them live
   const groups = /** @type {{ g: string, fs: FileAperto[] }[]} */ ([]);
   // both worlds list the files of every experiment, all of them live
