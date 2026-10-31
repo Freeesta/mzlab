@@ -84,7 +84,7 @@ try:
             except Exception: raise AssertionError(pg.evaluate("[UPBUSY, OPENNOW.busy(), ST.files.length, document.querySelectorAll('#flist tbody tr').length, document.querySelector('#v-workspace').dataset.work]"))
             table(pg)
             assert not heads(pg) and pg.is_visible("#tb-by"), "the table is as before: no group row, the control above it"
-            assert pg.evaluate("document.querySelectorAll('#flist .tg-grip, #flist [data-mv]').length") == 0
+            assert pg.evaluate("document.querySelectorAll('#flist .tg-grip, #flist [data-mv]').length") == 60, "every row has its grip and its move button"
         step("starting point: the table of 30 files, no group row, «Group by» above it", start)
         def by():
             table(pg); pg.click("#tb-by"); attendi(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
