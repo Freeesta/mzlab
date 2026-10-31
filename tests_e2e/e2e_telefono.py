@@ -14,8 +14,8 @@ try:
         U = f"http://127.0.0.1:{r.port}/"
         def desktop():
             assert not pg.evaluate("document.documentElement.classList.contains('phone')")
-            assert pg.locator("#nav button:visible").count() == 2 and pg.is_hidden("#phone")
-        step("computer: two tabs, no phone card", desktop)
+            assert pg.locator("#nav button:visible").count() == 4 and pg.is_hidden("#phone")
+        step("computer: four tabs, no phone card", desktop)
         for vw, vh, tag in [(390, 844, "verticale"), (844, 390, "orizzontale")]:
             ctx = r.b.new_context(viewport={"width": vw, "height": vh}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=IPHONE)
             q = ctx.new_page(); reqs = []
