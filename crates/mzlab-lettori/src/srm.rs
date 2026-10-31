@@ -228,6 +228,10 @@ impl Lettore for SrmDaScansioni {
     fn mancanti(&mut self, c: usize) -> usize {
         self.inner.mancanti(c)
     }
+    // The account `conv/1` gives of the mzML is the reader's own: the wrapper adds traces, not gaps.
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        self.inner.non_portati()
+    }
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.inner.indice(c)
     }
