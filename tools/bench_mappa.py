@@ -266,11 +266,12 @@ def table(o):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cases", nargs="?", default="lr,hrc"); ap.add_argument("--site", type=Path); ap.add_argument("--wd", type=Path)
+    ap.add_argument("--rebuild", action="store_true", help="build the site again even if SITE (default WD/site) holds one: a built site is reused, so a measurement after a code change needs this")
     ap.add_argument("--json", action="store_true"); ap.add_argument("--port", type=int, default=8871)
     a = ap.parse_args()
     wd = a.wd or Path(tempfile.gettempdir()) / "bench_mappa"; wd.mkdir(parents=True, exist_ok=True)
     site = a.site or wd / "site"
-    if not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
+    if a.rebuild or not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
         if not (shutil.which("cargo") and shutil.which("wasm-bindgen")): sys.exit("the site needs the engine: cargo and wasm-bindgen (or --site DIR of a built site)")
         build_site(site)
     from playwright.sync_api import sync_playwright
