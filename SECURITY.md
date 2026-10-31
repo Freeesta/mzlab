@@ -20,5 +20,6 @@ Only the latest release of the desktop app and the version of the site published
 
 - A Content-Security-Policy in the page (no `unsafe-eval`, network only to the same origin) and in the desktop app.
 - The desktop updates are checked by SHA-256.
-- Dependencies are watched by Dependabot (Cargo, pip, GitHub Actions) and checked by `cargo-deny` (advisories and licences).
+- Dependencies are watched by Dependabot (Cargo, pip, npm, GitHub Actions; weekly, never merged automatically) and checked by `cargo-deny` (advisories and licences).
+- CodeQL scans the JavaScript and Rust code every week.
 - A CycloneDX software bill of materials (SBOM) is attached to every release.
