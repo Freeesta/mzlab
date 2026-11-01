@@ -43,7 +43,8 @@ try:
             first = [i for i in items if not i[0].startswith(("m/z", "Ripristina", "Copia valore"))]
             assert first[0][0].startswith("Apri la scansione MS²") and first[0][1], first[:2]
             assert "ormula" in first[1][0], first[:3]
-            assert any("pzioni di visualizzazione" in i[0] for i in first[:8]) and hrs >= 3, (first, hrs)
+            # the item reads «Opzioni…» (disp.menu); the long wording lives in its aria-label (disp.menu.aria)
+            assert any("pzioni di visualizzazione" in (i[1] or "") for i in first[:8]) and hrs >= 3, (first, hrs)
             assert pg.evaluate(f"DDA.ms2For({S1}, {S1}._pm).length") >= 1
             pg.click("#ctx [role^=menuitem]:has-text('Apri la scansione MS²')"); ready(pg); pg.wait_for_timeout(800)
             assert pg.evaluate("E.panels.find(p=>p.dda!=null).sid") is not None
