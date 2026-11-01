@@ -97,11 +97,11 @@ with sync_playwright() as p:
     def method():
         pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='mrm'));renderFileList();renderNav()")
         pg.set_input_files("input[type=file][accept*='.dam']", []) if False else None
-        pg.click("#np-method"); ready(pg); t = pg.inner_text("#bigdlg"); assert "MRM" in t and "transizione" in t.lower(), t[:300]
+        pg.click("#np-method"); ready(pg); t = pg.inner_text("#bigdlg"); assert "Q1 (m/z)" in t and "Q3 (m/z)" in t and "Dwell" in t, t[:300]
         pg.screenshot(path=SH + "124_method_mrm.png"); pg.click("#bigx")
-        pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='ms2'));renderFileList();renderNav()"); pg.click("#np-method"); ready(pg); attendi(pg, "document.querySelector('#bigdlg').innerText.includes('ioni prodotto')")
-        assert "ioni prodotto" in pg.inner_text("#bigdlg"); pg.screenshot(path=SH + "125_method_ms2.png"); pg.click("#bigx")
-    step("Metodo: MRM and MS2 explained", method)
+        pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='ms2'));renderFileList();renderNav()"); pg.click("#np-method"); ready(pg); attendi(pg, "document.querySelector('#bigdlg').innerText.includes('Precursori (Q1)')")
+        assert "Precursori (Q1)" in pg.inner_text("#bigdlg") and "Energia di collisione" in pg.inner_text("#bigdlg"); pg.screenshot(path=SH + "125_method_ms2.png"); pg.click("#bigx")
+    step("Metodo: MRM transitions and MS2 precursors listed", method)
     def ital():
         n = pg.evaluate("[...document.querySelectorAll('#v-data *')].filter(e=>e.children.length==0&&e.tagName!=='I'&&e.tagName!=='OPTION'&&e.tagName!=='SCRIPT'&&/m\\/z/.test(e.textContent)).map(e=>e.outerHTML.slice(0,100))")
         assert not n, n
