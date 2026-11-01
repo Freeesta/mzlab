@@ -202,8 +202,8 @@ function groupFiles() {
 }
 /** True when the list has user groups and every one is a single file: their headers (a count of 1 each) are left out. @param {{ g: string, fs: any[] }[]} groups */
 const ugFlat = groups => (E.ugBy && E.ugBy.by === "flat") || groups.some(G => G.g.startsWith("u:")) && groups.every(G => !G.g.startsWith("u:") || G.fs.length < 2);
-/** Experiment-type groups in the catalogue order, «None» = one headerless group. @param {{ g: string, fs: any[] }[]} groups */
-function ugArrange(groups) {
+// experiment types in the catalogue order; «None» = one headerless group
+function ugArrange(/** @type {{ g: string, fs: any[] }[]} */ groups) {
   const at = (/** @type {{ g: string, fs: any[] }} */ G) => (ESP.voce(G.g.startsWith("hr.") ? G.g.slice(3) : G.fs[0].kind) || { ordine: 99 }).ordine, slots = groups.map((G, j) => G.g[0] == "u" ? -1 : j).filter(j => j >= 0), ts = slots.map(j => groups[j]).sort((a, b) => at(a) - at(b));
   slots.forEach((j, i) => { groups[j] = ts[i]; });
   if (E.ugBy && E.ugBy.by === "flat") groups.splice(0, groups.length, { g: "u:", fs: groups.flatMap(G => G.fs) });
@@ -246,6 +246,9 @@ function firstOpenK(/** @type {any[]} */ session) {
   return i < 0 ? 0 : i;
 }
 // a DDA file is named after the file only: its engine label ends with «· Full Scan»
+const noExt = (/** @type {string} */ s) => String(s).replace(/\.(mzml|mzxml|wiff2?|raw|d|dam|cdf)(?= · |$)/i, "");
+// labels without extension and unique: the later twins get « (2)»…
+const uniqueLabels = (/** @type {{ label: string }[]} */ fs) => { const n = /** @type {Record<string, number>} */ ({}); fs.forEach(f => { n[f.label] = (n[f.label] || 0) + 1; if (n[f.label] > 1) f.label += " (" + n[f.label] + ")"; }); };
 const noFullScan = (/** @type {string} */ label, /** @type {any} */ dda) => dda ? String(label).replace(/ · Full Scan(?=[+−-]?$)/, "") : label;
 
 // the live spectrum of a chromatogram shows the file the user picked in the list (unless the spectrum's own file menu was used)
