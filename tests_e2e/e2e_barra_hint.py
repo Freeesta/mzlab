@@ -50,7 +50,7 @@ with sync_playwright() as p:
             pg.keyboard.press("Escape"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None
             assert pg.evaluate("BARRA.commands.every(c=>c.id!=='hint')"), "no palette command for the hint"
             pg.evaluate("BARRA.hintShow()"); attendi(pg, "!!document.getElementById('bar-hint')"); assert vis(pg), "hintShow did not reopen it"
-            pg.click("#stbar [data-cmd=losses]"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None      # first tool closes it
+            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None      # first tool closes it
         finally: ctx.close(); r.close()
     step("Esc closes, hintShow reopens (no palette command), first tool closes", esc_tool)
     def seen():

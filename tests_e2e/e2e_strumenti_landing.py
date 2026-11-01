@@ -1,4 +1,4 @@
-"""In the empty landing the tools (adducts, losses, lists) open docked in the side panel, never as a floating window; closing one gives the file list back. The calculator is the drop-down under its button there (no side panel): the file list stays and a second press closes it."""
+"""In the empty landing the tools (adducts & losses, lists) open docked in the side panel, never as a floating window; closing one gives the file list back. The calculator is the drop-down under its button there (no side panel): the file list stays and a second press closes it."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
@@ -13,7 +13,7 @@ if __name__ == "__main__":
         with sync_playwright() as p:
             pg = r.page(p)
             pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
-            for cmd, panel in (("calc", "#sb-panel-calc"), ("adducts", "#sb-panel-adducts"), ("losses", "#sb-panel-losses"), ("lists", "#sb-panel-lists")):
+            for cmd, panel in (("calc", "#sb-panel-calc"), ("addloss", "#sb-panel-adducts"), ("lists", "#sb-panel-lists")):
                 pg.click(f'#stbar [data-cmd="{cmd}"]'); frames(pg, 6)
                 if cmd == "calc":
                     # outside a session the calculator is a drop-down, not a docked panel (e2e_calc_avvio)

@@ -44,14 +44,14 @@ try:
             assert pg.get_attribute("#stbar", "role") == "toolbar" and pg.get_attribute("#stbar", "aria-label") == "Strumenti"
             assert pg.locator("#sidebar-tablist").count() == 0, "no rail"
             ids = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.dataset.cmd)")
-            assert ids == ["file", "calc", "adducts", "losses", "lists", "ptable", "more", "search"], ids
+            assert ids == ["file", "calc", "addloss", "lists", "ptable", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.innerText.trim())")
-            assert lab == ["File", "Calcolatrice", "Addotti", "Perdite", "Liste", "Tavola", "Altro", "Cerca"], lab
+            assert lab == ["File", "Calcolatrice", "Addotti e perdite", "Liste", "Tavola", "Altro", "Cerca"], lab
             for b in pg.query_selector_all("#stbar > button[data-cmd]"):
                 if b.is_visible(): assert b.get_attribute("aria-label") and b.get_attribute("title") and b.query_selector("svg"), b.get_attribute("data-cmd")
             assert pg.evaluate("document.querySelectorAll('header button#np-pc, header button#np-bt').length") == 0, "PubChem and BioTransformer only in «Altro»"
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.curTab") == "file", "first start on a wide screen: the File panel is open"
-        step("barra in the header (role toolbar), file/calc/losses/adducts/lists/table in this order, words under the icons, no rail, File panel open at first start", barra)
+        step("barra in the header (role toolbar), file/calc/adducts & losses/lists/table in this order, words under the icons, no rail, File panel open at first start", barra)
 
         def altro():
             pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
@@ -80,10 +80,10 @@ try:
         def cambia():
             pg.click("#stbar [data-cmd=calc]"); shown("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Calcolatrice'")
             assert pg.is_visible("#calcdlg") and pg.inner_text("#sb-title") == "Calcolatrice", pg.inner_text("#sb-title")
-            pg.click("#stbar [data-cmd=losses]"); gone("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Perdite neutre' && document.querySelector('#stbar [data-cmd=losses]').getAttribute('aria-pressed') === 'true'")
-            assert pg.inner_text("#sb-title") == "Perdite neutre" and not pg.is_visible("#calcdlg")
-            assert pg.get_attribute("#stbar [data-cmd=calc]", "aria-pressed") == "false" and pg.get_attribute("#stbar [data-cmd=losses]", "aria-pressed") == "true"
-            pg.click("#stbar [data-cmd=losses]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=losses]", "aria-pressed") == "false", "a second click on the same tool hides the panel"
+            pg.click("#stbar [data-cmd=addloss]"); gone("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Addotti e perdite' && document.querySelector('#stbar [data-cmd=addloss]').getAttribute('aria-pressed') === 'true'")
+            assert pg.inner_text("#sb-title") == "Addotti e perdite" and not pg.is_visible("#calcdlg")
+            assert pg.get_attribute("#stbar [data-cmd=calc]", "aria-pressed") == "false" and pg.get_attribute("#stbar [data-cmd=addloss]", "aria-pressed") == "true"
+            pg.click("#stbar [data-cmd=addloss]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=addloss]", "aria-pressed") == "false", "a second click on the same tool hides the panel"
             pg.click("#stbar [data-cmd=lists]"); shown("#sb-panel-lists"); assert pg.is_visible("#sb-panel-lists")
             pg.click("#stbar [data-cmd=ptable]"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
             pg.evaluate("document.querySelector('#refdlg').close()")
@@ -149,11 +149,11 @@ try:
         step("side by drag and drop of the header (drop zones, preview, charts move) and Alt+Shift+arrows; remembered in mzlab.barra.lato", lato)
 
         def ricorda():
-            pg.click("#stbar [data-cmd=losses]"); attendi(pg, "BARRA.curTab === 'losses'")
+            pg.click("#stbar [data-cmd=addloss]"); pg.click("#al-t-losses"); attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')")
             pg.evaluate("BARRA.setWidth(320)"); pg.evaluate("BARRA.setSide('right')")
-            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "losses" and st["open"] and "pinned" not in st, st
+            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "addloss" and st["sub"] == "losses" and st["open"] and "pinned" not in st, st
             pg.reload(); ready(pg)
-            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && BARRA.curTab === 'losses'"), "open, tool, side and width come back"
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && (BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"), "open, tool, side and width come back"
             assert pg.is_visible("#sb-panel-losses"), "the restored panel is painted"
             pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg)
             assert not pg.is_visible("#dfiles"), "hidden when it was left hidden"
@@ -214,7 +214,7 @@ try:
 
         def hr_barra():
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
-            assert ids == ["file", "calc", "adducts", "losses", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
+            assert ids == ["file", "calc", "addloss", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
             pg.set_viewport_size({"width": 1800, "height": 1000}); attendi(pg, "document.documentElement.dataset.barLab === 'all'")        # the words need room: the panel pill takes its own word from the bar
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
             assert all(x in lab for x in ("Scansione", "Formule", "Librerie")), lab         # the HR group keeps its words as long as the main tools do
@@ -257,9 +257,9 @@ try:
         step("HR menus from the keyboard (↓ opens, ↓ Enter chooses), last item kept on the button and reopened by a click, 6 tools in all", hr_menu)
 
         def hr_stato():
-            pg.click("#stbar [data-cmd=losses]"); pg.evaluate("BARRA.setWidth(400)")
+            pg.click("#stbar [data-cmd=addloss]"); pg.evaluate("BARRA.setWidth(400)")
             hr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.hr'))"); lr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr')||'null')")
-            assert hr["open"] and hr["w"] == 400 and hr["tab"] == "losses" and hr["last"]["scan"] == "lst" and hr["last"]["form"] == "iso", hr
+            assert hr["open"] and hr["w"] == 400 and hr["tab"] == "addloss" and hr["last"]["scan"] == "lst" and hr["last"]["form"] == "iso", hr
             assert lr is None or lr.get("w") != 400, "LR and HR keep separate states"
             pg.click("#sb-x")
         step("HR state in mzlab.barra.hr (pinned, width, tool, last item of each menu), separate from LR", hr_stato)
@@ -313,7 +313,7 @@ try:
                 vis = q.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
                 assert vis == ["file", "more", "search"], vis
                 q.click("#tb-more"); q.wait_for_selector("#stmenu")
-                t = q.inner_text("#stmenu"); assert "Calcolatrice" in t and "Perdite neutre" in t and "Tavola periodica" in t and "PubChem" in t, t
+                t = q.inner_text("#stmenu"); assert "Calcolatrice" in t and "Addotti e perdite" in t and "Tavola periodica" in t and "PubChem" in t, t
                 q.locator("#stmenu button", has_text="Calcolatrice").click(); shown("#calcdlg", q); attendi(q, "document.querySelector('#dfiles').getBoundingClientRect().width <= 391")
                 assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 + 1
                 q.evaluate("BARRA.close(false)")
@@ -332,7 +332,7 @@ try:
             t = pg.inner_text("#pal-l"); assert "Simulazione isotopica" in t, t
             pg.keyboard.press("Control+a"); pg.keyboard.type("CALCOL"); attendi(pg, "(document.querySelector('#pal-o-0') || {innerText: ''}).innerText.includes('Calcolatrice')")
             assert pg.inner_text("#pal-l #pal-o-0").startswith("Calcolatrice") or "Calcolatrice" in pg.inner_text("#pal-o-0"), pg.inner_text("#pal-l")
-            pg.keyboard.press("Control+a"); pg.keyboard.type("perdita"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Perdite neutre')"); assert "Perdite neutre" in pg.inner_text("#pal-l")       # singular finds the plural entry through its keywords
+            pg.keyboard.press("Control+a"); pg.keyboard.type("perdita"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Addotti e perdite')"); assert "Addotti e perdite" in pg.inner_text("#pal-l")       # singular finds the plural entry through its keywords
             pg.keyboard.press("Control+a"); pg.keyboard.type("zzzzqq"); attendi(pg, "document.querySelector('#paletta').innerText.includes('Nessun risultato')"); assert "Nessun risultato" in pg.inner_text("#paletta")
             pg.keyboard.press("Control+a"); pg.keyboard.type("metodo"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Metodo di acquisizione')"); assert "Metodo di acquisizione" in pg.inner_text("#pal-l")
             pg.keyboard.press("Control+a"); pg.keyboard.type("pannello"); attendi(pg, "document.querySelectorAll('#pal-l li[role=option]').length >= 3")

@@ -103,7 +103,7 @@ try:
         pg.set_viewport_size({"width": 1500, "height": 2200})
         # the Adducts panel
         def adducts():
-            pg.click("#np-add"); attendi(pg, "document.querySelector('#refdlg') && !document.querySelector('#refdlg').hidden || document.querySelector('#sb-panel-adducts') && !document.querySelector('#sb-panel-adducts').hidden")
+            pg.click("#np-addloss"); attendi(pg, "document.querySelector('#refdlg') && !document.querySelector('#refdlg').hidden || document.querySelector('#sb-panel-adducts') && !document.querySelector('#sb-panel-adducts').hidden")
             q = pg.query_selector("#refdlg [id$='-q'], #sb-panel-adducts [id$='-q']")
             assert q
             q.fill("21.98"); frames(pg, 25)
@@ -111,7 +111,7 @@ try:
         step("Adducts panel opens and answers a number", adducts)
         def to_loss():
             pg.click("#reftitle ~ *", timeout=1000) if False else None
-            pg.click("#np-nl"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-q')")
+            pg.click("#np-addloss") if not pg.evaluate("BARRA.curTab==='addloss'") else None; pg.click("#al-t-losses"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-q')")
             pg.fill("#nl-q", "30"); frames(pg, 25)
             t = pg.inner_text("#nl-res"); assert "CH2O" in t or "CH₂O" in t, t[:300]
             assert pg.locator("#nl-ctl [data-r]").count() == 0 and pg.get_attribute("#nl-ctl .cq-ctl", "data-mode") == "lr"
