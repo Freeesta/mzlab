@@ -247,6 +247,11 @@ def ready(pg, timeout=90000, settle=400):
 def drawer(pg, tab="file", pin=True):
     """Open a tool of the toolbar drawer (the file list by default). Docked next to the charts. `pin` is kept for old callers."""
     pg.evaluate(f"(()=>{{BARRA.setTab('{tab}',{{noFocus:true,instant:true}})}})()"); pg.wait_for_timeout(300)
+def open_ms2(pg):
+    """Expands the product-ion (MS2) group of the file list (it starts folded), by clicking its header as a user does."""
+    drawer(pg)
+    if pg.locator("#flst .fgh[data-gt=ms2] .chv[aria-expanded=false]").count(): pg.click("#flst .fgh[data-gt=ms2] .chv")
+    pg.wait_for_selector("#flst input[data-pr]", state="visible", timeout=10000)
 def pick_kind(pg, value, panel="E.panels.find(q=>q.type==='chrom')"):
     """Chooses what a chromatogram panel plots (pda, press, an:<id>, reg) with the picker, as a user does."""
     pg.evaluate(f"{panel}.el.querySelector('[data-o=kind]').click()")
@@ -258,6 +263,8 @@ def open_kind(pg, kind):
     k = pg.evaluate("kind => (E.files.find(f => f.kind === kind && !f.gone) || {}).k", kind)
     assert k is not None, f"no {kind} file loaded"
     if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]")      # the file list is a drawer: open it first
+    chv = f"#flst .fgh[data-gt={kind}] .chv[aria-expanded=false]"
+    if pg.locator(chv).count(): pg.click(chv)      # a folded group (product ion starts folded) is opened first
     pg.wait_for_selector(f"#flst .fl[data-k='{k}'] .nm", state="visible")
     pg.click(f"#flst .fl[data-k='{k}'] .nm")
 def shut(pg, sel):

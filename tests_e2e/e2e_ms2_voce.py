@@ -15,7 +15,7 @@ try:
         P = "E.panels.filter(p => p.tab === 'ms2')"
         def tick():
             assert pg.evaluate("E.files.find(f => f.label === 'MS2_t15').vis") is False
-            pg.locator("#flst input[data-pr]").first.click(); attendi(pg, f"{P}.length >= 1"); ready(pg)
+            open_ms2(pg); pg.locator("#flst input[data-pr]").first.click(); attendi(pg, f"{P}.length >= 1"); ready(pg)
             t = pg.evaluate(f"{P}.map(p => p.type)"); assert t == ["chrom"], t
             assert pg.evaluate("E.files.find(f => f.label === 'MS2_t15').vis") is True, "the MS2 file of the precursor is visible"
             n = pg.evaluate(f"(async () => (await rawSeries({P}[0])).filter(s => s.y.some(v => v > 0)).length)()"); assert n >= 1, "the precursor chromatogram has data"

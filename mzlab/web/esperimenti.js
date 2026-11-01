@@ -5,7 +5,7 @@
 const ESP = (() => {
   const voci = [
     { id: "full", ordine: 1, etichetta: "Full Scan", didattica: "full", spettri: true, vista: "tic-spettro" },
-    { id: "ms2", ordine: 2, etichetta: "MS2 (Product Ion)", didattica: "prod", spettri: true },
+    { id: "ms2", ordine: 2, etichetta: "MS2 (Product Ion)", didattica: "prod", spettri: true, chiuso: true },
     { id: "mrm", ordine: 3, etichetta: "MRM", didattica: "mrm", spettri: false },
     // direct infusion with MSn on fixed precursors (the tree of infusione.js)
     { id: "infusion", ordine: 4, etichetta: I18N.t("inf.name"), didattica: "msn", spettri: true, vista: "tic-spettro", nodi: true },

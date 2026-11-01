@@ -802,8 +802,7 @@ function renderFileList() {
   };
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : "";
   E._grpOpen = E._grpOpen || {};
-  // the product ion (MS2) experiment starts folded: its files list one precursor row each
-  const isExpOpen = (/** @type {string} */ t) => E._grpOpen[t] !== undefined ? E._grpOpen[t] : t === "ms2" ? false : (t === E.tab || lrTog() || t.startsWith("u:"));
+  const isExpOpen = (/** @type {string} */ t) => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (ESP.voce(t) || {}).chiuso ? false : (t === E.tab || lrTog() || t.startsWith("u:"));
   // the open/closed state of a group: one per experiment type in the low-resolution list (its files are of one type), one for the whole list in the bench
   const gkOf = (/** @type {{ g: string, fs: FileAperto[] }} */ G) => G.g.startsWith("u:") ? G.g : lrTog() ? G.fs[0].kind : E.tab;
   // compact list (iPad, narrow window), high resolution: lower rows and groups that fold, remembered in qqq.flgrp
