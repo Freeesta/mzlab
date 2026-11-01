@@ -783,8 +783,8 @@ function renderFileList() {
   side.forEach((/** @type {FileAperto} */ f) => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   // a DDA file is ONE row (its Full Scan and MS2 parts open together)
   groups.forEach(G => { G.fs = G.fs.filter((/** @type {FileAperto} */ f, /** @type {number} */ i, /** @type {FileAperto[]} */ a) => !f.dda || a.findIndex((/** @type {FileAperto} */ x) => x.dda && fileBase(x.file) === fileBase(f.file)) === i); });
-  if (E.ugBy && E.ugBy.by !== "custom") carica("gruppi.js").then(() => GRUPPI.follow());
-  if (window.GRUPPI) GRUPPI.order(groups);
+  if (E.ugBy && E.ugBy.by !== "custom" && E.ugBy.by !== "flat") carica("gruppi.js").then(() => GRUPPI.follow());
+  if (window.GRUPPI) GRUPPI.order(groups); ugArrange(groups);
   if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
   const sub = (/** @type {FileAperto} */ f) => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = (/** @type {FileAperto} */ f) => {

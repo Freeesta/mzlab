@@ -1,6 +1,7 @@
 I18N.add("en", {
   "groups.by.btn": "Groups",
   "groups.menu": "Group files by",
+  "groups.type": "Experiment type",
   "groups.none": "None",
   "groups.then": "Then by…",
   "groups.pos": "Token position…",

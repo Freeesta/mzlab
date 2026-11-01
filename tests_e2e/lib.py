@@ -247,6 +247,9 @@ def ready(pg, timeout=90000, settle=400):
 def drawer(pg, tab="file", pin=True):
     """Open a tool of the toolbar drawer (the file list by default). Docked next to the charts. `pin` is kept for old callers."""
     pg.evaluate(f"(()=>{{BARRA.setTab('{tab}',{{noFocus:true,instant:true}})}})()"); pg.wait_for_timeout(300)
+def close_side(pg):
+    """Closes the side panel as a user does: the × of the full-width sheet (phone) or else the panel button of the main header."""
+    pg.click("#sb-x" if pg.is_visible("#sb-x") else "#sb-toggle")
 def open_ms2(pg):
     """Expands the product-ion (MS2) group of the file list (it starts folded), by clicking its header as a user does."""
     drawer(pg)

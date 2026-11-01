@@ -201,7 +201,13 @@ function groupFiles() {
   carica("gruppi.js").then(() => GRUPPI.set([...ugBases()], I18N.t("files.ugrp.name", { n }), "new"));
 }
 /** True when the list has user groups and every one is a single file: their headers (a count of 1 each) are left out. @param {{ g: string, fs: any[] }[]} groups */
-const ugFlat = groups => groups.some(G => G.g.startsWith("u:")) && groups.every(G => !G.g.startsWith("u:") || G.fs.length < 2);
+const ugFlat = groups => (E.ugBy && E.ugBy.by === "flat") || groups.some(G => G.g.startsWith("u:")) && groups.every(G => !G.g.startsWith("u:") || G.fs.length < 2);
+/** Orders the groups of the file list in place: experiment types in the catalogue order (Full Scan first) whatever the load order, user groups keep their places; «None» (a flat list) puts every file in one headerless group. @param {{ g: string, fs: any[] }[]} groups */
+function ugArrange(groups) {
+  const at = (/** @type {{ g: string, fs: any[] }} */ G) => (ESP.voce(G.g.startsWith("hr.") ? G.g.slice(3) : G.fs[0].kind) || { ordine: 99 }).ordine, slots = groups.map((G, j) => G.g.startsWith("u:") ? -1 : j).filter(j => j >= 0), ts = slots.map(j => groups[j]).sort((a, b) => at(a) - at(b));
+  slots.forEach((j, i) => { groups[j] = ts[i]; });
+  if (E.ugBy && E.ugBy.by === "flat") groups.splice(0, groups.length, { g: "u:", fs: groups.flatMap(G => G.fs) });
+}
 /** «Group by» is shown only while some grouping gives a group of 2+ files (one the list already has, or a variable of the names); the chosen key stays and applies again when it is useful. */
 let _byTick = 0;
 function syncGroupBy() {

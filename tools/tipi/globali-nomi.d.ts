@@ -891,6 +891,7 @@ declare var tunitLabel: any;
 declare var tunitSet: any;
 declare var typeTag: any;
 declare var typingNow: any;
+declare var ugArrange: any;
 declare var ugBases: any;
 declare var ugFiles: any;
 declare var ugFlat: any;
