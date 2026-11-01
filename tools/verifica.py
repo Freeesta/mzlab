@@ -48,7 +48,7 @@ NEEDS: dict[str, set[str]] = {
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 # the slowest e2e (seconds, measured in the CI): they start first, so the pool does not end waiting for one of them
-LENTI = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]; SOLI = ["e2e_carica_grandi"]      # SOLI fill the browser storage and memory on purpose: run alone after the pool, so the tests beside them never starve
+LENTI = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]; SOLI = ["e2e_carica_grandi", "e2e_sw_versione"]      # SOLI run alone after the pool: carica_grandi fills the browser storage and memory on purpose, sw_versione checks that a deploy shows at the first reload inside the 3 s navigation budget of the worker (a loaded machine spends it); the tests beside them never starve
 NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 # e2e3 plus the e2e that were red on main without anybody seeing it (the CI used to run only e2e3): download menu, buttons, settings, axes, spectra.
 # e2e_cromato is not here yet: it fails in WebKit (the dialog of the integrations has no S/N box) and in Firefox (waterfall step), both only in those browsers.
