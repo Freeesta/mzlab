@@ -21,7 +21,7 @@ try:
         def groups():
             rows = pg.evaluate("[...document.querySelectorAll('#flist tr[data-grp]')].map(r => [r.dataset.grp, r.children[1].childNodes[0].textContent.trim(), r.children[1].innerText])"); print(rows)
             assert pg.locator("#flist tr.grp").count() == 0, "no group lines: nothing appears or moves"
-            assert [r[1] for r in rows] == [f.name for f in files], rows           # the order of arrival, as the rows had while loading
+            assert [r[1] for r in rows] == [f.stem for f in files], rows           # the order of arrival, as the rows had while loading
             keys = [r[0] for r in rows]
             assert any(k.startswith("lr:mix:") and "DDA" in k for k in keys) and any(k.startswith("lr:") and "MRM" in k for k in keys), keys
             assert all(("HR" in r[2]) == r[0].startswith("hr:") for r in rows), rows
