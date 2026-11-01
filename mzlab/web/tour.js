@@ -58,12 +58,12 @@ const TOUR = (() => {
 
   const STEPS_CAP1 = [
     {
-      id: "file",
+      id: "file", dati: true,
       prep: openFileDrawer,
       target: () => document.getElementById("sb-pane")
     },
     {
-      id: "gruppi",
+      id: "gruppi", dati: true,
       prep: openFileDrawer,
       target: () => document.querySelector("#flst .fgh")
     },
@@ -439,11 +439,13 @@ const TOUR = (() => {
       return;
     }
 
-    const step = list[curStep];
+    let step = list[curStep];
     if (curLeave) { const f = curLeave; curLeave = null; f(); }
     if (step.prep) { const back = step.prep(); if (typeof back === "function") curLeave = back; }
 
-    const targetEl = step.target();
+    let targetEl = step.target();
+    // nothing loaded (lab build): the first step that needs data becomes a «load a file» card that waits for the data (tour-dopo.js)
+    if (curCap === 1 && TOURDOPO.vuoto() && (step.dati || !targetEl || targetEl.offsetParent === null)) { step = TOURDOPO.passoCarica; targetEl = step.target(); }
     if (!targetEl || targetEl.offsetParent === null || targetEl.getBoundingClientRect().width === 0) {
       console.debug("Tour: target missing for step", step.id);
       curStep++;
@@ -538,6 +540,8 @@ const TOUR = (() => {
     // Focus primary action button
     const priBtn = btnNext || btnCont || btnFine;
     if (priBtn) priBtn.focus();
+
+    if (step === TOURDOPO.passoCarica) tryTimer = TOURDOPO.attendiDati(() => { stopTryTimer(); renderStep(); });
 
     // Setup "Prova tu" observation
     if (step.prova && step.attesa && step.initProva) {
