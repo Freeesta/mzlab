@@ -3,6 +3,8 @@
 // Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafici.js.
 // ------------------------------------------------------------------ peak integration
 // base = [t0, y0, t1, y1]: the baseline of an HR automatic integration (autoAll), a straight line through those two points, still valid when an edge is dragged
+// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
+const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
 function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, base = /** @type {number[] | null} */ (null)) {
   const xs = s.x, ys = s.y;
   let i0 = nearIdx(xs, Math.min(a, b)), i1 = nearIdx(xs, Math.max(a, b));
@@ -10,8 +12,7 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   let ar = 0, mx = -Infinity, at = i0;
   for (let j = i0 + 1; j <= i1; j++) ar += (ys[j] + ys[j - 1]) / 2 * (xs[j] - xs[j - 1]) * 60;
   for (let j = i0; j <= i1; j++) if (ys[j] > mx) { mx = ys[j]; at = j; }
-  const e3 = (/** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };   // end points of the baseline: mean of 3 points
-  const ya = base ? baseAt(base, xs[i0]) : e3(i0), yb = base ? baseAt(base, xs[i1]) : e3(i1), area = (ya + yb) / 2 * (xs[i1] - xs[i0]) * 60;
+  const ya = base ? baseAt(base, xs[i0]) : edge3(ys, i0), yb = base ? baseAt(base, xs[i1]) : edge3(ys, i1), area = (ya + yb) / 2 * (xs[i1] - xs[i0]) * 60;
   const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
