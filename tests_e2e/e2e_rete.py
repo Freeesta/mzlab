@@ -124,7 +124,7 @@ try:
 
         def data_table():
             pg.focus("#rv-host svg.rv-svg"); pg.keyboard.press("t")
-            pg.wait_for_selector("table", timeout=5000)
+            pg.wait_for_selector("dialog#tdati table", timeout=5000)
             txt = pg.evaluate("() => [...document.querySelectorAll('dialog table, .tdati table, [role=dialog] table')].map(t => t.innerText).join(' ')")
             assert FX["arcs"][0]["rule"] in txt and "Δ ion formula" in txt, txt[:300]
         step("the table of the arcs (TDATI) opens from the chart", data_table)
