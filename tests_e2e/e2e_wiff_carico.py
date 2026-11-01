@@ -97,7 +97,7 @@ try:
             assert li.count() == 1, pg.inner_text("#flist .cvsum")
             n, t = int(li.get_attribute("data-cvmiss")), li.inner_text()
             assert li.count() == 1 and pg.locator("#flist .cvsum li").count() == 1, "only the file with a warning is listed"
-            assert 0 < n < 200 and f"{n} scans missing: the .wiff.scan ends before them" in t and "Loaded ✓" in t, t
+            assert 0 < n < 200 and f"{n} scans missing: the file ends before them" in t and "Loaded ✓" in t, t
             assert "1 with scans missing" in pg.inner_text("#flist .cvsum [data-cvtot]")
             pg.evaluate("document.querySelector('#flist .cvsum [data-cvact=close]')?.click()")      # the table may stand behind the first file shown
         step("a truncated .wiff.scan loads what it has and says how many scans are missing", truncated)
