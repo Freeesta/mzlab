@@ -5691,3 +5691,4 @@
 {"v":1,"ts_utc":"2026-11-01T17:10:51Z","azione":"push","titolo":"Merge main","merge_main":true,"aree":{"docs":1,"web":17,"test":16,"generati":1},"tipo":"pr","pr":2475,"sha":"a9702e2377b803da37c101a6c4817ba7b9d80cba"}
 {"v":1,"ts_utc":"2026-11-01T17:11:27Z","azione":"push","titolo":"Merge main into claude/tools-panel-no-overlay","merge_main":true,"aree":{"web":2},"tipo":"pr","pr":2476,"sha":"1d52bcbed332b4596edb129a2e806a09f7809cf7"}
 {"v":1,"ts_utc":"2026-11-01T17:11:34Z","azione":"push","titolo":"Merge main","merge_main":true,"aree":{"web":2},"tipo":"pr","pr":2480,"sha":"887d86b5b880b26ed1eaf4a104c2eac111211c06"}
+{"v":1,"ts_utc":"2026-11-01T17:11:56Z","azione":"push","titolo":"Merge origin/main into claude/lr-a-titoli-ms2","merge_main":true,"aree":{"web":2},"tipo":"pr","pr":2473,"sha":"e6d660a13ab10908f9427ac85310cd2faf03807f"}
