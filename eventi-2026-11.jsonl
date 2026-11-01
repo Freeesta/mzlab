@@ -5689,3 +5689,4 @@
 {"v":1,"ts_utc":"2026-11-01T17:09:45Z","tipo":"job","k":"124918008201","workflow":"rust","job":"rust","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"995ff557ea6d0465d3e100ed32872c1d89aef5e3","run_id":41330010402,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-01T17:10:03Z","tipo":"carico","k":"2026-11-01T17:1","job_in_coda":0,"job_in_corso":16}
 {"v":1,"ts_utc":"2026-11-01T17:10:51Z","azione":"push","titolo":"Merge main","merge_main":true,"aree":{"docs":1,"web":17,"test":16,"generati":1},"tipo":"pr","pr":2475,"sha":"a9702e2377b803da37c101a6c4817ba7b9d80cba"}
+{"v":1,"ts_utc":"2026-11-01T17:11:27Z","azione":"push","titolo":"Merge main into claude/tools-panel-no-overlay","merge_main":true,"aree":{"web":2},"tipo":"pr","pr":2476,"sha":"1d52bcbed332b4596edb129a2e806a09f7809cf7"}
