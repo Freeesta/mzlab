@@ -1,5 +1,5 @@
 I18N.add("it", {
-  "groups.by.btn": "Raggruppa",
+  "groups.by.btn": "Gruppi",
   "groups.menu": "Raggruppa i file per",
   "groups.none": "Nessuno",
   "groups.then": "Poi per…",
