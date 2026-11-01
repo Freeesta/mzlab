@@ -46,7 +46,7 @@ try:
         def matrix():
             assert pg.evaluate("E.files.filter(f => !f.gone).length") == 30
             open_menu(pg)
-            assert item(pg, "None").get_attribute("aria-checked") == "true"
+            assert item(pg, "Experiment type").get_attribute("aria-checked") == "true"
             item(pg, "Matrix").click(); attendi(pg, "!!E.ugBy && E.ugBy.by === 'matrix'", 10000); fermo(pg, "#flst")
             assert (count(pg, "MQ"), count(pg, "TW")) == (20, 9), (count(pg, "MQ"), count(pg, "TW"))
             assert pg.evaluate("E.files.filter(f => !f.gone && !f.ugrp).length") == 1
@@ -88,7 +88,7 @@ try:
             assert pg.evaluate("document.activeElement.closest('.gby-menu') !== null"), "the focus is not in the menu"
             assert pg.evaluate("document.querySelector('.gby-menu').getAttribute('role')") == "menu"
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("End"); pg.keyboard.press("Home")
-            assert "None" in pg.evaluate("document.activeElement.textContent")
+            assert "Experiment type" in pg.evaluate("document.activeElement.textContent")
             pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('.gby-menu')", 3000)
             assert pg.evaluate("document.activeElement.id") == "sb-by", "the focus does not return to the button"
             pg.keyboard.press("Enter"); attendi(pg, f"{ITEM}.length > 3", 10000)
@@ -98,7 +98,7 @@ try:
             pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.gby-dlg')", 3000)
             assert pg.evaluate("document.activeElement.id") == "sb-by"
             pg.keyboard.press("Enter"); attendi(pg, f"{ITEM}.length > 3", 10000)
-            while "None" not in pg.evaluate("document.activeElement.textContent"): pg.keyboard.press("ArrowUp")
+            while "Experiment type" not in pg.evaluate("document.activeElement.textContent"): pg.keyboard.press("ArrowUp")
             pg.keyboard.press("Space"); attendi(pg, "!E.ugBy && !E.files.some(f => f.ugrp)", 5000)
         step("the menu and the dialogs work with the keyboard only (arrows, Enter, Space, Esc), the focus returns to the button", keyboard)
         def axe():

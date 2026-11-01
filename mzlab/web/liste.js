@@ -21,14 +21,14 @@ const LISTE = (() => {
       (L.items || []).forEach((/** @type {Bag} */ it) => {
         const /** @type {Bag} */ x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
         if (en && it.name_en) x.name = it.name_en;
+        if (it.series && it.series.n != null && typeof I18N !== "undefined") { x.baseName = String(x.name).replace(/ n=\d+$/, ""); x.name = I18N.t(it.series.n === 1 ? "lst.unitName.one" : "lst.unitName.many", { name: x.baseName, n: it.series.n }); }    // a polymer series is named by its repeat units, not by the bare «n=3» of the data
         if (en && it.cls_en) x.cls = it.cls_en;
         if (it.pol !== -1) pos.push(x);
         if (it.pol !== 1) neg.push(x);
       });
     });
     const by = (/** @type {Bag} */ a, /** @type {Bag} */ b) => a.mz - b.mz;
-    pos.sort(by);
-    neg.sort(by);
+    pos.sort(by); neg.sort(by);
     return { pos, neg };
   }
 
@@ -96,7 +96,7 @@ const LISTE = (() => {
         let j = i;
         while (j + 1 < ns.length && ns[j + 1] === ns[j] + 1) j++;
         if (j - i + 1 >= minRun) {
-          const nm = byN.get(ns[i]).name.replace(/ n=\d+$/, "").split(" (")[0];
+          const nm = String(byN.get(ns[i]).baseName || byN.get(ns[i]).name).split(" (")[0];
           const txt = `serie ${nm} (n = ${ns[i]}-${ns[j]})`;
           for (let q = i; q <= j; q++) out.set(k + "#" + ns[q], txt);
         }
@@ -772,7 +772,7 @@ const LISTE = (() => {
         const delta = hasMz ? (isNom ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
                                     : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
         const polBadge = it.pol === 1 ? `<span class="pol pos" style="font-size:10px">ESI+</span>` : it.pol === -1 ? `<span class="pol neg" style="font-size:10px">ESI&minus;</span>` : `<span class="pol both" style="font-size:10px">&plusmn;</span>`;
-        const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">n=${it.series.n}</span>` : "";
+        const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">${I18N.t(it.series.n === 1 ? "lst.unitShort.one" : "lst.unitShort.many", { n: it.series.n })}</span>` : "";
         if (isNom) return `<tr>
           <td class="num font-mono"><b>${Math.round(it.mz)}</b></td>
           <td><b>${EH(it.name)}</b></td>

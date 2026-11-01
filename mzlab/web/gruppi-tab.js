@@ -16,7 +16,7 @@ window.GRUTAB = (() => {
     pre() {
       if (window.GDND && GDND.busy()) { GDND.defer(); return true; }
       window.GRUPPI?.arrive();
-      if (E.ugBy && E.ugBy.by !== "custom") window.GRUPPI?.follow();
+      if (E.ugBy && E.ugBy.by !== "custom" && E.ugBy.by !== "flat") window.GRUPPI?.follow();
       return false;
     },
     /** The rows of the table body: `ents` = [{ f, i, h }] in table order (`h` = the row's HTML): every row of a table of two or more gets its grip and «Move» button, the headers come with the first label. @param {{ f: any, i: number, h: string }[]} ents @param {number} ncol */

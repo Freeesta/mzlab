@@ -1,6 +1,7 @@
 I18N.add("it", {
   "groups.by.btn": "Gruppi",
   "groups.menu": "Raggruppa i file per",
+  "groups.type": "Tipo di esperimento",
   "groups.none": "Nessuno",
   "groups.then": "Poi per…",
   "groups.pos": "Posizione del termine…",

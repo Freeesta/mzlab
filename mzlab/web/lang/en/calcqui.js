@@ -8,7 +8,6 @@ I18N.add("en", {
   "cq.g.addotti": "Adducts",
   "cq.g.diff": "Differences between adducts",
   "cq.ad.title": "Adducts",
-  "cq.ad.hint": "A number is read as an observed m/z; a formula gives the table of its adducts.",
   "cq.ad.title.field": "Type a number (or a sum such as 100+114) or a formula",
   "cq.link.ad": "Adducts with this difference",
   "cq.link.loss": "Neutral losses with this number",

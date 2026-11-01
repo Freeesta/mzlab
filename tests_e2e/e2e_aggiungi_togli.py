@@ -46,7 +46,7 @@ try:
             assert gap >= 8, f"«Back to work!» keeps a gap from the drop area: {gap}"
             assert pg.evaluate("[...document.querySelectorAll('#v-data .card')].every(c => c.hidden || c.getBoundingClientRect().height === 0 || c.textContent.trim() !== '' || c.querySelector('canvas,svg,table'))"), "no empty bar"
             pg.click("#backwork"); attendi(pg, f"{WORK} === 'panels'")
-            pg.click("#sb-x"); attendi(pg, "!document.querySelector('#v-data').classList.contains('sb-open')")
+            close_side(pg); attendi(pg, "!document.querySelector('#v-data').classList.contains('sb-open')")
             pg.evaluate("STATO.aggiunta(true, 'add-files'); applyView()"); attendi(pg, f"{WORK} === 'add'")
             assert not vis(), "the user's own collapse of the side panel is kept"
             pg.click("#backwork"); attendi(pg, f"{WORK} === 'panels'")

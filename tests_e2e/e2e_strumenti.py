@@ -61,7 +61,7 @@ try:
         step("«Altro» menu: PubChem and BioTransformer, Esc closes and gives the focus back", altro)
 
         def apri_chiudi():
-            pg.click("#sb-x"); gone("#dfiles"); attendi(pg, FOLLOW)      # open at first start: close it, then reopen with the tool button
+            close_side(pg); gone("#dfiles"); attendi(pg, FOLLOW)      # open at first start: close it, then reopen with the tool button
             w0 = pg.evaluate("E.panels[0].w")
             pg.click("#stbar [data-cmd=file]"); shown("#dfiles"); shown("#flst"); attendi(pg, f"E.panels[0].w < {w0} - 150 && document.querySelector('#dfiles').contains(document.activeElement)")
             assert pg.is_visible("#dfiles") and pg.is_visible("#flst"), "file list in the panel"
@@ -74,7 +74,7 @@ try:
             assert not pg.is_visible("#dfiles") and pg.get_attribute("#stbar [data-cmd=file]", "aria-pressed") == "false", "the same button hides it"
             assert pg.evaluate("document.activeElement.dataset.cmd") == "file", "the focus goes back to the button"
             assert pg.evaluate("E.panels[0].w") == w0, "the charts get the page back"
-            pg.click("#stbar [data-cmd=file]"); shown("#dfiles"); pg.click("#sb-x"); gone("#dfiles"); assert not pg.is_visible("#dfiles")
+            pg.click("#stbar [data-cmd=file]"); shown("#dfiles"); close_side(pg); gone("#dfiles"); assert not pg.is_visible("#dfiles")
         step("panel: docks next to the charts (they narrow), the same button / × hide it, focus in and back", apri_chiudi)
 
         def cambia():
@@ -87,7 +87,7 @@ try:
             pg.click("#stbar [data-cmd=lists]"); shown("#sb-panel-lists"); assert pg.is_visible("#sb-panel-lists")
             pg.click("#stbar [data-cmd=ptable]"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
             pg.evaluate("document.querySelector('#refdlg').close()")
-            pg.click("#sb-x"); gone("#dfiles"); assert not pg.is_visible("#dfiles")
+            close_side(pg); gone("#dfiles"); assert not pg.is_visible("#dfiles")
         step("one tool at a time in the drawer; the periodic table stays the window #refdlg", cambia)
 
         def larghezza():
@@ -104,7 +104,7 @@ try:
             attendi(pg, FOLLOW)
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"), "the charts follow the narrower page"
             h.dblclick(); attendi(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300, "double click = the automatic width"
-            pg.click("#sb-x"); gone("#dfiles")
+            close_side(pg); gone("#dfiles")
         step("splitter (role separator): keyboard, Home/End, double click, 280-560 px", larghezza)
 
         def lato():
@@ -145,7 +145,7 @@ try:
             assert pg.evaluate("BARRA.side") == "left"
             assert pg.evaluate("Q('#dpanels').getBoundingClientRect().left") > w_dp + 150, "the charts move to the free side"
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")
-            pg.click("#sb-x"); gone("#dfiles")
+            close_side(pg); gone("#dfiles")
         step("side by drag and drop of the header (drop zones, preview, charts move) and Alt+Shift+arrows; remembered in mzlab.barra.lato", lato)
 
         def ricorda():
@@ -155,7 +155,7 @@ try:
             pg.reload(); ready(pg)
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && (BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"), "open, tool, side and width come back"
             assert pg.is_visible("#sb-panel-losses"), "the restored panel is painted"
-            pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg)
+            close_side(pg); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg)
             assert not pg.is_visible("#dfiles"), "hidden when it was left hidden"
             pg.evaluate("localStorage.setItem('mzlab.barra.lato','bogus'); localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg)
             st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert "pinned" not in st and st["w"] == 280 and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") == "left", st
@@ -238,7 +238,7 @@ try:
             assert pg.evaluate("document.querySelector('#stbar [data-cmd-main=scan]').getAttribute('aria-label')") == "Scansione: Elenco delle scansioni"
             assert pg.get_attribute("#stbar [data-cmd-main=scan]", "aria-pressed") == "true"
             pg.keyboard.press("Escape"); frames(pg, 3)
-            if pg.is_visible("#dfiles"): pg.click("#sb-x")
+            if pg.is_visible("#dfiles"): close_side(pg)
             gone("#dfiles")
             pg.click("#stbar [data-cmd-main=scan]"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'lst'")
             assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "lst", "a click on the button reopens the last chosen item"
@@ -253,7 +253,7 @@ try:
             pg.click("#stbar [data-cmd=idn]"); gone("#dfiles"); assert not pg.is_visible("#dfiles")
             for t in ("hdr", "fil", "cmp"):
                 pg.evaluate(f"BARRA.setTab('{t}')"); shown("#hrinfo"); attendi(pg, f"BARRA.curTab === '{t}'"); assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == t, t
-            pg.click("#sb-x")
+            close_side(pg)
         step("HR menus from the keyboard (↓ opens, ↓ Enter chooses), last item kept on the button and reopened by a click, 6 tools in all", hr_menu)
 
         def hr_stato():
@@ -261,7 +261,7 @@ try:
             hr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.hr'))"); lr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr')||'null')")
             assert hr["open"] and hr["w"] == 400 and hr["tab"] == "addloss" and hr["last"]["scan"] == "lst" and hr["last"]["form"] == "iso", hr
             assert lr is None or lr.get("w") != 400, "LR and HR keep separate states"
-            pg.click("#sb-x")
+            close_side(pg)
         step("HR state in mzlab.barra.hr (pinned, width, tool, last item of each menu), separate from LR", hr_stato)
 
         # ------------------------------------------------------------------ narrow windows, iPad, phone
@@ -343,7 +343,7 @@ try:
             pg.click("#tb-search"); pg.wait_for_selector("#paletta:not([hidden])"); pg.keyboard.type("calcol"); pg.keyboard.press("Enter"); gone("#paletta"); shown("#calcdlg"); attendi(pg, "BARRA.curTab === 'calc'")
             assert not pg.is_visible("#paletta") and pg.evaluate("BARRA.curTab") == "calc" and pg.is_visible("#calcdlg"), "Enter runs the command"
             pg.keyboard.press("Escape"); frames(pg, 3)
-            if pg.is_visible("#dfiles"): pg.click("#sb-x")
+            if pg.is_visible("#dfiles"): close_side(pg)
             gone("#dfiles")
         step("palette: Ctrl+K or 🔍, finds «isotop» and «calcol» without accents, partial words, ↑↓ Enter Esc, dialog/combobox/listbox", paletta)
 
@@ -352,7 +352,7 @@ try:
             assert "Simulazione isotopica" in pg.inner_text("#pal-l") and "Alta risoluzione" in pg.inner_text("#pal-l")
             pg.keyboard.press("Enter"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'iso'")
             assert pg.evaluate("BARRA.curTab") == "iso" and pg.is_visible("#hrinfo")
-            pg.click("#sb-x"); pg.keyboard.press("Control+k"); pg.keyboard.type("sinistra"); pg.keyboard.press("Enter"); attendi(pg, "BARRA.side === 'left'")
+            close_side(pg); pg.keyboard.press("Control+k"); pg.keyboard.type("sinistra"); pg.keyboard.press("Enter"); attendi(pg, "BARRA.side === 'left'")
             assert pg.evaluate("BARRA.side") == "left"
             pg.keyboard.press("Control+k"); pg.keyboard.type("destra"); pg.keyboard.press("Enter"); attendi(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
             pg.evaluate("BARRA.setSide('left')")
