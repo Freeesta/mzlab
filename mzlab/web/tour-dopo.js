@@ -51,11 +51,5 @@ const TOURDOPO = (() => {
     // the click that closed the invitation is already over: listen from the next turn
     setTimeout(() => { document.addEventListener("pointerdown", off, true); document.addEventListener("keydown", onKey, true); }, 0);
   }
-  /** The «load a file» card of the tour when nothing is loaded yet: it points at the drop zone and waits for the data. */
-  const passoCarica = { id: "carica", dati: true, target: () => document.getElementById("drop") };
-  /** True when no data is loaded and the drop zone that the card points at is on screen. @returns {boolean} */
-  const vuoto = () => !(E.files && E.files.length && E.panels && E.panels.length) && !!passoCarica.target()?.offsetParent;
-  /** Calls `fatto` once data are loaded; returns the timer to stop. @param {() => void} fatto */
-  const attendiDati = fatto => setInterval(() => { if (E.files && E.files.length && E.panels && E.panels.length) fatto(); }, 400);
-  return { centra, mostra, passoCarica, vuoto, attendiDati };
+  return { centra, mostra };
 })();

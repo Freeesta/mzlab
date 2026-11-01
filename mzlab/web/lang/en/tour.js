@@ -18,7 +18,7 @@ I18N.add("en", {
   "tour.impost.esempio": "Take the tour with an example file",
   "tour.impost.fai": "Take the tour",
   "tour.carica.titolo": "Load a file",
-  "tour.carica.testo": "Load a file to continue: the tour resumes from here as soon as the data are open.",
+  "tour.carica.testo": "Load a file to continue.",
   "tour.impost.soloLR": "The tour is about low-resolution files.",
   "tour.annuncio": "Step {n} of {tot}: {titolo}",
   "tour.campioni.titolo": "Pick the samples here",

@@ -85,6 +85,17 @@
     var late = document.querySelectorAll("#nav [data-late]");
     for (var i = 0; i < late.length; i++) late[i].remove();
   });
+  // tour with nothing loaded: the first data step becomes a «load a file» card on the drop zone that waits for the data (tour.js)
+  w.TOURCARICA = {
+    passo: function (step, el) {
+      var drop = document.getElementById("drop");
+      if (typeof E !== "undefined" && E.files && E.files.length && E.panels && E.panels.length) return null;
+      if (!drop || !drop.offsetParent || (step.id !== "file" && step.id !== "gruppi" && el && el.offsetParent)) return null;
+      return { id: "carica", target: function () { return drop; }, carica: function (done) {
+        return setInterval(function () { if (E.files.length && E.panels.length) done(); }, 400);
+      } };
+    }
+  };
   route();
   addEventListener("hashchange", route);
 })();

@@ -18,7 +18,7 @@ I18N.add("it", {
   "tour.impost.esempio": "Fai il tour con un file di esempio",
   "tour.impost.fai": "Fai il tour",
   "tour.carica.titolo": "Carica un file",
-  "tour.carica.testo": "Carica un file per continuare: il tour riprende da qui appena i dati sono aperti.",
+  "tour.carica.testo": "Carica un file per continuare.",
   "tour.impost.soloLR": "Il tour riguarda i file a bassa risoluzione.",
   "tour.annuncio": "Passo {n} di {tot}: {titolo}",
   "tour.campioni.titolo": "Qui scegli i campioni",
