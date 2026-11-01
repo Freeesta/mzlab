@@ -16,6 +16,7 @@ globalThis.window = globalThis;
 globalThis.COMANDI = { gestore() {}, fai: (_a, _b, fn) => fn(), GLOBALE: 0 };
 globalThis.I18N = { t: (k, p) => k === "files.ugrp.name" ? "Group " + p.n : k };
 globalThis.EH = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+globalThis.KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" }; globalThis.GRP_HR = { hr: () => "HR" }; globalThis.directNote = () => {};
 globalThis.fileBase = n => String(n).split("#")[0];
 globalThis.ESP = { voce: k => ({ spettri: k !== "mrm" }), unici() {} };
 globalThis.BENCH = false; globalThis.lrTog = () => !BENCH;
