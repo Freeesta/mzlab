@@ -35,6 +35,7 @@ class StoriaPila {
 }
 
 const STORIA = typeof document === "undefined" ? null : (() => {
+  /** @type {{ id: number, ps: Set<any> } | null} */ let lotto = null;
   const pila = new StoriaPila(), KEYS = ["bk", "bg", "fondo", "smooth", "corr", "ref", "bgr"];
   /** @param {string} k @param {any} [v] */ const T = (k, v) => I18N.t(k, v);
   /** The live region of the bar (barra.js creates the same one). @param {string} m */
@@ -72,9 +73,16 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   }
   /** Records the state of p BEFORE a change. @param {any} p @param {string} tipo @param {string} [w] i18n key of the label @param {any} [snap] */
   function registra(p, tipo, w, snap) {
+    if (lotto) { if (lotto.ps.has(p)) return; lotto.ps.add(p); }
     const prima = cattura(p, tipo, snap);
     if (tipo === "zoom") { const l = pila.v[StoriaPila.ultimo(pila.v, e => e.p === p && e.tipo === "zoom")]; if (l && l.prima === prima) return; }
-    pila.push({ p, tipo, w, prima, dopo: null }); sync();
+    pila.push({ p, tipo, w, prima, dopo: null, g: lotto ? lotto.id : 0 }); sync();
+  }
+  /** One gesture = one undo step: every "int" entry recorded while fn runs (one per panel, mirrors included) is undone and redone together. @param {() => void} fn */
+  function gruppo(fn) {
+    if (lotto) { fn(); return; }
+    lotto = { id: ++HSEQ, ps: new Set() };
+    try { fn(); } finally { lotto = null; }
   }
   /** Records the step of a registered command (comandi.js) whose state BEFORE the change is `prima`; steps with the same `unisci` on the same panel less than 0.8 s apart are one (a drag). @param {string} id @param {any} p @param {string} prima @param {string} [unisci] */
   function comando(id, p, prima, unisci) {
@@ -89,6 +97,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     if (!solo && window.AFFIANCA && AFFIANCA.ultimo() > top) { AFFIANCA.annulla(); sync(); return true; }
     const e = pila.annulla(ok, ripristina);
     if (!e) { if (!solo) say(T("storia.niente")); return false; }
+    if (e.g) while (pila.annulla(x => x.g === e.g, ripristina));
     presa(e); say(T("storia.undone", { what: etichetta(e) })); sync(); return true;
   }
   /** The undo of a removal is done: its timer stops and the copy in the store is not freed. @param {any} e */
@@ -120,6 +129,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   function ripeti() {
     const e = pila.ripeti(visibile, ripristina);
     if (!e) { say(T("storia.nienteRipeti")); return false; }
+    if (e.g) while (pila.ripeti(x => x.g === e.g, ripristina));
     say(T("storia.redone", { what: etichetta(e) })); sync(); return true;
   }
   // text entry keeps the undo of the browser; a button, checkbox, range or select does not (the key must reach the stack)
@@ -143,7 +153,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   const bu = document.getElementById("np-undo"), br = document.getElementById("np-redo");
   if (bu) bu.addEventListener("click", () => { annulla(); });
   if (br) br.addEventListener("click", () => { ripeti(); });
-  return { registra, comando, tolto, aperto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
+  return { registra, gruppo, comando, tolto, aperto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
 })();
 
 // thin wrappers: the callers (eventi.js, pannelli.js, dda.js, mappa.js, banco.js) keep their names

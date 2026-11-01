@@ -85,7 +85,9 @@ const CAL = { quant: null, qual: null, trs: /** @type {any[]} */ ([]) };
 function calPick() {
   const t = CAL.trs;
   if (!t.some(x => x.key === CAL.quant)) CAL.quant = (t.find(x => /quant/i.test(x.name)) || t[0] || {}).key || null;
-  if (!t.some(x => x.key === CAL.qual) || CAL.qual === CAL.quant) CAL.qual = (t.find(x => /qual/i.test(x.name) && x.key !== CAL.quant) || t.find(x => x.key !== CAL.quant) || {}).key || null;
+  // without Quant/Qual names the second transition must share the Q1 of the first (same compound), otherwise there is only one
+  const q1 = (/** @type {string | null} */ k) => String(k || "").split(">")[0];
+  if (!t.some(x => x.key === CAL.qual) || CAL.qual === CAL.quant) CAL.qual = (t.find(x => /qual/i.test(x.name) && x.key !== CAL.quant) || t.find(x => x.key !== CAL.quant && q1(x.key) === q1(CAL.quant)) || {}).key || null;
 }
 async function calLoad() {
   const mf = E.files.filter((/** @type {MzFile} */ f) => f.kind === "mrm"), seen = new Map();
@@ -152,13 +154,25 @@ function defaultLayoutTab(/** @type {string} */ t) {
     calLoad().catch(() => {}).then(() => {
       E._mrmLoading = false; if (tabPanels("mrm").length) return;
       const mfs = tabFiles("mrm");
-      if (!mfs.some((/** @type {MzFile} */ f) => f.vis)) mfs.forEach((/** @type {MzFile} */ f, /** @type {number} */ i) => { f.vis = (i === 0); });
+      // the whole series is shown (up to MRM_SHOW_MAX files, so the chart stays readable): "integrate all" covers every visible file
+      if (!mfs.some((/** @type {MzFile} */ f) => f.vis)) mfs.forEach((/** @type {MzFile} */ f, /** @type {number} */ i) => { f.vis = i < MRM_SHOW_MAX; });
       if (typeof renderFileList === "function") renderFileList();
       const w2 = hostWidth(), keys = [CAL.quant, CAL.qual].filter(Boolean);
       addPanel("mrm", { tab: "mrm", tr: keys.length ? keys : "", title: PT.mrm, x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all" });
       relayout(); fitHost(); uiSave();
+      if (mfs.length > MRM_SHOW_MAX) mrmShowAllNotice(mfs);
     });
   }
+}
+const MRM_SHOW_MAX = 12;
+// beyond the cap only the first files are drawn: a visible, keyboard-reachable button shows them all
+function mrmShowAllNotice(/** @type {MzFile[]} */ mfs) {
+  const p = tabPanels("mrm")[0]; if (!p || !p.el || p.el.querySelector(".mrm-all")) return;
+  const d = document.createElement("div"); d.className = "mrm-all"; d.setAttribute("role", "status");
+  const b = document.createElement("button"); b.type = "button"; b.textContent = I18N.t("mrm.showAll"); b.setAttribute("aria-label", I18N.t("mrm.showAllAria", { n: mfs.length }));
+  b.addEventListener("click", () => { mfs.forEach(f => { f.vis = true; }); d.remove(); if (typeof renderFileList === "function") renderFileList(); redrawAll(); uiSave(); });
+  d.append(I18N.t("mrm.capNotice", { n: MRM_SHOW_MAX, t: mfs.length }) + " ", b);
+  p.el.insertBefore(d, p.el.firstChild);
 }
 
 // one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked); the sidebar opens the chromatogram alone (addMs2Chrom), the spectrum comes on a double click
