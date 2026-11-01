@@ -634,7 +634,8 @@ const LISTE = (() => {
         if (isTarget && !elTargetBox.dataset.mounted) {
           elTargetBox.dataset.mounted = "1";
           try {
-            await import("./liste-target-core.js"); const mod = (typeof window !== "undefined" && window.LISTE_TARGET) || (await import("./liste-target.js")).default || (await import("./liste-target.js"));
+            await import("./liste-target-core.js"); if (!window.LISTE_TARGET) await import("./liste-target.js");
+            const mod = window.LISTE_TARGET;      // liste-target.js is a classic script: importing it only sets window.LISTE_TARGET (the namespace has no mount)
             if (mod && typeof mod.mount === "function") mod.mount(elTargetBox);
           } catch (_) {}
         }
