@@ -9,9 +9,8 @@ import { writeFull, quotaError } from "./archivio.js";
 import { buildNative } from "./rust-nativo.js";
 import { openSource } from "./lettura-sync.js";
 import { createEsterno } from "./lettore-esterno.js";
-import { creaAiuti } from "./idx-aiuti.js";
+import { creaAiuti, earlyTicInputs } from "./idx-aiuti.js";
 import { makeSpill } from "./idx-spill.js";
-import { earlyTicInputs } from "./idx-early.js";
 
 // a Thermo .raw is read through the `thermo` module, loaded here on the first one (lettore-esterno.js)
 const ext = createEsterno(native_external);
