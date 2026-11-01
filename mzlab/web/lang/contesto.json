@@ -8,6 +8,8 @@
   "masscal.minint": "Etichetta del campo intensità minima; {input} = campo numerico.",
   "masscal.plot.desc": "Descrizione breve di un grafico; {title} = titolo, {n} = numero di ioni, {a} e {b} = errore minimo e massimo in ppm.",
   "storia.tolto": "Avviso 6 s dopo aver tolto un file, chiuso un pannello o svuotato le marcature, con il pulsante Annulla; {what} = nome del file, del pannello o «marcature».",
+  "mrm.capNotice": "Avviso nel pannello MRM quando i file sono più del tetto mostrato all'apertura; {n} = file mostrati, {t} = file MRM totali.",
+  "mrm.showAllAria": "Etichetta del pulsante «Mostra tutti i file» del pannello MRM; {n} = numero di file MRM.",
   "storia.undone": "Annuncio dopo Ctrl/Cmd+Z; {what} = nome breve dell'azione annullata (zoom, integrazione, fondo...).",
   "storia.redone": "Annuncio dopo Ripeti; {what} = nome breve dell'azione ripetuta.",
   "draw.part.line": "Riga del menu del tasto destro su una struttura parziale (tra parentesi). {delta} = Δ normalizzato (es. +O -H2), {formula} = formula con il Δ, {mass} = massa neutra, {mz} = m/z di [M+H]+.",

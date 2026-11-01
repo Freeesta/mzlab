@@ -79,6 +79,13 @@ try:
             a, b = pt(ap - 0.3), pt(ap + 0.3)
             pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=8); pg.mouse.up(); pg.wait_for_timeout(1500)
             n = pg.evaluate("tabPanels().filter(p=>p.type==='mrm').map(p=>p.ints.length)"); assert n in ([10], [5, 5]), n          # 5 MRM files; 10 ints (5 quant + 5 qual in 1 panel) or [5, 5]
+            # one drag = one undo step: a single Ctrl+Z removes the windows of every file (and the mirrors), Ctrl+Shift+Z puts them all back
+            tot = "tabPanels().filter(p=>p.type==='mrm').reduce((s,p)=>s+p.ints.length,0)"
+            n0 = pg.evaluate(tot); assert n0 >= 5, n0
+            pg.keyboard.press("Control+z"); attendi(pg, tot + "===0")
+            assert pg.evaluate(tot) == 0, pg.evaluate(tot)
+            pg.keyboard.press("Control+Shift+z"); attendi(pg, f"{tot}==={n0}")
+            assert pg.evaluate(tot) == n0, pg.evaluate(tot)
             # same drag again: replaced, not doubled
             pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=8); pg.mouse.up(); pg.wait_for_timeout(800)
             assert pg.evaluate("tabPanels().filter(p=>p.type==='mrm').map(p=>p.ints.length)") in ([10], [5, 5])

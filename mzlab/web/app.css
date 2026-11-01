@@ -570,3 +570,6 @@ html.in-draw #sb-toggle{display:none}
 /* narrow screens: tighter tab padding so the four tabs plus the tools still fit two header rows; #nav keeps one fixed width (widest label set measured: 250 px) */
 @media (max-width:600px){html:not(.phone) #nav button{padding:6px 7px}html:not(.phone) #nav{min-width:calc(250px*var(--z,1));order:1}html:not(.phone) header .hq{order:2}html:not(.phone) header #fs-btn{order:3}html:not(.phone) header #sb-toggle{order:4}html:not(.phone) header #np-set{order:5}html:not(.phone) #stbar{flex-basis:80px;min-width:112px}html:not(.phone) #g-tools button{min-height:24px}}
 #v-workspace[data-work=landing][data-up] #start #drop{visibility:hidden}
+
+.mrm-all{padding:6px 10px;font-size:13px;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line)}
+.mrm-all button{margin-left:6px;min-height:24px;min-width:24px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;cursor:pointer}
