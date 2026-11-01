@@ -85,7 +85,7 @@ try:
                     if sheet: assert b["side"]["w"] >= vw - 30 and not pg.is_visible("#dpanels") and pg.is_visible("#sb-x"), (vw, b)
                     else: assert not overlap(b), (vw, b)
                     assert b["sw"] <= 1
-                    pg.click("#sb-x"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles") and pg.is_visible("#dpanels")
+                    close_side(pg); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles") and pg.is_visible("#dpanels")
                 finally: ctx.close(); r.close()
                 assert not errs, errs
         step("iPad landscape docked, iPad portrait a sheet that replaces the workspace (× gives it back)", schermi)

@@ -8,7 +8,7 @@
 (() => {
   const Q1 = (/** @type {string} */ s) => /** @type {HTMLElement | null} */ (document.querySelector(s));
   const H = CALCQUIHTML, DEBOUNCE = 90;
-  /** @typedef {{ ctl: HTMLElement, out: HTMLElement, idp: string, quiet?: boolean, numOnly?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pol?: () => 1 | -1 | null, after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
+  /** @typedef {{ ctl: HTMLElement, out: HTMLElement, idp: string, quiet?: boolean, catalogue?: boolean, numOnly?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pol?: () => 1 | -1 | null, after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
   /** @typedef {{ cfg: CqCfg, open: Set<string>, all: Set<string>, more: boolean, diffs: boolean, delta: string, seq: number, timer: number, tab: any, formula: string }} CqView */
   const views = /** @type {CqView[]} */ ([]);
   const prune = () => { for (let i = views.length - 1; i >= 0; i--) if (!views[i].cfg.out.isConnected) views.splice(i, 1); };      // a panel redrawn leaves its old view behind
@@ -39,9 +39,9 @@
 
   /** Draws the groups of the view for its argument (the newest call wins). @param {CqView} v */
   async function render(v) {
-    const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = CALCQUI.arg(t.text, t.ans);
+    const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = { ...CALCQUI.arg(t.text, t.ans), catalogue: !!v.cfg.catalogue };
     sync(v);                                                                                  // the detected resolution (text and tolerance) follows what is typed
-    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && a.kind === "none") { v.cfg.out.innerHTML = ""; return; }      // a panel with its own field says nothing until something is typed
+    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && !v.cfg.catalogue && a.kind === "none") { v.cfg.out.innerHTML = ""; return; }      // a panel with its own field and no default table says nothing until something is typed
     let gs = await CALCQUI.gruppi(a, o, await deps());
     if (my !== v.seq) return;
     if (v.cfg.groups) gs = gs.filter(g => /** @type {string[]} */ (v.cfg.groups).includes(g.id));

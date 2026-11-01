@@ -36,7 +36,7 @@ try:
             assert rows.count() == 2, rows.count()
             opened, sent = state()
             txt = " ".join(rows.nth(i).inner_text() for i in range(2))
-            assert all((n in txt) != (n in opened) for n in names), (txt, opened)      # a row for each file not open yet
+            assert all((n.rsplit(".", 1)[0] in txt) != (n in opened) for n in names), (txt, opened)      # a row for each file not open yet
             assert rows.nth(0).locator(".prog[role=progressbar]").count() == 1
             assert pg.get_attribute("#flst", "aria-busy") == "true"
             assert pg.evaluate("window.__t.length && window.__t[0] - window.__t0") < 5000

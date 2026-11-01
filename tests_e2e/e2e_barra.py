@@ -46,8 +46,8 @@ try:
                 pg.click(b); attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
             pg.click(b)
             attendi(pg, "(() => { const e = Q('#flst'); return !!e && e.getBoundingClientRect().width > 0 })()")
-            assert pg.is_visible("#flst") and pg.is_visible("#sb-x") and pg.evaluate("!!Q('#sb-x svg')") and pg.evaluate("Q('#sb-x').title") == "Chiudi il pannello"
-            pg.click("#sb-x")
+            assert pg.is_visible("#flst") and not pg.is_visible("#sb-x") and pg.is_visible("#sb-toggle")      # no second × on a wide screen: the panel button of the main header closes it
+            close_side(pg)
             attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
             assert not pg.is_visible("#flst")
             # the only previous/next arrows left in the toolbar are the file arrows (SVG icons, named by their aria-label)
