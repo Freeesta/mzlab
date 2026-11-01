@@ -1,5 +1,5 @@
 I18N.add("en", {
-  "groups.by.btn": "Group by",
+  "groups.by.btn": "Groups",
   "groups.menu": "Group files by",
   "groups.none": "None",
   "groups.then": "Then by…",
