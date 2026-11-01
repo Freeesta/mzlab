@@ -8,7 +8,6 @@ I18N.add("it", {
   "cq.g.addotti": "Addotti",
   "cq.g.diff": "Differenze tra addotti",
   "cq.ad.title": "Addotti",
-  "cq.ad.hint": "Un numero è letto come m/z osservato; una formula dà la tabella dei suoi addotti.",
   "cq.ad.title.field": "Scrivi un numero (anche un conto come 100+114) o una formula",
   "cq.link.ad": "Addotti con questa differenza",
   "cq.link.loss": "Perdite neutre con questo numero",

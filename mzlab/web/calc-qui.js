@@ -101,15 +101,15 @@ const CALCQUIG = (() => {
       .sort((a, b) => Math.abs(a.err) - Math.abs(b.err));
     return { id: "perdite", n: items.length, near: items.length ? Math.abs(items[0].err) / w : 1, items };
   }
-  /** The adducts: for a number its implied neutral masses (the number taken as an observed m/z), for a formula its table. */
-  async function addotti(/** @type {{ kind: string, v: number, text: string }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
+  /** The adducts: for a number its implied neutral masses (the number taken as an observed m/z), for a formula its table, for nothing (`a.catalogue`) the standard list with its mass shifts. */
+  async function addotti(/** @type {{ kind: string, v: number, text: string, catalogue?: boolean }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
     const isNum = a.kind === "num", obs = isNum ? a.v : 0;
     const ref = obs || DIFF_REF, f = isNum || a.kind === "none" ? "" : a.text;
-    if (!f && !obs) return null;
+    if (!f && !obs && !a.catalogue) return null;
     const tab = await dep.table(f, obs ? String(obs) : "", String(ppmFor(o, ref)), "");
     const rows = tab.rows.filter((/** @type {any} */ r) => r.pol === o.pol);
     const hit = tab.best != null && tab.rows[tab.best].pol === o.pol ? tab.rows[tab.best] : null;
-    return { id: "addotti", n: rows.length, near: hit ? Math.abs(hit.ppm || 0) * (o.unit === "ppm" ? 1 : ref * 1e-6) / o.tol : 2, items: rows, tab, formula: !!f, obs: false };
+    return { id: "addotti", n: rows.length, near: hit ? Math.abs(hit.ppm || 0) * (o.unit === "ppm" ? 1 : ref * 1e-6) / o.tol : 2, items: rows, tab, formula: !!f, obs: false, catalogue: !f && !obs };
   }
   /** The pairs of adducts whose difference is `v` (a number), or the characteristic differences (otherwise). */
   async function differenze(/** @type {{ kind: string, v: number }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
@@ -122,7 +122,7 @@ const CALCQUIG = (() => {
 
   /** The groups for the argument, tightest match first; empty groups are dropped (the catalogue of differences stays for a formula or an empty field).
    * dep: { idx, find, findNominal, table, mass, losses, lossCombos }  @returns {Promise<CqGroup[]>} */
-  async function gruppi(/** @type {{ kind: "none" | "num" | "formula", v: number, text: string }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
+  async function gruppi(/** @type {{ kind: "none" | "num" | "formula", v: number, text: string, catalogue?: boolean }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
     /** @type {any[]} */ const gs = [];
     const isNum = a.kind === "num" && a.v > 0;
     if (isNum) gs.push(liste(a.v, o, dep), perdite(a.v, o, dep));
