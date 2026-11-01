@@ -166,3 +166,12 @@ def test_numpress_variant_looks_to_the_end_of_the_first_spectrum(tmp_path):
       process.exit(0);
     """)
     assert r == ["aperti", "", "aperti", "", ""]
+
+
+def test_the_family_of_the_engine_modules_follows_the_member_names(tmp_path):
+    r = esm(tmp_path, ["lettore-esterno.js", "carica-modulo.js"], """
+      const { famigliaEsterna: f } = await import("./lettore-esterno.js");
+      console.log(JSON.stringify([f([]), f(["a.mzml"]), f(["A.MZML"]), f(["a.mzML", "b.mzML"]), f(["a.raw"]), f(["B.RAW"]), f(["a.mzML", "b.raw"]), f(["a.wiff", "a.wiff.scan"])]));
+      process.exit(0);
+    """)
+    assert r == ["", "aperti", "aperti", "", "thermo", "thermo", "thermo", ""]

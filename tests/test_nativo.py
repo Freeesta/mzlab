@@ -39,3 +39,29 @@ def test_raw_files_become_samples_and_the_rest_goes_on():
 
 def test_the_state_of_a_row_follows_the_phase():
     assert run("['read','scans','chrom','x',undefined].map(n.rowState)") == ["nread", "nscan", "nchrom", "index", "index"]
+
+
+def test_only_a_plain_numpress_mzml_becomes_a_native_sample_and_the_order_is_kept():
+    r = run("""(async()=>{
+      const flagged=n.sample('n.mzML','k',[{name:'n.mzML',blob:new Blob(['x'])}],0,1,false),
+        mod=new File(['m'],'m.mzML'); Object.defineProperty(mod,'mzlabModulo',{value:{size:1}});
+      const names=fs=>fs.map(f=>[f.name,!!f.mzlabNat]), yes=async()=>true, no=async()=>false;
+      const mk=(...ns)=>ns.map(x=>new File(['<x/>'],x)), seen=[];
+      return {
+        empty:(await n.numpress([],yes)).length,
+        lower:names(await n.numpress(mk('a.mzml'),yes)), upper:names(await n.numpress(mk('a.MZML'),yes)),
+        two:names(await n.numpress(mk('a.mzML','b.mzML'),yes)),
+        mixed:names(await n.numpress(mk('a.mzML','t.raw','b.mzML'),yes)),
+        flagged:(await n.numpress([flagged,mod],yes)).map(f=>f.mzlabNat===flagged.mzlabNat||f===mod),
+        notNumpress:names(await n.numpress(mk('a.mzML','b.mzML'),no)),
+        skipped:await (async()=>{await n.numpress([...mk('t.raw'),flagged,mod],async f=>{seen.push(f.name);return true});return seen})(),
+        some:names(await n.numpress(mk('x.mzML','y.mzML','z.mzML'),async f=>f.name==='y.mzML'))};
+    })()""")
+    assert r["empty"] == 0
+    assert r["lower"] == [["a.mzml", True]] and r["upper"] == [["a.MZML", True]]
+    assert r["two"] == [["a.mzML", True], ["b.mzML", True]]
+    assert r["mixed"] == [["a.mzML", True], ["t.raw", False], ["b.mzML", True]]
+    assert r["flagged"] == [True, True]
+    assert r["notNumpress"] == [["a.mzML", False], ["b.mzML", False]]
+    assert r["skipped"] == []
+    assert r["some"] == [["x.mzML", False], ["y.mzML", True], ["z.mzML", False]]
