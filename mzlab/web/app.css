@@ -424,6 +424,18 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .ldtab col.c-use{width:34px}.ldtab col.c-exp{width:16%}.ldtab col.c-typ{width:15%}.ldtab col.c-tim{width:110px}.ldtab col.c-con{width:130px}.ldtab col.c-siz{width:80px}.ldtab col.c-act{width:160px}
 .ldtab td,.ldtab th{overflow-wrap:anywhere}
 .ldtab .ldname{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.ldtab col.c-x{width:120px}
+.samphead #colsbtn{margin-left:8px}
+.colsdlg{max-width:min(560px,94vw);border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:16px}
+.colsdlg::backdrop{background:rgba(0,0,0,.4)}
+.colsset{border:1px solid var(--line);border-radius:6px;margin:0 0 10px;padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.colsset legend{font-weight:600;padding:0 4px}
+.colsrow{display:flex;align-items:center;gap:6px;min-height:28px}
+.colslist{list-style:none;margin:0;padding:0;width:100%}
+.colsadd{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+.colsfoot{text-align:right;margin-top:8px}
+.colsdlg button{min-height:24px;min-width:24px}
+.ldtab td input[data-xk][aria-invalid=true]{border-color:var(--bad)}
 .ldtab tbody td{height:48px}
 .ldtab td select,.ldtab td input[type=text]{max-width:100%;box-sizing:border-box}
 .ldtab .cvst{display:grid;grid-template-columns:minmax(0,1fr) 8ch 6ch;gap:0 8px;align-items:baseline}
