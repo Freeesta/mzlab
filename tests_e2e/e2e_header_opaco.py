@@ -12,6 +12,8 @@ try:
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_MRM-t0")])
         pg.click("text=Carica dati"); ready(pg)
         def opaque():
+            for b in ("#np-chrom", "#np-map"):
+                if pg.locator(b).count(): pg.click(b); ready(pg)
             pg.evaluate("setVisOf(E.files, true); window.scrollTo(0, 400)"); frames(pg, 3)
             for sel in ("header", "#tools", "#stbar"):
                 a = pg.evaluate("s => { const e = document.querySelector(s); if (!e) return 1; const m = getComputedStyle(e).backgroundColor.match(/[\\d.]+/g); return m.length > 3 ? +m[3] : 1 }", sel)
