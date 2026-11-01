@@ -7,7 +7,7 @@
 // Pickaxe, cracks and shards are inline SVG/CSS (no asset). The label of the logo (alt/title) never changes.
 (() => {
   "use strict";
-  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = NOMI.KEY("logo.gold"), ADMIN_KEY = NOMI.KEY("admin"), LEGACY_KEY = NOMI.KEY("teoria.esteso");
+  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = NOMI.KEY("logo.gold"), ADMIN_KEY = NOMI.KEY("admin");
   const logo = document.querySelector("header img.logo");
   if (!logo) return;
   const t = (k, d) => (window.I18N && I18N.t ? I18N.t(k) : d);
@@ -86,11 +86,11 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
       a.onfinish = () => { if (++done === pieces.length) { f.remove(); fx = null; gold(); logo.style.opacity = ""; logo.animate([{ opacity: 0, transform: "scale(.7)" }, { opacity: 1, transform: "scale(1.15)", offset: 0.6 }, { opacity: 1, transform: "scale(1)" }], { duration: 400 }); } };
     });
   }
-  const adminOn = () => { try { return localStorage.getItem(ADMIN_KEY) === "1" || localStorage.getItem(LEGACY_KEY) === "1"; } catch (_) { return false; } };
+  const adminOn = () => { try { return localStorage.getItem(ADMIN_KEY) === "1"; } catch (_) { return false; } };
   /** flips the administrator mode; returns what to do once the logo is whole (leaving reloads the page), or null */
   function flipAdmin() {
     try {
-      if (adminOn()) { localStorage.removeItem(ADMIN_KEY); localStorage.removeItem(LEGACY_KEY); return () => location.reload(); }
+      if (adminOn()) { localStorage.removeItem(ADMIN_KEY); return () => location.reload(); }
       localStorage.setItem(ADMIN_KEY, "1"); document.dispatchEvent(new Event("mzlab:admin"));
     } catch (_) { /* private mode: the mode does not change */ }
     return null;

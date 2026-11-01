@@ -48,7 +48,7 @@
     const read = (/** @type {string} */ k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (_) { return {}; } };
     // the profile rule of uipProfile() in settings.js (not loaded yet when the Flow is built): administrator mode or the desktop app
     const w = /** @type {any} */ (window), key = (/** @type {string} */ k) => (typeof NOMI !== "undefined" ? NOMI.KEY(k) : "mzlab." + k);
-    let admin = false; try { admin = localStorage.getItem(key("admin")) === "1" || localStorage.getItem(key("teoria.esteso")) === "1"; } catch (_) { /* blocked */ }
+    let admin = false; try { admin = localStorage.getItem(key("admin")) === "1"; } catch (_) { /* blocked */ }
     const p = admin || w.MZLAB_DESKTOP ? "ricerca" : "corso";
     const s = read("mzlab.llm");
     return p === "ricerca" && s.on === true && !!s.provider && !!read("mzlab.llm.consenso")[s.provider];
