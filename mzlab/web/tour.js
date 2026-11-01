@@ -439,11 +439,13 @@ const TOUR = (() => {
       return;
     }
 
-    const step = list[curStep];
+    let step = list[curStep];
     if (curLeave) { const f = curLeave; curLeave = null; f(); }
     if (step.prep) { const back = step.prep(); if (typeof back === "function") curLeave = back; }
 
-    const targetEl = step.target();
+    let targetEl = step.target();
+    const c = curCap === 1 && typeof TOURCARICA !== "undefined" && TOURCARICA.passo(step, targetEl);      // lab: nothing loaded yet
+    if (c) { step = c; targetEl = c.target(); }
     if (!targetEl || targetEl.offsetParent === null || targetEl.getBoundingClientRect().width === 0) {
       console.debug("Tour: target missing for step", step.id);
       curStep++;
@@ -539,6 +541,7 @@ const TOUR = (() => {
     const priBtn = btnNext || btnCont || btnFine;
     if (priBtn) priBtn.focus();
 
+    if (step.carica) tryTimer = step.carica(() => { stopTryTimer(); renderStep(); });
     // Setup "Prova tu" observation
     if (step.prova && step.attesa && step.initProva) {
       provaState = step.initProva();
