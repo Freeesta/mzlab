@@ -421,8 +421,12 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .cvtool .cvr2 details{margin:0}
 .ldwrap{margin-top:8px;overflow-x:auto}
 .ldtab{table-layout:fixed;width:100%;min-width:1060px}
-.ldtab col.c-use{width:34px}.ldtab col.c-exp{width:16%}.ldtab col.c-typ{width:15%}.ldtab col.c-tim{width:110px}.ldtab col.c-con{width:130px}.ldtab col.c-siz{width:80px}.ldtab col.c-act{width:160px}
+.ldtab col.c-use{width:34px}.ldtab col.c-exp{width:16%}.ldtab col.c-typ{width:15%}.ldtab col.c-tim{width:176px}.ldtab col.c-con{width:130px}.ldtab col.c-siz{width:112px}.ldtab col.c-act{width:112px}
 .ldtab td,.ldtab th{overflow-wrap:anywhere}
+.ldtab th{white-space:nowrap;overflow-wrap:normal}
+/* the actions stay in view when the table scrolls sideways in a narrow window */
+.ldtab thead th:last-child,.ldtab tbody tr:not(.tg-head) td:last-child{position:sticky;right:0;background:var(--panel)}
+.ldtab td:last-child{white-space:nowrap}
 .ldtab .ldname{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .ldtab col.c-x{width:120px}
 .samphead #colsbtn{margin-left:8px}
@@ -514,8 +518,18 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 /* first paint: the side panel is open next to the landing, except below 900 px where it would replace it (barra.js takes over at once) */
 @media (max-width:899.98px){#v-data.sb-first{grid-template-columns:minmax(0,1fr)}#v-data.sb-first #dfiles{display:none}}
 /* sample table: the name of an open file opens it; side list: one progress row per file being read (upload-rows.js) */
-.ldtab button.lnk{background:none;border:0;padding:0;min-height:24px;font:inherit;color:var(--accent);text-align:left;text-decoration:underline;cursor:pointer;overflow-wrap:anywhere}
-.samphead{margin:0 0 6px}
+.ldtab button.lnk{background:none;border:0;padding:0;min-height:24px;font:inherit;color:var(--accent);text-align:left;text-decoration:none;cursor:pointer;overflow-wrap:anywhere}
+.ldtab button.lnk:hover,.ldtab button.lnk:focus-visible{text-decoration:underline}
+/* count, Columns, Groups, options, downloads and Remove all on one row (the wrappers dissolve into it) */
+.samptool{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 8px}
+.samptool .samphead,.samptool .cvtool,.samptool .cvr2{display:contents}
+.samptool #advconv{margin-left:auto}
+.samphead{margin:0}
+.dlic{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;padding:4px 8px}
+.dlmenu{position:fixed;z-index:70;display:flex;flex-direction:column;gap:2px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.dlmenu button{text-align:left;min-height:32px;white-space:nowrap}
+/* «Back to work!» sits right under the toolbar: the landing's top margin only belongs to the drop area on its own */
+#start:has(#backwork:not([hidden])){margin-top:0}
 /* a long name is cut with an ellipsis; the state text and the cancel button always stay whole */
 .fl.up .fi{flex:1;min-width:0}.fl.up .fi>b{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fl.up .fi>small{flex:none}.fl.up>button{flex:none}.fl.up .prog{margin-top:2px}.fl.up .diag{display:block}
 

@@ -65,6 +65,8 @@ I18N.add("it", {
   "conv.dl": "Scarica mzML",
   "conv.dl.title": "Salva l'mzML convertito: è quello che il programma usa, e riaperto si legge senza convertire di nuovo",
   "conv.dlall": "Scarica tutti gli mzML",
+  "conv.fmt.mzml": "mzML",
+  "conv.fmt.numpress": "mzML + Numpress",
   "conv.q.done": "mzML pronto ✓",
   "conv.q.run": "mzML in preparazione…",
   "conv.q.wait": "mzML in coda",

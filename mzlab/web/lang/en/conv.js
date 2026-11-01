@@ -65,6 +65,8 @@ I18N.add("en", {
   "conv.dl": "Download mzML",
   "conv.dl.title": "Save the converted mzML: it is what the program reads, and opened again it needs no new conversion",
   "conv.dlall": "Download all the mzML files",
+  "conv.fmt.mzml": "mzML",
+  "conv.fmt.numpress": "mzML + Numpress",
   "conv.q.done": "mzML ready ✓",
   "conv.q.run": "preparing the mzML…",
   "conv.q.wait": "mzML queued",

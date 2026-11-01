@@ -64,8 +64,10 @@ try:
         step("an estimated size is shown before", estimates)
         def save_all():
             for k in ("standard", "smallest", "none"):
-                pg.select_option("#cvcomp", k)
-                with pg.expect_download(timeout=120000) as d: pg.locator("#flist [data-dl]").first.click()
+                if k == "none": pg.select_option("#cvcomp", k)           # «Uncompressed» is only in the advanced options; the menu has the two formats
+                with pg.expect_download(timeout=120000) as d:
+                    if k != "none": pg.locator("#flist [data-dl]").first.click(); pg.click(".dlmenu [data-dlfmt=%s]" % k)
+                    else: pg.evaluate("CONV.download(document.querySelector('#flist [data-dl]').dataset.dl)")
                 path = D / f"serie_{k}.mzML"; d.value.save_as(str(path)); saved[k] = path
                 pg.wait_for_function("document.querySelector('#flist [data-dl]').title.includes('(')", timeout=60000)
         step("the three mzML files are written and saved", save_all)
