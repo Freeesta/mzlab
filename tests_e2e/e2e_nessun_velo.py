@@ -29,7 +29,8 @@ try:
         def tabs_no_veil():
             for k in ("mrm", "ms2", "full"):
                 pg.evaluate(f"setTab('{k}')")
-                pg.wait_for_timeout(300)
+                attendi(pg, f"E.tab === '{k}'")
+                ready(pg)
             assert pg.evaluate("window.__veil") is False, "the veil was shown by a tab"
         step("opening a tab for the first time: no veil", tabs_no_veil)
 finally:
