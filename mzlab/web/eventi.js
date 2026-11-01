@@ -103,6 +103,9 @@ function attach(p) {
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
   cv.addEventListener("mousemove", e => pendHint(p, e));
+  cv.addEventListener("pointerdown", () => { cv.dataset.ptr = "1"; });                       // a click gives the canvas focus: no keyboard ring until a key is used
+  cv.addEventListener("keydown", () => { delete cv.dataset.ptr; });
+  cv.addEventListener("blur", () => { delete cv.dataset.ptr; });
   cv.onmouseleave = e => { if (p.type === "spec" && window.XICLENS) XICLENS.leave(p, e); if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const bb = cv.getBoundingClientRect(), px = e.clientX - bb.left, py = e.clientY - bb.top, a = p._a;

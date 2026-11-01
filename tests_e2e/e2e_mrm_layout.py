@@ -30,6 +30,14 @@ try:
             ov = pg.evaluate(f"(() => {{ const hd = {q}.querySelector('.can-hd'); const c = [...hd.children].map(e => e.getBoundingClientRect()); return c.slice(1).some((r, i) => r.left < c[i].right - 1); }})()")
             assert not ov, "columns overlap"
         step("transitions: one list, no second selector, no extra integration dropdown, one notation", menu)
+        def ring():
+            ol = "getComputedStyle(document.querySelector('.pnl.mrm canvas')).outlineStyle"
+            box = pg.evaluate("(() => { const r = document.querySelector('.pnl.mrm canvas').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()")
+            pg.mouse.click(box[0], box[1]); frames(pg, 2)
+            assert pg.evaluate(ol) == "none", "focus ring after a mouse click"
+            pg.keyboard.press("Shift"); pg.evaluate("document.querySelector('.pnl.mrm canvas').blur(); document.querySelector('.pnl.mrm canvas').focus()"); frames(pg, 2)
+            assert pg.evaluate(ol) != "none", "no focus ring for keyboard focus"
+        step("canvas focus ring: none after a mouse click, shown for keyboard focus", ring)
         def stacked():
             for m in ("stk", "cas"):
                 pg.evaluate(f"(() => {{ const p = E.panels.find(q => q.type === 'mrm'); p.mode = '{m}'; ctl(p); draw(p); p.imode = 'man'; }})()"); frames(pg, 2)
