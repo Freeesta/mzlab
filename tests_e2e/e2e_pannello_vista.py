@@ -17,11 +17,15 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Carica dati"); ready(pg)
+        # the note that follows an opening fades away and would change the height of the list under the measure
+        attendi(pg, "document.getElementById('fl-note').hidden")
         def aperto():
             pg.evaluate("BARRA.setTab('file', {noFocus: true, instant: true})"); attendi(pg, "BARRA.open")
             pg.evaluate("BARRA.setWidth(380)")
-            pg.evaluate("(() => { const e = document.querySelector('#sb-panels'); e.style.maxHeight = '120px'; e.scrollTop = 40; })()")
+            pg.evaluate("(() => { const e = document.querySelector('#sb-panels'); e.style.maxHeight = '60px'; e.scrollTop = 40; })()")
+            frames(pg, 3)          # the scroll event of the panel reaches the page before the view changes, as it does for a hand on the wheel
             top = pg.evaluate("document.querySelector('#sb-panels').scrollTop")
+            assert top > 0, "the list must be scrolled for the test to mean something"
             round_trip(pg)
             attendi(pg, "BARRA.open")
             assert pg.is_visible("#dfiles"), "the panel must be open again"
