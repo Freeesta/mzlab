@@ -16,6 +16,7 @@ declare var CAPACITA: any;
 declare var CARTELLA: any;
 declare var CART_CAP: any;
 declare var CMD: any;
+declare var COLS: any;
 declare var CONC_MGL: any;
 declare var CONV: any;
 declare var CONVCARD: any;

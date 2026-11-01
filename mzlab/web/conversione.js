@@ -243,8 +243,8 @@ const CONVROWS = {
       `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm" id="dlall" data-cvtool="dl"${off(st.dl)} title="${T("conv.dl.title")}">${T("conv.dlall")}</button></div></div>`;
   },
   // the table of the loading: the columns have a fixed width from the first row, so no phase moves them; `head` = the row of headings, `body` = the rows
-  table(/** @type {string} */ head, /** @type {string} */ body) {
-    return `<div class="ldwrap"><table class="ldtab"><colgroup><col class="c-use"><col><col class="c-exp"><col class="c-typ"><col class="c-tim"><col class="c-con"><col class="c-siz"><col class="c-act"></colgroup><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  table(/** @type {string} */ head, /** @type {string} */ body, extra = 0) {
+    return `<div class="ldwrap"><table class="ldtab"><colgroup><col class="c-use"><col><col class="c-exp"><col class="c-typ"><col class="c-tim"><col class="c-con"><col class="c-siz">${'<col class="c-x">'.repeat(extra)}<col class="c-act"></colgroup><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
   },
   // the count of the ended rows by kind of file (full scan, MS2, MRM, infusion, mixed, other), the failed, cancelled and truncated ones, and the time from the first start to the last end
   /** @param {ConvRow[]} end */
