@@ -4712,3 +4712,4 @@
 {"v":1,"ts_utc":"2026-11-01T13:03:26Z","tipo":"carico","k":"2026-11-01T13:0","job_in_coda":0,"job_in_corso":9}
 {"v":1,"ts_utc":"2026-11-01T13:44:08Z","azione":"aperta","tipo":"pr","pr":2467,"sha":"67df1681e176d38856cd5f51dbc756a3be0a8670"}
 {"v":1,"ts_utc":"2026-11-01T13:51:08Z","azione":"aperta","tipo":"pr","pr":2468,"sha":"9389b27564f57ec96f273c02fbe5492597527ac9"}
+{"v":1,"ts_utc":"2026-11-01T13:51:39Z","azione":"push","titolo":"Sample table: drop the Remove all tooltip that repeats its label","merge_main":false,"aree":{"web":1},"tipo":"pr","pr":2467,"sha":"a6258b077a14a802b28369c029f3f21a27b54eb6"}
