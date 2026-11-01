@@ -268,6 +268,7 @@ I18N.add("en", {
   "hr.iso.legend": "theoretical profile {formula} {adduct}{w}{obs}",
   "hr.iso.noPeak": "(no peak observed within {tol} ppm of m/z {mz})",
   "files.mode.profile": "Profile",
+  "files.prec.row": "Precursor {mz}",
   "grad.title": "Gradient",
   "grad.none": "This file has no gradient (mzML files do not contain it). You can type it, or import it from a .raw file or a CSV.",
   "grad.src.dam": "From the .dam method",

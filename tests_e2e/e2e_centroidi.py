@@ -44,8 +44,9 @@ try:
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
         def card_profile():
             pg.wait_for_function("typeof ST !== 'undefined' && ST.files.length === 1 && ST.files[0].spectrum_mode === 'profile'", timeout=60000)
-            t = pg.evaluate("modeTag({ kind: 'full', spectrum_mode: 'profile' })")
+            t = pg.evaluate("modeTip({ kind: 'full', spectrum_mode: 'profile' })")
             assert "Profilo" in t, t
+            assert "Profilo" not in pg.inner_text("#flst") and "Profilo" in pg.get_attribute("#flst .fl:not(.pr)", "data-tip"), "Profile only in the tooltip"
         step("the card of a profile file says Profilo", card_profile)
         def convert():
             pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.evaluate("document.getElementById('uip-g-data').open = true"); pg.wait_for_selector("#uip-cen")
@@ -58,7 +59,7 @@ try:
         def modes():
             m = pg.evaluate("Object.fromEntries(ST.files.map(f => [f.name, f.spectrum_mode]))")
             assert m == {"prof.mzML": "profile", "prof.centroidi.mzML": "centroid"}, m
-            t = pg.evaluate("modeTag({ kind: 'full', spectrum_mode: 'centroid' })")
+            t = pg.evaluate("modeTip({ kind: 'full', spectrum_mode: 'centroid' })")
             assert t == "" and "Un punto per picco" not in pg.inner_text("#flst"), t      # the usual centroid file carries no label
         step("the copy is a centroid file (no label), the original is still a profile file", modes)
         def copy_text():

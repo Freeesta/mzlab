@@ -648,7 +648,7 @@ declare var minW: any;
 declare var mixedText: any;
 declare var modeNote: any;
 declare var modeSchema: any;
-declare var modeTag: any;
+declare var modeTip: any;
 declare var moduloToMzml: any;
 declare var moduloWants: any;
 declare var movePanel: any;

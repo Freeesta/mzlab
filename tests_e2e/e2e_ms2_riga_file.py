@@ -19,7 +19,7 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         def rows():
             pg.evaluate("setTab('ms2')"); ready(pg)
-            pg.evaluate("E.files.forEach(f => { f.vis = true; }); renderFileList()")
+            pg.evaluate("E.files.forEach(f => { f.vis = true; }); renderFileList()"); open_ms2(pg)
             ids = pg.evaluate("[...document.querySelectorAll('#flst input[data-pr]')].map(x => x.id)")
             assert len(ids) == len(set(ids)) and len(ids) >= 2, f"every precursor row has its own id: {ids}"
             two = pg.evaluate("(() => { const m = {}; document.querySelectorAll('#flst input[data-pr]').forEach(x => (m[x.dataset.pr] = m[x.dataset.pr] || []).push(x.dataset.pk)); return Object.entries(m).find(([, v]) => v.length > 1); })()")
