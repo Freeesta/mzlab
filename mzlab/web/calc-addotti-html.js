@@ -17,15 +17,15 @@ const CALCADDHTML = (() => {
   };
 
   // low resolution: one decimal and the error in Da (the tolerance is in Da there); high resolution: the decimals above and the error in ppm
-  /** @param {AdTable} t @param {boolean} hasM @param {boolean} hasObs @param {{ pol: number, more: boolean, lr?: boolean, tolDa?: number }} st */
+  /** @param {AdTable} t @param {boolean} hasM @param {boolean} hasObs @param {{ pol: number, more: boolean, lr?: boolean, unit?: string, tol?: number }} st */
   function mainHtml(t, hasM, hasObs, st) {
-    const lr = !!st.lr, dd = lr ? 1 : decimals(), mzOf = (/** @type {AdRow} */ r) => (lr ? (r.mz1 == null ? "" : r.mz1.toFixed(1)) : r.mz5 == null || r.mz4 == null ? "" : dd > 4 ? r.mz5.toFixed(dd) : r.mz4.toFixed(4));
-    const errOf = (/** @type {AdRow} */ r) => (r.ppm == null ? "" : lr ? sgn(r.ppm) + Math.abs(r.ppm * (r.mz4 || 0) * 1e-6).toFixed(2) : sgn(r.ppm) + Math.abs(r.ppm).toFixed(1));
+    const lr = !!st.lr, da = st.unit ? st.unit === "da" : lr, dd = lr ? 1 : decimals(), mzOf = (/** @type {AdRow} */ r) => (lr ? (r.mz1 == null ? "" : r.mz1.toFixed(1)) : r.mz5 == null || r.mz4 == null ? "" : dd > 4 ? r.mz5.toFixed(dd) : r.mz4.toFixed(4));
+    const errOf = (/** @type {AdRow} */ r) => (r.ppm == null ? "" : da ? sgn(r.ppm) + Math.abs(r.ppm * (r.mz4 || 0) * 1e-6).toFixed(lr ? 2 : 4) : sgn(r.ppm) + Math.abs(r.ppm).toFixed(1));
     const idx = (/** @type {AdRow} */ r) => t.rows.indexOf(r), mine = t.rows.filter(r => r.pol === st.pol), best = t.best == null ? null : t.rows[t.best];
     const unit = hasM && !hasObs, mif = hasObs && !hasM, cols = 2 + (hasM ? 1 : 0) + (unit ? 1 : 0) + (hasM && hasObs ? 1 : 0) + (mif ? 1 : 0) + (hasM ? 1 : 0);
     const head = `<tr><th scope="col">${I18N.t("calc.col.adduct")}</th><th scope="col" class="num">${I18N.t("calc.col.delta")}</th>`
       + (hasM ? `<th scope="col" class="num">${I18N.t("calc.col.exact")}</th>` : "") + (unit ? `<th scope="col" class="num">${I18N.t("calc.col.nominal")}</th>` : "")
-      + (hasM && hasObs ? `<th scope="col" class="num">${I18N.t(lr ? "calc.col.da" : "calc.col.ppm")}</th>` : "") + (mif ? `<th scope="col" class="num">${I18N.t("calc.col.mif")}</th>` : "") + (hasM ? '<td></td>' : "") + "</tr>";
+      + (hasM && hasObs ? `<th scope="col" class="num">${I18N.t(da ? "calc.col.da" : "calc.col.ppm")}</th>` : "") + (mif ? `<th scope="col" class="num">${I18N.t("calc.col.mif")}</th>` : "") + (hasM ? '<td></td>' : "") + "</tr>";
     const row = (/** @type {AdRow} */ r) => {
       const hit = best === r, mz = mzOf(r);
       return `<tr class="${hit ? "hit" : ""}"><th scope="row">${hit ? `<span aria-hidden="true">✓ </span><span class="sr-only">${I18N.t("calc.add.match")} </span>` : ""}${fmtAdduct(r.n)}</th><td class="num">${shiftText(r)}</td>`
@@ -40,8 +40,8 @@ const CALCADDHTML = (() => {
     if (hasM) line = `<p>${I18N.t("calc.neutral", { formula: fmtFormula(t.formula || ""), mass: (t.neutral || 0).toFixed(lr ? 1 : 4), nominal: Math.round(t.neutral || 0) })}</p>`;
     if (hasM && hasObs) {
       line += best
-        ? `<p class="cadd-match">${I18N.t(lr ? "calc.add.hitDa" : "calc.add.hit", { adduct: fmtAdduct(best.n), ppm: errOf(best) })}${best.pol === st.pol ? "" : " (" + (best.pol > 0 ? "ESI+" : "ESI−") + ")"}</p>`
-        : `<p class="cadd-match muted">${I18N.t(lr ? "calc.add.noneDa" : "calc.add.none", { tol: lr ? st.tolDa : t.tol })}</p>`;
+        ? `<p class="cadd-match">${I18N.t(da ? "calc.add.hitDa" : "calc.add.hit", { adduct: fmtAdduct(best.n), ppm: errOf(best) })}${best.pol === st.pol ? "" : " (" + (best.pol > 0 ? "ESI+" : "ESI−") + ")"}</p>`
+        : `<p class="cadd-match muted">${I18N.t(da ? "calc.add.noneDa" : "calc.add.none", { tol: st.tol != null ? st.tol : t.tol })}</p>`;
     }
     return `${line}<div class="cadd-wrap" role="region" tabindex="0" aria-label="${I18N.t("calc.add.region")}"><table class="cadt"><thead>${head}</thead><tbody>${common.map(row).join("")}${more}${open ? rare.map(row).join("") : ""}</tbody></table></div>`;
   }

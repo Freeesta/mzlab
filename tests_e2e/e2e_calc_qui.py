@@ -32,9 +32,18 @@ try:
         def lr_214():
             type_("214")
             assert mode() == "lr" and msrc() == "short", (mode(), msrc())
-            assert "ppm" not in pg.inner_text("#calcctl").lower(), pg.inner_text("#calcctl")
+            assert pg.get_attribute("#calcctl [data-u=da]", "aria-pressed") == "true" and pg.get_attribute("#calcctl [data-u=ppm]", "aria-pressed") == "false", "Da preset in low resolution"
             assert pg.input_value("#calctol") == "0.5"
-        step("214: low resolution from the number, Da tolerance, no ppm in the choices", lr_214)
+        step("214: low resolution from the number, 0.5 Da preset", lr_214)
+        def unit_switch():
+            type_("214"); n_da = pg.evaluate("document.querySelectorAll('#calcout .cq-g').length")
+            pg.click("#calcctl [data-u=ppm]"); frames(pg, 25)
+            assert pg.input_value("#calctol") == "5" and pg.get_attribute("#calcctl [data-u=ppm]", "aria-pressed") == "true", "ppm: its own value (5)"
+            assert pg.evaluate("CALCQUI.opts(CALCQUI.arg('214',0)).unit") == "ppm" and pg.evaluate("CALCQUI.opts(CALCQUI.arg('214.0896',0)).unit") == "ppm"
+            pg.evaluate("CALCQUI.set({unit: {hr: null, lr: 'da'}})"); frames(pg, 25)            # the same unit again: the same groups as before
+            assert pg.input_value("#calctol") == "0.5" and pg.evaluate("document.querySelectorAll('#calcout .cq-g').length") == n_da
+            assert pg.evaluate("JSON.parse(localStorage.getItem(NOMI.KEY('calcqui'))).unit.lr") == "da", "remembered in the settings"
+        step("the Da / ppm selector switches the unit, keeps each value and remembers the choice per mode", unit_switch)
         def lr_30():
             type_("30"); assert "CH2O" in txt() or "CH\u2082O" in txt(), txt()[:300]
         step("30 lists CH2O among the neutral losses", lr_30)
@@ -50,7 +59,7 @@ try:
             assert mode() == "lr", mode()
             type_("21.9819")
             assert mode() == "hr" and msrc() == "decimals", mode()
-            assert pg.input_value("#calctol") == "5"
+            assert pg.input_value("#calctol") == "5" and pg.get_attribute("#calcctl [data-u=ppm]", "aria-pressed") == "true", "ppm preset in high resolution"
             assert "Na" in txt() and "H" in txt(), txt()[:300]
         step("21.9819 (3+ decimals): high resolution detected, ppm tolerance, the difference Na - H", hr_diff)
         def formula_mode():
