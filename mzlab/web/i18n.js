@@ -4,7 +4,7 @@
 // Interface languages (Italian and English). Classic script, loaded FIRST by index.html (before the catalogs lang/it.js and lang/en.js).
 //  - Code uses semantic keys ("load.drop.title"); the texts live in the two catalogs, loaded as plain <script> tags (no fetch: CSP, offline).
 //  - Italian is the fallback language: a key missing in English shows the Italian text; a key missing everywhere shows the key itself.
-//  - Default language: the first of the browser languages that is Italian or English (none -> English). The gear (settings.js) can change it
+//  - Default language: Italian, whatever the browser language is. The gear (settings.js) can change it
 //    (stored in localStorage "mzlab.lang"); ?lang=it|en in the address forces the language for that tab only.
 //  - index.html decides the language in a tiny inline script at the top of the head (same rules as detect below), sets I18N_LANG, <html lang>
 //    and the title, and loads ONLY the catalog of that language.
@@ -22,18 +22,13 @@
     set(v) { try { localStorage.setItem(KEY, v); } catch (_) { /* storage blocked: the choice lasts until the page is closed */ } },
   };
 
-  // language chosen at start: ?lang= (this tab only) > stored choice > the first browser language that is Italian or English (default English)
+  // language chosen at start: ?lang= (this tab only) > stored choice > Italian (the browser language is not consulted; `browser` is kept for the callers)
   // keep in step with the inline script at the top of the head of index.html
   function detect(search, stored, browser) {
     const q = /[?&]lang=(it|en)(?:&|#|$)/.exec(search || "");
     if (q) return q[1];
     if (LANGS.includes(stored)) return stored;
-    for (const b of [].concat(browser || [])) {
-      const l = String(b).toLowerCase();
-      if (/^it(-|_|$)/.test(l)) return "it";
-      if (/^en(-|_|$)/.test(l)) return "en";
-    }
-    return "en";
+    return "it";
   }
 
   // ---- reduced ICU: {name} {name, number} {name, plural, =0 {..} one {..} other {..}}  (# = the number inside a plural branch)

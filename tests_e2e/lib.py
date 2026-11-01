@@ -149,14 +149,26 @@ _np, _nc = _Br.new_page, _Br.new_context
 _SITO = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true})"
 def _sito():
     return None if os.environ.get("MZLAB_SITO_PRODUZIONE") else _SITO
+def _start_prefs(k):
+    """The site starts in Italian with the light theme whatever the browser says. A test that asks for an English locale or a dark system scheme
+    wants that UI, so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` leaves the real defaults."""
+    if k.pop("lang_auto", False): return None
+    js = ""
+    if str(k.get("locale", "")).lower().startswith("en"): js += "if(!localStorage.getItem('mzlab.lang'))localStorage.setItem('mzlab.lang','en');"
+    if k.get("color_scheme") == "dark": js += "if(!localStorage.getItem('mzlab.prefs'))localStorage.setItem('mzlab.prefs',JSON.stringify({v:2,theme:'auto'}));"
+    return ("try{" + js + "}catch(e){}") if js else None
 def _new_page(self, *a, **k):
     k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
+    sp = _start_prefs(k)
     pg = _np(self, *a, **k); pg.add_init_script(_TRACK)
+    if sp: pg.add_init_script(sp)
     if _sito(): pg.add_init_script(_sito())
     return pg
 def _new_context(self, *a, **k):
     k.setdefault("locale", "it-IT")
+    sp = _start_prefs(k)
     c = _nc(self, *a, **k); c.add_init_script(_TRACK)
+    if sp: c.add_init_script(sp)
     if _sito(): c.add_init_script(_sito())
     return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
@@ -170,9 +182,11 @@ class _PersistentWebKit:
     def new_context(self, **k):
         import tempfile
         k.setdefault("locale", "it-IT")
+        sp = _start_prefs(k)
         d = tempfile.mkdtemp(prefix="mzlab-wkprofile-")
         c = self._bt.launch_persistent_context(d, **self._kw, **k)
         self._open.append((c, d)); c.add_init_script(_TRACK)
+        if sp: c.add_init_script(sp)
         if _sito(): c.add_init_script(_sito())
         return c
     def new_page(self, **k):

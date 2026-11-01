@@ -1,4 +1,4 @@
-"""Interface language: default from the browser (it-IT -> Italian, en-US/fr-FR -> English), ?lang=, choice from the gear (remembered in
+"""Interface language: Italian by default whatever the browser language is (it-IT, en-US, fr-FR), ?lang=, choice from the gear (remembered in
 mzlab.lang, files stay open after the reload). Synthetic data."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -15,7 +15,7 @@ try:
         url = f"http://127.0.0.1:{r.port}/"
         b = p.chromium.launch()
         def page(locale, query=""):
-            c = b.new_context(locale=locale, viewport={"width": 1500, "height": 1400}); pg = c.new_page()
+            c = b.new_context(lang_auto=True, locale=locale, viewport={"width": 1500, "height": 1400}); pg = c.new_page()
             pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
             pg.goto(url + query); pg.wait_for_timeout(800); return pg
         # the tabs Tabui and Flow follow Data and Drawing (they carry the same name in both languages)
@@ -24,11 +24,16 @@ try:
             pg = page("it-IT"); assert pg.evaluate("I18N.lang") == "it" and pg.evaluate("document.documentElement.lang") == "it"
             assert nav(pg) == ["Dati", "Disegno", "Tabui", "Flow"], nav(pg)
         step("it-IT browser -> Italian", italian)
-        def english():
+        def italian_everywhere():
             for loc in ("en-US", "fr-FR", "de-DE"):
-                pg = page(loc); assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("document.documentElement.lang") == "en", loc
+                pg = page(loc); assert pg.evaluate("I18N.lang") == "it" and pg.evaluate("document.documentElement.lang") == "it", loc
+                assert nav(pg) == ["Dati", "Disegno", "Tabui", "Flow"], (loc, nav(pg))
+        step("en-US, fr-FR, de-DE browsers -> Italian too (the browser language is not consulted)", italian_everywhere)
+        def english():
+            for loc in ("en-US", "it-IT"):
+                pg = page(loc, "?lang=en"); assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("document.documentElement.lang") == "en", loc
                 assert nav(pg) == ["Data", "Drawing", "Tabui", "Flow"], (loc, nav(pg))
-        step("en-US, fr-FR, de-DE browsers -> English", english)
+        step("?lang=en -> English in any browser", english)
         def query():
             pg = page("it-IT", "?lang=en"); assert pg.evaluate("I18N.lang") == "en"
             pg = page("en-US", "?lang=it"); assert pg.evaluate("I18N.lang") == "it"

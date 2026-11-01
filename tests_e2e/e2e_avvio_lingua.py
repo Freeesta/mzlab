@@ -27,7 +27,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         def ctx(locale, old):
-            c = b.new_context(locale=locale, viewport={"width": 1300, "height": 900})
+            c = b.new_context(lang_auto=True, locale=locale, viewport={"width": 1300, "height": 900})
             c.add_init_script(f"try {{ localStorage.setItem('qqq.lang', '{old}') }} catch (e) {{}}")
             c.add_init_script(WATCH); return c
         def italian_from_the_start():
@@ -47,20 +47,20 @@ try:
             assert any(u.endswith("/lang/it.js") for u in reqs) and not any(u.endswith("/lang/en.js") for u in reqs), [u for u in reqs if "/lang/" in u]
             c.close()
         step("browser it-IT + old qqq.lang=en: Italian title and page from the first instant, one phrase for 4 s, only it.js", italian_from_the_start)
-        def english_ignores_old_key():
-            c = ctx("en-US", "it"); pg = c.new_page(); pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
-            assert pg.evaluate("I18N.lang") == "en"; titles = pg.evaluate("window.__titles")
-            assert titles == ["mzLab • MS Analysis"], titles      # the static title is already the right one: it never changes
-            c.close()
-        step("browser en-US + old qqq.lang=it: English (the old key is ignored)", english_ignores_old_key)
-        def gear_choice():
+        def english_browser_is_italian():
             c = ctx("en-US", "en"); pg = c.new_page(); pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
-            pg.evaluate("I18N.set('it')"); pg.wait_for_function("window.I18N && I18N.lang === 'it'", timeout=60000)
-            assert pg.evaluate("localStorage.getItem('mzlab.lang')") == "it"; c.close()
+            assert pg.evaluate("I18N.lang") == "it"; titles = pg.evaluate("window.__titles")
+            assert titles and titles[-1] == "mzLab • Analisi MS", titles      # the browser language and the old key are ignored: Italian
+            c.close()
+        step("browser en-US + old qqq.lang=en: Italian (the browser language and the old key are ignored)", english_browser_is_italian)
+        def gear_choice():
+            c = ctx("it-IT", "it"); pg = c.new_page(); pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
+            pg.evaluate("I18N.set('en')"); pg.wait_for_function("window.I18N && I18N.lang === 'en'", timeout=60000)
+            assert pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"; c.close()
         step("the choice is stored in mzlab.lang and wins over the browser", gear_choice)
         def header_first_paint():
             # while the texts wait (class i18n-wait) the buttons without text are already visible, in their place; the title never changes
-            c = ctx("en-US", "en"); pg = c.new_page(); pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
+            c = ctx("en-US", "en"); pg = c.new_page(); pg.goto(URL + "?lang=en"); pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("window.__titles") == ["mzLab \u2022 MS Analysis"], pg.evaluate("window.__titles")
             pg.evaluate("document.documentElement.classList.add('i18n-wait')")
             vis = pg.evaluate("['.logo','#np-set','#fs-btn','.hq'].map(s => getComputedStyle(document.querySelector('header ' + s)).visibility)")
