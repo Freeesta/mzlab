@@ -860,10 +860,10 @@ function renderFileList() {
 const vis = () => tabFiles().filter((/** @type {FileAperto} */ f) => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off
 const follow = (/** @type {string} */ tab) => !!(E.browse && E.files[E.cur] && E.files[E.cur].kind === tab);
-const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab ? [E.files[E.cur]] : vis();
+const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab ? [E.files[E.cur]] : ESP.soloUno(vis());
 // the files a cell draws: those of ITS tab (the same as shown() unless, in the bench, the cell is not of the tab of the active cell)
 const shownFor = (/** @type {Bag} */ p) => {
-  const l = p && p.tab && p.tab !== E.tab ? tabFiles(p.tab).filter((/** @type {FileAperto} */ f) => f.vis) : shown();
+  const l = p && p.tab && p.tab !== E.tab ? ESP.soloUno(tabFiles(p.tab).filter((/** @type {FileAperto} */ f) => f.vis)) : shown();
   // an MS2 precursor chromatogram ticked file by file (the sidebar rows) draws only the files ticked
   return p && p.type === "chrom" && p.ks ? l.filter((/** @type {FileAperto} */ f) => !(f.precursors || []).length || p.ks.includes(f.k)) : l;
 };
