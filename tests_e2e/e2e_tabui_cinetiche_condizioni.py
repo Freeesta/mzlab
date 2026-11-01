@@ -90,7 +90,7 @@ try:
 
         def data():
             pg.focus("#gv-tp svg.gv-svg"); pg.keyboard.press("t")
-            pg.wait_for_selector("table", timeout=3000)
+            pg.wait_for_selector("dialog[open] table", timeout=3000)      # the page has other (hidden) tables: the data table is the one of the open dialog
             txt = pg.evaluate("() => document.body.innerText"); assert "Dark" in txt and "% of own max" in txt
             pg.keyboard.press("Escape")
         step("the table of the data has the dark series and both percentages", data)
