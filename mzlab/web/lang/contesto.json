@@ -826,8 +826,6 @@
   "calc.add.noneDa": "Riga sopra la tabella in bassa risoluzione quando nessun addotto combacia; {tol} = tolleranza in Da.",
   "cq.all": "Pulsante che apre tutte le righe di un gruppo di candidati; {n} = numero totale di righe.",
   "cq.none": "Riga sotto la calcolatrice quando nulla corrisponde al numero; {tol} = tolleranza con l'unità (es. «5 ppm» o «0.5 Da»).",
-  "cq.mode.hr.files": "Testo piccolo sotto la calcolatrice: risoluzione alta rilevata dai file aperti; {name} = strumento o analizzatore del file (es. «Orbitrap Exploris 120»).",
-  "cq.mode.lr.files": "Testo piccolo sotto la calcolatrice: risoluzione bassa (unitaria) rilevata dai file aperti; {name} = strumento o analizzatore del file (es. «QTRAP 3200»).",
   "valida.title": "Titolo della finestra «Valida mzML»; {name} = nome del file (già protetto).",
   "valida.caption": "Didascalia e nome accessibile della tabella dei problemi trovati; {name} = nome del file.",
   "valida.counts": "Riga di riepilogo della validazione; {spectra}, {chroms} = numero di spettri e cromatogrammi del file; {errors}, {warnings} = numero di errori e di avvisi.",

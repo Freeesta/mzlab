@@ -865,7 +865,7 @@ const fmt2 = (/** @type {number | string} */ v) => String(+(+v).toFixed(2));
 const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trailing zeros)
 // THE tool that extracts an ion (XIC). The student gives ONE m/z value, or the NEUTRAL formula plus the adduct; the window is always a unit window (1 Da, unit resolution)
 // anchored to the nominal mass n of the calculated value: [n - XIC_BELOW, n + 1 - XIC_BELOW]. Every way to create an XIC (XIC button, warning when integrating from a TIC,
-// right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice m/z, Disegno) opens this window, possibly pre-filled:
+// right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
 const TIP_DELAY = 1250;   // ms before the label of a button appears (one value for the whole program; 1500 before 7 Oct 2026)
 const XIC_BELOW = 0.2;   // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (AGENTS.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)

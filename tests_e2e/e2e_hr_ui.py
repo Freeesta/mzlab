@@ -47,7 +47,7 @@ try:
             pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             assert pg.locator("#calcobs").count() == 0 and pg.locator("#calcctl [data-r]").count() == 0, "no observed field, no High/Low switch"
             t = pg.inner_text("#calcdlg"); assert "364.0737" in t and "errore (ppm)" not in t, t
-            m = pg.inner_text("#calcctl .cq-mode"); assert "alta" in m and "Exploris" in m, m          # the Orbitrap file decides: high resolution, named
+            m = pg.get_attribute("#calcctl .cq-ctl", "data-mode"); n = pg.get_attribute("#calcctl .cq-ctl", "data-name"); assert m == "hr" and "Exploris" in n, (m, n)          # the Orbitrap file decides: high resolution, named
             assert pg.input_value("#calctol") == "5"
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with an Orbitrap file: 4 decimals, high resolution detected from the file", calc_hr)

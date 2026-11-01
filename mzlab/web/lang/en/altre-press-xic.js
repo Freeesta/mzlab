@@ -127,7 +127,6 @@ I18N.add("en", {
   "tbl.loss.detail": "exact mass <b>{m}</b> · <span class=\"muted\">mechanism:</span> {mech}",
   "tbl.loss.detailLr": "<span class=\"muted\">mechanism:</span> {mech}",
   "tbl.loss.sameShort": "same Δm, unit resolution",
-  "tbl.loss.hint": "Click a row for details. A loss is only a hypothesis.",
   "tbl.loss.checkM2": "Check <i>M+2</i> with the isotope pattern in the spectrum (right-click; Br: M and M+2 almost equal).",
   "tbl.loss.searchPh": "Δm, e.g. 62",
   "tbl.loss.searchTitle": "Type the observed mass difference: it highlights the losses with that value (within the chosen tolerance) and shows the pairs and repetitions that make it up, the contaminants and the adducts",

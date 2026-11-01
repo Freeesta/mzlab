@@ -4,10 +4,10 @@
 // Arithmetic of the header calculator (block 4.2): pure functions, also run by node in tests/test_calcola.py. No eval (the page has a strict CSP):
 // a small recursive-descent parser. The field takes an EXPRESSION (only digits, decimal point or comma, + - x / ( ) and "Ans") or a chemical formula.
 
-// true when the text is an arithmetic expression (so: not a formula); the text may be empty
+// true when the text is an arithmetic expression (so: not a formula), even an unfinished one such as "(" or "+" (the keypad must stay); empty text is not
 function calcIsExpr(t) {
   const s = String(t || "").replace(/ans/gi, "").replace(/\s+/g, "");
-  return /^[0-9.,+\-−–—*xX×/÷()]*$/.test(s) && /[0-9]|ans/i.test(String(t || ""));
+  return String(t || "").trim() !== "" && /^[0-9.,+\-−–—*xX×/÷()]*$/.test(s);
 }
 // evaluates; ans = last result (for "Ans"). Returns { v } or { err } (err = short Italian message, "" while the expression is only unfinished)
 function calcEval(t, ans = 0) {
