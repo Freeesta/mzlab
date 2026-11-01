@@ -46,7 +46,7 @@ r = Run(port=8875, wd="/tmp/wd_colonne")
 try:
     with sync_playwright() as p:
         for lang in ("it", "en"):
-            pg = r.page(p); _pg[:] = [pg]; pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); pg.wait_for_timeout(800)
+            pg = r.page(p); _pg[:] = [pg]; pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); attendi(pg, "!!document.querySelector('#pick')", 30000)
             pg.set_viewport_size({"width": 1400, "height": 900})
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t10")])
             frames(pg, 3); pg.click("text=Carica dati" if lang == "it" else "text=Load data"); ready(pg)
