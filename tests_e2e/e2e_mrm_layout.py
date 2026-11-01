@@ -1,4 +1,4 @@
-# e2e_mrm_layout: a file with only MRM opens only the MRM block (no empty graphs); the transitions menu has «all transitions» plus the single ones, nothing else
+# e2e_mrm_layout: a file with only MRM opens only the MRM block (no empty graphs); one transitions list (no second selector, no extra integration dropdown); integrating in stacked or cascade returns to overlaid
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -17,11 +17,27 @@ try:
             assert pg.evaluate("E.panels.every(q => q.tab === 'mrm')"), "panels of another type"
         step("MRM-only files: only the MRM panel is open", only_mrm)
         def menu():
-            o = pg.evaluate("(() => { const s = document.querySelector('.pnl.mrm select[data-o=tr]'); return [...s.options].map(x => [x.value, x.textContent]); })()")
-            assert o[0][0] == "" and len(o) > 1, o
-            assert not any(v == "__quant_qual" for v, _ in o), o
-            assert len({t for _, t in o}) == len(o), o
-        step("transitions menu: all + single, no duplicate entry", menu)
+            q = "document.querySelector('.pnl.mrm')"
+            assert pg.evaluate(f"!{q}.querySelector('select[data-o=tr]')"), "second transitions selector still there"
+            assert pg.evaluate(f"!{q}.querySelector('[data-a=intf]') || {q}.querySelector('[data-a=intf]').hidden"), "extra integration target dropdown"
+            assert not pg.evaluate(f"!!{q}.querySelector('select[data-o=fk]')"), "file counter dropdown"
+            assert pg.evaluate(f"{q}.querySelector('.pn-t, .ptitle, header, .hd') ? {q}.textContent.includes('Transizioni MRM') === false : true"), "old panel title"
+            pg.evaluate(f"{q}.querySelector('.canb').click()"); frames(pg, 2)
+            n = pg.evaluate(f"[...{q}.querySelectorAll('.can-row .can-n,.can-row')].length"); assert n > 1, n
+            lab = pg.evaluate(f"[...{q}.querySelectorAll('.can-row')].map(x => x.getAttribute('aria-label') || '')")
+            assert not any("\u2192" in l or "@" in l for l in lab), lab                          # one notation: q1>q3 role
+            assert len(set(lab)) == len(lab), lab
+            ov = pg.evaluate(f"(() => {{ const hd = {q}.querySelector('.can-hd'); const c = [...hd.children].map(e => e.getBoundingClientRect()); return c.slice(1).some((r, i) => r.left < c[i].right - 1); }})()")
+            assert not ov, "columns overlap"
+        step("transitions: one list, no second selector, no extra integration dropdown, one notation", menu)
+        def stacked():
+            for m in ("stk", "cas"):
+                pg.evaluate(f"(() => {{ const p = E.panels.find(q => q.type === 'mrm'); p.mode = '{m}'; ctl(p); draw(p); p.imode = 'man'; }})()"); frames(pg, 2)
+                assert pg.evaluate(f"E.panels.find(q => q.type === 'mrm').mode") == m
+                pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'mrm'); p.el.querySelector('[data-a=iauto]').click(); })()"); frames(pg, 2)
+                assert pg.evaluate("E.panels.find(q => q.type === 'mrm').mode") == "ovl", m
+                assert pg.evaluate("E.panels.find(q => q.type === 'mrm').el.querySelector('[data-o=mode]').value") == "ovl"
+        step("integrate tool in stacked or cascade goes back to overlaid", stacked)
         def mixed():
             pg2 = r.page(p)
             pg2.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_MRM-t0")])

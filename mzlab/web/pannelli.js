@@ -349,7 +349,7 @@ function addPanel(type, o, after) {
   const bZ = el.querySelector('[data-a="izoom"]'), bA = el.querySelector('[data-a="iauto"]'), bM = el.querySelector('[data-a="iman"]'), bD = el.querySelector('[data-a="idel"]'), bT = el.querySelector('[data-a="itab"]'), bX = el.querySelector('[data-a="xic"]');
   if (bA) {  // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval), delete integration (click a peak)
     const /** @type {Record<string, Element | null>} */ btns = { zoom: bZ, auto: bA, man: bM, idel: bD };
-    const setMode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
+    const setMode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; if (p.imode && p.imode !== "zoom") toOverlaid(p); Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
     if (p.imode && btns[p.imode]) { /** @type {Element} */ (btns[p.imode]).classList.add("on"); p.cv.style.cursor = p.imode === "idel" ? "pointer" : "cell"; }  // MRM panels open with the manual integration tool ready
     bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); if (bD) bD.onclick = () => setMode("idel"); bT.onclick = showInts;
     el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
@@ -697,10 +697,7 @@ function ctl(/** @type {Pannello} */ p) {
     const xr = xt && hrX ? `${xsel}<b class="xlab" title="${EH(I18N.t("ctl.xlab.title"))}">XIC \u2022 m/z ${(+xt.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}</b>` : xt ? `${xsel}<label class="muted" title="${I18N.t("ctl.xr.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[0] : fmz(xt.mz - xw1)}"> ${I18N.t("ctl.range.to")} <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[1] : fmz(xt.mz + xw1)}"></label>` : "";
     c.innerHTML = `${xr}${fsel}${view}${corr}${parBox(rtbar + lrExtra)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
   }
-  if (p.type === "mrm") {
-    const isMulti = Array.isArray(p.tr) && p.tr.length > 1;
-    c.innerHTML = `<select data-o="tr" title="${I18N.t("ctl.mrm.tr.title")}"><option value="" ${(!p.tr && !isMulti) ? "selected" : ""}>${I18N.t("ctl.mrm.all")}</option>${p._trs.map((/** @type {Bag} */ t) => `<option value="${EH(t.key)}" ${(!isMulti && p.tr === t.key) ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${canBtn}${fsel}${view}${corr}${parBox(rtbar + lrExtra)}`;
-  }
+  if (p.type === "mrm") c.innerHTML = `${canBtn}${view}${corr}${parBox(rtbar + lrExtra)}`;      // the transitions list is the one control for what is shown (no second dropdown, no files counter)
   if (p.type === "map") {
     const sf = TF, opt = (/** @type {number | string} */ v, /** @type {number | string} */ cur, /** @type {number | string} */ lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     const G = (/** @type {string} */ lab, /** @type {string} */ inner) => `<span class="mzg" role="group" aria-label="${lab}">${inner}</span>`, fol = follow(p.tab || E.tab), lvf = (E.files[fol ? E.cur : p.k] || {}).lv || 1;

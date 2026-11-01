@@ -60,7 +60,7 @@ I18N.add("en", {
   "panel.title.chrom": "Chromatogram",
   "panel.title.spec": "Mass spectrum",
   "panel.title.xic": "Extracted ion (XIC)",
-  "panel.title.mrm": "MRM transitions",
+  "panel.title.mrm": "MRM",
   "panel.title.map": "RT-m/z map",
   "panel.title.product": "Product ion spectrum",
   "panel.title.ms2prec": "MS2 · precursor {prec}",
