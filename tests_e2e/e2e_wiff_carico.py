@@ -135,7 +135,8 @@ try:
             pg.wait_for_selector("#flst .fl.up:not(.err) [data-up-x]", timeout=10000)
             t1 = pg.inner_text("#flst .fl.up:not(.err) [data-uptxt]")
             assert t1.strip() and "Indexing 0%" not in t1, t1
-            pg.locator("#flst .fl.up:not(.err) [data-up-x]").first.click()
+            # the pair has one row per sample and each × stops its own file (upload-rows.js): press them all in one go, so a sample read meanwhile cannot slip through
+            pg.evaluate("document.querySelectorAll('#flst .fl.up:not(.err) [data-up-x]').forEach(b => b.click())")
             pg.wait_for_function("UPBUSY === 0", timeout=30000)
             assert pg.locator("#ldact").is_hidden()
             assert pg.evaluate("!E.files.some(f => !f.gone && f.file.startsWith('ferma'))"), "a cancelled file is not opened"
