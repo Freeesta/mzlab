@@ -6804,3 +6804,4 @@
 {"v":1,"ts_utc":"2026-11-01T18:40:04Z","tipo":"job","k":"124941175410","workflow":"rust","job":"deny","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"161583547286dfbcf2b7f507c9763ce53b28f7ba","run_id":41337763901,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-01T18:40:04Z","tipo":"job","k":"124941175625","workflow":"rust","job":"rust","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"161583547286dfbcf2b7f507c9763ce53b28f7ba","run_id":41337763901,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-01T18:40:25Z","tipo":"carico","k":"2026-11-01T18:4","job_in_coda":0,"job_in_corso":31}
+{"v":1,"ts_utc":"2026-11-01T18:48:43Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/lr-b-names","merge_main":true,"aree":{"docs":1,"web":21,"test":14,"tools":2,"generati":1},"tipo":"pr","pr":2472,"sha":"5e63d0165bc9c47d962e4188199a4e0be90bc93b"}
