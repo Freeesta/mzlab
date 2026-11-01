@@ -1,6 +1,8 @@
 """MS2 sidebar: the precursor rows are per (file, precursor); ticking the m/z of one file never ticks the same m/z under another file (two MS2 files hold the same precursors)"""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+import shutil, tempfile
+from pathlib import Path
 ES = ROOT / "mzlab" / "web" / "esempi"
 steps = []
 def step(name, fn):
@@ -10,7 +12,10 @@ r = Run(port=8901, wd="/tmp/wd_ms2rigafile")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [str(ES / f"MS2_t{t}.mzML") for t in (15, 60)])
+        # two files that really hold the same precursors: one example file under two names
+        twin = Path(tempfile.mkdtemp(prefix="ms2twin_"))
+        for n in ("a", "b"): shutil.copy(ES / "MS2_t15.mzML", twin / f"MS2_{n}.mzML")
+        stage(pg, [str(twin / f"MS2_{n}.mzML") for n in ("a", "b")])
         pg.click("text=Carica dati"); ready(pg)
         def rows():
             pg.evaluate("setTab('ms2')"); ready(pg)
