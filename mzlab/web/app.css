@@ -122,17 +122,17 @@ header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 /* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
 html.i18n-wait body>:not(header){visibility:hidden}html.i18n-wait header{visibility:hidden}html.i18n-wait header :is(.logo,#np-set,#sb-toggle,#fs-btn,.hq){visibility:visible}header .ib .ic{min-width:16px;min-height:16px}
 /* toolbar of the header */
-#stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
+#stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:2px;overflow:hidden;white-space:nowrap}
 @media (max-width:760px){header{flex-wrap:wrap}#nav{flex-wrap:wrap;min-width:0}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
-#stbar .tb{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;min-height:30px;flex:none;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font-size:13px}
+#stbar .tb{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;min-height:30px;flex:none;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font-size:13px}
 #stbar .tb:hover{background:var(--soft)}
 #stbar .tb .ti{display:inline-flex;color:var(--accent)}
 #stbar .tb .tl{display:none}
 /* label levels, chosen by barra.js from the measured space: lab-all (words on every button), lab-main (only on the main tools), none */
 #stbar.lab-all .tb .tl,#stbar.lab-main .tb[data-main] .tl{display:inline}
-#stbar.lab-all .tb,#stbar.lab-main .tb[data-main]{border-color:var(--line);border-radius:999px;padding:4px 8px 4px 6px}
+#stbar.lab-all .tb,#stbar.lab-main .tb[data-main]{border-color:var(--line);border-radius:999px;padding:4px 5px 4px 4px}
 #stbar.lab-all .tb-split .tb-main,#stbar.lab-main .tb-split .tb-main[data-main]{border-radius:999px 0 0 999px}
-#stbar.lab-all .tb-split .tb-car,#stbar.lab-main .tb-split .tb-main[data-main]+.tb-car{border-color:var(--line);border-radius:0 999px 999px 0;padding:4px 7px 4px 5px}
+#stbar.lab-all .tb-split .tb-car,#stbar.lab-main .tb-split .tb-main[data-main]+.tb-car{border-color:var(--line);border-radius:0 999px 999px 0;padding:4px 6px 4px 4px}
 #stbar.lab-all .tb.on,#stbar.lab-all .tb[aria-pressed=true],#stbar.lab-main .tb.on[data-main],#stbar.lab-main .tb[data-main][aria-pressed=true]{border-color:var(--accent)}
 #stbar .tb.on,#stbar .tb[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
 /* an active split button is one control: the caret takes the state of the main part */
