@@ -420,6 +420,30 @@ def check_glossary(it: dict, en: dict, errs: list) -> None:
 
 
 # ---------------------------------------------------------------- main
+# Names of other programs, vendors and people never appear in the texts of the interface. NEVER: no exception. FORMAT_OK: instrument-vendor names that
+# only identify a file format (".raw (Thermo)", "Agilent .D"). TOOL_OK: tools the student is sent to by the conversion / drawing / lookup workflows.
+NEVER_RE = re.compile(r"FreeStyle|Xcalibur|Analyst|MassHunter|Skyline|mzmine|MS-DIAL|XCMS|Keller|GNPS|MoNA|DataAnalysis", re.I)
+VENDOR_RE = re.compile(r"Thermo|Agilent|Bruker|Waters|Shimadzu|SCIEX", re.I)
+TOOL_RE = re.compile(r"MSConvert|ProteoWizard|PubChem|BioTransformer|Ketcher|OpenChemLib|MassBank", re.I)
+NAME_FORMAT_OK = {"cart.method", "cart.method.one", "cart.none", "conv.help.step1", "err.file.agilent", "err.file.agilentNoEngine", "err.file.brukerBaf",
+             "err.file.brukerNoBin", "err.file.raw", "err.file.rawTruncated", "err.file.rawVersion", "err.file.shimadzu", "err.file.wiff",
+             "help.filegrandi.body", "method.m.title", "predef.guide.linux.cmd", "predef.settings.title", "predef.text", "uv.none"}
+NAME_TOOL_OK = {"cmd.bio.kw", "cmd.bio.lab", "cmd.bio.name", "cmd.bio.tip", "cmd.more.tip", "cmd.pubchem.kw", "cmd.pubchem.lab", "cmd.pubchem.name",
+           "cmd.pubchem.tip", "conv.help.step1", "conv.help.step2", "ctx.spec.exportMassbank", "draw.error.ketcherNotStarted", "draw.tools.file",
+           "err.file.notAccepted", "err.memory.over4gb", "err.memory.tooBig", "fair.mb.note", "fair.mb.title", "help.filegrandi.body",
+           "help.prop.body", "help.start.body", "lib.avail.intro", "lib.intro", "load.hrnote"}
+
+
+def check_names(cats: dict[str, dict[str, str]], errs: list) -> None:
+    for lang, cat in cats.items():
+        for k, v in sorted(cat.items()):
+            for rx, ok, what in ((NEVER_RE, set(), "a name of another program or person"), (VENDOR_RE, NAME_FORMAT_OK, "a vendor name outside a file-format identifier"),
+                                 (TOOL_RE, NAME_TOOL_OK, "a tool name outside the workflow texts")):
+                m = rx.search(v)
+                if m and k not in ok:
+                    errs.append(f"{lang}.js {k}: {what} ({m.group(0)}): reword it, or list the key in tools/controlla_i18n.py if it is a file format / workflow tool")
+
+
 def run(listing: bool = False) -> list[str]:
     errs: list[str] = []
     try:
@@ -453,6 +477,7 @@ def run(listing: bool = False) -> list[str]:
     check_static_html(it, errs)
     check_italian(errs, listing)
     check_glossary(it, en, errs)
+    check_names({"it": it, "en": en}, errs)
     ctx = json.loads((LANG / "contesto.json").read_text(encoding="utf-8"))
     for k in sorted(it):
         if PARAM_RE.search(it[k]) and k not in ctx:

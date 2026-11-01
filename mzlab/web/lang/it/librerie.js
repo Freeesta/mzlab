@@ -5,7 +5,7 @@ I18N.add("it", {
   "lib.err.unknown": "Formato non riconosciuto: servono file MSP o MGF.",
   "lib.err.noSpectrum": "Nessuno spettro utilizzabile (scartati: {dropped}).",
   "lib.title": "Librerie di spettri",
-  "lib.intro": "Le librerie di spettri MS2 (<b>MSP</b>, <b>MGF</b>, JSON di MoNA o mzMine, record MassBank) stanno in una sola cartella e si indicizzano una volta sola. Il programma non guarda altrove e non invia nulla. I file NIST (.lib) e mzVault non si leggono: esportali in MSP.",
+  "lib.intro": "Le librerie di spettri MS2 (<b>MSP</b>, <b>MGF</b>, JSON, record MassBank) stanno in una sola cartella e si indicizzano una volta sola. Il programma non guarda altrove e non invia nulla. I file NIST (.lib) e mzVault non si leggono: esportali in MSP.",
   "lib.folder": "Cartella delle librerie",
   "lib.folder.native": "Cartella del computer: {name}",
   "lib.folder.fs": "Cartella scelta: «{name}»",

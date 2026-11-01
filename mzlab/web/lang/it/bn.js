@@ -113,7 +113,7 @@ I18N.add("it", {
   "bn.iso.new": "Nuova cella",
   "bn.iso.repTitle": "Al posto dello spettro osservato resta solo la simulazione",
   "bn.iso.rep": "Sostituisci",
-  "bn.iso.hint": "Risoluzione vuota = quella della scansione; 0 = tutta la struttura fine. Potere risolutivo: come lo scrive Thermo, scende con la radice di m/z.",
+  "bn.iso.hint": "Risoluzione vuota = quella della scansione; 0 = tutta la struttura fine. Potere risolutivo: scende con la radice di m/z.",
   "bn.iso.typeFormula": "Scrivi la formula.",
   "bn.iso.failed": "Non riesco a calcolare il profilo: {message}",
   "bn.needSpec": "Serve una cella con uno spettro.",
