@@ -55,6 +55,33 @@ const CONV = {
     return true;
   },
   // all of them, one after the other (a pause between browser downloads, a dialog each in the desktop app)
+  // the icon of the download buttons (the label is the aria-label)
+  ICON: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 2v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg>',
+  // the small menu of the download icons: the two formats the program writes (plain mzML, mzML with MS-Numpress); the compression of the advanced options follows the pick. `name` null = all the files
+  menu(/** @type {HTMLElement} */ anchor, /** @type {string | null} */ name) {
+    document.querySelector(".dlmenu")?.remove();
+    const m = document.createElement("div"); m.className = "dlmenu"; m.setAttribute("role", "menu"); m.setAttribute("aria-label", I18N.t(name == null ? "conv.dlall" : "conv.dl"));
+    const close = (/** @type {boolean} */ back) => { m.remove(); document.removeEventListener("pointerdown", away, true); anchor.setAttribute("aria-expanded", "false"); if (back) anchor.focus(); };
+    const away = (/** @type {Event} */ e) => { if (!m.contains(/** @type {Node} */ (e.target)) && !anchor.contains(/** @type {Node} */ (e.target))) close(false); };
+    for (const [k, key] of [["standard", "conv.fmt.mzml"], ["smallest", "conv.fmt.numpress"]]) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "sec sm"; b.dataset.dlfmt = k; b.setAttribute("role", "menuitem"); b.textContent = I18N.t(key);
+      b.onclick = () => { close(true); this.saveAs(k, name); }; m.append(b);
+    }
+    m.onkeydown = (/** @type {KeyboardEvent} */ e) => {
+      const it = [.../** @type {NodeListOf<HTMLElement>} */ (m.querySelectorAll("button"))], i = it.indexOf(/** @type {HTMLElement} */ (document.activeElement));
+      if (e.key === "Escape") { e.preventDefault(); close(true); } else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); it[(i + (e.key === "ArrowDown" ? 1 : it.length - 1)) % it.length].focus(); } else if (e.key === "Tab") close(false);
+    };
+    document.body.append(m); anchor.setAttribute("aria-expanded", "true"); document.addEventListener("pointerdown", away, true);
+    const r = anchor.getBoundingClientRect(), w = m.offsetWidth;
+    m.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + "px"; m.style.top = r.bottom + 4 + "px";
+    /** @type {HTMLElement} */ (m.firstElementChild).focus();
+  },
+  // saves in the format picked in the menu (the advanced select and the estimate follow)
+  async saveAs(/** @type {string} */ fmt, /** @type {string | null} */ name) {
+    this.compression = fmt; const s = /** @type {HTMLSelectElement | null} */ (document.getElementById("cvcomp")); if (s) s.value = fmt;
+    this.paintSizes(); const e = document.getElementById("cvest"); if (e) e.textContent = this.estimate();
+    if (name == null) await this.downloadAll(); else await this.download(name);
+  },
   async downloadAll() { for (const n of new Set([...this.files.keys(), ...this.native()])) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
 };
 
@@ -240,7 +267,7 @@ const CONVROWS = {
     /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p);
     const st = this.toolState(), off = (/** @type {boolean} */ on) => (on ? "" : " data-off inert");
     return `<div class="cvtool"><div class="cvr2"><details class="muted sm" id="advconv" data-cvtool="adv"${off(st.adv)}><summary>${T("conv.adv")}</summary><label>${T("conv.comp")} <select id="cvcomp">${[["standard", T("conv.comp.standard")], ["smallest", T("conv.comp.smallest")], ["none", T("conv.comp.none")]].map(([k, t]) => `<option value="${k}"${CONV.compression === k ? " selected" : ""}>${t}</option>`).join("")}</select></label> <button type="button" class="hq" data-help="compressione" title="${I18N.t("common.help")}" aria-label="${I18N.t("common.help")}">?</button> <span id="cvest" class="muted" aria-live="polite">${CONV.estimate()}</span></details>` +
-      `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm" id="dlall" data-cvtool="dl"${off(st.dl)} title="${T("conv.dl.title")}">${T("conv.dlall")}</button></div></div>`;
+      `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm dlic" id="dlall" data-cvtool="dl"${off(st.dl)} aria-haspopup="menu" aria-label="${T("conv.dlall")}" title="${T("conv.dlall")}">${CONV.ICON}</button><button type="button" class="sec sm" id="rmall">${T("load.table.removeAll")}</button></div></div>`;
   },
   // the table of the loading: the columns have a fixed width from the first row, so no phase moves them; `head` = the row of headings, `body` = the rows, `conc` = the concentration column is there
   table(/** @type {string} */ head, /** @type {string} */ body, conc = true, extra = 0) {

@@ -385,6 +385,7 @@ declare var colorSpot: any;
 declare var computePosition: any;
 declare var concFrom: any;
 declare var concMgL: any;
+declare var confirmRemoveAll: any;
 declare var contLegend: any;
 declare var contMarks: any;
 declare var contMenu: any;
