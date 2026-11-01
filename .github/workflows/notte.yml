@@ -27,8 +27,8 @@ jobs:
           # the pull-request workflow (test.yml) runs Linux on 3.11 only; Linux 3.14 runs here
           - {os: ubuntu-latest, python: "3.14"}
     runs-on: ${{ matrix.os }}
-    # measured on the runners: macOS 3.11 took 10.5 min serially; with the xdist workers (as in test.yml) and the cargo builds of the wasm tests 25 min is the ceiling
-    timeout-minutes: 25
+    # measured on the runners: macOS 3.11 took 10.5 min serially; with the xdist workers (as in test.yml) and the cargo builds of the wasm tests Windows 3.14 needs about 25 min (1435 tests), so the ceiling is 40
+    timeout-minutes: 40
     # Windows: the tests compare bytes and sizes of the checked-out files (LF) and read text files with the default encoding (UTF-8 here, as on Linux and macOS)
     env:
       PYTHONUTF8: "1"
