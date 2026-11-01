@@ -1,7 +1,7 @@
 """Window sizes: phone, tablet, laptop, large screen, and live resizing. No horizontal page scroll, panels follow the window, nothing unreadable."""
 import sys
 from playwright.sync_api import sync_playwright
-from lib import Run, mz, SH, drawer, stage, ready, attendi, frames
+from lib import Run, mz, SH, drawer, stage, ready, attendi, frames, close_side
 
 SIZES = [(360, 740), (768, 1024), (1024, 700), (1500, 900), (2560, 1300)]
 R = []
