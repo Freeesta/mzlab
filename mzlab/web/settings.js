@@ -124,15 +124,6 @@ function uipRestore() {            // theme, colours, reading and high-resolutio
   uipDo(() => { Object.assign(UIP, { theme: "light", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
   uipSave(); uipApply();
 }
-/** Privacy group body: export and import buttons, hidden file input, preview box and statuses (logic in esporta-dati.js and importa-dati.js). */
-/** @param {(k: string, p?: any) => string} T @param {(s: string) => string} esc */
-function uipPrivHtml(T, esc) { return `<div id="uip-priv" class="imp-fld"><button id="uip-export" type="button" title="${esc(T("export.title"))}">${T("export.btn")}</button></div><div class="hint">${T("export.hint")}</div><div id="uip-export-st" class="hint" role="status" aria-live="polite"></div>` + `<div class="imp-fld"><button id="uip-import" type="button" title="${esc(T("import.title"))}">${T("import.btn")}</button><input type="file" id="uip-import-file" accept=".zip,application/zip" hidden></div><div id="uip-import-box" role="group" aria-label="${esc(T("import.preview"))}" hidden></div><div id="uip-import-st" class="hint" role="status" aria-live="polite"></div>`; }
-/** @param {HTMLElement} d @param {(sel: string, ev: string, fn: (e: any) => void) => void} on */
-function uipPriv(d, on) {
-  on("#uip-export", "click", () => { import("./esporta-dati.js").then(m => m.start(d)).catch(() => { const st = d.querySelector("#uip-export-st"); if (st) st.textContent = I18N.t("export.err"); }); });
-  on("#uip-import", "click", () => { const f = /** @type {HTMLInputElement | null} */ (d.querySelector("#uip-import-file")); if (f) { f.value = ""; f.click(); } });
-  on("#uip-import-file", "change", e => { const f = e.target.files && e.target.files[0]; if (f) import("./importa-dati.js").then(m => m.begin(d, f)).catch(() => { const st = d.querySelector("#uip-import-st"); if (st) st.textContent = I18N.t("import.bad"); }); });
-}
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
   const C = window.IMPCOMP, T = (k, p) => I18N.t(k, p), esc = C.esc;
@@ -162,7 +153,6 @@ function uipOpen(btn) {
     + C.section(T("settings.language.label"), C.opts("seg2", C.radios("uip-lang", [["it", "Italiano", T("settings.language.title"), C.GICON.lang], ["en", "English", T("settings.language.title"), C.GICON.lang]], I18N.lang, "seg")))
     + grp("uip-g-look", "look", "settings.g.look", look, true) + grp("uip-a11y", "read", "settings.g.read", read, false) + grp("uip-g-data", "data", "settings.g.data", data, false)
     + grp("uip-g-app", "app", "settings.g.app", app, false)
-    + grp("uip-g-priv", "data", "settings.g.priv", uipPrivHtml(T, esc), false)
     + grp("uip-g-bug", "bug", "settings.g.bug", '<div id="uip-bug"></div>', false)
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false) : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false)
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
@@ -201,7 +191,6 @@ function uipOpen(btn) {
   });
   on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
   on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (window.XICBTN) XICBTN.setLens(UIP.xicLens); });
-  uipPriv(d, on);
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
     if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }

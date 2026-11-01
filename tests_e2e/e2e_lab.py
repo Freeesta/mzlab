@@ -98,6 +98,13 @@ try:
             assert "Carica un file per continuare" not in pg.inner_text("#tour-dialog")
             assert not errs, errs
         step("lab: the tour runs with no file (waits at the first data step) and with one file, no console errors", tour)
+        def gap():
+            GAP = "() => { const b = [...document.querySelectorAll('#nav button')].filter(x => x.offsetParent).pop().getBoundingClientRect(), t = document.getElementById('sb-toggle').getBoundingClientRect(); return t.left - b.right }"
+            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#sb-toggle", timeout=120000); pg.wait_for_function("typeof setView === 'function'", timeout=120000)
+            g = pg.evaluate(GAP); assert 0 <= g < 60, g
+            pg.set_viewport_size({"width": 390, "height": 800}); pg.evaluate("n => new Promise(ok => { const f = () => (--n > 0 ? requestAnimationFrame(f) : ok()); requestAnimationFrame(f) })", 3)
+            h = pg.evaluate("(() => { const h = document.querySelector('header'); return [h.scrollWidth, h.clientWidth] })()"); assert h[0] <= h[1] + 2, ("header clipped at phone width", h)
+        step("lab: the panels button follows the last tab (gap < 60 px), phone width fits", gap)
         def normal():
             pg, reqs = page(NORMAL, ""); pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("typeof MZLAB_LAB") == "undefined"
