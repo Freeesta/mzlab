@@ -33,7 +33,7 @@ try:
             assert dil in heads and "Pump (bar)" in heads, heads
         step("a preset and a custom column are added", add)
         def fill():
-            sel = "#flist tr:has(:text-is('X_t000min.mzML')) input[data-xf]"
+            sel = "#flist tr:has(:text-is('X_t000min')) input[data-xf]"
             inputs = pg.query_selector_all(sel); assert len(inputs) == 2
             inputs[0].fill("10"); inputs[0].dispatch_event("change")
             inputs[1].fill("abc"); inputs[1].dispatch_event("change")

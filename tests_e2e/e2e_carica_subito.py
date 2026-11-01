@@ -18,7 +18,7 @@ try:
         pg = r.page(p)
         pg.wait_for_selector("#start:not([hidden])", timeout=60000)
         stage(pg, [str(EX / f"{n}.mzML") for n in NAMES])
-        row = lambda n: f"#flist tr:has(:text-is('{n}.mzML'))"
+        row = lambda n: f"#flist tr:has(:text-is('{n}'))"
         def tval(n): return pg.eval_on_selector(f"{row(n)} input[data-k=time]", "e => e.value")
         def times_in_rows():
             pg.wait_for_function("[...document.querySelectorAll('#flist input[data-k=time]')].filter(x => x.value).length >= 4", timeout=30000)

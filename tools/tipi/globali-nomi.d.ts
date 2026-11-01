@@ -883,6 +883,7 @@ declare var tabFiles: any;
 declare var tabPanels: any;
 declare var timeShown: any;
 declare var timeStored: any;
+declare var toOverlaid: any;
 declare var toggleLock: any;
 declare var toggleTl: any;
 declare var toolbar: any;

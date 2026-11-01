@@ -55,7 +55,7 @@ try:
             except Exception as e:      # say why a row is missing (a failed conversion keeps its message in CONVROWS and in the loading box)
                 st = pg.evaluate("() => ({ files: ST.files.map(f => f.name), conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), up: (document.querySelector('#up') || {}).innerText })")
                 raise AssertionError(f"{str(e)[:120]} | {st}") from None
-            n = sorted(names(pg)); assert n == ["due.mzML", "mix.mzML", "uno.mzML", "vecchia.mzML"], n
+            n = sorted(names(pg)); assert n == ["due", "mix", "uno", "vecchia"], n
         step("a folder with two .D runs, an older .D with only data.ms and an mzML lists four files", folder)
         def notice():
             t = pg.inner_text("#up")

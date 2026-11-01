@@ -33,7 +33,14 @@ window.COLS = (() => {
     return at < 0 ? head : head.slice(0, at) + cols.map(c => `<th scope="col"${c.type === "number" ? ' class="num"' : ""}>${EH(label(c))}</th>`).join("") + head.slice(at);
   };
   /** the cells of a row, put before its last (buttons) one @param {{ name: string }} f @param {string} h */
-  const row = (f, h) => {
+  const row = (f, h) => bare(f, cells(f, h));
+  /** The name shown in the table is the file name without its extension (the cell title and the open button keep the full one). @param {{ name: string }} f @param {string} h */
+  const bare = (f, h) => {
+    const a = EH(f.name), b = EH(noExt(f.name));
+    return a === b ? h : h.replace(`class="ldname" title="${a}">${a}</span>`, `class="ldname" title="${a}">${b}</span>`).replace(`aria-label="${EH(I18N.t("load.table.open", { name: f.name }))}">${a}</button>`, m => m.replace(`>${a}<`, `>${b}<`));
+  };
+  /** @param {{ name: string }} f @param {string} h */
+  const cells = (f, h) => {
     const cols = active();
     if (!cols.length) return h;
     const at = h.lastIndexOf('<td style="white-space:nowrap">'), mine = values()[f.name] || {};
