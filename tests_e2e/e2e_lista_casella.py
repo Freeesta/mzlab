@@ -9,7 +9,8 @@ r = Run(port=8993, wd="/tmp/wd_lista_casella")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
+        attendi(pg, "document.querySelector('#flist input[data-k=use]')", 20000)
         pg.click("text=Carica dati"); ready(pg)
         pg.wait_for_selector("#flst .fl > input[data-k]", timeout=5000)
         def small_box():
