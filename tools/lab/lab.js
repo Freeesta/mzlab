@@ -57,7 +57,7 @@
   // tour's example loader are hidden / inert. The elements stay in the DOM (draw.js binds #ex-link when it loads), hidden by CSS and `hidden`.
   try {
     var css = document.createElement("style");
-    css.textContent = "#demo,#ex-link,:has(> #ex-link){display:none!important}";
+    css.textContent = "#demo,#ex-link,:has(> #ex-link){display:none!important}#nav{min-width:0!important}";      // #nav keeps room for four tabs; with two it would leave a wide gap before the panels button
     document.head.appendChild(css);
     var hideExamples = function () {
       var ids = ["demo", "ex-link"];
