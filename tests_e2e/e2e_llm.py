@@ -84,7 +84,7 @@ try:
             pg = fresh(profile="corso"); reqs.clear()
             attendi(pg, "document.readyState === 'complete' && !!document.querySelector('#nav')")
             # the Flow tab is open to everyone: the profile corso gets the Flow, but nothing of the assistant
-            pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000); pg.wait_for_timeout(1500)
+            pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000); pg.evaluate("window.FLOW.whenLate")   # the lazy parts of the Flow have loaded
             assert pg.locator("#flx-assistant").count() == 0 and pg.locator("#flx-llm").count() == 0
             assert not [r for r in reqs if "/llm/" in r or "flow-llm" in r], "nothing of the assistant is downloaded with the profile corso"
             pg.context.close()
