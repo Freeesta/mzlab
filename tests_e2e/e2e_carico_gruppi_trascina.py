@@ -98,6 +98,7 @@ try:
         step("Group by → Condition from the control above the table: a header per group and «Ungrouped», same labels in the side list", by)
         def one():
             table(pg); global box0; box0 = pg.evaluate(BOX)
+            pg.evaluate("window.__cls = 0")      # the claim starts at the first drag: the 22 px the side list loses while the 30 files finish opening is the load, not a drag
             seen = []
             drag(pg, "MQ_O2_T00", THEAD("PMS"), hold=lambda: seen.extend([pg.evaluate(f"document.querySelector('{THEAD('PMS')}').classList.contains('gdnd-over')"), pg.evaluate(LIVE)]))
             assert seen == [True, "Move to PMS · 1 file"], seen
