@@ -853,6 +853,7 @@ declare var spLinkFreeze: any;
 declare var spanOf: any;
 declare var specCaption: any;
 declare var specClick: any;
+declare var specColor: any;
 declare var specHere: any;
 declare var specParams: any;
 declare var specPick: any;
