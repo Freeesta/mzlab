@@ -110,6 +110,8 @@ declare var INTOPT: any;
 declare var INT_COLS: any;
 declare var INT_EPS: any;
 declare var INT_HEADS: any;
+declare var INT_NEW: any;
+declare var INT_NEW_HEADS: any;
 declare var J: any;
 declare var JSONSCAN: any;
 declare var KEY: any;

@@ -176,7 +176,14 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
 if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.int", gruppo: "tools", ordine: 1, viste: ["chrom", "xic", "mrm"],
   voci: (/** @type {Bag} */ c) => intMenuItems(c.p, c.x, c.near, c.py).filter(/** @param {any} i */ i => i !== "-").map(/** @param {any} i */ i => ({ nome: i.label, icon: i.icon, esegui: i.fn })) });
 function allInts() {
-  return E.panels.flatMap((/** @type {Bag} */ p) => p.ints.map((/** @type {Bag} */ i) => { const f = E.files[i.k], std = f && f.type === "standard" && f.conc != null; return { ...i, _p: p, _it: i, panel: ptitle(p.title), conc: std ? f.conc : null, cunit: std ? f.cunit || "" : "" }; }));      // the concentration is only for standards: the calibration line is made by the student in Excel
+  // the concentration is for standards and QCs (the calibration line is made by the student in Excel); q1/q3/transition only for MRM traces
+  return E.panels.flatMap((/** @type {Bag} */ p) => p.ints.map((/** @type {Bag} */ i) => {
+    const f = E.files[i.k], kind = f ? CAMPIONI.kindOf(f) : "sample", withConc = f && (kind === "std" || kind === "qc") && f.conc != null;
+    const s = p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === i.key), mrm = !!(s && s.q1 != null);
+    return { ...i, _p: p, _it: i, panel: ptitle(p.title), conc: withConc ? f.conc : null, cunit: withConc ? f.cunit || "" : "",
+      role: I18N.t(`export.int.role.${kind === "calibration" ? "std" : ["sample", "blank", "dark", "infusion", "std", "qc"].includes(kind) ? kind : "sample"}`),
+      q1: mrm ? s.q1 : null, q3: mrm ? s.q3 : null, transition: mrm ? s.tname || "" : "" };
+  }));
 }
 // optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
 const INTOPT = { sn: false, par: false, q: false };
@@ -187,6 +194,9 @@ COMANDI.gestore("peaks.settings", {
 });
 const INT_COLS = ["panel", "ion", "file", "time", "conc", "cunit", "a", "b", "rt", "area", "height", "corr"];
 const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "rt1", "apex", "area", "height", "corr"].map(k => I18N.t(`export.int.${k}`));
+// appended after every other column of the export: role of the file, and the MRM transition (Q1, Q3, name; empty for an XIC)
+const INT_NEW = ["role", "q1", "q3", "transition"];
+const INT_NEW_HEADS = INT_NEW.map(k => I18N.t(`export.int.${k}`));
 function intExtra(/** @type {Bag} */ r) {
   const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === it.key);
   const pk = s ? chromPeak(s.x, s.y, r.a, r.b) : null, sd = s && it.noise ? noiseSD(s.x, s.y, it.noise[0], it.noise[1]) : null;
@@ -226,8 +236,8 @@ async function showInts() {
       const r = rows[Number(b.dataset.nz)]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
       stepMsg(r._p, I18N.t("int.pickNoise.msg"), true);
     });
-    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : [])],
-      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18] }];
+    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS],
+      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : []), ...INT_NEW.map(c => r[c])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18, 14, 10, 10, 22] }];
     Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
     Q("#ig-csv").onclick = () => dlc(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
   });

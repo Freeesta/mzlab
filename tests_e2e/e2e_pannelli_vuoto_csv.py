@@ -36,9 +36,10 @@ try:
             with pg.expect_download() as d: pg.locator("#ctx div", has_text="CSV").first.click()
             f = d.value; assert f.suggested_filename.endswith(".csv"), f.suggested_filename
             b = open(f.path(), "rb").read(); assert b[:3] == b"\xef\xbb\xbf", "BOM"
-            lines = b[3:].decode("utf-8").split("\n"); assert lines[0].startswith("# mzLab "), lines[0][:40]
-            assert "," in lines[1] and ";" not in lines[1] and len(lines) > 5, lines[1]
-        step("CSV of a panel: BOM, provenance line, comma-separated", csv)
+            lines = b[3:].decode("utf-8").rstrip("\n").split("\n"); assert not lines[0].startswith("# mzLab "), lines[0][:40]
+            assert ";" in lines[0] and "," not in lines[0] and len(lines) > 5, lines[0]      # the harness runs in it-IT: Italian Excel opens it into columns, header on row 1
+            assert lines[-1].startswith('"# mzLab ') or lines[-1].startswith("# mzLab "), lines[-1][:40]      # the provenance closes the file
+        step("CSV of a panel: BOM, header on line 1, semicolon-separated, provenance as the last row", csv)
         def popover():
             b = pg.locator(".pnl.chrom [data-a=cpar]").first
             assert b.get_attribute("aria-description") and b.get_attribute("aria-description") in b.get_attribute("title"), "the note is the tooltip and the description"
