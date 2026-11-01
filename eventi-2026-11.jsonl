@@ -4588,3 +4588,4 @@
 {"v":1,"ts_utc":"2026-11-01T12:11:10Z","tipo":"carico","k":"2026-11-01T12:1","job_in_coda":0,"job_in_corso":19}
 {"v":1,"ts_utc":"2026-11-01T12:34:25Z","azione":"aperta","tipo":"pr","pr":2466,"sha":"79807fe7f38271186bef3308c6ff3108b7be10c7"}
 {"v":1,"ts_utc":"2026-11-01T12:36:46Z","azione":"push","titolo":"Merge origin/main into claude/lr-a-p8","merge_main":true,"aree":{"rust":1,"docs":2,"web":26,"test":23,"tools":2,"generati":1},"tipo":"pr","pr":2466,"sha":"9b4baa2c34791732ba0d57b7208efb7376c399e8"}
+{"v":1,"ts_utc":"2026-11-01T12:41:13Z","azione":"push","titolo":"Register picchi.js as a place that sets the noise zone","merge_main":false,"aree":{"web":1},"tipo":"pr","pr":2466,"sha":"1dd67d80ad489ef2254eec858eedaebcc83b2542"}
