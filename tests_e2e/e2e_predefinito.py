@@ -94,12 +94,12 @@ try:
             pg2.goto(f"http://127.0.0.1:{r.port}/"); pg2.wait_for_function("window.DESKDEF && typeof window.upload === 'function' && window.qqReady === true", timeout=60000)
             pg2.evaluate("""async () => { const b = await (await fetch('static/esempi/FullScan_t15.mzML')).blob();
                 window.MZLAB_TOFILE = f => new File([b], f.name); window.__seen = [];
-                new MutationObserver(() => { const d = document.querySelector('#drop'); if (d && d.offsetParent !== null) window.__seen.push('landing'); }).observe(document.body, {subtree: true, attributes: true, childList: true}); }""")
+                new MutationObserver(() => { const d = document.querySelector('#drop'); if (d && d.offsetParent !== null && getComputedStyle(d).visibility !== 'hidden') window.__seen.push('landing'); }).observe(document.body, {subtree: true, attributes: true, childList: true}); }""")
             arrive_on(pg2, F("Open_with.mzML"))
             pg2.wait_for_selector("#flst .fl[data-k], #flst .fl.pend", timeout=60000)
             names = pg2.evaluate("[...document.querySelectorAll('#flst .fl')].map(e => e.textContent)")
             assert any("Open_with" in n for n in names), names
-            assert pg2.evaluate("window.__seen.length") == 0, "the landing was painted between the arrival and the side list"
+            assert pg2.evaluate("window.__seen.length") == 0, "the drop area was painted between the arrival and the side list"
             pg2.close()
         def arrive_on(pg2, files):
             pg2.evaluate("o => { window.__open = o; }", {"files": files, "ask": False})

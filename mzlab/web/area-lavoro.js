@@ -48,6 +48,8 @@ function syncWork(/** @type {boolean} */ force = false) {
   if (sig === _workSig && !force) return;
   const was = ws.dataset.work;
   _workSig = sig; ws.dataset.work = w;
+  // files are being read on the landing: the drop area keeps its box but is not painted, the progress rows (#up) sit in it as the status
+  ws.toggleAttribute("data-up", up && w === "landing");
   // the landing forgets «Sample table»; once empty it waits again for the first file to be shown
   const rows = workRows(typeof E !== "undefined" ? E.files : []), land = w === "landing" && rows;
   if (w === "landing") S.table = false;
