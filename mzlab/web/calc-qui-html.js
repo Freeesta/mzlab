@@ -45,7 +45,7 @@ const CALCQUIHTML = (() => {
   /** The table of the adducts (formula, or the number taken as an observed m/z). @param {Bag} g @param {Bag} o @param {Bag} view */
   function addHtml(g, o, view) {
     const st = { pol: o.pol, more: !!view.more, lr: !o.hr, unit: o.unit, tol: o.tol };
-    return AH.mainHtml(g.tab, !!g.formula, !!g.obs || !g.formula, st);
+    return AH.mainHtml(g.tab, !!g.formula, !g.catalogue && (!!g.obs || !g.formula), st);
   }
   const TITLE = { liste: "cq.g.liste", perdite: "cq.g.perdite", addotti: "cq.g.addotti", diff: "cq.g.diff" };
   /** The groups, each a `details` (open while it has a close match, or the adduct table of a formula).
@@ -54,7 +54,7 @@ const CALCQUIHTML = (() => {
     if (!gs.length) return `<p class="muted cq-none">${T("cq.none", { tol: o.tol + " " + (o.unit === "ppm" ? "ppm" : "Da") })}</p>`;
     return gs.map(g => {
       if (g.id === "diff" && /** @type {Bag} */ (g).catalogue) return AH.diffsHtml(g.tab, { diffs: view.open.has("catdiff"), delta: "" });
-      const open = view.open.has(g.id) || (!view.open.has("-" + g.id) && (g.near <= 1 || (g.id === "addotti" && ctx.formula)));
+      const open = view.open.has(g.id) || (!view.open.has("-" + g.id) && (g.near <= 1 || (g.id === "addotti" && (ctx.formula || /** @type {Bag} */ (g).catalogue))));
       const all = view.all.has(g.id);
       const body = g.id === "addotti" ? addHtml(g, o, view) : rowsOf(g.id, g.id === "liste" ? listeRows(g, o) : g.id === "perdite" ? lossRows(g, o) : diffRows(g), all);
       const n = g.id === "addotti" ? "" : ` <span class="cq-n">${g.n}</span>`;
