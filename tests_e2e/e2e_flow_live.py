@@ -188,7 +188,7 @@ try:
         step("the cards and the table of files say what the steps did, by keyboard, with no axe violation", cards)
 
         # --- C. a mixed series: a profile file whose centroid index Data holds (first: the recipe of the series is taken from the first file), a centroid file, a profile file without one
-        MODES = """(names) => { const rows = names.map((n, k) => ({ name: n.replace(/\\.mzidx$/, '.mzML'), spectrum_mode: k === 1 ? 'centroid' : 'profile', group: 'sample', kind: 'full', use: true }));
+        MODES = """(names) => { const rows = names.map((n, k) => ({ name: n.replace(/\\.mzidx$/, '.mzML'), spectrum_mode: k === 1 ? 'centroid' : 'profile', hr_profile: k === 2, group: 'sample', kind: 'full', use: true }));
           const open = rows.map((r, k) => ({ file: r.name, name: r.name, label: r.name, k, type: 'sample', kind: 'full', group: 'sample', vis: false }));
           Object.defineProperty(ST, 'files', { get: () => rows, set: () => {}, configurable: true }); Object.defineProperty(E, 'files', { get: () => open, set: () => {}, configurable: true }); return rows.map(r => r.name); }"""
         PUT_CEN = """async (n) => { let d = await navigator.storage.getDirectory(); for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
