@@ -44,7 +44,7 @@ try:
             t = pg.inner_text("#rf-regulatory")
             assert pg.inner_text("#rf-regulatory-h") == "Regulatory lists", t
             assert "Screened against:" in t and "version 2000-01-01" in t and "retrieved 2000-01-02" in t and "SHA-256" in t, t
-            assert "3 lists in force, 1 proposal." in g["header"], g["header"]
+            assert "4 lists in force, 1 proposal." in g["header"], g["header"]
             assert "not screened by mass." in t and g["disclaimer"] in t, t
         step("the section has the header with versions, the coverage and the disclaimer", section)
         def table():
