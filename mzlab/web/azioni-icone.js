@@ -58,7 +58,7 @@ const AZIONI_ICONE = (() => {
     "spec.iso": "iso", "spec.isoRes": "isoRes", "spec.isoOff": "isoOff", "spec.full": "fit", "spec.freeze": "lock", "spec.relink": "link", "spec.generate": "formula", "spec.fmClear": "clear",
     "spec.marker": "flag", "spec.noCont": "filter", "spec.disp": "gear", "spec.ms2": "ms2", "spec.dda": "dda", "spec.ddaShow": "eye", "spec.lib": "book", "spec.exportMgf": "save",
     "spec.exportMsp": "save", "spec.exportMassbank": "save", "spec.exportSirius": "save", "spec.contLists": "list", "spec.known": "listCheck", "spec.addLab": "tag",
-    "chrom.avgSel": "avg", "chrom.specAtRt": "atRt", "chrom.uvAtRt": "atRt", "chrom.uvAvgSel": "avg", "chrom.wl": "xic", "uv.wlAt": "xic", "uv.wlView": "xic", "chrom.xic": "xic", "xic.addIon": "plus", "chrom.annotate": "note", "chrom.disp": "gear", "chrom.ddaShow": "eye",
+    "chrom.avgSel": "avg", "chrom.specAtRt": "atRt", "chrom.ms2AtRt": "ms2", "chrom.uvAtRt": "atRt", "chrom.uvAvgSel": "avg", "chrom.wl": "xic", "uv.wlAt": "xic", "uv.wlView": "xic", "chrom.xic": "xic", "xic.addIon": "plus", "chrom.annotate": "note", "chrom.disp": "gear", "chrom.ddaShow": "eye",
     "chrom.identAll": "search", "chrom.tree": "tree", "chrom.masscal": "gauge", "chrom.ibk": "baseline", "chrom.int": "area", "chrom.press": "gauge", "chrom.grad": "ramp", "chrom.etpk": "flag",
     "disp.affianca": "side", "disp.su": "up", "disp.giu": "down", "disp.intera": "wide", "disp.uguali": "equal", "disp.ripristina": "reset",
     "view.resetZoom": "reset", "ann.edit": "edit", "ann.delete": "trash", "metodo.xic": "xic", "metodo.ms2": "ms2",
