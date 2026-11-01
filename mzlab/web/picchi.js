@@ -50,7 +50,7 @@ function intTargets(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {nu
 }
 function refreshIntf(/** @type {Bag} */ p) {
   const sel = p.el.querySelector('[data-a="intf"]'); if (!sel) return;
-  const on = (p.imode === "auto" || p.imode === "man") && p.type !== "chrom" && p.type !== "mrm" && p._a && p._a.sr && p._a.sr.length > 1;
+  const on = (p.imode === "auto" || p.imode === "man") && p.type !== "chrom" && !p.intfFixed && p._a && p._a.sr && p._a.sr.length > 1;
   sel.hidden = !on; if (!on) return;
   const opts = [["", I18N.t("int.target.clicked")], ["all", I18N.t("int.target.all")], ...p._a.sr.map((/** @type {Bag} */ s) => [s.key, s.name])], sig = JSON.stringify(opts);
   if (sel._sig !== sig) { sel._sig = sig; sel.innerHTML = opts.map(o => h`<option value="${o[0]}">${o[1]}</option>`).join(""); }
