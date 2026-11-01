@@ -16,14 +16,14 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         K = pg.evaluate("E.files.find(f=>f.file==='HR_DDA-Exploris-t30.mzML#MS1').k")
         sp = pg.evaluate(f"(()=>{{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');return newSpec(c,13.9,14.7,{K}).id}})()")
-        pg.wait_for_function(f"(()=>{{const p=E.panels.find(q=>q.id=={sp});return p&&p._a&&p._a.data&&p._a.data.length}})()", timeout=20000); pg.wait_for_timeout(400)
+        pg.wait_for_function(f"(()=>{{const p=E.panels.find(q=>q.id=={sp});return p&&p._a&&p._a.data&&p._a.data.length}})()", timeout=20000)
         # worst offender over the label boxes: how far (px) a bar inside the span rises above the bottom of the text
         PROBE = f"""(() => {{ const p = E.panels.find(q => q.id == {sp}), a = p._a, d = a.data[0].d; let worst = -1e9, n = 0;
             for (const l of a.lbls) {{ n++; for (let j = 0; j < d.mz.length; j++) {{ const x = a.X(d.mz[j]); if (x < l.x || x > l.x + l.w || d.y[j] <= 0) continue;
               worst = Math.max(worst, (l.y + l.h) - a.Y(Math.min(d.y[j], a.ymax))); }} }}
             return {{ n, worst }}; }})()"""
         def probe(zoom, zy):
-            pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={sp});p.zoom={zoom};p.zoomY={zy};p.thr=0.5;p.nlab=40;draw(p)}})()"); pg.wait_for_timeout(500)
+            pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={sp});p.zoom={zoom};p.zoomY={zy};p.thr=0.5;p.nlab=40;draw(p)}})()"); frames(pg, 3)
             return pg.evaluate(PROBE)
         def clear():
             for zoom, zy in [("null", "null"), ("[300,520]", "null"), ("[300,520]", "[0,0.3*E.panels.find(q=>q.id==%d)._a.yfull[1]]" % sp), ("[380,440]", "[0,0.1*E.panels.find(q=>q.id==%d)._a.yfull[1]]" % sp)]:
