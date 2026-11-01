@@ -4862,3 +4862,4 @@
 {"v":1,"ts_utc":"2026-11-01T15:53:35Z","azione":"aperta","tipo":"pr","pr":2470,"sha":"12fa20ee52c3f8fbb15c417d41795850ec479f4c"}
 {"v":1,"ts_utc":"2026-11-01T15:58:56Z","azione":"push","titolo":"Trim start-up weight of the list grouping code","merge_main":false,"aree":{"web":2},"tipo":"pr","pr":2470,"sha":"26bc63b9980b9b0218be9076c5a78f69b3ef6224"}
 {"v":1,"ts_utc":"2026-11-01T16:01:42Z","azione":"push","titolo":"Panel title of the file list: File / Files","merge_main":false,"aree":{"web":5},"tipo":"pr","pr":2470,"sha":"b03526b719a7f8517d43329e8e5207ded42c3ef3"}
+{"v":1,"ts_utc":"2026-11-01T16:03:44Z","azione":"push","titolo":"Keep series-name oracle valid with the I18N stub in perf test","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":2469,"sha":"705a55d2d1d98acbc2fc51e1fa0516114407c354"}
