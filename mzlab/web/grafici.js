@@ -419,6 +419,7 @@ async function drawLines(p) {
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(/** @type {any} */ (seg).x); seg = null; } });
     if (seg) tri(/** @type {any} */ (seg).x);
   }
+  // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js)
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
@@ -428,13 +429,13 @@ async function drawLines(p) {
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
-      const b0 = it.base ? Y(U(s, baseAt(it.base, s.x[i0]))) : Y(U(s, s.ys[i0])), b1 = it.base ? Y(U(s, baseAt(it.base, s.x[i1]))) : Y(U(s, s.ys[i1]));   // HR automatic: its own baseline
+      const b0 = Y(U(s, it.base ? baseAt(it.base, s.x[i0]) : edge3(s.y, i0))), b1 = Y(U(s, it.base ? baseAt(it.base, s.x[i1]) : edge3(s.y, i1)));   // HR automatic: its own baseline
       g.lineTo(X(s.x[i1]), b1); g.lineTo(X(s.x[i0]), b0); g.closePath(); g.fill(); g.globalAlpha = 1;
       if (chosen) { g.strokeStyle = s.color; g.lineWidth = 2.5; g.stroke(); }
       g.strokeStyle = s.color; g.lineWidth = 1; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(X(s.x[i0]), b0); g.lineTo(X(s.x[i1]), b1); g.stroke(); g.setLineDash([]);
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
-    for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
+    for (const e of ["a", "b"]) { const px = X(s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
     const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: fmtFull(r.area), y: fmt(r.height) }) }); g.font = fpx(12);
