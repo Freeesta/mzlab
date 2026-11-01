@@ -16,12 +16,13 @@ GROUPS = "Array.from(document.querySelectorAll('#flst .fgh')).map(g=>g.querySele
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        load(pg, [D / "HR_DDA-Exploris-t30.mzML"] + V, 6000, 5); pg.wait_for_timeout(1500)
+        # the list keeps the order of the drop and opens its first file: the Full Scan file goes first
+        load(pg, [V[0], D / "HR_DDA-Exploris-t30.mzML"] + V[1:], 6000, 5); pg.wait_for_timeout(1500)
         def first_only():
             v = pg.evaluate("E.files.map(f=>[f.file,f.vis])")
             assert [x[0] for x in v if x[1]] and all(x[0].startswith("HR_full-t5") for x in v if x[1]), v
             assert sum(1 for x in v if not x[1]) == 4, v
-        step("only the first file (by time) is open", first_only)
+        step("only the first file (in list order) is open", first_only)
         def groups():
             g = pg.evaluate(GROUPS)
             assert sorted(g) == sorted(["Full Scan|2", "MS2 (Product Ion)|1", "Infusione|1"]), g
@@ -57,7 +58,7 @@ try:
             pg.evaluate("E.files.filter(f => f.file.startsWith('HR_DDA')).forEach(f => { f.vis = true; }); groupFiles()"); pg.wait_for_function("E.files.some(f => f.ugrp)")
             g = pg.evaluate(GROUPS); assert any(re.match(r"(Group|Gruppo) 1\|", x) for x in g) and not any(x.startswith("DDA") for x in g), g
             assert pg.evaluate("E.files.filter(f => f.ugrp).every(f => f.vis)")
-            pg.evaluate("ugSet(ugFiles(E.files.find(f => f.ugrp).ugrp), '')"); pg.wait_for_function("!E.files.some(f => f.ugrp)")
+            pg.evaluate("GRUPPI.ungroup(E.files.find(f => f.ugrp).ugrp)"); pg.wait_for_function("!E.files.some(f => f.ugrp)")
             assert not any(re.match(r"(Group|Gruppo) 1", x) for x in pg.evaluate(GROUPS))
         step("the user groups the shown files and dissolves the group", own_group)
 finally:
