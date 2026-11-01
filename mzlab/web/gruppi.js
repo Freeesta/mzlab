@@ -67,13 +67,26 @@ window.GRUPPI = (() => {
     const top = () => STORIA?.pila.v[STORIA.pila.v.length - 1], was = top(); fileViewDo(go);
     const l = top(); if (l && l !== was && l.cmd === "files.view") l.w = UNDO[action];
   }
+  /** Spelling-blind key of a group name: «Full_scan», «full scan» and «FULL SCAN» are the same name. @param {string} x */
+  const nk = x => String(x).toLowerCase().replace(/[\s_]+/g, "");
+  /** True when `label` would make a second group of the same name: the name of an experiment-type group, or another spelling of an existing user group (the exact same label just joins it). @param {string} label @param {string} [except] a label that is being renamed */
+  function clash(label, except = "") {
+    const k = nk(label); if (!k) return false;
+    if ([...Object.values(KIND), ...Object.values(GRP_HR).map(/** @param {any} f */ f => f())].some(x => nk(x) === k)) return true;
+    return [...flSide().map(/** @param {any} x */ x => x.ugrp), ...rowsT().map(x => x.ugrp)].some(l => l && l !== label && l !== except && nk(l) === k);
+  }
+  /** The labels of a «Group by» result with every clash made unique by « (2)». @param {{ out: Map<string, string>, order: string[] }} r */
+  function fit(r) {
+    const m = new Map(); const f = /** @param {string} l */ l => { if (!clash(l)) return l; if (!m.has(l)) m.set(l, l + " (2)"); return m.get(l); };
+    r.out.forEach((l, b) => r.out.set(b, f(l))); r.order = r.order.map(f); return r;
+  }
   /** The name of a new group: the common tokens of the names (engine) when no group has it yet, else «Group N». @param {string[]} files */
   async function newName(files) {
     const used = new Set([...flSide().map(/** @param {any} x */ x => x.ugrp), ...rowsT().map(x => x.ugrp)]);
     const ans = await fetch("api/campioni/nome_gruppo", { method: "POST", body: JSON.stringify({ names: files }) }).then(r => r.json()).catch(() => null);
     const nome = ans && !ans.error && ans.nome ? clip(String(ans.nome)) : "";
-    if (nome && !used.has(nome)) return nome;
-    let n = 1; while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
+    if (nome && !used.has(nome) && !clash(nome)) return nome;
+    let n = 1; while (used.has(I18N.t("files.ugrp.name", { n })) || clash(I18N.t("files.ugrp.name", { n }))) n++;
     return I18N.t("files.ugrp.name", { n });
   }
   /** The label of the file `base` in the side list or the table ("" = none). @param {string} base */
@@ -90,9 +103,10 @@ window.GRUPPI = (() => {
   function hasGroups() { return E.files.some(/** @param {any} f */ f => f.ugrp) || rowsT().some(f => f.ugrp); }
   /** Puts the files `bases` (physical file names) into group `label` ("" = out of every group): a manual edit, one undo step. @param {string[]} bases @param {string} label */
   function set(bases, label, action = "move") {
+    if (clash(label)) { directNote("groups.clash", { g: label }); return false; }
     const map = remap(l => l);
     bases.forEach(b => map.set(b, clip(label)));
-    write(map, { by: "custom" }, E.ugOrder || [], true, action);
+    write(map, { by: "custom" }, E.ugOrder || [], true, action); return true;
   }
   /** A file dropped ONTO another one: both (and the dragged files' companions) join the group of the target, or make a new one; returns the group. @param {string[]} bases @param {string} target */
   async function onto(bases, target) {
@@ -105,6 +119,7 @@ window.GRUPPI = (() => {
   async function rename(old) {
     const v = clip((await ask(I18N.t("files.group.prompt"), old)) || "");
     if (!v || v === old) return;
+    if (clash(v, old)) { directNote("groups.clash", { g: v }); return; }
     E._grpOpen = E._grpOpen || {}; if (E._grpOpen["u:" + old] !== undefined) E._grpOpen["u:" + v] = E._grpOpen["u:" + old];
     const map = remap(l => l === old ? v : l);
     write(map, { by: "custom" }, (E.ugOrder || []).map(x => x === old ? v : x), true, "rename");
@@ -130,7 +145,7 @@ window.GRUPPI = (() => {
       if (!spec || spec.by === "flat") { write(new Map(), spec || undefined, [], true, "none"); return true; }
       const ans = await vars(spec.manuale);
       if (!ans) return false;
-      const { out, order } = labelsOf(ans, spec, I18N.t("groups.other"));
+      const { out, order } = fit(labelsOf(ans, spec, I18N.t("groups.other")));
       followed = names().join("\n");
       write(out, spec, order, true, spec.manuale?.has ? "contains" : spec.manuale ? "token" : spec.then ? "then" : "by");
       if (replaced) note("groups.replaced");
@@ -144,7 +159,7 @@ window.GRUPPI = (() => {
       timer = window.setTimeout(async () => {
         const ans = await vars(ub.manuale); if (!ans || E.ugBy !== ub) return;
         followed = key;
-        const { out, order } = labelsOf(ans, ub, I18N.t("groups.other"));
+        const { out, order } = fit(labelsOf(ans, ub, I18N.t("groups.other")));
         if (E.files.every(/** @param {any} f */ f => (f.ugrp || "") === (out.get(fileBase(f.file)) || "")) && rowsT().every(f => (f.ugrp || "") === (out.get(f.name) || "")) && (E.ugOrder || []).join("\n") === order.join("\n")) return;
         write(out, ub, order, false);
       }, 300);

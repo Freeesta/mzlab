@@ -64,6 +64,7 @@ I18N.add("en", {
   "groups.undo.rename": "Rename group",
   "groups.undo.ungroup": "Ungroup",
   "groups.move.menu": "Move to group ▸",
+  "groups.clash": "A group with this name already exists: «{g}» was not used.",
   "groups.move.new": "New group…",
   "groups.move.none": "Ungrouped",
   "groups.move.prompt": "Name of the new group"
