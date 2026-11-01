@@ -49,7 +49,7 @@ try:
                 assert pg.evaluate("getComputedStyle(document.querySelector('#flst .fgh[data-gt=ms2]')).display") != "none"
         step("light and dark", themes)
         def phone():
-            pg.set_viewport_size({"width": 390, "height": 800}); pg.wait_for_timeout(300)
+            pg.set_viewport_size({"width": 390, "height": 800}); ready(pg)
             assert pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "no horizontal overflow"
         step("phone width", phone)
 finally:
