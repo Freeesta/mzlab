@@ -158,7 +158,7 @@ try:
             pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg)
             assert not pg.is_visible("#dfiles"), "hidden when it was left hidden"
             pg.evaluate("localStorage.setItem('mzlab.barra.lato','bogus'); localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg)
-            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert "pinned" not in st and st["w"] == 300 and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") == "left", st
+            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert "pinned" not in st and st["w"] == 280 and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") == "left", st
             pg.evaluate("localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'file', open:true, w:99999}))"); pg.reload(); ready(pg)
             assert pg.evaluate("BARRA.width") <= 560, "a width out of range goes back to the default"
             pg.evaluate("localStorage.removeItem('mzlab.barra.lr'); localStorage.removeItem('mzlab.barra.lato')"); pg.reload(); ready(pg)
