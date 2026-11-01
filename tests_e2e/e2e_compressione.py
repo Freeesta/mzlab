@@ -67,12 +67,12 @@ try:
                 pg.select_option("#cvcomp", k)
                 with pg.expect_download(timeout=120000) as d: pg.locator("#flist [data-dl]").first.click()
                 path = D / f"serie_{k}.mzML"; d.value.save_as(str(path)); saved[k] = path
-                pg.wait_for_function("document.querySelector('#flist [data-dl]').textContent.includes('(')", timeout=60000)
+                pg.wait_for_function("document.querySelector('#flist [data-dl]').title.includes('(')", timeout=60000)
         step("the three mzML files are written and saved", save_all)
         def real_size_on_button():
-            t = pg.inner_text("#flist [data-dl]")
-            assert "(" in t and ("kB" in t or "MB" in t), t
-        step("the real size shows on the download button after", real_size_on_button)
+            t = pg.get_attribute("#flist [data-dl]", "title"); assert "(" in t and ("kB" in t or "MB" in t), t
+            assert "(" not in pg.inner_text("#flist [data-dl]"), "the size is in the Size column and the tooltip, not in the label"
+        step("the real size shows in the tooltip of the download button after, not in its label", real_size_on_button)
         def size_order():
             s = {k: v.stat().st_size for k, v in saved.items()}
             assert s["smallest"] < s["standard"] < s["none"], s
