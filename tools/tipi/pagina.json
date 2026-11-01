@@ -60,6 +60,7 @@
     "../../mzlab/web/metodo-doc.js",
     "../../mzlab/web/chrom-primo.js",
     "../../mzlab/web/cache-dati.js",
+    "../../mzlab/web/nb-pendiente.js",
     "../../mzlab/web/explore.js",
     "../../mzlab/web/lista-file.js",
     "../../mzlab/web/open-now.js",
