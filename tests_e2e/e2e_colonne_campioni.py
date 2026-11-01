@@ -50,7 +50,7 @@ try:
             assert row.endswith("\t10\t2.5"), row
         step("the TSV carries the columns", export)
         def reload():
-            pg.evaluate("nbSave()"); pg.wait_for_timeout(800); pg.reload(); pg.wait_for_timeout(3000)
+            pg.evaluate("nbSave()"); pg.reload(); pg.wait_for_function("typeof NB !== 'undefined' && NB.sampleCols && NB.sampleCols.on.length === 2", timeout=30000)
             assert pg.evaluate("JSON.stringify(NB.sampleCols.on.length)") == "2"
             assert pg.evaluate("NB.sampleEx['X_t000min.mzML'] && Object.keys(NB.sampleEx['X_t000min.mzML']).length") == 2
         step("a reload keeps the definitions and the values", reload)

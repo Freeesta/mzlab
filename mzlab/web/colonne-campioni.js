@@ -64,7 +64,7 @@ window.COLS = (() => {
 <button type="button" class="sec sm" data-cdown="${EH(c.id)}" aria-label="${EH(t("load.cols.down", { name: c.name }))}"${i < 0 || i >= s.on.length - 1 ? " disabled" : ""}>↓</button>
 <button type="button" class="sec sm" data-cdel="${EH(c.id)}" aria-label="${EH(t("load.cols.remove", { name: c.name }))}">&times;</button></li>`;
     }).join("");
-    box.innerHTML = `<fieldset class="colsset"><legend>${EH(t("load.cols.preset"))}</legend>
+    const html = `<fieldset class="colsset"><legend>${EH(t("load.cols.preset"))}</legend>
 ${PRESETS.map(p => check(p[0], pname(p[0]), on.has(p[0]))).join("")}</fieldset>
 ${s.custom.length ? `<fieldset class="colsset"><legend>${EH(t("load.cols.custom"))}</legend><ul class="colslist">${custom}</ul></fieldset>` : ""}
 <fieldset class="colsset"><legend>${EH(t("load.cols.add.h"))}</legend><div class="colsadd">
@@ -72,13 +72,15 @@ ${s.custom.length ? `<fieldset class="colsset"><legend>${EH(t("load.cols.custom"
 <label>${EH(t("load.cols.type"))} <select id="colstype"><option value="text">${EH(t("load.cols.type.text"))}</option><option value="number">${EH(t("load.cols.type.number"))}</option></select></label>
 <label>${EH(t("load.cols.unit"))} <input type="text" id="colsunit" size="6"></label>
 <button type="button" id="colsadd">${EH(t("load.cols.add"))}</button></div></fieldset>`;
+    box.innerHTML = h`${raw(html)}`;      // every piece above is escaped with EH
     if (focusId) /** @type {HTMLElement | null} */ (box.querySelector(focusId))?.focus();
   }
   function open() {
     document.getElementById("colsdlg")?.remove();
     const dlg = /** @type {HTMLDialogElement} */ (document.createElement("dialog"));
     dlg.id = "colsdlg"; dlg.className = "colsdlg"; dlg.setAttribute("aria-labelledby", "colshead");
-    dlg.innerHTML = `<h2 id="colshead">${EH(t("load.cols.head"))}</h2><div class="colsbody"></div><div class="colsfoot"><button type="button" id="colsclose">${EH(t("load.cols.close"))}</button></div>`;
+    const shell = `<h2 id="colshead">${EH(t("load.cols.head"))}</h2><div class="colsbody"></div><div class="colsfoot"><button type="button" id="colsclose">${EH(t("load.cols.close"))}</button></div>`;
+    dlg.innerHTML = h`${raw(shell)}`;
     document.body.append(dlg); drawDialog(dlg);
     dlg.addEventListener("close", () => { dlg.remove(); document.getElementById("colsbtn")?.focus(); });
     dlg.addEventListener("click", ev => {
