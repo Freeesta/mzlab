@@ -3,7 +3,7 @@ I18N.add("it", {
   "ctl.noMrm": "Non si applica agli MRM: ogni transizione è già selettiva.",
   "ctl.oneFile": "Con un solo file non c'è nulla da sovrapporre o impilare.",
   "ctl.mode.aria": "Disegno delle tracce",
-  "ctl.mode.title": "Come disegnare più tracce: una sopra l'altra; una per riga (come in FreeStyle); a cascata, in ordine di tempo, la prima davanti (solo per guardare: senza integrazione né lettura dei valori)",
+  "ctl.mode.title": "Come disegnare più tracce: una sopra l'altra; una per riga; a cascata, in ordine di tempo, la prima davanti (solo per guardare: senza integrazione né lettura dei valori)",
   "ctl.mode.ovl": "sovrapposti",
   "ctl.mode.stk": "impilati",
   "ctl.mode.cas": "a cascata",

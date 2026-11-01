@@ -59,7 +59,7 @@ try:
         step("default off: unchecked in Reference lists, no diamonds; checked adds diamonds; persists on reload", default_off)
 
         def known():
-            h = hov(pg, 279.1591); assert h and "Compatibile con un contaminante noto" in h and "dibutilftalato" in h and "Keller 2008" in h, h
+            h = hov(pg, 279.1591); assert h and "Compatibile con un contaminante noto" in h and "dibutilftalato" in h and "Contaminanti noti e fondo LC-MS" in h and "Keller" not in h, h
             h2 = hov(pg, 391.2843); assert h2 and "DEHP" in h2, h2
         step("279.1591 and 391.2843: the line of the contaminant in the box of the peak", known)
 

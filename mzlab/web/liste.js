@@ -114,7 +114,7 @@ const LISTE = (() => {
     const e = esc || ((/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]));
     const row = (/** @type {Bag} */ it) => {
       const ser = it.series && runs && runs.get(it.list + ":" + it.series.id + "#" + it.series.n);
-      return `<div class="cont-row"><b>${e(it.name)}</b>${it.mzonly ? ` <span class="sm">${I18N.t("lst.mzOnly")}</span>` : ` <span class="sm">${e(it.adduct || "")}${it.formula ? ", " + e(it.formula.replace(/x(\d+)$/, " ×$1")) : ""}</span>`}<div class="sm">${I18N.t("lst.theoMz")} ${it.mz.toFixed(4)} · ${it.err >= 0 ? "+" : ""}${it.err.toFixed(1)} ppm · ${e(it.list === "keller" ? (it.source ? it.source.split(",")[0] : it.listName) : it.listName || it.list)}${ser ? ` · <b>${e(ser)}</b>` : ""}</div></div>`;
+      return `<div class="cont-row"><b>${e(it.name)}</b>${it.mzonly ? ` <span class="sm">${I18N.t("lst.mzOnly")}</span>` : ` <span class="sm">${e(it.adduct || "")}${it.formula ? ", " + e(it.formula.replace(/x(\d+)$/, " ×$1")) : ""}</span>`}<div class="sm">${I18N.t("lst.theoMz")} ${it.mz.toFixed(4)} · ${it.err >= 0 ? "+" : ""}${it.err.toFixed(1)} ppm · ${e(noRef(it.listName || it.list))}${ser ? ` · <b>${e(ser)}</b>` : ""}</div></div>`;
     };
     const shown = matches.slice(0, MAXROWS), more = matches.length - shown.length;
     return `<div class="cont"><div class="sm cont-h">${I18N.t("lst.compatible")}</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">${I18N.t("lst.more", { n: more })}</div>` : ""}</div>`;
