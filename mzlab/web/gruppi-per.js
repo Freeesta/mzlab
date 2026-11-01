@@ -25,7 +25,6 @@ window.GRUPPIPER = (() => {
       vs.filter((/** @type {any} */ v) => v.id !== ub?.by).forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.then === v.id, fn: () => pick({ by: ub.by, then: ub.then === v.id ? undefined : v.id, manuale: ub.manuale }) }));
       return list;
     }
-    // the file list has experiment types (the default) and a flat list; the sample table only «None»
     if (anchor === "sb-by") {
       list.push({ label: t("groups.type"), checked: !ub && !GRUPPI.has(), fn: () => pick(null) });
       list.push({ label: t("groups.none"), checked: ub?.by === "flat", fn: () => pick({ by: "flat" }) });
