@@ -52,13 +52,13 @@ try:
         def late_scan():
             pg.set_input_files("#pick", [str(D / "one.wiff.scan")])
             shown(pg, 1)
-            assert names(pg) == ["one.mzML"], names(pg)
+            assert names(pg) == ["one"], names(pg)
         step("its .wiff.scan arrives in another loading: the pair is converted into one.mzML", late_scan)
         def several():
             pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#fl-up [aria-busy=true]').forEach(r => window.__rows.add(r.dataset.up))).observe(document.getElementById('flst'), { childList: true, subtree: true })")
             pg.set_input_files("#pick", [str(D / "two.wiff.scan"), str(D / "two.wiff"), str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
             shown(pg, 4)
-            assert sorted(names(pg)) == ["one.mzML", "serie.mzML", "two_s1.mzML", "two_s2.mzML"], names(pg)
+            assert sorted(names(pg)) == ["one", "serie", "two_s1", "two_s2"], names(pg)
         step("a .wiff with two samples gives one mzML per sample (either order of the files)", several)
         def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
             seen = set(pg.evaluate("Array.from(window.__rows)"))
@@ -91,7 +91,7 @@ try:
             assert not pyodide(reqs), pyodide(reqs)[:3]
         step("conversion and list: Pyodide was not requested", listed_without_python)
         def opens():
-            for n in ("one.mzML", "two_s1.mzML", "two_s2.mzML"):        # tiny files and MRM chromatograms are not what this test shows
+            for n in ("one", "two_s1", "two_s2"):        # tiny files and MRM chromatograms are not what this test shows
                 pg.evaluate("n => Array.from(document.querySelectorAll('#flist tr:not(.grp)')).find(tr => tr.children[1].textContent.trim().startsWith(n)).querySelector('input[data-k=use]').click()", n)
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
@@ -142,7 +142,7 @@ try:
             pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "variante.wiff"), str(D / "variante.wiff.scan")])
             shown(pg, 1)
-            assert names(pg) == ["variante.mzML"], names(pg)
+            assert names(pg) == ["variante"], names(pg)
             assert any("wasm-lettori/sciex" in u for u in asked), "the sciex module was not requested"
             miss = pg.evaluate("window.MZLAB_LR_MISS || []")
             assert not pyodide(asked) and not miss, (miss, pg.evaluate("(window.MZLAB_TRACE || []).slice(-40)"), pg.evaluate("window.MZLAB_LR_ERR || null"), diag(pg))

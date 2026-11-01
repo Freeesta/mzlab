@@ -206,9 +206,9 @@ try:
                 const f = CONV.files.get(n) || await rb.nativeToMzml(n, 1 << 20, undefined, undefined);
                 out[n] = await f.text();
               }
-              return { names: [...document.querySelectorAll("#flist tr")].map(t => (t.innerText.match(/[^\\s⠿]+\\.mzML/) || [""])[0]).filter(Boolean).sort(), mrm: out["mrm.mzML"], perfil: out["perfil.mzML"], miss: (window.MZLAB_LR_MISS || []).length };
+              return { names: [...document.querySelectorAll("#flist .ldname")].map(t => t.textContent.trim()).filter(Boolean).sort(), mrm: out["mrm.mzML"], perfil: out["perfil.mzML"], miss: (window.MZLAB_LR_MISS || []).length };
             }""")
-            assert r["names"] == ["mrm.mzML", "perfil.mzML"] and r["miss"] == 0, (r["names"], r["miss"])
+            assert r["names"] == ["mrm", "perfil"] and r["miss"] == 0, (r["names"], r["miss"])
             assert "SRM SIC Q1=301.1 Q3=150.05" in r["mrm"] and "SRM SIC Q1=301.1 Q3=200.05" in r["mrm"], "no SRM chromatograms"
             assert 'MS:1000130' in r["perfil"] and 'profile' in r["perfil"].lower(), "profile spectra, positive"
             assert 'spectrumList count="40"' in r["perfil"], "profile spectra"
