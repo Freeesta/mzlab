@@ -65,7 +65,8 @@ try:
                     pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
         step("panels and right-click menu", menus)
         def gear_method():
-            pg.click("#np-set"); pg.wait_for_selector("#uipset"); it = italian(pg); assert not it, it; pg.click("#np-set")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); it = italian(pg); assert not it, it
+            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#uipset')")      # the settings drawer covers the gear: Esc closes it
             pg.click("#np-method"); attendi(pg, "!!document.querySelector('dialog[open]')"); frames(pg, 2); it = italian(pg); assert not it, it
         step("gear and method window", gear_method)
         def xic_integrate():

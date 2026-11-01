@@ -68,7 +68,11 @@ function syncWork(/** @type {boolean} */ force = false) {
   workQ("#fl-hint").hidden = !(none && !up);
   if (!workQ("#sb-pane").classList.contains("dz-over")) workQ("#fl-dz").hidden = true;
   // the content fades in once in place of the landing (opacity only, transizioni.css)
-  if (was === "landing" && w === "panels") { const v = workQ("#v-data"); v.classList.add("opn-rev"); setTimeout(() => v.classList.remove("opn-rev"), 400); }
+  // the class leaves when the fade ends (a long task on a slow machine must not remove it before the first frame, or the fade never starts); the timer is only the fallback
+  if (was === "landing" && w === "panels") {
+    const v = workQ("#v-data"), end = (/** @type {AnimationEvent} */ e) => { if (e.animationName === "tr-fade") done(); }, done = () => { v.classList.remove("opn-rev"); v.removeEventListener("animationend", end); };
+    v.classList.add("opn-rev"); v.addEventListener("animationend", end); setTimeout(done, 2000);
+  }
   // the side panel takes the width of the names once a file is shown (barra.js)
   if (was !== w && window.BARRA) BARRA.fitNames();
 }

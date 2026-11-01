@@ -38,7 +38,7 @@ td{padding:var(--row-py) 6px;border-bottom:1px solid var(--line);vertical-align:
 canvas{display:block;width:100%}
 .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}.chips span{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}.chips i:empty{width:10px;height:10px;border-radius:2px;display:inline-block}
 .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}.bar label{display:flex;gap:4px;align-items:center;color:var(--muted)}
-#err{color:var(--bad);padding:6px 14px}#avvio-errore{position:sticky;top:0;z-index:9000;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px;background:var(--panel,#fff);color:var(--bad);border-bottom:2px solid var(--bad);font-size:14px}#avvio-errore-msg{flex:1 1 280px}#avvio-fase{padding:6px 14px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}#opening.restoring{min-height:360px}#tbl{max-height:62vh;overflow:auto}
+#err{color:var(--bad);padding:6px 14px}#err:empty{display:none}#avvio-errore{position:sticky;top:0;z-index:9000;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px;background:var(--panel,#fff);color:var(--bad);border-bottom:2px solid var(--bad);font-size:14px}#avvio-errore-msg{flex:1 1 280px}#avvio-fase{padding:6px 14px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}#opening.restoring{min-height:360px}#tbl{max-height:62vh;overflow:auto}
 .alt{color:var(--muted);font-size:12px}
 
 .hq{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;margin:0 4px;border-radius:50%;border:1px solid var(--accent);color:var(--accent);background:var(--panel);font-size:11px;font-weight:700;line-height:1;cursor:help;vertical-align:middle;flex:none}.hq:hover{background:var(--accent);color:var(--on-accent)}
@@ -79,11 +79,11 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
-:root{--sb-w:300px}
+:root{--sb-w:280px}
 /* Dati view: the side panel is hidden or docked at full height to the left or right edge; the workspace takes the rest (never under it) */
 #v-data{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--sp-3);padding:var(--sp-2) 6px var(--sp-3) 6px;align-items:start}
-#v-data.sb-open{grid-template-columns:var(--sb-w,300px) minmax(0,1fr)}
-#v-data.sb-open.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-w,300px)}
+#v-data.sb-open{grid-template-columns:var(--sb-w,280px) minmax(0,1fr)}
+#v-data.sb-open.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-w,280px)}
 #v-data.sb-right #dfiles{order:2}
 #v-data.sb-right #v-workspace{order:1}
 #v-data.sb-right #sidebar-resize-handle{left:-3px;right:auto}
@@ -122,17 +122,17 @@ header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 /* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
 html.i18n-wait body>:not(header){visibility:hidden}html.i18n-wait header{visibility:hidden}html.i18n-wait header :is(.logo,#np-set,#sb-toggle,#fs-btn,.hq){visibility:visible}header .ib .ic{min-width:16px;min-height:16px}
 /* toolbar of the header */
-#stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
+#stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:2px;overflow:hidden;white-space:nowrap}
 @media (max-width:760px){header{flex-wrap:wrap}#nav{flex-wrap:wrap;min-width:0}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
-#stbar .tb{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;min-height:30px;flex:none;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font-size:13px}
+#stbar .tb{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;min-height:30px;flex:none;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font-size:13px}
 #stbar .tb:hover{background:var(--soft)}
 #stbar .tb .ti{display:inline-flex;color:var(--accent)}
 #stbar .tb .tl{display:none}
 /* label levels, chosen by barra.js from the measured space: lab-all (words on every button), lab-main (only on the main tools), none */
 #stbar.lab-all .tb .tl,#stbar.lab-main .tb[data-main] .tl{display:inline}
-#stbar.lab-all .tb,#stbar.lab-main .tb[data-main]{border-color:var(--line);border-radius:999px;padding:4px 8px 4px 6px}
+#stbar.lab-all .tb,#stbar.lab-main .tb[data-main]{border-color:var(--line);border-radius:999px;padding:4px 5px 4px 4px}
 #stbar.lab-all .tb-split .tb-main,#stbar.lab-main .tb-split .tb-main[data-main]{border-radius:999px 0 0 999px}
-#stbar.lab-all .tb-split .tb-car,#stbar.lab-main .tb-split .tb-main[data-main]+.tb-car{border-color:var(--line);border-radius:0 999px 999px 0;padding:4px 7px 4px 5px}
+#stbar.lab-all .tb-split .tb-car,#stbar.lab-main .tb-split .tb-main[data-main]+.tb-car{border-color:var(--line);border-radius:0 999px 999px 0;padding:4px 6px 4px 4px}
 #stbar.lab-all .tb.on,#stbar.lab-all .tb[aria-pressed=true],#stbar.lab-main .tb.on[data-main],#stbar.lab-main .tb[data-main][aria-pressed=true]{border-color:var(--accent)}
 #stbar .tb.on,#stbar .tb[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
 /* an active split button is one control: the caret takes the state of the main part */
@@ -567,5 +567,5 @@ html.in-draw #sb-toggle{display:none}
 /* the show/hide box of a file in the side list is a 24 px target (WCAG 2.2 target size); the checkboxes of the precursor rows keep their own size */
 #flst .fl>input[type=checkbox][data-k]{width:24px;height:24px;margin:0;flex:none}
 /* narrow screens: tighter tab padding so the four tabs plus the tools still fit two header rows; #nav keeps one fixed width (widest label set measured: 250 px) */
-@media (max-width:600px){html:not(.phone) #nav button{padding:6px 7px}html:not(.phone) #nav{min-width:calc(250px*var(--z,1));order:1}html:not(.phone) header .hq{order:2}html:not(.phone) header #fs-btn{order:3}html:not(.phone) header #sb-toggle{order:4}html:not(.phone) header #np-set{order:5}html:not(.phone) #stbar{flex-basis:80px}html:not(.phone) #g-tools button{min-height:24px}}
+@media (max-width:600px){html:not(.phone) #nav button{padding:6px 7px}html:not(.phone) #nav{min-width:calc(250px*var(--z,1));order:1}html:not(.phone) header .hq{order:2}html:not(.phone) header #fs-btn{order:3}html:not(.phone) header #sb-toggle{order:4}html:not(.phone) header #np-set{order:5}html:not(.phone) #stbar{flex-basis:80px;min-width:112px}html:not(.phone) #g-tools button{min-height:24px}}
 #v-workspace[data-work=landing][data-up] #start #drop{visibility:hidden}

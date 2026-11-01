@@ -537,12 +537,13 @@ document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).de
 const calcBox = Q("#calcdlg");
 Object.defineProperty(calcBox, "open", {
   get: () => {
-    if (window.BARRA && BARRA.isDataView()) return BARRA.isOpen("calc");
+    if (window.BARRA && BARRA.isDataView() && calcBox.classList.contains("sb-docked")) return BARRA.isOpen("calc");
     return !calcBox.hidden;
   }
 });
 calcBox.close = () => {
-  if (window.BARRA && BARRA.isDataView()) {
+  // the drop-down shown on the loading screen is not docked: the side panel has nothing to close
+  if (window.BARRA && BARRA.isDataView() && calcBox.classList.contains("sb-docked")) {
     BARRA.close(true);
   } else {
     calcBox.hidden = true;

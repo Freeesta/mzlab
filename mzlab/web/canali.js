@@ -218,6 +218,8 @@
         act();
       };
       row.onkeydown = e => {
+        // the tree owns its keys: the page-wide handlers (Space = play the scans, arrows = step them) must not see them
+        if (/^(Arrow(Up|Down|Left|Right)|Home|End| |Enter)$/.test(e.key)) e.stopPropagation();
         const col = /** @type {Set<string>} */ (p._canCol ||= new Set());
         if (e.key === "ArrowDown") { e.preventDefault(); moveFocus(row, 1); }
         else if (e.key === "ArrowUp") { e.preventDefault(); moveFocus(row, -1); }
