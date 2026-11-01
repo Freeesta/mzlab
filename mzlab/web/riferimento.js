@@ -220,6 +220,11 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
   if (typeof STAT !== "undefined") STAT.add({ id: "reference", title: "ref.title", hr: true, visible: () => true, mount });
   // the PCA section keeps its place; pca.js is fetched when the section is first shown (it registers the same id, which STAT ignores)
   if (typeof STAT !== "undefined") STAT.add({ id: "pca", title: "pca.title", hr: true, visible: () => true, mount: box => { carica("pca.js").then(() => PCA.mount(box)).catch(console.error); } });
+  // KMD and PFAS likewise: their scripts (and kmd-vista.js) are fetched when the section is first shown, in the same place of the panel
+  if (typeof STAT !== "undefined") {
+    STAT.add({ id: "kmd", title: "kmd.title", hr: true, visible: () => true, mount: box => { carica("kmd-vista.js").then(() => carica("kmd.js")).then(() => KMD.mount(box)).catch(console.error); } });
+    STAT.add({ id: "pfas", title: "pfas.title", hr: true, visible: () => true, mount: box => { carica("m:pfas.js").then(() => /** @type {any} */ (window).PFAS.mount(box)).catch(console.error); } });
+  }
   return { mount, run, inspect, tsv, get params() { return st; }, get result() { return res; } };
 })();
 window.RIFERIMENTO = RIFERIMENTO;

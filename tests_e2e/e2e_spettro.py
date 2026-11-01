@@ -112,9 +112,9 @@ try:
             attendi(pg, "(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec'&&q.cv);return !!p&&!!p._a&&p.cv.parentElement.querySelector('.leg').textContent.length>0})()")
             s = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec');return {rel:specRel(p),ymax:p._a&&p._a.ymax,lock:!!p.lock,t:p.cv.parentElement.querySelector('.leg').textContent}})()"); print(s)
             assert s["rel"] is False and not s["lock"], s                      # cps by default since 8/10 (the «%» button switches)
-            assert "precursore" in s["t"] and "CE" in s["t"], s
+            assert "precursore" not in s["t"] and "CE" in s["t"] and "scansione" in s["t"], s    # the title names the precursor, the line only the scan and the energy
             assert pg.evaluate("document.querySelector('.pnl.spec:not([style*=\"display: none\"]) canvas')") is not None
-        step("S6/G2: MS2 spectrum starts in %, no lock, shows precursor and CE", ms2)
+        step("S6/G2: MS2 spectrum starts in cps, no lock, shows scan and CE", ms2)
         def thin_trace():
             # the TIC is a thin line (like the vendor software): every stroke of the trace is at most 1.25 px, and none is thinner than 1 px
             w = pg.evaluate("""(async () => { const seen = [], o = CanvasRenderingContext2D.prototype.stroke;
