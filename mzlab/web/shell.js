@@ -98,7 +98,7 @@ const expCell=(/** @type {FileRiga} */ f)=>f.kind&&f.mixed&&f.mixed.length?`<b>$
 // the types of the files change in place (table, viewer, XIC button) and the table is sorted again
 function expSet(/** @type {string[]} */ names,/** @type {string | null | undefined} */ kind){names.forEach(n=>TIPOF.set(n,kind||null));ST.files.forEach((/** @type {FileRiga} */ f)=>{if(names.includes(f.name))Object.assign(f,TIPOF.apply(f,f.name))});TIPOF.viewer(names);CONVROWS.thaw();sortFiles();renderFiles()}
 function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el=$("#flist");
-  const hasCal=true,tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
+  const hasCal=F.some((/** @type {FileRiga} */ f)=>f.use&&(isCal(f)||(f.conc!=null&&f.conc!==""))),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
   // GUESS: concentration cells
   const ncol=7+(hasCal?1:0),GUESS=` title="${I18N.t("load.guess.title")}"`;
   let rows="";
@@ -113,7 +113,7 @@ function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el
   const tok=FILECHUNK.t={},big=R.length>500;rows=(big?R.slice(0,200):R).join("");
   const head=F.length?`<p class="sm samphead"><b>${I18N.t("load.samples.head",{n:F.length})}</b>${S.sess?" · "+I18N.t("load.samples.click"):""}</p>`:"";
   // the columns, the unit menus and the buttons over the table are there from the first row (CONVROWS.table, tools): the phases of the loading move nothing
-  el.innerHTML=(F.length?head+CONVROWS.tools()+CONVROWS.table(`<tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")} ${tuSel}</th><th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th><th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`,rows):"")+CONVROWS.summary();
+  el.innerHTML=(F.length?head+CONVROWS.tools()+CONVROWS.table(`<tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")} ${tuSel}</th>${hasCal?`<th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`,rows,hasCal):"")+CONVROWS.summary();
   if(big){let at=200;const more=()=>{if(FILECHUNK.t!==tok)return;const tb=el.querySelector("tbody");if(tb)tb.insertAdjacentHTML("beforeend",R.slice(at,at+200).join(""));at+=200;if(at<R.length)FRAME.next(more);else wireFiles(el,F)};FRAME.next(more)}else wireFiles(el,F);
   UPROWS.paint();syncWork()}
 const FILECHUNK={t:{}};
