@@ -4,7 +4,7 @@
 // Classic script, loaded after stato.js. A new experiment type is one entry here plus its texts in modi.js (didattica = key of QMODI.M).
 const ESP = (() => {
   const voci = [
-    { id: "full", ordine: 1, etichetta: "Full Scan", didattica: "full", spettri: true, vista: "tic-spettro" },
+    { id: "full", ordine: 1, etichetta: "Full Scan", didattica: "full", spettri: true, tempo: true, vista: "tic-spettro" },
     { id: "ms2", ordine: 2, etichetta: "MS2 (Product Ion)", didattica: "prod", spettri: true, chiuso: true },
     { id: "mrm", ordine: 3, etichetta: "MRM", didattica: "mrm", spettri: false },
     // direct infusion with MSn on fixed precursors (the tree of infusione.js)

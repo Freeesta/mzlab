@@ -20,7 +20,7 @@ const UPROWS = /** @type {any} */ ((() => {
   const txt = (/** @type {ConvRow} */ r) => { const s = CONVROWS.short(r); return r.state === "done" ? T("files.up.opening") : s.txt + (s.num ? " " + s.num : ""); };
   function one(/** @type {ConvRow} */ r) {
     const fail = r.state === "fail", lab = EH(r.name), x = T(fail ? "files.up.close" : "files.up.cancel", { name: r.name });
-    return `<div class="fl pend up${fail ? " err" : ""}" data-up="${lab}" title="${EH(CONVROWS.label(r))}"${fail ? "" : ' aria-busy="true"'}><i></i><div class="fi"><b>${lab}</b><small data-uptxt>${EH(txt(r))}</small>` +
+    return `<div class="fl pend up${fail ? " err" : ""}" data-up="${lab}" title="${EH(CONVROWS.label(r))}"${fail ? "" : ' aria-busy="true"'}><i></i><div class="fi"><b>${EH(r.name.replace(/\.(mzml|mzxml|wiff|raw|d)$/i, ""))}</b><small data-uptxt>${EH(txt(r))}</small>` +
       (fail ? (r.diag && typeof DIAG !== "undefined" ? DIAG.html(r.diag, EH, T) : "") : `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pcOf(r)}" aria-label="${EH(r.name + ": " + CONVROWS.label(r))}"><i style="width:${pcOf(r)}%"></i></div>`) +
       `</div><button type="button" data-up-x="${lab}" aria-label="${EH(x)}" title="${EH(x)}">&times;</button></div>`;
   }
