@@ -253,7 +253,7 @@ function nbMerge(/** @type {Bag} */ remote) {
     if (same(NB[k], nbBase[k])) continue;
     if (NB[k] === undefined) delete out[k]; else out[k] = NB[k];
   }
-  out._v = NB_V; return out;
+  out._v = NB_V; out._t = Date.now(); return out;
 }
 function nbSave(now = false) {
   clearTimeout(/** @type {number} */ (nbTimer));
@@ -263,8 +263,8 @@ function nbSave(now = false) {
     let remote = nbRemote;
     if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } }
     const out = nbMerge(remote || nbBase), body = JSON.stringify(out);
-    const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out;
-    fetch("api/notebook", { method: "POST", body, keepalive: true }).catch(() => { nbLast = ""; });
+    const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out; if (now) NBP.keep(body);
+    fetch("api/notebook", { method: "POST", body, keepalive: true }).then(r => { if (r && r.ok) NBP.done(body); }).catch(() => { nbLast = ""; });
   };
   if (now) go(); else nbTimer = setTimeout(go, 500);
 }
@@ -272,8 +272,9 @@ let nbEverLoaded = false;
 async function nbLoad() {
   let j = {};
   try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
-  Object.assign(NB, j); const snap = JSON.stringify(NB); nbBase = JSON.parse(snap); nbRemote = j; nbLast = snap;
+  const again = NBP.take(j, nbClean); if (again) j = again; Object.assign(NB, j); const snap = JSON.stringify(NB); nbBase = JSON.parse(snap); nbRemote = j; nbLast = snap;
   nbEverLoaded = true;
+  if (again) { nbLast = ""; nbSave(true); }
   // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
   if (CDOC.isOld(NB.session)) {
     try { NB.session = await CDOC.migrate(NB.session, (window.QAQC && QAQC.state.roles) || {}); NB._v = NB_V; nbSave(); } catch (_) { /* the notebook stays as it is */ }

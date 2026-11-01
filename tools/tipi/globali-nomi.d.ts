@@ -151,6 +151,7 @@ declare var MSG: any;
 declare var NATIVO: any;
 declare var NAV_OFF: any;
 declare var NB: any;
+declare var NBP: any;
 declare var NB_V: any;
 declare var NEAR: any;
 declare var NOMI: any;
