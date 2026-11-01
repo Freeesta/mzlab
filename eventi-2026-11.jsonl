@@ -5695,3 +5695,4 @@
 {"v":1,"ts_utc":"2026-11-01T17:12:15Z","azione":"push","titolo":"Merge main into claude/tools-panel-metodo","merge_main":true,"aree":{"web":2},"tipo":"pr","pr":2477,"sha":"dd5c772064ff89b9fe5798ee0449a96e4eec2e2f"}
 {"v":1,"ts_utc":"2026-11-01T17:12:23Z","azione":"push","titolo":"Merge main","merge_main":true,"aree":{"docs":2,"web":25,"test":18,"generati":1},"tipo":"pr","pr":2472,"sha":"5ca0437d431d787ac89cb3623153d73473a8851f"}
 {"v":1,"ts_utc":"2026-11-01T17:14:04Z","azione":"push","titolo":"Merge origin/main into claude/lr-a-impostazioni-privacy","merge_main":true,"aree":{"docs":2,"web":25,"test":18,"generati":1},"tipo":"pr","pr":2474,"sha":"ac2caf190f2a564b405d3c731fdef650aed675e0"}
+{"v":1,"ts_utc":"2026-11-01T17:17:48Z","azione":"aperta","tipo":"pr","pr":2481,"sha":"00b0085ca4e29e1cee3f7efd0ab8797678ee18ab"}
