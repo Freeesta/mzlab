@@ -190,10 +190,10 @@ function toggleTl(p) {
 
 // ---------------------------------------------------------------- one line under the spectrum: which scan it is
 function scanLine(p, data, d0) {
-  // only what the title does not say: which scan(s), and for MS2 the precursor and the energy
+  // only what the title does not say: which scan(s), and for MS2 the collision energy (the title already names the precursor)
   const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;
   parts.push(d0.scans === 1 && i != null ? I18N.t("spec.scanLine.one", { i: i + 1, of: n ? "/" + n : "" }) : I18N.t("spec.scanLine.avg", { n: d0.scans }));
-  if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push(I18N.t("spec.scanLine.prec", { prec: p.prec != null ? p.prec : "?" }) + (ce != null ? I18N.t("spec.scanLine.ce", { ce }) : "")); }
+  if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; if (ce != null) parts.push(I18N.t("spec.scanLine.ce", { ce })); }
   return parts.join(" · ");
 }
 

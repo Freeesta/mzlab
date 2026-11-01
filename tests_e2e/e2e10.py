@@ -15,7 +15,7 @@ try:
         def missing():
             pg.click("#np-method"); ready(pg)
             t = pg.inner_text("#bigdlg")
-            assert "Manca il metodo di acquisizione" in t and "3200 QTRAP" in t, t[:200]
+            assert "Manca il metodo" not in t and "Analyst" not in t and "Scansione Q1" not in t and "non c'è un gradiente" not in t and "3200 QTRAP" in t, t[:200]
             assert "Parametri del metodo" not in t and "Curtain gas" not in t, "no built-in method may appear"
             assert pg.locator("#m-load").count() == 1
             pg.screenshot(path=SH + "100_no_method.png")

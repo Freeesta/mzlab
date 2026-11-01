@@ -27,7 +27,7 @@ try:
         step("no pill «HR» or «DDA» on the QqQ file", pills_qqq)
         def method_qqq():
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.startsWith('B_Full'));E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(1500)
-            t = pg.inner_text("#bigdlg"); assert "Manca il metodo di acquisizione" in t and "Parametri delle scansioni" not in t, t
+            t = pg.inner_text("#bigdlg"); assert "Manca il metodo" not in t and "Parametri delle scansioni" not in t and pg.locator("#bigdlg #m-load").count() == 1, t
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("window «Metodo» of a QqQ file: as before", method_qqq)
         def losses_qqq():
@@ -54,7 +54,7 @@ try:
         def method():
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_function("document.querySelector('#bigdlg') && document.querySelector('#bigdlg').innerText.includes('Parametri delle scansioni')", timeout=30000)
             t = pg.inner_text("#bigdlg"); print(t[:600].replace("\n", " | "))
-            assert "Il metodo completo non è nel file mzML" in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45000" in t and "±0.75" in t, t
+            assert "Il metodo completo non è nel file mzML" not in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45000" in t and "±0.75" in t, t
             assert "Manca il metodo di acquisizione" not in t
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans", method)

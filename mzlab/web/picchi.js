@@ -18,6 +18,8 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
+// the colour of a spectrum of the panel: the one of its file, or of its precursor when one file gives several (the bars and the legend entry use this one)
+const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color);
 const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0, hrSmooth: 5, hrSn: 5, hrProm: 1, hrScans: 3, hrHalf: 0, hrSlope: 3 };
 const PK = (() => { const o = lsObj(NOMI.KEY("picchi")); const { method: _old, ...rest } = o; return { ...PK_DEF, ...rest }; })();
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
@@ -425,7 +427,7 @@ async function drawSpec(p, snapped) {
   };
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
   data.forEach(x => {
-    const color = x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color;
+    const color = specColor(x);
     g.strokeStyle = color; g.lineWidth = 1.4 + LWX();
     if (x.multi) g.globalAlpha = 0.55; else g.globalAlpha = 1.0;
     g.beginPath();
@@ -500,7 +502,7 @@ async function drawSpec(p, snapped) {
   const showLabel = data.length > 1 || multiFiles;
   if (p.leg2) p.leg2.innerHTML = (showLabel ? data.map(x => {
     const lab = x.f.label.length > 25 ? x.f.label.slice(0, 24) + "…" : x.f.label;
-    const color = x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color;
+    const color = specColor(x);
     return `<span><i style="background:${color}"></i>${EH(lab)}${legPol(x.f)}${x.multi ? ` (prec. ${x.prec})` : ""}</span>`;
   }).join("") : "") + isoNote;
   contLegend(p);

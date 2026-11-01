@@ -31,11 +31,8 @@ function setTab(t, quiet, motivo) {
   setActive(E.activeBy[t] && E.panels.includes(E.activeBy[t]) ? E.activeBy[t] : null); playStop();
   // changing tab: the axes of the spectra are free again
   E.panels.forEach((/** @type {Pannello} */ q) => { if (q.type === "spec") q.lock = null; });
-  const firstLayout = tabFiles().length && !tabPanels(t).length;
-  // same funny loading screen as everywhere else, but not when a file opens (its panels fade in where they stay)
-  if (firstLayout && motivo !== "file") loading(true);
+  // no full-screen veil here: a tab (or a file of another type) opening after start-up never blocks the page, its panels fade in where they stay
   ensureLayout();
-  if (firstLayout) Promise.all(tabPanels(t).map((/** @type {Pannello} */ p) => p.ready).filter(Boolean)).catch(() => {}).then(() => loading(false));
   fitWidth(); relayout(); fitHost(); renderFileList(); renderNav();
   // @ts-expect-error toolbar() of explore.js is also window.toolbar (a BarProp) for lib.dom
   toolbar();
