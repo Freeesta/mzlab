@@ -81,9 +81,9 @@ try:
         step("lab: no example files shipped and no example entry points", noexamples)
         def gap():
             GAP = "() => { const b = [...document.querySelectorAll('#nav button')].filter(x => x.offsetParent).pop().getBoundingClientRect(), t = document.getElementById('sb-toggle').getBoundingClientRect(); return t.left - b.right }"
-            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#sb-toggle", timeout=120000); pg.wait_for_timeout(500)
+            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#sb-toggle", timeout=120000); pg.wait_for_function("typeof setView === 'function'", timeout=120000)
             g = pg.evaluate(GAP); assert 0 <= g < 60, g
-            pg.set_viewport_size({"width": 390, "height": 800}); pg.wait_for_timeout(300)
+            pg.set_viewport_size({"width": 390, "height": 800}); pg.evaluate("n => new Promise(ok => { const f = () => (--n > 0 ? requestAnimationFrame(f) : ok()); requestAnimationFrame(f) })", 3)
             h = pg.evaluate("(() => { const h = document.querySelector('header'); return [h.scrollWidth, h.clientWidth] })()"); assert h[0] <= h[1] + 2, ("header clipped at phone width", h)
         step("lab: the panels button follows the last tab (gap < 60 px), phone width fits", gap)
         def normal():

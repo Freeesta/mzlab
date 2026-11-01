@@ -10,9 +10,9 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_MRM-t0")])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(1500)
+        pg.click("text=Carica dati"); ready(pg)
         def opaque():
-            pg.evaluate("setVisOf(E.files, true); window.scrollTo(0, 400)"); pg.wait_for_timeout(400)
+            pg.evaluate("setVisOf(E.files, true); window.scrollTo(0, 400)"); frames(pg, 3)
             for sel in ("header", "#tools", "#stbar"):
                 a = pg.evaluate("s => { const e = document.querySelector(s); if (!e) return 1; const m = getComputedStyle(e).backgroundColor.match(/[\\d.]+/g); return m.length > 3 ? +m[3] : 1 }", sel)
                 assert a == 1 or sel != "header", (sel, a)
