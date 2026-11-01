@@ -149,8 +149,11 @@ const AVVIO = (function () {
     const g = (/** @type {string} */ id) => document.getElementById(id), v = g("v-data"), sel = /** @type {HTMLSelectElement | null} */ (g("fsel"));
     if (!v || v.hidden || v.classList.contains("riga") || !sel || !haSessione()) return;
     const a = BOTTONI_RIGA.map(id => { const b = g(id); return b && !b.hidden ? 1 : 0; });
+    // the width the select asks for (its flex basis), not the width a tight row squeezed it to: the first paint then shrinks like the settled row does
+    const keep = sel.style.cssText; sel.style.flex = "none"; sel.style.width = "";
+    const fw = Math.round(sel.getBoundingClientRect().width); sel.style.cssText = keep;
     if (!a.some(Boolean) || (window.BANCO && window.BANCO.on())) segnaRiga(null);
-    else segnaRiga({ a, f: (sel.selectedOptions[0] || { text: "" }).text.slice(0, 120), fw: Math.round(sel.getBoundingClientRect().width), s: document.documentElement.style.getPropertyValue("--sb-w") });
+    else segnaRiga({ a, f: (sel.selectedOptions[0] || { text: "" }).text.slice(0, 120), fw, s: document.documentElement.style.getPropertyValue("--sb-w") });
   }
 
   function finisciRiga() {
