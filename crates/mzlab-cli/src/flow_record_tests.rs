@@ -54,12 +54,12 @@ fn report(
     o.raw(",\"bytes\":")
         .int(bytes.len() as i64)
         .raw("}],\"ms\":1");
-    // the series is unit resolution: the page tells the record so, as `flow run` does
-    if instance == "det" {
-        o.raw(",\"preset\":\"lr\"");
-    }
     if let Some(m) = meta {
         let v = mzlab_core::json::parse(m.as_bytes()).unwrap();
+        // the meta says when the files of a detection are unit resolution (the preset `flow run` records): the page forwards it as it is
+        if let Some(Value::Str(id)) = v.get("preset") {
+            o.raw(",\"preset\":").str(id);
+        }
         o.raw(",\"estimates\":")
             .raw(&mzlab_core::flow::value_text(v.get("estimates").unwrap()));
         o.raw(",\"mem\":")
