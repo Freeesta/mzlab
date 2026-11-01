@@ -25,6 +25,9 @@ def cold(p, vw, vh, reduced, saved=None):
     pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
     pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(500)
+    # loading data opens the file list whatever was stored: these tests slide it open from closed, so close it first (reduced motion = at once)
+    if "mzlab.barra.lr" not in (saved or {}) and pg.get_attribute("#sb-toggle", "aria-pressed") == "true":
+        pg.click("#sb-toggle"); pg.wait_for_function("document.querySelector('#sb-toggle').getAttribute('aria-pressed') === 'false'"); pg.wait_for_function(SETTLED)
     return r, ctx, pg, errs
 def toggle_final(p, vw, saved=None):          # the final geometry, from the reduced-motion run
     r, ctx, pg, errs = cold(p, vw, 900, True, saved)

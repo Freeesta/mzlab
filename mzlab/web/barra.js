@@ -424,7 +424,7 @@ const BARRA = (() => {
 
   // the header button: show the last tool used (first start: File) or hide the panel
   function toggleDrawer() {
-    if (_open && (inDataOrOpening() || landing())) close(true);
+    if (_open && (inDataOrOpening() || landing())) { _opener = Q1("#sb-toggle"); close(true); }      // the focus stays on the button that was pressed
     else if (landing() && !inData()) { _open = true; applyLayout(); updateButtons(); }
     else show(validTab(_tab) ? _tab : "file", { opener: Q1("#sb-toggle") });
   }
