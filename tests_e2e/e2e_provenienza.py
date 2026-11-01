@@ -19,8 +19,7 @@ r = Run(port=8893, wd="/tmp/wd93")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(f) for f in SYN]); attendi(pg, "document.body.innerText.includes('Carica dati')")
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        stage(pg, SYN); pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()"); attendi(pg, "E.panels.some(p=>p.type==='chrom'&&p._a)")
         def line_ok(t):
             first = t.split("\n")[0]
