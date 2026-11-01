@@ -75,7 +75,17 @@ function nearMsg(/** @type {string} */ t) {                                     
   clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 3200);
 }
 document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; }, true);
-const intSnap = (/** @type {Bag} */ p) => JSON.stringify(p.ints);
+// undo snapshot of a panel: the integrations and the noise zones (one per trace)
+const intSnap = (/** @type {Bag} */ p) => JSON.stringify({ i: p.ints, n: p.noise || {} });
+// noise stretch [t0, t1] (min) of the trace of an integration: one per trace of the panel (the same for every file), else the one stored on the integration itself
+const noiseZone = (/** @type {Bag} */ p, /** @type {Bag} */ it) => (p.noise && p.noise[it.ion]) || it.noise || null;
+// the student marks the noise once: it goes to every file of that trace and to the other transition panels of an MRM tab; S/N is switched on
+function setNoiseZone(/** @type {Bag} */ p, /** @type {Bag} */ it, /** @type {number[]} */ z) {
+  const set = (/** @type {Bag} */ q, /** @type {string[]} */ ions) => { q.noise = { ...(q.noise || {}) }; ions.forEach(i => { q.noise[i] = z; }); };
+  set(p, [it.ion]);
+  if (ESP.mrm(p)) tabPanels().filter((/** @type {Bag} */ q) => q !== p && ESP.mrm(q)).forEach((/** @type {Bag} */ q) => set(q, [...new Set([...(q._a && q._a.sr ? q._a.sr.map((/** @type {Bag} */ s) => s.ion) : []), ...q.ints.map((/** @type {Bag} */ i) => i.ion)])]));
+  INTOPT.sn = true;
+}
 function delInts(/** @type {Bag} */ p, /** @type {Bag[]} */ list) { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => !list.includes(i)); if (list.some((/** @type {Bag} */ i) => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
 function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, mirror = true) {
   const lo = Math.min(a, b), hi = Math.max(a, b);
@@ -199,8 +209,9 @@ const INT_NEW = ["role", "q1", "q3", "transition"];
 const INT_NEW_HEADS = INT_NEW.map(k => I18N.t(`export.int.${k}`));
 function intExtra(/** @type {Bag} */ r) {
   const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === it.key);
-  const pk = s ? chromPeak(s.x, s.y, r.a, r.b) : null, sd = s && it.noise ? noiseSD(s.x, s.y, it.noise[0], it.noise[1]) : null;
-  return { sn: pk && sd ? pk.height / sd : null, noise: !!it.noise, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
+  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.base) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
+  const h = Number.isFinite(r.height) ? r.height : pk ? pk.height : null;      // the height shown in the table, so S/N and «height» never disagree
+  return { sn: h != null && sd ? h / sd : null, noise: !!z, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
 }
 // quality of each integrated peak from the Rust engine (qualita.js): Gaussian similarity, asymmetry at 10 %, noise score; null where the engine or the trace is missing
 async function qualityOf(/** @type {Bag} */ r) {
@@ -217,7 +228,7 @@ async function showInts() {
   const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>1/2</sub> (min)", 1) + th(I18N.t("int.tbl.plates"), 1) + th(I18N.t("int.tbl.tail"), 1) : "") +
     (INTOPT.q ? ["gauss", "asym", "nscore"].map(k => `<th class="num" title="${I18N.t(`int.tbl.${k}.h`)}">${I18N.t(`int.tbl.${k}`)}</th>`).join("") : "");
   big(I18N.t("int.tbl.title"), rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button><button id="ig-csv">${IC_DL}CSV</button>
-    <label title="${I18N.t("int.tbl.sn.title")}"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label>
+    <label title="${I18N.t("int.tbl.sn.title")}"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label><button type="button" class="hq" data-help="sn" title="${I18N.t("common.help")}" aria-label="${I18N.t("common.help")}">?</button>
     <label title="${I18N.t("int.tbl.par.title")}"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> ${I18N.t("int.tbl.par")}</label>
     <label title="${I18N.t("int.tbl.q.title")}"><input type="checkbox" id="ig-q" ${INTOPT.q ? "checked" : ""}> ${I18N.t("int.tbl.q")}</label></div>
     <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>${I18N.t("int.tbl.corr")}</th><th></th></tr>` +
