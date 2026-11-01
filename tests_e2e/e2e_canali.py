@@ -46,6 +46,8 @@ try:
             k = idx(pg, "DAD-t0"); assert tipo(pg, k) in ("lc-full", "misto", "solo-uv"), tipo(pg, k)
         step("DAD file opens", dad)
         pg.evaluate("setTab('full')"); ready(pg)
+        # ticking every file leaves the one-file view: the steps below compare several files
+        pg.evaluate("E.files.forEach(f=>f.vis=true); renderFileList(); redrawAll()"); ready(pg)
         def tree():
             pg.click("[data-o=kind]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
             n = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert n >= 5, n
