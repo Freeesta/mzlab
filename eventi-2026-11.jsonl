@@ -6777,3 +6777,4 @@
 {"v":1,"ts_utc":"2026-11-01T18:37:39Z","tipo":"job","k":"124940578851","workflow":"rust","job":"rust","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"bba2e951b93d201db009b9cdb54defa2f243d4da","run_id":41337567845,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-01T18:37:39Z","tipo":"job","k":"124940579032","workflow":"rust","job":"rust-misc-a","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"bba2e951b93d201db009b9cdb54defa2f243d4da","run_id":41337567845,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-01T18:37:55Z","tipo":"carico","k":"2026-11-01T18:3","job_in_coda":0,"job_in_corso":9}
+{"v":1,"ts_utc":"2026-11-01T18:39:17Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/lr-b-peak","merge_main":true,"aree":{"docs":1,"web":5,"test":4},"tipo":"pr","pr":2484,"sha":"f86e4033042b758c40eaba1e6ccbddd6b0b0259f"}
