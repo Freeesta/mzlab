@@ -5281,3 +5281,4 @@
 {"v":1,"ts_utc":"2026-11-01T16:27:25Z","tipo":"job","k":"124907198724","workflow":"rust","job":"rust-det","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"8b24f8b1617eb5dd2108d224076abf9cdc3ac0ad","run_id":41326398518,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-01T16:32:34Z","azione":"aperta","tipo":"pr","pr":2476,"sha":"10d92d55e0e4980b9e5386c2a498ecff6d05b818"}
 {"v":1,"ts_utc":"2026-11-01T16:36:59Z","azione":"aperta","tipo":"pr","pr":2477,"sha":"eb77044833c9301c97be722e08bd4e16100d6eb4"}
+{"v":1,"ts_utc":"2026-11-01T16:40:36Z","azione":"push","titolo":"Test harness stubs: ESP.unici for the file-list tests","merge_main":false,"aree":{"test":2},"tipo":"pr","pr":2473,"sha":"eb04c83dbeb7347d8dd9bde25b330962eb658312"}
