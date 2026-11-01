@@ -12,7 +12,9 @@ What is checked (specification: PROMPT_INGLESE.md of the data repository, sectio
     motivated exceptions are in tools/i18n_eccezioni.txt;
  5. the glossary (lang/glossario.json): if the Italian text contains an Italian form of an entry, the English text must contain an
     English form and none of the forms to avoid;
- 6. lang/contesto.json describes every key that has parameters.
+ 6. lang/contesto.json describes every key that has parameters;
+ 7. every `err.*` / `error.*` / `warn.*` key a web crate can send (literals in crates/, see CRATE_*) has a text in both languages
+    (the allow list CRATE_SENZA_TESTO says why a key never reaches a student).
 The catalogs are plain JSON inside `I18N.add("xx", { ... });`: the first and the last line are cut off and the rest is parsed as JSON.
 """
 from __future__ import annotations
@@ -61,6 +63,29 @@ sovrapporre disegna disegnare disegnato disegni struttura strutture molecola mol
 vuol dire significa significato esempio esempi spiegazione guida aiuto domanda domande risposta risposte
 scansione scansioni madre sconosciuto sconosciuta vicina vicino
 """.split())
+
+# crates that never serve the page, and the keys a student never sees (one reason per key)
+CRATE_ESCLUSI = ("mzlab-cli", "mzlab-desktop", "mzlab-llm")
+CRATE_SENZA_TESTO = {
+    "err.test": "placeholder error of a unit test inside a src file",
+    "err.test.interned": "string used by a unit test of the interner",
+    "error.x": "key of a unit test of the JSON escaping",
+}
+CRATE_KEY = re.compile(r"""\"((?:err|error|warn)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\"""")
+
+
+def crate_keys() -> dict[str, str]:
+    """Keys of messages written as literals in the Rust sources the page can reach: key -> first file."""
+    out: dict[str, str] = {}
+    for p in sorted((ROOT / "crates").rglob("*.rs")):
+        rel = p.relative_to(ROOT).as_posix()
+        parts = rel.split("/")
+        if parts[1] in CRATE_ESCLUSI or "tests" in parts or "examples" in parts or "benches" in parts or p.stem.endswith("_tests") or p.stem.startswith("tests"):
+            continue
+        for k in CRATE_KEY.findall(p.read_text(encoding="utf-8", errors="replace")):
+            out.setdefault(k, rel)
+    return out
+
 
 PARAM_RE = re.compile(r"\{([A-Za-z_][\w]*)")
 
@@ -417,9 +442,13 @@ def run(listing: bool = False) -> list[str]:
     for k, files in sorted(used.items()):
         if k not in it or k not in en:
             errs.append(f"key used but not in the catalogs: {k}  ({', '.join(sorted(files))})")
+    sent = set(crate_keys())
     for k in sorted(set(it) | set(en)):
-        if k not in used and not any(k.startswith(p) for p in prefixes):
+        if k not in used and k not in sent and not any(k.startswith(p) for p in prefixes):
             errs.append(f"orphan key (nobody uses it): {k}")
+    for k, rel in sorted(crate_keys().items()):
+        if k not in CRATE_SENZA_TESTO and (k not in it or k not in en):
+            errs.append(f"engine message without a text in both languages: {k}  ({rel})")
     check_paramless_calls(it, errs)
     check_static_html(it, errs)
     check_italian(errs, listing)
