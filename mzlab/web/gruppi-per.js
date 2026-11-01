@@ -25,9 +25,12 @@ window.GRUPPIPER = (() => {
       vs.filter((/** @type {any} */ v) => v.id !== ub?.by).forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.then === v.id, fn: () => pick({ by: ub.by, then: ub.then === v.id ? undefined : v.id, manuale: ub.manuale }) }));
       return list;
     }
-    list.push({ label: t("groups.none"), checked: !ub && !GRUPPI.has(), fn: () => pick(null) });
+    if (anchor === "sb-by") {
+      list.push({ label: t("groups.type"), checked: !ub && !GRUPPI.has(), fn: () => pick(null) });
+      list.push({ label: t("groups.none"), checked: ub?.by === "flat", fn: () => pick({ by: "flat" }) });
+    } else list.push({ label: t("groups.none"), checked: !ub && !GRUPPI.has(), fn: () => pick(null) });
     vs.forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.by === v.id, fn: () => pick({ by: v.id }) }));
-    if (ub && ub.by !== "custom" && ub.by !== "manuale" && vs.length > 1) list.push({ label: t("groups.then"), sub: ub.then ? t(`groups.var.${ub.then}`) : "", fn: () => draw("then") });
+    if (ub && ub.by !== "custom" && ub.by !== "flat" && ub.by !== "manuale" && vs.length > 1) list.push({ label: t("groups.then"), sub: ub.then ? t(`groups.var.${ub.then}`) : "", fn: () => draw("then") });
     list.push({ label: t("groups.pos"), checked: ub?.by === "manuale" && !!ub.manuale?.pos, fn: () => { close(false); dialogPos(); } });
     list.push({ label: t("groups.has"), checked: ub?.by === "manuale" && !!ub.manuale?.has, fn: () => { close(false); dialogHas(); } });
     list.push({ label: t("groups.custom"), checked: ub?.by === "custom", disabled: true, fn: () => { /* shown only: set by a manual edit */ } });

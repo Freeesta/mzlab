@@ -127,7 +127,7 @@ window.GRUPPI = (() => {
     /** «Group by»: every file takes the label of its value of the key `spec` (a manual group set is replaced, undo brings it back); null = None. @param {any} spec */
     async by(spec) {
       const replaced = hasGroups();
-      if (!spec) { write(new Map(), undefined, [], true, "none"); return true; }
+      if (!spec || spec.by === "flat") { write(new Map(), spec || undefined, [], true, "none"); return true; }
       const ans = await vars(spec.manuale);
       if (!ans) return false;
       const { out, order } = labelsOf(ans, spec, I18N.t("groups.other"));
@@ -138,7 +138,7 @@ window.GRUPPI = (() => {
     },
     /** Files that arrive later take the key while it is not «custom»: debounced 300 ms, no undo step of its own (a new file only). */
     follow() {
-      const ub = E.ugBy; if (!ub || ub.by === "custom") return;
+      const ub = E.ugBy; if (!ub || ub.by === "custom" || ub.by === "flat") return;
       const key = names().join("\n"); if (key === followed) return;
       clearTimeout(timer);
       timer = window.setTimeout(async () => {

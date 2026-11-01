@@ -1,7 +1,7 @@
 """Window sizes: phone, tablet, laptop, large screen, and live resizing. No horizontal page scroll, panels follow the window, nothing unreadable."""
 import sys
 from playwright.sync_api import sync_playwright
-from lib import Run, mz, SH, drawer, stage, ready, attendi, frames
+from lib import Run, mz, SH, drawer, stage, ready, attendi, frames, close_side
 
 SIZES = [(360, 740), (768, 1024), (1024, 700), (1500, 900), (2560, 1300)]
 R = []
@@ -26,7 +26,7 @@ with sync_playwright() as p:
     pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#opbtn"); ready(pg); pg.wait_for_selector(".pnl.chrom canvas", timeout=60000); attendi(pg, "!!(E.panels[0] && E.panels[0]._a)")
     pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
     attendi(pg, "E.panels[0]._a.sr.length >= 3")
-    if pg.is_visible("#dfiles"): pg.click("#sb-x"); attendi(pg, "!document.querySelector('#dfiles') || !document.querySelector('#dfiles').offsetParent")      # the File panel is open at first start; under 900 px it would replace the workspace
+    if pg.is_visible("#dfiles"): close_side(pg); attendi(pg, "!document.querySelector('#dfiles') || !document.querySelector('#dfiles').offsetParent")      # the File panel is open at first start; under 900 px it would replace the workspace
     for w, h in SIZES:
         def at():
             pg.set_viewport_size({"width": w, "height": h}); attendi(pg, "E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"); frames(pg, 3)

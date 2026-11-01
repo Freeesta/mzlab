@@ -28,7 +28,7 @@ try:
                     pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Addotti e perdite").click(); pg.click("#al-t-losses")
                 attendi(pg, "!!document.querySelector('#sb-panel-losses') && document.querySelector('#sb-panel-losses').offsetParent !== null")
                 assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Addotti e perdite", w
-                pg.click("#sb-x"); frames(pg, 3); assert not pg.is_visible("#dfiles"), w
+                close_side(pg); frames(pg, 3); assert not pg.is_visible("#dfiles"), w
             pg.set_viewport_size({"width": 1400, "height": 900})
         step("header: Perdite neutre opens its tab at 360/768/1500 px, no title text", header)
         pg.click("#np-chrom"); attendi(pg, "E.panels.some(p=>p.type==='chrom')"); pg.click("#np-spec"); attendi(pg, "E.panels.some(p=>p.type==='spec')")
