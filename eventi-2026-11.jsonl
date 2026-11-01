@@ -6254,3 +6254,4 @@
 {"v":1,"ts_utc":"2026-11-01T17:40:27Z","tipo":"carico","k":"2026-11-01T17:4","job_in_coda":0,"job_in_corso":21}
 {"v":1,"ts_utc":"2026-11-01T17:40:30Z","azione":"aperta","tipo":"pr","pr":2483,"sha":"7aff88b4899c24784b5300f9629cad2c3bd5dda2"}
 {"v":1,"ts_utc":"2026-11-01T17:45:08Z","azione":"push","titolo":"Merge main into claude/group-names-drag","merge_main":true,"aree":{"docs":6,"web":26,"test":17,"tools":2,"generati":1},"tipo":"pr","pr":2478,"sha":"3fadfaecbbde51938947f456fe8895186f9f687b"}
+{"v":1,"ts_utc":"2026-11-01T17:47:25Z","azione":"push","titolo":"Merge main into claude/table-no-ext","merge_main":true,"aree":{"docs":6,"web":26,"test":17,"tools":2,"generati":1},"tipo":"pr","pr":2483,"sha":"88bfd5677ac0a3f0b0e4a460874b54a24a1511fc"}
