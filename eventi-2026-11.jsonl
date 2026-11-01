@@ -6256,3 +6256,4 @@
 {"v":1,"ts_utc":"2026-11-01T17:45:08Z","azione":"push","titolo":"Merge main into claude/group-names-drag","merge_main":true,"aree":{"docs":6,"web":26,"test":17,"tools":2,"generati":1},"tipo":"pr","pr":2478,"sha":"3fadfaecbbde51938947f456fe8895186f9f687b"}
 {"v":1,"ts_utc":"2026-11-01T17:47:25Z","azione":"push","titolo":"Merge main into claude/table-no-ext","merge_main":true,"aree":{"docs":6,"web":26,"test":17,"tools":2,"generati":1},"tipo":"pr","pr":2483,"sha":"88bfd5677ac0a3f0b0e4a460874b54a24a1511fc"}
 {"v":1,"ts_utc":"2026-11-01T17:48:58Z","azione":"push","titolo":"Stub the type-group globals in the node tests of gruppi.js","merge_main":false,"aree":{"test":2},"tipo":"pr","pr":2478,"sha":"fcc62e1472bb44a16565ecf8c941d61c98ddf181"}
+{"v":1,"ts_utc":"2026-11-01T17:54:43Z","azione":"aperta","tipo":"pr","pr":2484,"sha":"2b41c0b3f8ddeeacf0cc517b7b72fd3c10e67869"}
