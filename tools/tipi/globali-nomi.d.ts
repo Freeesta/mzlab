@@ -906,8 +906,6 @@ declare var uipDo: any;
 declare var uipGroupOpen: any;
 declare var uipLoad: any;
 declare var uipOpen: any;
-declare var uipPriv: any;
-declare var uipPrivHtml: any;
 declare var uipProfile: any;
 declare var uipRead: any;
 declare var uipReset: any;
