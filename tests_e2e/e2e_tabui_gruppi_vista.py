@@ -116,7 +116,9 @@ try:
             assert mz == sorted(mz), mz
             pg.click('#gv-mx [data-sort="mz"]'); mz = pg.evaluate("() => [...document.querySelectorAll('#gv-mx tbody tr')].map(r => parseFloat(r.children[1].textContent))")
             assert mz == sorted(mz, reverse=True), mz
-            assert pg.get_attribute('#gv-mx [data-sort="mz"]', "data-tip") == "Sort by m/z", pg.evaluate("document.querySelector('#gv-mx [data-sort=mz]').outerHTML")
+            # the sort redraws the header, so its title is fresh; the tooltip layer moves it to data-tip on the first hover (after the redraw the browser's own mouseover comes late)
+            pg.hover('#gv-mx [data-sort="mz"]')
+            pg.wait_for_function("document.querySelector('#gv-mx [data-sort=mz]').dataset.tip === 'Sort by m/z'", timeout=5000)
         step("matrix: sort by a column, both directions", sort)
 
         def bars_and_curves():

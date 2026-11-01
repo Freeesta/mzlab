@@ -76,7 +76,8 @@ try:
         step("two fingers up / down scroll the page (nothing else moves)", scroll)
         def longpress():
             x, y = X(8), Ymid(); T("touchStart", [(x, y)]); wait(800); T("touchEnd", []); wait(300)
-            assert pg.is_visible("#ctx") and "Spettro a questo RT" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
+            # the spectrum at the RT left the menu on purpose (double-click / Enter open it; e2e_menu_coerenti): the long press is checked with the XIC item
+            assert pg.is_visible("#ctx") and pg.locator('#ctx [data-azione="chrom.xic"]').count() == 1, pg.inner_text("#ctx")
             pg.keyboard.press("Escape"); pg.mouse.click(2, 2); wait(200)
         step("long press opens the menu of the graph (right click)", longpress)
         def dtap():
