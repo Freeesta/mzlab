@@ -37,7 +37,7 @@
     else if (note && v.state === "blocked") v.title = `${v.title} (${note})`;
     const word = line.querySelector(".fln-lw"), bar = /** @type {HTMLElement} */ (line.querySelector(".fln-bar"));
     line.dataset.state = v.state; line.dataset.tone = v.tone;
-    if (word && word.textContent !== v.word) { word.textContent = v.word; word.setAttribute("title", v.title); }
+    if (word) { if (word.textContent !== v.word) word.textContent = v.word; if (word.getAttribute("title") !== v.title) word.setAttribute("title", v.title); }   // the tooltip follows the sentence even when the short word stays
     const m = line.querySelector(".fln-lm");
     if (m && m.dataset.mark !== v.icon) { m.dataset.mark = v.icon; m.replaceChildren(mark(v.icon)); }
     bar.hidden = v.state !== "running";
