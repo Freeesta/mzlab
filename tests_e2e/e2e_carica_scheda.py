@@ -14,6 +14,8 @@ def scenario(seq):
             assert pg.evaluate("E.tab") == "full"
             # as if only the first three files had been read so far: the next step of the load adds the MS2 and MRM ones
             pg.evaluate("E.files = E.files.slice(0, 3); E.key = ''; E._seq = %s" % ("true" if seq else "false"))
+            # a file added LATER comes after the student acted: the tab of the batch just shown stays put until the first key or click (open-now.js batchShown)
+            if not seq: pg.keyboard.press("Shift")
             pg.evaluate("bootSession()"); pg.wait_for_function("E.files.length === 5", timeout=60000); pg.wait_for_timeout(800)
             return pg.evaluate("E.tab")
     finally:
