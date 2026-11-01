@@ -45,8 +45,8 @@ try:
         def active():
             pg.evaluate("setActive(E.panels.find(q => q.type === 'spec'))")
             st = pg.evaluate("(() => { const e = document.querySelector('.pnl.act'), c = getComputedStyle(e); return [c.outlineStyle, c.borderLeftStyle, c.borderLeftWidth]; })()")
-            # the side bar of the active (or paired) panel is its own 4 px left border, which follows the corner radius; no frame around the panel
-            assert st[0] == "none" and st[1] == "solid" and st[2] == "4px", st
+            # the side bar of the active (or paired) panel is its own 2 px left border, which follows the corner radius; no frame around the panel
+            assert st[0] == "none" and st[1] == "solid" and st[2] == "2px", st
         step("the active panel has no frame, a bar on the left", active)
 finally:
     r.close()

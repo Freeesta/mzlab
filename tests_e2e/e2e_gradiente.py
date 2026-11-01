@@ -109,10 +109,10 @@ try:
             P = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='press')"
             opts = pg.evaluate(f"[...{P}.el.querySelectorAll('.can-row[data-kind]')].map(o=>o.getAttribute('aria-label'))"); assert "Pressione della pompa" in opts, opts
             v = pg.evaluate(f"(()=>{{const a={P}._a;return {{n:a.sr.length,unit:a.sr[0].unit,y1:a.sr[0].y[a.sr[0].x.findIndex(t=>t>=1)],lab:{P}.leg.textContent+{P}.corrbar.textContent}}}})()")
-            assert v["n"] == 1 and v["unit"] == "bar" and abs(v["y1"] - 278) < 12 and "10 volte" in v["lab"], v
+            assert v["n"] == 1 and v["unit"] == "bar" and abs(v["y1"] - 278) < 12 and "10 volte" not in v["lab"], v
             e = pg.evaluate(f"(()=>{{const q={P}, o=E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic'), r=q.cv.getBoundingClientRect(), s=o.cv.getBoundingClientRect();return [r.left+q._a.X(q._a.x0)-(s.left+o._a.X(o._a.x0)), r.left+q._a.X(q._a.x1)-(s.left+o._a.X(o._a.x1)), q._a.x0-o._a.x0, q._a.x1-o._a.x1]}})()")
             assert abs(e[0]) <= 1 and abs(e[1]) <= 1, e
-        step("the pressure is in the chromatogram selector, in bar, with the unit note and the shared axis", kind_press)
+        step("the pressure is in the chromatogram selector, in bar (no unit note: the file holds bar) and the shared axis", kind_press)
         def press_overlay():
             T2 = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic')"
             pg.evaluate(f"{T2}.overlay='press'; redrawAll()"); ready(pg)
