@@ -897,10 +897,11 @@ const BARRA = (() => {
       applyLayout();
       schedFit();
     });
-    let wasData = false;
+    let wasData = false, lastTop = 0;
+    // the view is hidden before "tpview" fires and a hidden element reads scrollTop 0: the scroll is followed as it happens
+    document.addEventListener("scroll", e => { const t = /** @type {HTMLElement | null} */ (e.target); if (t && t.id === "sb-panels") lastTop = t.scrollTop; }, true);
     document.addEventListener("tpview", () => {
-      const sc = Q1("#sb-panels");
-      if (wasData && !inDataOrOpening()) { _away = { open: _open, top: sc ? sc.scrollTop : 0 }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
+      if (wasData && !inDataOrOpening()) { _away = { open: _open, top: lastTop }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
       else if (!wasData && inDataOrOpening() && _away) {                                                          // back in Dati: the panel returns as it was left (width and tool are kept in _w / _tab)
         _open = _away.open; _forced = false; _restore = false; autoNarrow();
         const top = _away.top; _away = null;
