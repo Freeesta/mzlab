@@ -17,9 +17,9 @@ const CONV = {
     const total = todo.reduce((/** @type {number} */ a, /** @type {Bag} */ x) => a + (x.size || 0), 0) * (this.RATIO[this.compression] || 1);
     return total ? "≈ " + (total > 1e6 ? (total / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1e3)) + " kB") : "";
   },
-  // the label of each «Download mzML» button of the table with the real size of the file written for the compression now selected (in place: the table is not drawn again)
+  // the tooltip of each «Download mzML» button of the table with the real size of the file written for the compression now selected (in place: the table is not drawn again)
   paintSizes() {
-    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {Element} */ b) => { const s = this.realSize(/** @type {HTMLElement} */ (b).dataset.dl || ""); b.textContent = I18N.t("conv.dl") + (s ? " (" + s + ")" : ""); });
+    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {HTMLElement} */ b) => { const s = this.realSize(b.dataset.dl || ""); b.title = I18N.t("conv.dl.title") + (s ? " (" + s + ")" : ""); });
   },
   // the real size of the mzML already written for `name` (in the desktop app the file stays on the disk and its size comes from the native side)
   realSize(/** @type {string} */ name) {
@@ -242,9 +242,9 @@ const CONVROWS = {
     return `<div class="cvtool"><div class="cvr2"><details class="muted sm" id="advconv" data-cvtool="adv"${off(st.adv)}><summary>${T("conv.adv")}</summary><label>${T("conv.comp")} <select id="cvcomp">${[["standard", T("conv.comp.standard")], ["smallest", T("conv.comp.smallest")], ["none", T("conv.comp.none")]].map(([k, t]) => `<option value="${k}"${CONV.compression === k ? " selected" : ""}>${t}</option>`).join("")}</select></label> <button type="button" class="hq" data-help="compressione" title="${I18N.t("common.help")}" aria-label="${I18N.t("common.help")}">?</button> <span id="cvest" class="muted" aria-live="polite">${CONV.estimate()}</span></details>` +
       `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm" id="dlall" data-cvtool="dl"${off(st.dl)} title="${T("conv.dl.title")}">${T("conv.dlall")}</button></div></div>`;
   },
-  // the table of the loading: the columns have a fixed width from the first row, so no phase moves them; `head` = the row of headings, `body` = the rows
-  table(/** @type {string} */ head, /** @type {string} */ body) {
-    return `<div class="ldwrap"><table class="ldtab"><colgroup><col class="c-use"><col><col class="c-exp"><col class="c-typ"><col class="c-tim"><col class="c-con"><col class="c-siz"><col class="c-act"></colgroup><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  // the table of the loading: the columns have a fixed width from the first row, so no phase moves them; `head` = the row of headings, `body` = the rows, `conc` = the concentration column is there
+  table(/** @type {string} */ head, /** @type {string} */ body, conc = true, extra = 0) {
+    return `<div class="ldwrap"><table class="ldtab"><colgroup><col class="c-use"><col><col class="c-exp"><col class="c-typ"><col class="c-tim">${conc ? '<col class="c-con">' : ""}<col class="c-siz">${'<col class="c-x">'.repeat(extra)}<col class="c-act"></colgroup><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
   },
   // the count of the ended rows by kind of file (full scan, MS2, MRM, infusion, mixed, other), the failed, cancelled and truncated ones, and the time from the first start to the last end
   /** @param {ConvRow[]} end */

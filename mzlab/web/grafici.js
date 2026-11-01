@@ -110,7 +110,7 @@ async function rawSeries(p) {
     if (!matchTr) return;
     const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);
     const multiTr = Array.isArray(p.tr) && p.tr.length > 1;
-    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, time: f.time, color: (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
+    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
       dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${key} · ${f.label}` : `${key} ${t.name || ""}`.trim(), tid_label: `${key} ${t.name || ""}`.trim() });
   }));
   return out;
