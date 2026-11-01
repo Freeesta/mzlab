@@ -34,7 +34,7 @@ try:
             for w in ("Full Scan", "+ Chromatogram", "+ Spectrum", "+ RT-m/z map", "Method"): assert w.lower() in pg.inner_text("#v-data").lower(), w
         step("first view of Data: no Italian", first_view)
         def sidebar():
-            for t in ("calc", "losses", "lists"):
+            for t in ("calc", "addloss", "lists"):
                 pg.click(f"#stbar [data-cmd={t}]"); attendi(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
                 it = italian(pg); assert not it, (t, it)
             pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)

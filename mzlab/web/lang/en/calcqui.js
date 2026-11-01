@@ -17,9 +17,5 @@ I18N.add("en", {
   "calc.col.da": "error (Da)",
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "no adduct within {tol} Da",
-  "icon.ad": "Adducts",
-  "cmd.adducts.lab": "Adducts",
-  "cmd.adducts.name": "Adducts",
-  "cmd.adducts.tip": "Adducts of a formula or of an observed m/z, and differences between adducts",
-  "cmd.adducts.kw": "adduct adducts addotto addotti mass difference esi sodium ammonium"
+  "icon.ad": "Adducts"
 });

@@ -15,7 +15,7 @@ try:
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
         def simple():
-            pg.click("#np-nl"); pg.wait_for_timeout(300)
+            pg.click("#np-addloss"); pg.click("#al-t-losses"); pg.wait_for_timeout(300)
             n = pg.locator("#nl-list .nlr").count(); assert 14 <= n <= 24, n
             ms = [int(x) for x in pg.locator("#nl-list .nlm").all_inner_texts()]; print(ms); assert ms == sorted(ms) and ms[0] == 15, ms
             assert pg.locator("#nl-list .nldet:visible").count() == 0, "details closed by default"
@@ -67,7 +67,7 @@ try:
             shut(pg, "#refx")
         step("4.6: +/- toggle filter", polarity)
         def a2():
-            if not pg.is_visible("#sb-panel-losses"): pg.click("#np-nl")
+            if not pg.is_visible("#sb-panel-losses"): pg.click("#np-addloss"); pg.click("#al-t-losses")
             pg.wait_for_timeout(300)
             assert [b.strip() for b in pg.locator("#nl-pol button").all_inner_texts()] == ["ESI+", "ESI−"]
             assert pg.locator("#nl-list .nlpp").count() == 0, "polarity column removed"
@@ -122,7 +122,7 @@ try:
             its = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>d.textContent)"); print(its)
             assert "Cerca 170.2 nelle perdite neutre" in its, its
             pg.locator("#ctx div", has_text="Cerca 170.2").click(); pg.wait_for_timeout(500)
-            assert pg.evaluate("BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden") and pg.input_value("#nl-q") == "170.2"
+            assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden") and pg.input_value("#nl-q") == "170.2"
             shut(pg, "#refx")
         step("4.7: from the ruler: «Cerca 170.2 nelle perdite neutre»", ruler)
         def ruler_label():
@@ -132,7 +132,7 @@ try:
             l = lbl_pos(364.4, 194.2); assert l and not l[3] and "perdite" in l[2], l
             pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)
             assert not pg.evaluate("document.querySelector('#ctx') && !document.querySelector('#ctx').hidden"), "the general menu must not open on the label"
-            assert pg.evaluate("BARRA.curTab === 'losses'") and pg.input_value("#nl-q") == "170.2", "right click on the label: losses filtered on the value"
+            assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')") and pg.input_value("#nl-q") == "170.2", "right click on the label: losses filtered on the value"
             shut(pg, "#refx")
             l = lbl_pos(300, 321.9819); assert l and l[3] and "[M+Na]" in l[2] and "[M+H]" in l[2], l
             pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)

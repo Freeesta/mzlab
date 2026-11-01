@@ -52,7 +52,7 @@ I18N.add("it", {
   "tour.pannello.titolo": "Gli strumenti del pannello",
   "tour.pannello.testo": "Smoothing, correzione del fondo, integrazione, Scarica (immagine o dati per Excel) e schermo intero. Il clic destro sul grafico offre altre azioni.",
   "tour.barra.titolo": "La barra degli strumenti",
-  "tour.barra.testo": "File, Calcolatrice, Perdite neutre, Liste e Tavola periodica si aprono da qui: il pannello si affianca ai grafici, che si restringono. Il pulsante «Pannello» (Ctrl/⌘+B) lo mostra o lo nasconde. Il resto è sotto «Altro».",
+  "tour.barra.testo": "File, Calcolatrice, Addotti e perdite, Liste e Tavola periodica si aprono da qui: il pannello si affianca ai grafici, che si restringono. Il pulsante «Pannello» (Ctrl/⌘+B) lo mostra o lo nasconde. Il resto è sotto «Altro».",
   "tour.metodo.titolo": "Il metodo dello strumento",
   "tour.metodo.testo": "Che cosa ha misurato lo strumento: tipo di scansione, polarità, intervallo di massa e parametri del metodo.",
   "tour.ingranaggio.titolo": "Impostazioni e questo tour",

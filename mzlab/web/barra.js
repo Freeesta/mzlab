@@ -20,12 +20,14 @@ const BARRA = (() => {
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
   const AUTO_W = 1100;              // below this width the panel hides by itself (the first thing to go, before the charts); a tool button brings it back
   const PHONE_W = 600;
-  const MAIN = new Set(["file", "calc", "adducts", "losses", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
+  const MAIN = new Set(["file", "calc", "addloss", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
   const LEVELS = ["all", "main", "none"];
   const HYST = 8;                   // px of slack asked before a richer level comes back (no flicker at the edge)
-  const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
+  const DROP_ORDER = ["ptable", "qaqc", "lists", "addloss", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
   let _tab = "file";
+  let _sub = "adducts";             // the section of the Adducts & losses panel ("adducts" | "losses"): the last one used is remembered
+  const SUBS = ["adducts", "losses"];
   let _open = false;
   let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, loading)
   let _restore = false;             // hidden by the narrow window, not by the user: it comes back when the window widens
@@ -64,7 +66,7 @@ const BARRA = (() => {
   const byNames = () => typeof namesWidth === "function" && seen();                 // the names set the width once a file is shown
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
   const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.min(defaultW(), namesWidth(defaultW())) : defaultW()));
-  const validTab = (/** @type {string} */ id) => ["file", "calc", "adducts", "losses", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
+  const validTab = (/** @type {string} */ id) => ["file", "calc", "addloss", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
   const IC = (/** @type {string} */ d) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -95,8 +97,7 @@ const BARRA = (() => {
   const CMD = [
     { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() ? toggleDrawer() : toggle("file")) },
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inDataOrOpening() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },     // outside Dati the calculator is the drop-down under the button (eventi.js)
-    { id: "adducts", dom: "np-add", ic: () => QI("ad"), panel: "adducts", run: () => toggle("adducts") },
-    { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => toggle("losses") },
+    { id: "addloss", dom: "np-addloss", ic: () => QI("ad"), panel: "addloss", run: () => toggle("addloss") },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => toggle("lists") },
     { id: "qaqc", feature: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
     
@@ -172,6 +173,8 @@ const BARRA = (() => {
     _w = okW ? Math.round(s.w) : defaultW();
     _wUser = okW && (s.u === true || (s.u === undefined && _w !== defaultW()));
     if (!_wUser) _w = defaultW();
+    if (SUBS.includes(s.sub)) _sub = s.sub;
+    if (SUBS.includes(s.tab)) { _sub = s.tab; s.tab = "addloss"; }         // a state saved while Adducts or Losses had their own panels
     _tab = validTab(s.tab) ? s.tab : "file";
     _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     _landOpen = typeof s.open === "boolean" ? s.open : undefined;
@@ -194,7 +197,7 @@ const BARRA = (() => {
 
   function saveState() {
     try {
-      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: landing() ? _landOpen : _open || _restore, w: _w, u: _wUser, last: _last }));
+      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, sub: _sub, open: landing() ? _landOpen : _open || _restore, w: _w, u: _wUser, last: _last }));
       localStorage.setItem(K_SIDE, _side);
     } catch (_) { /* no storage */ }
   }
@@ -274,7 +277,7 @@ const BARRA = (() => {
   }
 
   function setPanelVisible(/** @type {string} */ id) {
-    const /** @type {Record<string, string>} */ map = { file: "#sb-panel-file", calc: "#sb-panel-calc", adducts: "#sb-panel-adducts", losses: "#sb-panel-losses", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc", stat: "#sb-panel-stat" };
+    const /** @type {Record<string, string>} */ map = { file: "#sb-panel-file", calc: "#sb-panel-calc", addloss: "#sb-panel-addloss", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc", stat: "#sb-panel-stat" };
     Object.values(map).forEach(sel => { const p = Q1(sel); if (p) p.hidden = true; });
     const hr = Q1("#hrinfo");
     if (hr) hr.hidden = true;
@@ -314,11 +317,35 @@ const BARRA = (() => {
         if (inp && _open && _tab === "calc") inp.focus();
         if (typeof calcRun === "function") calcRun();
       }, 30);
-    } else if (id === "losses") ensureLossesMounted(opt);
-    else if (id === "adducts" && typeof CALCQUI !== "undefined") CALCQUI.ensureAdducts(opt);
+    } else if (id === "addloss") setSub(opt.sub || _sub, opt);
     else if (id === "lists") ensureListsMounted(opt);
     else if (id === "stat") { const pnl = Q1("#sb-panel-stat"); if (pnl && window.STAT) STAT.mount(pnl); }
     else if (id === "qaqc") { const pnl = Q1("#sb-panel-qaqc"); if (pnl && window.QAQC) QAQC.mount(pnl); }      // painted again at every opening: the files may have changed
+  }
+
+  /** Shows one section of the Adducts & losses panel (tabs on top, both bodies stay mounted). @param {string} sub @param {Bag} [opt] */
+  function setSub(sub, opt = {}) {
+    if (!SUBS.includes(sub)) sub = "adducts";
+    _sub = sub;
+    SUBS.forEach(k => {
+      const body = Q1("#sb-panel-" + k), tab = Q1("#al-t-" + k), on = k === sub;
+      if (body) body.hidden = !on;
+      if (tab) { tab.setAttribute("aria-selected", String(on)); tab.tabIndex = on ? 0 : -1; tab.classList.toggle("on", on); }
+    });
+    if (sub === "losses") ensureLossesMounted(opt);
+    else if (typeof CALCQUI !== "undefined") CALCQUI.ensureAdducts(opt);
+    saveState();
+  }
+  function bindAddLoss() {
+    const tabs = Q1("#al-tabs");
+    if (!tabs) return;
+    tabs.addEventListener("click", ev => { const b = /** @type {HTMLElement} */ (ev.target).closest("[data-sub]"); if (b instanceof HTMLElement) setSub(b.dataset.sub || "adducts"); });
+    tabs.addEventListener("keydown", ev => {            // arrows move between the two tabs, as in any tablist
+      if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight" && ev.key !== "Home" && ev.key !== "End") return;
+      ev.preventDefault();
+      const next = ev.key === "ArrowLeft" || ev.key === "Home" ? SUBS[0] : SUBS[1];
+      setSub(next); const b = Q1("#al-t-" + next); if (b) b.focus();
+    });
   }
 
   function ensureLossesMounted(/** @type {Bag} */ opt = {}) {
@@ -373,6 +400,7 @@ const BARRA = (() => {
   }
 
   function show(/** @type {string} */ id, /** @type {Bag} */ opt = {}) {
+    if (SUBS.includes(id)) { opt = { ...opt, sub: id }; id = "addloss"; }          // «adducts» and «losses» are the two sections of one panel
     hintClose(true);
     if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
     if (!(inDataOrOpening() || landing()) || !validTab(id)) return false;
@@ -1004,6 +1032,7 @@ const BARRA = (() => {
     saveState();                 // writes back only the valid fields: an old state (pinned, odd side or width) is cleaned
     bindResizer();
     bindSideDrag();
+    bindAddLoss();
     bindGlobalEvents();
     dockCalc(true);
     if (typeof ResizeObserver !== "undefined") {
@@ -1054,7 +1083,9 @@ const BARRA = (() => {
     focusToolbar,
     isDataView: () => inData() || landing(),      // the tools dock in the side panel also in the empty landing
     /** @param {string} [id] */
-    isOpen: id => _open && inData() && (id == null || _tab === id),
+    isOpen: id => _open && inData() && (id == null || (SUBS.includes(id) ? _tab === "addloss" && _sub === id : _tab === id)),
+    get curSub() { return _sub; },
+    setSub,
     get curTab() { return _tab; },
     get side() { return _side; },
     get width() { return effW(); },

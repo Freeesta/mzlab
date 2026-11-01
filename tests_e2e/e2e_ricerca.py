@@ -40,7 +40,7 @@ try:
             n0 = pg.get_attribute("#pal-in", "aria-activedescendant"); pg.keyboard.press("ArrowDown")
             assert pg.get_attribute("#pal-in", "aria-activedescendant") != n0 and pg.locator("#pal-l [aria-selected=true]").count() == 1
             pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter"); attendi(pg, "document.querySelector('#paletta').hidden")
-            attendi(pg, "BARRA.curTab === 'losses'"); assert pg.input_value("#nl-q") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'nl-q'"); pg.evaluate("BARRA.close(false)")
+            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#nl-q") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'nl-q'"); pg.evaluate("BARRA.close(false)")
         step("↑↓ and Enter open the panel of the first result", keys)
         def esc():
             opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('#paletta').hidden")
