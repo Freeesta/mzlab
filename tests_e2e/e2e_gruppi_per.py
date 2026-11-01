@@ -44,7 +44,7 @@ try:
         watch()
         BOX = "['#tools', '#dpanels', '#sb-header'].map(s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round).join(); }).join('|')"
         def matrix():
-            assert pg.evaluate("E.files.filter(f => !f.gone).length") == 30
+            assert pg.evaluate("E.files.filter(f => !f.gone).length") == 30, pg.evaluate("E.files.map(f => f.label + (f.gone ? '!' : '')).join('|')")
             open_menu(pg)
             assert item(pg, "Experiment type").get_attribute("aria-checked") == "true"
             item(pg, "Matrix").click(); attendi(pg, "!!E.ugBy && E.ugBy.by === 'matrix'", 10000); fermo(pg, "#flst")
