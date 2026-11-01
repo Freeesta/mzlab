@@ -52,13 +52,11 @@ const toDraft = (/** @type {GradModel | null} */ g) => (g ? g.points.map((/** @t
 async function html(/** @type {FileAperto} */ f) {
   const g = await get(f);
   const last = lastRead();
-  let h = `<section class="msec" id="grad-sec"><h4>${T("grad.title")}</h4>`;
+  let h = `<section class="msec" id="grad-sec">${g ? `<h4>${T("grad.title")}</h4>` : ""}`;
   if (g) {
     h += `<div class="sm" style="margin:0 0 6px">${T((/** @type {Record<string, string>} */ (SRC))[g.source] || "grad.src.manual")}${g.nonlinear ? " · " + T("grad.nonlinear") : ""}</div>`;
     h += typeof lcHtml === "function" ? lcHtml({ gradient: g.points, run_time: g.run_time }, () => "") : "";
     h += `<div class="mchips" style="margin-top:6px"><button type="button" class="go" id="grad-edit">${T("grad.edit")}</button> <button type="button" class="go" id="grad-rm">${T("grad.remove")}</button></div>`;
-  } else {
-    h += `<div class="sm" style="margin:0 0 8px">${T("grad.none")}</div>`;
   }
   h += `<div class="mchips" style="margin-top:6px"><button type="button" class="go" id="grad-new">${T("grad.insert")}</button> <button type="button" class="go" id="grad-raw">${T("grad.rawImport")}</button> <button type="button" class="go" id="grad-csv">${T("grad.csvImport")}</button> <button type="button" class="go" id="grad-course">${T("grad.course")}</button>${last ? ` <button type="button" class="go" id="grad-last">${T("grad.last")}</button>` : ""}</div>`;
   h += `<div id="grad-ed" hidden></div><div id="grad-msg" class="sm" role="status" aria-live="polite" style="margin-top:6px"></div></section>`;

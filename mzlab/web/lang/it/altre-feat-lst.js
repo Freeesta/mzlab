@@ -273,7 +273,6 @@ I18N.add("it", {
   "hr.iso.noPeak": "(nessun picco osservato entro {tol} ppm da m/z {mz})",
   "files.prec.row": "Precursore m/z {mz}",
   "grad.title": "Gradiente",
-  "grad.none": "Per questo file non c'è un gradiente (gli mzML non lo contengono). Puoi inserirlo, importarlo da un file .raw o da un CSV.",
   "grad.src.dam": "Dal metodo .dam",
   "grad.src.raw": "Letto dal file .raw",
   "grad.src.file": "Letto dal metodo del file",
