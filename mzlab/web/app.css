@@ -32,7 +32,7 @@ main{display:grid;grid-template-columns:minmax(380px,34%) 1fr;gap:10px;padding:1
 @media (max-width:900px){main{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:var(--sp-4) 10px;margin-bottom:var(--sp-4)}
 .card h3{margin:0 0 6px;font-size:13px}.cardhd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}.cardhd h3{margin:0}.cartpick{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;padding:4px;margin:-4px -2px -4px 0}.cartpick[hidden]{display:none}@media (pointer:coarse){.cartpick{min-width:40px;min-height:40px}}.muted{color:var(--muted)}
-input[aria-invalid="true"]{outline:2px solid var(--bad)}input.guess{background:rgba(255,214,0,.30)}.guess{background:rgba(255,214,0,.30)}tr.grp td{background:var(--bg);font-weight:600;border-bottom:1px solid var(--line);padding:6px 6px 3px;font-size:.9em}table{border-collapse:collapse;width:100%}th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:3px 6px}
+input[aria-invalid="true"]{outline:2px solid var(--bad)}input.guess,select.guess,.guess{border:1px dashed var(--muted)}tr.grp td{background:var(--bg);font-weight:600;border-bottom:1px solid var(--line);padding:6px 6px 3px;font-size:.9em}table{border-collapse:collapse;width:100%}th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:3px 6px}
 td{padding:var(--row-py) 6px;border-bottom:1px solid var(--line);vertical-align:middle}tr.row{cursor:pointer}tr.row:hover{background:var(--sel)}tr.sel{background:var(--sel)}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 canvas{display:block;width:100%}
@@ -421,9 +421,10 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .cvtool .cvr2 details{margin:0}
 .ldwrap{margin-top:8px;overflow-x:auto}
 .ldtab{table-layout:fixed;width:100%;min-width:1060px}
-.ldtab col.c-use{width:34px}.ldtab col.c-exp{width:19%}.ldtab col.c-typ{width:15%}.ldtab col.c-tim{width:110px}.ldtab col.c-con{width:130px}.ldtab col.c-siz{width:80px}.ldtab col.c-act{width:176px}
-.ldtab col.c-x{width:120px}
+.ldtab col.c-use{width:34px}.ldtab col.c-exp{width:16%}.ldtab col.c-typ{width:15%}.ldtab col.c-tim{width:110px}.ldtab col.c-con{width:130px}.ldtab col.c-siz{width:80px}.ldtab col.c-act{width:160px}
 .ldtab td,.ldtab th{overflow-wrap:anywhere}
+.ldtab .ldname{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.ldtab col.c-x{width:120px}
 .samphead #colsbtn{margin-left:8px}
 .colsdlg{max-width:min(560px,94vw);border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:16px}
 .colsdlg::backdrop{background:rgba(0,0,0,.4)}
@@ -576,8 +577,8 @@ html.in-draw #sb-toggle{display:none}
 #tools>#g-add{flex:0 6 auto;min-width:min(100%,7.5rem);overflow-x:auto;scrollbar-width:none;padding:3px 3px 3px 8px;margin:-3px -3px -3px 0}
 #tools>#g-add::-webkit-scrollbar{display:none}
 @container tools (max-width:1180px){#tools>#g-add{mask-image:linear-gradient(to right,#000 calc(100% - 14px),transparent)}}
-/* the show/hide box of a file in the side list is a 24 px target (WCAG 2.2 target size); the checkboxes of the precursor rows keep their own size */
-#flst .fl>input[type=checkbox][data-k]{width:24px;height:24px;margin:0;flex:none}
+/* the show/hide box of a file in the side list is a 24 px target (WCAG 2.2 target size) that draws a 14 px box; the checkboxes of the precursor rows keep their own size */
+#flst .fl>input[type=checkbox][data-k]{appearance:none;-webkit-appearance:none;position:relative;width:24px;height:24px;margin:0;flex:none;border:0;background:none;cursor:pointer}#flst .fl>input[type=checkbox][data-k]::before{content:"";position:absolute;inset:5px;box-sizing:border-box;border:1.5px solid var(--muted);border-radius:3px;background:var(--panel)}#flst .fl>input[type=checkbox][data-k]:checked::before{background:var(--accent);border-color:var(--accent)}#flst .fl>input[type=checkbox][data-k]:checked::after{content:"";position:absolute;left:9.5px;top:6px;width:4px;height:8px;border:solid var(--on-accent);border-width:0 2px 2px 0;transform:rotate(45deg)}#flst .fl>input[type=checkbox][data-k]:disabled{cursor:default}#flst .fl>input[type=checkbox][data-k]:disabled::before{opacity:.5}#flst .fl>input[type=checkbox][data-k]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 /* narrow screens: tighter tab padding so the four tabs plus the tools still fit two header rows; #nav keeps one fixed width (widest label set measured: 250 px) */
 @media (max-width:600px){html:not(.phone) #nav button{padding:6px 7px}html:not(.phone) #nav{min-width:calc(250px*var(--z,1));order:1}html:not(.phone) header .hq{order:2}html:not(.phone) header #fs-btn{order:3}html:not(.phone) header #sb-toggle{order:4}html:not(.phone) header #np-set{order:5}html:not(.phone) #stbar{flex-basis:80px;min-width:112px}html:not(.phone) #g-tools button{min-height:24px}}
 #v-workspace[data-work=landing][data-up] #start #drop{visibility:hidden}
