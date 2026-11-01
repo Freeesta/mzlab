@@ -1,6 +1,6 @@
 I18N.add("it", {
   "cmd.file.lab": "File",
-  "cmd.file.name": "Elenco dei file",
+  "cmd.file.name": "File",
   "cmd.file.tip": "Elenco dei file caricati: scegli, nascondi, rinomina, colora",
   "cmd.calc.lab": "Calcolatrice",
   "cmd.addloss.lab": "Addotti e perdite",
