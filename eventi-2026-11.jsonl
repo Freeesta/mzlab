@@ -5285,3 +5285,4 @@
 {"v":1,"ts_utc":"2026-11-01T16:42:28Z","azione":"aperta","tipo":"pr","pr":2478,"sha":"ad4be1cfaff81b3bf1c28cfbb0db36c784dfe46a"}
 {"v":1,"ts_utc":"2026-11-01T16:45:51Z","azione":"aperta","tipo":"pr","pr":2479,"sha":"4077ab87e1eb96b191482f64eb16e5bd757a5055"}
 {"v":1,"ts_utc":"2026-11-01T16:47:50Z","azione":"aperta","tipo":"pr","pr":2480,"sha":"a988034cf8fc2cbdb608a0712c277fc279eedb99"}
+{"v":1,"ts_utc":"2026-11-01T16:48:51Z","azione":"push","titolo":"Merge origin/main into claude/lr-a-titoli-ms2","merge_main":true,"aree":{"docs":2,"web":23,"test":18,"generati":1},"tipo":"pr","pr":2473,"sha":"8f70f2cf4e59dc3db36ccbee29e11eaff8098709"}
