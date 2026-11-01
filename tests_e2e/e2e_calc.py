@@ -50,8 +50,8 @@ try:
             assert pg.is_visible("#calc-nl") and "170.2" in pg.get_attribute("#calc-nl", "title")
             pg.fill("#calcin", "364,4 \u2212 194,2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '170.2'"); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
             pg.fill("#calcin", "(229.1-171.2)*2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '115.8'"); assert pg.inner_text("#calcres").strip() == "115.8"
-            pg.click("#calc-nl"); until(pg, "window.BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden")
-            assert pg.evaluate("window.BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden")
+            pg.click("#calc-nl"); until(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
+            assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.input_value("#nl-q") == "115.8"
             pg.click("#np-calc2"); attendi(pg, "window.BARRA.curTab === 'calc'")
         step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), calc-nl button opens losses tab", arithmetic)
@@ -117,8 +117,8 @@ try:
             pg.fill("#cadd-delta", ""); pg.click("#cadd-diffs summary")
         step("mass differences: closed by default, a delta between two peaks names the adduct pair", diffs)
         def menu():
-            assert pg.locator("#stbar [data-cmd=adducts]").count() == 1 and pg.locator("#np-ad").count() == 0, "one toolbar entry for the Adducts panel, no leftover old one"
-            pg.evaluate("BARRA.setTab('adducts')"); attendi(pg, "BARRA.curTab === 'adducts' && !document.querySelector('#sb-panel-adducts').hidden")
+            assert pg.locator("#stbar [data-cmd=addloss]").count() == 1 and pg.locator("#stbar [data-cmd=adducts], #stbar [data-cmd=losses], #np-ad, #np-nl").count() == 0, "one toolbar entry for Adducts & losses, no leftover old ones"
+            pg.evaluate("BARRA.setTab('adducts')"); attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'adducts') && !document.querySelector('#sb-panel-adducts').hidden")
             pg.evaluate("QQQRef.open('ad')"); attendi(pg, "BARRA.curTab === 'calc' && !!document.querySelector('#calcin').offsetParent")      # the old «adducts» request of the references opens the calculator
         step("the Adducts entry opens its panel, the references request opens the calculator; no dead menu entry", menu)
         def xic_click():

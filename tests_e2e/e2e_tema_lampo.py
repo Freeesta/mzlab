@@ -13,7 +13,7 @@ def near(a, b): return all(abs(x - y) <= 3 for x, y in zip(a, b))
 def early_pixel(b, url, scheme, pref):
     """Opens url with its stylesheets and external scripts held back and returns the computed background of <html> read before any of them ran
     (headless Chromium paints no frame while they are pending, so the computed style is what the first frame will use)."""
-    ctx = b.new_context(color_scheme=scheme, viewport={"width": 800, "height": 600}, reduced_motion="reduce")
+    ctx = b.new_context(lang_auto=True, color_scheme=scheme, viewport={"width": 800, "height": 600}, reduced_motion="reduce")
     if pref: ctx.add_init_script("try{localStorage.setItem('mzlab.prefs',JSON.stringify({theme:'%s'}))}catch(e){}" % pref)
     pg = ctx.new_page(); held = []; free = []
     def hold(route):
@@ -32,7 +32,8 @@ try:
         r.page(p); b = r.b; root = f"http://127.0.0.1:{r.port}/"
         cases = [("app", root, LIGHT_APP)]
         for nm, url, light in cases:
-            step(nm + ": system dark, no saved choice -> dark at the first frame", lambda url=url: (lambda px: (_ for _ in ()).throw(AssertionError(px)) if not near(px, DARK) else None)(early_pixel(b, url, "dark", None)))
+            step(nm + ": system dark, no saved choice -> light at the first frame (light is the default)", lambda url=url, light=light: (lambda px: (_ for _ in ()).throw(AssertionError(px)) if not near(px, light) else None)(early_pixel(b, url, "dark", None)))
+            step(nm + ": saved auto over a dark system -> dark", lambda url=url: (lambda px: (_ for _ in ()).throw(AssertionError(px)) if not near(px, DARK) else None)(early_pixel(b, url, "dark", "auto")))
             step(nm + ": saved dark over a light system -> dark", lambda url=url: (lambda px: (_ for _ in ()).throw(AssertionError(px)) if not near(px, DARK) else None)(early_pixel(b, url, "light", "dark")))
             step(nm + ": saved light over a dark system -> light", lambda url=url, light=light: (lambda px: (_ for _ in ()).throw(AssertionError(px)) if not near(px, light) else None)(early_pixel(b, url, "dark", "light")))
     r.close()

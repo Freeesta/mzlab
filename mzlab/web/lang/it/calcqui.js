@@ -12,13 +12,10 @@ I18N.add("it", {
   "cq.ad.title.field": "Scrivi un numero (anche un conto come 100+114) o una formula",
   "cq.link.ad": "Addotti con questa differenza",
   "cq.link.loss": "Perdite neutre con questo numero",
-  "calc.tol.da": "Tolleranza (Da)",
+  "calc.tol.plain": "Tolleranza",
+  "cq.unit": "Unità della tolleranza",
   "calc.col.da": "errore (Da)",
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "nessun addotto entro {tol} Da",
-  "icon.ad": "Addotti",
-  "cmd.adducts.lab": "Addotti",
-  "cmd.adducts.name": "Addotti",
-  "cmd.adducts.tip": "Addotti di una formula o di un m/z osservato e differenze tra addotti",
-  "cmd.adducts.kw": "addotto addotti adducts adduct differenza massa esi sodio ammonio"
+  "icon.ad": "Addotti"
 });

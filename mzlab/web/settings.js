@@ -121,7 +121,7 @@ function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.
 const UIP_GROUP_KEY = id => NOMI.KEY(id === "uip-a11y" ? "set.a11y" : "set." + id);      // the group «Accessibility» keeps the key it always had
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
-  uipDo(() => { Object.assign(UIP, { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
+  uipDo(() => { Object.assign(UIP, { theme: "light", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
   uipSave(); uipApply();
 }
 /** Privacy group body: export and import buttons, hidden file input, preview box and statuses (logic in esporta-dati.js and importa-dati.js). */

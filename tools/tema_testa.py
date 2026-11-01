@@ -11,10 +11,10 @@ LIGHT = {"app": "#f7f8fa"}   # the --bg of each page in the light theme (the dar
 DARK = "#14171b"
 
 # data-theme comes from the parent page (when embedded) or from the saved preference «mzlab.prefs» (the old «qqq.prefs» until migrated); «auto» sets
-# nothing and the prefers-color-scheme rules decide. «no-tr» switches the colour transitions off until the second frame after load.
+# nothing and the prefers-color-scheme rules decide; with nothing saved the theme is light (the default), whatever the system says. «no-tr» switches the colour transitions off until the second frame after load.
 JS = ('(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}'
       'if(!t)try{t=JSON.parse(localStorage.getItem("mzlab.prefs")||localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}'
-      'if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}'
+      'if(!t)t="light";if(t==="dark"||t==="light")R.setAttribute("data-theme",t);'
       'R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()')
 
 
@@ -22,6 +22,7 @@ def snippet(kind: str) -> str:
     light = LIGHT[kind]
     css = (f"html{{background:{light}}}@media(prefers-color-scheme:dark){{html:not([data-theme=light]){{background:{DARK}}}}}"
            f"html[data-theme=dark]{{background:{DARK}}}html[data-theme=light]{{background:{light}}}"
+           "html[data-theme=dark]{color-scheme:dark}html[data-theme=light]{color-scheme:light}"
            "html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}")
     return f'{OPEN}<meta name="color-scheme" content="light dark"><style>{css}</style><script>{JS}</script>{CLOSE}'
 

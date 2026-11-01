@@ -261,7 +261,6 @@ I18N.add("en", {
   "calc.col.nominal": "to the unit",
   "calc.col.delta": "Δ mass",
   "calc.col.mif": "M if this adduct",
-  "calc.tol": "Tolerance (ppm)",
   "calc.pol": "Polarity",
   "calc.add.match": "match",
   "calc.add.hit": "{adduct} · {ppm} ppm",

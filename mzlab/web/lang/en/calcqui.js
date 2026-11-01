@@ -12,13 +12,10 @@ I18N.add("en", {
   "cq.ad.title.field": "Type a number (or a sum such as 100+114) or a formula",
   "cq.link.ad": "Adducts with this difference",
   "cq.link.loss": "Neutral losses with this number",
-  "calc.tol.da": "Tolerance (Da)",
+  "calc.tol.plain": "Tolerance",
+  "cq.unit": "Tolerance unit",
   "calc.col.da": "error (Da)",
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "no adduct within {tol} Da",
-  "icon.ad": "Adducts",
-  "cmd.adducts.lab": "Adducts",
-  "cmd.adducts.name": "Adducts",
-  "cmd.adducts.tip": "Adducts of a formula or of an observed m/z, and differences between adducts",
-  "cmd.adducts.kw": "adduct adducts addotto addotti mass difference esi sodium ammonium"
+  "icon.ad": "Adducts"
 });
