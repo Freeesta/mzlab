@@ -449,17 +449,15 @@ async function showMethod(sel) {
   const pol = ["positive", "negative", "mixed", "unknown"].includes(m.polarity) ? I18N.t(`method.pol.${m.polarity}`) : m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
   const sp = m.scan_params && !m.scan_params.error ? m.scan_params : null;       // high resolution / DDA file: the parameters stored in the scans themselves
-  const spNote = `<div class="avv info">${I18N.t("method.scanParamsNote")}</div>`;
-  let h = labs.length ? "" : sp ? spNote : `<div class="avv warn">${I18N.t("method.missing")}<div style="margin-top:6px"><button class="go" id="m-load">${I18N.t("method.loadDam")}</button></div></div>`;
+  let h = "";
   const sec = (title, body, extra = "") => `<section class="msec"><h4>${title}${extra}</h4>${body}</section>`;
-  const HOW = { q1: I18N.t("method.how.q1"), ems: I18N.t("method.how.ems"), ms2: I18N.t("method.how.ms2"), mrm: I18N.t("method.how.mrm") };
 
   const scanLike = m.kind === "full" || m.kind === "ms2";
   const expTbl = `<table>${row(I18N.t("method.row.polarity"), pol)}${scanLike ? row(I18N.t("method.row.massRange"), m.scan_window ? `m/z ${m.scan_window[0]}-${m.scan_window[1]}` : "") : ""}${row(I18N.t("method.row.duration"), m.rt_max > 0 ? `${m.rt_min.toFixed(2)}-${m.rt_max.toFixed(2)} min` : "")}${scanLike ? row(I18N.t("method.row.scans"), m.scans || "") + row(I18N.t("method.row.cycle"), m.cycle_s ? m.cycle_s.toFixed(2) + " s" : "") : ""}${m.kind === "ms2" ? row(I18N.t("method.row.precursors"), m.precursors.join(", ")) + row(I18N.t("method.row.ce"), m.ce.length ? m.ce.join(", ") + " eV" : "") : ""}</table>`;
   const labName = x => x.sample ? I18N.t("method.name", { n: x.sample }) : x.name;       // «Metodo 1»: the .dam holds several methods, one per sample
   const trTbl = m.transitions.length ? `<table><tr><th>${I18N.t("method.tr.name")}</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${EH(String(t.q1))}</td><td class="num">${EH(String(t.q3))}</td><td class="num">${EH(String(t.ce ?? ""))}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>` : "";
-  h += `<div class="msub"><span class="tag">${kindOf(f)}</span> <b>${EH(f.label)}</b> <span class="muted">· ${EH(m.instrument)} (${EH(m.serial)})</span></div><div class="mgrid">`;
-  h += sec(I18N.t("method.sec.experiment"), `<div class="sm hw">${HOW[m.kind === "full" ? (f.mode === "ems" ? "ems" : "q1") : m.kind] || ""}</div>${expTbl}${trTbl}`);
+  h += `<div class="msub"><span class="tag">${kindOf(f)}</span> <b>${EH(f.label)}</b> <span class="muted">· ${EH(m.instrument)} (${EH(m.serial)})</span>${labs.length || sp ? "" : ` <button type="button" class="go" id="m-load">${I18N.t("method.loadDam")}</button>`}</div><div class="mgrid">`;
+  h += sec(I18N.t("method.sec.experiment"), `${expTbl}${trTbl}`);
   if (sp && !lab) {
     const n1 = sp.ms1, n2 = sp.ms2, nf = (v, d = 0) => v == null ? "" : (+v).toFixed(d), join = a => a.join(", ");
     const t1 = `<table>${row(I18N.t("method.row.analyzer"), n1.an)}${row(I18N.t("method.row.massRange"), n1.window ? `m/z ${n1.window[0]}-${n1.window[1]}` : "")}${row(I18N.t("method.row.resolution"), n1.res ? nf(n1.res) : "")}${row(I18N.t("method.row.inject"), n1.inject != null ? nf(n1.inject, 1) + " ms" : "")}${row(I18N.t("method.row.scansN"), nf(n1.n))}</table>`;
@@ -475,12 +473,11 @@ async function showMethod(sel) {
   if (lab) {
     const pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.id === "ihe" ? I18N.t(s.value ? "method.source.on" : "method.source.off") : s.value + " " + s.unit}</td></tr>`).join("");
     const pick = labs.length > 1 ? `<div class="sm" style="margin:2px 0 6px">${I18N.t("method.source.pick", { select: `<select id="m-sel">${labs.map((x, i) => `<option value="${i}" ${i === li ? "selected" : ""}>${EH(labName(x))}</option>`).join("")}</select>` })}</div>` : `<div class="muted sm" style="margin:2px 0 6px">${I18N.t("method.source.from", { name: EH(labName(lab)) })}</div>`;
-    h += sec(I18N.t("method.source.title"), pick + (lab.error ? `<div class="fail">${EH(lab.error_key ? I18N.t(lab.error_key, lab.params) : lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : `<div class="muted sm">${I18N.t("method.source.none")}</div>`));
+    h += sec(I18N.t("method.source.title"), pick + (lab.error ? `<div class="fail">${EH(lab.error_key ? I18N.t(lab.error_key, lab.params) : lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : ""));
   }
   h += "</div>";
   if (lab) {
     if (lab.lc) h += lcHtml(lab.lc, row);
-    else if (!lab.error) h += `<div class="muted sm" style="margin-top:6px">${I18N.t("method.noLc")}</div>`;
   }
   const gradHere = !!(lab && lab.lc && lab.lc.gradient && lab.lc.gradient.length > 1);
   if (!gradHere && window.GRADIENTE) h += await GRADIENTE.html(f);       // no gradient in the .dam: the student can enter one
