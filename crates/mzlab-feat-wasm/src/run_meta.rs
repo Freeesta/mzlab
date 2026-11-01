@@ -144,7 +144,11 @@ pub fn job_meta<R: ReadAt>(
         _ => None,
     };
     let preset = (detect && recipe.detect.axis.is_da()).then_some("lr");
-    Ok(Meta { estimates, mem, preset })
+    Ok(Meta {
+        estimates,
+        mem,
+        preset,
+    })
 }
 
 /// A sink that keeps nothing: `Hashing` over it only hashes what passes.
