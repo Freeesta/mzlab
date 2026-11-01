@@ -480,7 +480,7 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .cq-ld{margin:2px 0 4px 0}
 .cq-links{margin:4px 0}.cq-link{background:none;border:0;padding:0 4px;min-height:28px;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}.cq-link[hidden]{display:none}
 .cq-none{margin:6px 0}
-#calcres-wrap{min-height:42px}#calcsum{min-height:1.5em}
+#calcres-wrap{min-height:calc(38px + 45px*var(--z,1));display:flex;flex-direction:column;align-items:stretch;gap:6px}#calcres-wrap #calcres{justify-content:center;text-align:center;width:100%;margin:0}#calcres-wrap .calc-nl-btn{justify-content:center;width:100%;box-sizing:border-box;min-height:32px;margin:0}#calcsum{min-height:1.5em}
 .cq-ctl .seg button{min-width:44px;min-height:32px;font-size:12px}
 @media (pointer:coarse){.cq-lb,.cq-link,.cq-g>summary{min-height:40px}}
 #sb-panel-adducts .nlbar{flex-wrap:wrap;gap:4px}#sb-panel-adducts .nlbar input{width:100%;max-width:100%;box-sizing:border-box}
