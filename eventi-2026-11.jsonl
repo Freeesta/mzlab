@@ -4866,3 +4866,4 @@
 {"v":1,"ts_utc":"2026-11-01T16:07:47Z","azione":"push","titolo":"File list: precursor rows show the number only, time only on Full Scan rows, names without extension and unique, no Prof","merge_main":false,"aree":{"docs":1,"web":5,"test":2,"generati":1},"tipo":"pr","pr":2470,"sha":"242025395c57e57bed9c3781f4fc2ab3f1cd48e2"}
 {"v":1,"ts_utc":"2026-11-01T16:13:38Z","azione":"aperta","tipo":"pr","pr":2471,"sha":"55193574684617678cfd59b955fe4dd47832096a"}
 {"v":1,"ts_utc":"2026-11-01T16:21:20Z","azione":"aperta","tipo":"pr","pr":2472,"sha":"cb7d49d1de24f144d662ed6db10720e269b8ee75"}
+{"v":1,"ts_utc":"2026-11-01T16:21:37Z","azione":"aperta","tipo":"pr","pr":2473,"sha":"611007d8501bbd0b137dff3443a9cf880f301bd3"}
