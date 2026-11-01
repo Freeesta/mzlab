@@ -19,7 +19,7 @@ globalThis.document = { getElementById: () => null };
 globalThis.steps = 0; globalThis.renders = 0; globalThis.fetched = [];
 globalThis.fileViewDo = fn => { steps++; fn(); };
 globalThis.renderFileList = () => { renders++; }; globalThis.uiSave = () => {};
-globalThis.lrTog = () => true; globalThis.ESP = { voce: () => ({ spettri: true }) };
+globalThis.lrTog = () => true; globalThis.ESP = { voce: () => ({ spettri: true }), unici() {} };
 globalThis.E = { files: ["MQ_H2O2_T00.mzML", "MQ_N2_T00.mzML", "TW_H2O2_T00.mzML", "QC_std.mzML"].map(file => ({ file })) };
 // the engine stub: the first token of the name is the matrix (none for QC), the second the condition; shaped as `nomivar/1`
 const NAMES = n => n.replace(/\\.mzML$/, "").split("_");

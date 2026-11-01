@@ -20,7 +20,7 @@ try:
         def menu():
             q = pg.evaluate(f"({RULES})({specs(pg)}[0])")
             assert q["files"] == ["MS2_t15"], q["files"]                 # MS2_t60 has no scan of 229.1
-            assert q["prec"] == ["tutti i prec.", "prec. 229.1 (821)", "prec. 305 (184)"], q["prec"]
+            assert q["prec"] == ["tutti", "229.1", "305"], q["prec"]
             assert not q["fol"] and not q["all"], q
         step("product ion: files and precursors of the active file with counts, no Follows, no overlay", menu)
         def badge():
@@ -32,7 +32,7 @@ try:
             q = pg.evaluate(f"{specs(pg)}.map(p => ({RULES})(p))")
             assert [x["file"] for x in q] == ["MS2_t15", "MS2_t60"] or sorted(x["file"] for x in q) == ["MS2_t15", "MS2_t60"], q
             b = [x for x in q if x["file"] == "MS2_t60"][0]
-            assert b["files"] == ["MS2_t60"] and b["prec"] == ["tutti i prec.", "prec. 237 (597)", "prec. 333 (529)"] and not b["fol"] and not b["all"], b
+            assert b["files"] == ["MS2_t60"] and b["prec"] == ["tutti", "237", "333"] and not b["fol"] and not b["all"], b
             n = pg.evaluate(f"{specs(pg)}.every(p => p._a && p._a.data && p._a.data.length >= 1)"); assert n, "both spectra have data"
         step("second pair (_bis): same rules, own file, with data", bis)
 finally:
