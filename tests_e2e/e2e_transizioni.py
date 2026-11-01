@@ -44,7 +44,8 @@ try:
                 assert pg.evaluate(BOX) == b0, "same start"
                 pg.focus("#sb-toggle"); pg.evaluate(COUNT); pg.evaluate(LONG)
                 pg.click("#sb-toggle")
-                assert pg.evaluate("document.activeElement.id") == "sb-toggle", "focus kept while it animates"
+                # opening moves the focus from the button into the pane after 90 ms (barra.js show); either way it is never dropped to the page while the panel slides
+                fid = pg.evaluate("document.activeElement.id"); assert fid in ("sb-toggle", "sb-pane"), "focus kept while it animates: " + fid
                 pg.wait_for_function(SETTLED); pg.wait_for_timeout(450)
                 assert pg.evaluate(BOX) == b1, (pg.evaluate(BOX), b1)
                 n = pg.evaluate("window.__n"); assert n["fit"] == (0 if name == "sheet" else 1), n   # the sheet hides the workspace: nothing to redraw
