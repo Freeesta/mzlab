@@ -25,7 +25,7 @@ COMANDI.gestore("files.view", {
   },
 });
 /** @param {() => void} fn */
-const fileViewDo = fn => COMANDI.fai("files.view", COMANDI.GLOBALE, fn);
+const fileViewDo = fn => COMANDI.fai("files.view", COMANDI.GLOBALE, () => { const had = new Set(E.files.filter(f => f.vis).map(f => f.k)); fn(); ESP.unici(had); });   // two files of a never-overlaid type (MS2) are never ticked together
 const setVisOf = (/** @type {any[]} */ fs, /** @type {boolean} */ on) => {
   fileViewDo(() => fs.forEach(f => sibsOf(f).forEach(g => { g.vis = on; })));
   if (!on) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
