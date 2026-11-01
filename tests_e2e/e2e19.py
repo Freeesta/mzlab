@@ -52,7 +52,7 @@ try:
             pg.locator("#flst input[data-pr]:not(:checked)").first.click(); pg.wait_for_timeout(1500); assert n() == 3, n()      # a second chromatogram alone (the spectrum comes on a double click)
             pg.locator("#flst input[data-pr]:checked").nth(1).click(); pg.wait_for_timeout(500); assert n() == 1, n()      # the second precursor in the list is the one with the pair: it closes, the lone chromatogram stays
             pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")
-            sel = pg.evaluate("(()=>{const c=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').el.querySelector('[data-o=prec]');return c?c.getBoundingClientRect().width:0})()"); assert sel > 90, sel     # the precursor menu is wide enough to read
+            sel = pg.evaluate("(()=>{const c=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').el.querySelector('[data-o=prec]');return c?c.getBoundingClientRect().width:0})()"); assert sel > 60, sel     # the precursor menu (numbers only) is wide enough to read
             pg.screenshot(path=SH + "19_ms2b.png")
         step("sidebar precursors: click switches the one pair, tick adds a second pair, readable menu", toggle)
         # MS2 arrows (nearest scan with data): covered by e2e_scroll «MS2: arrows jump over empty scans»
