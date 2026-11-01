@@ -1,8 +1,8 @@
 # e2e_carica_grandi: many big mzML loaded together with little room left in the browser. A file that does not fit says so (error.quota, in words), never the raw key
 # error.badIndex of an index cut short; the files open as soon as they are read: the progress rows of the side list show the phase and the percentage; no data of the laboratory: the files are made here (mzml_grande.py).
 import os, sys, tempfile, time; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mzml_grande   # before lib: lib puts tools/ first on the path, where a script of the same name (a command-line tool) lives
 from lib import *
-import mzml_grande
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
