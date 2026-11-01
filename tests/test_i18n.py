@@ -18,10 +18,10 @@ def node(code: str):
 
 
 @needs_node
-def test_default_language_follows_the_browser():
+def test_default_language_is_italian_whatever_the_browser():
     r = node("console.log(JSON.stringify([I.detect('', null, 'it-IT'), I.detect('', null, 'IT'), I.detect('', null, 'en-US'), I.detect('', null, 'fr-FR'),"
              "I.detect('', null, 'de'), I.detect('', null, undefined), I.detect('', null, 'es-ES')]))")
-    assert r == ["it", "it", "en", "en", "en", "en", "en"]
+    assert r == ["it"] * 7
 
 
 @needs_node
