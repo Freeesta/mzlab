@@ -103,6 +103,9 @@ function attach(p) {
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
   cv.addEventListener("mousemove", e => pendHint(p, e));
+  cv.addEventListener("pointerdown", () => { cv.dataset.ptr = "1"; });                       // a click gives the canvas focus: no keyboard ring until a key is used
+  cv.addEventListener("keydown", () => { delete cv.dataset.ptr; });
+  cv.addEventListener("blur", () => { delete cv.dataset.ptr; });
   cv.onmouseleave = e => { if (p.type === "spec" && window.XICLENS) XICLENS.leave(p, e); if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const bb = cv.getBoundingClientRect(), px = e.clientX - bb.left, py = e.clientY - bb.top, a = p._a;
@@ -522,7 +525,7 @@ Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
 Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
 Q("#np-xic").onclick = () => openXic(null);
 Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
-Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all" })));
+Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true })));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };

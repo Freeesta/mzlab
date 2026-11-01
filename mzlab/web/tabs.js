@@ -155,7 +155,7 @@ function defaultLayoutTab(/** @type {string} */ t) {
       if (!mfs.some((/** @type {MzFile} */ f) => f.vis)) mfs.forEach((/** @type {MzFile} */ f, /** @type {number} */ i) => { f.vis = i < MRM_SHOW_MAX; });
       if (typeof renderFileList === "function") renderFileList();
       const w2 = hostWidth(), keys = [CAL.quant, CAL.qual].filter(Boolean);
-      addPanel("mrm", { tab: "mrm", tr: keys.length ? keys : "", title: PT.mrm, x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all" });
+      addPanel("mrm", { tab: "mrm", tr: keys.length ? keys : "", title: PT.mrm, x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all", intfFixed: true });
       relayout(); fitHost(); uiSave();
       if (mfs.length > MRM_SHOW_MAX) mrmShowAllNotice(mfs);
     });

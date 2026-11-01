@@ -52,7 +52,7 @@ function intTargets(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {nu
 }
 function refreshIntf(/** @type {Bag} */ p) {
   const sel = p.el.querySelector('[data-a="intf"]'); if (!sel) return;
-  const on = (p.imode === "auto" || p.imode === "man") && p.type !== "chrom" && p._a && p._a.sr && p._a.sr.length > 1;
+  const on = (p.imode === "auto" || p.imode === "man") && p.type !== "chrom" && !p.intfFixed && p._a && p._a.sr && p._a.sr.length > 1;
   sel.hidden = !on; if (!on) return;
   const opts = [["", I18N.t("int.target.clicked")], ["all", I18N.t("int.target.all")], ...p._a.sr.map((/** @type {Bag} */ s) => [s.key, s.name])], sig = JSON.stringify(opts);
   if (sel._sig !== sig) { sel._sig = sig; sel.innerHTML = opts.map(o => h`<option value="${o[0]}">${o[1]}</option>`).join(""); }
@@ -60,8 +60,14 @@ function refreshIntf(/** @type {Bag} */ p) {
 }
 // students integrate only from an XIC (or an MRM transition): the total chromatograms add up every ion, so their area belongs to no compound
 const canInt = (/** @type {Bag} */ p) => p.type !== "chrom" || p.tab === "ms2";
+// integration needs the traces on one axis: a stacked or cascade panel goes back to overlaid first (existing integrations stay in p.ints and are drawn as before)
+function toOverlaid(/** @type {Bag} */ p) {
+  if (p.mode !== "stk" && p.mode !== "cas") return;
+  p.mode = "ovl"; const m = p.el && p.el.querySelector('[data-o="mode"]'); if (m) m.value = "ovl";
+  draw(p);
+}
 function guardInt(/** @type {Bag} */ p) {
-  if (canInt(p)) return true;
+  if (canInt(p)) { toOverlaid(p); return true; }
   yesno(I18N.t("int.guard")).then((/** @type {boolean} */ v) => { if (v) openXic(null); });
   return false;
 }
