@@ -18,11 +18,11 @@ if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
     print("SKIP cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm"); sys.exit(0)
 import dati_sintetici as ds
 
-NAMES = ["B_FullMass-t0.mzML", "B_FullMass-t30.mzML"]
+NAMES = ["B_FullMass-t0.mzML", "B_FullMass-t30.mzML", "B_FullMass-blank.mzML"]      # "Keep reliable rows" compares with the blank: a series without one is refused (error.filterNoBlank)
 def sample(n, t):
     return {"composto": "", "concentrazione": None, "file": n, "istd": False, "note": "", "ordine_iniezione": NAMES.index(n) + 1, "replica": 1, "serie": "", "sha256": "", "tempo": t, "tempo_confermato": False,
-            "tempo_min": t, "tipo": "t0" if t == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
-SAMPLES = json.dumps({"campioni": [sample(n, t) for n, t in zip(NAMES, (0, 30))], "schema": "campioni/2"}, separators=(",", ":"))
+            "tempo_min": t, "tipo": "blank" if t is None else "t0" if t == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
+SAMPLES = json.dumps({"campioni": [sample(n, t) for n, t in zip(NAMES, (0, 30, None))], "schema": "campioni/2"}, separators=(",", ":"))
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_lr_tpl_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
@@ -30,7 +30,7 @@ subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", 
 from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
-for n, t in zip(NAMES, (0, 30)): ds.full_scan(run / n, t, np.random.default_rng(5 + t))
+for n, t in zip(NAMES, (0, 30, None)): ds.full_scan(run / n, 1000 if t is None else t, np.random.default_rng(5 + (t or 0)))      # the blank: the standard decayed to nothing
 
 # the plan of the template, the files of the series as the source of the first step, the sample list written by hand
 BUILD = """(names) => {
@@ -94,7 +94,7 @@ try:
             nat_csv = (out / name).read_text(); web = kept[name]
             at = next((i for i, (x, y) in enumerate(zip(nat_csv, web)) if x != y), min(len(nat_csv), len(web)))
             assert nat_csv == web and len(nat_csv) > 100, (name, "first difference at", at, len(nat_csv), len(web))
-        step("two unit-resolution files: the CSV of the browser is the file of flow run, byte for byte", first)
+        step("unit-resolution series with a blank: the CSV of the browser is the file of flow run, byte for byte", first)
         step("no request was left unserved by the engine", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         b.close()
 finally:
