@@ -83,7 +83,7 @@ const noiseZone = (/** @type {Bag} */ p, /** @type {Bag} */ it) => (p.noise && p
 function setNoiseZone(/** @type {Bag} */ p, /** @type {Bag} */ it, /** @type {number[]} */ z) {
   const set = (/** @type {Bag} */ q, /** @type {string[]} */ ions) => { q.noise = { ...(q.noise || {}) }; ions.forEach(i => { q.noise[i] = z; }); };
   set(p, [it.ion]);
-  if (p.type === "mrm") tabPanels().filter((/** @type {Bag} */ q) => q !== p && q.type === "mrm").forEach((/** @type {Bag} */ q) => set(q, [...new Set([...(q._a && q._a.sr ? q._a.sr.map((/** @type {Bag} */ s) => s.ion) : []), ...q.ints.map((/** @type {Bag} */ i) => i.ion)])]));
+  if (ESP.mrm(p)) tabPanels().filter((/** @type {Bag} */ q) => q !== p && ESP.mrm(q)).forEach((/** @type {Bag} */ q) => set(q, [...new Set([...(q._a && q._a.sr ? q._a.sr.map((/** @type {Bag} */ s) => s.ion) : []), ...q.ints.map((/** @type {Bag} */ i) => i.ion)])]));
   INTOPT.sn = true;
 }
 function delInts(/** @type {Bag} */ p, /** @type {Bag[]} */ list) { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => !list.includes(i)); if (list.some((/** @type {Bag} */ i) => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }

@@ -44,8 +44,8 @@ try:
             pg.click("#bigx")
             pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             pg.wait_for_function(f"{XP}._a.sr.length>=3", timeout=30000)      # one trace per visible file
-            pg.evaluate(f"(()=>{{const p={XP};p._a.sr.slice(1,3).forEach(s=>addInt(p,s,13.9,14.9))}})()"); pg.wait_for_timeout(800)
-            pg.evaluate("showInts()"); pg.wait_for_timeout(500)
+            pg.evaluate(f"(()=>{{const p={XP};p._a.sr.slice(1,3).forEach(s=>addInt(p,s,13.9,14.9))}})()"); attendi(pg, f"{XP}.ints.length===3")
+            pg.evaluate("showInts()"); attendi(pg, "document.querySelectorAll('#bigbody table tr').length>=4")
             rows = pg.evaluate("[...document.querySelectorAll('#bigbody table tr')].map(r=>[...r.children].map(c=>c.textContent))"); h = rows[0]; body = rows[1:]
             assert len(body) == 3, ("rows", len(body), pg.evaluate(f"{XP}.ints.length"))
             assert pg.locator("button[data-nz]").count() == 0, "one noise zone serves every file of the trace: no more per-row buttons"
