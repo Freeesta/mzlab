@@ -1,12 +1,5 @@
 I18N.add("en", {
-  "cq.title": "What can this be?",
   "cq.ctl": "Search options",
-  "cq.mode.hr.files": "high resolution: {name}",
-  "cq.mode.lr.files": "low resolution: {name}",
-  "cq.mode.hr.formula": "high resolution: a formula is searched in ppm",
-  "cq.mode.hr.decimals": "high resolution: the number has 3 or more decimals",
-  "cq.mode.lr.short": "low resolution: the number has fewer than 3 decimals",
-  "cq.mode.lr.none": "low resolution: no file open",
   "cq.none": "no match within ±{tol}",
   "cq.all": "show all ({n})",
   "cq.less": "show fewer",

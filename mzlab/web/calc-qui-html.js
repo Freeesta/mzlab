@@ -11,22 +11,14 @@ const CALCQUIHTML = (() => {
   const err = (/** @type {number} */ d, /** @type {number} */ dec) => sgn(d) + Math.abs(d).toFixed(dec);
   const loss = (/** @type {Bag} */ l) => (window.QQQRef ? QQQRef.lossName(l) : `<b>${EH(l.f)}</b>`);
 
-  /** Small text saying which resolution was detected and why (never a button). @param {{ hr: boolean, mode: { src: string, name: string } }} o */
-  function modeText(o) {
-    const n = { name: o.mode.name };
-    if (o.mode.src === "files") return o.hr ? T("cq.mode.hr.files", n) : T("cq.mode.lr.files", n);
-    if (o.mode.src === "formula") return T("cq.mode.hr.formula");
-    if (o.mode.src === "decimals") return T("cq.mode.hr.decimals");
-    return T(o.mode.src === "short" ? "cq.mode.lr.short" : "cq.mode.lr.none");
-  }
-  /** The choices row: detected resolution (text), tolerance, polarity. Ids are `<idp>tol|pol`.
+  /** The choices row: tolerance, polarity. Ids are `<idp>tol|pol`.
    * @param {string} idp @param {{ hr: boolean, tol: number, pol: number, mode: { src: string, name: string } }} o */
   function ctrlHtml(idp, o) {
     const on = (/** @type {boolean} */ b) => ` class="${b ? "on" : ""}" aria-pressed="${b}"`;
-    return `<div class="cadd cq-ctl" role="group" aria-label="${EH(T("cq.ctl"))}">
+    return `<div class="cadd cq-ctl" data-mode="${o.hr ? "hr" : "lr"}" role="group" aria-label="${EH(T("cq.ctl"))}">
       <label class="cadd-f"><span class="cq-tl">${T(o.hr ? "calc.tol" : "calc.tol.da")}</span><input id="${idp}tol" inputmode="decimal" autocomplete="off" value="${o.tol}"></label>
       <span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}"><button type="button" data-p="1"${on(o.pol > 0)}>ESI+</button><button type="button" data-p="-1"${on(o.pol < 0)}>ESI&minus;</button></span>
-      <span class="cq-mode muted" aria-live="polite">${EH(modeText(o))}</span></div>`;
+      </div>`;
   }
 
   const rowsOf = (/** @type {string} */ gid, /** @type {string[]} */ lis, /** @type {boolean} */ all) => {
@@ -68,5 +60,5 @@ const CALCQUIHTML = (() => {
       return `<details class="cq-g" data-g="${g.id}"${open ? " open" : ""}><summary>${T(/** @type {Bag} */ (TITLE)[g.id])}${n}</summary>${body}</details>`;
     }).join("");
   }
-  return { ctrlHtml, groupsHtml, modeText };
+  return { ctrlHtml, groupsHtml };
 })();

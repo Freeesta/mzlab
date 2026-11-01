@@ -58,7 +58,7 @@
     const o = options(v), c = v.cfg.ctl, put = (/** @type {string} */ id, /** @type {string} */ val) => { const i = /** @type {HTMLInputElement | null} */ (c.querySelector("#" + v.cfg.idp + id)); if (i && document.activeElement !== i) i.value = val; };
     c.querySelectorAll(".cq-ctl [data-p]").forEach(b => { const on = +(b.getAttribute("data-p") || 0) === o.pol; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
     const tl = c.querySelector(".cq-tl"); if (tl) tl.textContent = I18N.t(o.hr ? "calc.tol" : "calc.tol.da");
-    const md = c.querySelector(".cq-mode"); if (md) md.textContent = H.modeText(o);
+    const cc = c.querySelector(".cq-ctl"); if (cc) { cc.setAttribute("data-mode", o.hr ? "hr" : "lr"); cc.setAttribute("data-src", o.mode.src); cc.setAttribute("data-name", o.mode.name || ""); }
     put("tol", String(o.tol));
   }
 

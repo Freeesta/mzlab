@@ -127,7 +127,6 @@ I18N.add("it", {
   "tbl.loss.detail": "massa esatta <b>{m}</b> · <span class=\"muted\">meccanismo:</span> {mech}",
   "tbl.loss.detailLr": "<span class=\"muted\">meccanismo:</span> {mech}",
   "tbl.loss.sameShort": "stesso Δm, risoluzione unitaria",
-  "tbl.loss.hint": "Clic su una riga per i dettagli. Una perdita è solo un'ipotesi.",
   "tbl.loss.checkM2": "Controlla <i>M+2</i> con il profilo isotopico nello spettro (clic destro; Br: M e M+2 quasi uguali).",
   "tbl.loss.searchPh": "Δm, es. 62",
   "tbl.loss.searchTitle": "Scrivi la differenza di massa osservata: evidenzia le perdite con quel valore (secondo la tolleranza scelta) e mostra coppie e ripetizioni che la compongono, i contaminanti e gli addotti",

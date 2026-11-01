@@ -78,7 +78,7 @@
   function lossTab() {
     return `<div class="nlbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></div>
       <span class="seg" id="nl-pol" title="${I18N.t("tbl.loss.polTitle")}"><button type="button" data-p="+" class="${NL.pols.has("+") ? "on" : ""}">ESI+</button><button type="button" data-p="-" class="${NL.pols.has("-") ? "on" : ""}">ESI&minus;</button></span></div>
-      <div class="nlhint muted" id="nl-hint">ⓘ ${I18N.t("tbl.loss.hint")}</div><div id="nl-ctl"></div><div class="cq-links"><button type="button" class="cq-link" id="nl-to-ad" hidden>${I18N.t("cq.link.ad")}</button></div><div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
+      <div id="nl-ctl"></div><div class="cq-links"><button type="button" class="cq-link" id="nl-to-ad" hidden>${I18N.t("cq.link.ad")}</button></div><div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
   }
   // root is the host of the Neutral losses tab (any DOM container): its descendants are queried by selector, hence any
   function bindLoss(/** @type {any} */ root, /** @type {(id: string) => void} */ show) {

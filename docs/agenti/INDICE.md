@@ -20,7 +20,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | mappa RT×m/z, mirino, navigazione | `docs/agenti/dati-mappa.md` (visore 3D: `dati-mappa-3d.md`) |
 | velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
-| calcolatrice «Cosa può essere?», pannello Addotti, fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
+| calcolatrice (gruppi «cosa può essere» sotto il numero), pannello Addotti, fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
 | mondo HR: Banco, formule, isotopi, librerie, albero MSn | `docs/agenti/alta-risoluzione.md` |
 | statistica in HR: tabella delle feature, bianco, differenza dal riferimento, PCA | `docs/agenti/alta-risoluzione-statistica.md` |
 | formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |

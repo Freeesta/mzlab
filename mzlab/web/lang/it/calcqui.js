@@ -1,12 +1,5 @@
 I18N.add("it", {
-  "cq.title": "Cosa può essere?",
   "cq.ctl": "Opzioni della ricerca",
-  "cq.mode.hr.files": "risoluzione alta: {name}",
-  "cq.mode.lr.files": "risoluzione bassa: {name}",
-  "cq.mode.hr.formula": "risoluzione alta: una formula si cerca in ppm",
-  "cq.mode.hr.decimals": "risoluzione alta: il numero ha 3 o più decimali",
-  "cq.mode.lr.short": "risoluzione bassa: il numero ha meno di 3 decimali",
-  "cq.mode.lr.none": "risoluzione bassa: nessun file aperto",
   "cq.none": "nessuna corrispondenza entro ±{tol}",
   "cq.all": "mostra tutto ({n})",
   "cq.less": "mostra meno",

@@ -628,7 +628,7 @@ function calcKey(k) {
 }
 Q("#calcpad").querySelectorAll("button").forEach(b => { b.onmousedown = ev => ev.preventDefault(); b.onclick = () => calcKey(b.dataset.k); });      // the field keeps the focus
 Q("#calcin").onkeydown = ev => {
-  if (ev.key === "Enter" && calcIsExpr(ev.target.value)) { ev.preventDefault(); calcEquals(); return; }
+  if ((ev.key === "Enter" && calcIsExpr(ev.target.value)) || ev.key === "=") { ev.preventDefault(); calcEquals(); return; }          // "=" typed is the = key of the keypad
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
   if ((ev.key || "").length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
@@ -636,7 +636,8 @@ Q("#calcin").onkeydown = ev => {
 function calcRun() {
   const t = Q("#calcin").value.trim(), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
   const ex = !t || calcIsExpr(t);
-  pad.hidden = !ex; res.hidden = !ex || !t; if (nlBtn) nlBtn.hidden = true; calcTape();
+  pad.hidden = !ex; res.hidden = !ex;                    // the result well stays (empty) while the field is empty or only unfinished
+  if (nlBtn) nlBtn.hidden = true; calcTape();
   if (CALCQUI.calc) CALCQUI.later(CALCQUI.calc);
   if (!t) { sum.innerHTML = ""; res.textContent = ""; return; }
   if (!ex) return;

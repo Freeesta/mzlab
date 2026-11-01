@@ -20,17 +20,19 @@ try:
             frames(pg, 2); frames(pg, 25)
         def groups(): return pg.evaluate("[...document.querySelectorAll('#calcout > details.cq-g, #calcout > details')].map(d => d.dataset.g || d.id)")
         def txt(): return pg.inner_text("#calcout")
-        def mode(): return pg.inner_text("#calcctl .cq-mode")
+        def mode(): return pg.get_attribute("#calcctl .cq-ctl", "data-mode")       # the detected resolution: "hr" or "lr" (no text line, a data attribute)
+        def msrc(): return pg.get_attribute("#calcctl .cq-ctl", "data-src")          # where it comes from: files, formula, decimals, short, none
+        def mname(): return pg.get_attribute("#calcctl .cq-ctl", "data-name")
         def height(): return pg.evaluate("document.documentElement.scrollHeight")
         def auto_default():
             assert pg.locator("#calcctl [data-r]").count() == 0 and pg.locator("#calcobs").count() == 0, "no High/Low switch, no observed field"
-            assert "bassa" in mode() and "nessun file" in mode(), mode()
+            assert mode() == "lr" and msrc() not in ("files", "formula", "decimals"), (mode(), msrc())
             assert pg.is_visible("#calcctl") and pg.is_visible("#calcout")
         step("no file: low resolution by default, said in small text; no switch, no observed field", auto_default)
         def lr_214():
             type_("214")
-            assert "bassa" in mode() and "meno di 3" in mode(), mode()
-            assert "ppm" not in pg.inner_text("#calcctl").lower().replace(mode().lower(), ""), pg.inner_text("#calcctl")
+            assert mode() == "lr" and msrc() == "short", (mode(), msrc())
+            assert "ppm" not in pg.inner_text("#calcctl").lower(), pg.inner_text("#calcctl")
             assert pg.input_value("#calctol") == "0.5"
         step("214: low resolution from the number, Da tolerance, no ppm in the choices", lr_214)
         def lr_30():
@@ -45,14 +47,14 @@ try:
         step("100+114: the argument is the result 214", sum_)
         def hr_diff():
             type_("21.98")
-            assert "bassa" in mode(), mode()
+            assert mode() == "lr", mode()
             type_("21.9819")
-            assert "alta" in mode() and "3 o pi" in mode(), mode()
+            assert mode() == "hr" and msrc() == "decimals", mode()
             assert pg.input_value("#calctol") == "5"
             assert "Na" in txt() and "H" in txt(), txt()[:300]
         step("21.9819 (3+ decimals): high resolution detected, ppm tolerance, the difference Na - H", hr_diff)
         def formula_mode():
-            type_("C9H10N2O"); assert "alta" in mode() and "formula" in mode(), mode()
+            type_("C9H10N2O"); assert mode() == "hr" and msrc() == "formula", mode()
         step("a formula is searched in high resolution", formula_mode)
         def pol():
             pg.click("#calcpol button[data-p='-1']"); frames(pg, 25)
@@ -61,9 +63,9 @@ try:
         step("polarity buttons toggle aria-pressed", pol)
         def files_decide():
             pg.evaluate("CALCQUI.follow(() => ({ hr: false, name: 'QTRAP 3200' }), () => 1)"); type_("21.9819")
-            assert "bassa" in mode() and "QTRAP 3200" in mode() and pg.input_value("#calctol") == "0.5", mode()
+            assert mode() == "lr" and "QTRAP 3200" in mname() and pg.input_value("#calctol") == "0.5", (mode(), mname())
             pg.evaluate("CALCQUI.follow(() => ({ hr: true, name: 'Orbitrap Exploris 120' }), () => 1)"); type_("214")
-            assert "alta" in mode() and "Exploris" in mode() and pg.input_value("#calctol") == "5", mode()
+            assert mode() == "hr" and "Exploris" in mname() and pg.input_value("#calctol") == "5", (mode(), mname())
             pg.evaluate("CALCQUI.follow(() => null, () => 1)"); type_("")
         step("an open file decides the resolution and names the instrument", files_decide)
         def no_jump():
@@ -103,7 +105,7 @@ try:
             pg.click("#np-nl"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-q')")
             pg.fill("#nl-q", "30"); frames(pg, 25)
             t = pg.inner_text("#nl-res"); assert "CH2O" in t or "CH₂O" in t, t[:300]
-            assert pg.locator("#nl-ctl [data-r]").count() == 0 and "bassa" in pg.inner_text("#nl-ctl .cq-mode")
+            assert pg.locator("#nl-ctl [data-r]").count() == 0 and pg.get_attribute("#nl-ctl .cq-ctl", "data-mode") == "lr"
         step("Neutral losses panel: shared groups for 30", to_loss)
         def link():
             pg.click("#nl-to-ad"); frames(pg, 25)
