@@ -437,9 +437,13 @@ async function drawSpec(p, snapped) {
   g.fillStyle = ecss("--ink"); g.textAlign = "center"; g.font = fpx(12);
   /** @type {Bag[]} */ const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
   for (const [m, y] of pk.slice(0, 40)) { const px = X(m), t = m.toFixed(DEC), w = g.measureText(t).width; if (used.length >= NL || used.some(u => Math.abs(u.x - px) < (u.w + w) / 2 + 8)) continue; used.push({ x: px, w }); const fo = p.fm && p.fm.find((/** @type {Bag} */ z) => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
-    g.fillText(t, px, y < 0 ? Y(y) + 15 : Y(y) - 4 - up);
-    if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = ecss("--accent"); g.fillText(subText(fo.text), px, Y(y) - 4); g.restore(); }
-    lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: (p._a.hov(px) || { html: "" }).html }); }
+    // the label clears the tallest bar under its own width (a taller neighbour must not cross the text)
+    let yb = Y(y); if (y > 0) { const sx = (/** @type {number} */ a0, /** @type {number} */ a1) => { let lo = a0, hi = a1; while (lo < hi) { const mid = (lo + hi) >> 1; if (X(d0.mz[mid]) < px - w / 2 - 3) lo = mid + 1; else hi = mid; } return lo; }; const [s0, s1] = spanOf(d0.mz, x0, x1); for (let j = sx(s0, s1); j < s1 && X(d0.mz[j]) <= px + w / 2 + 3; j++) { const yy = Y(Math.min(d0.y[j], ymax)); if (d0.y[j] > 0 && yy < yb) yb = yy; } }
+    const ly = y < 0 ? Y(y) + 15 : yb - 4 - up;
+    if (y >= 0) { g.save(); g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = ecss("--panel"); g.strokeText(t, px, ly); g.restore(); }   // halo: keeps the digits legible where a trace passes near
+    g.fillText(t, px, ly);
+    if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = ecss("--accent"); g.fillText(subText(fo.text), px, yb - 4); g.restore(); }
+    lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : yb - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: (p._a.hov(px) || { html: "" }).html }); }
   g.font = fpx(12);
   contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
   if (window.XICBTN) XICBTN.mark(p, g, X, Y, W, d0);   // the peak chosen for the XIC button
