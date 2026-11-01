@@ -38,7 +38,7 @@ try:
                 pg.click(f"#stbar [data-cmd={t}]"); attendi(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
                 it = italian(pg); assert not it, (t, it)
             pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)
-            pg.click("#sb-x"); frames(pg, 3)
+            close_side(pg); frames(pg, 3)
         step("sidebar tabs: calculator, losses, lists", sidebar)
         def periodic():
             pg.click("#np-pt"); attendi(pg, "/Hydrogen|Carbon/.test(document.querySelector('#refdlg').innerText)")

@@ -1,5 +1,6 @@
 """File list: the product-ion (MS2) group starts folded and folds/unfolds with the mouse and the keyboard (header, chevron, per-file toggle); precursor rows read «Precursore …»; no «Profilo»/«Centroide» text on file rows. Demo files, light and dark, phone width."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import re
 from lib import *
 ES = ROOT / "mzlab" / "web" / "esempi"
 steps = []
@@ -32,22 +33,33 @@ try:
         def perfile():
             open_ms2(pg)
             t = pg.inner_text("#flst .pr-container") if pg.locator("#flst .pr-container").count() else pg.inner_text("#flst")
-            assert "Precursore " in t and "m/z 2" not in t, t
+            nums = pg.evaluate("[...document.querySelectorAll('#flst .fl.pr .pn')].map(x => x.textContent)")
+            assert nums and all(re.fullmatch(r"[0-9.]+", x) for x in nums), nums      # only the precursor number
+            assert "Precursore m/z" in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label"), "the tooltip words it"
             tog = pg.locator("#flst .pr-tog").first
             if tog.count():
                 tog.click(); a = N(); tog.click(); b = N(); assert a != b, (a, b)
             assert "Profilo" not in pg.inner_text("#flst") and "Centroid" not in pg.inner_text("#flst")
         step("precursor rows are named; per-file toggle works; no mode text", perfile)
         def langs():
-            for lang, want in (("en", "Precursor "), ("it", "Precursore ")):
+            for lang, want in (("en", "Precursor m/z"), ("it", "Precursore m/z")):
                 pg.evaluate(f"I18N.set('{lang}')"); pg.wait_for_function(f"I18N.lang === '{lang}'"); ready(pg); drawer(pg); open_ms2(pg)
-                assert want in pg.inner_text("#flst"), (lang, pg.inner_text("#flst"))
+                assert want in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label"), lang
         step("English and Italian labels", langs)
         def themes():
             for th in ("light", "dark"):
                 pg.evaluate(f"document.documentElement.dataset.theme='{th}'")
                 assert pg.evaluate("getComputedStyle(document.querySelector('#flst .fgh[data-gt=ms2]')).display") != "none"
         step("light and dark", themes)
+        def labels():
+            t = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.pr)')].map(x => [x.dataset.tip, x.querySelector('small').textContent])")
+            ms2 = [x for x in t if x[0].startswith("MS2")]; full = [x for x in t if x[0].startswith("FullScan")]
+            assert ms2 and all("min" not in x[1] for x in ms2), t      # no time on a product-ion row
+            assert full and all("min" in x[1] for x in full), t        # the time stays on Full Scan rows
+            assert not any("." in x[0].split(" ")[0] for x in t), t   # no extension in a name
+            r = pg.evaluate("(() => { const fs = [{ label: noExt('CBZ_t10.wiff') }, { label: noExt('CBZ_t10.mzML') }, { label: noExt('CBZ_t15.RAW · MS2') }]; uniqueLabels(fs); return fs.map(f => f.label); })()")
+            assert r == ["CBZ_t10", "CBZ_t10 (2)", "CBZ_t15 · MS2"], r
+        step("names without extension and unique, time only on Full Scan rows", labels)
         def phone():
             pg.set_viewport_size({"width": 390, "height": 800}); ready(pg)
             assert pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "no horizontal overflow"

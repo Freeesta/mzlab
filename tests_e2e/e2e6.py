@@ -51,11 +51,11 @@ try:
             if wb: assert isinstance(wb.active.cell(2, 1).value, (int, float)) and wb.active.cell(1, 1).font.b
         step("plot Excel (.xlsx: numeric cells, units in headers)", lambda: (xlsxexcel(), pg.evaluate("setTab('full')"), ready(pg)))
         def fold():
-            if pg.is_visible("#dfiles"): pg.click("#sb-x"); gone("#dfiles"); attendi(pg, "E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")      # open at first start
+            if pg.is_visible("#dfiles"): close_side(pg); gone("#dfiles"); attendi(pg, "E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")      # open at first start
             w0 = pg.evaluate("E.panels[0].w"); drawer(pg); shown("#dfiles"); attendi(pg, f"E.panels[0].w < {w0} - 150")
             w1 = pg.evaluate("E.panels[0].w"); assert w1 < w0 - 150 and pg.is_visible("#dfiles"), (w0, w1)         # pinned next to the charts: they narrow
             pg.screenshot(path=SH + "61_folded.png")
-            pg.click("#sb-x"); gone("#dfiles"); attendi(pg, f"E.panels[0].w === {w0}"); assert pg.evaluate("E.panels[0].w") == w0 and not pg.is_visible("#dfiles")
+            close_side(pg); gone("#dfiles"); attendi(pg, f"E.panels[0].w === {w0}"); assert pg.evaluate("E.panels[0].w") == w0 and not pg.is_visible("#dfiles")
         step("pinned file list narrows the panels, closing it widens them", fold)
         def png():
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "png")
@@ -66,7 +66,7 @@ try:
         step("PNG of a plot has a white background", png)
         def restore():
             drawer(pg); shown("#dfiles"); pg.reload(); ready(pg)
-            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.open && BARRA.curTab === 'file'"); pg.click("#sb-x"); gone("#dfiles")
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.open && BARRA.curTab === 'file'"); close_side(pg); gone("#dfiles")
         step("open file list is restored after reload", restore)
         def periodic():
             pg.click("#np-pt"); attendi(pg, "document.querySelectorAll('.pt-c').length === 118")
