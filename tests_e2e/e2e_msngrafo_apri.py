@@ -92,9 +92,9 @@ try:
         step("a newer format is error.newerFormat and does not open", newer)
         def other():
             pg.set_input_files("#pick", str(OTHER)); pg.wait_for_selector("#unopen", state="visible", timeout=15000)
-            assert "format not recognised" in pg.inner_text("#unopen") and pg.locator("#ig-ro").count() == 0
+            assert "not a mass-spectrometry file we know" in pg.inner_text("#unopen") and pg.locator("#ig-ro").count() == 0
             pg.click("#unopen [data-a=close]")
-        step("another .json keeps the usual «format not recognised»", other)
+        step("another .json keeps the usual «not a mass-spectrometry file we know»", other)
         def noapi():
             urls = pg.evaluate(ASK)
             assert not urls, urls
