@@ -94,7 +94,7 @@ const BARRA = (() => {
   /** @type {any[]} */
   const CMD = [
     { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() ? toggleDrawer() : toggle("file")) },
-    { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => toggle("calc") },
+    { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inDataOrOpening() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },     // outside Dati the calculator is the drop-down under the button (eventi.js)
     { id: "adducts", dom: "np-add", ic: () => QI("ad"), panel: "adducts", run: () => toggle("adducts") },
     { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => toggle("losses") },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => toggle("lists") },
