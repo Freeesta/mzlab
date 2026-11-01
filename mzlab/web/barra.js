@@ -51,7 +51,7 @@ const BARRA = (() => {
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
   const isHrMode = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
   const storageKey = () => (isHrMode() ? K_HR : K_LR);
-  const defaultW = () => (isHrMode() ? 340 : 300);
+  const defaultW = () => (isHrMode() ? 340 : MIN_W);
   const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
   // the side panel and its toolbar button have their place also while the files are being opened (skeleton, no session yet: nothing moves when the session arrives) and while «+» shows the drop area (S.adding)
   const inDataOrOpening = () => inData() || typeof S !== "undefined" && S.view === "data" && (!!S.opening && !S.sess || !!S.sess && !!S.adding);

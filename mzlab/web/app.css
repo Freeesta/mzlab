@@ -79,11 +79,11 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
-:root{--sb-w:300px}
+:root{--sb-w:280px}
 /* Dati view: the side panel is hidden or docked at full height to the left or right edge; the workspace takes the rest (never under it) */
 #v-data{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--sp-3);padding:var(--sp-2) 6px var(--sp-3) 6px;align-items:start}
-#v-data.sb-open{grid-template-columns:var(--sb-w,300px) minmax(0,1fr)}
-#v-data.sb-open.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-w,300px)}
+#v-data.sb-open{grid-template-columns:var(--sb-w,280px) minmax(0,1fr)}
+#v-data.sb-open.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-w,280px)}
 #v-data.sb-right #dfiles{order:2}
 #v-data.sb-right #v-workspace{order:1}
 #v-data.sb-right #sidebar-resize-handle{left:-3px;right:auto}
