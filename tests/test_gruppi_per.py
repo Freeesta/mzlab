@@ -14,6 +14,7 @@ STUBS = """
 globalThis.window = globalThis;
 globalThis.I18N = { t: (k, p) => ({ "groups.other": "Other" }[k] || k) + (p && p.n ? " " + p.n : "") };
 globalThis.EH = s => String(s);
+globalThis.KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" }; globalThis.GRP_HR = { hr: () => "HR" }; globalThis.directNote = () => {};
 globalThis.fileBase = n => String(n).split("#")[0];
 globalThis.document = { getElementById: () => null };
 globalThis.steps = 0; globalThis.renders = 0; globalThis.fetched = [];
