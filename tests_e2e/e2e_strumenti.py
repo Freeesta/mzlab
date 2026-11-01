@@ -78,8 +78,8 @@ try:
         step("panel: docks next to the charts (they narrow), the same button / × hide it, focus in and back", apri_chiudi)
 
         def cambia():
-            pg.click("#stbar [data-cmd=calc]"); shown("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Calcolatrice m/z'")
-            assert pg.is_visible("#calcdlg") and pg.inner_text("#sb-title") == "Calcolatrice m/z", pg.inner_text("#sb-title")
+            pg.click("#stbar [data-cmd=calc]"); shown("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Calcolatrice'")
+            assert pg.is_visible("#calcdlg") and pg.inner_text("#sb-title") == "Calcolatrice", pg.inner_text("#sb-title")
             pg.click("#stbar [data-cmd=losses]"); gone("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Perdite neutre' && document.querySelector('#stbar [data-cmd=losses]').getAttribute('aria-pressed') === 'true'")
             assert pg.inner_text("#sb-title") == "Perdite neutre" and not pg.is_visible("#calcdlg")
             assert pg.get_attribute("#stbar [data-cmd=calc]", "aria-pressed") == "false" and pg.get_attribute("#stbar [data-cmd=losses]", "aria-pressed") == "true"
@@ -313,8 +313,8 @@ try:
                 vis = q.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
                 assert vis == ["file", "more", "search"], vis
                 q.click("#tb-more"); q.wait_for_selector("#stmenu")
-                t = q.inner_text("#stmenu"); assert "Calcolatrice m/z" in t and "Perdite neutre" in t and "Tavola periodica" in t and "PubChem" in t, t
-                q.locator("#stmenu button", has_text="Calcolatrice m/z").click(); shown("#calcdlg", q); attendi(q, "document.querySelector('#dfiles').getBoundingClientRect().width <= 391")
+                t = q.inner_text("#stmenu"); assert "Calcolatrice" in t and "Perdite neutre" in t and "Tavola periodica" in t and "PubChem" in t, t
+                q.locator("#stmenu button", has_text="Calcolatrice").click(); shown("#calcdlg", q); attendi(q, "document.querySelector('#dfiles').getBoundingClientRect().width <= 391")
                 assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 + 1
                 q.evaluate("BARRA.close(false)")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
@@ -331,7 +331,7 @@ try:
             pg.keyboard.type("isotop"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Simulazione isotopica')")
             t = pg.inner_text("#pal-l"); assert "Simulazione isotopica" in t, t
             pg.keyboard.press("Control+a"); pg.keyboard.type("CALCOL"); attendi(pg, "(document.querySelector('#pal-o-0') || {innerText: ''}).innerText.includes('Calcolatrice')")
-            assert pg.inner_text("#pal-l #pal-o-0").startswith("Calcolatrice") or "Calcolatrice m/z" in pg.inner_text("#pal-o-0"), pg.inner_text("#pal-l")
+            assert pg.inner_text("#pal-l #pal-o-0").startswith("Calcolatrice") or "Calcolatrice" in pg.inner_text("#pal-o-0"), pg.inner_text("#pal-l")
             pg.keyboard.press("Control+a"); pg.keyboard.type("perdita"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Perdite neutre')"); assert "Perdite neutre" in pg.inner_text("#pal-l")       # singular finds the plural entry through its keywords
             pg.keyboard.press("Control+a"); pg.keyboard.type("zzzzqq"); attendi(pg, "document.querySelector('#paletta').innerText.includes('Nessun risultato')"); assert "Nessun risultato" in pg.inner_text("#paletta")
             pg.keyboard.press("Control+a"); pg.keyboard.type("metodo"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Metodo di acquisizione')"); assert "Metodo di acquisizione" in pg.inner_text("#pal-l")

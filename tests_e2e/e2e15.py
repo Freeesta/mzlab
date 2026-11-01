@@ -79,6 +79,13 @@ try:
             a, b = pt(ap - 0.3), pt(ap + 0.3)
             pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=8); pg.mouse.up(); pg.wait_for_timeout(1500)
             n = pg.evaluate("tabPanels().filter(p=>p.type==='mrm').map(p=>p.ints.length)"); assert n in ([10], [5, 5]), n          # 5 MRM files; 10 ints (5 quant + 5 qual in 1 panel) or [5, 5]
+            # one drag = one undo step: a single Ctrl+Z removes the windows of every file (and the mirrors), Ctrl+Shift+Z puts them all back
+            tot = "tabPanels().filter(p=>p.type==='mrm').reduce((s,p)=>s+p.ints.length,0)"
+            n0 = pg.evaluate(tot); assert n0 >= 5, n0
+            pg.keyboard.press("Control+z"); attendi(pg, tot + "===0")
+            assert pg.evaluate(tot) == 0, pg.evaluate(tot)
+            pg.keyboard.press("Control+Shift+z"); attendi(pg, f"{tot}==={n0}")
+            assert pg.evaluate(tot) == n0, pg.evaluate(tot)
             # same drag again: replaced, not doubled
             pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=8); pg.mouse.up(); pg.wait_for_timeout(800)
             assert pg.evaluate("tabPanels().filter(p=>p.type==='mrm').map(p=>p.ints.length)") in ([10], [5, 5])
@@ -90,7 +97,19 @@ try:
             rows = pg.evaluate("[...document.querySelectorAll('#bigbody table tr')].map(r=>[...r.children].map(c=>c.textContent))")
             assert any("Std_5" in " ".join(r) and any("mg" in c or "ppm" in c or "ug" in c.lower() for c in r) for r in rows), rows[:4]      # the concentration of the standards is in the table
             with pg.expect_download() as d: pg.click("#ig-xlsx")
-            xr = xlsx_rows(d.value.path()); head = [c[1] for c in xr[0] if c]; assert "Concentrazione (standard)" in head and "Unità" in head, head
+            xr = xlsx_rows(d.value.path()); head = [c[1] for c in xr[0] if c]; assert "Concentrazione (standard / QC)" in head and "Unità" in head, head
+            for h in ("Tipo di file", "Q1 (m/z)", "Q3 (m/z)", "Nome della transizione"): assert h in head, (h, head)      # appended after the existing columns
+            assert head.index("Tipo di file") > head.index("Correzione"), head
+            body = [[c[1] if c else None for c in r_] for r_ in xr[1:]]
+            std = [r_ for r_ in body if r_[head.index("Concentrazione (standard / QC)")] not in (None, "")]
+            assert std and all(r_[head.index("Tipo di file")] == "standard" for r_ in std), std[:2]
+            assert all(isinstance(r_[head.index("Q1 (m/z)")], (int, float)) and r_[head.index("Q3 (m/z)")] > 0 for r_ in body), body[:2]      # MRM rows carry Q1 and Q3 as numbers
+            with pg.expect_download() as dc: pg.click("#ig-csv")
+            raw = open(dc.value.path(), "rb").read(); assert raw[:3] == b"\xef\xbb\xbf"
+            ln = raw[3:].decode("utf-8").rstrip("\n").split("\n")
+            assert ";" in ln[0] and "," not in ln[0] and ln[0].startswith("Pannello"), ln[0][:80]      # Italian UI: header on line 1, ';' separated
+            assert any(l.count(",") >= 1 and l.count(";") == ln[0].count(";") for l in ln[1:-1]), ln[1:3]      # decimal comma in the numbers
+            assert ln[-1].startswith('"# mzLab ') or ln[-1].startswith("# mzLab "), ln[-1][:30]
             pg.click("#bigx")
         step("drag integrates every file in one window; a new drag replaces", integrate)
 finally:

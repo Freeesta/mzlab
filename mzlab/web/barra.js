@@ -295,6 +295,8 @@ const BARRA = (() => {
     }
     const addf = Q1("#addf");
     if (addf) addf.style.display = id === "file" ? "" : "none";
+    const pane = Q1("#sb-pane");
+    if (pane) pane.dataset.tab = id;                         // the «Groups» control of the header exists only for the file list (app.css)
     setPanelVisible(id);
     if (HR_PANELS.includes(id)) {
       if (typeof BANCO !== "undefined") {

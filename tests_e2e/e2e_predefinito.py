@@ -87,24 +87,28 @@ try:
             assert "assoc_reset" in pg.evaluate("window.__calls")
         step("the setting asks again at once and forgets the answer", settings_row)
         def opened_files_reach_the_side_list():
-            # the real upload (not the recorder above): the files appear in the side list and the landing is not shown in between.
-            # Needs "files open at once" (landing D3); before it the files wait in the loading table, so the step reports that instead of passing.
+            # the real upload (not the recorder above): the files appear in the side list; the drop area stays visible and usable while they load,
+            # and a second file added during loading is queued next to the first
             pg2 = ctx.new_page(); pg2.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
             pg2.add_init_script(FAKE)
             pg2.goto(f"http://127.0.0.1:{r.port}/"); pg2.wait_for_function("window.DESKDEF && typeof window.upload === 'function' && window.qqReady === true", timeout=60000)
             pg2.evaluate("""async () => { const b = await (await fetch('static/esempi/FullScan_t15.mzML')).blob();
-                window.MZLAB_TOFILE = f => new File([b], f.name); window.__seen = [];
-                new MutationObserver(() => { const d = document.querySelector('#drop'); if (d && document.querySelector('#flst .fl') && d.offsetParent !== null && getComputedStyle(d).visibility !== 'hidden') window.__seen.push('landing'); }).observe(document.body, {subtree: true, attributes: true, childList: true}); }""")
+                window.MZLAB_TOFILE = f => new File([b], f.name); window.__rows = 0; window.__hidden = 0;
+                new MutationObserver(() => { if (!document.querySelector('#flst .fl.up')) return; window.__rows++; const d = document.querySelector('#drop');
+                    if (d && d.offsetParent !== null && getComputedStyle(d).visibility === 'hidden') window.__hidden++; }).observe(document.body, {subtree: true, attributes: true, childList: true}); }""")
             arrive_on(pg2, F("Open_with.mzML"))
-            pg2.wait_for_selector("#flst .fl[data-k], #flst .fl.pend", timeout=60000)
+            pg2.wait_for_selector("#flst .fl.up, #flst .fl[data-k]", timeout=60000)
+            pg2.evaluate("window.upload([window.MZLAB_TOFILE({name: 'Second_one.mzML'})], 'data')")
+            pg2.wait_for_function("[...document.querySelectorAll('#flst .fl')].some(e => e.textContent.includes('Second_one'))", timeout=60000)
             names = pg2.evaluate("[...document.querySelectorAll('#flst .fl')].map(e => e.textContent)")
             assert any("Open_with" in n for n in names), names
-            assert pg2.evaluate("window.__seen.length") == 0, "the drop area was painted once the file was in the side list"
+            assert any("Second_one" in n for n in names), names
+            assert pg2.evaluate("window.__hidden") == 0, "the drop area was hidden while files were loading"
             pg2.close()
         def arrive_on(pg2, files):
             pg2.evaluate("o => { window.__open = o; }", {"files": files, "ask": False})
             pg2.evaluate("DESKDEF.take()"); pg2.wait_for_function("window.__calls.includes('take_opened')")
-        step("«Open with»: the files appear in the side list at once, with no landing in between (needs D3)", opened_files_reach_the_side_list)
+        step("«Open with»: the files appear in the side list, the drop area stays usable and a second file is queued", opened_files_reach_the_side_list)
         def lang_en():
             pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_function("window.DESKDEF", timeout=20000)
             pg.evaluate("DESKDEF.ask()"); pg.wait_for_selector("#predefdlg[open]")

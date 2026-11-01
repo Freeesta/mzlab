@@ -57,8 +57,8 @@
   function sync(v) {
     const o = options(v), c = v.cfg.ctl, put = (/** @type {string} */ id, /** @type {string} */ val) => { const i = /** @type {HTMLInputElement | null} */ (c.querySelector("#" + v.cfg.idp + id)); if (i && document.activeElement !== i) i.value = val; };
     c.querySelectorAll(".cq-ctl [data-p]").forEach(b => { const on = +(b.getAttribute("data-p") || 0) === o.pol; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
-    const tl = c.querySelector(".cq-tl"); if (tl) tl.textContent = I18N.t(o.hr ? "calc.tol" : "calc.tol.da");
-    const md = c.querySelector(".cq-mode"); if (md) md.textContent = H.modeText(o);
+    c.querySelectorAll(".cq-ctl [data-u]").forEach(b => { const on = b.getAttribute("data-u") === o.unit; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+    const cc = c.querySelector(".cq-ctl"); if (cc) { cc.setAttribute("data-mode", o.hr ? "hr" : "lr"); cc.setAttribute("data-src", o.mode.src); cc.setAttribute("data-name", o.mode.name || ""); }
     put("tol", String(o.tol));
   }
 
@@ -68,11 +68,12 @@
     const v = /** @type {CqView} */ ({ cfg, open: new Set(), all: new Set(), more: false, diffs: false, delta: "", seq: 0, timer: 0, tab: null, formula: "" });
     views.push(v);
     cfg.ctl.innerHTML = H.ctrlHtml(cfg.idp, options(v));
-    const set = (/** @type {Partial<CqState>} */ p) => CALCQUI.set(p), tolKey = () => (options(v).hr ? "ppm" : "da");
+    const set = (/** @type {Partial<CqState>} */ p) => CALCQUI.set(p), tolKey = () => options(v).unit;
     cfg.ctl.addEventListener("click", ev => {
       const b = /** @type {HTMLElement} */ (ev.target).closest("button");
       if (!b) return;
       if (b.dataset.p) set({ pol: +b.dataset.p > 0 ? 1 : -1 });
+      else if (b.dataset.u === "da" || b.dataset.u === "ppm") set({ unit: { ...CALCQUI.st.unit, [options(v).hr ? "hr" : "lr"]: b.dataset.u } });         // remembered for this resolution mode only
     });
     cfg.ctl.addEventListener("input", ev => {
       const i = /** @type {HTMLInputElement} */ (ev.target);

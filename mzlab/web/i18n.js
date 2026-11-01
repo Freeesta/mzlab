@@ -104,7 +104,10 @@
     // the phase has a name for people when the catalog has one (`memory.phase.<id>`)
     const ph = j.params && j.params.fase && cat[lang]["memory.phase." + j.params.fase] ? t(`memory.phase.${j.params.fase}`) : "";
     const params = ph ? Object.assign({}, j.params, { fase: ph }) : j.params;
-    return Object.assign(new Error(t(k, params || {})), { key: j.error_key, params: j.params });
+    let msg = t(k, params || {});
+    // a key with no text in the catalogs never reaches the student: the generic sentence carries the engine's own detail
+    if (msg === k) msg = t("error.generic", { detail: (j.params && j.params.detail) || j.error || "–" });
+    return Object.assign(new Error(msg), { key: j.error_key, params: j.params });
   }
 
   // static HTML: the Italian text stays in the page (works before JS); tools/controlla_i18n.py checks that it matches it.js

@@ -155,7 +155,7 @@ function attach(p) {
         return;
       }
       if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => hrTrace(s) ? autoAll(p, s) : autoInt(p, s, x0)); return; }
-      if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) t.forEach(s => addInt(p, s, x0, x1)); else draw(p); return; }
+      if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) { const go = () => t.forEach(s => addInt(p, s, x0, x1)); if (STORIA) STORIA.gruppo(go); else go(); } else draw(p); return; }
     }
     if (Math.abs(d.x - d.x0) > 4) {
       if (p.type === "spec") { pushZh(p); if (Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0)), true); p.zoom = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); }
@@ -628,7 +628,7 @@ function calcKey(k) {
 }
 Q("#calcpad").querySelectorAll("button").forEach(b => { b.onmousedown = ev => ev.preventDefault(); b.onclick = () => calcKey(b.dataset.k); });      // the field keeps the focus
 Q("#calcin").onkeydown = ev => {
-  if (ev.key === "Enter" && calcIsExpr(ev.target.value)) { ev.preventDefault(); calcEquals(); return; }
+  if ((ev.key === "Enter" && calcIsExpr(ev.target.value)) || ev.key === "=") { ev.preventDefault(); calcEquals(); return; }          // "=" typed is the = key of the keypad
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
   if ((ev.key || "").length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
@@ -636,7 +636,8 @@ Q("#calcin").onkeydown = ev => {
 function calcRun() {
   const t = Q("#calcin").value.trim(), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
   const ex = !t || calcIsExpr(t);
-  pad.hidden = !ex; res.hidden = !ex || !t; if (nlBtn) nlBtn.hidden = true; calcTape();
+  pad.hidden = !ex; res.hidden = !ex;                    // the result well stays (empty) while the field is empty or only unfinished
+  if (nlBtn) nlBtn.hidden = true; calcTape();
   if (CALCQUI.calc) CALCQUI.later(CALCQUI.calc);
   if (!t) { sum.innerHTML = ""; res.textContent = ""; return; }
   if (!ex) return;

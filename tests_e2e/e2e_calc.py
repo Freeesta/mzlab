@@ -99,7 +99,8 @@ try:
         step("ESI+/ESI- switch, remembered, More shows the rare adducts", polarity)
         def no_observed_field():
             assert pg.locator("#calcobs").count() == 0 and pg.locator("#calcctl [data-r]").count() == 0, "no observed m/z field and no High/Low switch"
-            assert pg.locator("#calcctl .cq-mode").count() == 1, "the detected resolution is a small text"
+            assert pg.locator("#calcctl .cq-mode").count() == 0 and pg.locator("#calcqui .cq-t").count() == 0, "no resolution line and no «what can this be» heading"
+            assert pg.get_attribute("#calcctl .cq-ctl", "data-mode") in ("hr", "lr")
             pg.fill("#calctol", "100000"); frames(pg, 25); pg.fill("#calctol", "5")
         step("no observed m/z field, no High/Low switch; the tolerance field stays", no_observed_field)
         def typed_number():
