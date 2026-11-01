@@ -30,19 +30,29 @@ pub const MIN_SEP_FWHM: f64 = 0.5;
 /// A peak needs a prominence over its surroundings of at least this many noise sigmas on the width-following smoothing.
 pub const PROM_SIGMA: f64 = 3.0;
 
-/// The raw trace `yc` (prominence and valleys do not depend on the baseline, which the detector may bend under a broad peak) smoothed (quadratic Savitzky-Golay) with a half window of 30 % of the half-height width of the tallest peak, and that half window in points.
-/// A first pass with a window of ten points measures the width; with no peak the trace gets the narrowest window.
-fn wide_smooth(rt: &[f64], yc: &[f64], found: &[crate::peaks::Peak]) -> (usize, Vec<f64>) {
-    let coarse = crate::peakq_lr::sg_filter(yc, 10, false);
-    let apex = found.first().map_or(0, |p| p.apex_i);
-    let w = crate::signal::fwhm_walk(rt, &coarse, apex.min(coarse.len() - 1));
+/// The raw trace `y` (prominence and valleys do not depend on the baseline, which the detector may bend under a broad peak) smoothed (quadratic
+/// Savitzky-Golay) with a half window of 30 % of the half-height width of the tallest peak, and that half window in points.
+/// The width is measured on a light smoothing (three points each side) above the 10th percentile of the trace, so a high baseline does not widen it
+/// and two close peaks are not smoothed into one hump; the returned trace has that level subtracted, so valley ratios and widths are measured on the peaks.
+fn wide_smooth(rt: &[f64], y: &[f64], found: &[crate::peaks::Peak]) -> (usize, Vec<f64>) {
+    let coarse = crate::peakq_lr::sg_filter(y, 3, false);
+    let mut sorted = coarse.clone();
+    crate::sortc::slice_by(&mut sorted, |a, b| crate::sortc::asc_nan_last(*a, *b));
+    let base = sorted[sorted.len() / 10];
+    let above: Vec<f64> = coarse.iter().map(|v| v - base).collect();
+    let apex = found.first().map_or(0, |p| p.apex_i).min(above.len() - 1);
+    let w = crate::signal::fwhm_walk(rt, &above, apex);
     let step = (rt[rt.len() - 1] - rt[0]) / (rt.len() - 1) as f64;
     let half = if step > 0.0 {
         ((0.3 * w / step) as usize).clamp(2, 100)
     } else {
         2
     };
-    (half, crate::peakq_lr::sg_filter(yc, half, false))
+    let sm = crate::peakq_lr::sg_filter(y, half, false)
+        .into_iter()
+        .map(|v| v - base)
+        .collect();
+    (half, sm)
 }
 
 /// The highest smoothed point within `half` points of the detector's apex: the true apex of a ripple of the unsmoothed trace.

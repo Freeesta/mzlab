@@ -3,8 +3,6 @@
 // Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafici.js.
 // ------------------------------------------------------------------ peak integration
 // base = [t0, y0, t1, y1]: the baseline of an HR automatic integration (autoAll), a straight line through those two points, still valid when an edge is dragged
-// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
-const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
 function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, base = /** @type {number[] | null} */ (null)) {
   const xs = s.x, ys = s.y;
   let i0 = nearIdx(xs, Math.min(a, b)), i1 = nearIdx(xs, Math.max(a, b));
@@ -16,6 +14,8 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
+// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
+const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
