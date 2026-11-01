@@ -156,7 +156,8 @@ def _start_prefs(k):
     js = ""
     if str(k.get("locale", "")).lower().startswith("en"): js += "if(!localStorage.getItem('mzlab.lang'))localStorage.setItem('mzlab.lang','en');"
     if k.get("color_scheme") == "dark": js += "if(!localStorage.getItem('mzlab.prefs'))localStorage.setItem('mzlab.prefs',JSON.stringify({v:2,theme:'auto'}));"
-    return ("try{" + js + "}catch(e){}") if js else None
+    # once per tab: a test that resets the site's data must see the default afterwards, not the seeded choice again
+    return ("try{if(window.name.indexOf('|mzseed')<0){window.name+='|mzseed';" + js + "}}catch(e){}") if js else None
 def _new_page(self, *a, **k):
     k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
     sp = _start_prefs(k)

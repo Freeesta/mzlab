@@ -30,7 +30,7 @@ STATE = """async () => ({
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
-        ctx = b.new_context(locale="en-US", viewport={"width": 1280, "height": 900})
+        ctx = b.new_context(lang_auto=True, locale="en-US", viewport={"width": 1280, "height": 900})
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         base = f"http://127.0.0.1:{r.port}/"
         def load_files():
@@ -76,7 +76,7 @@ try:
         step("Header «New session» → Full reset: dialog, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
         def isolated_after():
             # a visitor's tab (no guard preset by the harness): first visit isolates itself, a Full reset must end isolated again with no manual reload
-            c2 = b.new_context(locale="en-US", viewport={"width": 1280, "height": 900}); q = c2.new_page()
+            c2 = b.new_context(lang_auto=True, locale="en-US", viewport={"width": 1280, "height": 900}); q = c2.new_page()
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
             loads = []; q.on("framenavigated", lambda f: loads.append(f.url) if f == q.main_frame else None)
             try:
