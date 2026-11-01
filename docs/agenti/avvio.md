@@ -1,6 +1,6 @@
 # Avvio progressivo (stato attuale)
 
-- **Pagina subito visibile**: header, `#start` e `#drop` si vedono senza aspettare il motore; `#loading` (velo, frasi, ione) è nascosto all'avvio e resta SOLO per l'apertura dei file (`loading()` in `explore.js`).
+- **Pagina subito visibile**: header, `#start` e `#drop` si vedono senza aspettare il motore; `#loading` (velo, frasi, ione) è nascosto all'avvio e dopo l'avvio non si accende mai per aggiungere file né per aprire una scheda (`setTab` non lo usa); resta solo per il cambio di mondo LR/HR (`open-now-raro.js`) e l'esempio del tour (`loading()` in `explore.js`); `e2e_nessun_velo`.
 - **`AVVIO`** (`mzlab/web/avvio-progressivo.js`, caricato prima di `carica.js`): stato `pending | ready | failed`, una sola transizione fuori da `pending`. `pronto()` è il cancello di `upload()` in `shell.js` (`true` pronto, `false` fallito o annullato); i drop prima del motore restano in coda e partono in ordine. Senza `browser.js` o su telefono nasce `ready`.
 - **Riga di stato** `#avvio-fase` (`role=status`) sotto la barra: fase d'avvio (`qqPhaseCur`); dopo 10 s di `pending` compare «Reset completo» (`qqHardReset`); sparisce a motore pronto o fallito.
 - **Sessione salvata**: l'indizio sincrono `mzlab.sessione` (`NOMI.KEY`) non dipinge mai la landing: mostra `#opening` in modalità «restoring» (chiave `load.session.restoring`, altezza riservata come la landing) nel riquadro dei pannelli, con la barra laterale, finché `api/state` risponde (`segnaSessione`, `applicaIndizioSessione`, `rimuoviScheletro`); `reset.js` lo azzera.
