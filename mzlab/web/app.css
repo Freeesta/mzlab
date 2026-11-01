@@ -506,7 +506,8 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 /* sample table: the name of an open file opens it; side list: one progress row per file being read (upload-rows.js) */
 .ldtab button.lnk{background:none;border:0;padding:0;min-height:24px;font:inherit;color:var(--accent);text-align:left;text-decoration:underline;cursor:pointer;overflow-wrap:anywhere}
 .samphead{margin:0 0 6px}
-.fl.up .fi{flex:1;min-width:0}.fl.up .prog{margin-top:2px}.fl.up .diag{display:block}
+/* a long name is cut with an ellipsis; the state text and the cancel button always stay whole */
+.fl.up .fi{flex:1;min-width:0}.fl.up .fi>b{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fl.up .fi>small{flex:none}.fl.up>button{flex:none}.fl.up .prog{margin-top:2px}.fl.up .diag{display:block}
 
 /* landing: a big central drop zone; the empty side list says a plain sentence; the toolbar buttons that wait for data are plainly grey */
 #start{max-width:none}#backwork{margin-bottom:12px}#v-workspace[data-work=add] #start #drop{min-height:clamp(160px,30vh,360px)}#start #drop{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;align-items:baseline;gap:6px .35em;min-height:clamp(220px,48vh,520px);box-sizing:border-box;padding:32px 14px}#start #drop b{font-size:calc(1.25em + 2px)}#start #drop .fmts{flex:0 0 100%;margin-top:14px}
@@ -568,4 +569,3 @@ html.in-draw #sb-toggle{display:none}
 #flst .fl>input[type=checkbox][data-k]{width:24px;height:24px;margin:0;flex:none}
 /* narrow screens: tighter tab padding so the four tabs plus the tools still fit two header rows; #nav keeps one fixed width (widest label set measured: 250 px) */
 @media (max-width:600px){html:not(.phone) #nav button{padding:6px 7px}html:not(.phone) #nav{min-width:calc(250px*var(--z,1));order:1}html:not(.phone) header .hq{order:2}html:not(.phone) header #fs-btn{order:3}html:not(.phone) header #sb-toggle{order:4}html:not(.phone) header #np-set{order:5}html:not(.phone) #stbar{flex-basis:80px;min-width:112px}html:not(.phone) #g-tools button{min-height:24px}}
-#v-workspace[data-work=landing][data-up] #start #drop{visibility:hidden}
