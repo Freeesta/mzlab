@@ -36,10 +36,21 @@ try:
             pg.click("button[data-nz]"); pg.wait_for_timeout(300); assert not pg.evaluate("document.querySelector('#bigdlg').open")
             c = pg.evaluate(f"(()=>{{const p={XP},r=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});const q=p.cv.getBoundingClientRect();return {{x0:q.left+p._a.X(2),x1:q.left+p._a.X(5),y:q.top+q.height/2}}}})()")
             pg.mouse.move(c["x0"], c["y"]); pg.mouse.down(); pg.mouse.move(c["x1"], c["y"], steps=6); pg.mouse.up(); pg.wait_for_timeout(800)
-            assert pg.evaluate(f"{XP}.ints[0].noise") is not None and pg.evaluate("document.querySelector('#bigdlg').open")
+            assert pg.evaluate(f"Object.keys({XP}.noise||{{}}).length") == 1 and pg.evaluate("document.querySelector('#bigdlg').open")      # the zone is stored once, on the trace of the panel
             rows = pg.evaluate("[...document.querySelectorAll('#bigbody table tr')].map(r=>[...r.children].map(c=>c.textContent))"); h = rows[0]; v = rows[1][h.index("S/N")]
             assert float(v) > 1, rows[1]
         step("S/N: the student drags a noise stretch, the number appears", sn)
+        def sn_all_files():
+            pg.click("#bigx")
+            pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
+            pg.wait_for_function(f"{XP}._a.sr.length>=3", timeout=30000)      # one trace per visible file
+            pg.evaluate(f"(()=>{{const p={XP};p._a.sr.slice(1,3).forEach(s=>addInt(p,s,13.9,14.9))}})()"); pg.wait_for_timeout(800)
+            pg.evaluate("showInts()"); pg.wait_for_timeout(500)
+            rows = pg.evaluate("[...document.querySelectorAll('#bigbody table tr')].map(r=>[...r.children].map(c=>c.textContent))"); h = rows[0]; body = rows[1:]
+            assert len(body) == 3, ("rows", len(body), pg.evaluate(f"{XP}.ints.length"))
+            assert pg.locator("button[data-nz]").count() == 0, "one noise zone serves every file of the trace: no more per-row buttons"
+            assert all(float(r[h.index("S/N")]) > 0 for r in body), body
+        step("one noise zone gives S/N on all 3 files", sn_all_files)
         def xl():
             with pg.expect_download() as d: pg.click("#ig-xlsx")
             hd = [c[1] for c in xlsx_rows(d.value.path())[0] if c]; assert any(x.startswith("S/N") for x in hd) and "N (piatti teorici)" in hd, hd

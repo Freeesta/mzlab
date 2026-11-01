@@ -421,7 +421,7 @@ async function drawLines(p) {
   }
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
-    if (it.noise && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(it.noise[0]), M.l), xb = Math.min(X(it.noise[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
+    const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
     const r = integ(s, it.a, it.b, it.base); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, corr: corrText(p) });
     const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (i1 > i0) {

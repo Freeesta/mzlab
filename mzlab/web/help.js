@@ -16,6 +16,7 @@ const HELP = {
   "pnl-spec": [I18N.t("help.pnlSpec.title"), I18N.t("help.pnlSpec.body")],
   "pnl-xic": [I18N.t("help.pnlXic.title"), I18N.t("help.pnlXic.body")],
   "pnl-mrm": [I18N.t("help.pnlMrm.title"), I18N.t("help.pnlMrm.body")],
+  "sn": [I18N.t("help.sn.title"), I18N.t("help.sn.body")],
   "pnl-map": [I18N.t("help.pnlMap.title"), I18N.t("help.pnlMap.body")],
   "mappa": [I18N.t("help.mappa.title"), I18N.t("help.mappa.body")],
   "origine": [I18N.t("help.origine.title"), I18N.t("help.origine.body")],

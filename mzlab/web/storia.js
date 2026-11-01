@@ -58,7 +58,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     // before = "U" + data (its weight), after = "R"
     if (e.tipo === "tolto") { if (st.charAt(0) === "U") { e.undo(); return "R"; } e.redo(); return "U" + e.dati; }
     const p = e.p, cur = e.tipo === "cmd" ? "" : cattura(p, e.tipo), o = e.tipo === "cmd" ? null : JSON.parse(st);
-    if (e.tipo === "int") { p.ints = o; p.isel = null; }
+    if (e.tipo === "int") { p.ints = Array.isArray(o) ? o : o.i; p.noise = Array.isArray(o) ? p.noise : o.n; p.isel = null; }
     else if (e.tipo === "campi") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); if (typeof syncTb === "function") syncTb(p); }
     else if (e.tipo === "cmd") { const g = COMANDI.gest(e.cmd); const prev = g.leggi(p); COMANDI.ripristina(e.cmd, p, st); if (!p.globale) draw(p); uiSave(); return prev; }
     else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") { p.lock = null; if ("meas" in o) { p.meas = o.meas; p.rul = o.rul; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", !!o.rul); } } }
