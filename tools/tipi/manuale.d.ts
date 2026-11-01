@@ -8,6 +8,7 @@ declare var MZLAB_PHONE: boolean;
 declare var QQQ_PHONE: boolean;
 declare var MZLAB_DESKTOP: boolean;
 declare var MZLAB_LAB: any;
+declare var TOURCARICA: any;
 declare var SITO_PUBBLICO: { readonly scaricaApp: boolean };
 declare var MZLAB_TOFILE: ((f: { id: number; name: string; size: number }) => File) | undefined;
 declare var __TAURI__: any;

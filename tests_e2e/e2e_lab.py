@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
-from lib import free_port; from lib_sito import add_wasm  # noqa: E402
+from lib import free_port, mz, attendi; from lib_sito import add_wasm  # noqa: E402
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -79,6 +79,25 @@ try:
             assert not [u for u in reqs if "/esempi/" in u or "esempio-" in u], reqs
             assert pg.evaluate("fetch('static/esempi/FullScan_t15.mzML').then(r => r.status)") == 404
         step("lab: no example files shipped and no example entry points", noexamples)
+        def tour():
+            pg, _ = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z"); errs = []
+            pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: m.type == "error" and errs.append(m.text))
+            pg.wait_for_selector("#drop", timeout=120000); attendi(pg, "typeof TOUR !== 'undefined' && typeof setView === 'function'", 120000)
+            pg.click("#np-set"); pg.wait_for_selector("#uip-g-app", timeout=30000); pg.evaluate("document.getElementById('uip-g-app').open = true"); pg.wait_for_selector("#uip-tour", timeout=30000)
+            assert pg.inner_text("#uip-tour").strip() == "Fai il tour", pg.inner_text("#uip-tour")
+            pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
+            assert "Carica un file per continuare" in pg.inner_text("#tour-dialog"), pg.inner_text("#tour-dialog")
+            assert "file di esempio" not in pg.inner_text("body") and "example file" not in pg.inner_text("body")
+            pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Carica dati")      # the card waits, then the tour goes on with the data
+            attendi(pg, "!document.getElementById('tour-dialog').innerText.includes('Carica un file per continuare')", 60000)
+            assert pg.is_visible("#tour-dialog")
+            pg.keyboard.press("Escape"); attendi(pg, "!document.getElementById('tour-dialog')")
+            pg.click("#np-set"); pg.wait_for_selector("#uip-g-app", timeout=30000); pg.evaluate("document.getElementById('uip-g-app').open = true"); pg.wait_for_selector("#uip-tour", timeout=30000)      # one file loaded: same label, the tour starts on the data at once
+            assert pg.inner_text("#uip-tour").strip() == "Fai il tour"
+            pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
+            assert "Carica un file per continuare" not in pg.inner_text("#tour-dialog")
+            assert not errs, errs
+        step("lab: the tour runs with no file (waits at the first data step) and with one file, no console errors", tour)
         def gap():
             GAP = "() => { const b = [...document.querySelectorAll('#nav button')].filter(x => x.offsetParent).pop().getBoundingClientRect(), t = document.getElementById('sb-toggle').getBoundingClientRect(); return t.left - b.right }"
             pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#sb-toggle", timeout=120000); pg.wait_for_function("typeof setView === 'function'", timeout=120000)
