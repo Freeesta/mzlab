@@ -77,10 +77,9 @@ fn resolved(prov: &Value) -> Result<(Value, Value)> {
         }
         out.push((name.clone(), obj(kv)));
         for (k, v) in params.entries() {
-            if k == "seed" || k.ends_with("_seed") {
-                if let Some(n) = v.f64().filter(|n| n.fract() == 0.0) {
-                    seeds.push((format!("{name}.{k}"), Value::Num(n)));
-                }
+            let n = v.f64().filter(|n| n.fract() == 0.0);
+            if let (true, Some(n)) = (k == "seed" || k.ends_with("_seed"), n) {
+                seeds.push((format!("{name}.{k}"), Value::Num(n)));
             }
         }
     }

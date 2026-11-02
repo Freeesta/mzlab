@@ -27,7 +27,7 @@ pub fn verify(text: &[u8]) -> Result<Verdict> {
     }
     if v.get("min_reader")
         .and_then(Value::f64)
-        .map_or(true, |n| n > 1.0)
+        .is_none_or(|n| n > 1.0)
     {
         return Err(Error::new("error.newerFormat"));
     }
@@ -53,10 +53,9 @@ pub fn verify(text: &[u8]) -> Result<Verdict> {
         let prov = v.get("prov").and_then(|p| p.get("entity"));
         for (name, sha) in &ents {
             // a prov/1 without that entity (a trimmed one) has nothing to disagree with
-            if let Some(held) = prov.and_then(|e| e.get(name)).map(|e| field(e, "sha256")) {
-                if held != Some(sha) {
-                    problems.push(format!("entity:{name}"));
-                }
+            let held = prov.and_then(|e| e.get(name)).map(|e| field(e, "sha256"));
+            if held.is_some_and(|h| h != Some(sha)) {
+                problems.push(format!("entity:{name}"));
             }
         }
     }
