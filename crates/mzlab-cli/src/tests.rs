@@ -346,28 +346,3 @@ fn the_csv_of_the_cli_is_the_one_of_the_page() {
     );
     let _ = std::fs::remove_dir_all(Path::new(&dir));
 }
-
-#[test]
-fn the_short_english_names_and_the_old_ones_are_the_same_command() {
-    for (old, new) in [
-        ("canali", "channels"),
-        ("campioni", "samples"),
-        ("peaks-edges", "peak-edges"),
-    ] {
-        let (o, n) = (cli(&[old, "--help"]), cli(&[new, "--help"]));
-        assert_eq!(
-            (o.code, o.stdout.clone()),
-            (n.code, n.stdout.clone()),
-            "{old}"
-        );
-        assert!(
-            String::from_utf8_lossy(&n.stdout).contains("old names still accepted"),
-            "{new}"
-        );
-    }
-    let top = String::from_utf8_lossy(&cli(&["--help"]).stdout).into_owned();
-    assert!(top.trim_end().ends_with(
-        "old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl"
-    ));
-    assert!(!top.contains("mzlab-cli canali") && !top.contains("mzlab-cli campioni"));
-}

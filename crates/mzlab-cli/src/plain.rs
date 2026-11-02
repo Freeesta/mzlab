@@ -43,3 +43,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         _ => peaks_edges_cmd::run(args),
     }
 }
+
+#[cfg(test)]
+#[path = "plain_tests.rs"]
+mod tests;

@@ -141,8 +141,8 @@ mod mzml_varianti_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
-mod plain;
 mod peaks_edges_cmd;
+mod plain;
 mod steps_cmd;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
