@@ -45,7 +45,7 @@ def test_golden_keys_found(tmp_path):
     for test, p in _files(tmp_path).items():
         st = json.loads(gzip.decompress((GOLD / f"{test}.json.gz").read_bytes()))
         assert _key(p) in st, (f"{test}: the synthetic {p.name} has no golden answer (tools/dati_sintetici*.py changed?): "
-                               f"MZLAB_REGEN_GOLDEN=1 python3 tools/verifica.py --solo {test}")
+                               f"MZLAB_UPDATE_GOLDEN=1 python3 tools/verifica.py --solo {test}")
 
 
 def test_same_bytes_without_simd(tmp_path):

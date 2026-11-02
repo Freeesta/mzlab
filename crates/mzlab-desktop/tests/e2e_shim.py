@@ -39,7 +39,7 @@ if not (DIST / "index.html").exists() or not all(f.exists() for f in LR_FILES + 
 subprocess.run(["cargo", "build", "-q", "-p", "mzlab-desktop", "--example", "serve"], cwd=ROOT, check=True)
 LIBDIR = Path(tempfile.mkdtemp(prefix="mzlab-libs-")) / "Librerie"      # the native folder of the libraries (does not exist yet: the app creates it)
 DATA = Path(tempfile.mkdtemp(prefix="mzlab-data-"))                    # the folder of the app: files.json, kv.json, the indexes
-eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES + WIFF_FILES)], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_DATA": str(DATA)})
+eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES + WIFF_FILES)], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_APP_DIR": str(DATA)})
 picked = {}
 for line in eng.stdout:
     if line.startswith("FILE "):

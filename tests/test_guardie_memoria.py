@@ -1,6 +1,6 @@
 """Guards of memory (docs/agenti/memoria.md): the peak of the linear memory of the .wasm after each phase, on the synthetic series `piccolo`, must stay under the
 recorded value + 10 % (tools/guardie_memoria.json). The growth of WASM memory is deterministic for a given input: it is a guard of the architecture, not a measure of
-speed. To record new values on purpose: MZLAB_GUARDIE_CREA=1 pytest tests/test_guardie_memoria.py (and say why in the PR). Skipped without cargo, the wasm32 target,
+speed. To record new values on purpose: MZLAB_UPDATE_GUARDS=1 pytest tests/test_guardie_memoria.py (and say why in the PR). Skipped without cargo, the wasm32 target,
 wasm-bindgen, node or numpy. The static rules (exported WASM functions that return a whole Vec<u8>, IndexedDB) are in tools/controlla.py and tested here."""
 import hashlib
 import json
@@ -71,7 +71,7 @@ def test_peak_memory_of_each_phase_stays_under_the_recorded_value(tmp_path):
     measured = {k: done[k][0] for k in ("byte", "completo", "completo_blocchi")}
     # the way in slabs (small budget) gives the same bytes as the way in memory
     assert done["completo_blocchi"][1] == done["memoria"][1], "the slabs do not give the bytes of the way in memory"
-    if os.environ.get("MZLAB_GUARDIE_CREA"):
+    if os.environ.get("MZLAB_UPDATE_GUARDS") or os.environ.get("MZLAB_GUARDIE_CREA"):
         GUARD.write_text(json.dumps({"serie": "piccolo e completo (feat_mirato.py --seme 2 --scala 1.0); completo_blocchi = completo con budget di %d MB" % BLOCKS_MB,
                                      "soglia": "valore registrato + 10 %", **measured}, indent=1) + "\n", encoding="utf-8")
     want = json.loads(GUARD.read_text(encoding="utf-8"))
