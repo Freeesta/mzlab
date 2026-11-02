@@ -152,7 +152,8 @@ def run_measurement(port):
         b = p.chromium.launch()
         url = f"http://127.0.0.1:{port}/"
         for w, h, loc, warm in matrix:
-            ctx = b.new_context(viewport={"width": w, "height": h}, locale=loc)
+            # reduced motion: the empty-state leaf (app.css .empty-leaf) floats forever, which is not a first-paint change
+            ctx = b.new_context(viewport={"width": w, "height": h}, locale=loc, reduced_motion="reduce")
             if warm:
                 warm_pg = ctx.new_page()
                 warm_pg.goto(url, wait_until="networkidle")
