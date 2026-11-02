@@ -19,6 +19,7 @@ limit_interp=623200   # interp (cap +10 % over the 566463 measured with tp.revie
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
 limit_msnregole=196608   # msnregole: SMILES -> the expectations of the structure rules (mzlab-feat chem::regole), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES; measured 163480 (+3 %)
 limit_msngrafo=790528   # zlib-rs +30 KB (was 575000), mzlab-picchi at O3 +1.1 KB (peaks 3.1x); msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 537129 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
+limit_rotte=884736   # rotte: the statistics, molecules, campioni (Data) and Flow command/line/scheduler routes, out of the engine; loaded by the worker of the engine on the first request of one of them (docs/agenti/wasm-tetti.md)
 limit_llm=344064   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent), the context builder, the charts (grafico/1: views, validation, reduction) and the readers of the data assistant (Assist: requests, lettura/1 and param-scelte/1 validation against the step registry), loaded only after the user turned it on and agreed; measured 309824 (x 1.10, multiple of 4 KiB); 265264 before the readers, the plan checker is the page's
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
@@ -61,6 +62,9 @@ wasm_pack "$out/msngrafo" $R/mzlab_msngrafo_wasm.wasm $limit_msngrafo "msngrafo"
 # the structure rules of that graph (crates/mzlab-msnregole-wasm: SMILES -> attese), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-msnregole-wasm
 wasm_pack "$out/msnregole" $R/mzlab_msnregole_wasm.wasm $limit_msnregole "msnregole" @motore
+# the statistics, molecules, Data and Flow routes (crates/mzlab-rotte-wasm), loaded by the worker of the engine on the first request of one of them
+tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-rotte-wasm
+wasm_pack "$out/rotte" $R/mzlab_rotte_wasm.wasm $limit_rotte "rotte" @motore
 # the assistant (crates/mzlab-llm-wasm: llm-provider/1 requests, answer streams, recordings), loaded by mzlab/web/llm/llm-worker.js only after the opt-in; never fused with another module
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-llm-wasm
 wasm_pack "$out/llm" $R/mzlab_llm_wasm.wasm $limit_llm "assistant" @motore
@@ -131,6 +135,8 @@ m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzla
               "sha256": hashlib.sha256(open(f"{o}/msngrafo/mzlab_msngrafo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["msnregole"] = {"js": "msnregole/mzlab_msnregole_wasm.js", "wasm": "msnregole/mzlab_msnregole_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/msnregole/mzlab_msnregole_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["rotte"] = {"js": "rotte/mzlab_rotte_wasm.js", "wasm": "rotte/mzlab_rotte_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/rotte/mzlab_rotte_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["normative"] = {"js": "normative/mzlab_normative_wasm.js", "wasm": "normative/mzlab_normative_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/normative/mzlab_normative_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
