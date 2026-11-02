@@ -21,27 +21,13 @@ fn run_folder(tag: &str) -> (std::path::PathBuf, std::path::PathBuf) {
     );
     assert_ne!(with, prov, "the agent has a platform key");
     std::fs::write(out.join("prov.json"), with).unwrap();
-    let list: Vec<String> = files
+    let list: Vec<mzlab_core::campioni::Campione> = files
         .iter()
         .enumerate()
-        .map(|(k, (n, b))| {
-            format!(
-                "{{\"file\":\"{n}\",\"sha256\":\"{}\",\"tipo\":\"sample\",\"ordine_iniezione\":{},\"replica\":1,\"serie\":\"\",\"tempo\":{},\"unita\":\"min\",\"tempo_confermato\":true}}",
-                sha256_hex(b),
-                k + 1,
-                [0, 10, 30][k]
-            )
-        })
+        .map(|(k, (n, b))| mzlab_core::campioni::Campione::new(n, &sha256_hex(b), k as u32 + 1))
         .collect();
     let roles = dir.join("roles.json");
-    std::fs::write(
-        &roles,
-        format!(
-            "{{\"schema\":\"campioni/2\",\"campioni\":[{}]}}",
-            list.join(",")
-        ),
-    )
-    .unwrap();
+    std::fs::write(&roles, mzlab_core::campioni::to_json(&list)).unwrap();
     (out, roles)
 }
 
