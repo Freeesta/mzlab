@@ -93,7 +93,7 @@ Canale                         Sigla   n     RT (min)
 - EMS→EPI (IDA): `EMS` (MS1) e `EPI · dipendenti` (`dd:2:EPI`, n precursori); la lista scan del canale mostra i precursori.
 - DDA Orbitrap: `TIC`, `MS1 FTMS`, `MS2 · DDA (2 811 precursori)`; XIC su MS1; il precursore si sceglie dall'albero o dalla lista scan.
 - DAD Shimadzu/`.wiff`: `UV TWC` e `λ` aggiunte dall'utente; spettro UV per scan.
-- SIM: un canale `SIM [m1–m2]` per finestra (Thermo) o `sim:` (SIC del `.wiff` Q1MI).
+- SIM: un canale `SIM [m1–m2]` per finestra (Thermo) o `sim:` (SIC; del `.wiff` Q1MI/Q3MI un canale per ione, etichetta `SIM <m/z> (+|−) <dwell> ms «nome»`).
 
 **Sovrapposizione di file.** Il pannello salva il canale come `omologo`, non come indice: ogni file risolve il suo; un file che non lo ha compare in legenda «—» (nessun errore). La stessa transizione in 12 campioni = 12 tracce di colori Okabe-Ito; tabella dei dati (`TDATI`) con una colonna per file.
 

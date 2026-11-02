@@ -203,6 +203,16 @@ fn collega_genitori(
 /// The MRM transitions of the file, one channel each.
 fn canali_srm(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Option<u32>) {
     for c in chroms.iter().filter(|c| c.kind == "srm") {
+        if c.q3.is_none() && c.id.starts_with("SIM SIC ") {
+            // the same ion in every sample: m/z and polarity, not the sample of the id
+            let pol =
+                c.id.split(' ')
+                    .find_map(|w| w.strip_prefix("polarity="))
+                    .unwrap_or("");
+            let omologo = format!("sim|1|{:.1}|{pol}", c.q1.unwrap_or(0.0));
+            v.push(canale_sim(c, facts, radice, omologo));
+            continue;
+        }
         let ce = c.ce.filter(|x| x.is_finite());
         let (q1, q3) = (c.q1.unwrap_or(0.0), c.q3.unwrap_or(0.0));
         let mut id = format!("srm:{}>{}", fmt_g(q1), fmt_g(q3));
@@ -244,6 +254,39 @@ fn canali_srm(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Opti
     }
 }
 
+/// The label of a SIM channel: `SIM <m/z> (+|−) <dwell> ms «name»` for the msconvert ids (`SIM SIC Q1=… dwell=… polarity=… name=…`), `SIM <id>` otherwise.
+fn sim_label(id: &str) -> String {
+    let Some(rest) = id.strip_prefix("SIM SIC ") else {
+        return format!("SIM {id}");
+    };
+    let field = |k: &str| {
+        rest.split(' ')
+            .find_map(|w| w.strip_prefix(k))
+            .filter(|v| !v.is_empty())
+    };
+    let mut out = String::from("SIM");
+    match field("Q1=") {
+        Some(q1) => out += &format!(" {q1}"),
+        None => out += &format!(" #{}", field("transition=").unwrap_or("?")),
+    }
+    match field("polarity=") {
+        Some("positive") => out += " (+)",
+        Some("negative") => out += " (−)",
+        _ => {}
+    }
+    if let Some(d) = field("dwell=") {
+        out += &format!(" {d} ms");
+    }
+    if let Some(n) = rest
+        .split_once(" name=")
+        .map(|x| x.1)
+        .filter(|n| !n.is_empty())
+    {
+        out += &format!(" «{n}»");
+    }
+    out
+}
+
 /// The SIM / SIC chromatograms of the file, one channel each.
 fn canali_sim(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Option<u32>) {
     for c in chroms.iter().filter(|c| {
@@ -252,21 +295,25 @@ fn canali_sim(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Opti
                 .get(..3)
                 .is_some_and(|p| p.eq_ignore_ascii_case("sic") || p.eq_ignore_ascii_case("sim"))
     }) {
-        let rt = facts.srm_rt.unwrap_or((0.0, 0.0));
-        v.push(Canale {
-            id: format!("sim:{}", c.id),
-            famiglia: Famiglia::Sim,
-            genitore: radice,
-            livello: 1,
-            pol: 0,
-            sigla: Some("SIM"),
-            etichetta: format!("SIM {}", c.id),
-            omologo: format!("sim|1|{}", c.id),
-            n: c.n.unwrap_or(0).max(0) as u32,
-            rt,
-            spettri: false,
-            sorgente: Sorgente::Cromatogramma(c.index as i64),
-        });
+        v.push(canale_sim(c, facts, radice, format!("sim|1|{}", c.id)));
+    }
+}
+
+/// The channel of one SIM / SIC chromatogram.
+fn canale_sim(c: &Chrom, facts: &Facts, radice: Option<u32>, omologo: String) -> Canale {
+    Canale {
+        id: format!("sim:{}", c.id),
+        famiglia: Famiglia::Sim,
+        genitore: radice,
+        livello: 1,
+        pol: 0,
+        sigla: Some("SIM"),
+        etichetta: sim_label(&c.id),
+        omologo,
+        n: c.n.unwrap_or(0).max(0) as u32,
+        rt: facts.srm_rt.unwrap_or((0.0, 0.0)),
+        spettri: false,
+        sorgente: Sorgente::Cromatogramma(c.index as i64),
     }
 }
 
