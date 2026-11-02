@@ -385,7 +385,7 @@ const dropReady=()=>!!(S.sess&&!$("#v-data").hidden);
 const dropHasFiles=(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>[...((e.dataTransfer&&e.dataTransfer.types)||[])].includes("Files");
 // a clean «added» is only announced and then fades away; warnings and failures stay 9 s
 /** @param {unknown} [p] */ function directNote(/** @type {string} */ key,p){const n=$("#fl-note");clearTimeout(DIRECT.tm);n.textContent=key?I18N.t(key,p):"";n.hidden=!key;n.style.opacity="";
-  if(key==="files.drop.done"){DIRECT.tm=setTimeout(()=>{n.style.opacity="0";DIRECT.tm=setTimeout(()=>directNote(""),600)},900)}else if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
+  if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
 function dropZone(/** @type {boolean} */ on){$("#sb-pane").classList.toggle("dz-over",on);if(on)$("#fl-dz").hidden=false;else syncWork(true)}
 (()=>{const dz=$("#dfiles");
   ["dragenter","dragover"].forEach(t=>dz.addEventListener(t,(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();dropZone(true);carica("gruppi-dnd.js")}));
