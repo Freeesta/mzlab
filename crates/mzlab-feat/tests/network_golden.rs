@@ -1,5 +1,5 @@
 //! The `mass_network` of the Dig on a hand-made Dig of invented products of the timolol formula, against the answer saved before `rete/arcs.rs` took
-//! the shared functions out of `legacy/network.rs` (`tests/data/mass_network_timolol.json`): the bytes must not change. `MZLAB_WRITE_GOLDEN=1` rewrites it.
+//! the shared functions out of `legacy/network.rs` (`tests/data/mass_network_timolol.json`): the bytes must not change. `MZLAB_UPDATE_GOLDEN=1` rewrites it.
 
 use mzlab_core::elements::parse_formula;
 use mzlab_feat::hypo::Rules;
@@ -130,7 +130,10 @@ fn mass_network_does_not_change() {
     let got = mass_network(&dig(), &rules);
     assert!(got.contains("\"edges\""), "{got}");
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(GOLDEN);
-    if std::env::var("MZLAB_WRITE_GOLDEN").is_ok() {
+    if std::env::var_os("MZLAB_UPDATE_GOLDEN")
+        .or_else(|| std::env::var_os("MZLAB_WRITE_GOLDEN"))
+        .is_some()
+    {
         std::fs::write(&path, &got).unwrap();
     }
     assert_eq!(got, std::fs::read_to_string(&path).unwrap());
