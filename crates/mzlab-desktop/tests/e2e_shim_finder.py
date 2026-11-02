@@ -87,7 +87,7 @@ subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-finder-lr-wasm",
 lr_native = {"run": json.loads((tmp / "lr_nat" / "run.json").read_text()), "detail": json.loads((tmp / "lr_nat" / "detail.json").read_text())}
 subprocess.run(["cargo", "build", "-q", "-p", "mzlab-desktop", "--example", "serve"], cwd=ROOT, check=True)
 eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT)], stdout=subprocess.PIPE, text=True,
-                       env={**os.environ, "MZLAB_LIBDIR": str(tmp / "Librerie"), "MZLAB_DATA": str(tmp / "app")})
+                       env={**os.environ, "MZLAB_LIBDIR": str(tmp / "Librerie"), "MZLAB_APP_DIR": str(tmp / "app")})
 for line in eng.stdout:
     if line.startswith("READY"): break
 
