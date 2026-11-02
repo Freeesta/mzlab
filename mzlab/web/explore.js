@@ -788,7 +788,7 @@ function renderFileList() {
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
     return `<div class="fl ${f.k === E.cur ? "cur" : ""}"${f.k === E.cur ? ' aria-current="true"' : ""} data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
       <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="${I18N.t("files.showHide")}">
-      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${f._provisional ? `<span class="sm muted provvisorio" title="${I18N.t("load.ph.index")}"> ⏳</span>` : ""}${hasPr ? `<span class="pr-tog${prOpen ? " on" : ""}" role="button" tabindex="0" aria-expanded="${prOpen}" aria-label="${I18N.t("files.showHidePrec")}" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}"></span>` : ""}</span></div>
+      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span class="fmeta">${polSign(f)}<small>${sub(f)}</small>${f._provisional ? `<span class="sm muted provvisorio" title="${I18N.t("load.ph.index")}"> ⏳</span>` : ""}${hasPr ? `<span class="pr-tog${prOpen ? " on" : ""}" role="button" tabindex="0" aria-expanded="${prOpen}" aria-label="${I18N.t("files.showHidePrec")}" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}"></span>` : ""}</span></div>
       <button type="button" class="fl-x" data-rm="${f.k}" aria-label="${EH(I18N.t("files.row.remove", { name: f.label }))}" title="${EH(I18N.t("files.row.remove", { name: f.label }))}">×</button>
       ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
         prList.map(pr => `<div class="fl pr" style="padding-left:0;min-height:0;margin-bottom:2px;border-bottom:none"><input type="checkbox" data-pr="${pr}" data-pk="${f.k}" id="pr-${f.k}-${EH(pr)}" ${ms2RowOn(pr, f.k) ? "checked" : ""} title="${I18N.t("files.addPair.title")}" aria-label="${EH(f.label)} · ${EH(I18N.t("files.prec.row", { mz: String(pr) }))}"><div class="fi"><b class="pn" data-pg="${pr}" data-pk="${f.k}" title="${I18N.t("files.precGo.title")}">${pr}</b></div></div>`).join("") +
@@ -797,7 +797,9 @@ function renderFileList() {
   };
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : "";
   E._grpOpen = E._grpOpen || {};
-  const isExpOpen = (/** @type {string} */ t) => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (ESP.voce(t) || {}).chiuso ? false : (t === E.tab || lrTog() || t.startsWith("u:"));
+  // by default only the first group is expanded; a group the student opened or closed (E._grpOpen) keeps that choice
+  const firstKey = groups.length ? (groups[0].g.startsWith("u:") ? groups[0].g : lrTog() ? groups[0].fs[0].kind : E.tab) : "", firstOpen = groups.length > 1 && (lrTog() || groups.some(G => G.g.startsWith("u:")));
+  const isExpOpen = (/** @type {string} */ t) => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (ESP.voce(t) || {}).chiuso ? false : (firstOpen ? t === firstKey : (t === E.tab || lrTog() || t.startsWith("u:")));
   // the open/closed state of a group: one per experiment type in the low-resolution list (its files are of one type), one for the whole list in the bench
   const gkOf = (/** @type {{ g: string, fs: FileAperto[] }} */ G) => G.g.startsWith("u:") ? G.g : lrTog() ? G.fs[0].kind : E.tab;
   // compact list (iPad, narrow window), high resolution: lower rows and groups that fold, remembered in qqq.flgrp
