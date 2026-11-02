@@ -253,7 +253,6 @@ I18N.add("it", {
   "lst.contSigns.title": "Sugli spettri ad alta risoluzione, un rombo segna i picchi la cui m/z è compatibile con un contaminante noto e il riquadro al mouse dice quale. Spegnendo l'interruttore spariscono segni ed esclusioni.",
   "files.drop.zone": "Rilascia qui i file per aggiungerli",
   "files.samples.btn": "Tabella dei campioni",
-  "files.drop.done": "Aggiunti {n} file.",
   "files.drop.mixed": "Aggiunti {n} file. {m} di risoluzione diversa da quelli aperti sono messi da parte: «Passa…» nella tabella dei campioni.",
   "files.up.opening": "in apertura",
   "files.up.cancel": "Annulla {name}",

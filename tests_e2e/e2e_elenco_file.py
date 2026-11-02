@@ -58,8 +58,8 @@ try:
             assert pg.locator("#gomsg .fail").count() == 0
         step("a file of the other resolution is left out with a gentle note", drop_hr)
         def note_and_groups():
-            # more files into a list that has some: no «Added» note; a name keeps the room, the meta sits to its right
-            assert pg.evaluate("document.querySelector('#fl-note').hidden || !/Added|Aggiunt/.test(document.querySelector('#fl-note').textContent)"), "no note for a later addition"
+            # the «Added N files» note does not exist; a name keeps the room, the meta sits to its right
+            assert pg.evaluate("document.querySelector('#fl-note').hidden || !/Added|Aggiunt/.test(document.querySelector('#fl-note').textContent)"), "an addition never leaves an «Added» note"
             pg.set_viewport_size({"width": 1440, "height": 950})
             pg.set_input_files("#pick", [str(EX / "MS2_t15.mzML"), str(EX / "MRM_std_0.6ppm.mzML")]); ready(pg)
             attendi(pg, "document.querySelectorAll('#flst .fgh[data-gt]').length >= 2", timeout=60000)

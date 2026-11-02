@@ -1,15 +1,9 @@
-"""Side file list (explore.js, open-now.js, app.css): the «Added N files» note is for the first load into an empty list only, only the first
+"""Side file list (explore.js, open-now.js, app.css): only the first
 group is expanded by default (a choice in E._grpOpen wins), and the file name takes the row's room while the meta text sits compact on the right."""
 import re
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
-
-
-def test_added_note_only_for_first_load():
-    s = (WEB / "open-now.js").read_text(encoding="utf-8")
-    assert "tally.first = true" in s and 'directNote(first ? "files.drop.done" : "", { n, m })' in s
-    assert "const { n, m, first } = tally; tally.n = tally.m = 0; tally.first = false;" in s
 
 
 def test_only_first_group_open_by_default():

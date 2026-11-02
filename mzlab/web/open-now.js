@@ -11,7 +11,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   /** @type {string[]} */ const q = [];
   const held = new Set();      // «Choose» of a large folder: these files stay unticked until the student ticks them
   const sent = new Set();      // files whose roles and times went to the open files once
-  const tally = { n: 0, m: 0, first: false };      // files opened and set aside since the last note of the side list; first = the batch began on an empty list
+  const tally = { n: 0, m: 0 };      // files opened and set aside since the last note of the side list
   let busy = 0, last = 0, late = false, autoShown = false, batchShown = false, cur = "", t0 = 0;      // cur = the file being opened now, since t0
   /** @type {(() => void)[]} */ let calm = [];
   const src = (/** @type {string} */ n) => String(n).split("#")[0];
@@ -68,7 +68,7 @@ const OPENNOW = /** @type {any} */ ((() => {
         if (w !== null && !!f.hr !== w) { f.use = false; tally.m++; continue; }
         f.use = true; cur = name; t0 = Date.now();
         try {
-          if (w === null) { tally.first = true; await post("api/explore", { samples: [sample(f)] }); await boot(); }
+          if (w === null) { await post("api/explore", { samples: [sample(f)] }); await boot(); }
           else { await post("api/explore", { samples: [sample(f)], append: true }); if (Date.now() - last >= 200 || !q.length) await boot(); else late = true; }
           tally.n++;
         } catch (e_) { f.use = false; fail(e_); } finally { cur = ""; }
@@ -105,17 +105,14 @@ const OPENNOW = /** @type {any} */ ((() => {
   const rare = async () => { await carica("m:open-now-raro.js"); return /** @type {any} */ (window).OPENRARO; };
   /** «Switch to …»: closes the files of the open world and opens the other one (one «Removed · Undo» entry) */
   const toWorld = async (/** @type {boolean} */ hr) => (await rare()).toWorld(hr, { sent, q, drain });
-  /** a batch has ended: the side list says what was set aside, and what was added to files already shown */
+  /** a batch has ended: the side list says what was set aside */
   async function note() {
     drain();      // a file held back by one dropped before it that then failed or never ended
     await idle();
-    const { n, m, first } = tally; tally.n = tally.m = 0; tally.first = false;
-    const shown = E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone);
+    const { n, m } = tally; tally.n = tally.m = 0;
     // a veil raised for this loading (the example of the tour) drops with it
     if (UPBUSY === 0 && !(/** @type {HTMLElement} */ (document.querySelector("#loading")).hidden)) loading(false);
-    // «Added N files» only for the first load into an empty list; later additions leave no note (unless files were set aside)
     if (m) directNote("files.drop.mixed", { n, m });
-    else if (n && shown) directNote(first ? "files.drop.done" : "", { n, m });
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
   const many = async (/** @type {number} */ n) => (await rare()).many(n);
