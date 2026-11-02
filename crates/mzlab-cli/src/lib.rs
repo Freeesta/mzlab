@@ -141,6 +141,7 @@ mod mzml_varianti_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
+mod plain;
 mod peaks_edges_cmd;
 mod steps_cmd;
 #[cfg(not(target_family = "wasm"))]
@@ -376,45 +377,6 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
     }
 }
 
-/// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 8] = [
-    "llm",
-    "steps",
-    "explain-missing",
-    "msn-rules",
-    "channels",
-    "ion-pattern",
-    "samples",
-    "peak-edges",
-];
-
-/// Old command names still accepted on input, as `(old, new)`; they are never printed outside `--help`.
-const ALIASES: [(&str, &str); 3] = [
-    ("canali", "channels"),
-    ("campioni", "samples"),
-    ("peaks-edges", "peak-edges"),
-];
-
-fn canonical(command: &str) -> &str {
-    ALIASES
-        .iter()
-        .find(|(old, _)| *old == command)
-        .map_or(command, |(_, new)| new)
-}
-
-fn run_plain(command: &str, args: Vec<String>) -> Outcome {
-    match command {
-        "llm" => llm::run(args),
-        "steps" => steps_cmd::run(args),
-        "explain-missing" => flow_explain::run(args),
-        "msn-rules" => msn_rules::run(args),
-        "channels" => canali_cmd::run(args),
-        "ion-pattern" => ion_pattern_cmd::run(args),
-        "samples" => campioni_cmd::run(args),
-        _ => peaks_edges_cmd::run(args),
-    }
-}
-
 /// The commands that exist only in the native build (they read the disk or the network).
 #[cfg(not(target_family = "wasm"))]
 fn native_cmd(name: &str, args: impl Iterator<Item = String>) -> Outcome {
@@ -434,10 +396,10 @@ fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
 pub fn execute(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
     let first = args.next();
-    match first.as_deref().map(canonical) {
+    match first.as_deref().map(plain::canonical) {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
-        Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
+        Some(c) if plain::PLAIN.contains(&c) => return plain::run(c, args.collect()),
         Some("msn-graph") => return msn_graph::cmd(args),
         Some("msn-lib") => return msn_lib::cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
