@@ -33,8 +33,9 @@ def test_guards_reader_text():
     ("crates/mzlab-desktop/examples/serve.rs", "MZLAB_APP_DIR", "MZLAB_DATA"),
 ])
 def test_rust_readers_check_new_then_old(f, new, old):
-    src = (ROOT / f).read_text(encoding="utf-8")
-    assert f'var_os("{new}").or_else(|| std::env::var_os("{old}"))' in src
+    # rustfmt may wrap the chain over several lines: compare without whitespace
+    src = "".join((ROOT / f).read_text(encoding="utf-8").split())
+    assert "".join(f'var_os("{new}").or_else(|| std::env::var_os("{old}"))'.split()) in src
 
 
 def test_mostra_ok_alias():
