@@ -20,19 +20,29 @@ def test_drop_area_has_no_leaf():
 
 def test_animation_only_when_motion_allowed():
     outside = re.sub(r"@media \(prefers-reduced-motion:no-preference\)\{.*?\}\}\n", "", CSS, flags=re.S)
-    assert "leaf-fall 3.4s" not in outside
-    assert "prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) #fl-hint .leaf{animation:leaf-fall 3.4s ease-in-out 1 forwards}" in CSS
+    assert "leaf-fall 9s" not in outside
+    assert "prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) .empty-leaf .leaf{animation:leaf-fall 9s ease-in-out infinite}" in CSS
 
 
-def test_leaf_is_horizontal_and_glides():
+def test_leaf_is_horizontal_and_falls_in_a_loop():
     m = re.search(r'<svg class="leaf"[^>]*viewBox="0 0 (\d+) (\d+)"', HTML)
     assert m and int(m.group(1)) > 1.4 * int(m.group(2)) and "rotate(" not in re.search(r'<svg class="leaf".*?</svg>', HTML, re.S).group(0)
     kf = re.search(r"@keyframes leaf-fall\{(.*)\}\}", CSS).group(1)
     pts = [(int(x), int(y), int(r)) for x, y, r in re.findall(r"translate\((-?\d+)(?:px)?,(-?\d+)(?:px)?\) rotate\((-?\d+)(?:deg)?\)", kf)]
-    assert pts[0][1] < pts[-1][1] and pts[-1] == (0, 0, 0), "falls down and settles flat"
-    assert max(abs(x) for x, _, _ in pts) <= 45, "the swing fits the 280px minimum panel"
-    for (x, _, r) in pts[1:-1]:
-        assert x * r < 0, "angle is opposite to the side"
-    xs = [x for x, _, _ in pts]
-    assert all(abs(xs[i]) > abs(xs[i + 1]) for i in range(1, len(xs) - 1)), "swings are damped"
+    assert pts[0][1] < pts[-1][1] and pts[-1][:2] == (0, 0), "falls down to the resting place"
+    assert max(abs(x) for x, _, _ in pts) <= 45, "the sway fits the 280px minimum panel"
+    ys = [y for _, y, _ in pts]
+    assert ys == sorted(ys), "it never climbs back"
     assert not re.search(r"(width|height|top|left|margin)\s*:", kf), "transform/opacity only: no layout shift"
+
+
+def test_hidden_panel_pauses_the_loop():
+    assert "[hidden] .empty-leaf .leaf" in CSS and "animation-play-state:paused" in CSS
+
+
+def test_one_drawing_shared_by_every_panel():
+    assert len(re.findall(r'<svg class="leaf"', HTML)) == 1
+    barra = (WEB / "barra.js").read_text(encoding="utf-8")
+    assert "EMPTYLEAF" in barra and "svg.leaf" in barra
+    for f in ("liste.js", "tables.js", "calc-qui-ui.js"):
+        assert "EMPTYLEAF" in (WEB / f).read_text(encoding="utf-8"), f

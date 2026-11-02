@@ -243,7 +243,6 @@ I18N.add("it", {
   "lst.userLoaded": "Liste utente caricate:",
   "lst.userDelete": "Elimina questa lista",
   "lst.loadingLists": "Caricamento liste in corso…",
-  "lst.noMatch": "Nessuna corrispondenza",
   "lst.member": "Numero di unità ripetitive (monomeri) nella catena del polimero: {n}",
   "lst.unitName.one": "{name}, 1 unità ripetitiva",
   "lst.unitName.many": "{name}, {n} unità ripetitive",
