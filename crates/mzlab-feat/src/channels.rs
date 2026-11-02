@@ -111,6 +111,7 @@ pub(crate) fn segments(
                 mw += it[i] * mz[i];
                 k += 1;
             }
+            // `order` is sorted by scan (`by_scan`), so `ps >= c.1` and the subtraction cannot underflow.
             match cur.as_mut() {
                 Some(c) if ps - c.1 <= p.max_gap => {
                     c.1 = ps;
