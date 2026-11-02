@@ -1,6 +1,6 @@
 //! wasm-bindgen bridge of the routes that the engine `.wasm` (`mzlab-wasm`) does not carry: the statistics of the series (`stat_post`), `molecules/1`,
 //! `campioni/2` and `/3` (the Data view) and the Flow's command, line and scheduler. A `.wasm` of its own, fetched by the worker of the engine on the
-//! first request of one of them (`mzlab/web/rust-rotte.js`). Errors are JSON `{"error_key", "params"}` strings, as in the engine.
+//! first request of one of them (`load("rotte")` of `mzlab/web/rust-msngrafo.js`, called by `rust-worker.js`). Errors are JSON `{"error_key", "params"}` strings, as in the engine.
 #![forbid(unsafe_code)]
 use wasm_bindgen::prelude::*;
 
