@@ -45,4 +45,4 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 - Planned, later: RO-Crate (Provenance Run Crate) and mzQC exports.
 
 ## Later PRs
-1. engine identity (commit, modules); 2. descriptor guard; 3. `mzrun` build/verify (`mzlab_core::mzrun`); 4. browser `prov` for all steps; 5. wasm and desktop routes; 6. preset apply; 7. Attributio decisions; 8. UI; 9. ESI+/ESI- merge; 10. exports; 11. e2e replicate.
+1. engine identity (commit, modules); 2. descriptor guard (every pseudo-random step declares an integer `seed` parameter, `crates/mzlab-feat/tests/steps_seeds.rs`); 3. `mzrun` build/verify (`mzlab_core::mzrun`); 4. browser `prov` for all steps; 5. wasm and desktop routes; 6. preset apply; 7. Attributio decisions; 8. UI; 9. ESI+/ESI- merge; 10. exports; 11. e2e replicate.

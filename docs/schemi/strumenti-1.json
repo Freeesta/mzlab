@@ -540,6 +540,7 @@
                   "rt_coarse_gap",
                   "rt_span",
                   "rt_inlier",
+                  "rt_seed",
                   "weak_files",
                   "link_rt",
                   "max_span",
@@ -602,6 +603,12 @@
                     "minimum":0,
                     "default":0.05,
                     "description":"Largest distance of an anchor from the line to agree with it (ransac)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Seed of the random samples of the line (ransac); the same seed gives the same correction"
                   },
                   {
                     "type":"integer",

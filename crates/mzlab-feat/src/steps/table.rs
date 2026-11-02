@@ -102,6 +102,11 @@ pub(super) fn align() -> Step {
             .unit("min")
             .doc("Largest distance of an anchor from the line to agree with it (ransac)")
             .advanced(),
+        Param::integer("rt_seed", "RANSAC seed")
+            .min(0.0)
+            .default_num(0.0)
+            .doc("Seed of the random samples of the line (ransac); the same seed gives the same correction")
+            .advanced(),
         Param::integer("weak_files", "Weak tier files")
             .min(0.0)
             .default_num(5.0)
