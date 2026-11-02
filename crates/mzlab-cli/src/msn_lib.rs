@@ -9,24 +9,35 @@ use mzlab_core::msngrafo::{aggiungi, cerca, Opzioni, OpzioniCerca};
 
 use mzlab_core::msngrafo::{export_text, LibFormato as Formato};
 
+/// Old flag names of `msn-lib` (old, new); resolved before each match. The options of `add` are those of `msn-graph`, which has its own table.
+const ALIASES: &[(&str, &str)] = &[
+    ("--pulito", "--clean"),
+    ("--tutti", "--all"),
+    ("--annota", "--annotate"),
+    ("--formato", "--format"),
+    ("--min-prove", "--min-evidence"),
+];
+
 pub const HELP: &str = "mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
-       mzlab-cli msn-lib export LIB.json [--pulito] [--tutti] [--annota] [--formato msp|massbank] [--out PATH]
-       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-prove N] [--top N] [--delta N] [--out PATH]
+       mzlab-cli msn-lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
+       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
   build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
           of the manifest); optional smiles, attivazione. The ion is \"<formula_neutra> <addotto_atteso>\". Writes LIB.json next to the manifest unless --out
-  export  the MS2 spectra of every entry as MSP text (--tutti: every MS level); --pulito keeps the peaks a node of the graph explains;
-          --annota writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
-          --formato massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
+  export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
+          --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
+          --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
           msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
-          --min-prove: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
-          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not";
+          --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
+          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
+
+old names still accepted: --pulito --tutti --annota --formato --min-prove";
 
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
@@ -145,11 +156,12 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let mut formato = Formato::Msp;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
+        let x = crate::msn_uscite::canonical(ALIASES, x);
         match x.as_str() {
-            "--pulito" => pulito = true,
-            "--tutti" => tutti = true,
-            "--annota" => annota = true,
-            "--formato" => formato = Formato::parse(&it.next().unwrap_or_default())?,
+            "--clean" => pulito = true,
+            "--all" => tutti = true,
+            "--annotate" => annota = true,
+            "--format" => formato = Formato::parse(&it.next().unwrap_or_default())?,
             "--out" => out = it.next().map(PathBuf::from),
             _ if lib.is_none() => lib = Some(PathBuf::from(x)),
             _ => return Err(bad(&format!("unknown argument {x}"))),
@@ -172,6 +184,7 @@ fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let (mut files, mut out, mut o) = (Vec::new(), None, OpzioniCerca::default());
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
+        let x = crate::msn_uscite::canonical(ALIASES, x);
         let mut number = || {
             let v = it.next().unwrap_or_default();
             v.parse::<f64>()
@@ -180,7 +193,7 @@ fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
         match x.as_str() {
             "--ppm" => o.ppm_prec = number()?,
             "--tol" => o.tol_mz = number()?,
-            "--min-prove" => o.min_prove = number()? as usize,
+            "--min-evidence" => o.min_prove = number()? as usize,
             "--top" => o.top = number()? as usize,
             "--delta" => o.delta_max = number()?,
             "--out" => out = it.next().map(PathBuf::from),

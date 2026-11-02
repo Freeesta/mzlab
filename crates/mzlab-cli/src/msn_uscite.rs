@@ -38,7 +38,7 @@ pub fn formati(lista: &str) -> std::result::Result<Vec<Formato>, String> {
     let mut out = Vec::new();
     for n in lista.split(',') {
         let f = Formato::da_nome(n).ok_or(format!(
-            "--figura needs svg, html or png, not \"{}\"",
+            "--figure needs svg, html or png, not \"{}\"",
             n.trim()
         ))?;
         if !out.contains(&f) {
@@ -69,18 +69,30 @@ pub fn scrivi(graph: &str, fs: &[Formato], vista: Vista, stem: &Path) -> Result<
     Ok(out)
 }
 
-/// `msn-graph figure IN.json [--figura svg,html,png] [--vista albero|radiale] [--out STEM]`: the figures of a graph already made; the stem defaults to the file
+/// Old flag names of `msn-graph figure` (old, new).
+const ALIASES: &[(&str, &str)] = &[("--figura", "--figure"), ("--vista", "--view")];
+
+/// The current name of the flag `x`: `aliases` pairs (old, new); any other text is returned as it is.
+pub fn canonical(aliases: &[(&str, &str)], x: String) -> String {
+    match aliases.iter().find(|(old, _)| *old == x) {
+        Some((_, new)) => (*new).to_string(),
+        None => x,
+    }
+}
+
+/// `msn-graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]`: the figures of a graph already made; the stem defaults to the file
 /// without its extension. Returns the message for the standard output.
 pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<String, String> {
     let (mut file, mut out, mut fs, mut vista) =
         (None, None, vec![Formato::Svg, Formato::Html], Vista::Albero);
     while let Some(x) = a.next() {
+        let x = canonical(ALIASES, x);
         match x.as_str() {
             "--out" => out = a.next().map(PathBuf::from),
-            "--figura" => fs = formati(&a.next().unwrap_or_default())?,
-            "--vista" => {
+            "--figure" => fs = formati(&a.next().unwrap_or_default())?,
+            "--view" => {
                 vista = Vista::da_nome(&a.next().unwrap_or_default())
-                    .ok_or("--vista needs albero or radiale")?
+                    .ok_or("--view needs tree or radial")?
             }
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
