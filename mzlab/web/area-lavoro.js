@@ -96,28 +96,3 @@ workQ("#flist").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   if (S.table && /** @type {HTMLElement} */ (e.target).closest("[data-open]")) { S.table = false; queueMicrotask(() => syncWork()); }
 }, true);
 
-// before a session the side panel takes a drop as the landing does (with a session shell.js takes it): the files open as soon as they are read
-(() => {
-  const dz = workQ("#dfiles"), early = () => S.view === "data" && !S.sess && !S.opening;
-  const files = (/** @type {DragEvent} */ e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes("Files");
-  ["dragenter", "dragover"].forEach(t => dz.addEventListener(t, (/** @type {DragEvent} */ e) => { if (early() && files(e)) { e.preventDefault(); dropZone(true); } }));
-  dz.addEventListener("drop", (/** @type {DragEvent} */ e) => {
-    if (!early() || !files(e) || !e.dataTransfer) return;
-    e.preventDefault(); e.stopPropagation(); dropZone(false);
-    if (!CartCarica.fromDrop(e)) upload([...e.dataTransfer.files], "data");
-  }, true);
-})();
-
-// files dragged over the work area while panels or the sample table show: an overlay over the whole area takes the drop (the landing has its own box)
-(() => {
-  const ws = workQ("#v-workspace"), on = (/** @type {DragEvent} */ e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes("Files") && S.sess && S.view === "data" && ["panels", "table"].includes(ws.dataset.work || "");
-  const off = () => ws.classList.remove("ws-drop");
-  ["dragenter", "dragover"].forEach(t => ws.addEventListener(t, (/** @type {DragEvent} */ e) => { if (!on(e)) return; e.preventDefault(); ws.dataset.dz = I18N.t("files.drop.zone"); ws.classList.add("ws-drop"); }));
-  ws.addEventListener("dragleave", (/** @type {DragEvent} */ e) => { if (!ws.contains(/** @type {Node | null} */ (e.relatedTarget))) off(); });
-  ws.addEventListener("drop", (/** @type {DragEvent} */ e) => {
-    const was = ws.classList.contains("ws-drop"); off();
-    if (!was || !e.dataTransfer || !on(e)) return;
-    e.preventDefault(); e.stopPropagation();
-    if (!CartCarica.fromDrop(e)) upload([...e.dataTransfer.files], "data");
-  }, true);
-})();
