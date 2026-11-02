@@ -56,7 +56,7 @@ if __name__ == "__main__":
             samples = []
             for _ in range(6):
                 samples.append(pm.evaluate("() => { const h = document.getElementById('fl-hint'), l = h.querySelector('svg.leaf'), r = h.getBoundingClientRect(), b = l.getBoundingClientRect(), p = document.getElementById('dfiles').getBoundingClientRect(); return [r.height, r.top, getComputedStyle(l).animationName, b.top, b.left, b.left >= p.left && b.right <= p.right]; }"))
-                pm.wait_for_timeout(700)
+                frames(pm, 40)      # about 0.7 s of animation frames
             check("motion: the box never moves", len({(s[0], s[1]) for s in samples}) == 1, samples)
             check("motion: the leaf falls (animation runs, position changes)", samples[0][2] == "leaf-fall" and len({(s[3], s[4]) for s in samples}) > 1, samples)
             check("narrow panel (280 px): the swing stays inside", all(s[5] for s in samples), samples)
