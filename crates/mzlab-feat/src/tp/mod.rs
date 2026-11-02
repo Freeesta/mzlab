@@ -19,6 +19,7 @@ mod tabella;
 pub use candidati::{candidates, candidates_json, element_fit, FitCandidate};
 pub use gruppi::{conditions as group_conditions, groups_json, infos_from_json, treated_by_condition, RowInfo};
 pub use rete::{arcs, arcs_in, explain_by_arcs, explain_by_arcs_in, next_generation, Arc, NetParams};
+#[cfg(feature = "interp")]
 pub(crate) use tabella::measured;
 pub use tabella::{role_of, table_json, table_json_cond, Role, TABLE_SCHEMA};
 

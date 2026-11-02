@@ -45,7 +45,9 @@ pub(super) struct Parte {
     chroms: Option<Vec<Chromatogram>>,
     /// Base peak intensity of each scan as the mzML writer saw it (NaN: not yet) and how many it has seen: the BPC of the full scan experiments is listed
     /// once all of them were seen, so that listing the chromatograms never decodes a scan.
+    #[cfg(feature = "estesi")]
     pub(super) bpc: Vec<f64>,
+    #[cfg(feature = "estesi")]
     pub(super) bpc_seen: usize,
     /// A scan with points has a block version the engine's reader does not decode (it would list the sample with no scans): the module reads it.
     #[cfg(feature = "sciex")]
@@ -156,7 +158,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.pronta(c).is_ok_and(|p| p.w.variante() || p.other_version) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { #[cfg(feature = "estesi")] self.watch(c, k, s); extra_of(self, s) }
+#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.pronta(c).is_ok_and(|p| p.w.variante() || p.other_version) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } #[cfg_attr(not(feature = "estesi"), allow(unused_variables))] fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { #[cfg(feature = "estesi")] self.watch(c, k, s); extra_of(self, s) }
     fn formato(&self) -> Formato { Formato::SciexWiff }
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
@@ -296,7 +298,9 @@ pub fn apri_solo(
             scans: Vec::new(),
             indice: Vec::new(),
             chroms: None,
+            #[cfg(feature = "estesi")]
             bpc: Vec::new(),
+            #[cfg(feature = "estesi")]
             bpc_seen: 0,
             #[cfg(feature = "sciex")]
             other_version: false,

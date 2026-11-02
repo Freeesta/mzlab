@@ -51,21 +51,6 @@ impl RawSource for NoRaw {
     }
 }
 
-/// The folder (among `candidates`, each with the names of the files it holds) that holds most of `files`; `None` when none holds any.
-pub fn find_raw_dir<'a>(
-    candidates: &'a [(String, Vec<String>)],
-    files: &[String],
-) -> Option<&'a str> {
-    let mut best: Option<(&str, usize)> = None;
-    for (dir, held) in candidates {
-        let n = files.iter().filter(|f| held.contains(f)).count();
-        if n > best.map_or(0, |b| b.1) {
-            best = Some((dir, n));
-        }
-    }
-    best.map(|b| b.0)
-}
-
 /// (file, scan) of the merged spectrum closest in time to the feature apex, skipping the excluded samples unless nothing else is left.
 pub fn best_scan<R: RawSource>(
     raw: &R,

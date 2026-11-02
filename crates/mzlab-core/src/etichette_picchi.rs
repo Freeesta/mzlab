@@ -98,9 +98,9 @@ pub fn select(
     if n < 3 || max_n == 0 {
         return Vec::new();
     }
-    // the peaks come by decreasing height; `ys` is the trace they were found on, the one the valleys are measured on
+    // the peaks come by decreasing height; the valleys are measured on the wide-smoothed trace (`wide`) below
     let det = detect_full(&rt[..n], &y[..n], Params::default());
-    let (found, ys, noise) = (det.peaks, det.ys, det.noise);
+    let (found, noise) = (det.peaks, det.noise);
     let (t0, t1) = (rt[0], rt[n - 1]);
     let span = t1 - t0;
     let (lo, hi) = if skip_ends {

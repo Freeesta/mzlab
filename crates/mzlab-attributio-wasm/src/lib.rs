@@ -10,7 +10,7 @@ use mzlab_feat::attributio::export::run::Options;
 use mzlab_feat::attributio::io::{Entry, Io};
 use mzlab_feat::attributio::review::banco::review_json_with;
 use mzlab_feat::attributio::review::save::{decision_text, Saved};
-use mzlab_feat::attributio::table::{self, Run};
+use mzlab_feat::attributio::table::Run;
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
@@ -115,7 +115,7 @@ fn run_table(io: &Io, root: &str) -> mzlab_feat::attributio::error::Result<Run> 
 
 #[cfg(not(feature = "rev"))]
 fn run_table(io: &Io, root: &str) -> mzlab_feat::attributio::error::Result<Run> {
-    table::run(io, root)
+    mzlab_feat::attributio::table::run(io, root)
 }
 
 /// Runs `f` on the folder (`fetch` as in `run_with`).
