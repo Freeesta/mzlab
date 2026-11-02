@@ -22,6 +22,8 @@ I18N.add("it", {
   "err.flow.param.axis": "{param} non vale per un file con asse {axis}: sull'asse a risoluzione unitaria la tolleranza di m/z si scrive in Da (tol_da, dup_da), su quello ad alta risoluzione in ppm (ppm, tol_ppm, max_ppm_span, dup_ppm).",
   "err.flow.align.polarity": "Una tabella contiene una sola polarità: nella stessa serie ci sono file positivi ({positive}) e file negativi ({negative}). Dividi la serie, oppure rileva e allinea ogni polarità in un ramo suo.",
   "err.flow.align.resolution": "Una tabella contiene una sola risoluzione: nella stessa serie ci sono file a risoluzione unitaria ({unit}) e file ad alta risoluzione ({high}). Dividi la serie, oppure rileva e allinea ogni risoluzione in un ramo suo.",
+  "err.mzrun.read": "Questo file non è un registro di corsa di mzLab (mzrun/1).",
+  "err.mzrun.build": "Il registro della corsa non si può costruire: {what} ({detail}).",
   "err.file.notAccepted": "Tipo di file non accettato: {name}. Si accettano: .mzML, .mzXML, .cdf, .wiff insieme al suo .wiff.scan, .raw, cartelle .d e metodi .dam. Qualsiasi altro file: convertilo prima in mzML con MSConvert.",
   "err.file.notMzml": "{name} non sembra un file mzML.",
   "err.file.netcdf4": "Questo è un file netCDF-4 (HDF5): esportalo in netCDF-3/AIA (.cdf) dal programma dello strumento.",

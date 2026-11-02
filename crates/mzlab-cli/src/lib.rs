@@ -88,6 +88,7 @@ mod flow_msnlib;
 mod flow_msnlib_tests;
 #[cfg(test)]
 mod flow_msnraw_tests;
+mod flow_mzrun;
 mod flow_nature;
 #[cfg(test)]
 mod flow_neglr_tests;
@@ -152,6 +153,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow record RUNDIR --roles CAMPIONI.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
        mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
@@ -363,10 +365,12 @@ fn features_cmd(args: impl Iterator<Item = String>) -> Outcome {
 fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
     match args.next().as_deref() {
         Some("report") => flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok),
+        Some("record") => flow_mzrun::record(args.collect()),
+        Some("verify") => flow_mzrun::check(args.collect()),
         Some("run") => flow_run::run(args.collect(), None),
         Some("command") => flow_command(args.collect()),
         Some("check") => flow_json::check(args.collect()),
-        _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
+        _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow record RUNDIR --roles CAMPIONI.json | mzlab-cli flow verify RECORD | mzlab-cli flow command PLAN.json"),
     }
 }
 
@@ -458,6 +462,8 @@ mod flow_level_tests;
 mod flow_ms2_tests;
 #[cfg(test)]
 mod flow_msngraph_tests;
+#[cfg(test)]
+mod flow_mzrun_tests;
 #[cfg(test)]
 mod flow_network_tests;
 #[cfg(test)]
