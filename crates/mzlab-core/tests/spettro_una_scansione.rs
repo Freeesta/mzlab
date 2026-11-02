@@ -146,8 +146,13 @@ fn old_json(m: Old, nd: usize) -> String {
     o.0
 }
 
+/// (level, rt, precursor, filter) of a scan.
+type ScanRow = (u8, f64, Option<f64>, String);
+/// (level, window, precursor, filter, sum).
+type Params = (u8, (f64, f64), Option<f64>, Option<String>, bool);
+
 /// What the file asks of the two functions: level, window, precursor, filter, and `modo=somma`.
-fn params(q: &Query) -> Option<(u8, (f64, f64), Option<f64>, Option<String>, bool)> {
+fn params(q: &Query) -> Option<Params> {
     let (rt0, rt1) = (q.num("rt0").unwrap()?, q.num("rt1").unwrap()?);
     Some((
         q.get("level").and_then(|v| v.parse().ok()).unwrap_or(1),
@@ -193,11 +198,7 @@ fn old_spectrum_exact(r: &mut Routes<File>, q: &Query, mzml: &mut File) -> Optio
 }
 
 /// The mzML written from `schede`, its index and a `Routes` on it.
-fn open(
-    dir: &Path,
-    name: &str,
-    schede: Vec<Scheda>,
-) -> (Routes<File>, File, Vec<(u8, f64, Option<f64>, String)>) {
+fn open(dir: &Path, name: &str, schede: Vec<Scheda>) -> (Routes<File>, File, Vec<ScanRow>) {
     let mut l = Finto::da_schede(schede);
     let scans: Vec<_> = l
         .schede
@@ -275,7 +276,7 @@ fn same(r: &mut Routes<File>, mzml: &mut File, queries: &[String], seen: &mut [u
     }
 }
 
-fn queries_of(scans: &[(u8, f64, Option<f64>, String)]) -> Vec<String> {
+fn queries_of(scans: &[ScanRow]) -> Vec<String> {
     let mut qs = vec![];
     for (i, (level, rt, prec, filter)) in scans.iter().enumerate() {
         let (a, b) = (rt - 1e-6, rt + 1e-6);
@@ -355,7 +356,7 @@ fn synthetic(n: usize) -> Vec<Scheda> {
                     300.0 + (k % 7) as f64
                 )
             };
-            let precursor = (level == 2).then(|| 300.0 + (k % 7) as f64);
+            let precursor = (level == 2).then_some(300.0 + (k % 7) as f64);
             let sp = Spectrum {
                 index: k,
                 id: format!("controllerType=0 controllerNumber=1 scan={}", k + 1),
