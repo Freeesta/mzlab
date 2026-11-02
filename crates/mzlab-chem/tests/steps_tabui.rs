@@ -101,7 +101,10 @@ fn reactivity_defaults_are_those_of_the_engine() {
 
 #[test]
 fn reactivity_declares_its_seed() {
-    let s = tabui().into_iter().find(|s| s.id == "structure.reactivity").unwrap();
+    let s = tabui()
+        .into_iter()
+        .find(|s| s.id == "structure.reactivity")
+        .unwrap();
     let p = s.params.iter().find(|p| p.name == "seed").expect("seed");
     assert!(matches!(p.kind, mzlab_core::step::Kind::Integer));
     assert_eq!(p.min, Some(0.0));

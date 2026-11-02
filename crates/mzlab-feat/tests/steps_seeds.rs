@@ -22,21 +22,39 @@ fn is_seed(p: &Param) -> bool {
 }
 
 fn check(p: &Param, who: &str) {
-    assert!(matches!(p.kind, Kind::Integer), "{who}: a seed is an integer");
+    assert!(
+        matches!(p.kind, Kind::Integer),
+        "{who}: a seed is an integer"
+    );
     assert_eq!(p.min, Some(0.0), "{who}: a seed starts at 0");
-    assert!(matches!(p.default, Some(Value::Num(_))), "{who}: a seed has a default");
+    assert!(
+        matches!(p.default, Some(Value::Num(_))),
+        "{who}: a seed has a default"
+    );
 }
 
 #[test]
 fn every_random_source_declares_its_seed() {
     let steps = all();
     for (id, algo, name) in SEEDED {
-        let s = steps.iter().find(|s| s.id == id).unwrap_or_else(|| panic!("{id} missing"));
+        let s = steps
+            .iter()
+            .find(|s| s.id == id)
+            .unwrap_or_else(|| panic!("{id} missing"));
         let params: &[Param] = match algo {
             None => &s.params,
-            Some(a) => &s.algorithms.iter().find(|x| x.id == a).unwrap_or_else(|| panic!("{id}/{a} missing")).params,
+            Some(a) => {
+                &s.algorithms
+                    .iter()
+                    .find(|x| x.id == a)
+                    .unwrap_or_else(|| panic!("{id}/{a} missing"))
+                    .params
+            }
         };
-        let p = params.iter().find(|p| p.name == name).unwrap_or_else(|| panic!("{id}: no {name}"));
+        let p = params
+            .iter()
+            .find(|p| p.name == name)
+            .unwrap_or_else(|| panic!("{id}: no {name}"));
         check(p, &format!("{id}.{name}"));
     }
 }
@@ -44,7 +62,11 @@ fn every_random_source_declares_its_seed() {
 #[test]
 fn every_seed_parameter_is_well_formed() {
     for s in all() {
-        for p in s.params.iter().chain(s.algorithms.iter().flat_map(|a| a.params.iter())) {
+        for p in s
+            .params
+            .iter()
+            .chain(s.algorithms.iter().flat_map(|a| a.params.iter()))
+        {
             if is_seed(p) {
                 check(p, &format!("{}.{}", s.id, p.name));
             }
