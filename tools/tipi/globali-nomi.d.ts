@@ -200,7 +200,7 @@ declare var RIC_IC: any;
 declare var RIC_ICON: any;
 declare var RIC_MAX_ADDUCTS: any;
 declare var RIC_NUMBER: any;
-declare var RIFERIMENTO: any;
+declare var RIFERIMENTO_CORPO: any;
 declare var RIGHELLO: any;
 declare var RUOLI: any;
 declare var RawHtml: any;
