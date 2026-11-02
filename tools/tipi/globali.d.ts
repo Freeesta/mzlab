@@ -36,6 +36,7 @@ declare var DESKDEF: any;
 declare var DESKUPD: any;
 declare var DIAG: any;
 declare var ELEMP: any;
+declare var EMPTYLEAF: any;
 declare var ERRORI: any;
 declare var ETPK: any;
 declare var EXPORT_PEZZI: any;

@@ -1,4 +1,4 @@
-"""The leaf of the empty file list (#fl-hint): one line drawing drawn horizontal, tinted from the accent token, inside its box in both themes; still under reduced motion (the test page), gliding down once otherwise."""
+"""The leaf of the empty file list (#fl-hint): one line drawing drawn horizontal, tinted from the accent token, inside its box in both themes; still under reduced motion (the test page)."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

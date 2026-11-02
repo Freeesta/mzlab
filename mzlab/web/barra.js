@@ -1104,6 +1104,14 @@ const BARRA = (() => {
 
 if (typeof window !== "undefined") {
   window.BARRA = BARRA;
+  // quiet empty state of the side panels: the leaf of the file list (one drawing, cloned) and one short line
+  /** @type {any} */ (window).EMPTYLEAF = (/** @type {string} */ key) => {
+    const box = document.createElement("div"), line = document.createElement("span"), leaf = document.querySelector("#fl-hint svg.leaf");
+    box.className = "empty-leaf muted"; line.textContent = I18N.t(key);
+    if (leaf) box.append(leaf.cloneNode(true));
+    box.append(line);
+    return box.outerHTML;
+  };
 }
 
 if (typeof document !== "undefined") {

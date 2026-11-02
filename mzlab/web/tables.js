@@ -73,7 +73,7 @@
     const vis = LOSSES.filter((/** @type {Bag} */ l) => l.pol === "±" || NL.pols.has(l.pol)).sort((/** @type {Bag} */ a, /** @type {Bag} */ b) => massOf(a.f) - massOf(b.f));
     if (isFinite(q)) vis.forEach((/** @type {Bag} */ l) => { if (Math.abs(massOf(l.f) - q) <= NL_TOL(q)) hit.add(l.f); });
     const /** @type {{ n: number, ls: Bag[] }[]} */ groups = []; vis.forEach((/** @type {Bag} */ l) => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
-    return groups.map(g => lossRow(g.ls, { hit })).join("");
+    return groups.length ? groups.map(g => lossRow(g.ls, { hit })).join("") : /** @type {any} */ (window).EMPTYLEAF("empty.losses");
   }
   function lossTab() {
     return `<div class="nlbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></div>

@@ -764,7 +764,7 @@ const LISTE = (() => {
       if (elCount) elCount.innerHTML = "";
 
       if (!shown.length) {
-        elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted" style="text-align:center;padding:16px">${I18N.t("lst.noMatch")}</td></tr>`;
+        elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;
         return;
       }
 

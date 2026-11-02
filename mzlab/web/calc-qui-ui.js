@@ -49,6 +49,7 @@
     v.tab = ad ? ad.tab : null; v.formula = ad && /** @type {Bag} */ (ad).formula ? ad.tab.formula || "" : "";
     v.diffs = v.open.has("diff");
     v.cfg.out.innerHTML = H.groupsHtml(gs, o, v, { formula: a.kind === "formula" });
+    if (v.cfg.catalogue && v.cfg.quiet && !v.cfg.out.innerHTML.trim()) v.cfg.out.innerHTML = /** @type {any} */ (window).EMPTYLEAF("empty.adducts");     // a panel with nothing to list shows the quiet leaf
     if (v.cfg.after) v.cfg.after(a, gs);
   }
   const later = (/** @type {CqView} */ v) => { clearTimeout(v.timer); v.timer = window.setTimeout(() => render(v).catch(e => { v.cfg.out.innerHTML = h`<p class="muted">${e && e.message || ""}</p>`; }), DEBOUNCE); };
