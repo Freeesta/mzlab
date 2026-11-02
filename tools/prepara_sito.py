@@ -5,6 +5,8 @@
 `tools/build_site.py`, then `cargo build` of mzlab-wasm for wasm32 and `wasm-bindgen` into site/static/wasm (the same two commands the site
 tests run when the engine is missing). Nothing is done when site/ is newer than its sources; cargo skips what is up to date; the wasm-bindgen version must be the one of Cargo.lock.
 """
+import hashlib
+import json
 import os
 import re
 import shutil
@@ -49,6 +51,16 @@ def up_to_date() -> bool:
     return all(f.stat().st_mtime <= t for f in sources if f.is_file())
 
 
+def add_rotte() -> None:
+    """The lazy module `rotte` (statistics, molecules, Data and Flow routes, crates/mzlab-rotte-wasm) into site/static/wasm-feat with its manifest entry; the rest of the manifest is the CI's."""
+    mod = ROOT / "site" / "static" / "wasm-feat" / "rotte"
+    run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(mod), str(WASM.with_name("mzlab_rotte_wasm.wasm"))])
+    mp = mod.parent / "manifest.json"
+    m = json.loads(mp.read_text(encoding="utf-8")) if mp.exists() else {}
+    m["rotte"] = {"js": "rotte/mzlab_rotte_wasm.js", "wasm": "rotte/mzlab_rotte_wasm_bg.wasm", "sha256": hashlib.sha256((mod / "mzlab_rotte_wasm_bg.wasm").read_bytes()).hexdigest()}
+    mp.write_text(json.dumps(m, indent=1), encoding="utf-8")
+
+
 def main() -> int:
     # before the tests that call cargo side by side (tools/verifica.py gives them RUSTUP_AUTO_INSTALL=0): one install, checked
     why = ci_toolchain.ensure()
@@ -62,12 +74,13 @@ def main() -> int:
         print("cargo not found: the e2e tests need the Rust toolchain (rustup show)")
         return 1
     run([sys.executable, "tools/build_site.py"])
-    run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm"], build_env("wasm32-unknown-unknown", commit=False))
+    run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "-p", "mzlab-rotte-wasm"], build_env("wasm32-unknown-unknown", commit=False))
     have = subprocess.run(["wasm-bindgen", "--version"], capture_output=True, text=True).stdout if shutil.which("wasm-bindgen") else ""
     want = bindgen_version()
     if want and want not in have:
         run(["cargo", "install", "wasm-bindgen-cli", "--version", want, "--locked", "--force"])
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", "site/static/wasm", str(WASM)])
+    add_rotte()
     run([sys.executable, "tools/build_site.py", "--build-json"])      # the .wasm is in place now: build.json names its SHA-256
     return 0
 
