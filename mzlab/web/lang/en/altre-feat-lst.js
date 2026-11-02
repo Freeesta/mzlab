@@ -253,7 +253,7 @@ I18N.add("en", {
   "lst.contSigns.title": "On high-resolution spectra, a diamond marks the peaks whose m/z is compatible with a known contaminant and the mouse box says which. Turning it off removes signs and exclusions together.",
   "files.drop.zone": "Drop the files here to add them",
   "files.samples.btn": "Sample table",
-  "files.drop.mixed": "Added {n} files. {m} with a different resolution from the open ones are set aside: «Switch…» in the sample table.",
+  "files.drop.mixed": "{m} with a different resolution from the open ones are set aside: «Switch…» in the sample table.",
   "files.up.opening": "opening",
   "files.up.cancel": "Cancel {name}",
   "files.up.close": "Close the error of {name}",

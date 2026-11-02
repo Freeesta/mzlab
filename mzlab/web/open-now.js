@@ -109,10 +109,10 @@ const OPENNOW = /** @type {any} */ ((() => {
   async function note() {
     drain();      // a file held back by one dropped before it that then failed or never ended
     await idle();
-    const { n, m } = tally; tally.n = tally.m = 0;
+    const { m } = tally; tally.n = tally.m = 0;
     // a veil raised for this loading (the example of the tour) drops with it
     if (UPBUSY === 0 && !(/** @type {HTMLElement} */ (document.querySelector("#loading")).hidden)) loading(false);
-    if (m) directNote("files.drop.mixed", { n, m });
+    if (m) directNote("files.drop.mixed", { m });
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
   const many = async (/** @type {number} */ n) => (await rare()).many(n);
