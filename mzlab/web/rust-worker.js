@@ -123,12 +123,16 @@ const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); ret
 const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
 const openGate = createOpenGate();
 async function lrOpen(name) {                                             // opens the index of a file in its slot; false when there is none
-  const f = await fileOf(name), ix = await ARCH.get("idx", name + ".mzidx");
-  if (!ix) { openGate.drop(slotOf(name)); return false; }
-  await ARCH.lease("idx", name + ".mzidx");
-  if (!openGate.same(slotOf(name), ix)) { openGate.drop(slotOf(name)); engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"])); openGate.mark(slotOf(name), ix); }      // the same index already parsed in the slot is not parsed again
-  await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader
-  return true;
+  const f = await fileOf(name);
+  for (;;) {
+    const ix = await ARCH.get("idx", name + ".mzidx");
+    if (!ix) { openGate.drop(slotOf(name)); return false; }
+    await ARCH.lease("idx", name + ".mzidx");
+    if (!openGate.same(slotOf(name), ix)) { openGate.drop(slotOf(name)); engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"])); openGate.mark(slotOf(name), ix); }      // the same index already parsed in the slot is not parsed again
+    await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader
+    // a new session ("reset" of the bridge: close_all + gate clear) can run while attach waits: the index is gone from the slot, so the caller would find none; open it again
+    if (openGate.same(slotOf(name), ix)) return true;
+  }
 }
 // IndexedDB of the page ("qqq_lab"): the notebook and, without OPFS, the files
 const idb = lab(() => postMessage({ op: "blocked" }));      // another tab holds the database: the page says so
