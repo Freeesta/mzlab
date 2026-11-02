@@ -9,6 +9,7 @@ thread_local! {
     static RUN: RefCell<Option<mzml::Run>> = RefCell::new(None);
     static IDX: RefCell<Vec<u8>> = RefCell::new(Vec::new());
     static Z: RefCell<(Vec<u8>, usize)> = RefCell::new((Vec::new(), 0));
+    static H: RefCell<Vec<u8>> = RefCell::new(Vec::new());
 }
 
 #[wasm_bindgen]
@@ -145,6 +146,35 @@ pub fn inflate() -> f64 {
         let mut out = Vec::with_capacity(c.1);
         flate2::read::ZlibDecoder::new(c.0.as_slice()).read_to_end(&mut out).unwrap();
         out.len() as f64
+    })
+}
+
+/// Fixed pseudo-random buffer of `mb` MB for `hash` (seeded: the same bytes in every variant).
+#[wasm_bindgen]
+pub fn hash_setup(mb: u32) -> f64 {
+    let mut v = vec![0u8; (mb as usize) << 20];
+    let mut seed = 7u64;
+    for c in v.chunks_mut(8) {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        c.copy_from_slice(&seed.to_le_bytes()[..c.len()]);
+    }
+    let n = v.len();
+    H.with(|h| *h.borrow_mut() = v);
+    n as f64
+}
+
+/// SHA-256 and SHA-1 of the `hash_setup` buffer in pieces of 1 MB through `upload::Passata` (what the browser does for a vendor file); the check value folds the first 6 bytes of both digests.
+#[wasm_bindgen]
+pub fn hash() -> f64 {
+    H.with(|h| {
+        let h = h.borrow();
+        let mut p = upload::Passata::new(h.len() as u64);
+        for piece in h.chunks(1 << 20) {
+            p.aggiorna(piece);
+        }
+        let (a, b, _) = p.fine().unwrap();
+        let first6 = |x: &str| u64::from_str_radix(&x[..12], 16).unwrap();
+        (first6(&a) ^ first6(&b)) as f64
     })
 }
 
