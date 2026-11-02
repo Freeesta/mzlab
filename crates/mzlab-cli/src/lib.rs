@@ -88,6 +88,7 @@ mod flow_msnlib;
 mod flow_msnlib_tests;
 #[cfg(test)]
 mod flow_msnraw_tests;
+mod flow_mzrun;
 mod flow_nature;
 #[cfg(test)]
 mod flow_neglr_tests;
@@ -114,7 +115,6 @@ mod flow_render;
 #[cfg(test)]
 mod flow_render_tests;
 pub mod flow_report;
-mod flow_mzrun;
 mod flow_run;
 mod flow_set;
 mod flow_stats;
@@ -463,13 +463,13 @@ mod flow_ms2_tests;
 #[cfg(test)]
 mod flow_msngraph_tests;
 #[cfg(test)]
+mod flow_mzrun_tests;
+#[cfg(test)]
 mod flow_network_tests;
 #[cfg(test)]
 mod flow_picchi_tests;
 #[cfg(test)]
 mod flow_report_tests;
-#[cfg(test)]
-mod flow_mzrun_tests;
 #[cfg(test)]
 mod flow_rule_tests;
 #[cfg(test)]

@@ -22,6 +22,8 @@ I18N.add("en", {
   "err.flow.param.axis": "{param} does not apply to a file on the {axis} axis: on the unit resolution axis set the m/z tolerance in Da (tol_da, dup_da), on the high-resolution axis in ppm (ppm, tol_ppm, max_ppm_span, dup_ppm).",
   "err.flow.align.polarity": "One table holds one polarity: positive files ({positive}) and negative files ({negative}) are in the same series. Split the series, or detect and align each polarity on its own branch.",
   "err.flow.align.resolution": "One table holds one resolution: unit resolution files ({unit}) and high-resolution files ({high}) are in the same series. Split the series, or detect and align each resolution on its own branch.",
+  "err.mzrun.read": "This file is not an mzLab run record (mzrun/1).",
+  "err.mzrun.build": "The run record could not be built: {what} ({detail}).",
   "err.file.notAccepted": "File type not accepted: {name}. Accepted: .mzML, .mzXML, .cdf, .wiff together with its .wiff.scan, .raw, .d folders and .dam methods. Anything else: convert it to mzML with MSConvert first.",
   "err.file.notMzml": "{name} does not look like an mzML file.",
   "err.file.netcdf4": "This is a netCDF-4 (HDF5) file: export it as netCDF-3/AIA (.cdf) from the instrument software.",

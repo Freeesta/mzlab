@@ -36,9 +36,7 @@ fn bad(what: &'static str, detail: &str) -> Error {
 }
 
 fn text<'a>(v: &'a Value, k: &str, what: &'static str) -> Result<&'a str> {
-    v.get(k)
-        .and_then(Value::str)
-        .ok_or_else(|| bad(what, k))
+    v.get(k).and_then(Value::str).ok_or_else(|| bad(what, k))
 }
 
 /// The engine that ran: the `agent` of the `prov/1`, with the keys it has. The commit is required (a record names the code that made it).
@@ -167,8 +165,7 @@ pub fn build(p: &Parts) -> Result<String> {
             ]),
         ),
     ];
-    let mut entries: Vec<(String, Value)> =
-        kv.drain(..).map(|(k, v)| (k.to_string(), v)).collect();
+    let mut entries: Vec<(String, Value)> = kv.drain(..).map(|(k, v)| (k.to_string(), v)).collect();
     let fp = self_sha256(&entries);
     entries.push(("self_sha256".into(), s(&fp)));
     Ok(value_text(&Value::Obj(entries)) + "\n")

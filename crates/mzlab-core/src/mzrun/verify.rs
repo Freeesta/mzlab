@@ -25,7 +25,10 @@ pub fn verify(text: &[u8]) -> Result<Verdict> {
     if field(&v, "schema") != Some("mzrun/1") {
         return Err(Error::new("err.mzrun.read"));
     }
-    if v.get("min_reader").and_then(Value::f64).map_or(true, |n| n > 1.0) {
+    if v.get("min_reader")
+        .and_then(Value::f64)
+        .map_or(true, |n| n > 1.0)
+    {
         return Err(Error::new("error.newerFormat"));
     }
     let mut problems = Vec::new();
