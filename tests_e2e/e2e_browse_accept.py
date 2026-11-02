@@ -1,5 +1,5 @@
-"""Browse (the #pick input of the start screen) must not carry a long `accept` list (it makes the OS file dialog open slowly):
-the input stays multiple, still takes the intended file kinds, and an unknown file is turned down politely by the intake
+"""Browse (the #pick input of the start screen) keeps a short accept list of plain extensions (a long or MIME-based one makes the OS file dialog
+open slowly): the input stays multiple, still takes the intended file kinds, and an unknown file that gets through anyway is turned down by the intake
 (synthetic mzML only, dev server)."""
 import sys, os, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
@@ -19,9 +19,11 @@ try:
         pg.wait_for_selector("#pick", state="attached", timeout=60000)
         def attr():
             acc = pg.get_attribute("#pick", "accept") or ""
-            assert len([e for e in acc.split(",") if e.strip()]) <= 3, acc
+            es = acc.split(",")
+            assert 0 < len(es) <= 8 and len(set(es)) == len(es) and all(e == e.lower() and e.startswith(".") for e in es), acc
+            assert {".mzml", ".mzxml", ".raw", ".wiff", ".scan"} <= set(es), acc
             assert pg.get_attribute("#pick", "multiple") is not None and pg.get_attribute("#pickdir", "webkitdirectory") is not None
-        step("the Browse input has no long accept list and keeps multiple selection (folder input unchanged)", attr)
+        step("the Browse input has a short lowercase-extension accept list and keeps multiple selection (folder input unchanged)", attr)
         def known():
             pg.set_input_files("#pick", str(D / "campione.mzML"))
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=90000)
