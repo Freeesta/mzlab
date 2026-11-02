@@ -35,7 +35,7 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 - I tempi della sessione e del `.mzflow` sono confermati (scritti dall'utente), quelli di `campioni/1` no. Un `sample` a 0 minuti diventa `t0`; bianchi, standard, QC e infusioni perdono il tempo; la replica scritta resta, le altre si numerano.
 
 ## Binding
-- Una funzione per motore: `campioni(op, json)` in `mzlab-wasm/src/campioni.rs` (vista Dati) e in `mzlab-feat-table-wasm` (mzFinder), con `op` ∈ `proponi` e `proponi3` (`{"files":[{"name","sha256","kind"}]}`, la seconda dà un `campioni/3` con matrice e gruppo), `valida`, `per_tp`, `canonico` e `digest` (un `campioni/2`: JSON canonico e SHA-256), `da_legacy`. Errori JSON `{error_key, params}` (`error.badCampioni`).
+- Una funzione per motore: `campioni(op, json)` in `mzlab-rotte-wasm/src/lib.rs` (vista Dati) e in `mzlab-feat-table-wasm` (mzFinder), con `op` ∈ `proponi` e `proponi3` (`{"files":[{"name","sha256","kind"}]}`, la seconda dà un `campioni/3` con matrice e gruppo), `valida`, `per_tp`, `canonico` e `digest` (un `campioni/2`: JSON canonico e SHA-256), `da_legacy`. Errori JSON `{error_key, params}` (`error.badCampioni`).
 - `mzlab-core/src/project.rs` resta per la parità col Python del programma principale.
 
 ## Pannello Pipeline di mzFinder (`TP_Mine/files/finder-ruoli.js`, `TP_Mine/js/34_pipeline_run.js`)

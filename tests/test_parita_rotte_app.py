@@ -16,6 +16,7 @@ def run(*a, env=None):
 
 
 def test_the_app_and_the_wasm_give_the_same_answers(tmp_path):
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(tmp_path / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
+    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "-p", "mzlab-rotte-wasm")
+    for crate in ("mzlab_wasm", "mzlab_rotte_wasm"):   # the engine and the lazy module of the statistics, Data and Flow routes, side by side in one folder
+        run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(tmp_path / "pkg"), f"target/wasm32-unknown-unknown/release/{crate}.wasm")
     run("cargo", "test", "--locked", "-p", "mzlab-desktop", "--test", "parita_rotte", env={**os.environ, "MZLAB_WASM_PKG": str(tmp_path / "pkg")})

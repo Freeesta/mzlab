@@ -1,0 +1,15 @@
+[package]
+name = "mzlab-rotte-wasm"
+description = "wasm-bindgen bridge of the routes the engine does not need at start-up (statistics, molecules, Data sample lists, Flow command/line/scheduler); a .wasm of its own, loaded by the worker of the engine on the first request of one of them"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+js-sys = "0.3.106"
+# the same features the engine had when it carried these routes, so the answers stay byte for byte the same
+mzlab-core = { path = "../mzlab-core", default-features = false, features = ["mappa-dad", "isotopi-tutti"] }
+wasm-bindgen = "0.2"

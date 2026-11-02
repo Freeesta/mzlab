@@ -2569,6 +2569,15 @@ name = "mzlab-picchi"
 version = "1.0.0"
 
 [[package]]
+name = "mzlab-rotte-wasm"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-target"
 version = "1.0.0"
 dependencies = [
