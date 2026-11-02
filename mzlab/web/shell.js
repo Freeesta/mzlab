@@ -370,28 +370,18 @@ function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d)
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#drop").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#drop").click()}};$("#pick").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"data");e.target.value=""};
-["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,(/** @type {Event} */ e)=>{e.preventDefault();$("#drop").classList.add("over")}));
-["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,(/** @type {Event} */ e)=>{e.preventDefault();$("#drop").classList.remove("over")}));
-// a dropped folder is read by cartella-carica.js
-$("#drop").addEventListener("drop",(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{if(!CartCarica.fromDrop(e))upload([...e.dataTransfer.files],"data")});
-["dragenter","dragover"].forEach(t=>$("#dropdam").addEventListener(t,(/** @type {Event} */ e)=>{e.preventDefault();$("#dropdam").classList.add("over")}));
-["dragleave","drop"].forEach(t=>$("#dropdam").addEventListener(t,(/** @type {Event} */ e)=>{e.preventDefault();$("#dropdam").classList.remove("over")}));
-$("#dropdam").addEventListener("drop",(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>upload([...e.dataTransfer.files],"dam"));
-// a missed drop must not open the file
-addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.preventDefault());
+DROP.target($("#drop"),{});DROP.target($("#dropdam"),{kind:"dam"});
 // Files dropped on the side panel of the data view open as any other (OPENNOW): a progress row each in the list (UPROWS), a note at the end of the batch
 const DIRECT={tm:0};
 const dropReady=()=>!!(S.sess&&!$("#v-data").hidden);
-const dropHasFiles=(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>[...((e.dataTransfer&&e.dataTransfer.types)||[])].includes("Files");
 // a clean «added» is only announced and then fades away; warnings and failures stay 9 s
 /** @param {unknown} [p] */ function directNote(/** @type {string} */ key,p){const n=$("#fl-note");clearTimeout(DIRECT.tm);n.textContent=key?I18N.t(key,p):"";n.hidden=!key;n.style.opacity="";
   if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
 function dropZone(/** @type {boolean} */ on){$("#sb-pane").classList.toggle("dz-over",on);if(on)$("#fl-dz").hidden=false;else syncWork(true)}
-(()=>{const dz=$("#dfiles");
-  ["dragenter","dragover"].forEach(t=>dz.addEventListener(t,(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();dropZone(true);carica("gruppi-dnd.js")}));
-  dz.addEventListener("dragleave",(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{if(!dz.contains(e.relatedTarget))dropZone(false)});
-  dz.addEventListener("drop",(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>{dropZone(false);if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();e.stopPropagation();
-    if(!CartCarica.fromDrop(e))upload([...e.dataTransfer.files],"data")});
+// one target for the side list (the session and the landing before it) and one for the work area, whose overlay shows while panels or the sample table are in view
+(()=>{const dz=$("#dfiles"),ws=$("#v-workspace"),ready=(/** @type {DragEvent} */ e)=>DROP.has(e)&&dropReady(),early=(/** @type {DragEvent} */ e)=>DROP.has(e)&&S.view==="data"&&!S.sess&&!S.opening;
+  DROP.target(dz,{ready:(/** @type {DragEvent} */ e)=>ready(e)||early(e),over:(/** @type {boolean} */ v)=>{if(v){dropZone(true);if(S.sess)carica("gruppi-dnd.js")}else dropZone(false)}});
+  DROP.target(ws,{ready:(/** @type {DragEvent} */ e)=>DROP.has(e)&&!!S.sess&&S.view==="data"&&["panels","table"].includes(ws.dataset.work||""),over:(/** @type {boolean} */ v)=>{ws.classList.toggle("ws-drop",v);if(v)ws.dataset.dz=I18N.t("files.drop.zone")}});
   $("#addf").addEventListener("click",()=>directNote(""))})();
 // with a world open the button switches to the other one (OPENNOW.toWorld); before, it picks the world to open
 $("#hrmix-lr").onclick=()=>{if(OPENNOW.world()!==null)OPENNOW.toWorld(false);else{hrMixPick(false);renderFiles()}};$("#hrmix-hr").onclick=()=>{if(OPENNOW.world()!==null)OPENNOW.toWorld(true);else{hrMixPick(true);renderFiles()}};
