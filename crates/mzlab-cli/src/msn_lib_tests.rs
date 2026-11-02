@@ -229,3 +229,102 @@ fn search_finds_the_entry_of_the_same_infusion_and_its_options_and_errors_work()
     assert_eq!(run(&["msn-lib", "search", l, gp, "--nope"]).code, 2);
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// (old, new) arguments of the renamed `export` and `search` flags, for the library `l` and the graph `g`.
+fn alias_cases<'a>(l: &'a str, g: &'a str) -> [(Vec<&'a str>, Vec<&'a str>); 5] {
+    [
+        (vec!["export", l, "--tutti"], vec!["export", l, "--all"]),
+        (
+            vec!["export", l, "--pulito", "--annota"],
+            vec!["export", l, "--clean", "--annotate"],
+        ),
+        (
+            vec!["export", l, "--formato", "massbank"],
+            vec!["export", l, "--format", "massbank"],
+        ),
+        (
+            vec![
+                "export",
+                l,
+                "--tutti",
+                "--pulito",
+                "--annota",
+                "--formato",
+                "massbank",
+            ],
+            vec![
+                "export",
+                l,
+                "--all",
+                "--clean",
+                "--annotate",
+                "--format",
+                "massbank",
+            ],
+        ),
+        (
+            vec!["search", l, g, "--min-prove", "2"],
+            vec!["search", l, g, "--min-evidence", "2"],
+        ),
+    ]
+}
+
+/// Old flags of `msn-lib` (`export`, `search`, and the msn-graph ones of `add`) give the same bytes as the English ones.
+#[test]
+fn old_flags_are_aliases_of_the_english_ones() {
+    let d = dir("alias");
+    let lib = d.join("lib.json");
+    let (l, f) = (lib.to_str().unwrap(), msn());
+    let add = |extra: &[&str]| {
+        let mut a = vec![
+            "msn-lib",
+            "add",
+            l,
+            f.to_str().unwrap(),
+            "--id",
+            "STD-1",
+            "--formula",
+            "C14H15N3O5+",
+        ];
+        a.extend(extra);
+        let _ = std::fs::remove_file(&lib);
+        let o = run(&a);
+        (
+            o.code,
+            o.stderr.replace(l, "LIB"),
+            std::fs::read(&lib).unwrap_or_default(),
+        )
+    };
+    assert_eq!(
+        add(&["--attivazione", "cid", "--regole"]),
+        add(&["--activation", "cid", "--rules"])
+    );
+    assert_eq!(add(&[]).0, 0);
+    let g = d.join("g.json");
+    let graph = run(&["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"]);
+    std::fs::write(&g, &graph.stdout).unwrap();
+    let cases = alias_cases(l, g.to_str().unwrap());
+    for (old, new) in cases {
+        let go = |x: &[&str]| {
+            let mut a = vec!["msn-lib"];
+            a.extend(x);
+            run(&a)
+        };
+        let (o, n) = (go(&old), go(&new));
+        assert_eq!(n.code, 0, "{new:?}: {}", n.stderr);
+        assert_eq!(
+            (o.code, &o.stdout),
+            (n.code, &n.stdout),
+            "{old:?} vs {new:?}"
+        );
+    }
+    let h = String::from_utf8(run(&["msn-lib", "--help"]).stdout).unwrap();
+    assert!(h.contains("--min-evidence N"));
+    assert!(h
+        .trim_end()
+        .lines()
+        .last()
+        .unwrap()
+        .starts_with("old names still accepted: --pulito"));
+    let _ = std::fs::remove_dir_all(&d);
+}

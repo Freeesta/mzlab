@@ -424,7 +424,7 @@ def main() -> None:
     ap.add_argument("--ultimi-falliti", action="store_true", help="rilancia solo gli e2e che erano FAIL nel giro precedente (.verifica/ultimo.md)")
     ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
     ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
-    ap.add_argument("--tutto", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
+    ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
     a = ap.parse_args()
     if a.browser:
         os.environ["MZLAB_BROWSER"] = a.browser
@@ -473,7 +473,7 @@ def main() -> None:
     lines += ["", "Log completi: .verifica/log/<nome>.log (leggili solo per i FAIL)."]
     text = "\n".join(lines)
     (OUT / "ultimo.md").write_text(text + "\n", encoding="utf-8")
-    if a.tutto:
+    if a.mostra_ok:
         print(text)
     else:          # fewer tokens for whoever reads it: only what is not OK, plus how many are OK (the full list is in .verifica/ultimo.md)
         ok = [r for r in results if r[1] == "OK"]
