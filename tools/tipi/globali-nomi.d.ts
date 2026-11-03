@@ -77,6 +77,7 @@ declare var EXPORT_LIGHT: any;
 declare var FEATURES: any;
 declare var FILECHUNK: any;
 declare var FILESICURI: any;
+declare var FLQ: any;
 declare var FONDO: any;
 declare var FONDOP: any;
 declare var FONDOSP: any;

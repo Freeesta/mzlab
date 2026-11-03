@@ -17,9 +17,9 @@ import dati_sintetici as ds
 INIT = r"""(() => {
   const V = window.__L = { calls: 0, ms: 0, lt: [], on: false };
   try { new PerformanceObserver(l => { if (V.on) l.getEntries().forEach(e => V.lt.push(e.duration)); }).observe({ entryTypes: ['longtask'] }); } catch (_) {}
-  V.wrap = () => { const o = window.renderFileList; if (typeof o !== 'function' || o.__w) return;
+  V.wrap = () => { const nm = 'renderFileList', o = window[nm]; if (typeof o !== 'function' || o.__w) return;       // calls = every call (while files load most only schedule and cost ~0 ms); ms = time spent in them
     const w = function () { const t = performance.now(); try { return o.apply(this, arguments); } finally { if (V.on) { V.calls++; V.ms += performance.now() - t; } } };
-    w.__w = 1; for (const k of Object.keys(o)) w[k] = o[k]; window.renderFileList = w; };
+    w.__w = 1; for (const k of Object.keys(o)) w[k] = o[k]; window[nm] = w; };
 })();"""
 
 
