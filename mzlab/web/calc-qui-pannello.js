@@ -34,7 +34,7 @@
   }
 
   // ---------------------------------------------------------------- the page in the drawer
-  const SUBS = ["adducts", "losses", "cont"], CAP = { adducts: "cq.cap.adducts", losses: "cq.cap.losses", cont: "cq.cap.cont" };
+  const SUBS = ["adducts", "losses", "cont"];
   const CALC_KEY = () => (typeof NOMI !== "undefined" ? NOMI.KEY("addloss.calc") : "mzlab.addloss.calc");
   /** @type {{ q: HTMLInputElement, views: any[], losses: { setQ: (q: string) => void } | null } | null} */
   let page = null;
@@ -72,11 +72,10 @@
     if (on && focus) { const i = Q1("#calcin"); if (i) setTimeout(() => i.focus(), 30); }
   }
   const calcOpen = () => { const tg = Q1("#al-calc-tg"); return !!tg && tg.getAttribute("aria-expanded") === "true"; };
-  /** One section of the page was shown (barra.js setSub): build, caption, and the number or formula it was opened with. @param {string} sub @param {{ q?: string | number | null, calc?: boolean, open?: string }} [opt] */
+  /** One section of the page was shown (barra.js setSub): build, and the number or formula it was opened with. @param {string} sub @param {{ q?: string | number | null, calc?: boolean, open?: string }} [opt] */
   function showSub(sub, opt = {}) {
     const pg = ensurePage();
     if (!pg) return;
-    const cap = Q1("#al-cap"); if (cap) cap.textContent = T(/** @type {Bag} */ (CAP)[sub] || CAP.adducts);
     if (opt.calc) setCalc(true, true);
     if (opt.open) pg.views.forEach(v => { v.open.add(/** @type {string} */ (opt.open)); v.open.delete("-" + opt.open); });
     if (opt.q != null) {
