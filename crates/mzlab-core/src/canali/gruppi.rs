@@ -113,7 +113,7 @@ pub(super) fn nuovo_gruppo(id: String, s: &Scan, percorso: Vec<i64>) -> Gruppo {
             pol: s.polarity,
             percorso,
             sigla,
-            etichetta: format!("{} {} IDA", apice(s.level), sigla.unwrap_or_default()),
+            etichetta: format!("{} IDA", apice(s.level)),
             omologo: format!("dd|{}|{}", s.level, sigla.unwrap_or_default()),
         };
     }
@@ -132,9 +132,6 @@ pub(super) fn nuovo_gruppo(id: String, s: &Scan, percorso: Vec<i64>) -> Gruppo {
                 .collect::<Vec<_>>()
                 .join("→")
         );
-    }
-    if let Some(sg) = sigla.filter(|_| s.level <= 1) {
-        etichetta += &format!(" {sg}");
     }
     if s.level >= 2 && !act.is_empty() {
         etichetta += &format!(
