@@ -82,7 +82,7 @@ try:
             assert pg.is_visible("#calcdlg") and pg.is_visible("#al-q"), "one page: the calculator on top of the lists"
             pg.click("#al-calc-tg"); gone("#calcdlg"); assert pg.get_attribute("#al-calc-tg", "aria-expanded") == "false" and pg.evaluate("!BARRA.isOpen('calc')")
             pg.click("#al-calc-tg"); shown("#calcdlg"); assert pg.evaluate("BARRA.isOpen('calc')")
-            pg.click("#stbar [data-cmd=addloss]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=addloss]", "aria-pressed") == "false", "a second click on the same tool hides the panel"
+            pg.click("#stbar [data-cmd=addloss]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=addloss]", "aria-pressed") == "false", "a second click on the same tool goes back to the previous one"
             pg.click("#stbar [data-cmd=lists]"); shown("#sb-panel-lists"); assert pg.is_visible("#sb-panel-lists")
             pg.click("#stbar [data-cmd=ptable]"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
             pg.evaluate("document.querySelector('#refdlg').close()")
@@ -249,7 +249,7 @@ try:
             pg.click("#stmenu [role^=menuitem] >> nth=1"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'iso'")
             assert pg.evaluate("BARRA.curTab") == "iso" and pg.is_visible("#hrinfo")
             pg.click("#stbar [data-cmd=idn]"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'idn'"); assert pg.evaluate("BARRA.curTab") == "idn" and pg.is_visible("#hrinfo")
-            pg.click("#stbar [data-cmd=idn]"); gone("#dfiles"); assert not pg.is_visible("#dfiles")
+            pg.click("#stbar [data-cmd=idn]"); attendi(pg, "BARRA.curTab === 'iso'"); assert pg.is_visible("#hrinfo"), "a second click goes back to the previous tool"
             for t in ("hdr", "fil", "cmp"):
                 pg.evaluate(f"BARRA.setTab('{t}')"); shown("#hrinfo"); attendi(pg, f"BARRA.curTab === '{t}'"); assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == t, t
             close_side(pg)
