@@ -53,8 +53,12 @@ try:
             n = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert n >= 5, n
             assert pg.evaluate("document.querySelector('.can-pop [role=tree]').getAttribute('aria-label')")
             lv = pg.evaluate("[...document.querySelectorAll('.can-pop [role=treeitem]')].map(e => e.getAttribute('aria-level'))"); assert "2" in lv, lv
-            t = pg.evaluate("[...document.querySelectorAll('.can-pop [role=treeitem]')].some(e => /@/.test(e.title) || /^ms:/.test(e.title))"); assert t
-        step("tree with levels, aria and the exact id in the title", tree)
+            # the hover text says what the channel is: no time range or engine id glued to it (they have their own columns)
+            t = pg.evaluate("[...document.querySelectorAll('.can-pop [role=treeitem]')].map(e => e.title).filter(Boolean)"); assert t and all("\n" not in x and " min" not in x and not x.startswith(("ms:", "tic")) for x in t), t
+            # the scan mode (EMS, EPI...) stays in the «Experiment» column, not in the channel name
+            sg = pg.evaluate("[...document.querySelectorAll('.can-pop .can-row')].map(e => [e.querySelector('.can-et').textContent, (e.querySelector('.can-sg') || {}).textContent || ''])")
+            assert all(not g or g not in et.split(" ") for et, g in sg), sg
+        step("tree with levels, aria and a short title", tree)
         def two():
             before = pg.evaluate("E.panels.find(p => p.type==='chrom').canali")
             pg.click(".can-pop [role=treeitem][data-omo^='ms|1']"); ready(pg); frames(pg, 6)

@@ -96,7 +96,7 @@ I18N.add("en", {
   "lib.search.tol": "tolerance",
   "lib.search.peaksWithin": "peaks within",
   "lib.search.go": "Search",
-  "lib.copy.title": "Copy the table: pasted in Excel it fills rows and columns",
+  "lib.copy.title": "Pasted in Excel it fills rows and columns",
   "lib.copy": "Copy the table",
   "lib.libs": "Libraries…",
   "lib.col.name": "Name",
