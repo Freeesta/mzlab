@@ -434,7 +434,7 @@ mod codifica;
 mod compressione;
 pub use compressione::opzioni_compressione;
 mod matrice;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
 mod uv;
 mod thread;
 pub use thread::thread_predefinito;

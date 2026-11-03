@@ -216,7 +216,7 @@ pub trait Lettore {
         Ok(None)
     }
     /// The optical (DAD / PDA) matrix of sample `c` as the reader holds it, for `convert.mzml` with `dad`; `None` when the sample has none.
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
     fn dad_dati(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
         Ok(None)
     }

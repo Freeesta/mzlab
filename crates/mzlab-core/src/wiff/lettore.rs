@@ -219,7 +219,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         }
         dad_chrom(self.parte(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
     fn dad_dati(&mut self, c: usize) -> Result<Option<super::dad::DadData>> {
         Ok(self.parte(c)?.w.dad.clone())
     }
@@ -235,7 +235,8 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
         Ok(self.parte(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
     }
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> { testata(self, c).map(Some) }
+    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> { con_metodo(self, c).map(Some) }
+    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> { testata(self, c).map(Some) }
     fn metodo(&mut self, c: usize) -> Result<String> {
         let sample = self.parte(c)?.w.sample;
         Ok(crate::metodo_wiff::from_wiff(&self.ole, sample, &source(self, sample)))
@@ -249,6 +250,18 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
         unita: None,
         cv: None,
     }
+}
+
+/// The header of the mzML with the `metodo/1` document in the run: the method (pumps, gradient, detectors) travels in the mzML, as for `.raw` and `.D`,
+/// so the page reads it back from a converted file.
+fn con_metodo(l: &mut LettoreWiff, c: usize) -> Result<Header> {
+    let mut h = testata(l, c)?;
+    let doc = l.metodo(c)?;
+    if !doc.is_empty() {
+        h.run_params
+            .push((crate::metodo::USERPARAM.to_string(), doc));
+    }
+    Ok(h)
 }
 
 /// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.

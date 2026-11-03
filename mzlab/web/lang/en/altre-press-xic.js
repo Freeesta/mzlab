@@ -203,7 +203,7 @@ I18N.add("en", {
   "tdati.note.spec": "Peaks above {thr} % of the highest between m/z {a} and {b} (at most 300, the most intense).",
   "tdati.note.map": "The {n} most intense cells of the visible region.",
   "uv.error": "UV spectrum not available.",
-  "uv.none": "This file has no UV spectra: only SCIEX .wiff files with the DAD detector (time × wavelength matrix) have them.",
+  "uv.none": "This file has no UV spectra: they need the data of a DAD detector (time × wavelength matrix). An mzML without UV spectra has none; if it comes from a .wiff with a DAD, load the .wiff again with its .wiff.scan.",
   "uv.axis.x": "Wavelength (nm)",
   "uv.axis.y": "Absorbance (mAU)",
   "uv.leg.one": "RT {rt} min",
