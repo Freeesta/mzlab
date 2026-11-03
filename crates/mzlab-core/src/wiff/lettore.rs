@@ -258,7 +258,8 @@ fn con_metodo(l: &mut LettoreWiff, c: usize) -> Result<Header> {
     let mut h = testata(l, c)?;
     let doc = l.metodo(c)?;
     if !doc.is_empty() {
-        h.run_params.push((crate::metodo::USERPARAM.to_string(), doc));
+        h.run_params
+            .push((crate::metodo::USERPARAM.to_string(), doc));
     }
     Ok(h)
 }
