@@ -2,7 +2,7 @@
 "use strict";
 // Peak table of the spectrum panel (button «Tabella picchi»): a small popover with the peak list the chart draws (p._a.data[0].d), the facts of the spectrum
 // and four controls (threshold, max rows, sort, only labelled). Output is to COPY (TSV + html on the clipboard, or Ctrl/Cmd+C on the table); nothing is saved.
-// Numbers are data: I18N.num, always with the decimal point. Classic helpers used by name: E, I18N. State per panel in p._tp.
+// Classic helpers h and raw (html-sicuro.js) build every HTML string. Numbers are data: I18N.num, always with the decimal point. Classic helpers used by name: E, I18N. State per panel in p._tp.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
@@ -34,17 +34,16 @@
     const body = ix.map(j => [I18N.num(d.mz[j], dec), I18N.num(+y[j].toPrecision(6)), I18N.num(y[j] / top * 100, 1), ...(ms2 ? [I18N.num(d.mz[j] - p.prec, dec), I18N.num(p.prec - d.mz[j], dec)] : [])]);
     return { head, body };
   }
-  const EH_ = (/** @type {string} */ s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] || c);
   /** @param {{ head: string[], body: string[][] }} r */
   const tsv = r => [r.head, ...r.body].map(l => l.join("\t")).join("\n");
   /** @param {{ head: string[], body: string[][] }} r */
-  const html = r => `<table><thead><tr>${r.head.map(h => `<th>${EH_(h)}</th>`).join("")}</tr></thead><tbody>${r.body.map(l => `<tr>${l.map(c => `<td>${EH_(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  const html = r => h`<table><thead><tr>${raw(r.head.map(x => h`<th>${x}</th>`).join(""))}</tr></thead><tbody>${raw(r.body.map(l => h`<tr>${raw(l.map(c => h`<td>${c}</td>`).join(""))}</tr>`).join(""))}</tbody></table>`;
   /** @param {any} p */
   function render(p) {
     const s = st(p), pop = s.pop; if (!pop || !p._a) return;
     const r = rows(p), tb = pop.querySelector("table");
-    pop.querySelector(".tp-facts").innerHTML = facts(p).map(([k, v]) => `<div><span class="muted">${EH_(k)}</span> <b>${EH_(v)}</b></div>`).join("");
-    tb.innerHTML = `<caption class="sr-only">${EH_(T("tabp.title"))}</caption><thead><tr>${r.head.map(h => `<th scope="col">${EH_(h)}</th>`).join("")}</tr></thead><tbody>${r.body.map(l => `<tr>${l.map(c => `<td class="num">${EH_(c)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+    pop.querySelector(".tp-facts").innerHTML = facts(p).map(([k, v]) => h`<div><span class="muted">${k}</span> <b>${v}</b></div>`).join("");
+    tb.innerHTML = h`<caption class="sr-only">${T("tabp.title")}</caption><thead><tr>${raw(r.head.map(x => h`<th scope="col">${x}</th>`).join(""))}</tr></thead><tbody>${raw(r.body.map(l => h`<tr>${raw(l.map(c => h`<td class="num">${c}</td>`).join(""))}</tr>`).join(""))}</tbody>`;
     pop.querySelector(".tp-n").textContent = T("tabp.rows", { n: r.body.length });
   }
   /** @param {any} p @param {boolean} [back] */
@@ -68,12 +67,12 @@
     const s = st(p); if (s.pop) { close(p, true); return; }
     if (!p._a || !p._a.data || !p._a.data[0]) return;
     const pop = document.createElement("div"); pop.className = "sp-pop tp-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", T("tabp.title"));
-    pop.innerHTML = `<div class="tp-facts"></div>
+    pop.innerHTML = h`<div class="tp-facts"></div>
       <div class="tp-ctl"><label>${T("tabp.thr")} <input type="number" data-f="thr" min="0" max="100" step="0.5" value="${s.thr}"></label>
       <label>${T("tabp.max")} <input type="number" data-f="max" min="1" max="5000" step="1" value="${s.max}"></label>
-      <label>${T("tabp.sort")} <select data-f="sort"><option value="mz"${s.sort === "mz" ? " selected" : ""}>${T("tabp.sort.mz")}</option><option value="int"${s.sort === "int" ? " selected" : ""}>${T("tabp.sort.int")}</option></select></label>
-      <label class="tp-chk"><input type="checkbox" data-f="lab"${s.lab ? " checked" : ""}> ${T("tabp.lab")}</label></div>
-      <div class="tp-sc" tabindex="0" role="region" aria-label="${EH_(T("tabp.title"))}"><table></table></div>
+      <label>${T("tabp.sort")} <select data-f="sort"><option value="mz"${raw(s.sort === "mz" ? " selected" : "")}>${T("tabp.sort.mz")}</option><option value="int"${raw(s.sort === "int" ? " selected" : "")}>${T("tabp.sort.int")}</option></select></label>
+      <label class="tp-chk"><input type="checkbox" data-f="lab"${raw(s.lab ? " checked" : "")}> ${T("tabp.lab")}</label></div>
+      <div class="tp-sc" tabindex="0" role="region" aria-label="${T("tabp.title")}"><table></table></div>
       <div class="tp-ft"><button type="button" class="bt" data-f="copy">${T("tabp.copy")}</button><button type="button" class="bt" data-f="no">${T("tabp.close")}</button><span class="sm tp-n"></span><span class="sm tp-ok" role="status" aria-live="polite"></span></div>`;
     p.el.appendChild(pop); s.pop = pop;
     const b = /** @type {HTMLElement} */ (p.el.querySelector('[data-a="tabp"]')), pr = p.el.getBoundingClientRect(), br = b.getBoundingClientRect();
