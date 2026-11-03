@@ -106,8 +106,10 @@
     const t = tree.length ? tree.filter(n => ["tic", "bpc", "ms", "dd", "srm"].includes(n.fam)) : [fall("tic", T("ctl.kind.tic")), fall("bpc", T("ctl.kind.bpc"))];
     return cx && !cx.hasScan ? t.filter(n => n.fam !== "bpc") : t;
   }
-  /** the label of a row: the engine's name, with TIC and BPC in the words of the page @param {Nodo} n */
-  const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.fam === "srm" ? srmLabel(n.et) : n.et;
+  /** the label of a row: the engine's name, with TIC and BPC in the words of the page; the scan mode (EMS, EPI…) has its own column, so it leaves the name @param {Nodo} n */
+  const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.fam === "srm" ? srmLabel(n.et) : bare(n);
+  /** the engine's name without the scan-mode word that the «Experiment» column already shows («MS¹ EMS» → «MS¹») @param {Nodo} n */
+  const bare = n => n.sigla ? n.et.split(" ").filter(w => w !== n.sigla).join(" ") || n.et : n.et;
   /** a transition in the notation of the legend, «precursor>product role», from the engine's «MRM q1→q3 @CE «role»» @param {string} et */
   const srmLabel = et => { const m = /^MRM\s+([\d.]+)→([\d.]+)(?:\s+@[\d.]+)?(?:\s+«(.*)»)?\s*$/.exec(et); return m ? `${m[1]}>${m[2]}${m[3] ? " " + m[3] : ""}` : et; };
   /** the text of the button: what the panel plots, «TIC + 1» for several channels @param {any} p @param {Nodo[]} tree @param {Ctx} cx */
@@ -116,11 +118,8 @@
     const ids = chosen(p), one = (/** @type {string} */ o) => { const n = tree.find(x => x.omo === o); return n ? label(n) : o === "bpc" ? T("ctl.kind.bpc") : T("ctl.kind.tic"); };
     return ids.length > 1 ? `${one(ids[0])} + ${ids.length - 1}` : one(ids[0]);
   }
-  /** the hover text of a row: what the channel is, the time range, the exact ids @param {Nodo} n */
-  function tip(n) {
-    const what = n.fam === "dd" ? T("canali.tip.dd") : n.fam === "ms" && n.liv === 1 ? T("canali.tip.ms1") : n.omo === "tic" ? T("canali.tip.tic") : n.omo === "bpc" ? T("ctl.kind.bpc.title") : "";
-    return [what, n.n ? T("canali.tip.time", { a: +n.rt0.toFixed(2), b: +n.rt1.toFixed(2) }) : "", ...n.ids.slice(0, 3)].filter(Boolean).join("\n");
-  }
+  /** the hover text of a row: what the channel is (time range and points have their own columns) @param {Nodo} n */
+  const tip = n => n.fam === "dd" ? T("canali.tip.dd") : n.fam === "ms" && n.liv === 1 ? T("canali.tip.ms1") : n.omo === "tic" ? T("canali.tip.tic") : n.omo === "bpc" ? T("ctl.kind.bpc.title") : "";
   /** the label of the row for screen readers @param {Nodo} n */
   const rowLabel = n => n.n ? T("canali.row", { et: label(n), n: n.n, a: +n.rt0.toFixed(2), b: +n.rt1.toFixed(2) }) : label(n);
   /** the rows of the tree (a collapsed parent hides its descendants) @param {any} p @param {Nodo[]} tree @param {Set<string>} sel @param {boolean} onlySrm @param {number} nfiles */
