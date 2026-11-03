@@ -2,7 +2,7 @@
 //! key (the transport puts it in the `AuthSlot`), `Stream` turns the response bytes into normalized events, `http_error` maps a failed status. Pure
 //! functions on text; the transport (fetch in the site, `ureq` in the desktop) lives elsewhere.
 
-mod anthropic;
+pub(crate) mod anthropic;
 mod errors;
 mod gemini;
 mod openai;

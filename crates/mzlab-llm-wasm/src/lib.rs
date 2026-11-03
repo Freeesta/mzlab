@@ -1,8 +1,9 @@
 //! wasm-bindgen bridge of `mzlab-llm` for the assistant of the site: the catalog in, a conversation in, the request out; the response bytes in, normalized
 //! events out (one JSON line each); a recording `llmreg/1` for the transport `replay`. No network and no key here: the iframe `llm/trasporto.html` does the fetch.
-//! An error is a JSON text `{"error", "error_key", "params"}` (the same shape as the routes of the engine). Loaded by `mzlab/web/llm/llm-worker.js`.
+//! `ledger` counts the money of the public proxy. An error is a JSON text `{"error", "error_key", "params"}` (the same shape as the routes of the engine). Loaded by `mzlab/web/llm/llm-worker.js`.
 mod agent;
 mod assist;
+mod ledger;
 
 use mzlab_core::error::Error;
 use mzlab_llm::conv::Conversation;

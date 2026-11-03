@@ -1,0 +1,33 @@
+# The anonymous public proxy of the mzLab assistant (docs/agenti/assistente-proxy.md). No secret here: ANTHROPIC_KEY and OWNER_SHA256 are set with
+# `npx wrangler secret put` (docs/studi/assistente-dati/09-worker.md §9). Logs are off: nothing of a request is ever written anywhere.
+name = "mzlab-assist-proxy"
+main = "adapters/cloudflare.js"
+compatibility_date = "2026-06-01"
+workers_dev = true
+logpush = false
+
+[build]
+command = "sh build.sh"
+
+[vars]
+PHASE = "0"
+
+[observability]
+enabled = false
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+
+[[durable_objects.bindings]]
+name = "LEDGER"
+class_name = "Ledger"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Ledger"]
+
+[[ratelimits]]
+name = "RATE"
+namespace_id = "1001"
+simple = { limit = 12, period = 60 }

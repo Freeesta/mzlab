@@ -191,25 +191,29 @@ impl Dec {
     }
 
     fn message_start(&mut self, v: &Value) {
-        let u = v.get("message").and_then(|m| m.get("usage"));
-        let n = |k: &str| u.and_then(|u| u.get(k)).and_then(Value::f64).unwrap_or(0.0) as u64;
-        let detail = u.and_then(|u| u.get("cache_creation"));
-        let w = |k: &str| detail.and_then(|d| d.get(k)).and_then(Value::f64);
-        // Without the per-lifetime detail the total counts as the 5-minute rate (the default lifetime).
-        let (w5, w1) = match (
-            w("ephemeral_5m_input_tokens"),
-            w("ephemeral_1h_input_tokens"),
-        ) {
-            (None, None) => (n("cache_creation_input_tokens"), 0),
-            (a, b) => (a.unwrap_or(0.0) as u64, b.unwrap_or(0.0) as u64),
-        };
-        self.usage = Usage {
-            input: n("input_tokens"),
-            output: n("output_tokens"),
-            cache_read: n("cache_read_input_tokens"),
-            cache_write_5m: w5,
-            cache_write_1h: w1,
-        };
+        self.usage = start_usage(v.get("message").and_then(|m| m.get("usage")));
+    }
+}
+
+/// The `usage` of a `message_start` event (its `message.usage` object). Without the per-lifetime detail the cache-write total counts at the 5-minute
+/// rate (the default lifetime). Shared with the proxy ledger (`spend::usage_of_stream`).
+pub(crate) fn start_usage(u: Option<&Value>) -> Usage {
+    let n = |k: &str| u.and_then(|u| u.get(k)).and_then(Value::f64).unwrap_or(0.0) as u64;
+    let detail = u.and_then(|u| u.get("cache_creation"));
+    let w = |k: &str| detail.and_then(|d| d.get(k)).and_then(Value::f64);
+    let (w5, w1) = match (
+        w("ephemeral_5m_input_tokens"),
+        w("ephemeral_1h_input_tokens"),
+    ) {
+        (None, None) => (n("cache_creation_input_tokens"), 0),
+        (a, b) => (a.unwrap_or(0.0) as u64, b.unwrap_or(0.0) as u64),
+    };
+    Usage {
+        input: n("input_tokens"),
+        output: n("output_tokens"),
+        cache_read: n("cache_read_input_tokens"),
+        cache_write_5m: w5,
+        cache_write_1h: w1,
     }
 }
 

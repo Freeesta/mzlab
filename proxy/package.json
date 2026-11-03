@@ -1,0 +1,9 @@
+{
+  "name": "mzlab-assist-proxy",
+  "private": true,
+  "type": "module",
+  "description": "Anonymous public proxy of the mzLab assistant for the Claude API (docs/agenti/assistente-proxy.md)",
+  "scripts": {
+    "test": "node --test test/"
+  }
+}
