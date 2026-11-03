@@ -111,13 +111,13 @@ def sim3(out):
     for s, name in enumerate(SIM3_SAMPLES):
         wr.sample(s + 1, blocks_of(s), method, log="3200 QTRAP", data_name=name)
     wr.save(out, "sim3")
+    wr.save(out, "sim3_cut")
     # the same cycles with a method that names no ion: the reader gives each channel only its place (transition=N), no Q1
     nameless = {k: v for k, v in method.items() if "MassRangeEx" not in k}
-    wr = w.Writer()
+    wq = w.Writer()
     for s, name in enumerate(SIM3_SAMPLES):
-        wr.sample(s + 1, [("mrm", v, t, tot) for _, v, t, tot in blocks_of(s)], nameless, log="3200 QTRAP", data_name=name)
-    wr.save(out, "sim_senzaq1")
-    wr.save(out, "sim3_cut")
+        wq.sample(s + 1, blocks_of(s), nameless, log="3200 QTRAP", data_name=name)
+    wq.save(out, "sim_senzaq1")
     scan = (out / "sim3_cut.wiff.scan").read_bytes()
     (out / "sim3_cut.wiff.scan").write_bytes(scan[:len(scan) * 6 // 10])
     (out / "sim3.json").write_text(json.dumps({"ioni": [{"q1": q1, "name": nm} for q1, nm in SIM3], "campioni": SIM3_SAMPLES,
