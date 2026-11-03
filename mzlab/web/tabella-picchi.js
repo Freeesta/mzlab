@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // Peak table of the spectrum panel (button «Tabella picchi»): a small popover with the peak list the chart draws (p._a.data[0].d), the facts of the spectrum
-// and four controls (threshold, max rows, sort, only labelled). Output is to COPY (TSV + html on the clipboard, or Ctrl/Cmd+C on the table); nothing is saved.
+// and four controls (threshold, max rows, sort, only labelled). Output: COPY (TSV + html on the clipboard, or Ctrl/Cmd+C on the table) and CSV (also in the panel download menu).
 // Classic helpers h and raw (html-sicuro.js) build every HTML string. Numbers are data: I18N.num, always with the decimal point. Classic helpers used by name: E, I18N. State per panel in p._tp.
 (() => {
   /** @param {string} k @param {any} [v] */
@@ -19,15 +19,19 @@
     if (ms2 && p.prec != null) out.push([T("tabp.f.prec"), I18N.num(p.prec, a.hrp ? a.dec : 2)]);
     if (ce != null) out.push([T("tabp.f.ce"), I18N.num(ce, 1) + " eV"]);
     if (pol) out.push([T("tabp.f.pol"), pol === "+" ? T("tabp.pos") : T("tabp.neg")]);
+    const z = zoomed(p); if (z) out.push([T("tabp.f.range"), I18N.num(z[0], 2) + " – " + I18N.num(z[1], 2)]);
     return out;
   }
+  /** the m/z window of a zoomed spectrum, else null @param {any} p */
+  const zoomed = p => (p.zoom && p._a && p._a.x0 != null && p._a.x1 != null ? [p._a.x0, p._a.x1] : null);
   /** the rows to show (strings, already formatted) and the header @param {any} p */
   function rows(p) {
     const a = p._a, s = st(p), d = a.data[0].d, ms2 = p.level >= 2 && p.prec != null, dec = a.hrp ? a.dec : 2, y = d.y0 || d.y;
-    let top = 1e-9; for (const v of y) if (v > top) top = v;
+    const z = zoomed(p), inz = (/** @type {number} */ j) => !z || (d.mz[j] >= z[0] && d.mz[j] <= z[1]);   // zoomed: the peaks in view, the base peak of that window is 100
+    let top = 1e-9; for (let j = 0; j < y.length; j++) if (inz(j) && y[j] > top) top = y[j];
     const lab = s.lab ? (a.lbls || []).filter((/** @type {any} */ b) => typeof b.m === "number" && !b.ann).map((/** @type {any} */ b) => b.m) : null;
     /** @type {number[]} */ let ix = [];
-    for (let j = 0; j < d.mz.length; j++) if (y[j] > 0 && y[j] / top * 100 >= s.thr && (!lab || lab.some((/** @type {number} */ m) => Math.abs(m - d.mz[j]) < 1e-9))) ix.push(j);
+    for (let j = 0; j < d.mz.length; j++) if (inz(j) && y[j] > 0 && y[j] / top * 100 >= s.thr && (!lab || lab.some((/** @type {number} */ m) => Math.abs(m - d.mz[j]) < 1e-9))) ix.push(j);
     ix.sort((u, v) => y[v] - y[u]); ix = ix.slice(0, Math.max(1, s.max));                       // most intense first, then the cut
     if (s.sort === "mz") ix.sort((u, v) => d.mz[u] - d.mz[v]);
     const head = ["m/z", T("tabp.c.int"), T("tabp.c.rel"), ...(ms2 ? [T("tabp.c.dmz"), T("tabp.c.nl")] : [])];
@@ -36,6 +40,15 @@
   }
   /** @param {{ head: string[], body: string[][] }} r */
   const tsv = r => [r.head, ...r.body].map(l => l.join("\t")).join("\n");
+  /** CSV text of the rows: comma, decimal point, UTF-8 BOM (csvBuild of xlsx.js), the same cells as the table @param {{ head: string[], body: string[][] }} r */
+  const csv = r => "\ufeff" + csvBuild({ head: r.head, rows: r.body });
+  /** download the peak list as CSV, named like the other downloads of the panel @param {any} p */
+  function save(p) {
+    if (!p._a || !p._a.data || !p._a.data[0]) return false;
+    dl(plotName(p) + "_" + T("tabp.file") + ".csv", csv(rows(p)), "text/csv;charset=utf-8", { p, table: "peaks" }); return true;
+  }
+  /** the entry «Peak list (CSV)» of the panel download menu @param {any} p @param {string} icon */
+  const item = (p, icon) => ({ label: T("tabp.dl"), icon, fn: () => { if (!save(p)) info(T("panel.dl.nodata")); } });
   /** @param {{ head: string[], body: string[][] }} r */
   const html = r => h`<table><thead><tr>${raw(r.head.map(x => h`<th>${x}</th>`).join(""))}</tr></thead><tbody>${raw(r.body.map(l => h`<tr>${raw(l.map(c => h`<td>${c}</td>`).join(""))}</tr>`).join(""))}</tbody></table>`;
   /** @param {any} p */
@@ -73,7 +86,7 @@
       <label>${T("tabp.sort")} <select data-f="sort"><option value="mz"${raw(s.sort === "mz" ? " selected" : "")}>${T("tabp.sort.mz")}</option><option value="int"${raw(s.sort === "int" ? " selected" : "")}>${T("tabp.sort.int")}</option></select></label>
       <label class="tp-chk"><input type="checkbox" data-f="lab"${raw(s.lab ? " checked" : "")}> ${T("tabp.lab")}</label></div>
       <div class="tp-sc" tabindex="0" role="region" aria-label="${T("tabp.title")}"><table></table></div>
-      <div class="tp-ft"><button type="button" class="bt" data-f="copy">${T("tabp.copy")}</button><button type="button" class="bt" data-f="no">${T("tabp.close")}</button><span class="sm tp-n"></span><span class="sm tp-ok" role="status" aria-live="polite"></span></div>`;
+      <div class="tp-ft"><button type="button" class="bt" data-f="copy">${T("tabp.copy")}</button><button type="button" class="bt" data-f="csv">${T("tabp.csv")}</button><button type="button" class="bt" data-f="no">${T("tabp.close")}</button><span class="sm tp-n"></span><span class="sm tp-ok" role="status" aria-live="polite"></span></div>`;
     p.el.appendChild(pop); s.pop = pop;
     const b = /** @type {HTMLElement} */ (p.el.querySelector('[data-a="tabp"]')), pr = p.el.getBoundingClientRect(), br = b.getBoundingClientRect();
     b.setAttribute("aria-expanded", "true");
@@ -94,6 +107,7 @@
       const r = rows(p); e.clipboardData.setData("text/plain", tsv(r)); e.clipboardData.setData("text/html", html(r)); e.preventDefault();
     });
     /** @type {HTMLElement} */ (pop.querySelector('[data-f="copy"]')).onclick = () => { copy(p); };
+    /** @type {HTMLElement} */ (pop.querySelector('[data-f="csv"]')).onclick = () => { save(p); };
     /** @type {HTMLElement} */ (pop.querySelector('[data-f="no"]')).onclick = () => close(p, true);
     render(p);
     /** @type {HTMLElement} */ (pop.querySelector('[data-f="thr"]')).focus();
@@ -108,5 +122,5 @@
   }
   /** after every drawing: the table follows the scan; a spectrum with no peaks closes it @param {any} p */
   function sync(p) { const s = p._tp; if (s && s.pop) render(p); }
-  window.TABPICCHI = { wire, sync, rows, facts, open, close };
+  window.TABPICCHI = { wire, sync, rows, facts, open, close, save, item, csv, tsv };
 })();
