@@ -23,7 +23,7 @@ pub(crate) fn prompts_of(json: &str) -> Result<Prompts, String> {
     Ok(with_prompts(&pairs))
 }
 
-fn registry_of(json: &str) -> Result<Vec<Step>, String> {
+pub(crate) fn registry_of(json: &str) -> Result<Vec<Step>, String> {
     registry_from_value(&parse(json.as_bytes()).map_err(fail)?).map_err(fail)
 }
 

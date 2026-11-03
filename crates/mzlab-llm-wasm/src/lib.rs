@@ -35,6 +35,24 @@ pub fn context_build(sources_json: &str, budget_tokens: u32) -> Result<String, S
     mzlab_llm::context::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
 }
 
+/// The `ispezione/1` of the sources the page collected from the engine (`mzlab_llm::inspect::build_text`), within `budget_tokens`: no model needed.
+#[wasm_bindgen]
+pub fn inspect_build(sources_json: &str, budget_tokens: u32) -> Result<String, String> {
+    mzlab_llm::inspect::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
+}
+
+/// The `proposta-param/1` of the rules `R-*` for an `ispezione/1` and the user's answers (`""` = none), checked against the `step/1` descriptors of the
+/// page's registry (`mzlab_llm::params_rules::propose_text`): no model needed.
+#[wasm_bindgen]
+pub fn params_propose(
+    inspection_json: &str,
+    answers_json: &str,
+    steps_json: &str,
+) -> Result<String, String> {
+    let registry = assist::registry_of(steps_json)?;
+    mzlab_llm::params_rules::propose_text(inspection_json, answers_json, &registry).map_err(fail)
+}
+
 /// The named views of the sources (`chart_views::views_json`): the list the drawing prompt gets.
 #[wasm_bindgen]
 pub fn chart_views(sources_json: &str) -> Result<String, String> {
@@ -164,3 +182,6 @@ impl LlmStream {
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "tests_facts.rs"]
+mod tests_facts;

@@ -20,7 +20,7 @@ limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 
 limit_msnregole=196608   # msnregole: SMILES -> the expectations of the structure rules (mzlab-feat chem::regole), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES; measured 163480 (+3 %)
 limit_msngrafo=790528   # zlib-rs +30 KB (was 575000), mzlab-picchi at O3 +1.1 KB (peaks 3.1x); msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 537129 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
 limit_rotte=884736   # rotte: the statistics, molecules, campioni (Data) and Flow command/line/scheduler routes, out of the engine; loaded by the worker of the engine on the first request of one of them (docs/agenti/wasm-tetti.md)
-limit_llm=344064   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent), the context builder, the charts (grafico/1: views, validation, reduction) and the readers of the data assistant (Assist: requests, lettura/1 and param-scelte/1 validation against the step registry), loaded only after the user turned it on and agreed; measured 309824 (x 1.10, multiple of 4 KiB); 265264 before the readers, the plan checker is the page's
+limit_llm=397312   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent), the context builder, the charts (grafico/1: views, validation, reduction), the readers of the data assistant (Assist: requests, lettura/1 and param-scelte/1 validation against the step registry) and the facts without a model (inspect_build, params_propose), loaded for the facts in the profile «ricerca» and for the assistant after the user turned it on and agreed; measured 358897 (x 1.10, multiple of 4 KiB); 305994 before the facts, the plan checker is the page's
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
@@ -65,7 +65,7 @@ wasm_pack "$out/msnregole" $R/mzlab_msnregole_wasm.wasm $limit_msnregole "msnreg
 # the statistics, molecules, Data and Flow routes (crates/mzlab-rotte-wasm), loaded by the worker of the engine on the first request of one of them
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-rotte-wasm
 wasm_pack "$out/rotte" $R/mzlab_rotte_wasm.wasm $limit_rotte "rotte" @motore
-# the assistant (crates/mzlab-llm-wasm: llm-provider/1 requests, answer streams, recordings), loaded by mzlab/web/llm/llm-worker.js only after the opt-in; never fused with another module
+# the assistant (crates/mzlab-llm-wasm: llm-provider/1 requests, answer streams, recordings), loaded by mzlab/web/llm/llm-worker.js for the facts of the Flow (profile «ricerca») or after the opt-in; never fused with another module
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-llm-wasm
 wasm_pack "$out/llm" $R/mzlab_llm_wasm.wasm $limit_llm "assistant" @motore
 # the import of an official regulatory file (ECHA Candidate List, Proposition 65) into a private .mzsus, loaded only by the Library window when the user imports one: crates/mzlab-normative-wasm

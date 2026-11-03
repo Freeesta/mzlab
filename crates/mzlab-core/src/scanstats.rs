@@ -1,11 +1,42 @@
-//! The scan statistics of `ispezione/1`: what `Item.info()` does not carry about the scans of one file (MS1 cycle time, product-ion scans per
-//! cycle, isolation windows, distinct precursors). Read from the scan table of the index, never from the peaks. Used by `inspect`.
+//! The scan statistics of a file (`/api/scan_stats`, a source of `ispezione/1`): what `Item.info()` does not carry about the scans (MS1 cycle time,
+//! product-ion scans per cycle, isolation windows, distinct precursors). Read from the scan table of the index, never from the peaks. Used by `routes`
+//! (site and app) and re-exported by `mzlab_llm::inspect`.
 
-use mzlab_core::idxread::Scan;
-use mzlab_core::json::Value;
-use mzlab_core::sortc;
+use crate::idxread::Scan;
+use crate::json::{Out, Value};
+use crate::sortc;
 
-use crate::inspect::{median, n, Obj};
+/// Four significant digits (the rounding of `ispezione/1`).
+fn n(x: f64) -> Value {
+    if x == 0.0 || x.fract() == 0.0 || !x.is_finite() {
+        return Value::Num(x);
+    }
+    let m = 10f64.powf(3.0 - x.abs().log10().floor());
+    Value::Num((x * m).round() / m)
+}
+
+fn median(v: &mut [f64]) -> Option<f64> {
+    if v.is_empty() {
+        return None;
+    }
+    sortc::by(v, f64::total_cmp);
+    let k = v.len() / 2;
+    Some(if v.len() % 2 == 1 {
+        v[k]
+    } else {
+        (v[k - 1] + v[k]) / 2.0
+    })
+}
+
+struct Obj(Vec<(String, Value)>);
+
+impl Obj {
+    fn put(&mut self, k: &str, v: Option<Value>) {
+        if let Some(v) = v {
+            self.0.push((k.to_string(), v));
+        }
+    }
+}
 
 /// The most isolation windows listed.
 const MAX_WINDOWS: usize = 32;
@@ -101,4 +132,38 @@ pub fn scan_stats(scans: &[Scan]) -> Value {
         put_windows(&mut o, &windows);
     }
     Value::Obj(o.0)
+}
+
+/// `scan_stats` as JSON text, the answer of `/api/scan_stats` (`{}` for a file without scans).
+pub fn scan_stats_json(scans: &[Scan]) -> String {
+    let mut o = Out::default();
+    put_value(&mut o, &scan_stats(scans));
+    o.0
+}
+
+fn put_value(o: &mut Out, v: &Value) {
+    match v {
+        Value::Num(x) => {
+            o.num(*x);
+        }
+        Value::Arr(a) => {
+            o.raw("[");
+            for (i, x) in a.iter().enumerate() {
+                o.raw(if i > 0 { "," } else { "" });
+                put_value(o, x);
+            }
+            o.raw("]");
+        }
+        Value::Obj(m) => {
+            o.raw("{");
+            for (i, (k, x)) in m.iter().enumerate() {
+                o.raw(if i > 0 { "," } else { "" }).str(k).raw(":");
+                put_value(o, x);
+            }
+            o.raw("}");
+        }
+        _ => {
+            o.raw("null");
+        }
+    }
 }

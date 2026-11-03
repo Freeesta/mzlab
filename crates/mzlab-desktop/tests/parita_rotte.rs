@@ -110,6 +110,7 @@ fn plan() -> Vec<Value> {
         r("/api/spectrum", "?k=0&level=1&rt0=0.2&rt1=0.4"),
         r("/api/dda", "?k=0"),
         r("/api/msn_albero", "?k=0"),
+        r("/api/scan_stats", "?k=0"),
         r("/api/nope", ""),
         json!({"op": "route", "slot": 9, "path": "/api/chrom", "query": ""}),
         json!({"op": "fileinfo", "slot": 0, "name": NAME}),

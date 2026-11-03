@@ -93,6 +93,8 @@ impl<R: ReadAt> Routes<R> {
     /// Answer for a path such as `/api/filters` and its query; `None` = not answered here.
     pub fn handle(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
         if let Some(r) = self.canali_route(path, q) { return r; }
+        // the statistics of the scans, a source of the inspection of the assistant (docs/agenti/llm.md)
+        if path == "/api/scan_stats" { return Ok(Some(crate::scanstats::scan_stats_json(&self.idx.scans))); }
         if !self.has_scans() { return Ok(crate::mrmroutes::no_scans(path, q)); }
         self.con_opz(q, |r| match path {
             "/api/chrom" => r.chrom(q),

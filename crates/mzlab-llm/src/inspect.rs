@@ -13,8 +13,8 @@ use crate::inspect_facts::{
     put_shape, signals, strs,
 };
 use crate::inspect_qc::{self, QcFile};
-pub use crate::inspect_scan::scan_stats;
 use crate::tools::value;
+pub use mzlab_core::scanstats::scan_stats;
 
 /// The longest string that goes out, in characters.
 pub const MAX_STR: usize = 64;

@@ -156,6 +156,7 @@ pub mod canali_uv;
 pub mod routes;
 pub mod routes_xicbin;
 pub mod scaninfo;
+pub mod scanstats;
 pub(crate) mod scanrow;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod scanparams;
