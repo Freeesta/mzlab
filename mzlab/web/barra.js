@@ -425,7 +425,7 @@ const BARRA = (() => {
   }
 
   function toggle(/** @type {string} */ id) {
-    const away = !(inData() || landing()) && /** @type {Record<string, () => void>} */ ({ calc: () => window.calcToggleFloat && window.calcToggleFloat(), adducts: () => window.QQQRef && QQQRef.open("ad"), losses: () => window.QQQRef && QQQRef.open("ls"), lists: () => window.LISTE && LISTE.open() })[id];      // outside Dati (Disegno, Tabui, Flow) the drawer is hidden: the same buttons open their windows
+    const away = !(inData() || landing()) && /** @type {Record<string, () => void>} */ ({ calc: () => window.calcToggleFloat && window.calcToggleFloat(), adducts: () => window.QQQRef && QQQRef.open("ad"), losses: () => window.QQQRef && QQQRef.open("ls"), addloss: () => window.QQQRef && QQQRef.open(_sub === "losses" ? "ls" : "ad"), lists: () => window.LISTE && LISTE.open() })[id];      // outside Dati (Disegno, Tabui, Flow) the drawer is hidden: the same buttons open their windows
     if (away) away(); else if (_open && _tab === id) { if (id !== "file" && landing() && !inData()) show("file"); else close(true); } else show(id);      // the empty landing keeps its panel: closing a tool gives the file list back
   }
 

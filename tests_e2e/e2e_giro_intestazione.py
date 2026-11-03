@@ -25,7 +25,7 @@ GEOM = r"""() => { window.scrollTo(0, 0); const o = {}, put = (k, e) => { if (!e
 HDR = r"""() => [...document.querySelectorAll('header button')].filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !b.disabled && !b.closest('#nav'); })
  .map(b => b.id ? '#' + b.id : b.dataset.cmd ? `header [data-cmd="${b.dataset.cmd}"]` : b.dataset.cmdMain ? `header [data-cmd-main="${b.dataset.cmdMain}"]` : b.dataset.cmdCar ? `header [data-cmd-car="${b.dataset.cmdCar}"]` : b.dataset.help != null ? `header .hq[data-help="${b.dataset.help}"]` : null).filter(Boolean)"""
 # outside Dati these open their window: a click that does nothing there is a dead button
-FLOATING = {"#np-calc2", "#np-add", "#np-nl", "#np-liste", "#np-pt", "#tb-search", "#tb-more", "#np-set", "#newrun"}
+FLOATING = {"#np-calc2", "#np-add", "#np-nl", "#np-addloss", "#np-liste", "#np-pt", "#tb-search", "#tb-more", "#np-set", "#newrun"}
 MOVE_PX = 2       # rounding of sub-pixel layouts; a slide or a jump is tens of pixels
 
 

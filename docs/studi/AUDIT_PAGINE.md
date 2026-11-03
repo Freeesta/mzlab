@@ -57,7 +57,8 @@ script's reset between cycles, not of the page (a probe that closes it by Esc af
 1. **Calcolatrice, Addotti, Perdite and Liste did nothing outside Dati** (Disegno, Tabui, Flow, with or without samples). `toggle()` in `barra.js` asks
    `show()`, which refuses outside Dati and the landing, so the documented windows (`#calcdlg` drop-down, `#refdlg`, `LISTE.open`, `dati-barra.md`) never opened;
    `e2e_calc` was red on main (14 of 18 steps) and is not in the smoke round, so the PR CI did not see it. **Fixed here**: `toggle()` in `barra.js` routes the four tools to
-   their windows outside Dati; `e2e_calc` back to 18/18; the new smoke test fails without the fix.
+   their windows outside Dati (the merged Addotti e perdite button `#np-addloss` too, with the last section used); `e2e_calc` back to 18/18;
+   the new smoke test fails without the fix.
 2. **Side panel slides in when coming back to Dati** (Federico's report; chat DATA-SLIDE). With samples, after any other view, `#sb-pane` moves from x ≈ −8…1 px to 6 px
    over ~50 frames (~0.8 s); without samples it does not move. Cause hypothesis: the `tpview` handler in `barra.js` restores `_open` from `_away` and calls
    `applyLayout()`, which toggles `sb-open` on `#v-data` without the «instant» path, so the opening transition of the drawer plays as if the student had opened it.
