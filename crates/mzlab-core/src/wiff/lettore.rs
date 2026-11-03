@@ -56,6 +56,24 @@ pub(super) struct Parte {
     pronta: bool,
 }
 
+impl Parte {
+    fn new(w: Wiff) -> Self {
+        Parte {
+            w,
+            scans: Vec::new(),
+            indice: Vec::new(),
+            chroms: None,
+            #[cfg(feature = "estesi")]
+            bpc: Vec::new(),
+            #[cfg(feature = "estesi")]
+            bpc_seen: 0,
+            #[cfg(feature = "sciex")]
+            other_version: false,
+            pronta: false,
+        }
+    }
+}
+
 pub struct LettoreWiff {
     ole: Ole,
     nome: String,
@@ -293,19 +311,7 @@ pub fn apri_solo(
         w.wiff_sha1 = Some(sha1.clone());
         total += w.records.len() as u64;
         limiti.voci_ok(total)?;
-        let mut parte = Parte {
-            w,
-            scans: Vec::new(),
-            indice: Vec::new(),
-            chroms: None,
-            #[cfg(feature = "estesi")]
-            bpc: Vec::new(),
-            #[cfg(feature = "estesi")]
-            bpc_seen: 0,
-            #[cfg(feature = "sciex")]
-            other_version: false,
-            pronta: false,
-        };
+        let mut parte = Parte::new(w);
         if solo.is_none_or(|c| c == i) {
             build(&mut parte, &mut scan, scan_len, membro)?;
         }
