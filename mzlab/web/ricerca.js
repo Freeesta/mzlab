@@ -52,7 +52,7 @@ function ricContaminants() {
 const RIC_GO = {
   loss: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("losses", { q: String(x) }); },
   adduct: (x = /** @type {number | null} */ (null)) => { if (window.BARRA) BARRA.setTab("adducts", x != null ? { q: String(x) } : {}); },
-  cont: (/** @type {number} */ x, /** @type {any} */ it) => { if (window.LISTE) LISTE.open({ mz: x, polarity: it && it.pol > 0 ? "positive" : "negative", hr: ricHrNow() }); }
+  cont: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("cont", { q: String(x) }); }
 };
 
 /** @param {number} x  @returns {Promise<RicGroup[]>} */
@@ -85,9 +85,9 @@ async function ricForNumber(x) {
     const it = items[+h.id] || {};
     const nm = (ricLang() === "en" && it.name_en) || it.name || "";
     const mz = hr ? Number(it.mz).toFixed(4) : String(Math.round(it.mz));
-    return { ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(nm) + ` <span class="pal-d">${EH(it.adduct || "")} m/z ${mz}</span>`, detail: d, aria: `${ricT("pal.k.cont")}: ${nm} ${it.adduct || ""}, ${d}`, run: () => RIC_GO.cont(x, it) };
+    return { ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(nm) + ` <span class="pal-d">${EH(it.adduct || "")} m/z ${mz}</span>`, detail: d, aria: `${ricT("pal.k.cont")}: ${nm} ${it.adduct || ""}, ${d}`, run: () => RIC_GO.cont(x) };
   });
-  if (r.more > 0) rows.push({ ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(ricT("pal.more", { n: r.more })), detail: "", aria: ricT("pal.more", { n: r.more }), run: () => RIC_GO.cont(x, null) });
+  if (r.more > 0) rows.push({ ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(ricT("pal.more", { n: r.more })), detail: "", aria: ricT("pal.more", { n: r.more }), run: () => RIC_GO.cont(x) });
   return rows.length ? [{ id: "compat", title: ricT("pal.res.compat"), rows }] : [];
 }
 

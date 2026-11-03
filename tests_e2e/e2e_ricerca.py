@@ -42,6 +42,12 @@ try:
             pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter"); attendi(pg, "document.querySelector('#paletta').hidden")
             attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#al-q") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'al-q'"); pg.evaluate("BARRA.close(false)")
         step("↑↓ and Enter open the panel of the first result", keys)
+        def cont():
+            opn(); typ("63.04", "Contaminante"); pg.locator("#pal-l li[role=option]", has_text="Contaminante").first.click()
+            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')"); assert pg.input_value("#al-q") == "63.04", pg.input_value("#al-q")
+            assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
+            pg.evaluate("BARRA.close(false)")
+        step("a contaminant hit opens the Contaminants tab of the side panel with the number", cont)
         def esc():
             opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('#paletta').hidden")
             assert not pg.is_visible("#paletta"), (pg.evaluate("document.activeElement.id||document.activeElement.tagName"), pg.evaluate("document.querySelector('#paletta').hidden"))

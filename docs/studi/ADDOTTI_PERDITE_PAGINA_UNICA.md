@@ -44,11 +44,11 @@ Design note for merging the «Calcolatrice» drawer tool into «Addotti e perdit
 - Toolbar: one button, «Adducts & losses». The `calc` command leaves the bar in the Dati view and on the start page (`onBar`; the command palette still finds it and opens the page with the calculator unfolded and focused); in Disegno the calculator button stays and opens the floating drop-down, unchanged.
 - `BARRA.setTab("calc")` = `addloss` with the calculator unfolded; a saved state with `tab: "calc"` reopens `addloss`. `BARRA.isOpen("calc")` is true while that page is open with the calculator unfolded.
 - `CALCQUI.apri(n, {gruppo})` (spectrum ruler, `CALCADD.showDelta`) fills the page field and picks the tab (`diff` → Adducts with the differences open, otherwise Neutral losses).
-- `ricerca.js` (`RIC_GO.adduct`, `RIC_GO.loss`), `spettro.js` `dmOpen`, `tables.js` `open("ad"|"ls")` go to the page sections, switching to the Dati view when needed: these lists live only in the side panel, never in a pop-up (Federico).
+- `ricerca.js` (`RIC_GO.adduct`, `RIC_GO.loss`, `RIC_GO.cont`), `spettro.js` `dmOpen` and `spec.cont`, `tables.js` `open("ad"|"ls")` go to the page sections, switching to the Dati view when needed: these lists live only in the side panel, never in a pop-up (Federico).
 
 ## 6. Contaminants
 - Third tab «Contaminants» (first PR) with the `liste` group of `CALCQUI.gruppi` (Keller 2008, laboratory list, user suspect lists) in the same row style: name | adduct · m/z · list · error. Typing a number in the one field fills all three tabs; the tab counts its matches; a formula is not looked up there.
-- Second PR — spectrum: the peak context menu gets «Is it a known contaminant?», which opens the page on that m/z with the Contaminants tab (same tolerance and polarity rules); the command palette's contaminant hits (`RIC_GO.cont`) open the same tab instead of the Lists tool, which stays for managing lists.
+- Second PR — spectrum: the peak context menu has «Is it a known contaminant?» (`spec.cont`), which opens the page on that m/z with the Contaminants tab: the m/z as written on the chart sets the tolerance, the polarity is the page's. The command palette's contaminant hits (`RIC_GO.cont`) open the same tab; the Lists tool (`LISTE.open`) stays for managing lists.
 - No new engine route: the index is the one `LISTE` already builds from `/api/contaminants`.
 
 ## 7. Dependencies and delivery
