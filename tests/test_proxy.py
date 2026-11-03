@@ -29,7 +29,7 @@ def wasm_dir(tmp_path_factory):
 
 def test_proxy_node_suite(wasm_dir):
     env = {**os.environ, "MZLAB_LLM_WASM_DIR": str(wasm_dir)}
-    p = subprocess.run(["node", "--test", "proxy/test/"], cwd=ROOT, env=env, capture_output=True, text=True, timeout=600)
+    p = subprocess.run(["node", "--test", "--test-reporter=tap", "proxy/test/"], cwd=ROOT, env=env, capture_output=True, text=True, timeout=600)
     out = p.stdout + p.stderr
     assert p.returncode == 0, out[-4000:]
     assert "# fail 0" in out and "# skipped 0" in out, out[-4000:]
