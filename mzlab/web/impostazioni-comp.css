@@ -12,8 +12,18 @@
 @keyframes imp-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.impset details.imp-g>summary .car,.impset input[role=switch]::before{transition:none}.impset details.imp-g>.imp-b{animation:none}}
 :root[data-a11y-reduce] .impset details.imp-g>.imp-b{animation:none}
+.impset .imp-s{border-top:1px solid var(--line);margin-top:12px;padding-top:6px}
+.impset .imp-h{display:flex;align-items:center;gap:8px;min-height:32px;margin:0;font-size:15px;font-weight:700}.impset .imp-h .gi{color:var(--accent);display:inline-flex;flex:none}
+.impset .imp-solo{margin-top:10px}
+.impset .imp-lang{margin-top:8px;flex-wrap:nowrap}.impset .imp-lang>span{font-weight:700;min-width:0}
+.impset .seglang{display:inline-flex;flex:none;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.impset .seglang .lg{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:36px;padding:0 10px;font-weight:600;font-size:14px;letter-spacing:.04em;cursor:pointer;background:var(--bg);color:var(--ink)}
+.impset .seglang .lg+.lg{border-left:1px solid var(--line)}
+.impset .seglang .lg input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.impset .seglang .lg:has(input:checked){background:var(--sel);color:var(--ink);font-weight:800;box-shadow:inset 0 -3px 0 var(--accent)}
+.impset .seglang .lg:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:-3px}
+@media (pointer:coarse){.impset .seglang .lg{min-height:40px;min-width:48px}}
 .impset .ic{display:inline-flex;vertical-align:middle;margin-right:6px;color:var(--accent)}
-.impset .seg2{grid-template-columns:repeat(2,1fr)}
 .impset .hint{margin:4px 0 0;font-size:13px;color:var(--muted)}
 .impset .imp-fld{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px}
 .impset .imp-fld select,.impset .imp-fld input[type=number]{font:inherit;min-height:32px}

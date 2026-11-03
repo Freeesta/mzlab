@@ -15,7 +15,6 @@
     data: ico('<ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V5M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5"/>'),
     bug: ico('<path d="M7.5 5.5a2.5 2.5 0 0 1 5 0"/><rect x="6" y="5.5" width="8" height="10" rx="4"/><path d="M10 8v7.5M6 10H3M6.2 13H3.5M14 10h3M13.8 13h2.7M7 4L5.5 2.8M13 4l1.5-1.2"/>'),
     app: ico('<rect x="3" y="3.5" width="14" height="13" rx="2"/><path d="M3 7.5h14"/>'),
-    lang: ico('<circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c2.3 2 2.3 12 0 14M10 3c-2.3 2-2.3 12 0 14"/>'),
     play: ico('<path d="M6 4l10 6-10 6z" fill="currentColor"/>'),
     pal: ico('<path d="M10 3a7 7 0 1 0 0 14c1.2 0 1.6-.8 1.2-1.6-.5-1 .1-2 1.2-2H14a3 3 0 0 0 3-3A7 7 0 0 0 10 3z"/><circle cx="6.8" cy="9" r=".6"/><circle cx="9" cy="6.3" r=".6"/><circle cx="12.4" cy="6.8" r=".6"/>'),
     side: ico('<rect x="3" y="4" width="14" height="12" rx="1.5"/><path d="M10 4v12"/>'),
@@ -47,5 +46,21 @@
   const sw = (text, hint, attr, on, icon) => `<label class="swrow"${hint ? ` title="${esc(hint)}"` : ""}><span>${icon && GICON[icon] ? `<span class="ic">${GICON[icon]}</span>` : ""}${text}</span><input type="checkbox" role="switch" ${attr}${on ? " checked" : ""}></label>`;
   /** A folding group with an icon; `id` is also the key under which the panel remembers if it was left open. */
   const group = (id, icon, title, body, open) => `<details class="imp-g" id="${id}"${open ? " open" : ""}><summary><span class="gi">${GICON[icon] || ""}</span>${title}<span class="car">${GICON.chev}</span></summary><div class="imp-b">${body}</div></details>`;
-  window.IMPCOMP = { ico, TICON, GICON, TICK, radios, section, opts, sw, group, esc };
+  /** A flat group: icon + title over its controls, always open, no fold. */
+  const flat = (id, icon, title, body) => `<div class="imp-s" id="${id}" role="group" aria-labelledby="${id}-h"><h3 class="imp-h" id="${id}-h"><span class="gi">${GICON[icon] || ""}</span>${title}</h3>${body}</div>`;
+  /** A group that folds into nothing: no controls → "", one control → a plain row (no title), several → a flat group with its title. */
+  const flatOrRow = (id, icon, title, items) => { const it = items.filter(Boolean); return !it.length ? "" : it.length === 1 ? `<div class="imp-s" id="${id}">${it[0]}</div>` : flat(id, icon, title, it.join("")); };
+  /** The language row: a bilingual label and a two-state IT|EN switch (real radios named uip-lang, full names as accessible names). */
+  const langRow = (label, tip, cur) => `<div class="imp-fld imp-lang" title="${esc(tip)}"><span id="uip-lang-l">${label}</span><div class="seglang" role="radiogroup" aria-labelledby="uip-lang-l">`
+    + [["it", "Italiano", "IT"], ["en", "English", "EN"]].map(([v, name, code]) => `<label class="lg" title="${esc(name)}"><input type="radio" name="uip-lang" value="${v}" aria-label="${esc(name)}"${cur === v ? " checked" : ""}><span aria-hidden="true">${code}</span></label>`).join("") + "</div></div>";
+  /** The bug-report row: a plain button that shows the form (fetched at the first click through `load`) in #uip-bug. */
+  const bugRow = label => `<div class="imp-fld imp-solo" id="uip-g-bug"><button id="uip-bugbtn" type="button" aria-expanded="false" aria-controls="uip-bug"><span class="ic">${GICON.bug}</span>${label}</button></div><div id="uip-bug" hidden></div>`;
+  const bugBind = (root, load) => {
+    const btn = root.querySelector("#uip-bugbtn"), box = root.querySelector("#uip-bug"); let done = false;
+    if (btn && box) btn.addEventListener("click", () => {
+      const show = box.hidden; box.hidden = !show; btn.setAttribute("aria-expanded", String(show));
+      if (show && !done) { done = true; load(box).catch(() => { done = false; }); }
+    });
+  };
+  window.IMPCOMP = { flatOrRow, langRow, bugRow, bugBind, flat, ico, TICON, GICON, TICK, radios, section, opts, sw, group, esc };
 })();

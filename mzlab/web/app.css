@@ -58,7 +58,7 @@ abbr.ftag{text-decoration:none;cursor:help;letter-spacing:.02em}#tools{gap:var(-
 /* section titles: more air above (and a thin rule after a previous block) than below, so a title reads as the head of what follows */
 #uipset fieldset{padding-top:0;margin-top:18px}
 #uipset legend{margin-bottom:8px}
-#uipset>fieldset:first-of-type,#uipset .imp-b>fieldset:first-child{margin-top:6px}
+#uipset>fieldset:first-of-type,#uipset .imp-b>fieldset:first-child,#uipset .imp-s>fieldset:first-of-type{margin-top:6px}
 #uipset .imp-b>:has(+fieldset){border-bottom:1px solid var(--line);padding-bottom:12px}.ibk{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;background:var(--sel);border-radius:10px;padding:1px 8px;font-size:11px}.ibk button{padding:0 6px;font-size:11px}.tw{display:inline-flex;align-items:flex-end}.tw>.hq{margin:0 6px 9px -8px}#helppop.wide{max-width:min(640px,94vw)}.fl .qi{display:inline-flex;color:var(--muted);flex:none;margin-top:1px}.fgh .qi{display:inline-flex;color:var(--accent)}
 
 

@@ -30,12 +30,9 @@ try:
         load(pg, [60, 0, 30, 5, 15], "5")                        # loaded in a mixed order on purpose
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200)
-            assert pg.evaluate("document.getElementById('uip-a11y').open") is False, "the accessibility submenu starts closed"
-            assert pg.is_visible("#uip-pal") and not pg.is_visible("#uip-hc"), "look group open, reading group closed"
-            pg.click("#uip-a11y > summary"); pg.wait_for_timeout(150); assert pg.is_visible("#uip-hc") and pg.is_visible("input[name=uip-font][value=atkinson]")
-            assert pg.evaluate("localStorage.getItem('mzlab.set.a11y')") == "1"
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(150); pg.click("#np-set"); pg.wait_for_timeout(250)      # close and reopen: it stays as left
-            assert pg.evaluate("document.getElementById('uip-a11y').open") is True, "the state of the submenu is remembered"
+            assert pg.evaluate("document.querySelectorAll('#uipset details').length") == 0, "no folding group in the plain settings"
+            assert pg.is_visible("#uip-pal") and pg.is_visible("#uip-hc") and pg.is_visible("input[name=uip-font][value=atkinson]"), "look and reading controls show at once"
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(150); pg.click("#np-set"); pg.wait_for_timeout(250)      # close and reopen
             t = pg.inner_text("#uipset"); print(repr(t))
             assert "Dimensione testo" not in t and "tema" in t.lower() and "colori dei grafici" in t.lower()
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
