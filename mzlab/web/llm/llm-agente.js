@@ -198,6 +198,10 @@ export class AgentRun {
   async log() { return (await this.rpc({ op: "agent.in", kind: "log" })).log; }
   /** @param {string} sources JSON of the sources of the page @param {number} [budget] @returns {Promise<string>} a contesto/1 text */
   async context(sources, budget = 4000) { return (await this.rpc({ op: "context", sources, budget })).context; }
+  /** the `ispezione/1` of the sources the page collected (Rust, no model), as Rust wrote it @param {string} sources JSON @param {number} [budget] tokens @returns {Promise<string>} */
+  async inspectText(sources, budget = 30000) { return (await this.rpc({ op: "inspect.build", sources, budget })).inspection; }
+  /** the `proposta-param/1` of the rules for an inspection and the user's answers (Rust, no model), as Rust wrote it @param {string} inspection JSON @param {string} answers JSON or "" @param {string} steps JSON of the `step/1` descriptors of the page @returns {Promise<string>} */
+  async paramsProposeText(inspection, answers, steps) { return (await this.rpc({ op: "params.propose", inspection, answers, steps })).proposal; }
   /** @param {string} sources JSON of the sources of the charts @returns {Promise<any[]>} the views that exist now: {ref, description, fields, rows} */
   async chartViews(sources) { return JSON.parse((await this.rpc({ op: "chart.views", sources })).views); }
   /** a `grafico/1` of the model, checked and filled with its rows by Rust; a rejection is an error {key, params} @param {string} spec @param {string} sources @returns {Promise<any>} */
@@ -207,8 +211,13 @@ export class AgentRun {
   close() { this.worker.terminate(); if (this.client && this.client.close) this.client.close(); }
 }
 
-/** whether the assistant is on for this page: profile «ricerca», switched on in the settings and a consent for the provider (no file of llm/ is read before this is true) */
+/** whether the assistant is on for this page: profile «ricerca», switched on in the settings and a consent for the provider (no conversation is opened before this is true; the facts of `factsRun` need none) */
 export function assistantOn() {
   const s = readSettings();
   return s.on && !!s.provider && hasConsent(s.provider);
+}
+
+/** a worker for the facts that need no model (inspection, proposals of the parameters, charts without the model): no conversation, no consent, nothing leaves the site */
+export function factsRun() {
+  return new AgentRun({ show: () => {}, log: () => {}, sending: () => {}, call: async () => ({ ok: false, content: null }), ask: async () => false, done: () => {} });
 }

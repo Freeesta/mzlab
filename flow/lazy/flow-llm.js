@@ -103,14 +103,14 @@
       run: { steps: S.plan.steps.filter((/** @type {any} */ i) => runs.states[i.id]).map((/** @type {any} */ i) => ({ instance: i.id, step: i.step, status: runs.states[i.id] })) },
     });
     const context = async () => (st.agent ? st.agent.context(JSON.stringify(sources())) : "{}");
-    /** what the charts can show: the page's collection of the open files and tables (`F.chartSources`, empty until the page has data) */
-    const chartSources = () => JSON.stringify(typeof F.chartSources === "function" ? F.chartSources() : {});
+    /** what the charts can show: the TIC and BPC of the open files (`F.chartSources` of flow-llm-facts.js, a value or a promise) */
+    const chartSources = async () => JSON.stringify(typeof F.chartSources === "function" ? await F.chartSources() : {});
     /** a specification of the model, checked by Rust: {ok, chart} or {ok: false, key, params} @param {any} spec */
     const chart = async spec => {
-      try { return { ok: true, chart: await (await st.ensure()).chartMake(JSON.stringify(spec), chartSources()) }; } catch (e) { const x = /** @type {any} */ (e); return { ok: false, key: x && x.key || "err.llm.module", params: x && x.params || {} }; }
+      try { return { ok: true, chart: await (await st.ensure()).chartMake(JSON.stringify(spec), await chartSources()) }; } catch (e) { const x = /** @type {any} */ (e); return { ok: false, key: x && x.key || "err.llm.module", params: x && x.params || {} }; }
     };
-    const chartViews = async () => (await st.ensure()).chartViews(chartSources());
-    const chartPresets = async () => (await st.ensure()).chartPresets(chartSources());
+    const chartViews = async () => (await st.ensure()).chartViews(await chartSources());
+    const chartPresets = async () => (await st.ensure()).chartPresets(await chartSources());
     const llmRef = async () => ({ log_sha256: await sha256(st.agent ? await st.agent.log() : ""), turn: st.agent ? st.agent.turns : 0, provider: st.settings.provider, model: st.settings.model, level: st.level });
 
         const money = () => {
@@ -138,6 +138,7 @@
         ui.sent.textContent = `${r && r.url || ""}\n` + (typeof body === "string" ? body : JSON.stringify(body, null, 1)).slice(0, 8000);
         st.money();
       },
+      readerInput: (/** @type {string} */ role) => (F.llmFacts ? F.llmFacts.readerInput(st.S, role) : null),
       readerStage: (/** @type {string} */ role, /** @type {string} */ stage) => { host.cur = null; if (stage === "queued") rd.queued(role); else rd.stage(role, stage); },
       reader: (/** @type {any} */ info) => { host.cur = null; rd.verdict(info); },
       call: async (/** @type {string} */ _id, /** @type {string} */ name, /** @type {any} */ args) => {
@@ -204,7 +205,7 @@
     /** the rest of the work is the tools */
     const { context, llmRef, money, chart, chartViews, chartPresets } = dataKit(S, runs, st, cost); st.money = money;
     const showChart = (/** @type {any} */ c) => put(c.error === "no_view" ? F.llmChart.noView(c) : F.llmChart.figure(c));
-    st.tools = F.llmTools({ S, runs, select: ctx.select, propose, edited, context: () => context(), llmRef: () => llmRef(), chart, chartViews, showChart });
+    st.tools = F.llmTools({ S, runs, select: ctx.select, propose, edited, context: () => context(), llmRef: () => llmRef(), chart, chartViews, showChart, facts: () => F.llmFacts.facts(S) });
     panel.insertBefore(F.llmChart.presetMenu(chartPresets, put), input);
 
     const host = makeHost(kit, { log, sent, stop, send, input }, st);

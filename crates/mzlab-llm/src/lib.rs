@@ -19,7 +19,6 @@ pub mod fake;
 pub mod inspect;
 mod inspect_facts;
 mod inspect_qc;
-mod inspect_scan;
 pub mod log;
 mod moves;
 pub mod params_rules;

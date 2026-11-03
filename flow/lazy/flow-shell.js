@@ -147,10 +147,11 @@
     split.addEventListener("pointermove", e => { if (split.classList.contains("drag")) setWidth(body.getBoundingClientRect().right - e.clientX); });
     split.addEventListener("pointerup", () => { split.classList.remove("drag"); cv.fit(); });
     split.addEventListener("keydown", e => { const d = e.key === "ArrowLeft" ? 40 : e.key === "ArrowRight" ? -40 : 0; if (d) { e.preventDefault(); setWidth(inspHost.getBoundingClientRect().width + d); } });
-    const root = el("div", { class: "flw flx", id: "flx-root" }, bar, live, body, issuesHost, planView, listHost);
+    const factsHost = el("div", { class: "flx-facts-host" });
+    const root = el("div", { class: "flw flx", id: "flx-root" }, bar, live, body, issuesHost, factsHost, planView, listHost);
     function setTab(/** @type {string} */ t) {
       tab = t; tabs.forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.tab === t)); });
-      body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();
+      body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; factsHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();
     }
     // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) outside text fields
     root.addEventListener("keydown", e => {
@@ -162,10 +163,11 @@
       if (k === "z" && !e.shiftKey) { e.preventDefault(); S.undo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); S.redo(); }
     });
     sec.textContent = ""; sec.append(root);
-    // the assistant: nothing of it is downloaded unless the profile is «ricerca» and it is switched on (settings) with a consent
-    if (F.llmOn()) {
+    // the facts of the files (no model, nothing leaves the site) in the profile «ricerca»; the assistant only if it is switched on (settings) with a consent
+    if (F.research()) {
       const L = /** @type {any} */ (window).TPLAZY;
-      L.load("flow-llm-chart.js", "flow-llm-chart-ui.js", "flow-llm-tools.js", "flow-llm-readers.js", "flow-llm-errors.js", "flow-llm.js").then(() => F.llmMount({ S, bar, body, root, redraw, select: cvUi.select, setTab })).catch(() => { /* the assistant is optional */ });
+      const facts = L.load("flow-llm-errors.js", "flow-llm-facts.js").then(() => F.llmFacts.mount({ S, host: factsHost, root, redraw })).catch(() => { /* the facts are optional */ });
+      if (F.llmOn()) facts.then(() => L.load("flow-llm-chart.js", "flow-llm-chart-ui.js", "flow-llm-tools.js", "flow-llm-readers.js", "flow-llm.js")).then(() => F.llmMount({ S, bar, body, root, redraw, select: cvUi.select, setTab })).catch(() => { /* the assistant is optional */ });
     }
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redoBtn.disabled = !S.future.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;

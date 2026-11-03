@@ -23,5 +23,8 @@ def test_catalogs_and_flow_panel_have_every_terminal_error():
 
 
 def test_errors_module_is_loaded_with_the_assistant():
+    # the errors come with the facts card, and the assistant loads only after that promise
     shell = (ROOT / "flow/lazy/flow-shell.js").read_text(encoding="utf-8")
-    assert re.search(r'"flow-llm-errors\.js",\s*"flow-llm\.js"', shell)
+    m = re.search(r'const facts = L\.load\("flow-llm-errors\.js"', shell)
+    assert m, "flow-llm-errors.js is not loaded with the facts"
+    assert re.search(r'facts\.then\(\(\) => L\.load\([^)]*"flow-llm\.js"\)', shell[m.end():]), "the assistant does not wait for the errors"

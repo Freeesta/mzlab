@@ -44,14 +44,16 @@
 
   /** the text of a problem; the keys are the err.flow.* of the Rust checker (docs/agenti/rust-flow.md) @param {any} p {instance, port, key, params} */
   /** whether the assistant may exist on this page: profile «ricerca», switched on, a consent for the provider (llm-agente.js checks again) */
-  F.llmOn = () => {
-    const read = (/** @type {string} */ k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (_) { return {}; } };
-    // the profile rule of uipProfile() in settings.js (not loaded yet when the Flow is built): administrator mode or the desktop app
+  // the profile rule of uipProfile() in settings.js (not loaded yet when the Flow is built): administrator mode or the desktop app
+  F.research = () => {
     const w = /** @type {any} */ (window), key = (/** @type {string} */ k) => (typeof NOMI !== "undefined" ? NOMI.KEY(k) : "mzlab." + k);
     let admin = false; try { admin = localStorage.getItem(key("admin")) === "1"; } catch (_) { /* blocked */ }
-    const p = admin || w.MZLAB_DESKTOP ? "ricerca" : "corso";
+    return admin || !!w.MZLAB_DESKTOP;
+  };
+  F.llmOn = () => {
+    const read = (/** @type {string} */ k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (_) { return {}; } };
     const s = read("mzlab.llm");
-    return p === "ricerca" && s.on === true && !!s.provider && !!read("mzlab.llm.consenso")[s.provider];
+    return F.research() && s.on === true && !!s.provider && !!read("mzlab.llm.consenso")[s.provider];
   };
 
   /** the refusal of a facet: the step, its input, what it needs and what the files are (`want` and `have` are lists joined by «|») */

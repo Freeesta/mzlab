@@ -110,6 +110,7 @@ fn plan() -> Vec<Value> {
         r("/api/spectrum", "?k=0&level=1&rt0=0.2&rt1=0.4"),
         r("/api/dda", "?k=0"),
         r("/api/msn_albero", "?k=0"),
+        r("/api/scan_stats", "?k=0"),
         r("/api/nope", ""),
         json!({"op": "route", "slot": 9, "path": "/api/chrom", "query": ""}),
         json!({"op": "fileinfo", "slot": 0, "name": NAME}),
@@ -281,7 +282,7 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
         fid,
         &plan,
         &wasm,
-        &[1, 14, 15, 22, 25, 26, 30, 31, 32, 33],
+        &[1, 12, 15, 16, 23, 26, 27, 31, 32, 33, 34],
     );
     // a slot that was never opened is an error with the same key in both
     for w in &wasm[wasm.len() - 3..] {
