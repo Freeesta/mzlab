@@ -4,15 +4,19 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  const COLS = { adducts: ["name", "delta", "charge", "comment"], transformations: ["name", "delta", "max_repeat", "comment"] };
-  const HEAD = { name: "Name", delta: "Change of formula", charge: "Charge", max_repeat: "Max repeats", comment: "Comment" };
+  const COLS = { adducts: ["name", "delta", "charge", "comment"], transformations: ["name", "delta", "max_repeat", "comment"],
+    transitions: ["name", "q1", "q3", "polarity", "rt", "rt_window", "isomer_group", "note", "formula", "adduct"] };
+  const HEAD = { name: "Name", delta: "Change of formula", charge: "Charge", max_repeat: "Max repeats", comment: "Comment",
+    q1: "Q1 m/z", q3: "Q3 m/z", polarity: "Polarity", rt: "RT (min)", rt_window: "RT window (min)", isomer_group: "Isomer group", note: "Note", formula: "Neutral formula", adduct: "Adduct" };
+  // the first row of a new list of each kind
+  const START = { transitions: { name: "row 1", formula: "", q1: "100", polarity: "+" } };
   const CSS = `.fl-list{display:flex;flex-direction:column;gap:6px;min-width:0}.fl-list table{border-collapse:collapse;width:100%}.fl-list th{text-align:left;font-weight:600;color:var(--muted);padding:2px 4px}
 .fl-list td{padding:2px 4px}.fl-list td input{min-height:28px;width:100%;min-width:56px;box-sizing:border-box}.fl-list .fl-b{min-width:24px;min-height:28px}.fl-list-sha{font-family:monospace;font-size:12px;overflow-wrap:anywhere;color:var(--muted)}
 .fl-list-err{color:var(--bad,var(--ink));margin:0;padding-left:16px}@media (pointer:coarse){.fl-list td input,.fl-list .fl-b{min-height:40px;min-width:40px}}`;
 
   /** the editor, or null when the engine of the app is not there (the plain text field stays) @param {any} p descriptor of the parameter @param {any} cur its value (names, or the CSV of the list) @param {(v: any) => void} set @param {string} id */
   F.listeEditor = (p, cur, set, id) => {
-    const app = /** @type {any} */ (window).MZLAB_DESKTOP, kind = /** @type {"adducts" | "transformations"} */ (p["x-liste"]), cols = COLS[kind];
+    const app = /** @type {any} */ (window).MZLAB_DESKTOP, kind = /** @type {"adducts" | "transformations" | "transitions"} */ (p["x-liste"]), cols = COLS[kind];
     if (!app || !cols) return null;
     const { el } = F;
     if (!document.getElementById("fl-list-css")) { const s = document.createElement("style"); s.id = "fl-list-css"; s.textContent = CSS; document.head.append(s); }
@@ -22,7 +26,7 @@
     const ask = async (/** @type {any} */ body) => { if (!F.desktopPost && F.whenLate) await F.whenLate; return F.desktopPost("flow/liste", { kind, ...body }); };
     const parsed = (/** @type {any} */ body) => ask(body).then((/** @type {string} */ t) => JSON.parse(t));
     if (!own) {
-      box.append(el("span", { class: "fl-note", text: text || "(none)" }), F.btn("plus", `Use my own list for ${p.title}`, () => parsed({ rows: [{ name: "[M+H]+", delta: "+H", charge: "1", comment: "" }] }).then((/** @type {any} */ a) => set(a.csv)), "Use my own list"));
+      box.append(el("span", { class: "fl-note", text: text || "(none)" }), F.btn("plus", `Use my own list for ${p.title}`, () => parsed({ rows: [START[/** @type {"transitions"} */ (kind)] || { name: "[M+H]+", delta: "+H", charge: "1", comment: "" }] }).then((/** @type {any} */ a) => set(a.csv)), "Use my own list"));
       return box;
     }
     const body = el("tbody"), sha = el("span", { class: "fl-list-sha", "data-fk": id + "-sha" }), errs = el("ul", { class: "fl-list-err", role: "alert", "data-fk": id + "-err" });
