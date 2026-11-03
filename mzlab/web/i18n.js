@@ -94,6 +94,8 @@
   // table cells: "–" for a missing or non-finite value, else fixed decimals; sci() switches to 2-digit scientific notation for >= 1e4 or < 0.01
   const dash = (v, d) => (v == null || !isFinite(v) ? "–" : Number(v).toFixed(d));
   const sci = (v, d = 2) => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? Number(v).toExponential(2) : Number(v).toFixed(d));
+  // areas and heights, one form everywhere (numfmt.rs): 7.841E+04, point, no thousands separator, signed two-digit exponent; "" when not a number
+  const sciE = (x, d = 3) => { if (x === null || x === undefined || x === "" || !isFinite(+x)) return ""; const [m, e] = (+x === 0 ? 0 : +x).toExponential(d).split("e"); return `${m}E${+e < 0 ? "-" : "+"}${String(Math.abs(+e)).padStart(2, "0")}`; };
   const num = (x, dec) => (x === null || x === undefined || Number.isNaN(+x)) ? "" : (dec === undefined ? String(+x) : (+x).toFixed(dec));
 
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
@@ -142,7 +144,7 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
   }
 
-  const I18N = { add, t, apply, set, num, fix, dash, sci, err, detect, format, get lang() { return lang; }, LANGS, KEY, missing };
+  const I18N = { add, t, apply, set, num, fix, dash, sci, sciE, err, detect, format, get lang() { return lang; }, LANGS, KEY, missing };
   /** @type {any} */ (root).I18N = I18N;
   if (typeof module !== "undefined" && module.exports) module.exports = I18N;
 })(typeof window !== "undefined" ? window : globalThis);

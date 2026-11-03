@@ -112,6 +112,7 @@ pub mod simtab;
 #[cfg(feature = "mappa-dad")]
 mod mzml_dad;
 pub mod numarray;
+pub mod numfmt;
 pub mod numpress;
 pub mod attivazioni;
 pub mod mzmlwrite;

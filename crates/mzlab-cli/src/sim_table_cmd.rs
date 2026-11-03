@@ -1,4 +1,4 @@
-//! `mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=samples|channels] [--out PATH]`: the SIM table of the Data view (`mzlab_core::simtab`):
+//! `mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=..] [--set group.SAMPLE=GROUP] [--out PATH]`: the SIM table of the Data view (`mzlab_core::simtab`):
 //! the peaks of every SIM channel of every sample, or a pivot (one row per sample and one column per channel, or the reverse). Each file gives the `/api/mrm` transitions the engine gives the page (an mzML read as it is, a vendor file through the
 //! chromatograms of `lettori_mzml::guscio`, as the site reads it), so the CSV is the bytes of the page's export. A `.wiff` gives one column per sample,
 //! named as the site names its mzML (`conversione.js::wiffName`).
@@ -16,15 +16,18 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli sim-table: every SIM channel of the files integrated with the default settings, as CSV.
 
-usage: mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=samples|channels] [--out PATH]
+usage: mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=samples|channels] [--set group.SAMPLE=GROUP]... [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in injection order
   --set output=area_sum    sum of the peak areas of each channel in each sample (default; 0.0 = no peak)
          output=area_max   area of the largest peak; height_max its height; apex_rt its apex time (min); n_peaks the number of peaks
          output=peaks      the peak table: one row per resolved peak (sample, q1, name, peak, apex_rt, area, height, snr, fwhm_s)
-  --set layout=samples     one row per sample, one column per channel (its Q1 m/z; transition=N without one) (default); layout=channels the reverse
+  --set layout=samples     one row per sample, one column per channel (its Q1 m/z; ion N without one, N = place in the list) (default); layout=channels the reverse
+  --set group.SAMPLE=GROUP the sample (its row name) in a group, as the sidebar groups of the site: rows by group in the order the groups first appear,
+                           then the samples without one; a group column; channels without Q1 apart per group (ion N [GROUP])
   --out PATH  write there instead of the standard output
 
+Areas and heights in scientific notation with a decimal point (7.84077E+04), read as numbers by a spreadsheet in any locale.
 Peaks: every resolved peak of the whole trace, up to 10 per channel (smoothing 1-2-1 over 3 points, at least 3 points across, S/N at least 3);
 an empty cell = the sample has no such channel, or no peak for area_max, height_max and apex_rt.";
 
@@ -32,15 +35,17 @@ struct Chiesta {
     files: Vec<PathBuf>,
     output: String,
     layout: String,
+    groups: Vec<(String, String)>,
     out: Option<PathBuf>,
 }
 
 fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
-    let (mut files, mut output, mut layout, mut out) = (
+    let (mut files, mut output, mut layout, mut out, mut groups) = (
         Vec::new(),
         "area_sum".to_string(),
         "samples".to_string(),
         None,
+        Vec::new(),
     );
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -63,6 +68,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
                     Some(("layout", l)) => {
                         return Err(format!("layout is samples or channels, not {l}"))
                     }
+                    Some((k, g)) if k.starts_with("group.") && k.len() > 6 => {
+                        groups.push((k[6..].to_string(), g.to_string()))
+                    }
                     _ => return Err(format!("unknown setting {v}")),
                 }
             }
@@ -77,6 +85,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
         files,
         output,
         layout,
+        groups,
         out,
     }))
 }
@@ -177,11 +186,15 @@ fn table(c: &Chiesta, warn: &mut String) -> Result<String> {
     let mut first = true;
     for p in &c.files {
         for (name, tr) in samples_of(p, &mut taken, warn)? {
+            let stem = mzlab_core::simtab::sample_of(&name);
             o.raw(if first { "{\"name\":" } else { ",{\"name\":" })
                 .str(&name)
                 .raw(",\"transitions\":")
-                .raw(&tr)
-                .raw("}");
+                .raw(&tr);
+            if let Some((_, g)) = c.groups.iter().rev().find(|(s, _)| s == stem) {
+                o.raw(",\"group\":").str(g);
+            }
+            o.raw("}");
             first = false;
         }
     }

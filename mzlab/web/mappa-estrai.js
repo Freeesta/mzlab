@@ -213,7 +213,7 @@ function table(/** @type {PannelloMappa} */ p) {
   const n = s.num, w = s.win || s.box, row = (/** @type {string} */ k, /** @type {string} */ lab, /** @type {string} */ v, /** @type {string} */ u) => `<div class="mzex-r"><dt>${T(lab)}</dt><dd><output data-k="${k}" aria-label="${T(lab)}">${v}</output>${u ? ` <span class="muted">${u}</span>` : ""}</dd></div>`;
   box.innerHTML = `<p class="mzex-d">${T("mapex.intro")}</p><dl class="mzex-n">` +
     row("mz", "mapex.n.mz", `${num(w.mz0, d)} – ${num(w.mz1, d)}`, `(± ${num((w.mz1 - w.mz0) / 2, d)})`) + row("rt", "mapex.n.rt", `${num(w.rt0, 3)} – ${num(w.rt1, 3)}`, "min") +
-    row("area", "mapex.n.area", n && n.area != null ? fmt(n.area) : "–", T("mapex.u.area")) + row("height", "mapex.n.height", n && n.height != null ? fmt(n.height) : "–", T("mapex.u.height")) +
+    row("area", "mapex.n.area", n && n.area != null ? I18N.sciE(n.area) : "–", T("mapex.u.area")) + row("height", "mapex.n.height", n && n.height != null ? I18N.sciE(n.height) : "–", T("mapex.u.height")) +
     row("rtmax", "mapex.n.rtmax", n ? num(n.rtMax, 3) : "–", "min") + row("mzmax", "mapex.n.mzmax", n ? num(n.mzMax, d) : "–", "") + `</dl>` +
     `<p class="mzex-f"><b>XIC(t)</b> = Σ ${T("mapex.f.xic")}<br><b>S(m/z)</b> = ${T("mapex.f.spec")}<br>${T("mapex.f.area")}</p>` +
     `<p class="mzex-b"><button type="button" data-ex="off">${T("mapex.close")}</button></p>`;
