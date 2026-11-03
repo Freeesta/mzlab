@@ -9,7 +9,7 @@ use std::process::Command;
 use mzlab_core::itemroutes::{pda_spectrum, pda_wavelength};
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::lettori_mzml::Conversione;
-use mzlab_core::mzml::Mzml;
+use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::mzmlwrite::Opzioni;
 use serde_json::Value;
 
