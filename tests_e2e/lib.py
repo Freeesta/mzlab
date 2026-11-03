@@ -381,9 +381,9 @@ class Run:
                 urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).read(); break
             except Exception:
                 time.sleep(0.1)
-    def page(s, p, tour=False, qaqc=False):
+    def page(s, p, tour=False, qaqc=False, motion=False):
         s.b = p.chromium.launch()
-        pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
+        pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="no-preference" if motion else "reduce")
         pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")

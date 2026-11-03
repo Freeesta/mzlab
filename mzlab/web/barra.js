@@ -64,9 +64,9 @@ const BARRA = (() => {
   const seen = () => (_seen = typeof S !== "undefined" && !S.sess ? false
     : _seen || (typeof E !== "undefined" && E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)));
   const landing = () => (typeof S === "undefined" ? !document.documentElement.classList.contains("in-draw") : S.view === "data" && !(S.sess && S.adding)) && !seen();
-  const byNames = () => typeof namesWidth === "function" && seen();                 // the names set the width once a file is shown
+  const byNames = () => typeof namesWidth === "function" && seen();                 // the landing width stays unless the names need more room (the panel never narrows by itself)
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
-  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.min(defaultW(), namesWidth(defaultW())) : defaultW()));
+  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.max(defaultW(), namesWidth(defaultW())) : defaultW()));
   const validTab = (/** @type {string} */ id) => ["file", "addloss", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
