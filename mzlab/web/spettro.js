@@ -223,6 +223,9 @@ function scanLine(p, data, d0) {
     return xs.map(ov);
   } });
   reg({ id: "spec.measure", gruppo: "tools", voci: /** @param {any} c */ c => measMenu(c.p, c.m).map((o, i) => ({ nome: o.label, tip: o.tip, dim: i === 0 && !c.has, esegui: o.fn })) });
+  // the m/z in the Contaminants tab of the Adducts & losses page (side panel only); the text shown sets the tolerance there, the polarity is the page's
+  reg({ id: "spec.cont", gruppo: "cont", ordine: 0, visibile: () => !!window.BARRA, disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.cont"), aria: /** @param {any} c */ c => T("ctx.spec.cont.aria", { mz: c.lab }),
+    esegui: /** @param {any} c */ c => BARRA.setTab("cont", { q: c.lab }) });
   reg({ id: "spec.annotate", gruppo: "tools", disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.annotate"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.m, text: v })); draw(c.p); } } });
   reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });

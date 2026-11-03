@@ -8,6 +8,8 @@ I18N.add("it", {
   "ctx.spec.copy": "Copia valore",
   "ctx.spec.copy.aria": "Copia il valore m/z {mz} (con il punto decimale)",
   "ctx.spec.xic": "Estrai l'XIC di m/z {mz}",
+  "ctx.spec.cont": "È un contaminante noto?",
+  "ctx.spec.cont.aria": "Cerca m/z {mz} tra i contaminanti di Addotti e perdite",
   "ctx.spec.contLists": "Cerca nelle liste dei contaminanti…",
   "ctx.spec.known": "Contaminante noto: {name} ({adduct}, {err} ppm){more}",
   "ctx.spec.knownOnlyMz": "solo m/z",

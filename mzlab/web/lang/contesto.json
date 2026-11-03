@@ -258,6 +258,7 @@
   "ctx.map.where": "Prima riga (grigia) del menu del clic destro sulla mappa; {rt} = RT, {mz} = m/z, {file} = campione.",
   "ctx.map.xic": "Menu del clic destro sulla mappa; {mz} = m/z.",
   "ctx.map.addTo": "Menu del clic destro sulla mappa; {mz} = m/z, {panel} = titolo del pannello XIC.",
+  "ctx.spec.cont.aria": "Nome accessibile della voce «È un contaminante noto?» del menu dello spettro; {mz} = m/z del picco.",
   "ctx.spec.copy.aria": "Voce «Copia valore» del menu del clic destro sullo spettro; {mz} = m/z del picco.",
   "mappa.grp.row": "Riga di gruppo nella tabella dei punti segnati (solo HR); {g} = numero del gruppo, {shape} = nome della forma dei suoi punti, {n} = quanti punti, {members} = numeri dei punti.",
   "mappa.grp.fold": "Pulsante che comprime la riga di un gruppo di punti segnati; {g} = numero del gruppo.",
