@@ -215,7 +215,7 @@ def test_timeout_tipizzato_e_giornaliero():
           {"ts_utc": "2026-10-21T11:00:00Z", "tipo": "pr", "azione": "unita", "aperta_s": 10800, "verde_a_unione_s": 600, "commit_n": 4}]
     g = s.dati_ci.giornaliero(ev)
     assert len(g) == 1 and (g[0]["run"], g[0]["rilanci"], g[0]["coda_media_s"], g[0]["rossi_timeout"]) == (1, 1, 40, 1)
-    assert (g[0]["pr_aperte"], g[0]["pr_unite"], g[0]["verde_a_unione_media_s"], g[0]["commit_per_pr_media"]) == (1, 1, 600, 4.0)
+    assert (g[0]["pr_aperte_nel_giorno"], g[0]["pr_unite"], g[0]["verde_a_unione_media_s"], g[0]["commit_per_pr_media"]) == (1, 1, 600, 4.0)
 
 
 def test_rust_ok_e_aggregato():
@@ -306,3 +306,83 @@ def test_comandi_saltano_i_file_congelati(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["ci_metrics.py", "riempi-verde", "--dati", str(dati)])
     before = dati.read_bytes()
     assert s.main() == 0 and not chiamate and dati.read_bytes() == before
+
+
+def _pr(ts, pr, azione, **kw):
+    return {"ts_utc": ts, "tipo": "pr", "pr": pr, "azione": azione, "sha": f"s{pr}", **kw}
+
+
+def test_flusso_critico_include_sito_rust_e_desktop():
+    assert {"test", "rust", "sito-rust", "desktop"} <= set(s.dati_ci.WORKFLOW_CRITICI) <= set(s.dati_ci.WORKFLOW_MISURATI)
+    run = dict(RUN["workflow_run"], id=4, name="sito-rust", updated_at="2026-10-21T10:30:30Z")
+
+    def api(p):
+        return {"workflow_runs": [run]} if "status=completed" in p else {"workflow_runs": []} if "status=" in p else {"jobs": JOBS}
+    righe, _ = s.righe_recenti("/nonexistent/eventi.jsonl", api, lambda p: None, s.datetime(2026, 10, 21, 11, 0, tzinfo=s.timezone.utc))
+    assert any(r["tipo"] == "run" and r["workflow"] == "sito-rust" for r in righe)
+    ev = [_pr("t", 1, "unita", sha="a", solo_doc=False, aree={}),
+          {"tipo": "run", "workflow": "test", "main": False, "sha": "a", "run_attempt": 1, "esito": "success", "ts_utc": "2026-10-22T08:00:00Z", "durata_s": 300, "jobs": {"pytest": 300}},
+          {"tipo": "run", "workflow": "sito-rust", "main": False, "sha": "a", "run_attempt": 1, "esito": "success", "ts_utc": "2026-10-22T08:00:00Z", "durata_s": 2100, "jobs": {"sito-e2e": 2100}}]
+    r = s.dati_ci.percorso_critico(ev)["site/other"]
+    assert r["mediana"] == 35.0 and r["lenti"][0] == ("sito-e2e", 35.0)
+
+
+def test_coda_istantanea_e_riepilogo():
+    ora = "2026-11-03T12:00:00Z"
+    prs = {1: ("behind", "2026-11-03T06:00:00Z", False), 2: ("dirty", "2026-11-02T12:00:00Z", False), 3: ("clean", "2026-11-03T10:00:00Z", False), 4: ("clean", "2026-11-03T11:00:00Z", True)}
+
+    def api(p):
+        if p.startswith("/pulls?"):
+            return [{"number": n, "created_at": c, "draft": d, "head": {"sha": f"s{n}"}} for n, (_, c, d) in prs.items()]
+        if p.startswith("/pulls/"):
+            return {"mergeable": True, "mergeable_state": prs[int(p.rsplit("/", 1)[1])][0]}
+        n = p.split("/")[2][1:]       # /commits/s<N>/check-runs
+        return {"check_runs": [{"id": 1, "name": "test", "status": "completed", "conclusion": "success", "completed_at": f"2026-11-03T0{n}:30:00Z"}]}
+    (riga,) = s.giorno_ci.righe_coda(api, ora, lambda x: None)
+    assert (riga["aperte"], riga["indietro"], riga["sporche"], riga["verdi_in_attesa"]) == (3, 1, 1, 2)
+    assert riga["piu_vecchia_aperta_s"] == 24 * 3600 and riga["piu_vecchia_verde_s"] == 10 * 3600 + 1800
+    out = []
+    s.riepilogo([riga], out=out.append)
+    assert any("Queue of open PRs" in o for o in out) and any("behind 1" in o for o in out)
+
+
+def test_rossi_veri_senza_annullati():
+    def rosso(cat, pr):
+        return {"ts_utc": "2026-11-03T10:00:00Z", "tipo": "job_fallito", "pr": pr, "categoria": cat, "job": "j", "durata_s": 5}
+
+    def run(pr):
+        return {"ts_utc": "2026-11-03T09:00:00Z", "tipo": "run", "pr": pr, "workflow": "test", "esito": "failure", "run_attempt": 1, "coda_s": 0, "jobs": {}}
+    ev = [run(1), run(2), run(3), run(4), rosso("annullato", 1), rosso("aggregato", 2), rosso("test", 3), rosso("timeout", 3)]
+    assert s.giorno_ci.pr_con_rosso_vero(ev) == (1, 4)
+    g = s.dati_ci.giornaliero(ev)[0]
+    assert (g["rossi_veri"], g["pr_con_rosso_vero"], g["rossi_annullato"]) == (2, 1, 1)
+    out = []
+    s.riepilogo(ev, out=out.append)
+    txt = "\n".join(out)
+    assert "PRs with a real red: 1 of 4 (25%)" in txt and "2 of 4 failed jobs left out" in txt and "[annullato]" not in txt
+    assert all("annullato" not in n for n, _, _ in s.colli(ev))
+
+
+def test_giornaliero_mediana_max_e_aperte_a_fine_giorno(tmp_path):
+    ev = [_pr("2026-11-01T08:00:00Z", 1, "aperta"), _pr("2026-11-01T09:00:00Z", 2, "aperta"), _pr("2026-11-01T10:00:00Z", 3, "aperta"),
+          _pr("2026-11-02T08:00:00Z", 1, "unita", aperta_s=3600 * 24, verde_a_unione_s=600),
+          _pr("2026-11-02T09:00:00Z", 2, "unita", aperta_s=3600 * 2, verde_a_unione_s=1200),
+          _pr("2026-11-02T10:00:00Z", 3, "chiusa", aperta_s=5), _pr("2026-11-02T11:00:00Z", 4, "aperta"),
+          _pr("2026-11-02T12:00:00Z", 5, "unita", aperta_s=3600 * 6, verde_a_unione_s=60)]
+    g = {r["giorno"]: r for r in s.dati_ci.giornaliero(ev)}
+    assert "pr_aperte" not in g["2026-11-01"]
+    assert (g["2026-11-01"]["pr_aperte_nel_giorno"], g["2026-11-01"]["pr_aperte_fine_giorno"]) == (3, 3)
+    d2 = g["2026-11-02"]
+    assert (d2["pr_aperte_nel_giorno"], d2["pr_aperte_fine_giorno"], d2["pr_unite"]) == (1, 1, 3)
+    assert (d2["aperta_mediana_s"], d2["aperta_max_s"], d2["aperta_media_s"]) == (6 * 3600, 24 * 3600, 38400)
+    assert (d2["verde_a_unione_mediana_s"], d2["verde_a_unione_max_s"]) == (600, 1200)
+
+
+def test_esporta_riga_coo(tmp_path):
+    ev = [_pr("2026-11-02T08:00:00Z", 1, "unita", aperta_s=3600 * 4), _pr("2026-11-02T09:00:00Z", 2, "unita", aperta_s=90 * 60),
+          _pr("2026-11-02T10:00:00Z", 9, "aperta")]
+    files = s.dati_ci.esporta(ev, str(tmp_path))
+    coo = tmp_path / "giornaliero-coo.csv"
+    assert str(coo) in files
+    assert coo.read_text().splitlines() == ["date,merged,median_open_to_merge_min,max_open_to_merge_min,open_prs_end,chats_running,note",
+                                           "2026-11-02,2,165.0,240.0,1,,"]
