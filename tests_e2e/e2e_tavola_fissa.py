@@ -16,8 +16,9 @@ try:
         def run(lang, w, h):
             pg.set_viewport_size({"width": w, "height": h})
             pg.evaluate(f"document.querySelector('#refdlg') && document.querySelector('#refdlg').close()")
-            pg.evaluate(f"(window.I18N&&I18N.setLang)&&I18N.setLang('{lang}')"); pg.wait_for_timeout(200)
-            pg.evaluate("document.querySelector('#np-pt').click()"); pg.wait_for_timeout(400)
+            if pg.evaluate("I18N.lang") != lang: pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); ready(pg)
+            assert pg.evaluate("I18N.lang") == lang, lang
+            pg.evaluate("document.querySelector('#np-pt').click()"); attendi(pg, "document.querySelectorAll('#refbody .pt-c').length >= 118")
             syms = pg.evaluate("[...document.querySelectorAll('#refbody .pt-c')].map(c=>c.dataset.s)")
             assert len(syms) >= 118, len(syms)
             base = pg.evaluate(BOXES); bad = []
