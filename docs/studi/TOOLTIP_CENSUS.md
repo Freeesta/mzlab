@@ -16,9 +16,9 @@ One short sentence at most: say what the control does or add the one fact that i
 - Six shortened tips are close to 80 characters because they carry a warning that the code relies on: `cmd.idn.tip` (candidates, not identifications), `cmd.subref.tip`, `disp.pdaAlign.title` (screen only), `llm.on.title` (nothing sent), `mappa.col.dm.title`, `xic.adduct.title`.
 - Kept as they are: `load.demo.*.title` (they list the example files), `int.tbl.par.title` (names three chromatographic parameters).
 
-## Follow-up (not edited here)
-- SETTINGS-PANEL: `settings.pal.title` (228), `settings.ext.title` (179), `settings.cen.title` (151), `settings.xiclens.title` (123), `settings.libs.title` (112), `settings.reset.title`, `settings.beside.title`, `settings.hrPpm.title`, `update.settings.title`, `predef.settings.title`.
-- ADD-LOSS: `cx.score.tip` (254), `calc.in.title` (191), `tbl.loss.searchTitle` (186), `cmd.addloss.tip` (122).
+## Follow-up
+- SETTINGS-PANEL: `settings.beside.title`, `settings.hrPpm.title`, `update.settings.title`, `predef.settings.title` still to review (`settings.pal/ext/cen/xiclens/libs/reset.title` are shortened).
+- ADD-LOSS: `cx.score.tip`, `calc.in.title`, `tbl.loss.searchTitle`, `cmd.addloss.tip` are shortened (the `{s}` sigma placeholder of `cx.score.tip` is dropped, `{w}` stays).
 
 ## Keys
 Current = Italian text before this census; Len = its length in characters; Proposed = new IT / EN.
