@@ -1,5 +1,6 @@
 //! The subagents of the data assistant as data: `data/assist/assist-ruoli-1.json` says which prompt, model, effort and output limit each role has, and the
 //! prompt files (fetched by the page, never part of the program) are exact copies of the blocks of `docs/studi/assistente-dati/prompt/`. Nothing about a model is written in the code. Used by the agent.
+//! With the provider of the public demo (`DEMO_PROVIDER`) every output limit is the smaller `demo_*` one, the cap the proxy enforces per role.
 
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
@@ -13,12 +14,31 @@ pub struct Role {
     pub model: String,
     pub effort: String,
     pub max_tokens: u32,
+    /// The limit with the provider of the public demo.
+    pub demo_max_tokens: u32,
     pub output_schema: String,
     pub input_sources: Vec<String>,
 }
 
+/// The provider of the public demo (`data/fornitori-1.json`): the proxy of mzLab, no key, the `demo_*` limits.
+pub const DEMO_PROVIDER: &str = "mzlab-demo";
+
+/// The output limits of the orchestrator: one turn, and a turn after the phase prompt of the whole plan.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Caps {
+    pub turn: u32,
+    pub plan: u32,
+}
+
 fn bad() -> Error {
     Error::new("err.llm.assist.roles")
+}
+
+fn count(v: &Value, key: &str) -> Result<u32> {
+    match v.get(key).and_then(Value::f64) {
+        Some(n) if n >= 1.0 && n <= 8192.0 => Ok(n as u32),
+        _ => Err(bad()),
+    }
 }
 
 fn text(v: &Value, key: &str) -> Result<String> {
@@ -80,7 +100,8 @@ pub fn roles(text_json: &str) -> Result<Vec<Role>> {
             prompt_file: file,
             model: text(r, "model")?,
             effort: text(r, "effort")?,
-            max_tokens: r.get("max_tokens").and_then(Value::f64).ok_or_else(bad)? as u32,
+            max_tokens: count(r, "max_tokens")?,
+            demo_max_tokens: count(r, "demo_max_tokens")?,
             output_schema: text(r, "output_schema")?,
             input_sources: r
                 .get("input_sources")
@@ -95,4 +116,36 @@ pub fn roles(text_json: &str) -> Result<Vec<Role>> {
         out.push(role);
     }
     Ok(out)
+}
+
+/// The roles for a conversation with `provider`: the demo provider gets the `demo_max_tokens` of each role.
+pub fn roles_for(text_json: &str, provider: &str) -> Result<Vec<Role>> {
+    let mut all = roles(text_json)?;
+    if provider == DEMO_PROVIDER {
+        for r in &mut all {
+            r.max_tokens = r.demo_max_tokens;
+        }
+    }
+    Ok(all)
+}
+
+/// The output limits of the orchestrator for `provider` (`orchestrator.max_tokens`/`max_tokens_plan`, or the `demo_*` pair for the demo provider).
+pub fn orchestrator_caps(text_json: &str, provider: &str) -> Result<Caps> {
+    let doc = parse(text_json.as_bytes())?;
+    let o = doc.get("orchestrator").ok_or_else(bad)?;
+    let demo = provider == DEMO_PROVIDER;
+    let pick = |k: &str| {
+        count(
+            o,
+            &if demo {
+                format!("demo_{k}")
+            } else {
+                k.to_string()
+            },
+        )
+    };
+    Ok(Caps {
+        turn: pick("max_tokens")?,
+        plan: pick("max_tokens_plan")?,
+    })
 }

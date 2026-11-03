@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { setup, post, drain, orchestratorBody, routerBody, OWNER } from "./helpers.mjs";
+import { demoMaxTokens } from "../build-allowlist.mjs";
 
 const IP = "198.51.100.4";
 
@@ -112,11 +113,21 @@ test("the allow-list holds every prompt of assist-ruoli-1.json, and the catalog 
   for (const r of roles.roles) assert.ok(named.has(r.role), r.role);
   assert.ok(named.has("orchestrator"));
   assert.equal(s.allow.schemas.length, 3, "router/1, lettura/1, param-scelte/1");
-  const llm = new s.rust.Llm(readFileSync(new URL("../../docs/schemi/strumenti-1.json", import.meta.url), "utf-8"));
-  const conv = { schema: "llm-conv/1", provider: "anthropic", model: "claude-sonnet-5-5", system: "x", max_output_tokens: 1, messages: [{ role: "user", parts: [{ text: "x" }] }] };
-  const req = JSON.parse(llm.request(JSON.stringify(conv)));
-  const tools = (typeof req.body === "string" ? JSON.parse(req.body) : req.body).tools;
-  assert.ok(tools.length > 5);
+  const toolsOf = (file) => {
+    const llm = new s.rust.Llm(readFileSync(new URL(`../../docs/schemi/${file}`, import.meta.url), "utf-8"));
+    const conv = { schema: "llm-conv/1", provider: "mzlab-demo", model: "claude-sonnet-5-5", system: "x", max_output_tokens: 1, messages: [{ role: "user", parts: [{ text: "x" }] }] };
+    const req = JSON.parse(llm.request(JSON.stringify(conv)));
+    llm.free();
+    return (typeof req.body === "string" ? JSON.parse(req.body) : req.body).tools;
+  };
+  const tools = toolsOf("strumenti-demo-1.json");
+  assert.equal(tools.length, 12);
+  // the whole catalog (flow_run, code_export, ui_show...) is not the demo's
+  await refused(s, post(orchestratorBody({ tools: toolsOf("strumenti-1.json") })), 400, "err.llm.proxy.body", "tools");
+  // the caps of the allow-list are the demo_* limits of the roles file
+  const caps = demoMaxTokens();
+  for (const e of Object.values(s.allow.system)) assert.equal(e.max_tokens, caps[e.role], e.role);
+  assert.deepEqual([caps.router, caps.metadati, caps.grafici, caps.orchestrator, caps.plan], [200, 2000, 800, 1500, 3000]);
   const r = await drain(await s.handle(post(orchestratorBody({ tools, tool_choice: { type: "auto" } })), IP));
   assert.equal(r.status, 200, r.text);
   // one tool changed (a wider description) is no longer the catalog

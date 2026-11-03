@@ -5,7 +5,7 @@ use mzlab_core::error::Result;
 use mzlab_core::json::Value;
 
 use super::{json, note, quoted, send, Output, State};
-use crate::assist::{Prompts, Role};
+use crate::assist::{Caps, Prompts, Role};
 use crate::conv::{Message, Part, Role as Speaker};
 use crate::router::{self, Route};
 
@@ -19,6 +19,8 @@ pub(super) struct Assist {
     phase: Option<String>,
     /// Validated readings that go with the next user message.
     readings: Vec<Value>,
+    /// The output limit once the phase prompt of the plan is in (`set_output_caps`).
+    plan_cap: Option<u32>,
 }
 
 impl State {
@@ -32,8 +34,18 @@ impl State {
             phase_file: None,
             phase: None,
             readings: Vec::new(),
+            plan_cap: None,
         });
         Ok(())
+    }
+
+    /// The output limits of the orchestrator (`assist::orchestrator_caps`; the demo provider needs them, the proxy refuses more): `turn` from now on,
+    /// `plan` from the phase prompt of the plan on. Call it after `enable_assist`.
+    pub fn set_output_caps(&mut self, caps: Caps) {
+        self.conv.max_output_tokens = Some(caps.turn);
+        if let Some(a) = &mut self.assist {
+            a.plan_cap = Some(caps.plan);
+        }
     }
 
     /// The prompt file (`orchestrator.phase_prompt`) that becomes a `role: "system"` message in the middle of the conversation when the route turns to `plan`.
@@ -137,6 +149,9 @@ fn phase_message(s: &mut State, route: &str, out: &mut Vec<Output>) {
     };
     let text = a.prompts.prompt(&file).unwrap_or("").to_string();
     let sha = a.prompts.digest(&file).unwrap_or_default();
+    if let Some(n) = a.plan_cap {
+        s.conv.max_output_tokens = Some(n);
+    }
     s.conv.messages.push(Message {
         role: Speaker::System,
         parts: vec![Part::Text(text)],

@@ -24,6 +24,23 @@ pub fn providers() -> String {
     provider::BUILTIN_JSON.to_string()
 }
 
+/// A request (`{url, headers, body, auth}`) as it leaves for `provider_id`: for the demo provider the proxy host in place of the placeholder and the
+/// session/owner headers (`provider::demo::for_send`, the same function the app uses); any other provider's request is unchanged.
+#[wasm_bindgen]
+pub fn demo_send(
+    request_json: &str,
+    provider_id: &str,
+    host: &str,
+    session: &str,
+    owner: &str,
+) -> Result<String, String> {
+    let v = mzlab_core::json::parse(request_json.as_bytes()).map_err(fail)?;
+    let req = Request::from_value(&v).map_err(fail)?;
+    let req =
+        provider::demo::for_send(&find(provider_id)?, req, host, session, owner).map_err(fail)?;
+    Ok(req.to_json())
+}
+
 /// The event line of a failed HTTP status (`err.llm.*`), for the transport that got an answer without a stream.
 #[wasm_bindgen]
 pub fn http_error(status: u16, body: &str) -> String {

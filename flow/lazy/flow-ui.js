@@ -50,6 +50,8 @@
     let admin = false; try { admin = localStorage.getItem(key("admin")) === "1"; } catch (_) { /* blocked */ }
     return admin || !!w.MZLAB_DESKTOP;
   };
+  /** the profile «demo» of settings.js (uipProfile): a visitor outside «ricerca» may try the assistant of the public demo from the Flow page only */
+  F.demo = () => { const u = /** @type {any} */ (globalThis).uipProfile; return !F.research() && typeof u === "function" && u() === "demo"; };
   F.llmOn = () => {
     const read = (/** @type {string} */ k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (_) { return {}; } };
     const s = read("mzlab.llm");

@@ -461,5 +461,7 @@ I18N.add("it", {
   "llm.key.local": "Questo modello gira sul tuo computer: non serve la chiave.",
   "llm.key.none": "Nessuna chiave.",
   "llm.key.set": "Chiave pronta.",
-  "llm.key.frame": "Chiave API dell'assistente"
+  "llm.key.frame": "Chiave API dell'assistente",
+  "llm.chip.explain": "Spiegami questi file",
+  "llm.chip.setup": "Imposta mzFlow per me"
 });

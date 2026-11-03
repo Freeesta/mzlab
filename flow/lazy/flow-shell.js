@@ -168,6 +168,18 @@
       const L = /** @type {any} */ (window).TPLAZY;
       const facts = L.load("flow-llm-errors.js", "flow-llm-facts.js").then(() => F.llmFacts.mount({ S, host: factsHost, root, redraw })).catch(() => { /* the facts are optional */ });
       if (F.llmOn()) facts.then(() => L.load("flow-llm-chart.js", "flow-llm-chart-ui.js", "flow-llm-tools.js", "flow-llm-readers.js", "flow-llm.js")).then(() => F.llmMount({ S, bar, body, root, redraw, select: cvUi.select, setTab })).catch(() => { /* the assistant is optional */ });
+    } else if (F.demo()) {
+      // the public demo: one button, and nothing of the assistant is downloaded before it is pressed (then the facts, the panel, the consent)
+      const L = /** @type {any} */ (window).TPLAZY;
+      const tryIt = F.btn("chat", "Try the assistant (public demo: what you ask leaves this computer only after your consent)", () => {
+        tryIt.disabled = true;
+        L.load("flow-llm-errors.js", "flow-llm-facts.js").then(() => F.llmFacts.mount({ S, host: factsHost, root, redraw }))
+          .then(() => L.load("flow-llm-chart.js", "flow-llm-chart-ui.js", "flow-llm-tools.js", "flow-llm-readers.js", "flow-llm.js"))
+          .then(() => F.llmMount({ S, bar, body, root, redraw, select: cvUi.select, setTab, demo: true, opener: tryIt }))
+          .then((/** @type {any} */ m) => { if (m) { tryIt.remove(); m.open(); } else tryIt.disabled = false; })
+          .catch(() => { tryIt.disabled = false; say("The assistant could not be loaded. Reload the page.", null); });
+      }, "Try the assistant");
+      tryIt.id = "flx-assistant-try"; bar.insertBefore(tryIt, bar.querySelector(".flx-run"));
     }
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redoBtn.disabled = !S.future.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;

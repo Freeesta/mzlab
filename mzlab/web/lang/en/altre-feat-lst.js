@@ -461,5 +461,7 @@ I18N.add("en", {
   "llm.key.local": "This model runs on your computer: no key needed.",
   "llm.key.none": "No key.",
   "llm.key.set": "Key ready.",
-  "llm.key.frame": "API key of the assistant"
+  "llm.key.frame": "API key of the assistant",
+  "llm.chip.explain": "Explain these files",
+  "llm.chip.setup": "Set up mzFlow for me"
 });

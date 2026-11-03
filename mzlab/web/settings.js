@@ -109,9 +109,11 @@ function uipReset(d) {
 // Administrator mode (5 clicks on the logo): the exit row shows only while it is on; 
 function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1"; } catch (_) { return false; } }
 
-// Profile of the program, never a setting: «ricerca» (the assistant can be turned on) when the administrator mode is on or in the desktop app, else «corso» (the assistant does not exist: no element, nothing downloaded).
+// Profile of the program, never a setting: «ricerca» (the assistant can be turned on) when the administrator mode is on or in the desktop app; else «demo» while UIP_DEMO is true (only the
+// Flow page offers «Try the assistant» of the public demo, fixed settings in llm/llm-demo.js; Theory, Practice and Data have no element of it), else «corso» (no element, nothing downloaded).
 // The old explicit choice `mzlab.profilo` ("corso"/"ricerca", a plain string) is dropped; the same key now also holds the JSON state of the time profile (profilo.js), which is left alone.
-function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "ricerca" : "corso"; }
+const UIP_DEMO = true;      // D2: false switches the public demo of the assistant off for every visitor
+function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "ricerca" : UIP_DEMO ? "demo" : "corso"; }
 try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v === "corso" || v === "ricerca") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
 
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
