@@ -5,7 +5,7 @@
 Writes OUT/modi/<SIGLA>.wiff + .wiff.scan for 14 modes (one 3200 QTRAP experiment, 4 cycles, version 2 blocks; EPI also a version 3 sample, EMS also a
 version 1 one) and OUT/modi/modi.json: per mode the code (ExperimentHeader +122), whether it is confirmed on real files, what the reader does today
 ("letto" with level / precursor / CV type, or "rifiuto" with the exact `detail`) and what it should do once supported ("futuro"). Code 0 (Q1, three samples with one shared Method1) is seen in real files and read like EMS; codes 1-3, 6, 12-14, 16 are
-guesses from the Analyst ScanType enum and the Q1MI / Q3MI blocks (one f32 per ion) are a hypothesis. A mode that gets supported changes its entry in
+guesses from the Analyst ScanType enum and the Q1MI / Q3MI blocks (one f32 per ion, read like a dense MRM block into SIM chromatograms) are a hypothesis. A mode that gets supported changes its entry in
 modi.json: the test is the executable matrix. No laboratory data is used.
 """
 import json
@@ -29,7 +29,7 @@ MODES = {
     "Q1": (0, True, "scan", 1, None), "Q1MI": (1, False, "ions", None, None), "Q3": (2, False, "scan", 1, None),
     "Q3MI": (3, False, "ions", None, None), "TDF": (14, False, "scan", 2, None),
 }
-READ = {"EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1"}
+READ = {"EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1", "Q1MI", "Q3MI"}
 
 
 def pts(k):
@@ -71,8 +71,8 @@ def blocks(sigla, kind, version):
 def oggi(sigla, code, kind, version):
     if sigla not in READ:
         return {"esito": "rifiuto", "detail": f"scan type code {code} (experiment 1)"}
-    if kind == "mrm":
-        return {"esito": "letto", "spettri": 0, "cromatogrammi": 1 + len(TRS), "tipo": None}
+    if kind in ("mrm", "ions"):
+        return {"esito": "letto", "spettri": 0, "cromatogrammi": 1 + len(TRS if kind == "mrm" else IONS), "tipo": None}
     sp = [w.spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1 if sigla in ("EMS", "Q1") else 2, PREC.get(sigla) if sigla not in ("EMS", "Q1") else None, 1000.0 * k, pts(k), version)
           for k in range(CYCLES)]
     return {"esito": "letto", "spettri": CYCLES, "livello": sp[0]["level"], "precursore": sp[0]["precursor"], "tipo": CV.get(sigla),
