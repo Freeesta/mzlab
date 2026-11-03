@@ -36,7 +36,7 @@ fn bad() -> Error {
 
 fn count(v: &Value, key: &str) -> Result<u32> {
     match v.get(key).and_then(Value::f64) {
-        Some(n) if n >= 1.0 && n <= 8192.0 => Ok(n as u32),
+        Some(n) if (1.0..=8192.0).contains(&n) => Ok(n as u32),
         _ => Err(bad()),
     }
 }
