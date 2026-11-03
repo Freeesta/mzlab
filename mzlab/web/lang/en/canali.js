@@ -52,5 +52,15 @@ I18N.add("en", {
   "canali.simtab.h.area": "Area (counts × s)",
   "canali.simtab.h.height": "Height",
   "canali.simtab.h.snr": "S/N",
-  "canali.simtab.h.fwhm_s": "FWHM (s)"
+  "canali.simtab.h.fwhm_s": "FWHM (s)",
+  "canali.sim.cell": "SIM · {n} ions",
+  "canali.sim.cell1": "SIM · 1 ion",
+  "canali.sim.kind": "SIM",
+  "canali.sim.add": "+ SIM ions",
+  "canali.sim.btn": "Ions",
+  "canali.sim.all": "All",
+  "canali.sim.extract": "Extract ion",
+  "canali.tr.extract": "Extract transition",
+  "canali.sim.help": "SIM file open: every monitored ion is a channel. Add a graph with «+ SIM ions» and choose the ions, or see every peak in the SIM table.",
+  "canali.sim.helpbtn": "Open the SIM table"
 });

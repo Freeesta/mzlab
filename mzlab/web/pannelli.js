@@ -137,7 +137,7 @@ function ptitle(/** @type {string} */ s) {  // the title to show
   if (c === "product") return a[0] != null ? I18N.t("panel.title.ms2prec", { prec: a[0] }) : I18N.t("panel.title.product");
   if (c === "ms2prec") return I18N.t("panel.title.ms2prec", { prec: a[0] });
   if (c === "composite") return a.length ? I18N.t("panel.title.composite", { t0: a[0], t1: a[1] }) : I18N.t("panel.title.compositeBare");
-  return ["chrom", "spec", "xic", "mrm", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
+  return ["chrom", "spec", "xic", "mrm", "sim", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
 }
 function closePanel(/** @type {Pannello} */ p) {
   if (!p) return;
@@ -237,7 +237,7 @@ function addPanel(type, o, after) {
   if (type === "chrom") Object.assign(p, { prec: o.prec ?? null, ks: o.ks ?? null, ptol: o.ptol ?? null, kind: o.kind || "tic", sel: null, cur: null, smooth: o.smooth ?? true, zoom: o.zoom || null, title: ptNorm(o.title) || PT.chrom });
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.spec });
   if (type === "xic") Object.assign(p, { traces: o.traces || [], tol: o.tol ?? TOL0, smooth: o.smooth ?? true, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.xic });
-  if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.mrm, _trs: [] });
+  if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || (window.SIMUI && SIMUI.allSim() ? "@sim" : PT.mrm), area: o.area ?? true, _trs: [] });
   if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "lin", gamma: o.gamma, ref: o.ref ?? "", norm: o.norm || "abs", corr: o.corr, bgr: o.bgr || null, zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
   if (type !== "map") p.zoomY = Array.isArray(o.zoomY) && o.zoomY.length === 2 ? o.zoomY : null;   // y zoom of the plot (an old notebook's "yz" is simply ignored)
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
@@ -267,7 +267,7 @@ function addPanel(type, o, after) {
     const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="${I18N.t("panel.rul.title")}">${IC_RULER}</button><button class="bt" data-a="par" title="${I18N.t("panel.par.title")}" aria-label="${I18N.t("panel.par.aria")}">&#9662;</button><button class="bt${p.rel ? " on" : ""}" data-a="rel" title="${I18N.t("panel.rel.title")}">%</button><button class="bt" data-a="lock" aria-pressed="false" title="${I18N.t("lock.off.title")}" aria-label="${I18N.t("lock.off.title")}">${IC_UNLOCK}</button></span>` : "";
     const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" aria-pressed="${!!p.tl}" aria-label="${I18N.t("panel.tlink.aria")}" title="${I18N.t("panel.tlink.title")}">${IC_SYNC}</button></span>` : "";
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
-    const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button></span>` : "";
+    const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button>${window.SIMUI ? SIMUI.areaBtn(type) : ""}</span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
     const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
     const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
@@ -321,7 +321,7 @@ function addPanel(type, o, after) {
   if (p.type === "spec" && window.XICBTN) XICBTN.wire(p);
   const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { COMANDI.fai("spec.display", p, () => { p.rel = !p.rel; }); relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
-  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); };
+  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); }; if (window.SIMUI) SIMUI.wireArea(p);
   const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; COMANDI.fai("panel.source", p, () => { p.log = !p.log; }); syncTb(p); draw(p); uiSave(); };
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   const dlB = el.querySelector('[data-a="dl"]');
@@ -409,7 +409,7 @@ function plotCaption(/** @type {Pannello} */ p) {
     parts.push("XIC" + (trLab ? ` · ${trLab}` : ""));
   } else if (p.type === "mrm") {
     const trs = (p.traces && p.traces.length) ? p.traces.map((/** @type {Traccia} */ t) => t.label || t.tr).join(", ") : (Array.isArray(p.tr) ? p.tr.join(", ") : (p.tr || ""));
-    parts.push("MRM" + (trs ? ` · ${trs}` : ""));
+    parts.push((window.SIMUI && SIMUI.panelSim(p) ? "SIM" : "MRM") + (trs ? ` · ${trs}` : ""));
   } else if (p.type === "map") {
     parts.push("Mappa RT-m/z");
     if (a.y0 != null && a.y1 != null) parts.push(`m/z ${a.y0.toFixed(0)}–${a.y1.toFixed(0)}`);
@@ -795,7 +795,7 @@ function rngIsOn(/** @type {Pannello} */ p) {
 function syncTb(/** @type {Pannello} */ p) {
   const el = p.el; if (!el) return;
   const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2";
-  const sm = el.querySelector('[data-a="smooth"]'), lg = el.querySelector('[data-a="log"]');
+  const sm = el.querySelector('[data-a="smooth"]'), lg = el.querySelector('[data-a="log"]'); if (window.SIMUI) SIMUI.syncArea(p);
   if (sm) { const tip = I18N.t(p.type === "mrm" ? "ctl.mrm.smooth.title" : "ctl.smooth.title"); sm.classList.toggle("on", !!p.smooth); sm.setAttribute("aria-pressed", String(!!p.smooth)); sm.title = tip; }
   if (lg) {
     const off = ms2c || (p.type === "chrom" && p.kind === "pda"); if (ms2c) p.log = false;

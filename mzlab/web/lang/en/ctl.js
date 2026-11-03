@@ -8,6 +8,8 @@ I18N.add("en", {
   "ctl.mode.stk": "stacked",
   "ctl.mode.cas": "cascaded",
   "ctl.log": "log",
+  "ctl.area": "Area",
+  "ctl.area.title": "Fills the area under each trace with a lighter tint of its colour",
   "ctl.mz.title": "Only the ions in this m/z range; empty = all",
   "ctl.range.from": "from",
   "ctl.range.to": "to",

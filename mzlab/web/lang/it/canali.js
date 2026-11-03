@@ -52,5 +52,15 @@ I18N.add("it", {
   "canali.simtab.h.area": "Area (conteggi × s)",
   "canali.simtab.h.height": "Altezza",
   "canali.simtab.h.snr": "S/N",
-  "canali.simtab.h.fwhm_s": "FWHM (s)"
+  "canali.simtab.h.fwhm_s": "FWHM (s)",
+  "canali.sim.cell": "SIM · {n} ioni",
+  "canali.sim.cell1": "SIM · 1 ione",
+  "canali.sim.kind": "SIM",
+  "canali.sim.add": "+ Ioni SIM",
+  "canali.sim.btn": "Ioni",
+  "canali.sim.all": "Tutti",
+  "canali.sim.extract": "Estrai ione",
+  "canali.tr.extract": "Estrai transizione",
+  "canali.sim.help": "File SIM aperto: ogni ione monitorato è un canale. Aggiungi un grafico con «+ Ioni SIM» e scegli gli ioni, oppure guarda tutti i picchi nella tabella SIM.",
+  "canali.sim.helpbtn": "Apri la tabella SIM"
 });

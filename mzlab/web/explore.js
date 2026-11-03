@@ -157,7 +157,7 @@ const fmtAdduct = (/** @type {string|undefined} */ a) => !a ? "" : fmtFormula(a)
 const subText = (/** @type {unknown} */ f) => String(f || "").replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[+d]);
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
 const KIND = /** @type {Record<string, string>} */ ({ full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" });
-const kindOf = (/** @type {FileAperto} */ f) => f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
+const kindOf = (/** @type {FileAperto} */ f) => window.SIMUI && SIMUI.n(f) > 0 ? I18N.t("canali.sim.kind") : f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
 // the three kinds of experiment never share a graph: Dati has one block of panels for each (Full Scan, MS2, MRM); panels and files belong to one
 // f.gone = removed from the session (the file on disk is untouched)
 const tabFiles = (t = E.tab) => E.files.filter((/** @type {FileAperto} */ f) => f.kind === t && !f.gone);
@@ -296,7 +296,7 @@ window.nbEnsure = async () => { if (!nbEverLoaded) await nbLoad(); };
 /** One panel as the notebook stores it (uiSave); the links are indices into E.panels. @param {any} p */
 function panelRec(p) {
   return {
-    type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
+    type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, area: window.SIMUI ? SIMUI.areaOf(p) : undefined, tol: p.tol,
     traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, canale: t.canale || undefined })),
     canali: p.canali && p.canali.length ? p.canali : undefined,
     k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, ks: p.ks ? p.ks.map((/** @type {number} */ k) => E.files[k]?.file).filter(Boolean) : undefined, ptol: p.ptol ?? undefined, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, noise: p.noise || undefined, tr: p.tr,
@@ -464,7 +464,7 @@ async function bootSession0() {
     const t = TIPOF.apply(s, s.file);
     return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noExt(noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
   }); uniqueLabels(E.files);
-  paintFiles();
+  paintFiles(); if (window.SIMUI) SIMUI.mark(E.files);
   if (window.HR) HR.notice(E.files);
   // a file index follows its file name; a file not back yet (list reopened file by file) keeps its name in PEND and is found at a later step
   const remap = (/** @type {any} */ o, /** @type {string} */ key, /** @type {any} */ none) => remapFileIndex(o, key, none, oldNames, E.files);
@@ -899,7 +899,7 @@ function toolbar() {
   // the buttons follow the experiment types the files have
   const has = (/** @type {string} */ t) => tabFiles(t).length > 0, scan = has("full") || has("ms2") || has("infusion"), mrm = has("mrm"), empty = !scan && !mrm;
   Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = !has("full"); Q("#np-xic").hidden = !scan;
-  Q("#np-mrm").hidden = !mrm;
+  Q("#np-mrm").hidden = !mrm; if (window.SIMUI) SIMUI.button();
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
 }
 // ------------------------------------------------------------------ piccole finestre e menu
@@ -957,7 +957,7 @@ function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
     d.setAttribute("role", it.check != null ? "menuitemcheckbox" : "menuitem");
     if (it.check != null) d.setAttribute("aria-checked", String(!!it.check));
     // an action of the registry azioni/1: the same id in every menu that offers it
-    if (it.id) d.dataset.azione = it.id;
+    if (it.id) d.dataset.azione = it.id; if (it.sub && !it.dim && window.MENUSUB) { MENUSUB.wire(d, it, m); return d; }   // an entry with a submenu (menu-sotto.js)
     // an action not available now: grey, still reachable from the keyboard
     if (it.dim) { d.className = "dim"; if (it.id) { d.tabIndex = -1; d.setAttribute("aria-disabled", "true"); } }
     else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
@@ -977,7 +977,7 @@ function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
   m.hidden = false; m.setAttribute("role", "menu");
   // keyboard: arrows move, Enter/Space choose, Esc closes
   if (!m._kb) { m._kb = true; m.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => {
-    const its = [...m.querySelectorAll('div[role^=menuitem]:not(.dim), div[aria-disabled=true]')], i = its.indexOf(document.activeElement);
+    const its = [...m.querySelectorAll('div[role^=menuitem]:not(.dim), div[aria-disabled=true]')].filter(x => !x.closest(".ctxsub")), i = its.indexOf(document.activeElement);
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (its.length) its[(i + (e.key === "ArrowDown" ? 1 : -1) + its.length) % its.length].focus(); }
     else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); if (!its[i].hasAttribute("aria-disabled")) its[i].click(); } }
     else if (e.key === "Escape") { e.preventDefault(); m.hidden = true; if (m._ret && m._ret.focus) m._ret.focus(); }

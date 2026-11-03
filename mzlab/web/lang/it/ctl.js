@@ -8,6 +8,8 @@ I18N.add("it", {
   "ctl.mode.stk": "impilati",
   "ctl.mode.cas": "a cascata",
   "ctl.log": "log",
+  "ctl.area": "Area",
+  "ctl.area.title": "Riempie l'area sotto ogni traccia con una tinta più chiara del suo colore",
   "ctl.mz.title": "Solo gli ioni in questo intervallo di m/z; vuoto = tutti",
   "ctl.range.from": "da",
   "ctl.range.to": "a",

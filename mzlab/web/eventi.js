@@ -395,7 +395,7 @@ function ctxFor(p, e, x, px, py) {
   reg({ id: "chrom.uvAvgSel", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.uv.avgSel"),
     esegui: /** @param {any} c */ c => uvOpen(c.p, c.k, c.p.sel[0] - pdaT(c.p), c.p.sel[1] - pdaT(c.p)) });
   reg({ id: "chrom.wl", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.wl" }, nome: () => T("ctx.chrom.wl"), esegui: /** @param {any} c */ c => wlOpen(c.p) });
-  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
+  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda" && !(window.SIMUI && SIMUI.ions(c.p).length), scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.x, text: v })); draw(c.p); } } });
