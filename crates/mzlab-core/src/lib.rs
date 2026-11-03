@@ -108,6 +108,7 @@ mod mzmlarray;
 pub mod mzmlhead;
 pub(crate) mod unita_traccia;
 pub mod mzmlsrm;
+pub mod simtab;
 #[cfg(feature = "mappa-dad")]
 mod mzml_dad;
 pub mod numarray;
@@ -117,6 +118,7 @@ pub mod mzmlwrite;
 #[cfg(any(not(target_family = "wasm"), feature = "valida"))]
 pub mod mzmlvalida;
 pub mod pace;
+pub mod peak1d;
 pub mod peakq;
 pub mod peakq_auto;
 pub mod peakq_lr;

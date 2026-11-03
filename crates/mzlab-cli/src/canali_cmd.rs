@@ -1,5 +1,5 @@
 //! `mzlab-cli channels FILE [--out PATH]`: the channels (`canali/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
-//! any other file the app reads gives the channels of its scans.
+//! any other file the app reads gives the channels of its scans and the chromatograms of its first sample (the mzML shell the site reads).
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -105,7 +105,18 @@ fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
         let facts = mzlab_core::iteminfo::facts_from(&mut m, scans_end, chroms.len() as i64, true)?;
         r.pon_cromatogrammi(&nome, &chroms, &facts);
     } else {
-        r.pon_cromatogrammi(&nome, &[], &Default::default());
+        // the first sample, as the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`lettori_mzml::guscio`)
+        let mut l = mzlab_lettori::apri(
+            crate::flow_set::file_set(file)?,
+            &mzlab_core::lettori::Limiti::desktop(),
+        )?;
+        let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), 0)?;
+        let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
+        let size = shell.len() as u64;
+        let mut m = Mzml::new(shell, size);
+        let chroms = m.chromatograms(end)?;
+        let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
+        r.pon_cromatogrammi(&nome, &chroms, &facts);
     }
     Ok(r.canali().json())
 }

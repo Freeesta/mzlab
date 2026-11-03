@@ -20,6 +20,8 @@ I18N.add("it", {
   "unopen.more": "e altri {n}",
   "unopen.how": "Come convertire",
   "unopen.other": "{n} file ignorati, non sono file di spettrometria di massa che conosco: {names}",
+  "load.note.logs.one": "Un file di log ignorato (non contiene dati): {names}",
+  "load.note.logs": "{n} file di log ignorati (non contengono dati): {names}",
   "unopen.err.one": "{name}: {message}",
   "unopen.err.many": "{n} file non letti ({names}): {message}",
   "update.settings.label": "Aggiornamenti",

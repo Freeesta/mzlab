@@ -2,11 +2,11 @@
 
 use crate::{
     campioni_cmd, canali_cmd, flow_explain, ion_pattern_cmd, llm, msn_rules, peaks_edges_cmd,
-    steps_cmd, Outcome,
+    sim_table_cmd, steps_cmd, Outcome,
 };
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 8] = [
+pub(crate) const PLAIN: [&str; 9] = [
     "llm",
     "steps",
     "explain-missing",
@@ -15,6 +15,7 @@ pub(crate) const PLAIN: [&str; 8] = [
     "ion-pattern",
     "samples",
     "peak-edges",
+    "sim-table",
 ];
 
 /// Old command names still accepted on input, as `(old, new)`; they are never printed outside `--help`.
@@ -40,6 +41,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "channels" => canali_cmd::run(args),
         "ion-pattern" => ion_pattern_cmd::run(args),
         "samples" => campioni_cmd::run(args),
+        "sim-table" => sim_table_cmd::run(args),
         _ => peaks_edges_cmd::run(args),
     }
 }

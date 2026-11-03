@@ -42,6 +42,7 @@ const COMMANDS: &[&[&str]] = &[
     &["ion-pattern"],
     &["samples"],
     &["peak-edges"],
+    &["sim-table"],
     &["explain-missing"],
     &["convert"],
     &["validate"],
