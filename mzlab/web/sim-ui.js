@@ -7,6 +7,8 @@
   /** @typedef {{ key: string, name: string, sim: boolean }} Ione */
   /** transitions of a file, read once: k|file -> list @type {Map<string, Ione[]>} */
   const LIST = new Map();
+  /** a file of an experiment made of transitions (no spectra), the engine's «empty» kind (no experiment) and a panel of transitions: read from ESP, never by name */
+  const isTr = (/** @type {any} */ f) => ESP.voce(f.kind)?.spettri === false, isNone = (/** @type {any} */ f) => !ESP.voce(f.kind), panelTr = (/** @type {any} */ p) => ESP.mrm(p), tabTr = (/** @type {any} */ p) => ESP.voce(p.tab)?.spettri === false;
   const keyOf = (/** @type {number} */ k) => `${k}|${E.files[k] ? E.files[k].file : ""}`;
   const trKey = (/** @type {{q1?: any, q3?: any}} */ t) => t.q3 == null ? String(t.q1) : `${t.q1}>${t.q3}`;
 
@@ -21,10 +23,10 @@
   /** reads the ions of the MRM-kind and empty files and sets f.sim; the file table and the lists are painted again when something changed @param {any[]} files */
   async function mark(files) {
     let changed = false;
-    await Promise.all(files.filter(f => f.kind === "mrm" || f.kind === "empty").map(async f => {
+    await Promise.all(files.filter(f => isTr(f) || isNone(f)).map(async f => {
       let ions = /** @type {Ione[]} */ ([]);
       try {
-        const tr = f.kind === "mrm" ? await getMrm(f.k) : [];
+        const tr = isTr(f) ? await getMrm(f.k) : [];
         ions = tr.map((/** @type {any} */ t) => ({ key: trKey(t), name: t.name || "", sim: t.q3 == null }));
         if (!ions.length) {
           const c = await CANALI.canali(f.k);
@@ -39,35 +41,35 @@
   }
 
   /** the SIM files a panel draws (the MRM-kind ones among the files it shows) @param {any} p */
-  const filesOf = p => shownFor(p).filter((/** @type {any} */ f) => f.kind === "mrm");
+  const filesOf = p => shownFor(p).filter((/** @type {any} */ f) => isTr(f));
   /** true when every file the panel draws is a SIM file @param {any} p */
   const panelSim = p => { const l = filesOf(p); return l.length > 0 && l.every((/** @type {any} */ f) => f.sim > 0); };
   /** true when the files of the session that are of the MRM kind are all SIM (the toolbar button says «ions» then) */
-  const allSim = () => { const l = E.files.filter((/** @type {any} */ f) => f.kind === "mrm" && !f.gone); return l.length > 0 && l.every((/** @type {any} */ f) => f.sim > 0); };
+  const allSim = () => { const l = E.files.filter((/** @type {any} */ f) => isTr(f) && !f.gone); return l.length > 0 && l.every((/** @type {any} */ f) => f.sim > 0); };
 
   /** the transitions (or ions) of the MRM-kind files in view, merged by key, in the order of the files: [{ key, name, sim }] @param {any} p */
   function ions(p) {
     /** @type {Map<string, Ione>} */ const m = new Map();
-    (p.type === "mrm" ? filesOf(p) : p.tab !== "mrm" ? [] : E.files.filter((/** @type {any} */ f) => f.kind === "mrm" && f.vis && !f.gone)).forEach((/** @type {any} */ f) => (LIST.get(keyOf(f.k)) || []).forEach(x => { if (!m.has(x.key)) m.set(x.key, x); }));
+    (panelTr(p) ? filesOf(p) : !tabTr(p) ? [] : E.files.filter((/** @type {any} */ f) => isTr(f) && f.vis && !f.gone)).forEach((/** @type {any} */ f) => (LIST.get(keyOf(f.k)) || []).forEach(x => { if (!m.has(x.key)) m.set(x.key, x); }));
     return [...m.values()];
   }
   /** colour index of an ion: its place among the ions of every file of the session, so the same m/z has the same colour in every sample and panel @param {string} key */
   function colorIdx(key) {
     /** @type {string[]} */ const seen = [];
-    E.files.filter((/** @type {any} */ f) => f.kind === "mrm" && !f.gone).forEach((/** @type {any} */ f) => (LIST.get(keyOf(f.k)) || []).forEach(x => { if (!seen.includes(x.key)) seen.push(x.key); }));
+    E.files.filter((/** @type {any} */ f) => isTr(f) && !f.gone).forEach((/** @type {any} */ f) => (LIST.get(keyOf(f.k)) || []).forEach(x => { if (!seen.includes(x.key)) seen.push(x.key); }));
     const i = seen.indexOf(key); return i < 0 ? 0 : i;
   }
   const color = (/** @type {string} */ key) => PAL[colorIdx(key) % PAL.length];
 
   /** the keys the panel plots now (all when it names none) @param {any} p @param {Ione[]} all */
-  const picked = (p, all) => p.type !== "mrm" ? [] : (!p.tr || (Array.isArray(p.tr) && !p.tr.length)) ? all.map(x => x.key) : (Array.isArray(p.tr) ? p.tr : [p.tr]);
+  const picked = (p, all) => !panelTr(p) ? [] : (!p.tr || (Array.isArray(p.tr) && !p.tr.length)) ? all.map(x => x.key) : (Array.isArray(p.tr) ? p.tr : [p.tr]);
 
   /** the entries of the «Extract ion ›» submenu: «All», then one per ion with its colour; click = only this one, Ctrl/⌘+click adds or removes it, Shift+click takes the range
    * from the last one clicked @param {any} c the context of the menu @returns {any[]} */
   function rows(c) {
     const p = c.p, all = ions(p), cur = new Set(picked(p, all)), T = (/** @type {string} */ k) => I18N.t(k);
     const set = (/** @type {string[]} */ keys) => {
-      if (p.type === "mrm") { COMANDI.fai("panel.source", p, () => { p.tr = keys.length === all.length || !keys.length ? "" : keys; }); ctl(p); draw(p); uiSave(); }
+      if (panelTr(p)) { COMANDI.fai("panel.source", p, () => { p.tr = keys.length === all.length || !keys.length ? "" : keys; }); ctl(p); draw(p); uiSave(); }
       else { reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true, tr: keys.length === all.length ? "" : keys, title: all.every(x => x.sim) ? "@sim" : undefined }))); }
     };
     const out = [{ nome: T("canali.sim.all"), check: cur.size === all.length && all.length > 0, esegui: () => set(all.map(x => x.key)), aria: T("canali.sim.all") }];
@@ -75,7 +77,7 @@
       nome: x.name ? `${x.key} ${x.name}` : x.key, color: color(x.key), check: cur.has(x.key), aria: x.key + (x.name ? " " + x.name : ""),
       // @ts-ignore the event comes from the menu
       esegui: (/** @type {MouseEvent | undefined} */ ev) => {
-        const multi = p.type === "mrm" && ev && (ev.ctrlKey || ev.metaKey), range = p.type === "mrm" && ev && ev.shiftKey;
+        const multi = panelTr(p) && ev && (ev.ctrlKey || ev.metaKey), range = panelTr(p) && ev && ev.shiftKey;
         if (range && p._ionAnc != null) {
           const a = Math.min(p._ionAnc, i), b = Math.max(p._ionAnc, i); set(all.slice(a, b + 1).map(y => y.key)); return;
         }
@@ -83,13 +85,13 @@
         if (multi) { const s = new Set(cur); if (s.has(x.key)) s.delete(x.key); else s.add(x.key); set(all.filter(y => s.has(y.key)).map(y => y.key)); return; }
         set([x.key]);
       },
-      keep: (/** @type {MouseEvent | undefined} */ ev) => !!(ev && p.type === "mrm" && (ev.ctrlKey || ev.metaKey || ev.shiftKey)),
+      keep: (/** @type {MouseEvent | undefined} */ ev) => !!(ev && panelTr(p) && (ev.ctrlKey || ev.metaKey || ev.shiftKey)),
     }));
     return out;
   }
 
   /** the panel draws the area under the traces (a tint of the line colour): MRM and SIM overlays, on by default @param {any} p */
-  const area = p => p.type === "mrm" && p.area !== false;
+  const area = p => panelTr(p) && p.area !== false;
 
   /** the help line of the empty Data view of a SIM session (no graph yet): what to do next and a button to the SIM table */
   function help() {
@@ -97,7 +99,7 @@
     const on = allSim() && !E.panels.some((/** @type {any} */ p) => p.el);
     if (!on) { el.hidden = true; return; }
     if (el.dataset.on !== I18N.lang) {
-      el.innerHTML = `${EH(I18N.t("canali.sim.help"))} <button type="button" class="sec sm">${EH(I18N.t("canali.sim.helpbtn"))}</button>`;
+      el.innerHTML = h`${I18N.t("canali.sim.help")} <button type="button" class="sec sm">${I18N.t("canali.sim.helpbtn")}</button>`;
       /** @type {HTMLElement} */ (el.querySelector("button")).onclick = () => {
         const c = document.getElementById("simtab"); if (!c) return;
         const d = c.querySelector("details"); if (d) d.open = true;
@@ -128,9 +130,9 @@
     g.fill(); g.restore();
   }
   /** the saved value of the «Area» toggle of a panel (undefined for the other types) @param {any} p */
-  const areaOf = p => p.type === "mrm" ? p.area !== false : undefined;
+  const areaOf = p => panelTr(p) ? p.area !== false : undefined;
   /** the «Area» button of the toolbar of an MRM / SIM panel @param {string} type */
-  const areaBtn = type => type !== "mrm" ? "" : `<button type="button" class="bt tgl" data-a="area" aria-pressed="true" aria-label="${EH(I18N.t("ctl.area.title"))}" title="${EH(I18N.t("ctl.area.title"))}">${EH(I18N.t("ctl.area"))}</button>`;
+  const areaBtn = type => !ESP.mrm({ type }) ? "" : `<button type="button" class="bt tgl" data-a="area" aria-pressed="true" aria-label="${EH(I18N.t("ctl.area.title"))}" title="${EH(I18N.t("ctl.area.title"))}">${EH(I18N.t("ctl.area"))}</button>`;
   /** @param {any} p */
   function syncArea(p) { const b = p.el && p.el.querySelector('[data-a="area"]'); if (b) { b.classList.toggle("on", p.area !== false); b.setAttribute("aria-pressed", String(p.area !== false)); } }
   /** @param {any} p */
