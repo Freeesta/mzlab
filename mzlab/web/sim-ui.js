@@ -104,6 +104,7 @@
     if (el.dataset.on !== I18N.lang) {
       el.innerHTML = h`${I18N.t("canali.sim.help")} <button type="button" class="sec sm">${I18N.t("canali.sim.helpbtn")}</button>`;
       /** @type {HTMLElement} */ (el.querySelector("button")).onclick = () => {
+        S.table = true; syncWork(true);                                // the work area shows the sample table and the SIM table (area-lavoro.js)
         const c = document.getElementById("simtab"); if (!c) return;
         const d = c.querySelector("details"); if (d) d.open = true;
         c.hidden = false; c.scrollIntoView({ block: "start" }); const r = /** @type {HTMLElement | null} */ (c.querySelector("[role=region]")); if (r) r.focus();

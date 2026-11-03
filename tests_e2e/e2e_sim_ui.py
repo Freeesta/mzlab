@@ -30,7 +30,6 @@ try:
         open_first(pg)
         step("the side list group is «SIM», not «MRM»", lambda: need(pg.evaluate("[...document.querySelectorAll('#flst .fgh')].map(e => e.textContent).join('|')").find("SIM") >= 0 and "MRM" not in pg.evaluate("[...document.querySelectorAll('#flst .fgh')].map(e => e.textContent).join('|')"), "group"))
         step("the toolbar button speaks of SIM ions", lambda: need("SIM" in pg.inner_text("#np-mrm"), pg.inner_text("#np-mrm")))
-        step("the empty Data view has a help line and a button to the SIM table", lambda: need(pg.evaluate("(() => { const h = document.querySelector('#simhelp'); return !!h && !h.hidden && !!h.querySelector('button'); })()"), "simhelp"))
         pg.click("#np-mrm"); attendi(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         step("the panel title says SIM ions", lambda: need(pg.evaluate("E.panels.find(p => p.type === 'mrm').title") == "@sim", pg.evaluate("E.panels.find(p => p.type === 'mrm').title")))
         def colours():
@@ -47,8 +46,8 @@ try:
         step("the Area button turns the fill off and on", toggle)
         def picker():
             pg.click(".can-b, .canb"); pg.wait_for_selector(".can-row", state="visible")
-            rows = pg.evaluate("document.querySelectorAll('.can-pop .can-row').length")
-            need(rows == N, rows)
+            rows = pg.evaluate("[...document.querySelectorAll('.can-pop')].map(e => e.querySelectorAll('.can-row').length)")
+            need(rows and all(r == N for r in rows), rows)
         step("the channel picker lists the SIM ions", picker)
         pg.keyboard.press("Escape")
         def submenu():
@@ -73,6 +72,11 @@ try:
             pg.locator("#ctx .ctxsub [role=menuitemcheckbox]").nth(0).click()
             need(pg.evaluate("E.panels.find(p => p.type === 'mrm').tr") == "", "all")
         step("Ctrl adds an ion, Shift takes a range, All clears the selection", ctrl_shift)
+        def helpline():
+            pg.click("#np-closeall"); attendi(pg, "!E.panels.some(p => p.el)", timeout=20000)
+            attendi(pg, "(() => { const h = document.querySelector('#simhelp'); return !!h && !h.hidden && !!h.querySelector('button'); })()", timeout=20000)
+            pg.click("#simhelp button"); attendi(pg, "(() => { const t = document.querySelector('#simtab'); return t && !t.hidden; })()", timeout=30000)
+        step("with no graph the help line offers the SIM table and the button shows it", helpline)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:
