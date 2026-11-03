@@ -1,4 +1,4 @@
-# Level 3 of the tests (AGENTS.md §3): the whole round, once a day on main (and by hand: Actions > notte > Run workflow).
+# Level 3 of the tests (CLAUDE.md): the whole round, once a day on main (and by hand: Actions > notte > Run workflow).
 # Unit tests on Mac and Windows, the e2e smoke tests on Firefox, WebKit (the engine of Safari, on macOS) and Chromium on Windows,
 # and the complete verification (all the e2e) on Chromium Linux. Red in the morning = a correction job for the Coordinatore.
 name: notte

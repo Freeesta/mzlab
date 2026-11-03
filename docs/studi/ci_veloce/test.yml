@@ -1,4 +1,4 @@
-# Level 2 of the tests (AGENTS.md §3): quick checks on every pull request and on every push to main (goal < 6 min).
+# Level 2 of the tests (CLAUDE.md): quick checks on every pull request and on every push to main (goal < 6 min).
 # Unit tests on Linux with the oldest supported and the newest Python, JavaScript syntax, the e2e smoke tests on Chromium.
 # The rest (Mac, Windows, Firefox, WebKit and all the e2e) runs once a day on main: notte.yml.
 name: test
@@ -72,7 +72,7 @@ jobs:
           key: ${{ steps.rcache.outputs.cache-primary-key }}
 
   # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server.
-  # No Pyodide here: the engine of the site is tried by hand (see AGENTS.md, "Prestazioni e compatibilità").
+  # No Pyodide here: the engine of the site is tried by hand (see docs/agenti/).
   browser:
     name: browser (ubuntu-latest, chromium)
     runs-on: ubuntu-latest

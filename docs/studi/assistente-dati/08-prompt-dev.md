@@ -2,7 +2,7 @@
 
 Stato: A1–A6 in `main`, A7 e A8 da fare (`11-stato.md`). Intestazione comune (vale per ogni prompt).
 
-Sei una chat DEV di mzLab; AGENTS.md è nel contesto; leggi `docs/agenti/llm.md` e i file di questo studio citati nel prompt; ramo `claude/assist-<pr>` da `origin/main`; una PR alla volta; `tools/fondi_main.py` prima, `tools/pre_pr.py` completo prima di aprire; nessun cambio a `Cargo.toml`, workflow, `pages.yml`, CSP, tetti `.wasm` senza via; nessuna chiamata a un fornitore vero, nessuna chiave; codice e commenti in inglese, testi visibili solo in `lang/`; a fine PR un messaggio al Coordinatore (≤ 5 righe). Subagenti Haiku solo per compiti meccanici (`cercatore`, `verificatore`).
+Sei una chat DEV di mzLab; CLAUDE.md è nel contesto; leggi `docs/agenti/llm.md` e i file di questo studio citati nel prompt; ramo `claude/assist-<pr>` da `origin/main`; una PR alla volta; `tools/fondi_main.py` prima, `tools/pre_pr.py` completo prima di aprire; nessun cambio a `Cargo.toml`, workflow, `pages.yml`, CSP, tetti `.wasm` senza via; nessuna chiamata a un fornitore vero, nessuna chiave; codice e commenti in inglese, testi visibili solo in `lang/`; a fine PR un messaggio al Coordinatore (≤ 5 righe). Subagenti Haiku solo per compiti meccanici (`cercatore`, `verificatore`).
 
 ## A1 — Adattatore Anthropic completo, spesa e prezzi verificati
 Leggi: `02-costo.md`, `07-mappa-codice.md` §3. Tocca: `crates/mzlab-llm/src/{provider/anthropic.rs, event.rs, cost.rs, lib.rs}`, nuovo `spend.rs`, `crates/mzlab-llm/data/fornitori-1.json`, `crates/mzlab-tutor/src/quota.rs` (importa da `spend`), test e file attesi in `crates/mzlab-llm/tests/data/`.

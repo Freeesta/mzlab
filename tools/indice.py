@@ -104,7 +104,7 @@ def render() -> str:
     out = ["# Mappa del codice",
            "Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla che sia aggiornata). Una riga per file: "
            "righe, scopo (prima riga di commento o docstring), poi `funzione:riga` per le più grandi. Per orientarsi: `grep -n` sul nome, "
-           "poi lettura a intervalli. Aree e file d'area: AGENTS.md §5.", ""]
+           "poi lettura a intervalli. Aree e file d'area: CLAUDE.md", ""]
     used: set[str] = set()
     for title, prefix, per_file in GROUPS:
         sel = [f for f in files if f.startswith(prefix) and f not in used]

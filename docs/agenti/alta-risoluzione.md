@@ -1,5 +1,5 @@
 # Mondo HR (alta risoluzione) e Banco
-Il nucleo è in AGENTS.md; la vista Dati comune è in `dati.md`.
+Il nucleo è in CLAUDE.md; la vista Dati comune è in `dati.md`.
 
 - **Banco** (`banco.js`, `BANCO`; nel mondo LR `BANCO.on()` è falso e non c'è nulla di questo). Ogni cella ha un **filtro di scansione** (`/api/filters?k=`, chiave `scan_key`, es. «FTMS + ms2 @hcd») che viaggia con ogni richiesta (`filt=`; nelle cache sta nello slot del precursore: `prk` / `prSplit`); `p.filt`/`p.flv` si salvano con la sessione; un filtro MS2/MSn azzera il precursore, uno di un altro esperimento sposta la cella (`p.tab`). **Puntina** `p.pin`.
 - Il pannello spettro ha il pulsante **«+ scansione»** (`scanPicker`/`openScan` in `banco.js`, al posto del menu dei tipi; l'infusione MSn tiene il menu): elenca tutte le scansioni del file in ordine di tempo (`/api/scanlist` per ogni livello, filtro per tipo dentro il riquadro) e apre un TIC con la scansione sotto in cima, in fondo, sopra o sotto il pannello (`e2e_scansione`).

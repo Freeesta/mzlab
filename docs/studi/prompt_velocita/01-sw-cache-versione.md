@@ -1,6 +1,6 @@
 # V01: service worker cache-first by site version
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, then `docs/studi/VELOCITA_RICARICA.md` §2, §4, §6–8. Branch `claude/sw-cache-versione` from `origin/main`.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, then `docs/studi/VELOCITA_RICARICA.md` §2, §4, §6–8. Branch `claude/sw-cache-versione` from `origin/main`.
 
 **Problem.** `mzlab/web/sw.js` is network-first for every app file: `fetch(req, {cache: "no-cache"})`, then `cache.put`. Each of the ~400 files of a load waits in the worker's queue for a revalidation (median 130–190 ms each, even on localhost). Measured: warm reload 0.8–1.2 s with the worker, 0.35–0.5 s without; after a reset 2–9 s.
 

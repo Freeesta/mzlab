@@ -1,5 +1,5 @@
 # Disegno (`draw.js`, Ketcher in `vendor/ketcher`)
-Il nucleo è in AGENTS.md.
+Il nucleo è in CLAUDE.md.
 
 - L'editor occupa tutta la larghezza e l'altezza sotto l'intestazione (`#kframe` senza bordo né margini, `calc(100vh - var(--hh))`); i riquadri stanno a destra o, su schermi stretti, sotto.
 - Ketcher si carica solo aprendo la scheda; OpenChemLib al primo calcolo delle proprietà. Lo `<style>` iniettato da `hideMacro` adatta le barre e nasconde aiuto e informazioni di Ketcher; zoom iniziale 100% (`fitZoom`). Tasto destro: «Copia SMILES», «Centra disegno».

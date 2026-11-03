@@ -1,6 +1,6 @@
 # N02: English flags of `msn-graph`, `msn-lib`, `msn-rules`
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/agenti/msn-grafo.md` §3 and `docs/studi/NOMI_TERMINALE.md` §3–4, §6. Branch `claude/msn-flag-names` from `origin/main`. English only.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/agenti/msn-grafo.md` §3 and `docs/studi/NOMI_TERMINALE.md` §3–4, §6. Branch `claude/msn-flag-names` from `origin/main`. English only.
 
 **Goal.** The MSn commands take English flags; old Italian flags stay as aliases; no output byte changes.
 

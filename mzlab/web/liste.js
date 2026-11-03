@@ -4,7 +4,7 @@
 // Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists).
 // ONE engine for every list of reference: unit resolution (nominal m/z ±0.5 Da, ordered by proximity) and high resolution (ppm tolerance).
 // Pure functions first (also run by node in tests/test_liste.py); page UI (mount, dialogs, IndexedDB storage) below.
-// Principle 1 of AGENTS.md: in low resolution, coincidences are often accidental. The program NEVER shows automatic annotations on LR spectra.
+// Principle 1 of CLAUDE.md: in low resolution, coincidences are often accidental. The program NEVER shows automatic annotations on LR spectra.
 const LISTE = (() => {
   // ---------------------------------------------------------------- pure part
   const PROTON = 1.007276;                      // [M+H]+ / [M-H]- shift, the value of the adduct tables of the page (liste-target-core.js, fair.js)

@@ -1,6 +1,6 @@
 # V05: Ketcher start-up off the click path
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, then `docs/studi/VELOCITA_RICARICA.md` §5. Branch `claude/ketcher-click` from `origin/main`, after landing D3 #2207 / D1b #2211 (they touch `first-paint.js`).
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, then `docs/studi/VELOCITA_RICARICA.md` §5. Branch `claude/ketcher-click` from `origin/main`, after landing D3 #2207 / D1b #2211 (they touch `first-paint.js`).
 
 **Problem.** The «noticeable latency when clicking around» is not in the click handlers (24–96 ms): after opening Disegno there are main-thread long tasks of 2.1–2.5 s at CPU ×4, most likely the Ketcher start-up (`first-paint.js` prefetches Ketcher, 29 MB, 3 s after load; `draw.js` starts it). Opening the first file costs another 0.9–1.4 s of long tasks.
 

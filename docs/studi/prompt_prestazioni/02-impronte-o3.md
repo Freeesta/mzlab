@@ -1,6 +1,6 @@
 # PERF-02: the hash crates at opt-level 3 in the .wasm builds
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2 and §7, `docs/agenti/wasm-potenziale.md` (profiles, `tools/banco_wasm.py`), `docs/agenti/wasm-tetti.md` (caps). Branch `claude/perf-impronte-o3` from `origin/main`. English for code, commits and PR.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2 and §7, `docs/agenti/wasm-potenziale.md` (profiles, `tools/banco_wasm.py`), `docs/agenti/wasm-tetti.md` (caps). Branch `claude/perf-impronte-o3` from `origin/main`. English for code, commits and PR.
 
 **Problem (measured).** The fingerprints of a file (`Passata`, `crates/mzlab-wasm/src/nativi.rs`; `mzlab/web/impronta.js`, `impronta-worker.js`) are computed in wasm while the file is copied to OPFS. For a `.raw`/`.wiff` both SHA-256 and SHA-1 are computed (`rust-nativo.js:122`); for an mzML only SHA-256 (`rust-carica.js:9`). The workspace builds `sha1` and `sha2` at the default `opt-level = "z"`. A scratch crate with the site's flags (`+simd128`, LTO, `codegen-units = 1`, `panic = "abort"`, no wasm-opt; Node 22; 256 MB, best of 5) measured:
 

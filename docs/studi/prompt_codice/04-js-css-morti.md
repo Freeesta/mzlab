@@ -4,7 +4,7 @@ Prompt ready for a DEV chat: copy everything after the «---» line. Wave 2 (wit
 
 ---
 
-**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read AGENTS.md (in context) and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §1.3. Branch `claude/js-css-dead` from `origin/main`.
+**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read CLAUDE.md (in context) and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §1.3. Branch `claude/js-css-dead` from `origin/main`.
 
 **Goal.** Delete JS functions and CSS rules nothing reaches, with no visible change.
 

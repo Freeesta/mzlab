@@ -1,6 +1,6 @@
 # Piano DEV per l'assistente pubblico
 
-Ordine delle PR ancora necessarie, partendo dallo stato di `11-stato.md`. Ogni PR ha un prompt autosufficiente in inglese in `prompt/dev-P*.md` che il COO lancia così com'è. Regole comuni: una PR alla volta per zona, `tools/pre_pr.py` prima di spingere, nessuna chiamata a un fornitore vero, nessuna chiave, nessun deploy; parità sito/app (AGENTS.md §1).
+Ordine delle PR ancora necessarie, partendo dallo stato di `11-stato.md`. Ogni PR ha un prompt autosufficiente in inglese in `prompt/dev-P*.md` che il COO lancia così com'è. Regole comuni: una PR alla volta per zona, `tools/pre_pr.py` prima di spingere, nessuna chiamata a un fornitore vero, nessuna chiave, nessun deploy; parità sito/app (CLAUDE.md).
 
 | PR | Titolo | Prerequisiti | Zona | Modello | `.wasm` |
 |---|---|---|---|---|---|

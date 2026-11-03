@@ -4,7 +4,7 @@ Prompt ready for a DEV chat: copy everything after the «---» line. Wave 1 (wit
 
 ---
 
-**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read AGENTS.md (in context), `docs/agenti/dati.md` (start-up list `L`, `carica()`, globals) and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §3. Branch `claude/lazy-ref-lib` from `origin/main`.
+**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read CLAUDE.md (in context), `docs/agenti/dati.md` (start-up list `L`, `carica()`, globals) and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §3. Branch `claude/lazy-ref-lib` from `origin/main`.
 
 **Goal.** The start-up list `L` of `mzlab/web/carica.js:6` weighs 1 871 402 B of `MAX_TOTAL` 1 900 000 (`tests/test_peso_avvio.py:8`): 28 KB of headroom. Two scripts are only needed after a click; move their bodies behind the existing lazy loader `carica(name)` and keep a small stub at start-up. Expected: −62…64 KB of start-up, no visible change, `MAX_TOTAL` untouched (never raise it; you may propose a lower cap in the PR text).
 
@@ -19,7 +19,7 @@ Prompt ready for a DEV chat: copy everything after the «---» line. Wave 1 (wit
    - the synchronous helpers those need (`isHr` `:382` and what it calls: `queryOf`, `profOf`), moved, not copied: the body imports them from the stub (one copy only);
    - `window.LIB` with the SAME member names as `:431` (`open, addFiles, queryOf, profOf, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine, ensureCss`). Members that need the body are async forwarders: `async (...a) => (await body()).open(...a)` with `body = () => carica("libreria-corpo.js").then(() => window.LIBCORE)`. Check each caller for a member used synchronously (e.g. `settings.js:206` `if (window.LIB) LIB.open()`, `ident-pannello.js:42-43`, `libreria-finestra.js:10`, `e2e_libreria*.py` `LIB.engine`, `LIB.call`): a sync member stays sync (stub or a getter that loads first and is awaited by its caller). Whatever you choose, no test is changed to wait less or check less.
    - The worker supervisor and the dialog code go to the body; the worker is still created on first use, never at start-up.
-3. Remove both bodies from `L`, keep both stubs in `L` in the same position (order of classic scripts matters: AGENTS §4). A body loaded by `carica()` must not redeclare a global of another script.
+3. Remove both bodies from `L`, keep both stubs in `L` in the same position (order of classic scripts matters: CLAUDE.md). A body loaded by `carica()` must not redeclare a global of another script.
 4. Measure with `python3 -c "import sys; sys.path.insert(0,'tests'); from test_peso_avvio import *; print(sum((WEB/n).stat().st_size for n in startup_files()))"` before/after; put both numbers in the PR. Also the first-paint e2e (`e2e_primo_disegno.py`) and the `?perf` start-up numbers if available.
 5. Parity site/app: the desktop app loads the same page, so it gets the same change; run the desktop smoke e2e that CI runs if it touches the library window.
 

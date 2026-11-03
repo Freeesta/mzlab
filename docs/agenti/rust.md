@@ -5,7 +5,7 @@ Keep it in English and under 16 000 bytes: a new module gets its detail in its o
 Module-level detail lives in the code (module headers) and in the area files listed at the end; to find a module: `python3 tools/indice.py` then `grep -n '<name>' docs/agenti/mappa.md`.
 
 ## What runs where
-- One engine, two targets: the site runs the crates as `.wasm` inside Web Workers (`static/wasm*/`); the desktop app and `mzlab-cli` run the same crates natively (mmap, threads, no wasm caps). Every function exists in both, with a byte-for-byte parity test (AGENTS.md §1).
+- One engine, two targets: the site runs the crates as `.wasm` inside Web Workers (`static/wasm*/`); the desktop app and `mzlab-cli` run the same crates natively (mmap, threads, no wasm caps). Every function exists in both, with a byte-for-byte parity test (CLAUDE.md).
 - Python (`mzlab/`, `tools/*_riferimento.py`, `tools/golden.py`) is only the reference of the parity tests: a new computation is born in Rust; Python changes only to fix a bug the parity found.
 - Rust returns i18n keys and parameters (`error.rs`, JSON `{error, error_key, params}` at the bridge), never user text.
 

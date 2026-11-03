@@ -83,7 +83,7 @@ Le regole `Read(...)` valgono anche per `ls`, `cat`, `du`, `stat` in shell, anch
 | `site/**` | evita le copie di `vendor/`, `elements.js`, esempi, Pyodide, librerie | blocca `ls -l site/static/wasm/*.wasm` (misura dei tetti dei .wasm), `site/index.html`, `sw.js`, `version.js`, `manifest.json` (debug degli e2e che costruiscono il sito) | sostituirla con le sole copie dei file già negati in `mzlab/web/` più `site/static/mzfinder/**` (Pyodide e sospetti) e `site/static/librerie/**` |
 | `.git/**` | evita oggetti e pack | nessuno: `git` funziona | tenere |
 | `.verifica/cache_massbank/**` | 240 MB di zip | nessuno: i log in `.verifica/log/` restano leggibili | tenere |
-| `tests_e2e/shots/**` | le immagini costano token | blocca anche il giudizio visivo che AGENTS.md ammette | tenere: è raro, e il permesso per una sola immagine si concede a mano |
+| `tests_e2e/shots/**` | le immagini costano token | blocca anche il giudizio visivo che CLAUDE.md ammette | tenere: è raro, e il permesso per una sola immagine si concede a mano |
 | `__pycache__`, `.pytest_cache`, `*.egg-info`, `misure-diario.md`, file di `mzlab/web/` | file generati o enormi | nessuno | tenere |
 
 File proposto, da incollare al posto di `.claude/settings.json` (lo applica Federico): `docs/studi/ci_veloce/claude-settings.json`. Unica differenza: `Read(./site/**)` diventa le otto regole sotto `site/static/`; `site/static/wasm/`, `site/index.html` e i file piccoli generati diventano leggibili.

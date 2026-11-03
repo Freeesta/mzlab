@@ -1,6 +1,6 @@
 # V03: Tabui loads after the page is usable
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, then `docs/studi/VELOCITA_RICARICA.md` §4 and §6. Branch `claude/tabui-dopo` from `origin/main`. Coordinate with LAZY-WIFF (session `session_01Ly8ApmF7tTC43eWmFeBeCs`: slim engine, lazy readers, idle prefetch in `shell.js` / `carica.js`): start after it is merged, or ask the Coordinator.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, then `docs/studi/VELOCITA_RICARICA.md` §4 and §6. Branch `claude/tabui-dopo` from `origin/main`. Coordinate with LAZY-WIFF (session `session_01Ly8ApmF7tTC43eWmFeBeCs`: slim engine, lazy readers, idle prefetch in `shell.js` / `carica.js`): start after it is merged, or ask the Coordinator.
 
 **Problem.** `mzlab/web/tpmine-loader.js` loads `static/mzfinder/` (125–164 files) and `contaminanti.json` (457 KB) at page start: 2.2–2.8 MB and 125–164 requests before the Dati page is usable, all through the service worker queue.
 

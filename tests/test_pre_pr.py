@@ -23,7 +23,7 @@ def test_cloud_da_variabile(monkeypatch):
 
 def test_solo_doc_usa_la_lista_di_ci_solo_doc():
     m = carica()
-    assert m.ci_solo_doc.solo(["docs/agenti/test.md", "AGENTS.md"])
+    assert m.ci_solo_doc.solo(["docs/agenti/test.md", "CLAUDE.md"])
     assert not m.ci_solo_doc.solo(["docs/agenti/test.md", "tools/pre_pr.py"])
     assert not m.ci_solo_doc.solo([])
 

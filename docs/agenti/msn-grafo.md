@@ -71,7 +71,7 @@ Formato `msnlib/1`, ricerca, protocollo di acquisizione, gestione dei dati e con
 ## 9. Piano delle PR (una alla volta, il Coordinatore unisce)
 | PR | Tocca | Accettazione |
 |---|---|---|
-| 0 · studio | questo file, riga in AGENTS.md §5 | revisione |
+| 0 · studio | questo file, riga in CLAUDE.md | revisione |
 | 1 · grafo per masse | `crates/mzlab-core/src/msngrafo/` (`mod.rs` tipi e opzioni, `unisci.rs` §4, `posa.rs` coordinate, `json.rs`), `docs/schemi/msngrafo-1.json`, riga in `rust.md` | test di unità su consensi costruiti in memoria (il sintetico di `msn_synth`): nodi e archi attesi, DAG, catena spezzata, isotopi, pesanti |
 | 2 · formule (tappa A) | `msngrafo/formule.rs`, `candidati.rs`, `annota.rs`, `leggi.rs` (§3), `m1` in `unisci.rs`, schema, `mzlab-cli msn-graph` | sintetico: ogni frammento con la sua sottoformula, modi di scrivere lo ione, polarità e formula sbagliate |
 | 3 · modulo (A2) | `msngrafo/rotta.rs` (`da_richiesta`, `grafo_json`: stessa funzione di CLI e `.wasm`), crate `mzlab-msngrafo-wasm`, `build_feat_wasm.sh`, manifest, rotta `/api/msn_grafo` (pagina → worker → `rust-msngrafo.js`: il modulo apre il `.mzidx` in OPFS e legge l'mzML); `/api/msn_grafo/export` (`esporta.rs`, `--export` della CLI); POST `/api/msnlib/aggiungi` (`libreria.rs`, vedi `rust-rotte.md`) | `.wasm` ≤ 512 000, motore invariato; stesso JSON di CLI e `.wasm` su `msntree_rotta/msn.mzML` (`test_msngrafo_wasm.py` |

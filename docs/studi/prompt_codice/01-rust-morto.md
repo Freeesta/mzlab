@@ -4,7 +4,7 @@ Prompt ready for a DEV chat: copy everything after the «---» line. Wave 1 (wit
 
 ---
 
-**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read AGENTS.md (already in context) and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §1.1 and §1.2 only. Branch `claude/rust-dead-code` from `origin/main`.
+**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read CLAUDE.md (already in context) and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §1.1 and §1.2 only. Branch `claude/rust-dead-code` from `origin/main`.
 
 **Goal.** Delete Rust code that nothing reaches and make every site wasm build warning-free, with no output byte changed. Unused `pub fn` cost 0 wasm bytes (LTO drops them): the gain is lines and clarity, so do not touch anything that is reached, even only by a test.
 

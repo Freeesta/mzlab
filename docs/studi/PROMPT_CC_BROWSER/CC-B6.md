@@ -20,4 +20,4 @@ Prompt per una chat DEV, da copiare dopo la riga «---». Parte solo con il sì 
 `crates/mzlab-chem/tests/indici.rs` (formule a mano, ordine delle acrilammidi, IP); e2e `e2e_reattivita.py` esteso con le righe di «Info».
 
 ## Regole
-Valgono AGENTS.md e i vincoli della famiglia CC: solo in modalità amministratore (`uipAdminOn()`), valori «Prev.» senza livello di Schymanski, niente Teoria né motore, `.wasm` `chem` sotto il suo tetto in `tools/build_feat_wasm.sh`, strutture di prova pubbliche, funzioni ≤ 80 righe, `cargo test --release -p mzlab-chem`, `python3 tools/verifica.py --cambiati`.
+Valgono CLAUDE.md e i vincoli della famiglia CC: solo in modalità amministratore (`uipAdminOn()`), valori «Prev.» senza livello di Schymanski, niente Teoria né motore, `.wasm` `chem` sotto il suo tetto in `tools/build_feat_wasm.sh`, strutture di prova pubbliche, funzioni ≤ 80 righe, `cargo test --release -p mzlab-chem`, `python3 tools/verifica.py --cambiati`.

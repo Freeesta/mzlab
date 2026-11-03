@@ -14,7 +14,7 @@ Waves: **1** = N01 + N02 + N03 in parallel (disjoint files; `cli.md` only on the
 No wave-1 package touches `docs/schemi/steps-*.json`, `F.liveJobs` or the build scripts; N04 is the only owner of `steps-cli-1.json`.
 
 Rules for all:
-- AGENTS.md applies (branch `claude/<topic>` from `origin/main`, PR ready for review, never merged from the chat, `python3 tools/pre_pr.py` before pushing, one message ≤ 5 lines to the COO with the 40-char SHA at green CI).
+- CLAUDE.md applies (branch `claude/<topic>` from `origin/main`, PR ready for review, never merged from the chat, `python3 tools/pre_pr.py` before pushing, one message ≤ 5 lines to the COO with the 40-char SHA at green CI).
 - Every old name stays accepted on input, is never printed except one line `old names still accepted: …` at the end of the command's `--help`, and the alias table sits next to the parser (one `const` slice of `(old, new)` pairs per file).
 - No output byte changes for the same input: an alias test per renamed name runs old and new spelling and asserts identical stdout and exit code; `git diff --stat origin/main -- tests/golden docs/schemi` is empty (N04 excepted, by design).
 - Parity: the CLI is native only; anything the site and the app share (`mzlab_core::flow::line`) changes in Rust once, so both see the same names.

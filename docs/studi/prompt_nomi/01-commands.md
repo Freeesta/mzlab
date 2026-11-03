@@ -1,6 +1,6 @@
 # N01: short English command names (`channels`, `samples`, `peak-edges`, `flow run --events`)
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/agenti/cli.md` and `docs/studi/NOMI_TERMINALE.md` §3–4. Branch `claude/cli-short-names` from `origin/main`. English only in code, tests, commit and PR.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/agenti/cli.md` and `docs/studi/NOMI_TERMINALE.md` §3–4. Branch `claude/cli-short-names` from `origin/main`. English only in code, tests, commit and PR.
 
 **Goal.** The commands typed most often use short English names; every old name keeps working.
 

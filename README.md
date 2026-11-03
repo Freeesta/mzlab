@@ -24,7 +24,7 @@ Con risoluzione unitaria **un m/z è un candidato, non un'identificazione**.
 
 ## Sviluppo
 
-Tutto ciò che serve a chi modifica il programma (regole, architettura, test, decisioni prese) è in [`AGENTS.md`](AGENTS.md) (nucleo) e in [`docs/agenti/`](docs/agenti/) (un file per area). In breve: per l'uso ordinario del sito statico o dei test non serve compilazione (JavaScript classico e moduli ES, Python per la suite di test); per lo sviluppo del motore Rust (`crates/`) si compila in WebAssembly per il web o in binario nativo per la versione desktop e i test di parità. `python3 tools/verifica.py` esegue tutti i controlli (sintassi JS, pytest, prove nel browser con Playwright); il sito si costruisce con `python3 tools/build_site.py` e si pubblica da solo a ogni push su `main`.
+Tutto ciò che serve a chi modifica il programma (regole, architettura, test, decisioni prese) è in [`CLAUDE.md`](CLAUDE.md) (nucleo) e in [`docs/agenti/`](docs/agenti/) (un file per area). In breve: per l'uso ordinario del sito statico o dei test non serve compilazione (JavaScript classico e moduli ES, Python per la suite di test); per lo sviluppo del motore Rust (`crates/`) si compila in WebAssembly per il web o in binario nativo per la versione desktop e i test di parità. `python3 tools/verifica.py` esegue tutti i controlli (sintassi JS, pytest, prove nel browser con Playwright); il sito si costruisce con `python3 tools/build_site.py` e si pubblica da solo a ogni push su `main`.
 
 ## Uso dell'intelligenza artificiale
 

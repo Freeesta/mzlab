@@ -7,7 +7,7 @@ import re
 import subprocess
 import sys
 
-# markdown at the root (AGENTS.md, CHANGELOG.md, ...), markdown under docs/, anything under .claude/; a .md elsewhere may be a test input (fixtures, crate READMEs)
+# markdown at the root (CLAUDE.md, CHANGELOG.md, ...), markdown under docs/, anything under .claude/; a .md elsewhere may be a test input (fixtures, crate READMEs)
 ALLOWED = [re.compile(p) for p in (
     r"[^/]+\.md",
     r"docs/.+\.md",

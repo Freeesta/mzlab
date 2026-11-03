@@ -1,6 +1,6 @@
 # PERF-05: SHA-256 and SHA-1 of a vendor file in two workers (only if PERF-02 says the hash is on the critical path)
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2, the PR of PERF-02 (its critical-path answer and its MB/s table), `docs/agenti/wasm-potenziale.md`. Branch `claude/perf-impronte-due` from `origin/main`, after PERF-02 is in `main`. English for code, commits and PR.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2, the PR of PERF-02 (its critical-path answer and its MB/s table), `docs/agenti/wasm-potenziale.md`. Branch `claude/perf-impronte-due` from `origin/main`, after PERF-02 is in `main`. English for code, commits and PR.
 
 **Gate.** Read the PR of PERF-02. If it measured that the OPFS copy is slower than the hash (the hash waits for the copy), stop the code part. Do only step 4 (the rows), and add one row «scartata» to `ottimizzazioni-tentate.md` with the two numbers and «riprovare solo se» (for example: a faster OPFS, or a file source that is not copied).
 

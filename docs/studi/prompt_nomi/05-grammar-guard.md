@@ -1,6 +1,6 @@
 # N05: naming grammar in `cli.md` and a guard test
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/agenti/cli.md` and `docs/studi/NOMI_TERMINALE.md` §3. Branch `claude/name-grammar` from `origin/main` after N01, N02, N03 (and N04 if it ran) are merged.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/agenti/cli.md` and `docs/studi/NOMI_TERMINALE.md` §3. Branch `claude/name-grammar` from `origin/main` after N01, N02, N03 (and N04 if it ran) are merged.
 
 **Do.**
 1. `docs/agenti/cli.md`: a section «Names» with the 7 rules of study §3 (one line each, ≤ 600 chars) and the shared abbreviation list.

@@ -1,7 +1,7 @@
 # Vista Dati, bassa risoluzione (`explore.js` e compagni)
 Mappa dei file (script classici in `index.html`, in quest'ordine, campo globale condiviso; ogni funzione sta in un solo file): `explore.js` = colori, velo di avvio (`#loading`) e `#busybar`, taccuino, dati con cache e caricamento/lista file, barra file, finestre e menu; `pannelli.js` = pannelli mobili (posto, trascinamento, schede, nomi e metadati delle immagini/Excel, `XIC_BELOW`); `grafici.js` = disegno dei grafici (cromatogrammi, correzioni, zoom, `drawMap`); `picchi.js` = integrazione dei picchi, spettri, `contMarks`;
 `eventi.js` = mouse e tastiera sui grafici, metodo di acquisizione, barra strumenti, calcolatrice formula → m/z, suggerimenti (tooltip).
-Il nucleo è in AGENTS.md.
+Il nucleo è in CLAUDE.md.
 
 ## Caricamento
 - Riquadro 1 = file dei dati (dal CONTENUTO; il nome dà solo tipo/tempo/concentrazione, in giallo se indovinati; formati scritti una volta in piccolo, `.fmts`; accanto al titolo non c'è alcun «?»: l'avviso su `.wiff.scan` e cartelle `.D` compare solo dopo il rilascio se manca il `.wiff.scan`), riquadro 2 = «Trascina qui il file del metodo» in una riga compatta (`#dropdam`, più file, Invio/Spazio; formati letti in `METHOD_FORMATS` di `shell.js`, una riga per formato, da cui testo e filtro); ogni metodo è un chip «Metodo: nome» con × (`renderMethods`);

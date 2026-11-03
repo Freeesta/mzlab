@@ -58,12 +58,12 @@ Rule (Federico, 29/10, REGOLE.md): what is typed or read in the terminal uses sh
 | `MZLAB_WRITE_GOLDEN` (`mzlab-feat/tests/network_golden.rs`), `MZLAB_GOLDEN_WRITE` (`famalign.rs`), `MZLAB_REGEN_GOLDEN` (`tests_e2e/golden_ref.py`, `tests/test_golden_sintetici.py`), `MZLAB_WRITE_FIXTURE` (`rete.rs`), `MZLAB_GUARDIE_CREA` (`tests/test_guardie_memoria.py`) | inconsistent | five spellings of «rewrite the expected file» |
 | `MZLAB_UPDATE_FIGURA` (`msn_figura_tests.rs`) | inconsistent | Italian noun in an English family |
 | `MZLAB_DATA` (`mzlab-desktop/examples/serve.rs`) | unclear | one letter from `MZLAB_DATI` (the private data repo) and a different meaning (the app folder) |
-| `MZLAB_DATI` | fine | in AGENTS.md and 120 files; the private repo folder is `dati/` |
+| `MZLAB_DATI` | fine | in CLAUDE.md and 120 files; the private repo folder is `dati/` |
 | `MZLAB_COMMIT`, `MZLAB_RUSTC`, `MZLAB_TARGET`, `MZLAB_CARGO_LOCK_SHA256` (build), `MZLAB_PHASES`, `MZLAB_CACHE`, `MZLAB_GOLDEN_STRICT`, `MZLAB_CHROMIUM`, `MZLAB_IN` («Run on CLI» shell variable) | fine | |
 | about 60 other test-only variables (`MZLAB_PIPE_SITE`, `MZLAB_ORO_LIVELLI`, `MZLAB_ENORMI_GB`, …) | not scored | each is set by one test or tool; not typed by hand in normal work |
 
 ### 2.6 `tools/` options
-Italian and documented in AGENTS.md (`pre_pr.py --veloce --completo --senza-e2e`, `verifica.py --cambiati --solo --rapida --fumo --parte --paralleli --ultimi-falliti --setup --browser`, `golden.py --crea --controlla`, `controlla.py --aggiorna`, `ci_metrics.py --da --giorni …`, `fondi_main.py --veloce --senza-controlli`, `converti.py --uscita --prova`). Short and clear for the team. One unclear: `verifica.py --tutto` means «also print the OK lines» (`verifica.py:427`), while `pre_pr.py --completo` means «run everything»: a reader takes `--tutto` for the second.
+Italian and documented in CLAUDE.md (`pre_pr.py --veloce --completo --senza-e2e`, `verifica.py --cambiati --solo --rapida --fumo --parte --paralleli --ultimi-falliti --setup --browser`, `golden.py --crea --controlla`, `controlla.py --aggiorna`, `ci_metrics.py --da --giorni …`, `fondi_main.py --veloce --senza-controlli`, `converti.py --uscita --prova`). Short and clear for the team. One unclear: `verifica.py --tutto` means «also print the OK lines» (`verifica.py:427`), while `pre_pr.py --completo` means «run everything»: a reader takes `--tutto` for the second.
 
 ## 3. Grammar
 1. **Language**: English for every name the engine and the CLI read or print; `tools/` options stay Italian (team tools, §5 D4).
@@ -117,7 +117,7 @@ Kept on purpose: `explain-missing`, `normative`, `--budget-mb`, `--dry-run`, `--
 - **D1** Rename persisted step parameters (`spectra.msn_graph` Italian params, `meta.compare` tolerances, the ppm/Da/RT spellings)? Needs a new mechanism: step `@2` with a Rust migration `@1 → @2` that `flow::check`, `mzrun` presets (`preset.param.migrated`) and saved plans go through, plus `msngrafo/2` for the `opzioni` keys. **Recommend: yes for `spectra.msn_graph` only** (14 Italian names in one step, prompt N04, gated); no for the rest now, grammar applies to new parameters.
 - **D2** Rename user-facing step ids (`tp.dig_lr`, the 17–20-char ids)? They are in templates, saved plans, `mzrun/1`, cache keys and the page. **Recommend: no.**
 - **D3** Rename Italian schema ids and output files (`corsa.json`/`corsa/1`, `canali/1`, `campioni/1`, `errore/1`, `strumenti/1`, `contesto/1`, `mzrun/1` `tipo_bianco`)? Each needs a format version and readers of both. **Recommend: no**, only when a format changes for another reason.
-- **D4** Move `tools/` options to English? **Recommend: no** (Italian team tools, documented in AGENTS.md; only `--tutto` changes).
+- **D4** Move `tools/` options to English? **Recommend: no** (Italian team tools, documented in CLAUDE.md; only `--tutto` changes).
 - **D5** `canali` → `channels` is two letters longer: accept consistency over length? **Recommend: yes.**
 
 ## 6. Risks

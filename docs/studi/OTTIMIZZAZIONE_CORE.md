@@ -89,7 +89,7 @@ Cose valutate e scartate (misurate): `opt-level="s"` (+310 KB); `--converge` con
 - `json.rs` (lettore e scrittore), `jsonb.rs` (rapporti) e `methodjson.rs` hanno compiti distinti: nessuna fusione utile.
 
 ## 5. Prompt per le chat DEV
-Regole comuni: leggi `AGENTS.md` (già nel contesto) e `docs/agenti/rust.md`; ramo `claude/<argomento>` da `origin/main`; una PR, unione con merge commit dopo la CI verde; commit in italiano senza nomi di modelli; non toccare `.github/workflows/`, i tetti di dimensione, `mzlab/web/teoria/`; documenti = solo stato attuale (riscrivi la riga di `docs/agenti/rust.md` che descrive ciò che cambi). Misura del `.wasm` del motore: comandi di §1 di `docs/studi/OTTIMIZZAZIONE_CORE.md`. A fine lavoro un messaggio di max 5 righe al Coordinatore (PR, CI, pages, byte prima/dopo, cosa resta).
+Regole comuni: leggi `CLAUDE.md` (già nel contesto) e `docs/agenti/rust.md`; ramo `claude/<argomento>` da `origin/main`; una PR, unione con merge commit dopo la CI verde; commit in italiano senza nomi di modelli; non toccare `.github/workflows/`, i tetti di dimensione, `mzlab/web/teoria/`; documenti = solo stato attuale (riscrivi la riga di `docs/agenti/rust.md` che descrive ciò che cambi). Misura del `.wasm` del motore: comandi di §1 di `docs/studi/OTTIMIZZAZIONE_CORE.md`. A fine lavoro un messaggio di max 5 righe al Coordinatore (PR, CI, pages, byte prima/dopo, cosa resta).
 
 ### DEV-P1 — Ordinamenti compatti nel motore
 ```

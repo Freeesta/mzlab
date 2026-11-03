@@ -1,6 +1,6 @@
 # V02: lean «Full reset» and isolation after the reset
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, then `docs/studi/VELOCITA_RICARICA.md` §3, §6–8. Branch `claude/reset-snello` from `origin/main`, after V01 is merged.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, then `docs/studi/VELOCITA_RICARICA.md` §3, §6–8. Branch `claude/reset-snello` from `origin/main`, after V01 is merged.
 
 **Decision for Federico first** (ask the Coordinator if the prompt you got does not record it): may «Full reset» keep the program's own files (`mzlab-app-*`, `mzlab-big-*` caches and the service worker registration)? They hold no user data. Today `tests_e2e/e2e_reset.py` requires caches and workers to go. If the answer is no, do only points 2 and 3.
 

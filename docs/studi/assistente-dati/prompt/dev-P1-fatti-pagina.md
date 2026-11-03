@@ -1,6 +1,6 @@
 # DEV P1 — Model-free facts in the page (inspection, parameter proposals, reader and chart sources)
 
-You are a DEV chat of mzLab (repository Freeesta/mzlab). AGENTS.md is in your context. Read `docs/agenti/llm.md`, `docs/agenti/llm-subagenti.md`, `docs/agenti/llm-lettori.md`, `docs/agenti/wasm-tetti.md` and `docs/studi/assistente-dati/{11-stato.md, 03-parametri.md, 12-demo.md}`. Branch `claude/assist-p1` from `origin/main`. No real provider call, no key, no `Cargo.toml`/workflow/CSP change.
+You are a DEV chat of mzLab (repository Freeesta/mzlab). CLAUDE.md is in your context. Read `docs/agenti/llm.md`, `docs/agenti/llm-subagenti.md`, `docs/agenti/llm-lettori.md`, `docs/agenti/wasm-tetti.md` and `docs/studi/assistente-dati/{11-stato.md, 03-parametri.md, 12-demo.md}`. Branch `claude/assist-p1` from `origin/main`. No real provider call, no key, no `Cargo.toml`/workflow/CSP change.
 
 ## Why
 Rust already builds `ispezione/1` (`mzlab_llm::inspect::build`) and `proposta-param/1` (`mzlab_llm::params_rules::propose`), but the `.wasm` `llm` does not export them, `flow/lazy/flow-llm.js` gives no `readerInput` (every reader is `skipped` in the real panel) and `F.chartSources` is undefined (charts say "no data"). The public demo and the "Assistant not available" fallback both need these facts in the page without any model.

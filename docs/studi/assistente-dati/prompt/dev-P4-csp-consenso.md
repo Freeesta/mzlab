@@ -1,6 +1,6 @@
 # DEV P4 — Transport CSP, per-visit consent, owner passphrase, "Assistant not available"
 
-You are a DEV chat of mzLab (repository Freeesta/mzlab). AGENTS.md is in your context. Read `docs/agenti/llm.md` (§Profilo, impostazioni, consenso; §Trasporto nel sito), `docs/agenti/lingue.md`, `docs/agenti/accessibilita.md`, `docs/studi/assistente-dati/{09-worker.md §3 §7 §10, 14-decision-card.md D4}`. Branch `claude/assist-p4` from `origin/main`. Prerequisites: P3 merged; the proxy host given by Federico through the Coordinator (never invent one). The CSP change needs the Coordinator's explicit go-ahead in your launch message.
+You are a DEV chat of mzLab (repository Freeesta/mzlab). CLAUDE.md is in your context. Read `docs/agenti/llm.md` (§Profilo, impostazioni, consenso; §Trasporto nel sito), `docs/agenti/lingue.md`, `docs/agenti/accessibilita.md`, `docs/studi/assistente-dati/{09-worker.md §3 §7 §10, 14-decision-card.md D4}`. Branch `claude/assist-p4` from `origin/main`. Prerequisites: P3 merged; the proxy host given by Federico through the Coordinator (never invent one). The CSP change needs the Coordinator's explicit go-ahead in your launch message.
 
 ## Do
 1. `mzlab/web/llm/trasporto.html`: `connect-src 'self' http://localhost:* http://127.0.0.1:* https://<proxy host>`; nothing else (no `api.anthropic.com`: no personal keys in the site). `tests/test_llm_csp.py` lists the new allowed source.
