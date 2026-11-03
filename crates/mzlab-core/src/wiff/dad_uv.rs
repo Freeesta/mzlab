@@ -142,6 +142,26 @@ mod tests {
         assert!(dad_spectrum_json(&d, f64::NAN, 0.0).is_none());
     }
 
+    /// A double click at time t on the PDA trace asks rt0 == rt1 == t: the row nearest in time, also before the first and after the last row.
+    #[test]
+    fn a_click_takes_the_nearest_row() {
+        let d = dad(5, 1);
+        let row = |t: f64| {
+            let j = dad_spectrum_json(&d, t, t).unwrap_or_default();
+            assert!(j.contains("\"n\":1"), "{j}");
+            j.split("\"rt0\":")
+                .nth(1)
+                .and_then(|r| r.split(',').next())
+                .and_then(|r| r.parse::<f64>().ok())
+                .unwrap_or(f64::NAN)
+        };
+        assert_eq!(row(-1.0), 0.0);
+        assert_eq!(row(0.0149), 0.01);
+        assert_eq!(row(0.0151), 0.02);
+        assert_eq!(row(0.03), 0.03);
+        assert_eq!(row(9.0), 0.04);
+    }
+
     #[test]
     fn wavelength_trace_is_the_mean_of_the_channels_in_range() {
         let d = dad(3, 3);

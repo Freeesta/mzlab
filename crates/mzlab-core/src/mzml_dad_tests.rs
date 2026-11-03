@@ -269,32 +269,61 @@ impl crate::idxread::ReadAt for Counted {
     }
 }
 
-/// The optical routes answer from the matrix alone: the chromatogram list the page-side wrapper used to read first (to throw it away) costs
-/// a full read of the tail of the file, and the answers do not change without it.
+/// The optical routes answer from the matrix alone (the chromatogram list changes nothing), and the matrix is read once per file: once it is held,
+/// a round of the three routes reads only the fingerprints (3 samples of `PROBE` bytes each), not the file again.
 #[test]
-fn optical_routes_do_not_need_the_chromatogram_list() {
-    let bytes = with_array(true);
+fn optical_routes_read_the_matrix_once() {
+    let pad = format!("<!-- {} -->", "x".repeat(1 << 20));
+    let bytes = String::from_utf8(spectra())
+        .unwrap()
+        .replacen("</spectrumList>", &format!("{pad}</spectrumList>"), 1)
+        .into_bytes();
     let size = bytes.len() as u64;
     let run = |with_list: bool| {
         let seen = std::rc::Rc::new(std::cell::Cell::new(0));
         let mut m = Mzml::new(Counted(bytes.clone(), seen.clone()), size);
         if with_list {
-            assert_eq!(m.chromatograms(0).unwrap().len(), 1);
+            m.chromatograms(0).unwrap();
+            seen.set(0);
         }
         let answers = (
             pda_map(&mut m).unwrap(),
             pda_spectrum(&mut m, 0.0, 0.01).unwrap(),
+            pda_spectrum(&mut m, 0.02, 0.02).unwrap(),
             pda_wavelength(&mut m, 200.0, 201.0).unwrap(),
         );
         (answers, seen.get())
     };
-    let ((with_a, with_bytes), (without_a, without_bytes)) = (run(true), run(false));
-    assert_eq!(with_a, without_a);
-    assert_eq!(
-        with_bytes - without_bytes,
-        size,
-        "the list read the whole tail once more"
+    let ((first, _), (again, bytes_again)) = (run(true), run(false));
+    assert_eq!(first, again);
+    assert!(
+        bytes_again <= 4 * 3 * PROBE && bytes_again < size,
+        "{bytes_again} bytes of {size} read again"
     );
+    assert_eq!(
+        first.1,
+        pda_spectrum(&mut mz(spectra()), 0.0, 0.01).unwrap(),
+        "the padding changes nothing"
+    );
+}
+
+/// Another file of the same size (one value changed in the middle) is not answered from the matrix of the first.
+#[test]
+fn memo_tells_files_apart() {
+    let a = spectra();
+    let i = String::from_utf8(a.clone())
+        .unwrap()
+        .rfind("<binary>")
+        .unwrap()
+        + 8
+        + 9; // the exponent of the first value (a byte of its mantissa prints the same)
+    let mut b = a.clone();
+    b[i] = if b[i] == b'A' { b'B' } else { b'A' };
+    let (sa, sb) = (
+        pda_spectrum(&mut mz(a), 0.09, 0.09).unwrap(),
+        pda_spectrum(&mut mz(b), 0.09, 0.09).unwrap(),
+    );
+    assert_ne!(sa, sb);
 }
 
 #[test]
