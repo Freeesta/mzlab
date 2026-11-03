@@ -69,6 +69,9 @@ pub fn apply_set(plan: &mut Plan, reg: &[Step], set: &str) -> std::result::Resul
         "algorithm" => inst.algorithm = Some(text.into()),
         "preset" => inst.preset = Some(text.into()),
         _ => {
+            // an old name of the parameter is read as its current one, never written
+            let current = super::migrate::migrate_name(&inst.step, inst.version, name);
+            let name = current.as_deref().unwrap_or(name);
             let step = reg
                 .iter()
                 .find(|s| s.id == inst.step && s.version == inst.version);

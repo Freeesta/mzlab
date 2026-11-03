@@ -38,7 +38,7 @@ try:
             if want is not None:
                 assert st == 200 and mask(t) == mask(want), "the page and the command line differ"
             else:
-                assert st in (200, 400) and ('"formato":"msngrafo/1"' in t or "error_key" in t), (st, t[:200])
+                assert st in (200, 400) and ('"formato":"msngrafo/2"' in t or "error_key" in t), (st, t[:200])
         step("the graph of a sample of a maker's file is the one of the command line (not err.scan.outside)", graph)
         def bar():
             ev = pg.evaluate("window.__ev")

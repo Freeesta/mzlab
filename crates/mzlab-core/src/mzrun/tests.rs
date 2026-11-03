@@ -149,3 +149,52 @@ fn an_input_without_a_role_or_a_run_without_a_commit_does_not_build() {
         "err.mzrun.build"
     );
 }
+
+const PRESET: &str = include_str!("../../../../tests/data/mzrun/preset.mzrun.json");
+
+/// The example preset with its instance turned into a `spectra.msn_graph@1` with old names.
+fn preset_msn_1() -> String {
+    PRESET
+        .replace("features.detect@1", "spectra.msn_graph@1")
+        .replace("\"params\":{\"ppm\":5}", "\"params\":{\"mz_basso\":120,\"scelte\":\"195.0877=C8H11N4O2+\"}")
+        .replace("\"params\":{\"min_scans\":3,\"ppm\":5},\"pin\":{\"min_scans\":\"estimate\",\"ppm\":\"fixed\"}", "\"params\":{\"min_scans\":3,\"mz_basso\":120,\"scelte\":\"195.0877=C8H11N4O2+\"},\"pin\":{\"min_scans\":\"estimate\",\"mz_basso\":\"fixed\",\"scelte\":\"fixed\"}")
+}
+
+#[test]
+fn a_preset_at_msn_graph_1_applies_as_2_with_migrated_changes() {
+    let old = preset_msn_1();
+    assert!(old.contains("\"mz_basso\":\"fixed\""), "the fixture was built");
+    let text = migrate(old.as_bytes()).unwrap();
+    let v = parse(text.as_bytes()).unwrap();
+    let plan = v.get("plan").unwrap().get("steps").unwrap().at(0).unwrap();
+    assert_eq!(plan.get("step").unwrap().str(), Some("spectra.msn_graph@2"));
+    assert_eq!(crate::flow::value_text(plan.get("params").unwrap()), r#"{"low_mz":120,"pick":"195.0877=C8H11N4O2+"}"#);
+    let r = v.get("resolved").unwrap().get("detect").unwrap();
+    assert_eq!(r.get("step").unwrap().str(), Some("spectra.msn_graph@2"));
+    assert_eq!(crate::flow::value_text(r.get("pin").unwrap()), r#"{"low_mz":"fixed","min_scans":"estimate","pick":"fixed"}"#);
+    let changes = crate::flow::value_text(v.get("compat").unwrap().get("changes").unwrap());
+    assert_eq!(
+        changes,
+        r#"[{"confirmed":true,"instance":"detect","kind":"new","param":"min_scans","value":3},{"confirmed":true,"instance":"detect","kind":"migrated","param":"low_mz","value":120},{"confirmed":true,"instance":"detect","kind":"migrated","param":"pick","value":"195.0877=C8H11N4O2+"}]"#
+    );
+    let limits = v.get("limits").unwrap().arr();
+    assert_eq!(limits.last().unwrap().get("code").unwrap().str(), Some("preset.param.migrated"));
+    assert_eq!(limits.last().unwrap().get("detail").unwrap().str(), Some("detect: spectra.msn_graph@1 → @2 (mz_basso → low_mz, scelte → pick)"));
+    // only the limit names the old parameters
+    let kept = crate::flow::value_text(v.get("plan").unwrap()) + &crate::flow::value_text(v.get("resolved").unwrap());
+    for old_name in ["mz_basso", "scelte", "msn_graph@1"] {
+        assert!(!kept.contains(old_name), "{old_name} is not in the plan nor in resolved");
+    }
+    // the fingerprints follow the new content, and a second pass changes nothing
+    assert_eq!(v.get("self_sha256").unwrap().str(), Some(self_sha256(v.entries()).as_str()));
+    assert_eq!(v.get("plan_sha256").unwrap().str(), Some(crate::budget::sha256_hex(crate::flow::value_text(v.get("plan").unwrap()).as_bytes()).as_str()));
+    assert_eq!(migrate(text.as_bytes()).unwrap(), text);
+}
+
+#[test]
+fn a_preset_with_nothing_to_migrate_keeps_its_content() {
+    let text = migrate(PRESET.as_bytes()).unwrap();
+    assert_eq!(text, crate::flow::value_text(&parse(PRESET.as_bytes()).unwrap()) + "\n");
+    assert_eq!(migrate(b"{\"schema\":\"mzrun/1\",\"min_reader\":2}").unwrap_err().key, "error.newerFormat");
+    assert_eq!(migrate(b"[]").unwrap_err().key, "err.mzrun.read");
+}

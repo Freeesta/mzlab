@@ -82,7 +82,7 @@ try:
             assert mask(t) == mask(cli), (len(t), len(cli))
         step("the graph is the text of mzlab-cli msn-graph --interpreta (the template starts with the interpretation on)", graph)
         def molecule_box():
-            pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, inst = S.plan.steps[0]; inst.params = { interpreta: true };
+            pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, inst = S.plan.steps[0]; inst.params = { interpret: true };
               const box = FLOW.form(inst, FLOW.stepOf(S.reg, inst), () => {}); box.id = 'tmpform'; document.body.append(box); }""")
             pg.wait_for_selector("#tmpform .molc input", timeout=30000)
             pg.fill("#tmpform .molc input", "caffeine"); pg.wait_for_selector("#tmpform .molc li", timeout=30000); pg.click("#tmpform .molc li >> nth=0")
@@ -137,13 +137,13 @@ try:
                     if pg.locator(".flx-res .ig-use:not([disabled])").count(): break
             if pg.locator(".flx-res .ig-use:not([disabled])").count():
                 pg.locator(".flx-res .ig-use:not([disabled])").first.click()
-                sc = pg.evaluate("(document.querySelector('.flx-list').__flow.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')).params || {}).scelte")
+                sc = pg.evaluate("(document.querySelector('.flx-list').__flow.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')).params || {}).pick")
                 assert sc and "=" in sc, sc
             pg.click(".flx-res [aria-pressed=false]")
             assert pg.locator(".flx-res table").count() >= 1
             assert pg.evaluate("window.MZLAB_LR_MISS || []") == [], "no route the engine could not serve"
             pg.evaluate("document.querySelector('.flx-res').remove()")
-        step("the graph view draws one box per ion and «Use» writes the choice in scelte", graph_view)
+        step("the graph view draws one box per ion and «Use» writes the choice in pick", graph_view)
         def cards():
             # Raw files → Fragmentation graph → {Export, View graph}; no id on a card; the view card is on once the run made the graph
             names = pg.evaluate("[...document.querySelectorAll('.fln .fln-t')].map(n => n.textContent).sort()")

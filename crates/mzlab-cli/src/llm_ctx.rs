@@ -97,7 +97,7 @@ fn sources(dir: &Path, hide: bool) -> Value {
                 );
             }
             ("json", Some("annot/1"), Some(v)) => o.push(("annot".into(), v)),
-            ("json", Some("msngrafo/1"), Some(v)) => o.push(("msn".into(), v)),
+            ("json", Some("msngrafo/1" | "msngrafo/2"), Some(v)) => o.push(("msn".into(), v)),
             _ => {}
         }
     }

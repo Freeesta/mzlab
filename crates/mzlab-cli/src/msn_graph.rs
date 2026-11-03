@@ -18,7 +18,7 @@ use mzlab_core::msngrafo::{
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::Opzioni as MzmlOpzioni;
 
-pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
+pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/2) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
 usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
        mzlab-cli msn-graph FILE.mzML --formula ION --truth TRUTH.json --summary
@@ -33,23 +33,23 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
                        ppm and the peaks of its spectrum that the same piece explains); `all` = the key `strutture_tutti`, those of every node of level 2
                        or more that has a cleavage
   --interpret          add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
-                       activations that observed it (param interpreta)
-  --loss-ppm N         window of the loss match by mass, ppm of the precursor m/z (10) (param ppm_perdita)
+                       activations that observed it (param interpret)
+  --loss-ppm N         window of the loss match by mass, ppm of the precursor m/z (10) (param loss_ppm)
   --rules              add to the JSON the key `regole`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
-                       of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates (param regole)
+                       of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates (param rules)
   --cutoff-q N         q of the trap cut-off, fragments below q/0.908 of the precursor m/z are not observable in a trap CID (0.25) (param cutoff_q)
-  --loss-tol-mda N     tolerance of a loss against a rule, mDa (3) (param toll_perdita_mda)
+  --loss-tol-mda N     tolerance of a loss against a rule, mDa (3) (param loss_tol_mda)
   --breaks             add to the JSON the key `rotture`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
-                       node, the arcs they explain and the share of each spectrum's intensity explained (hypotheses, never an assignment) (param rotture)
+                       node, the arcs they explain and the share of each spectrum's intensity explained (hypotheses, never an assignment) (param breaks)
   --h-max N            hydrogens moved at most beyond the plain cleavage, for --breaks (2) (param h_max)
-  --max-bonds N        bonds cut at most, 1 or 2, for --breaks (2) (param max_legami)
-  --struct-ppm N       window of those cleavages and of --breaks, ppm (10) (param ppm_struttura)
+  --max-bonds N        bonds cut at most, 1 or 2, for --breaks (2) (param max_bonds)
+  --struct-ppm N       window of those cleavages and of --breaks, ppm (10) (param struct_ppm)
   --ppm-formula N      window of the sub-formulas, ppm (10) (param ppm_formula)
-  --low-mz N           below this m/z the window may widen (150) (param mz_basso)
-  --wide-ppm N         the wider window, ppm (20), for a candidate with --min-evidence evidences (1) (params ppm_basso, prove_min)
-  --activation A       only the spectra of this activation (cid, hcd, ...) (param attivazione)
-  --isotopes           keep the M+1 peaks as nodes (param isotopi)
-  --pick MZ=ION        the formula chosen for the node at MZ (repeatable) (param scelte)
+  --low-mz N           below this m/z the window may widen (150) (param low_mz)
+  --wide-ppm N         the wider window, ppm (20), for a candidate with --min-evidence evidences (1) (params wide_ppm, min_evidence)
+  --activation A       only the spectra of this activation (cid, hcd, ...) (param activation)
+  --isotopes           keep the M+1 peaks as nodes (param isotopes)
+  --pick MZ=ION        the formula chosen for the node at MZ (repeatable) (param pick)
   --truth FILE         paths and formulas expected ({nodes: [{path, formula}]})
   --summary            one line of numbers instead of the graph
   --export FORMAT      the spectra of the tree as csv, mgf or msp text instead of the graph

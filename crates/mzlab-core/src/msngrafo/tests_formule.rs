@@ -268,7 +268,7 @@ fn the_choice_of_the_user_wins_and_conflicts_are_noted() {
     // the choices are in the JSON, so the graph can be rebuilt
     let v = crate::json::parse(j.as_bytes()).unwrap();
     assert_eq!(
-        v.get("opzioni").unwrap().get("scelte").unwrap().arr().len(),
+        v.get("opzioni").unwrap().get("pick").unwrap().arr().len(),
         3
     );
 }

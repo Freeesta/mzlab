@@ -211,7 +211,7 @@ fn same_bytes_whatever_the_order_of_the_input() {
     let (_, b) = grafo(&Opzioni::default(), &[3, 2, 1, 0], true);
     assert_eq!(a, b);
     let v = crate::json::parse(a.as_bytes()).unwrap();
-    assert_eq!(v.get("formato").unwrap().str(), Some("msngrafo/1"));
+    assert_eq!(v.get("formato").unwrap().str(), Some("msngrafo/2"));
     assert_eq!(v.get("nodi").unwrap().arr().len(), 8);
 }
 
