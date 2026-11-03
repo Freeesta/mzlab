@@ -180,8 +180,9 @@ impl State {
                 Some(r) => Ok(Answer::Bytes(r.scanbin_route(&q(), &mut self.src_slot(&mut eng.nat, u("slot"), u("fid"))?.0)?.unwrap_or_default())),
                 None => Ok(Answer::Bytes(Vec::new())),
             },
+            // as `spectrum_exact` of the wasm: one scan of a centroid HR file, or a single-precision profile level whose spacing comes from the mzML
             "specexact" => match eng.idx.get_mut(&u("slot")) {
-                Some(r) => opt(r.spectrum_exact(&q(), &mut self.src_slot(&mut eng.nat, u("slot"), u("fid"))?.0)?),
+                Some(r) => opt(r.mzml_route("/api/spectrum", &q(), &mut self.src_slot(&mut eng.nat, u("slot"), u("fid"))?.0)?),
                 None => text(""),
             },
             "specbg" => {

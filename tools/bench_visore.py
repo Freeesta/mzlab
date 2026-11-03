@@ -83,6 +83,11 @@ def machine():
     return {"cpu": cpu, "cores": os.cpu_count(), "os": platform.platform(), "commit": sha}
 
 
+def load_button(pg):
+    """The files open as soon as they are read; a page that still has «Load data» gets its click."""
+    if pg.locator("#opbtn").count(): pg.click("#opbtn")
+
+
 def files_of(wd, kind, nscan, npk, nfiles):
     """The files of a case (written once: `lr` and `lr20` share the first one)."""
     out = []
@@ -132,7 +137,7 @@ class Base:
         t0 = time.time(); s.t0 = pg.evaluate("performance.now()"); pg.set_input_files("#pick", [str(f) for f in files])
         try:
             bm.wait(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(files)}", timeout=OPEN_MS)
-            pg.click("#opbtn"); bm.wait(pg, f"typeof E!=='undefined' && E.files.length >= {len(files)} && E.pending.length === 0", timeout=OPEN_MS)
+            load_button(pg); bm.wait(pg, f"typeof E!=='undefined' && E.files.length >= {len(files)} && E.pending.length === 0", timeout=OPEN_MS)
             s.out["open_s"] = round(time.time() - t0, 1)
             bm.wait(pg, "E.panels.some(p => p.type === 'chrom' && p._a) && E.panels.some(p => p.type === 'spec' && p._a)", timeout=min(600000, OPEN_MS))
         finally:
@@ -339,7 +344,7 @@ def g7_site(pg, port, mzml, reps=100):
     bm.wait(pg, "window.MZLAB_LR !== undefined", timeout=120000)
     t0 = time.time(); pg.set_input_files("#pick", [str(mzml)])
     bm.wait(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=OPEN_MS)
-    pg.click("#opbtn"); bm.wait(pg, "typeof E!=='undefined' && E.files.length >= 1 && E.pending.length === 0", timeout=OPEN_MS)
+    load_button(pg); bm.wait(pg, "typeof E!=='undefined' && E.files.length >= 1 && E.pending.length === 0", timeout=OPEN_MS)
     o = {"mzML_MB": round(Path(mzml).stat().st_size / 1e6), "open_s": round(time.time() - t0, 1)}
     for lab, tol in (("LR_0.5Da", "0.5"), ("HR_5ppm", "ppm")):
         r = pg.evaluate("""async ([n, tol]) => { const q = [], b = [];
