@@ -28,7 +28,7 @@ try:
         step("header sticky, shadow only when scrolled, file list below it", sticky)
         def noscroll():
             pg.evaluate("window.__sc = 0; const o = window.scrollTo; window.scrollTo = function () { if (!/UtilityScript/.test(new Error().stack)) window.__sc++; return o.apply(window, arguments); }   // calls made by Playwright itself are not the page's")
-            for v in ("draw", "theory", "data"):
+            for v in ("draw", "data"):
                 pg.click(f"#nav [data-v={v}]"); ready(pg)
             assert pg.evaluate("scrollY") == 0 and top() == 0 and pg.evaluate("window.__sc") == 0, (pg.evaluate("scrollY"), pg.evaluate("window.__sc"))
             pg.evaluate("window.scrollTo(0, 500)"); pg.evaluate("window.__sc = 0"); attendi(pg, "scrollY > 0"); y0 = pg.evaluate("scrollY")
@@ -36,7 +36,7 @@ try:
             assert pg.evaluate("window.__sc") == 0 and top() == 0, pg.evaluate("window.__sc")
             pg.evaluate("setTab('ms2')"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
             assert pg.evaluate("window.__sc") == 0, "switching Full Scan / MS2 does not scroll"
-        step("Dati from Disegno/Teoria and tab changes: no scrolling", noscroll)
+        step("Dati from Disegno and tab changes: no scrolling", noscroll)
         def layers():
             pg.evaluate("window.scrollTo(0, 400)"); attendi(pg, "scrollY > 300"); frames(pg, 3)
             hh = pg.evaluate("document.querySelector('header').offsetHeight")

@@ -13,10 +13,8 @@ use mzlab_feat::evid::PointsTable;
 use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::recipe::{Mode, Recipe};
-use mzlab_feat::series::{
-    align_and_fill, analyse_file, analyse_file_with, source_sha256, weak_candidates,
-};
-use mzlab_feat::slabs::{align_and_fill_spilling, align_and_fill_stored, Stored};
+use mzlab_feat::series::{align_and_fill, analyse_file_with, source_sha256, weak_candidates};
+use mzlab_feat::slabs::{align_and_fill_spilling, Stored};
 use mzlab_feat::spill::Spill;
 use mzlab_feat::store::{
     origin_from_meta, read_file, read_meta_mz, write_file_to, write_table_to,
@@ -476,12 +474,10 @@ pub use crate::run_evid::{evidence_roles_to, evidence_sources_to, RowSources};
 /// Preview of one file (see `mzlab_feat::params`): the floor of the recipe is used if it was given, else the one estimated from the intensities.
 pub fn preview<R: ReadAt>(index: &mut Index<R>, r: &Recipe, floor_given: bool) -> Result<String> {
     let mut p = r.detect.clone();
-    if !floor_given {
-        if let Some(si) = index.section_of(1, p.polarity) {
-            let h = mzlab_feat::params::intensity_hist(index, si)?;
-            if let Some(n) = mzlab_feat::params::noise_from_hist(&h) {
-                p.floor = n.floor;
-            }
+    if !floor_given && let Some(si) = index.section_of(1, p.polarity) {
+        let h = mzlab_feat::params::intensity_hist(index, si)?;
+        if let Some(n) = mzlab_feat::params::noise_from_hist(&h) {
+            p.floor = n.floor;
         }
     }
     mzlab_feat::params::preview(index, &p)

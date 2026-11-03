@@ -1,4 +1,4 @@
-# Analizzatori animati della schermata di caricamento
+# Analizzatori animati del velo di avvio (`#loading`)
 
 - **Analizzatori spenti di default**: durante il caricamento compare solo l'animazione base (`base` in `ldIon`: tre ioni sfasati di 120° le cui scie avanzano e si intrecciano, punto con scia). Le schermate degli analizzatori restano nel codice ma non sono incluse nella pagina, non si scaricano e non c'è alcuna voce nell'interfaccia. Per riattivarle: `LD_ANALYSERS = true` in `avvio.js` (le carica a richiesta da `LD_AN` e ne sceglie una a caso).
 - **Testo del caricamento**: durante l'apertura dei file compaiono solo le frasi a rotazione (`loading(true)` senza messaggio). Aggancio per fase e %: `loadingStato(testo, pct)` in `shell.js` (`pct` nullo = barra indeterminata), `loadingStato(null)` torna alle frasi.

@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
-from lib import free_port; from lib_sito import add_wasm  # noqa: E402
+from lib import free_port, mz, attendi; from lib_sito import add_wasm  # noqa: E402
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -25,7 +25,7 @@ for u in (LAB, NORMAL):          # wait for the servers to listen (state, not a 
     while True:
         try: socket.create_connection(("127.0.0.1", port), timeout=1).close(); break
         except OSError: pass
-ADMIN = "try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}"      # the administrator mode stays off in the lab (Teoria editor and the like); Tabui and mzFlow no longer depend on it
+ADMIN = "try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}"      # the administrator mode stays off in the lab; Tabui and mzFlow no longer depend on it
 CLOCK = "(()=>{const R=Date,t=R.parse('%s');class D extends R{constructor(...a){a.length?super(...a):super(t)}static now(){return t}};window.Date=D})()"      # fake clock
 NAV = "[...document.querySelectorAll('#nav button')].map(b => b.dataset.v)"
 try:
@@ -79,6 +79,32 @@ try:
             assert not [u for u in reqs if "/esempi/" in u or "esempio-" in u], reqs
             assert pg.evaluate("fetch('static/esempi/FullScan_t15.mzML').then(r => r.status)") == 404
         step("lab: no example files shipped and no example entry points", noexamples)
+        def tour():
+            pg, _ = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z"); errs = []
+            pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: m.type == "error" and errs.append(m.text))
+            pg.wait_for_selector("#drop", timeout=120000); attendi(pg, "typeof TOUR !== 'undefined' && typeof setView === 'function'", 120000)
+            pg.click("#np-set"); pg.wait_for_selector("#uip-g-app", timeout=30000); pg.evaluate("document.getElementById('uip-g-app').open = true"); pg.wait_for_selector("#uip-tour", timeout=30000)
+            assert pg.inner_text("#uip-tour").strip() == "Fai il tour", pg.inner_text("#uip-tour")
+            pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
+            assert "Carica un file per continuare" in pg.inner_text("#tour-dialog"), pg.inner_text("#tour-dialog")
+            assert "file di esempio" not in pg.inner_text("body") and "example file" not in pg.inner_text("body")
+            pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Carica dati")      # the card waits, then the tour goes on with the data
+            attendi(pg, "!document.getElementById('tour-dialog').innerText.includes('Carica un file per continuare')", 60000)
+            assert pg.is_visible("#tour-dialog")
+            pg.keyboard.press("Escape"); attendi(pg, "!document.getElementById('tour-dialog')")
+            pg.click("#np-set"); pg.wait_for_selector("#uip-g-app", timeout=30000); pg.evaluate("document.getElementById('uip-g-app').open = true"); pg.wait_for_selector("#uip-tour", timeout=30000)      # one file loaded: same label, the tour starts on the data at once
+            assert pg.inner_text("#uip-tour").strip() == "Fai il tour"
+            pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
+            assert "Carica un file per continuare" not in pg.inner_text("#tour-dialog")
+            assert not errs, errs
+        step("lab: the tour runs with no file (waits at the first data step) and with one file, no console errors", tour)
+        def gap():
+            GAP = "() => { const b = [...document.querySelectorAll('#nav button')].filter(x => x.offsetParent).pop().getBoundingClientRect(), t = document.getElementById('sb-toggle').getBoundingClientRect(); return t.left - b.right }"
+            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#sb-toggle", timeout=120000); pg.wait_for_function("typeof setView === 'function'", timeout=120000)
+            g = pg.evaluate(GAP); assert 0 <= g < 60, g
+            pg.set_viewport_size({"width": 390, "height": 800}); pg.evaluate("n => new Promise(ok => { const f = () => (--n > 0 ? requestAnimationFrame(f) : ok()); requestAnimationFrame(f) })", 3)
+            h = pg.evaluate("(() => { const h = document.querySelector('header'); return [h.scrollWidth, h.clientWidth] })()"); assert h[0] <= h[1] + 2, ("header clipped at phone width", h)
+        step("lab: the panels button follows the last tab (gap < 60 px), phone width fits", gap)
         def normal():
             pg, reqs = page(NORMAL, ""); pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("typeof MZLAB_LAB") == "undefined"

@@ -21,6 +21,7 @@ export const FORMATI = [
   { re: /\.(peg|smp)$/i, ext: ".peg", vendors: ["LECO"], fmt: ".peg / .smp", st: "unsupported" },
   { re: /\.mzdata$/i, ext: ".mzdata", vendors: ["PSI"], fmt: "mzData", st: "unsupported" },
   { re: /\.cdf$/i, ext: ".cdf", vendors: ["ANDI"], fmt: ".cdf", st: "read" },
+  { re: /\.mzml\.gz$/i, ext: ".mzml.gz", vendors: ["PSI"], fmt: "mzML (gzip)", st: "read" },
   { re: /\.mzxml$/i, ext: ".mzxml", vendors: ["ISB"], fmt: "mzXML", st: "read" },
 ];
 

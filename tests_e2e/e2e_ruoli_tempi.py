@@ -24,7 +24,7 @@ try:
         stage(pg, paths)
         pg.wait_for_function("RUOLI.busy() === 0 && ST.files.length >= 6 && ST.files.every(f => f.prop)", timeout=30000)
         lib.show_table(pg)
-        row = lambda n: f"#flist tr:has(:text-is('{n}.mzML'))"
+        row = lambda n: f"#flist tr:has(:text-is('{n}'))"
         def role(n): return pg.eval_on_selector(f"{row(n)} select[data-k=type]", "e => e.value")
         def tval(n): return pg.eval_on_selector(f"{row(n)} input[data-k=time]", "e => e.value")
         def proposals():
@@ -49,9 +49,9 @@ try:
             sel = f"{row('X_dark-adsorption')} input[data-k=time]"
             assert "buio" in (pg.get_attribute(sel, "title") or ""), "the dark cell says what its time is"
             pg.fill(sel, "-30"); pg.keyboard.press("Tab")
-            pg.wait_for_function("[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_dark-adsorption.mzML') && r.querySelector('input[data-k=time]').value === '-30')", timeout=10000)
+            pg.wait_for_function("[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_dark-adsorption') && r.querySelector('input[data-k=time]').value === '-30')", timeout=10000)
             pg.fill(sel, "45"); pg.keyboard.press("Tab")                    # a positive number typed in a dark is read as its negative
-            pg.wait_for_function("[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_dark-adsorption.mzML') && r.querySelector('input[data-k=time]').value === '-45')", timeout=10000)
+            pg.wait_for_function("[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_dark-adsorption') && r.querySelector('input[data-k=time]').value === '-45')", timeout=10000)
             pg.fill(f"{row('X_t005min')} input[data-k=time]", "-5"); pg.keyboard.press("Tab")        # a sample takes no sign
             assert pg.eval_on_selector(f"{row('X_t005min')} input[data-k=time]", "e => e.classList.contains('bad')")
             pg.fill(f"{row('X_t005min')} input[data-k=time]", "5"); pg.keyboard.press("Tab")
@@ -63,7 +63,7 @@ try:
         def no_t0():
             sel = f"{row('X_t000min')} input[data-k=time]"
             pg.fill(sel, ""); pg.keyboard.press("Tab")
-            pg.wait_for_function(f"[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_t000min.mzML') && r.querySelector('input[data-k=time]').value === '')", timeout=10000)
+            pg.wait_for_function(f"[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_t000min') && r.querySelector('input[data-k=time]').value === '')", timeout=10000)
             assert pg.eval_on_selector("#flist", "e => e.querySelectorAll('input[aria-invalid=true]').length") == 0
             assert pg.inner_text("#gomsg").strip() == "" and pg.inner_text("#flist").count("Senza") == 0, "no time 0 and no warning"
             pg.focus(f"{row('X_blank')} select[data-k=type]")

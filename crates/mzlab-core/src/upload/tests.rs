@@ -1,5 +1,5 @@
 use super::*;
-use sha1::{Digest as _, Sha1};
+use sha1::Sha1;
 
 /// A file in memory that, like a JS callback might, refuses a read of length 0.
 struct Strict(Vec<u8>);

@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use mzlab_core::gradient::Gradient;
 use mzlab_core::idxread::{Index, ReadAt};
-use mzlab_core::json::{self, Out};
+use mzlab_core::json::Out;
 use mzlab_core::labmethods::Lab;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::routes::{Query, Routes};
@@ -139,13 +139,14 @@ impl State {
         let t0 = std::time::Instant::now();
         // the mapped old index goes before the build replaces its file (a mapped file cannot be replaced on Windows); the next request opens the new one
         self.drop_lr_index(name);
-        if let Some(nat) = &e.nat {
-            self.indexer()?.build_nat(nat, name)?;
+        let missing = if let Some(nat) = &e.nat {
+            self.indexer()?.build_nat(nat, name)?.missing
         } else {
-            self.indexer()?.build(&e.path, name, None)?;
-        }
+            self.indexer()?.build(&e.path, name, None)?.missing
+        };
         self.drop_lr_index(name);
-        text(format!("{{\"ms\":{}}}", t0.elapsed().as_millis()))
+        // missing: the spectra the file declares beyond the ones it holds (the row of the loading warns, as on the site)
+        text(format!("{{\"ms\":{},\"missing\":{missing}}}", t0.elapsed().as_millis()))
     }
 
     #[allow(unused_variables)]
@@ -354,7 +355,12 @@ impl State {
         if op == "lr_index" {
             return self.lr_index(p["name"].as_str().unwrap_or(""));                 // the build takes its time: it does not hold the engine
         }
+        if op == "lr_clear" {
+            self.warm_forget(None);                                                         // the indexes built ahead go with the session
+        }
         match op {
+            "lr_warm" => return self.lr_warm(p),                                            // the index of a file of the pointed folder, built ahead (`rpc_warm.rs`): it does not hold the engine
+            "lr_warm_claim" => return self.lr_warm_claim(p),
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
             "nat2mzml" => return self.nat_to_mzml(p),
             "natsrm" => return self.nat_srm(p),                                             // the traces of a sample for mzFinder (no mzML)

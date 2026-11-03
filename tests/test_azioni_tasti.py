@@ -31,7 +31,7 @@ def chiave(s):
 
 def test_found_the_wanted_keys():
     ids = {i for i, _ in tasti()}
-    for want in ("spec.xic", "chrom.specAtRt", "spec.peak", "chrom.intAuto", "spec.measureKey", "view.fullscreen", "app.apri", "app.esporta", "app.dati", "app.disegno", "app.teoria", "app.scorciatoie", "app.pannelli", "app.filePrec", "app.fileSucc"):
+    for want in ("spec.xic", "chrom.specAtRt", "spec.peak", "chrom.intAuto", "spec.measureKey", "view.fullscreen", "app.apri", "app.esporta", "app.dati", "app.disegno", "app.scorciatoie", "app.pannelli", "app.filePrec", "app.fileSucc"):
         assert want in ids, want
 
 

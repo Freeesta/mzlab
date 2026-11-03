@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "msnlib/1",
  "title": "msnlib/1: the library of MSn trees of standards",
- "description": "Format «msnlib/1» (crates/mzlab-core/src/msngrafo/libreria.rs, docs/agenti/msnlib.md): one entry per standard, ion, polarity and set of activations, sorted by that key so the same entries give the same bytes. The graph of an entry is a full msngrafo/1 (docs/schemi/msngrafo-1.json) and is validated against that schema by the tests.",
+ "description": "Format «msnlib/1» (crates/mzlab-core/src/msngrafo/libreria.rs, docs/agenti/msnlib.md): one entry per standard, ion, polarity and set of activations, sorted by that key so the same entries give the same bytes. The graph of an entry is a full msngrafo/2 (docs/schemi/msngrafo-2.json; older entries msngrafo/1) and is validated against that schema by the tests.",
  "type": "object",
  "required": ["formato", "voci"],
  "additionalProperties": false,
@@ -34,7 +34,7 @@
      "grafo": {
       "type": "object",
       "required": ["formato"],
-      "properties": { "formato": { "const": "msngrafo/1" } }
+      "properties": { "formato": { "enum": ["msngrafo/1", "msngrafo/2"] } }
      }
     }
    }

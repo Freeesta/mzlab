@@ -154,7 +154,7 @@ fn dad_wl_chrom(
         dad.wavelengths_nm
             .iter()
             .enumerate()
-            .filter(|(_, &w)| (w - nm).abs() <= half + 1e-6)
+            .filter(|&(_, &w)| (w - nm).abs() <= half + 1e-6)
             .map(|(j, _)| j)
             .collect()
     } else {

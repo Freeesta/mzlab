@@ -65,11 +65,11 @@ fn main() {
     let all = qs["all"].as_array().unwrap();
     for q in all {
         if let Some(h) = query(q).and_then(|q| identity(&lib, &q, &io).unwrap().into_iter().next())
+            && h.entropy >= 0.75
+            && h.shared >= 6
         {
-            if h.entropy >= 0.75 && h.shared >= 6 {
-                strong += 1;
-                *names.entry(name(h.index)).or_default() += 1;
-            }
+            strong += 1;
+            *names.entry(name(h.index)).or_default() += 1;
         }
     }
     out["all"] =

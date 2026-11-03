@@ -111,6 +111,8 @@ try:
             with pg.expect_download() as d2: pg.click("#ig-xlsx")
             g = d2.value.path(); assert d2.value.suggested_filename == "integrazioni.xlsx"; rr = xlsx_rows(g)
             heads = [c[1] for c in rr[0]]; assert "Area (conteggi*s)" in heads and "RT inizio (min)" in heads, heads
+            assert "Tipo di file" in heads and heads.index("Tipo di file") > heads.index("Correzione"), heads
+            assert rr[1][heads.index("Tipo di file")][1] and not any(c and c[1] for c in rr[1][heads.index("Q1 (m/z)"):heads.index("Q1 (m/z)") + 3]), rr[1]      # an XIC has no transition: Q1, Q3 and the name are empty
             area = rr[1][heads.index("Area (conteggi*s)")]; assert area[0] == "n" and area[1] > 0, area
             wb = xlsx_openpyxl(g)
             if wb: assert wb.active.cell(2, heads.index("Area (conteggi*s)") + 1).value > 0

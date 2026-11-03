@@ -17,13 +17,13 @@
   function mountAdducts(root, opt = {}) {
     const id = "ad" + ++seq;
     root.innerHTML = h`<div class="nlbar"><div class="sb-search-box">${raw(SEARCH)}<input id="${id}-q" inputmode="decimal" autocomplete="off" placeholder="${T("calc.ph")}" aria-label="${T("cq.ad.title")}" title="${T("cq.ad.title.field")}"></div></div>
-      <div class="nlhint muted">ⓘ ${raw(T("cq.ad.hint"))}</div><div id="${id}-ctl"></div>
+      <div id="${id}-ctl"></div>
       <div class="cq-links"><button type="button" class="cq-link" id="${id}-loss" hidden>${raw(T("cq.link.loss"))}</button></div><div id="${id}-out" class="cq-out" aria-live="polite"></div>`;
     const q = /** @type {HTMLInputElement} */ (root.querySelector(`#${id}-q`)), loss = /** @type {HTMLElement} */ (root.querySelector(`#${id}-loss`));
     if (opt.q != null) q.value = String(opt.q);
     const view = CALCQUI.mount({
       ctl: /** @type {HTMLElement} */ (root.querySelector(`#${id}-ctl`)), out: /** @type {HTMLElement} */ (root.querySelector(`#${id}-out`)), idp: id, quiet: true,
-      groups: ["addotti", "diff"], arg: () => ({ text: q.value, ans: 0 }),
+      groups: ["addotti", "diff"], catalogue: true, arg: () => ({ text: q.value, ans: 0 }),
     });
     const upd = () => { loss.hidden = !numberOf(q.value); CALCQUI.later(view); };
     q.addEventListener("input", upd);

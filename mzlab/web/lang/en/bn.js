@@ -113,7 +113,7 @@ I18N.add("en", {
   "bn.iso.new": "New cell",
   "bn.iso.repTitle": "In place of the observed spectrum only the simulation remains",
   "bn.iso.rep": "Replace",
-  "bn.iso.hint": "Empty resolution = that of the scan; 0 = the whole fine structure. Resolving power: as Thermo writes it, it decreases with the square root of m/z.",
+  "bn.iso.hint": "Empty resolution = that of the scan; 0 = the whole fine structure. Resolving power: it decreases with the square root of m/z.",
   "bn.iso.typeFormula": "Type the formula.",
   "bn.iso.failed": "Cannot calculate the pattern: {message}",
   "bn.needSpec": "A cell with a spectrum is needed.",

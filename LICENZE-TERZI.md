@@ -1,12 +1,11 @@
 # Licenze del materiale di terzi
 
-mzLab (codice del programma, logo e icone) è sotto licenza MIT (`LICENSE`). I testi di Teoria e Pratica sono sotto CC BY 4.0 e i file d'esempio sono dati sintetici (sezioni sotto). Il sito e il repository contengono o scaricano anche il materiale seguente, ciascuno con la propria licenza.
+mzLab (codice del programma, logo e icone) è sotto licenza MIT (`LICENSE`). I file d'esempio sono dati sintetici (sezioni sotto). Il sito e il repository contengono o scaricano anche il materiale seguente, ciascuno con la propria licenza.
 
 | Componente | Versione | Licenza | Dove si trova |
 |---|---|---|---|
-| Ketcher (EPAM Systems) con Indigo e React | 3.18.0 | Apache-2.0 (React: MIT) | `mzlab/web/vendor/ketcher/` (testo completo: `LICENSE.txt` nella stessa cartella). Sorgente: https://github.com/epam/ketcher |
+| Ketcher (EPAM Systems) con Indigo e React | 3.18.0 | Apache-2.0 (React: MIT) | `mzlab/web/vendor/ketcher/` (testo completo: `LICENSE.txt` nella stessa cartella; il worker `indigo-worker-*.js` e il modulo WebAssembly di Indigo `indigo-*.wasm` in `assets/` sono estratti dal bundle con `tools/ketcher_estrai_worker.py`, senza modifiche al codice di Indigo, stessa licenza; `tools/ketcher_senza_monomeri.py` disattiva la modalità macromolecole di Ketcher e sostituisce con una libreria vuota la sua libreria predefinita di monomeri, non usata da mzLab: modifica del bundle indicata qui come richiede la licenza Apache-2.0). Sorgente: https://github.com/epam/ketcher |
 | OpenChemLib JS (Zakodium / Actelion / cheminfo) | 9.25.1 | BSD-3-Clause | `mzlab/web/vendor/openchemlib.js` (testo: `vendor/openchemlib.LICENSE`). Sorgente: https://github.com/cheminfo/openchemlib-js |
-| Milkdown/Crepe (Mirone Software), KaTeX (Khan Academy), CodeMirror e altri pacchetti npm | Milkdown 7.22.3, KaTeX 0.19.0; elenco completo con versioni e licenze in `THIRD-PARTY.txt` | MIT (dompurify: MPL-2.0 o Apache-2.0) | `mzlab/web/vendor/libro/` (pagina dell'editor del Libro, `mzlab/web/libro/`; licenze: `LICENSE-milkdown.txt`, `LICENSE-katex.txt`). Costruito da `tools/libro/editor/build.mjs`. Sorgenti: https://github.com/Milkdown/milkdown, https://github.com/KaTeX/KaTeX |
 | OpenTFRaw e OpenMassSpec-core (Nathan Riley / Sigilweaver; lettore dei file Thermo .raw) | 2.0.0 e 2.0.1 (OpenTFRaw è copiato e modificato in `vendor/opentfraw/`, con `LICENSE` e `MODIFICHE-MZLAB.md`; OpenMassSpec-core dal registro, versione in `Cargo.lock`) | Apache-2.0 (nessun file NOTICE; con le loro dipendenze serde e thiserror, MIT o Apache-2.0) | Compilato dentro `mzlab_wasm.wasm` (`crates/mzlab-core/src/raw.rs`), costruito da `pages.yml`, solo con `?motore=rust`. Sorgente e licenza: https://github.com/Sigilweaver/OpenTFRaw |
 | Tauri v2 e plugin dialog (Tauri Programme / CrabNebula), memmap2 | `tauri` 2.x, `tauri-plugin-dialog` 2.x, `memmap2` 0.9 (versioni esatte in `Cargo.lock`) | MIT o Apache-2.0 (a scelta); fra le dipendenze di Tauri alcuni crate sono MPL-2.0 (es. `cssparser`, `selectors`, `option-ext`), gli altri MIT, Apache-2.0 o simili | Solo nell'app per il computer (`crates/mzlab-desktop`, installatori costruiti da `desktop.yml`, mai nel sito né nel repository). Sorgente e licenze: https://github.com/tauri-apps/tauri, https://github.com/tauri-apps/plugins-workspace, https://github.com/RazrFalcon/memmap2-rs |
 | sci-form (sci-form contributors; github.com/jigonzalez930209/sci-form) | 0.15.2 (dipendenza esatta di `crates/mzlab-chem`) | MIT | Geometria 3D ETKDG da SMILES (`crates/mzlab-chem/src/embed.rs` usa il suo `conformer`); per GFN2-xTB i parametri (`xtb::gfn2_params`), gli integrali STO-nG, il modello D4 e il ripiego di Hückel esteso; `crates/mzlab-chem/src/xtb/basis.rs` è ristrutturato dal suo `xtb/gfn2.rs`. Testo della licenza in `crates/mzlab-chem/LICENSE-sci-form`. Il resto del crate (adattatore di numerazione, regolarizzazione dei legami, minimizzatore, SCC, ALPB, Fukui) è scritto per mzLab. |
@@ -25,25 +24,13 @@ mzLab (codice del programma, logo e icone) è sotto licenza MIT (`LICENSE`). I t
 | Masse isotopiche degli elementi | - | BSD-3-Clause (da OpenChemLib) | `mzlab/web/elements.js` (generato da `tools/genera_elementi.py`) |
 | Pesi atomici medi | - | Apache-2.0 (da Ketcher) | stesso file |
 | Abbondanze isotopiche naturali | - | dati IUPAC (fatti pubblici, senza copyright) | scritte in `tools/genera_elementi.py` |
-| Atkinson Hyperlegible Next (Braille Institute, Google Fonts) | WOFF2 Regular e Bold dal ramo `main` di googlefonts/atkinson-hyperlegible-next | SIL OFL 1.1 | `mzlab/web/teoria/fonts/AtkinsonHyperlegibleNext-{Regular,Bold}.woff2` (licenza: `OFL-AtkinsonHyperlegibleNext.txt`). https://github.com/googlefonts/atkinson-hyperlegible-next. SHA-256: Regular `378aea0f5c1d179f4e0b5382c06bfc87571b98cfcc4fd1352bc979e2e2259c54`, Bold `dda449f0f556a595cffd0a9ce479bb1210beba286cb4c2f5aeca6975f9c85a3b`. Si scarica solo se lo studente lo sceglie in «Lettura facilitata» |
-| OpenDyslexic (Abbie Gonzalez) | WOFF2 Regular e Bold dal ramo `master` di antijingoist/opendyslexic (cartella `compiled`) | SIL OFL 1.1 | `mzlab/web/teoria/fonts/OpenDyslexic-{Regular,Bold}.woff2` (licenza: `OFL-OpenDyslexic.txt`). https://github.com/antijingoist/opendyslexic. SHA-256: Regular `0441bc21071e42db57c217f93fbc48d3b55a2987c02814c94dc93621c42e8695`, Bold `b534a0b84ef3cca941ebdb506ce3f4e0010aa4ef881271bac8b6959dbf694fbf`. Si scarica solo se scelto |
+| Atkinson Hyperlegible Next (Braille Institute, Google Fonts) | WOFF2 Regular e Bold dal ramo `main` di googlefonts/atkinson-hyperlegible-next | SIL OFL 1.1 | `mzlab/web/fonts/AtkinsonHyperlegibleNext-{Regular,Bold}.woff2` (licenza: `OFL-AtkinsonHyperlegibleNext.txt`). https://github.com/googlefonts/atkinson-hyperlegible-next. SHA-256: Regular `378aea0f5c1d179f4e0b5382c06bfc87571b98cfcc4fd1352bc979e2e2259c54`, Bold `dda449f0f556a595cffd0a9ce479bb1210beba286cb4c2f5aeca6975f9c85a3b`. Si scarica solo se lo studente lo sceglie in «Lettura facilitata» |
+| OpenDyslexic (Abbie Gonzalez) | WOFF2 Regular e Bold dal ramo `master` di antijingoist/opendyslexic (cartella `compiled`) | SIL OFL 1.1 | `mzlab/web/fonts/OpenDyslexic-{Regular,Bold}.woff2` (licenza: `OFL-OpenDyslexic.txt`). https://github.com/antijingoist/opendyslexic. SHA-256: Regular `0441bc21071e42db57c217f93fbc48d3b55a2987c02814c94dc93621c42e8695`, Bold `b534a0b84ef3cca941ebdb506ce3f4e0010aa4ef881271bac8b6959dbf694fbf`. Si scarica solo se scelto |
 | Caratteri predefiniti | - | nessuno incluso | `system-ui` |
-
-## Testi di Teoria e Pratica
-
-I testi originali di Teoria e Pratica (`mzlab/web/teoria/`, esclusi gli spettri EI e i caratteri, che hanno la licenza indicata qui sotto) sono © 2026 Federico Cristaudo e distribuiti con licenza **Creative Commons Attribution 4.0 International** (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/): puoi copiarli, adattarli e ridistribuirli, anche a scopo commerciale, citando l'autore e indicando le modifiche. Il codice della stessa cartella resta MIT.
 
 ## File d'esempio
 
 I file in `mzlab/web/esempi/` (offerti da «Prova con i file di esempio») sono dati sintetici anonimi, creati per la didattica: non vengono da campioni o strumenti reali. Si possono usare, copiare e modificare liberamente (**CC0 1.0**, https://creativecommons.org/publicdomain/zero/1.0/).
-
-## Figure della Teoria
-
-Le figure dei capitoli di Teoria sono disegnate dal programma stesso (SVG e simulazioni in JavaScript): non contengono immagini di terzi.
-
-## Spettri EI della Teoria e della Pratica
-
-Gli spettri di ionizzazione elettronica in `mzlab/web/teoria/pratica/ei-dati.js` vengono da **MassBank Europe** (https://massbank.eu), ognuno con il proprio codice di record, autori e licenza indicati nel file e sotto ogni grafico; tutti con licenza **Creative Commons Attribution-NonCommercial-ShareAlike** (CC BY-NC-SA). Per questa licenza gli spettri si usano solo a scopo didattico e non commerciale, con attribuzione, e chi li redistribuisce modificati deve usare la stessa licenza. Le note didattiche sugli ioni sono originali. Nessuno spettro proviene dalla libreria NIST.
 
 ## Pacchetto dei candidati in silico (PubChemLite)
 

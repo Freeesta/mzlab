@@ -4,7 +4,7 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 #![forbid(unsafe_code)]
-mod xicbin; mod etichette; mod fondo_cr; mod info; mod diff; mod items; mod metodo; mod stat; mod budget_js;
+mod xicbin; mod etichette; mod fondo_cr; mod info; mod diff; mod items; mod metodo; mod budget_js;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -14,7 +14,7 @@ use std::io::Write;
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca; mod adduct;
+mod centroidi; mod panic; mod ricerca; mod adduct;
 pub mod esterno;
 mod contato;
 mod zip;
@@ -492,6 +492,7 @@ pub fn build_mzidx(
         source_json,
         run_json,
         hr1,
+        declared: 0,
     };
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
@@ -555,6 +556,8 @@ pub fn prepare_upload(size: f64, read: Function, name: &str, sha256: Option<Stri
     out.push(&JsValue::from_str(&t.run_json));
     out.push(&JsValue::from_bool(t.hr1));
     out.push(&JsValue::from_str(&p.sha256));
+    // the spectra the file declares: the page compares them with the ones the index holds (a truncated file lacks the rest)
+    out.push(&JsValue::from_f64(p.table.declared as f64));
     Ok(out)
 }
 

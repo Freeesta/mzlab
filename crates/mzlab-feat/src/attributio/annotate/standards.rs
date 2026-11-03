@@ -63,10 +63,10 @@ fn remap_spectra(
     twins: &[(i64, i64)],
 ) -> HashMap<i64, Spectrum> {
     for (gone, keep) in twins {
-        if !spectra.contains_key(keep) {
-            if let Some(s) = spectra.get(gone).cloned() {
-                spectra.insert(*keep, s);
-            }
+        if !spectra.contains_key(keep)
+            && let Some(s) = spectra.get(gone).cloned()
+        {
+            spectra.insert(*keep, s);
         }
     }
     spectra

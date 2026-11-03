@@ -30,11 +30,11 @@ try:
             assert o["zoom"] == 1, ("first zoom 100 %", o)
             assert not o["title"], "no tooltip over the canvas"
         step("rings in one drop-down button, editor fits the window, zoom = 100 %, no tooltip", layout)
-        def tools():
+        def tools():      # the bundle has no macromolecules mode (tools/ketcher_senza_monomeri.py), so there is no polymer-toggler button to show or hide
             assert RINGS() and pg.evaluate(VIS, "reaction-plus")
-            for hidden in ("sgroup", "enhanced-stereo", "create-monomer", "polymer-toggler", "any-atom"): assert not pg.evaluate(VIS, hidden), hidden
+            for hidden in ("sgroup", "enhanced-stereo", "create-monomer", "any-atom"): assert not pg.evaluate(VIS, hidden), hidden
             pg.click("#tools-card summary"); pg.click("#tools-all"); pg.wait_for_timeout(300)
-            for shown in ("sgroup", "enhanced-stereo", "create-monomer", "polymer-toggler", "any-atom"): assert pg.evaluate(VIS, shown), shown
+            for shown in ("sgroup", "enhanced-stereo", "create-monomer", "any-atom"): assert pg.evaluate(VIS, shown), shown
             pg.click("#tools-def"); pg.wait_for_timeout(300); pg.uncheck("input[data-t=rings]"); pg.wait_for_timeout(300)
             assert not RINGS()
         step("tool groups: essentials by default, «Mostra tutti», single groups", tools)

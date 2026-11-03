@@ -9,20 +9,24 @@
   const SRC = /** @type {HTMLScriptElement} */ (document.currentScript).src;
   // an old browser cannot run the engine: say it clearly instead of staying blank
   // OPFS keeps the files and their indexes
+  // set by a reset (reset.js): this page follows a wipe, so a guard left in sessionStorage by the page before it must not count (read now, the engine start removes it from the address)
+  const RESET_NONCE = new URLSearchParams(location.search).get("ripn") || "";
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response && navigator.storage && navigator.storage.getDirectory);
   try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).then(isolateOnce).catch(() => {}); } catch (_) { /* offline copy is optional */ }
   // the first visit starts not isolated (everything works as before); once the service worker (which adds COOP/COEP) is active the page reloads ONCE,
   // at the first moment with no work going on (no open file). The session guard prevents loops; ?cap-off=isolamento turns it off.
+  // After a reset the guard of the earlier page can come back (Chrome restores the sessionStorage of a page whose worker was unregistered, even after clear()):
+  // such a page uses the reset's nonce as its own guard, so the stale "1" does not stop the one reload that isolates it.
   function isolateOnce() {
     try {
-      if (window.crossOriginIsolated || /[?&]cap-off=[^&]*isolamento/.test(location.search) || sessionStorage.getItem("mzlab.coiReload")) return;
+      if (window.crossOriginIsolated || /[?&]cap-off=[^&]*isolamento/.test(location.search) || ((seen) => seen && (!RESET_NONCE || seen === RESET_NONCE))(sessionStorage.getItem("mzlab.coiReload"))) return;
       // no open file and nothing being copied, indexed or converted (those are not in E.files until «Load data»)
       const idle = () => (typeof E === "undefined" || !Array.isArray(E.files) || !E.files.some((/** @type {any} */ f) => f && !f.gone))
         && !(typeof UPBUSY !== "undefined" && UPBUSY > 0)
         && !(typeof S !== "undefined" && S.opening)
         && !(typeof PROGRESSO !== "undefined" && PROGRESSO.busy())
         && !(typeof CONVROWS !== "undefined" && CONVROWS.rows.some((/** @type {any} */ r) => !["done", "fail", "cancel"].includes(r.state)));
-      const go = () => { if (window.crossOriginIsolated) return; if (!idle()) { setTimeout(go, 1000); return; } try { sessionStorage.setItem("mzlab.coiReload", "1"); } catch (_) { return; } location.reload(); };
+      const go = () => { if (window.crossOriginIsolated) return; if (!idle()) { setTimeout(go, 1000); return; } try { sessionStorage.setItem("mzlab.coiReload", RESET_NONCE || "1"); } catch (_) { return; } location.reload(); };
       navigator.serviceWorker.ready.then(() => { if (navigator.serviceWorker.controller) go(); else navigator.serviceWorker.addEventListener("controllerchange", go, { once: true }); });
     } catch (_) { /* stays not isolated */ }
   }
@@ -46,7 +50,7 @@
     await wait((async () => { for (const k of await caches.keys()) if (k.startsWith(NOMI.CACHE_PREFIX) || k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
     await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
     try { localStorage.clear(); sessionStorage.clear(); } catch (_) {}
-    const u = new URL(location.href); u.search = "?riparti=1"; u.hash = ""; location.replace(u.href);
+    const u = new URL(location.href); u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; location.replace(u.href);
   };
   window.mzlabHardReset = window.qqHardReset;
   // the failure goes to the banner of AVVIO (avvio-progressivo.js: fixed, role=alert, «Copy details», «Full reset»); the page stays visible. If AVVIO is not loaded yet it picks window.qqFailInfo up
@@ -95,7 +99,7 @@
       const u = new URL(location.href), stall = stored.then(n => +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * n);
       const within = p => Promise.race([p, stall.then(ms => new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), ms)))]);
       const fresh = u.searchParams.get("riparti") === "1";
-      if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
+      if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); u.searchParams.delete("ripn"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
       window.qqStep = ""; phase(null); perfMark("motore pronto");
     }

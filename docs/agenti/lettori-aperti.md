@@ -1,16 +1,21 @@
-# Modulo «aperti»: formati aperti (mzML con numpress, mzXML)
+# Modulo «aperti»: formati aperti (mzML con numpress, mzML gzip, mzXML)
 
 Famiglia `aperti` (`crates/mzlab-lettori/src/aperti/`, feature `aperti`, tetto 393 216 B, `.wasm` in `wasm-lettori/aperti/`). Contratto dei lettori e caricamento a richiesta: `lettori-modulo.md`, `estendere.md`.
 
 ## mzML con MS-Numpress (`aperti/mzml_numpress.rs`)
 - `numpress.rs` (`mzlab-core`, solo con `estesi`, fuori dal motore): decodifica `Np::{Linear, Pic, Slof}` (MS:1002312/13/14, e le forme con zlib 1002746/47/48 via `of_accession`); `decode(np, byte, atteso)` limita i valori a `atteso` (8 M se 0) e dà `err.file.numpress`; `decode_text` aggiunge base64 e zlib limitato (`error.memoryBudget` oltre `max_bytes`); `plain_base64` scrive f64 piani; i codificatori `encode_linear/pic/slof` servono ai test.
-- Il motore resta com'è: `mzml.rs` rifiuta il numpress (`err.file.numpress`) e il suo `.wasm` non cambia (stesso SHA-256). Il modulo riscrive gli array di UN spettro/cromatogramma come f64 piani (`aperti/np_riscrivi.rs`: `riscrivi`) e li dà a `mzml::parse` / `Mzml::chromatogram`.
+- Il motore resta com'è: `mzml.rs` rifiuta il numpress (`err.file.numpress`) e il suo `.wasm` non cambia. Il modulo riscrive gli array di UN spettro/cromatogramma come f64 piani (`aperti/np_riscrivi.rs`: `riscrivi`) e li dà a `mzml::parse` / `Mzml::chromatogram`.
 - `VOCE` `id "mzml-numpress"`, `.mzml`: `riconosci` vuole `<mzML` e una delle sei accession prima della fine del primo `</spectrum>` (legge 64 KB, poi raddoppia fino a 16 MB: l'array m/z può essere piano e lungo mentre solo le intensità sono numpress; `Fiducia::Si`). `apri` fa un solo passaggio sugli offset (`scantable::read`), controlla `start < end ≤ dimensione` e `Limiti::voci_ok`; `scansione(c, k)` legge solo i byte di `k`.
 - `cromatogrammi`/`cromatogramma`: come `mzmlhead.rs`, sui byte riscritti del cromatogramma. Lo scanner di tag, i parametri dello spettro e la lettura della testata originale stanno in `aperti/mzml_testata.rs`.
 - `testata_mzml` = testata originale (strumento, seriale, componenti, sorgenti con SHA-1, software, data; lo SHA-1 dell'intero file si calcola solo se l'originale non nomina nessuna sorgente) con mzLab come convertitore; `metodo` ripete il documento `mzLab metodo/1` se il file lo porta, altrimenti `{}`.
-- Pagina: `LETTORI_FAM.aperti` (`lettori-famiglie.js`) e `LETTORI_MOD.variante` (`lettori-modulo.js`: legge 64 KB di un `.mzML` e poi raddoppia fino a 16 MB, come `riconosci`, fino alla fine del primo `</spectrum>`) fanno arrivare al modulo, da `moduloWants` (`shell.js`), gli mzML che portano numpress; gli altri vanno al motore.
+- Pagina: `LETTORI_FAM.aperti` (`lettori-famiglie.js`) e `LETTORI_MOD.variante` (`lettori-modulo.js`: legge 64 KB e raddoppia fino a 16 MB, come `riconosci`) riconoscono gli mzML con numpress; `numpressToNat` (`shell.js`, `NATIVO.numpress`) li apre come campione nativo di un solo membro e il motore li indicizza dal lettore del modulo (`famigliaEsterna` dà «aperti»), senza riscrivere l'mzML; «Download .mzML» lo converte al momento (`nativeToMzml`). Desktop e CLI lo leggono già nativamente.
 - Prove: `crates/mzlab-lettori/tests/aperti_numpress.rs` (file sintetici; costruttori in `tests/comune/`), `aperti_numpress_ostili.rs` (casi ostili e dati veri se c'è `MZLAB_DATI`), unit in `numpress/tests.rs`, `tests_e2e/e2e_lettori_modulo.py` (mzML numpress e gemello zlib).
 - Limiti noti: i cvParam dello spettro che la riscrittura non conosce diventano userParam «ACC nome» nell'mzML riscritto; `dataProcessing`, `referenceableParamGroup` e `scanSettings` non passano (`grezzi-non-estratti.md`).
+
+## mzML gzip (`aperti/mzml_gz.rs`)
+- `VOCE` `id "mzml-gz"`, `.mzml.gz`: `riconosci` vuole i byte magici gzip e `<mzML`/`<indexedmzML` nei primi 4 KB decompressi (`Fiducia::Si`). `apri` decomprime TUTTO in memoria (`MultiGzDecoder`, tetto `Limiti::byte`, `error.memoryBudget` oltre; gzip rotto `err.file.zlib`; un gzip troncato con qualche byte già gonfiato si apre con gli spettri che ha e `Lettore::mancanti` conta gli altri) e passa il file a `mzml_numpress::apri`, che legge anche gli array piani.
+- La pagina lo manda sempre al modulo (`soloModulo`). Un gzip più grande del tetto non si apre: leggerlo a flusso su OPFS è lavoro a parte.
+- Prove: `crates/mzlab-lettori/tests/aperti_gz.rs`, `mzml_varianti_tests.rs` (CLI).
 
 ## mzXML (`aperti/mzxml.rs`)
 - `VOCE` `id "mzxml"`, `.mzxml`: `riconosci` vuole `<mzXML` nei primi 4 KB (`Fiducia::Si`). Il lettore decodifica da sé (nessuna riscrittura in mzML): `mzxml_indice.rs` (offset), `mzxml_scan.rs` (una scansione), `mzxml_testata.rs` (testata, `metodo/1`, `Header`). Il motore non lo legge: `LETTORI_FAM.aperti.soloModulo` contiene `.mzxml`, quindi la pagina lo manda sempre al modulo.

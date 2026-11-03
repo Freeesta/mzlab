@@ -80,3 +80,11 @@ fn the_route_builds_the_line_and_applies_it() {
         format!(r#"{{"plan":{PLAN},"line":"mzlab-cli flow run plan.json --set graph.ppm=9"}}"#);
     assert!(route(&body, Some(&reg())).unwrap().contains("\"ppm\":9"));
 }
+
+#[test]
+fn events_and_jsonl_parse_the_same() {
+    let a = sets_of("mzlab-cli flow run p.json --out o --events --set g.ppm=3").unwrap();
+    let b = sets_of("mzlab-cli flow run p.json --out o --jsonl --set g.ppm=3").unwrap();
+    assert_eq!(a, b);
+    assert_eq!(a, vec!["g.ppm=3".to_string()]);
+}

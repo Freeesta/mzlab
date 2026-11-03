@@ -41,6 +41,8 @@ fn the_routes_answer_as_the_scheduler_of_the_site() {
     );
     let files = json!({ "s_t000.mzML": "a", "s_t010.mzML": "b" });
     let st = State::new();
+    let root = tempfile::tempdir().unwrap();
+    st.set_flow_folder(root.path().join("flow"));
     st.live_start(&json!({ "plan": PLAN, "files": files }), 0)
         .unwrap();
 
@@ -82,6 +84,8 @@ fn the_routes_answer_as_the_scheduler_of_the_site() {
 fn finish_answers_the_record_of_the_plan_it_holds() {
     let _one = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let st = State::new();
+    let root = tempfile::tempdir().unwrap();
+    st.set_flow_folder(root.path().join("flow"));
     assert!(st.flow_live("finish", &json!({})).is_err());
     let files = json!({ "s_t000.mzML": "a", "s_t010.mzML": "b" });
     st.live_start(&json!({ "plan": PLAN, "files": files }), 0)

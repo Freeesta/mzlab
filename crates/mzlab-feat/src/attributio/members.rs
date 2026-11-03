@@ -350,12 +350,11 @@ pub fn lookup_name(identity: &str) -> Option<String> {
     }
     let mut s = identity;
     let t = identity.trim_end();
-    if t.ends_with(')') {
-        if let Some(o) = t.rfind('(') {
-            if !t[o + 1..t.len() - 1].contains(['(', ')']) {
-                s = t[..o].trim_end();
-            }
-        }
+    if t.ends_with(')')
+        && let Some(o) = t.rfind('(')
+        && !t[o + 1..t.len() - 1].contains(['(', ')'])
+    {
+        s = t[..o].trim_end();
     }
     Some(s.trim().to_string()).filter(|n| !n.is_empty())
 }

@@ -155,14 +155,17 @@ fn every_mode_is_read_or_refused_exactly_as_the_matrix_says() {
             }
         }
     }
-    // the confirmed codes and the readable modes are the same six
+    // the readable modes are the confirmed codes and the two SIM modes (read like a dense MRM block, not yet seen in a real file)
     let confirmed: Vec<&str> = modi
         .iter()
-        .filter(|(_, m)| m["codice_confermato"] == true)
+        .filter(|(_, m)| m["codice_confermato"] == true || m["futuro"]["sim"] == true)
         .map(|(s, _)| s.as_str())
         .collect();
     assert_eq!(confirmed, read);
-    assert_eq!(read, ["EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1"]);
+    assert_eq!(
+        read,
+        ["EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1", "Q1MI", "Q3MI"]
+    );
 }
 
 /// The refused modes are refused through the registry too (the page's path), with the same detail.
@@ -228,14 +231,27 @@ fn q1_reads_like_ems_and_the_method_one_fallback_serves_every_sample() {
     assert!(mzml(&dir, "Q1", 2).contains("sample=3 period=1 cycle=4 experiment=1"));
 }
 
-/// Q1MI (code 1) stays refused, the message names the code.
+/// Q1MI and Q3MI (codes 1 and 3) give a TIC and one SIM chromatogram per ion, never an SRM one, through the registry too.
 #[test]
-fn q1mi_is_still_refused_with_its_code() {
-    let Some((dir, _)) = generate() else {
+fn sim_modes_give_one_sim_chromatogram_per_ion() {
+    let Some((dir, modi)) = generate() else {
         return;
     };
-    let err = lettori::apri(set(&dir, "Q1MI"), &Limiti::sito())
-        .err()
-        .unwrap();
-    assert_eq!(detail(&err), "scan type code 1 (experiment 1)");
+    for sigla in ["Q1MI", "Q3MI"] {
+        let ions = modi[sigla]["futuro"]["ioni"].as_array().unwrap().len();
+        let mut l = lettori::apri(set(&dir, sigla), &Limiti::sito()).unwrap();
+        let list = l.cromatogrammi(0).unwrap();
+        let sim: Vec<_> = list
+            .iter()
+            .filter(|v| v.tipo == mzlab_core::mzml::ChromKind::Sic)
+            .collect();
+        assert_eq!(sim.len(), ions, "{sigla}");
+        assert!(list
+            .iter()
+            .all(|v| v.tipo != mzlab_core::mzml::ChromKind::Srm));
+        assert!(sim[0]
+            .id
+            .starts_with("SIM SIC sample=1 period=1 experiment=1 transition=0"));
+        assert!(sim[0].id.ends_with(" polarity=positive"), "{}", sim[0].id);
+    }
 }

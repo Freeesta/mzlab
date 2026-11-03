@@ -25,7 +25,7 @@ COMANDI.gestore("files.view", {
   },
 });
 /** @param {() => void} fn */
-const fileViewDo = fn => COMANDI.fai("files.view", COMANDI.GLOBALE, fn);
+const fileViewDo = fn => COMANDI.fai("files.view", COMANDI.GLOBALE, () => { const had = new Set(E.files.filter(f => f.vis).map(f => f.k)); fn(); ESP.unici(had); });   // two files of a never-overlaid type (MS2) are never ticked together
 const setVisOf = (/** @type {any[]} */ fs, /** @type {boolean} */ on) => {
   fileViewDo(() => fs.forEach(f => sibsOf(f).forEach(g => { g.vis = on; })));
   if (!on) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
@@ -198,17 +198,29 @@ const ugBases = () => new Set(flSide().filter(x => x.vis).map(x => fileBase(x.fi
 function groupFiles() {
   const used = new Set(E.files.map(x => x.ugrp)); let n = 1;
   while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
-  const b = ugBases(); ugSet(flSide().filter(x => b.has(fileBase(x.file))), I18N.t("files.ugrp.name", { n }));
+  carica("gruppi.js").then(() => GRUPPI.set([...ugBases()], I18N.t("files.ugrp.name", { n }), "new"));
 }
-async function renameGroup(/** @type {string} */ n) {
-  const v = ((await ask(I18N.t("files.group.prompt"), n)) || "").trim();
-  if (!v || v === n) return;
-  E._grpOpen = E._grpOpen || {}; if (E._grpOpen["u:" + n] !== undefined) E._grpOpen["u:" + v] = E._grpOpen["u:" + n];
-  ugSet(ugFiles(n), v);
+/** True when the list has user groups and every one is a single file: their headers (a count of 1 each) are left out. @param {{ g: string, fs: any[] }[]} groups */
+const ugFlat = groups => (E.ugBy && E.ugBy.by === "flat") || groups.some(G => G.g.startsWith("u:")) && groups.every(G => !G.g.startsWith("u:") || G.fs.length < 2);
+// experiment types in the catalogue order; «None» = one headerless group
+function ugArrange(/** @type {{ g: string, fs: any[] }[]} */ groups) {
+  const at = (/** @type {{ g: string, fs: any[] }} */ G) => (ESP.voce(G.g.startsWith("hr.") ? G.g.slice(3) : G.fs[0].kind) || { ordine: 99 }).ordine, slots = groups.map((G, j) => G.g[0] == "u" ? -1 : j).filter(j => j >= 0), ts = slots.map(j => groups[j]).sort((a, b) => at(a) - at(b));
+  slots.forEach((j, i) => { groups[j] = ts[i]; });
+  if (E.ugBy && E.ugBy.by === "flat") groups.splice(0, groups.length, { g: "u:", fs: groups.flatMap(G => G.fs) });
 }
+/** «Group by» is shown only while some grouping gives a group of 2+ files (one the list already has, or a variable of the names); the chosen key stays and applies again when it is useful. */
+let _byTick = 0;
+function syncGroupBy() {
+  const by = document.getElementById("sb-by"); if (!by) return;
+  const my = ++_byTick, show = (/** @type {boolean} */ on) => { if (my !== _byTick || by.hidden === !on) return; by.hidden = !on; if (!on) window.GRUPPIPER?.close(false); };
+  if (new Set(flSide().map((/** @type {any} */ f) => fileBase(f.file))).size < 2) return show(false);
+  carica("gruppi.js").then(() => GRUPPI.useful()).then(show);
+}
+// rename and ungroup also reach the labels of the loading table's rows: gruppi.js writes both
+const renameGroup = (/** @type {string} */ n) => carica("gruppi.js").then(() => GRUPPI.rename(n));
 function groupCtx(/** @type {any} */ e, /** @type {string} */ n) {
   e.stopPropagation();
-  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => ugSet(ugFiles(n), "") }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
+  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => carica("gruppi.js").then(() => GRUPPI.ungroup(n)) }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
 }
 /** Header of a user group: the markup of the automatic headers of renderFileList, plus the name for its menu (right click, Menu key, Shift+F10) and rename (double click, F2). */
 function ugHead(/** @type {{ g: string, fs: any[] }} */ G, /** @type {boolean} */ open) {
@@ -234,6 +246,9 @@ function firstOpenK(/** @type {any[]} */ session) {
   return i < 0 ? 0 : i;
 }
 // a DDA file is named after the file only: its engine label ends with «· Full Scan»
+const noExt = (/** @type {string} */ s) => String(s).replace(/\.(mzml|mzxml|wiff2?|raw|d|dam|cdf)(?= · |$)/i, "");
+// labels without extension and unique: the later twins get « (2)»…
+const uniqueLabels = (/** @type {{ label: string }[]} */ fs) => { const n = /** @type {Record<string, number>} */ ({}); fs.forEach(f => { n[f.label] = (n[f.label] || 0) + 1; if (n[f.label] > 1) f.label += " (" + n[f.label] + ")"; }); };
 const noFullScan = (/** @type {string} */ label, /** @type {any} */ dda) => dda ? String(label).replace(/ · Full Scan(?=[+−-]?$)/, "") : label;
 
 // the live spectrum of a chromatogram shows the file the user picked in the list (unless the spectrum's own file menu was used)

@@ -17,7 +17,7 @@
   }
   const sub = (/** @type {string} */ f) => H(f).replace(/(\d+)/g, "<sub>$1</sub>");
 
-  // periodic table: markup, layout and behaviour live in tavola-periodica.js (shared with the Teoria)
+  // periodic table: markup, layout and behaviour live in tavola-periodica.js 
   const { periodic, bindPeriodic } = TAVOLA.create({ elements: ELEMENTS, t: (/** @type {string} */ k, /** @type {Bag | undefined} */ p) => I18N.t(k, p), nome: (/** @type {Bag} */ e) => I18N.t(`el.${e.s}`) });
 
 
@@ -73,12 +73,12 @@
     const vis = LOSSES.filter((/** @type {Bag} */ l) => l.pol === "±" || NL.pols.has(l.pol)).sort((/** @type {Bag} */ a, /** @type {Bag} */ b) => massOf(a.f) - massOf(b.f));
     if (isFinite(q)) vis.forEach((/** @type {Bag} */ l) => { if (Math.abs(massOf(l.f) - q) <= NL_TOL(q)) hit.add(l.f); });
     const /** @type {{ n: number, ls: Bag[] }[]} */ groups = []; vis.forEach((/** @type {Bag} */ l) => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
-    return groups.map(g => lossRow(g.ls, { hit })).join("");
+    return groups.length ? groups.map(g => lossRow(g.ls, { hit })).join("") : /** @type {any} */ (window).EMPTYLEAF("empty.losses");
   }
   function lossTab() {
     return `<div class="nlbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></div>
       <span class="seg" id="nl-pol" title="${I18N.t("tbl.loss.polTitle")}"><button type="button" data-p="+" class="${NL.pols.has("+") ? "on" : ""}">ESI+</button><button type="button" data-p="-" class="${NL.pols.has("-") ? "on" : ""}">ESI&minus;</button></span></div>
-      <div class="nlhint muted" id="nl-hint">ⓘ ${I18N.t("tbl.loss.hint")}</div><div id="nl-ctl"></div><div class="cq-links"><button type="button" class="cq-link" id="nl-to-ad" hidden>${I18N.t("cq.link.ad")}</button></div><div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
+      <div id="nl-ctl"></div><div class="cq-links"><button type="button" class="cq-link" id="nl-to-ad" hidden>${I18N.t("cq.link.ad")}</button></div><div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
   }
   // root is the host of the Neutral losses tab (any DOM container): its descendants are queried by selector, hence any
   function bindLoss(/** @type {any} */ root, /** @type {(id: string) => void} */ show) {

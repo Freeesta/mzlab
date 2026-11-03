@@ -17,13 +17,18 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); ready(pg)
         pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(" + S2 + ",D.sid[3])})()"); pg.wait_for_timeout(2500)
+        def open_dl():
+            # the MassBank record and the SIRIUS file are in the download menu of the panel (scarico: true in fair.js), not in the right-click menu
+            pg.evaluate("(()=>{const s=" + S2 + ";s.el.scrollIntoView({block:'center'})})()")
+            pg.evaluate("(()=>{const s=" + S2 + ";s.el.querySelector('[data-a=\"dl\"]').click()})()")
+            pg.wait_for_timeout(400)
         def menu():
-            pos = pg.evaluate("(()=>{const s=" + S2 + ";s.el.scrollIntoView({block:'center'});const r=s.cv.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()")
-            pg.mouse.click(pos["x"], pos["y"], button="right"); pg.wait_for_timeout(400)
+            open_dl()
             t = pg.inner_text("#ctx"); assert "Record MassBank" in t and "SIRIUS 6" in t, t
-        step("HR MS2: the menu offers the MassBank record and the SIRIUS file", menu)
+            pg.keyboard.press("Escape")
+        step("HR MS2: the download menu of the panel offers the MassBank record and the SIRIUS file", menu)
         def refuse():
-            pg.click("#ctx >> text=Record MassBank"); pg.wait_for_selector("#fairdlg[open]")
+            open_dl(); pg.click("#ctx >> text=Record MassBank"); pg.wait_for_selector("#fairdlg[open]")
             pg.fill("#fa-name", "Test compound"); pg.click("#fa-go"); pg.wait_for_timeout(400)
             t = pg.inner_text("#fa-msg"); assert "SMILES" in t and "InChIKey" in t and "autori" in t.lower(), t        # nothing is downloaded with fields missing
         step("MassBank dialog: missing fields are listed and block the download", refuse)
@@ -41,9 +46,7 @@ try:
             assert not pg.evaluate("document.querySelector('#fairdlg').open")
         step("MassBank record: downloaded with the compound, the spectrum and the licence", record)
         def sirius():
-            pos = pg.evaluate("(()=>{const s=" + S2 + ";const r=s.cv.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()")
-            pg.mouse.click(pos["x"], pos["y"], button="right"); pg.wait_for_timeout(400)
-            pg.click("#ctx >> text=SIRIUS 6"); pg.wait_for_selector("#fairdlg[open]")
+            open_dl(); pg.click("#ctx >> text=SIRIUS 6"); pg.wait_for_selector("#fairdlg[open]")
             with pg.expect_download() as dl:
                 pg.click("#fa-go")
             txt = open(dl.value.path(), encoding="utf-8").read(); print(txt[:300])

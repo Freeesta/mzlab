@@ -458,11 +458,10 @@ pub fn item_info<R: ReadAt>(
     let pol = part.and_then(|p| p.pol).filter(|p| *p == 1 || *p == -1);
     let mut ranges = [None, None];
     for (i, (level, present)) in [(1u8, has1), (2u8, has2)].into_iter().enumerate() {
-        if present {
-            if let Some(si) = idx.section_of(level, pol) {
+        if present
+            && let Some(si) = idx.section_of(level, pol) {
                 ranges[i] = idx.mz_range(si)?;
             }
-        }
     }
     let (r1, r2) = (ranges[0], ranges[1]);
     let all: Vec<&Scan> = idx.scans.iter().collect();

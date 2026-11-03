@@ -43,7 +43,7 @@ def settle(q):
 
 def setup(q):
     ready(q)
-    if q.is_visible("#dfiles"): q.click("#sb-x"); attendi(q, "(()=>{const d=document.querySelector('#dfiles');return !d||!d.offsetParent})()")      # the File panel is open at first start: the test measures the panel headers at the width of the window
+    if q.is_visible("#dfiles"): close_side(q); attendi(q, "(()=>{const d=document.querySelector('#dfiles');return !d||!d.offsetParent})()")      # the File panel is open at first start: the test measures the panel headers at the width of the window
     q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000)
     q.evaluate("(()=>{addPanel('xic',{tab:E.tab,traces:[HR.ionTrace(305.0702,{tab:E.tab})],x:0,y:700,w:hostWidth(),h:300,full:true});relayout();fitHost()})()"); attendi(q, "E.panels.some(p=>p.type==='xic')")
     q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full'); if(f){addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()}})()"); attendi(q, "E.panels.some(p=>p.type==='map')||!E.files.find(x=>x.kind==='full')"); settle(q)

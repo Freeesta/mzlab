@@ -1,0 +1,1683 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "msngrafo/2",
+ "title": "msngrafo/2: the fragmentation graph of an MSn infusion",
+ "description": "Format «msngrafo/2» (the English opzioni keys of msngrafo/1, docs/schemi/msngrafo-1.json) (crates/mzlab-core/src/msngrafo/, docs/agenti/msn-grafo.md): one node per ion seen at any level, energy or path, one arc per precursor → fragment with the neutral loss. With the formula of the ion of the root given by the user (opzioni.formula) every fragment gets the sub-formulas of the root within its window (candidates, never a proposal) and the fragments with none leave the graph; without it the formulas are null. Same input, same bytes.",
+ "type": "object",
+ "required": [
+  "formato",
+  "motore",
+  "sorgente",
+  "opzioni",
+  "polarita",
+  "radici",
+  "ione",
+  "candidati_radice",
+  "conteggi",
+  "avvisi",
+  "nodi",
+  "archi",
+  "spettri"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "formato": {
+   "const": "msngrafo/2"
+  },
+  "motore": {
+   "type": "string"
+  },
+  "sorgente": {
+   "type": [
+    "object",
+    "null"
+   ],
+   "properties": {
+    "nome": {
+     "type": "string"
+    },
+    "sha256_idx": {
+     "type": "string"
+    }
+   }
+  },
+  "opzioni": {
+   "type": "object",
+   "required": [
+    "ppm",
+    "da_min",
+    "min_rel",
+    "max_peaks",
+    "isotopes",
+    "activation",
+    "formula",
+    "smiles",
+    "ppm_formula",
+    "low_mz",
+    "wide_ppm",
+    "min_evidence",
+    "pick"
+   ],
+   "properties": {
+    "ppm": {
+     "type": "number",
+     "default": 5
+    },
+    "da_min": {
+     "type": "number",
+     "default": 0.002
+    },
+    "min_rel": {
+     "type": "number",
+     "default": 2
+    },
+    "max_peaks": {
+     "type": "integer",
+     "default": 120
+    },
+    "isotopes": {
+     "type": "boolean",
+     "default": false
+    },
+    "activation": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "formula": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "The ion of the root as typed (C8H11N4O2+, C8H10N4O2+H, C8H10N4O2 [M+H]+)"
+    },
+    "smiles": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "The structure of the molecule, written back for the drawing of the fragments"
+    },
+    "molfile": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "The structure as a molfile (alternative to smiles), written back for the drawing of the fragments; the key is there only when it was given"
+    },
+    "ppm_formula": {
+     "type": "number",
+     "default": 10,
+     "description": "Window of the sub-formulas, ppm"
+    },
+    "low_mz": {
+     "type": "number",
+     "default": 150,
+     "description": "Below this m/z the window may widen to wide_ppm"
+    },
+    "wide_ppm": {
+     "type": "number",
+     "default": 20
+    },
+    "min_evidence": {
+     "type": "integer",
+     "minimum": 0,
+     "default": 1,
+     "description": "Evidences a candidate of the wide window needs"
+    },
+    "pick": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "mz",
+       "formula"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "mz": {
+        "type": "number"
+       },
+       "formula": {
+        "type": "string"
+       }
+      }
+     },
+     "description": "Formulas chosen by the user, found again on the node within its window"
+    }
+   }
+  },
+  "polarita": {
+   "enum": [
+    1,
+    -1
+   ]
+  },
+  "radici": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "ione": {
+   "oneOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "required": [
+      "formula",
+      "mz_teorico",
+      "mz_osservato",
+      "ppm"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "formula": {
+       "type": "string"
+      },
+      "mz_teorico": {
+       "type": "number"
+      },
+      "mz_osservato": {
+       "type": "number"
+      },
+      "ppm": {
+       "type": "number"
+      }
+     }
+    }
+   ]
+  },
+  "candidati_radice": {
+   "description": "Without opzioni.formula: up to 8 formulas of the ion of the first root that fit its m/z (candidates, never an identification); empty otherwise.",
+   "type": "array",
+   "maxItems": 8,
+   "items": {
+    "type": "object",
+    "required": [
+     "formula",
+     "mz_teorico",
+     "ppm"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "formula": {
+      "type": "string"
+     },
+     "mz_teorico": {
+      "type": "number"
+     },
+     "ppm": {
+      "type": "number"
+     }
+    }
+   }
+  },
+  "conteggi": {
+   "type": "object",
+   "required": [
+    "nodi",
+    "archi",
+    "scartati_pesanti",
+    "scartati_isotopi",
+    "scartati_deboli",
+    "scartati_formula"
+   ],
+   "properties": {
+    "nodi": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "archi": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "scartati_pesanti": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "scartati_isotopi": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "scartati_deboli": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "scartati_formula": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Nodes with no sub-formula of the root in their window (they are not in nodi)"
+    }
+   }
+  },
+  "avvisi": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "chiave",
+     "albero",
+     "nodo"
+    ],
+    "properties": {
+     "chiave": {
+      "enum": [
+       "warn.msngrafo.isolation",
+       "warn.msngrafo.precNotFound",
+       "warn.msngrafo.polarity",
+       "warn.msngrafo.badFormula",
+       "warn.msngrafo.rootMissing",
+       "warn.msngrafo.fixedNotFound",
+       "warn.msngrafo.userConflict",
+       "warn.msngrafo.isolatedUnexplained",
+       "warn.msngrafo.mostUnexplained"
+      ]
+     },
+     "albero": {
+      "type": "string",
+      "description": "Node of the tree; empty when the note is about the graph"
+     },
+     "nodo": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "pattern": "^n[0-9]+$"
+     }
+    }
+   }
+  },
+  "nodi": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "id",
+     "mz",
+     "dev_ppm",
+     "livello",
+     "isolato",
+     "albero",
+     "osservazioni",
+     "rel_max",
+     "isotopo_di",
+     "m1",
+     "isolamento",
+     "non_spiegati",
+     "pos",
+     "formula"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^n[0-9]+$"
+     },
+     "mz": {
+      "type": "number"
+     },
+     "dev_ppm": {
+      "type": "number",
+      "minimum": 0
+     },
+     "livello": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "MS level of the first spectrum in which the ion is seen; 1 = a root ion"
+     },
+     "isolato": {
+      "type": "boolean"
+     },
+     "albero": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Nodes of the precursor tree whose precursor this ion is"
+     },
+     "osservazioni": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "rel_max": {
+      "type": "number"
+     },
+     "isotopo_di": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "pos": {
+      "type": "object",
+      "required": [
+       "col",
+       "riga"
+      ],
+      "properties": {
+       "col": {
+        "type": "integer"
+       },
+       "riga": {
+        "type": "integer"
+       }
+      }
+     },
+     "formula": {
+      "description": "The sub-formulas of the ion of the root that explain the node: candidates, never an identification",
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "candidati",
+         "scelta",
+         "fonte"
+        ],
+        "properties": {
+         "candidati": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+           "type": "object",
+           "additionalProperties": false,
+           "required": [
+            "formula",
+            "mz_teorico",
+            "ppm",
+            "dbe",
+            "elettroni",
+            "finestra",
+            "prove"
+           ],
+           "properties": {
+            "formula": {
+             "type": "string"
+            },
+            "mz_teorico": {
+             "type": "number"
+            },
+            "ppm": {
+             "type": "number",
+             "description": "(m/z of the node − mz_teorico) / mz_teorico"
+            },
+            "dbe": {
+             "type": "number"
+            },
+            "elettroni": {
+             "enum": [
+              "pari",
+              "dispari"
+             ]
+            },
+            "finestra": {
+             "type": "number",
+             "description": "ppm_formula, or wide_ppm for a candidate with evidences"
+            },
+            "prove": {
+             "type": "array",
+             "items": {
+              "enum": [
+               "perdita",
+               "isotopes",
+               "msn"
+              ]
+             }
+            }
+           }
+          },
+          "description": "By |ppm|, then Hill order"
+         },
+         "scelta": {
+          "type": [
+           "string",
+           "null"
+          ],
+          "description": "Only with one candidate, or chosen by the user"
+         },
+         "fonte": {
+          "enum": [
+           "radice",
+           "unica",
+           "utente",
+           null
+          ]
+         }
+        }
+       }
+      ]
+     },
+     "m1": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "description": "The M+1 of its most intense observation, % of it"
+     },
+     "isolamento": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "larghezza",
+       "a_monte",
+       "stretto"
+      ],
+      "properties": {
+       "larghezza": {
+        "type": [
+         "number",
+         "null"
+        ],
+        "description": "Its own isolation window (Da), when it is isolated and the file says"
+       },
+       "a_monte": {
+        "type": [
+         "number",
+         "null"
+        ],
+        "description": "The narrowest window on the path to the spectrum of its most intense observation (Da)"
+       },
+       "stretto": {
+        "type": "boolean",
+        "description": "a_monte < 2·1.00336 Da: its M+1 is not expected there, the isotopes are no evidence"
+       }
+      }
+     },
+     "non_spiegati": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "n",
+         "picchi"
+        ],
+        "properties": {
+         "n": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Fragments of its spectra that left the graph (no sub-formula)"
+         },
+         "picchi": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+           "type": "object",
+           "additionalProperties": false,
+           "required": [
+            "mz",
+            "rel"
+           ],
+           "properties": {
+            "mz": {
+             "type": "number"
+            },
+            "rel": {
+             "type": "number"
+            }
+           }
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "archi": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "da",
+     "a",
+     "perdita",
+     "isolamento",
+     "misure"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "da": {
+      "type": "string"
+     },
+     "a": {
+      "type": "string"
+     },
+     "perdita": {
+      "type": "object",
+      "required": [
+       "da_massa",
+       "formula",
+       "ppm",
+       "compatibile"
+      ],
+      "properties": {
+       "da_massa": {
+        "type": "number",
+        "exclusiveMinimum": 0
+       },
+       "formula": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "description": "Chosen formula of the precursor minus that of the fragment (usual name for a known loss)"
+       },
+       "ppm": {
+        "type": [
+         "number",
+         "null"
+        ],
+        "description": "Error of the loss in ppm of the m/z of the precursor"
+       },
+       "compatibile": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        },
+        "description": "Known neutral losses within the tolerance, by mass only"
+       }
+      }
+     },
+     "isolamento": {
+      "type": "boolean",
+      "description": "The step belongs to an isolated path (the fragment is the precursor of a child of the spectrum)"
+     },
+     "misure": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "object",
+       "required": [
+        "albero",
+        "livello",
+        "att",
+        "ce",
+        "n_scansioni",
+        "rel"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "albero": {
+         "type": "string",
+         "description": "Node id of the precursor tree (msn_albero/1), the filter msn:<id>"
+        },
+        "livello": {
+         "type": "integer",
+         "minimum": 2
+        },
+        "att": {
+         "type": "string",
+         "description": "Activation of the last stage, lower case"
+        },
+        "ce": {
+         "type": [
+          "number",
+          "null"
+         ],
+         "description": "Collision energy; null when the energies are merged"
+        },
+        "n_scansioni": {
+         "type": "integer",
+         "minimum": 1
+        },
+        "rel": {
+         "type": "number",
+         "minimum": 0,
+         "description": "% of the base peak of the spectrum; 0 for an isolated precursor not found there"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "spettri": {
+   "type": "array",
+   "description": "Every spectrum of the tree in the graph, with its peaks: a peak with nodo null left the graph (unexplained); the clean spectrum is the others",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "albero",
+     "livello",
+     "att",
+     "ce",
+     "precursore",
+     "larghezza",
+     "picchi"
+    ],
+    "properties": {
+     "albero": {
+      "type": "string"
+     },
+     "livello": {
+      "type": "integer",
+      "minimum": 2
+     },
+     "att": {
+      "type": "string"
+     },
+     "ce": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "precursore": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "pattern": "^n[0-9]+$"
+     },
+     "larghezza": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "description": "Isolation window (Da)"
+     },
+     "picchi": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "mz",
+        "rel",
+        "nodo"
+       ],
+       "properties": {
+        "mz": {
+         "type": "number"
+        },
+        "rel": {
+         "type": "number"
+        },
+        "nodo": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "pattern": "^n[0-9]+$"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "strutture": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Present only when asked (mzlab-cli msn-graph --strutture NODO): the cleavages of the structure (opzioni.smiles) of ONE node whose piece gives its m/z. Candidates with their evidence, never identifications: the broken bond is a hypothesis. The rest of the document keeps its bytes without it.",
+   "required": [
+    "nodo",
+    "smiles",
+    "mz",
+    "ppm_tol",
+    "atomi",
+    "legami",
+    "avvisi",
+    "candidati"
+   ],
+   "properties": {
+    "nodo": {
+     "type": "string",
+     "pattern": "^n[0-9]+$"
+    },
+    "smiles": {
+     "type": "string"
+    },
+    "mz": {
+     "type": "number"
+    },
+    "ppm_tol": {
+     "type": "number"
+    },
+    "atomi": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Heavy atoms of the structure (0 for a mixture)"
+    },
+    "legami": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Bonds that can be cleaved (acyclic single bonds, at most 400)"
+    },
+    "avvisi": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "enum": [
+       "warn.msngrafo.structMixture"
+      ]
+     }
+    },
+    "candidati": {
+     "type": "array",
+     "description": "Ordered by |ppm|, then m/z",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "formula",
+       "mz_teorico",
+       "ppm",
+       "tagli"
+      ],
+      "properties": {
+       "formula": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "description": "The candidate formula of the node with this m/z, null when the node has none"
+       },
+       "mz_teorico": {
+        "type": "number"
+       },
+       "ppm": {
+        "type": "number",
+        "description": "Smallest distance of a cleavage from the m/z of the node"
+       },
+       "tagli": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "legame",
+          "lato",
+          "pezzo",
+          "resto",
+          "formula",
+          "variante",
+          "perdita",
+          "mz_teorico",
+          "ppm",
+          "picchi"
+         ],
+         "properties": {
+          "legame": {
+           "type": "object",
+           "additionalProperties": false,
+           "required": [
+            "idx",
+            "atomi",
+            "etichetta"
+           ],
+           "properties": {
+            "idx": {
+             "type": "integer",
+             "minimum": 0,
+             "description": "Index of the bond in the structure graph"
+            },
+            "atomi": {
+             "type": "array",
+             "minItems": 2,
+             "maxItems": 2,
+             "items": {
+              "type": "integer",
+              "minimum": 0
+             },
+             "description": "The two atoms of the bond, 0-based as the atoms of the SMILES"
+            },
+            "etichetta": {
+             "type": "string",
+             "description": "For example C2-O3 (element and 1-based atom number)"
+            }
+           }
+          },
+          "lato": {
+           "type": "integer",
+           "enum": [
+            1,
+            2
+           ],
+           "description": "The side of the bond that carries the charge"
+          },
+          "pezzo": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           },
+           "description": "Atoms of the piece that carries the charge"
+          },
+          "resto": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           },
+           "description": "Atoms of the other piece"
+          },
+          "formula": {
+           "type": "string",
+           "description": "Neutral formula of the piece, with the hydrogen that replaces the bond"
+          },
+          "variante": {
+           "type": "string",
+           "description": "ion, radical, -H2O, -2H2O, -CO, -CO2 or -NH3: the form that gives the m/z of the node"
+          },
+          "perdita": {
+           "type": "string"
+          },
+          "mz_teorico": {
+           "type": "number"
+          },
+          "ppm": {
+           "type": "number"
+          },
+          "picchi": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+             "mz",
+             "rel",
+             "ppm",
+             "formula",
+             "perdita"
+            ],
+            "properties": {
+             "mz": {
+              "type": "number"
+             },
+             "rel": {
+              "type": "number",
+              "description": "% of the base peak of the spectrum of the node"
+             },
+             "ppm": {
+              "type": "number"
+             },
+             "formula": {
+              "type": "string",
+              "description": "Form of the piece that gives this peak (with the loss)"
+             },
+             "perdita": {
+              "type": "string",
+              "description": "Neutral loss of the form, \"\" for the ion itself"
+             }
+            }
+           },
+           "description": "Peaks of the spectrum of the node that the same piece also explains"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "interpretazione": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Present only when asked (mzlab-cli msn-graph --interpreta): for each arc the neutral loss as evidence (name, formula, exact mass, ppm, source, confidence) and the activations that observed it. Never a verdict. The rest of the document keeps its bytes without it.",
+   "required": [
+    "versione",
+    "ppm",
+    "archi"
+   ],
+   "properties": {
+    "versione": {
+     "const": 1
+    },
+    "ppm": {
+     "type": "number"
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "da",
+       "a",
+       "attivazioni",
+       "perdita"
+      ],
+      "properties": {
+       "da": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "a": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "attivazioni": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "perdita": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "additionalProperties": false,
+        "required": [
+         "nome",
+         "formula",
+         "massa",
+         "errore_ppm",
+         "fonte",
+         "confidenza",
+         "alternative"
+        ],
+        "properties": {
+         "nome": {
+          "type": [
+           "string",
+           "null"
+          ],
+          "description": "Common name of a known loss; null when the formula is not in the table"
+         },
+         "formula": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "massa": {
+          "type": "number"
+         },
+         "errore_ppm": {
+          "type": "number"
+         },
+         "fonte": {
+          "enum": [
+           "formula",
+           "mass"
+          ]
+         },
+         "confidenza": {
+          "enum": [
+           "high",
+           "medium",
+           "low"
+          ]
+         },
+         "alternative": {
+          "type": "array",
+          "items": {
+           "type": "string"
+          },
+          "description": "Other known losses within the window, by mass only"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "regole": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "versione",
+    "tabella",
+    "cutoff_q",
+    "toll_perdita_mda",
+    "addotto",
+    "archi",
+    "ioni",
+    "non_osservabili",
+    "conteggi",
+    "fonti",
+    "soglie"
+   ],
+   "properties": {
+    "versione": {
+     "const": 1
+    },
+    "tabella": {
+     "const": "fragrules/1"
+    },
+    "cutoff_q": {
+     "type": "number"
+    },
+    "toll_perdita_mda": {
+     "type": "number"
+    },
+    "addotto": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "Adduct of the ion of the root, from the typed formula; null for the ion itself"
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "da",
+       "a",
+       "regole",
+       "composta",
+       "stepped",
+       "avvisi"
+      ],
+      "properties": {
+       "da": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "a": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "regole": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "id",
+          "formula",
+          "massa",
+          "errore_mda",
+          "radicale",
+          "priorita",
+          "energia",
+          "perche",
+          "refs"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "formula": {
+           "type": "string"
+          },
+          "massa": {
+           "type": "number"
+          },
+          "errore_mda": {
+           "type": "number"
+          },
+          "radicale": {
+           "type": "boolean"
+          },
+          "priorita": {
+           "enum": [
+            1,
+            2,
+            3
+           ]
+          },
+          "energia": {
+           "type": "string"
+          },
+          "refs": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "perche": {
+           "type": "string",
+           "description": "Why the rule explains a loss (the `why` of the table); a rule of priority 3 says here why it is weak"
+          }
+         }
+        }
+       },
+       "composta": {
+        "type": "array",
+        "items": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "minItems": 2,
+         "maxItems": 2
+        },
+        "description": "Pairs of rules whose losses add up to the loss of the arc (beam-type activation; the intermediate step is not observed)"
+       },
+       "stepped": {
+        "type": "boolean",
+        "description": "A spectrum of the arc is a sum of energies: no breakdown curve is read from it"
+       },
+       "avvisi": {
+        "type": "array",
+        "items": {
+         "enum": [
+          "warn.msngrafo.radicalLoss",
+          "warn.msngrafo.belowCutoff"
+         ]
+        }
+       }
+      }
+     }
+    },
+    "ioni": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "nodo",
+       "regola",
+       "errore_mda"
+      ],
+      "properties": {
+       "nodo": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "regola": {
+        "type": "string"
+       },
+       "errore_mda": {
+        "type": "number"
+       }
+      }
+     }
+    },
+    "non_osservabili": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "nodo",
+       "regola",
+       "mz",
+       "soglia"
+      ],
+      "properties": {
+       "nodo": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "regola": {
+        "type": "string"
+       },
+       "mz": {
+        "type": "number"
+       },
+       "soglia": {
+        "type": "number"
+       }
+      }
+     },
+     "description": "Rules whose product falls below the cut-off q/0.908 of the precursor m/z of a trap CID spectrum"
+    },
+    "conteggi": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "archi_spiegati",
+      "archi_senza_regola",
+      "intensita_spiegata"
+     ],
+     "properties": {
+      "archi_spiegati": {
+       "type": "integer"
+      },
+      "archi_senza_regola": {
+       "type": "integer"
+      },
+      "intensita_spiegata": {
+       "type": "number"
+      }
+     }
+    },
+    "fonti": {
+     "type": "array",
+     "description": "References cited by the rules of the arcs and by the thresholds, with their DOI and PMID",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "key",
+       "doi",
+       "pmid"
+      ],
+      "properties": {
+       "key": {
+        "type": "string"
+       },
+       "doi": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pmid": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      }
+     }
+    },
+    "soglie": {
+     "type": "array",
+     "description": "Numeric thresholds of the table (trap cut-off, loss tolerance) with their origin and whether they are still to be calibrated",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "id",
+       "valore",
+       "perche",
+       "origine",
+       "da_calibrare",
+       "refs"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "valore": {
+        "type": "number"
+       },
+       "perche": {
+        "type": "string"
+       },
+       "origine": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "da_calibrare": {
+        "type": "boolean"
+       },
+       "refs": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    }
+   },
+   "description": "Present only when asked (mzlab-cli msn-graph --regole): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
+  },
+  "strutture_tutti": {
+   "type": "array",
+   "description": "Present only when asked (strutture=tutti): the `strutture` value of every node of level 2 or more that has candidates, in the order of the nodes",
+   "items": {
+    "type": "object"
+   }
+  },
+  "rotture": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Present only when asked (mzlab-cli msn-graph --rotture): the sets of atoms of the structure (opzioni.smiles) with one or two bonds cut and a few hydrogens moved whose m/z is a node's, the arcs whose child piece lies inside the parent's, and the share of each spectrum's intensity on explained arcs. Hypotheses with their evidence, never an assignment.",
+   "required": [
+    "versione",
+    "smiles",
+    "ppm",
+    "h_max",
+    "max_legami",
+    "atomi",
+    "legami",
+    "avvisi",
+    "conteggi",
+    "nodi",
+    "archi",
+    "spettri"
+   ],
+   "properties": {
+    "versione": {
+     "const": 1
+    },
+    "smiles": {
+     "type": "string"
+    },
+    "ppm": {
+     "type": "number"
+    },
+    "h_max": {
+     "type": "integer"
+    },
+    "max_legami": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 2
+    },
+    "atomi": {
+     "type": "integer"
+    },
+    "legami": {
+     "type": "integer"
+    },
+    "avvisi": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "conteggi": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "archi_spiegati",
+      "archi",
+      "intensita_spiegata"
+     ],
+     "properties": {
+      "archi_spiegati": {
+       "type": "integer"
+      },
+      "archi": {
+       "type": "integer"
+      },
+      "intensita_spiegata": {
+       "type": "number"
+      }
+     }
+    },
+    "nodi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "nodo",
+       "n",
+       "ipotesi"
+      ],
+      "properties": {
+       "nodo": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "n": {
+        "type": "integer"
+       },
+       "ipotesi": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "legami",
+          "pezzo",
+          "formula",
+          "h",
+          "mz_teorico",
+          "ppm"
+         ],
+         "properties": {
+          "legami": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           }
+          },
+          "pezzo": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           }
+          },
+          "formula": {
+           "type": "string"
+          },
+          "h": {
+           "type": "integer"
+          },
+          "mz_teorico": {
+           "type": "number"
+          },
+          "ppm": {
+           "type": "number"
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "da",
+       "a",
+       "spiegato"
+      ],
+      "properties": {
+       "da": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "a": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "spiegato": {
+        "type": "boolean"
+       }
+      }
+     }
+    },
+    "spettri": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "albero",
+       "spiegata",
+       "totale"
+      ],
+      "properties": {
+       "albero": {
+        "type": "string"
+       },
+       "spiegata": {
+        "type": "number"
+       },
+       "totale": {
+        "type": "number"
+       }
+      }
+     }
+    }
+   }
+  },
+  "vista": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Always the last key. What a drawer needs and the graph does not say outright, computed only from the fields above (so `completa` adds it to an older graph with the same bytes). Abstract coordinates: pixels and styles belong to the drawer. A proposal of a rule, never a mechanism.",
+   "required": [
+    "versione",
+    "algoritmo",
+    "regola",
+    "ordine",
+    "nodi",
+    "archi"
+   ],
+   "properties": {
+    "versione": {
+     "const": 1
+    },
+    "algoritmo": {
+     "const": "best-path/1"
+    },
+    "regola": {
+     "type": "string",
+     "description": "The rule of the best path in plain words"
+    },
+    "ordine": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Node ids in the order of the tree layout (column, then row)"
+    },
+    "nodi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "id",
+       "livelli",
+       "rel",
+       "rel_max",
+       "best",
+       "entranti",
+       "comune",
+       "albero",
+       "radiale"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "livelli": {
+        "type": "array",
+        "items": {
+         "type": "integer"
+        },
+        "description": "MS levels of the measures in which the ion really is"
+       },
+       "rel": {
+        "type": [
+         "number",
+         "null"
+        ],
+        "description": "Intensity in the spectrum of its parent on the best path, % of the base peak (a root: its rel_max)"
+       },
+       "rel_max": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "best": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "da",
+         "passi",
+         "costo"
+        ],
+        "properties": {
+         "da": {
+          "type": [
+           "string",
+           "null"
+          ],
+          "description": "Parent on the best path, null for a root"
+         },
+         "passi": {
+          "type": "integer"
+         },
+         "costo": {
+          "type": "array",
+          "description": "[steps, smallest rel along the path | null, isolated arcs]",
+          "items": {
+           "type": [
+            "number",
+            "null"
+           ]
+          }
+         }
+        }
+       },
+       "entranti": {
+        "type": "integer",
+        "description": "Number of different precursors"
+       },
+       "comune": {
+        "type": "boolean",
+        "description": "Two or more precursors"
+       },
+       "albero": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "col",
+         "riga"
+        ],
+        "properties": {
+         "col": {
+          "type": "integer"
+         },
+         "riga": {
+          "type": "integer"
+         }
+        }
+       },
+       "radiale": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "anello",
+         "angolo"
+        ],
+        "properties": {
+         "anello": {
+          "type": "integer",
+          "description": "Ring = steps of the best path"
+         },
+         "angolo": {
+          "type": "number",
+          "description": "Degrees, 2 decimals"
+         }
+        }
+       }
+      }
+     }
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "da",
+       "a",
+       "best"
+      ],
+      "properties": {
+       "da": {
+        "type": "string"
+       },
+       "a": {
+        "type": "string"
+       },
+       "best": {
+        "type": "boolean",
+        "description": "The arc is the best entering arc of its target"
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

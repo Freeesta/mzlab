@@ -35,7 +35,7 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 - I tempi della sessione e del `.mzflow` sono confermati (scritti dall'utente), quelli di `campioni/1` no. Un `sample` a 0 minuti diventa `t0`; bianchi, standard, QC e infusioni perdono il tempo; la replica scritta resta, le altre si numerano.
 
 ## Binding
-- Una funzione per motore: `campioni(op, json)` in `mzlab-wasm/src/campioni.rs` (vista Dati) e in `mzlab-feat-table-wasm` (mzFinder), con `op` ∈ `proponi` e `proponi3` (`{"files":[{"name","sha256","kind"}]}`, la seconda dà un `campioni/3` con matrice e gruppo), `valida`, `per_tp`, `canonico` e `digest` (un `campioni/2`: JSON canonico e SHA-256), `da_legacy`. Errori JSON `{error_key, params}` (`error.badCampioni`).
+- Una funzione per motore: `campioni(op, json)` in `mzlab-rotte-wasm/src/lib.rs` (vista Dati) e in `mzlab-feat-table-wasm` (mzFinder), con `op` ∈ `proponi` e `proponi3` (`{"files":[{"name","sha256","kind"}]}`, la seconda dà un `campioni/3` con matrice e gruppo), `valida`, `per_tp`, `canonico` e `digest` (un `campioni/2`: JSON canonico e SHA-256), `da_legacy`. Errori JSON `{error_key, params}` (`error.badCampioni`).
 - `mzlab-core/src/project.rs` resta per la parità col Python del programma principale.
 
 ## Pannello Pipeline di mzFinder (`TP_Mine/files/finder-ruoli.js`, `TP_Mine/js/34_pipeline_run.js`)
@@ -75,7 +75,7 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 - Ruolo, tempo e concentrazione sono del parser dei nomi (`ruolo_e_tempo`, `guess_conc`); il ruolo `t0` conta come `sample`. Un nome senza separatori (`MQH2O2T00`) si taglia in atomi (parola nota, pezzo chimico con simboli di elementi, `T00`); `H2O2`, `TiO2`, `Na2SO4` restano interi.
 - Matrice = prima parola di sole lettere (non ruolo né condizione) con 2-6 valori su ≥ 2 file ciascuno; condizione = i token fra matrice e tempo (senza tempo nessun valore: `BTZ`, `mid`, `Wash` non sono condizioni); replica = numero ≤ 20 in coda se lo stesso nome senza di esso compare con un altro numero.
 - Punteggio = copertura × equilibrio (1 − Σp² normalizzato, solo + × /: stessi bit in `.wasm` e app). Nascoste: costanti, identificatori (categoriche con un file per valore, ≥ 3), punteggio < 0,05. Ordine: sopra 0,25 quello fisso `matrix cond time role matcond folder`, poi per punteggio (`conc`, `rep`).
-- `has`: token intero (`O2` non prende `H2O2`) o `substring`; un file va al primo termine, chi ne ha più sta in `multipli`, chi nessuno in `senza`. CLI `mzlab-cli campioni variabili|nome-gruppo`.
+- `has`: token intero (`O2` non prende `H2O2`) o `substring`; un file va al primo termine, chi ne ha più sta in `multipli`, chi nessuno in `senza`. CLI `mzlab-cli samples vars|group`.
 - Prove: `crates/mzlab-core/tests/campioni_variabili.rs` (elenco dello studio in `crates/mzlab-core/tests/campioni_variabili/federico.json`), `crates/mzlab-cli/src/campioni_cmd_tests.rs`, parità `.wasm` = app in `parita_rotte.rs` (`name_steps`).
 
 ## `campioni/3` (`docs/schemi/campioni-3.json`, `idcampione.rs`, `colonne.rs`, `json3.rs`, `valida3.rs`, `csv.rs`, `modello.rs`, `regex.rs`, `dal_file.rs`)

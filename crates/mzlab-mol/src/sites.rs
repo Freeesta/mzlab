@@ -91,14 +91,14 @@ impl Mol {
         let cls = self.constitution_classes();
         let mut out = Vec::new();
         for c in 0..self.atoms.len() {
-            if let Some(slots) = tetra_slots(self, &adj, &cls, c) {
-                if let Some(sure) = differ(&slots, 2) {
-                    out.push(Cand {
-                        site: Site::Tetra(c as u32),
-                        twins: twins(&adj, &cls, c, None),
-                        sure,
-                    });
-                }
+            if let Some(slots) = tetra_slots(self, &adj, &cls, c)
+                && let Some(sure) = differ(&slots, 2)
+            {
+                out.push(Cand {
+                    site: Site::Tetra(c as u32),
+                    twins: twins(&adj, &cls, c, None),
+                    sure,
+                });
             }
         }
         for b in self.bonds.iter().filter(|b| b.o == 2) {

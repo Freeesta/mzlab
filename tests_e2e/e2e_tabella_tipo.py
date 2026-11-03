@@ -10,7 +10,8 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [{"name": n + ".mzML", "mimeType": "application/octet-stream", "buffer": open(mz(n), "rb").read()} for n in ("B_FullMass-t15", "B_FullMass-t10")]); pg.wait_for_timeout(1500)
-        pg.wait_for_selector('#flist select[data-k="type"]')
+        # the files open at once in the panels: the loading table is behind «Sample table»
+        pg.click("#samptab"); pg.wait_for_selector('#flist select[data-k="type"]')
         def standard():
             assert pg.locator('#flist input[data-k="conc"]').count() == 0, "no concentration column before any standard"
             pg.select_option('#flist select[data-k="type"] >> nth=0', "standard"); pg.wait_for_timeout(300)

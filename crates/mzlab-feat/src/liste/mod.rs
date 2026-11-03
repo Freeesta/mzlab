@@ -4,7 +4,7 @@
 //! to the same bytes. The transformation list of mzFinder (`name;change[;comment]` per line) is the header-less form of the same CSV and goes through here
 //! (`transformation_rows`), so that its results do not change.
 
-mod csv;
+pub(crate) mod csv;
 mod json;
 mod route;
 

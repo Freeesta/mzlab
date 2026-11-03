@@ -431,6 +431,8 @@ fn component_list(h: &Header) -> String {
 }
 
 mod codifica;
+mod compressione;
+pub use compressione::opzioni_compressione;
 mod matrice;
 #[cfg(not(target_family = "wasm"))]
 mod uv;

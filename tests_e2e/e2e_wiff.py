@@ -5,13 +5,13 @@ Needs the site and the .wasm: python tools/build_site.py; the .wasm is built her
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT
+from lib import diag, ROOT
 
 from lib import free_port; PORT = free_port()
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
-    except Exception as e: print("  ", (name, "FAIL " + str(e)[:600]))
+    except Exception as e: print("  ", (name, "FAIL " + str(e)[:1500]))
 
 wasm = ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js"
 if not (ROOT / "site" / "index.html").exists():
@@ -52,18 +52,18 @@ try:
         def late_scan():
             pg.set_input_files("#pick", [str(D / "one.wiff.scan")])
             shown(pg, 1)
-            assert names(pg) == ["one.mzML"], names(pg)
+            assert names(pg) == ["one"], names(pg)
         step("its .wiff.scan arrives in another loading: the pair is converted into one.mzML", late_scan)
         def several():
             pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#fl-up [aria-busy=true]').forEach(r => window.__rows.add(r.dataset.up))).observe(document.getElementById('flst'), { childList: true, subtree: true })")
             pg.set_input_files("#pick", [str(D / "two.wiff.scan"), str(D / "two.wiff"), str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
             shown(pg, 4)
-            assert sorted(names(pg)) == ["one.mzML", "serie.mzML", "two_s1.mzML", "two_s2.mzML"], names(pg)
+            assert sorted(names(pg)) == ["one", "serie", "two_s1", "two_s2"], names(pg)
         step("a .wiff with two samples gives one mzML per sample (either order of the files)", several)
         def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
             seen = set(pg.evaluate("Array.from(window.__rows)"))
-            assert {"two.wiff", "serie.wiff"} <= seen, seen
-            assert pg.locator("#fl-up [aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.running().length") == 0
+            assert {"two.wiff", "serie.wiff"} <= seen, (seen, diag(pg))
+            assert pg.locator("#fl-up [aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.running().length") == 0, diag(pg)
         step("the pairs and the samples are listed (in conversion) before their mzML is ready", rows_while_converting)
         def rows_progress():                             # the bar of a row moves without drawing the list again
             pg.evaluate("CONVROWS.add('x_s1.mzML', 'wait'); CONVROWS.add('x_s2.mzML', 'wait'); CONVROWS.set('x_s1.mzML', 'run', 0)")
@@ -91,7 +91,7 @@ try:
             assert not pyodide(reqs), pyodide(reqs)[:3]
         step("conversion and list: Pyodide was not requested", listed_without_python)
         def opens():
-            for n in ("one.mzML", "two_s1.mzML", "two_s2.mzML"):        # tiny files and MRM chromatograms are not what this test shows
+            for n in ("one", "two_s1", "two_s2"):        # tiny files and MRM chromatograms are not what this test shows
                 pg.evaluate("n => Array.from(document.querySelectorAll('#flist tr:not(.grp)')).find(tr => tr.children[1].textContent.trim().startsWith(n)).querySelector('input[data-k=use]').click()", n)
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
@@ -129,7 +129,7 @@ try:
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)
-            except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"))
+            except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"), diag(pg))
         step("mzFinder lists the converted Full Scan file", mzfinder)
         def variante():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
@@ -138,12 +138,14 @@ try:
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
+            pg.add_init_script("window.MZLAB_TRACE = [];")      # the requests the page makes, with their timing: said by the message of a red run
             pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "variante.wiff"), str(D / "variante.wiff.scan")])
             shown(pg, 1)
-            assert names(pg) == ["variante.mzML"], names(pg)
+            assert names(pg) == ["variante"], names(pg)
             assert any("wasm-lettori/sciex" in u for u in asked), "the sciex module was not requested"
-            assert not pyodide(asked) and not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS || []")
+            miss = pg.evaluate("window.MZLAB_LR_MISS || []")
+            assert not pyodide(asked) and not miss, (miss, pg.evaluate("(window.MZLAB_TRACE || []).slice(-40)"), pg.evaluate("window.MZLAB_LR_ERR || null"), diag(pg))
             assert not errs, errs
             c3.close()
         step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variante)

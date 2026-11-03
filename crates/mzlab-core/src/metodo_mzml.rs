@@ -182,10 +182,9 @@ fn scan_part(scans: &str, fields: &mut Vec<Campo>) -> Option<V> {
             if let (Some(v), Some(l)) = (
                 get(pr.0).and_then(|v| v.parse::<f64>().ok()),
                 levels.get_mut(at),
-            ) {
-                if let Some(slot) = l.1.get_mut(i) {
-                    slot.push(v);
-                }
+            ) && let Some(slot) = l.1.get_mut(i)
+            {
+                slot.push(v);
             }
         }
     }

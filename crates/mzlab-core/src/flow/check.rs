@@ -57,12 +57,13 @@ pub fn conversion_path(registry: &[Step], from: DataType, to: DataType) -> Optio
             return Some(path);
         }
         for s in registry {
-            if let Some((a, b)) = s.converts {
-                if a == ty && !seen.iter().any(|(t, _)| *t == b) {
-                    let mut p = path.clone();
-                    p.push(s);
-                    seen.push((b, p));
-                }
+            if let Some((a, b)) = s.converts
+                && a == ty
+                && !seen.iter().any(|(t, _)| *t == b)
+            {
+                let mut p = path.clone();
+                p.push(s);
+                seen.push((b, p));
             }
         }
         at += 1;

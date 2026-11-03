@@ -141,10 +141,10 @@ pub fn fileinfo<R: ReadAt, M: ReadAt>(
         .to_string();
     let mut ranges = vec![];
     for lv in [1u8, 2u8] {
-        if let Some(si) = routes.idx.section_of(lv, None) {
-            if let Some((a, b)) = routes.idx.mz_range(si)? {
-                ranges.push((lv, round(a, 4), round(b, 4)));
-            }
+        if let Some(si) = routes.idx.section_of(lv, None)
+            && let Some((a, b)) = routes.idx.mz_range(si)?
+        {
+            ranges.push((lv, round(a, 4), round(b, 4)));
         }
     }
     let mut o = Out::default();

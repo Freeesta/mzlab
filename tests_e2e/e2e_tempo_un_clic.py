@@ -23,7 +23,7 @@ try:
         step("typing in a time, one click on the time of another row: the focus is there and typing goes in", click_other)
         def tab_next():
             pg.locator(T).nth(0).fill("9"); pg.keyboard.press("Tab")
-            attendi(pg, "document.activeElement && document.activeElement.dataset.rm !== undefined")      # the next stop after the time is the remove button
+            attendi(pg, "document.activeElement && document.activeElement.dataset.mv !== undefined")      # the next stop after the time is the «move to group» button (then the remove button)
         step("Tab from a changed time keeps the focus on the next stop", tab_next)
         def select():
             pg.locator(T).nth(0).fill("3")

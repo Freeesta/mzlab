@@ -40,9 +40,7 @@ fn num(v: &Value, k: &str) -> Result<f64> {
 }
 
 pub(super) fn leggi(v: &Value) -> Result<Dati> {
-    if v.get("formato").and_then(|f| f.str()) != Some("msngrafo/1") {
-        return Err(bad());
-    }
+    super::versione(v)?;
     let nodi = v.get("nodi").ok_or_else(bad)?.arr();
     let mut d = Dati {
         id: vec![],
@@ -293,7 +291,7 @@ pub(super) fn con_vista(json: String) -> String {
     completa(&json).unwrap_or(json)
 }
 
-/// The text of a graph with the key `vista` added at its end; `Err` when it is not an `msngrafo/1`. A graph that has `vista` is returned as it is.
+/// The text of a graph with the key `vista` added at its end; `Err` when it is not an `msngrafo/1` or `/2` (`error.newerFormat` for a newer one). A graph that has `vista` is returned as it is.
 pub fn completa(json: &str) -> Result<String> {
     let v = parse(json.as_bytes()).map_err(|_| bad())?;
     if v.get("vista").is_some() {

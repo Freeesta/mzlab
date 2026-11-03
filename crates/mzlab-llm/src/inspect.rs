@@ -125,10 +125,10 @@ fn put_class(
     primary: Option<&(bool, Vec<String>, Option<f64>)>,
 ) {
     let label = |hr: bool| if hr { "high" } else { "unit" };
-    if let (Some(a), Some(b)) = (c1, c2) {
-        if a.0 != b.0 {
-            o.put("class_ms2", Some(Value::Str(label(b.0).into())));
-        }
+    if let (Some(a), Some(b)) = (c1, c2)
+        && a.0 != b.0
+    {
+        o.put("class_ms2", Some(Value::Str(label(b.0).into())));
     }
     o.put("class_basis", primary.map(|c| strs(c.1.clone())));
     let rp: Vec<(&str, Value)> = [("ms1", c1), ("ms2", c2)]

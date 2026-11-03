@@ -86,10 +86,10 @@ pub(super) fn why_level(sub: &[&FRow], level: i32) -> Option<String> {
 pub(super) fn first_max<T>(items: &[T], key: impl Fn(&T) -> Option<f64>) -> Option<usize> {
     let mut best: Option<(usize, f64)> = None;
     for (i, it) in items.iter().enumerate() {
-        if let Some(v) = key(it) {
-            if best.is_none_or(|(_, b)| v > b) {
-                best = Some((i, v));
-            }
+        if let Some(v) = key(it)
+            && best.is_none_or(|(_, b)| v > b)
+        {
+            best = Some((i, v));
         }
     }
     best.map(|b| b.0)

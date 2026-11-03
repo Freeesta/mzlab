@@ -4,7 +4,7 @@
 // Interface languages (Italian and English). Classic script, loaded FIRST by index.html (before the catalogs lang/it.js and lang/en.js).
 //  - Code uses semantic keys ("load.drop.title"); the texts live in the two catalogs, loaded as plain <script> tags (no fetch: CSP, offline).
 //  - Italian is the fallback language: a key missing in English shows the Italian text; a key missing everywhere shows the key itself.
-//  - Default language: the first of the browser languages that is Italian or English (none -> English). The gear (settings.js) can change it
+//  - Default language: Italian, whatever the browser language is. The gear (settings.js) can change it
 //    (stored in localStorage "mzlab.lang"); ?lang=it|en in the address forces the language for that tab only.
 //  - index.html decides the language in a tiny inline script at the top of the head (same rules as detect below), sets I18N_LANG, <html lang>
 //    and the title, and loads ONLY the catalog of that language.
@@ -22,18 +22,13 @@
     set(v) { try { localStorage.setItem(KEY, v); } catch (_) { /* storage blocked: the choice lasts until the page is closed */ } },
   };
 
-  // language chosen at start: ?lang= (this tab only) > stored choice > the first browser language that is Italian or English (default English)
+  // language chosen at start: ?lang= (this tab only) > stored choice > Italian (the browser language is not consulted; `browser` is kept for the callers)
   // keep in step with the inline script at the top of the head of index.html
   function detect(search, stored, browser) {
     const q = /[?&]lang=(it|en)(?:&|#|$)/.exec(search || "");
     if (q) return q[1];
     if (LANGS.includes(stored)) return stored;
-    for (const b of [].concat(browser || [])) {
-      const l = String(b).toLowerCase();
-      if (/^it(-|_|$)/.test(l)) return "it";
-      if (/^en(-|_|$)/.test(l)) return "en";
-    }
-    return "en";
+    return "it";
   }
 
   // ---- reduced ICU: {name} {name, number} {name, plural, =0 {..} one {..} other {..}}  (# = the number inside a plural branch)
@@ -55,7 +50,7 @@
     }
     return out;
   }
-  // THE number format of the whole program (not the Teoria): decimal point in every language, no thousands separator (a comma would be read as a decimal one)
+  // THE number format of the whole program: decimal point in every language, no thousands separator (a comma would be read as a decimal one)
   const NF = dec => new Intl.NumberFormat("en-US", dec === undefined ? { useGrouping: false } : { useGrouping: false, minimumFractionDigits: dec, maximumFractionDigits: dec });
   function format(msg, params, lg) {
     params = params || {}; let out = "", i = 0;
@@ -109,7 +104,10 @@
     // the phase has a name for people when the catalog has one (`memory.phase.<id>`)
     const ph = j.params && j.params.fase && cat[lang]["memory.phase." + j.params.fase] ? t(`memory.phase.${j.params.fase}`) : "";
     const params = ph ? Object.assign({}, j.params, { fase: ph }) : j.params;
-    return Object.assign(new Error(t(k, params || {})), { key: j.error_key, params: j.params });
+    let msg = t(k, params || {});
+    // a key with no text in the catalogs never reaches the student: the generic sentence carries the engine's own detail
+    if (msg === k) msg = t("error.generic", { detail: (j.params && j.params.detail) || j.error || "–" });
+    return Object.assign(new Error(msg), { key: j.error_key, params: j.params });
   }
 
   // static HTML: the Italian text stays in the page (works before JS); tools/controlla_i18n.py checks that it matches it.js
@@ -136,7 +134,7 @@
   }
 
   const loc = typeof location !== "undefined" ? location : {}, nav = typeof navigator !== "undefined" ? navigator : {};
-  // I18N_LANG: set before this script by pages that exist in one language only (the Teoria)
+  // I18N_LANG: set before this script by pages that exist in one language only
   lang = LANGS.includes(root.I18N_LANG) ? root.I18N_LANG : detect(loc.search, store.get(), nav.languages && nav.languages.length ? Array.from(nav.languages) : nav.language);
   setLangAttr();
   if (typeof document !== "undefined") {

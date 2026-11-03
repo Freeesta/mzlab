@@ -77,6 +77,10 @@ impl<R: ReadAt> Routes<R> {
         let inside: Vec<bool> = rt.iter().map(|&r| r >= rt0 && r < rt1).collect();
         let n_scans = counts((0..rt.len()).filter(|&p| inside[p]).map(|p| bins[p]), nrt);
         let from_cells = if mean || log { None } else { self.region_from_cells(level, (mz0, mz1), (nrt, nmz), (a, b.max(a)), (&bins, &inside))? };
+        let from_cells = match from_cells {
+            None if !mean => self.region_from_columns(level, (mz0, mz1), (nrt, nmz, log), (a, b.max(a)), (&bins, &inside))?,
+            f => f,
+        };
         let acc = match from_cells {
             Some(acc) => acc,
             None => self.accumulate(si, (a, b.max(a)), nrt * nmz, mean, |p, mz| inside[p].then(|| clipped_cell(bins[p], frac(mz, mz0, mz1, log) * nmz as f64, nmz)))?,

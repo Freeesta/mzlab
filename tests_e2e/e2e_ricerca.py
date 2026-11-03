@@ -1,5 +1,5 @@
 """Search box (palette, Ctrl/⌘K): a number is matched in Rust against the neutral losses, the adducts and the lab contaminants (the chip says
-«compatible», never a verdict); a formula gives its mass and ions; a word gives commands and Teoria. Keyboard, it/en, axe, 400 px, no engine miss."""
+«compatible», never a verdict); a formula gives its mass and ions; a word gives commands. Keyboard, it/en, axe, 400 px, no engine miss."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -40,7 +40,7 @@ try:
             n0 = pg.get_attribute("#pal-in", "aria-activedescendant"); pg.keyboard.press("ArrowDown")
             assert pg.get_attribute("#pal-in", "aria-activedescendant") != n0 and pg.locator("#pal-l [aria-selected=true]").count() == 1
             pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter"); attendi(pg, "document.querySelector('#paletta').hidden")
-            attendi(pg, "BARRA.curTab === 'losses'"); assert pg.input_value("#nl-q") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'nl-q'"); pg.evaluate("BARRA.close(false)")
+            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#nl-q") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'nl-q'"); pg.evaluate("BARRA.close(false)")
         step("↑↓ and Enter open the panel of the first result", keys)
         def esc():
             opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('#paletta').hidden")

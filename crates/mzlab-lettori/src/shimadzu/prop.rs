@@ -29,12 +29,12 @@ pub(super) fn value_of(v: &str) -> String {
         return text_of_hex(h);
     }
     if let Some(h) = v.strip_prefix("@FtoX@") {
-        if h.len() == 8 {
-            if let Ok(bits) = u32::from_str_radix(h, 16) {
-                let f = f32::from_bits(bits);
-                if f.is_finite() {
-                    return f.to_string();
-                }
+        if h.len() == 8
+            && let Ok(bits) = u32::from_str_radix(h, 16)
+        {
+            let f = f32::from_bits(bits);
+            if f.is_finite() {
+                return f.to_string();
             }
         }
         return h.to_string();

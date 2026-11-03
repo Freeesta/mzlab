@@ -31,6 +31,7 @@ try:
             assert pg.get_attribute("#cartbody .cpone >> nth=0", "aria-label") == "Carica a.mzML"
             pg.click("#cartbody .cpone >> nth=0"); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length===1", timeout=90000)
             pg.wait_for_function("document.querySelectorAll('#cartbody .cpone').length===1")        # the loaded one has no button any more
+            pg.click("#addf"); pg.wait_for_selector("#cartgo", state="visible")      # the file is shown: «+» brings the loading screen back
             pg.click("#cartgo"); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length===2", timeout=90000)
             pg.wait_for_function("!document.querySelector('#cartgo') && !document.querySelector('#cartbody .cpone')")
             assert count(pg) == 2, count(pg)
@@ -40,7 +41,7 @@ try:
         pg2.goto(f"http://127.0.0.1:{r.port}/"); pg2.wait_for_selector("#drop", timeout=60000); pg2.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def twice():
             pg2.set_input_files("#pick", [str(D / "a.mzML")]); pg2.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length===1", timeout=90000)
-            pg2.set_input_files("#pick", [str(D / "a.mzML")]); pg2.wait_for_function("document.querySelector('#cartinfo') && /già caricato/.test(document.querySelector('#cartinfo').textContent)", timeout=30000)
+            pg2.click("#addf"); pg2.set_input_files("#pick", [str(D / "a.mzML")]); pg2.wait_for_function("document.querySelector('#cartinfo') && /già caricato/.test(document.querySelector('#cartinfo').textContent)", timeout=30000)
             assert count(pg2) == 1, count(pg2)
             pg2.wait_for_selector("#flist tr.dupflash", timeout=3000)
             pg2.set_input_files("#pick", [str(D / "a.mzML"), str(D / "a.mzML")]); pg2.wait_for_timeout(1500); assert count(pg2) == 1, count(pg2)

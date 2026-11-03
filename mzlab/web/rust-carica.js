@@ -3,10 +3,10 @@
 // and the gate that lets lrOpen skip re-parsing an index that did not change.
 
 /** the copy of a plain uploaded file: `copyPrints` (SHA-256 and probe taken in the same pass), `putPlain` (one retry after `free`, room released when it fails)
- * @param {{ ARCH: any, impronte: { start: (size: number) => any }, prints: Map<string, any>, cancelled: () => string, isCancelled: (name: string) => boolean, post: (m: any) => void, free: () => Promise<unknown>, now?: () => number }} h */
+ * @param {{ ARCH: any, impronte: { start: (size: number, noSha1?: boolean) => any }, prints: Map<string, any>, cancelled: () => string, isCancelled: (name: string) => boolean, post: (m: any) => void, free: () => Promise<unknown>, now?: () => number }} h */
 export function createPlainPut({ ARCH, impronte, prints, cancelled, isCancelled, post, free, now = () => performance.now() }) {
   async function copyPrints(/** @type {{ blob: Blob, name: string, id: any }} */ m) {
-    const blob = m.blob, pass = /\.mzml$/i.test(m.name) ? impronte.start(blob.size) : null;
+    const blob = m.blob, pass = /\.mzml$/i.test(m.name) ? impronte.start(blob.size, true) : null;
     let tp = 0;      // the page shows the copy (bytes done / total, at most 10 times a second)
     const put = ARCH.putChunks("files", m.name, blob.size, async (/** @type {number} */ o, /** @type {number} */ n) => {
       if (isCancelled(m.name)) throw cancelled();      // «Cancel» of the page: the copy stops at the next piece

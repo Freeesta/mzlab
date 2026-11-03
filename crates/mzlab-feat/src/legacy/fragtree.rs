@@ -319,12 +319,12 @@ pub fn two_level(t: &TwoLevel, losses: &[(&str, f64)]) -> String {
         let alts = alternatives(t, space.as_ref(), losses, m);
         let best = alts.first();
         let mut sm = Vec::new();
-        if let (Some(s), Some(Some(f))) = (subs.as_ref(), best.map(|b| b.formula.as_deref())) {
-            if let Some(v) = vec_of(f, t.els) {
-                let (idx, w) = s.candidates(&v);
-                if !idx.is_empty() {
-                    sm = s.top_smiles(&idx, &w);
-                }
+        if let (Some(s), Some(Some(f))) = (subs.as_ref(), best.map(|b| b.formula.as_deref()))
+            && let Some(v) = vec_of(f, t.els)
+        {
+            let (idx, w) = s.candidates(&v);
+            if !idx.is_empty() {
+                sm = s.top_smiles(&idx, &w);
             }
         }
         o.raw(",");

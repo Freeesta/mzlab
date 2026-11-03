@@ -20,19 +20,25 @@ static PICCO: AtomicUsize = AtomicUsize::new(0);
 // SAFETY: forwards every call to the system allocator and only counts the bytes.
 unsafe impl GlobalAlloc for Conta {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-        PICCO.fetch_max(v, Ordering::Relaxed);
-        System.alloc(l)
+        unsafe {
+            let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
+            PICCO.fetch_max(v, Ordering::Relaxed);
+            System.alloc(l)
+        }
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-        System.dealloc(p, l)
+        unsafe {
+            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            System.dealloc(p, l)
+        }
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
-        let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
-        VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-        PICCO.fetch_max(v, Ordering::Relaxed);
-        System.realloc(p, l, n)
+        unsafe {
+            let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
+            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            PICCO.fetch_max(v, Ordering::Relaxed);
+            System.realloc(p, l, n)
+        }
     }
 }
 #[global_allocator]
@@ -198,5 +204,10 @@ fn main() {
     let s = t.elapsed().as_secs_f64();
     let picco = PICCO.load(Ordering::Relaxed).saturating_sub(base) as f64 / 1048576.0;
     let (sha, byte) = pozzo.fine();
-    println!("threads {} | {s:.2} s | heap peak {picco:.1} MB | process peak {:.0} MB | {} bytes | sha256 {sha}", opz.thread, rss_max(), byte);
+    println!(
+        "threads {} | {s:.2} s | heap peak {picco:.1} MB | process peak {:.0} MB | {} bytes | sha256 {sha}",
+        opz.thread,
+        rss_max(),
+        byte
+    );
 }

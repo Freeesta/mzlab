@@ -1,4 +1,4 @@
-"""Loading screen: the method field is a slim row (no card box, hidden step heading, still a drop target and a file picker); the loading overlay and the shared
+"""Loading screen: the method field is a slim row (no card box, still a drop target and a file picker); the loading overlay and the shared
 progress panel show a turning ring (still with reduced motion) and the finished panel a check mark."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -23,8 +23,8 @@ try:
             c, pg = opened(b, "no-preference")
             bb = pg.locator("#dropdam").bounding_box(); assert bb["height"] < 44, bb
             assert pg.evaluate("getComputedStyle(document.querySelector('.method-row')).borderTopWidth") == "0px"
-            t = pg.inner_text("#start"); assert "Add acquisition method" in t and "optional" in t and "2. Acquisition method" in t, t
-            assert pg.evaluate("document.querySelector('.method-row h3').getBoundingClientRect().height") <= 1
+            t = pg.inner_text("#start"); assert "Add acquisition method" in t and "optional" in t, t
+            assert pg.locator(".method-row h3").count() == 0, "no step heading in the method row"
             with pg.expect_file_chooser(timeout=10000): pg.click("#dropdam")
             c.close()
         step("method field: slim row, still opens the file picker", row)

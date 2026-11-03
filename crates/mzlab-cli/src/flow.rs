@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use self::screen_suspects::{regulatory_job, screen_job};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{Artifact, Job, Mem, Outcome, Runner};
+use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
 use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
@@ -18,8 +18,6 @@ use crate::flow_cache::Cache;
 use crate::flow_digl::uv::uv_job;
 use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
-use crate::flow_insilico::insilico_job;
-use crate::flow_level::level_job;
 pub(crate) use crate::flow_made::Made;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
@@ -28,6 +26,7 @@ use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, prov_text, run_plan};
 use crate::flow_stats::stats_job;
+use crate::{flow_insilico::insilico_job, flow_level::level_job};
 
 #[path = "flow_live.rs"]
 pub mod live;
@@ -99,13 +98,13 @@ pub fn steps() -> Vec<Step> {
     ]);
     all.extend([mzlab_feat::steps::run_order(), mzlab_feat::steps::methods()]);
     all.push(mzlab_feat::steps::export_annotations());
+    all.push(mzlab_feat::steps::transitions());
     all
 }
 
 /// The runners of `flow run` and of `run_plan_cached`, which keep a cache.
 impl FileRunner {
-    /// The runner of `flow run`: inputs found by name in `inputs`, one progress line per job for the instances in `order`, the cache of `work`
-    /// unless `fresh`.
+    /// The runner of `flow run`: inputs found by name in `inputs`, one progress line per job for the instances in `order`, the cache of `work` unless `fresh`.
     pub(crate) fn located(
         work: &Path,
         inputs: HashMap<String, PathBuf>,
@@ -424,6 +423,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(flow_runorder::EXECUTORS)
         .chain(flow_methods::EXECUTORS)
         .chain(flow_export_annot::EXECUTORS)
+        .chain(crate::flow_transitions::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?

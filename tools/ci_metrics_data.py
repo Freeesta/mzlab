@@ -18,9 +18,14 @@ import zipfile
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
+from ci_metrics_giorno import COLONNE_COO, giornaliero, righe_coo  # noqa: F401
+
 LENTO_S = 5
 AREE = [("workflow", r"^\.github/"), ("docs", r"^(docs/|AGENTS\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto(-worker)?\.json|mappa\.md|manifest)"),
         ("rust", r"^(crates/|Cargo\.|vendor/)"), ("test", r"^tests(_e2e)?/"), ("tools", r"^tools/"), ("web", r"^mzlab/web/"), ("python", r"\.py$")]
+# Workflows the poll measures, and those that make up the critical path of a PR (the required checks: sito-e2e of `sito-rust` is the slowest).
+WORKFLOW_MISURATI = ("test", "rust", "sito-rust", "desktop", "pages")
+WORKFLOW_CRITICI = ("test", "rust", "sito-rust", "desktop")
 PESANTI = ("passi", "file", "lenti", "fasi", "worker", "moduli")      # fields dropped by the compaction
 
 
@@ -215,37 +220,8 @@ def compatta(ev: list[dict], oggi: datetime, giorni: int = 14) -> list[dict]:
     return ev
 
 
-def giornaliero(ev: list[dict]) -> list[dict]:
-    """One row per UTC day: runs, re-runs, mean queue, failed jobs by category, PRs opened/merged, mean open-to-merge, green-to-merge and commits per merged PR, conflicts."""
-    from ci_metrics import media
-    giorni: dict[str, dict] = defaultdict(lambda: {"run": 0, "rilanci": 0, "coda": [], "job_rossi": Counter(), "pr_aperte": 0, "pr_unite": 0,
-                                                   "aperta_s": [], "verde_a_unione_s": [], "commit_n": [], "conflitti": 0})
-    for r in ev:
-        g = giorni[r["ts_utc"][:10]]
-        t = r["tipo"]
-        if t == "run":
-            g["run"] += 1
-            g["rilanci"] += r.get("run_attempt", 1) > 1
-            g["coda"].append(r.get("coda_s"))
-        elif t == "job_fallito":
-            g["job_rossi"][r["categoria"]] += 1
-        elif t == "conflitto":
-            g["conflitti"] += 1
-        elif t == "pr" and r["azione"] == "aperta":
-            g["pr_aperte"] += 1
-        elif t == "pr" and r["azione"] == "unita":
-            g["pr_unite"] += 1
-            for k in ("aperta_s", "verde_a_unione_s", "commit_n"):
-                g[k].append(r.get(k))
-    cat = sorted({c for g in giorni.values() for c in g["job_rossi"]})
-    return [{"giorno": d, "run": g["run"], "rilanci": g["rilanci"], "coda_media_s": round(media(g["coda"])), "pr_aperte": g["pr_aperte"], "pr_unite": g["pr_unite"],
-             "aperta_media_s": round(media(g["aperta_s"])), "verde_a_unione_media_s": round(media(g["verde_a_unione_s"])),
-             "commit_per_pr_media": round(media(g["commit_n"]), 1), "conflitti": g["conflitti"],
-             **{"rossi_" + c: g["job_rossi"][c] for c in cat}} for d, g in sorted(giorni.items())]
-
-
 def esporta(ev: list[dict], cartella: str) -> list[str]:
-    """One CSV per row type; nested values as JSON text."""
+    """One CSV per row type (nested values as JSON text), plus `giornaliero-coo.csv`: the daily row in the layout of the COO's misure/giornaliero.csv."""
     os.makedirs(cartella, exist_ok=True)
     per_tipo: dict[str, list[dict]] = defaultdict(list)
     for r in ev:
@@ -261,7 +237,12 @@ def esporta(ev: list[dict], cartella: str) -> list[str]:
             for r in righe:
                 w.writerow([json.dumps(r[c], ensure_ascii=False, separators=(",", ":")) if isinstance(r.get(c), (dict, list)) else r.get(c, "") for c in cols])
         scritti.append(path)
-    return scritti
+    path = os.path.join(cartella, "giornaliero-coo.csv")
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=COLONNE_COO)
+        w.writeheader()
+        w.writerows(righe_coo(ev))
+    return scritti + [path]
 
 
 def tabelle(ev: list[dict], out=print) -> None:
@@ -331,12 +312,12 @@ def tabelle(ev: list[dict], out=print) -> None:
 def percorso_critico(ev: list[dict], dal: str = "") -> dict[str, dict]:
     """Per PR type (docs / Rust / site+other): median and max minutes from push to the last required check, and the slowest jobs, over merged PRs.
 
-    The critical path of a head sha is the longest run among `test` and `rust` (first attempt, green); `dal` is an ISO timestamp lower bound.
+    The critical path of a head sha is the longest run among WORKFLOW_CRITICI (first attempt, green); `dal` is an ISO timestamp lower bound.
     """
     unite = {x["sha"]: x for x in ev if x.get("tipo") == "pr" and x.get("azione") == "unita"}
     corse: dict[str, dict[str, dict]] = defaultdict(dict)
     for x in ev:
-        if x.get("tipo") == "run" and not x.get("main") and x.get("sha") in unite and x.get("workflow") in ("test", "rust") \
+        if x.get("tipo") == "run" and not x.get("main") and x.get("sha") in unite and x.get("workflow") in WORKFLOW_CRITICI \
                 and x.get("run_attempt") == 1 and x.get("esito") == "success" and x["ts_utc"] >= dal:
             corse[x["sha"]][x["workflow"]] = x
     durate: dict[str, list[float]] = defaultdict(list)

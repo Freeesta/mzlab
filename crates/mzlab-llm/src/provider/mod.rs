@@ -252,10 +252,10 @@ pub fn request_with(
         return Err(err("provider"));
     }
     let m = p.model(&c.model).ok_or_else(|| err("model"))?;
-    if let Some(f) = &opts.format_schema {
-        if !tools.is_empty() || parse(f.as_bytes()).is_err() {
-            return Err(err("format"));
-        }
+    if let Some(f) = &opts.format_schema
+        && (!tools.is_empty() || parse(f.as_bytes()).is_err())
+    {
+        return Err(err("format"));
     }
     if !m.vision
         && c.messages

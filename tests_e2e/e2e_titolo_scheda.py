@@ -1,4 +1,4 @@
-"""Browser tab title in administrator mode: every view (Dati, Disegno, Teoria, Flow, Tabui) sets its own document.title when the tab is switched, with no reload."""
+"""Browser tab title in administrator mode: every view (Dati, Disegno, Flow, Tabui) sets its own document.title when the tab is switched, with no reload."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
@@ -19,7 +19,7 @@ try:
                 pg.click(f"#nav [data-v={view}]")
                 attendi(pg, f"document.title === {name!r}".replace("'", '"'), 10000)
             step(f"title of {view}", f)
-        for view, name in [("theory", pg.evaluate("I18N.t('nav.theory')") + f" · {app}"), ("flow", f"Flow · {app}"), ("tpmine", f"Tabui · {app}"), ("draw", pg.evaluate("I18N.t('nav.draw')") + f" · {app}"), ("data", None)]:
+        for view, name in [("flow", f"Flow · {app}"), ("tpmine", f"Tabui · {app}"), ("draw", pg.evaluate("I18N.t('nav.draw')") + f" · {app}"), ("data", None)]:
             if name: title(view, name)
             else:
                 def d():

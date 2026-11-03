@@ -83,8 +83,20 @@ def loaded(pg, timeout=120000):
     """Waits until nothing is read or opened any more; on a timeout the message says what is still busy."""
     try: pg.wait_for_function(LOADED, timeout=timeout)
     except Exception as e:
-        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state) })")
+        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), up: (document.querySelector('#up') || {}).innerText })")
         raise TimeoutError(f"{e} | still busy: {st}") from None
+def diag(pg):
+    """What the page holds right now, for the message of a failed step: conversion rows, the files of the Data tab, the notice line, and mzlab/files/ in OPFS (name, size, age)."""
+    try:
+        return pg.evaluate("""async () => {
+          const o = { conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), files: (ST.files || []).map(f => f.name), up: (document.querySelector('#up') || {}).innerText, busy: [UPBUSY, OPENNOW.busy()] };
+          try {
+            const d = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab').then(r => r.getDirectoryHandle('files')), out = [];
+            for await (const [n, h] of d.entries()) { try { const f = await h.getFile(); out.push(n + ':' + f.size + ':' + (Date.now() - f.lastModified) + 'ms'); } catch (e) { out.push(n + ':' + e.name); } }
+            o.opfs = out;
+          } catch (e) { o.opfs = String(e); }
+          return o; }""")
+    except Exception as e: return f"diag failed: {str(e)[:80]}"
 def open_first(pg, timeout=120000):
     """The first file shown: the files open as soon as they are read, hidden, and the landing stays until the student shows one.
     Waits until nothing is read or opened any more, then clicks the row of the first file of the sample table that is not a blank (firstOpenK) in the side list, unless a file is already shown."""
@@ -132,19 +144,32 @@ def hold(pg, ms):
     _real_wft(pg, ms)
 from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
 _np, _nc = _Br.new_page, _Br.new_context
-# The public site hides the desktop-app download and the Teoria (sito.js); the tests run with both on, as the code still offers them.
+# The public site hides the desktop-app download (sito.js); the tests run with it on, as the code still offers it.
 # MZLAB_SITO_PRODUZIONE=1 (e2e_sito_pubblico) leaves the production values.
-_SITO = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true,teoria:true})"
+_SITO = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true})"
 def _sito():
     return None if os.environ.get("MZLAB_SITO_PRODUZIONE") else _SITO
+def _start_prefs(k):
+    """The site starts in Italian with the light theme whatever the browser says. A test that asks for an English locale or a dark system scheme
+    wants that UI, so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` leaves the real defaults."""
+    if k.pop("lang_auto", False): return None
+    js = ""
+    if str(k.get("locale", "")).lower().startswith("en"): js += "if(!localStorage.getItem('mzlab.lang'))localStorage.setItem('mzlab.lang','en');"
+    if k.get("color_scheme") == "dark": js += "if(!localStorage.getItem('mzlab.prefs'))localStorage.setItem('mzlab.prefs',JSON.stringify({v:2,theme:'auto'}));"
+    # once per tab: a test that resets the site's data must see the default afterwards, not the seeded choice again
+    return ("try{if(window.name.indexOf('|mzseed')<0){window.name+='|mzseed';" + js + "}}catch(e){}") if js else None
 def _new_page(self, *a, **k):
     k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
+    sp = _start_prefs(k)
     pg = _np(self, *a, **k); pg.add_init_script(_TRACK)
+    if sp: pg.add_init_script(sp)
     if _sito(): pg.add_init_script(_sito())
     return pg
 def _new_context(self, *a, **k):
     k.setdefault("locale", "it-IT")
+    sp = _start_prefs(k)
     c = _nc(self, *a, **k); c.add_init_script(_TRACK)
+    if sp: c.add_init_script(sp)
     if _sito(): c.add_init_script(_sito())
     return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
@@ -158,9 +183,11 @@ class _PersistentWebKit:
     def new_context(self, **k):
         import tempfile
         k.setdefault("locale", "it-IT")
+        sp = _start_prefs(k)
         d = tempfile.mkdtemp(prefix="mzlab-wkprofile-")
         c = self._bt.launch_persistent_context(d, **self._kw, **k)
         self._open.append((c, d)); c.add_init_script(_TRACK)
+        if sp: c.add_init_script(sp)
         if _sito(): c.add_init_script(_sito())
         return c
     def new_page(self, **k):
@@ -220,6 +247,14 @@ def ready(pg, timeout=90000, settle=400):
 def drawer(pg, tab="file", pin=True):
     """Open a tool of the toolbar drawer (the file list by default). Docked next to the charts. `pin` is kept for old callers."""
     pg.evaluate(f"(()=>{{BARRA.setTab('{tab}',{{noFocus:true,instant:true}})}})()"); pg.wait_for_timeout(300)
+def close_side(pg):
+    """Closes the side panel as a user does: the × of the full-width sheet (phone) or else the panel button of the main header."""
+    pg.click("#sb-x" if pg.is_visible("#sb-x") else "#sb-toggle")
+def open_ms2(pg):
+    """Expands the product-ion (MS2) group of the file list (it starts folded), by clicking its header as a user does."""
+    drawer(pg)
+    if pg.locator("#flst .fgh[data-gt=ms2] .chv[aria-expanded=false]").count(): pg.click("#flst .fgh[data-gt=ms2] .chv")
+    pg.wait_for_selector("#flst input[data-pr]", state="visible", timeout=10000)
 def pick_kind(pg, value, panel="E.panels.find(q=>q.type==='chrom')"):
     """Chooses what a chromatogram panel plots (pda, press, an:<id>, reg) with the picker, as a user does."""
     pg.evaluate(f"{panel}.el.querySelector('[data-o=kind]').click()")
@@ -231,6 +266,8 @@ def open_kind(pg, kind):
     k = pg.evaluate("kind => (E.files.find(f => f.kind === kind && !f.gone) || {}).k", kind)
     assert k is not None, f"no {kind} file loaded"
     if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]")      # the file list is a drawer: open it first
+    chv = f"#flst .fgh[data-gt={kind}] .chv[aria-expanded=false]"
+    if pg.locator(chv).count(): pg.click(chv)      # a folded group (product ion starts folded) is opened first
     pg.wait_for_selector(f"#flst .fl[data-k='{k}'] .nm", state="visible")
     pg.click(f"#flst .fl[data-k='{k}'] .nm")
 def shut(pg, sel):
@@ -292,7 +329,7 @@ def wasm_cap(man: dict, key: str) -> int:
     import re
     txt = (ROOT / "tools" / "build_feat_wasm.sh").read_text(encoding="utf-8")
     shared = sum(1 for v in man.values() if isinstance(v, dict) and v.get("wasm") == man[key]["wasm"]) > 1
-    var = ("limit_attributio" if key.startswith("attributio") else "limit_hr") if shared else {"attributio_rev": "limit_rev", "attributio_export": "limit_export", "attributio_ms2": "limit_ms2", "table": "limit_table"}.get(key, "limit")
+    var = ("limit_attributio" if key.startswith("attributio") else "limit_hr") if shared else {"attributio_rev": "limit_rev", "attributio_export": "limit_export", "attributio_ms2": "limit_ms2", "table": "limit_table", "rotte": "limit_rotte"}.get(key, "limit")
     return int(re.search(rf"^{var}=(\d+)", txt, re.M).group(1))
 
 def free_port() -> int:
@@ -312,14 +349,15 @@ def scrivi(dst, text):
     t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)
 def build_feat(static, env=None):
     """Give the copy of the site the .wasm of mzFinder: copied from site/static when built there, else tools/build_feat_wasm.sh, one process at a time: it shares cargo's target/ and its artefacts, so parallel tests would clash."""
-    import fcntl, subprocess, tempfile
+    import subprocess, tempfile
+    from flock_util import lock_exclusive
     ready = ROOT / "site" / "static"
     if (ready / "wasm-feat" / "manifest.json").exists():          # already built in the shared site (CI, local runs): copy it instead of building again
         for d in ("wasm-feat", "wasm-lettori"):
             if (ready / d).is_dir(): shutil.copytree(ready / d, Path(static) / d, dirs_exist_ok=True)
         return
     with open(os.path.join(tempfile.gettempdir(), "mzlab-build-feat.lock"), "w") as lk:
-        fcntl.flock(lk, fcntl.LOCK_EX)
+        lock_exclusive(lk)
         subprocess.run(["tools/build_feat_wasm.sh", str(static)], cwd=ROOT, check=True, env=env, capture_output=True)
 
 
@@ -346,7 +384,7 @@ class Run:
     def page(s, p, tour=False, qaqc=False):
         s.b = p.chromium.launch()
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
-        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
+        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         else:          # the tour tests want the invitation of the tour, but not the hint of the side-by-side panels: it shows up after a few seconds (later under load) over the spectrum and takes the clicks of the test
@@ -354,16 +392,12 @@ class Run:
         if qaqc:       # QA/QC is dormant: only this switch (as ?qaqc=1) makes it visible
             pg.add_init_script("try{localStorage.setItem('mzlab.dev.qaqc','1');}catch(_){}")
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e) + " @ " + " | ".join((getattr(e, "stack", "") or "").split("\n")[1:5]))))          # diagnostics: the first stack frames say which script threw
-        pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text else None)       # software-GL performance hints of the 3D viewer are not page errors
+        pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text and "using link preload but not used" not in m.text else None)       # not page errors: software-GL hints of the 3D viewer, and WebKit's note that a preloaded script was injected later than a few seconds after load
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
         pg.on("response", lambda r: s.errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)
         pg.goto(f"http://127.0.0.1:{s.port}/")
         pg.wait_for_timeout(800)
         return pg
-    def teoria(s, pg, name="12-dati.html", wait=800):
-        """Text of a Teoria chapter, opened in a second tab of the same browser."""
-        q = s.b.new_page(); q.goto(f"http://127.0.0.1:{s.port}/static/teoria/{name}"); q.wait_for_timeout(wait)
-        t = q.inner_text("body"); q.close(); return t
     def close(s):
         try: s.b.close()
         except Exception: pass

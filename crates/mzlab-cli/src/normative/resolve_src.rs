@@ -115,10 +115,10 @@ pub(super) fn read_parents(
         .lines()
         .map_while(Result::ok)
     {
-        if let Some((cid, par)) = line.split_once('\t') {
-            if want.contains(cid) {
-                r.parent.insert(cid.to_string(), par.trim().to_string());
-            }
+        if let Some((cid, par)) = line.split_once('\t')
+            && want.contains(cid)
+        {
+            r.parent.insert(cid.to_string(), par.trim().to_string());
         }
     }
     Ok(())

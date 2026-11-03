@@ -20,14 +20,16 @@ const BARRA = (() => {
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
   const AUTO_W = 1100;              // below this width the panel hides by itself (the first thing to go, before the charts); a tool button brings it back
   const PHONE_W = 600;
-  const MAIN = new Set(["file", "calc", "adducts", "losses", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
+  const MAIN = new Set(["file", "calc", "addloss", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
   const LEVELS = ["all", "main", "none"];
   const HYST = 8;                   // px of slack asked before a richer level comes back (no flicker at the edge)
-  const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
+  const DROP_ORDER = ["ptable", "qaqc", "lists", "addloss", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
   let _tab = "file";
+  let _sub = "adducts";             // the section of the Adducts & losses panel ("adducts" | "losses"): the last one used is remembered
+  const SUBS = ["adducts", "losses"];
   let _open = false;
-  let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, Teoria, loading)
+  let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, loading)
   let _restore = false;             // hidden by the narrow window, not by the user: it comes back when the window widens
   let _forced = false;              // the user opened it in a narrow window: it stays until the window widens
   let _side = "left";
@@ -51,16 +53,12 @@ const BARRA = (() => {
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
   const isHrMode = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
   const storageKey = () => (isHrMode() ? K_HR : K_LR);
-  const defaultW = () => (isHrMode() ? 340 : 300);
+  const defaultW = () => (isHrMode() ? 340 : MIN_W);
   const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
-  // while the files are being opened (skeleton on screen, no session yet) the side panel and its toolbar button already have their final place: nothing moves when the session arrives
-  const inDataOrOpening = () => inData() || typeof S !== "undefined" && S.view === "data" && !!S.opening && !S.sess;
+  // the side panel and its toolbar button have their place also while the files are being opened (skeleton, no session yet: nothing moves when the session arrives) and while «+» shows the drop area (S.adding)
+  const inDataOrOpening = () => inData() || typeof S !== "undefined" && S.view === "data" && (!!S.opening && !S.sess || !!S.sess && !!S.adding);
   /** A text field (or an open dialog) keeps its own keys: Alt+Shift+arrows select words there, like Ctrl/Cmd+Z undoes text. @param {EventTarget | null} t */
   const inCampo = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
-  // context «theory»: the bar shows the commands of the Teoria (window.TCMD of the same-origin iframe), not the ones of the data
-  let _ctx = "data";
-  const inTheory = () => typeof S !== "undefined" && S.view === "theory";
-  const tcmd = () => { try { const f = /** @type {HTMLIFrameElement | null} */ (Q1("#tframe")); return (f && f.contentWindow && /** @type {Bag} */ (f.contentWindow).TCMD) || null; } catch (_) { return null; } };
   const sheet = () => window.innerWidth < SHEET;
   const seen = () => (_seen = typeof S !== "undefined" && !S.sess ? false
     : _seen || (typeof E !== "undefined" && E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)));
@@ -68,7 +66,7 @@ const BARRA = (() => {
   const byNames = () => typeof namesWidth === "function" && seen();                 // the names set the width once a file is shown
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
   const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.min(defaultW(), namesWidth(defaultW())) : defaultW()));
-  const validTab = (/** @type {string} */ id) => ["file", "calc", "adducts", "losses", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
+  const validTab = (/** @type {string} */ id) => ["file", "calc", "addloss", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
   const IC = (/** @type {string} */ d) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -98,9 +96,8 @@ const BARRA = (() => {
   /** @type {any[]} */
   const CMD = [
     { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() ? toggleDrawer() : toggle("file")) },
-    { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => toggle("calc") },
-    { id: "adducts", dom: "np-add", ic: () => QI("ad"), panel: "adducts", run: () => toggle("adducts") },
-    { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => toggle("losses") },
+    { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inDataOrOpening() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },     // outside Dati the calculator is the drop-down under the button (eventi.js)
+    { id: "addloss", dom: "np-addloss", ic: () => QI("ad"), panel: "addloss", run: () => toggle("addloss") },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => toggle("lists") },
     { id: "qaqc", feature: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
     
@@ -164,9 +161,9 @@ const BARRA = (() => {
   const shown = (/** @type {string} */ sel) => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
   /** @param {Bag} c @returns {boolean} */
   const visible = c => (!c.feature || !!/** @type {Record<string, boolean>} */ (FEATURES)[c.feature]) && (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
-  const lab = (/** @type {Bag} */ c) => (c.teo ? c.etichetta : t(`cmd.${c.id}.lab`));
-  const name = (/** @type {Bag} */ c) => (c.teo ? c.etichetta : t(`cmd.${c.id}.name`));
-  const tip = (/** @type {Bag} */ c) => t(`cmd.${c.id}.tip` + (c.id === "search" && !SITO_PUBBLICO.teoria ? ".nt" : ""));
+  const lab = (/** @type {Bag} */ c) => t(`cmd.${c.id}.lab`);
+  const name = (/** @type {Bag} */ c) => t(`cmd.${c.id}.name`);
+  const tip = (/** @type {Bag} */ c) => t(`cmd.${c.id}.tip`);
 
   // ---------------------------------------------------------------- state
   function loadState() {
@@ -176,6 +173,8 @@ const BARRA = (() => {
     _w = okW ? Math.round(s.w) : defaultW();
     _wUser = okW && (s.u === true || (s.u === undefined && _w !== defaultW()));
     if (!_wUser) _w = defaultW();
+    if (SUBS.includes(s.sub)) _sub = s.sub;
+    if (SUBS.includes(s.tab)) { _sub = s.tab; s.tab = "addloss"; }         // a state saved while Adducts or Losses had their own panels
     _tab = validTab(s.tab) ? s.tab : "file";
     _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     _landOpen = typeof s.open === "boolean" ? s.open : undefined;
@@ -198,14 +197,14 @@ const BARRA = (() => {
 
   function saveState() {
     try {
-      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: landing() ? _landOpen : _open || _restore, w: _w, u: _wUser, last: _last }));
+      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, sub: _sub, open: landing() ? _landOpen : _open || _restore, w: _w, u: _wUser, last: _last }));
       localStorage.setItem(K_SIDE, _side);
     } catch (_) { /* no storage */ }
   }
 
   // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
-    document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");
+    if (_appliedW || !Q1("#v-data.riga")) document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");     // the first paint of a restore keeps the width the last session had (avvio-progressivo.js)
   }
 
   // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized
@@ -270,7 +269,7 @@ const BARRA = (() => {
       tg.hidden = !(inDataOrOpening() || landing());
       tg.setAttribute("aria-pressed", shown ? "true" : "false");
       tg.classList.toggle("on", shown);
-      const tl = tg.querySelector(".tl"); if (tl) { tl.dataset.i18n = shown ? "cmd.panel.hide" : "cmd.panel.show"; tl.textContent = I18N.t(tl.dataset.i18n); }
+      const tl = tg.querySelector(".tl"); if (tl && !(typeof SHEETLBL !== "undefined" && SHEETLBL.paint(tg, tl, sheet()))) { tl.dataset.i18n = shown ? "cmd.panel.hide" : "cmd.panel.show"; tl.textContent = I18N.t(tl.dataset.i18n); }
     }
     const h = Q1("#sidebar-resize-handle");
     if (h) { h.setAttribute("aria-valuemin", String(MIN_W)); h.setAttribute("aria-valuemax", String(maxW())); h.setAttribute("aria-valuenow", String(effW())); }
@@ -278,7 +277,7 @@ const BARRA = (() => {
   }
 
   function setPanelVisible(/** @type {string} */ id) {
-    const /** @type {Record<string, string>} */ map = { file: "#sb-panel-file", calc: "#sb-panel-calc", adducts: "#sb-panel-adducts", losses: "#sb-panel-losses", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc", stat: "#sb-panel-stat" };
+    const /** @type {Record<string, string>} */ map = { file: "#sb-panel-file", calc: "#sb-panel-calc", addloss: "#sb-panel-addloss", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc", stat: "#sb-panel-stat" };
     Object.values(map).forEach(sel => { const p = Q1(sel); if (p) p.hidden = true; });
     const hr = Q1("#hrinfo");
     if (hr) hr.hidden = true;
@@ -299,6 +298,8 @@ const BARRA = (() => {
     }
     const addf = Q1("#addf");
     if (addf) addf.style.display = id === "file" ? "" : "none";
+    const pane = Q1("#sb-pane");
+    if (pane) pane.dataset.tab = id;                         // the «Groups» control of the header exists only for the file list (app.css)
     setPanelVisible(id);
     if (HR_PANELS.includes(id)) {
       if (typeof BANCO !== "undefined") {
@@ -316,11 +317,35 @@ const BARRA = (() => {
         if (inp && _open && _tab === "calc") inp.focus();
         if (typeof calcRun === "function") calcRun();
       }, 30);
-    } else if (id === "losses") ensureLossesMounted(opt);
-    else if (id === "adducts" && typeof CALCQUI !== "undefined") CALCQUI.ensureAdducts(opt);
+    } else if (id === "addloss") setSub(opt.sub || _sub, opt);
     else if (id === "lists") ensureListsMounted(opt);
     else if (id === "stat") { const pnl = Q1("#sb-panel-stat"); if (pnl && window.STAT) STAT.mount(pnl); }
     else if (id === "qaqc") { const pnl = Q1("#sb-panel-qaqc"); if (pnl && window.QAQC) QAQC.mount(pnl); }      // painted again at every opening: the files may have changed
+  }
+
+  /** Shows one section of the Adducts & losses panel (tabs on top, both bodies stay mounted). @param {string} sub @param {Bag} [opt] */
+  function setSub(sub, opt = {}) {
+    if (!SUBS.includes(sub)) sub = "adducts";
+    _sub = sub;
+    SUBS.forEach(k => {
+      const body = Q1("#sb-panel-" + k), tab = Q1("#al-t-" + k), on = k === sub;
+      if (body) body.hidden = !on;
+      if (tab) { tab.setAttribute("aria-selected", String(on)); tab.tabIndex = on ? 0 : -1; tab.classList.toggle("on", on); }
+    });
+    if (sub === "losses") ensureLossesMounted(opt);
+    else if (typeof CALCQUI !== "undefined") CALCQUI.ensureAdducts(opt);
+    saveState();
+  }
+  function bindAddLoss() {
+    const tabs = Q1("#al-tabs");
+    if (!tabs) return;
+    tabs.addEventListener("click", ev => { const b = /** @type {HTMLElement} */ (ev.target).closest("[data-sub]"); if (b instanceof HTMLElement) setSub(b.dataset.sub || "adducts"); });
+    tabs.addEventListener("keydown", ev => {            // arrows move between the two tabs, as in any tablist
+      if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight" && ev.key !== "Home" && ev.key !== "End") return;
+      ev.preventDefault();
+      const next = ev.key === "ArrowLeft" || ev.key === "Home" ? SUBS[0] : SUBS[1];
+      setSub(next); const b = Q1("#al-t-" + next); if (b) b.focus();
+    });
   }
 
   function ensureLossesMounted(/** @type {Bag} */ opt = {}) {
@@ -375,9 +400,10 @@ const BARRA = (() => {
   }
 
   function show(/** @type {string} */ id, /** @type {Bag} */ opt = {}) {
+    if (SUBS.includes(id)) { opt = { ...opt, sub: id }; id = "addloss"; }          // «adducts» and «losses» are the two sections of one panel
     hintClose(true);
     if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
-    if (!(inData() || landing()) || !validTab(id)) return false;
+    if (!(inDataOrOpening() || landing()) || !validTab(id)) return false;
     const wasOpen = _open;
     _tab = id;
     _open = true; _restore = false; _forced = innerWidth < AUTO_W;
@@ -428,7 +454,7 @@ const BARRA = (() => {
 
   // the header button: show the last tool used (first start: File) or hide the panel
   function toggleDrawer() {
-    if (_open && (inData() || landing())) close(true);
+    if (_open && (inDataOrOpening() || landing())) { _opener = Q1("#sb-toggle"); close(true); }      // the focus stays on the button that was pressed
     else if (landing() && !inData()) { _open = true; applyLayout(); updateButtons(); }
     else show(validTab(_tab) ? _tab : "file", { opener: Q1("#sb-toggle") });
   }
@@ -479,49 +505,9 @@ const BARRA = (() => {
       `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
 
-  // the commands of the Teoria as the bar and the palette use them: {id, teo, etichetta, ic, run, items}
-  // administrator mode: the chapter editor of the Teoria (embedded, the frame has no button of its own: the bar here gives it)
-  const theoryEditor = () => { try { const w = /** @type {Bag} */ (/** @type {HTMLIFrameElement} */ (Q1("#tframe")).contentWindow); return w.QADMIN && w.QADMIN.on() && w.TEORIA_EDITOR ? w.TEORIA_EDITOR : null; } catch (_) { return null; } };
-  const EDIT_IC = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L6.5 16.5l-4 1 1-4L13.5 3.5z"/><path d="M11.5 5.5l3 3"/></svg>';
-  function theoryCmds() {
-    const T = tcmd(); if (!T) return [];
-    const ed = theoryEditor();
-    return /** @type {any[]} */ (ed ? [{ id: "editor", teo: true, end: false, group: "tools", etichetta: I18N.t("theory.editor"), titolo: I18N.t("theory.editor.title"), chiave: "Alt+E", off: false, ic: () => EDIT_IC, run: () => ed.toggle() }] : []).concat(T.lista.map((/** @type {Bag} */ c) => ({ id: c.id, teo: true, end: c.gruppo === "fine", lat: c.posto === "side", premuto: c.premuto, group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato, hide: !!c.nascosto, testo: c.testo, after: !!c.dopo,
-      ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map((/** @type {Bag} */ f) => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) })));
-  }
-  const theoryAll = () => theoryCmds().filter(c => !c.hide).flatMap(c => (c.items ? c.items : [c]));       // the palette finds the tools one by one
-  function buildTheoryBar(/** @type {HTMLElement} */ bar) {
-    const sep = '<span class="tb-sep" role="separator"></span>';
-    const cs = theoryCmds().filter(c => !c.end && !c.lat && !c.hide);
-    const gear = theoryCmds().find(c => c.end);
-    const one = (/** @type {Bag} */ c) => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""}${c.premuto ? ` aria-pressed="${c.premuto()}"` : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.testo ? c.titolo : c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}>${c.after ? `<span class="tl">${EHs(c.testo || c.etichetta)}</span><span class="ti">${c.ic()}</span>` : `<span class="ti">${c.ic()}</span><span class="tl">${EHs(c.testo || c.etichetta)}</span>`}</button>`;
-    bar.innerHTML = cs.filter(c => c.id === "indice" || c.id === "prec" || c.id === "succ").map(one).join("") + [cs.filter(c => c.id !== "indice" && c.id !== "prec" && c.id !== "succ").map(one).join(""), gear ? one(gear) : ""].filter(Boolean).map(g => sep + g).join("");   // one separator between groups, none at the ends or doubled
-    bar.querySelectorAll("button[data-tcmd]").forEach((/** @type {HTMLElement} */ b) => {
-      const c = cs.concat(gear || []).find(x => x.id === b.dataset.tcmd);
-      b.tabIndex = -1;
-      b.onclick = () => {
-        if (c.off) return;
-        if (c.items) { if (Q1("#stmenu") && /** @type {Bag} */ (Q1("#stmenu"))._anchor === b) return closeMenu(true); openMenu(b, c.items.map((/** @type {Bag} */ f) => ({ label: f.etichetta, ic: f.ic(), dom: null, fn: () => f.run() }))); b.setAttribute("aria-expanded", "true"); }
-        else { c.run(); if (c.premuto) b.setAttribute("aria-pressed", String(c.premuto())); }
-      };
-      if (c.premuto) { try { /** @type {Document} */ (/** @type {HTMLIFrameElement} */ (Q1("#tframe")).contentDocument).addEventListener("tcmd-stato", () => b.setAttribute("aria-pressed", String(c.premuto()))); } catch (_) { /* frame not reachable */ } }
-    });
-    setRover(firstItem());
-    fit();
-  }
-  // the bar follows the view: Teoria commands in the Teoria, the data ones elsewhere
-  function syncContext() {
-    const c = inTheory() ? "theory" : "data";
-    document.documentElement.classList.toggle("in-theory", c === "theory");
-    if (c === _ctx) return false;
-    _ctx = c; closeMenu(false); buildBar();
-    return true;
-  }
-
   function buildBar() {
     const bar = Q1("#stbar");
     if (!bar) return;
-    if (_ctx === "theory") return buildTheoryBar(bar);
     const hadFocus = bar.contains(document.activeElement) ? /** @type {Element} */ (document.activeElement).getAttribute("data-cmd") || /** @type {Element} */ (document.activeElement).getAttribute("data-cmd-main") || /** @type {Element} */ (document.activeElement).getAttribute("data-cmd-car") : null;
     const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end" && (!c.feature || /** @type {Record<string, boolean>} */ (FEATURES)[c.feature]));
     const hr = CMD.filter(c => c.hr);
@@ -557,7 +543,7 @@ const BARRA = (() => {
 
   function syncVisibility() {
     const bar = Q1("#stbar");
-    if (!bar || _ctx === "theory") return;
+    if (!bar) return;
     CMD.forEach(c => {
       if (c.item || c.more || c.bar === false) return;
       const el = bar.querySelector(`[data-cmd="${c.id}"]`);
@@ -573,7 +559,7 @@ const BARRA = (() => {
 
   function updateButtons() {
     const bar = Q1("#stbar");
-    if (!bar || _ctx === "theory") return;
+    if (!bar) return;
     const open = _open && inData();
     bar.querySelectorAll("button[data-cmd]").forEach((/** @type {HTMLElement} */ b) => {
       const c = byId(b.dataset.cmd);
@@ -612,11 +598,6 @@ const BARRA = (() => {
   function fit() {
     const bar = Q1("#stbar");
     if (!bar || !bar.offsetParent) return;
-    if (_ctx === "theory") {          // words next to the icons while they fit, else the icons alone
-      setLevel("all");
-      if (bar.scrollWidth > bar.clientWidth) setLevel("none");
-      return;
-    }
     const t0 = performance.now();
     _dropped = new Set();
     syncVisibility();
@@ -836,44 +817,37 @@ const BARRA = (() => {
     if (!head) return;
     /** @type {any} */
     let st = null;
-    const zones = () => {
-      let l = Q1(".sb-dz.l"), r = Q1(".sb-dz.r"), pv = Q1(".sb-dz-prev");
-      if (!l) {
-        l = document.createElement("div"); l.className = "sb-dz l"; l.textContent = t("side.dropLeft");
-        r = document.createElement("div"); r.className = "sb-dz r"; r.textContent = t("side.dropRight");
-        pv = document.createElement("div"); pv.className = "sb-dz-prev";
-        [l, r, pv].forEach(z => { z.setAttribute("aria-hidden", "true"); document.body.appendChild(z); });
-      }
-      return /** @type {{ l: HTMLElement, r: HTMLElement, pv: HTMLElement }} */ ({ l, r, pv });
-    };
-    const hot = (/** @type {number} */ x) => {
-      const z = zones(), side = x < innerWidth / 2 ? "left" : "right";
-      z.l.classList.toggle("hot", side === "left");
-      z.r.classList.toggle("hot", side === "right");
-      const w = sheet() ? innerWidth : effW();
-      z.pv.style.width = w + "px";
-      z.pv.style.left = side === "left" ? "0" : "auto";
-      z.pv.style.right = side === "right" ? "0" : "auto";
-      return side;
-    };
+    // two edge strips as wide as the panel really is (barra-lato.js): the one under the pointer is the target, anywhere else cancels
+    const hot = (/** @type {number} */ x, /** @type {number} */ y) => BARRA_LATO.show({
+      x, y, width: effW(), sheet: sheet(), side: _side, title: (Q1("#sb-title") || {}).textContent || "",
+      texts: { l: t("side.dropLeft"), r: t("side.dropRight"), no: t("side.dropCancel") },
+    });
     const end = () => {
       document.body.classList.remove("sb-dragging");
-      document.querySelectorAll(".sb-dz,.sb-dz-prev").forEach(z => z.remove());
+      if (window.BARRA_LATO) BARRA_LATO.clear();
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("keydown", key, true);
       if (st && st.timer) clearTimeout(st.timer);
       st = null;
     };
     const begin = () => {
+      if (!window.BARRA_LATO) return;                 // still loading: the next move (or the long press) tries again
       st.active = true;
       document.body.classList.add("sb-dragging");
+      window.addEventListener("keydown", key, true);
       try { head.setPointerCapture(st.id); } catch (_) { /* gone */ }
-      hot(st.x);
+      hot(st.x, st.y);
+    };
+    const key = (/** @type {KeyboardEvent} */ e) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault(); e.stopPropagation();
+      end();
     };
     const move = (/** @type {PointerEvent} */ e) => {
       if (!st || e.pointerId !== st.id) return;
-      st.x = e.clientX;
+      st.x = e.clientX; st.y = e.clientY;
       if (!st.active) {
         const d = Math.hypot(e.clientX - st.x0, e.clientY - st.y0);
         if (st.touch) { if (d > 10) end(); return; }       // a finger that moves before the long press is a scroll
@@ -881,18 +855,19 @@ const BARRA = (() => {
         begin();
       }
       e.preventDefault();
-      hot(e.clientX);
+      if (st.active) hot(e.clientX, e.clientY);
     };
     const up = (/** @type {PointerEvent} */ e) => {
       if (!st || e.pointerId !== st.id) return;
-      const was = st.active, side = was ? (e.clientX < innerWidth / 2 ? "left" : "right") : null;
+      const was = st.active, side = was ? hot(e.clientX, e.clientY) : null;
       end();
       if (was && side) setSide(side);
     };
     const cancel = () => end();
     head.addEventListener("pointerdown", (/** @type {PointerEvent} */ e) => {
       if (e.button !== 0 || /** @type {Element} */ (e.target).closest("button,input,a,select")) return;
-      st = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, active: false, touch: e.pointerType === "touch" || e.pointerType === "pen" };
+      carica("m:barra-lato.js").catch(() => { /* the drag simply does not start */ });
+      st = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, active: false, touch: e.pointerType === "touch" || e.pointerType === "pen" };
       window.addEventListener("pointermove", move, { passive: false });
       window.addEventListener("pointerup", up);
       window.addEventListener("pointercancel", cancel);
@@ -952,19 +927,17 @@ const BARRA = (() => {
       applyLayout();
       schedFit();
     });
-    let wasData = false;
-    const tf = Q1("#tframe");
-    if (tf) tf.addEventListener("load", () => { if (_ctx === "theory") { buildBar(); if (!tcmd()) setTimeout(() => _ctx === "theory" && buildBar(), 400); } });
+    let wasData = false, lastTop = 0;
+    // the view is hidden before "tpview" fires and a hidden element reads scrollTop 0: the scroll is followed as it happens
+    document.addEventListener("scroll", e => { const t = /** @type {HTMLElement | null} */ (e.target); if (t && t.id === "sb-panels") lastTop = t.scrollTop; }, true);
     document.addEventListener("tpview", () => {
-      syncContext();
-      const sc = Q1("#sb-panels");
-      if (wasData && !inData()) { _away = { open: _open, top: sc ? sc.scrollTop : 0 }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
-      else if (!wasData && inData() && _away) {                                                          // back in Dati: the panel returns as it was left (width and tool are kept in _w / _tab)
+      if (wasData && !inDataOrOpening()) { _away = { open: _open, top: lastTop }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
+      else if (!wasData && inDataOrOpening() && _away) {                                                          // back in Dati: the panel returns as it was left (width and tool are kept in _w / _tab)
         _open = _away.open; _forced = false; _restore = false; autoNarrow();
         const top = _away.top; _away = null;
         FRAME.next(() => { const e = Q1("#sb-panels"); if (e) e.scrollTop = top; });
       }
-      wasData = inData();
+      wasData = inDataOrOpening();
       syncMode();
       if (_open && inData() && validTab(_tab) && _painted !== _tab) renderPane(_tab);
       applyLayout();
@@ -1048,7 +1021,7 @@ const BARRA = (() => {
     _mode = isHrMode() ? "hr" : "lr";
     loadState();
     window.CMD = CMD;
-    if (!syncContext()) buildBar();
+    buildBar();
     const x = Q1("#sb-x");
     if (x) x.onclick = () => close(true);
     const tg = Q1("#sb-toggle");
@@ -1059,6 +1032,7 @@ const BARRA = (() => {
     saveState();                 // writes back only the valid fields: an old state (pinned, odd side or width) is cleaned
     bindResizer();
     bindSideDrag();
+    bindAddLoss();
     bindGlobalEvents();
     dockCalc(true);
     if (typeof ResizeObserver !== "undefined") {
@@ -1109,7 +1083,9 @@ const BARRA = (() => {
     focusToolbar,
     isDataView: () => inData() || landing(),      // the tools dock in the side panel also in the empty landing
     /** @param {string} [id] */
-    isOpen: id => _open && inData() && (id == null || _tab === id),
+    isOpen: id => _open && inData() && (id == null || (SUBS.includes(id) ? _tab === "addloss" && _sub === id : _tab === id)),
+    get curSub() { return _sub; },
+    setSub,
     get curTab() { return _tab; },
     get side() { return _side; },
     get width() { return effW(); },
@@ -1122,14 +1098,20 @@ const BARRA = (() => {
     name,
     lab,
     visible,
-    kw: (/** @type {Bag} */ c) => (c.teo ? "" : t(`cmd.${c.id}.kw`)),
-    get inTheory() { return _ctx === "theory"; },
-    theoryCommands: theoryAll
+    kw: (/** @type {Bag} */ c) => t(`cmd.${c.id}.kw`),
   };
 })();
 
 if (typeof window !== "undefined") {
   window.BARRA = BARRA;
+  // quiet empty state of the side panels: the leaf of the file list (one drawing, cloned) and one short line
+  /** @type {any} */ (window).EMPTYLEAF = (/** @type {string} */ key) => {
+    const box = document.createElement("div"), line = document.createElement("span"), leaf = document.querySelector("#fl-hint svg.leaf");
+    box.className = "empty-leaf muted"; line.textContent = I18N.t(key);
+    if (leaf) box.append(leaf.cloneNode(true));
+    box.append(line);
+    return box.outerHTML;
+  };
 }
 
 if (typeof document !== "undefined") {

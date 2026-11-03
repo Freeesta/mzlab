@@ -621,10 +621,10 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
                 return None;
             }
             fold_into(x, &slot, &mut b);
-            if let Some(pm) = &par_max {
-                if b.iter().zip(pm).any(|(n, m)| n > m) {
-                    return None;
-                }
+            if let Some(pm) = &par_max
+                && b.iter().zip(pm).any(|(n, m)| n > m)
+            {
+                return None;
             }
             for ((v, d), out) in x.iter().zip(&a).zip(nn.iter_mut()) {
                 *out = v - d;

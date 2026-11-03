@@ -52,12 +52,12 @@ pub fn blank_fallback(samples: &[Sample], rules: &[Rule], labels: &Labels) -> Op
     let mut out: Option<Vec<bool>> = None;
     let (blank, sample) = blank_and_samples(samples);
     for r in rules {
-        if let Rule::BlankWith(_, o) = r {
-            if o.matching != Matching::All {
-                let (_, fb) = fb::blank_groups(o.matching, labels, &sample, &blank, samples.len());
-                let acc = out.get_or_insert_with(|| vec![false; samples.len()]);
-                acc.iter_mut().zip(fb).for_each(|(a, b)| *a |= b);
-            }
+        if let Rule::BlankWith(_, o) = r
+            && o.matching != Matching::All
+        {
+            let (_, fb) = fb::blank_groups(o.matching, labels, &sample, &blank, samples.len());
+            let acc = out.get_or_insert_with(|| vec![false; samples.len()]);
+            acc.iter_mut().zip(fb).for_each(|(a, b)| *a |= b);
         }
     }
     out

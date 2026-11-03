@@ -19,19 +19,25 @@ static VIVI: AtomicUsize = AtomicUsize::new(0);
 static PICCO: AtomicUsize = AtomicUsize::new(0);
 unsafe impl GlobalAlloc for Conta {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-        PICCO.fetch_max(v, Ordering::Relaxed);
-        System.alloc(l)
+        unsafe {
+            let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
+            PICCO.fetch_max(v, Ordering::Relaxed);
+            System.alloc(l)
+        }
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-        System.dealloc(p, l)
+        unsafe {
+            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            System.dealloc(p, l)
+        }
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
-        let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
-        VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-        PICCO.fetch_max(v, Ordering::Relaxed);
-        System.realloc(p, l, n)
+        unsafe {
+            let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
+            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            PICCO.fetch_max(v, Ordering::Relaxed);
+            System.realloc(p, l, n)
+        }
     }
 }
 #[global_allocator]

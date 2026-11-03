@@ -5,7 +5,7 @@ I18N.add("en", {
   "lib.err.unknown": "Format not recognised: MSP or MGF files are needed.",
   "lib.err.noSpectrum": "No usable spectrum (discarded: {dropped}).",
   "lib.title": "Spectral libraries",
-  "lib.intro": "The libraries of MS2 spectra (<b>MSP</b>, <b>MGF</b>, MoNA or mzMine JSON, MassBank records) live in one folder and are indexed only once. The program looks nowhere else and sends nothing. NIST (.lib) and mzVault files cannot be read: export them as MSP.",
+  "lib.intro": "The libraries of MS2 spectra (<b>MSP</b>, <b>MGF</b>, JSON, MassBank records) live in one folder and are indexed only once. The program looks nowhere else and sends nothing. NIST (.lib) and mzVault files cannot be read: export them as MSP.",
   "lib.folder": "Libraries folder",
   "lib.folder.native": "Folder of this computer: {name}",
   "lib.folder.fs": "Chosen folder: “{name}”",

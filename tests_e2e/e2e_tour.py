@@ -36,7 +36,7 @@ try:
 
         pg.wait_for_selector("#tour-invito", timeout=30000)      # shown once the data are up: on a loaded machine that takes longer than 5 s
         inv_text = pg.inner_text("#tour-invito")
-        assert "Primo accesso? Un tour guidato degli strumenti." in inv_text and "minut" not in inv_text, inv_text
+        assert "Prima volta?" in inv_text and "minut" not in inv_text, inv_text
 
         # bottom-left corner of the window, compact, non-modal dialog
         bb = pg.locator("#tour-invito").bounding_box()
@@ -248,7 +248,7 @@ try:
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 9 di 9 · Strumenti e movimenti" in hd, hd
-        assert ttl == "Impostazioni, Teoria e questo tour", ttl
+        assert ttl == "Impostazioni e questo tour", ttl
         assert pg.is_visible("#tour-btn-fine") and "Fine" in pg.inner_text("#tour-btn-fine")
 
         # Click Fine -> finishes and saves fatto

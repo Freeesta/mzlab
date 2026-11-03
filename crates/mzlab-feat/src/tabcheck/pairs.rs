@@ -157,15 +157,15 @@ fn adduct_pairs(e: &Env, by: &[usize]) -> Vec<Pair> {
     for &a in by {
         for &(name, d) in adducts_of(e) {
             for &b in window(e, by, e.t.mz[a] + d, e.opts.mz_tol_da) {
-                if e.rt_close(a, b) {
-                    if let Some(r) = corr(e, a, b).filter(|r| *r >= ADDUCT_R) {
-                        found.push(Pair {
-                            lo: a,
-                            hi: b,
-                            tag: name,
-                            x: r,
-                        });
-                    }
+                if e.rt_close(a, b)
+                    && let Some(r) = corr(e, a, b).filter(|r| *r >= ADDUCT_R)
+                {
+                    found.push(Pair {
+                        lo: a,
+                        hi: b,
+                        tag: name,
+                        x: r,
+                    });
                 }
             }
         }

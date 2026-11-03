@@ -60,7 +60,7 @@ try:
             pg.set_input_files("#pick", [blob("b.wiff2"), blob("e.wiff2"), blob("c.d"), blob("x.lcdx"), blob("y.lcdx"), blob("z.xyz"), blob("q.txt")])      # a .wiff with its .scan is converted by the engine
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
             t = pg.inner_text("#unopen")
-            assert "5" in t and ".wiff" in t and "2 file ignorati" in t, t
+            assert "2 file SCIEX .wiff2" in t and "2 file Shimadzu .lcdx" in t and ".wiff" in t and "ignorati" in t and "z.xyz" in t and "q.txt" not in t, repr(t)
             pg.locator("#unopen details.unopen-names summary").click()
             assert pg.locator("#unopen details.unopen-names li").count() == 5, "5 names, no «and N more»"
             pg.focus("#unopen [data-a=close]")
@@ -90,7 +90,7 @@ try:
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
             t = pg.inner_text("#unopen"); assert "5 Shimadzu .lcdx files: recognised, not supported yet" in t, t
             pg.set_input_files("#pick", [blob("w.wiff2"), blob("w.xyz")]); pg.wait_for_function("document.querySelector('#unopen').innerText.includes('SCIEX .wiff2')", timeout=10000)
-            t = pg.inner_text("#unopen"); assert "SCIEX .wiff2 file: recognised, not supported yet" in t and "1 file ignored" in t, t
+            t = pg.inner_text("#unopen"); assert "SCIEX .wiff2 file: recognised, not supported yet" in t and "ignored, not a mass-spectrometry file we know: w.xyz" in t, t
         step("English text", en)
         def contrast():
             for th in ("light", "dark"):

@@ -323,21 +323,21 @@ pub fn merge_annotations(t: &mut Table, text: &str) -> Result<(), ImportError> {
                 ("smiles", &["smiles", "isomeric_smiles"][..]),
                 ("formula", &["mol_formula"][..]),
             ] {
-                if a.text(k).is_empty() {
-                    if let Some(v) = get(names) {
-                        a.set(k, V::s(v));
-                    }
+                if a.text(k).is_empty()
+                    && let Some(v) = get(names)
+                {
+                    a.set(k, V::s(v));
                 }
             }
-            if a.text("adduct").is_empty() {
-                if let Some(i) = col(&["adduct"]) {
-                    a.set("adduct", V::Str(norm_adduct(cell(r, Some(i)))));
-                }
+            if a.text("adduct").is_empty()
+                && let Some(i) = col(&["adduct"])
+            {
+                a.set("adduct", V::Str(norm_adduct(cell(r, Some(i)))));
             }
-            if a.num("precursor").is_none() {
-                if let Some(i) = col(&["precursor_mz"]) {
-                    a.set("precursor", V::opt(num(cell(r, Some(i)))));
-                }
+            if a.num("precursor").is_none()
+                && let Some(i) = col(&["precursor_mz"])
+            {
+                a.set("precursor", V::opt(num(cell(r, Some(i)))));
             }
             merged += 1.0;
             Ok(())

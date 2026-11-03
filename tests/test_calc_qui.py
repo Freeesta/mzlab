@@ -27,7 +27,7 @@ const table=async(f,obs,tol,delta)=>{{asked.push({{f,obs,tol,delta}});const ref=
   if(d&&Math.abs(21.98194-d)<=win)hits.push({{a:'[M+Na]+',b:'[M+H]+',d:21.98194,err_mda:(21.98194-d)*1000}});
   return {{formula:f||null,neutral:null,tol:+tol,rows:[],best:null,diffs:[{{pair:'Na',a:'[M+Na]+',b:'[M+H]+',pol:1,d:21.98194}}],delta:delta?{{value:d,hits}}:undefined}}}};
 const dep={{idx,find:LISTE.find,findNominal:LISTE.findNominal,table,mass,losses:P.LOSSES,lossCombos:P.lossCombos}};
-const HR={{hr:true,pol:1,tol:5,dec:4}},LR={{hr:false,pol:1,tol:0.5,dec:1}};
+const HR={{hr:true,unit:'ppm',pol:1,tol:5,dec:4}},LR={{hr:false,unit:'da',pol:1,tol:0.5,dec:1}};
 """
 
 
@@ -104,9 +104,27 @@ def test_the_open_files_decide_the_resolution_and_name_the_instrument():
 
 def test_there_is_no_resolution_switch_and_no_observed_value_in_the_choices():
     r = run("console.log(JSON.stringify([Object.keys(CQ.st),Object.keys(CQ.opts(CQ.arg('214',0)))]))")
-    assert r[0] == ["ppm", "da", "pol"] and "obs" not in r[1] and "res" not in r[0]
+    assert r[0] == ["ppm", "da", "pol", "unit"] and "obs" not in r[1] and "res" not in r[0]
 
 
 def test_the_typed_number_is_the_observed_value_of_the_adduct_table():
     r = run("asked.length=0;await CQ.gruppi(CQ.arg('177.1023',0),HR,dep);console.log(JSON.stringify(asked.find(a=>!a.delta)))")
     assert float(r["obs"]) == pytest.approx(177.1023) and r["f"] == ""
+
+
+def test_tolerance_unit_presets_follow_the_resolution_and_the_choice_is_remembered_per_mode():
+    r = run("""const a=CQ.opts(CQ.arg('214',0)),b=CQ.opts(CQ.arg('214.0896',0));
+      CQ.set({unit:{...CQ.st.unit,lr:'ppm'}});const c=CQ.opts(CQ.arg('214',0)),d=CQ.opts(CQ.arg('214.0896',0));
+      CQ.set({unit:{...CQ.st.unit,hr:'da'}});const e=CQ.opts(CQ.arg('214.0896',0)),f=CQ.opts(CQ.arg('214',0));
+      console.log(JSON.stringify([a,b,c,d,e,f].map(o=>[o.hr,o.unit,o.tol])))""")
+    assert r == [[False, "da", 0.5], [True, "ppm", 5], [False, "ppm", 5], [True, "ppm", 5], [True, "da", 0.5], [False, "ppm", 5]]          # LR: 0.5 Da; HR: 5 ppm; each mode keeps its own unit
+
+
+def test_the_same_unit_gives_the_same_results_in_both_modes():
+    r = run("""const k=async o=>{const g=await CQ.gruppi(CQ.arg('214.0896',0),o,dep);return [g.map(x=>x.id+x.n).join(),asked.length&&asked[asked.length-1].tol]};
+      const da={tol:0.5,unit:'da',pol:1},ppm={tol:5,unit:'ppm',pol:1};
+      console.log(JSON.stringify([await k({...da,hr:true,dec:4}),await k({...da,hr:false,dec:1}),await k({...ppm,hr:true,dec:4}),await k({...ppm,hr:false,dec:1})]))""")
+    assert r[0] == r[1] and r[2] == r[3]          # the unit decides, not the mode
+    assert r[0][0] != r[2][0] or r[0][1] != r[2][1]          # and Da and ppm are not the same window
+    # a window in Da reaches the engine as the equivalent ppm at the reference m/z of the differences (400): 0.5 Da = 1250 ppm
+    assert abs(float(r[0][1]) - 0.5 / 400 * 1e6) < 1e-3 and float(r[2][1]) == 7.5          # 5 ppm at 400 is 0.002 Da: the window of a difference never gets under 0.003 Da (7.5 ppm)

@@ -1,6 +1,6 @@
 //! Money in integer micro-dollars (1 USD = 1 000 000): the prices per million tokens, the cost of a `usage` event (cache reads and the two cache writes at
 //! their own rates, Haiku's higher tier above 100 000 prompt tokens) and the `Meter` that decides before each call whether the cap still allows it.
-//! No float is stored, so counters never drift. Used by the assistant, `mzlab-cli` and, through `mzlab-tutor::quota`, by the tutor Worker.
+//! No float is stored, so counters never drift. Used by the assistant and `mzlab-cli`.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Value};

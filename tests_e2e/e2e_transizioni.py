@@ -25,6 +25,9 @@ def cold(p, vw, vh, reduced, saved=None):
     pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
     pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(500)
+    # loading data opens the file list whatever was stored: these tests slide it open from closed, so close it first (reduced motion = at once)
+    if "mzlab.barra.lr" not in (saved or {}) and pg.get_attribute("#sb-toggle", "aria-pressed") == "true":
+        pg.click("#sb-toggle"); pg.wait_for_function("document.querySelector('#sb-toggle').getAttribute('aria-pressed') === 'false'"); pg.wait_for_function(SETTLED)
     return r, ctx, pg, errs
 def toggle_final(p, vw, saved=None):          # the final geometry, from the reduced-motion run
     r, ctx, pg, errs = cold(p, vw, 900, True, saved)
@@ -41,7 +44,8 @@ try:
                 assert pg.evaluate(BOX) == b0, "same start"
                 pg.focus("#sb-toggle"); pg.evaluate(COUNT); pg.evaluate(LONG)
                 pg.click("#sb-toggle")
-                assert pg.evaluate("document.activeElement.id") == "sb-toggle", "focus kept while it animates"
+                # opening moves the focus from the button into the pane after 90 ms (barra.js show); either way it is never dropped to the page while the panel slides
+                fid = pg.evaluate("document.activeElement.id"); assert fid in ("sb-toggle", "sb-pane"), "focus kept while it animates: " + fid
                 pg.wait_for_function(SETTLED); pg.wait_for_timeout(450)
                 assert pg.evaluate(BOX) == b1, (pg.evaluate(BOX), b1)
                 n = pg.evaluate("window.__n"); assert n["fit"] == (0 if name == "sheet" else 1), n   # the sheet hides the workspace: nothing to redraw

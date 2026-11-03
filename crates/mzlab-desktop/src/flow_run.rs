@@ -28,7 +28,7 @@ impl State {
     /// `{name}` -> the text of the output file `name` of the last run (a plain file name, at most 4 MB); with `encoding: "base64"` it answers `{"base64": "..."}`, the exact bytes of a binary file.
     pub(crate) fn flow_read(&self, p: &Value) -> Result<Answer> {
         let name = crate::store::clean(p["name"].as_str().unwrap_or(""))?;
-        let dir = std::env::temp_dir().join("mzlab-flow").join("out");
+        let dir = self.flow_root().join("out");
         text(read_out(
             &dir,
             name,
@@ -43,7 +43,7 @@ impl State {
             .as_str()
             .ok_or_else(|| Error::new("err.flow.json"))?;
         let plan = parse(plan_text.as_bytes())?;
-        let root = std::env::temp_dir().join("mzlab-flow");
+        let root = self.flow_root();
         let (inputs, work) = (root.join("in"), root.join("out"));
         // the outputs stay: their cache gives back the steps whose key did not change (`fresh` recomputes all)
         let _ = std::fs::remove_dir_all(&inputs);
@@ -87,7 +87,7 @@ impl State {
 
     /// `{}` -> the `corsa/1` report (`mzlab-cli flow report`) of the last run of `flow/run`, for the report page of the Flow.
     pub(crate) fn flow_report(&self, _p: &Value) -> Result<Answer> {
-        let dir = std::env::temp_dir().join("mzlab-flow").join("out");
+        let dir = self.flow_root().join("out");
         text(mzlab_cli::flow_report::report(&dir)?)
     }
 }

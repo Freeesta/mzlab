@@ -5,6 +5,17 @@
 // Called by applyView, renderFiles and upload (shell.js) and by every refit of the panels (syncWorkEmpty, lista-file.js).
 "use strict";
 
+// Below 900 px the toggle of the side panel (#sb-toggle, barra.js) is the way to the file list: it says «Files (N)», N = rows of the sample table.
+// paint() returns true when it wrote that label; false leaves barra.js to write the usual one (and gives back the usual accessible name).
+const SHEETLBL = {
+  paint(/** @type {HTMLElement} */ tg, /** @type {HTMLElement} */ tl, /** @type {boolean} */ narrow) {
+    if (!narrow || S.view !== "data") { if (tg.dataset.sheet) { delete tg.dataset.sheet; tg.setAttribute("aria-label", I18N.t("cmd.panel.name")); } return false; }
+    const txt = I18N.t("cmd.panel.files", { n: ST.files.length });
+    delete tl.dataset.i18n; tl.textContent = txt; tg.dataset.sheet = "1"; tg.setAttribute("aria-label", txt);
+    return true;
+  },
+  refresh() { const tg = document.getElementById("sb-toggle"), tl = tg && tg.querySelector(".tl"); if (tg && tl) this.paint(tg, /** @type {HTMLElement} */ (tl), window.innerWidth < 900); }
+};
 const workQ = (/** @type {string} */ s) => /** @type {HTMLElement & { disabled: boolean }} */ (document.querySelector(s));
 // every panel was closed with the X of the toolbar: the files stay ticked but the landing shows until a panel or a file is opened again
 let closedAll = false;
@@ -31,6 +42,7 @@ const TOOLS_OFF = ["#np-chrom", "#np-spec", "#np-map", "#np-xic", "#np-mrm", "#n
 let _workSig = "";
 /** Shows the part of the work area that the state asks for; nothing is written when nothing changed (`force` writes anyway). */
 function syncWork(/** @type {boolean} */ force = false) {
+  SHEETLBL.refresh();
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
   const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
   if (sig === _workSig && !force) return;
@@ -40,19 +52,25 @@ function syncWork(/** @type {boolean} */ force = false) {
   const rows = workRows(typeof E !== "undefined" ? E.files : []), land = w === "landing" && rows;
   if (w === "landing") S.table = false;
   workQ("#wdata").hidden = w === "panels" || w === "opening";
-  // «Back to work!» waits for a file to go back to
-  workQ("#backwork").hidden = !(S.sess && !none && (w === "add" || w === "landing"));
+  // «Back to work!» waits for a file to go back to, and for the reading to end (it would push the drop area down while the files load)
+  workQ("#backwork").hidden = !(S.sess && !none && !up && (w === "add" || w === "landing"));
   workQ("#start").hidden = !(w === "landing" || w === "add" || (w === "table" && !S.sess));
   workQ("#wtable").hidden = !(w === "table" || w === "add" || land);
-  // on the landing the table is already in view under the drop area: the button stays in place, pressed and inert
-  const sb = workQ("#samptab"); sb.hidden = !tab; sb.setAttribute("aria-pressed", String(w === "table" || land)); sb.disabled = land;
+  // never inert: on the landing with a session (panels closed by the X) it brings the table back; before a session it scrolls the table under the drop area into view
+  const sb = workQ("#samptab"); sb.hidden = !tab; sb.setAttribute("aria-pressed", String(w === "table")); sb.disabled = false;
+  // the add buttons scroll sideways in a narrow window: with every button disabled the strip has no stop of its own, so the keyboard reaches it directly (axe scrollable-region-focusable)
+  const ga = workQ("#g-add"); if (none) ga.tabIndex = 0; else ga.removeAttribute("tabindex");
   TOOLS_OFF.forEach(q => { const b = workQ(q); b.disabled = none; b.setAttribute("aria-disabled", String(none)); });
   NAV_OFF.forEach(q => { const b = workQ(q); if (none) b.disabled = true; b.setAttribute("aria-disabled", String(b.disabled)); });
   // the empty side list shows a plain hint (it still takes a drop: the dashed box of #fl-dz appears only while a drag is over it)
   workQ("#fl-hint").hidden = !(none && !up);
   if (!workQ("#sb-pane").classList.contains("dz-over")) workQ("#fl-dz").hidden = true;
   // the content fades in once in place of the landing (opacity only, transizioni.css)
-  if (was === "landing" && w === "panels") { const v = workQ("#v-data"); v.classList.add("opn-rev"); setTimeout(() => v.classList.remove("opn-rev"), 400); }
+  // the class leaves when the fade ends (a long task on a slow machine must not remove it before the first frame, or the fade never starts); the timer is only the fallback
+  if (was === "landing" && w === "panels") {
+    const v = workQ("#v-data"), end = (/** @type {AnimationEvent} */ e) => { if (e.animationName === "tr-fade") done(); }, done = () => { v.classList.remove("opn-rev"); v.removeEventListener("animationend", end); };
+    v.classList.add("opn-rev"); v.addEventListener("animationend", end); setTimeout(done, 2000);
+  }
   // the side panel takes the width of the names once a file is shown (barra.js)
   if (was !== w && window.BARRA) BARRA.fitNames();
 }
@@ -67,34 +85,14 @@ workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   if (!t.closest("input")) queueMicrotask(() => { if (!E.panels.some((/** @type {Pannello} */ p) => p.el)) soloFile(E.files[+((/** @type {HTMLElement} */ (nm)).dataset.k || 0)]); });
 }, true);
 // «Sample table» of the side panel: the table in place of the panels and back; a click on a file of the side list goes back to the panels
-workQ("#samptab").onclick = () => { S.table = !S.table; syncWork(); };
+workQ("#samptab").onclick = () => { if (!S.sess && workState() === "landing") { workQ("#wtable").scrollIntoView({ block: "nearest" }); return; } S.table = !S.table; if (S.table && window.innerWidth < 900 && window.BARRA) { BARRA.close(false); document.getElementById("sb-toggle")?.focus({ preventScroll: true }); } syncWork(); };
 workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   const t = /** @type {HTMLElement} */ (e.target);
   if (S.table && t.closest(".fl:not(.up)")) { S.table = false; queueMicrotask(() => syncWork()); }
 }, true);
 
-// before a session the side panel takes a drop as the landing does (with a session shell.js takes it): the files open as soon as they are read
-(() => {
-  const dz = workQ("#dfiles"), early = () => S.view === "data" && !S.sess && !S.opening;
-  const files = (/** @type {DragEvent} */ e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes("Files");
-  ["dragenter", "dragover"].forEach(t => dz.addEventListener(t, (/** @type {DragEvent} */ e) => { if (early() && files(e)) { e.preventDefault(); dropZone(true); } }));
-  dz.addEventListener("drop", (/** @type {DragEvent} */ e) => {
-    if (!early() || !files(e) || !e.dataTransfer) return;
-    e.preventDefault(); e.stopPropagation(); dropZone(false);
-    if (!CartCarica.fromDrop(e)) upload([...e.dataTransfer.files], "data");
-  }, true);
-})();
+// a file name of the sample table itself opens the file: the table gives way to the panels
+workQ("#flist").addEventListener("click", (/** @type {MouseEvent} */ e) => {
+  if (S.table && /** @type {HTMLElement} */ (e.target).closest("[data-open]")) { S.table = false; queueMicrotask(() => syncWork()); }
+}, true);
 
-// files dragged over the work area while panels or the sample table show: an overlay over the whole area takes the drop (the landing has its own box)
-(() => {
-  const ws = workQ("#v-workspace"), on = (/** @type {DragEvent} */ e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes("Files") && S.sess && S.view === "data" && ["panels", "table"].includes(ws.dataset.work || "");
-  const off = () => ws.classList.remove("ws-drop");
-  ["dragenter", "dragover"].forEach(t => ws.addEventListener(t, (/** @type {DragEvent} */ e) => { if (!on(e)) return; e.preventDefault(); ws.dataset.dz = I18N.t("files.drop.zone"); ws.classList.add("ws-drop"); }));
-  ws.addEventListener("dragleave", (/** @type {DragEvent} */ e) => { if (!ws.contains(/** @type {Node | null} */ (e.relatedTarget))) off(); });
-  ws.addEventListener("drop", (/** @type {DragEvent} */ e) => {
-    const was = ws.classList.contains("ws-drop"); off();
-    if (!was || !e.dataTransfer || !on(e)) return;
-    e.preventDefault(); e.stopPropagation();
-    if (!CartCarica.fromDrop(e)) upload([...e.dataTransfer.files], "data");
-  }, true);
-})();

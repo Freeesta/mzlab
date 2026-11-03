@@ -40,7 +40,7 @@ function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOB
     box.innerHTML = html;
   }
   function msg(box, text, bad) { const m = box.querySelector("#cmp-msg"); if (m) { m.textContent = text; m.classList.toggle("bad", !!bad); } }
-  function tsvText() { return toTsv(rows(), tunitGet()); }
+  function tsvText() { const x = toTsv(rows(), tunitGet()); return window.COLS ? COLS.tsv(x) : x; }
   function mount(box) {
     paint(box);
     box.onchange = e => {

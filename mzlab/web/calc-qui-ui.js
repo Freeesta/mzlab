@@ -8,7 +8,7 @@
 (() => {
   const Q1 = (/** @type {string} */ s) => /** @type {HTMLElement | null} */ (document.querySelector(s));
   const H = CALCQUIHTML, DEBOUNCE = 90;
-  /** @typedef {{ ctl: HTMLElement, out: HTMLElement, idp: string, quiet?: boolean, numOnly?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pol?: () => 1 | -1 | null, after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
+  /** @typedef {{ ctl: HTMLElement, out: HTMLElement, idp: string, quiet?: boolean, catalogue?: boolean, numOnly?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pol?: () => 1 | -1 | null, after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
   /** @typedef {{ cfg: CqCfg, open: Set<string>, all: Set<string>, more: boolean, diffs: boolean, delta: string, seq: number, timer: number, tab: any, formula: string }} CqView */
   const views = /** @type {CqView[]} */ ([]);
   const prune = () => { for (let i = views.length - 1; i >= 0; i--) if (!views[i].cfg.out.isConnected) views.splice(i, 1); };      // a panel redrawn leaves its old view behind
@@ -39,9 +39,9 @@
 
   /** Draws the groups of the view for its argument (the newest call wins). @param {CqView} v */
   async function render(v) {
-    const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = CALCQUI.arg(t.text, t.ans);
+    const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = { ...CALCQUI.arg(t.text, t.ans), catalogue: !!v.cfg.catalogue };
     sync(v);                                                                                  // the detected resolution (text and tolerance) follows what is typed
-    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && a.kind === "none") { v.cfg.out.innerHTML = ""; return; }      // a panel with its own field says nothing until something is typed
+    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && !v.cfg.catalogue && a.kind === "none") { v.cfg.out.innerHTML = ""; return; }      // a panel with its own field and no default table says nothing until something is typed
     let gs = await CALCQUI.gruppi(a, o, await deps());
     if (my !== v.seq) return;
     if (v.cfg.groups) gs = gs.filter(g => /** @type {string[]} */ (v.cfg.groups).includes(g.id));
@@ -49,6 +49,7 @@
     v.tab = ad ? ad.tab : null; v.formula = ad && /** @type {Bag} */ (ad).formula ? ad.tab.formula || "" : "";
     v.diffs = v.open.has("diff");
     v.cfg.out.innerHTML = H.groupsHtml(gs, o, v, { formula: a.kind === "formula" });
+    if (v.cfg.catalogue && v.cfg.quiet && !v.cfg.out.innerHTML.trim()) v.cfg.out.innerHTML = /** @type {any} */ (window).EMPTYLEAF("empty.adducts");     // a panel with nothing to list shows the quiet leaf
     if (v.cfg.after) v.cfg.after(a, gs);
   }
   const later = (/** @type {CqView} */ v) => { clearTimeout(v.timer); v.timer = window.setTimeout(() => render(v).catch(e => { v.cfg.out.innerHTML = h`<p class="muted">${e && e.message || ""}</p>`; }), DEBOUNCE); };
@@ -57,8 +58,8 @@
   function sync(v) {
     const o = options(v), c = v.cfg.ctl, put = (/** @type {string} */ id, /** @type {string} */ val) => { const i = /** @type {HTMLInputElement | null} */ (c.querySelector("#" + v.cfg.idp + id)); if (i && document.activeElement !== i) i.value = val; };
     c.querySelectorAll(".cq-ctl [data-p]").forEach(b => { const on = +(b.getAttribute("data-p") || 0) === o.pol; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
-    const tl = c.querySelector(".cq-tl"); if (tl) tl.textContent = I18N.t(o.hr ? "calc.tol" : "calc.tol.da");
-    const md = c.querySelector(".cq-mode"); if (md) md.textContent = H.modeText(o);
+    c.querySelectorAll(".cq-ctl [data-u]").forEach(b => { const on = b.getAttribute("data-u") === o.unit; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+    const cc = c.querySelector(".cq-ctl"); if (cc) { cc.setAttribute("data-mode", o.hr ? "hr" : "lr"); cc.setAttribute("data-src", o.mode.src); cc.setAttribute("data-name", o.mode.name || ""); }
     put("tol", String(o.tol));
   }
 
@@ -68,11 +69,12 @@
     const v = /** @type {CqView} */ ({ cfg, open: new Set(), all: new Set(), more: false, diffs: false, delta: "", seq: 0, timer: 0, tab: null, formula: "" });
     views.push(v);
     cfg.ctl.innerHTML = H.ctrlHtml(cfg.idp, options(v));
-    const set = (/** @type {Partial<CqState>} */ p) => CALCQUI.set(p), tolKey = () => (options(v).hr ? "ppm" : "da");
+    const set = (/** @type {Partial<CqState>} */ p) => CALCQUI.set(p), tolKey = () => options(v).unit;
     cfg.ctl.addEventListener("click", ev => {
       const b = /** @type {HTMLElement} */ (ev.target).closest("button");
       if (!b) return;
       if (b.dataset.p) set({ pol: +b.dataset.p > 0 ? 1 : -1 });
+      else if (b.dataset.u === "da" || b.dataset.u === "ppm") set({ unit: { ...CALCQUI.st.unit, [options(v).hr ? "hr" : "lr"]: b.dataset.u } });         // remembered for this resolution mode only
     });
     cfg.ctl.addEventListener("input", ev => {
       const i = /** @type {HTMLInputElement} */ (ev.target);

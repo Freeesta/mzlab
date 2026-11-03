@@ -3,10 +3,10 @@
 // @ts-noany
 "use strict";
 // Periodic table with isotopes and abundances: ONE place for the markup, the layout and the behaviour, used by the program
-// (tables.js, dialog "Tavola periodica") and by the Teoria (teoria/strumenti/tavola.js). The data of the elements is elements.js.
-// Classic script (not an ES module) because the Teoria must also work from file://, where module scripts are blocked.
+// (tables.js, dialog "Tavola periodica"). The data of the elements is elements.js.
+// Classic script (not an ES module).
 // TAVOLA.create({ elements, t, nome }) -> { periodic(), bindPeriodic(root), info(element) }
-//   t(key, params): the texts (keys tbl.pt.*, tbl.na; the program passes I18N.t, the Teoria its Italian table); nome(element): its name.
+//   t(key, params): the texts (keys tbl.pt.*, tbl.na; the program passes I18N.t); nome(element): its name.
 /** @typedef {{ z: number, s: string, w: number | null, r: number, c: number, iso: number[][] }} TavEl */
 window.TAVOLA = (() => {
   // layout: fixed row heights, so the table never changes size; the info box scrolls if needed. Colours only from the page variables

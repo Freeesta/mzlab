@@ -1,6 +1,7 @@
 // mixesResolutions (lr-sessione.js): the entry of a plain file answers for its resolution, only a mixed file asks the engine for its items; argv[2] = folder with the copied module.
 import assert from "assert";
-const { mixesResolutions } = await import(process.argv[2] + "/lr-sessione.js");
+import { pathToFileURL } from "url";
+const { mixesResolutions } = await import(pathToFileURL(process.argv[2]).href + "/lr-sessione.js");
 
 const mk = (entries, items = {}) => {
   const calls = [];

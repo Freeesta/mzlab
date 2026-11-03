@@ -1,8 +1,7 @@
 // @ts-strict
 // @ts-check
 // mzLab on a smartphone. Dati and Disegno need a large screen and the Python engine (tens of MB): on a phone the site shows only
-// the Teoria, and nothing heavy is downloaded. Loaded first by index.html (before browser.js); the Teoria pages repeat the same rule
-// in teoria.js. A phone = a phone browser (user agent) or a touch screen whose short side is under 500 CSS px, in any orientation
+// a card, and nothing heavy is downloaded. Loaded first by index.html (before browser.js). A phone = a phone browser (user agent) or a touch screen whose short side is under 500 CSS px, in any orientation
 // (a tablet is not a phone). ?telefono=1 / ?telefono=0 force the choice for this tab (tests, or a student who wants the full site anyway).
 (function () {
   let force = null;

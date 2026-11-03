@@ -140,10 +140,10 @@ impl UntParams {
             return Ok(p);
         }
         let v = json::parse(text.as_bytes()).map_err(|_| bad())?;
-        if let Some(e) = v.get("engine").and_then(Value::str) {
-            if e != "untargeted" {
-                return Err(bad());
-            }
+        if let Some(e) = v.get("engine").and_then(Value::str)
+            && e != "untargeted"
+        {
+            return Err(bad());
         }
         p.polarity = match v.get("polarity") {
             None | Some(Value::Null) => None,

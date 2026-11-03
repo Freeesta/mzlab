@@ -107,7 +107,9 @@
     return cx && !cx.hasScan ? t.filter(n => n.fam !== "bpc") : t;
   }
   /** the label of a row: the engine's name, with TIC and BPC in the words of the page @param {Nodo} n */
-  const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.et;
+  const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.fam === "srm" ? srmLabel(n.et) : n.et;
+  /** a transition in the notation of the legend, «precursor>product role», from the engine's «MRM q1→q3 @CE «role»» @param {string} et */
+  const srmLabel = et => { const m = /^MRM\s+([\d.]+)→([\d.]+)(?:\s+@[\d.]+)?(?:\s+«(.*)»)?\s*$/.exec(et); return m ? `${m[1]}>${m[2]}${m[3] ? " " + m[3] : ""}` : et; };
   /** the text of the button: what the panel plots, «TIC + 1» for several channels @param {any} p @param {Nodo[]} tree @param {Ctx} cx */
   function summary(p, tree, cx) {
     if (isOther(p)) { const r = others(cx).flat().find(x => x[0] === p.kind); return r ? r[1] : String(p.kind); }
@@ -133,10 +135,17 @@
       const lv = onlySrm ? 1 : depth(n), has = n.kids.length > 0 && !onlySrm, open = has && !col.has(n.omo), t = tip(n);
       return `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.omo)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-omo="${EH(n.omo)}" aria-label="${EH(rowLabel(n))}"${t ? ` title="${EH(t)}"` : ""}>` +
         `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span><span class="can-ck" aria-hidden="true"></span><span class="can-et">${EH(label(n))}</span></span>` +
-        `<span class="can-sg" aria-hidden="true">${EH(n.sigla)}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt0.toFixed(1)}–${+n.rt1.toFixed(1)}` : ""}</span>` +
+        `<span class="can-sg" aria-hidden="true"${sgTitle(n.sigla)}>${EH(sgShort(n.sigla))}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt0.toFixed(1)}–${+n.rt1.toFixed(1)}` : ""}</span>` +
         (many ? `<span class="can-fl" aria-hidden="true" title="${EH(T("canali.files.title"))}">${n.files}</span>` : "") + `</div>`;
     }).join("");
   }
+  // scan-type codes of the engine (PREC, NL, NG...) are shown by name, never raw; unknown codes stay as they come
+  const SG = () => /** @type {Record<string, [string, string]>} */ ({
+    PREC: [T("canali.sg.PREC"), T("canali.sgl.PREC")], NL: [T("canali.sg.NL"), T("canali.sgl.NL")], NG: [T("canali.sg.NG"), T("canali.sgl.NG")],
+    EMC: [T("canali.sg.EMC"), T("canali.sgl.EMC")], TDF: [T("canali.sg.TDF"), T("canali.sgl.TDF")], ER: [T("canali.sg.ER"), T("canali.sgl.ER")],
+  });
+  const sgShort = (/** @type {string} */ g) => SG()[g] ? SG()[g][0] : g;
+  const sgTitle = (/** @type {string} */ g) => SG()[g] ? ` title="${EH(SG()[g][1])}"` : "";
   /** the rows of the other kinds (one at a time, a round mark) @param {any} p @param {[string, string, string][]} list */
   const kindRows = (p, list) => list.map(([v, et, t]) =>
     `<div class="can-row" role="treeitem" aria-level="1" aria-selected="${p.kind === v}" tabindex="-1" data-kind="${EH(v)}" aria-label="${EH(et)}"${t ? ` title="${EH(t)}"` : ""}><span class="can-in"><span class="can-car" aria-hidden="true"></span><span class="can-ck can-rd" aria-hidden="true"></span><span class="can-et">${EH(et)}</span></span></div>`).join("");
@@ -218,6 +227,8 @@
         act();
       };
       row.onkeydown = e => {
+        // the tree owns its keys: the page-wide handlers (Space = play the scans, arrows = step them) must not see them
+        if (/^(Arrow(Up|Down|Left|Right)|Home|End| |Enter)$/.test(e.key)) e.stopPropagation();
         const col = /** @type {Set<string>} */ (p._canCol ||= new Set());
         if (e.key === "ArrowDown") { e.preventDefault(); moveFocus(row, 1); }
         else if (e.key === "ArrowUp") { e.preventDefault(); moveFocus(row, -1); }

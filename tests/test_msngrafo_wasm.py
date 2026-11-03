@@ -35,7 +35,7 @@ def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
     want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), *args).stdout
     assert got + "\n" == want  # the command line ends its output with a newline
-    assert '"formato":"msngrafo/1"' in got
+    assert '"formato":"msngrafo/2"' in got
     assert ('"strutture":{' in got) == ("strutture=" in query)
 
 

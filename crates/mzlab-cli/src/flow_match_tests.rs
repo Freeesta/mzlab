@@ -356,8 +356,8 @@ fn tol_ppm_replaces_the_fragment_window_in_da() {
     let score = |params: &str| -> Option<(f64, usize)> {
         run(&dir, "spectral_entropy", params);
         let h = hits(&dir);
-        let best = h
-            .get("hits")
+
+        h.get("hits")
             .unwrap()
             .arr()
             .iter()
@@ -368,8 +368,7 @@ fn tol_ppm_replaces_the_fragment_window_in_da() {
                     b.get("score").unwrap().f64().unwrap(),
                     b.get("shared").unwrap().f64().unwrap() as usize,
                 )
-            });
-        best
+            })
     };
     let da = score(r#"{"tol_da":0.01}"#).unwrap();
     assert_eq!(score(r#"{"tol_da":0.01,"tol_ppm":30}"#), Some(da));

@@ -47,6 +47,15 @@ fn chrom_of(h: &str, index: usize, start: u64, end: u64) -> Chrom {
         (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
         d.dwell = named_value(h, "MS_dwell_time");
         d.ce = d.ce.or_else(|| named_value(h, "collision energy"));
+    } else if let Some(q1) = cid
+        .strip_prefix("SIM SIC ")
+        .and_then(|_| after(&cid, "Q1="))
+    {
+        // a SIM ion of a triple quadrupole (msconvert spelling, `wiff::Wiff::sim_id`): a transition with no Q3
+        d.kind = "srm".into();
+        (_, _, _, d.name) = srm_id(&cid);
+        d.q1 = Some(q1);
+        d.dwell = after(&cid, "dwell=").or_else(|| named_value(h, "MS_dwell_time"));
     } else if ![
         "MS:1000235",
         "MS:1000627",
@@ -399,12 +408,12 @@ impl<R: ReadAt> Mzml<R> {
             let t = &rest[p + 16..];
             if let Some(e) = t.find('"') {
                 let after = &t[e + 1..];
-                if let Some(nm) = after.strip_prefix(" name=\"") {
-                    if let Some(e2) = nm.find('"') {
-                        src.push(nm[..e2].to_string());
-                        rest = &nm[e2..];
-                        continue;
-                    }
+                if let Some(nm) = after.strip_prefix(" name=\"")
+                    && let Some(e2) = nm.find('"')
+                {
+                    src.push(nm[..e2].to_string());
+                    rest = &nm[e2..];
+                    continue;
                 }
             }
             rest = t;
@@ -564,10 +573,10 @@ fn named_value(h: &str, key: &str) -> Option<f64> {
             let mut t = &h[at + key.len()..];
             t = t.strip_prefix('"').unwrap_or(t);
             let t2 = t.trim_start();
-            if t2.len() < t.len() {
-                if let Some(v) = t2.strip_prefix("value=\"") {
-                    return v.find('"').and_then(|e| pyfloat(&v[..e]));
-                }
+            if t2.len() < t.len()
+                && let Some(v) = t2.strip_prefix("value=\"")
+            {
+                return v.find('"').and_then(|e| pyfloat(&v[..e]));
             }
         }
         from = at + 1;

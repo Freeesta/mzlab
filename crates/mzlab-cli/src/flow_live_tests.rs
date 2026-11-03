@@ -97,6 +97,29 @@ fn flow_live_gives_the_files_and_the_provenance_of_flow_run() {
     }
     drop(run);
 
+    // `--events` is `--jsonl`: the same files and the same refusal with `--json`
+    let ev = dir.join("ev");
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&dir.join("data")),
+        "--out",
+        p(&ev),
+        "--events",
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert_eq!(folder(&out), folder(&ev));
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&dir.join("data")),
+        "--out",
+        p(&ev),
+        "--events",
+        "--json",
+    ]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+
     // `--jsonl` changes the standard output only
     let again = dir.join("again");
     let o = flow_run(&[

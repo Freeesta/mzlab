@@ -49,7 +49,7 @@ impl State {
         let q = || Query::parse(s("query"));
         match op {
             "lr_boot" => {
-                let list = self.store.lock().unwrap_or_else(|e| e.into_inner()).list();
+                let list = self.visible_list();
                 let mut rows = Vec::new();
                 for (name, e, changed) in list {
                     let mzml = e.nat.is_some() || name.to_ascii_lowercase().ends_with(".mzml");

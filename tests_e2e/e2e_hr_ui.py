@@ -27,7 +27,7 @@ try:
         step("no pill «HR» or «DDA» on the QqQ file", pills_qqq)
         def method_qqq():
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.startsWith('B_Full'));E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(1500)
-            t = pg.inner_text("#bigdlg"); assert "Manca il metodo di acquisizione" in t and "Parametri delle scansioni" not in t, t
+            t = pg.inner_text("#bigdlg"); assert "Manca il metodo" not in t and "Parametri delle scansioni" not in t and pg.locator("#bigdlg #m-load").count() == 1, t
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("window «Metodo» of a QqQ file: as before", method_qqq)
         def losses_qqq():
@@ -47,14 +47,14 @@ try:
             pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             assert pg.locator("#calcobs").count() == 0 and pg.locator("#calcctl [data-r]").count() == 0, "no observed field, no High/Low switch"
             t = pg.inner_text("#calcdlg"); assert "364.0737" in t and "errore (ppm)" not in t, t
-            m = pg.inner_text("#calcctl .cq-mode"); assert "alta" in m and "Exploris" in m, m          # the Orbitrap file decides: high resolution, named
+            m = pg.get_attribute("#calcctl .cq-ctl", "data-mode"); n = pg.get_attribute("#calcctl .cq-ctl", "data-name"); assert m == "hr" and "Exploris" in n, (m, n)          # the Orbitrap file decides: high resolution, named
             assert pg.input_value("#calctol") == "5"
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with an Orbitrap file: 4 decimals, high resolution detected from the file", calc_hr)
         def method():
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_function("document.querySelector('#bigdlg') && document.querySelector('#bigdlg').innerText.includes('Parametri delle scansioni')", timeout=30000)
             t = pg.inner_text("#bigdlg"); print(t[:600].replace("\n", " | "))
-            assert "Il metodo completo non è nel file mzML" in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45000" in t and "±0.75" in t, t
+            assert "Il metodo completo non è nel file mzML" not in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45000" in t and "±0.75" in t, t
             assert "Manca il metodo di acquisizione" not in t
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans", method)

@@ -14,7 +14,7 @@
     return [txt(name), c ? fx(c.ppm, 2) : ""];
   };
 
-  /** msngrafo/1 → the modifications (one row per arc and measure) and the ions @param {any} g @returns {{modifications: {head: string[], rows: string[][]}, nodes: {head: string[], rows: string[][]}}} */
+  /** msngrafo/1 or /2 → the modifications (one row per arc and measure) and the ions @param {any} g @returns {{modifications: {head: string[], rows: string[][]}, nodes: {head: string[], rows: string[][]}}} */
   F.readMsnGraph = g => {
     const byId = new Map((g.nodi || []).map((/** @type {any} */ n) => [n.id, n]));
     const mods = /** @type {string[][]} */ ([]);
@@ -49,9 +49,9 @@
     if (t.nodes.rows.length) F.drawTable(tables, { caption: `${label}, ions`, head: t.nodes.head, rows: t.nodes.rows, label: `Ions of ${label}` });
   };
 
-  /** the texts the MSn steps made join the Results of their step: the graph (msngrafo/1) as a report, the MSP as a library, the CSV as a table; the graph opens under the canvas. Gives the names now in the Results @param {any} S @param {{id: string, name: string, text: string}[]} files @returns {Set<string>} */
+  /** the texts the MSn steps made join the Results of their step: the graph (msngrafo/1 or /2) as a report, the MSP as a library, the CSV as a table; the graph opens under the canvas. Gives the names now in the Results @param {any} S @param {{id: string, name: string, text: string}[]} files @returns {Set<string>} */
   F.webMsnAfterRun = (S, files) => {
-    const shown = new Set(), type = (/** @type {any} */ f) => /\.msp$/i.test(f.name) ? "library" : /\.csv$/i.test(f.name) ? "table" : /\.json$/i.test(f.name) && /"formato"\s*:\s*"msngrafo\/1"/.test(f.text.slice(0, 200)) ? "report" : "";
+    const shown = new Set(), type = (/** @type {any} */ f) => /\.msp$/i.test(f.name) ? "library" : /\.csv$/i.test(f.name) ? "table" : /\.json$/i.test(f.name) && /"formato"\s*:\s*"msngrafo\/[12]"/.test(f.text.slice(0, 200)) ? "report" : "";
     let graph = null;
     S.results = S.results || {};
     for (const f of files || []) {

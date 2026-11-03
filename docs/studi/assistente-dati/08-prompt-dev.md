@@ -1,6 +1,6 @@
 # Prompt DEV dell'assistente dati
 
-Intestazione comune (vale per ogni prompt).
+Stato: A1–A6 in `main`, A7 e A8 da fare (`11-stato.md`). Intestazione comune (vale per ogni prompt).
 
 Sei una chat DEV di mzLab; AGENTS.md è nel contesto; leggi `docs/agenti/llm.md` e i file di questo studio citati nel prompt; ramo `claude/assist-<pr>` da `origin/main`; una PR alla volta; `tools/fondi_main.py` prima, `tools/pre_pr.py` completo prima di aprire; nessun cambio a `Cargo.toml`, workflow, `pages.yml`, CSP, tetti `.wasm` senza via; nessuna chiamata a un fornitore vero, nessuna chiave; codice e commenti in inglese, testi visibili solo in `lang/`; a fine PR un messaggio al Coordinatore (≤ 5 righe). Subagenti Haiku solo per compiti meccanici (`cercatore`, `verificatore`).
 
@@ -79,13 +79,5 @@ Tocca: `flow/lazy/flow-llm.js`, `flow/lazy/flow-llm-tools.js`, nuovo `flow/lazy/
 Prove: `e2e_llm_assist.py` con `replay` (sessione `fs_pos`: carte visibili, «Apply» annullabile, contatore che si ferma al tetto con una registrazione costosa finta, «rules only» senza richieste di rete, nessun host esterno), axe 0 gravi, `e2e_tour.py` verde.
 Accettazione: le prove sopra; nessun testo fuori da `lang/` (`tools/controlla_i18n.py`); `tipi` a 0 errori nuovi.
 
-## W1 — Worker portabile (dopo W0 e via del Coordinatore)
-Leggi: `09-worker.md`, `02-costo.md` §4, `05-sicurezza.md`. Tocca: nuova cartella del Worker (`assist-proxy.js`, `adapters/cloudflare.js`, `adapters/memoria.js`, `wrangler.toml` senza segreti, prove), `crates/mzlab-cli/src/assist.rs` (sottocomando `invito`), `docs/agenti/assistente-dati.md`.
-1. Logica in un modulo con Request/Response standard; l'adattatore dà `secret` e `store` (riserva e saldo atomici, un Durable Object per persona).
-2. Regole di `09-worker.md` §2–4, con le chiavi d'errore in `lang/` per il pannello.
-3. Costo come deciso in W0.
-Accettazione: prove di `09-worker.md` §6 con fornitore finto e store in memoria; misura della CPU per richiesta su un flusso registrato lungo (≤ 10 ms o via dichiarata); nessuna chiave in nessun file; nessun deploy (lo fa Federico).
-
-## W2 — CSP e scelta chiave/invito
-Leggi: `09-worker.md` §7, `docs/agenti/llm.md` (trasporto), `docs/agenti/lingue.md`, `docs/agenti/accessibilita.md`. Tocca: `mzlab/web/llm/trasporto.html` (CSP `connect-src` con `https://api.anthropic.com` e l'host del Worker dato da Federico), pannello (scelta «My API key» / «Invitation code»), `lang/it.js`, `lang/en.js`, e2e.
-Accettazione: e2e con `replay` e con un Worker finto su `localhost`; CSP senza altri host; chiave e codice solo nell'iframe del trasporto; axe 0 gravi.
+## Proxy pubblico e demo (P1–P5)
+I prompt sono in inglese, uno per file: `prompt/dev-P1-fatti-pagina.md`, `dev-P2-proxy.md`, `dev-P3-modo-demo.md`, `dev-P4-csp-consenso.md`, `dev-P5-carte-demo.md`; ordine, prerequisiti e accettazione in `13-piano-dev.md`. Stato di A1–A8: `11-stato.md`.

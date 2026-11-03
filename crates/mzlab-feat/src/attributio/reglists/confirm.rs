@@ -228,10 +228,10 @@ fn verdict_row(h: &Hit, sir: &SiriusIn, mf: Option<&MetFragIn>, dec: &[Decision]
     let e = gather(h, sir);
     let (rules, [a, b, c]) = formal(&e, canon(&h.rt_logp) == "yes");
     let (mut verdict, mut note, mut who) = (rules.clone(), String::new(), String::new());
-    if rules == LEVEL_3 || rules == LEVEL_2A {
-        if let Some(d) = decide(dec, h) {
-            (verdict, note, who) = (canon(&d.verdict), d.note.clone(), d.decided_on.clone());
-        }
+    if (rules == LEVEL_3 || rules == LEVEL_2A)
+        && let Some(d) = decide(dec, h)
+    {
+        (verdict, note, who) = (canon(&d.verdict), d.note.clone(), d.decided_on.clone());
     }
     Verdict {
         verdict,

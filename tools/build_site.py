@@ -22,9 +22,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import tema_testa  # noqa: E402
-
 ROOT = Path(__file__).resolve().parent.parent
 # The visible name of the program lives only in mzlab/web/appname.js
 APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
@@ -177,24 +174,12 @@ def lock_sha256() -> str | None:
 
 def write_build_json(out: Path, version: str, commit: str | None = None) -> None:
     """static/build.json: the exact build of the site, {commit, version, rustc, cargo_lock_sha256, modules}; `modules` maps the path (under static/) of every
-    .wasm to its SHA-256 (the hashes of `file_hashes`), sorted. The .wasm files are built after this script in pages.yml, so
+    .wasm to its SHA-256 (the hashes of `file_hashes`), sorted (the third-party ones under vendor/, e.g. Ketcher's Indigo, are not engine modules). The .wasm files are built after this script in pages.yml, so
     `python3 tools/build_site.py --build-json` writes it again once they are in place."""
     static = out / "static"
-    modules = {rel[len("static/"):]: h["sha256"] for rel, h in file_hashes(out).items() if rel.startswith("static/") and rel.endswith(".wasm")}
+    modules = {rel[len("static/"):]: h["sha256"] for rel, h in file_hashes(out).items() if rel.startswith("static/") and not rel.startswith("static/vendor/") and rel.endswith(".wasm")}
     doc = {"commit": commit or git_commit(), "version": version, "rustc": rustc_version(), "cargo_lock_sha256": lock_sha256(), "modules": dict(sorted(modules.items()))}
     (static / "build.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
-
-
-def theory_entry() -> str:
-    """site/theory/index.html: the short address of the Teoria (theory/, theory/#5 for a chapter). It only forwards to static/teoria/, the real
-    page (no second copy to download, same files in the service-worker cache); teoria.js turns #5, #cap-5 or #09-quadrupolo into the chapter."""
-    return (
-        '<!doctype html>\n<html lang="it"><head><meta charset="utf-8">' + tema_testa.snippet("teoria") + '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
-        f"<title>Teoria · {APP_NAME}</title>\n"
-        '<script>location.replace("../static/teoria/index.html"+location.hash)</script>\n'
-        '<noscript><meta http-equiv="refresh" content="0;url=../static/teoria/index.html"></noscript></head>\n'
-        '<body><p><a href="../static/teoria/index.html">Teoria</a></p></body></html>\n'
-    )
 
 
 def lab_expiry() -> str | None:
@@ -258,9 +243,6 @@ def main() -> None:
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
-    if not lab:                                                  # the lab has no Teoria entry (its address goes back to #/data)
-        (out / "theory").mkdir()
-        (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     # program version and git commit for reproducibility (.mzflow)
     commit = git_commit()

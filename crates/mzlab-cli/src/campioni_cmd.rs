@@ -1,4 +1,4 @@
-//! `mzlab-cli campioni variabili|nome-gruppo`: the two name operations of `campioni::route` (`variabili`, `nome_gruppo`), printing the JSON the page gets
+//! `mzlab-cli samples vars|group`: the two name operations of `campioni::route` (`variabili`, `nome_gruppo`), printing the JSON the page gets
 //! from `api/campioni/<op>`. The names come one per line from a file or the standard input.
 
 use std::io::Read;
@@ -7,16 +7,18 @@ use mzlab_core::json::Out;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli campioni: how the names of a set of files split them (nomivar/1), as JSON.
+pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JSON.
 
-usage: mzlab-cli campioni variabili [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
-       mzlab-cli campioni nome-gruppo NAME...
+usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
+       mzlab-cli samples group NAME...
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
-  nome-gruppo     the name of a group made of NAMEs: their common tokens in order, empty when none";
+  group           the name of a group made of NAMEs: their common tokens in order, empty when none
+
+old names still accepted: campioni, variabili, nome-gruppo";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
     let mut text = String::new();
@@ -45,7 +47,10 @@ fn list(names: &[String]) -> String {
     o.0
 }
 
-/// The body of `variabili`: the names and, when asked, the manual variable.
+/// Old subcommand names still accepted on input, as `(old, new)`.
+const ALIASES: [(&str, &str); 2] = [("variabili", "vars"), ("nome-gruppo", "group")];
+
+/// The body of `vars`: the names and, when asked, the manual variable.
 fn variabili(args: Vec<String>) -> Result<String, String> {
     let (mut src, mut pos, mut sep, mut has, mut substring) =
         ("-".to_string(), None, None, None, false);
@@ -96,14 +101,21 @@ fn variabili(args: Vec<String>) -> Result<String, String> {
 
 pub fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
-    let (op, body) = match it.next().as_deref() {
-        Some("variabili") => ("variabili", variabili(it.collect())),
-        Some("nome-gruppo") => {
+    let first = it.next();
+    let sub = first.as_deref().map(|c| {
+        ALIASES
+            .iter()
+            .find(|(old, _)| *old == c)
+            .map_or(c, |(_, new)| new)
+    });
+    let (op, body) = match sub {
+        Some("vars") => ("variabili", variabili(it.collect())),
+        Some("group") => {
             let n: Vec<String> = it.collect();
             ("nome_gruppo", Ok(format!("{{\"names\":{}}}", list(&n))))
         }
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
-        Some(c) => return Outcome::fail(&format!("unknown campioni operation {c}")),
+        Some(c) => return Outcome::fail(&format!("unknown samples operation {c}")),
     };
     match body.and_then(|b| {
         mzlab_core::campioni::route_tutto(op, &b).map_err(|e| format!("{} {:?}", e.key, e.params))

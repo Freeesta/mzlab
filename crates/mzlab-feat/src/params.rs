@@ -467,10 +467,10 @@ mod tests;
 /// Preview of one file: detection with `p`, the estimates and three example traces, as JSON.
 pub fn preview<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<String> {
     let mut p = p.clone();
-    if let (MassAxis::Da { .. }, Some(si)) = (p.axis, index.section_of(1, p.polarity)) {
-        if let Some(defect) = estimate_defect(index, si, p.floor)? {
-            p.axis = MassAxis::Da { defect };
-        }
+    if let (MassAxis::Da { .. }, Some(si)) = (p.axis, index.section_of(1, p.polarity))
+        && let Some(defect) = estimate_defect(index, si, p.floor)?
+    {
+        p.axis = MassAxis::Da { defect };
     }
     let p = &p;
     let f = trace::detect(index, p)?;

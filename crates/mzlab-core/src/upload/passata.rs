@@ -35,6 +35,14 @@ impl Passata {
             ..Passata::new(size)
         }
     }
+    /// `senza_sha1` or `new` by a flag (the page asks for it per upload).
+    pub fn scelta(size: u64, senza: Option<bool>) -> Passata {
+        if senza == Some(true) {
+            Passata::senza_sha1(size)
+        } else {
+            Passata::new(size)
+        }
+    }
     pub fn aggiorna(&mut self, b: &[u8]) {
         self.sha256.update(b);
         if let Some(h) = self.sha1.as_mut() {

@@ -15,7 +15,7 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         def invito():
             pg.wait_for_selector("#tour-invito", timeout=8000); pg.mouse.move(700, 100)
-            t = pg.inner_text("#tour-invito"); assert "Primo accesso? Un tour guidato degli strumenti." in t and "minut" not in t, t
+            t = pg.inner_text("#tour-invito"); assert "Prima volta?" in t and "minut" not in t, t
             hold(pg, 55000); assert pg.is_visible("#tour-invito"), "still there before a minute"
             hold(pg, 8000); assert not pg.is_visible("#tour-invito"), "dismissed by itself after a minute"
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).stato") == "invitato"

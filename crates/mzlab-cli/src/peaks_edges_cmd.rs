@@ -1,20 +1,22 @@
-//! `mzlab-cli peaks-edges TRACE.csv --at T`: the limits of the low-resolution peak under a click, from `mzlab_core::peakq_lr::lr_edges`, the same
+//! `mzlab-cli peak-edges TRACE.csv --at T`: the limits of the low-resolution peak under a click, from `mzlab_core::peakq_lr::lr_edges`, the same
 //! function the page asks through `QUALITA.edges`. The trace is two columns (RT in min, intensity), comma, tab or space separated, header optional.
 
 use mzlab_core::peakq_lr::{lr_edges, LrParams, NoiseMode};
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peaks-edges: the limits of the peak at a time on a low-resolution trace, as JSON.
+pub const HELP: &str = "mzlab-cli peak-edges: the limits of the peak at a time on a low-resolution trace, as JSON.
 
-usage: mzlab-cli peaks-edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME=VALUE...]
+usage: mzlab-cli peak-edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --at MIN     the time of the click
   --ref MIN    base width of the peaks already integrated (used with --set constrain=PERCENT)
   --mrm        the trace is an MRM transition
-  --set        win, areaNoise, edgeFrac, snMin, noise (mad|rms|manual), minHalf, multi, tail, constrain, nr0, nr1 (the dialog of the page)
-  output       {\"edges\":[t0,t1]}, or {\"edges\":null} when the S/N is under snMin";
+  --set        win, area_noise, edge_frac, sn_min, noise (mad|rms|manual), min_half, multi, tail, constrain, nr0, nr1 (the dialog of the page)
+  output       {\"edges\":[t0,t1]}, or {\"edges\":null} when the S/N is under sn_min
+
+old names still accepted: peaks-edges, areaNoise, edgeFrac, snMin, minHalf";
 
 fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
     let text = if src == "-" {
@@ -41,7 +43,19 @@ fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
     Ok((x, y))
 }
 
+/// Old camelCase `--set` names still accepted on input, as `(old, new)`.
+const ALIASES: [(&str, &str); 4] = [
+    ("areaNoise", "area_noise"),
+    ("edgeFrac", "edge_frac"),
+    ("snMin", "sn_min"),
+    ("minHalf", "min_half"),
+];
+
 fn set(p: &mut LrParams, name: &str, v: &str) -> Result<(), String> {
+    let name = ALIASES
+        .iter()
+        .find(|(old, _)| *old == name)
+        .map_or(name, |(_, new)| new);
     if name == "noise" {
         p.noise = match v {
             "mad" => NoiseMode::Mad,
@@ -54,10 +68,10 @@ fn set(p: &mut LrParams, name: &str, v: &str) -> Result<(), String> {
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;
     match name {
         "win" => p.win = n,
-        "areaNoise" => p.area_noise = n,
-        "edgeFrac" => p.edge_frac = n,
-        "snMin" => p.sn_min = n,
-        "minHalf" => p.min_half = n,
+        "area_noise" => p.area_noise = n,
+        "edge_frac" => p.edge_frac = n,
+        "sn_min" => p.sn_min = n,
+        "min_half" => p.min_half = n,
         "multi" => p.multi = n,
         "tail" => p.tail = n,
         "constrain" => p.constrain = n,
@@ -107,7 +121,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(()) => {}
     }
     let (Some(src), Some(at)) = (src, at) else {
-        return Outcome::fail("peaks-edges needs a trace and --at (see --help)");
+        return Outcome::fail("peak-edges needs a trace and --at (see --help)");
     };
     match trace(&src) {
         Err(e) => Outcome::fail(&e),
