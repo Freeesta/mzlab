@@ -523,6 +523,8 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 /* the work area shows one thing (shell.js, syncWork): the panels, the loading table or the landing, centred; before any script it is the landing */
 #v-workspace:not([data-work=panels]):not([data-work=opening]) #dpanels{display:none}
 .land-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center;margin:14px 0 6px}.land-row .cartpick{margin:0;padding:var(--ctl-py) 12px}#demochoice{flex-basis:100%;gap:6px;justify-content:center;flex-wrap:wrap}#wtable{margin-top:12px}
+/* the sample card shows nothing to look at while its list is empty and no note is shown: no empty bar under the method row */
+#wtable:has(>#flist:empty):not(:has(>#hrmix:not([hidden]),>#hrnote:not([hidden]),>#modenote:not([hidden]),>#gomsg:not(:empty))){display:none}
 /* the file menu keeps the width of one name while it is empty (nothing grows when the first file arrives) */
 #fsel:empty{width:16ch}
 /* first paint: the side panel is open next to the landing, except below 900 px where it would replace it (barra.js takes over at once) */
