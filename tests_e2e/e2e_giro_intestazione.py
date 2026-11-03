@@ -26,6 +26,8 @@ HDR = r"""() => [...document.querySelectorAll('header button')].filter(b => { co
  .map(b => b.id ? '#' + b.id : b.dataset.cmd ? `header [data-cmd="${b.dataset.cmd}"]` : b.dataset.cmdMain ? `header [data-cmd-main="${b.dataset.cmdMain}"]` : b.dataset.cmdCar ? `header [data-cmd-car="${b.dataset.cmdCar}"]` : b.dataset.help != null ? `header .hq[data-help="${b.dataset.help}"]` : null).filter(Boolean)"""
 # outside Dati these open their window: a click that does nothing there is a dead button
 FLOATING = {"#np-calc2", "#np-add", "#np-nl", "#np-addloss", "#np-liste", "#np-pt", "#tb-search", "#tb-more", "#np-set", "#newrun"}
+# outside Dati these go back to Dati with their side panel page (the Adducts & losses lists never float: docs/studi/ADDOTTI_PERDITE_PAGINA_UNICA.md §5)
+TO_DATA = {"#np-addloss": "addloss"}
 MOVE_PX = 2       # rounding of sub-pixel layouts; a slide or a jump is tens of pixels
 
 
@@ -43,11 +45,25 @@ def back_to(pg, base):
         pg.evaluate("sb => { if (sb) BARRA.show(sb, {noFocus: true, instant: true}); else BARRA.close(); }", base["sb"]); frames(pg, 3)
 
 
+def to_data(pg, sel, base):
+    """A TO_DATA button outside Dati: Dati with its page open; then Dati's side panel as it was and back to the view it came from."""
+    tab0 = pg.evaluate("BARRA.curTab")
+    pg.click(sel); attendi(pg, f"S.view === 'data' && BARRA.isDataView() && BARRA.curTab === '{TO_DATA[sel]}'"); frames(pg, 3); ready(pg, settle=200)
+    pg.evaluate("t => BARRA.show(t, {noFocus: true, instant: true})", tab0); frames(pg, 3)
+    view(pg, base["view"]); back_to(pg, base)
+
+
 def walk(pg, where):
     """Every header button: it reacts, Esc or a second click puts the page back, nothing moved."""
     bad = []
     for sel in pg.evaluate(HDR):
         base, g0 = pg.evaluate(OPEN), pg.evaluate(GEOM)
+        if sel in TO_DATA and base["view"] != "data":
+            to_data(pg, sel, base); ready(pg, settle=200)
+            if pg.evaluate(OPEN) != base: bad.append(f"{sel}: state {base} → {pg.evaluate(OPEN)}")
+            m = moved(g0, pg.evaluate(GEOM))
+            if m: bad.append(f"{sel}: moved {m}")
+            continue
         pg.click(sel); frames(pg, 3); ready(pg, settle=200)
         st = pg.evaluate(OPEN)
         if st == base: bad.append(f"{sel}: nothing opened")
@@ -86,6 +102,7 @@ def floating_outside_data(pg, v):
     for sel in FLOATING:
         if not pg.is_visible(sel): continue
         base = pg.evaluate(OPEN)
+        if sel in TO_DATA: to_data(pg, sel, base); continue
         pg.click(sel); frames(pg, 3)
         if pg.evaluate(OPEN) == base: dead.append(sel)
         back_to(pg, base)
