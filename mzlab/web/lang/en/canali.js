@@ -31,5 +31,15 @@ I18N.add("en", {
   "canali.btn.aria": "Channels plotted: {n}",
   "canali.col.file": "Files",
   "canali.files.title": "Files that have the channel",
-  "canali.miss.title": "This file does not have the channel"
+  "canali.miss.title": "This file does not have the channel",
+  "canali.simtab.title": "SIM table: {rows} channels × {cols} samples",
+  "canali.simtab.show": "Value shown",
+  "canali.simtab.area": "Area",
+  "canali.simtab.apex_rt": "Apex RT",
+  "canali.simtab.csv": "Download CSV",
+  "canali.simtab.name": "Name",
+  "canali.simtab.none": "no peak",
+  "canali.simtab.note": "Every SIM channel of every file, integrated automatically: the highest peak of the whole trace (3-point smoothing, at least 3 points, S/N ≥ 3); an empty cell = no peak. An m/z is a candidate, not an identification: check the peaks in the panels.",
+  "canali.simtab.area.cap": "Peak area (counts × s) per channel and sample",
+  "canali.simtab.apex_rt.cap": "Apex RT (min) per channel and sample"
 });

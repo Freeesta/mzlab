@@ -15,6 +15,7 @@ use mzlab_feat_wasm::run;
 
 mod campioni_cmd;
 mod canali_cmd;
+mod sim_table_cmd;
 pub mod convert;
 mod convert_report;
 pub mod flow;
@@ -166,6 +167,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help)
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
+       mzlab-cli sim-table FILE... [--set output=area|apex_rt]   every SIM channel integrated, one column per sample, as CSV (sim-table --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)

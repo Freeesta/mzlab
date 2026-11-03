@@ -61,3 +61,12 @@ pub fn mrm_diff_post(files: &str, reference: &str, query: &str) -> String {
         Some(Err(json)) => format!("E{json}"),
     }
 }
+
+/// `api/simtab`: the SIM table of `files` (`[{"name", "transitions"}]`, the transitions as `api/mrm` gives them); `output` = `area` or `apex_rt`. "E" + JSON = no SIM channel.
+#[wasm_bindgen]
+pub fn sim_table(files: &str, output: &str) -> String {
+    match mzlab_core::simtab::table_text(files, output) {
+        Ok(csv) => csv,
+        Err(e) => format!("E{}", e.to_json()),
+    }
+}

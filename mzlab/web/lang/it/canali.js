@@ -31,5 +31,15 @@ I18N.add("it", {
   "canali.btn.aria": "Canali tracciati: {n}",
   "canali.col.file": "File",
   "canali.files.title": "File che hanno il canale",
-  "canali.miss.title": "Questo file non ha il canale"
+  "canali.miss.title": "Questo file non ha il canale",
+  "canali.simtab.title": "Tabella SIM: {rows} canali × {cols} campioni",
+  "canali.simtab.show": "Valore mostrato",
+  "canali.simtab.area": "Area",
+  "canali.simtab.apex_rt": "RT dell'apice",
+  "canali.simtab.csv": "Scarica CSV",
+  "canali.simtab.name": "Nome",
+  "canali.simtab.none": "nessun picco",
+  "canali.simtab.note": "Ogni canale SIM di ogni file, integrato in automatico: il picco più alto di tutta la traccia (lisciatura di 3 punti, almeno 3 punti, S/N ≥ 3); una cella vuota = nessun picco. Un m/z è un candidato, non un'identificazione: controlla i picchi nei pannelli.",
+  "canali.simtab.area.cap": "Area del picco (conteggi × s) per canale e campione",
+  "canali.simtab.apex_rt.cap": "RT dell'apice (min) per canale e campione"
 });
