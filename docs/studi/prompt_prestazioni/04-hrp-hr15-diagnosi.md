@@ -1,6 +1,6 @@
 # PERF-04: why `hrp` and `hr15` never open in the site (diagnose, then fix)
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-4, `docs/agenti/visore-veloce.md` (cases, «Non misurati»), `docs/agenti/memoria.md`, `docs/agenti/caricamento-mappa.md`, `docs/agenti/mappa-fluida.md` (D1, D8). Branch `claude/perf-hrp-hr15` from `origin/main`, after wave 1 (PERF-01..03) is in `main`. English for code, commits and PR.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-4, `docs/agenti/visore-veloce.md` (cases, «Non misurati»), `docs/agenti/memoria.md`, `docs/agenti/caricamento-mappa.md`, `docs/agenti/mappa-fluida.md` (D1, D8). Branch `claude/perf-hrp-hr15` from `origin/main`, after wave 1 (PERF-01..03) is in `main`. English for code, commits and PR.
 
 **Fact.** `tools/bench_visore.py` has two cases that never open in the site:
 - `hrp`: Orbitrap profile, 400 scans × 50 000 points, ~320 MB mzML. Files open, but the TIC and spectrum panels do not appear within 25 min.

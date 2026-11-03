@@ -15,7 +15,7 @@ on:
       - "!tests/**"
       - "tests/golden/**"
       - "!tests_e2e/**"
-      - "!AGENTS.md"
+      - "!CLAUDE.md"
       - "!.claude/**"
       - "!.github/workflows/**"
       - ".github/workflows/pages.yml"

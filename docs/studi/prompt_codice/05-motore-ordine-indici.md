@@ -4,7 +4,7 @@ Prompt ready for a DEV chat: copy everything after the «---» line. Wave 2 (wit
 
 ---
 
-**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read AGENTS.md (in context), `docs/agenti/wasm-tetti.md` («Ordinamenti»), `docs/studi/OTTIMIZZAZIONE_CORE.md` §4.1 and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §2.1. Branch `claude/engine-index-sort` from `origin/main`.
+**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read CLAUDE.md (in context), `docs/agenti/wasm-tetti.md` («Ordinamenti»), `docs/studi/OTTIMIZZAZIONE_CORE.md` §4.1 and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §2.1. Branch `claude/engine-index-sort` from `origin/main`.
 
 **Goal.** Shrink the engine `.wasm` with no change of speed class or output. twiggy on the engine (`tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`, then `twiggy top -n 100000 -f csv target/wasm32-unknown-unknown/release/mzlab_wasm.wasm`; `cargo install twiggy --locked` works in the cloud) shows five copies of the SAME std stable sort, one per closure, each sorting `usize` indices by one `f64` key with `total_cmp`:
 

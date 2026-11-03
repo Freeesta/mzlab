@@ -1,6 +1,6 @@
 # PERF-03: the Data file list with hundreds of files (measure first)
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2, `docs/agenti/ottimizzazioni-tentate.md` (the 25/10 rows on «pronto» at 6×: `renderFileList` 11 calls = 646 ms, coalescing tried with 6 files and discarded), `docs/agenti/misure-macchine.md`, `docs/agenti/caricamento-mappa.md`. Branch `claude/perf-lista-molti` from `origin/main`. English for code, commits and PR.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2, `docs/agenti/ottimizzazioni-tentate.md` (the 25/10 rows on «pronto» at 6×: `renderFileList` 11 calls = 646 ms, coalescing tried with 6 files and discarded), `docs/agenti/misure-macchine.md`, `docs/agenti/caricamento-mappa.md`. Branch `claude/perf-lista-molti` from `origin/main`. English for code, commits and PR.
 
 **Hypothesis (not yet measured at scale).** `renderFileList` (`mzlab/web/explore.js:772`) rebuilds the whole list with one `innerHTML` and re-wires every handler. It is called from ~50 places, several times per file while files arrive (`explore.js:477`, `484`, `553`, `630`, and `lista-file.js`). Its own work is O(files): group lookup `groups.find` per file, DDA dedupe `findIndex` per file inside a group, `G.fs.every` per group. So a load of N files costs O(N²) on the main thread. At 6 files coalescing gave nothing. The question is whether it does at 100-300 files, which researchers open.
 

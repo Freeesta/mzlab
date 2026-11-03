@@ -52,11 +52,11 @@ def check_steps(root: Path) -> Result:
 
 
 def check_area_files(root: Path) -> Result:
-    cited = "".join(f.read_text(encoding="utf-8") for f in (root / "AGENTS.md", root / "docs/agenti/INDICE.md") if f.is_file())
+    cited = "".join(f.read_text(encoding="utf-8") for f in (root / "docs/agenti/INDICE.md",) if f.is_file())
     return "area files in docs/agenti/INDICE.md", [
         f"docs/agenti/INDICE.md:1: docs/agenti/{p.name} is not cited -> add it to the row of its area"
         for p in sorted((root / "docs/agenti").glob("*.md"))
-        if p.name not in cited
+        if p.name != "INDICE.md" and p.name not in cited
     ]
 
 

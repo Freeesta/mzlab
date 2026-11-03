@@ -1,6 +1,6 @@
 # N03: one verb for the golden variables, `MZLAB_APP_DIR`, `verifica.py --mostra-ok`
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/agenti/test.md` and `docs/studi/NOMI_TERMINALE.md` §2.5–2.6, §4. Branch `claude/env-names` from `origin/main`. English only.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/agenti/test.md` and `docs/studi/NOMI_TERMINALE.md` §2.5–2.6, §4. Branch `claude/env-names` from `origin/main`. English only.
 
 **Goal.** «Rewrite the expected file» is always `MZLAB_UPDATE_<WHAT>`; the desktop app folder no longer looks like `MZLAB_DATI`.
 

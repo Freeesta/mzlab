@@ -4,14 +4,14 @@ Copia in `CHECKLIST-vX.Y.Z.md` (stessa cartella), spunta ogni casella con `[x]`:
 
 ## Mappe
 - [ ] `python3 tools/indice.py --controlla` è verde; `graphify-out` aggiornato se presente
-- [ ] ogni file d'area di `docs/agenti/` è citato nel §5 di `AGENTS.md`
+- [ ] ogni file d'area di `docs/agenti/` è citato nel §5 di `CLAUDE.md`
 
 ## Guide per agenti
 - [ ] ogni passo di `mzlab-cli steps` ha la sua riga in `docs/agenti/cli.md`
 - [ ] `docs/agenti/per-agenti.md` e `llms.txt` (se esiste) citano solo comandi esistenti
 
 ## Guide per noi
-- [ ] `AGENTS.md` e `docs/agenti/` descrivono lo stato attuale (niente «ora…», «prima era…»)
+- [ ] `CLAUDE.md` e `docs/agenti/` descrivono lo stato attuale (niente «ora…», «prima era…»)
 - [ ] `docs/agenti/rilascio.md` rispecchia `release.yml`
 
 ## Leggimi di tutto

@@ -17,7 +17,7 @@ def tree(tmp: Path) -> Path:
     (tmp / "docs/schemi/steps-a-1.json").write_text(json.dumps([{"id": "a.one"}, {"id": "a.two"}]))
     (tmp / "docs/agenti/cli.md").write_text("`a.one` and `a.two`\n")
     (tmp / "docs/agenti/area.md").write_text("x\n")
-    (tmp / "AGENTS.md").write_text("see docs/agenti/area.md and cli.md\n")
+    (tmp / "docs/agenti/INDICE.md").write_text("see docs/agenti/area.md and cli.md\n")
     (tmp / "docs/rilascio/CHECKLIST-v1.2.3.md").write_text("- [x] done\n")
     return tmp
 
@@ -65,7 +65,7 @@ def test_step_row_may_live_in_cli_passi(tmp_path):
     root = tree(tmp_path)
     (root / "docs/agenti/cli.md").write_text("`a.one`\n")
     (root / "docs/agenti/cli-passi.md").write_text("`a.two`\n")
-    (root / "AGENTS.md").write_text("see docs/agenti/area.md, cli.md and cli-passi.md\n")
+    (root / "docs/agenti/INDICE.md").write_text("see docs/agenti/area.md, cli.md and cli-passi.md\n")
     rc, out = run(root)
     assert rc == 0, out
 
@@ -75,6 +75,6 @@ def test_plain_commands_of_the_cli_are_known(tmp_path):
     (root / "crates/mzlab-cli/src").mkdir(parents=True)
     (root / "crates/mzlab-cli/src/lib.rs").write_text('const PLAIN: [&str; 2] = ["llm", "steps"];\nmatch a { Some("flow") => {} }\n')
     (root / "docs/agenti/per-agenti.md").write_text("run `mzlab-cli steps --json`\n")
-    (root / "AGENTS.md").write_text("see docs/agenti/area.md and per-agenti.md\n")
+    (root / "docs/agenti/INDICE.md").write_text("see docs/agenti/area.md and per-agenti.md\n")
     assert g.known_commands(root) == {"flow", "llm", "steps"}
     assert g.check_guides(root)[1] == []

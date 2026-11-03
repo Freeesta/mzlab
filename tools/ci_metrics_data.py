@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 from ci_metrics_giorno import COLONNE_COO, giornaliero, righe_coo  # noqa: F401
 
 LENTO_S = 5
-AREE = [("workflow", r"^\.github/"), ("docs", r"^(docs/|AGENTS\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto(-worker)?\.json|mappa\.md|manifest)"),
+AREE = [("workflow", r"^\.github/"), ("docs", r"^(docs/|CLAUDE\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto(-worker)?\.json|mappa\.md|manifest)"),
         ("rust", r"^(crates/|Cargo\.|vendor/)"), ("test", r"^tests(_e2e)?/"), ("tools", r"^tools/"), ("web", r"^mzlab/web/"), ("python", r"\.py$")]
 # Workflows the poll measures, and those that make up the critical path of a PR (the required checks: sito-e2e of `sito-rust` is the slowest).
 WORKFLOW_MISURATI = ("test", "rust", "sito-rust", "desktop", "pages")

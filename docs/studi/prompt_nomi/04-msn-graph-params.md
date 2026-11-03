@@ -2,7 +2,7 @@
 
 Start only if the COO's prompt records Federico's **yes to D1** (`docs/studi/NOMI_TERMINALE.md` §5). Otherwise reply to the COO «D1 not approved» and stop.
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/agenti/rust-step.md`, `rust-flow.md`, `mzrun.md`, `msn-grafo.md` §3 and the study §1, §2.3. Branch `claude/msn-graph-v2` from `origin/main` after N02 is merged. You are the only owner of `docs/schemi/steps-cli-1.json` for this PR.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/agenti/rust-step.md`, `rust-flow.md`, `mzrun.md`, `msn-grafo.md` §3 and the study §1, §2.3. Branch `claude/msn-graph-v2` from `origin/main` after N02 is merged. You are the only owner of `docs/schemi/steps-cli-1.json` for this PR.
 
 **Goal.** The 14 Italian parameters of `spectra.msn_graph` get the English names of N02's flags; saved plans and `mzrun/1` presets at `@1` keep running with the same output bytes.
 

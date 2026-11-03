@@ -4,7 +4,7 @@ Prompt ready for a DEV chat: copy everything after the «---» line. Wave 1 (wit
 
 ---
 
-**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read AGENTS.md (in context), `docs/agenti/wasm-tetti.md` and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §1.1 and §2.2. Branch `claude/wasm-dead-exports` from `origin/main`.
+**Role.** DEV chat for mzLab (public repo Freeesta/mzlab). English for code, commits, PR and messages. Read CLAUDE.md (in context), `docs/agenti/wasm-tetti.md` and `docs/studi/OTTIMIZZAZIONE_CODICE.md` §1.1 and §2.2. Branch `claude/wasm-dead-exports` from `origin/main`.
 
 **Goal.** Every `#[wasm_bindgen]` export is a root the linker keeps with everything it calls. Remove the exports no page, worker or desktop file calls, so the modules shrink with no behaviour change. Measured in the study: building `hr` without `mrm` removes 31 583 B of code before wasm-opt (twiggy), est. −22…30 KB on the site file.
 

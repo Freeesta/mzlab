@@ -1,6 +1,6 @@
 # PERF-01: the spectrum of one HR scan without the full-section pass
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2, `docs/agenti/visore-veloce.md` (G1, G6), `docs/agenti/rust-rotte.md` (row `spectrum` centroid HR). Branch `claude/perf-spettro-hr` from `origin/main`. English for code, commits and PR.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2, `docs/agenti/visore-veloce.md` (G1, G6), `docs/agenti/rust-rotte.md` (row `spectrum` centroid HR). Branch `claude/perf-spettro-hr` from `origin/main`. English for code, commits and PR.
 
 **Problem (measured).** A click on the TIC of an HR centroid file asks `api/spectrum` for a window that holds ONE scan. `rust-bridge.js:147` first sends the `route` op. `Routes::spectrum` → `hr_spectrum` (`hrroutes.rs:14`) → `hr_window` → `binned_cells` (`spectrum.rs:91`) walks EVERY peak of the MS1 section (`each_peak(si, 0, total, …)`), sees `n == 1` and returns `None`. Then the bridge sends `specexact`: `spectrum_exact` (`hrroutes.rs:24`) calls `hr_window` again (a second full pass) and finally replaces the peaks with `mzml.spettro(sc)`. Native cost of ONE pass: 48.5 ms with 9 M peaks (3 000 × 3 000), 190 ms with 30 M peaks (6 000 × 5 000). In the site, G1 costs 804 / 2 427 ms (engine 574 / 1 775 ms) and G6 (ArrowRight) costs 104 / 287 ms.
 

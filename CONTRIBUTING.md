@@ -10,7 +10,7 @@ mzLab è un programma **didattico** per il laboratorio di analisi degli inquinan
 ## Proporre una modifica / Proposing a change
 1. Apri prima una issue per descrivere la modifica, soprattutto se cambia il comportamento o l'interfaccia.
 2. Lavora su un ramo `claude/<argomento>` o `<tuo-nome>/<argomento>` partendo da `main`; una pull request per argomento. L'unione avviene con *merge commit* (niente rebase né push forzato) dopo la CI verde.
-3. Le regole del progetto sono in [AGENTS.md](AGENTS.md) e in [docs/agenti/](docs/agenti/): principi didattici (il programma non dà le risposte), leggerezza (nessun bundler), interfaccia in italiano e inglese tramite i cataloghi in `mzlab/web/lang/`, accessibilità (WCAG 2.2 AA, ogni grafico con la sua tabella dei dati), architettura e test.
+3. Le regole del progetto sono in [CLAUDE.md](CLAUDE.md) e in [docs/agenti/](docs/agenti/): principi didattici (il programma non dà le risposte), leggerezza (nessun bundler), interfaccia in italiano e inglese tramite i cataloghi in `mzlab/web/lang/`, accessibilità (WCAG 2.2 AA, ogni grafico con la sua tabella dei dati), architettura e test.
 4. Prima della PR: `python3 tools/verifica.py --cambiati` (vedi `docs/agenti/test.md`).
 
 ## Dati e contenuti / Data and content

@@ -6,7 +6,7 @@ Indicazione di Federico: questi strumenti sono opzioni da valutare, non escluse 
 
 - **A cosa servirebbe**: revisione automatica delle PR A1–A8 (seconda lettura su schemi, `lang/`, accessibilità) o agente che apre PR piccole da un'issue (per esempio i casi d'oro nuovi). Non entra nel prodotto né nell'assistente.
 - **Vantaggi**: una lettura indipendente da quella delle chat Claude; commenti direttamente sulla PR; nessun codice da mantenere.
-- **Costi e rischi**: richiede un piano Copilot sull'account di Federico (la revisione e l'agente non sono nel piano gratuito); legge solo codice pubblico, ma un commento può proporre testo italiano fuori da `lang/` o nomi vietati; un'altra fonte di commenti da smistare (regole dei bot in `AGENTS.md`).
+- **Costi e rischi**: richiede un piano Copilot sull'account di Federico (la revisione e l'agente non sono nel piano gratuito); legge solo codice pubblico, ma un commento può proporre testo italiano fuori da `lang/` o nomi vietati; un'altra fonte di commenti da smistare (regole dei bot in `CLAUDE.md`).
 - **Alternativa locale**: `/code-review` e `/security-review` nella chat DEV, i subagenti `verificatore` e `cercatore`, `tools/pre_pr.py`.
 - **Quando conviene**: se le PR DEV superano la capacità di revisione del Coordinatore o se un tipo di errore si ripete nonostante i controlli.
 

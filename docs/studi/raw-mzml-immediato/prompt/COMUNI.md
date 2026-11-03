@@ -9,7 +9,7 @@ Ogni prompt RM-n dice di leggere questo file per primo. Insieme formano il promp
 - Ramo `claude/raw-mzml-<argomento>` da `origin/main`; `tools/fondi_main.py` solo se in conflitto; `tools/pre_pr.py` completo prima di spingere.
 - Commit e PR in inglese. Eventi della PR: skill `steward`.
 - Contesto oltre 200k token a fine PR: blocco di consegna al Coordinatore e fermati.
-- AGENTS.md è nel tuo contesto. Per il codice: `python3 tools/indice.py`, `grep -n`, subagente `cercatore`.
+- CLAUDE.md è nel tuo contesto. Per il codice: `python3 tools/indice.py`, `grep -n`, subagente `cercatore`.
 
 ## Zero perdite prima della velocità
 - Nessuna regola di velocità supera F1-F7 di `CRITERI.md` né A1-A4 di `docs/studi/PROMPT_LETTORE_THERMO/T-7.md`.

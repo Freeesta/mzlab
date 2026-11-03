@@ -47,7 +47,7 @@ Score = (start-up/wasm bytes saved + bug risk removed) / effort, each 1-5. Promp
 | PFAS MD/C | `pfas-calc.js:8-51` own masses, MD/C | no Rust twin | `tests/test_pfas.py` (JS only) | move to Rust when PFAS is next touched (C5) |
 | SMILES | `mzlab-mol/src/smiles_parse.rs` (381 lines), `mzlab-feat/src/chem/smiles.rs` (279), `legacy/formula.rs:81-290` (+valence table `:9` = `chem/smiles.rs:12`) | aromaticity, valences | `legacy_parity.rs:61` pins legacy | backlog: one reader in `mzlab-mol` (large effort, wasm module boundaries) |
 | Molfile V2000 | `mzlab-mol/src/molfile_v2000.rs` vs `mzlab-feat/src/chem/grafo.rs:37` | — | — | backlog |
-| Spectral similarity | `mzlab-lib/src/scores.rs:86/101`, `prep.rs:19` (authoritative); `mzlab-core/src/entropy.rs:10/24/59` (O(n·m), used by `msngrafo/cerca.rs:197`); `legacy/similarity.rs:41`; JS `libreria-worker.js:107-180` | match algorithm | `mzlab-lib/tests/parita.rs:85` core vs lib (1e-9); no JS↔wasm | JS fallback: delete (one engine, AGENTS §4); core entropy: keep until `msngrafo` can depend on `mzlab-lib` |
+| Spectral similarity | `mzlab-lib/src/scores.rs:86/101`, `prep.rs:19` (authoritative); `mzlab-core/src/entropy.rs:10/24/59` (O(n·m), used by `msngrafo/cerca.rs:197`); `legacy/similarity.rs:41`; JS `libreria-worker.js:107-180` | match algorithm | `mzlab-lib/tests/parita.rs:85` core vs lib (1e-9); no JS↔wasm | JS fallback: delete (one engine, CLAUDE.md); core entropy: keep until `msngrafo` can depend on `mzlab-lib` |
 
 ### 2.2 Signal and data
 | Tool | Copies | What differs | Authoritative / tested | Verdict |
@@ -85,7 +85,7 @@ Score = (start-up/wasm bytes saved + bug risk removed) / effort, each 1-5. Promp
 ### 2.4 JS UI written twice
 | UI | Copies | Verdict |
 |---|---|---|
-| Sortable table headers | `riferimento.js:73-81` (button + `aria-sort`, tested `e2e_differenza_hr.py`), `infusione-albero.js:88`; without keyboard/`aria-sort`: `mappa-tabella.js:96`, `dda.js:394`, `banco.js:425` | one header helper on the `riferimento.js` pattern; also an accessibility fix (AGENTS §1.6) — backlog after C10 |
+| Sortable table headers | `riferimento.js:73-81` (button + `aria-sort`, tested `e2e_differenza_hr.py`), `infusione-albero.js:88`; without keyboard/`aria-sort`: `mappa-tabella.js:96`, `dda.js:394`, `banco.js:425` | one header helper on the `riferimento.js` pattern; also an accessibility fix (CLAUDE.md) — backlog after C10 |
 | Shared table component | only `TP_Mine/js/42_tp_table.js:413` `TPTAB` (4 users); `TP_Mine/js/33_pipeline_view.js:14` writes its own virtual list | `33_pipeline_view.js` → `TPTAB` (backlog) |
 | Virtual lists | `banco.js:117-131` and `banco.js:415-427` (same scan list, overscan 2/5 vs 1/3) | one windowing function in `banco.js` (backlog, start-up −0.5 K) |
 | Dialogs | shared `ask`/`yesno`/`info`/`big`/`menu` in `explore.js:906-936`; own copies: `predefinito.js:27`, `reset.js:97`, `memoria-avviso.js:22`, `molecole-ui.js:206`, `libreria.js:368` and `:439` (creates `#libres` twice) | use `explore.js` helpers (backlog) |

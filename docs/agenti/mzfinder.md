@@ -1,5 +1,5 @@
 # mzFinder (nome interno TP Mine; nascosto, solo per Federico)
-Il nucleo è in AGENTS.md.
+Il nucleo è in CLAUDE.md.
 
 - L'unico strumento che dà risposte (ricerca dei TP). Nome visibile «Tabui»; etichette, segnaposto e risposte del motore sono in inglese e brevi (poche parole: «Name», «Neutral formula», «RT (min)»; mai «Formula» da sola: formula neutra, oppure «Ion formula» con l'addotto accanto), senza chiavi `lang/`; le spiegazioni stanno negli aiuti, solo in inglese qualunque sia la lingua della pagina, dal catalogo `40_tabui_testi.js`; i nomi interni restano `tpmine`/TP Mine (cartella, id `tpmine`, selettori `#tp-*`).
 - **Accesso**: la scheda «Tabui» (nome visibile di mzFinder; i nomi interni sono `mzfinder`, `tpmine`) è sempre nell'header accanto a Disegno, senza chiavi, clic né badge, nel sito e nell'app (nessun indirizzo `#/…` di suo). Non c'è nel laboratorio (`window.MZLAB_LAB`, `tools/lab/lab.js`: il pacchetto non si scarica), su telefono né nella cartella web semplice. I pannelli interni (posizione, reattività, motore Pipeline) restano dietro `uipAdminOn()` (`settings.js`, 5 clic sul logo). Testi dello strumento in inglese anche con la lingua italiana.
