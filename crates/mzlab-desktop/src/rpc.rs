@@ -341,6 +341,10 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
+            "simtab" => text(match mzlab_core::simtab::table_text(s("files"), s("output"), s("layout")) {
+                Ok(csv) => csv,
+                Err(e) => format!("E{}", e.to_json()),
+            }),
             "mrmdiff" => match mzlab_core::diffroute::mrm_diff(s("files"), s("ref"), &q()) {
                 None => text(""),
                 Some(Ok(j)) => text(j),

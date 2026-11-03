@@ -45,7 +45,8 @@ function syncWork(/** @type {boolean} */ force = false) {
   SHEETLBL.refresh();
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
   const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
-  if (sig === _workSig && !force) return;
+  const simtab = () => /** @type {any} */ (window).SIMTAB?.sync();   // the SIM table follows the loaded files and the state written here (sim-tabella.js)
+  if (sig === _workSig && !force) { simtab(); return; }
   const was = ws.dataset.work;
   _workSig = sig; ws.dataset.work = w;
   // the landing forgets «Sample table»; once empty it waits again for the first file to be shown
@@ -73,6 +74,7 @@ function syncWork(/** @type {boolean} */ force = false) {
   }
   // the side panel takes the width of the names once a file is shown (barra.js)
   if (was !== w && window.BARRA) BARRA.fitNames();
+  simtab();
 }
 
 /** The X of the toolbar closed every panel (pannelli.js): the landing takes the work area; `false` gives it back to the panels. */

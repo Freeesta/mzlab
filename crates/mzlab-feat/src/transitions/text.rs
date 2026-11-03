@@ -137,51 +137,16 @@ fn integrate(row: &Row, c: Option<&Channel>, s: &Settings) -> Cell {
     Cell { found, flag }
 }
 
-/// Up to `s.max_candidates` peaks of a channel, highest first: the highest of the trace, then the highest of what is left on each side of it.
+/// Up to `s.max_candidates` peaks of a channel, highest first (`peak1d::peaks`).
 fn candidates(c: &Channel, s: &Settings) -> Vec<Found> {
-    let (Some(&a), Some(&b)) = (c.t.first(), c.t.last()) else {
-        return Vec::new();
-    };
-    let (mut spans, mut out) = (vec![(a, b)], Vec::new());
-    while out.len() < s.max_candidates && !spans.is_empty() {
-        let mut best: Option<(usize, Found)> = None;
-        for (i, &(lo, hi)) in spans.iter().enumerate() {
-            let f = find_peak(
-                &c.t,
-                &c.y,
-                Some((lo + hi) / 2.0),
-                (hi - lo) / 2.0,
-                s.smooth,
-                s.min_points,
-            );
-            if let Some(f) = f.filter(|f| best.as_ref().is_none_or(|(_, g)| f.height > g.height)) {
-                best = Some((i, f));
-            }
-        }
-        let Some((i, f)) = best else {
-            break;
-        };
-        let (lo, hi) = spans.remove(i);
-        if !f.ok || f.snr < s.snr_min {
-            continue;
-        }
-        // an apex on the first or last point of its span is the flank of a peak already taken (or cut off by the end of the trace): cut it away, not counted
-        let mut inside = c.t.iter().filter(|t| **t >= lo && **t <= hi);
-        let ends = (inside.clone().next(), inside.next_back());
-        let flank = ends.0 == Some(&f.apex_rt) || ends.1 == Some(&f.apex_rt);
-        let (l, r) = (f.left.min(f.apex_rt), f.right.max(f.apex_rt));
-        let eps = 1e-9;
-        if l - eps > lo {
-            spans.push((lo, l - eps));
-        }
-        if r + eps < hi {
-            spans.push((r + eps, hi));
-        }
-        if !flank {
-            out.push(f);
-        }
-    }
-    out
+    mzlab_core::peak1d::peaks(
+        &c.t,
+        &c.y,
+        s.smooth,
+        s.min_points,
+        s.snr_min,
+        s.max_candidates,
+    )
 }
 
 /// A CSV field: quoted when it holds a comma, a quote or a line break.

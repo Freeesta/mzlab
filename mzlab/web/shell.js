@@ -270,6 +270,7 @@ function reportLoad(/** @type {CaricaRep} */ rep){
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
   if(rep.moved.data.length)L.push(`<p>${T("load.note.movedToData",{name:namesCut(rep.moved.data,3)})}</p>`);
   for(const n of rep.notes||[])L.push(`<p>${esc(n)}</p>`);
+  if(rep.logs&&rep.logs.length)L.push(`<p class="muted">${T(rep.logs.length===1?"load.note.logs.one":"load.note.logs",{n:rep.logs.length,names:namesCut(rep.logs,3)})}</p>`);   // msconvert logs (*.wiff.log): known by-products, not data
   if(!L.length)return;
   const needHelp=rep.unopen.length||rep.other.length;
   u.innerHTML=L.join("")+`<div class="row">${needHelp?`<button type="button" class="sec" data-a="help">${T("unopen.how")}</button>`:""}<button type="button" class="sec" data-a="close">${T("common.close")}</button></div>`;
@@ -345,7 +346,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
   const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   // a file that is not for the list (a by-product, a format we do not read) is told in the notice; the others are kept
-  const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name))return false;const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
+  const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name)){if(/\.log$/i.test(f.name))(rep.logs=rep.logs||[]).push(f.name);return false}const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
   // the same group dropped again: no second notice
   const dedupeNotice=()=>{if(rep.unopen.length){const h=groupHash(/** @type {FileCarica[]} */ (rep.unopen.map(x=>rejected.find(f=>f.name===x.name))));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}};
   // a batch of up to 50 files is pipelined: each file is read as soon as it is ready (the first sample opens while the next ones convert); a bigger batch asks first (below) and goes as a whole

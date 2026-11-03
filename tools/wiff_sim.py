@@ -5,7 +5,9 @@
 Writes OUT/sim.wiff + .wiff.scan with two samples and two Q1MI experiments per cycle (positive with three ions, negative with one; the method table
 holds each ion as an MRM-like row with Q3 = 0, which is a hypothesis: no real SIM file was seen), and OUT/sim.json with the ions and the apex RT of
 every peak. Ion 237.1 has two isobaric peaks (isomers at two RTs). Also OUT/sim_periodi.wiff (the same method with a second period: refused with
-`periods=2`) and OUT/sim_vuoti.wiff (one sample whose cycle 10 has an empty row in experiment 1: left out, the ions keep their columns).
+`periods=2`), OUT/sim_vuoti.wiff (one sample whose cycle 10 has an empty row in experiment 1: left out, the ions keep their columns), and for the SIM
+table of the Data view OUT/sim3.wiff (a blank and three named samples, one positive experiment of seven ions at a 0.8 s cycle, one peak per ion and an
+isomer pair in ionC; OUT/sim3.json) with OUT/sim3_cut.wiff, the same pair with its .wiff.scan cut at 60 %.
 Invented numbers, no laboratory data.
 """
 import json
@@ -70,6 +72,46 @@ def main(out=None):
             "campioni": {str(n): {str(q1): [rt for rt, _ in p] for q1, p in PEAKS[n].items()} for n in PEAKS},
             "cicli": CYCLES}
     (out / "sim.json").write_text(json.dumps(info))
+
+    sim3(out)
+
+
+# the SIM table: seven ions (Q1, name) of one positive experiment, four named samples in injection order (a blank, then three), a cycle of 0.8 s over
+# 20 min and peaks about 13 s wide at the base (15-16 points, as a 3200 SIM method); ionC has an isomer pair 25 s apart; invented numbers
+SIM3 = [(253.1, "ionA"), (267.1, "ionB"), (251.1, "ionC"), (271.1, "ionD"), (285.1, "ionE"), (225.1, "ionF"), (210.1, "ionG")]
+SIM3_SAMPLES = ["Blank", "Sample_A", "Sample_B", "Sample_C"]
+SIM3_CYCLES, SIM3_CYCLE_MS, SIM3_SIGMA_MIN = 1500, 800, 3.2 / 60.0
+SIM3_ISOMER = 2, 25.0 / 60.0, 0.6     # ion, distance of the second peak (min), its height over the first
+
+
+def sim3_peaks(s, j):
+    """The peaks (apex RT min, height) of ion j in sample s; none in the blank."""
+    if s == 0:
+        return []
+    rt, h = 2.0 + 2.2 * j + 0.04 * s, (9.0e4 - 1.0e4 * j) * (1.0 - 0.3 * (s - 1))
+    return [(rt, h)] + ([(rt + SIM3_ISOMER[1], h * SIM3_ISOMER[2])] if j == SIM3_ISOMER[0] else [])
+
+
+def sim3(out):
+    method = {"Experiment0/ExperimentHeader": w.header(1, 0.0, polarity=0),
+              "Experiment0/MassRangeEx/MassRangeEx": table([(q1, 20.0, nm) for q1, nm in SIM3]),
+              "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": w.ion_spray(5500.0)}
+    wr = w.Writer()
+    for s, name in enumerate(SIM3_SAMPLES):
+        blocks = []
+        for k in range(SIM3_CYCLES):
+            t = SIM3_CYCLE_MS * k / 60000.0
+            v = [round(40.0 + (k * 7 + j) % 11 + sum(h * math.exp(-0.5 * ((t - rt) / SIM3_SIGMA_MIN) ** 2) for rt, h in sim3_peaks(s, j)), 1)
+                 for j in range(len(SIM3))]
+            blocks.append(("mrm", v, SIM3_CYCLE_MS * k, sum(v)))
+        wr.sample(s + 1, blocks, method, log="3200 QTRAP", data_name=name)
+    wr.save(out, "sim3")
+    wr.save(out, "sim3_cut")
+    scan = (out / "sim3_cut.wiff.scan").read_bytes()
+    (out / "sim3_cut.wiff.scan").write_bytes(scan[:len(scan) * 6 // 10])
+    (out / "sim3.json").write_text(json.dumps({"ioni": [{"q1": q1, "name": nm} for q1, nm in SIM3], "campioni": SIM3_SAMPLES,
+                                                "picchi": [[[round(rt, 3) for rt, _ in sim3_peaks(s, j)] for j in range(len(SIM3))] for s in range(len(SIM3_SAMPLES))],
+                                                "cicli": SIM3_CYCLES}))
 
 
 if __name__ == "__main__":
