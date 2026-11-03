@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(ROOT / "tests_e2e"))
 import dati_sintetici_uv as du  # noqa: E402
 
+TMO = 600000                                                   # ms: a gesture that does not end by then is reported as stuck, with the state of the page
 HOOK = r"""(() => { const V = window.__U = { ev: 0, fe: [], dr: [] };
   window.addEventListener('dblclick', () => { V.ev = performance.now(); V.fe = []; V.dr = []; }, true);
   const wrap = () => { if (!window.draw || window.draw.__u) return;
@@ -70,28 +71,34 @@ def main():
                 box = pg.evaluate(f"(()=>{{const p={C};p.cv.scrollIntoView({{block:'center'}});const b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X({rt}),y:b.y+M.t+(a.H-M.t-M.b)/2}}}})()")
                 n0 = pg.evaluate("E.panels.filter(q=>q.uv).length")
                 pg.mouse.dblclick(box["x"], box["y"])
-                attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length>{n0} && __U.dr.some(d=>d.ok&&d.id===E.panels.filter(q=>q.uv).pop().id)", 900000)
+                attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length>{n0} && __U.dr.some(d=>d.ok&&d.id===E.panels.filter(q=>q.uv).pop().id)", TMO)
                 v = pg.evaluate("__U"); nid = pg.evaluate("E.panels.filter(q=>q.uv).pop().id"); t = min(d["t1"] for d in v["dr"] if d["id"] == nid and d["ok"])
                 ntr = pg.evaluate("(()=>{const u=E.panels.filter(q=>q.uv); const s=u[u.length-1]; return s._a.uvd.ser ? s._a.uvd.ser.length : 1})()")
                 return {**phases(v, t), "traces": ntr}
-            res["gestures"]["D1 first double click"] = dbl(3.1)
+            def run(name, fn, *a):
+                try: res["gestures"][name] = fn(*a)
+                except Exception as e:
+                    st = pg.evaluate("({panels: E.panels.map(q=>[q.id,q.type,q.kind,!!q.uv,!!q._a]), dr: __U.dr.slice(-5), fe: __U.fe.map(r=>[r.u.slice(0,60), r.t1 ? Math.round(r.t1-r.t0) : null])})")
+                    res["gestures"][name] = {"total": -1, "stuck": str(e)[:80], "state": json.dumps(st)[:600]}
+                print(name, res["gestures"][name], flush=True)
+            run("D1 first double click", dbl, 3.1)
             for i, rt in enumerate([6.4, 8.5, 12.2, 15.7, 4.0, 10.0][: a.reps]):
-                res["gestures"][f"D{i + 2} next double click"] = dbl(rt)
+                run(f"D{i + 2} next double click", dbl, rt)
 
             def lam(nm):
                 pg.evaluate("__U.ev=performance.now(); __U.fe=[]; __U.dr=[]")
                 ids = pg.evaluate("E.panels.map(q=>q.id)")
                 pg.evaluate(f"wlOpen({C}, {nm}, {nm})")
-                attendi(pg, f"__U.dr.some(d=>d.lam&&d.ok&&!{json.dumps(ids)}.includes(d.id))", 900000)
+                attendi(pg, f"__U.dr.some(d=>d.lam&&d.ok&&!{json.dumps(ids)}.includes(d.id))", TMO)
                 v = pg.evaluate("__U"); return phases(v, min(d["t1"] for d in v["dr"] if d["lam"] and d["ok"] and d["id"] not in ids))
-            res["gestures"]["L1 first λ trace"] = lam(254)
-            res["gestures"]["L2 next λ trace"] = lam(280)
+            run("L1 first λ trace", lam, 254)
+            run("L2 next λ trace", lam, 280)
             b.close()
     finally:
         srv.terminate(); shutil.rmtree(wd, ignore_errors=True)
     if a.json: print(json.dumps(res)); return
     print(f"{a.files} files, {res['mb']} MB, {a.uv} UV spectra x {a.wl} wavelengths each")
-    for g, ph in res["gestures"].items(): print(f"  {g:28s} {ph['total']:>8} ms   " + "  ".join(f"{k} {v}" for k, v in ph.items() if k != "total"))
+    for g, ph in res["gestures"].items(): print(f"  {g:28s} {ph['total']:>8} ms   " + "  ".join(f"{k} {v}" for k, v in ph.items() if k not in ("total", "state")))
 
 
 if __name__ == "__main__":
