@@ -34,9 +34,14 @@ export function sectionHtml(C, T, s, provs, p, m) {
   return html;
 }
 
+/** the labels of the transport document when its «key» is the owner passphrase of the demo (`x-mzlab-owner`) @param {(k: string, p?: any) => string} T */
+export const ownerLabels = T => ({ key: T("llm.owner.label"), use: T("llm.owner.use"), forget: T("llm.owner.forget"), remember: "", hint: T("llm.owner.hint"), local: "", none: T("llm.owner.none"), set: T("llm.owner.set") });
+
 /** the key area: the iframe in the site (cloud providers; the key never reaches this document), a password field in the desktop app, nothing for a model on this computer
  * @param {any} client @param {(k: string, p?: any) => string} T @param {(k: string, p?: any) => void} status @param {HTMLElement} kb @param {import("./llm-clienti.js").Provider} p */
 export const keyUi = (client, T, status, kb, p) => {
+  const demo = p.id === "mzlab-demo";
+  if (client instanceof SiteClient && demo) { client.attach(kb, p, ownerLabels(T), T("llm.owner.frame")); return; }
   if (client instanceof SiteClient) {
     client.attach(kb, p, { key: T("llm.key.label"), use: T("llm.key.use"), forget: T("llm.key.forget"), remember: T("llm.key.remember"), hint: T("llm.key.hint"), local: T("llm.key.local"),
       none: T("llm.key.none"), set: T("llm.key.set") }, T("llm.key.frame"));
@@ -44,7 +49,8 @@ export const keyUi = (client, T, status, kb, p) => {
   }
   const hint = `<div class="hint">${T("llm.key.local")}</div>`;
   if (p.local) { kb.innerHTML = hint; return; }
-  const html = `<div class="imp-fld"><label for="llm-key">${T("llm.key.label")}</label><input type="password" id="llm-key" autocomplete="off" spellcheck="false" style="width:16em"><button type="button" id="llm-key-use">${T("llm.key.use")}</button><button type="button" id="llm-key-forget">${T("llm.key.forget")}</button></div><div class="hint">${T("llm.key.hint.desktop")}</div>`;
+  const w = demo ? ownerLabels(T) : { key: T("llm.key.label"), use: T("llm.key.use"), forget: T("llm.key.forget") };
+  const html = `<div class="imp-fld"><label for="llm-key">${w.key}</label><input type="password" id="llm-key" autocomplete="off" spellcheck="false" style="width:16em"><button type="button" id="llm-key-use">${w.use}</button><button type="button" id="llm-key-forget">${w.forget}</button></div><div class="hint">${T("llm.key.hint.desktop")}</div>`;
   kb.innerHTML = html;
   const inp = /** @type {HTMLInputElement} */ (kb.querySelector("#llm-key")), dc = /** @type {DesktopClient} */ (client);
   /** @type {HTMLElement} */ (kb.querySelector("#llm-key-use")).onclick = async () => { const k = inp.value.trim(); inp.value = ""; if (k) { try { await dc.setKey(p.id, k); status("llm.key.set"); } catch (e) { status("", {}); } } };

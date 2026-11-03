@@ -8,8 +8,10 @@
 import { DesktopClient, SiteClient, asError, desktop } from "./llm-clienti.js";
 import { readSettings } from "./llm-impostazioni.js";
 import { askConsent, costLine, hasConsent } from "./llm-consenso.js";
-import { DEMO_CHIPS, DEMO_PROVIDER, demoActive, spend, startDemo } from "./llm-demo.js";
+import { DEMO_CHIPS, DEMO_PROVIDER, DEMO_WORDS, demoActive, spend, startDemo } from "./llm-demo.js";
 import { PROXY_HOST } from "./proxy-host.js";
+import { conv, ownerLabels, pretty } from "./llm-sezione.js";
+
 
 /** @typedef {{show: (text: string) => void, log: (line: any) => void, sending: (request: any) => void, call: (id: string, name: string, args: any) => Promise<{ok: boolean, content: any}>,
  *   ask: (id: string, summary: string, name: string, args: any) => Promise<boolean>, done: (outcome: string) => void,
@@ -22,6 +24,8 @@ import { PROXY_HOST } from "./proxy-host.js";
 
 /** without a limit set, the conversation asks before it goes past this many tokens */
 const ASK_TOKENS = 50000;
+/** the errors after which nothing more is sent in the turn (the proxy of the demo refused, or the spend limit was reached) */
+const FINAL = /^err\.llm\.(proxy\.|limit\.spend$)/;
 
 export class AgentRun {
   /** @param {Host} host @param {{hideNames?: boolean}} [opts] */
@@ -41,6 +45,7 @@ export class AgentRun {
     this.replaying = false;
     /** whether the user was already asked to go past ASK_TOKENS */ this.capAsked = false;
     this.assist = false;
+    /** the spend of the demo session {spent, cap, soft} (micro-dollars), set by the panel @type {((s: {spent: number, cap: number, soft: boolean}) => void) | null} */ this.onSpend = null;
     /** @type {any} */ this.client = null;
     /** @type {Promise<string>} */ this.done = Promise.resolve("");
     /** @type {((o: string) => void) | null} */ this.finish = null;
@@ -130,6 +135,13 @@ export class AgentRun {
   /** the router, then the readers it names, then the router's answer to the machine (the readings must be in before it builds the request of the orchestrator) @param {{role: string, request: any}} o */
   async runSub(o) {
     const r = await this.subCall(o.request);
+    // a refusal of the demo proxy or of the spend limit holds for the orchestrator too: the turn ends here, nothing more is sent
+    if (!r.ok && FINAL.test(r.key || "")) {
+      this.stopped = true;
+      try { await this.rpc({ op: "agent.in", kind: "stop" }); } catch (_) { /* the turn ends below */ }
+      this.host.done("error:" + r.key); this.end("error:" + r.key);
+      return;
+    }
     if (r.ok && this.assist && !this.stopped) {
       const readers = JSON.parse((await this.rpc({ op: "assist.readers", body: r.body })).readers);
       const stage = (/** @type {string} */ role, /** @type {"queued" | "running" | "cancelled"} */ st) => { if (this.host.readerStage) this.host.readerStage(role, st); };
@@ -162,6 +174,8 @@ export class AgentRun {
   async getClient() {
     const client = this.client || (this.client = desktop() ? new DesktopClient() : (/** @type {any} */ (window).MZLAB_LLM && /** @type {any} */ (window).MZLAB_LLM.client));
     if (!client) throw { key: "err.llm.network", params: { reason: "settings" } };
+    // the spend the proxy of the demo reports reaches the panel
+    client.onSpend = (/** @type {any} */ s) => { if (this.onSpend) this.onSpend(s); };
     return client;
   }
 
@@ -180,7 +194,7 @@ export class AgentRun {
   async spendCheck(client, s) {
     const p = (await client.providers()).find((/** @type {any} */ x) => x.id === s.provider), m = p && p.models.find((/** @type {any} */ x) => x.id === s.model);
     const usd = spend(this.totalUsage(), m && m.price_per_mtok);
-    if (usd === null || usd >= s.spendCap) throw { key: "err.llm.limit.spend", params: {} };
+    if (usd === null || usd >= s.spendCap) throw { key: "err.llm.limit.spend", params: { limit: "session" } };
   }
 
   /** the token limit of the conversation (machine + subagents, counted before each send): a limit stops the assistant; without one, the first crossing of ASK_TOKENS asks the user once @param {number} cap */
@@ -191,7 +205,7 @@ export class AgentRun {
       this.capAsked = true;
       if (await this.host.ask("cap", `${tokens} tokens used in this conversation so far. Go on?`, "continue", null)) return;
     }
-    throw { key: "err.llm.limit.spend", params: {} };
+    throw { key: "err.llm.limit.spend", params: { limit: "tokens" } };
   }
 
   /** the request of the last `send` goes out through the client of the page and its events come back one by one, in order */
@@ -236,15 +250,18 @@ export async function demoOpen(opener) {
     const p = (await client.providers()).find(x => x.id === DEMO_PROVIDER);
     if (!p) throw { key: "err.llm.provider", params: {} };
     const m = p.models[0], host = new URL(PROXY_HOST || p.base_url).host;
-    if (!hasConsent(p.id) && !(await askConsent({ provider: p.id, host, model: m.id, local: false, cost: costLine({ price: m.price_per_mtok }, T), T, opener }))) { client.close(); return false; }
-    const box = document.createElement("div"); box.hidden = true; document.body.append(box);
-    client.attach(box, p, {}, T("llm.key.frame"));
+    // the exact request of the first chip, built by Rust as it would leave (the summary of the files goes with the message when it is sent)
+    const preview = async () => { try { return pretty(T, await client.request(conv({ provider: p.id, model: m.id }, DEMO_CHIPS[0][1]))); } catch (e) { return T(asError(e).key); } };
+    if (!hasConsent(p.id) && !(await askConsent({ provider: p.id, host, model: m.id, local: false, cost: costLine({ price: m.price_per_mtok }, T), preview: await preview(), T, opener }))) { client.close(); return false; }
+    // the transport document, with the field of the owner passphrase: hidden until the proxy answers «closed» (the panel shows it) or the administrator mode is on
+    const box = document.createElement("div"); box.id = "llm-owner-box"; box.hidden = !(typeof (/** @type {any} */ (globalThis)).uipAdminOn === "function" && /** @type {any} */ (globalThis).uipAdminOn()); document.body.append(box);
+    client.attach(box, p, ownerLabels(T), T("llm.owner.frame"));
     client.session = /** @type {any} */ (startDemo(m.id)).session;
     /** @type {any} */ (window).MZLAB_LLM = { client };
     return true;
   } catch (e) { client.close(); throw asError(e); }
 }
-export { DEMO_CHIPS, demoActive };
+export { DEMO_CHIPS, DEMO_WORDS, demoActive };
 
 /** a worker for the facts that need no model (inspection, proposals of the parameters, charts without the model): no conversation, no consent, nothing leaves the site */
 export function factsRun() {

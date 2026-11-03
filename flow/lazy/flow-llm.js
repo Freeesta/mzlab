@@ -27,6 +27,9 @@
 @media (prefers-reduced-motion:reduce){.flx .flx-llm,.flx .flx-llm *{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 `;
   const EDITS = new Set(["flow_add_step", "flow_set_param", "flow_remove_step", "flow_propose_plan"]);
+  const DEMO = "mzlab-demo";
+  /** the ends of a demo turn after which the proxy is not usable (spent, off, closed, unreachable): one notice, then rules only, no retry */
+  const UNAVAILABLE = new Set(["err.llm.proxy.off", "err.llm.proxy.budget", "err.llm.proxy.closed", "err.llm.proxy.origin", "err.llm.limit.spend", "err.llm.network"]);
 
   /** @param {string} text */
   const sha256 = async text => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -49,13 +52,14 @@
       const label = I ? I.t(k) : text, b = btn("chat", label, () => act.chip(text), label); b.dataset.chip = k; return b;
     })) : null;
     const note = ctx.demo ? el("p", { class: "flx-llm-demo", id: "flx-llm-demo", text: "Public demo: asks before each edit, file names hidden, spending limit 0.50 USD." }) : null;
+    const spend = el("span", { class: "flx-llm-cost", id: "flx-llm-spend", hidden: true });
     const panel = el("aside", { class: "flx-llm", id: "flx-llm", "aria-label": "Assistant", hidden: true, tabindex: "-1" },
-      el("div", { class: "flx-llm-head" }, el("h3", { text: "Assistant" }), el("span", { class: "flx-llm-level", id: "flx-llm-level", text: level, title: level === "L0" ? "L0: proposes, never edits" : level === "L1" ? "L1: asks before each edit" : "L2: edits by itself within limits" }), closeBtn), note, cost,
+      el("div", { class: "flx-llm-head" }, el("h3", { text: "Assistant" }), el("span", { class: "flx-llm-level", id: "flx-llm-level", text: level, title: level === "L0" ? "L0: proposes, never edits" : level === "L1" ? "L1: asks before each edit" : "L2: edits by itself within limits" }), closeBtn), note, cost, spend,
       log, regList, sentBox, chips, input, el("div", { class: "row" }, send, stop), grip);
     const open = btn("chat", "Open the assistant", () => act.toggle(), "Assistant"); open.id = "flx-assistant"; open.setAttribute("aria-expanded", "false");
     ctx.bar.insertBefore(open, ctx.bar.querySelector(".flx-run"));
     ctx.body.append(panel);
-    return { log, cost, sent, regList, input, send, stop, panel, open };
+    return { log, cost, spend, sent, regList, input, send, stop, panel, open, chips };
   };
 
   /** the messages and cards of the conversation log @param {HTMLElement} log */
@@ -170,11 +174,40 @@
       },
       done: (/** @type {string} */ outcome) => {
         host.cur = null; ui.stop.hidden = true; ui.send.disabled = false; ui.input.disabled = false; st.money();
-        if (outcome.startsWith("error:")) kit.say(F.message({ key: outcome.slice(6), params: {} }) || "The assistant stopped: " + outcome.slice(6), "err");
+        const key = outcome.startsWith("error:") ? outcome.slice(6) : "";
+        if (key && st.settings.provider === DEMO && UNAVAILABLE.has(key)) ui.unavailable(key);
+        else if (key) kit.say(F.message({ key, params: {} }) || "The assistant stopped: " + key, "err");
         else if (outcome === "stopped") kit.say("Stopped.", "");
       },
     };
     return host;
+  };
+
+  /** the ends of the public demo: the proxy closed, off, spent or unreachable, and its spend counter @param {any} ui @param {any} kit @param {any} st @param {Record<string, string>} W the lang/ keys */
+  const demoKit = (ui, kit, st, W) => {
+    const { panel, input, send, chips, spend } = ui;
+    const I = /** @type {any} */ (globalThis).I18N, T = (/** @type {string} */ k, /** @type {any} */ p) => (I ? I.t(k, p) : k);
+    /** a «closed» demo (403) shows the owner passphrase field (the transport document) and keeps the input; any other end says «Assistant not available» once and
+     * leaves only the parts that need no model (facts card, preset charts), with no further request @param {string} key */
+    const unavailable = key => {
+      if (key === "err.llm.proxy.closed") {
+        const box = document.getElementById("llm-owner-box");
+        if (box) { box.hidden = false; panel.insertBefore(box, input); }
+        kit.say(F.message({ key, params: {} }) || key, "err");
+        return;
+      }
+      if (st.unavailable) return;
+      st.unavailable = true;
+      kit.put(F.el("div", { class: "flx-llm-card bad", id: "flx-llm-unavail", role: "status" }, F.el("strong", { text: T(W.unavailable) }), F.el("span", { text: F.message({ key, params: {} }) || "" }), F.el("span", { text: T(W.rules) })));
+      input.hidden = send.hidden = true; if (chips) chips.hidden = true;
+    };
+    /** the spend of the demo session as the proxy reports it: spent / cap in $, and one notice past the soft mark @param {{spent: number, cap: number, soft: boolean}} s */
+    const onSpend = s => {
+      spend.hidden = false;
+      spend.textContent = T(W.spend, { spent: (s.spent / 1e6).toFixed(2), cap: (s.cap / 1e6).toFixed(2) });
+      if (s.soft && !st.softSaid) { st.softSaid = true; kit.say(T(W.soft), ""); }
+    };
+    return { unavailable, onSpend };
   };
 
   /** mounts the button and the panel; `ctx`: {S, bar, body, say, redraw, select, setTab, demo?, opener?} (`demo`: the profile «demo», after «Try the assistant») */
@@ -194,7 +227,7 @@
     const runs = { running: false, states: /** @type {Record<string, string>} */ ({}) };
 
     /** @type {any} */ const act = {};
-    const { log, cost, sent, regList, input, send, stop, panel, open } = buildPanel({ ...ctx, demo: ctx.demo ? { chips: mod.DEMO_CHIPS } : null }, level, act);
+    const { log, cost, spend, sent, regList, input, send, stop, panel, open, chips } = buildPanel({ ...ctx, demo: ctx.demo ? { chips: mod.DEMO_CHIPS } : null }, level, act);
     /** @param {number} d */
     const resize = d => { width = Math.max(260, Math.min(720, width + d)); ctx.body.style.setProperty("--llmw", width + "px"); };
     function show() { ctx.setTab("canvas"); panel.hidden = false; ctx.body.classList.add("flx-llm-on"); open.setAttribute("aria-expanded", "true"); input.focus(); }
@@ -215,20 +248,24 @@
     st.tools = F.llmTools({ S, runs, select: ctx.select, propose, edited, context: () => context(), llmRef: () => llmRef(), chart, chartViews, showChart, facts: () => F.llmFacts.facts(S) });
     panel.insertBefore(F.llmChart.presetMenu(chartPresets, put), input);
 
-    const host = makeHost(kit, { log, sent, stop, send, input }, st);
+    const { unavailable, onSpend } = demoKit({ panel, input, send, chips, spend }, kit, st, mod.DEMO_WORDS);
+    const host = makeHost(kit, { log, sent, stop, send, input, unavailable }, st);
 
     /** the conversation (one worker), opened on first use by a message or by a chart @returns {Promise<any>} */
     st.ensure = async () => {
       if (st.agent) return st.agent;
       st.agent = new mod.AgentRun(host, {});
+      st.agent.onSpend = onSpend;
       await st.agent.open(true);
+      // the proxy of the demo refuses more output than its demo_* limits: they come with the subagents (enable_assist)
+      if (settings.provider === DEMO) await st.agent.enableAssist(ctx.S.reg.steps);
       try { const p = await (/** @type {any} */ (window).MZLAB_LLM && window.MZLAB_LLM.client ? window.MZLAB_LLM.client.providers() : []); const m = (p.find((/** @type {any} */ x) => x.id === settings.provider) || { models: [] }).models.find((/** @type {any} */ x) => x.id === settings.model); st.price = m && (m.price || m.price_per_mtok) || null; } catch (_) { /* no price: «unknown» */ }
       return st.agent;
     };
 
     async function submit() {
       const text = input.value.trim();
-      if (!text || (st.agent && st.agent.running)) return;
+      if (!text || st.unavailable || (st.agent && st.agent.running)) return;
       input.value = ""; say(text, "me"); st.edits = 0;
       stop.hidden = false; send.disabled = true;
       try {

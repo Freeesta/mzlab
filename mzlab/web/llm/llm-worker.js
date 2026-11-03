@@ -4,7 +4,7 @@
 // each answer with it; the bytes travel over a MessagePort to/from the iframe `llm/trasporto.html`, which owns the key. The transport `replay` answers from a recording and never uses the iframe.
 // Page -> worker: init, port, request, send (a conversation, or a ready `request` of a subagent), abort, assist.files, assist.on, assist.request, assist.check, assist.readers, assist.state, assist.reading, sub.replay, replay.load, replay.reset, chart.views, chart.make, chart.presets (charts: grafico/1, docs/agenti/llm.md), inspect.build, params.propose (the facts without a model: ispezione/1, proposta-param/1), agent.new, agent.in (the loop of the assistant: llm-agente.js). Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.
 // The provider of the public demo (`mzlab-demo`): its conversations use the demo catalog `strumenti-demo-1.json`, and each of its requests leaves through `demo_send` of Rust (the host of
-// proxy-host.js in place of the placeholder, the session headers); with an empty host nothing leaves.
+// proxy-host.js in place of the placeholder, the session header); with an empty host nothing leaves. The spend headers of the proxy reach the page as {id, spend}.
 import { PROXY_HOST } from "./proxy-host.js";
 /** @typedef {{request: (conv: string) => string, replay_load: (text: string, strict: boolean) => number, replay_respond: (conv: string) => string, replay_reset: () => void}} Llm */
 /** @typedef {{push: (b: Uint8Array) => string, finish: () => string}} Dec */
@@ -75,16 +75,30 @@ const send = async m => {
   // a call of a subagent comes as a request already built by Rust (`Assist.request`); a conversation is built here
   const conv = m.request ? m : JSON.parse(m.conv);
   let req = m.request ? m.request : (conv.provider === DEMO ? (await loadDemo()).llm : llm).request(m.conv);
-  if (conv.provider === DEMO) req = mod.demo_send(req, DEMO, PROXY_HOST, m.demo && m.demo.session || "", m.demo && m.demo.owner || "");
+  // the owner passphrase is added by the transport document, which alone holds it
+  if (conv.provider === DEMO) req = mod.demo_send(req, DEMO, PROXY_HOST, m.demo && m.demo.session || "", "");
   live.set(m.id, { dec: new mod.LlmStream(conv.provider, conv.model), status: 0, body: [] });
   port.postMessage({ t: "send", id: m.id, request: JSON.parse(req) });
+};
+
+/** the request of a conversation as it will leave: the demo's with its catalog and, once the proxy has a host, the host and session in place (`demo_send`) @param {any} m */
+const requestOf = async m => {
+  if (!llm) throw { key: "err.llm.module", params: { reason: "load" } };
+  if (JSON.parse(m.conv).provider !== DEMO) return llm.request(m.conv);
+  const req = (await loadDemo()).llm.request(m.conv);
+  return PROXY_HOST ? mod.demo_send(req, DEMO, PROXY_HOST, m.demo && m.demo.session || "", "") : req;
 };
 
 /** the iframe's side of a call: head (status), chunk (bytes), end, fail @param {MessageEvent} ev */
 const onPort = ev => {
   const m = ev.data || {}, c = live.get(m.id);
   if (!c) return;
-  if (m.t === "head") c.status = m.status;
+  if (m.t === "head") {
+    c.status = m.status;
+    // the spend of the demo session, as the proxy reports it on a 2xx answer (parsed by Rust)
+    const spend = m.spend && m.status < 300 ? mod.demo_spend(String(m.spend), !!m.soft) : "";
+    if (spend) postMessage({ id: m.id, spend });
+  }
   else if (m.t === "chunk") {
     if (c.status >= 400) c.body.push(new TextDecoder().decode(m.bytes));
     else emit(m.id, c.dec.push(new Uint8Array(m.bytes)));
@@ -131,7 +145,7 @@ onmessage = async ev => {
     await load();
     if (!llm) return;
     if (m.op === "init") postMessage({ id: m.id, ok: true, providers: mod.providers(), version: mod.version() });
-    else if (m.op === "request") postMessage({ id: m.id, ok: true, request: llm.request(m.conv) });
+    else if (m.op === "request") postMessage({ id: m.id, ok: true, request: await requestOf(m) });
     else if (m.op === "replay.load") postMessage({ id: m.id, ok: true, turns: llm.replay_load(m.text, !!m.strict) });
     else if (m.op === "replay.reset") { llm.replay_reset(); postMessage({ id: m.id, ok: true }); }
     else if (m.op === "send") await send(m);

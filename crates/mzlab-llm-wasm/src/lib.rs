@@ -41,6 +41,12 @@ pub fn demo_send(
     Ok(req.to_json())
 }
 
+/// The spend of the demo session from the headers `x-mzlab-spend` and `x-mzlab-soft` of a 2xx answer (`provider::demo::spend_json`), "" when absent or malformed.
+#[wasm_bindgen]
+pub fn demo_spend(header: &str, soft: bool) -> String {
+    provider::demo::spend_json(header, soft).unwrap_or_default()
+}
+
 /// The event line of a failed HTTP status (`err.llm.*`), for the transport that got an answer without a stream.
 #[wasm_bindgen]
 pub fn http_error(status: u16, body: &str) -> String {

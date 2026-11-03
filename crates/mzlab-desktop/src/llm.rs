@@ -1,6 +1,7 @@
 //! The assistant in the app: the routes `llm/*`. The key lives in `llm-chiavi.json` (mode 0600) and only this file reads it; `llm/send` opens the
 //! request with `ureq` on a thread and `llm/poll` hands the normalized events to the page, like `flow/progress` does for a plan. The demo provider
-//! (`mzlab-demo`, mzLab's proxy) needs no key: it gets the demo catalog and, at `llm/send`, the proxy host and session headers of the page.
+//! (`mzlab-demo`, mzLab's proxy) needs no key: it gets the demo catalog and, at `llm/send`, the proxy host and session of the page; its stored «key» is
+//! the owner passphrase (`x-mzlab-owner`), and `llm/poll` hands over the spend the proxy reports (`x-mzlab-spend`).
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -61,9 +62,14 @@ impl State {
                         (prov, prompted, req)
                     }
                 };
-                // the demo provider: the host of `llm/proxy-host.js` and the session of the panel, as in the site (`demo_send` of the .wasm)
-                let req = demo::for_send(&prov, req, s("proxy_host"), s("session"), s("owner"))?;
+                // the demo provider: the host of `llm/proxy-host.js` and the session of the panel, as in the site (`demo_send` of the .wasm); the owner
+                // passphrase is the stored «key» of the demo, read only here (the page never holds it)
                 let key = read_keys(&self.keys_path()?).remove(&prov.id);
+                let owner = match &key {
+                    Some(k) if prov.id == DEMO_PROVIDER => k.as_str(),
+                    _ => "",
+                };
+                let req = demo::for_send(&prov, req, s("proxy_host"), s("session"), owner)?;
                 let abort = Arc::new(AtomicBool::new(false));
                 let id = with_jobs(|n, m| {
                     *n += 1;
@@ -79,23 +85,7 @@ impl State {
                 std::thread::spawn(move || run(id, prov, prompted, req, key, abort));
                 text(json!({ "id": id.to_string() }).to_string())
             }
-            "llm/poll" => {
-                let id: u64 = s("id")
-                    .parse()
-                    .map_err(|_| err("err.llm.conversation", "field", "id"))?;
-                let (events, done) = with_jobs(|_, m| match m.get_mut(&id) {
-                    Some(j) => {
-                        let ev = std::mem::take(&mut j.events);
-                        let done = j.done;
-                        if done {
-                            m.remove(&id);
-                        }
-                        (ev, done)
-                    }
-                    None => (Vec::new(), true),
-                });
-                text(json!({ "events": events, "done": done }).to_string())
-            }
+            "llm/poll" => poll(s("id")),
             "llm/abort" => {
                 if let Ok(id) = s("id").parse::<u64>() {
                     with_jobs(|_, m| {
@@ -112,10 +102,47 @@ impl State {
     }
 }
 
+/// `llm/poll`: the events so far, whether the job is over, and the spend the proxy reported (`demo::spend_json`, "" when none).
+fn poll(id: &str) -> Result<Answer> {
+    let id: u64 = id
+        .parse()
+        .map_err(|_| err("err.llm.conversation", "field", "id"))?;
+    let (events, done, spend) = with_jobs(|_, m| match m.get_mut(&id) {
+        Some(j) => {
+            let ev = std::mem::take(&mut j.events);
+            let spend = std::mem::take(&mut j.spend);
+            let done = j.done;
+            if done {
+                m.remove(&id);
+            }
+            (ev, done, spend)
+        }
+        None => (Vec::new(), true, String::new()),
+    });
+    text(json!({ "events": events, "done": done, "spend": spend }).to_string())
+}
+
+/// Keeps the spend of the demo session from the headers of a 2xx answer of the proxy.
+fn keep_spend(id: u64, resp: &ureq::Response) {
+    let Some(v) = resp
+        .header("x-mzlab-spend")
+        .and_then(|h| demo::spend_json(h, resp.header("x-mzlab-soft").is_some()))
+    else {
+        return;
+    };
+    with_jobs(|_, m| {
+        if let Some(j) = m.get_mut(&id) {
+            j.spend = v;
+        }
+    });
+}
+
 #[derive(Default)]
 struct Job {
     events: Vec<String>,
     done: bool,
+    /// `demo::spend_json` of the last answer of the proxy, "" when it reported none
+    spend: String,
     abort: Arc<AtomicBool>,
 }
 
@@ -268,6 +295,7 @@ fn run(
     }
     match r.send_string(&req.body) {
         Ok(resp) => {
+            keep_spend(id, &resp);
             let mut rd = resp.into_reader();
             let mut buf = [0u8; 4096];
             loop {

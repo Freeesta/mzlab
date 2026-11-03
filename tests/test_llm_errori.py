@@ -8,7 +8,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import lang_catalogo  # noqa: E402
 # keys that can end a turn or a send; Rust emits them, the page must say them in words
 TERMINAL = ["auth", "rate", "context", "network", "bad_response", "aborted", "provider", "module", "limit.workspace", "limit.spend",
-            "limit.calls", "plan.tries", "profile.course", "level.denied", "context.budget", "consent", "key.missing"]
+            "limit.calls", "plan.tries", "profile.course", "level.denied", "context.budget", "consent", "key.missing",
+            "proxy.closed", "proxy.off", "proxy.budget", "proxy.body", "proxy.origin"]
 
 
 def test_catalogs_and_flow_panel_have_every_terminal_error():
@@ -28,3 +29,11 @@ def test_errors_module_is_loaded_with_the_assistant():
     m = re.search(r'const facts = L\.load\("flow-llm-errors\.js"', shell)
     assert m, "flow-llm-errors.js is not loaded with the facts"
     assert re.search(r'facts\.then\(\(\) => L\.load\([^)]*"flow-llm\.js"\)', shell[m.end():]), "the assistant does not wait for the errors"
+
+
+def test_the_spend_limit_names_its_limit():
+    # the proxy and the page give `limit` (session, ip, rate, tokens): both catalogs show it
+    for lang in ("it", "en"):
+        m = re.search(r'"err\.llm\.limit\.spend":\s*"([^"]*)"', lang_catalogo.testo(lang))
+        assert m and "{limit}" in m.group(1), lang
+    assert "q.limit" in (ROOT / "flow/lazy/flow-llm-errors.js").read_text(encoding="utf-8")

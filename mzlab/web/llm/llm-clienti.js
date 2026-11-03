@@ -1,11 +1,12 @@
 // @ts-strict
 // The clients of the assistant: the worker + iframe `trasporto.html` in the site, the native routes `llm/*` in the desktop app (the key stays in Rust), and the helpers that
 // say which providers a page can reach. Loaded by llm-impostazioni.js only after the user turned the assistant on, or by llm-agente.js for the public demo.
-// The provider of the demo (`mzlab-demo`) needs no key: every send carries the host of proxy-host.js and the session of the client (one per client, i.e. per opening of the panel).
+// The provider of the demo (`mzlab-demo`) needs no key: every send carries the host of proxy-host.js and the session of the client (one per client, i.e. per opening of the panel);
+// its «key» slot holds the owner passphrase (transport document in the site, Rust in the app), never this page.
 import { PROXY_HOST } from "./proxy-host.js";
 import { newSession } from "./llm-demo.js";
 
-/** @typedef {{id: string, base_url: string, local: boolean, site_allowed: boolean, auth?: {header: string}, models: {id: string, price?: any, price_per_mtok?: any}[]}} Provider */
+/** @typedef {{id: string, base_url: string, local: boolean, site_allowed: boolean, auth?: {header: string}, session_headers?: {session: string, owner: string}, models: {id: string, price?: any, price_per_mtok?: any}[]}} Provider */
 /** @typedef {{ev: string, text?: string, key?: string, params?: Record<string, string>}} LlmEvent */
 
 const RPC = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/rpc" : "mzlab://localhost/rpc";
@@ -20,10 +21,12 @@ export class SiteClient {
     this.n = 0;
     /** @type {HTMLIFrameElement | null} */ this.frame = null;
     this.hasKey = false;
-    /** the session and owner of the demo provider (`x-mzlab-session`, `x-mzlab-owner`) */ this.session = newSession(); this.owner = "";
+    /** the session of the demo provider (`x-mzlab-session`; the owner passphrase stays in the transport document) */ this.session = newSession();
     /** @type {((has: boolean) => void) | null} */ this.onKey = null;
+    /** the spend of the demo session {spent, cap, soft} in micro-dollars, from the proxy's headers @type {((s: {spent: number, cap: number, soft: boolean}) => void) | null} */ this.onSpend = null;
     this.worker.onmessage = ev => {
       const m = ev.data || {};
+      if (m.spend) { if (this.onSpend) this.onSpend(JSON.parse(m.spend)); return; }
       if (m.event && this.sinks.has(m.id)) { /** @type {(e: LlmEvent) => void} */ (this.sinks.get(m.id))(JSON.parse(m.event)); return; }
       const c = this.calls.get(m.id);
       if (!c) return;
@@ -39,7 +42,7 @@ export class SiteClient {
   /** @returns {Promise<Provider[]>} */
   async providers() { return JSON.parse((await this.call("init")).providers).providers; }
   /** @param {object} conv */
-  async request(conv) { return JSON.parse((await this.call("request", { conv: JSON.stringify(conv) })).request); }
+  async request(conv) { return JSON.parse((await this.call("request", { conv: JSON.stringify(conv), demo: this.demo() })).request); }
   /** @param {object} conv @param {(e: LlmEvent) => void} sink @param {boolean} replay */
   send(conv, sink, replay) {
     return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, conv: JSON.stringify(conv), transport: replay ? "replay" : "net", demo: this.demo() }); });
@@ -48,7 +51,7 @@ export class SiteClient {
   sendRaw(provider, model, request, sink) {
     return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, provider, model, request, transport: "net", demo: this.demo() }); });
   }
-  demo() { return { session: this.session, owner: this.owner }; }
+  demo() { return { session: this.session }; }
   stop() { if (this.lastId) this.worker.postMessage({ op: "abort", id: this.lastId }); }
   /** whether the provider needs a key that this page does not hold (a model on this computer and the proxy of the demo need none) @param {string} id */
   async needsKey(id) { const p = (await this.providers()).find(x => x.id === id); return !!p && !p.local && !!(p.auth ? p.auth.header : true) && !this.hasKey; }
@@ -63,7 +66,9 @@ export class SiteClient {
     f.addEventListener("load", () => {
       const ch = new MessageChannel();
       this.worker.postMessage({ op: "port" }, [ch.port2]);
-      /** @type {Window} */ (f.contentWindow).postMessage({ op: "init", provider: p.id, local: p.local, labels }, location.origin, [ch.port1]);
+      // the demo's «key» is the owner passphrase, sent in the header its descriptor names
+      const owner = p.session_headers && p.session_headers.owner || "";
+      /** @type {Window} */ (f.contentWindow).postMessage({ op: "init", provider: p.id, local: p.local, owner, labels }, location.origin, [ch.port1]);
     });
     box.appendChild(f); this.frame = f;
   }
@@ -72,9 +77,12 @@ export class SiteClient {
 
 /** The client of the desktop app (routes `llm/*` of mzlab://; the key stays in Rust). */
 export class DesktopClient {
-  constructor() { this.kind = "desktop"; this.hasKey = false; /** @type {string} */ this.cur = ""; this.stopped = false; this.session = newSession(); this.owner = ""; }
-  /** what the route `llm/send` needs for the demo provider (ignored by any other) */
-  demo() { return { proxy_host: PROXY_HOST, session: this.session, owner: this.owner }; }
+  constructor() {
+    this.kind = "desktop"; this.hasKey = false; /** @type {string} */ this.cur = ""; this.stopped = false; this.session = newSession();
+    /** @type {((s: {spent: number, cap: number, soft: boolean}) => void) | null} */ this.onSpend = null;
+  }
+  /** what the route `llm/send` needs for the demo provider (ignored by any other; the owner passphrase is the demo's key, held by Rust) */
+  demo() { return { proxy_host: PROXY_HOST, session: this.session }; }
   /** @param {string} op @param {any} [p] @returns {Promise<any>} */
   async post(op, p) {
     const r = await fetch(RPC, { method: "POST", body: JSON.stringify({ op, ...p }) }), text = await r.text();
@@ -97,6 +105,7 @@ export class DesktopClient {
     this.cur = id;
     for (;;) {
       const r = await this.post("llm/poll", { id });
+      if (r.spend && this.onSpend) this.onSpend(JSON.parse(r.spend));
       for (const l of r.events || []) sink(JSON.parse(l));
       if (r.done || this.stopped) break;
       await new Promise(ok => setTimeout(ok, 120));
