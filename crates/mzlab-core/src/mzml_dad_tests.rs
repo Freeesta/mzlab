@@ -346,3 +346,28 @@ fn uv_row_time_in_seconds_by_unit_name_or_accession() {
         Some(30.0)
     );
 }
+
+/// A double click at time t on the PDA trace asks rt0 == rt1 == t: the row nearest in time, also before the first and after the last row.
+#[test]
+fn a_click_takes_the_nearest_row() {
+    let d = build(
+        (0..5).map(|i| i as f64 * 0.01).collect(),
+        vec![200.0],
+        vec![0.0; 5],
+    )
+    .unwrap();
+    let row = |t: f64| {
+        let j = crate::wiff::dad_uv::dad_spectrum_json(&d, t, t).unwrap_or_default();
+        assert!(j.contains("\"n\":1"), "{j}");
+        j.split("\"rt0\":")
+            .nth(1)
+            .and_then(|r| r.split(',').next())
+            .and_then(|r| r.parse::<f64>().ok())
+            .unwrap_or(f64::NAN)
+    };
+    assert_eq!(row(-1.0), 0.0);
+    assert_eq!(row(0.0149), 0.01);
+    assert_eq!(row(0.0151), 0.02);
+    assert_eq!(row(0.03), 0.03);
+    assert_eq!(row(9.0), 0.04);
+}
