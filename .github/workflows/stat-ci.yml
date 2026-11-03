@@ -59,6 +59,8 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = push ]; then
             python3 tools/ci_metrics.py registra-recenti --dati dati/eventi.jsonl --nuovi nuovi-recenti.jsonl --cursore cursore-nuovo.json
             cat nuovi-recenti.jsonl >> nuovi.jsonl
+            python3 tools/ci_metrics.py registra-coda --nuovi nuovi-coda.jsonl
+            cat nuovi-coda.jsonl >> nuovi.jsonl
           fi
       # metrics are best effort: a failed publish must never turn a pull request red
       - name: Publish on stat-ci
