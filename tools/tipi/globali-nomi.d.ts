@@ -759,6 +759,7 @@ declare var ptMs2: any;
 declare var ptNorm: any;
 declare var ptProduct: any;
 declare var ptitle: any;
+declare var ptitleP: any;
 declare var pulisciMenu: any;
 declare var pushCampi: any;
 declare var pushIh: any;

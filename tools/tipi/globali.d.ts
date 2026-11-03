@@ -129,6 +129,7 @@ declare var TBL_HR: any;
 declare var TDATI: any;
 declare var TDATI_P: any;
 declare var TIME_UNITS: any;
+declare var TITOLI: any;
 declare var TOUR: any;
 declare var TPALBERO: any;
 declare var TPBASE: any;

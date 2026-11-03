@@ -111,6 +111,7 @@
     "../../mzlab/web/lettori-modulo.js",
     "../../mzlab/web/valida-mzml.js",
     "../../mzlab/web/barra-spettro.js",
+    "../../mzlab/web/titoli.js",
     "../../mzlab/web/xic-spettro.js",
     "../../mzlab/web/tabella-picchi.js",
     "../../mzlab/web/elementare-pannello.js",
