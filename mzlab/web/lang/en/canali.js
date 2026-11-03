@@ -60,6 +60,7 @@ I18N.add("en", {
   "canali.sim.btn": "Ions",
   "canali.sim.all": "All",
   "canali.sim.extract": "Extract ion",
+  "canali.sim.ion": "ion {n}",
   "canali.tr.extract": "Extract transition",
   "canali.sim.help": "SIM file open: every monitored ion is a channel. Add a graph with «+ SIM ions» and choose the ions, or see every peak in the SIM table.",
   "canali.sim.helpbtn": "Open the SIM table"

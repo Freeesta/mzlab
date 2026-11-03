@@ -218,6 +218,7 @@ I18N.add("en", {
   "mrm.showAll": "Show all files",
   "mrm.showAllAria": "Show all {n} MRM files in the panel",
   "mrm.capNotice": "Showing the first {n} of {t} MRM files.",
+  "mrm.capNoticeSim": "Showing the first {n} of {t} SIM files.",
   "storia.int": "integration",
   "storia.campi": "correction",
   "storia.liscia": "smoothing",

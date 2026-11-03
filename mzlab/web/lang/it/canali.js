@@ -60,6 +60,7 @@ I18N.add("it", {
   "canali.sim.btn": "Ioni",
   "canali.sim.all": "Tutti",
   "canali.sim.extract": "Estrai ione",
+  "canali.sim.ion": "ione {n}",
   "canali.tr.extract": "Estrai transizione",
   "canali.sim.help": "File SIM aperto: ogni ione monitorato è un canale. Aggiungi un grafico con «+ Ioni SIM» e scegli gli ioni, oppure guarda tutti i picchi nella tabella SIM.",
   "canali.sim.helpbtn": "Apri la tabella SIM"

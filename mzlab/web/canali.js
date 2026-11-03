@@ -29,7 +29,7 @@
   const find = (k, omo) => { const c = cached(k); return c && c.canali.find(x => x.omo === omo) || null; };
 
   /** transition key «q1>q3» of an srm channel (the key of the MRM panel) @param {Canale} c */
-  const srmKey = c => c.fam === "sim" || c.id.startsWith("sim:") ? String(+(/Q1=([\d.]+)/.exec(c.id) || [])[1]) : c.id.slice(4).replace(/@.*$/, "");
+  const srmKey = c => c.fam === "sim" || c.id.startsWith("sim:") ? SIMUI.chKey(c.id) : c.id.slice(4).replace(/@.*$/, "");
   /** a row of the MRM picker: a transition (srm) or a SIM ion (sim) @param {Nodo} n */
   const isTr = n => n.fam === "srm" || n.fam === "sim";
   /** the MRM transition of the file that an srm channel names @param {Canale} c @param {any} t */
@@ -109,7 +109,7 @@
     return cx && !cx.hasScan ? t.filter(n => n.fam !== "bpc") : t;
   }
   /** the label of a row: the engine's name, with TIC and BPC in the words of the page; the scan mode (EMS, EPI…) has its own column, so it leaves the name @param {Nodo} n */
-  const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.fam === "srm" ? srmLabel(n.et) : bare(n);
+  const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.fam === "srm" ? srmLabel(n.et) : n.fam === "sim" ? bare(n).replace(/^#(\d+)/, (_, d) => T("canali.sim.ion", { n: d })) : bare(n);
   /** the engine's name without the scan-mode word that the «Experiment» column already shows («MS¹ EMS» → «MS¹») @param {Nodo} n */
   const bare = n => n.sigla ? n.et.split(" ").filter(w => w !== n.sigla).join(" ") || n.et : n.et;
   /** a transition in the notation of the legend, «precursor>product role», from the engine's «MRM q1→q3 @CE «role»» @param {string} et */

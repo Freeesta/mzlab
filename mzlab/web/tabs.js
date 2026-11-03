@@ -168,7 +168,7 @@ function mrmShowAllNotice(/** @type {MzFile[]} */ mfs) {
   const d = document.createElement("div"); d.className = "mrm-all"; d.setAttribute("role", "status");
   const b = document.createElement("button"); b.type = "button"; b.textContent = I18N.t("mrm.showAll"); b.setAttribute("aria-label", I18N.t("mrm.showAllAria", { n: mfs.length }));
   b.addEventListener("click", () => { mfs.forEach(f => { f.vis = true; }); d.remove(); if (typeof renderFileList === "function") renderFileList(); redrawAll(); uiSave(); });
-  d.append(I18N.t("mrm.capNotice", { n: MRM_SHOW_MAX, t: mfs.length }) + " ", b);
+  d.append(I18N.t(window.SIMUI && SIMUI.allSim() ? "mrm.capNoticeSim" : "mrm.capNotice", { n: MRM_SHOW_MAX, t: mfs.length }) + " ", b);
   p.el.insertBefore(d, p.el.firstChild);
 }
 

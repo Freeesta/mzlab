@@ -10,7 +10,11 @@
   /** a file of an experiment made of transitions (no spectra), the engine's «empty» kind (no experiment) and a panel of transitions: read from ESP, never by name */
   const isTr = (/** @type {any} */ f) => ESP.voce(f.kind)?.spettri === false, isNone = (/** @type {any} */ f) => !ESP.voce(f.kind), panelTr = (/** @type {any} */ p) => ESP.mrm(p), tabTr = (/** @type {any} */ p) => ESP.voce(p.tab)?.spettri === false;
   const keyOf = (/** @type {number} */ k) => `${k}|${E.files[k] ? E.files[k].file : ""}`;
-  const trKey = (/** @type {{q1?: any, q3?: any}} */ t) => t.q3 == null ? String(t.q1) : `${t.q1}>${t.q3}`;
+  const trKey = (/** @type {{q1?: any, q3?: any, idx?: number}} */ t) => t.q3 == null ? (t.q1 == null ? `i${t.idx}` : String(t.q1)) : `${t.q1}>${t.q3}`;
+  /** the key of a SIM channel from its id: the Q1 m/z, or «i<N>» (its place in the experiment) when the reader gave no Q1 @param {string} id */
+  const chKey = id => { const q = /Q1=([\d.]+)/.exec(id), t = /transition=(\d+)/.exec(id); return q ? String(+q[1]) : t ? `i${t[1]}` : ""; };
+  /** what a key is called to the user: the m/z, or «ione N» for a channel without Q1 @param {string} key */
+  const label = key => /^i\d+$/.test(key) ? I18N.t("canali.sim.ion", { n: +key.slice(1) + 1 }) : key;
 
   /** the number of SIM ions of a file of the session or of a row of the file table (0: not a SIM file) @param {any} f */
   const n = f => {
@@ -30,7 +34,7 @@
         ions = tr.map((/** @type {any} */ t) => ({ key: trKey(t), name: t.name || "", sim: t.q3 == null }));
         if (!ions.length) {
           const c = await CANALI.canali(f.k);
-          ions = c.canali.filter((/** @type {any} */ x) => x.fam === "sim").map((/** @type {any} */ x) => ({ key: String(+(/Q1=([\d.]+)/.exec(x.id) || [])[1]), name: "", sim: true }));
+          ions = c.canali.filter((/** @type {any} */ x) => x.fam === "sim").map((/** @type {any} */ x) => ({ key: chKey(x.id), name: "", sim: true }));
         }
       } catch (e) { return; }
       LIST.set(keyOf(f.k), ions);
@@ -77,7 +81,7 @@
     };
     const out = [{ nome: T("canali.sim.all"), check: cur.size === all.length && all.length > 0, esegui: () => set(all.map(x => x.key)), aria: T("canali.sim.all") }];
     all.forEach((x, i) => out.push({
-      nome: x.name ? `${x.key} ${x.name}` : x.key, color: color(x.key), check: cur.has(x.key), aria: x.key + (x.name ? " " + x.name : ""),
+      nome: x.name ? `${label(x.key)} ${x.name}` : label(x.key), color: color(x.key), check: cur.has(x.key), aria: label(x.key) + (x.name ? " " + x.name : ""),
       // @ts-ignore the event comes from the menu
       esegui: (/** @type {MouseEvent | undefined} */ ev) => {
         const multi = panelTr(p) && ev && (ev.ctrlKey || ev.metaKey), range = panelTr(p) && ev && ev.shiftKey;
@@ -91,6 +95,13 @@
       keep: (/** @type {MouseEvent | undefined} */ ev) => !!(ev && panelTr(p) && (ev.ctrlKey || ev.metaKey || ev.shiftKey)),
     }));
     return out;
+  }
+
+  /** the transition table of the «Method» panel of a SIM sample: name, Q1 and dwell only (a SIM ion has no Q3 or collision energy), «—» for a value the file does not give; null for an MRM table @param {any[]} tr */
+  function methodTable(tr) {
+    if (!tr.length || !tr.every(t => t.q3 == null)) return null;
+    const v = (/** @type {any} */ x) => x == null || x === "" ? "—" : String(x);
+    return h`<table><tr><th>${I18N.t("method.tr.name")}</th><th class="num">Q1 (m/z)</th><th class="num">Dwell (ms)</th></tr>${raw(tr.map(t => h`<tr><td>${t.name || "—"}</td><td class="num">${v(t.q1)}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : "—"}</td></tr>`).join(""))}</table>`;
   }
 
   /** the panel draws the area under the traces (a tint of the line colour): MRM and SIM overlays, on by default @param {any} p */
@@ -146,5 +157,5 @@
   AZIONI.registra({ id: "mrm.estrai", gruppo: "xic", viste: ["chrom", "mrm"], visibile: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     nome: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), sotto: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { cell, button, fill, areaOf, areaBtn, syncArea, wireArea, help, n, mark, filesOf, panelSim, allSim, ions, colorIdx, color, rows, area, trKey };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, help, n, mark, filesOf, panelSim, allSim, ions, colorIdx, color, rows, area, trKey };
 })();
