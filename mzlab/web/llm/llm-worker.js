@@ -3,12 +3,24 @@
 // Worker of the assistant (module worker): loads the Rust module `wasm-feat/llm/` (manifest, SHA-256 checked) on the first message and only then. Builds each request and decodes
 // each answer with it; the bytes travel over a MessagePort to/from the iframe `llm/trasporto.html`, which owns the key. The transport `replay` answers from a recording and never uses the iframe.
 // Page -> worker: init, port, request, send (a conversation, or a ready `request` of a subagent), abort, assist.files, assist.on, assist.request, assist.check, assist.readers, assist.state, assist.reading, sub.replay, replay.load, replay.reset, chart.views, chart.make, chart.presets (charts: grafico/1, docs/agenti/llm.md), inspect.build, params.propose (the facts without a model: ispezione/1, proposta-param/1), agent.new, agent.in (the loop of the assistant: llm-agente.js). Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.
+// The provider of the public demo (`mzlab-demo`): its conversations use the demo catalog `strumenti-demo-1.json`, and each of its requests leaves through `demo_send` of Rust (the host of
+// proxy-host.js in place of the placeholder, the session headers); with an empty host nothing leaves.
+import { PROXY_HOST } from "./proxy-host.js";
 /** @typedef {{request: (conv: string) => string, replay_load: (text: string, strict: boolean) => number, replay_respond: (conv: string) => string, replay_reset: () => void}} Llm */
 /** @typedef {{push: (b: Uint8Array) => string, finish: () => string}} Dec */
 
 /** @type {any} */ let mod = null;
 /** @type {Llm | null} */ let llm = null;
 let toolsText = "";
+const DEMO = "mzlab-demo";
+/** the demo catalog and its builder, fetched on the first conversation of the demo @type {Promise<{text: string, llm: Llm}> | null} */
+let demoTools = null;
+const loadDemo = () => demoTools || (demoTools = (async () => {
+  const r = await fetch(new URL("strumenti-demo-1.json", import.meta.url));
+  if (!r.ok) throw { key: "err.llm.module", params: { reason: "tools" } };
+  const text = await r.text();
+  return { text, llm: new mod.Llm(text) };
+})().catch(e => { demoTools = null; throw e; }));
 /** @type {any} */ let agent = null;
 /** the readers of the subagents (`Assist` of the module), created by `assist.on` @type {any} */ let assist = null;
 /** @type {MessagePort | null} */ let port = null;
@@ -62,8 +74,10 @@ const send = async m => {
   if (!port) throw { key: "err.llm.network", params: { reason: "noport" } };
   // a call of a subagent comes as a request already built by Rust (`Assist.request`); a conversation is built here
   const conv = m.request ? m : JSON.parse(m.conv);
+  let req = m.request ? m.request : (conv.provider === DEMO ? (await loadDemo()).llm : llm).request(m.conv);
+  if (conv.provider === DEMO) req = mod.demo_send(req, DEMO, PROXY_HOST, m.demo && m.demo.session || "", m.demo && m.demo.owner || "");
   live.set(m.id, { dec: new mod.LlmStream(conv.provider, conv.model), status: 0, body: [] });
-  port.postMessage({ t: "send", id: m.id, request: m.request ? JSON.parse(m.request) : JSON.parse(llm.request(m.conv)) });
+  port.postMessage({ t: "send", id: m.id, request: JSON.parse(req) });
 };
 
 /** the iframe's side of a call: head (status), chunk (bytes), end, fail @param {MessageEvent} ev */
@@ -128,7 +142,7 @@ onmessage = async ev => {
     else if (m.op === "params.propose") postMessage({ id: m.id, ok: true, proposal: mod.params_propose(m.inspection, m.answers || "", m.steps) });
     else if (m.op === "chart.presets") postMessage({ id: m.id, ok: true, charts: mod.chart_presets(m.sources) });
     else if (m.op === "agent.new") {
-      agent = new mod.Agent(toolsText, m.provider, m.model, m.level, !!m.research);
+      agent = new mod.Agent(m.provider === DEMO ? (await loadDemo()).text : toolsText, m.provider, m.model, m.level, !!m.research);
       if (m.replay) agent.replay_load(m.replay, !!m.strict);
       postMessage({ id: m.id, ok: true });
     } else if (m.op === "agent.in") postMessage({ id: m.id, ok: true, ...agentIn(m) });

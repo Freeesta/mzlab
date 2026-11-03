@@ -1,0 +1,2706 @@
+{
+  "schema":"strumenti/1",
+  "tools":[
+    {
+      "name":"flow_list_steps",
+      "class":"read",
+      "description":"List the steps of the Flow registry: id, title, ports, where each runs and whether it runs natively.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{},
+        "required":[],
+        "x-executable-native":[
+          "annot.level",
+          "annot.regulatory",
+          "chrom.transitions",
+          "chrom.uv_peaks",
+          "convert.mzml",
+          "export.annotations",
+          "export.inclusion",
+          "export.mztab",
+          "export.table_csv",
+          "features.align",
+          "features.detect",
+          "features.estimate",
+          "features.gapfill",
+          "features.table",
+          "formula.ms1",
+          "formula.ms2",
+          "import.raw",
+          "index.mzidx",
+          "meta.compare",
+          "msn.figure",
+          "msn.library_export",
+          "msn.table_export",
+          "qc.mass_accuracy",
+          "qc.run_order",
+          "quant.calibrate",
+          "report.methods",
+          "rt.predict",
+          "screen.suspects",
+          "spectra.centroid",
+          "spectra.chimeric",
+          "spectra.insilico",
+          "spectra.lookup",
+          "spectra.match",
+          "spectra.ms2",
+          "spectra.msn_graph",
+          "structure.reactivity",
+          "structure.render",
+          "table.drift",
+          "table.filter",
+          "table.kmd",
+          "table.match",
+          "table.pca",
+          "table.plausible",
+          "table.stats",
+          "tp.dig_lr",
+          "tp.filter",
+          "tp.generate",
+          "tp.link",
+          "tp.network",
+          "tp.position",
+          "tp.review"
+        ]
+      }
+    },
+    {
+      "name":"flow_describe_step",
+      "class":"read",
+      "description":"Describe one step: parameters, algorithms, presets and references.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "step":{
+            "enum":[
+              "annot.hazard@1",
+              "annot.level@1",
+              "annot.regulatory@1",
+              "chrom.transitions@1",
+              "chrom.uv_peaks@1",
+              "convert.mzml@1",
+              "export.annotations@1",
+              "export.inclusion@1",
+              "export.mztab@1",
+              "export.table_csv@1",
+              "features.align@1",
+              "features.detect@1",
+              "features.estimate@1",
+              "features.gapfill@1",
+              "features.ms2_link@1",
+              "features.table@1",
+              "formula.ms1@1",
+              "formula.ms2@1",
+              "import.raw@1",
+              "index.mzidx@1",
+              "meta.compare@1",
+              "msn.figure@1",
+              "msn.library_export@1",
+              "msn.table_export@1",
+              "qc.mass_accuracy@1",
+              "qc.run_order@1",
+              "quant.calibrate@1",
+              "report.methods@1",
+              "rt.predict@1",
+              "screen.suspects@1",
+              "spectra.centroid@1",
+              "spectra.chimeric@1",
+              "spectra.insilico@1",
+              "spectra.lookup@1",
+              "spectra.match@1",
+              "spectra.ms2@1",
+              "spectra.msn_graph@2",
+              "structure.draw@1",
+              "structure.reactivity@1",
+              "structure.render@1",
+              "table.drift@1",
+              "table.filter@1",
+              "table.kmd@1",
+              "table.match@1",
+              "table.pca@1",
+              "table.plausible@1",
+              "table.stats@1",
+              "tp.dig_lr@1",
+              "tp.filter@2",
+              "tp.generate@1",
+              "tp.link@2",
+              "tp.network@1",
+              "tp.position@1",
+              "tp.review@1"
+            ]
+          }
+        },
+        "required":["step"]
+      }
+    },
+    {
+      "name":"flow_get_plan",
+      "class":"read",
+      "description":"Return the current plan in canonical form with its problems.",
+      "input_schema":{"type":"object","additionalProperties":false,"properties":{},"required":[]}
+    },
+    {
+      "name":"flow_check",
+      "class":"read",
+      "description":"Check a proposed plan and return its problems.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{"plan":{"type":"object","description":"A plan mzflow/2."}},
+        "required":["plan"]
+      }
+    },
+    {
+      "name":"flow_propose_plan",
+      "class":"propose",
+      "description":"Propose a whole plan, shown to the user as a proposal.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "plan":{"type":"object","description":"A plan mzflow/2."},
+          "note":{"type":"string","description":"Why this plan."}
+        },
+        "required":["plan"]
+      }
+    },
+    {
+      "name":"flow_set_param",
+      "class":"edit",
+      "description":"Set a parameter of a step instance; the value follows the schema of the parameter.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "instance":{"type":"string","description":"Instance id in the plan."},
+          "step":{"type":"string"},
+          "name":{"type":"string"},
+          "value":{}
+        },
+        "required":["instance"],
+        "oneOf":[
+          {
+            "properties":{"step":{"const":"annot.hazard@1"},"name":{"enum":["algorithm"]},"value":{"enum":["tiers"]}},
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"annot.level@1"},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "spec_sim_min",
+                  "spec_peaks_min",
+                  "library_conflict",
+                  "library_conflict_margin",
+                  "gnps_mass_tol_ppm",
+                  "mzlib_mass_tol_ppm",
+                  "cosmic_min",
+                  "canopus_min",
+                  "rt_group_tol_min",
+                  "putative_library_level3",
+                  "std_rt_max",
+                  "std_score_min",
+                  "std_ppm_max",
+                  "suspect_fragments_min"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["cascade"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.7,
+                    "description":"Cosine of a library match, every spectral-library source"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":4,
+                    "description":"Shared fragment ions of a library match, every library (SIRIUS, GNPS2, mzMine)"
+                  },
+                  {
+                    "enum":["best_match","level3"],
+                    "default":"best_match",
+                    "description":"best_match: the libraries are one library; level3: sources naming different structures give Level 3"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.05,
+                    "description":"The best match keeps Level 2a only if its cosine exceeds the best match of a different structure by this much"
+                  },
+                  {"type":"number","minimum":0,"default":15,"description":"GNPS mass tolerance"},
+                  {"type":"number","minimum":0,"default":15,"description":"Library mass tolerance"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.64,
+                    "description":"Confidence of the Level 3 gate; 0.64 is the threshold of the COSMIC paper, roughly an FDR of 10 %, a practical guide and no guarantee"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.7,
+                    "description":"A CANOPUS class is shown, as an annotation of its own that gives no level, at or above this probability"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Features of one identity farther apart in RT (consecutive) are different peaks"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Library entries named Spectral Match to ... (propagated annotations) are taken to Level 3"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Level 1: the feature RT is within this of the RT of the standard you gave"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.7,
+                    "description":"Level 1: the MS2 score (entropy similarity, or cosine for a cosine hit) of the hit on the standard"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Level 1: the precursor of the hit on the standard"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":2,
+                    "description":"Level 3a: at least this many fragments listed for a suspect are found in the feature MS2"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"annot.regulatory@1"},
+              "name":{"enum":["algorithm","window","lists","include"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["list_membership","suspect_screen","ms2_confirm"]},
+                  {
+                    "type":"array",
+                    "items":{"type":"number","minimum":0},
+                    "minItems":2,
+                    "maxItems":2,
+                    "description":"Entries of the lists outside this range of monoisotopic mass are left out; absent: all the entries"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Ids of the lists to compare, comma-separated; empty: every list in force"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Statuses added to the lists in force: proposal, draft, reference; empty: none"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"chrom.transitions@1"},
+              "name":{
+                "enum":[
+                  "preset",
+                  "transitions",
+                  "output",
+                  "mz_tol",
+                  "rt_window",
+                  "snr_min",
+                  "smooth",
+                  "min_points",
+                  "max_candidates",
+                  "group_rt"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["example_1"]},
+                  {
+                    "type":"string",
+                    "description":"CSV with the header name;q1;q3;polarity;rt;rt_window;isomer_group;note;formula;adduct: q3 empty for a SIM ion, q1 empty to take it from formula and adduct ([M+H]+ or [M-H]- by polarity), rt empty when not known yet"
+                  },
+                  {
+                    "enum":["peaks","table","candidates"],
+                    "default":"peaks",
+                    "description":"peaks: one row per file and table row; table: one row per table row with the area and apex RT of each file; candidates: the peaks of the rows without an RT"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"A chromatogram belongs to a row when its Q1 (and Q3) are within this of the row's"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.3,
+                    "description":"The peak is searched in RT plus and minus this when the row writes no window"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"A peak under this signal-to-noise is reported as no_peak"
+                  },
+                  {
+                    "enum":[1,3,5],
+                    "default":3,
+                    "description":"1 = none, 3 = 1-2-1, 5 = 1-4-6-4-1 before the apex and the edges are found"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":3,
+                    "description":"A peak with fewer points above 5 % of its height is reported as no_peak"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":5,
+                    "description":"Most candidate peaks taken from the trace of each file (candidates output)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"Candidate apexes of different files closer than this are one candidate (candidates output)"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"chrom.uv_peaks@1"},
+              "name":{"enum":["wavelength_nm","band_nm","broad","broad_min_s","broad_max_s","broad_snr"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":254,
+                    "description":"The trace is the matrix at this wavelength; the nearest column when none is inside the band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":4,
+                    "description":"The columns within half of this around the wavelength are averaged"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also look for bands too wide for the narrow peak finder"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":30,
+                    "description":"Smallest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":300,
+                    "description":"Largest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":8,
+                    "description":"Smallest height of a band over its bridge, in noise units"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"convert.mzml@1"},
+              "name":{"enum":["peaks","zlib_level","numpress","dad"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["file","profile","mzlab"],
+                    "default":"file",
+                    "description":"file: the points the file holds (the centroids of the maker where it has them, else the profile, which the next step reduces to peaks and the run reports); profile: the profile points of the file, an error where it has none; mzlab: our own centroids, with parameters estimated on the sample and written in the mzML (MS:1000035)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "maximum":9,
+                    "default":2,
+                    "description":"zlib level of the binary arrays, 0 (none) to 9 (smallest)"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Lossy MS-Numpress linear prediction of m/z and short logged float of intensities, smaller files"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also write the UV / PDA matrix of the sample as MS:1000804 spectra (one per instant, wavelengths in nm) after the scans; off: the file is the one written without the option"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"export.annotations@1"},
+              "name":{"enum":["top_per_method","min_level","separator"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"The most candidates written for each feature and method, best first by the score of that method"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only features whose annot.level decision is at this level or better are written, for example 3a (order 1, 2a, 2b, 3a, 3b, 4, 5, 0); left empty every feature is written"
+                  },
+                  {
+                    "enum":["comma","semicolon"],
+                    "default":"comma",
+                    "description":"comma: the usual CSV; semicolon: for spreadsheets with a decimal comma"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"export.inclusion@1"},
+              "name":{"enum":["adducts","rt_window"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"string",
+                    "description":"Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct; left empty it is [M-H]- for products linked in negative mode and [M+H]+ otherwise"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"Each row spans the expected RT of the product plus and minus this; the start is never below 0"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"export.table_csv@1"},
+              "name":{"enum":["kind"]},
+              "value":{
+                "enum":["full","full_mzmine","quant","csv_semicolon"],
+                "default":"full",
+                "description":"full: one row per feature with the summaries; full_mzmine: the same with the words of mzmine for the filled and targeted cells; quant: the areas for FBMN; csv_semicolon: the sheet of features with ;"
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.align@1"},
+              "name":{
+                "enum":[
+                  "mode",
+                  "ppm",
+                  "tol_da",
+                  "rt_gap",
+                  "max_ppm_span",
+                  "drop_artefacts",
+                  "split_gap",
+                  "rt_warp",
+                  "rt_coarse_gap",
+                  "rt_span",
+                  "rt_inlier",
+                  "rt_seed",
+                  "weak_files",
+                  "link_rt",
+                  "max_span",
+                  "min_dependent"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["family","ion"],
+                    "default":"family",
+                    "description":"One row per family of ions (isotopologues, adducts, in-source fragments) or one per ion"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"At unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"Largest gap of RT between neighbouring features of one row"
+                  },
+                  {"type":"number","minimum":0,"default":10,"description":"Largest m/z span"},
+                  {"type":"boolean","default":true,"description":"Drop artefacts"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.03,
+                    "description":"A row with two features of one file (close isomers) is cut at the RT gaps above this"
+                  },
+                  {
+                    "enum":["off","piecewise","loess","ransac"],
+                    "default":"off",
+                    "description":"Brings the RT of every file to a common one before the features are grouped, from anchors (peaks every file shows) found by a coarse alignment: piecewise (medians by blocks), loess (local regression), ransac (a line robust to wrong anchors); off: the RT as the files give it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"RT gap of the coarse alignment that finds the anchors, and the widest spread of an anchor over the files: the drift between files the correction can follow"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"Fraction of the anchors each local fit takes (loess)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.05,
+                    "description":"Largest distance of an anchor from the line to agree with it (ransac)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Seed of the random samples of the line (ransac); the same seed gives the same correction"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Family mode: largest RT distance between an ion and the root of its family in one file for the two rows to be joined"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"Family mode: largest RT span of the groups joined in one row"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":1,
+                    "description":"Family mode: an ion that is mostly the base of its own family joins a family only if it follows its root in this many files"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.detect@1"},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "preset",
+                  "polarity",
+                  "floor",
+                  "min_height",
+                  "axis",
+                  "rt_range",
+                  "mass_defect",
+                  "min_points",
+                  "max_gap",
+                  "long_trace",
+                  "merge_overlap",
+                  "budget",
+                  "min_width",
+                  "min_snr",
+                  "ppm",
+                  "peak_width_s",
+                  "snr",
+                  "broad_peaks",
+                  "smooth"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["masstrace","centwave","threshold"]},
+                  {"enum":["hr","lr"]},
+                  {"enum":[1,-1,0],"default":1,"description":"1 positive, -1 negative, 0 all MS1 scans"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":20000,
+                    "description":"Points below are ignored; left empty, it is estimated from the intensity histogram"
+                  },
+                  {"type":"number","minimum":0,"default":200000,"description":"Minimum height"},
+                  {"enum":["ppm","Da"],"default":"ppm","description":"m/z axis"},
+                  {
+                    "type":"array",
+                    "items":{"type":"number","minimum":0},
+                    "minItems":2,
+                    "maxItems":2,
+                    "description":"Optional [min, max]: only rows eluting inside are kept, for every file; left empty, all rows"
+                  },
+                  {
+                    "type":"number",
+                    "description":"Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty"
+                  },
+                  {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
+                  {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":400,
+                    "description":"A trace longer than this is background and is not taken"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0,
+                    "description":"Rows within the mass tolerance are one ion when their scans overlap by this share of the shorter trace"
+                  },
+                  {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Drops features narrower than this share of the typical peak width of the file; 0 = off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
+                  },
+                  {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
+                  {
+                    "type":"array",
+                    "items":{"type":"number","minimum":0},
+                    "minItems":2,
+                    "maxItems":2,
+                    "default":[5,30],
+                    "description":"Peak width"
+                  },
+                  {"type":"number","minimum":0,"default":10,"description":"Signal to noise"},
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"
+                  },
+                  {"type":"integer","minimum":1,"default":5,"description":"Smoothing window"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.estimate@1"},
+              "name":{"enum":["polarity","axis"]},
+              "value":{
+                "anyOf":[
+                  {"enum":[1,-1,0],"default":1,"description":"1 positive, -1 negative, 0 all MS1 scans"},
+                  {"enum":["ppm","Da"],"default":"ppm","description":"m/z axis"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.gapfill@1"},
+              "name":{"enum":["floor","ppm","tol_da","rt_tol","min_points","max_gap","long_trace"]},
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":0,"default":20000,"description":"Noise floor"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"At unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
+                  },
+                  {"type":"number","minimum":0,"default":0.1,"description":"Half width added to the window of RT"},
+                  {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
+                  {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":400,
+                    "description":"A trace longer than this is background and is not taken"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.ms2_link@1"},
+              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.6,
+                    "description":"Used when the index records no isolation window; the peak is then marked as estimated"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":6,
+                    "description":"Window of the peak in the MS1 scan of the precursor; at unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"Purity below which an MS2 is weak evidence; it is not dropped"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.table@1"},
+              "name":{"enum":["polarity","mode","floor","min_height","min_points","ppm","rt_tol"]},
+              "value":{
+                "anyOf":[
+                  {"enum":[-1,1],"description":"Polarity"},
+                  {"enum":["family","ion"],"description":"Grouping"},
+                  {"type":"number","minimum":0,"description":"Noise floor"},
+                  {"type":"number","minimum":0,"description":"Minimum height"},
+                  {"type":"integer","minimum":1,"description":"Minimum points"},
+                  {"type":"number","minimum":0,"description":"m/z tolerance"},
+                  {"type":"number","minimum":0,"description":"RT tolerance"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"formula.ms1@1"},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "ion",
+                  "z",
+                  "tol_ppm",
+                  "elements",
+                  "nitrogen",
+                  "rdb_min",
+                  "max_results",
+                  "max_charge",
+                  "require_c13"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["compose_isotopes"]},
+                  {
+                    "enum":["[M+H]+","[M+NH4]+","[M+Na]+","[M+K]+","[M-H]-","[M+Cl]-","[M+HCOO]-","M+.","M-.","[M]+","[M]-"],
+                    "default":"[M+H]+",
+                    "description":"Ion"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "description":"Absent: the isotope finder decides, and 1 when it finds no pattern; above 1 the formulas are those of the ion itself"
+                  },
+                  {"type":"number","minimum":0,"default":5,"description":"m/z tolerance"},
+                  {
+                    "type":"string",
+                    "description":"Ranges as C:0-50,H:0-100. Absent: C:0-50,H:0-100,N:0-8,O:0-15,P:0-2,S:0-3 plus the heavy elements the finder sees in the spectrum; the text given is searched as written"
+                  },
+                  {"enum":["none","odd","even"],"default":"none","description":"Nitrogen rule"},
+                  {"type":"number","default":0,"description":"Smallest RDB"},
+                  {"type":"integer","minimum":1,"default":10,"description":"Formulas kept"},
+                  {"type":"integer","minimum":1,"default":3,"description":"Charges the isotope finder looks at"},
+                  {
+                    "type":"boolean",
+                    "default":true,
+                    "description":"The isotope finder accepts a pattern only with the 13C peak"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"formula.ms2@1"},
+              "name":{"enum":["algorithm","ppm_ion","ppm_frag","max_subformulas"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["subformula","h_rearrangement"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Precursor against the ion of the formula, the adduct with the smallest error of the polarity"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Fragment against a sub-formula of the ion (the MS2 tolerance of SIRIUS)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":3000000,
+                    "description":"Above this many sub-formulas the table is not built"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"index.mzidx@1"},
+              "name":{"enum":["budget"]},
+              "value":{
+                "type":"integer",
+                "minimum":1,
+                "default":67108864,
+                "description":"Bytes of peaks held in memory while the index is built; the rest goes to a scratch file and the bytes of the index do not change"
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"meta.compare@1"},
+              "name":{"enum":["step","labels","mz_tolerance_ppm","mz_tolerance_da","rt_tolerance_min"]},
+              "value":{
+                "anyOf":[
+                  {"type":"string","description":"Wrapped step"},
+                  {
+                    "type":"string",
+                    "description":"Labels of the variants, comma separated, in the order of the inputs"
+                  },
+                  {"type":"number","minimum":0,"description":"m/z tolerance (ppm)"},
+                  {"type":"number","minimum":0,"description":"m/z tolerance (unit resolution, Da)"},
+                  {"type":"number","minimum":0,"description":"RT tolerance (min)"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"msn.figure@1"},
+              "name":{"enum":["format","view"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["svg","html","png"],
+                    "default":"svg",
+                    "description":"svg: the static figure, colours written in the file; html: one file with no external resource, two views, data table and downloads; png: the SVG rasterised (only in a build with the cargo feature `png`)"
+                  },
+                  {
+                    "enum":["tree","radial"],
+                    "default":"tree",
+                    "description":"tree: columns by MS level; radial: the precursor in the centre, one ring per step of the best path (the HTML has both and opens on this one)"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"msn.library_export@1"},
+              "name":{"enum":["format","levels","clean","annotate","id"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["msp","massbank"],
+                    "default":"msp",
+                    "description":"MSP, or MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)"
+                  },
+                  {
+                    "enum":["all","ms2"],
+                    "default":"all",
+                    "description":"all: one record per spectrum of the tree, MS2 and deeper; ms2: only the spectra of the first fragmentation"
+                  },
+                  {"type":"boolean","default":false,"description":"Keep only the peaks a node of the graph explains"},
+                  {
+                    "type":"boolean",
+                    "default":true,
+                    "description":"Write the sub-formula of each explained peak and the neutral loss from its precursor (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT)"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Name of the records; empty = the formula of the ion of the root, or MSN"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"msn.table_export@1"},
+              "name":{"enum":["view","clean"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["modifications","nodes","peaks"],
+                    "default":"modifications",
+                    "description":"modifications: one row per neutral loss between two ions of the tree (mass, formula, ppm, measures); nodes: one row per ion with its proposed sub-formula; peaks: one row per peak of every spectrum with its node"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"peaks table only: keep the peaks a node of the graph explains"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"qc.mass_accuracy@1"},
+              "name":{
+                "enum":[
+                  "search_ppm",
+                  "min_intensity",
+                  "min_refs",
+                  "robust",
+                  "model",
+                  "warn_offset_ppm",
+                  "warn_spread_ppm",
+                  "warn_is_rt_min",
+                  "warn_is_area_rsd"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":1,"default":20,"description":"Search window around each reference ion"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10000,
+                    "description":"Lowest peak intensity taken for a reference"
+                  },
+                  {"type":"integer","minimum":1,"default":5,"description":"References a file needs to be assessed"},
+                  {
+                    "enum":["huber","ransac","none"],
+                    "default":"huber",
+                    "description":"How outlying references are handled"
+                  },
+                  {
+                    "enum":["none","offset","linear_mz","linear_mz_rt"],
+                    "default":"none",
+                    "description":"Correction of the table m/z"
+                  },
+                  {"type":"number","minimum":0,"default":3,"description":"Offset above which the file is flagged"},
+                  {"type":"number","minimum":0,"default":2,"description":"Spread above which the file is flagged"},
+                  {"type":"number","minimum":0,"default":0.1,"description":"RT shift limit of internal standards"},
+                  {"type":"number","minimum":0,"default":0.2,"description":"Area spread limit of internal standards"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"qc.run_order@1"},
+              "name":{"enum":["qc_every_max","std_levels_min","blank_per_batch"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"A gap of more injections between two QC files of the same batch is reported; the gap is the difference of their injection positions"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":2,
+                    "description":"A batch whose standards and calibration files have fewer distinct concentrations is reported; 0 turns the check off"
+                  },
+                  {"type":"boolean","default":true,"description":"Report a batch without a blank file"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"quant.calibrate@1"},
+              "name":{"enum":["mz_tol","rt_tol","signal","kinds"]},
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":0,"default":0.5,"description":"m/z tolerance to match a curve to a row"},
+                  {"type":"number","minimum":0,"default":0.3,"description":"RT tolerance to match a curve to a row"},
+                  {"enum":["area","height"],"default":"area","description":"Signal the curve was made with"},
+                  {"type":"string","default":"sample","description":"Sample types to quantify, comma separated"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"report.methods@1"},
+              "name":{"enum":["style"]},
+              "value":{
+                "enum":["paragraph","list"],
+                "default":"paragraph",
+                "description":"paragraph: one English paragraph per step; list: one bullet per step with every parameter"
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"rt.predict@1"},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "parent",
+                  "parent_rt",
+                  "polarity_margin",
+                  "rt_margin",
+                  "order",
+                  "drop_outside",
+                  "rt_logp_k",
+                  "rt_logp_floor",
+                  "lc_dwell_min",
+                  "lc_gradient",
+                  "rt_logp_terms",
+                  "seed"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["logp_window","forest"]},
+                  {
+                    "type":"string",
+                    "description":"SMILES of the parent compound: each candidate then gets delta_logp (Crippen) against it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"With a parent: the direction of the RT change (rt_dir) and whether it agrees with delta_logp (rt_dir_agrees)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.3,
+                    "description":"A change of logP within this margin gives no direction"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"A change of RT within this margin gives no direction"
+                  },
+                  {
+                    "enum":["none","residual"],
+                    "default":"none",
+                    "description":"residual: within each query the candidates with the smallest |residual| first; a candidate without a prediction last"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: the candidates whose RT falls outside the window are removed (logp_window only)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"Prediction window = plus or minus this many times the residual MAD"
+                  },
+                  {"type":"number","minimum":0,"default":0,"description":"0 = 3 %B with a gradient, 1.0 min without"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Dwell volume over flow, used with the gradient: the compound is taken to meet the %B of the gradient this long before its RT"
+                  },
+                  {
+                    "type":"string",
+                    "description":"The %B profile as t:%B pairs separated by semicolons (minutes, ascending), e.g. 0:5;10:95;12:95. Given: the window is fitted on the largest %B met, so rt_pred, rt_resid and the window are in %B (rt_unit) and the floor 0 means 3 %B; empty: the fit is on the RT in minutes"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: the check also writes its residual as a sum of named terms (observed value, intercept, one term per descriptor) and the key of its formula in the Theory; the residual itself does not change"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":42,
+                    "description":"Seed of the bootstrap; 100 trees over a 2048-bit fingerprint of radius 2 (N_TREES, N_BITS)"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"screen.suspects@1"},
+              "name":{
+                "enum":[
+                  "ppm",
+                  "adducts",
+                  "rt_window_min",
+                  "min_fragments",
+                  "max_hits_per_feature",
+                  "lists",
+                  "include",
+                  "ms2_rt_min"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":0,"default":5,"description":"Mass tolerance"},
+                  {
+                    "type":"string",
+                    "default":"[M+H]+,[M+NH4]+,[M+Na]+,[M-H]-,[M+Cl]-",
+                    "description":"Comma-separated; the ones of the polarity of the table are searched"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Drops a candidate whose listed RT is farther than this from the feature; off when empty"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "description":"Keeps a candidate only if this many of its listed fragments are in the MS2; off when empty"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"Most formula groups kept per feature, the closest in mass first"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Ids of the lists of a regulatory package to screen, comma-separated; empty: every list in force"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Statuses added to the lists in force: proposal, draft, reference; empty: none"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Without feature ids in the spectra: largest RT distance between a scan and the feature"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.centroid@1"},
+              "name":{"enum":["fwhm","threshold"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"FWHM of a peak; left out, it is measured on the isolated peaks of the file"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"A peak is kept when it stands this many sigma over the background (Poisson Z for counts); left out, the value of the mode of the file"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.chimeric@1"},
+              "name":{"enum":["algorithm","purity_min","window","rt_tol","chim_rel","chim_cap","tol_da","min_share"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["purity_flag","intruders","ms1_window","library_deconvolution"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.8,
+                    "description":"A spectrum whose purity is lower is flagged CHIMERIC=true (the same limit as tp.link); PURITY_BAND is low under 0.5, medium up to this limit and high above"
+                  },
+                  {
+                    "anyOf":[
+                      {
+                        "type":"number",
+                        "minimum":0,
+                        "description":"Absent: the instrument of the campaign decides, 3.0 for a Fusion and 1.5 for the others (default_window); a feature is co-isolated within half of it"
+                      },
+                      {
+                        "type":"number",
+                        "minimum":0,
+                        "description":"Absent: the instrument of the campaign decides (default_window); library spectra whose precursor lies within half of it are candidates"
+                      }
+                    ]
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"Features of the same polarity farther apart in RT are not co-isolated"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.1,
+                    "description":"An ion of the MS1 isolation window this large against the precursor peak is listed as co-isolated"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"A co-isolated ion this large caps the proposal of the review (propose.rs); the level stays the chemist's"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.02,
+                    "description":"A library peak explains a peak of the spectrum within this distance"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.05,
+                    "description":"A library spectrum that explains less of the spectrum than this is not listed"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.insilico@1"},
+              "name":{"enum":["algorithm","db_ppm","frag_ppm","max_bonds","top","score_terms"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["fragmenter"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Candidates within this of the neutral mass of the precursor"
+                  },
+                  {"type":"number","minimum":0,"default":10,"description":"Fragment tolerance"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":200,
+                    "description":"A candidate is broken bond by bond up to this many bonds"
+                  },
+                  {"type":"integer","minimum":1,"default":5,"description":"Candidates kept"},
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: every candidate also carries score_terms, its score as the share of each explained peak and the key of its formula in the Theory; the scores themselves do not change"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.lookup@1"},
+              "name":{"enum":["by","value","exact","ppm","top_n"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["name","formula","inchikey","accession","precursor_mz"],
+                    "default":"name",
+                    "description":"The field of the library entries that value is compared with; precursor_mz takes a number and the window ppm"
+                  },
+                  {"type":"string","description":"The text to find (for precursor_mz, the m/z); required"},
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"By name: the name must be the whole value, not only contain it (any case); the other fields are always compared whole"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"By precursor_mz: the entries whose precursor is this close to the value"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":50,
+                    "description":"The first entries in the order of the library; the rest are not written"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.match@1"},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "tol_da",
+                  "tol_ppm",
+                  "precursor_ppm",
+                  "precursor_da",
+                  "name_contains",
+                  "rt_tol",
+                  "adduct_contains",
+                  "instrument_contains",
+                  "ce_contains",
+                  "top_n",
+                  "decoys",
+                  "matched_peaks",
+                  "score_terms",
+                  "min_score",
+                  "min_shared",
+                  "analog_window_da",
+                  "analog_prefilter",
+                  "analog_min_shift_da",
+                  "exact_ppm",
+                  "delta_formula_mda",
+                  "min_prove",
+                  "tree_output"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["spectral_entropy","cosine","modified_cosine","tree"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Fragment matching between spectra, the GNPS convention"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search uses it too"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Library precursor against the precursor of the feature"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0, a library entry whose retention time differs from the RT of the query spectrum by more than this is not a candidate; entries or queries without a retention time are kept. The candidate carries rt_delta_min (query minus library) when both are known; 0 switches the filter off. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose adduct (for example [M+H]+) contains this text (any case) are candidates; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose instrument or instrument type contains this text (any case) are candidates, for example Orbitrap or QTOF; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose collision energy text contains this text (any case) are candidates, for example 30 or HCD; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
+                  {
+                    "enum":["none","spectrum"],
+                    "default":"none",
+                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: every candidate also lists matched_peaks, the pairs of peaks behind its score (m/z and relative intensity of the query and of the library spectrum, and whether the precursor shift was needed), so the match can be checked peak by peak; the scores do not change. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: every candidate also carries score_terms, its score as a weighted sum of named terms (the contribution of each matched pair, the rest in one term) and the key of its formula in the Theory; the scores themselves do not change"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.6,
+                    "description":"A hit below this entropy similarity is dropped"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":3,
+                    "description":"Matched ions between query and library spectrum; two peaks can score high on a sparse spectrum"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":250,
+                    "description":"Library precursors within this distance of the feature are candidate analogues"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":200,
+                    "description":"Candidates that pass the prefilter and are scored with the modified cosine"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"A smaller precursor difference is the same ion, not an analogue"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"A precursor difference within this is an exact match, not an analogue"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Free search of a CHNOPS formula for the precursor difference"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":1,
+                    "description":"A candidate needs this many peaks shared with the unknown in its best MS2 pair"
+                  },
+                  {
+                    "enum":["msncerca","candidates"],
+                    "default":"msncerca",
+                    "description":"msncerca: the msncerca/1 text of msn-lib search. candidates: the candidates/1 of the other algorithms (score = MS2 entropy similarity; the tree and loss scores and the proofs in the tree block), which annot.level reads"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.ms2@1"},
+              "name":{
+                "enum":[
+                  "min_intensity",
+                  "max_isolation",
+                  "tol_da",
+                  "rt_tol",
+                  "dia_pseudo",
+                  "dia_min_corr",
+                  "dia_min_points",
+                  "dia_frag_ppm"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Peaks below this intensity are dropped; a scan left with no peak is dropped"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Scans whose isolation window is wider are dropped; off when absent, and a scan that does not say its window is kept"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.02,
+                    "description":"With a feature table: largest distance between the precursor and the m/z of the feature"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"With a feature table: largest distance between the scan and the RT of the feature"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"For data-independent runs (SWATH, MSE): one pseudo MS2 spectrum per feature of the table, made of the fragments whose trace follows that of the precursor; needs the feature table, and the DDA scans are not written"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.9,
+                    "description":"With `dia_pseudo`: least Pearson correlation between the trace of a fragment and that of the precursor"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":3,
+                    "default":5,
+                    "description":"With `dia_pseudo`: fewest cycles of the RT range of a feature; a feature with fewer has no spectrum"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"With `dia_pseudo`: window around an m/z to follow its trace"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"spectra.msn_graph@2"},
+              "name":{
+                "enum":[
+                  "formula",
+                  "molecule",
+                  "adduct",
+                  "smiles",
+                  "molfile",
+                  "ppm_formula",
+                  "low_mz",
+                  "wide_ppm",
+                  "min_evidence",
+                  "activation",
+                  "isotopes",
+                  "structures",
+                  "struct_ppm",
+                  "interpret",
+                  "loss_ppm",
+                  "rules",
+                  "cutoff_q",
+                  "loss_tol_mda",
+                  "pick",
+                  "breaks",
+                  "h_max",
+                  "max_bonds"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; empty = masses only, no sub-formulas"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Name, synonym, id or formula looked up in the molecules list of the port `molecules`; it gives the formula (and the SMILES) of the root with `adduct`. `formula` wins when both are given"
+                  },
+                  {
+                    "type":"string",
+                    "default":"[M+H]+",
+                    "description":"Adduct written after the formula of `molecule`, e.g. [M+H]+ or [M-H]-"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Written back in the graph; it does not change the numbers"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"The 2D structure as a molfile, written back in the graph for the drawings; it does not change the numbers"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"A sub-formula is a candidate of a fragment within this distance of its m/z"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":150,
+                    "description":"Below this m/z the window may widen to the low-mass window"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":20,
+                    "description":"The wider window, for a candidate with enough evidences"
+                  },
+                  {"type":"integer","minimum":0,"default":1,"description":"Evidences for the wider window"},
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Only the spectra of this activation (cid, hcd, ...); empty = all"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"The M+1 peaks of the fragments become nodes with their monoisotopic peak"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `all` (or `tutti`) = the key `strutture_tutti` for every node of level 2 or more; empty = none"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Distance of a cleaved piece from the m/z of the node"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the activations that saw it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Window of the loss match by mass, ppm of the precursor m/z"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds the key `regole`: the rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss of an arc, even-electron check, trap cut-off, composite and stepped losses)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.25,
+                    "description":"Fragments below q/0.908 of the precursor m/z are not observable in a trap CID"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"Tolerance of a loss against the mass of a rule"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"MZ=ION pairs separated by commas: the formula chosen for the node at that m/z"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `struct_ppm`)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "maximum":4,
+                    "default":2,
+                    "description":"Hydrogens moved at most beyond the plain cleavage, for the bond breaks"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":2,
+                    "default":2,
+                    "description":"Bonds cut at most for one piece, 1 or 2"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{"step":{"const":"structure.draw@1"},"name":{"enum":["algorithm"]},"value":{"enum":["ketcher"]}},
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"structure.reactivity@1"},
+              "name":{"enum":["algorithm","solvent","conformers","protomer","seed"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["gfn2_xtb","extended_huckel"]},
+                  {"enum":["water","none"],"default":"water","description":"Solvent"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":16,
+                    "default":4,
+                    "description":"ETKDG conformers of the parent, lowest energy first; f(-) is also computed on the lowest ones to give its spread"
+                  },
+                  {
+                    "enum":["none","ph7"],
+                    "default":"none",
+                    "description":"none: the SMILES as written; ph7: the most probable charge form at pH 7 from a table of typical pKa"
+                  },
+                  {"type":"integer","minimum":0,"default":42,"description":"Seed"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"structure.render@1"},
+              "name":{"enum":["algorithm"]},
+              "value":{"enum":["simplest_form"]}
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.drift@1"},
+              "name":{"enum":["method","span"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["linear","loess"],
+                    "default":"linear",
+                    "description":"Line or local line (LOESS) through the areas of the QC files of each batch, against the position of the injection"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.1,
+                    "maximum":1,
+                    "default":0.75,
+                    "description":"Share of the QC files of a batch in the neighbourhood of each fit; used by the local line only"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.filter@1"},
+              "name":{
+                "enum":[
+                  "min_detected",
+                  "min_replicate_fraction",
+                  "min_area",
+                  "min_height",
+                  "blank_ratio",
+                  "blank_quantity",
+                  "blank_stat",
+                  "blank_scope",
+                  "blank_subtract",
+                  "blank_match",
+                  "blank_keep_istd",
+                  "qc_zero",
+                  "qc_cv_max",
+                  "qc_min_files",
+                  "dup_ppm",
+                  "dup_da",
+                  "dup_rt",
+                  "require_ms2",
+                  "normalize",
+                  "istd_id",
+                  "istd_mz",
+                  "istd_rt"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "description":"Peaks found by the detection in at least this many files that are not blanks; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "description":"A row is kept if, in at least one group of replicates (same series, role, time and concentration, or the same group when it is set), it is detected in at least this fraction of the files, rounded to a whole file and at least one; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"The largest area over the files is at least this; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"The largest height over the files is at least this; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"The largest area of a sample is at least this many times the mean area of the blanks; needs a blank in the samples; left empty, the rule is off"
+                  },
+                  {
+                    "enum":["area","height","norm_area"],
+                    "default":"area",
+                    "description":"What is compared with the blank: area, height or normalised area; used with the sample to blank ratio only"
+                  },
+                  {
+                    "enum":["mean","max"],
+                    "default":"mean",
+                    "description":"The blank level of a row: mean or maximum over the blank files (a blank without a peak counts as 0)"
+                  },
+                  {
+                    "enum":["max_feature","each_feature"],
+                    "default":"max_feature",
+                    "description":"max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"
+                  },
+                  {
+                    "enum":["all","batch","matrix"],
+                    "default":"all",
+                    "description":"all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"CV of the areas over the files with the role qc is at most this; a row needs a peak in at least the minimum number of them; fewer qc files than that is the error error.qc.tooFew; left empty, the rule is off"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":2,
+                    "default":3,
+                    "description":"QC files with a peak that the row needs for the QC rule, and QC files that the series needs"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only: of the rows within this many Da in m/z and the duplicate RT window of each other only the one with the largest area is kept; dup_ppm on a unit-resolution table is an error; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"RT distance under which two rows may be duplicates; used with the duplicate m/z window only"
+                  },
+                  {"type":"boolean","description":"An MS2 is linked to the peak; left empty, the rule is off"},
+                  {
+                    "enum":["none","sum","median","istd"],
+                    "default":"none",
+                    "description":"Scale of the areas of each file: total area or median area"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "description":"Id of the row of the internal standard; used with the normalisation istd"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"m/z of the internal standard, with its RT: the nearest row (5 ppm, 0.2 min) is the standard; used with the normalisation istd when no row id is set"
+                  },
+                  {"type":"number","minimum":0,"description":"RT of the internal standard; used with its m/z"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.kmd@1"},
+              "name":{"enum":["unit","tol_mda","min_members"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["CF2","CF2O","C2F4","CH2"],"default":"CF2","description":"Unit of the Kendrick mass"},
+                  {"type":"number","minimum":0,"default":3,"description":"Width of the KMD window of a series"},
+                  {
+                    "type":"integer",
+                    "minimum":2,
+                    "default":3,
+                    "description":"Distinct nominal Kendrick masses a series needs"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.match@1"},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "tol_da",
+                  "tol_ppm",
+                  "precursor_ppm",
+                  "precursor_da",
+                  "name_contains",
+                  "rt_tol",
+                  "adduct_contains",
+                  "instrument_contains",
+                  "ce_contains",
+                  "top_n",
+                  "decoys",
+                  "matched_peaks",
+                  "score_terms",
+                  "ms2_spectrum",
+                  "ms2_background",
+                  "min_score",
+                  "min_shared",
+                  "analog_window_da",
+                  "analog_prefilter",
+                  "analog_min_shift_da",
+                  "exact_ppm",
+                  "delta_formula_mda"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["spectral_entropy","cosine","modified_cosine"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Fragment matching between spectra, the GNPS convention"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search uses it too"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Library precursor against the precursor of the feature"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0, a library entry whose retention time differs from the RT of the query spectrum by more than this is not a candidate; entries or queries without a retention time are kept. The candidate carries rt_delta_min (query minus library) when both are known; 0 switches the filter off. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose adduct (for example [M+H]+) contains this text (any case) are candidates; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose instrument or instrument type contains this text (any case) are candidates, for example Orbitrap or QTOF; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose collision energy text contains this text (any case) are candidates, for example 30 or HCD; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
+                  {
+                    "enum":["none","spectrum"],
+                    "default":"none",
+                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: every candidate also lists matched_peaks, the pairs of peaks behind its score (m/z and relative intensity of the query and of the library spectrum, and whether the precursor shift was needed), so the match can be checked peak by peak; the scores do not change. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: every candidate also carries score_terms, its score as a weighted sum of named terms (the contribution of each matched pair, the rest in one term) and the key of its formula in the Theory; the scores themselves do not change"
+                  },
+                  {
+                    "enum":["best","consensus"],
+                    "default":"best",
+                    "description":"best: the scan with the highest TIC of the file that has the best MS2 of the row; consensus: all the fitting scans of the row, merged across the files where it has a peak"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: the MS2 peaks that recur in the blank files are taken out of every row, never the precursor; without a blank file nothing is taken out"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.6,
+                    "description":"A hit below this entropy similarity is dropped"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":3,
+                    "description":"Matched ions between query and library spectrum; two peaks can score high on a sparse spectrum"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":250,
+                    "description":"Library precursors within this distance of the feature are candidate analogues"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":200,
+                    "description":"Candidates that pass the prefilter and are scored with the modified cosine"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"A smaller precursor difference is the same ion, not an analogue"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"A precursor difference within this is an exact match, not an analogue"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Free search of a CHNOPS formula for the precursor difference"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.pca@1"},
+              "name":{"enum":["factor","stat","min_detect","min_intensity","min_samples","transform","scaling","ncomp"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"A feature must exceed the blank level times this factor; skipped when no file is a blank"
+                  },
+                  {
+                    "enum":["max","mean"],
+                    "default":"max",
+                    "description":"Level of the blank files: the maximum or the mean of their areas"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":1,
+                    "description":"Sample files that must exceed the blank threshold"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Smallest maximum area of a feature, and the area that counts as present"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":2,
+                    "description":"Samples in which a feature must be present"
+                  },
+                  {
+                    "enum":["log","none"],
+                    "default":"log",
+                    "description":"log2 of the areas after the imputation, or the areas as they are"
+                  },
+                  {
+                    "enum":["pareto","auto","none"],
+                    "default":"pareto",
+                    "description":"Pareto divides by the square root of the sd; auto divides by the sd and inflates the noise with few samples"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":2,
+                    "maximum":20,
+                    "default":5,
+                    "description":"Components kept in scores and loadings"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.plausible@1"},
+              "name":{"enum":["mz_min","mz_max","rt_max","width_max","ppm_max","mz_tol_da"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":20,
+                    "description":"A row below it is flagged: no LC-MS run reads there"
+                  },
+                  {"type":"number","minimum":0,"default":5000,"description":"A row above it is flagged"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":600,
+                    "description":"A row with an RT outside 0 and this value is flagged: check the unit of the times"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":30,
+                    "description":"A detected peak wider than this, or with no width or apex, is flagged"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":50,
+                    "description":"A row whose m/z is further than this from its neutral mass plus adduct is flagged; read only in a high-resolution table"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"0.1 Da or more is unit resolution and the ppm error is not read; without a value the recipe stored in the table decides"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.stats@1"},
+              "name":{"enum":["pseudocount","floor"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Added to every area before the logarithm and in the log2FC; without a value it is 3 x the median of the positive areas of the blanks, else of the reference, else the floor"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":1000,
+                    "description":"Smallest estimated pseudocount, and the one used when no file gives a noise level"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"tp.dig_lr@1"},
+              "name":{
+                "enum":[
+                  "tol_da",
+                  "rt_tol_min",
+                  "max_steps",
+                  "rt_min",
+                  "discover",
+                  "max_unexpected",
+                  "auto_offset",
+                  "min_files",
+                  "frag_min_rel",
+                  "min_snr",
+                  "max_fwhm_s",
+                  "min_points",
+                  "dead_factor",
+                  "parent_decay"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":0,"default":0.35,"description":"m/z tolerance"},
+                  {"type":"number","minimum":0,"default":0.25,"description":"RT tolerance"},
+                  {"type":"number","minimum":1,"default":2,"description":"Steps of the rules"},
+                  {"type":"number","minimum":0,"default":0.5,"description":"End of the dead volume"},
+                  {"type":"boolean","default":true,"description":"Look for unexpected ions"},
+                  {"type":"integer","minimum":0,"default":40,"description":"Unexpected ions kept"},
+                  {"type":"boolean","default":true,"description":"Calibrate on the parent"},
+                  {"type":"integer","minimum":0,"default":3,"description":"Min. samples"},
+                  {"type":"number","minimum":0,"maximum":100,"default":5,"description":"Fragments from"},
+                  {"type":"number","minimum":0,"default":5,"description":"Min. S/N of a peak"},
+                  {"type":"number","minimum":0,"default":60,"description":"Max. FWHM of a peak"},
+                  {"type":"integer","minimum":1,"default":5,"description":"Min. scans of a peak"},
+                  {"type":"number","minimum":0,"default":1.5,"description":"Dead-volume factor"},
+                  {"type":"boolean","default":true,"description":"Parent must fall over time"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"tp.filter@2"},
+              "name":{"enum":["algorithm","tol_min","tol_max","decoy_step","decoy_k","decoy_ppm"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["stages"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"Floor of the tolerance of a formula; the tolerance of a file is its measured error, kept between the two"
+                  },
+                  {"type":"number","minimum":0,"default":5,"description":"Highest formula tolerance"},
+                  {"type":"number","minimum":0,"default":0.0137,"description":"Decoy mass defect"},
+                  {"type":"integer","minimum":0,"default":5,"description":"Decoys per rule"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"A decoy lies beyond this many ppm of every true delta, and a row matches a decoy within it"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"tp.generate@1"},
+              "name":{"enum":["algorithm","polarity","max_steps","min_mz","max_suspects","other_polarity","nominal"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["rule_chain"]},
+                  {"enum":[1,-1],"default":1,"description":"Polarity"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":4,
+                    "default":2,
+                    "description":"Most reactions chained from the parent; one hypothesis per net change of formula, the fewest steps first"
+                  },
+                  {"type":"number","minimum":0,"default":50,"description":"Lowest m/z"},
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":500,
+                    "description":"Hypotheses taken from the suspect index, the best supported first; the number left out is written in the registry"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Expected members of a family in the other polarity too ([M-H]- of a positive base and the reverse)"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Two formulas of the same nominal m/z and adduct are one hypothesis, the others its alternatives"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"tp.link@2"},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "polarity",
+                  "select_ppm",
+                  "purity_ppm",
+                  "purity_min",
+                  "match_ppm",
+                  "iso_corr",
+                  "iso_min_scans",
+                  "iso_fragments"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["pooled_ms2","isomer_traces"]},
+                  {
+                    "enum":[1,-1],
+                    "default":1,
+                    "description":"Polarity of the series: the adduct of the parent and the MS1 scans read for the purity"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"An MS2 scan belongs to a row when its isolation centre is within this many ppm of the m/z of the row"
+                  },
+                  {"type":"number","minimum":0,"default":5,"description":"Purity window"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.8,
+                    "description":"A scan below this purity is chimeric and does not vote"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Tolerance of the modification (neutral formula change) and of the comparison of the fragments with the parent"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":-1,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"Correlation between the traces of two fragments below which they belong to different isomers"
+                  },
+                  {"type":"integer","minimum":1,"default":4,"description":"Fewest clean scans"},
+                  {"type":"integer","minimum":2,"default":5,"description":"Fragments compared"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"tp.network@1"},
+              "name":{"enum":["algorithm","ppm","min_fragments"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["rule_arcs"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Largest error of the observed difference of m/z against the mass of the change of formula"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"An arc from the parent whose MS2 was compared is kept with at least this many fragments in common, equal or shifted; 0 keeps every arc"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"tp.position@1"},
+              "name":{"enum":["algorithm","match_ppm","min_rel","min_informative","margin","ll_support","ll_against"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["msn_tree","cleavage_likelihood"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Matching of the fragments with the cleavages of the parent (HR spectra)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":100,
+                    "default":5,
+                    "description":"A fragment is informative from this share of the base peak, if its formula is within 5 ppm"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":3,
+                    "description":"Fewer informative fragments cannot tell one class from the others"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":2,
+                    "description":"Log-likelihood units a class must lead the second by to be called alone: two fragments' worth of evidence"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":1,
+                    "description":"Log-likelihood a fragment that a cleavage explains adds to a class"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":2,
+                    "description":"Cost of a peak a class cannot explain, twice the support: a wrong site is worse than an undecided one"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{"step":{"const":"tp.review@1"},"name":{"enum":["algorithm"]},"value":{"enum":["level_rules"]}},
+            "required":["step","name","value"]
+          }
+        ]
+      }
+    },
+    {
+      "name":"data_summary",
+      "class":"read",
+      "description":"Summary of the files open in the Data view.",
+      "input_schema":{"type":"object","additionalProperties":false,"properties":{},"required":[]}
+    },
+    {
+      "name":"data_inspect",
+      "class":"read",
+      "description":"What each open file is (instrument, polarity, series, blanks and QC) as the inspection of the program; no raw data.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "files":{"type":"array","items":{"type":"string","description":"Alias of an open file."},"maxItems":50}
+        },
+        "required":[]
+      }
+    },
+    {
+      "name":"params_propose",
+      "class":"propose",
+      "description":"Parameter values for the given steps from the rules of the program, each with its source, confidence and reason; shown as a proposal.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "steps":{
+            "type":"array",
+            "items":{
+              "enum":[
+                "annot.hazard@1",
+                "annot.level@1",
+                "annot.regulatory@1",
+                "chrom.transitions@1",
+                "chrom.uv_peaks@1",
+                "convert.mzml@1",
+                "export.annotations@1",
+                "export.inclusion@1",
+                "export.mztab@1",
+                "export.table_csv@1",
+                "features.align@1",
+                "features.detect@1",
+                "features.estimate@1",
+                "features.gapfill@1",
+                "features.ms2_link@1",
+                "features.table@1",
+                "formula.ms1@1",
+                "formula.ms2@1",
+                "import.raw@1",
+                "index.mzidx@1",
+                "meta.compare@1",
+                "msn.figure@1",
+                "msn.library_export@1",
+                "msn.table_export@1",
+                "qc.mass_accuracy@1",
+                "qc.run_order@1",
+                "quant.calibrate@1",
+                "report.methods@1",
+                "rt.predict@1",
+                "screen.suspects@1",
+                "spectra.centroid@1",
+                "spectra.chimeric@1",
+                "spectra.insilico@1",
+                "spectra.lookup@1",
+                "spectra.match@1",
+                "spectra.ms2@1",
+                "spectra.msn_graph@2",
+                "structure.draw@1",
+                "structure.reactivity@1",
+                "structure.render@1",
+                "table.drift@1",
+                "table.filter@1",
+                "table.kmd@1",
+                "table.match@1",
+                "table.pca@1",
+                "table.plausible@1",
+                "table.stats@1",
+                "tp.dig_lr@1",
+                "tp.filter@2",
+                "tp.generate@1",
+                "tp.link@2",
+                "tp.network@1",
+                "tp.position@1",
+                "tp.review@1"
+              ]
+            },
+            "maxItems":40
+          }
+        },
+        "required":["steps"]
+      }
+    },
+    {
+      "name":"table_check",
+      "class":"read",
+      "description":"The checks of the program on the feature table of the last run: flags and the numbers behind them.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "checks":{
+            "type":"array",
+            "items":{
+              "enum":[
+                "size",
+                "blank",
+                "contaminants",
+                "qc_cv",
+                "qc_intensity",
+                "rt_drift",
+                "duplicates",
+                "adducts",
+                "isotopes",
+                "insource",
+                "long_traces",
+                "homologous",
+                "missing",
+                "structure",
+                "polarity_units"
+              ]
+            },
+            "maxItems":15
+          }
+        },
+        "required":[]
+      }
+    },
+    {
+      "name":"ask_user",
+      "class":"propose",
+      "description":"Ask the user up to 5 closed questions, never one the program can answer; the answer comes back as the tool result.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "questions":{
+            "type":"array",
+            "minItems":1,
+            "maxItems":5,
+            "items":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "id":{"type":"string","description":"Short id of the question."},
+                "text":{"type":"string","minLength":1},
+                "options":{"type":"array","minItems":2,"maxItems":8,"items":{"type":"string"}}
+              },
+              "required":["id","text","options"]
+            }
+          }
+        },
+        "required":["questions"]
+      }
+    },
+    {
+      "name":"chart_make",
+      "class":"propose",
+      "description":"Propose a chart from data of the session.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{"spec":{"type":"object"}},
+        "required":["spec"]
+      }
+    }
+  ]
+}

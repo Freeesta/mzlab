@@ -59,6 +59,15 @@ MANIFEST = {
 }
 
 
+PROXY_HOST = re.compile(r'^export const PROXY_HOST = "(https://[a-z0-9.-]+(?::[0-9]{1,5})?)?";$', re.M)
+
+
+def check_proxy_host(static: Path) -> None:
+    """The host of the proxy of the public demo (`llm/proxy-host.js`, empty or `https://<host>` without a path): the placeholder of the provider `mzlab-demo` is replaced by Rust at send time."""
+    if not PROXY_HOST.search((static / "llm" / "proxy-host.js").read_text(encoding="utf-8")):
+        raise SystemExit("llm/proxy-host.js: PROXY_HOST must be empty or https://<host> with no path")
+
+
 def python_files(out: Path) -> list[str]:
     """The Python the site carries: any `pyodide*` file or folder and any zip with a `.py` inside (there must be none, mzFinder's folder included)."""
     found = []
@@ -252,6 +261,9 @@ def main() -> None:
     pack_mzfinder(static)
     # the catalog of assistant tools beside its page (the module `llm/` reads it on first use)
     shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-1.json", static / "llm" / "strumenti-1.json")
+    # the subset of the public demo (provider `mzlab-demo`), the catalog the proxy allows; and the one constant of its host
+    shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-demo-1.json", static / "llm" / "strumenti-demo-1.json")
+    check_proxy_host(static)
     # the prompts and roles of the assistant's subagents: data fetched on request, the same bytes as in the crate
     shutil.copytree(ROOT / "crates" / "mzlab-llm" / "data" / "assist", static / "llm" / "assist")
     bad = python_files(out)

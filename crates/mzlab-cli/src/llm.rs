@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use mzlab_llm::conv::{Conversation, Role};
 use mzlab_llm::fake::Replay;
 use mzlab_llm::provider::{builtin, request};
-use mzlab_llm::tools::{catalog, catalog_json, UI_TOOLS};
+use mzlab_llm::tools::{catalog, catalog_json, demo_catalog_json, UI_TOOLS};
 
 use crate::flow::{executable, steps};
 use crate::{emit, Outcome};
@@ -16,7 +16,7 @@ use crate::{emit, Outcome};
 #[path = "llm_facts.rs"]
 pub(crate) mod facts;
 
-const HELP: &str = "mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (stdout, or FILE)
+const HELP: &str = "mzlab-cli llm tools [--demo] [--out FILE]   the catalog strumenti/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
 mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
@@ -27,6 +27,11 @@ mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the prop
 /// The catalog text, the one `docs/schemi/strumenti-1.json` holds.
 pub fn tools_json() -> String {
     catalog_json(&steps(), UI_TOOLS, &executable)
+}
+
+/// The demo catalog text, the one `docs/schemi/strumenti-demo-1.json` holds.
+pub fn demo_tools_json() -> String {
+    demo_catalog_json(&steps(), UI_TOOLS, &executable)
 }
 
 pub(crate) fn run(args: Vec<String>) -> Outcome {
@@ -41,9 +46,11 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         _ => return Outcome::fail(&format!("usage: {HELP}")),
     }
     let mut out: Option<PathBuf> = None;
+    let mut demo = false;
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
+            "--demo" => demo = true,
             "--out" => match it.next() {
                 Some(p) => out = Some(p.into()),
                 None => return Outcome::fail("--out needs a path"),
@@ -51,7 +58,14 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             x => return Outcome::fail(&format!("unknown option {x}")),
         }
     }
-    emit(tools_json(), &out)
+    emit(
+        if demo {
+            demo_tools_json()
+        } else {
+            tools_json()
+        },
+        &out,
+    )
 }
 
 /// The events of one turn of a recording; errors (a mismatch, a missing turn, a bad file) are the exit code 2 with the key on stderr.

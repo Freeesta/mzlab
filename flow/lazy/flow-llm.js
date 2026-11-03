@@ -1,7 +1,8 @@
 // @ts-check
 // Flow (administrator mode): the panel of the assistant, to the right of the canvas. It shows the conversation, the level, the estimated cost, what will be sent, and the cards where the user
 // decides (L0 «Apply»/«Discard» of a proposed plan, L1 «Allow»/«Deny», L2 a register of the edits with «Undo»). The loop is llm/llm-agente.js (the state machine is Rust); the tools are flow-llm-tools.js.
-// Loaded by flow-shell.js only when the assistant is on (profile «ricerca», switched on in the settings, consent given). English only.
+// Loaded by flow-shell.js when the assistant is on (profile «ricerca», switched on in the settings, consent given), or after «Try the assistant» in the profile «demo» (fixed settings
+// of llm/llm-demo.js, two script chips whose sent text is fixed so that a strict recording replays it in any language). English only, but for the chip labels (lang/ keys).
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -20,6 +21,7 @@
 .flx .flx-llm-reg{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px;font-size:12px}.flx .flx-llm-reg li{display:flex;gap:6px;align-items:center;justify-content:space-between}
 .flx .flx-llm pre{margin:0;max-height:160px;overflow:auto;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--soft);padding:4px;border-radius:4px}
 .flx .flx-llm textarea{width:100%;min-height:48px;resize:vertical;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.flx .flx-llm-chips{display:flex;flex-wrap:wrap;gap:6px}.flx .flx-llm-demo{color:var(--muted);font-size:12px}
 .flx .flx-llm-grip{display:flex;gap:4px;align-items:center;color:var(--muted);font-size:12px}
 @media (max-width:900px){.flx .flx-body.flx-llm-on,.flx .flx-body.flx-adv.flx-llm-on{grid-template-columns:minmax(0,1fr)}}
 @media (prefers-reduced-motion:reduce){.flx .flx-llm,.flx .flx-llm *{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
@@ -31,7 +33,7 @@
 
   /** the button and the panel of the assistant, in the bar and beside the canvas; `act`: {submit, stop, close, toggle, resize}, filled by the mount @param {any} ctx @param {string} level @param {any} act */
   const buildPanel = (ctx, level, act) => {
-    const { el, btn } = F;
+    const { el, btn } = F, I = /** @type {any} */ (globalThis).I18N;
     const log = el("div", { class: "flx-llm-log", id: "flx-llm-log", role: "log", "aria-live": "polite", "aria-label": "Conversation with the assistant" });
     const cost = el("span", { class: "flx-llm-cost", id: "flx-llm-cost", text: "Estimated cost: unknown" });
     const sent = el("pre", { id: "flx-llm-sent", tabindex: "0", "aria-label": "Text that will be sent" });
@@ -43,9 +45,13 @@
     const closeBtn = btn("x", "Close the assistant", () => act.close(), "Close");
     const grow = btn("plus", "Make the panel wider", () => act.resize(40), ""), shrink = btn("minus", "Make the panel narrower", () => act.resize(-40), "");
     const grip = el("div", { class: "flx-llm-grip", role: "group", "aria-label": "Width of the panel" }, shrink, grow, el("span", { text: "Width" }));
+    const chips = ctx.demo ? el("div", { class: "flx-llm-chips", role: "group", "aria-label": "Ready questions" }, ...ctx.demo.chips.map((/** @type {string[]} */ [k, text]) => {
+      const label = I ? I.t(k) : text, b = btn("chat", label, () => act.chip(text), label); b.dataset.chip = k; return b;
+    })) : null;
+    const note = ctx.demo ? el("p", { class: "flx-llm-demo", id: "flx-llm-demo", text: "Public demo: asks before each edit, file names hidden, spending limit 0.50 USD." }) : null;
     const panel = el("aside", { class: "flx-llm", id: "flx-llm", "aria-label": "Assistant", hidden: true, tabindex: "-1" },
-      el("div", { class: "flx-llm-head" }, el("h3", { text: "Assistant" }), el("span", { class: "flx-llm-level", id: "flx-llm-level", text: level, title: level === "L0" ? "L0: proposes, never edits" : level === "L1" ? "L1: asks before each edit" : "L2: edits by itself within limits" }), closeBtn), cost,
-      log, regList, sentBox, input, el("div", { class: "row" }, send, stop), grip);
+      el("div", { class: "flx-llm-head" }, el("h3", { text: "Assistant" }), el("span", { class: "flx-llm-level", id: "flx-llm-level", text: level, title: level === "L0" ? "L0: proposes, never edits" : level === "L1" ? "L1: asks before each edit" : "L2: edits by itself within limits" }), closeBtn), note, cost,
+      log, regList, sentBox, chips, input, el("div", { class: "row" }, send, stop), grip);
     const open = btn("chat", "Open the assistant", () => act.toggle(), "Assistant"); open.id = "flx-assistant"; open.setAttribute("aria-expanded", "false");
     ctx.bar.insertBefore(open, ctx.bar.querySelector(".flx-run"));
     ctx.body.append(panel);
@@ -171,14 +177,15 @@
     return host;
   };
 
-  /** mounts the button and the panel; `ctx`: {S, bar, body, say, redraw, select, setTab} */
+  /** mounts the button and the panel; `ctx`: {S, bar, body, say, redraw, select, setTab, demo?, opener?} (`demo`: the profile «demo», after «Try the assistant») */
   const llmMount = async ctx => {
     const S = ctx.S;
     // served from static/mzfinder/lazy/, the module from static/llm/ (a variable: the source tree has another layout)
     const where = "../../llm/llm-agente.js", mod = /** @type {any} */ (await import(where));
+    if (ctx.demo && !(await mod.demoOpen(ctx.opener || null))) return null;
     if (!mod.assistantOn()) return null;
     const css = document.createElement("style"); css.textContent = CSS; document.head.append(css);
-    const settings = JSON.parse(localStorage.getItem("mzlab.llm") || "{}");
+    const settings = ctx.demo ? { ...mod.demoActive() } : JSON.parse(localStorage.getItem("mzlab.llm") || "{}");
     const level = ["L0", "L1", "L2"].includes(settings.level) ? settings.level : "L0";
     const l2max = Math.min(50, Math.max(1, Math.round(+settings.l2max || 5)));
     let width = 360;
@@ -187,7 +194,7 @@
     const runs = { running: false, states: /** @type {Record<string, string>} */ ({}) };
 
     /** @type {any} */ const act = {};
-    const { log, cost, sent, regList, input, send, stop, panel, open } = buildPanel(ctx, level, act);
+    const { log, cost, sent, regList, input, send, stop, panel, open } = buildPanel({ ...ctx, demo: ctx.demo ? { chips: mod.DEMO_CHIPS } : null }, level, act);
     /** @param {number} d */
     const resize = d => { width = Math.max(260, Math.min(720, width + d)); ctx.body.style.setProperty("--llmw", width + "px"); };
     function show() { ctx.setTab("canvas"); panel.hidden = false; ctx.body.classList.add("flx-llm-on"); open.setAttribute("aria-expanded", "true"); input.focus(); }
@@ -197,7 +204,7 @@
       else if (e.altKey && e.key === "ArrowLeft") { e.preventDefault(); resize(40); } else if (e.altKey && e.key === "ArrowRight") { e.preventDefault(); resize(-40); }
     });
     input.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); } });
-    Object.assign(act, { submit, resize, close, stop: () => { if (st.agent) st.agent.stop(); }, toggle: () => (panel.hidden ? show() : close()) });
+    Object.assign(act, { submit, resize, close, chip: (/** @type {string} */ text) => { input.value = text; submit(); }, stop: () => { if (st.agent) st.agent.stop(); }, toggle: () => (panel.hidden ? show() : close()) });
 
     const kit = logKit(log); const { say, put, card } = kit;
 
@@ -215,7 +222,7 @@
       if (st.agent) return st.agent;
       st.agent = new mod.AgentRun(host, {});
       await st.agent.open(true);
-      try { const p = await (/** @type {any} */ (window).MZLAB_LLM && window.MZLAB_LLM.client ? window.MZLAB_LLM.client.providers() : []); const m = (p.find((/** @type {any} */ x) => x.id === settings.provider) || { models: [] }).models.find((/** @type {any} */ x) => x.id === settings.model); st.price = m && m.price || null; } catch (_) { /* no price: «unknown» */ }
+      try { const p = await (/** @type {any} */ (window).MZLAB_LLM && window.MZLAB_LLM.client ? window.MZLAB_LLM.client.providers() : []); const m = (p.find((/** @type {any} */ x) => x.id === settings.provider) || { models: [] }).models.find((/** @type {any} */ x) => x.id === settings.model); st.price = m && (m.price || m.price_per_mtok) || null; } catch (_) { /* no price: «unknown» */ }
       return st.agent;
     };
 

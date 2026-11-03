@@ -301,3 +301,34 @@ fn a_request_of_a_subagent_survives_the_trip_through_json() {
             .unwrap();
     assert_eq!(back.to_json(), req);
 }
+
+fn repo(rel: &str) -> String {
+    std::fs::read_to_string(format!("{}/../../{rel}", env!("CARGO_MANIFEST_DIR"))).unwrap()
+}
+
+#[test]
+fn the_demo_body_of_the_site_is_the_one_the_app_sends() {
+    // the digest of tests/data/llm/demo/body.sha256 is the app's (crates/mzlab-desktop/src/llm_tests.rs)
+    let l = Llm::new(&repo("docs/schemi/strumenti-demo-1.json")).unwrap();
+    let r = l.build(&repo("tests/data/llm/demo/conv.json")).unwrap();
+    let sha = mzlab_core::budget::sha256_hex(r.body.as_bytes());
+    assert_eq!(repo("tests/data/llm/demo/body.sha256").trim(), sha);
+    let sent = demo_send(
+        &r.to_json(),
+        "mzlab-demo",
+        "https://assist.example.org",
+        "panel_0123456789",
+        "",
+    )
+    .unwrap();
+    assert!(
+        sent.contains("\"url\":\"https://assist.example.org/v1/messages\""),
+        "{sent}"
+    );
+    assert!(
+        sent.contains("[\"x-mzlab-session\",\"panel_0123456789\"]"),
+        "{sent}"
+    );
+    let e = demo_send(&r.to_json(), "mzlab-demo", "", "panel_0123456789", "").unwrap_err();
+    assert!(e.contains("err.llm.network"), "{e}");
+}

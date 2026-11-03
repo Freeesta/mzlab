@@ -237,6 +237,7 @@ declare var TOURDOPO: any;
 declare var TRACE_LW: any;
 declare var TYPORD: any;
 declare var UIP: any;
+declare var UIP_DEMO: any;
 declare var UIP_GROUP_KEY: any;
 declare var UIP_KEY: any;
 declare var UPBUSY: any;

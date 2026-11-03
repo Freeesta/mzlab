@@ -1,7 +1,8 @@
 //! The catalog `strumenti/1` against the registry: every step and every `--set` name is reachable through it, defaults sit inside their limits, the
-//! file `docs/schemi/strumenti-1.json` is the export (`MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools` rewrites it) and the bytes are stable.
+//! file `docs/schemi/strumenti-1.json` is the export (`MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools` rewrites it) and the bytes are stable;
+//! the same for the demo subset `docs/schemi/strumenti-demo-1.json`, whose tools are those of the whole catalog, byte for byte.
 
-// The tests of `proposta-param/1`, of `reading` and of `llm inspect|params` ride on this module (the crate root is at its line limit).
+// The tests of `proposta-param/1`, of `reading`, of the scope rule and of `llm inspect|params` ride on this module (the crate root is at its line limit).
 #[path = "llm_facts_tests.rs"]
 mod facts;
 #[path = "llm_params_tests.rs"]
@@ -10,13 +11,15 @@ mod params;
 mod params_g;
 #[path = "llm_reading_tests.rs"]
 mod reading;
+#[path = "llm_scope_tests.rs"]
+mod scope;
 
 use std::collections::BTreeSet;
 
 use mzlab_core::json::{parse, Value};
 
 use crate::flow::steps;
-use crate::llm::tools_json;
+use crate::llm::{demo_tools_json, tools_json};
 
 fn catalog() -> Value {
     parse(tools_json().as_bytes()).expect("the catalog is JSON")
@@ -195,23 +198,59 @@ fn list_steps_reports_the_native_executors() {
     assert!(!got.is_empty());
 }
 
-#[test]
-fn the_file_is_the_export_and_the_bytes_are_stable() {
-    let text = tools_json();
-    assert_eq!(text, tools_json());
-    let path = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../docs/schemi/strumenti-1.json"
-    );
+/// The file `docs/schemi/<name>` is the text `make` gives, twice the same (`MZLAB_UPDATE_STEPS=1` rewrites it).
+fn exported(name: &str, make: fn() -> String) {
+    let text = make();
+    assert_eq!(text, make());
+    let path = format!("{}/../../docs/schemi/{name}", env!("CARGO_MANIFEST_DIR"));
     if std::env::var_os("MZLAB_UPDATE_STEPS").is_some() {
-        std::fs::write(path, &text).unwrap();
+        std::fs::write(&path, &text).unwrap();
     }
-    let on_disk = std::fs::read_to_string(path)
-        .expect("docs/schemi/strumenti-1.json (MZLAB_UPDATE_STEPS=1 writes it)");
+    let on_disk = std::fs::read_to_string(&path)
+        .unwrap_or_else(|_| panic!("docs/schemi/{name} (MZLAB_UPDATE_STEPS=1 writes it)"));
     assert_eq!(
         on_disk, text,
-        "docs/schemi/strumenti-1.json is stale: MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools"
+        "docs/schemi/{name} is stale: MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools"
     );
+}
+
+#[test]
+fn the_file_is_the_export_and_the_bytes_are_stable() {
+    exported("strumenti-1.json", tools_json);
+}
+
+#[test]
+fn the_demo_file_is_the_export_and_the_bytes_are_stable() {
+    exported("strumenti-demo-1.json", demo_tools_json);
+}
+
+#[test]
+fn the_demo_catalog_is_a_subset_of_the_whole_catalog_with_the_same_schemas() {
+    let all = catalog();
+    let demo = parse(demo_tools_json().as_bytes()).unwrap();
+    let names: Vec<&str> = demo
+        .get("tools")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|t| t.get("name").unwrap().str().unwrap())
+        .collect();
+    assert_eq!(names, mzlab_llm::tools::DEMO_TOOLS);
+    for t in demo.get("tools").unwrap().arr() {
+        let name = t.get("name").unwrap().str().unwrap();
+        assert_eq!(t, tool(&all, name), "{name}");
+    }
+    // nothing that runs, removes, exports or drives the interface
+    for gone in [
+        "flow_run",
+        "flow_remove_step",
+        "flow_add_step",
+        "code_export",
+        "ui_show",
+        "table_rows",
+    ] {
+        assert!(!names.contains(&gone), "{gone}");
+    }
 }
 
 #[test]
