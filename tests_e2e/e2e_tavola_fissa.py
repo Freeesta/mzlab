@@ -21,6 +21,8 @@ try:
             pg.evaluate("document.querySelector('#np-pt').click()"); attendi(pg, "document.querySelectorAll('#refbody .pt-c').length >= 118")
             syms = pg.evaluate("[...document.querySelectorAll('#refbody .pt-c')].map(c=>c.dataset.s)")
             assert len(syms) >= 118, len(syms)
+            # classic (non-overlay) scrollbars would narrow the box for elements with long isotope lists; headless overlay bars cannot show it, so pin the cause
+            assert 'stable' in pg.evaluate("getComputedStyle(document.querySelector('#refbody .pt-info')).scrollbarGutter")
             base = pg.evaluate(BOXES); bad = []
             for s in syms:
                 pg.locator(f'#refbody .pt-c[data-s="{s}"]').hover(); b = pg.evaluate(BOXES)
