@@ -203,7 +203,7 @@ I18N.add("it", {
   "tdati.note.spec": "Picchi oltre il {thr} % del più alto fra m/z {a} e {b} (al massimo 300, i più intensi).",
   "tdati.note.map": "Le {n} celle più intense della regione visibile.",
   "uv.error": "Spettro UV non disponibile.",
-  "uv.none": "Questo file non ha spettri UV: li hanno solo i file .wiff SCIEX con il rivelatore DAD (matrice tempo × lunghezza d'onda).",
+  "uv.none": "Questo file non ha spettri UV: servono i dati del rivelatore DAD (matrice tempo × lunghezza d'onda). Un mzML senza spettri UV non li ha; se viene da un .wiff con il DAD, ricarica il .wiff con il suo .wiff.scan.",
   "uv.axis.x": "Lunghezza d'onda (nm)",
   "uv.axis.y": "Assorbanza (mAU)",
   "uv.leg.one": "RT {rt} min",

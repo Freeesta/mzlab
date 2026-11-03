@@ -4,11 +4,11 @@
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
 mod cv;
-mod picchi;
 pub(crate) mod help;
-use help::Decode;
-pub use help::corriere::{Corriere, Decodificatore};
+mod picchi;
 use crate::numarray::Num;
+pub use help::corriere::{Corriere, Decodificatore};
+use help::Decode;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::{BufReader, Read};
@@ -230,7 +230,6 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobil
     Ok(picchi::assemble(s, p))
 }
 
-
 fn number_after(id: &str, key: &str) -> Option<f64> {
     let k = id.find(key)? + key.len();
     let rest = &id[k..];
@@ -305,7 +304,11 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
 }
 
 /// `parse` with the arrays decoded by another instance through `c` (the browser's helper workers, `help::corriere`): the same items in the same order.
-pub fn parse_corriere<R: Read, F: FnMut(Item)>(reader: R, mut f: F, c: &mut dyn Corriere) -> Result<()> {
+pub fn parse_corriere<R: Read, F: FnMut(Item)>(
+    reader: R,
+    mut f: F,
+    c: &mut dyn Corriere,
+) -> Result<()> {
     help::parse_with(reader, &mut f, &mut help::corriere::Sent::new(c))
 }
 
@@ -443,7 +446,9 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
                         if let Some(arr) = cur.array.take() {
                             match cur.scope {
                                 Scope::Spectrum => cur.spec.as_mut().map(|s| s.arrays.push(arr)),
-                                Scope::Chromatogram => cur.chrom.as_mut().map(|c| c.arrays.push(arr)),
+                                Scope::Chromatogram => {
+                                    cur.chrom.as_mut().map(|c| c.arrays.push(arr))
+                                }
                                 Scope::None => None,
                             };
                         }

@@ -53,14 +53,19 @@ fn err_matches(e: &mzlab_core::Error, r: &Value, what: &str) {
 #[test]
 fn composition_like_python() {
     let golden = root().join("tests/golden/ref/composizione.json");
-    let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
-    let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab_comp_{}.json", std::process::id())) };
-    let ok = committed || Command::new("python3")
-        .arg(root().join("tools/composizione_riferimento.py"))
-        .arg(&out)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    let committed = golden.exists(); // the answers of Python for the synthetic data are committed: no python3 needed
+    let out = if committed {
+        golden
+    } else {
+        std::env::temp_dir().join(format!("mzlab_comp_{}.json", std::process::id()))
+    };
+    let ok = committed
+        || Command::new("python3")
+            .arg(root().join("tools/composizione_riferimento.py"))
+            .arg(&out)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
     if !ok {
         assert!(
             std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
@@ -70,7 +75,9 @@ fn composition_like_python() {
         return;
     }
     let rows: Vec<Value> = serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
-    if !committed { let _ = std::fs::remove_file(&out); }
+    if !committed {
+        let _ = std::fs::remove_file(&out);
+    }
     let (mut n_ok, mut n_err, mut n_res) = (0, 0, 0);
     for (i, r) in rows.iter().enumerate() {
         if r["kind"] == "parse" {
