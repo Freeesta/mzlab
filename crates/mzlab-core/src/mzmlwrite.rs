@@ -507,7 +507,7 @@ mod compressione;
 pub use compressione::opzioni_compressione;
 mod matrice;
 mod thread;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
 mod uv;
 use codifica::{Codifica, Data};
 pub use thread::thread_predefinito;
