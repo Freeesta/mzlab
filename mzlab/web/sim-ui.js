@@ -53,7 +53,7 @@
     /** @type {Map<string, Ione>} */ const m = new Map();
     (panelTr(p) ? filesOf(p) : !tabTr(p) ? [] : E.files.filter((/** @type {any} */ f) => isTr(f) && f.vis && !f.gone)).forEach((/** @type {any} */ f) => (LIST.get(keyOf(f.k)) || []).forEach(x => { if (!m.has(x.key)) m.set(x.key, x); }));
     // transitions of one precursor keep the file order but the quantifier comes first (its name, from the method, starts with «Quant»)
-    const rank = (/** @type {Ione} */ x) => /^quant/i.test(x.name) ? 0 : 1, q1 = (/** @type {Ione} */ x) => x.key.split(">")[0], l = [...m.values()], first = new Map(l.map((x, i) => [q1(x), i]).reverse());
+    const rank = (/** @type {Ione} */ x) => /^quant/i.test(x.name) ? 0 : 1, q1 = (/** @type {Ione} */ x) => x.key.split(">")[0], l = [...m.values()], first = new Map(/** @type {[string, number][]} */ (l.map((x, i) => [q1(x), i])).reverse());
     return l.map((x, i) => ({ x, i })).sort((a, b) => (first.get(q1(a.x)) ?? 0) - (first.get(q1(b.x)) ?? 0) || rank(a.x) - rank(b.x) || a.i - b.i).map(o => o.x);
   }
   /** colour index of an ion: its place among the ions of every file of the session, so the same m/z has the same colour in every sample and panel @param {string} key */
