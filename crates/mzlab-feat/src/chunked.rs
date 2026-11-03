@@ -1,6 +1,7 @@
 //! Runs blocks of work on the calling thread and on spare cores (none in the browser), for the passes that measure many independent
 //! rows of one slab: `quality::assess_with`.
 
+#[cfg(not(target_family = "wasm"))]
 use std::sync::Mutex;
 
 /// Runs `work(&mut state, k)` for the chunks `0..n`, on the calling thread and on spare cores (none in the browser), each worker with a
