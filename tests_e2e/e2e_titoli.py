@@ -9,6 +9,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:300]))
 D = HERE / "shots" / "titoli_tmp"; D.mkdir(parents=True, exist_ok=True)
+MRMF = D / "MRM_t0.mzML"; ds.mrm(MRMF, 1.0, np.random.default_rng(4), 0)
 PDA = [D / "PDA_t0.mzML", D / "PDA_t45.mzML"]
 for f, t in zip(PDA, (0, 45)): ds.full_scan(f, t, np.random.default_rng(3), dad=True)
 TTL = lambda q: f"({q}).el.querySelector('.ttl').textContent"
@@ -43,7 +44,7 @@ def pda_overlay(pg):
     assert pg.evaluate("![...document.querySelectorAll('.pnl.chrom .pscan')].length"), "a chromatogram header names a file"
 step("MS2: TIC on top, precursor in the spectrum title", lambda: run(8901, "/tmp/wd_tit1", [str(ES / f"MS2_t{t}.mzML") for t in (15, 60)], ms2))
 step("MS1: TIC / MS¹", lambda: run(8902, "/tmp/wd_tit2", [str(ES / "FullScan_t15.mzML")], ms1))
-step("MRM", lambda: run(8903, "/tmp/wd_tit3", [mz("B_MRM-STD_0_6ppm")], mrm))
+step("MRM", lambda: run(8903, "/tmp/wd_tit3", [str(MRMF)], mrm))
 step("PDA single sample + one wavelength", lambda: run(8904, "/tmp/wd_tit4", [str(PDA[0])], pda_single))
 step("PDA overlay: title does not name a file", lambda: run(8905, "/tmp/wd_tit5", [str(f) for f in PDA], pda_overlay))
 bad = [s for s in steps if s[1] != "ok"]
