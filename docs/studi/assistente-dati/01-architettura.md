@@ -31,13 +31,12 @@ Principio: Rust misura e controlla, il modello interpreta, domanda e spiega. Il 
 |---|---|---|---|---|
 | CLI `mzlab-cli assist` | `curl` con intestazioni su stdin (come `tutor eval`), mai la chiave negli argomenti | file `--key-file` (0600) o stdin | da costruire | nessuna |
 | App desktop | rotte `llm/send`, `llm/poll` (`ureq`, esistono) | `llm-chiavi.json` 0600, la legge solo Rust | esiste il trasporto | nessuna |
-| Sito, chiave propria | iframe `llm/trasporto.html` (esiste) verso `api.anthropic.com` con `anthropic-dangerous-direct-browser-access` | dell'utente, nell'IndexedDB dell'iframe | oggi solo `localhost` e `replay`; CSP in W2 | V1a (data) |
-| Sito e desktop, invito | lo stesso iframe verso il Worker (`09-worker.md`) | condivisa, solo segreto del Worker; l'utente ha un codice d'invito | da costruire (W1, W2) | V2a (data) |
+| Sito e desktop, demo pubblica | iframe `llm/trasporto.html` (sito) o `llm/send` (app) verso il proxy anonimo (`09-worker.md`), fornitore `mzlab-demo` | solo segreto del proxy; nessuna chiave dell'utente, nessun account; frase segreta solo per la fase 0 | oggi il sito raggiunge solo `localhost` e `replay`; da costruire (P2–P4 di `13-piano-dev.md`) | `14-decision-card.md` |
 
 - Per il test con la chiave dedicata si usa la CLI: nessun cambio di CSP, nessun server, ripetibile da una sessione cloud o dal Mac di Federico.
 - La chiave arriva solo con il flusso di richiesta della credenziale dell'ambiente (variabile o file fuori dal repository); mai in chat, in un commit, in un argomento di processo, in `llmlog/1`, in `prov/1`. `log::has_secret` e `tests/test_llm_chiavi.py` restano le guardie.
-- Con la chiave propria (V1a) il tetto per persona coincide con il limite della chiave nella Console, più il contatore locale di 10 $ per sessione. Una chiave condivisa nella pagina non è mai ammessa (si leggerebbe): la chiave condivisa vive solo nel Worker (V2a), che tiene i contatori per persona e per sessione.
-- Profilo `corso`: l'assistente non esiste (nessun byte scaricato), come oggi per `llm/`. L'assistente vive dove vive il Flow.
+- Una chiave nella pagina non è mai ammessa (si leggerebbe) e il sito non chiede chiavi personali: la chiave condivisa vive solo nel proxy, che tiene i contatori per sessione, per IP (hash con sale giornaliero), per giorno e per mese. Nell'app desktop la chiave propria in `llm-chiavi.json` resta per chi la vuole, con il tetto locale di `spend`.
+- Profilo `corso`: l'assistente non esiste (nessun byte scaricato), come oggi per `llm/`. La demo pubblica (D2 di `14-decision-card.md`) lo mostra solo nel Flow, dietro un pulsante esplicito. L'assistente vive dove vive il Flow.
 
 ## 3. Cosa si manda al modello
 
