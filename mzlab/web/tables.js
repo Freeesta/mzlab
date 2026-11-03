@@ -51,7 +51,7 @@
   // exact mass, mechanism and source. Losses with the same nominal mass share ONE line (formulas side by side). Radicals carry a small dot with a tooltip.
   // «Cerca Δm» lists single, pair and repeated candidates.
   // state kept while the window is open (the ruler of the spectrum can fill q)
-  const NL = { q: "", pols: new Set(["+", "-"]), open: new Set() };
+  const NL = { q: "", open: new Set() };
   const fl = (/** @type {string} */ f) => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
   const NL_TOL = (/** @type {number} */ q) => (typeof CALCQUI !== "undefined" ? CALCQUI.diffDa(CALCQUI.opts({ kind: "num", text: String(q) }), q) : resHr() ? 0.003 : 0.5);
   const lossDet = (/** @type {Bag} */ l) => {
@@ -68,50 +68,40 @@
     return `<div class="nlr${hit ? " hit" : ""}" data-f="${id}"><button type="button" class="nlrow" data-d="${id}" aria-expanded="${open}" aria-controls="nld-${id}"><span class="nlm">${Math.round(m)}${exact}</span><span class="nlf">${ls.map(l => `<b>${fl(l.f)}</b>`).join('<span class="nlsep"> · </span>')}</span><span class="nls">${label}</span>${rad ? `<span class="nlrd" role="img" aria-label="${H(I18N.t("loss.radShort"))}" title="${H(I18N.t("loss.radShort"))}"></span>` : ""}${NL_CHEV}</button>
       <div class="nldet" id="nld-${id}"${open ? "" : " hidden"}>${ls.map(lossDet).join("")}</div></div>`;
   };
+  // the polarity is the shared choice of «what can this number be?» (calc-qui.js: ESI+, ESI− or both)
+  const polNow = () => (typeof CALCQUI !== "undefined" ? CALCQUI.pol() : 0), polOk = (/** @type {string} */ p) => (typeof CALCQUI !== "undefined" ? CALCQUI.polOk(polNow(), p) : true);
   function lossList() {
     const /** @type {Set<string>} */ hit = new Set(), q = numIt(NL.q);
-    const vis = LOSSES.filter((/** @type {Bag} */ l) => l.pol === "±" || NL.pols.has(l.pol)).sort((/** @type {Bag} */ a, /** @type {Bag} */ b) => massOf(a.f) - massOf(b.f));
+    const vis = LOSSES.filter((/** @type {Bag} */ l) => polOk(l.pol)).sort((/** @type {Bag} */ a, /** @type {Bag} */ b) => massOf(a.f) - massOf(b.f));
     if (isFinite(q)) vis.forEach((/** @type {Bag} */ l) => { if (Math.abs(massOf(l.f) - q) <= NL_TOL(q)) hit.add(l.f); });
     const /** @type {{ n: number, ls: Bag[] }[]} */ groups = []; vis.forEach((/** @type {Bag} */ l) => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
     return groups.length ? groups.map(g => lossRow(g.ls, { hit })).join("") : /** @type {any} */ (window).EMPTYLEAF("empty.losses");
   }
-  function lossTab() {
-    return `<div class="nlbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></div>
-      <span class="seg" id="nl-pol" title="${I18N.t("tbl.loss.polTitle")}"><button type="button" data-p="+" class="${NL.pols.has("+") ? "on" : ""}">ESI+</button><button type="button" data-p="-" class="${NL.pols.has("-") ? "on" : ""}">ESI&minus;</button></span></div>
+  /** shared: a tab of the Adducts & losses page, whose one field and choices row sit above the tabs (calc-qui-pannello.js); otherwise its own field and row. @param {boolean} [shared] */
+  function lossTab(shared) {
+    if (shared) return `<div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
+    return `<div class="nlbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></div></div>
       <div id="nl-ctl"></div><div class="cq-links"><button type="button" class="cq-link" id="nl-to-ad" hidden>${I18N.t("cq.link.ad")}</button></div><div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
   }
   // root is the host of the Neutral losses tab (any DOM container): its descendants are queried by selector, hence any
-  function bindLoss(/** @type {any} */ root, /** @type {(id: string) => void} */ show) {
-    // the candidates for the typed number (contaminants, adducts, losses...) are the shared block of calc-qui*.js
-    const view = CALCQUI.mount({
-      ctl: root.querySelector("#nl-ctl"), out: root.querySelector("#nl-res"), idp: "nlq", quiet: true, numOnly: true, arg: () => ({ text: NL.q, ans: 0 }),
-      pol: () => (NL.pols.size === 1 ? (NL.pols.has("+") ? 1 : -1) : null),
-    });
+  function bindLoss(/** @type {any} */ root, /** @type {(id: string) => void} */ show, shared = false) {
+    // the candidates for the typed number are the shared block of calc-qui*.js; in the page tab only the pairs and repetitions (the single losses light up in the list)
+    const view = CALCQUI.mount(shared
+      ? { ctl: null, out: root.querySelector("#nl-res"), idp: "nlq", quiet: true, numOnly: true, flat: true, combos: true, arg: () => ({ text: NL.q, ans: 0 }) }
+      : { ctl: root.querySelector("#nl-ctl"), out: root.querySelector("#nl-res"), idp: "nlq", quiet: true, numOnly: true, arg: () => ({ text: NL.q, ans: 0 }) });
     const toAd = root.querySelector("#nl-to-ad");
-    const list = () => { root.querySelector("#nl-list").innerHTML = lossList(); wire(); toAd.hidden = !CALCQUI.numberOf(NL.q); CALCQUI.later(view); };
-    toAd.onclick = () => { const n = CALCQUI.numberOf(NL.q); if (n) CALCQUI.apriAddotti(n); };
-    toAd.hidden = !CALCQUI.numberOf(NL.q);
+    const list = () => { root.querySelector("#nl-list").innerHTML = lossList(); wire(); if (toAd) toAd.hidden = !CALCQUI.numberOf(NL.q); CALCQUI.later(view); };
+    if (toAd) { toAd.onclick = () => { const n = CALCQUI.numberOf(NL.q); if (n) CALCQUI.apriAddotti(n); }; toAd.hidden = !CALCQUI.numberOf(NL.q); }
     const wire = () => {
       root.querySelectorAll(".nlrow").forEach((/** @type {any} */ b) => b.onclick = () => { const id = b.dataset.d, d = b.closest(".nlr").querySelector(".nldet"); if (NL.open.has(id)) NL.open.delete(id); else NL.open.add(id); d.hidden = !NL.open.has(id); b.setAttribute("aria-expanded", NL.open.has(id)); });
       root.querySelectorAll("[data-go]").forEach((/** @type {HTMLElement} */ a) => a.onclick = (/** @type {Event} */ e) => { e.preventDefault(); show(/** @type {string} */ (a.dataset.go)); });
     };
     wire();
-    root.querySelector("#nl-q").oninput = (/** @type {Bag} */ e) => { NL.q = e.target.value; list(); };
-    root.querySelectorAll("#nl-pol button").forEach((/** @type {any} */ b) => b.onclick = () => {
-      const p = b.dataset.p;
-      if (NL.pols.has(p)) {
-        if (NL.pols.size === 1) NL.pols.add(p === "+" ? "-" : "+");
-        NL.pols.delete(p);
-      } else {
-        NL.pols.add(p);
-      }
-      root.querySelectorAll("#nl-pol button").forEach((/** @type {HTMLElement} */ x) => x.classList.toggle("on", NL.pols.has(/** @type {string} */ (x.dataset.p))));
-      list();
-    });
-  }
-  // the polarity of the loaded files sets the filter when the window opens (the student can change it)
-  function lossPolStart() {
-    try { const fl = typeof shown === "function" && shown().length ? shown() : E.files.filter((/** @type {MzFile} */ f) => f.vis), pos = fl.some((/** @type {MzFile} */ f) => f.polarity === "positive"), neg = fl.some((/** @type {MzFile} */ f) => f.polarity === "negative"); NL.pols = pos && !neg ? new Set(["+"]) : neg && !pos ? new Set(["-"]) : new Set(["+", "-"]); } catch (_) { NL.pols = new Set(["+", "-"]); }
+    const qi = root.querySelector("#nl-q");
+    if (qi) qi.oninput = (/** @type {Bag} */ e) => { NL.q = e.target.value; list(); };
+    // a new polarity or tolerance redraws the list (the view of the candidates follows by itself); a list taken off the page stops listening
+    CALCQUI.onChange(() => { if (root.isConnected && root.querySelector("#nl-list")) list(); });
+    return { list, setQ: (/** @type {string} */ q) => { NL.q = q; list(); } };
   }
 
   // ---------------------------------------------------------------- isotope pattern, computed here (no external library)
@@ -144,9 +134,11 @@
   function open(which, opt = {}) {
     // the adducts are the calculator's: the old request opens it
     // in Dati the calculator lives in the sidebar tab, elsewhere it floats
-    if (which === "ad") { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("calc"); else { const c = Qs("#calcdlg"); if (c && c.hidden && window.calcToggleFloat) window.calcToggleFloat(); } return; }
+    if (which === "ad") { if (window.BARRA) BARRA.setTab("adducts", opt); return; }
+    // the Neutral losses live in the side panel page (from another view it goes back to Dati); the window stays only for a page without the drawer
+    if (which === "ls" && window.BARRA) { BARRA.setTab("losses", opt.q != null ? { q: String(opt.q) } : {}); return; }
     const d = Qs("#refdlg"), body = Qs("#refbody");
-    if (which === "ls") { if (!d.open) lossPolStart(); if (opt.q != null) NL.q = String(opt.q); }
+    if (which === "ls" && opt.q != null) NL.q = String(opt.q);
     const show = (/** @type {string} */ id) => {
       const t = TABS.find(x => x[0] === id); if (!t) return; body.innerHTML = t[2](); if (t[3]) t[3](body, show);
       Qs("#reftitle").textContent = t[1];
@@ -155,38 +147,15 @@
     show(which); if (!d.open) d.showModal();
     if (which === "ls" && opt.q != null) setTimeout(() => { const i = body.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
   }
-  /** @param {HTMLElement} container @param {{ q?: string | number | null }} [opt] */
-  function mountLosses(container, opt = {}) {
-    lossPolStart();
-    if (opt.q != null) NL.q = String(opt.q);
-    container.innerHTML = lossTab();
-    bindLoss(container, id => {
-      if (id === "pt") {
-        if (window.BARRA && BARRA.isDataView()) {
-          BARRA.setTab("ptable");
-        } else {
-          open(id);
-        }
-      }
-    });
-    if (opt.q != null) {
-      setTimeout(() => { const i = container.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
-    }
-  }
-
-  function setLossQuery(/** @type {unknown} */ q) {
-    NL.q = String(q || "");
-    const qInp = document.querySelector("#nl-q");
-    if (qInp) {
-      qInp.value = NL.q;
-      qInp.dispatchEvent(new Event("input", { bubbles: true }));
-      setTimeout(() => { qInp.focus(); qInp.select(); }, 50);
-    }
+  /** The Neutral losses tab of the Adducts & losses page: no field of its own, the page field gives the number. @param {HTMLElement} container */
+  function mountLosses(container) {
+    container.innerHTML = lossTab(true);
+    return bindLoss(container, id => { if (id === "pt") { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("ptable"); else open(id); } }, true);
   }
 
   window.QQQRef = {
     open, massOf, mono, unitIon, ionCounts, ADD,
     lossName: (/** @type {Bag} */ l) => `<b>${fl(l.f)}</b>`, lossDet,
-    mountLosses, setLossQuery, periodic, bindPeriodic, lossTab, bindLoss
+    mountLosses, periodic, bindPeriodic, lossTab, bindLoss
   };
 })();

@@ -363,6 +363,7 @@ declare var calcKey: any;
 declare var calcPlace: any;
 declare var calcPretty: any;
 declare var calcRun: any;
+declare var calcSearch: any;
 declare var calcTape: any;
 declare var campioniEdit: any;
 declare var canInt: any;

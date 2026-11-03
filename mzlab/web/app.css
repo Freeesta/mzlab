@@ -496,6 +496,36 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 
 .cadd-diffs .cadd-f{margin:8px 0 4px}.cadd-diffs ul{margin:4px 0;padding-left:18px}
 @media (pointer:coarse){.cadd .seg button,.cadt .cxic,.cadd-more{min-height:40px}.cadt th,.cadt td{height:40px}}
+/* the Adducts & losses page of the drawer: calculator on top (folds), one field, one choices row, the tabs */
+#al-calc{border-bottom:1px solid var(--line);margin:0 0 6px;padding:0 0 4px}
+.al-calc-tg{display:flex;align-items:center;gap:6px;width:100%;min-height:32px;padding:2px 6px;margin:0;border:0;border-radius:6px;background:transparent;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
+.al-calc-tg:hover{background:var(--sel)}.al-calc-tg:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.al-calc-tg .al-chev{margin-left:auto;color:var(--muted);transition:transform .15s}.al-calc-tg[aria-expanded=false] .al-chev{transform:rotate(-90deg)}
+@media (prefers-reduced-motion:reduce){.al-calc-tg .al-chev{transition:none}}
+#al-calc-body[hidden]{display:none}
+#calcdlg.sb-docked #calcqui{display:none}
+#calcdlg.sb-docked input#calcin{margin:4px 0}
+#calcres-wrap,#calcres-wrap #calcres{min-height:0}
+#calcres-wrap{flex-direction:row!important;align-items:center!important;gap:8px!important;min-height:calc(40px*var(--z,1))!important}
+#calcres-wrap .calc-nl-btn{width:auto!important;flex:none;min-height:32px}
+#calcres-wrap #calcres{flex:1 1 auto;width:auto!important;justify-content:flex-end!important;text-align:right!important;height:calc(38px*var(--z,1));font-size:calc(26px*var(--z,1))}
+#calcdlg.sb-docked #calcsum{min-height:0}
+#calcdlg.sb-docked .cpad{gap:4px;margin:4px 0}
+#calcdlg.sb-docked .cpad button{min-height:34px;font-size:calc(17px*var(--z,1))}
+#calcdlg.sb-docked #calctape{max-height:5.5em;overflow:auto}
+#al-find{margin:2px 0 4px}#al-find .sb-search-box{flex:1}#al-find input{width:100%;box-sizing:border-box;min-height:28px}#al-find input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}#al-find .sb-search-box:focus-within{border-color:transparent}
+#al-ctl .cq-ctl{margin:2px 0 6px;align-items:center;gap:6px 8px}
+.cq-tolf{flex-direction:row!important;align-items:center;gap:6px!important;flex:none!important}
+.cq-tolf input{width:6ch!important;min-width:0;text-align:right;margin:0!important;min-height:32px;box-sizing:border-box;font-variant-numeric:tabular-nums}
+.cq-res{font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.cq-res[data-mode=hr]{border-color:var(--accent);color:var(--accent);font-weight:600}
+#al-tabs{display:flex;margin:4px 0 2px}#al-tabs button{flex:1 1 auto;min-height:32px;white-space:nowrap;padding:2px 6px}
+#al-tabs .cq-n[hidden]{display:none}
+#al-tabs [aria-selected="true"] .cq-n{color:inherit;border-color:currentColor}
+.al-cap{font-size:11.5px;margin:4px 2px 6px}
+.al-body .cq-flat .cq-l{margin-left:0;list-style:none}.al-body .cq-flat .cq-l li{border-bottom:1px solid var(--line);padding:4px 2px;margin:0}
+.cq-sub{font-weight:600;margin:6px 0 2px;font-size:12px}
+@media (pointer:coarse){.al-calc-tg,#al-tabs button,.cq-tolf input{min-height:40px}#calcdlg.sb-docked .cpad button{min-height:40px}}
 /* precursor tree of an MSn infusion (infusione-albero.js): three groups of labelled controls on one row that wraps cleanly, rows with a visible selection */
 .inf-ctl{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 28px;margin-bottom:8px}
 .inf-g{display:flex;flex-wrap:wrap;gap:8px 8px}

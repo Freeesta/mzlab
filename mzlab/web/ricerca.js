@@ -50,8 +50,8 @@ function ricContaminants() {
 
 // ------------------------------------------------------------------ number
 const RIC_GO = {
-  loss: (/** @type {number} */ x) => { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses", { q: String(x) }); else if (window.QQQRef) QQQRef.open("ls", { q: String(x) }); },
-  adduct: () => { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("calc"); else if (window.QQQRef) QQQRef.open("ad"); },
+  loss: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("losses", { q: String(x) }); },
+  adduct: (x = /** @type {number | null} */ (null)) => { if (window.BARRA) BARRA.setTab("adducts", x != null ? { q: String(x) } : {}); },
   cont: (/** @type {number} */ x, /** @type {any} */ it) => { if (window.LISTE) LISTE.open({ mz: x, polarity: it && it.pol > 0 ? "positive" : "negative", hr: ricHrNow() }); }
 };
 

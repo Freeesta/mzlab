@@ -128,3 +128,15 @@ def test_the_same_unit_gives_the_same_results_in_both_modes():
     assert r[0][0] != r[2][0] or r[0][1] != r[2][1]          # and Da and ppm are not the same window
     # a window in Da reaches the engine as the equivalent ppm at the reference m/z of the differences (400): 0.5 Da = 1250 ppm
     assert abs(float(r[0][1]) - 0.5 / 400 * 1e6) < 1e-3 and float(r[2][1]) == 7.5          # 5 ppm at 400 is 0.002 Da: the window of a difference never gets under 0.003 Da (7.5 ppm)
+
+
+def test_esi_plus_and_minus_toggle_on_their_own_and_one_always_stays_on():
+    r = run("console.log(JSON.stringify([CQ.polToggle(1,-1),CQ.polToggle(0,1),CQ.polToggle(-1,-1),CQ.polToggle(0,-1),CQ.polToggle(1,1),"
+            "CQ.polOk(0,1),CQ.polOk(0,-1),CQ.polOk(1,'+'),CQ.polOk(1,'-'),CQ.polOk(-1,'±'),CQ.polOk(-1,1)]))")
+    assert r == [0, -1, 1, 1, -1, True, True, True, False, True, False]
+
+
+def test_both_polarities_list_the_adducts_and_losses_of_both_signs():
+    r = run("const one=p=>({...LR,pol:p});const f=async p=>(await CQ.gruppi(CQ.arg('30',0),one(p),dep)).find(g=>g.id==='perdite');"
+            "const n=async p=>{const g=await f(p);return g?g.items.length:0};console.log(JSON.stringify([await n(1),await n(-1),await n(0)]))")
+    assert r[2] >= max(r[0], r[1])

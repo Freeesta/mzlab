@@ -16,5 +16,16 @@ I18N.add("it", {
   "calc.col.da": "errore (Da)",
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "nessun addotto entro {tol} Da",
-  "icon.ad": "Addotti"
+  "icon.ad": "Addotti",
+  "cq.cap.adducts": "Il numero è la m/z di uno ione: M = m/z ∓ addotto. Una formula dà i suoi ioni.",
+  "cq.cap.losses": "Il numero è una differenza fra due picchi (Δm), non uno ione.",
+  "cq.cap.cont": "Ioni di fondo noti a questa m/z: liste dei contaminanti (fondo LC-MS, laboratorio) e le tue liste.",
+  "cq.res.lr": "Risoluzione unitaria",
+  "cq.res.hr": "Alta risoluzione",
+  "cq.res.src.files": "Dai file aperti: {name}",
+  "cq.res.src.formula": "Da una formula: masse esatte",
+  "cq.res.src.decimals": "Dal numero scritto (tre o più decimali)",
+  "cq.res.src.short": "Dal numero scritto (meno di tre decimali)",
+  "cq.res.src.none": "Nessun file aperto: risoluzione unitaria",
+  "cq.g.combos": "Combinazioni di perdite"
 });
