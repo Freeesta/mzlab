@@ -52,21 +52,9 @@ pub fn local_max(x: &[f64], xr: &[f64], yr: &[f64], tol: f64) -> Vec<f64> {
 }
 
 /// `subtract_trace`: `y − factor · reference`; `clip` turns the negatives into 0 (a NaN stays NaN).
-pub fn subtract_trace(
-    x: &[f64],
-    y: &[f64],
-    xr: &[f64],
-    yr: &[f64],
-    factor: f64,
-    rttol: f64,
-    clip: bool,
-) -> Vec<f64> {
+pub fn subtract_trace(x: &[f64], y: &[f64], xr: &[f64], yr: &[f64], factor: f64, rttol: f64, clip: bool) -> Vec<f64> {
     let r = local_max(x, xr, yr, rttol);
-    y.iter()
-        .zip(&r)
-        .map(|(a, b)| a - factor * b)
-        .map(|d| if clip && d < 0.0 { 0.0 } else { d })
-        .collect()
+    y.iter().zip(&r).map(|(a, b)| a - factor * b).map(|d| if clip && d < 0.0 { 0.0 } else { d }).collect()
 }
 
 /// `area`: the trapezoid area of a trace (numpy's pairwise sum of the strips).
@@ -74,9 +62,7 @@ pub fn area(x: &[f64], y: &[f64]) -> f64 {
     if x.len() < 2 {
         return 0.0;
     }
-    let strips: Vec<f64> = (1..x.len())
-        .map(|i| (x[i] - x[i - 1]) * (y[i] + y[i - 1]) / 2.0)
-        .collect();
+    let strips: Vec<f64> = (1..x.len()).map(|i| (x[i] - x[i - 1]) * (y[i] + y[i - 1]) / 2.0).collect();
     psum(&strips)
 }
 
@@ -90,9 +76,5 @@ pub fn norm_factor(normalize: bool, sample: f64, reference: f64) -> f64 {
 
 /// `_diff_cut`: the difference at the times of the sample, without the times that have no reference (NaN), as (rt, y).
 pub fn cut(rt: &[f64], d: &[f64]) -> (Vec<f64>, Vec<f64>) {
-    rt.iter()
-        .zip(d)
-        .filter(|(_, v)| !v.is_nan())
-        .map(|(t, v)| (*t, *v))
-        .unzip()
+    rt.iter().zip(d).filter(|(_, v)| !v.is_nan()).map(|(t, v)| (*t, *v)).unzip()
 }

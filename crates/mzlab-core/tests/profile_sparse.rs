@@ -35,19 +35,11 @@ fn scan(i: usize, prec: f64, dense: bool) -> Spectrum {
 
 /// Two precursors alternating; the only scans with more than 20 points are the first ones, far from the middle of the run.
 fn routes() -> Routes<Vec<u8>> {
-    let mut w = MzmlWriter::new(
-        Vec::new(),
-        &Header {
-            run: "sparse".into(),
-            ..Default::default()
-        },
-    )
-    .unwrap();
+    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "sparse".into(), ..Default::default() }).unwrap();
     let total = 100;
     w.open_spectra(total).unwrap();
     for i in 0..total {
-        w.spectrum(&scan(i, if i % 5 == 1 { 305.0 } else { 229.1 }, i < 6))
-            .unwrap();
+        w.spectrum(&scan(i, if i % 5 == 1 { 305.0 } else { 229.1 }, i < 6)).unwrap();
     }
     w.close_spectra().unwrap();
     let mzml = w.finish().unwrap();
@@ -67,10 +59,7 @@ fn sparse_profile_level_still_answers_the_spectrum() {
         let got = r.handle("/api/spectrum", &Query::parse(&q)).unwrap();
         let text = got.unwrap_or_else(|| panic!("{q}: gave the spectrum to Python"));
         let j: serde_json::Value = serde_json::from_str(&text).unwrap();
-        assert!(
-            !j["mz"].as_array().unwrap().is_empty(),
-            "{q}: empty spectrum"
-        );
+        assert!(!j["mz"].as_array().unwrap().is_empty(), "{q}: empty spectrum");
         assert!(j["scans"].as_i64().unwrap() > 0, "{q}: no scans");
     }
 }
