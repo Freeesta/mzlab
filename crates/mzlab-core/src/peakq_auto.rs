@@ -43,6 +43,22 @@ impl Default for AutoParams {
     }
 }
 
+impl AutoParams {
+    /// The two numbers of the page dialog: smoothing window of the apex picking (points, odd) and minimum S/N of the prominence; the rest at
+    /// the defaults (set only with `mzlab-cli peaks-auto --set`).
+    pub fn from_dialog(smooth: usize, snr: f64) -> AutoParams {
+        let d = AutoParams::default();
+        AutoParams {
+            pick: ProminenceParams {
+                smooth,
+                snr,
+                ..d.pick
+            },
+            ..d
+        }
+    }
+}
+
 /// The background (AsLS, lambda 1e7, raised to the median of the points within 3 noise of it) and the trace above it.
 fn background(y: &[f64], noise: f64) -> (Vec<f64>, Vec<f64>) {
     let mut b = asls_baseline(y, 1e7, 0.01, 10, 160);

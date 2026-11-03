@@ -138,6 +138,7 @@ pub mod msn_uscite;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
+mod peaks_auto_cmd;
 mod peaks_edges_cmd;
 mod steps_cmd;
 mod tutor;
@@ -160,6 +161,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help)
        mzlab-cli campioni variabili|nome-gruppo ...   how the file names split the files, as JSON (campioni --help)
        mzlab-cli peaks-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peaks-edges --help)
+       mzlab-cli peaks-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peaks-auto --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
@@ -371,7 +373,7 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 9] = [
+const PLAIN: [&str; 10] = [
     "llm",
     "steps",
     "tutor",
@@ -381,6 +383,7 @@ const PLAIN: [&str; 9] = [
     "ion-pattern",
     "campioni",
     "peaks-edges",
+    "peaks-auto",
 ];
 
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
@@ -393,6 +396,7 @@ fn run_plain(command: &str, args: Vec<String>) -> Outcome {
         "ion-pattern" => ion_pattern_cmd::run(args),
         "campioni" => campioni_cmd::run(args),
         "peaks-edges" => peaks_edges_cmd::run(args),
+        "peaks-auto" => peaks_auto_cmd::run(args),
         _ => tutor::run(args),
     }
 }

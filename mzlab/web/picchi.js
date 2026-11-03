@@ -16,10 +16,12 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
-// Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
+// Settings of the automatic integration (dialog «Rilevamento dei picchi»), saved in this browser; any other stored key is dropped. The defaults are
+// those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peaks-edges / peaks-auto --set only).
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
-const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0, hrSmooth: 5, hrSn: 5, hrProm: 1, hrScans: 3, hrHalf: 0, hrSlope: 3 };
-const PK = (() => { const o = lsObj(NOMI.KEY("picchi")); const { method: _old, ...rest } = o; return { ...PK_DEF, ...rest }; })();
+/** @type {Record<string, number>} */
+const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5 };
+const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 // Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
 // moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
@@ -27,10 +29,10 @@ function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringif
 // goes from + to -. Each edge is where the signal falls below (local baseline + 3% of the peak height, and at least 3 times the noise), or where
 // the derivative changes sign again (a valley before the next peak) for a sustained stretch. Baseline = straight line between the two edges (integ()).
 // The detector is Rust (crates/mzlab-core/src/peakq_lr.rs through QUALITA.edges); this asks it with the parameters of the dialog.
-/** Limits [t0, t1] (min) of the peak at time x on the trace s; null below the S/N threshold or without the engine. @param {Bag} s @param {number} x @param {number} [ref] */
-async function autoEdges(s, x, ref = 0) {
+/** Limits [t0, t1] (min) of the peak at time x on the trace s; null below the S/N threshold or without the engine. @param {Bag} s @param {number} x */
+async function autoEdges(s, x) {
   const isMrm = (s.key && s.key.startsWith("m|")) || s.tr != null;
-  const r = window.QUALITA ? await QUALITA.edges(s.x, s.y, x, ref, isMrm, PK) : null;
+  const r = window.QUALITA ? await QUALITA.edges(s.x, s.y, x, isMrm, PK) : null;
   return r && r.length ? r : null;
 }
 // trace to integrate at time x: the clicked row when stacked, otherwise the most intense one
@@ -101,8 +103,7 @@ const hrTrace = (/** @type {Bag} */ s) => { const f = E.files[s.k]; return !!f &
 // windows that would overlap an integration already there are left out
 async function autoAll(/** @type {Bag} */ p, /** @type {Bag} */ s) {
   const a = p._a; if (!a) return;
-  const o = { smooth: PK.hrSmooth, snr: PK.hrSn, rel: PK.hrProm / 100, scans: PK.hrScans, half: PK.hrHalf, slope: PK.hrSlope / 100 };
-  const lim = window.QUALITA ? await QUALITA.autoIntegrate(s.x, s.y, a.x0, a.x1, o) : null;
+  const lim = window.QUALITA ? await QUALITA.autoIntegrate(s.x, s.y, a.x0, a.x1, { smooth: PK.hrSmooth, snr: PK.hrSn }) : null;
   if (!lim) { nearMsg(I18N.t("int.autoOff")); return; }
   const add = lim.map((/** @type {Bag} */ w) => [s.x[w.lo], s.x[w.hi], w.b0, w.b1]).filter((/** @type {number[]} */ w) => w[1] - w[0] > INT_EPS && !intClash(p, s.key, w[0], w[1]));
   if (!add.length) { nearMsg(I18N.t(lim.length ? "int.clash" : "int.autoNone")); return; }
@@ -112,9 +113,8 @@ async function autoAll(/** @type {Bag} */ p, /** @type {Bag} */ s) {
 }
 // automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
 async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ x) {
-  const same = p.ints.filter((/** @type {Bag} */ i) => i.key === s.key).map((/** @type {Bag} */ i) => iHi(i) - iLo(i)).sort((/** @type {number} */ u, /** @type {number} */ v) => u - v);
   if (!window.QUALITA) { nearMsg(I18N.t("int.autoOff")); return; }
-  const ed = await autoEdges(s, x, same.length ? same[same.length >> 1] : 0);
+  const ed = await autoEdges(s, x);
   if (!ed) { nearMsg(I18N.t("int.belowSn")); return; }
   let [l, r] = ed;
   if (p.type !== "mrm") {
@@ -135,27 +135,19 @@ function intAt(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number
   }
   return null;
 }
-// dialog of the automatic-integration parameters (applies to every panel; the defaults reproduce the behaviour that always was)
+// dialog of the automatic-integration settings (applies to every panel): two blocks side by side, one row per setting (label, field, one-line hint)
 function peakParams() {
-  // one row per parameter: label | field | short hint, in a single aligned column; the sections group what belongs together
-  const f = (/** @type {string} */ k, hint = true) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${hint ? I18N.t(`pk.${k}.h`) : ""}</span></label>`;
-  const sec = (/** @type {string} */ k, /** @type {string} */ rows) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${rows}</fieldset>`;
-  const opt = (/** @type {string} */ k) => `<option value="${k}"${PK.noise === k ? " selected" : ""}>${I18N.t(`pk.noise.${k}`)}</option>`;
-  big(I18N.t("pk.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("pk.intro")}</div>
-    ${sec("noise", f("win") + f("areaNoise"))}
-    ${sec("edges", f("edgeFrac") + f("snMin") + f("tail"))}
-    ${sec("multi", f("multi"))}
-    ${sec("hr", f("hrSmooth") + f("hrSn") + f("hrProm") + f("hrScans") + f("hrHalf") + f("hrSlope"))}
-    <details id="pk-adv"><summary>${I18N.t("pk.sec.adv")}</summary><fieldset class="pk-sec"><legend class="sr-only">${I18N.t("pk.sec.adv")}</legend>
-      <label class="pk-row"><span>${I18N.t("pk.noise")}</span><select data-pk="noise" style="grid-column:2/4;justify-self:start">${["mad", "rms", "manual"].map(opt).join("")}</select></label>
-      ${f("nr0")}${f("nr1", false)}${f("constrain")}${f("minHalf")}</fieldset></details>
-    <div style="margin-top:8px"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
-    const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = PK[i.dataset.pk]; });
+  const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
+  const sec = (/** @type {string} */ k, /** @type {string[]} */ keys) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${keys.map(f).join("")}</fieldset>`;
+  big(I18N.t("pk.title"), `<div class="muted sm pk-intro">${I18N.t("pk.intro")}</div>
+    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}</div>
+    <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
+    const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
     Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
     Q("#pk-ok").onclick = () => {
       COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => {
-        document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const k = i.dataset.pk; if (k === "noise") PK[k] = i.value; else { const v = numIt(i.value); if (v >= 0) PK[k] = v; } });
-        PK.minHalf = Math.max(1, Math.round(PK.minHalf)); PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1); PK.hrScans = Math.max(2, Math.round(PK.hrScans)); PK.hrHalf = Math.min(30, Math.round(PK.hrHalf));
+        document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const v = numIt(i.value); if (v >= 0) PK[i.dataset.pk] = v; });
+        PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1);
       });
       pkSave(); Q("#bigdlg").close();
     };

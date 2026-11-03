@@ -4,7 +4,8 @@
 
 use crate::sortc;
 
-/// Parameters of the detector (the dialog «Peak detection» of the page, `PK`).
+/// Parameters of the detector. The dialog «Peak detection» of the page sets five of them (`from_dialog`); the rest keep these defaults
+/// there and are set only with `mzlab-cli peaks-edges --set`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LrParams {
     /// Baseline window around the apex (min).
@@ -55,6 +56,19 @@ impl Default for LrParams {
 }
 
 impl LrParams {
+    /// The five numbers of the page dialog (`PK` of picchi.js), in the order win, edgeFrac, snMin, multi, tail; every other field at its default.
+    pub fn from_dialog(p: &[f64]) -> Option<LrParams> {
+        let [win, edge_frac, sn_min, multi, tail] = <[f64; 5]>::try_from(p.get(..5)?).ok()?;
+        Some(LrParams {
+            win,
+            edge_frac,
+            sn_min,
+            multi,
+            tail,
+            ..Default::default()
+        })
+    }
+
     /// The eleven numbers of the wasm and CLI interface, in the order of the fields (`noise`: 0 = MAD, 1 = RMS, 2 = manual region).
     pub fn from_slice(p: &[f64]) -> Option<LrParams> {
         if p.len() < 11 {
