@@ -198,8 +198,11 @@ fn samples_text_v1(doc: &str) -> String {
 }
 
 /// Two rows with the same blank area (1e6) and a sample area of 2e6: the blank cell of the first was filled by the gap filling, the one of the second was detected.
+/// A row: m/z, RT and the (area, state) of each of the four files.
+type Row = (f64, f64, [(f64, u8); 4]);
+
 fn blank_table() -> Vec<u8> {
-    let rows: [(f64, f64, [(f64, u8); 4]); 2] = [
+    let rows: [Row; 2] = [
         (
             200.0,
             5.0,

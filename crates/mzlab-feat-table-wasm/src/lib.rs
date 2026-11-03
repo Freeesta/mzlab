@@ -225,6 +225,7 @@ pub fn export_table(
 /// or, when `view_json` is the text `table_view_auto` made, the rows it keeps (its table must be this one: `err.flow.export.view` otherwise).
 /// The `.mzidx` of the files are read as `index_read(k, offset, length)`, `index_sizes[k]` bytes each (none when they are not at hand).
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn export_table_auto(
     table_read: Function,
     size: f64,
