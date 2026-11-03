@@ -21,11 +21,11 @@ try:
         pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
         def opengroup():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
-            g = pg.locator("#uip-g-bug"); assert g.count() == 1 and g.locator("summary svg").count() == 2, "group with the bug icon (and the chevron)"
-            if not pg.evaluate("document.querySelector('#uip-g-bug').open"): pg.click("#uip-g-bug summary")
+            g = pg.locator("#uip-g-bug"); assert g.count() == 1 and g.locator("button svg").count() == 1, "plain button with the bug icon, no fold"
+            if pg.locator("#uip-bug").is_hidden(): pg.click("#uip-bugbtn")
             pg.wait_for_selector("#bug-what", timeout=10000)
         def closepanel():
-            pg.focus("#uip-g-bug summary")      # Esc goes to the focused document: in the drawing view the sketcher iframe can take the focus while the panel opens
+            pg.focus("#uip-bugbtn")      # Esc goes to the focused document: in the drawing view the sketcher iframe can take the focus while the panel opens
             pg.keyboard.press("Escape")
             try: pg.wait_for_selector("#uipset", state="detached", timeout=5000)
             except TimeoutError:
@@ -34,11 +34,11 @@ try:
                 raise AssertionError(f"Escape did not close the settings: {st}; after a second Escape: {late}")
         def icon():
             assert pg.locator("#bug-btn").count() == 0, "no bug button in the header"
-            assert pg.evaluate("typeof window.BUGREP") == "undefined", "the form is lazy: not loaded before the group is opened"
+            assert pg.evaluate("typeof window.BUGREP") == "undefined", "the form is lazy: not loaded before the button opens it"
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
-            assert pg.inner_text("#uip-g-bug summary").strip() == "Segnala un bug" and pg.locator("#bugdlg").count() == 0
+            assert pg.inner_text("#uip-bugbtn").strip() == "Segnala un bug" and pg.locator("#bugdlg").count() == 0
             pg.keyboard.press("Escape")
-        step("no header button; the settings have the «Segnala un bug» group with the insect; form not loaded at start", icon)
+        step("no header button; the settings have the «Segnala un bug» button with the insect; form not loaded at start", icon)
         pg.set_input_files("#pick", [str(named)]); pg.wait_for_selector("text=Carica dati"); pg.click("text=Carica dati"); ready(pg)
         def opens():
             pg.evaluate("window.ERRORI && ERRORI.segnala(new Error('Cannot read %s.mzML and %s'), 'prova')" % (SECRET, SECRET))
@@ -48,7 +48,7 @@ try:
             assert pg.evaluate("document.querySelector('#uipset').getAttribute('role')") == "dialog"
             assert pg.get_attribute("#bug-what", "id") == "bug-what" and pg.locator("label[for=bug-what]").count() == 1, "the field has a label"
             pg.click("#uip-bug details > summary"); attendi(pg, "document.querySelector('#bug-diagtxt').textContent !== ''")
-            assert pg.evaluate("document.querySelector('#uip-g-bug').open"), "group still open"
+            assert pg.is_visible("#bug-what"), "form still open"
             t = pg.inner_text("#bug-diagtxt")
             assert "- mzLab:" in t and "- Mode: web" in t and "- Loaded files: 1 (mzML" in t and "- Service worker:" in t and "Recent errors:" in t, t
             assert SECRET not in t and "ZZ" not in t, "no name of the loaded file in the report"
@@ -95,7 +95,7 @@ try:
         def english():
             pg.evaluate("I18N.set('en')"); pg.wait_for_function("window.qqReady===true && I18N.lang === 'en'", timeout=60000)
             opengroup()
-            assert pg.inner_text("#uip-g-bug summary").strip() == "Report a bug" and pg.inner_text("#bug-go") == "GitHub" and pg.inner_text("#bug-copy") == "Copy" and pg.inner_text("#bug-mail") == "Send by email"
+            assert pg.inner_text("#uip-bugbtn").strip() == "Report a bug" and pg.inner_text("#bug-go") == "GitHub" and pg.inner_text("#bug-copy") == "Copy" and pg.inner_text("#bug-mail") == "Send by email"
             assert pg.get_attribute("#bug-what", "placeholder") == "What happened?"
             assert "## What happened" in report(); closepanel(); pg.evaluate("I18N.set('it')"); pg.wait_for_function("window.qqReady===true && I18N.lang === 'it'", timeout=60000)
         step("English", english)

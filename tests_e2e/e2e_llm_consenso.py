@@ -19,7 +19,7 @@ try:
         def llm_urls(): return [u for u in seen if "/llm/" in u or "wasm-feat/llm" in u]
         def corso():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
-            pg.evaluate("document.getElementById('uip-g-app').open = true")
+            
             assert pg.locator("#uip-llm").count() == 0, "no LLM element with the profile corso"
             assert not llm_urls(), llm_urls()
         step("corso: no LLM element and no llm/ file", corso)

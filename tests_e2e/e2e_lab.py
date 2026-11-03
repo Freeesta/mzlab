@@ -83,7 +83,7 @@ try:
             pg, _ = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z"); errs = []
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: m.type == "error" and errs.append(m.text))
             pg.wait_for_selector("#drop", timeout=120000); attendi(pg, "typeof TOUR !== 'undefined' && typeof setView === 'function'", 120000)
-            pg.click("#np-set"); pg.wait_for_selector("#uip-g-app", timeout=30000); pg.evaluate("document.getElementById('uip-g-app').open = true"); pg.wait_for_selector("#uip-tour", timeout=30000)
+            pg.click("#np-set"); pg.wait_for_selector("#uip-g-app", timeout=30000); pg.wait_for_selector("#uip-tour", timeout=30000)
             assert pg.inner_text("#uip-tour").strip() == "Fai il tour", pg.inner_text("#uip-tour")
             pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
             assert "Carica un file per continuare" in pg.inner_text("#tour-dialog"), pg.inner_text("#tour-dialog")
@@ -92,7 +92,7 @@ try:
             attendi(pg, "!document.getElementById('tour-dialog').innerText.includes('Carica un file per continuare')", 60000)
             assert pg.is_visible("#tour-dialog")
             pg.keyboard.press("Escape"); attendi(pg, "!document.getElementById('tour-dialog')")
-            pg.click("#np-set"); pg.wait_for_selector("#uip-g-app", timeout=30000); pg.evaluate("document.getElementById('uip-g-app').open = true"); pg.wait_for_selector("#uip-tour", timeout=30000)      # one file loaded: same label, the tour starts on the data at once
+            pg.click("#np-set"); pg.wait_for_selector("#uip-g-app", timeout=30000); pg.wait_for_selector("#uip-tour", timeout=30000)      # one file loaded: same label, the tour starts on the data at once
             assert pg.inner_text("#uip-tour").strip() == "Fai il tour"
             pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
             assert "Carica un file per continuare" not in pg.inner_text("#tour-dialog")
