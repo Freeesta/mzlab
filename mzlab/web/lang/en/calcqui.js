@@ -16,5 +16,16 @@ I18N.add("en", {
   "calc.col.da": "error (Da)",
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "no adduct within {tol} Da",
-  "icon.ad": "Adducts"
+  "icon.ad": "Adducts",
+  "cq.cap.adducts": "The number is the m/z of an ion: M = m/z ∓ adduct. A formula gives its ions.",
+  "cq.cap.losses": "The number is a difference between two peaks (Δm), not an ion.",
+  "cq.cap.cont": "Known background ions at this m/z: contaminant lists (LC-MS background, laboratory) and your own lists.",
+  "cq.res.lr": "Unit resolution",
+  "cq.res.hr": "High resolution",
+  "cq.res.src.files": "From the open files: {name}",
+  "cq.res.src.formula": "From a formula: exact masses",
+  "cq.res.src.decimals": "From the number typed (three or more decimals)",
+  "cq.res.src.short": "From the number typed (fewer than three decimals)",
+  "cq.res.src.none": "No file open: unit resolution",
+  "cq.g.combos": "Combinations of losses"
 });

@@ -1,4 +1,4 @@
-"""«What can this number be?» under the Calculator, the Adducts panel and the Neutral losses panel (no data file needed):
+"""«What can this number be?» under the floating Calculator (Disegno), the Adducts and the Neutral losses tabs of Adducts & losses (no data file needed):
 groups for 214 / 30 / 18 / 100+114 / 21.98, resolution detected from the number (no switch), polarity, no observed field, no layout jump, cross-links, keystroke time, no engine miss."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -11,7 +11,8 @@ r = Run(port=8886, wd="/tmp/wd86")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        attendi(pg, "document.querySelector('#np-calc2') && !document.querySelector('#start').hidden")
+        attendi(pg, "window.qqReady && !document.querySelector('#start').hidden"); pg.evaluate("setView('draw')")
+        attendi(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
         pg.click("#np-calc2")
         attendi(pg, "!document.querySelector('#calcdlg').hidden && typeof CALCQUI !== 'undefined' && CALCQUI.calc")
         def type_(v):
@@ -66,10 +67,14 @@ try:
             type_("C9H10N2O"); assert mode() == "hr" and msrc() == "formula", mode()
         step("a formula is searched in high resolution", formula_mode)
         def pol():
+            P = "[...document.querySelectorAll('#calcpol button')].map(b => b.dataset.p + ':' + b.getAttribute('aria-pressed')).join(' ')"
             pg.click("#calcpol button[data-p='-1']"); frames(pg, 25)
-            assert pg.get_attribute("#calcpol button[data-p='-1']", "aria-pressed") == "true"
+            assert pg.evaluate(P) == "1:true -1:true" and pg.evaluate("CALCQUI.pol()") == 0, pg.evaluate(P)
             pg.click("#calcpol button[data-p='1']"); frames(pg, 25)
-        step("polarity buttons toggle aria-pressed", pol)
+            assert pg.evaluate(P) == "1:false -1:true" and pg.evaluate("CALCQUI.pol()") == -1, pg.evaluate(P)
+            pg.click("#calcpol button[data-p='-1']"); frames(pg, 25)
+            assert pg.evaluate(P) == "1:true -1:false", "switching off the last one switches on the other"
+        step("ESI+ and ESI− toggle on their own: both can be on, one always is", pol)
         def files_decide():
             pg.evaluate("CALCQUI.follow(() => ({ hr: false, name: 'QTRAP 3200' }), () => 1)"); type_("21.9819")
             assert mode() == "lr" and "QTRAP 3200" in mname() and pg.input_value("#calctol") == "0.5", (mode(), mname())
@@ -92,9 +97,11 @@ try:
             assert max(t) <= 30, t
         step("search time per keystroke <= 30 ms", timing)
         def apri():
-            pg.evaluate("CALCQUI.apri(214)"); frames(pg, 25)
-            assert pg.input_value("#calcin") == "214"
-        step("CALCQUI.apri(214) puts the number in the calculator", apri)
+            pg.evaluate("CALCQUI.apri(214)"); attendi(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#al-q').offsetParent")
+            assert pg.input_value("#al-q") == "214" and pg.evaluate("BARRA.curSub") == "losses"
+            pg.evaluate("BARRA.close(false); setView('draw')"); attendi(pg, "!!document.querySelector('#np-calc2').offsetParent")
+            if not pg.is_visible("#calcdlg"): pg.click("#np-calc2")
+        step("CALCQUI.apri(214) puts the number in the field of Adducts & losses (Dati view)", apri)
         def shot(name, w):
             if not SHOTS: return
             pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 25)
@@ -104,23 +111,23 @@ try:
         # the Adducts panel
         def adducts():
             pg.click("#np-addloss"); attendi(pg, "document.querySelector('#refdlg') && !document.querySelector('#refdlg').hidden || document.querySelector('#sb-panel-adducts') && !document.querySelector('#sb-panel-adducts').hidden")
-            q = pg.query_selector("#refdlg [id$='-q'], #sb-panel-adducts [id$='-q']")
+            q = pg.query_selector("#al-q")
             assert q
             q.fill("21.98"); frames(pg, 25)
             assert "Na" in pg.inner_text("body")
         step("Adducts panel opens and answers a number", adducts)
         def to_loss():
             pg.click("#reftitle ~ *", timeout=1000) if False else None
-            pg.click("#np-addloss") if not pg.evaluate("BARRA.curTab==='addloss'") else None; pg.click("#al-t-losses"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-q')")
-            pg.fill("#nl-q", "30"); frames(pg, 25)
-            t = pg.inner_text("#nl-res"); assert "CH2O" in t or "CH₂O" in t, t[:300]
-            assert pg.locator("#nl-ctl [data-r]").count() == 0 and pg.get_attribute("#nl-ctl .cq-ctl", "data-mode") == "lr"
+            pg.click("#np-addloss") if not pg.evaluate("BARRA.curTab==='addloss'") else None; pg.click("#al-t-losses"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-res')")
+            pg.fill("#al-q", "30"); frames(pg, 25)
+            t = pg.inner_text("#sb-panel-losses"); assert "CH2O" in t or "CH₂O" in t, t[:300]
+            assert pg.locator("#al-ctl [data-r]").count() == 0 and pg.get_attribute("#al-ctl .cq-ctl", "data-mode") == "lr" and pg.get_attribute("#alres", "data-mode") == "lr"
         step("Neutral losses panel: shared groups for 30", to_loss)
         def link():
-            pg.click("#nl-to-ad"); frames(pg, 25)
+            pg.click("#al-t-adducts"); frames(pg, 25)
             assert pg.evaluate("!document.querySelector('#sb-panel-adducts').hidden")
-            assert pg.input_value("#sb-panel-adducts [id$='-q']") in ("30", "30.0"), pg.input_value("[id$='-q']")
-        step("Perdite -> Addotti link carries the number", link)
+            assert pg.input_value("#al-q") == "30", pg.input_value("#al-q")
+        step("one field for the tabs: Perdite -> Addotti keeps the number", link)
         def nolr():
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")
         step("no engine miss", nolr)

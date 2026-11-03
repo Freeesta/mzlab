@@ -555,6 +555,7 @@ function calcPlace() {
 }
 // outside the Dati view the calculator is a drop-down under its toolbar button (in the Dati view it is the "Calcolatrice" panel of the drawer)
 window.calcToggleFloat = () => {
+  if (window.BARRA && BARRA.isDataView()) { BARRA.setTab("calc"); return; }           // where the side panel exists the calculator is part of its Adducts & losses page
   // before the Dati view is shown the dialog can still sit docked in the (invisible) side panel: take it out first, or the toggle would only "close" it
   if (calcBox.classList.contains("sb-docked") || calcBox.parentElement !== document.body) { document.body.appendChild(calcBox); calcBox.classList.remove("sb-docked"); calcBox.hidden = true; }
   if (!calcBox.hidden) return calcBox.close();
@@ -632,30 +633,35 @@ Q("#calcin").onkeydown = ev => {
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
   if ((ev.key || "").length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
-// the groups under the calculator («what can this number be?», calc-qui*.js) follow the field
+// the groups under the floating calculator («what can this number be?», calc-qui*.js) follow the field; docked in the Adducts & losses page,
+// «Cerca» hands the result (or the formula) to the page field: a difference goes to the Neutral losses, a formula to the Adducts
 function calcRun() {
   const t = Q("#calcin").value.trim(), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
-  const ex = !t || calcIsExpr(t);
+  const ex = !t || calcIsExpr(t), docked = calcBox.classList.contains("sb-docked");
   pad.hidden = !ex; res.hidden = !ex;                    // the result well stays (empty) while the field is empty or only unfinished
   if (nlBtn) nlBtn.hidden = true; calcTape();
   if (CALCQUI.calc) CALCQUI.later(CALCQUI.calc);
   if (!t) { sum.innerHTML = ""; res.textContent = ""; return; }
-  if (!ex) return;
-  const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
-  if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) {
-    nlBtn.hidden = false;
-    const vabs = calcFmt(Math.abs(r.v));
-    nlBtn.title = I18N.t("calc.toLosses", { v: vabs });
-    nlBtn.onclick = () => {
-      if (window.BARRA && BARRA.isDataView()) {
-        BARRA.setTab("losses", { q: vabs });
-      } else {
-        calcBox.close();
-        if (window.QQQRef) QQQRef.open("ls", { q: vabs });
-      }
-    };
+  if (!ex) {
+    if (docked && nlBtn) calcSearch(nlBtn, t, "adducts");
+    return;
   }
+  const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
+  // a difference picks Neutral losses, also after «=» when the field holds the result of the last line of the tape
+  const diff = (/** @type {string} */ e) => /[0-9.,)]\s*[-−–]/.test(e);
+  const isDiff = diff(t) || (CALC.fresh && CALC.tape.length > 0 && CALC.tape[0].r === t && diff(CALC.tape[0].e));
+  if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) calcSearch(nlBtn, calcFmt(Math.abs(r.v)), isDiff ? "losses" : null);
   sum.innerHTML = r.err ? EH(r.err) : "";
+}
+/** The «Cerca» button of the calculator for value `v`, toward the tab `sub` of the Adducts & losses page (null: the tab shown). */
+function calcSearch(/** @type {HTMLElement} */ b, /** @type {string} */ v, /** @type {string | null} */ sub) {
+  b.hidden = false;
+  b.title = I18N.t("calc.toLosses", { v });
+  b.onclick = () => {
+    if (window.BARRA && BARRA.isDataView()) { CALCQUI.cerca(v, sub); return; }
+    calcBox.close();
+    CALCQUI.cerca(v, sub || "losses");
+  };
 }
 Q("#calcin").oninput = calcRun;
 

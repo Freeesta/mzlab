@@ -12,19 +12,19 @@ const CALCQUI = (() => {
   const LIMIT = 6;                                          // rows shown per group before «show all»
   const num = (/** @type {unknown} */ s) => parseFloat(String(s == null ? "" : s).trim().replace(",", "."));
 
-  // the choices; pol is null while the student has not chosen (it follows the files shown)
+  // the choices; pol is 1 (ESI+), -1 (ESI−) or 0 (both), null while the student has not chosen (it follows the files shown)
   // unit: the tolerance unit chosen in each mode (null = the preset: ppm in high resolution, Da in low)
   const st = /** @type {CqState} */ ({ ppm: "5", da: "0.5", pol: null, unit: { hr: null, lr: null } });
   const KEY = () => (typeof NOMI !== "undefined" ? NOMI.KEY("calcqui") : "mzlab.calcqui");
   const subs = /** @type {(() => void)[]} */ ([]);
   // what the open files say: { hr, name } (name = the instrument / analyzer that decided), or null when no file is open
-  let filesMode = () => /** @type {{ hr: boolean, name: string } | null} */ (null), filesPol = () => /** @type {1 | -1} */ (1);
+  let filesMode = () => /** @type {{ hr: boolean, name: string } | null} */ (null), filesPol = () => /** @type {1 | -1 | 0} */ (1);
 
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(KEY()) || "null");
       if (s) {
-        if (s.pol === 1 || s.pol === -1) st.pol = s.pol;
+        if (s.pol === 1 || s.pol === -1 || s.pol === 0) st.pol = s.pol;
         if (typeof s.ppm === "string") st.ppm = s.ppm;
         if (typeof s.da === "string") st.da = s.da;
         if (s.unit && typeof s.unit === "object") for (const k of /** @type {("hr" | "lr")[]} */ (["hr", "lr"])) if (s.unit[k] === "da" || s.unit[k] === "ppm") st.unit[k] = s.unit[k];
@@ -40,7 +40,11 @@ const CALCQUI = (() => {
   /** @param {Partial<CqState>} p */
   function set(p) { Object.assign(st, p); save(); subs.slice().forEach(f => f()); }
 
-  const pol = () => (st.pol || filesPol());
+  const pol = () => (st.pol == null ? filesPol() : st.pol);
+  /** true when a row of polarity `p` (1 | -1, or "+" | "-" | "±" for a loss) belongs to the chosen polarity `o` (0 = both). @param {number} o @param {number | string} p */
+  const polOk = (o, p) => p === "±" || o === 0 || (o > 0 ? p === 1 || p === "+" : p === -1 || p === "-");
+  /** The polarity after a click on one of the two buttons: each one toggles, the last one on hands over to the other. @param {number} o @param {1 | -1} b */
+  const polToggle = (o, b) => { const on = { 1: o !== -1, "-1": o !== 1 }; on[b] = !on[b]; if (!on[1] && !on[-1]) on[/** @type {1 | -1} */ (-b)] = true; return on[1] && on[-1] ? 0 : on[1] ? 1 : -1; };
   /** The resolution, from the open files; with none open, from what is typed: a formula or a number with three or more decimals is high resolution, anything else low.
    * @param {{ kind?: string, text?: string }} [a] the argument (see `arg`) @returns {{ hr: boolean, src: "files" | "formula" | "decimals" | "short" | "none", name: string }} */
   function mode(a) {
@@ -72,17 +76,17 @@ const CALCQUI = (() => {
   }
 
   return {
-    st, load, save, set, opts, mode, isHr: (/** @type {{ kind?: string, text?: string }} */ a) => mode(a).hr, pol, arg, diffDa, ppmFor, num, LIMIT,
+    st, load, save, set, opts, mode, isHr: (/** @type {{ kind?: string, text?: string }} */ a) => mode(a).hr, pol, polOk, polToggle, arg, diffDa, ppmFor, num, LIMIT,
     onChange: (/** @type {() => void} */ f) => { subs.push(f); },
     /** Where the resolution and the polarity come from: the open files. */
-    follow: (/** @type {() => { hr: boolean, name: string } | null} */ m, /** @type {() => 1 | -1} */ p) => { filesMode = m; filesPol = p; },
+    follow: (/** @type {() => { hr: boolean, name: string } | null} */ m, /** @type {() => 1 | -1 | 0} */ p) => { filesMode = m; filesPol = p; },
   };
 })();
 
 // The groups of candidates (second part of CALCQUI: the choices above, the groups here)
 const CALCQUIG = (() => {
   const DIFF_REF = 400;                                     // m/z the adduct engine uses for the ppm window of a difference
-  const { diffDa, ppmFor } = CALCQUI;
+  const { diffDa, ppmFor, polOk } = CALCQUI;
   /** Known ions of the lists (contaminants, Keller, suspects) at `v` as an ion m/z. */
   function liste(/** @type {number} */ v, /** @type {any} */ o, /** @type {any} */ dep) {
     if (!dep.idx) return null;
@@ -92,7 +96,7 @@ const CALCQUIG = (() => {
   }
   /** Single losses, pairs and repetitions that explain `v` as a mass difference. */
   function perdite(/** @type {number} */ v, /** @type {any} */ o, /** @type {any} */ dep) {
-    const w = diffDa(o, v), c = dep.lossCombos(v, dep.mass, w, dep.losses);
+    const w = diffDa(o, v), c = dep.lossCombos(v, dep.mass, w, dep.losses.filter((/** @type {any} */ l) => !l.pol || polOk(o.pol, l.pol)));
     const row = (/** @type {string} */ kind, /** @type {any[]} */ ls, /** @type {number} */ n) => {
       const m = ls.reduce((a, l) => a + dep.mass(l.f), 0) * n;
       return { kind, ls, n, mass: m, err: m - v };
@@ -107,8 +111,8 @@ const CALCQUIG = (() => {
     const ref = obs || DIFF_REF, f = isNum || a.kind === "none" ? "" : a.text;
     if (!f && !obs && !a.catalogue) return null;
     const tab = await dep.table(f, obs ? String(obs) : "", String(ppmFor(o, ref)), "");
-    const rows = tab.rows.filter((/** @type {any} */ r) => r.pol === o.pol);
-    const hit = tab.best != null && tab.rows[tab.best].pol === o.pol ? tab.rows[tab.best] : null;
+    const rows = tab.rows.filter((/** @type {any} */ r) => polOk(o.pol, r.pol));
+    const hit = tab.best != null && polOk(o.pol, tab.rows[tab.best].pol) ? tab.rows[tab.best] : null;
     return { id: "addotti", n: rows.length, near: hit ? Math.abs(hit.ppm || 0) * (o.unit === "ppm" ? 1 : ref * 1e-6) / o.tol : 2, items: rows, tab, formula: !!f, obs: false, catalogue: !f && !obs };
   }
   /** The pairs of adducts whose difference is `v` (a number), or the characteristic differences (otherwise). */

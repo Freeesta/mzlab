@@ -11,14 +11,19 @@ const CALCQUIHTML = (() => {
   const err = (/** @type {number} */ d, /** @type {number} */ dec) => sgn(d) + Math.abs(d).toFixed(dec);
   const loss = (/** @type {Bag} */ l) => (window.QQQRef ? QQQRef.lossName(l) : `<b>${EH(l.f)}</b>`);
 
-  /** The choices row: tolerance, polarity. Ids are `<idp>tol|pol`.
+  /** The resolution chip: «Unit resolution» or «High resolution», its title says where it comes from. @param {{ hr: boolean, mode: { src: string, name: string } }} o */
+  const resText = o => T(o.hr ? "cq.res.hr" : "cq.res.lr");
+  const SRC = /** @type {Record<string, string>} */ ({ files: "cq.res.src.files", formula: "cq.res.src.formula", decimals: "cq.res.src.decimals", short: "cq.res.src.short", none: "cq.res.src.none" });
+  const resTitle = (/** @type {{ hr: boolean, mode: { src: string, name: string } }} */ o) => T(SRC[o.mode.src] || SRC.none, { name: o.mode.name || "" });
+  /** The choices row: tolerance (field, then its name), unit, polarity (ESI+ and ESI− toggle on their own: both can be on), resolution. Ids are `<idp>tol|unit|pol|res`.
    * @param {string} idp @param {{ hr: boolean, unit: string, tol: number, pol: number, mode: { src: string, name: string } }} o */
   function ctrlHtml(idp, o) {
     const on = (/** @type {boolean} */ b) => ` class="${b ? "on" : ""}" aria-pressed="${b}"`;
     return `<div class="cadd cq-ctl" data-mode="${o.hr ? "hr" : "lr"}" role="group" aria-label="${EH(T("cq.ctl"))}">
-      <label class="cadd-f"><span class="cq-tl">${T("calc.tol.plain")}</span><input id="${idp}tol" inputmode="decimal" autocomplete="off" value="${o.tol}"></label>
+      <label class="cadd-f cq-tolf"><input id="${idp}tol" inputmode="decimal" autocomplete="off" value="${o.tol}"><span class="cq-tl">${T("calc.tol.plain")}</span></label>
       <span class="seg" id="${idp}unit" role="group" aria-label="${EH(T("cq.unit"))}"><button type="button" data-u="da"${on(o.unit === "da")}>Da</button><button type="button" data-u="ppm"${on(o.unit === "ppm")}>ppm</button></span>
-      <span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}"><button type="button" data-p="1"${on(o.pol > 0)}>ESI+</button><button type="button" data-p="-1"${on(o.pol < 0)}>ESI&minus;</button></span>
+      <span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}"><button type="button" data-p="1"${on(o.pol !== -1)}>ESI+</button><button type="button" data-p="-1"${on(o.pol !== 1)}>ESI&minus;</button></span>
+      <span class="cq-res" id="${idp}res" data-mode="${o.hr ? "hr" : "lr"}" title="${EH(resTitle(o))}">${resText(o)}</span>
       </div>`;
   }
 
@@ -34,7 +39,9 @@ const CALCQUIHTML = (() => {
   function lossRow(x, i, dec) {
     const nm = x.kind === "pair" ? `${loss(x.ls[0])} + ${loss(x.ls[1])}` : x.kind === "rep" ? `${x.n} &times; ${loss(x.ls[0])}` : loss(x.ls[0]);
     const det = x.ls.map((/** @type {Bag} */ l) => (window.QQQRef ? QQQRef.lossDet(l) : "")).join("");
-    return `<li><button type="button" class="cq-lb" aria-expanded="false" aria-controls="cq-ld-${i}">${nm}</button> <span class="muted">${x.mass.toFixed(dec)} · ${err(x.err, dec)} Da</span><div class="nldet cq-ld" id="cq-ld-${i}" hidden>${det}</div></li>`;
+    // at unit resolution the error of a loss («+0.0 Da») says nothing: only the mass; in high resolution the error in mDa
+    const e = dec > 1 ? ` · ${err(x.err * 1000, 1)} mDa` : "";
+    return `<li><button type="button" class="cq-lb" aria-expanded="false" aria-controls="cq-ld-${i}">${nm}</button> <span class="muted">${x.mass.toFixed(dec)}${e}</span><div class="nldet cq-ld" id="cq-ld-${i}" hidden>${det}</div></li>`;
   }
   /** @param {CqGroup} g @param {Bag} o */
   const lossRows = (g, o) => g.items.map((x, i) => lossRow(x, i, o.hr ? 4 : 1));
@@ -49,17 +56,20 @@ const CALCQUIHTML = (() => {
   }
   const TITLE = { liste: "cq.g.liste", perdite: "cq.g.perdite", addotti: "cq.g.addotti", diff: "cq.g.diff" };
   /** The groups, each a `details` (open while it has a close match, or the adduct table of a formula).
-   * @param {CqGroup[]} gs @param {Bag} o @param {{ open: Set<string>, all: Set<string>, more?: boolean }} view @param {{ formula: boolean }} ctx */
+   * flat (a tab of the Adducts & losses page, which already names the group): the body of each group without its fold, the catalogue of differences still folded.
+   * @param {CqGroup[]} gs @param {Bag} o @param {{ open: Set<string>, all: Set<string>, more?: boolean }} view @param {{ formula: boolean, flat?: boolean, none?: boolean }} ctx */
   function groupsHtml(gs, o, view, ctx) {
+    if (ctx.flat && !gs.length && !ctx.none) return "";
     if (!gs.length) return `<p class="muted cq-none">${T("cq.none", { tol: o.tol + " " + (o.unit === "ppm" ? "ppm" : "Da") })}</p>`;
     return gs.map(g => {
       if (g.id === "diff" && /** @type {Bag} */ (g).catalogue) return AH.diffsHtml(g.tab, { diffs: view.open.has("catdiff"), delta: "" });
       const open = view.open.has(g.id) || (!view.open.has("-" + g.id) && (g.near <= 1 || (g.id === "addotti" && (ctx.formula || /** @type {Bag} */ (g).catalogue))));
       const all = view.all.has(g.id);
       const body = g.id === "addotti" ? addHtml(g, o, view) : rowsOf(g.id, g.id === "liste" ? listeRows(g, o) : g.id === "perdite" ? lossRows(g, o) : diffRows(g), all);
+      if (ctx.flat && g.id !== "diff") return `<div class="cq-flat" data-g="${g.id}">${g.id === "perdite" ? `<p class="cq-sub">${T("cq.g.combos")} <span class="cq-n">${g.n}</span></p>` : ""}${body}</div>`;
       const n = g.id === "addotti" ? "" : ` <span class="cq-n">${g.n}</span>`;
       return `<details class="cq-g" data-g="${g.id}"${open ? " open" : ""}><summary>${T(/** @type {Bag} */ (TITLE)[g.id])}${n}</summary>${body}</details>`;
     }).join("");
   }
-  return { ctrlHtml, groupsHtml };
+  return { ctrlHtml, groupsHtml, resText, resTitle };
 })();
