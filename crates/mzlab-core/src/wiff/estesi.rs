@@ -21,19 +21,7 @@ pub(crate) fn mark_windows(ole: &Ole, sample: u32, experiments: &mut [super::Exp
     }
 }
 
-/// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
-/// method), the nearest one before it.
-pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
-    let has = |k: u32| {
-        ole.has(&format!(
-            "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
-        ))
-    };
-    (1..=sample.min(10_000))
-        .rev()
-        .find(|&k| has(k))
-        .unwrap_or(sample)
-}
+pub(crate) use super::method_no;
 
 /// The method of `sample` read from the method that stands for it (`method_no`), for the samples without a `MethodN` of their own.
 pub(crate) fn fallback_method(ole: &Ole, sample: u32) -> Option<crate::methodinfo::Method> {
