@@ -7,7 +7,7 @@ use js_sys::{Function, Uint8Array};
 use mzlab_lib::build::{BuildOpts, Builder};
 use mzlab_lib::error::{Error, Result};
 use mzlab_lib::io::{Sink, Source};
-use mzlab_lib::parse::{detect, Format, Parser};
+use mzlab_lib::parse::{detect, Parser};
 use mzlab_lib::read::{cache_budget, Library};
 use mzlab_lib::search::{analogs, identity, AnalogHit, AnalogOpts, Hit, IdentityOpts, Query, Tol};
 use mzlab_lib::spec::Spectrum;
@@ -59,19 +59,6 @@ pub fn flow_match(
 #[wasm_bindgen]
 pub fn total_cache_budget(small_device: bool) -> f64 {
     cache_budget(small_device) as f64
-}
-
-/// Format of a library file from its name and first bytes: "msp", "mgf", "massbank" or "json"; the error is `lib.err.unsupported` or `lib.err.unknown`.
-#[wasm_bindgen]
-pub fn detect_format(name: &str, head: &[u8]) -> std::result::Result<String, JsValue> {
-    let f = detect(name, head).map_err(js_err)?;
-    Ok(match f {
-        Format::Msp => "msp",
-        Format::Mgf => "mgf",
-        Format::MassBank => "massbank",
-        Format::Json => "json",
-    }
-    .to_string())
 }
 
 /// Bytes held by JavaScript (an OPFS handle, a memory buffer, a Blob): `read(offset, length) -> Uint8Array`, `write(offset, Uint8Array)`.

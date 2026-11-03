@@ -127,3 +127,22 @@ fn times_only_matches_the_full_read() {
     assert_eq!(got, t);
     assert_eq!(got.len(), 3);
 }
+
+#[test]
+fn sim_sic_id_without_q1_is_still_a_transition_with_no_q3() {
+    let with = chrom_of(
+        "<chromatogram id=\"SIM SIC Q1=228.1 sample=1 period=1 experiment=2 transition=0\">",
+        0,
+        0,
+        0,
+    );
+    assert_eq!(
+        (with.kind.as_str(), with.q1, with.q3),
+        ("srm", Some(228.1), None)
+    );
+    let without = chrom_of("<chromatogram id=\"SIM SIC sample=1 period=1 experiment=2 transition=3 polarity=positive\">", 1, 0, 0);
+    assert_eq!(
+        (without.kind.as_str(), without.q1, without.q3),
+        ("srm", None, None)
+    );
+}

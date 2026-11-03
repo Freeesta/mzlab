@@ -10,14 +10,17 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   let ar = 0, mx = -Infinity, at = i0;
   for (let j = i0 + 1; j <= i1; j++) ar += (ys[j] + ys[j - 1]) / 2 * (xs[j] - xs[j - 1]) * 60;
   for (let j = i0; j <= i1; j++) if (ys[j] > mx) { mx = ys[j]; at = j; }
-  const e3 = (/** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };   // end points of the baseline: mean of 3 points
-  const ya = base ? baseAt(base, xs[i0]) : e3(i0), yb = base ? baseAt(base, xs[i1]) : e3(i1), area = (ya + yb) / 2 * (xs[i1] - xs[i0]) * 60;
+  const ya = base ? baseAt(base, xs[i0]) : edge3(ys, i0), yb = base ? baseAt(base, xs[i1]) : edge3(ys, i1), area = (ya + yb) / 2 * (xs[i1] - xs[i0]) * 60;
   const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
+// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
+const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
+// the colour of a spectrum of the panel: the one of its file, or of its precursor when one file gives several (the bars and the legend entry use this one)
+const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color);
 // Settings of the automatic integration (dialog «Rilevamento dei picchi»), saved in this browser; any other stored key is dropped. The defaults are
-// those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peaks-edges / peaks-auto --set only).
+// those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peak-edges / peak-auto --set only).
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
 /** @type {Record<string, number>} */
 const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5 };
@@ -52,7 +55,7 @@ function intTargets(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {nu
 }
 function refreshIntf(/** @type {Bag} */ p) {
   const sel = p.el.querySelector('[data-a="intf"]'); if (!sel) return;
-  const on = (p.imode === "auto" || p.imode === "man") && p.type !== "chrom" && p._a && p._a.sr && p._a.sr.length > 1;
+  const on = (p.imode === "auto" || p.imode === "man") && p.type !== "chrom" && !p.intfFixed && p._a && p._a.sr && p._a.sr.length > 1;
   sel.hidden = !on; if (!on) return;
   const opts = [["", I18N.t("int.target.clicked")], ["all", I18N.t("int.target.all")], ...p._a.sr.map((/** @type {Bag} */ s) => [s.key, s.name])], sig = JSON.stringify(opts);
   if (sel._sig !== sig) { sel._sig = sig; sel.innerHTML = opts.map(o => h`<option value="${o[0]}">${o[1]}</option>`).join(""); }
@@ -60,8 +63,14 @@ function refreshIntf(/** @type {Bag} */ p) {
 }
 // students integrate only from an XIC (or an MRM transition): the total chromatograms add up every ion, so their area belongs to no compound
 const canInt = (/** @type {Bag} */ p) => p.type !== "chrom" || p.tab === "ms2";
+// integration needs the traces on one axis: a stacked or cascade panel goes back to overlaid first (existing integrations stay in p.ints and are drawn as before)
+function toOverlaid(/** @type {Bag} */ p) {
+  if (p.mode !== "stk" && p.mode !== "cas") return;
+  p.mode = "ovl"; const m = p.el && p.el.querySelector('[data-o="mode"]'); if (m) m.value = "ovl";
+  draw(p);
+}
 function guardInt(/** @type {Bag} */ p) {
-  if (canInt(p)) return true;
+  if (canInt(p)) { toOverlaid(p); return true; }
   yesno(I18N.t("int.guard")).then((/** @type {boolean} */ v) => { if (v) openXic(null); });
   return false;
 }
@@ -77,7 +86,17 @@ function nearMsg(/** @type {string} */ t) {                                     
   clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 3200);
 }
 document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; }, true);
-const intSnap = (/** @type {Bag} */ p) => JSON.stringify(p.ints);
+// undo snapshot of a panel: the integrations and the noise zones (one per trace)
+const intSnap = (/** @type {Bag} */ p) => JSON.stringify({ i: p.ints, n: p.noise || {} });
+// noise stretch [t0, t1] (min) of the trace of an integration: one per trace of the panel (the same for every file), else the one stored on the integration itself
+const noiseZone = (/** @type {Bag} */ p, /** @type {Bag} */ it) => (p.noise && p.noise[it.ion]) || it.noise || null;
+// the student marks the noise once: it goes to every file of that trace and to the other transition panels of an MRM tab; S/N is switched on
+function setNoiseZone(/** @type {Bag} */ p, /** @type {Bag} */ it, /** @type {number[]} */ z) {
+  const set = (/** @type {Bag} */ q, /** @type {string[]} */ ions) => { q.noise = { ...(q.noise || {}) }; ions.forEach(i => { q.noise[i] = z; }); };
+  set(p, [it.ion]);
+  if (ESP.mrm(p)) tabPanels().filter((/** @type {Bag} */ q) => q !== p && ESP.mrm(q)).forEach((/** @type {Bag} */ q) => set(q, [...new Set([...(q._a && q._a.sr ? q._a.sr.map((/** @type {Bag} */ s) => s.ion) : []), ...q.ints.map((/** @type {Bag} */ i) => i.ion)])]));
+  INTOPT.sn = true;
+}
 function delInts(/** @type {Bag} */ p, /** @type {Bag[]} */ list) { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => !list.includes(i)); if (list.some((/** @type {Bag} */ i) => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
 function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, mirror = true) {
   const lo = Math.min(a, b), hi = Math.max(a, b);
@@ -168,7 +187,14 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
 if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.int", gruppo: "tools", ordine: 1, viste: ["chrom", "xic", "mrm"],
   voci: (/** @type {Bag} */ c) => intMenuItems(c.p, c.x, c.near, c.py).filter(/** @param {any} i */ i => i !== "-").map(/** @param {any} i */ i => ({ nome: i.label, icon: i.icon, esegui: i.fn })) });
 function allInts() {
-  return E.panels.flatMap((/** @type {Bag} */ p) => p.ints.map((/** @type {Bag} */ i) => { const f = E.files[i.k], std = f && f.type === "standard" && f.conc != null; return { ...i, _p: p, _it: i, panel: ptitle(p.title), conc: std ? f.conc : null, cunit: std ? f.cunit || "" : "" }; }));      // the concentration is only for standards: the calibration line is made by the student in Excel
+  // the concentration is for standards and QCs (the calibration line is made by the student in Excel); q1/q3/transition only for MRM traces
+  return E.panels.flatMap((/** @type {Bag} */ p) => p.ints.map((/** @type {Bag} */ i) => {
+    const f = E.files[i.k], kind = f ? CAMPIONI.kindOf(f) : "sample", withConc = f && (kind === "std" || kind === "qc") && f.conc != null;
+    const s = p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === i.key), mrm = !!(s && s.q1 != null);
+    return { ...i, _p: p, _it: i, panel: ptitle(p.title), conc: withConc ? f.conc : null, cunit: withConc ? f.cunit || "" : "",
+      role: I18N.t(`export.int.role.${kind === "calibration" ? "std" : ["sample", "blank", "dark", "infusion", "std", "qc"].includes(kind) ? kind : "sample"}`),
+      q1: mrm ? s.q1 : null, q3: mrm ? s.q3 : null, transition: mrm ? s.tname || "" : "" };
+  }));
 }
 // optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
 const INTOPT = { sn: false, par: false, q: false };
@@ -179,10 +205,14 @@ COMANDI.gestore("peaks.settings", {
 });
 const INT_COLS = ["panel", "ion", "file", "time", "conc", "cunit", "a", "b", "rt", "area", "height", "corr"];
 const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "rt1", "apex", "area", "height", "corr"].map(k => I18N.t(`export.int.${k}`));
+// appended after every other column of the export: role of the file, and the MRM transition (Q1, Q3, name; empty for an XIC)
+const INT_NEW = ["role", "q1", "q3", "transition"];
+const INT_NEW_HEADS = INT_NEW.map(k => I18N.t(`export.int.${k}`));
 function intExtra(/** @type {Bag} */ r) {
   const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === it.key);
-  const pk = s ? chromPeak(s.x, s.y, r.a, r.b) : null, sd = s && it.noise ? noiseSD(s.x, s.y, it.noise[0], it.noise[1]) : null;
-  return { sn: pk && sd ? pk.height / sd : null, noise: !!it.noise, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
+  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.base) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
+  const h = Number.isFinite(r.height) ? r.height : pk ? pk.height : null;      // the height shown in the table, so S/N and «height» never disagree
+  return { sn: h != null && sd ? h / sd : null, noise: !!z, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
 }
 // quality of each integrated peak from the Rust engine (qualita.js): Gaussian similarity, asymmetry at 10 %, noise score; null where the engine or the trace is missing
 async function qualityOf(/** @type {Bag} */ r) {
@@ -199,11 +229,11 @@ async function showInts() {
   const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>1/2</sub> (min)", 1) + th(I18N.t("int.tbl.plates"), 1) + th(I18N.t("int.tbl.tail"), 1) : "") +
     (INTOPT.q ? ["gauss", "asym", "nscore"].map(k => `<th class="num" title="${I18N.t(`int.tbl.${k}.h`)}">${I18N.t(`int.tbl.${k}`)}</th>`).join("") : "");
   big(I18N.t("int.tbl.title"), rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button><button id="ig-csv">${IC_DL}CSV</button>
-    <label title="${I18N.t("int.tbl.sn.title")}"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label>
+    <label title="${I18N.t("int.tbl.sn.title")}"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label><button type="button" class="hq" data-help="sn" title="${I18N.t("common.help")}" aria-label="${I18N.t("common.help")}">?</button>
     <label title="${I18N.t("int.tbl.par.title")}"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> ${I18N.t("int.tbl.par")}</label>
     <label title="${I18N.t("int.tbl.q.title")}"><input type="checkbox" id="ig-q" ${INTOPT.q ? "checked" : ""}> ${I18N.t("int.tbl.q")}</label></div>
     <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>${I18N.t("int.tbl.corr")}</th><th></th></tr>` +
-    rows.map((/** @type {Bag} */ r, /** @type {number} */ i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td>` +
+    rows.map((/** @type {Bag} */ r, /** @type {number} */ i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${I18N.sciE(r.area ?? 0, 5)}">${I18N.sciE(r.area ?? 0)}</td><td class="num">${I18N.sciE(r.height ?? 0)}</td>` +
       (INTOPT.sn ? `<td class="num">${r.sn != null ? fx(r.sn, 1) : `<button data-nz="${i}" title="${I18N.t("int.tbl.pickNoise.title")}">${I18N.t("int.tbl.pickNoise")}</button>`}</td>` : "") +
       (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") +
       (INTOPT.q ? `<td class="num">${fx(r.qg, 3)}</td><td class="num">${fx(r.qa, 2)}</td><td class="num">${fx(r.qn, 2)}</td>` : "") + `<td>${EH(r.corr || I18N.t("ibk.no"))}</td><td>${intClash(r._p, r.key, r.a, r.b, r._it) ? `<span class="warn" title="${I18N.t("int.tbl.overlap.title")}">${I18N.t("int.tbl.overlap")}</span> ` : ""}<button data-del="${i}" title="${I18N.t("int.tbl.del.title")}">×</button></td></tr>`).join("") +
@@ -218,8 +248,8 @@ async function showInts() {
       const r = rows[Number(b.dataset.nz)]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
       stepMsg(r._p, I18N.t("int.pickNoise.msg"), true);
     });
-    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : [])],
-      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18] }];
+    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS],
+      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : []), ...INT_NEW.map(c => r[c])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18, 14, 10, 10, 22] }];
     Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
     Q("#ig-csv").onclick = () => dlc(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
   });
@@ -368,10 +398,10 @@ async function drawSpec(p, snapped) {
   if (isDiff) { data.forEach(x => x.d.y.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (v < negMax && x.d.mz[i] >= x0 && x.d.mz[i] <= x1) negMax = v; })); if (negMax < 0) { ymin = negMax * 1.12; ymax = Math.max(ymax, -negMax * 0.3); } }
   const yfull0 = ymin;
   if (p.zoomY) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }   // zoom of the intensity axis (drag on the numbers at the left of the axis, or box)
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: relY ? I18N.t("axis.relPct") : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
+  const { X, Y, yt } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: relY ? I18N.t("axis.relPct") : YT_I, tickMax: relY ? 100 : null, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, data, ymax, ymin, yfull: [yfull0, yfull], yinv: (/** @type {number} */ py) => ymin + (H - M.b - py) / ph * (ymax - ymin), full };
-  p._a.hrp = hrp; p._a.dec = DECP;
+  p._a.hrp = hrp; p._a.dec = DECP; p._a.yticks = yt;
   if (isDiff) {                                            // the words of the sign on the plot (never only the colour)
     g.save(); g.font = fpx(12, "bold "); g.textAlign = "left";
     g.fillStyle = ecss("--diff-pos"); g.fillText("▲ " + I18N.t("spec.diff.upAxis"), M.l + 8, M.t + 14);
@@ -390,7 +420,7 @@ async function drawSpec(p, snapped) {
   };
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
   data.forEach(x => {
-    const color = x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color;
+    const color = specColor(x);
     g.strokeStyle = color; g.lineWidth = 1.4 + LWX();
     if (x.multi) g.globalAlpha = 0.55; else g.globalAlpha = 1.0;
     g.beginPath();
@@ -429,9 +459,13 @@ async function drawSpec(p, snapped) {
   g.fillStyle = ecss("--ink"); g.textAlign = "center"; g.font = fpx(12);
   /** @type {Bag[]} */ const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
   for (const [m, y] of pk.slice(0, 40)) { const px = X(m), t = m.toFixed(DEC), w = g.measureText(t).width; if (used.length >= NL || used.some(u => Math.abs(u.x - px) < (u.w + w) / 2 + 8)) continue; used.push({ x: px, w }); const fo = p.fm && p.fm.find((/** @type {Bag} */ z) => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
-    g.fillText(t, px, y < 0 ? Y(y) + 15 : Y(y) - 4 - up);
-    if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = ecss("--accent"); g.fillText(subText(fo.text), px, Y(y) - 4); g.restore(); }
-    lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: (p._a.hov(px) || { html: "" }).html }); }
+    // the label clears the tallest bar under its own width (a taller neighbour must not cross the text)
+    let yb = Y(y); if (y > 0) { const sx = (/** @type {number} */ a0, /** @type {number} */ a1) => { let lo = a0, hi = a1; while (lo < hi) { const mid = (lo + hi) >> 1; if (X(d0.mz[mid]) < px - w / 2 - 3) lo = mid + 1; else hi = mid; } return lo; }; const [s0, s1] = spanOf(d0.mz, x0, x1); for (let j = sx(s0, s1); j < s1 && X(d0.mz[j]) <= px + w / 2 + 3; j++) { const yy = Y(Math.min(d0.y[j], ymax)); if (d0.y[j] > 0 && yy < yb) yb = yy; } }
+    const ly = y < 0 ? Y(y) + 15 : yb - 4 - up;
+    if (y >= 0) { g.save(); g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = ecss("--panel"); g.strokeText(t, px, ly); g.restore(); }   // halo: keeps the digits legible where a trace passes near
+    g.fillText(t, px, ly);
+    if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = ecss("--accent"); g.fillText(subText(fo.text), px, yb - 4); g.restore(); }
+    lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : yb - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: (p._a.hov(px) || { html: "" }).html }); }
   g.font = fpx(12);
   contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
   if (window.XICBTN) XICBTN.mark(p, g, X, Y, W, d0);   // the peak chosen for the XIC button
@@ -461,10 +495,11 @@ async function drawSpec(p, snapped) {
   const showLabel = data.length > 1 || multiFiles;
   if (p.leg2) p.leg2.innerHTML = (showLabel ? data.map(x => {
     const lab = x.f.label.length > 25 ? x.f.label.slice(0, 24) + "…" : x.f.label;
-    const color = x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color;
+    const color = specColor(x);
     return `<span><i style="background:${color}"></i>${EH(lab)}${legPol(x.f)}${x.multi ? ` (prec. ${x.prec})` : ""}</span>`;
   }).join("") : "") + isoNote;
   contLegend(p);
+  if (window.TABPICCHI) TABPICCHI.sync(p);                    // the open peak table follows the scan
   if (window.XICBTN) XICBTN.sync(p);                         // the XIC under this spectrum follows its scan
 }
 

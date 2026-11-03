@@ -40,14 +40,14 @@ try:
         step("no Altro / Unisci; no Ordina button", gone)
         def fold():
             b = "#stbar [data-cmd=file]"
-            assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Elenco dei file caricati: scegli, nascondi, rinomina, colora"
+            assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Scegli, nascondi, rinomina e colora i file caricati"
             ready(pg)
             if pg.is_visible("#flst"):          # the drawer remembers its state: start from the closed one, so the click below opens it
                 pg.click(b); attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
             pg.click(b)
             attendi(pg, "(() => { const e = Q('#flst'); return !!e && e.getBoundingClientRect().width > 0 })()")
-            assert pg.is_visible("#flst") and pg.is_visible("#sb-x") and pg.evaluate("!!Q('#sb-x svg')") and pg.evaluate("Q('#sb-x').title") == "Chiudi il pannello"
-            pg.click("#sb-x")
+            assert pg.is_visible("#flst") and not pg.is_visible("#sb-x") and pg.is_visible("#sb-toggle")      # no second × on a wide screen: the panel button of the main header closes it
+            close_side(pg)
             attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
             assert not pg.is_visible("#flst")
             # the only previous/next arrows left in the toolbar are the file arrows (SVG icons, named by their aria-label)
@@ -56,8 +56,8 @@ try:
         def narrow():
             pg.set_viewport_size({"width": 700, "height": 900}); pg.wait_for_timeout(600)
             h = pg.evaluate("Q('#tools').offsetHeight"); s = sel()
-            assert h > 45 and s["w"] <= 700 * 0.6 + 2, (h, s)
-        step("narrow window: the bar wraps", narrow)
+            assert h < 45 and s["w"] <= 700 * 0.6 + 2, (h, s)       # one row at any width: the selector shrinks, the «+ panel» group scrolls (e2e_toolbar_wrap)
+        step("narrow window: the bar stays on one row", narrow)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

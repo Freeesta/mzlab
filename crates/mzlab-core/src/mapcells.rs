@@ -77,6 +77,10 @@ impl<R: ReadAt> Routes<R> {
         let inside: Vec<bool> = rt.iter().map(|&r| r >= rt0 && r < rt1).collect();
         let n_scans = counts((0..rt.len()).filter(|&p| inside[p]).map(|p| bins[p]), nrt);
         let from_cells = if mean || log { None } else { self.region_from_cells(level, (mz0, mz1), (nrt, nmz), (a, b.max(a)), (&bins, &inside))? };
+        let from_cells = match from_cells {
+            None if !mean => self.region_from_columns(level, (mz0, mz1), (nrt, nmz, log), (a, b.max(a)), (&bins, &inside))?,
+            f => f,
+        };
         let acc = match from_cells {
             Some(acc) => acc,
             None => self.accumulate(si, (a, b.max(a)), nrt * nmz, mean, |p, mz| inside[p].then(|| clipped_cell(bins[p], frac(mz, mz0, mz1, log) * nmz as f64, nmz)))?,
@@ -152,10 +156,8 @@ impl<R: ReadAt> Routes<R> {
             }
         })?;
         let total = pts.len();
-        let mut order: Vec<usize> = (0..total).collect();
-        // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
-        #[allow(clippy::disallowed_methods)]
-        order.sort_by(|&i, &j| pts[j].2.total_cmp(&pts[i].2));
+        let keys: Vec<f64> = pts.iter().map(|p| p.2).collect();
+        let mut order = crate::specpeaks::order_by_f64(&keys, true);
         order.truncate(cap);
         Ok(Sticks {
             rt: order.iter().map(|&i| pts[i].0 as f32).collect(),

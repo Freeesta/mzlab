@@ -8,6 +8,7 @@ tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectr
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 The variants of the readers module (feature `estesi`): `variante.wiff` (Log model QTRAP 5500; survey scan V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1,
 under "variante" in the JSON) and the files the module refuses with `err.file.wiff` (under "rifiuti": name -> text of the `detail`): two periods, a TOF scan type, a TOF block, a block version 4.
+`dadmetodo.wiff`: a 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method (under "dadmetodo").
 """
 import json
 import math
@@ -206,7 +207,8 @@ def main():
     variante, rifiuti = variants(out)
     totale = full_tic(out)
     blocchi = blocks_v13(out)
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti, "totale": totale, "blocchi": blocchi}))
+    dad = dad_method(out)
+    (out / "riferimento.json").write_text(json.dumps({"dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti, "totale": totale, "blocchi": blocchi}))
 
 
 def energy(out: Path):
@@ -251,6 +253,12 @@ def transitions(out: Path):
     w = Writer()
     w.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method)
     w.save(out, "transizioni")
+    # a batch run: only Method1 exists, samples 2 and 3 take their transitions from it
+    batch = Writer()
+    batch.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method)
+    for n in (2, 3):
+        batch.sample(n, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], None)
+    batch.save(out, "transizioni_lotto")
     return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs]}
 
 
@@ -338,6 +346,40 @@ def blocks_v13(out: Path):
     w.sample(1, blocks, ex)
     w.save(out, "blocchi")
     return {"polarity": [1, -1, 1], "spectra": want}
+
+
+def lc_method() -> bytes:
+    """`DeviceMethod1/VendorAppMethod` of an LC with a PDA: the XML Analyst writes (pumps, time program, PDA, oven), wrapped in bytes that are not XML."""
+    def par(n, v):
+        return f"<Parameter><Name>{n}</Name><Value>{v}</Value><Unit></Unit></Parameter>"
+
+    def row(*cells):
+        return "<row>" + "".join(f"<Field{i}>{c}</Field{i}>" for i, c in enumerate(cells, 1)) + "</row>"
+    prog = row("Time", "Module", "Device", "Event", "Value") + "".join(row(t, "Pump", "dev", ev, v) for t, ev, v in GRADIENT) + row("2.00", "Controller", "dev", "Stop", "")
+    return ("junk<SCIEX_ANALYST_ACQUISITION_METHOD><Categories>"
+            f"<Category><Title>Pumps</Title>{par('Total Flow', '0.3')}{par('B Concentration', '10')}</Category>"
+            f"<Category><Title>System Controller</Title><Table><Name>Time Program</Name>{prog}</Table></Category>"
+            f"<Category><Title>PDA Detector</Title>{par('Start WL', '210')}{par('Stop WL', '400')}{par('Wave Step', '1')}</Category>"
+            f"<Category><Title>Oven</Title>{par('Temperature', '40')}</Category>"
+            "</Categories></SCIEX_ANALYST_ACQUISITION_METHOD>tail").encode()
+
+
+GRADIENT = [("0.50", "Pump B Conc.", "60"), ("1.50", "Pump B Conc.", "95")]
+
+
+def dad_method(out: Path):
+    """`dadmetodo.wiff`: a 3200 QTRAP full scan whose blocks are all version 1 (so the site sends it to the readers module), with an optical detector
+    (191 wavelengths, 210-400 nm, on Device_1 as Analyst writes it) and the LC method in `DeviceMethod1/VendorAppMethod`. The module's mzML must carry both."""
+    blocks = [("scan", [(100 + k, 50 + k)], 1000.0 * k, 50.0 + k, 1) for k in range(30)]
+    ts = [0.05 * k for k in range(30)]
+    rows = [[5 + 300 * math.exp(-((j - 44) / 10) ** 2) * math.exp(-((t - 0.8) / 0.2) ** 2) for j in range(191)] for t in ts]
+    w = Writer()
+    w.sample(1, blocks, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="3200 QTRAP", dad=(ts, 210.0, 1.0, rows))
+    for k in [k for k in w.streams if "/Devices/Device_0/" in k]:
+        w.streams[k.replace("Device_0", "Device_1")] = w.streams.pop(k)
+    w.streams["MethodSubtree/Method1/DeviceMethod1/VendorAppMethod"] = lc_method()
+    w.save(out, "dadmetodo")
+    return {"points": len(ts), "nm": [210.0, 400.0, 191], "gradient": [[0.0, 10.0]] + [[float(t), float(v)] for t, _, v in GRADIENT]}
 
 
 if __name__ == "__main__":

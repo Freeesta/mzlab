@@ -60,16 +60,16 @@ impl<R: ReadAt> Mzml<R> {
                 continue;
             };
             let block = &chunk[a..b + 11];
-            if find(block, b"MS:1000804", 0).is_some() {
-                if let Some((t, w, y)) = uv_row(block) {
-                    if wl.is_empty() {
-                        wl = w;
-                    }
-                    // a row on another wavelength grid cannot join the matrix
-                    if y.len() == wl.len() {
-                        times.push(t);
-                        mat.extend(y.iter().map(|&v| v as f32));
-                    }
+            if find(block, b"MS:1000804", 0).is_some()
+                && let Some((t, w, y)) = uv_row(block)
+            {
+                if wl.is_empty() {
+                    wl = w;
+                }
+                // a row on another wavelength grid cannot join the matrix
+                if y.len() == wl.len() {
+                    times.push(t);
+                    mat.extend(y.iter().map(|&v| v as f32));
                 }
             }
             pos += (b + 11) as u64;

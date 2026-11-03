@@ -5,7 +5,7 @@
 use crate::sortc;
 
 /// Parameters of the detector. The dialog «Peak detection» of the page sets five of them (`from_dialog`); the rest keep these defaults
-/// there and are set only with `mzlab-cli peaks-edges --set`.
+/// there and are set only with `mzlab-cli peak-edges --set`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LrParams {
     /// Baseline window around the apex (min).

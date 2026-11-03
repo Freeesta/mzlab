@@ -136,19 +136,4 @@ impl Mol3d {
     pub fn is_empty(&self) -> bool {
         self.el.is_empty()
     }
-
-    /// XYZ file text (atom count, comment line, one line per atom).
-    pub fn to_xyz(&self, comment: &str) -> String {
-        let mut s = format!("{}\n{}\n", self.len(), comment);
-        for (z, p) in self.el.iter().zip(&self.xyz) {
-            s.push_str(&format!(
-                "{:<2} {:>12.6} {:>12.6} {:>12.6}\n",
-                symbol(*z),
-                p[0],
-                p[1],
-                p[2]
-            ));
-        }
-        s
-    }
 }

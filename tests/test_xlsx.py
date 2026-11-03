@@ -92,3 +92,17 @@ def test_dlx_completes_the_extension():
     calls = json.loads(subprocess.run(["node", "-e", code], check=True, capture_output=True, encoding="utf-8").stdout)
     mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     assert calls == [["r.xlsx", "Uint8Array", mime], ["r.XLSX", "Uint8Array", mime]]
+
+
+def csv(opts):
+    code = f"""const x=require({str(JS)!r});
+process.stdout.write(x.csvBuild({{head:["RT","Nome; con punto e virgola","Q1"],rows:[[1.5,"a,b",123.456789012345],[2,"ok",null]]}}{opts}))"""
+    return subprocess.run(["node", "-e", code], check=True, capture_output=True, encoding="utf-8").stdout
+
+
+def test_csv_english_is_comma_and_point():
+    assert csv("") == 'RT,Nome; con punto e virgola,Q1\n1.5,"a,b",123.456789012345\n2,ok,\n'
+
+
+def test_csv_italian_is_semicolon_and_decimal_comma_with_full_precision():
+    assert csv(", {sep: ';', dec: ','}") == 'RT;"Nome; con punto e virgola";Q1\n1,5;a,b;123,456789012345\n2;ok;\n'

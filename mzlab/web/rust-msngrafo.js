@@ -3,13 +3,15 @@
 // wasm-feat/manifest.json (crates/mzlab-msngrafo-wasm) is fetched on the first request, checked against its SHA-256, and reads the .mzidx of
 // OPFS and the mzML of the file through `readerFor`. The engine itself is not touched. docs/agenti/msn-grafo.md.
 
+import { featManifest } from "./feat-manifesto.js";
+
 /** @type {Record<string, Promise<any>>} */ const loading = {};
 
 /** the module `key` of wasm-feat/manifest.json, fetched on first use and checked against its SHA-256 @param {string} key */
 export function load(key) {
   if (!loading[key]) loading[key] = (async () => {
     const base = new URL("./wasm-feat/", import.meta.url);
-    const man = (await (await fetch(new URL("manifest.json", base))).json())[key];
+    const man = (await featManifest(base))[key];
     if (!man) throw JSON.stringify({ error_key: "err.route.unavailable", params: {} });
     const bytes = await (await fetch(new URL(man.wasm, base))).arrayBuffer();
     const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -40,7 +42,7 @@ async function indexOf(name) {
 }
 
 /**
- * The `msngrafo/1` of the file `name` (a JSON string); a failure is thrown as the JSON string `{error_key, params}` of the module.
+ * The `msngrafo/2` of the file `name` (a JSON string); a failure is thrown as the JSON string `{error_key, params}` of the module.
  * @param {string} name @param {Blob} blob the mzML @param {string} query the query string of the request @param {boolean} esporta the spectra as text
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
  * @param {File} [idxFile] the index to read instead of the one of `name` (the derived mzML of a sample of a maker's file, rust-msngrafo-nativo.js)
@@ -52,7 +54,7 @@ export async function msnGrafo(name, blob, query, readerFor, esporta = false, id
 }
 
 /**
- * The text of an `msngrafo/1` with the key `vista` added (a graph that has it comes back as it is); a failure is thrown as the JSON string `{error_key, params}`.
+ * The text of an `msngrafo/1` or `/2` with the key `vista` added (a graph that has it comes back as it is); a failure is thrown as the JSON string `{error_key, params}`.
  * @param {string} json
  */
 export async function msnCompleta(json) {

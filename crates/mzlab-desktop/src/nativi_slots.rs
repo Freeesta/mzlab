@@ -33,12 +33,12 @@ impl Nativi {
 
     /// Forgets the slot; the dataset goes with its last slot.
     pub(crate) fn forget(&mut self, slot: u32) {
-        if let Some((ds, _)) = self.slots.remove(&slot) {
-            if !self.slots.values().any(|(d, _)| *d == ds) {
-                self.sets.remove(&ds);
-                self.shells.retain(|(d, _), _| *d != ds);
-                self.order.retain(|(d, _)| *d != ds);
-            }
+        if let Some((ds, _)) = self.slots.remove(&slot)
+            && !self.slots.values().any(|(d, _)| *d == ds)
+        {
+            self.sets.remove(&ds);
+            self.shells.retain(|(d, _), _| *d != ds);
+            self.order.retain(|(d, _)| *d != ds);
         }
     }
 
@@ -58,15 +58,15 @@ impl Nativi {
     fn reader(&mut self, ds: &str) -> Result<&mut dyn Lettore> {
         self.clock += 1;
         let open_now = self.sets.values().filter(|d| d.l.is_some()).count();
-        if open_now >= OPEN && self.sets.get(ds).is_some_and(|d| d.l.is_none()) {
-            if let Some(old) = self
+        if open_now >= OPEN
+            && self.sets.get(ds).is_some_and(|d| d.l.is_none())
+            && let Some(old) = self
                 .sets
                 .values_mut()
                 .filter(|d| d.l.is_some())
                 .min_by_key(|d| d.used)
-            {
-                old.l = None;
-            }
+        {
+            old.l = None;
         }
         let d = self
             .sets

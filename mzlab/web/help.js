@@ -3,8 +3,8 @@
 // Context help: every <button class="hq" data-help="key"> opens a short explanation (HELP[key]) next to it.
 // Texts for students, in the catalogs (keys help.<key>.title / .body). To add one: a key here and a "?" button where it is needed. Classic script.
 const HELP = {
-  "numpress": [I18N.t("help.numpress.title"), I18N.t("help.numpress.body")],
   "start": [I18N.t("help.start.title"), I18N.t("help.start.body")],
+  "compressione": [I18N.t("help.compressione.title"), I18N.t("help.compressione.body")],
   "filegrandi": [I18N.t("help.filegrandi.title"), I18N.t("help.filegrandi.body")],
   "files": [I18N.t("help.files.title"), I18N.t("help.files.body")],
   "toolbar": [I18N.t("help.toolbar.title"), I18N.t("help.toolbar.body")],
@@ -16,6 +16,7 @@ const HELP = {
   "pnl-spec": [I18N.t("help.pnlSpec.title"), I18N.t("help.pnlSpec.body")],
   "pnl-xic": [I18N.t("help.pnlXic.title"), I18N.t("help.pnlXic.body")],
   "pnl-mrm": [I18N.t("help.pnlMrm.title"), I18N.t("help.pnlMrm.body")],
+  "sn": [I18N.t("help.sn.title"), I18N.t("help.sn.body")],
   "pnl-map": [I18N.t("help.pnlMap.title"), I18N.t("help.pnlMap.body")],
   "mappa": [I18N.t("help.mappa.title"), I18N.t("help.mappa.body")],
   "origine": [I18N.t("help.origine.title"), I18N.t("help.origine.body")],

@@ -26,6 +26,14 @@ const NATIVO = {
     }
     return out;
   },
+  // mzML files with MS-Numpress arrays (`isNumpress(f)`: the family `aperti` of the readers modules): each is one sample read as it is through the module, no mzML is written; the other files go on as they are
+  async numpress(files, isNumpress) {
+    const out = [];
+    for (const f of files) {
+      out.push(/\.mzml$/i.test(f.name) && !f.mzlabNat && !f.mzlabModulo && await isNumpress(f) ? NATIVO.sample(f.name, NATIVO.key(f.name), [{ name: f.name, blob: f }], 0, 1, false) : f);
+    }
+    return out;
+  },
   // the samples of a pair that the browser storage already holds with a current index (the same members: names, sizes, dates): their entries of `list`, else null (a part of them only, the desktop app, an engine without natsame)
   // every name of the list is a candidate: a sample named by its DATA name does not start with the stem of the pair
   // `samples` (optional) is the caller's thunk for rb.nativeSamples(mem): the pair is then parsed once for the check and for the caller

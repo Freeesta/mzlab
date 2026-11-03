@@ -12,7 +12,13 @@ use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
 fn generate() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_modi_{}", std::process::id()));
+    // one folder per call: the tests of this file run in parallel threads of one process and would write the same files
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let out = std::env::temp_dir().join(format!(
+        "mzlab_wiff_modi_{}_{}",
+        std::process::id(),
+        CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    ));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_modi.py");
     let ok = Command::new("python3")
         .arg(script)
@@ -155,14 +161,17 @@ fn every_mode_is_read_or_refused_exactly_as_the_matrix_says() {
             }
         }
     }
-    // the confirmed codes and the readable modes are the same six
+    // the readable modes are the confirmed codes and the two SIM modes (read like a dense MRM block, not yet seen in a real file)
     let confirmed: Vec<&str> = modi
         .iter()
-        .filter(|(_, m)| m["codice_confermato"] == true)
+        .filter(|(_, m)| m["codice_confermato"] == true || m["futuro"]["sim"] == true)
         .map(|(s, _)| s.as_str())
         .collect();
     assert_eq!(confirmed, read);
-    assert_eq!(read, ["EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1"]);
+    assert_eq!(
+        read,
+        ["EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1", "Q1MI", "Q3MI"]
+    );
 }
 
 /// The refused modes are refused through the registry too (the page's path), with the same detail.
@@ -195,7 +204,17 @@ fn mzml(dir: &Path, name: &str, c: usize) -> String {
     for p in parts.iter_mut().skip(1) {
         *p = &p[p.find('"').unwrap()..];
     }
-    parts.concat()
+    // the method document names the experiment type of each file (Q1, EMS): the scans are what must match
+    let xml = parts.concat();
+    let key = format!("name=\"{}\"", mzlab_core::metodo::USERPARAM);
+    match xml.find(&key) {
+        Some(a) => {
+            let a = xml[..a].rfind("<userParam").unwrap();
+            let b = a + xml[a..].find("/>").unwrap() + 2;
+            format!("{}{}", &xml[..a], &xml[b..])
+        }
+        None => xml,
+    }
 }
 
 /// Q1 (code 0) is read as an EMS level-1 profile scan, also by the samples that take their method from Method1 (a batch run with one method).
@@ -228,14 +247,27 @@ fn q1_reads_like_ems_and_the_method_one_fallback_serves_every_sample() {
     assert!(mzml(&dir, "Q1", 2).contains("sample=3 period=1 cycle=4 experiment=1"));
 }
 
-/// Q1MI (code 1) stays refused, the message names the code.
+/// Q1MI and Q3MI (codes 1 and 3) give a TIC and one SIM chromatogram per ion, never an SRM one, through the registry too.
 #[test]
-fn q1mi_is_still_refused_with_its_code() {
-    let Some((dir, _)) = generate() else {
+fn sim_modes_give_one_sim_chromatogram_per_ion() {
+    let Some((dir, modi)) = generate() else {
         return;
     };
-    let err = lettori::apri(set(&dir, "Q1MI"), &Limiti::sito())
-        .err()
-        .unwrap();
-    assert_eq!(detail(&err), "scan type code 1 (experiment 1)");
+    for sigla in ["Q1MI", "Q3MI"] {
+        let ions = modi[sigla]["futuro"]["ioni"].as_array().unwrap().len();
+        let mut l = lettori::apri(set(&dir, sigla), &Limiti::sito()).unwrap();
+        let list = l.cromatogrammi(0).unwrap();
+        let sim: Vec<_> = list
+            .iter()
+            .filter(|v| v.tipo == mzlab_core::mzml::ChromKind::Sic)
+            .collect();
+        assert_eq!(sim.len(), ions, "{sigla}");
+        assert!(list
+            .iter()
+            .all(|v| v.tipo != mzlab_core::mzml::ChromKind::Srm));
+        assert!(sim[0]
+            .id
+            .starts_with("SIM SIC sample=1 period=1 experiment=1 transition=0"));
+        assert!(sim[0].id.ends_with(" polarity=positive"), "{}", sim[0].id);
+    }
 }

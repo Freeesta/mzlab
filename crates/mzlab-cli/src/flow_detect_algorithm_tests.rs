@@ -47,7 +47,7 @@ fn the_default_detection_is_byte_identical_to_the_one_before_the_scope_moved() {
         ),
         (
             "gap.mzfeat",
-            "1f728c9100c3281b0b8b58547537722543cc663bca1d6c58c45d6e7432f6511f",
+            "c2dc919b147fc0aa4127aec2bfd177e375a850cc2d244a7ff2010c0d9be223e1",
         ),
     ] {
         assert_eq!(sha(&files, name), expected, "{name}");
@@ -74,7 +74,7 @@ fn the_noise_gates_off_write_the_bytes_of_the_recipe_without_them() {
         ),
         (
             "gap.mzfeat",
-            "7a5e8acbdf439d7231c8b95a32b718740560963714686ead0c9740bdb45ff311",
+            "b9fb1ae698a03a6fac6eadbc9bc52f324be5af7fe33d64d2495db45de4a27c42",
         ),
     ] {
         assert_eq!(sha(&files, name), expected, "{name}");

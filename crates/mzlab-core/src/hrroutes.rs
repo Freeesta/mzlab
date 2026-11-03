@@ -12,9 +12,15 @@ use crate::spectrum::{binned_json, Binned, EMPTY};
 
 impl<R: ReadAt> Routes<R> {
     pub(crate) fn hr_spectrum(&mut self, level: u8, win: (f64, f64), precursor: Option<f64>, filt: Option<&str>, hr: &HrProfile) -> Result<Option<String>> {
+        let (prec, _) = Self::hr_cells(level, precursor, hr);
+        // one scan: the answer is `spectrum_exact`'s, so the section is not walked here
+        match self.select_scans(level, win.0, win.1, prec, filt)? {
+            None => return Ok(Some(EMPTY.into())),
+            Some(s) if s.n == 1 => return Ok(None),
+            Some(_) => {}
+        }
         Ok(match self.hr_window(level, win, precursor, filt, hr)? {
             None => Some(EMPTY.into()),
-            Some(m) if m.n == 1 => None,
             Some(m) => Some(binned_json(m, hr.dec + 1, false)),
         })
     }
@@ -31,31 +37,39 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         let precursor = q.num("precursor")?;
-        let Some(mut m) = self.hr_window(level, (rt0.min(rt1), rt0.max(rt1)), precursor, q.some("filt"), &hr)? else {
+        let (prec, _) = Self::hr_cells(level, precursor, &hr);
+        let Some(sl) = self.select_scans(level, rt0.min(rt1), rt0.max(rt1), prec, q.some("filt"))? else {
             return Ok(None);
         };
-        if m.n != 1 || m.in_win.len() != 1 {
+        if sl.n != 1 || sl.in_win.len() != 1 {
             return Ok(None);
         }
-        let sid = m.scan_ids[m.sel[m.in_win[0]]] as usize;
+        let sid = sl.scan_ids[sl.sel[sl.in_win[0]]] as usize;
         let Some(sc) = self.idx.scans.get(sid) else {
             return Ok(None);
         };
-        if !m.mz.is_empty() {
-            (m.mz, m.y) = mzml.spettro(sc)?;
-        }
+        // The index holds every peak of the scan as the mzML parse gives it (`mzidx::add` pushes `mz.len()` peaks, none dropped) and `spettro` returns
+        // `min(mz.len, intensity.len)` of the same parse, so "the index has a peak of this scan" is implied by a non-empty `spettro`; the opposite
+        // case (peaks in the index, none read) answers the same empty arrays. The index pass is not needed to decide.
+        let (mz, y) = mzml.spettro(sc)?;
+        let m = Binned { mz, y, n: sl.n, sel: sl.sel, in_win: sl.in_win, scan_ids: sl.scan_ids };
         Ok(Some(binned_json(m, hr.dec + 1, false)))
     }
 
     /// The mean spectrum of a window of a high-resolution file: cells of 3 ppm, the precursor within the tolerance of the profile (ppm of the
     /// precursor, at least 1 mDa, as `Item.ptol`). `None` = the file has no scans of this level.
     fn hr_window(&mut self, level: u8, (lo, hi): (f64, f64), precursor: Option<f64>, filt: Option<&str>, hr: &HrProfile) -> Result<Option<Binned>> {
+        let (prec, cell) = Self::hr_cells(level, precursor, hr);
+        self.binned_cells(level, lo, hi, prec, filt, |m| (m.max(1e-9).ln() / cell).floor() as i64)
+    }
+
+    /// The precursor with its tolerance and the log width of a 3 ppm cell.
+    fn hr_cells(level: u8, precursor: Option<f64>, hr: &HrProfile) -> ((Option<f64>, f64), f64) {
         let tol = match precursor {
             Some(p) if level > 1 && p != 0.0 => (p * hr.ppm * 1e-6).max(1e-3),
             _ => 0.6,
         };
-        let cell = (3e-6f64).ln_1p();
-        self.binned_cells(level, lo, hi, (precursor, tol), filt, |m| (m.max(1e-9).ln() / cell).floor() as i64)
+        ((precursor, tol), (3e-6f64).ln_1p())
     }
 
     /// `/api/dda`: every MS2 (and MSn) of the file with its parent, isolation window, activation, level and charge, in columns, plus the survey scans.

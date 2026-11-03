@@ -35,7 +35,8 @@ try:
             # right click in the 2nd band -> integrate -> should integrate that series
             a = pg.evaluate("(()=>{const p=E.panels[0],a=p._a;return {n:a.sr.length}})()")
             c = pt(pg, 0, 14.33, ymz=1.45); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Integra il picco").first.click(); pg.wait_for_timeout(500)
+            assert pg.locator("#ctx div", has_text="Integra il picco").count() == 0, "the TIC menu does not offer the integration"
+            pg.keyboard.press("Escape"); pg.mouse.move(c["px"], c["py"]); pg.keyboard.press("i"); pg.wait_for_timeout(500)   # the key «I» integrates at the cursor
             assert pg.is_visible("#askdlg") and "non sul TIC" in pg.inner_text("#asktxt"), "TIC must refuse the integration"
             pg.click("#askno"); assert pg.evaluate("E.panels[0].ints.length") == 0
         step("TIC refuses integration (only XIC)", stack_int)

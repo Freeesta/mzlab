@@ -39,6 +39,16 @@ fn format(schema: &str) -> Option<String> {
     }
 }
 
+/// Every closed answer schema a request may force (`output_config.format.schema`), by name: the router's and the readers'. The proxy allow-list
+/// (`proxy/build-allowlist.mjs`) hashes them, so no other schema passes the proxy.
+pub fn closed_schemas() -> Vec<(&'static str, String)> {
+    let mut v = vec![("router/1", crate::router::SCHEMA.to_string())];
+    for name in ["lettura/1", "param-scelte/1"] {
+        v.extend(format(name).map(|s| (name, s)));
+    }
+    v
+}
+
 fn bad(field: &str) -> Error {
     Error::new("err.llm.assist.call").with("field", field)
 }

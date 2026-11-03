@@ -213,12 +213,12 @@ pub(super) fn finish_one(
     let hit = rows::isotope_of(e, snapshot, s.tol_da, s.rt_tol_min);
     rows::isotope_crit(e, hit);
     weak_unless_formed(e);
-    if status(&e.criteria, GROWS) == "pass" {
-        if let Some((v, text)) = gens.generation(lc, &e.cells, &e.cond) {
-            e.criteria
-                .push(labels::crit("kinetic generation", "n/a", text));
-            e.generation = Some(v);
-        }
+    if status(&e.criteria, GROWS) == "pass"
+        && let Some((v, text)) = gens.generation(lc, &e.cells, &e.cond)
+    {
+        e.criteria
+            .push(labels::crit("kinetic generation", "n/a", text));
+        e.generation = Some(v);
     }
 }
 

@@ -2,7 +2,8 @@
 //! key (the transport puts it in the `AuthSlot`), `Stream` turns the response bytes into normalized events, `http_error` maps a failed status. Pure
 //! functions on text; the transport (fetch in the site, `ureq` in the desktop) lives elsewhere.
 
-mod anthropic;
+pub(crate) mod anthropic;
+pub mod demo;
 mod errors;
 mod gemini;
 mod openai;
@@ -83,6 +84,8 @@ pub struct Provider {
     pub models: Vec<Model>,
     pub local: bool,
     pub site_allowed: bool,
+    /// The headers (session, owner) of mzLab's proxy (`demo::for_send`); `None` for a vendor.
+    pub session_headers: Option<(String, String)>,
 }
 
 /// What the transport sends. The key is not a field: it goes where `auth` says.
@@ -156,6 +159,10 @@ impl Provider {
             models,
             local: v.get("local").and_then(Value::bool).unwrap_or(false),
             site_allowed: v.get("site_allowed").and_then(Value::bool).unwrap_or(false),
+            session_headers: match v.get("session_headers") {
+                Some(h) => Some((s(h, "session")?, s(h, "owner")?)),
+                None => None,
+            },
         })
     }
 
@@ -252,10 +259,10 @@ pub fn request_with(
         return Err(err("provider"));
     }
     let m = p.model(&c.model).ok_or_else(|| err("model"))?;
-    if let Some(f) = &opts.format_schema {
-        if !tools.is_empty() || parse(f.as_bytes()).is_err() {
-            return Err(err("format"));
-        }
+    if let Some(f) = &opts.format_schema
+        && (!tools.is_empty() || parse(f.as_bytes()).is_err())
+    {
+        return Err(err("format"));
     }
     if !m.vision
         && c.messages

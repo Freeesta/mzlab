@@ -103,6 +103,9 @@ function attach(p) {
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
   cv.addEventListener("mousemove", e => pendHint(p, e));
+  cv.addEventListener("pointerdown", () => { cv.dataset.ptr = "1"; });                       // a click gives the canvas focus: no keyboard ring until a key is used
+  cv.addEventListener("keydown", () => { delete cv.dataset.ptr; });
+  cv.addEventListener("blur", () => { delete cv.dataset.ptr; });
   cv.onmouseleave = e => { if (p.type === "spec" && window.XICLENS) XICLENS.leave(p, e); if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const bb = cv.getBoundingClientRect(), px = e.clientX - bb.left, py = e.clientY - bb.top, a = p._a;
@@ -133,7 +136,7 @@ function attach(p) {
     if (p.type === "map" && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
     if (p.type === "map" && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
-      const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
+      const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); setNoiseZone(p, it, [Math.min(x0, x1), Math.max(x0, x1)]); E.panels.filter(q => q.ints && q.ints.length).forEach(q => draw(q)); uiSave(); showInts(); return;
     }
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
@@ -155,7 +158,7 @@ function attach(p) {
         return;
       }
       if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => hrTrace(s) ? autoAll(p, s) : autoInt(p, s, x0)); return; }
-      if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) t.forEach(s => addInt(p, s, x0, x1)); else draw(p); return; }
+      if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) { const go = () => t.forEach(s => addInt(p, s, x0, x1)); if (STORIA) STORIA.gruppo(go); else go(); } else draw(p); return; }
     }
     if (Math.abs(d.x - d.x0) > 4) {
       if (p.type === "spec") { pushZh(p); if (Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0)), true); p.zoom = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); }
@@ -392,7 +395,7 @@ function ctxFor(p, e, x, px, py) {
   reg({ id: "chrom.uvAvgSel", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.uv.avgSel"),
     esegui: /** @param {any} c */ c => uvOpen(c.p, c.k, c.p.sel[0] - pdaT(c.p), c.p.sel[1] - pdaT(c.p)) });
   reg({ id: "chrom.wl", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.wl" }, nome: () => T("ctx.chrom.wl"), esegui: /** @param {any} c */ c => wlOpen(c.p) });
-  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
+  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda" && !(window.SIMUI && SIMUI.ions(c.p).length), scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.x, text: v })); draw(c.p); } } });
@@ -449,17 +452,15 @@ async function showMethod(sel) {
   const pol = ["positive", "negative", "mixed", "unknown"].includes(m.polarity) ? I18N.t(`method.pol.${m.polarity}`) : m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
   const sp = m.scan_params && !m.scan_params.error ? m.scan_params : null;       // high resolution / DDA file: the parameters stored in the scans themselves
-  const spNote = `<div class="avv info">${I18N.t("method.scanParamsNote")}</div>`;
-  let h = labs.length ? "" : sp ? spNote : `<div class="avv warn">${I18N.t("method.missing")}<div style="margin-top:6px"><button class="go" id="m-load">${I18N.t("method.loadDam")}</button></div></div>`;
+  let h = "";
   const sec = (title, body, extra = "") => `<section class="msec"><h4>${title}${extra}</h4>${body}</section>`;
-  const HOW = { q1: I18N.t("method.how.q1"), ems: I18N.t("method.how.ems"), ms2: I18N.t("method.how.ms2"), mrm: I18N.t("method.how.mrm") };
 
   const scanLike = m.kind === "full" || m.kind === "ms2";
   const expTbl = `<table>${row(I18N.t("method.row.polarity"), pol)}${scanLike ? row(I18N.t("method.row.massRange"), m.scan_window ? `m/z ${m.scan_window[0]}-${m.scan_window[1]}` : "") : ""}${row(I18N.t("method.row.duration"), m.rt_max > 0 ? `${m.rt_min.toFixed(2)}-${m.rt_max.toFixed(2)} min` : "")}${scanLike ? row(I18N.t("method.row.scans"), m.scans || "") + row(I18N.t("method.row.cycle"), m.cycle_s ? m.cycle_s.toFixed(2) + " s" : "") : ""}${m.kind === "ms2" ? row(I18N.t("method.row.precursors"), m.precursors.join(", ")) + row(I18N.t("method.row.ce"), m.ce.length ? m.ce.join(", ") + " eV" : "") : ""}</table>`;
   const labName = x => x.sample ? I18N.t("method.name", { n: x.sample }) : x.name;       // «Metodo 1»: the .dam holds several methods, one per sample
-  const trTbl = m.transitions.length ? `<table><tr><th>${I18N.t("method.tr.name")}</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${EH(String(t.q1))}</td><td class="num">${EH(String(t.q3))}</td><td class="num">${EH(String(t.ce ?? ""))}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>` : "";
-  h += `<div class="msub"><span class="tag">${kindOf(f)}</span> <b>${EH(f.label)}</b> <span class="muted">· ${EH(m.instrument)} (${EH(m.serial)})</span></div><div class="mgrid">`;
-  h += sec(I18N.t("method.sec.experiment"), `<div class="sm hw">${HOW[m.kind === "full" ? (f.mode === "ems" ? "ems" : "q1") : m.kind] || ""}</div>${expTbl}${trTbl}`);
+  const trTbl = (window.SIMUI && SIMUI.methodTable(m.transitions)) ?? (m.transitions.length ? `<table><tr><th>${I18N.t("method.tr.name")}</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${EH(String(t.q1 ?? "—"))}</td><td class="num">${EH(String(t.q3 ?? "—"))}</td><td class="num">${EH(String(t.ce ?? ""))}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>` : "");
+  h += `<div class="msub"><span class="tag">${kindOf(f)}</span> <b>${EH(f.label)}</b> <span class="muted">· ${EH(m.instrument)} (${EH(m.serial)})</span>${labs.length || sp ? "" : ` <button type="button" class="go" id="m-load">${I18N.t("method.loadDam")}</button>`}</div><div class="mgrid">`;
+  h += sec(I18N.t("method.sec.experiment"), `${expTbl}${trTbl}`);
   if (sp && !lab) {
     const n1 = sp.ms1, n2 = sp.ms2, nf = (v, d = 0) => v == null ? "" : (+v).toFixed(d), join = a => a.join(", ");
     const t1 = `<table>${row(I18N.t("method.row.analyzer"), n1.an)}${row(I18N.t("method.row.massRange"), n1.window ? `m/z ${n1.window[0]}-${n1.window[1]}` : "")}${row(I18N.t("method.row.resolution"), n1.res ? nf(n1.res) : "")}${row(I18N.t("method.row.inject"), n1.inject != null ? nf(n1.inject, 1) + " ms" : "")}${row(I18N.t("method.row.scansN"), nf(n1.n))}</table>`;
@@ -475,12 +476,11 @@ async function showMethod(sel) {
   if (lab) {
     const pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.id === "ihe" ? I18N.t(s.value ? "method.source.on" : "method.source.off") : s.value + " " + s.unit}</td></tr>`).join("");
     const pick = labs.length > 1 ? `<div class="sm" style="margin:2px 0 6px">${I18N.t("method.source.pick", { select: `<select id="m-sel">${labs.map((x, i) => `<option value="${i}" ${i === li ? "selected" : ""}>${EH(labName(x))}</option>`).join("")}</select>` })}</div>` : `<div class="muted sm" style="margin:2px 0 6px">${I18N.t("method.source.from", { name: EH(labName(lab)) })}</div>`;
-    h += sec(I18N.t("method.source.title"), pick + (lab.error ? `<div class="fail">${EH(lab.error_key ? I18N.t(lab.error_key, lab.params) : lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : `<div class="muted sm">${I18N.t("method.source.none")}</div>`));
+    h += sec(I18N.t("method.source.title"), pick + (lab.error ? `<div class="fail">${EH(lab.error_key ? I18N.t(lab.error_key, lab.params) : lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : ""));
   }
   h += "</div>";
   if (lab) {
     if (lab.lc) h += lcHtml(lab.lc, row);
-    else if (!lab.error) h += `<div class="muted sm" style="margin-top:6px">${I18N.t("method.noLc")}</div>`;
   }
   const gradHere = !!(lab && lab.lc && lab.lc.gradient && lab.lc.gradient.length > 1);
   if (!gradHere && window.GRADIENTE) h += await GRADIENTE.html(f);       // no gradient in the .dam: the student can enter one
@@ -525,7 +525,7 @@ Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
 Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
 Q("#np-xic").onclick = () => openXic(null);
 Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
-Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all" })));
+Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true })));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
@@ -537,12 +537,13 @@ document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).de
 const calcBox = Q("#calcdlg");
 Object.defineProperty(calcBox, "open", {
   get: () => {
-    if (window.BARRA && BARRA.isDataView()) return BARRA.isOpen("calc");
+    if (window.BARRA && BARRA.isDataView() && calcBox.classList.contains("sb-docked")) return BARRA.isOpen("calc");
     return !calcBox.hidden;
   }
 });
 calcBox.close = () => {
-  if (window.BARRA && BARRA.isDataView()) {
+  // the drop-down shown on the loading screen is not docked: the side panel has nothing to close
+  if (window.BARRA && BARRA.isDataView() && calcBox.classList.contains("sb-docked")) {
     BARRA.close(true);
   } else {
     calcBox.hidden = true;
@@ -554,6 +555,7 @@ function calcPlace() {
 }
 // outside the Dati view the calculator is a drop-down under its toolbar button (in the Dati view it is the "Calcolatrice" panel of the drawer)
 window.calcToggleFloat = () => {
+  if (window.BARRA && BARRA.isDataView()) { BARRA.setTab("calc"); return; }           // where the side panel exists the calculator is part of its Adducts & losses page
   // before the Dati view is shown the dialog can still sit docked in the (invisible) side panel: take it out first, or the toggle would only "close" it
   if (calcBox.classList.contains("sb-docked") || calcBox.parentElement !== document.body) { document.body.appendChild(calcBox); calcBox.classList.remove("sb-docked"); calcBox.hidden = true; }
   if (!calcBox.hidden) return calcBox.close();
@@ -627,33 +629,39 @@ function calcKey(k) {
 }
 Q("#calcpad").querySelectorAll("button").forEach(b => { b.onmousedown = ev => ev.preventDefault(); b.onclick = () => calcKey(b.dataset.k); });      // the field keeps the focus
 Q("#calcin").onkeydown = ev => {
-  if (ev.key === "Enter" && calcIsExpr(ev.target.value)) { ev.preventDefault(); calcEquals(); return; }
+  if ((ev.key === "Enter" && calcIsExpr(ev.target.value)) || ev.key === "=") { ev.preventDefault(); calcEquals(); return; }          // "=" typed is the = key of the keypad
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
   if ((ev.key || "").length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
-// the groups under the calculator («what can this number be?», calc-qui*.js) follow the field
+// the groups under the floating calculator («what can this number be?», calc-qui*.js) follow the field; docked in the Adducts & losses page,
+// «Cerca» hands the result (or the formula) to the page field: a difference goes to the Neutral losses, a formula to the Adducts
 function calcRun() {
   const t = Q("#calcin").value.trim(), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
-  const ex = !t || calcIsExpr(t);
-  pad.hidden = !ex; res.hidden = !ex || !t; if (nlBtn) nlBtn.hidden = true; calcTape();
+  const ex = !t || calcIsExpr(t), docked = calcBox.classList.contains("sb-docked");
+  pad.hidden = !ex; res.hidden = !ex;                    // the result well stays (empty) while the field is empty or only unfinished
+  if (nlBtn) nlBtn.hidden = true; calcTape();
   if (CALCQUI.calc) CALCQUI.later(CALCQUI.calc);
   if (!t) { sum.innerHTML = ""; res.textContent = ""; return; }
-  if (!ex) return;
-  const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
-  if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) {
-    nlBtn.hidden = false;
-    const vabs = calcFmt(Math.abs(r.v));
-    nlBtn.title = I18N.t("calc.toLosses", { v: vabs });
-    nlBtn.onclick = () => {
-      if (window.BARRA && BARRA.isDataView()) {
-        BARRA.setTab("losses", { q: vabs });
-      } else {
-        calcBox.close();
-        if (window.QQQRef) QQQRef.open("ls", { q: vabs });
-      }
-    };
+  if (!ex) {
+    if (docked && nlBtn) calcSearch(nlBtn, t, "adducts");
+    return;
   }
+  const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
+  // a difference picks Neutral losses, also after «=» when the field holds the result of the last line of the tape
+  const diff = (/** @type {string} */ e) => /[0-9.,)]\s*[-−–]/.test(e);
+  const isDiff = diff(t) || (CALC.fresh && CALC.tape.length > 0 && CALC.tape[0].r === t && diff(CALC.tape[0].e));
+  if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) calcSearch(nlBtn, calcFmt(Math.abs(r.v)), isDiff ? "losses" : null);
   sum.innerHTML = r.err ? EH(r.err) : "";
+}
+/** The «Cerca» button of the calculator for value `v`, toward the tab `sub` of the Adducts & losses page (null: the tab shown). */
+function calcSearch(/** @type {HTMLElement} */ b, /** @type {string} */ v, /** @type {string | null} */ sub) {
+  b.hidden = false;
+  b.title = I18N.t("calc.toLosses", { v });
+  b.onclick = () => {
+    if (window.BARRA && BARRA.isDataView()) { CALCQUI.cerca(v, sub); return; }
+    calcBox.close();
+    CALCQUI.cerca(v, sub || "losses");
+  };
 }
 Q("#calcin").oninput = calcRun;
 

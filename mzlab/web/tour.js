@@ -439,11 +439,13 @@ const TOUR = (() => {
       return;
     }
 
-    const step = list[curStep];
+    let step = list[curStep];
     if (curLeave) { const f = curLeave; curLeave = null; f(); }
     if (step.prep) { const back = step.prep(); if (typeof back === "function") curLeave = back; }
 
-    const targetEl = step.target();
+    let targetEl = step.target();
+    const c = curCap === 1 && typeof TOURCARICA !== "undefined" && TOURCARICA.passo(step, targetEl);      // lab: nothing loaded yet
+    if (c) { step = c; targetEl = c.target(); }
     if (!targetEl || targetEl.offsetParent === null || targetEl.getBoundingClientRect().width === 0) {
       console.debug("Tour: target missing for step", step.id);
       curStep++;
@@ -458,9 +460,8 @@ const TOUR = (() => {
     const stepNumber = curStep + 1;
     const chapterName = I18N.t(curCap === 1 ? "tour.cap1" : curCap === 3 ? "tour.cap3" : "tour.cap2");
     const headerText = I18N.t("tour.passo", { n: stepNumber, tot: totalSteps, cap: chapterName });
-    const nt = step.id === "ingranaggio" && !SITO_PUBBLICO.teoria ? ".nt" : "";       // the gear step without the Teoria
-    const titleText = I18N.t(`tour.${step.id}.titolo` + nt);
-    const bodyText = I18N.t(`tour.${step.id}.testo` + nt + (step.id === "tasti" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : ""));
+    const titleText = I18N.t(`tour.${step.id}.titolo`);
+    const bodyText = I18N.t(`tour.${step.id}.testo` + (step.id === "tasti" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : ""));
     const provaText = step.prova ? I18N.t(`tour.${step.id}.prova`) : "";
 
     const dlg = getDialogEl();
@@ -540,6 +541,7 @@ const TOUR = (() => {
     const priBtn = btnNext || btnCont || btnFine;
     if (priBtn) priBtn.focus();
 
+    if (step.carica) tryTimer = step.carica(() => { stopTryTimer(); renderStep(); });
     // Setup "Prova tu" observation
     if (step.prova && step.attesa && step.initProva) {
       provaState = step.initProva();

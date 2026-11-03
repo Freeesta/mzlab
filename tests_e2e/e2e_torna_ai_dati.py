@@ -27,7 +27,7 @@ try:
                 before = pg.evaluate(SNAP)
                 # not pg.click: Playwright would first scroll the button into view and move the page
                 pg.evaluate("document.querySelector('#addf').click()"); pg.wait_for_selector("#backwork", state="visible"); frames(pg, 4)
-                assert not pg.evaluate("!document.querySelector('#v-data').hidden"), "the loading screen is not showing"
+                assert pg.is_visible("#start") and not pg.is_visible("#dpanels .pnl"), "the loading screen is not showing"      # the landing now sits inside the work area (#v-data stays shown)
                 (pg.keyboard.press("Escape") if leave == "Escape" else pg.click(leave)); frames(pg, 6); fermo(pg, "#dpanels"); frames(pg, 4)
                 after = pg.evaluate(SNAP)
                 assert before == after, f"\nbefore {before}\nafter  {after}"

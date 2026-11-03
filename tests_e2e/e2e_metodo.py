@@ -51,7 +51,9 @@ try:
         def lone_with_match():
             pg.set_input_files("#pick", [str(D / "one.wiff")])
             pg.wait_for_function("fetch('api/metodo?k=0').then(r => r.json()).then(j => j.source === 'wiff')", timeout=60000)
-            assert not (pg.locator("#unopen").count() and pg.locator("#unopen").is_visible() and "one.wiff" in pg.inner_text("#unopen")), pg.inner_text("#unopen")
+            # the notice is visible now and says the method was read (a note); an error would be a .fail block
+            pg.wait_for_function("document.querySelector('#unopen') && document.querySelector('#unopen').innerText.includes('one.wiff')", timeout=60000)
+            assert pg.locator("#unopen .fail").count() == 0, pg.inner_text("#unopen")
         step("a lone .wiff named by the open mzML is no error", lone_with_match)
         def route():
             r = pg.evaluate(JSON, "api/metodo?k=0")

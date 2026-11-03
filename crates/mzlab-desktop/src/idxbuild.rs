@@ -57,6 +57,7 @@ pub fn decode_inputs(body: &[u8]) -> Result<ScanTable, Error> {
         source_json: text(items[5])?,
         run_json: text(items[6])?,
         hr1: items[7].first().is_some_and(|&b| b != 0),
+        declared: 0,
     };
     if table.polarity.len() != table.level.len()
         || table.rt.len() != table.level.len()

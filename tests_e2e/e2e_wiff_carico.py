@@ -97,7 +97,7 @@ try:
             assert li.count() == 1, pg.inner_text("#flist .cvsum")
             n, t = int(li.get_attribute("data-cvmiss")), li.inner_text()
             assert li.count() == 1 and pg.locator("#flist .cvsum li").count() == 1, "only the file with a warning is listed"
-            assert 0 < n < 200 and f"{n} scans missing: the .wiff.scan ends before them" in t and "Loaded ✓" in t, t
+            assert 0 < n < 200 and f"{n} scans missing: the file ends before them" in t and "Loaded ✓" in t, t
             assert "1 with scans missing" in pg.inner_text("#flist .cvsum [data-cvtot]")
             pg.evaluate("document.querySelector('#flist .cvsum [data-cvact=close]')?.click()")      # the table may stand behind the first file shown
         step("a truncated .wiff.scan loads what it has and says how many scans are missing", truncated)
@@ -135,7 +135,8 @@ try:
             pg.wait_for_selector("#flst .fl.up:not(.err) [data-up-x]", timeout=10000)
             t1 = pg.inner_text("#flst .fl.up:not(.err) [data-uptxt]")
             assert t1.strip() and "Indexing 0%" not in t1, t1
-            pg.locator("#flst .fl.up:not(.err) [data-up-x]").first.click()
+            # the pair has one row per sample and each × stops its own file (upload-rows.js): press them all in one go, so a sample read meanwhile cannot slip through
+            pg.evaluate("document.querySelectorAll('#flst .fl.up:not(.err) [data-up-x]').forEach(b => b.click())")
             pg.wait_for_function("UPBUSY === 0", timeout=30000)
             assert pg.locator("#ldact").is_hidden()
             assert pg.evaluate("!E.files.some(f => !f.gone && f.file.startsWith('ferma'))"), "a cancelled file is not opened"

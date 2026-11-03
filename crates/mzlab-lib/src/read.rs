@@ -379,10 +379,10 @@ impl<S: Source> Library<S> {
             Kind::Peaks => 1,
             _ => 2,
         };
-        if let Some(Some((i, v))) = self.recent.borrow().get(slot) {
-            if *i == idx {
-                return Ok(v.clone());
-            }
+        if let Some(Some((i, v))) = self.recent.borrow().get(slot)
+            && *i == idx
+        {
+            return Ok(v.clone());
         }
         let v = self.chunk_cached(kind, idx)?;
         if let Some(h) = self.recent.borrow_mut().get_mut(slot) {
@@ -640,10 +640,6 @@ impl<S: Source> Library<S> {
         } else {
             &self.frag
         }
-    }
-
-    pub fn index_entries(&self, nl: bool) -> u64 {
-        self.index_dir(nl).n_entries
     }
 }
 

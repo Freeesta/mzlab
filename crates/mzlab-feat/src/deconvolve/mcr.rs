@@ -334,10 +334,10 @@ pub(super) fn mcr_als(
         c = update_c(d, n, m, &s, k, unimodal);
         let cur = calc_lof(d, n, m, &c, &s, k, sum_d2);
         lof = cur;
-        if let Some(p) = prev {
-            if (p - cur).abs() < 1e-6 * p.max(1e-12) {
-                break;
-            }
+        if let Some(p) = prev
+            && (p - cur).abs() < 1e-6 * p.max(1e-12)
+        {
+            break;
         }
         prev = Some(cur);
     }

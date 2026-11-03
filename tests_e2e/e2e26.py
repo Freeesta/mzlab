@@ -21,13 +21,14 @@ try:
             for w in (360, 768, 1500):
                 pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 3)
                 if w < 600:      # very narrow: everything but File is in «Altro»
-                    assert not pg.is_visible("#np-nl"); pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Perdite neutre").click()
-                else:
-                    assert pg.is_visible("#np-nl"), w
-                    pg.click("#np-nl")
+                    assert not pg.is_visible("#np-addloss"); pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Addotti e perdite").click(); pg.click("#al-t-losses")
+                elif pg.is_visible("#np-addloss"):
+                    pg.click("#np-addloss"); pg.click("#al-t-losses")
+                else:      # the toolbar keeps one row: at 768 px the tools that do not fit go to «Altro»
+                    pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Addotti e perdite").click(); pg.click("#al-t-losses")
                 attendi(pg, "!!document.querySelector('#sb-panel-losses') && document.querySelector('#sb-panel-losses').offsetParent !== null")
-                assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Perdite neutre", w
-                pg.click("#sb-x"); frames(pg, 3); assert not pg.is_visible("#dfiles"), w
+                assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Addotti e perdite", w
+                close_side(pg); frames(pg, 3); assert not pg.is_visible("#dfiles"), w
             pg.set_viewport_size({"width": 1400, "height": 900})
         step("header: Perdite neutre opens its tab at 360/768/1500 px, no title text", header)
         pg.click("#np-chrom"); attendi(pg, "E.panels.some(p=>p.type==='chrom')"); pg.click("#np-spec"); attendi(pg, "E.panels.some(p=>p.type==='spec')")

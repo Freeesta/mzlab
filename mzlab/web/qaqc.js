@@ -119,24 +119,30 @@ const QAQC = (() => {
       : `<circle cx="${x}" cy="${y}" r="${s}" ${a}/>`;
     return `<g>${lab ? `<title>${eh(lab)}</title>` : ""}${g}</g>`;
   }
-  // one value per file along the order of the series; `lines`: [{label, vals, color}], roles of the files for the shape of the marks
-  function chart(title, lines, roles, ylab) {
-    const W = 300, H = 120, L = 38, R = 6, T = 8, B = 20, n = roles.length;
-    const all = lines.flatMap(l => l.vals).filter(v => v != null && isFinite(v));
-    if (!all.length || n < 2) return "";
+  // one value per file along the order of the series; `lines`: [{label, vals, color, dash}], roles of the files for the shape of the marks; with
+  // `opt.xs` (one x per file, null = left out) the x axis is that value (`opt.xlab`, ends written) and each line joins its points in x order
+  function chart(title, lines, roles, ylab, opt = {}) {
+    const W = 300, H = 120, L = 38, R = 6, T = 8, B = 20, n = roles.length, xs = opt.xs;
+    const all = lines.flatMap(l => l.vals.filter((v, i) => !xs || (xs[i] != null && isFinite(xs[i])))).filter(v => v != null && isFinite(v));
+    const xv = xs ? xs.filter(v => v != null && isFinite(v)) : [];
+    if (!all.length || (xs ? xv.length < 1 : n < 2)) return "";
     let lo = minOf(all), hi = maxOf(all);
     if (lo === hi) { lo -= 1; hi += 1; }
-    const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
-    const X = i => L + (n === 1 ? 0 : (i * (W - L - R)) / (n - 1)), Y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+    const pad = (hi - lo) * 0.08, yf = opt.yfmt || (v => fmt(v, 2)); lo -= pad; hi += pad;
+    let x0 = xv.length ? minOf(xv) : 0, x1 = xv.length ? maxOf(xv) : 1;
+    if (x0 === x1) { x0 -= 1; x1 += 1; }
+    const X = xs ? (/** @type {number} */ i) => L + ((xs[i] - x0) * (W - L - R)) / (x1 - x0) : (/** @type {number} */ i) => L + (n === 1 ? 0 : (i * (W - L - R)) / (n - 1)), Y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
     let s = `<svg class="qq-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${eh(title)}"><title>${eh(title)}</title>`;
     s += `<line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="var(--line)"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" stroke="var(--line)"/>`;
-    s += `<text x="${L - 3}" y="${T + 4}" text-anchor="end" font-size="8" fill="var(--muted)">${eh(fmt(hi - pad, 2))}</text><text x="${L - 3}" y="${H - B}" text-anchor="end" font-size="8" fill="var(--muted)">${eh(fmt(lo + pad, 2))}</text>`;
-    s += `<text x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle" font-size="8" fill="var(--muted)">${eh(t("qaqc.chart.x"))}</text>`;
+    s += `<text x="${L - 3}" y="${T + 4}" text-anchor="end" font-size="8" fill="var(--muted)">${eh(yf(hi - pad))}</text><text x="${L - 3}" y="${H - B}" text-anchor="end" font-size="8" fill="var(--muted)">${eh(yf(lo + pad))}</text>`;
+    s += `<text x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle" font-size="8" fill="var(--muted)">${eh(xs ? opt.xlab || "" : t("qaqc.chart.x"))}</text>`;
+    if (xs) s += `<text x="${L}" y="${H - 4}" font-size="8" fill="var(--muted)">${eh(fmt(minOf(xv), 1))}</text><text x="${W - R}" y="${H - 4}" text-anchor="end" font-size="8" fill="var(--muted)">${eh(fmt(maxOf(xv), 1))}</text>`;
     s += `<text x="6" y="${(T + H - B) / 2}" font-size="8" fill="var(--muted)" transform="rotate(-90 6 ${(T + H - B) / 2})" text-anchor="middle">${eh(ylab)}</text>`;
     lines.forEach(l => {
-      const pts = l.vals.map((v, i) => (v == null || !isFinite(v) ? null : [X(i), Y(v), i, v])).filter(Boolean);
+      const pts = l.vals.map((v, i) => (v == null || !isFinite(v) || (xs && (xs[i] == null || !isFinite(xs[i]))) ? null : [X(i), Y(v), i, v])).filter(Boolean);
+      if (xs) pts.sort((a, b) => a[0] - b[0]);
       if (pts.length > 1) s += `<polyline fill="none" stroke="${l.color}" stroke-width="1.2" stroke-dasharray="${l.dash || ""}" points="${pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}"/>`;
-      pts.forEach(p => { s += mark(MARK[roles[p[2]]] || "c", p[0], p[1], l.color, `${l.label} · #${p[2] + 1} · ${roleName(roles[p[2]])} · ${fmt(p[3], 3)}`); });
+      pts.forEach(p => { s += mark(MARK[roles[p[2]]] || "c", p[0], p[1], l.color, `${l.label} · ${xs ? `${opt.xlab || ""} ${fmt(xs[p[2]], 2)}` : `#${p[2] + 1}`} · ${roleName(roles[p[2]])} · ${opt.yfmt ? opt.yfmt(p[3]) : fmt(p[3], 3)}`); });
     });
     return s + "</svg>";
   }
@@ -150,7 +156,7 @@ const QAQC = (() => {
     const head = [t("qaqc.col.file"), t("qaqc.col.type"), "RT", "ΔRT", t("qaqc.col.area"), t("qaqc.col.rel")].concat(hr ? ["Δppm"] : []);
     const body = o.files.map((f, k) => {
       const x = rows[k];
-      return [`<span class="qq-n">${k + 1}</span> ${eh(f)}`, roleName(o.roles[k])].concat(x ? [fmt(x.rt, 3), fmt(x.drt, 3), fmt(x.area, 0), fmt(x.rel, 2)].concat(hr ? [fmt(x.dppm, 2)] : []) : ["–", "–", "–", "–", "–"].concat(hr ? ["–"] : []));
+      return [`<span class="qq-n">${k + 1}</span> ${eh(f)}`, roleName(o.roles[k])].concat(x ? [fmt(x.rt, 3), fmt(x.drt, 3), I18N.sciE(x.area), fmt(x.rel, 2)].concat(hr ? [fmt(x.dppm, 2)] : []) : ["–", "–", "–", "–", "–"].concat(hr ? ["–"] : []));
     });
     const sum = [];
     sum.push(`<li>${t("qaqc.sum.cv", { v: fmt(r.cv_area, 1) })}</li>`);
@@ -166,7 +172,7 @@ const QAQC = (() => {
     if (!rt) return "";
     const rows = rt.files.map((f, k) => {
       const a = rt.r.rows[k], q = rt.r.ratio.rows[k];
-      return [eh(f), roleName(rt.roles[k]), a ? fmt(a.area, 0) : "0", rt.roles[k] === "blank" ? "–" : !q ? "–" : q.absent_in_blank ? t("qaqc.ratio.absent") : fmt(q.ratio, 1), rt.roles[k] === "blank" || !q ? "–" : t(q.at_least ? "qaqc.yes" : "qaqc.no")];
+      return [eh(f), roleName(rt.roles[k]), a ? I18N.sciE(a.area) : I18N.sciE(0), rt.roles[k] === "blank" ? "–" : !q ? "–" : q.absent_in_blank ? t("qaqc.ratio.absent") : fmt(q.ratio, 1), rt.roles[k] === "blank" || !q ? "–" : t(q.at_least ? "qaqc.yes" : "qaqc.no")];
     });
     return `<div class="qq-ion"><div class="sm">${t("qaqc.ratio.sum", { mz: fmt(rt.mz, 4), thr: rt.thr, blank: fmt(rt.r.ratio.blank_area, 0) })}</div><div class="qq-scroll">${table([t("qaqc.col.file"), t("qaqc.col.type"), t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: rt.thr })], rows)}</div></div>`;
   }

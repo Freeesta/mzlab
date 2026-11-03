@@ -40,10 +40,11 @@ try:
             pg.evaluate(f"(()=>{{const p={CH};p.ms2tri=true;ctl(p);draw(p)}})()"); pg.wait_for_timeout(1200)
             n = pg.evaluate(f"{CH}._a.tri.length"); assert n > 20, n
             t = pg.evaluate(f"(()=>{{const p={CH},q=p._a.tri[5];p.el.scrollIntoView({{block:'center'}});const c=p.cv.getBoundingClientRect();return {{x:c.left+q.px,y:c.top+M.t+4,rt:q.rt,prec:q.prec}}}})()")
-            pg.mouse.click(t["x"], t["y"]); pg.wait_for_timeout(4500)
-            assert pg.evaluate("E.tab") == "ms2", "the triangle opens the MS2 tab"
-            s = pg.evaluate("(()=>{const sp=E.panels.find(p=>p.tab==='ms2'&&p.type==='spec');return {rt:(sp.r0+sp.r1)/2,prec:sp.prec,ok:!!sp._a}})()"); print(t, s)
-            assert abs(s["rt"] - t["rt"]) < 0.03 and s["ok"], (t, s)
+            pg.mouse.click(t["x"], t["y"])
+            # the IDA Full Scan has its MS2 panel next to the spectrum (the trio): the triangle selects that scan there, the tab stays Full Scan
+            pg.wait_for_function("(()=>{const q=E.panels.find(p=>p.dda!=null);return !!q && q.r0!=null && Math.abs((q.r0+q.r1)/2-%f)<0.03})()" % t["rt"], timeout=30000)
+            s = pg.evaluate("(()=>{const q=E.panels.find(p=>p.dda!=null);return {rt:(q.r0+q.r1)/2,tab:E.tab,ok:!!q.el}})()"); print(t, s)
+            assert s["tab"] == "full" and s["ok"], (t, s)
         step("triangles on the survey chromatogram; a click opens that MS2 scan", tri)
         def ms2tab():
             assert pg.evaluate("tabFiles('ms2').length") == 2

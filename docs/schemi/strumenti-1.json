@@ -13,6 +13,7 @@
         "x-executable-native":[
           "annot.level",
           "annot.regulatory",
+          "chrom.transitions",
           "chrom.uv_peaks",
           "convert.mzml",
           "export.annotations",
@@ -77,6 +78,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.transitions@1",
               "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.annotations@1",
@@ -109,7 +111,7 @@
               "spectra.lookup@1",
               "spectra.match@1",
               "spectra.ms2@1",
-              "spectra.msn_graph@1",
+              "spectra.msn_graph@2",
               "structure.draw@1",
               "structure.reactivity@1",
               "structure.render@1",
@@ -177,6 +179,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.transitions@1",
               "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.annotations@1",
@@ -209,7 +212,7 @@
               "spectra.lookup@1",
               "spectra.match@1",
               "spectra.ms2@1",
-              "spectra.msn_graph@1",
+              "spectra.msn_graph@2",
               "structure.draw@1",
               "structure.reactivity@1",
               "structure.render@1",
@@ -388,6 +391,81 @@
           },
           {
             "properties":{
+              "step":{"const":"chrom.transitions@1"},
+              "name":{
+                "enum":[
+                  "preset",
+                  "transitions",
+                  "output",
+                  "mz_tol",
+                  "rt_window",
+                  "snr_min",
+                  "smooth",
+                  "min_points",
+                  "max_candidates",
+                  "group_rt"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["example_1"]},
+                  {
+                    "type":"string",
+                    "description":"CSV with the header name;q1;q3;polarity;rt;rt_window;isomer_group;note;formula;adduct: q3 empty for a SIM ion, q1 empty to take it from formula and adduct ([M+H]+ or [M-H]- by polarity), rt empty when not known yet"
+                  },
+                  {
+                    "enum":["peaks","table","candidates"],
+                    "default":"peaks",
+                    "description":"peaks: one row per file and table row; table: one row per table row with the area and apex RT of each file; candidates: the peaks of the rows without an RT"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"A chromatogram belongs to a row when its Q1 (and Q3) are within this of the row's"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.3,
+                    "description":"The peak is searched in RT plus and minus this when the row writes no window"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"A peak under this signal-to-noise is reported as no_peak"
+                  },
+                  {
+                    "enum":[1,3,5],
+                    "default":3,
+                    "description":"1 = none, 3 = 1-2-1, 5 = 1-4-6-4-1 before the apex and the edges are found"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":3,
+                    "description":"A peak with fewer points above 5 % of its height is reported as no_peak"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":5,
+                    "description":"Most candidate peaks taken from the trace of each file (candidates output)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"Candidate apexes of different files closer than this are one candidate (candidates output)"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"chrom.uv_peaks@1"},
               "name":{"enum":["wavelength_nm","band_nm","broad","broad_min_s","broad_max_s","broad_snr"]},
               "value":{
@@ -540,6 +618,7 @@
                   "rt_coarse_gap",
                   "rt_span",
                   "rt_inlier",
+                  "rt_seed",
                   "weak_files",
                   "link_rt",
                   "max_span",
@@ -602,6 +681,12 @@
                     "minimum":0,
                     "default":0.05,
                     "description":"Largest distance of an anchor from the line to agree with it (ransac)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Seed of the random samples of the line (ransac); the same seed gives the same correction"
                   },
                   {
                     "type":"integer",
@@ -1635,7 +1720,7 @@
           },
           {
             "properties":{
-              "step":{"const":"spectra.msn_graph@1"},
+              "step":{"const":"spectra.msn_graph@2"},
               "name":{
                 "enum":[
                   "formula",
@@ -1644,22 +1729,22 @@
                   "smiles",
                   "molfile",
                   "ppm_formula",
-                  "mz_basso",
-                  "ppm_basso",
-                  "prove_min",
-                  "attivazione",
-                  "isotopi",
-                  "strutture_nodo",
-                  "ppm_struttura",
-                  "interpreta",
-                  "ppm_perdita",
-                  "regole",
+                  "low_mz",
+                  "wide_ppm",
+                  "min_evidence",
+                  "activation",
+                  "isotopes",
+                  "structures",
+                  "struct_ppm",
+                  "interpret",
+                  "loss_ppm",
+                  "rules",
                   "cutoff_q",
-                  "toll_perdita_mda",
-                  "scelte",
-                  "rotture",
+                  "loss_tol_mda",
+                  "pick",
+                  "breaks",
                   "h_max",
-                  "max_legami"
+                  "max_bonds"
                 ]
               },
               "value":{
@@ -1721,7 +1806,7 @@
                   {
                     "type":"string",
                     "default":"",
-                    "description":"Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `tutti` = the key `strutture_tutti` for every node of level 2 or more; empty = none"
+                    "description":"Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `all` (or `tutti`) = the key `strutture_tutti` for every node of level 2 or more; empty = none"
                   },
                   {
                     "type":"number",
@@ -1765,7 +1850,7 @@
                   {
                     "type":"boolean",
                     "default":false,
-                    "description":"Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `ppm_struttura`)"
+                    "description":"Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `struct_ppm`)"
                   },
                   {
                     "type":"integer",
@@ -2601,6 +2686,7 @@
                 "annot.hazard@1",
                 "annot.level@1",
                 "annot.regulatory@1",
+                "chrom.transitions@1",
                 "chrom.uv_peaks@1",
                 "convert.mzml@1",
                 "export.annotations@1",
@@ -2633,7 +2719,7 @@
                 "spectra.lookup@1",
                 "spectra.match@1",
                 "spectra.ms2@1",
-                "spectra.msn_graph@1",
+                "spectra.msn_graph@2",
                 "structure.draw@1",
                 "structure.reactivity@1",
                 "structure.render@1",

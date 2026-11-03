@@ -285,11 +285,11 @@ impl Sched {
 
     /// The share done of a running job (0 to 1); other jobs ignore it.
     pub fn progress(&mut self, id: &JobId, frac: f64) {
-        if let Some(p) = self.at(id) {
-            if let State::Running { frac: f } = &mut self.jobs[p].state {
-                *f = Some(frac.clamp(0.0, 1.0));
-                self.after();
-            }
+        if let Some(p) = self.at(id)
+            && let State::Running { frac: f } = &mut self.jobs[p].state
+        {
+            *f = Some(frac.clamp(0.0, 1.0));
+            self.after();
         }
     }
 
@@ -369,14 +369,14 @@ impl Sched {
 
     /// Puts a failed, refused or cancelled job back in line.
     pub fn retry(&mut self, id: &JobId) {
-        if let Some(p) = self.at(id) {
-            if matches!(
+        if let Some(p) = self.at(id)
+            && matches!(
                 self.jobs[p].state,
                 State::Error { .. } | State::Refused { .. } | State::Cancelled
-            ) {
-                self.jobs[p].state = State::Waiting;
-                self.after();
-            }
+            )
+        {
+            self.jobs[p].state = State::Waiting;
+            self.after();
         }
     }
 

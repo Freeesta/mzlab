@@ -170,12 +170,11 @@ impl Scan {
 /// `re.sub(r"\s*\[[^\]]*\]\s*$", "", f)`: the scan range in square brackets at the end of a filter.
 fn strip_range(f: &str) -> &str {
     let t = f.trim_end();
-    if t.ends_with(']') {
-        if let Some(p) = t.rfind('[') {
-            if !t[p + 1..t.len() - 1].contains(']') {
-                return t[..p].trim_end();
-            }
-        }
+    if t.ends_with(']')
+        && let Some(p) = t.rfind('[')
+        && !t[p + 1..t.len() - 1].contains(']')
+    {
+        return t[..p].trim_end();
     }
     f
 }

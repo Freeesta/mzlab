@@ -4,7 +4,7 @@
 // Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists).
 // ONE engine for every list of reference: unit resolution (nominal m/z ±0.5 Da, ordered by proximity) and high resolution (ppm tolerance).
 // Pure functions first (also run by node in tests/test_liste.py); page UI (mount, dialogs, IndexedDB storage) below.
-// Principle 1 of AGENTS.md: in low resolution, coincidences are often accidental. The program NEVER shows automatic annotations on LR spectra.
+// Principle 1 of CLAUDE.md: in low resolution, coincidences are often accidental. The program NEVER shows automatic annotations on LR spectra.
 const LISTE = (() => {
   // ---------------------------------------------------------------- pure part
   const PROTON = 1.007276;                      // [M+H]+ / [M-H]- shift, the value of the adduct tables of the page (liste-target-core.js, fair.js)
@@ -21,14 +21,14 @@ const LISTE = (() => {
       (L.items || []).forEach((/** @type {Bag} */ it) => {
         const /** @type {Bag} */ x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
         if (en && it.name_en) x.name = it.name_en;
+        if (it.series && it.series.n != null && typeof I18N !== "undefined") { x.baseName = String(x.name).replace(/ n=\d+$/, ""); x.name = I18N.t(it.series.n === 1 ? "lst.unitName.one" : "lst.unitName.many", { name: x.baseName, n: it.series.n }); }    // a polymer series is named by its repeat units, not by the bare «n=3» of the data
         if (en && it.cls_en) x.cls = it.cls_en;
         if (it.pol !== -1) pos.push(x);
         if (it.pol !== 1) neg.push(x);
       });
     });
     const by = (/** @type {Bag} */ a, /** @type {Bag} */ b) => a.mz - b.mz;
-    pos.sort(by);
-    neg.sort(by);
+    pos.sort(by); neg.sort(by);
     return { pos, neg };
   }
 
@@ -96,7 +96,7 @@ const LISTE = (() => {
         let j = i;
         while (j + 1 < ns.length && ns[j + 1] === ns[j] + 1) j++;
         if (j - i + 1 >= minRun) {
-          const nm = byN.get(ns[i]).name.replace(/ n=\d+$/, "").split(" (")[0];
+          const nm = String(byN.get(ns[i]).baseName || byN.get(ns[i]).name).split(" (")[0];
           const txt = `serie ${nm} (n = ${ns[i]}-${ns[j]})`;
           for (let q = i; q <= j; q++) out.set(k + "#" + ns[q], txt);
         }
@@ -114,7 +114,7 @@ const LISTE = (() => {
     const e = esc || ((/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]));
     const row = (/** @type {Bag} */ it) => {
       const ser = it.series && runs && runs.get(it.list + ":" + it.series.id + "#" + it.series.n);
-      return `<div class="cont-row"><b>${e(it.name)}</b>${it.mzonly ? ` <span class="sm">${I18N.t("lst.mzOnly")}</span>` : ` <span class="sm">${e(it.adduct || "")}${it.formula ? ", " + e(it.formula.replace(/x(\d+)$/, " ×$1")) : ""}</span>`}<div class="sm">${I18N.t("lst.theoMz")} ${it.mz.toFixed(4)} · ${it.err >= 0 ? "+" : ""}${it.err.toFixed(1)} ppm · ${e(it.list === "keller" ? (it.source ? it.source.split(",")[0] : it.listName) : it.listName || it.list)}${ser ? ` · <b>${e(ser)}</b>` : ""}</div></div>`;
+      return `<div class="cont-row"><b>${e(it.name)}</b>${it.mzonly ? ` <span class="sm">${I18N.t("lst.mzOnly")}</span>` : ` <span class="sm">${e(it.adduct || "")}${it.formula ? ", " + e(it.formula.replace(/x(\d+)$/, " ×$1")) : ""}</span>`}<div class="sm">${I18N.t("lst.theoMz")} ${it.mz.toFixed(4)} · ${it.err >= 0 ? "+" : ""}${it.err.toFixed(1)} ppm · ${e(noRef(it.listName || it.list))}${ser ? ` · <b>${e(ser)}</b>` : ""}</div></div>`;
     };
     const shown = matches.slice(0, MAXROWS), more = matches.length - shown.length;
     return `<div class="cont"><div class="sm cont-h">${I18N.t("lst.compatible")}</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">${I18N.t("lst.more", { n: more })}</div>` : ""}</div>`;
@@ -634,7 +634,8 @@ const LISTE = (() => {
         if (isTarget && !elTargetBox.dataset.mounted) {
           elTargetBox.dataset.mounted = "1";
           try {
-            await import("./liste-target-core.js"); const mod = (typeof window !== "undefined" && window.LISTE_TARGET) || (await import("./liste-target.js")).default || (await import("./liste-target.js"));
+            await import("./liste-target-core.js"); if (!window.LISTE_TARGET) await import("./liste-target.js");
+            const mod = window.LISTE_TARGET;      // liste-target.js is a classic script: importing it only sets window.LISTE_TARGET (the namespace has no mount)
             if (mod && typeof mod.mount === "function") mod.mount(elTargetBox);
           } catch (_) {}
         }
@@ -763,7 +764,7 @@ const LISTE = (() => {
       if (elCount) elCount.innerHTML = "";
 
       if (!shown.length) {
-        elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted" style="text-align:center;padding:16px">${I18N.t("lst.noMatch")}</td></tr>`;
+        elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;
         return;
       }
 
@@ -771,7 +772,7 @@ const LISTE = (() => {
         const delta = hasMz ? (isNom ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
                                     : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
         const polBadge = it.pol === 1 ? `<span class="pol pos" style="font-size:10px">ESI+</span>` : it.pol === -1 ? `<span class="pol neg" style="font-size:10px">ESI&minus;</span>` : `<span class="pol both" style="font-size:10px">&plusmn;</span>`;
-        const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">n=${it.series.n}</span>` : "";
+        const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">${I18N.t(it.series.n === 1 ? "lst.unitShort.one" : "lst.unitShort.many", { n: it.series.n })}</span>` : "";
         if (isNom) return `<tr>
           <td class="num font-mono"><b>${Math.round(it.mz)}</b></td>
           <td><b>${EH(it.name)}</b></td>

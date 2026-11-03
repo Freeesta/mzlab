@@ -328,7 +328,7 @@ fn encode_data_ms(scans: &[(u32, Vec<(u16, u16)>)]) -> Vec<u8> {
         b.extend(
             peaks
                 .iter()
-                .map(|p| (((p.1 & 0x3fff) as u32) << (3 * (p.1 >> 14))))
+                .map(|p| ((p.1 & 0x3fff) as u32) << (3 * (p.1 >> 14)))
                 .sum::<u32>()
                 .to_be_bytes(),
         );

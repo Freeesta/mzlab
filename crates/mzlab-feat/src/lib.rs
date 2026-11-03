@@ -112,6 +112,7 @@ pub mod tabcheck;
 pub mod table;
 pub mod target;
 pub mod tp;
+pub mod transitions;
 pub mod trace;
 mod trace_text;
 #[cfg(feature = "untargeted")]

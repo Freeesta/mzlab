@@ -33,7 +33,7 @@ try:
             pg.screenshot(path=SH + "19_ms2.png")
         step("precursor chromatogram: kind/m-z/blank/baseline/log grey with tooltips, no TIC/BPC", dis)
         def side():
-            drawer(pg); t = pg.inner_text("#flst"); assert "PRODUCT ION" in t.upper() and "m/z 229.1" in t, t      # grouped by experiment: the MS2 group lists its precursors
+            drawer(pg); open_ms2(pg); t = pg.inner_text("#flst"); assert "PRODUCT ION" in t.upper() and "229.1" in t, t      # grouped by experiment: the MS2 group lists its precursors
             r = pg.evaluate("""()=>{const f=document.querySelector('#flst .fl:not(.pr) .fi');const b=f.querySelector('.nm').getBoundingClientRect(),s=f.querySelector('small').getBoundingClientRect();return [b.top,s.top,b.right,s.left]}""")
             assert abs(r[0] - r[1]) < 12 and r[3] >= r[2] - 1, r
         step("sidebar: precursors first, time to the right of the file name", side)
@@ -52,7 +52,7 @@ try:
             pg.locator("#flst input[data-pr]:not(:checked)").first.click(); pg.wait_for_timeout(1500); assert n() == 3, n()      # a second chromatogram alone (the spectrum comes on a double click)
             pg.locator("#flst input[data-pr]:checked").nth(1).click(); pg.wait_for_timeout(500); assert n() == 1, n()      # the second precursor in the list is the one with the pair: it closes, the lone chromatogram stays
             pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")
-            sel = pg.evaluate("(()=>{const c=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').el.querySelector('[data-o=prec]');return c?c.getBoundingClientRect().width:0})()"); assert sel > 90, sel     # the precursor menu is wide enough to read
+            sel = pg.evaluate("(()=>{const c=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').el.querySelector('[data-o=prec]');return c?c.getBoundingClientRect().width:0})()"); assert sel > 60, sel     # the precursor menu (numbers only) is wide enough to read
             pg.screenshot(path=SH + "19_ms2b.png")
         step("sidebar precursors: click switches the one pair, tick adds a second pair, readable menu", toggle)
         # MS2 arrows (nearest scan with data): covered by e2e_scroll «MS2: arrows jump over empty scans»

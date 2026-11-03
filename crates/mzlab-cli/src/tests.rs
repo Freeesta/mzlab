@@ -186,6 +186,55 @@ fn the_convert_step_writes_an_indexed_mzml_the_table_step_reads() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// An mzML with numpress arrays gets the table of its plain twin through `features` (the index is built by the reader of the registry), and `canali` lists its channels.
+#[test]
+fn a_numpress_mzml_gives_the_table_of_its_plain_twin() {
+    use mzlab_core::mzmlwrite::Opzioni;
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_np_{}", std::process::id()));
+    let tmp = dir.join("tmp");
+    std::fs::create_dir_all(&tmp).unwrap();
+    let sample = mzlab_core::mzml::read(&mzml(10.0)[..]).unwrap();
+    let write = |numpress: bool, name: &str| {
+        let mut w = MzmlWriter::con_opzioni(
+            Vec::new(),
+            &Header::default(),
+            Opzioni {
+                numpress,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        w.open_spectra(sample.spectra.len()).unwrap();
+        for s in &mut sample.spectra.clone() {
+            // a longer array, so that the writer encodes it: flat noise above the ions
+            s.mz.extend((0..40).map(|k| 310.0 + 2.5 * k as f64));
+            s.intensity.extend([2e3; 40]);
+            s.wide = None;
+            w.spectrum(s).unwrap();
+        }
+        w.close_spectra().unwrap();
+        let p = dir.join(name);
+        std::fs::write(&p, w.finish().unwrap()).unwrap();
+        p
+    };
+    let (plain, np) = (write(false, "plain.mzML"), write(true, "np.mzML"));
+    assert!(std::fs::read_to_string(&np).unwrap().contains("MS:10027"));
+    let rows = |p: &std::path::PathBuf, sub: &str| {
+        let t = tmp.join(sub);
+        std::fs::create_dir_all(&t).unwrap();
+        let csv = crate::features(std::slice::from_ref(p), "{}", &t).unwrap();
+        csv.lines()
+            .map(|l| l.split(',').take(3).collect::<Vec<_>>().join(","))
+            .collect::<Vec<_>>()
+    };
+    let (a, b) = (rows(&plain, "a"), rows(&np, "b"));
+    assert!(a.len() > 1, "{a:?}");
+    assert_eq!(a, b);
+    let ch = cli(&["canali", np.to_str().unwrap()]);
+    assert_eq!(ch.code, 0, "{}", ch.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// The command of `main.rs`, run in this process (a binary built for the test would be a second build of the engine with another panic profile).
 fn cli(args: &[&str]) -> crate::Outcome {
     let a: Vec<String> = args.iter().map(|x| x.to_string()).collect();

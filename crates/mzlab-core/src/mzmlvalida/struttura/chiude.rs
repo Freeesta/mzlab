@@ -75,7 +75,11 @@ impl<'a> Walk<'a> {
                 ),
             );
         }
-        match arr.decode(&mut self.inf) {
+        let declared = arr
+            .array_length
+            .or(self.cur.as_ref().and_then(|c| c.declared))
+            .unwrap_or(0);
+        match arr.decode(&mut self.inf, declared) {
             Ok(v) => {
                 if let Some(c) = self.cur.as_mut() {
                     c.arrays.push((arr.kind(), v, arr.array_length));

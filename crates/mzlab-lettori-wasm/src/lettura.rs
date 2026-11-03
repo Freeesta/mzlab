@@ -189,18 +189,6 @@ pub fn famiglia() -> String {
     mzlab_lettori::famiglia().into()
 }
 
-/// The extensions the module accepts (JSON array, lower case with the dot).
-#[wasm_bindgen]
-pub fn estensioni() -> String {
-    let mut o = mzlab_core::json::Out::default();
-    o.raw("[");
-    for (i, e) in mzlab_lettori::estensioni().into_iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(e);
-    }
-    o.raw("]");
-    o.0
-}
-
 /// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
 /// as scans), `"pda"` (UV traces), `"variante"` (a file whose points the engine would misread: an Agilent `.D` QqQ MRM or Q-TOF profile or flight times, a SCIEX file of the 3200 reader). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
 #[wasm_bindgen]
@@ -252,7 +240,7 @@ fn apri_campione(
     mzlab_lettori::apri(fs, &Limiti::sito())
 }
 
-/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written.
+/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::mancanti`).
 #[wasm_bindgen]
 pub fn to_mzml(
     names: js_sys::Array,
@@ -261,9 +249,10 @@ pub fn to_mzml(
     c: u32,
     sink: Function,
     progress: Function,
-) -> Result<(), JsValue> {
+) -> Result<f64, JsValue> {
     let m = Membri::new(names, sizes, read)?;
     let mut l = apri_campione(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
+    let lacking = l.mancanti(c as usize);
     let mut out = BlockWriter {
         sink,
         buf: Vec::new(),
@@ -275,16 +264,22 @@ pub fn to_mzml(
             &(total as f64).into(),
         );
     };
-    // indexed mzML with no processing steps: the form `mzlab-cli convert` writes (`flow_base.rs` `write_mzml_with`), byte for byte
+    // indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
+    // the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte
     let conv = lettori_mzml::Conversione {
         steps: Some(&[]),
+        opz: mzlab_core::mzmlwrite::Opzioni {
+            dad: true,
+            ..mzlab_core::mzmlwrite::Opzioni::default()
+        },
         ..lettori_mzml::Conversione::default()
     };
     conv.scrivi(&mut *l, c as usize, &mut out, &mut tell)
         .map_err(|e| error_json(&e))?;
     out.flush().map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
-    })
+    })?;
+    Ok(lacking as f64)
 }
 
 // ---- session interface (for the external reader of the engine): a reader stays open under a handle ----
@@ -356,6 +351,11 @@ pub fn cromatogramma(h: u32, c: u32, id: &str) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn metodo(h: u32, c: u32) -> Result<String, JsValue> {
     con(|s| s.metodo(h, c as usize))
+}
+/// The spectra of the sample that a truncated file declares but does not hold.
+#[wasm_bindgen]
+pub fn mancanti(h: u32, c: u32) -> Result<u32, JsValue> {
+    con(|s| s.mancanti(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
 }
 /// The header of the mzML of the sample as JSON (`null` when the reader has none).
 #[wasm_bindgen]

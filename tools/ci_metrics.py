@@ -8,10 +8,11 @@ Standard library only. The data file `eventi.jsonl` lives on the orphan branch `
     python3 tools/ci_metrics.py registra-pr --evento E.json --nuovi N.jsonl    # pull_request_target: opened/push/merged/closed
     python3 tools/ci_metrics.py registra-conflitti --evento E.json --dati D.jsonl --nuovi N.jsonl   # push to main: new `dirty` PRs
     python3 tools/ci_metrics.py registra-recenti --dati D.jsonl --nuovi N.jsonl --cursore C.json   # scheduled: runs completed after the cursor + runner load
+    python3 tools/ci_metrics.py registra-coda --nuovi N.jsonl                  # snapshot of the open PRs (behind, dirty, green and waiting, oldest)
     python3 tools/ci_metrics.py accoda N.jsonl --dati D.jsonl [--cursore C.json]   # append without duplicates (every line gets `v`)
     python3 tools/ci_metrics.py riempi-verde --dati D.jsonl [--massimo 30]    # best-effort backfill of verde_a_unione_s (rewrites D in place)
     python3 tools/ci_metrics.py compatta --dati D.jsonl [--giorni 14]          # drop the heavy fields of old rows
-    python3 tools/ci_metrics.py esporta [--dati D.jsonl] [--out DIR]           # one CSV per row type
+    python3 tools/ci_metrics.py esporta [--dati D.jsonl] [--out DIR]           # one CSV per row type + giornaliero-coo.csv
     python3 tools/ci_metrics.py percorso [--dati D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
     python3 tools/ci_metrics.py riepilogo [--dati D.jsonl] [--da YYYY-MM-DD]   # default data: every events file of origin/stat-ci
 """
@@ -32,6 +33,7 @@ from datetime import datetime, timedelta, timezone
 
 import ci_metrics_data as dati_ci
 import ci_metrics_file as file_ci
+import ci_metrics_giorno as giorno_ci
 from ci_metrics_file import attivo, eventi_ramo, leggi, leggi_tutti, segmenti  # noqa: F401
 
 # Estimated minutes lost for the events that have no measured duration (printed with the summary).
@@ -139,7 +141,7 @@ def righe_recenti(dati: str, api=api_get, fetch=dati_ci.scarica, ora: datetime |
     runs = []
     for pagina in (1, 2, 3):
         r = api(f"/actions/runs?status=completed&created=>={dal}&per_page=100&page={pagina}").get("workflow_runs", [])
-        runs += [x for x in r if x["name"] in ("test", "rust", "pages") and x["updated_at"] > ultimo]
+        runs += [x for x in r if x["name"] in dati_ci.WORKFLOW_MISURATI and x["updated_at"] > ultimo]
         if len(r) < 100:
             break
     runs = sorted(runs, key=lambda x: x["updated_at"])[:massimo]
@@ -317,7 +319,7 @@ def colli(ev: list[dict]) -> list[tuple[str, int, int]]:
 
     runs = [r for r in ev if r["tipo"] == "run"]
     for r in ev:
-        if r["tipo"] == "job_fallito":
+        if r["tipo"] == "job_fallito" and r["categoria"] != "annullato":
             somma(f"job failed: {r['job']} [{r['categoria']}]", 1, r.get("durata_s") or 0)
     for r in runs:
         if r.get("run_attempt", 1) > 1:
@@ -372,8 +374,11 @@ def riepilogo(ev: list[dict], da: str | None = None, out=print) -> None:
     chiusi = [r for r in prs if r["azione"] in ("unita", "chiusa")]
     out("  pushes per PR by cause (commits after the first): " + (", ".join(f"{k} {v / len(chiusi):.1f}" for k, v in cause.most_common()) if chiusi else "-"))
     out(f"  merges of main per PR (closed PRs): mean {media([r.get('merge_main') for r in prs if r['azione'] in ('unita', 'chiusa')]):.1f}; PRs seen {len(pr_visti)}")
-    fall = [r for r in ev if r["tipo"] == "job_fallito"]
-    out("\nJobs failing most often")
+    fall = [r for r in ev if r["tipo"] == "job_fallito" and r["categoria"] not in giorno_ci.NON_VERI]
+    rosse, viste = giorno_ci.pr_con_rosso_vero(ev)
+    tutti = sum(r["tipo"] == "job_fallito" for r in ev)
+    out(f"\nJobs failing most often (real reds only: {tutti - len(fall)} of {tutti} failed jobs left out as cancelled or aggregate)")
+    out(f"  PRs with a real red: {rosse} of {viste} ({100 * rosse / viste:.0f}%)" if viste else "  PRs with a real red: -")
     for (job, cat), n in Counter((r["job"], r["categoria"]) for r in fall).most_common(10):
         out(f"  {n:4d}  {job} [{cat}]")
     tempi = defaultdict(list)
@@ -394,6 +399,7 @@ def riepilogo(ev: list[dict], da: str | None = None, out=print) -> None:
     out("  hours: " + (", ".join(f"{h}h:{n}" for h, n in ore.most_common(5)) or "-"))
     out("  days:  " + (", ".join(f"{g}:{n}" for g, n in Counter(r["ts_utc"][:10] for r in fall).most_common(5)) or "-"))
     dati_ci.tabelle(ev, out)
+    giorno_ci.tabella_coda(ev, out)
     out(f"\nTop 10 bottlenecks by estimated time lost (conflict = {CONFLITTO_S // 60} min, merge of main = {FUSIONE_S // 60} min; the others are measured)")
     for nome, n, perso in colli(ev)[:10]:
         out(f"  {hm(perso):>7}  x{n:<4d} {nome}")
@@ -406,7 +412,7 @@ def scrivi_righe(path: str, righe: list[dict]) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "registra-recenti", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
+    ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "registra-recenti", "registra-coda", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
     ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
     ap.add_argument("--evento", default=os.environ.get("GITHUB_EVENT_PATH"))
     ap.add_argument("--dati", help="events file (default: eventi.jsonl, plus its eventi-YYYY-MM[-N].jsonl parts; riepilogo and esporta: origin/stat-ci)")
@@ -453,6 +459,8 @@ def main() -> int:
         if a.cursore:
             with open(a.cursore, "w", encoding="utf-8") as f:
                 json.dump({"ultimo": cursore}, f)
+    elif a.comando == "registra-coda":
+        righe = giorno_ci.righe_coda(api_get, adesso())
     else:
         with open(a.evento, encoding="utf-8") as f:
             evento = json.load(f)

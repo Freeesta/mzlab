@@ -1,7 +1,7 @@
 """Size limits of the first-party code: files over 500 lines and functions over 80 lines are WARNINGS; the check FAILS only when
 the list gets worse than the saved base (tools/soglie_base.json): a file or function over the limit that is not in the base, or one
 that grew by more than 10% (at least 10 lines) over its base. The base can only shrink.
-The agent documents (AGENTS.md, docs/agenti/*.md except the generated mappa.md and misure-diario.md) have two more limits:
+The agent documents (CLAUDE.md, docs/agenti/*.md except the generated mappa.md and misure-diario.md) have two more limits:
 lines over 600 characters (counted per file) and files over 25 KB.
 
     python3 tools/controlla.py             # report + exit 1 if worse than the base
@@ -46,7 +46,7 @@ def misura() -> dict[str, dict[str, int]]:
                 funcs[k] = max(funcs.get(k, 0), length)
     long_lines: dict[str, int] = {}
     big: dict[str, int] = {}
-    docs = [indice.ROOT / "AGENTS.md"] + sorted((indice.ROOT / "docs" / "agenti").glob("*.md"))
+    docs = [indice.ROOT / "CLAUDE.md"] + sorted((indice.ROOT / "docs" / "agenti").glob("*.md"))
     for d in docs:
         if d.name in DOC_SKIP or not d.exists():
             continue
@@ -85,7 +85,7 @@ def vicini() -> list[str]:
         n = (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").count("\n") + 1
         if NEAR_FILE <= n <= MAX_FILE:
             out.append(f"{f} has {n} lines (limit {MAX_FILE})")
-    docs = [indice.ROOT / "AGENTS.md"] + sorted((indice.ROOT / "docs" / "agenti").glob("*.md"))
+    docs = [indice.ROOT / "CLAUDE.md"] + sorted((indice.ROOT / "docs" / "agenti").glob("*.md"))
     for d in docs:
         if d.name in DOC_SKIP or not d.exists():
             continue
@@ -114,7 +114,7 @@ def vicini_caldi(tocchi: dict[str, int]) -> list[str]:
         p = indice.ROOT / f
         if t <= HOT_TOUCHES or not p.is_file() or Path(f).name in DOC_SKIP:
             continue
-        if f == "AGENTS.md" or f.startswith("docs/agenti/") and f.endswith(".md"):
+        if f == "CLAUDE.md" or f.startswith("docs/agenti/") and f.endswith(".md"):
             if len(p.read_bytes()) >= HOT_FRACTION * MAX_DOC_BYTES:
                 out.append(f"{f} is {len(p.read_bytes()) / 1024:.1f} KB and was touched by {t} of the last {HOT_MERGES} merges (limit 25 KB)")
         elif f.endswith((".js", ".py", ".rs")) and not any(k in f for k in indice.SKIP):
@@ -137,7 +137,7 @@ def peggiori(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) ->
 
 
 BYTE_API = indice.ROOT / "tools" / "api_byte_ammesse.txt"
-IDB_OK = {"mzlab/web/qqq-db.js", "mzlab/web/libreria.js", "mzlab/web/libreria-worker.js", "mzlab/web/liste.js", "mzlab/web/llm/trasporto.js", "TP_Mine/js/19_tpmine_base.js"}     # the schema point and the historical databases
+IDB_OK = {"mzlab/web/qqq-db.js", "mzlab/web/libreria-corpo.js", "mzlab/web/libreria-worker.js", "mzlab/web/liste.js", "mzlab/web/llm/trasporto.js", "TP_Mine/js/19_tpmine_base.js"}     # the schema point and the historical databases
 
 
 def regole_statiche() -> list[str]:
@@ -199,7 +199,7 @@ def confronti_esperimenti() -> dict[str, int]:
     rx = re.compile(r'[=!]==?\s*"(?:full|ms2|mrm)"|"(?:full|ms2|mrm)"\s*[=!]==?')
     out = {}
     for f in indice.tracked():
-        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and "/teoria/" not in f and f != "mzlab/web/esperimenti.js":
+        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and f != "mzlab/web/esperimenti.js":
             n = sum(len(rx.findall(l)) for l in (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n") if not l.lstrip().startswith("//"))
             if n:
                 out[f] = n
@@ -223,7 +223,7 @@ def chiamate_frame() -> dict[str, int]:
     rx = re.compile(r"\b(?:requestAnimationFrame|cancelAnimationFrame)\(|new ResizeObserver\(")
     out = {}
     for f in indice.tracked():
-        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and "/teoria/" not in f and f != "mzlab/web/frame.js":
+        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and f != "mzlab/web/frame.js":
             n = sum(len(rx.findall(l)) for l in (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n") if not l.lstrip().startswith("//"))
             if n:
                 out[f] = n

@@ -31,7 +31,7 @@ try:
             pg.evaluate("BARRA.setTab('file', {noFocus: true, instant: true})"); pg.wait_for_timeout(400)
             s = st(); assert s["open"] and "sb-open" in s["cls"] and "sb-sheet" not in s["cls"], s
             s = at(700); assert s["open"] and "sb-sheet" in s["cls"], s
-            pg.click("#sb-x"); pg.wait_for_timeout(300); s = st(); assert not s["open"] and s["wsShown"], s
+            close_side(pg); pg.wait_for_timeout(300); s = st(); assert not s["open"] and s["wsShown"], s
             s = at(1400); assert not s["open"], s
         step("reopened by hand at 1000 (docked) and 700 (sheet); closed by hand stays closed", reopen)
 finally:

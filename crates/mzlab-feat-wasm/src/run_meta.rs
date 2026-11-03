@@ -80,6 +80,8 @@ pub fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
 pub struct Meta {
     pub estimates: Vec<Estimate>,
     pub mem: Option<(f64, &'static str)>,
+    /// The preset the files decided (`lr` for a detection on unit-resolution files), as `flow run` records it.
+    pub preset: Option<&'static str>,
 }
 
 const LAYERED: [&str; 3] = ["features.detect", "features.align", "features.gapfill"];
@@ -89,11 +91,11 @@ fn upstream(ctx: &Ctx, plan: &Plan, inst: &Instance) -> Vec<Layer> {
     let mut line: Vec<&str> = Vec::new();
     let mut todo = inst.sources();
     while let Some(id) = todo.pop() {
-        if let Some(i) = plan.steps.iter().find(|s| s.id == id) {
-            if !line.contains(&id) {
-                line.push(id);
-                todo.extend(i.sources());
-            }
+        if let Some(i) = plan.steps.iter().find(|s| s.id == id)
+            && !line.contains(&id)
+        {
+            line.push(id);
+            todo.extend(i.sources());
         }
     }
     plan.steps
@@ -141,7 +143,12 @@ pub fn job_meta<R: ReadAt>(
         }
         _ => None,
     };
-    Ok(Meta { estimates, mem })
+    let preset = (detect && recipe.detect.axis.is_da()).then_some("lr");
+    Ok(Meta {
+        estimates,
+        mem,
+        preset,
+    })
 }
 
 /// A sink that keeps nothing: `Hashing` over it only hashes what passes.
@@ -166,7 +173,7 @@ pub fn file_sha<R: ReadAt>(r: &mut R, size: u64) -> Result<String> {
     Ok(out.finish().2)
 }
 
-/// `job_meta` as JSON: `{"estimates":[{"name","value","proof"}],"mem":{"mb","via"}|null}`.
+/// `job_meta` as JSON: `{"estimates":[{"name","value","proof"}],"mem":{"mb","via"}|null,"preset":"lr"?}`.
 pub fn meta_json(m: &Meta) -> String {
     let mut o = Out::default();
     o.raw("{\"estimates\":[");
@@ -182,6 +189,9 @@ pub fn meta_json(m: &Meta) -> String {
         Some((mb, via)) => o.raw("{\"mb\":").num(mb).raw(",\"via\":").str(via).raw("}"),
         None => o.raw("null"),
     };
+    if let Some(p) = m.preset {
+        o.raw(",\"preset\":").str(p);
+    }
     o.raw("}").0.clone()
 }
 

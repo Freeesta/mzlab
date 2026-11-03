@@ -57,6 +57,20 @@ try:
             assert pg.evaluate(LIVE) == n, "a file of the other resolution is not opened"
             assert pg.locator("#gomsg .fail").count() == 0
         step("a file of the other resolution is left out with a gentle note", drop_hr)
+        def note_and_groups():
+            # the «Added N files» note does not exist; a name keeps the room, the meta sits to its right
+            assert pg.evaluate("document.querySelector('#fl-note').hidden || !/Added|Aggiunt/.test(document.querySelector('#fl-note').textContent)"), "an addition never leaves an «Added» note"
+            pg.set_viewport_size({"width": 1440, "height": 950})
+            pg.set_input_files("#pick", [str(EX / "MS2_t15.mzML"), str(EX / "MRM_std_0.6ppm.mzML")]); ready(pg)
+            attendi(pg, "document.querySelectorAll('#flst .fgh[data-gt]').length >= 2", timeout=60000)
+            op = pg.evaluate("[...document.querySelectorAll('#flst .fgh[data-gt] .chv')].map(c => c.classList.contains('on'))")
+            assert op[0] and not any(op[1:]), f"only the first group is open: {op}"
+            pg.evaluate("document.querySelectorAll('#flst .fgh[data-gt] .chv')[1].click()")
+            pg.evaluate("renderFileList()")
+            assert pg.evaluate("[...document.querySelectorAll('#flst .fgh[data-gt] .chv')].filter(c => c.classList.contains('on')).length") >= 2, "a manual choice stays after a re-render"
+            m = pg.evaluate("(() => { const r = document.querySelector('#flst .fl .fmeta'); return r && r.getBoundingClientRect().right - r.closest('.fi').getBoundingClientRect().right; })()")
+            assert m is not None and abs(m) <= 1, "the meta text is flush right"
+        step("later additions leave no note, only the first group is open, meta flush right", note_and_groups)
 finally:
     r.close()
 r.report()

@@ -35,7 +35,7 @@ fn spec(mz: Vec<f64>, intensity: Vec<f32>) -> Spectrum {
 fn linear(s: &Spectrum, lo: f64, hi: f64) -> Vec<(f64, f32)> {
     s.mz.iter()
         .zip(&s.intensity)
-        .filter(|(&m, _)| m >= lo && m <= hi)
+        .filter(|&(&m, _)| m >= lo && m <= hi)
         .map(|(&m, &i)| (m, i))
         .collect()
 }

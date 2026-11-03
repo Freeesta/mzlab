@@ -49,6 +49,13 @@ opt-level = 3
 inherits = "release"
 [profile.sol_core.package.mzlab-core]
 opt-level = 3
+# The SHA crates alone (fingerprints of a file, `upload::Passata`)
+[profile.sol_hash]
+inherits = "release"
+[profile.sol_hash.package.sha1]
+opt-level = 3
+[profile.sol_hash.package.sha2]
+opt-level = 3
 [profile.sol_miniz]
 inherits = "release"
 [profile.sol_miniz.package.miniz_oxide]

@@ -11,7 +11,6 @@ use mzlab_core::error::Result;
 use crate::broad_blank::{subtract, BlankBank};
 use crate::broad_front::{area_over_line, base_of, hwhm_left, noise_of};
 use crate::broad_gt::{detrend, median, CommonMode};
-use crate::centwave::ricker;
 use crate::trace::{filled, reserve};
 
 mod scale;

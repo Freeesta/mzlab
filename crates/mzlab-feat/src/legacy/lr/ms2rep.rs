@@ -77,10 +77,10 @@ fn best<R: ReadAt>(
     let mz = e.observed.unwrap_or(e.mz_x);
     let mut out: Option<Rep> = None;
     for (_, k) in l.of(e.id) {
-        if let Some(r) = represent(l, k, mz, open)? {
-            if out.as_ref().is_none_or(|b| r.intensity > b.intensity) {
-                out = Some(r);
-            }
+        if let Some(r) = represent(l, k, mz, open)?
+            && out.as_ref().is_none_or(|b| r.intensity > b.intensity)
+        {
+            out = Some(r);
         }
     }
     Ok(out)

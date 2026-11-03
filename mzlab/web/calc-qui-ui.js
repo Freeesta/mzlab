@@ -8,14 +8,15 @@
 (() => {
   const Q1 = (/** @type {string} */ s) => /** @type {HTMLElement | null} */ (document.querySelector(s));
   const H = CALCQUIHTML, DEBOUNCE = 90;
-  /** @typedef {{ ctl: HTMLElement, out: HTMLElement, idp: string, quiet?: boolean, numOnly?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pol?: () => 1 | -1 | null, after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
+  // ctl: the choices row (null: the view follows a row drawn by another view of the same page); flat: no fold around the groups (a tab already names them); none: a flat view says «no match» instead of nothing; combos: only the pairs and repetitions of losses (the single ones light up in the list); pick: the view keeps only these groups/items
+  /** @typedef {{ ctl: HTMLElement | null, out: HTMLElement, idp: string, quiet?: boolean, catalogue?: boolean, numOnly?: boolean, flat?: boolean, none?: boolean, combos?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pick?: (gs: CqGroup[]) => CqGroup[], after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
   /** @typedef {{ cfg: CqCfg, open: Set<string>, all: Set<string>, more: boolean, diffs: boolean, delta: string, seq: number, timer: number, tab: any, formula: string }} CqView */
   const views = /** @type {CqView[]} */ ([]);
   const prune = () => { for (let i = views.length - 1; i >= 0; i--) if (!views[i].cfg.out.isConnected) views.splice(i, 1); };      // a panel redrawn leaves its old view behind
   const memo = /** @type {Map<string, number>} */ (new Map());
   const mass = (/** @type {string} */ f) => { const c = memo.get(f); if (c != null) return c; const m = QQQRef.massOf(f); memo.set(f, m); return m; };
 
-  // resolution and polarity follow the files shown (negative only = ESI-); a file is high resolution when its profile says so, and the instrument names the reason
+  // resolution and polarity follow the files shown (negative only = ESI-, both kinds = both); a file is high resolution when its profile says so, and the instrument names the reason
   const files = () => (typeof E !== "undefined" ? E.files.filter((/** @type {any} */ f) => !f.gone) : []);
   const filesMode = () => {
     const fs = files();
@@ -23,7 +24,7 @@
     const hf = window.HR ? fs.find((/** @type {any} */ f) => HR.isHr(f, 1) || HR.isHr(f, 2)) : null, f = hf || fs[0], p = f.prof1 || {};
     return { hr: !!hf, name: String(f.instrument || (p.an && p.an !== "?" ? p.an : "") || f.label || f.file || "") };
   };
-  CALCQUI.follow(filesMode, () => (files().some((/** @type {any} */ f) => f.polarity === "negative") && !files().some((/** @type {any} */ f) => f.polarity === "positive") ? -1 : 1));
+  CALCQUI.follow(filesMode, () => { const n = files().some((/** @type {any} */ f) => f.polarity === "negative"), p = files().some((/** @type {any} */ f) => f.polarity === "positive"); return n && p ? 0 : n ? -1 : 1; });
   CALCQUI.load();
 
   async function deps() {
@@ -32,33 +33,43 @@
   }
   /** @param {CqView} v */
   function options(v) {
-    const t = v.cfg.arg(), o = CALCQUI.opts(CALCQUI.arg(t.text, t.ans)), p = v.cfg.pol ? v.cfg.pol() : null;
-    if (p) o.pol = p;
-    return o;
+    const t = v.cfg.arg();
+    return CALCQUI.opts(CALCQUI.arg(t.text, t.ans));
   }
 
   /** Draws the groups of the view for its argument (the newest call wins). @param {CqView} v */
   async function render(v) {
-    const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = CALCQUI.arg(t.text, t.ans);
+    const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = { ...CALCQUI.arg(t.text, t.ans), catalogue: !!v.cfg.catalogue };
+    if (v.cfg.idp === "calc" && docked()) {                                                   // docked in the Adducts & losses page: the lists under it answer; only the line on how a formula was read stays
+      v.cfg.out.innerHTML = "";
+      if (a.kind === "formula" && v.cfg.after) { const gs = await CALCQUI.gruppi(a, o, await deps()); if (my === v.seq) v.cfg.after(a, gs); }
+      return;
+    }
     sync(v);                                                                                  // the detected resolution (text and tolerance) follows what is typed
-    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && a.kind === "none") { v.cfg.out.innerHTML = ""; return; }      // a panel with its own field says nothing until something is typed
+    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && !v.cfg.catalogue && a.kind === "none") { v.cfg.out.innerHTML = ""; if (v.cfg.after) v.cfg.after(a, []); return; }      // a panel with its own field and no default table says nothing until something is typed
     let gs = await CALCQUI.gruppi(a, o, await deps());
     if (my !== v.seq) return;
     if (v.cfg.groups) gs = gs.filter(g => /** @type {string[]} */ (v.cfg.groups).includes(g.id));
+    if (v.cfg.pick) gs = v.cfg.pick(gs);
+    if (v.cfg.combos) gs = gs.filter(g => g.id === "perdite").map(g => { const items = g.items.filter((/** @type {Bag} */ x) => x.kind !== "single"); return { ...g, items, n: items.length }; }).filter(g => g.n > 0);
     const ad = gs.find(g => g.id === "addotti");
     v.tab = ad ? ad.tab : null; v.formula = ad && /** @type {Bag} */ (ad).formula ? ad.tab.formula || "" : "";
     v.diffs = v.open.has("diff");
-    v.cfg.out.innerHTML = H.groupsHtml(gs, o, v, { formula: a.kind === "formula" });
+    v.cfg.out.innerHTML = H.groupsHtml(gs, o, v, { formula: a.kind === "formula", flat: !!v.cfg.flat, none: !!v.cfg.none });
+    if (v.cfg.catalogue && v.cfg.quiet && !v.cfg.out.innerHTML.trim()) v.cfg.out.innerHTML = /** @type {any} */ (window).EMPTYLEAF("empty.adducts");     // a panel with nothing to list shows the quiet leaf
     if (v.cfg.after) v.cfg.after(a, gs);
   }
   const later = (/** @type {CqView} */ v) => { clearTimeout(v.timer); v.timer = window.setTimeout(() => render(v).catch(e => { v.cfg.out.innerHTML = h`<p class="muted">${e && e.message || ""}</p>`; }), DEBOUNCE); };
 
   /** The choices row of a view follows the shared choices. @param {CqView} v */
   function sync(v) {
-    const o = options(v), c = v.cfg.ctl, put = (/** @type {string} */ id, /** @type {string} */ val) => { const i = /** @type {HTMLInputElement | null} */ (c.querySelector("#" + v.cfg.idp + id)); if (i && document.activeElement !== i) i.value = val; };
-    c.querySelectorAll(".cq-ctl [data-p]").forEach(b => { const on = +(b.getAttribute("data-p") || 0) === o.pol; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
-    const tl = c.querySelector(".cq-tl"); if (tl) tl.textContent = I18N.t(o.hr ? "calc.tol" : "calc.tol.da");
-    const md = c.querySelector(".cq-mode"); if (md) md.textContent = H.modeText(o);
+    const o = options(v), c = v.cfg.ctl;
+    if (!c) return;
+    const put = (/** @type {string} */ id, /** @type {string} */ val) => { const i = /** @type {HTMLInputElement | null} */ (c.querySelector("#" + v.cfg.idp + id)); if (i && document.activeElement !== i) i.value = val; };
+    c.querySelectorAll(".cq-ctl [data-p]").forEach(b => { const on = +(b.getAttribute("data-p") || 0) > 0 ? o.pol !== -1 : o.pol !== 1; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+    c.querySelectorAll(".cq-ctl [data-u]").forEach(b => { const on = b.getAttribute("data-u") === o.unit; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+    const cc = c.querySelector(".cq-ctl"); if (cc) { cc.setAttribute("data-mode", o.hr ? "hr" : "lr"); cc.setAttribute("data-src", o.mode.src); cc.setAttribute("data-name", o.mode.name || ""); }
+    const rs = c.querySelector(".cq-res"); if (rs) { rs.textContent = H.resText(o); rs.setAttribute("title", H.resTitle(o)); rs.setAttribute("data-mode", o.hr ? "hr" : "lr"); }
     put("tol", String(o.tol));
   }
 
@@ -67,20 +78,26 @@
     prune();
     const v = /** @type {CqView} */ ({ cfg, open: new Set(), all: new Set(), more: false, diffs: false, delta: "", seq: 0, timer: 0, tab: null, formula: "" });
     views.push(v);
-    cfg.ctl.innerHTML = H.ctrlHtml(cfg.idp, options(v));
-    const set = (/** @type {Partial<CqState>} */ p) => CALCQUI.set(p), tolKey = () => (options(v).hr ? "ppm" : "da");
-    cfg.ctl.addEventListener("click", ev => {
-      const b = /** @type {HTMLElement} */ (ev.target).closest("button");
-      if (!b) return;
-      if (b.dataset.p) set({ pol: +b.dataset.p > 0 ? 1 : -1 });
-    });
-    cfg.ctl.addEventListener("input", ev => {
-      const i = /** @type {HTMLInputElement} */ (ev.target);
-      if (i.id === cfg.idp + "tol") set({ [tolKey()]: i.value });
-    });
+    if (cfg.ctl) bindCtl(v, cfg.ctl);
     bindOut(v);
     sync(v); later(v);
     return v;
+  }
+  /** The choices row of a view. @param {CqView} v @param {HTMLElement} ctl */
+  function bindCtl(v, ctl) {
+    const cfg = v.cfg;
+    ctl.innerHTML = H.ctrlHtml(cfg.idp, options(v));
+    const set = (/** @type {Partial<CqState>} */ p) => CALCQUI.set(p), tolKey = () => options(v).unit;
+    ctl.addEventListener("click", ev => {
+      const b = /** @type {HTMLElement} */ (ev.target).closest("button");
+      if (!b) return;
+      if (b.dataset.p) set({ pol: CALCQUI.polToggle(options(v).pol, +b.dataset.p > 0 ? 1 : -1) });
+      else if (b.dataset.u === "da" || b.dataset.u === "ppm") set({ unit: { ...CALCQUI.st.unit, [options(v).hr ? "hr" : "lr"]: b.dataset.u } });         // remembered for this resolution mode only
+    });
+    ctl.addEventListener("input", ev => {
+      const i = /** @type {HTMLInputElement} */ (ev.target);
+      if (i.id === cfg.idp + "tol") set({ [tolKey()]: i.value });
+    });
   }
 
   /** Clicks inside the groups: folds, details of a loss, XIC of an adduct, the difference typed by hand. @param {CqView} v */
@@ -124,9 +141,12 @@
 
   CALCQUI.onChange(() => { prune(); views.slice().forEach(v => { sync(v); later(v); }); });
 
-  /** Opens the calculator on a number: the groups under it answer «what can this be?». gruppo: the group to open. @param {number | string} n @param {{ gruppo?: string }} [opt] */
+  const docked = () => { const d = Q1("#calcdlg"); return !!d && d.classList.contains("sb-docked"); };
+  /** Opens «what can this number be?» on a number: in the drawer the Adducts & losses page (gruppo «diff»: the Adducts tab with the differences open, otherwise
+   * the Neutral losses), elsewhere the floating calculator. @param {number | string} n @param {{ gruppo?: string }} [opt] */
   function apri(n, opt = {}) {
     const dlg = Q1("#calcdlg");
+    if (window.BARRA && CALCQUI.cerca) { CALCQUI.cerca(n, opt.gruppo === "diff" ? "adducts" : "losses", { open: opt.gruppo }); return; }
     if (window.BARRA && BARRA.isDataView()) BARRA.setTab("calc"); else if (dlg && dlg.hidden && window.calcToggleFloat) window.calcToggleFloat();
     const inp = /** @type {HTMLInputElement | null} */ (Q1("#calcin"));
     if (!inp) return;

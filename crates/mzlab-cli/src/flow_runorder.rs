@@ -1,7 +1,7 @@
 //! The native executor of `qc.run_order@1`: the facts and warnings of the injection sequence of the sample table. The text is `mzlab_feat::runorder::runorder_text`, shared with the browser;
 //! this file only reads and writes the files. Called by `flow.rs`.
 
-use crate::flow::{one_input, read_one, write_made, Exec, FileRunner};
+use crate::flow::{read_one, write_made, Exec, FileRunner};
 use mzlab_core::error::Result;
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;

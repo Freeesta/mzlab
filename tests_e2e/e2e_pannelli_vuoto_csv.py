@@ -1,4 +1,4 @@
-"""Panel toolbars and menus: with no ticked file the work area shows the loading table (the panels come back as soon as a file is ticked), no visible table button
+"""Panel toolbars and menus: with no ticked file the work area shows the landing with the loading table (the panels come back as soon as a file is ticked), no visible table button
 (T on the focused chart still opens the table), a CSV next to every Excel of a panel (UTF-8 with BOM, comma, provenance line first), the range button keeps its note
 as a tooltip, the correction menu has no subtitle under «None» and «Subtract file».
 Run from the repo root: python3 tests_e2e/e2e_pannelli_vuoto_csv.py"""
@@ -22,11 +22,11 @@ try:
             assert pg.locator("#rmall").count() == 0, "no remove-all icon"
             W = "document.getElementById('v-workspace').dataset.work"
             assert pg.evaluate(W) == "panels", "a file is ticked: the panels"
-            pg.evaluate("setVisOf(E.files, false)"); attendi(pg, W + " === 'table'")
-            assert pg.is_visible("#wtable") and pg.is_hidden("#start") and pg.is_hidden("#dpanels"), "no file shown: the loading table in place of the panels"
+            pg.evaluate("setVisOf(E.files, false)"); attendi(pg, W + " === 'landing'")
+            assert pg.is_visible("#wtable") and pg.is_visible("#start") and pg.is_hidden("#dpanels"), "no file shown: the landing (drop area and the loading table) in place of the panels"
             pg.evaluate("setVisOf([E.files[0]], true)"); attendi(pg, W + " === 'panels'")
             assert pg.is_hidden("#wtable") and pg.is_visible("#dpanels")
-        step("no ticked file: the loading table stands in for the panels, back when one is ticked", empty)
+        step("no ticked file: the landing with the loading table stands in for the panels, back when one is ticked", empty)
         def buttons():
             assert pg.locator(".pnl [data-a=tab]").count() == 0, "no table button"
             pg.evaluate("document.querySelector('.pnl.chrom canvas').focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]"); pg.keyboard.press("Escape")
@@ -36,9 +36,10 @@ try:
             with pg.expect_download() as d: pg.locator("#ctx div", has_text="CSV").first.click()
             f = d.value; assert f.suggested_filename.endswith(".csv"), f.suggested_filename
             b = open(f.path(), "rb").read(); assert b[:3] == b"\xef\xbb\xbf", "BOM"
-            lines = b[3:].decode("utf-8").split("\n"); assert lines[0].startswith("# mzLab "), lines[0][:40]
-            assert "," in lines[1] and ";" not in lines[1] and len(lines) > 5, lines[1]
-        step("CSV of a panel: BOM, provenance line, comma-separated", csv)
+            lines = b[3:].decode("utf-8").rstrip("\n").split("\n"); assert not lines[0].startswith("# mzLab "), lines[0][:40]
+            assert ";" in lines[0] and "," not in lines[0] and len(lines) > 5, lines[0]      # the harness runs in it-IT: Italian Excel opens it into columns, header on row 1
+            assert lines[-1].startswith('"# mzLab ') or lines[-1].startswith("# mzLab "), lines[-1][:40]      # the provenance closes the file
+        step("CSV of a panel: BOM, header on line 1, semicolon-separated, provenance as the last row", csv)
         def popover():
             b = pg.locator(".pnl.chrom [data-a=cpar]").first
             assert b.get_attribute("aria-description") and b.get_attribute("aria-description") in b.get_attribute("title"), "the note is the tooltip and the description"

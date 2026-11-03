@@ -8,7 +8,9 @@ use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::Stored;
 
 use crate::run;
-use crate::run_tp::{parent_formula, read_parent, LinkParent};
+use crate::run_tp::LinkParent;
+#[cfg(feature = "proofs")]
+use crate::run_tp::{parent_formula, read_parent};
 
 /// What the Dig of a unit-resolution series (`lr::dig`) is given besides the table: the files and samples, the parent and the `ipotesi/1` the search in the series annotated.
 pub struct DigInputs {

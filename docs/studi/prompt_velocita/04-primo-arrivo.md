@@ -1,6 +1,6 @@
 # V04: first visit without the lost page, one language file
 
-You are a chat of mzLab (repository Freeesta/mzlab). Read AGENTS.md, then `docs/studi/VELOCITA_RICARICA.md` §4 and §6. Branch `claude/primo-arrivo` from `origin/main`, after V02 (both touch `isolateOnce`) and after landing D3 #2207 / D1b #2211 are merged.
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, then `docs/studi/VELOCITA_RICARICA.md` §4 and §6. Branch `claude/primo-arrivo` from `origin/main`, after V02 (both touch `isolateOnce`) and after landing D3 #2207 / D1b #2211 are merged.
 
 **Problem.** (a) On the first visit the page is thrown away at 0.45–0.95 s by the isolation reload (`isolateOnce` in `mzlab/web/browser.js`), before it paints: FCP 2.6 s (mirror) to 4.1 s (live). Isolation only enables the shared-memory indexing helpers (`idxpool.js`). (b) `lang/it.js` (and `lang/en.js`) `document.write`s 31 files: one more dependency level and 31 requests before the first paint.
 

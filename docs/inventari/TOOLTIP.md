@@ -27,11 +27,13 @@ Per tipo: 330 `title="…"`, 39 `data-i18n-title`, 85 `.title =` (26 righe tra q
 - **D da togliere**: rumore (per esempio solo «Right-click: actions»).
 - **-**: la riga contiene `.title` ma è una proprietà del pannello o della pagina, non un tooltip.
 
-## Regola proposta (da approvare)
-1. Un tooltip esiste solo se aggiunge informazione rispetto a ciò che è visibile; mai la copia dell'etichetta o del valore.
-2. I pulsanti con sola icona hanno SEMPRE tooltip con nome e, se c'è, scorciatoia (oggi sono ~20 senza: tabella «Mancanti»).
-3. Ogni grafico mostra tempo, m/z e intensità nello stesso formato, prodotto da una sola funzione.
-4. I suggerimenti sui gesti («Tasto destro: azioni») non stanno nel tooltip: stanno nell'aiuto e nella Teoria.
+## Regola (Federico)
+1. Al massimo una frase breve: cosa fa il controllo o il dato che non si vede; mai la copia dell'etichetta, niente tutorial né spiegazioni dell'ovvio.
+2. I valori dinamici (intervallo di tempo, id) non si incollano alla spiegazione: hanno la loro colonna o spariscono. Le scorciatoie restano, tra parentesi.
+3. I pulsanti con sola icona hanno SEMPRE tooltip con nome e, se c'è, scorciatoia (tabella «Mancanti»).
+4. Ogni grafico mostra tempo, m/z e intensità nello stesso formato, prodotto da una sola funzione.
+5. I suggerimenti sui gesti («Tasto destro: azioni») stanno nell'aiuto e nella Teoria, non nel tooltip.
+Censimento chiave per chiave (verdetto e testo nuovo IT/EN, eccezioni, seguiti per impostazioni e addotti): `docs/studi/TOOLTIP_CENSUS.md`.
 Guardia: `tests/test_tooltip_inventario.py` (nessun tooltip uguale al testo del proprio elemento, nessuno fatto solo di «Right-click: actions»; le due eccezioni sono quelle di CROMA-CLICK-PICCO e solo calano).
 
 ## Hover dei grafici (da tenere insieme)

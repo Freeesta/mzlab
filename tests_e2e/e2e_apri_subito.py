@@ -75,6 +75,19 @@ try:
             attendi(pg, "document.getElementById('v-workspace').dataset.work === 'panels'", 10000)
             assert pg.get_attribute("#samptab", "aria-pressed") == "false"
         step("«Sample table» shows the table; a click on a file goes back to the panels", table_button)
+        def table_button_after_close():
+            # below the last file of the list, enabled also after the X of the toolbar (landing with a session), and it brings the table back
+            b = pg.evaluate("(() => { const s = document.querySelector('#samptab').getBoundingClientRect(), l = [...document.querySelectorAll('#flst .fl')].pop().getBoundingClientRect(); return [s.top, l.bottom]; })()")
+            assert b[0] >= b[1] - 1, f"the button is below the file list: {b}"
+            pg.click("#np-closeall")
+            attendi(pg, "document.getElementById('v-workspace').dataset.work === 'landing'", 10000)
+            assert pg.is_enabled("#samptab"), "the button is not inert on the landing"
+            pg.click("#samptab")
+            pg.wait_for_selector("#wtable .samphead", state="visible", timeout=10000)
+            assert pg.get_attribute("#samptab", "aria-pressed") == "true", "the table is back"
+            pg.focus("#samptab"); pg.keyboard.press("Enter")
+            attendi(pg, "document.getElementById('v-workspace').dataset.work !== 'table'", 10000)
+        step("«Sample table» sits below the list and works after the X", table_button_after_close)
         def hr_aside():
             pg.set_input_files("#pick", [str(HR)])
             attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && ST.files.length === 4 && !document.querySelector('#hrmix').hidden", 60000)

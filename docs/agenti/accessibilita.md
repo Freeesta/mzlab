@@ -39,9 +39,8 @@ Questo documento riassume lo stato di conformità all'accessibilità (WCAG 2.1 l
 | **Mappa 2D / 3D** | Controllo axe-core sul pannello mappa RT $\times$ m/z; zoom e pan da tastiera<br>senza drag (`+`, `-`, `[`, `]`, `0`); indicatori di fuoco visibili; contrasto assi/picchi. | WCAG 2.1 AA<br>WCAG 2.5.7 | `tests_e2e/e2e_a11y_dati.py`<br>`tests_e2e/e2e_axe_grafici.py` | Conforme (0 violazioni) |
 | **Tabui / mzFinder** | Interfaccia in sola lingua inglese; etichette accessibili e ruoli ARIA per tabelle,<br>filtri e dialoghi; colori dei livelli basati su Okabe-Ito; esportazione accessibile. | WCAG 2.1 AA<br>WCAG 1.4.1 | `tests_e2e/e2e_axe_release.py`<br>`tests/test_tabui_inglese.py` | Conforme (0 violazioni) |
 | **Disegno molecolare** | Controllo axe-core sull'area Disegno (escluso l'iframe isolato di Ketcher);<br>barra strumenti frammenti e formule; tastiera e contrasto dei pulsanti operativi. | WCAG 2.1 AA | `tests_e2e/e2e_axe_release.py` | Conforme (0 violazioni) |
-| **Teoria e Pratica** | Struttura semantica capitoli (`lang="it"`, 1 `h1`, gerarchia `h2..h4`, `main`, `nav`, skip link);<br>pannello delle Impostazioni di lettura (font Atkinson e OpenDyslexic su richiesta, spaziatura WCAG,<br>sfondi crema/azzurro/alto contrasto $\ge 7:1$, righello di lettura click-through);<br>descrizioni estese `<details>` per figure ed SVG; integrazione iframe `#tframe`. | WCAG 2.1 AA<br>WCAG 1.3.1<br>WCAG 1.4.3<br>WCAG 1.4.12<br>WCAG 2.4.1 | `tests_e2e/e2e_accessibilita.py`<br>`tests_e2e/e2e_axe_release.py` | Conforme (0 violazioni) |
-| **Impostazioni e Palette** | Pannello `#uipset` accessibile con axe-core, apertura e chiusura via tasto Esc;<br>palette comandi `paletta` (`Ctrl+K`) apribile e chiudibile via tastiera;<br>persistenza configurazione (chiavi `mzlab.a11y` con retrocompatibilità `qqq.a11y`). | WCAG 2.1 AA<br>WCAG 2.1.2 | `tests_e2e/e2e_a11y_dati.py`<br>`tests_e2e/e2e_accessibilita.py` | Conforme (0 violazioni) |
-| **Mobile e Touch** | Dimensione controlli e grip su schermi touch ($1024\times 1366$ e $400\times 800$, coarse pointer);<br>adattamento delle Impostazioni e dei pannelli laterali; reflow senza scroll a 320 px CSS. | WCAG 2.1 AA<br>WCAG 1.4.10<br>WCAG 2.5.8 | `tests_e2e/e2e_axe_grafici.py`<br>`tests_e2e/e2e_a11y_dati.py`<br>`tests_e2e/e2e_accessibilita.py` | Conforme (0 violazioni) |
+| **Impostazioni e Palette** | Pannello `#uipset` accessibile con axe-core, apertura e chiusura via tasto Esc;<br>palette comandi `paletta` (`Ctrl+K`) apribile e chiudibile via tastiera;<br>persistenza configurazione (chiavi `mzlab.a11y` con retrocompatibilità `qqq.a11y`). | WCAG 2.1 AA<br>WCAG 2.1.2 | `tests_e2e/e2e_a11y_dati.py` | Conforme (0 violazioni) |
+| **Mobile e Touch** | Dimensione controlli e grip su schermi touch ($1024\times 1366$ e $400\times 800$, coarse pointer);<br>adattamento delle Impostazioni e dei pannelli laterali; reflow senza scroll a 320 px CSS. | WCAG 2.1 AA<br>WCAG 1.4.10<br>WCAG 2.5.8 | `tests_e2e/e2e_axe_grafici.py`<br>`tests_e2e/e2e_a11y_dati.py` | Conforme (0 violazioni) |
 
 ---
 
@@ -70,11 +69,6 @@ python3 tests_e2e/e2e_a11y_hr.py
 python3 tests_e2e/e2e_a11y_pratica.py
 ```
 
-### 4. Verifica completa di «Lettura facilitata» e Teoria
-Controlla font ad alta leggibilità, spaziature WCAG, contrasti colore in modalità chiara/scura e alto contrasto ($\ge 7:1$), righello, navigazione da tastiera, gerarchia intestazioni e integrazione nell'app:
-```bash
-python3 tests_e2e/e2e_accessibilita.py
-```
 
 ### 5. Verifica globale dell'applicazione (senza e2e lunghi)
 Esegue la mappatura del codice, il controllo dei limiti di dimensione, verifica i18n, tipi TypeScript e import:

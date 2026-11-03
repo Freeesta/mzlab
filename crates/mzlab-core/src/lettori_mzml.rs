@@ -135,8 +135,8 @@ fn scansione_di(
     }
 }
 
-/// The optical matrix of sample `c` when `opz.dad` asks for it (the browser build never writes it: `convert.mzml` is native only).
-#[cfg(not(target_family = "wasm"))]
+/// The optical matrix of sample `c` when `opz.dad` asks for it (in the browser only the `sciex` readers module writes it; the engine has none).
+#[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
 fn dad_di(
     opz: Opzioni,
     l: &mut dyn Lettore,
@@ -149,18 +149,18 @@ fn dad_di(
     }
 }
 
-#[cfg(target_family = "wasm")]
+#[cfg(all(target_family = "wasm", not(feature = "sciex")))]
 fn dad_di(_: Opzioni, _: &mut dyn Lettore, _: usize) -> Result<Option<crate::wiff::dad::DadData>> {
     Ok(None)
 }
 
 /// The rows of the optical matrix as `MS:1000804` spectra, after the scans.
-#[cfg(not(target_family = "wasm"))]
+#[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
 fn uv_spettri<W: Write>(
     w: &mut MzmlWriter<W>,
     dad: Option<&crate::wiff::dad::DadData>,
 ) -> Result<()> {
-    for d in dad {
+    if let Some(d) = dad {
         for (i, &t) in d.time_min.iter().enumerate() {
             w.uv_spectrum(i, t, &d.wavelengths_nm, d.spectrum_at(i).unwrap_or(&[]))?;
         }
@@ -168,7 +168,7 @@ fn uv_spettri<W: Write>(
     Ok(())
 }
 
-#[cfg(target_family = "wasm")]
+#[cfg(all(target_family = "wasm", not(feature = "sciex")))]
 fn uv_spettri<W: Write>(
     _: &mut MzmlWriter<W>,
     _: Option<&crate::wiff::dad::DadData>,

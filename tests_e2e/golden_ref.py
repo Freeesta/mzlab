@@ -1,6 +1,6 @@
 """The reference answers of the e2e tests, from committed golden data (tests/golden/e2e/<test>.json.gz): same interface as `pyref.PyRef`, no Python engine in the process.
 Every call is keyed by the chain of the calls made before it on the same object (method, URL, body, SHA-256 of the uploaded bytes), so the files may live anywhere.
-To rewrite the data (a deliberate change of the reference): `MZLAB_REGEN_GOLDEN=1 python3 tools/verifica.py --solo <test>`; that is the only case that loads pyref.py."""
+To rewrite the data (a deliberate change of the reference): `MZLAB_UPDATE_GOLDEN=1 python3 tools/verifica.py --solo <test>`; that is the only case that loads pyref.py."""
 import atexit
 import base64
 import gzip
@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 DIR = Path(__file__).resolve().parent.parent / "tests" / "golden" / "e2e"
-REGEN = bool(os.environ.get("MZLAB_REGEN_GOLDEN"))
+REGEN = bool(os.environ.get("MZLAB_UPDATE_GOLDEN") or os.environ.get("MZLAB_REGEN_GOLDEN"))
 _store = {}
 
 
@@ -61,7 +61,7 @@ class PyRef:
         if REGEN:
             st[self.chain] = _enc(call())
         if self.chain not in st:
-            raise KeyError(f"no golden answer for {tag} {parts[0]!r} in {_name()}: regenerate with MZLAB_REGEN_GOLDEN=1")
+            raise KeyError(f"no golden answer for {tag} {parts[0]!r} in {_name()}: regenerate with MZLAB_UPDATE_GOLDEN=1")
         return _dec(st[self.chain])
 
     def upload(self, path):

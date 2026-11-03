@@ -57,6 +57,14 @@ try:
             pg.keyboard.press("Control+z"); attendi(pg, f"{XP}.ints.length===3"); assert n() == 3 and pg.evaluate(f"{XP}.zoom") == [13, 17]
             pg.keyboard.press("Control+z"); attendi(pg, f"{XP}.zoom==null"); assert pg.evaluate(f"{XP}.zoom") is None
         step("Ctrl+Z undoes the last action, integration or zoom", order)
+        def gesture():
+            n0 = n()
+            pg.evaluate(f"(()=>{{const p={XP};STORIA.gruppo(()=>{{pushIh(p);p.ints.pop();pushIh(p);p.ints.pop()}});draw(p)}})()")
+            assert n() == n0 - 2, n()
+            pg.keyboard.press("Control+z"); attendi(pg, f"{XP}.ints.length==={n0}"); assert n() == n0, "one Ctrl+Z undoes the whole grouped gesture"
+            pg.keyboard.press("Control+Shift+z"); attendi(pg, f"{XP}.ints.length==={n0 - 2}")
+            pg.keyboard.press("Control+z"); attendi(pg, f"{XP}.ints.length==={n0}")
+        step("a grouped gesture is one undo step", gesture)
         def menu():
             labs = pg.evaluate(f"(()=>{{const p={XP};return intMenuItems(p,14.9,null,0).map(i=>i.label||i)}})()")
             assert labs[0] == "Elimina questa integrazione" and "Elimina tutte le integrazioni di questo pannello" in labs, labs

@@ -121,7 +121,7 @@ const PT = { chrom: "@chrom", spec: "@spec", xic: "@xic", mrm: "@mrm", map: "@ma
 /** @type {Record<string, string>} */
 const PT_OLD = { "Cromatogramma": PT.chrom, "Spettro di massa": PT.spec, "Ione estratto (XIC)": PT.xic, "Transizioni MRM": PT.mrm, "Mappa RT-m/z": PT.map, "Spettro degli ioni prodotto": PT.product, "Simulazione isotopica": PT.isosim, "Spettro composito": PT.composite };
 const ptProduct = (/** @type {number | null} */ prec) => prec != null ? `@product:${prec}` : PT.product;
-const ptMs2 = (/** @type {number | null} */ prec) => prec != null ? `@ms2prec:${prec}` : "MS2";
+const ptMs2 = (/** @type {number | null} */ prec) => prec != null ? `@ms2prec:${prec}` : "MS²";
 const ptComposite = (/** @type {string} */ t0, /** @type {string} */ t1) => `@composite:${t0}:${t1}`;
 function ptNorm(/** @type {string} */ s) {
   if (!s || typeof s !== "string") return s;
@@ -134,10 +134,10 @@ function ptNorm(/** @type {string} */ s) {
 function ptitle(/** @type {string} */ s) {  // the title to show
   if (!s || s[0] !== "@") return s || "";
   const [c, ...a] = s.slice(1).split(":");
-  if (c === "product") return I18N.t("panel.title.product") + (a[0] != null ? " · " + a[0] : "");
+  if (c === "product") return a[0] != null ? I18N.t("panel.title.ms2prec", { prec: a[0] }) : I18N.t("panel.title.product");
   if (c === "ms2prec") return I18N.t("panel.title.ms2prec", { prec: a[0] });
   if (c === "composite") return a.length ? I18N.t("panel.title.composite", { t0: a[0], t1: a[1] }) : I18N.t("panel.title.compositeBare");
-  return ["chrom", "spec", "xic", "mrm", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
+  return ["chrom", "spec", "xic", "mrm", "sim", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
 }
 function closePanel(/** @type {Pannello} */ p) {
   if (!p) return;
@@ -237,7 +237,7 @@ function addPanel(type, o, after) {
   if (type === "chrom") Object.assign(p, { prec: o.prec ?? null, ks: o.ks ?? null, ptol: o.ptol ?? null, kind: o.kind || "tic", sel: null, cur: null, smooth: o.smooth ?? true, zoom: o.zoom || null, title: ptNorm(o.title) || PT.chrom });
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.spec });
   if (type === "xic") Object.assign(p, { traces: o.traces || [], tol: o.tol ?? TOL0, smooth: o.smooth ?? true, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.xic });
-  if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.mrm, _trs: [] });
+  if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || (window.SIMUI && SIMUI.allSim() ? "@sim" : PT.mrm), area: o.area ?? true, _trs: [] });
   if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "lin", gamma: o.gamma, ref: o.ref ?? "", norm: o.norm || "abs", corr: o.corr, bgr: o.bgr || null, zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
   if (type !== "map") p.zoomY = Array.isArray(o.zoomY) && o.zoomY.length === 2 ? o.zoomY : null;   // y zoom of the plot (an old notebook's "yz" is simply ignored)
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
@@ -267,7 +267,7 @@ function addPanel(type, o, after) {
     const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="${I18N.t("panel.rul.title")}">${IC_RULER}</button><button class="bt" data-a="par" title="${I18N.t("panel.par.title")}" aria-label="${I18N.t("panel.par.aria")}">&#9662;</button><button class="bt${p.rel ? " on" : ""}" data-a="rel" title="${I18N.t("panel.rel.title")}">%</button><button class="bt" data-a="lock" aria-pressed="false" title="${I18N.t("lock.off.title")}" aria-label="${I18N.t("lock.off.title")}">${IC_UNLOCK}</button></span>` : "";
     const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" aria-pressed="${!!p.tl}" aria-label="${I18N.t("panel.tlink.aria")}" title="${I18N.t("panel.tlink.title")}">${IC_SYNC}</button></span>` : "";
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
-    const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button></span>` : "";
+    const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button>${window.SIMUI ? SIMUI.areaBtn(type) : ""}</span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
     const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
     const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
@@ -299,7 +299,7 @@ function addPanel(type, o, after) {
     if (skip > 0) { skip--; return; }
     if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
     FRAME.cancel(p._raf); p._raf = FRAME.next(() => draw(p));
-    fitHdSoon(p);
+    fitHdNow(p);
   };
   const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap to more lines
   // full screen of THIS panel (any panel, also the ones added later): the button, Esc, and the graph is redrawn at the new size on the way in and out
@@ -318,10 +318,10 @@ function addPanel(type, o, after) {
   el.querySelector('[data-a="fit"]').onclick = () => { pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); };
   const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
   const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { COMANDI.fai("spec.ruler", p, () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } }); };
-  if (p.type === "spec" && window.XICBTN) XICBTN.wire(p);
+  if (p.type === "spec") { if (window.XICBTN) XICBTN.wire(p); if (window.TABPICCHI) TABPICCHI.wire(p); }
   const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { COMANDI.fai("spec.display", p, () => { p.rel = !p.rel; }); relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
-  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); };
+  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); }; if (window.SIMUI) SIMUI.wireArea(p);
   const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; COMANDI.fai("panel.source", p, () => { p.log = !p.log; }); syncTb(p); draw(p); uiSave(); };
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   const dlB = el.querySelector('[data-a="dl"]');
@@ -349,7 +349,7 @@ function addPanel(type, o, after) {
   const bZ = el.querySelector('[data-a="izoom"]'), bA = el.querySelector('[data-a="iauto"]'), bM = el.querySelector('[data-a="iman"]'), bD = el.querySelector('[data-a="idel"]'), bT = el.querySelector('[data-a="itab"]'), bX = el.querySelector('[data-a="xic"]');
   if (bA) {  // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval), delete integration (click a peak)
     const /** @type {Record<string, Element | null>} */ btns = { zoom: bZ, auto: bA, man: bM, idel: bD };
-    const setMode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
+    const setMode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; if (p.imode && p.imode !== "zoom") toOverlaid(p); Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
     if (p.imode && btns[p.imode]) { /** @type {Element} */ (btns[p.imode]).classList.add("on"); p.cv.style.cursor = p.imode === "idel" ? "pointer" : "cell"; }  // MRM panels open with the manual integration tool ready
     bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); if (bD) bD.onclick = () => setMode("idel"); bT.onclick = showInts;
     el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
@@ -409,7 +409,7 @@ function plotCaption(/** @type {Pannello} */ p) {
     parts.push("XIC" + (trLab ? ` · ${trLab}` : ""));
   } else if (p.type === "mrm") {
     const trs = (p.traces && p.traces.length) ? p.traces.map((/** @type {Traccia} */ t) => t.label || t.tr).join(", ") : (Array.isArray(p.tr) ? p.tr.join(", ") : (p.tr || ""));
-    parts.push("MRM" + (trs ? ` · ${trs}` : ""));
+    parts.push((window.SIMUI && SIMUI.panelSim(p) ? "SIM" : "MRM") + (trs ? ` · ${trs}` : ""));
   } else if (p.type === "map") {
     parts.push("Mappa RT-m/z");
     if (a.y0 != null && a.y1 != null) parts.push(`m/z ${a.y0.toFixed(0)}–${a.y1.toFixed(0)}`);
@@ -673,7 +673,7 @@ function ctl(/** @type {Pannello} */ p) {
   const anKinds = [...new Map(TF.flatMap((/** @type {MzFile} */ x) => x.analog || []).map((/** @type {Bag} */ a) => [a.kind === "pressure" ? "press" : "an:" + a.id, a])).entries()];  // [value, trace] of the analog traces of the files of the tab
   if (p.type === "chrom" && ((!hasScan && p.kind === "bpc") || (!hasPda && p.kind === "pda") || (isAnalog(p.kind) && p.kind !== "reg" && !anKinds.some(([v]) => v === p.kind)) || (p.kind === "reg" && !(window.REGISTRO && REGISTRO.has(TF) !== false)))) p.kind = "tic";  // options that make no sense for these files are switched off
   const precs = [...new Set(ms2s.flatMap((/** @type {MzFile} */ x) => x.precursors))].sort((a, b) => a - b);
-  const precSel = precs.length && p.kind !== "pda" ? `<select data-o="prec" style="flex:none;min-width:11em" title="${I18N.t("ctl.prec.title")}"><option value="">${I18N.t("ctl.prec.all")}</option>${precs.map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "";
+  const precSel = precs.length && p.kind !== "pda" ? `<select data-o="prec" style="flex:none;min-width:7em" title="${I18N.t("ctl.prec.title")}"><option value="">${I18N.t("ctl.prec.all")}</option>${precs.map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${v}</option>`).join("")}</select>` : "";
     const blanks = TF.filter((/** @type {MzFile} */ x) => x.kind !== "mrm" || p.type === "mrm"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
   const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);  // an old notebook may point to a file that is not marked as blank: keep it
   const fo0 = p.fondo || { mode: "none", w: 1 }, fm = fo0.mode, fval = FONDOP.is(fo0) ? "flat" : fm === "tract" || p._pickIbk ? "tract" : fm === "auto" ? "snip" : "";
@@ -697,10 +697,7 @@ function ctl(/** @type {Pannello} */ p) {
     const xr = xt && hrX ? `${xsel}<b class="xlab" title="${EH(I18N.t("ctl.xlab.title"))}">XIC \u2022 m/z ${(+xt.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}</b>` : xt ? `${xsel}<label class="muted" title="${I18N.t("ctl.xr.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[0] : fmz(xt.mz - xw1)}"> ${I18N.t("ctl.range.to")} <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[1] : fmz(xt.mz + xw1)}"></label>` : "";
     c.innerHTML = `${xr}${fsel}${view}${corr}${parBox(rtbar + lrExtra)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
   }
-  if (p.type === "mrm") {
-    const isMulti = Array.isArray(p.tr) && p.tr.length > 1;
-    c.innerHTML = `<select data-o="tr" title="${I18N.t("ctl.mrm.tr.title")}"><option value="" ${(!p.tr && !isMulti) ? "selected" : ""}>${I18N.t("ctl.mrm.all")}</option>${p._trs.map((/** @type {Bag} */ t) => `<option value="${EH(t.key)}" ${(!isMulti && p.tr === t.key) ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${canBtn}${fsel}${view}${corr}${parBox(rtbar + lrExtra)}`;
-  }
+  if (p.type === "mrm") c.innerHTML = `${canBtn}${view}${corr}${parBox(rtbar + lrExtra)}`;      // the transitions list is the one control for what is shown (no second dropdown, no files counter)
   if (p.type === "map") {
     const sf = TF, opt = (/** @type {number | string} */ v, /** @type {number | string} */ cur, /** @type {number | string} */ lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     const G = (/** @type {string} */ lab, /** @type {string} */ inner) => `<span class="mzg" role="group" aria-label="${lab}">${inner}</span>`, fol = follow(p.tab || E.tab), lvf = (E.files[fol ? E.cur : p.k] || {}).lv || 1;
@@ -721,15 +718,16 @@ function ctl(/** @type {Pannello} */ p) {
     const fol = follow(T0), FW = I18N.t("ctl.spec.follow");
     // product ions: only the files that hold scans of the chosen precursor, and the precursors of the active file with their scan count
     const hasPrec = p.level === 2 && p.prec != null && /** @type {unknown} */ (p.prec) !== "", fl = prodTab ? f.filter((/** @type {MzFile} */ x) => hasPrec ? ms2Scans(x, Number(p.prec)) : (x.ms2_exps || []).length) : f;
-    if (prodTab) { p.all = false; if (fl.length && !fl.some((/** @type {MzFile} */ x) => x.k === (fol ? E.cur : p.k))) p.k = fl[0].k; }
+    if (prodTab || p.level === 2) p.all = false;
+    if (prodTab) { if (fl.length && !fl.some((/** @type {MzFile} */ x) => x.k === (fol ? E.cur : p.k))) p.k = fl[0].k; }
     const vf = f.filter((/** @type {MzFile} */ x) => x.vis);  // the menu lists the files ticked in the list (the same as the TIC)
     if (!prodTab && !fol && vf.length && !vf.some((/** @type {MzFile} */ x) => x.k === p.k)) { p.k = vf[0].k; p.kSet = false; }
     const act = E.files[fol ? E.cur : p.k] || {}, precN = prodTab ? (act.ms2_exps || []).filter((/** @type {Bag} */ e) => e.prec != null).sort((/** @type {Bag} */ a, /** @type {Bag} */ b) => a.prec - b.prec) : [];
-    c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${(prodTab && fl.length ? fl : vf.length ? vf : f).map((/** @type {MzFile} */ x) => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${prodTab ? "" : SPECBAR.overlay(p, fol || ONEF, fol ? FW : I18N.t("ctl.files.one"))}` +
+    c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${(prodTab && fl.length ? fl : vf.length ? vf : f).map((/** @type {MzFile} */ x) => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${prodTab ? "" : SPECBAR.overlay(p, fol || ONEF || p.level === 2, fol ? FW : p.level === 2 ? I18N.t("ctl.spec.overlayMs2") : I18N.t("ctl.files.one"))}` +
             (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", I18N.t("ctl.spec.levelMs2"))}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       corrWidget(p, { files: f.filter((/** @type {MzFile} */ x) => x.kind !== "mrm"), cur: p.bg === "w" ? "tract" : p.bg === "x" ? "" : p.bg !== "" && p.bg != null ? "f" + p.bg : sref0 ? "f" + sref0.k : "", snip: false, dis: "", tractDesc: I18N.t("corr.tract.spec") }) + corrInfo(p) +
       (p.bg === "w" ? FONDOSP.box(p) : "") +
-      (p.level === 2 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${(prodTab ? precN : [...new Set(f.flatMap((/** @type {MzFile} */ x) => x.precursors))].sort((a, b) => a - b).map(v => ({ prec: v }))).map((/** @type {Bag} */ e) => `<option value="${e.prec}" ${String(p.prec) === String(e.prec) ? "selected" : ""}>${e.n != null ? I18N.t("ctl.prec.n", { v: e.prec, n: e.n }) : I18N.t("ctl.prec.one", { v: e.prec })}</option>`).join("")}</select>` : "");
+      (p.level === 2 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:7em"><option value="">${I18N.t("ctl.prec.all")}</option>${(prodTab ? precN : [...new Set(f.flatMap((/** @type {MzFile} */ x) => x.precursors))].sort((a, b) => a - b).map(v => ({ prec: v }))).map((/** @type {Bag} */ e) => `<option value="${e.prec}" ${String(p.prec) === String(e.prec) ? "selected" : ""}>${e.prec}</option>`).join("")}</select>` : "");
   }
   if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {  // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
     const srcP = p.link ? E.panels.find((/** @type {Pannello} */ q) => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
@@ -797,7 +795,7 @@ function rngIsOn(/** @type {Pannello} */ p) {
 function syncTb(/** @type {Pannello} */ p) {
   const el = p.el; if (!el) return;
   const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2";
-  const sm = el.querySelector('[data-a="smooth"]'), lg = el.querySelector('[data-a="log"]');
+  const sm = el.querySelector('[data-a="smooth"]'), lg = el.querySelector('[data-a="log"]'); if (window.SIMUI) SIMUI.syncArea(p);
   if (sm) { const tip = I18N.t(p.type === "mrm" ? "ctl.mrm.smooth.title" : "ctl.smooth.title"); sm.classList.toggle("on", !!p.smooth); sm.setAttribute("aria-pressed", String(!!p.smooth)); sm.title = tip; }
   if (lg) {
     const off = ms2c || (p.type === "chrom" && p.kind === "pda"); if (ms2c) p.log = false;
@@ -836,6 +834,8 @@ function fitHd(/** @type {Pannello} */ p) {
   } finally { p._fitBusy = false; }
 }
 function fitHdSoon(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); p._fitRaf = FRAME.next(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }  // a second pass: widgets that settle after the first layout (fonts, async parts of the header) must not leave it too wide
+// Fit in the same frame as the width change (observer callbacks run after layout and before paint): no frame shows the header at the old arrangement.
+function fitHdNow(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); fitHd(p); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }
 function hdMorePlace(/** @type {Pannello} */ p) { const hd = p.el.querySelector(".hd"), m = p.el.querySelector(".hmore"); if (hd && m) { m.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; m.style.maxHeight = Math.max(80, p.el.clientHeight - hd.offsetHeight - 16) + "px"; } }
 function hdMoreInit(/** @type {Pannello} */ p) {
   const mb = p.el.querySelector('[data-a="more"]'), m = p.el.querySelector(".hmore"); if (!mb || !m) return;
@@ -863,10 +863,10 @@ const fmt2 = (/** @type {number | string} */ v) => String(+(+v).toFixed(2));
 const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trailing zeros)
 // THE tool that extracts an ion (XIC). The student gives ONE m/z value, or the NEUTRAL formula plus the adduct; the window is always a unit window (1 Da, unit resolution)
 // anchored to the nominal mass n of the calculated value: [n - XIC_BELOW, n + 1 - XIC_BELOW]. Every way to create an XIC (XIC button, warning when integrating from a TIC,
-// right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice m/z, Disegno) opens this window, possibly pre-filled:
+// right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
 const TIP_DELAY = 1250;   // ms before the label of a button appears (one value for the whole program; 1500 before 7 Oct 2026)
-const XIC_BELOW = 0.2;   // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (AGENTS.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)
+const XIC_BELOW = 0.2;   // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (CLAUDE.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)
 const XIC_DRIFT = 0.25;  // mean offset (Da) of the observed centroids over the calculated m/z, used only to go from a CLICKED centroid back to the calculated nominal mass (364.37 -> 364.12 -> n = 364, not 365)
 const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };

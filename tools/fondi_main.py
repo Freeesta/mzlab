@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Merge origin/main into the current branch; conflicts only in generated files are resolved by regenerating them.
 
-Used before pushing a PR branch (AGENTS.md §2). Standard library only (the regenerators are the repository's own tools).
+Used before pushing a PR branch (CLAUDE.md). Standard library only (the regenerators are the repository's own tools).
 
     python3 tools/fondi_main.py [--senza-controlli]
 Exit 0: merged and `pre_pr.py --veloce` green. 1: conflicts in human files (merge left open, files printed). 2: checks red.

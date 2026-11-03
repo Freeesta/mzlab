@@ -221,18 +221,18 @@ fn adduct_evidence(
     ev: &mut Vec<Proof>,
 ) -> (bool, bool, bool) {
     let (mut pos, mut neg, mut tl_hit) = (false, false, false);
-    if let (Some(lo), Some(up)) = (p.ms2_lo, p.ms2_up) {
-        if let (_, _, Some(f)) = r.skeleton(lo, up, p.mz_lo, p.mz_up) {
-            let ok = f >= r.skeleton_min;
-            (pos, neg) = (ok, !ok);
-            ev.push(proof(
-                ProofKind::Skeleton,
-                f,
-                r.skeleton_min,
-                1.0,
-                if ok { 1 } else { -1 },
-            ));
-        }
+    if let (Some(lo), Some(up)) = (p.ms2_lo, p.ms2_up)
+        && let (_, _, Some(f)) = r.skeleton(lo, up, p.mz_lo, p.mz_up)
+    {
+        let ok = f >= r.skeleton_min;
+        (pos, neg) = (ok, !ok);
+        ev.push(proof(
+            ProofKind::Skeleton,
+            f,
+            r.skeleton_min,
+            1.0,
+            if ok { 1 } else { -1 },
+        ));
     }
     if let (true, Some(up)) = (name == super::rel::NH4_NAME, p.ms2_up) {
         let lm = t.nh3();
@@ -253,10 +253,9 @@ fn adduct_evidence(
     if let (true, Some(up)) = (
         matches!(name, "[M+Na]+" | "[M+K]+" | "[M+Na-2H]-"),
         p.ms2_up,
-    ) {
-        if r.peaks_besides(up, p.mz_up) == 0 {
-            ev.push(proof(ProofKind::NoFragmentation, 0.0, 0.0, 0.5, 0));
-        }
+    ) && r.peaks_besides(up, p.mz_up) == 0
+    {
+        ev.push(proof(ProofKind::NoFragmentation, 0.0, 0.0, 0.5, 0));
     }
     (pos, neg, tl_hit)
 }

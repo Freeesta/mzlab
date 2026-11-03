@@ -79,7 +79,7 @@ pub(super) fn window<'a>(
     spec.mz[a..b]
         .iter()
         .zip(&spec.intensity[a..b])
-        .filter(move |(&m, _)| m >= lo && m <= hi)
+        .filter(move |&(&m, _)| m >= lo && m <= hi)
         .map(|(&m, &i)| (m, i))
 }
 

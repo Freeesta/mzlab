@@ -75,3 +75,15 @@ fn the_bounded_reach_links_the_segments_the_full_one_links() {
 fn a_segment_is_48_bytes() {
     assert_eq!(std::mem::size_of::<Seg>(), 48);
 }
+
+/// The invariant `segments` relies on: walking `by_scan` visits the scans in ascending order, so `ps - last` never underflows.
+#[test]
+fn by_scan_visits_scans_in_ascending_order() {
+    let pos: Vec<u32> = vec![5, 0, 3, 3, 9, 0, 1, 5, 2];
+    let order = by_scan(&pos).unwrap();
+    assert_eq!(order.len(), pos.len());
+    assert!(order
+        .windows(2)
+        .all(|w| pos[w[0] as usize] <= pos[w[1] as usize]));
+    assert!(by_scan(&[]).unwrap().is_empty());
+}

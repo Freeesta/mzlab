@@ -1,12 +1,15 @@
 //! Money in integer micro-dollars (1 USD = 1 000 000): the prices per million tokens, the cost of a `usage` event (cache reads and the two cache writes at
 //! their own rates, Haiku's higher tier above 100 000 prompt tokens) and the `Meter` that decides before each call whether the cap still allows it.
-//! No float is stored, so counters never drift. Used by the assistant, `mzlab-cli` and, through `mzlab-tutor::quota`, by the tutor Worker.
+//! No float is stored, so counters never drift. Used by the assistant and `mzlab-cli`; `ledger` keeps the counters of the public proxy.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Value};
 
 use crate::event::Usage;
 use crate::provider::{Price, Provider};
+
+mod ledger;
+pub use ledger::{usage_of_stream, Caps, Counter, Hold, Keys, Ledger};
 
 /// Micro-dollars in one dollar.
 pub const DOLLAR: u64 = 1_000_000;

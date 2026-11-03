@@ -7,7 +7,7 @@ Questo file è il contratto dei pacchetti V-0…V-6 (prompt in questa cartella, 
 - **Studenti dell'esperienza 3** (3200 QTRAP, bassa risoluzione, nel browser su portatili qualsiasi): 5-20 file Full Scan da ~1500 scansioni × ~500 centroidi. Gesto tipico: clic sul TIC → spettro → «di chi è questo picco nel tempo?» → XIC. Oggi l'XIC dallo spettro c'è ma è nascosto (menu del tasto destro, tasto «x» sul picco sotto il puntatore, doppio clic quando non c'è una MS2).
 - **Ricerca in alta risoluzione** (Orbitrap/Q-TOF, DDA, 15+ file da ~80 MB, 3000-6000 MS1): stesso gesto con tolleranza in ppm e molti file sovrapposti; oggi l'XIC su 15 file HR costa ~500 ms (misure-diario: 475 000 numeri scritti e riletti in JSON).
 - **App desktop con file grandi** (≥ 2 GB di `.raw`, indice mappato con `memmap2`): la stessa pagina con il motore nativo.
-I principi di AGENTS.md restano: il programma non dà risposte nel mondo LR (un'area si mostra solo dove l'integrazione è già uno strumento dello studente, §6 D2); a risoluzione unitaria un m/z è un candidato.
+I principi di CLAUDE.md restano: il programma non dà risposte nel mondo LR (un'area si mostra solo dove l'integrazione è già uno strumento dello studente, §6 D2); a risoluzione unitaria un m/z è un candidato.
 
 ## 2. Cosa c'è già (verificato nel codice, `origin/main` `ea8b19c`)
 - **Indice per m/z**: il `.mzidx` (`docs/agenti/mzidx.md`) è già un indice colonnare SoA, array allineati a 64 byte: per ogni sezione livello × polarità tutti i picchi ordinati per m/z (`mz`, `inten`, `pos` = scansione) con un recinto ogni 16 384 picchi. Un XIC è due ricerche binarie più una somma per scansione (`Routes::xic_raw` → `Index::search`, `sum_window`). È più preciso di un indice a secchi da 1 Da (finestra esatta, nessun filtro a valle).

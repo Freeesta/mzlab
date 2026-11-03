@@ -16,7 +16,7 @@ fn row(y: &[f64]) -> (FileFeatures, Vec<f64>) {
         ..Default::default()
     };
     macro_rules! one {
-        ($($c:ident = $v:expr),*) => { $( f.$c.push($v); )* };
+        ($($c:ident = $v:expr_2021),*) => { $( f.$c.push($v); )* };
     }
     one!(
         mz = 300.0,

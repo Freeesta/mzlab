@@ -24,7 +24,7 @@ fn trace() -> (Vec<f64>, Vec<f64>) {
 }
 
 #[test]
-fn peaks_are_the_core_result_and_set_names_are_the_page_ones() {
+fn peaks_are_the_core_result_and_set_names_are_accepted() {
     let (rt, y) = trace();
     let f = std::env::temp_dir().join("mzlab_peaks_auto_trace.csv");
     let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
@@ -45,11 +45,11 @@ fn peaks_are_the_core_result_and_set_names_are_the_page_ones() {
     let o = run(args(&[
         p,
         "--set",
-        "hrSmooth=7",
+        "hr_smooth=7",
         "--set",
-        "hrSn=5",
+        "hr_sn=5",
         "--set",
-        "hrProm=200",
+        "hr_prom=200",
     ]));
     assert_eq!(
         String::from_utf8(o.stdout).unwrap().trim(),
@@ -62,14 +62,14 @@ fn peaks_are_the_core_result_and_set_names_are_the_page_ones() {
         "--to",
         "3",
         "--set",
-        "hrProm=1",
+        "hr_prom=1",
         "--set",
-        "hrSlope=3",
+        "hr_slope=3",
     ]));
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["peaks"].as_array().unwrap().len(), 1);
     assert_ne!(run(args(&[p, "--set", "bogus=1"])).code, 0);
-    assert_ne!(run(args(&[p, "--set", "hrSn=-1"])).code, 0);
+    assert_ne!(run(args(&[p, "--set", "hr_sn=-1"])).code, 0);
     let _ = std::fs::remove_file(f);
 }
 

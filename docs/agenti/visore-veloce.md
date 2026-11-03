@@ -4,7 +4,7 @@
 - **Tasti**: pulsante «XIC» = modo «scegli un picco» (Esc esce, catena `xic-scelta`); `,` e `.` picco precedente/successivo; Invio estrae; Maiusc+Invio o Maiusc+clic aggiunge una traccia; Spazio sul pulsante non scorre le scansioni.
 - **Finestra**: LR = finestra nominale di `xicTraceFor` ([n−0,2; n+0,8]); HR = ppm del profilo del file (`HR.ionTrace`). Una tolleranza digitata sostituisce quella predefinita e compare nell'etichetta; mai inventata.
 - **Linea di scansione**: `xp.cur` (banda se lo spettro è una media di più scansioni); apice e area in `.xb-info`; area subito in HR, in LR solo dopo l'integrazione dello studente.
-- **Tipi di spettro coperti**: LR full scan e HR MS1 (`e2e_xic_spettro`), MS2 HR e LR (clic del mouse sull'etichetta), spettro del secondo file come lo apre un clic sulla mappa e file sovrapposti (`e2e_xic_spettro_tipi`). Un clic durante la dissolvenza di `#loading` (0,4 s) cade sulla schermata di avvio e non arriva al canvas: i test aspettano che sotto il puntatore ci sia il canvas. Infusion MSn e Tabui restano fuori.
+- **Tipi di spettro coperti**: LR full scan e HR MS1 (`e2e_xic_spettro`), MS2 HR e LR (nessun pulsante né scelta del picco: un clic non estrae nulla), spettro del secondo file come lo apre un clic sulla mappa e file sovrapposti (`e2e_xic_spettro_tipi`). Un clic durante la dissolvenza di `#loading` (0,4 s) cade sulla schermata di avvio e non arriva al canvas: i test aspettano che sotto il puntatore ci sia il canvas. Infusion MSn e Tabui restano fuori.
 
 ## Misure (G2: dal Invio nel pannello all'ultimo disegno dell'XIC, ioni non in cache, n = 30)
 Macchina: container cloud 4 CPU, Chromium headless, dati sintetici (`.verifica/dati_sintetici`), sito costruito con `tools/prepara_sito.py`, ramo `claude/viewer-1-xic-button`.
@@ -19,6 +19,7 @@ Dove va il tempo: il tempo misurato comprende la richiesta `api/xic` (JSON dal m
 
 ## Banco di misura (V-0)
 - **Comando**: `python3 tools/bench_visore.py lr,hrc,hrc_big,lr20,hrp,hr15 --wd DIR --native --json > run.json` (sito costruito in `DIR/site`, Chromium headless, motore Rust/WASM; `--md run.json` ristampa la tabella). Nativo: `cargo run --release -p mzlab-core --example visore_tempi -- FILE.mzidx [N] [--json]`; `genera DIR` e `indicizza FILE.mzML OUT.mzidx` creano e indicizzano un file sintetico. G7: `--g7 DIR` (nativo) e `--g7-site FILE` (sito) su un mzML da 2,6 GB.
+- **Traccia e sito del banco**: `--trace` aggiunge le fasi dell'apertura (operazioni del motore con i tempi, risposte vuote, errori, `MZLAB_LR_MISS`, memoria), anche per un caso che non si apre. Il sito costruito dal banco non ha i moduli di `build_feat_wasm.sh`: senza `rotte` la prima `lr_campioni` uccide il worker (che riparte); per numeri fedeli costruire il sito come `pages.yml` e passarlo con `--site`.
 - **Casi** (sintetici, mai dati del laboratorio): `lr` 1500 scansioni x 500 picchi; `hrc` 3000 x 3000; `hrc_big` 6000 x 5000; `hrp` 400 x 50000 in profilo; `lr20` = 20 file `lr`; `hr15` = 15 file `hrc`. Ogni caso apre i file con il profilo su disco (la quota di un browser vero), `--enable-precise-memory-info` e `gc` esposto.
 - **Cosa si misura**: l'orologio parte dall'evento (clic, tasto, rotella) e si ferma all'ultimo `draw()` del pannello; le fasi sono richiesta (`fetch`), motore (`X-Py-Ms`), JSON (`Response.json`) e resto (disegno). Numeri `p50 / p95 ms (n)`. G1 clic sul TIC e spettro collegato; G2 XIC dal pannello spettro (ioni non in cache); G3 XIC su tutti i file della scheda;
 - **Cosa si misura (seguito)**: G4 scorrimento del puntatore sullo spettro (fotogrammi e long task, riferimento); G5 zoom (Ctrl+rotella) e spostamento (Maiusc+trascinamento) di TIC, spettro e XIC da 3k, 50k e 1M punti; G6 freccia destra = scansione successiva; G7 XIC su un indice da miliardi di picchi; M memoria dopo 1000 XIC.
@@ -27,26 +28,30 @@ Dove va il tempo: il tempo misurato comprende la richiesta `api/xic` (JSON dal m
 ### Tabella di partenza (sito, p50 / p95 ms, n tra parentesi)
 | gesture | lr | hrc | hrc_big | lr20 | hrp | hr15 |
 |---|---|---|---|---|---|---|
-| G1 click on the TIC -> spectrum | 36.3 / 44.3 (29) | 803.6 / 883.8 (29) | 2427.3 / 2783.0 (30) | 56.3 / 67.0 (30) | not measured | not measured |
-| G2 XIC from the spectrum, one file | 18.7 / 25.9 (30) | 23.3 / 31.8 (30) | 28.0 / 40.5 (30) | 30.4 / 46.0 (30) | not measured | not measured |
-| G3 XIC, all files of the tab | – | – | – | 288.4 / 366.0 (30) | not measured | not measured |
-| G5 TIC zoom (wheel step) | 29.2 / 38.3 (30) | 33.4 / 43.5 (30) | 31.6 / 40.8 (30) | 121.6 / 138.5 (30) | not measured | not measured |
-| G5 TIC pan | 3.8 / 5.8 (30) | 4.4 / 5.8 (30) | 5.5 / 8.2 (30) | 61.9 / 78.8 (30) | not measured | not measured |
-| G5 spectrum zoom | 33.1 / 43.4 (30) | 96.3 / 136.4 (30) | 244.8 / 312.7 (30) | 36.0 / 45.3 (30) | not measured | not measured |
-| G5 spectrum pan | 4.9 / 7.4 (30) | 64.8 / 90.9 (30) | 173.5 / 231.8 (30) | 7.5 / 10.2 (30) | not measured | not measured |
-| G5 XIC 3k points zoom | 30.6 / 38.7 (30) | 29.4 / 37.4 (30) | 27.2 / 38.7 (30) | – | not measured | not measured |
-| G5 XIC 3k points pan | 3.9 / 6.1 (30) | 4.0 / 5.6 (30) | 4.3 / 5.9 (30) | – | not measured | not measured |
-| G5 XIC 50k points zoom | 36.7 / 45.9 (30) | 32.7 / 41.6 (30) | 33.3 / 40.9 (30) | – | not measured | not measured |
-| G5 XIC 50k points pan | 6.8 / 11.3 (30) | 7.6 / 11.2 (30) | 8.8 / 12.3 (30) | – | not measured | not measured |
-| G5 XIC 1M points zoom | 92.9 / 125.8 (30) | 91.9 / 122.8 (30) | 96.3 / 156.4 (30) | – | not measured | not measured |
-| G5 XIC 1M points pan | 63.8 / 96.9 (30) | 61.4 / 106.1 (30) | 62.4 / 98.0 (30) | – | not measured | not measured |
-| G6 ArrowRight -> next spectrum | 6.0 / 8.5 (30) | 104.0 / 154.3 (30) | 286.9 / 315.8 (30) | 11.8 / 14.9 (30) | not measured | not measured |
+| G1 click on the TIC -> spectrum | 36.3 / 44.3 (29) | 803.6 / 883.8 (29) | 2427.3 / 2783.0 (30) | 56.3 / 67.0 (30) | 342.1 / 388.8 (30) | 65.1 / 109.9 (30) |
+| G2 XIC from the spectrum, one file | 18.7 / 25.9 (30) | 23.3 / 31.8 (30) | 28.0 / 40.5 (30) | 30.4 / 46.0 (30) | 21.6 / 46.1 (30) | 25.3 / 40.0 (30) |
+| G3 XIC, all files of the tab | – | – | – | 288.4 / 366.0 (30) | – | 40.3 / 57.6 (30) |
+| G5 TIC zoom (wheel step) | 29.2 / 38.3 (30) | 33.4 / 43.5 (30) | 31.6 / 40.8 (30) | 121.6 / 138.5 (30) | 6.7 / 10.1 (30) | 43.1 / 67.4 (30) |
+| G5 TIC pan | 3.8 / 5.8 (30) | 4.4 / 5.8 (30) | 5.5 / 8.2 (30) | 61.9 / 78.8 (30) | 3.9 / 5.8 (30) | 38.6 / 49.6 (30) |
+| G5 spectrum zoom | 33.1 / 43.4 (30) | 96.3 / 136.4 (30) | 244.8 / 312.7 (30) | 36.0 / 45.3 (30) | 21.5 / 26.4 (30) | 5.5 / 9.1 (30) |
+| G5 spectrum pan | 4.9 / 7.4 (30) | 64.8 / 90.9 (30) | 173.5 / 231.8 (30) | 7.5 / 10.2 (30) | 6.8 / 8.2 (30) | 6.4 / 9.1 (30) |
+| G5 XIC 3k points zoom | 30.6 / 38.7 (30) | 29.4 / 37.4 (30) | 27.2 / 38.7 (30) | – | 3.0 / 4.4 (30) | – |
+| G5 XIC 3k points pan | 3.9 / 6.1 (30) | 4.0 / 5.6 (30) | 4.3 / 5.9 (30) | – | 4.4 / 6.3 (30) | – |
+| G5 XIC 50k points zoom | 36.7 / 45.9 (30) | 32.7 / 41.6 (30) | 33.3 / 40.9 (30) | – | 3.6 / 5.4 (30) | – |
+| G5 XIC 50k points pan | 6.8 / 11.3 (30) | 7.6 / 11.2 (30) | 8.8 / 12.3 (30) | – | 4.6 / 6.2 (30) | – |
+| G5 XIC 1M points zoom | 92.9 / 125.8 (30) | 91.9 / 122.8 (30) | 96.3 / 156.4 (30) | – | 9.1 / 13.6 (30) | – |
+| G5 XIC 1M points pan | 63.8 / 96.9 (30) | 61.4 / 106.1 (30) | 62.4 / 98.0 (30) | – | 10.8 / 13.8 (30) | – |
+| G6 ArrowRight -> next spectrum | 6.0 / 8.5 (30) | 104.0 / 154.3 (30) | 286.9 / 315.8 (30) | 11.8 / 14.9 (30) | 171.1 / 214.6 (30) | 7.3 / 9.5 (30) |
 
-- **Non misurati**: `hrp` apre i file ma i pannelli TIC e spettro non compaiono entro 25 minuti; `hr15` (15 file da 150 MB) non si apre nel browser entro 27 minuti (tetto per caso); G7 nel sito: un mzML da 2,6 GB non entra nell'elenco file entro 15 minuti. Sono numeri cattivi anch'essi: un caso che non si apre è una lacuna del visualizzatore.
+- **Colonne `hrp` e `hr15`**: misurate su un giro diverso dalle altre (stessa macchina, commit di questo ramo, sito con il motore, le librerie e i moduli di `build_feat_wasm.sh`). `hrp` (321 MB) si apre in 13,1 s: copia 4,7 s, tabella e `.mzidx` 8,1 s, primo TIC e prima richiesta dello spettro a 13,1 s; `hr15` in 35,1 s (indice dell'ultimo file a 19,3 s).
+- **Spettro di un profilo HR**: la sezione MS1 di un file HR è a precisione singola, quindi il passo dei punti del profilo si legge dall'mzML (`prime_steps`); `route` risponde vuoto e `specexact` (`Engine.spectrum_exact`, op `specexact` di `rpc.rs`) passa da `Routes::mzml_route("/api/spectrum")`: passo dall'mzML, poi la rotta dell'indice. Il passo resta con l'indice aperto: le finestre dopo la prima le serve `route`. Prova: `profilo_hr_spettro.rs` (`hrp` ridotto 60 x 50000, app e `.wasm`).
+- **Lacuna aperta**: `api/scanbin` di scansioni a profilo non ha rotta Rust (finisce in `MZLAB_LR_MISS`); `scroll.js` ripiega sulla richiesta della finestra, quindi G6 `hrp` costa 171 ms invece dei 7 ms di `hr15`.
+- **Non misurati**: G7 nel sito: un mzML da 2,6 GB non entra nell'elenco file entro 15 minuti. Sono numeri cattivi anch'essi: un caso che non si apre è una lacuna del visualizzatore.
 - **Dove va il tempo, G1 HR**: `hrc` 804 ms = richiesta 696 (motore 574, JSON 2, resto 107); `hrc_big` 2427 ms = richiesta 2446 (motore 1775, JSON 4). In LR lo stesso gesto costa 36 ms (motore 19). G3 su `lr20`: 288 ms, motore 755 ms sommati su richieste in parallelo, richiesta 64, JSON 6, disegno 222.
 - **Altri valori**: G2 19-30 ms in ogni caso (motore 8-17). G4: fotogrammi da 16,7 ms, nessun long task. G6 `hrc` 104 ms, `hrc_big` 287 ms (lo spettro HR pesa). G5 spettro HR `hrc_big`: zoom 245 ms, spostamento 174 ms. G5 XIC da 1M punti: zoom 92-96 ms, spostamento 61-64 ms in ogni caso.
-- **M** (1000 XIC): heap JS 57 -> 72 MB (`lr`), 64 -> 123 MB (`hrc`), 73 -> 190 MB (`hrc_big`), 35 -> 49 MB (`lr20`); motore WASM fisso a 32 MB (50 MB con 20 file); Chromium 1,2-1,4 GB di RSS.
-- **Nativo** (stesso indice `.mzidx`, N = 200 m/z): apertura 4,3 ms (`lr`), 9,4 (`hrc`), 12,9 (`hrc_big`). `xic_raw` (array) 0,01-0,02 ms (`lr`), 0,12-0,19 (`hrc`), 0,16-0,45 (`hrc_big`); `xic` con la stringa JSON 0,9-1,0 ms (`lr`), 1,9-2,3 (`hrc`), 3,8-4,8 (`hrc_big`). Lo spettro nativo risponde `None` su questi file sintetici (non è la rotta Rust): 0 byte, riga marcata nella stampa.
+- **M** (1000 XIC): heap JS 57 -> 72 MB (`lr`), 64 -> 123 MB (`hrc`), 73 -> 190 MB (`hrc_big`), 35 -> 49 MB (`lr20`), 173 -> 193 MB (`hrp`), 77 -> 161 MB (`hr15`); motore WASM fisso a 32 MB (50 MB con 20 file `lr`, 60 MB con 15 file `hrc`); Chromium 1,2-1,4 GB di RSS (1,8 GB con `hrp` e `hr15`).
+- **Nativo** (stesso indice `.mzidx`, N = 200 m/z): apertura 4,3 ms (`lr`), 9,4 (`hrc`), 12,9 (`hrc_big`). `xic_raw` (array) 0,01-0,02 ms (`lr`), 0,12-0,19 (`hrc`), 0,16-0,45 (`hrc_big`); `xic` con la stringa JSON 0,9-1,0 ms (`lr`), 1,9-2,3 (`hrc`), 3,8-4,8 (`hrc_big`).
+- **Spettro HR di una scansione** (nativo, rotta + `spectrum_exact` sull'mzML accanto all'indice come il worker): si decide dalla tabella e dagli array per scansione, senza percorrere i picchi (`Routes::select_scans`). p50 / p95: `hrc` 3000x3000 94,2 / 119 -> 1,3 / 2,0 ms, `hrc_big` 6000x5000 282 / 329 -> 2,0 / 2,6 ms, stessi byte; prova `spettro_una_scansione.rs`.
 - **G7 nativo** (mzML 2,64 GB, 80000 scansioni x 6000 picchi, `.mzidx` 6,76 GB, 82 milioni di picchi MS1; indice costruito in 118 s dopo 21 s di tabella): apertura p50 468 ms (p95 2001); `xic_raw` p50 0,18-0,62 ms (p95 fino a 22 ms a freddo); `xic` JSON p50 20-25 ms, 350-470 KB per risposta.
 
 ## XIC binario (V-2)

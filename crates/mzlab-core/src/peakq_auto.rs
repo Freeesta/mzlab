@@ -45,7 +45,7 @@ impl Default for AutoParams {
 
 impl AutoParams {
     /// The two numbers of the page dialog: smoothing window of the apex picking (points, odd) and minimum S/N of the prominence; the rest at
-    /// the defaults (set only with `mzlab-cli peaks-auto --set`).
+    /// the defaults (set only with `mzlab-cli peak-auto --set`).
     pub fn from_dialog(smooth: usize, snr: f64) -> AutoParams {
         let d = AutoParams::default();
         AutoParams {

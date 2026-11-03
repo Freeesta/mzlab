@@ -1,5 +1,6 @@
 //! The assistant in the app: the routes `llm/*`. The key lives in `llm-chiavi.json` (mode 0600) and only this file reads it; `llm/send` opens the
-//! request with `ureq` on a thread and `llm/poll` hands the normalized events to the page, like `flow/progress` does for a plan.
+//! request with `ureq` on a thread and `llm/poll` hands the normalized events to the page, like `flow/progress` does for a plan. The demo provider
+//! (`mzlab-demo`, mzLab's proxy) needs no key: it gets the demo catalog and, at `llm/send`, the proxy host and session headers of the page.
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -9,10 +10,11 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use mzlab_core::{Error, Result};
+use mzlab_llm::assist::DEMO_PROVIDER;
 use mzlab_llm::conv::Conversation;
 use mzlab_llm::event::Event;
-use mzlab_llm::provider::{self, Provider, Request, Stream, ToolMode};
-use mzlab_llm::tools::{catalog, Tool, UI_TOOLS};
+use mzlab_llm::provider::{self, demo, Provider, Request, Stream, ToolMode};
+use mzlab_llm::tools::{catalog, demo_catalog, Tool, UI_TOOLS};
 use serde_json::{json, Value};
 
 use crate::engine::State;
@@ -59,6 +61,8 @@ impl State {
                         (prov, prompted, req)
                     }
                 };
+                // the demo provider: the host of `llm/proxy-host.js` and the session of the panel, as in the site (`demo_send` of the .wasm)
+                let req = demo::for_send(&prov, req, s("proxy_host"), s("session"), s("owner"))?;
                 let key = read_keys(&self.keys_path()?).remove(&prov.id);
                 let abort = Arc::new(AtomicBool::new(false));
                 let id = with_jobs(|n, m| {
@@ -166,8 +170,14 @@ fn find(id: &str) -> Result<Provider> {
         .ok_or_else(|| err("err.llm.conversation", "field", "provider"))
 }
 
-fn tools() -> Vec<Tool> {
-    catalog(
+/// The catalog of a provider: the demo gets only `DEMO_TOOLS` (the proxy refuses any other catalog).
+fn tools(provider: &str) -> Vec<Tool> {
+    let make = if provider == DEMO_PROVIDER {
+        demo_catalog
+    } else {
+        catalog
+    };
+    make(
         &mzlab_cli::flow::steps(),
         UI_TOOLS,
         &mzlab_cli::flow::executable,
@@ -177,7 +187,7 @@ fn tools() -> Vec<Tool> {
 fn build(conv: &str) -> Result<(Provider, Conversation, Request)> {
     let c = Conversation::parse(conv)?;
     let p = find(&c.provider)?;
-    let r = provider::request(&p, &c, &tools())?;
+    let r = provider::request(&p, &c, &tools(&p.id))?;
     Ok((p, c, r))
 }
 

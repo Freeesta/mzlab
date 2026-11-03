@@ -198,8 +198,6 @@ fn fill_threads<R: ReadAt>(
 ) -> Result<usize> {
     #[cfg(not(target_family = "wasm"))]
     let workers = std::thread::available_parallelism().map_or(1, |w| w.get());
-    #[cfg(target_family = "wasm")]
-    let workers = 1;
     let mut found: Vec<Option<Result<Cells>>> = (0..n).map(|_| None).collect();
     {
         let al: &Aligned = table;

@@ -131,6 +131,9 @@
     const tabs = ["canvas", "list"].map(t => el("button", { type: "button", "aria-pressed": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : "List" })));
     const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, redoBtn, fitBtn, status, run, termBtn, moreBtn);
     bar.insertBefore(el("span", { class: "flx-seg flx-views", role: "group", "aria-label": "View" }, ...tabs), bar.children[1]);
+    // the live controls (Auto-run, and Pause once a job runs) arrive with a late module: invisible twins hold their place, so Run, Terminal and More do not jump when they land
+    const slot = el("span", { class: "flx-live-slot", "aria-hidden": "true" }, el("button", { type: "button", class: "fl-b", tabindex: "-1" }, el("span", { text: "Auto-run" })), btn("stop", "", () => {}, "Pause"));
+    slot.setAttribute("inert", ""); bar.insertBefore(slot, run);
     const issuesHost = el("div", { class: "flx-issues-host" });
     // the divider between the canvas and the settings: drag, or the arrow keys (the width is kept for the session of the page)
     const split = el("div", { class: "flx-split", role: "separator", "aria-orientation": "vertical", "aria-label": "Width of the settings panel", tabindex: 0, "aria-valuemin": 240, "aria-valuemax": 900, "aria-valuenow": 500 });
@@ -147,10 +150,11 @@
     split.addEventListener("pointermove", e => { if (split.classList.contains("drag")) setWidth(body.getBoundingClientRect().right - e.clientX); });
     split.addEventListener("pointerup", () => { split.classList.remove("drag"); cv.fit(); });
     split.addEventListener("keydown", e => { const d = e.key === "ArrowLeft" ? 40 : e.key === "ArrowRight" ? -40 : 0; if (d) { e.preventDefault(); setWidth(inspHost.getBoundingClientRect().width + d); } });
-    const root = el("div", { class: "flw flx", id: "flx-root" }, bar, live, body, issuesHost, planView, listHost);
+    const factsHost = el("div", { class: "flx-facts-host" });
+    const root = el("div", { class: "flw flx", id: "flx-root" }, bar, live, body, issuesHost, factsHost, planView, listHost);
     function setTab(/** @type {string} */ t) {
       tab = t; tabs.forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.tab === t)); });
-      body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();
+      body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; factsHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();
     }
     // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) outside text fields
     root.addEventListener("keydown", e => {
@@ -162,10 +166,23 @@
       if (k === "z" && !e.shiftKey) { e.preventDefault(); S.undo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); S.redo(); }
     });
     sec.textContent = ""; sec.append(root);
-    // the assistant: nothing of it is downloaded unless the profile is «ricerca» and it is switched on (settings) with a consent
-    if (F.llmOn()) {
+    // the facts of the files (no model, nothing leaves the site) in the profile «ricerca»; the assistant only if it is switched on (settings) with a consent
+    if (F.research()) {
       const L = /** @type {any} */ (window).TPLAZY;
-      L.load("flow-llm-chart.js", "flow-llm-chart-ui.js", "flow-llm-tools.js", "flow-llm-readers.js", "flow-llm-errors.js", "flow-llm.js").then(() => F.llmMount({ S, bar, body, root, redraw, select: cvUi.select, setTab })).catch(() => { /* the assistant is optional */ });
+      const facts = L.load("flow-llm-errors.js", "flow-llm-facts.js").then(() => F.llmFacts.mount({ S, host: factsHost, root, redraw })).catch(() => { /* the facts are optional */ });
+      if (F.llmOn()) facts.then(() => L.load("flow-llm-chart.js", "flow-llm-chart-ui.js", "flow-llm-tools.js", "flow-llm-readers.js", "flow-llm.js")).then(() => F.llmMount({ S, bar, body, root, redraw, select: cvUi.select, setTab })).catch(() => { /* the assistant is optional */ });
+    } else if (F.demo()) {
+      // the public demo: one button, and nothing of the assistant is downloaded before it is pressed (then the facts, the panel, the consent)
+      const L = /** @type {any} */ (window).TPLAZY;
+      const tryIt = F.btn("chat", "Try the assistant (public demo: what you ask leaves this computer only after your consent)", () => {
+        tryIt.disabled = true;
+        L.load("flow-llm-errors.js", "flow-llm-facts.js").then(() => F.llmFacts.mount({ S, host: factsHost, root, redraw }))
+          .then(() => L.load("flow-llm-chart.js", "flow-llm-chart-ui.js", "flow-llm-tools.js", "flow-llm-readers.js", "flow-llm.js"))
+          .then(() => F.llmMount({ S, bar, body, root, redraw, select: cvUi.select, setTab, demo: true, opener: tryIt }))
+          .then((/** @type {any} */ m) => { if (m) { tryIt.remove(); m.open(); } else tryIt.disabled = false; })
+          .catch(() => { tryIt.disabled = false; say("The assistant could not be loaded. Reload the page.", null); });
+      }, "Try the assistant");
+      tryIt.id = "flx-assistant-try"; bar.insertBefore(tryIt, bar.querySelector(".flx-run"));
     }
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redoBtn.disabled = !S.future.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;

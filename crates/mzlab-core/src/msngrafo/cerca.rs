@@ -241,10 +241,10 @@ fn score(u: &G, e: &G, tol: f64) -> Scores {
     let mut shared = 0;
     for s in u.spectra.iter().filter(|s| s.level == 2) {
         let same = e.spectra.iter().filter(|x| x.level == 2 && x.act == s.act);
-        if let Some((h, n)) = best_of(s, same, tol) {
-            if ms2.is_none_or(|b| h > b) {
-                (ms2, shared) = (Some(h), n);
-            }
+        if let Some((h, n)) = best_of(s, same, tol)
+            && ms2.is_none_or(|b| h > b)
+        {
+            (ms2, shared) = (Some(h), n);
         }
     }
     let deep: Vec<&Sp> = u.spectra.iter().filter(|s| s.level >= 3).collect();

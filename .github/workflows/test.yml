@@ -1,11 +1,11 @@
-# Level 2 of the tests (AGENTS.md §3): quick checks on every pull request and on every push to main (goal < 6 min).
+# Level 2 of the tests (CLAUDE.md): quick checks on every pull request and on every push to main (goal < 6 min).
 # Unit tests on Linux with the oldest supported and the newest Python, JavaScript syntax, the e2e smoke tests on Chromium.
 # The rest (Mac, Windows, Firefox, WebKit and all the e2e) runs once a day on main: notte.yml.
 name: test
 
 # No paths-ignore: these 4 jobs are the required checks of the "main protetto" ruleset, so they must run on every pull request.
-# A pull request that changes ONLY Teoria chapters (tools/ci_solo_teoria.py: every file on its list) skips the Rust/wasm toolchain and runs the Teoria/Libro tests and 4 Teoria e2e
-# instead; the jobs stay green for the ruleset. A pull request that changes ONLY documents (tools/ci_solo_doc.py) runs a few document tests and no e2e. Any other file, even one, runs everything.
+# A pull request that changes ONLY documents (tools/ci_solo_doc.py) skips the Rust/wasm toolchain, runs a few document tests and no e2e; the jobs stay green for the ruleset.
+# Any other file, even one, runs everything.
 on:
   push:
     branches: [main]
@@ -39,14 +39,13 @@ jobs:
     # safety net only: the run lasts far less since the crates of the cache are reused (tools/ci_cargo_mtime.py)
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      # pull request only: is every changed file a Teoria chapter, or a document? (a push to main gets no base, so solo=false)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # pull request only: is every changed file a document? (a push to main gets no base, so nothing is written)
       - id: solo
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
-          python3 tools/ci_solo_teoria.py "$BASE"
           python3 tools/ci_solo_doc.py "$BASE"   # documents only: appends solo=true and kind=doc
       # test files that rust.yml (rust-wasm) runs on the same diff are left out here (tools/ci_pytest_doppi.py); a push to main uses the previous head as base
       - id: doppi
@@ -56,7 +55,7 @@ jobs:
         run: |
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE" || BASE=; fi
           python3 tools/ci_pytest_doppi.py "$BASE"
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
           cache: pip
@@ -75,7 +74,7 @@ jobs:
       # already compiled and rebuilds only what it changed. A cache saved on a pull request is seen by no other pull request.
       - id: rcache
         if: steps.solo.outputs.solo != 'true'
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -109,7 +108,6 @@ jobs:
       - name: Unit tests
         if: steps.solo.outputs.solo != 'true'
         env:
-          MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
           PYTHONPATH: tools
           PARTE: ${{ matrix.parte }}
         run: |
@@ -135,7 +133,7 @@ jobs:
       # time per test file for tools/ci_metrics.py (small, kept 3 days)
       - name: Test durations
         if: ${{ !cancelled() && hashFiles(format('junit-{0}-{1}.xml', matrix.python, matrix.parte)) != '' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: junit-${{ matrix.python }}-${{ matrix.parte }}
           path: |
@@ -143,16 +141,14 @@ jobs:
             tempi-test.json
           if-no-files-found: ignore
           retention-days: 3
-      # Teoria-only pull request: the chapter, Libro and forbidden-names tests (the list is in tools/ci_solo_teoria.py); documents-only: tools/ci_solo_doc.py
-      - name: Unit tests (Teoria or documents only)
+      # documents-only pull request: the document tests (the list is in tools/ci_solo_doc.py)
+      - name: Unit tests (documents only)
         if: steps.solo.outputs.solo == 'true' && matrix.parte != 'solo311'
-        env:
-          MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
-        run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_doc.py --pytest "${{ steps.solo.outputs.kind }}")
+        run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_doc.py --pytest)
       - name: Record the tree of the cache
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
@@ -180,22 +176,21 @@ jobs:
           [ "$ESITO" = success ]
 
   # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server.
-  # No Pyodide here: the engine of the site is tried by hand (see AGENTS.md, "Prestazioni e compatibilità").
+  # No Pyodide here: the engine of the site is tried by hand (see docs/agenti/).
   browser:
     name: browser (ubuntu-latest, chromium)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      # pull request only: is every changed file a Teoria chapter, or a document? (a push to main gets no base, so solo=false)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # pull request only: is every changed file a document? (a push to main gets no base, so nothing is written)
       - id: solo
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
-          python3 tools/ci_solo_teoria.py "$BASE"
           python3 tools/ci_solo_doc.py "$BASE"   # documents only: appends solo=true and kind=doc
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
           cache: pip
@@ -203,7 +198,7 @@ jobs:
       # a run that installs nothing (documents only) leaves no pip folder, and the post step of setup-python fails on a cache miss without it
       - name: Pip cache folder
         run: mkdir -p ~/.cache/pip
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pyproject.toml') }}
@@ -213,7 +208,7 @@ jobs:
         run: python tools/ci_toolchain.py
       - id: rcache
         if: steps.solo.outputs.solo != 'true'
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -231,22 +226,19 @@ jobs:
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
         run: python tools/verifica.py --browser chromium --fumo
-      - name: Teoria e2e (Teoria-only pull request)
-        if: steps.solo.outputs.solo == 'true' && steps.solo.outputs.kind != 'doc'
-        run: python tools/verifica.py --browser chromium --fumo --solo "$(python tools/ci_solo_teoria.py --e2e)"
       # size of every built .wasm against its cap, for tools/ci_metrics.py (small, kept 3 days)
       - name: Size of the .wasm
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' }}
         run: python3 tools/ci_wasm_dimensioni.py site wasm-dimensioni.json
       - name: Size of the .wasm (artifact)
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && hashFiles('wasm-dimensioni.json') != '' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: wasm-dimensioni
           path: wasm-dimensioni.json
           retention-days: 3
       # saved after the smoke tests have built the site and its .wasm (main only; a red test does not lose it)
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
         with:
           path: |
@@ -266,7 +258,7 @@ jobs:
           for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
       - name: Logs of the failed tests
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: verifica-ubuntu-chromium
           path: .verifica/
@@ -277,8 +269,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
       - name: Syntax check
@@ -299,15 +291,13 @@ jobs:
           PY
           # classic scripts share globals: check explore.js + inline together (no duplicate const)
           cat mzlab/web/explore.js mzlab/web/pannelli.js mzlab/web/grafici.js mzlab/web/picchi.js mzlab/web/eventi.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       - name: Map of the code and size limits
         run: |
           python3 tools/indice.py --controlla
           python3 tools/controlla.py
-      - name: Teoria chapters (no private data)
-        run: python3 tools/controlla_teoria.py
 
   # Types without a build step: tsc on the projects of tools/tipi/ (pagina, moduli, worker); the errors per file may only go down (tools/tipi/base_errori.json).
   tipi:
@@ -315,11 +305,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       - name: Globals

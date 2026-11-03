@@ -52,13 +52,9 @@ COMANDI.gestore("app.settings", {
 });
 /** @param {() => void} f */
 const uipDo = f => COMANDI.fai("app.settings", COMANDI.GLOBALE, f);
-// the settings panel of the Teoria (inside the iframe) changes the theme of the whole program through here
-window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { uipDo(() => { UIP.theme = t; }); uipSave(); TEMASOFT.run(uipApply); } };
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
-  const tf = /** @type {HTMLIFrameElement | null} */ (document.getElementById("tframe"));                // the Teoria (iframe) follows the theme too (it reads it itself when it loads; this is for a change while it is open)
-  if (tf && tf.contentWindow) { try { tf.contentWindow.postMessage({ type: NOMI.KEY("theme"), theme: UIP.theme }, location.origin); } catch (_) { /* not loaded yet */ } }
   if (typeof setPal === "function") setPal(UIP.pal);
   if (typeof paintFiles === "function" && typeof E !== "undefined") {
     paintFiles();
@@ -110,32 +106,25 @@ function uipReset(d) {
   if (cen) cen.onclick = () => centroidAll(cen, d.querySelector("#uip-cen-x"), d.querySelector("#uip-cen-st"), () => {});
 }
 
-// Administrator mode (5 clicks on the logo): the exit row shows only while it is on; the flag is shared with the Teoria
-function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } }
+// Administrator mode (5 clicks on the logo): the exit row shows only while it is on; 
+function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1"; } catch (_) { return false; } }
 
-// Profile of the program, never a setting: «ricerca» (the assistant can be turned on) when the administrator mode is on or in the desktop app, else «corso» (the assistant does not exist: no element, nothing downloaded).
+// Profile of the program, never a setting: «ricerca» (the assistant can be turned on) when the administrator mode is on or in the desktop app; else «demo» while UIP_DEMO is true (only the
+// Flow page offers «Try the assistant» of the public demo, fixed settings in llm/llm-demo.js; Theory, Practice and Data have no element of it), else «corso» (no element, nothing downloaded).
 // The old explicit choice `mzlab.profilo` ("corso"/"ricerca", a plain string) is dropped; the same key now also holds the JSON state of the time profile (profilo.js), which is left alone.
-function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "ricerca" : "corso"; }
+const UIP_DEMO = true;      // D2: false switches the public demo of the assistant off for every visitor
+function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "ricerca" : UIP_DEMO ? "demo" : "corso"; }
 try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v === "corso" || v === "ricerca") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
 
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
 function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
 
-// --- settings panel (same look as the one of the Teoria: shared pieces in teoria/impostazioni-comp.js)
+// --- settings panel (shared pieces in impostazioni-comp.js)
 const UIP_GROUP_KEY = id => NOMI.KEY(id === "uip-a11y" ? "set.a11y" : "set." + id);      // the group «Accessibility» keeps the key it always had
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
-  uipDo(() => { Object.assign(UIP, { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
+  uipDo(() => { Object.assign(UIP, { theme: "light", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
   uipSave(); uipApply();
-}
-/** Privacy group body: export and import buttons, hidden file input, preview box and statuses (logic in esporta-dati.js and importa-dati.js). */
-/** @param {(k: string, p?: any) => string} T @param {(s: string) => string} esc */
-function uipPrivHtml(T, esc) { return `<div id="uip-priv" class="imp-fld"><button id="uip-export" type="button" title="${esc(T("export.title"))}">${T("export.btn")}</button></div><div class="hint">${T("export.hint")}</div><div id="uip-export-st" class="hint" role="status" aria-live="polite"></div>` + `<div class="imp-fld"><button id="uip-import" type="button" title="${esc(T("import.title"))}">${T("import.btn")}</button><input type="file" id="uip-import-file" accept=".zip,application/zip" hidden></div><div id="uip-import-box" role="group" aria-label="${esc(T("import.preview"))}" hidden></div><div id="uip-import-st" class="hint" role="status" aria-live="polite"></div>`; }
-/** @param {HTMLElement} d @param {(sel: string, ev: string, fn: (e: any) => void) => void} on */
-function uipPriv(d, on) {
-  on("#uip-export", "click", () => { import("./esporta-dati.js").then(m => m.start(d)).catch(() => { const st = d.querySelector("#uip-export-st"); if (st) st.textContent = I18N.t("export.err"); }); });
-  on("#uip-import", "click", () => { const f = /** @type {HTMLInputElement | null} */ (d.querySelector("#uip-import-file")); if (f) { f.value = ""; f.click(); } });
-  on("#uip-import-file", "change", e => { const f = e.target.files && e.target.files[0]; if (f) import("./importa-dati.js").then(m => m.begin(d, f)).catch(() => { const st = d.querySelector("#uip-import-st"); if (st) st.textContent = I18N.t("import.bad"); }); });
 }
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
@@ -153,31 +142,26 @@ function uipOpen(btn) {
     + C.sw(T("settings.hc.label"), "", 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion");
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
     ? `<div class="imp-fld"><button id="uip-cen" type="button" title="${esc(T("settings.cen.title"))}">${T("settings.cen.btn")}</button><button id="uip-cen-x" type="button" hidden>${T("settings.cen.stop")}</button></div><div class="hint" id="uip-cen-st" role="status" aria-live="polite"></div>` : "";
-  const data = ((!files.length || files.some(f => f.spectrum_mode !== "profile" || (window.HR && HR.isHr(f)))) ? C.sw(T("settings.merge"), "", 'id="uip-merge"', UIP.merge, "cont") : "")
-    + (hr ? fld(`<span class="ic">${C.GICON.lib}</span>${T("settings.libs.label")}`, T("settings.libs.title"), `<button id="uip-lib" type="button">${T("settings.libs.button")}</button>`)
-      + fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`)
-      + fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`) : "") + cen;
+  const dataItems = [(!files.length || files.some(f => f.spectrum_mode !== "profile" || (window.HR && HR.isHr(f)))) ? C.sw(T("settings.merge"), "", 'id="uip-merge"', UIP.merge, "cont") : "",
+    ...(hr ? [fld(`<span class="ic">${C.GICON.lib}</span>${T("settings.libs.label")}`, T("settings.libs.title"), `<button id="uip-lib" type="button">${T("settings.libs.button")}</button>`),
+      fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`),
+      fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`)] : []), cen];
   const tourOn = !(window.BANCO && BANCO.on());
   const prof = uipProfile();
-  const app = (window.DESKUPD ? DESKUPD.row() : "") + (window.DESKDEF ? DESKDEF.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
-    + (tourOn ? `<div class="imp-fld"><button id="uip-tour" type="button"><span class="ic">${C.GICON.play}</span>${T(files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "");
+  const appItems = [window.DESKUPD ? DESKUPD.row() : "", window.DESKDEF ? DESKDEF.row() : "", window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : ""];
+  const tour = tourOn ? `<div class="imp-fld imp-solo"><button id="uip-tour" type="button"><span class="ic">${C.GICON.play}</span>${T(window.MZLAB_LAB ? "tour.impost.fai" : files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "";
+  const flat = (id, icon, title, items) => C.flatOrRow(id, icon, T(title), items);          // a fold or a title only for a real group of several controls
   const grp = (id, icon, title, body, dflt) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}"></button></div>`
-    + C.section(T("settings.language.label"), C.opts("seg2", C.radios("uip-lang", [["it", "Italiano", T("settings.language.title"), C.GICON.lang], ["en", "English", T("settings.language.title"), C.GICON.lang]], I18N.lang, "seg")))
-    + grp("uip-g-look", "look", "settings.g.look", look, true) + grp("uip-a11y", "read", "settings.g.read", read, false) + grp("uip-g-data", "data", "settings.g.data", data, false)
-    + grp("uip-g-app", "app", "settings.g.app", app, false)
-    + grp("uip-g-priv", "data", "settings.g.priv", uipPrivHtml(T, esc), false)
-    + grp("uip-g-bug", "bug", "settings.g.bug", '<div id="uip-bug"></div>', false)
+    + C.langRow(T("settings.language.label"), T("settings.language.title"), I18N.lang)
+    + C.flat("uip-g-look", "look", T("settings.g.look"), look) + C.flat("uip-a11y", "read", T("settings.g.read"), read)
+    + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
+    + tour + C.bugRow(T("settings.g.bug"))
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false) : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false)
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
-  const bugGroup = /** @type {HTMLDetailsElement | null} */ (d.querySelector("#uip-g-bug")), bugBox = /** @type {HTMLElement | null} */ (d.querySelector("#uip-bug"));
-  if (bugGroup && bugBox) {            // the report form is fetched when the group is first opened
-    let bugDone = false;
-    const bugMount = () => { if (bugDone || !bugGroup.open) return; bugDone = true; import("./bug-report.js").then(m => m.mount(bugBox)).catch(() => { bugDone = false; }); };
-    bugGroup.addEventListener("toggle", bugMount); bugMount();
-  }
+  C.bugBind(d, box => import("./bug-report.js").then(m => m.mount(box)));      // the report form is fetched the first time the button opens it
   if (window.DESKUPD) DESKUPD.bind(d);
   if (window.DESKDEF) DESKDEF.bind(d);
   if (mem) mem.bind(d);
@@ -205,11 +189,10 @@ function uipOpen(btn) {
   });
   on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
   on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (window.XICBTN) XICBTN.setLens(UIP.xicLens); });
-  uipPriv(d, on);
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
     if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }
-    const go = () => { if (!window.TOUR) return; if (files.length) TOUR.inizia(1, 0); else TOUR.caricaEsempio(); };
+    const go = () => { if (!window.TOUR) return; if (files.length || window.MZLAB_LAB) TOUR.inizia(1, 0); else TOUR.caricaEsempio(); };
     if (typeof S !== "undefined" && S.view !== "data" && typeof setView === "function") { setView("data"); setTimeout(go, 150); } else go();
   });
   uipReset(d);
@@ -238,10 +221,9 @@ uipLoad();
 (() => {
   const nav = Q("#nav"), b = document.getElementById("np-set") || document.createElement("button"); b.id = "np-set"; b.className = "ib gear"; b.title = I18N.t("settings.gear.title"); b.setAttribute("aria-label", I18N.t("settings.title"));
   b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
-  if (!b.isConnected) { const hq = Q("header .hq"); if (hq) hq.insertAdjacentElement("beforebegin", b); else nav.insertAdjacentElement("afterend", b); } b.onclick = e => {      // in the Teoria the gear opens the settings of the Teoria, elsewhere the ones of the program
+  if (!b.isConnected) { const hq = Q("header .hq"); if (hq) hq.insertAdjacentElement("beforebegin", b); else nav.insertAdjacentElement("afterend", b); } b.onclick = e => {
     e.stopPropagation();
-    const tw = /** @type {any} */ (document.documentElement.classList.contains("in-theory") && /** @type {HTMLIFrameElement} */ (document.getElementById("tframe")).contentWindow);
-    if (tw && tw.TEORIA && tw.TEORIA.settings) tw.TEORIA.settings(); else uipOpen(b);
+    uipOpen(b);
   };
   uipApply();
 })();

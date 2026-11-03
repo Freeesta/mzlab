@@ -88,3 +88,18 @@ pub(crate) fn report(items: &[Item]) -> String {
     o.raw("\n]\n");
     o.0
 }
+
+/// The `--set` pairs of a compression kind (the three choices of the download dialog): standard = zlib, smallest = zlib and MS-Numpress, none = raw arrays.
+pub(crate) fn compression_sets(kind: &str) -> Result<[String; 2], String> {
+    let o = mzlab_core::mzmlwrite::opzioni_compressione(kind)
+        .ok_or_else(|| format!("--compression {kind}: expected standard, smallest or none"))?;
+    let (z, n) = (o.livello, o.numpress);
+    Ok([format!("conv.zlib_level={z}"), format!("conv.numpress={n}")])
+}
+
+/// The name of a gzip-compressed mzML without the `.gz` (`x.mzML.gz` -> `x.mzML`), any other name as it is.
+pub(crate) fn sans_gz(name: &str) -> &str {
+    name.strip_suffix(".gz")
+        .filter(|n| n.to_lowercase().ends_with(".mzml"))
+        .unwrap_or(name)
+}

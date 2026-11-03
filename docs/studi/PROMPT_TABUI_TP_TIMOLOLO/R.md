@@ -19,7 +19,7 @@ Per ogni riga della feature table della Pipeline che passa i cancelli di `tp/1`,
 7. `filtri.rs`: registro `filtri/1` (§6 dello studio) con F1-F5; F1-F4 si leggono dal `.mzfeat` e da `tp/1`, non si ricalcolano.
 8. `store.rs`: meta `interp` + un JSON compresso per riga (stessa via di `write_table_tp`); tabella senza blocco = come oggi.
 9. `.wasm` `interp`: feature di `crates/mzlab-feat-wasm`, cartella `wasm-feat/interp/`, voce nel manifest, riga in `tools/build_feat_wasm.sh` col tetto comune 512 000 B; funzioni `interp_build(...)` (tutta la tabella, scrive il blocco) e `table_interp(id)`; worker `TP_Mine/files/feat-worker.js`, `feat-desktop-pool.js`, `crates/mzlab-desktop/src/feat.rs`. Si carica solo con SMILES del genitore e modalità amministratore. **Misura il peso alla prima build**: oltre 470 000 B l'albero lo costruisce il `.wasm` `finder_msn` (esporta `msnlib`) e `interp` legge solo la libreria (studio §11, cancello); scrivi la misura in `docs/agenti/misure.md`.
-10. Schemi `docs/schemi/interp-1.json` e `filtri-1.json`; file d'area nuovo `docs/agenti/interp.md` (una riga per funzione) e una riga nella tabella §5 di AGENTS.md («interpretazione per riga dei TP: `interp/1`, `filtri/1`»).
+10. Schemi `docs/schemi/interp-1.json` e `filtri-1.json`; file d'area nuovo `docs/agenti/interp.md` (una riga per funzione) e una riga nella tabella §5 di CLAUDE.md («interpretazione per riga dei TP: `interp/1`, `filtri/1`»).
 
 ## TT-R2 (seconda PR): la posizione
 1. `crates/mzlab-feat/src/chem/posizioni.rs`: trasformazione `-2H` (legame C-C sp3 con un H su ciascun lato; classi per simmetria come le altre) e un accesso alle maschere dei siti.

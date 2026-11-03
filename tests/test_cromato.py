@@ -35,3 +35,41 @@ def test_noise_ignores_drift():
       const xs=[],ys=[];for(let t=0;t<=2;t+=0.01){xs.push(t);ys.push(100+30*t+(rnd()-0.5)*20*Math.sqrt(12)/Math.sqrt(12)*2)}
       console.log(JSON.stringify({sd:c.noiseSD(xs,ys,0,2),few:c.noiseSD([1,2],[1,2],0,3)}))""")
     assert 9.5 < r["sd"] < 13.5 and r["few"] is None              # uniform noise of width 20 -> SD = 20/sqrt(12) = 5.8 x ... drift removed
+
+
+def test_chromPeak_uses_the_given_baseline():
+    r = run("""const xs=[],ys=[];for(let t=0;t<=10;t+=0.005){xs.push(t);ys.push(1000*Math.exp(-0.5*((t-5)/0.1)**2)+50+20*t)}
+      console.log(JSON.stringify({auto:c.chromPeak(xs,ys,4,6).height,given:c.chromPeak(xs,ys,4,6,[4,50+20*4,6,50+20*6]).height}))""")
+    assert abs(r["given"] - 1000) < 3 and abs(r["auto"] - 1000) < 12            # the explicit line is the true baseline
+
+
+def test_signal_to_noise_of_a_known_peak():
+    """Height 1000, white noise SD 5 (fixed seed) on a sloped baseline: S/N = 1000 / 5 = 200 within 5 %."""
+    r = run("""let s=7;const rnd=()=>{s=(s*1103515245+12345)%2147483648;return s/2147483648};
+      const g=()=>{let u=0;for(let i=0;i<12;i++)u+=rnd();return u-6};          // ~N(0,1)
+      const xs=[],ys=[];for(let t=0;t<=10;t+=0.01){xs.push(t);ys.push(1000*Math.exp(-0.5*((t-5)/0.15)**2)+100+10*t+5*g())}
+      const pk=c.chromPeak(xs,ys,4,6),sd=c.noiseSD(xs,ys,0.5,3);
+      console.log(JSON.stringify({sn:pk.height/sd,sd}))""")
+    assert abs(r["sn"] - 200) / 200 < 0.05 and abs(r["sd"] - 5) < 0.4, r
+
+
+PICCHI = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "picchi.js"
+
+
+def run_integ(code):
+    """integ() lives in picchi.js, a classic script of the page: cut its text out and run it with nearIdx of numeri.js."""
+    src = PICCHI.read_text(encoding="utf-8")
+    fn = src[src.index("function integ("):src.index("// Parameters of the automatic integration")]
+    num = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "numeri.js"
+    out = subprocess.run(["node", "-e", f"const {{nearIdx}}=require({str(num)!r});{fn}\n{code}"], check=True, capture_output=True, encoding="utf-8").stdout
+    return json.loads(out)
+
+
+def test_integ_area_of_a_gaussian_is_known():
+    """height 1000 counts, sigma 0.1 min = 6 s -> area = H * sigma * sqrt(2 pi) = 15039.8 counts*s; a flat or a sloped baseline is taken away"""
+    r = run_integ("""const xs=[],flat=[],slope=[];for(let t=0;t<=10;t+=0.005){xs.push(t);const g=1000*Math.exp(-0.5*((t-5)/0.1)**2);flat.push(g+50);slope.push(g+50+20*t)}
+      console.log(JSON.stringify({flat:integ({x:xs,y:flat},4,6),slope:integ({x:xs,y:slope},4,6)}))""")
+    want = 1000 * 6 * (2 * 3.141592653589793) ** 0.5
+    for k in ("flat", "slope"):
+        assert abs(r[k]["area"] - want) / want < 0.002, (k, r[k], want)
+        assert abs(r[k]["height"] - 1000) < 12 and abs(r[k]["rt"] - 5) < 0.006, (k, r[k])

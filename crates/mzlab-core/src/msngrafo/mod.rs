@@ -1,4 +1,4 @@
-//! The fragmentation graph of an MSn infusion (`msngrafo/1`, `docs/agenti/msn-grafo.md`): the nodes of the precursor tree (`msnalbero`) and
+//! The fragmentation graph of an MSn infusion (`msngrafo/2`, `docs/agenti/msn-grafo.md`): the nodes of the precursor tree (`msnalbero`) and
 //! their consensus spectra become ONE graph of ions, a node per ion seen at any level, energy or path, an arc per precursor → fragment
 //! observed in the spectrum of that precursor, with the neutral loss. A DAG ordered by m/z, never a verdict: with the formula of the ion
 //! of the root given by the user, each fragment gets the sub-formulas within the window of ppm (`formule`), and the others leave the graph.
@@ -55,7 +55,29 @@ pub use strutture::{
 pub use tabelle::{library_text, table_text};
 pub use vista::completa;
 
+use crate::error::{Error, Result};
+use crate::json::Value;
 use crate::msnalbero::Albero;
+
+/// The newest `msngrafo/N` this engine reads; `/1` (Italian `opzioni` keys) is read too.
+pub const VERSIONE_MAX: u32 = 2;
+
+/// The version of the graph `v`: 1 or 2. A newer one is `error.newerFormat {kind: msngrafo, version}` (opened by a newer program, never rewritten),
+/// anything else `err.msngrafo.badGraph`.
+pub fn versione(v: &Value) -> Result<u32> {
+    let f = v.get("formato").and_then(Value::str).unwrap_or_default();
+    let n: u32 = f
+        .strip_prefix("msngrafo/")
+        .and_then(|n| n.parse().ok())
+        .filter(|n| *n >= 1)
+        .ok_or_else(|| Error::new("err.msngrafo.badGraph"))?;
+    if n > VERSIONE_MAX {
+        return Err(Error::new("error.newerFormat")
+            .with("kind", "msngrafo")
+            .with("version", n));
+    }
+    Ok(n)
+}
 
 /// The options of the graph; every one is written in the JSON so that a graph can be rebuilt.
 #[derive(Debug, Clone, PartialEq)]

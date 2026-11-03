@@ -6,7 +6,7 @@ const path = require("path");
 
 const pkg = path.resolve(process.argv[2]);
 const casesPath = process.argv[3];
-const { flow_sched } = require(path.join(pkg, "mzlab_wasm.js"));
+const { flow_sched } = require(path.join(pkg, "mzlab_rotte_wasm.js"));
 
 const jid = (s) => {
   const i = s.indexOf("|");

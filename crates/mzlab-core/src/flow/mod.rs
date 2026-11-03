@@ -10,6 +10,7 @@ mod corsa_reg;
 mod line;
 #[cfg(test)]
 mod line_tests;
+pub mod migrate;
 mod order;
 mod parse;
 mod prov;
@@ -23,6 +24,7 @@ pub use check::{check, conversion_path, Platform, Problem};
 pub use command::{command, route as command_route};
 pub use corsa::{build as corsa_build, Corsa, Uscita};
 pub use line::{apply_set, apply_sets, line, route as line_route, sets_of};
+pub use migrate::{migrate, migrate_name, Migrated, MIGRATIONS};
 pub use order::{levels, plan_order};
 pub use parse::parse;
 pub use prov::{
@@ -99,10 +101,10 @@ impl Instance {
         let mut v: Vec<&str> = Vec::new();
         for (_, refs) in &self.ins {
             for r in refs {
-                if let Ref::Out { instance, .. } = r {
-                    if !v.contains(&instance.as_str()) {
-                        v.push(instance);
-                    }
+                if let Ref::Out { instance, .. } = r
+                    && !v.contains(&instance.as_str())
+                {
+                    v.push(instance);
                 }
             }
         }

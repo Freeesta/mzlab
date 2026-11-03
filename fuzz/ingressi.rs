@@ -105,10 +105,10 @@ pub fn wiff(data: &[u8]) {
             let _ = l.intestazione(0, j);
         }
     }
-    if let Ok(cr) = l.cromatogrammi(0) {
-        if let Some(v) = cr.first() {
-            let _ = l.cromatogramma(0, &v.id);
-        }
+    if let Ok(cr) = l.cromatogrammi(0)
+        && let Some(v) = cr.first()
+    {
+        let _ = l.cromatogramma(0, &v.id);
     }
 }
 

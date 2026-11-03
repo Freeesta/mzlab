@@ -14,19 +14,25 @@ static PICCO: AtomicUsize = AtomicUsize::new(0);
 // SAFETY: forwards every call to the system allocator and only counts the bytes.
 unsafe impl GlobalAlloc for Conta {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-        PICCO.fetch_max(v, Ordering::Relaxed);
-        System.alloc(l)
+        unsafe {
+            let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
+            PICCO.fetch_max(v, Ordering::Relaxed);
+            System.alloc(l)
+        }
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-        System.dealloc(p, l)
+        unsafe {
+            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            System.dealloc(p, l)
+        }
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
-        let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
-        VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-        PICCO.fetch_max(v, Ordering::Relaxed);
-        System.realloc(p, l, n)
+        unsafe {
+            let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
+            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            PICCO.fetch_max(v, Ordering::Relaxed);
+            System.realloc(p, l, n)
+        }
     }
 }
 #[global_allocator]
@@ -93,7 +99,13 @@ fn main() {
     let _ = picco();
     let p = upload::prepare(&mut File::open(path).expect("open"), size, "x.mzML").expect("prepare");
     let rows = p.table.level.len();
-    println!("prepare   heap peak {:>7.1} MB, rss peak {:>7.1} MB | {rows} scans, rows JSON {:.1} MB ({:.0} B per scan)", picco(), rss_max(), p.table.scans_json.len() as f64 / 1048576.0, p.table.scans_json.len() as f64 / rows.max(1) as f64);
+    println!(
+        "prepare   heap peak {:>7.1} MB, rss peak {:>7.1} MB | {rows} scans, rows JSON {:.1} MB ({:.0} B per scan)",
+        picco(),
+        rss_max(),
+        p.table.scans_json.len() as f64 / 1048576.0,
+        p.table.scans_json.len() as f64 / rows.max(1) as f64
+    );
     let (idx, spool) = (format!("{path}.mzidx"), format!("{path}.spool"));
     let mut sp = OpenOptions::new()
         .read(true)
@@ -116,7 +128,14 @@ fn main() {
     )
     .expect("index");
     let sp_mb = std::fs::metadata(&spool).map(|m| m.len()).unwrap_or(0) as f64 / 1048576.0;
-    println!("mzidx     heap peak {:>7.1} MB, rss peak {:>7.1} MB | {} passes, mzidx {:.1} MB, scratch file {:.1} MB", picco(), rss_max(), st.passes, st.bytes as f64 / 1048576.0, sp_mb);
+    println!(
+        "mzidx     heap peak {:>7.1} MB, rss peak {:>7.1} MB | {} passes, mzidx {:.1} MB, scratch file {:.1} MB",
+        picco(),
+        rss_max(),
+        st.passes,
+        st.bytes as f64 / 1048576.0,
+        sp_mb
+    );
     if std::env::var("MZ_NULL").is_err() {
         println!("mzidx     sha256 {}", sha256_file(&idx));
     }

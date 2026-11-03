@@ -1,6 +1,6 @@
 """Assistant panel in Flow (docs/agenti/llm.md, «Pannello nel Flow»): recordings answer the model, no request leaves the site. L0: the proposed plan of E1 is shown as a difference, «Apply» puts it
 on the canvas as one entry of Undo (Ctrl+Z removes it); L1: every edit asks («Allow»/«Deny», a refusal changes nothing); L2: two steps and a parameter by themselves, a run on the web executor
-(a stub: the plumbing, not the numbers), a read of the result, then every action is undone from the register; «Stop» ends a turn in the middle; the profile «corso» has no button and downloads nothing of llm/.
+(a stub: the plumbing, not the numbers), a read of the result, then every action is undone from the register; «Stop» ends a turn in the middle; the profile «corso» has the Flow but no assistant and downloads nothing of llm/.
 Also axe, targets of 24 px, prefers-reduced-motion and the click budget (MISURA clic_assistente). Run from the repo root: python3 tests_e2e/e2e_llm.py"""
 import json, socket, subprocess, sys, tempfile
 from pathlib import Path
@@ -64,7 +64,7 @@ try:
             pg.add_init_script("try{%slocalStorage.setItem('mzlab.lang','en');localStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consenso',%s);}catch(_){}"
                                % ("localStorage.setItem('mzlab.admin','1');" if profile == "ricerca" else "", json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
-            if profile == "corso": return pg      # no administrator mode: no Flow at all, so no assistant either
+            if profile == "corso": return pg      # no administrator mode: the Flow, but no assistant
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
             if profile == "ricerca" and on:
                 pg.wait_for_selector("#flx-assistant", timeout=30000)
@@ -83,10 +83,12 @@ try:
         def corso():
             pg = fresh(profile="corso"); reqs.clear()
             attendi(pg, "document.readyState === 'complete' && !!document.querySelector('#nav')")
-            assert pg.locator(TAB).count() == 0 and pg.locator("#flx-assistant").count() == 0 and pg.locator("#flx-llm").count() == 0
+            # the Flow tab is open to everyone: the profile corso gets the Flow, but nothing of the assistant
+            pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000); pg.evaluate("window.FLOW.whenLate")   # the lazy parts of the Flow have loaded
+            assert pg.locator("#flx-assistant").count() == 0 and pg.locator("#flx-llm").count() == 0
             assert not [r for r in reqs if "/llm/" in r or "flow-llm" in r], "nothing of the assistant is downloaded with the profile corso"
             pg.context.close()
-        step("profile corso: no button, no file of the assistant", corso)
+        step("profile corso: the Flow without the assistant, no file of llm/", corso)
 
         def l0():
             pg = fresh("L0", recording=E1); before = nsteps(pg)

@@ -3,7 +3,7 @@
 
 Time to open the files (upload + first TIC drawn), time for the TIC and five XIC of every file (what the page asks while a student
 works) and the resident memory of the whole browser (Linux: sum of /proc RSS of the Chromium processes). It does not interpret the
-numbers: AGENTS.md decides what they mean. Needs the site (python3 tools/build_site.py) and site/static/wasm (see .github/workflows/pages.yml).
+numbers: CLAUDE.md decides what they mean. Needs the site (python3 tools/build_site.py) and site/static/wasm (see .github/workflows/pages.yml).
 Usage: python3 tools/bench.py [--files N] [--json]
 --librerie: the spectral libraries (docs/agenti/librerie.md): synthetic libraries of 1e5 and 1e6 spectra (and the MassBank of the data repository when it is found
 by tools/dati_percorsi.py), imported and searched through LIB in Chromium with the old JavaScript path (?libjs=1, only up to 1e5) and the WebAssembly engine

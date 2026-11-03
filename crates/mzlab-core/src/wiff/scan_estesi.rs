@@ -47,7 +47,7 @@ pub fn read_mrm_cols<R: ReadAt>(
                 pos = pos.saturating_add(count((-x).floor()));
             } else if x.is_finite() {
                 points.push((pos, x));
-                pos += 1;
+                pos = pos.saturating_add(1);
             } else {
                 return Err(bad("sparse MRM block"));
             }
@@ -74,4 +74,21 @@ pub fn other_version<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) 
     let mut b = [0u8; 8];
     scan.read_at(at, &mut b)?;
     Ok(b[..4] == MARKER && u32::from_le_bytes([b[4], b[5], b[6], b[7]]) != 2)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::read_mrm_cols;
+
+    fn block(v: &[f32]) -> Vec<u8> {
+        v.iter().flat_map(|x| x.to_le_bytes()).collect()
+    }
+
+    // a skip count that saturates the position, followed by a point, is an error and not an overflow
+    #[test]
+    fn sparse_block_with_a_saturating_skip_is_an_error() {
+        let mut b = block(&[-4.0, -1.0e30, 5.0, 6.0]);
+        let n = b.len();
+        assert!(read_mrm_cols(&mut b, n as u64, 0, n).is_err());
+    }
 }

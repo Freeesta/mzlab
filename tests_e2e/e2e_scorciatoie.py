@@ -1,5 +1,5 @@
 """Shortcuts of the registry azioni/1: one keydown runs the field `scorciatoia` of the actions. Letters only with the focus on a chart and never in a text field;
-Ctrl/⌘ and Alt+1-3 anywhere; the panel «Shortcuts» (key ?) lists the registry (axe clean); the keys of the registry in the palette."""
+Ctrl/⌘ and Alt+1-2 anywhere; the panel «Shortcuts» (key ?) lists the registry (axe clean); the keys of the registry in the palette."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -28,7 +28,7 @@ try:
             got = pg.evaluate("[...document.querySelectorAll('#scorc li')].map(li => li.querySelector('kbd').textContent)")
             want = pg.evaluate("AZIONI.voci.filter(a => a.scorciatoia).map(a => AZIONI.testo(a.scorciatoia))")
             assert got and set(got) <= set(want), (got, want)
-            for k in ("Alt+1", "Alt+2", "Alt+3", "Ctrl+O", "Ctrl+E", "?") if pg.evaluate("!/Mac/.test(navigator.platform)") else ("⌥1", "⌘O", "⌘E", "?"):
+            for k in ("Alt+1", "Alt+2", "Ctrl+O", "Ctrl+E", "?") if pg.evaluate("!/Mac/.test(navigator.platform)") else ("⌥1", "⌘O", "⌘E", "?"):
                 assert k in got, (k, got)
             assert pg.evaluate("document.activeElement.closest('#scorc') !== null"), "the focus is inside the panel"
             if AXE: v = pg.evaluate(RUN, "#scorc"); assert not v, v
@@ -92,7 +92,7 @@ try:
             pg.evaluate("document.activeElement && document.activeElement.blur()")
             pg.keyboard.press("Alt+Digit2"); attendi(pg, "S.view === 'draw'")
             pg.keyboard.press("Alt+Digit1"); attendi(pg, "S.view === 'data'")
-        step("Alt+1-3 change view (by code)", views)
+        step("Alt+1-2 change view (by code)", views)
         def open_files():
             assert not pg.evaluate("!!document.querySelector('dialog[open]')"), "a dialog is still open"
             for tries in range(4):      # the Draw editor (Ketcher iframe) of the previous step can take the focus when it finishes loading, late on a slow runner: the key then goes to the iframe; blur again and retry

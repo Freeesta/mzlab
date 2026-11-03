@@ -1,18 +1,18 @@
-//! `mzlab-cli peaks-auto TRACE.csv`: every peak of a high-resolution trace with its baseline, from `mzlab_core::peakq_auto::auto_integrate`, the
-//! function behind the one-click integration of the page (`QUALITA.autoIntegrate`). The `--set` names are those of the page settings (`PK`).
+//! `mzlab-cli peak-auto TRACE.csv`: every peak of a high-resolution trace with its baseline, from `mzlab_core::peakq_auto::auto_integrate`, the
+//! function behind the one-click integration of the page (`QUALITA.autoIntegrate`). The `--set` names are the snake_case of the page settings (`PK`).
 
 use mzlab_core::peakq_auto::{auto_integrate, AutoParams};
 
 use crate::peaks_edges_cmd::trace;
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peaks-auto: every peak of a high-resolution trace with its baseline, as JSON.
+pub const HELP: &str = "mzlab-cli peak-auto: every peak of a high-resolution trace with its baseline, as JSON.
 
-usage: mzlab-cli peaks-auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
+usage: mzlab-cli peak-auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
-  --set        the page dialog: hrSmooth (points, odd), hrSn; engine only: hrProm (% of the tallest), hrScans, hrHalf (points, 0 = auto), hrSlope (%)
+  --set        the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%)
   output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":BASELINE,\"b1\":BASELINE,\"area\":COUNTS_MIN}...]}";
 
 fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
@@ -21,12 +21,12 @@ fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
         return Err(format!("{name} must not be negative"));
     }
     match name {
-        "hrSmooth" => p.pick.smooth = n as usize,
-        "hrSn" => p.pick.snr = n,
-        "hrProm" => p.pick.rel_prominence = n / 100.0,
-        "hrScans" => p.pick.min_scans = n as usize,
-        "hrHalf" => p.half_window = n as usize,
-        "hrSlope" => p.slope = n / 100.0,
+        "hr_smooth" => p.pick.smooth = n as usize,
+        "hr_sn" => p.pick.snr = n,
+        "hr_prom" => p.pick.rel_prominence = n / 100.0,
+        "hr_scans" => p.pick.min_scans = n as usize,
+        "hr_half" => p.half_window = n as usize,
+        "hr_slope" => p.slope = n / 100.0,
         _ => return Err(format!("unknown parameter {name}")),
     }
     Ok(())
@@ -63,7 +63,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(()) => {}
     }
     let Some(src) = src else {
-        return Outcome::fail("peaks-auto needs a trace (see --help)");
+        return Outcome::fail("peak-auto needs a trace (see --help)");
     };
     match trace(&src) {
         Err(e) => Outcome::fail(&e),

@@ -16,7 +16,7 @@ onmessage = async ev => {
   // no engine here: the page takes the fingerprints later
   if (broken) { if (m.op === "upd") postMessage({ op: "ack", id: m.id }); else if (m.op === "end") postMessage({ op: "fine", id: m.id, out: null }); return; }
   try {
-    if (m.op === "new") passate.set(m.id, new Passata(m.size));
+    if (m.op === "new") passate.set(m.id, new Passata(m.size, m.noSha1));
     else if (m.op === "upd") { passate.get(m.id)?.aggiorna(m.b); postMessage({ op: "ack", id: m.id }); }
     else if (m.op === "end") {
       const p = passate.get(m.id); passate.delete(m.id);

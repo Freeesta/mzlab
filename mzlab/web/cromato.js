@@ -15,12 +15,15 @@ function cpCross(xs, c, ap, i0, i1, level, dir) {
   return null;
 }
 // peak between the edges a and b (min): height above the baseline, apex time, width at half height (min), plates N = 5.54 (tR / w1/2)^2, USP tailing at 5% of the height
-function chromPeak(xs, ys, a, b) {
+// base = [t0, y0, t1, y1] (the stored baseline of an automatic integration) replaces the line through the edges, as in integ()
+function chromPeak(xs, ys, a, b, base = null) {
   const i0 = cpNear(xs, Math.min(a, b)), i1 = cpNear(xs, Math.max(a, b));
   if (i1 - i0 < 2) return null;
   const e3 = i => { let t = 0, n = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; n++; } return t / n; };
-  const ya = e3(i0), yb = e3(i1), base = x => ya + (yb - ya) * (x - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
-  const c = ys.map((v, j) => v - base(xs[j]));
+  const ya = base ? base[1] + (base[3] - base[1]) * (xs[i0] - base[0]) / ((base[2] - base[0]) || 1) : e3(i0),
+    yb = base ? base[1] + (base[3] - base[1]) * (xs[i1] - base[0]) / ((base[2] - base[0]) || 1) : e3(i1),
+    line = x => ya + (yb - ya) * (x - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
+  const c = ys.map((v, j) => v - line(xs[j]));
   let ap = i0; for (let j = i0; j <= i1; j++) if (c[j] > c[ap]) ap = j;
   const h = c[ap]; if (!(h > 0)) return null;
   const at = f => [cpCross(xs, c, ap, i0, i1, h * f, -1), cpCross(xs, c, ap, i0, i1, h * f, 1)];

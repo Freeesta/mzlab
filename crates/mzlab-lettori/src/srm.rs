@@ -122,10 +122,10 @@ impl SrmDaScansioni {
         }
         let righe: Vec<VoceScansione> = self.inner.indice(c)?.to_vec();
         let mut tr = transizioni_dalle_scansioni(&mut *self.inner, c, &righe)?;
-        if tr.iter().any(|t| t.ce.is_none()) {
-            if let Ok(m) = self.inner.metodo(c) {
-                completa_dal_metodo(&m, &mut tr);
-            }
+        if tr.iter().any(|t| t.ce.is_none())
+            && let Ok(m) = self.inner.metodo(c)
+        {
+            completa_dal_metodo(&m, &mut tr);
         }
         Ok(tr.into_iter().enumerate().map(cromatogramma_di).collect())
     }
@@ -225,6 +225,13 @@ impl Lettore for SrmDaScansioni {
     fn campioni(&self) -> &[Campione] {
         self.inner.campioni()
     }
+    fn mancanti(&mut self, c: usize) -> usize {
+        self.inner.mancanti(c)
+    }
+    // The account `conv/1` gives of the mzML is the reader's own: the wrapper adds traces, not gaps.
+    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+        self.inner.non_portati()
+    }
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.inner.indice(c)
     }
@@ -261,6 +268,10 @@ impl Lettore for SrmDaScansioni {
     }
     fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> Result<Option<String>> {
         self.inner.dad_wavelength(c, nm0, nm1)
+    }
+    #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
+    fn dad_dati(&mut self, c: usize) -> Result<Option<mzlab_core::wiff::dad::DadData>> {
+        self.inner.dad_dati(c)
     }
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.inner.metodo(c)

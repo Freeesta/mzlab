@@ -67,7 +67,7 @@ const LISTE_TARGET = (function() {
             <b>Target list:</b>
             <select id="ts-list-sel" style="font-size:12px;padding:2px 4px">
               <option value="psychoactive">Psychoactive substances (645)</option>
-              <option value="keller">Keller 2008 Contaminants</option>
+              <option value="keller">Known contaminants and LC-MS background</option>
               <option value="upload">Upload custom CSV...</option>
             </select>
           </label>

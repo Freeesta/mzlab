@@ -19,33 +19,39 @@ static PICCO: AtomicUsize = AtomicUsize::new(0);
 // SAFETY: every call forwards to `System` with the same layout; the counters are atomics.
 unsafe impl GlobalAlloc for Conta {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        if !ATTIVO.load(Ordering::Relaxed) {
-            return System.alloc(l);
+        unsafe {
+            if !ATTIVO.load(Ordering::Relaxed) {
+                return System.alloc(l);
+            }
+            ALLOC.fetch_add(1, Ordering::Relaxed);
+            BYTE.fetch_add(l.size() as u64, Ordering::Relaxed);
+            let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
+            PICCO.fetch_max(v, Ordering::Relaxed);
+            System.alloc(l)
         }
-        ALLOC.fetch_add(1, Ordering::Relaxed);
-        BYTE.fetch_add(l.size() as u64, Ordering::Relaxed);
-        let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-        PICCO.fetch_max(v, Ordering::Relaxed);
-        System.alloc(l)
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        if !ATTIVO.load(Ordering::Relaxed) {
-            return System.dealloc(p, l);
+        unsafe {
+            if !ATTIVO.load(Ordering::Relaxed) {
+                return System.dealloc(p, l);
+            }
+            LIBERE.fetch_add(1, Ordering::Relaxed);
+            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            System.dealloc(p, l)
         }
-        LIBERE.fetch_add(1, Ordering::Relaxed);
-        VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-        System.dealloc(p, l)
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
-        if !ATTIVO.load(Ordering::Relaxed) {
-            return System.realloc(p, l, n);
+        unsafe {
+            if !ATTIVO.load(Ordering::Relaxed) {
+                return System.realloc(p, l, n);
+            }
+            ALLOC.fetch_add(1, Ordering::Relaxed);
+            BYTE.fetch_add(n as u64, Ordering::Relaxed);
+            let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
+            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            PICCO.fetch_max(v, Ordering::Relaxed);
+            System.realloc(p, l, n)
         }
-        ALLOC.fetch_add(1, Ordering::Relaxed);
-        BYTE.fetch_add(n as u64, Ordering::Relaxed);
-        let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
-        VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-        PICCO.fetch_max(v, Ordering::Relaxed);
-        System.realloc(p, l, n)
     }
 }
 

@@ -1,7 +1,7 @@
 //! Alignment "per family" on a synthetic series built here (invented ions with an RT drift per file, adducts, isotopologues, in-source fragments,
 //! a fragment shared by two compounds, a family whose base ion is missing in some files): the families end in one row, the shared fragment does not
 //! join two compounds, the table has the same bytes in two runs and matches the frozen answer in `tests/golden/feat/famalign_sintetico.json`
-//! (rewrite it with `MZLAB_GOLDEN_WRITE=1`).
+//! (rewrite it with `MZLAB_UPDATE_GOLDEN=1`).
 
 use std::path::Path;
 
@@ -182,7 +182,10 @@ fn matches_the_frozen_answer() {
         serde_json::json!({"rows": fam.len(), "members": fam.member_mz.len(), "sha256": sha(&fam)});
     let p = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/golden/feat/famalign_sintetico.json");
-    if std::env::var("MZLAB_GOLDEN_WRITE").is_ok() {
+    if std::env::var_os("MZLAB_UPDATE_GOLDEN")
+        .or_else(|| std::env::var_os("MZLAB_GOLDEN_WRITE"))
+        .is_some()
+    {
         std::fs::write(&p, serde_json::to_string_pretty(&now).unwrap() + "\n").unwrap();
     }
     let want: serde_json::Value = serde_json::from_slice(&std::fs::read(&p).unwrap()).unwrap();

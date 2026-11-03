@@ -350,10 +350,11 @@ fn source_scans(hdr: &HashMap<String, String>) -> Vec<(String, i64)> {
         };
         for x in parts[3].split(',') {
             let x = x.trim();
-            if !x.is_empty() && x.chars().all(|c| c.is_ascii_digit()) {
-                if let Ok(n) = x.parse() {
-                    srcs.push((name.clone(), n));
-                }
+            if !x.is_empty()
+                && x.chars().all(|c| c.is_ascii_digit())
+                && let Ok(n) = x.parse()
+            {
+                srcs.push((name.clone(), n));
             }
         }
     }
@@ -417,11 +418,10 @@ pub fn read_mgf_blocks(text: &str, wanted: Option<&[i64]>) -> BTreeMap<i64, MgfB
             if let (Some(a), Some(b)) = (
                 p.first().and_then(|s| s.parse::<f64>().ok()),
                 p.get(1).and_then(|s| s.parse::<f64>().ok()),
-            ) {
-                if p.len() >= 2 {
-                    mzs.push(a);
-                    its.push(b);
-                }
+            ) && p.len() >= 2
+            {
+                mzs.push(a);
+                its.push(b);
             }
         }
     }
@@ -438,10 +438,10 @@ pub fn review_sites(c: &Campaign, matrix: Option<&str>) -> (String, Vec<String>)
             .and_then(|v| v.as_str())
             .map(String::from)
     });
-    if let Some(m) = m {
-        if let Some(sites) = c.matrix_sites(&m) {
-            return (m, sites.to_vec());
-        }
+    if let Some(m) = m
+        && let Some(sites) = c.matrix_sites(&m)
+    {
+        return (m, sites.to_vec());
     }
     (
         "all sites".to_string(),

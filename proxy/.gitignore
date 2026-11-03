@@ -1,0 +1,5 @@
+# built by build.sh at deploy (wrangler [build]) and by the tests: never committed
+wasm/
+allowlist.json
+.wrangler/
+node_modules/

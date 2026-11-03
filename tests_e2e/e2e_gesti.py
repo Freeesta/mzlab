@@ -47,9 +47,9 @@ try:
             pg.keyboard.press("Control+z"); frames(pg, 18); assert z() != zz, "Ctrl/⌘+Z takes it back"
         step("a drag zooms to the box; Esc keeps the zoom, Ctrl/⌘+Z undoes it", esc_keeps_zoom)
         def menu_everywhere():
-            for fx, fy in ((.5, .5), (.5, .97), (.01, .5)):                      # plot, bottom margin, left margin
+            for fx, fy, nmin in ((.5, .5, 5), (.5, .97, 3), (.01, .5, 3)):       # plot, bottom margin, left margin (no point there: only the items that need none)
                 show(); x, y = at(fx, fy); pg.mouse.click(x, y, button="right"); frames(pg, 18)
-                assert pg.evaluate("!document.getElementById('ctx').hidden") and pg.evaluate("document.querySelectorAll('#ctx [role^=menuitem]').length") >= 5, (fx, fy)
+                assert pg.evaluate("!document.getElementById('ctx').hidden") and pg.evaluate("document.querySelectorAll('#ctx [role^=menuitem]').length") >= nmin, (fx, fy)
                 pg.keyboard.press("Escape"); pg.wait_for_function("document.getElementById('ctx').hidden", timeout=4000)
         step("the right-click menu opens on the plot and on the margins", menu_everywhere)
 finally:

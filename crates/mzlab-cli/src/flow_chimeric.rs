@@ -267,7 +267,7 @@ fn deconvolutions(job: &Job, library: Named, text: &str, window: f64) -> Result<
         let list: Vec<String> = cands
             .iter()
             .zip(&d.shares)
-            .filter(|(_, &x)| x >= min_share)
+            .filter(|&(_, &x)| x >= min_share)
             .map(|(s, x)| format!("{}:{x:.3}", s.meta.name.replace([';', ':'], " ")))
             .collect();
         out.push(format!(

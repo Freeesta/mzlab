@@ -1,9 +1,0 @@
-/* Teoria editor: a plain source editor beside the chapter list; colours come from the variables of editor.css. */
-#source, #summary { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
-#source { width: 100%; min-height: 30vh; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 10px; box-sizing: border-box; resize: vertical; }
-#summary { width: 100%; box-sizing: border-box; padding: 6px 8px; margin-bottom: 6px; }
-#preview { width: 100%; height: 70vh; border: 1px solid var(--line, #8886); border-radius: 6px; margin-top: 10px; background: #fff; }
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.err-hint { color: var(--err); }
-.draft { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 6px 0; background: var(--panel); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.draft[hidden] { display: none; }

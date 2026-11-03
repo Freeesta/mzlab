@@ -50,3 +50,16 @@ fn concurrent_builds_of_one_name_write_their_own_part_files() {
     let body = std::fs::read(b.path("same.mzML").unwrap()).unwrap();
     assert!(body == b"aaaaaaaa" || body == b"bbbbbbbb", "{body:?}");
 }
+
+/// An empty scan table decodes with `declared == 0` (the body carries no count), which means no "missing scans" warning.
+#[test]
+fn an_empty_table_decodes_with_no_declared_count() {
+    let mut body = Vec::new();
+    for _ in 0..8 {
+        body.extend_from_slice(&0u32.to_le_bytes());
+    }
+    let t = decode_inputs(&body).unwrap();
+    assert_eq!((t.declared, t.level.len(), t.rt.len()), (0, 0, 0));
+    assert!(!t.hr1);
+    assert!(decode_inputs(&body[..31]).is_err());
+}

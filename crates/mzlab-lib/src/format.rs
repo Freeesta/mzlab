@@ -268,19 +268,3 @@ pub fn shuffle_peaks(mz_delta: &[u32], it: &[u16]) -> Vec<u8> {
     }
     out
 }
-
-/// Inverse of `shuffle_peaks` for `p` peaks (`raw.len() == 6 p` is checked by the caller).
-pub fn unshuffle_peaks(raw: &[u8], p: usize) -> (Vec<u32>, Vec<u16>) {
-    let mut d = Vec::with_capacity(p);
-    let mut it = Vec::with_capacity(p);
-    for i in 0..p {
-        d.push(u32::from_le_bytes([
-            raw[i],
-            raw[p + i],
-            raw[2 * p + i],
-            raw[3 * p + i],
-        ]));
-        it.push(u16::from_le_bytes([raw[4 * p + i], raw[5 * p + i]]));
-    }
-    (d, it)
-}

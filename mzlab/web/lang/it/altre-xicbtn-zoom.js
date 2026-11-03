@@ -1,12 +1,12 @@
 I18N.add("it", {
   "zoom.mz": "m/z {lo}–{hi}",
   "zoom.rt": "RT {lo}–{hi} min",
-  "xicbtn.title": "Estrae subito lo XIC dell'ione scelto nello spettro e lo mostra nel pannello sotto. Senza un ione scelto: clic su un picco (o tasti , e .). Maiusc: aggiunge lo ione come traccia in più",
+  "xicbtn.title": "XIC dell'ione scelto nello spettro, nel pannello sotto (Maiusc: traccia in più)",
   "xicbtn.n": "XIC di {n} file",
   "xicbtn.infusion": "Infusione: nessun cromatogramma",
   "xicbtn.aria": "Estrai lo XIC dell'ione scelto",
   "xicbtn.pend": "Clic su un picco: ne estrae lo XIC · Esc annulla",
-  "xicbtn.ion.title": "Ione e tolleranza dello XIC: clic o Invio per scriverli",
+  "xicbtn.ion.title": "Clic o Invio per cambiare ione e tolleranza",
   "xicbtn.ion.aria": "Ione e tolleranza dello XIC: {ion}. Modifica",
   "xicbtn.picked": "Ione scelto: {ion}",
   "xicbtn.pop.aria": "Ione e tolleranza dello XIC",
@@ -19,8 +19,8 @@ I18N.add("it", {
   "xicbtn.nopeak": "nessun picco qui",
   "xicdlg.title": "Estrai ioni (XIC)",
   "xicdlg.desc": "XIC (Extracted Ion Chromatogram): il cromatogramma dei soli segnali con m/z dentro un intervallo largo 1 Da attorno alla massa nominale dello ione. Si integra da qui. In ogni riga scrivi un m/z oppure una formula neutra (con l'addotto).",
-  "xicdlg.add.title": "Aggiunge un altro ione (fino a 10): tutti finiscono nello stesso grafico",
+  "xicdlg.add.title": "Fino a 10 ioni nello stesso grafico",
   "xicdlg.add": "+ ione",
-  "xicdlg.file.title": "Da quale file estrarre. Vale solo all'inizio: dopo si cambia dal selettore File del grafico",
+  "xicdlg.file.title": "Vale solo all'inizio; poi dal selettore File del grafico",
   "xicdlg.go": "Estrai"
 });

@@ -22,9 +22,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import tema_testa  # noqa: E402
-
 ROOT = Path(__file__).resolve().parent.parent
 # The visible name of the program lives only in mzlab/web/appname.js
 APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
@@ -60,6 +57,15 @@ MANIFEST = {
         {"src": "static/app-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
     ],
 }
+
+
+PROXY_HOST = re.compile(r'^export const PROXY_HOST = "(https://[a-z0-9.-]+(?::[0-9]{1,5})?)?";$', re.M)
+
+
+def check_proxy_host(static: Path) -> None:
+    """The host of the proxy of the public demo (`llm/proxy-host.js`, empty or `https://<host>` without a path): the placeholder of the provider `mzlab-demo` is replaced by Rust at send time."""
+    if not PROXY_HOST.search((static / "llm" / "proxy-host.js").read_text(encoding="utf-8")):
+        raise SystemExit("llm/proxy-host.js: PROXY_HOST must be empty or https://<host> with no path")
 
 
 def python_files(out: Path) -> list[str]:
@@ -177,24 +183,12 @@ def lock_sha256() -> str | None:
 
 def write_build_json(out: Path, version: str, commit: str | None = None) -> None:
     """static/build.json: the exact build of the site, {commit, version, rustc, cargo_lock_sha256, modules}; `modules` maps the path (under static/) of every
-    .wasm to its SHA-256 (the hashes of `file_hashes`), sorted. The .wasm files are built after this script in pages.yml, so
+    .wasm to its SHA-256 (the hashes of `file_hashes`), sorted (the third-party ones under vendor/, e.g. Ketcher's Indigo, are not engine modules). The .wasm files are built after this script in pages.yml, so
     `python3 tools/build_site.py --build-json` writes it again once they are in place."""
     static = out / "static"
-    modules = {rel[len("static/"):]: h["sha256"] for rel, h in file_hashes(out).items() if rel.startswith("static/") and rel.endswith(".wasm")}
+    modules = {rel[len("static/"):]: h["sha256"] for rel, h in file_hashes(out).items() if rel.startswith("static/") and not rel.startswith("static/vendor/") and rel.endswith(".wasm")}
     doc = {"commit": commit or git_commit(), "version": version, "rustc": rustc_version(), "cargo_lock_sha256": lock_sha256(), "modules": dict(sorted(modules.items()))}
     (static / "build.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
-
-
-def theory_entry() -> str:
-    """site/theory/index.html: the short address of the Teoria (theory/, theory/#5 for a chapter). It only forwards to static/teoria/, the real
-    page (no second copy to download, same files in the service-worker cache); teoria.js turns #5, #cap-5 or #09-quadrupolo into the chapter."""
-    return (
-        '<!doctype html>\n<html lang="it"><head><meta charset="utf-8">' + tema_testa.snippet("teoria") + '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
-        f"<title>Teoria · {APP_NAME}</title>\n"
-        '<script>location.replace("../static/teoria/index.html"+location.hash)</script>\n'
-        '<noscript><meta http-equiv="refresh" content="0;url=../static/teoria/index.html"></noscript></head>\n'
-        '<body><p><a href="../static/teoria/index.html">Teoria</a></p></body></html>\n'
-    )
 
 
 def lab_expiry() -> str | None:
@@ -258,9 +252,6 @@ def main() -> None:
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
-    if not lab:                                                  # the lab has no Teoria entry (its address goes back to #/data)
-        (out / "theory").mkdir()
-        (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     # program version and git commit for reproducibility (.mzflow)
     commit = git_commit()
@@ -270,6 +261,9 @@ def main() -> None:
     pack_mzfinder(static)
     # the catalog of assistant tools beside its page (the module `llm/` reads it on first use)
     shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-1.json", static / "llm" / "strumenti-1.json")
+    # the subset of the public demo (provider `mzlab-demo`), the catalog the proxy allows; and the one constant of its host
+    shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-demo-1.json", static / "llm" / "strumenti-demo-1.json")
+    check_proxy_host(static)
     # the prompts and roles of the assistant's subagents: data fetched on request, the same bytes as in the crate
     shutil.copytree(ROOT / "crates" / "mzlab-llm" / "data" / "assist", static / "llm" / "assist")
     bad = python_files(out)

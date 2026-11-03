@@ -1,8 +1,11 @@
 // @ts-strict
 // The clients of the assistant: the worker + iframe `trasporto.html` in the site, the native routes `llm/*` in the desktop app (the key stays in Rust), and the helpers that
-// say which providers a page can reach. Loaded by llm-impostazioni.js only after the user turned the assistant on.
+// say which providers a page can reach. Loaded by llm-impostazioni.js only after the user turned the assistant on, or by llm-agente.js for the public demo.
+// The provider of the demo (`mzlab-demo`) needs no key: every send carries the host of proxy-host.js and the session of the client (one per client, i.e. per opening of the panel).
+import { PROXY_HOST } from "./proxy-host.js";
+import { newSession } from "./llm-demo.js";
 
-/** @typedef {{id: string, base_url: string, local: boolean, site_allowed: boolean, models: {id: string, price?: any}[]}} Provider */
+/** @typedef {{id: string, base_url: string, local: boolean, site_allowed: boolean, auth?: {header: string}, models: {id: string, price?: any, price_per_mtok?: any}[]}} Provider */
 /** @typedef {{ev: string, text?: string, key?: string, params?: Record<string, string>}} LlmEvent */
 
 const RPC = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/rpc" : "mzlab://localhost/rpc";
@@ -17,6 +20,7 @@ export class SiteClient {
     this.n = 0;
     /** @type {HTMLIFrameElement | null} */ this.frame = null;
     this.hasKey = false;
+    /** the session and owner of the demo provider (`x-mzlab-session`, `x-mzlab-owner`) */ this.session = newSession(); this.owner = "";
     /** @type {((has: boolean) => void) | null} */ this.onKey = null;
     this.worker.onmessage = ev => {
       const m = ev.data || {};
@@ -38,15 +42,16 @@ export class SiteClient {
   async request(conv) { return JSON.parse((await this.call("request", { conv: JSON.stringify(conv) })).request); }
   /** @param {object} conv @param {(e: LlmEvent) => void} sink @param {boolean} replay */
   send(conv, sink, replay) {
-    return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, conv: JSON.stringify(conv), transport: replay ? "replay" : "net" }); });
+    return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, conv: JSON.stringify(conv), transport: replay ? "replay" : "net", demo: this.demo() }); });
   }
   /** a request already built by Rust (a call of a subagent): the events come to `sink` like those of `send` @param {string} provider @param {string} model @param {string} request JSON of the request @param {(e: LlmEvent) => void} sink */
   sendRaw(provider, model, request, sink) {
-    return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, provider, model, request, transport: "net" }); });
+    return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, provider, model, request, transport: "net", demo: this.demo() }); });
   }
+  demo() { return { session: this.session, owner: this.owner }; }
   stop() { if (this.lastId) this.worker.postMessage({ op: "abort", id: this.lastId }); }
-  /** whether the provider needs a key that this page does not hold (a model on this computer needs none) @param {string} id */
-  async needsKey(id) { const p = (await this.providers()).find(x => x.id === id); return !!p && !p.local && !this.hasKey; }
+  /** whether the provider needs a key that this page does not hold (a model on this computer and the proxy of the demo need none) @param {string} id */
+  async needsKey(id) { const p = (await this.providers()).find(x => x.id === id); return !!p && !p.local && !!(p.auth ? p.auth.header : true) && !this.hasKey; }
   /** @param {string} text @param {boolean} strict */
   async replay(text, strict) { return (await this.call("replay.load", { text, strict })).turns; }
   /** the iframe with the key field; created only here, after the consent @param {HTMLElement} box @param {Provider} p @param {Record<string, string>} labels @param {string} title */
@@ -67,7 +72,9 @@ export class SiteClient {
 
 /** The client of the desktop app (routes `llm/*` of mzlab://; the key stays in Rust). */
 export class DesktopClient {
-  constructor() { this.kind = "desktop"; this.hasKey = false; /** @type {string} */ this.cur = ""; this.stopped = false; }
+  constructor() { this.kind = "desktop"; this.hasKey = false; /** @type {string} */ this.cur = ""; this.stopped = false; this.session = newSession(); this.owner = ""; }
+  /** what the route `llm/send` needs for the demo provider (ignored by any other) */
+  demo() { return { proxy_host: PROXY_HOST, session: this.session, owner: this.owner }; }
   /** @param {string} op @param {any} [p] @returns {Promise<any>} */
   async post(op, p) {
     const r = await fetch(RPC, { method: "POST", body: JSON.stringify({ op, ...p }) }), text = await r.text();
@@ -80,10 +87,10 @@ export class DesktopClient {
   /** @param {object} conv @param {(e: LlmEvent) => void} sink @param {boolean} replay */
   async send(conv, sink, replay) {
     if (replay) throw { key: "err.llm.replay.format", params: {} };
-    await this.poll(await this.post("llm/send", { conv: JSON.stringify(conv) }), sink);
+    await this.poll(await this.post("llm/send", { conv: JSON.stringify(conv), ...this.demo() }), sink);
   }
   /** a request already built by Rust (a call of a subagent), sent by the app with the key it holds @param {string} provider @param {string} _model @param {string} request JSON @param {(e: LlmEvent) => void} sink */
-  async sendRaw(provider, _model, request, sink) { await this.poll(await this.post("llm/send", { provider, request }), sink); }
+  async sendRaw(provider, _model, request, sink) { await this.poll(await this.post("llm/send", { provider, request, ...this.demo() }), sink); }
   /** @param {{id: string}} job @param {(e: LlmEvent) => void} sink */
   async poll({ id }, sink) {
     this.stopped = false;
@@ -96,7 +103,7 @@ export class DesktopClient {
     }
   }
   /** whether the provider needs a key that the app does not hold, asked to the app each time (the key may have been forgotten since) @param {string} id */
-  async needsKey(id) { const r = await this.post("llm/providers"), p = JSON.parse(r.providers).providers.find((/** @type {Provider} */ x) => x.id === id); return !!p && !p.local && !(r.has_key || {})[id]; }
+  async needsKey(id) { const r = await this.post("llm/providers"), p = JSON.parse(r.providers).providers.find((/** @type {Provider} */ x) => x.id === id); return !!p && !p.local && !!(p.auth ? p.auth.header : true) && !(r.has_key || {})[id]; }
   stop() { this.stopped = true; if (this.cur) this.post("llm/abort", { id: this.cur }).catch(() => {}); }
   /** @param {string} provider @param {string} key */
   async setKey(provider, key) { await this.post("llm/key/set", { provider, key }); this.hasKey = true; }

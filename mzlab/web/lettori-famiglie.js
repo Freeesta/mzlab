@@ -8,7 +8,7 @@
 /** @typedef {{ ext: string[], membri: string[], errori: string[], soloModulo: string[], sonda?: boolean }} Famiglia */
 /** @type {Record<string, Famiglia>} */
 const LETTORI_FAM = {
-  aperti: { ext: [".mzml", ".mzxml"], membri: [], errori: ["err.file.numpress"], soloModulo: [".mzxml"] },
+  aperti: { ext: [".mzml", ".mzml.gz", ".mzxml"], membri: [], errori: ["err.file.numpress"], soloModulo: [".mzml.gz", ".mzxml"] },
   andi: { ext: [".cdf", ".nc"], membri: [], errori: [], soloModulo: [".cdf", ".nc"] },
   thermo: { ext: [".raw"], membri: [], errori: [], soloModulo: [] },
   // bruker before agilent: both are `.d` folders and `famigliaDi` takes the first family that matches, so the members `analysis.*` decide, never the extension

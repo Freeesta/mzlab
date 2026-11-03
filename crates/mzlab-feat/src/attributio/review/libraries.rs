@@ -312,10 +312,10 @@ impl LibraryIndex {
                     continue;
                 };
                 let r = &f.records[row];
-                if let (Some(w), Some(g)) = (want, adduct_key(&r.adduct)) {
-                    if w != g {
-                        continue;
-                    }
+                if let (Some(w), Some(g)) = (want, adduct_key(&r.adduct))
+                    && w != g
+                {
+                    continue;
                 }
                 out.push((r.prec, Ref { file: k, row }));
             }

@@ -1,4 +1,5 @@
 {
   "words": ["wash", "mq", "milliq", "milli"],
+  "exact": ["h2o"],
   "neutral": ["q", "init", "pos", "neg", "positive", "negative", "esi", "ms", "full", "scan", "fs"]
 }

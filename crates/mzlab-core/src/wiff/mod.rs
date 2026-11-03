@@ -4,6 +4,8 @@
 //! were decoded against ProteoWizard mzML of the same files. The code here is written anew.
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
+#[cfg(feature = "estesi")]
+mod bpc;
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
@@ -13,8 +15,6 @@ pub mod idx;
 pub mod lettore;
 pub mod modi;
 pub mod nomi;
-#[cfg(feature = "estesi")]
-mod bpc;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
@@ -31,11 +31,34 @@ const HEADER_CODE: usize = 122;
 /// Offset of the polarity in `ExperimentHeader`.
 const HEADER_POLARITY: usize = 86;
 use modi::{Uscita, CODE_PRODUCT};
+/// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
+/// method), the nearest one before it.
+pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
+    let has = |k: u32| {
+        ole.has(&format!(
+            "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
+        ))
+    };
+    (1..=sample.min(10_000))
+        .rev()
+        .find(|&k| has(k))
+        .unwrap_or(sample)
+}
+
 impl Wiff {
     /// The method says experiment `e` acquires scans: a block of it that is not a readable scan is not an MRM block.
     pub(crate) fn scan_experiment(&self, e: usize) -> bool {
         let code = self.experiments.get(e).and_then(|x| x.code);
-        modi::nativo(code) && code.and_then(modi::modo).is_some_and(|m| m.uscita == Uscita::Spettro)
+        modi::nativo(code)
+            && code
+                .and_then(modi::modo)
+                .is_some_and(|m| m.uscita == Uscita::Spettro)
+    }
+
+    #[cfg(not(feature = "estesi"))]
+    /// A row of a SIM experiment without values: left out, so that it does not cut the columns of the ions.
+    pub(crate) fn empty_sim_row(&self, r: &Record) -> bool {
+        r.size == 0 && modi::sim(self.experiments.get(r.experiment).and_then(|x| x.code))
     }
 }
 
@@ -115,6 +138,21 @@ pub fn samples(ole: &Ole) -> Vec<u32> {
     v
 }
 
+/// The number of periods of method `method` (the `PeriodN` storages of its first device method).
+pub(crate) fn period_count(ole: &Ole, method: u32) -> usize {
+    let prefix = format!("MethodSubtree/Method{method}/DeviceMethod0/Period");
+    let mut n = 0;
+    for p in ole.paths_list() {
+        if let Some(rest) = p.strip_prefix(&prefix) {
+            let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+            if let Ok(k) = digits.parse::<usize>() {
+                n = n.max(k + 1);
+            }
+        }
+    }
+    n
+}
+
 fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
     let mut out = Vec::new();
     while let Some(d) = ole.read(&format!(
@@ -152,9 +190,15 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
 /// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
 fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
     let Some(m) = method else { return };
-    for (i, e) in experiments.iter_mut().enumerate().filter(|(_, e)| e.level == 2) {
+    for (i, e) in experiments
+        .iter_mut()
+        .enumerate()
+        .filter(|(_, e)| e.level == 2)
+    {
         e.iso_half = Some(UNIT_HALF_WIDTH);
-        if let Some(methodinfo::Kind::Scan { ce, .. }) = m.experiments.iter().find(|x| x.index == i).map(|x| &x.kind) {
+        if let Some(methodinfo::Kind::Scan { ce, .. }) =
+            m.experiments.iter().find(|x| x.index == i).map(|x| &x.kind)
+        {
             e.ce = match ce[..] {
                 [v] => Some(v),
                 _ => None,
@@ -178,6 +222,17 @@ fn polarity(method: &Option<Method>) -> i8 {
         })
 }
 
+/// A SIM method of several periods is `periods=N`: only Period0 is read, so its cycles would be laid out wrong.
+fn sim_periods(ole: &Ole, sample: u32, experiments: &[Experiment]) -> Result<()> {
+    if experiments.iter().any(|e| modi::sim(e.code)) {
+        let p = period_count(ole, sample);
+        if p > 1 {
+            return Err(bad(&format!("periods={p}")));
+        }
+    }
+    Ok(())
+}
+
 fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
     let scan_len = scan_len.ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", name))?;
     let table = ole
@@ -193,11 +248,16 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             .ok_or_else(|| bad("no Idx"))?,
     );
     let mut experiments = experiments(ole, sample);
+    #[cfg(not(feature = "estesi"))]
+    if experiments.is_empty() {
+        experiments = self::experiments(ole, method_no(ole, sample));
+    }
     #[cfg(feature = "estesi")]
     {
         experiments = estesi::refine(ole, sample, experiments)?;
         estesi::mark_windows(ole, sample, &mut experiments);
     }
+    sim_periods(ole, sample, &experiments)?;
     let n_exp = experiments.len().max(1);
     let records = entries
         .iter()
@@ -215,8 +275,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         })
         .collect();
     let method = methodinfo::method_of_sample(ole, sample);
-    #[cfg(feature = "estesi")]
-    let method = method.or_else(|| estesi::fallback_method(ole, sample));
+    let method = method.or_else(|| methodinfo::method_of_sample(ole, method_no(ole, sample)));
     activation(&mut experiments, &method);
     let dad = dad::DadData::read(ole, sample);
     let (model, created, serial, source_type) = crate::metodo_wiff::run_facts_full(ole, sample);

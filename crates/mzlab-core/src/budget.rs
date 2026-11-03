@@ -176,10 +176,12 @@ impl<W: WriteAt> WriteAt for Hashing<W> {
 
 /// SHA-256 (hex) of a byte string.
 pub fn sha256_hex(b: &[u8]) -> String {
-    Sha256::digest(b)
-        .iter()
-        .map(|x| format!("{x:02x}"))
-        .collect()
+    sha256(b).iter().map(|x| format!("{x:02x}")).collect()
+}
+
+/// SHA-256 of a byte string, raw (the HMAC of the proxy ledger builds on it).
+pub fn sha256(b: &[u8]) -> [u8; 32] {
+    Sha256::digest(b).into()
 }
 
 #[cfg(test)]

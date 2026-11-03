@@ -37,11 +37,12 @@ impl Arr {
     }
 
     /// The values: base64, then zlib or a numpress codec as the terms say, then the number type (64-bit float when the file does not say).
-    pub fn decode(&self, inf: &mut Inflate) -> Result<Vec<f64>> {
+    /// `declared` (0 = unknown) is the length the file states: a numpress stream whose last value is exactly the predicted one cannot be told from its padding without it.
+    pub fn decode(&self, inf: &mut Inflate, declared: usize) -> Result<Vec<f64>> {
         let zlib = self.terms.iter().any(|t| t == "MS:1000574");
         let text = self.text.trim();
         if let Some((np, z)) = self.terms.iter().find_map(|t| numpress::of_accession(t)) {
-            return numpress::decode_text(np, z, text, 0);
+            return numpress::decode_text(np, z, text, declared);
         }
         let num = self
             .terms

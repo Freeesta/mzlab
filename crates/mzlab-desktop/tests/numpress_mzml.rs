@@ -148,3 +148,32 @@ fn a_numpress_mzml_opens_in_the_app_and_answers_as_its_plain_twin() {
         "{sp1} {sp0}"
     );
 }
+
+/// `lr_index` of a numpress mzML opened as a dataset says how many spectra a cut file declares beyond the ones it holds, and 0 for a whole file.
+#[test]
+fn the_index_of_a_truncated_numpress_mzml_reports_the_spectra_it_lacks() {
+    let dir = tempfile::tempdir().unwrap();
+    let whole = run(true);
+    let cut_at = String::from_utf8_lossy(&whole)
+        .match_indices("</spectrum>")
+        .nth(2)
+        .map(|(i, m)| i + m.len())
+        .expect("more than three spectra");
+    let missing = |bytes: &[u8], name: &str| -> u64 {
+        let file = dir.path().join(name);
+        std::fs::write(&file, bytes).unwrap();
+        let st = State::new();
+        st.set_data_folder(dir.path().join(format!("app-{name}")));
+        st.set_index_folder(dir.path().join(format!("idx-{name}")))
+            .unwrap();
+        let (fid, _) = st.pick(file).unwrap();
+        let r = |op: &str, p: Value| st.rpc(op, &p, &[]).map(text).unwrap();
+        let members = json!([{"name": name, "fid": fid}]);
+        let nat = json!({"key": "k", "c": 0, "id": 0, "centroid": false, "members": members});
+        r("lr_put", json!({"name": name, "nat": nat}));
+        let j: Value = serde_json::from_str(&r("lr_index", json!({"name": name}))).unwrap();
+        j["missing"].as_u64().unwrap()
+    };
+    assert_eq!(missing(&whole, "whole.mzML"), 0);
+    assert!(missing(&whole[..cut_at], "cut.mzML") > 0);
+}

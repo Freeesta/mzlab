@@ -1,8 +1,9 @@
 //! wasm-bindgen bridge of `mzlab-llm` for the assistant of the site: the catalog in, a conversation in, the request out; the response bytes in, normalized
 //! events out (one JSON line each); a recording `llmreg/1` for the transport `replay`. No network and no key here: the iframe `llm/trasporto.html` does the fetch.
-//! An error is a JSON text `{"error", "error_key", "params"}` (the same shape as the routes of the engine). Loaded by `mzlab/web/llm/llm-worker.js`.
+//! `ledger` counts the money of the public proxy. An error is a JSON text `{"error", "error_key", "params"}` (the same shape as the routes of the engine). Loaded by `mzlab/web/llm/llm-worker.js`.
 mod agent;
 mod assist;
+mod ledger;
 
 use mzlab_core::error::Error;
 use mzlab_llm::conv::Conversation;
@@ -23,6 +24,23 @@ pub fn providers() -> String {
     provider::BUILTIN_JSON.to_string()
 }
 
+/// A request (`{url, headers, body, auth}`) as it leaves for `provider_id`: for the demo provider the proxy host in place of the placeholder and the
+/// session/owner headers (`provider::demo::for_send`, the same function the app uses); any other provider's request is unchanged.
+#[wasm_bindgen]
+pub fn demo_send(
+    request_json: &str,
+    provider_id: &str,
+    host: &str,
+    session: &str,
+    owner: &str,
+) -> Result<String, String> {
+    let v = mzlab_core::json::parse(request_json.as_bytes()).map_err(fail)?;
+    let req = Request::from_value(&v).map_err(fail)?;
+    let req =
+        provider::demo::for_send(&find(provider_id)?, req, host, session, owner).map_err(fail)?;
+    Ok(req.to_json())
+}
+
 /// The event line of a failed HTTP status (`err.llm.*`), for the transport that got an answer without a stream.
 #[wasm_bindgen]
 pub fn http_error(status: u16, body: &str) -> String {
@@ -33,6 +51,24 @@ pub fn http_error(status: u16, body: &str) -> String {
 #[wasm_bindgen]
 pub fn context_build(sources_json: &str, budget_tokens: u32) -> Result<String, String> {
     mzlab_llm::context::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
+}
+
+/// The `ispezione/1` of the sources the page collected from the engine (`mzlab_llm::inspect::build_text`), within `budget_tokens`: no model needed.
+#[wasm_bindgen]
+pub fn inspect_build(sources_json: &str, budget_tokens: u32) -> Result<String, String> {
+    mzlab_llm::inspect::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
+}
+
+/// The `proposta-param/1` of the rules `R-*` for an `ispezione/1` and the user's answers (`""` = none), checked against the `step/1` descriptors of the
+/// page's registry (`mzlab_llm::params_rules::propose_text`): no model needed.
+#[wasm_bindgen]
+pub fn params_propose(
+    inspection_json: &str,
+    answers_json: &str,
+    steps_json: &str,
+) -> Result<String, String> {
+    let registry = assist::registry_of(steps_json)?;
+    mzlab_llm::params_rules::propose_text(inspection_json, answers_json, &registry).map_err(fail)
 }
 
 /// The named views of the sources (`chart_views::views_json`): the list the drawing prompt gets.
@@ -164,3 +200,6 @@ impl LlmStream {
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "tests_facts.rs"]
+mod tests_facts;

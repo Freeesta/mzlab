@@ -115,7 +115,7 @@ pub fn network_share(child: &Peaks, parent: &Peaks, delta: f64, tol: f64) -> Opt
         .mz
         .iter()
         .zip(&child.it)
-        .filter(|(_, &i)| i >= 0.05 * tc)
+        .filter(|&(_, &i)| i >= 0.05 * tc)
         .map(|(&m, _)| m)
         .collect();
     (!used.is_empty()).then(|| used.iter().filter(|&&m| near(m)).count() as f64 / used.len() as f64)

@@ -28,9 +28,12 @@ async function diffTrace(p, s, o0) {
       () => J(`api/chrom?k=${s.k}&kind=${p.kind}&level=${lv}` + (p.mz0 != null ? `&mz0=${p.mz0}` : "") + (p.mz1 != null ? `&mz1=${p.mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(p.filt) + SUBREF.qs(o)));
   }
   const j = await memo(`dm${s.k}${SUBREF.qs(o)}`, () => J(`api/mrm?k=${s.k}${SUBREF.qs(o)}`));
-  const t = j.files[0].transitions.find(q => `${q.q1}>${q.q3}` === s.ion);
+  const t = j.files[0].transitions.map((q, i) => ({ ...q, idx: i })).find(q => trKey(q) === s.ion);
   return t && !t.nodiff ? t : null;
 }
+// The key of a transition: «Q1>Q3», or Q1 alone for a SIM ion (no Q3)
+/** @param {{q1?: any, q3?: any, idx?: number}} t */
+const trKey = t => t.q3 == null ? (t.q1 == null ? `i${t.idx}` : String(t.q1)) : `${t.q1}>${t.q3}`;
 async function corrected(p, all) {
   const so = window.SUBREF && p.type !== "spec" && p.type !== "map" ? SUBREF.eff(p) : null, fo = p.fondo;
   if (!so && (!fo || fo.mode === "none")) return all;
@@ -101,17 +104,17 @@ async function rawSeries(p) {
   // MRM
   const mf = files.filter(f => f.kind === "mrm"), out = [], seen = new Map();
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
-  data.forEach(({ tr }) => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
+  data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
   const list = [...seen.values()];
   if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
   data.forEach(({ f, tr }, fi) => tr.forEach(t => {
-    const key = `${t.q1}>${t.q3}`;
+    const key = trKey(t);
     const matchTr = !p.tr || (Array.isArray(p.tr) ? p.tr.includes(key) : p.tr === key);
     if (!matchTr) return;
     const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);
     const multiTr = Array.isArray(p.tr) && p.tr.length > 1;
-    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, time: f.time, color: (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
-      dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${key} · ${f.label}` : `${key} ${t.name || ""}`.trim(), tid_label: `${key} ${t.name || ""}`.trim() });
+    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: t.q3 == null && window.SIMUI ? SIMUI.color(key) : (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
+      dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${window.SIMUI ? SIMUI.label(key) : key} · ${f.label}` : `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim(), tid_label: `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim() });
   }));
   return out;
 }
@@ -121,10 +124,10 @@ function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
   const X = v => M.l + (v - x0) / (x1 - x0) * (W - M.l - M.r), ph = H - M.t - M.b, y0 = o.ymin || 0;   // y0 < 0: signals that go below zero (PDA baseline)
   const Y = o.log ? v => H - M.b - (Math.log10(Math.max(v, o.lo)) - Math.log10(o.lo)) / (Math.log10(ymax) - Math.log10(o.lo)) * ph : v => H - M.b - (v - y0) / (ymax - y0) * ph;
   g.clearRect(0, 0, W, H);
-  const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(y0, ymax, Math.max(5, Math.round(ph / (32 * fz()))));
+  const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(y0, ymax, Math.max(5, Math.round(ph / (32 * fz())))).filter(t => o.tickMax == null || t <= o.tickMax + 1e-9);   // o.tickMax: no tick above it (the % axis ends at 100, the headroom above is for labels)
   frame(g, W, H, nice(x0, x1, o.xn || Math.max(8, Math.round((W - M.l - M.r) / (75 * fz())))).map(t => [X(t), +t.toFixed(2)]), yt.map(t => [Y(t), yfmt(t)]), o.xt, o.yt);
   if (y0 < 0) { g.save(); g.strokeStyle = ecss("--line"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + .5); g.lineTo(W - M.r, Math.round(Y(0)) + .5); g.stroke(); g.restore(); }   // zero line
-  return { X, Y };
+  return { X, Y, yt };
 }
 // axis lines, tick marks, tick labels and titles (shared by all the plots)
 function frame(g, W, H, xt, yt, xtitle, ytitle) {
@@ -396,7 +399,7 @@ async function drawLines(p) {
   } else for (const s of sr) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
     const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // the window by binary search (decima.js): smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
-    g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
+    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
     for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }
@@ -419,25 +422,26 @@ async function drawLines(p) {
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(/** @type {any} */ (seg).x); seg = null; } });
     if (seg) tri(/** @type {any} */ (seg).x);
   }
+  // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js)
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
-    if (it.noise && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(it.noise[0]), M.l), xb = Math.min(X(it.noise[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
+    const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
     const r = integ(s, it.a, it.b, it.base); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, corr: corrText(p) });
     const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (i1 > i0) {
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
-      const b0 = it.base ? Y(U(s, baseAt(it.base, s.x[i0]))) : Y(U(s, s.ys[i0])), b1 = it.base ? Y(U(s, baseAt(it.base, s.x[i1]))) : Y(U(s, s.ys[i1]));   // HR automatic: its own baseline
+      const b0 = Y(U(s, it.base ? baseAt(it.base, s.x[i0]) : edge3(s.y, i0))), b1 = Y(U(s, it.base ? baseAt(it.base, s.x[i1]) : edge3(s.y, i1)));   // HR automatic: its own baseline
       g.lineTo(X(s.x[i1]), b1); g.lineTo(X(s.x[i0]), b0); g.closePath(); g.fill(); g.globalAlpha = 1;
       if (chosen) { g.strokeStyle = s.color; g.lineWidth = 2.5; g.stroke(); }
       g.strokeStyle = s.color; g.lineWidth = 1; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(X(s.x[i0]), b0); g.lineTo(X(s.x[i1]), b1); g.stroke(); g.setLineDash([]);
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
-    for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
-    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
+    for (const e of ["a", "b"]) { const px = X(s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
+    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + I18N.sciE(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: fmtFull(r.area), y: fmt(r.height) }) }); g.font = fpx(12);
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) }) }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {

@@ -55,6 +55,8 @@ pub struct ScanTable {
     pub run_json: String,
     /// MS1 peaks as `f32` (high-resolution file).
     pub hr1: bool,
+    /// Spectra the mzML declares in `<spectrumList count>` (0 when unknown or not an mzML): more than `level.len()` means the file is truncated.
+    pub declared: usize,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -65,6 +67,8 @@ pub struct Stats {
     /// Times the stream was decoded.
     pub passes: usize,
     pub bytes: u64,
+    /// Spectra the file declares beyond the ones it holds (a truncated mzML; 0 when the count is not known).
+    pub missing: usize,
 }
 
 pub(crate) trait Num: Copy + Default + Send {
@@ -167,12 +171,11 @@ impl Totals {
             self.have.get_mut(pos),
             self.bpy.get_mut(pos),
             self.bpm.get_mut(pos),
-        ) {
-            if !*have || it >= *bpy {
-                *bpm = mz;
-                *bpy = it;
-                *have = true;
-            }
+        ) && (!*have || it >= *bpy)
+        {
+            *bpm = mz;
+            *bpy = it;
+            *have = true;
         }
     }
 }
@@ -366,13 +369,14 @@ impl<T: Num> Sect for Sec<T> {
             pos,
         };
         let b = bucket(p.mz.to64());
-        if b >= self.lo && b < self.hi {
-            if let Some(c) = self.cursor.get_mut(b) {
-                if let Some(slot) = self.round.get_mut(*c) {
-                    *slot = p;
-                }
-                *c += 1;
+        if b >= self.lo
+            && b < self.hi
+            && let Some(c) = self.cursor.get_mut(b)
+        {
+            if let Some(slot) = self.round.get_mut(*c) {
+                *slot = p;
             }
+            *c += 1;
         }
         Ok(())
     }
@@ -488,7 +492,7 @@ impl Gruppo {
             if keep {
                 self.kept32.push(Peak { mz, it, pos });
             } else if let Some((parti, spill)) = scorta {
-                parti.push(spill, f64::from(mz), f64::from(it), pos)?;
+                parti.push32(spill, mz, it, pos)?;
             }
         } else if keep {
             self.kept.push(Peak { mz, it, pos });
@@ -590,7 +594,7 @@ impl<'a> Prima<'a> {
 }
 
 /// The budget ran out with a scratch file: what is kept goes to it in the order of the scans (the groups merged by scan number), and the next scans follow it.
-#[allow(clippy::indexing_slicing)] // the indexes come from the groups just counted
+#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the groups just counted; `f32` groups hold widened `f32` values
 fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
     let mut counts = vec![0u64; NB];
     for g in gruppi.iter() {
@@ -604,10 +608,10 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
         // the group whose next scan comes first (the first group on a tie); its peaks of that scan follow one another, so they go as a run
         let mut best: Option<(usize, u32)> = None;
         for (i, g) in gruppi.iter().enumerate() {
-            if let Some(p) = g.picco(next[i]) {
-                if best.is_none_or(|(_, b)| p.2 < b) {
-                    best = Some((i, p.2));
-                }
+            if let Some(p) = g.picco(next[i])
+                && best.is_none_or(|(_, b)| p.2 < b)
+            {
+                best = Some((i, p.2));
             }
         }
         let Some((i, pos)) = best else {
@@ -618,7 +622,12 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
                 break;
             }
             next[i] += 1;
-            parti.push(sp, mz, it, pos)?;
+            if gruppi[i].f32 {
+                // the kept values are `f32` widened: narrowing them back is exact
+                parti.push32(sp, mz as f32, it as f32, pos)?;
+            } else {
+                parti.push(sp, mz, it, pos)?;
+            }
         }
     }
     Ok(parti)
@@ -981,6 +990,7 @@ pub(crate) fn build_dopo(
         sections: infos.len(),
         passes,
         bytes: total,
+        missing: table.declared.saturating_sub(n_scans),
     })
 }
 

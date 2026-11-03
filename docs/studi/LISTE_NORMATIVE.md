@@ -18,7 +18,7 @@ eCFR texts were read through the versioned API (`https://www.ecfr.gov/api/versio
 | `screen.suspects` (NTS PR3) | not in the repository on 2026-10-29 (no file, branch or doc mentions it) | planned | the generic mass screen of any `.mzsus`; the design below fixes its contract for lists |
 | Molecule records `molecules/1` (`esterni.cas`, `inchikey`) | `crates/mzlab-core/src/molecules/` | done | not used for lists: a list is not a molecule collection (thousands of rows, many laws per row) |
 
-**Consequence.** The builder is RG-04 plus the list half of RG-06, as already planned in `docs/studi/ATTRIBUTIO.md` §6. Federico's decision Q5 put construction from the sources in native Rust (`mzlab-cli`, a `Fetch` trait with a disk cache, 5 requests/s per host, exponential retry), not in Python. AGENTS.md principle 2 points the same way: no new function is born in Python. The brief's "a tool in `tools/`" therefore becomes a `mzlab-cli` subcommand, plus at most a one-line call in CI (decision D2, §9). Prompt A must be announced to the COO as covering RG-04, so that nobody opens it twice.
+**Consequence.** The builder is RG-04 plus the list half of RG-06, as already planned in `docs/studi/ATTRIBUTIO.md` §6. Federico's decision Q5 put construction from the sources in native Rust (`mzlab-cli`, a `Fetch` trait with a disk cache, 5 requests/s per host, exponential retry), not in Python. CLAUDE.md principle 2 points the same way: no new function is born in Python. The brief's "a tool in `tools/`" therefore becomes a `mzlab-cli` subcommand, plus at most a one-line call in CI (decision D2, §9). Prompt A must be announced to the COO as covering RG-04, so that nobody opens it twice.
 
 ## 2. Sources
 

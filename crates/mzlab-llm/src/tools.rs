@@ -7,6 +7,9 @@ use std::collections::BTreeSet;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::step::{Kind, Param, Step};
+#[path = "tools_demo.rs"]
+mod demo;
+pub use demo::{demo_catalog, demo_catalog_json, DEMO_TOOLS};
 
 /// What a tool may do, read by the policy of the autonomy level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -433,9 +436,13 @@ fn spread(s: &[u8], i: usize, depth: usize, out: &mut String) -> usize {
 /// The catalog as the file `strumenti/1`: one element per line in every long list, so the diff of a new step touches only its own lines, and without
 /// the hash of the registry, which any change of the registry would rewrite on its own line.
 pub fn catalog_json(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> bool) -> String {
+    tools_file(&catalog(steps, ui, executable))
+}
+
+pub(crate) fn tools_file(tools: &[Tool]) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"strumenti/1\",\"tools\":[");
-    for (i, t) in catalog(steps, ui, executable).iter().enumerate() {
+    for (i, t) in tools.iter().enumerate() {
         if i > 0 {
             o.raw(",");
         }

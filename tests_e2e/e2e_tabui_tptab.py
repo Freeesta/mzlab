@@ -72,6 +72,7 @@ try:
         def load():
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#nav button[data-v=\"tpmine\"]", state="attached", timeout=120000)
             pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /motore|engine/i.test(l.innerText)) l.remove(); }")     # the component needs no engine: a build without the .wasm must not block the test
+            pg.wait_for_function("window.QTOOLS && typeof window.QTOOLS.ensure === 'function'", timeout=60000); pg.evaluate("() => window.QTOOLS.ensure()")      # no engine here, so no qqReady: ask for the package like the idle start does
             pg.wait_for_function("typeof window.TPTAB === 'object' && typeof window.TPHELP === 'object' && typeof window.TPRIGA === 'object'", timeout=120000)       # before the click: the view attaches the help to what exists when it is built
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-right", timeout=60000)
             pg.evaluate(MOUNT); pg.wait_for_selector("#tt-t tr.clk")

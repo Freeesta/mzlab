@@ -1,8 +1,8 @@
 /* Channel picker of the chromatogram (what to plot: channels of scans, detectors, log) and MRM panels (canali.js): a button and a popover with grouped rows; colours only from the page variables. */
 .can{position:relative;display:inline-flex}
 .can-pop{min-width:440px;max-width:min(560px,92vw);max-height:60vh;overflow:auto;padding:6px 8px;gap:2px}
-.can-hd,.can-row{display:grid;grid-template-columns:minmax(120px,1fr) 52px 54px 76px;gap:6px;align-items:center}
-.can-pop:has(.can-fl) .can-hd,.can-pop:has(.can-fl) .can-row{grid-template-columns:minmax(120px,1fr) 52px 54px 76px 32px}
+.can-hd,.can-row{display:grid;grid-template-columns:minmax(120px,1fr) 88px 56px 84px;gap:6px;align-items:center}.can-hd>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.can-pop:has(.can-fl) .can-hd,.can-pop:has(.can-fl) .can-row{grid-template-columns:minmax(120px,1fr) 88px 56px 84px 32px}
 .can-hd{color:var(--muted);font-size:11px;border-bottom:1px solid var(--line);padding:0 4px 3px}
 .can-row{min-height:28px;padding:0 4px;border-radius:5px;cursor:pointer;font-size:12px}
 .can-row:hover{background:var(--hover,var(--line))}

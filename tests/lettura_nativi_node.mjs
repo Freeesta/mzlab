@@ -1,7 +1,8 @@
 // Reads of the members of a maker's dataset in the worker of the engine (rust-nativo.js, lettura-sync.js) with a fake OPFS of read-only handles and a FileReaderSync that counts; argv[2] = folder with the copied modules.
 import assert from "assert";
+import { pathToFileURL } from "url";
 import { createHash } from "crypto";
-const dir = process.argv[2];
+const dir = pathToFileURL(process.argv[2]).href;
 const bytes = new Map();                       // store name -> Uint8Array in the fake OPFS `files/`
 let fileReads = 0, handleReads = 0, handleOpens = 0, modes = [];
 globalThis.self = globalThis;

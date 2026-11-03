@@ -1,5 +1,5 @@
-//! `mzlab-cli canali FILE [--out PATH]`: the channels (`canali/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
-//! any other file the app reads gives the channels of its scans.
+//! `mzlab-cli channels FILE [--out PATH]`: the channels (`canali/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
+//! any other file the app reads gives the channels of its scans and the chromatograms of its first sample (the mzML shell the site reads).
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -11,16 +11,18 @@ use mzlab_core::routes::Routes;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli canali: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (canali/1).
+pub const HELP: &str = "mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (canali/1).
 
-usage: mzlab-cli canali FILE [--canale ID [--rt T0[,T1]] [--n N]] [--out PATH]
+usage: mzlab-cli channels FILE [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
-  --canale ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc
+  --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc
   --n N       points at most per extreme of an analog trace (default 2000)
-  --out PATH  write there instead of the standard output";
+  --out PATH  write there instead of the standard output
 
-/// What was asked: the file, the channel to read (`--canale`, `--rt`, `--n`) and where to write.
+old names still accepted: canali, --canale";
+
+/// What was asked: the file, the channel to read (`--channel`, `--rt`, `--n`) and where to write.
 struct Chiesta {
     file: PathBuf,
     out: Option<PathBuf>,
@@ -36,7 +38,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
         match a.as_str() {
             "--help" | "-h" => return Ok(None),
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
-            "--canale" => canale = Some(it.next().ok_or("--canale needs a channel id")?),
+            "--channel" | "--canale" => {
+                canale = Some(it.next().ok_or("--channel needs a channel id")?)
+            }
             "--rt" => {
                 let v = it.next().ok_or("--rt needs minutes")?;
                 let num = |x: &str| x.parse::<f64>().ok().filter(|x| x.is_finite());
@@ -53,14 +57,14 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
             }
             o if o.starts_with("--") => return Err(format!("unknown option {o}")),
             _ if file.is_none() => file = Some(PathBuf::from(a)),
-            _ => return Err("canali takes one file".into()),
+            _ => return Err("channels takes one file".into()),
         }
     }
     if canale.is_none() && (rt.is_some() || n != 2000) {
-        return Err("--rt and --n need --canale".into());
+        return Err("--rt and --n need --channel".into());
     }
     Ok(Some(Chiesta {
-        file: file.ok_or("canali needs a file")?,
+        file: file.ok_or("channels needs a file")?,
         out,
         canale,
         rt,
@@ -72,7 +76,7 @@ fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-/// The JSON of `api/canali` for `file`, indexes kept in `tmp`; with `--canale`, the trace (or with `--rt` the UV spectrum) of that UV or analog channel
+/// The JSON of `api/canali` for `file`, indexes kept in `tmp`; with `--channel`, the trace (or with `--rt` the UV spectrum) of that UV or analog channel
 /// of an mzML: what `api/chrom?canale=` and `api/uvspec?canale=` answer.
 fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
     let file = &c.file;
@@ -101,7 +105,18 @@ fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
         let facts = mzlab_core::iteminfo::facts_from(&mut m, scans_end, chroms.len() as i64, true)?;
         r.pon_cromatogrammi(&nome, &chroms, &facts);
     } else {
-        r.pon_cromatogrammi(&nome, &[], &Default::default());
+        // the first sample, as the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`lettori_mzml::guscio`)
+        let mut l = mzlab_lettori::apri(
+            crate::flow_set::file_set(file)?,
+            &mzlab_core::lettori::Limiti::desktop(),
+        )?;
+        let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), 0)?;
+        let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
+        let size = shell.len() as u64;
+        let mut m = Mzml::new(shell, size);
+        let chroms = m.chromatograms(end)?;
+        let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
+        r.pon_cromatogrammi(&nome, &chroms, &facts);
     }
     Ok(r.canali().json())
 }

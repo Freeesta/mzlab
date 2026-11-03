@@ -34,7 +34,7 @@ def test_normal_build_has_no_trace_of_the_lab(sites):
     _, normal = sites
     assert not (normal / "static" / "lab.js").exists() and not (normal / "robots.txt").exists()
     html = (normal / "index.html").read_text(encoding="utf-8")
-    assert "lab.js" not in html and "noindex" not in html and "og:title" in html and (normal / "theory" / "index.html").is_file()
+    assert "lab.js" not in html and "noindex" not in html and "og:title" in html and not (normal / "theory").exists()
 
 
 def test_lab_build_head(sites):
@@ -97,7 +97,7 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(file, "utf8").replace("__LAB_EXPIRES__", expires), ctx);
 const s = new Storage();
 console.log(JSON.stringify({ calls, hash: loc.hash, lab: !!win.MZLAB_LAB, sito: win.SITO_PUBBLICO, admin: ctx.Storage.prototype.getItem.call({ getItem: Storage.prototype.getItem }, "mzlab.admin"),
-  adminViaStorage: s.getItem("mzlab.admin"), legacy: s.getItem("qqq.teoria.esteso"), prefs: s.getItem("mzlab.prefs"), written: (s.setItem("mzlab.admin", "1"), s.getItem("mzlab.admin")),
+  adminViaStorage: s.getItem("mzlab.admin"), prefs: s.getItem("mzlab.prefs"), written: (s.setItem("mzlab.admin", "1"), s.getItem("mzlab.admin")),
   banner: body.inserted && body.inserted.text, css: head.child && head.child.text, tour: typeof win.TOUR.caricaEsempio }));
 """
 
@@ -109,9 +109,9 @@ def guard(expires="2026-12-29", now="2026-10-29T12:00:00Z", hash="", stored=None
 
 @needs_node
 def test_guard_before_the_date_hides_the_admin_mode_and_adds_no_banner():
-    r = guard(stored={"mzlab.admin": "1", "qqq.teoria.esteso": "1", "mzlab.prefs": "{}"})
-    assert r["calls"] == [] and r["lab"] and r["sito"] == {"scaricaApp": False, "teoria": False}
-    assert r["adminViaStorage"] is None and r["legacy"] is None and r["prefs"] == "{}" and r["written"] is None
+    r = guard(stored={"mzlab.admin": "1", "mzlab.prefs": "{}"})
+    assert r["calls"] == [] and r["lab"] and r["sito"] == {"scaricaApp": False}
+    assert r["adminViaStorage"] is None and r["prefs"] == "{}" and r["written"] is None
     assert r.get("banner") is None
 
 

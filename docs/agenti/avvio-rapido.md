@@ -1,6 +1,6 @@
 # Avvio rapido: interfaccia subito, il resto in sottofondo (regola per ogni pagina)
 
-Vale per Dati, Teoria, mzFlow e Disegno (Tabui esclusa). Il dettaglio dell'avvio della vista Dati è in `avvio.md`.
+Vale per Dati, mzFlow e Disegno (Tabui esclusa). Il dettaglio dell'avvio della vista Dati è in `avvio.md`.
 
 - **Budget** a cache calda: primo paint ≤ 300 ms, interattivo ≤ 1 s; a cache fredda niente tetto, ma la shell compare comunque prima di qualunque `.wasm`.
 - **Shell immediata**: HTML e CSS della pagina con segnaposto (scheletro dei pannelli, barra, titoli) e script classici piccoli; nessun `.wasm`, JSON di catalogo, modello o libreria pesante sul percorso che porta al primo paint e all'interattività.

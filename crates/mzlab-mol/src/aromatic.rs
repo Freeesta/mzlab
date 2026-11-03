@@ -45,7 +45,7 @@ impl Mol {
             }
         }
         let mut atoms = vec![false; self.atoms.len()];
-        for (b, _) in flag.iter().enumerate().filter(|(_, &f)| f) {
+        for (b, _) in flag.iter().enumerate().filter(|&(_, &f)| f) {
             atoms[self.bonds[b].a as usize] = true;
             atoms[self.bonds[b].b as usize] = true;
         }

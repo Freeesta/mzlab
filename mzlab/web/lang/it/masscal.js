@@ -1,6 +1,6 @@
 I18N.add("it", {
   "masscal.title": "Controllo della calibrazione di massa · {file}",
-  "masscal.intro": "Ioni della lista dei contaminanti (Keller 2008) che restano nelle scansioni MS1 di questo file, con il loro errore di massa. L'errore di un singolo ione può venire anche da un picco sovrapposto: guarda l'insieme.",
+  "masscal.intro": "Ioni della lista dei contaminanti che restano nelle scansioni MS1 di questo file, con il loro errore di massa. L'errore di un singolo ione può venire anche da un picco sovrapposto: guarda l'insieme.",
   "masscal.sum": "{n} ioni contaminanti trovati; scarto {off} ppm; dispersione {spread} ppm",
   "masscal.sum.few": "{n} ioni contaminanti trovati: troppo pochi per stimare l'errore (ne servono almeno {min}).",
   "masscal.none": "Nessun ione contaminante resta nelle scansioni MS1 di questo file sopra l'intensità minima scelta.",

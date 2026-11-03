@@ -42,3 +42,31 @@ fn merge_unit_has_the_same_bits_with_a_reused_buffer() {
         assert_eq!((bits(&a.0), bits(&a.1)), (bits(&b.0), bits(&b.1)), "n {n}");
     }
 }
+
+#[test]
+fn order_by_f64_matches_the_closures_it_replaced() {
+    let key = [
+        3.0,
+        -0.0,
+        0.0,
+        f64::NAN,
+        1.0,
+        3.0,
+        -f64::NAN,
+        0.0,
+        -0.0,
+        f64::INFINITY,
+        1.0,
+        -2.5,
+    ];
+    let mut asc: Vec<usize> = (0..key.len()).collect();
+    let mut desc = asc.clone();
+    #[allow(clippy::disallowed_methods)]
+    {
+        asc.sort_by(|a, b| key[*a].total_cmp(&key[*b]));
+        desc.sort_by(|&i, &j| key[j].total_cmp(&key[i]));
+    }
+    assert_eq!(order_by_f64(&key, false), asc);
+    assert_eq!(order_by_f64(&key, true), desc);
+    assert!(order_by_f64(&[], true).is_empty());
+}

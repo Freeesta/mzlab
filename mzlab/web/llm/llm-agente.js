@@ -5,9 +5,11 @@
 // The subagents (docs/agenti/llm.md): when the machine asks for the router (`sub`), the page sends its request, asks Rust which readers the answer names (`assist_readers`), runs each
 // one (request, send, verdict of `Assist.check`, one retry with the problems, then a discard) and hands the accepted summaries to the machine as data. Every decision is Rust's;
 // what a file says never becomes an instruction: a reading is checked against the data it saw and enters the conversation only as data.
-import { DesktopClient, asError, desktop } from "./llm-clienti.js";
+import { DesktopClient, SiteClient, asError, desktop } from "./llm-clienti.js";
 import { readSettings } from "./llm-impostazioni.js";
-import { hasConsent } from "./llm-consenso.js";
+import { askConsent, costLine, hasConsent } from "./llm-consenso.js";
+import { DEMO_CHIPS, DEMO_PROVIDER, demoActive, spend, startDemo } from "./llm-demo.js";
+import { PROXY_HOST } from "./proxy-host.js";
 
 /** @typedef {{show: (text: string) => void, log: (line: any) => void, sending: (request: any) => void, call: (id: string, name: string, args: any) => Promise<{ok: boolean, content: any}>,
  *   ask: (id: string, summary: string, name: string, args: any) => Promise<boolean>, done: (outcome: string) => void,
@@ -170,6 +172,15 @@ export class AgentRun {
     if (!s.on || !s.provider || !hasConsent(s.provider)) throw { key: "err.llm.consent", params: {} };
     if (await client.needsKey(s.provider)) throw { key: "err.llm.key.missing", params: {} };
     await this.capCheck(s.cap);
+    if (s.spendCap > 0) await this.spendCheck(client, s);
+  }
+
+  /** the spending cap of the demo (USD, not editable): the estimated cost of the tokens so far, with the price of the provider list, stops the assistant at the cap
+   * @param {any} client @param {{provider: string, model: string, spendCap: number}} s */
+  async spendCheck(client, s) {
+    const p = (await client.providers()).find((/** @type {any} */ x) => x.id === s.provider), m = p && p.models.find((/** @type {any} */ x) => x.id === s.model);
+    const usd = spend(this.totalUsage(), m && m.price_per_mtok);
+    if (usd === null || usd >= s.spendCap) throw { key: "err.llm.limit.spend", params: {} };
   }
 
   /** the token limit of the conversation (machine + subagents, counted before each send): a limit stops the assistant; without one, the first crossing of ASK_TOKENS asks the user once @param {number} cap */
@@ -198,6 +209,10 @@ export class AgentRun {
   async log() { return (await this.rpc({ op: "agent.in", kind: "log" })).log; }
   /** @param {string} sources JSON of the sources of the page @param {number} [budget] @returns {Promise<string>} a contesto/1 text */
   async context(sources, budget = 4000) { return (await this.rpc({ op: "context", sources, budget })).context; }
+  /** the `ispezione/1` of the sources the page collected (Rust, no model), as Rust wrote it @param {string} sources JSON @param {number} [budget] tokens @returns {Promise<string>} */
+  async inspectText(sources, budget = 30000) { return (await this.rpc({ op: "inspect.build", sources, budget })).inspection; }
+  /** the `proposta-param/1` of the rules for an inspection and the user's answers (Rust, no model), as Rust wrote it @param {string} inspection JSON @param {string} answers JSON or "" @param {string} steps JSON of the `step/1` descriptors of the page @returns {Promise<string>} */
+  async paramsProposeText(inspection, answers, steps) { return (await this.rpc({ op: "params.propose", inspection, answers, steps })).proposal; }
   /** @param {string} sources JSON of the sources of the charts @returns {Promise<any[]>} the views that exist now: {ref, description, fields, rows} */
   async chartViews(sources) { return JSON.parse((await this.rpc({ op: "chart.views", sources })).views); }
   /** a `grafico/1` of the model, checked and filled with its rows by Rust; a rejection is an error {key, params} @param {string} spec @param {string} sources @returns {Promise<any>} */
@@ -207,8 +222,31 @@ export class AgentRun {
   close() { this.worker.terminate(); if (this.client && this.client.close) this.client.close(); }
 }
 
-/** whether the assistant is on for this page: profile «ricerca», switched on in the settings and a consent for the provider (no file of llm/ is read before this is true) */
+/** whether the assistant is on for this page: profile «ricerca», switched on in the settings and a consent for the provider (no conversation is opened before this is true; the facts of `factsRun` need none) */
 export function assistantOn() {
   const s = readSettings();
   return s.on && !!s.provider && hasConsent(s.provider);
+}
+
+/** the public demo (profile «demo»): the provider list of Rust, the consent for `mzlab-demo` (asked once), the client of the site with its transport (no key field) and the fixed
+ * settings of llm-demo.js; false when the visitor says no. Nothing is sent here. @param {HTMLElement | null} opener */
+export async function demoOpen(opener) {
+  const T = (/** @type {string} */ k, /** @type {any} */ p = {}) => I18N.t(k, p), client = new SiteClient();
+  try {
+    const p = (await client.providers()).find(x => x.id === DEMO_PROVIDER);
+    if (!p) throw { key: "err.llm.provider", params: {} };
+    const m = p.models[0], host = new URL(PROXY_HOST || p.base_url).host;
+    if (!hasConsent(p.id) && !(await askConsent({ provider: p.id, host, model: m.id, local: false, cost: costLine({ price: m.price_per_mtok }, T), T, opener }))) { client.close(); return false; }
+    const box = document.createElement("div"); box.hidden = true; document.body.append(box);
+    client.attach(box, p, {}, T("llm.key.frame"));
+    client.session = /** @type {any} */ (startDemo(m.id)).session;
+    /** @type {any} */ (window).MZLAB_LLM = { client };
+    return true;
+  } catch (e) { client.close(); throw asError(e); }
+}
+export { DEMO_CHIPS, demoActive };
+
+/** a worker for the facts that need no model (inspection, proposals of the parameters, charts without the model): no conversation, no consent, nothing leaves the site */
+export function factsRun() {
+  return new AgentRun({ show: () => {}, log: () => {}, sending: () => {}, call: async () => ({ ok: false, content: null }), ask: async () => false, done: () => {} });
 }

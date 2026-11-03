@@ -26,7 +26,7 @@ if (!fp.QQQ_PHONE) {
     if (warmed || navigator.onLine === false) return;
     warmed = true;
     fetch(base + "index.html", { priority: "low" }).then(r => r.text()).then(html => {
-      new DOMParser().parseFromString(html, "text/html").querySelectorAll("script[src], link[rel=stylesheet][href]").forEach(el => {
+      new DOMParser().parseFromString(html, "text/html").querySelectorAll("script[src], link[rel=stylesheet][href], link[rel=prefetch][href]").forEach(el => {
         const link = document.createElement("link");
         link.rel = "prefetch";
         link.setAttribute("fetchpriority", "low");

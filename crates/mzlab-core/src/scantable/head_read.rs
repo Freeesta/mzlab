@@ -31,3 +31,14 @@ pub(super) fn read_head<R: ReadAt>(src: &mut Source<'_, R>) -> Result<Head> {
         &String::from_utf8_lossy(run_text),
     ))
 }
+
+/// `count` of the `<spectrumList` in `run_text` (0 when the tag or the attribute is not there).
+pub(super) fn declared_count(run_text: &str) -> usize {
+    let Some(p) = run_text.find("<spectrumList") else {
+        return 0;
+    };
+    let t = &run_text[p..];
+    attr(&t[..t.find('>').unwrap_or(t.len())], "count")
+        .and_then(|c| c.parse().ok())
+        .unwrap_or(0)
+}

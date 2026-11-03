@@ -70,6 +70,9 @@ impl Modulo for Finto {
     fn metodo(&mut self, _: usize) -> Result<String> {
         Ok("{}".into())
     }
+    fn mancanti(&mut self, _: usize) -> Result<u32> {
+        Ok(3)
+    }
     fn testata(&mut self, _: usize) -> Result<String> {
         Ok(r#"{"run":"r","sources":["r.raw"],"instrument":["MS:1","Orbitrap"],"components":[["analyzer","MS:2","orbitrap"]],"software":["mzLab","1.0"],"acquired":"2026-01-01T00:00:00","serial":null,"source_sha1":["ab"],"source_cv":[["MS:3","Thermo RAW format"]],"sample":null,"run_params":[["k","v"]],"content":[],"extra_software":[],"centroided":true}"#.into())
     }
@@ -117,6 +120,8 @@ fn le_risposte_diventano_i_tipi_del_contratto() {
         (ChromKind::Srm, Some(300.1), None, vec![3.0, 4.0])
     );
     assert_eq!(l.metodo(0).unwrap(), "{}");
+    // the count of a truncated file comes from the module; a module with none (the wrapper below) says 0
+    assert_eq!(l.mancanti(0), 3);
     let t = l.testata_mzml(0).unwrap().unwrap();
     assert_eq!(t.instrument, Some(("MS:1".into(), "Orbitrap".into())));
     assert_eq!(

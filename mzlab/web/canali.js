@@ -29,7 +29,9 @@
   const find = (k, omo) => { const c = cached(k); return c && c.canali.find(x => x.omo === omo) || null; };
 
   /** transition key «q1>q3» of an srm channel (the key of the MRM panel) @param {Canale} c */
-  const srmKey = c => c.id.slice(4).replace(/@.*$/, "");
+  const srmKey = c => c.fam === "sim" || c.id.startsWith("sim:") ? SIMUI.chKey(c.id) : c.id.slice(4).replace(/@.*$/, "");
+  /** a row of the MRM picker: a transition (srm) or a SIM ion (sim) @param {Nodo} n */
+  const isTr = n => n.fam === "srm" || n.fam === "sim";
   /** the MRM transition of the file that an srm channel names @param {Canale} c @param {any} t */
   const srmIs = (c, t) => `${t.q1}>${t.q3}` === srmKey(c) && (!/@/.test(c.id) || Math.abs(+c.id.split("@")[1] - (t.ce ?? 0)) < 0.5);
 
@@ -106,19 +108,20 @@
     const t = tree.length ? tree.filter(n => ["tic", "bpc", "ms", "dd", "srm"].includes(n.fam)) : [fall("tic", T("ctl.kind.tic")), fall("bpc", T("ctl.kind.bpc"))];
     return cx && !cx.hasScan ? t.filter(n => n.fam !== "bpc") : t;
   }
-  /** the label of a row: the engine's name, with TIC and BPC in the words of the page @param {Nodo} n */
-  const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.et;
+  /** the label of a row: the engine's name, with TIC and BPC in the words of the page; the scan mode (EMS, EPI…) has its own column, so it leaves the name @param {Nodo} n */
+  const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.fam === "srm" ? srmLabel(n.et) : n.fam === "sim" ? bare(n).replace(/^#(\d+)/, (_, d) => T("canali.sim.ion", { n: d })) : bare(n);
+  /** the engine's name without the scan-mode word that the «Experiment» column already shows («MS¹ EMS» → «MS¹») @param {Nodo} n */
+  const bare = n => n.sigla ? n.et.split(" ").filter(w => w !== n.sigla).join(" ") || n.et : n.et;
+  /** a transition in the notation of the legend, «precursor>product role», from the engine's «MRM q1→q3 @CE «role»» @param {string} et */
+  const srmLabel = et => { const m = /^MRM\s+([\d.]+)→([\d.]+)(?:\s+@[\d.]+)?(?:\s+«(.*)»)?\s*$/.exec(et); return m ? `${m[1]}>${m[2]}${m[3] ? " " + m[3] : ""}` : et; };
   /** the text of the button: what the panel plots, «TIC + 1» for several channels @param {any} p @param {Nodo[]} tree @param {Ctx} cx */
   function summary(p, tree, cx) {
     if (isOther(p)) { const r = others(cx).flat().find(x => x[0] === p.kind); return r ? r[1] : String(p.kind); }
     const ids = chosen(p), one = (/** @type {string} */ o) => { const n = tree.find(x => x.omo === o); return n ? label(n) : o === "bpc" ? T("ctl.kind.bpc") : T("ctl.kind.tic"); };
     return ids.length > 1 ? `${one(ids[0])} + ${ids.length - 1}` : one(ids[0]);
   }
-  /** the hover text of a row: what the channel is, the time range, the exact ids @param {Nodo} n */
-  function tip(n) {
-    const what = n.fam === "dd" ? T("canali.tip.dd") : n.fam === "ms" && n.liv === 1 ? T("canali.tip.ms1") : n.omo === "tic" ? T("canali.tip.tic") : n.omo === "bpc" ? T("ctl.kind.bpc.title") : "";
-    return [what, n.n ? T("canali.tip.time", { a: +n.rt0.toFixed(2), b: +n.rt1.toFixed(2) }) : "", ...n.ids.slice(0, 3)].filter(Boolean).join("\n");
-  }
+  /** the hover text of a row: what the channel is (time range and points have their own columns) @param {Nodo} n */
+  const tip = n => n.fam === "dd" ? T("canali.tip.dd") : n.fam === "ms" && n.liv === 1 ? T("canali.tip.ms1") : n.omo === "tic" ? T("canali.tip.tic") : n.omo === "bpc" ? T("ctl.kind.bpc.title") : "";
   /** the label of the row for screen readers @param {Nodo} n */
   const rowLabel = n => n.n ? T("canali.row", { et: label(n), n: n.n, a: +n.rt0.toFixed(2), b: +n.rt1.toFixed(2) }) : label(n);
   /** the rows of the tree (a collapsed parent hides its descendants) @param {any} p @param {Nodo[]} tree @param {Set<string>} sel @param {boolean} onlySrm @param {number} nfiles */
@@ -128,15 +131,22 @@
     const depth = (/** @type {Nodo} */ n) => { let d = 1, u = n.up; while (u) { d++; u = (byO.get(u) || { up: null }).up; } return d; };
     const hidden = new Set(), many = nfiles > 1;
     tree.forEach(n => { if (n.up && (col.has(n.up) || hidden.has(n.up))) hidden.add(n.omo); });
-    const vis = tree.filter(n => !hidden.has(n.omo) && (!onlySrm || n.fam === "srm"));
+    const vis = tree.filter(n => !hidden.has(n.omo) && (!onlySrm || isTr(n)));
     return vis.map(n => {
       const lv = onlySrm ? 1 : depth(n), has = n.kids.length > 0 && !onlySrm, open = has && !col.has(n.omo), t = tip(n);
       return `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.omo)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-omo="${EH(n.omo)}" aria-label="${EH(rowLabel(n))}"${t ? ` title="${EH(t)}"` : ""}>` +
         `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span><span class="can-ck" aria-hidden="true"></span><span class="can-et">${EH(label(n))}</span></span>` +
-        `<span class="can-sg" aria-hidden="true">${EH(n.sigla)}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt0.toFixed(1)}–${+n.rt1.toFixed(1)}` : ""}</span>` +
+        `<span class="can-sg" aria-hidden="true"${sgTitle(n.sigla)}>${EH(sgShort(n.sigla))}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt0.toFixed(1)}–${+n.rt1.toFixed(1)}` : ""}</span>` +
         (many ? `<span class="can-fl" aria-hidden="true" title="${EH(T("canali.files.title"))}">${n.files}</span>` : "") + `</div>`;
     }).join("");
   }
+  // scan-type codes of the engine (PREC, NL, NG...) are shown by name, never raw; unknown codes stay as they come
+  const SG = () => /** @type {Record<string, [string, string]>} */ ({
+    PREC: [T("canali.sg.PREC"), T("canali.sgl.PREC")], NL: [T("canali.sg.NL"), T("canali.sgl.NL")], NG: [T("canali.sg.NG"), T("canali.sgl.NG")],
+    EMC: [T("canali.sg.EMC"), T("canali.sgl.EMC")], TDF: [T("canali.sg.TDF"), T("canali.sgl.TDF")], ER: [T("canali.sg.ER"), T("canali.sgl.ER")],
+  });
+  const sgShort = (/** @type {string} */ g) => SG()[g] ? SG()[g][0] : g;
+  const sgTitle = (/** @type {string} */ g) => SG()[g] ? ` title="${EH(SG()[g][1])}"` : "";
   /** the rows of the other kinds (one at a time, a round mark) @param {any} p @param {[string, string, string][]} list */
   const kindRows = (p, list) => list.map(([v, et, t]) =>
     `<div class="can-row" role="treeitem" aria-level="1" aria-selected="${p.kind === v}" tabindex="-1" data-kind="${EH(v)}" aria-label="${EH(et)}"${t ? ` title="${EH(t)}"` : ""}><span class="can-in"><span class="can-car" aria-hidden="true"></span><span class="can-ck can-rd" aria-hidden="true"></span><span class="can-et">${EH(et)}</span></span></div>`).join("");
@@ -146,7 +156,7 @@
   function ticked(p, tree) {
     if (!ESP.mrm(p)) return isOther(p) ? new Set() : new Set(chosen(p));
     const all = !p.tr || (Array.isArray(p.tr) && !p.tr.length), want = new Set(Array.isArray(p.tr) ? p.tr : [p.tr]);
-    return new Set(tree.filter(n => n.fam === "srm" && (all || want.has(nodeKey(n)))).map(n => n.omo));
+    return new Set(tree.filter(n => isTr(n) && (all || want.has(nodeKey(n)))).map(n => n.omo));
   }
   /** the control of a panel: a button with what is plotted and the popover with the channels in groups. The chromatogram passes what its files have (cx); the MRM panel
    * lists only its transitions ("" while nothing is known about the files) @param {any} p @param {Ctx} [cx] */
@@ -159,7 +169,7 @@
     const grp = (/** @type {string} */ name, /** @type {string} */ body) => body ? `<div role="group" aria-label="${EH(name)}"><div class="can-gh" aria-hidden="true">${EH(name)}</div>${body}</div>` : "";
     const [det, log] = cx ? others(cx) : [[], []];
     const body = only ? rows(p, tree, sel, true, files.length) : grp(T("canali.grp.ms"), rows(p, tree, sel, false, files.length)) + grp(T("canali.grp.det"), kindRows(p, det)) + grp(T("canali.grp.log"), kindRows(p, log));
-    const txt = only ? T("canali.btn.mrm") : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
+    const txt = only ? T(tree.some(n => n.fam === "sim") && !tree.some(n => n.fam === "srm") ? "canali.sim.btn" : "canali.btn.mrm") : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
     return `<span class="can"><button class="bt canb" type="button" data-o="${only ? "canali" : "kind"}" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T(only ? "canali.btn.title" : "ctl.kind.title"))}" aria-label="${EH(aria)}"><span class="can-bt">${EH(txt)}</span><span class="can-dn" aria-hidden="true">▾</span></button>` +
       `<div class="sp-pop can-pop" ${open ? "" : "hidden"}>${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true" class="can-tree">${body}</div></div></span>`;
   }
@@ -172,7 +182,7 @@
   function toggle(p, omo, tree) {
     COMANDI.fai("panel.source", p, () => {
       if (ESP.mrm(p)) {
-        const srm = tree.filter(n => n.fam === "srm"), cur = new Set(ticked(p, tree));
+        const srm = tree.filter(isTr), cur = new Set(ticked(p, tree));
         if (cur.has(omo)) cur.delete(omo); else cur.add(omo);
         const pick = srm.filter(n => cur.has(n.omo)).map(nodeKey);
         p.tr = pick.length === srm.length || !pick.length ? "" : pick;
@@ -218,6 +228,8 @@
         act();
       };
       row.onkeydown = e => {
+        // the tree owns its keys: the page-wide handlers (Space = play the scans, arrows = step them) must not see them
+        if (/^(Arrow(Up|Down|Left|Right)|Home|End| |Enter)$/.test(e.key)) e.stopPropagation();
         const col = /** @type {Set<string>} */ (p._canCol ||= new Set());
         if (e.key === "ArrowDown") { e.preventDefault(); moveFocus(row, 1); }
         else if (e.key === "ArrowUp") { e.preventDefault(); moveFocus(row, -1); }
