@@ -400,7 +400,40 @@ fn sim_channels_of_a_wiff_are_labelled_by_their_ion() {
     );
     assert_eq!(
         sim_label("SIM SIC sample=2 period=1 experiment=2 transition=3 polarity=negative"),
-        "SIM #3 (−)"
+        "SIM #4 (−)"
     );
     assert_eq!(sim_label("SIC 180.10"), "SIM SIC 180.10");
+}
+
+#[test]
+fn sim_channels_without_q1_stay_apart_by_their_place_in_the_experiment() {
+    let chroms: Vec<Chrom> = (0..3)
+        .map(|j| Chrom {
+            index: j,
+            id: format!("SIM SIC sample=1 period=1 experiment=1 transition={j} polarity=positive"),
+            kind: "srm".into(),
+            n: Some(100),
+            ..Default::default()
+        })
+        .collect();
+    let c = Canali::da(&[], &chroms, &Facts::default(), "m.mzML");
+    let sim: Vec<&str> =
+        c.v.iter()
+            .filter(|x| x.id.starts_with("sim:"))
+            .map(|x| x.omologo.as_str())
+            .collect();
+    assert_eq!(
+        sim,
+        [
+            "sim|1|#0|positive",
+            "sim|1|#1|positive",
+            "sim|1|#2|positive"
+        ]
+    );
+    assert_eq!(
+        c.v.iter()
+            .find(|x| x.omologo == "sim|1|#2|positive")
+            .map(|x| x.etichetta.as_str()),
+        Some("SIM #3 (+)")
+    );
 }

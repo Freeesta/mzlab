@@ -7,7 +7,7 @@ holds each ion as an MRM-like row with Q3 = 0, which is a hypothesis: no real SI
 every peak. Ion 237.1 has two isobaric peaks (isomers at two RTs). Also OUT/sim_periodi.wiff (the same method with a second period: refused with
 `periods=2`), OUT/sim_vuoti.wiff (one sample whose cycle 10 has an empty row in experiment 1: left out, the ions keep their columns), and for the SIM
 table of the Data view OUT/sim3.wiff (a blank and three named samples, one positive experiment of seven ions at a 0.8 s cycle, one peak per ion and an
-isomer pair in ionC; OUT/sim3.json) with OUT/sim3_cut.wiff, the same pair with its .wiff.scan cut at 60 %.
+isomer pair in ionC; OUT/sim3.json) with OUT/sim_senzaq1.wiff (the same samples whose method names no ion: SIM channels without Q1) and OUT/sim3_cut.wiff, the same pair with its .wiff.scan cut at 60 %.
 Invented numbers, no laboratory data.
 """
 import json
@@ -92,20 +92,31 @@ def sim3_peaks(s, j):
     return [(rt, h)] + ([(rt + SIM3_ISOMER[1], h * SIM3_ISOMER[2])] if j == SIM3_ISOMER[0] else [])
 
 
+def blocks_of(s):
+    """The cycles of sample s of the SIM table files: ("mrm", the seven ion currents, time ms, their sum)."""
+    blocks = []
+    for k in range(SIM3_CYCLES):
+        t = SIM3_CYCLE_MS * k / 60000.0
+        v = [round(40.0 + (k * 7 + j) % 11 + sum(h * math.exp(-0.5 * ((t - rt) / SIM3_SIGMA_MIN) ** 2) for rt, h in sim3_peaks(s, j)), 1)
+             for j in range(len(SIM3))]
+        blocks.append(("mrm", v, SIM3_CYCLE_MS * k, sum(v)))
+    return blocks
+
+
 def sim3(out):
     method = {"Experiment0/ExperimentHeader": w.header(1, 0.0, polarity=0),
               "Experiment0/MassRangeEx/MassRangeEx": table([(q1, 20.0, nm) for q1, nm in SIM3]),
               "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": w.ion_spray(5500.0)}
     wr = w.Writer()
     for s, name in enumerate(SIM3_SAMPLES):
-        blocks = []
-        for k in range(SIM3_CYCLES):
-            t = SIM3_CYCLE_MS * k / 60000.0
-            v = [round(40.0 + (k * 7 + j) % 11 + sum(h * math.exp(-0.5 * ((t - rt) / SIM3_SIGMA_MIN) ** 2) for rt, h in sim3_peaks(s, j)), 1)
-                 for j in range(len(SIM3))]
-            blocks.append(("mrm", v, SIM3_CYCLE_MS * k, sum(v)))
-        wr.sample(s + 1, blocks, method, log="3200 QTRAP", data_name=name)
+        wr.sample(s + 1, blocks_of(s), method, log="3200 QTRAP", data_name=name)
     wr.save(out, "sim3")
+    # the same cycles with a method that names no ion: the reader gives each channel only its place (transition=N), no Q1
+    nameless = {k: v for k, v in method.items() if "MassRangeEx" not in k}
+    wr = w.Writer()
+    for s, name in enumerate(SIM3_SAMPLES):
+        wr.sample(s + 1, [("mrm", v, t, tot) for _, v, t, tot in blocks_of(s)], nameless, log="3200 QTRAP", data_name=name)
+    wr.save(out, "sim_senzaq1")
     wr.save(out, "sim3_cut")
     scan = (out / "sim3_cut.wiff.scan").read_bytes()
     (out / "sim3_cut.wiff.scan").write_bytes(scan[:len(scan) * 6 // 10])

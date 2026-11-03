@@ -196,3 +196,38 @@ fn a_sim_method_of_two_periods_is_refused_and_an_empty_row_is_left_out() {
         assert_eq!((c.time.len(), c.intensity.len()), (n, n), "{}", c.id);
     }
 }
+
+#[test]
+fn sim_channels_of_a_method_without_ions_have_a_place_but_no_q1() {
+    let Some((dir, _)) = generate() else {
+        return;
+    };
+    let ole = container(
+        std::fs::read(dir.join("sim_senzaq1.wiff")).unwrap(),
+        "sim_senzaq1",
+    )
+    .unwrap();
+    let mut scan = std::fs::read(dir.join("sim_senzaq1.wiff.scan")).unwrap();
+    let w = Wiff::open(&ole, "sim_senzaq1", Some(scan.len() as u64), 2).unwrap();
+    let run = w.run(&mut scan).unwrap();
+    let sim: Vec<_> = run
+        .chromatograms
+        .iter()
+        .filter(|c| c.kind == ChromKind::Sic)
+        .collect();
+    assert_eq!(
+        sim.len(),
+        7,
+        "{:?}",
+        run.chromatograms.iter().map(|c| &c.id).collect::<Vec<_>>()
+    );
+    for (j, c) in sim.iter().enumerate() {
+        assert!(
+            c.id.starts_with("SIM SIC sample=2 ") && !c.id.contains("Q1="),
+            "{}",
+            c.id
+        );
+        assert!(c.id.contains(&format!("transition={j}")), "{}", c.id);
+        assert_eq!((c.q1, c.q3), (None, None));
+    }
+}

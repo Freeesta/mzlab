@@ -414,7 +414,7 @@ const polMixed = () => new Set(shown().map((/** @type {FileAperto} */ f) => f.po
 // the legend shows the sign only when positive and negative files are drawn together
 const legPol = (/** @type {FileAperto | null | undefined} */ f) => polMixed() && f ? " " + polSign(f, shown()) : "";
 /** @param {FileAperto[]} [fs] */ const defAdduct = fs => { const l = fs || (shown().length ? shown() : E.files.filter((/** @type {FileAperto} */ f) => f.vis)); return l.some((/** @type {FileAperto} */ f) => f.polarity === "negative") && !l.some((/** @type {FileAperto} */ f) => f.polarity === "positive") ? "[M-H]-" : "[M+H]+"; };
-const getMrm = (/** @type {string | number} */ k) => memo(`m${k}`, () => J(`api/mrm?k=${k}`).then(j => j.files[0].transitions));
+const getMrm = (/** @type {string | number} */ k) => memo(`m${k}`, () => J(`api/mrm?k=${k}`).then(j => j.files[0].transitions.map((/** @type {any} */ t, /** @type {number} */ i) => ({ ...t, idx: i }))));
 
 // a method (.dam) of another experiment type than the open files (MRM against Full Scan...): a visible notice above the panels, not a toast
 async function methodWarn() {

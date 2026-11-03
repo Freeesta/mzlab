@@ -28,12 +28,12 @@ async function diffTrace(p, s, o0) {
       () => J(`api/chrom?k=${s.k}&kind=${p.kind}&level=${lv}` + (p.mz0 != null ? `&mz0=${p.mz0}` : "") + (p.mz1 != null ? `&mz1=${p.mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(p.filt) + SUBREF.qs(o)));
   }
   const j = await memo(`dm${s.k}${SUBREF.qs(o)}`, () => J(`api/mrm?k=${s.k}${SUBREF.qs(o)}`));
-  const t = j.files[0].transitions.find(q => trKey(q) === s.ion);
+  const t = j.files[0].transitions.map((q, i) => ({ ...q, idx: i })).find(q => trKey(q) === s.ion);
   return t && !t.nodiff ? t : null;
 }
 // The key of a transition: «Q1>Q3», or Q1 alone for a SIM ion (no Q3)
-/** @param {{q1?: any, q3?: any}} t */
-const trKey = t => t.q3 == null ? String(t.q1) : `${t.q1}>${t.q3}`;
+/** @param {{q1?: any, q3?: any, idx?: number}} t */
+const trKey = t => t.q3 == null ? (t.q1 == null ? `i${t.idx}` : String(t.q1)) : `${t.q1}>${t.q3}`;
 async function corrected(p, all) {
   const so = window.SUBREF && p.type !== "spec" && p.type !== "map" ? SUBREF.eff(p) : null, fo = p.fondo;
   if (!so && (!fo || fo.mode === "none")) return all;
@@ -114,7 +114,7 @@ async function rawSeries(p) {
     const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);
     const multiTr = Array.isArray(p.tr) && p.tr.length > 1;
     out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: t.q3 == null && window.SIMUI ? SIMUI.color(key) : (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
-      dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${key} · ${f.label}` : `${key} ${t.name || ""}`.trim(), tid_label: `${key} ${t.name || ""}`.trim() });
+      dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${window.SIMUI ? SIMUI.label(key) : key} · ${f.label}` : `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim(), tid_label: `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim() });
   }));
   return out;
 }

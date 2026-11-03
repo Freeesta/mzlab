@@ -209,7 +209,12 @@ fn canali_srm(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Opti
                 c.id.split(' ')
                     .find_map(|w| w.strip_prefix("polarity="))
                     .unwrap_or("");
-            let omologo = format!("sim|1|{:.1}|{pol}", c.q1.unwrap_or(0.0));
+            // a reader that gives no Q1 leaves the ion told by its place in the experiment
+            let ion = c.q1.map_or_else(
+                || format!("#{}", id_field(&c.id, "transition=").unwrap_or("?")),
+                |q| format!("{q:.1}"),
+            );
+            let omologo = format!("sim|1|{ion}|{pol}");
             v.push(canale_sim(c, facts, radice, omologo));
             continue;
         }
@@ -254,20 +259,26 @@ fn canali_srm(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Opti
     }
 }
 
+/// The value of `key=` among the space-separated words of a chromatogram id (none when empty).
+fn id_field<'a>(id: &'a str, key: &str) -> Option<&'a str> {
+    id.split(' ')
+        .find_map(|w| w.strip_prefix(key))
+        .filter(|v| !v.is_empty())
+}
+
 /// The label of a SIM channel: `SIM <m/z> (+|−) <dwell> ms «name»` for the msconvert ids (`SIM SIC Q1=… dwell=… polarity=… name=…`), `SIM <id>` otherwise.
 fn sim_label(id: &str) -> String {
     let Some(rest) = id.strip_prefix("SIM SIC ") else {
         return format!("SIM {id}");
     };
-    let field = |k: &str| {
-        rest.split(' ')
-            .find_map(|w| w.strip_prefix(k))
-            .filter(|v| !v.is_empty())
-    };
+    let field = |k: &str| id_field(id, k);
     let mut out = String::from("SIM");
     match field("Q1=") {
         Some(q1) => out += &format!(" {q1}"),
-        None => out += &format!(" #{}", field("transition=").unwrap_or("?")),
+        None => match field("transition=").and_then(|t| t.parse::<u32>().ok()) {
+            Some(t) => out += &format!(" #{}", t + 1),
+            None => out += " #?",
+        },
     }
     match field("polarity=") {
         Some("positive") => out += " (+)",
