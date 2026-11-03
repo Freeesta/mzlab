@@ -1,12 +1,12 @@
 I18N.add("en", {
   "zoom.mz": "m/z {lo}–{hi}",
   "zoom.rt": "RT {lo}–{hi} min",
-  "xicbtn.title": "Extracts at once the XIC of the ion chosen in the spectrum and shows it in the panel below. With no ion chosen: click a peak (or keys , and .). Shift: adds the ion as one more trace",
+  "xicbtn.title": "XIC of the ion chosen in the spectrum, in the panel below (Shift: extra trace)",
   "xicbtn.n": "XIC of {n} files",
   "xicbtn.infusion": "Infusion: no chromatogram",
   "xicbtn.aria": "Extract the XIC of the chosen ion",
   "xicbtn.pend": "Click a peak: its XIC is extracted · Esc cancels",
-  "xicbtn.ion.title": "Ion and tolerance of the XIC: click or press Enter to write them",
+  "xicbtn.ion.title": "Click or Enter to change ion and tolerance",
   "xicbtn.ion.aria": "Ion and tolerance of the XIC: {ion}. Edit",
   "xicbtn.picked": "Ion chosen: {ion}",
   "xicbtn.pop.aria": "Ion and tolerance of the XIC",
@@ -19,8 +19,8 @@ I18N.add("en", {
   "xicbtn.nopeak": "no peak here",
   "xicdlg.title": "Extract ions (XIC)",
   "xicdlg.desc": "XIC (Extracted Ion Chromatogram): the chromatogram of the only signals with m/z inside an interval 1 Da wide around the nominal mass of the ion. You integrate from here. In each row type an m/z or a neutral formula (with the adduct).",
-  "xicdlg.add.title": "Adds another ion (up to 10): all end up in the same chart",
+  "xicdlg.add.title": "Up to 10 ions in the same chart",
   "xicdlg.add": "+ ion",
-  "xicdlg.file.title": "Which file to extract from. It applies only at the start: afterwards it is changed from the File selector of the chart",
+  "xicdlg.file.title": "Applies only at the start; later use the chart's File selector",
   "xicdlg.go": "Extract"
 });
