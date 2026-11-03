@@ -55,12 +55,11 @@ try:
             pg.fill("#calcin", "(229.1-171.2)*2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '115.8'"); assert pg.inner_text("#calcres").strip() == "115.8"
             pg.click("#calc-nl"); until(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
-            assert pg.input_value("#al-q") == "115.8"
-            attendi(pg, "document.activeElement.id === 'al-q'")         # «Cerca» hands the focus to the page field
+            assert pg.input_value("#calcin") == "(229.1-171.2)*2" and "115.8" in pg.inner_text("#sb-panel-losses")         # «Cerca» only picks the tab: one field, left as typed
             pg.fill("#calcin", "96-66"); pg.keyboard.press("Enter"); until(pg, "document.querySelector('#calcin').value === '30'")
-            pg.click("#al-t-adducts"); pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'losses' && document.querySelector('#al-q').value === '30'")       # after «=» the difference still picks the losses
+            pg.click("#al-t-adducts"); pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'losses' && document.querySelector('#calcin').value === '30'")       # after «=» the difference still picks the losses
             pg.evaluate("CALC.tape.length = 0")
-        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), «Cerca» puts it in the page field on the losses tab", arithmetic)
+        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), «Cerca» picks the losses tab", arithmetic)
         def keypad():
             pg.fill("#calcin", ""); frames(pg, 2)
             for k in ("1", "+", "2"): pg.click(f"#calcpad [data-k='{k}']")
@@ -79,13 +78,13 @@ try:
         def formula_hides_pad():
             pg.fill("#calcin", "C9H10Cl2N2O"); until(pg, "document.querySelector('#calcpad').hidden && !document.querySelector('#calc-nl').hidden")
             assert pg.evaluate("document.querySelector('#calcres').hidden") and pg.locator("#calcout .cadd-wrap").count() == 0, "docked: no table under the calculator, the page answers"
-            pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'adducts' && document.querySelector('#al-q').value === 'C9H10Cl2N2O' && !!document.querySelector('#sb-panel-adducts .cadd-wrap table')")
+            pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'adducts' && document.querySelector('#calcin').value === 'C9H10Cl2N2O' && !!document.querySelector('#sb-panel-adducts .cadd-wrap table')")
             pg.fill("#calcin", ""); until(pg, "!document.querySelector('#calcpad').hidden")
         step("a formula: no keypad, «Cerca» shows its adducts on the page", formula_hides_pad)
         VIS = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!!w.offsetParent)"       # the page and the Disegno drop-down each draw a table: only the visible one is read
         TXT = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!!w.offsetParent).flatMap(w=>[...w.querySelectorAll('tbody tr:not(.cmore)')]).map(tr=>[...tr.children].map(c=>c.textContent.replace(/\\s+/g,' ').trim()))"
         def table_rows():
-            pg.fill("#al-q", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
             rows = pg.evaluate(TXT); names = [x[0] for x in rows]
             assert names[:4] == ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+"], names
             assert rows[0][1] == "+1.0073" and rows[0][2] == "239.2" and rows[0][3] == "239", rows[0]
@@ -112,12 +111,12 @@ try:
             pg.fill("#altol", "100000"); frames(pg, 25); pg.fill("#altol", "5")
         step("no observed m/z field, no High/Low switch; the tolerance field stays", no_observed_field)
         def typed_number():
-            pg.fill("#al-q", "239.2230"); until(pg, "!document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
+            pg.fill("#calcin", "239.2230"); until(pg, "!document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
             rows = pg.evaluate(TXT); assert rows[0][0] == "[M+H]+" and rows[0][-1] == "238.2", rows[0]
             assert pg.locator("#sb-panel-adducts .cxic").count() == 0, "no XIC without a formula"
         step("a typed number is the m/z looked up: M if this adduct", typed_number)
         def diffs():
-            pg.fill("#al-q", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#cadd-diffs')")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#cadd-diffs')")
             assert pg.get_attribute("#cadd-diffs", "open") is None, "closed by default"
             pg.click("#cadd-diffs summary"); pg.fill("#cadd-delta", "21.9819"); pg.wait_for_function("document.querySelector('#cadd-dres').textContent.includes('Na')")
             assert "Na" in pg.inner_text("#cadd-dres")
@@ -130,7 +129,7 @@ try:
             pg.evaluate("BARRA.setTab('losses')"); pg.evaluate("QQQRef.open('ad')"); attendi(pg, "BARRA.curTab === 'addloss' && BARRA.curSub === 'adducts'")      # the old «adducts» request of the references opens the Adducts tab
         step("the Adducts entry opens its panel, the references request too; no dead menu entry", menu)
         def xic_click():
-            pg.fill("#al-q", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cxic')")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cxic')")
             pg.click("#sb-panel-adducts .cadd-wrap button.cxic >> nth=1"); pg.wait_for_selector("#xic-mz", state="visible")
             assert "NH4" in pg.input_value("#xic-ad") or "NH4" in pg.inner_text("#xic-sum") or pg.input_value("#xic-mz"), "XIC window prefilled"
             pg.click("#xic-no")

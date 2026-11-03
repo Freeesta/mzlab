@@ -1,7 +1,7 @@
 // @ts-check
 // @ts-strict
 "use strict";
-// The Adducts & losses page of the drawer: the calculator (folds with its toggle), ONE field and ONE choices row, then the tabs Adducts | Neutral losses |
+// The Adducts & losses page of the drawer: the calculator (its keypad folds with the toggle, its field #calcin stays), ONE choices row, then the tabs Adducts | Neutral losses |
 // Contaminants, all fed by calc-qui*.js. Outside the drawer the Adducts window keeps its own field (mountAdducts). Classic script, after tables.js.
 
 (() => {
@@ -38,25 +38,27 @@
   const CALC_KEY = () => (typeof NOMI !== "undefined" ? NOMI.KEY("addloss.calc") : "mzlab.addloss.calc");
   /** @type {{ q: HTMLInputElement, views: any[], losses: { setQ: (q: string) => void } | null } | null} */
   let page = null;
-  const field = () => /** @type {HTMLInputElement | null} */ (Q1("#al-q"));
-  /** Builds the page once: the field, the choices row (drawn by the Adducts view), the three tab bodies. */
+  const field = () => /** @type {HTMLInputElement | null} */ (Q1("#calcin"));
+  /** Builds the page once: the field (the calculator's), the choices row (drawn by the Adducts view), the three tab bodies. */
   function ensurePage() {
     if (page) return page;
     const q = field(), ad = Q1("#sb-panel-adducts"), ls = Q1("#sb-panel-losses"), ct = Q1("#sb-panel-cont"), ctl = Q1("#al-ctl");
     if (!q || !ad || !ls || !ct || !ctl) return null;
-    const arg = () => ({ text: q.value, ans: 0 });
+    const arg = () => ({ text: q.value, ans: typeof CALC !== "undefined" ? CALC.ans : 0 });
     const views = [
       CALCQUI.mount({ ctl, out: ad, idp: "al", quiet: true, flat: true, groups: ["addotti", "diff"], catalogue: true, arg }),
       CALCQUI.mount({ ctl: null, out: ct, idp: "alc", quiet: true, flat: true, none: true, numOnly: true, groups: ["liste"], arg, after: (a, gs) => count("cont", a.kind === "num" ? (gs[0] ? gs[0].n : 0) : null) }),
     ];
     const losses = window.QQQRef ? QQQRef.mountLosses(ls) : null;
     page = { q, views, losses };
-    q.addEventListener("input", () => { views.forEach(v => CALCQUI.later(v)); if (losses) losses.setQ(q.value); });
     const tg = Q1("#al-calc-tg");
     if (tg) tg.addEventListener("click", () => setCalc(tg.getAttribute("aria-expanded") !== "true", true));
     setCalc(calcStored(), false);
+    refreshPage();
     return page;
   }
+  /** The tabs follow the field: called by the calculator at every change of its text (typed, keypad, tape, «=»). */
+  function refreshPage() { if (page) { page.views.forEach(v => CALCQUI.later(v)); if (page.losses) page.losses.setQ(page.q.value); } }
   /** The number of matches next to a tab's name (null: nothing typed). @param {string} sub @param {number | null} n */
   function count(sub, n) {
     const b = Q1(`#al-t-${sub} .cq-n`);
@@ -79,15 +81,15 @@
     if (opt.calc) setCalc(true, true);
     if (opt.open) pg.views.forEach(v => { v.open.add(/** @type {string} */ (opt.open)); v.open.delete("-" + opt.open); });
     if (opt.q != null) {
-      pg.q.value = String(opt.q); pg.q.dispatchEvent(new Event("input", { bubbles: true }));
+      pg.q.value = String(opt.q); if (typeof CALC !== "undefined") CALC.fresh = false; pg.q.dispatchEvent(new Event("input", { bubbles: true }));
       if (!opt.calc) setTimeout(() => { pg.q.focus(); pg.q.select(); }, 50);
     }
   }
-  /** «Cerca»: a number, a difference or a formula into the page field, on the tab given (null: the one shown). @param {string | number} q @param {string | null} [sub] @param {{ open?: string }} [opt] */
+  /** «Cerca»: a number, a difference or a formula into the field (null: the field as it is), on the tab given (null: the one shown). @param {string | number | null} q @param {string | null} [sub] @param {{ open?: string }} [opt] */
   function cerca(q, sub = null, opt = {}) {
     if (!window.BARRA) return;
     const s = sub && SUBS.includes(sub) ? sub : BARRA.curSub;
-    BARRA.setTab(s, { q: String(q), open: opt.open });
+    BARRA.setTab(s, { q: q == null ? undefined : String(q), open: opt.open });
   }
   /** @param {{ q?: string | number | null }} [opt] */
   const ensureAdducts = (opt = {}) => showSub("adducts", opt);
@@ -106,5 +108,5 @@
   function apriPerdite(q) {
     if (window.BARRA) BARRA.setTab("losses", { q: String(q) }); else if (window.QQQRef) QQQRef.open("ls", { q: String(q) });
   }
-  Object.assign(CALCQUI, { ensureAdducts, mountAdducts, showSub, cerca, setCalc, calcOpen, apriAddotti, apriPerdite, numberOf, SUBS });
+  Object.assign(CALCQUI, { ensureAdducts, mountAdducts, showSub, refreshPage, cerca, setCalc, calcOpen, apriAddotti, apriPerdite, numberOf, SUBS });
 })();

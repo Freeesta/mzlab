@@ -79,7 +79,7 @@ try:
 
         def cambia():
             pg.click("#stbar [data-cmd=addloss]"); shown("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Addotti e perdite' && document.querySelector('#stbar [data-cmd=addloss]').getAttribute('aria-pressed') === 'true'")
-            assert pg.is_visible("#calcdlg") and pg.is_visible("#al-q"), "one page: the calculator on top of the lists"
+            assert pg.is_visible("#calcdlg") and pg.is_visible("#calcin"), "one page: the calculator on top of the lists"
             pg.click("#al-calc-tg"); gone("#calcdlg"); assert pg.get_attribute("#al-calc-tg", "aria-expanded") == "false" and pg.evaluate("!BARRA.isOpen('calc')")
             pg.click("#al-calc-tg"); shown("#calcdlg"); assert pg.evaluate("BARRA.isOpen('calc')")
             pg.click("#stbar [data-cmd=addloss]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=addloss]", "aria-pressed") == "false", "a second click on the same tool goes back to the previous one"
