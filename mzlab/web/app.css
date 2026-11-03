@@ -518,7 +518,6 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 #al-tabs{display:flex;margin:4px 0 2px}#al-tabs button{flex:1 1 auto;min-height:32px;white-space:nowrap;padding:2px 6px}
 #al-tabs .cq-n[hidden]{display:none}
 #al-tabs [aria-selected="true"] .cq-n{color:inherit;border-color:currentColor}
-.al-cap{font-size:11.5px;margin:4px 2px 6px}
 .al-body .cq-flat .cq-l{margin-left:0;list-style:none}.al-body .cq-flat .cq-l li{border-bottom:1px solid var(--line);padding:4px 2px;margin:0}
 .cq-sub{font-weight:600;margin:6px 0 2px;font-size:12px}
 @media (pointer:coarse){.al-calc-tg,#al-tabs button,.cq-tolf input{min-height:40px}#calcdlg.sb-docked .cpad button{min-height:40px}}
