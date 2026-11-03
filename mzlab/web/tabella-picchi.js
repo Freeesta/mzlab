@@ -31,7 +31,7 @@
     ix.sort((u, v) => y[v] - y[u]); ix = ix.slice(0, Math.max(1, s.max));                       // most intense first, then the cut
     if (s.sort === "mz") ix.sort((u, v) => d.mz[u] - d.mz[v]);
     const head = ["m/z", T("tabp.c.int"), T("tabp.c.rel"), ...(ms2 ? [T("tabp.c.dmz"), T("tabp.c.nl")] : [])];
-    const body = ix.map(j => [I18N.num(d.mz[j], dec), I18N.num(+y[j].toPrecision(6)), I18N.num(y[j] / top * 100, 1), ...(ms2 ? [I18N.num(d.mz[j] - p.prec, dec), I18N.num(p.prec - d.mz[j], dec)] : [])]);
+    const body = ix.map(j => [I18N.num(d.mz[j], dec), I18N.sciE(y[j], 5), I18N.num(y[j] / top * 100, 1), ...(ms2 ? [I18N.num(d.mz[j] - p.prec, dec), I18N.num(p.prec - d.mz[j], dec)] : [])]);
     return { head, body };
   }
   /** @param {{ head: string[], body: string[][] }} r */

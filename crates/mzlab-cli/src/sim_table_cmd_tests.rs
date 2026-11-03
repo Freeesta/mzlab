@@ -65,7 +65,7 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
     assert_eq!(lines.len(), samples.len() + 1, "{area}");
     assert_eq!(
         lines[1],
-        format!("Blank{}", ",0.0".repeat(ions.len())),
+        format!("Blank{}", ",0.00000E+00".repeat(ions.len())),
         "the blank: every channel, no peak"
     );
     let peaks = text(&table(&[&d.join("sim3.wiff")], &["--set", "output=peaks"]));
@@ -99,6 +99,32 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
         format!("channel,name,{}", samples.join(","))
     );
     assert_eq!(flip.lines().nth(3).unwrap(), "251.1,ionC,0,2,2,2", "{flip}");
+    let g = text(&table(
+        &[&d.join("sim3.wiff")],
+        &[
+            "--set",
+            "output=n_peaks",
+            "--set",
+            "group.Sample_B=late",
+            "--set",
+            "group.Blank=early",
+        ],
+    ));
+    let rows: Vec<String> = g
+        .lines()
+        .map(|l| l.splitn(3, ',').take(2).collect::<Vec<_>>().join(","))
+        .collect();
+    assert_eq!(
+        rows,
+        [
+            "sample,group",
+            "Blank,early",
+            "Sample_B,late",
+            "Sample_A,",
+            "Sample_C,"
+        ],
+        "groups in the order they first appear, then the rest: {g}"
+    );
     for bad in ["output=area", "layout=rows"] {
         assert_ne!(table(&[&d.join("sim3.wiff")], &["--set", bad]).code, 0);
     }
@@ -169,7 +195,7 @@ fn a_scan_file_cut_short_gives_the_points_before_the_cut_and_a_warning() {
     let b: Vec<&str> = cut[3].split(',').skip(1).collect();
     assert!(
         b[..3].iter().all(|v| v.parse::<f64>().unwrap() > 0.0)
-            && b[3..].iter().all(|v| *v == "0.0"),
+            && b[3..].iter().all(|v| *v == "0.00000E+00"),
         "{cut:?}"
     );
     assert!(cut[4].split(',').skip(1).all(str::is_empty), "{cut:?}");

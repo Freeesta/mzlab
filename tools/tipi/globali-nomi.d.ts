@@ -484,7 +484,6 @@ declare var fmt2: any;
 declare var fmtA: any;
 declare var fmtAdduct: any;
 declare var fmtFormula: any;
-declare var fmtFull: any;
 declare var fmtTime: any;
 declare var fmz: any;
 declare var fname: any;
