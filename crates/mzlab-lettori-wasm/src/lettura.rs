@@ -189,18 +189,6 @@ pub fn famiglia() -> String {
     mzlab_lettori::famiglia().into()
 }
 
-/// The extensions the module accepts (JSON array, lower case with the dot).
-#[wasm_bindgen]
-pub fn estensioni() -> String {
-    let mut o = mzlab_core::json::Out::default();
-    o.raw("[");
-    for (i, e) in mzlab_lettori::estensioni().into_iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(e);
-    }
-    o.raw("]");
-    o.0
-}
-
 /// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
 /// as scans), `"pda"` (UV traces), `"variante"` (a file whose points the engine would misread: an Agilent `.D` QqQ MRM or Q-TOF profile or flight times, a SCIEX file of the 3200 reader). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
 #[wasm_bindgen]

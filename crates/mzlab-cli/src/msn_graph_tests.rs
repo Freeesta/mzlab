@@ -91,3 +91,117 @@ fn bad_arguments_are_refused() {
     );
     assert_eq!(run(&["msn-graph", "--help"]).code, 0);
 }
+
+/// (old flags, new flags) of every renamed flag of `msn-graph`; `t` is a truth file.
+const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";
+
+fn alias_cases(t: &str) -> Vec<(Vec<&str>, Vec<&str>)> {
+    vec![
+        (vec!["--mz-basso", "200"], vec!["--low-mz", "200"]),
+        (vec!["--ppm-basso", "30"], vec!["--wide-ppm", "30"]),
+        (vec!["--prove-min", "2"], vec!["--min-evidence", "2"]),
+        (vec!["--attivazione", "cid"], vec!["--activation", "cid"]),
+        (vec!["--isotopi"], vec!["--isotopes"]),
+        (
+            vec!["--scelta", "244=C13H10NO4"],
+            vec!["--pick", "244=C13H10NO4"],
+        ),
+        (
+            vec!["--interpreta", "--ppm-perdita", "5"],
+            vec!["--interpret", "--loss-ppm", "5"],
+        ),
+        (
+            vec!["--regole", "--toll-perdita-mda", "5"],
+            vec!["--rules", "--loss-tol-mda", "5"],
+        ),
+        (
+            vec![
+                "--smiles",
+                SMILES,
+                "--rotture",
+                "--max-legami",
+                "1",
+                "--ppm-struttura",
+                "5",
+            ],
+            vec![
+                "--smiles",
+                SMILES,
+                "--breaks",
+                "--max-bonds",
+                "1",
+                "--struct-ppm",
+                "5",
+            ],
+        ),
+        (
+            vec!["--smiles", SMILES, "--strutture", "n3"],
+            vec!["--smiles", SMILES, "--structures", "n3"],
+        ),
+        (
+            vec!["--smiles", SMILES, "--strutture", "tutti"],
+            vec!["--smiles", SMILES, "--structures", "all"],
+        ),
+        (
+            vec!["--export", "csv", "--pulito", "--nodo", "tutto"],
+            vec!["--export", "csv", "--clean", "--node", "tutto"],
+        ),
+        (
+            vec!["--verita", t, "--riassunto"],
+            vec!["--truth", t, "--summary"],
+        ),
+    ]
+}
+
+/// Every old flag of `msn-graph` gives the same stdout bytes and exit code as its English name; `tutti` = `all`.
+#[test]
+fn old_flags_are_aliases_of_the_english_ones() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_msn_alias_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let truth = dir.join("t.json");
+    std::fs::write(
+        &truth,
+        r#"{"nodes":[{"path":[305],"formula":"C14H15N3O5"}]}"#,
+    )
+    .unwrap();
+    let t = truth.to_str().unwrap();
+    let cases = alias_cases(t);
+    let f = msn();
+    for (old, new) in cases {
+        let go = |flags: &[&str]| {
+            let mut a = vec!["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"];
+            a.extend(flags);
+            run(&a)
+        };
+        let (o, n) = (go(&old), go(&new));
+        assert_eq!(n.code, 0, "{new:?}: {}", n.stderr);
+        assert_eq!(
+            (o.code, &o.stdout),
+            (n.code, &n.stdout),
+            "{old:?} vs {new:?}"
+        );
+    }
+    // the refusals name the new flags
+    let r = run(&["msn-graph", "x.mzML", "--summary"]);
+    assert_eq!(r.code, 2);
+    assert!(r.stderr.contains("--summary needs --truth"), "{}", r.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The help shows the English flags, the step parameter next to them, and ends with the line of the old names.
+#[test]
+fn help_shows_new_flags_and_ends_with_the_old_names() {
+    let h = String::from_utf8(run(&["msn-graph", "--help"]).stdout).unwrap();
+    assert!(h.contains("--low-mz N") && h.contains("(param mz_basso)"));
+    let last = h.trim_end().lines().last().unwrap();
+    assert!(
+        last.starts_with("old names still accepted: --mz-basso"),
+        "{last}"
+    );
+    assert!(!h
+        .trim_end()
+        .lines()
+        .rev()
+        .skip(1)
+        .any(|l| l.contains("--mz-basso")));
+}

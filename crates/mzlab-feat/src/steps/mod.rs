@@ -18,6 +18,8 @@ mod table;
 mod tabui;
 mod tabui_draw;
 mod tabui_link;
+mod transitions;
+pub use transitions::{transitions, EXAMPLE_1};
 
 use mzlab_core::step::{core_steps, Step};
 

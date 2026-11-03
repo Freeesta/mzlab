@@ -214,3 +214,51 @@ fn a_rule_with_fewer_than_twenty_applications_is_not_measured() {
     );
     assert_eq!(st.get("soglia_copertura").unwrap().bool(), Some(false));
 }
+
+/// Every old flag and the subcommand `somma` give the same bytes and exit code as `--list`, `--activation`, `--rules` and `sum`.
+#[test]
+fn old_names_are_aliases_of_the_english_ones() {
+    let f = scrivi(
+        "al.txt",
+        &registro("SYN-AL", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
+    );
+    let list = scrivi("al.lst", &format!("{f}\n"));
+    let lines = run(&["msn-rules", &f, "--rules"]);
+    let lf = scrivi(
+        "al.lines",
+        &String::from_utf8(lines.stdout.clone()).unwrap(),
+    );
+    let cases: [(&[&str], &[&str]); 4] = [
+        (
+            &["msn-rules", &f, "--regole"],
+            &["msn-rules", &f, "--rules"],
+        ),
+        (
+            &["msn-rules", &f, "--attivazione", "cid"],
+            &["msn-rules", &f, "--activation", "cid"],
+        ),
+        (
+            &["msn-rules", "--lista", &list, "--regole"],
+            &["msn-rules", "--list", &list, "--rules"],
+        ),
+        (&["msn-rules", "somma", &lf], &["msn-rules", "sum", &lf]),
+    ];
+    for (old, new) in cases {
+        let (o, n) = (run(old), run(new));
+        assert_eq!(n.code, 0, "{new:?}: {}", n.stderr);
+        assert!(!n.stdout.is_empty(), "{new:?}");
+        assert_eq!(
+            (o.code, &o.stdout),
+            (n.code, &n.stdout),
+            "{old:?} vs {new:?}"
+        );
+    }
+    let h = String::from_utf8(run(&["msn-rules", "--help"]).stdout).unwrap();
+    assert!(h.contains("--activation A") && h.contains("msn-rules sum"));
+    assert!(h
+        .trim_end()
+        .lines()
+        .last()
+        .unwrap()
+        .starts_with("old names still accepted: --lista"));
+}

@@ -42,20 +42,7 @@ pub(crate) fn fallback_method(ole: &Ole, sample: u32) -> Option<crate::methodinf
 
 /// The number of periods of the method of `sample` (the `PeriodN` storages of its first device method).
 fn periods(ole: &Ole, sample: u32) -> usize {
-    let prefix = format!(
-        "MethodSubtree/Method{}/DeviceMethod0/Period",
-        method_no(ole, sample)
-    );
-    let mut n = 0;
-    for p in ole.paths_list() {
-        if let Some(rest) = p.strip_prefix(&prefix) {
-            let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
-            if let Ok(k) = digits.parse::<usize>() {
-                n = n.max(k + 1);
-            }
-        }
-    }
-    n
+    super::period_count(ole, method_no(ole, sample))
 }
 
 /// The experiments of `sample` checked: a method of several periods or a scan type this reader does not know is an error; the precursor-ion and

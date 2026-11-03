@@ -14,7 +14,7 @@ fn err(line: usize, key: &'static str, detail: impl Into<String>) -> RowError {
 }
 
 /// The fields of a line; a field in double quotes may hold the delimiter, `""` is a quote.
-fn split(line: &str, d: char) -> Vec<String> {
+pub(crate) fn split(line: &str, d: char) -> Vec<String> {
     let (mut out, mut cur, mut quoted) = (Vec::new(), String::new(), false);
     let mut it = line.chars().peekable();
     while let Some(c) = it.next() {
@@ -33,7 +33,7 @@ fn split(line: &str, d: char) -> Vec<String> {
     out
 }
 
-fn delimiter(header: &str) -> char {
+pub(crate) fn delimiter(header: &str) -> char {
     if header.contains(';') {
         ';'
     } else if header.contains('\t') {

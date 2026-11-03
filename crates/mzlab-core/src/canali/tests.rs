@@ -391,3 +391,16 @@ fn mrm_label_is_the_method_name_else_the_transition() {
     assert_eq!(c.v[1].etichetta, "MRM 230→162 @25 «bentazone 1»");
     assert_eq!(c.v[2].etichetta, "MRM 230→190 @18");
 }
+
+#[test]
+fn sim_channels_of_a_wiff_are_labelled_by_their_ion() {
+    assert_eq!(
+        sim_label("SIM SIC Q1=237.1 sample=1 period=1 experiment=1 transition=0 dwell=50 polarity=positive name=ion A"),
+        "SIM 237.1 (+) 50 ms «ion A»"
+    );
+    assert_eq!(
+        sim_label("SIM SIC sample=2 period=1 experiment=2 transition=3 polarity=negative"),
+        "SIM #3 (−)"
+    );
+    assert_eq!(sim_label("SIC 180.10"), "SIM SIC 180.10");
+}

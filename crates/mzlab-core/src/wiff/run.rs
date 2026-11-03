@@ -1,5 +1,5 @@
 //! A sample as the `Run` that the rest of the program reads: scans become spectra (profile, empty ones left out as msconvert does)
-//! and the MRM blocks become a TIC and one SRM chromatogram per transition.
+//! and the MRM blocks become a TIC and one SRM chromatogram per transition (one SIM chromatogram per ion for a Q1MI / Q3MI experiment).
 
 use super::{scan, Wiff};
 use crate::error::Result;
@@ -50,6 +50,56 @@ impl Wiff {
         id
     }
 
+    /// The id of the SIM chromatogram of ion `j` of experiment `e` (0-based), as msconvert spells it (`SIM SIC Q1=<m/z> sample period experiment transition`),
+    /// then the dwell (ms), the polarity of the experiment and the name of the method when it has them.
+    pub(super) fn sim_id(&self, e: usize, j: usize, t: Option<&Transition>) -> String {
+        let mut id = String::from("SIM SIC");
+        if let Some(t) = t {
+            id += &format!(" Q1={}", t.q1);
+        }
+        id += &format!(
+            " sample={} period=1 experiment={} transition={j}",
+            self.sample,
+            e + 1
+        );
+        if let Some(t) = t {
+            id += &format!(" dwell={}", t.dwell);
+        }
+        let pol = self
+            .experiments
+            .get(e)
+            .map_or(self.polarity, |x| self.polarity_of(x));
+        match pol {
+            1 => id += " polarity=positive",
+            -1 => id += " polarity=negative",
+            _ => {}
+        }
+        if let Some(t) = t.filter(|t| !t.name.is_empty()) {
+            id += &format!(" name={}", t.name);
+        }
+        id
+    }
+
+    /// Id, kind, Q1 and Q3 of the chromatogram of column `j` of the block experiment `e`: SRM for an MRM experiment, SIM (no Q3) for a Q1MI / Q3MI one.
+    pub(super) fn trace_of(
+        &self,
+        e: usize,
+        j: usize,
+        t: Option<&Transition>,
+    ) -> (String, crate::mzml::ChromKind, Option<f64>, Option<f64>) {
+        if super::modi::sim(self.experiments.get(e).and_then(|x| x.code)) {
+            let id = self.sim_id(e, j, t);
+            return (id, crate::mzml::ChromKind::Sic, t.map(|t| t.q1), None);
+        }
+        let id = self.srm_id(e, j, t);
+        (
+            id,
+            crate::mzml::ChromKind::Srm,
+            t.map(|t| t.q1),
+            t.map(|t| t.q3),
+        )
+    }
+
     /// Spectra and chromatograms of the sample. Reads every block of the `.wiff.scan` once.
     pub fn run<R: ReadAt>(&self, scan: &mut R) -> Result<Run> {
         let mut run = Run::default();
@@ -78,7 +128,7 @@ impl Wiff {
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
-            } else if self.scan_experiment(r.experiment) {
+            } else if self.scan_experiment(r.experiment) || self.empty_sim_row(r) {
                 continue;
             } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?
             {
@@ -133,6 +183,7 @@ impl Wiff {
         for r in &self.records {
             if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some()
                 || self.scan_experiment(r.experiment)
+                || self.empty_sim_row(r)
             {
                 continue;
             }
@@ -228,13 +279,11 @@ impl Wiff {
             }
             let known = self.mrm_transitions(e);
             for (j, col) in cols.into_iter().enumerate() {
-                let t = known.get(j);
-                let (q1, q3) = (t.map(|t| t.q1), t.map(|t| t.q3));
-                let id = self.srm_id(e, j, t);
+                let (id, kind, q1, q3) = self.trace_of(e, j, known.get(j));
                 chroms.push(Chromatogram {
                     index: chroms.len(),
                     id,
-                    kind: ChromKind::Srm,
+                    kind,
                     q1,
                     q3,
                     unit: unit.into(),

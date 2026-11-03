@@ -246,7 +246,7 @@ pub fn sets_of(text: &str) -> Result<Vec<String>> {
                 value()?;
                 while it.next_if(|n| !n.starts_with("--")).is_some() {}
             }
-            "--dry-run" | "--json" | "--fresh" | "--jsonl" => {}
+            "--dry-run" | "--json" | "--fresh" | "--events" | "--jsonl" => {}
             s if s.starts_with("--") => return Err(bad(&format!("unknown option {s}"))),
             _ => {}
         }

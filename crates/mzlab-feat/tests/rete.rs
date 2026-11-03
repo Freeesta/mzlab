@@ -252,7 +252,7 @@ fn no_arc_leaves_the_parent_alone() {
 }
 
 /// The network the view is tried on (`TP_Mine/tests/rete_fixture.json`, copied from here so that the page and the engine agree): the five products of
-/// `rows()` with the MS2 of two of them compared with the parent's. `MZLAB_WRITE_FIXTURE=1` rewrites the file.
+/// `rows()` with the MS2 of two of them compared with the parent's. `MZLAB_UPDATE_FIXTURE=1` rewrites the file.
 #[test]
 fn the_fixture_of_the_view_is_the_output_of_the_engine() {
     let mut v = rows();
@@ -264,7 +264,10 @@ fn the_fixture_of_the_view_is_the_output_of_the_engine() {
     let got = net(&v, &ReteParams::default()).to_json();
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../TP_Mine/tests/rete_fixture.json");
-    if std::env::var("MZLAB_WRITE_FIXTURE").is_ok() {
+    if std::env::var_os("MZLAB_UPDATE_FIXTURE")
+        .or_else(|| std::env::var_os("MZLAB_WRITE_FIXTURE"))
+        .is_some()
+    {
         std::fs::write(&path, &got).unwrap();
     }
     assert_eq!(got, std::fs::read_to_string(&path).unwrap());

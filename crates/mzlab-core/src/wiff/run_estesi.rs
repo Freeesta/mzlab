@@ -1,4 +1,4 @@
-//! The spectra and chromatograms of a sample (a TIC for each full scan or MRM experiment) for the readers module (feature `estesi`): as `run.rs`, and the MRM blocks may be scheduled (sMRM: a transition
+//! The spectra and chromatograms of a sample (a TIC for each full scan or MRM experiment) for the readers module (feature `estesi`): as `run.rs` (SIM experiments as in `run.rs`), and the MRM blocks may be scheduled (sMRM: a transition
 //! is a point of its chromatogram only in the scans where it was acquired) and the experiments of a sample may be several (one TIC each).
 
 use super::super::{scan, Record, Wiff};
@@ -166,12 +166,11 @@ impl Wiff {
                         continue;
                     }
                 }
-                let (q1, q3) = (t.map(|t| t.q1), t.map(|t| t.q3));
-                let id = self.srm_id(e, j, t);
+                let (id, kind, q1, q3) = self.trace_of(e, j, t);
                 chroms.push(Chromatogram {
                     index: chroms.len(),
                     id,
-                    kind: ChromKind::Srm,
+                    kind,
                     q1,
                     q3,
                     unit: unit.into(),
