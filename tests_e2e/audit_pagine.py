@@ -102,7 +102,7 @@ def walk_header(pg, cell, cdp, shots):
             rec["motion_open"] = mo
             rec["untr"] = pg.evaluate(UNTR)
             if shots and rec["opened"]:
-                pg.screenshot(path=str(OUT / f"{cell.name}__{b['sel'].strip('#').replace(' ', '_').replace('[', '').replace(']', '').replace('=', '-').replace('\"', '')}.png"))
+                pg.screenshot(path=str(OUT / f"{cell.name}__{b['sel'].strip('#').replace(' ', '_').replace('[', '').replace(']', '').replace('=', '-').replace(chr(34), '')}.png"))
             if len(pg.context.pages) > n0:
                 for p in pg.context.pages[n0:]: rec.setdefault("popup", []).append(p.url); p.close()
             # close: same button again, then Escape
@@ -206,6 +206,28 @@ def first_useful(pg, v):
     except Exception as e: return "timeout"
 
 
+def switches(pg, cdp, sk, v):
+    """Data → v (cold), header walk in v, back to Data, v again (warm)."""
+    vv = {}
+    g0 = pg.evaluate(GEOM); cls0 = pg.evaluate("__au.cls")
+    vv["cold_ms"], vv["cold_motion"] = view(pg, v)
+    vv["cls_cold"] = round(pg.evaluate("__au.cls") - cls0, 4)
+    vv["untr"] = pg.evaluate(UNTR)
+    pg.screenshot(path=str(OUT / f"{sk}__{v}_cold.png"))
+    hc = Cell(f"{sk}_{v}"); walk_header(pg, hc, cdp, True); vv["header"] = hc.d["buttons"]
+    cls0 = pg.evaluate("__au.cls")
+    vv["back_data_ms"], vv["back_data_motion"] = view(pg, "data")
+    vv["back_cls"] = round(pg.evaluate("__au.cls") - cls0, 4)
+    vv["back_shifts"] = [x for x in pg.evaluate("__au.shifts") if x["t"] > 0][-6:]
+    g1 = pg.evaluate(GEOM)
+    vv["back_geom_changed"] = {k: [g0.get(k), g1.get(k)] for k in set(g0) | set(g1) if g0.get(k) != g1.get(k)}
+    cls0 = pg.evaluate("__au.cls")
+    vv["warm_ms"], vv["warm_motion"] = view(pg, v)
+    vv["cls_warm"] = round(pg.evaluate("__au.cls") - cls0, 4)
+    view(pg, "data")
+    return vv
+
+
 def main():
     r = Run(fresh=True)
     res = []
@@ -236,27 +258,7 @@ def main():
                 hc = Cell(f"{sk}_data"); walk_header(pg, hc, cdp, True); c.d["header_data"] = hc.d["buttons"]
                 if files: c.d["panels"] = panels(pg)
                 # page switches: cold (first visit) then warm (second)
-                c.d["views"] = {}
-                for v in views[1:]:
-                    vv = {}
-                    g0 = pg.evaluate(GEOM); cls0 = pg.evaluate("__au.cls")
-                    vv["cold_ms"], vv["cold_motion"] = view(pg, v)
-                    vv["cls_cold"] = round(pg.evaluate("__au.cls") - cls0, 4)
-                    vv["untr"] = pg.evaluate(UNTR)
-                    pg.screenshot(path=str(OUT / f"{sk}__{v}_cold.png"))
-                    hc = Cell(f"{sk}_{v}"); walk_header(pg, hc, cdp, True); vv["header"] = hc.d["buttons"]
-                    cls0 = pg.evaluate("__au.cls")
-                    vv["back_data_ms"], vv["back_data_motion"] = view(pg, "data")
-                    vv["back_cls"] = round(pg.evaluate("__au.cls") - cls0, 4)
-                    vv["back_shifts"] = [x for x in pg.evaluate("__au.shifts") if x["t"] > 0][-6:]
-                    g1 = pg.evaluate(GEOM)
-                    vv["back_geom_changed"] = {k: [g0.get(k), g1.get(k)] for k in set(g0) | set(g1) if g0.get(k) != g1.get(k)}
-                    cls0 = pg.evaluate("__au.cls")
-                    vv["warm_ms"], vv["warm_motion"] = view(pg, v)
-                    vv["cls_warm"] = round(pg.evaluate("__au.cls") - cls0, 4)
-                    view(pg, "data")
-                    c.d["views"][v] = vv
-                # cold load of each non-data route by address
+                c.d["views"] = {v: switches(pg, cdp, sk, v) for v in views[1:]}
                 c.d["direct"] = {}
                 # memory: 20 cycles of a few openers
                 c.d["cycles"] = []
