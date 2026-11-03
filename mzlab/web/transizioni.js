@@ -59,6 +59,16 @@ function layout(opts, run) {
   }
 }
 
+// run() applies the final layout with no slide at all (a page coming back, not a layout change the user made)
+function jump(run) {
+  const ps = panels();
+  suppress = true;
+  run();
+  queueMicrotask(() => { suppress = false; });
+  ps.forEach(cancelAll);
+  const a = Q1("#dfiles"); if (a) cancelAll(a);
+}
+
 // panels of the work area that change place or size by themselves (neighbours closing a gap, a plot growing, a new grid)
 const num = (s, k) => { const m = new RegExp("(?:^|[;\\s])" + k + ":\\s*(-?[\\d.]+)px").exec(s || ""); return m ? +m[1] : null; };
 const geom = s => ({ x: num(s, "left"), y: num(s, "top"), w: num(s, "width"), h: num(s, "height") });
@@ -86,4 +96,4 @@ function watchPanels() {
   dp.querySelectorAll(":scope>.pnl").forEach(p => mo.observe(p, opt));
 }
 watchPanels();
-window.TRANS = { layout, still };
+window.TRANS = { layout, jump, still };
