@@ -9,7 +9,7 @@ One short sentence at most: say what the control does or add the one fact that i
 589 keys: 394 keep, 153 shortened (IT and EN, keys unchanged), 1 deleted (`canali.tip.time`), 24 not tooltips (visible hints, headings, plural strings), 17 left to the follow-up of other chats. Literal tooltips (Tabui/Flow/runtime): 4 shortened, the rest are short or built at runtime from values.
 
 ## Channel picker
-- The channel name no longer carries the scan mode: `MS¹ EMS` is shown as `MS¹`, with `EMS` in the «Experiment» column (`canali.js` `bare`). The engine name (`et` of `api/canali`, `mzlab-cli channels`) is unchanged and still used in the legend, where there is no experiment column.
+- The channel name no longer carries the scan mode: `MS¹ EMS` is shown as `MS¹`, with `EMS` in the «Experiment» column (`canali.js` `bare`). The engine name (`et` of `api/canali`, `mzlab-cli channels`) also omits the scan mode, so the legend, site, desktop and CLI show the same label; ids are unchanged.
 - Row tooltip: only what the channel is (TIC, MS¹, data-dependent MS², BPC). The time range (`canali.tip.time`) and the raw engine ids are gone: time and points have their own columns.
 
 ## Exceptions for Federico to decide
