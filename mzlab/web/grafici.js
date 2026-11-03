@@ -28,9 +28,12 @@ async function diffTrace(p, s, o0) {
       () => J(`api/chrom?k=${s.k}&kind=${p.kind}&level=${lv}` + (p.mz0 != null ? `&mz0=${p.mz0}` : "") + (p.mz1 != null ? `&mz1=${p.mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(p.filt) + SUBREF.qs(o)));
   }
   const j = await memo(`dm${s.k}${SUBREF.qs(o)}`, () => J(`api/mrm?k=${s.k}${SUBREF.qs(o)}`));
-  const t = j.files[0].transitions.find(q => `${q.q1}>${q.q3}` === s.ion);
+  const t = j.files[0].transitions.find(q => trKey(q) === s.ion);
   return t && !t.nodiff ? t : null;
 }
+// The key of a transition: «Q1>Q3», or Q1 alone for a SIM ion (no Q3)
+/** @param {{q1?: any, q3?: any}} t */
+const trKey = t => t.q3 == null ? String(t.q1) : `${t.q1}>${t.q3}`;
 async function corrected(p, all) {
   const so = window.SUBREF && p.type !== "spec" && p.type !== "map" ? SUBREF.eff(p) : null, fo = p.fondo;
   if (!so && (!fo || fo.mode === "none")) return all;
@@ -101,11 +104,11 @@ async function rawSeries(p) {
   // MRM
   const mf = files.filter(f => f.kind === "mrm"), out = [], seen = new Map();
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
-  data.forEach(({ tr }) => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
+  data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
   const list = [...seen.values()];
   if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
   data.forEach(({ f, tr }, fi) => tr.forEach(t => {
-    const key = `${t.q1}>${t.q3}`;
+    const key = trKey(t);
     const matchTr = !p.tr || (Array.isArray(p.tr) ? p.tr.includes(key) : p.tr === key);
     if (!matchTr) return;
     const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);

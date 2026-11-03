@@ -889,6 +889,7 @@ declare var toOverlaid: any;
 declare var toggleLock: any;
 declare var toggleTl: any;
 declare var toolbar: any;
+declare var trKey: any;
 declare var traceMax: any;
 declare var tunitGet: any;
 declare var tunitLabel: any;
