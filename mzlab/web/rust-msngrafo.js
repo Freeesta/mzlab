@@ -3,13 +3,15 @@
 // wasm-feat/manifest.json (crates/mzlab-msngrafo-wasm) is fetched on the first request, checked against its SHA-256, and reads the .mzidx of
 // OPFS and the mzML of the file through `readerFor`. The engine itself is not touched. docs/agenti/msn-grafo.md.
 
+import { featManifest } from "./feat-manifesto.js";
+
 /** @type {Record<string, Promise<any>>} */ const loading = {};
 
 /** the module `key` of wasm-feat/manifest.json, fetched on first use and checked against its SHA-256 @param {string} key */
 export function load(key) {
   if (!loading[key]) loading[key] = (async () => {
     const base = new URL("./wasm-feat/", import.meta.url);
-    const man = (await (await fetch(new URL("manifest.json", base))).json())[key];
+    const man = (await featManifest(base))[key];
     if (!man) throw JSON.stringify({ error_key: "err.route.unavailable", params: {} });
     const bytes = await (await fetch(new URL(man.wasm, base))).arrayBuffer();
     const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2, "0")).join("");

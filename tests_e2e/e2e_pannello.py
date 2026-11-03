@@ -42,6 +42,9 @@ try:
                 pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles")
                 pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="visible"); frames(pg, 4); assert pg.evaluate("BARRA.curTab") == "addloss", "the toggle reopens the last tool"
                 pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles"), "a second click on the same tool hides it"
+                pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "BARRA.curTab === 'addloss'")
+                pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "BARRA.curTab === 'file'"); frames(pg, 4); assert pg.is_visible("#dfiles"), "a second click on a tool goes back to the previous one (File), the panel stays"
+                pg.click("#stbar [data-cmd=file]"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles"), "with no previous tool the second click hides the panel"
                 pg.keyboard.press("Control+b"); pg.wait_for_selector("#dfiles", state="visible"); frames(pg, 4); assert pg.is_visible("#dfiles"), "Ctrl+B"
                 pg.keyboard.press("Control+b"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles")
                 assert pg.evaluate("BARRA.commands.some(c => c.id === 'panel' && c.run)") and pg.locator("#sb-pin").count() == 0

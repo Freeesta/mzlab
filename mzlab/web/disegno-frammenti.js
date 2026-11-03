@@ -4,6 +4,8 @@
 // of the molecule. The numbers come from the Rust graph (crates/mzlab-feat-grafo-wasm, `fragments`), fed with the V2000 molfile of the piece so that the atom
 // order is the one of Ketcher (a SMILES from Indigo is renumbered). Hydrogens: each side takes one H per bond order, as in mzFinder's cleavages.
 
+import { featManifest } from "./feat-manifesto.js";
+
 /** @typedef {{ atoms: number[], formula: string, mass: number, mz: number }} Side */
 /** @typedef {{ a: number, b: number, order: number, kind: string, sides: Side[] }} Cut */
 
@@ -35,7 +37,7 @@ export function carica() {
   if (modulo) return modulo;
   if (/** @type {any} */ (window).MZLAB_DESKTOP) return (modulo = Promise.resolve(nativo()));
   modulo = (async () => {
-    const base = new URL("./wasm-feat/", import.meta.url), man = await (await fetch(new URL("manifest.json", base))).json(), e = man.grafo;
+    const base = new URL("./wasm-feat/", import.meta.url), man = await featManifest(base), e = man.grafo;
     if (!e) throw new Error("grafo");
     const bytes = await (await fetch(new URL(e.wasm, base))).arrayBuffer();
     if ((await sha256(bytes)) !== e.sha256) throw new Error("sha");
