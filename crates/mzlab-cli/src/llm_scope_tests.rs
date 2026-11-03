@@ -78,6 +78,51 @@ fn text(t: &str) -> Vec<Event> {
     vec![Event::TextDelta(t.into()), Event::Stop(StopReason::End)]
 }
 
+/// One user message on a fresh demo machine: router, then the orchestrator; `model` answers each call. Returns the text shown and the tools called.
+fn play(
+    user: &str,
+    route: &str,
+    model: &mut dyn FnMut(&Request, Vec<Event>) -> Vec<Event>,
+) -> (String, Vec<String>) {
+    let mut s = demo_state();
+    let (mut shown, mut called) = (String::new(), Vec::<String>::new());
+    let mut queue = vec![Input::User(user.into())];
+    while let Some(input) = queue.pop() {
+        for o in step(&mut s, input) {
+            match o {
+                Output::Sub { request, .. } => {
+                    let body: String = model(&request, text(route))
+                        .iter()
+                        .filter_map(|e| match e {
+                            Event::TextDelta(t) => Some(t.clone()),
+                            _ => None,
+                        })
+                        .collect();
+                    queue.push(Input::SubResult {
+                        role: "router".into(),
+                        body: Ok(body),
+                    });
+                }
+                Output::Send(req) => {
+                    // the orchestrator carries the scope rule and the demo catalog only
+                    assert!(req.body.contains("help only with the files open in mzLab, with mzFlow and with LC-MS data analysis"));
+                    assert!(!req.body.contains("\"flow_run\""));
+                    queue.extend(
+                        model(&req, text(REFUSAL))
+                            .into_iter()
+                            .rev()
+                            .map(Input::Event),
+                    );
+                }
+                Output::Show(t) => shown.push_str(&t),
+                Output::CallTool { name, .. } => called.push(name),
+                _ => {}
+            }
+        }
+    }
+    (shown, called)
+}
+
 #[test]
 fn off_topic_requests_are_refused_with_the_two_chips_and_no_tool() {
     let file = root("tests/data/assist/reg/fuori_tema.jsonl");
@@ -113,49 +158,7 @@ fn off_topic_requests_are_refused_with_the_two_chips_and_no_tool() {
             n += 1;
             ev
         };
-        let mut s = demo_state();
-        let (mut shown, mut called) = (String::new(), Vec::<String>::new());
-        let mut queue = vec![Input::User(user.into())];
-        while let Some(input) = queue.pop() {
-            for o in step(&mut s, input) {
-                match o {
-                    Output::Sub { request, .. } => {
-                        let body: String = model(&request, text(&route))
-                            .iter()
-                            .filter_map(|e| {
-                                if let Event::TextDelta(t) = e {
-                                    Some(t.clone())
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
-                        queue.push(Input::SubResult {
-                            role: "router".into(),
-                            body: Ok(body),
-                        });
-                    }
-                    Output::Send(req) => {
-                        // the orchestrator carries the scope rule and the demo catalog only
-                        assert!(
-                            req.body
-                                .contains("help only with the files open in mzLab, with mzFlow and with LC-MS data analysis"),
-                            "{id}"
-                        );
-                        assert!(!req.body.contains("\"flow_run\""), "{id}");
-                        queue.extend(
-                            model(&req, text(REFUSAL))
-                                .into_iter()
-                                .rev()
-                                .map(Input::Event),
-                        );
-                    }
-                    Output::Show(t) => shown.push_str(&t),
-                    Output::CallTool { name, .. } => called.push(name),
-                    _ => {}
-                }
-            }
-        }
+        let (shown, called) = play(user, &route, &mut model);
         assert!(called.is_empty(), "{id}: no tool, {called:?}");
         for f in strs(c, "forbidden_tools") {
             assert!(!called.iter().any(|t| t == f), "{id}: {f}");
