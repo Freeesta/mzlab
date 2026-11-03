@@ -102,11 +102,6 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   }
   /** The undo of a removal is done: its timer stops and the copy in the store is not freed. @param {any} e */
   function presa(e) { if (e.tipo !== "tolto") return; e.scade = null; if (e.chiudi) e.chiudi(); }
-  /** Takes back one removal (the button of its notice). @param {any} e */
-  function annullaVoce(e) {
-    const r = pila.annulla(x => x === e, ripristina); if (!r) return false;
-    presa(r); say(T("storia.undone", { what: etichetta(r) })); sync(); return true;
-  }
   /** A removal has no visible notice (the undo/redo buttons and Ctrl+Z are enough): it is announced to screen readers, and when it keeps something to free (`scade`) the removal becomes final after 6 s: the entry leaves the stack and `scade` frees what it kept. @param {any} e */
   function avviso(e) {
     say(T("storia.tolto", { what: e.what }));
