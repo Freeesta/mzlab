@@ -144,23 +144,37 @@ fn xic_rows(
     rows
 }
 
-/// Times `api/spectrum` for one scan at each of the given retention times.
-fn spectrum_row(r: &mut Routes<File>, rts: &[f64]) -> (String, f64, f64, f64) {
+/// Times the spectrum of one scan at each of the given retention times as the worker answers it: the route first (`None` on a high-resolution
+/// centroid file), then `spectrum_exact` on the mzML next to the index when there is one.
+fn spectrum_row(
+    r: &mut Routes<File>,
+    mzml: Option<&mut File>,
+    rts: &[f64],
+) -> (String, f64, f64, f64) {
     let n = rts.len();
     let (mut sp, mut sp_b, mut none) = (Vec::new(), 0usize, 0usize);
+    let mut mzml = mzml;
     for &rt in rts {
         let q = Query::parse(&format!("rt0={}&rt1={}&level=1", rt - 1e-4, rt + 1e-4));
         let t = Instant::now();
-        let s = r.handle("/api/spectrum", &q).expect("spectrum");
+        let mut s = r.handle("/api/spectrum", &q).expect("spectrum");
+        if let (None, Some(m)) = (&s, mzml.as_deref_mut()) {
+            s = r.spectrum_exact(&q, m).expect("spectrum_exact");
+        }
         sp.push(t.elapsed().as_secs_f64() * 1e3);
         sp_b += s.as_ref().map_or(0, String::len);
         none += s.is_none() as usize;
     }
     let (s50, s95) = stat(&mut sp);
-    let spec = if none == 0 {
-        "spectrum (api/spectrum, one scan)".to_string()
+    let how = if mzml.is_some() {
+        "route + spectrum_exact"
     } else {
-        format!("spectrum (api/spectrum: {none}/{n} answered None, not Rust's)")
+        "api/spectrum"
+    };
+    let spec = if none == 0 {
+        format!("spectrum ({how}, one scan)")
+    } else {
+        format!("spectrum ({how}: {none}/{n} answered None, not Rust's)")
     };
     (spec, s50, s95, (sp_b / n) as f64)
 }
@@ -203,7 +217,8 @@ fn misura(path: &str, a: &[String]) {
     ] {
         rows.extend(xic_rows(&mut r, set, mzs, name, tol_of));
     }
-    rows.push(spectrum_row(&mut r, &rts));
+    let mut mzml = File::open(std::path::Path::new(path).with_extension("mzML")).ok();
+    rows.push(spectrum_row(&mut r, mzml.as_mut(), &rts));
     let (o50, o95) = stat(&mut open);
     if json {
         let r: Vec<String> = rows

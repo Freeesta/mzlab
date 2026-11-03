@@ -46,6 +46,7 @@
     "spectra.msn_graph": ["Fragmentation graph", "process", "Builds the tree of fragments and neutral losses of one infusion."],
     "msn.library_export": ["Save as library", "output", "Writes the spectra of the tree as a library file."],
     "msn.table_export": ["Save as tables", "output", "Writes the ions and the losses of the graph as CSV tables."],
+    "chrom.transitions": ["Transition table", "process", "Integrates each SIM ion or SRM transition of a table in each file, inside its RT window."],
     "chrom.uv_peaks": ["Find UV peaks", "process", "Integrates the peaks of the UV trace of each file."],
     "features.table": ["Feature table", "process", "Detects and aligns the features of the files and writes the table."],
     "quant.calibrate": ["Apply calibration curves", "process", "Turns the signal of each compound into a concentration with the curves you imported."],

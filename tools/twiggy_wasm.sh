@@ -12,7 +12,7 @@ pack() { # <name> <wasm file>
 }
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
 pack engine $R/mzlab_wasm.wasm
-cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect,proofs,mrm,finder,finder_edge,finder_msn,flow_ms2
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect,proofs,finder,finder_edge,finder_msn,flow_ms2
 pack hr $R/mzlab_feat_wasm.wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features all
 pack attributio-all $R/mzlab_attributio_wasm.wasm

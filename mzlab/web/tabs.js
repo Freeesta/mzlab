@@ -88,7 +88,7 @@ function calPick() {
 }
 async function calLoad() {
   const mf = E.files.filter((/** @type {MzFile} */ f) => f.kind === "mrm"), seen = new Map();
-  (await Promise.all(mf.map((/** @type {MzFile} */ f) => getMrm(f.k)))).forEach(tr => tr.forEach((/** @type {Bag} */ t) => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
+  (await Promise.all(mf.map((/** @type {MzFile} */ f) => getMrm(f.k)))).forEach(tr => tr.forEach((/** @type {Bag} */ t) => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
   CAL.trs = [...seen.values()]; calPick();
 }
 
