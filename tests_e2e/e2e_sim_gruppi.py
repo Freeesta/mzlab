@@ -2,7 +2,7 @@
 `sim_listab_senzaq1`, three other channels without Q1, a water blank and samples named at T10, T20, T40; no laboratory data): no explanatory paragraph;
 without groups «ione 1» is one column; grouped as List A / List B the lists get their own columns, the rows follow the groups under folding header rows
 and the CSV is `mzlab-cli sim-table --set group.SAMPLE=GROUP` byte for byte; areas read 7.841E+04; `H2O` has the role Bianco; a picked column draws the
-time plot (one line, the blank dashed) with its data table, and a column of files without times gives the one-line hint. Needs the site and the .wasm
+time plot (one line, the blank dashed: a timeless blank is a level across the axis) with its data table, and a column of files without times gives the hint. Needs the site and the .wasm
 (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_gruppi.py"""
 import re, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
@@ -75,6 +75,8 @@ try:
             n = pg.evaluate("document.querySelectorAll('#tdati tbody tr').length"); need(n == 8, n)
             pg.keyboard.press("Escape")
             pg.click("#simtab [data-c='ion 2 [List B]']"); pg.click("#simtab [data-c='ion 1 [List A]']")
+            attendi(pg, "document.querySelectorAll('#simtab .simtab-kin svg polyline').length === 2", timeout=30000)
+            pg.evaluate("E.files.filter(f => f.ugrp === 'List A').forEach(f => { f.time = null; }); SIMTAB.sync()")
             attendi(pg, "document.querySelector('#simtab [data-kin-hint]')?.textContent === I18N.t('canali.simtab.kin.notime')", timeout=30000)
         step("a picked column draws the time plot with the blank dashed and its data table; no times = the hint", kinetic)
         step("no page error", lambda: need(not [x for x in r.errs if x[0] == "pageerror"], r.errs))

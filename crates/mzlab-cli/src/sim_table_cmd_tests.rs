@@ -99,6 +99,15 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
         format!("channel,name,{}", samples.join(","))
     );
     assert_eq!(flip.lines().nth(3).unwrap(), "251.1,ionC,0,2,2,2", "{flip}");
+    for bad in ["output=area", "layout=rows"] {
+        assert_ne!(table(&[&d.join("sim3.wiff")], &["--set", bad]).code, 0);
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn groups_order_the_rows_and_add_a_group_column() {
+    let Some(d) = fixture("groups") else { return };
     let g = text(&table(
         &[&d.join("sim3.wiff")],
         &[
@@ -125,9 +134,6 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
         ],
         "groups in the order they first appear, then the rest: {g}"
     );
-    for bad in ["output=area", "layout=rows"] {
-        assert_ne!(table(&[&d.join("sim3.wiff")], &["--set", bad]).code, 0);
-    }
     let _ = std::fs::remove_dir_all(&d);
 }
 
