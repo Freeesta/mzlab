@@ -19,7 +19,7 @@ try:
             pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             t = pg.inner_text("#sb-panel-adducts"); assert "364.1" in t and "364.0737" not in t, t       # QqQ (low resolution): one decimal, the observed m/z is an optional field of the zone below
             assert "errore (ppm)" not in t
-            assert pg.get_attribute("#alres", "data-mode") == "lr"
+            assert pg.get_attribute("#al-ctl .cq-ctl", "data-mode") == "lr"
             pg.evaluate("BARRA.close(false)"); pg.wait_for_timeout(200)
         step("adducts page with a QqQ file only: unit resolution", calc_qqq)
         def pills_qqq():
@@ -48,7 +48,7 @@ try:
             pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             assert pg.locator("#calcobs").count() == 0 and pg.locator("#al-ctl [data-r]").count() == 0, "no observed field, no High/Low switch"
             t = pg.inner_text("#sb-panel-adducts"); assert "364.0737" in t and "errore (ppm)" not in t, t
-            m = pg.get_attribute("#al-ctl .cq-ctl", "data-mode"); n = pg.get_attribute("#alres", "title"); assert m == "hr" and "Exploris" in n and pg.get_attribute("#alres", "data-mode") == "hr", (m, n)          # the Orbitrap file decides: high resolution, named in the chip
+            m = pg.get_attribute("#al-ctl .cq-ctl", "data-mode"); n = pg.get_attribute("#al-ctl .cq-ctl", "data-name"); assert m == "hr" and "Exploris" in n, (m, n)          # the Orbitrap file decides: high resolution, named in the chip
             assert pg.input_value("#altol") == "5"
             pg.evaluate("BARRA.close(false)"); pg.wait_for_timeout(200)
         step("adducts page with an Orbitrap file: 4 decimals, high resolution detected from the file", calc_hr)

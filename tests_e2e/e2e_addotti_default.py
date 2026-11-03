@@ -42,12 +42,12 @@ if __name__ == "__main__":
             step("Contaminants tab: the typed m/z in the known background lists, with its count", contaminanti)
             def ripiega():
                 assert pg.is_visible("#calcin") and pg.get_attribute("#al-calc-tg", "aria-expanded") == "true", "the calculator is shown by default"
-                pg.click("#al-calc-tg"); attendi(pg, "!document.querySelector('#calcin').offsetParent")
+                pg.click("#al-calc-tg"); attendi(pg, "!document.querySelector('#calcpad').offsetParent")
                 assert pg.get_attribute("#al-calc-tg", "aria-expanded") == "false"
                 pg.reload(); attendi(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
                 pg.evaluate("BARRA.setTab('adducts')"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
-                assert not pg.is_visible("#calcin"), "folded stays folded"
-                pg.evaluate("BARRA.setTab('calc')"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
+                assert not pg.is_visible("#calcpad") and pg.is_visible("#calcin"), "folded stays folded, the field stays"
+                pg.evaluate("BARRA.setTab('calc')"); attendi(pg, "!!document.querySelector('#calcpad').offsetParent")
                 assert pg.get_attribute("#al-calc-tg", "aria-expanded") == "true", "the calc command unfolds it"
             step("the calculator folds with its toggle, remembered; the calc command unfolds it", ripiega)
             def lista():

@@ -58,7 +58,12 @@
     return page;
   }
   /** The tabs follow the field: called by the calculator at every change of its text (typed, keypad, tape, «=»). */
-  function refreshPage() { if (page) { page.views.forEach(v => CALCQUI.later(v)); if (page.losses) page.losses.setQ(page.q.value); } }
+  function refreshPage() { if (page) { page.views.forEach(v => CALCQUI.later(v)); if (page.losses) page.losses.setQ(lossQ(page.q)); } }
+  /** What the Neutral losses list reads: a calculation counts as its result, a number or a formula as typed. @param {HTMLInputElement} q */
+  function lossQ(q) {
+    const a = CALCQUI.arg(q.value, typeof CALC !== "undefined" ? CALC.ans : 0);
+    return a.kind === "num" ? String(+a.v.toFixed(4)) : q.value;
+  }
   /** The number of matches next to a tab's name (null: nothing typed). @param {string} sub @param {number | null} n */
   function count(sub, n) {
     const b = Q1(`#al-t-${sub} .cq-n`);

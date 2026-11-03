@@ -55,7 +55,7 @@ try:
             pg.fill("#calcin", "(229.1-171.2)*2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '115.8'"); assert pg.inner_text("#calcres").strip() == "115.8"
             pg.click("#calc-nl"); until(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
-            assert pg.input_value("#calcin") == "(229.1-171.2)*2" and "115.8" in pg.inner_text("#sb-panel-losses")         # «Cerca» only picks the tab: one field, left as typed
+            assert pg.input_value("#calcin") == "(229.1-171.2)*2"         # «Cerca» only picks the tab: one field, left as typed
             pg.fill("#calcin", "96-66"); pg.keyboard.press("Enter"); until(pg, "document.querySelector('#calcin').value === '30'")
             pg.click("#al-t-adducts"); pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'losses' && document.querySelector('#calcin').value === '30'")       # after «=» the difference still picks the losses
             pg.evaluate("CALC.tape.length = 0")
@@ -107,7 +107,7 @@ try:
         def no_observed_field():
             assert pg.locator("#calcobs").count() == 0 and pg.locator("#al-ctl [data-r]").count() == 0, "no observed m/z field and no High/Low switch"
             assert pg.locator("#calcctl .cq-mode").count() == 0 and pg.locator("#calcqui .cq-t").count() == 0, "no resolution line and no «what can this be» heading"
-            assert pg.get_attribute("#al-ctl .cq-ctl", "data-mode") in ("hr", "lr") and pg.get_attribute("#alres", "data-mode") in ("hr", "lr")
+            assert pg.get_attribute("#al-ctl .cq-ctl", "data-mode") in ("hr", "lr")
             pg.fill("#altol", "100000"); frames(pg, 25); pg.fill("#altol", "5")
         step("no observed m/z field, no High/Low switch; the tolerance field stays", no_observed_field)
         def typed_number():

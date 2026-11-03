@@ -121,7 +121,7 @@ try:
             pg.click("#np-addloss") if not pg.evaluate("BARRA.curTab==='addloss'") else None; pg.click("#al-t-losses"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-res')")
             pg.fill("#calcin", "30"); frames(pg, 25)
             t = pg.inner_text("#sb-panel-losses"); assert "CH2O" in t or "CH₂O" in t, t[:300]
-            assert pg.locator("#al-ctl [data-r]").count() == 0 and pg.get_attribute("#al-ctl .cq-ctl", "data-mode") == "lr" and pg.get_attribute("#alres", "data-mode") == "lr"
+            assert pg.locator("#al-ctl [data-r]").count() == 0 and pg.get_attribute("#al-ctl .cq-ctl", "data-mode") == "lr"
         step("Neutral losses panel: shared groups for 30", to_loss)
         def link():
             pg.click("#al-t-adducts"); frames(pg, 25)
