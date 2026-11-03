@@ -22,6 +22,7 @@ mod nativi;
 mod corriere;
 mod nativi_motore;
 mod blocchi;
+mod gunzip;
 pub(crate) use blocchi::{js_blocks, BLOCK};
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.

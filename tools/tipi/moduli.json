@@ -75,6 +75,7 @@
     "../../mzlab/web/infusione-grafo-avanza.js",
     "../../mzlab/web/infusione-grafo-apri.js",
     "../../mzlab/web/formati-noti.js",
+    "../../mzlab/web/gz-flusso.js",
     "../../mzlab/web/infusione-grafo-svg.js",
     "../../mzlab/web/infusione-grafo-mol.js",
     "../../mzlab/web/msngrafo-vista.js",

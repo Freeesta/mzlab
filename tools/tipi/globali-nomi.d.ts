@@ -519,6 +519,7 @@ declare var groupMark: any;
 declare var groupSeen: any;
 declare var grpOf: any;
 declare var guardInt: any;
+declare var gzToEngine: any;
 declare var h: any;
 declare var hasDocked: any;
 declare var hashView: any;

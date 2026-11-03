@@ -173,6 +173,7 @@ I18N.add("en", {
   "err.file.base64": "The file is damaged: a peak array is not valid base64 ({detail}). Copy the file again or export it again from the instrument software.",
   "err.file.xml": "The file is not a complete mzML: the XML cannot be read ({detail}). If the copy was interrupted, copy the whole file again.",
   "err.file.zlib": "The file is damaged: a compressed peak array cannot be unpacked ({detail}). Copy the file again or export it again from the instrument software.",
+  "err.file.gzStream": "This browser cannot unpack a .gz file piece by piece into its storage (OPFS): unpack the file first (for example with 7-Zip) and open the .mzML or .mzXML, or use the app.",
   "err.flow.algorithm.unavailable": "The algorithm of this step is not available in this version of the program.",
   "err.flow.algorithm.unknown": "Unknown algorithm: {algorithm}.",
   "err.flow.annotations.level": "Unknown identification level: {level}.",

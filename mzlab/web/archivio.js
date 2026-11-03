@@ -131,6 +131,35 @@ async function writeNow(/** @type {string} */ kind, /** @type {string} */ name, 
 /** @type {(kind: string, name: string, size: number, chunk: Chunker, after?: AfterPiece) => Promise<File>} */
 export const putChunks = (kind, name, size, chunk, after) => write(kind, name, size, chunk, after);
 
+// pieces of a size known only at the end (the mzML a .mzML.gz inflates to, rust-carica.js putGz): `next()` gives the next piece, null at the end; the partial file is removed if something fails
+export function putStream(/** @type {string} */ kind, /** @type {string} */ name, /** @type {() => Promise<Uint8Array | null>} */ next) {
+  return locked(kind, name, async () => {
+    await dropLease(kind, name);
+    const d = await dir(kind), fh = await d.getFileHandle(name, { create: true }), ah = await fh.createSyncAccessHandle();
+    let at = 0;
+    try {
+      ah.truncate(0);
+      for (let p = await next(); p; p = await next()) { if (p.length) { await writeAll(ah, p, at); at += p.length; } }
+      ah.flush();
+      if (ah.getSize() < at) throw await quotaError(at);
+    } catch (e) {
+      try { ah.close(); } catch (_) { /* already closed */ }
+      try { await d.removeEntry(name); } catch (_) { /* nothing to remove */ }
+      throw e;
+    }
+    ah.close();
+    const f = await fh.getFile();
+    told("put", kind, name, f.size);
+    return f;
+  });
+}
+// removes kind/name unless a tab is writing it now (its Web Lock is held): the leftovers of a write that a closed tab or a crash stopped
+export async function removeIfFree(/** @type {string} */ kind, /** @type {string} */ name) {
+  const L = self.navigator && navigator.locks;
+  if (!L) return remove(kind, name);
+  await L.request("mzlab-file:" + kind + "/" + name, { ifAvailable: true }, async l => { if (l) await remove(kind, name); });
+}
+
 // a Blob, an ArrayBuffer or a Uint8Array -> File in OPFS
 export async function put(/** @type {string} */ kind, /** @type {string} */ name, /** @type {Blob | ArrayBuffer | Uint8Array} */ data) {
   if (data instanceof Blob) return write(kind, name, data.size, async (/** @type {number} */ o, /** @type {number} */ n) => new Uint8Array(await data.slice(o, o + n).arrayBuffer()));

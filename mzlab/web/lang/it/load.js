@@ -100,6 +100,7 @@ I18N.add("it", {
   "load.method.scan": "scansione",
   "load.method.scanRange": "scansione, m/z {lo}-{hi}",
   "load.note.wiffMethod": "{name}: letto il metodo dal .wiff per {n} file ({files}).",
+  "load.note.gzMemory": "{name} ({mb} MB compressi) si apre decomprimendolo tutto in memoria, perché questo browser non lo scrive a pezzi nel suo spazio: un file grande può non entrarci. Se l'apertura fallisce, decomprimilo prima (per esempio con 7-Zip) e apri il .mzML.",
   "load.dup.one": "«{name}» è già caricato.",
   "load.dup.many": "{n} file già caricati: ignorati.",
   "load.wiffWait": "{name}: aspetto l'altro file della coppia (.wiff e .wiff.scan con lo stesso nome).",

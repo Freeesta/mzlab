@@ -40,6 +40,7 @@ pub mod hrscans;
 pub mod error;
 pub mod provenance;
 pub mod gradient;
+pub mod gunzip;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod idxcache;
 pub mod idxnuovo;
