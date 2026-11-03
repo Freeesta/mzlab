@@ -40,12 +40,16 @@
   }
   /** @param {{ head: string[], body: string[][] }} r */
   const tsv = r => [r.head, ...r.body].map(l => l.join("\t")).join("\n");
-  /** CSV text of the rows: comma, decimal point, UTF-8 BOM (csvBuild of xlsx.js), the same cells as the table @param {{ head: string[], body: string[][] }} r */
-  const csv = r => "\ufeff" + csvBuild({ head: r.head, rows: r.body });
-  /** download the peak list as CSV, named like the other downloads of the panel @param {any} p */
+  /** download the peak list as CSV, named like the other downloads of the panel; header is row 1 and the provenance line closes the file (as dlc) @param {any} p */
   function save(p) {
     if (!p._a || !p._a.data || !p._a.data[0]) return false;
-    dl(plotName(p) + "_" + T("tabp.file") + ".csv", csv(rows(p)), "text/csv;charset=utf-8", { p, table: "peaks" }); return true;
+    (async () => {
+      let t = csvBuild({ head: rows(p).head, rows: rows(p).body });
+      const w = await PROV.tsv(t, { p, table: "peaks" }), i = w.indexOf("\n");
+      if (w !== t && i > 0) t += csvBuild({ rows: [[w.slice(0, i)]] });
+      dl(plotName(p) + "_" + T("tabp.file") + ".csv", "\ufeff" + t, "text/csv;charset=utf-8", false);
+    })();
+    return true;
   }
   /** the entry «Peak list (CSV)» of the panel download menu @param {any} p @param {string} icon */
   const item = (p, icon) => ({ label: T("tabp.dl"), icon, fn: () => { if (!save(p)) info(T("panel.dl.nodata")); } });
@@ -122,5 +126,5 @@
   }
   /** after every drawing: the table follows the scan; a spectrum with no peaks closes it @param {any} p */
   function sync(p) { const s = p._tp; if (s && s.pop) render(p); }
-  window.TABPICCHI = { wire, sync, rows, facts, open, close, save, item, csv, tsv };
+  window.TABPICCHI = { wire, sync, rows, facts, open, close, save, item, tsv };
 })();
