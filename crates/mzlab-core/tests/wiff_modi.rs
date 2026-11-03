@@ -12,7 +12,13 @@ use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
 fn generate() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_modi_{}", std::process::id()));
+    // one folder per call: the tests of this file run in parallel threads of one process and would write the same files
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let out = std::env::temp_dir().join(format!(
+        "mzlab_wiff_modi_{}_{}",
+        std::process::id(),
+        CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    ));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_modi.py");
     let ok = Command::new("python3")
         .arg(script)
@@ -198,7 +204,17 @@ fn mzml(dir: &Path, name: &str, c: usize) -> String {
     for p in parts.iter_mut().skip(1) {
         *p = &p[p.find('"').unwrap()..];
     }
-    parts.concat()
+    // the method document names the experiment type of each file (Q1, EMS): the scans are what must match
+    let xml = parts.concat();
+    let key = format!("name=\"{}\"", mzlab_core::metodo::USERPARAM);
+    match xml.find(&key) {
+        Some(a) => {
+            let a = xml[..a].rfind("<userParam").unwrap();
+            let b = a + xml[a..].find("/>").unwrap() + 2;
+            format!("{}{}", &xml[..a], &xml[b..])
+        }
+        None => xml,
+    }
 }
 
 /// Q1 (code 0) is read as an EMS level-1 profile scan, also by the samples that take their method from Method1 (a batch run with one method).

@@ -5,7 +5,7 @@ I18N.add("it", {
   "cmd.calc.lab": "Calcolatrice",
   "cmd.addloss.lab": "Addotti e perdite",
   "cmd.addloss.name": "Addotti e perdite",
-  "cmd.addloss.tip": "Calcolatrice, addotti di una formula o di una m/z osservata, perdite neutre (Δm) e contaminanti noti",
+  "cmd.addloss.tip": "Addotti, perdite neutre (Δm) e calcolatrice",
   "cmd.addloss.kw": "addotto addotti adducts adduct differenza massa esi sodio ammonio perdita neutra perdite neutre delta neutral loss neutral losses mass difference calcolatrice calculator contaminanti contaminants fondo background",
   "al.tabs": "Addotti, perdite neutre o contaminanti",
   "cmd.calc.name": "Calcolatrice",

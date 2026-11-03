@@ -324,7 +324,7 @@ fn wiff_ems_and_epi_at_fixed_precursors_are_ms_channels_with_a_sigla() {
     let ms: Vec<_> = c.v.iter().filter(|x| x.famiglia == Famiglia::Ms).collect();
     assert_eq!(ms.len(), 3);
     assert_eq!((ms[0].sigla, ms[0].livello), (Some("EMS"), 1));
-    assert_eq!(ms[0].etichetta, "MS¹ EMS");
+    assert_eq!(ms[0].etichetta, "MS¹");
     assert!(ms[1..].iter().all(|x| x.sigla == Some("EPI") && x.n == 10));
     assert!(c.v.iter().all(|x| x.famiglia != Famiglia::Dd));
 }

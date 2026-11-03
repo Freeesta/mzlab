@@ -7,7 +7,8 @@ holds each ion as an MRM-like row with Q3 = 0, which is a hypothesis: no real SI
 every peak. Ion 237.1 has two isobaric peaks (isomers at two RTs). Also OUT/sim_periodi.wiff (the same method with a second period: refused with
 `periods=2`), OUT/sim_vuoti.wiff (one sample whose cycle 10 has an empty row in experiment 1: left out, the ions keep their columns), and for the SIM
 table of the Data view OUT/sim3.wiff (a blank and three named samples, one positive experiment of seven ions at a 0.8 s cycle, one peak per ion and an
-isomer pair in ionC; OUT/sim3.json) with OUT/sim_senzaq1.wiff (the same samples whose method names no ion: SIM channels without Q1) and OUT/sim3_cut.wiff, the same pair with its .wiff.scan cut at 60 %.
+isomer pair in ionC; OUT/sim3.json) with OUT/sim_senzaq1.wiff (the same samples whose method names no ion: SIM channels without Q1) and OUT/sim3_cut.wiff, the same pair with its .wiff.scan cut at 60 %;
+OUT/sim_listab.wiff and OUT/sim_listab_senzaq1.wiff: a second list of three other ions (a water blank, samples at T10, T20, T40).
 Invented numbers, no laboratory data.
 """
 import json
@@ -118,11 +119,40 @@ def sim3(out):
     for s, name in enumerate(SIM3_SAMPLES):
         wq.sample(s + 1, blocks_of(s), nameless, log="3200 QTRAP", data_name=name)
     wq.save(out, "sim_senzaq1")
+    listb(out)
     scan = (out / "sim3_cut.wiff.scan").read_bytes()
     (out / "sim3_cut.wiff.scan").write_bytes(scan[:len(scan) * 6 // 10])
     (out / "sim3.json").write_text(json.dumps({"ioni": [{"q1": q1, "name": nm} for q1, nm in SIM3], "campioni": SIM3_SAMPLES,
                                                 "picchi": [[[round(rt, 3) for rt, _ in sim3_peaks(s, j)] for j in range(len(SIM3))] for s in range(len(SIM3_SAMPLES))],
                                                 "cicli": SIM3_CYCLES}))
+
+
+# a second SIM list for the groups of the SIM table: three other ions, a water blank and three timed samples (T10, T20, T40: the peak grows), written
+# with the ions (sim_listab.wiff) and without them (sim_listab_senzaq1.wiff: «ione 1» here is another m/z than «ione 1» of sim_senzaq1)
+LISTB = [(196.1, "ionH"), (329.2, "ionI"), (180.1, "ionJ")]
+LISTB_SAMPLES = ["H2O", "B_T10", "B_T20", "B_T40"]
+
+
+def listb_blocks(s):
+    """The cycles of sample s of the second list: peak heights grow with the time of the sample, none in the water."""
+    blocks = []
+    for k in range(SIM3_CYCLES):
+        t = SIM3_CYCLE_MS * k / 60000.0
+        v = [round(40.0 + (k * 5 + j) % 7 + (s * (3.0e4 + 1.0e4 * j) * math.exp(-0.5 * ((t - 3.0 - 3.0 * j) / SIM3_SIGMA_MIN) ** 2) if s else 0.0), 1)
+             for j in range(len(LISTB))]
+        blocks.append(("mrm", v, SIM3_CYCLE_MS * k, sum(v)))
+    return blocks
+
+
+def listb(out):
+    method = {"Experiment0/ExperimentHeader": w.header(1, 0.0, polarity=0),
+              "Experiment0/MassRangeEx/MassRangeEx": table([(q1, 20.0, nm) for q1, nm in LISTB]),
+              "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": w.ion_spray(5500.0)}
+    for tag, m in (("sim_listab", method), ("sim_listab_senzaq1", {k: v for k, v in method.items() if "MassRangeEx" not in k})):
+        wr = w.Writer()
+        for s, name in enumerate(LISTB_SAMPLES):
+            wr.sample(s + 1, listb_blocks(s), m, log="3200 QTRAP", data_name=name)
+        wr.save(out, tag)
 
 
 if __name__ == "__main__":

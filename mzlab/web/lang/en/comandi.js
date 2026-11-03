@@ -5,7 +5,7 @@ I18N.add("en", {
   "cmd.calc.lab": "Calculator",
   "cmd.addloss.lab": "Adducts & losses",
   "cmd.addloss.name": "Adducts & losses",
-  "cmd.addloss.tip": "Calculator, adducts of a formula or of an observed m/z, neutral losses (Δm) and known contaminants",
+  "cmd.addloss.tip": "Adducts, neutral losses (Δm) and calculator",
   "cmd.addloss.kw": "adduct adducts addotto addotti mass difference esi sodium ammonium neutral loss neutral losses perdita neutra perdite neutre delta calculator calcolatrice contaminants contaminanti background fondo",
   "al.tabs": "Adducts, neutral losses or contaminants",
   "cmd.calc.name": "Calculator",

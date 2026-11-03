@@ -269,6 +269,10 @@ impl Lettore for SrmDaScansioni {
     fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> Result<Option<String>> {
         self.inner.dad_wavelength(c, nm0, nm1)
     }
+    #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
+    fn dad_dati(&mut self, c: usize) -> Result<Option<mzlab_core::wiff::dad::DadData>> {
+        self.inner.dad_dati(c)
+    }
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.inner.metodo(c)
     }

@@ -9,16 +9,16 @@ One short sentence at most: say what the control does or add the one fact that i
 589 keys: 394 keep, 153 shortened (IT and EN, keys unchanged), 1 deleted (`canali.tip.time`), 24 not tooltips (visible hints, headings, plural strings), 17 left to the follow-up of other chats. Literal tooltips (Tabui/Flow/runtime): 4 shortened, the rest are short or built at runtime from values.
 
 ## Channel picker
-- The channel name no longer carries the scan mode: `MS¹ EMS` is shown as `MS¹`, with `EMS` in the «Experiment» column (`canali.js` `bare`). The engine name (`et` of `api/canali`, `mzlab-cli channels`) is unchanged and still used in the legend, where there is no experiment column.
+- The channel name no longer carries the scan mode: `MS¹ EMS` is shown as `MS¹`, with `EMS` in the «Experiment» column (`canali.js` `bare`). The engine name (`et` of `api/canali`, `mzlab-cli channels`) also omits the scan mode, so the legend, site, desktop and CLI show the same label; ids are unchanged.
 - Row tooltip: only what the channel is (TIC, MS¹, data-dependent MS², BPC). The time range (`canali.tip.time`) and the raw engine ids are gone: time and points have their own columns.
 
 ## Exceptions for Federico to decide
 - Six shortened tips are close to 80 characters because they carry a warning that the code relies on: `cmd.idn.tip` (candidates, not identifications), `cmd.subref.tip`, `disp.pdaAlign.title` (screen only), `llm.on.title` (nothing sent), `mappa.col.dm.title`, `xic.adduct.title`.
 - Kept as they are: `load.demo.*.title` (they list the example files), `int.tbl.par.title` (names three chromatographic parameters).
 
-## Follow-up (not edited here)
-- SETTINGS-PANEL: `settings.pal.title` (228), `settings.ext.title` (179), `settings.cen.title` (151), `settings.xiclens.title` (123), `settings.libs.title` (112), `settings.reset.title`, `settings.beside.title`, `settings.hrPpm.title`, `update.settings.title`, `predef.settings.title`.
-- ADD-LOSS: `cx.score.tip` (254), `calc.in.title` (191), `tbl.loss.searchTitle` (186), `cmd.addloss.tip` (122).
+## Follow-up
+- SETTINGS-PANEL: `settings.beside.title`, `settings.hrPpm.title`, `update.settings.title`, `predef.settings.title` still to review (`settings.pal/ext/cen/xiclens/libs/reset.title` are shortened).
+- ADD-LOSS: `cx.score.tip`, `calc.in.title`, `tbl.loss.searchTitle`, `cmd.addloss.tip` are shortened (the `{s}` sigma placeholder of `cx.score.tip` is dropped, `{w}` stays).
 
 ## Keys
 Current = Italian text before this census; Len = its length in characters; Proposed = new IT / EN.

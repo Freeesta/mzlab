@@ -264,9 +264,14 @@ pub fn to_mzml(
             &(total as f64).into(),
         );
     };
-    // indexed mzML with no processing steps: the form `mzlab-cli convert` writes (`flow_base.rs` `write_mzml_with`), byte for byte
+    // indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
+    // the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte
     let conv = lettori_mzml::Conversione {
         steps: Some(&[]),
+        opz: mzlab_core::mzmlwrite::Opzioni {
+            dad: true,
+            ..mzlab_core::mzmlwrite::Opzioni::default()
+        },
         ..lettori_mzml::Conversione::default()
     };
     conv.scrivi(&mut *l, c as usize, &mut out, &mut tell)

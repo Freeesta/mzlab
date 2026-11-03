@@ -1,5 +1,6 @@
 //! `simtab::table_text` on synthetic traces sampled every 0.8 s with peaks 12-15 s wide at the base (about 15 points per peak, the SIM methods of a
-//! triple quadrupole): rows and columns of both layouts, an isomer pair 25 s apart in one channel, a blank, a channel id without Q1.
+//! triple quadrupole): rows and columns of both layouts, an isomer pair 25 s apart in one channel, a blank, a channel without Q1, columns keyed by
+//! m/z across files, groups (row order, `group` column, channels without Q1 apart per group).
 
 use super::*;
 
@@ -20,9 +21,26 @@ fn trace(id: i64, q1: Option<f64>, name: &str, peaks: &[(f64, f64)]) -> String {
 }
 
 fn files(list: &[(&str, Vec<String>)]) -> String {
+    grouped(
+        &list
+            .iter()
+            .map(|(n, tr)| (*n, "", tr.clone()))
+            .collect::<Vec<_>>(),
+    )
+}
+
+/// Files with a group ("" = none).
+fn grouped(list: &[(&str, &str, Vec<String>)]) -> String {
     let parts: Vec<String> = list
         .iter()
-        .map(|(n, tr)| format!("{{\"name\":\"{n}\",\"transitions\":[{}]}}", tr.join(",")))
+        .map(|(n, g, tr)| {
+            let g = if g.is_empty() {
+                String::new()
+            } else {
+                format!(",\"group\":\"{g}\"")
+            };
+            format!("{{\"name\":\"{n}\",\"transitions\":[{}]{g}}}", tr.join(","))
+        })
         .collect();
     format!("[{}]", parts.join(","))
 }
@@ -57,14 +75,14 @@ fn set() -> String {
 fn rows_are_samples_and_columns_channels() {
     let area = table_text(&set(), "area_sum", "samples").unwrap();
     let lines: Vec<&str> = area.lines().collect();
-    assert_eq!(lines[0], "sample,237.1,253.1,transition=2");
+    assert_eq!(lines[0], "sample,237.1,253.1,ion 2");
     assert_eq!(lines.len(), 4, "{area}");
     assert!(
         lines[1].starts_with("t0,") && lines[1].ends_with(','),
         "{area}"
     );
     assert_eq!(
-        lines[2], "blank,0.0,0.0,",
+        lines[2], "blank,0.00000E+00,0.00000E+00,",
         "a blank: no peak, sum 0, no error"
     );
     assert!(lines[3].starts_with("\"s, 3h\",,"), "{area}");
@@ -124,6 +142,11 @@ fn the_peak_table_has_one_row_per_resolved_peak() {
         "peaks numbered in RT order"
     );
     assert!(p.contains("\nblank,237.1000,A,0,,,,,\n"), "{p}");
+    let area = rows[0].split(',').nth(5).unwrap();
+    assert!(
+        area.len() == 11 && &area[7..9] == "E+" && area.parse::<f64>().is_ok(),
+        "{area}"
+    );
     assert!(p.contains("\n\"s, 3h\",,,1,12.000,"), "{p}");
 }
 
@@ -143,4 +166,40 @@ fn no_sim_channel_and_bad_options() {
         table_text(&set(), "area_sum", "rows").unwrap_err().key,
         "err.simtab.output"
     );
+}
+
+#[test]
+fn a_column_is_one_mz_across_files_whatever_its_place() {
+    let set = files(&[
+        ("a", vec![trace(1, Some(253.1), "X", &[(5.0, 8e4)])]),
+        (
+            "b",
+            vec![
+                trace(4, Some(196.1), "", &[(6.0, 8e4)]),
+                trace(5, Some(253.1), "Y", &[(5.0, 4e4)]),
+            ],
+        ),
+    ]);
+    let t = table_text(&set, "n_peaks", "samples").unwrap();
+    assert_eq!(t, "sample,253.1,196.1\na,1,\nb,1,1\n");
+}
+
+#[test]
+fn groups_order_the_rows_and_keep_channels_without_q1_apart() {
+    let set = grouped(&[
+        ("a1", "List A", vec![trace(1, None, "", &[(5.0, 8e4)])]),
+        ("free", "", vec![trace(1, Some(300.2), "", &[(5.0, 8e4)])]),
+        ("b1", "List B", vec![trace(1, None, "", &[(6.0, 8e4)])]),
+        ("a2", "List A", vec![trace(1, None, "", &[(5.0, 8e4)])]),
+    ]);
+    let t = table_text(&set, "n_peaks", "samples").unwrap();
+    assert_eq!(
+        t,
+        "sample,group,ion 1 [List A],ion 1 [List B],300.2\na1,List A,1,,\na2,List A,1,,\nb1,List B,,1,\nfree,,,,1\n"
+    );
+    let p = table_text(&set, "peaks", "samples").unwrap();
+    assert!(p.starts_with("sample,group,q1,name,peak,"), "{p}");
+    assert!(p.contains("\nb1,List B,,,1,6.000,"), "{p}");
+    let c = table_text(&set, "n_peaks", "channels").unwrap();
+    assert_eq!(c.lines().next().unwrap(), "channel,name,a1,a2,b1,free");
 }
