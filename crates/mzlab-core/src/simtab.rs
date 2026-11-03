@@ -140,7 +140,9 @@ pub fn table_text(files: &str, output: &str, layout: &str) -> Result<String> {
     }
     let rank_of = |g: &str| order.iter().position(|x| *x == g).unwrap_or(order.len());
     let mut files: Vec<&Value> = list.arr().iter().collect();
-    files.sort_by_key(|f| rank_of(f.get("group").and_then(Value::str).unwrap_or("")));
+    crate::sortc::slice_by_key(&mut files, |f| {
+        rank_of(f.get("group").and_then(Value::str).unwrap_or(""))
+    });
     let mut samples: Vec<Sample> = Vec::new();
     let mut cols: Vec<Column> = Vec::new();
     for f in files {
