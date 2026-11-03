@@ -406,10 +406,10 @@ async function drawSpec(p, snapped) {
   if (isDiff) { data.forEach(x => x.d.y.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (v < negMax && x.d.mz[i] >= x0 && x.d.mz[i] <= x1) negMax = v; })); if (negMax < 0) { ymin = negMax * 1.12; ymax = Math.max(ymax, -negMax * 0.3); } }
   const yfull0 = ymin;
   if (p.zoomY) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }   // zoom of the intensity axis (drag on the numbers at the left of the axis, or box)
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: relY ? I18N.t("axis.relPct") : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
+  const { X, Y, yt } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: relY ? I18N.t("axis.relPct") : YT_I, tickMax: relY ? 100 : null, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, data, ymax, ymin, yfull: [yfull0, yfull], yinv: (/** @type {number} */ py) => ymin + (H - M.b - py) / ph * (ymax - ymin), full };
-  p._a.hrp = hrp; p._a.dec = DECP;
+  p._a.hrp = hrp; p._a.dec = DECP; p._a.yticks = yt;
   if (isDiff) {                                            // the words of the sign on the plot (never only the colour)
     g.save(); g.font = fpx(12, "bold "); g.textAlign = "left";
     g.fillStyle = ecss("--diff-pos"); g.fillText("▲ " + I18N.t("spec.diff.upAxis"), M.l + 8, M.t + 14);
@@ -507,6 +507,7 @@ async function drawSpec(p, snapped) {
     return `<span><i style="background:${color}"></i>${EH(lab)}${legPol(x.f)}${x.multi ? ` (prec. ${x.prec})` : ""}</span>`;
   }).join("") : "") + isoNote;
   contLegend(p);
+  if (window.TABPICCHI) TABPICCHI.sync(p);                    // the open peak table follows the scan
   if (window.XICBTN) XICBTN.sync(p);                         // the XIC under this spectrum follows its scan
 }
 
