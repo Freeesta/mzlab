@@ -179,7 +179,10 @@ fn graph_2(d: &Path, params: &str) -> String {
         {{"id":"g","step":"spectra.msn_graph@2","in":{{"source":"file:msn.mzML"}},"params":{params}}}]}}"#
     );
     let (run, prov) = crate::flow::run_plan(plan.as_bytes(), d, &d.join("work2"), 1, None).unwrap();
-    assert!(run.skipped.is_empty() && !prov.contains("\"error\""), "{prov}");
+    assert!(
+        run.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
     std::fs::read_to_string(d.join("work2/g.json")).unwrap()
 }
 
@@ -223,19 +226,42 @@ fn the_plan_written_after_a_run_names_2_and_an_old_set_name_is_read_as_the_new_o
     )
     .unwrap();
     let out = d.join("out");
-    let a: Vec<String> = ["flow", "run", plan.to_str().unwrap(), "--in", d.to_str().unwrap(), "--out", out.to_str().unwrap(), "--set", "g.mz_basso=100"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
+    let a: Vec<String> = [
+        "flow",
+        "run",
+        plan.to_str().unwrap(),
+        "--in",
+        d.to_str().unwrap(),
+        "--out",
+        out.to_str().unwrap(),
+        "--set",
+        "g.mz_basso=100",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
     let o = crate::execute(&a);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let written = std::fs::read_to_string(out.join("plan.json")).unwrap();
     assert!(written.contains("\"spectra.msn_graph@2\""), "{written}");
-    assert!(written.contains("\"min_evidence\":2") && written.contains("\"low_mz\":100"), "{written}");
+    assert!(
+        written.contains("\"min_evidence\":2") && written.contains("\"low_mz\":100"),
+        "{written}"
+    );
     for old in ["@1", "prove_min", "mz_basso"] {
         assert!(!written.contains(old), "{old} in {written}");
     }
     let g = std::fs::read_to_string(out.join("g.json")).unwrap();
-    assert_eq!(g, cli(&["--formula", "C14H15N3O5+", "--min-evidence", "2", "--low-mz", "100"]));
+    assert_eq!(
+        g,
+        cli(&[
+            "--formula",
+            "C14H15N3O5+",
+            "--min-evidence",
+            "2",
+            "--low-mz",
+            "100"
+        ])
+    );
     let _ = std::fs::remove_dir_all(&d);
 }

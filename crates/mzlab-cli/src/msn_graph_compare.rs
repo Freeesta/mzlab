@@ -61,7 +61,13 @@ fn num(v: &Value, k: &str) -> f64 {
 
 fn carica(testo: &str) -> Result<Grafo> {
     let v = parse(testo.as_bytes())?;
-    mzlab_core::msngrafo::versione(&v).map_err(|e| if e.key == "error.newerFormat" { e } else { bad() })?;
+    mzlab_core::msngrafo::versione(&v).map_err(|e| {
+        if e.key == "error.newerFormat" {
+            e
+        } else {
+            bad()
+        }
+    })?;
     let lista = |k: &str| v.get(k).map_or(&[][..], |x| x.arr());
     let nodi = lista("nodi")
         .iter()
