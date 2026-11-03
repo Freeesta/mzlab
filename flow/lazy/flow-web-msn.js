@@ -22,12 +22,13 @@
     if (ion && text("adduct") && !/[+\-[]/.test(ion)) ion += " " + text("adduct");
     if (ion) q.set("formula", ion);
     if (ion && text("smiles")) q.set("smiles", text("smiles"));
-    if (text("attivazione")) q.set("attivazione", text("attivazione"));
-    for (const n of ["ppm_formula", "mz_basso", "ppm_basso", "prove_min"]) if (typeof p[n] === "number") q.set(n, String(p[n]));
-    if (p.isotopi === true) q.set("isotopi", "1");
-    if (text("scelte")) q.set("scelte", JSON.stringify(text("scelte").split(",").map(s => { const [m, f] = s.split("="); return { mz: Number(m), formula: (f || "").trim() }; })));
-    if (p.interpreta === true) { q.set("interpreta", "1"); if (typeof p.ppm_perdita === "number") q.set("ppm_perdita", String(p.ppm_perdita)); }
-    if (text("strutture_nodo")) { q.set("strutture", text("strutture_nodo")); if (typeof p.ppm_struttura === "number") q.set("ppm_struttura", String(p.ppm_struttura)); }
+    // step parameter (spectra.msn_graph@2) → query key of the route
+    if (text("activation")) q.set("attivazione", text("activation"));
+    for (const [n, key] of [["ppm_formula", "ppm_formula"], ["low_mz", "mz_basso"], ["wide_ppm", "ppm_basso"], ["min_evidence", "prove_min"]]) if (typeof p[n] === "number") q.set(key, String(p[n]));
+    if (p.isotopes === true) q.set("isotopi", "1");
+    if (text("pick")) q.set("scelte", JSON.stringify(text("pick").split(",").map(s => { const [m, f] = s.split("="); return { mz: Number(m), formula: (f || "").trim() }; })));
+    if (p.interpret === true) { q.set("interpreta", "1"); if (typeof p.loss_ppm === "number") q.set("ppm_perdita", String(p.loss_ppm)); }
+    if (text("structures")) { q.set("strutture", text("structures")); if (typeof p.struct_ppm === "number") q.set("ppm_struttura", String(p.struct_ppm)); }
     return q;
   };
 

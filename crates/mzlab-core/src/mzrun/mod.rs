@@ -1,10 +1,12 @@
 //! The `mzrun/1` record (`docs/agenti/mzrun.md`, schema `docs/schemi/mzrun-1.json`): `build` writes one from a plan, its `prov/1` and the roles of the
-//! files, `verify` checks the fingerprints of a written one. Used by `mzlab-cli flow record|verify`; text is the canonical JSON of `flow::value_text`.
+//! files, `verify` checks the fingerprints of a written one, `migrate` brings a file of older step versions to the current ones. Used by `mzlab-cli flow record|verify`; text is the canonical JSON of `flow::value_text`.
 
 mod build;
+mod migrate;
 mod verify;
 
 pub use build::{build, Parts};
+pub use migrate::migrate;
 pub use verify::{verify, Verdict};
 
 use crate::budget::sha256_hex;

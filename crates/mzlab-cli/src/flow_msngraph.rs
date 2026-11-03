@@ -1,4 +1,4 @@
-//! The native executor of `spectra.msn_graph@1`: the fragmentation graph `msngrafo/1` of an MSn infusion (mzML or a vendor file such as a Thermo `.raw`),
+//! The native executor of `spectra.msn_graph@2`: the fragmentation graph `msngrafo/2` of an MSn infusion (mzML or a vendor file such as a Thermo `.raw`),
 //! the same bytes as `mzlab-cli msn-graph FILE`. The step takes the options of `msngrafo::Opzioni` that the command has, plus the name of the molecule
 //! looked up in a molecules list the user gives; its output is read by the page and by `msn-lib`.
 
@@ -12,7 +12,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{one_input, write_made, FileRunner};
 
-/// `spectra.msn_graph@1`: one graph per infusion file.
+/// `spectra.msn_graph@2`: one graph per infusion file.
 pub fn msn_graph_step() -> Step {
     Step {
         ins: vec![
@@ -23,7 +23,7 @@ pub fn msn_graph_step() -> Step {
                     .accepts(&[DataType::Table, DataType::Report])
             },
         ],
-        outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msngrafo/1)")],
+        outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msngrafo/2)")],
         params: params(),
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),
@@ -31,6 +31,7 @@ pub fn msn_graph_step() -> Step {
             ..RunsIn::default()
         },
         errors: vec!["err.file.numpress"],
+        version: 2,
         ..Step::core(
             "spectra.msn_graph",
             "MSn fragmentation graph",
@@ -40,14 +41,14 @@ pub fn msn_graph_step() -> Step {
 }
 
 /// The parameters of the step: one per option of the command.
-/// The parameters of the bond breaks (`rotture`).
+/// The parameters of the bond breaks (`breaks`).
 fn rotture_params() -> Vec<Param> {
     vec![
-            Param::boolean("rotture", "Break the bonds of the structure")
+            Param::boolean("breaks", "Break the bonds of the structure")
                 .label("Break the bonds")
                 .tip("Add the atom sets of the structure, with bonds cut, that give the m/z of each node.")
                 .default_bool(false)
-                .doc("Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `ppm_struttura`)"),
+                .doc("Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `struct_ppm`)"),
             Param::integer("h_max", "Hydrogens moved")
                 .label("Hydrogens moved")
                 .tip("Maximum number of hydrogens moved beyond the plain cleavage.")
@@ -55,7 +56,7 @@ fn rotture_params() -> Vec<Param> {
                 .max(4.0)
                 .default_num(2.0)
                 .doc("Hydrogens moved at most beyond the plain cleavage, for the bond breaks"),
-            Param::integer("max_legami", "Bonds cut")
+            Param::integer("max_bonds", "Bonds cut")
                 .label("Bonds cut")
                 .tip("Maximum number of bonds cut for one piece, 1 or 2.")
                 .min(1.0)
@@ -100,21 +101,21 @@ fn root_params(d: &Opzioni) -> Vec<Param> {
                 .default_num(d.ppm_formula)
                 .unit("ppm")
                 .doc("A sub-formula is a candidate of a fragment within this distance of its m/z"),
-            Param::number("mz_basso", "Low m/z limit")
+            Param::number("low_mz", "Low m/z limit")
                 .label("Low m/z limit")
                 .tip("Below this m/z the wider low-mass window may apply.")
                 .min(0.0)
                 .default_num(d.mz_basso)
                 .unit("m/z")
                 .doc("Below this m/z the window may widen to the low-mass window"),
-            Param::number("ppm_basso", "Low-mass window")
+            Param::number("wide_ppm", "Low-mass window")
                 .label("Low-mass window")
                 .tip("Wider ppm window used below the low m/z limit when enough evidences support the candidate.")
                 .min(0.0)
                 .default_num(d.ppm_basso)
                 .unit("ppm")
                 .doc("The wider window, for a candidate with enough evidences"),
-            Param::integer("prove_min", "Evidences for the wider window")
+            Param::integer("min_evidence", "Evidences for the wider window")
                 .label("Evidences for the wider window")
                 .tip("Number of evidences a candidate needs to use the wider window.")
                 .min(0.0)
@@ -126,41 +127,41 @@ fn params() -> Vec<Param> {
     let d = Opzioni::default();
     let mut v = root_params(&d);
     v.extend(vec![
-            Param::text("attivazione", "Activation")
+            Param::text("activation", "Activation")
                 .label("Activation")
                 .tip("Keep only spectra of this activation (cid, hcd, ...); empty keeps all.")
                 .default_str("")
                 .doc("Only the spectra of this activation (cid, hcd, ...); empty = all"),
-            Param::boolean("isotopi", "Keep M+1 peaks")
+            Param::boolean("isotopes", "Keep M+1 peaks")
                 .label("Keep M+1 peaks")
                 .tip("Turn the M+1 peaks of fragments into nodes linked to their monoisotopic peak.")
                 .default_bool(d.isotopi)
                 .doc("The M+1 peaks of the fragments become nodes with their monoisotopic peak"),
-            Param::text("strutture_nodo", "Node for the structure cleavages")
+            Param::text("structures", "Node for the structure cleavages")
                 .label("Node to cleave")
-                .tip("Node (nK) whose m/z is explained by structure cleavages; tutti for all nodes of level 2 or more.")
+                .tip("Node (nK) whose m/z is explained by structure cleavages; all for all nodes of level 2 or more.")
                 .default_str("")
-                .doc("Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `tutti` = the key `strutture_tutti` for every node of level 2 or more; empty = none"),
-            Param::number("ppm_struttura", "Cleavage window")
+                .doc("Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `all` (or `tutti`) = the key `strutture_tutti` for every node of level 2 or more; empty = none"),
+            Param::number("struct_ppm", "Cleavage window")
                 .label("Cleavage window")
                 .tip("Maximum distance in ppm between a cleaved piece and the m/z of the node.")
                 .min(0.0)
                 .default_num(crate::msn_graph::PPM_STRUTTURA)
                 .unit("ppm")
                 .doc("Distance of a cleaved piece from the m/z of the node"),
-            Param::boolean("interpreta", "Interpret the losses")
+            Param::boolean("interpret", "Interpret the losses")
                 .label("Interpret losses")
                 .tip("Add to each arc the neutral loss, its mass error and the activations that saw it.")
                 .default_bool(false)
                 .doc("Adds the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the activations that saw it"),
-            Param::number("ppm_perdita", "Loss window")
+            Param::number("loss_ppm", "Loss window")
                 .label("Loss window")
                 .tip("Maximum distance in ppm, relative to the precursor m/z, for matching a loss by mass.")
                 .min(0.0)
                 .default_num(mzlab_core::msngrafo::PPM_PERDITA)
                 .unit("ppm")
                 .doc("Window of the loss match by mass, ppm of the precursor m/z"),
-            Param::boolean("regole", "Apply the fragmentation rules")
+            Param::boolean("rules", "Apply the fragmentation rules")
                 .label("Apply fragmentation rules")
                 .tip("Add the rule that explains each loss, the even-electron check and the trap cut-off.")
                 .default_bool(false)
@@ -171,14 +172,14 @@ fn params() -> Vec<Param> {
                 .min(0.0)
                 .default_num(ParamRegole::default().cutoff_q)
                 .doc("Fragments below q/0.908 of the precursor m/z are not observable in a trap CID"),
-            Param::number("toll_perdita_mda", "Rule tolerance")
+            Param::number("loss_tol_mda", "Rule tolerance")
                 .label("Rule tolerance")
                 .tip("Maximum distance in mDa between a loss and the mass of a rule.")
                 .min(0.0)
                 .default_num(ParamRegole::default().toll_mda)
                 .unit("mDa")
                 .doc("Tolerance of a loss against the mass of a rule"),
-            Param::text("scelte", "Chosen formulas")
+            Param::text("pick", "Chosen formulas")
                 .label("Chosen formulas")
                 .tip("Pairs MZ=ION separated by commas, fixing the formula of the node at that m/z.")
                 .default_str("")
@@ -236,7 +237,7 @@ fn opzioni(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
         formula: text(job, "formula"),
         smiles: text(job, "smiles"),
         molfile: text(job, "molfile"),
-        attivazione: text(job, "attivazione"),
+        attivazione: text(job, "activation"),
         ..Opzioni::default()
     };
     if let (Some(name), None) = (text(job, "molecule"), &o.formula) {
@@ -248,28 +249,28 @@ fn opzioni(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
         o.smiles = o.smiles.or(smiles);
     }
     o.ppm_formula = number(job, "ppm_formula", o.ppm_formula);
-    o.mz_basso = number(job, "mz_basso", o.mz_basso);
-    o.ppm_basso = number(job, "ppm_basso", o.ppm_basso);
-    o.prove_min = number(job, "prove_min", o.prove_min as f64) as usize;
+    o.mz_basso = number(job, "low_mz", o.mz_basso);
+    o.ppm_basso = number(job, "wide_ppm", o.ppm_basso);
+    o.prove_min = number(job, "min_evidence", o.prove_min as f64) as usize;
     o.isotopi = job
         .resolved
         .params
         .iter()
-        .any(|(k, v)| k == "isotopi" && v.bool() == Some(true));
+        .any(|(k, v)| k == "isotopes" && v.bool() == Some(true));
     if job
         .resolved
         .params
         .iter()
-        .any(|(k, v)| k == "regole" && v.bool() == Some(true))
+        .any(|(k, v)| k == "rules" && v.bool() == Some(true))
     {
         let d = ParamRegole::default();
         o.regole = Some(ParamRegole {
             cutoff_q: number(job, "cutoff_q", d.cutoff_q),
-            toll_mda: number(job, "toll_perdita_mda", d.toll_mda),
+            toll_mda: number(job, "loss_tol_mda", d.toll_mda),
         });
     }
-    for par in text(job, "scelte").iter().flat_map(|s| s.split(',')) {
-        let bad = || Error::new("err.flow.param.type").with("param", "scelte");
+    for par in text(job, "pick").iter().flat_map(|s| s.split(',')) {
+        let bad = || Error::new("err.flow.param.type").with("param", "pick");
         let (m, f) = par.split_once('=').ok_or_else(bad)?;
         o.scelte
             .push((m.trim().parse().map_err(|_| bad())?, f.trim().to_string()));
@@ -290,27 +291,27 @@ pub fn msn_graph_text(
         .resolved
         .params
         .iter()
-        .any(|(k, v)| k == "interpreta" && v.bool() == Some(true))
+        .any(|(k, v)| k == "interpret" && v.bool() == Some(true))
     {
-        let ppm = number(job, "ppm_perdita", mzlab_core::msngrafo::PPM_PERDITA);
+        let ppm = number(job, "loss_ppm", mzlab_core::msngrafo::PPM_PERDITA);
         json = mzlab_core::msngrafo::con_interpretazione(&json, &g, ppm);
     }
     if job
         .resolved
         .params
         .iter()
-        .any(|(k, v)| k == "rotture" && v.bool() == Some(true))
+        .any(|(k, v)| k == "breaks" && v.bool() == Some(true))
     {
         let p = mzlab_feat::chem::rotture::Parametri {
-            ppm: number(job, "ppm_struttura", crate::msn_graph::PPM_STRUTTURA),
+            ppm: number(job, "struct_ppm", crate::msn_graph::PPM_STRUTTURA),
             h_max: number(job, "h_max", 2.0) as u8,
-            max_legami: number(job, "max_legami", 2.0) as u8,
+            max_legami: number(job, "max_bonds", 2.0) as u8,
         };
         json = mzlab_feat::chem::rotture::rotture_testo(&g, &json, o.smiles.as_deref(), p)?;
     }
-    match text(job, "strutture_nodo") {
+    match text(job, "structures") {
         Some(nodo) => {
-            let ppm = number(job, "ppm_struttura", crate::msn_graph::PPM_STRUTTURA);
+            let ppm = number(job, "struct_ppm", crate::msn_graph::PPM_STRUTTURA);
             Ok(crate::msn_graph::strutture_testo(&g, &json, &o, (&nodo, ppm))? + "\n")
         }
         None => Ok(json + "\n"),

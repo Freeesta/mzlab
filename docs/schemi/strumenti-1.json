@@ -111,7 +111,7 @@
               "spectra.lookup@1",
               "spectra.match@1",
               "spectra.ms2@1",
-              "spectra.msn_graph@1",
+              "spectra.msn_graph@2",
               "structure.draw@1",
               "structure.reactivity@1",
               "structure.render@1",
@@ -212,7 +212,7 @@
               "spectra.lookup@1",
               "spectra.match@1",
               "spectra.ms2@1",
-              "spectra.msn_graph@1",
+              "spectra.msn_graph@2",
               "structure.draw@1",
               "structure.reactivity@1",
               "structure.render@1",
@@ -1720,7 +1720,7 @@
           },
           {
             "properties":{
-              "step":{"const":"spectra.msn_graph@1"},
+              "step":{"const":"spectra.msn_graph@2"},
               "name":{
                 "enum":[
                   "formula",
@@ -1729,22 +1729,22 @@
                   "smiles",
                   "molfile",
                   "ppm_formula",
-                  "mz_basso",
-                  "ppm_basso",
-                  "prove_min",
-                  "attivazione",
-                  "isotopi",
-                  "strutture_nodo",
-                  "ppm_struttura",
-                  "interpreta",
-                  "ppm_perdita",
-                  "regole",
+                  "low_mz",
+                  "wide_ppm",
+                  "min_evidence",
+                  "activation",
+                  "isotopes",
+                  "structures",
+                  "struct_ppm",
+                  "interpret",
+                  "loss_ppm",
+                  "rules",
                   "cutoff_q",
-                  "toll_perdita_mda",
-                  "scelte",
-                  "rotture",
+                  "loss_tol_mda",
+                  "pick",
+                  "breaks",
                   "h_max",
-                  "max_legami"
+                  "max_bonds"
                 ]
               },
               "value":{
@@ -1806,7 +1806,7 @@
                   {
                     "type":"string",
                     "default":"",
-                    "description":"Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `tutti` = the key `strutture_tutti` for every node of level 2 or more; empty = none"
+                    "description":"Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `all` (or `tutti`) = the key `strutture_tutti` for every node of level 2 or more; empty = none"
                   },
                   {
                     "type":"number",
@@ -1850,7 +1850,7 @@
                   {
                     "type":"boolean",
                     "default":false,
-                    "description":"Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `ppm_struttura`)"
+                    "description":"Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `struct_ppm`)"
                   },
                   {
                     "type":"integer",
@@ -2719,7 +2719,7 @@
                 "spectra.lookup@1",
                 "spectra.match@1",
                 "spectra.ms2@1",
-                "spectra.msn_graph@1",
+                "spectra.msn_graph@2",
                 "structure.draw@1",
                 "structure.reactivity@1",
                 "structure.render@1",

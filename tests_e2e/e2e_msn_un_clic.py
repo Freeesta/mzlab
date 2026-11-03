@@ -56,7 +56,7 @@ try:
             by = pg.evaluate(f"""(async () => {{ const o = {{}}; for (const r of Object.values({FLOWS}.results).flat()) o[r.label.split('.').pop()] = await r.text(); return o }})()""")
             g, msp, csv = by["json"], by["msp"], by["csv"]
             j = json.loads(g)
-            assert j["formato"] == "msngrafo/1" and j.get("interpretazione"), list(j)[:12]
+            assert j["formato"] == "msngrafo/2" and j.get("interpretazione"), list(j)[:12]
             assert "Name:" in msp and "Num Peaks:" in msp
             assert csv.startswith("from,from_mz,from_formula,to,to_mz,to_formula,loss_mass,loss_formula,loss_ppm") and len(csv.splitlines()) > 1
         step("the three texts are the graph with the interpretation, MSP and the CSV of the modifications", texts)
