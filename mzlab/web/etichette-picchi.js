@@ -8,8 +8,8 @@ const cache = new Map();
 /** @type {Map<string, Promise<void>>} the labels being worked out, and those a drawing is waiting for (it draws them itself) */
 const pending = new Map(), claimed = new Set();
 
-/** Labels are on by default for one visible trace; a student's choice (p.etpk) wins. @param {any} p @param {number} n visible traces */
-const on = (p, n) => !isAnalog(p.kind) && (typeof p.etpk === "boolean" ? p.etpk : n <= 1);
+/** Labels are on by default for one visible trace, off in MRM panels (jagged transitions pile up times); a student's choice (p.etpk) wins. @param {any} p @param {number} n visible traces */
+const on = (p, n) => !isAnalog(p.kind) && (typeof p.etpk === "boolean" ? p.etpk : !ESP.mrm(p) && n <= 1);
 
 /** @param {any} s */
 const keyOf = (p, s) => { let sum = 0; for (let i = 0; i < s.y.length; i++) sum += s.y[i]; return [p.type, p.kind, s.key, s.x.length, +sum.toFixed(1), p.flv, p.mz0, p.mz1, p.prec, p.filt, p.pdaAlign ? DISP.pdaShift(p) : 0].join("|"); };
