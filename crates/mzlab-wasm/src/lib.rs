@@ -209,10 +209,11 @@ impl Engine {
         }
     }
 
-    /// `/api/spectrum` of a window holding ONE scan of a centroid HR file: the exact peaks come from the mzML (`read`). Empty = Python's.
+    /// `/api/spectrum` the index alone did not answer, with the mzML (`read`): ONE scan of a centroid HR file (its exact peaks) or a profile level of
+    /// single-precision peaks (its spacing read from the mzML first). Empty = Python's.
     pub fn spectrum_exact(&mut self, slot: u32, query: &str, read: Function) -> Result<String, JsValue> {
         let Some(r) = self.idx.get_mut(&slot) else { return Ok(String::new()) };
-        r.spectrum_exact(&Query::parse(query), &mut self.nat.src(slot, read, 0.0)?.0).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
+        r.mzml_route("/api/spectrum", &Query::parse(query), &mut self.nat.src(slot, read, 0.0)?.0).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
     }
 
     /// The SRM transitions of the file at `slot` (`[{id, q1, q3, ce, name, dwell, rt, y}]`), from the chromatograms of its mzML (`api/mrm`).

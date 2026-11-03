@@ -63,7 +63,9 @@ try:
         def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
             seen = set(pg.evaluate("Array.from(window.__rows)"))
             assert {"two.wiff", "serie.wiff"} <= seen, (seen, diag(pg))
-            assert pg.locator("#fl-up [aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.running().length") == 0, diag(pg)
+            # the last row leaves its busy state a moment after its mzML is listed (the engine may still be answering the first requests of the opened files)
+            try: pg.wait_for_function("!document.querySelector('#fl-up [aria-busy=true]') && CONVROWS.running().length === 0", timeout=30000)
+            except Exception: raise AssertionError(diag(pg))
         step("the pairs and the samples are listed (in conversion) before their mzML is ready", rows_while_converting)
         def rows_progress():                             # the bar of a row moves without drawing the list again
             pg.evaluate("CONVROWS.add('x_s1.mzML', 'wait'); CONVROWS.add('x_s2.mzML', 'wait'); CONVROWS.set('x_s1.mzML', 'run', 0)")
