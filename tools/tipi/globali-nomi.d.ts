@@ -792,6 +792,7 @@ declare var reorderFilesRaw: any;
 declare var reportLoad: any;
 declare var resetColors: any;
 declare var restack: any;
+declare var restoreRows: any;
 declare var restoreUi: any;
 declare var reveal: any;
 declare var rh: any;
