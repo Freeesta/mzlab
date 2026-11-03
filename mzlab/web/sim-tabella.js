@@ -91,7 +91,7 @@ function kinetic() {
   const cols = head.map((c, j) => [c, j]).filter(([c, j]) => +j >= (gcol ? 2 : 1) && st.sel.has(/** @type {string} */ (c)));
   const groups = gcol ? [...new Set(body.map(c => c[1]))] : [""], pal = /** @type {string[]} */ (typeof PAL !== "undefined" && PAL.length ? PAL : ["var(--lv1)", "var(--lv3)", "var(--lv4)"]);
   const num = (/** @type {string} */ v) => (v === "" ? null : Number(v));
-  const xv = xs.filter((x, i) => x != null && roles[i] !== "blank").map(Number), x0 = Math.min(...xv), x1 = Math.max(...xv);
+  const xv = xs.filter((x, i) => x != null && roles[i] !== "blank").map(Number), x0 = minOf(xv), x1 = maxOf(xv);
   // a blank without a time is drawn as a dashed level across the time span: two points at the ends of the axis
   const X = [...xs, x0, x1], R = [...roles, "blank", "blank"];
   /** @type {any[]} */ const lines = []; let s = 0;
