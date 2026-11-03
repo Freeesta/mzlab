@@ -75,7 +75,7 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 - Ruolo, tempo e concentrazione sono del parser dei nomi (`ruolo_e_tempo`, `guess_conc`); il ruolo `t0` conta come `sample`. Un nome senza separatori (`MQH2O2T00`) si taglia in atomi (parola nota, pezzo chimico con simboli di elementi, `T00`); `H2O2`, `TiO2`, `Na2SO4` restano interi.
 - Matrice = prima parola di sole lettere (non ruolo né condizione) con 2-6 valori su ≥ 2 file ciascuno; condizione = i token fra matrice e tempo (senza tempo nessun valore: `BTZ`, `mid`, `Wash` non sono condizioni); replica = numero ≤ 20 in coda se lo stesso nome senza di esso compare con un altro numero.
 - Punteggio = copertura × equilibrio (1 − Σp² normalizzato, solo + × /: stessi bit in `.wasm` e app). Nascoste: costanti, identificatori (categoriche con un file per valore, ≥ 3), punteggio < 0,05. Ordine: sopra 0,25 quello fisso `matrix cond time role matcond folder`, poi per punteggio (`conc`, `rep`).
-- `has`: token intero (`O2` non prende `H2O2`) o `substring`; un file va al primo termine, chi ne ha più sta in `multipli`, chi nessuno in `senza`. CLI `mzlab-cli campioni variabili|nome-gruppo`.
+- `has`: token intero (`O2` non prende `H2O2`) o `substring`; un file va al primo termine, chi ne ha più sta in `multipli`, chi nessuno in `senza`. CLI `mzlab-cli samples vars|group`.
 - Prove: `crates/mzlab-core/tests/campioni_variabili.rs` (elenco dello studio in `crates/mzlab-core/tests/campioni_variabili/federico.json`), `crates/mzlab-cli/src/campioni_cmd_tests.rs`, parità `.wasm` = app in `parita_rotte.rs` (`name_steps`).
 
 ## `campioni/3` (`docs/schemi/campioni-3.json`, `idcampione.rs`, `colonne.rs`, `json3.rs`, `valida3.rs`, `csv.rs`, `modello.rs`, `regex.rs`, `dal_file.rs`)
