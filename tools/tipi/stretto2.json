@@ -156,6 +156,7 @@
     "../../mzlab/web/bug-report-testo.js",
     "../../mzlab/web/esporta-dati.js",
     "../../mzlab/web/importa-dati.js",
+    "../../mzlab/web/feat-manifesto.js",
     "../../mzlab/web/parentesi.js",
     "../../mzlab/web/fair.js",
     "../../mzlab/web/idxpool.js",
