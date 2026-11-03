@@ -11,6 +11,9 @@ pub const CODE_PRODUCT_ION: u32 = 6;
 pub const CODE_NEUTRAL_LOSS: u32 = 7;
 pub const CODE_PRODUCT: u32 = 11;
 pub const CODE_FULL: u32 = 15;
+/// Selected-ion monitoring on Q1 or Q3 (Q1MI, Q3MI): one value per ion per cycle, like an MRM block. Not yet seen in a real file.
+pub const CODE_Q1MI: u32 = 1;
+pub const CODE_Q3MI: u32 = 3;
 
 /// What an experiment of this type writes into the mzML.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,9 +48,9 @@ use Uscita::{Sim, Spettro, Srm};
 #[rustfmt::skip]
 pub const MODI: [Modo; 17] = [
     m(CODE_Q1, "Q1", 1, None, Spettro, true),
-    m(1, "Q1MI", 1, None, Sim, false),
+    m(CODE_Q1MI, "Q1MI", 1, None, Sim, false),
     m(2, "Q3", 1, None, Spettro, false),
-    m(3, "Q3MI", 1, None, Sim, false),
+    m(CODE_Q3MI, "Q3MI", 1, None, Sim, false),
     m(CODE_MRM, "MRM", 2, None, Srm, true),
     m(CODE_PRECURSOR_ION, "Prec", 2, Some(("MS:1000341", "precursor ion spectrum")), Spettro, true),
     m(CODE_PRODUCT_ION, "PI", 2, None, Spettro, true),
@@ -69,9 +72,17 @@ pub fn modo(code: u32) -> Option<&'static Modo> {
         .filter(|x| x.code == code)
 }
 
-/// The engine's own reader (3200 QTRAP) handles MRM, product-ion, full (EMS) and Q1 full scans only.
+/// The engine's own reader (3200 QTRAP) handles MRM, SIM (Q1MI, Q3MI), product-ion, full (EMS) and Q1 full scans only.
 pub fn nativo(code: Option<u32>) -> bool {
-    matches!(code, Some(CODE_MRM | CODE_PRODUCT | CODE_FULL | CODE_Q1))
+    matches!(
+        code,
+        Some(CODE_MRM | CODE_PRODUCT | CODE_FULL | CODE_Q1 | CODE_Q1MI | CODE_Q3MI)
+    )
+}
+
+/// True for the SIM experiments (Q1MI, Q3MI): their blocks are one value per ion and become SIM chromatograms, not SRM ones.
+pub fn sim(code: Option<u32>) -> bool {
+    code.and_then(modo).is_some_and(|x| x.uscita == Uscita::Sim)
 }
 
 /// The readers module accepts a code only when its row is confirmed.
@@ -107,6 +118,7 @@ mod tests {
                 && !confermato(None)
         );
         assert!(nativo(Some(4)) && nativo(Some(0)) && !nativo(Some(5)));
+        assert!(nativo(Some(1)) && sim(Some(1)) && sim(Some(3)) && !sim(Some(4)) && !sim(None));
         assert_eq!(sigla(Some(0)), Some("Q1"));
     }
 }
