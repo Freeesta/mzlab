@@ -25,7 +25,7 @@ Tutto il lavoro dell'utente sta nel SUO browser; l'esportazione lo raccoglie in 
 |---|---|---|---|
 | localStorage | `mzlab.prefs` | preferenze generali | JSON oggetto |
 | localStorage | `mzlab.lang`, `mzlab-theme`, `mzlab-labels` | lingua, tema, etichette dei grafici | stringa |
-| localStorage | `mzlab.a11y`, `mzlab.set.a11y` | aiuti di lettura e impostazioni di accessibilità | JSON |
+| localStorage | `mzlab.a11y` | aiuti di lettura e impostazioni di accessibilità | JSON |
 | localStorage | `mzlab.sessione` | file e pannelli aperti (sessione) | JSON |
 | localStorage | `mzlab.picchi`, `mzlab.calc`, `mzlab.mappa`, `mzlab.ordine`, `mzlab.pca`, `mzlab.pfas`, `mzlab.profilo`, `mzlab.fair`, `mzlab.flgrp`, `mzlab.tunit`, `mzlab.kmd`, `mzlab.qaqc`, `mzlab.riferimento`, `mzlab.gradiente.ultimo`, `mzlab.bianco`, `mzlab.comp`, `mzlab.infg.frag` | scelte delle viste di Dati | JSON o stringa |
 | localStorage | `mzlab.barra.lato`, `mzlab.barra.lr`, `mzlab.barra.hr`, `mzlab.barra.hint`, `mzlab.banco.info` | layout della barra laterale e avvisi già visti | stringa / JSON |
