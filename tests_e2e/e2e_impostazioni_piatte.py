@@ -35,7 +35,7 @@ try:
         step("bug report: plain button opens and closes the form", bug_toggle)
         def narrow():
             for w in (360, 1400):
-                pg.set_viewport_size({"width": w, "height": 800}); pg.wait_for_timeout(150)
+                pg.set_viewport_size({"width": w, "height": 800}); attendi(pg, f"innerWidth === {w}")
                 m = pg.evaluate("""(() => { const d = document.querySelector('#uipset'), l = document.querySelector('.imp-lang'), s = l.querySelector('span').getBoundingClientRect(), g = l.querySelector('.seglang').getBoundingClientRect();
                   return [d.scrollWidth - d.clientWidth, Math.abs(s.top + s.height / 2 - g.top - g.height / 2), g.width, g.height]; })()""")
                 assert m[0] <= 0 and m[1] < 20 and m[3] >= 24, (w, m)
