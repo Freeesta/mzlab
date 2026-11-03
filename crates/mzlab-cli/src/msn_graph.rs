@@ -18,60 +18,74 @@ use mzlab_core::msngrafo::{
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::Opzioni as MzmlOpzioni;
 
-pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
+pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/2) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
 usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
-       mzlab-cli msn-graph FILE.mzML --formula ION --verita TRUTH.json --riassunto
+       mzlab-cli msn-graph FILE.mzML --formula ION --truth TRUTH.json --summary
        mzlab-cli msn-graph compare A.json B.json [--out PATH]
        mzlab-cli msn-graph complete IN.json [--out PATH]
-       mzlab-cli msn-graph figure IN.json [--figura svg,html,png] [--vista albero|radiale] [--out STEM]
+       mzlab-cli msn-graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]
 
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; without it, masses only
-  --smiles TEXT        written back in the JSON; with --strutture, the structure that is cleaved
+  --smiles TEXT        written back in the JSON; with --structures, the structure that is cleaved
   --molfile FILE       the 2D structure of the molecule (a molfile), written back in the JSON for the drawings of the root and of the fragments
-  --strutture NODO     add to the JSON the key `strutture`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
-                       ppm and the peaks of its spectrum that the same piece explains); `tutti` = the key `strutture_tutti`, those of every node of level 2
+  --structures NODE    add to the JSON the key `strutture`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
+                       ppm and the peaks of its spectrum that the same piece explains); `all` = the key `strutture_tutti`, those of every node of level 2
                        or more that has a cleavage
-  --interpreta         add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
-                       activations that observed it
-  --ppm-perdita N      window of the loss match by mass, ppm of the precursor m/z (10)
-  --regole             add to the JSON the key `regole`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
-                       of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates
-  --cutoff-q N         q of the trap cut-off, fragments below q/0.908 of the precursor m/z are not observable in a trap CID (0.25)
-  --toll-perdita-mda N tolerance of a loss against a rule, mDa (3)
-  --rotture            add to the JSON the key `rotture`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
-                       node, the arcs they explain and the share of each spectrum's intensity explained (hypotheses, never an assignment)
-  --h-max N            hydrogens moved at most beyond the plain cleavage, for --rotture (2)
-  --max-legami N       bonds cut at most, 1 or 2, for --rotture (2)
-  --ppm-struttura N    window of those cleavages and of --rotture, ppm (10)
-  --ppm-formula N      window of the sub-formulas, ppm (10)
-  --mz-basso N         below this m/z the window may widen (150)
-  --ppm-basso N        the wider window, ppm (20), for a candidate with --prove-min evidences (1)
-  --attivazione A      only the spectra of this activation (cid, hcd, ...)
-  --isotopi            keep the M+1 peaks as nodes
-  --scelta MZ=ION      the formula chosen for the node at MZ (repeatable)
-  --verita FILE        paths and formulas expected ({nodes: [{path, formula}]})
-  --riassunto          one line of numbers instead of the graph
+  --interpret          add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
+                       activations that observed it (param interpret)
+  --loss-ppm N         window of the loss match by mass, ppm of the precursor m/z (10) (param loss_ppm)
+  --rules              add to the JSON the key `regole`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
+                       of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates (param rules)
+  --cutoff-q N         q of the trap cut-off, fragments below q/0.908 of the precursor m/z are not observable in a trap CID (0.25) (param cutoff_q)
+  --loss-tol-mda N     tolerance of a loss against a rule, mDa (3) (param loss_tol_mda)
+  --breaks             add to the JSON the key `rotture`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
+                       node, the arcs they explain and the share of each spectrum's intensity explained (hypotheses, never an assignment) (param breaks)
+  --h-max N            hydrogens moved at most beyond the plain cleavage, for --breaks (2) (param h_max)
+  --max-bonds N        bonds cut at most, 1 or 2, for --breaks (2) (param max_bonds)
+  --struct-ppm N       window of those cleavages and of --breaks, ppm (10) (param struct_ppm)
+  --ppm-formula N      window of the sub-formulas, ppm (10) (param ppm_formula)
+  --low-mz N           below this m/z the window may widen (150) (param low_mz)
+  --wide-ppm N         the wider window, ppm (20), for a candidate with --min-evidence evidences (1) (params wide_ppm, min_evidence)
+  --activation A       only the spectra of this activation (cid, hcd, ...) (param activation)
+  --isotopes           keep the M+1 peaks as nodes (param isotopes)
+  --pick MZ=ION        the formula chosen for the node at MZ (repeatable) (param pick)
+  --truth FILE         paths and formulas expected ({nodes: [{path, formula}]})
+  --summary            one line of numbers instead of the graph
   --export FORMAT      the spectra of the tree as csv, mgf or msp text instead of the graph
-  --pulito             with --export: only the peaks a node of the graph explains
-  --nodo ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
+  --clean              with --export: only the peaks a node of the graph explains
+  --node ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
                        the tree; tutto = all
-  --figura LIST        with --out: also write the figures of the graph next to it (g.json → g.svg, g.html, g.png): svg, html (one file, no external
+  --figure LIST        with --out: also write the figures of the graph next to it (g.json → g.svg, g.html, g.png): svg, html (one file, no external
                        resource, two views, data table) and png (only in a build with the cargo feature `png`)
-  --vista V            the view the figures open on: albero (default) or radiale
+  --view V             the view the figures open on: tree (default) or radial
   --out PATH           write there instead of the standard output
 
-  figure               the figures of a graph already made (after `complete` if it has no `vista`): STEM.svg and STEM.html, STEM.png with --figura
+  figure               the figures of a graph already made (after `complete` if it has no `vista`): STEM.svg and STEM.html, STEM.png with --figure
   complete             adds the key `vista` (levels, best path, tree and radial layout) to an msngrafo/1 that has not got it, with the bytes the engine writes
   compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
-                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`";
+                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`
 
-/// Default window of the cleavages of `--strutture`, ppm.
+old names still accepted: --mz-basso --ppm-basso --prove-min --attivazione --isotopi --scelta --verita --riassunto --pulito --nodo --strutture --interpreta --ppm-perdita --regole --toll-perdita-mda --figura --vista --rotture --max-legami --ppm-struttura (values albero|radiale, tutti)";
+
+/// Old flag names of `msn-graph` (old, new); resolved before the match in `parse_args`.
+#[rustfmt::skip]
+const ALIASES: &[(&str, &str)] = &[
+    ("--mz-basso", "--low-mz"), ("--ppm-basso", "--wide-ppm"), ("--prove-min", "--min-evidence"),
+    ("--attivazione", "--activation"), ("--isotopi", "--isotopes"), ("--scelta", "--pick"),
+    ("--verita", "--truth"), ("--riassunto", "--summary"), ("--pulito", "--clean"),
+    ("--nodo", "--node"), ("--strutture", "--structures"), ("--interpreta", "--interpret"),
+    ("--ppm-perdita", "--loss-ppm"), ("--regole", "--rules"), ("--toll-perdita-mda", "--loss-tol-mda"),
+    ("--figura", "--figure"), ("--vista", "--view"), ("--rotture", "--breaks"),
+    ("--max-legami", "--max-bonds"), ("--ppm-struttura", "--struct-ppm"),
+];
+
+/// Default window of the cleavages of `--structures`, ppm.
 pub const PPM_STRUTTURA: f64 = 10.0;
 
 use mzlab_feat::chem::rotture::Parametri;
 
-/// The flags of the bond breaks and the window shared with `--strutture`.
+/// The flags of the bond breaks and the window shared with `--structures`.
 struct Rot {
     on: bool,
     p: Parametri,
@@ -90,17 +104,17 @@ impl Default for Rot {
 }
 
 impl Rot {
-    /// Takes the flag `x` if it is one of `--rotture`, `--h-max`, `--max-legami`, `--ppm-struttura`.
+    /// Takes the flag `x` if it is one of `--breaks`, `--h-max`, `--max-bonds`, `--struct-ppm`.
     fn flag(
         &mut self,
         x: &str,
         a: &mut impl Iterator<Item = String>,
     ) -> std::result::Result<bool, String> {
         match x {
-            "--rotture" => self.on = true,
+            "--breaks" => self.on = true,
             "--h-max" => self.p.h_max = numero(a.next(), x)?.clamp(0.0, 4.0) as u8,
-            "--max-legami" => self.p.max_legami = numero(a.next(), x)?.clamp(1.0, 2.0) as u8,
-            "--ppm-struttura" => self.p.ppm = numero(a.next(), x)?,
+            "--max-bonds" => self.p.max_legami = numero(a.next(), x)?.clamp(1.0, 2.0) as u8,
+            "--struct-ppm" => self.p.ppm = numero(a.next(), x)?,
             _ => return Ok(false),
         }
         Ok(true)
@@ -121,21 +135,27 @@ pub struct Args {
     pub out: Option<PathBuf>,
 }
 
+/// The value of `--structures`: `all` is the engine's `tutti`.
+#[rustfmt::skip]
+fn tutti(v: String) -> String {
+    if v == "all" { "tutti".into() } else { v }
+}
+
 fn numero(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
     v.and_then(|x| x.parse().ok())
         .ok_or(format!("{k} needs a number"))
 }
 
 /// The arguments after `msn-graph`; `Ok(None)` = `--help`.
-/// The view named after `--vista`.
+/// The view named after `--view`.
 fn vista_di(n: Option<String>) -> std::result::Result<crate::msn_figura::Vista, String> {
     crate::msn_figura::Vista::da_nome(&n.unwrap_or_default())
-        .ok_or_else(|| "--vista needs albero or radiale".into())
+        .ok_or_else(|| "--view needs tree or radial".into())
 }
 
-/// The refusal of `--figura` without `--out` or together with an output that is not the graph.
+/// The refusal of `--figure` without `--out` or together with an output that is not the graph.
 const FIGURA_USO: &str =
-    "--figura needs --out and the graph itself (not --riassunto, --export or --strutture)";
+    "--figure needs --out and the graph itself (not --summary, --export or --structures)";
 
 pub fn parse_args(
     mut a: impl Iterator<Item = String>,
@@ -147,7 +167,7 @@ pub fn parse_args(
     let (mut interpreta, mut ppm_perdita) = (false, PPM_PERDITA);
     let (mut regole, mut regole_p) = (false, ParamRegole::default());
     let (mut figura, mut vista) = (Vec::new(), crate::msn_figura::Vista::Albero);
-    while let Some(x) = a.next() {
+    while let Some(x) = a.next().map(|x| crate::msn_uscite::canonical(ALIASES, x)) {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
             "--formula" => o.formula = a.next(),
@@ -157,35 +177,35 @@ pub fn parse_args(
                 o.molfile = Some(std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))?);
             }
             "--ppm-formula" => o.ppm_formula = numero(a.next(), &x)?,
-            "--mz-basso" => o.mz_basso = numero(a.next(), &x)?,
-            "--ppm-basso" => o.ppm_basso = numero(a.next(), &x)?,
-            "--prove-min" => o.prove_min = numero(a.next(), &x)? as usize,
-            "--attivazione" => o.attivazione = a.next(),
-            "--isotopi" => o.isotopi = true,
-            "--scelta" => {
+            "--low-mz" => o.mz_basso = numero(a.next(), &x)?,
+            "--wide-ppm" => o.ppm_basso = numero(a.next(), &x)?,
+            "--min-evidence" => o.prove_min = numero(a.next(), &x)? as usize,
+            "--activation" => o.attivazione = a.next(),
+            "--isotopes" => o.isotopi = true,
+            "--pick" => {
                 let v = a.next().unwrap_or_default();
-                let (m, f) = v.split_once('=').ok_or("--scelta needs MZ=ION")?;
+                let (m, f) = v.split_once('=').ok_or("--pick needs MZ=ION")?;
                 o.scelte.push((numero(Some(m.into()), &x)?, f.into()));
             }
-            "--verita" => verita = a.next().map(PathBuf::from),
-            "--riassunto" => riassunto = true,
+            "--truth" => verita = a.next().map(PathBuf::from),
+            "--summary" => riassunto = true,
             "--export" => {
                 export = Some(
                     Formato::da_nome(&a.next().unwrap_or_default())
                         .map_err(|_| "--export needs csv, mgf or msp")?,
                 )
             }
-            "--pulito" => pulito = true,
-            "--nodo" => nodo = a.next(),
-            "--strutture" => strutture = a.next(),
-            "--interpreta" => interpreta = true,
-            "--ppm-perdita" => ppm_perdita = numero(a.next(), &x)?,
-            "--regole" => regole = true,
+            "--clean" => pulito = true,
+            "--node" => nodo = a.next(),
+            "--structures" => strutture = a.next().map(tutti),
+            "--interpret" => interpreta = true,
+            "--loss-ppm" => ppm_perdita = numero(a.next(), &x)?,
+            "--rules" => regole = true,
             "--cutoff-q" => regole_p.cutoff_q = numero(a.next(), &x)?,
-            "--toll-perdita-mda" => regole_p.toll_mda = numero(a.next(), &x)?,
+            "--loss-tol-mda" => regole_p.toll_mda = numero(a.next(), &x)?,
             x if rot.flag(x, &mut a)? => {}
-            "--figura" => figura = crate::msn_uscite::formati(&a.next().unwrap_or_default())?,
-            "--vista" => vista = vista_di(a.next())?,
+            "--figure" => figura = crate::msn_uscite::formati(&a.next().unwrap_or_default())?,
+            "--view" => vista = vista_di(a.next())?,
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
@@ -197,7 +217,7 @@ pub fn parse_args(
         return Err(FIGURA_USO.into());
     }
     if riassunto && verita.is_none() {
-        return Err("--riassunto needs --verita".into());
+        return Err("--summary needs --truth".into());
     }
     o.regole = regole.then_some(regole_p);
     let export = export.map(|f| (f, pulito, nodo));

@@ -117,6 +117,7 @@
     "../../mzlab/web/profilo.js",
     "../../mzlab/web/bianco.js",
     "../../mzlab/web/riferimento.js",
+    "../../mzlab/web/riferimento-corpo.js",
     "../../mzlab/web/pca.js",
     "../../mzlab/web/kmd-calc.js",
     "../../mzlab/web/kmd-vista.js",

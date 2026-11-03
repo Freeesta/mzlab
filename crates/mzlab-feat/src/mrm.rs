@@ -15,7 +15,6 @@ use mzlab_core::sorgente::Tracce;
 mod resolver;
 use resolver::{area_above, boxcar, odd_points, resolve, Span, Stabilise};
 
-use crate::export::{fix, Ctx};
 use crate::gapfill::{expected_window, trace_area, FillParams};
 use crate::recipe::Recipe;
 use crate::store::{write_file_to, write_table_to, Origin};
@@ -272,106 +271,6 @@ pub fn fill_file(al: &mut Aligned, file: usize, traces: &[Srm], p: &MrmParams) -
         }
     }
     filled
-}
-
-/// A qualifier against the quantifier of its precursor: the ratio of their areas in every file (NaN where one has no area).
-#[derive(Debug, Clone, PartialEq)]
-pub struct QualRatio {
-    pub qualifier: usize,
-    pub quantifier: usize,
-    pub ratio: Vec<f64>,
-}
-
-/// For every Q1 with several transitions, each of the others against the one with the largest median area. Measured, never a verdict.
-pub fn qualifier_ratios(t: &Aligned) -> Vec<QualRatio> {
-    let nf = t.n_files;
-    let median = |r: usize| {
-        let mut v: Vec<f64> = (0..nf)
-            .map(|k| t.area[r * nf + k])
-            .filter(|&a| a > 0.0)
-            .collect();
-        crate::sortc::by(&mut v, f64::total_cmp);
-        v.get(v.len() / 2).copied().unwrap_or(0.0)
-    };
-    let mut out = Vec::new();
-    let mut a = 0;
-    while a < t.len() {
-        let b = (a..t.len())
-            .take_while(|&r| key(t.mz[r]) == key(t.mz[a]))
-            .last()
-            .map_or(a, |r| r)
-            + 1;
-        if b - a > 1 {
-            let quant = (a..b)
-                .max_by(|&x, &y| median(x).total_cmp(&median(y)).then(y.cmp(&x)))
-                .unwrap_or(a);
-            for r in (a..b).filter(|&r| r != quant) {
-                let ratio = (0..nf)
-                    .map(|k| {
-                        let (n, d) = (t.area[r * nf + k], t.area[quant * nf + k]);
-                        if n > 0.0 && d > 0.0 {
-                            n / d
-                        } else {
-                            f64::NAN
-                        }
-                    })
-                    .collect();
-                out.push(QualRatio {
-                    qualifier: r,
-                    quantifier: quant,
-                    ratio,
-                });
-            }
-        }
-        a = b;
-    }
-    out
-}
-
-/// The long table of the calibration standards, ready for the line (that the programme does not compute): one line for every transition and every file of
-/// type `calibration` or `std`, with its concentration and unit, RT, area, height and state.
-pub fn csv_calibration(c: &Ctx) -> String {
-    let t = c.table;
-    let mut out =
-        String::from("transition,q1,q3,sample,type,concentration,unit,rt,area,height,state\n");
-    for r in c.rows() {
-        for (k, s) in c
-            .samples
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.kind == "calibration" || s.kind == "std")
-        {
-            let cell = r * t.n_files + k;
-            let state = match t.state[cell] {
-                CELL_DETECTED => "DETECTED",
-                CELL_FILLED => "FILLED",
-                _ => "ABSENT",
-            };
-            let (q1, q3) = (fix(t.mz[r], 2), fix(t.q3.get(r).copied().unwrap_or(0.0), 2));
-            let stem = s.file.rsplit_once('.').map_or(s.file.as_str(), |x| x.0);
-            let a = c.area(r, k);
-            out.push_str(&format!(
-                "{q1}>{q3},{q1},{q3},\"{}\",{},{},{},{},{},{},{state}\n",
-                stem.replace('"', "\"\""),
-                s.kind,
-                s.conc.map_or(String::new(), |v| fix(v, 6)),
-                // fixed size: a unit label, empty when absent
-                s.unit.clone().unwrap_or_default(),
-                if t.apex_rt[cell].is_nan() {
-                    fix(t.rt[r], 4)
-                } else {
-                    fix(f64::from(t.apex_rt[cell]), 4)
-                },
-                a.map_or(String::new(), |v| fix(v, 1)),
-                if a.is_some() {
-                    fix(f64::from(t.height[cell]), 1)
-                } else {
-                    String::new()
-                },
-            ));
-        }
-    }
-    out
 }
 
 /// The recipe written in the meta of the files of an MRM series: the unit one (the masses are nominal), with the threshold of the heights.

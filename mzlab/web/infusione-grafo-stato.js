@@ -1,6 +1,6 @@
 // @ts-strict
 // State and requests of the «Fragmentation graph» tab of an MSn infusion: the ion typed or chosen by name, the settings, the user's formula choices
-// and the graph (msngrafo/1) that /api/msn_grafo answers. No chemistry here: the engine reads the ion text and does every calculation.
+// and the graph (msngrafo/2) that /api/msn_grafo answers. No chemistry here: the engine reads the ion text and does every calculation.
 // Used by infusione-grafo*.js.
 
 /** Texts of the evidences, of the parity of the electrons and of the warnings, spelled out so the catalogue check sees every key used. */
@@ -111,7 +111,8 @@ export async function fetchGraph(/** @type {number} */ k) {
       url = viewUrl(k, false); G.key = url; j = await J(url);
     }
     if (G.key !== url) return false;
-    if (G.j == null) { const o = j.opzioni || {}; for (const n of /** @type {const} */ (["ppm_formula", "mz_basso", "ppm_basso", "prove_min"])) if (typeof o[n] === "number") G.o[n] = o[n]; }
+    // msngrafo/2 names its options in English, /1 in Italian (the names of G.o)
+    if (G.j == null) { const o = j.opzioni || {}; for (const [n, en] of /** @type {const} */ ([["ppm_formula", "ppm_formula"], ["mz_basso", "low_mz"], ["ppm_basso", "wide_ppm"], ["prove_min", "min_evidence"]])) { const x = typeof o[en] === "number" ? o[en] : o[n]; if (typeof x === "number") G.o[n] = x; } }
     G.j = j; G.error = null; G.errorObj = null; G.k = k;
     if (G.sel && !j.nodi.some((/** @type {any} */ n) => n.id === G.sel)) G.sel = null;
   } catch (e) {

@@ -1,4 +1,4 @@
-//! `mzlab-cli flow record RUNDIR --roles CAMPIONI.json [--out FILE]` and `flow verify FILE`: the `mzrun/1` record of a finished run, and
+//! `mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]` and `flow verify FILE`: the `mzrun/1` record of a finished run, and
 //! the check of its fingerprints (`mzlab_core::mzrun`, `docs/agenti/mzrun.md`). Exit 0 ok, 3 the record does not match itself, 2 usage.
 
 use std::path::Path;

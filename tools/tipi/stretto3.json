@@ -30,6 +30,7 @@
     "../../mzlab/web/mappa.js",
     "../../mzlab/web/tabs.js",
     "../../mzlab/web/libreria.js",
+    "../../mzlab/web/libreria-corpo.js",
     "../../mzlab/web/tabella.js",
     "../../mzlab/web/tavola-periodica.js",
     "../../mzlab/web/tables.js",

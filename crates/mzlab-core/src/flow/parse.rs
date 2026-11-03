@@ -1,4 +1,5 @@
-//! Reader of `mzflow/2` (and of the keys of `mzflow/1`): JSON text to a `Plan`. It only checks the shape of the file; what the steps mean is `check`.
+//! Reader of `mzflow/2` (and of the keys of `mzflow/1`): JSON text to a `Plan`. It only checks the shape of the file (what the steps mean is `check`)
+//! and migrates each instance to the current version of its step (`migrate.rs`).
 
 use super::{FileInput, Instance, Observed, Plan, Program, Ref};
 use crate::error::{Error, Result};
@@ -70,10 +71,15 @@ fn instance(v: &Value) -> Result<Instance> {
             ins.push((port.clone(), refs?));
         }
     }
-    let params = match v.get("params") {
+    let mut params = match v.get("params") {
         Some(Value::Obj(kv)) => kv.clone(),
         _ => Vec::new(),
     };
+    // an older version of the step (or its old parameter names) is read as the current one
+    let mut version = version;
+    if let Some((v, p, _)) = super::migrate::migrate_params(&step, version, &params) {
+        (version, params) = (v, p);
+    }
     Ok(Instance {
         id,
         step,

@@ -29,7 +29,7 @@ try:
         got = {}
         def same():
             got["t"] = pg.evaluate("fetch('api/msn_grafo?k=0&formula=C8H11N4O2%2B').then(r=>r.text())")
-            assert got["t"].startswith('{"formato":"msngrafo/1"'), got["t"][:200]
+            assert got["t"].startswith('{"formato":"msngrafo/2"'), got["t"][:200]
             assert mask(got["t"]) == mask(cli), "the site and the command line differ"
         step("the graph of the site is the one of the command line", same)
         def cuts():

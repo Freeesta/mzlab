@@ -35,7 +35,7 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 
 ## Applying a preset written by another version
 - A parameter the running step has and the preset lacks (new): ALWAYS ask for confirmation, never silent; the answer goes in `compat.changes` (`confirmed`) and the limit `preset.param.new` is written.
-- A parameter removed, or a new version of a step: a Rust migration (`preset.param.migrated`) or a refusal with `err.flow.step.version`.
+- A parameter removed, or a new version of a step: a Rust migration or a refusal with `err.flow.step.version`. `mzrun::migrate(bytes)` (`mzrun/migrate.rs`) applies the table of `flow::migrate` to `plan`, `resolved` (with `pin`, `estimates`) and `seeds`: each renamed parameter is a `compat.changes` entry `{kind: migrated, value, confirmed: true}` under the new name, each migrated instance a limit `preset.param.migrated` (`detail`: `g: spectra.msn_graph@1 → @2 (mz_basso → low_mz, …)`), `plan_sha256` and `self_sha256` recomputed; a file with nothing to migrate keeps its content.
 - A schema above the reader (`min_reader` greater than the reader's): the file opens read-only with `error.newerFormat` (`formato-nuovo.md`), never rewritten.
 
 ## Comparing two records

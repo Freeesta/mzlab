@@ -87,8 +87,8 @@ impl<R: ReadAt> Routes<R> {
         self.binned_cells(level, lo, hi, (precursor, 0.6), filt, |m| (m / bin).floor() as i64)
     }
 
-    /// The mean spectrum of a window with the peaks summed per cell `cell(m/z)` (cells come in order because the peaks do).
-    pub(crate) fn binned_cells(&mut self, level: u8, lo: f64, hi: f64, (precursor, prec_tol): (Option<f64>, f64), filt: Option<&str>, cell_of: impl Fn(f64) -> i64) -> Result<Option<Binned>> {
+    /// Which scans a window takes, from the scan table and the per-scan arrays of the section only (no peak is read): `None` = no section of this level.
+    pub(crate) fn select_scans(&mut self, level: u8, lo: f64, hi: f64, (precursor, prec_tol): (Option<f64>, f64), filt: Option<&str>) -> Result<Option<Selection>> {
         let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(None);
         };
@@ -111,6 +111,14 @@ impl<R: ReadAt> Routes<R> {
             .filter(|&(_, &j)| ar.rt[j] >= lo && ar.rt[j] <= hi)
             .map(|(i, _)| i)
             .collect();
+        Ok(Some(Selection { si, ok, n, sel, in_win, scan_ids: ar.scan_ids }))
+    }
+
+    /// The mean spectrum of a window with the peaks summed per cell `cell(m/z)` (cells come in order because the peaks do).
+    pub(crate) fn binned_cells(&mut self, level: u8, lo: f64, hi: f64, prec: (Option<f64>, f64), filt: Option<&str>, cell_of: impl Fn(f64) -> i64) -> Result<Option<Binned>> {
+        let Some(Selection { si, ok, n, sel, in_win, scan_ids }) = self.select_scans(level, lo, hi, prec, filt)? else {
+            return Ok(None);
+        };
         let (mut mz, mut y) = (vec![], vec![]);
         // `modo=somma`: the sum per cell, not the mean (a spectrum of more than `MAX_CELLS` cells is refused rather than built)
         let (div, cap) = if self.msn.opz.somma { (1.0, MAX_CELLS) } else { (n as f64, usize::MAX) };
@@ -146,8 +154,18 @@ impl<R: ReadAt> Routes<R> {
             mz = cm;
             y = cy;
         }
-        Ok(Some(Binned { mz, y, n, sel, in_win, scan_ids: ar.scan_ids.clone() }))
+        Ok(Some(Binned { mz, y, n, sel, in_win, scan_ids }))
     }
+}
+
+/// The scans a window takes: `n` in the window, `sel` (positions in the section) passing the filter, `in_win` (indices among `sel`) inside the window.
+pub(crate) struct Selection {
+    pub si: usize,
+    pub ok: Vec<bool>,
+    pub n: usize,
+    pub sel: Vec<usize>,
+    pub in_win: Vec<usize>,
+    pub scan_ids: Vec<i64>,
 }
 
 /// The mean spectrum of a window, peaks merged within `bin` (`Item._binned`), not rounded.
