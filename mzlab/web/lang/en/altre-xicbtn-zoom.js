@@ -18,9 +18,9 @@ I18N.add("en", {
   "xicbtn.apex": "apex RT {rt} min · intensity {y}",
   "xicbtn.nopeak": "no peak here",
   "xicdlg.title": "Extract ions (XIC)",
-  "xicdlg.desc": "XIC (Extracted Ion Chromatogram): the chromatogram of the only signals with m/z inside an interval 1 Da wide around the nominal mass of the ion. You integrate from here. In each row type an m/z or a neutral formula (with the adduct).",
+  "xicdlg.desc": "Chromatogram of the signals with m/z in a window around the ion",
   "xicdlg.add.title": "Up to 10 ions in the same chart",
   "xicdlg.add": "+ ion",
-  "xicdlg.file.title": "Applies only at the start; later use the chart's File selector",
+  "xicdlg.file.title": "File to extract the XICs from",
   "xicdlg.go": "Extract"
 });

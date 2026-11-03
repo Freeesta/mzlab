@@ -3,22 +3,20 @@
 Every tooltip of the site (`mzlab/web`, Tabui `TP_Mine`, Flow `flow/lazy`): i18n keys of tips and titles in `lang/it` and `lang/en`, plus the literal (English-only) tooltips of Tabui and Flow. Built from `python3 tools/inventario_tooltip.py` (sites) and the catalogs (keys named `*.title`, `*.tip`, `tip.*`, `*.hint`). Mechanism and the generated per-area tables: `docs/inventari/TOOLTIP.md`.
 
 ## Rule (Federico)
-One short sentence at most: say what the control does or add the one fact that is not visible. No restating the label, no tutorials, no AI-style explanations of the obvious. Dynamic values (time range, ids) are never glued to the explanation: they go in their own column or are dropped. Keyboard shortcuts stay, in parentheses.
+A tooltip says only what the button or the click does, in one short sentence (at most 90 characters, a keyboard shortcut stays in parentheses). It never carries a privacy or policy statement («nothing is sent», «we do X instead of Y»), marketing, a tutorial, a restatement of the label, a «candidate, not an identification» disclaimer, or a dynamic value glued to the explanation. A warning is allowed only when the control itself is destructive (deletes, overwrites). Facts that were in a tooltip belong in the help panel or in the visible notes. `tests/test_tooltip_corti.py` enforces length and banned phrases (IT and EN) on every catalog key ending `.tip`, `.title` or `Title` and on the literal `title="..."` of the pages; the exemptions are in `tests/tooltip_ammessi.txt`, each with a reason (none today).
 
 ## Numbers
-589 keys: 394 keep, 153 shortened (IT and EN, keys unchanged), 1 deleted (`canali.tip.time`), 24 not tooltips (visible hints, headings, plural strings), 17 left to the follow-up of other chats. Literal tooltips (Tabui/Flow/runtime): 4 shortened, the rest are short or built at runtime from values.
+443 tooltip keys checked by the guard (IT and EN, same set). Second pass: 57 keys rewritten (keys unchanged), 9 literal tooltips of Tabui shortened or cleaned, 0 exemptions. Earlier pass: 153 shortened, 1 deleted (`canali.tip.time`). Chart hover labels that show data (`kmd.point.tip`, `pfas.point.tip`, `pca.sample.tip`, `mappa.lbl.tip`) carry values by design, not explanations.
 
 ## Channel picker
 - The channel name no longer carries the scan mode: `MS¹ EMS` is shown as `MS¹`, with `EMS` in the «Experiment» column (`canali.js` `bare`). The engine name (`et` of `api/canali`, `mzlab-cli channels`) also omits the scan mode, so the legend, site, desktop and CLI show the same label; ids are unchanged.
 - Row tooltip: only what the channel is (TIC, MS¹, data-dependent MS², BPC). The time range (`canali.tip.time`) and the raw engine ids are gone: time and points have their own columns.
 
-## Exceptions for Federico to decide
-- Six shortened tips are close to 80 characters because they carry a warning that the code relies on: `cmd.idn.tip` (candidates, not identifications), `cmd.subref.tip`, `disp.pdaAlign.title` (screen only), `llm.on.title` (nothing sent), `mappa.col.dm.title`, `xic.adduct.title`.
-- Kept as they are: `load.demo.*.title` (they list the example files), `int.tbl.par.title` (names three chromatographic parameters).
+## Exceptions
+None: the six tips that carried a warning (`cmd.idn.tip`, `cmd.subref.tip`, `disp.pdaAlign.title`, `llm.on.title`, `xic.adduct.title`) now say only what the control does; the facts live in `lib.an.note`, `llm.off.hint` and the chromatogram help (`help.pnlChrom.body`). `load.demo.*.title` (list of the example files) and `int.tbl.par.title` (names the three parameters) stay: they describe what the click loads or shows.
 
 ## Follow-up
-- SETTINGS-PANEL: `settings.beside.title`, `settings.hrPpm.title`, `update.settings.title`, `predef.settings.title` still to review (`settings.pal/ext/cen/xiclens/libs/reset.title` are shortened).
-- ADD-LOSS: `cx.score.tip`, `calc.in.title`, `tbl.loss.searchTitle`, `cmd.addloss.tip` are shortened (the `{s}` sigma placeholder of `cx.score.tip` is dropped, `{w}` stays).
+- SETTINGS-PANEL and ADD-LOSS keys are reviewed against the rule; `settings.hrPpm.title` and `predef.settings.title` already say only what the control does.
 
 ## Keys
 Current = Italian text before this census; Len = its length in characters; Proposed = new IT / EN.
