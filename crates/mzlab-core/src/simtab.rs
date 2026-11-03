@@ -161,68 +161,87 @@ pub fn table_text(files: &str, output: &str, layout: &str) -> Result<String> {
     if cols.is_empty() {
         return Err(Error::new("err.simtab.noChannel"));
     }
-    let mut out = String::new();
-    if output == "peaks" {
-        out += "sample,q1,name,peak,apex_rt,area,height,snr,fwhm_s\n";
-        for (s, cells) in &samples {
-            for c in &cols {
-                let Some(p) = get(cells, &c.key) else {
-                    continue;
-                };
-                let head = format!(
-                    "{},{},{}",
-                    field(s),
-                    c.q1.map_or(String::new(), |q| format!("{q:.4}")),
-                    field(&c.name)
-                );
-                if p.is_empty() {
-                    out += &format!("{head},0,,,,,\n");
-                }
-                for (i, f) in p.iter().enumerate() {
-                    out += &format!(
-                        "{head},{},{:.3},{:.1},{:.1},{:.1},{:.1}\n",
-                        i + 1,
-                        f.apex_rt,
-                        f.area,
-                        f.height,
-                        f.snr,
-                        f.fwhm
-                    );
-                }
-            }
-        }
+    Ok(if output == "peaks" {
+        peaks_text(&samples, &cols)
     } else if layout == "samples" {
-        out += "sample";
-        for c in &cols {
-            out += ",";
-            out += &field(&c.label);
-        }
-        out += "\n";
-        for (s, cells) in &samples {
-            out += &field(s);
-            for c in &cols {
-                out += ",";
-                out += &cell(get(cells, &c.key), output);
-            }
-            out += "\n";
-        }
+        by_sample(&samples, &cols, output)
     } else {
-        out += "channel,name";
-        for (s, _) in &samples {
-            out += ",";
-            out += &field(s);
-        }
-        out += "\n";
-        for c in &cols {
-            out += &format!("{},{}", field(&c.label), field(&c.name));
-            for (_, cells) in &samples {
-                out += ",";
-                out += &cell(get(cells, &c.key), output);
+        by_channel(&samples, &cols, output)
+    })
+}
+
+/// The long table: one row per peak, a channel without peaks = peak 0.
+fn peaks_text(samples: &[Sample], cols: &[Column]) -> String {
+    let mut out = String::new();
+    out += "sample,q1,name,peak,apex_rt,area,height,snr,fwhm_s\n";
+    for (s, cells) in samples {
+        for c in cols {
+            let Some(p) = get(cells, &c.key) else {
+                continue;
+            };
+            let head = format!(
+                "{},{},{}",
+                field(s),
+                c.q1.map_or(String::new(), |q| format!("{q:.4}")),
+                field(&c.name)
+            );
+            if p.is_empty() {
+                out += &format!("{head},0,,,,,\n");
             }
-            out += "\n";
+            for (i, f) in p.iter().enumerate() {
+                out += &format!(
+                    "{head},{},{:.3},{:.1},{:.1},{:.1},{:.1}\n",
+                    i + 1,
+                    f.apex_rt,
+                    f.area,
+                    f.height,
+                    f.snr,
+                    f.fwhm
+                );
+            }
         }
     }
-    Ok(out)
+    out
+}
+
+/// The pivot with one row per sample and one column per channel.
+fn by_sample(samples: &[Sample], cols: &[Column], output: &str) -> String {
+    let mut out = String::new();
+    out += "sample";
+    for c in cols {
+        out += ",";
+        out += &field(&c.label);
+    }
+    out += "\n";
+    for (s, cells) in samples {
+        out += &field(s);
+        for c in cols {
+            out += ",";
+            out += &cell(get(cells, &c.key), output);
+        }
+        out += "\n";
+    }
+    out
+}
+
+/// The pivot with one row per channel and one column per sample.
+fn by_channel(samples: &[Sample], cols: &[Column], output: &str) -> String {
+    let mut out = String::new();
+    out += "channel,name";
+    for (s, _) in samples {
+        out += ",";
+        out += &field(s);
+    }
+    out += "\n";
+    for c in cols {
+        out += &format!("{},{}", field(&c.label), field(&c.name));
+        for (_, cells) in samples {
+            out += ",";
+            out += &cell(get(cells, &c.key), output);
+        }
+        out += "\n";
+    }
+    out
 }
 
 #[cfg(test)]
