@@ -769,15 +769,18 @@ function bindFileReorder() {
 
 // short tag of a standard / blank file (3 letters, the full word in the tooltip)
 const typeTag = (/** @type {boolean} */ blank) => `<abbr class="ftag" title="${blank ? I18N.t("files.type.blk.title") : I18N.t("files.type.std.title")}">${blank ? I18N.t("files.type.blk") : I18N.t("files.type.std")}</abbr>`;
+// While files are still being read or opened, renders are throttled to one per interval (files arrive one every ~150 ms, so one frame merges nothing); the trailing render always runs. Outside loading the call is synchronous; renderFileList.now() always renders at once.
+const FLQ = { tm: 0, force: false }; renderFileList.now = () => { FLQ.tm = 0; FLQ.force = true; try { renderFileList(); } finally { FLQ.force = false; } };
 function renderFileList() {
+  if (!FLQ.force && !(/** @type {any} */ (window)).__flSync && ((E.pending && E.pending.length) || (typeof OPENNOW !== "undefined" && OPENNOW.busy() > 0))) { if (!FLQ.tm) FLQ.tm = window.setTimeout(renderFileList.now, Math.min(400, 100 + 3 * E.files.length)); return; }
   if (window.GDND && GDND.busy()) return GDND.defer(); if (window.GRUPPI) GRUPPI.adopt();
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed, all of them live
   const groups = /** @type {{ g: string, fs: FileAperto[] }[]} */ ([]);
   // both worlds list the files of every experiment, all of them live
   const side = window.BANCO && BANCO.on() ? E.files.filter((/** @type {FileAperto} */ f) => !f.gone && f.kind !== "mrm") : E.files.filter((/** @type {FileAperto} */ f) => !f.gone);
-  side.forEach((/** @type {FileAperto} */ f) => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
-  // a DDA file is ONE row (its Full Scan and MS2 parts open together)
-  groups.forEach(G => { G.fs = G.fs.filter((/** @type {FileAperto} */ f, /** @type {number} */ i, /** @type {FileAperto[]} */ a) => !f.dda || a.findIndex((/** @type {FileAperto} */ x) => x.dda && fileBase(x.file) === fileBase(f.file)) === i); });
+  const byG = /** @type {Map<string, { g: string, fs: FileAperto[] }>} */ (new Map()); side.forEach((/** @type {FileAperto} */ f) => { const g = grpOf(f); let G = byG.get(g); if (!G) { G = { g, fs: [] }; byG.set(g, G); groups.push(G); } G.fs.push(f); });
+  // a DDA file is ONE row (its Full Scan and MS2 parts open together): the first file of each base stays
+  groups.forEach(G => { const seen = new Set(); G.fs = G.fs.filter((/** @type {FileAperto} */ f) => { if (!f.dda) return true; const b = fileBase(f.file); if (seen.has(b)) return false; seen.add(b); return true; }); });
   if (E.ugBy && E.ugBy.by !== "custom" && E.ugBy.by !== "flat") carica("gruppi.js").then(() => GRUPPI.follow());
   if (window.GRUPPI) GRUPPI.order(groups); ugArrange(groups);
   if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));

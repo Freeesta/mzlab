@@ -47,6 +47,15 @@ fn chrom_of(h: &str, index: usize, start: u64, end: u64) -> Chrom {
         (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
         d.dwell = named_value(h, "MS_dwell_time");
         d.ce = d.ce.or_else(|| named_value(h, "collision energy"));
+    } else if let Some(q1) = cid
+        .strip_prefix("SIM SIC ")
+        .and_then(|_| after(&cid, "Q1="))
+    {
+        // a SIM ion of a triple quadrupole (msconvert spelling, `wiff::Wiff::sim_id`): a transition with no Q3
+        d.kind = "srm".into();
+        (_, _, _, d.name) = srm_id(&cid);
+        d.q1 = Some(q1);
+        d.dwell = after(&cid, "dwell=").or_else(|| named_value(h, "MS_dwell_time"));
     } else if ![
         "MS:1000235",
         "MS:1000627",

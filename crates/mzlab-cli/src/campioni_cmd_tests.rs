@@ -91,3 +91,35 @@ fn bad_use_is_an_error_of_use() {
     }
     assert_eq!(run(&["campioni", "--help"]).0, 0);
 }
+
+#[test]
+fn old_and_new_names_give_the_same_bytes() {
+    let f = names_file("alias");
+    let n = f.to_str().unwrap();
+    for (old, new) in [
+        (
+            vec!["campioni", "variabili", "--names", n],
+            vec!["samples", "vars", "--names", n],
+        ),
+        (
+            vec!["campioni", "variabili", "--names", n, "--pos", "2"],
+            vec!["samples", "vars", "--names", n, "--pos", "2"],
+        ),
+        (
+            vec!["campioni", "nome-gruppo", "MQ_H2O2_T00", "MQ_H2O2_T01"],
+            vec!["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"],
+        ),
+        (vec!["campioni", "nope"], vec!["samples", "nope"]),
+        (vec!["campioni", "--help"], vec!["samples", "--help"]),
+        (vec!["campioni"], vec!["samples"]),
+    ] {
+        let (a, b) = (run(&old), run(&new));
+        assert_eq!((a.0, &a.1), (b.0, &b.1), "{old:?}");
+    }
+    // The mixed spellings are accepted too.
+    assert_eq!(run(&["samples", "variabili", "--names", n]).0, 0);
+    assert_eq!(run(&["campioni", "group", "A_B", "A_C"]).0, 0);
+    assert!(run(&["samples", "--help"])
+        .1
+        .ends_with("old names still accepted: campioni, variabili, nome-gruppo\n"));
+}

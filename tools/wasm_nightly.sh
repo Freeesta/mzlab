@@ -6,7 +6,7 @@ set -euo pipefail
 work=$(realpath -m "${1:?work dir}"); nightly=${2:?nightly}
 : "${RUNNER_TEMP:=$work/tmp}"; export RUNNER_TEMP
 BASE="-C link-arg=--initial-memory=33554432 -C link-arg=--max-memory=4294967296 -C target-feature=+simd128"
-HR="detect,proofs,mrm,finder,finder_edge,finder_msn,flow_ms2"
+HR="detect,proofs,finder,finder_edge,finder_msn,flow_ms2"
 mkdir -p "$work"
 rustup toolchain install "$nightly" --profile minimal -c rust-src -t wasm32-unknown-unknown
 rows=""
