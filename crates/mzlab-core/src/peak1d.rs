@@ -162,3 +162,58 @@ pub fn find_peak(
         ok: points >= min_points,
     })
 }
+
+/// Up to `max` peaks of a trace, highest first: the highest of the trace, then the highest of what is left on each side of it; a peak counts with
+/// `min_points` points across and S/N ≥ `snr_min`. Resolved peaks of one trace (isomers at one m/z) each come out once.
+pub fn peaks(
+    t: &[f64],
+    y: &[f64],
+    smooth_k: usize,
+    min_points: usize,
+    snr_min: f64,
+    max: usize,
+) -> Vec<Found> {
+    let (Some(&a), Some(&b)) = (t.first(), t.last()) else {
+        return Vec::new();
+    };
+    let (mut spans, mut out) = (vec![(a, b)], Vec::new());
+    while out.len() < max && !spans.is_empty() {
+        let mut best: Option<(usize, Found)> = None;
+        for (i, &(lo, hi)) in spans.iter().enumerate() {
+            let f = find_peak(
+                t,
+                y,
+                Some((lo + hi) / 2.0),
+                (hi - lo) / 2.0,
+                smooth_k,
+                min_points,
+            );
+            if let Some(f) = f.filter(|f| best.as_ref().is_none_or(|(_, g)| f.height > g.height)) {
+                best = Some((i, f));
+            }
+        }
+        let Some((i, f)) = best else {
+            break;
+        };
+        let (lo, hi) = spans.remove(i);
+        if !f.ok || f.snr < snr_min {
+            continue;
+        }
+        // an apex on the first or last point of its span is the flank of a peak already taken (or cut off by the end of the trace): cut it away, not counted
+        let mut inside = t.iter().filter(|t| **t >= lo && **t <= hi);
+        let ends = (inside.clone().next(), inside.next_back());
+        let flank = ends.0 == Some(&f.apex_rt) || ends.1 == Some(&f.apex_rt);
+        let (l, r) = (f.left.min(f.apex_rt), f.right.max(f.apex_rt));
+        let eps = 1e-9;
+        if l - eps > lo {
+            spans.push((lo, l - eps));
+        }
+        if r + eps < hi {
+            spans.push((r + eps, hi));
+        }
+        if !flank {
+            out.push(f);
+        }
+    }
+    out
+}

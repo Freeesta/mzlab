@@ -341,7 +341,7 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
-            "simtab" => text(match mzlab_core::simtab::table_text(s("files"), s("output")) {
+            "simtab" => text(match mzlab_core::simtab::table_text(s("files"), s("output"), s("layout")) {
                 Ok(csv) => csv,
                 Err(e) => format!("E{}", e.to_json()),
             }),

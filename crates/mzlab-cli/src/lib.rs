@@ -15,7 +15,6 @@ use mzlab_feat_wasm::run;
 
 mod campioni_cmd;
 mod canali_cmd;
-mod sim_table_cmd;
 pub mod convert;
 mod convert_report;
 pub mod flow;
@@ -147,6 +146,7 @@ pub mod normative;
 mod par;
 mod peaks_edges_cmd;
 mod plain;
+mod sim_table_cmd;
 mod steps_cmd;
 #[cfg(not(target_family = "wasm"))]
 mod validate;

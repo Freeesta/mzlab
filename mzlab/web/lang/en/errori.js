@@ -19,6 +19,7 @@ I18N.add("en", {
   "err.transitions.manifest": "The list of mzML files of the step is not valid.",
   "err.transitions.noChannel": "No file of the step has a SIM or SRM chromatogram.",
   "err.simtab.noChannel": "No file has a SIM channel.",
+  "err.simtab.output": "Unknown value or layout of the SIM table: {output}, {layout}.",
   "err.transitions.table": "The transition table has a wrong row ({row}).",
   "err.workflow.noFiles": "No open files to export in the workflow.",
   "err.http": "error {status}",

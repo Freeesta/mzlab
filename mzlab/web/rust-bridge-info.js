@@ -64,17 +64,17 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
   return done(`{"files":[${parts.join(",")}]}`);
 }
 
-/** api/simtab?k=..&output=area|apex_rt: the `mrm` transitions of every slot, then the op `simtab` of the worker; "E" + JSON (no SIM channel) = a 400.
+/** api/simtab?k=..&output=..&layout=samples|channels (simtab::OUTPUTS): the `mrm` transitions of every slot, then the op `simtab` of the worker; "E" + JSON (no SIM channel, unknown output) = a 400.
  * @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, stats: any, t0: number}} env */
 async function simtabRoute(u, { slots, rpc, stats, t0 }) {
-  const q = u.searchParams, ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), output = q.get("output") === "apex_rt" ? "apex_rt" : "area";
+  const q = u.searchParams, ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), output = q.get("output") || "area_sum", layout = q.get("layout") || "samples";
   if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
   await Promise.all(ks.map(k => slots[k].opening));
   if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad && slots[k].blob)) return null;
   const rs = await Promise.all(ks.map(k => rpc({ op: "mrm", slot: k, blob: slots[k].blob })));
   if (rs.some(r => r.dead || r.error || !r.info)) return null;
   const files = `[${ks.map((k, i) => `{"name":${JSON.stringify(slots[k].name)},"transitions":${rs[i].info}}`).join(",")}]`;
-  const r = await rpc({ op: "simtab", files, output });
+  const r = await rpc({ op: "simtab", files, output, layout });
   if (r.dead || r.error || !r.info) return null;
   stats.rust++;
   const bad = r.info[0] === "E";

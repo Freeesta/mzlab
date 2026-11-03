@@ -19,6 +19,7 @@ I18N.add("it", {
   "err.transitions.manifest": "L'elenco dei file mzML del passo non è valido.",
   "err.transitions.noChannel": "Nessun file del passo ha un cromatogramma SIM o SRM.",
   "err.simtab.noChannel": "Nessun file ha un canale SIM.",
+  "err.simtab.output": "Valore o disposizione della Tabella SIM sconosciuti: {output}, {layout}.",
   "err.transitions.table": "La tabella delle transizioni ha una riga sbagliata ({row}).",
   "err.workflow.noFiles": "Nessun file aperto da esportare nel flusso di lavoro.",
   "err.http": "errore {status}",
