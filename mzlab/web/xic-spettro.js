@@ -20,6 +20,8 @@
   /** an infusion has no real chromatogram: the XIC button and the lens of its spectrum are off (the kind of the engine, infusione.rs, or the same words in the file name) @param {any} p */
   const infusion = p => { const f = specFile(p); return !!f && (f.kind === "infusion" || !f.manual && /infus|fia|direct|syringe/i.test(String(f.label || f.name || "").split(/[\\/]/).pop() || "") || (!!window.CANALI && ESP.predefinito(CANALI.tipo(f)).lente === false)); };      // the table of the types of experiment (esperimenti.js) says whether the lens is proposed
   /** the XIC lens (the preview on peak hover and its switch) exists only on the MS1 spectrum of a high-resolution file: not on MS2, not at low resolution, not on infusion @param {any} p */
+  /** an MS2 spectrum has no XIC of its own: no button, no choosing a peak @param {any} p */
+  const ms2 = p => p.level >= 2;
   const lens = { ok: (/** @type {any} */ p) => { const f = specFile(p); return !!f && !infusion(p) && p.level === 1 && !!window.HR && HR.isHr(f, 1); } };       // an object so that a test can lift the condition
   /** the high-resolution file among those the XIC reads, if any @param {any} p */
   const hrFile = p => (window.HR ? HR.xicFiles(p.tab).find((/** @type {any} */ f) => HR.isHr(f, f.lv)) : null) || null;
@@ -67,6 +69,8 @@
   function refresh(p) {
     const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]'), pv = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicp"]'));
     if (p.uv) { for (const x of [b, l, pv]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
+    if (ms2(p)) { for (const x of [b, l]) if (x) x.hidden = true; s.pend = false; s.sel = null; return; }   // an MS2 spectrum has no XIC of its own
+    if (b) b.hidden = false;
     const off = infusion(p);
     if (off && (s.pend || s.sel)) { s.pend = false; s.sel = null; }
     if (b) {
@@ -151,6 +155,7 @@
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
     if (window.XICLENS) XICLENS.sync(p);
+    { const xh = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="xicb"]')); if (xh && !p.uv && xh.hidden !== ms2(p)) refresh(p); }   // the button follows the level shown
     const s = ST.get(p), xb = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]')); if (s && (infusion(p) !== xb?.disabled || (xb && xb.title !== tipOf(p, infusion(p))) || (p.el.querySelector('[data-a="xicp"]')?.getAttribute("aria-pressed") === "true") !== (!!UIP.xicLens && lens.ok(p)))) refresh(p);
     if (!s || !live(p)) return;
     FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
@@ -191,7 +196,7 @@
   // ---------------------------------------------------------------- the button, the label, the pop-up
   /** the button was pressed @param {any} p @param {boolean} add */
   function press(p, add) {
-    if (infusion(p)) return;
+    if (infusion(p) || ms2(p)) return;
     const s = st(p);
     if (s.sel) { extract(p, add); return; }
     s.pend = !s.pend; refresh(p);
@@ -285,7 +290,7 @@
   function commit(p, m) { choose(p, m, true); extract(p, false); }
   /** a click on the spectrum, no drag: with the ruler on (or a measure open) it stays the ruler's; otherwise the nearest peak is chosen, and extracted when the button is waiting @param {any} p @param {number} px @param {number} py */
   function click(p, px, py) {
-    if (infusion(p) || p.rul || (p.meas && p.meas.ref != null) || !p._a || !p._a.snap) return false;
+    if (infusion(p) || ms2(p) || p.rul || (p.meas && p.meas.ref != null) || !p._a || !p._a.snap) return false;
     const m = target(p, px);
     if (m == null) return false;
     const s = st(p);
@@ -317,7 +322,7 @@
   // keys on the focused spectrum (not in a text field): the labelled peaks in order of m/z
   /** @param {string} id @param {string} tasto @param {string} et @param {() => string} nome @param {number} d */
   const key = (id, tasto, et, nome, d) => AZIONI.registra({ id, viste: ["spec"], gruppo: "xic", menu: false, scorciatoia: { tasto, dove: "chart", et },
-    nome, disponibile: (/** @type {any} */ c) => !!c.p._a && labelled(c.p).length > 0, esegui: (/** @type {any} */ c) => step(c.p, d) });
+    nome, disponibile: (/** @type {any} */ c) => !ms2(c.p) && !!c.p._a && labelled(c.p).length > 0, esegui: (/** @type {any} */ c) => step(c.p, d) });
   key("spec.xicPrev", ",", "scorc.xicPrev", () => T("scorc.xicPrev"), -1); key("spec.xicNext", ".", "scorc.xicNext", () => T("scorc.xicNext"), 1);
 
   /** Starts the requests of the XIC panel about to be created in the current tab (getXic memoises them): they run while addPanel builds the DOM, and draw() finds them done or under way. @param {any} tr */
