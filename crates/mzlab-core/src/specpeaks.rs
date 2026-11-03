@@ -1,6 +1,25 @@
 //! Peaks of a unit-resolution mass spectrum: the same rules, in the same order of operations, as `mzlab/peaks.py`
 //! (`profile_peaks`, `merge_unit`, `pad_zeros`). Parity: `tests/specpeaks_parity.rs`.
 
+/// Stable permutation of `0..key.len()` sorting `key` by `total_cmp` (descending when `desc`).
+/// The one std index sort of the engine: `#[inline(never)]` keeps a single copy in the `.wasm`.
+/// Descending sorts the negated keys: `-x` reverses the total order exactly, ties included.
+#[inline(never)]
+pub(crate) fn order_by_f64(key: &[f64], desc: bool) -> Vec<usize> {
+    let neg: Vec<f64>;
+    let k = if desc {
+        neg = key.iter().map(|&x| -x).collect();
+        &neg[..]
+    } else {
+        key
+    };
+    let mut o: Vec<usize> = (0..k.len()).collect();
+    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+    #[allow(clippy::disallowed_methods)]
+    o.sort_by(|&a, &b| k[a].total_cmp(&k[b]));
+    o
+}
+
 pub const XIC_BELOW: f64 = 0.2;
 const SG5: [f64; 5] = [
     -3.0 / 35.0,
@@ -127,10 +146,7 @@ pub fn merge_unit(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     if mz.len() < 2 {
         return (mz.to_vec(), y.to_vec());
     }
-    let mut o: Vec<usize> = (0..mz.len()).collect();
-    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
-    #[allow(clippy::disallowed_methods)]
-    o.sort_by(|a, b| mz[*a].total_cmp(&mz[*b]));
+    let o = order_by_f64(mz, false);
     let (mzs, ys): (Vec<f64>, Vec<f64>) = o.iter().map(|&i| (mz[i], y[i])).unzip();
     let nom: Vec<i64> = mzs.iter().map(|&m| nominal(m)).collect();
     let (starts, _g) = groups(&nom);
@@ -166,10 +182,7 @@ pub fn pad_zeros(mz: &[f64], y: &[f64], step: f64) -> (Vec<f64>, Vec<f64>) {
     om.extend(gap.iter().map(|&i| mz[i] + step));
     om.extend(gap.iter().map(|&i| mz[i + 1] - step));
     oy.resize(om.len(), 0.0);
-    let mut o: Vec<usize> = (0..om.len()).collect();
-    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
-    #[allow(clippy::disallowed_methods)]
-    o.sort_by(|a, b| om[*a].total_cmp(&om[*b]));
+    let o = order_by_f64(&om, false);
     (
         o.iter().map(|&i| om[i]).collect(),
         o.iter().map(|&i| oy[i]).collect(),

@@ -172,10 +172,7 @@ fn subtract_unit(mz: &[f64], y: &[f64], rmz: &[f64], ry: &[f64]) -> (Vec<f64>, V
 
 /// High resolution: each sample line minus the strongest reference line within +-ppm, then the reference lines no sample line covers.
 fn subtract_hr(mz: &[f64], y: &[f64], rmz: &[f64], ry: &[f64], ppm: f64) -> (Vec<f64>, Vec<f64>) {
-    let mut o: Vec<usize> = (0..rmz.len()).collect();
-    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
-    #[allow(clippy::disallowed_methods)]
-    o.sort_by(|a, b| rmz[*a].total_cmp(&rmz[*b]));
+    let o = crate::specpeaks::order_by_f64(rmz, false);
     let (rm, rv): (Vec<f64>, Vec<f64>) = o.iter().map(|&i| (rmz[i], ry[i])).unzip();
     let mut covered = vec![false; rm.len()];
     let mut oy = Vec::with_capacity(mz.len() + rm.len());
