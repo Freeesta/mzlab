@@ -22,7 +22,12 @@
     "shortDescription": "mzLab desktop",
     "fileAssociations": [
       { "ext": ["mzML"], "name": "mzML", "description": "mzML mass spectrometry data", "mimeType": "application/x-mzml", "role": "Viewer" },
-      { "ext": ["raw"], "name": "Thermo RAW", "description": "Thermo RAW mass spectrometry data", "mimeType": "application/x-thermo-raw", "role": "Viewer" }
+      { "ext": ["mzXML"], "name": "mzXML", "description": "mzXML mass spectrometry data", "mimeType": "application/x-mzxml", "role": "Viewer" },
+      { "ext": ["raw"], "name": "raw", "description": "Thermo / Waters RAW mass spectrometry data", "mimeType": "application/x-thermo-raw", "role": "Viewer" },
+      { "ext": ["wiff"], "name": "wiff", "description": "SCIEX WIFF mass spectrometry data", "mimeType": "application/x-sciex-wiff", "role": "Viewer" },
+      { "ext": ["lcd"], "name": "lcd", "description": "Shimadzu LCD data", "mimeType": "application/x-shimadzu-lcd", "role": "Viewer" },
+      { "ext": ["qgd"], "name": "qgd", "description": "Shimadzu QGD data", "mimeType": "application/x-shimadzu-qgd", "role": "Viewer" },
+      { "ext": ["cdf"], "name": "cdf", "description": "ANDI netCDF mass spectrometry data", "mimeType": "application/x-netcdf", "role": "Viewer" }
     ]
   }
 }

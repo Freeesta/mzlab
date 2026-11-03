@@ -15,12 +15,12 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use mzlab_desktop::apertura::Pending;
-use mzlab_desktop::{cartella, dialogo};
+use mzlab_desktop::apertura::{self, Pending};
 use mzlab_desktop::librerie::{self, Config};
 use mzlab_desktop::release;
 use mzlab_desktop::scarica::{self, Policy};
 use mzlab_desktop::update::{self, Http, Source, UpdateError};
+use mzlab_desktop::{cartella, dialogo};
 use mzlab_desktop::{handle_body, State};
 use serde::Serialize;
 use tauri::http::{header, Response};
@@ -48,7 +48,7 @@ fn register(state: &State, paths: Vec<PathBuf>) -> Vec<PickedFile> {
         .collect()
 }
 
-/// System file dialog (`dam`: only `.dam` files; otherwise mzML, Thermo `.raw` and SCIEX `.wiff` with its `.wiff.scan`).
+/// System file dialog (`dam`: only `.dam` files; otherwise every single-file format of the readers' registry).
 #[tauri::command]
 async fn pick_files(
     app: tauri::AppHandle,
@@ -59,10 +59,9 @@ async fn pick_files(
     let dlg = if dam {
         dlg.add_filter("DAM", &["dam", "DAM"])
     } else {
-        dlg.add_filter(
-            "Data files (mzML, RAW, WIFF)",
-            &["mzML", "mzml", "raw", "RAW", "wiff", "wiff.scan"],
-        )
+        let exts = apertura::dialog_extensions();
+        let refs: Vec<&str> = exts.iter().map(String::as_str).collect();
+        dlg.add_filter("Data files", &refs)
     };
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_files())
         .await
@@ -128,7 +127,10 @@ fn data_root(app: &AppHandle) -> Option<PathBuf> {
 }
 
 fn folder_name(p: &std::path::Path) -> String {
-    p.file_name().map_or_else(|| p.to_string_lossy().into_owned(), |n| n.to_string_lossy().into_owned())
+    p.file_name().map_or_else(
+        || p.to_string_lossy().into_owned(),
+        |n| n.to_string_lossy().into_owned(),
+    )
 }
 
 /// System dialog to point at the folder of the data; its name, None if the user cancels. The path stays in this side: the page only sees the name.
@@ -155,15 +157,23 @@ fn data_get_dir(app: AppHandle) -> Option<String> {
 /// The compatible files of the remembered folder (`cartella.rs`).
 #[tauri::command]
 fn data_list(app: AppHandle) -> Vec<cartella::Item> {
-    data_root(&app).map(|r| cartella::list(&r)).unwrap_or_default()
+    data_root(&app)
+        .map(|r| cartella::list(&r))
+        .unwrap_or_default()
 }
 
 /// Opens one file of the list (path relative to the folder): it gets its number like a file of the system dialog and the engine reads it from the disk.
 #[tauri::command]
-fn data_register(app: AppHandle, state: tauri::State<'_, Arc<State>>, path: String) -> Result<PickedFile, String> {
+fn data_register(
+    app: AppHandle,
+    state: tauri::State<'_, Arc<State>>,
+    path: String,
+) -> Result<PickedFile, String> {
     let root = data_root(&app).ok_or("no folder")?;
     let full = cartella::resolve(&root, &path).ok_or("bad path")?;
-    register(&state, vec![full]).pop().ok_or_else(|| "cannot open".to_string())
+    register(&state, vec![full])
+        .pop()
+        .ok_or_else(|| "cannot open".to_string())
 }
 
 #[tauri::command]
