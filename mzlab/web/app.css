@@ -4,7 +4,7 @@
 @font-face{font-family:"OpenDyslexic";src:url(fonts/OpenDyslexic-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
 :root[data-a11y-font=atkinson] body,:root[data-a11y-font=atkinson] button,:root[data-a11y-font=atkinson] input,:root[data-a11y-font=atkinson] select,:root[data-a11y-font=atkinson] textarea{font-family:"Atkinson Hyperlegible Next",system-ui,sans-serif}
 :root[data-a11y-font=dyslexic] body,:root[data-a11y-font=dyslexic] button,:root[data-a11y-font=dyslexic] input,:root[data-a11y-font=dyslexic] select,:root[data-a11y-font=dyslexic] textarea{font-family:"OpenDyslexic","Comic Sans MS",system-ui,sans-serif}
-:root{--sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--pnl-pad-y:2px;--pnl-pad-x:8px;--pnl-gap:3px;--pnl-hd-gap:1px;--ctl-py:2px;--row-py:2px;--tab-py:4px;--row-h:24px}   /* vertical spacing of the workspace (--pnl-gap is read by pannelli.js) */
+:root{--sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--pnl-pad-y:3px;--pnl-pad-x:8px;--pnl-gap:3px;--pnl-hd-gap:1px;--ctl-py:2px;--row-py:2px;--tab-py:4px;--row-h:24px}   /* vertical spacing of the workspace (--pnl-gap is read by pannelli.js) */
 :root{--lv1:#0072B2;--lv2a:#009E73;--lv2b:#56B4E9;--lv3:#E69F00;--lv3a:#E69F00;--lv3b:#D55E00;--lv4:#CC79A7;--lv5:#999999;--lv0:#BBBBBB}
 .lvb{display:inline-block;border:2px solid var(--lvc,var(--line));border-radius:4px;padding:0 6px;font-weight:700;font-size:12px;color:var(--ink);background:color-mix(in srgb,var(--lvc,var(--line)) 18%,var(--panel));white-space:nowrap}.lv-1{--lvc:var(--lv1)}.lv-2a{--lvc:var(--lv2a)}.lv-2b{--lvc:var(--lv2b)}.lv-3{--lvc:var(--lv3)}.lv-3a{--lvc:var(--lv3a)}.lv-3b{--lvc:var(--lv3b)}.lv-4{--lvc:var(--lv4)}.lv-5{--lvc:var(--lv5)}.lv-0{--lvc:var(--lv0)}
 html{background:var(--bg)}
