@@ -17,9 +17,9 @@ const CONV = {
     const total = todo.reduce((/** @type {number} */ a, /** @type {Bag} */ x) => a + (x.size || 0), 0) * (this.RATIO[this.compression] || 1);
     return total ? "≈ " + (total > 1e6 ? (total / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1e3)) + " kB") : "";
   },
-  // the tooltip of each «Download mzML» button of the table with the real size of the file written for the compression now selected (in place: the table is not drawn again)
+  // the tooltip of each «Download mzML» button of the table (in place: the table is not drawn again)
   paintSizes() {
-    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {HTMLElement} */ b) => { const s = this.realSize(b.dataset.dl || ""); b.title = I18N.t("conv.dl.title") + (s ? " (" + s + ")" : ""); });
+    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {HTMLElement} */ b) => { b.title = I18N.t("conv.dl.title"); });
   },
   // the real size of the mzML already written for `name` (in the desktop app the file stays on the disk and its size comes from the native side)
   realSize(/** @type {string} */ name) {
