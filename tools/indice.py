@@ -28,6 +28,7 @@ GROUPS = [  # (title, path prefix, one line per file?)
     ("Strumenti (`tools/`)", "tools/", True),
     ("mzFinder (`TP_Mine/`)", "TP_Mine/", False),
     ("Flow grafico (`flow/`)", "flow/", False),
+    ("Proxy pubblico dell'assistente (`proxy/`)", "proxy/", True),
     ("Test (`tests/`, `tests_e2e/`)", "tests", False),
     ("Fuzzing dei parser (`fuzz/`)", "fuzz/", False),
     ("Controlli indipendenti (`docs/controlli/`)", "docs/controlli/", False),
@@ -61,6 +62,9 @@ def definizioni(path: str, text: str | None = None) -> list[tuple[str, int, int]
     for i, l in enumerate(lines, 1):
         m = rx.match(l)
         if not m:
+            # an `impl` block ends the item before it (its methods are measured one by one)
+            if rx is RS_DEF and l.startswith("impl"):
+                starts.append(("", i, 0))
             continue
         name = m.group(3) if path.endswith(".rs") else (m.group(2) or m.group(3))
         starts.append((name, i, len(m.group(1))))
@@ -73,7 +77,8 @@ def definizioni(path: str, text: str | None = None) -> list[tuple[str, int, int]
         # drop trailing blank / closing lines shared with the next block
         while end > i and not lines[end - 1].strip():
             end -= 1
-        found.append((name, i, end - i + 1))
+        if name:
+            found.append((name, i, end - i + 1))
     return found
 
 

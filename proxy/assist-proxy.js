@@ -227,6 +227,75 @@ function spendHeaders(session, cap) {
   return h;
 }
 
+const BLANK_ERROR = JSON.stringify({ type: "error", error: { type: "api_error", message: "" } });
+
+/** Of the provider's headers only these reach the page. */
+function keptHeaders(up) {
+  const keep = {};
+  for (const h of ["retry-after", "request-id"]) {
+    const v = up.headers.get(h);
+    if (v) keep[h] = v;
+  }
+  return keep;
+}
+
+function preflight(origin) {
+  return new Response(null, {
+    status: 204,
+    headers: { ...cors(origin), "access-control-allow-methods": "POST", "access-control-allow-headers": "content-type, x-mzlab-session, x-mzlab-owner", "access-control-max-age": "600" },
+  });
+}
+
+/** The request body as bytes and JSON, or the `field` that rejects it (`size`, `json`). */
+async function readJson(request) {
+  if (Number(request.headers.get("content-length") || 0) > LIMITS.bodyBytes) return { field: "size" };
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.length > LIMITS.bodyBytes) return { field: "size" };
+  try {
+    return { bytes, parsed: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) };
+  } catch {
+    return { field: "json" };
+  }
+}
+
+/** A refused reservation: the global caps close the demo for everybody (503), the session and IP caps only for this visitor (429). */
+function admitFail(error, origin) {
+  const limit = error.params && error.params.limit;
+  if (error.error_key !== "err.llm.limit.spend") return fail(500, error.error_key, error.params, origin);
+  if (limit === "day" || limit === "month") return fail(503, "err.llm.proxy.budget", { limit }, origin, { "x-mzlab-limit": limit });
+  return fail(429, "err.llm.limit.spend", error.params, origin, { "x-mzlab-limit": limit });
+}
+
+/** The bytes of a 2xx answer pass unchanged; `finish()` (the settlement, run once) runs at the end, on a read error or on a cancel. */
+function passThrough(source, sniff, finish, waitUntil) {
+  const reader = source.getReader();
+  return new ReadableStream({
+    async pull(ctrl) {
+      let r;
+      try {
+        r = await reader.read();
+      } catch (e) {
+        await finish();
+        ctrl.error(e);
+        return;
+      }
+      if (r.done) {
+        await finish();
+        ctrl.close();
+        return;
+      }
+      sniff.push(r.value);
+      ctrl.enqueue(r.value);
+    },
+    async cancel(reason) {
+      const p = finish();
+      waitUntil?.(p);
+      await reader.cancel(reason).catch(() => {});
+      await p;
+    },
+  });
+}
+
 /**
  * deps: `allow` (allowlist.json), `ledger` ({ipKey(ip), admit(args), settle(ticket, usage)} → {value}|{error}), `secret(name)`, `vars` (PHASE,
  * ASSIST_OFF), `rateLimit(key)` → true when allowed, `upstream(url, init)` (fetch), optional `waitUntil(promise)` and `caps`.
@@ -260,50 +329,19 @@ export function makeProxy(deps) {
       await settle(ticket, null);
       return fail(502, "err.llm.network", {}, origin);
     }
-    const keep = {};
-    for (const h of ["retry-after", "request-id"]) {
-      const v = up.headers.get(h);
-      if (v) keep[h] = v;
-    }
+    const keep = keptHeaders(up);
     if (!up.ok || !up.body) {
       const text = await up.text().catch(() => "");
       const r = await settle(ticket, ZERO_USAGE);
-      const safe = SECRET_LIKE.test(text) ? JSON.stringify({ type: "error", error: { type: "api_error", message: "" } }) : text;
-      return new Response(safe, {
+      return new Response(SECRET_LIKE.test(text) ? BLANK_ERROR : text, {
         status: up.status,
         headers: { "content-type": "application/json", "cache-control": "no-store", ...cors(origin), ...keep, ...spendHeaders(r.value ? r.value.session : head.session, head.cap) },
       });
     }
     const sniff = usageSniffer();
-    const reader = up.body.getReader();
     let done = null;
     const finish = () => (done ??= settle(ticket, sniff.usage()));
-    const body = new ReadableStream({
-      async pull(ctrl) {
-        let r;
-        try {
-          r = await reader.read();
-        } catch (e) {
-          await finish();
-          ctrl.error(e);
-          return;
-        }
-        if (r.done) {
-          await finish();
-          ctrl.close();
-          return;
-        }
-        sniff.push(r.value);
-        ctrl.enqueue(r.value);
-      },
-      async cancel(reason) {
-        const p = finish();
-        deps.waitUntil?.(p);
-        await reader.cancel(reason).catch(() => {});
-        await p;
-      },
-    });
-    return new Response(body, {
+    return new Response(passThrough(up.body, sniff, finish, deps.waitUntil), {
       status: up.status,
       headers: { "content-type": up.headers.get("content-type") || "text/event-stream", "cache-control": "no-store", ...cors(origin), ...keep, ...spendHeaders(head.session, head.cap) },
     });
@@ -314,26 +352,14 @@ export function makeProxy(deps) {
     const origin = request.headers.get("origin") || "";
     if (url.pathname !== "/v1/messages" || (request.method !== "POST" && request.method !== "OPTIONS")) return fail(404, "err.llm.proxy.body", { field: "path" }, origin);
     if (!ORIGINS.has(origin)) return fail(403, "err.llm.proxy.origin", {}, "");
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: { ...cors(origin), "access-control-allow-methods": "POST", "access-control-allow-headers": "content-type, x-mzlab-session, x-mzlab-owner", "access-control-max-age": "600" },
-      });
-    }
+    if (request.method === "OPTIONS") return preflight(origin);
     if (flag("ASSIST_OFF")) return fail(503, "err.llm.proxy.off", {}, origin);
     const owner = await isOwner(request);
     if (deps.vars?.PHASE !== "1" && !owner) return fail(403, "err.llm.proxy.closed", {}, origin);
     const session = request.headers.get("x-mzlab-session") || "";
     if (!SESSION.test(session)) return bodyError("session", origin);
-    if (Number(request.headers.get("content-length") || 0) > LIMITS.bodyBytes) return bodyError("size", origin);
-    const bytes = new Uint8Array(await request.arrayBuffer());
-    if (bytes.length > LIMITS.bodyBytes) return bodyError("size", origin);
-    let parsed;
-    try {
-      parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-    } catch {
-      return bodyError("json", origin);
-    }
+    const { bytes, parsed, field } = await readJson(request);
+    if (field) return bodyError(field, origin);
     const c = await checkBody(parsed, deps.allow);
     if (c.field) return bodyError(c.field, origin);
     const mine = owner ? caps.owner : caps.public;
@@ -345,13 +371,7 @@ export function makeProxy(deps) {
       if (!(await deps.rateLimit(ipHash))) return fail(429, "err.llm.limit.spend", { limit: "rate" }, origin, { "x-mzlab-limit": "rate", "retry-after": "60" });
     }
     const a = await deps.ledger.admit({ model: c.model, inBytes: bytes.length, maxTokens: c.maxTokens, session, ipHash, caps: mine });
-    if (a.error) {
-      const limit = a.error.params && a.error.params.limit;
-      if (a.error.error_key !== "err.llm.limit.spend") return fail(500, a.error.error_key, a.error.params, origin);
-      // the global caps close the demo for everybody; the session and IP caps only for this visitor
-      if (limit === "day" || limit === "month") return fail(503, "err.llm.proxy.budget", { limit }, origin, { "x-mzlab-limit": limit });
-      return fail(429, "err.llm.limit.spend", a.error.params, origin, { "x-mzlab-limit": limit });
-    }
+    if (a.error) return admitFail(a.error, origin);
     return forward(bytes, origin, a.value.ticket, { session: a.value.session, cap: mine.session });
   }
 

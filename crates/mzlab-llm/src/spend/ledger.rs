@@ -62,78 +62,6 @@ pub struct Ledger {
     next: u64,
 }
 
-fn bad(field: &str) -> Error {
-    Error::new("err.llm.ledger").with("field", field)
-}
-
-fn hex(b: &[u8]) -> String {
-    b.iter().map(|x| format!("{x:02x}")).collect()
-}
-
-fn unhex32(s: &str) -> Option<[u8; 32]> {
-    if s.len() != 64 {
-        return None;
-    }
-    let mut out = [0u8; 32];
-    for (i, o) in out.iter_mut().enumerate() {
-        *o = u8::from_str_radix(s.get(2 * i..2 * i + 2)?, 16).ok()?;
-    }
-    Some(out)
-}
-
-/// HMAC-SHA256 (RFC 2104) of `msg` under a 32-byte key.
-fn hmac(key: &[u8; 32], msg: &[u8]) -> [u8; 32] {
-    let (mut inner, mut outer) = ([0x36u8; 64].to_vec(), [0x5cu8; 64].to_vec());
-    for (i, k) in key.iter().enumerate() {
-        inner[i] ^= k;
-        outer[i] ^= k;
-    }
-    inner.extend_from_slice(msg);
-    outer.extend_from_slice(&sha256(&inner));
-    sha256(&outer)
-}
-
-fn is_day(s: &str) -> bool {
-    let b = s.as_bytes();
-    b.len() == 10
-        && b[4] == b'-'
-        && b[7] == b'-'
-        && b.iter()
-            .enumerate()
-            .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
-}
-
-/// A session id is the panel's random token: 8 to 64 of `[A-Za-z0-9_-]`, nothing that could carry a name.
-fn is_session(s: &str) -> bool {
-    (8..=64).contains(&s.len())
-        && s.bytes()
-            .all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'-')
-}
-
-fn counter_of(v: Option<&Value>) -> Result<Counter> {
-    let n = |i| {
-        v.and_then(|v| v.at(i))
-            .and_then(Value::f64)
-            .filter(|x| *x >= 0.0 && x.fract() == 0.0)
-            .map(|x| x as u64)
-    };
-    match v {
-        None => Ok(Counter::default()),
-        Some(_) => Ok(Counter {
-            spent: n(0).ok_or_else(|| bad("counter"))?,
-            held: n(1).ok_or_else(|| bad("counter"))?,
-        }),
-    }
-}
-
-fn put_counter(o: &mut Out, c: &Counter) {
-    o.raw("[")
-        .int(c.spent as i64)
-        .raw(",")
-        .int(c.held as i64)
-        .raw("]");
-}
-
 impl Ledger {
     /// The state as stored by the host; `""` is an empty ledger (the first request ever).
     pub fn parse(text: &str) -> Result<Ledger> {
@@ -440,4 +368,76 @@ pub fn usage_of_stream(text: &str) -> Result<Option<Usage>> {
         u.cache_write_1h = w.cache_write_1h;
     }
     Ok(Some(u))
+}
+
+fn bad(field: &str) -> Error {
+    Error::new("err.llm.ledger").with("field", field)
+}
+
+fn hex(b: &[u8]) -> String {
+    b.iter().map(|x| format!("{x:02x}")).collect()
+}
+
+fn unhex32(s: &str) -> Option<[u8; 32]> {
+    if s.len() != 64 {
+        return None;
+    }
+    let mut out = [0u8; 32];
+    for (i, o) in out.iter_mut().enumerate() {
+        *o = u8::from_str_radix(s.get(2 * i..2 * i + 2)?, 16).ok()?;
+    }
+    Some(out)
+}
+
+/// HMAC-SHA256 (RFC 2104) of `msg` under a 32-byte key.
+fn hmac(key: &[u8; 32], msg: &[u8]) -> [u8; 32] {
+    let (mut inner, mut outer) = ([0x36u8; 64].to_vec(), [0x5cu8; 64].to_vec());
+    for (i, k) in key.iter().enumerate() {
+        inner[i] ^= k;
+        outer[i] ^= k;
+    }
+    inner.extend_from_slice(msg);
+    outer.extend_from_slice(&sha256(&inner));
+    sha256(&outer)
+}
+
+fn is_day(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() == 10
+        && b[4] == b'-'
+        && b[7] == b'-'
+        && b.iter()
+            .enumerate()
+            .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
+}
+
+/// A session id is the panel's random token: 8 to 64 of `[A-Za-z0-9_-]`, nothing that could carry a name.
+fn is_session(s: &str) -> bool {
+    (8..=64).contains(&s.len())
+        && s.bytes()
+            .all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'-')
+}
+
+fn counter_of(v: Option<&Value>) -> Result<Counter> {
+    let n = |i| {
+        v.and_then(|v| v.at(i))
+            .and_then(Value::f64)
+            .filter(|x| *x >= 0.0 && x.fract() == 0.0)
+            .map(|x| x as u64)
+    };
+    match v {
+        None => Ok(Counter::default()),
+        Some(_) => Ok(Counter {
+            spent: n(0).ok_or_else(|| bad("counter"))?,
+            held: n(1).ok_or_else(|| bad("counter"))?,
+        }),
+    }
+}
+
+fn put_counter(o: &mut Out, c: &Counter) {
+    o.raw("[")
+        .int(c.spent as i64)
+        .raw(",")
+        .int(c.held as i64)
+        .raw("]");
 }
