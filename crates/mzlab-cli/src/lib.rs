@@ -124,6 +124,7 @@ mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
+mod flow_transitions;
 pub mod insilico_pack;
 mod ion_pattern_cmd;
 pub mod llm;

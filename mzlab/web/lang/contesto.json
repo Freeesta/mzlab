@@ -889,6 +889,7 @@
   "err.flow.level.standards": "Messaggio d'errore del motore; {column} = nome della colonna.",
   "err.flow.link.hypotheses": "Messaggio d'errore del motore; {parent} = precursore.",
   "err.flow.link.parent": "Messaggio d'errore del motore; {mz} = m/z.",
+  "err.transitions.table": "Messaggio d'errore del motore; {row} = riga, chiave e testo del primo errore della tabella.",
   "err.flow.massacc.references": "Messaggio d'errore del motore; {line} = numero di riga, {message} = messaggio.",
   "err.flow.match.format": "Messaggio d'errore del motore; {file} = nome del file.",
   "err.flow.param.type": "Messaggio d'errore del motore; {detail} = dettaglio tecnico, {instance} = nome del passo, {param} = nome del parametro.",
