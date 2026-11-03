@@ -1,5 +1,5 @@
-//! The Flow table steps that do not fit the `table` module, in the browser (`.wasm` `flowtab`): `table.drift` (`mzlab_feat::flow_drift::drift_text`), `qc.run_order` (`mzlab_feat::runorder::runorder_text`) and
-//! `report.methods` (`mzlab_feat::methods::methods_text`) and `export.annotations` (`mzlab_feat::flow_export_annot`), the functions `flow run` calls.
+//! The Flow table steps that do not fit the `table` module, in the browser (`.wasm` `flowtab`): `table.drift` (`mzlab_feat::flow_drift::drift_text`), `qc.run_order` (`mzlab_feat::runorder::runorder_text`),
+//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`) and `chrom.transitions` (`mzlab_feat::transitions`), the functions `flow run` calls.
 //! Loaded by the page only when one of these steps runs.
 
 use mzlab_feat::flow_ms2::json_params;
@@ -48,5 +48,18 @@ pub fn flow_export_annot(
     blob: &[u8],
 ) -> std::result::Result<String, JsValue> {
     mzlab_feat::flow_export_annot::export_text_packed(params_json, table, manifest, blob)
+        .map_err(crate::js_err)
+}
+
+/// The CSV of `chrom.transitions` for the transition table `table` (a CSV) over the mzML files packed as `manifest` (JSON `[{"name","len"}]`) over their
+/// concatenated bytes `blob`. Errors are JSON `{"error_key","params"}` texts.
+#[wasm_bindgen]
+pub fn flow_transitions(
+    params_json: &str,
+    table: &str,
+    manifest: &str,
+    blob: &[u8],
+) -> std::result::Result<String, JsValue> {
+    mzlab_feat::transitions::transitions_packed(params_json, table, manifest, blob)
         .map_err(crate::js_err)
 }

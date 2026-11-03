@@ -84,6 +84,15 @@ fn csv_from_rows(kind: Kind, rows: &[Value]) -> String {
 /// `{kind, rows|csv}` -> `{rows, csv, sha256, json}` or `{errors}`; a wrong row is the error of its line in the CSV that `csv` would be.
 pub fn route(body: &str) -> Result<String> {
     let req = parse(body.as_bytes()).map_err(|_| Error::new("error.badListe"))?;
+    // the transition table keeps its own columns and its order (`transitions::route`)
+    if req.get("kind").and_then(Value::str) == Some("transitions") {
+        return crate::transitions::route(&req).ok_or_else(|| Error::new("error.badListe"));
+    }
+    lists(&req)
+}
+
+/// `route` for the kinds of `liste/1` (`adducts`, `transformations`).
+fn lists(req: &Value) -> Result<String> {
     let kind = req
         .get("kind")
         .and_then(Value::str)
