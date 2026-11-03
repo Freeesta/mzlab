@@ -26,7 +26,7 @@ window.MENUSUB = {
       else sm.hidden = true;
       d.setAttribute("aria-expanded", String(v));
     };
-    d.onclick = (/** @type {MouseEvent} */ ev) => { ev.stopPropagation(); if (/** @type {HTMLElement} */ (ev.target).closest(".ctxsub")) return; open(sm.hidden); if (!sm.hidden && ev.detail === 0) { const f = /** @type {HTMLElement | undefined} */ (rowsOf()[0]); if (f) f.focus(); } };
+    d.onclick = (/** @type {MouseEvent} */ ev) => { ev.stopPropagation(); if (/** @type {HTMLElement} */ (ev.target).closest(".ctxsub")) return; open(!!sm.hidden); if (!sm.hidden && ev.detail === 0) { const f = /** @type {HTMLElement | undefined} */ (rowsOf()[0]); if (f) f.focus(); } };
     d.onmouseenter = () => open(true); d.onmouseleave = () => { if (!sm.contains(document.activeElement)) open(false); };
     d.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => {
       if (e.target === d && e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); open(true); const f = /** @type {HTMLElement | undefined} */ (rowsOf()[0]); if (f) f.focus(); }

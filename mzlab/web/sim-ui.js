@@ -37,6 +37,7 @@
       const s = ions.length && ions.every(x => x.sim) ? ions.length : 0;
       if (f.sim !== s) { f.sim = s; changed = true; }
     }));
+    // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
     if (changed) { try { renderFiles(); renderFileList(); toolbar(); } catch (e) { /* a screen that is not up yet */ } }
   }
 
