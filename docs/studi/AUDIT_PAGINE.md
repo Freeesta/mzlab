@@ -67,6 +67,8 @@ script's reset between cycles, not of the page (a probe that closes it by Esc af
    as rows arrive, then 0.133 when the side panel narrows from 300 px (landing, `defaultW()`) to 280 px (`byNames()`: «the names set the width once a file is shown»)
    and the whole work area jumps 20 px left, with no user input (the file opens by itself). Fix proposal (a decision for the coordinator, it changes a deliberate rule):
    keep the landing width until the student resizes or the names need MORE room, or size by names already in the landing as soon as rows exist.
+   The CLS figure depends on timing: when the narrowing lands within 500 ms of the click that opened the file the browser does not count it (a later quick run read 0),
+   but the 20 px jump of the work area is there every time in the bounding boxes.
 4. **The page is taller than the window** in Dati (+7 px: `#dfiles` is `100vh − header − 16 px` but starts 16 px below a 12 px gap) and Disegno (+13 px: `#v-draw aside`
    is `100vh − --hh` under a 12 px gap). There is a page scroll bar, and opening the first file scrolls the page by 7 px, so every block moves up 7 px (the 51 vs 58 px
    tops seen in the audit). Fix proposal: subtract the top gap in those `calc()` (`app.css` lines 91 and 303). Not edited: top gap CSS belongs to chat GAP-TOP.
