@@ -1,5 +1,6 @@
 # The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
-# Runs on pull requests that touch the engine, the page or the build, and by hand. Not a required check of the protected main branch.
+# Runs on every pull request, on the merge queue (merge_group), by hand and once a night on main. `sito-changes` decides from the changed paths whether the build and the e2e run; the jobs it skips
+# report "skipped", which a required check accepts, so `sito` can be required without hanging a pull request that touches none of those paths.
 # `sito-wasm-core`, `sito-wasm-feat-a` and `sito-wasm-feat-b` build the .wasm in parallel and hand them over as artifacts; `sito-e2e` runs the quick checks of tools/verifica.py
 # (JS syntax and the shell, i18n, code map, sizes), builds the site, adds the artifacts and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
 # (3.11 and 3.14, with the wasm32 toolchain, so also the tests this job would skip).
@@ -11,7 +12,9 @@ on:
   schedule:
     - cron: "11 3 * * *"
   pull_request:
-    paths: ["crates/**", "Cargo.*", "mzlab/**", "flow/**", "TP_Mine/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", "tools/wasm_opt.sh", "tools/wasm_paralleli.sh", "tools/build_feat_wasm.sh", "tools/build_lettori_wasm.sh", ".github/workflows/sito-rust.yml"]
+  # merge queue: GitHub ignores `paths` on merge_group, so `sito-changes` filters on the diff of the queue branch against its base
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
     inputs:
       solo:
@@ -27,7 +30,29 @@ concurrency:
 
 # The .wasm are built once, in three parallel jobs (engine + libraries + readers, mzFinder part a, mzFinder part b), and `sito-e2e` downloads them as artifacts.
 jobs:
+  # Runs the build and the e2e when a path of the old pull_request filter changed. Nightly, by hand, or a base that cannot be fetched: always (never reduces the checks).
+  sito-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE" || true; fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|Cargo\.|mzlab/|flow/|TP_Mine/|tests_e2e/|tests/golden/|tools/(build_site\.py|dati_sintetici\.py|verifica\.py|wasm_opt\.sh|wasm_paralleli\.sh|build_feat_wasm\.sh|build_lettori_wasm\.sh)$|\.github/workflows/sito-rust\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   sito-wasm-core:
+    needs: sito-changes
+    if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -89,6 +114,8 @@ jobs:
           retention-days: 1
 
   sito-wasm-feat-a:
+    needs: sito-changes
+    if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -141,6 +168,8 @@ jobs:
           retention-days: 1
 
   sito-wasm-feat-b:
+    needs: sito-changes
+    if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -293,10 +322,11 @@ jobs:
   # The name `sito` stays: the one check that sums up the job.
   sito:
     if: always()
-    needs: [sito-e2e]
+    needs: [sito-changes, sito-e2e]
     runs-on: ubuntu-latest
     steps:
-      - name: sito-e2e passed
+      - name: sito-e2e passed (or skipped because no path of the filter changed)
         run: |
-          echo "sito-e2e: ${{ needs.sito-e2e.result }}"
-          test "${{ needs.sito-e2e.result }}" = success
+          echo "sito-changes: ${{ needs.sito-changes.result }} (run=${{ needs.sito-changes.outputs.run }}), sito-e2e: ${{ needs.sito-e2e.result }}"
+          test "${{ needs.sito-changes.result }}" = success
+          if [ "${{ needs.sito-changes.outputs.run }}" = true ]; then test "${{ needs.sito-e2e.result }}" = success; else test "${{ needs.sito-e2e.result }}" = skipped; fi
