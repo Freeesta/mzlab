@@ -58,7 +58,7 @@ try:
         def centroid():
             pg.evaluate("document.querySelector('#np-set').click()"); pg.wait_for_timeout(300)
             assert pg.is_checked("#uip-merge"), "the merge is on by default"
-            if not pg.evaluate("document.querySelector('#uip-merge').closest('details').open"): pg.click("details:has(#uip-merge) > summary")      # the section of the data starts closed
+            assert pg.is_visible("#uip-merge"), "the merge switch is a plain row, visible without opening anything"
             show(ck, 14.2, 14.4)
             on = pg.evaluate(f"{SPEC}._a.data[0].d.mz.length")
             pg.uncheck("#uip-merge"); pg.wait_for_timeout(1500)

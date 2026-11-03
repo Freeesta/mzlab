@@ -58,7 +58,7 @@ abbr.ftag{text-decoration:none;cursor:help;letter-spacing:.02em}#tools{gap:var(-
 /* section titles: more air above (and a thin rule after a previous block) than below, so a title reads as the head of what follows */
 #uipset fieldset{padding-top:0;margin-top:18px}
 #uipset legend{margin-bottom:8px}
-#uipset>fieldset:first-of-type,#uipset .imp-b>fieldset:first-child{margin-top:6px}
+#uipset>fieldset:first-of-type,#uipset .imp-b>fieldset:first-child,#uipset .imp-s>fieldset:first-of-type{margin-top:6px}
 #uipset .imp-b>:has(+fieldset){border-bottom:1px solid var(--line);padding-bottom:12px}.ibk{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;background:var(--sel);border-radius:10px;padding:1px 8px;font-size:11px}.ibk button{padding:0 6px;font-size:11px}.tw{display:inline-flex;align-items:flex-end}.tw>.hq{margin:0 6px 9px -8px}#helppop.wide{max-width:min(640px,94vw)}.fl .qi{display:inline-flex;color:var(--muted);flex:none;margin-top:1px}.fgh .qi{display:inline-flex;color:var(--accent)}
 
 
@@ -81,7 +81,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
 :root{--sb-w:280px}
 /* Dati view: the side panel is hidden or docked at full height to the left or right edge; the workspace takes the rest (never under it) */
-#v-data{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--sp-3);padding:var(--sp-2) 6px var(--sp-3) 6px;align-items:start}
+#v-data{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--sp-3);padding:var(--sp-1) 6px var(--sp-3) 6px;align-items:start}
 #v-data.sb-open{grid-template-columns:var(--sb-w,280px) minmax(0,1fr)}
 #v-data.sb-open.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-w,280px)}
 #v-data.sb-right #dfiles{order:2}
@@ -523,6 +523,8 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 /* the work area shows one thing (shell.js, syncWork): the panels, the loading table or the landing, centred; before any script it is the landing */
 #v-workspace:not([data-work=panels]):not([data-work=opening]) #dpanels{display:none}
 .land-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center;margin:14px 0 6px}.land-row .cartpick{margin:0;padding:var(--ctl-py) 12px}#demochoice{flex-basis:100%;gap:6px;justify-content:center;flex-wrap:wrap}#wtable{margin-top:12px}
+/* the sample card shows nothing to look at while its list is empty and no note is shown: no empty bar under the method row */
+#wtable:has(>#flist:empty):not(:has(>#hrmix:not([hidden]),>#hrnote:not([hidden]),>#modenote:not([hidden]),>#gomsg:not(:empty))){display:none}
 /* the file menu keeps the width of one name while it is empty (nothing grows when the first file arrives) */
 #fsel:empty{width:16ch}
 /* first paint: the side panel is open next to the landing, except below 900 px where it would replace it (barra.js takes over at once) */

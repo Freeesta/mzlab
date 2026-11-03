@@ -16,9 +16,10 @@ try:
                 assert "privacy" not in pg.inner_text("#uipset").lower(), pg.inner_text("#uipset")
             step(f"{lang}: no «Data and privacy» group", gone)
             def kept(pg=pg):
-                ids = pg.evaluate("[...document.querySelectorAll('#uipset > details')].map(d => d.id)")
+                ids = pg.evaluate("[...document.querySelectorAll('#uipset > [id]')].map(d => d.id)")
                 for k in ("uip-g-look", "uip-a11y", "uip-g-bug"): assert k in ids, (k, ids)
-            step(f"{lang}: the other groups (with «Report a bug») stay", kept)
+                assert pg.locator("#uipset details.imp-g").count() == 0, "no folding group when each holds only a few plain controls"
+            step(f"{lang}: the flat groups (with «Report a bug») stay", kept)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

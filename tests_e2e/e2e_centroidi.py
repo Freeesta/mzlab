@@ -47,7 +47,7 @@ try:
             assert "Profilo" not in pg.inner_text("#flst") and "Profilo" not in pg.get_attribute("#flst .fl:not(.pr)", "data-tip"), "no mode word on the row or in its tooltip"
         step("the card of a profile file carries no Profilo word", card_profile)
         def convert():
-            pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.evaluate("document.getElementById('uip-g-data').open = true"); pg.wait_for_selector("#uip-cen")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.wait_for_selector("#uip-cen")
             assert "Centroidazione" in pg.get_attribute("#uip-cen", "title")
             pg.click("#uip-cen"); pg.click("#askok")
             pg.wait_for_function("typeof ST !== 'undefined' && ST.files.length === 2", timeout=60000)

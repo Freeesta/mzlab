@@ -73,7 +73,7 @@ try:
         step("open the files", load)
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uip-a11y")
-            pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # every group open
+            pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # the folding groups (assistant, diagnostics) open
             t = pg.inner_text("#uipset")
             for w in ("Settings", "Theme", "Like the system", "Chart colors", "Merge the centroids of the same nominal mass"): assert w.lower() in t.lower(), (w, t)
             assert "By file (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"

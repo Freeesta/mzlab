@@ -29,6 +29,7 @@ const BARRA = (() => {
   let _sub = "adducts";             // the section of the Adducts & losses panel ("adducts" | "losses"): the last one used is remembered
   const SUBS = ["adducts", "losses"];
   let _open = false;
+  let _lastView = "";          // the page of the last applyLayout: a change of page never animates the work area
   let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, loading)
   let _restore = false;             // hidden by the narrow window, not by the user: it comes back when the window widens
   let _forced = false;              // the user opened it in a narrow window: it stays until the window widens
@@ -263,7 +264,11 @@ const BARRA = (() => {
       aside.setAttribute("aria-hidden", shown ? "false" : "true");
       if (change) { applyWidth(); refitNow(); }
     };
-    if (change && inData() && window.TRANS) TRANS.layout({ aside, was, shown, moved }, apply); else apply();
+    // coming back to Dati (or leaving it) only restores the layout of a page that was already there: no slide, the panels are at their final place at once
+    const switched = typeof S !== "undefined" && _lastView !== "" && S.view !== _lastView;
+    _lastView = typeof S !== "undefined" ? S.view : _lastView;
+    if (change && switched && window.TRANS) TRANS.jump(apply);
+    else if (change && inData() && window.TRANS) TRANS.layout({ aside, was, shown, moved }, apply); else apply();
     const tg = Q1("#sb-toggle");
     if (tg) {
       tg.hidden = !(inDataOrOpening() || landing());

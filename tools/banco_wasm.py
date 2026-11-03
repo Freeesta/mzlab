@@ -38,6 +38,7 @@ VARIANTI = {
     "mix": ("mix", "", "", "-Oz"),
     "mix_zrs": ("mix", "", "zlibrs", "-Oz"),
     "sol_core": ("sol_core", "", "", "-Oz"),
+    "sol_hash": ("sol_hash", "", "", "-Oz"),
     "sol_miniz": ("sol_miniz", "", "", "-Oz"),
     "sol_xml": ("sol_xml", "", "", "-Oz"),
     "sol_b64": ("sol_b64", "", "", "-Oz"),
@@ -62,7 +63,7 @@ LAVORI = [
     ("centroid_hr", "centroids 100 HR scans"), ("pick50_hr", "50 XIC + peaks HR"), ("entropy300_hr", "entropy 300x300 MS2"),
     ("parse_lr", "mzML LR read"), ("index_lr", "mzidx LR"), ("xic200_lr", "200 XIC from the LR index"),
     ("pick50_lr", "50 XIC + peaks (AsLS) LR"), ("compose200", "200 compositions"),
-    ("parse_raw", ".raw decode"), ("index_raw", ".raw mzidx (build_lettore)"), ("inflate64MB", "inflate 64 MB"),
+    ("parse_raw", ".raw decode"), ("index_raw", ".raw mzidx (build_lettore)"), ("inflate64MB", "inflate 64 MB"), ("hash64MB", "SHA-256 + SHA-1 of 64 MB"),
 ]
 
 
