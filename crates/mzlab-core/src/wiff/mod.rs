@@ -31,6 +31,20 @@ const HEADER_CODE: usize = 122;
 /// Offset of the polarity in `ExperimentHeader`.
 const HEADER_POLARITY: usize = 86;
 use modi::{Uscita, CODE_PRODUCT};
+/// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
+/// method), the nearest one before it.
+pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
+    let has = |k: u32| {
+        ole.has(&format!(
+            "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
+        ))
+    };
+    (1..=sample.min(10_000))
+        .rev()
+        .find(|&k| has(k))
+        .unwrap_or(sample)
+}
+
 impl Wiff {
     /// The method says experiment `e` acquires scans: a block of it that is not a readable scan is not an MRM block.
     pub(crate) fn scan_experiment(&self, e: usize) -> bool {
@@ -234,6 +248,10 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             .ok_or_else(|| bad("no Idx"))?,
     );
     let mut experiments = experiments(ole, sample);
+    #[cfg(not(feature = "estesi"))]
+    if experiments.is_empty() {
+        experiments = self::experiments(ole, method_no(ole, sample));
+    }
     #[cfg(feature = "estesi")]
     {
         experiments = estesi::refine(ole, sample, experiments)?;
@@ -257,8 +275,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         })
         .collect();
     let method = methodinfo::method_of_sample(ole, sample);
-    #[cfg(feature = "estesi")]
-    let method = method.or_else(|| estesi::fallback_method(ole, sample));
+    let method = method.or_else(|| methodinfo::method_of_sample(ole, method_no(ole, sample)));
     activation(&mut experiments, &method);
     let dad = dad::DadData::read(ole, sample);
     let (model, created, serial, source_type) = crate::metodo_wiff::run_facts_full(ole, sample);
