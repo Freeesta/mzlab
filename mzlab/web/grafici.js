@@ -113,7 +113,7 @@ async function rawSeries(p) {
     if (!matchTr) return;
     const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);
     const multiTr = Array.isArray(p.tr) && p.tr.length > 1;
-    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
+    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: t.q3 == null && window.SIMUI ? SIMUI.color(key) : (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
       dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${key} · ${f.label}` : `${key} ${t.name || ""}`.trim(), tid_label: `${key} ${t.name || ""}`.trim() });
   }));
   return out;
@@ -399,7 +399,7 @@ async function drawLines(p) {
   } else for (const s of sr) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
     const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // the window by binary search (decima.js): smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
-    g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
+    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
     for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }

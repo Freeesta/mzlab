@@ -61,6 +61,7 @@ I18N.add("it", {
   "panel.title.spec": "Spettro di massa",
   "panel.title.xic": "Ione estratto (XIC)",
   "panel.title.mrm": "MRM",
+  "panel.title.sim": "Ioni SIM",
   "panel.title.map": "Mappa RT-m/z",
   "panel.title.product": "MS²",
   "panel.title.ms2prec": "MS² {prec}",

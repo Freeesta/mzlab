@@ -28,7 +28,7 @@ I18N.add("it", {
   "tour.file.titolo": "Qui ci sono i file caricati",
   "tour.file.testo": "Ogni riga è un file, raggruppato per tipo di esperimento. La spunta lo mostra o lo nasconde nei grafici; con + ne aggiungi altri. Per il giro ne basta uno. Si apre dal pulsante «File» della barra.",
   "tour.gruppi.titolo": "Un gruppo per esperimento",
-  "tour.gruppi.testo": "Full Scan, MS² e MRM stanno in gruppi separati dell'elenco: i grafici non mescolano mai esperimenti diversi. Il numero dice quanti file ci sono; un clic su un file porta al suo blocco di grafici.",
+  "tour.gruppi.testo": "Full Scan, MS², MRM e SIM stanno in gruppi separati dell'elenco: i grafici non mescolano mai esperimenti diversi. Il numero dice quanti file ci sono; un clic su un file porta al suo blocco di grafici.",
   "tour.tic.titolo": "Il TIC: tutto il segnale nel tempo",
   "tour.tic.testo": "Ogni punto è la somma delle intensità di una scansione. In orizzontale il tempo di ritenzione (min), in verticale l'intensità (cps). Un picco è qualcosa che esce dalla colonna in quel momento.",
   "tour.istante.titolo": "Scegli un istante",

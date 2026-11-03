@@ -29,7 +29,9 @@
   const find = (k, omo) => { const c = cached(k); return c && c.canali.find(x => x.omo === omo) || null; };
 
   /** transition key «q1>q3» of an srm channel (the key of the MRM panel) @param {Canale} c */
-  const srmKey = c => c.id.slice(4).replace(/@.*$/, "");
+  const srmKey = c => c.fam === "sim" || c.id.startsWith("sim:") ? String(+(/Q1=([\d.]+)/.exec(c.id) || [])[1]) : c.id.slice(4).replace(/@.*$/, "");
+  /** a row of the MRM picker: a transition (srm) or a SIM ion (sim) @param {Nodo} n */
+  const isTr = n => n.fam === "srm" || n.fam === "sim";
   /** the MRM transition of the file that an srm channel names @param {Canale} c @param {any} t */
   const srmIs = (c, t) => `${t.q1}>${t.q3}` === srmKey(c) && (!/@/.test(c.id) || Math.abs(+c.id.split("@")[1] - (t.ce ?? 0)) < 0.5);
 
@@ -129,7 +131,7 @@
     const depth = (/** @type {Nodo} */ n) => { let d = 1, u = n.up; while (u) { d++; u = (byO.get(u) || { up: null }).up; } return d; };
     const hidden = new Set(), many = nfiles > 1;
     tree.forEach(n => { if (n.up && (col.has(n.up) || hidden.has(n.up))) hidden.add(n.omo); });
-    const vis = tree.filter(n => !hidden.has(n.omo) && (!onlySrm || n.fam === "srm"));
+    const vis = tree.filter(n => !hidden.has(n.omo) && (!onlySrm || isTr(n)));
     return vis.map(n => {
       const lv = onlySrm ? 1 : depth(n), has = n.kids.length > 0 && !onlySrm, open = has && !col.has(n.omo), t = tip(n);
       return `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.omo)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-omo="${EH(n.omo)}" aria-label="${EH(rowLabel(n))}"${t ? ` title="${EH(t)}"` : ""}>` +
@@ -154,7 +156,7 @@
   function ticked(p, tree) {
     if (!ESP.mrm(p)) return isOther(p) ? new Set() : new Set(chosen(p));
     const all = !p.tr || (Array.isArray(p.tr) && !p.tr.length), want = new Set(Array.isArray(p.tr) ? p.tr : [p.tr]);
-    return new Set(tree.filter(n => n.fam === "srm" && (all || want.has(nodeKey(n)))).map(n => n.omo));
+    return new Set(tree.filter(n => isTr(n) && (all || want.has(nodeKey(n)))).map(n => n.omo));
   }
   /** the control of a panel: a button with what is plotted and the popover with the channels in groups. The chromatogram passes what its files have (cx); the MRM panel
    * lists only its transitions ("" while nothing is known about the files) @param {any} p @param {Ctx} [cx] */
@@ -167,7 +169,7 @@
     const grp = (/** @type {string} */ name, /** @type {string} */ body) => body ? `<div role="group" aria-label="${EH(name)}"><div class="can-gh" aria-hidden="true">${EH(name)}</div>${body}</div>` : "";
     const [det, log] = cx ? others(cx) : [[], []];
     const body = only ? rows(p, tree, sel, true, files.length) : grp(T("canali.grp.ms"), rows(p, tree, sel, false, files.length)) + grp(T("canali.grp.det"), kindRows(p, det)) + grp(T("canali.grp.log"), kindRows(p, log));
-    const txt = only ? T("canali.btn.mrm") : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
+    const txt = only ? T(tree.some(n => n.fam === "sim") && !tree.some(n => n.fam === "srm") ? "canali.sim.btn" : "canali.btn.mrm") : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
     return `<span class="can"><button class="bt canb" type="button" data-o="${only ? "canali" : "kind"}" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T(only ? "canali.btn.title" : "ctl.kind.title"))}" aria-label="${EH(aria)}"><span class="can-bt">${EH(txt)}</span><span class="can-dn" aria-hidden="true">▾</span></button>` +
       `<div class="sp-pop can-pop" ${open ? "" : "hidden"}>${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true" class="can-tree">${body}</div></div></span>`;
   }
@@ -180,7 +182,7 @@
   function toggle(p, omo, tree) {
     COMANDI.fai("panel.source", p, () => {
       if (ESP.mrm(p)) {
-        const srm = tree.filter(n => n.fam === "srm"), cur = new Set(ticked(p, tree));
+        const srm = tree.filter(isTr), cur = new Set(ticked(p, tree));
         if (cur.has(omo)) cur.delete(omo); else cur.add(omo);
         const pick = srm.filter(n => cur.has(n.omo)).map(nodeKey);
         p.tr = pick.length === srm.length || !pick.length ? "" : pick;

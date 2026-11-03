@@ -831,6 +831,7 @@
   "load.note.logs.one": "Nota del caricamento per un file di log saltato (per esempio il .wiff.log di msconvert); {names} = nome del file.",
   "load.note.logs": "Nota del caricamento per i file di log saltati (per esempio i .wiff.log di msconvert); {n} = quanti, {names} = i primi nomi.",
   "canali.simtab.title": "Titolo della carta della Tabella SIM in Dati; {channels} = numero di canali SIM, {samples} = numero di campioni.",
+  "canali.sim.cell": "Cella «Esperimento» della tabella dei file per un file SIM; {n} = numero di ioni monitorati.",
   "canali.btn.aria": "Nome accessibile del pulsante dei canali; {n} = numero di canali tracciati.",
   "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di punti (scansioni), {a} e {b} = tempo iniziale e finale in minuti.",
   "canali.kind.aria": "Nome accessibile del pulsante che sceglie cosa traccia il cromatogramma; {v} = testo del pulsante (per esempio TIC o TIC + 1).",

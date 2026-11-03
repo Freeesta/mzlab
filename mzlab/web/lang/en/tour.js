@@ -28,7 +28,7 @@ I18N.add("en", {
   "tour.file.titolo": "Your loaded files are here",
   "tour.file.testo": "Each row is a file, grouped by experiment type. The tick shows or hides it in the plots; + adds more files. One file is enough for this tour. It opens from the «Files» button of the toolbar.",
   "tour.gruppi.titolo": "One group per experiment",
-  "tour.gruppi.testo": "Full Scan, MS² and MRM are in separate groups of the list: plots never mix different experiments. The number tells how many files each one holds; a click on a file takes you to its block of plots.",
+  "tour.gruppi.testo": "Full Scan, MS², MRM and SIM are in separate groups of the list: plots never mix different experiments. The number tells how many files each one holds; a click on a file takes you to its block of plots.",
   "tour.tic.titolo": "The TIC: all the signal over time",
   "tour.tic.testo": "Each point is the summed intensity of one scan. Retention time (min) runs across, intensity (cps) up. A peak is something leaving the column at that moment.",
   "tour.istante.titolo": "Pick a moment",
