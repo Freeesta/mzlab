@@ -130,7 +130,7 @@ I18N.add("en", {
   "tbl.loss.sameShort": "same Δm, unit resolution",
   "tbl.loss.checkM2": "Check <i>M+2</i> with the isotope pattern in the spectrum (right-click; Br: M and M+2 almost equal).",
   "tbl.loss.searchPh": "Δm, e.g. 62",
-  "tbl.loss.searchTitle": "Type the observed mass difference: it highlights the losses with that value (within the chosen tolerance) and shows the pairs and repetitions that make it up, the contaminants and the adducts",
+  "tbl.loss.searchTitle": "Observed mass difference: highlights the losses with that value",
   "tbl.iso.adductTooMany": "the adduct removes more atoms than there are",
   "side.addf": "Load more files",
   "side.info.aria": "Bench information bar",
