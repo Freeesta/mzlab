@@ -9,7 +9,7 @@ I18N.add("it", {
   "tour.fine": "Fine",
   "tour.continua": "Continua",
   "tour.fine_cap1_testo": "Hai visto le basi. Continui con gli strumenti (9 passi) o ti fermi qui?",
-  "tour.invito.testo": "Primo accesso? Un tour guidato degli strumenti.",
+  "tour.invito.testo": "Prima volta?",
   "tour.invito.si": "Inizia il tour",
   "tour.invito.no": "Non ora",
   "tour.invito.dopo": "Potrai fare il tour più tardi dalle Impostazioni.",

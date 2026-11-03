@@ -81,7 +81,7 @@ try:
             pg.keyboard.press("Enter"); pg.wait_for_function("!document.getElementById('predefdlg')")
         step("Yes records «si» and shows the guide of the system, with a Close button that has the focus", yes)
         def settings_row():
-            pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.evaluate("document.getElementById('uip-g-app').open = true")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset")
             pg.wait_for_selector("#uip-predef"); pg.evaluate("window.__calls = []"); pg.click("#uip-predef")
             pg.wait_for_selector("#predefdlg[open]")
             assert "assoc_reset" in pg.evaluate("window.__calls")

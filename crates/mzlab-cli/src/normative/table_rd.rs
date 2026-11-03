@@ -3,7 +3,7 @@
 
 use mzlab_core::json::Value;
 
-use super::entry::{cas_tokens, Entry};
+use super::entry::Entry;
 use super::markup::{self, Item, Node, Row};
 
 impl Cfg {
@@ -283,9 +283,4 @@ pub fn read(root: &Node, cfg: &Cfg) -> Vec<Entry> {
         }
     }
     out
-}
-
-/// Every CAS number of the entries, for tests and coverage.
-pub fn cas_of(entries: &[Entry]) -> Vec<String> {
-    entries.iter().flat_map(|e| cas_tokens(&e.cas)).collect()
 }

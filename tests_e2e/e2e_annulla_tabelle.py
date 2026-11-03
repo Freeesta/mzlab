@@ -53,7 +53,7 @@ try:
         def settings():
             fresh()
             ev("uipOpen(document.getElementById('np-set'))"); tick()
-            ev("document.querySelector('#uip-g-look').open=true"); tick()
+            tick()
             was = ev("UIP.theme")
             pg.click("#uipset input[name=uip-th][value=dark]", force=True); tick(); pg.wait_for_function("UIP.theme==='dark'")
             undo(); pg.wait_for_function(f"UIP.theme==={was!r}")

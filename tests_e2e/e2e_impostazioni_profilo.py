@@ -15,7 +15,7 @@ try:
         pg.reload(); ready(pg)
         def no_profile():
             assert pg.evaluate("localStorage.getItem('mzlab.profilo')") is None, "the old explicit profile is dropped"
-            pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.evaluate("document.getElementById('uip-g-app').open = true")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset")
             t = pg.inner_text("#uipset")
             for bad in ("Profile", "Profilo", "Course", "Corso", "Research", "Ricerca"): assert bad not in t, bad
             assert pg.locator("input[name=uip-prof]").count() == 0 and pg.locator("#uip-g-llm").count() == 0, "no assistant without the administrator mode"
@@ -33,7 +33,7 @@ try:
             pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")
             for w in (1500, 380):
                 pg.set_viewport_size({"width": w, "height": 900});
-                m = pg.evaluate("""[...document.querySelectorAll('#uipset .imp-b>fieldset')].map(f => [parseFloat(getComputedStyle(f).marginTop), parseFloat(getComputedStyle(f.querySelector(':scope>legend')).marginBottom), !!f.previousElementSibling])""")
+                m = pg.evaluate("""[...document.querySelectorAll('#uipset .imp-s>fieldset')].map(f => [parseFloat(getComputedStyle(f).marginTop), parseFloat(getComputedStyle(f.querySelector(':scope>legend')).marginBottom), !!(f.previousElementSibling && f.previousElementSibling.tagName === "FIELDSET")])""")
                 assert m, "sections found"
                 for top, bot, has_prev in m:
                     if has_prev: assert top >= 18 and top >= 2 * bot, m

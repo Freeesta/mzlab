@@ -17,7 +17,7 @@ fn the_graph_of_a_file_with_the_formula_of_its_ion() {
     let o = run(&["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v = mzlab_core::json::parse(&o.stdout).unwrap();
-    assert_eq!(v.get("formato").unwrap().str(), Some("msngrafo/1"));
+    assert_eq!(v.get("formato").unwrap().str(), Some("msngrafo/2"));
     assert_eq!(
         v.get("sorgente").unwrap().get("nome").unwrap().str(),
         Some("msn.mzML")
@@ -192,7 +192,7 @@ fn old_flags_are_aliases_of_the_english_ones() {
 #[test]
 fn help_shows_new_flags_and_ends_with_the_old_names() {
     let h = String::from_utf8(run(&["msn-graph", "--help"]).stdout).unwrap();
-    assert!(h.contains("--low-mz N") && h.contains("(param mz_basso)"));
+    assert!(h.contains("--low-mz N") && h.contains("(param low_mz)"));
     let last = h.trim_end().lines().last().unwrap();
     assert!(
         last.starts_with("old names still accepted: --mz-basso"),

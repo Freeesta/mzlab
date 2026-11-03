@@ -16,7 +16,7 @@ window.TAVOLA = (() => {
 .pt-c span{font-size:9px;color:var(--muted);align-self:flex-start}.pt-c b{font-size:15px}.pt-c small{font-size:9px;color:var(--muted)}
 .pt-c.org{background:color-mix(in srgb,var(--accent) 17%,var(--panel));border:2px solid var(--accent);color:var(--ink)}.pt-c.org span,.pt-c.org small{color:var(--ink)}.pt-c.org b{font-weight:800}.pt-c.nd b{color:var(--muted)}
 .pt-c:hover,.pt-c.pin{outline:2px solid var(--accent);outline-offset:-2px;z-index:1}.pt-c:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;z-index:1}
-.pt-info{grid-row:1/4;grid-column:3/13;height:144px;padding:2px 10px;font-size:11px;line-height:1.3;overflow:auto}.pt-info table th,.pt-info table td{padding:0 6px}.pt-info .pt-big b{font-size:22px}
+.pt-info{grid-row:1/4;grid-column:3/13;height:144px;padding:2px 10px;font-size:11px;line-height:1.3;overflow:auto;scrollbar-gutter:stable}.pt-info table th,.pt-info table td{padding:0 6px}.pt-info .pt-big b{font-size:22px}
 .pt-big{float:left;margin:0 10px 4px 0;border:1px solid var(--line);border-radius:6px;padding:2px 8px;text-align:center}.pt-big span{display:block;font-size:10px;color:var(--muted)}.pt-big b{font-size:26px}
 .pt-gap{grid-row:8;grid-column:3/18;font-size:10px;color:var(--muted);align-self:center}.pt-bar{display:inline-block;height:8px;background:var(--accent);border-radius:2px}
 @media (forced-colors:active){.pt-c.pin,.pt-c:focus-visible{outline-color:Highlight}.pt-bar{background:CanvasText}}`;

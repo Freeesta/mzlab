@@ -44,14 +44,14 @@ try:
             assert pg.get_attribute("#stbar", "role") == "toolbar" and pg.get_attribute("#stbar", "aria-label") == "Strumenti"
             assert pg.locator("#sidebar-tablist").count() == 0, "no rail"
             ids = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.dataset.cmd)")
-            assert ids == ["file", "calc", "addloss", "lists", "ptable", "more", "search"], ids
+            assert ids == ["file", "addloss", "lists", "ptable", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.innerText.trim())")
-            assert lab == ["File", "Calcolatrice", "Addotti e perdite", "Liste", "Tavola", "Altro", "Cerca"], lab
+            assert lab == ["File", "Addotti e perdite", "Liste", "Tavola", "Altro", "Cerca"], lab
             for b in pg.query_selector_all("#stbar > button[data-cmd]"):
                 if b.is_visible(): assert b.get_attribute("aria-label") and b.get_attribute("title") and b.query_selector("svg"), b.get_attribute("data-cmd")
             assert pg.evaluate("document.querySelectorAll('header button#np-pc, header button#np-bt').length") == 0, "PubChem and BioTransformer only in «Altro»"
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.curTab") == "file", "first start on a wide screen: the File panel is open"
-        step("barra in the header (role toolbar), file/calc/adducts & losses/lists/table in this order, words under the icons, no rail, File panel open at first start", barra)
+        step("barra in the header (role toolbar), file/adducts & losses (with the calculator)/lists/table in this order, words under the icons, no rail, File panel open at first start", barra)
 
         def altro():
             pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
@@ -78,11 +78,10 @@ try:
         step("panel: docks next to the charts (they narrow), the same button / × hide it, focus in and back", apri_chiudi)
 
         def cambia():
-            pg.click("#stbar [data-cmd=calc]"); shown("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Calcolatrice'")
-            assert pg.is_visible("#calcdlg") and pg.inner_text("#sb-title") == "Calcolatrice", pg.inner_text("#sb-title")
-            pg.click("#stbar [data-cmd=addloss]"); gone("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Addotti e perdite' && document.querySelector('#stbar [data-cmd=addloss]').getAttribute('aria-pressed') === 'true'")
-            assert pg.inner_text("#sb-title") == "Addotti e perdite" and not pg.is_visible("#calcdlg")
-            assert pg.get_attribute("#stbar [data-cmd=calc]", "aria-pressed") == "false" and pg.get_attribute("#stbar [data-cmd=addloss]", "aria-pressed") == "true"
+            pg.click("#stbar [data-cmd=addloss]"); shown("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Addotti e perdite' && document.querySelector('#stbar [data-cmd=addloss]').getAttribute('aria-pressed') === 'true'")
+            assert pg.is_visible("#calcdlg") and pg.is_visible("#al-q"), "one page: the calculator on top of the lists"
+            pg.click("#al-calc-tg"); gone("#calcdlg"); assert pg.get_attribute("#al-calc-tg", "aria-expanded") == "false" and pg.evaluate("!BARRA.isOpen('calc')")
+            pg.click("#al-calc-tg"); shown("#calcdlg"); assert pg.evaluate("BARRA.isOpen('calc')")
             pg.click("#stbar [data-cmd=addloss]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=addloss]", "aria-pressed") == "false", "a second click on the same tool hides the panel"
             pg.click("#stbar [data-cmd=lists]"); shown("#sb-panel-lists"); assert pg.is_visible("#sb-panel-lists")
             pg.click("#stbar [data-cmd=ptable]"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
@@ -203,7 +202,7 @@ try:
             assert not pg.is_visible("#stbar [data-cmd=file]"), "no File outside the Dati view"
             pg.click("#np-pt"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "in Disegno the tools are the windows of before"
             pg.evaluate("document.querySelector('#refdlg').close()")
-            pg.click("#np-calc2"); shown("#calcdlg"); assert pg.is_visible("#calcdlg") and pg.evaluate("!BARRA.open")
+            pg.click("#np-calc2"); shown("#calcdlg"); assert pg.is_visible("#calcdlg") and pg.evaluate("!BARRA.open"), "in Disegno the calculator is the drop-down"
             pg.click("#np-calc2"); gone("#calcdlg"); assert not pg.is_visible("#calcdlg")
             pg.click("#nav [data-v=data]"); shown("#stbar [data-cmd=file]"); assert pg.is_visible("#stbar [data-cmd=file]")
         step("in Disegno the same buttons open the windows of before; File only in the Dati view", disegno)
@@ -214,7 +213,7 @@ try:
 
         def hr_barra():
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
-            assert ids == ["file", "calc", "addloss", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
+            assert ids == ["file", "addloss", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
             pg.set_viewport_size({"width": 1800, "height": 1000}); attendi(pg, "document.documentElement.dataset.barLab === 'all'")        # the words need room: the panel pill takes its own word from the bar
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
             assert all(x in lab for x in ("Scansione", "Formule", "Librerie")), lab         # the HR group keeps its words as long as the main tools do
@@ -267,7 +266,7 @@ try:
         # ------------------------------------------------------------------ narrow windows, iPad, phone
         def stretta():
             resize(1500, 1000)
-            pg.evaluate("BARRA.setTab('calc',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'calc'")
+            pg.evaluate("BARRA.setTab('calc',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'addloss' && BARRA.isOpen('calc')")
             assert pg.evaluate("BARRA.open && !BARRA.sheet")
             pg.set_viewport_size({"width": 800, "height": 900})
             attendi(pg, "!BARRA.open")           # below 1100 px the side panel closes by itself; the tool button gives it back, as a sheet
@@ -313,8 +312,8 @@ try:
                 vis = q.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
                 assert vis == ["file", "more", "search"], vis
                 q.click("#tb-more"); q.wait_for_selector("#stmenu")
-                t = q.inner_text("#stmenu"); assert "Calcolatrice" in t and "Addotti e perdite" in t and "Tavola periodica" in t and "PubChem" in t, t
-                q.locator("#stmenu button", has_text="Calcolatrice").click(); shown("#calcdlg", q); attendi(q, "document.querySelector('#dfiles').getBoundingClientRect().width <= 391")
+                t = q.inner_text("#stmenu"); assert "Addotti e perdite" in t and "Tavola periodica" in t and "PubChem" in t, t
+                q.locator("#stmenu button", has_text="Addotti e perdite").click(); shown("#calcdlg", q); attendi(q, "document.querySelector('#dfiles').getBoundingClientRect().width <= 391")
                 assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 + 1
                 q.evaluate("BARRA.close(false)")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
@@ -340,8 +339,8 @@ try:
             n0 = pg.evaluate("document.querySelector('#pal-in').getAttribute('aria-activedescendant')"); pg.keyboard.press("ArrowDown")
             assert pg.evaluate("document.querySelector('#pal-in').getAttribute('aria-activedescendant')") != n0 and pg.evaluate("document.querySelectorAll('#pal-l [aria-selected=true]').length") == 1
             pg.keyboard.press("Escape"); gone("#paletta"); assert not pg.is_visible("#paletta")
-            pg.click("#tb-search"); pg.wait_for_selector("#paletta:not([hidden])"); pg.keyboard.type("calcol"); pg.keyboard.press("Enter"); gone("#paletta"); shown("#calcdlg"); attendi(pg, "BARRA.curTab === 'calc'")
-            assert not pg.is_visible("#paletta") and pg.evaluate("BARRA.curTab") == "calc" and pg.is_visible("#calcdlg"), "Enter runs the command"
+            pg.click("#tb-search"); pg.wait_for_selector("#paletta:not([hidden])"); pg.keyboard.type("calcol"); pg.keyboard.press("Enter"); gone("#paletta"); shown("#calcdlg"); attendi(pg, "BARRA.curTab === 'addloss'")
+            assert not pg.is_visible("#paletta") and pg.evaluate("BARRA.curTab") == "addloss" and pg.is_visible("#calcdlg"), "Enter runs the command"
             pg.keyboard.press("Escape"); frames(pg, 3)
             if pg.is_visible("#dfiles"): close_side(pg)
             gone("#dfiles")

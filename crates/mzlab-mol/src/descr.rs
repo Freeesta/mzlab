@@ -141,11 +141,6 @@ impl Mol {
         crippen::contributions(&Ctx::new(self)).0
     }
 
-    /// Wildman-Crippen molar refractivity.
-    pub fn crippen_mr(&self) -> f64 {
-        crippen::contributions(&Ctx::new(self)).1
-    }
-
     /// Topological polar surface area (Ertl 2000) from N and O only, the usual default that leaves out S and P.
     pub fn tpsa(&self) -> f64 {
         tpsa_of(&Ctx::new(self))
@@ -201,12 +196,6 @@ impl Mol {
     /// amine N whose neighbours are all sp3 carbons).
     pub fn hba(&self) -> u32 {
         hba_of(&Ctx::new(self))
-    }
-
-    /// Rotatable bonds: single, acyclic, between two non-terminal atoms, not next to a triple bond, not on an atom of an acyl group (amide,
-    /// ester, acid, thio analogues), and not on a CF3 / tert-butyl carbon.
-    pub fn rotatable_bonds(&self) -> u32 {
-        rotors_of(&Ctx::new(self))
     }
 
     /// Average molecular weight; isotope-labelled atoms count with their mass number.

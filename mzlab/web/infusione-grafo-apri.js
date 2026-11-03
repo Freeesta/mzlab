@@ -1,12 +1,12 @@
 // @ts-strict
-// Opening a saved fragmentation graph (a g.json, msngrafo/1) without its raw data: a dropped or picked .json is recognised by its head, a graph without `vista`
+// Opening a saved fragmentation graph (a g.json, msngrafo/1 or /2) without its raw data: a dropped or picked .json is recognised by its head, a graph without `vista`
 // is completed by the .wasm msngrafo (op `completa`; no calculation here) and shown read-only in a window with the same body as the «Fragmentation graph» tab.
 // Used by shell.js (upload0, the data area) and infusione-grafo.js (the tab). docs/agenti/infusione-grafo.md.
 import { G } from "./infusione-grafo-stato.js";
 import { mostraErrore } from "./infusione-grafo-avanza.js";
 
 const HEAD = /"formato"\s*:\s*"msngrafo\/(\d+)/;
-const KNOWN = 1;
+const KNOWN = 2;
 /** The graph window opens as the head of the file says, but a JSON this large is not a graph the page can draw. */
 const MAX_BYTES = 200e6;
 
@@ -28,7 +28,7 @@ async function read(f, v) {
   if (v > KNOWN) throw fail("error.newerFormat", { kind: "msngrafo", version: v, file: f.name });
   let text = await f.text(), j;
   try { j = JSON.parse(text); } catch (e) { throw fail("error.msngrafo.badFile", { file: f.name, raw: String(/** @type {Error} */ (e).message) }); }
-  if (!j || j.formato !== "msngrafo/1" || !Array.isArray(j.nodi) || !Array.isArray(j.archi)) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not a msngrafo/1 graph" });
+  if (!j || !/^msngrafo\/[12]$/.test(j.formato) || !Array.isArray(j.nodi) || !Array.isArray(j.archi)) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not an msngrafo graph" });
   if (!j.vista) {
     try { text = await (await import("./rust-msngrafo.js")).msnCompleta(text); } catch (e) {
       let o = null; try { o = JSON.parse(String(e)); } catch (_) { /* a plain error of the page */ }
@@ -67,7 +67,7 @@ async function show(j, name) {
  */
 export async function open(f, v) {
   const ver = v || await version(f);
-  if (!ver) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not a msngrafo/1 graph" });
+  if (!ver) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not an msngrafo graph" });
   await show(await read(f, ver), f.name);
 }
 
@@ -106,7 +106,7 @@ async function openFiles(host, list) {
   if (msg) msg.textContent = "";
   for (const f of list) {
     const v = await version(f);
-    try { if (!v) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not a msngrafo/1 graph" }); await show(await read(f, v), f.name); return; } catch (e) {
+    try { if (!v) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not an msngrafo graph" }); await show(await read(f, v), f.name); return; } catch (e) {
       const err = /** @type {any} */ (e);
       if (msg) mostraErrore(msg, err.message, err, { name: f.name, size: f.size }, "load"); else nearMsg(err.message);
       return;

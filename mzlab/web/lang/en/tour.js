@@ -9,7 +9,7 @@ I18N.add("en", {
   "tour.fine": "Finish",
   "tour.continua": "Continue",
   "tour.fine_cap1_testo": "That's the basics. Go on with the tools (9 steps) or stop here?",
-  "tour.invito.testo": "First time here? A guided tour of the tools.",
+  "tour.invito.testo": "First time?",
   "tour.invito.si": "Start the tour",
   "tour.invito.no": "Not now",
   "tour.invito.dopo": "You can take the tour later from Settings.",

@@ -25,18 +25,19 @@ try:
                 assert pg.is_visible("#calcpad"), "the keypad vanished"
                 assert pg.evaluate("document.activeElement && document.activeElement.id") == "calcin", "the focus left the field"
             check("pad"); check("kbd")
-        # the loading screen: the calculator is the drop-down under its button
-        attendi(pg, "document.querySelector('#np-calc2') && !document.querySelector('#start').hidden")
+        # the Disegno view: the calculator is the drop-down under its button
+        attendi(pg, "window.qqReady && !document.querySelector('#start').hidden"); pg.evaluate("setView('draw')")
+        attendi(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
         pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden")
         for k in KEYS: step(f"drop-down: {k!r} first keeps the panel open", lambda k=k: stays(k))
-        pg.click("#calcx")
-        # the Dati view: the calculator is a panel of the side drawer
+        pg.click("#calcx"); pg.evaluate("setView('data')")
+        # the Dati view: the calculator sits on top of the Adducts & losses page of the side drawer
         pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Carica dati"); ready(pg)
-        pg.click("#np-calc2"); attendi(pg, "window.BARRA.curTab === 'calc' && !document.querySelector('#sb-panel-calc').hidden")
+        pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "window.BARRA.curTab === 'addloss' && window.BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent")
         def stays_docked(first):
             def check():
                 pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type(first); frames(pg, 3)
-                assert pg.evaluate("window.BARRA.curTab === 'calc' && window.BARRA.isOpen('calc')") and pg.is_visible("#calcin") and pg.is_visible("#calcpad"), "the panel closed or lost its keypad"
+                assert pg.evaluate("window.BARRA.curTab === 'addloss' && window.BARRA.isOpen('calc')") and pg.is_visible("#calcin") and pg.is_visible("#calcpad"), "the panel closed or lost its keypad"
             check()
         for k in KEYS: step(f"Dati panel: {k!r} first keeps the panel open", lambda k=k: stays_docked(k))
         def err_in_place():

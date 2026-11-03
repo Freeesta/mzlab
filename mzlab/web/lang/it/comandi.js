@@ -5,11 +5,11 @@ I18N.add("it", {
   "cmd.calc.lab": "Calcolatrice",
   "cmd.addloss.lab": "Addotti e perdite",
   "cmd.addloss.name": "Addotti e perdite",
-  "cmd.addloss.tip": "Addotti di una formula o di un m/z osservato, differenze tra addotti, perdite neutre più comuni e differenze di massa (Δm)",
-  "cmd.addloss.kw": "addotto addotti adducts adduct differenza massa esi sodio ammonio perdita neutra perdite neutre delta neutral loss neutral losses mass difference",
-  "al.tabs": "Addotti o perdite neutre",
+  "cmd.addloss.tip": "Calcolatrice, addotti di una formula o di una m/z osservata, perdite neutre (Δm) e contaminanti noti",
+  "cmd.addloss.kw": "addotto addotti adducts adduct differenza massa esi sodio ammonio perdita neutra perdite neutre delta neutral loss neutral losses mass difference calcolatrice calculator contaminanti contaminants fondo background",
+  "al.tabs": "Addotti, perdite neutre o contaminanti",
   "cmd.calc.name": "Calcolatrice",
-  "cmd.calc.tip": "Calcolatrice e addotti",
+  "cmd.calc.tip": "Calcolatrice: somme, differenze e formule",
   "cmd.lists.lab": "Liste",
   "cmd.lists.name": "Liste di riferimento",
   "cmd.lists.tip": "Liste di riferimento e contaminanti noti (laboratorio e sospetti)",
@@ -257,5 +257,9 @@ I18N.add("it", {
   "cmd.gra.lab": "Grafo",
   "cmd.gra.name": "Grafo di frammentazione",
   "cmd.gra.tip": "Frammenti di una molecola nota in un'infusione MSn",
-  "cmd.gra.kw": "grafo frammentazione infusione msn frammenti formula fragmentation graph ion formula"
+  "cmd.gra.kw": "grafo frammentazione infusione msn frammenti formula fragmentation graph ion formula",
+  "al.q.ph": "m/z, Δm o formula",
+  "al.q.aria": "Numero o formula da cercare in addotti, perdite neutre e contaminanti",
+  "al.q.title": "Una m/z, una differenza fra due picchi (Δm) o una formula: ogni scheda la legge a modo suo",
+  "al.t.cont": "Contaminanti"
 });

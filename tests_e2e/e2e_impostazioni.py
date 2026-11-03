@@ -15,7 +15,7 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         def invito():
             pg.wait_for_selector("#tour-invito", timeout=8000); pg.mouse.move(700, 100)
-            t = pg.inner_text("#tour-invito"); assert "Primo accesso? Un tour guidato degli strumenti." in t and "minut" not in t, t
+            t = pg.inner_text("#tour-invito"); assert "Prima volta?" in t and "minut" not in t, t
             hold(pg, 55000); assert pg.is_visible("#tour-invito"), "still there before a minute"
             hold(pg, 8000); assert not pg.is_visible("#tour-invito"), "dismissed by itself after a minute"
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).stato") == "invitato"
@@ -27,18 +27,18 @@ try:
             for bad in ("Archivio nel browser", "Storage in the browser", "Rimuovi file e indici", "Libera i derivati"): assert bad not in t, bad
             assert pg.locator("#uip-arch-all").count() == 0 and "Reset completo" not in t
             assert pg.locator("#uip-arch-rm").count() == 0 and pg.locator("#uip-arch-der").count() == 0
-            assert pg.evaluate("document.getElementById('uip-a11y').open") is False
+            assert pg.evaluate("document.querySelectorAll('#uipset details').length") == 0 and pg.is_visible("#uip-hc"), "readability controls are flat: no fold"
             assert pg.evaluate("[...document.querySelectorAll('#uip-a11y input[name=uip-font], #uip-a11y #uip-hc, #uip-g-look #uip-pal')].length") == 5
             assert pg.locator("#uip-lib").count() == 0, "spectral libraries only with HRMS files"
             assert pg.evaluate("getComputedStyle(document.getElementById('uip-pal')).appearance") == "none", "select without native arrow"
             x = pg.evaluate("(() => { const b = document.querySelector('#uip-x'); return [b.textContent, getComputedStyle(b).fontSize, getComputedStyle(b, '::before').content]; })()")
             assert x[0] == "" and x[1] == "0px", f"the close button must show the CSS icon only (one X), got {x}"
             pg.keyboard.press("Escape")
-        step("settings: no storage section, one full reset, accessibility submenu closed", gear)
+        step("settings: no storage section, one full reset, flat groups, no folds", gear)
         def tour_from_draw():
             pg.click("#nav button[data-v=draw]"); pg.wait_for_timeout(800)
             assert pg.evaluate("S.view") == "draw"
-            pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.evaluate("document.getElementById('uip-g-app').open = true"); assert pg.is_enabled("#uip-tour")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); assert pg.is_enabled("#uip-tour")
             pg.click("#uip-tour")
             attendi(pg, "!!(window.TOUR && TOUR.active)")
             assert pg.evaluate("S.view") == "draw", "the tour of Disegno starts in Disegno"

@@ -641,10 +641,6 @@ impl<S: Source> Library<S> {
             &self.frag
         }
     }
-
-    pub fn index_entries(&self, nl: bool) -> u64 {
-        self.index_dir(nl).n_entries
-    }
 }
 
 #[allow(dead_code)]

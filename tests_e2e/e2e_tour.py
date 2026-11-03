@@ -36,7 +36,7 @@ try:
 
         pg.wait_for_selector("#tour-invito", timeout=30000)      # shown once the data are up: on a loaded machine that takes longer than 5 s
         inv_text = pg.inner_text("#tour-invito")
-        assert "Primo accesso? Un tour guidato degli strumenti." in inv_text and "minut" not in inv_text, inv_text
+        assert "Prima volta?" in inv_text and "minut" not in inv_text, inv_text
 
         # bottom-left corner of the window, compact, non-modal dialog
         bb = pg.locator("#tour-invito").bounding_box()
@@ -73,7 +73,7 @@ try:
         # 2. Replay tour from gear: all 15 steps tested
         attendi(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the label reads «Rifai» only once the reloaded file is back
         pg.click("#np-set")
-        pg.wait_for_selector("#uipset", timeout=3000); pg.evaluate("document.getElementById('uip-g-app').open = true")
+        pg.wait_for_selector("#uipset", timeout=3000)
         assert pg.is_visible("#uip-tour") and "Rifai il tour" in pg.inner_text("#uip-tour")
         pg.click("#uip-tour")
 

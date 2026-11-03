@@ -6,12 +6,11 @@
 use std::collections::HashMap;
 
 use super::annotate::types::Feature;
-use super::annotate::Annotations;
 use super::formula::{
     best_common_adduct, ion_mz, neutral_equivalent, parse_adduct, ppm, structure_fit,
     STRUCTURE_TOL_PPM,
 };
-use super::rt_logp::{build_batch_fit, rt_vs_batch, FitInput, Fitted, Z_FLAG};
+use super::rt_logp::{rt_vs_batch, FitInput, Fitted, Z_FLAG};
 
 pub const CHECK_COVERAGE: &str = "coverage";
 pub const CHECK_MASS: &str = "mass";
@@ -322,11 +321,6 @@ pub fn csi_level3(feats: &[Feature]) -> Vec<FitInput> {
             rt: f.rt,
         })
         .collect()
-}
-
-/// The fit of a campaign, ready for `check_xlogp_rt`.
-pub fn campaign_fit(a: &Annotations) -> Vec<Fitted> {
-    build_batch_fit(&csi_level3(&a.features))
 }
 
 /// The RT of an identity against the XLogP of its registry compound and the isotonic fit of its campaign (robust z above `Z_FLAG`).

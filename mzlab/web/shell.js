@@ -24,7 +24,7 @@ function smooth(/** @type {number[]} */ y,/** @type {number} */ k){if(!k)return 
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
 async function init(){try{await bootSession();await Promise.all(E.panels.map((/** @type {{ ready?: unknown }} */ p)=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);if(typeof AVVIO!=="undefined")AVVIO.segnaSessione(!!S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{if(!$("#loading").hidden)loading(false)}}
+  const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);if(typeof AVVIO!=="undefined")AVVIO.segnaSessione(!!S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();restoreRows(d);applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{if(!$("#loading").hidden)loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (landing, loading table or panels), Disegno
 let _addY=/** @type {number | null} */ (null),_wasAdd=false;
@@ -366,6 +366,8 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
+// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load
+function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods()}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();ST.files.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{CartCarica.fromInput(e.target.files);e.target.value=""};

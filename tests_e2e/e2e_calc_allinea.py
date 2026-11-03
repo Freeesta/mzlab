@@ -1,5 +1,5 @@
-"""Calculator layout: the input, the result well, the «Cerca in Δm» button and the key grid share the same left/right edges (within 1 px),
-and the result text is centred in its well; at desktop and phone width, in light and dark."""
+"""Calculator layout on the Adducts & losses page: the input, the row «Cerca» + result well and the key grid share the same left/right edges
+(within 1 px), «Cerca» sits on the left of the well, the result is right-aligned and vertically centred in it; at desktop and phone width, light and dark."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -12,16 +12,16 @@ EDGES = """() => { const e = s => { const r = document.querySelector(s).getBound
     textVMid: (tr.top + tr.bottom) / 2, wellVMid: (w.top + w.bottom) / 2 }; }"""
 def check(pg):
     d = pg.evaluate(EDGES)
-    for k in ("well", "nl", "pad"):
-        assert abs(d[k][0] - d["input"][0]) <= 1 and abs(d[k][1] - d["input"][1]) <= 1, (k, d)
-    assert abs(d["textMid"] - d["wellMid"]) <= 1.5 and abs(d["textVMid"] - d["wellVMid"]) <= 3, d
+    assert abs(d["pad"][0] - d["input"][0]) <= 1 and abs(d["pad"][1] - d["input"][1]) <= 1, ("pad", d)
+    assert abs(d["nl"][0] - d["input"][0]) <= 1 and abs(d["well"][1] - d["input"][1]) <= 1 and d["nl"][1] <= d["well"][0], ("row", d)
+    assert d["textMid"] > d["wellMid"] and abs(d["textVMid"] - d["wellVMid"]) <= 3, d
 r = Run(port=8830 + 162, wd="/tmp/wd_calc_allinea")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")])
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#np-calc2"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
+        pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
         pg.fill("#calcin", "4+5"); attendi(pg, "document.querySelector('#calcres').innerText.trim() === '9'")
         attendi(pg, "!document.querySelector('#calc-nl').hidden")
         step("desktop, light: same edges, centred result", lambda: check(pg))

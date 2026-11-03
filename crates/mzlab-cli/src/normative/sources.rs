@@ -84,11 +84,6 @@ impl Sources {
             .map(String::from)
     }
 
-    /// Column names of the DSSTox file, if the file is pinned.
-    pub fn resolve_params(&self, key: &str) -> Option<&Value> {
-        self.root.get("resolve")?.get(key)?.get("columns")
-    }
-
     /// Every pinned URL with its pin.
     pub fn pins(&self) -> Vec<(String, Option<String>)> {
         let mut out = Vec::new();

@@ -11,7 +11,7 @@ Per chi lancia il lavoro dalla shell o da un piano Flow; il progetto del grafo �
 
 ## 2. Passi del Flow
 Piano `mzflow/2` con l'ingresso `.raw` (o mzML) e, in ordine:
-- `spectra.msn_graph@1`: porta `source` (l'infusione), uscita `graph` (`msngrafo/1`). Il composto si dà con `formula` + `adduct`, oppure con `molecule` (nome) e la porta `molecules` (elenco CSV delle molecole); gli altri parametri sono quelli di `msn-graph` (`ppm_formula`, `attivazione`, `isotopi`, `scelte`, `smiles`).
+- `spectra.msn_graph@2`: porta `source` (l'infusione), uscita `graph` (`msngrafo/2`). Il composto si dà con `formula` + `adduct`, oppure con `molecule` (nome) e la porta `molecules` (elenco CSV delle molecole); gli altri parametri hanno i nomi dei flag di `msn-graph` (`ppm_formula`, `activation`, `isotopes`, `pick`, `smiles`, …); un piano salvato a `@1` con i nomi italiani si apre e gira uguale.
 - `msn.library_export@1` (`graph` → libreria): `format` msp|massbank, `levels` all|ms2, `clean`, `annotate`, `id` (nome del record).
 - `msn.table_export@1` (`graph` → tabella CSV): `view` modifications|nodes|peaks, `clean`.
 Le perdite neutre stanno nella tabella `modifications`, le sottoformule in `nodes`, i picchi in `peaks`; la vista «Grafo MSn» della corsa le mostra senza aprire il CSV. Ogni parametro ha il suo `--set ISTANZA.NOME=VALORE` in `mzlab-cli flow run`.

@@ -30,7 +30,7 @@ try:
         step("HR.prof / tolDa / dec / label", hrjs)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(300)
-            pg.click("#uip-g-data > summary"); assert "ppm" in pg.inner_text("#uipset")           # the group «Dati e calcolo» is folded by default
+            assert "ppm" in pg.inner_text("#uipset")           # the group «Dati e calcolo» is flat: its controls show without a click
             pg.fill("#uip-ppm", "8"); pg.dispatch_event("#uip-ppm", "change"); pg.fill("#uip-hdec", "5"); pg.dispatch_event("#uip-hdec", "change"); pg.wait_for_timeout(300)
             v = pg.evaluate("(()=>{const ex=E.files.find(f=>f.file.includes('Exploris')&&f.lv===1);return [HR.prof(ex,1),JSON.parse(localStorage.getItem('mzlab.prefs'))]})()"); print(v)
             assert v[0]["tol"] == 8 and v[0]["dec"] == 5 and v[1]["hrPpm"] == 8 and v[1]["hrDec"] == 5 and "hr" not in v[1]

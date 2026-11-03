@@ -144,7 +144,7 @@ fn the_html_is_one_file_with_nothing_outside() {
             && h.contains("function drawVista")
             && !h.contains("\nexport ")
     );
-    // the graph is inside, and the text of a script cannot end its element early
+    // the graph (an msngrafo/1 fixture: older graphs still draw) is inside, and the text of a script cannot end its element early
     assert!(h.contains("\"formato\":\"msngrafo/1\""));
     let end = html(&graph().replace("msn.mzML", "a</script><b>"), Vista::Albero).unwrap();
     // the five script elements of the page, no more

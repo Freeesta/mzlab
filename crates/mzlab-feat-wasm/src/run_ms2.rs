@@ -3,6 +3,7 @@
 
 #[cfg(feature = "flow_ms2")]
 use mzlab_feat::flow_ms2::{ms2_text, Ms2Params};
+#[cfg(feature = "flow_ms2")]
 use wasm_bindgen::prelude::*;
 
 /// The MGF of `mzml` (named `name`, the stem names the spectra), under the parameters of the step as JSON merged with its defaults. Errors are JSON `{"error_key","params"}` texts.

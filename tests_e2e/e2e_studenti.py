@@ -48,9 +48,9 @@ try:
         step("B-6 chromatogram + spectrum both inside a 1280x720 window", fit720)
         pg.screenshot(path=SH + "studenti_1280.png")
         def header():
-            assert pg.is_visible("#np-calc2"); ys = pg.evaluate("[...document.querySelectorAll('header > button, header > nav')].filter(e=>e.offsetParent).map(e=>e.offsetTop)"); assert max(ys) - min(ys) < 12, ys
-            pg.click("#np-calc2"); assert pg.evaluate("document.querySelector('#calcdlg').open"); pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
-        step("B-18 calculator button in the header, one row at 1280", header)
+            assert pg.is_visible("#stbar [data-cmd=addloss]"); ys = pg.evaluate("[...document.querySelectorAll('header > button, header > nav')].filter(e=>e.offsetParent).map(e=>e.offsetTop)"); assert max(ys) - min(ys) < 12, ys
+            pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#calcin", state="visible"); pg.evaluate("BARRA.close(false)"); pg.wait_for_timeout(200)
+        step("B-18 Adducts & losses (with the calculator) in the header, one row at 1280", header)
         def yz():
             pg.evaluate("setActive(null)")
             assert not pg.evaluate("!!document.querySelector('[data-a=yz]')"), "the y x10 button is gone (replaced by the drag on the y axis, see e2e_assi)"

@@ -140,30 +140,26 @@ function uipOpen(btn) {
     + C.sw(T("settings.hc.label"), "", 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion");
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
     ? `<div class="imp-fld"><button id="uip-cen" type="button" title="${esc(T("settings.cen.title"))}">${T("settings.cen.btn")}</button><button id="uip-cen-x" type="button" hidden>${T("settings.cen.stop")}</button></div><div class="hint" id="uip-cen-st" role="status" aria-live="polite"></div>` : "";
-  const data = ((!files.length || files.some(f => f.spectrum_mode !== "profile" || (window.HR && HR.isHr(f)))) ? C.sw(T("settings.merge"), "", 'id="uip-merge"', UIP.merge, "cont") : "")
-    + (hr ? fld(`<span class="ic">${C.GICON.lib}</span>${T("settings.libs.label")}`, T("settings.libs.title"), `<button id="uip-lib" type="button">${T("settings.libs.button")}</button>`)
-      + fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`)
-      + fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`) : "") + cen;
+  const dataItems = [(!files.length || files.some(f => f.spectrum_mode !== "profile" || (window.HR && HR.isHr(f)))) ? C.sw(T("settings.merge"), "", 'id="uip-merge"', UIP.merge, "cont") : "",
+    ...(hr ? [fld(`<span class="ic">${C.GICON.lib}</span>${T("settings.libs.label")}`, T("settings.libs.title"), `<button id="uip-lib" type="button">${T("settings.libs.button")}</button>`),
+      fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`),
+      fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`)] : []), cen];
   const tourOn = !(window.BANCO && BANCO.on());
   const prof = uipProfile();
-  const app = (window.DESKUPD ? DESKUPD.row() : "") + (window.DESKDEF ? DESKDEF.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
-    + (tourOn ? `<div class="imp-fld"><button id="uip-tour" type="button"><span class="ic">${C.GICON.play}</span>${T(window.MZLAB_LAB ? "tour.impost.fai" : files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "");
+  const appItems = [window.DESKUPD ? DESKUPD.row() : "", window.DESKDEF ? DESKDEF.row() : "", window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : ""];
+  const tour = tourOn ? `<div class="imp-fld imp-solo"><button id="uip-tour" type="button"><span class="ic">${C.GICON.play}</span>${T(window.MZLAB_LAB ? "tour.impost.fai" : files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "";
+  const flat = (id, icon, title, items) => C.flatOrRow(id, icon, T(title), items);          // a fold or a title only for a real group of several controls
   const grp = (id, icon, title, body, dflt) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}"></button></div>`
-    + C.section(T("settings.language.label"), C.opts("seg2", C.radios("uip-lang", [["it", "Italiano", T("settings.language.title"), C.GICON.lang], ["en", "English", T("settings.language.title"), C.GICON.lang]], I18N.lang, "seg")))
-    + grp("uip-g-look", "look", "settings.g.look", look, true) + grp("uip-a11y", "read", "settings.g.read", read, false) + grp("uip-g-data", "data", "settings.g.data", data, false)
-    + grp("uip-g-app", "app", "settings.g.app", app, false)
-    + grp("uip-g-bug", "bug", "settings.g.bug", '<div id="uip-bug"></div>', false)
+    + C.langRow(T("settings.language.label"), T("settings.language.title"), I18N.lang)
+    + C.flat("uip-g-look", "look", T("settings.g.look"), look) + C.flat("uip-a11y", "read", T("settings.g.read"), read)
+    + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
+    + tour + C.bugRow(T("settings.g.bug"))
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false) : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false)
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
-  const bugGroup = /** @type {HTMLDetailsElement | null} */ (d.querySelector("#uip-g-bug")), bugBox = /** @type {HTMLElement | null} */ (d.querySelector("#uip-bug"));
-  if (bugGroup && bugBox) {            // the report form is fetched when the group is first opened
-    let bugDone = false;
-    const bugMount = () => { if (bugDone || !bugGroup.open) return; bugDone = true; import("./bug-report.js").then(m => m.mount(bugBox)).catch(() => { bugDone = false; }); };
-    bugGroup.addEventListener("toggle", bugMount); bugMount();
-  }
+  C.bugBind(d, box => import("./bug-report.js").then(m => m.mount(box)));      // the report form is fetched the first time the button opens it
   if (window.DESKUPD) DESKUPD.bind(d);
   if (window.DESKDEF) DESKDEF.bind(d);
   if (mem) mem.bind(d);

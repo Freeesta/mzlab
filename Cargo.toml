@@ -37,6 +37,13 @@ opt-level = 3
 [profile.release.package.miniz_oxide]
 opt-level = 3
 
+# The SHA crates behind the fingerprints of a file (`upload::Passata`, run in wasm while a file is copied to OPFS): SHA-256 + SHA-1 over 64 MB x1.68 in Node and x1.34 in Chromium 153 (774 -> 461 ms and 654 -> 489 ms, median of 9, tools/banco_wasm.py sol_hash), check values identical. Wasm builds only: desktop and CLI are already at 3.
+[profile.release.package.sha1]
+opt-level = 3
+
+[profile.release.package.sha2]
+opt-level = 3
+
 # Desktop app only (`cargo tauri build --features app -- --profile desktop`): speed over size; the .wasm builds keep `release`.
 [profile.desktop]
 inherits = "release"

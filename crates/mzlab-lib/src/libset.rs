@@ -168,10 +168,6 @@ impl<S: Source> LibSet<S> {
         self.sidecar = Sidecar::from_bytes(bytes, &self.fingerprints());
         self.sidecar.is_some()
     }
-
-    pub fn set_sidecar(&mut self, s: Sidecar) {
-        self.sidecar = Some(s);
-    }
 }
 
 fn fnv(h: &mut u64, x: u64) {
