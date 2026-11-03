@@ -251,6 +251,12 @@ def transitions(out: Path):
     w = Writer()
     w.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method)
     w.save(out, "transizioni")
+    # a batch run: only Method1 exists, samples 2 and 3 take their transitions from it
+    batch = Writer()
+    batch.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method)
+    for n in (2, 3):
+        batch.sample(n, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], None)
+    batch.save(out, "transizioni_lotto")
     return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs]}
 
 

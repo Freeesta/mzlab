@@ -236,6 +236,7 @@
   "disp.pdaDelay.found": "Esito della misura del ritardo; {delay} = minuti, {n} = picchi accoppiati, {corr} = correlazione 0-1.",
   "press.read": "Lettura accanto alla curva della pressione; {t} = tempo, {p} = valore, {u} = unità (bar se il file dichiara un'unità di pressione, altrimenti quella del file).",
   "press.read.cursor": "Parte della lettura del cursore; {p} = valore al tempo del cursore, {u} = unità.",
+  "tabp.rows": "Contatore delle righe della tabella picchi; {n} = numero di righe.",
   "tdati.rows": "Contatore sotto la tabella dei dati; {n} = numero di righe.",
   "tdati.region": "Etichetta dell'area scorrevole della tabella; {title} = titolo del grafico.",
   "tdati.apex": "Riga della tabella per un picco integrato; {a}, {b} = estremi in min.",

@@ -83,3 +83,42 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
         assert_eq!(c.name, w["name"].as_str().unwrap());
     }
 }
+
+/// A batch run stores one method for several samples: every sample takes its transitions (Q1, Q3, name) from the nearest method before it,
+/// in the engine build (no `estesi`) as well as in the readers module.
+#[test]
+fn samples_without_a_method_of_their_own_read_the_transitions_of_method_one() {
+    let Some((dir, want)) = reference() else {
+        return;
+    };
+    let want = want["transizioni"]["transitions"].as_array().unwrap();
+    let ole = mzlab_core::wiff::container(
+        std::fs::read(dir.join("transizioni_lotto.wiff")).unwrap(),
+        "transizioni_lotto",
+    )
+    .unwrap();
+    let mut scan = std::fs::read(dir.join("transizioni_lotto.wiff.scan")).unwrap();
+    for n in 1..=3 {
+        let w = mzlab_core::wiff::Wiff::open(&ole, "transizioni_lotto", Some(scan.len() as u64), n)
+            .unwrap();
+        let run = w.run(&mut scan).unwrap();
+        let srm: Vec<_> = run
+            .chromatograms
+            .iter()
+            .filter(|c| c.kind == mzlab_core::mzml::ChromKind::Srm)
+            .collect();
+        assert_eq!(srm.len(), want.len(), "sample {n}");
+        for (c, t) in srm.iter().zip(want) {
+            assert_eq!(
+                (c.q1, c.q3),
+                (t["q1"].as_f64(), t["q3"].as_f64()),
+                "sample {n}"
+            );
+            assert!(
+                c.id.ends_with(&format!("name={}", t["name"].as_str().unwrap())),
+                "{}",
+                c.id
+            );
+        }
+    }
+}

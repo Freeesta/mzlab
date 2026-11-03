@@ -108,6 +108,13 @@ try:
         KH = pg2.evaluate("E.files.find(f=>f.file.endsWith('#MS1')).k")
         def hr_peak():
             return pg2.evaluate(f"(()=>{{const p={S1},q=p.cv.getBoundingClientRect(),a=p._a,d=a.data[0].d;let b=0;d.mz.forEach((v,i)=>{{if(d.y[i]>d.y[b])b=i}});return {{mz:d.mz[b],x:q.left+a.X(d.mz[b]),y:q.top+a.Y(d.y[b])+6}}}})()")
+        def esc_mode():
+            fresh = pg2.evaluate("(()=>{const p=E.panels.find(q=>q.type==='spec'&&q.level===1);return p.id})()")
+            pg2.evaluate(f"E.panels.find(q=>q.id=={fresh}).el.querySelector('[data-a=xicb]').click()")
+            assert pg2.evaluate(f"E.panels.find(q=>q.id=={fresh}).el.querySelector('[data-a=xicb]').getAttribute('aria-pressed')") == "true"
+            pg2.keyboard.press("Escape")
+            assert pg2.evaluate(f"E.panels.find(q=>q.id=={fresh}).el.querySelector('[data-a=xicb]').getAttribute('aria-pressed')") == "false"
+        step("Esc leaves the mode «choose a peak»", esc_mode)
         def hr_extract():
             pk = hr_peak(); pg2.click(f"{S1}.el".replace(S1 + ".el", "[data-a=xicb]") if False else "[data-a=xicb] >> nth=0") if False else None
             pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicb]').click()"); pg2.mouse.click(pk["x"], pk["y"]); ready(pg2); attendi(pg2, "!!document.querySelector('.xb-info')?.textContent")
@@ -130,15 +137,8 @@ try:
             has = pg2.evaluate(f"!!({S2}&&{S2}._a&&{S2}._a.lbls&&{S2}._a.lbls.length)")
             if not has: return
             pg2.evaluate(f"{S2}.cv.focus()"); pg2.keyboard.press("."); frames(pg2, 4)
-            assert pg2.evaluate(f"XICBTN.chosen({S2})") is not None
-        step("HR: the keys choose a peak of the MS2 spectrum", hr_ms2)
-        def esc_mode():
-            fresh = pg2.evaluate("(()=>{const p=E.panels.find(q=>q.type==='spec'&&q.level===2);return p.id})()")
-            pg2.evaluate(f"E.panels.find(q=>q.id=={fresh}).el.querySelector('[data-a=xicb]').click()")
-            assert pg2.evaluate(f"E.panels.find(q=>q.id=={fresh}).el.querySelector('[data-a=xicb]').getAttribute('aria-pressed')") == "true"
-            pg2.keyboard.press("Escape")
-            assert pg2.evaluate(f"E.panels.find(q=>q.id=={fresh}).el.querySelector('[data-a=xicb]').getAttribute('aria-pressed')") == "false"
-        step("Esc leaves the mode «choose a peak»", esc_mode)
+            assert pg2.evaluate(f"XICBTN.chosen({S2})") is None and pg2.evaluate(f"{S2}.el.querySelector('[data-a=xicb]').hidden"), "HR MS2: no XIC button, the keys choose nothing"
+        step("HR: the MS2 spectrum has no XIC button and the keys choose nothing", hr_ms2)
         step("STATO.verifica() is empty", lambda: (lambda v: v == [] or v is None or (_ for _ in ()).throw(AssertionError(v)))(pg2.evaluate("window.STATO&&STATO.verifica?STATO.verifica():[]")))
         assert not pg.evaluate("window.MZLAB_LR_MISS&&window.MZLAB_LR_MISS.length"), pg.evaluate("window.MZLAB_LR_MISS")
         print([e for e in r.errs if e[0] != "console.warning"])

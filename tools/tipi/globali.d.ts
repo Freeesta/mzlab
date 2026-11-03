@@ -123,6 +123,7 @@ declare var SIMUI: any;
 declare var SPECBAR: any;
 declare var SUBREF: any;
 declare var TABELLA: any;
+declare var TABPICCHI: any;
 declare var TAVOLA: any;
 declare var TBL_HR: any;
 declare var TDATI: any;
