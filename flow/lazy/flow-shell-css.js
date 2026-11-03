@@ -55,7 +55,7 @@
 .flx .fln[data-live=stale]{border-style:dashed}.flx .fln[data-live=error],.flx .fln[data-live=refused]{border-color:var(--bad);border-left-color:var(--cc)}
 .flx .fln-files{margin-top:8px}.flx .fln-files .flx-tablewrap{max-height:240px}
 @media (prefers-reduced-motion:no-preference){.flx .fln-bar.indet i{animation:flSlide 1.2s linear infinite}}@keyframes flSlide{from{margin-left:-40%}to{margin-left:100%}}
-.flx .flx-live-ctl{display:inline-flex;gap:4px;align-items:center}.flx .flx-live-ctl button{min-height:28px;min-width:24px}.flx .flx-live-ctl button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}
+.flx .flx-live-ctl{display:inline-flex;gap:4px;align-items:center}.flx .flx-live-slot{display:inline-flex;gap:4px;align-items:center;visibility:hidden;pointer-events:none}.flx .flx-live-slot button{min-height:28px;min-width:24px}.flx .flx-live-ctl button{min-height:28px;min-width:24px}.flx .flx-live-ctl button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}
 @media (max-width:900px){.flx .flx-body,.flx .flx-body.flx-adv{grid-template-columns:minmax(0,1fr)}.flx .flx-split{display:none}.flx .fl-insp{max-height:none}}
 @media (pointer:coarse){.flx .flx-live-ctl button,.flx .flx-bar .fl-b{min-height:40px;min-width:40px}.flx .fln-next{width:40px;height:40px;right:-20px;margin-top:-20px}.flx .flx-seg button{min-height:40px}.flx .flx-split{min-width:24px}}
 @media (prefers-reduced-motion:reduce){.flx .fln,.flx .fl-insp,.flx .flx-pop{animation:none}.flx .fl-stage.fl-soft,.flx .fln{transition:none}.flx .fln-bar.indet i{animation:none}}
