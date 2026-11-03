@@ -88,7 +88,7 @@
     });
     pop.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); close(p, true); } });
     const sc = /** @type {HTMLElement} */ (pop.querySelector(".tp-sc"));
-    sc.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") { e.preventDefault(); const g = getSelection(); if (g) g.selectAllChildren(/** @type {Node} */ (sc.querySelector("table"))); } });
+    sc.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && (e.key || "").toLowerCase() === "a") { e.preventDefault(); const g = getSelection(); if (g) g.selectAllChildren(/** @type {Node} */ (sc.querySelector("table"))); } });
     pop.addEventListener("copy", e => {                                                  // select-all + Ctrl/Cmd+C on the table gives the same TSV
       const g = getSelection(), tb = sc.querySelector("table"); if (!g || g.isCollapsed || !tb || !g.containsNode(tb, true) || !e.clipboardData) return;
       const r = rows(p); e.clipboardData.setData("text/plain", tsv(r)); e.clipboardData.setData("text/html", html(r)); e.preventDefault();
