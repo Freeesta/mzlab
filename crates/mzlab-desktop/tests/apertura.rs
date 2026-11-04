@@ -113,7 +113,8 @@ fn accepted_extensions_come_from_the_readers_registry() {
     assert!(!all.iter().any(|x| x == ".d"));
     let dlg = mzlab_desktop::apertura::dialog_extensions();
     assert!(dlg.contains(&"MZXML".to_string()) && dlg.contains(&"mzxml".to_string()));
-    assert!(dlg.iter().all(|x| !x.starts_with('.')));
+    assert!(dlg.iter().all(|x| !x.starts_with('.') && !x.contains('.')));
+    assert!(dlg.contains(&"gz".to_string()));
 }
 
 /// `tauri.conf.json` (static) must list exactly the extensions derived from the registry.
@@ -134,10 +135,10 @@ fn file_associations_in_tauri_conf_match_the_registry() {
 }
 
 #[test]
-fn mzxml_and_wiff_files_are_taken_but_not_gz_or_folders() {
+fn mzxml_wiff_and_mzml_gz_files_are_taken_but_not_other_gz() {
     let t = tempfile::tempdir().unwrap();
     let d = t.path();
-    for n in ["a.mzXML", "b.wiff", "c.mzML.gz"] {
+    for n in ["a.mzXML", "b.wiff", "c.mzML.gz", "d.txt.gz"] {
         std::fs::write(d.join(n), b"x").unwrap();
     }
     let args: Vec<String> = ["a.mzXML", "b.wiff", "c.mzML.gz"]
@@ -146,6 +147,6 @@ fn mzxml_and_wiff_files_are_taken_but_not_gz_or_folders() {
         .collect();
     assert_eq!(
         paths_from_args(&args, Some(d)),
-        vec![d.join("a.mzXML"), d.join("b.wiff")]
+        vec![d.join("a.mzXML"), d.join("b.wiff"), d.join("c.mzML.gz")]
     );
 }

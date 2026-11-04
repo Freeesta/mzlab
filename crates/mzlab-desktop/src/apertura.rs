@@ -22,11 +22,11 @@ pub fn file_extensions() -> Vec<String> {
         .collect()
 }
 
-/// The extensions the dialog filter takes: no dot, in both lower and UPPER case (the OS filters differ in case handling).
+/// The extensions the dialog filter takes: the last component without dot (a filter cannot hold `mzml.gz`, so `gz` is offered), in both lower and UPPER case (the OS filters differ in case handling).
 pub fn dialog_extensions() -> Vec<String> {
     let mut v = Vec::new();
     for e in file_extensions() {
-        let b = e.trim_start_matches('.').to_string();
+        let b = e.rsplit('.').next().unwrap_or_default().to_string();
         v.push(b.to_ascii_uppercase());
         v.push(b);
     }
@@ -35,7 +35,7 @@ pub fn dialog_extensions() -> Vec<String> {
     v
 }
 
-/// The extensions registered as file associations (no dot, lower case, without repeats; companions such as `.wiff.scan` are not associated): what `tauri.conf.json` must list.
+/// The extensions registered as file associations (no dot, lower case, without repeats; companions such as `.wiff.scan` and compressed `.mzml.gz` are not associated): what `tauri.conf.json` must list.
 pub fn associated_extensions() -> Vec<String> {
     let mut v: Vec<String> = file_extensions()
         .into_iter()
