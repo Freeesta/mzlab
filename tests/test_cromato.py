@@ -59,7 +59,7 @@ PICCHI = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "picchi.js"
 def run_integ(code):
     """integ() lives in picchi.js, a classic script of the page: cut its text out and run it with nearIdx of numeri.js."""
     src = PICCHI.read_text(encoding="utf-8")
-    fn = src[src.index("function integ("):src.index("// Parameters of the automatic integration")]
+    fn = src[src.index("function integ("):src.index("// Settings of the automatic integration")]
     num = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "numeri.js"
     out = subprocess.run(["node", "-e", f"const {{nearIdx}}=require({str(num)!r});{fn}\n{code}"], check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out)

@@ -177,8 +177,6 @@
   "map.leg.minus": "Legenda della mappa differenza; {label} = file di riferimento (protetto).",
   "map.leg3d.scale": "Dopo la legenda 3D; {scale} = radice/lineare/log, {norm} = normalizzazione o vuoto.",
   "int.clash": "«Elimina» è la voce di menu int.menu.del.",
-  "pk.intro": "Il nome tra virgolette è la voce di menu int.menu.auto.",
-  "pk.nr0.h": "Il nome tra virgolette è l'opzione pk.noise.manual.",
   "int.tbl.none": "Il nome tra virgolette è int.menu.auto.",
   "tip.peak": "Riquadro del mouse su un picco dello spettro; {y} = valore (con % se relativo), {abs} = HTML con i cps assoluti o vuoto.",
   "ctx.spec.known": "Voce grigia del menu (HR); {adduct} = addotto oppure «solo m/z», {more} = « e altri N» oppure vuoto.",
