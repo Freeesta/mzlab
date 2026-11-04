@@ -46,6 +46,7 @@
     "../../mzlab/web/disegno-frammenti.js",
     "../../mzlab/web/feat-manifesto.js",
     "../../mzlab/web/disegno-parziali.js",
+    "../../mzlab/web/disegno-tablet.js",
     "../../mzlab/web/disegno-indigo.js",
     "../../mzlab/web/disegno-molfile.js",
     "../../mzlab/web/disegno-menu.js",
