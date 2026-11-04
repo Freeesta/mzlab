@@ -43,6 +43,11 @@ try:
             pg.locator("#ctx .ctxsub [role=menuitemcheckbox]").nth(3).click()
             attendi(pg, "%s._a && new Set(%s._a.sr.map(s => s.ion)).size === 1" % (PANEL, PANEL), timeout=30000)
         step("the menu extracts one channel and the plot keeps one ion", submenu)
+        def title():
+            tr = pg.evaluate("%s.tr" % PANEL); tr = tr[0] if isinstance(tr, list) else tr
+            got, lab = pg.evaluate("TITOLI.di(%s)" % PANEL), pg.evaluate("SIMUI.label(%r)" % tr)
+            need(tr.startswith("i") and lab in got and tr not in got.split(), (tr, lab, got))
+        step("the title of a one-channel panel names the channel as the legend does", title)
         def banner():
             need(pg.evaluate("I18N.t('mrm.capNoticeSim', {n: 12, t: 27})").endswith("27 file SIM.") or "SIM files" in pg.evaluate("I18N.t('mrm.capNoticeSim', {n: 12, t: 27})"), "text")
         step("the long-list banner says SIM files", banner)

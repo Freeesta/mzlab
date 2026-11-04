@@ -38,7 +38,8 @@
     if (p.type === "xic") return (p.traces || []).length === 1 ? T("panel.title.xicOne", { label: p.traces[0].label }) : T("panel.title.xic");
     if (isMrm(p)) {
       const sim = t === "@sim", trs = Array.isArray(p.tr) ? p.tr : p.tr ? [p.tr] : [];
-      return trs.length === 1 ? T(sim ? "panel.title.simOne" : "panel.title.mrmOne", { tr: trs[0] }) : T(sim ? "panel.title.sim" : "panel.title.mrm");
+      // a SIM channel without Q1 is keyed `i<idx>`: the title says it as the legend does («ione 1»)
+      return trs.length === 1 ? T(sim ? "panel.title.simOne" : "panel.title.mrmOne", { tr: sim && window.SIMUI ? SIMUI.label(trs[0]) : trs[0] }) : T(sim ? "panel.title.sim" : "panel.title.mrm");
     }
     if (p.type === "map") return p.mapKind === "pda" ? T("panel.title.mapPda") : T("panel.title.map");
     return t;
