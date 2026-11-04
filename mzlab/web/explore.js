@@ -847,7 +847,7 @@ function renderFileList() {
   Q("#flst").querySelectorAll("input[data-k]").forEach((/** @type {CampoDati} */ x) => x.onchange = () => {
     fileViewDo(() => sibsOf(E.files[+x.dataset.k]).forEach((/** @type {FileAperto} */ f) => { f.vis = x.checked; }));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
-    renderNav(); redrawAll();
+    renderFileList(); renderNav(); redrawAll();   // the precursor rows tick what is drawn now
     uiSave();
   });
   Q("#flst").querySelectorAll(".fl").forEach((/** @type {ElementoDati} */ el) => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = (/** @type {MouseEvent} */ e) => fileCtx(e, E.files[+nm.dataset.k]); });
@@ -859,7 +859,7 @@ function renderFileList() {
 const vis = () => tabFiles().filter((/** @type {FileAperto} */ f) => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off
 const follow = (/** @type {string} */ tab) => !!(E.browse && E.files[E.cur] && E.files[E.cur].kind === tab);
-const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab ? [E.files[E.cur]] : ESP.soloUno(vis());
+const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab && E.files[E.cur].vis && !E.files[E.cur].gone ? [E.files[E.cur]] : ESP.soloUno(vis());   // an unticked current file is not drawn
 // the files a cell draws: those of ITS tab (the same as shown() unless, in the bench, the cell is not of the tab of the active cell)
 const shownFor = (/** @type {Bag} */ p) => {
   const l = p && p.tab && p.tab !== E.tab ? ESP.soloUno(tabFiles(p.tab).filter((/** @type {FileAperto} */ f) => f.vis)) : shown();
