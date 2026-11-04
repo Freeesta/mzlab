@@ -1,6 +1,6 @@
 I18N.add("en", {
   "mappa.bg": "remove background",
-  "mappa.pal.title": "Viridis or cividis: both readable with colour-vision deficiency",
+  "mappa.pal.title": "Colour palette: Viridis or cividis",
   "mappa.pal.viridis": "palette: viridis",
   "mappa.pal.cividis": "palette: cividis",
   "mappa.aria": "RT × m/z map: arrows to move, L to lock, M for the sight, F for full screen, 0 for the whole view",
@@ -111,7 +111,7 @@ I18N.add("en", {
   "mappa.dens.few": "few labels",
   "mappa.dens.mid": "medium labels",
   "mappa.dens.many": "many labels",
-  "mappa.lbl.tip": "m/z {mz} · S/N {snr} (intensity over the noise around the peak)",
+  "mappa.lbl.tip": "m/z {mz} · S/N {snr}",
   "mappa.thr.title": "Below this % (of the 99.5th percentile) values stay uncoloured",
   "mappa.col.n": "no.",
   "mappa.col.n.title": "Number of the point on the map",

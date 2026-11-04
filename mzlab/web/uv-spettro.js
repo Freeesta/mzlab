@@ -1,7 +1,7 @@
 // @ts-strict
 // UV spectrum of the DAD / PDA (absorbance against wavelength), opened by a double click on the PDA map (mappa.js) or on the PDA trace (eventi.js).
-// A "spec" panel with `uv: true`: the data come from /api/uvspec (mean of the optical rows between r0 and r1, or the nearest row), drawn here as a line
-// with the same axes machinery (zoom, hover, export, table of the data) as the other graphs. Only a .wiff with the detector has the matrix.
+// A "spec" panel with `uv: true`: the matrix of each file (api/map?kind=pda, read once and held in MAT) is sliced in memory at r0..r1, one line per
+// PDA sample shown in the source chromatogram; /api/uvspec only when a reader gives the spectrum without the matrix. Same axes machinery as the other graphs.
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 /** @type {Map<string, Promise<any>>} */
 const memo = new Map();
@@ -48,9 +48,24 @@ const reason = j => (j && j.error_key ? I18N.t(j.error_key, j.params || {}) : T(
  * @param {any} from @param {number} k @param {number} r0 @param {number} r1
  */
 export async function open(from, k, r0, r1) {
-  try { await load(k, r0, r1); } catch (e) { if (window.toast) toast(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); return null; }
+  // the held matrix answers at once; without it one request reads it (the engine keeps it), and api/uvspec only words a file that has none
+  const slow = MAT[k] || !from || typeof stepMsg !== "function" ? null : setTimeout(() => { stepMsg(from, T("uv.reading"), false, true); from.el.setAttribute("aria-busy", "true"); }, 150);
+  const has = await ensureMat(k);
+  if (slow) { clearTimeout(slow); if (from.el.getAttribute("aria-busy")) { stepMsg(from, "", false, false); from.el.removeAttribute("aria-busy"); } }
+  if (!has) try { await load(k, r0, r1); } catch (e) { if (window.toast) toast(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); return null; }
   const link = from && ["chrom", "xic", "mrm"].includes(from.type) ? from.id : null;
-  return newSpec(from, r0, r1, k, link, { uv: true, title: "@uv" });
+  return newSpec(from, r0, r1, k, link, { uv: true, title: "@uv", ks: pdaKs(from, k), wl: from && from.kind === "pda" && from.mz0 != null ? [from.mz0, from.mz1 ?? from.mz0] : null });
+}
+/** The PDA files the panel `src` shows (its overlaid samples), `k` first; just [k] for a map or a lone file. @param {any} src @param {number} k @returns {number[]} */
+function pdaKs(src, k) {
+  const ks = src && src.type === "chrom" && typeof shownFor === "function" ? shownFor(src).filter((/** @type {any} */ f) => f && f.pda && !f.gone).map((/** @type {any} */ f) => f.k) : [];
+  return [k, ...ks.filter((/** @type {number} */ x) => x !== k)];
+}
+/** The files of the UV panel `p`: while live, the PDA samples its chromatogram shows now; frozen, the ones it had. @param {any} p @returns {number[]} */
+function filesOf(p) {
+  const src = p.link != null ? E.panels.find((/** @type {any} */ q) => q.id === p.link) : null;
+  if (src) p.ks = pdaKs(src, p.k);
+  return (p.ks && p.ks.length ? p.ks : [p.k]).filter((/** @type {number} */ k) => E.files[k]);
 }
 
 /**
@@ -76,14 +91,19 @@ export async function draw(p) {
   const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const f = E.files[p.k];
   if (!f || p.r0 == null) return say(T("spec.pickRange"));
-  /** @type {any} */ let d = MAT[p.k] ? sliceUv(MAT[p.k], p.r0, p.r1) : null;
-  if (!d && await ensureMat(p.k)) { if (tok !== p._tok) return false; d = sliceUv(MAT[p.k], p.r0, p.r1); }
-  if (!d) try { d = await load(p.k, p.r0, p.r1); } catch (e) { return say(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); }
+  /** @param {number} k @returns {Promise<any>} the slice of file k at r0..r1, or the answer of api/uvspec, or the error */
+  const one = async k => {
+    if (MAT[k] || await ensureMat(k)) return sliceUv(MAT[k], p.r0, p.r1);
+    try { return await load(k, p.r0, p.r1); } catch (e) { return { err: e }; }
+  };
+  const ks = filesOf(p), got = await Promise.all(ks.map(one));
   if (tok !== p._tok) return false;
-  /** @type {number[]} */ const nm = d.nm, y = d.mau;
-  if (!nm.length) return say(T("uv.none"));
-  const full = [nm[0], nm[nm.length - 1]], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
-  let lo = 0, hi = 0; for (const v of y) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  /** @type {{ f: any, nm: number[], y: number[], d: any }[]} */
+  const ser = []; got.forEach((d, i) => { if (d && !d.err && d.nm && d.nm.length) ser.push({ f: E.files[ks[i]], nm: d.nm, y: d.mau, d }); });
+  if (!ser.length) { const e = got[0] && got[0].err; return say(e && e.error_key !== "err.pda.none" ? reason(e) : T("uv.none")); }
+  const d = ser[0].d, nm = ser[0].nm, y = ser[0].y;
+  const full = [minOf(ser.map(s => s.nm[0])), maxOf(ser.map(s => s.nm[s.nm.length - 1]))], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
+  let lo = 0, hi = 0; for (const s of ser) for (const v of s.y) { if (v < lo) lo = v; if (v > hi) hi = v; }
   const pad = (hi - lo || 1) * (window.ETPK && ETPK.on(p, 1) ? 0.16 : 0.06), yfull = [lo < 0 ? lo - pad : 0, hi + pad];
   if (p.lock && p.lock.pending) { p.lock.y = yfull[1]; p.lock.pending = false; }
   const y0 = p.zoomY ? p.zoomY[0] : yfull[0], y1 = p.zoomY ? p.zoomY[1] : p.lock && p.lock.y != null ? p.lock.y : yfull[1];
@@ -91,16 +111,25 @@ export async function draw(p) {
   g.clearRect(0, 0, W, H);
   frame(g, W, H, nice(x0, x1, 8).map(t => [X(t), String(+t.toFixed(2))]), nice(y0, y1, 6).map(t => [Y(t), String(+t.toFixed(2))]), T("uv.axis.x"), T("uv.axis.y"));
   g.save(); g.beginPath(); g.rect(M.l, M.t, pw, ph); g.clip();
-  g.strokeStyle = f.color || ecss("--ink"); g.lineWidth = 1.6; g.beginPath();
-  let pen = false; nm.forEach((w, i) => { if (w < x0 - 1 || w > x1 + 1) return; const px = X(w), py = Y(y[i]); if (pen) g.lineTo(px, py); else { g.moveTo(px, py); pen = true; } });
-  g.stroke(); g.restore();
-  const near = (/** @type {number} */ w) => Math.max(0, Math.min(nm.length - 1, Math.round((w - nm[0]) / ((nm[nm.length - 1] - nm[0]) / Math.max(1, nm.length - 1)))));
+  if (p.wl) {                                        // the wavelength of the PDA trace the spectrum comes from (a band, at least 2 px)
+    const a = X(Math.min(p.wl[0], p.wl[1])), b = X(Math.max(p.wl[0], p.wl[1]));
+    g.globalAlpha = 0.18; g.fillStyle = ecss("--accent"); g.fillRect(Math.min(a, (a + b) / 2 - 1), M.t, Math.max(2, b - a), ph); g.globalAlpha = 1;
+  }
+  for (const s of ser.slice().reverse()) {          // the sample of the click on top
+    g.strokeStyle = s.f.color || ecss("--ink"); g.lineWidth = s === ser[0] ? 1.6 : 1.2; g.beginPath();
+    let pen = false; s.nm.forEach((w, i) => { if (w < x0 - 1 || w > x1 + 1) return; const px = X(w), py = Y(s.y[i]); if (pen) g.lineTo(px, py); else { g.moveTo(px, py); pen = true; } });
+    g.stroke();
+  }
+  g.restore();
+  const near = (/** @type {number[]} */ a, /** @type {number} */ w) => Math.max(0, Math.min(a.length - 1, Math.round((w - a[0]) / ((a[a.length - 1] - a[0]) / Math.max(1, a.length - 1)))));
   const rt = d.n > 1 ? `${d.rt0.toFixed(2)}–${d.rt1.toFixed(2)}` : d.rt0.toFixed(2);
-  p._a = { x0, x1, y0, y1, ymin: y0, ymax: y1, yfull, full, W, H, X, Y, f, uvd: { nm, y, rt: d.rt0, rt1: d.rt1, n: d.n },
+  p._a = { x0, x1, y0, y1, ymin: y0, ymax: y1, yfull, full, W, H, X, Y, f, uvd: { nm, y, rt: d.rt0, rt1: d.rt1, n: d.n, ser: ser.map(s => ({ k: s.f.k, label: s.f.label, nm: s.nm, y: s.y, rt: s.d.rt0 })) },
     yinv: (/** @type {number} */ py) => y1 - (py - M.t) / ph * (y1 - y0),
-    hov: (/** @type {number} */ px) => { const w = x0 + (px - M.l) / pw * (x1 - x0), i = near(w); return { px: X(nm[i]), html: `<b>${T("hov.nm", { v: nm[i].toFixed(0) })}</b><div>${T("map.hov.mean")}: <b>${T("hov.mau", { v: y[i].toFixed(2) })}</b></div>` }; } };
-  if (window.ETPK) ETPK.drawUv(p, g, { nm, y, X, Y, x0, x1, W });       // wavelength of the absorbance maxima (etichette-picchi.js)
-  p.leg.innerHTML = h`<span><i style="background:${f.color}"></i>${f.label}</span> · <span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
+    hov: (/** @type {number} */ px) => { const w = x0 + (px - M.l) / pw * (x1 - x0), i = near(nm, w);
+      const rows = ser.length > 1 ? ser.map(s => `<div><i style="background:${s.f.color}"></i>${EH(s.f.label)} <b>${T("hov.mau", { v: s.y[near(s.nm, w)].toFixed(2) })}</b></div>`).join("") : `<div>${T("map.hov.mean")}: <b>${T("hov.mau", { v: y[i].toFixed(2) })}</b></div>`;
+      return { px: X(nm[i]), html: `<b>${T("hov.nm", { v: nm[i].toFixed(0) })}</b>${rows}` }; } };
+  if (window.ETPK) ETPK.drawUv(p, g, { nm, y, X, Y, x0, x1, W });       // wavelength of the absorbance maxima of the first sample (etichette-picchi.js)
+  p.leg.innerHTML = ser.map(s => h`<span><i style="background:${s.f.color}"></i>${s.f.label}</span>`).join(" ") + h` · <span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
   if (p.leg2) p.leg2.innerHTML = "";
   p.r0 = d.rt0; p.r1 = d.rt1;
 }

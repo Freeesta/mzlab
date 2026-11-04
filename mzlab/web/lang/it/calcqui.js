@@ -17,12 +17,5 @@ I18N.add("it", {
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "nessun addotto entro {tol} Da",
   "icon.ad": "Addotti",
-  "cq.res.lr": "Risoluzione unitaria",
-  "cq.res.hr": "Alta risoluzione",
-  "cq.res.src.files": "Dai file aperti: {name}",
-  "cq.res.src.formula": "Da una formula: masse esatte",
-  "cq.res.src.decimals": "Dal numero scritto (tre o più decimali)",
-  "cq.res.src.short": "Dal numero scritto (meno di tre decimali)",
-  "cq.res.src.none": "Nessun file aperto: risoluzione unitaria",
   "cq.g.combos": "Combinazioni di perdite"
 });

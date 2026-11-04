@@ -96,7 +96,7 @@ I18N.add("it", {
   "lib.search.tol": "tolleranza",
   "lib.search.peaksWithin": "picchi entro",
   "lib.search.go": "Cerca",
-  "lib.copy.title": "Incollata in Excel riempie righe e colonne",
+  "lib.copy.title": "Copia la tabella con le tabulazioni",
   "lib.copy": "Copia la tabella",
   "lib.libs": "Librerie…",
   "lib.col.name": "Nome",

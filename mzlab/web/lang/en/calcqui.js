@@ -17,12 +17,5 @@ I18N.add("en", {
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "no adduct within {tol} Da",
   "icon.ad": "Adducts",
-  "cq.res.lr": "Unit resolution",
-  "cq.res.hr": "High resolution",
-  "cq.res.src.files": "From the open files: {name}",
-  "cq.res.src.formula": "From a formula: exact masses",
-  "cq.res.src.decimals": "From the number typed (three or more decimals)",
-  "cq.res.src.short": "From the number typed (fewer than three decimals)",
-  "cq.res.src.none": "No file open: unit resolution",
   "cq.g.combos": "Combinations of losses"
 });

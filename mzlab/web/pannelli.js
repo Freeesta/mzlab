@@ -160,11 +160,13 @@ function chiudiPannello(p) {
   const dati = JSON.stringify(panelRec(p)), tab = p.tab, rel = { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo };
   const what = typeof p.title === "string" && p.title ? p.title : I18N.t("storia.pannello");
   const after = () => { relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
+  const vis0 = visNow();
   let cur = p;
-  const chiudi = () => { closePanel(cur); after(); };
+  const chiudi = () => { closePanel(cur); if (!E.panels.length) untickAll(); after(); };
   chiudi();
   if (!STORIA) return;
   STORIA.tolto({ what, tab, dati, redo: chiudi, undo: () => {
+    visBack(vis0);
     const sp = JSON.parse(dati); sp.y = (sp.y || 0) - 0.5;  // ahead of the panels that moved up into its place (relayout sorts by y)
     const q = riapriPannello(sp);
     for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = rel[k] != null && E.panels.some((/** @type {Pannello} */ x) => x.id === rel[k]) ? rel[k] : null;
@@ -172,15 +174,32 @@ function chiudiPannello(p) {
   } });
 }
 
+/** The files ticked in the side list, to give them back with the undo of the close that emptied the work area. */
+const visNow = () => E.files.filter((/** @type {MzFile} */ f) => f.vis).map((/** @type {MzFile} */ f) => f.k);
+/** Closing the last panel leaves no file ticked: the work area goes back to the landing. */
+function untickAll() { E.files.forEach((/** @type {MzFile} */ f) => { f.vis = false; }); renderFileList(); renderNav(); syncWork(); }
+function visBack(/** @type {number[]} */ ks) { E.files.forEach((/** @type {MzFile} */ f) => { f.vis = ks.includes(f.k); }); }
+
+/** The X of the toolbar: every panel closes and no file stays ticked; one entry of the stack opens them all again with the ticks. */
 function closeAllPanels() {
-  const all = E.panels.slice();
-  all.forEach((/** @type {Pannello} */ p) => closePanel(p));
-  relayout();
-  fitHost();
-  uiSave();
-  if (tabFiles("ms2").length) renderFileList();
-  redrawAll();
-  workClosedAll();
+  const recs = E.panels.map((/** @type {Pannello} */ p) => /** @type {[number, any, any]} */ ([p.id, panelRec(p), { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo }])), vis0 = visNow();
+  const go = () => {
+    E.panels.slice().forEach((/** @type {Pannello} */ p) => closePanel(p));
+    untickAll(); relayout(); fitHost(); uiSave();
+    if (tabFiles("ms2").length) renderFileList();
+    redrawAll();
+    workClosedAll();
+  };
+  go();
+  if (!STORIA || !recs.length) return;
+  STORIA.tolto({ what: I18N.t("storia.pannelli"), dati: JSON.stringify(recs.map((/** @type {any[]} */ r) => r[1])), redo: go, undo: () => {
+    visBack(vis0); workClosedAll(false);
+    const made = /** @type {Map<number, Pannello>} */ (new Map());
+    recs.forEach((/** @type {[number, any, any]} */ [id, rec]) => made.set(id, riapriPannello(rec)));
+    const now = (/** @type {number | null} */ id) => id == null ? null : made.get(id)?.id ?? null;
+    recs.forEach((/** @type {[number, any, any]} */ [id, , rel]) => { const q = /** @type {any} */ (made.get(id)); for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = now(rel[k]); });
+    relayout(); fitHost(); renderFileList(); renderNav(); syncWork(); uiSave(); made.forEach(q => ctl(q)); redrawAll();
+  } });
 }
 
 function cleanupOrphanPanels() {
