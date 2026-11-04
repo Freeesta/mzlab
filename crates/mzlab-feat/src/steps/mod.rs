@@ -3,6 +3,7 @@
 //! from these defaults and compares its fingerprint with `Recipe::default()`. The identification chain is in `ident*.rs` (`attributio()`).
 
 mod detect;
+mod group;
 mod ident;
 mod ident_annot;
 mod ident_formula;
@@ -52,6 +53,7 @@ pub fn registry() -> Vec<Step> {
         table::gapfill(),
         table::filter(),
         table::drift(),
+        group::group(),
         stats::stats(),
         stats::pca(),
         stats::kmd(),
