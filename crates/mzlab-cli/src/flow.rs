@@ -159,9 +159,9 @@ pub type DoneFn = Arc<dyn Fn(&str, Option<usize>, f64, bool, Option<String>) + S
 
 /// Runs the steps of this crate on files: inputs are found by name in `inputs`, else in `dir`; what steps make is written to `work`.
 pub struct FileRunner {
-    dir: PathBuf,
+    pub(crate) dir: PathBuf,
     pub(crate) work: PathBuf,
-    inputs: HashMap<String, PathBuf>,
+    pub(crate) inputs: HashMap<String, PathBuf>,
     meter: Option<Meter>,
     pub(crate) made: Mutex<HashMap<String, PathBuf>>,
     lineage: Mutex<HashMap<String, Lineage>>,

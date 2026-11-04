@@ -25,6 +25,7 @@ I18N.add("en", {
   "err.http": "error {status}",
   "err.upload.network": "upload failed",
   "err.hr.mix": "Low- and high-resolution files cannot be in the same session. Open the high-resolution files in another session, or remove them from this one.",
+  "err.flow.export.view": "A filter view cannot be exported: its table is not part of this run. Run the filter and the export in the same plan.",
   "err.flow.param.axis": "{param} does not apply to a file on the {axis} axis: on the unit resolution axis set the m/z tolerance in Da (tol_da, dup_da), on the high-resolution axis in ppm (ppm, tol_ppm, max_ppm_span, dup_ppm).",
   "err.flow.align.polarity": "One table holds one polarity: positive files ({positive}) and negative files ({negative}) are in the same series. Split the series, or detect and align each polarity on its own branch.",
   "err.flow.align.resolution": "One table holds one resolution: unit resolution files ({unit}) and high-resolution files ({high}) are in the same series. Split the series, or detect and align each resolution on its own branch.",
