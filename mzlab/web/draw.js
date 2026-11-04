@@ -7,9 +7,9 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
-import { initCerca } from "./disegno-cerca.js";
+import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js";
-import { indigo } from "./disegno-indigo.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -105,7 +105,7 @@ function placePill(/** @type {Document} */ d) {
 let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
 function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
   try {
-    const d = /** @type {Document} */ (fr.contentDocument), st = d.createElement("style");
+    const d = /** @type {Document} */ (fr.contentDocument), st = d.createElement("style"); guardPaste(d, () => dnote(I18N.t("draw.quick.notFound")));
     // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
     // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
     st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
@@ -166,11 +166,11 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
       addZoomButtons(d, fr, fullBtn, btn);
     }
 
-    // Context menu on canvas / molecule
-    d.addEventListener("contextmenu", async (/** @type {MouseEvent} */ ev) => {
+    // Context menu on canvas / molecule (right click, ContextMenu key or Shift+F10; closes on a click or Esc inside the Ketcher document too)
+    const openCtx = async (/** @type {any} */ ev, /** @type {boolean} */ kbd) => {
       const st = K && K.editor && K.editor.struct();
       if (!st || st.isBlank()) return;
-      const hl = labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr); return; }      // right click on the label under a molecule
+      const hl = labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr, kbd); return; }      // right click on the label under a molecule
       ev.preventDefault();
       ev.stopPropagation();
       const sel = K.editor.selection() || {};
@@ -183,34 +183,35 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
       const m = Q("#ctx"); if (!m) return;
       m.innerHTML = "";
-      const cpItem = document.createElement("div");
       const shortSmi = smi.length > 24 ? smi.slice(0, 21) + "…" : smi;
-      cpItem.textContent = smi ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi }) : I18N.t("draw.ctx.copySmiles");
-      cpItem.onclick = () => {
-        if (smi) navigator.clipboard.writeText(smi).catch(() => {});
+      ctxRow(m, smi ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi }) : I18N.t("draw.ctx.copySmiles"), () => {
+        if (smi) copyText(smi);
         m.hidden = true;
-      };
-      m.appendChild(cpItem);
-      const ctrItem = document.createElement("div");
-      ctrItem.textContent = I18N.t("draw.ctx.center");
-      ctrItem.onclick = () => {
+      });
+      ctxRow(m, I18N.t("draw.ctx.center"), () => {
         if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); }
         m.hidden = true;
-      };
-      m.appendChild(ctrItem);
+      });
       if ((sel.bonds || []).length) {                                   // «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
-        const brk = document.createElement("div"), nb = sel.bonds.length;
-        brk.textContent = I18N.t("draw.ctx.breakBonds", { n: nb }); brk.title = I18N.t("draw.ctx.breakBonds.title");
-        const bids = [...sel.bonds]; brk.onclick = () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); };
-        m.appendChild(brk);
+        const nb = sel.bonds.length, bids = [...sel.bonds];
+        ctxRow(m, I18N.t("draw.ctx.breakBonds", { n: nb }), () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); }, I18N.t("draw.ctx.breakBonds.title"));
       }
       for (const it of [...await partialItems(K, ev, set, fragHelpers).catch(() => []), ...await fragmentItems(K, ev, fragHelpers).catch(() => [])]) {   // brackets with a delta (disegno-parziali.js); the two pieces of the bond, all cuts
-        const row = document.createElement("div"); row.textContent = it.text; if (it.title) row.title = it.title;
-        row.onclick = () => { m.hidden = true; if (it.run) it.run(); }; m.appendChild(row);
+        ctxRow(m, it.text, () => { m.hidden = true; if (it.run) it.run(); }, it.title);
       }
-      m.hidden = false;
-      m.style.left = Math.min(mx, innerWidth - 240) + "px";
-      m.style.top = Math.max(4, Math.min(my, innerHeight - m.offsetHeight - 8)) + "px";
+      ctxShow(m, mx, my, 240, kbd);
+    };
+    let kbdCtxAt = 0;                                                    // the ContextMenu key also raises a native contextmenu event: only the first one opens
+    d.addEventListener("contextmenu", (/** @type {MouseEvent} */ ev) => { if (Date.now() - kbdCtxAt < 300) { ev.preventDefault(); ev.stopPropagation(); return; } openCtx(ev, false); }, true);
+    d.addEventListener("mousedown", () => { const m = Q("#ctx"); if (m) m.hidden = true; }, true);
+    d.addEventListener("keydown", (/** @type {KeyboardEvent} */ ev) => {
+      const m = Q("#ctx");
+      if (ev.key === "Escape") { if (m) m.hidden = true; return; }
+      if (ev.key === "ContextMenu" || (ev.key === "F10" && ev.shiftKey)) {
+        ev.preventDefault(); kbdCtxAt = Date.now();
+        const w = /** @type {Window} */ (d.defaultView);
+        openCtx({ clientX: w.innerWidth / 2, clientY: w.innerHeight / 2, preventDefault() {}, stopPropagation() {} }, true);
+      }
     }, true);
 
     const fit = () => {
@@ -332,18 +333,7 @@ const dnote = (/** @type {string} */ msg) => { const w = Q("#smi-warn"); w.textC
   const out = [...groups.values()].map(g => ({ ids: g, x: Math.min(...g.map((/** @type {number} */ i) => st.atoms.get(i).pp.x)), y: Math.min(...g.map((/** @type {number} */ i) => st.atoms.get(i).pp.y)) }));
   return out.sort((a, b) => a.x - b.x || a.y - b.y);
 }
-/** @param {number[]} ids @param {Set<number>} [noCharge] */ function pieceMolfile(ids, noCharge) {
-  const st = K.editor.struct(), set = new Set(ids), idx = new Map(ids.map((id, n) => [id, n + 1])), atoms = ids.map(i => st.atoms.get(i));
-  if (atoms.some(a => !(a.label in MONO))) return null;                      // R groups, abbreviations...: no structure
-  const bonds = /** @type {DrawKet[]} */ ([]); st.bonds.forEach((/** @type {DrawKet} */ b) => { if (set.has(b.begin) && set.has(b.end)) bonds.push(b); });
-  const f = (/** @type {number} */ v, /** @type {number} */ w) => v.toFixed(4).padStart(w), n3 = (/** @type {number} */ v) => String(v).padStart(3), chg = /** @type {[number, number][]} */ ([]);
-  const L = ["", "  qqq", "", `${n3(atoms.length)}${n3(bonds.length)}  0  0  0  0  0  0  0  0999 V2000`];
-  atoms.forEach((a, /** @type {DrawKet} */ k) => { L.push(`${f(a.pp.x, 10)}${f(-a.pp.y, 10)}${f(0, 10)} ${a.label.padEnd(3)} 0  0  0  0  0  0  0  0  0  0  0  0`); if (a.charge && !(noCharge && noCharge.has(ids[k]))) chg.push([k + 1, a.charge]); });
-  bonds.forEach(b => L.push(`${n3(/** @type {number} */ (idx.get(b.begin)))}${n3(/** @type {number} */ (idx.get(b.end)))}${n3(b.type >= 1 && b.type <= 4 ? b.type : 1)}  0  0  0  0`));
-  for (let i = 0; i < chg.length; i += 8) L.push("M  CHG" + n3(Math.min(8, chg.length - i)) + chg.slice(i, i + 8).map(([a, c]) => " " + n3(a) + " " + n3(c)).join(""));
-  L.push("M  END");
-  return L.join("\n");
-}
+/** @param {number[]} ids @param {Set<number>} [noCharge] */ const pieceMolfile = (ids, noCharge) => molfileOf(K.editor.struct(), ids, noCharge, l => l in MONO);
 /** @param {number[]} ids @param {Set<number>} [noCharge] */ async function pieceSmiles(ids, noCharge) {
   const mf = pieceMolfile(ids, noCharge); if (!mf) return null;
   try {
@@ -377,7 +367,7 @@ function breakBonds(/** @type {number[]} */ ids) {
   } catch (_) { return false; }
 }
 window.breakBonds = breakBonds;
-const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { navigator.clipboard.writeText(s).catch(() => {}); if (window.toast) toast(I18N.t("draw.copy.done")); },
+const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
 // selects the bonds between the given pairs of atoms (ids as in the SMILES just loaded) so Ketcher highlights them; returns how many were found
 function markBonds(/** @type {[number, number][]} */ pairs) {
@@ -453,7 +443,7 @@ async function showInfo1() {
 let neutOn = true;                                                             // "Escludi la carica": on by default
 document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
 const fmtF = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
-document.addEventListener("click", e => { const tg = /** @type {any} */ (e.target), b = tg.closest && tg.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); if (window.toast) toast(I18N.t("draw.copy.smilesToast")); b.textContent = I18N.t("draw.copy.done"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, 1200); } catch (_) { /* clipboard blocked */ } } });
+document.addEventListener("click", e => { const tg = /** @type {any} */ (e.target), b = tg.closest && tg.closest("[data-cp]"); if (b) copyText(b.dataset.cp, "draw.copy.smilesToast").then(ok => { b.textContent = I18N.t(ok ? "draw.copy.done" : "draw.copy.fail"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, ok ? 1200 : 2500); }); });
 
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
@@ -752,12 +742,12 @@ function syncBg() {                                    // JPEG cannot be transpa
 }
 Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
-Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
+Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
+window.TPDraw = { when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
@@ -790,15 +780,14 @@ function labelHit(/** @type {MouseEvent} */ ev) {
 // formula as the student can paste it in the Data view: Hill formula, then the charge (C10H14N+, C6H5O2-)
 const formulaText = (/** @type {DrawStruct} */ d) => d.formula + (d.q ? (Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "-") : "");
 const massText = (/** @type {DrawStruct} */ d) => { const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass, dec = +Q("#lb-dec").value; return dec ? rh(raw, dec).toFixed(dec) : String(rh(raw, 0)); };
-function labelMenu(/** @type {MouseEvent} */ ev, /** @type {DrawStruct} */ d, /** @type {HTMLElement} */ fr) {
+function labelMenu(/** @type {any} */ ev, /** @type {DrawStruct} */ d, /** @type {HTMLElement} */ fr, /** @type {boolean} */ kbd = false) {
   const m = Q("#ctx"); if (!m) return;
-  const fr0 = fr.getBoundingClientRect(), mx = fr0.left + ev.clientX, my = fr0.top + ev.clientY;
+  const fr0 = fr.getBoundingClientRect();
   m.innerHTML = "";
-  const item = (/** @type {string} */ label, /** @type {string} */ text) => { const e = document.createElement("div"); e.textContent = label; e.onclick = () => { navigator.clipboard.writeText(text).catch(() => {}); m.hidden = true; if (window.toast) toast(I18N.t("draw.copy.done")); }; m.appendChild(e); };
+  const item = (/** @type {string} */ label, /** @type {string} */ text) => ctxRow(m, label, () => { copyText(text); m.hidden = true; });
   item(I18N.t("draw.ctx.copyFormula", { formula: formulaText(d) }), formulaText(d));
   item(I18N.t(d.q ? "draw.ctx.copyMassMz" : "draw.ctx.copyMass", { mass: massText(d) }), massText(d));
-  m.hidden = false;
-  m.style.left = Math.min(mx, innerWidth - 270) + "px"; m.style.top = Math.max(4, Math.min(my, innerHeight - m.offsetHeight - 8)) + "px";
+  ctxShow(m, fr0.left + ev.clientX, fr0.top + ev.clientY, 270, kbd);
 }
 // ------------------------------------------------------------------ side cards: hide / show (more room to draw), remembered in this browser
 const SKEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.riquadri") : "qqq.disegno.riquadri";
