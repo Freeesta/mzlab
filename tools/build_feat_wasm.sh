@@ -10,10 +10,7 @@ limit=512000
 limit_untargeted=585728   # untargeted: +2.4 % over 512000 for the broad-band mark and the blank rule (measured 512259), decision of the Coordinator
 limit_table=737280   # table: tabcheck/1 with all fifteen checks (Kendrick analysis and PCA included); cap +20 % over 512000, decision of Federico, 22 Oct 2026 (docs/agenti/wasm-tetti.md)
 limit_hr=1605632   # hr: detect, proofs, finder, finder_edge and finder_msn in ONE .wasm (measured 1384565 with flow_job_meta, the estimates of the record of a run in the browser; before 1302880); the only cap of the group (docs/agenti/wasm-tetti.md)
-limit_attributio=1536000   # attributio fused: the table, the review (Banco 2b), the exports and the MS2 engine in ONE .wasm (measured 1395661 (+10 %); the four separate ones measured 2494394 under 512000 + 942080 + 659456 + 479232); the only cap of the group (docs/agenti/misure.md)
-limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %); the table of chemical classes is a file beside it
-limit_export=659456   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient); measured 636757 (+3 %)
-limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS2 engine (library search, in-silico ranking, hydrogen rearrangements, RT forest); measured 464210 (+3 %)
+limit_attributio=1536000   # attributio fused: the table, the review (Banco 2b), the exports and the MS2 engine in ONE .wasm (measured 1395661 (+10 %)); the only cap of the group (docs/agenti/misure.md)
 limit_lr=892928   # zlib-rs +30 KB (was 741376), mzlab-picchi at O3 +3.6 KB (peaks 3.1x); finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=623200   # interp (cap +10 % over the 566463 measured with tp.review, rounded up to 100 B): the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
@@ -25,20 +22,15 @@ out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them
 . tools/wasm_paralleli.sh
-# HR group (detect, proofs, finder, finder_edge, finder_msn): ONE .wasm "hr" (the manifest keys of the five name it; the workers load it once). MZLAB_WASM_SEPARATI=1 builds the five as before.
-if [ -z "${MZLAB_WASM_SEPARATI:-}" ]; then
-  if want a; then
-    tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect,proofs,finder,finder_edge,finder_msn,flow_ms2
-    wasm_pack "$out/hr" $R/mzlab_feat_wasm.wasm $limit_hr "mzFinder hr" @motore
-  fi
-  group="untargeted interp"
-else
-  group="detect proofs finder finder_edge finder_msn untargeted interp"
+# HR group (detect, proofs, finder, finder_edge, finder_msn): ONE .wasm "hr" (the manifest keys of the five name it; the workers load it once).
+if want a; then
+  tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect,proofs,finder,finder_edge,finder_msn,flow_ms2
+  wasm_pack "$out/hr" $R/mzlab_feat_wasm.wasm $limit_hr "mzFinder hr" @motore
 fi
-for which in $group; do
-  case $which in detect|proofs|finder) want a || continue ;; *) want b || continue ;; esac
+for which in untargeted interp; do
+  want b || continue
   tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
-  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $(case $which in interp) echo $limit_interp;; untargeted) echo $limit_untargeted;; *) echo $limit;; esac) "mzFinder $which" @motore
+  wasm_pack "$out/$which" $R/mzlab_feat_wasm.wasm $(case $which in interp) echo $limit_interp;; *) echo $limit_untargeted;; esac) "mzFinder $which" @motore
 done
 if want a; then
 # formula.ms1 of the Flow (flow_ms1_rows, flow_ms1_join), loaded only by its executor in flow-web-ident.js; a module of its own, with the standard limit
@@ -77,25 +69,9 @@ wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import" 
 fi
 if want b; then
 # Attributio (administrator mode): ONE .wasm "attributio-all" with the table of levels, the Banco 2b, the exports and the MS2 engine (the manifest keys of the four point to it; the workers load it once).
-# MZLAB_WASM_SEPARATI=1 builds the four as before: crates/mzlab-attributio-wasm without features (the table, loaded when a campaign folder is chosen) and with rev, export or ms2.
-if [ -z "${MZLAB_WASM_SEPARATI:-}" ]; then
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features all
 wasm_pack "$out/attributio-all" $R/mzlab_attributio_wasm.wasm $limit_attributio "mzFinder attributio" @motore
 mkdir -p "$out/attributio-all" && cp crates/mzlab-feat/data/classi-1.json "$out/attributio-all/classi-1.json"
-else
-tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm
-wasm_pack "$out/attributio" $R/mzlab_attributio_wasm.wasm $limit "mzFinder attributio" @motore
-# the Banco 2b of Attributio (review of one feature, saving of a decision), loaded only when the Banco opens: the same crate with the feature rev
-tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features rev
-wasm_pack "$out/attributio-rev" $R/mzlab_attributio_wasm.wasm $limit_rev "mzFinder attributio-rev" @motore
-mkdir -p "$out/attributio-rev" && cp crates/mzlab-feat/data/classi-1.json "$out/attributio-rev/classi-1.json"
-# the exports of Attributio (Schymanski folder, publication table, quantification, gradient), loaded only when the Export menu is used: the same crate with the feature export
-tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features export
-wasm_pack "$out/attributio-export" $R/mzlab_attributio_wasm.wasm $limit_export "mzFinder attributio-export" @motore
-# the MS2 engine of Attributio (library search, in-silico ranking, hydrogen rearrangements, RT forest, chimeric intruders), loaded only when its panel runs: the same crate with the feature ms2
-tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features ms2
-wasm_pack "$out/attributio-ms2" $R/mzlab_attributio_wasm.wasm $limit_ms2 "mzFinder attributio-ms2" @motore
-fi
 # the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
 wasm_pack "$out/finder-lr" $R/mzlab_finder_lr_wasm.wasm $limit_lr "mzFinder finder-lr" @motore

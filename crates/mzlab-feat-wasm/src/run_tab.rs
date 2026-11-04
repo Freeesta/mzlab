@@ -1,5 +1,5 @@
 //! The Flow table steps that do not fit the `table` module, in the browser (`.wasm` `flowtab`): `table.drift` (`mzlab_feat::flow_drift::drift_text`), `qc.run_order` (`mzlab_feat::runorder::runorder_text`),
-//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`) and `chrom.transitions` (`mzlab_feat::transitions`), the functions `flow run` calls.
+//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`), `chrom.transitions` (`mzlab_feat::transitions`) and `features.group` (`mzlab_feat::ionnet`), the functions `flow run` calls.
 //! Loaded by the page only when one of these steps runs.
 
 use mzlab_feat::flow_ms2::json_params;
@@ -16,6 +16,14 @@ pub fn flow_drift(
 ) -> std::result::Result<String, JsValue> {
     let params = json_params(params_json).map_err(crate::js_err)?;
     mzlab_feat::flow_drift::drift_text(&params, table, samples, design).map_err(crate::js_err)
+}
+
+/// The `ionnet/1` text of `table` (the bytes of a per-ion `.mzfeat`); `params_json` is the step's parameters merged with its defaults.
+/// Errors are JSON `{"error_key","params"}` texts.
+#[wasm_bindgen]
+pub fn flow_group(params_json: &str, table: &[u8]) -> std::result::Result<String, JsValue> {
+    let params = json_params(params_json).map_err(crate::js_err)?;
+    mzlab_feat::ionnet::group_text(&params, table).map_err(crate::js_err)
 }
 
 /// The `runorder/1` text of the sample table `samples`; `design` holds the batches (`disegno/1`), empty for none (the batch of the sample table). `params_json` is the step's parameters merged with its defaults.
