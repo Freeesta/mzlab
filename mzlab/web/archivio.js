@@ -40,6 +40,14 @@ export async function locked(kind, name, fn) {
   } finally { clearTimeout(timer); }
 }
 
+// A long job on one file (an index of a big file takes minutes) is serialised across tabs: a second tab waits its turn, with no time limit, instead of opening the
+// same OPFS handle (a NoModificationAllowedError) or deleting the partial file of the first. The key is not the one of `locked`: the job writes through `put`/`promote`, which take that one.
+export async function exclusive(/** @type {string} */ kind, /** @type {string} */ name, /** @type {() => Promise<any>} */ fn) {
+  const L = self.navigator && navigator.locks;
+  if (!L) return fn();
+  return L.request("mzlab-job:" + kind + "/" + name, { mode: "exclusive" }, () => fn());
+}
+
 // storage: persist() once (the first file); before a big write the room is checked (sources + their index take about 1.8 times the size)
 let asked = false;
 export async function persistOnce() {
