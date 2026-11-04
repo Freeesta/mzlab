@@ -15,6 +15,8 @@ pub struct Migration {
     pub from: u32,
     pub to: u32,
     pub apply: fn(Params) -> Params,
+    /// True when `apply` only makes sense on an instance written at `from` (it adds a parameter whose absence means something else at `to`).
+    pub from_only: bool,
 }
 
 /// `spectra.msn_graph@1 → @2`: the Italian parameters take the English names of the `msn-graph` flags.
@@ -54,13 +56,31 @@ fn msn_graph_1_2(p: Params) -> Params {
     rename(p, MSN_GRAPH_1_2)
 }
 
+/// `table.filter@1 → @2`: version 1 counted the gap-filled blank cells, so a saved plan keeps that rule until it is changed by hand.
+fn table_filter_1_2(mut p: Params) -> Params {
+    if !p.iter().any(|(k, _)| k == "blank_cells") {
+        p.push(("blank_cells".to_string(), Value::Str("all".to_string())));
+    }
+    p
+}
+
 /// Every migration of the engine, one row per step and version.
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    step: "spectra.msn_graph",
-    from: 1,
-    to: 2,
-    apply: msn_graph_1_2,
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        step: "spectra.msn_graph",
+        from: 1,
+        to: 2,
+        apply: msn_graph_1_2,
+        from_only: false,
+    },
+    Migration {
+        step: "table.filter",
+        from: 1,
+        to: 2,
+        apply: table_filter_1_2,
+        from_only: true,
+    },
+];
 
 /// What a migration changed in one instance: the versions and each parameter renamed (old, new).
 #[derive(Debug, Clone, PartialEq)]
@@ -85,7 +105,10 @@ pub fn migrate_params(
         any = true;
     }
     // an instance already at the newest version with old names left in it
-    if let Some(m) = MIGRATIONS.iter().find(|m| m.step == step && m.to == v) {
+    if let Some(m) = MIGRATIONS
+        .iter()
+        .find(|m| m.step == step && m.to == v && !m.from_only)
+    {
         let again = (m.apply)(p.clone());
         any |= again != p;
         p = again;
@@ -119,7 +142,10 @@ pub fn migrate_name(step: &str, version: u32, name: &str) -> Option<String> {
         p = (m.apply)(p);
         v = m.to;
     }
-    if let Some(m) = MIGRATIONS.iter().find(|m| m.step == step && m.to == v) {
+    if let Some(m) = MIGRATIONS
+        .iter()
+        .find(|m| m.step == step && m.to == v && !m.from_only)
+    {
         p = (m.apply)(p);
     }
     let new = p.into_iter().next()?.0;
