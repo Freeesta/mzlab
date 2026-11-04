@@ -10,22 +10,22 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
-        pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.wait_for_timeout(800)
+        pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         KJ = "document.querySelector('#kframe').contentWindow.ketcher"
-        pg.evaluate(f"{KJ}.addFragment('CCO')"); pg.wait_for_timeout(800)
+        pg.evaluate(f"{KJ}.addFragment('CCO')"); attendi(pg, f"!{KJ}.editor.struct().isBlank()")
         def undo():
             pg.evaluate("document.activeElement && document.activeElement.blur()")
             if pg.locator("#errbox").count(): pg.evaluate("document.getElementById('errbox').remove()")       # an earlier error (e.g. a wasm not built) must not hide this check
-            for _ in range(3): pg.keyboard.press("Control+z"); pg.wait_for_timeout(150)
-            pg.wait_for_timeout(300); assert pg.locator("#errbox").count() == 0, "error box: " + (pg.locator("#errbox").inner_text() if pg.locator("#errbox").count() else "")
+            for _ in range(3): pg.keyboard.press("Control+z")
+            pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); assert pg.locator("#errbox").count() == 0, "error box: " + (pg.locator("#errbox").inner_text() if pg.locator("#errbox").count() else "")
         step("3x Ctrl+Z with the focus outside the canvas raise no error box", undo)
-        pg.evaluate(f"{KJ}.addFragment('CCO')"); pg.wait_for_timeout(800)
+        pg.evaluate(f"{KJ}.addFragment('CCO')"); attendi(pg, f"!{KJ}.editor.struct().isBlank()")
         OPEN = """(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()"""
         def opened():
-            for _ in range(20):
+            for _ in range(200):
                 pg.evaluate(OPEN)
                 if pg.locator("#ctx:not([hidden]) div[role=menuitem]").count(): return
-                pg.wait_for_timeout(400)
+                pg.evaluate("new Promise(r => requestAnimationFrame(r))")
             raise AssertionError("menu did not open")
         step("the menu opens with role=menu and menuitem rows", lambda: (opened(), pg.wait_for_selector("#ctx[role=menu]")))
         def click_closes():
