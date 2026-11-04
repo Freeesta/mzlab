@@ -29,7 +29,7 @@ try:
             assert "spec.cont" in rows(), "«Is it a known contaminant?» in the peak menu"
             pg.evaluate("__c.lab = __c.m.toFixed(4); AZIONI.esegui('spec.cont', __c)")
             attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')")
-            assert pg.input_value("#al-q") == pg.evaluate("__c.lab"), pg.input_value("#al-q")
+            assert pg.input_value("#calcin") == pg.evaluate("__c.lab"), pg.input_value("#calcin")
             assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
             pg.evaluate("BARRA.close(false)")
         step("«Is it a known contaminant?» opens the Contaminants tab on the peak m/z", known_cont)

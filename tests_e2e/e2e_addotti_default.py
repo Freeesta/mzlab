@@ -13,7 +13,7 @@ if __name__ == "__main__":
                 except Exception as e: print("FAIL", n, repr(e)[:300]); bad.append(n)
             def default_table():
                 pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "document.querySelector('#sb-panel-adducts .cadt tbody tr')")
-                assert pg.input_value("#al-q") == ""
+                assert pg.input_value("#calcin") == ""
                 t = pg.inner_text("#sb-panel-adducts")
                 assert "[M+H]+" in t and "[M+Na]+" in t and "[M-H]-" not in t, t[:300]
                 assert "Un numero è letto" not in t and pg.locator("#sb-panel-adducts .nlhint").count() == 0
@@ -26,28 +26,28 @@ if __name__ == "__main__":
                 assert "[M-H]-" not in pg.inner_text("#sb-panel-adducts .cadt")
             step("the table follows ESI+, ESI- or both", polarity)
             def typing():
-                pg.fill("#al-q", "214"); frames(pg, 30)
+                pg.fill("#calcin", "214"); frames(pg, 30)
                 t = pg.inner_text("#sb-panel-adducts"); assert "[M+H]+" in t
-                pg.fill("#al-q", ""); frames(pg, 30)
+                pg.fill("#calcin", ""); frames(pg, 30)
                 assert pg.locator("#sb-panel-adducts .cadt tbody tr").count() >= 4
             step("typing computes, clearing keeps a table", typing)
             def contaminanti():
-                pg.click("#al-t-cont"); pg.fill("#al-q", "149.0233"); attendi(pg, "document.querySelectorAll('#sb-panel-cont li').length > 0")
+                pg.click("#al-t-cont"); pg.fill("#calcin", "149.0233"); attendi(pg, "document.querySelectorAll('#sb-panel-cont li').length > 0")
                 n = pg.locator("#sb-panel-cont li").count(); t = pg.inner_text("#sb-panel-cont")
                 assert "149.0" in t and pg.get_attribute("#al-t-cont", "aria-selected") == "true", t[:300]
                 assert pg.inner_text("#al-t-cont .cq-n").strip() == str(n) and pg.is_visible("#al-t-cont .cq-n"), "the tab counts its matches"
-                pg.click("#al-t-adducts"); assert pg.input_value("#al-q") == "149.0233", "one field for the three tabs"
-                pg.fill("#al-q", "C9H10N2O"); frames(pg, 30); assert not pg.is_visible("#al-t-cont .cq-n"), "a formula is not looked up in the contaminant lists"
-                pg.fill("#al-q", "")
+                pg.click("#al-t-adducts"); assert pg.input_value("#calcin") == "149.0233", "one field for the three tabs"
+                pg.fill("#calcin", "C9H10N2O"); frames(pg, 30); assert not pg.is_visible("#al-t-cont .cq-n"), "a formula is not looked up in the contaminant lists"
+                pg.fill("#calcin", "")
             step("Contaminants tab: the typed m/z in the known background lists, with its count", contaminanti)
             def ripiega():
                 assert pg.is_visible("#calcin") and pg.get_attribute("#al-calc-tg", "aria-expanded") == "true", "the calculator is shown by default"
-                pg.click("#al-calc-tg"); attendi(pg, "!document.querySelector('#calcin').offsetParent")
+                pg.click("#al-calc-tg"); attendi(pg, "!document.querySelector('#calcpad').offsetParent")
                 assert pg.get_attribute("#al-calc-tg", "aria-expanded") == "false"
                 pg.reload(); attendi(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
-                pg.evaluate("BARRA.setTab('adducts')"); attendi(pg, "!!document.querySelector('#al-q').offsetParent")
-                assert not pg.is_visible("#calcin"), "folded stays folded"
-                pg.evaluate("BARRA.setTab('calc')"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
+                pg.evaluate("BARRA.setTab('adducts')"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
+                assert not pg.is_visible("#calcpad") and pg.is_visible("#calcin"), "folded stays folded, the field stays"
+                pg.evaluate("BARRA.setTab('calc')"); attendi(pg, "!!document.querySelector('#calcpad').offsetParent")
                 assert pg.get_attribute("#al-calc-tg", "aria-expanded") == "true", "the calc command unfolds it"
             step("the calculator folds with its toggle, remembered; the calc command unfolds it", ripiega)
             def lista():

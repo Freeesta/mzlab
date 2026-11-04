@@ -13,8 +13,8 @@
     ["full", "CSV (estimated cells marked)", "The same table with the origin of every cell (detected, targeted, filled)."],
     ["xlsx", "Excel (.xlsx)", "The rows of the view as one sheet."],
     ["semi", "CSV (;)", "Text with ';' as separator, UTF-8 with BOM, for Excel in Italian."],
-    ["fbmn", "GNPS2 (FBMN)", "Quantification table + MS2 (.mgf) in a .zip. Files only: nothing is sent."],
-    ["sirius", "SIRIUS (.ms)", "MS2 of the rows of the view for SIRIUS 6. Files only: nothing is sent."],
+    ["fbmn", "GNPS2 (FBMN)", "Quantification table + MS2 (.mgf) in a .zip"],
+    ["sirius", "SIRIUS (.ms)", "MS2 of the rows of the view for SIRIUS 6"],
     ["report", "Report (HTML)", "A page to print or save as PDF: the series, the view and the quality control."],
   ];
   const css = `#pipe .px-bar{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}#pipe .px-bar button{min-height:32px}@media print{#pipe .px-bar{display:none}}`;
