@@ -13,7 +13,7 @@ INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'
 READY = "document.getElementById('kframe').classList.contains('kwait') === false && !!(window.TPDraw && TPDraw.ready())"
 def open_draw(ctx):
     pg = ctx.new_page(); pg.add_init_script(INIT)
-    pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
+    pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "!!document.querySelector('#nav [data-v=draw]')")
     pg.click("#nav [data-v=draw]"); attendi(pg, READY, timeout=60000); hold(pg, 2000)
     return pg
 TOPBOX = "(() => { const f = document.getElementById('kframe'), t = f.contentDocument.querySelector('[class*=App-module_top]'); const b = t.getBoundingClientRect(), fb = f.getBoundingClientRect(); return {y: b.top + fb.top, bottom: b.bottom + fb.top, vh: innerHeight}; })()"
