@@ -106,11 +106,11 @@ try:
         step("isotope overlay on the spectrum, aligned to the observed peak", overlay)
         pg.click("#nav button[data-v=draw]"); pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=60000)
         def labels():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
-            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "nominal mass 151"], t            # one text per line: formula, then mass
-            pg.select_option("#lb-dec", "4"); lbl(["C8H9NO2", "exact mass 151.0633"])
-            assert pg.evaluate(LBL) == ["C8H9NO2", "exact mass 151.0633"], pg.evaluate(LBL)
-            pg.select_option("#lb-dec", "0"); lbl(["C8H9NO2", "nominal mass 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
+            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "massa nominale 151"], t            # one text per line: formula, then mass
+            pg.select_option("#lb-dec", "4"); lbl(["C8H9NO2", "massa esatta 151.0633"])
+            assert pg.evaluate(LBL) == ["C8H9NO2", "massa esatta 151.0633"], pg.evaluate(LBL)
+            pg.select_option("#lb-dec", "0"); lbl(["C8H9NO2", "massa nominale 151"])
         step("label under the molecule (formula, nominal mass)", labels)
         def ion():
             pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); lbl(["C8H10NO2+", "m/z 152"])
@@ -118,7 +118,7 @@ try:
             pg.screenshot(path=SH + "62_ion.png")
         step("charged structure shows m/z", ion)
         def breakbond():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
             # erase the amide C-N bond with Ketcher's own eraser tool (as a student would)
             pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); frames(pg, 5)      # first the tool: the layout may move, the position is read after it
             pos = pg.evaluate("""(()=>{const k=%s, st=k.editor.struct();let bid=null;st.bonds.forEach((b,id)=>{const a=st.atoms.get(b.begin).label,c=st.atoms.get(b.end).label;
@@ -126,17 +126,17 @@ try:
                const b=st.bonds.get(bid),p1=st.atoms.get(b.begin).pp,p2=st.atoms.get(b.end).pp;
                const c=k.editor.render.paper.canvas, r=c.getBoundingClientRect(), vb=c.viewBox.baseVal, f=document.getElementById('kframe').getBoundingClientRect();
                const ux=(p1.x+p2.x)/2*40, uy=(p1.y+p2.y)/2*40; return {x:f.left+r.left+(ux-vb.x)*r.width/vb.width, y:f.top+r.top+(uy-vb.y)*r.height/vb.height}})()""" % KQ)
-            pg.mouse.click(pos["x"], pos["y"]); lbl(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"], sort=True)
-            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"]), t
+            pg.mouse.click(pos["x"], pos["y"]); lbl(["C2H4O", "massa nominale 44", "C6H7NO", "massa nominale 109"], sort=True)
+            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "massa nominale 44", "C6H7NO", "massa nominale 109"]), t
             pg.screenshot(path=SH + "63_broken.png")
-            pg.evaluate(KQ + ".editor.undo()"); lbl(["C8H9NO2", "nominal mass 151"]); assert pg.evaluate(LBL) == ["C8H9NO2", "nominal mass 151"]
+            pg.evaluate(KQ + ".editor.undo()"); lbl(["C8H9NO2", "massa nominale 151"]); assert pg.evaluate(LBL) == ["C8H9NO2", "massa nominale 151"]
         step("erasing a bond gives two labels; undo restores", breakbond)
         def no_boxes():
             # the boxes that did the student's work are gone for good; the cream background option too
             assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-on','ex-bg'].every(i=>!document.getElementById(i))")
         step("caption / adduct table / fragment-calculation boxes and cream option removed", no_boxes)
         def sel_smiles():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
             assert not pg.is_visible("#sel-card")
             # no selection: only the hint; the table appears once the molecule is selected
             assert pg.is_visible("#prop-card") and "Seleziona una molecola" in pg.inner_text("#prop-body") and pg.locator("#prop-body table").count() == 0
