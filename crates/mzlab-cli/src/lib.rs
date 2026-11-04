@@ -20,8 +20,6 @@ mod convert_report;
 pub mod flow;
 #[cfg(test)]
 mod flow_align_join_tests;
-#[cfg(test)]
-mod flow_iso_grouper_tests;
 mod flow_apply;
 mod flow_base;
 #[cfg(test)]
@@ -66,6 +64,8 @@ mod flow_inclusion;
 #[cfg(test)]
 mod flow_inclusion_tests;
 mod flow_insilico;
+#[cfg(test)]
+mod flow_iso_grouper_tests;
 mod flow_json;
 mod flow_kmd;
 mod flow_level;
