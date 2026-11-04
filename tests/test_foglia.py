@@ -1,4 +1,4 @@
-"""Leaf decoration: only the side-panel hint keeps it (decorative, drawn horizontal, gliding down once just when motion is allowed); the drop area has none and no dead CSS is left."""
+"""Leaf decoration: only the side-panel hint keeps it (decorative, drawn horizontal, gliding down once (and staying) just when motion is allowed); the drop area has none and no dead CSS is left."""
 import re
 from pathlib import Path
 
@@ -21,10 +21,10 @@ def test_drop_area_has_no_leaf():
 def test_animation_only_when_motion_allowed():
     outside = re.sub(r"@media \(prefers-reduced-motion:no-preference\)\{.*?\}\}\n", "", CSS, flags=re.S)
     assert "leaf-fall 9s" not in outside
-    assert "prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) .empty-leaf .leaf{animation:leaf-fall 9s ease-in-out infinite}" in CSS
+    assert "prefers-reduced-motion:no-preference){:root:not([data-a11y-reduce]) .empty-leaf:not(.rest) .leaf{animation:leaf-fall 9s ease-in-out 1 forwards}" in CSS
 
 
-def test_leaf_is_horizontal_and_falls_in_a_loop():
+def test_leaf_is_horizontal_and_falls_once_and_stays():
     m = re.search(r'<svg class="leaf"[^>]*viewBox="0 0 (\d+) (\d+)"', HTML)
     assert m and int(m.group(1)) > 1.4 * int(m.group(2)) and "rotate(" not in re.search(r'<svg class="leaf".*?</svg>', HTML, re.S).group(0)
     kf = re.search(r"@keyframes leaf-fall\{(.*)\}\}", CSS).group(1)
@@ -34,6 +34,16 @@ def test_leaf_is_horizontal_and_falls_in_a_loop():
     ys = [y for _, y, _ in pts]
     assert ys == sorted(ys), "it never climbs back"
     assert not re.search(r"(width|height|top|left|margin)\s*:", kf), "transform/opacity only: no layout shift"
+
+
+def test_leaf_plays_once_and_rests_visible():
+    rule = re.search(r"\.empty-leaf:not\(\.rest\) \.leaf\{animation:([^}]*)\}", CSS).group(1)
+    assert "infinite" not in rule and re.search(r"\s1\s+forwards$", rule), rule
+    last = re.search(r"@keyframes leaf-fall\{.*[,}](\d+%|to)\{([^}]*)\}\}", CSS)
+    assert last.group(1) == "100%" and "opacity:1" in last.group(2), "ends visible at rest"
+    assert "opacity:0" not in re.search(r"@keyframes leaf-fall\{.*\}\}", CSS).group(0).split("12%")[1], "never fades out after landing"
+    barra = (WEB / "barra.js").read_text(encoding="utf-8")
+    assert "played" in barra and "rest" in barra, "a re-render of the same line rests at once"
 
 
 def test_hidden_panel_pauses_the_loop():

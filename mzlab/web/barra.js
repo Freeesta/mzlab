@@ -365,11 +365,15 @@ const BARRA = (() => {
     }
   }
 
-  // Dock or undock #calcdlg
+  // Dock or undock #calcdlg; docked, its field #calcin is the one field of the page and leaves the foldable body (back above the result when undocked)
   function dockCalc(/** @type {boolean} */ inSidebar) {
     const dlg = Q1("#calcdlg");
-    const pnl = Q1("#al-calc-body");
+    const pnl = Q1("#al-calc-body"), box = Q1("#al-find .sb-search-box"), inp = Q1("#calcin");
     if (!dlg || !pnl) return;
+    if (box && inp) {
+      if (inSidebar) { if (inp.parentElement !== box) box.appendChild(inp); }
+      else if (inp.parentElement !== dlg) dlg.insertBefore(inp, Q1("#calcres-wrap"));
+    }
     if (inSidebar) {
       if (dlg.parentElement !== pnl) pnl.appendChild(dlg);
       dlg.classList.add("sb-docked");
@@ -1102,9 +1106,10 @@ const BARRA = (() => {
 if (typeof window !== "undefined") {
   window.BARRA = BARRA;
   // quiet empty state of the side panels: the leaf of the file list (one drawing, cloned) and one short line
+  const played = new Set();                                  // lines whose leaf already fell: a re-render rests at once
   /** @type {any} */ (window).EMPTYLEAF = (/** @type {string} */ key) => {
     const box = document.createElement("div"), line = document.createElement("span"), leaf = document.querySelector("#fl-hint svg.leaf");
-    box.className = "empty-leaf muted"; line.textContent = I18N.t(key);
+    box.className = played.has(key) ? "empty-leaf muted rest" : "empty-leaf muted"; played.add(key); line.textContent = I18N.t(key);
     if (leaf) box.append(leaf.cloneNode(true));
     box.append(line);
     return box.outerHTML;

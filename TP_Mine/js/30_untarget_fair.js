@@ -47,7 +47,7 @@
     return files;
   }
 
-  const buttons = () => ` <button type="button" id="unt-x-gnps" title="Quantification table + MGF (+ IIN edges) in a .zip for GNPS2 FBMN/IIMN; nothing is sent">GNPS2 (FBMN)</button><button type="button" id="unt-x-sirius" title="SIRIUS 6 .ms file: MS2 (and MS1) of the features. Files only: nothing is sent.">SIRIUS (.ms)</button>`;
+  const buttons = () => ` <button type="button" id="unt-x-gnps" title="Quantification table + MGF (+ IIN edges) in a .zip for GNPS2 FBMN/IIMN">GNPS2 (FBMN)</button><button type="button" id="unt-x-sirius" title="SIRIUS 6 .ms file: MS2 (and MS1) of the features">SIRIUS (.ms)</button>`;
   function bind(dlg, pick) {
     const stem = s => G.UNTX.base(s.table).replace(/^untargeted_/, "");
     dlg.querySelector("#unt-x-gnps").onclick = () => {

@@ -8,7 +8,7 @@ import { cerca } from "./molecole-archivio.js";
 /** @typedef {import("./molecole-archivio.js").Trovata} Trovata */
 /**
  * @typedef {{ label: string, placeholder?: string, none: string, count: (n: number) => string, manage?: string }} TestiCampo
- * @typedef {{ testi: TestiCampo, onScegli: (m: Trovata) => void, limite?: number, ppm?: number, ampia?: boolean, interroga?: (t: string) => Promise<string>, gestisci?: (() => void) | null, valore?: string, etichetta?: (nome: string) => string }} OpzioniCampo
+ * @typedef {{ testi: TestiCampo, onScegli: (m: Trovata) => void, limite?: number, ppm?: number, ampia?: boolean, interroga?: (t: string) => Promise<string>, gestisci?: (() => void) | null, valore?: string, etichetta?: (nome: string) => string, input?: HTMLInputElement, salta?: (t: string) => boolean }} OpzioniCampo
  */
 
 const STYLE_ID = "molc-style";
@@ -23,25 +23,34 @@ const CSS = `.molc{position:relative;display:flex;flex-direction:column;gap:4px;
 .molc .molc-f,.molc .molc-m{color:var(--muted);font-size:.8125rem;white-space:nowrap}
 .molc .molc-man{align-self:flex-start;background:none;border:0;padding:4px 0;min-height:24px;font:inherit;font-size:.8125rem;color:var(--accent);text-decoration:underline;cursor:pointer}
 .molc .molc-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.molc.molc-sul{flex:1;min-width:0;max-width:none}
 @media (pointer:coarse){.molc li{min-height:40px}.molc input{min-height:40px}.molc .molc-man{min-height:40px}}`;
 
 let seq = 0;
 
 /** The elements of the box: label, input, listbox and the status line that the screen readers hear; `-i`, `-b`, `-l` ids tie them with ARIA. */
-function costruisci(/** @type {string} */ id, /** @type {TestiCampo} */ testi) {
+function costruisci(/** @type {string} */ id, /** @type {TestiCampo} */ testi, /** @type {HTMLInputElement | undefined} */ esistente) {
   const el = (/** @type {string} */ tag, /** @type {Record<string, string>} */ attr) => {
     const e = document.createElement(tag);
     for (const k in attr) e.setAttribute(k, attr[k]);
     return e;
   };
   const root = el("div", { class: "molc" });
-  const label = el("label", { id: id + "-l", for: id + "-i" });
-  label.textContent = testi.label;
-  const input = /** @type {HTMLInputElement} */ (el("input", { id: id + "-i", type: "text", role: "combobox", "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": id + "-b", autocomplete: "off", spellcheck: "false" }));
-  if (testi.placeholder) input.placeholder = testi.placeholder;
-  const lista = el("ul", { id: id + "-b", role: "listbox", "aria-labelledby": id + "-l" });
+  const aria = { role: "combobox", "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": id + "-b", autocomplete: "off", spellcheck: "false" };
+  const lista = el("ul", { id: id + "-b", role: "listbox", ...(esistente ? { "aria-label": testi.label } : { "aria-labelledby": id + "-l" }) });
   lista.hidden = true;
   const stato = el("span", { class: "molc-sr", role: "status", "aria-live": "polite" });
+  if (esistente) {                       // an input of the page (already labelled there) becomes the combobox; it keeps its id and its place
+    for (const k in aria) esistente.setAttribute(k, aria[/** @type {keyof typeof aria} */ (k)]);
+    root.classList.add("molc-sul");
+    esistente.replaceWith(root);
+    root.append(esistente, lista, stato);
+    return { root, input: esistente, lista, stato };
+  }
+  const label = el("label", { id: id + "-l", for: id + "-i" });
+  label.textContent = testi.label;
+  const input = /** @type {HTMLInputElement} */ (el("input", { id: id + "-i", type: "text", ...aria }));
+  if (testi.placeholder) input.placeholder = testi.placeholder;
   root.append(label, input, lista, stato);
   return { root, input, lista, stato };
 }
@@ -54,7 +63,7 @@ function costruisci(/** @type {string} */ id, /** @type {TestiCampo} */ testi) {
 export function campo(host, opz) {
   if (!document.getElementById(STYLE_ID)) { const st = document.createElement("style"); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
   const { testi } = opz, id = "molc" + ++seq, etichetta = opz.etichetta || ((/** @type {string} */ n) => n);
-  const { root, input, lista, stato } = costruisci(id, testi);
+  const { root, input, lista, stato } = costruisci(id, testi, opz.input);
   if (opz.valore) input.value = opz.valore;
   if (opz.gestisci !== null && testi.manage) {
     const b = document.createElement("button");
@@ -62,7 +71,7 @@ export function campo(host, opz) {
     b.onclick = opz.gestisci || (() => /** @type {any} */ (window).carica("m:molecole-ui.js").then(() => /** @type {any} */ (window).MOLDB.apri()));
     root.appendChild(b);
   }
-  host.appendChild(root);
+  if (!opz.input) host.appendChild(root);   // an input of the page is replaced in place by `costruisci`
 
   /** @type {Trovata[]} */ let trovate = [];
   let attiva = -1, token = 0;
@@ -102,7 +111,7 @@ export function campo(host, opz) {
   };
   const cercaOra = async () => {
     const mio = ++token, t = input.value.trim();
-    if (t.length < 2) { trovate = []; apre(false); stato.textContent = ""; return; }
+    if (t.length < 2 || (opz.salta && opz.salta(t))) { trovate = []; apre(false); stato.textContent = ""; return; }
     /** @type {Trovata[]} */ let r;
     try { r = await cerca(opz.interroga ? await opz.interroga(t) : t, opz.limite || 8, opz.ppm || 10, !!opz.ampia); } catch (_) { r = []; }
     if (mio !== token) return;

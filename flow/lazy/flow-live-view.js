@@ -21,6 +21,8 @@
     if (s < 60) return Math.round(s) + " s";
     return `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`;
   };
+  /** a step that only waits for the output of an earlier step (not a plan error) */
+  const WAIT = "Waiting for an earlier step to finish";
   const percent = (/** @type {number} */ f) => Math.min(100, Math.max(0, Math.round(f * 100)));
 
   /** the reason of an error or a refusal, in the words of the page @param {any} e */
@@ -36,7 +38,7 @@
     return `${ready === n ? files(n) : `${ready} of ${files(n)}`} ready (${what})`;
   };
 
-  /** the mark, the words and the look (ok, run, warn, bad, idle) of one node or job event; `title` is the full text for the tooltip @param {any} e @returns {{state: string, icon: string, word: string, title: string, tone: string, frac: number | null}} */
+  /** the mark, the words and the look (ok, run, wait, warn, bad, idle) of one node or job event; `title` is the full text for the tooltip @param {any} e @returns {{state: string, icon: string, word: string, title: string, tone: string, frac: number | null}} */
   const look = e => {
     const st = e.state, frac = typeof e.frac === "number" ? e.frac : null, many = (e.di || 0) > 1, files = many ? `${e.parte || 0} of ${e.di} files` : "";
     // `word` is short enough for one line of a card; `title` (tooltip, aria-label) is the whole sentence
@@ -48,14 +50,15 @@
       case "stale": return mk("stale", "Settings changed: press Run", "warn", "Settings changed: runs again on Run");
       case "error": return mk("bad", "This step failed", "bad", why(e) || "This step failed");
       case "refused": return mk("bad", "This step was refused", "bad", why(e) || "This step was refused");
-      case "blocked": return e.blocked_by === "permission.memory" ? mk("lock", "Allow more memory: Run now", "warn", "Large files: allow more memory with Run now")
+      case "blocked": return e.blocked_by === "input.missing" ? mk("hold", "Waiting…", "wait", WAIT)
+        : e.blocked_by === "permission.memory" ? mk("lock", "Allow more memory: Run now", "warn", "Large files: allow more memory with Run now")
         : e.blocked_by === "input.insilico" ? mk("lock", "Needs the candidate structures", "warn", "Download the in-silico candidate package or choose a list of candidate structures, then run again")
         : e.blocked_by === "input.run" ? mk("lock", "Needs a run first", "warn", "Run the plan once in this browser first: the methods are written from the record of its run")
         : e.blocked_by === "platform.computer" ? mk("lock", "Needs the desktop app", "warn", "This step needs the desktop app (high-resolution profile mzML, or centroid parameters set by hand). Use the app.") : mk("lock", "Fix the plan first", "warn", "Fix the plan first (see Issues)");
       case "skipped": return mk("skip", "skipped", "idle");
       case "paused": return mk("pause", "paused", "idle");
       case "cancelled": return mk("skip", "cancelled", "idle");
-      default: return mk("wait", "waiting", "idle");
+      default: return mk("hold", "Waiting…", "wait", WAIT);
     }
   };
 
