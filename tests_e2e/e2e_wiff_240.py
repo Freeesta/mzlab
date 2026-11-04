@@ -1,4 +1,4 @@
-"""240 SCIEX pairs (.wiff + .wiff.scan; 120 EMS+, 120 EMS-) dropped together on the built site with the Rust engine (?motore=rust&lr=1), synthetic (tools/wiff_grande.py; no laboratory data):
+"""240 SCIEX pairs (.wiff + .wiff.scan; 120 EMS+, 120 EMS-) dropped together on the built site with the Rust engine, synthetic (tools/wiff_grande.py; no laboratory data):
 they all load without an error and without reloading the page, the list keeps the order of the names, at most 4 index builders run together, «Cancel» in the middle stops the rest, and the same pairs again are «from cache».
 Small pairs by default (about 2 min). MZLAB_CARICO_DIR=DIR measures a folder of real-size pairs (tools/wiff_grande.py --samples 1 --scans 1200 --points 3333): prints seconds, peak MB of the browser processes and of the page heap, GB of OPFS.
 Needs the site and the .wasm (python tools/build_site.py + wasm, see e2e_wiff.py). Run from the repo root: python3 tests_e2e/e2e_wiff_240.py"""
@@ -64,7 +64,7 @@ try:
         pg = c.pages[0] if c.pages else c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e)))); pg.on("crash", lambda: errs.append(("crash", "page crashed")))
         loads = []; pg.on("load", lambda: loads.append(time.time()))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         cdp = c.new_cdp_session(pg); cdp.send("Performance.enable"); bcdp = cdp
         base = len(loads)
         opfs = lambda: pg.evaluate("navigator.storage.estimate().then(e => e.usage)") / 1e9
@@ -92,7 +92,7 @@ try:
             print(f"   measure: second drop {time.time() - t0:.1f} s")
             assert pg.locator("#flist .cvsum").count() == 0 and pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 24 * (len(SAMPLES) // len(NAMES)), "not all from the cache"
         step("the same pairs again enter without duplicates", again)
-        FRESH = f"http://127.0.0.1:{PORT}/?motore=rust&lr=1&riparti=1"      # an empty storage
+        FRESH = f"http://127.0.0.1:{PORT}/?riparti=1"      # an empty storage
         def reopen():                                   # the page opened again with everything stored: the limit of the reopening grows with the files, so the list comes back
             t0 = time.time(); pg.reload(); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=300000)
             print(f"   measure: reload with {len(SAMPLES)} samples stored {time.time() - t0:.1f} s")

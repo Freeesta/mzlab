@@ -1,4 +1,4 @@
-"""The loading of a SCIEX .wiff + .wiff.scan of realistic size in the browser (synthetic, tools/wiff_grande.py; no laboratory data), on the built site with the Rust engine (?motore=rust&lr=1):
+"""The loading of a SCIEX .wiff + .wiff.scan of realistic size in the browser (synthetic, tools/wiff_grande.py; no laboratory data), on the built site with the Rust engine:
 the bar goes forward only and ends; each sample has its row with the phase, the scans done and the time, and the page never stays still for more than 5 s; at the end each sample keeps
 «Loaded ✓ (n scans, t s)» and the totals by kind; a truncated .wiff.scan says how many scans are missing; «Cancel» stops the files still running and they do not enter the list; a damaged pair leaves an error with «Details» and «Copy diagnosis», whose text carries the
 trace of the loading and no file name. Needs the site and the .wasm (python tools/build_site.py + wasm, see e2e_wiff.py). Run from the repo root: python3 tests_e2e/e2e_wiff_carico.py"""
@@ -46,7 +46,7 @@ try:
         c = b.new_context(locale="en-US", viewport={"width": 1500, "height": 1800}, permissions=["clipboard-read", "clipboard-write"]); c.set_default_timeout(120000)
         pg = c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
 
         pg.set_input_files("#pick", [str(D / "lotto.wiff"), str(D / "lotto.wiff.scan")])
         states, still = follow(pg, lambda s: s["busy"] == 0 and len(s["files"]) == 4)

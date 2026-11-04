@@ -79,6 +79,31 @@ try:
             assert "<table" in h and h.count("<tr>") == n + 1, h[:120]
             attendi(pg, "document.querySelector('.tp-ok').textContent===''", 4000)
         step("Copia: TSV with a header row and N rows, html table too, «Copiato» for 2 s", copy_btn)
+        def csv_btn():
+            with pg.expect_download() as dw: pg.click("[data-f=csv]")
+            d = dw.value; assert d.suggested_filename.endswith("_picchi.csv"), d.suggested_filename
+            raw = open(d.path(), "rb").read(); assert raw[:3] == b"\xef\xbb\xbf", "UTF-8 BOM"
+            L = raw.decode("utf-8-sig").splitlines(); n = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")
+            assert L[0] == "m/z,Intensità,Intensità relativa (%),Δm/z dal precursore,Perdita neutra", L[0]
+            body = [x for x in L[1:] if not x.startswith("#") and not x.startswith('"#')]
+            assert len(body) == n and all(len(x.split(",")) == 5 for x in body), (len(body), n, body[:2])
+            assert max(float(x.split(",")[2]) for x in body) == 100.0 and "E+" in body[0].split(",")[1], body[:2]
+        step("Scarica CSV: BOM, comma, decimal point, same rows as the table, base peak 100", csv_btn)
+        def menu_item():
+            pg.keyboard.press("Escape")
+            pg.evaluate(f"{S2}.el.querySelector('[data-a=dl]').click()"); attendi(pg, "[...document.querySelectorAll('.menu *,[role=menu] *')].some(e=>e.textContent==='Elenco picchi (CSV)')")
+            with pg.expect_download() as dw: pg.click("text=Elenco picchi (CSV)")
+            assert dw.value.suggested_filename.endswith("_picchi.csv")
+            pg.evaluate(f"{S2}.el.querySelector('[data-a=tabp]').click()"); attendi(pg, "!!document.querySelector('.tp-pop')")
+        step("the download menu has «Elenco picchi (CSV)»", menu_item)
+        def zoom_range():
+            n0 = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")
+            pg.evaluate(f"(()=>{{const p={S2};const a=p._a;p.zoom=[a.x0,(a.x0+a.x1)/2];draw(p)}})()"); frames(pg, 3)
+            assert "Intervallo m/z" in pg.inner_text(".tp-facts"), pg.inner_text(".tp-facts")
+            rel = pg.evaluate("[...document.querySelectorAll('.tp-pop tbody tr')].map(t=>+t.children[2].textContent)")
+            assert 0 < len(rel) <= n0 and max(rel) == 100, (len(rel), n0)
+            pg.evaluate(f"(()=>{{const p={S2};p.zoom=null;draw(p)}})()"); frames(pg, 3)
+        step("zoomed: the header gives the m/z range and the base peak of the window is 100", zoom_range)
         def ctrl_c():
             pg.click(".tp-sc"); pg.keyboard.press("Control+A"); pg.keyboard.press("Control+C"); frames(pg, 3)
             t = pg.evaluate("navigator.clipboard.readText()"); n = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")

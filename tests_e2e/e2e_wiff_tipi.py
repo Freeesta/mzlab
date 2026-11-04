@@ -1,5 +1,5 @@
 """The experiment type that the list of the files shows for each sample of a .wiff with mixed experiments (synthetic, tools/wiff_misto.py; no laboratory data), on the built site with the
-Rust engine (?motore=rust&lr=1): every sample has its own type (Full Scan, MS2 or MRM) in the state of the page and in the group of its row, not the one of the first sample or of the method.
+Rust engine: every sample has its own type (Full Scan, MS2 or MRM) in the state of the page and in the group of its row, not the one of the first sample or of the method.
 Needs the site and the .wasm (python tools/build_site.py + wasm, see e2e_wiff.py). Run from the repo root: python3 tests_e2e/e2e_wiff_tipi.py"""
 import json, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -29,7 +29,7 @@ try:
         c = b.new_context(viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000); pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop"); attendi(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange")
         pg.set_input_files("#pick", [str(D / "misto.wiff"), str(D / "misto.wiff.scan")])
         attendi(pg, f"ST.files.length === {len(TRUE)} && ST.files.every(f => f.kind)", timeout=120000)

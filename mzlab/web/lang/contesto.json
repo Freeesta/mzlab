@@ -958,6 +958,8 @@
   "error.drift.tooFewQc": "Messaggio d'errore del motore; {batch} = lotto, {have} = quante ce ne sono, {need} = quante ne servono.",
   "error.evid.points": "Messaggio d'errore del motore; {what} = cosa.",
   "error.export.adduct": "Messaggio d'errore del motore; {adduct} = addotto.",
+  "error.etich.element": "Messaggio d'errore del motore (etichette del disegno); {label} = etichetta dell'atomo in Ketcher.",
+  "error.etich.isotope": "Messaggio d'errore del motore (etichette del disegno); {label} = simbolo dell'atomo con l'isotopo.",
   "error.grafo.delta": "Messaggio d'errore del motore; {delta} = variazione scritta.",
   "error.grafo.delta.neg": "Messaggio d'errore del motore; {element} = elemento.",
   "error.grafo.element": "Messaggio d'errore del motore; {element} = elemento.",
