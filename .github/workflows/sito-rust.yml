@@ -55,10 +55,16 @@ jobs:
     if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # same commands as pages.yml's wasm-core: its records vouch for this build too (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: wasm-core
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the build identity of pages.yml: option_env! in mzlab-core reads it, and a different value would rebuild every crate of the cache below
+      - name: Build identity of the WASM modules (as pages.yml)
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -68,8 +74,9 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: sito-v2-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
-          # the cache of this kind first, then the older single cache, so the first run is not cold
+          # pages.yml saves this build on every push to main (the caches of this workflow, saved once a night, are evicted within the hour)
           restore-keys: |
+            pages-core-${{ runner.os }}-
             sito-v2-core-${{ runner.os }}-
             sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
@@ -118,10 +125,16 @@ jobs:
     if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # same commands as pages.yml's wasm-feat-a: its records vouch for this build too (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: wasm-feat-a
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the build identity of pages.yml: option_env! in mzlab-core reads it, and a different value would rebuild every crate of the cache below
+      - name: Build identity of the WASM modules (as pages.yml)
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -131,8 +144,9 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: sito-v2-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
-          # the cache of this kind first, then the older single cache, so the first run is not cold
+          # pages.yml saves this build on every push to main (the caches of this workflow, saved once a night, are evicted within the hour)
           restore-keys: |
+            pages-feat-a-${{ runner.os }}-
             sito-v2-feat-a-${{ runner.os }}-
             sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
@@ -172,10 +186,16 @@ jobs:
     if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # same commands as pages.yml's wasm-feat-b: its records vouch for this build too (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: wasm-feat-b
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the build identity of pages.yml: option_env! in mzlab-core reads it, and a different value would rebuild every crate of the cache below
+      - name: Build identity of the WASM modules (as pages.yml)
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -185,8 +205,9 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: sito-v2-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
-          # the cache of this kind first, then the older single cache, so the first run is not cold
+          # pages.yml saves this build on every push to main (the caches of this workflow, saved once a night, are evicted within the hour)
           restore-keys: |
+            pages-feat-b-${{ runner.os }}-
             sito-v2-feat-b-${{ runner.os }}-
             sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
