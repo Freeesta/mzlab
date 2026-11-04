@@ -181,7 +181,7 @@ fn preset_lr() -> Preset {
 }
 
 fn algorithms() -> Vec<Algorithm> {
-    vec![masstrace(), centwave(), threshold()]
+    vec![masstrace(), centwave(), adap_localmin(), threshold()]
 }
 
 fn masstrace() -> Algorithm {
@@ -228,6 +228,66 @@ fn centwave() -> Algorithm {
             Param::boolean("broad_peaks", "Broad peaks")
                 .default_bool(false)
                 .doc("Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"),
+        ],
+        status: Status::Available,
+    }
+}
+
+/// The detection of mzmine 3 (`untargeted/`): defaults of `adap_peak::AdapPeak`; `floor`, `min_height` and `min_points` are the common parameters.
+fn adap_localmin() -> Algorithm {
+    Algorithm {
+        id: "adap_localmin",
+        version: 1,
+        title: "ADAP and local minimum",
+        doc: "The detection of mzmine 3: mass detection, ADAP chromatograms, optional Savitzky-Golay smoothing, then the local-minimum resolver. floor is the noise and the group intensity, min_height the highest point and the peak height, min_points the consecutive scans; the trace parameters max_gap, long_trace and merge_overlap do not apply.",
+        references: vec![
+            Reference {
+                doi: "10.1021/acs.analchem.7b00947",
+                citation_key: "myers2017one",
+                note: "ADAP chromatogram builder",
+            },
+            Reference {
+                doi: "10.1038/s41587-023-01690-2",
+                citation_key: "schmid2023integrative",
+                note: "MZmine 3: mass detection and the local-minimum resolver",
+            },
+        ],
+        applicability: Applicability {
+            resolution: vec!["hr"],
+            spectrum_mode: vec!["centroid"],
+            note: "High resolution centroided data, as mzmine expects",
+            ..Applicability::default()
+        },
+        params: vec![
+            Param::number("noise_factor", "Factor of lowest signal")
+                .min(0.0)
+                .default_num(0.0)
+                .doc("A point below this many times the lowest signal of its scan is not taken; 0 = the noise floor"),
+            Param::number("ppm", "m/z tolerance").min(0.0).default_num(5.0).unit("ppm"),
+            Param::number("abs_da", "Absolute m/z tolerance")
+                .min(0.0)
+                .default_num(0.002)
+                .unit("Da")
+                .advanced(),
+            Param::integer("smooth_window", "Smoothing window")
+                .min(0.0)
+                .default_num(0.0)
+                .unit("scans")
+                .doc("Savitzky-Golay window before the minimum search; 0 = no smoothing. Height and area stay those of the raw trace"),
+            Param::number("chrom_threshold", "Chromatographic threshold")
+                .min(0.0)
+                .max(1.0)
+                .default_num(0.85)
+                .advanced(),
+            Param::number("search_rt", "Minimum search range")
+                .min(0.0)
+                .default_num(0.1)
+                .unit("min"),
+            Param::number("min_ratio", "Top/edge ratio").min(0.0).default_num(1.7),
+            Param::pair("duration", "Peak duration", 0.0)
+                .default_pair(0.0, 1.0)
+                .unit("min")
+                .advanced(),
         ],
         status: Status::Available,
     }

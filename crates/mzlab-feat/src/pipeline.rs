@@ -52,7 +52,8 @@ pub fn analyse_with<R: ReadAt>(
 ) -> Result<(FileFeatures, Ms2Links)> {
     let mut f = time("detect: traces", || detect_with(index, p, progress))?;
     let mut multi = time("detect: quality + resolve", || {
-        if s.split {
+        // the local-minimum resolver of `adap_localmin` has already cut the traces
+        if s.split && !matches!(p.peak, crate::centwave::Peak::Adap(_)) {
             Ok(assess_and_resolve(index, &mut f, p, &s.quality, &s.resolve)?.multi)
         } else {
             assess(index, &mut f, p, &s.quality)?;

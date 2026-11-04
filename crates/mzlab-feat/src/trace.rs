@@ -175,6 +175,9 @@ pub fn detect_with<R: ReadAt>(
     p: &Params,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<FileFeatures> {
+    if let Peak::Adap(a) = &p.peak {
+        return adap(index, p, a);
+    }
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(FileFeatures::default());
     };
@@ -187,6 +190,25 @@ pub fn detect_with<R: ReadAt>(
         run_slab(slab, &rt, dt, p, &mut rows)
     })?;
     finish(rows, dt, p.axis, p.merge_overlap)
+}
+
+/// The ADAP route of `adap_localmin` (`untargeted::flow`); a build without the feature `untargeted` refuses the recipe.
+#[cfg(feature = "untargeted")]
+fn adap<R: ReadAt>(
+    index: &mut Index<R>,
+    p: &Params,
+    a: &crate::adap_peak::AdapPeak,
+) -> Result<FileFeatures> {
+    crate::untargeted::flow::detect(index, p, a)
+}
+
+#[cfg(not(feature = "untargeted"))]
+fn adap<R: ReadAt>(
+    _: &mut Index<R>,
+    _: &Params,
+    _: &crate::adap_peak::AdapPeak,
+) -> Result<FileFeatures> {
+    Err(Error::new("error.badRecipe"))
 }
 
 /// `detect_with` for a sample whose blank run `blank` is open in the same batch: with the pointwise blank option of the broad pass on, the traces of

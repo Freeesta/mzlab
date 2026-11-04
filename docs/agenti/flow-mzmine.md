@@ -7,14 +7,15 @@ Tabella di lavoro del Flow grafico (`docs/agenti/flow-grafica.md`). Dice cosa es
 | Raw data import | `import.raw` (file RAW, WIFF, D...) e `convert.mzml` | step |
 | Mass detection: centroid, exact mass | `features.detect` legge i centroidi dell'indice; nessun rilevatore di massa separato | nessuno |
 | Mass detection: local maxima | `untargeted/localmax.rs` (da `LocalMaxMassDetector` 4.10.90), fuori dalla pipeline | motore |
-| Mass detection: wavelet, auto, recursive threshold, factor of lowest signal | nessuna implementazione | nessuno |
+| Mass detection: factor of lowest signal | `features.detect`, algoritmo `adap_localmin`, parametro `noise_factor` (soglia per scansione, `untargeted/pipeline_stream.rs`); 0 = soglia assoluta `floor` | step |
+| Mass detection: wavelet, auto, recursive threshold | nessuna implementazione | nessuno |
 | Scan index per accesso a finestre | `index.mzidx` | step |
-| Chromatogram building (ADAP / ion chromatogram builder) | `features.detect`, algoritmo `masstrace` (HR e LR); ADAP in `untargeted/adap.rs` | step (`masstrace`), motore (ADAP) |
+| Chromatogram building (ADAP / ion chromatogram builder) | `features.detect`, algoritmo `masstrace` (HR e LR) o `adap_localmin` (ADAP di `untargeted/adap.rs`, ponte `untargeted/flow.rs`: `floor`, `min_height`, `min_points` comuni, tolleranza `ppm`/`abs_da`) | step |
 | Feature detection alternativa | `features.detect`: `centwave` (onde Ricker sulle tracce, `centwave.rs`) disponibile; `threshold` | `threshold` previsto |
 | Parametri dai dati | `features.estimate` (rumore, tolleranza m/z, larghezza del picco, tempo morto) | step |
-| Smoothing | `untargeted/smooth.rs` (gaussiana, Savitzky-Golay); LOESS no | motore (SG, gauss), nessuno (LOESS) |
+| Smoothing | Savitzky-Golay in `features.detect` `adap_localmin` (`smooth_window`, 0 = spento; solo la forma su cui cerca i minimi, altezza e area dal grezzo); gaussiana in `untargeted/smooth.rs`; LOESS no | step (SG), motore (gauss), nessuno (LOESS) |
 | Baseline | `untargeted/arpls.rs`, opzionale | motore |
-| Feature resolving: local minimum | taglio di `resolve.rs` dentro `features.detect`; `untargeted/resolve.rs` (da `MinimumSearchFeatureResolver`) | motore |
+| Feature resolving: local minimum | `features.detect` `adap_localmin` (`untargeted/resolve.rs`, da `MinimumSearchFeatureResolver`: `chrom_threshold`, `search_rt`, `min_ratio`, `duration`; il taglio di `resolve.rs` non si applica); con `masstrace` il taglio di `resolve.rs` | step |
 | Feature resolving: ADAP wavelets, Savitzky-Golay, baseline resolver, noise amplitude | nessuna implementazione | nessuno |
 | Deisotoping: isotope grouper | `isotopes.rs` dentro `features.detect` (gruppo isotopico, mai scarta); `untargeted/isotopes.rs` | motore |
 | Deisotoping: isotope finder 4.10 | `untargeted/isofinder.rs` | motore |

@@ -21,7 +21,8 @@ use super::ident::{ident, IdentParams};
 use super::isotopes::{group, IsoParams, Representative};
 use super::join::{align, JoinParams};
 use super::pipeline_stream::{common_mode_params, each_slab, Kept, TraceBuf};
-use super::resolve::{resolve_with_broad, MinParams};
+use super::resolve::{resolve_on, resolve_with_broad, MinParams};
+use super::smooth::{smooth_run, Method};
 use super::table::to_aligned;
 use super::Feature;
 use crate::broad::BroadParams;
@@ -81,6 +82,10 @@ pub struct UntParams {
     pub iso: Option<(IsoParams, IdentParams)>,
     /// Bytes of points the ADAP builder holds at once.
     pub slab_bytes: usize,
+    /// Factor of lowest signal of the mass detection (`pipeline_stream::scan_noise`); 0 = the absolute `adap.noise`. Set by the Flow step only.
+    pub noise_factor: f64,
+    /// Savitzky-Golay window (scans) of the shape the resolver walks on; 0 = the raw trace. Narrow peaks only; set by the Flow step only.
+    pub smooth_window: usize,
 }
 
 impl Default for UntParams {
@@ -103,6 +108,8 @@ impl Default for UntParams {
             },
             iso: Some((IsoParams::default(), IdentParams::default())),
             slab_bytes: SLAB_BYTES,
+            noise_factor: 0.0,
+            smooth_window: 0,
         }
     }
 }
@@ -305,6 +312,16 @@ fn read_iso(v: &Value, p: &mut UntParams) -> Result<()> {
     Ok(())
 }
 
+/// The chromatogram with its intensities smoothed by Savitzky-Golay over its own points (the padded zeros included, as mzmine smooths a feature).
+fn smoothed(c: &AdapChrom, window: usize) -> AdapChrom {
+    let y: Vec<f64> = c.int.iter().map(|&v| f64::from(v)).collect();
+    let s = smooth_run(&y, 0, y.len(), Method::SavitzkyGolay, window);
+    AdapChrom {
+        int: s.iter().map(|&v| v as f32).collect(),
+        ..c.clone()
+    }
+}
+
 /// What the store keeps of a feature: RT, limits and height in `f32`.
 fn stored(mut f: Feature) -> Feature {
     f.rt = f.rt as f32 as f64;
@@ -332,9 +349,16 @@ pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Featu
     let mut out = Vec::new();
     let mut failed = None;
     let mut buf = TraceBuf::new(axis.len());
+    let mut shape = (p.smooth_window > 0 && !p.broad.enabled).then(|| TraceBuf::new(axis.len()));
     let mut resolve_slab = |chroms: Vec<AdapChrom>| {
         for c in &chroms {
             buf.load(c);
+            if let Some(sb) = shape.as_mut() {
+                sb.load(&smoothed(c, p.smooth_window));
+                let fs = resolve_on(&buf.t, &sb.t.y, &axis, &p.resolve);
+                out.extend(fs.iter().map(|f| stored(f.into())));
+                continue;
+            }
             let res = match &p.baseline {
                 Some(b) => {
                     let mut y = b.apply(&axis, &buf.t.y);

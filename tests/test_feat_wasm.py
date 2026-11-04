@@ -60,6 +60,24 @@ def test_wasm_and_native_give_the_same_mzfeat_bytes(built):
         assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
 
 
+ADAP = '{"fill": true, "layers": [{"step": "features.detect", "params": {"algorithm": "adap_localmin", "floor": 10000, "min_height": 30000, "smooth_window": 5, "noise_factor": 1.5}}]}'
+
+
+def test_the_adap_localmin_detection_gives_the_same_bytes_native_and_in_node(built):
+    """The algorithm `adap_localmin` of the Flow step `features.detect` (layers of a Flow run) writes the same `.mzfeatf` of every file and the same
+    `series.mzfeat` in the .wasm as natively, and not those of the default `masstrace`. `series_evid.mzfeat` is left out: the proofs entries of the
+    .wasm read the recipe without its layers (`recipe_from_json`), so a layered recipe gives other proofs there whatever the algorithm."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_adap", "--recipe", ADAP)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_adap", "--recipe", ADAP)
+    _, mt_dir = native(root, idx, "nat_mt", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    assert (nat_dir / "series.mzfeat").read_bytes() != (mt_dir / "series.mzfeat").read_bytes(), "adap_localmin and masstrace give the same table: the test proves nothing"
+
+
 @pytest.mark.parametrize("mode", ["ion", "family"])
 def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
     """The contract of memory: the `.mzfeatf`, the `.mzfeat` and the one with `evid` have the same SHA-256 in memory and under a budget (slabs of m/z,
