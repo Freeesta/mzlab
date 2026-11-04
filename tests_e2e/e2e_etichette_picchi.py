@@ -118,6 +118,28 @@ try:
             step("PDA: two peaks (maxima at 260 and 320 nm), time labels apart", pda)
     finally:
         r2.close()
+    r3 = Run(port=8879, wd="/tmp/wd_etichette_picchi3")
+    try:
+        with sync_playwright() as p:
+            pg = r3.page(p)
+            M = D / "mrm.mzML"; ds.mrm(M, 1.0, np.random.default_rng(3), 1)
+            pg.set_input_files("#pick", [str(M)]); pg.click("text=Carica dati"); ready(pg)
+            MP = "E.panels.find(q=>q.type==='mrm')"; ML = f"({MP}._a.lbls || []).filter(l => l.etpk)"
+            def mrm_off():
+                attendi(pg, f"{MP} && {MP}._a && {MP}._a.sr.length > 0"); frames(pg, 3)
+                assert pg.evaluate(f"{MP}.etpk") is None or pg.evaluate(f"{MP}.etpk") is False
+                assert pg.evaluate(f"ETPK.on({MP}, {MP}._a.sr.length)") is False and pg.evaluate(f"{ML}.length") == 0
+            step("MRM: no peak time labels by default", mrm_off)
+            def mrm_on():
+                pg.evaluate(f"ETPK.toggle({MP})"); attendi(pg, f"{ML}.length >= 1")
+                assert pg.evaluate(f"{MP}.etpk") is True
+            step("MRM: the control turns the labels on", mrm_on)
+            def others():
+                pg.evaluate(f"(() => {{ const p = {MP}; p.etpk = undefined; }})()")
+                assert pg.evaluate("ETPK.on({type:'chrom', kind:'tic'}, 1) && ETPK.on({type:'xic', kind:'xic'}, 1) && !ETPK.on({type:'chrom', kind:'tic'}, 2)")
+            step("chromatogram and XIC defaults unchanged", others)
+    finally:
+        r3.close()
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

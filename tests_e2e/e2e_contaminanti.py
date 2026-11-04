@@ -239,6 +239,14 @@ try:
             assert "Risoluzione unitaria" in pg.evaluate("HELP.liste[1]") and "silossani" in pg.evaluate("HELP.liste[1]")
             # Results table is populated and sorted
             assert pg.locator("#lst-tbody tr").count() > 0
+            import re
+            mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr td:first-child')].map(t=>t.textContent)")
+            assert mzs and all(re.fullmatch(r"\d+\.\d{4}", m) for m in mzs), mzs[:5]      # exact m/z, 4 decimals, never rounded
+            # the whole list is shown, one badge per row, no ESI+/ESI-/All toggle; a long name stays reachable (wraps, full text in the title)
+            pg.fill("#lst-q", ""); pg.wait_for_selector("#lst-tbody tr .pol", timeout=5000)
+            assert pg.locator("#lst-pol-seg").count() == 0
+            bad = pg.evaluate("[...document.querySelectorAll('#lst-tbody td.lst-name')].filter(t=>t.scrollWidth>t.clientWidth+1||!t.title).length")
+            assert bad == 0, bad
             shut(pg, "#listex")
         step("low resolution: context menu search opens nominal ±0.5 Da search", lr_context_menu_search)
 

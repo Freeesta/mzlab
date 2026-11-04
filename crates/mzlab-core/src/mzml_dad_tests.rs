@@ -269,32 +269,61 @@ impl crate::idxread::ReadAt for Counted {
     }
 }
 
-/// The optical routes answer from the matrix alone: the chromatogram list the page-side wrapper used to read first (to throw it away) costs
-/// a full read of the tail of the file, and the answers do not change without it.
+/// The optical routes answer from the matrix alone (the chromatogram list changes nothing), and the matrix is read once per file: once it is held,
+/// a round of the three routes reads only the fingerprints (3 samples of `PROBE` bytes each), not the file again.
 #[test]
-fn optical_routes_do_not_need_the_chromatogram_list() {
-    let bytes = with_array(true);
+fn optical_routes_read_the_matrix_once() {
+    let pad = format!("<!-- {} -->", "x".repeat(1 << 20));
+    let bytes = String::from_utf8(spectra())
+        .unwrap()
+        .replacen("</spectrumList>", &format!("{pad}</spectrumList>"), 1)
+        .into_bytes();
     let size = bytes.len() as u64;
     let run = |with_list: bool| {
         let seen = std::rc::Rc::new(std::cell::Cell::new(0));
         let mut m = Mzml::new(Counted(bytes.clone(), seen.clone()), size);
         if with_list {
-            assert_eq!(m.chromatograms(0).unwrap().len(), 1);
+            m.chromatograms(0).unwrap();
+            seen.set(0);
         }
         let answers = (
             pda_map(&mut m).unwrap(),
             pda_spectrum(&mut m, 0.0, 0.01).unwrap(),
+            pda_spectrum(&mut m, 0.02, 0.02).unwrap(),
             pda_wavelength(&mut m, 200.0, 201.0).unwrap(),
         );
         (answers, seen.get())
     };
-    let ((with_a, with_bytes), (without_a, without_bytes)) = (run(true), run(false));
-    assert_eq!(with_a, without_a);
-    assert_eq!(
-        with_bytes - without_bytes,
-        size,
-        "the list read the whole tail once more"
+    let ((first, _), (again, bytes_again)) = (run(true), run(false));
+    assert_eq!(first, again);
+    assert!(
+        bytes_again <= 4 * 3 * PROBE && bytes_again < size,
+        "{bytes_again} bytes of {size} read again"
     );
+    assert_eq!(
+        first.1,
+        pda_spectrum(&mut mz(spectra()), 0.0, 0.01).unwrap(),
+        "the padding changes nothing"
+    );
+}
+
+/// Another file of the same size (one value changed in the middle) is not answered from the matrix of the first.
+#[test]
+fn memo_tells_files_apart() {
+    let a = spectra();
+    let i = String::from_utf8(a.clone())
+        .unwrap()
+        .rfind("<binary>")
+        .unwrap()
+        + 8
+        + 9; // the exponent of the first value (a byte of its mantissa prints the same)
+    let mut b = a.clone();
+    b[i] = if b[i] == b'A' { b'B' } else { b'A' };
+    let (sa, sb) = (
+        pda_spectrum(&mut mz(a), 0.09, 0.09).unwrap(),
+        pda_spectrum(&mut mz(b), 0.09, 0.09).unwrap(),
+    );
+    assert_ne!(sa, sb);
 }
 
 #[test]
@@ -315,5 +344,71 @@ fn uv_row_time_in_seconds_by_unit_name_or_accession() {
     assert_eq!(
         full("unitAccession=\"UO:0000031\" unitName=\"minute\""),
         Some(30.0)
+    );
+}
+
+/// A double click at time t on the PDA trace asks rt0 == rt1 == t: the row nearest in time, also before the first and after the last row.
+#[test]
+fn a_click_takes_the_nearest_row() {
+    let d = build(
+        (0..5).map(|i| i as f64 * 0.01).collect(),
+        vec![200.0],
+        vec![0.0; 5],
+    )
+    .unwrap();
+    let row = |t: f64| {
+        let j = crate::wiff::dad_uv::dad_spectrum_json(&d, t, t).unwrap_or_default();
+        assert!(j.contains("\"n\":1"), "{j}");
+        j.split("\"rt0\":")
+            .nth(1)
+            .and_then(|r| r.split(',').next())
+            .and_then(|r| r.parse::<f64>().ok())
+            .unwrap_or(f64::NAN)
+    };
+    assert_eq!(row(-1.0), 0.0);
+    assert_eq!(row(0.0149), 0.01);
+    assert_eq!(row(0.0151), 0.02);
+    assert_eq!(row(0.03), 0.03);
+    assert_eq!(row(9.0), 0.04);
+}
+
+/// A file of several read steps: every row reaches the matrix, rows cut by a step boundary included, and the walk reads each byte about once
+/// (not one step per spectrum).
+#[test]
+fn the_walk_reads_each_byte_about_once() {
+    let (nt, nl) = (3000usize, 200usize);
+    let wl = b64(
+        &(0..nl).map(|j| 190.0 + j as f64).collect::<Vec<_>>(),
+        true,
+        false,
+    );
+    let rows: String = (0..nt)
+        .map(|i| {
+            let ab = b64(&(0..nl).map(|j| (i * nl + j) as f64).collect::<Vec<_>>(), true, false);
+            format!("<spectrum index=\"{i}\" id=\"uv={i}\" defaultArrayLength=\"{nl}\"><cvParam accession=\"MS:1000804\" name=\"electromagnetic radiation spectrum\"/><cvParam accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitName=\"second\"/><binaryDataArrayList count=\"2\"><binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"MS:1000617\" name=\"wavelength array\"/><binary>{wl}</binary></binaryDataArray><binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"MS:1000515\" name=\"intensity array\"/><binary>{ab}</binary></binaryDataArray></binaryDataArrayList></spectrum>", i as f64 * 0.4)
+        })
+        .collect();
+    let bytes =
+        format!("<mzML><run><spectrumList count=\"{nt}\">{rows}</spectrumList></run></mzML>")
+            .into_bytes();
+    let size = bytes.len() as u64;
+    assert!(
+        size > 3 * STEP,
+        "{size} bytes: the file must span several steps"
+    );
+    let seen = std::rc::Rc::new(std::cell::Cell::new(0));
+    let d = Mzml::new(Counted(bytes, seen.clone()), size)
+        .dad_spectra()
+        .unwrap()
+        .unwrap();
+    assert_eq!(d.matrix_mau.len(), nt * nl);
+    assert!(
+        d.matrix_mau.iter().enumerate().all(|(k, &v)| v == k as f32),
+        "rows in order, none lost at a boundary"
+    );
+    assert!(
+        seen.get() < size + size / 2,
+        "{} bytes read for {size}",
+        seen.get()
     );
 }

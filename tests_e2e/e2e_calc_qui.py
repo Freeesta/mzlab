@@ -97,8 +97,8 @@ try:
             assert max(t) <= 30, t
         step("search time per keystroke <= 30 ms", timing)
         def apri():
-            pg.evaluate("CALCQUI.apri(214)"); attendi(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#al-q').offsetParent")
-            assert pg.input_value("#al-q") == "214" and pg.evaluate("BARRA.curSub") == "losses"
+            pg.evaluate("CALCQUI.apri(214)"); attendi(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#calcin').offsetParent")
+            assert pg.input_value("#calcin") == "214" and pg.evaluate("BARRA.curSub") == "losses"
             pg.evaluate("BARRA.close(false); setView('draw')"); attendi(pg, "!!document.querySelector('#np-calc2').offsetParent")
             if not pg.is_visible("#calcdlg"): pg.click("#np-calc2")
         step("CALCQUI.apri(214) puts the number in the field of Adducts & losses (Dati view)", apri)
@@ -111,7 +111,7 @@ try:
         # the Adducts panel
         def adducts():
             pg.click("#np-addloss"); attendi(pg, "document.querySelector('#refdlg') && !document.querySelector('#refdlg').hidden || document.querySelector('#sb-panel-adducts') && !document.querySelector('#sb-panel-adducts').hidden")
-            q = pg.query_selector("#al-q")
+            q = pg.query_selector("#calcin")
             assert q
             q.fill("21.98"); frames(pg, 25)
             assert "Na" in pg.inner_text("body")
@@ -119,14 +119,14 @@ try:
         def to_loss():
             pg.click("#reftitle ~ *", timeout=1000) if False else None
             pg.click("#np-addloss") if not pg.evaluate("BARRA.curTab==='addloss'") else None; pg.click("#al-t-losses"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-res')")
-            pg.fill("#al-q", "30"); frames(pg, 25)
+            pg.fill("#calcin", "30"); frames(pg, 25)
             t = pg.inner_text("#sb-panel-losses"); assert "CH2O" in t or "CH₂O" in t, t[:300]
-            assert pg.locator("#al-ctl [data-r]").count() == 0 and pg.get_attribute("#al-ctl .cq-ctl", "data-mode") == "lr" and pg.get_attribute("#alres", "data-mode") == "lr"
+            assert pg.locator("#al-ctl [data-r]").count() == 0 and pg.get_attribute("#al-ctl .cq-ctl", "data-mode") == "lr"
         step("Neutral losses panel: shared groups for 30", to_loss)
         def link():
             pg.click("#al-t-adducts"); frames(pg, 25)
             assert pg.evaluate("!document.querySelector('#sb-panel-adducts').hidden")
-            assert pg.input_value("#al-q") == "30", pg.input_value("#al-q")
+            assert pg.input_value("#calcin") == "30", pg.input_value("#calcin")
         step("one field for the tabs: Perdite -> Addotti keeps the number", link)
         def nolr():
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")

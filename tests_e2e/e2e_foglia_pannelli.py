@@ -16,7 +16,7 @@ KEY = {"lists": "empty.lists", "losses": "empty.losses", "adducts": "empty.adduc
 def show(pg, which):
     if which == "lists":
         pg.click('#stbar [data-cmd="lists"]'); frames(pg, 6)
-        pg.fill("#lst-txt", "zzzzqqqq"); frames(pg, 20)
+        pg.fill("#lst-q", "zzzzqqqq"); frames(pg, 20)
     else:
         pg.click('#stbar [data-cmd="addloss"]'); frames(pg, 6)
         pg.click("#al-t-" + ("losses" if which == "losses" else "adducts")); frames(pg, 4)

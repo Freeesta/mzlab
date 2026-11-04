@@ -12,7 +12,7 @@ pan of the TIC, the spectrum and XIC traces of 3k, 50k and 1M points (served by 
 before and after MREPS XICs (default 1000). Phases per gesture: request (wall time of the `api/` fetches), engine (`X-Py-Ms`), JSON (`Response.json`), rest = drawing.
 `--trace` adds the phases of the opening (engine operations and their times, empty answers, errors, `MZLAB_LR_MISS`, memory) to each case. `--native` also runs `visore_tempi` on the `.mzidx` of the first file of each case; `--g7 DIR` builds the >= 2 GB file in DIR and times the native engine on it.
 Nothing of the product is changed: the hooks wrap global functions of the page (draw, fetch, Response.json, Worker)."""
-import argparse, glob, json, os, platform, shutil, signal, subprocess, sys, tempfile, time
+import argparse, glob, json, os, platform, re, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -100,13 +100,21 @@ def files_of(wd, kind, nscan, npk, nfiles):
     return out
 
 
+def engine_cap():
+    """Engine .wasm cap, read from the pages.yml step this bench mimics (single source of truth)."""
+    m = re.search(r"wasm_opt\.sh\s+\S+\s+(\d+)\s+engine\b", (ROOT / ".github" / "workflows" / "pages.yml").read_text())
+    if not m:
+        raise SystemExit("engine cap not found in .github/workflows/pages.yml")
+    return m.group(1)
+
+
 def build_site(out):
     """The site and the engine as pages.yml builds them (wasm-opt when it can be installed, as tools/wasm_opt.sh)."""
     bm.build_site(out)
     w = out / "static" / "wasm" / "mzlab_wasm_bg.wasm"
     if shutil.which("npm"):
         env = {**os.environ, "RUNNER_TEMP": str(out.parent / "runner_tmp")}
-        subprocess.run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(w), "1884160", "engine"], cwd=ROOT, env=env, check=False)
+        subprocess.run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(w), engine_cap(), "engine"], cwd=ROOT, env=env, check=False)
 
 
 def stats(v):
