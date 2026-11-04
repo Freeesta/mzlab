@@ -7,6 +7,7 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
+import { mountTablet } from "./disegno-tablet.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js";
 import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
@@ -35,6 +36,7 @@ function start() {
     }
     // first-paint.js already started the frame on a direct #/draw address (and may have seen the ready message before this listener existed)
     if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
+    const early = () => { try { mountTablet(/** @type {Document} */ (fr.contentDocument)); } catch (_) { /* not ready */ } }; early(); fr.addEventListener("load", early, { once: true });   // before Ketcher focuses its clipboard textarea
     // a slow first download must not break the editor for good: after the wait the attempt is dropped and the next call (Quick draw, export, the tab) starts it again
     clearTimeout(startTimeout);
     startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
@@ -43,7 +45,7 @@ function start() {
   // the editor stays invisible (.kwait) until hideMacro and the first fit are done: Ketcher's native bars would otherwise show and then jump
   fr.classList.add("kwait");
   starting.finally(() => { clearInterval(kldTimer); }).catch(() => {});
-  starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
+  starting = starting.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
     hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
@@ -312,6 +314,7 @@ async function changed() {
   if (!K) return;
   let ket = "";
   try { ket = await K.getKet(); } catch (_) { return; }
+  { const f = document.activeElement; if (f && f.closest && f.closest("#v-draw aside")) Q("#kframe").scrollIntoView({ block: "start" }); }       // a change made from the cards (Quick draw) on a stacked tablet layout: bring the canvas into view
   drawLabels();                                                          // the labels drawn right at a change can miss the structure Ketcher is still adding (Quick draw, paste): this one runs when it has settled
   try { if (!NB.ket && K.editor.struct().isBlank()) return; } catch (_) { /* no isBlank: save as before */ }       // nothing drawn and nothing saved: no empty notebook entry
   NB.ket = ket; nbSave();
@@ -724,6 +727,7 @@ async function doExport(/** @type {string} */ kind) {
   exwarn("");
   try {
     await start();
+    if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return; }
     if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
@@ -751,13 +755,6 @@ window.TPDraw = { when: async () => { await start(); return true; }, load: async
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
-// "Nuova sessione": the drawing and its controls go back to the start (the notebook was already emptied)
-document.addEventListener("nbreset", () => {
-  clearTimeout(timer);
-  Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-a").checked = false; Q("#lb-dec").value = "0"; Q("#ex-nobg").checked = false; syncBg();
-  Q("#ex-name").value = stamp(); Q("#ex-smi").value = ""; dnote(""); exwarn(""); usedNames.clear();
-  if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; FRAME.next(() => { drawLabels(); showInfo(); }); }
-});
 
 // ------------------------------------------------------------------ label under a molecule: right click = copy the formula or the mass
 // geometry of the labels (same numbers as drawLabels): a box per structure, in the user units of Ketcher's svg

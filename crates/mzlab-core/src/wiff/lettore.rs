@@ -446,6 +446,11 @@ fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
     }
     let Some(e) = e else { return extra };
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
+    if let Some(sg) = super::modi::sigla(e.code) {
+        extra
+            .params
+            .push((super::modi::SCAN_TYPE_PARAM.into(), sg.into()));
+    }
     #[cfg(feature = "estesi")]
     if let Some((acc, name)) = super::estesi::spectrum_term(e.code) {
         extra.params.push((format!("cv:{acc}"), name.to_string()));
