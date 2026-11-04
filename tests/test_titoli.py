@@ -18,6 +18,7 @@ const lang = process.argv[1];
 globalThis.I18N_LANG = lang;
 require(%(web)r + "/i18n.js");
 for (const f of fs.readdirSync(path.join(%(web)r, "lang", lang)).sort()) new Function("I18N", fs.readFileSync(path.join(%(web)r, "lang", lang, f), "utf8"))(globalThis.I18N);
+globalThis.ESP = new Function(fs.readFileSync(%(web)r + "/esperimenti.js", "utf8") + "\\nreturn ESP;")();  // the page loads esperimenti.js before titoli.js
 require(%(titoli)r);
 const cases = JSON.parse(process.argv[2]);
 console.log(JSON.stringify(cases.map(([p, ctx]) => TITOLI.nome(p, ctx))));
