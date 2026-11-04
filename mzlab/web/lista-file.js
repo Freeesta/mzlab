@@ -37,7 +37,7 @@ function soloFile(/** @type {any} */ f0) {
   // the panels area shows before the layout is built, so the panels take its real width (not the estimate of hostWidth)
   syncWork();
   STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind, false, "file");
-  cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
+  cleanupOrphanPanels(); ensureLayout(); ms2Follow(f0); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
 // The three steps of taking one file out: take (hide it), back (undo) and free (release its copy in OPFS and its indexes, only in the browser, when the notice closes without an undo).
 function fileRemoval(/** @type {any} */ f) {

@@ -645,7 +645,7 @@ function bindFileRows() {
       const f0 = E.files[+nm.dataset.k];
       // the first click (nothing shown yet, the work area holds the sample table): only this file, with the starting layout of its type
       if (f0 && !E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) { soloFile(f0); return; }
-      if (f0 && f0.kind !== "mrm") followSpectra(f0);
+      if (f0 && f0.kind !== "mrm") { followSpectra(f0); ms2Follow(f0); }
       // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {
         sibsOf(f0).forEach((/** @type {FileAperto} */ f) => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
