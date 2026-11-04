@@ -18,6 +18,7 @@ I18N.add("en", {
   "draw.quick.label": "Paste a SMILES or search a compound",
   "draw.quick.none": "No compound found",
   "draw.quick.count": "{n} compounds found",
+  "draw.quick.notFound": "Compound not found and not a SMILES",
   "draw.quick.noStructure": "This compound has no structure.",
   "draw.quick.button": "Draw",
   "draw.quick.invalidNone": "Invalid SMILES: no structure was added.",

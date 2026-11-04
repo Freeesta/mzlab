@@ -18,6 +18,7 @@ I18N.add("it", {
   "draw.quick.label": "Incolla uno SMILES o cerca un composto",
   "draw.quick.none": "Nessun composto trovato",
   "draw.quick.count": "{n} composti trovati",
+  "draw.quick.notFound": "Composto non trovato e non è uno SMILES",
   "draw.quick.noStructure": "Questo composto non ha una struttura.",
   "draw.quick.button": "Disegna",
   "draw.quick.invalidNone": "SMILES non valido: non è stata aggiunta nessuna struttura.",
