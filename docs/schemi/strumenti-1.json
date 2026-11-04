@@ -831,7 +831,7 @@
                   {
                     "enum":["averagine","grouper"],
                     "default":"averagine",
-                    "description":"averagine = steps of 13C, 34S, 37Cl, 81Br with ratios natural abundance allows; grouper = the isotope grouper of mzmine (1.0033 Da steps over the charges, no ratio test); no row is removed"
+                    "description":"averagine tests the ratios natural abundance allows; grouper is the isotope grouper of mzmine, with no ratio test"
                   },
                   {
                     "type":"number",
