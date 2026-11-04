@@ -58,9 +58,10 @@ try:
             attendi(pg, f"!!({W} && {W}._a)")
             n0 = pg.evaluate(f"{UVS}.length")
             dbl(pg, W, 3.1)
-            attendi(pg, f"{UVS}.length === {n0 + 1} && {UVS}[{n0}]._a")
-            u = f"{UVS}[{n0}]"
-            assert pg.evaluate(f"{u}.wl") == [254, 254] and pg.evaluate(f"{u}._a.full") == [190, 310]
+            u = f"{UVS}.reduce((a,q)=>q.id>a.id?q:a)"                                     # the newest: a panel opens next to its source, not at the end
+            attendi(pg, f"{UVS}.length === {n0 + 1} && {u}._a")
+            got = pg.evaluate(f"[{u}.wl, {u}._a.full]")
+            assert got == [[254, 254], [190, 310]], got
         step("from the 254 nm trace: the full UV spectrum at that time, with 254 nm marked", from_wl)
         def back_to_wl():
             n0 = pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")
