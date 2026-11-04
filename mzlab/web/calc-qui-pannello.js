@@ -35,7 +35,7 @@
 
   // ---------------------------------------------------------------- the page in the drawer
   const SUBS = ["adducts", "losses", "cont"];
-  const CALC_KEY = () => (typeof NOMI !== "undefined" ? NOMI.KEY("addloss.calc") : "mzlab.addloss.calc");
+  const CALC_KEY = () => (NOMI.KEY("addloss.calc"));
   /** @type {{ q: HTMLInputElement, views: any[], losses: { setQ: (q: string) => void } | null } | null} */
   let page = null;
   const field = () => /** @type {HTMLInputElement | null} */ (Q1("#calcin"));

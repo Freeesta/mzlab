@@ -148,13 +148,13 @@ function modeNote(){hrMixNote();const h=$("#hrnote");if(h)h.hidden=!ST.files.som
 // a file of the table that can be opened (an mzML with no data cannot)
 const usable=(/** @type {FileRiga} */ f)=>f.use&&["full","ms2","mrm","infusion"].includes(f.kind);
 // names of the files that could not be read: mzFinder warns that they are missing from its series
-let UPBUSY=0;const LOADFAIL=window.QQQ_LOADFAIL=new Set();
+let UPBUSY=0;const LOADFAIL=window.MZLAB_LOADFAIL=new Set();
 // hook for a progress bar on the loading screen: loadingStato("phase", 40) shows the phase and 40 % in place of the phrase, loadingStato(null) gives the phrases back
 /** @param {number | null} [pct] */ function loadingStato(/** @type {string | null} */ text,pct){ldMsg=text?{text,pct:pct==null?null:pct}:null;ldRefresh()}
 const IDLE=/** @type {((v?: unknown) => void)[]} */ ([]);
 const idle=()=>UPBUSY>0?new Promise(ok=>IDLE.push(ok)):Promise.resolve();
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
-const sendFile=(/** @type {string} */ url,/** @type {Blob} */ f,/** @type {(loaded: number, total: number) => void} */ onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
+const sendFile=(/** @type {string} */ url,/** @type {Blob} */ f,/** @type {(loaded: number, total: number) => void} */ onp)=>window.MZLAB_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error(I18N.t("err.upload.network")));x.send(f)});
 const DEMO_SETS=/** @type {Record<string, string[]>} */ ({full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].map(t=>`MS2_t${t}.mzML`),mrm:["0.6","2.4","7.2","18"].map(c=>`MRM_std_${c}ppm.mzML`),hrms:[0,5,10,30].map(t=>`HRMS_t${String(t).padStart(3,"0")}.mzML`)});
 (()=>{const d=$("#demo");if(!d)return;
@@ -186,7 +186,7 @@ const WIFF_WAIT=new Map();
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine reads them as they are and each sample (injection) is a file of the list. Gives the files to go on with and the notices [message, name]
 async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res=/** @type {any} */ ({files,errs:[]}),isW=(/** @type {FileCarica} */ f)=>/\.wiff(\.scan)?$/i.test(f.name);
   // the engine exists but cannot convert now (it stopped twice in a minute, or the page and its scripts are of two versions): say so, not «cannot be opened in the browser»
-  if((rb?(rb.disabled||!rb.nativeSamples):window.MZLAB_RUST_ERR&&!window.QQQ_PHONE)&&files.some(isW)){
+  if((rb?(rb.disabled||!rb.nativeSamples):window.MZLAB_RUST_ERR&&!window.MZLAB_PHONE)&&files.some(isW)){
     res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t(rb?"err.file.wiffEngine":"err.file.wiffLoad"),f.name]));return res}
   if(!rb||rb.disabled||!rb.nativeSamples||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=/** @type {(k: string, p?: unknown) => string} */ ((k,p)=>I18N.t(k,p)),dropped=new Set();
@@ -362,7 +362,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   if(piped&&files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");
   const early=piped?(/** @type {FileCarica} */ f,/** @type {any} */ g)=>{if(g)panel=g;if(!keep(f))return;PROGRESSO.begin(f.name,NATIVO.size(f));CONVROWS.add(f.name,"wait",f.mzlabNat?memDesc(f.mzlabNat.members.map(m=>({name:m.name,size:m.blob.size}))):"");CONVROWS.base(f.name,0);
     // browser: the engine's pool of workers queues the reads; desktop: one at a time
-    if(window.QQQ_BROWSER)runs.push(one(f));else chain=chain.then(()=>one(f))}:undefined;
+    if(window.MZLAB_BROWSER)runs.push(one(f));else chain=chain.then(()=>one(f))}:undefined;
   files=await moduloToMzml(files,box,rep,early);panel=/** @type {FileCarica[] & { panel?: typeof panel }} */ (files).panel||panel;
   if(piped){dedupeNotice();await Promise.all(runs);await chain;FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep);return}
   if(files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");
@@ -373,7 +373,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // all the files of this loading are in the batch before the first one is read: the total only grows in precision, never goes back
   for(const f of files){PROGRESSO.begin(f.name,NATIVO.size(f));CONVROWS.add(f.name,"wait",f.mzlabNat?memDesc(f.mzlabNat.members.map(m=>({name:m.name,size:m.blob.size}))):"");CONVROWS.base(f.name,0)}
   // in the browser the engine builds the indexes of several files at once (pool of workers)
-  if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
+  if(window.MZLAB_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 // a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load
 function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods()}

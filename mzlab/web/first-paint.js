@@ -6,7 +6,7 @@
 const fp = /** @type {any} */ (window);
 // Dati is the work area from the first paint, except on the address of another view (#/draw, #/flow, …): applyView takes over with the shell
 if (/^#\/(?!data(\/|$))\w/.test(location.hash)) { const vd = document.getElementById("v-data"); if (vd) vd.hidden = true; }
-if (!fp.QQQ_PHONE) {
+if (!fp.MZLAB_PHONE) {
   fp.QQ_FIRST_PAINT = true;
   ["features", "icons-modi", "barra"].forEach(n => document.write('<script src="static/' + n + '.js"><\/script>'));
 }
@@ -17,7 +17,7 @@ if (!fp.QQQ_PHONE) {
 // 3 s and no file is being loaded (event mzlab-index quiet for 3 s), then at an idle moment; skipped with data saving on or when offline.
 // The pointer or focus on "Disegno" (shell.js) calls MZLAB_WARM_KETCHER at once. Not on a smartphone, which has no Disegno.
 // Opening Disegno then finds the bundle in the HTTP cache.
-if (!fp.QQQ_PHONE) {
+if (!fp.MZLAB_PHONE) {
   const base = "static/vendor/ketcher/";
   const QUIET = 3000;
   const fr = /** @type {HTMLIFrameElement | null} */ (document.getElementById("kframe"));

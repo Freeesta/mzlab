@@ -1,7 +1,7 @@
 // Loads mzlab/web/gradiente.js with stubs and prints the right-axis box (margin, title position) of the gradient / pressure overlays as JSON; tests/test_gradiente_margine.py checks it.
 const fs = require("fs"), vm = require("vm"), path = require("path");
 const win = {};
-const ctx = vm.createContext({ window: win, I18N: { t: k => k }, document: { addEventListener() {} } });
+const ctx = vm.createContext({ window: win, NOMI: require("../mzlab/web/nomi.js"), I18N: { t: k => k }, document: { addEventListener() {} } });
 vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "mzlab/web/gradiente.js"), "utf8"), ctx);
 const G = win.GRADIENTE;
 const ASC = 0.8, DESC = 0.2;                                  // title glyph box around its baseline (rotated: the ascent points to the right)

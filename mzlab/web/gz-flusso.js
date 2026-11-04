@@ -37,7 +37,7 @@ export const GZFLUSSO = {
   isGz: (/** @type {string} */ name) => /\.(mzml|mzxml)\.gz$/i.test(name),
   /** the worker of the engine can stream the gzip into OPFS: the site's engine (not the app, which reads the .gz natively) with sync handles */
   stream() {
-    if (FORCE_MEMORY || W.MZLAB_DESKTOP || !W.QQQ_BROWSER) return false;
+    if (FORCE_MEMORY || W.MZLAB_DESKTOP || !W.MZLAB_BROWSER) return false;
     const C = W.CAPACITA;
     return !C || C.ha("opfsSync");
   },

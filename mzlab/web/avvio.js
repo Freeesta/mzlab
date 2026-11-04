@@ -124,7 +124,7 @@ function ldShow(i) {                                              // phrase i (0
   let n = 3; clearInterval(ldDotTimer);
   ldDotTimer = setInterval(() => { n = (n + 1) % 4; /** @type {HTMLElement[]} */ ([...dots.children]).forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
 }
-if (!window.QQQ_PHONE) { ldArmBootTimer(); }
+if (!window.MZLAB_PHONE) { ldArmBootTimer(); }
 window.ldAction = ldAction;
 window.ldFullReset = ldFullReset;
 window.ldArmBootTimer = ldArmBootTimer;

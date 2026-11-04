@@ -15,6 +15,5 @@
   const coarse = !!(/** @type {any} */ (window).matchMedia && matchMedia("(pointer:coarse)").matches);
   const auto = /iPhone|iPod|Android.+Mobile|Windows Phone|Mobile.+Firefox|Opera Mini/i.test(ua) || (coarse && Math.min(screen.width, screen.height) < 500);
   window.MZLAB_PHONE = force === null ? auto : force === "1";
-  window.QQQ_PHONE = window.MZLAB_PHONE; // kept from the old name: backward compatibility
   if (window.MZLAB_PHONE) document.documentElement.classList.add("phone");
 })();

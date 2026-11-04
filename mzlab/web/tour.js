@@ -54,7 +54,7 @@ const PASSI_INIZIALI = [
 const passiVisibili = lista => lista.filter(st => !st.opt || (el => !!el && el.offsetParent !== null && el.getBoundingClientRect().width > 0)(st.target()));
 
 const TOUR = (() => {
-  const STORAGE_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr";
+  const STORAGE_KEY = NOMI.KEY("tour.lr");
 
   const STEPS_CAP1 = [
     {
@@ -586,7 +586,7 @@ const TOUR = (() => {
     get step() { return curStep; },
 
     offri: () => {
-      if (window.QQQ_PHONE) return;
+      if (window.MZLAB_PHONE) return;
       if (window.BANCO && BANCO.on()) return;
       if (window.TPMINE && TPMINE.on) return;
       if (typeof E === "undefined" || !E.files || !E.files.length) return;
@@ -779,7 +779,7 @@ if (typeof window !== "undefined") {
   // «New session» / «Start from scratch»: the invitation is a user datum too, so it comes back with the clean slate
   const hard = window.qqHardReset;
   if (typeof hard === "function") {
-    window.qqHardReset = () => { try { localStorage.removeItem(typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr"); } catch (_) { /* storage blocked: nothing to reset */ } return hard(); };
+    window.qqHardReset = () => { try { localStorage.removeItem(NOMI.KEY("tour.lr")); } catch (_) { /* storage blocked: nothing to reset */ } return hard(); };
   }
 }
 

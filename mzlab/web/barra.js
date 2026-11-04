@@ -992,7 +992,7 @@ const BARRA = (() => {
     if (mark) hintMark();
   }
   function hintShow() {
-    if (document.getElementById("bar-hint") || !inData() || window.QQQ_PHONE) return false;
+    if (document.getElementById("bar-hint") || !inData() || window.MZLAB_PHONE) return false;
     const bar = Q1("#stbar");
     if (!bar || bar.offsetParent === null) return false;
     const el = document.createElement("div");

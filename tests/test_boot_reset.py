@@ -63,7 +63,7 @@ def test_boot_timer_triggers_full_reset_button():
       }}
     }};
 
-    global.window = {{ QQQ_PHONE: false, qqReady: false, I18N: {{ t: (k) => k === 'reset.all.btn' ? 'Full reset' : k }} }};
+    global.window = {{ MZLAB_PHONE: false, qqReady: false, I18N: {{ t: (k) => k === 'reset.all.btn' ? 'Full reset' : k }} }};
     global.I18N = window.I18N;
     global.FRAME = {{ cancel() {{}}, next() {{}} }};
 
@@ -101,7 +101,7 @@ def test_boot_timer_does_not_fire_when_ready_or_cleared():
       getElementById() {{ return null; }},
       createElement() {{ return {{ children: [], style: {{}}, setAttribute() {{}}, appendChild() {{}} }}; }}
     }};
-    global.window = {{ QQQ_PHONE: false, qqReady: false, I18N: {{ t: (k) => k }} }};
+    global.window = {{ MZLAB_PHONE: false, qqReady: false, I18N: {{ t: (k) => k }} }};
     global.I18N = window.I18N;
     global.FRAME = {{ cancel() {{}}, next() {{}} }};
 
@@ -126,7 +126,7 @@ def test_full_reset_execution_calls_run_all():
         }}
       }},
       I18N: {{ t: (k) => k }},
-      QQQ_PHONE: false,
+      MZLAB_PHONE: false,
       qqReady: false
     }};
     global.I18N = window.I18N;

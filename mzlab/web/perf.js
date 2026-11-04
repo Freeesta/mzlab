@@ -97,7 +97,7 @@
   function env() {
     const n = /** @type {any} */ (navigator), c = n.connection || {};
     return [`${n.userAgent}`, I18N.t("perf.env", { sw: screen.width, sh: screen.height, iw: innerWidth, ih: innerHeight, dpr: devicePixelRatio, cores: n.hardwareConcurrency || "?", mem: n.deviceMemory || "?", net: c.effectiveType || "?" }),
-      I18N.t("perf.version", { app: window.APP_NAME || "?", title: document.title }), I18N.t("perf.engine", { engine: I18N.t(window.QQQ_BROWSER ? "perf.engine.browser" : "perf.engine.local") })];
+      I18N.t("perf.version", { app: window.APP_NAME || "?", title: document.title }), I18N.t("perf.engine", { engine: I18N.t(window.MZLAB_BROWSER ? "perf.engine.browser" : "perf.engine.local") })];
   }
   function startLines() {
     const nav = /** @type {any} */ (performance.getEntriesByType("navigation")[0]), o = [];

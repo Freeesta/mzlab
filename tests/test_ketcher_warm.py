@@ -10,7 +10,7 @@ const src = require("fs").readFileSync(process.argv[1], "utf8");
 function make(o) {
   const log = { fetches: [], links: [], idle: 0 }, tm = [], ev = {}; let now = 0;
   const el = () => ({ attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k] ?? null; } });
-  const win = { QQQ_PHONE: !!o.phone, requestIdleCallback: f => { log.idle++; tm.push([now, f]); } };
+  const win = { MZLAB_PHONE: !!o.phone, requestIdleCallback: f => { log.idle++; tm.push([now, f]); } };
   const doc = { getElementById: () => Object.assign(el(), { removeAttribute() {}, contentWindow: {} }), write() {}, createElement: () => el(), head: { appendChild: l => log.links.push(l) },
     };
   const ctx = { window: win, document: doc, location: { hash: o.hash || "", href: "http://x/" }, URL, DOMParser: class { parseFromString() {

@@ -12,7 +12,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 PRE = f"""globalThis.window = globalThis; const store = {{}};
 globalThis.localStorage = {{ getItem: k => (k in store ? store[k] : null), setItem: (k, v) => {{ store[k] = String(v); }} }};
-require({str(WEB / 'livelli-1.js')!r}); const L = require({str(WEB / 'livelli.js')!r});
+globalThis.NOMI = require({str(WEB / 'nomi.js')!r}); require({str(WEB / 'livelli-1.js')!r}); const L = require({str(WEB / 'livelli.js')!r});
 const c = (ent, shared, dprec, name = 'A', ik = 'AAAAAAAAAAAAAA-X', extra = {{}}) => ({{ ent, cos: ent - 0.05, shared, dprec, name, ik, lib: 'LIB', nlib: 30, ...extra }});
 """
 

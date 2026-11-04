@@ -10,7 +10,7 @@ const stdGate = (g, std) => (g.id === "stdscore" && std.ent == null ? { ...g, id
 const suspectFragments = (sp, P, TT) => (sp && !P.tetto && sp.matched > 0 && sp.matched >= (TT.sospetto_frammenti_min ?? 2) ? sp : null);
 const LIVELLI = (() => {
   const D = (typeof window !== "undefined" ? window : globalThis).LIVELLI_DATI;
-  const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("lib.soglie") : "qqq.lib.soglie", ORDER = D.livelli;
+  const KEY = NOMI.KEY("lib.soglie"), ORDER = D.livelli;
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
   // lsObj lives in i18n.js (not loaded under node)
   const read = () => { if (typeof lsObj === "function") return lsObj(KEY); try { const o = JSON.parse(localStorage.getItem(KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
