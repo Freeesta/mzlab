@@ -213,6 +213,6 @@ I18N.add("it", {
   "lib.err.tooLarge": "La libreria supera un limite del formato ({what}).",
   "lib.err.io": "Lettura o scrittura del file della libreria non riuscita.",
   "lib.err.needWasm": "Questa libreria usa il motore veloce, che qui non parte: ricarica la pagina.",
-  "lib.err.restarted": "Il lettore delle librerie si è riavviato: puoi continuare.",
+  "lib.err.restarted": "Il lettore delle librerie si è riavviato.",
   "lib.err.fallback": "Il lettore delle librerie si è fermato di nuovo: ricarica la pagina per usare di nuovo il motore veloce."
 });
