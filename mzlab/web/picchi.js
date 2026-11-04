@@ -326,7 +326,9 @@ async function drawSpec(p, snapped) {
   if (!files.length) return say(I18N.t("spec.isMrm"));
   if (!isDda && p.level === 2 && p.prec != null && p.prec !== "") {          // an MS2 experiment is a precursor: only the files that have it (as the chromatograms)
     const hasPr = (/** @type {Bag} */ f) => !(f.precursors || []).length || f.precursors.some((/** @type {number} */ v) => Math.abs(v - p.prec) < 0.6);
-    const has = files.filter(hasPr), other = has.length ? has : scanFiles(E.files.filter(Boolean)).filter(hasPr).slice(0, 1);      // none of them: the first loaded file that has it
+    // none of them: the first loaded file whose precursors include it (a file with no precursor list, a Full Scan sample, has no MS2 scans to give)
+    const owns = (/** @type {Bag} */ f) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - p.prec) < 0.6);
+    const has = files.filter(hasPr), other = has.length ? has : scanFiles(E.files.filter(Boolean)).filter(owns).slice(0, 1);
     if (!other.length) return say(I18N.t("spec.noPrec", { v: p.prec }));
     files = other;
   }
