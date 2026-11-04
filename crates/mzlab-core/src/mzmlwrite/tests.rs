@@ -156,3 +156,19 @@ fn a_cv_parameter_of_the_file_is_escaped_in_the_header() {
     );
     assert!(head.contains("<userParam name=\"k&lt;\" value=\"v&amp;\"/>"));
 }
+
+/// The collision energy and the dwell an SRM id spells are written whatever readers the build carries: the `thermo` and `waters` readers modules of the
+/// site build mzlab-core without `sciex`, `mzlab-cli convert` with every feature, and both must write the same mzML.
+#[test]
+fn an_srm_id_with_energy_and_dwell_writes_them_in_every_build() {
+    let ch = Chromatogram { index: 0, id: "SRM SIC Q1=364.5 Q3=159 ce=25 dwell=50".into(), kind: ChromKind::Srm, q1: Some(364.5), q3: Some(159.0), unit: "number of detector counts".into(), time: vec![0.5], intensity: vec![3.0] };
+    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "x".into(), ..Default::default() }).unwrap();
+    w.open_spectra(0).unwrap();
+    w.close_spectra().unwrap();
+    w.open_chromatograms(1).unwrap();
+    w.chromatogram(&ch).unwrap();
+    w.close_chromatograms().unwrap();
+    let xml = String::from_utf8(w.finish().unwrap()).unwrap();
+    assert!(xml.contains("<userParam name=\"MS_dwell_time\" value=\"50\"/>"), "{xml}");
+    assert!(xml.contains("name=\"collision energy\" value=\"25\""), "{xml}");
+}
