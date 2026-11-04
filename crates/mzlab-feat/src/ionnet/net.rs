@@ -7,7 +7,7 @@ use super::pairs::Corr;
 use super::{Edge, EdgeKind, Params};
 use crate::table::Aligned;
 
-const C13: f64 = 1.003_354_8;
+const C13: f64 = mzlab_core::elements::C13_STEP;
 /// (step in Da, isotopes the step stands for, steps of 13C it counts as)
 const ISO_STEPS: [(f64, &str, u8); 5] = [
     (C13, "13C", 1),

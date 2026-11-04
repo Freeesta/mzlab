@@ -27,7 +27,7 @@ fn params() -> Vec<Param> {
             .max(2.0)
             .default_num(0.6)
             .unit("fraction")
-            .doc("In each file that detects both rows, the apexes are at most this share of the wider peak apart (CAMERA perfwhm)")
+            .doc("Largest apex distance in the shared files, as a share of the wider peak width (CAMERA perfwhm)")
             .advanced(),
         Param::number("min_corr", "Height correlation")
             .min(-1.0)
