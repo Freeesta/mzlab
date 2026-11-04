@@ -133,7 +133,10 @@ impl Recipe {
         ) + &self
             .rt_range
             .map_or(String::new(), |r| format!("\nrt_range={r:?}"))
-            + &self.join.as_ref().map_or(String::new(), |j| format!("\njoin={j:?}"))
+            + &self
+                .join
+                .as_ref()
+                .map_or(String::new(), |j| format!("\njoin={j:?}"))
             + &self
                 .peak_finder
                 .as_ref()

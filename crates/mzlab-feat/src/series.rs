@@ -164,12 +164,20 @@ pub(crate) fn align_rows(files: &[&FileFeatures], r: &Recipe) -> Result<Aligned>
 }
 
 #[cfg(feature = "untargeted")]
-fn join_table(files: &[&FileFeatures], r: &Recipe, j: &crate::align_mzmine::JoinAlign) -> Result<Aligned> {
+fn join_table(
+    files: &[&FileFeatures],
+    r: &Recipe,
+    j: &crate::align_mzmine::JoinAlign,
+) -> Result<Aligned> {
     crate::untargeted::flow_align::join_table(files, r, j)
 }
 
 #[cfg(not(feature = "untargeted"))]
-fn join_table(_: &[&FileFeatures], _: &Recipe, _: &crate::align_mzmine::JoinAlign) -> Result<Aligned> {
+fn join_table(
+    _: &[&FileFeatures],
+    _: &Recipe,
+    _: &crate::align_mzmine::JoinAlign,
+) -> Result<Aligned> {
     Err(mzlab_core::error::Error::new("error.badRecipe"))
 }
 
