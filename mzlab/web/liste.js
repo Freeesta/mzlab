@@ -565,18 +565,8 @@ const LISTE = (() => {
         <div id="lst-ref-box" style="display:flex;flex-direction:column;gap:6px;flex:1">
         <div class="liste-bar">
           <div class="lb-row">
-            <label><span><i>m/z</i></span> <input type="text" id="lst-mz" value="${EH(state.mz)}" placeholder="${I18N.t("lst.mzPh")}" aria-label="m/z"></label>
+            <label class="lb-grow"><span><i>m/z</i></span> <input type="text" id="lst-q" value="${EH(state.q)}" placeholder="${I18N.t("lst.qPh")}" aria-label="${I18N.t("lst.qPh")}"></label>
             <label id="lst-tol-wrap"${state.mode === "da" ? " hidden" : ""}><span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span> <input type="number" id="lst-tol" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" aria-label="${I18N.t("lst.tolAria")}"></label>
-          </div>
-          <div class="lb-row">
-            <label class="lb-grow"><span>${I18N.t("lst.search")}</span> <input type="text" id="lst-txt" value="${EH(state.text)}" placeholder="${I18N.t("lst.searchPh")}"></label>
-          </div>
-          <div class="lb-row">
-            <span class="seg" id="lst-pol-seg" title="${I18N.t("lst.polFilter")}">
-              <button type="button" data-p="1" class="${state.pol === 1 ? "on" : ""}">ESI+</button>
-              <button type="button" data-p="-1" class="${state.pol === -1 ? "on" : ""}">ESI&minus;</button>
-              <button type="button" data-p="0" class="${state.pol === 0 ? "on" : ""}">${I18N.t("lst.all")}</button>
-            </span>
           </div>
         </div>
 
@@ -600,7 +590,7 @@ const LISTE = (() => {
           <table class="lct" style="width:100%;border-collapse:collapse;font-size:12px">
             <thead>
               <tr style="position:sticky;top:0;background:var(--soft,#f1f5f9);z-index:2">
-                <th class="num" style="width:${state.mode === "da" ? 56 : 84}px"><i>m/z</i>${state.mode === "da" ? "" : " " + I18N.t("lst.th.theo")}</th>
+                <th class="num" style="width:${state.mode === "da" ? 76 : 84}px"><i>m/z</i>${state.mode === "da" ? "" : " " + I18N.t("lst.th.theo")}</th>
                 ${state.mode === "da" ? "" : `<th class="num" style="width:70px">&Delta;</th>`}
                 <th>${I18N.t("lst.col.name")}</th>
                 ${state.mode === "da" ? "" : `<th>${I18N.t("lst.th.series")}</th>`}
@@ -653,20 +643,17 @@ const LISTE = (() => {
 
     // Initial state of controls
     const /** @type {Bag} */ state = {
-      mz: opt.mz != null ? String(opt.mz) : "",
+      q: opt.mz != null ? String(opt.mz) : "",
       mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.TBL_HR ? (TBL_HR() ? "ppm" : "da") : "ppm")),
       tolDa: 0.5,
-      tolPpm: typeof UIP !== "undefined" && UIP.hrPpm ? UIP.hrPpm : 5,
-      text: "",
-      pol: opt.polarity === "positive" || opt.polarity === 1 ? 1 : opt.polarity === "negative" || opt.polarity === -1 ? -1 : 0
+      tolPpm: typeof UIP !== "undefined" && UIP.hrPpm ? UIP.hrPpm : 5
     };
 
     container.innerHTML = panelHtml(state);
     setupViewSwitcher(container, opt);
 
-    const elMz = container.querySelector("#lst-mz");
+    const elQ = container.querySelector("#lst-q");
     const elTol = container.querySelector("#lst-tol");
-    const elTxt = container.querySelector("#lst-txt");
     const elTbody = container.querySelector("#lst-tbody");
     const elCount = container.querySelector("#lst-count");
     const elChecks = container.querySelector("#lst-src-checks");
@@ -729,19 +716,21 @@ const LISTE = (() => {
         return;
       }
 
-      const qMz = numIt(state.mz);
-      const hasMz = isFinite(qMz) && qMz > 0;
-      const qTxt = state.text.trim().toLowerCase();
+      // one field: a plain number (comma or dot) ranks by m/z, anything else filters by name, formula, class or source
+      const qRaw = state.q.trim();
+      const hasMz = /^\d+(?:[.,]\d*)?$|^[.,]\d+$/.test(qRaw) && numIt(qRaw) > 0;
+      const qMz = hasMz ? numIt(qRaw) : NaN;
+      const qTxt = hasMz ? "" : qRaw.toLowerCase();
       const isNom = state.mode === "da";
       const tolVal = numIt(state.tol) || (isNom ? 0.5 : 5);
 
       /** @type {Bag[]} */ let items = [];
       if (hasMz) {
-        items = isNom ? findNominal(idx, state.pol, qMz, tolVal) : find(idx, state.pol, qMz, tolVal, false);
+        items = isNom ? findNominal(idx, 0, qMz, tolVal) : find(idx, 0, qMz, tolVal, false);
       } else {
         // Collect all items from active lists for browsing
         const act = activeMap();
-        const pool = arrays(idx, state.pol);
+        const pool = arrays(idx, 0);
         const seen = new Set();
         pool.forEach(arr => {
           arr.forEach((/** @type {Bag} */ it) => {
@@ -771,18 +760,18 @@ const LISTE = (() => {
       elTbody.innerHTML = shown.map(it => {
         const delta = hasMz ? (isNom ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
                                     : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
-        const polBadge = it.pol === 1 ? `<span class="pol pos" style="font-size:10px">ESI+</span>` : it.pol === -1 ? `<span class="pol neg" style="font-size:10px">ESI&minus;</span>` : `<span class="pol both" style="font-size:10px">&plusmn;</span>`;
+        const polBadge = it.pol === 1 ? `<span class="pol pos" title="${I18N.t("lst.pol.pos")}" style="font-size:12px">+</span>` : it.pol === -1 ? `<span class="pol neg" title="${I18N.t("lst.pol.neg")}" style="font-size:12px">&minus;</span>` : `<span class="pol both" title="${I18N.t("lst.pol.both")}" style="font-size:12px">&plusmn;</span>`;
         const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">${I18N.t(it.series.n === 1 ? "lst.unitShort.one" : "lst.unitShort.many", { n: it.series.n })}</span>` : "";
         if (isNom) return `<tr>
-          <td class="num font-mono"><b>${Math.round(it.mz)}</b></td>
-          <td><b>${EH(it.name)}</b></td>
+          <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
+          <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
           <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
           <td>${polBadge}</td>
         </tr>`;
         return `<tr>
           <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
           <td class="num sm muted">${delta}</td>
-          <td><b>${EH(it.name)}</b></td>
+          <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
           <td>${seriesInfo}</td>
           <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
           <td>${it.formula ? fmtSub(it.formula) : "<span class='muted'>&ndash;</span>"}</td>
@@ -794,22 +783,13 @@ const LISTE = (() => {
     }
 
     // Bind event listeners
-    elMz.oninput = (/** @type {Event} */ e) => { state.mz = /** @type {HTMLInputElement} */ (e.target).value; render(); };
-    elTxt.oninput = (/** @type {Event} */ e) => { state.text = /** @type {HTMLInputElement} */ (e.target).value; render(); };
+    elQ.oninput = (/** @type {Event} */ e) => { state.q = /** @type {HTMLInputElement} */ (e.target).value; render(); };
     elTol.oninput = (/** @type {Event} */ e) => {
       const v = parseFloat(/** @type {HTMLInputElement} */ (e.target).value);
       if (state.mode === "da") state.tolDa = v || 0.5;
       else state.tolPpm = v || 5;
       render();
     };
-
-    container.querySelectorAll("#lst-pol-seg button").forEach((/** @type {HTMLElement} */ b) => {
-      b.onclick = () => {
-        state.pol = Number(b.dataset.p);
-        container.querySelectorAll("#lst-pol-seg button").forEach((/** @type {HTMLElement} */ x) => x.classList.toggle("on", x === b));
-        render();
-      };
-    });
 
     ready().then(() => {
       renderSourceChecks();
