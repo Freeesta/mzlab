@@ -213,6 +213,6 @@ I18N.add("en", {
   "lib.err.tooLarge": "The library exceeds a limit of the format ({what}).",
   "lib.err.io": "Reading or writing the library file failed.",
   "lib.err.needWasm": "This library needs the fast engine, which does not start here: reload the page.",
-  "lib.err.restarted": "The library reader restarted: you can carry on.",
+  "lib.err.restarted": "The library reader restarted.",
   "lib.err.fallback": "The library reader stopped again: reload the page to use the fast engine again."
 });

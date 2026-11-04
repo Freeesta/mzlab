@@ -382,6 +382,53 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
+  # the native release builds of sito-rust.yml's `sito-e2e` (its two slow e2e), with its very commands: only to keep their cache fresh, the site does not use them.
+  # A cache saved once a night is evicted by the next morning (the repository saves far more than its 10 GB a day); one saved here on every Rust change is not.
+  native-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Freeesta/mzlab
+          ref: main
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: python3 tools/ci_toolchain.py
+      - id: rcache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: pages-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          restore-keys: |
+            pages-e2e-${{ runner.os }}-
+            sito-v2-e2e-${{ runner.os }}-
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        if: steps.rcache.outputs.cache-hit != 'true'
+        run: python3 tools/ci_cargo_mtime.py restore
+      - name: Native release builds of the slow e2e (as sito-e2e)
+        if: steps.rcache.outputs.cache-hit != 'true'
+        run: |
+          cargo build -q --release -p mzlab-core --example mzidx
+          cargo build -q --release --locked -p mzlab-cli
+      - name: Record the tree of the cache
+        if: steps.rcache.outputs.cache-hit != 'true'
+        run: |
+          find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
+          python3 tools/ci_cargo_mtime.py record
+      - name: Save the Rust cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+
   assemble:
     needs: [wasm-core, wasm-feat-a, wasm-feat-b, packages]
     runs-on: ubuntu-latest

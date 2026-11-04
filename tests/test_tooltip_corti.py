@@ -21,6 +21,16 @@ BANNED = re.compile("|".join([
     r"non (verdett|giudizi)|not (verdicts?|judg)",
     r"solo sullo schermo|(on )?screen only|mai le aree|never the areas",
 ]), re.I)
+# Cushion sentences: reassurance or generic advice that says nothing about what the thing is or does.
+CUSHION = re.compile("|".join([
+    r"\b(puoi|potrai|potresti)\b|\byou (can|may|could|will be able)\b",
+    r"lascia(re)? (i )?valori predefiniti|keep (the )?default|leave (the )?default|vanno bene così|settings are fine",
+    r"se non (sai|sei sicur|conosci)|if (you are |you.re )?(not sure|unsure|in doubt)",
+    r"non preoccuparti|don.t worry|do not worry",
+    r"consigliamo|si consiglia|consigliat[ao]|we recommend|(is |are )?recommended",
+    r"migliori risultati|risultati migliori|(best|better) results",
+    r"tieni presente|tenere presente|keep in mind|bear in mind|feel free",
+]), re.I)
 ENTRY = re.compile(r'^\s*"([^"]+)":\s*("(?:[^"\\]|\\.)*")\s*,?\s*$')
 
 
@@ -84,4 +94,14 @@ def test_literal_tooltips():
                     v = m.group(1)
                     if len(v) > MAX_LEN or BANNED.search(v):
                         bad.append((f.relative_to(ROOT).as_posix(), n, v[:60]))
+    assert not bad, "\n".join(map(str, bad))
+
+
+def test_no_cushion_sentences():
+    ok, bad = allowed(), []
+    for lang in ("it", "en"):
+        for k, v in catalog(lang).items():
+            m = CUSHION.search(v)
+            if m and k not in ok:
+                bad.append((lang, k, m.group(0)))
     assert not bad, "\n".join(map(str, bad))

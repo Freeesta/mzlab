@@ -72,7 +72,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; piano DEV-a…f) | `docs/agenti/canali-dati.md` (prompt dei DEV: `docs/archivio/prompt-canali/a.md`…`f.md`) |
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/campioni/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
-| tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio), build separata `MZLAB_WASM_SEPARATI` | `docs/agenti/wasm-tetti.md` |
+| tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
 | parità sito ↔ app (funzioni e passi del Flow presenti da una parte sola, operazioni del motore assenti nell'app, test di parità mancanti, prossimi passi) | `docs/studi/parita-browser.md` (formati: `docs/studi/formati-matrice.md`) |
 | potenziale di WebAssembly (profili `opt-level`, SIMD128, binaryen, zlib-rs, thread, memory64, browser minimi; misure e prompt DEV) | `docs/agenti/wasm-potenziale.md` (prompt: `docs/studi/PROMPT_WASM_POTENZIALE/`) |
 | service worker, cache per versione del sito, `sw-manifest.json`, aggiornamenti | `docs/agenti/service-worker.md` |
@@ -92,6 +92,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | misure dei motori | `docs/agenti/misure.md` (misure Rust e dei moduli: `misure-rust.md`; clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
+| tagli della CI già misurati e scartati, tempi dei job Rust | `docs/agenti/ci-tagli.md` |
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | Dependabot, CodeQL, impostazioni di sicurezza da accendere a mano | `docs/agenti/sicurezza.md` |
 | sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`) |
@@ -103,6 +104,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`cancello_rilascio.py`) | `docs/agenti/rilascio.md` |
 | Flow grafico (scheda: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`; copertura di Tabui: `flow-copertura-tabui.md`, `flow-pacchetto-tabui.md`; griglia dei metadati dei campioni: `flow-meta-griglia.md`) |
 | esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `stima_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
+| raggruppamento degli ioni di un composto (`features.group`, `ionnet/1`: correlazione, isotopi, ion identity networking, archi per GNPS; `crates/mzlab-feat/src/ionnet/`) | `docs/agenti/gruppi-ioni.md` |
 | `qc.mass_accuracy` (accuratezza di massa, correzione della tabella, controllo della calibrazione dal tasto destro del TIC `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-massa.md` |
 | usabilità del Flow (modello MSn infusione: grafo dopo la corsa, suggerimenti dei campi, Raw files, nomi, barra, terminale; prompt dei lavori) | `docs/agenti/flow-ux.md` |
 | lanciare la verifica nel container cloud (Chromium, `--setup`, test col sito costruito) | `docs/agenti/ambiente-cloud.md` |

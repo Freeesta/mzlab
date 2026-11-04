@@ -10,7 +10,7 @@ I18N.add("en", {
   "av.elapsed": "{t} elapsed",
   "av.left": "about {t} left",
   "av.beat": "Still working…",
-  "av.stall": "No news for over 30 seconds: keep this tab open; if it does not restart you can cancel and try again.",
+  "av.stall": "No news for over 30 seconds: if it does not restart, cancel and try again.",
   "av.sum": "{done} of {n} done",
   "cart.open": "Open folder",
   "cart.reading": "Reading the folder… {n} files found so far.",
