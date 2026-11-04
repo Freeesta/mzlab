@@ -1,0 +1,4 @@
+# Stress scripts for the site with .wiff files (work in progress)
+Layout: `seq/` (seeded random view sequences), `race/` (bursts of rapid input and loads), `soak/` (long runs, OPFS audit, multi-tab, kill mid-copy). Data paths come from arguments or env vars (`STRESS_WIFF_DIR`, `STRESS_WIFF_POOL`); no data in the repo. Each folder has its own README.
+Known candidate: two tabs opening the same .wiff at once split the samples (`soak/two.py`, `soak/tabs_min.py`).
+Next test family (reported by the owner: empty panels appear at moments not pinned down, and close-and-reopen fixes them): many KEY and CLICK COMBINATIONS on every panel and toolbar (Tab, Shift+Tab, Enter, Space, Escape, arrows, shortcut keys, modifier clicks, double and right clicks) interleaved with extraction, channel switching and tab changes, checking after each step that no panel is empty.
