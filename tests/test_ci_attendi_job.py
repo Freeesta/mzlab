@@ -44,6 +44,38 @@ def test_a_job_not_listed_yet_keeps_waiting():
     assert w.verdict([job("sito-wasm-core", "completed", "success")], NAMES) is None
 
 
+def test_a_job_never_listed_fails_after_a_few_polls():
+    code, polls = run([[job("sito-wasm-core", "completed", "success")]] * (w.MISSING_POLLS + 1))
+    assert (code, polls) == (1, w.MISSING_POLLS - 1)
+
+
+def test_a_rerun_of_the_e2e_alone_counts_the_wasm_jobs_of_the_first_attempt():
+    # filter=latest lists the latest execution of every job across attempts: the .wasm jobs of attempt 1, sito-e2e of attempt 2
+    latest = [job("sito-e2e", "in_progress"), job("sito-wasm-core", "completed", "success"), job("sito-wasm-feat-a", "completed", "success")]
+    assert run([latest]) == (0, 0)
+
+
+def test_the_request_asks_for_the_latest_job_of_each_attempt(monkeypatch):
+    seen = []
+
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"jobs": []}'
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "o/r")
+    monkeypatch.setenv("GITHUB_RUN_ID", "7")
+    monkeypatch.setenv("GITHUB_TOKEN", "t")
+    monkeypatch.setattr(w.urllib.request, "urlopen", lambda req, timeout: seen.append(req.full_url) or Resp())
+    assert w.jobs_of_run() == []
+    assert seen == ["https://api.github.com/repos/o/r/actions/runs/7/jobs?filter=latest&per_page=100"]
+
+
 def test_an_api_error_is_retried():
     calls = iter([OSError("503"), [job(n, "completed", "success") for n in NAMES]])
 
