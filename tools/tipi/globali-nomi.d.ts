@@ -664,6 +664,7 @@ declare var ms2Holders: any;
 declare var ms2Holds: any;
 declare var ms2Near: any;
 declare var ms2OfPeak: any;
+declare var ms2PairFiles: any;
 declare var ms2PairOf: any;
 declare var ms2Rehome: any;
 declare var ms2RowOn: any;

@@ -205,6 +205,8 @@ const ms2PairOf = (/** @type {unknown} */ prec) => E.panels.find((/** @type {Pan
 const ms2RowOn = (/** @type {number | string} */ prec, /** @type {number} */ k) => { const c = ms2PairOf(prec); return !!c && shownFor(c).some((/** @type {MzFile} */ f) => f.k === k && !f.gone); };
 // the MS2 files that hold a precursor
 const ms2Holds = (/** @type {MzFile} */ f, /** @type {unknown} */ prec) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - Number(prec)) < 0.6);
+// an MS2 pair draws only the drawn files (shownFor: ticked, one per never-overlaid type, kept by its rows) that hold its precursor; null for any other panel
+const ms2PairFiles = (/** @type {Pannello} */ p) => p.tab === ESP.ms2 && p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "" ? shownFor(p).filter((/** @type {MzFile} */ f) => !f.gone && ms2Holds(f, p.prec)) : null;
 const ms2Holders = (/** @type {number | string} */ prec) => tabFiles("ms2").filter((/** @type {MzFile} */ f) => ms2Holds(f, prec)).map((/** @type {MzFile} */ f) => f.k);
 // the top MS2 pair over a precursor no visible file holds (cleanupOrphanPanels) moves to the first precursor of the drawn MS2 file that no other pair shows; true when it moved
 function ms2Rehome(/** @type {Pannello} */ c) {
