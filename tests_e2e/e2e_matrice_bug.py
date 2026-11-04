@@ -99,6 +99,31 @@ try:
             assert not any("t30" in x for x in rows), rows
         cell(pg, "many files: a file removed, the profile forgets it", remove)
         cell(pg, "many files: undo, redo", lambda: (pg.keyboard.press("Control+z"), ready(pg), pg.keyboard.press("Control+Shift+z"), ready(pg)))
+        T30 = "E.files.find(f => f.file === 'M_t30.mzML' && !f.gone)"
+        ROW30 = "ST.files.find(f => f.name === 'M_t30.mzML')"
+        def pick_again():
+            assert pg.evaluate(f"!{T30} && {ROW30}.use === false"), pg.evaluate(f"[!!{T30}, {ROW30} && {ROW30}.use]")
+            pg.set_input_files("#pick", [str(F[1])])
+            attendi(pg, f"!!{T30} && {ROW30}.use === true", 30000); loaded(pg); ready(pg)
+        cell(pg, "removed file: its row is unticked and picking it again opens it", pick_again)
+        def pick_freed():
+            k = pg.evaluate(f"{T30}.k"); pg.evaluate(f"removeFile(E.files[{k}])")
+            attendi(pg, f"!{ROW30}", 30000)          # the copy is freed when the undo time is over: the row leaves the table
+            pg.evaluate("soloFile(E.files.find(f => f.file === 'M_t60.mzML'))"); ready(pg)     # a file after the freed one: its index moved
+            pg.set_input_files("#pick", [str(F[1])])
+            attendi(pg, f"!!{T30}", 60000); loaded(pg)
+            pg.evaluate(f"soloFile({T30})"); ready(pg)
+        cell(pg, "freed file: picked again, it is read again and shown (no endless request)", pick_freed)
+        def two_removals():
+            t0 = pg.evaluate("removeFile(E.files.find(f => f.file === 'M_t30.mzML' && !f.gone)), performance.now()")
+            attendi(pg, f"performance.now() > {t0} + 3000", 10000)      # the second removal starts halfway through the 6 s of the first
+            pg.evaluate("removeFile(E.files.find(f => f.file === 'M_Blank_1.mzML' && !f.gone))")
+            attendi(pg, f"!{ROW30}", 30000)          # the first is freed while the second still waits for its undo
+            pg.evaluate("STORIA.annulla()"); ready(pg)
+            assert pg.evaluate("E.files.some(f => f.file === 'M_Blank_1.mzML' && !f.gone) && E.files.every((f, k) => f.k === k)"), pg.evaluate("E.files.map(f => f.k + ':' + f.file + (f.gone ? ':gone' : ''))")
+            pg.evaluate("soloFile(E.files.find(f => f.file === 'M_Blank_1.mzML'))"); ready(pg)
+            pg.set_input_files("#pick", [str(F[1])]); attendi(pg, f"!!{T30}", 60000); loaded(pg); ready(pg)
+        cell(pg, "two removals: the first freed, the undo of the second still brings it back", two_removals)
         cell(pg, "many files: theme dark then light", lambda: (pg.evaluate("document.documentElement.setAttribute('data-theme','dark')"), stat_ok(pg), pg.evaluate("document.documentElement.setAttribute('data-theme','light')")))
         def narrow():
             pg.set_viewport_size({"width": 360, "height": 740}); ready(pg)
