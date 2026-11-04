@@ -57,6 +57,9 @@ fn iso_step(t: &Aligned, p: &Params, a: usize, b: usize) -> Option<(usize, i8, f
 }
 
 /// Isotope edges: each heavy row gets the one light partner with the smallest error; `iso[b]` = 13C steps above the lightest member, `charge` the charge of the step.
+/// The light partner of a heavy row: row, 13C steps, charge, m/z error, Pearson.
+type Light = (usize, usize, i8, f64, f64);
+
 pub fn isotopes(
     t: &Aligned,
     p: &Params,
@@ -64,17 +67,17 @@ pub fn isotopes(
     iso: &mut [u8],
     charge: &mut [i8],
 ) -> Vec<Edge> {
-    let mut light: Vec<Option<(usize, usize, i8, f64, f64)>> = vec![None; t.len()];
+    let mut light: Vec<Option<Light>> = vec![None; t.len()];
     for c in corr {
         let (a, b) = if t.mz[c.a] <= t.mz[c.b] {
             (c.a, c.b)
         } else {
             (c.b, c.a)
         };
-        if let Some((k, z, err)) = iso_step(t, p, a, b) {
-            if light[b].is_none_or(|x| err < x.3) {
-                light[b] = Some((a, k, z, err, c.r));
-            }
+        if let Some((k, z, err)) = iso_step(t, p, a, b)
+            && light[b].is_none_or(|x| err < x.3)
+        {
+            light[b] = Some((a, k, z, err, c.r));
         }
     }
     // rows by m/z: a light partner has its own level before its heavy row

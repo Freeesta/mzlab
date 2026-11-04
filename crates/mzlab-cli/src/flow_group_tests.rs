@@ -32,8 +32,8 @@ fn table() -> Vec<u8> {
     for (mz, rt, c, share) in rows {
         t.mz.push(mz);
         t.rt.push(rt);
-        for f in 0..FILES {
-            let h = 1e5 * levels[c][f] * share;
+        for level in levels[c] {
+            let h = 1e5 * level * share;
             t.area.push(h * 6.0);
             t.height.push(h as f32);
             t.apex_rt.push(rt as f32);
