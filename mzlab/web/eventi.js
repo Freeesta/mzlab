@@ -633,14 +633,15 @@ Q("#calcin").onkeydown = ev => {
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
   if ((ev.key || "").length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
-// the groups under the floating calculator («what can this number be?», calc-qui*.js) follow the field; docked in the Adducts & losses page,
-// «Cerca» hands the result (or the formula) to the page field: a difference goes to the Neutral losses, a formula to the Adducts
+// the groups under the floating calculator («what can this number be?», calc-qui*.js) follow the field; docked in the Adducts & losses page the field is the page's,
+// and «Cerca» only picks the tab: a difference goes to the Neutral losses, a formula to the Adducts
 function calcRun() {
   const t = Q("#calcin").value.trim(), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
   const ex = !t || calcIsExpr(t), docked = calcBox.classList.contains("sb-docked");
   pad.hidden = !ex; res.hidden = !ex;                    // the result well stays (empty) while the field is empty or only unfinished
   if (nlBtn) nlBtn.hidden = true; calcTape();
   if (CALCQUI.calc) CALCQUI.later(CALCQUI.calc);
+  if (CALCQUI.refreshPage) CALCQUI.refreshPage();
   if (!t) { sum.innerHTML = ""; res.textContent = ""; return; }
   if (!ex) {
     if (docked && nlBtn) calcSearch(nlBtn, t, "adducts");
@@ -658,7 +659,7 @@ function calcSearch(/** @type {HTMLElement} */ b, /** @type {string} */ v, /** @
   b.hidden = false;
   b.title = I18N.t("calc.toLosses", { v });
   b.onclick = () => {
-    if (window.BARRA && BARRA.isDataView()) { CALCQUI.cerca(v, sub); return; }
+    if (window.BARRA && BARRA.isDataView()) { CALCQUI.cerca(null, sub); return; }
     calcBox.close();
     CALCQUI.cerca(v, sub || "losses");
   };
