@@ -152,3 +152,15 @@ def test_a_v1_record_is_not_trusted(tmp_path):
     run(repo, "restore")
     assert mtime(repo, "crates/mzlab-core/src/lib.rs") != OLD
     assert not (repo / "target/.mzlab-tree").exists()
+
+
+def test_a_job_with_the_same_build_shares_the_record_it_names(tmp_path):
+    # sito-rust.yml's sito-wasm-core runs the commands of pages.yml's wasm-core and names it in MZLAB_CACHE_JOB
+    repo = make_repo(tmp_path)
+    run(repo, "restore", "wasm-core")
+    compile_crate(repo, "mzlab-core")
+    run(repo, "record", "wasm-core")
+    os.utime(repo / "crates/mzlab-core/src/lib.rs", None)
+    env = {**os.environ, "GITHUB_JOB": "sito-wasm-core", "MZLAB_CACHE_JOB": "wasm-core"}
+    subprocess.run([sys.executable, str(TOOL), "restore"], cwd=repo, check=True, capture_output=True, env=env)
+    assert mtime(repo, "crates/mzlab-core/src/lib.rs") == OLD

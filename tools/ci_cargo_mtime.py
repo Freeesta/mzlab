@@ -1,13 +1,14 @@
 """Makes cargo reuse the `target` folder restored by the CI cache. Cargo decides that a workspace crate is fresh by the mtime of its sources, and a
 checkout gives every file the time of the checkout, so every crate would be compiled again. `restore` gives an old mtime to the tracked files whose
-content equals the one recorded in `target/.mzlab-tree` when the cache was saved (changed or new files keep the checkout time and are rebuilt);
+content equals the one recorded in `target/.mzlab-tree2` when the cache was saved (changed or new files keep the checkout time and are rebuilt);
 `record` writes that file just before the cache is saved, but only for the files whose crate cargo really rebuilt in this run (a fingerprint newer than the
 stamp `restore` leaves): a run that failed before compiling, or restored an older cache, must not vouch for sources its `target` never saw. Without a record
 `restore` does nothing; it writes `record=true|false` to $GITHUB_OUTPUT so test.yml can let a pull request seed a cache that has none.
 The record also names the job that wrote it: a `target` holds only the build variants (profile, target, features) its own job compiles, so a record
-of another job (a restore-key fallback) vouches for sources whose variant here may be stale, and `restore` ignores it. One job builds a crate in
-several variants (native, wasm32, feature families under target/fam/), and a run may compile only some: `record` deletes the fingerprints of the
-variants it did not rebuild for a crate whose sources it newly vouches for, so cargo rebuilds them when a later run needs them."""
+of another job (a restore-key fallback) vouches for sources whose variant here may be stale, and `restore` ignores it. A job that runs the very
+build commands of another job (sito-rust.yml's `sito-wasm-*` and pages.yml's `wasm-*`) names that job in MZLAB_CACHE_JOB and shares its records.
+One job builds a crate in several variants (native, wasm32, feature families under target/fam/), and a run may compile only some: `record` deletes
+the fingerprints of the variants it did not rebuild for a crate whose sources it newly vouches for, so cargo rebuilds them when a later run needs them."""
 import os
 import shutil
 import subprocess
@@ -36,9 +37,13 @@ def read_record() -> dict[str, str]:
     return dict(line.split("\t", 1)[::-1] for line in RECORD.read_text(encoding="utf-8").splitlines())
 
 
+def job() -> str:
+    return os.environ.get("MZLAB_CACHE_JOB") or os.environ.get("GITHUB_JOB", "")
+
+
 def same_job() -> bool:
     written = JOB.read_text(encoding="utf-8") if JOB.is_file() else ""
-    return written == os.environ.get("GITHUB_JOB", "")
+    return written == job()
 
 
 def crate_of(path: str) -> str | None:
@@ -112,7 +117,7 @@ def record() -> int:
                 continue
     RECORD.parent.mkdir(parents=True, exist_ok=True)
     RECORD.write_text("".join(f"{blob}\t{path}\n" for path, blob in out.items()), encoding="utf-8")
-    JOB.write_text(os.environ.get("GITHUB_JOB", ""), encoding="utf-8")
+    JOB.write_text(job(), encoding="utf-8")
     return 0
 
 
