@@ -903,7 +903,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"Time added before and after the retention-time range of each feature when pairing MS2 scans; 0 uses one MS1 cycle of the file"
+                    "description":"Seconds added on each side of the feature RT range to pair MS2 scans, 0 meaning one MS1 cycle."
                   }
                 ]
               }

@@ -288,7 +288,7 @@ pub(super) fn ms2_link() -> Step {
                 .min(0.0)
                 .default_num(0.0)
                 .unit("s")
-                .doc("Time added before and after the retention-time range of each feature when pairing MS2 scans; 0 uses one MS1 cycle of the file")
+                .doc("Seconds added on each side of the feature RT range to pair MS2 scans, 0 meaning one MS1 cycle.")
                 .advanced(),
         ],
         runs_in: feat_runs_in(),
