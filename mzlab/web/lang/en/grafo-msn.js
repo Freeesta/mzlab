@@ -209,7 +209,7 @@ I18N.add("en", {
   "msngrafo.file.open.tip": "A saved graph (.json from the command line or the Flow); dropping it works too",
   "msngrafo.file.title": "Fragmentation graph · {name}",
   "msngrafo.file.close": "Close the graph",
-  "msngrafo.file.ro": "Opened from the file {name} without its raw data: you can read the graph and each ion, but the spectrum of an ion, «Use», the cleavages of a structure and a new calculation of the rules need the raw data file and are off.",
+  "msngrafo.file.ro": "Opened from the file {name} without its raw data: the graph and each ion are readable, but the spectrum of an ion, «Use», the cleavages of a structure and a new calculation of the rules need the raw data file and are off.",
   "msngrafo.file.off": "Needs the raw data file, which is not loaded.",
   "msngrafo.file.nospec": "The spectrum of this ion cannot be opened: the raw data file is not loaded."
 });

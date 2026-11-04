@@ -85,7 +85,7 @@ I18N.add("it", {
   "method.check.diff": "✗ diverso",
   "method.check.na": "non verificabile",
   "method.check.bad": "{n, plural, one {# differenza} other {# differenze}}: controlla di aver caricato il metodo giusto per questo file{another}.",
-  "method.check.another": " (puoi sceglierne un altro)",
+  "method.check.another": "",
   "method.source.title": "Sorgente e composto (.dam)",
   "method.source.on": "acceso",
   "method.source.off": "spento",

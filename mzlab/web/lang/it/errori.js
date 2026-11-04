@@ -47,7 +47,7 @@ I18N.add("it", {
   "err.scan.outside": "scansione fuori dal file",
   "err.scan.noneValid": "nessuna scansione valida",
   "err.request.tooLarge": "Richiesta troppo grande.",
-  "error.engineRestarted": "Il motore Rust si è riavviato: i file sono stati riaperti, puoi continuare.",
+  "error.engineRestarted": "Il motore Rust si è riavviato: i file sono stati riaperti.",
   "error.engineLowered": "Il motore ha finito la memoria. Le fasi finite sono salvate; riparte con meno memoria e i file sono stati riaperti.",
   "error.noSimd": "Questo browser è troppo vecchio per il motore di calcolo (serve WebAssembly SIMD): aggiorna Chrome o Edge alla 91 o successiva, Firefox alla 89 o successiva, Safari alla 16.4 o successiva.",
   "error.engineFallback": "Il motore di calcolo si è fermato di nuovo: ricarica la pagina (i file salvati restano).",
