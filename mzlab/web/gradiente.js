@@ -1,16 +1,11 @@
 // @ts-strict
 // @ts-noany
-// LC gradient (%B) of a file: read from the .dam by the server, or typed / pasted / imported by the student here (a .raw script, a CSV, the course method).
-// mzML files carry no gradient; Thermo .raw files keep it as UTF-16 text of the Chromeleon script (the first ~2 MB are read in the browser, the file is neither
-// opened nor copied). The model is {source, points: [{t, b, flow?, curve?}], run_time?, solvents?}; the server keeps it per file (api/gradient) and the notebook
-// (NB.gradienti), the .mzflow and qqq.gradiente.ultimo remember what the student entered. Classic globals are used as they are (E, J, post, NB, I18N, EH).
-const LAST_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("gradiente.ultimo") : "qqq.gradiente.ultimo";
+// LC gradient (%B) of a file, read-only: from the .dam (the server) or from the file's own method document (metodo/1); nothing can be typed or imported.
+// The model is {source: dam|raw|file, points: [{t, b, flow?, curve?}], run_time?, solvents?}. Classic globals are used as they are (E, J, I18N, EH).
 const cache = new Map();                                     // file name -> model | null (what the server answered)
 const nameOf = (/** @type {FileAperto} */ f) => f.file.split("#")[0];
 /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p);
 
-const lastRead = () => { const o = lsObj(LAST_KEY); return Array.isArray(o.points) ? o : null; };
-const lastWrite = (/** @type {GradModel} */ m) => { try { localStorage.setItem(LAST_KEY, JSON.stringify({ points: m.points, run_time: m.run_time })); } catch (_) { /* not saved */ } };
 
 // The pump program that the file's own method document (metodo/1: .raw, .wiff, .D, Waters) carries, as a gradient model; null when it has fewer than two %B points.
 async function fromMethod(/** @type {FileAperto} */ f) {
@@ -19,97 +14,30 @@ async function fromMethod(/** @type {FileAperto} */ f) {
   const pts = ((lc && lc.gradiente) || []).filter((/** @type {Bag} */ q) => q.t_min != null && q.B_pct != null).map((/** @type {Bag} */ q) => ({ t: +q.t_min, b: +q.B_pct, ...(q.flusso_mL_min != null ? { flow: +q.flusso_mL_min } : {}) }));
   return pts.length > 1 ? { source: "file", points: pts, run_time: lc.durata_min != null ? +lc.durata_min : pts[pts.length - 1].t } : null;
 }
-// The gradient of file f: .dam first (the server), then what was entered; one that the notebook remembers is given back to the server first.
+// The gradient of file f: the .dam first (the server), then the file's own method.
 async function get(/** @type {FileAperto} */ f) {
   const n = nameOf(f);
   if (cache.has(n)) return cache.get(n);
   let g = null;
   try { g = (await J("api/gradient?k=" + f.k)).gradient; } catch (_) { /* no gradient */ }
   if (!g) g = await fromMethod(f);
-  if (!g && NB.gradienti && NB.gradienti[n]) { try { g = (await post("api/gradient", { k: f.k, model: NB.gradienti[n] })).gradient; } catch (_) { /* stays null */ } }
   cache.set(n, g);
-  return g;
-}
-/** @param {FileAperto} f @param {Bag | null} model @param {boolean} [all] */ async function set(f, model, all) {
-  const ks = all ? tabFiles(f.kind).map((/** @type {FileAperto} */ x) => x.k) : [f.k];
-  const g = (await post("api/gradient", { k: f.k, model, all: ks })).gradient;
-  NB.gradienti = NB.gradienti || {};
-  ks.forEach((/** @type {number} */ k) => { const x = E.files[k]; if (!x) return; const n = nameOf(x); cache.delete(n); if (g) NB.gradienti[n] = g; else delete NB.gradienti[n]; });
-  if (g) lastWrite(g);
-  nbSave();
   return g;
 }
 const any = () => [...cache.values()].some(Boolean);
 const forget = () => cache.clear();
 document.addEventListener("nbreset", () => { forget(); });
 
-// ---- the section in the Method window (files without a gradient of their own)
-const SRC = { dam: "grad.src.dam", raw: "grad.src.raw", file: "grad.src.file", manual: "grad.src.manual", csv: "grad.src.csv", course: "grad.src.course" };
-let /** @type {GradRow[]} */ draft = /** @type {any} */ (null);                                            // set by edit() before any use; the table being edited: [{t, b, flow}] as text
-const row = (/** @type {GradRow} */ r, /** @type {number} */ i) => `<tr><td><input data-c="t" data-i="${i}" inputmode="decimal" aria-label="${T("grad.col.time")}" value="${EH(r.t ?? "")}"></td><td><input data-c="b" data-i="${i}" inputmode="decimal" aria-label="% B" value="${EH(r.b ?? "")}"></td><td><input data-c="flow" data-i="${i}" inputmode="decimal" aria-label="${T("grad.col.flow")}" value="${EH(r.flow ?? "")}"></td><td><button type="button" class="bt" data-del="${i}" aria-label="${T("grad.delRow")}" title="${T("grad.delRow")}">&times;</button></td></tr>`;
-const toDraft = (/** @type {GradModel | null} */ g) => (g ? g.points.map((/** @type {GradPt} */ p) => ({ t: p.t, b: p.b, flow: p.flow ?? "" })) : [{ t: 0, b: "", flow: "" }, { t: "", b: "", flow: "" }]);
+// ---- the read-only section in the Method window (files without a gradient in the .dam): the gradient comes only from the file's own metadata
+const SRC = { dam: "grad.src.dam", raw: "grad.src.raw", file: "grad.src.file" };
 
 async function html(/** @type {FileAperto} */ f) {
   const g = await get(f);
-  const last = lastRead();
-  let h = `<section class="msec" id="grad-sec">${g ? `<h4>${T("grad.title")}</h4>` : ""}`;
-  if (g) {
-    h += `<div class="sm" style="margin:0 0 6px">${T((/** @type {Record<string, string>} */ (SRC))[g.source] || "grad.src.manual")}${g.nonlinear ? " · " + T("grad.nonlinear") : ""}</div>`;
-    h += typeof lcHtml === "function" ? lcHtml({ gradient: g.points, run_time: g.run_time }, () => "") : "";
-    h += `<div class="mchips" style="margin-top:6px"><button type="button" class="go" id="grad-edit">${T("grad.edit")}</button> <button type="button" class="go" id="grad-rm">${T("grad.remove")}</button></div>`;
-  }
-  h += `<div class="mchips" style="margin-top:6px"><button type="button" class="go" id="grad-new">${T("grad.insert")}</button> <button type="button" class="go" id="grad-raw">${T("grad.rawImport")}</button> <button type="button" class="go" id="grad-csv">${T("grad.csvImport")}</button> <button type="button" class="go" id="grad-course">${T("grad.course")}</button>${last ? ` <button type="button" class="go" id="grad-last">${T("grad.last")}</button>` : ""}</div>`;
-  h += `<div id="grad-ed" hidden></div><div id="grad-msg" class="sm" role="status" aria-live="polite" style="margin-top:6px"></div></section>`;
-  return h;
-}
-
-// buttons of the section; again() reopens the Method window after a change
-function bind(/** @type {FileAperto} */ f, /** @type {() => void} */ again) {
-  const sec = Q("#grad-sec"); if (!sec) return;
-  const msg = (/** @type {string | undefined} */ t) => { Q("#grad-msg").textContent = t || ""; };
-  const err = (/** @type {Lanciato} */ e) => msg(e.key ? T(e.key, e.params) : e.message);
-  /** @param {Bag | null} model @param {boolean} [all] */ const save = async (model, all) => { try { await set(f, model, all); again(); } catch (e) { err(/** @type {Lanciato} */ (e)); } };
-  /** @param {string} accept @param {(f: File) => Promise<void>} onText @param {boolean} [binary] */ const ask = (accept, onText, binary) => {
-    const inp = document.createElement("input"); inp.type = "file"; inp.accept = accept;
-    inp.onchange = async () => { const fl = /** @type {FileList} */ (inp.files)[0]; if (fl) { try { await onText(fl); } catch (e) { err(/** @type {Lanciato} */ (e)); } } };
-    inp.click();
-  };
-  const parse = async (/** @type {string} */ text, /** @type {string} */ fmt) => (await post("api/gradient_parse", { text, fmt })).gradient;
-  const edit = (/** @type {GradModel | null} */ g) => {                                       // the editable table, pasting from Excel allowed
-    draft = toDraft(g);
-    const ed = Q("#grad-ed"); ed.hidden = false;
-    const paint = () => {
-      ed.innerHTML = `<table class="lct"><tr><th class="num">${T("grad.col.time")}</th><th class="num">% B</th><th class="num">${T("grad.col.flow")}</th><th></th></tr>${draft.map(row).join("")}</table>
-        <div class="mchips" style="margin-top:6px"><button type="button" class="go" id="grad-add">${T("grad.addRow")}</button> <button type="button" class="go" id="grad-ok">${T("grad.apply")}</button> <label><input type="checkbox" id="grad-all"> ${T("grad.applyAll")}</label></div><div class="sm muted" style="margin-top:4px">${T("grad.paste")}</div>`;
-      ed.querySelectorAll("input[data-c]").forEach((/** @type {HTMLInputElement} */ i) => { i.oninput = () => { draft[Number(i.dataset.i)][/** @type {string} */ (i.dataset.c)] = i.value; }; });
-      ed.querySelectorAll("button[data-del]").forEach((/** @type {HTMLElement} */ b) => { b.onclick = () => { draft.splice(Number(b.dataset.del), 1); paint(); }; });
-      Q("#grad-add").onclick = () => { draft.push({ t: "", b: "", flow: "" }); paint(); };
-      Q("#grad-ok").onclick = () => {
-        const pts = draft.filter((/** @type {GradRow} */ r) => String(r.t).trim() !== "" || String(r.b).trim() !== "").map((/** @type {GradRow} */ r) => ({ t: r.t, b: r.b, flow: r.flow === "" ? null : r.flow }));
-        save({ source: "manual", points: pts.map((/** @type {Bag} */ p) => ({ t: String(p.t).replace(",", "."), b: String(p.b).replace(",", "."), flow: p.flow == null ? null : String(p.flow).replace(",", ".") })) }, Q("#grad-all").checked);
-      };
-      // a block copied from Excel: time TAB %B [TAB flow] per line
-      ed.onpaste = async (/** @type {ClipboardEvent} */ e) => {
-        const t = (e.clipboardData || /** @type {any} */ (window).clipboardData).getData("text"); if (!/\n|\t/.test(t.trim())) return;
-        e.preventDefault();
-        try { draft = toDraft(await parse(t, "csv")); paint(); } catch (er) { err(/** @type {Lanciato} */ (er)); }
-      };
-    };
-    paint();
-  };
-  const on = (/** @type {string} */ id, /** @type {() => unknown} */ fn) => { const b = Q(id); if (b) b.onclick = fn; };
-  on("#grad-new", () => edit(null));
-  on("#grad-edit", async () => edit(await get(f)));
-  on("#grad-rm", () => save(null));
-  on("#grad-course", async () => { try { await save(await parse("", "course")); } catch (e) { err(/** @type {Lanciato} */ (e)); } });
-  on("#grad-last", () => { const l = lastRead(); if (l) save({ source: "manual", points: l.points, run_time: l.run_time }); });
-  on("#grad-csv", () => ask(".csv,.txt,.tsv", async (/** @type {File} */ fl) => edit(await parse(await FILESICURI.readText(fl), "csv"))));
-  on("#grad-raw", () => ask(".raw,.RAW", async (/** @type {File} */ fl) => {
-    const buf = await fl.slice(0, 2 * 1024 * 1024).arrayBuffer();
-    const dec = (/** @type {number} */ o) => new TextDecoder("utf-16le").decode(buf.slice(o, o + ((buf.byteLength - o) & ~1)));
-    const pick = [dec(0), dec(1)].map(s => s.replace(/[^\x20-\x7e°µ]+/g, "\n")).sort((a, b) => (b.match(/%B/g) || []).length - (a.match(/%B/g) || []).length)[0].slice(0, 400000);
-    try { edit(await parse(pick, "chromeleon")); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.key === "gradient.err.noScript") msg(T("grad.rawNone")); else throw e; }
-  }));
+  if (!g) return "";
+  let h = `<section class="msec" id="grad-sec"><h4>${T("grad.title")}</h4>`;
+  h += `<div class="sm" style="margin:0 0 6px">${T((/** @type {Record<string, string>} */ (SRC))[g.source] || "grad.src.file")}${g.nonlinear ? " · " + T("grad.nonlinear") : ""}</div>`;
+  h += typeof lcHtml === "function" ? lcHtml({ gradient: g.points, run_time: g.run_time }, () => "") : "";
+  return h + "</section>";
 }
 
 
@@ -247,8 +175,6 @@ function hover(/** @type {Bag} */ p, /** @type {number} */ t, /** @type {number}
 }
 const cursorText = (/** @type {Bag} */ p) => { if (p.overlay === "press") { const c = pressCurves(p)[0], v = c && p.cur != null ? pressAt(c.d, p.cur) : null; return v != null ? " · " + T("press.read.cursor", { p: v.toFixed(0), u: pressUnit([c]) }) : ""; } const r = p.cur != null ? reading(p, p.cur) : null; return r ? " · " + T("grad.read.cursor", { b: /** @type {number} */ (r.bcol != null ? r.bcol : r.b).toFixed(1) }) : ""; };
 
-const exportState = () => (NB.gradienti && Object.keys(NB.gradienti).length ? NB.gradienti : null);
-function importState(/** @type {Bag} */ o) { if (o && typeof o === "object") { NB.gradienti = { ...(NB.gradienti || {}), ...o }; forget(); nbSave(); } }
 
 // the overlays of the chromatogram menu (registry azioni/1): the pressure trace and the gradient over the graph
 if (typeof AZIONI !== "undefined") {
@@ -258,4 +184,4 @@ if (typeof AZIONI !== "undefined") {
   over("press", "ctx.chrom.press", "ctx.chrom.press.aria", c => pressHave(c.p) && !isAnalog(c.p.kind));
   over("grad", "ctx.chrom.grad", "ctx.chrom.grad.aria", c => have(c.p));
 }
-window.GRADIENTE = { pressHave, get, set, html, bind, any, forget, exportState, importState, ensure, have, curve, at, reading, draw, hover, needR, rightLayout, fitTitle, cursorText, colorOf };
+window.GRADIENTE = { pressHave, get, html, any, forget, ensure, have, curve, at, reading, draw, hover, needR, rightLayout, fitTitle, cursorText, colorOf };

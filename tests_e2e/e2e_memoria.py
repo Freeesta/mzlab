@@ -12,7 +12,7 @@ KJ = "document.querySelector('#kframe').contentWindow.ketcher"
 LAB = "(()=>{const g=document.querySelector('#kframe').contentDocument.querySelector('#mzlab-labels');return g?g.childNodes.length:-1})()"
 KEYS = ["mzlab.a11y", "mzlab.banco.info", "mzlab.barra.hr", "mzlab.barra.lato", "mzlab.barra.lr", "mzlab.bianco", "mzlab.comp", "mzlab.contaminanti",
         "mzlab.contaminanti.esclusi", "mzlab.contaminanti.on", "mzlab.convopen", "mzlab.disegno.riquadri", "mzlab.disegno.strumenti", "mzlab.fair", "mzlab.flgrp",
-        "mzlab.gradiente.ultimo", "mzlab.lang", "mzlab.lib.cartella", "mzlab.lib.soglie", "mzlab.liste.attive", "mzlab.lr", "mzlab.mappa", "mzlab.pca",
+        "mzlab.lang", "mzlab.lib.cartella", "mzlab.lib.soglie", "mzlab.liste.attive", "mzlab.lr", "mzlab.mappa", "mzlab.pca",
         "mzlab.picchi", "mzlab.pool", "mzlab.prefs", "mzlab.profilo", "mzlab.qaqc", "mzlab.riferimento", "mzlab.tunit", "mzlab.unopen", "mzlab.upd.last", "mzlab-labels", "mzlab-theme"]
 BAD = ["{", "null", "[]", "123", '"x"', '{"a":1}', "[1,2,3]", "undefined", "x" * 5000]
 r = Run(port=8997, wd="/tmp/wd_memoria")

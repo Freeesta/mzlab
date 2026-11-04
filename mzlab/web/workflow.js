@@ -79,7 +79,6 @@ const WORKFLOW = (() => {
       soglie_libreria: soglieLib,
       contaminanti_esclusi: window.LISTE ? LISTE.exclExport() : null,
       qaqc: window.QAQC ? QAQC.exportState() : null,
-      gradienti: window.GRADIENTE ? GRADIENTE.exportState() : null,       // only what the student entered (the gradient of a .dam or .raw is not stored)
     };
 
     const panels = (typeof E !== "undefined" && E.panels ? E.panels : []).map(p => ({
@@ -234,7 +233,6 @@ const WORKFLOW = (() => {
       LISTE.exclImport(p.contaminanti_esclusi);
     }
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
-    if (p.gradienti && window.GRADIENTE) GRADIENTE.importState(p.gradienti);
     await restoreCampioni(wf, neededFiles, p);
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
     if (Array.isArray(wf.operazioni) && typeof NB !== "undefined") {

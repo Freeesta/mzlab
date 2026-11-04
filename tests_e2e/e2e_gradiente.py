@@ -1,5 +1,5 @@
-"""Gradient and analog traces: the Method window offers the gradient section when the file has none (mzML files never do), the course method and the editor store
-it for the file, the file lists its pressure trace; the answers of api/analog and api/gradient."""
+"""Gradient and analog traces: the Method window has no gradient section (and no way to enter one) for a file without a gradient (mzML files never have one),
+the file lists its pressure trace, the overlays of the TIC; the answers of api/analog and api/gradient."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import numpy as np
@@ -24,31 +24,11 @@ try:
             assert j["unit"] == "bar" and "unit_note" not in j and abs(np.interp(1.0, j["t"], j["y"]) - 278) < 12, j
         step("the file lists its pressure trace, in bar, with no unit note", listed)
         def section():
-            pg.click("#np-method"); pg.wait_for_selector("#grad-sec"); 
-            assert pg.is_visible("#grad-course") and pg.is_visible("#grad-raw") and pg.is_visible("#grad-csv") and pg.is_visible("#grad-new")
+            pg.click("#np-method"); pg.wait_for_selector("#bigdlg[open]")
+            assert not pg.query_selector("#grad-sec") and not pg.query_selector("#grad-new") and not pg.query_selector("#grad-course")
             assert pg.evaluate("(async () => (await GRADIENTE.get(E.files[0])))()") is None
-        step("Method window: gradient section, no gradient yet", section)
-        def course():
-            pg.click("#grad-course"); pg.wait_for_selector("#grad-sec .lct"); ready(pg)
-            g = pg.evaluate("(async () => (await (await fetch('api/gradient?k=0')).json()).gradient)()")
-            assert g["source"] == "course" and [p["b"] for p in g["points"]] == [10, 10, 60, 70, 100, 100, 10, 10], g
-            assert pg.evaluate("Object.keys(NB.gradienti||{}).length") == 1
-            assert pg.evaluate("!!localStorage.getItem('mzlab.gradiente.ultimo')")
-        step("«Metodo del corso» stores the gradient for the file (and the last used)", course)
-        def editor():
-            pg.click("#grad-rm"); pg.wait_for_selector("#grad-new"); ready(pg)
-            assert pg.evaluate("(async () => (await (await fetch('api/gradient?k=0')).json()).gradient)()") is None
-            pg.click("#grad-new"); pg.wait_for_selector("#grad-ok")
-            pg.fill('#grad-ed input[data-c=t][data-i="0"]', "0"); pg.fill('#grad-ed input[data-c=b][data-i="0"]', "5")
-            pg.fill('#grad-ed input[data-c=t][data-i="1"]', "10"); pg.fill('#grad-ed input[data-c=b][data-i="1"]', "95")
-            pg.click("#grad-ok"); pg.wait_for_selector("#grad-sec .lct"); ready(pg)
-            g = pg.evaluate("(async () => (await (await fetch('api/gradient?k=0')).json()).gradient)()")
-            assert g["source"] == "manual" and [(p["t"], p["b"]) for p in g["points"]] == [(0, 5), (10, 95)], g
-        step("the table editor stores a typed gradient; «Togli» removes it", editor)
-        def paste():
-            j = pg.evaluate("(async () => await (await fetch('api/gradient_parse', {method:'POST', body: JSON.stringify({fmt:'csv', text:'0\\t10\\n5,5\\t60\\n'})})).json())()")
-            assert j["gradient"]["points"][1] == {"t": 5.5, "b": 60.0} or j["gradient"]["points"][1]["t"] in (5, 5.5), j
-        step("pasted text from Excel becomes a gradient", paste)
+            assert pg.evaluate("typeof GRADIENTE.set + typeof GRADIENTE.bind") == "undefinedundefined"
+        step("Method window: no gradient section and no way to enter one", section)
         TIC = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic')"
         def ctx_items():
             pg.evaluate(f"(()=>{{const p={TIC};p.el.scrollIntoView({{block:'center'}})}})()"); frames(pg, 3)
@@ -58,11 +38,11 @@ try:
             pg.keyboard.press("Escape"); return labs
         def no_entry():
             pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}"); frames(pg, 2)
-            pg.evaluate("(async () => { await GRADIENTE.set(E.files[0], null); redrawAll(); })()"); ready(pg)
             assert not any("gradiente" in l.lower() for l in ctx_items())
         step("right click on a chromatogram: no gradient entry without a gradient", no_entry)
         def entry():
-            pg.evaluate("(async () => { const g = (await (await fetch('api/gradient_parse', {method:'POST', body: JSON.stringify({fmt:'course'})})).json()).gradient; await GRADIENTE.set(E.files[0], g); })()")
+            # the engine route is still there: a gradient it holds for the file (as a .dam would give) is drawn
+            pg.evaluate("(async () => { await post('api/gradient', {k: 0, model: {source: 'dam', points: [{t:0,b:10},{t:2,b:10},{t:12,b:60},{t:15,b:70},{t:20,b:100},{t:25,b:100},{t:25.1,b:10},{t:30,b:10}]}}); GRADIENTE.forget(); })()")
             pg.evaluate("redrawAll()"); ready(pg)
             labs = ctx_items(); assert any("Mostra il gradiente" in l for l in labs), labs
             pg.evaluate(f"(()=>{{const p={TIC};p.cv.dispatchEvent(new MouseEvent('contextmenu',{{bubbles:true,clientX:300,clientY:300}}))}})()")
@@ -97,8 +77,8 @@ try:
         def saved():
             pg.evaluate("uiSave(true)"); attendi(pg, "!!NB.ui")
             u = pg.evaluate("NB.ui.panels.filter(q=>q.overlay).map(q=>[q.overlay,q.gdelay])"); assert u == [["grad", 1]], u
-            assert pg.evaluate("!!GRADIENTE.exportState()")
-        step("overlay and delay are saved with the session; the gradient goes to the .mzflow", saved)
+            assert pg.evaluate("typeof GRADIENTE.exportState") == "undefined"
+        step("overlay and delay are saved with the session", saved)
         def pdadelay():
             j = pg.evaluate("(async () => (await (await fetch('api/delay?k=0')).json()).delay)()")
             assert j and abs(j["delay"]) < 0.03 and j["peaks"] >= 1, j

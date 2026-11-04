@@ -444,7 +444,6 @@ function lcHtml(lc, row) {
 
 // ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
 async function showMethod(sel) {
-  const again = () => showMethod(sel);
   const f = E.files[E.cur], held = METODO_M.any();      // the Agilent *.m method folders loaded outside any run (metodo-m.js) show here too
   if (!f) return held ? showHeldMethods("") : info(I18N.t("method.none"));
   let m; try { m = await J("api/method?k=" + f.k); } catch (e_) { const e = /** @type {Lanciato} */ (e_); return held ? showHeldMethods(I18N.t("method.error", { message: EH(e.message) })) : info(I18N.t("method.error", { message: EH(e.message) })); }
@@ -483,13 +482,12 @@ async function showMethod(sel) {
     if (lab.lc) h += lcHtml(lab.lc, row);
   }
   const gradHere = !!(lab && lab.lc && lab.lc.gradient && lab.lc.gradient.length > 1);
-  if (!gradHere && window.GRADIENTE) h += await GRADIENTE.html(f);       // no gradient in the .dam: the student can enter one
+  if (!gradHere && window.GRADIENTE) h += await GRADIENTE.html(f);       // no gradient in the .dam: the one of the file's own method, read-only
   if (held) h += await METODO_M.html();
   h += await METODO_DOC.html(f);       // what the file itself says (metodo/1)
   h = h.replace(/m\/z/g, "<i>m/z</i>");   // m/z is always in italics
   const d = Q("#bigdlg"); if (d.open) d.close();
   big(I18N.t("method.dialog.title"), h, () => {
-    if (!gradHere && window.GRADIENTE) GRADIENTE.bind(f, again);
     const sl = Q("#m-sel"); if (sl) sl.onchange = () => showMethod(+sl.value);
     const ld = Q("#m-load"); if (ld) ld.onclick = loadDam;
     METODO_DOC.bind(f);
