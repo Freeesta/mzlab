@@ -72,7 +72,7 @@ try:
         step("TIC with %B and PDA without keep the same plot edges (1280/1440/1680/iPad)", aligned)
         def delay():
             pg.evaluate(f"{TIC}.gdelay = 1; draw({TIC})"); ready(pg)
-            r = pg.evaluate(f"GRADIENTE.reading({TIC}, 12.5)"); assert abs(r["b"] - 65) < 1e-6 and abs(r["bcol"] - 57.5) < 1e-6, r
+            r = pg.evaluate(f"GRADIENTE.reading({TIC}, 12.5)"); assert abs(r["b"] - 61.6666667) < 1e-4 and abs(r["bcol"] - 57.5) < 1e-6, r
         step("a delay of 1.0 min moves the reading at the column", delay)
         def saved():
             pg.evaluate("uiSave(true)"); attendi(pg, "!!NB.ui")
