@@ -43,7 +43,8 @@ def test_the_validation_is_not_vacuous():
 
 def test_the_ten_steps_of_the_chain_in_order():
     assert [s["id"] for s in STEPS] == IDS
-    assert all(s["package"] == "core" and s["version"] == 1 and s["schema"] == "step/1" for s in STEPS)
+    newer = {"table.filter": 2}  # steps whose descriptor moved past version 1 (their old plans are migrated)
+    assert all(s["package"] == "core" and s["version"] == newer.get(s["id"], 1) and s["schema"] == "step/1" for s in STEPS)
 
 
 def test_references_have_the_shape_of_the_study():

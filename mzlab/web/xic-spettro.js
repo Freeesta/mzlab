@@ -179,7 +179,7 @@
     return d;
   }
   /** the limits of the peak that holds RT x on a series, with the detector of the student (Settings «Rilevamento dei picchi») @param {any} s @param {number} x */
-  async function edges(s, x) { return autoEdges(s, x, 0); }
+  async function edges(s, x) { return autoEdges(s, x); }
   /** «apex RT … min · intensity …» for each trace of the file of the spectrum @param {any} p @param {any} xp @param {number} rt */
   async function apexLines(p, xp, rt) {
     const f = specFile(p), a = xp._a; if (!f || !a || !a.sr) return [];

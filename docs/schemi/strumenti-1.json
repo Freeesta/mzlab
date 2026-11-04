@@ -116,7 +116,7 @@
               "structure.reactivity@1",
               "structure.render@1",
               "table.drift@1",
-              "table.filter@1",
+              "table.filter@2",
               "table.kmd@1",
               "table.match@1",
               "table.pca@1",
@@ -217,7 +217,7 @@
               "structure.reactivity@1",
               "structure.render@1",
               "table.drift@1",
-              "table.filter@1",
+              "table.filter@2",
               "table.kmd@1",
               "table.match@1",
               "table.pca@1",
@@ -1934,7 +1934,7 @@
           },
           {
             "properties":{
-              "step":{"const":"table.filter@1"},
+              "step":{"const":"table.filter@2"},
               "name":{
                 "enum":[
                   "min_detected",
@@ -1945,6 +1945,7 @@
                   "blank_quantity",
                   "blank_stat",
                   "blank_scope",
+                  "blank_cells",
                   "blank_subtract",
                   "blank_match",
                   "blank_keep_istd",
@@ -2003,6 +2004,11 @@
                     "enum":["max_feature","each_feature"],
                     "default":"max_feature",
                     "description":"max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"
+                  },
+                  {
+                    "enum":["detected","all"],
+                    "default":"detected",
+                    "description":"detected counts only the blank cells the detection found (a gap-filled or missing blank cell is 0, as in mzmine); all also counts the gap-filled blank cells, the behaviour of version 1"
                   },
                   {
                     "type":"boolean",
@@ -2724,7 +2730,7 @@
                 "structure.reactivity@1",
                 "structure.render@1",
                 "table.drift@1",
-                "table.filter@1",
+                "table.filter@2",
                 "table.kmd@1",
                 "table.match@1",
                 "table.pca@1",

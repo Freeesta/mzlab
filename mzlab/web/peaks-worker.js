@@ -29,11 +29,11 @@ onmessage = async ev => {
       postMessage({ id: m.id, v: peaks });
     } else if (m.op === "auto") {
       const out = new Float64Array(5 * 256);
-      const n = auto_integrate(m.rt, m.y, m.x0, m.x1, m.smooth, m.snr, m.rel, m.scans, m.half || 0, m.slope, out);
+      const n = auto_integrate(m.rt, m.y, m.x0, m.x1, m.smooth, m.snr, out);
       postMessage({ id: m.id, v: Array.from({ length: n }, (_, i) => ({ lo: out[5 * i], hi: out[5 * i + 1], b0: out[5 * i + 2], b1: out[5 * i + 3], area: out[5 * i + 4] })) });
     } else if (m.op === "edges") {
       const out = new Float64Array(2);
-      postMessage({ id: m.id, v: lr_edges(m.rt, m.y, m.at, m.ref, !!m.mrm, m.params, out) ? [out[0], out[1]] : [] });
+      postMessage({ id: m.id, v: lr_edges(m.rt, m.y, m.at, !!m.mrm, m.params, out) ? [out[0], out[1]] : [] });
     } else if (m.op === "labels") {
       const out = new Float64Array(4 * 64);
       const n = label_peaks(m.rt, m.y, m.maxN, m.rel, m.snr, !!m.ends, out);
