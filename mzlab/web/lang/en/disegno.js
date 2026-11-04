@@ -148,6 +148,7 @@ I18N.add("en", {
   "draw.copy.button": "Copy",
   "draw.copy.title": "Copy to the clipboard",
   "draw.copy.done": "Copied",
+  "draw.copy.fail": "Copy failed: select the text",
   "draw.copy.smilesToast": "SMILES copied",
   "draw.examples.title": "Drawing examples",
   "draw.examples.transform.alt": "Transformation scheme: a parent molecule and three products linked by arrows, with the name or TP and the m/z above each structure",
