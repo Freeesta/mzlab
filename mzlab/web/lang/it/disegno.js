@@ -149,6 +149,7 @@ I18N.add("it", {
   "draw.copy.button": "Copia",
   "draw.copy.title": "Copia negli appunti",
   "draw.copy.done": "Copiato",
+  "draw.copy.fail": "Copia non riuscita: seleziona il testo",
   "draw.copy.smilesToast": "SMILES copiato",
   "draw.examples.title": "Esempi di disegno",
   "draw.examples.transform.alt": "Schema di trasformazione: una molecola madre e tre prodotti collegati da frecce, con il nome o TP e l'm/z sopra ogni struttura",

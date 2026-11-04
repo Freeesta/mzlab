@@ -893,6 +893,7 @@
   "err.flow.check": "Messaggio d'errore del motore; {count} = numero, {instance} = nome del passo.",
   "err.flow.format": "Messaggio d'errore del motore; {format} = formato.",
   "err.flow.formula.table": "Messaggio d'errore del motore; {column} = nome della colonna.",
+  "err.flow.group.ion": "Messaggio d'errore del motore; {ion} = nome della specie ionica scritta nel piano (es. [M+Na]+).",
   "err.flow.input": "Messaggio d'errore del motore; {field} = campo.",
   "err.flow.insilico.package": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.flow.insilico.piece": "Messaggio d'errore del motore; {file} = nome del file.",

@@ -186,6 +186,7 @@ I18N.add("en", {
   "err.flow.format": "The flow file has an unknown format: {format}.",
   "err.flow.formula.file": "A file of the table has no MS1 scan to read the formula from.",
   "err.flow.formula.table": "The table has no column “{column}”.",
+  "err.flow.group.ion": "The ion species {ion} is not one the grouping knows for this polarity.",
   "err.flow.inclusion.product": "A product of the list has no formula or no RT.",
   "err.flow.input": "An input of the flow has no “{field}”.",
   "err.flow.input.unknown": "The input named here is not in the flow: check the name.",
