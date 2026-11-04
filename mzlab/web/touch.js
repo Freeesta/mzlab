@@ -9,12 +9,12 @@
 //   long press        = right click (the menu); the barrel button of a pen too
 //   two fingers       = pinch zooms (as Ctrl + wheel). On a graph: sideways pans it (as Shift + drag), up / down scrolls the page. In the editor: both pan the drawing
 //   pen hover         = the hover information (Apple Pencil on the newest iPads)
-//   a pen in range    = palm rejection: touches are ignored for a moment
+//   a pen in range    = palm rejection: touches are ignored while it is down and for a moment after; a pen down also cancels a palm that rested first (no long press for a pen)
 // The keys a touch screen lacks are not needed: the dot on the cursor line of a chromatogram moves it. Everything switches on only when a touch or a pen is really
 // used, so a computer with a mouse does not change at all.
 const TOUCH = (() => {
   const LONG = 550, MOVE = 8, DTAP = 350, PALM = 900;
-  let penAt = 0, seen = false, lastTouch = 0, lastUp = 0, lpFired = false;
+  let penAt = 0, seen = false, lastTouch = 0, lastUp = 0, lpFired = false, menuUp = 0;
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y), mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
   // events are built in the realm of the element that receives them (the editor lives in an iframe)
   const win = el => (el.ownerDocument && el.ownerDocument.defaultView) || window;
@@ -32,6 +32,8 @@ const TOUCH = (() => {
   // hooks.down(ctx)                               a finger / pen went down on it (bring the panel to the front, ...)
   // hooks.hit                                     true: the events go to the element under the finger, not to the surface itself
   // hooks.panDrag                                 true: a sideways pan is a Shift + drag and up / down scrolls the page (the graphs); false: both are wheel events (the editor)
+  // Palm policy: a pen blocks every other pointer while it is down (penAt follows it, so PALM counts from its LAST event), and a pen down drops a touch that came first
+  const penDown = pts => [...pts.values()].some(q => q.pen);
   function engine(doc, hooks) {
     const pts = new Map();                                       // active pointers on a surface: id -> {x, y}
     /** @type {any} */ let G = null, lastTap = { t: 0, x: 0, y: 0, el: null };
@@ -41,22 +43,23 @@ const TOUCH = (() => {
     const tgt = (S, x, y) => (hooks.hit ? doc.elementFromPoint(x, y) || S.el : S.el);
 
     function down(e, S) {
-      if (e.pointerType === "pen") penAt = Date.now();
-      else if (Date.now() - penAt < PALM) { e.preventDefault(); return; }               // palm rejection: the pen is near
+      const pen = e.pointerType === "pen";
+      if (penDown(pts) || (!pen && Date.now() - penAt < PALM)) { e.preventDefault(); return; }      // palm rejection: the pen is down or was just used
+      if (pen) { penAt = Date.now(); dropTouch(); }
       touchMode(); e.preventDefault(); lastTouch = Date.now();
       try { S.el.setPointerCapture(e.pointerId); } catch (_) { /* not capturable: the events still arrive while the pointer is over it */ }
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY, pen });
       if (pts.size === 2) return startTwo(S);
       if (pts.size > 2) return;
       hooks.down && hooks.down(S.ctx);
       mouse("mousemove", tgt(S, e.clientX, e.clientY), e.clientX, e.clientY, { buttons: 0 });                    // the hover information under the finger
       G = { S, id: e.pointerId, mode: "wait", x0: e.clientX, y0: e.clientY };
       if ((e.buttons & 2) === 2) { G.mode = "done"; mouse("contextmenu", tgt(S, e.clientX, e.clientY), e.clientX, e.clientY, { button: 2, buttons: 2 }); return; }      // the barrel button of a pen
-      G.timer = setTimeout(() => { if (G && G.mode === "wait") { G.mode = "long"; navigator.vibrate && navigator.vibrate(15); mouse("contextmenu", tgt(S, G.x0, G.y0), G.x0, G.y0, { button: 2, buttons: 2 }); } }, LONG);   // long press = right click
+      if (!pen) G.timer = setTimeout(() => { if (G && G.mode === "wait") { G.mode = "long"; navigator.vibrate && navigator.vibrate(15); mouse("contextmenu", tgt(S, G.x0, G.y0), G.x0, G.y0, { button: 2, buttons: 2 }); } }, LONG);   // long press = right click
     }
     function move(e) {
       const q = pts.get(e.pointerId); if (!q) return;
-      q.x = e.clientX; q.y = e.clientY;
+      q.x = e.clientX; q.y = e.clientY; if (q.pen) penAt = Date.now();
       if (G && G.two) { if (!G.raf) { const g = G; g.raf = FRAME.next(() => { g.raf = 0; if (G === g) moveTwo(); }); } return; }      // once per frame: both fingers have reported
       if (!G || e.pointerId !== G.id) return;
       if (G.mode === "wait" && Math.hypot(e.clientX - G.x0, e.clientY - G.y0) > MOVE) {
@@ -67,11 +70,12 @@ const TOUCH = (() => {
     }
     function up(e) {
       if (!pts.has(e.pointerId)) return;
-      lastUp = Date.now(); pts.delete(e.pointerId);
+      lastUp = Date.now(); if (pts.get(e.pointerId).pen) penAt = lastUp; pts.delete(e.pointerId);
       if (G && G.two) { if (pts.size < 2) endTwo(); return; }
       if (!G || e.pointerId !== G.id) return;
       const g = G; G = null; clearTimeout(g.timer); const el = g.S.el;
       if (g.mode === "drag") { mouse("mouseup", tgt(g.S, e.clientX, e.clientY), e.clientX, e.clientY); return; }
+      if (g.mode === "long") menuUp = lastUp;                                            // the click that may follow the lift must not close that menu
       if (g.mode !== "wait") return;                                                     // a long press already opened the menu
       const dbl = Date.now() - lastTap.t < DTAP && lastTap.el === el && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 28;
       const t = tgt(g.S, g.x0, g.y0);
@@ -83,6 +87,11 @@ const TOUCH = (() => {
       if (!pts.has(e.pointerId)) return;
       pts.delete(e.pointerId);
       if (G) { clearTimeout(G.timer); if (G.mode === "drag" && !G.two) mouse("mouseup", tgt(G.S, e.clientX, e.clientY), e.clientX, e.clientY); if (G.two && G.panning) endTwo(); if (!pts.size) G = null; }
+    }
+    function dropTouch() {                                                               // a pen went down: a palm that rested first is not a gesture
+      if (G && G.two) return endTwo();
+      if (G) { clearTimeout(G.timer); if (G.mode === "drag") mouse("mouseup", tgt(G.S, G.x0, G.y0), G.x0, G.y0); }
+      pts.clear(); G = null;
     }
     // two fingers: pinch = zoom, sideways = pan, up / down = scroll (graphs) or pan (editor)
     function startTwo(S) {
@@ -145,6 +154,8 @@ const TOUCH = (() => {
     ["pointermove", "pointerup", "pointercancel"].forEach(t => addEventListener(t, stop, true));
   }, true);
   addEventListener("pointerup", e => { if (e.pointerType !== "mouse") lastUp = Date.now(); }, true);
+  // the compat mouse events after the lift of a long press land on the menu it opened (or under it): they would close it or run the row under the finger
+  ["mousedown", "mouseup", "click"].forEach(t => document.addEventListener(t, e => { if (e.isTrusted && Date.now() - menuUp < 700) { e.stopPropagation(); e.preventDefault(); if (t === "click") menuUp = 0; } }, true));
   document.addEventListener("click", e => { if (e.isTrusted && lpFired && Date.now() - lastUp < 700 && (/** @type {HTMLElement} */ (e.target)).closest && /** @type {HTMLElement} */ (e.target).closest("#flst .fl")) { lpFired = false; e.stopPropagation(); e.preventDefault(); } }, true);
   // the first touch anywhere (a button, the list of files) also switches the touch mode on
   addEventListener("pointerdown", e => { if (e.pointerType !== "mouse") { touchMode(); lastTouch = Date.now(); } }, true);
