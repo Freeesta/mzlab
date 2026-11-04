@@ -139,7 +139,8 @@
     names.forEach((n, i) => { files[n] = texts[i]; });
     await Promise.all(warm);
     settling = true;
-    try { for (const n of js) await runScript(n); } finally { settling = false; }
+    // all tags at once with async=false: they still run in this order, without one round trip of onload per script (~120 scripts)
+    try { await Promise.all(js.map(n => runScript(n, true))); } finally { settling = false; }
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
   const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
