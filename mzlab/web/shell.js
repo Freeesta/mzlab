@@ -298,7 +298,11 @@ async function loneWiffs(/** @type {{ lone?: { e: { stem: string, wiff: File }, 
     const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
 const INFLIGHT=new Set(),fkey=(/** @type {FileRiga} */ f)=>f.name+"|"+f.size;
 // the same file (name and size) already in the list, or being read now, is not loaded again: a short notice and its row lights up for a moment
-function dropDups(/** @type {FileCarica[]} */ files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
+function dropDups(/** @type {FileCarica[]} */ files){
+  // a file of the table that is not open (removed, set aside) is not a duplicate: picking it again ticks it, as its box in the table would
+  const row=(/** @type {FileCarica} */ f)=>ST.files.find((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size),again=files.filter(f=>{const g=row(f);return !INFLIGHT.has(fkey(f))&&g&&g.kind in GORD&&!OPENNOW.isOpen(g.name)});
+  if(again.length){again.forEach(f=>OPENNOW.tick(row(f),true));renderFiles();files=files.filter(f=>!again.includes(f))}
+  const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
   const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
   dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.children[1]&&r.children[1].textContent.trim().startsWith(f.name));if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
   return files.filter(f=>!dups.includes(f))}
