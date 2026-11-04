@@ -106,6 +106,7 @@ I18N.add("en", {
   "draw.export.metaTitle": "Drawing",
   "draw.export.metaDesc.clear": "scale {scale}x; transparent background",
   "draw.export.metaDesc.white": "scale {scale}x; white background",
+  "draw.export.empty": "Nothing to export",
   "draw.export.emptyImage": "empty image",
   "draw.export.failed": "Export failed: {message}. Reload the page (Cmd+Shift+R) and try again; if it persists, write to whoever runs the course.",
   "draw.export.saved": "File saved",
