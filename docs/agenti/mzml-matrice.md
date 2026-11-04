@@ -15,7 +15,7 @@ Fixture: `tools/mzml_varianti.py OUT_DIR` (20 file sintetici, numeri inventati);
 | MS-Numpress linear/pic/slof, con e senza zlib | `Opzioni::numpress`, `aperti_numpress*.rs` | si apre dal lettore `aperti` (sito, app, CLI) |
 | file vuoto, non XML | `empty`, `notxml` | `err.file.notMzml` |
 | base64 rotta | `badb64` | `err.file.base64` |
-| gzip (`.mzML.gz`) | `gz.mzML.gz`, `aperti_gz.rs` | si apre dal lettore `mzml-gz` (`aperti/mzml_gz.rs`): decomprime in memoria fino a `Limiti::byte` (`error.memoryBudget` oltre), poi lo legge `mzml-numpress`; gzip troncato dopo qualche spettro si apre con quelli che ha (`mancanti` = `declared` meno le righe), gzip rotto o troncato prima del primo byte `err.file.zlib` |
+| gzip (`.mzML.gz`) | `gz.mzML.gz`, `aperti_gz.rs` | si apre dal lettore `mzml-gz` (`aperti/mzml_gz.rs`): decomprime in memoria fino a `Limiti::byte` (`error.memoryBudget` oltre), poi lo legge `mzml-numpress`; gzip troncato dopo qualche spettro si apre con quelli che ha (`mancanti` = `declared` meno le righe), gzip rotto o troncato prima del primo byte `err.file.zlib`; sul sito si gonfia a flusso su OPFS (`gz-flusso.js`, `lettori-aperti.md`) |
 | file troncato | `truncated` | si apre con gli spettri che ha; `Table::declared` (conteggio di `<spectrumList>`) meno le righe lette dà `stats.missing` e la riga del caricamento dice «N scansioni mancanti» (`conv.row.missing`); la CLI scrive `warn.file.truncated` su stderr (anche per i file letti da `aperti`: `.mzML.gz`, Numpress; sul sito il modulo restituisce il conteggio con la conversione e `lr.js` lo somma a quello dell'indice); `validate` lo segnala INVALID |
 | mzMLb, imzML | – | non letti |
 

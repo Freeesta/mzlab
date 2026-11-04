@@ -7,9 +7,7 @@ const E = { files: /** @type {any[]} */ ([]), panels: /** @type {any[]} */ ([]),
 const NB = { ui: null, session: null };   // notebook: state of the interface (+ drawing, see draw.js)
 // addresses of the views: #/data, #/draw
 const VIEW_HASH = { data: "data", draw: "draw" }, HASH_VIEW = { data: "data", draw: "draw" };
-// views that moved into another one: the old name still works (Attributio is now a step of Flow)
-const VIEW_ALIAS = { attributio: "flow" };
-const hashView = () => { const m = /^#\/(\w+)/.exec(location.hash); const v = m && HASH_VIEW[m[1]] || null; return v && VIEW_ALIAS[v] || v; };
+const hashView = () => { const m = /^#\/(\w+)/.exec(location.hash); return m && HASH_VIEW[m[1]] || null; };
 const S = { view: hashView() || "data", sess: null, adding: false, opening: false, ref: { on: {}, k: "auto", factor: 1, norm: "none", istd: "", rttol: 0.1, clip: false } };
 const ST = { files: [], methods: [] };
 

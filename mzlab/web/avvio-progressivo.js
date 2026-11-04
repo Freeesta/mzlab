@@ -20,9 +20,9 @@ const AVVIO = (function () {
 
   const T = (k, p) => (typeof window !== "undefined" && window.I18N ? window.I18N.t(k, p) : k);
 
-  // Se siamo su smartphone o in ambiente locale senza browser.js, il motore non usa il worker web:
+  // On a smartphone the engine does not use the web worker:
   if (typeof window !== "undefined") {
-    if (window.QQQ_PHONE || !window.QQQ_BROWSER) {
+    if (window.QQQ_PHONE) {
       stato = "ready";
     finisciRiga();
     } else {

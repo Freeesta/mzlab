@@ -40,6 +40,7 @@ pub mod hrscans;
 pub mod error;
 pub mod provenance;
 pub mod gradient;
+pub mod gunzip;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod idxcache;
 pub mod idxnuovo;
@@ -53,6 +54,7 @@ pub mod isofine;
 pub mod isoscore;
 #[cfg(feature = "isotopi-tutti")]
 pub mod isotable;
+pub mod nuclidi;
 pub mod itemroutes;
 pub mod infusione;
 pub mod iteminfo;
