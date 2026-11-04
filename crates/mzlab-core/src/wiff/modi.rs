@@ -95,6 +95,31 @@ pub fn sigla(code: Option<u32>) -> Option<&'static str> {
     code.and_then(modo).map(|x| x.sigla)
 }
 
+/// The userParam of every spectrum of a `.wiff` that names the Analyst abbreviation of its experiment: PSI-MS has no term for an EPI (product ions
+/// trapped in Q3) nor for a product-ion scan of Q3, both written as `MSn spectrum`, so the scan table reads the type back from it (`scan_type_of`).
+pub const SCAN_TYPE_PARAM: &str = "analyst scan type";
+
+/// The experiment of a scan (`EPI`, `PI`, `EMS`, `Q1`) from that userParam in its mzML header: the scan table's slow path.
+pub(crate) fn scan_type_of(h: &str) -> Option<&'static str> {
+    let v = h
+        .split_once("<userParam name=\"analyst scan type\" value=\"")?
+        .1;
+    scan_type_named(&v[..v.find('"')?])
+}
+
+/// The same from the userParams a reader gives a scan (`SpectrumExtra::params`): the fast path.
+pub(crate) fn scan_type_param(params: &[(String, String)]) -> Option<&'static str> {
+    params
+        .iter()
+        .find(|(k, _)| k == SCAN_TYPE_PARAM)
+        .and_then(|(_, v)| scan_type_named(v))
+}
+
+fn scan_type_named(v: &str) -> Option<&'static str> {
+    use crate::idxread::{KINDS, SPECIAL};
+    KINDS.iter().skip(SPECIAL).find(|k| **k == v).copied()
+}
+
 /// The CV term of the spectrum type of an experiment: `None` for the types that need none (full scan, product-ion scan).
 pub fn spectrum_term(code: Option<u32>) -> Option<(&'static str, &'static str)> {
     code.and_then(modo).and_then(|x| x.term)
