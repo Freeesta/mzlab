@@ -63,6 +63,8 @@ I18N.add("en", {
   "draw.keys.trackpad": "Moves the drawing; pinch to zoom",
   "draw.font.label": "Atom symbol size",
   "draw.font.title": "Changes the size of the atom symbols in the drawing",
+  "draw.copy.options": "Copy options",
+  "draw.skip": "Skip to Quick draw",
   "draw.font.small": "Small",
   "draw.font.medium": "Medium",
   "draw.font.large": "Large",
