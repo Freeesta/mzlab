@@ -9,7 +9,7 @@ import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
 import { initCerca } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -333,18 +333,7 @@ const dnote = (/** @type {string} */ msg) => { const w = Q("#smi-warn"); w.textC
   const out = [...groups.values()].map(g => ({ ids: g, x: Math.min(...g.map((/** @type {number} */ i) => st.atoms.get(i).pp.x)), y: Math.min(...g.map((/** @type {number} */ i) => st.atoms.get(i).pp.y)) }));
   return out.sort((a, b) => a.x - b.x || a.y - b.y);
 }
-/** @param {number[]} ids @param {Set<number>} [noCharge] */ function pieceMolfile(ids, noCharge) {
-  const st = K.editor.struct(), set = new Set(ids), idx = new Map(ids.map((id, n) => [id, n + 1])), atoms = ids.map(i => st.atoms.get(i));
-  if (atoms.some(a => !(a.label in MONO))) return null;                      // R groups, abbreviations...: no structure
-  const bonds = /** @type {DrawKet[]} */ ([]); st.bonds.forEach((/** @type {DrawKet} */ b) => { if (set.has(b.begin) && set.has(b.end)) bonds.push(b); });
-  const f = (/** @type {number} */ v, /** @type {number} */ w) => v.toFixed(4).padStart(w), n3 = (/** @type {number} */ v) => String(v).padStart(3), chg = /** @type {[number, number][]} */ ([]);
-  const L = ["", "  qqq", "", `${n3(atoms.length)}${n3(bonds.length)}  0  0  0  0  0  0  0  0999 V2000`];
-  atoms.forEach((a, /** @type {DrawKet} */ k) => { L.push(`${f(a.pp.x, 10)}${f(-a.pp.y, 10)}${f(0, 10)} ${a.label.padEnd(3)} 0  0  0  0  0  0  0  0  0  0  0  0`); if (a.charge && !(noCharge && noCharge.has(ids[k]))) chg.push([k + 1, a.charge]); });
-  bonds.forEach(b => L.push(`${n3(/** @type {number} */ (idx.get(b.begin)))}${n3(/** @type {number} */ (idx.get(b.end)))}${n3(b.type >= 1 && b.type <= 4 ? b.type : 1)}  0  0  0  0`));
-  for (let i = 0; i < chg.length; i += 8) L.push("M  CHG" + n3(Math.min(8, chg.length - i)) + chg.slice(i, i + 8).map(([a, c]) => " " + n3(a) + " " + n3(c)).join(""));
-  L.push("M  END");
-  return L.join("\n");
-}
+/** @param {number[]} ids @param {Set<number>} [noCharge] */ const pieceMolfile = (ids, noCharge) => molfileOf(K.editor.struct(), ids, noCharge, l => l in MONO);
 /** @param {number[]} ids @param {Set<number>} [noCharge] */ async function pieceSmiles(ids, noCharge) {
   const mf = pieceMolfile(ids, noCharge); if (!mf) return null;
   try {
