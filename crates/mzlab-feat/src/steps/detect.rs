@@ -273,7 +273,7 @@ fn adap_localmin() -> Algorithm {
                 .min(0.0)
                 .default_num(0.0)
                 .unit("scans")
-                .doc("Savitzky-Golay window before the minimum search; 0 = no smoothing. Height and area stay those of the raw trace"),
+                .doc("Savitzky-Golay window before the minimum search, 0 for none; height and area stay those of the raw trace."),
             Param::number("chrom_threshold", "Chromatographic threshold")
                 .min(0.0)
                 .max(1.0)

@@ -837,7 +837,7 @@
                     "type":"integer",
                     "minimum":0,
                     "default":0,
-                    "description":"Savitzky-Golay window before the minimum search; 0 = no smoothing. Height and area stay those of the raw trace"
+                    "description":"Savitzky-Golay window before the minimum search, 0 for none; height and area stay those of the raw trace."
                   },
                   {"type":"number","minimum":0,"maximum":1,"default":0.85,"description":"Chromatographic threshold"},
                   {"type":"number","minimum":0,"default":0.1,"description":"Minimum search range"},
