@@ -647,3 +647,5 @@ html.in-draw #sb-toggle{display:none}
 #v-draw summary{min-height:24px;display:list-item}
 header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 #kframe{scroll-margin-top:var(--hh,48px)}
+/* the provisional TIC of a first loading (tic-provvisorio.js), above the drop area */
+#ticprov{margin:0 0 12px;padding:10px 14px}#ticprov h3{margin:0 0 2px}#ticprov p{margin:0 0 6px}#ticprov canvas{display:block;width:100%;height:180px}

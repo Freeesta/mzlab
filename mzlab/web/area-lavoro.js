@@ -45,7 +45,8 @@ function syncWork(/** @type {boolean} */ force = false) {
   SHEETLBL.refresh();
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
   const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
-  const simtab = () => { /** @type {any} */ (window).SIMTAB?.sync(); /** @type {any} */ (window).SIMUI?.help(); };   // the SIM table follows the loaded files and the state written here (sim-tabella.js)
+  // the SIM table follows the loaded files and the state written here (sim-tabella.js); the provisional TIC of a first loading too (tic-provvisorio.js)
+  const simtab = () => { /** @type {any} */ (window).SIMTAB?.sync(); /** @type {any} */ (window).SIMUI?.help(); /** @type {any} */ (window).TICPROV?.sync(); };
   if (sig === _workSig && !force) { simtab(); return; }
   const was = ws.dataset.work;
   _workSig = sig; ws.dataset.work = w;
