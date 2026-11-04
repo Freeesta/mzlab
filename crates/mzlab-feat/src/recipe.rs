@@ -162,11 +162,11 @@ impl Recipe {
                 detect,
                 self.steps.quality,
                 self.steps.iso
-            ) + &self
-                .steps
-                .use_grouper
-                .then(|| format!("\ngrouper={:?}", self.steps.grouper))
-                .unwrap_or_default()),
+            ) + &if self.steps.use_grouper {
+                format!("\ngrouper={:?}", self.steps.grouper)
+            } else {
+                String::new()
+            }),
         )
     }
 
