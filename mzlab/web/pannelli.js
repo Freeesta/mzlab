@@ -236,7 +236,7 @@ function cleanupOrphanPanels() {
         const tab = p.tab || E.tab;
         let fs = (tab && tab !== E.tab ? tabFiles(tab) : shownFor(p)).filter((/** @type {MzFile} */ f) => f.vis && !f.gone);
         // an MS2 pair draws only the drawn files (shownFor: ticked, one per never-overlaid type, kept by its rows) that hold its precursor: with none it would be blank
-        if (p.tab === "ms2" && p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "") fs = shownFor(p).filter((/** @type {MzFile} */ f) => !f.gone && ms2Holds(f, p.prec));
+        if (p.tab === ESP.ms2 && p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "") fs = shownFor(p).filter((/** @type {MzFile} */ f) => !f.gone && ms2Holds(f, p.prec));
         if (fs.length === 0 && !ms2Rehome(p)) {
           toClose.push(p);
         }

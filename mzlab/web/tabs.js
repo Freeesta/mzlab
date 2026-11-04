@@ -162,6 +162,12 @@ function defaultLayoutTab(/** @type {string} */ t) {
     });
   }
 }
+// the channels an MRM / SIM panel draws: its choice (p.tr), or all of them when none of the chosen ones is in the files shown (a SIM file shown after the MRM
+// file whose quantifier / qualifier the layout chose would draw nothing); the choice itself stays for when those files come back (canali.js ticks the same)
+function mrmSel(/** @type {string | string[] | null | undefined} */ tr, /** @type {string[]} */ keys) {
+  const want = Array.isArray(tr) ? tr : tr ? [tr] : [];
+  return want.length && !want.some(k => keys.includes(k)) ? "" : tr;
+}
 const MRM_SHOW_MAX = 12;
 // beyond the cap only the first files are drawn: a visible, keyboard-reachable button shows them all
 function mrmShowAllNotice(/** @type {MzFile[]} */ mfs) {
@@ -203,7 +209,7 @@ const ms2Holders = (/** @type {number | string} */ prec) => tabFiles("ms2").filt
 // the top MS2 pair over a precursor no visible file holds (cleanupOrphanPanels) moves to the first precursor of the drawn MS2 file that no other pair shows; true when it moved
 function ms2Rehome(/** @type {Pannello} */ c) {
   const top = tabPanels("ms2").filter((/** @type {Pannello} */ q) => q.type === "chrom").sort((/** @type {Pannello} */ a, /** @type {Pannello} */ b) => a.y - b.y)[0];
-  if (c !== top || c.tab !== "ms2") return false;
+  if (c !== top || c.tab !== ESP.ms2) return false;
   const taken = tabPanels("ms2").filter((/** @type {Pannello} */ q) => q.type === "chrom" && q !== c).map((/** @type {Pannello} */ q) => Number(q.prec));
   const prec = ms2Drawn().flatMap((/** @type {MzFile} */ f) => (f.ms2_exps || []).map((/** @type {Bag} */ e) => e.prec).filter((/** @type {number | null} */ v) => v != null).sort((/** @type {number} */ a, /** @type {number} */ b) => a - b))
     .find((/** @type {number} */ v) => !taken.some((/** @type {number} */ t) => Math.abs(t - v) < 0.6));

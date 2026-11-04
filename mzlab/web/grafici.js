@@ -51,12 +51,6 @@ async function corrected(p, all) {
   }
   return out;
 }
-// the channels an MRM / SIM panel draws: its choice (p.tr), or all of them when none of the chosen ones is in the files shown (a SIM file shown after the MRM
-// file whose quantifier / qualifier the layout chose would draw nothing); the choice itself stays for when those files come back (canali.js ticks the same)
-function mrmSel(/** @type {string | string[] | null | undefined} */ tr, /** @type {string[]} */ keys) {
-  const want = Array.isArray(tr) ? tr : tr ? [tr] : [];
-  return want.length && !want.some(k => keys.includes(k)) ? "" : tr;
-}
 async function seriesOf(p) { return corrected(p, await rawSeries(p)); }
 // the kinds of chromatogram that come from an analog trace of the file: the pump pressure ("press"), any other device trace ("an:<id>") and a series of the instrument log ("reg", registro-serie.js)
 const isAnalog = k => k === "press" || k === "reg" || (typeof k === "string" && k.startsWith("an:"));
@@ -174,8 +168,7 @@ function unionTime(p, lo, hi) {
 function syncView(p) {
   if (!isLine(p) || !p._a) return;
   p._needL = p.cv._needL || 0; p._needR = p.cv._needR || 0;
-  // the margins are one for the page (M.l / M.r): they come from the line panels of every tab on screen, or the tabs shown together would reset them for each other at every drawing
-  const lines = E.panels.filter(q => isLine(q) && q.el && !q._exp), z = fz();
+  const lines = E.panels.filter(q => isLine(q) && q.el && !q._exp), z = fz();   // margins are one for the page: from the line panels of every tab, or tabs shown together reset them for each other forever
   const L = maxOf(lines.map(q => q._needL || 0), Math.round(66 * z)), R = maxOf(lines.map(q => q._needR || 0), 14);
   const marg = L !== (window.MARG_L || 0) || R !== (window.MARG_R || 0);
   window.MARG_L = L; window.MARG_R = R;
