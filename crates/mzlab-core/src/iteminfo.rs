@@ -334,7 +334,7 @@ fn acq(sc1: &[&Scan], sc2: &[&Scan]) -> Vec<&'static str> {
             out.push(code);
         }
     }
-    let plain: Vec<&Scan> = sc2.iter().copied().filter(|s| s.kind == 0).collect();
+    let plain: Vec<&Scan> = sc2.iter().copied().filter(|s| s.kind_name().is_none()).collect();
     if plain.is_empty() {
         return out;
     }

@@ -204,8 +204,16 @@ fn mzml(dir: &Path, name: &str, c: usize) -> String {
     for p in parts.iter_mut().skip(1) {
         *p = &p[p.find('"').unwrap()..];
     }
-    // the method document names the experiment type of each file (Q1, EMS): the scans are what must match
-    let xml = parts.concat();
+    // the method document and the userParam of every spectrum name the experiment type of each file (Q1, EMS): the scans are what must match
+    let mut xml = parts.concat();
+    let tag = format!(
+        "<userParam name=\"{}\" value=\"",
+        mzlab_core::wiff::modi::SCAN_TYPE_PARAM
+    );
+    while let Some(a) = xml.find(&tag) {
+        let b = a + xml[a..].find("/>").unwrap() + 2;
+        xml.replace_range(a..b, "");
+    }
     let key = format!("name=\"{}\"", mzlab_core::metodo::USERPARAM);
     match xml.find(&key) {
         Some(a) => {
@@ -269,5 +277,64 @@ fn sim_modes_give_one_sim_chromatogram_per_ion() {
             .id
             .starts_with("SIM SIC sample=1 period=1 experiment=1 transition=0"));
         assert!(sim[0].id.ends_with(" polarity=positive"), "{}", sim[0].id);
+    }
+}
+
+/// Product-ion (PI, code 6) and EPI (code 11) scans are both MS2 scans of their precursor: the same routes answer them (channel, spectrum, scan list),
+/// and only the experiment the scan table names tells them apart in the channels (as EMS and Q1 at level 1).
+#[test]
+fn pi_and_epi_are_both_ms2_and_only_their_experiment_tells_them_apart() {
+    use mzlab_core::canali::Famiglia;
+    use mzlab_core::idxread::Index;
+    use mzlab_core::routes::{Query, Routes};
+    let Some((dir, modi)) = generate() else {
+        return;
+    };
+    for (name, level) in [("PI", 2), ("EPI", 2), ("EMS", 1), ("Q1", 1)] {
+        let mut l = lettori::apri(set(&dir, name), &Limiti::sito()).unwrap();
+        let xml = mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let tag = format!(
+            "<userParam name=\"{}\" value=\"{name}\"/>",
+            mzlab_core::wiff::modi::SCAN_TYPE_PARAM
+        );
+        let n = String::from_utf8_lossy(&xml).matches("<spectrum ").count();
+        assert_eq!(
+            String::from_utf8_lossy(&xml).matches(tag.as_str()).count(),
+            n,
+            "{name}: one scan type per spectrum"
+        );
+        let mut src = xml.clone();
+        let p = mzlab_core::upload::prepare(&mut src, xml.len() as u64, "x.mzML").unwrap();
+        let (idx, _) = mzlab_core::mzidx::build_mzml_to_vec(&p.table, &xml, 64 << 20).unwrap();
+        let len = idx.len() as u64;
+        let idx = Index::open(idx, len).unwrap();
+        assert!(
+            idx.scans.iter().all(|s| s.scan_type() == Some(name)
+                && s.kind_name().is_none()
+                && s.level == level),
+            "{name}: scan table"
+        );
+        let mut r = Routes::new(idx);
+        let ch = r.canali();
+        let ms: Vec<_> = ch.v.iter().filter(|c| c.famiglia == Famiglia::Ms).collect();
+        assert_eq!(ms.len(), 1, "{name}: one channel");
+        assert_eq!(
+            (ms[0].sigla, ms[0].livello),
+            (Some(name), level),
+            "{name}: channel"
+        );
+        if level == 2 {
+            let prec = modi[name]["campioni"][0]["oggi"]["precursore"]
+                .as_f64()
+                .unwrap();
+            for route in ["/api/spectrum", "/api/scanlist"] {
+                let q = format!("k=0&rt0=0&rt1=60&level=2&precursor={prec}");
+                let got = r.handle(route, &Query::parse(&q)).unwrap();
+                assert!(
+                    got.is_some_and(|t| !t.is_empty()),
+                    "{name}: {route} unanswered"
+                );
+            }
+        }
     }
 }
