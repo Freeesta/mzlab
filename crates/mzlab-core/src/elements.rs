@@ -4,7 +4,7 @@
 use crate::error::{Error, Result};
 use crate::json::{round, Out};
 
-pub const MASS: [(&str, f64); 14] = [
+pub const MASS: [(&str, f64); 15] = [
     ("H", 1.00782503223),
     ("C", 12.0),
     ("N", 14.00307400443),
@@ -19,6 +19,8 @@ pub const MASS: [(&str, f64); 14] = [
     ("K", 38.9637064),
     ("Si", 27.9769265350),
     ("Se", 79.9165218),
+    // Deuterium (2H), so that «+D» / «+2D» read as a delta.
+    ("D", 2.01410177812),
 ];
 pub const ELECTRON: f64 = 0.000548579909;
 /// Proton mass (CODATA); the neutral-to-ion shift of `[M+H]+` is this, not H.
@@ -142,6 +144,18 @@ pub fn parse_formula_lenient(s: &str) -> std::collections::BTreeMap<String, u64>
         i = j;
     }
     d
+}
+
+/// A term of a delta: `parse_formula`, plus «2D» -> D2 (a count before deuterium only; «2O» stays unreadable, as in the Python reference).
+pub fn parse_term(s: &str) -> Result<Formula> {
+    let d = s.bytes().take_while(u8::is_ascii_digit).count();
+    if d == 0 || &s[d..] != "D" {
+        return parse_formula(s);
+    }
+    let k: u64 = s[..d]
+        .parse()
+        .map_err(|_| Error::new("err.formula.unreadable").with("formula", s))?;
+    Ok(vec![("D".to_string(), k)])
 }
 
 /// 'C15H12N2O' -> [("C",15),("H",12),("N",2),("O",1)]. Parentheses are allowed: 'C(OH)2'.

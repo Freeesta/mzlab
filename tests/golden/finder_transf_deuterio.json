@@ -1,0 +1,4 @@
+{
+ "text": "d1;+D\nd2;-D\nd3;+2D\nd4;-H+2D\nd5;+O",
+ "describe": "{\"rows\":[{\"line\":0,\"on\":true,\"name\":\"d1\",\"change\":\"+D\",\"dm\":2.0141,\"class\":\"gain\",\"note\":\"\",\"lit\":false},{\"line\":1,\"on\":true,\"name\":\"d2\",\"change\":\"-D\",\"dm\":-2.0141,\"class\":\"loss\",\"note\":\"\",\"lit\":false},{\"line\":2,\"on\":true,\"name\":\"d3\",\"change\":\"+D2\",\"dm\":4.0282,\"class\":\"gain\",\"note\":\"\",\"lit\":false},{\"line\":3,\"on\":true,\"name\":\"d4\",\"change\":\"+D2-H\",\"dm\":3.0204,\"class\":\"gain\",\"note\":\"\",\"lit\":false},{\"line\":4,\"on\":true,\"name\":\"d5\",\"change\":\"+O\",\"dm\":15.9949,\"class\":\"oxidation\",\"note\":\"\",\"lit\":false}]}"
+}
