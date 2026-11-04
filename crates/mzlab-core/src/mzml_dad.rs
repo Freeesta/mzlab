@@ -35,10 +35,10 @@ impl<R: ReadAt> Mzml<R> {
     /// `dad()` read once per file: a click on the PDA trace or a new wavelength only slices the matrix in memory (the `MS:1000804` layout walks the whole file).
     pub fn dad_memo(&mut self) -> Result<Option<Arc<DadData>>> {
         let key = self.fingerprint()?;
-        if let Ok(h) = HELD.lock() {
-            if let Some((_, d)) = h.iter().find(|(k, _)| *k == key) {
-                return Ok(d.clone());
-            }
+        if let Ok(h) = HELD.lock()
+            && let Some((_, d)) = h.iter().find(|(k, _)| *k == key)
+        {
+            return Ok(d.clone());
         }
         let d = self.dad()?.map(Arc::new);
         if let Ok(mut h) = HELD.lock() {
