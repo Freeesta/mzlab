@@ -95,32 +95,36 @@ impl<R: ReadAt> Mzml<R> {
         while pos < self.size {
             let chunk = self.read(pos, (pos + step).min(self.size))?;
             let last = pos + step >= self.size;
-            let Some(a) = find(&chunk, b"<spectrum ", 0) else {
-                pos += (chunk.len() as u64).saturating_sub(10).max(1);
-                continue;
-            };
-            let Some(b) = find(&chunk, b"</spectrum>", a) else {
-                if last {
+            // every complete spectrum of the chunk, so each byte of the file is read about once
+            let (mut at, mut done) = (0usize, None);
+            while let Some(a) = find(&chunk, b"<spectrum ", at) {
+                let Some(b) = find(&chunk, b"</spectrum>", a) else {
+                    done = Some(a);
                     break;
+                };
+                let block = &chunk[a..b + 11];
+                if find(block, b"MS:1000804", 0).is_some()
+                    && let Some((t, w, y)) = uv_row(block)
+                {
+                    if wl.is_empty() {
+                        wl = w;
+                    }
+                    // a row on another wavelength grid cannot join the matrix
+                    if y.len() == wl.len() {
+                        times.push(t);
+                        mat.extend(y.iter().map(|&v| v as f32));
+                    }
                 }
-                pos += a as u64;
-                step = if a == 0 { step * 2 } else { step };
-                continue;
-            };
-            let block = &chunk[a..b + 11];
-            if find(block, b"MS:1000804", 0).is_some()
-                && let Some((t, w, y)) = uv_row(block)
-            {
-                if wl.is_empty() {
-                    wl = w;
-                }
-                // a row on another wavelength grid cannot join the matrix
-                if y.len() == wl.len() {
-                    times.push(t);
-                    mat.extend(y.iter().map(|&v| v as f32));
-                }
+                at = b + 11;
             }
-            pos += (b + 11) as u64;
+            match done {
+                Some(_) if last => break,
+                // a spectrum longer than the chunk: read twice as much from its start
+                Some(0) => step *= 2,
+                Some(a) => pos += a as u64,
+                None if at > 0 => pos += at as u64,
+                None => pos += (chunk.len() as u64).saturating_sub(10).max(1),
+            }
         }
         Ok(build(times, wl, mat))
     }

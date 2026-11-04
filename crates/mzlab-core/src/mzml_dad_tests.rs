@@ -371,3 +371,44 @@ fn a_click_takes_the_nearest_row() {
     assert_eq!(row(0.03), 0.03);
     assert_eq!(row(9.0), 0.04);
 }
+
+/// A file of several read steps: every row reaches the matrix, rows cut by a step boundary included, and the walk reads each byte about once
+/// (not one step per spectrum).
+#[test]
+fn the_walk_reads_each_byte_about_once() {
+    let (nt, nl) = (3000usize, 200usize);
+    let wl = b64(
+        &(0..nl).map(|j| 190.0 + j as f64).collect::<Vec<_>>(),
+        true,
+        false,
+    );
+    let rows: String = (0..nt)
+        .map(|i| {
+            let ab = b64(&(0..nl).map(|j| (i * nl + j) as f64).collect::<Vec<_>>(), true, false);
+            format!("<spectrum index=\"{i}\" id=\"uv={i}\" defaultArrayLength=\"{nl}\"><cvParam accession=\"MS:1000804\" name=\"electromagnetic radiation spectrum\"/><cvParam accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitName=\"second\"/><binaryDataArrayList count=\"2\"><binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"MS:1000617\" name=\"wavelength array\"/><binary>{wl}</binary></binaryDataArray><binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"MS:1000515\" name=\"intensity array\"/><binary>{ab}</binary></binaryDataArray></binaryDataArrayList></spectrum>", i as f64 * 0.4)
+        })
+        .collect();
+    let bytes =
+        format!("<mzML><run><spectrumList count=\"{nt}\">{rows}</spectrumList></run></mzML>")
+            .into_bytes();
+    let size = bytes.len() as u64;
+    assert!(
+        size > 3 * STEP,
+        "{size} bytes: the file must span several steps"
+    );
+    let seen = std::rc::Rc::new(std::cell::Cell::new(0));
+    let d = Mzml::new(Counted(bytes, seen.clone()), size)
+        .dad_spectra()
+        .unwrap()
+        .unwrap();
+    assert_eq!(d.matrix_mau.len(), nt * nl);
+    assert!(
+        d.matrix_mau.iter().enumerate().all(|(k, &v)| v == k as f32),
+        "rows in order, none lost at a boundary"
+    );
+    assert!(
+        seen.get() < size + size / 2,
+        "{} bytes read for {size}",
+        seen.get()
+    );
+}
