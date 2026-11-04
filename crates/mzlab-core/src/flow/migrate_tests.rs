@@ -71,3 +71,19 @@ fn the_table_has_fourteen_distinct_english_names() {
     new.dedup();
     assert_eq!(new.len(), 14);
 }
+
+#[test]
+fn table_filter_1_keeps_the_filled_blank_cells_and_2_is_left_alone() {
+    let (v, out, _) = migrate_params("table.filter", 1, &p(&[("blank_ratio", 3.0)])).unwrap();
+    assert_eq!(v, 2);
+    assert!(out.contains(&("blank_cells".to_string(), Value::Str("all".to_string()))));
+    // a version 2 plan that leaves the option out takes the default of the step, it is not rewritten
+    assert!(migrate_params("table.filter", 2, &p(&[("blank_ratio", 3.0)])).is_none());
+    // a version 1 plan that names the option keeps its value
+    let given = vec![(
+        "blank_cells".to_string(),
+        Value::Str("detected".to_string()),
+    )];
+    let (_, out, _) = migrate_params("table.filter", 1, &given).unwrap();
+    assert_eq!(out, given);
+}

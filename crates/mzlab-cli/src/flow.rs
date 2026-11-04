@@ -16,7 +16,6 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
 use crate::flow_digl::uv::uv_job;
-use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
 pub(crate) use crate::flow_made::Made;
 use crate::flow_msngraph::job as msn_graph_job;
@@ -159,9 +158,9 @@ pub type DoneFn = Arc<dyn Fn(&str, Option<usize>, f64, bool, Option<String>) + S
 
 /// Runs the steps of this crate on files: inputs are found by name in `inputs`, else in `dir`; what steps make is written to `work`.
 pub struct FileRunner {
-    dir: PathBuf,
+    pub(crate) dir: PathBuf,
     pub(crate) work: PathBuf,
-    inputs: HashMap<String, PathBuf>,
+    pub(crate) inputs: HashMap<String, PathBuf>,
     meter: Option<Meter>,
     pub(crate) made: Mutex<HashMap<String, PathBuf>>,
     lineage: Mutex<HashMap<String, Lineage>>,
@@ -347,7 +346,6 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("table.stats", Exec::File("report", stats_job)),
     ("table.kmd", Exec::File("report", crate::flow_kmd::kmd_job)),
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
-    ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
     ("spectra.insilico", Exec::File("candidates", insilico_job)),
     ("formula.ms1", Exec::Made(crate::flow_formula::ms1_job)),
@@ -424,6 +422,8 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(flow_methods::EXECUTORS)
         .chain(flow_export_annot::EXECUTORS)
         .chain(crate::flow_transitions::EXECUTORS)
+        .chain(crate::flow_drift::EXECUTORS)
+        .chain(crate::flow_group::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?

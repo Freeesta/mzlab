@@ -111,7 +111,7 @@ export function campo(host, opz) {
   };
   const cercaOra = async () => {
     const mio = ++token, t = input.value.trim();
-    if (t.length < 2 || (opz.salta && opz.salta(t))) { trovate = []; apre(false); stato.textContent = ""; return; }
+    if (t.length < 2 || (opz.salta && opz.salta(t))) { trovate = []; lista.replaceChildren(); apre(false); stato.textContent = ""; return; }   // the old rows go too: they must not outlive the search that made them
     /** @type {Trovata[]} */ let r;
     try { r = await cerca(opz.interroga ? await opz.interroga(t) : t, opz.limite || 8, opz.ppm || 10, !!opz.ampia); } catch (_) { r = []; }
     if (mio !== token) return;
@@ -119,7 +119,7 @@ export function campo(host, opz) {
     disegna();
   };
 
-  input.addEventListener("input", () => { clearTimeout(attesa); attesa = setTimeout(cercaOra, 120); });
+  input.addEventListener("input", () => { clearTimeout(attesa); const t = input.value.trim(); if (t.length < 2 || (opz.salta && opz.salta(t))) cercaOra(); else attesa = setTimeout(cercaOra, 120); });   // nothing to search: the old rows and status go at once
   input.addEventListener("keydown", ev => {
     const n = trovate.length;
     if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {

@@ -10,7 +10,7 @@ I18N.add("it", {
   "av.elapsed": "{t} trascorsi",
   "av.left": "circa {t} al termine",
   "av.beat": "Ancora al lavoro…",
-  "av.stall": "Nessuna novità da oltre 30 secondi: lascia aperta questa scheda; se non riparte puoi annullare e riprovare.",
+  "av.stall": "Nessuna novità da oltre 30 secondi: se non riparte, annulla e riprova.",
   "av.sum": "{done} di {n} completati",
   "cart.open": "Apri cartella",
   "cart.reading": "Lettura della cartella… {n} file trovati finora.",

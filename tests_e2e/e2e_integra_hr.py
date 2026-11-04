@@ -45,7 +45,7 @@ for kind in ("hr", "lr"):
                 step("one click on an empty stretch integrates both peaks of the HR trace", all_peaks)
                 def parity():
                     v = pg.evaluate("""(async()=>{const p=E.panels.find(q=>q.type==='xic'),s=p._a.sr[0],a=p._a;
-                      const r=await QUALITA.autoIntegrate(s.x,s.y,a.x0,a.x1,{smooth:PK.hrSmooth,snr:PK.hrSn,rel:PK.hrProm/100,scans:PK.hrScans,half:PK.hrHalf,slope:PK.hrSlope/100});
+                      const r=await QUALITA.autoIntegrate(s.x,s.y,a.x0,a.x1,{smooth:PK.hrSmooth,snr:PK.hrSn});
                       const it=[...p.ints].sort((u,w)=>u.a-w.a);return it.map((i,k)=>[i.area,r[k].area*60,!!i.base,integ(s,i.a,i.b).area])})()""")
                     for page, rust, has_base, chord in v:
                         assert has_base and abs(page - rust) <= 1e-6 * rust, v       # the page area over the Rust baseline is the Rust area
@@ -63,11 +63,12 @@ for kind in ("hr", "lr"):
                     w = pg.evaluate(WINS); assert len(w) == 1 and w[0][0] < 9.0 < w[0][1], w
                 step("zoomed in, only the peaks of the stretch shown", zoomed)
                 def params():
-                    pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='xic');p.ints=[];zoomTo(p,0,20);PK.hrProm=80})()"); attendi(pg, "E.panels.find(q=>q.type==='xic')._a.x1>15")
-                    click_at(pg, 10.2); attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length>=1")
-                    w = pg.evaluate(WINS); assert len(w) == 1 and w[0][0] < 9.0 < w[0][1], w             # the copy stands at 60 % of the tallest: under 80 %
+                    pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='xic');p.ints=[];zoomTo(p,0,20);PK.hrSmooth=7;PK.hrSn=9;const f=QUALITA.autoIntegrate;window.__ai=null;QUALITA.autoIntegrate=(...a)=>{window.__ai=a[4];QUALITA.autoIntegrate=f;return f(...a)}})()")
+                    attendi(pg, "E.panels.find(q=>q.type==='xic')._a.x1>15")
+                    click_at(pg, 10.2); attendi(pg, "window.__ai!==null")
+                    assert pg.evaluate("window.__ai") == {"smooth": 7, "snr": 9}, pg.evaluate("window.__ai")   # the two settings of the dialog, nothing else
                     pg.evaluate("Object.assign(PK, PK_DEF)")
-                step("the minimum height parameter leaves out the smaller peak", params)
+                step("the HR settings of the dialog reach the engine", params)
             else:
                 xic(pg, "364")
                 def lr_one():

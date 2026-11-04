@@ -27,7 +27,7 @@ try:
                 assert w in t, (w, t[:300])
             bad = ITALIAN.findall(t); assert not bad, bad
             assert pg.input_value("#ex-name").startswith("drawing_"), pg.input_value("#ex-name")
-            assert pg.get_attribute("#ex-smi", "placeholder") == "Paste a SMILES"
+            assert pg.get_attribute("#ex-smi", "placeholder") == "Paste a SMILES or search a compound"
             pg.click("#keys-card summary"); k = pg.inner_text("#keys-body"); assert "Copy, paste, cut the selection" in k and "Right-click" in k, k
             pg.click("#tools-card summary"); assert "Quick rings (benzene, cyclohexane...)" in pg.inner_text("#tools-body")
         step("English: static texts, shortcuts, tools card, default file name drawing_...", english)
