@@ -186,6 +186,7 @@ I18N.add("it", {
   "err.flow.format": "Il file del flusso ha un formato sconosciuto: {format}.",
   "err.flow.formula.file": "Un file della tabella non ha una scansione MS1 da cui leggere la formula.",
   "err.flow.formula.table": "La tabella non ha la colonna «{column}».",
+  "err.flow.group.ion": "La specie ionica {ion} non è tra quelle che il raggruppamento conosce per questa polarità.",
   "err.flow.inclusion.product": "Un prodotto dell'elenco non ha formula o RT.",
   "err.flow.input": "Un ingresso del flusso non ha «{field}».",
   "err.flow.input.unknown": "L'ingresso indicato qui non è nel flusso: controlla il nome.",

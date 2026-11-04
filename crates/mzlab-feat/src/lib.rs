@@ -59,6 +59,7 @@ pub mod hypo;
 pub mod import;
 #[cfg(feature = "interp")]
 pub mod interp;
+pub mod ionnet;
 pub mod isotopes;
 pub mod kinetic;
 pub mod legacy;

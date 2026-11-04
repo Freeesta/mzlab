@@ -47,6 +47,9 @@ mod flow_formula;
 #[cfg(test)]
 mod flow_formula_web_tests;
 mod flow_generate;
+mod flow_group;
+#[cfg(test)]
+mod flow_group_tests;
 mod flow_hash;
 #[cfg(test)]
 mod flow_hr_tests;
