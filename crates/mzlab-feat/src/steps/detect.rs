@@ -284,6 +284,12 @@ pub(super) fn ms2_link() -> Step {
                 .default_num(0.5)
                 .unit("fraction")
                 .doc("Purity below which an MS2 is weak evidence; it is not dropped"),
+            Param::number("margin_s", "Trigger margin")
+                .min(0.0)
+                .default_num(0.0)
+                .unit("s")
+                .doc("Time added before and after the retention-time range of each feature when pairing MS2 scans; 0 uses one MS1 cycle of the file")
+                .advanced(),
         ],
         runs_in: feat_runs_in(),
         errors: vec!["error.memoryBudget", "err.file.index"],
