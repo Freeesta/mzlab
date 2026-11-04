@@ -6,22 +6,6 @@ use mzlab_core::error::{Error, Result};
 const PROTON: f64 = mzlab_core::elements::PROTON_6DP;
 const WATER: f64 = 18.010565;
 
-/// One ion species: `n` molecules, charge `z`, `shift` = mass added to `n·M` (electrons included).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Ion {
-    pub name: &'static str,
-    pub z: i8,
-    pub n: u8,
-    pub shift: f64,
-}
-
-impl Ion {
-    /// The neutral mass this ion gives for an observed `mz`.
-    pub fn neutral(&self, mz: f64) -> f64 {
-        (mz * f64::from(self.z.unsigned_abs()) - self.shift) / f64::from(self.n)
-    }
-}
-
 /// Every species the step knows; a plan names the ones it searches.
 pub const LIBRARY: &[Ion] = &[
     Ion {
@@ -143,6 +127,22 @@ pub const LIBRARY: &[Ion] = &[
 /// The default list of each polarity (the species of the IIMN examples).
 pub const DEFAULT_POS: &str = "[M+H]+,[M+Na]+,[M+NH4]+,[M+K]+,[M+H-H2O]+,[M+2H]2+,[2M+H]+,[2M+Na]+";
 pub const DEFAULT_NEG: &str = "[M-H]-,[M+Cl]-,[M+HCOO]-,[M+CH3COO]-,[M-H-H2O]-,[M-2H]2-,[2M-H]-";
+
+/// One ion species: `n` molecules, charge `z`, `shift` = mass added to `n·M` (electrons included).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Ion {
+    pub name: &'static str,
+    pub z: i8,
+    pub n: u8,
+    pub shift: f64,
+}
+
+impl Ion {
+    /// The neutral mass this ion gives for an observed `mz`.
+    pub fn neutral(&self, mz: f64) -> f64 {
+        (mz * f64::from(self.z.unsigned_abs()) - self.shift) / f64::from(self.n)
+    }
+}
 
 /// The species of a comma-separated list, in its order; an unknown name or a species of the other polarity is `err.flow.group.ion`.
 pub fn parse_list(text: &str, positive: bool) -> Result<Vec<Ion>> {

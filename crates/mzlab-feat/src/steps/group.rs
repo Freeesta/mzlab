@@ -6,8 +6,8 @@ use mzlab_core::step::{DataType, Facets, Param, Port, Reference, RunsIn, Step};
 use super::FEAT_CEILING;
 use crate::ionnet::ions::{DEFAULT_NEG, DEFAULT_POS};
 
-pub(super) fn group() -> Step {
-    let params = vec![
+fn params() -> Vec<Param> {
+    vec![
         Param::choice("polarity", "Polarity", &["auto", "positive", "negative"])
             .default_str("auto")
             .doc("Which list of ion species is searched; auto = the polarity of the files of the table"),
@@ -56,7 +56,11 @@ pub(super) fn group() -> Step {
             .default_num(2.0)
             .doc("Largest charge an isotope step is read with")
             .advanced(),
-    ];
+    ]
+}
+
+pub(super) fn group() -> Step {
+    let params = params();
     let hr = Facets {
         resolution: vec!["hr"],
         ..Facets::default()
