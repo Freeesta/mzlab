@@ -96,7 +96,8 @@ const PROFILO = (() => {
   }
   function tableHtml(r) {
     const b = body(r);
-    return `<div class="qq-scroll"><table class="qq-tab" id="prof-tab"><thead><tr>${head(r).map(h => `<th scope="col">${eh(h)}</th>`).join("")}</tr></thead><tbody>${b.map((row, k) => `<tr${r.series.includes(k) ? "" : ' class="sm"'}>${row.map((c, i) => `<td${i > 1 ? ' class="num"' : ""}>${i > 1 && typeof c === "number" ? eh(fmt(c, i === 2 || i === 3 ? 2 : 1)) : eh(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    // rows without a control: the scrolling box itself takes the focus (keyboard scroll), named by the summary above it
+    return `<div class="qq-scroll" tabindex="0" role="region" aria-labelledby="prof-sum"><table class="qq-tab" id="prof-tab"><thead><tr>${head(r).map(h => `<th scope="col">${eh(h)}</th>`).join("")}</tr></thead><tbody>${b.map((row, k) => `<tr${r.series.includes(k) ? "" : ' class="sm"'}>${row.map((c, i) => `<td${i > 1 ? ' class="num"' : ""}>${i > 1 && typeof c === "number" ? eh(fmt(c, i === 2 || i === 3 ? 2 : 1)) : eh(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
   const tsv = r => [head(r)].concat(body(r)).map(l => l.map(c => String(c).replace(/[\t\r\n]+/g, " ")).join("\t")).join("\n") + "\n";
 
@@ -119,7 +120,7 @@ ${hr && qaOn() && !ions.length ? `<p class="sm">${t("prof.istd.hint")}</p>` : ""
     if (!el) return;
     if (res && !sameFiles(res)) res = null;
     if (!res) { el.innerHTML = ""; return; }
-    el.innerHTML = `<div class="sm">${t("prof.sum", { mz: fmt(res.ion.mz, 4), rt: fmt(res.ion.rt, 2) })}${res.normalized && res.istd ? " " + t("prof.sum.istd", { istd: eh(res.istd.label) }) : ""}</div>${chart(res)}${window.CAMPIONI ? CAMPIONI.gradientLegend() : ""}
+    el.innerHTML = `<div class="sm" id="prof-sum">${t("prof.sum", { mz: fmt(res.ion.mz, 4), rt: fmt(res.ion.rt, 2) })}${res.normalized && res.istd ? " " + t("prof.sum.istd", { istd: eh(res.istd.label) }) : ""}</div>${chart(res)}${window.CAMPIONI ? CAMPIONI.gradientLegend() : ""}
 ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("meta.copy")}</button><button type="button" id="prof-xlsx">Excel</button></div><div id="prof-note" class="sm" role="status"></div>`;
   }
   function mount(box) {
