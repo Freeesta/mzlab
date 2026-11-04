@@ -5,7 +5,8 @@ bytes before FCP and until usable, render-blocking files, engine ready, console 
     python3 tests_e2e/misura_primo_paint.py --site site [--runs 5] [--scenari cold,warm,...] [--out run.json] [--browser chromium|webkit]
 
 Scenarios: cold (new context, first visit), warm (reload served by the service worker), en (cold with ?lang=en), dark (warm with dark theme saved),
-cpu4 / cpu4warm (CPU x4), fast4g (150 ms + 9 Mbps, cold), ipad (iPad viewport and touch, cold), draw/flow/tabui (warm, then click the view).
+cpu4 / cpu4warm (CPU x4), fast4g (CDP 150 ms + 9 Mbps, cold: it does not slow the
+local mirror, numbers equal cold; kept out of the default list), ipad (iPad viewport and touch, cold), draw/flow/tabui (warm, then click the view).
 """
 import argparse, json, statistics, sys, time
 from pathlib import Path
@@ -128,7 +129,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", default=str(ROOT / "site"))
     ap.add_argument("--runs", type=int, default=5)
-    ap.add_argument("--scenari", default="cold,warm,en,dark,cpu4,cpu4warm,fast4g,ipad,draw,flow,tabui")
+    ap.add_argument("--scenari", default="cold,warm,en,dark,cpu4,cpu4warm,ipad,draw,flow,tabui")
     ap.add_argument("--browser", default="chromium")
     ap.add_argument("--out")
     a = ap.parse_args()
