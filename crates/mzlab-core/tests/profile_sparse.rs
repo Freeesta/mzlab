@@ -1,6 +1,6 @@
 //! `/api/spectrum` on a profile level whose scans are mostly a few points (a converter that leaves the zero bins out, as the `.wiff` reader does):
-//! the spacing of the points is read from the scans that have enough of them, wherever they are, so the route answers instead of giving the
-//! level to Python (the page has no Python: the spectrum panel stayed blank). Synthetic data only.
+//! the spacing of the points is read from the scans that have enough of them, wherever they are (else from the shortest gap of all the scans), so
+//! the route answers instead of giving the level to Python (the page has no Python: the spectrum panel stayed blank). Synthetic data only.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
@@ -33,13 +33,13 @@ fn scan(i: usize, prec: f64, dense: bool) -> Spectrum {
     }
 }
 
-/// Two precursors alternating; the only scans with more than 20 points are the first ones, far from the middle of the run.
-fn routes() -> Routes<Vec<u8>> {
+/// Two precursors alternating; the only scans with more than 20 points are the first `dense` ones, far from the middle of the run.
+fn routes(dense: usize) -> Routes<Vec<u8>> {
     let mut w = MzmlWriter::new(Vec::new(), &Header { run: "sparse".into(), ..Default::default() }).unwrap();
     let total = 100;
     w.open_spectra(total).unwrap();
     for i in 0..total {
-        w.spectrum(&scan(i, if i % 5 == 1 { 305.0 } else { 229.1 }, i < 6)).unwrap();
+        w.spectrum(&scan(i, if i % 5 == 1 { 305.0 } else { 229.1 }, i < dense)).unwrap();
     }
     w.close_spectra().unwrap();
     let mzml = w.finish().unwrap();
@@ -53,7 +53,13 @@ fn routes() -> Routes<Vec<u8>> {
 
 #[test]
 fn sparse_profile_level_still_answers_the_spectrum() {
-    let mut r = routes();
+    // with a few dense scans, and with none (the product-ion and EPI scans of a 3200 QTRAP keep a handful of points each)
+    for dense in [6, 0] {
+        answers(routes(dense));
+    }
+}
+
+fn answers(mut r: Routes<Vec<u8>>) {
     for (prec, from, to) in [("229.1", 1.0, 4.0), ("305", 1.0, 4.0), ("229.1", 0.0, 5.0)] {
         let q = format!("k=0&rt0={from}&rt1={to}&level=2&precursor={prec}");
         let got = r.handle("/api/spectrum", &Query::parse(&q)).unwrap();

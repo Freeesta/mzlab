@@ -46,12 +46,10 @@ Do **not** touch `teoria/07-qqq.html` or the glossary «QqQ» entries: there "Qq
 |---|---|---|---|---|---|
 | B1 | `reset.js:59` (`fetch("api/new")`), `avvio-progressivo.js:25`, `shell.js:326,338` (`QQQ_NET` upload progress) | `!window.QQQ_BROWSER` branches for the retired Python server. `browser.js` is always injected, by `tools/build_site.py:240` for the site and `crates/mzlab-desktop/src/update.rs:33` for the app. | ~20 lines | None. First check that no e2e serves raw `mzlab/web` without `browser.js` (`tests_e2e/servi.py` serves `site/`). | **CUT NOW** |
 | B2 | `?motore=rust` and `&lr=1` | Query switches that no JS reads. They survive in comments (`rust-worker.js:2`, `peaks-worker.js:3`, `shell.js:248`) and in the URLs of 19 `tests_e2e/` files. | Comments plus URL strings | None | **CUT NOW** |
-| B3 | `crates/mzlab-feat/src/attributio/campaign.rs:216-240` `HISTORICAL_NAMES` | Old Attributio `compat.py` name table. It has 0 references, tests included. | 25 lines | None | **CUT NOW** |
 | B4 | `crates/mzlab-lib/src/read.rs:650-653` `#[allow(dead_code)] fn _unused` | Dead function | 3 lines | None | **CUT AFTER** the freeze (in `mzlab-lib`) |
 | B5 | `rust-budget.js:14-15,62,111,129` `MANUAL_ENABLED = false` | The manual memory-budget choice. It has no UI, and its stored value is cleared at every start. | ~15 lines | None | **CUT NOW** |
 | B6 | `capacita.js:25-30` `MZLAB_NO_SIMD` | The older test switch beside `MZLAB_CAP_OFF` / `?cap-off=`, which do the same job | ~4 lines | None (tests use `cap-off`) | **CUT NOW** |
-| B7 | `crates/mzlab-feat/src/legacy/lrisf/isf_report.rs` (251), `isf_split.rs` (91), `isf_text.rs` (116) | ISF report path reachable only from `crates/mzlab-feat/tests/legacy_lrisf.rs` and its golden `tests/golden/finder_lrisf.json` (896 KB) | 458 lines + 1 test + 896 KB golden | None. It protects behaviour that nothing ships. The live code (`isf_eval`, `tree`, `compare`) has its own tests. | **CUT NOW** (with its golden) |
-| B8 | `tools/build_feat_wasm.sh:28-37,80-99` `MZLAB_WASM_SEPARATI` | The separate-module build "as before", with six HR modules and four Attributio modules instead of `hr` and `attributio-all`. It needs the per-module caps `limit_rev`, `limit_export`, `limit_ms2`, the `rev`/`export`/`ms2` split in `mzlab-attributio-wasm` and the same-URL dedup in `TP_Mine/files/feat-worker.js:66`. | ~30 lines of script, 3 caps, docs in `wasm-tetti.md:8` and `INDICE.md:74`. No workflow or test sets it. | None. The shipped bytes do not change. | **CUT NOW** (no `.github/` edit needed) |
+| B7 | `crates/mzlab-feat/src/legacy/lrisf/isf_report.rs` (251), `isf_split.rs` (91), `isf_text.rs` (116) | ISF report path reachable only from `crates/mzlab-feat/tests/legacy_lrisf.rs` and its golden `tests/golden/finder_lrisf.json` (896 KB) | Live: `isf_eval` calls `classify_report` (`lr/isf.rs`), shipped in desktop `feat_finder.rs` and `mzlab-finder-lr-wasm`. `legacy_lrisf.rs` also holds the tree/compare parity tests that read `finder_lrisf.json`. Only the DP ramp (`Ramp`) is test-only, about 40 lines. | None: nothing is cut. | **KEEP** |
 | B9 | `mzlab/web/browser.js:5` and `composizione.js:3` | Stale comments ("the local program does not load it"; "server: mzlab/chem/composition.py") | 2 lines | None | **CUT NOW** (with B1) |
 
 ## C. Old saved-file and settings formats
@@ -134,7 +132,7 @@ Documented floor: Chrome/Edge 91, Firefox 89, Safari 16.4 (`docs/agenti/wasm-pot
 
 ## G. Golden and parity fixtures that protect only removed behaviour
 
-- `tests/golden/finder_lrisf.json` (896 KB): it goes with B7.
+- `tests/golden/finder_lrisf.json` (896 KB): it stays (B7 is KEEP).
 - `tests/test_migrazione_qqq.py` (490 lines): it shrinks with A1 and A4–A7, and goes entirely with A2–A3.
 - `tests/test_libreria.py` (207 lines): it goes with C1 and C2 (its node run of the JS engine).
 - The untargeted goldens and tests (`crates/mzlab-feat/tests/untargeted_*.rs`, `tests/data/untargeted/`, `tools/valida/cancello_untargeted.py`, Python refs `arpls`, `localmax`): they go with D1. The `formula_id` and `isofinder` refs stay.
@@ -147,19 +145,17 @@ Removing a test together with the code it guards is a cut, not skipping a test. 
 
 Each PR runs `python3 tools/pre_pr.py` plus the named check, and touches no `.github/`.
 
-1. **Dead bits (Rust + JS)**: B3, B5, B6, B2 (comments only; the e2e URLs lose `&motore=rust`/`&lr=1`), C11, C12. Check: `cargo test -p mzlab-feat`, `python3 tools/verifica.py --cambiati`.
-2. **Separate wasm build**: B8. Check: `tools/build_feat_wasm.sh site/static` gives the same `manifest.json` SHA-256 as before; `wasm-tetti.md` and `INDICE.md:74` rewritten.
-3. **Test-only ISF report**: B7 with its golden. Check: `cargo test -p mzlab-feat`, plus `grep -rn isf_report crates` empty.
-4. **Storage hooks and fallbacks**: A1, A4, A6, A7, B1, B9. Check: the trimmed `tests/test_migrazione_qqq.py` still proves the one-time copy; `e2e_tour.py` and a full `verifica.py --cambiati` are green; `grep -rn 'QQQ_' mzlab/web TP_Mine` is empty apart from `nomi.js`.
-5. **Browser floor**: E1–E7. Check: the floor is written once (`docs/agenti/wasm-potenziale.md`) and `browser.js` names it in `load.err.oldBrowser`; e2e green in Chromium, Firefox and WebKit (`--completo`).
-6. **Docs archive**: F1–F4, F6–F8. Check: `python3 tools/controlla.py` and `tools/controlla_link_docs.py` are green, and `grep -rn 'docs/studi/<moved>'` is empty.
-7. **Old settings in JS**: C10. Check: `verifica.py --cambiati`.
-8. *(after A2's condition)* **Drop the qqq migration**: A2, A3, A5, C4. Check: `test_migrazione_qqq.py` removed, `tests/test_migra.py` green, `qqq-db.js` gone or renamed, and the IndexedDB open count at start is 1 (`?perf`).
-9. *(after the C3 check)* **No-OPFS library store**: C3, E8. Check: new e2e in Firefox and WebKit private windows.
-10. *(after the C1/C2 conditions)* **JS library engine and MZL1**: C1, C2, `?libjs=1`. Check: `e2e_libreria_wasm.py` green; `test_libreria.py` removed; `libreria-worker.js` under 300 lines.
-11. *(after the freeze)* **Flow and mzlab-lib items**: B4, C5–C7, C9, C15. **FREEZE**. Check: `cargo test -p mzlab-core -p mzlab-lib`, and an `.mzflow` round trip in `e2e_flow_*`.
-12. *(after the freeze plus Federico's decision)* **The mzmine-like engine**: D1. **FREEZE**. Check: the `untargeted` wasm is gone from `manifest.json`; `formula.ms1` parity tests (`flow_formula_ms1`) stay green; `hr` bytes do not change.
-13. *(after the freeze, measured plan)* **Consolidations**: D2, D5, D7, the `legacy/` → `finder_api/` rename, and C13, C14, D3 once their conditions are met.
+1. **Dead bits (Rust + JS)**: B5, B6, B2 (comments only; the e2e URLs lose `&motore=rust`/`&lr=1`), C11, C12. Check: `cargo test -p mzlab-feat`, `python3 tools/verifica.py --cambiati`.
+2. **Storage hooks and fallbacks**: A1, A4, A6, A7, B1, B9. Check: the trimmed `tests/test_migrazione_qqq.py` still proves the one-time copy; `e2e_tour.py` and a full `verifica.py --cambiati` are green; `grep -rn 'QQQ_' mzlab/web TP_Mine` is empty apart from `nomi.js`.
+3. **Browser floor**: E1–E7. Check: the floor is written once (`docs/agenti/wasm-potenziale.md`) and `browser.js` names it in `load.err.oldBrowser`; e2e green in Chromium, Firefox and WebKit (`--completo`).
+4. **Docs archive**: F1–F4, F6–F8. Check: `python3 tools/controlla.py` and `tools/controlla_link_docs.py` are green, and `grep -rn 'docs/studi/<moved>'` is empty.
+5. **Old settings in JS**: C10. Check: `verifica.py --cambiati`.
+6. *(after A2's condition)* **Drop the qqq migration**: A2, A3, A5, C4. Check: `test_migrazione_qqq.py` removed, `tests/test_migra.py` green, `qqq-db.js` gone or renamed, and the IndexedDB open count at start is 1 (`?perf`).
+7. *(after the C3 check)* **No-OPFS library store**: C3, E8. Check: new e2e in Firefox and WebKit private windows.
+8. *(after the C1/C2 conditions)* **JS library engine and MZL1**: C1, C2, `?libjs=1`. Check: `e2e_libreria_wasm.py` green; `test_libreria.py` removed; `libreria-worker.js` under 300 lines.
+9. *(after the freeze)* **Flow and mzlab-lib items**: B4, C5–C7, C9, C15. **FREEZE**. Check: `cargo test -p mzlab-core -p mzlab-lib`, and an `.mzflow` round trip in `e2e_flow_*`.
+10. *(after the freeze plus Federico's decision)* **The mzmine-like engine**: D1. **FREEZE**. Check: the `untargeted` wasm is gone from `manifest.json`; `formula.ms1` parity tests (`flow_formula_ms1`) stay green; `hr` bytes do not change.
+11. *(after the freeze, measured plan)* **Consolidations**: D2, D5, D7, the `legacy/` → `finder_api/` rename, and C13, C14, D3 once their conditions are met.
 
 **Expected total** (all cuts):
 - Rust: about 4 000 lines.

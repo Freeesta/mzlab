@@ -5,6 +5,7 @@ use mzlab_feat::filters::{self, Rule};
 use mzlab_feat::filters_blank::{qc_cv_percent, BlankOpts, Quantity, Scope, Stat};
 use mzlab_feat::norm::Method;
 use mzlab_feat::samples::{propose, Sample};
+use mzlab_feat::table::CELL_FILLED;
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
 use mzlab_feat::view;
 
@@ -222,5 +223,42 @@ fn qc_cv_counts_a_missing_file_as_zero_and_needs_two_qc() {
     assert_eq!(
         filters::apply(&t, &s, &[Rule::QcCv(90.0, 3)]).unwrap(),
         vec![1]
+    );
+}
+
+#[test]
+fn detected_only_ignores_a_gap_filled_blank_cell() {
+    // the blank at file 0 was filled (area 100), the one at file 1 was detected (100): every cell gives the mean 100 (250 < 3 x 100), detected only gives 50 (250 >= 3 x 50)
+    let (mut t, s) = table(
+        &KINDS,
+        &[vec![(100.0, 1.0), (100.0, 1.0), (250.0, 1.0), (10.0, 1.0)]],
+    );
+    t.state[0] = CELL_FILLED;
+    let run = |t: &Aligned, detected_only| {
+        let o = BlankOpts {
+            detected_only,
+            ..BlankOpts::default()
+        };
+        filters::apply(t, &s, &[Rule::BlankWith(3.0, o)]).unwrap()
+    };
+    assert_eq!(run(&t, false), vec![1]); // 1: the row is dropped
+    assert_eq!(run(&t, true), vec![0]); // 0: the row is kept
+                                        // a detected blank cell still removes the row
+    t.state[0] = CELL_DETECTED;
+    assert_eq!(run(&t, true), vec![1]);
+    // the option travels in the JSON of the rule
+    let mut j = mzlab_core::json::Out::default();
+    mzlab_feat::filters_blank::write_json(
+        &mut j,
+        &BlankOpts {
+            detected_only: true,
+            ..BlankOpts::default()
+        },
+    );
+    let v = mzlab_core::json::parse(format!("{{{}}}", &j.0[1..]).as_bytes()).unwrap();
+    assert!(
+        mzlab_feat::filters_blank::read_json(&v)
+            .unwrap()
+            .detected_only
     );
 }

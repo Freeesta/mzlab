@@ -47,6 +47,9 @@ mod flow_formula;
 #[cfg(test)]
 mod flow_formula_web_tests;
 mod flow_generate;
+mod flow_group;
+#[cfg(test)]
+mod flow_group_tests;
 mod flow_hash;
 #[cfg(test)]
 mod flow_hr_tests;
@@ -144,6 +147,7 @@ mod name_rule_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
+mod peaks_auto_cmd;
 mod peaks_edges_cmd;
 mod plain;
 mod sim_table_cmd;
@@ -168,6 +172,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
        mzlab-cli sim-table FILE... [--set output=area|apex_rt]   every SIM channel integrated, one column per sample, as CSV (sim-table --help)
+       mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
