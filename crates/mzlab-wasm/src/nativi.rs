@@ -204,15 +204,15 @@ impl ReadAt for Src<'_> {
 pub(crate) fn reader(n: &mut Nativi, ds: String) -> Result<&mut dyn Lettore, JsValue> {
     n.clock += 1;
     let open = n.sets.values().filter(|d| d.l.is_some()).count();
-    if open >= OPEN && n.sets.get(&ds).is_some_and(|d| d.l.is_none()) {
-        if let Some(old) = n
+    if open >= OPEN
+        && n.sets.get(&ds).is_some_and(|d| d.l.is_none())
+        && let Some(old) = n
             .sets
             .values_mut()
             .filter(|d| d.l.is_some())
             .min_by_key(|d| d.used)
-        {
-            old.l = None;
-        }
+    {
+        old.l = None;
     }
     let d = n
         .sets
@@ -266,8 +266,8 @@ pub struct Passata(Option<upload::Passata>);
 #[wasm_bindgen]
 impl Passata {
     #[wasm_bindgen(constructor)]
-    pub fn new(size: f64) -> Passata {
-        Passata(Some(upload::Passata::new(size as u64)))
+    pub fn new(size: f64, senza_sha1: Option<bool>) -> Passata {
+        Passata(Some(upload::Passata::scelta(size as u64, senza_sha1)))
     }
     pub fn aggiorna(&mut self, piece: &[u8]) {
         self.0.as_mut().unwrap().aggiorna(piece);
@@ -471,7 +471,7 @@ pub fn native_to_mzml(
     read: Function,
     c: u32,
     centroid: bool,
-    numpress: bool,
+    compression: &str,
     sink: Function,
     progress: Function,
 ) -> Result<(), JsValue> {
@@ -487,10 +487,8 @@ pub fn native_to_mzml(
             &(total as f64).into(),
         );
     };
-    let opz = mzlab_core::mzmlwrite::Opzioni {
-        numpress,
-        ..Default::default()
-    };
+    let opz = mzlab_core::mzmlwrite::opzioni_compressione(compression)
+        .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     lettori_mzml::scrivi_con(&mut *l, c as usize, &mut out, &mut tell, opz)
         .map_err(|e| error_json(&e))?;
     std::io::Write::flush(&mut out).map_err(|_| {

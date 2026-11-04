@@ -1,0 +1,92 @@
+# Metrics of every main commit (tools/metriche.py, docs/agenti/metriche.md): one JSONL line per commit and part on the branch `stat-ci`
+# (files metriche-YYYY-MM.jsonl; the big eventi*.jsonl files of ci_metrics.py are never checked out or touched).
+# Not a required check and it runs after the real work: workflow_run of `pages` and `test` on main. GITHUB_TOKEN reads the API and pushes to
+# `stat-ci` (a push with it starts no workflow). Only commits already merged into main are checked out, never code of a pull request.
+name: metriche
+
+on:
+  workflow_run:
+    workflows: [pages, test]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit of main to measure (default: the tip)"
+        required: false
+
+concurrency:
+  group: metriche
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: read
+
+jobs:
+  registra:
+    # a fork pull request can have a branch called main: only pushes of this repository count
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.workflow_run.head_sha || inputs.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+      - name: Data branch (only the metriche files, not the 100 MB events file)
+        run: |
+          git config user.name "stat-ci"
+          git config user.email "stat-ci@users.noreply.github.com"
+          if git fetch --depth=1 --filter=blob:none origin stat-ci; then
+            git worktree add --no-checkout -B stat-ci dati FETCH_HEAD
+            git -C dati sparse-checkout set --no-cone '/metriche-*.jsonl' '/copilot-*.jsonl'
+            git -C dati checkout
+          else
+            git worktree add --orphan -b stat-ci dati
+          fi
+      - name: Built .wasm modules (the pages run only)
+        if: github.event.workflow_run.name == 'pages' && github.event.workflow_run.conclusion == 'success'
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: metriche-wasm
+          path: wasm
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      # metrics are best effort: a failure here must never turn anything red
+      - name: Measure and publish on stat-ci
+        continue-on-error: true
+        run: |
+          args=""
+          if [ -d wasm ]; then
+            command -v brotli >/dev/null || sudo apt-get install -y -qq brotli
+            args="--sito wasm"
+          fi
+          for i in 1 2 3 4 5; do
+            python3 tools/metriche.py --registra --ci $args --sha "$SHA" --dati dati
+            python3 tools/metriche.py --copilot --dati dati || true
+            cd dati
+            git add -A
+            git diff --cached --quiet && exit 0
+            git commit -qm "metriche: ${SHA:0:10}"
+            git push origin HEAD:stat-ci && exit 0
+            git fetch --depth=1 --filter=blob:none origin stat-ci && git reset -q --hard FETCH_HEAD
+            cd ..
+          done
+          echo "::warning::metriche: not published"
+      # the trend table in the job summary and the HTML page (sparklines) as an artifact
+      - name: Trend report
+        continue-on-error: true
+        run: |
+          { echo '```'; python3 tools/metriche.py --rapporto --dati dati --html metriche.html; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Trend report (artifact)
+        if: ${{ !cancelled() && hashFiles('metriche.html') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: metriche-rapporto
+          path: metriche.html
+          retention-days: 30

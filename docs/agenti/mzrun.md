@@ -1,6 +1,11 @@
 # The `mzrun/1` file (`*.mzrun.json`)
 
-One analysis in one canonical JSON file, in two modes: a `record` replicates a run exactly, a `preset` keeps the parameters only and starts a new analysis. Schema `docs/schemi/mzrun-1.json` (JSON Schema 2020-12, `$id` `mzrun/1`), examples `tests/data/mzrun/` (synthetic, no lab data), test `tests/test_mzrun_schema.py`. The format is defined here and nothing reads or writes it yet: `mzlab_core::mzrun` (Rust) comes in later PRs, with the site and the app sharing the same bytes (parity rule of AGENTS.md).
+One analysis in one canonical JSON file, in two modes: a `record` replicates a run exactly, a `preset` keeps the parameters only and starts a new analysis. Schema `docs/schemi/mzrun-1.json` (JSON Schema 2020-12, `$id` `mzrun/1`), examples `tests/data/mzrun/` (synthetic, no lab data), test `tests/test_mzrun_schema.py`. `mzlab_core::mzrun` (`crates/mzlab-core/src/mzrun/`) writes and checks it; the site and app routes come later (parity rule of CLAUDE.md).
+
+## Build and verify (Rust)
+- `build(&Parts)`: the record of a finished run from the `mzflow/2` plan, the `prov/1` and the roles of the files (`campioni/2`: the role of each plan input is found by its SHA-256, `pool` is written as `qc`). `resolved` and `seeds` (integer parameters named `seed` or `*_seed`) come from the `prov/1`; `resources`, `decisions` and `limits` are given by the caller.
+- `verify(bytes)`: recomputes `self_sha256`, `plan_sha256`, `results_digest` and the hash of every result entity that the `prov/1` also holds; `error.newerFormat` above `min_reader`. `results_digest(entities)` is the digest of "Comparing two records".
+- CLI (`flow_mzrun.rs`): `mzlab-cli flow record RUNDIR --roles CAMPIONI.json [--out FILE]` reads `plan.json` and `prov.json` of the run folder (the engine commit must be in `prov.json`) and writes empty `resources`, `decisions` and `limits`; `flow verify FILE` exits 0, or 3 with one line per mismatch (`self_sha256`, `plan_sha256`, `results_digest`, `entity:NAME`).
 
 ## Canonical text and fingerprint
 - The canonical text is the one of `flow::value_text` / `Resolved::text()` (`crates/mzlab-core/src/flow/canon.rs`): keys sorted, the shortest number form, UTF-8, LF line ends, no trailing spaces, no spaces between tokens. The number form is that of `canon.rs`; the Python check `json.dumps(sort_keys=True, separators=(",", ":"), ensure_ascii=False)` agrees with it only for integers and strings, so the examples avoid floats with several representations (`5`, not `5.0`).
@@ -30,7 +35,7 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 
 ## Applying a preset written by another version
 - A parameter the running step has and the preset lacks (new): ALWAYS ask for confirmation, never silent; the answer goes in `compat.changes` (`confirmed`) and the limit `preset.param.new` is written.
-- A parameter removed, or a new version of a step: a Rust migration (`preset.param.migrated`) or a refusal with `err.flow.step.version`.
+- A parameter removed, or a new version of a step: a Rust migration or a refusal with `err.flow.step.version`. `mzrun::migrate(bytes)` (`mzrun/migrate.rs`) applies the table of `flow::migrate` to `plan`, `resolved` (with `pin`, `estimates`) and `seeds`: each renamed parameter is a `compat.changes` entry `{kind: migrated, value, confirmed: true}` under the new name, each migrated instance a limit `preset.param.migrated` (`detail`: `g: spectra.msn_graph@1 → @2 (mz_basso → low_mz, …)`), `plan_sha256` and `self_sha256` recomputed; a file with nothing to migrate keeps its content.
 - A schema above the reader (`min_reader` greater than the reader's): the file opens read-only with `error.newerFormat` (`formato-nuovo.md`), never rewritten.
 
 ## Comparing two records
@@ -44,5 +49,5 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 - The methods paragraph is English only and generated in Rust from the record.
 - Planned, later: RO-Crate (Provenance Run Crate) and mzQC exports.
 
-## Later PRs
-1. engine identity (commit, modules); 2. descriptor guard; 3. `mzrun` build/verify (`mzlab_core::mzrun`); 4. browser `prov` for all steps; 5. wasm and desktop routes; 6. preset apply; 7. Attributio decisions; 8. UI; 9. ESI+/ESI- merge; 10. exports; 11. e2e replicate.
+## Planned
+browser `prov` for all steps; wasm and desktop routes; preset apply; Attributio decisions; UI; ESI+/ESI- merge; exports; e2e replicate.

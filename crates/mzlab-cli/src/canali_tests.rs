@@ -23,6 +23,13 @@ fn ids(v: &Value) -> Vec<String> {
         .collect()
 }
 
+/// `mzlab-cli channels FILE extra...`.
+fn run_new(p: &str, extra: &[&str]) -> crate::Outcome {
+    let mut a = vec!["channels".to_string(), p.to_string()];
+    a.extend(extra.iter().map(|s| s.to_string()));
+    execute(&a)
+}
+
 fn campo(v: &Value, i: usize, k: &str) -> f64 {
     v.get("canali").unwrap().arr()[i]
         .get(k)
@@ -250,6 +257,24 @@ fn canale_reads_a_uv_and_an_analog_trace() {
         "{ids:?}"
     );
     assert_eq!(proposto(&canali_di(&f)), "solo-uv");
+    // The new and the old spellings answer with the same bytes and exit code.
+    let old = |extra: &[&str]| {
+        let mut a = vec!["canali".to_string(), p.clone()];
+        a.extend(extra.iter().map(|s| s.to_string()));
+        execute(&a)
+    };
+    for (new, old_args) in [
+        (vec!["--channel", "uv:twc"], vec!["--canale", "uv:twc"]),
+        (
+            vec!["--channel", "an:1", "--n", "50"],
+            vec!["--canale", "an:1", "--n", "50"],
+        ),
+        (vec!["--channel", "tic"], vec!["--canale", "tic"]),
+        (vec![], vec![]),
+    ] {
+        let (a, b) = (run_new(&p, &new), old(&old_args));
+        assert_eq!((a.code, a.stdout), (b.code, b.stdout), "{new:?}");
+    }
     let twc = run(&["--canale", "uv:twc"]);
     assert_eq!(twc.code, 0, "{}", twc.stderr);
     assert_eq!(

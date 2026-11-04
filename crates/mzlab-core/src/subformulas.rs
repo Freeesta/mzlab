@@ -96,7 +96,7 @@ pub fn subformulas(formula: &str, z: i32, min_mz: f64) -> Result<(Formula, Vec<(
             let g: Formula = els
                 .iter()
                 .zip(&ix)
-                .filter(|(_, &c)| c > 0)
+                .filter(|&(_, &c)| c > 0)
                 .map(|((e, _), &c)| (e.clone(), c))
                 .collect();
             (crate::elements::fmt(&g), mz)

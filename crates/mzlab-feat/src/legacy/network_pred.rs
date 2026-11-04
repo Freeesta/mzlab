@@ -98,10 +98,10 @@ pub(super) fn predecessors(
             if name.is_none() && cos.is_none() {
                 continue;
             }
-            if let (Some(tj), Some(ti)) = (tmax[j], tmax[i]) {
-                if tj > ti + STEP {
-                    continue;
-                }
+            if let (Some(tj), Some(ti)) = (tmax[j], tmax[i])
+                && tj > ti + STEP
+            {
+                continue;
             }
             let coh = match (tmax[j], tmax[i]) {
                 (Some(tj), Some(ti)) if tj > ti => 0.5,

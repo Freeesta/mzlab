@@ -15,7 +15,7 @@ try:
         def missing():
             pg.click("#np-method"); ready(pg)
             t = pg.inner_text("#bigdlg")
-            assert "Manca il metodo di acquisizione" in t and "3200 QTRAP" in t, t[:200]
+            assert "Manca il metodo" not in t and "Analyst" not in t and "Scansione Q1" not in t and "non c'è un gradiente" not in t and "3200 QTRAP" in t, t[:200]
             assert "Parametri del metodo" not in t and "Curtain gas" not in t, "no built-in method may appear"
             assert pg.locator("#m-load").count() == 1
             pg.screenshot(path=SH + "100_no_method.png")
@@ -36,7 +36,7 @@ try:
         step("two methods: selector", two)
         pg.click("#bigx"); pg.wait_for_timeout(300)
         def texts():
-            pg.click("#stbar [data-cmd=losses]"); pg.wait_for_timeout(300)
+            pg.click("#stbar [data-cmd=addloss]"); pg.click("#al-t-losses"); pg.wait_for_timeout(300)
             t = pg.inner_text("#sb-panel-losses"); assert "Differenze di massa frequenti" not in t and "Riferimenti" not in t and "Levsen" not in t
             assert pg.is_visible("#sb-help") and pg.locator("#sb-help").get_attribute("data-help") == "losses"
             pg.click("#np-pt"); pg.wait_for_timeout(300)             # the periodic table is in the header: it stays a window

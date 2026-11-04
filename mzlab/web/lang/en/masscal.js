@@ -1,6 +1,6 @@
 I18N.add("en", {
   "masscal.title": "Mass calibration check · {file}",
-  "masscal.intro": "Ions of the contaminant list (Keller 2008) that stay in the MS1 scans of this file, with their mass error. The error of one ion can also come from a peak that overlaps it: look at the whole set.",
+  "masscal.intro": "Ions of the contaminant list that stay in the MS1 scans of this file, with their mass error. The error of one ion can also come from a peak that overlaps it: look at the whole set.",
   "masscal.sum": "{n} contaminant ions found; offset {off} ppm; spread {spread} ppm",
   "masscal.sum.few": "{n} contaminant ions found: too few to estimate the error (at least {min}).",
   "masscal.none": "No contaminant ion stays in the MS1 scans of this file above the lowest intensity chosen.",

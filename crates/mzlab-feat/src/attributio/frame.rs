@@ -49,13 +49,6 @@ impl Frame {
     pub fn int(&self, r: usize, c: usize) -> Option<i64> {
         self.num(r, c).map(|v| v as i64)
     }
-    /// The cells of a column by name (empty texts when the column is absent).
-    pub fn column_texts(&self, name: &str) -> Vec<&str> {
-        match self.col(name) {
-            Some(c) => (0..self.nrows).map(|r| self.cell(r, c)).collect(),
-            None => vec![""; self.nrows],
-        }
-    }
     pub fn set(&mut self, r: usize, c: usize, text: &str) {
         let start = self.data.len();
         self.data.push_str(text);

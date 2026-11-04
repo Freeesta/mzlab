@@ -16,6 +16,12 @@
       "properties": {"header": {"type": "string"}, "prefix": {"type": "string"}}
     },
     "extra_headers": {"type": "object", "additionalProperties": {"type": "string"}},
+    "session_headers": {
+      "type": "object",
+      "description": "Only mzLab's proxy (provider mzlab-demo): the header of the session id (random per opening of the panel) and of the owner's passphrase; the base_url is the placeholder https://proxy.invalid until the transport puts the host of mzlab/web/llm/proxy-host.js in its place.",
+      "required": ["session", "owner"],
+      "properties": {"session": {"type": "string"}, "owner": {"type": "string"}}
+    },
     "models": {
       "type": "array",
       "items": {

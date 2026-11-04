@@ -5,7 +5,7 @@
 use mzlab_core::error::Error;
 use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::step::{registry_from_value, Step};
-use mzlab_llm::assist::{roles, with_prompts, Prompts, Role};
+use mzlab_llm::assist::{roles_for, with_prompts, Prompts, Role};
 use mzlab_llm::provider::Provider;
 use mzlab_llm::subcheck::{check, request, Verdict};
 use wasm_bindgen::prelude::*;
@@ -23,7 +23,7 @@ pub(crate) fn prompts_of(json: &str) -> Result<Prompts, String> {
     Ok(with_prompts(&pairs))
 }
 
-fn registry_of(json: &str) -> Result<Vec<Step>, String> {
+pub(crate) fn registry_of(json: &str) -> Result<Vec<Step>, String> {
     registry_from_value(&parse(json.as_bytes()).map_err(fail)?).map_err(fail)
 }
 
@@ -68,7 +68,8 @@ impl Assist {
         prompts_json: &str,
         steps_json: &str,
     ) -> Result<Assist, String> {
-        let roles = roles(roles_json).map_err(fail)?;
+        // the demo provider gets the smaller limits the proxy enforces
+        let roles = roles_for(roles_json, provider_id).map_err(fail)?;
         let prompts = prompts_of(prompts_json)?;
         prompts.check(&roles).map_err(fail)?;
         Ok(Assist {

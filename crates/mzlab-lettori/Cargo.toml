@@ -29,6 +29,8 @@ flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 # the zstd decoder of the Bruker blocks (already in the workspace for the .mzlib format); without the checksum feature: the blocks have none
 ruzstd = { version = "0.9", optional = true, default-features = false, features = ["std"] }
 [dev-dependencies]
+# the engine side of tests/sciex_dad_metodo.rs: the mzML of the module read back as the engine reads it (`Mzml::dad`, `/api/uvspec`)
+mzlab-core = { path = "../mzlab-core", default-features = false, features = ["estesi", "indice", "mappa-dad"] }
 # the tests check the keys of metodo/1 against its schema
 serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }
 # the scandump example (tools of the Thermo oracle bench, docs/agenti/scandump.md) reads the file with the same functions as the `thermo` module; never part of a .wasm

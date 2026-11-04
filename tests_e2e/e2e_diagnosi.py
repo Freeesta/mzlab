@@ -1,6 +1,6 @@
 """Loading errors: a short message with the cause, a closed «Details» button (aria-expanded) with the phase, the format, the original error and the header (never the data), and «Copy diagnosis».
 Real failures of the engine: a truncated mzML and a file that is not XML (synthetic, tools/mzml_msconvert_sintetico.py). Needs the site and the .wasm. Run from the repo root: python3 tests_e2e/e2e_diagnosi.py"""
-import os, shutil, subprocess, sys, tempfile, urllib.request
+import os, re, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT
@@ -39,6 +39,10 @@ try:
                 assert btns.count() >= 1 and det in btns.first.inner_text(), t
                 assert btns.first.get_attribute("aria-expanded") == "false" and not pg.locator("#unopen .diagbox").first.is_visible()
                 assert "troncato" in t or "nonxml" in t
+                # the failure reads in words in the language of the page, never as a catalogue key
+                assert not re.search(r"\b(?:err|error|warn)\.[A-Za-z]+\.", t), t
+                words = ("non è un mzML completo", "danneggiato", "non sembra un file mzML") if lang == "it-IT" else ("not a complete mzML", "damaged", "does not look like an mzML file")
+                assert any(w in t for w in words), t
             step(f"{lang}: the notice has a closed «{det}» button", shown)
             def open_it():
                 pg.locator("#unopen [data-a=diagdet]").first.click()

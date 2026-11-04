@@ -211,10 +211,11 @@ fn an_index_that_starts_just_after_queueing_holds_the_job_back() {
     let d = tempfile::tempdir().unwrap();
     let a = d.path().join("a.mzXML");
     mzxml_file(&a, 3);
-    let c = Coda::with_workers(1);
+    // a long re-check pause keeps the worker inside its window however slow the machine is, so the order is fixed:
+    // job queued, then the index starts, then the worker re-checks
+    let c = Coda::with_recheck(3000);
     c.set_folder(d.path().join("cache"));
     c.add("a.mzXML", 0, &a);
-    std::thread::sleep(Duration::from_millis(10));
     let busy = Indexing::new();
     std::thread::sleep(Duration::from_millis(300));
     assert_eq!(c.list()["jobs"][0]["state"], "queued");

@@ -42,7 +42,7 @@ export function createDerivata({ nativo, ARCH, indexPlain }) {
     if (mzml && mzml.size && idx) return { idx, mzml };
     for (const e of await ARCH.list("idx")) if (e.name.startsWith(key.replace(/~[^~]*$/, "~")) && e.name !== dest + ".mzidx") await ARCH.remove("idx", e.name);
     annuncia({ phase: "convert", frac: 0 });
-    const r = await nativo.toMzml({ name, dest, numpress: false }, p => annuncia({ phase: "convert", frac: p.scansTotal ? p.scans / p.scansTotal : 0, done: p.scans, total: p.scansTotal || undefined }));
+    const r = await nativo.toMzml({ name, dest, compression: "standard" }, p => annuncia({ phase: "convert", frac: p.scansTotal ? p.scans / p.scansTotal : 0, done: p.scans, total: p.scansTotal || undefined }));
     mzml = r.file || (r.parts ? new Blob(r.parts) : null);
     if (!mzml || !mzml.size) throw JSON.stringify({ error_key: "err.msngrafo.noMzml", params: {} });
     annuncia({ phase: "index", frac: 0 });

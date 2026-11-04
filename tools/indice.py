@@ -20,7 +20,6 @@ OUT = ROOT / "docs" / "agenti" / "mappa.md"
 SKIP = ("vendor/", "ei-dati.js", "web/elements.js", "glossario-dati.js", "web/esempi/", "/target/", "docs/studi/", "docs/archivio/")  # docs/studi/, docs/archivio/: study probes and archived scripts, not part of the program
 DORMIENTI = {"mzlab/web/qaqc.js", "mzlab/qaqc.py", "tests/test_qaqc.py", "tests_e2e/e2e_qaqc.py"}   # QA/QC: switched off by default, keep it
 GROUPS = [  # (title, path prefix, one line per file?)
-    ("Teoria e Pratica (`mzlab/web/teoria/`)", "mzlab/web/teoria/", True),
     ("Pagina principale (`mzlab/web/`)", "mzlab/web/", True),
     ("Python (`mzlab/`)", "mzlab/", True),
     ("Rust, nucleo (`crates/mzlab-core`)", "crates/mzlab-core/", True),
@@ -29,6 +28,7 @@ GROUPS = [  # (title, path prefix, one line per file?)
     ("Strumenti (`tools/`)", "tools/", True),
     ("mzFinder (`TP_Mine/`)", "TP_Mine/", False),
     ("Flow grafico (`flow/`)", "flow/", False),
+    ("Proxy pubblico dell'assistente (`proxy/`)", "proxy/", True),
     ("Test (`tests/`, `tests_e2e/`)", "tests", False),
     ("Fuzzing dei parser (`fuzz/`)", "fuzz/", False),
     ("Controlli indipendenti (`docs/controlli/`)", "docs/controlli/", False),
@@ -62,6 +62,9 @@ def definizioni(path: str, text: str | None = None) -> list[tuple[str, int, int]
     for i, l in enumerate(lines, 1):
         m = rx.match(l)
         if not m:
+            # an `impl` block ends the item before it (its methods are measured one by one)
+            if rx is RS_DEF and l.startswith("impl"):
+                starts.append(("", i, 0))
             continue
         name = m.group(3) if path.endswith(".rs") else (m.group(2) or m.group(3))
         starts.append((name, i, len(m.group(1))))
@@ -74,7 +77,8 @@ def definizioni(path: str, text: str | None = None) -> list[tuple[str, int, int]
         # drop trailing blank / closing lines shared with the next block
         while end > i and not lines[end - 1].strip():
             end -= 1
-        found.append((name, i, end - i + 1))
+        if name:
+            found.append((name, i, end - i + 1))
     return found
 
 
@@ -105,7 +109,7 @@ def render() -> str:
     out = ["# Mappa del codice",
            "Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla che sia aggiornata). Una riga per file: "
            "righe, scopo (prima riga di commento o docstring), poi `funzione:riga` per le più grandi. Per orientarsi: `grep -n` sul nome, "
-           "poi lettura a intervalli. Aree e file d'area: AGENTS.md §5.", ""]
+           "poi lettura a intervalli. Aree e file d'area: CLAUDE.md", ""]
     used: set[str] = set()
     for title, prefix, per_file in GROUPS:
         sel = [f for f in files if f.startswith(prefix) and f not in used]

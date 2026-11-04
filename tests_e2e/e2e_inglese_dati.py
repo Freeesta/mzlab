@@ -34,11 +34,11 @@ try:
             for w in ("Full Scan", "+ Chromatogram", "+ Spectrum", "+ RT-m/z map", "Method"): assert w.lower() in pg.inner_text("#v-data").lower(), w
         step("first view of Data: no Italian", first_view)
         def sidebar():
-            for t in ("calc", "losses", "lists"):
+            for t in ("calc", "addloss", "lists"):
                 pg.click(f"#stbar [data-cmd={t}]"); attendi(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
                 it = italian(pg); assert not it, (t, it)
             pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)
-            pg.click("#sb-x"); frames(pg, 3)
+            close_side(pg); frames(pg, 3)
         step("sidebar tabs: calculator, losses, lists", sidebar)
         def periodic():
             pg.click("#np-pt"); attendi(pg, "/Hydrogen|Carbon/.test(document.querySelector('#refdlg').innerText)")
@@ -65,7 +65,8 @@ try:
                     pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
         step("panels and right-click menu", menus)
         def gear_method():
-            pg.click("#np-set"); pg.wait_for_selector("#uipset"); it = italian(pg); assert not it, it; pg.click("#np-set")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); it = italian(pg); assert not it, it
+            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#uipset')")      # the settings drawer covers the gear: Esc closes it
             pg.click("#np-method"); attendi(pg, "!!document.querySelector('dialog[open]')"); frames(pg, 2); it = italian(pg); assert not it, it
         step("gear and method window", gear_method)
         def xic_integrate():

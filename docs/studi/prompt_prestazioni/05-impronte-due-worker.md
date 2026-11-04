@@ -1,0 +1,21 @@
+# PERF-05: SHA-256 and SHA-1 of a vendor file in two workers (only if PERF-02 says the hash is on the critical path)
+
+You are a chat of mzLab (repository Freeesta/mzlab). Read CLAUDE.md, `docs/studi/OTTIMIZZAZIONE_PRESTAZIONI.md` §1-2, the PR of PERF-02 (its critical-path answer and its MB/s table), `docs/agenti/wasm-potenziale.md`. Branch `claude/perf-impronte-due` from `origin/main`, after PERF-02 is in `main`. English for code, commits and PR.
+
+**Gate.** Read the PR of PERF-02. If it measured that the OPFS copy is slower than the hash (the hash waits for the copy), stop the code part. Do only step 4 (the rows), and add one row «scartata» to `ottimizzazioni-tentate.md` with the two numbers and «riprovare solo se» (for example: a faster OPFS, or a file source that is not copied).
+
+**Problem.** For a `.raw`/`.wiff`, `rust-nativo.js:122` starts one `Passata` that computes SHA-256, SHA-1 and the probe in ONE worker (`impronta-worker.js`), serially, on every piece. Rates after PERF-02 (scratch measure, Node 22, O3): SHA-256 281 MB/s, SHA-1 626 MB/s. Serially that is 194 MB/s; with one hash per worker it is bounded by SHA-256 alone, 281 MB/s, i.e. −31 % of hash time (**estimate**, to be measured). mzML files hash SHA-256 only and do not change.
+
+**Do (if the gate passes).**
+1. `impronta.js` / `impronta-worker.js`: for a member that needs both hashes, post each piece to two workers. Worker A computes SHA-256 + probe and worker B computes SHA-1, both from the same compiled `WebAssembly.Module` (already shared: `module: () => wasmModule`). `end()` returns the same `[sha256, sha1, probe]` array in the same order. Pieces are transferred today. With two receivers, copy once for B (or `slice`) and measure the copy. Respect the existing back-pressure: never more pieces in flight than today per worker. Use `Passata` as is, or give it a mode flag in `crates/mzlab-wasm/src/nativi.rs` if computing SHA-256 only (or SHA-1 only) needs one. The same `Passata` code serves the desktop native path, so desktop and site stay one code.
+2. The same fallback as today when workers are not available (inline `Passata`, `impronta.js:54`).
+3. Measure in Chromium: time from drop to fingerprints ready, on a 300 MB synthetic vendor-size file (bytes do not matter for a hash) and on the `.raw`/`.wiff` test files. Do it before and after, 1× and 4× CPU, 5 runs, median, builds alternated. Adopt only if the gain on drop→ready is ≥ 10 % at 1×. Otherwise revert and record «scartata».
+4. Rows: add to `docs/agenti/misure-velocita.md` and `ottimizzazioni-tentate.md` your row and the rows that PERF-02, PERF-03 and PERF-04 left in their PR bodies (copy them verbatim, keeping their PR numbers). In wave 2 you are the only owner of these two files.
+
+**Zone (only these files).** `mzlab/web/impronta.js`, `mzlab/web/impronta-worker.js`, `mzlab/web/rust-nativo.js` (only the `impronte.start` call), `crates/mzlab-wasm/src/nativi.rs` (only `Passata`, if step 1 needs a mode), `tests/test_carica_worker.py` / `tests/carica_worker_node.mjs` (extend), `docs/agenti/misure-velocita.md`, `docs/agenti/ottimizzazioni-tentate.md`. `nativi.rs` is in the engine: measure its `.wasm` after `wasm-opt`. It must not grow more than 512 B, and its cap stays as it is.
+
+**Identity test.** Extend the Node test of the worker (`tests/carica_worker_node.mjs`): for random buffers of 0, 1, 63, 64, 65 bytes, 1 MB and 37 MB, cut into random pieces, the two-worker result equals the one-worker result and equals Node's `crypto.createHash('sha256'|'sha1')`. The probe equals today's. `cargo test --release -p mzlab-core --test upload_passata --test impronte_parallele`, `e2e_wiff`, `e2e_wiff_carico`, `e2e_mzidx` green (CI).
+
+**Rules.** No new dependency, no `unsafe`, caps unchanged, results deterministic whatever the scheduling of the workers. `python3 tools/pre_pr.py` before pushing.
+
+**PR.** Title `Hash vendor files with SHA-256 and SHA-1 in two workers` (or `Record the fingerprint speed rows of the performance study` if the gate stops the code). Body starts with `VISIBLE: yes - opening Thermo and SCIEX files is faster` (or `VISIBLE: no`). Ready for review. Send the Coordinator: PR number, 40-char SHA at green CI, before/after numbers.

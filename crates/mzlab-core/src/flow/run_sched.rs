@@ -184,10 +184,10 @@ impl Ctx {
                 for r in refs {
                     match r {
                         Ref::File(n) => {
-                            if let Some(f) = self.plan.input(n) {
-                                if !driving || id.item.as_deref() == Some(n.as_str()) {
-                                    got.push(file_artifact(step, port, f));
-                                }
+                            if let Some(f) = self.plan.input(n)
+                                && (!driving || id.item.as_deref() == Some(n.as_str()))
+                            {
+                                got.push(file_artifact(step, port, f));
                             }
                         }
                         Ref::Out {

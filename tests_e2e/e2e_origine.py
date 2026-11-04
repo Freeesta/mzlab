@@ -52,12 +52,6 @@ try:
             assert pg.locator("#ctx div", has_text="Da dove viene").count() == 0
             pg.keyboard.press("Escape")
         step("no «Da dove viene» in the right-click menu of the map", menus)
-        def teoria():
-            pg.evaluate("document.getElementById('ogdlg').close()")
-            pg.evaluate("setView('teoria')") if False else None
-            h = pg.evaluate("fetch('static/teoria/17-origine.html').then(r=>r.text())"); assert "atrazina" in h and "flufenacet" not in h.lower()
-            assert "Capitolo 17" in h
-        step("Teoria chapter 17 exists and does not discuss the lab compound", teoria)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

@@ -152,10 +152,10 @@ fn rows_json(
         let (k, z) = (f64::from(a.k), f64::from(a.z.abs()));
         let mz = m.map(|x| (k * x + s) / z);
         let ppm = mz.zip(obs).map(|(c, v)| (v - c) / c * 1e6);
-        if let Some(p) = ppm.filter(|p| p.abs() <= tol) {
-            if best.is_none_or(|(_, b)| p.abs() < b.abs()) {
-                best = Some((i, p));
-            }
+        if let Some(p) = ppm.filter(|p| p.abs() <= tol)
+            && best.is_none_or(|(_, b)| p.abs() < b.abs())
+        {
+            best = Some((i, p));
         }
         o.raw(if i > 0 { ",{" } else { "{" })
             .raw("\"n\":")

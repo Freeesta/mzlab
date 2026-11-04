@@ -13,10 +13,10 @@
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
-  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-rmall" type="button" aria-label="Remove all the files" hidden>Remove all</button></div>
+  <div class="row"><button id="tp-page" title="Reload the files open in the Data tab">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-rmall" type="button" aria-label="Remove all the files" hidden>Remove all</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden>
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div>
-  <details id="tp-cond" hidden><summary title="Compare several conditions of the same degradation (gases, photocatalysts...): label the files with their condition">Conditions of the files</summary><div id="tp-cfiles"></div></details><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
+  <details id="tp-cond" hidden><summary title="Label each file with its condition">Conditions of the files</summary><div id="tp-cfiles"></div></details><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div><div id="tp-reatt"></div><div id="tp-reatt-ctl" hidden></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"${dt("ft.f.name")}><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
   <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false"${dt("ft.f.formula")}></div>
@@ -25,7 +25,7 @@
   <div class="row"><label class="mut" for="tp-add"${dt("ft.f.adduct")}>Adduct</label><select id="tp-add"${dt("ft.f.adduct")}><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
   <div class="row"><label class="mut grow" for="tp-prt"${dt("ft.f.prt")}>RT (min)</label><input type="number" id="tp-prt"${dt("ft.f.prt")} step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
  <div class="card"><h3>3 · Settings</h3>
-  <div class="row"><button id="tp-est" type="button" title="Low resolution: propose the XIC window, the RT tolerance and the start of the analysis from the loaded files (yellow values, editable)">Estimate from data</button></div>
+  <div class="row"><button id="tp-est" type="button" title="Low resolution: proposes XIC window, RT tolerance and start from the loaded files">Estimate from data</button></div>
   <div class="row"><label class="mut grow" id="tp-tol-l" for="tp-tol"${dt("ft.f.tol")}>XIC ±Da</label><input type="number" id="tp-tol"${dt("ft.f.tol")} value="0.35" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow" for="tp-rtt"${dt("ft.f.rtt")}>RT ±min</label><input type="number" id="tp-rtt"${dt("ft.f.rtt")} value="0.25" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow" for="tp-steps"${dt("ft.f.steps")}>Steps</label><input type="number" id="tp-steps"${dt("ft.f.steps")} value="2" min="1" max="3" style="width:70px"></div>
@@ -196,7 +196,7 @@
           $("#tp-tol-l").textContent = "XIC ±ppm"; t.value = 5; t.step = 1; t.min = 1;
           const span = Math.max(0, ...st.files.filter(f => f.kind === "hr").map(f => f.rt_max || 0));
           r.value = span ? Math.max(0.05, Math.round(span * 0.005 / 0.05) * 0.05).toFixed(2) : "0.10";      // 0.5 % of the gradient length (20 min: 0.10)
-          r.title = "From the chromatographic method (0.5 % of the run length)";
+          r.title = "From the chromatographic method";
         } else { $("#tp-tol-l").textContent = "XIC ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
       }
       const n = st.files.length;

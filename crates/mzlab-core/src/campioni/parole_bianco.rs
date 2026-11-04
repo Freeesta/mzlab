@@ -1,10 +1,12 @@
-//! Words of a file name that suggest a blank (`wash`, `MQ`, `milliq`...), read from `data/nomi-bianco.json`; used by `nomi.rs` for the role Auto.
+//! Words of a file name that suggest a blank (`wash`, `MQ`, `milliq`, the whole token `H2O`, never `H2O2`), read from `data/nomi-bianco.json`;
+//! used by `nomi.rs` for the role Auto.
 //! A name with a time or an extra series token (`MQ_PMS_T00`) is a sample: the matrix MilliQ is not a blank.
 
 use std::sync::OnceLock;
 
 struct Table {
     words: Vec<String>,
+    exact: Vec<String>,
     neutral: Vec<String>,
 }
 
@@ -25,6 +27,7 @@ fn table() -> &'static Table {
         };
         Table {
             words: list("words"),
+            exact: list("exact"),
             neutral: list("neutral"),
         }
     })
@@ -43,9 +46,24 @@ pub fn is_blank_name(stem_low: &str) -> bool {
         .split(|c: char| !c.is_ascii_alphanumeric())
         .filter(|w| !w.is_empty())
         .collect();
-    let hit = |w: &&str| t.words.iter().any(|x| is_word(w, x));
+    let hit = |w: &&str| t.words.iter().any(|x| is_word(w, x)) || t.exact.iter().any(|x| x == w);
     toks.iter().any(hit)
         && toks.iter().all(|w| {
             hit(w) || w.chars().all(|c| c.is_ascii_digit()) || t.neutral.iter().any(|n| n == w)
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_blank_name;
+
+    #[test]
+    fn h2o_is_a_blank_only_as_a_whole_token() {
+        for b in ["h2o", "h2o_1", "milliq", "mq 2", "mq_wash_1"] {
+            assert!(is_blank_name(b), "{b}");
+        }
+        for s in ["h2o2", "h2o2_1", "h2o_t10", "mq_pms_t00", "tw_h2o"] {
+            assert!(!is_blank_name(s), "{s}");
+        }
+    }
 }

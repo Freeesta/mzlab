@@ -47,15 +47,12 @@ try:
             sp = "E.panels.find(p=>p.type==='spec'&&p.tab==='ms2')"
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic'&&p.tab==='ms2').length")
             pg.evaluate(f"{sp}.el.scrollIntoView({{block:'center'}})"); frames(pg, 20)
-            pg.evaluate(f"{sp}.el.querySelector('[data-a=xicb]').click()")
+            assert pg.evaluate(f"{sp}.level") == 2 and pg.evaluate(f"{sp}.el.querySelector('[data-a=xicb]').hidden"), "an MS2 spectrum has no XIC button"
             pk = top_peak(sp)
-            # the start screen fades out over 0.4 s and swallows the clicks meanwhile: wait until the canvas is what lies under the pointer
             attendi(pg, f"document.elementFromPoint({pk['x']},{pk['y']})==={sp}.cv")
             pg.mouse.click(pk["x"], pk["y"]); ready(pg)
-            attendi(pg, "E.panels.some(p=>p.type==='xic'&&p.tab==='ms2'&&p._a&&p._a.sr&&p._a.sr.length)")
-            t = pg.evaluate("E.panels.find(p=>p.type==='xic'&&p.tab==='ms2').traces[0].mz")
-            assert abs(t - pk["mz"]) < 1.0, (t, pk["mz"])
-        step("MS2 file (full scan filter): the XIC of the fragment is drawn in the MS2 tab", ms2)
+            assert pg.evaluate("E.panels.filter(p=>p.type==='xic'&&p.tab==='ms2').length") == n0, "a click on an MS2 peak extracts nothing"
+        step("MS2 file (full scan filter): no XIC button, a click on a fragment extracts nothing", ms2)
         step("STATO.verifica() is empty", lambda: (lambda v: v and (_ for _ in ()).throw(AssertionError(v)))(pg.evaluate("typeof STATO!=='undefined'&&STATO.verifica?STATO.verifica():[]")))
         errs = [e for e in r.errs if "iframe" not in str(e)]
         for n, s in steps: print(("OK   " if s == "ok" else "FAIL ") + n, "" if s == "ok" else s)

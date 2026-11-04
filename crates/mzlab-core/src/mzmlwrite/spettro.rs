@@ -139,10 +139,10 @@ pub(super) fn precursor_list_into(s: &mut String, list: &[Precursore]) {
         for (a, n) in &p.activation {
             cv_into(s, a, n, "");
         }
-        if let Some((a, v)) = &p.energy {
-            if let Some((n, ua, un)) = energy_term(a) {
-                unit_cv_str_into(s, a, n, &v.to_string(), "UO", ua, un);
-            }
+        if let Some((a, v)) = &p.energy
+            && let Some((n, ua, un)) = energy_term(a)
+        {
+            unit_cv_str_into(s, a, n, &v.to_string(), "UO", ua, un);
         }
         s.push_str("</activation></precursor>");
     }

@@ -5,20 +5,24 @@
 import { askConsent, costLine, hasConsent, readConsent, revoke } from "./llm-consenso.js";
 import { DesktopClient, SiteClient, asError, desktop, reachable, siteHosts } from "./llm-clienti.js";
 import { bindTest, keyUi as keyArea, sectionHtml, LEVELS } from "./llm-sezione.js";
+import { DEMO_PROVIDER, demoActive } from "./llm-demo.js";
+import { PROXY_HOST } from "./proxy-host.js";
 
 /** @typedef {import("./llm-clienti.js").Provider} Provider */
 /** @typedef {import("./llm-clienti.js").LlmEvent} LlmEvent */
 
 const KEY = "mzlab.llm";
 
-/** @typedef {{on: boolean, provider: string, model: string, level: string, l2max: number, cap: number, hideNames: boolean}} Settings */
+/** @typedef {{on: boolean, provider: string, model: string, level: string, l2max: number, cap: number, hideNames: boolean, spendCap: number}} Settings */
 
-/** @returns {Settings} */
+/** the stored settings, or the fixed ones of the public demo while it is on (llm-demo.js) @returns {Settings} */
 export function readSettings() {
+  const d = demoActive();
+  if (d) return { on: true, provider: d.provider, model: d.model, level: d.level, l2max: 5, cap: 0, hideNames: d.hideNames, spendCap: d.spendCap };
   /** @type {any} */ let o = {};
   try { o = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (_) { /* blocked or damaged: the defaults */ }
   return { on: o.on === true, provider: String(o.provider || ""), model: String(o.model || ""), level: LEVELS.includes(o.level) ? o.level : "L0",
-    l2max: Math.min(50, Math.max(1, Math.round(+o.l2max || 5))), cap: Math.max(0, +o.cap || 0), hideNames: o.hideNames === true };
+    l2max: Math.min(50, Math.max(1, Math.round(+o.l2max || 5))), cap: Math.max(0, +o.cap || 0), hideNames: o.hideNames === true, spendCap: 0 };
 }
 /** @param {Settings} s */
 export function writeSettings(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (_) { /* the setting lasts until the page is closed */ } }
@@ -51,7 +55,8 @@ export async function mount(box, ui, startOn = false) {
     status("llm.loading");
     client = desktop() ? new DesktopClient() : new SiteClient();
     if (!desktop()) hosts = await siteHosts();
-    provs = (await client.providers()).filter(p => reachable(p, hosts));
+    // the provider of the demo only once its proxy has a host (proxy-host.js)
+    provs = (await client.providers()).filter(p => reachable(p, hosts) && (p.id !== DEMO_PROVIDER || !!PROXY_HOST));
     if (!provs.length) throw { key: "err.llm.provider", params: {} };
     if (!provs.some(p => p.id === s.provider)) { s.provider = provs[0].id; s.model = provs[0].models[0].id; }
     if (!provider().models.some(m => m.id === s.model)) s.model = provider().models[0].id;

@@ -45,6 +45,8 @@ function ask(/** @type {any} */ msg, /** @type {((p: any) => void) | undefined} 
 const cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });
 
 const LETTORI_MOD = {
+  /** name of a converted mzML -> spectra its truncated source lacked (`toMzml`); read by `lr.js` for the row of the loading */
+  missing: /** @type {Map<string, number>} */ (new Map()),
   /** true once the worker has been started (a probe is asked only then, or when it is needed) */
   get loaded() { return !!worker; },
   /** the extensions only the modules read (every family's `soloModulo`) */
@@ -96,7 +98,10 @@ const LETTORI_MOD = {
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     try {
       const r = await ask({ op: "toMzml", fam, members, c, dest }, onProgress);
-      return r.file || new Blob(r.parts, { type: "application/xml" });
+      const out = r.file || new Blob(r.parts, { type: "application/xml" });
+      // the spectra a truncated file lacked: the converted mzML is whole, so the row of the loading learns it from here (`lr.js` adds it to the index's)
+      if (r.missing) Object.defineProperty(out, "mzlabMissing", { value: r.missing });
+      return out;
     } finally { if (signal) signal.removeEventListener("abort", onAbort); }
   },
 };

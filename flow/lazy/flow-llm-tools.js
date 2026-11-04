@@ -71,7 +71,23 @@
     return good({ shown: true, title: r.chart.title, mark: r.chart.mark, rows: r.chart.data.rows.length, reduced: r.chart.data.reduced });
   };
 
-  /** the tools bound to one Flow page; `ctx`: {S, select(instance), propose(plan, note), edited(label), chart(spec), chartViews(), showChart(chart)}, `ctx.runs` the states of the steps of the last run @param {any} ctx */
+  /** the facts of the open files (flow-llm-facts.js, Rust without a model): the inspection, or the proposals of the rules for the given steps @param {any} ctx */
+  const factTools = ctx => {
+    const facts = async () => { const f = await ctx.facts(); return { inspection: JSON.parse(f.inspection), proposal: JSON.parse(f.proposal) }; };
+    return /** @type {Record<string, (a: any) => any>} */ ({
+      data_summary: async () => good({ inspection: (await facts()).inspection }),
+      data_inspect: async a => {
+        const i = (await facts()).inspection, want = Array.isArray(a.files) && a.files.length ? new Set(a.files) : null;
+        return good({ inspection: want ? { ...i, files: i.files.filter((/** @type {any} */ f) => want.has(f.alias)) } : i });
+      },
+      params_propose: async a => {
+        const p = (await facts()).proposal, want = new Set((a.steps || []).map((/** @type {string} */ s) => String(s).split("@")[0]));
+        return good({ ...p, proposals: p.proposals.filter((/** @type {any} */ x) => want.has(String(x.step).split("@")[0])) });
+      },
+    });
+  };
+
+  /** the tools bound to one Flow page; `ctx`: {S, select(instance), propose(plan, note), edited(label), chart(spec), chartViews(), showChart(chart), facts()}, `ctx.runs` the states of the steps of the last run @param {any} ctx */
   const llmTools = ctx => {
     const S = ctx.S;
     const problems = (/** @type {any} */ plan) => F.validate(plan, S.reg).map((/** @type {any} */ p) => ({ error_key: p.key, instance: p.instance || "", port: p.port || "", params: p.params || {} }));
@@ -136,9 +152,9 @@
     };
 
     T.flow_run = a => runTool(ctx, a, problems);
-
     T.ui_show = a => showTool(ctx, a);
-    T.chart_make = a => chartTool(ctx, a); for (const n of ["data_summary", "code_export"]) T[n] = () => bad("err.llm.tool.unavailable", { tool: n });
+    T.chart_make = a => chartTool(ctx, a); T.code_export = () => bad("err.llm.tool.unavailable", { tool: "code_export" });
+    Object.assign(T, factTools(ctx));
 
     return {
       /** one call of the model: {ok, content}; a tool that throws is a failed call, never a broken page @param {string} name @param {any} args */

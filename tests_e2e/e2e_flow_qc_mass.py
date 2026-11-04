@@ -1,4 +1,4 @@
-"""Flow «This browser» qc.mass_accuracy (flow-web-qc.js, `mass_accuracy` of the `hr` .wasm): over the five demo full-scan files the browser writes the massacc/1 report (before the alignment, from the indexes alone, and after it, with the
+"""Flow «This browser» qc.mass_accuracy (flow-web-qc.js, `mass_accuracy` of the `hr` .wasm): over five high-resolution full-scan files (synthetic, five steady ions) the browser writes the massacc/1 report (before the alignment, from the indexes alone, and after it, with the
 offset model correcting the feature table) and the corrected .mzfeat that `mzlab-cli flow run` writes of the same plan, byte for byte; a second run takes them from OPFS; the view draws the table and the two charts without axe violations.
 Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_qc_mass.py"""
 
@@ -23,7 +23,9 @@ def sample(n, t):
     return {"composto": "", "concentrazione": None, "file": n + ".mzML", "istd": False, "note": "", "ordine_iniezione": NAMES.index(n) + 1, "replica": 1, "serie": "", "sha256": "", "tempo": t, "tempo_confermato": False,
             "tempo_min": t, "tipo": "t0" if t == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
 SAMPLES = json.dumps({"campioni": [sample(n, t) for n, t in zip(NAMES, TIMES)], "schema": "campioni/2"}, separators=(",", ":"))
-REFS = "name,ion,role\na,141.18,reference\nb,158.20,reference\nc,149.21,reference\nd,198.35,reference\ne,214.25,reference\n"
+# five steady ions of high-resolution files (qc.mass_accuracy asks for scan indexes of resolving power; the unit-resolution demo files are refused by the plan check)
+IONS = [("a", 201.1234, 2.0), ("b", 285.2345, 4.0), ("c", 367.3456, 6.0), ("d", 449.4567, 8.0), ("e", 531.5678, 10.0)]
+REFS = "name,ion,role\n" + "".join("%s,%s,reference\n" % (n, m) for n, m, _ in IONS)
 P = {"min_refs": 1, "min_intensity": 1000}
 PLAN = {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in NAMES] + [{"name": "samples.json", "sha256": "", "type": "samples"}, {"name": "refs.csv", "sha256": "", "type": "report"}],
         "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in NAMES]}},
@@ -39,7 +41,8 @@ subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", 
 from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
-for n, t in zip(NAMES, TIMES): shutil.copy2(ROOT / "mzlab" / "web" / "esempi" / ("FullScan_t%d.mzML" % t), run / (n + ".mzML"))
+import numpy as np, dati_sintetici as ds
+for i, n in enumerate(NAMES): ds.hr_series(run / (n + ".mzML"), np.random.default_rng(20 + i), [(m, rt, 0.3, 5e6) for _, m, rt in IONS])
 (run / "plan.json").write_text(json.dumps(PLAN)); (run / "samples.json").write_text(SAMPLES); (run / "refs.csv").write_text(REFS)
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "plan.json"), "--in", str(run), "--out", str(run / "out")], cwd=ROOT, check=True, capture_output=True)
 print("native outputs:", sorted(x.name for x in (run / "out").iterdir() if not x.name.endswith(".mzidx")))

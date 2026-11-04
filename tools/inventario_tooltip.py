@@ -9,7 +9,7 @@ import json, re, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP = ("vendor/", "/teoria/", "/esempi/", "elements.js", "glossario-dati.js", "ei-dati.js", "/lang/", "node_modules")
+SKIP = ("vendor/", "/esempi/", "elements.js", "glossario-dati.js", "ei-dati.js", "/lang/", "node_modules")
 ROOTS = ["mzlab/web", "TP_Mine/js", "TP_Mine/lazy", "flow/lazy"]
 KV = re.compile(r'^\s*"([^"]+)":\s*("(?:[^"\\]|\\.)*")\s*,?\s*$')
 
@@ -190,7 +190,7 @@ def visible(r, cat):
 NOT_TOOLTIP = {"appname.js:6", "appname.js:8", "avvio.js:4", "banco.js:63", "banco.js:67", "dda.js:118", "dda.js:299", "dda.js:308",
                "eventi.js:274", "pannelli.js:161", "pannelli.js:358", "pannelli.js:649", "pannelli.js:651", "pannelli-annulla.js:25",
                "tabs.js:206", "tabs.js:208", "index.html:8", "shell.js:137", "xic-lente.js:115", "llm/llm-clienti.js:56",
-               "TP_Mine/js/20_tpmine.js:200", "libro/teoria-editor.js:79", "libro/teoria-editor.js:424", "rapporto.js:76", "draw.js:701", "TP_Mine/js/38_feature_export.js:27"}
+               "TP_Mine/js/20_tpmine.js:200", "rapporto.js:76", "draw.js:701", "TP_Mine/js/38_feature_export.js:27"}
 OVERRIDE = {
     "etpk.tip.rt": ("B", "repeats the RT already written on the label (CROMA-CLICK-PICCO)"),
     "tip.area": ("D", "«Right-click: actions» line (CROMA-CLICK-PICCO)"),

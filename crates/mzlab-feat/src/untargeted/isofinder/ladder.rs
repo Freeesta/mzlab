@@ -88,12 +88,12 @@ impl Ladder {
         let (mut steps, mut r) = (0, start);
         'outer: loop {
             for gap in 1..=CLUSTER_MAX_GAP {
-                if let Some(found) = self.nearest_within(r + gap as f64 * delta, GAP_TOL_FACTOR) {
-                    if (found - r).abs() >= min_advance {
-                        r = found;
-                        steps += gap as i64;
-                        continue 'outer;
-                    }
+                if let Some(found) = self.nearest_within(r + gap as f64 * delta, GAP_TOL_FACTOR)
+                    && (found - r).abs() >= min_advance
+                {
+                    r = found;
+                    steps += gap as i64;
+                    continue 'outer;
                 }
             }
             return steps;

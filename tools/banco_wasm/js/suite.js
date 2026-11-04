@@ -23,6 +23,8 @@ async function suite(m, files, reps, log) {
   }
   m.deflate_setup(64);
   T("inflate64MB", () => m.inflate());
+  m.hash_setup(64);
+  T("hash64MB", () => m.hash());
   return res;
 }
 if (typeof module !== "undefined") module.exports = { suite };

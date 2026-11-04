@@ -283,7 +283,8 @@
     // Run is a new request: an MSn step that failed (the engine refused, the file was not open) is tried again, the other failures wait for a change of the plan
     for (const j of await call(live, "jobs")) { const inst = instOf(live, j.instance); if (inst && F.webMsn?.STEPS.includes(base(inst)) && ["error", "refused", "cancelled"].includes(j.state)) await call(live, "retry", { job: { instance: j.instance, item: j.item ?? null } }); }
     // what happened since the last run is reported again to this run; with nothing new, every finished step is reused
-    const hist = live.log.slice(live.logFrom);
+    // only the steps of the current plan: the log also holds the events of a plan that was replaced (the default plan before a template)
+    const hist = live.log.slice(live.logFrom).filter((/** @type {any} */ ev) => instOf(live, ev.passo));
     if (o.onEvent) live.listeners.add(o.onEvent);
     try {
       if (hist.length) for (const ev of hist) { if (o.onEvent) o.onEvent(ev); document.dispatchEvent(new CustomEvent("flow:web-step", { detail: ev })); }

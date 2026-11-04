@@ -12,7 +12,7 @@ use crate::subcall;
 use crate::tools::value;
 
 /// The schema of the answer (`output_config.format`), the one of `prompt/02`.
-const SCHEMA: &str = r#"{"type":"object","additionalProperties":false,"required":["route","need_data","language","suspicious"],"properties":{"route":{"enum":["inspect","chromatography","params","plan","table","chart","answer","chat"]},"need_data":{"type":"array","items":{"enum":["inspection","chromatograms","proposals","plan","tabcheck","rows","views"]}},"language":{"type":"string","pattern":"^[a-z]{2}$"},"suspicious":{"type":"boolean"}}}"#;
+pub(crate) const SCHEMA: &str = r#"{"type":"object","additionalProperties":false,"required":["route","need_data","language","suspicious"],"properties":{"route":{"enum":["inspect","chromatography","params","plan","table","chart","answer","chat"]},"need_data":{"type":"array","items":{"enum":["inspection","chromatograms","proposals","plan","tabcheck","rows","views"]}},"language":{"type":"string","pattern":"^[a-z]{2}$"},"suspicious":{"type":"boolean"}}}"#;
 
 /// What the router decided for one user message: an object that satisfies `SCHEMA` (`route`, `need_data`, `language`, `suspicious`).
 #[derive(Debug, Clone, PartialEq)]

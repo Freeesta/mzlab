@@ -50,8 +50,11 @@
     const fileInput = el("input", { type: "file", accept: ".json,application/json", hidden: true, id: "fl-file", onchange: async (/** @type {any} */ e) => {
       const f = e.target.files[0]; e.target.value = "";
       if (!f) return;
-      const r = F.importText(await f.text());
+      let r = F.importText(await f.text());
       if (r.error) { S.note = F.message({ key: r.error.key, params: r.error.params }); refresh(); return; }
+      // a step saved at an older version (spectra.msn_graph@1) is migrated by the engine (mzlab_core::flow::migrate): the plan goes through flow/line with no --set
+      const old = (/** @type {any} */ i) => { const st = F.stepOfInstance(S.reg, i); return st && Number(String(i.step).split("@")[1]) < st.version; };
+      if (F.lineCall && r.plan.steps.some(old)) try { const m = F.importText(await F.lineCall({ ...S, plan: r.plan }, "mzlab-cli flow run")); if (!m.error) r = m; } catch (_) { /* the checker reports the old version */ }
       S.plan = r.plan; S.note = `Opened ${f.name}.`; refresh();
     } });
     const doUndo = () => { const prev = S.history.pop(); if (prev) { S.future.push(S.snap); S.plan = JSON.parse(prev); S.snap = prev; refresh(null, true); } };

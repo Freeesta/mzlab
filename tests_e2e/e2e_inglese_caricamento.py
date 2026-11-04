@@ -37,7 +37,7 @@ try:
         step("header in English", header)
         def start():
             t = pg.inner_text("#start")
-            for w in ("1. Data files", "Drop files here", ".mzML · .raw · .wiff (+ .wiff.scan) · .D (folder)", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
+            for w in ("Drop files here", ".mzML · .raw · .wiff (+ .wiff.scan) · .D (folder)", "Try the example files", "Add acquisition method", "OPTIONAL"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("start screen in English, no Italian words", start)
         def demo():
@@ -55,9 +55,9 @@ try:
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("file table in English", upload)
         def errors():
-            open("/tmp/x_ingl_b.txt", "w").write("x")
-            pg.set_input_files("#pick", "/tmp/x_ingl_b.txt"); pg.wait_for_timeout(800)
-            t = pg.inner_text("#unopen"); assert "format not recognised" in t and "x_ingl_b.txt" in t, t
+            open("/tmp/x_ingl_b.xyz", "w").write("x")
+            pg.set_input_files("#pick", "/tmp/x_ingl_b.xyz"); pg.wait_for_timeout(800)
+            t = pg.inner_text("#unopen"); assert "not a mass-spectrometry file we know" in t and "x_ingl_b.xyz" in t, t
             open("/tmp/y_ingl_b.raw", "w").write("x")
             pg.set_input_files("#pick", "/tmp/y_ingl_b.raw")
             ok_raw = "(t => t.includes('File type not accepted: y_ingl_b.raw') || t.includes('The calculation engine did not load'))(document.body.innerText)"
@@ -73,7 +73,7 @@ try:
         step("open the files", load)
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uip-a11y")
-            pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # every group open
+            pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # the folding groups (assistant, diagnostics) open
             t = pg.inner_text("#uipset")
             for w in ("Settings", "Theme", "Like the system", "Chart colors", "Merge the centroids of the same nominal mass"): assert w.lower() in t.lower(), (w, t)
             assert "By file (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"

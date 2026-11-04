@@ -141,8 +141,8 @@ try:
             assert top["dm"] == 0 and abs(oth["dm"] - (oth["mz"] - top["mz"])) < 1e-6 and rows[2]["dm"] == 0, rows
             assert all(r["ib"] is not None for r in rows) and all(r["sn"] is not None for r in rows[:2]) and abs(rows[0]["d"] - (rows[0]["ia"] - rows[0]["ib"])) < 1e-3
             assert pg.locator(".pnl.map .mztab tbody tr[data-i]").count() == 3 and pg.locator(".pnl.map .mztab tbody tr.mzgr").count() == 1      # three points; the two of one group sit under a group row
-            pg.click(".pnl.map .mztab a[data-dm]"); attendi(pg, "(i => !!i && i.value !== '')(document.querySelector('#sb-panel-losses #nl-q') || document.querySelector('#nl-q'))")                                    # the Δm opens the neutral losses, filtered
-            v = pg.evaluate("(()=>{const i=document.querySelector('#sb-panel-losses #nl-q')||document.querySelector('#nl-q');return i&&i.value})()")
+            pg.click(".pnl.map .mztab a[data-dm]"); attendi(pg, "(i => !!i && i.value !== '')(document.querySelector('#calcin'))")                                    # the Δm opens the neutral losses, filtered
+            v = pg.evaluate("(()=>{const i=document.querySelector('#calcin');return i&&i.value})()")
             assert v and abs(float(v) - abs(oth["dm"])) < 0.06, (v, oth["dm"])
             pg.screenshot(path=SH + "mappa_punti.png")
         step("marked points: snap, two RT groups, Δm from the most intense, the Δm opens the losses filtered", points)

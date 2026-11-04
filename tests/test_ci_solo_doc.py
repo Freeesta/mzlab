@@ -9,14 +9,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import ci_solo_doc as ci  # noqa: E402
 
-DOCS = ["AGENTS.md", "CHANGELOG.md", "docs/agenti/ci-veloce.md", "docs/studi/ottimizza/x.md", ".claude/settings.json", ".claude/agents/cercatore.md"]
-OTHER = ["tools/x.py", "tests/test_x.py", "docs/schemi/strumenti-1.json", "docs/agenti/mappa.png", "docs/agenti/ci-veloce.md.py", "docs/../tools/x.md", "x/AGENTS.md",
-         "tools/libro/fixtures/a.md", "crates/mzlab-x/README.md", "mzlab/web/teoria/src/12-dati.md", "mzlab/web/index.html", ".github/workflows/test.yml",
+DOCS = ["CLAUDE.md", "CHANGELOG.md", "docs/agenti/ci-veloce.md", "docs/studi/ottimizza/x.md", ".claude/settings.json", ".claude/agents/cercatore.md"]
+OTHER = ["tools/x.py", "tests/test_x.py", "docs/schemi/strumenti-1.json", "docs/agenti/mappa.png", "docs/agenti/ci-veloce.md.py", "docs/../tools/x.md", "x/CLAUDE.md",
+         "tools/lab/fixtures/a.md", "crates/mzlab-x/README.md", "mzlab/web/index.html", ".github/workflows/test.yml",
          "docs", ".claudeX/a.md", "Cargo.toml", "mzlab/web/lang/it.js", "doc/a.md"]
 
 
 def test_only_documents_is_solo():
-    assert ci.solo(DOCS) and ci.solo(["AGENTS.md"])
+    assert ci.solo(DOCS) and ci.solo(["CLAUDE.md"])
 
 
 def test_no_file_is_not_solo():
@@ -34,11 +34,9 @@ def test_the_selection_names_existing_tests():
         assert (ROOT / "tests" / f"{t}.py").exists(), t
 
 
-def test_pytest_selection_by_kind(capsys):
-    assert ci.main(["--pytest", "doc"]) == 0
+def test_pytest_selection(capsys):
+    assert ci.main(["--pytest"]) == 0
     assert "tests/test_versione.py" in capsys.readouterr().out
-    assert ci.main(["--pytest", ""]) == 0
-    assert "tests/test_libro.py" in capsys.readouterr().out
 
 
 def git(repo, *a):
@@ -65,7 +63,7 @@ def test_main_writes_solo_and_kind_only_for_documents(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_OUTPUT", str(out))
     repo = tmp_path / "r"
     repo.mkdir()
-    base = _repo(repo, monkeypatch, ["AGENTS.md", "docs/agenti/a.md"])
+    base = _repo(repo, monkeypatch, ["CLAUDE.md", "docs/agenti/a.md"])
     assert ci.main([base]) == 0
     assert out.read_text() == "solo=true\nkind=doc\n"
 
@@ -75,7 +73,7 @@ def test_a_python_file_with_documents_is_not_solo(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_OUTPUT", str(out))
     repo = tmp_path / "r"
     repo.mkdir()
-    base = _repo(repo, monkeypatch, ["AGENTS.md", "tools/x.py"])
+    base = _repo(repo, monkeypatch, ["CLAUDE.md", "tools/x.py"])
     assert ci.main([base]) == 0
     assert not out.exists()
 

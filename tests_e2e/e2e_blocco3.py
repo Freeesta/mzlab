@@ -56,23 +56,25 @@ try:
         step("3.2: the file chosen in the window (the others are hidden in the panel)", many_file)
         TH = "[...document.querySelectorAll('.cadd-wrap tbody th')].map(t=>t.textContent.replace(/\\u2212/g,'-'))"
         def calc():
-            pg.click("#np-calc2"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_selector(".cadd-wrap tbody th")
+            pg.click("#stbar [data-cmd=addloss]"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_selector(".cadd-wrap tbody th")
             th = pg.evaluate(TH); print(th)
             assert any("[M+H]+" in t for t in th) and not any("[M-H]-" in t for t in th), th
-            assert pg.get_attribute("#calcpol button[data-p='1']", "aria-pressed") == "true"
+            assert pg.get_attribute("#al-ctl button[data-p='1']", "aria-pressed") == "true" and pg.get_attribute("#al-ctl button[data-p='-1']", "aria-pressed") == "false"
             pg.click(".cadd-more"); pg.wait_for_function("document.querySelectorAll('.cadd-wrap tbody tr').length > 6")
             assert not any("[M-H]-" in t for t in pg.evaluate(TH)), "the polarity of the files stays: no negative adduct under the positive ones"
-            pg.evaluate("BARRA.close(false)"); shut(pg, "#calcx")
-        step("3.4: the calculator shows only ESI+ adducts for positive files", calc)
+            pg.evaluate("BARRA.close(false)")
+        step("3.4: the page shows only ESI+ adducts for positive files", calc)
         def neg():
-            pg.click("#np-calc2"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_selector(".cadd-wrap tbody th")
-            pg.click("#calcpol button[data-p='-1']")
+            pg.click("#stbar [data-cmd=addloss]"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_selector(".cadd-wrap tbody th")
+            pg.click("#al-ctl button[data-p='-1']")          # both polarities
+            pg.wait_for_function("(t => t.includes('[M+H]+') && t.includes('[M-H]-'))([...document.querySelectorAll('.cadd-wrap tbody th')].map(t=>t.textContent.replace(/\\u2212/g,'-')).join(' '))")
+            pg.click("#al-ctl button[data-p='1']")           # ESI- only
             pg.wait_for_function("[...document.querySelectorAll('.cadd-wrap tbody th')].every(t=>!t.textContent.includes('[M+H]+'))")
             th = pg.evaluate(TH); assert any("[M-H]-" in t for t in th) and not any("[M+Na]+" in t for t in th), th
-            pg.click("#calcpol button[data-p='1']"); pg.wait_for_function("document.querySelector('.cadd-wrap tbody th').textContent.includes('[M+H]')")
-            assert any("[M+H]+" in t for t in pg.evaluate(TH)) and pg.get_attribute("#calcpol button[data-p='1']", "aria-pressed") == "true"
-            pg.evaluate("BARRA.close(false)"); shut(pg, "#calcx")
-        step("3.4: the ESI- button -> only negative adducts; ESI+ brings the positive ones back", neg)
+            pg.click("#al-ctl button[data-p='1']"); pg.click("#al-ctl button[data-p='-1']"); pg.wait_for_function("document.querySelector('.cadd-wrap tbody th').textContent.includes('[M+H]')")
+            assert any("[M+H]+" in t for t in pg.evaluate(TH)) and pg.get_attribute("#al-ctl button[data-p='1']", "aria-pressed") == "true" and pg.get_attribute("#al-ctl button[data-p='-1']", "aria-pressed") == "false"
+            pg.evaluate("BARRA.close(false)")
+        step("3.4: ESI- adds the negative adducts, ESI+ off leaves only them, back to ESI+", neg)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

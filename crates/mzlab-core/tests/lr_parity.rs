@@ -53,12 +53,12 @@ fn infusion_exception(got: &mut Value, want: &Value) {
     };
     // `hr` (the loading table groups high-resolution files apart) exists only in the Rust engine
     o.remove("hr");
-    if let Some(m) = o.remove("msn") {
-        if let Some(inf) = o.get("infusion").and_then(Value::as_bool) {
-            assert_eq!(inf, !m.is_null(), "infusion and msn disagree");
-            if m["motivo"] != "rt_costante" {
-                o.insert("infusion".into(), want["infusion"].clone());
-            }
+    if let Some(m) = o.remove("msn")
+        && let Some(inf) = o.get("infusion").and_then(Value::as_bool)
+    {
+        assert_eq!(inf, !m.is_null(), "infusion and msn disagree");
+        if m["motivo"] != "rt_costante" {
+            o.insert("infusion".into(), want["infusion"].clone());
         }
     }
     // an MSn infusion is one item of kind `infusion` (not split into MS1 and MS2 parts, not `ms2`)

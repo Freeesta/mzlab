@@ -123,6 +123,8 @@ lc_top = tmp / "lc"
 agilent_sintetico.write_lcms(lc_top, "mrm.D", "mrm"); agilent_sintetico.write_lcms(lc_top, "perfil.D", "profile")
 for nm, flag in (("npa", True), ("npb", False)):   # two folders of one mzML each: numpress and its zlib twin
     (tmp / nm).mkdir(); mzml_file(tmp / nm / "np.mzML", flag)
+(tmp / "npt").mkdir()   # a numpress mzML cut after three quarters of its bytes: it opens with the spectra it holds and says how many are missing
+(tmp / "npt" / "np.mzML").write_bytes((tmp / "npa" / "np.mzML").read_bytes()[:(tmp / "npa" / "np.mzML").stat().st_size * 3 // 4])
 (tmp / "xml").mkdir(); XTIC = mzxml_file(tmp / "xml" / "x.mzXML")
 (tmp / "cdf").mkdir(); CTIC = cdf_file(tmp / "cdf" / "c.cdf")
 
@@ -175,7 +177,13 @@ try:
             assert res["mod"]["tic"] == res["eng"]["tic"] and len(res["mod"]["tic"].get("t", res["mod"]["tic"].get("rt", [1] * N))) > 0, (res["mod"]["tic"], res["eng"]["tic"])
         step("the TIC is the one of the engine's path", same_tic)
         def same_bytes():
-            assert res["mod_mzml"] == res["eng_mzml"] and len(res["mod_mzml"]) > 1000, (len(res["mod_mzml"]), len(res["eng_mzml"]))
+            # the module (feature `estesi`) writes the indexed form of `mzlab-cli convert` and the account `conv/1` of its extended reader; the engine's wasm leaves both out for its size.
+            # So compare the <mzML> element they share, without that one userParam (the spectra, the header and every other byte must match)
+            import base64, re
+            def core(b64):
+                x = base64.b64decode(b64).decode("utf-8"); x = x[x.index("<mzML"):x.index("</mzML>")]
+                return re.sub(r'<userParam name="mzLab conv/1"[^>]*/>', "", x)
+            assert core(res["mod_mzml"]) == core(res["eng_mzml"]) and len(res["mod_mzml"]) > 1000, (len(res["mod_mzml"]), len(res["eng_mzml"]))
         step("«Download .mzML» is the engine's mzML byte for byte, without converting again", same_bytes)
         def no_miss():
             assert res["mod"]["miss"] == 0 and res["eng"]["miss"] == 0, (res["mod"]["miss"], res["eng"]["miss"])
@@ -198,9 +206,9 @@ try:
                 const f = CONV.files.get(n) || await rb.nativeToMzml(n, 1 << 20, undefined, undefined);
                 out[n] = await f.text();
               }
-              return { names: [...document.querySelectorAll("#flist tr")].map(t => (t.innerText.match(/\\S+\\.mzML/) || [""])[0]).filter(Boolean).sort(), mrm: out["mrm.mzML"], perfil: out["perfil.mzML"], miss: (window.MZLAB_LR_MISS || []).length };
+              return { names: [...document.querySelectorAll("#flist .ldname")].map(t => t.textContent.trim()).filter(Boolean).sort(), mrm: out["mrm.mzML"], perfil: out["perfil.mzML"], miss: (window.MZLAB_LR_MISS || []).length };
             }""")
-            assert r["names"] == ["mrm.mzML", "perfil.mzML"] and r["miss"] == 0, (r["names"], r["miss"])
+            assert r["names"] == ["mrm", "perfil"] and r["miss"] == 0, (r["names"], r["miss"])
             assert "SRM SIC Q1=301.1 Q3=150.05" in r["mrm"] and "SRM SIC Q1=301.1 Q3=200.05" in r["mrm"], "no SRM chromatograms"
             assert 'MS:1000130' in r["perfil"] and 'profile' in r["perfil"].lower(), "profile spectra, positive"
             assert 'spectrumList count="40"' in r["perfil"], "profile spectra"
@@ -230,6 +238,26 @@ try:
             for k in ka:   # the spectrum: m/z to 1e-7, intensity to the precision of slof (1e-3 relative)
                 assert len(a["sp"][k]) == len(c["sp"][k]) and all(abs(x - y) <= 1e-3 * max(abs(y), 1) for x, y in zip(a["sp"][k], c["sp"][k])), k
         step("its TIC equals the twin's within the codec precision and nothing misses the engine", numpress_same)
+        # the numpress mzML is a sample read as it is (rust-nativo.js, the engine reads it through the module): the module never writes an mzML for it, «Download .mzML» writes the plain one on request
+        MZNP = """async () => { const rb = await window.MZLAB_RUST_READY, f = await rb.nativeToMzml("np.mzML", 1 << 20, undefined, undefined), t = await f.text();
+          return { writer: window.LETTORI_MOD.loaded, spectra: (t.match(/<spectrum /g) || []).length, numpress: /accession="MS:10027/.test(t), plain: t.includes("MS:1000574") }; }"""
+        def numpress_as_is():
+            pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / "npa"))
+            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
+            pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
+            r = pg.evaluate(MZNP)
+            assert r == {"writer": False, "spectra": 40, "numpress": False, "plain": True}, r
+        step("a numpress mzML is read as it is (the module writes no mzML) and «Download .mzML» gives the plain one", numpress_as_is)
+        def numpress_truncated():
+            pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / "npt"))
+            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            pg.click("#opbtn")
+            pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
+            li = pg.locator("#flist .cvsum li[data-cvmiss]")
+            assert li.count() == 1, pg.inner_text("#flist")
+            n = int(li.get_attribute("data-cvmiss")); assert 0 < n < 40, n
+        step("a truncated numpress mzML opens with the spectra it holds and its row says how many are missing", numpress_truncated)
         def mzxml_opens():
             r = one("xml"); assert r["files"] == ["x.mzML"], r["files"]
             y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, XTIC)), (y and y[:3], XTIC[:3])

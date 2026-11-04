@@ -18,7 +18,7 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def tabs_gone():
             assert pg.is_visible("#hrbar") and pg.locator("#dtabs").count() == 0, "the toolbar of the bench is the only bar"
-            n = pg.locator("#hrbar button[data-hb]").count(); assert n == 5, n
+            ids = pg.evaluate("[...document.querySelectorAll('#hrbar button[data-hb]')].map(b => b.dataset.hb)"); assert ids == ["add", "type", "tree"], ids      # the other tools of the old bar live elsewhere now
             assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
         def no_badges():
@@ -71,7 +71,7 @@ try:
             assert pg.locator("#hrbar .hl").first.inner_text().strip() != "", "words next to the icons when there is room"
         step("one row, one pair of arrows per meaning, one undo/redo, words next to the icons", one_row)
         def narrow():
-            pg.set_viewport_size({"width": 600, "height": 1400}); pg.wait_for_timeout(600)
+            pg.set_viewport_size({"width": 420, "height": 1400}); pg.wait_for_timeout(420)
             tops = pg.evaluate("(()=>{const t=[...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>b.getBoundingClientRect().top);return Math.max(...t)-Math.min(...t)<12?[0]:t})()")
             assert len(tops) == 1, tops
             assert pg.is_visible("#hr-more"), "what does not fit goes into the «⋯» menu"

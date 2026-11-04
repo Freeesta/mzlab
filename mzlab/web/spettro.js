@@ -53,9 +53,8 @@ const specPol = p => { const f = p._a && p._a.data && p._a.data[0] && p._a.data[
 // opens the sidebar tab of the neutral losses filtered on |dm|, or the adducts when dm is a usual adduct exchange
 function dmOpen(dm, hr, polarity, losses) {
   const ad = !losses && !!adductPair(dm, hr, polarity), q = String(+Math.abs(dm).toFixed(hr ? 4 : 1));
-  if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "calc" : "losses", ad ? {} : { q });
-  else if (window.QQQRef) QQQRef.open(ad ? "ad" : "ls", ad ? {} : { q });
-  if (ad) setTimeout(() => CALCADD.showDelta(+Math.abs(dm).toFixed(hr ? 4 : 1)), 150);
+  if (ad) CALCADD.showDelta(+Math.abs(dm).toFixed(hr ? 4 : 1));            // the Adducts tab, the differences open
+  else if (window.BARRA) BARRA.setTab("losses", { q });
 }
 /** right click on the label of a measure: straight to the losses or adducts tab; true when the click was on a label */
 function measCtx(p, px, py) {
@@ -190,10 +189,10 @@ function toggleTl(p) {
 
 // ---------------------------------------------------------------- one line under the spectrum: which scan it is
 function scanLine(p, data, d0) {
-  // only what the title does not say: which scan(s), and for MS2 the precursor and the energy
+  // only what the title does not say: which scan(s), and for MS2 the collision energy (the title already names the precursor)
   const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;
   parts.push(d0.scans === 1 && i != null ? I18N.t("spec.scanLine.one", { i: i + 1, of: n ? "/" + n : "" }) : I18N.t("spec.scanLine.avg", { n: d0.scans }));
-  if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push(I18N.t("spec.scanLine.prec", { prec: p.prec != null ? p.prec : "?" }) + (ce != null ? I18N.t("spec.scanLine.ce", { ce }) : "")); }
+  if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; if (ce != null) parts.push(I18N.t("spec.scanLine.ce", { ce })); }
   return parts.join(" · ");
 }
 
@@ -224,6 +223,9 @@ function scanLine(p, data, d0) {
     return xs.map(ov);
   } });
   reg({ id: "spec.measure", gruppo: "tools", voci: /** @param {any} c */ c => measMenu(c.p, c.m).map((o, i) => ({ nome: o.label, tip: o.tip, dim: i === 0 && !c.has, esegui: o.fn })) });
+  // the m/z in the Contaminants tab of the Adducts & losses page (side panel only); the text shown sets the tolerance there, the polarity is the page's
+  reg({ id: "spec.cont", gruppo: "cont", ordine: 0, visibile: () => !!window.BARRA, disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.cont"), aria: /** @param {any} c */ c => T("ctx.spec.cont.aria", { mz: c.lab }),
+    esegui: /** @param {any} c */ c => BARRA.setTab("cont", { q: c.lab }) });
   reg({ id: "spec.annotate", gruppo: "tools", disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.annotate"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.m, text: v })); draw(c.p); } } });
   reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });

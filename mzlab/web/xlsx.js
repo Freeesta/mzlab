@@ -89,17 +89,23 @@ async function dlx(name, sheets, prov = undefined) {
   if (prov !== false) sheets = await PROV.sheets(sheets, prov || {});
   dl(/\.xlsx$/i.test(name) ? name : name + ".xlsx", xlsxBuild(sheets), XLSX_MIME);
 }
-// CSV of the FIRST sheet (the data: the extra sheets, metadata and provenance, are not repeated; the provenance line opens the file): UTF-8 with BOM, comma, dot decimal
-/** @param {{ head?: any[], rows: any[][] }} sheet */
-function csvBuild(sheet) {
+// CSV of the FIRST sheet (the data: the extra sheets, metadata and provenance, are not repeated): UTF-8 with BOM. `o` = {sep, dec}: "," and "." by default;
+// dlc() asks for ";" and "," when the interface is Italian, which is what Italian Excel opens into columns. Numbers keep their full precision.
+/** @param {{ head?: any[], rows: any[][] }} sheet @param {{ sep?: string, dec?: string }} [o] */
+function csvBuild(sheet, o = {}) {
+  const sep = o.sep || ",", dec = o.dec || ".";
   /** @param {any} v */
-  const cell = v => { if (v && typeof v === "object") v = v.v; const t = typeof v === "number" ? (isFinite(v) ? String(v) : "") : v == null ? "" : String(v); return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-  return [...(sheet.head ? [sheet.head] : []), ...sheet.rows].map(r => r.map(cell).join(",")).join("\n") + "\n";
+  const cell = v => { if (v && typeof v === "object") v = v.v; let t = typeof v === "number" ? (isFinite(v) ? String(v) : "") : v == null ? "" : String(v); if (typeof v === "number" && dec !== ".") t = t.replace(".", dec); return t.includes(sep) || /["\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  return [...(sheet.head ? [sheet.head] : []), ...sheet.rows].map(r => r.map(cell).join(sep)).join("\n") + "\n";
 }
-/** download the first sheet as .csv (same name as the .xlsx, same provenance rule as dlx) @param {string} name @param {any[]} sheets @param {any} [prov] */
+/** download the first sheet as .csv (same name as the .xlsx). The header is always row 1: the provenance line (if any) closes the file as one quoted `# mzLab ...` row. @param {string} name @param {any[]} sheets @param {any} [prov] */
 async function dlc(name, sheets, prov = undefined) {
-  let text = csvBuild(sheets[0]);
-  if (prov !== false) text = await PROV.tsv(text, prov || {});
+  const it = typeof I18N !== "undefined" && I18N.lang === "it", o = it ? { sep: ";", dec: "," } : {};
+  let text = csvBuild(sheets[0], o);
+  if (prov !== false) {
+    const withLine = await PROV.tsv(text, prov || {}), i = withLine.indexOf("\n");
+    if (withLine !== text && i > 0) text += csvBuild({ rows: [[withLine.slice(0, i)]] }, o);
+  }
   dl(name.replace(/\.xlsx$/i, "") + ".csv", "\ufeff" + text, "text/csv;charset=utf-8", false);
 }
 if (typeof module !== "undefined") module.exports = { xlsxBuild, zipStore, xlsxCrc32, csvBuild };

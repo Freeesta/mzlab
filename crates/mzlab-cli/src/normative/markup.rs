@@ -228,11 +228,11 @@ fn pop(stack: &mut Vec<Node>) {
 /// An end tag closes the nearest open element of that name (and what is open inside it).
 fn end_tag(stack: &mut Vec<Node>, close: &str) {
     let name = close.trim().to_ascii_lowercase();
-    if let Some(pos) = stack.iter().rposition(|n| n.name == name) {
-        if pos > 0 {
-            while stack.len() > pos {
-                pop(stack);
-            }
+    if let Some(pos) = stack.iter().rposition(|n| n.name == name)
+        && pos > 0
+    {
+        while stack.len() > pos {
+            pop(stack);
         }
     }
 }
@@ -311,11 +311,11 @@ pub fn parse(src: &str) -> Node {
         text_from = i;
         if let Some(close) = inner.strip_prefix('/') {
             end_tag(&mut stack, close);
-        } else if !inner.starts_with(['!', '?']) {
-            if let Some(next) = start_tag(&mut stack, src, inner, i) {
-                i = next;
-                text_from = i;
-            }
+        } else if !inner.starts_with(['!', '?'])
+            && let Some(next) = start_tag(&mut stack, src, inner, i)
+        {
+            i = next;
+            text_from = i;
         }
     }
     flush(&mut stack, src, text_from, b.len());

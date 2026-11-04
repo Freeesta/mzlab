@@ -35,10 +35,14 @@ try:
             miss = pg.evaluate("window.MZLAB_LR_MISS || []"); assert not miss, miss
         step("no request left unserved by the engine", no_miss)
         def label():
-            assert pg.inner_text("#lst-view-seg button[data-v=target]").strip() == "HRMS Target Screening"
+            # the test page runs in Italian: compare with the catalogue entry of the current language, and make sure it is not the key itself
+            t = pg.inner_text("#lst-view-seg button[data-v=target]").strip(); want = pg.evaluate("I18N.t('lst.view.target')")
+            assert t == want and t != "lst.view.target" and len(t) > 5, repr((t, want))
         step("the view label comes from the catalogue", label)
 finally:
     r.close()
 for s in steps: print("  ", s)
 r.report()
-sys.exit(0 if all(s[1] == "ok" for s in steps) and not r.errs else 1)
+# Chromium notes the Ketcher iframe (allow-scripts + allow-same-origin, by design) on every page load: not an error of this view
+real_errs = [e for e in r.errs if "can escape its sandboxing" not in str(e)]
+sys.exit(0 if all(s[1] == "ok" for s in steps) and not real_errs else 1)

@@ -88,6 +88,7 @@ mod flow_msnlib;
 mod flow_msnlib_tests;
 #[cfg(test)]
 mod flow_msnraw_tests;
+mod flow_mzrun;
 mod flow_nature;
 #[cfg(test)]
 mod flow_neglr_tests;
@@ -123,6 +124,7 @@ mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
+mod flow_transitions;
 pub mod insilico_pack;
 mod ion_pattern_cmd;
 pub mod llm;
@@ -135,12 +137,17 @@ mod msn_lib;
 mod msn_png;
 mod msn_rules;
 pub mod msn_uscite;
+#[cfg(test)]
+mod mzml_varianti_tests;
+#[cfg(test)]
+mod name_rule_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
 mod peaks_edges_cmd;
+mod plain;
+mod sim_table_cmd;
 mod steps_cmd;
-mod tutor;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 
@@ -151,18 +158,19 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
        mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
-       mzlab-cli tutor eval CASES --blocchi F (--replay DIR | --solo-recupero)   score the Teoria tutor on the eval cases (tutor --help)
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
-       mzlab-cli canali FILE [--out PATH]   the channels of a file as JSON (canali --help)
+       mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help)
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help)
-       mzlab-cli campioni variabili|nome-gruppo ...   how the file names split the files, as JSON (campioni --help)
-       mzlab-cli peaks-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peaks-edges --help)
+       mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
+       mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
+       mzlab-cli sim-table FILE... [--set output=area|apex_rt]   every SIM channel integrated, one column per sample, as CSV (sim-table --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
-       mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
+       mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
        mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
        mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help); insilico pack CSV OUT   the spectra.insilico candidate package
@@ -171,7 +179,9 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
   --preset NAME      auto (default: both polarities as the panel does), pos or neg
   --params FILE.json the numbers of the panel Pipeline: {\"polarity\", \"mode\", \"floor\", \"min_height\", \"min_points\", \"ppm\", \"rt_tol\", \"fill\"}
-  --help             this text";
+  --help             this text
+
+old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl";
 
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
@@ -363,37 +373,12 @@ fn features_cmd(args: impl Iterator<Item = String>) -> Outcome {
 fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
     match args.next().as_deref() {
         Some("report") => flow_report::run(args).map_or_else(|e| Outcome::fail(&e), Outcome::ok),
+        Some("record") => flow_mzrun::record(args.collect()),
+        Some("verify") => flow_mzrun::check(args.collect()),
         Some("run") => flow_run::run(args.collect(), None),
         Some("command") => flow_command(args.collect()),
         Some("check") => flow_json::check(args.collect()),
-        _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow command PLAN.json"),
-    }
-}
-
-/// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 9] = [
-    "llm",
-    "steps",
-    "tutor",
-    "explain-missing",
-    "msn-rules",
-    "canali",
-    "ion-pattern",
-    "campioni",
-    "peaks-edges",
-];
-
-fn run_plain(command: &str, args: Vec<String>) -> Outcome {
-    match command {
-        "llm" => llm::run(args),
-        "steps" => steps_cmd::run(args),
-        "explain-missing" => flow_explain::run(args),
-        "msn-rules" => msn_rules::run(args),
-        "canali" => canali_cmd::run(args),
-        "ion-pattern" => ion_pattern_cmd::run(args),
-        "campioni" => campioni_cmd::run(args),
-        "peaks-edges" => peaks_edges_cmd::run(args),
-        _ => tutor::run(args),
+        _ => Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow record RUNDIR --roles ROLES.json | mzlab-cli flow verify RECORD | mzlab-cli flow command PLAN.json"),
     }
 }
 
@@ -415,10 +400,11 @@ fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
-    match args.next().as_deref() {
+    let first = args.next();
+    match first.as_deref().map(plain::canonical) {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
-        Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
+        Some(c) if plain::PLAIN.contains(&c) => return plain::run(c, args.collect()),
         Some("msn-graph") => return msn_graph::cmd(args),
         Some("msn-lib") => return msn_lib::cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
@@ -461,6 +447,8 @@ mod flow_ms2_tests;
 #[cfg(test)]
 mod flow_msngraph_tests;
 #[cfg(test)]
+mod flow_mzrun_tests;
+#[cfg(test)]
 mod flow_network_tests;
 #[cfg(test)]
 mod flow_picchi_tests;
@@ -488,7 +476,5 @@ mod msn_graph_strutture_tests;
 mod msn_graph_tests;
 #[cfg(test)]
 mod msn_lib_tests;
-#[cfg(test)]
-mod tutor_tests;
 #[cfg(all(test, not(target_family = "wasm")))]
 mod validate_tests;

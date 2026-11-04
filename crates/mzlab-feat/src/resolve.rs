@@ -282,19 +282,19 @@ fn spectra<R: ReadAt>(
     let ids = index.arrays(si)?.scan_ids.clone();
     let mut slot = vec![u32::MAX; ids.len()];
     for (k, &g) in ids.iter().enumerate() {
-        if let Ok(j) = want.binary_search(&(g.max(0) as u32)) {
-            if g >= 0 {
-                slot[k] = j as u32;
-            }
+        if let Ok(j) = want.binary_search(&(g.max(0) as u32))
+            && g >= 0
+        {
+            slot[k] = j as u32;
         }
     }
     let mut raw: Vec<Vec<(i64, f64)>> = vec![Vec::new(); want.len()];
     let n = index.sections[si].n_peaks;
     index.each_peak(si, 0, n, |pos, mz, it| {
-        if let Some(&j) = slot.get(pos) {
-            if j != u32::MAX {
-                raw[j as usize].push(((mz / bin).floor() as i64, it));
-            }
+        if let Some(&j) = slot.get(pos)
+            && j != u32::MAX
+        {
+            raw[j as usize].push(((mz / bin).floor() as i64, it));
         }
     })?;
     Ok(raw

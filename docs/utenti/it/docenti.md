@@ -3,7 +3,7 @@
 ## In breve
 - mzLab è un sito: gli studenti aprono <https://freeesta.github.io/mzlab/> da computer o tablet, senza installare nulla e senza account. Esiste anche un'[app desktop](desktop.md) con lo stesso aspetto.
 - Il programma **non dà le risposte** (niente elenco dei TP, niente rette di taratura o tabelle della relazione): mostra i dati e gli studenti ragionano e calcolano in Excel. A risoluzione unitaria un m/z è un candidato, non un'identificazione.
-- Teoria e Pratica sono solo in italiano; l'interfaccia dei Dati e del Disegno è in italiano e inglese.
+- L'interfaccia dei Dati e del Disegno è in italiano e inglese.
 - La prima apertura scarica il motore di calcolo, quindi serve la rete (in aula conviene che gli studenti aprano il sito prima della lezione).
 
 ## Prima della lezione

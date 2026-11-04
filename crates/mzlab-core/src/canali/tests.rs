@@ -324,7 +324,7 @@ fn wiff_ems_and_epi_at_fixed_precursors_are_ms_channels_with_a_sigla() {
     let ms: Vec<_> = c.v.iter().filter(|x| x.famiglia == Famiglia::Ms).collect();
     assert_eq!(ms.len(), 3);
     assert_eq!((ms[0].sigla, ms[0].livello), (Some("EMS"), 1));
-    assert_eq!(ms[0].etichetta, "MS¹ EMS");
+    assert_eq!(ms[0].etichetta, "MS¹");
     assert!(ms[1..].iter().all(|x| x.sigla == Some("EPI") && x.n == 10));
     assert!(c.v.iter().all(|x| x.famiglia != Famiglia::Dd));
 }
@@ -390,4 +390,50 @@ fn mrm_label_is_the_method_name_else_the_transition() {
     let c = Canali::da(&[], &chroms, &Facts::default(), "m.mzML");
     assert_eq!(c.v[1].etichetta, "MRM 230→162 @25 «bentazone 1»");
     assert_eq!(c.v[2].etichetta, "MRM 230→190 @18");
+}
+
+#[test]
+fn sim_channels_of_a_wiff_are_labelled_by_their_ion() {
+    assert_eq!(
+        sim_label("SIM SIC Q1=237.1 sample=1 period=1 experiment=1 transition=0 dwell=50 polarity=positive name=ion A"),
+        "SIM 237.1 (+) 50 ms «ion A»"
+    );
+    assert_eq!(
+        sim_label("SIM SIC sample=2 period=1 experiment=2 transition=3 polarity=negative"),
+        "SIM #4 (−)"
+    );
+    assert_eq!(sim_label("SIC 180.10"), "SIM SIC 180.10");
+}
+
+#[test]
+fn sim_channels_without_q1_stay_apart_by_their_place_in_the_experiment() {
+    let chroms: Vec<Chrom> = (0..3)
+        .map(|j| Chrom {
+            index: j,
+            id: format!("SIM SIC sample=1 period=1 experiment=1 transition={j} polarity=positive"),
+            kind: "srm".into(),
+            n: Some(100),
+            ..Default::default()
+        })
+        .collect();
+    let c = Canali::da(&[], &chroms, &Facts::default(), "m.mzML");
+    let sim: Vec<&str> =
+        c.v.iter()
+            .filter(|x| x.id.starts_with("sim:"))
+            .map(|x| x.omologo.as_str())
+            .collect();
+    assert_eq!(
+        sim,
+        [
+            "sim|1|#0|positive",
+            "sim|1|#1|positive",
+            "sim|1|#2|positive"
+        ]
+    );
+    assert_eq!(
+        c.v.iter()
+            .find(|x| x.omologo == "sim|1|#2|positive")
+            .map(|x| x.etichetta.as_str()),
+        Some("SIM #3 (+)")
+    );
 }

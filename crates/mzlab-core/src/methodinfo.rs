@@ -192,19 +192,24 @@ fn transition_from_hit(d: &[u8], h: &MrmHit, end: usize) -> Transition {
     }
 }
 
+/// The scan-type code of experiment `i` (`ExperimentHeader` +122).
+fn scan_code(ole: &Ole, base: &str, i: usize) -> Option<u32> {
+    ole.read(&format!(
+        "{base}DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"
+    ))
+    .and_then(|h| {
+        h.get(122..126)
+            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+    })
+}
+
 fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
     let mut out = Vec::new();
     for i in 0..16 {
         let key = format!("{base}DeviceMethod0/Period0/Experiment{i}/MassRangeEx/MassRangeEx");
         let Some(d) = ole.read(&key) else { break };
-        let is_mrm =
-            ole.read(&format!(
-                "{base}DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"
-            ))
-            .and_then(|h| {
-                h.get(122..126)
-                    .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-            }) == Some(4);
+        // MRM (4) or SIM (Q1MI 1, Q3MI 3): a row of their table may have no name
+        let is_mrm = scan_code(ole, base, i).is_some_and(|c| matches!(c, 1 | 3 | 4));
         let mut hits = Vec::new();
         let mut at = 0;
         while at < d.len() {
@@ -253,10 +258,12 @@ fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
             } else {
                 f32_at(&d, 44)
             };
-            if let Some(b) = b {
-                if 10.0 <= a && a < b && b <= 3000.0 {
-                    range = Some([round(a, 2), round(b, 2)]);
-                }
+            if let Some(b) = b
+                && 10.0 <= a
+                && a < b
+                && b <= 3000.0
+            {
+                range = Some([round(a, 2), round(b, 2)]);
             }
         }
         out.push(Experiment {
@@ -318,15 +325,15 @@ fn compound(ole: &Ole, base: &str) -> Vec<Param> {
         }
         let end = at + 2 + 2 * n;
         let id = ascii(&d[at + 2..end]);
-        if let (Some(nm), true) = (named(&id), !out.iter().any(|p| p.id == id)) {
-            if let Some(v) = f32_at(&d, end) {
-                out.push(Param {
-                    id,
-                    label: nm.1,
-                    value: num_param(v),
-                    unit: nm.2,
-                });
-            }
+        if let (Some(nm), true) = (named(&id), !out.iter().any(|p| p.id == id))
+            && let Some(v) = f32_at(&d, end)
+        {
+            out.push(Param {
+                id,
+                label: nm.1,
+                value: num_param(v),
+                unit: nm.2,
+            });
         }
         at = end;
     }

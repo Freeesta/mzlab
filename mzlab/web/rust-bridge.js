@@ -144,12 +144,12 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
 
   async function indexRoute(s, k, path, u, t0) {
     let r = await rpc(path === "/api/canali" && s.blob ? { op: "canali", slot: k, name: base(s.name).split("#")[0], blob: s.blob } : { op: "route", slot: k, path, query: u.search });      // the channels also read the chromatograms of the mzML (SRM, UV)
-    if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
+    if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // what the index alone cannot answer: one scan of a centroid HR file (exact peaks), a single-precision profile level (its spacing)
     if (r.dead || r.error || !r.info) return null;
     stats.rust++;
     return { status: 200, text: r.info, ms: performance.now() - t0 };
   }
-  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero|canali)$/;
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero|canali|scan_stats)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {
@@ -185,7 +185,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       stats.rust++;
       return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
-    if (/^\/api\/(ms2tr|fileinfo|masscal|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
+    if (/^\/api\/(simtab|ms2tr|fileinfo|masscal|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
     if (path === "/api/scaninfo") {
       const s = slots[k0], sid = num(q, "sid", NaN);
       if (!s) return null;

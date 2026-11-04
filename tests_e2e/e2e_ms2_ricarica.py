@@ -13,14 +13,15 @@ try:
         pg = r.page(p)
         stage(pg, [str(ES / f"MS2_t{t}.mzML") for t in (15, 60)])
         pg.click("text=Carica dati"); ready(pg)
-        pg.locator('#flst [data-pg="229.1"]').dblclick(); attendi(pg, f"{specs(pg)}.length >= 1"); ready(pg)
+        open_ms2(pg); pg.locator('#flst [data-pg="229.1"]').dblclick(); attendi(pg, f"{specs(pg)}.length >= 1"); ready(pg)
         def second():
             pg.click("#addf"); pg.set_input_files("#pick", [str(ES / f"FullScan_t{t}.mzML") for t in (0, 5)])
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2")
             pg.click("#opbtn"); attendi(pg, "E.files.length === 4 && !(E.pending || []).length"); ready(pg)
             q = pg.evaluate(f"{specs(pg)}.map(p => [E.files[p.k].label, p._a && p._a.data ? p._a.data.length : 0])")
             assert len(q) == 1 and q[0][0] == "MS2_t15" and q[0][1] >= 1, q
-            assert pg.evaluate("E.files[E.cur].label") == "MS2_t15", "the active file follows its name"
+            # the tab of the first file added later opens (e2e_carica_scheda); the MS2 panels checked above stay on their files
+            assert pg.evaluate("E.files[E.cur].label") == "FullScan_t0", "the active file is the first new one"
         step("second load: MS2 panels stay on their files and keep data", second)
 finally:
     r.close()

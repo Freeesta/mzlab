@@ -95,12 +95,12 @@ impl Sqlite {
             .read_at(0, &mut h[..letti])
             .map_err(|_| guasto("short read"))?;
         let mut commit = None;
-        if let Some((mut w, wdim)) = wal {
-            if let Some((pagina, mappa, pagine)) = leggi_wal(&mut *w, wdim, limiti)? {
-                s.pagina = pagina;
-                commit = Some(pagine);
-                s.wal = Some((w, mappa));
-            }
+        if let Some((mut w, wdim)) = wal
+            && let Some((pagina, mappa, pagine)) = leggi_wal(&mut *w, wdim, limiti)?
+        {
+            s.pagina = pagina;
+            commit = Some(pagine);
+            s.wal = Some((w, mappa));
         }
         if s.pagina == 0 {
             let raw = u16_be(&h, 16).ok_or_else(|| guasto("header"))?;
@@ -186,10 +186,10 @@ impl Sqlite {
             return Err(guasto("page number"));
         }
         let pagina = self.pagina;
-        if let Some((w, mappa)) = &mut self.wal {
-            if let Some(&off) = mappa.get(&n) {
-                return leggi_in(&mut **w, off, pagina, buf);
-            }
+        if let Some((w, mappa)) = &mut self.wal
+            && let Some(&off) = mappa.get(&n)
+        {
+            return leggi_in(&mut **w, off, pagina, buf);
         }
         if u64::from(n) > self.pagine_main {
             return Err(guasto("page beyond the file"));
@@ -379,10 +379,10 @@ impl Sqlite {
                 }
                 return f(&r);
             }
-            if let Some(a) = t.alias_rowid {
-                if matches!(v.get(a), Some(Val::Null)) {
-                    v[a] = Val::Int(rowid);
-                }
+            if let Some(a) = t.alias_rowid
+                && matches!(v.get(a), Some(Val::Null))
+            {
+                v[a] = Val::Int(rowid);
             }
             f(&v)
         })

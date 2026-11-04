@@ -1,0 +1,2 @@
+# Tooltip keys exempt from the guard in tests/test_tooltip_corti.py, one per line: `key  # why`.
+# Only destructive controls (delete, overwrite) may carry a warning; every entry needs a reason.

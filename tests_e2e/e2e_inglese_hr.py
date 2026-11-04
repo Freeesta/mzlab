@@ -27,7 +27,7 @@ try:
         c = b.new_context(locale="en-US", viewport={"width": 1600, "height": 1500}); pg = c.new_page()
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.on("console", lambda m: r.errs.append(("console", m.text)) if "missing key" in m.text else None)
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#start:not([hidden])", timeout=60000)
+        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_selector("#start:not([hidden])", timeout=60000)
         pg.set_input_files("#pick", [str(D / "HR_DDA-Exploris-t30.mzML")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=180000)
         def start():

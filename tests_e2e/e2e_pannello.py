@@ -37,11 +37,14 @@ try:
                 pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4)
                 b0 = pg.evaluate(BOX)
                 assert not pg.is_visible("#dfiles") and pg.get_attribute("#sb-toggle", "aria-pressed") == "false" and b1["chart"]["w"] < b0["chart"]["w"] - 200, (b0, b1)
-                pg.click("#stbar [data-cmd=losses]"); attendi(pg, "BARRA.curTab === 'losses'"); frames(pg, 4)
-                b2 = pg.evaluate(BOX); assert pg.evaluate("BARRA.curTab") == "losses" and b2["chart"]["w"] < b0["chart"]["w"] - 200 and not overlap(b2), b2
+                pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "BARRA.curTab === 'addloss'"); frames(pg, 4)
+                b2 = pg.evaluate(BOX); assert pg.evaluate("BARRA.curTab") == "addloss" and b2["chart"]["w"] < b0["chart"]["w"] - 200 and not overlap(b2), b2
                 pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles")
-                pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="visible"); frames(pg, 4); assert pg.evaluate("BARRA.curTab") == "losses", "the toggle reopens the last tool"
-                pg.click("#stbar [data-cmd=losses]"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles"), "a second click on the same tool hides it"
+                pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="visible"); frames(pg, 4); assert pg.evaluate("BARRA.curTab") == "addloss", "the toggle reopens the last tool"
+                pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles"), "a second click on the same tool hides it"
+                pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "BARRA.curTab === 'addloss'")
+                pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "BARRA.curTab === 'file'"); frames(pg, 4); assert pg.is_visible("#dfiles"), "a second click on a tool goes back to the previous one (File), the panel stays"
+                pg.click("#stbar [data-cmd=file]"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles"), "with no previous tool the second click hides the panel"
                 pg.keyboard.press("Control+b"); pg.wait_for_selector("#dfiles", state="visible"); frames(pg, 4); assert pg.is_visible("#dfiles"), "Ctrl+B"
                 pg.keyboard.press("Control+b"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles")
                 assert pg.evaluate("BARRA.commands.some(c => c.id === 'panel' && c.run)") and pg.locator("#sb-pin").count() == 0
@@ -68,7 +71,7 @@ try:
                 r, ctx, pg, errs = cold(p, 1440, 900, saved=saved)
                 try:
                     st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))")
-                    assert "pinned" not in st and 280 <= st["w"] <= 560 and st["tab"] in ("file", "calc", "losses", "lists", "qaqc", "stat") and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") in ("left", "right"), st
+                    assert "pinned" not in st and 280 <= st["w"] <= 560 and st["tab"] in ("file", "calc", "addloss", "lists", "qaqc", "stat") and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") in ("left", "right"), st
                     b = pg.evaluate(BOX); assert not overlap(b) and b["sw"] <= 1, b
                 finally: ctx.close(); r.close()
                 assert not errs, errs
@@ -85,7 +88,7 @@ try:
                     if sheet: assert b["side"]["w"] >= vw - 30 and not pg.is_visible("#dpanels") and pg.is_visible("#sb-x"), (vw, b)
                     else: assert not overlap(b), (vw, b)
                     assert b["sw"] <= 1
-                    pg.click("#sb-x"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles") and pg.is_visible("#dpanels")
+                    close_side(pg); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles") and pg.is_visible("#dpanels")
                 finally: ctx.close(); r.close()
                 assert not errs, errs
         step("iPad landscape docked, iPad portrait a sheet that replaces the workspace (× gives it back)", schermi)

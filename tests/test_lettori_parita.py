@@ -86,9 +86,9 @@ def da_wasm(tools, fam, ds: Path) -> bytes:
     return out.read_bytes()
 
 
-def da_cli(tools, fam, ds: Path) -> bytes:
+def da_cli(tools, fam, ds: Path, *extra: str) -> bytes:
     out = tools["tmp"] / f"cli_{fam}"
-    r = run([str(tools["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1"])
+    r = run([str(tools["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
     assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
     files = sorted(out.glob("*.mzML"))
     assert len(files) == 1, files
@@ -162,6 +162,19 @@ def test_mzml_del_modulo_uguale_a_quello_del_cli(tools, fam):
     cli = da_cli(tools, fam, ds)
     wasm = da_wasm(tools, fam, ds)
     assert sha(wasm) == sha(cli), (fam, len(wasm), len(cli), first_diff(wasm, cli))
+
+
+def test_wiff_con_dad_e_metodo_uguale_al_cli_con_dad(tools):
+    """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
+    (`mzLab metodo/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""
+    d = tools["tmp"] / "in_dadmetodo"
+    r = run([sys.executable, str(ROOT / "tools/wiff_riferimento.py"), str(d)])
+    assert r.returncode == 0, r.stderr[-1500:]
+    ds = d / "dadmetodo.wiff"
+    cli = da_cli(tools, "sciex_dad", ds, "--set", "conv.dad=true")
+    wasm = da_wasm(tools, "sciex", ds)
+    assert b"MS:1000804" in cli and b"mzLab metodo/1" in cli
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
 def first_diff(a: bytes, b: bytes):

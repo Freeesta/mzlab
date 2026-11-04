@@ -83,10 +83,10 @@ try:
             pg.screenshot(path=SH + "52_specbg.png")
         step("spectrum background subtraction", spec_bg)
         def calc():
-            pg.evaluate("document.querySelector('#np-calc2').click()"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
-            t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "363.1" in t and "364.07" not in t and "1 decimale" not in t
+            pg.evaluate("BARRA.setTab('adducts')"); pg.wait_for_selector("#calcin", state="visible"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
+            t = pg.inner_text("#sb-panel-adducts"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "363.1" in t and "364.07" not in t and "1 decimale" not in t
             pg.screenshot(path=SH + "53_calc.png")
-            pg.locator("#calcout button.cxic").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
+            pg.locator("#sb-panel-adducts button.cxic").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
             assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-mz") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-mz"), pg.inner_text("#xic-sum"))
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)") == n0 + 1

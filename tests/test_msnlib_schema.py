@@ -1,5 +1,5 @@
 """The library written by `mzlab-cli msn-lib build` (two standards from the public synthetic infusion, never lab data) validates against
-docs/schemi/msnlib-1.json, every graph inside against docs/schemi/msngrafo-1.json, and the entries come out sorted by id."""
+docs/schemi/msnlib-1.json, every graph inside against docs/schemi/msngrafo-2.json, and the entries come out sorted by id."""
 import json
 import shutil
 import subprocess
@@ -11,7 +11,7 @@ from jsonschema import Draft202012Validator
 ROOT = Path(__file__).resolve().parents[1]
 MZML = ROOT / "tests" / "golden" / "ref" / "msntree_rotta" / "msn.mzML"
 SCHEMA = json.loads((ROOT / "docs/schemi/msnlib-1.json").read_text())
-GRAFO = json.loads((ROOT / "docs/schemi/msngrafo-1.json").read_text())
+GRAFO = json.loads((ROOT / "docs/schemi/msngrafo-2.json").read_text())
 pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
 
 MANIFEST = "id\tformula_neutra\taddotto_atteso\tfile\nSTD-2\tC14H14N3O5\t[M+H]+\tmsn.mzML\nSTD-1\tC14H14N3O5\t[M+H]+\tmsn.mzML\n"

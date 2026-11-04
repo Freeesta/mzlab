@@ -215,10 +215,10 @@ fn lc(ole: &Ole, m: &mut Meta) {
             }
             campo(m, &o, k, v);
         }
-        if let Some(t) = get("dwLowGeneratedDateTime").zip(get("dwHighGeneratedDateTime")) {
-            if let Some(d) = prop::filetime_xml(t.0, t.1) {
-                m.campi.push(Campo::new(&o, "generatedTime", d));
-            }
+        if let Some(t) = get("dwLowGeneratedDateTime").zip(get("dwHighGeneratedDateTime"))
+            && let Some(d) = prop::filetime_xml(t.0, t.1)
+        {
+            m.campi.push(Campo::new(&o, "generatedTime", d));
         }
     }
     for p in ole

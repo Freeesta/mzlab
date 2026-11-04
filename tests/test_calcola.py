@@ -16,8 +16,8 @@ def run(code):
 
 
 def test_expressions_are_recognised_and_formulas_are_not():
-    r = run("console.log(JSON.stringify(['364.4-194.2','364,4 − 194,2','(229.1-171.2)*2','305+18','5x3','8 ÷ 2','Ans+1','1,5','',' ','C9H10Cl2N2O','c9h10n2o','CO','Xe','H2O','2'].map(c.calcIsExpr)))")
-    assert r == [True, True, True, True, True, True, True, True, False, False, False, False, False, False, False, True]
+    r = run("console.log(JSON.stringify(['364.4-194.2','364,4 − 194,2','(229.1-171.2)*2','305+18','5x3','8 ÷ 2','Ans+1','1,5','',' ','C9H10Cl2N2O','c9h10n2o','CO','Xe','H2O','2','(','+','×',')',',','Ans'].map(c.calcIsExpr)))")
+    assert r == [True, True, True, True, True, True, True, True, False, False, False, False, False, False, False, True] + [True] * 6          # an unfinished expression is still an expression: the keypad stays
 
 
 def test_values():

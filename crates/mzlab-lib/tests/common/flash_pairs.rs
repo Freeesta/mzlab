@@ -26,28 +26,28 @@ pub fn reference<S: Source>(
     };
     for (i, &mz) in q.spec.mz.iter().enumerate() {
         let t = frag_da * 1e5;
-        if mode != FlashMode::NeutralLoss {
-            if let Some((lo, hi)) = window(mz * 1e5, t) {
-                lib.for_each_entry(false, lo, hi, |mq, sp, qi| {
-                    if in_ranges(sp) {
-                        let p = qi as f64 / 65535.0 * light.recs[sp as usize].scale as f64;
-                        pairs.push((sp, i as u16, mq, pair_term(pa[i], p)));
-                    }
-                })
-                .unwrap();
-            }
+        if mode != FlashMode::NeutralLoss
+            && let Some((lo, hi)) = window(mz * 1e5, t)
+        {
+            lib.for_each_entry(false, lo, hi, |mq, sp, qi| {
+                if in_ranges(sp) {
+                    let p = qi as f64 / 65535.0 * light.recs[sp as usize].scale as f64;
+                    pairs.push((sp, i as u16, mq, pair_term(pa[i], p)));
+                }
+            })
+            .unwrap();
         }
-        if mode != FlashMode::Open {
-            if let Some((lo, hi)) = window((q.prec - mz) * 1e5, t) {
-                lib.for_each_entry(true, lo, hi, |nq, sp, qi| {
-                    if in_ranges(sp) {
-                        let p = qi as f64 / 65535.0 * light.recs[sp as usize].scale as f64;
-                        let mq = light.recs[sp as usize].precq.wrapping_sub(nq);
-                        pairs.push((sp, i as u16, mq, pair_term(pa[i], p)));
-                    }
-                })
-                .unwrap();
-            }
+        if mode != FlashMode::Open
+            && let Some((lo, hi)) = window((q.prec - mz) * 1e5, t)
+        {
+            lib.for_each_entry(true, lo, hi, |nq, sp, qi| {
+                if in_ranges(sp) {
+                    let p = qi as f64 / 65535.0 * light.recs[sp as usize].scale as f64;
+                    let mq = light.recs[sp as usize].precq.wrapping_sub(nq);
+                    pairs.push((sp, i as u16, mq, pair_term(pa[i], p)));
+                }
+            })
+            .unwrap();
         }
     }
     sortc::by(&mut pairs, |a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));

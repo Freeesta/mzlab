@@ -59,7 +59,7 @@ try:
         step("default off: unchecked in Reference lists, no diamonds; checked adds diamonds; persists on reload", default_off)
 
         def known():
-            h = hov(pg, 279.1591); assert h and "Compatibile con un contaminante noto" in h and "dibutilftalato" in h and "Keller 2008" in h, h
+            h = hov(pg, 279.1591); assert h and "Compatibile con un contaminante noto" in h and "dibutilftalato" in h and "Contaminanti noti e fondo LC-MS" in h and "Keller" not in h, h
             h2 = hov(pg, 391.2843); assert h2 and "DEHP" in h2, h2
         step("279.1591 and 391.2843: the line of the contaminant in the box of the peak", known)
 
@@ -140,12 +140,12 @@ try:
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=5000)
             assert pg.locator("#uip-cont").count() == 0, "contaminant switch removed from settings modal"
-            pg.click("#np-set")
+            pg.keyboard.press("Escape")   # the settings dialog covers the gear: Escape closes it
         step("gear: contaminant switch removed from settings modal", gear)
         def gear_lab():
             pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=5000)
             assert pg.locator("#uip-lab").count() == 0 and "aboratorio" not in pg.inner_text("#uipset"), "the laboratory contaminants are not in the settings"
-            pg.click("#np-set")
+            pg.keyboard.press("Escape")   # the settings dialog covers the gear: Escape closes it
             pg.keyboard.press("Control+k"); pg.wait_for_selector("#pal-in", timeout=5000); pg.fill("#pal-in", "contaminanti"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
             pg.fill("#pal-in", "lab contaminants"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
             pg.keyboard.press("Enter"); pg.wait_for_selector("#bigdlg[open] #lab-add", timeout=5000); pg.evaluate("document.querySelector('#bigdlg').close()")
@@ -239,6 +239,14 @@ try:
             assert "Risoluzione unitaria" in pg.evaluate("HELP.liste[1]") and "silossani" in pg.evaluate("HELP.liste[1]")
             # Results table is populated and sorted
             assert pg.locator("#lst-tbody tr").count() > 0
+            import re
+            mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr td:first-child')].map(t=>t.textContent)")
+            assert mzs and all(re.fullmatch(r"\d+\.\d{4}", m) for m in mzs), mzs[:5]      # exact m/z, 4 decimals, never rounded
+            # the whole list is shown, one badge per row, no ESI+/ESI-/All toggle; a long name stays reachable (wraps, full text in the title)
+            pg.fill("#lst-q", ""); pg.wait_for_selector("#lst-tbody tr .pol", timeout=5000)
+            assert pg.locator("#lst-pol-seg").count() == 0
+            bad = pg.evaluate("[...document.querySelectorAll('#lst-tbody td.lst-name')].filter(t=>t.scrollWidth>t.clientWidth+1||!t.title).length")
+            assert bad == 0, bad
             shut(pg, "#listex")
         step("low resolution: context menu search opens nominal ±0.5 Da search", lr_context_menu_search)
 

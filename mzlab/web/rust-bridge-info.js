@@ -1,11 +1,13 @@
 // @ts-check
 // @ts-strict
 // The routes of the bridge that read the head of a file or one answer per file from the indexes: `api/ms2tr`, `api/fileinfo`, `api/msn_grafo` (the graph) and `api/msn_grafo/export` (its spectra as text), `api/msnlib/aggiungi` and `api/msnlib/cerca` (POST) and the `api/chrom` of an MRM file.
+// `api/simtab` (the SIM table of the files: their api/mrm transitions integrated by the engine, simtab.rs).
 // Returns { status, text, ms } or null (the route is unavailable: browser.js answers err.route.unavailable).
 import { cercaRoute, grafoRoute, libreriaRoute } from "./rust-msngrafo-pagina.js";
 
 /** @param {string} path  @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, base: (n: string) => string, stats: any, t0: number, init?: any}} env */
 export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) {
+  if (path === "/api/simtab") return simtabRoute(u, { slots, rpc, stats, t0 });
   if (path === "/api/msnlib/aggiungi") {                               // add an entry to the msnlib/1 library of the user (POST)
     const r = await libreriaRoute({ slots, rpc, stats }, init);
     return r && { ...r, ms: performance.now() - t0 };
@@ -21,6 +23,8 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
   const q = u.searchParams;
   const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
   if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
+  /** @type {any} */ let gs = []; try { gs = JSON.parse(q.get("g") || "[]"); } catch (_) { return null; }
+  if (!Array.isArray(gs)) return null;
   await Promise.all(ks.map(k => slots[k].opening));
   if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) return null;
   const done = text => { stats.rust++; return { status: 200, text, ms: performance.now() - t0 }; };
@@ -60,4 +64,24 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
     parts.push(`{"k":${k},"transitions":${r.info}}`);
   }
   return done(`{"files":[${parts.join(",")}]}`);
+}
+
+/** api/simtab?k=..&output=..&layout=samples|channels (simtab::OUTPUTS)[&g=JSON list of the group of each k, "" = none]: the `mrm` transitions of every slot,
+ * then the op `simtab` of the worker; "E" + JSON (no SIM channel, unknown output) = a 400.
+ * @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, stats: any, t0: number}} env */
+async function simtabRoute(u, { slots, rpc, stats, t0 }) {
+  const q = u.searchParams, ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), output = q.get("output") || "area_sum", layout = q.get("layout") || "samples";
+  if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
+  /** @type {any} */ let gs = []; try { gs = JSON.parse(q.get("g") || "[]"); } catch (_) { return null; }
+  if (!Array.isArray(gs)) return null;
+  await Promise.all(ks.map(k => slots[k].opening));
+  if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad && slots[k].blob)) return null;
+  const rs = await Promise.all(ks.map(k => rpc({ op: "mrm", slot: k, blob: slots[k].blob })));
+  if (rs.some(r => r.dead || r.error || !r.info)) return null;
+  const files = `[${ks.map((k, i) => `{"name":${JSON.stringify(slots[k].name)},"transitions":${rs[i].info}${gs[i] ? `,"group":${JSON.stringify(String(gs[i]))}` : ""}}`).join(",")}]`;
+  const r = await rpc({ op: "simtab", files, output, layout });
+  if (r.dead || r.error || !r.info) return null;
+  stats.rust++;
+  const bad = r.info[0] === "E";
+  return { status: bad ? 400 : 200, text: bad ? r.info.slice(1) : r.info, type: bad ? "application/json" : "text/csv", ms: performance.now() - t0 };
 }

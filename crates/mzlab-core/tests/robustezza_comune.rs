@@ -44,10 +44,10 @@ fn esegui_registro(m: &[(String, Vec<u8>)]) -> Vec<String> {
                 }
             }
         }
-        if let Some(cr) = nota(l.cromatogrammi(c), &mut k) {
-            if let Some(v) = cr.first() {
-                nota(l.cromatogramma(c, &v.id), &mut k);
-            }
+        if let Some(cr) = nota(l.cromatogrammi(c), &mut k)
+            && let Some(v) = cr.first()
+        {
+            nota(l.cromatogramma(c, &v.id), &mut k);
         }
         nota(l.metodo(c), &mut k);
         nota(

@@ -1,6 +1,6 @@
 """Speed of the viewer gestures on the built site (Rust/WASM engine, Chromium headless, synthetic files) and, optionally, of the native engine.
 
-    python3 tools/bench_visore.py [CASES] [--site DIR] [--wd DIR] [--reps N] [--mreps N] [--json] [--native] [--g7 DIR] [--only-g2]
+    python3 tools/bench_visore.py [CASES] [--site DIR] [--wd DIR] [--reps N] [--mreps N] [--json] [--native] [--g7 DIR] [--only-g2] [--trace] [--open-min M]
 
 CASES (default `lr,hrc`): `lr` 3200-like Full Scan (1500 scans x 500 centroids), `hrc` Orbitrap centroids (3000 x 3000), `hrc_big` (6000 x 5000), `hrp` Orbitrap
 profile (400 x 50 000), `lr20` (20 `lr` files), `hr15` (15 `hrc` files); `NAME:SCANSxPEAKS` changes the size, `NAME:SCANSxPEAKSxFILES` also the number of files.
@@ -10,9 +10,9 @@ that shows the result): G1 click on the TIC -> spectrum; G2 `AZIONI.esegui("spec
 files of the tab visible (multi-file cases); G4 pointer sweep over the spectrum (frames only: the lens does not exist yet); G5 Ctrl+wheel zoom and Shift+drag
 pan of the TIC, the spectrum and XIC traces of 3k, 50k and 1M points (served by the bench, see SYN); G6 ArrowRight; M heap of the page and of the engine
 before and after MREPS XICs (default 1000). Phases per gesture: request (wall time of the `api/` fetches), engine (`X-Py-Ms`), JSON (`Response.json`), rest = drawing.
-`--native` also runs `visore_tempi` on the `.mzidx` of the first file of each case; `--g7 DIR` builds the >= 2 GB file in DIR and times the native engine on it.
+`--trace` adds the phases of the opening (engine operations and their times, empty answers, errors, `MZLAB_LR_MISS`, memory) to each case. `--native` also runs `visore_tempi` on the `.mzidx` of the first file of each case; `--g7 DIR` builds the >= 2 GB file in DIR and times the native engine on it.
 Nothing of the product is changed: the hooks wrap global functions of the page (draw, fetch, Response.json, Worker)."""
-import argparse, glob, json, os, platform, shutil, signal, subprocess, sys, tempfile, time
+import argparse, glob, json, os, platform, re, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -24,6 +24,8 @@ CASES = {"lr": ("lr", 1500, 500, 1), "hrc": ("hrc", 3000, 3000, 1), "hrc_big": (
 ONLY_M = False
 ONLY_G2 = False
 ONLY_G5 = False
+TRACE = False
+LAST = []                                                      # the viewer of the running case: its trace goes with a case that does not open
 OPEN_MS = 1500000                                              # the opening of the files gives up after this many ms (the case is reported as not measured)
 SYN = {"3k": 3_000, "50k": 50_000, "1M": 1_000_000}          # traces served by the bench for the m/z 1001 / 1002 / 1003 (G5)
 
@@ -32,7 +34,11 @@ INIT = r"""(() => {
   const V = window.__V = { ev: [], dr: [], fe: [], js: [], wmem: 0, wcur: 0, last: 0, rec: false, fr: null, lt: [], syn: {} };
   for (const t of ['pointerup', 'keydown', 'wheel', 'pointermove']) window.addEventListener(t, e => { if (t === 'pointermove' && !V.rec) return; V.last = performance.now(); V.ev.push({ t: V.last, type: t, key: e.key }); }, true);
   const W = window.Worker;
-  window.Worker = class extends W { constructor(u, o) { super(u, o); this.addEventListener('message', e => { const m = e.data; if (m && m.mem) { V.wcur = m.mem; V.wmem = Math.max(V.wmem, m.mem); } }); } };
+  V.wk = [];                                                         // --trace: the engine's operations of the opening, sent and answered, with their time
+  const OPS = /^(lr_put|lr_index|lr_entry|idxopen|route|specexact|mzmlroute|canali)$/, note = (d, m) => { if (V.wk.length < 400 && m && (OPS.test(m.op) || m.error || m.fatal || (m.op === 'progress' && m.phase && !V.wk.some(w => w.phase === m.phase))))
+    V.wk.push({ t: Math.round(performance.now()), d, op: m.op, phase: m.phase, path: m.path || (m.query && m.query.slice(0, 80)), none: d === '<' && m.op && !m.info && !m.error && !m.buf ? 1 : undefined, error: m.error && String(m.error).slice(0, 160), fatal: m.fatal, mem: m.mem }); };
+  window.Worker = class extends W { constructor(u, o) { super(u, o); this.addEventListener('message', e => { const m = e.data; note('<', m); if (m && m.mem) { V.wcur = m.mem; V.wmem = Math.max(V.wmem, m.mem); } }); }
+    postMessage(m, t) { note('>', m); return super.postMessage(m, t); } };
   const j0 = Response.prototype.json; Response.prototype.json = function () { const t0 = performance.now(); return j0.call(this).then(x => { V.js.push({ t0, t1: performance.now() }); return x; }); };
   const rnd = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const synth = (n, k, bin) => { const r = rnd(7 + n), rt = new Array(n), y = new Array(n), pk = [4, 9, 13, 18, 22];
@@ -77,6 +83,11 @@ def machine():
     return {"cpu": cpu, "cores": os.cpu_count(), "os": platform.platform(), "commit": sha}
 
 
+def load_button(pg):
+    """The files open as soon as they are read; a page that still has «Load data» gets its click."""
+    if pg.locator("#opbtn").count(): pg.click("#opbtn")
+
+
 def files_of(wd, kind, nscan, npk, nfiles):
     """The files of a case (written once: `lr` and `lr20` share the first one)."""
     out = []
@@ -89,13 +100,21 @@ def files_of(wd, kind, nscan, npk, nfiles):
     return out
 
 
+def engine_cap():
+    """Engine .wasm cap, read from the pages.yml step this bench mimics (single source of truth)."""
+    m = re.search(r"wasm_opt\.sh\s+\S+\s+(\d+)\s+engine\b", (ROOT / ".github" / "workflows" / "pages.yml").read_text())
+    if not m:
+        raise SystemExit("engine cap not found in .github/workflows/pages.yml")
+    return m.group(1)
+
+
 def build_site(out):
     """The site and the engine as pages.yml builds them (wasm-opt when it can be installed, as tools/wasm_opt.sh)."""
     bm.build_site(out)
     w = out / "static" / "wasm" / "mzlab_wasm_bg.wasm"
     if shutil.which("npm"):
         env = {**os.environ, "RUNNER_TEMP": str(out.parent / "runner_tmp")}
-        subprocess.run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(w), "1884160", "engine"], cwd=ROOT, env=env, check=False)
+        subprocess.run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(w), engine_cap(), "engine"], cwd=ROOT, env=env, check=False)
 
 
 def stats(v):
@@ -123,11 +142,14 @@ class Base:
         pg = s.pg; s.name = name
         pg.goto(f"http://127.0.0.1:{port}/?riparti=1"); pg.wait_for_selector("#drop", timeout=120000)
         bm.wait(pg, "window.MZLAB_LR !== undefined", timeout=120000)
-        t0 = time.time(); pg.set_input_files("#pick", [str(f) for f in files])
-        bm.wait(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(files)}", timeout=OPEN_MS)
-        pg.click("#opbtn"); bm.wait(pg, f"typeof E!=='undefined' && E.files.length >= {len(files)} && E.pending.length === 0", timeout=OPEN_MS)
-        s.out["open_s"] = round(time.time() - t0, 1)
-        bm.wait(pg, "E.panels.some(p => p.type === 'chrom' && p._a) && E.panels.some(p => p.type === 'spec' && p._a)", timeout=600000)
+        t0 = time.time(); s.t0 = pg.evaluate("performance.now()"); pg.set_input_files("#pick", [str(f) for f in files])
+        try:
+            bm.wait(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(files)}", timeout=OPEN_MS)
+            load_button(pg); bm.wait(pg, f"typeof E!=='undefined' && E.files.length >= {len(files)} && E.pending.length === 0", timeout=OPEN_MS)
+            s.out["open_s"] = round(time.time() - t0, 1)
+            bm.wait(pg, "E.panels.some(p => p.type === 'chrom' && p._a) && E.panels.some(p => p.type === 'spec' && p._a)", timeout=min(600000, OPEN_MS))
+        finally:
+            if TRACE: s.out["trace"] = s.trace()
         s.ev("__V.wrap()"); s.quiet(600); s.take()
         f = files[0]
         s.out.update({"case": name, "files": len(files), "scans": s.ev("E.files[0].nscan || E.files[0].scans || null"), "mzML_MB": round(f.stat().st_size / 1e6), "hr": bool(s.ev("!!window.HR && HR.isHr(E.files[0], E.files[0].lv)"))})
@@ -275,8 +297,22 @@ class Viewer(Gestures):
                            "js_heap_growth_MB": round(steps[-1]["js_heap_MB"] - h0, 1), "engine_growth_MB": steps[-1]["engine_MB"] - w0, "chromium_rss_MB": bm.rss_mb()}
 
 
+    def trace(s):
+        """--trace: ms from the choice of the files to the first end of each phase of the opening (copy `lr_put`, table and `.mzidx` `lr_index`, `lr_entry`,
+        `idxopen`, first TIC and first spectrum answered or not), the operations the engine answered with nothing, its errors, the misses, the memory."""
+        js = """(() => { const V = __V, w = V.wk.map(x => ({ ...x, t: Math.round(x.t - %f) })), first = (d, op, f) => { const x = w.find(y => y.d === d && y.op === op && (!f || f(y))); return x ? x.t : null; };
+          return { phases: { copy: first('<', 'lr_put'), index: first('<', 'lr_index'), lr_entry: first('<', 'lr_entry'), idxopen: first('<', 'idxopen'),
+              tic: (w.find(y => y.d === '>' && y.op === 'route' && /chrom/.test(y.path || '')) || {}).t ?? null, spectrum_asked: first('>', 'route', y => /spectrum/.test(y.path || '')) },
+            progress: w.filter(y => y.op === 'progress').map(y => [y.phase, y.t]), empty: w.filter(y => y.none).map(y => [y.op, y.t]),
+            errors: w.filter(y => y.error || y.fatal).map(y => [y.op, y.t, y.error, !!y.fatal]).slice(0, 5), miss: (window.MZLAB_LR_MISS || []).slice(0, 5),
+            panels: typeof E === 'undefined' ? '' : E.panels.map(p => p.type + (p._a ? '+' : '-')).join(','),
+            js_heap_MB: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null, engine_MB: Math.round(V.wmem / 1048576) }; })()""" % s.t0
+        try: return s.ev(js)
+        except Exception as e: return {"error": str(e).splitlines()[0][:200]}
+
+
 def run_case(pg, port, name, files, reps, mreps, one_synthetic):
-    v = Viewer(pg, reps, mreps); v.open(port, name, files)
+    v = Viewer(pg, reps, mreps); LAST[:] = [v]; v.open(port, name, files)
     if ONLY_M: v.mem_lens(); return v.out
     if ONLY_G5: v.g5(synthetic=one_synthetic); return v.out
     v.g1()
@@ -316,7 +352,7 @@ def g7_site(pg, port, mzml, reps=100):
     bm.wait(pg, "window.MZLAB_LR !== undefined", timeout=120000)
     t0 = time.time(); pg.set_input_files("#pick", [str(mzml)])
     bm.wait(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=OPEN_MS)
-    pg.click("#opbtn"); bm.wait(pg, "typeof E!=='undefined' && E.files.length >= 1 && E.pending.length === 0", timeout=OPEN_MS)
+    load_button(pg); bm.wait(pg, "typeof E!=='undefined' && E.files.length >= 1 && E.pending.length === 0", timeout=OPEN_MS)
     o = {"mzML_MB": round(Path(mzml).stat().st_size / 1e6), "open_s": round(time.time() - t0, 1)}
     for lab, tol in (("LR_0.5Da", "0.5"), ("HR_5ppm", "ppm")):
         r = pg.evaluate("""async ([n, tol]) => { const q = [], b = [];
@@ -367,9 +403,10 @@ def main():
     ap.add_argument("--port", type=int, default=8873); ap.add_argument("--only-g2", action="store_true", help="only G1 and G2 (the XIC panel)"); ap.add_argument("--only-g5", action="store_true", help="only G5 (zoom and pan)"); ap.add_argument("--only-m", action="store_true", help="only the M of the lens (V-5)"); ap.add_argument("--native", action="store_true"); ap.add_argument("--g7", type=Path)
     ap.add_argument("--g7-site", type=Path, help="open this big mzML in the browser and time XICs on its index (G7 on the site)")
     ap.add_argument("--open-min", type=int, default=25, help="minutes the opening of the files of a case may take")
+    ap.add_argument("--trace", action="store_true", help="add the phases of the opening (engine operations, misses, errors, memory) to every case, also one that does not open")
     ap.add_argument("--g7-size", default="80000x6000", help="SCANSxPEAKS of the file of --g7 (80000x6000 = 2.6 GB of mzML)")
     ap.add_argument("--md", type=Path, help="print the starting table from the JSON lines of a previous run and stop")
-    a = ap.parse_args(); global OPEN_MS, ONLY_M, ONLY_G2, ONLY_G5; OPEN_MS = a.open_min * 60000; ONLY_M = a.only_m; ONLY_G2 = a.only_g2; ONLY_G5 = a.only_g5
+    a = ap.parse_args(); global OPEN_MS, ONLY_M, ONLY_G2, ONLY_G5, TRACE; OPEN_MS = a.open_min * 60000; TRACE = a.trace; ONLY_M = a.only_m; ONLY_G2 = a.only_g2; ONLY_G5 = a.only_g5
     if a.md: return print(md(a.md))
     wd = a.wd or Path(tempfile.gettempdir()) / "bench_visore"; wd.mkdir(parents=True, exist_ok=True)
     t_all = time.time(); mach = machine(); print(json.dumps({"machine": mach}) if a.json else f"machine: {mach['cpu']} x{mach['cores']}, commit {mach['commit']}", flush=True)
@@ -416,9 +453,11 @@ def main():
                         idx = wd / f"visore_{nm}.mzidx"
                         subprocess.run([str(ROOT / "target" / "release" / "examples" / "visore_tempi"), "indicizza", str(files[0]), str(idx)], check=True, stdout=subprocess.DEVNULL)
                         o["native"] = native(idx, None)
-                    print(json.dumps(o) if a.json else table(o), flush=True)
+                    print(json.dumps(o) if a.json else table(o) + (f"\ntrace: {json.dumps(o['trace'])}" if "trace" in o else ""), flush=True)
                 except Exception as e:                                                       # a case that does not open in time (hrp in the browser) is a result, not a crash
-                    o = {"case": nm, "error": str(e).splitlines()[0][:300], "case_s": round(time.time() - t)}; print(json.dumps(o) if a.json else f"\n### {nm}\nnot measured: {o['error']}", flush=True)
+                    o = {"case": nm, "error": str(e).splitlines()[0][:300], "case_s": round(time.time() - t)}
+                    if LAST and "trace" in LAST[0].out: o["trace"] = LAST[0].out["trace"]
+                    print(json.dumps(o) if a.json else f"\n### {nm}\nnot measured: {o['error']}" + (f"\ntrace: {json.dumps(o['trace'])}" if "trace" in o else ""), flush=True)
                 finally: signal.alarm(0); ctx.close(); shutil.rmtree(prof, ignore_errors=True)
     finally:
         srv.terminate()

@@ -1,7 +1,7 @@
 # Regole di frammentazione in CID e HCD per il grafo MSn: studio
 
 Studio per il workflow MSn predefinito: l'utente carica l'infusione, dà la molecola (formula + SMILES) e il programma INTERPRETA i frammenti del grafo `msngrafo/1` con regole prese dalla letteratura. Questo file: principi, differenze CID/HCD, fonti, licenze, prove esterne. Schema `fragrules/1` e tabella delle regole: `regole-frammentazione-schema.md`. Mappa del codice, piano delle PR e prompt: `regole-frammentazione-piano.md`. Contratto del grafo: `docs/agenti/msn-grafo.md`.
-Le regole danno PROPOSTE con prove e citazione, mai identificazioni (principio 1 di AGENTS.md: nel mondo HR candidati con punteggio, mai verità). Le citazioni hanno chiavi `[XXX00]` risolte nella bibliografia (§8); «da verificare» = riferimento o contenuto non controllato sul testo, da non usare come prova finché qualcuno non lo legge.
+Le regole danno PROPOSTE con prove e citazione, mai identificazioni (principio 1 di CLAUDE.md: nel mondo HR candidati con punteggio, mai verità). Le citazioni hanno chiavi `[XXX00]` risolte nella bibliografia (§8); «da verificare» = riferimento o contenuto non controllato sul testo, da non usare come prova finché qualcuno non lo legge.
 
 ## 0. Sintesi delle scelte
 1. **Cosa aggiungere**: una tabella di regole `fragrules/1` (dati, non codice) e un valutatore Rust che, dato il SMILES e il grafo con le sottoformule, segna ogni arco con le regole compatibili (perdita neutra + gruppo funzionale presente + polarità + attivazione) e ogni nodo con gli ioni diagnostici; chiave facoltativa `regole` in `msngrafo/1`, come `strutture`.

@@ -1,4 +1,4 @@
-"""The leaf of the empty file list (#fl-hint): one still line drawing, tinted from the accent token, inside its box, never animated, in both themes."""
+"""The leaf of the empty file list (#fl-hint): one line drawing drawn horizontal, tinted from the accent token, inside its box in both themes; still under reduced motion (the test page)."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -16,17 +16,17 @@ try:
         S = "#fl-hint svg.leaf"
         def shape():
             assert pg.locator(S).count() == 1 and pg.locator("svg.leaf").count() == 1, "one leaf, one definition"
-            v = pg.evaluate(f"""(() => {{ const s = document.querySelector('{S}'), g = s.querySelector('g'), b = g.getBBox(), sw = parseFloat(getComputedStyle(s.querySelector('path:not(.lf)')).strokeWidth);
-              return {{w: s.getBoundingClientRect().width, h: s.getBoundingClientRect().height, hid: s.getAttribute('aria-hidden'), b: [b.x, b.y, b.x + b.width, b.y + b.height], sw, paths: s.querySelectorAll('path').length}}; }})()""")
-            assert 64 <= v["w"] <= 80 and v["w"] == v["h"] and v["hid"] == "true" and v["sw"] == 1.5, v
-            m = v["sw"] / 2 + .5      # the stroke reaches half its width past the geometry
-            assert v["b"][0] >= m and v["b"][1] >= m and v["b"][2] <= 80 - m and v["b"][3] <= 80 - m, ("the leaf does not fit its box", v)
-        step("one svg of 64-80 px, aria-hidden, 1.5 px stroke, the whole leaf inside its box", shape)
+            v = pg.evaluate(f"""(() => {{ const s = document.querySelector('{S}'), sw = parseFloat(getComputedStyle(s.querySelector('path:not(.lf)')).strokeWidth), r = s.getBoundingClientRect(), b = s.querySelector('.lf').getBoundingClientRect();
+              return {{w: r.width, h: r.height, hid: s.getAttribute('aria-hidden'), sw, paths: s.querySelectorAll('path').length, inside: [b.left - r.left, b.top - r.top, r.right - b.right, r.bottom - b.bottom]}}; }})()""")
+            assert v["w"] == 72 and v["h"] == 44 and v["hid"] == "true" and v["sw"] == 1.5, v
+            assert all(x >= 0 for x in v["inside"]), ("the leaf does not fit its box", v)
+            assert v["w"] > 1.4 * v["h"], ("the leaf is not drawn horizontal", v)
+        step("one 72x44 svg, aria-hidden, 1.5 px stroke, drawn horizontal and inside its box", shape)
         def still():
             v = pg.evaluate(f"""[...document.querySelectorAll('{S}, {S} *')].map(e => {{ const c = getComputedStyle(e); return [e.tagName, c.animationName, c.transitionDuration, e.getAnimations().length]; }})""")
             assert all(a[1] == "none" and set(a[2].split(", ")) <= {"0s"} and a[3] == 0 for a in v), v
             assert pg.evaluate(f"document.querySelectorAll('{S} animate, {S} animateTransform, {S} set').length") == 0
-        step("no animation and no transition on the leaf or inside it", still)
+        step("still under reduced motion: no animation, no transition", still)
         def tokens():
             for th in ("light", "dark"):
                 pg.evaluate(f"document.documentElement.setAttribute('data-theme', '{th}')"); frames(pg, 2)

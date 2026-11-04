@@ -65,7 +65,7 @@ pub fn strutture_testo(
     let smiles = smiles.filter(|s| !s.trim().is_empty());
     let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
     let bad = || Error::new("err.msngrafo.badNode").with("node", nodo);
-    if nodo == "tutti" {
+    if nodo == "tutti" || nodo == "all" {
         let mut tutti = vec![];
         for (k, _) in g.nodi.iter().enumerate().filter(|(_, n)| n.livello >= 2) {
             let ing = g.ingresso_strutture(k).ok_or_else(bad)?;

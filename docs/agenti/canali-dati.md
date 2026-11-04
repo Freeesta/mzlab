@@ -1,5 +1,5 @@
 # Canali dei dati: un file = un insieme di canali
-Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta e un'euristica per i default; gli strumenti lavorano sul canale selezionato. Il motore (§2: `canali.rs`, `canali_uv.rs`, `api/canali`, `canale=`, `mzlab-cli canali`) è realizzato; le sezioni 1, 3-4 descrivono stato e piano, la 6 i prompt dei DEV.
+Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta e un'euristica per i default; gli strumenti lavorano sul canale selezionato. Il motore (§2: `canali.rs`, `canali_uv.rs`, `api/canali`, `canale=`, `mzlab-cli channels`) è realizzato; le sezioni 1, 3-4 descrivono stato e piano, la 6 i prompt dei DEV.
 
 ## 1. Stato attuale (prove nel codice)
 **Classificazione (Rust).** `item_info` (`crates/mzlab-core/src/iteminfo.rs:459-530`) dà a ogni elemento `kind` ∈ `full|ms2|mrm|infusion|empty`: `infusion` se `infusione::infusione` (`infusione.rs:110`) riconosce precursori fissi (B: ≤64 chiavi MSn, mediana ≥10 scan) e blocchi lunghi (C) o metodo `.raw` senza LC o nome `infus|fia|direct|syringe`; poi `ms2` (MSn), `full` (solo MS1), `mrm` (solo SRM). Un file «misto» è spezzato in elementi (`file_parts`, `iteminfo.rs:92`: livello × tipo di scan PREC/NL/NG/EMC/TDF/ER × polarità + «MRM»), ognuno con il suo `kind`.
@@ -68,7 +68,7 @@ pub struct Canali { pub v: Vec<Canale>, pub scan_ids: Vec<u32>, pub tipo: Tipo }
 - `GET api/chrom?k&canale=<id>&kind=tic|bpc&mz0&mz1` → traccia del canale (per `srm:`/`uv:`/`an:` reindirizza al lettore attuale: `api/mrm`, `pda_trace`, `analog`).
 - `GET api/xic?k&mz&tol&canale=<id>` → XIC dentro gli scan del canale (oggi per livello).
 - `GET api/scanlist?k&canale=<id>`, `api/spectrum?k&canale=<id>&rt|scan&modo=somma`.
-Adattatore: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<nodo>` resta, `level`/`prec` restano accettati e tradotti; nessuna rotta vecchia sparisce finché un test la usa. In JS un solo modulo `canali.js` (`m:`, `@ts-check`): `canali(k)` (cache), `traccia(k, id, opz)`, `omologhi(files, omo)`. CLI: `mzlab-cli canali FILE` (Regola CLI).
+Adattatore: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<nodo>` resta, `level`/`prec` restano accettati e tradotti; nessuna rotta vecchia sparisce finché un test la usa. In JS un solo modulo `canali.js` (`m:`, `@ts-check`): `canali(k)` (cache), `traccia(k, id, opz)`, `omologhi(files, omo)`. CLI: `mzlab-cli channels FILE` (Regola CLI).
 
 **Costruzione per formato.**
 - mzML/mzXML e Thermo `.raw`: chiavi da `Scan::key()`; SIM = chiave MS1 con «SIM»; cromatogrammi `srm`/`pda`/`pressure` dalla coda (`mzmlhead`).
@@ -93,7 +93,7 @@ Canale                         Sigla   n     RT (min)
 - EMS→EPI (IDA): `EMS` (MS1) e `EPI · dipendenti` (`dd:2:EPI`, n precursori); la lista scan del canale mostra i precursori.
 - DDA Orbitrap: `TIC`, `MS1 FTMS`, `MS2 · DDA (2 811 precursori)`; XIC su MS1; il precursore si sceglie dall'albero o dalla lista scan.
 - DAD Shimadzu/`.wiff`: `UV TWC` e `λ` aggiunte dall'utente; spettro UV per scan.
-- SIM: un canale `SIM [m1–m2]` per finestra (Thermo) o `sim:` (SIC del `.wiff` Q1MI).
+- SIM: un canale `SIM [m1–m2]` per finestra (Thermo) o `sim:` (SIC; del `.wiff` Q1MI/Q3MI un canale per ione, etichetta `SIM <m/z> (+|−) <dwell> ms «nome»`).
 
 **Sovrapposizione di file.** Il pannello salva il canale come `omologo`, non come indice: ogni file risolve il suo; un file che non lo ha compare in legenda «—» (nessun errore). La stessa transizione in 12 campioni = 12 tracce di colori Okabe-Ito; tabella dei dati (`TDATI`) con una colonna per file.
 
@@ -137,5 +137,5 @@ Pipeline TP (priorità 3): i passi del Flow ricevono un canale (`ms:<chiave MS1>
 Uno per file in `docs/archivio/prompt-canali/` (`a.md` motore, `b.md` `.wiff`, `c.md` UV e analogici, `d.md` selettore, `e.md` albero e lista scan, `f.md` tabella): formato a 7 punti, con ramo e dipendenze in testa. Ordine: A → (B, C, D in parallelo; D dopo `claude/xic-infusione`) → (E dopo ALBERO-PRECURSORI-UI, F) in parallelo.
 
 ## 7. Selettore dei canali (pagina Dati)
-`canali.js` (`window.CANALI`, `canali.css`, chiavi `canali.*`): il selettore unico del cromatogramma (pulsante `data-o=kind`, etichetta «TIC», «TIC + 1») apre un albero a gruppi (`role=tree`, frecce/Spazio/Invio/Esc): «Spettrometria di massa» (a scelta multipla: `p.canali`, salvato da `panelRec`; solo le famiglie che `traccia()` disegna), «Rivelatori» (PDA, analogici) e «Registri», righe a scelta singola (`data-kind`, impostano `p.kind`); il pannello MRM ha il pulsante «Transizioni» (`data-o=canali`, `p.tr`).
+`canali.js` (`window.CANALI`, `canali.css`, chiavi `canali.*`): il selettore unico del cromatogramma (pulsante `data-o=kind`, etichetta «TIC», «TIC + 1») apre un albero a gruppi (`role=tree`, frecce/Spazio/Invio/Esc): «Spettrometria di massa» (nome senza la sigla del modo, già nella colonna «Esperimento»; a scelta multipla: `p.canali`, salvato da `panelRec`; solo le famiglie che `traccia()` disegna), «Rivelatori» (PDA, analogici) e «Registri», righe a scelta singola (`data-kind`, impostano `p.kind`); il pannello MRM ha il pulsante «Transizioni» (`data-o=canali`, `p.tr`).
 Una traccia per file × canale, «—» in legenda se il file non ha il canale, XIC dentro il canale con `canale=`. Il motore serve `api/canali` (`Routes::canali`, metodo wasm `canali`) e `canale=` su chrom/xic/scanlist/spectrum/nearest_scan; transizioni e UV passano da `api/mrm`. Il canale iniziale per tipo sta in `ESP.predefinito` (`esperimenti.js`).

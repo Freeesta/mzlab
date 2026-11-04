@@ -1,5 +1,5 @@
-//! The figures of the fragmentation graph: the golden SVGs of a synthetic graph (`tests/msn_figura/`, `MZLAB_UPDATE_FIGURA=1` rewrites them), the HTML with
-//! nothing outside it, and the same bytes from the command, `msn-graph --figura`, `msn-graph figure` and the step `msn.figure@1`.
+//! The figures of the fragmentation graph: the golden SVGs of a synthetic graph (`tests/msn_figura/`, `MZLAB_UPDATE_FIGURE=1` rewrites them), the HTML with
+//! nothing outside it, and the same bytes from the command, `msn-graph --figure`, `msn-graph figure` and the step `msn.figure@1`.
 
 use std::path::PathBuf;
 
@@ -23,13 +23,17 @@ fn cli(args: &[&str]) -> String {
 
 fn golden(name: &str, got: &str) {
     let p = fixtures().join(name);
-    if std::env::var_os("MZLAB_UPDATE_FIGURA").is_some() {
+    // `MZLAB_UPDATE_FIGURA` is the old name of the variable
+    if ["MZLAB_UPDATE_FIGURE", "MZLAB_UPDATE_FIGURA"]
+        .iter()
+        .any(|k| std::env::var_os(k).is_some())
+    {
         std::fs::write(&p, got).unwrap();
     }
     assert_eq!(
         std::fs::read_to_string(&p).unwrap(),
         got,
-        "{name} is stale: MZLAB_UPDATE_FIGURA=1 cargo test -p mzlab-cli --lib msn_figura"
+        "{name} is stale: MZLAB_UPDATE_FIGURE=1 cargo test -p mzlab-cli --lib msn_figura"
     );
 }
 
@@ -140,7 +144,7 @@ fn the_html_is_one_file_with_nothing_outside() {
             && h.contains("function drawVista")
             && !h.contains("\nexport ")
     );
-    // the graph is inside, and the text of a script cannot end its element early
+    // the graph (an msngrafo/1 fixture: older graphs still draw) is inside, and the text of a script cannot end its element early
     assert!(h.contains("\"formato\":\"msngrafo/1\""));
     let end = html(&graph().replace("msn.mzML", "a</script><b>"), Vista::Albero).unwrap();
     // the five script elements of the page, no more
@@ -292,5 +296,59 @@ fn the_step_writes_the_bytes_of_the_command() {
     assert!(String::from_utf8(run("svg", "tree").1)
         .unwrap()
         .contains("<line "));
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// Every old name of the figure flags gives the same bytes (stdout and files) as the new one, and the value `radiale` the same as `radial`.
+#[test]
+fn old_figure_flags_and_values_are_aliases() {
+    let d = dir("alias");
+    let g = fixtures().join("g.json");
+    let pairs: [(&[&str], &[&str]); 2] = [
+        (
+            &["--figura", "svg,html", "--vista", "radiale"],
+            &["--figure", "svg,html", "--view", "radial"],
+        ),
+        (
+            &["--figura", "svg", "--vista", "albero"],
+            &["--figure", "svg", "--view", "tree"],
+        ),
+    ];
+    for (old, new) in pairs {
+        let mut got = Vec::new();
+        for flags in [old, new] {
+            let stem = d.join("o");
+            let mut a = vec![
+                "msn-graph",
+                "figure",
+                g.to_str().unwrap(),
+                "--out",
+                stem.to_str().unwrap(),
+            ];
+            a.extend(flags);
+            let _ = std::fs::remove_file(d.join("o.html"));
+            let text = cli(&a);
+            let files: Vec<Vec<u8>> = ["svg", "html"]
+                .iter()
+                .map(|e| std::fs::read(d.join(format!("o.{e}"))).unwrap_or_default())
+                .collect();
+            got.push((text, files));
+        }
+        assert_eq!(got[0], got[1], "{old:?} vs {new:?}");
+    }
+    // the refusals name the new flags
+    let o = crate::execute(&[
+        "msn-graph".into(),
+        "figure".into(),
+        g.display().to_string(),
+        "--view".into(),
+        "cubo".into(),
+    ]);
+    assert_eq!(o.code, 2);
+    assert!(
+        o.stderr.contains("--view needs tree or radial"),
+        "{}",
+        o.stderr
+    );
     let _ = std::fs::remove_dir_all(&d);
 }

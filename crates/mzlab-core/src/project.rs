@@ -28,12 +28,13 @@ fn known_unit(u: &str) -> bool {
 /// File name without a REAL extension: 'std_0.5ppm' keeps its decimals.
 fn stem(name: &str) -> String {
     let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
-    if let Some(i) = base.rfind('.') {
-        if i > 0 && i + 1 < base.len() {
-            let suf = base[i..].to_lowercase();
-            if EXTS.contains(&suf.as_str()) {
-                return base[..i].to_string();
-            }
+    if let Some(i) = base.rfind('.')
+        && i > 0
+        && i + 1 < base.len()
+    {
+        let suf = base[i..].to_lowercase();
+        if EXTS.contains(&suf.as_str()) {
+            return base[..i].to_string();
         }
     }
     base.to_string()
@@ -71,7 +72,7 @@ fn not_lower(s: &[char], i: usize) -> bool {
 }
 
 /// `\d+(?:[.,p]\d+)?`: end positions in the order the engine tries them (with the fraction first).
-fn number_ends(s: &[char], i: usize, frac: &[char]) -> impl Iterator<Item = usize> {
+fn number_ends(s: &[char], i: usize, frac: &[char]) -> impl Iterator<Item = usize> + use<> {
     let d = digits(s, i);
     let with_fraction = (d < s.len() && frac.contains(&s[d]))
         .then(|| digits(s, d + 1))

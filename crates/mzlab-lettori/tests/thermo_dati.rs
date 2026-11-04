@@ -138,10 +138,10 @@ fn the_chromatograms_match_the_msconvert_mzml_when_there_is_one() {
         };
         let mut theirs = Vec::new();
         mzml::parse(std::fs::File::open(&mzml_path).unwrap(), |i| {
-            if let Item::Chromatogram(c) = i {
-                if matches!(c.kind, ChromKind::Srm | ChromKind::Pda) {
-                    theirs.push(c);
-                }
+            if let Item::Chromatogram(c) = i
+                && matches!(c.kind, ChromKind::Srm | ChromKind::Pda)
+            {
+                theirs.push(c);
             }
         })
         .unwrap();

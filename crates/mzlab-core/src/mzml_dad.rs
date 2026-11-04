@@ -1,6 +1,10 @@
 //! The 2D optical (DAD / PDA) matrix of an mzML, read into the `DadData` the `.wiff` reader fills, so `/api/map?kind=pda`, `/api/uvspec` and
 //! `/api/uvxic` answer the same JSON for both. Two layouts: a `dad_matrix` array in the PDA `<chromatogram>`, or `<spectrum>` elements with
-//! `MS:1000804` (electromagnetic radiation spectrum). Used by `itemroutes`.
+//! `MS:1000804` (electromagnetic radiation spectrum). Used by `itemroutes`, through `dad_memo`: the matrix is read once per file, then every route slices it in memory.
+
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
+use std::sync::{Arc, Mutex};
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
@@ -9,6 +13,15 @@ use crate::wiff::dad::DadData;
 
 /// Bytes read per step when walking the file for UV spectra.
 const STEP: u64 = 4 << 20;
+/// Bytes of each of the three samples (head, middle, tail) that, with the size, tell one file from another in the memo.
+const PROBE: u64 = 64 << 10;
+/// Matrices held at most, and their values (f32) in total: the oldest go first.
+const HELD_MAX: usize = 16;
+const HELD_VALUES: usize = 64 << 20;
+
+/// The matrices already read, by fingerprint of the file; `None` = the file has none (a file without a DAD is not walked again).
+type Held = Vec<(u64, Option<Arc<DadData>>)>;
+static HELD: Mutex<Held> = Mutex::new(Vec::new());
 
 impl<R: ReadAt> Mzml<R> {
     /// The optical matrix of the file, or `None` when it has no more than the 1D PDA trace.
@@ -17,6 +30,41 @@ impl<R: ReadAt> Mzml<R> {
             return Ok(Some(d));
         }
         self.dad_spectra()
+    }
+
+    /// `dad()` read once per file: a click on the PDA trace or a new wavelength only slices the matrix in memory (the `MS:1000804` layout walks the whole file).
+    pub fn dad_memo(&mut self) -> Result<Option<Arc<DadData>>> {
+        let key = self.fingerprint()?;
+        if let Ok(h) = HELD.lock()
+            && let Some((_, d)) = h.iter().find(|(k, _)| *k == key)
+        {
+            return Ok(d.clone());
+        }
+        let d = self.dad()?.map(Arc::new);
+        if let Ok(mut h) = HELD.lock() {
+            h.push((key, d.clone()));
+            let size = |h: &Held| {
+                h.iter()
+                    .filter_map(|(_, d)| d.as_ref())
+                    .map(|d| d.matrix_mau.len())
+                    .sum::<usize>()
+            };
+            while h.len() > HELD_MAX || (h.len() > 1 && size(&h) > HELD_VALUES) {
+                h.remove(0);
+            }
+        }
+        Ok(d)
+    }
+
+    /// Size and hash of the first, middle and last `PROBE` bytes: the same bytes give the same matrix, whatever the name or the slot of the file.
+    fn fingerprint(&mut self) -> Result<u64> {
+        let mut h = DefaultHasher::new();
+        h.write_u64(self.size);
+        let mid = (self.size / 2).saturating_sub(PROBE / 2);
+        for a in [0, mid, self.size.saturating_sub(PROBE)] {
+            h.write(&self.read(a, a + PROBE)?);
+        }
+        Ok(h.finish())
     }
 
     /// The `dad_matrix` array of a `<chromatogram>`; the chromatograms close the file, so only its tail is read.
@@ -47,21 +95,17 @@ impl<R: ReadAt> Mzml<R> {
         while pos < self.size {
             let chunk = self.read(pos, (pos + step).min(self.size))?;
             let last = pos + step >= self.size;
-            let Some(a) = find(&chunk, b"<spectrum ", 0) else {
-                pos += (chunk.len() as u64).saturating_sub(10).max(1);
-                continue;
-            };
-            let Some(b) = find(&chunk, b"</spectrum>", a) else {
-                if last {
+            // every complete spectrum of the chunk, so each byte of the file is read about once
+            let (mut at, mut done) = (0usize, None);
+            while let Some(a) = find(&chunk, b"<spectrum ", at) {
+                let Some(b) = find(&chunk, b"</spectrum>", a) else {
+                    done = Some(a);
                     break;
-                }
-                pos += a as u64;
-                step = if a == 0 { step * 2 } else { step };
-                continue;
-            };
-            let block = &chunk[a..b + 11];
-            if find(block, b"MS:1000804", 0).is_some() {
-                if let Some((t, w, y)) = uv_row(block) {
+                };
+                let block = &chunk[a..b + 11];
+                if find(block, b"MS:1000804", 0).is_some()
+                    && let Some((t, w, y)) = uv_row(block)
+                {
                     if wl.is_empty() {
                         wl = w;
                     }
@@ -71,8 +115,16 @@ impl<R: ReadAt> Mzml<R> {
                         mat.extend(y.iter().map(|&v| v as f32));
                     }
                 }
+                at = b + 11;
             }
-            pos += (b + 11) as u64;
+            match done {
+                Some(_) if last => break,
+                // a spectrum longer than the chunk: read twice as much from its start
+                Some(0) => step *= 2,
+                Some(a) => pos += a as u64,
+                None if at > 0 => pos += at as u64,
+                None => pos += (chunk.len() as u64).saturating_sub(10).max(1),
+            }
         }
         Ok(build(times, wl, mat))
     }

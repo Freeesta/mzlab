@@ -4,7 +4,9 @@
 
 use mzlab_core::idxread::{Index, ReadAt};
 
-use super::{ms2, Entry, LrDig};
+#[cfg(feature = "chem")]
+use super::ms2;
+use super::{Entry, LrDig};
 use crate::legacy::Res;
 
 const NO_PARENT_MS2: &str =

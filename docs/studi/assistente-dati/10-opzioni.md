@@ -1,4 +1,4 @@
-# Opzioni esterne: Copilot, server MCP, sandbox (D6), cloud e Worker
+# Opzioni esterne: Copilot, server MCP, sandbox (D6), cloud e proxy pubblico
 
 Indicazione di Federico: questi strumenti sono opzioni da valutare, non escluse a priori. Nessuna è autorizzata: una chat non attiva, installa, registra o usa nessuna di esse. Per usarne una si manda al Coordinatore la scheda di §6; Federico decide caso per caso.
 
@@ -6,7 +6,7 @@ Indicazione di Federico: questi strumenti sono opzioni da valutare, non escluse 
 
 - **A cosa servirebbe**: revisione automatica delle PR A1–A8 (seconda lettura su schemi, `lang/`, accessibilità) o agente che apre PR piccole da un'issue (per esempio i casi d'oro nuovi). Non entra nel prodotto né nell'assistente.
 - **Vantaggi**: una lettura indipendente da quella delle chat Claude; commenti direttamente sulla PR; nessun codice da mantenere.
-- **Costi e rischi**: richiede un piano Copilot sull'account di Federico (la revisione e l'agente non sono nel piano gratuito); legge solo codice pubblico, ma un commento può proporre testo italiano fuori da `lang/` o nomi vietati; un'altra fonte di commenti da smistare (regole dei bot in `AGENTS.md`).
+- **Costi e rischi**: richiede un piano Copilot sull'account di Federico (la revisione e l'agente non sono nel piano gratuito); legge solo codice pubblico, ma un commento può proporre testo italiano fuori da `lang/` o nomi vietati; un'altra fonte di commenti da smistare (regole dei bot in `CLAUDE.md`).
 - **Alternativa locale**: `/code-review` e `/security-review` nella chat DEV, i subagenti `verificatore` e `cercatore`, `tools/pre_pr.py`.
 - **Quando conviene**: se le PR DEV superano la capacità di revisione del Coordinatore o se un tipo di errore si ripete nonostante i controlli.
 
@@ -14,7 +14,7 @@ Indicazione di Federico: questi strumenti sono opzioni da valutare, non escluse 
 
 - **A cosa servirebbe**: esporre i passi di `mzlab-cli` (ispezione, `proposta-param/1`, `flow::check`, corsa, `tabcheck/1`) come strumenti MCP locali, così un client esterno fa da assistente senza il pannello di mzLab.
 - **Vantaggi**: stesso catalogo `strumenti/1` e stessa validazione in Rust; nessuna chiave nell'app (la mette il client); utile per Federico e per le prove su dati veri senza scrivere interfaccia.
-- **Costi e rischi**: un programma in più da mantenere e da firmare (processo stdio, versioni del protocollo); i risultati degli strumenti vanno al fornitore del client, quindi i dati MS escono dal computer quanto con il pannello, ma senza il nostro tetto di 10 $ né la politica L0–L2; i nomi dei file vanno nascosti dal server stesso (alias come in `05-sicurezza.md`).
+- **Costi e rischi**: un programma in più da mantenere e da firmare (processo stdio, versioni del protocollo); i risultati degli strumenti vanno al fornitore del client, quindi i dati MS escono dal computer quanto con il pannello, ma senza i tetti del proxy né la politica L0–L2; i nomi dei file vanno nascosti dal server stesso (alias come in `05-sicurezza.md`).
 - **Alternativa locale**: `mzlab-cli` dalla shell con la sequenza di `docs/agenti/per-agenti.md` (Claude Code e Cowork la usano già); il pannello A8.
 - **Quando conviene**: dopo A7, se le prove mostrano che Federico usa l'assistente più da Claude Desktop o Cowork che dal pannello; il server riusa `assist` di A7 senza logica nuova.
 
@@ -26,13 +26,13 @@ Indicazione di Federico: questi strumenti sono opzioni da valutare, non escluse 
 - **Alternativa locale**: viste nominate `chart::views` (A5) e grafici predefiniti; codice esportato come script per l'utente (D6 punto 3); un passo Rust nuovo quando la domanda si ripete.
 - **Quando conviene**: solo nel mondo HR e solo se le prove T10–T19 mostrano domande di grafico frequenti che nessuna vista copre; mai come sostituto di un calcolo con parità.
 
-## 4. Worker e host cloud per la chiave condivisa (W1–W2)
+## 4. Proxy pubblico anonimo (P2–P4)
 
-- **A cosa servirebbe**: tenere la chiave condivisa come segreto e i contatori per persona per gli inviti (V2a, `09-worker.md`); host consigliato Cloudflare Workers Free con un Durable Object per persona (README, «Host per le prove»).
-- **Vantaggi**: tetto per persona vero senza dare la chiave a nessuno; il sito funziona anche per chi non ha una chiave propria.
-- **Costi e rischi**: account presso un terzo, segreto da ruotare, codice da mantenere (W1) e CSP da allargare (W2); il Worker vede le richieste in transito (contesto e domande, mai i file grezzi) e non deve registrarle (`09-worker.md` §4); limiti del piano gratuito (CPU 10 ms per richiesta); regione dei dati non garantita sul piano gratuito.
-- **Alternativa locale**: chiave propria dell'utente (V1a) con il limite della sua Console; una chiave o un workspace per persona con limite di spesa (V2b); solo CLI e desktop.
-- **Quando conviene**: quando più di 2–3 persone senza chiave propria devono provare l'assistente nello stesso periodo.
+- **A cosa serve**: tenere la chiave Anthropic come segreto lato server e servire l'assistente a chiunque visiti il sito, senza chiave personale né account, con tetti per sessione, per IP (contato come hash con sale giornaliero), per giorno e per mese (`09-worker.md`). Host consigliato: Cloudflare Workers con un Durable Object come registro dei contatori.
+- **Vantaggi**: demo pubblica di mzFlow con costo limitato e noto (`12-demo.md`); stesso proxy per sito e app desktop.
+- **Costi e rischi**: account presso un terzo, segreto da ruotare, codice da mantenere (P2), CSP del trasporto allargata a un host (P4); il proxy vede in transito i fatti ridotti e i messaggi (mai i file grezzi) e non li registra; l'IP è un dato personale (parere del responsabile protezione dati UniTO prima della fase 1); bot che consumano il tetto giornaliero.
+- **Alternativa locale**: fase 0 (solo Federico) o nessun proxy: la demo registrata («Play a recorded demo») e le parti senza modello funzionano senza rete e senza costo.
+- **Quando conviene**: per presentare mzFlow a un pubblico; decisioni in `14-decision-card.md`.
 
 ## 5. Corse in cloud per il test e lo sviluppo
 

@@ -431,10 +431,10 @@ fn main() {
             micro_json.as_ref(),
         );
     }
-    if a.cancella {
-        if let Some(p) = denso_path {
-            let _ = std::fs::remove_file(p);
-        }
+    if a.cancella
+        && let Some(p) = denso_path
+    {
+        let _ = std::fs::remove_file(p);
     }
     let testo = serde_json::to_string_pretty(&Value::Object(doc)).expect("json");
     match &a.json {

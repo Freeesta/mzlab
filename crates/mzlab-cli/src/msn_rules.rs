@@ -1,5 +1,5 @@
 //! `mzlab-cli msn-rules RECORD...`: the rules of `fragrules/1` judged on public library spectra (MassBank records, MSP) with a known SMILES. One line of
-//! numbers per record (`msn_rules_prova`); `msn-rules somma` adds the lines up (`msn_rules_somma`). The protocol is `docs/studi/regole-frammentazione-piano.md` §3.
+//! numbers per record (`msn_rules_prova`); `msn-rules sum` adds the lines up (`msn_rules_somma`). The protocol is `docs/studi/regole-frammentazione-piano.md` §3.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -8,6 +8,7 @@ use mzlab_core::json::Out;
 use mzlab_lib::parse::{detect, parse_all};
 
 use self::prova::{attese_del_registro, decoy, misura, Registro};
+use crate::msn_uscite::canonical;
 use crate::Outcome;
 
 mod prova;
@@ -15,21 +16,31 @@ mod somma;
 #[cfg(test)]
 mod tests;
 
+/// Old flag and subcommand names of `msn-rules` (old, new); resolved before the match.
+const ALIASES: &[(&str, &str)] = &[
+    ("--lista", "--list"),
+    ("--attivazione", "--activation"),
+    ("--regole", "--rules"),
+    ("somma", "sum"),
+];
+
 pub const HELP: &str = "mzlab-cli msn-rules: the fragmentation rules judged on library spectra with a known structure.
 
-usage: mzlab-cli msn-rules RECORD... [--lista FILE] [--smiles S] [--attivazione A] [--regole] [--decoy SEME] [--out PATH]
-       mzlab-cli msn-rules somma LINES... [--out PATH]
+usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEME] [--out PATH]
+       mzlab-cli msn-rules sum LINES... [--out PATH]
 
-  RECORD...         MassBank records (one spectrum each) or MSP files; --lista: a file with one path per line
+  RECORD...         MassBank records (one spectrum each) or MSP files; --list: a file with one path per line
   --smiles S        the structure, when the record has none (one record)
-  --attivazione A   cid (trap type) or hcd (beam type), for a file that does not say (MSP)
-  --regole          also the peaks explained with the rules of the formula and of the structure, and the peaks per rule id
+  --activation A    cid (trap type) or hcd (beam type), for a file that does not say (MSP)
+  --rules           also the peaks explained with the rules of the formula and of the structure, and the peaks per rule id
   --decoy SEME      the same numbers on three decoys: the structure rewired (same formula), the spectrum of another record with the same nominal
                     precursor, the losses shifted by 0.0137 Da; SEME fixes the choice, the same seed gives the same lines
-  somma             the lines of the records added up per stratum (trap CID, HCD, Q-TOF, other beam) and polarity: coverage of (c) against the decoys,
+  sum               the lines of the records added up per stratum (trap CID, HCD, Q-TOF, other beam) and polarity: coverage of (c) against the decoys,
                     peaks per rule, decoy rate per rule and the thresholds of the protocol (a rule with fewer than 20 applications is not measured)
 
-Peaks above 2 % of the base peak, 10 ppm (20 below m/z 150) for a fragment, 3 mDa for a loss. Output: a JSON line per record, numbers only.";
+Peaks above 2 % of the base peak, 10 ppm (20 below m/z 150) for a fragment, 3 mDa for a loss. Output: a JSON line per record, numbers only.
+
+old names still accepted: --lista --attivazione --regole somma";
 
 /// Adducts the graph reads for the ion of the precursor.
 const ADDOTTI: [&str; 8] = [
@@ -64,12 +75,13 @@ fn parse_args(mut a: impl Iterator<Item = String>) -> Result<Option<Args>, Strin
         out: None,
     };
     while let Some(x) = a.next() {
+        let x = canonical(ALIASES, x);
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
-            "--lista" => r.lista = a.next().map(PathBuf::from),
+            "--list" => r.lista = a.next().map(PathBuf::from),
             "--smiles" => r.smiles = a.next(),
-            "--attivazione" => r.att = a.next(),
-            "--regole" => r.regole = true,
+            "--activation" => r.att = a.next(),
+            "--rules" => r.regole = true,
             "--decoy" => {
                 let s = a.next().and_then(|v| v.parse().ok());
                 r.decoy = Some(s.ok_or("--decoy needs a number")?);
@@ -253,7 +265,12 @@ pub fn run(args: Vec<String>) -> Outcome {
         stdout: vec![],
         stderr: format!("error: {m}\n(mzlab-cli msn-rules --help)\n"),
     };
-    if args.first().map(String::as_str) == Some("somma") {
+    if args
+        .first()
+        .map(|x| canonical(ALIASES, x.clone()))
+        .as_deref()
+        == Some("sum")
+    {
         return somma::run(args[1..].to_vec());
     }
     let a = match parse_args(args.into_iter()) {

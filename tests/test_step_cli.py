@@ -1,4 +1,4 @@
-"""The step/1 descriptors that live in crates/mzlab-cli (features.table, spectra.centroid, spectra.ms2, spectra.msn_graph, meta.compare, quant.calibrate), exported to docs/schemi/steps-cli-1.json by the Rust test `flow_ms2`."""
+"""The step/1 descriptors that live in crates/mzlab-cli (features.table, spectra.centroid, spectra.ms2, spectra.msn_graph, meta.compare, quant.calibrate and the feature steps it runs, such as chrom.transitions), exported to docs/schemi/steps-cli-1.json by the Rust test `flow_ms2`."""
 import json
 from pathlib import Path
 
@@ -22,4 +22,4 @@ def test_ms2_step_turns_mzml_into_spectra():
 
 
 def test_every_step_of_the_crate_is_exported():
-    assert [s["id"] for s in STEPS] == ["features.table", "spectra.centroid", "spectra.ms2", "spectra.msn_graph", "msn.library_export", "msn.table_export", "msn.figure", "meta.compare", "tp.dig_lr", "chrom.uv_peaks", "quant.calibrate", "qc.mass_accuracy", "qc.run_order", "report.methods", "export.annotations", "spectra.lookup", "table.match"]
+    assert [s["id"] for s in STEPS] == ["features.table", "spectra.centroid", "spectra.ms2", "spectra.msn_graph", "msn.library_export", "msn.table_export", "msn.figure", "meta.compare", "tp.dig_lr", "chrom.uv_peaks", "quant.calibrate", "qc.mass_accuracy", "qc.run_order", "report.methods", "export.annotations", "spectra.lookup", "table.match", "chrom.transitions"]

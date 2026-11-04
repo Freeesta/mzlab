@@ -151,7 +151,8 @@ try:
             pg.mouse.click(box["x"], box["y"], button="right")
             attendi(pg, "!!document.querySelector('#ctx [data-azione=\"uv.wlAt\"]')")
             ids = pg.evaluate("[...document.querySelectorAll('#ctx [data-azione]')].map(d=>d.dataset.azione)")
-            assert "uv.wlView" in ids and "spec.xic" not in ids, ids
+            # without a zoom there is no visible range to trace: «X» (uv.wlView) is not offered here, the zoomed case is the next steps; no XIC either way
+            assert "uv.wlAt" in ids and "uv.wlView" not in ids and "spec.xic" not in ids, ids
             menu_click("uv.wlAt")
             attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
             w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()"); assert w[0] == w[1] and abs(w[0] - 255) < 3, w

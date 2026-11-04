@@ -36,11 +36,11 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         attendi(pg, "window.qqReady === true"); ready(pg)
-        stage(pg, [f]); ready(pg)
-        assert pg.evaluate("!!(E.earlyTic && E.earlyTic.get(fileBase(%r)))" % f.name), "no provisional TIC from the indexing: the test would prove nothing"
+        # the file opens as soon as it is read: the hook is in place before it is given, and api/chrom stays held back
         pg.evaluate(HOOK)
-        pg.click("#opbtn")
+        stage(pg, [f])
         attendi(pg, "window.__held.length > 0")
+        assert pg.evaluate("!!(E.earlyTic && E.earlyTic.get(fileBase(%r)))" % f.name), "no provisional TIC from the indexing: the test would prove nothing"
         attendi(pg, "(" + DRAWN.strip() + ")()")
         assert pg.evaluate("window.__held.length") == 1, "one api/chrom request for the one chromatogram, not one per redraw"
         assert pg.evaluate("window.__setupHidden") == 0, "a graph was set up while the work area was hidden"

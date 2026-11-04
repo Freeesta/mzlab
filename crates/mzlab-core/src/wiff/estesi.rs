@@ -21,19 +21,7 @@ pub(crate) fn mark_windows(ole: &Ole, sample: u32, experiments: &mut [super::Exp
     }
 }
 
-/// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
-/// method), the nearest one before it.
-pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
-    let has = |k: u32| {
-        ole.has(&format!(
-            "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
-        ))
-    };
-    (1..=sample.min(10_000))
-        .rev()
-        .find(|&k| has(k))
-        .unwrap_or(sample)
-}
+pub(crate) use super::method_no;
 
 /// The method of `sample` read from the method that stands for it (`method_no`), for the samples without a `MethodN` of their own.
 pub(crate) fn fallback_method(ole: &Ole, sample: u32) -> Option<crate::methodinfo::Method> {
@@ -42,20 +30,7 @@ pub(crate) fn fallback_method(ole: &Ole, sample: u32) -> Option<crate::methodinf
 
 /// The number of periods of the method of `sample` (the `PeriodN` storages of its first device method).
 fn periods(ole: &Ole, sample: u32) -> usize {
-    let prefix = format!(
-        "MethodSubtree/Method{}/DeviceMethod0/Period",
-        method_no(ole, sample)
-    );
-    let mut n = 0;
-    for p in ole.paths_list() {
-        if let Some(rest) = p.strip_prefix(&prefix) {
-            let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
-            if let Ok(k) = digits.parse::<usize>() {
-                n = n.max(k + 1);
-            }
-        }
-    }
-    n
+    super::period_count(ole, method_no(ole, sample))
 }
 
 /// The experiments of `sample` checked: a method of several periods or a scan type this reader does not know is an error; the precursor-ion and
@@ -149,10 +124,10 @@ impl Wiff {
             h.run_params.clear();
         }
         for e in &self.experiments {
-            if let Some((acc, term)) = spectrum_term(e.code) {
-                if !h.content.iter().any(|(a, _)| a == acc) {
-                    h.content.push((acc.to_string(), term.to_string()));
-                }
+            if let Some((acc, term)) = spectrum_term(e.code)
+                && !h.content.iter().any(|(a, _)| a == acc)
+            {
+                h.content.push((acc.to_string(), term.to_string()));
             }
         }
         h

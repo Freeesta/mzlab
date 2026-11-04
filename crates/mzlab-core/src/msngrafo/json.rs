@@ -1,4 +1,4 @@
-//! The JSON `msngrafo/1` of a graph (`docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers, the same bytes for the same
+//! The JSON `msngrafo/2` of a graph (`docs/schemi/msngrafo-2.json`; `/1` had the Italian `opzioni` keys): keys in a fixed order, rounded numbers, the same bytes for the same
 //! input. `ione` and the formulas are `null` without the formula of the ion of the root.
 
 use super::{Arco, Candidato, FormulaNodo, Grafo, NodoG, Opzioni, SpettroG, STRETTA};
@@ -36,11 +36,11 @@ fn opzioni(o: &mut Out, op: &Opzioni) {
         .num(op.da_min);
     o.raw(",\"min_rel\":")
         .num(op.min_rel)
-        .raw(",\"max_picchi\":")
+        .raw(",\"max_peaks\":")
         .int(op.max_picchi as i64)
-        .raw(",\"isotopi\":");
+        .raw(",\"isotopes\":");
     bool_(o, op.isotopi);
-    o.raw(",\"attivazione\":");
+    o.raw(",\"activation\":");
     opt_str(
         o,
         op.attivazione.as_ref().map(|a| a.to_lowercase()).as_deref(),
@@ -55,13 +55,13 @@ fn opzioni(o: &mut Out, op: &Opzioni) {
     }
     o.raw(",\"ppm_formula\":")
         .num(op.ppm_formula)
-        .raw(",\"mz_basso\":")
+        .raw(",\"low_mz\":")
         .num(op.mz_basso);
-    o.raw(",\"ppm_basso\":")
+    o.raw(",\"wide_ppm\":")
         .num(op.ppm_basso)
-        .raw(",\"prove_min\":")
+        .raw(",\"min_evidence\":")
         .int(op.prove_min as i64)
-        .raw(",\"scelte\":[");
+        .raw(",\"pick\":[");
     for (i, (mz, f)) in op.scelte.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"mz\":")
@@ -106,7 +106,7 @@ fn candidati(o: &mut Out, g: &Grafo) {
 }
 
 fn testa(o: &mut Out, g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) {
-    o.raw("{\"formato\":\"msngrafo/1\",\"motore\":")
+    o.raw("{\"formato\":\"msngrafo/2\",\"motore\":")
         .str(env!("CARGO_PKG_VERSION"))
         .raw(",\"sorgente\":");
     match sorgente {
@@ -314,7 +314,7 @@ fn spettro(o: &mut Out, s: &SpettroG) {
     o.raw("]}");
 }
 
-/// The graph as `msngrafo/1`; `sorgente` = (name of the file, SHA-256 of its `.mzidx`) when the caller knows them.
+/// The graph as `msngrafo/2`; `sorgente` = (name of the file, SHA-256 of its `.mzidx`) when the caller knows them.
 pub fn json(g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) -> String {
     let mut o = Out::default();
     testa(&mut o, g, op, sorgente);

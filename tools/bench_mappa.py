@@ -74,9 +74,9 @@ def build_site(out):
 
 # the hooks: they wrap global functions of the page (drawMap, mapImage, MAPPA.zoomImg, fetch, Worker) and record when each ends
 INIT = """(() => {
-  const B = window.__B = { f: [], d: [], z: [], img: [], wmem: 0, fr: null, lt: [] };
+  const B = window.__B = { pr: [], f: [], d: [], z: [], img: [], wmem: 0, fr: null, lt: [] };
   const W = window.Worker;
-  window.Worker = class extends W { constructor(u, o) { super(u, o); this.addEventListener('message', e => { const m = e.data; if (m && m.mem) B.wmem = Math.max(B.wmem, m.mem); if (m && m.rd) B.rd = m.rd; }); } };
+  window.Worker = class extends W { constructor(u, o) { super(u, o); this.addEventListener('message', e => { const m = e.data; if (m && m.mem) B.wmem = Math.max(B.wmem, m.mem); if (m && m.rd) B.rd = m.rd; if (m && m.op === 'progress') { const l = B.pr[B.pr.length - 1]; if (!l || l.id !== m.id || l.phase !== m.phase) B.pr.push({ id: m.id, phase: m.phase, t: Math.round(performance.now()), frac: m.frac }); } }); } };
   const F = window.fetch; let wrapped = false;
   const wrap = () => { if (wrapped || !window.drawMap || !window.MAPPA) return; wrapped = true;
     const f0 = window.fetch;
@@ -147,6 +147,8 @@ class Case:
         pg.evaluate("() => { if (!E.files.some(f => f.vis && !f.gone)) soloFile(E.files.find(f => !f.gone)); }")   # the first click on a file
         wait(pg, "E.files.some(f => f.vis && !f.gone)", timeout=600000)
         s.out["open_s"] = round(time.time() - t0, 1)
+        s.out["open_phases"] = s.ev("__B.pr")      # when each loading phase of each request first reported progress (page clock, ms)
+        s.out["open_ops"] = s.ev("((__B.rd || {}).ops || []).filter(o => /^lr_(put|index|open|boot)/.test(o[0]))")      # [op, name, total ms, read ms, reads] of the loading
         s.ev("__B.wrap()")
         if os.environ.get("MZLAB_PREWARM"):      # build the per-scan cells of every file before the map exists: splits the table build from the rest of the first map
             s.out["warm_ms"] = s.ev("(async () => { const t = performance.now(); for (const f of E.files) await (await fetch(`api/map?k=${f.k}&level=1&warm=1`)).json(); return Math.round(performance.now() - t); })()")
@@ -206,6 +208,8 @@ class Moves(Case):
         s.gesture("zoom_wheel", lambda: s.wheel(12, -100))
         s.gesture("pan_zoomed", s.pan)
         s.whole(); s.gesture("zoom_rt_only", lambda: s.wheel(10, -100, "Shift"))
+        s.gesture("zoom_rt_again", lambda: s.wheel(5, 100, "Shift"))     # the same m/z window, a wider RT stretch
+        s.gesture("zoom_rt_third", lambda: s.wheel(3, 100, "Shift"))     # and wider again
         s.whole()                                                          # a window of 2 min x 2 m/z: the zoom of the search for a TP in HR
         s.gesture("zoom_deep", lambda: s.ev(f"(() => {{ const p = {M}, a = p._a, m = (a.x0 + a.x1) / 2, z = (a.y0 + a.y1) / 2; p.zoom = [m - 1, m + 1]; p.zoomY = [z - 1, z + 1]; draw(p); }})()"))
         s.whole()
@@ -246,9 +250,11 @@ def run_case(pg, port, name, kind, nscan, npk, wd):
 def table(o):
     rows = [("points (M) / mzML (MB) / open (s)", f'{o["points_total_M"]} / {o["mzML_MB"]} / {o["open_s"]}'),
             ("first drawing: total / api/map / colour pass (ms)", f'{o["first_draw_ms"]} / {o["first_map_request_ms"]} / {o["first_mapImage_ms"]}')]
+    if o.get("open_phases"): rows.insert(1, ("opening: phase starts (id phase t ms)", "; ".join(f"{w['id']} {w['phase']} {w['t']}" for w in o["open_phases"])))
+    if o.get("open_ops"): rows.insert(1, ("opening: ops [total, read ms, reads]", "; ".join(f"{w[0]} {w[2]}/{w[3]}/{w[4]}" for w in o["open_ops"])))
     if "warm_ms" in o: rows.insert(1, ("per-scan cells built before the map (ms)", str(o["warm_ms"]) + "  ops [total, read ms, reads]: " + ", ".join(f"{w[2]}/{w[3]}/{w[4]}" for w in o.get("warm_ops", []))))
     w = o["whole_split"]; rows.append(("whole map: cells / JSON kB / request / parse / base64 / colour (ms)", f'{w["nrt"]}x{w["nmz"]} / {w["json_kB"]} / {w["request_ms"]} / {w["parse_ms"]} / {w["b64_ms"]} / {w["colour_ms"]}'))
-    for k in ("zoom_wheel", "pan_zoomed", "zoom_rt_only", "zoom_deep"):
+    for k in ("zoom_wheel", "pan_zoomed", "zoom_rt_only", "zoom_rt_again", "zoom_rt_third", "zoom_deep"):
         g = o[k]; rows.append((f"{k}: frame p50/p95/max, long tasks, draws (n, p50, max), to sharp, region (n, ms)",
                                f'{g["frame_p50"]}/{g["frame_p95"]}/{g["frame_max"]}, {g["long_tasks"]}, {g["draws"]}/{g["draw_ms_p50"]}/{g["draw_ms_max"]}, {g["to_sharp_ms"]}, {g["region_requests"]}, {g["region_request_ms"]}'))
     rows.append(("change of file: cold / back warm / warm (ms)", f'{o["file_change_cold_ms"]} / {o["file_back_warm_ms"]} / {o["file_change_warm_ms"]}'))
@@ -260,11 +266,12 @@ def table(o):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cases", nargs="?", default="lr,hrc"); ap.add_argument("--site", type=Path); ap.add_argument("--wd", type=Path)
+    ap.add_argument("--rebuild", action="store_true", help="build the site again even if SITE (default WD/site) holds one: a built site is reused, so a measurement after a code change needs this")
     ap.add_argument("--json", action="store_true"); ap.add_argument("--port", type=int, default=8871)
     a = ap.parse_args()
     wd = a.wd or Path(tempfile.gettempdir()) / "bench_mappa"; wd.mkdir(parents=True, exist_ok=True)
     site = a.site or wd / "site"
-    if not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
+    if a.rebuild or not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
         if not (shutil.which("cargo") and shutil.which("wasm-bindgen")): sys.exit("the site needs the engine: cargo and wasm-bindgen (or --site DIR of a built site)")
         build_site(site)
     from playwright.sync_api import sync_playwright

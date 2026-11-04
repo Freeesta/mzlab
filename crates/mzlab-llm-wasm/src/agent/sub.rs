@@ -2,7 +2,7 @@
 //! Child of `agent` (it works on the machine behind `Agent`).
 use mzlab_core::error::Error;
 use mzlab_core::json::parse;
-use mzlab_llm::assist::roles as assist_roles;
+use mzlab_llm::assist::{orchestrator_caps, roles_for, DEMO_PROVIDER};
 use mzlab_llm::provider::Request;
 use wasm_bindgen::prelude::*;
 
@@ -12,15 +12,21 @@ use crate::fail;
 #[wasm_bindgen]
 impl Agent {
     /// Turns the subagents on: `roles_json` (`assist-ruoli/1`), `prompts_json` (`[["file","text"],...]`) and the file of the phase prompt (`orchestrator.phase_prompt`, may be empty).
+    /// With the demo provider every limit is the `demo_*` one of the file, the orchestrator's included.
     pub fn enable_assist(
         &mut self,
         roles_json: &str,
         prompts_json: &str,
         phase_file: &str,
     ) -> Result<(), String> {
-        let roles = assist_roles(roles_json).map_err(fail)?;
+        let provider = self.st.conversation().provider.clone();
+        let roles = roles_for(roles_json, &provider).map_err(fail)?;
         let prompts = crate::assist::prompts_of(prompts_json)?;
         self.st.enable_assist(roles, prompts).map_err(fail)?;
+        if provider == DEMO_PROVIDER {
+            self.st
+                .set_output_caps(orchestrator_caps(roles_json, &provider).map_err(fail)?);
+        }
         if phase_file.is_empty() {
             return Ok(());
         }

@@ -172,10 +172,10 @@ fn arc_of(
         equal: b.equal.clone(),
         shifted: b.shifted.clone(),
     });
-    if let Some(m) = &ms2 {
-        if m.equal.len() + m.shifted.len() < params.min_fragments {
-            return None;
-        }
+    if let Some(m) = &ms2
+        && m.equal.len() + m.shifted.len() < params.min_fragments
+    {
+        return None;
     }
     let delta = json::delta_label(&forms[p.from], &forms[p.to]);
     let reason = json::reason(&delta, rule.id.as_str(), p.kinetic, ms2.as_ref(), dm);

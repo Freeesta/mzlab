@@ -35,7 +35,8 @@ r = Run(port=8931, wd="/tmp/wdqaqc")
 try:
     with sync_playwright() as p:
         pg = r.page(p, qaqc=True)
-        load(pg, [D / "S_t0.mzML", D / "S_t30.mzML", D / "Blank_1.mzML"], 3)
+        # the files open in the order of the drop: the blank first, so that the series reads blank, sample, sample
+        load(pg, [D / "Blank_1.mzML", D / "S_t0.mzML", D / "S_t30.mzML"], 3)
         def lr_panel():
             pg.evaluate("localStorage.removeItem('mzlab.qaqc')"); drawer(pg, "qaqc"); pg.wait_for_selector("#sb-panel-qaqc select[data-role]")
             roles = pg.evaluate("Array.from(document.querySelectorAll('#sb-panel-qaqc select[data-role]')).map(s=>[s.dataset.role,s.value])")

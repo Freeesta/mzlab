@@ -114,10 +114,10 @@ fn check_pins(
     }
     let mut bad = Vec::new();
     for (url, sha) in &seen {
-        if let Some((_, Some(pin))) = pins.iter().find(|(u, _)| u == url) {
-            if pin != sha {
-                bad.push(format!("{url}: pinned {pin}, read {sha}"));
-            }
+        if let Some((_, Some(pin))) = pins.iter().find(|(u, _)| u == url)
+            && pin != sha
+        {
+            bad.push(format!("{url}: pinned {pin}, read {sha}"));
         }
     }
     if !bad.is_empty() && !o.update_pins {

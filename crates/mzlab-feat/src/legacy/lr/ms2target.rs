@@ -76,10 +76,10 @@ fn open_peaks(d: &LrDig, l: &Links) -> Vec<(usize, Near)> {
 pub fn make(d: &mut LrDig, l: &Links) -> Vec<(usize, i64)> {
     let mut want: Vec<(usize, usize)> = Vec::new();
     for (x, n) in open_peaks(d, l) {
-        if let Near::Feature(r) = n {
-            if !want.iter().any(|w| w.1 == r) {
-                want.push((x, r));
-            }
+        if let Near::Feature(r) = n
+            && !want.iter().any(|w| w.1 == r)
+        {
+            want.push((x, r));
         }
     }
     want.sortc_by_key(|w| w.1);

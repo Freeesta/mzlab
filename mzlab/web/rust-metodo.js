@@ -29,8 +29,9 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
         const emb = e.native_metodo(o.slot) || e.mzml_metodo(o.f.size, o.rd);
         let doc = emb || wiffDocs.get(base(m.name)) || e.lab_metodo(o.slot, m.name, o.f.size, o.rd);
         let source = emb ? "mzml" : wiffDocs.has(base(m.name)) ? "wiff" : doc ? "dam" : "none";
-        // an mzML written by another program: its header
-        if (!doc && /\.mzml$/i.test(m.name)) { doc = e.mzml_head_metodo(m.name, o.f.size, o.rd); if (doc) source = "mzml"; }
+        // an mzML written by another program: its header (a part of a DDA file, «name#MS1», reads the header of its file)
+        const file = String(m.name).split("#")[0];
+        if (!doc && /\.mzml$/i.test(file)) { doc = e.mzml_head_metodo(file, o.f.size, o.rd); if (doc) source = "mzml"; }
         return { info: `{"source":"${source}","metodo":${doc || "null"}}` };
       }
     }

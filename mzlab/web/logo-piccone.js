@@ -2,12 +2,12 @@
 // Easter egg of the header logo: five hits with a small pickaxe turn the logo gold (or back to normal). Each hit shakes the logo and adds a
 // stage of cracks (1-4); the fifth shatters it into pieces and turns the logo GOLDEN (localStorage, as a trophy), the next round
 // of five hits gives the original logo back. Every fifth hit also flips the administrator mode (localStorage «qqq.admin», independent of the gold): on fires "mzlab:admin", off reloads
-// the page once the logo is whole, which drops the tools of the mode (the editor of the Teoria, the assistant and the like; Tabui and Flow do not depend on it).
+// the page once the logo is whole, which drops the tools of the mode (the assistant and the like; Tabui and Flow do not depend on it).
 // No hit for a few seconds: the cracks close again. Reduced motion: no shake, no pickaxe, no shards, only the stages of cracks. Enter / Space on the focused logo = a hit.
 // Pickaxe, cracks and shards are inline SVG/CSS (no asset). The label of the logo (alt/title) never changes.
 (() => {
   "use strict";
-  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = NOMI.KEY("logo.gold"), ADMIN_KEY = NOMI.KEY("admin"), LEGACY_KEY = NOMI.KEY("teoria.esteso");
+  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = NOMI.KEY("logo.gold"), ADMIN_KEY = NOMI.KEY("admin");
   const logo = document.querySelector("header img.logo");
   if (!logo) return;
   const t = (k, d) => (window.I18N && I18N.t ? I18N.t(k) : d);
@@ -86,11 +86,11 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
       a.onfinish = () => { if (++done === pieces.length) { f.remove(); fx = null; gold(); logo.style.opacity = ""; logo.animate([{ opacity: 0, transform: "scale(.7)" }, { opacity: 1, transform: "scale(1.15)", offset: 0.6 }, { opacity: 1, transform: "scale(1)" }], { duration: 400 }); } };
     });
   }
-  const adminOn = () => { try { return localStorage.getItem(ADMIN_KEY) === "1" || localStorage.getItem(LEGACY_KEY) === "1"; } catch (_) { return false; } };
+  const adminOn = () => { try { return localStorage.getItem(ADMIN_KEY) === "1"; } catch (_) { return false; } };
   /** flips the administrator mode; returns what to do once the logo is whole (leaving reloads the page), or null */
   function flipAdmin() {
     try {
-      if (adminOn()) { localStorage.removeItem(ADMIN_KEY); localStorage.removeItem(LEGACY_KEY); return () => location.reload(); }
+      if (adminOn()) { localStorage.removeItem(ADMIN_KEY); return () => location.reload(); }
       localStorage.setItem(ADMIN_KEY, "1"); document.dispatchEvent(new Event("mzlab:admin"));
     } catch (_) { /* private mode: the mode does not change */ }
     return null;

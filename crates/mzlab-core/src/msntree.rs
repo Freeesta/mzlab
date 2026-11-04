@@ -136,14 +136,13 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
     ppm: f64,
 ) -> Result<String> {
     let formula = formula.filter(|f| !f.is_empty());
-    if let Some(f) = formula {
-        if !valid(f)
+    if let Some(f) = formula
+        && (!valid(f)
             || parse(f)
                 .iter()
-                .any(|(e, _)| !MASS.iter().any(|(m, _)| m == e))
-        {
-            return Err(Error::new("err.tree.formula").with("formula", f));
-        }
+                .any(|(e, _)| !MASS.iter().any(|(m, _)| m == e)))
+    {
+        return Err(Error::new("err.tree.formula").with("formula", f));
     }
     // nodes and parents from the one builder of the tree (`msnalbero`): a node without the generation before hangs from the nearest ancestor
     let tree = albero_di(
@@ -284,28 +283,28 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
         });
     }
     let mut cands: Vec<String> = vec![];
-    if formula.is_none() {
-        if let Some(p) = nodes.first().and_then(|n| n.prec).filter(|p| *p != 0.0) {
-            let o = Opts {
-                elements: Some(root_el.clone()),
-                ion: ion1,
-                tol: ppm,
-                rdb: (-0.5, 100.0),
-                rules: ROOT_RULES.iter().map(|s| s.to_string()).collect(),
-                max_results: 8,
-                ..Default::default()
-            };
-            if let Ok(s) = compose(p, &o) {
-                if let Ok(v) = json::parse(s.as_bytes()) {
-                    cands = v
-                        .get("results")
-                        .map(Value::arr)
-                        .unwrap_or(&[])
-                        .iter()
-                        .filter_map(|r| r.get("formula")?.str().map(String::from))
-                        .collect();
-                }
-            }
+    if formula.is_none()
+        && let Some(p) = nodes.first().and_then(|n| n.prec).filter(|p| *p != 0.0)
+    {
+        let o = Opts {
+            elements: Some(root_el.clone()),
+            ion: ion1,
+            tol: ppm,
+            rdb: (-0.5, 100.0),
+            rules: ROOT_RULES.iter().map(|s| s.to_string()).collect(),
+            max_results: 8,
+            ..Default::default()
+        };
+        if let Ok(s) = compose(p, &o)
+            && let Ok(v) = json::parse(s.as_bytes())
+        {
+            cands = v
+                .get("results")
+                .map(Value::arr)
+                .unwrap_or(&[])
+                .iter()
+                .filter_map(|r| r.get("formula")?.str().map(String::from))
+                .collect();
         }
     }
     let mut o = Out::default();

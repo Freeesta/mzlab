@@ -2,7 +2,8 @@
 #![allow(
     clippy::unwrap_used,
     clippy::indexing_slicing,
-    clippy::explicit_counter_loop
+    clippy::explicit_counter_loop,
+    clippy::cast_possible_truncation
 )]
 use super::*;
 
@@ -19,17 +20,21 @@ fn per_peak(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
     loop {
         let mut best: Option<(usize, (f64, f64, u32))> = None;
         for (i, g) in gruppi.iter().enumerate() {
-            if let Some(p) = g.picco(next[i]) {
-                if best.is_none_or(|(_, b)| p.2 < b.2) {
-                    best = Some((i, p));
-                }
+            if let Some(p) = g.picco(next[i])
+                && best.is_none_or(|(_, b)| p.2 < b.2)
+            {
+                best = Some((i, p));
             }
         }
         let Some((i, (mz, it, pos))) = best else {
             break;
         };
         next[i] += 1;
-        parti.push(sp, mz, it, pos)?;
+        if gruppi[i].f32 {
+            parti.push32(sp, mz as f32, it as f32, pos)?;
+        } else {
+            parti.push(sp, mz, it, pos)?;
+        }
     }
     Ok(parti)
 }

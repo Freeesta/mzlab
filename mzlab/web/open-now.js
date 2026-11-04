@@ -105,15 +105,14 @@ const OPENNOW = /** @type {any} */ ((() => {
   const rare = async () => { await carica("m:open-now-raro.js"); return /** @type {any} */ (window).OPENRARO; };
   /** «Switch to …»: closes the files of the open world and opens the other one (one «Removed · Undo» entry) */
   const toWorld = async (/** @type {boolean} */ hr) => (await rare()).toWorld(hr, { sent, q, drain });
-  /** a batch has ended: the side list says what was set aside, and what was added to files already shown */
+  /** a batch has ended: the side list says what was set aside */
   async function note() {
     drain();      // a file held back by one dropped before it that then failed or never ended
     await idle();
-    const { n, m } = tally; tally.n = tally.m = 0;
-    const shown = E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone);
+    const { m } = tally; tally.n = tally.m = 0;
     // a veil raised for this loading (the example of the tour) drops with it
     if (UPBUSY === 0 && !(/** @type {HTMLElement} */ (document.querySelector("#loading")).hidden)) loading(false);
-    if (m || (n && shown)) directNote(m ? "files.drop.mixed" : "files.drop.done", { n, m });
+    if (m) directNote("files.drop.mixed", { m });
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
   const many = async (/** @type {number} */ n) => (await rare()).many(n);

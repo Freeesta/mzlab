@@ -1,6 +1,6 @@
 // @ts-check
-// Flow (administrator mode): the fragmentation graph msngrafo/1 of spectra.msn_graph drawn as in the Fragmentation graph tab (same SVG, loaded from the app's modules), in English.
-// Tree view, no filters, no drawings (the tab has them). Clicking an ion shows its candidate formulas; «Use» writes the choice in the parameter `scelte` of the step, and the next Run applies it. Used by flow-views-msn.js.
+// Flow (administrator mode): the fragmentation graph msngrafo/2 of spectra.msn_graph drawn as in the Fragmentation graph tab (same SVG, loaded from the app's modules), in English.
+// Tree view, no filters, no drawings (the tab has them). Clicking an ion shows its candidate formulas; «Use» writes the choice in the parameter `pick` of the step, and the next Run applies it. Used by flow-views-msn.js.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
@@ -17,7 +17,7 @@
   /** @param {string} key @param {Record<string, any>} [p] */
   const t = (key, p) => (EN[key] || key).replace(/\{(\w+)\}/g, (_, k) => String(p && p[k] !== undefined ? p[k] : ""));
 
-  /** the pairs «MZ=ION» of `scelte` with the choice for `mz` set (or removed when `formula` is empty) @param {string} text @param {string} mz @param {string} formula */
+  /** the pairs «MZ=ION» of `pick` with the choice for `mz` set (or removed when `formula` is empty) @param {string} text @param {string} mz @param {string} formula */
   F.msnChoices = (text, mz, formula) => {
     const keep = (text || "").split(",").map(s => s.trim()).filter(s => s && Number(s.split("=")[0]) !== Number(mz));
     if (formula) keep.push(`${mz}=${formula}`);
@@ -33,18 +33,18 @@
   /** the state of the Fragmentation graph tab of Data (one instance, shared with the tab): the graph and the choices of the step in this plan, so its ion panel can be drawn here; `again` is called after a «Use» @param {any} g */
   const dataState = async g => {
     const st = await app("infusione-grafo-stato.js"), to = target();
-    st.G.j = g; st.G.ro = null; st.G.scelte = to ? String((to.inst.params || {}).scelte || "").split(",").map(x => { const [mz, f] = x.split("="); return { mz: Number(mz), formula: (f || "").trim() }; }).filter(c => c.mz && c.formula) : [];
+    st.G.j = g; st.G.ro = null; st.G.scelte = to ? String((to.inst.params || {}).pick || "").split(",").map(x => { const [mz, f] = x.split("="); return { mz: Number(mz), formula: (f || "").trim() }; }).filter(c => c.mz && c.formula) : [];
     return st.G;
   };
 
-  /** the panel of the selected ion, the one of the Fragmentation graph tab; «Use» writes `scelte` of the step @param {HTMLElement} box @param {any} G0 @param {any} g @param {string | null} id */
+  /** the panel of the selected ion, the one of the Fragmentation graph tab; «Use» writes `pick` of the step @param {HTMLElement} box @param {any} G0 @param {any} g @param {string | null} id */
   const ionPanel = async (box, G0, g, id) => {
     const node = await app("infusione-grafo-nodo.js"), n = id && g.nodi.find((/** @type {any} */ x) => x.id === id);
     G0.j = g; G0.sel = id;
     if (!n) { box.replaceChildren(); return; }
     const to = target(), redo = () => {
       if (!to) return;
-      F.setParam(to.inst, to.step, "scelte", G0.scelte.map((/** @type {any} */ c) => `${c.mz}=${c.formula}`).join(",") || null);
+      F.setParam(to.inst, to.step, "pick", G0.scelte.map((/** @type {any} */ c) => `${c.mz}=${c.formula}`).join(",") || null);
       to.S.refresh(null); box.append(F.el("p", { class: "fl-note", role: "status", text: "Applied at the next Run." }));
     };
     node.nodePanel(box, n, { redo, again: () => ionPanel(box, G0, g, id) });
@@ -57,8 +57,9 @@
     await G.carica("m:infusione-grafo.js");
     const k = F.webMsn.infusion(to.S);
     Object.assign(G0, { mol: null, text: text("formula"), adduct: text("adduct"), smiles: text("smiles"), j: null, sel: null, k: -1, ro: null });
-    for (const n of ["ppm_formula", "mz_basso", "ppm_basso", "prove_min"]) if (typeof p[n] === "number") G0.o[n] = p[n];
-    G0.o.attivazione = text("attivazione"); G0.o.isotopi = p.isotopi === true;
+    // the step parameters (spectra.msn_graph@2) under the names of the tab's state
+    for (const [n, step] of [["ppm_formula", "ppm_formula"], ["mz_basso", "low_mz"], ["ppm_basso", "wide_ppm"], ["prove_min", "min_evidence"]]) if (typeof p[step] === "number") G0.o[n] = p[step];
+    G0.o.attivazione = text("activation"); G0.o.isotopi = p.isotopes === true;
     STATO.file(k, "flow"); setView("data"); BARRA.show("gra");
   };
 

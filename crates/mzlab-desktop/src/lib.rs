@@ -40,6 +40,7 @@ mod rpc_lr;
 mod rpc_masscal;
 mod rpc_msn;
 mod rpc_nat;
+mod rpc_warm;
 pub mod scarica;
 pub mod scarica_fonti;
 pub mod store;

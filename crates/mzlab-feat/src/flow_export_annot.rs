@@ -409,10 +409,10 @@ pub fn export_made(p: &Params, inp: &Inputs) -> Result<Made> {
             .then(|| decisions[r.feature - 1].as_ref())
             .flatten();
         if r.feature > 0 {
-            if let Some(m) = min {
-                if !d.and_then(|d| level_rank(&d.level)).is_some_and(|k| k <= m) {
-                    continue;
-                }
+            if let Some(m) = min
+                && !d.and_then(|d| level_rank(&d.level)).is_some_and(|k| k <= m)
+            {
+                continue;
             }
         } else if min.is_some() {
             continue;

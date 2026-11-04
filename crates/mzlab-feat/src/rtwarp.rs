@@ -52,6 +52,8 @@ pub struct WarpParams {
     pub span: f64,
     /// RANSAC: largest distance (minutes) of an anchor from the line to count as agreeing with it.
     pub inlier: f64,
+    /// RANSAC: seed of the samples; 0 is the historical stream, so a run is the same every time for the same seed.
+    pub seed: u64,
 }
 
 impl Default for WarpParams {
@@ -61,6 +63,7 @@ impl Default for WarpParams {
             coarse_gap: 0.5,
             span: 0.5,
             inlier: 0.05,
+            seed: 0,
         }
     }
 }
@@ -157,7 +160,7 @@ pub fn map_from_table(al: &Aligned, rt: &RtParams, w: &WarpParams) -> RtMap {
             .collect();
         let curve = match w.method {
             Method::Loess => loess_curve(&pts, &grid, w.span),
-            _ => ransac_curve(&pts, &grid, w.inlier, k as u64),
+            _ => ransac_curve(&pts, &grid, w.inlier, k as u64 ^ w.seed.rotate_left(32)),
         };
         let all: Vec<(f64, usize)> = rows.clone();
         rms.push(residual(&all, &grid, &curve, |i| {

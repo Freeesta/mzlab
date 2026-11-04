@@ -34,11 +34,10 @@ try:
             assert pg.locator(".hq:visible").count() == 1, "only the general (i) is left"
             pg.locator('button.hq[data-help=header]').click(); shown("#helppop")
             tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "fedecrista@gmail.com" in tx, tx[:200]
-            tg = r.teoria(pg); assert "MRM" in tg and len(tg) > 1000, tg[:200]      # a real chapter of the Teoria opens
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); gone("#helppop"); assert not pg.is_visible("#helppop")
             assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
-        step("only the general (i) is left: it opens the info box; the guide is the first Teoria chapter; panel titles carry the short explanation", helpq)
+        step("only the general (i) is left: it opens the info box; panel titles carry the short explanation", helpq)
         def xlsxexcel():
             open_kind(pg, "mrm"); ready(pg)
             with pg.expect_download() as d: dlmenu(pg, ".pnl.mrm", "xlsx")
@@ -52,11 +51,11 @@ try:
             if wb: assert isinstance(wb.active.cell(2, 1).value, (int, float)) and wb.active.cell(1, 1).font.b
         step("plot Excel (.xlsx: numeric cells, units in headers)", lambda: (xlsxexcel(), pg.evaluate("setTab('full')"), ready(pg)))
         def fold():
-            if pg.is_visible("#dfiles"): pg.click("#sb-x"); gone("#dfiles"); attendi(pg, "E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")      # open at first start
+            if pg.is_visible("#dfiles"): close_side(pg); gone("#dfiles"); attendi(pg, "E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")      # open at first start
             w0 = pg.evaluate("E.panels[0].w"); drawer(pg); shown("#dfiles"); attendi(pg, f"E.panels[0].w < {w0} - 150")
             w1 = pg.evaluate("E.panels[0].w"); assert w1 < w0 - 150 and pg.is_visible("#dfiles"), (w0, w1)         # pinned next to the charts: they narrow
             pg.screenshot(path=SH + "61_folded.png")
-            pg.click("#sb-x"); gone("#dfiles"); attendi(pg, f"E.panels[0].w === {w0}"); assert pg.evaluate("E.panels[0].w") == w0 and not pg.is_visible("#dfiles")
+            close_side(pg); gone("#dfiles"); attendi(pg, f"E.panels[0].w === {w0}"); assert pg.evaluate("E.panels[0].w") == w0 and not pg.is_visible("#dfiles")
         step("pinned file list narrows the panels, closing it widens them", fold)
         def png():
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "png")
@@ -67,7 +66,7 @@ try:
         step("PNG of a plot has a white background", png)
         def restore():
             drawer(pg); shown("#dfiles"); pg.reload(); ready(pg)
-            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.open && BARRA.curTab === 'file'"); pg.click("#sb-x"); gone("#dfiles")
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.open && BARRA.curTab === 'file'"); close_side(pg); gone("#dfiles")
         step("open file list is restored after reload", restore)
         def periodic():
             pg.click("#np-pt"); attendi(pg, "document.querySelectorAll('.pt-c').length === 118")

@@ -1,4 +1,4 @@
-//! `spectra.msn_graph@1`: the plan gives the bytes of `mzlab-cli msn-graph` on the synthetic infusion of the route `/api/msntree`.
+//! `spectra.msn_graph@2` (and a saved `@1` plan, migrated): the plan gives the bytes of `mzlab-cli msn-graph` on the synthetic infusion of the route `/api/msntree`.
 
 use std::path::{Path, PathBuf};
 
@@ -169,5 +169,99 @@ fn the_structure_rules_give_the_same_bytes_in_the_step_and_in_the_command() {
     )
     .unwrap();
     assert!(bad.contains("\"regole\":{"));
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// The plan of `graph` at `@2`.
+fn graph_2(d: &Path, params: &str) -> String {
+    let plan = format!(
+        r#"{{"format":"mzflow/2","inputs":[{{"name":"msn.mzML","type":"mzml"}}],"steps":[
+        {{"id":"g","step":"spectra.msn_graph@2","in":{{"source":"file:msn.mzML"}},"params":{params}}}]}}"#
+    );
+    let (run, prov) = crate::flow::run_plan(plan.as_bytes(), d, &d.join("work2"), 1, None).unwrap();
+    assert!(
+        run.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
+    std::fs::read_to_string(d.join("work2/g.json")).unwrap()
+}
+
+#[test]
+fn a_saved_plan_at_1_gives_the_bytes_of_the_plan_at_2_with_the_new_names() {
+    let d = dir("v2");
+    let pairs = [
+        (
+            r#"{"formula":"C14H15N3O5+","ppm_formula":5,"mz_basso":100,"ppm_basso":15,"prove_min":2,"attivazione":"cid","isotopi":true,"scelte":"305.1=C14H15N3O5"}"#,
+            r#"{"formula":"C14H15N3O5+","ppm_formula":5,"low_mz":100,"wide_ppm":15,"min_evidence":2,"activation":"cid","isotopes":true,"pick":"305.1=C14H15N3O5"}"#,
+        ),
+        (
+            r#"{"formula":"C14H15N3O5+","interpreta":true,"ppm_perdita":5,"regole":true,"toll_perdita_mda":2}"#,
+            r#"{"formula":"C14H15N3O5+","interpret":true,"loss_ppm":5,"rules":true,"loss_tol_mda":2}"#,
+        ),
+        (
+            r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","strutture_nodo":"tutti","ppm_struttura":5}"#,
+            r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","structures":"all","struct_ppm":5}"#,
+        ),
+        (
+            r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","rotture":true,"max_legami":1}"#,
+            r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","breaks":true,"max_bonds":1}"#,
+        ),
+    ];
+    for (old, new) in pairs {
+        let a = graph(&d, old).unwrap();
+        assert_eq!(a, graph_2(&d, new), "{old}");
+        assert!(a.starts_with("{\"formato\":\"msngrafo/2\""));
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_plan_written_after_a_run_names_2_and_an_old_set_name_is_read_as_the_new_one() {
+    let d = dir("plan");
+    let plan = d.join("plan.json");
+    std::fs::write(
+        &plan,
+        r#"{"format":"mzflow/2","inputs":[{"name":"msn.mzML","type":"mzml"}],"steps":[
+        {"id":"g","step":"spectra.msn_graph@1","in":{"source":"file:msn.mzML"},"params":{"formula":"C14H15N3O5+","prove_min":2}}]}"#,
+    )
+    .unwrap();
+    let out = d.join("out");
+    let a: Vec<String> = [
+        "flow",
+        "run",
+        plan.to_str().unwrap(),
+        "--in",
+        d.to_str().unwrap(),
+        "--out",
+        out.to_str().unwrap(),
+        "--set",
+        "g.mz_basso=100",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    let o = crate::execute(&a);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let written = std::fs::read_to_string(out.join("plan.json")).unwrap();
+    assert!(written.contains("\"spectra.msn_graph@2\""), "{written}");
+    assert!(
+        written.contains("\"min_evidence\":2") && written.contains("\"low_mz\":100"),
+        "{written}"
+    );
+    for old in ["@1", "prove_min", "mz_basso"] {
+        assert!(!written.contains(old), "{old} in {written}");
+    }
+    let g = std::fs::read_to_string(out.join("g.json")).unwrap();
+    assert_eq!(
+        g,
+        cli(&[
+            "--formula",
+            "C14H15N3O5+",
+            "--min-evidence",
+            "2",
+            "--low-mz",
+            "100"
+        ])
+    );
     let _ = std::fs::remove_dir_all(&d);
 }

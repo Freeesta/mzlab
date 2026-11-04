@@ -13,7 +13,7 @@
  * @typedef {{ tasto?: string, code?: string, mod?: boolean, alt?: boolean, shift?: boolean, dove: "chart" | "view", et?: string }} Scorciatoia
  *   tasto = `e.key` of the letter / Enter / ? (compared in lower case); code = `e.code` for the digits of Alt+1-3; mod = Ctrl on Windows and Linux, ⌘ on the Mac; dove = "chart": only with the focus on a chart, "view": anywhere in the view; et = i18n key of the short label
  * @typedef {{ nome: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, info?: boolean, icon?: string, esegui: () => any }} Riga
- * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean }} VoceAzione
+ * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean, sub?: () => any[] }} VoceAzione
  */
 // an entry not available now (`off`, set by AZIONI.per) is not shown at all; a separator left first, last or doubled by that goes too
 /** @param {any[]} items */
@@ -75,6 +75,7 @@ const AZIONI = (() => {
       if (last && a.gruppo !== last) items.push("-");
       last = a.gruppo;
       const nome = a.nome ? a.nome(c) : a.id;
+      if (a.sotto) { items.push({ id: a.id, label: nome, aria: nome, icon: icona(a, c), check: null, dim: !pronta(a, c), off: !pronta(a, c), fn: () => {}, sub: () => a.sotto(c) }); continue; }
       items.push({ id: a.id, label: a.voce ? a.voce(c) : nome, aria: a.aria ? a.aria(c) : nome, tip: a.tip && a.tip(c), icon: icona(a, c),
         check: a.attiva ? a.attiva(c) : null, dim: !pronta(a, c), off: !pronta(a, c), fn: () => esegui(a.id, c), fila: a.fila, soloIcona: !!a.fila });
     }

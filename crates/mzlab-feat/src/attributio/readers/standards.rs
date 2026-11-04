@@ -254,19 +254,19 @@ fn apply_decisions(
         let mut hit: Vec<usize> = (0..cand.len())
             .filter(|&i| cand[i].id == x.feature_id && same(&cand[i]))
             .collect();
-        if hit.is_empty() {
-            if let (Some(xmz), Some(xrt)) = (to_num(&x.mz), to_num(&x.rt)) {
-                hit = (0..cand.len())
-                    .filter(|&i| {
-                        let f = at(cand[i].id);
-                        same(&cand[i])
-                            && f.and_then(|f| f.mz)
-                                .is_some_and(|m| (m - xmz).abs() / xmz * 1e6 <= DECISION_MZ_PPM)
-                            && f.and_then(|f| f.rt)
-                                .is_some_and(|t| (t - xrt).abs() <= DECISION_RT_MIN)
-                    })
-                    .collect();
-            }
+        if hit.is_empty()
+            && let (Some(xmz), Some(xrt)) = (to_num(&x.mz), to_num(&x.rt))
+        {
+            hit = (0..cand.len())
+                .filter(|&i| {
+                    let f = at(cand[i].id);
+                    same(&cand[i])
+                        && f.and_then(|f| f.mz)
+                            .is_some_and(|m| (m - xmz).abs() / xmz * 1e6 <= DECISION_MZ_PPM)
+                        && f.and_then(|f| f.rt)
+                            .is_some_and(|t| (t - xrt).abs() <= DECISION_RT_MIN)
+                })
+                .collect();
         }
         if hit.is_empty() {
             warnings.push(format!(

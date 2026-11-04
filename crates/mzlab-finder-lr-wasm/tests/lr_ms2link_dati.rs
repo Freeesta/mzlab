@@ -2,7 +2,7 @@
 //! do and do not get. Every number comes from its `scratchpad/tabui_ms2_lr_truth.json`; none is written here.
 
 use mzlab_feat::legacy::lr::ms2::pool;
-use mzlab_feat::legacy::lr::ms2link::{Links, State};
+use mzlab_feat::legacy::lr::ms2link::State;
 use mzlab_feat::legacy::lr::{Entry, LrDig};
 use serde_json::Value;
 

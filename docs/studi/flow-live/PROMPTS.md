@@ -2,7 +2,7 @@
 
 Parte di `docs/studi/flow-live/README.md` (§4). Ogni blocco si incolla come primo messaggio di una chat DEV nuova (Sonnet) e sta in piedi da solo. Ordine: L1 → L2 → L3; L1 → L4 → L5 (dopo L2) → L6 (dopo L3); L7 dopo L1, in parallelo; L8 dopo L2 e L5. Una sola PR Flow-Live alla volta su `crates/mzlab-core/src/flow/`, `crates/mzlab-cli/src/flow.rs`, `lib.rs`.
 
-Vincoli comuni (ripetuti in ogni blocco): niente modifiche a `Cargo.toml`/`Cargo.lock`, workflow `.github/`, CSP di `index.html` o tetti `.wasm` senza autorizzazione scritta di Federico (Cargo è ammesso solo per la velocità e va chiesto al COO); `AGENTS.md` e `docs/agenti/cli.md` restano ≤ 25 600 B (oggi sono pieni: non aggiungere righe, al più riscriverne una a parità di byte); un file d'area ≤ 25 KB, una riga ≤ 600 caratteri; codice e commenti in inglese, Flow solo in inglese senza chiavi `lang/`; nessun calcolo in JS; merge solo a CI verde sul SHA esatto con i sei controlli richiesti, dopo un fold di `origin/main` (`tools/fondi_main.py`) e `tools/pre_pr.py` completo; a fine lavoro UN messaggio al COO (session_01SqVGjScVGPMmoMETWKcX2F) di ≤ 5 righe: PR, SHA a CI verde, cosa resta.
+Vincoli comuni (ripetuti in ogni blocco): niente modifiche a `Cargo.toml`/`Cargo.lock`, workflow `.github/`, CSP di `index.html` o tetti `.wasm` senza autorizzazione scritta di Federico (Cargo è ammesso solo per la velocità e va chiesto al COO); `CLAUDE.md` e `docs/agenti/cli.md` restano ≤ 25 600 B (oggi sono pieni: non aggiungere righe, al più riscriverne una a parità di byte); un file d'area ≤ 25 KB, una riga ≤ 600 caratteri; codice e commenti in inglese, Flow solo in inglese senza chiavi `lang/`; nessun calcolo in JS; merge solo a CI verde sul SHA esatto con i sei controlli richiesti, dopo un fold di `origin/main` (`tools/fondi_main.py`) e `tools/pre_pr.py` completo; a fine lavoro UN messaggio al COO (session_01SqVGjScVGPMmoMETWKcX2F) di ≤ 5 righe: PR, SHA a CI verde, cosa resta.
 
 ## L1 · Scheduler puro in Rust (`mzlab_core::flow::sched`)
 
@@ -21,9 +21,9 @@ Cosa costruire, in crates/mzlab-core/src/flow/sched.rs (nuovo; in flow/mod.rs so
 
 Test minimi (cargo test -p mzlab-core --lib flow::sched): catena di 4 passi per elemento su 3 file: il file 1 può arrivare a detect mentre il file 3 è ancora in convert; align resta waiting finché l'ultimo detect non è done; cambiare un parametro di align rende stale solo align (detect resta done, nessun Cancel per detect); cambiare un parametro di detect con detect(f2) running dà Cancel(detect,f2) e rende stale align; aggiungere un file in coda crea solo i suoi lavori e rende stale le barriere; aggiungere un file IN TESTA invalida i rilevamenti HR (arco del primo ingresso) — documentalo; togliere un nodo cancella i suoi lavori; stessa plan_key dopo andata e ritorno di un parametro; next rispetta slots, mem_mb e risorse; lo stesso piano scritto con le chiavi JSON in ordine diverso dà le stesse plan_key; nessun indice di item nelle chiavi.
 
-Documenti: crea docs/agenti/flow-live.md (file d'area: funzioni, stati, eventi, trappole; ≤ 25 KB) e aggiungi UNA riga in fondo a docs/agenti/flow-web.md che rimanda a flow-live.md. Non toccare AGENTS.md (è pieno).
+Documenti: crea docs/agenti/flow-live.md (file d'area: funzioni, stati, eventi, trappole; ≤ 25 KB) e aggiungi UNA riga in fondo a docs/agenti/flow-web.md che rimanda a flow-live.md. Non toccare CLAUDE.md (è pieno).
 Criteri: cargo test -p mzlab-core verde, cargo clippy senza avvisi nuovi, nessun cambiamento di byte in alcun test esistente.
-Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; AGENTS.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; codice e commenti in inglese; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
+Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; CLAUDE.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; codice e commenti in inglese; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
 ```
 
 ## L2 · `flow::execute` sopra lo scheduler; chiavi e nomi senza indice
@@ -39,7 +39,7 @@ Obiettivo: un solo motore. flow::execute (crates/mzlab-core/src/flow/run.rs:310)
 5. FileRunner::keep (crates/mzlab-cli/src/flow.rs:183) calcola lo SHA-256 a pezzi invece di leggere tutto il file (stesso risultato).
 Prove: cargo test -p mzlab-core -p mzlab-feat -p mzlab-cli; python3 -m pytest -q tests/test_flow_determinismo.py tests/test_corsa_schema.py; e2e_flow_web.py se cargo e wasm-bindgen ci sono.
 Documenti: riscrivi le righe di docs/agenti/rust-flow.md su execute e cache (a parità di dimensione circa: il file è a 23,5 KB) e aggiorna flow-live.md.
-Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; AGENTS.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; una PR alla volta su flow.rs/lib.rs; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
+Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; CLAUDE.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; una PR alla volta su flow.rs/lib.rs; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
 ```
 
 ## L3 · Esecutore nativo live, `--jsonl` e rotte desktop
@@ -55,7 +55,7 @@ Obiettivo: sul computer il piano gira in continuo e accetta modifiche mentre gir
 5. crates/mzlab-desktop/src/flow_live.rs (nuovo; in rpc.rs solo le righe del dispatch): rotte flow/live/<op> con gli stessi nomi, corpi e risposte di api/flow/sched/<op> del sito (new→start dei file, update, events {since}, nodes, jobs, pause, resume, retry, unblock) più cancel; flow/run e flow/progress restano (la pagina passa a live in L6). Un test confronta le risposte di una sequenza di sched_cases.json fra le due vie.
 6. La coda di conversione (crates/mzlab-desktop/src/conv_coda.rs) entra nel grafo: un ingresso del produttore il cui mzML è pronto (conv_ready) dà il lavoro import/convert come cached con la sua chiave; uno in conversione è running (frac dalle scansioni se conv_list le ha); la coda continua a cedere i core all'indice di Dati (INDEXING).
 Prove: cargo test -p mzlab-cli --lib flow_live (piano sintetico di tools/dati_sintetici.py: update a metà corsa che cambia un parametro di align non rifà i rilevamenti; cambiare un parametro di detect annulla solo i rilevamenti in corso; un annullamento non lascia file a metà; --jsonl valida lo schema; stessi file finali e stesso prov/1 di flow run); cargo test -p mzlab-core --lib flow::sched; cargo test -p mzlab-desktop se la CI lo prevede (job desktop).
-Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti (nessun byte in più nel motore .wasm salvo i pub: misura e scrivi il residuo del tetto del motore nella PR); AGENTS.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; codice e commenti in inglese; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
+Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti (nessun byte in più nel motore .wasm salvo i pub: misura e scrivi il residuo del tetto del motore nella PR); CLAUDE.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; codice e commenti in inglese; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
 ```
 
 ## L4 · Lo scheduler nel `.wasm` del sito
@@ -70,7 +70,7 @@ Obiettivo: il sito ha lo stesso scheduler di Rust, in un Worker, senza .wasm nuo
 2. flow/lazy/worker-flow-web.js ospita lo scheduler (carica già il feat per stima_series): messaggi {op:"sched.*"}; nessuna logica di scelta in JS.
 3. Parità: tests/flow_sched_nodo.js esegue crates/mzlab-core/tests/data/sched_cases.json sul .wasm e deve dare gli stessi stati e comandi di sched_tests.rs; lanciato da un test pytest (SKIP senza cargo/wasm-bindgen, come e2e_flow_web.py).
 4. Misura: costruisci con tools/build_feat_wasm.sh e confronta con limit_hr (oggi 1 212 416 B, misura 1 099 407 B). Se la misura supera il tetto FERMATI, non toccare il tetto, scrivi al COO la misura e lo scarto (decisione D4 di Federico).
-Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; AGENTS.md e cli.md ≤ 25 600 B; mzfeat-wasm.md è pieno: la riga va in flow-live.md; righe ≤ 600 caratteri; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
+Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; CLAUDE.md e cli.md ≤ 25 600 B; mzfeat-wasm.md è pieno: la riga va in flow-live.md; righe ≤ 600 caratteri; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
 ```
 
 ## L5 · «This browser» diventa live
@@ -86,7 +86,7 @@ Obiettivo: nel sito, mentre l'utente costruisce il grafo, i passi che il browser
 5. Memoria: mem_mb = budget di MZLAB_RUST; un align oltre il budget va blocked (block {by: "permission.memory"}) e chiede «Use more memory» solo al clic dell'utente, non a metà modifica; resta il Web Lock mzlab-mem-grande oltre 512 MB.
 6. Motore: residuo del tetto ~19-25 KB. L5 non aggiunge Rust al motore; se un'operazione manca, aggiungila in sched_route.rs, misura (wasm-opt -Oz) e scrivi il residuo nella PR; se supera il tetto FERMATI e scrivi al COO.
 Prova: tests_e2e/e2e_flow_live.py (nuovo; costruisce il sito; file sintetici): aprendo Flow con 3 .mzidx in OPFS i rilevamenti partono senza clic su Run; cambiare un parametro di align mentre i rilevamenti girano non li rifà (conta i lavori del pool); cambiare un parametro di detect annulla solo i rilevamenti in corso; tornare al valore di prima riusa (reused); nessuna pausa fissa, si contano eventi; window.MZLAB_LR_MISS vuoto; MISURA flow_live_primo_detect (clic → primo evento running). Più e2e_flow_web.py, e2e_flow.py, e2e_flow_avvio.py, test_flow_sched_wasm.py verdi.
-Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; AGENTS.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; Flow solo in inglese, nessuna chiave lang/; nessun calcolo in JS; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
+Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; CLAUDE.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; Flow solo in inglese, nessuna chiave lang/; nessun calcolo in JS; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
 ```
 
 ## L6 · Stato, % e tempo sulle carte; desktop sullo stesso modello
@@ -101,7 +101,7 @@ Obiettivo: ogni carta della tela dice cosa sta facendo il suo nodo, e la pagina 
 4. flow/lazy/flow-desktop.js: «This computer» usa flow/live/* (L3) invece di flow/run + polling di flow/progress; stessa tela e stessi testi del sito.
 5. Tour: tour.js e tests_e2e/e2e_tour.py restano validi (ogni passo trova il bersaglio).
 Prove: tests_e2e/e2e_flow_live.py esteso (stati e % sulle carte, out of date dopo una modifica, axe senza violazioni con e2e_axe_grafici, tastiera); e2e_flow.py, e2e_flow_avvio.py (nessun modulo live nel primo disegno), e2e_tour.py verdi; tsc 0 errori nuovi (base_errori.json non sale).
-Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; AGENTS.md e cli.md ≤ 25 600 B; flow-grafica.md è a 24,5 KB: le righe nuove vanno in flow-live.md e in flow-grafica.md si riscrive solo la riga «Avanzamento della corsa»; Flow solo in inglese; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
+Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; CLAUDE.md e cli.md ≤ 25 600 B; flow-grafica.md è a 24,5 KB: le righe nuove vanno in flow-live.md e in flow-grafica.md si riscrive solo la riga «Avanzamento della corsa»; Flow solo in inglese; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
 ```
 
 ## L7 · Avanzamento dentro i lavori lunghi
@@ -113,7 +113,7 @@ Obiettivo: le carte mostrano il % anche DENTRO un file per i passi lunghi.
 1. Una callback di avanzamento opzionale step(done, total) (stesso stile di quella dei lettori in crates/mzlab-wasm/src/contato.rs, Contato) in: conversione/centroidi (crates/mzlab-cli/src/flow_centroid.rs, convert.mzml), costruzione dell'indice, rilevamento delle feature (crates/mzlab-feat, per scansione o per finestra di m/z), allineamento (per file letto). Mai più di un richiamo ogni 1 % circa; nessun effetto sui byte prodotti (test: stessi SHA con e senza callback).
 2. Il Runner nativo e il pool di feat-worker.js la inoltrano come progress(id, frac) allo scheduler (solo il trasporto; se L5 non è ancora unito, solo la parte Rust e il messaggio del worker).
 Prove: cargo test dei crate toccati (frazioni monotone, ultima = 1, stessi byte), tests/test_nativo.py e i test di monotonia di progresso.md verdi.
-Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti (misura i .wasm: lib.wasm_cap; se un tetto si supera FERMATI e scrivi al COO); AGENTS.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
+Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti (misura i .wasm: lib.wasm_cap; se un tetto si supera FERMATI e scrivi al COO); CLAUDE.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
 ```
 
 ## L8 · Centroidatura per file nel grafo
@@ -127,5 +127,5 @@ Obiettivo: una serie mista (file in profilo e in centroidi) dà la feature table
 3. Sito: il lavoro di un file in profilo è il .cen.mzidx del motore di Dati (mzlab/web/rust-worker.js:242-289; chiedilo con la rotta esistente, niente calcolo in JS); flow/lazy/flow-web-run.js listIdx (oggi salta i .cen.mzidx, :33) dà al rilevamento l'indice in centroidi per quei file.
 4. Carta e pannello: «k of n files centroided, m already centroided»; tabella «Files» con il modo.
 Prove: cargo test -p mzlab-cli --lib flow_centroid (serie sintetica mista di tools/dati_sintetici.py: stessi byte per i file in centroidi, picchi ritrovati nei file in profilo, via per file nel prov/1); tests_e2e/e2e_flow_live.py esteso (serie mista: carta e Issues dicono cosa succede, nessun passo inserito di nascosto); e2e_flow.py, e2e_flow_web.py verdi.
-Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; AGENTS.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; Flow solo in inglese, nessuna chiave lang/; nessun calcolo in JS; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
+Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; CLAUDE.md e cli.md ≤ 25 600 B; righe ≤ 600 caratteri; Flow solo in inglese, nessuna chiave lang/; nessun calcolo in JS; merge a CI verde sul SHA esatto con i sei controlli richiesti dopo fold di main e tools/pre_pr.py completo; un messaggio di ≤ 5 righe al COO (session_01SqVGjScVGPMmoMETWKcX2F).
 ```

@@ -24,8 +24,6 @@ const EXTRA_O: i64 = 6;
 const EXTRA_H: i64 = 8;
 /// Tolerance (Da) between a peak of the MS2 and a sub-formula.
 const FRAG_TOL: f64 = 0.01;
-/// Most sub-formulas listed for one candidate, and the mass of the electron.
-const ELECTRON: f64 = mzlab_core::elements::ELECTRON;
 
 /// A formula candidate of a row.
 #[derive(Debug, Clone, PartialEq)]

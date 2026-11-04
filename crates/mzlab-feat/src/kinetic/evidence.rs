@@ -196,7 +196,7 @@ fn controls_of(s: &Setup, y: &[f64], ctrl: &[f64]) -> (Controls, f64) {
         .times
         .iter()
         .zip(y)
-        .filter(|(&t, _)| t > 0.0)
+        .filter(|&(&t, _)| t > 0.0)
         .fold(0.0f64, |m, (_, &v)| m.max(v));
     let fc = libm::log2((treated + s.pseudo) / (reference + s.pseudo));
     let c = if treated <= s.pseudo {
@@ -252,7 +252,7 @@ fn decide(controls: Controls, stable: bool, coupling: Coupling, second: bool) ->
 }
 
 fn params(s: &Setup, r: &Report, n: usize, would: f64) -> Vec<(&'static str, f64)> {
-    let gen = r.generation.map_or(-1.0, |g| {
+    let generation = r.generation.map_or(-1.0, |g| {
         code(g.verdict, &[Gen::First, Gen::Second, Gen::Undecidable])
     });
     let ctl = code(
@@ -287,7 +287,7 @@ fn params(s: &Setup, r: &Report, n: usize, would: f64) -> Vec<(&'static str, f64
         ("shape", r.shape.map_or(-1.0, |f| f as u8 as f64)),
         ("gap_aicc", if r.gap.is_finite() { r.gap } else { 1e9 }),
         ("stability", r.stability.map_or(0.0, |st| st.share())),
-        ("generation", gen),
+        ("generation", generation),
         ("generation_delta", r.generation.map_or(0.0, |g| g.delta)),
         ("k_form", r.k_form),
         ("k_parent", s.parent.k.unwrap_or(0.0)),
