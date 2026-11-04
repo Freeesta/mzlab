@@ -17,6 +17,7 @@ I18N.add("it", {
   "load.prog.count": "{done} di {n}",
   "load.err.oldBrowser": "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari.",
   "load.err.engineStart": "Non riesco ad avviare il motore di calcolo: ricarica la pagina.",
+  "load.err.noStorage": "Questa finestra non lascia al sito conservare i file (finestra privata?): apri {app} in una finestra normale, oppure usa l'app.",
   "load.err.engineMissing": "Questo browser non può avviare il motore di calcolo: usa una versione recente di Chrome, Edge, Firefox o Safari.",
   "load.err.engineLost": "Il motore di calcolo si è fermato: ricarica la pagina.",
   "load.phrase.1": "Ignorando i warning",
