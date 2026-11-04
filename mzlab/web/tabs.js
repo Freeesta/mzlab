@@ -8,13 +8,6 @@ const firstTab = () => (ESP.ids.find((/** @type {string} */ t) => tabFiles(t).le
 const pickTab = (/** @type {string | null | undefined} */ want) => (want && tabFiles(want).length ? want : firstTab());
 E.curBy = {};
 
-// the tooltip of a group of the file list: the scheme Q1 -> q2 -> Q3 in big, with the words (texts from modi.js)
-function modeSchema(/** @type {string} */ t) {
-  try {
-    const m = QMODI.M[ESP.didattica(t)], st = ["Q1", "q2", "Q3"].map((n, i) => `<div class="qb"><b>${n}</b><span>${m.q[i].replace(/^Q[123] /, "")}</span></div>`);
-    return `<div class="qs"><b>${m.name}</b><div class="qr">${st.join('<span class="qa">&rarr;</span>')}</div><div class="qw"><b>${m.what}.</b> ${m.use}</div></div>`;
-  } catch (e) { return ""; }
-}
 // the page goes to the first panel of an experiment type
 function scrollToBlock(/** @type {string} */ t) {
   setTimeout(() => { const f = E.panels.filter((/** @type {Pannello} */ q) => q.tab === t && q.el).sort((/** @type {Pannello} */ u, /** @type {Pannello} */ v) => u.y - v.y)[0]; if (f) f.el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 500);

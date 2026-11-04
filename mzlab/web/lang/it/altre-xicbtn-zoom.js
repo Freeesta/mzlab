@@ -1,7 +1,7 @@
 I18N.add("it", {
   "zoom.mz": "m/z {lo}–{hi}",
   "zoom.rt": "RT {lo}–{hi} min",
-  "xicbtn.title": "XIC dell'ione scelto nello spettro, nel pannello sotto (Maiusc: traccia in più)",
+  "xicbtn.title": "XIC dell'ione scelto nello spettro, nel pannello sotto",
   "xicbtn.n": "XIC di {n} file",
   "xicbtn.infusion": "Infusione: nessun cromatogramma",
   "xicbtn.aria": "Estrai lo XIC dell'ione scelto",
