@@ -97,9 +97,9 @@ try:
             # the boxes that did the student's work (caption, formula/adduct table, fragment selection) no longer exist
             assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-part','cap-ad','cap-on','cap-txt','cap-copy'].every(i=>!document.getElementById(i))")
             LB = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#mzlab-labels text')].map(t=>t.textContent)"
-            assert pg.evaluate(LB) == ["C7H7NO2", "nominal mass 137"], pg.evaluate(LB)
+            assert pg.evaluate(LB) == ["C7H7NO2", "massa nominale 137"], pg.evaluate(LB)
             pg.select_option("#lb-dec", "4"); pg.wait_for_timeout(300)
-            assert pg.evaluate(LB) == ["C7H7NO2", "exact mass 137.0477"], pg.evaluate(LB)
+            assert pg.evaluate(LB) == ["C7H7NO2", "massa esatta 137.0477"], pg.evaluate(LB)
             pg.select_option("#lb-dec", "0"); pg.wait_for_timeout(300)
             pg.fill("#ex-smi", "Oc1ccc(cc1)C(=O)[NH3+]"); pg.click("#ex-load"); pg.wait_for_timeout(2500)         # a structure drawn with its charge: formula of the ion and m/z
             pg.evaluate("(()=>{const k=document.getElementById('kframe').contentWindow.ketcher;k.setMolecule('Oc1ccc(cc1)C(=O)[NH3+]')})()"); pg.wait_for_timeout(1500)

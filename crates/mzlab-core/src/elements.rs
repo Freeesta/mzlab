@@ -38,23 +38,9 @@ pub fn mass_of(el: &str) -> Option<f64> {
     MASS.iter().find(|(e, _)| *e == el).map(|(_, m)| *m)
 }
 
-/// Mass of an isotope written «13C»: the exact value for the common labels, otherwise the monoisotopic mass shifted by the mass-number difference.
+/// Mass of an isotope written «13C», from the nuclide table.
 fn isotope_mass(a: u32, el: &str) -> Option<f64> {
-    const ISO: [(u32, &str, f64); 8] = [
-        (2, "H", 2.01410177812),
-        (13, "C", 13.00335483507),
-        (15, "N", 15.0001088989),
-        (17, "O", 16.99913175),
-        (18, "O", 17.99915961),
-        (34, "S", 33.96786701),
-        (37, "Cl", 36.96590260),
-        (81, "Br", 80.9162906),
-    ];
-    if let Some((_, _, m)) = ISO.iter().find(|(n, e, _)| *n == a && *e == el) {
-        return Some(*m);
-    }
-    let m = MASS.iter().find(|(e, _)| *e == el)?.1;
-    Some(m + (a as f64 - m.round()))
+    nuclide(el, Some(u16::try_from(a).ok()?)).map(|(_, m)| m)
 }
 
 /// Ion m/z = neutral mass + shift; the order is the one of `ADDUCT_SHIFT`.
@@ -388,4 +374,18 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     }
     o.raw("}");
     Ok(o.0)
+}
+
+/// Mass number and exact mass of a nuclide of `el` (`None` = its monoisotopic isotope), from the generated table `nuclidi`; `D` and `T` are
+/// hydrogen 2 and 3. `None` for a symbol outside the table or a mass number it does not list.
+pub fn nuclide(el: &str, a: Option<u16>) -> Option<(u16, f64)> {
+    let (el, a) = match el {
+        "D" => ("H", Some(a.unwrap_or(2))),
+        "T" => ("H", Some(a.unwrap_or(3))),
+        _ => (el, a),
+    };
+    let (_, mono, a0, d) = crate::nuclidi::NUCLIDES.iter().find(|(e, ..)| *e == el)?;
+    let a = a.unwrap_or(*mono);
+    let off = d.get(a.checked_sub(*a0)? as usize)?;
+    Some((a, a as f64 + *off as f64 * 1e-9))
 }
