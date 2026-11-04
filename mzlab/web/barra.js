@@ -1102,9 +1102,10 @@ const BARRA = (() => {
 if (typeof window !== "undefined") {
   window.BARRA = BARRA;
   // quiet empty state of the side panels: the leaf of the file list (one drawing, cloned) and one short line
+  const played = new Set();                                  // lines whose leaf already fell: a re-render rests at once
   /** @type {any} */ (window).EMPTYLEAF = (/** @type {string} */ key) => {
     const box = document.createElement("div"), line = document.createElement("span"), leaf = document.querySelector("#fl-hint svg.leaf");
-    box.className = "empty-leaf muted"; line.textContent = I18N.t(key);
+    box.className = played.has(key) ? "empty-leaf muted rest" : "empty-leaf muted"; played.add(key); line.textContent = I18N.t(key);
     if (leaf) box.append(leaf.cloneNode(true));
     box.append(line);
     return box.outerHTML;
