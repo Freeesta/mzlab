@@ -1,5 +1,5 @@
 // Loads mzlab/web/sw.js with a mocked service-worker scope: app files are cache-first by site version (hit, miss -> network -> checked against
-// the manifest -> put), navigations are network-first, a manifest of another version bypasses the cache, the background fill, old caches go.
+// the manifest -> put), navigations are network-first, a manifest of another version bypasses the cache, the background fill, unchanged files carried over from the previous version, old caches go.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -129,11 +129,44 @@ function mondo(net = { ...FILES }, man = manifest()) {
   await w.get("static/app.js");
   assert.equal(w.st.waits, n, "stale: no event kept open (the newer worker activates only when the older one has none)");
 }
-{ // old caches go, the current ones stay
+{ // old caches go, the current ones stay; an earlier app cache stays until this version's fill is done
   const w = mondo();
   for (const n of ["mzlab-app-old", "mzlab-app-abc", "mzlab-big-v-1", "mzlab-big-v-0", "qqq-app-x", "other"]) await w.ctx.caches.open(n);
   await new Promise(r => { w.listeners.activate({ waitUntil: p => p.then(r) }); });
-  assert.deepEqual((await w.ctx.caches.keys()).sort(), ["mzlab-app-abc", "mzlab-big-v-1", "other"]);
+  assert.deepEqual((await w.ctx.caches.keys()).sort(), ["mzlab-app-abc", "mzlab-app-old", "mzlab-big-v-1", "other"]);
+}
+{ // after a deploy: a file with the same bytes comes from the earlier version's cache, a changed one from the network
+  const w = mondo();
+  const old = await w.ctx.caches.open("mzlab-app-old");
+  await old.put(new Request(O + "static/app.js"), new Response("app()", { status: 200 }));
+  await old.put(new Request(O + "static/lazy.js"), new Response("lazy() of v0", { status: 200 }));
+  assert.equal(await (await w.get("static/app.js")).text(), "app()");
+  assert.equal(w.netCount("static/app.js"), 0, "unchanged file: not downloaded again " + w.st.fetches);
+  assert.ok(await (await w.ctx.caches.open("mzlab-app-abc")).match(O + "static/app.js"), "copied into this version's cache");
+  assert.equal(await (await w.get("static/lazy.js")).text(), "lazy()", "changed file: the bytes of this version");
+  assert.equal(w.netCount("static/lazy.js"), 1);
+}
+{ // the fill copies the unchanged files, downloads the others, then the earlier cache goes
+  const w = mondo();
+  const old = await w.ctx.caches.open("mzlab-app-old");
+  for (const p of ["index.html", "static/app.js", "static/big.wasm"]) await old.put(new Request(O + p), new Response(FILES[p], { status: 200 }));
+  w.listeners.install(); w.timers[0]();
+  const cache = await w.ctx.caches.open("mzlab-app-abc");
+  for (let i = 0; i < 200 && !await cache.match(O + ".fill-done"); i++) await new Promise(r => setTimeout(r, 10));
+  for (let i = 0; i < 200 && (await w.ctx.caches.keys()).includes("mzlab-app-old"); i++) await new Promise(r => setTimeout(r, 10));
+  for (const p of ["index.html", "static/app.js", "static/big.wasm"]) assert.equal(w.netCount(p), 0, p + " copied, not downloaded");
+  assert.equal(w.netCount("static/lazy.js"), 1);
+  assert.ok(await cache.match(O + "static/big.wasm"));
+  assert.deepEqual((await w.ctx.caches.keys()).filter(n => n.startsWith("mzlab-app-")), ["mzlab-app-abc"], "earlier cache deleted once full");
+}
+{ // a worker of an older version (the manifest on the network is newer) never deletes the other app caches
+  const w = mondo(undefined, manifest({ app: "newer" }));
+  const mine = await w.ctx.caches.open("mzlab-app-abc");
+  await mine.put(new Request(O + ".fill-done"), new Response("ok"));
+  await w.ctx.caches.open("mzlab-app-newer");
+  w.listeners.install(); w.timers[0]();
+  await new Promise(r => setTimeout(r, 50));
+  assert.ok((await w.ctx.caches.keys()).includes("mzlab-app-newer"), "the newer version's cache stays");
 }
 { // install does not wait; the background fill stores every file of the manifest except the big ones, then leaves its mark
   const w = mondo();

@@ -6,7 +6,7 @@
 // The big, rarely changing files (Ketcher; the Python of mzFinder) live in their own cache. Offline, everything comes from the caches.
 try { importScripts("static/nomi.js"); } catch (_) { /* local testing */ }
 const APPV = "__APP__";
-const APP = (typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "mzlab-app-") + APPV, BIG = (typeof NOMI !== "undefined" ? NOMI.CACHE_BIG : "mzlab-big-") + "__BIG__";
+const APPFX = typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "mzlab-app-", APP = APPFX + APPV, BIG = (typeof NOMI !== "undefined" ? NOMI.CACHE_BIG : "mzlab-big-") + "__BIG__";
 /** @type {ServiceWorkerGlobalScope} */
 const sw = /** @type {any} */ (self);
 const BASE = new URL("./", location.href);                       // the site root: this file sits there
@@ -78,6 +78,31 @@ let appCache = null;
 const abrirApp = () => appCache || (appCache = caches.open(APP).catch(err => { appCache = null; throw err; }));
 /** The copy in `cache`; a URL with a query is looked up ignoring it (the query only busts browser caches), which scans the cache, so only then. */
 const buscar = (/** @type {Cache} */ cache, /** @type {Request} */ req) => cache.match(req, new URL(req.url).search ? { ignoreSearch: true } : undefined);
+/** The app caches of earlier versions, kept until this version's fill is done: a file whose bytes did not change is copied from them, not
+ * downloaded again (after a deploy most files are the same; the HTTP cache of a visit days later no longer has them). */
+/** @type {Promise<string[]> | null} */
+let prevP = null;
+const previas = () => prevP || (prevP = caches.keys().then(k => k.filter(n => n.startsWith(APPFX) && n !== APP)).catch(() => []));
+/** The copy of `req` in an earlier version's cache when its SHA-256 is the one this version's manifest promises, else null. */
+const heredado = async (/** @type {Request} */ req, /** @type {string | undefined} */ want) => {
+  if (!want) return null;
+  for (const n of await previas()) {
+    try {
+      const hit = await buscar(await caches.open(n), req);
+      if (hit && hit.status === 200 && await shaDe(hit) === want) return hit;
+    } catch (_) { /* that cache is gone: the network answers */ }
+  }
+  return null;
+};
+/** Deletes the earlier versions' caches once this version's cache is complete. Only the worker of the version on the network does it (manifest
+ * asked again): an older worker still running would otherwise drop the cache of the newer one. */
+const olvidar = async () => {
+  if (!(await previas()).length) return;
+  manP = null;
+  if (!await manifestoSw() || stale) return;
+  for (const n of await previas()) await caches.delete(n);
+  prevP = Promise.resolve([]);
+};
 const guardar = async (/** @type {Cache} */ cache, /** @type {Request} */ req, /** @type {Response} */ res) => {
   try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ }
 };
@@ -85,7 +110,7 @@ const guardar = async (/** @type {Cache} */ cache, /** @type {Request} */ req, /
 const llenar = async () => {
   try {
     const cache = await abrirApp();
-    if (await cache.match(MARK)) return;
+    if (await cache.match(MARK)) { await olvidar(); return; }
     const man = await manifestoSw();
     if (!man) return;
     const todo = Object.keys(man).filter(p => !nofill.has(p));
@@ -97,7 +122,8 @@ const llenar = async () => {
           const req = new Request(new URL(p.split("/").map(encodeURIComponent).join("/"), BASE).href);
           if (stale) { failed++; continue; }
           if (have.has(req.url)) continue;
-          const { res, ok } = await traer(req, man[p]);
+          const prev = await heredado(req, man[p]);
+          const { res, ok } = prev ? { res: prev, ok: true } : await traer(req, man[p]);
           if (ok && !stale) {
             await guardar(cache, req, res);
             if (p.endsWith("index.html")) await guardar(cache, new Request(new URL(p.slice(0, -"index.html".length), BASE).href), res);   // the page is also asked for as its folder
@@ -106,7 +132,7 @@ const llenar = async () => {
       }
     };
     await Promise.all(Array.from({ length: FILL_PARALLEL }, worker));
-    if (!failed && !stale) await cache.put(MARK, new Response("ok"));
+    if (!failed && !stale) { await cache.put(MARK, new Response("ok")); await olvidar(); }
   } catch (_) { /* retried when the worker starts again */ }
 };
 let filled = false;
@@ -119,7 +145,7 @@ sw.addEventListener("install", () => {
 sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUntil((async () => {
   const pfx = typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-";
   for (const k of await caches.keys()) {
-    if (k.startsWith("qqq-") || (k.startsWith(pfx) && k !== APP && k !== BIG)) {
+    if (k.startsWith("qqq-") || (k.startsWith(pfx) && !k.startsWith(APPFX) && k !== BIG)) {     // earlier app caches stay until the fill (previas)
       await caches.delete(k);
     }
   }
@@ -133,7 +159,10 @@ const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) 
   if (!visto) await manifestoSw();      // a restarted worker of an older version must not serve its old files to a newer page before it knows (one request, shared)
   if (!stale) { const hit = await buscar(cache, req); if (hit) return isolata(hit); }
   try {
-    const { res, ok } = await traer(req, await expected(new URL(req.url)));
+    const want = await expected(new URL(req.url));
+    const prev = stale ? null : await heredado(req, want);
+    if (prev) { later(guardar(cache, req, prev)); return isolata(prev); }
+    const { res, ok } = await traer(req, want);
     if (ok && !stale) later(guardar(cache, req, res));
     return isolata(res);
   } catch (err) {
