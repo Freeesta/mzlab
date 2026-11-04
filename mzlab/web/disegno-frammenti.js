@@ -17,7 +17,7 @@ async function sha256(/** @type {ArrayBuffer} */ b) {
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256", b))].map(x => x.toString(16).padStart(2, "0")).join("");
 }
 
-/** the app: the same two functions as the .wasm, asked of the native engine (`feat/grafo`); an error is thrown as the text `{error_key, params}`, as the .wasm throws it */
+/** the app: the same functions as the .wasm, asked of the native engine (`feat/grafo`); an error is thrown as the text `{error_key, params}`, as the .wasm throws it */
 function nativo() {
   const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
   const ask = async (/** @type {Record<string, any>} */ body) => {
@@ -29,6 +29,7 @@ function nativo() {
   return {
     fragments: (/** @type {string} */ molfile, /** @type {number} */ a, /** @type {number} */ b) => ask({ kind: "fragments", molfile, a, b }),
     partial: (/** @type {string} */ molfile, /** @type {string} */ delta) => ask({ kind: "partial", molfile, delta }),
+    labels: (/** @type {string} */ request) => ask({ kind: "labels", request }),
   };
 }
 
