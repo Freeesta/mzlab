@@ -90,13 +90,14 @@ export async function fragmentItems(/** @type {any} */ K, /** @type {MouseEvent}
   const st = K.editor.struct(), b = hit.map === "bonds" ? st.bonds.get(hit.id) : null, atom = b ? b.begin : hit.id;
   const piece = h.pieces().find(p => p.ids.includes(atom)), mf = piece && h.pieceMolfile(piece.ids); if (!piece || !mf) return [];
   /** @type {Item[]} */ const items = [];
+  let live = true;                                                  // false when the engine (.wasm) cannot answer: «All cuts…» would do nothing
   if (b) {
     const r = await cutsOf(mf, piece.ids.indexOf(b.begin), piece.ids.indexOf(b.end));
     if (r === "ring") items.push({ text: h.t("draw.frag.ring") });
     else if (r && r[0]) r[0].sides.forEach(s => { const line = sideLine(s, h.num, h.t); items.push({ text: line, run: () => h.copy(line) }); });
-    else items.push({ text: h.t("draw.frag.off") });
-  }
-  items.push({ text: h.t("draw.frag.all"), title: h.t("draw.frag.all.title"), run: async () => {
+    else { items.push({ text: h.t("draw.frag.off") }); live = false; }
+  } else live = await carica().then(() => true, () => false);
+  if (live) items.push({ text: h.t("draw.frag.all"), title: h.t("draw.frag.all.title"), run: async () => {
     const cuts = await cutsOf(mf);
     if (Array.isArray(cuts)) h.table(cutsTable(cuts, piece.ids.map(i => st.atoms.get(i).label), h.num, h.t));
   } });
