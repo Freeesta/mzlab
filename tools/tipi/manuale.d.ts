@@ -57,7 +57,7 @@ type FileAperto = { file: string; label?: string; gone?: boolean; color?: string
 /** A file still to be opened one by one (E.pending). */
 type Pendiente = { file: string; label: string; state: string; msg?: string };
 /** A file as the loading code handles it: the File of the picker or of a converter, plus the records that makers (Rust engine, readers module) attach. */
-type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { motivi: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any } };
+type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { motivi: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any }; mzlabGz?: { name: string; size: number }; mzlabTemp?: string };
 /** What one loading collects for the notice after it (shell.js reportLoad). */
 type CaricaRep = { unopen: { name: string; ext: string; label: string; st: string }[]; other: string[]; errs: Record<string, string[]>; moved: { dam: string[]; data: string[] }; notes: string[]; diag?: Record<string, any>; [k: string]: any };
 

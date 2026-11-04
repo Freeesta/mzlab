@@ -108,3 +108,25 @@ fn i_casi_ostili_danno_una_chiave() {
         Some("error.memoryBudget")
     );
 }
+
+/// `x.mzXML.gz` in the app and the CLI (registry, `tutte`): the scans of the inflated mzXML, exactly. The site gunzips it into OPFS with `mzlab_core::gunzip` and gives the
+/// `.mzXML` to the module, which is the same reader: the mzML both write is the same.
+#[cfg(feature = "tutte")]
+#[test]
+fn un_mzxml_gz_si_apre_come_il_suo_mzxml() {
+    let piano = comune::mzxml::mzxml(&comune::mzxml::corsa(), comune::mzxml::PIATTO);
+    let mut dal_gz = abre("run.mzXML.gz", gz(&piano), &Limiti::sito()).unwrap();
+    let mut dal_piano = abre("run.mzXML", piano.clone(), &Limiti::sito()).unwrap();
+    let n = dal_piano.campioni()[0].scansioni;
+    assert!(n > 0);
+    assert_eq!(dal_gz.campioni()[0].scansioni, n);
+    assert_eq!(mzml_scritto(&mut dal_gz), mzml_scritto(&mut dal_piano));
+    // the bytes the site writes into OPFS before the module reads them
+    let mut g = mzlab_core::gunzip::Gunzip::new(u64::MAX);
+    let mut sito = Vec::new();
+    for p in gz(&piano).chunks(333) {
+        sito.extend(g.push(p).unwrap());
+    }
+    sito.extend(g.finish().unwrap().0);
+    assert_eq!(sito, piano);
+}
