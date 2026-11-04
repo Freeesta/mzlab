@@ -22,12 +22,11 @@ const g = /** @type {any} */ (globalThis);
 /** @type {{ found: Partial<Record<Nome, boolean>>, done: Promise<Record<string, boolean>> | null }} */
 const state = g.__capacita || (g.__capacita = { found: {}, done: null });
 
-// test switch: ?cap-off=a,b, MZLAB_CAP_OFF (string or array) and the older MZLAB_NO_SIMD
+// test switch: ?cap-off=a,b, MZLAB_CAP_OFF (string or array)
 function forcedOff() {
   /** @type {Set<string>} */ const off = new Set();
   try { for (const n of String(new URLSearchParams(g.location && g.location.search).get("cap-off") || "").split(",")) if (n) off.add(n.trim()); } catch (_) { /* no location */ }
   const w = g.MZLAB_CAP_OFF; for (const n of Array.isArray(w) ? w : String(w || "").split(",")) if (n) off.add(String(n).trim());
-  if (g.MZLAB_NO_SIMD) off.add("simd128");
   return off;
 }
 

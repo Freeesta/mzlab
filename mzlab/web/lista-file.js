@@ -148,13 +148,13 @@ function syncBrowse() {
   if (act && act.k !== E.cur) STATO.file(act.k, "browse");
   paintScanOf();
 }
-/** In the header of a chromatogram that drives a spectrum: whose scans are shown, when several files are overlaid (the active one). */
+/** Secondary label in the header of a spectrum that follows a chromatogram: whose scan it is, when several files are overlaid (the chromatogram title never names a file). */
 function paintScanOf() {
   E.panels.forEach(q => {
     if (!q.el) return;
     q.el.querySelectorAll(".pscan").forEach(x => x.remove());
-    const m = /** @type {any} */ (q)._mate, f = E.files[E.cur];
-    if (q.type !== "chrom" || !m || m.type !== "spec" || !f || tabFiles(q.tab || E.tab).filter(g => g.vis).length < 2) return;
+    const f = E.files[q.k];
+    if (q.type !== "spec" || !q.link || q.all || !f || tabFiles(q.tab || E.tab).filter(g => g.vis).length < 2) return;
     const t = document.createElement("span"); t.className = "pscan"; t.textContent = I18N.t("panel.scanOf", { f: f.label });
     (q.el.querySelector(".ppair") || q.el.querySelector(".pnum") || q.el.firstChild)?.after(t);
   });

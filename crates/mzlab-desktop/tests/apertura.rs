@@ -100,3 +100,53 @@ fn counter_and_answer_survive_in_the_config_file() {
     let old = read_config(t.path());
     assert!(old.esterne && old.aperture == 0 && old.risposta.is_none());
 }
+
+#[test]
+fn accepted_extensions_come_from_the_readers_registry() {
+    let all = mzlab_desktop::apertura::file_extensions();
+    // every single-file reader extension is there, folder-only ones are not
+    for e in [
+        ".mzml", ".mzxml", ".raw", ".wiff", ".qgd", ".lcd", ".cdf", ".nc",
+    ] {
+        assert!(all.iter().any(|x| x == e), "{e}");
+    }
+    assert!(!all.iter().any(|x| x == ".d"));
+    let dlg = mzlab_desktop::apertura::dialog_extensions();
+    assert!(dlg.contains(&"MZXML".to_string()) && dlg.contains(&"mzxml".to_string()));
+    assert!(dlg.iter().all(|x| !x.starts_with('.') && !x.contains('.')));
+    assert!(dlg.contains(&"gz".to_string()));
+}
+
+/// `tauri.conf.json` (static) must list exactly the extensions derived from the registry.
+#[test]
+fn file_associations_in_tauri_conf_match_the_registry() {
+    let conf =
+        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tauri.conf.json")).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&conf).unwrap();
+    let mut got: Vec<String> = v["bundle"]["fileAssociations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|r| r["ext"].as_array().unwrap().iter())
+        .map(|e| e.as_str().unwrap().to_ascii_lowercase())
+        .collect();
+    got.sort();
+    assert_eq!(got, mzlab_desktop::apertura::associated_extensions());
+}
+
+#[test]
+fn mzxml_wiff_and_mzml_gz_files_are_taken_but_not_other_gz() {
+    let t = tempfile::tempdir().unwrap();
+    let d = t.path();
+    for n in ["a.mzXML", "b.wiff", "c.mzML.gz", "d.txt.gz"] {
+        std::fs::write(d.join(n), b"x").unwrap();
+    }
+    let args: Vec<String> = ["a.mzXML", "b.wiff", "c.mzML.gz"]
+        .iter()
+        .map(|x| x.to_string())
+        .collect();
+    assert_eq!(
+        paths_from_args(&args, Some(d)),
+        vec![d.join("a.mzXML"), d.join("b.wiff"), d.join("c.mzML.gz")]
+    );
+}

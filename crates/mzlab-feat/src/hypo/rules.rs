@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use mzlab_core::elements::parse_formula;
+use mzlab_core::elements::parse_term;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
 
@@ -94,7 +94,7 @@ pub fn parse_delta(text: &str) -> Result<Counts> {
         if body.is_empty() {
             return Ok(());
         }
-        for (el, n) in parse_formula(body)? {
+        for (el, n) in parse_term(body)? {
             *out.entry(el).or_insert(0) += sign * n as i64;
         }
         body.clear();

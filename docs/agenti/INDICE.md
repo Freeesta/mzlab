@@ -7,6 +7,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | integrazione dei picchi nella vista Dati (strumento automatico, un clic = tutti i picchi in HR, parametri, `auto_integrate`) | `docs/agenti/dati-integrazione.md` |
 | primo caricamento di più file (si apre solo il primo), campi della tabella di carico | `docs/agenti/dati-carico.md` |
 | barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
+| titoli dei pannelli (regole uniche per tipo di pannello × segnale, `titoli.js`, etichetta «spettro di», nomi dei file esportati) | `docs/agenti/titoli-pannelli.md` |
 | affiancare e spostare i pannelli (maniglia, zone di rilascio, divisori, annulla) | `docs/agenti/pannelli-affianca.md` |
 | esportazioni a pezzi in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenienza, pulizia di `export/`) | `docs/agenti/dati-esporta.md` |
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
@@ -115,7 +116,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusione.rs` (chiavi, blocchi, nome), comando `diagnosi_infusione` | `docs/agenti/infusione-lente.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
-| tooltip: regola (solo se aggiungono informazione), inventario, hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
+| tooltip: regola (solo se aggiungono informazione), inventario, elenco completo dei testi (`tools/elenco_tooltip.py`), hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
 | file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
 | elenco degli esperimenti MSn di un file DDA nella finestra «Albero MSn» (schede Experiments/Tree, TIC e XIC di un precursore, `msn-elenco.js`, colonne `lev`/`z` di `/api/dda`, `ptol` di `/api/chrom`) | `docs/agenti/msn-elenco.md` |
 | audit delle pagine (ogni vista × campioni × pulsanti dell'header: CLS, pannelli che si spostano, memoria, errori; `tests_e2e/audit_pagine.py`, test di fumo `e2e_giro_intestazione`) | `docs/studi/AUDIT_PAGINE.md` |

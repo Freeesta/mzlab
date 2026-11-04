@@ -121,7 +121,8 @@ const PT = { chrom: "@chrom", spec: "@spec", xic: "@xic", mrm: "@mrm", map: "@ma
 /** @type {Record<string, string>} */
 const PT_OLD = { "Cromatogramma": PT.chrom, "Spettro di massa": PT.spec, "Ione estratto (XIC)": PT.xic, "Transizioni MRM": PT.mrm, "Mappa RT-m/z": PT.map, "Spettro degli ioni prodotto": PT.product, "Simulazione isotopica": PT.isosim, "Spettro composito": PT.composite };
 const ptProduct = (/** @type {number | null} */ prec) => prec != null ? `@product:${prec}` : PT.product;
-const ptMs2 = (/** @type {number | null} */ prec) => prec != null ? `@ms2prec:${prec}` : "MS²";
+// a chromatogram of the MS2 tab is a TIC of its experiment; it names a precursor only when the file holds several (titoli.js)
+const ptMs2 = (/** @type {number | null} */ prec) => prec == null ? "@ms2tic" : window.TITOLI && TITOLI.nPrecOf(tabFiles("ms2")) <= 1 ? "@ms2tic" : `@ms2prec:${prec}`;
 const ptComposite = (/** @type {string} */ t0, /** @type {string} */ t1) => `@composite:${t0}:${t1}`;
 function ptNorm(/** @type {string} */ s) {
   if (!s || typeof s !== "string") return s;
@@ -134,11 +135,13 @@ function ptNorm(/** @type {string} */ s) {
 function ptitle(/** @type {string} */ s) {  // the title to show
   if (!s || s[0] !== "@") return s || "";
   const [c, ...a] = s.slice(1).split(":");
-  if (c === "product") return a[0] != null ? I18N.t("panel.title.ms2prec", { prec: a[0] }) : I18N.t("panel.title.product");
+  if (c === "product") return a[0] != null ? I18N.t("panel.title.productOf", { prec: a[0] }) : I18N.t("panel.title.product");
+  if (c === "ms2tic") return I18N.t("panel.title.ticMs2");
   if (c === "ms2prec") return I18N.t("panel.title.ms2prec", { prec: a[0] });
   if (c === "composite") return a.length ? I18N.t("panel.title.composite", { t0: a[0], t1: a[1] }) : I18N.t("panel.title.compositeBare");
   return ["chrom", "spec", "xic", "mrm", "sim", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
 }
+const ptitleP = (/** @type {Pannello} */ p) => window.TITOLI ? TITOLI.di(p) : ptitle(p.title);  // the shown title of a live panel (a typed title is kept)
 function closePanel(/** @type {Pannello} */ p) {
   if (!p) return;
   // the last mate of a row goes back to the full width (a panel resized alone is not touched: it has no mates)
@@ -361,7 +364,7 @@ function addPanel(type, o, after) {
       ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.csv"), icon: IC_DL, fn: () => {
         const t = plotSheets(p); if (t) dlc(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
       }}]),
-      ...(p.type === "spec" ? AZIONI.scarichi({ vista: "spec", p, a: p._a }) : []),
+      ...(p.type === "spec" ? [...(window.TABPICCHI && !p.uv ? [TABPICCHI.item(p, IC_DL)] : []), ...AZIONI.scarichi({ vista: "spec", p, a: p._a })] : []),
       ...(window.BANCO && BANCO.on() ? [{ label: I18N.t("panel.dl.copyPng"), fn: () => BANCO.copyPng(p) }, ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.copyData"), fn: () => BANCO.copyText(p) }])] : [])
     ]);
   };
@@ -550,10 +553,11 @@ function plotName(/** @type {Pannello} */ p) {
   const lst = (/** @type {any[]} */ arr, /** @type {(v: any) => any} */ f) => arr.length <= 3 ? arr.map(f).join("+") : I18N.t("export.file.ions", { n: arr.length });
   const rtm = p.r0 != null ? "RT" + ((p.r0 + p.r1) / 2).toFixed(1) : "";
   let parts;
-  if (p.type === "chrom") parts = [p.kind.toUpperCase(), ft];
+  const pr = p.prec != null && p.prec !== "" ? "prec" + +(+p.prec).toFixed(2) : "";  // the ion a panel belongs to is in its file name too
+  if (p.type === "chrom") parts = [p.kind.toUpperCase() + (p.kind === "pda" && p.mz0 != null ? "-" + p.mz0 + (p.mz1 != null && p.mz1 !== p.mz0 ? "-" + p.mz1 : "") + "nm" : ""), pr, ft];
   else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, (/** @type {number} */ v) => +v.toFixed(mzd(p))) : "", ft];
   else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, (/** @type {string} */ v) => String(v).replace(">", "-")) : "", ft];
-  else if (p.type === "spec") parts = [p.uv ? "UV" : I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, rtm];
+  else if (p.type === "spec") parts = [p.uv ? "UV" : I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, p.level === 2 ? pr : "", rtm];
   else parts = [I18N.t("export.file.map"), ft];
   if (p.title && p.title[0] !== "@") parts = [p.title, ft];  // a title typed by the student names the file; the default titles are codes
   return fname(parts.filter(Boolean).join("_")).slice(0, 60) || I18N.t("export.file.chart");
@@ -568,7 +572,7 @@ function plotMeta(/** @type {Pannello} */ p) {
   else if (p.fondo && p.fondo.mode === "auto") d.push(I18N.t("export.desc.fondoAuto", { text: fondoText(p) }));
   if (window.SUBREF && SUBREF.text(p)) d.push(SUBREF.text(p));
   if (a.x0 != null) d.push(I18N.t("export.desc.axis", { a: a.x0.toFixed(p.type === "spec" ? 1 : 2), b: a.x1.toFixed(p.type === "spec" ? 1 : 2) }));
-  return [["Title", ptitle(p.title) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
+  return [["Title", ptitleP(p) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
 }
 // writes tEXt chunks (Latin-1) right after the IHDR of a PNG
 const CRCT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -667,7 +671,7 @@ const ms2Scans = (/** @type {MzFile} */ x, /** @type {number} */ v) => (x.ms2_ex
 function ctl(/** @type {Pannello} */ p) {
   hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl"), wl = p.type === "chrom" ? wlCtl(p) : "";
-  t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === PT.xic ? I18N.t("panel.title.xicOne", { label: p.traces[0].label }) : ptitle(p.title);  // a single trace is named in the title
+  t.textContent = ptitleP(p);  // titoli.js: the title says what the panel shows
   if (window.SPECBAR && p.type === "spec") SPECBAR.title(p, t);
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";  // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some((/** @type {Pannello} */ q) => q.id === p.link) || E.panels.some((/** @type {Pannello} */ q) => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped

@@ -1,6 +1,6 @@
 # Studio: CI veloce (workflow di GitHub)
 
-Scopo: con fino a 15 chat in parallelo, ridurre la durata dei job e la coda dei runner senza togliere nessun controllo. Le chat non possono modificare `.github/workflows/`: i file proposti, interi e pronti da incollare, sono in `docs/studi/ci_veloce/`; li applica Federico dall'editor di GitHub.
+Scopo: con fino a 15 chat in parallelo, ridurre la durata dei job e la coda dei runner senza togliere nessun controllo. Le chat non possono modificare `.github/workflows/`: i file proposti, interi e pronti da incollare, sono in `docs/archivio/studi/ci_veloce/`; li applica Federico dall'editor di GitHub.
 
 ## 1. Misure
 
@@ -62,7 +62,7 @@ Ordine: 1-4 insieme (desktop, sito-rust, rust, pages), poi `test.yml` (5) da sol
 
 ## 4. Istruzioni per incollare (una riga per file)
 
-Per ognuno: GitHub → `.github/workflows/<nome>` → matita → seleziona tutto → incolla il file di `docs/studi/ci_veloce/` → «Commit changes» su `main`.
+Per ognuno: GitHub → `.github/workflows/<nome>` → matita → seleziona tutto → incolla il file di `docs/archivio/studi/ci_veloce/` → «Commit changes» su `main`.
 
 1. `desktop.yml`: cache solo da main con chiave per sistema/`Cargo.lock`/versione della CLI, Tauri CLI dalla cache, `wasm-bindgen.exe` in cache, installer con `-- --profile desktop` e bundle in `target/[triple/]desktop/`.
 2. `sito-rust.yml`: `sito-unit` tolto, controlli rapidi in testa a `sito-e2e`, cache con chiave sul contenuto del Rust.
@@ -70,7 +70,7 @@ Per ognuno: GitHub → `.github/workflows/<nome>` → matita → seleziona tutto
 4. `pages.yml`: cache Rust sul contenuto, cache dei download MassBank e delle fonti dei sospetti.
 5. `test.yml` (4 controlli obbligatori, nomi invariati): pytest con `-n auto --dist loadfile`, cache salvate solo da main.
 6. `release.yml`: le stesse cache dei download di `pages.yml`.
-7. `.claude/settings.json` (non è un workflow): incollare `docs/studi/ci_veloce/claude-settings.json` (§5).
+7. `.claude/settings.json` (non è un workflow): incollare `docs/archivio/studi/ci_veloce/claude-settings.json` (§5).
 
 Dopo ciascuno: il primo run su main salva le cache nuove (può durare quanto oggi), dal secondo valgono i tempi della tabella. Se un run diventa rosso, si torna al file precedente dalla cronologia del file su GitHub.
 
@@ -86,4 +86,4 @@ Le regole `Read(...)` valgono anche per `ls`, `cat`, `du`, `stat` in shell, anch
 | `tests_e2e/shots/**` | le immagini costano token | blocca anche il giudizio visivo che CLAUDE.md ammette | tenere: è raro, e il permesso per una sola immagine si concede a mano |
 | `__pycache__`, `.pytest_cache`, `*.egg-info`, `misure-diario.md`, file di `mzlab/web/` | file generati o enormi | nessuno | tenere |
 
-File proposto, da incollare al posto di `.claude/settings.json` (lo applica Federico): `docs/studi/ci_veloce/claude-settings.json`. Unica differenza: `Read(./site/**)` diventa le otto regole sotto `site/static/`; `site/static/wasm/`, `site/index.html` e i file piccoli generati diventano leggibili.
+File proposto, da incollare al posto di `.claude/settings.json` (lo applica Federico): `docs/archivio/studi/ci_veloce/claude-settings.json`. Unica differenza: `Read(./site/**)` diventa le otto regole sotto `site/static/`; `site/static/wasm/`, `site/index.html` e i file piccoli generati diventano leggibili.

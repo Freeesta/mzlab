@@ -150,7 +150,7 @@ try:
         step("second death within a minute: the engine stops, an error with a key, the page asks to reload", die_twice)
         def no_simd():
             # a browser without SIMD128 (forced by the test switch): the engine does not start and the note names the minimum versions
-            pg2 = ctx.new_page(); pg2.add_init_script("window.MZLAB_NO_SIMD = true")
+            pg2 = ctx.new_page(); pg2.add_init_script("window.MZLAB_CAP_OFF = ['simd128']")
             pg2.goto(f"http://127.0.0.1:{PORT}/"); pg2.wait_for_function("window.MZLAB_RUST !== undefined", timeout=60000)
             pg2.wait_for_function("window.MZLAB_RUST.disabled === true", timeout=30000)
             note = pg2.inner_text("#rust-note"); assert "91" in note and "16.4" in note, note

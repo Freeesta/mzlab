@@ -7,10 +7,10 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
-import { mountTablet } from "./disegno-tablet.js";
+import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -71,7 +71,7 @@ function start() {
     }
     
     return k; });
-  starting.catch(e => dnote(e.message));
+  starting.catch(e => { console.error(e); dnote(I18N.t("draw.error.ketcherNotStarted")); });   // never Ketcher's raw English: the cause stays in the console
   starting.finally(() => FRAME.next(() => FRAME.next(() => { fr.classList.remove("kwait"); Q("#kload").hidden = true; }))).catch(() => {});
   return starting;
 }
@@ -336,7 +336,7 @@ const dnote = (/** @type {string} */ msg) => { const w = Q("#smi-warn"); w.textC
   const out = [...groups.values()].map(g => ({ ids: g, x: Math.min(...g.map((/** @type {number} */ i) => st.atoms.get(i).pp.x)), y: Math.min(...g.map((/** @type {number} */ i) => st.atoms.get(i).pp.y)) }));
   return out.sort((a, b) => a.x - b.x || a.y - b.y);
 }
-/** @param {number[]} ids @param {Set<number>} [noCharge] */ const pieceMolfile = (ids, noCharge) => molfileOf(K.editor.struct(), ids, noCharge, l => l in MONO);
+/** @param {number[]} ids @param {Set<number>} [noCharge] */ const pieceMolfile = (ids, noCharge) => molfileOf(K.editor.struct(), ids, noCharge, isElement);
 /** @param {number[]} ids @param {Set<number>} [noCharge] */ async function pieceSmiles(ids, noCharge) {
   const mf = pieceMolfile(ids, noCharge); if (!mf) return null;
   try {
@@ -401,7 +401,8 @@ async function showInfo1() {
   const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
   (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
   if (!set.size) { sc.hidden = true; pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.select")) + '</div>'; return; }   // the table is filled only for a selected molecule
-  const all = /** @type {any[]} */ (pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map((/** @type {number} */ i) => st.atoms.get(i))) })));
+  const ps = pieces(set.size ? set : null), lr = await labelsNow({ structures: ps.map(p => p.ids.map((/** @type {number} */ i) => atomOf(st.atoms.get(i)))), arrows: [] });
+  const all = /** @type {any[]} */ (ps.map((p, i) => { const e = lr && lr.structures[i]; return { ...p, c: e && !e.error ? { q: e.charge, formula: e.formula } : null }; }));
   for (const p of all) {                                                       // SMILES (Ketcher) and molecule (OpenChemLib) of each piece
     p.smi = await pieceSmiles(p.ids); p.mol = null;
     if (p.smi) { try { p.mol = OCL.Molecule.fromSmiles(p.smi); } catch (_) { /* no properties */ } }
@@ -433,7 +434,7 @@ async function showInfo1() {
     if (ion && neutOn && !m) perm = true;
     const pr = m ? new OCL.MoleculeProperties(m) : null, v = (/** @type {number} */ x, /** @type {number} */ d) => m ? x.toFixed(d) : "&ndash;";
     if (m && ion) usedNeutral = true;
-    const fo = m ? m.getMolecularFormula().formula : formulaOf(p.c.n).formula;       // a cut piece is closed with H: the formula is that of the SMILES shown
+    const fo = m ? m.getMolecularFormula().formula : p.c.formula;       // a cut piece is closed with H: the formula is that of the SMILES shown
     const sign = ion && !m ? (p.c.q > 0 ? "<sup>+</sup>" : "<sup>&minus;</sup>") : "";
     rows.push(`<tr><td>${fmtF(fo)}${sign}</td><td class="num"><b>${v(m && pr.logP, 2)}</b></td><td class="num">${v(m && pr.logS, 2)}</td><td class="num">${v(m && pr.polarSurfaceArea, 0)}</td><td class="num">${m ? pr.donorCount + "/" + pr.acceptorCount : "&ndash;"}</td></tr>`);
   }
@@ -451,79 +452,54 @@ document.addEventListener("click", e => { const tg = /** @type {any} */ (e.targe
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
 // but is NOT part of the structure (undo, .ket and SMILES are untouched). Added as text to the exported images.
-const MONO = /** @type {Record<string, number>} */ ({ H: 1.00782503, D: 2.01410178, C: 12, N: 14.00307401, O: 15.99491462, F: 18.99840322, Na: 22.98976928, Mg: 23.9850417, Al: 26.98153853,
-  Si: 27.97692653, P: 30.97376163, S: 31.97207100, Cl: 34.96885268, K: 38.96370668, Ca: 39.96259098, Fe: 55.9349375, Cu: 62.9295975, Zn: 63.9291422,
-  As: 74.9215965, Se: 79.9165213, Br: 78.9183371, Sn: 119.9021947, I: 126.904473, Hg: 201.970643, B: 11.0093054, Li: 7.01600455 });
-const ELECTRON = 0.00054858;
-// one entry per connected structure: formula (Hill order), charge, monoisotopic mass, bounding box (Ketcher coordinates, y down)
-// counts {C: 8, H: 9, ...} -> Hill formula and monoisotopic mass
-function formulaOf(/** @type {Record<string, number>} */ n) {
-  const keys = Object.keys(n).filter(k => n[k] > 0).sort();
-  const order = n.C > 0 ? ["C", ...(n.H > 0 ? ["H"] : []), ...keys.filter(k => k !== "C" && k !== "H")] : keys;
-  return { formula: order.map(k => k + (n[k] > 1 ? n[k] : "")).join(""), mass: order.reduce((m, k) => m + MONO[k] * n[k], 0) };
-}
-// element counts of some atoms of the drawing (with the H they carry in the drawing); null if an atom has no formula
-function countAtoms(/** @type {DrawKet[]} */ atoms) {
-  const n = /** @type {Record<string, number>} */ ({}); let q = 0;
-  for (const a of atoms) {
-    if (!(a.label in MONO)) return null;                 // R groups, "any atom", abbreviations: no formula
-    n[a.label] = (n[a.label] || 0) + 1;
-    const h = a.implicitH || 0; if (h) n.H = (n.H || 0) + h;
-    q += a.charge || 0;
-  }
-  return { n, q };
-}
-function structures() {
-  if (!K) return [];
+// one entry per connected structure: formula (Hill order, isotopes as [13C] and D), charge, masses from the engine (`etich/1`), bounding box (Ketcher coordinates, y down)
+function drawing() {
+  if (!K) return { structs: [], arrows: [] };
   const st = K.editor.struct(), ids = [...st.atoms.keys()], up = new Map(ids.map(i => [i, i]));
   const root = (/** @type {number} */ i) => { while (up.get(i) !== i) { up.set(i, up.get(up.get(i))); i = up.get(i); } return i; };
   st.bonds.forEach((/** @type {DrawKet} */ b) => { const a = root(b.begin), c = root(b.end); if (a !== c) up.set(a, c); });
   const groups = new Map();
   ids.forEach(i => { const r = root(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(st.atoms.get(i)); });
-  const out = /** @type {DrawStruct[]} */ ([]);
-  groups.forEach(atoms => {
-    const c = countAtoms(atoms); if (!c || !atoms.length) return;
-    const xs = atoms.map((/** @type {DrawKet} */ a) => a.pp.x), ys = atoms.map((/** @type {DrawKet} */ a) => a.pp.y);
-    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-    out.push({ ...formulaOf(c.n), n: c.n, q: c.q, cx: (x0 + x1) / 2, y: y1, x0, x1, y0, y1 });
+  const gs = /** @type {DrawKet[][]} */ ([...groups.values()]), box = gs.map(atoms => {
+    const xs = atoms.map(a => a.pp.x), ys = atoms.map(a => a.pp.y), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    return { cx: (x0 + x1) / 2, y: y1, x0, x1, y0, y1 };
   });
-  return out;
+  const arrows = /** @type {{ x: number, y: number, pair: number[] }[]} */ ([]);   // each arrow joins the nearest structure before it and after it, on its line
+  st.rxnArrows.forEach((/** @type {DrawKet} */ ar) => {
+    const [p0, p1] = ar.pos, left = Math.min(p0.x, p1.x), right = Math.max(p0.x, p1.x), ym = (p0.y + p1.y) / 2, ix = box.map((_, i) => i);
+    const near = (/** @type {number} */ i) => ym >= box[i].y0 - 1.5 && ym <= box[i].y1 + 1.5;
+    const before = ix.filter(i => near(i) && box[i].cx < left).sort((a, b) => box[b].x1 - box[a].x1)[0], after = ix.filter(i => near(i) && box[i].cx > right).sort((a, b) => box[a].x0 - box[b].x0)[0];
+    if (before !== undefined && after !== undefined) arrows.push({ x: (p0.x + p1.x) / 2, y: ym, pair: [before, after] });
+  });
+  const r = labelsOf({ structures: gs.map(g => g.map(atomOf)), arrows: arrows.map(a => a.pair) }, () => FRAME.next(drawLabels));
+  if (!r) return { structs: [], arrows: [] };
+  return { structs: /** @type {DrawStruct[]} */ (box.map((b, i) => ({ ...r.structures[i], q: r.structures[i].charge, ...b })).filter(d => !d.error)), arrows: arrows.map((a, i) => ({ ...a, r: r.arrows[i] })).filter(a => a.r) };
 }
-// reaction arrows: what changes from the structure before the arrow to the one after it (e.g. "+O", "-CH2")
+const structures = () => drawing().structs;
+// reaction arrows: what changes from the structure before the arrow to the one after it (e.g. "+O", "-CH2"; «isotopologue» when only isotopes move)
 function arrowDeltas() {
   if (!K || !Q("#lb-a").checked) return [];            // optional, off by default: the students do this calculation themselves
-  const comps = structures(), out = /** @type {{ x: number, y: number, parts: DrawLine }[]} */ ([]);
-  K.editor.struct().rxnArrows.forEach((/** @type {DrawKet} */ ar) => {
-    const [p0, p1] = ar.pos, left = p0.x <= p1.x ? p0 : p1, right = p0.x <= p1.x ? p1 : p0, ym = (p0.y + p1.y) / 2;
-    const near = (/** @type {DrawStruct} */ c) => ym >= c.y0 - 1.5 && ym <= c.y1 + 1.5;                // roughly on the same line as the arrow
-    const before = comps.filter(c => near(c) && c.cx < left.x).sort((a, b) => b.x1 - a.x1)[0];
-    const after = comps.filter(c => near(c) && c.cx > right.x).sort((a, b) => a.x0 - b.x0)[0];
-    if (!before || !after) return;
-    const els = [...new Set([...Object.keys(before.n), ...Object.keys(after.n)])], gain = /** @type {Record<string, number>} */ ({}), loss = /** @type {Record<string, number>} */ ({});
-    for (const e of els) { const d = (after.n[e] || 0) - (before.n[e] || 0); if (d > 0) gain[e] = d; if (d < 0) loss[e] = -d; }
-    const conv = (/** @type {string} */ f) => f === "H3N" ? "NH3" : f;                              // Hill order would write H3N: students know NH3
-    const g = conv(formulaOf(gain).formula), l = conv(formulaOf(loss).formula), dm = after.mass - before.mass;
-    const parts = /** @type {DrawLine} */ ([]);
-    const push = (/** @type {string} */ sign, /** @type {string} */ f) => { parts.push([sign, ""]); for (const m of f.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); } parts.push([" ", ""]); };
-    if (g) push("+", g); if (l) push("\u2212", l);
-    if (!g && !l) parts.push([I18N.t("draw.labels.sameFormula") + " ", ""]);
+  return drawing().arrows.map(a => {
+    const { gain, loss, isotopologue, dm } = a.r, parts = /** @type {DrawLine} */ ([]);
+    const push = (/** @type {string} */ sign, /** @type {string} */ f) => { parts.push([sign, ""], ...formulaParts(f), [" ", ""]); };
+    if (gain) push("+", gain); if (loss) push("\u2212", loss);
+    if (isotopologue) parts.push([I18N.t("draw.labels.isotopologue") + " ", ""]); else if (!gain && !loss) parts.push([I18N.t("draw.labels.sameFormula") + " ", ""]);
     parts.push([`\u0394m ${dm >= 0 ? "+" : "\u2212"}${Math.round(Math.abs(dm))}`, ""]);   // unit resolution: the integer is enough
-    out.push({ x: (p0.x + p1.x) / 2, y: ym, parts });
+    return { x: a.x, y: a.y, parts };
   });
-  return out;
 }
+// the mass shown and copied: m/z of an ion, else the exact mass with decimals or the nominal mass (sum of the mass numbers) without
+const massOf = (/** @type {DrawStruct} */ d, /** @type {number} */ dec) => d.q ? (dec ? rh(/** @type {number} */ (d.mz), dec).toFixed(dec) : String(rh(/** @type {number} */ (d.mz), 0))) : dec ? rh(d.mass, dec).toFixed(dec) : String(d.nominal);
 // text of a label as LINES of pieces: [[text, "sub" | "sup" | "it" | ""], ...] (formula on the first line, "m/z 241" in italics on the next)
-function labelParts(/** @type {DrawStruct} */ d0) {
-  const d = d0, parts = /** @type {DrawLine} */ ([]), f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
+function labelParts(/** @type {DrawStruct} */ d) {
+  const parts = /** @type {DrawLine} */ ([]), f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
   if (f) {
-    for (const x of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([x[1], ""]); if (x[2]) parts.push([x[2], "sub"]); }
+    parts.push(...formulaParts(d.formula));
     if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
   }
   if (m) {
-    const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass;
     const line = f ? (lines.push([]), lines[1]) : parts;
-    const lab = d.q ? "m/z" : dec ? "exact mass" : "nominal mass";
-    line.push([lab, "it"], [` ${dec ? rh(raw, dec).toFixed(dec) : rh(raw, 0)}`, ""]);
+    line.push([d.q ? "m/z" : I18N.t(dec ? "draw.labels.exactMass" : "draw.labels.nominalMass"), "it"], [` ${massOf(d, dec)}`, ""]);
   }
   return lines;
 }
@@ -775,8 +751,8 @@ function labelHit(/** @type {MouseEvent} */ ev) {
   } catch (_) { return null; }
 }
 // formula as the student can paste it in the Data view: Hill formula, then the charge (C10H14N+, C6H5O2-)
-const formulaText = (/** @type {DrawStruct} */ d) => d.formula + (d.q ? (Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "-") : "");
-const massText = (/** @type {DrawStruct} */ d) => { const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass, dec = +Q("#lb-dec").value; return dec ? rh(raw, dec).toFixed(dec) : String(rh(raw, 0)); };
+const formulaText = (/** @type {DrawStruct} */ d) => d.text;   // [C3H2O4]2-: the charge count is not read as a subscript
+const massText = (/** @type {DrawStruct} */ d) => massOf(d, +Q("#lb-dec").value);
 function labelMenu(/** @type {any} */ ev, /** @type {DrawStruct} */ d, /** @type {HTMLElement} */ fr, /** @type {boolean} */ kbd = false) {
   const m = Q("#ctx"); if (!m) return;
   const fr0 = fr.getBoundingClientRect();

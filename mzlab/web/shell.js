@@ -44,7 +44,7 @@ function applyView(){const v=S.view,d=v==="data";
  hh();addEventListener("scroll",()=>hd.classList.toggle("scrolled",scrollY>4),{passive:true});addEventListener("resize",hh);if(window.ResizeObserver)new ResizeObserver(hh).observe(hd)}
 window.hdrH=()=>document.querySelector("header").offsetHeight;
 // Back and Forward walk through the views
-/** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){v=VIEW_ALIAS[v]||v;STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
+/** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
 document.querySelectorAll("#nav button:not([data-late])").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 // Back/Forward and typed addresses: the view follows the hash
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
@@ -173,6 +173,13 @@ const DEMO_SETS=/** @type {Record<string, string[]>} */ ({full:[0,5,10,15,30].ma
 async function rawToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
   return NATIVO.raws(files,(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name))}
 // an mzML with MS-Numpress arrays is read as it is by the engine through the `aperti` module (nativo.js numpress): no mzML is written, «Download .mzML» writes it on request
+// a .mzML.gz on the site: a stand-in File that the worker of the engine inflates into OPFS piece by piece (gz-flusso.js); a numpress one, or one without the stream, goes to the module (in memory, with a notice for a big file); a .mzXML.gz without the stream cannot be read here
+async function gzToEngine(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ rep){if(!files.some(f=>/\.gz$/i.test(f.name)))return files;await carica("m:gz-flusso.js");const G=window.GZFLUSSO,st=G.stream(),out=[];
+  for(const f of files){if(!G.isGz(f.name)||f.mzlabNat||f.mzlabModulo){out.push(f);continue}
+    if(/\.mzxml\.gz$/i.test(f.name)){if(st)out.push(f);else{const m=I18N.t("err.file.gzStream");(rep.errs[m]=rep.errs[m]||[]).push(f.name)}continue}
+    if(st&&!(await G.numpress(f))){out.push(G.stand(f));continue}
+    const n=G.memoryNote(f);if(n)rep.notes.push(n);out.push(f)}
+  return out}
 async function numpressToNat(/** @type {FileCarica[]} */ files){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,M=window.LETTORI_MOD;if(!rb||rb.disabled||!rb.nativo||window.MZLAB_DESKTOP||!M)return files;return NATIVO.numpress(files,async(/** @type {FileCarica} */ f)=>(await M.variante(f))==="aperti")}
 // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 const WIFF_WAIT=new Map();
@@ -212,7 +219,7 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
 const LETT_FORCE=/[?&]lettori=modulo\b/.test(location.search);
 /** the family whose module takes `f` ("" = none): a sample the engine refused, a file with an extension only a module reads, a dataset the module of its family says the engine cannot do (probe) */
 async function moduloWants(/** @type {typeof LETTORI_MOD} */ M,/** @type {FileCarica} */ f){
-  if(f.mzlabModulo)return f.mzlabModulo.fam;const n=f.name.toLowerCase();
+  if(f.mzlabModulo)return f.mzlabModulo.fam;if(f.mzlabGz)return "";const n=f.name.toLowerCase();if(n.endsWith(".mzxml.gz"))return "aperti";      // gzToEngine kept it: inflated into OPFS, then read as an mzXML
   if(M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return M.famigliaDi([n]);
   // an mzML with numpress arrays: the engine refuses it (err.file.numpress), the module writes it again with zlib
   if(n.endsWith(".mzml")&&!f.mzlabNat){const v=await M.variante(f);if(v)return v}
@@ -228,21 +235,22 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
   const jobs=new Map();for(const f of files){const fam=await moduloWants(M,f);if(fam)jobs.set(f,fam)}if(!jobs.size){if(onFile)files.forEach(f=>onFile(f,null));return files}
   const g=ConvUI.group(),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.filter(f=>!jobs.has(f)).map(f=>f.name)];
   // every file of the batch has its row (Queued) from the start, so the count over the table is the count of the headline
-  const names=new Map();for(const f of jobs.keys()){const lot=f.mzlabModulo||f.mzlabNat,nm=lot?f.name:M.mzmlName(f.name,taken);taken.push(nm);names.set(f,nm);CONVROWS.add(nm,"wait")}
+  const names=new Map();for(const f of jobs.keys()){const lot=f.mzlabModulo||f.mzlabNat,nm=lot?f.name:M.mzmlName(f.name.replace(/\.gz$/i,""),taken);taken.push(nm);names.set(f,nm);CONVROWS.add(nm,"wait")}
   let i=0;
   for(const f of files){
     if(!jobs.has(f)){out.push(f);if(onFile)onFile(f,g);continue}
-    i++;const lot=f.mzlabModulo||f.mzlabNat,mem=lot?lot.members:[{name:f.name,blob:f}],nm=names.get(f);
+    i++;const lot=f.mzlabModulo||f.mzlabNat,nm=names.get(f);let mem=lot?lot.members:[{name:f.name,blob:f}],temp="";
     if(g.signal.aborted||OPENNOW.held(nm))continue;
     let ready=null;CONVROWS.set(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
-    try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},ui.signal);
+    try{if(/\.mzxml\.gz$/i.test(f.name)){const x=await window.GZFLUSSO.mzxml(f,(/** @type {number} */ fr)=>CONVROWS.set(nm,"run",Math.floor(50*fr)),ui.signal);temp=x.mzlabTemp;mem=[{name:x.name,blob:x}]}      // its mzXML, inflated into conv/ (half of the row's bar)
+      const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},ui.signal);
       ui.done();CONV.add(nm,blob);if(/** @type {any} */ (blob).mzlabMissing)M.missing.set(nm,/** @type {any} */ (blob).mzlabMissing);ready=new File([blob],nm);out.push(ready)}
     catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
-    finally{CONVROWS.drop(nm)}
+    finally{CONVROWS.drop(nm);if(temp)window.GZFLUSSO.drop(temp)}
     if(ready&&onFile)onFile(ready,g)}
   for(const nm of names.values())CONVROWS.drop(nm);
   out.panel=g;return out}
-// true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
+// true where the engine converts .raw itself (desktop): the guide then appears only for the formats it cannot convert
 let CONVERT_RAW=false;
 function fileKind(/** @type {string} */ name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return null;return window.FORMATI_NOTI.classify(n)||"other"}
 function ssGet(/** @type {string} */ k){try{return sessionStorage.getItem(k)}catch(e){return null}}
@@ -321,11 +329,11 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
     if(signal.aborted){CONVROWS.finish(f.name,"cancel");PROGRESSO.end(f.name);return}
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     // a converted file: its index is the last phase of the bar of the conversion
-    const pn=panel&&CONV.has(f.name)?panel:null,QQQ_NET=!window.QQQ_BROWSER,mono=()=>Math.floor(100*PROGRESSO.file(f.name));
+    const pn=panel&&CONV.has(f.name)?panel:null,mono=()=>Math.floor(100*PROGRESSO.file(f.name));
     // the bar of the row: load 0-40, read 40-85, index 85-100 (rowPc, progresso.js) whatever the reader; the same fraction of the model always gives the same percent
     const rp=()=>Math.min(99,Math.floor(rowPc(!!f.mzlabNat,PROGRESSO.file(f.name)))),rowSt=(/** @type {string} */ phase,/** @type {number} */ pc)=>phase==="load"?"load":f.mzlabNat?NATIVO.rowState(phase):pc>=85?"idx":"nscan";let tot=0;
     CONVROWS.set(f.name,f.mzlabNat?"index":"load",0);if(pn)pn.index(f.name,0);
-    /** @param {{ done: number, total: number }} [det] */ const put=(/** @type {number} */ frac,/** @type {string} */ phase,/** @type {{ done: number, total: number } | null | undefined} */ sub,det)=>{PROGRESSO.set(f.name,QQQ_NET?PROG_NET.send+(1-PROG_NET.send)*frac:frac,phase);const pc=rp();CONVROWS.set(f.name,rowSt(phase,pc),pc,sub,det);if(pn)pn.index(f.name,Math.min(99,mono()))};
+    /** @param {{ done: number, total: number }} [det] */ const put=(/** @type {number} */ frac,/** @type {string} */ phase,/** @type {{ done: number, total: number } | null | undefined} */ sub,det)=>{PROGRESSO.set(f.name,frac,phase);const pc=rp();CONVROWS.set(f.name,rowSt(phase,pc),pc,sub,det);if(pn)pn.index(f.name,Math.min(99,mono()))};
     // the worker tells the phase, the fraction, the scans of the sample done (done/total) or that the file waits for a free builder (wait); the last message goes to the diagnosis
     const onIdx=(/** @type {Event} */ e)=>{const d=/** @type {CustomEvent} */ (e).detail;if(d.name!==f.name)return;CONVROWS.note(f.name,`${d.phase||"?"} ${(+d.frac||0).toFixed(3)}${d.total?` scans ${d.done}/${d.total}`:""}${d.wait?" queued":""}`);
       if(d.wait){CONVROWS.set(f.name,"wait",rp());return}
@@ -333,7 +341,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
       if(d.total)tot=d.total;      // the scans of an mzML are known from its first event; the builder then tells the position in the file, so the scans read are that share of them
       put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:!f.mzlabNat&&tot?{done:Math.round(tot*Math.max(0,Math.min(1,(d.frac-0.4)/0.585))),total:tot}:null)};
     addEventListener("mzlab-index",onIdx);
-    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
+    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
       if(j.error)throw I18N.err(j);const x=(j.files||[]).find((/** @type {FileRiga} */ y)=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files,true);ST.methods=j.methods||ST.methods;renderMethods();if(!isDam)OPENNOW.add(f.name);
       LOADFAIL.delete(f.name)}
     catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
@@ -344,7 +352,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // a saved fragmentation graph (g.json) opens by itself, without raw data: infusione-grafo-apri.js
   if(files.some(f=>/\.json$/i.test(f.name))){await carica("m:infusione-grafo-apri.js");files=await INFGAPRI.take(files,rep)}
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
-  const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);files=await gzToEngine(files,rep);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   // a file that is not for the list (a by-product, a format we do not read) is told in the notice; the others are kept
   const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name)){if(/\.log$/i.test(f.name))(rep.logs=rep.logs||[]).push(f.name);return false}const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
   // the same group dropped again: no second notice

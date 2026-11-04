@@ -1,4 +1,4 @@
-# Modulo «aperti»: formati aperti (mzML con numpress, mzML gzip, mzXML)
+# Modulo «aperti»: formati aperti (mzML con numpress, mzML e mzXML gzip, mzXML)
 
 Famiglia `aperti` (`crates/mzlab-lettori/src/aperti/`, feature `aperti`, tetto 393 216 B, `.wasm` in `wasm-lettori/aperti/`). Contratto dei lettori e caricamento a richiesta: `lettori-modulo.md`, `estendere.md`.
 
@@ -14,8 +14,11 @@ Famiglia `aperti` (`crates/mzlab-lettori/src/aperti/`, feature `aperti`, tetto 3
 
 ## mzML gzip (`aperti/mzml_gz.rs`)
 - `VOCE` `id "mzml-gz"`, `.mzml.gz`: `riconosci` vuole i byte magici gzip e `<mzML`/`<indexedmzML` nei primi 4 KB decompressi (`Fiducia::Si`). `apri` decomprime TUTTO in memoria (`MultiGzDecoder`, tetto `Limiti::byte`, `error.memoryBudget` oltre; gzip rotto `err.file.zlib`; un gzip troncato con qualche byte già gonfiato si apre con gli spettri che ha e `Lettore::mancanti` conta gli altri) e passa il file a `mzml_numpress::apri`, che legge anche gli array piani.
-- La pagina lo manda sempre al modulo (`soloModulo`). Un gzip più grande del tetto non si apre: leggerlo a flusso su OPFS è lavoro a parte.
-- Prove: `crates/mzlab-lettori/tests/aperti_gz.rs`, `mzml_varianti_tests.rs` (CLI).
+- `VOCE_MZXML` `id "mzxml-gz"`, `.mzxml.gz` (solo feature `tutte`: app e CLI, non il modulo del sito, che non ha margine sotto il tetto): stessa decompressione, poi lo legge `mzxml`.
+- Sul sito (`gz-flusso.js`, `shell.js` `gzToEngine`) il gzip si gonfia a flusso nel worker del motore: `Gunzip` del `.wasm` (`mzlab_core::gunzip`, `MultiGzDecoder` in scrittura, pezzi da 1 MiB letti e 64 KiB per volta) scrive su OPFS con `archivio.js` `putStream`, senza mai tenere il file intero. Un `.mzML.gz` diventa `files/<nome>.mzML.gz.part`, poi `files/<nome>.mzML` (`putGz`, `lr_put` con `gz`), e prosegue come un mzML caricato; il posto chiesto è l'ISIZE del gzip (`gzRoom`).
+- Un `.mzXML.gz` sul sito si gonfia in `conv/gz~<pagina>~<caso>.mzXML` (`lr_gunzip`, `gunzipTo`), che il modulo legge come `.mzXML`; il file temporaneo si toglie a conversione finita. All'avvio (`lr_boot`) spariscono i `.gz.part` liberi e i `gz~` di pagine il cui lucchetto `mzlab-gzses:<pagina>` è libero. «Annulla» ferma il flusso al pezzo dopo e toglie il file parziale.
+- Senza flusso (`?gz=memoria`, OPFS senza handle sincroni) o con array MS-Numpress nella testa gonfiata (`GZFLUSSO.numpress`) il `.mzML.gz` va al modulo, gonfiato in memoria; sopra 50 MB compressi la riga dice `load.note.gzMemory`. Un `.mzXML.gz` senza flusso si rifiuta con `err.file.gzStream`. `DecompressionStream` di Chromium si ferma al primo membro di un gzip a più membri: per questo l'inflate è in Rust.
+- Prove: `crates/mzlab-lettori/tests/aperti_gz.rs`, `mzml_varianti_tests.rs` (CLI), `crates/mzlab-desktop/tests/gz_mzml.rs` (mzML del sito = originale byte per byte; TIC, BPC, XIC, spettri e scansioni del sito = app), `tests/carica_worker_node.mjs` (`putGz`, `gunzipTo`, `gzRoom`), `tests_e2e/e2e_gz_flusso.py`.
 
 ## mzXML (`aperti/mzxml.rs`)
 - `VOCE` `id "mzxml"`, `.mzxml`: `riconosci` vuole `<mzXML` nei primi 4 KB (`Fiducia::Si`). Il lettore decodifica da sé (nessuna riscrittura in mzML): `mzxml_indice.rs` (offset), `mzxml_scan.rs` (una scansione), `mzxml_testata.rs` (testata, `metodo/1`, `Header`). Il motore non lo legge: `LETTORI_FAM.aperti.soloModulo` contiene `.mzxml`, quindi la pagina lo manda sempre al modulo.
