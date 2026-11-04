@@ -7,7 +7,7 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
-import { initCerca } from "./disegno-cerca.js";
+import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js";
 import { indigo } from "./disegno-indigo.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
@@ -105,7 +105,7 @@ function placePill(/** @type {Document} */ d) {
 let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
 function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
   try {
-    const d = /** @type {Document} */ (fr.contentDocument), st = d.createElement("style");
+    const d = /** @type {Document} */ (fr.contentDocument), st = d.createElement("style"); guardPaste(d, () => dnote(I18N.t("draw.quick.notFound")));
     // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
     // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
     st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
@@ -752,7 +752,7 @@ function syncBg() {                                    // JPEG cannot be transpa
 }
 Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
-Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
+Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
