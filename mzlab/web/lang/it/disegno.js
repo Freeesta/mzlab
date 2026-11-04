@@ -60,6 +60,8 @@ I18N.add("it", {
   "draw.keys.trackpad": "Sposta il disegno; pizzico per lo zoom",
   "draw.font.label": "Dimensione dei simboli degli atomi",
   "draw.font.title": "Cambia la dimensione dei simboli degli atomi nel disegno",
+  "draw.copy.options": "Opzioni di copia",
+  "draw.skip": "Vai a Disegna veloce",
   "draw.font.small": "Piccoli",
   "draw.font.medium": "Medi",
   "draw.font.large": "Grandi",
