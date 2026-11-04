@@ -123,7 +123,11 @@ fn margin_minutes(rt: &[f64], margin_s: f64) -> f64 {
     if margin_s > 0.0 {
         return margin_s / 60.0;
     }
-    let mut d: Vec<f64> = rt.windows(2).map(|w| w[1] - w[0]).filter(|x| *x > 0.0).collect();
+    let mut d: Vec<f64> = rt
+        .windows(2)
+        .map(|w| w[1] - w[0])
+        .filter(|x| *x > 0.0)
+        .collect();
     if d.is_empty() {
         return 0.0;
     }
@@ -145,12 +149,7 @@ fn widen(rt: &[f64], lo: usize, hi: usize, margin: f64) -> (usize, usize) {
 }
 
 /// (feature, candidate) pairs: the peak spans the MS1 scan of the candidate and its m/z is inside the window. Sorted by candidate.
-fn pairs(
-    f: &FileFeatures,
-    cands: &[Cand],
-    rt: &[f64],
-    margin_min: f64,
-) -> Result<Vec<(u32, u32)>> {
+fn pairs(f: &FileFeatures, cands: &[Cand], rt: &[f64], margin_min: f64) -> Result<Vec<(u32, u32)>> {
     let nscan = rt.len();
     let mut start = filled(nscan + 2, 0u32)?;
     for c in cands {

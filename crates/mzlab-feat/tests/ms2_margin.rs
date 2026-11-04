@@ -67,7 +67,13 @@ fn row() -> FileFeatures {
     f.flags.push(0);
     f.iso_group.push(0);
     f.charge.push(0);
-    for v in [&mut f.shape, &mut f.snr, &mut f.fwhm, &mut f.asym, &mut f.purity] {
+    for v in [
+        &mut f.shape,
+        &mut f.snr,
+        &mut f.fwhm,
+        &mut f.asym,
+        &mut f.purity,
+    ] {
         v.push(0.0);
     }
     f.gaps.push(0);
