@@ -3,7 +3,8 @@
 // `nome(p, ctx)` is pure (tests/titoli_node.js); `di(p)` reads the state of the page. A title typed by the student is kept as written.
 (() => {
   const T = (/** @type {string} */ k, /** @type {any} */ a) => I18N.t(k, a);
-  const [MS2, MRM] = typeof ESP !== "undefined" ? [ESP.ms2, ESP.mrm] : ["ms2", "mrm"];  // the experiment name comes from esperimenti.js (a plain node test has no ESP)
+  // the experiment name and the MRM test come from esperimenti.js (ESP.mrm is a predicate on the panel, not a name)
+  const MS2 = ESP.ms2, isMrm = ESP.mrm;
   const SUP = ["", "¹", "²", "³"];
   const fnm = (/** @type {number} */ v) => String(+(+v).toFixed(2));
   /** distinct precursors (0.6 Da) of the MS2 files shown @param {any[]} files */
@@ -35,7 +36,7 @@
       return "MS¹";
     }
     if (p.type === "xic") return (p.traces || []).length === 1 ? T("panel.title.xicOne", { label: p.traces[0].label }) : T("panel.title.xic");
-    if (p.type === MRM) {
+    if (isMrm(p)) {
       const sim = t === "@sim", trs = Array.isArray(p.tr) ? p.tr : p.tr ? [p.tr] : [];
       return trs.length === 1 ? T(sim ? "panel.title.simOne" : "panel.title.mrmOne", { tr: trs[0] }) : T(sim ? "panel.title.sim" : "panel.title.mrm");
     }
