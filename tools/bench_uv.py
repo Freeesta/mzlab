@@ -71,9 +71,9 @@ def main():
                 box = pg.evaluate(f"(()=>{{const p={C};p.cv.scrollIntoView({{block:'center'}});const b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X({rt}),y:b.y+M.t+(a.H-M.t-M.b)/2}}}})()")
                 n0 = pg.evaluate("E.panels.filter(q=>q.uv).length")
                 pg.mouse.dblclick(box["x"], box["y"])
-                attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length>{n0} && __U.dr.some(d=>d.ok&&d.id===E.panels.filter(q=>q.uv).pop().id)", TMO)
-                v = pg.evaluate("__U"); nid = pg.evaluate("E.panels.filter(q=>q.uv).pop().id"); t = min(d["t1"] for d in v["dr"] if d["id"] == nid and d["ok"])
-                ntr = pg.evaluate("(()=>{const u=E.panels.filter(q=>q.uv); const s=u[u.length-1]; return s._a.uvd.ser ? s._a.uvd.ser.length : 1})()")
+                attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length>{n0} && __U.dr.some(d=>d.ok&&d.id===Math.max(...E.panels.filter(q=>q.uv).map(q=>q.id)))", TMO)
+                v = pg.evaluate("__U"); nid = pg.evaluate("Math.max(...E.panels.filter(q=>q.uv).map(q=>q.id))"); t = min(d["t1"] for d in v["dr"] if d["id"] == nid and d["ok"])
+                ntr = pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id==={nid}); return s._a.uvd.ser ? s._a.uvd.ser.length : 1}})()")
                 return {**phases(v, t), "traces": ntr}
             def run(name, fn, *a):
                 try: res["gestures"][name] = fn(*a)
