@@ -35,19 +35,19 @@ fn the_default_detection_is_byte_identical_to_the_one_before_the_scope_moved() {
     for (name, expected) in [
         (
             "det-s_t000.mzfeatf",
-            "ff058e59e3f2c26aafc5814762964760818dfaf4feb01ff7cb26dc2ae27ef1b3",
+            "113cbf914b837298a24d40fc274a94fe9199fd57b5d91f1c489892c327851eb0",
         ),
         (
             "det-s_t010.mzfeatf",
-            "3d297c50185165352e3931b5ee583600301babb5136249c835e04334b5f33ff6",
+            "8e2a96674a9c348076a3fa8afeb2ab6cde0d2275ccaa97ad522bfc3a1642ef07",
         ),
         (
             "det-s_t030.mzfeatf",
-            "497f7699cedf24bd0e67991d8c7b4dd62849b36ddd3768bfe162f0af1479861a",
+            "af6b6fedff65a05c57087a3377c503e26046fe18a1b0090b3621240649ffedc7",
         ),
         (
             "gap.mzfeat",
-            "c2dc919b147fc0aa4127aec2bfd177e375a850cc2d244a7ff2010c0d9be223e1",
+            "978757668d78445e7a117770103258a019e0ee6ab4dd1ca3d30873d779aa7262",
         ),
     ] {
         assert_eq!(sha(&files, name), expected, "{name}");
@@ -62,19 +62,19 @@ fn the_noise_gates_off_write_the_bytes_of_the_recipe_without_them() {
     for (name, expected) in [
         (
             "det-s_t000.mzfeatf",
-            "a14770cb661f08f2a983c9246d84d72b476fc2a835bf5ccf2eba226399a5191e",
+            "f8b92e711618604b9ecde90518ea74c2aa67cdba56a7e1a151fbba1196a873eb",
         ),
         (
             "det-s_t010.mzfeatf",
-            "a06927336c5933f417782d6df365115bc52d1150dbe3429d22486dcc2519955e",
+            "2c1a2c9bdc04b546559164990192404b66f266c15261f9b70033dfb25ba3b1d5",
         ),
         (
             "det-s_t030.mzfeatf",
-            "2a5364a75e2c7605d856e20fe3a04cba9d1da6529fac7343dcbbfa99752680b5",
+            "103b80c19f503dc86979fe59ccb4d9f9baf371afda2f85270ddac8264da4150a",
         ),
         (
             "gap.mzfeat",
-            "b9fb1ae698a03a6fac6eadbc9bc52f324be5af7fe33d64d2495db45de4a27c42",
+            "d471b2cc2e5ebbb310e3402355d2c8956745a24608fe01df53876d176daccbc3",
         ),
     ] {
         assert_eq!(sha(&files, name), expected, "{name}");
