@@ -46,7 +46,7 @@ def run_page(query, fn, port):
     try:
         with sync_playwright() as p:
             pg = r.page(p)
-            if query: pg.goto(f"http://127.0.0.1:{r.port}/{query}"); pg.wait_for_timeout(800)
+            if query: pg.goto(f"http://127.0.0.1:{r.port}/{query}"); attendi(pg, "window.MZLAB_RUST_READY !== undefined", timeout=60000)
             fn(pg)
     finally:
         r.close()
@@ -67,10 +67,9 @@ def cancel(pg):
     pg.set_input_files("#pick", str(big))
     pg.wait_for_function("document.querySelector('#fl-up [data-uptxt]') && /\\d+\\s*%/.test(document.querySelector('#fl-up').textContent)", timeout=120000)
     pg.evaluate("cancelLoads()")
-    pg.wait_for_function("UPBUSY === 0", timeout=120000); pg.wait_for_timeout(500)
+    attendi(pg, "UPBUSY === 0", timeout=120000)
     assert pg.evaluate("ST.files.length") == 0, pg.evaluate("ST.files.map(f => f.name)")
-    o = pg.evaluate(OPFS)
-    assert not any(n.startswith("files/c.mzML") for n in o), o
+    attendi(pg, OPFS.replace("return out.sort(); }", "return !out.some(n => n.startsWith('files/c.mzML')); }"))
 def memory(pg):
     pg.set_input_files("#pick", str(small)); opened(pg)
     assert pg.evaluate("!!(window.LETTORI_MOD && window.LETTORI_MOD.loaded)"), "?gz=memoria did not take the readers module"
@@ -82,15 +81,13 @@ def mzxml(pg):
 def mzxml_gz(pg):
     pg.set_input_files("#pick", str(xgz)); opened(pg)
     assert pg.evaluate(TIC) == res["xtic"], "the TIC of the .mzXML.gz is not the one of its .mzXML"
-    pg.wait_for_timeout(500)
-    o = pg.evaluate(OPFS)
-    assert not any(n.startswith("conv/gz~") for n in o), o
+    attendi(pg, OPFS.replace("return out.sort(); }", "return !out.some(n => n.startsWith('conv/gz~')); }"))
 def orphans(pg):
     pg.evaluate("""async () => { const root = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab", { create: true });
       for (const [k, n] of [["files", "o.mzML.gz.part"], ["conv", "gz~deadpage~ab.mzXML"]]) {
         const w = await (await (await root.getDirectoryHandle(k, { create: true })).getFileHandle(n, { create: true })).createWritable(); await w.write("x"); await w.close(); } }""")
-    pg.reload(); pg.wait_for_function("window.MZLAB_RUST_READY !== undefined", timeout=60000)
-    pg.wait_for_function(OPFS.replace("return out.sort(); }", "return !out.some(n => n.includes('o.mzML.gz.part') || n.includes('gz~deadpage')); }"), timeout=60000)
+    pg.reload(); attendi(pg, "window.MZLAB_RUST_READY !== undefined", timeout=60000)
+    attendi(pg, OPFS.replace("return out.sort(); }", "return !out.some(n => n.includes('o.mzML.gz.part') || n.includes('gz~deadpage')); }"), timeout=60000)
 
 try:
     step("the plain mzML opens (reference TIC)", lambda: run_page("", plain_tic, 8861))
