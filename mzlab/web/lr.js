@@ -169,7 +169,7 @@ export function createLr({ rb }) {
       items = items.filter(it => base(it.file.split("#")[0]) !== n);      // a mixed file's items are named `file#tag`
       if (!items.length) { items = null; hr = lr = false; }
     }
-    rb.noteRemove(n); rb.noteExplore(null);
+    rb.noteRemove(n); rb.noteExplore(items ? { samples: items.map(it => ({ file: it.file })) } : null);      // the files left open again at their new indexes (the page follows by name: reindexAfterFree)
     return json({ files: sorted(), methods: mr.list() });
   }
 
