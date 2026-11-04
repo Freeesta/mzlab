@@ -206,12 +206,12 @@ function scanLine(p, data, d0) {
   reg({ id: "spec.copy", gruppo: "value", disponibile: /** @param {any} c */ c => c.has,
     nome: () => T("ctx.spec.copy"), aria: /** @param {any} c */ c => T("ctx.spec.copy.aria", { mz: c.lab }), esegui: /** @param {any} c */ c => { try { navigator.clipboard.writeText(c.lab).catch(() => {}); } catch (_) { /* clipboard unavailable */ } } });
   // low resolution: the product-ion spectrum of a precursor peak of the Full Scan
-  reg({ id: "spec.extractMs2", gruppo: "xic", visibile: /** @param {any} c */ c => c.p.level === 1 && !c.a.hrp && typeof ms2Exps === "function" && ms2Exps().length > 0, disponibile: /** @param {any} c */ c => c.has && !!ms2OfPeak(c.p, c.m), nome: () => T("ctx.spec.extractMs2"), aria: /** @param {any} c */ c => T("ctx.spec.extractMs2.aria", { mz: c.lab }),
+  reg({ id: "spec.extractMs2", gruppo: "xic", visibile: /** @param {any} c */ c => c.p.level === 1 && !c.a?.hrp && typeof ms2Exps === "function" && ms2Exps().length > 0, disponibile: /** @param {any} c */ c => c.has && !!ms2OfPeak(c.p, c.m), nome: () => T("ctx.spec.extractMs2"), aria: /** @param {any} c */ c => T("ctx.spec.extractMs2.aria", { mz: c.lab }),
     esegui: /** @param {any} c */ c => { const e2 = ms2OfPeak(c.p, c.m); if (e2) extractMs2(c.p, e2); } });
   reg({ id: "spec.xic", gruppo: "xic", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, disponibile: /** @param {any} c */ c => c.has, nome: /** @param {any} c */ c => T("ctx.spec.xic", { mz: c.lab }), esegui: /** @param {any} c */ c => xicDirect(c.m, c.p) });
   // the double click on a peak: its MS2 when a scan of that precursor exists (tolerance of the Banco in HR, 0.6 in unit resolution), otherwise its XIC (not a menu entry)
   reg({ id: "spec.peak", gruppo: "xic", menu: false, scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.picco" }, disponibile: /** @param {any} c */ c => !!c.has, doppio: /** @param {any} c */ c => !!c.has, doppioOrd: 6, esegui: /** @param {any} c */ c => {
-    const id = c.a.hrp ? "spec.ms2" : "spec.extractMs2", a = AZIONI.voce(id);
+    const id = c.a?.hrp ? "spec.ms2" : "spec.extractMs2", a = AZIONI.voce(id);
     if (a && AZIONI.pronta(a, c)) AZIONI.esegui(id, c); else AZIONI.esegui("spec.xic", c);
   } });
   // the m/z on an XIC already open: one row per XIC, or one row that lists them when they are more than 3
@@ -229,7 +229,7 @@ function scanLine(p, data, d0) {
   reg({ id: "spec.annotate", gruppo: "tools", disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.annotate"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.m, text: v })); draw(c.p); } } });
   reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });
-  reg({ id: "spec.isoRes", gruppo: "tools", visibile: /** @param {any} c */ c => !!window.HR && !!c.a.hrp, disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoRes"), esegui: /** @param {any} c */ c => isoRes(c.p) });
+  reg({ id: "spec.isoRes", gruppo: "tools", visibile: /** @param {any} c */ c => !!window.HR && !!c.a?.hrp, disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoRes"), esegui: /** @param {any} c */ c => isoRes(c.p) });
   reg({ id: "spec.isoOff", gruppo: "tools", disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { COMANDI.fai("spec.isotopes", c.p, () => { c.p.iso = null; }); draw(c.p); } });
   // a spectrum that follows its chromatogram can be frozen; a frozen one can follow it again
   /** @param {any} p */

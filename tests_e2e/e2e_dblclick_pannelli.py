@@ -36,6 +36,15 @@ try:
             assert pg.evaluate("E.panels.find(p=>p.type==='chrom').zoom") is None, "double click did not reset the zoom"
             assert pg.evaluate("E.panels.length") == n, "a spectrum was extracted while zoomed"
         step("Chromatogram zoomed: double click resets the zoom and extracts no spectrum", zoomed)
+        def no_analysis():
+            open_kind(pg, "full"); ready(pg)
+            S = "E.panels.find(p=>p.type==='spec')"
+            if not pg.evaluate("!!" + S): dbl(".pnl.chrom"); pg.wait_for_function("!!" + S)
+            errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
+            pg.evaluate(f"{S}._a = null")                                # a spectrum panel that has no analysis yet (lab build: no example files)
+            pg.evaluate(f"(()=>{{const r={S}.cv.getBoundingClientRect();{S}.cv.dispatchEvent(new MouseEvent('dblclick',{{bubbles:true,clientX:r.left+r.width/2,clientY:r.top+r.height/2}}))}})()")
+            pg.wait_for_function("true"); assert not errs, errs
+        step("Spectrum without analysis: double click throws no error", no_analysis)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]
