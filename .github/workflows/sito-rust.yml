@@ -251,6 +251,9 @@ jobs:
     permissions:
       contents: read
       actions: read   # the job list of this run, read by tools/ci_attendi_job.py
+    # pages.yml's `native-e2e` runs the same native builds and saves their cache on every Rust change of main: its records count here (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: native-e2e
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -271,7 +274,7 @@ jobs:
       # the e2e tests call cargo (native build) side by side: one verified install of the pinned toolchain before them, else each asks rustup for it and they corrupt each other
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: python tools/ci_toolchain.py
-      # the two slow e2e (e2e_indice_parallelo, e2e_flow_msn) compile mzlab-core (example mzidx) and mzlab-cli in release natively: with the crates cached they only link (main saves the cache, as in test.yml)
+      # the two slow e2e (e2e_indice_parallelo, e2e_flow_msn) compile mzlab-core (example mzidx) and mzlab-cli in release natively: with the crates cached they only link (pages.yml `native-e2e` saves the cache)
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -279,8 +282,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: sito-v2-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py') }}-m1
+          key: pages-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           restore-keys: |
+            pages-e2e-${{ runner.os }}-
             sito-v2-e2e-${{ runner.os }}-
       - id: mtime
         name: Reuse the compiled crates of the cache
