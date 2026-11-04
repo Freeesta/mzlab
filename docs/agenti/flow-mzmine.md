@@ -19,9 +19,9 @@ Tabella di lavoro del Flow grafico (`docs/agenti/flow-grafica.md`). Dice cosa es
 | Feature resolving: ADAP wavelets, Savitzky-Golay, baseline resolver, noise amplitude | nessuna implementazione | nessuno |
 | Deisotoping: isotope grouper | `isotopes.rs` dentro `features.detect` (gruppo isotopico, mai scarta); `untargeted/isotopes.rs` | motore |
 | Deisotoping: isotope finder 4.10 | `untargeted/isofinder.rs` | motore |
-| Alignment: join aligner | `features.align`, modalità «per ione» e «per famiglia»; `untargeted/join.rs` | step, motore |
+| Alignment: join aligner | `features.align`, algoritmo `join` (`untargeted/join.rs`, ponte `untargeted/flow_align.rs`: `mz_weight`, `rt_weight`, `rt_tol`, tolleranza `ppm`/`abs_da`; righe per ione qualunque `mode`, solo in memoria, quindi una serie che non ci sta è rifiutata); `groups` di default (modalità «per ione» e «per famiglia») | step, motore |
 | Alignment: RANSAC, correzione dell'RT tra campioni | `features.align`, parametro `rt_warp` (`piecewise`, `loess`, `ransac`; `crates/mzlab-feat/src/rtwarp.rs`): ancore da un allineamento grossolano (`rt_coarse_gap`), curva per file, RT riportato a quello comune prima del raggruppamento; `off` di default | step |
-| Gap filling (stesso RT e m/z) | `features.gapfill`; `untargeted/gapfill.rs` | step, motore |
+| Gap filling (stesso RT e m/z) | `features.gapfill`, algoritmo `integrate` di default; algoritmo `peak_finder` (`untargeted/gapfill.rs`, ponte `untargeted/flow_align.rs`: `intensity_tol`, tolleranza `ppm`/`abs_da`, `rt_tol`, `min_points`, `floor` comuni; `max_gap`, `long_trace` e la mappa RT non si applicano) | step, motore |
 | Duplicate feature filter | `table.filter`, parametri `dup_ppm` e `dup_rt` (regola `duplicati`, `filters.rs`): tiene la riga più forte entro la finestra; l'allineamento scarta già i lobi FT | step |
 | Feature list rows filter | `table.filter` (campioni minimi, area, altezza, rapporto al bianco, MS2 richiesta) | step |
 | Blank subtraction | `table.filter`, parametro `blank_ratio`; `bianco.js` nella vista Dati HR | step |

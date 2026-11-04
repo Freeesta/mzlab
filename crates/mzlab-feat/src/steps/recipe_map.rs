@@ -11,6 +11,8 @@ use crate::centwave::{CentWave, Peak};
 use crate::lrnoise::set_gate;
 use crate::recipe::{Mode, Recipe};
 
+use super::recipe_algo;
+
 fn bad(step: &str, name: &str) -> Error {
     Error::new("err.flow.param.type")
         .with("instance", step)
@@ -56,7 +58,7 @@ fn set_tol_da(r: &mut Recipe, step: &str, x: f64) {
     }
 }
 
-/// Writes `params` (descriptor names, any order; `algorithm` and `axis` are applied before the rest; `algorithm` is `centwave`, `masstrace` or `adap_localmin` for `features.detect`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
+/// Writes `params` (descriptor names, any order; `algorithm` and `axis` are applied before the rest; `algorithm` is `centwave`, `masstrace` or `adap_localmin` for `features.detect`, `groups` or `join` for `features.align`, `integrate` or `peak_finder` for `features.gapfill`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
 pub fn apply(r: &mut Recipe, step: &str, params: &[(String, Value)]) -> Result<()> {
     let mut sorted: Vec<&(String, Value)> = params.iter().collect();
     mzlab_core::sortc::slice_by_key(&mut sorted, |(k, _)| {
@@ -206,6 +208,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
         ("features.detect", "min_width" | "min_snr") => set_gate(&mut r.detect, k, num()?),
         ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
+        _ if recipe_algo::owns(step, k) => recipe_algo::set(r, step, k, v)?,
         ("features.align", "mode") => {
             r.mode = match v.str() {
                 Some("family") => Mode::Family,
@@ -360,6 +363,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
         _ => Vec::new(),
     };
     push_tols(r, step, &mut v);
+    recipe_algo::values(r, step, &mut v);
     mzlab_core::sortc::slice_by(&mut v, |a, b| a.0.cmp(b.0));
     v.into_iter().map(|(k, x)| (k.to_string(), x)).collect()
 }

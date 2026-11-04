@@ -81,6 +81,36 @@ pub(super) fn align() -> Step {
             .unit("min")
             .doc("A row with two features of one file (close isomers) is cut at the RT gaps above this")
             .advanced(),
+    ];
+    params.extend(warp_params());
+    params.push(
+        Param::integer("weak_files", "Weak tier files")
+            .min(0.0)
+            .default_num(5.0)
+            .unit("files")
+            .doc("Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier")
+            .advanced(),
+    );
+    params.extend(family_link_params());
+    Step {
+        ins: vec![Port::new("peaks", DataType::Peaks, "Features of each file").many()],
+        outs: vec![Port::new("table", DataType::Table, "Aligned feature table")],
+        params,
+        runs_in: feat_runs_in(),
+        errors: vec!["error.memoryBudget", "error.newerFormat", "err.file.index", "error.badRecipe"],
+        algorithms: super::table_algo::align(),
+        default_algorithm: Some("groups"),
+        ..Step::core(
+            "features.align",
+            "Align features",
+            "Groups the features of all the files into rows by m/z and RT and writes the aligned table. Today one call (series::align_and_fill) does this and the filling of the gaps.",
+        )
+    }
+}
+
+/// The RT correction parameters of `features.align` (`rtwarp`).
+fn warp_params() -> Vec<Param> {
+    vec![
         Param::choice("rt_warp", "RT correction", &["off", "piecewise", "loess", "ransac"])
             .default_str("off")
             .doc("Brings the RT of every file to a common one before the features are grouped, from anchors (peaks every file shows) found by a coarse alignment: piecewise (medians by blocks), loess (local regression), ransac (a line robust to wrong anchors); off: the RT as the files give it"),
@@ -107,26 +137,7 @@ pub(super) fn align() -> Step {
             .default_num(0.0)
             .doc("Seed of the random samples of the line (ransac); the same seed gives the same correction")
             .advanced(),
-        Param::integer("weak_files", "Weak tier files")
-            .min(0.0)
-            .default_num(5.0)
-            .unit("files")
-            .doc("Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier")
-            .advanced(),
-    ];
-    params.extend(family_link_params());
-    Step {
-        ins: vec![Port::new("peaks", DataType::Peaks, "Features of each file").many()],
-        outs: vec![Port::new("table", DataType::Table, "Aligned feature table")],
-        params,
-        runs_in: feat_runs_in(),
-        errors: vec!["error.memoryBudget", "error.newerFormat", "err.file.index"],
-        ..Step::core(
-            "features.align",
-            "Align features",
-            "Groups the features of all the files into rows by m/z and RT and writes the aligned table. Today one call (series::align_and_fill) does this and the filling of the gaps.",
-        )
-    }
+    ]
 }
 
 /// `features.gapfill`: integrates the raw traces where a file has no feature (`gapfill`).
@@ -172,7 +183,9 @@ pub(super) fn gapfill() -> Step {
         outs: vec![Port::new("table", DataType::Table, "Table with the gaps filled")],
         params,
         runs_in: feat_runs_in(),
-        errors: vec!["error.memoryBudget", "err.file.index"],
+        errors: vec!["error.memoryBudget", "err.file.index", "error.badRecipe"],
+        algorithms: super::table_algo::gapfill(),
+        default_algorithm: Some("integrate"),
         ..Step::core(
             "features.gapfill",
             "Fill gaps",

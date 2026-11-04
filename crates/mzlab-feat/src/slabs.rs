@@ -14,7 +14,7 @@ use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::align::align_grouped;
-use crate::famalign::{align_families, align_ions, assemble, rt_map, Collector};
+use crate::famalign::{assemble, rt_map, Collector};
 use crate::prog::Prog;
 use crate::recipe::{Mode, Recipe};
 use crate::rtmap::{RtMap, RtParams};
@@ -145,7 +145,8 @@ fn route(rows: &[usize], r: &Recipe, left: usize, sorted: bool) -> Stima {
     );
     let table_guess = widest * 3 / 2 * (n * CELL + TABLE_ROW);
     let whole = total * (LEAN_ROW + WORK_ROW) + table_guess;
-    if whole <= left / 2 || !sorted {
+    // the join of mzmine scores every feature against every row of a round: it has no slabs
+    if whole <= left / 2 || !sorted || r.join.is_some() {
         let via = if whole > left {
             Via::Refused
         } else {
@@ -289,10 +290,7 @@ fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {
         .map(|k| lean(src, k, None))
         .collect::<Result<Vec<_>>>()?;
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    Ok(match r.mode {
-        Mode::Ion => align_ions(&refs, &r.align, &r.rt)?,
-        Mode::Family => align_families(&refs, &r.align)?,
-    })
+    crate::series::align_rows(&refs, r)
 }
 
 /// What "per family" mode plans for its slabs: the bytes a slab is cut to take and the rows of room of the table (none: a quarter of the free, and the
