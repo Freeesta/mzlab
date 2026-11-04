@@ -56,7 +56,7 @@ try:
         def widths():
             pg = S["pg"]; out = []
             for w, h in ((1180, 820), (820, 1180), (375, 820), (590, 820), (1180, 820)):      # landscape, portrait, Split View 1/3 and 1/2, back
-                pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(400); ready(pg)
+                pg.set_viewport_size({"width": w, "height": h}); attendi(pg, f"innerWidth === {w}"); frames(pg, 3); ready(pg)
                 out.append((w, pg.evaluate(WIDE), pg.evaluate("E.panels[0].el.getBoundingClientRect().width")))
             print("  width, horizontal overflow, first panel width:", out)
             assert all(o <= 1 for _, o, _ in out), f"the page scrolls sideways: {out}"
