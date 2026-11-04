@@ -49,7 +49,7 @@
 .flx .flx-qc{margin-top:6px}.flx .flx-qc summary{cursor:pointer;min-height:24px}.flx .flx-table th[scope=row]{background:none;position:static;font-weight:600}.flx .flx-table caption{text-align:left;color:var(--muted);padding:4px 0}.flx .flx-table th,.flx .flx-table td{border:1px solid var(--line);padding:3px 8px;text-align:left;white-space:nowrap}.flx .flx-table th{position:sticky;top:0;background:var(--soft)}
 .flx .fln-live{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;min-height:20px;font-size:12px;color:var(--muted)}.flx .fln-live[hidden],.flx .fln-bar[hidden],.flx .fln-files[hidden]{display:none}
 .flx .fln-lm{display:inline-flex;flex:none}.flx .fln-lw{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.flx .fln-live[data-tone=ok]{color:var(--ok)}.flx .fln-live[data-tone=run]{color:var(--accent)}.flx .fln-live[data-tone=warn]{color:var(--warn)}.flx .fln-live[data-tone=bad]{color:var(--bad)}
+.flx .fln-live[data-tone=ok]{color:var(--ok)}.flx .fln-live[data-tone=run],.flx .fln-live[data-tone=wait]{color:var(--accent)}.flx .fln-live[data-tone=warn]{color:var(--warn)}.flx .fln-live[data-tone=bad]{color:var(--bad)}
 .flx .fln-bar{flex-basis:100%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}.flx .fln-bar i{display:block;height:100%;width:var(--p,0%);background:var(--accent)}
 .flx .fln-bar.indet i{width:40%;background:repeating-linear-gradient(90deg,var(--accent) 0 6px,transparent 6px 10px)}
 .flx .fln[data-live=stale]{border-style:dashed}.flx .fln[data-live=error],.flx .fln[data-live=refused]{border-color:var(--bad);border-left-color:var(--cc)}

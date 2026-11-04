@@ -1,6 +1,6 @@
 I18N.add("it", {
   "mappa.bg": "togli il fondo",
-  "mappa.pal.title": "Viridis o cividis: leggibili anche con il daltonismo",
+  "mappa.pal.title": "Palette dei colori: Viridis o cividis",
   "mappa.pal.viridis": "palette: viridis",
   "mappa.pal.cividis": "palette: cividis",
   "mappa.aria": "Mappa RT × m/z: frecce per muoversi, L per bloccare, M per il mirino, F per lo schermo intero, 0 per la vista intera",
@@ -111,7 +111,7 @@ I18N.add("it", {
   "mappa.dens.few": "poche etichette",
   "mappa.dens.mid": "etichette medie",
   "mappa.dens.many": "molte etichette",
-  "mappa.lbl.tip": "m/z {mz} · S/N {snr} (intensità sul rumore attorno al picco)",
+  "mappa.lbl.tip": "m/z {mz} · S/N {snr}",
   "mappa.thr.title": "Sotto questa % (del 99.5° percentile) i valori restano senza colore",
   "mappa.col.n": "n°",
   "mappa.col.n.title": "Numero del punto sulla mappa",
