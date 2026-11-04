@@ -51,11 +51,11 @@ try:
             assert "•" in pg.inner_text('#nl-list [data-f="NO2"]') if pg.locator('#nl-list [data-f="NO2"]').count() else True
         step("4.4: radical loss: dot with the dot in the formula and a tooltip, full text only in the details", radicals)
         def search():
-            pg.fill("#al-q", "62"); pg.wait_for_timeout(300)
+            pg.fill("#calcin", "62"); pg.wait_for_timeout(300)
             t = pg.inner_text("#nl-res"); print(t.replace("\n", " | ")); assert "Possibili perdite (da verificare sullo spettro)" in t and "H2O + CO2" in t.replace("H₂O", "H2O").replace("CO₂", "CO2") or ("H" in t and "CO" in t and "+" in t), t
-            pg.fill("#al-q", "72"); pg.wait_for_timeout(300); t = pg.inner_text("#nl-res"); assert "2 ×" in t and "HCl" in t, t
-            pg.fill("#al-q", "28"); pg.wait_for_timeout(300); assert pg.locator("#nl-list .nlr.hit").count() == 1, pg.locator("#nl-list .nlr.hit").count()
-            pg.fill("#al-q", "")
+            pg.fill("#calcin", "72"); pg.wait_for_timeout(300); t = pg.inner_text("#nl-res"); assert "2 ×" in t and "HCl" in t, t
+            pg.fill("#calcin", "28"); pg.wait_for_timeout(300); assert pg.locator("#nl-list .nlr.hit").count() == 1, pg.locator("#nl-list .nlr.hit").count()
+            pg.fill("#calcin", "")
         step("4.5: Cerca Δm: 62 = H2O + CO2, 72 = 2 x HCl, 28 highlights the shared line", search)
         def polarity():
             # Turn off + so only - is active
@@ -78,17 +78,17 @@ try:
             pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" not in d and "HCl (36)" in d and "37Cl" in d and "radicale" in d, d
             # the «?» is replaced by one short hint line
             assert not pg.is_visible("#sb-help") and pg.locator("#nl-hint").count() == 0
-            pg.fill("#al-q", "62"); pg.wait_for_timeout(300); assert "H2O" in pg.inner_text("#nl-res").replace("H₂O", "H2O"); pg.fill("#al-q", ""); shut(pg, "#refx")
+            pg.fill("#calcin", "62"); pg.wait_for_timeout(300); assert "H2O" in pg.inner_text("#nl-res").replace("H₂O", "H2O"); pg.fill("#calcin", ""); shut(pg, "#refx")
         step("A2: compact view, ESI+/ESI- toggles, •Cl, hint line instead of «?»", a2)
         def hr_version():
             # an HR file is loaded: exact mass with four decimals in the details and in the combinations
-            pg.evaluate("window.HR.isHr=()=>true; CALCQUI.follow(() => ({ hr: true, name: 'Orbitrap' }), () => 1)"); pg.fill("#al-q", "62")
+            pg.evaluate("window.HR.isHr=()=>true; CALCQUI.follow(() => ({ hr: true, name: 'Orbitrap' }), () => 1)"); pg.fill("#calcin", "62")
             pg.locator('#nl-list [data-d="Cl"]').click() if pg.locator('#nl-list [data-f="Cl"] .nldet:visible').count() == 0 else None
             d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "Levsen" not in d, d
             attendi(pg, "/\\d\\.\\d{4}/.test(document.querySelector('#nl-res').innerText)"); assert "mDa" in pg.inner_text("#nl-res"), "four decimals and the error in mDa in HR"
-            pg.evaluate("window.HR.isHr=()=>false; CALCQUI.follow(() => ({ hr: false, name: 'QTRAP' }), () => 1)"); pg.fill("#al-q", "62"); attendi(pg, "!/\\d\\.\\d{2,}/.test(document.querySelector('#nl-res').innerText)")
+            pg.evaluate("window.HR.isHr=()=>false; CALCQUI.follow(() => ({ hr: false, name: 'QTRAP' }), () => 1)"); pg.fill("#calcin", "62"); attendi(pg, "!/\\d\\.\\d{2,}/.test(document.querySelector('#nl-res').innerText)")
             import re; assert not re.search(r"\d\.\d{2,}", pg.inner_text("#nl-res")), pg.inner_text("#nl-res")      # LR: masses to one decimal at most (and the error in Da), never the four decimals of HR
-            pg.fill("#al-q", "")
+            pg.fill("#calcin", "")
         step("LR rounded to the unit / HR with four decimals, no references in both", hr_version)
         def narrow_axe():
             AXE = axe_path(); assert AXE, "axe-core not available"
@@ -122,7 +122,7 @@ try:
             its = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>d.textContent)"); print(its)
             assert "Cerca 170.2 nelle perdite neutre" in its, its
             pg.locator("#ctx div", has_text="Cerca 170.2").click(); pg.wait_for_timeout(500)
-            assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden") and pg.input_value("#al-q") == "170.2"
+            assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden") and pg.input_value("#calcin") == "170.2"
             shut(pg, "#refx")
         step("4.7: from the ruler: «Cerca 170.2 nelle perdite neutre»", ruler)
         def ruler_label():
@@ -132,7 +132,7 @@ try:
             l = lbl_pos(364.4, 194.2); assert l and not l[3] and "perdite" in l[2], l
             pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)
             assert not pg.evaluate("document.querySelector('#ctx') && !document.querySelector('#ctx').hidden"), "the general menu must not open on the label"
-            assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')") and pg.input_value("#al-q") == "170.2", "right click on the label: losses filtered on the value"
+            assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')") and pg.input_value("#calcin") == "170.2", "right click on the label: losses filtered on the value"
             shut(pg, "#refx")
             l = lbl_pos(300, 321.9819); assert l and l[3] and "[M+Na]" in l[2] and "[M+H]" in l[2], l
             pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)

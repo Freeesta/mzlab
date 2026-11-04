@@ -261,6 +261,7 @@ I18N.add("en", {
   "scorc.file.tip": "Goes to the file before or after in the list, like the arrows next to the file menu.",
   "scorc.vista.tip": "Changes view: Alt+1 Data, Alt+2 Draw.",
   "storia.pannello": "panel",
+  "storia.pannelli": "panels",
   "storia.marcature": "marks",
   "storia.niente": "Nothing to undo",
   "storia.nienteRipeti": "Nothing to redo",

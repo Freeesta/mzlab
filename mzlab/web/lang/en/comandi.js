@@ -258,8 +258,6 @@ I18N.add("en", {
   "cmd.gra.name": "Fragmentation graph",
   "cmd.gra.tip": "Fragments of a known molecule in an MSn infusion",
   "cmd.gra.kw": "grafo frammentazione infusione msn frammenti formula fragmentation graph ion formula",
-  "al.q.ph": "m/z, Δm or formula",
   "al.q.aria": "Number or formula to search in adducts, neutral losses and contaminants",
-  "al.q.title": "An m/z, a difference between two peaks (Δm) or a formula",
   "al.t.cont": "Contaminants"
 });

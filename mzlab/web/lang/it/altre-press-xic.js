@@ -261,6 +261,7 @@ I18N.add("it", {
   "scorc.file.tip": "Passa al file prima o dopo nell'elenco, come le frecce accanto al menu dei file.",
   "scorc.vista.tip": "Cambia vista: Alt+1 Dati, Alt+2 Disegno.",
   "storia.pannello": "pannello",
+  "storia.pannelli": "pannelli",
   "storia.marcature": "marcature",
   "storia.niente": "Niente da annullare",
   "storia.nienteRipeti": "Niente da ripetere",
