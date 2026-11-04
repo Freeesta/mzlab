@@ -1,5 +1,5 @@
 """«Riduci ogni picco a un solo punto» (Impostazioni): a low-resolution profile mzML gets a copy `<name>.centroidi.mzML` loaded next to it, the original stays as it is; the card says
-«Profilo» / «Un punto per picco»; the status shows «N di M». On the built site with the Rust engine and WITHOUT Pyodide (?motore=rust&lr=1); a synthetic file (no laboratory data).
+«Profilo» / «Un punto per picco»; the status shows «N di M». On the built site with the Rust engine and WITHOUT Pyodide; a synthetic file (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py (the .wasm is built as in e2e_wiff.py)."""
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -38,7 +38,7 @@ try:
         c = b.new_context(viewport={"width": 1500, "height": 1200}); c.set_default_timeout(120000); pg = c.new_page()
         errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         pg.set_input_files("#pick", [str(D / "prof.mzML")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)

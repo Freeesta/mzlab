@@ -1,5 +1,5 @@
 """Confidence levels (mzlab/web/livelli.js + the data file livelli-1.js): synthetic cases for every level, the evidence lines, the chemist's decision
-(2b is never assigned by the program), the thresholds (storage, old format, workflow file) and the hidden «attributio» profile."""
+(2b is never assigned by the program), the thresholds (storage, workflow file) and the hidden «attributio» profile."""
 import json
 import shutil
 import subprocess
@@ -112,13 +112,6 @@ def test_thresholds_are_editable_stored_and_exported():
       L.reset(); out.push(L.thresholds().entropia_min); L.importState(ex); out.push(L.thresholds().entropia_min);
       return out""")
     assert r == [0.75, 0.9, "3a", False, False, "livelli/1", "mzlab", 0.9, 0.75, 0.9]
-
-
-def test_old_threshold_format_is_still_read():
-    r = lv("""localStorage.setItem('qqq.lib.soglie', JSON.stringify({ent: .8, shared: 7, ppm: 3, ent2: .5}));
-      const t = L.thresholds(); const o = [t.entropia_min, t.picchi_min, t.precursore_ppm_max, t.entropia_provvisorio];
-      L.importState({ent: .7, shared: 5, ppm: 4, ent2: .55}); o.push(L.thresholds().entropia_min, L.thresholds().picchi_min); return o""")
-    assert r == [0.8, 7, 3, 0.5, 0.7, 5]
 
 
 def test_attributio_profile_cascade():

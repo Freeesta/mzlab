@@ -31,7 +31,7 @@ try:
             c = b.new_context(locale=lang, viewport={"width": 1400, "height": 1200}, permissions=["clipboard-read", "clipboard-write"]); c.set_default_timeout(120000)
             pg = c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             pg.set_input_files("#pick", [str(D / "troncato.mzML"), str(D / "nonxml.mzML")])
             pg.wait_for_selector("#unopen:not([hidden]) .diag", timeout=120000)
             def shown():

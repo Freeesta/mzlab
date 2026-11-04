@@ -2,7 +2,7 @@
 // Browser version of mzLab (GitHub Pages): there is no server. The calls the page makes to api/... are answered by the Rust engine
 // (WebAssembly: rust-bridge.js, rust-worker.js, lr.js). The student's files stay in this browser (OPFS and IndexedDB, to resume after a
 // reload): nothing is uploaded anywhere.
-// This script is added to index.html only by tools/build_site.py; the local program does not load it.
+// This script is injected into index.html by tools/build_site.py (site) and by crates/mzlab-desktop/src/update.rs (app).
 (() => {
   window.MZLAB_BROWSER = true;
   window.QQQ_BROWSER = true; // kept from the old name: backward compatibility

@@ -6,11 +6,9 @@
 // Classic script, loaded before conversione.js; the pure part is also run by node (tests/test_progresso.py).
 
 /** the share of the bar of each phase for a reader whose phases tell their own fraction (sum 1): a folder converted to mzML (Agilent .D, Waters .raw, ...) and then indexed (the same shares as ConvUI, CONV_W).
- * The readers that tell the fraction of the whole file need none: an mzML tells its index (0..1), a maker's file the phases of nativo-fasi.js (W), the desktop app adds PROG_NET */
+ * The readers that tell the fraction of the whole file need none: an mzML tells its index (0..1), a maker's file the phases of nativo-fasi.js (W) */
 const PROG_W = { conversione: { convert: 0.75, index: 0.25 } };
-/** the app of the desktop sends the file over the network before the engine reads it: that is the first part of the bar (in the browser the file is already there) */
-const PROG_NET = { send: 0.3 };
-const PROG_PHASE_KEY = { send: "load.ph.read", read: "load.ph.read", open: "load.ph.open", scans: "load.ph.scans", chrom: "load.ph.chrom", convert: "load.ph.convert" };
+const PROG_PHASE_KEY = { read: "load.ph.read", open: "load.ph.open", scans: "load.ph.scans", chrom: "load.ph.chrom", convert: "load.ph.convert" };
 
 /** whole-file fraction 0..1 from the phase being run and how far it has got: the phases before it count full */
 function progCompose(profile, phase, local) {
@@ -86,4 +84,4 @@ const PROGRESSO = (() => {
   };
 })();
 
-if (typeof module !== "undefined") module.exports = { PROGRESSO, progCompose, PROG_W, PROG_NET, rowPc };
+if (typeof module !== "undefined") module.exports = { PROGRESSO, progCompose, PROG_W, rowPc };
