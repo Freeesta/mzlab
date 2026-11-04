@@ -53,6 +53,7 @@ pub mod isofine;
 pub mod isoscore;
 #[cfg(feature = "isotopi-tutti")]
 pub mod isotable;
+pub mod nuclidi;
 pub mod itemroutes;
 pub mod infusione;
 pub mod iteminfo;
