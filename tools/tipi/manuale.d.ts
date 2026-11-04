@@ -49,7 +49,7 @@ interface FileSystemDirectoryHandle { entries(): AsyncIterableIterator<[string, 
 interface FileSystemSyncAccessHandle { close(): void; flush(): void; getSize(): number; truncate(size: number): void; read(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number; write(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number }
 type DrawKet = any;  // Ketcher editor object or one of its parts (vendor bundle, untyped)
 type DrawLine = [string | number, string][];  // one line of a drawing label: pieces [text, "sub" | "sup" | "it" | ""]
-type DrawStruct = { formula: string, mass: number, n: Record<string, number>, q: number, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing
+type DrawStruct = { formula: string, text: string, mass: number, nominal: number, mz: number | null, q: number, error?: string, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing (numbers from `etich/1`)
 /** A file of the loading table / of ST.files as the engine reports it (shell.js, explore.js): the fields differ by experiment, so only `name` is fixed. */
 type FileRiga = { name: string; [k: string]: any };
 /** A file open in the session (E.files): `file` is its name in the session, `gone` marks one taken away. */
