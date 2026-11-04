@@ -38,17 +38,20 @@ impl<R: ReadAt> Routes<R> {
             }
         }
         // A converter that leaves the zero bins out (the `.wiff` reader) gives baseline scans of a few points: when none of the 20 has more than 20, the
-        // spacing is read from the scans of the whole section that do (up to 20, the shortest gap of all).
+        // spacing is read from the scans of the whole section that do (up to 20, the shortest gap of all). When no scan has that many (the product-ion
+        // and EPI scans of a 3200 QTRAP keep a handful of points each), the shortest gap of all the scans with two points or more.
         let all: Vec<usize> = (0..ids.len()).collect();
-        let mut gap = f64::INFINITY;
+        let (mut gap, mut sparse) = (f64::INFINITY, f64::INFINITY);
         let mut used = 0;
         for pts in self.scan_points(si, &all)? {
+            let g = pts.0.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min);
             if pts.0.len() > 20 && used < 20 {
                 used += 1;
-                gap = gap.min(pts.0.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min));
+                gap = gap.min(g);
             }
+            sparse = sparse.min(g);
         }
-        Ok(gap_step(gap))
+        Ok(gap_step(if used > 0 { gap } else { sparse }))
     }
 
     /// The spacing of the profile points of `level` when ALL its scans are profile and the file can be answered here.
