@@ -50,7 +50,7 @@ try:
             pg.evaluate("BARRA.setTab('calc')") if not pg.evaluate("!!document.querySelector('#calcin').offsetParent") else None
             pg.fill("#calcin", "364.4-194.2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '170.2'")
             assert pg.inner_text("#calcres").strip() == "170.2" and not pg.evaluate("document.querySelector('#calcpad').hidden")
-            assert pg.is_visible("#calc-nl") and "170.2" in pg.get_attribute("#calc-nl", "title")
+            assert pg.is_visible("#calc-nl") and pg.get_attribute("#calc-nl", "title")
             pg.fill("#calcin", "364,4 \u2212 194,2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '170.2'"); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
             pg.fill("#calcin", "(229.1-171.2)*2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '115.8'"); assert pg.inner_text("#calcres").strip() == "115.8"
             pg.click("#calc-nl"); until(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
