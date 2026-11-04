@@ -212,3 +212,37 @@ console.log(JSON.stringify([0, 500, 1000, 1500, 100].map(off => writeFull(sh, da
     r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, encoding="utf-8")
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout) == [500, 500, 499, 499, 500]
+
+
+def test_one_failed_start_is_retried_on_a_fresh_worker_and_does_not_turn_the_pool_off():
+    got = run("""
+await out(async () => {
+  let n = 0;
+  const Cls = class {
+    constructor() { this.k = ++n; setTimeout(() => { if (this.k === 1) this.onerror({ message: "module fetch failed" }); else this.onmessage({ data: { op: "ready" } }); }, 1); }
+    postMessage(m) { if (m.op !== "module") setTimeout(() => this.onmessage({ data: { op: "done", stats: {} } }), 2); }
+    terminate() {}
+  };
+  const p = createPool({ workerUrl: "x", size: 1, WorkerClass: Cls });
+  const a = await p.build(job("a")), b = await p.build(job("b"));
+  return { a: a.ok, b: b.ok, off: p.unavailable() };
+});""")
+    assert got == {"a": True, "b": True, "off": False}
+
+
+def test_a_pool_turned_off_by_two_failed_starts_tries_again_after_the_pause():
+    got = run("""
+await out(async () => {
+  let n = 0;
+  const Cls = class {
+    constructor() { this.k = ++n; setTimeout(() => { if (this.k <= 2) this.onerror({ message: "boom" }); else this.onmessage({ data: { op: "ready" } }); }, 1); }
+    postMessage(m) { if (m.op !== "module") setTimeout(() => this.onmessage({ data: { op: "done", stats: {} } }), 2); }
+    terminate() {}
+  };
+  const p = createPool({ workerUrl: "x", size: 1, WorkerClass: Cls, offMs: 250 });
+  const a = await p.build(job("a")), offThen = p.unavailable(), soon = await p.build(job("b"));
+  await new Promise(r => setTimeout(r, 400));
+  const later = await p.build(job("c"));
+  return { a: a.reason, offThen, soon: soon.reason, later: later.ok, off: p.unavailable() };
+});""")
+    assert got == {"a": "unavailable", "offThen": True, "soon": "unavailable", "later": True, "off": False}
