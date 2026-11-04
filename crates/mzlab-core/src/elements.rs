@@ -146,16 +146,16 @@ pub fn parse_formula_lenient(s: &str) -> std::collections::BTreeMap<String, u64>
     d
 }
 
-/// A term of a delta: `parse_formula` with an optional leading count, «2D» -> D2, «2H2O» -> H4O2 (a lone number is still unreadable).
+/// A term of a delta: `parse_formula`, plus «2D» -> D2 (a count before deuterium only; «2O» stays unreadable, as in the Python reference).
 pub fn parse_term(s: &str) -> Result<Formula> {
     let d = s.bytes().take_while(u8::is_ascii_digit).count();
-    let k: u64 = s[..d].parse().unwrap_or(1);
-    if d == 0 || d == s.len() {
+    if d == 0 || &s[d..] != "D" {
         return parse_formula(s);
     }
-    let mut f = parse_formula(&s[d..])?;
-    f.iter_mut().for_each(|(_, n)| *n *= k);
-    Ok(f)
+    let k: u64 = s[..d]
+        .parse()
+        .map_err(|_| Error::new("err.formula.unreadable").with("formula", s))?;
+    Ok(vec![("D".to_string(), k)])
 }
 
 /// 'C15H12N2O' -> [("C",15),("H",12),("N",2),("O",1)]. Parentheses are allowed: 'C(OH)2'.
