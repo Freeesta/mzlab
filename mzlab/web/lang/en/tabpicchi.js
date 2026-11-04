@@ -1,5 +1,5 @@
 I18N.add("en", {
-  "tabp.btn.title": "Peak table: the peaks of the spectrum, to copy",
+  "tabp.btn.title": "Peak table: the peaks of the spectrum",
   "tabp.title": "Peak table",
   "tabp.f.sample": "Sample",
   "tabp.f.scan": "Scan",
@@ -20,6 +20,10 @@ I18N.add("en", {
   "tabp.c.rel": "Relative intensity (%)",
   "tabp.c.dmz": "Δm/z from precursor",
   "tabp.c.nl": "Neutral loss",
+  "tabp.f.range": "m/z range",
+  "tabp.csv": "Download CSV",
+  "tabp.file": "peaks",
+  "tabp.dl": "Peak list (CSV)",
   "tabp.copy": "Copy",
   "tabp.close": "Close",
   "tabp.copied": "Copied",

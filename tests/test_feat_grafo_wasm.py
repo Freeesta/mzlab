@@ -52,3 +52,17 @@ def test_fragments_of_a_molfile(pkg):
     assert [s["formula"] for s in cut["sides"]] == ["C2H6", "H2O"] and cut["sides"][0]["atoms"] == [0, 1]
     assert cut["sides"][1]["mz"] == pytest.approx(19.0178, abs=1e-3)
     assert len(json.loads(run("node", "tests/feat_grafo_node.js", str(pkg), ETHANOL, "-1", "-1"))["cuts"]) == 2
+
+
+LABELS = {"structures": [[{"el": "C", "iso": 13, "h": 4}], [{"el": "C", "h": 3}, {"el": "O", "h": 1}], [{"el": "Pt"}, {"el": "Cl"}, {"el": "Cl"}, {"el": "N", "h": 2}, {"el": "N", "h": 2}],
+                         [{"el": "C", "h": 2}, {"el": "C"}, {"el": "O", "q": -1}, {"el": "O", "q": -1}, {"el": "O"}, {"el": "O"}], [{"el": "R#"}]], "arrows": [[1, 0], [0, 4]]}
+
+
+def test_labels_through_wasm_equal_the_cli_byte_for_byte(pkg, tmp_path):
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps(LABELS), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "labels")
+    app = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-label", str(req))
+    assert site == app
+    r = json.loads(site)
+    assert [s.get("text") for s in r["structures"]] == ["[13C]H4", "CH4O", "H4Cl2N2Pt", "[C2H2O4]2-", None] and r["arrows"][1] is None

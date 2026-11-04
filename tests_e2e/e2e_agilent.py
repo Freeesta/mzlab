@@ -1,5 +1,4 @@
-"""An Agilent MassHunter .D folder loaded with «Load a folder» (cartella-carica.js + agilent-d.js), on the built site with the Rust engine and WITHOUT Pyodide
-(?motore=rust&lr=1): the folder becomes one mzML (named like the folder), listed and indexed like any file, with its TIC; a .D without MSPeak.bin gives a notice;
+"""An Agilent MassHunter .D folder loaded with «Load a folder» (cartella-carica.js + agilent-d.js), on the built site with the Rust engine and WITHOUT Pyodide: the folder becomes one mzML (named like the folder), listed and indexed like any file, with its TIC; a .D without MSPeak.bin gives a notice;
 two .D folders give two files. Synthetic folders of tools/agilent_sintetico.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
 import os, shutil, subprocess, sys, tempfile, time
@@ -47,7 +46,7 @@ try:
         c.on("request", lambda r: reqs.append(r.url)); pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def folder():
             pg.set_input_files("#pickdir", str(top))

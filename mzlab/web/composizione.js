@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// «Formule compatibili»: elemental composition of an ion from its exact m/z (server: mzlab/chem/composition.py, /api/composition). High-resolution world only.
+// «Formule compatibili»: elemental composition of an ion from its exact m/z (Rust engine, /api/composition). High-resolution world only.
 // The answer is a list of CANDIDATES with their errors and checks, never an identification. Classic script, loaded after hr.js.
 const COMP = (() => {
   // saved presets of the elements in use (localStorage, this browser only)
