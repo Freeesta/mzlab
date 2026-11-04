@@ -42,6 +42,7 @@ I18N.add("it", {
   "empty.lists": "Qui atterreranno i risultati!",
   "empty.losses": "Qui atterreranno le perdite!",
   "empty.adducts": "Qui atterreranno gli addotti!",
+  "empty.cont": "Qui compariranno i contaminanti!",
   "load.backwork": "Torna al lavoro!",
   "load.or": "oppure",
   "load.demo.title": "Carica file di esempio",

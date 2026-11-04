@@ -1,6 +1,7 @@
 I18N.add("en", {
   "cq.ctl": "Search options",
   "cq.none": "no match within ±{tol}",
+  "cq.liste.err": "Cannot read the contaminant lists. Try again shortly.",
   "cq.all": "show all ({n})",
   "cq.less": "show fewer",
   "cq.g.liste": "Contaminants and lists",

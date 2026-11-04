@@ -42,6 +42,7 @@ I18N.add("en", {
   "empty.lists": "Matches will land here!",
   "empty.losses": "Losses will land here!",
   "empty.adducts": "Adducts will land here!",
+  "empty.cont": "Contaminants will land here!",
   "load.backwork": "Back to work!",
   "load.or": "or",
   "load.demo.title": "Load example files",

@@ -29,7 +29,7 @@
 
   async function deps() {
     if (window.LISTE) await LISTE.ready();
-    return { idx: window.LISTE ? LISTE.ensure() : null, find: LISTE.find, findNominal: LISTE.findNominal, table: CALCADD.table, mass, losses: LOSSES, lossCombos };
+    return { idx: window.LISTE ? LISTE.ensure() : null, listsFailed: !!window.LISTE && LISTE.failed(), find: LISTE.find, findNominal: LISTE.findNominal, table: CALCADD.table, mass, losses: LOSSES, lossCombos };
   }
   /** @param {CqView} v */
   function options(v) {
@@ -46,9 +46,19 @@
       return;
     }
     sync(v);                                                                                  // the detected resolution (text and tolerance) follows what is typed
-    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && !v.cfg.catalogue && a.kind === "none") { v.cfg.out.innerHTML = ""; if (v.cfg.after) v.cfg.after(a, []); return; }      // a panel with its own field and no default table says nothing until something is typed
-    let gs = await CALCQUI.gruppi(a, o, await deps());
+    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && !v.cfg.catalogue && a.kind === "none") {      // a panel with its own field and no default table says one quiet line until something is typed
+      v.cfg.out.innerHTML = v.cfg.none ? /** @type {any} */ (window).EMPTYLEAF("empty.cont") : "";
+      if (v.cfg.after) v.cfg.after(a, []);
+      return;
+    }
+    const dp = await deps();
+    let gs = await CALCQUI.gruppi(a, o, dp);
     if (my !== v.seq) return;
+    if (dp.listsFailed && v.cfg.groups && v.cfg.groups.includes("liste")) {                    // the lists could not be read: say so, never a blank that looks like «no match»
+      v.cfg.out.innerHTML = h`<p class="muted cq-none cq-err" role="status">${I18N.t("cq.liste.err")}</p>`;
+      if (v.cfg.after) v.cfg.after(a, []);
+      return;
+    }
     if (v.cfg.groups) gs = gs.filter(g => /** @type {string[]} */ (v.cfg.groups).includes(g.id));
     if (v.cfg.pick) gs = v.cfg.pick(gs);
     if (v.cfg.combos) gs = gs.filter(g => g.id === "perdite").map(g => { const items = g.items.filter((/** @type {Bag} */ x) => x.kind !== "single"); return { ...g, items, n: items.length }; }).filter(g => g.n > 0);

@@ -852,6 +852,8 @@
   "calc.add.noneDa": "Riga sopra la tabella in bassa risoluzione quando nessun addotto combacia; {tol} = tolleranza in Da.",
   "cq.all": "Pulsante che apre tutte le righe di un gruppo di candidati; {n} = numero totale di righe.",
   "cq.none": "Riga sotto la calcolatrice quando nulla corrisponde al numero; {tol} = tolleranza con l'unità (es. «5 ppm» o «0.5 Da»).",
+  "cq.liste.err": "Riga nella scheda Contaminanti quando le liste integrate non si sono potute leggere (rete o motore); non è un «nessun risultato».",
+  "empty.cont": "Riga con la foglia nella scheda Contaminanti finché il campo non contiene un numero (stato vuoto tranquillo, al massimo 40 caratteri).",
   "valida.title": "Titolo della finestra «Valida mzML»; {name} = nome del file (già protetto).",
   "valida.caption": "Didascalia e nome accessibile della tabella dei problemi trovati; {name} = nome del file.",
   "valida.counts": "Riga di riepilogo della validazione; {spectra}, {chroms} = numero di spettri e cromatogrammi del file; {errors}, {warnings} = numero di errori e di avvisi.",
