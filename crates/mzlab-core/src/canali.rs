@@ -388,9 +388,12 @@ fn tipo_di(scans: &[Scan], v: &[Canale], facts: &Facts, nome: &str) -> Tipo {
         .collect();
     let t = |proposto, motivo| Tipo { proposto, motivo };
     if scans.is_empty() {
-        return match (srm, facts.pda) {
-            (true, _) => t("lc-mrm", "srm_only"),
-            (false, true) => t("solo-uv", "uv_only"),
+        // SIM chromatograms are targeted monitoring like SRM: a DAD beside them never makes the run UV only
+        let sim = v.iter().any(|c| c.famiglia == Famiglia::Sim);
+        return match (srm, sim, facts.pda) {
+            (true, _, _) => t("lc-mrm", "srm_only"),
+            (false, true, _) => t("lc-mrm", "sim_only"),
+            (false, false, true) => t("solo-uv", "uv_only"),
             _ => t("misto", "empty"),
         };
     }

@@ -437,3 +437,35 @@ fn sim_channels_without_q1_stay_apart_by_their_place_in_the_experiment() {
         Some("SIM #3 (+)")
     );
 }
+
+#[test]
+fn a_sim_run_without_scans_is_targeted_with_or_without_a_dad() {
+    let chroms: Vec<Chrom> = (0..3)
+        .map(|j| Chrom {
+            index: j,
+            id: format!(
+                "SIM SIC Q1={} sample=1 period=1 experiment=1 transition={j} polarity=positive",
+                200 + j
+            ),
+            kind: "srm".into(),
+            n: Some(100),
+            ..Default::default()
+        })
+        .collect();
+    for pda in [false, true] {
+        let facts = Facts {
+            pda,
+            ..Default::default()
+        };
+        let c = Canali::da(&[], &chroms, &facts, "m.mzML");
+        assert!(c.v.iter().any(|x| x.famiglia == Famiglia::Sim));
+        assert_eq!(
+            c.tipo,
+            Tipo {
+                proposto: "lc-mrm",
+                motivo: "sim_only"
+            },
+            "pda {pda}"
+        );
+    }
+}
