@@ -109,6 +109,7 @@ I18N.add("it", {
   "draw.export.metaTitle": "Disegno",
   "draw.export.metaDesc.clear": "scala {scale}x; sfondo trasparente",
   "draw.export.metaDesc.white": "scala {scale}x; sfondo bianco",
+  "draw.export.empty": "Niente da esportare",
   "draw.export.emptyImage": "immagine vuota",
   "draw.export.failed": "Esportazione non riuscita: {message}. Ricarica la pagina (Cmd+Maiusc+R) e riprova; se resta, scrivi a chi tiene il corso.",
   "draw.export.saved": "File salvato",
