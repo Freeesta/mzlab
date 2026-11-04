@@ -5,9 +5,9 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
-        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_disegno_tablet.py")][-1]
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_disegno_tablet_ketcher.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:300]))
-r = Run(port=8861, wd="/tmp/wd_disegno_tablet")
+r = Run(port=8861, wd="/tmp/wd_disegno_tablet_k")
 K = "document.querySelector('#kframe').contentWindow.ketcher"
 INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 READY = "document.getElementById('kframe').classList.contains('kwait') === false && !!(window.TPDraw && TPDraw.ready())"
