@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         r.b = p.chromium.launch()
         ctx = r.b.new_context(viewport={"width": 820, "height": 1180}, screen={"width": 1024, "height": 1366}, has_touch=True, is_mobile=True)
-        pg = ctx.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
+        pg = ctx.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/"); frames(pg, 20)
         cdp = ctx.new_cdp_session(pg)
         def T(kind, pts): cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in enumerate(pts)]})
         def PEN(kind, x, y):
