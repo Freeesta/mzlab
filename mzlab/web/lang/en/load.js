@@ -100,6 +100,7 @@ I18N.add("en", {
   "load.method.scan": "scan",
   "load.method.scanRange": "scan, m/z {lo}-{hi}",
   "load.note.wiffMethod": "{name}: the method was read from the .wiff for {n} files ({files}).",
+  "load.note.gzMemory": "{name} ({mb} MB compressed) is opened by unpacking it whole in memory, because this browser cannot write it piece by piece into its storage: a big file may not fit. If opening fails, unpack it first (for example with 7-Zip) and open the .mzML.",
   "load.dup.one": "«{name}» is already loaded.",
   "load.dup.many": "{n} files already loaded: ignored.",
   "load.wiffWait": "{name}: waiting for the other file of the pair (.wiff and .wiff.scan with the same name).",

@@ -174,6 +174,7 @@ I18N.add("it", {
   "err.file.base64": "Il file è danneggiato: un array di picchi non è base64 valido ({detail}). Copia di nuovo il file o esportalo di nuovo dal programma dello strumento.",
   "err.file.xml": "Il file non è un mzML completo: l'XML non si legge ({detail}). Se la copia si è interrotta, copia di nuovo il file per intero.",
   "err.file.zlib": "Il file è danneggiato: un array di picchi compresso non si decomprime ({detail}). Copia di nuovo il file o esportalo di nuovo dal programma dello strumento.",
+  "err.file.gzStream": "Questo browser non decomprime un file .gz a pezzi nel suo spazio (OPFS): decomprimi prima il file (per esempio con 7-Zip) e apri il .mzML o il .mzXML, oppure usa l'app.",
   "err.flow.algorithm.unavailable": "L'algoritmo di questo passo non è disponibile in questa versione del programma.",
   "err.flow.algorithm.unknown": "Algoritmo sconosciuto: {algorithm}.",
   "err.flow.annotations.level": "Livello di identificazione sconosciuto: {level}.",

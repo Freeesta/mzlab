@@ -672,12 +672,19 @@
                   "peak_width_s",
                   "snr",
                   "broad_peaks",
+                  "noise_factor",
+                  "abs_da",
+                  "smooth_window",
+                  "chrom_threshold",
+                  "search_rt",
+                  "min_ratio",
+                  "duration",
                   "smooth"
                 ]
               },
               "value":{
                 "anyOf":[
-                  {"enum":["masstrace","centwave","threshold"]},
+                  {"enum":["masstrace","centwave","adap_localmin","threshold"]},
                   {"enum":["hr","lr"]},
                   {"enum":[1,-1,0],"default":1,"description":"1 positive, -1 negative, 0 all MS1 scans"},
                   {
@@ -727,7 +734,12 @@
                     "default":0,
                     "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
                   },
-                  {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
+                  {
+                    "anyOf":[
+                      {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
+                      {"type":"number","minimum":0,"default":5,"description":"m/z tolerance"}
+                    ]
+                  },
                   {
                     "type":"array",
                     "items":{"type":"number","minimum":0},
@@ -741,6 +753,30 @@
                     "type":"boolean",
                     "default":false,
                     "description":"Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A point below this many times the lowest signal of its scan is not taken; 0 = the noise floor"
+                  },
+                  {"type":"number","minimum":0,"default":0.002,"description":"Absolute m/z tolerance"},
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Savitzky-Golay window before the minimum search, 0 for none; height and area stay those of the raw trace."
+                  },
+                  {"type":"number","minimum":0,"maximum":1,"default":0.85,"description":"Chromatographic threshold"},
+                  {"type":"number","minimum":0,"default":0.1,"description":"Minimum search range"},
+                  {"type":"number","minimum":0,"default":1.7,"description":"Top/edge ratio"},
+                  {
+                    "type":"array",
+                    "items":{"type":"number","minimum":0},
+                    "minItems":2,
+                    "maxItems":2,
+                    "default":[0,1],
+                    "description":"Peak duration"
                   },
                   {"type":"integer","minimum":1,"default":5,"description":"Smoothing window"}
                 ]

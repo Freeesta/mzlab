@@ -188,6 +188,106 @@
    "status": "available"
   },
   {
+   "id": "adap_localmin",
+   "version": 1,
+   "title": "ADAP and local minimum",
+   "doc": "The detection of mzmine 3: mass detection, ADAP chromatograms, optional Savitzky-Golay smoothing, then the local-minimum resolver. floor is the noise and the group intensity, min_height the highest point and the peak height, min_points the consecutive scans; the trace parameters max_gap, long_trace and merge_overlap do not apply.",
+   "references": [
+    {
+     "doi": "10.1021/acs.analchem.7b00947",
+     "citation_key": "myers2017one",
+     "note": "ADAP chromatogram builder"
+    },
+    {
+     "doi": "10.1038/s41587-023-01690-2",
+     "citation_key": "schmid2023integrative",
+     "note": "MZmine 3: mass detection and the local-minimum resolver"
+    }
+   ],
+   "applicability": {
+    "resolution": [
+     "hr"
+    ],
+    "spectrum_mode": [
+     "centroid"
+    ],
+    "note": "High resolution centroided data, as mzmine expects"
+   },
+   "params": {
+    "type": "object",
+    "properties": {
+     "noise_factor": {
+      "title": "Factor of lowest signal",
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "A point below this many times the lowest signal of its scan is not taken; 0 = the noise floor"
+     },
+     "ppm": {
+      "title": "m/z tolerance",
+      "type": "number",
+      "minimum": 0,
+      "default": 5,
+      "x-unit": "ppm"
+     },
+     "abs_da": {
+      "title": "Absolute m/z tolerance",
+      "type": "number",
+      "minimum": 0,
+      "default": 0.002,
+      "x-unit": "Da",
+      "x-advanced": true
+     },
+     "smooth_window": {
+      "title": "Smoothing window",
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "x-unit": "scans",
+      "description": "Savitzky-Golay window before the minimum search, 0 for none; height and area stay those of the raw trace."
+     },
+     "chrom_threshold": {
+      "title": "Chromatographic threshold",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.85,
+      "x-advanced": true
+     },
+     "search_rt": {
+      "title": "Minimum search range",
+      "type": "number",
+      "minimum": 0,
+      "default": 0.1,
+      "x-unit": "min"
+     },
+     "min_ratio": {
+      "title": "Top/edge ratio",
+      "type": "number",
+      "minimum": 0,
+      "default": 1.7
+     },
+     "duration": {
+      "title": "Peak duration",
+      "type": "array",
+      "items": {
+       "type": "number",
+       "minimum": 0
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "default": [
+       0,
+       1
+      ],
+      "x-unit": "min",
+      "x-advanced": true
+     }
+    }
+   },
+   "status": "available"
+  },
+  {
    "id": "threshold",
    "title": "Threshold and derivative",
    "doc": "Smooths each extracted chromatogram and keeps the apexes where the first derivative changes sign above the floor; fits unit resolution and few points per peak.",

@@ -21,6 +21,7 @@ for a in "$@"; do
   if [ "$a" = "@estesi" ]; then args+=($estesi); elif [ "$a" = "@motore" ]; then args+=($motore); else args+=("$a"); fi
 done
 set -- ${args[@]+"${args[@]}"}
+RUNNER_TEMP="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"   # unbound outside GitHub Actions
 mkdir -p "$RUNNER_TEMP"
 base="https://github.com/WebAssembly/binaryen/releases/download/version_133"
 case "$(uname -s)-$(uname -m)" in

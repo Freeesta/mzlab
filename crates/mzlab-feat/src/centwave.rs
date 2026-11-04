@@ -9,12 +9,14 @@ use crate::broad::{detect_broad_at, BroadParams};
 use crate::channels::Seg;
 use crate::trace::{filled, reserve, Params};
 
-/// How the segments of a slab become peaks: the cut of the runs at their gaps (`masstrace`) or the wavelet model.
+/// How the segments of a slab become peaks: the cut of the runs at their gaps (`masstrace`), the wavelet model, or the ADAP chromatograms and the
+/// local-minimum resolver of mzmine (`adap_localmin`, which builds its own traces from the index).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum Peak {
     #[default]
     Minima,
     CentWave(CentWave),
+    Adap(crate::adap_peak::AdapPeak),
 }
 
 /// Parameters of the wavelet model (descriptor `features.detect`, algorithm `centwave`).
