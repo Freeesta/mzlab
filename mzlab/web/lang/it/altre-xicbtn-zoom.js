@@ -21,6 +21,6 @@ I18N.add("it", {
   "xicdlg.desc": "XIC (Extracted Ion Chromatogram): il cromatogramma dei soli segnali con m/z dentro un intervallo largo 1 Da attorno alla massa nominale dello ione. Si integra da qui. In ogni riga scrivi un m/z oppure una formula neutra (con l'addotto).",
   "xicdlg.add.title": "Fino a 10 ioni nello stesso grafico",
   "xicdlg.add": "+ ione",
-  "xicdlg.file.title": "Vale solo all'inizio; poi dal selettore File del grafico",
+  "xicdlg.file.title": "File da cui estrarre gli XIC",
   "xicdlg.go": "Estrai"
 });
