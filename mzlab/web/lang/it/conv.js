@@ -63,7 +63,7 @@ I18N.add("it", {
   "conv.sum.cached": "{n} dalla cache",
   "conv.sum.missing": "{n} con scansioni mancanti",
   "conv.dl": "Scarica mzML",
-  "conv.dl.title": "Salva l'mzML convertito: riaperto non va riconvertito",
+  "conv.dl.title": "Salva l'mzML convertito",
   "conv.dlall": "Scarica tutti gli mzML",
   "conv.fmt.mzml": "mzML",
   "conv.fmt.numpress": "mzML + Numpress",

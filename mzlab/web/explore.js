@@ -1015,7 +1015,8 @@ const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the
 function plotSheets(/** @type {Pannello} */ p) {
   const a = p._a; if (!a) return null;
   const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") + (a.sr && a.sr[0] && a.sr[0].unit ? ` (${a.sr[0].unit})` : "") : I18N.t("export.col.intensity");
-  if (p.type === "spec" && a.uvd) cols.push(["nm", a.uvd.nm], [I18N.t("tdati.col.mau"), a.uvd.y]);
+  if (p.type === "spec" && a.uvd && a.uvd.ser && a.uvd.ser.length > 1) a.uvd.ser.forEach((/** @type {Bag} */ s) => { cols.push([`nm - ${s.label}`, s.nm], [`${I18N.t("tdati.col.mau")} - ${s.label}`, s.y]); });
+  else if (p.type === "spec" && a.uvd) cols.push(["nm", a.uvd.nm], [I18N.t("tdati.col.mau"), a.uvd.y]);
   else if (p.type === "spec") a.data.forEach((/** @type {Bag} */ x) => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
   else if (a.sr) {
     // total chromatograms of one run type share the time axis: one RT column

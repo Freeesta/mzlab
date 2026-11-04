@@ -51,7 +51,7 @@ try:
         step("default adduct follows the panel's files ([M-H]- for a negative file)", adduct)
         def addotti():
             pg.evaluate("E.files.forEach(f=>f.vis=true)")
-            pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#al-q", state="visible"); pg.fill("#al-q", "C13H26N4"); pg.wait_for_selector(".cadd-wrap table")
+            pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#calcin", state="visible"); pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cadd-wrap table")
             assert pg.locator(".cadd-wrap tbody tr").count() >= 4
             pg.evaluate("BARRA.close(false)")
         step("Adducts table opens in Adducts & losses", addotti)

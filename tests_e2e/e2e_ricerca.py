@@ -40,11 +40,11 @@ try:
             n0 = pg.get_attribute("#pal-in", "aria-activedescendant"); pg.keyboard.press("ArrowDown")
             assert pg.get_attribute("#pal-in", "aria-activedescendant") != n0 and pg.locator("#pal-l [aria-selected=true]").count() == 1
             pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter"); attendi(pg, "document.querySelector('#paletta').hidden")
-            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#al-q") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'al-q'"); pg.evaluate("BARRA.close(false)")
+            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#calcin") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'calcin'"); pg.evaluate("BARRA.close(false)")
         step("↑↓ and Enter open the panel of the first result", keys)
         def cont():
             opn(); typ("63.04", "Contaminante"); pg.locator("#pal-l li[role=option]", has_text="Contaminante").first.click()
-            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')"); assert pg.input_value("#al-q") == "63.04", pg.input_value("#al-q")
+            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')"); assert pg.input_value("#calcin") == "63.04", pg.input_value("#calcin")
             assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
             pg.evaluate("BARRA.close(false)")
         step("a contaminant hit opens the Contaminants tab of the side panel with the number", cont)
