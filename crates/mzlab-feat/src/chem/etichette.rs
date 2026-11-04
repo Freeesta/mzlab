@@ -7,6 +7,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
 use mzlab_core::nuclidi::NUCLIDES;
 
+use crate::sortc::SortC;
+
 /// One element-and-isotope of a formula: symbol (from the nuclide table) and mass number (0 = the element at natural abundance, written plain).
 type Key = (&'static str, u16);
 /// A few keys per structure: a plain list keeps the .wasm small (no map instantiated for these keys).
@@ -49,7 +51,7 @@ pub fn hill(n: &Counts) -> String {
         _ => 2,
     };
     let mut ks: Vec<&(Key, u64)> = n.iter().filter(|(_, c)| *c > 0).collect();
-    ks.sort_unstable_by_key(|((e, a), _)| (rank(e), *e, *a));
+    ks.sortc_by_key(|((e, a), _)| (rank(e), *e, *a));
     let s: String = ks
         .into_iter()
         .map(|(k, c)| match c {
