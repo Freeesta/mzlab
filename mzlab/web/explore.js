@@ -1028,10 +1028,10 @@ function plotSheets(/** @type {Pannello} */ p) {
   const n = maxOf(cols.map(c => c[1].length)), rows = [];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? c[1][i] : null)));
   /** @type {any[]} */
-  const out = [{ name: ptitle(p.title) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
+  const out = [{ name: ptitleP(p) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
   const metaRows = [
     [{ v: I18N.t("export.meta.property"), b: true }, { v: I18N.t("export.meta.value"), b: true }],
-    [{ v: I18N.t("export.meta.title"), b: true }, ptitle(p.title) || I18N.t("export.meta.chart")],
+    [{ v: I18N.t("export.meta.title"), b: true }, ptitleP(p) || I18N.t("export.meta.chart")],
     [{ v: I18N.t("export.meta.type"), b: true }, (/** @type {Record<string, string>} */ ({ chrom: I18N.t("export.type.chrom", { kind: (p.kind || "").toUpperCase() }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: p.level === 2 ? "MS²" : "MS¹" }), map: I18N.t("panel.title.map") }))[p.type] || p.type],
     [{ v: I18N.t("export.meta.samples"), b: true }, plotFiles(p).map((/** @type {FileAperto} */ f) => f.label).join(", ")],
     [{ v: I18N.t("export.meta.caption"), b: true }, plotCaption(p)],

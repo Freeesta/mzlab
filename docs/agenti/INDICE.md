@@ -7,6 +7,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | integrazione dei picchi nella vista Dati (strumento automatico, un clic = tutti i picchi in HR, parametri, `auto_integrate`) | `docs/agenti/dati-integrazione.md` |
 | primo caricamento di più file (si apre solo il primo), campi della tabella di carico | `docs/agenti/dati-carico.md` |
 | barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
+| titoli dei pannelli (regole uniche per tipo di pannello × segnale, `titoli.js`, etichetta «spettro di», nomi dei file esportati) | `docs/agenti/titoli-pannelli.md` |
 | affiancare e spostare i pannelli (maniglia, zone di rilascio, divisori, annulla) | `docs/agenti/pannelli-affianca.md` |
 | esportazioni a pezzi in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenienza, pulizia di `export/`) | `docs/agenti/dati-esporta.md` |
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |

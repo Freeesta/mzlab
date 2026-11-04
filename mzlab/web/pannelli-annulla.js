@@ -5,7 +5,7 @@ function apriAnnullabile(p) {
   if (!STORIA || !p) return p;
   let cur = p, dati = "", rel = /** @type {any} */ ({});
   const after = () => { relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
-  STORIA.aperto({ what: ptitle(p.title) || I18N.t("storia.pannello"), tab: p.tab, dati: JSON.stringify(panelRec(p)),
+  STORIA.aperto({ what: ptitleP(p) || I18N.t("storia.pannello"), tab: p.tab, dati: JSON.stringify(panelRec(p)),
     segue: (/** @type {any} */ v, /** @type {any} */ n) => { if (cur === v) cur = n; },
     undo: () => {
       if (!E.panels.includes(cur)) return;
