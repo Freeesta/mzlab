@@ -37,6 +37,15 @@ try:
             pg.evaluate(f"{KJ}.setMolecule('C1CCCCC1')"); pg.wait_for_timeout(1000)
             menu_at("bond", 0); pg.wait_for_selector("#ctx div:has-text('Legame di un anello')", timeout=5000)
         step("a ring bond says it does not split alone", ring)
+        def charged():
+            pg.evaluate(f"{KJ}.setMolecule('C[NH3+]')"); attendi(pg, f"{KJ}.editor.struct().atoms.size === 2")
+            for i in range(20):
+                menu_at("bond", 0)
+                if pg.locator("#ctx div", has_text="m/z").count() >= 2: break
+                frames(pg, 20)
+            t = pg.locator("#ctx div", has_text="m/z").all_inner_texts()
+            assert any(x.startswith("H4N+ ") and "m/z 18" in x for x in t) and any(x.startswith("CH4 ") and "m/z 17" in x for x in t), t       # the ammonium side is the ion itself, no second H+
+        step("a charged side is reported as the cation, not protonated again", charged)
 finally:
     r.close()
 r.report()

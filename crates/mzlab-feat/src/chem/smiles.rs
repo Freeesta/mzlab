@@ -273,6 +273,7 @@ pub(super) fn fill(raw: &[RawAtom], bonds: &[Bond]) -> Vec<Atom> {
                 arom: r.arom,
                 h,
                 charge: r.charge,
+                iso: 0,
             }
         })
         .collect()

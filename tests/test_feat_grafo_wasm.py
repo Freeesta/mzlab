@@ -52,3 +52,11 @@ def test_fragments_of_a_molfile(pkg):
     assert [s["formula"] for s in cut["sides"]] == ["C2H6", "H2O"] and cut["sides"][0]["atoms"] == [0, 1]
     assert cut["sides"][1]["mz"] == pytest.approx(19.0178, abs=1e-3)
     assert len(json.loads(run("node", "tests/feat_grafo_node.js", str(pkg), ETHANOL, "-1", "-1"))["cuts"]) == 2
+
+
+def test_fragments_keep_charge_and_isotope(pkg):
+    mol = lambda els, bonds, props: "\n  qqq\n\n%3d%3d  0  0  0  0  0  0  0  0999 V2000\n" % (len(els), len(bonds)) + "".join(f"{i:10.4f}{0:10.4f}{0:10.4f} {el:<3} 0  0  0  0  0  0  0  0  0  0  0  0\n" for i, el in enumerate(els)) + "".join("%3d%3d%3d  0  0  0  0\n" % b for b in bonds) + "".join(p + "\n" for p in props) + "M  END"
+    (cut,) = json.loads(run("node", "tests/feat_grafo_node.js", str(pkg), mol("CN", [(1, 2, 1)], ["M  CHG  1   2   1"]), "0", "1"))["cuts"]
+    assert [(s["formula"], s["mz"]) for s in cut["sides"]] == [("CH4", pytest.approx(17.0386, abs=1e-4)), ("H4N+", pytest.approx(18.0338, abs=1e-4))]
+    (cut,) = json.loads(run("node", "tests/feat_grafo_node.js", str(pkg), mol("CCOO", [(1, 2, 1), (2, 3, 2), (2, 4, 1)], ["M  ISO  1   1  13"]), "0", "1"))["cuts"]
+    assert cut["sides"][0]["formula"] == "13CH4" and cut["sides"][0]["mass"] == pytest.approx(17.0347, abs=1e-4)

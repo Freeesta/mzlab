@@ -22,20 +22,66 @@ fn reach(m: &Mol, start: usize, skip: usize) -> Vec<bool> {
     seen
 }
 
-/// `{"atoms":[..],"formula","mass","mz"}` of one side of a cut: the side closes with `h` hydrogens (the bond order, as in `cleavages`), `mz` is [F+H]+.
+/// Hill formula with isotope labels in front of their element («13CH4»), and the charge as a suffix («H4N+», «C2H6N2+2»).
+fn fmt_ion(f: &Formula, z: i32) -> String {
+    let base = |e: &str| {
+        e.trim_start_matches(|c: char| c.is_ascii_digit())
+            .to_string()
+    };
+    let mut els: Vec<String> = f.iter().map(|(e, _)| base(e)).collect();
+    els.sort_by_key(|e| (!matches!(e.as_str(), "C" | "H"), e == "H", e.clone()));
+    els.dedup();
+    let mut out = String::new();
+    for e in &els {
+        let mut parts: Vec<&(String, u64)> = f.iter().filter(|(k, _)| base(k) == *e).collect();
+        parts.sort_by_key(|(k, _)| k.len() == e.len());
+        for (k, n) in parts {
+            out += k;
+            if *n > 1 {
+                out += &n.to_string();
+            }
+        }
+    }
+    match z {
+        0 => out,
+        1 => out + "+",
+        -1 => out + "-",
+        _ => format!("{out}{}{}", if z > 0 { "+" } else { "-" }, z.abs()),
+    }
+}
+
+/// m/z of a species of formal charge `z`: the ion itself (mass minus or plus the electrons, per charge); neutral is [F+H]+.
+fn mz_of(mass: f64, z: i32) -> f64 {
+    if z == 0 {
+        return elements::ion_mz(mass, "[M+H]+").unwrap_or(mass);
+    }
+    (mass - z as f64 * elements::ELECTRON) / z.abs() as f64
+}
+
+/// `{"atoms":[..],"formula","mass","mz"}` of one side of a cut: the side closes with `h` hydrogens (the bond order, as in `cleavages`). A neutral side gives
+/// `mz` of [F+H]+; a side with a formal charge is the ion itself (no extra H+) and says its `charge`.
 fn side_json(o: &mut Out, m: &Mol, keep: &[bool], h: u64) {
     let f = add_h(m.formula_of(keep), h, 0);
+    let z: i32 = m
+        .atoms
+        .iter()
+        .zip(keep)
+        .filter(|(_, k)| **k)
+        .map(|(a, _)| a.charge)
+        .sum();
     let mass = elements::mass(&f);
     o.raw("{\"atoms\":[");
     for (n, i) in (0..keep.len()).filter(|i| keep[*i]).enumerate() {
         o.raw(if n > 0 { "," } else { "" }).int(i as i64);
     }
-    o.raw("],\"formula\":").str(&elements::fmt(&f));
+    o.raw("],\"formula\":").str(&fmt_ion(&f, z));
     o.raw(",\"mass\":").num(mzlab_core::json::round(mass, 4));
-    let mz = elements::ion_mz(mass, "[M+H]+").unwrap_or(mass);
     o.raw(",\"mz\":")
-        .num(mzlab_core::json::round(mz, 4))
-        .raw("}");
+        .num(mzlab_core::json::round(mz_of(mass, z), 4));
+    if z != 0 {
+        o.raw(",\"charge\":").int(z as i64);
+    }
+    o.raw("}");
 }
 
 /// `frag/1`: the cuts of a molfile as `{"cuts":[{"a","b","order","kind","sides":[{atoms,formula,mass,mz},..]}]}`. `a`, `b` are atom positions of the
@@ -145,10 +191,11 @@ fn partial_of(m: &Mol, delta: &str) -> Result<String> {
     let d = parse_delta(delta)?;
     let f = apply_delta(&m.formula(), &d)?;
     let mass = elements::mass(&f);
-    let mz = elements::ion_mz(mass, "[M+H]+").unwrap_or(mass);
+    let z: i32 = m.atoms.iter().map(|a| a.charge).sum();
+    let mz = mz_of(mass, z);
     let mut o = Out::default();
     o.raw("{\"format\":\"parz/1\",\"formula\":")
-        .str(&elements::fmt(&f));
+        .str(&fmt_ion(&f, z));
     o.raw(",\"mass\":").num(mzlab_core::json::round(mass, 4));
     o.raw(",\"mz\":").num(mzlab_core::json::round(mz, 4));
     o.raw(",\"delta\":")
