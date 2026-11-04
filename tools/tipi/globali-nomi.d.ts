@@ -882,6 +882,7 @@ declare var syncWorkEmpty: any;
 declare var sz: any;
 declare var tabFiles: any;
 declare var tabPanels: any;
+declare var tableOnScreen: any;
 declare var timeShown: any;
 declare var timeStored: any;
 declare var toOverlaid: any;
