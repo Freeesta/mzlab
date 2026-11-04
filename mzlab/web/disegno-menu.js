@@ -19,3 +19,10 @@ export function ctxShow(/** @type {any} */ m, /** @type {number} */ x, /** @type
   m.style.left = Math.min(x, innerWidth - w) + "px"; m.style.top = Math.max(4, Math.min(y, innerHeight - m.offsetHeight - 8)) + "px";
   if (kbd) { const f = m.querySelector("div[role=menuitem]"); if (f) f.focus(); }
 }
+// Copies to the clipboard and tells the truth: «Copied» only when the browser accepted it, otherwise «Copy failed» (never an unhandled rejection).
+export async function copyText(/** @type {string} */ text, /** @type {string} */ okKey = "draw.copy.done") {
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (_) { /* clipboard refused or missing */ }
+  if (window.toast) toast(I18N.t(ok ? okKey : "draw.copy.fail"));
+  return ok;
+}
