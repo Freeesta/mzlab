@@ -943,7 +943,7 @@
           {
             "properties":{
               "step":{"const":"features.ms2_link@1"},
-              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak"]},
+              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak","margin_s"]},
               "value":{
                 "anyOf":[
                   {
@@ -970,6 +970,12 @@
                     "maximum":1,
                     "default":0.5,
                     "description":"Purity below which an MS2 is weak evidence; it is not dropped"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Seconds added on each side of the feature RT range to pair MS2 scans, 0 meaning one MS1 cycle."
                   }
                 ]
               }

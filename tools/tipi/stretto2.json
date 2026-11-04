@@ -206,6 +206,7 @@
     "../../mzlab/web/lettori-modulo.js",
     "../../mzlab/web/xic-spettro.js",
     "../../mzlab/web/tabella-picchi.js",
+    "../../mzlab/web/area-copia.js",
     "../../mzlab/web/elementare-pannello.js",
     "../../mzlab/web/xic-lente-disegno.js",
     "../../mzlab/web/xic-lente.js",
