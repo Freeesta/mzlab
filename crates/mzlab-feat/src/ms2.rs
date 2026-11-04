@@ -1,7 +1,7 @@
 //! MS2 scans of a peak, with the purity of the precursor.
 //!
-//! An MS2 scan belongs to a peak when the MS1 scan it was triggered from (`Scan::parent`) lies between the edges of the peak (not only at
-//! the apex) and the m/z of the peak is inside its isolation window; a co-isolated ion is linked as well, with its own share of the
+//! An MS2 scan belongs to a peak when the MS1 scan it was triggered from (`Scan::parent`) lies between the edges of the peak widened by a
+//! trigger margin (`Ms2Params::margin_s`: a DDA scan is triggered a cycle before or after the narrow integrated edges) and the m/z of the peak is inside its isolation window; a co-isolated ion is linked as well, with its own share of the
 //! window. Purity = intensity of the peak in that MS1 scan (peaks within `tol_ppm` of its m/z) over the total intensity of the MS1 scan
 //! inside the isolation window. Below `weak` the MS2 is weak evidence (it is not dropped). When the index carries no isolation window the
 //! scan gets `default_half_window` around its precursor and the peak is marked `FLAG_PURITY_EST`; the format of the index does not change.
@@ -25,6 +25,9 @@ pub struct Ms2Params {
     pub tol_ppm: f64,
     /// Purity below which an MS2 is weak evidence.
     pub weak: f32,
+    /// Seconds added on both sides of the RT range of a row when pairing MS2 scans (the trigger lag of a DDA cycle); 0 = one cycle of the file
+    /// (median MS1 spacing), none when the file has fewer than two MS1 scans.
+    pub margin_s: f64,
 }
 
 impl Default for Ms2Params {
@@ -33,6 +36,7 @@ impl Default for Ms2Params {
             default_half_window: 0.6,
             tol_ppm: 6.0,
             weak: 0.5,
+            margin_s: 0.0,
         }
     }
 }
@@ -114,8 +118,39 @@ fn candidates<R: ReadAt>(
     Ok(out)
 }
 
+/// Margin in minutes: `margin_s` or, at 0, the median MS1 spacing; 0 when the spacing is unknown.
+fn margin_minutes(rt: &[f64], margin_s: f64) -> f64 {
+    if margin_s > 0.0 {
+        return margin_s / 60.0;
+    }
+    let mut d: Vec<f64> = rt
+        .windows(2)
+        .map(|w| w[1] - w[0])
+        .filter(|x| *x > 0.0)
+        .collect();
+    if d.is_empty() {
+        return 0.0;
+    }
+    sortc::by(&mut d, |a, b| a.total_cmp(b));
+    d[d.len() / 2]
+}
+
+/// MS1 positions `lo..=hi` widened to the scans whose time lies within `margin` minutes of the times of `lo` and `hi`.
+fn widen(rt: &[f64], lo: usize, hi: usize, margin: f64) -> (usize, usize) {
+    if margin <= 0.0 || rt.is_empty() || lo >= rt.len() {
+        return (lo, hi);
+    }
+    let eps = 1e-9;
+    let t0 = rt[lo] - margin - eps;
+    let t1 = rt[hi.min(rt.len() - 1)] + margin + eps;
+    let a = rt.partition_point(|&t| t < t0);
+    let b = rt.partition_point(|&t| t <= t1).saturating_sub(1);
+    (a.min(lo), b.max(hi))
+}
+
 /// (feature, candidate) pairs: the peak spans the MS1 scan of the candidate and its m/z is inside the window. Sorted by candidate.
-fn pairs(f: &FileFeatures, cands: &[Cand], nscan: usize) -> Result<Vec<(u32, u32)>> {
+fn pairs(f: &FileFeatures, cands: &[Cand], rt: &[f64], margin_min: f64) -> Result<Vec<(u32, u32)>> {
+    let nscan = rt.len();
     let mut start = filled(nscan + 2, 0u32)?;
     for c in cands {
         start[c.ppos as usize + 1] += 1;
@@ -131,7 +166,8 @@ fn pairs(f: &FileFeatures, cands: &[Cand], nscan: usize) -> Result<Vec<(u32, u32
     }
     let mut out = Vec::new();
     for i in 0..f.len() {
-        for p in f.scan_lo[i] as usize..=(f.scan_hi[i] as usize).min(nscan - 1) {
+        let (lo, hi) = widen(rt, f.scan_lo[i] as usize, f.scan_hi[i] as usize, margin_min);
+        for p in lo..=hi.min(nscan - 1) {
             for &ci in &by_pos[start[p] as usize..start[p + 1] as usize] {
                 let c = &cands[ci as usize];
                 if f.mz[i] >= c.lo && f.mz[i] <= c.hi {
@@ -220,7 +256,7 @@ pub fn link<R: ReadAt>(
         (a.scan_ids.clone(), a.rt.clone())
     };
     let cands = candidates(index, &ids, &rt, p.polarity, q)?;
-    let prs = pairs(f, &cands, ids.len())?;
+    let prs = pairs(f, &cands, &rt, margin_minutes(&rt, q.margin_s))?;
     let max_peaks = (p.budget / 24).clamp(1024, crate::trace::SLAB_PEAKS);
     let mut tri = purities(index, si, f, &cands, &prs, q, max_peaks)?;
     sortc::by(&mut tri, |a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
