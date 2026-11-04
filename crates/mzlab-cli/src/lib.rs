@@ -18,6 +18,8 @@ mod canali_cmd;
 pub mod convert;
 mod convert_report;
 pub mod flow;
+#[cfg(test)]
+mod flow_align_join_tests;
 mod flow_apply;
 mod flow_base;
 #[cfg(test)]

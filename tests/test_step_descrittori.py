@@ -49,7 +49,7 @@ def test_the_steps_of_the_chain_in_order():
 
 def test_references_have_the_shape_of_the_study():
     keys = [r["citation_key"] for s in STEPS for r in s.get("references", []) + [x for a in s.get("algorithms", []) for x in a.get("references", [])]]
-    assert keys == ["tautenhahn2008highly", "myers2017one", "schmid2023integrative", "schmid2021ion", "kuhl2012camera"]
+    assert keys == ["tautenhahn2008highly", "myers2017one", "schmid2023integrative", "schmid2023integrative", "schmid2023integrative", "schmid2021ion", "kuhl2012camera"]
     for s in STEPS:
         for a in s.get("algorithms", []):
             for r in a.get("references", []):

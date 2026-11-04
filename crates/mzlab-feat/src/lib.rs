@@ -7,6 +7,7 @@
 pub mod adap_peak;
 pub mod adducts;
 pub mod align;
+pub mod align_mzmine;
 mod aligned;
 mod aligned_meta;
 mod aligned_ops;
