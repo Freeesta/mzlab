@@ -656,6 +656,7 @@ declare var moduloWants: any;
 declare var movePanel: any;
 declare var mrmShowAllNotice: any;
 declare var ms2Exps: any;
+declare var ms2Follow: any;
 declare var ms2Goto: any;
 declare var ms2Holders: any;
 declare var ms2Near: any;

@@ -142,9 +142,10 @@ function defaultLayoutTab(/** @type {string} */ t) {
     // high-resolution bench: product ions that are not a DDA (infusion MSn, PRM) get their own cells under the survey
     if (window.BANCO) BANCO.afterLayout();
   } else if (t === "ms2") {
-    const exps = ms2Exps(), f0 = tabFiles("ms2")[0]; let y = 0;
-    // ONE pair (chromatogram + spectrum) for the first precursor; the list on the left switches it
-    const list = exps.length ? exps.slice(0, 1) : [{ prec: null, k: f0.k }];
+    const exps = ms2Exps(), cur = E.files[E.cur], f0 = cur && cur.kind === t && cur.vis && !cur.gone ? cur : tabFiles("ms2").find((/** @type {MzFile} */ f) => f.vis) || tabFiles("ms2")[0]; let y = 0;
+    // ONE pair (chromatogram + spectrum) for the first precursor of a shown file (one of a hidden file draws nothing); the list on the left switches it
+    const e0 = exps.find(e => e.files.has(f0.k));
+    const list = e0 ? [{ ...e0, k: f0.k }] : exps.length ? exps.slice(0, 1) : [{ prec: null, k: f0.k }];
     list.forEach(e => { addMs2Pair(e, y); y += 550; });
   } else if (t === "mrm") {
     if (E._mrmLoading) return; E._mrmLoading = true;
@@ -228,14 +229,25 @@ function ms2Goto(/** @type {number | string} */ prec) {
   const c = ms2PairOf(prec); if (!c) return ms2Switch(/** @type {number} */ (prec));
   setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - hdrH() - 12, behavior: "smooth" });
 }
-function ms2Switch(/** @type {number} */ prec) {
+// `show` = false keeps the other files hidden (the file just shown alone, ms2Follow)
+function ms2Switch(/** @type {number} */ prec, show = true) {
   const c = tabPanels("ms2").filter((/** @type {Pannello} */ q) => q.type === "chrom").sort((/** @type {Pannello} */ a, /** @type {Pannello} */ b) => a.y - b.y)[0];
   if (!c) return ms2Toggle(prec, true);
-  c.prec = prec; c.title = ptMs2(prec); c.sel = null; ms2Show(prec);
+  c.prec = prec; c.title = ptMs2(prec); c.sel = null; if (show) ms2Show(prec);
   const live = E.panels.filter((/** @type {Pannello} */ q) => q.type === "spec" && q.link === c.id);
   live.forEach((/** @type {Pannello} */ sp) => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = ptProduct(prec); });
   ctl(c); live.forEach(ctl);
   renderFileList(); uiSave();
   // the spectrum of the highest scan of the new precursor
   return Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);
+}
+// the file just picked in the list (a click, soloFile) whose precursors do not include the one of the MS2 pair: the pair switches to its first precursor, or the chromatogram and spectrum stay blank
+function ms2Follow(/** @type {MzFile} */ f0) {
+  const ps = (f0.ms2_exps || []).map((/** @type {Bag} */ e) => e.prec).filter((/** @type {number | null} */ v) => v != null).sort((/** @type {number} */ a, /** @type {number} */ b) => a - b);
+  const cs = tabPanels("ms2").filter((/** @type {Pannello} */ q) => q.type === "chrom").sort((/** @type {Pannello} */ a, /** @type {Pannello} */ b) => a.y - b.y), c = cs[0];
+  if (!c || f0.kind !== c.tab || !ps.length) return;
+  if (c.ks && !c.ks.includes(f0.k)) c.ks = null;
+  // a pair that already draws a precursor of the file (the top one or a second pair) is left as it is
+  if (cs.some((/** @type {Pannello} */ q) => q.prec == null || /** @type {unknown} */ (q.prec) === "" || ps.some((/** @type {number} */ v) => Math.abs(v - Number(q.prec)) < 0.6))) return;
+  return ms2Switch(ps[0], false);
 }
