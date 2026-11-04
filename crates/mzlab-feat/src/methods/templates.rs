@@ -35,3 +35,6 @@ pub(super) const TEMPLATES: &[(&str, &str, &str)] = &[
     ("export.mztab", "", "The feature table was exported as mzTab-M 2.0."),
     ("report.methods", "", "This methods text was written from the record of the run."),
 ];
+
+/// Sentence added to the one of `features.detect` when `isotopes` is `grouper`.
+pub(super) const ISO_GROUPER: &str = "Isotopologues were grouped with the isotope grouper of mzmine 3 (m/z tolerance {iso_ppm} ppm or {iso_abs_da} Da, RT tolerance {iso_rt_tol} min, charges up to {iso_max_charge}, group representative {iso_representative}).";

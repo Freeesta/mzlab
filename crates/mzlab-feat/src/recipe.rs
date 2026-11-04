@@ -148,19 +148,26 @@ impl Recipe {
         fingerprint(&self.file_text())[..16].to_string()
     }
 
-    /// Fingerprint (32 hex digits) of what the weak candidates of a file depend on (`series::weak_candidates`): versions, detection, quality and isotopes.
+    /// Fingerprint (32 hex digits) of what the weak candidates of a file depend on (`series::weak_candidates`): versions, detection, quality and isotopes
+    /// (the grouper of mzmine written only when chosen).
     pub fn weak_hash(&self) -> String {
         let detect = Params {
             budget: Params::default().budget,
             ..self.detect.clone()
         };
-        fingerprint(&format!(
-            "{}\nweak={WEAK_RATIO}\ndetect={:?}\nquality={:?}\niso={:?}",
-            versions(),
-            detect,
-            self.steps.quality,
-            self.steps.iso
-        ))
+        fingerprint(
+            &(format!(
+                "{}\nweak={WEAK_RATIO}\ndetect={:?}\nquality={:?}\niso={:?}",
+                versions(),
+                detect,
+                self.steps.quality,
+                self.steps.iso
+            ) + &self
+                .steps
+                .use_grouper
+                .then(|| format!("\ngrouper={:?}", self.steps.grouper))
+                .unwrap_or_default()),
+        )
     }
 
     /// Fingerprint (32 hex digits) of `table_text`.

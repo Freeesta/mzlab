@@ -105,6 +105,7 @@ pub(super) fn detect() -> Step {
             .advanced(),
     ];
     params.extend(noise_gates());
+    params.extend(isotope_params());
     Step {
         cv: Some("MS:1000035"),
         ins: vec![Port::new("index", DataType::Mzidx, "Scan index")
@@ -125,6 +126,48 @@ pub(super) fn detect() -> Step {
             "Finds the chromatographic peaks of the MS1 scans of each file, with their quality, isotopologues and families. The parameters are common to every algorithm; each algorithm adds its own.",
         )
     }
+}
+
+/// The isotope grouping of each file: the averagine grouping by default, or the isotope grouper of mzmine with the `iso_*` settings.
+fn isotope_params() -> Vec<Param> {
+    vec![
+        Param::choice("isotopes", "Isotope grouping", &["averagine", "grouper"])
+            .default_str("averagine")
+            .doc("averagine tests the ratios natural abundance allows; grouper is the isotope grouper of mzmine, with no ratio test")
+            .advanced(),
+        Param::number("iso_ppm", "Isotope m/z tolerance")
+            .min(0.0)
+            .default_num(5.0)
+            .unit("ppm")
+            .doc("grouper only: m/z tolerance of an isotope step, the larger of this and the absolute one")
+            .advanced(),
+        Param::number("iso_abs_da", "Isotope absolute tolerance")
+            .min(0.0)
+            .default_num(0.0015)
+            .unit("Da")
+            .doc("grouper only: absolute lower bound of the m/z tolerance")
+            .advanced(),
+        Param::number("iso_rt_tol", "Isotope RT tolerance")
+            .min(0.0)
+            .default_num(0.05)
+            .unit("min")
+            .doc("grouper only: largest RT distance of an isotopologue to the start row")
+            .advanced(),
+        Param::integer("iso_max_charge", "Isotope largest charge")
+            .min(1.0)
+            .max(3.0)
+            .default_num(2.0)
+            .doc("grouper only: the charges tried, from 1 up to this")
+            .advanced(),
+        Param::boolean("iso_monotonic", "Only heavier isotopes")
+            .default_bool(false)
+            .doc("grouper only: look only above the start row")
+            .advanced(),
+        Param::choice("iso_representative", "Group representative", &["most_intense", "lowest_mz"])
+            .default_str("most_intense")
+            .doc("grouper only: the row of a group that is not marked as an isotopologue")
+            .advanced(),
+    ]
 }
 
 /// The two gates against noise rows (`lrnoise`): the S/N gate is on by default only in the unit profile, the width gate is a choice.

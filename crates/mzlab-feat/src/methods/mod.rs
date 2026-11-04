@@ -199,24 +199,32 @@ fn without_missing(template: &str, s: &Step) -> String {
     }
 }
 
+/// `t` with each `{name}` replaced by the value of the parameter (a clause whose parameter is missing is dropped).
+fn fill(t: &str, s: &Step) -> String {
+    let t = without_missing(t, s);
+    let mut done = String::new();
+    let mut rest = t.as_str();
+    while let Some((head, tail)) = rest.split_once('{') {
+        let (name, after) = tail.split_once('}').unwrap_or((tail, ""));
+        done.push_str(head);
+        done.push_str(&value_of(s, name));
+        rest = after;
+    }
+    done.push_str(rest);
+    done
+}
+
 /// The sentence of a step: the template filled with the parameters, else the generic sentence.
 fn sentence(s: &Step) -> String {
     let mut out = match template(&s.id, &s.algorithm) {
-        Some(t) => {
-            let t = without_missing(t, s);
-            let mut done = String::new();
-            let mut rest = t.as_str();
-            while let Some((head, tail)) = rest.split_once('{') {
-                let (name, after) = tail.split_once('}').unwrap_or((tail, ""));
-                done.push_str(head);
-                done.push_str(&value_of(s, name));
-                rest = after;
-            }
-            done.push_str(rest);
-            done
-        }
+        Some(t) => fill(t, s),
         None => format!("The step {} was run with {}.", s.id, listing(s)),
     };
+    // the isotope grouping is a parameter, not the algorithm, of the detection
+    if s.id == "features.detect" && value_of(s, "isotopes") == "grouper" {
+        out.push(' ');
+        out.push_str(&fill(templates::ISO_GROUPER, s));
+    }
     if s.failed {
         out.push_str(" This step did not complete.");
     }

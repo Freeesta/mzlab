@@ -683,6 +683,13 @@
                   "budget",
                   "min_width",
                   "min_snr",
+                  "isotopes",
+                  "iso_ppm",
+                  "iso_abs_da",
+                  "iso_rt_tol",
+                  "iso_max_charge",
+                  "iso_monotonic",
+                  "iso_representative",
                   "ppm",
                   "peak_width_s",
                   "snr",
@@ -748,6 +755,42 @@
                     "minimum":0,
                     "default":0,
                     "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
+                  },
+                  {
+                    "enum":["averagine","grouper"],
+                    "default":"averagine",
+                    "description":"averagine = steps of 13C, 34S, 37Cl, 81Br with ratios natural abundance allows; grouper = the isotope grouper of mzmine (1.0033 Da steps over the charges, no ratio test); no row is removed"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"grouper only: m/z tolerance of an isotope step, the larger of this and the absolute one"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.0015,
+                    "description":"grouper only: absolute lower bound of the m/z tolerance"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.05,
+                    "description":"grouper only: largest RT distance of an isotopologue to the start row"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":3,
+                    "default":2,
+                    "description":"grouper only: the charges tried, from 1 up to this"
+                  },
+                  {"type":"boolean","default":false,"description":"grouper only: look only above the start row"},
+                  {
+                    "enum":["most_intense","lowest_mz"],
+                    "default":"most_intense",
+                    "description":"grouper only: the row of a group that is not marked as an isotopologue"
                   },
                   {
                     "anyOf":[

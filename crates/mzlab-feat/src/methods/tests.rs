@@ -87,3 +87,23 @@ fn every_placeholder_of_a_template_is_a_word_of_the_table() {
         }
     }
 }
+
+/// The isotope grouper of mzmine adds its sentence to the one of the detection; the averagine default adds nothing.
+#[test]
+fn the_isotope_grouper_adds_its_sentence_to_the_detection() {
+    let run = |iso: &str| {
+        let record = format!(
+            r#"{{"schema":"corsa/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+{{"name":"floor","value":20000,"state":"fixed"}},{{"name":"isotopes","value":"{iso}","state":"fixed"}},{{"name":"iso_ppm","value":5,"state":"fixed"}},
+{{"name":"iso_abs_da","value":0.0015,"state":"fixed"}},{{"name":"iso_rt_tol","value":0.05,"state":"fixed"}},{{"name":"iso_max_charge","value":2,"state":"fixed"}},
+{{"name":"iso_representative","value":"most_intense","state":"fixed"}}]}}]}}"#
+        );
+        methods_text(&style("paragraph"), record.as_bytes()).unwrap()
+    };
+    let grouper = run("grouper");
+    assert!(
+        grouper.contains("isotope grouper of mzmine 3 (m/z tolerance 5 ppm or 0.0015 Da, RT tolerance 0.05 min, charges up to 2, group representative most_intense)"),
+        "{grouper}"
+    );
+    assert!(!run("averagine").contains("isotope grouper"));
+}
