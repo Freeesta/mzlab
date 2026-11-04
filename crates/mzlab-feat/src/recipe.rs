@@ -42,6 +42,10 @@ pub struct Recipe {
     /// Mode and width (decades) of the noise lump that `detect.min_height` was estimated from (`Recipe::for_index`); `None` = the canonical value.
     /// Not part of the text, so the `.mzfeatf` fingerprint is that of `detect.min_height` alone.
     pub min_height_basis: Option<(f64, f64)>,
+    /// Algorithm `join` of `features.align` (`None` = the groups of `align`/`famalign`); with it the table has one row per ion whatever `mode` says.
+    pub join: Option<crate::align_mzmine::JoinAlign>,
+    /// Algorithm `peak_finder` of `features.gapfill` (`None` = the integration of `gapfill`).
+    pub peak_finder: Option<crate::align_mzmine::PeakFinder>,
 }
 
 /// The weak tier goes down to this fraction of the minimum height (3 times the noise when the minimum is 10 times).
@@ -72,6 +76,8 @@ impl Default for Recipe {
             weak_files: WEAK_FILES,
             ms2: crate::ms2spec::SpecOpts::default(),
             min_height_basis: None,
+            join: None,
+            peak_finder: None,
         }
     }
 }
@@ -112,7 +118,8 @@ impl Recipe {
         )
     }
 
-    /// Text of what the aligned table depends on: the text of the files and the alignment, the RT map and the filling.
+    /// Text of what the aligned table depends on: the text of the files and the alignment, the RT map and the filling; the algorithms `join` and
+    /// `peak_finder` are written only when chosen, so the text of the default is unchanged.
     pub fn table_text(&self) -> String {
         format!(
             "{}\nmode={:?}\nalign={:?}\nrt={:?}\nfill={:?}\nweak={}{}",
@@ -126,6 +133,11 @@ impl Recipe {
         ) + &self
             .rt_range
             .map_or(String::new(), |r| format!("\nrt_range={r:?}"))
+            + &self.join.as_ref().map_or(String::new(), |j| format!("\njoin={j:?}"))
+            + &self
+                .peak_finder
+                .as_ref()
+                .map_or(String::new(), |p| format!("\npeak_finder={p:?}"))
     }
 
     /// Fingerprint (16 hex digits) of `file_text`: the name of the per-file cache.

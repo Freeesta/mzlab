@@ -109,10 +109,7 @@ pub fn align_and_fill<R: ReadAt>(
     open: impl FnMut(usize) -> Result<Index<R>>,
 ) -> Result<(Aligned, usize)> {
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    let table = match r.mode {
-        Mode::Ion => align_ions(&refs, &r.align, &r.rt)?,
-        Mode::Family => align_families(&refs, &r.align)?,
-    };
+    let table = align_rows(&refs, r)?;
     let pos = |k: usize| -> Result<FileFeatures> {
         Ok(FileFeatures {
             mz: files[k].mz.clone(),
@@ -153,6 +150,52 @@ pub fn align_and_fill<R: ReadAt>(
         Ok(part)
     })?;
     Ok((table, filled))
+}
+
+/// The rows of the aligned table of `files`: the join of mzmine when the recipe chooses it (one row per ion whatever the mode), else the groups of the mode.
+pub(crate) fn align_rows(files: &[&FileFeatures], r: &Recipe) -> Result<Aligned> {
+    if let Some(j) = &r.join {
+        return join_table(files, r, j);
+    }
+    match r.mode {
+        Mode::Ion => align_ions(files, &r.align, &r.rt),
+        Mode::Family => align_families(files, &r.align),
+    }
+}
+
+#[cfg(feature = "untargeted")]
+fn join_table(files: &[&FileFeatures], r: &Recipe, j: &crate::align_mzmine::JoinAlign) -> Result<Aligned> {
+    crate::untargeted::flow_align::join_table(files, r, j)
+}
+
+#[cfg(not(feature = "untargeted"))]
+fn join_table(_: &[&FileFeatures], _: &Recipe, _: &crate::align_mzmine::JoinAlign) -> Result<Aligned> {
+    Err(mzlab_core::error::Error::new("error.badRecipe"))
+}
+
+/// The gap filling of the peak finder of mzmine, file after file (`series::finish` with `Recipe::peak_finder`).
+#[cfg(feature = "untargeted")]
+fn peak_finder<R: ReadAt>(
+    table: &mut Aligned,
+    n: usize,
+    r: &Recipe,
+    f: &crate::align_mzmine::PeakFinder,
+    open: &mut dyn FnMut(usize) -> Result<Index<R>>,
+    prog: &mut Prog,
+) -> Result<usize> {
+    crate::untargeted::flow_align::peak_finder(table, n, r, f, open, prog)
+}
+
+#[cfg(not(feature = "untargeted"))]
+fn peak_finder<R: ReadAt>(
+    _: &mut Aligned,
+    _: usize,
+    _: &Recipe,
+    _: &crate::align_mzmine::PeakFinder,
+    _: &mut dyn FnMut(usize) -> Result<Index<R>>,
+    _: &mut Prog,
+) -> Result<usize> {
+    Err(mzlab_core::error::Error::new("error.badRecipe"))
 }
 
 /// The cells a file fills: (row, area).
@@ -283,7 +326,9 @@ pub(crate) fn finish<R: ReadAt>(
         table.retain_rt(lo, hi);
     }
     let mut filled = 0;
-    if r.fill_gaps {
+    if let (true, Some(f)) = (r.fill_gaps, &r.peak_finder) {
+        filled = peak_finder(&mut table, n, r, f, &mut open, prog)?;
+    } else if r.fill_gaps {
         match par_open {
             Some(po) => filled = fill_threads(&mut table, n, map, r, po, prog)?,
             None => {

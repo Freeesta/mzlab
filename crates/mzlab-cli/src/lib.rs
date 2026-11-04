@@ -35,6 +35,8 @@ mod flow_compare;
 #[cfg(test)]
 mod flow_detect_adap_tests;
 #[cfg(test)]
+mod flow_align_join_tests;
+#[cfg(test)]
 mod flow_detect_algorithm_tests;
 mod flow_digl;
 mod flow_drift;
