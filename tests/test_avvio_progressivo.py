@@ -357,7 +357,9 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
     const CONVROWS = {{ clearDone: () => {{}}, paint: () => {{}}, onCancel: null }};
     const FILETAB = {{ flush: () => {{}} }};
     function syncWork() {{}}
-    const OPENNOW = {{ note: () => {{}} }};
+    // a table row that is not open is ticked again, not refused (dropDups): here the first copy is open
+    const GORD = {{ full: 0 }};
+    const OPENNOW = {{ note: () => {{}}, isOpen: () => true, tick: () => {{}} }};
     function fail() {{}}
     const IDLE = [];
     const processed = [];
