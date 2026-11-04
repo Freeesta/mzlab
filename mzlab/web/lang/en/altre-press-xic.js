@@ -345,7 +345,7 @@ I18N.add("en", {
   "qaqc.rep.json": "Study report (JSON)",
   "prof.title": "Time profile of an ion",
   "prof.intro.lr": "You choose the ion (m/z) and the RT of its peak: the program measures its height or area in every file, in time order, with the same integration as the chromatogram. Raw values, no fitted curve.",
-  "prof.intro.hr": "You choose the ion (m/z or formula) and the RT of its peak: height or area in every file in time order, with the same integration as the chromatogram. If you defined an internal standard in QA/QC you can divide by its value in the same file.",
+  "prof.intro.hr": "You choose the ion (m/z or formula) and the RT of its peak: height or area in every file in time order, with the same integration as the chromatogram. With an internal standard defined in QA/QC, the result is divided by its value in the same file.",
   "prof.intro.hr.plain": "You choose the ion (m/z or formula) and the RT of its peak: height or area in every file in time order, with the same integration as the chromatogram.",
   "prof.err.input": "Type an m/z (or a formula) and the RT of the peak in minutes.",
   "prof.nopoints": "Nothing to draw: files need a time («Time» column of the metadata) and a peak that was found.",

@@ -98,6 +98,42 @@ pub fn view_json<R: ReadAt>(
     Ok(o.0)
 }
 
+/// The whole content of a reader.
+fn read_all<R: ReadAt>(r: &mut R, size: u64) -> Result<Vec<u8>> {
+    let mut b = vec![0u8; size as usize];
+    r.read_at(0, &mut b)?;
+    Ok(b)
+}
+
+/// `view_json` of a `table.filter` step: the same view with `"origine":{"tabella":<SHA-256 of the table>,"spec":<the rules>}` after it, so that an export that
+/// reads the view finds the table in the run and writes the rows the view keeps (`view_spec`).
+pub fn view_json_origin<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+) -> Result<String> {
+    let mut text = view_json(r, size, samples_json, spec)?;
+    let sha = mzlab_core::budget::sha256_hex(&read_all(r, size)?);
+    text.pop();
+    let mut o = Out::default();
+    o.raw(&text).raw(",\"origine\":{\"tabella\":").str(&sha);
+    o.raw(",\"spec\":").str(spec).raw("}}");
+    Ok(o.0)
+}
+
+/// The SHA-256 of the table and the rules a view of `view_json_origin` was made with; `err.flow.export.view` for any other text.
+pub fn view_origin(view: &str) -> Result<(String, String)> {
+    let bad = || Error::new("err.flow.export.view");
+    let v = mzlab_core::json::parse(view.as_bytes()).map_err(|_| bad())?;
+    let o = v.get("origine").ok_or_else(bad)?;
+    let get = |k: &str| o.get(k).and_then(|x| x.str()).map(str::to_string);
+    Ok((
+        get("tabella").ok_or_else(bad)?,
+        get("spec").ok_or_else(bad)?,
+    ))
+}
+
 /// The `report/1` of a table under the view `spec` (empty = the whole table).
 pub fn report_json<R: ReadAt>(
     r: &mut R,

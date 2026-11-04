@@ -209,7 +209,7 @@ I18N.add("it", {
   "msngrafo.file.open.tip": "Un grafo salvato (.json della riga di comando o del Flow); anche trascinandolo",
   "msngrafo.file.title": "Grafo di frammentazione · {name}",
   "msngrafo.file.close": "Chiudi il grafo",
-  "msngrafo.file.ro": "Aperto dal file {name} senza i suoi dati grezzi: puoi leggere il grafo e ogni ione, ma lo spettro di uno ione, «Usa», i tagli di una struttura e un nuovo calcolo delle regole richiedono il file dei dati grezzi e sono spenti.",
+  "msngrafo.file.ro": "Aperto dal file {name} senza i suoi dati grezzi: il grafo e ogni ione si leggono, ma lo spettro di uno ione, «Usa», i tagli di una struttura e un nuovo calcolo delle regole richiedono il file dei dati grezzi e sono spenti.",
   "msngrafo.file.off": "Serve il file grezzo, che non è caricato.",
   "msngrafo.file.nospec": "Lo spettro di questo ione non si può aprire: il file dei dati grezzi non è caricato."
 });

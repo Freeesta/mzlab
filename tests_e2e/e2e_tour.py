@@ -53,7 +53,7 @@ try:
         attendi(pg, "!document.querySelector('#tour-invito') || document.querySelector('#tour-invito').hidden || !document.querySelector('#tour-invito').offsetParent", 5000)
         assert not pg.is_visible("#tour-invito"), "invitation closed by Non ora"
         pg.wait_for_selector("#tour-later.on")
-        assert pg.inner_text("#tour-later") == "Potrai fare il tour più tardi dalle Impostazioni." and pg.get_attribute("#tour-later", "aria-live") == "polite"
+        assert pg.inner_text("#tour-later") == "Il tour si rifà dalle Impostazioni." and pg.get_attribute("#tour-later", "aria-live") == "polite"
         lb, gb = pg.locator("#tour-later").bounding_box(), pg.locator("#np-set").bounding_box()
         assert lb["y"] >= gb["y"] + gb["height"] and lb["x"] <= gb["x"] + gb["width"] and lb["x"] + lb["width"] >= gb["x"], ("bubble under the gear", lb, gb)
         pg.mouse.click(300, 300)
