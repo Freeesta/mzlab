@@ -671,7 +671,8 @@ const ms2Scans = (/** @type {MzFile} */ x, /** @type {number} */ v) => (x.ms2_ex
 function ctl(/** @type {Pannello} */ p) {
   hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl"), wl = p.type === "chrom" ? wlCtl(p) : "";
-  t.textContent = ptitleP(p);  // titoli.js: the title says what the panel shows
+  const full = ptitleP(p); t.textContent = full;  // titoli.js: the title says what the panel shows
+  t.dataset.tip = t.dataset.tip || t.title; t.title = full ? full + "\n" + t.dataset.tip : t.dataset.tip;  // a title cut by its ellipsis stays readable whole in the tooltip
   if (window.SPECBAR && p.type === "spec") SPECBAR.title(p, t);
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";  // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some((/** @type {Pannello} */ q) => q.id === p.link) || E.panels.some((/** @type {Pannello} */ q) => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped

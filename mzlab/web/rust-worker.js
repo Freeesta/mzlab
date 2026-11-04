@@ -268,7 +268,8 @@ function earlyTicOf(job) {
   }
   return null;
 }
-async function lrIndex(m) {
+const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await ARCH.get("idx", m.name + ".mzidx") && await safe(() => lrOpen(m.name)) ? { info: JSON.stringify({ ms: 0, missing: 0 }) } : lrIndexOwn(m));      // one tab builds an index at a time; the one that waited uses the finished index
+async function lrIndexOwn(m) {
   const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
   if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
   const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;

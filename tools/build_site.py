@@ -119,6 +119,17 @@ def pack_mzfinder(static: Path) -> None:
     (dst / "indice.json").write_text(json.dumps({"early": early, "js": js, "lazy": lazy, "files": files + data}, indent=1), encoding="utf-8")
 
 
+def bundle_lang(static: Path) -> None:
+    """lang/<lang>.js of the site is the whole catalog in one file (the area files in the order of the loader), not the loader that writes one
+    <script> per area: one render-blocking request instead of ~35 before the first paint. The area folders stay (tools and tests read them)."""
+    for lang in ("it", "en"):
+        loader = (static / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        names = re.findall(r'"([^"]+)"', re.search(r"document\.write\(\[([^\]]*)\]", loader).group(1))
+        parts = [(static / "lang" / lang / f"{n}.js").read_text(encoding="utf-8").strip() for n in names]
+        assert parts, lang
+        (static / "lang" / f"{lang}.js").write_text(f"// Interface catalog ({lang}), all area files in one (tools/build_site.py bundle_lang)\n" + "\n".join(parts) + "\n", encoding="utf-8")
+
+
 def file_hashes(out: Path) -> dict:
     """SHA-256 and size of every file of the site, by path under `out` (sw.js, the manifest itself and the service worker's manifest left out)."""
     files = {}
@@ -223,6 +234,7 @@ def main() -> None:
         shutil.rmtree(out)
     static = out / "static"
     shutil.copytree(ROOT / "mzlab" / "web", static)
+    bundle_lang(static)
     for lic in ("LICENSE", "LICENZE-TERZI.md"):            # the licences travel with the site (Apache-2.0, BSD-3, MPL-2.0 ask for the notices)
         if (ROOT / lic).exists():
             shutil.copy2(ROOT / lic, out / lic)
