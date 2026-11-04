@@ -202,6 +202,7 @@ I18N.add("it", {
   "tdati.note.line": "Punti disegnati fra RT {a} e {b} min (al massimo {n} per traccia, più gli apici dei picchi integrati).",
   "tdati.note.spec": "Picchi oltre il {thr} % del più alto fra m/z {a} e {b} (al massimo 300, i più intensi).",
   "tdati.note.map": "Le {n} celle più intense della regione visibile.",
+  "uv.reading": "Lettura della matrice UV del file (solo la prima volta)…",
   "uv.error": "Spettro UV non disponibile.",
   "uv.none": "Questo file non ha spettri UV: servono i dati del rivelatore DAD (matrice tempo × lunghezza d'onda). Un mzML senza spettri UV non li ha; se viene da un .wiff con il DAD, ricarica il .wiff con il suo .wiff.scan.",
   "uv.axis.x": "Lunghezza d'onda (nm)",

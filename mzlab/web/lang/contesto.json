@@ -820,6 +820,7 @@
   "ctx.uv.wlAt": "Voce del menu dello spettro UV che apre la traccia del DAD a una lunghezza d'onda; {nm} = lunghezza d'onda sotto il puntatore, arrotondata.",
   "tdati.note.uv": "Nota sopra la tabella dello spettro UV; {a}-{b} nm, {n} = massimo di righe.",
   "uv.leg.mean": "Legenda dello spettro UV medio; {rt} = intervallo RT (min), {n} = numero di spettri mediati.",
+  "uv.reading": "Avviso sotto la traccia PDA mentre si legge la matrice UV di un file al primo doppio clic (una volta per file).",
   "uv.leg.one": "Legenda dello spettro UV di un solo istante; {rt} = RT (min).",
   "etpk.nm": "Lunghezza d'onda in nanometri nell'etichetta di un picco del PDA/UV (es. «14.26 · 254 nm»); {v} = lunghezza d'onda.",
   "etpk.tip.int": "Tooltip dell'etichetta di un picco del cromatogramma; {y} = intensità dell'apice.",

@@ -202,6 +202,7 @@ I18N.add("en", {
   "tdati.note.line": "Points drawn between RT {a} and {b} min (at most {n} per trace, plus the apexes of the integrated peaks).",
   "tdati.note.spec": "Peaks above {thr} % of the highest between m/z {a} and {b} (at most 300, the most intense).",
   "tdati.note.map": "The {n} most intense cells of the visible region.",
+  "uv.reading": "Reading the UV matrix of the file (first time only)…",
   "uv.error": "UV spectrum not available.",
   "uv.none": "This file has no UV spectra: they need the data of a DAD detector (time × wavelength matrix). An mzML without UV spectra has none; if it comes from a .wiff with a DAD, load the .wiff again with its .wiff.scan.",
   "uv.axis.x": "Wavelength (nm)",
