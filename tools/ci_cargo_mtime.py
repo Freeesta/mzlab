@@ -5,13 +5,17 @@ content equals the one recorded in `target/.mzlab-tree` when the cache was saved
 stamp `restore` leaves): a run that failed before compiling, or restored an older cache, must not vouch for sources its `target` never saw. Without a record
 `restore` does nothing; it writes `record=true|false` to $GITHUB_OUTPUT so test.yml can let a pull request seed a cache that has none.
 The record also names the job that wrote it: a `target` holds only the build variants (profile, target, features) its own job compiles, so a record
-of another job (a restore-key fallback) vouches for sources whose variant here may be stale, and `restore` ignores it."""
+of another job (a restore-key fallback) vouches for sources whose variant here may be stale, and `restore` ignores it. One job builds a crate in
+several variants (native, wasm32, feature families under target/fam/), and a run may compile only some: `record` deletes the fingerprints of the
+variants it did not rebuild for a crate whose sources it newly vouches for, so cargo rebuilds them when a later run needs them."""
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-RECORD = Path("target/.mzlab-tree")
+# v2: the v1 records (target/.mzlab-tree) vouched for crates whose other variants were stale, so they are never read
+RECORD = Path("target/.mzlab-tree2")
 # touched by `restore`; a crate whose .fingerprint is newer than this was compiled by the run
 STAMP = Path("target/.mzlab-stamp")
 # the CI job that wrote the record (empty outside CI)
@@ -38,23 +42,24 @@ def same_job() -> bool:
 
 
 def crate_of(path: str) -> str | None:
-    """Directory name of the workspace crate owning a path (None for files outside crates/)."""
+    """Directory name of the workspace or vendored crate owning a path (None for files outside crates/ and vendor/)."""
     parts = path.split("/")
-    return parts[1] if parts[0] == "crates" and len(parts) > 2 else None
+    return parts[1] if parts[0] in ("crates", "vendor") and len(parts) > 2 else None
 
 
-def built_crates(since: float) -> tuple[set[str], bool]:
-    """Names of the crates with a fingerprint newer than `since`, and whether any fingerprint at all is (vendored crates, lock file)."""
+def fingerprints(since: float) -> tuple[dict[str, list[Path]], set[str]]:
+    """Fingerprint folders by crate name, and the names with one newer than `since` (compiled by this run)."""
+    by_name: dict[str, list[Path]] = {}
     names: set[str] = set()
-    any_new = False
     for fp in Path("target").glob("**/.fingerprint/*"):
+        name = fp.name.rsplit("-", 1)[0]
         try:
             if fp.stat().st_mtime > since or any(f.stat().st_mtime > since for f in fp.iterdir()):
-                any_new = True
-                names.add(fp.name.rsplit("-", 1)[0])
+                names.add(name)
         except OSError:
             continue
-    return names, any_new
+        by_name.setdefault(name, []).append(fp)
+    return by_name, names
 
 
 def restore() -> int:
@@ -64,6 +69,7 @@ def restore() -> int:
             f.write(f"record={str(found).lower()}\n")
     STAMP.parent.mkdir(parents=True, exist_ok=True)
     STAMP.write_text("", encoding="utf-8")
+    Path("target/.mzlab-tree").unlink(missing_ok=True)
     if not found:
         print("no record of the cached tree: every crate is rebuilt")
         return 0
@@ -83,13 +89,27 @@ def restore() -> int:
 def record() -> int:
     """Writes the files already vouched for plus those of the crates compiled since `restore`; the rest is left out and so rebuilt next time."""
     prev = read_record() if same_job() else {}
-    names, any_new = built_crates(STAMP.stat().st_mtime) if STAMP.is_file() else (set(), False)
+    since = STAMP.stat().st_mtime if STAMP.is_file() else None
+    by_name, names = fingerprints(since) if since is not None else ({}, set())
     out = {}
+    newly: set[str] = set()
     for path, blob in tree().items():
         crate = crate_of(path)
-        compiled = any_new if crate is None else crate in names
-        if prev.get(path) == blob or compiled:
+        compiled = bool(names) if crate is None else crate in names
+        if prev.get(path) == blob:
             out[path] = blob
+        elif compiled:
+            out[path] = blob
+            if crate is not None:
+                newly.add(crate)
+    # a variant this run did not rebuild was compiled from older sources than the ones now vouched for
+    for crate in newly:
+        for fp in by_name.get(crate, []):
+            try:
+                if fp.stat().st_mtime <= since and all(f.stat().st_mtime <= since for f in fp.iterdir()):
+                    shutil.rmtree(fp)
+            except OSError:
+                continue
     RECORD.parent.mkdir(parents=True, exist_ok=True)
     RECORD.write_text("".join(f"{blob}\t{path}\n" for path, blob in out.items()), encoding="utf-8")
     JOB.write_text(os.environ.get("GITHUB_JOB", ""), encoding="utf-8")

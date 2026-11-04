@@ -107,3 +107,48 @@ def test_a_record_of_another_job_is_not_trusted(tmp_path):
     # the same job reuses its own record
     run(repo, "restore", "rust-det")
     assert mtime(repo, "crates/mzlab-core/src/lib.rs") == OLD
+
+
+def test_a_variant_the_run_did_not_rebuild_is_dropped_when_its_crate_changes(tmp_path):
+    # mzlab-core changes; the run rebuilds it natively but not for wasm32 (the test that builds the .wasm ran in another job):
+    # the stale wasm32 fingerprint must go, or the next run takes the old wasm32 mzlab-core as fresh
+    repo = make_repo(tmp_path)
+    run(repo, "restore")
+    compile_crate(repo, "mzlab-core")
+    wasm = repo / "target/fam/wasm/wasm32-unknown-unknown/release/.fingerprint/mzlab-core-4567ef01"
+    wasm.mkdir(parents=True)
+    (wasm / "lib-x.json").write_text("{}")
+    run(repo, "record")
+    (repo / "crates/mzlab-core/src/lib.rs").write_text("// v2\n")
+    git(repo, "commit", "-qam", "two")
+    time.sleep(0.02)
+    run(repo, "restore")
+    compile_crate(repo, "mzlab-core")
+    run(repo, "record")
+    assert not wasm.exists()
+    assert (repo / "target/debug/.fingerprint/mzlab-core-0123abcd").is_dir()
+    os.utime(repo / "crates/mzlab-core/src/lib.rs", None)
+    run(repo, "restore")
+    assert mtime(repo, "crates/mzlab-core/src/lib.rs") == OLD
+
+
+def test_an_unchanged_crate_keeps_the_variants_the_run_did_not_rebuild(tmp_path):
+    repo = make_repo(tmp_path)
+    run(repo, "restore")
+    compile_crate(repo, "mzlab-core")
+    run(repo, "record")
+    time.sleep(0.02)
+    run(repo, "restore")
+    compile_crate(repo, "mzlab-lib")
+    run(repo, "record")
+    assert (repo / "target/debug/.fingerprint/mzlab-core-0123abcd").is_dir()
+
+
+def test_a_v1_record_is_not_trusted(tmp_path):
+    repo = make_repo(tmp_path)
+    (repo / "target").mkdir()
+    (repo / "target/.mzlab-tree").write_text("")
+    os.utime(repo / "crates/mzlab-core/src/lib.rs", None)
+    run(repo, "restore")
+    assert mtime(repo, "crates/mzlab-core/src/lib.rs") != OLD
+    assert not (repo / "target/.mzlab-tree").exists()
