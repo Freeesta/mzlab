@@ -21,7 +21,7 @@ try:
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         for w in (1440, 1180, 820):
             def sizes(w=w):
-                pg.set_viewport_size({"width": w, "height": 1000}); pg.wait_for_timeout(300)
+                pg.set_viewport_size({"width": w, "height": 1000}); attendi(pg, f"innerWidth === {w}")
                 boxes = pg.evaluate(BOX); assert len(boxes) >= 3, boxes
                 bad = [b for b in boxes if b[1] < 24 or b[2] < 24 or not 16 <= b[3] <= 20]
                 assert not bad, bad
