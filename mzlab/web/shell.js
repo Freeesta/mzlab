@@ -44,7 +44,7 @@ function applyView(){const v=S.view,d=v==="data";
  hh();addEventListener("scroll",()=>hd.classList.toggle("scrolled",scrollY>4),{passive:true});addEventListener("resize",hh);if(window.ResizeObserver)new ResizeObserver(hh).observe(hd)}
 window.hdrH=()=>document.querySelector("header").offsetHeight;
 // Back and Forward walk through the views
-/** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){v=VIEW_ALIAS[v]||v;STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
+/** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
 document.querySelectorAll("#nav button:not([data-late])").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 // Back/Forward and typed addresses: the view follows the hash
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
@@ -242,7 +242,7 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
     if(ready&&onFile)onFile(ready,g)}
   for(const nm of names.values())CONVROWS.drop(nm);
   out.panel=g;return out}
-// true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
+// true where the engine converts .raw itself (desktop): the guide then appears only for the formats it cannot convert
 let CONVERT_RAW=false;
 function fileKind(/** @type {string} */ name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return null;return window.FORMATI_NOTI.classify(n)||"other"}
 function ssGet(/** @type {string} */ k){try{return sessionStorage.getItem(k)}catch(e){return null}}
@@ -321,11 +321,11 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
     if(signal.aborted){CONVROWS.finish(f.name,"cancel");PROGRESSO.end(f.name);return}
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     // a converted file: its index is the last phase of the bar of the conversion
-    const pn=panel&&CONV.has(f.name)?panel:null,QQQ_NET=!window.QQQ_BROWSER,mono=()=>Math.floor(100*PROGRESSO.file(f.name));
+    const pn=panel&&CONV.has(f.name)?panel:null,mono=()=>Math.floor(100*PROGRESSO.file(f.name));
     // the bar of the row: load 0-40, read 40-85, index 85-100 (rowPc, progresso.js) whatever the reader; the same fraction of the model always gives the same percent
     const rp=()=>Math.min(99,Math.floor(rowPc(!!f.mzlabNat,PROGRESSO.file(f.name)))),rowSt=(/** @type {string} */ phase,/** @type {number} */ pc)=>phase==="load"?"load":f.mzlabNat?NATIVO.rowState(phase):pc>=85?"idx":"nscan";let tot=0;
     CONVROWS.set(f.name,f.mzlabNat?"index":"load",0);if(pn)pn.index(f.name,0);
-    /** @param {{ done: number, total: number }} [det] */ const put=(/** @type {number} */ frac,/** @type {string} */ phase,/** @type {{ done: number, total: number } | null | undefined} */ sub,det)=>{PROGRESSO.set(f.name,QQQ_NET?PROG_NET.send+(1-PROG_NET.send)*frac:frac,phase);const pc=rp();CONVROWS.set(f.name,rowSt(phase,pc),pc,sub,det);if(pn)pn.index(f.name,Math.min(99,mono()))};
+    /** @param {{ done: number, total: number }} [det] */ const put=(/** @type {number} */ frac,/** @type {string} */ phase,/** @type {{ done: number, total: number } | null | undefined} */ sub,det)=>{PROGRESSO.set(f.name,frac,phase);const pc=rp();CONVROWS.set(f.name,rowSt(phase,pc),pc,sub,det);if(pn)pn.index(f.name,Math.min(99,mono()))};
     // the worker tells the phase, the fraction, the scans of the sample done (done/total) or that the file waits for a free builder (wait); the last message goes to the diagnosis
     const onIdx=(/** @type {Event} */ e)=>{const d=/** @type {CustomEvent} */ (e).detail;if(d.name!==f.name)return;CONVROWS.note(f.name,`${d.phase||"?"} ${(+d.frac||0).toFixed(3)}${d.total?` scans ${d.done}/${d.total}`:""}${d.wait?" queued":""}`);
       if(d.wait){CONVROWS.set(f.name,"wait",rp());return}
@@ -333,7 +333,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
       if(d.total)tot=d.total;      // the scans of an mzML are known from its first event; the builder then tells the position in the file, so the scans read are that share of them
       put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:!f.mzlabNat&&tot?{done:Math.round(tot*Math.max(0,Math.min(1,(d.frac-0.4)/0.585))),total:tot}:null)};
     addEventListener("mzlab-index",onIdx);
-    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
+    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
       if(j.error)throw I18N.err(j);const x=(j.files||[]).find((/** @type {FileRiga} */ y)=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files,true);ST.methods=j.methods||ST.methods;renderMethods();if(!isDam)OPENNOW.add(f.name);
       LOADFAIL.delete(f.name)}
     catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}

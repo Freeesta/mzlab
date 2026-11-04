@@ -11,8 +11,6 @@ const suspectFragments = (sp, P, TT) => (sp && !P.tetto && sp.matched > 0 && sp.
 const LIVELLI = (() => {
   const D = (typeof window !== "undefined" ? window : globalThis).LIVELLI_DATI;
   const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("lib.soglie") : "qqq.lib.soglie", ORDER = D.livelli;
-  // the keys of the first version of the thresholds
-  const LEGACY = { ent: "entropia_min", shared: "picchi_min", ppm: "precursore_ppm_max", ent2: "entropia_provvisorio" };
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
   // lsObj lives in i18n.js (not loaded under node)
   const read = () => { if (typeof lsObj === "function") return lsObj(KEY); try { const o = JSON.parse(localStorage.getItem(KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
@@ -22,9 +20,8 @@ const LIVELLI = (() => {
   const names = (all = false) => Object.keys(D.profili).filter(n => all || D.profili[n].visibile);
   function profileName(st = read()) { return D.profili[st.profilo] ? st.profilo : D.predefinito; }
   function profile(name) { return D.profili[name || profileName()]; }
-  function thresholds(name, st = read()) {            // data file < old flat keys < the user's values of this profile
+  function thresholds(name, st = read()) {            // data file < the user's values of this profile
     const n = name || profileName(st), base = { ...D.profili[n].soglie }, mine = (st[n] && typeof st[n] === "object") ? st[n] : {};
-    if (n === D.predefinito) for (const [o, k] of Object.entries(LEGACY)) if (typeof st[o] === "number") base[k] = st[o];
     for (const [k, v] of Object.entries(mine)) if (k in base && typeof v === "number" && v >= 0) base[k] = v;
     return base;
   }
@@ -35,11 +32,10 @@ const LIVELLI = (() => {
   function reset() { write({}); }
   // what the workflow file keeps
   const exportState = () => ({ formato: D.formato, profilo: profileName(), soglie: thresholds() });
-  // accepts the first format ({ent, shared, ppm, ent2}) and this one
+  // accepts the workflow-file format only
   function importState(o) {
     if (!o || typeof o !== "object") return;
     if (o.formato === D.formato && o.soglie) { const n = D.profili[o.profilo] ? o.profilo : D.predefinito; write({ profilo: n, [n]: o.soglie }); }
-    else write(o);
   }
 
   // ------------------------------------------------------------ the gates

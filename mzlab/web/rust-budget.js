@@ -11,8 +11,6 @@ const KEY_LEVEL = "mzlab.memLevel";
 const LOG_MAX = 40;
 /** The probe starts at the latest after this idle wait, below the 800 ms `whenProbed` gives it, so a busy page does not leave it running after the policy went without it. */
 const IDLE_MAX_MS = 500;
-/** The manual choice has no control in the settings, so a value saved by an older version is ignored and cleaned. Set true to bring it back (with a control that calls `setBudget`). */
-const MANUAL_ENABLED = false;
 
 /** @param {string} k @returns {string | null} */
 function read(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
@@ -59,8 +57,7 @@ export function sessionLevel() { const v = Number(readSession(KEY_LEVEL)); retur
 
 /** The budget chosen by hand in MB, 0 = automatic. */
 export function manualMb() {
-  if (!MANUAL_ENABLED) { write(KEY_MANUAL, null); return 0; }
-  const v = Number(read(KEY_MANUAL)); return Number.isFinite(v) && v > 0 ? v : 0;
+  write(KEY_MANUAL, null); return 0;
 }
 
 /** @returns {Array<{ t: number, by: string, mode: string, mb: number, reason: string, confidence: string, inputs: any }>} */

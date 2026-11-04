@@ -1,6 +1,6 @@
 """Campaign table of Attributio inside Flow (flow/lazy/flow-campaign.js, TP_Mine/js/51_attributio_table.js, feat-worker.js, the .wasm `attributio`). Without `mzlab.admin` there is no entry; with it the
 synthetic campaign folder (tests/data/attributio/campagna_sintetica) goes through the node «Confidence level» with set_input_files, the table has 15 features with the levels of livelli_attesi.csv, the filters and the sort
-work, CSV and XLSX are downloaded, the result and its fingerprint reach the notebook, the old view name «attributio» leads to Flow, the controls are at least 24 x 24 px and MZLAB_LR_MISS stays empty. Builds the site and the .wasm
+work, CSV and XLSX are downloaded, the result and its fingerprint reach the notebook, the controls are at least 24 x 24 px and MZLAB_LR_MISS stays empty. Builds the site and the .wasm
 (SKIP without cargo and wasm-bindgen); MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses a site. Run from the repo root: python3 tests_e2e/e2e_attributio.py"""
 import csv, io, json, os, re, shutil, subprocess, sys, tempfile, threading, urllib.request, zipfile
 from pathlib import Path
@@ -152,11 +152,6 @@ try:
             with pg.expect_download() as d: pg.click('.flx-res button[aria-label="Export the table as XLSX"]')
             assert d.value.suggested_filename.endswith(".xlsx") and Path(d.value.path()).read_bytes()[:2] == b"PK"
         step("Export CSV and Export XLSX download the table", exports)
-
-        def alias():
-            pg.evaluate("setView('attributio')")
-            assert pg.evaluate("S.view") == "flow" and pg.locator("#v-flow:not([hidden])").count() == 1
-        step("the old view name «attributio» leads to Flow", alias)
 
         def notebook():
             op = pg.evaluate("(NB.ops || []).filter(o => o.op === 'attributio').pop() || null")

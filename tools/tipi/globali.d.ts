@@ -101,7 +101,6 @@ declare var PIPEFORM: any;
 declare var PIPEPOL: any;
 declare var PIPER: any;
 declare var PROGRESSO: any;
-declare var PROG_NET: any;
 declare var PROG_PHASE_KEY: any;
 declare var PROG_W: any;
 declare var QA11Y: any;
