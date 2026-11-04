@@ -99,11 +99,11 @@ export function createLr({ rb }) {
   async function upload(name, blob) {
     const n = safeName(name);
     if (!n) return fail("err.file.notAccepted", { name }, `file type not accepted: ${name}`);
-    const nat = /** @type {any} */ (blob).mzlabNat || null;                   // a sample of a maker's file (nativo.js): the members go to the browser storage with it
+    const nat = /** @type {any} */ (blob).mzlabNat || null, gz = !!(/** @type {any} */ (blob).mzlabGz);      // a sample of a maker's file (nativo.js): its members go to the browser storage with it; gz: a .mzML.gz the worker inflates into OPFS (rust-carica.js putGz)
     if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
     let fase = "copy";                                                 // where it fails, for the diagnosis (diagnosi.js): copy → index → open
     try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
-      const hit = nat || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob), put = hit || await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : p => tellIndex(n, 0.4 * p.frac, "load", p));
+      const hit = nat || gz || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob), put = hit || await rpc({ op: "lr_put", name: n, blob, nat, gz }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : p => tellIndex(n, 0.4 * p.frac, "load", p));
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked

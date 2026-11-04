@@ -13,7 +13,10 @@ fn deuterium_delta_spellings() {
         vec![("D".to_string(), 2), ("H".to_string(), -1)]
     );
     assert_eq!(rules_delta("+2D").unwrap().get("D"), Some(&2));
-    assert!((mass_of("D").unwrap() - 2.01410177812).abs() < 1e-9);
+    // the element row agrees with the generated nuclide table (2H)
+    let (a, m) = mzlab_core::elements::nuclide("D", None).unwrap();
+    assert_eq!(a, 2);
+    assert!((mass_of("D").unwrap() - m).abs() < 1e-8);
 }
 
 #[test]

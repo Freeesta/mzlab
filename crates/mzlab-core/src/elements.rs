@@ -381,3 +381,17 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     o.raw("}");
     Ok(o.0)
 }
+
+/// Mass number and exact mass of a nuclide of `el` (`None` = its monoisotopic isotope), from the generated table `nuclidi`; `D` and `T` are
+/// hydrogen 2 and 3. `None` for a symbol outside the table or a mass number it does not list.
+pub fn nuclide(el: &str, a: Option<u16>) -> Option<(u16, f64)> {
+    let (el, a) = match el {
+        "D" => ("H", Some(a.unwrap_or(2))),
+        "T" => ("H", Some(a.unwrap_or(3))),
+        _ => (el, a),
+    };
+    let (_, mono, a0, d) = crate::nuclidi::NUCLIDES.iter().find(|(e, ..)| *e == el)?;
+    let a = a.unwrap_or(*mono);
+    let off = d.get(a.checked_sub(*a0)? as usize)?;
+    Some((a, a as f64 + *off as f64 * 1e-9))
+}

@@ -52,8 +52,6 @@ const RESET = (function () {
     const rep = { mode, opfs: [], idb: [], blocked: [], caches: [], sw: 0, keys: 0, errors: /** @type {string[]} */ ([]) };
     // the engine worker holds sync handles on the files: it must go first
     try { if (window.qqEngineStop) window.qqEngineStop(); } catch (e) { /* no engine */ }
-    // the development server keeps the session in memory
-    if (!window.QQQ_BROWSER) await wait(fetch("api/new", { method: "POST", body: JSON.stringify({ fresh: true }) }));
     // OPFS, IndexedDB, caches and the worker registration are independent: they go at the same time, each with its own timeout
     await Promise.all([
       navigator.storage && /** @type {any} */ (navigator.storage).getDirectory ? wait(opfs(mode, rep), OPFS_RETRY_MS + 4000) : null,

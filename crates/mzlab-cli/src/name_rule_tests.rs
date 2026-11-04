@@ -40,6 +40,7 @@ const COMMANDS: &[&[&str]] = &[
     &["msn-rules"],
     &["channels"],
     &["ion-pattern"],
+    &["mol-label"],
     &["samples"],
     &["peak-edges"],
     &["sim-table"],

@@ -35,7 +35,7 @@ for _ in range(100):
     except OSError: threading.Event().wait(0.2)
 
 def open_file(pg, f):
-    pg.goto(URL + "?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+    pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
     pg.set_input_files("#pick", [str(f)])
     pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
     pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
