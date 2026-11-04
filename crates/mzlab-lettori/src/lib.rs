@@ -10,6 +10,7 @@ pub mod andi;
 pub mod aperti;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 pub mod bruker;
+pub mod finiti;
 pub mod non_portati;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
 pub mod shimadzu;
@@ -116,7 +117,8 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
 }
 
 /// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans), except
-/// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmDaScansioni`).
+/// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmDaScansioni`). Every reader
+/// answers through `finiti::Finiti`: a NaN or infinite number of the file is an error, not a value.
 pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let name = fs
         .membri
@@ -129,7 +131,7 @@ pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     if l.formato() == lettori::Formato::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
         l = Box::new(srm::SrmDaScansioni::new(l));
     }
-    Ok(l)
+    Ok(Box::new(finiti::Finiti::new(l)))
 }
 
 /// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).

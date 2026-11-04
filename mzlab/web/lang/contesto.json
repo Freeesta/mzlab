@@ -891,6 +891,8 @@
   "err.cli.set": "Messaggio d'errore del motore; {message} = messaggio, {set} = impostazione.",
   "err.file.agilent": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.file.base64": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
+  "err.file.nonFinite": "Messaggio d'errore dei lettori; {scan} = id o numero della scansione, {what} = rt, tic, mz o intensity, {value} = NaN, inf o -inf.",
+  "err.file.nonFiniteTrace": "Messaggio d'errore dei lettori; {trace} = id del cromatogramma, {what} = time o intensity, {value} = NaN, inf o -inf.",
   "err.file.xml": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.file.zlib": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.flow.algorithm.unknown": "Messaggio d'errore del motore; {algorithm} = algoritmo.",
