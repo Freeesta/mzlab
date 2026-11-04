@@ -7,6 +7,7 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
+import { mountTablet } from "./disegno-tablet.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js";
 import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
@@ -35,6 +36,7 @@ function start() {
     }
     // first-paint.js already started the frame on a direct #/draw address (and may have seen the ready message before this listener existed)
     if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
+    const early = () => { try { mountTablet(/** @type {Document} */ (fr.contentDocument)); } catch (_) { /* not ready */ } }; early(); fr.addEventListener("load", early, { once: true });   // before Ketcher focuses its clipboard textarea
     // a slow first download must not break the editor for good: after the wait the attempt is dropped and the next call (Quick draw, export, the tab) starts it again
     clearTimeout(startTimeout);
     startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
@@ -43,7 +45,7 @@ function start() {
   // the editor stays invisible (.kwait) until hideMacro and the first fit are done: Ketcher's native bars would otherwise show and then jump
   fr.classList.add("kwait");
   starting.finally(() => { clearInterval(kldTimer); }).catch(() => {});
-  starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
+  starting = starting.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
     hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
