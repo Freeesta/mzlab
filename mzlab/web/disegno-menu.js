@@ -16,6 +16,16 @@ export function ctxRow(/** @type {HTMLElement} */ m, /** @type {string} */ text,
 export function ctxShow(/** @type {any} */ m, /** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ w, /** @type {boolean} */ kbd) {
   m.setAttribute("role", "menu"); m._ret = kbd ? document.activeElement : null; m._lp = false;
   m.hidden = false;
-  m.style.left = Math.min(x, innerWidth - w) + "px"; m.style.top = Math.max(4, Math.min(y, innerHeight - m.offsetHeight - 8)) + "px";
+  // with a finger the menu opens beside it (above it when there is no room below): the finger never rests on a row
+  const off = document.documentElement.classList.contains("touch") ? 16 : 0, h = m.offsetHeight;
+  let top = y + off; if (off && top + h > innerHeight - 8) top = y - off - h;
+  m.style.left = Math.min(x + off, innerWidth - w) + "px"; m.style.top = Math.max(4, Math.min(top, innerHeight - h - 8)) + "px";
   if (kbd) { const f = m.querySelector("div[role=menuitem]"); if (f) f.focus(); }
+}
+// Copies to the clipboard and tells the truth: «Copied» only when the browser accepted it, otherwise «Copy failed» (never an unhandled rejection).
+export async function copyText(/** @type {string} */ text, /** @type {string} */ okKey = "draw.copy.done") {
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (_) { /* clipboard refused or missing */ }
+  if (window.toast) toast(I18N.t(ok ? okKey : "draw.copy.fail"));
+  return ok;
 }

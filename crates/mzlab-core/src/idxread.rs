@@ -83,8 +83,12 @@ pub struct Scan {
     pub mob_unit: u8,
 }
 
-/// The scan types that are not a plain full or product-ion scan, as the row of the index names them.
-pub const KINDS: [&str; 6] = ["PREC", "NL", "NG", "EMC", "TDF", "ER"];
+/// The scan types as the row of the index names them: the first `SPECIAL` are not a plain full or product-ion scan (a part of their own); the
+/// others only name the SCIEX experiment of a plain scan (`wiff::modi::SCAN_TYPE_PARAM`): an EPI is an MS2 scan like a product-ion one.
+pub const KINDS: [&str; 10] = [
+    "PREC", "NL", "NG", "EMC", "TDF", "ER", "EPI", "PI", "EMS", "Q1",
+];
+pub const SPECIAL: usize = 6;
 
 impl Scan {
     /// The mobility of the whole scan and its unit (`k0`, `ms`), `None` when the scan has none.
@@ -101,6 +105,15 @@ impl Scan {
     pub fn kind_name(&self) -> Option<&'static str> {
         usize::from(self.kind)
             .checked_sub(1)
+            .filter(|i| *i < SPECIAL)
+            .and_then(|i| KINDS.get(i).copied())
+    }
+
+    /// The SCIEX experiment of a plain scan (`EPI`, `PI`, `EMS`, `Q1`), `None` when the file does not name it.
+    pub fn scan_type(&self) -> Option<&'static str> {
+        usize::from(self.kind)
+            .checked_sub(1)
+            .filter(|i| *i >= SPECIAL)
             .and_then(|i| KINDS.get(i).copied())
     }
 

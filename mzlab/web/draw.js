@@ -7,9 +7,10 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
-import { initCerca } from "./disegno-cerca.js";
+import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
+import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -35,6 +36,7 @@ function start() {
     }
     // first-paint.js already started the frame on a direct #/draw address (and may have seen the ready message before this listener existed)
     if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
+    const early = () => { try { mountTablet(/** @type {Document} */ (fr.contentDocument)); } catch (_) { /* not ready */ } }; early(); fr.addEventListener("load", early, { once: true });   // before Ketcher focuses its clipboard textarea
     // a slow first download must not break the editor for good: after the wait the attempt is dropped and the next call (Quick draw, export, the tab) starts it again
     clearTimeout(startTimeout);
     startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
@@ -43,7 +45,7 @@ function start() {
   // the editor stays invisible (.kwait) until hideMacro and the first fit are done: Ketcher's native bars would otherwise show and then jump
   fr.classList.add("kwait");
   starting.finally(() => { clearInterval(kldTimer); }).catch(() => {});
-  starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
+  starting = starting.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
     hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
@@ -69,7 +71,7 @@ function start() {
     }
     
     return k; });
-  starting.catch(e => dnote(e.message));
+  starting.catch(e => { console.error(e); dnote(I18N.t("draw.error.ketcherNotStarted")); });   // never Ketcher's raw English: the cause stays in the console
   starting.finally(() => FRAME.next(() => FRAME.next(() => { fr.classList.remove("kwait"); Q("#kload").hidden = true; }))).catch(() => {});
   return starting;
 }
@@ -105,7 +107,7 @@ function placePill(/** @type {Document} */ d) {
 let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
 function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
   try {
-    const d = /** @type {Document} */ (fr.contentDocument), st = d.createElement("style");
+    const d = /** @type {Document} */ (fr.contentDocument), st = d.createElement("style"); guardPaste(d, () => dnote(I18N.t("draw.quick.notFound")));
     // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
     // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
     st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
@@ -185,7 +187,7 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
       m.innerHTML = "";
       const shortSmi = smi.length > 24 ? smi.slice(0, 21) + "…" : smi;
       ctxRow(m, smi ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi }) : I18N.t("draw.ctx.copySmiles"), () => {
-        if (smi) navigator.clipboard.writeText(smi).catch(() => {});
+        if (smi) copyText(smi);
         m.hidden = true;
       });
       ctxRow(m, I18N.t("draw.ctx.center"), () => {
@@ -312,6 +314,7 @@ async function changed() {
   if (!K) return;
   let ket = "";
   try { ket = await K.getKet(); } catch (_) { return; }
+  { const f = document.activeElement; if (f && f.closest && f.closest("#v-draw aside")) Q("#kframe").scrollIntoView({ block: "start" }); }       // a change made from the cards (Quick draw) on a stacked tablet layout: bring the canvas into view
   drawLabels();                                                          // the labels drawn right at a change can miss the structure Ketcher is still adding (Quick draw, paste): this one runs when it has settled
   try { if (!NB.ket && K.editor.struct().isBlank()) return; } catch (_) { /* no isBlank: save as before */ }       // nothing drawn and nothing saved: no empty notebook entry
   NB.ket = ket; nbSave();
@@ -367,7 +370,7 @@ function breakBonds(/** @type {number[]} */ ids) {
   } catch (_) { return false; }
 }
 window.breakBonds = breakBonds;
-const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { navigator.clipboard.writeText(s).catch(() => {}); if (window.toast) toast(I18N.t("draw.copy.done")); },
+const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
 // selects the bonds between the given pairs of atoms (ids as in the SMILES just loaded) so Ketcher highlights them; returns how many were found
 function markBonds(/** @type {[number, number][]} */ pairs) {
@@ -443,7 +446,7 @@ async function showInfo1() {
 let neutOn = true;                                                             // "Escludi la carica": on by default
 document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
 const fmtF = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
-document.addEventListener("click", e => { const tg = /** @type {any} */ (e.target), b = tg.closest && tg.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); if (window.toast) toast(I18N.t("draw.copy.smilesToast")); b.textContent = I18N.t("draw.copy.done"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, 1200); } catch (_) { /* clipboard blocked */ } } });
+document.addEventListener("click", e => { const tg = /** @type {any} */ (e.target), b = tg.closest && tg.closest("[data-cp]"); if (b) copyText(b.dataset.cp, "draw.copy.smilesToast").then(ok => { b.textContent = I18N.t(ok ? "draw.copy.done" : "draw.copy.fail"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, ok ? 1200 : 2500); }); });
 
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
@@ -724,6 +727,7 @@ async function doExport(/** @type {string} */ kind) {
   exwarn("");
   try {
     await start();
+    if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return; }
     if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
@@ -742,7 +746,7 @@ function syncBg() {                                    // JPEG cannot be transpa
 }
 Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
-Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
+Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
@@ -751,13 +755,6 @@ window.TPDraw = { when: async () => { await start(); return true; }, load: async
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
-// "Nuova sessione": the drawing and its controls go back to the start (the notebook was already emptied)
-document.addEventListener("nbreset", () => {
-  clearTimeout(timer);
-  Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-a").checked = false; Q("#lb-dec").value = "0"; Q("#ex-nobg").checked = false; syncBg();
-  Q("#ex-name").value = stamp(); Q("#ex-smi").value = ""; dnote(""); exwarn(""); usedNames.clear();
-  if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; FRAME.next(() => { drawLabels(); showInfo(); }); }
-});
 
 // ------------------------------------------------------------------ label under a molecule: right click = copy the formula or the mass
 // geometry of the labels (same numbers as drawLabels): a box per structure, in the user units of Ketcher's svg
@@ -784,7 +781,7 @@ function labelMenu(/** @type {any} */ ev, /** @type {DrawStruct} */ d, /** @type
   const m = Q("#ctx"); if (!m) return;
   const fr0 = fr.getBoundingClientRect();
   m.innerHTML = "";
-  const item = (/** @type {string} */ label, /** @type {string} */ text) => ctxRow(m, label, () => { navigator.clipboard.writeText(text).catch(() => {}); m.hidden = true; if (window.toast) toast(I18N.t("draw.copy.done")); });
+  const item = (/** @type {string} */ label, /** @type {string} */ text) => ctxRow(m, label, () => { copyText(text); m.hidden = true; });
   item(I18N.t("draw.ctx.copyFormula", { formula: formulaText(d) }), formulaText(d));
   item(I18N.t(d.q ? "draw.ctx.copyMassMz" : "draw.ctx.copyMass", { mass: massText(d) }), massText(d));
   ctxShow(m, fr0.left + ev.clientX, fr0.top + ev.clientY, 270, kbd);

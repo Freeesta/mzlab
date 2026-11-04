@@ -206,6 +206,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.ms2_link", "default_half_window") => r.steps.ms2.default_half_window = num()?,
         ("features.ms2_link", "tol_ppm") => r.steps.ms2.tol_ppm = num()?,
         ("features.ms2_link", "weak") => r.steps.ms2.weak = num()? as f32,
+        ("features.ms2_link", "margin_s") => r.steps.ms2.margin_s = num()?,
         _ => {
             return Err(Error::new("err.flow.param.unknown")
                 .with("instance", step)
@@ -299,6 +300,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
         "features.ms2_link" => vec![
             ("default_half_window", n(r.steps.ms2.default_half_window)),
             ("weak", n(f64::from(r.steps.ms2.weak))),
+            ("margin_s", n(r.steps.ms2.margin_s)),
         ],
         _ => Vec::new(),
     };
