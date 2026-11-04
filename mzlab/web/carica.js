@@ -30,6 +30,12 @@
   var classic = L.filter(function (n) { return n.slice(0, 2) !== "m:"; });
   var modules = L.filter(function (n) { return n.slice(0, 2) === "m:"; });
   var rest = classic.concat(["shell.js"], modules);
-  var go = function () { rest.forEach(function (n) { add(n).catch(function (e) { console.error(e); }); }); };
+  // the tags go in by slices with a yield between them: all ~170 in one task were a 130-180 ms long task at CPU x4 (each insertion starts
+  // its fetch); async=false keeps the run order across slices, and no carica(n) call names a script of L, so none can jump the queue
+  var i = 0;
+  var go = function () {
+    rest.slice(i, i += 24).forEach(function (n) { add(n).catch(function (e) { console.error(e); }); });
+    if (i < rest.length) setTimeout(go, 0);
+  };
   go();
 })();
