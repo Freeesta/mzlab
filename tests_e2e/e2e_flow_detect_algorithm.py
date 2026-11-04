@@ -1,4 +1,4 @@
-"""Algorithm slot of `features.detect` in «This browser»: a plan with `algorithm: centwave` gives the browser the same feature table (SHA-256 of series.mzfeat) as the native run with the same layers
+"""Algorithm slot of `features.detect` in «This browser»: a plan with `algorithm: centwave` (or `adap_localmin`) gives the browser the same feature table (SHA-256 of series.mzfeat) as the native run with the same layers
 (`algorithm` written in the layer, as `flow run` writes it), and not the table of the default `masstrace`. Synthetic series only. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_detect_algorithm.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -95,10 +95,18 @@ try:
             assert state["web_cw"] == state["nat_cw"], state
         step("the browser table with algorithm=centwave has the SHA-256 of the native run", centwave_same_as_native)
 
+        def adap_same_as_native():
+            web, nat = browser_sha("adap_localmin"), native_sha(layers("adap_localmin"))
+            assert web == nat, (web, nat)
+            assert web != state["nat_cw"], "adap_localmin and centwave give the same table on the series: the test proves nothing"
+            state["nat_ad"] = nat
+        step("the browser table with algorithm=adap_localmin has the SHA-256 of the native run", adap_same_as_native)
+
         def default_same_as_native():
             web, nat = browser_sha(None), native_sha(layers(None))
             assert web == nat, (web, nat)
             assert web != state["nat_cw"], "centwave and masstrace give the same table on the series: the test proves nothing"
+            assert web != state["nat_ad"], "adap_localmin and masstrace give the same table on the series: the test proves nothing"
         step("the default algorithm still has the SHA-256 of the native run, and is not the centwave table", default_same_as_native)
         b.close()
 finally:

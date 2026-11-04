@@ -4,6 +4,7 @@
 //! `pipeline::analyse` adds the quality of every peak (`quality`), the isotopologues (`isotopes`) and the MS2 with purity (`ms2`).
 
 #![forbid(unsafe_code)]
+pub mod adap_peak;
 pub mod adducts;
 pub mod align;
 mod aligned;
