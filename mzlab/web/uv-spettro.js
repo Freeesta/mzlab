@@ -102,7 +102,7 @@ export async function draw(p) {
   const ser = []; got.forEach((d, i) => { if (d && !d.err && d.nm && d.nm.length) ser.push({ f: E.files[ks[i]], nm: d.nm, y: d.mau, d }); });
   if (!ser.length) { const e = got[0] && got[0].err; return say(e && e.error_key !== "err.pda.none" ? reason(e) : T("uv.none")); }
   const d = ser[0].d, nm = ser[0].nm, y = ser[0].y;
-  const full = [Math.min(...ser.map(s => s.nm[0])), Math.max(...ser.map(s => s.nm[s.nm.length - 1]))], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
+  const full = [minOf(ser.map(s => s.nm[0])), maxOf(ser.map(s => s.nm[s.nm.length - 1]))], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let lo = 0, hi = 0; for (const s of ser) for (const v of s.y) { if (v < lo) lo = v; if (v > hi) hi = v; }
   const pad = (hi - lo || 1) * (window.ETPK && ETPK.on(p, 1) ? 0.16 : 0.06), yfull = [lo < 0 ? lo - pad : 0, hi + pad];
   if (p.lock && p.lock.pending) { p.lock.y = yfull[1]; p.lock.pending = false; }
