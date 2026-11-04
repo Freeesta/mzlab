@@ -500,7 +500,6 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 @media (prefers-reduced-motion:reduce){.al-calc-tg .al-chev{transition:none}}
 #al-calc-body[hidden]{display:none}
 #calcdlg.sb-docked #calcqui{display:none}
-#calcdlg.sb-docked input#calcin{margin:4px 0}
 #calcres-wrap,#calcres-wrap #calcres{min-height:0}
 #calcres-wrap{flex-direction:row!important;align-items:center!important;gap:8px!important;min-height:calc(40px*var(--z,1))!important}
 #calcres-wrap .calc-nl-btn{width:auto!important;flex:none;min-height:32px}
@@ -510,11 +509,9 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 #calcdlg.sb-docked .cpad button{min-height:34px;font-size:calc(17px*var(--z,1))}
 #calcdlg.sb-docked #calctape{max-height:5.5em;overflow:auto}
 #al-find{margin:2px 0 4px}#al-find .sb-search-box{flex:1}#al-find input{width:100%;box-sizing:border-box;min-height:28px}#al-find input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}#al-find .sb-search-box:focus-within{border-color:transparent}
-#al-ctl .cq-ctl{margin:2px 0 6px;align-items:center;gap:6px 8px}
+#al-ctl .cq-ctl{margin:2px 0 6px;align-items:center;flex-wrap:nowrap;gap:3px}#al-ctl .cq-ctl .seg button{padding:2px 5px;min-width:0}#al-ctl .cq-tolf{gap:4px!important}#al-ctl .cq-tolf input{width:4ch!important;padding-left:2px;padding-right:2px}#al-ctl .cq-tl{font-size:12px}
 .cq-tolf{flex-direction:row!important;align-items:center;gap:6px!important;flex:none!important}
 .cq-tolf input{width:6ch!important;min-width:0;text-align:right;margin:0!important;min-height:32px;box-sizing:border-box;font-variant-numeric:tabular-nums}
-.cq-res{font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
-.cq-res[data-mode=hr]{border-color:var(--accent);color:var(--accent);font-weight:600}
 #al-tabs{display:flex;margin:4px 0 2px}#al-tabs button{flex:1 1 auto;min-height:32px;white-space:nowrap;padding:2px 6px}
 #al-tabs .cq-n[hidden]{display:none}
 #al-tabs [aria-selected="true"] .cq-n{color:inherit;border-color:currentColor}

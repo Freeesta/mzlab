@@ -69,7 +69,6 @@
     c.querySelectorAll(".cq-ctl [data-p]").forEach(b => { const on = +(b.getAttribute("data-p") || 0) > 0 ? o.pol !== -1 : o.pol !== 1; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
     c.querySelectorAll(".cq-ctl [data-u]").forEach(b => { const on = b.getAttribute("data-u") === o.unit; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
     const cc = c.querySelector(".cq-ctl"); if (cc) { cc.setAttribute("data-mode", o.hr ? "hr" : "lr"); cc.setAttribute("data-src", o.mode.src); cc.setAttribute("data-name", o.mode.name || ""); }
-    const rs = c.querySelector(".cq-res"); if (rs) { rs.textContent = H.resText(o); rs.setAttribute("title", H.resTitle(o)); rs.setAttribute("data-mode", o.hr ? "hr" : "lr"); }
     put("tol", String(o.tol));
   }
 

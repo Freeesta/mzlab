@@ -365,11 +365,15 @@ const BARRA = (() => {
     }
   }
 
-  // Dock or undock #calcdlg
+  // Dock or undock #calcdlg; docked, its field #calcin is the one field of the page and leaves the foldable body (back above the result when undocked)
   function dockCalc(/** @type {boolean} */ inSidebar) {
     const dlg = Q1("#calcdlg");
-    const pnl = Q1("#al-calc-body");
+    const pnl = Q1("#al-calc-body"), box = Q1("#al-find .sb-search-box"), inp = Q1("#calcin");
     if (!dlg || !pnl) return;
+    if (box && inp) {
+      if (inSidebar) { if (inp.parentElement !== box) box.appendChild(inp); }
+      else if (inp.parentElement !== dlg) dlg.insertBefore(inp, Q1("#calcres-wrap"));
+    }
     if (inSidebar) {
       if (dlg.parentElement !== pnl) pnl.appendChild(dlg);
       dlg.classList.add("sb-docked");
