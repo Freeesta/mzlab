@@ -139,7 +139,7 @@
     names.forEach((n, i) => { files[n] = texts[i]; });
     await Promise.all(warm);
     settling = true;
-    // all tags at once with async=false: they still run in this order, without one round trip of onload per script (~120 scripts)
+    // all tags at once with async=false: they still run in this order, without waiting for one onload per script (60 scripts)
     try { await Promise.all(js.map(n => runScript(n, true))); } finally { settling = false; }
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
