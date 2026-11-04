@@ -10,7 +10,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
 use mzlab_feat::store::Slice;
-use mzlab_feat_table_wasm::core::table_file;
+use mzlab_feat_table_wasm::core::{table_file, view_origin};
 use mzlab_feat_table_wasm::pol;
 
 /// Polarity of the table: the rule of `mzlab_feat_table_wasm::pol` (the recipe, else the files of its lineage), the one the browser applies.
@@ -19,23 +19,39 @@ pub(crate) fn polarity_of(table: &[u8], files: &[PathBuf]) -> Result<i32> {
     pol::of_table(&mut Slice(table), table.len() as u64, &ix)
 }
 
-/// The text of the file `kind` of the table, whole (no view: a filter view keeps no reference to its table).
+/// The `.mzfeat` of this run (made by a step, a plan input, or in the working folder) whose SHA-256 is `sha`: the table a filter view was made from.
+fn table_by_sha(r: &FileRunner, sha: &str) -> Option<PathBuf> {
+    let made: Vec<PathBuf> = {
+        let m = r.made.lock().unwrap_or_else(|e| e.into_inner());
+        m.values().cloned().collect()
+    };
+    let near = std::fs::read_dir(&r.dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path());
+    made.into_iter()
+        .chain(r.inputs.values().cloned())
+        .chain(near)
+        .filter(|p| p.extension().is_some_and(|x| x == "mzfeat"))
+        .find(|p| std::fs::read(p).is_ok_and(|b| sha256_hex(&b) == sha))
+}
+
+/// The text of the file `kind` of the table under the view `spec` (empty: the whole table).
 pub(crate) fn export_text(
     table: &[u8],
     samples: &[u8],
     kind: &str,
     files: &[PathBuf],
+    spec: &str,
 ) -> Result<String> {
-    if table.first() == Some(&b'{') {
-        return Err(Error::new("err.flow.export.view"));
-    }
     let samples = crate::flow_table::samples_text(samples)?;
     let sha = sha256_hex(table);
     table_file(
         &mut Slice(table),
         table.len() as u64,
         &samples,
-        "",
+        spec,
         &sha,
         polarity_of(table, files)?,
         kind,
@@ -43,16 +59,32 @@ pub(crate) fn export_text(
 }
 
 fn export_job(r: &FileRunner, job: &Job, kind: &str, ext: &str) -> Result<Artifact> {
-    let (table, samples) = (read_one(r, job, "table")?, read_one(r, job, "samples")?);
-    let files = job
+    let (view, samples) = (read_one(r, job, "table")?, read_one(r, job, "samples")?);
+    let mut origin = job
         .inputs
         .iter()
         .find(|(p, _)| p == "table")
         .and_then(|(_, v)| v.first())
-        .and_then(|a| r.lineage(a))
+        .cloned();
+    let (mut table, mut spec) = (view.1, String::new());
+    if table.first() == Some(&b'{') {
+        // a `table.filter` view: the table it was made from is a file of this run, and the rows kept are the view
+        let (sha, rules) = view_origin(&String::from_utf8_lossy(&table))?;
+        let a = Artifact {
+            sha256: sha,
+            bytes: 0,
+            ty: DataType::Table,
+            label: None,
+        };
+        let at = table_by_sha(r, &a.sha256).ok_or_else(|| Error::new("err.flow.export.view"))?;
+        table = std::fs::read(at).map_err(|_| Error::new("err.flow.export.view"))?;
+        (spec, origin) = (rules, Some(a));
+    }
+    let files = origin
+        .and_then(|a| r.lineage(&a))
         .map(|l| l.index)
         .unwrap_or_default();
-    let text = export_text(&table.1, &samples.1, kind, &files)?;
+    let text = export_text(&table, &samples.1, kind, &files, &spec)?;
     let out = r.work.join(format!("{}.{ext}", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Report)

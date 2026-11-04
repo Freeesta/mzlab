@@ -9,11 +9,11 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-# The Banco 2b (review of one feature and saving of the decision) as a .wasm of its own, `attributio-rev`; without it the .wasm is the table of levels
+# The Banco 2b (review of one feature and saving of the decision); part of the fused `attributio-all` .wasm
 rev = ["mzlab-feat/crippen"]
-# The four spreadsheet exports (Schymanski folder, publication table, quantification, gradient) with the cascade as a .wasm of its own, `attributio-export`; the evidence export is in `attributio-rev`
+# The four spreadsheet exports (Schymanski folder, publication table, quantification, gradient) with the cascade; the evidence export belongs to `rev`
 export = []
-# The MS2 engine (library search, in-silico ranking, hydrogen rearrangements, RT forest, chimeric intruders) as a .wasm of its own, `attributio-ms2`
+# The MS2 engine (library search, in-silico ranking, hydrogen rearrangements, RT forest, chimeric intruders); part of the fused .wasm
 ms2 = []
 # The four of the above in ONE .wasm (`attributio`, the cascade of the table, the review, the exports and the MS2 engine): the module the site loads
 all = ["rev", "export", "ms2", "mzlab-feat/flow_formula"]

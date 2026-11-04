@@ -85,7 +85,7 @@ I18N.add("en", {
   "method.check.diff": "✗ differs",
   "method.check.na": "cannot be checked",
   "method.check.bad": "{n, plural, one {# difference} other {# differences}}: check that you loaded the right method for this file{another}.",
-  "method.check.another": " (you can choose another one)",
+  "method.check.another": "",
   "method.source.title": "Source and compound (.dam)",
   "method.source.on": "on",
   "method.source.off": "off",

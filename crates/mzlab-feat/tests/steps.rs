@@ -16,7 +16,7 @@ const FEATURE_STEPS: [&str; 4] = [
     "features.ms2_link",
 ];
 
-const IDS: [&str; 17] = [
+const IDS: [&str; 18] = [
     "import.raw",
     "convert.mzml",
     "index.mzidx",
@@ -26,6 +26,7 @@ const IDS: [&str; 17] = [
     "features.gapfill",
     "table.filter",
     "table.drift",
+    "features.group",
     "table.stats",
     "table.pca",
     "table.kmd",
@@ -102,7 +103,10 @@ fn registry_lists_the_twelve_steps_of_the_chain() {
     let reg = registry();
     let ids: Vec<&str> = reg.iter().map(|s| s.id).collect();
     assert_eq!(ids, IDS);
-    assert!(reg.iter().all(|s| s.package == "core" && s.version == 1));
+    // `table.filter` is at version 2 (the blank rule counts the detected blank cells by default); the others are at 1
+    assert!(reg
+        .iter()
+        .all(|s| s.package == "core" && s.version == if s.id == "table.filter" { 2 } else { 1 }));
 }
 
 #[test]

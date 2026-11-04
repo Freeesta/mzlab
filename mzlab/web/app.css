@@ -317,7 +317,11 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 #busybar{position:fixed;left:0;right:0;top:0;height:3px;z-index:60;overflow:hidden;background:transparent}#busybar[hidden]{display:none}#busybar i{display:block;height:100%;width:30%;background:var(--accent);animation:busyslide 1.2s ease-in-out infinite}@keyframes busyslide{from{transform:translateX(-100%)}to{transform:translateX(340%)}}@media (prefers-reduced-motion:reduce){#busybar i{animation:none;width:100%}}:root[data-a11y-reduce] #busybar i{animation:none;width:100%}
 #kload{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-size:15px;z-index:1;pointer-events:none}#kld-dots span{display:inline-block;width:5px;visibility:hidden}
 /* the editor fills the page under the header: edge to edge, down to the window bottom */
-#kframe.kwait{visibility:hidden}#kframe{display:block;width:100%;height:calc(100vh - var(--hh,48px));min-height:420px;border:0;border-radius:0;background:#fff}
+:root{--canvas:#fff}   /* Ketcher's canvas stays white in dark mode: the structure labels assume it */
+#kframe.kwait{visibility:hidden}#kframe{display:block;width:100%;height:calc(100vh - var(--hh,48px));min-height:420px;border:0;border-radius:0;background:var(--canvas)}
+@supports (height:100svh){#kframe{height:calc(100svh - var(--hh,48px))}}   /* Safari on iPad: 100vh is the tallest viewport, the editor bottom would sit under the browser bar */
+#ex-warn{color:var(--bad)}
+@media (pointer:coarse){#v-draw input,#v-draw select{font-size:16px}}   /* under 16 px iOS Safari zooms the page on focus */
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto;margin:-3px;padding:3px}#refdlg h4{margin:12px 0 4px}
 #reftitle{margin:0;font-size:16px}
@@ -405,13 +409,13 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 @media (pointer:coarse){.xbb,.xbp,.xbl,.xb-pop .bt,.xb-pop input{min-height:40px;min-width:40px}}
 
 /* Peak detection dialog (picchi.js) */
-.pk-sec{border:1px solid var(--line);border-radius:6px;margin:0 0 8px;padding:4px 10px 6px}
+.pk-intro{margin:0 0 6px}.pk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 12px;align-items:start}
+.pk-sec{border:1px solid var(--line);border-radius:6px;margin:0;padding:2px 10px 6px;min-width:0}
 .pk-sec legend{font-weight:600;padding:0 4px}
-.pk-row{display:grid;grid-template-columns:minmax(150px,230px) 84px 1fr;gap:4px 10px;align-items:center;margin:4px 0}
-.pk-row input,.pk-row select{min-height:28px;box-sizing:border-box}
-#pk-adv>summary{cursor:pointer;min-height:28px;display:flex;align-items:center;font-weight:600}
-@media(max-width:560px){.pk-row{grid-template-columns:1fr 84px}
-.pk-row>span:last-child{grid-column:1/-1}}
+.pk-row{display:grid;grid-template-columns:1fr 72px;gap:0 10px;align-items:center;margin:5px 0;padding:0}
+.pk-row input{grid-column:2;grid-row:1/3;min-height:28px;box-sizing:border-box;width:100%}
+.pk-row>span{grid-column:1;line-height:1.25}
+.pk-act{margin-top:8px}
 td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cvrow] .prog{height:4px}
 /* loading table: fixed columns and fixed blocks from the first row, so no phase of the loading moves anything */
 .fl-uphead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px;padding:2px 8px}
@@ -632,3 +636,9 @@ html.in-draw #sb-toggle{display:none}
 .mrm-all{padding:6px 10px;font-size:13px;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line)}
 .mrm-all button{margin-left:6px;min-height:24px;min-width:24px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;cursor:pointer}
 .tp-pop{display:flex;flex-direction:column;gap:6px;padding:8px 10px;max-width:min(520px,calc(100% - 12px));z-index:40}.tp-facts{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12px}.tp-ctl{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}.tp-ctl label{display:inline-flex;gap:4px;align-items:center}.tp-ctl input[type=number]{width:5em;min-height:24px}.tp-ctl select{min-height:24px}.tp-chk input{min-width:24px;min-height:24px}.tp-sc{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px}.tp-sc table{border-collapse:collapse;width:100%;font-size:12px}.tp-sc th,.tp-sc td{padding:2px 8px;text-align:right;white-space:nowrap}.tp-sc th{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line)}.tp-ft{display:flex;gap:8px;align-items:center}.tp-ft .bt,.tpb{min-height:24px;min-width:24px}.tp-sc:focus-visible,.tpb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media (pointer:coarse){.tpb,.tp-ft .bt,.tp-ctl input,.tp-ctl select{min-height:40px;min-width:40px}}
+.areacopied{position:absolute;transform:translateX(-50%);pointer-events:none;z-index:4;background:var(--ink);color:var(--bg);padding:2px 8px;border-radius:4px;font-size:12px;opacity:0;transition:opacity .4s}.areacopied.show{opacity:1}@media (prefers-reduced-motion:reduce){.areacopied{transition:none}}
+/* Draw: touch targets of at least 24 px (WCAG 2.5.8), a header that keeps its right-hand buttons, a canvas that scrolls to just below the sticky header */
+#v-draw input[type=checkbox],#v-draw input[type=radio]{width:24px;height:24px;margin:0 4px 0 0;vertical-align:middle}
+#v-draw summary{min-height:24px;display:list-item}
+header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
+#kframe{scroll-margin-top:var(--hh,48px)}

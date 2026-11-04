@@ -602,13 +602,10 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
 
 /// Every peak whose apex is between `x0` and `x1` (minutes), by RT, into `out` as `[lo, hi, baseline at lo, baseline at hi, area]` (indices,
 /// counts, counts x min): the one-click integration of high-resolution traces (`peakq_auto`). `smooth` = Savitzky-Golay window of the apex
-/// picking (points), `snr` = prominence over the noise, `rel` = prominence over the highest point (fraction), `min_scans` = narrowest peak,
-/// `half_window` = smoothing of the edges (0 = from the peak width), `slope` = flat-flank stop (fraction). Returns the number of peaks written.
+/// picking (points), `snr` = prominence over the noise (`AutoParams::from_dialog`). Returns the number of peaks written.
 #[wasm_bindgen]
-#[allow(clippy::too_many_arguments)]
-pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, rel: f64, min_scans: u32, half_window: u32, slope: f64, out: &mut [f64]) -> u32 {
-    let pick = peakq::ProminenceParams { snr, rel_prominence: rel, min_scans: min_scans as usize, smooth: smooth as usize, local_snr: 5.0, ..Default::default() };
-    let p = mzlab_core::peakq_auto::AutoParams { pick, half_window: half_window as usize, slope, ..Default::default() };
+pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, out: &mut [f64]) -> u32 {
+    let p = mzlab_core::peakq_auto::AutoParams::from_dialog(smooth as usize, snr);
     let found = mzlab_core::peakq_auto::auto_integrate(rt, y, x0, x1, p);
     let room = out.len() / 5;
     for (i, k) in found.iter().take(room).enumerate() {
@@ -617,16 +614,16 @@ pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr:
     found.len().min(room) as u32
 }
 
-/// Limits (min) of the peak at time `at` on a low-resolution trace into `out[0..2]` (`peakq_lr`, the page's `autoEdges`): `params` = the 11 numbers
-/// of `LrParams::from_slice`. Returns 2, or 0 when the peak is under the S/N threshold or the arguments do not fit.
+/// Limits (min) of the peak at time `at` on a low-resolution trace into `out[0..2]` (`peakq_lr`, the page's `autoEdges`): `params` = the 5 numbers
+/// of `LrParams::from_dialog`. Returns 2, or 0 when the peak is under the S/N threshold or the arguments do not fit.
 #[wasm_bindgen]
-pub fn lr_edges(rt: &[f64], y: &[f64], at: f64, reference: f64, mrm: bool, params: &[f64], out: &mut [f64]) -> u32 {
-    let Some(pk) = mzlab_core::peakq_lr::LrParams::from_slice(params) else { return 0 };
+pub fn lr_edges(rt: &[f64], y: &[f64], at: f64, mrm: bool, params: &[f64], out: &mut [f64]) -> u32 {
+    let Some(pk) = mzlab_core::peakq_lr::LrParams::from_dialog(params) else { return 0 };
     let n = rt.len().min(y.len());
     if out.len() < 2 || n == 0 {
         return 0;
     }
-    match mzlab_core::peakq_lr::lr_edges(&rt[..n], &y[..n], at, reference, mrm, &pk) {
+    match mzlab_core::peakq_lr::lr_edges(&rt[..n], &y[..n], at, 0.0, mrm, &pk) {
         Some((a, b)) => {
             out[0] = a;
             out[1] = b;
@@ -681,10 +678,10 @@ mod tests {
         assert_eq!(core.len(), 3);
         let row = |k: &mzlab_core::peakq_auto::AutoPeak| vec![k.lo as f64, k.hi as f64, k.base_lo, k.base_hi, k.area];
         let mut out = vec![0.0; 5 * 64];
-        let n = super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, 0, 0.03, &mut out) as usize;
+        let n = super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, &mut out) as usize;
         assert_eq!(out[..5 * n].to_vec(), core.iter().flat_map(row).collect::<Vec<f64>>());
         let mut short = vec![0.0; 10];
-        assert_eq!(super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, 0, 0.03, &mut short), 2);
+        assert_eq!(super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, &mut short), 2);
         assert_eq!(short, core[..2].iter().flat_map(row).collect::<Vec<f64>>());
     }
 

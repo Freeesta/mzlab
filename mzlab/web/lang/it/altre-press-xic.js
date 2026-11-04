@@ -345,7 +345,7 @@ I18N.add("it", {
   "qaqc.rep.json": "Rapporto di studio (JSON)",
   "prof.title": "Profilo nel tempo di uno ione",
   "prof.intro.lr": "Scegli tu l'ione (m/z) e l'RT del suo picco: il programma ne misura altezza o area in ogni file, nell'ordine dei tempi, con la stessa integrazione del cromatogramma. Valori grezzi, nessuna curva adattata.",
-  "prof.intro.hr": "Scegli tu l'ione (m/z o formula) e l'RT del suo picco: altezza o area in ogni file nell'ordine dei tempi, con la stessa integrazione del cromatogramma. Se hai definito uno standard interno in QA/QC, puoi dividere per il suo valore nello stesso file.",
+  "prof.intro.hr": "Scegli tu l'ione (m/z o formula) e l'RT del suo picco: altezza o area in ogni file nell'ordine dei tempi, con la stessa integrazione del cromatogramma. Con uno standard interno definito in QA/QC si divide per il suo valore nello stesso file.",
   "prof.intro.hr.plain": "Scegli tu l'ione (m/z o formula) e l'RT del suo picco: altezza o area in ogni file nell'ordine dei tempi, con la stessa integrazione del cromatogramma.",
   "prof.err.input": "Scrivi un m/z (o una formula) e l'RT del picco in minuti.",
   "prof.nopoints": "Nessun punto da disegnare: servono file con un tempo (colonna «Tempo» dei metadati) e un picco trovato.",

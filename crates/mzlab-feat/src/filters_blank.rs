@@ -5,7 +5,7 @@
 use mzlab_core::error::Result;
 use mzlab_core::json::{Out, Value};
 
-use crate::aligned::Aligned;
+use crate::aligned::{Aligned, CELL_DETECTED, CELL_TARGETED};
 use crate::norm::{bad, measured};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,6 +53,8 @@ pub struct BlankOpts {
     pub matching: Matching,
     /// The internal-standard row of the view's normalisation passes the rule (it is spiked in the blanks too).
     pub keep_istd: bool,
+    /// Only the blank cells the detection found count as blank level; a gap-filled or absent blank cell counts as 0 (the semantics of mzmine).
+    pub detected_only: bool,
 }
 
 impl Default for BlankOpts {
@@ -64,6 +66,7 @@ impl Default for BlankOpts {
             subtract: false,
             matching: Matching::All,
             keep_istd: false,
+            detected_only: false,
         }
     }
 }
@@ -98,7 +101,14 @@ pub fn blank_level(
 ) -> Result<f64> {
     let mut v = Vec::with_capacity(blank.len());
     for &k in blank {
-        v.push(value(t, factors, o.quantity, row, k)?.unwrap_or(0.0));
+        let seen = !o.detected_only
+            || matches!(t.state[row * t.n_files + k], CELL_DETECTED | CELL_TARGETED);
+        let x = if seen {
+            value(t, factors, o.quantity, row, k)?
+        } else {
+            None
+        };
+        v.push(x.unwrap_or(0.0));
     }
     Ok(match o.stat {
         Stat::Mean if !v.is_empty() => v.iter().sum::<f64>() / v.len() as f64,
@@ -406,6 +416,9 @@ pub fn write_json(j: &mut Out, o: &BlankOpts) {
     if o.keep_istd {
         j.raw(",\"istd_esente\":true");
     }
+    if o.detected_only {
+        j.raw(",\"celle_bianco\":\"rilevate\"");
+    }
 }
 
 /// The options of a `bianco` rule (absent fields keep the defaults).
@@ -422,5 +435,11 @@ pub fn read_json(v: &Value) -> Result<BlankOpts> {
         keep_istd: v
             .get("istd_esente")
             .map_or(Ok(false), |b| b.bool().ok_or_else(bad))?,
+        detected_only: match v.get("celle_bianco").map(Value::str) {
+            None => false,
+            Some(Some("rilevate")) => true,
+            Some(Some("tutte")) => false,
+            Some(_) => return Err(bad()),
+        },
     })
 }

@@ -283,7 +283,7 @@
               "file:t2.csv"
             ]
           },
-          "step": "table.filter@1"
+          "step": "table.filter@2"
         },
         {
           "id": "ix",
@@ -530,7 +530,7 @@
             "samples": "file:s.json",
             "table": "a.table"
           },
-          "step": "table.filter@1"
+          "step": "table.filter@2"
         }
       ]
     }
