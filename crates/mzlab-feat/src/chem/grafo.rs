@@ -85,23 +85,14 @@ impl Mol {
                 true,
             ));
         }
-        for l in &lines[4 + na + nb..] {
-            if let Some(rest) = l.strip_prefix("M  CHG") {
-                let v: Vec<i32> = rest
-                    .split_whitespace()
-                    .filter_map(|t| t.parse().ok())
-                    .collect();
-                for p in v.get(1..).unwrap_or(&[]).chunks(2) {
-                    if let [i, c] = p
-                        && *i >= 1
-                        && (*i as usize) <= na
-                    {
-                        raw[*i as usize - 1].charge = *c;
-                    }
-                }
-            }
+        for (i, c) in props(&lines[4 + na + nb..], "M  CHG", na) {
+            raw[i].charge = c;
         }
-        Ok(Mol::assemble(raw, written, true))
+        let mut m = Mol::assemble(raw, written, true);
+        for (i, w) in props(&lines[4 + na + nb..], "M  ISO", na) {
+            m.atoms[i].iso = w.max(0) as u32;
+        }
+        Ok(m)
     }
 
     /// `by_charge`: the hydrogens are implicit (a molfile), so a charge moves the valence; a SMILES atom in brackets already says its hydrogens.
@@ -126,7 +117,7 @@ impl Mol {
         self.formula_of(&vec![true; self.atoms.len()])
     }
 
-    /// Neutral formula of the atoms in `keep` (heavy atoms and the hydrogens they carry).
+    /// Neutral formula of the atoms in `keep` (heavy atoms and the hydrogens they carry); an isotope-labelled atom is counted as «13C».
     pub fn formula_of(&self, keep: &[bool]) -> Formula {
         let mut f: Formula = Vec::new();
         let mut add = |el: &str, n: u64| match f.iter_mut().find(|(e, _)| e == el) {
@@ -135,7 +126,11 @@ impl Mol {
         };
         for (i, a) in self.atoms.iter().enumerate() {
             if keep[i] {
-                add(&a.el, 1);
+                if a.iso > 0 {
+                    add(&format!("{}{}", a.iso, a.el), 1);
+                } else {
+                    add(&a.el, 1);
+                }
                 if a.h > 0 {
                     add("H", a.h as u64);
                 }
@@ -319,6 +314,8 @@ pub struct Atom {
     pub arom: bool,
     pub h: u32,
     pub charge: i32,
+    /// Mass number of an isotope label (`M  ISO`), 0 = natural abundance.
+    pub iso: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -349,6 +346,26 @@ fn typed_bonds(raw: &[RawAtom], written: Vec<RawBond>) -> Vec<Bond> {
             }
         })
         .collect()
+}
+
+/// The (atom index, value) pairs of the `M  CHG` / `M  ISO` lines (`prefix`) of a molfile with `na` atoms.
+fn props(lines: &[&str], prefix: &str, na: usize) -> Vec<(usize, i32)> {
+    let mut out = vec![];
+    for rest in lines.iter().filter_map(|l| l.strip_prefix(prefix)) {
+        let v: Vec<i32> = rest
+            .split_whitespace()
+            .filter_map(|t| t.parse().ok())
+            .collect();
+        for p in v.get(1..).unwrap_or(&[]).chunks(2) {
+            if let [i, c] = p
+                && *i >= 1
+                && (*i as usize) <= na
+            {
+                out.push((*i as usize - 1, *c));
+            }
+        }
+    }
+    out
 }
 
 /// One cut of a bond outside the rings.

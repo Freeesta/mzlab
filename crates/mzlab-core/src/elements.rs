@@ -34,7 +34,15 @@ const COMMON2: [&str; 16] = [
 ];
 
 pub fn mass_of(el: &str) -> Option<f64> {
+    if let Some(i) = el.find(|c: char| !c.is_ascii_digit()).filter(|i| *i > 0) {
+        return isotope_mass(el[..i].parse().ok()?, &el[i..]);
+    }
     MASS.iter().find(|(e, _)| *e == el).map(|(_, m)| *m)
+}
+
+/// Mass of an isotope written «13C», from the nuclide table.
+fn isotope_mass(a: u32, el: &str) -> Option<f64> {
+    nuclide(el, Some(u16::try_from(a).ok()?)).map(|(_, m)| m)
 }
 
 /// Ion m/z = neutral mass + shift; the order is the one of `ADDUCT_SHIFT`.

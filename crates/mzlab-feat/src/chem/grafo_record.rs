@@ -34,6 +34,7 @@ impl Mol {
                 arom,
                 h: u32::from(a.h),
                 charge: i32::from(a.chg),
+                iso: u32::from(a.iso),
             })
             .collect();
         let bonds: Vec<Bond> = rec
