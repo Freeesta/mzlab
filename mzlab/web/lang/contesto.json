@@ -31,6 +31,7 @@
   "draw.import.failed": "Avviso sotto il campo SMILES quando l'incolla di una struttura fallisce; {message} = testo di Ketcher (inglese).",
   "draw.props.failed": "Riquadro delle proprietà previste quando il calcolo fallisce; {message} = testo tecnico.",
   "draw.quick.invalid": "Avviso sotto «Disegna veloce» per uno SMILES rifiutato da Ketcher; {message} = testo di Ketcher (inglese).",
+  "draw.quick.notFound": "Avviso sotto «Disegna veloce» quando il testo non è uno SMILES né un InChI e nessun composto del database ha quel nome (o quando si incolla un nome sul disegno).",
   "draw.quick.count": "Stato letto dagli screen reader sotto il campo «Disegna veloce» quando la ricerca di un composto ha trovato dei risultati; {n} = quanti suggerimenti.",
   "draw.selection.cuts": "Nota sotto gli SMILES della selezione: numero di legami tagliati dalla selezione ({n}).",
   "draw.export.filePrefix": "Prefisso del nome dei file scaricati (disegno_AAAA-MM-GG_HHMM.png): solo lettere minuscole senza accento.",
