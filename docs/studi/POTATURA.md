@@ -154,11 +154,11 @@ Each PR runs `python3 tools/pre_pr.py` plus the named check, and touches no `.gi
 5. **Docs archive**: F1–F4, F6–F8. Check: `python3 tools/controlla.py` and `tools/controlla_link_docs.py` are green, and `grep -rn 'docs/studi/<moved>'` is empty.
 6. **Old settings in JS**: C10. Check: `verifica.py --cambiati`.
 7. *(after A2's condition)* **Drop the qqq migration**: A2, A3, A5, C4. Check: `test_migrazione_qqq.py` removed, `tests/test_migra.py` green, `qqq-db.js` gone or renamed, and the IndexedDB open count at start is 1 (`?perf`).
-9. *(after the C3 check)* **No-OPFS library store**: C3, E8. Check: new e2e in Firefox and WebKit private windows.
-10. *(after the C1/C2 conditions)* **JS library engine and MZL1**: C1, C2, `?libjs=1`. Check: `e2e_libreria_wasm.py` green; `test_libreria.py` removed; `libreria-worker.js` under 300 lines.
-11. *(after the freeze)* **Flow and mzlab-lib items**: B4, C5–C7, C9, C15. **FREEZE**. Check: `cargo test -p mzlab-core -p mzlab-lib`, and an `.mzflow` round trip in `e2e_flow_*`.
-12. *(after the freeze plus Federico's decision)* **The mzmine-like engine**: D1. **FREEZE**. Check: the `untargeted` wasm is gone from `manifest.json`; `formula.ms1` parity tests (`flow_formula_ms1`) stay green; `hr` bytes do not change.
-13. *(after the freeze, measured plan)* **Consolidations**: D2, D5, D7, the `legacy/` → `finder_api/` rename, and C13, C14, D3 once their conditions are met.
+8. *(after the C3 check)* **No-OPFS library store**: C3, E8. Check: new e2e in Firefox and WebKit private windows.
+9. *(after the C1/C2 conditions)* **JS library engine and MZL1**: C1, C2, `?libjs=1`. Check: `e2e_libreria_wasm.py` green; `test_libreria.py` removed; `libreria-worker.js` under 300 lines.
+10. *(after the freeze)* **Flow and mzlab-lib items**: B4, C5–C7, C9, C15. **FREEZE**. Check: `cargo test -p mzlab-core -p mzlab-lib`, and an `.mzflow` round trip in `e2e_flow_*`.
+11. *(after the freeze plus Federico's decision)* **The mzmine-like engine**: D1. **FREEZE**. Check: the `untargeted` wasm is gone from `manifest.json`; `formula.ms1` parity tests (`flow_formula_ms1`) stay green; `hr` bytes do not change.
+12. *(after the freeze, measured plan)* **Consolidations**: D2, D5, D7, the `legacy/` → `finder_api/` rename, and C13, C14, D3 once their conditions are met.
 
 **Expected total** (all cuts):
 - Rust: about 4 000 lines.
