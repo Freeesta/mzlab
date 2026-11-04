@@ -5,6 +5,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
 use super::grafo::{add_h, hydrolysable, Mol};
+use crate::sortc::SortC;
 
 /// Atoms reached from `start` without crossing bond `skip`.
 fn reach(m: &Mol, start: usize, skip: usize) -> Vec<bool> {
@@ -28,13 +29,14 @@ fn fmt_ion(f: &Formula, z: i32) -> String {
         e.trim_start_matches(|c: char| c.is_ascii_digit())
             .to_string()
     };
+    let key = |e: &String| (!matches!(e.as_str(), "C" | "H"), e == "H", e.clone());
     let mut els: Vec<String> = f.iter().map(|(e, _)| base(e)).collect();
-    els.sort_by_key(|e| (!matches!(e.as_str(), "C" | "H"), e == "H", e.clone()));
+    els.sortc_by(|a, b| key(a).cmp(&key(b)));
     els.dedup();
     let mut out = String::new();
     for e in &els {
         let mut parts: Vec<&(String, u64)> = f.iter().filter(|(k, _)| base(k) == *e).collect();
-        parts.sort_by_key(|(k, _)| k.len() == e.len());
+        parts.sortc_by(|a, b| (a.0.len() == e.len()).cmp(&(b.0.len() == e.len())));
         for (k, n) in parts {
             out += k;
             if *n > 1 {
