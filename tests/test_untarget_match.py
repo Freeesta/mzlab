@@ -13,7 +13,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 PRE = f"""globalThis.window = globalThis; const store = {{}};
 globalThis.localStorage = {{ getItem: k => (k in store ? store[k] : null), setItem: (k, v) => {{ store[k] = String(v); }} }};
-require({str(WEB / 'livelli-1.js')!r}); require({str(WEB / 'livelli.js')!r}); const U = require({str(JS / '25_untarget.js')!r}); const M = require({str(JS / '26_untarget_match.js')!r}); const fs = require('fs');
+globalThis.NOMI = require({str(WEB / 'nomi.js')!r}); require({str(WEB / 'livelli-1.js')!r}); require({str(WEB / 'livelli.js')!r}); const U = require({str(JS / '25_untarget.js')!r}); const M = require({str(JS / '26_untarget_match.js')!r}); const fs = require('fs');
 const rd = p => fs.readFileSync({str(DATA)!r} + '/' + p, 'utf8');
 const cand = (o = {{}}) => ({{ name: 'Alpha', ik: 'AAAAAAAAAAAAAA-X', ent: 0.9, cos: 0.85, shared: 8, dprec: 1.2, nlib: 30, lib: 'LIB', ...o }});
 const feat = (o = {{}}) => ({{ key: 'POS:1', id: '1', pol: 1, mz: 301.1547, rt: 5, areas: {{ a: 1000 }}, ms2: {{ mz: [100, 200], it: [1, 2], prec: 0 }}, ann: [], nScans: 3, ...o }});

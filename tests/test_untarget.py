@@ -19,7 +19,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 PRE = f"""globalThis.window = globalThis; const store = {{}};
 globalThis.localStorage = {{ getItem: k => (k in store ? store[k] : null), setItem: (k, v) => {{ store[k] = String(v); }} }};
-require({str(WEB / 'livelli-1.js')!r}); require({str(WEB / 'livelli.js')!r}); const U = require({str(JS / '25_untarget.js')!r}); const fs = require('fs');
+globalThis.NOMI = require({str(WEB / 'nomi.js')!r}); require({str(WEB / 'livelli-1.js')!r}); require({str(WEB / 'livelli.js')!r}); const U = require({str(JS / '25_untarget.js')!r}); const fs = require('fs');
 const rd = p => fs.readFileSync({str(DATA)!r} + '/' + p, 'utf8'), F = (p, name) => ({{ name: name || p.split('/').pop(), text: rd(p) }});
 const ALL = () => [F('mzmine/tabella_pos.csv'), F('mzmine/annotazioni_pos.csv'), F('mzmine/fbmn.mgf'), F('gnps/biblioteca.tsv'), F('gnps/rete.tsv')];
 """

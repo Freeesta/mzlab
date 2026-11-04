@@ -16,6 +16,7 @@ pytestmark = pytest.mark.skipif(not NODE, reason="node non disponibile")
 PRELUDE = r"""
 const fs = require('fs');
 const web = process.argv[1];
+globalThis.NOMI = require(web + '/nomi.js');
 // the helpers of numeri.js, evaluated alone
 const gsrc = fs.readFileSync(web + '/numeri.js', 'utf8');
 const H = new Function(gsrc + '; return { maxOf, minOf, maxAbs, lowerIdx, spanOf, b64F32 };')();

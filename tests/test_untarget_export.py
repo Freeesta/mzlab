@@ -13,7 +13,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 PRE = f"""globalThis.window = globalThis; const store = {{}};
 globalThis.localStorage = {{ getItem: k => (k in store ? store[k] : null), setItem: (k, v) => {{ store[k] = String(v); }} }};
-require({str(WEB / 'livelli-1.js')!r}); require({str(WEB / 'livelli.js')!r}); const U = require({str(JS / '25_untarget.js')!r}); const M = require({str(JS / '26_untarget_match.js')!r}); const X = require({str(JS / '28_untarget_export.js')!r});
+globalThis.NOMI = require({str(WEB / 'nomi.js')!r}); require({str(WEB / 'livelli-1.js')!r}); require({str(WEB / 'livelli.js')!r}); const U = require({str(JS / '25_untarget.js')!r}); const M = require({str(JS / '26_untarget_match.js')!r}); const X = require({str(JS / '28_untarget_export.js')!r});
 const fs = require('fs'); const rd = p => fs.readFileSync({str(DATA)!r} + '/' + p, 'utf8');
 const cand = (o = {{}}) => ({{ name: 'Alpha; "beta"', ik: 'AAAAAAAAAAAAAA-X', ent: 0.912345, cos: 0.85, shared: 8, dprec: 1.234, nlib: 30, lib: 'LIB', accession: 'MSBNK-1', authors: 'A. Author', license: 'CC BY 4.0', smiles: 'CCO', ...o }});
 const T = () => {{ const t = U.build([{{ name: 'tabella_pos.csv', text: rd('mzmine/tabella_pos.csv') }}, {{ name: 'fbmn.mgf', text: rd('mzmine/fbmn.mgf') }}, {{ name: 'biblioteca.tsv', text: rd('gnps/biblioteca.tsv') }}], {{ pol: 1 }}); t.file.sha256 = 'ab'.repeat(32);
