@@ -144,6 +144,7 @@
   const SG = () => /** @type {Record<string, [string, string]>} */ ({
     PREC: [T("canali.sg.PREC"), T("canali.sgl.PREC")], NL: [T("canali.sg.NL"), T("canali.sgl.NL")], NG: [T("canali.sg.NG"), T("canali.sgl.NG")],
     EMC: [T("canali.sg.EMC"), T("canali.sgl.EMC")], TDF: [T("canali.sg.TDF"), T("canali.sgl.TDF")], ER: [T("canali.sg.ER"), T("canali.sgl.ER")],
+    EPI: [T("canali.sg.EPI"), T("canali.sgl.EPI")], PI: [T("canali.sg.PI"), T("canali.sgl.PI")], EMS: [T("canali.sg.EMS"), T("canali.sgl.EMS")], Q1: [T("canali.sg.Q1"), T("canali.sgl.Q1")],
   });
   const sgShort = (/** @type {string} */ g) => SG()[g] ? SG()[g][0] : g;
   const sgTitle = (/** @type {string} */ g) => SG()[g] ? ` title="${EH(SG()[g][1])}"` : "";

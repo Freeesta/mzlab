@@ -370,7 +370,10 @@ impl Rows {
                 .filter(|v| *v != 0.0)
                 .unwrap_or(0.0),
             an: self.head.analyzer(filt, icref),
-            kind: (level > 1).then(|| super::kind_of(h, filt)).flatten(),
+            kind: (level > 1)
+                .then(|| super::kind_of(h, filt))
+                .flatten()
+                .or_else(|| crate::wiff::modi::scan_type_of(h)),
             mob: super::mobility_of_header(h),
             filter: self.intern(filt),
             profile: h.contains("accession=\"MS:1000128\""),
@@ -436,7 +439,10 @@ impl Rows {
             polarity,
             tic: Some(tic).filter(|v| *v != 0.0).unwrap_or(0.0),
             an: self.head.analyzer(filt, None),
-            kind: (level > 1).then(|| super::kind_of("", filt)).flatten(),
+            kind: (level > 1)
+                .then(|| super::kind_of("", filt))
+                .flatten()
+                .or_else(|| crate::wiff::modi::scan_type_param(&extra.params)),
             filter: self.intern(filt),
             profile: sp.profile,
             parent: None,

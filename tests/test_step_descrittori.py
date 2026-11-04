@@ -13,7 +13,7 @@ CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_t
 STEPS = json.loads((ROOT / "docs/schemi/steps-1.json").read_text())
 SKETCH = json.loads((ROOT / "docs/studi/workflow/step.features.detect.json").read_text())
 IDS = ["import.raw", "convert.mzml", "index.mzidx", "features.estimate", "features.detect", "features.align",
-       "features.gapfill", "table.filter", "table.drift", "table.stats", "table.pca", "table.kmd", "table.plausible", "features.ms2_link", "export.table_csv",
+       "features.gapfill", "table.filter", "table.drift", "features.group", "table.stats", "table.pca", "table.kmd", "table.plausible", "features.ms2_link", "export.table_csv",
        "export.inclusion", "export.mztab"]
 
 
@@ -41,7 +41,7 @@ def test_the_validation_is_not_vacuous():
     assert list(validator("step").iter_errors(broken))
 
 
-def test_the_ten_steps_of_the_chain_in_order():
+def test_the_steps_of_the_chain_in_order():
     assert [s["id"] for s in STEPS] == IDS
     newer = {"table.filter": 2}  # steps whose descriptor moved past version 1 (their old plans are migrated)
     assert all(s["package"] == "core" and s["version"] == newer.get(s["id"], 1) and s["schema"] == "step/1" for s in STEPS)
@@ -49,7 +49,7 @@ def test_the_ten_steps_of_the_chain_in_order():
 
 def test_references_have_the_shape_of_the_study():
     keys = [r["citation_key"] for s in STEPS for r in s.get("references", []) + [x for a in s.get("algorithms", []) for x in a.get("references", [])]]
-    assert keys == ["tautenhahn2008highly"]
+    assert keys == ["tautenhahn2008highly", "schmid2021ion", "kuhl2012camera"]
     for s in STEPS:
         for a in s.get("algorithms", []):
             for r in a.get("references", []):

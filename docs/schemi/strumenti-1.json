@@ -24,6 +24,7 @@
           "features.detect",
           "features.estimate",
           "features.gapfill",
+          "features.group",
           "features.table",
           "formula.ms1",
           "formula.ms2",
@@ -89,6 +90,7 @@
               "features.detect@1",
               "features.estimate@1",
               "features.gapfill@1",
+              "features.group@1",
               "features.ms2_link@1",
               "features.table@1",
               "formula.ms1@1",
@@ -190,6 +192,7 @@
               "features.detect@1",
               "features.estimate@1",
               "features.gapfill@1",
+              "features.group@1",
               "features.ms2_link@1",
               "features.table@1",
               "formula.ms1@1",
@@ -865,8 +868,82 @@
           },
           {
             "properties":{
+              "step":{"const":"features.group@1"},
+              "name":{
+                "enum":[
+                  "polarity",
+                  "ions_pos",
+                  "ions_neg",
+                  "rt_tol",
+                  "apex_fwhm",
+                  "min_corr",
+                  "min_corr_samples",
+                  "ppm",
+                  "mz_abs",
+                  "max_charge"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["auto","positive","negative"],
+                    "default":"auto",
+                    "description":"Which list of ion species is searched; auto = the polarity of the files of the table"
+                  },
+                  {
+                    "type":"string",
+                    "default":"[M+H]+,[M+Na]+,[M+NH4]+,[M+K]+,[M+H-H2O]+,[M+2H]2+,[2M+H]+,[2M+Na]+",
+                    "description":"Comma-separated species searched in positive mode, among [M+H]+ [M+Na]+ [M+NH4]+ [M+K]+ [M+H-H2O]+ [M+H-2H2O]+ [M+2H]2+ [M+H+Na]2+ [2M+H]+ [2M+Na]+ [2M+NH4]+"
+                  },
+                  {
+                    "type":"string",
+                    "default":"[M-H]-,[M+Cl]-,[M+HCOO]-,[M+CH3COO]-,[M-H-H2O]-,[M-2H]2-,[2M-H]-",
+                    "description":"Comma-separated species searched in negative mode, among [M-H]- [M+Cl]- [M+HCOO]- [M+CH3COO]- [M-H-H2O]- [M-2H]2- [2M-H]- [2M+HCOO]-"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"Largest distance between the RT of two rows of one compound"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":2,
+                    "default":0.6,
+                    "description":"Largest apex distance in the shared files, as a share of the wider peak width (CAMERA perfwhm)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":-1,
+                    "maximum":1,
+                    "default":0.75,
+                    "description":"Smallest Pearson correlation of the heights of two rows over the files (CAMERA cor_eic_th)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":2,
+                    "default":3,
+                    "description":"The heights are compared only when both rows are measured in at least this many files"
+                  },
+                  {"type":"number","minimum":0,"default":5,"description":"m/z tolerance"},
+                  {"type":"number","minimum":0,"default":0.001,"description":"Floor of the m/z tolerance at low mass"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":3,
+                    "default":2,
+                    "description":"Largest charge an isotope step is read with"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"features.ms2_link@1"},
-              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak"]},
+              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak","margin_s"]},
               "value":{
                 "anyOf":[
                   {
@@ -893,6 +970,12 @@
                     "maximum":1,
                     "default":0.5,
                     "description":"Purity below which an MS2 is weak evidence; it is not dropped"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Seconds added on each side of the feature RT range to pair MS2 scans, 0 meaning one MS1 cycle."
                   }
                 ]
               }
@@ -2703,6 +2786,7 @@
                 "features.detect@1",
                 "features.estimate@1",
                 "features.gapfill@1",
+                "features.group@1",
                 "features.ms2_link@1",
                 "features.table@1",
                 "formula.ms1@1",

@@ -230,7 +230,7 @@ let ldSlow = 0;
 })();
 
 // ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
-let nbTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null), nbLast = "", nbBase = /** @type {Bag} */ ({}), nbRemote = /** @type {Bag | null} */ (null);
+let nbTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null), nbLast = "", nbBase = /** @type {Bag} */ ({}), nbRemote = /** @type {Bag | null} */ (null), nbGen = 0, nbQueue = /** @type {Promise<unknown>} */ (Promise.resolve());      // one save at a time; a save overtaken by a newer one is dropped (its stale read of the stored copy, merged after the newer save moved nbBase, would write the old notebook back)
 // schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format campioni/2)
 const NB_V = 2;
 const nbPlain = (/** @type {unknown} */ v) => !!v && typeof v === "object" && !Array.isArray(v);
@@ -256,16 +256,16 @@ function nbMerge(/** @type {Bag} */ remote) {
 }
 function nbSave(now = false) {
   clearTimeout(/** @type {number} */ (nbTimer));
-  const go = async () => {
+  const go = async (/** @type {number} */ gen) => {
     // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
-    if (!nbEverLoaded || JSON.stringify(NB) === nbLast) return;
+    if (gen !== nbGen || !nbEverLoaded || JSON.stringify(NB) === nbLast) return;
     let remote = nbRemote;
-    if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } }
+    if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } if (gen !== nbGen) return; }
     const out = nbMerge(remote || nbBase), body = JSON.stringify(out);
     const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out; if (now) NBP.keep(body);
-    fetch("api/notebook", { method: "POST", body, keepalive: true }).then(r => { if (r && r.ok) NBP.done(body); }).catch(() => { nbLast = ""; });
+    return fetch("api/notebook", { method: "POST", body, keepalive: true }).then(r => { if (r && r.ok) NBP.done(body); }).catch(() => { nbLast = ""; });
   };
-  if (now) go(); else nbTimer = setTimeout(go, 500);
+  if (now) go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
 }
 let nbEverLoaded = false;
 async function nbLoad() {
@@ -1028,10 +1028,10 @@ function plotSheets(/** @type {Pannello} */ p) {
   const n = maxOf(cols.map(c => c[1].length)), rows = [];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? c[1][i] : null)));
   /** @type {any[]} */
-  const out = [{ name: ptitle(p.title) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
+  const out = [{ name: ptitleP(p) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
   const metaRows = [
     [{ v: I18N.t("export.meta.property"), b: true }, { v: I18N.t("export.meta.value"), b: true }],
-    [{ v: I18N.t("export.meta.title"), b: true }, ptitle(p.title) || I18N.t("export.meta.chart")],
+    [{ v: I18N.t("export.meta.title"), b: true }, ptitleP(p) || I18N.t("export.meta.chart")],
     [{ v: I18N.t("export.meta.type"), b: true }, (/** @type {Record<string, string>} */ ({ chrom: I18N.t("export.type.chrom", { kind: (p.kind || "").toUpperCase() }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: p.level === 2 ? "MS²" : "MS¹" }), map: I18N.t("panel.title.map") }))[p.type] || p.type],
     [{ v: I18N.t("export.meta.samples"), b: true }, plotFiles(p).map((/** @type {FileAperto} */ f) => f.label).join(", ")],
     [{ v: I18N.t("export.meta.caption"), b: true }, plotCaption(p)],
