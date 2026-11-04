@@ -217,7 +217,8 @@ function cleanupOrphanPanels() {
           if (!linked || toClose.includes(linked)) {
             toClose.push(p);
           } else if (!f || !f.vis || f.gone) {
-            const nf = vis()[0] || tabFiles(p.tab).find((/** @type {MzFile} */ x) => x.vis && !x.gone);
+            // a file of ITS tab (not of the tab on screen), for a product-ion spectrum one that holds its precursor
+            const vf = tabFiles(p.tab || E.tab).filter((/** @type {MzFile} */ x) => x.vis && !x.gone), nf = (p.level > 1 && p.prec != null ? vf.find((/** @type {MzFile} */ x) => ms2Holds(x, p.prec)) : null) || vf[0];
             if (nf) { p.k = nf.k; if (p.el) draw(p); }
             else toClose.push(p);
           }
@@ -233,8 +234,10 @@ function cleanupOrphanPanels() {
         }
       } else if (p.type === "chrom" || p.type === "mrm" || p.type === "xic") {
         const tab = p.tab || E.tab;
-        const fs = (tab && tab !== E.tab ? tabFiles(tab) : shownFor(p)).filter((/** @type {MzFile} */ f) => f.vis && !f.gone);
-        if (fs.length === 0) {
+        let fs = (tab && tab !== E.tab ? tabFiles(tab) : shownFor(p)).filter((/** @type {MzFile} */ f) => f.vis && !f.gone);
+        // an MS2 pair draws only the drawn files (shownFor: ticked, one per never-overlaid type, kept by its rows) that hold its precursor: with none it would be blank
+        if (p.tab === "ms2" && p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "") fs = shownFor(p).filter((/** @type {MzFile} */ f) => !f.gone && ms2Holds(f, p.prec));
+        if (fs.length === 0 && !ms2Rehome(p)) {
           toClose.push(p);
         }
       }

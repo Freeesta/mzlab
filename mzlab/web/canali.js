@@ -156,7 +156,7 @@
   /** the omologhi that the panel shows as ticked @param {any} p @param {Nodo[]} tree */
   function ticked(p, tree) {
     if (!ESP.mrm(p)) return isOther(p) ? new Set() : new Set(chosen(p));
-    const all = !p.tr || (Array.isArray(p.tr) && !p.tr.length), want = new Set(Array.isArray(p.tr) ? p.tr : [p.tr]);
+    const tr = mrmSel(p.tr, tree.filter(isTr).map(nodeKey)), all = !tr || (Array.isArray(tr) && !tr.length), want = new Set(Array.isArray(tr) ? tr : [tr]);
     return new Set(tree.filter(n => isTr(n) && (all || want.has(nodeKey(n)))).map(n => n.omo));
   }
   /** the control of a panel: a button with what is plotted and the popover with the channels in groups. The chromatogram passes what its files have (cx); the MRM panel
