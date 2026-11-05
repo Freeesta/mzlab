@@ -30,10 +30,9 @@ try:
             assert pg.is_checked(sel(ks[0])), "the row ticked stays ticked"
             assert not pg.is_checked(sel(ks[1])), "the same m/z under the other file is not ticked"
             assert pg.evaluate(f"E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom' && String(p.prec) === '{pr}').ks.length") == 1, "the chromatogram draws that file only"
-            pg.check(sel(ks[1])); ready(pg)
-            assert pg.is_checked(sel(ks[0])) and pg.is_checked(sel(ks[1])), "both ticked"
-            pg.uncheck(sel(ks[0])); ready(pg)
-            assert not pg.is_checked(sel(ks[0])) and pg.is_checked(sel(ks[1])), "unticking one leaves the other"
+            pg.check(sel(ks[1])); ready(pg)      # MS2 files are never overlaid (esperimenti.js `unico`): the file ticked last stays, the list never keeps two ticked
+            assert pg.is_checked(sel(ks[1])) and not pg.is_checked(sel(ks[0])), "the file ticked last is the only one ticked"
+            assert pg.evaluate(f"E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom' && String(p.prec) === '{pr}').ks.length") == 1, "the chromatogram draws that file only"
             pg.uncheck(sel(ks[1])); ready(pg)
             assert pg.evaluate(f"!E.panels.some(p => p.tab === 'ms2' && p.type === 'chrom' && String(p.prec) === '{pr}')"), "no row ticked: the chromatogram is closed"
         step("MS2 precursor rows are per file", rows)
