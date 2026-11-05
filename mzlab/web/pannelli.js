@@ -834,6 +834,7 @@ function hdRestore(/** @type {Pannello} */ p) {
   l.slice().reverse().forEach((/** @type {HTMLElement & Bag} */ n) => { if (n._ph) { n._ph.replaceWith(n); n._ph = null; } n.classList.remove("hd-ov"); });
   const m = p.el && p.el.querySelector(".hmore"), b = p.el && p.el.querySelector('[data-a="more"]');
   if (m) m.hidden = true; if (b) { b.hidden = true; b.setAttribute("aria-expanded", "false"); }
+  const hd = p.el && p.el.querySelector(".hd"); if (hd) hd.classList.remove("hd-tight");
 }
 function fitHd(/** @type {Pannello} */ p) {
   const el = p.el; if (!el || !el.isConnected || p._fitBusy) return;
@@ -853,6 +854,10 @@ function fitHd(/** @type {Pannello} */ p) {
       if (n.hidden || !n.offsetWidth) continue;
       if (n.classList.contains("bnl")) { n.classList.add("hd-ov"); p._hm.push(n); continue; }
       const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); p._hm.push(n);
+    }
+    if (over()) {  // last resort, everything movable is already in «⋯»: the title and the selects shrink (ellipsis), the fixed touch targets keep their size and the close button stays inside
+      hd.classList.add("hd-tight");
+      el.querySelectorAll(".hd .ctl select").forEach((/** @type {HTMLSelectElement} */ sl) => { const o = sl.selectedOptions[0]; if (o && o.textContent) sl.title = o.textContent.trim(); });
     }
     if (!p._hm.some((/** @type {HTMLElement & Bag} */ n) => n._ph)) mb.hidden = true;
     else if (open) { more.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); }
