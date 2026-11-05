@@ -935,5 +935,5 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
 
 /// The Gaussian mass term of the combined score, from the rounded error in ppm.
 fn mass_t_raw(delta_ppm: f64, sigma_ppm: f64) -> f64 {
-    (-0.5 * (delta_ppm / sigma_ppm).powi(2)).exp()
+    libm::exp(-0.5 * (delta_ppm / sigma_ppm).powi(2))
 }

@@ -11,7 +11,7 @@ fn n(x: f64) -> Value {
     if x == 0.0 || x.fract() == 0.0 || !x.is_finite() {
         return Value::Num(x);
     }
-    let m = 10f64.powf(3.0 - x.abs().log10().floor());
+    let m = libm::pow(10f64, 3.0 - libm::log10(x.abs()).floor());
     Value::Num((x * m).round() / m)
 }
 

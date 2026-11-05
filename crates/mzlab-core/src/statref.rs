@@ -218,7 +218,7 @@ impl Ctx<'_> {
         });
         let sh = shape(&y, rho, self.pseudo, self.o.rho_min, self.o.drop);
         Obj::new().n("ref_level", q.blank).n("threshold", q.threshold).n("treated_max", top).i("max_file", top_i as i64)
-            .put("ratio", opt((q.blank != 0.0).then(|| top / q.blank))).n("log2fc", ((top + self.pseudo) / (q.blank + self.pseudo)).log2())
+            .put("ratio", opt((q.blank != 0.0).then(|| top / q.blank))).n("log2fc", libm::log2((top + self.pseudo) / (q.blank + self.pseudo)))
             .b("absent_in_reference", absent).i("n_above", q.n_above as i64).i("n_treated", self.tr.len() as i64)
             .put("shape", sh.map_or(Value::Null, text)).put("rho", opt(rho))
             .put("t_max", opt((!y.is_empty() && ytop > 0.0).then(|| self.ser[argmax(&y)]))).n("rep_mean", m).put("rep_cv", opt(cv))
