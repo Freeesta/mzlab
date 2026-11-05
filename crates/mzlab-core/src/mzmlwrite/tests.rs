@@ -172,3 +172,15 @@ fn an_srm_id_with_energy_and_dwell_writes_them_in_every_build() {
     assert!(xml.contains("<userParam name=\"MS_dwell_time\" value=\"50\"/>"), "{xml}");
     assert!(xml.contains("name=\"collision energy\" value=\"25\""), "{xml}");
 }
+
+/// The collision energy and the isolation half-width a reader gives a product-ion scan are written whatever features the build has: the engine reads
+/// the `.wiff` without `sciex` or `precursori`, and the row of its index is read back from this text, as from `mzlab-cli`'s.
+#[test]
+fn a_plain_precursor_keeps_its_energy_and_window_in_every_build() {
+    let sp = Spectrum { index: 0, id: "s".into(), level: 2, precursor: Some(229.1), mz: vec![100.0], intensity: vec![1.0], ..Default::default() };
+    let extra = SpectrumExtra { ce: Some(10.0), iso_half: Some(0.35), ..Default::default() };
+    let head = spectrum_head(0, &sp, &extra);
+    assert!(head.contains("accession=\"MS:1000045\" name=\"collision energy\" value=\"10\""), "{head}");
+    assert!(head.contains("accession=\"MS:1000828\" name=\"isolation window lower offset\" value=\"0.35\""), "{head}");
+    assert!(head.contains("accession=\"MS:1000829\" name=\"isolation window upper offset\" value=\"0.35\""), "{head}");
+}
