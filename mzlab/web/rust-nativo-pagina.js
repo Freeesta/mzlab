@@ -25,9 +25,9 @@ export function makeNativo(h) {
       if (r.dead || r.error) throw fail(r, "err.file.notAccepted");
       return JSON.parse(r.info);
     },
-    /** which of `names` (files of the session) are samples of these very files (`members`: [{ name, blob }]: same names, sizes and lastModified) with their index kept: the same dataset given again */
+    /** which of `names` (files of the session) are samples of these very files (`members`: [{ name, blob }]: same names, sizes and lastModified) with their index kept: the same dataset given again (the blob: the desktop app knows a file by its number) */
     async nativeSame(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string[]} */ names) {
-      const r = await h.rpc({ op: "natsame", members: members.map(m => ({ name: m.name, size: m.blob.size, mtime: /** @type {any} */ (m.blob).lastModified || 0 })), names: names.map(h.base) });
+      const r = await h.rpc({ op: "natsame", members: members.map(m => ({ name: m.name, size: m.blob.size, mtime: /** @type {any} */ (m.blob).lastModified || 0, blob: m.blob })), names: names.map(h.base) });
       if (r.dead || r.error) return [];
       return JSON.parse(r.info).names;
     },

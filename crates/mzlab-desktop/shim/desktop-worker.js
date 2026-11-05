@@ -93,7 +93,7 @@ async function handle(m) {
         for (const [k, v] of Object.entries(m)) if (k !== "id" && k !== "blob" && k !== "nat" && k !== "members") p[k] = v;
         if (m.nat) p.nat = { key: m.nat.key, c: m.nat.c, id: m.nat.id, centroid: m.nat.centroid, members: await members(m.nat.members) };      // a sample of a maker's file: its members stay on the disk
         else if (m.blob) p.fid = await fileId(m.blob, m.op === "lr_put" || m.op === "lr_warm" || m.op === "lr_warm_claim" ? m.name : undefined);
-        if (m.op === "natsamples") p.members = await members(m.members);
+        if (m.op === "natsamples" || m.op === "natsame") p.members = await members(m.members);
         if (m.op === "idxopen") tileName.set(m.slot, m.name);
         if (m.op === "msngrafo") p.name = tileName.get(m.slot) || "";
         const r = await post("rpc", undefined, JSON.stringify(p));

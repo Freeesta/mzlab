@@ -152,6 +152,17 @@ impl Store {
         Ok(e)
     }
 
+    /// True when `name` is a sample of exactly these members (names and paths, in any order) and none of them changed since it was registered.
+    pub fn same_nat(&mut self, name: &str, members: &[(String, PathBuf)]) -> bool {
+        self.load();
+        let Some(e) = self.files.get(name) else { return false };
+        let Some(nat) = &e.nat else { return false };
+        let (mut a, mut b) = (nat.members.clone(), members.to_vec());
+        a.sort();
+        b.sort();
+        a == b && e.stamp() == Some((e.size, e.mtime))
+    }
+
     /// Forgets `name`; the files made by the app go with it unless another entry (a sibling sample of the same upload) still uses them.
     pub fn remove(&mut self, name: &str) {
         self.load();
