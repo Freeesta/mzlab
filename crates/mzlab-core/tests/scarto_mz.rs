@@ -39,3 +39,16 @@ fn a_malformed_shift_is_refused_and_an_adduct_is_not_a_shift() {
     assert_eq!(split_offset("C9H8O4 [M+H]+").unwrap().1, None);
     assert!(formula_mz("288.2+", None).is_err());
 }
+
+#[test]
+fn an_unreadable_head_keeps_its_text_and_shift_in_the_error() {
+    let e = formula_mz("imidacloprid+16", Some("[M+H]+")).unwrap_err();
+    let get = |k: &str| {
+        e.params
+            .iter()
+            .find(|(n, _)| *n == k)
+            .map(|(_, v)| v.as_str())
+    };
+    assert_eq!(get("head"), Some("imidacloprid"));
+    assert_eq!(get("offset"), Some("16"));
+}

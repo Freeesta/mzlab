@@ -368,6 +368,28 @@ pub fn split_offset(text: &str) -> Result<(String, Option<f64>)> {
     ))
 }
 
+/// The answer for a bare m/z with a shift (`288.2+16`): nothing to resolve, so no formula.
+fn shifted_mz(text: &str, d: f64) -> Result<String> {
+    let base: f64 = text
+        .replace(',', ".")
+        .parse()
+        .map_err(|_| Error::new("err.formula.unreadable").with("formula", text))?;
+    let z = base + d;
+    let mut o = Out::default();
+    o.raw("{\"formula\":\"\",\"offset\":")
+        .num(d)
+        .raw(",\"adduct\":\"\",\"mz\":")
+        .num(round(z, 4))
+        .raw(",\"mz5\":")
+        .num(round(z, 5))
+        .raw(",\"mz1\":")
+        .num(round_half_up(z, 1))
+        .raw(",\"nominal\":")
+        .int(round_half_up(z, 0) as i64)
+        .raw("}");
+    Ok(o.0)
+}
+
 /// `/api/formula`: neutral mass and ion m/z of every adduct, exact, at 1 decimal and nominal. With the adduct `none` the text is an ion: an adduct written in it (`+H`, `[M+H]+`) is the one used, otherwise the mass of the formula is the m/z.
 pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     let (formula, offset) = split_offset(formula)?;
@@ -377,25 +399,7 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
             .chars()
             .all(|c| c.is_ascii_digit() || c == '.' || c == ',');
     if let (true, Some(d)) = (numeric, offset) {
-        // a bare m/z with a shift: nothing to resolve, the answer has no formula
-        let base: f64 = formula
-            .replace(',', ".")
-            .parse()
-            .map_err(|_| Error::new("err.formula.unreadable").with("formula", formula))?;
-        let z = base + d;
-        let mut o = Out::default();
-        o.raw("{\"formula\":\"\",\"offset\":")
-            .num(d)
-            .raw(",\"adduct\":\"\",\"mz\":")
-            .num(round(z, 4))
-            .raw(",\"mz5\":")
-            .num(round(z, 5))
-            .raw(",\"mz1\":")
-            .num(round_half_up(z, 1))
-            .raw(",\"nominal\":")
-            .int(round_half_up(z, 0) as i64)
-            .raw("}");
-        return Ok(o.0);
+        return shifted_mz(formula, d);
     }
     let (text, inner) = if adduct == Some(NO_ADDUCT) {
         let (t, a) = embedded_adduct(formula);
@@ -403,7 +407,11 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     } else {
         (formula.to_string(), None)
     };
-    let f = parse_formula(&text)?;
+    // an unreadable head keeps the text and the shift in the error: the page may read the head as a name of the contaminant lists
+    let f = parse_formula(&text).map_err(|e| match offset {
+        Some(d) => e.with("head", &text).with("offset", &format!("{d}")),
+        None => e,
+    })?;
     let m = mass(&f);
     let mut o = Out::default();
     o.raw("{\"formula\":")

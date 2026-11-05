@@ -4,4 +4,4 @@
 - Sito e app danno gli stessi byte: casi in `crates/mzlab-desktop/tests/parita_rotte.rs` (`lr_formula`); prove del lettore in `crates/mzlab-core/tests/scarto_mz.rs`.
 - CLI: `mzlab-cli ion-mz TESTO [--adduct A] [--out PATH]` (`ion_mz_cmd.rs`) stampa il JSON di `api/formula`; scarto illeggibile = uscita 2.
 - Interfaccia: `evalRow` di `openXic` (`pannelli.js`) mostra «base scarto Da → m/z candidato», mai un'identificazione; i testi sono `xic.shifted` e `err.formula.offset`. Prova: `tests_e2e/e2e_xic_scarto.py`.
-- Il dialogo risolve solo m/z e formule: i nomi di composto non vi sono cercati.
+- Nomi: un testo che il motore non legge come formula si prova come nome delle liste dei contaminanti (`xic-nomi.js`, caricato alla bisogna, con `liste-nomi.js` e `ask-suggerisci.js`): l'errore del motore porta `head` e `offset`, la pagina cerca il nome esatto e richiama `api/formula` con formula + scarto e l'addotto della riga. Suggerimenti sotto il campo (combobox). Un nome è un candidato, mai un'identificazione; se le liste non si caricano, m/z e formule funzionano. Prova: `e2e_xic_nomi.py`.

@@ -65,7 +65,7 @@ I18N.add("it", {
   "xic.empty": "vuoto",
   "xic.ion1": "Ione 1",
   "xic.ionN": "Ione {n}",
-  "xic.placeholder": "m/z (es. 364.1) o formula neutra (es. C9H10Cl2N2O); scarto facoltativo: 288.2+16",
+  "xic.placeholder": "m/z (es. 364.1), formula neutra o nome di un contaminante (es. C9H10Cl2N2O); scarto facoltativo: 288.2+16",
   "xic.optional": "facoltativo",
   "xic.placeholderIon": "m/z (es. 364.1) o formula dello ione (es. C9H10Cl2N2O+H)",
   "xic.optionalIon": "facoltativo (formula dello ione o m/z)",

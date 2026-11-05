@@ -926,6 +926,12 @@ const xicShiftRow = (/** @type {string} */ t, /** @type {Bag} */ f) => {
   const shown = off == null ? "" : I18N.t("xic.shifted", { base: String(rh(f.mz - off, 4)), shift: sh, mz: String(rh(f.mz, 4)) }) + " ";
   return { label: !f.formula ? t.replace(/\s+/g, "") : (f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`) + sh, win: xicWin(f.mz, false), ex: f.mz5 ?? f.mz, note: interp + shown };
 };
+// suggestions of names under the field of a row (the keys of the list come before the field's own)
+const xicWire = (/** @type {HTMLInputElement} */ inp) => {
+  inp.addEventListener("keydown", e => { if (typeof XICNOMI !== "undefined" && XICNOMI.key(e)) e.stopImmediatePropagation(); }, true);
+  inp.addEventListener("focus", () => { carica("xic-nomi.js").then(() => XICNOMI.focus(inp), () => {}); });
+  inp.addEventListener("blur", () => typeof XICNOMI !== "undefined" && XICNOMI.blur(inp));
+};
 // Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 /** @param {Pannello | null} [panel] */
@@ -960,7 +966,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     r.win = null; r.sum.textContent = "";
     r.pending = (async () => {
       try {
-        const f = await getFormula(t, r.ad.value);
+        const f = await getFormula(t, r.ad.value).catch((/** @type {Bag} */ e) => carica("xic-nomi.js").then(() => XICNOMI.read(t, r.ad.value, e)));   // not a formula: maybe a name of the lists
         if (ed !== r.edits) return;
         const x = xicShiftRow(t, f); r.label = x.label; r.win = x.win; if (hrFile()) r.ex = x.ex;
         r.sum.innerHTML = x.note + sumText(r);
@@ -971,7 +977,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     const el = document.createElement("div"); el.className = "xrw";
     el.innerHTML = `<label></label><div class="xin"><input class="mzf" autocomplete="off" inputmode="decimal" style="width:auto"><select title="${I18N.t("xic.adduct.title")}" aria-label="${I18N.t("xic.adduct.title")}">${XIC_ADDUCTS.map(a => `<option ${a === (init.adduct || dAd) ? "selected" : ""}>${a}</option>`).join("")}<option value="none" ${init.adduct === "none" ? "selected" : ""}>${I18N.t("xic.noAdduct")}</option></select><button class="xr-x" type="button" title="${I18N.t("xic.remove.title")}">&times;</button></div><div class="xr-sum"></div>`;
     const r = /** @type {Bag} */ ({ el, lab: el.querySelector("label"), inp: el.querySelector("input"), ad: el.querySelector("select"), x: el.querySelector(".xr-x"), sum: el.querySelector(".xr-sum"), win: null, label: "", obs: !!init.obs, edits: 0, pending: Promise.resolve(), tq: 0 });
-    r.inp.value = init.text || "";
+    r.inp.value = init.text || ""; xicWire(r.inp);
     r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = numShift(t); r.tq = setTimeout(() => evalRow(r), 500); } };
     r.ad.onchange = () => { renumber(); evalRow(r); };
     r.inp.onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Enter extracts at once (empty field: only the message); Shift+Enter moves to the next field
