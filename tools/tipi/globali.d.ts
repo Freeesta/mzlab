@@ -80,6 +80,7 @@ declare var MIRINO: any;
 declare var MOLUI: any;
 declare var MZLAB_BROWSER: any;
 declare var MZLAB_CEN_IDX: any;
+declare var MZLAB_LATE_CLICK: any;
 declare var MZLAB_LLM: any;
 declare var MZLAB_LLM_AGENT: any;
 declare var MZLAB_LOADFAIL: any;
