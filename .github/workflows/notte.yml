@@ -74,9 +74,7 @@ jobs:
           - { os: macos-latest, browser: webkit }
           - { os: windows-latest, browser: chromium }
     runs-on: ${{ matrix.os }}
-    # WebKit on the macOS runner informs only until it is green on 3 consecutive nights: the tests run in persistent contexts (tests_e2e/lib.py),
-    # because OPFS throws in the ephemeral context of new_page(); the other browsers still fail the night
-    continue-on-error: ${{ matrix.browser == 'webkit' }}
+    # WebKit fails the night like the other browsers; its tests run in persistent contexts (tests_e2e/lib.py), because OPFS throws in the ephemeral context of new_page()
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

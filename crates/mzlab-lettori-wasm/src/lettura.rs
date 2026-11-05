@@ -11,8 +11,8 @@ mod json_testo;
 pub mod sessione;
 use sessione::Sessioni;
 
-/// Bytes sent to `sink` at a time.
-const BLOCCO: usize = 64 << 10;
+/// Bytes sent to `sink` at a time (each call is an OPFS write in the page: 1 MiB blocks cost a quarter of 64 KiB ones per byte).
+const BLOCCO: usize = 1 << 20;
 
 fn error_text(e: &mzlab_core::Error) -> String {
     e.to_json()
@@ -189,7 +189,7 @@ pub fn famiglia() -> String {
     mzlab_lettori::famiglia().into()
 }
 
-/// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
+/// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}` (a SCIEX pair counts the scans of sample 0 only, the others say 0). The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
 /// as scans), `"pda"` (UV traces), `"variante"` (a file whose points the engine would misread: an Agilent `.D` QqQ MRM or Q-TOF profile or flight times, a SCIEX file of the 3200 reader). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
 #[wasm_bindgen]
 pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<String, JsValue> {
@@ -198,7 +198,7 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     let mut motivi: Vec<&str> = Vec::new();
     #[cfg(any(feature = "agilent", feature = "tutte"))]
     motivi.extend(mzlab_lettori::motivi_insieme(&mut m.fileset()));
-    let mut l = match mzlab_lettori::apri(m.fileset(), &Limiti::sito()) {
+    let mut l = match apri_sonda(m.fileset()) {
         Ok(l) => l,
         // a SCIEX file the module itself refuses (a TOF, several periods, an unknown scan type) is a variant too: the engine would read it as a 3200 and be wrong
         #[cfg(feature = "sciex")]
@@ -225,6 +225,19 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     Ok(o.0)
 }
 
+/// The reader of `fs` for `probe`: a SCIEX pair builds the index of sample 0 only (`apri_solo`), the method of the others is enough for `motivi`;
+/// any other set opens as `apri`.
+fn apri_sonda(
+    #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
+) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Lettore>> {
+    #[cfg(any(feature = "sciex", feature = "tutte"))]
+    if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::lettore::VOCE.id)
+    {
+        return mzlab_core::wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(0));
+    }
+    mzlab_lettori::apri(fs, &Limiti::sito())
+}
+
 /// The reader of `fs` for the mzML of sample `c`: a SCIEX pair reads the heads of the blocks of that injection only (`apri_solo`, as the engine does), any other set opens as `apri`.
 fn apri_campione(
     #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
@@ -241,6 +254,8 @@ fn apri_campione(
 }
 
 /// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::mancanti`).
+/// Indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
+/// the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte.
 #[wasm_bindgen]
 pub fn to_mzml(
     names: js_sys::Array,
@@ -250,6 +265,25 @@ pub fn to_mzml(
     sink: Function,
     progress: Function,
 ) -> Result<f64, JsValue> {
+    to_mzml_come(names, sizes, read, c, true, "standard", sink, progress)
+}
+
+/// `to_mzml` with the optical matrix only when `dad` and the compression of «Download .mzML» (`mzmlwrite::opzioni_compressione`): with `dad` false the file of
+/// `mzlab-cli convert` with the same `conv.numpress`, byte for byte (the download of a `.wiff` sample, also one the engine reads: the engine leaves out what `estesi` writes).
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn to_mzml_come(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+    dad: bool,
+    compression: &str,
+    sink: Function,
+    progress: Function,
+) -> Result<f64, JsValue> {
+    let opz = mzlab_core::mzmlwrite::opzioni_compressione(compression)
+        .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     let m = Membri::new(names, sizes, read)?;
     let mut l = apri_campione(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
     let lacking = l.mancanti(c as usize);
@@ -264,14 +298,9 @@ pub fn to_mzml(
             &(total as f64).into(),
         );
     };
-    // indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
-    // the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte
     let conv = lettori_mzml::Conversione {
         steps: Some(&[]),
-        opz: mzlab_core::mzmlwrite::Opzioni {
-            dad: true,
-            ..mzlab_core::mzmlwrite::Opzioni::default()
-        },
+        opz: mzlab_core::mzmlwrite::Opzioni { dad, ..opz },
         ..lettori_mzml::Conversione::default()
     };
     conv.scrivi(&mut *l, c as usize, &mut out, &mut tell)
