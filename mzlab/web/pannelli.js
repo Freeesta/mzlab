@@ -918,20 +918,6 @@ function xicDirect(mz, after, panel, over) {
   return np;
 }
 const xicName = (/** @type {Pannello} */ q) => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(mzd(q)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : I18N.t("xic.empty"); };
-// a formula or a shifted m/z resolved by the engine (f = answer of api/formula): label, window, exact m/z and the note under the field. A signed shift closing the text
-// (+16, -18) was added to the m/z after the adduct as literal Da; the result is a candidate to extract, never an identification.
-const xicShiftRow = (/** @type {string} */ t, /** @type {Bag} */ f) => {
-  const off = f.offset ?? null, sh = off == null ? "" : (off < 0 ? "-" : "+") + String(Math.abs(off));
-  const interp = f.formula && off == null && t.replace(/\s+/g, "") !== f.formula ? I18N.t("xic.interpreted", { formula: fmtFormula(f.formula) }) + " " : "";
-  const shown = off == null ? "" : I18N.t("xic.shifted", { base: String(rh(f.mz - off, 4)), shift: sh, mz: String(rh(f.mz, 4)) }) + " ";
-  return { label: !f.formula ? t.replace(/\s+/g, "") : (f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`) + sh, win: xicWin(f.mz, false), ex: f.mz5 ?? f.mz, note: interp + shown };
-};
-// suggestions of names under the field of a row (the keys of the list come before the field's own)
-const xicWire = (/** @type {HTMLInputElement} */ inp) => {
-  inp.addEventListener("keydown", e => { if (typeof XICNOMI !== "undefined" && XICNOMI.key(e)) e.stopImmediatePropagation(); }, true);
-  inp.addEventListener("focus", () => { carica("xic-nomi.js").then(() => XICNOMI.focus(inp), () => {}); });
-  inp.addEventListener("blur", () => typeof XICNOMI !== "undefined" && XICNOMI.blur(inp));
-};
 // Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 /** @param {Pannello | null} [panel] */
@@ -942,7 +928,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
   const dAd = pre.adduct || defAdduct(panel && E.panels.includes(panel) ? scanFiles(shown()) : undefined);
   const /** @type {Bag[]} */ rows = [];
   const isNum = (/** @type {string} */ t) => /^[\d.,\s]+$/.test(t);
-  const numShift = (/** @type {string} */ t) => /^[\d.,\s]+[+-]/.test(t);  // «288.2+16»: an m/z with a signed shift (parsed by the engine, no adduct applies)
+  const ns = (/** @type {string} */ t) => /^[\d.,\s]+[+-]/.test(t);
   const renumber = () => {
     rows.forEach((r, i) => { r.lab.textContent = i === 0 ? I18N.t("xic.ion1") : I18N.t("xic.ionN", { n: i + 1 }); r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? I18N.t(r.ad.value === "none" ? "xic.placeholderIon" : "xic.placeholder") : I18N.t(r.ad.value === "none" ? "xic.optionalIon" : "xic.optional"); r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
     addB.disabled = rows.length >= XIC_MAXROWS;
@@ -956,7 +942,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
   };
   const evalRow = (/** @type {Bag} */ r) => {
     const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null;
-    r.ad.hidden = isNum(t) || numShift(t);
+    r.ad.hidden = isNum(t) || ns(t);
     if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
     if (isNum(t)) {
       const v = numMz1(t), x = numIt(t);
@@ -966,19 +952,19 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     r.win = null; r.sum.textContent = "";
     r.pending = (async () => {
       try {
-        const f = await getFormula(t, r.ad.value).catch((/** @type {Bag} */ e) => carica("xic-nomi.js").then(() => XICNOMI.read(t, r.ad.value, e)));   // not a formula: maybe a name of the lists
+        const x = await carica("xic-nomi.js").then(() => XICNOMI.row(t, r.ad.value, hrFile()));
         if (ed !== r.edits) return;
-        const x = xicShiftRow(t, f); r.label = x.label; r.win = x.win; if (hrFile()) r.ex = x.ex;
+        Object.assign(r, x);
         r.sum.innerHTML = x.note + sumText(r);
-      } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (ed === r.edits) r.sum.innerHTML = `<span class="fail">${e.key === "err.formula.offset" ? e.message : I18N.t("xic.badFormula")}</span>`; }
+      } catch (e) {if (ed === r.edits) r.sum.innerHTML = `<span class="fail">${/** @type {any} */ (e).message}</span>`}
     })();
   };
   const addRow = (/** @type {Bag} */ init = {}) => {
     const el = document.createElement("div"); el.className = "xrw";
     el.innerHTML = `<label></label><div class="xin"><input class="mzf" autocomplete="off" inputmode="decimal" style="width:auto"><select title="${I18N.t("xic.adduct.title")}" aria-label="${I18N.t("xic.adduct.title")}">${XIC_ADDUCTS.map(a => `<option ${a === (init.adduct || dAd) ? "selected" : ""}>${a}</option>`).join("")}<option value="none" ${init.adduct === "none" ? "selected" : ""}>${I18N.t("xic.noAdduct")}</option></select><button class="xr-x" type="button" title="${I18N.t("xic.remove.title")}">&times;</button></div><div class="xr-sum"></div>`;
     const r = /** @type {Bag} */ ({ el, lab: el.querySelector("label"), inp: el.querySelector("input"), ad: el.querySelector("select"), x: el.querySelector(".xr-x"), sum: el.querySelector(".xr-sum"), win: null, label: "", obs: !!init.obs, edits: 0, pending: Promise.resolve(), tq: 0 });
-    r.inp.value = init.text || ""; xicWire(r.inp);
-    r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = numShift(t); r.tq = setTimeout(() => evalRow(r), 500); } };
+    r.inp.value = init.text || ""; r.inp.onfocus = () => carica("xic-nomi.js").then(() => XICNOMI.wire(r.inp), Object);
+    r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = false; r.tq = setTimeout(() => evalRow(r), 500); } };
     r.ad.onchange = () => { renumber(); evalRow(r); };
     r.inp.onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Enter extracts at once (empty field: only the message); Shift+Enter moves to the next field
       if (e.key !== "Enter") return; e.preventDefault();
