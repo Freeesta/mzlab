@@ -42,12 +42,23 @@ impl State {
     pub(crate) fn nat_same(&self, p: &Value) -> Result<Answer> {
         let mut members: Vec<(String, PathBuf)> = Vec::new();
         for m in p["members"].as_array().map_or(&[][..], |a| a.as_slice()) {
-            members.push((m["name"].as_str().unwrap_or("").to_string(), self.picked(m["fid"].as_u64().unwrap_or(0) as u32)?.path));
+            members.push((
+                m["name"].as_str().unwrap_or("").to_string(),
+                self.picked(m["fid"].as_u64().unwrap_or(0) as u32)?.path,
+            ));
         }
         let idx = self.indexer()?;
         let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
-        let names: Vec<&str> = p["names"].as_array().into_iter().flatten().filter_map(|n| n.as_str()).collect();
-        let out: Vec<&str> = names.into_iter().filter(|n| !members.is_empty() && store.same_nat(n, &members) && idx.size(n).is_some()).collect();
+        let names: Vec<&str> = p["names"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|n| n.as_str())
+            .collect();
+        let out: Vec<&str> = names
+            .into_iter()
+            .filter(|n| !members.is_empty() && store.same_nat(n, &members) && idx.size(n).is_some())
+            .collect();
         text(json!({ "names": out }).to_string())
     }
 
