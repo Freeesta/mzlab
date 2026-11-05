@@ -164,7 +164,7 @@ fn map_head(a: &Ask, g: &Grid, mz1: f64, hr: bool) -> Obj {
     let mut o = Obj::new().n("rt0", g.rt0).n("rt1", g.rt1).i("nrt", g.nrt as i64).n("mz0", g.mz0);
     o = if a.region.is_none() { o.n("dmz", g.dmz).i("nmz", g.nmz as i64) } else { o.n("mz1", mz1).i("nmz", g.nmz as i64) };
     if a.region.is_some() {
-        o = if a.log { o.n("dlog", (mz1 / g.mz0).ln() / g.nmz as f64) } else { o.n("dmz", g.dmz) };
+        o = if a.log { o.n("dlog", libm::log(mz1 / g.mz0) / g.nmz as f64) } else { o.n("dmz", g.dmz) };
     }
     o = o.i("level", a.level as i64).b("region", a.region.is_some()).put("agg", text(if a.mean { "mean" } else { "max" })).b("log", a.log);
     o.b("bg", a.bg || a.stretch.is_some()).put("bgstretch", a.stretch.map_or(Value::Null, |s| floats(&[s.0, s.1]))).b("hr", hr)
@@ -216,7 +216,7 @@ fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resul
                 Ok(v) => v.unwrap_or(5.0),
                 Err(_) => return Ok(None),
             };
-            let dlog = (mz1 / g.mz0).ln() / g.nmz as f64;
+            let dlog = libm::log(mz1 / g.mz0) / g.nmz as f64;
             wm = py_round(mztol * 1e-6 / dlog.max(1e-12)).clamp(0.0, 20.0) as usize;
         }
         let Some(rr) = route(items, routes, rk) else { return Ok(None) };

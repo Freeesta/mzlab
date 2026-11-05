@@ -321,9 +321,9 @@ pub fn isotope_score(counts: &Counts, z: i32, obs: &[(f64, f64)], o: &IsoOpts) -
             let (mm, i) = ob[*j];
             let d = (mm - p.mz) / p.mz * 1e6;
             let r = i / sc;
-            let tm = (-0.5 * (d / o.sigma_ppm).powi(2)).exp();
+            let tm = libm::exp(-0.5 * (d / o.sigma_ppm).powi(2));
             let ti = if r > 0.0 {
-                (-0.5 * ((r / p.rel).ln() / o.sigma_int).powi(2)).exp()
+                libm::exp(-0.5 * (libm::log(r / p.rel) / o.sigma_int).powi(2))
             } else {
                 0.0
             };

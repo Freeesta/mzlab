@@ -128,7 +128,7 @@ fn compute_residuals_and_weights(
             eta += a_mat[row_offset + c] * beta[c];
         }
         let clipped = eta.clamp(-30.0, 30.0);
-        let p_i = 1.0 / (1.0 + (-clipped).exp());
+        let p_i = 1.0 / (1.0 + libm::exp(-clipped));
         let w_i = match weights {
             Some(w) => w[i],
             None => 1.0,

@@ -54,7 +54,7 @@
       const { s, feats } = pick(), enc = new TextEncoder();
       G.dl("gnps2_" + stem(s) + ".zip", G.zipStore(gnps(s.table, feats).map(([n, t]) => [n, enc.encode(t)])), "application/zip");
     };
-    dlg.querySelector("#unt-x-sirius").onclick = () => { const { s, feats } = pick(); G.dl("sirius_" + stem(s) + ".ms", sirius(s.table, feats), "text/plain;charset=utf-8"); };
+    dlg.querySelector("#unt-x-sirius").onclick = async () => { const { s, feats } = pick(); if (!G.FAIR && G.carica) await G.carica("m:fair.js"); G.dl("sirius_" + stem(s) + ".ms", sirius(s.table, feats), "text/plain;charset=utf-8"); };
   }
 
   G.UNTF = { quant, mgf, edges, sirius, gnps, buttons, bind };

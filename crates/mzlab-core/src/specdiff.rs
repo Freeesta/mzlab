@@ -92,8 +92,8 @@ impl<R: ReadAt> Routes<R> {
         }
         let (_, hr_on) = self.window_tol(level, r.precursor, r.hr_flag);
         if hr_on {
-            let cell = (3e-6f64).ln_1p();
-            return Ok(Some(Mean { b: self.binned_cells(level, lo, hi, args, filt, |m| (m.max(1e-9).ln() / cell).floor() as i64)?, hr_on }));
+            let cell = libm::log1p(3e-6f64);
+            return Ok(Some(Mean { b: self.binned_cells(level, lo, hi, args, filt, |m| (libm::log(m.max(1e-9)) / cell).floor() as i64)?, hr_on }));
         }
         if !(r.bin > 0.0) {
             return Ok(None);

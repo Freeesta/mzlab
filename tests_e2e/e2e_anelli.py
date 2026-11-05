@@ -41,7 +41,7 @@ try:
             def f(): closedlg(); pg.evaluate(f"document.querySelector('{btn}').click()")
             return f
         step("Tavola periodica: ring of the cells inside the container", lambda: run("pt", "#refbody .pt-c", op("#np-pt")))
-        step("Perdite: ring of the focusable cells inside the container", lambda: run("nl", "#refbody button, #refbody input, #refbody a, #refbody tr[tabindex]", lambda: (closedlg(), pg.evaluate("QQQRef.open('ls')"))))   # in Dati #np-nl opens the sidebar panel; the dialog is the same list outside it
+        step("Perdite: ring of the focusable cells inside the container", lambda: run("nl", "#sb-panel-losses button, #sb-panel-losses input, #sb-panel-losses a, #sb-panel-losses tr[tabindex]", lambda: (closedlg(), pg.evaluate("BARRA.setTab('losses')"))))   # the neutral losses live in the Adducts & losses page of the side panel (QQQRef.open('ls') goes there)
         def pthover():
             pg.set_viewport_size({"width": 1280, "height": 800}); closedlg(); pg.evaluate("document.querySelector('#np-pt').click()"); pg.wait_for_timeout(400)
             bad = []

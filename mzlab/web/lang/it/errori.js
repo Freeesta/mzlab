@@ -1,6 +1,7 @@
 I18N.add("it", {
   "err.file.notWiff": "{name} non è un file .wiff valido.",
   "err.file.wiffNoScan": "Manca il file .wiff.scan di {name}: servono tutti e due, con lo stesso nome.",
+  "err.file.moduleLoad": "Il lettore di questo formato non si è scaricato ({family}): controlla la connessione, poi ricarica la pagina (Ctrl/Cmd+Maiusc+R) e riprova.",
   "err.file.wiffLoad": "Il motore di calcolo non si è caricato: ricarica la pagina (Ctrl/Cmd+Maiusc+R) e riprova.",
   "err.file.wiffEngine": "Il motore di calcolo non è pronto per leggere il .wiff: ricarica la pagina (Ctrl+Maiusc+R) e riprova.",
   "err.file.wiff": "Il file SCIEX .wiff non si legge ({detail}).",
@@ -23,6 +24,7 @@ I18N.add("it", {
   "err.simtab.output": "Valore o disposizione della Tabella SIM sconosciuti: {output}, {layout}.",
   "err.transitions.table": "La tabella delle transizioni ha una riga sbagliata ({row}).",
   "err.workflow.noFiles": "Nessun file aperto da esportare nel flusso di lavoro.",
+  "err.report.noFiles": "Nessun file aperto: carica dei dati per esportare il rapporto.",
   "err.http": "errore {status}",
   "err.upload.network": "upload fallito",
   "err.hr.mix": "I file a bassa e ad alta risoluzione non possono stare nella stessa sessione. Apri i file ad alta risoluzione in un'altra sessione, oppure toglili da questa.",

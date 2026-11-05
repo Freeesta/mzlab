@@ -29,26 +29,37 @@
   const lazyWarm = /** @type {Set<string>} */ (new Set());
   /** @param {...string} names @returns {Promise<void>} */
   const lazyLoad = async (...names) => { warmLazy(names); for (const n of names) { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } await p; } };
-  /** like load, but all the tags go in now, in order (async=false): called early, they run before the page's own long list of scripts instead of one by one behind it @param {...string} names @returns {Promise<void>} */
+  /** like load, but every name is claimed now, so a later load() of any of them waits for this same run @param {...string} names @returns {Promise<void>} */
   const lazyLoadNow = async (...names) => {
     warmLazy(names);
-    const ps = names.map(n => { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n, true); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } return p; });
+    const ps = runOrdered(names.map(n => "lazy/" + n), names.map(n => lazyDone.get(n)));
+    names.forEach((n, i) => { if (!lazyDone.has(n)) { lazyDone.set(n, ps[i]); ps[i].catch(() => lazyDone.delete(n)); } });
     for (const p of ps) await p;
   };
   /** @type {any} */ (window).TPLAZY = { load: lazyLoad, loadNow: lazyLoadNow, warm: warmLazy, whenLoaded: () => loaded || Promise.resolve() };
 
-  function runScript(name, inOrder) {
+  // never async=false: such tags join the page's single in-order queue behind carica.js's scripts (shell.js, the modules), so the tools would wait for the whole page
+  /** @param {string} name */
+  function runScript(name) {
     return new Promise((/** @type {any} */ res, rej) => {
       const s = document.createElement("script");
-      if (inOrder) s.async = false;
       s.onload = () => { s.remove(); res(); };
       s.onerror = () => { s.remove(); rej(new Error("script " + name)); };
       s.src = DIR + name; document.head.appendChild(s);
     });
   }
+  /** runs the names one after the other (each tag goes in when the previous one has run; their downloads are already started), a given promise in place of a name already running
+   * @param {string[]} names @param {(Promise<void> | undefined)[]} [given] @returns {Promise<void>[]} */
+  function runOrdered(names, given) {
+    let prev = Promise.resolve();
+    return names.map((n, i) => { const g = given && given[i]; prev = g ? prev.then(() => g) : prev.then(() => runScript(n)); return prev; });
+  }
 
   // ---- launcher bar and tool host
   let bar = null, host = null, on = false, loaded = null;
+  // resolved once the `early` scripts have run and their tabs exist: a click on such a tab (Flow) opens it then, not after the whole package
+  /** @type {() => void} */ let earlyOk = () => {};
+  const earlyDone = new Promise(res => { earlyOk = /** @type {() => void} */ (res); });
   const css = `#qt-bar{position:fixed;left:12px;bottom:12px;z-index:80;display:flex;gap:6px;align-items:center;background:var(--panel,#fff);border:1px solid var(--accent,#7a5c1e);border-radius:20px;padding:4px 10px;box-shadow:0 2px 10px rgba(0,0,0,.2);font:13px system-ui,sans-serif}
 #qt-bar button{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--accent,#7a5c1e);cursor:pointer;font:inherit;font-weight:600;padding:2px 4px}
 #qt-bar button:hover{text-decoration:underline}
@@ -135,12 +146,12 @@
     const warm = [...early, ...js].map(n => fetch(DIR + n).catch(() => null));     // starts all downloads now (early ones first); the script tags below then hit the cache
     for (const n of early) await runScript(n);                     // scripts that need neither the data files nor the other scripts (the Flow tab): they draw while the rest downloads
     if (on) showTabs();                                           // their tabs (Flow) appear now, not after the whole package
+    earlyOk();
     const texts = await Promise.all(names.map(n => get(n, "text")));
     names.forEach((n, i) => { files[n] = texts[i]; });
     await Promise.all(warm);
     settling = true;
-    // all tags at once with async=false: they still run in this order, without waiting for one onload per script (60 scripts)
-    try { await Promise.all(js.map(n => runScript(n, true))); } finally { settling = false; }
+    try { await Promise.all(runOrdered(js)); } finally { settling = false; }
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
   const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
@@ -164,11 +175,20 @@
   /** @type {any} */ (reg).ensure = ensureLoaded;
   // the package downloads after the page is usable (qqReady, then an idle moment), or at once when a tool tab is used first
   const BUILTIN = new Set(["data", "draw"]);
+  /** a tab written in index.html: opened as soon as its tool has registered (an `early` one before the rest of the package), else when the package is in @param {string} id */
+  function openLate(id) {
+    const all = ensureLoaded();
+    const go = () => { if (tabs.has(id)) openView(id); };
+    Promise.race([earlyDone, all]).then(() => tabs.has(id) ? go() : all.then(go));
+  }
   function turnOn() {
     on = true; ensureUi();
     if (!tabs.size) addTab(PLACEHOLDER);
     // tabs written in index.html that have no section yet (Flow): a click loads the package, then opens the view
-    document.querySelectorAll("#nav [data-late]").forEach(b => { const el = /** @type {HTMLElement} */ (b); if (!el.dataset.v || tabs.has(el.dataset.v)) return; el.onclick = () => { const id = /** @type {string} */ (el.dataset.v); ensureLoaded().then(() => { if (tabs.has(id)) openView(id); }); }; });
+    document.querySelectorAll("#nav [data-late]").forEach(b => { const el = /** @type {HTMLElement} */ (b); if (!el.dataset.v || tabs.has(el.dataset.v)) return; el.onclick = () => openLate(/** @type {string} */ (el.dataset.v)); });
+    // a click that came before this script ran (first-paint.js keeps it): replayed now, so it is not lost while the page's own scripts load
+    const pending = /** @type {any} */ (window).MZLAB_LATE_CLICK; /** @type {any} */ (window).MZLAB_LATE_CLICK = null;
+    if (pending) { if (tabs.has(pending)) openView(pending); else openLate(pending); }
     document.addEventListener("tpview", ev => { const v = /** @type {CustomEvent} */ (ev).detail.view; if (!BUILTIN.has(v)) ensureLoaded(); });
     const idle = () => { const run = () => { ensureLoaded(); }; if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 3000 }); else setTimeout(run, 1000); };
     // without an engine qqReady never comes (plain web folder, failed engine): start anyway after a long delay
