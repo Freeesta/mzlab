@@ -3,7 +3,7 @@
 fn entropy(p: &[f64]) -> f64 {
     -p.iter()
         .filter(|&&v| v > 0.0)
-        .map(|&v| v * v.ln())
+        .map(|&v| v * libm::log(v))
         .sum::<f64>()
 }
 
@@ -14,7 +14,7 @@ fn weighted(it: &[f64]) -> Vec<f64> {
     let big_s = entropy(&p);
     if big_s < 3.0 {
         let w = 0.25 + 0.25 * big_s;
-        p = p.iter().map(|v| v.powf(w)).collect();
+        p = p.iter().map(|v| libm::pow(*v, w)).collect();
         let t: f64 = p.iter().sum();
         p = p.iter().map(|v| v / t).collect();
     }
@@ -88,7 +88,7 @@ pub fn entropy_similarity(a_mz: &[f64], a_it: &[f64], b_mz: &[f64], b_it: &[f64]
             .filter(|(j, _)| !ib[*j])
             .map(|(_, v)| v / 2.0),
     );
-    let s = 1.0 - (2.0 * entropy(&m) - entropy(&pa) - entropy(&pb)) / 4f64.ln();
+    let s = 1.0 - (2.0 * entropy(&m) - entropy(&pa) - entropy(&pb)) / libm::log(4f64);
     s.clamp(0.0, 1.0)
 }
 

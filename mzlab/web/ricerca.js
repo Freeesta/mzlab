@@ -55,9 +55,9 @@ const RIC_GO = {
   cont: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("cont", { q: String(x) }); }
 };
 
-/** @param {number} x  @returns {Promise<RicGroup[]>} */
-async function ricForNumber(x) {
-  const hr = ricHrNow();
+/** @param {number} x  @param {string} q  @returns {Promise<RicGroup[]>} */
+async function ricForNumber(x, q) {
+  const hr = typeof CALCQUI !== "undefined" ? CALCQUI.isHr(CALCQUI.arg(q, 0)) : ricHrNow();      // as the calculator: 18 unit, 18.011 HR
   const items = await ricContaminants();
   const body = {
     x, hr, tol_mda: 3, tol_ppm: 5,
@@ -137,7 +137,7 @@ async function ricRisultati(q) {
   try {
     if (kind === "number") {
       const x = Number(q.trim().replace(/\s+/g, "").replace(",", ".").replace("−", "-"));
-      return { kind, groups: Number.isFinite(x) ? await ricForNumber(Math.abs(x)) : [] };
+      return { kind, groups: Number.isFinite(x) ? await ricForNumber(Math.abs(x), q) : [] };
     }
     if (kind === "formula") return { kind, groups: await ricForFormula(q) };
   } catch (_) { /* no engine for this route (reference engine of the tests): no results, the commands remain */ }

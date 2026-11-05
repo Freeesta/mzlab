@@ -24,6 +24,7 @@ I18N.add("it", {
   "err.simtab.output": "Valore o disposizione della Tabella SIM sconosciuti: {output}, {layout}.",
   "err.transitions.table": "La tabella delle transizioni ha una riga sbagliata ({row}).",
   "err.workflow.noFiles": "Nessun file aperto da esportare nel flusso di lavoro.",
+  "err.report.noFiles": "Nessun file aperto: carica dei dati per esportare il rapporto.",
   "err.http": "errore {status}",
   "err.upload.network": "upload fallito",
   "err.hr.mix": "I file a bassa e ad alta risoluzione non possono stare nella stessa sessione. Apri i file ad alta risoluzione in un'altra sessione, oppure toglili da questa.",

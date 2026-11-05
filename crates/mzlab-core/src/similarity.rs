@@ -137,7 +137,7 @@ pub fn profile_similarity(rt: &[f64], x: &[f64], p: &[f64], p_apex_rt: Option<f6
     match xk {
         Some(k) => {
             res.set("apex_diff_s", num((k.e.apex_rt - pk.e.apex_rt) * 60.0));
-            res.set("apex_diff_sigma_s", num(k.e.apex_sigma.hypot(pk.e.apex_sigma) * 60.0));
+            res.set("apex_diff_sigma_s", num(libm::hypot(k.e.apex_sigma, pk.e.apex_sigma) * 60.0));
             res.set("fwhm_ratio", num(if pk.e.fwhm_min > 0.0 { k.e.fwhm_min / pk.e.fwhm_min } else { f64::NAN }));
             res.set("x_snr", num(k.p.snr));
         }

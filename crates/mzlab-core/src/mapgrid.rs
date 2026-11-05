@@ -51,7 +51,7 @@ pub fn map_cells(mz0: f64, mz1: f64, nmz: usize) -> (f64, f64, usize) {
 
 /// `map_cells` for high resolution: never more cells than the instrument tells apart (cells of 3 ppm); returns the number of cells.
 pub fn map_cells_hr(mz0: f64, mz1: f64, nmz: usize, log: bool) -> usize {
-    let top = if log && mz0 > 0.0 { (mz1 / mz0).ln() / 3e-6f64.ln_1p() } else { (mz1 - mz0) / (mz1 * 3e-6) };
+    let top = if log && mz0 > 0.0 { libm::log(mz1 / mz0) / libm::log1p(3e-6f64) } else { (mz1 - mz0) / (mz1 * 3e-6) };
     (top.ceil().max(1.0) as usize).min(nmz.max(1)).max(1)
 }
 
