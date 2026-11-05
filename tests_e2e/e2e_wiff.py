@@ -173,6 +173,20 @@ try:
             assert not errs, errs
             c3.close()
         step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variante)
+        def rejected_named():                            # a pair the engine and the module both refuse (a TOF experiment): the error is told under the dropped .wiff, not under the «tof.mzML» that stood for it
+            if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
+                print("   (rejected: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
+            c6 = b.new_context(viewport={"width": 1500, "height": 1800}); c6.set_default_timeout(120000); pg = c6.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "tof.wiff"), str(D / "tof.wiff.scan")])
+            pg.wait_for_function("document.querySelector('#unopen') && /scan type code 8/.test(document.querySelector('#unopen').innerText)", timeout=120000)
+            told = pg.evaluate("document.querySelector('#unopen').innerText")
+            assert "tof.wiff" in told and "tof.mzML" not in told, told
+            assert not errs, errs
+            c6.close()
+        step("a pair the module refuses is named by its .wiff in the notice", rejected_named)
         def download_is_convert():                       # «Download .mzML» of a sample the engine reads: written by the sciex module as `mzlab-cli convert` writes it (indexed, TIC and BPC of the Full Scan)
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
                 print("   (download: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
