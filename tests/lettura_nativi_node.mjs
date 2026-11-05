@@ -10,6 +10,17 @@ globalThis.FileReaderSync = class { readAsArrayBuffer(b) { fileReads++; return b
 const mkBlob = (u, name) => { const f = new File([u], name); f.__bytes = u; f.slice = (a, b) => { const x = new Blob([u.slice(a, b)]); x.__bytes = u.slice(a, b); return x; }; return f; };
 const filesDir = { getFileHandle: async n => { if (!bytes.has(n)) throw new Error("NotFound"); return { createSyncAccessHandle: async o => { handleOpens++; modes.push(o && o.mode); const u = bytes.get(n); let closed = false; return { getSize: () => u.length, read: (buf, { at }) => { if (closed) throw new Error("closed"); handleReads++; const k = Math.min(buf.length, u.length - at); buf.set(u.subarray(at, at + k)); return k; }, close: () => { closed = true; } }; } }; } };
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { storage: { getDirectory: async () => ({ getDirectoryHandle: async n => { if (n === "mzlab") return { getDirectoryHandle: async k => { if (k === "files") return filesDir; throw new Error("no " + k); } }; throw new Error("no " + n); } }) } } });
+// a .wiff sample is written by the `sciex` readers module (carica-modulo.js): a stand-in module in wasm-lettori/ whose to_mzml_come is the fake engine below, served by a file fetch
+const { mkdirSync, writeFileSync, readFileSync } = await import("fs");
+const { fileURLToPath } = await import("url");
+const modDir = process.argv[2] + "/wasm-lettori/sciex", modWasm = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]);
+mkdirSync(modDir, { recursive: true });
+writeFileSync(modDir + "/mzlab_lettori_wasm_bg.wasm", modWasm);
+writeFileSync(process.argv[2] + "/wasm-lettori/manifest.json", JSON.stringify({ sciex: { sha256: createHash("sha256").update(modWasm).digest("hex") } }));
+writeFileSync(modDir + "/mzlab_lettori_wasm.js", "export default async () => {};\nexport const to_mzml_come = (...a) => globalThis.fakeModule(...a);\n");
+globalThis.fetch = async u => { const b = readFileSync(fileURLToPath(u)); return { json: async () => JSON.parse(b.toString()), arrayBuffer: async () => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) }; };
+let dads = [];
+globalThis.fakeModule = (names, sizes, rd, c, dad, _comp, sink) => { dads.push(dad); return run(names, sizes, rd, c, false, sink); };
 const { createNativo, PREFIX, MAGIC } = await import(dir + "/rust-nativo.js");
 const { openSource } = await import(dir + "/lettura-sync.js");
 
@@ -20,7 +31,7 @@ const stub = new File([JSON.stringify({ mzlab: MAGIC, ds: "k", c: 0, id: 0, cent
 const ARCH = { get: async (_k, n) => bytes.has(n) ? M.find(m => m.store === n).blob : null, list: async () => [], put: async () => null, remove: async () => {}, release: () => {} };
 // the engine reads every member in blocks of 1000 bytes and the "mzML" is what it read (the sink gets one piece per block)
 const run = (names, sizes, rd, _c, _cen, ...rest) => { const sink = rest.find(x => typeof x === "function"); let n = 0; sizes.forEach((sz, i) => { for (let o = 0; o < sz; o += 1000) { const b = rd(i, o, Math.min(1000, sz - o)); sink(Uint8Array.from(b)); n++; } }); return n; };
-const nat = createNativo({ ARCH, readerFor: null, fileOf: async () => stub, jerr: k => { throw k; }, native_samples: null, native_to_mzml: (names, sizes, rd, c, cen, np, sink) => run(names, sizes, rd, c, cen, sink), native_srm: (names, sizes, rd, c, cen, sink) => run(names, sizes, rd, c, cen, sink), native_external: null, impronte: undefined });
+const nat = createNativo({ ARCH, readerFor: null, fileOf: async () => stub, jerr: k => { throw k; }, native_samples: null, native_to_mzml: () => { throw new Error("a .wiff is not written by the engine"); }, native_srm: (names, sizes, rd, c, cen, sink) => run(names, sizes, rd, c, cen, sink), native_external: null, impronte: undefined });
 const want = createHash("sha256").update(Buffer.concat(M.map(m => Buffer.from(bytes.get(m.store))))).digest("hex");
 const sha = parts => createHash("sha256").update(Buffer.concat(parts.map(p => Buffer.from(p)))).digest("hex");
 
@@ -32,6 +43,7 @@ const sha = parts => createHash("sha256").update(Buffer.concat(parts.map(p => Bu
   assert.strictEqual(fileReads, 0, "no FileReaderSync read");
   assert.strictEqual(handleReads, 5 + 12);
   assert.strictEqual(handleOpens, 2); assert.deepStrictEqual(modes, ["read-only", "read-only"]);
+  assert.deepStrictEqual(dads, [false], "the sciex module writes it, without DAD (the bytes of convert)");
 }
 // ---- C04: the SRM traces the same way
 {

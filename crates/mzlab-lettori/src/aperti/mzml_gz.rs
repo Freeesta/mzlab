@@ -66,7 +66,11 @@ fn vede(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
         return Fiducia::No;
     };
     let head = fs.testa(i, 64 << 10);
-    if head.len() < 2 || head[..2] != [0x1f, 0x8b] {
+    // too short for the magic bytes: a damaged gzip of this name, which `apri` refuses with `err.file.zlib` as the page's inflate does
+    if head.len() < 2 {
+        return Fiducia::Forse;
+    }
+    if head[..2] != [0x1f, 0x8b] {
         return Fiducia::No;
     }
     let mut text = Vec::new();
@@ -77,6 +81,9 @@ fn vede(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
     let text = String::from_utf8_lossy(&text);
     if radici.iter().any(|r| text.contains(r)) {
         Fiducia::Si
+    } else if text.is_empty() {
+        // gzip whose first bytes do not inflate (header only, cut): damaged, not another type
+        Fiducia::Forse
     } else {
         Fiducia::No
     }
@@ -112,6 +119,10 @@ fn gonfia(mut fs: FileSet, suffisso: &str, limiti: &Limiti) -> Result<FileSet> {
         Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof && !fuori.is_empty() => fuori.len(),
         Err(e) => return Err(Error::new("err.file.zlib").with("detail", e)),
     };
+    // nothing inflated (an empty file, the magic bytes or the header alone): the page's inflate refuses it so (`rust-carica.js` `inflate`)
+    if fuori.is_empty() {
+        return Err(Error::new("err.file.zlib").with("detail", "truncated"));
+    }
     if lette as u64 > limiti.byte {
         return Err(Error::memory_budget());
     }
