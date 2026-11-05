@@ -200,6 +200,8 @@ try:
             lc = page(b, "&lettori=modulo")
             lc.set_input_files("#pickdir", str(lc_top))
             lc.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
+            # the loading done: the reference is the engine's copy of the module's mzML (CONV.settle), the one in conv/ is gone
+            lc.wait_for_function("UPBUSY === 0 && ['mrm.mzML', 'perfil.mzML'].every(n => CONV.files.get(n) && CONV.files.get(n).name === n)", timeout=120000)
             r = lc.evaluate("""async () => {
               const rb = await window.MZLAB_RUST_READY, out = {};
               for (const n of ["mrm.mzML", "perfil.mzML"]) {
