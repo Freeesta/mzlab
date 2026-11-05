@@ -95,3 +95,22 @@ fn hostile_streams_are_errors() {
     )
     .is_err());
 }
+
+#[test]
+fn a_tiny_fixed_point_is_an_error_not_infinity() {
+    // the fixed point of a damaged array: finite and not zero (subnormal), but it divides (linear) or scales the exponent (slof) into infinity
+    let tiny = 1e-320f64.to_be_bytes();
+    let lin = [&tiny[..], &7u32.to_le_bytes()[..], &9u32.to_le_bytes()[..]].concat();
+    assert_eq!(
+        decode(Np::Linear, &lin, 2).unwrap_err().key,
+        "err.file.numpress"
+    );
+    let slof = [&tiny[..], &[0xff, 0xff][..]].concat();
+    assert_eq!(
+        decode(Np::Slof, &slof, 1).unwrap_err().key,
+        "err.file.numpress"
+    );
+    // a negative fixed point gives finite values: the file's own numbers, read as they are
+    let neg = [&(-1000f64).to_be_bytes()[..], &7u32.to_le_bytes()[..]].concat();
+    assert_eq!(decode(Np::Linear, &neg, 1).unwrap(), vec![-0.007]);
+}

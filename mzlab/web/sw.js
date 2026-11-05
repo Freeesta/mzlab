@@ -123,13 +123,15 @@ sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUnti
   }
   await sw.clients.claim();
 })()));
-/** An app file: from the cache of this version; a miss goes to the network and is stored once it matches the manifest. */
-const app = async (/** @type {Request} */ req) => {
+/** An app file: from the cache of this version; a miss goes to the network and is stored once it matches the manifest. The page gets the
+ * checked body at once and the store runs after, kept alive by `later` (a cold load is ~70 misses before the first paint: awaiting each put first
+ * queued the page behind the cache writes). */
+const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) => void} */ later) => {
   const cache = await abrirApp();
   if (!stale) { const hit = await buscar(cache, req); if (hit) return isolata(hit); }
   try {
     const { res, ok } = await traer(req, await expected(new URL(req.url)));
-    if (ok && !stale) await guardar(cache, req, res);
+    if (ok && !stale) later(guardar(cache, req, res));
     return isolata(res);
   } catch (err) {
     const hit = await buscar(cache, req);
@@ -178,5 +180,5 @@ sw.addEventListener("fetch", (/** @type {FetchEvent} */ e) => {
   if (url.pathname.includes("/api/")) return;                       // answers of the engine and files of the user are never cached
   const big = /\/static\/vendor\//.test(url.pathname);
   if (!big && !filled) e.waitUntil(arrancar());                     // keeps the worker alive while it fills; one that was stopped finishes what is missing
-  e.respondWith(big ? grande(req) : req.mode === "navigate" ? navegar(req) : app(req));
+  e.respondWith(big ? grande(req) : req.mode === "navigate" ? navegar(req) : app(req, p => e.waitUntil(p)));
 });

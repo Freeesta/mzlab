@@ -43,10 +43,13 @@ function mondo(net = { ...FILES }, man = manifest()) {
   };
   vm.runInNewContext(src, ctx);
   const get = async (p, extra = {}) => {
-    let out; const e = { request: { method: "GET", url: O + p, headers: new Headers(), cache: "default", mode: "same-origin", ...extra }, respondWith: x => { out = x; }, waitUntil() {} };
+    let out; const later = [];
+    const e = { request: { method: "GET", url: O + p, headers: new Headers(), cache: "default", mode: "same-origin", ...extra }, respondWith: x => { out = x; }, waitUntil(x) { later.push(x); } };
     listeners.fetch(e);
     if (!out) return null;
     const res = await out;
+    // the store of a miss runs after the answer (waitUntil): settled here so the next request sees it (the fill waits for a timer the mock never fires)
+    await Promise.all(later.map(x => Promise.race([x, new Promise(r => setTimeout(r, 20))])));
     assert.equal(res.headers.get("Cross-Origin-Embedder-Policy"), "require-corp");
     assert.equal(res.headers.get("Cache-Control"), "no-cache", "the browser must ask the worker every time");
     return res;
@@ -63,6 +66,17 @@ function mondo(net = { ...FILES }, man = manifest()) {
   assert.equal(w.st.fetches.length, n, "second request: cache hit, no network " + w.st.fetches);
   assert.equal(await (await w.get("static/app.js?v=3")).text(), "app()", "a query string is the same file of the same version");
   assert.equal(w.st.fetches.length, n);
+}
+{ // a miss is answered without waiting for its store (a cold load is dozens of misses before the first paint)
+  const w = mondo();
+  const cache = await w.ctx.caches.open("mzlab-app-abc");
+  let release; const held = new Promise(r => { release = r; });
+  const put = cache.put; cache.put = async (r, res) => { await held; return put(r, res); };
+  w.ctx.caches.open = async () => cache;
+  const res = await Promise.race([w.get("static/app.js"), new Promise(r => setTimeout(r, 200, null))]);
+  assert.ok(res, "answered while the store is still pending");
+  assert.equal(await res.text(), "app()");
+  release();
 }
 { // cache-first: a cached file is never revalidated
   const w = mondo();

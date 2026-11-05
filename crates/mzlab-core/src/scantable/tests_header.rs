@@ -56,7 +56,11 @@ fn measure(data: &[u8], new: bool) -> (Head, usize, u64) {
     };
     let h = {
         let mut w = Windowed::new(&mut c, size);
-        let mut src = Source { r: &mut w, size };
+        let mut src = Source {
+            r: &mut w,
+            size,
+            spare: Vec::new(),
+        };
         if new {
             read_head(&mut src)
         } else {

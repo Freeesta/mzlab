@@ -241,6 +241,10 @@ impl Lettore for SrmDaScansioni {
     fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.inner.scansione_dati(c, k)
     }
+    // the profile points of a Thermo scan: without this the wrapper answers `None` and `--peaks profile` refuses a file that has them
+    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+        self.inner.scansione_profilo(c, k)
+    }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.inner.intestazione(c, k)
     }
@@ -278,6 +282,10 @@ impl Lettore for SrmDaScansioni {
     }
     fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
         self.inner.testata_mzml(c)
+    }
+    // the light header of the scan table (a Thermo `.raw` does not hash the whole file for it)
+    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
+        self.inner.testata_tabella(c)
     }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.inner.extra_mzml(s)
