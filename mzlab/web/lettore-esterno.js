@@ -14,7 +14,7 @@ export function famigliaEsterna(/** @type {string[]} */ names) {
 
 /** the error the page translates when the module cannot be loaded (thrown as the engine's own errors: a JSON string) */
 function loadError(/** @type {string} */ fam, /** @type {any} */ e) {
-  return JSON.stringify({ error_key: "err.file.wiffLoad", params: { family: fam, detail: String(e && e.message || e) } });
+  return JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: fam, detail: String(e && e.message || e) } });
 }
 
 /** @param {Function} native_external the one of the .wasm of this worker */
@@ -50,7 +50,7 @@ export function createEsterno(native_external) {
     };
   };
   return {
-    /** loads the module of the family that reads the dataset with these members (nothing for the others) and registers `open` on the engine; rejects with the JSON `err.file.wiffLoad` */
+    /** loads the module of the family that reads the dataset with these members (nothing for the others) and registers `open` on the engine; rejects with the JSON `err.file.moduleLoad` */
     async prepara(/** @type {string[]} */ names, /** @type {{ name: string, size: number, sha1?: string }[] | undefined} */ members) {
       // a member without a SHA-1 must not inherit the one of an earlier member with the same name and size
       for (const m of members || []) { const k = m.name + "\0" + m.size; if (m.sha1) known.set(k, m.sha1); else known.delete(k); }

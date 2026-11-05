@@ -1,6 +1,7 @@
 I18N.add("it", {
   "err.file.notWiff": "{name} non è un file .wiff valido.",
   "err.file.wiffNoScan": "Manca il file .wiff.scan di {name}: servono tutti e due, con lo stesso nome.",
+  "err.file.moduleLoad": "Il lettore di questo formato non si è scaricato ({family}): controlla la connessione, poi ricarica la pagina (Ctrl/Cmd+Maiusc+R) e riprova.",
   "err.file.wiffLoad": "Il motore di calcolo non si è caricato: ricarica la pagina (Ctrl/Cmd+Maiusc+R) e riprova.",
   "err.file.wiffEngine": "Il motore di calcolo non è pronto per leggere il .wiff: ricarica la pagina (Ctrl+Maiusc+R) e riprova.",
   "err.file.wiff": "Il file SCIEX .wiff non si legge ({detail}).",

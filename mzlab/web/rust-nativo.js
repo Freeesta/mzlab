@@ -192,11 +192,11 @@ async function orphansDi(/** @type {any} */ ARCH, /** @type {(n: string) => Prom
 const held = (/** @type {string} */ key, /** @type {() => Promise<any>} */ fn) => { const L = locks(); return L ? L.request(LOCK + key, { mode: "shared" }, fn) : fn(); };
 
 /** The writer of «Download .mzML» for a stub: a .wiff sample is written by the `sciex` module with the options of `mzlab-cli convert` (no optical matrix), the engine alone
- * leaves out what `estesi` writes (SRM dwell and energy, isolation offsets, TIC and BPC of a Full Scan); the other samples by the engine. Rejects with `err.file.wiffLoad`. */
+ * leaves out what `estesi` writes (SRM dwell and energy, isolation offsets, TIC and BPC of a Full Scan); the other samples by the engine. Rejects with `err.file.moduleLoad`. */
 async function writerOf(/** @type {Stub} */ st, /** @type {Function} */ native_to_mzml) {
   if (st.centroid || !st.members.some(x => /\.wiff$/i.test(x.name)))
     return (/** @type {any[]} */ ...a) => native_to_mzml(a[0], a[1], a[2], a[3], st.centroid, a[4], a[5], a[6]);
-  const w = await loadModulo("sciex").catch(e => { throw JSON.stringify({ error_key: "err.file.wiffLoad", params: { family: "sciex", detail: String(e && e.message || e) } }); });
+  const w = await loadModulo("sciex").catch(e => { throw JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: "sciex", detail: String(e && e.message || e) } }); });
   return (/** @type {any[]} */ ...a) => w.to_mzml_come(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
 }
 
