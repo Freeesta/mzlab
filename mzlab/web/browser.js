@@ -97,7 +97,7 @@
     try {
       lr = (await lrModule).createLr({ rb: b });
       // the browser storage held by another tab: the loading screen says so
-      // the limit runs from when the worker has its engine (a slow first visit spends it on the download of the .wasm); with nothing stored and no other tab holding the storage
+      // the limit runs from the end of the download of the engine (a slow first visit spends it on the .wasm); with nothing stored and no other tab holding the storage
       // there is nothing to reopen: a note, and the page keeps waiting. A download that never ends starts the limit after 5 minutes
       const u = new URL(location.href), stall = stored.then(n => ({ n, ms: +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * n }));
       const within = p => { let done = false; p.then(() => { done = true; }, () => { done = true; });

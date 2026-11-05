@@ -30,9 +30,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const api = BUD.attach({ enabled: true, disabled: false, stats, budgetMb: BUD.sessionLevel(), strikes: 0, pendingDown: /** @type {{ current: number, strikes: number } | null} */ (null), lastPanic: /** @type {string | null} */ (null) }); const death = { restarts: /** @type {number[]} */ ([]), ooms: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
   const base = n => String(n || "").split(/[\\/]/).pop() || "";
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled, limitMb: () => api.budgetMb || (api.choice && api.choice.mb) || 0 });
-  let upOk = () => {}; api.up = new Promise(r => { upOk = () => r(true); }); const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));      // up: a worker first has its engine (.wasm downloaded, compiled); browser.js times the reopening of the stored files from it
+  let upOk = () => {}; api.up = new Promise(r => { upOk = () => r(true); }); const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));      // up: the download of the .wasm is over (compiled or failed) or a worker has its engine; browser.js times the reopening of the stored files from it
   function spawn() {
-    const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy, BUD.whenProbed, () => takeDown(api));
+    const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; wasmModule().then(() => upOk()); w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy, BUD.whenProbed, () => takeDown(api));
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") { upOk(); if (m.cap) { nota(m.cap); if (stato("motore") === "no") off(api, slots, notify, "cap.engine"); } return; } if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
