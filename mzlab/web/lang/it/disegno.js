@@ -116,6 +116,7 @@ I18N.add("it", {
   "draw.export.failed": "Esportazione non riuscita: {message}. Ricarica la pagina (Cmd+Maiusc+R) e riprova; se resta, scrivi a chi tiene il corso.",
   "draw.export.saved": "File salvato",
   "draw.import.unsupported": "Formato non supportato o non valido.",
+  "draw.tap.atom": "Tocca un atomo per dargli la carica",
   "draw.import.done": "Struttura importata",
   "draw.import.failed": "Impossibile importare: {message}",
   "draw.error.ketcherNotStarted": "Ketcher non si e' avviato",

@@ -47,11 +47,29 @@ function longPress(d) {
 // the skip link (index.html) moves focus over Ketcher's toolbars to Quick draw
 document.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest(".tp-skip")) { const f = document.getElementById("ex-smi"); if (f) f.focus(); } });
 
+// Charge tool (+ / −): acts only on an atom and a fingertip misses a 10 px one. touch.js asks `tpSnap(x, y)` for each tap: probe rings up to SNAP px around it with
+// Ketcher's own hit test (`dist` = how close to the atom centre) and use the best point, so the tap lands and the hover highlight shows the atom; on empty space say
+// what to do. Other tools keep the exact point (null).
+const SNAP = 24;
+/** @param {Document} d */
+function snapCharge(d) {
+  const w = /** @type {any} */ (d.defaultView), on = () => !!d.querySelector('[data-testid="charge-plus"][class*="selected"],[data-testid="charge-minus"][class*="selected"]');
+  w.tpSnap = (/** @type {number} */ x, /** @type {number} */ y) => {
+    const K = w.ketcher; if (!K || !on()) return null;
+    /** @type {{x: number, y: number, dist: number} | null} */ let best = null;
+    const probe = (/** @type {number} */ px, /** @type {number} */ py) => { try { const h = K.editor.findItem({ clientX: px, clientY: py }, ["atoms"]); if (h && h.map === "atoms" && (!best || h.dist < best.dist)) best = { x: px, y: py, dist: h.dist }; } catch (_) { /* no editor yet */ } };
+    probe(x, y);
+    for (let r = 4; r <= SNAP; r += 4) for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12; probe(x + r * Math.cos(a), y + r * Math.sin(a)); }
+    if (!best && window.toast) window.toast(window.I18N.t("draw.tap.atom"));
+    return best;
+  };
+}
+
 /** @param {Document} d  the document of the Ketcher iframe */
 export function mountTablet(d) {
   if (!d.head || !d.body || d.getElementById("tp-tablet")) return;
   const st = d.createElement("style"); st.id = "tp-tablet"; st.textContent = CSS; d.head.appendChild(st);
-  const tc = d.createElement("style"); tc.id = "tp-touch"; tc.textContent = TOUCH_CSS; d.head.appendChild(tc); longPress(d);
+  const tc = d.createElement("style"); tc.id = "tp-touch"; tc.textContent = TOUCH_CSS; d.head.appendChild(tc); longPress(d); snapCharge(d);
   // not a Tab stop, and no on-screen keyboard after a tap; again whenever Ketcher re-creates the element
   const fix = () => { for (const c of d.querySelectorAll(".cliparea,[data-cliparea]")) { if (c.getAttribute("tabindex") !== "-1") c.setAttribute("tabindex", "-1"); if (c.getAttribute("inputmode") !== "none") c.setAttribute("inputmode", "none"); } };
   // the copy menu's triangle has no name of its own
