@@ -1,6 +1,7 @@
 I18N.add("en", {
   "load.blocked": "The saved files are locked by another {app} tab: close the other {app} tabs and this one will carry on by itself.",
   "load.err.resumeTimeout": "Reopening the saved files is not answering. Starting from scratch deletes the files saved in this browser, the notebook and the stored copies.",
+  "load.natInterrupted": "Loading of {name} was interrupted: load it again.",
   "load.slow": "The first visit downloads about 15 MB: it may take a minute.",
   "load.engine.waiting": "{n} files waiting",
   "load.engine.waitingOne": "1 file waiting",
