@@ -376,12 +376,15 @@ window.MAPPA = (() => {
   const canvasOf = (/** @type {Record<string, any>} */ c) => MAPMARGINI.sized(c, devicePixelRatio);
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
   // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (by S/N, see MAPREND.pick). s.lbls keeps the boxes.
-  function sideLabels(/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */ W, /** @type {number[]} */ order, /** @type {(i: number) => Record<string, any>} */ get, /** @type {number} */ x0, /** @type {Record<string, any>} */ s, limit = 8) {
-    /** @type {Record<string, any>[]} */ const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = ecss("--panel"); g.fillStyle = ecss("--ink");
+  function sideLabels(/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */ W, /** @type {number[]} */ order, /** @type {(i: number) => Record<string, any>} */ get, /** @type {number} */ x0, /** @type {Record<string, any>} */ s, limit = 8, /** @type {{y: number, end: number} | null} */ guide = null) {
+    /** @type {Record<string, any>[]} */ const out = []; s.lbls = out; g.font = fpx(12.5); g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3.5; g.strokeStyle = ecss("--panel"); g.fillStyle = ecss("--ink");
+    const px = parseFloat(g.font) || 12.5, asc = Math.round(px * .8), hh = Math.round(px * 1.05);
     for (const i of order) {
       if (out.length >= limit) break; const q = get(i);
-      const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + 4 : q.y - 3, bx = { x, y: by - 9, w, h: 11 };
+      const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + Math.round(px * .35) : q.y - 3, bx = { x, y: by - asc, w, h: hh };
       if (out.some(o => bx.x < o.x + o.w + 2 && o.x < bx.x + bx.w + 2 && bx.y < o.y + o.h + 1 && o.y < bx.y + bx.h + 1)) continue;
+      // the guide line never runs through text: a label that would meet it is left out (the marked peak's own label sits beyond the guide's end)
+      if (guide && bx.x < guide.end + 1 && guide.y > bx.y - 2 && guide.y < bx.y + bx.h + 2) continue;
       g.strokeText(q.t, x, by); g.fillText(q.t, x, by); out.push({ t: q.t, ...bx, ly: q.y, tip: q.tip, right, i: q.i });
     }
     g.lineWidth = 1;
@@ -444,8 +447,15 @@ window.MAPPA = (() => {
     // best S/N of each slice of the window; the peak of the sight always
     const kept = MAPREND.pick(sp.mz, sp.y, { lo: a.y0, hi: a.y1, bands: dn.bands, quota: dn.quota, act: [cen - tol, cen + tol] });
     s.snr = new Map(kept.all.map((/** @type {Record<string, any>} */ c) => [c.i, c.snr]));
-    sideLabels(g, W, kept.map((/** @type {Record<string, any>} */ c) => c.i), (/** @type {number} */ i) => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit);
-    if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
+    const tipOf = (/** @type {number} */ i) => sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax;   // the guide ends at the bar tip of the marked peak (nearest to the sight inside the XIC window); with no peak there it spans the panel
+    let mk = -1; for (const i of vis) if (Math.abs(sp.mz[i] - cen) <= tol && (mk < 0 || Math.abs(sp.mz[i] - pt.mz) < Math.abs(sp.mz[mk] - pt.mz))) mk = i;
+    const inWin = pt.mz >= a.y0 && pt.mz <= a.y1, gy = inWin ? Math.round(Y(pt.mz)) + .5 : 0, gEnd = mk >= 0 ? tipOf(mk) : x1;
+    s.gd = inWin ? { y: gy, end: gEnd } : null;   // kept for the tests
+    if (inWin) { g.save(); g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, gy); g.lineTo(gEnd, gy); g.stroke(); g.setLineDash([]);
+      if (mk >= 0) { g.beginPath(); g.moveTo(gEnd + .5, gy - 4); g.lineTo(gEnd + .5, gy + 4); g.stroke(); }   // clear end mark at the tip
+      g.restore();
+    }
+    sideLabels(g, W, kept.map((/** @type {Record<string, any>} */ c) => c.i), (/** @type {number} */ i) => ({ y: Y(sp.mz[i]), tip: tipOf(i), t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit, inWin ? { y: gy, end: gEnd } : null);
     g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, Math.min(H - 4, mapBot + 14));
   }
   /** @param {Pannello} p @param {Record<string, any> | null} pt @param {Record<string, any>} [xi] @param {boolean} [prev] */
