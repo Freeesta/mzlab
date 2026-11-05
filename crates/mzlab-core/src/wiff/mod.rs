@@ -145,13 +145,13 @@ pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
     Ole::open(wiff, name).map_err(|_| Error::new("err.file.notWiff").with("name", name))
 }
 
-/// The numbers of the samples that have scans, in order.
+/// The numbers of the samples of the sample table, in order: an injection that acquired nothing (no `Idx` stream) is a sample with no scans,
+/// listed like the others so that the site and `mzlab-cli convert` both show it as empty instead of dropping it unsaid.
 pub fn samples(ole: &Ole) -> Vec<u32> {
     let mut v: Vec<u32> = ole
         .read(&format!("{SAMPLES}SampleIdxTable"))
         .map(|t| idx::sections(&t).into_iter().map(|s| s.0).collect())
         .unwrap_or_default();
-    v.retain(|n| ole.has(&format!("{SAMPLES}Sample{n}/Idx")));
     crate::sortc::slice_ord(&mut v);
     v.dedup();
     v
@@ -262,10 +262,10 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         .find(|s| s.0 == sample)
         .ok_or_else(|| bad("no such sample"))?
         .1;
-    let entries = idx::parse(
-        &ole.read(&format!("{SAMPLES}Sample{sample}/Idx"))
-            .ok_or_else(|| bad("no Idx"))?,
-    );
+    let entries = ole
+        .read(&format!("{SAMPLES}Sample{sample}/Idx"))
+        .map(|b| idx::parse(&b))
+        .unwrap_or_default();
     let mut experiments = experiments(ole, sample);
     #[cfg(not(feature = "estesi"))]
     if experiments.is_empty() {

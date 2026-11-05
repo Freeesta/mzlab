@@ -74,11 +74,12 @@ const LETTORI_MOD = {
     const base = name.replace(/\.[^./]+$/, ""), used = new Set(taken.map(n => n.toLowerCase()));
     return used.has((base + ".mzML").toLowerCase()) ? name + ".mzML" : base + ".mzML";
   },
-  /** the File that stands for a sample the engine refused, in the list of the files until `shell.js moduloToMzml` converts it (members: [{ name, blob }]) */
-  stand(/** @type {string} */ name, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ fam, /** @type {number | null | undefined} */ sampleSize = undefined) {
+  /** the File that stands for a sample the engine refused, in the list of the files until `shell.js moduloToMzml` converts it (members: [{ name, blob }]);
+   *  `shown`: the file the user dropped, when the stand-in is the whole of it and not one of its samples (an error of the module is told under that name) */
+  stand(/** @type {string} */ name, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ fam, /** @type {number | null | undefined} */ sampleSize = undefined, /** @type {string | undefined} */ shown = undefined) {
     const f = new File([JSON.stringify({ mzlab: "modulo1" })], name);
     const size = sampleSize != null ? sampleSize : (members.length === 1 ? members[0].blob.size : null);
-    Object.defineProperty(f, "mzlabModulo", { value: { members, c, fam, size } });
+    Object.defineProperty(f, "mzlabModulo", { value: { members, c, fam, size, shown } });
     return f;
   },
   /** the JSON text of `mzlab-cli validate --json` for an mzML, from the module `valida` (loaded now, apart from the readers) */
