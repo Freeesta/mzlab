@@ -91,6 +91,14 @@ try:
             attendi(pg, "!!document.querySelector('#prof-tab') || !!document.querySelector('#prof-msg').textContent", 60000)
             assert pg.locator("#prof-tab tbody tr").count() >= 3, pg.inner_text("#prof-msg")
         cell(pg, "many files: time profile of an ion", profile)
+        def profile_a11y():
+            stat_ok(pg)                                    # the drawer is narrow: the result table scrolls sideways
+            box = "#prof-res .qq-scroll"
+            assert pg.evaluate(f"(e => e.scrollWidth > e.clientWidth)(document.querySelector('{box}'))"), "the table does not scroll: the cell tests nothing"
+            v = axe(pg, "#sb-pane"); assert not v, v
+            pg.focus(box); pg.keyboard.press("ArrowRight")                                   # the keyboard scrolls it
+            attendi(pg, f"document.querySelector('{box}').scrollLeft > 0", 5000)
+        cell(pg, "many files: profile result scrolls by keyboard (axe)", profile_a11y)
         def remove():
             k = pg.evaluate("E.files.find(f => !f.gone && f.file.includes('t30')).k")
             pg.evaluate(f"removeFile(E.files[{k}])"); ready(pg)

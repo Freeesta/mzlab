@@ -174,13 +174,13 @@ const QAQC = (() => {
       const a = rt.r.rows[k], q = rt.r.ratio.rows[k];
       return [eh(f), roleName(rt.roles[k]), a ? I18N.sciE(a.area) : I18N.sciE(0), rt.roles[k] === "blank" ? "–" : !q ? "–" : q.absent_in_blank ? t("qaqc.ratio.absent") : fmt(q.ratio, 1), rt.roles[k] === "blank" || !q ? "–" : t(q.at_least ? "qaqc.yes" : "qaqc.no")];
     });
-    return `<div class="qq-ion"><div class="sm">${t("qaqc.ratio.sum", { mz: fmt(rt.mz, 4), thr: rt.thr, blank: fmt(rt.r.ratio.blank_area, 0) })}</div><div class="qq-scroll">${table([t("qaqc.col.file"), t("qaqc.col.type"), t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: rt.thr })], rows)}</div></div>`;
+    return `<div class="qq-ion"><div class="sm" id="qq-rsum">${t("qaqc.ratio.sum", { mz: fmt(rt.mz, 4), thr: rt.thr, blank: fmt(rt.r.ratio.blank_area, 0) })}</div><div class="qq-scroll" tabindex="0" role="region" aria-labelledby="qq-rsum">${table([t("qaqc.col.file"), t("qaqc.col.type"), t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: rt.thr })], rows)}</div></div>`;
   }
   function featBlock(f) {
     if (!f) return "";
     const rows = f.rows.filter(x => x.ratio != null || x.absent_in_blank).sort((a, b) => (b.absent_in_blank ? 1e99 : b.ratio) - (a.absent_in_blank ? 1e99 : a.ratio));
     const n = rows.filter(x => x.at_least).length;
-    return `<div class="qq-ion"><div class="sm">${t("qaqc.feat.sum", { n, tot: f.rows.length, thr: f.thr, b: f.blanks.length })}</div><div class="qq-scroll">${table(["m/z", "RT", t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: f.thr })], rows.slice(0, 200).map(x => [fmt(x.mz, 4), fmt(x.rt, 2), fmt(x.sample_area, 0), x.absent_in_blank ? t("qaqc.ratio.absent") : fmt(x.ratio, 1), t(x.at_least ? "qaqc.yes" : "qaqc.no")]))}</div></div>`;
+    return `<div class="qq-ion"><div class="sm" id="qq-fsum">${t("qaqc.feat.sum", { n, tot: f.rows.length, thr: f.thr, b: f.blanks.length })}</div><div class="qq-scroll" tabindex="0" role="region" aria-labelledby="qq-fsum">${table(["m/z", "RT", t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: f.thr })], rows.slice(0, 200).map(x => [fmt(x.mz, 4), fmt(x.rt, 2), fmt(x.sample_area, 0), x.absent_in_blank ? t("qaqc.ratio.absent") : fmt(x.ratio, 1), t(x.at_least ? "qaqc.yes" : "qaqc.no")]))}</div></div>`;
   }
 
   // ---------------------------------------------------------------- panel
