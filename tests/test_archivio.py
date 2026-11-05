@@ -136,7 +136,17 @@ def test_the_quota_error_of_the_raw_sink_counts_the_block_that_did_not_fit():
     return [threw, JSON.parse(await s.error())];
   });""" % (WEB / "rust-opfs.js").as_uri())
     assert got[0] is True
-    assert got[1]["error_key"] == "error.quota" and got[1]["params"]["serve_mb"] == 4
+    assert got[1] == {"error_key": "error.quotaWrite", "params": {"serve_mb": 4}}     # the fake browser says 100 MB are free: not quoted
+
+
+def test_a_refused_write_never_quotes_a_free_space_that_would_have_held_it():
+    """A write the browser refuses while estimate() says the file fits (a private window, a full disk) gave «about 17 MB are needed and 3072 MB are left»."""
+    got = run("""
+  let free = 3072 * 1048576;
+  nav({ storage: { estimate: async () => ({ usage: 0, quota: free }) } });
+  await out(async () => { const a = JSON.parse(await A.quotaError(17 << 20)); free = 3 << 20; return [a, JSON.parse(await A.quotaError(17 << 20))]; });""")
+    assert got == [{"error_key": "error.quotaWrite", "params": {"serve_mb": 17}},
+                   {"error_key": "error.quota", "params": {"serve_mb": 17, "libero_mb": 3}}]
 
 
 def test_the_copy_reads_the_next_block_while_the_previous_one_is_written_and_hashed_in_file_order():

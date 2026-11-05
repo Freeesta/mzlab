@@ -738,6 +738,7 @@
   "mem.more.text": "Avviso prima di usare più memoria in una fase di Tabui (pipeline). {fase} = nome della fase, {stima_mb} = memoria stimata in MB, {budget_mb} = budget sicuro in MB, {libero_mb} = MB liberi, {high_mb} = budget alto in MB.",
   "error.featMemory": "Errore di Tabui (pipeline): una fase non entra nella memoria. {fase} = fase (align, proofs), {files} = numero di file, {stima_mb} e {budget_mb} = memoria stimata e budget in MB.",
   "error.quota": "Errore al caricamento di un file grande: lo spazio del browser non basta. {serve_mb} = MB necessari (file + indice), {libero_mb} = MB liberi.",
+  "error.quotaWrite": "Errore quando il browser rifiuta una scrittura pur dichiarando spazio libero (finestra privata, disco pieno). {serve_mb} = MB del file da scrivere.",
   "error.fileInUse": "Errore: il file è scritto da un'altra scheda di mzLab da più di 2 secondi. {file} = nome del file.",
   "load.dup.one": "Avviso breve nella schermata di caricamento quando si sceglie di nuovo un file già in elenco (stesso nome e dimensione). {name} = nome del file.",
   "load.dup.many": "Come load.dup.one, per più file insieme. {n} = numero di file ignorati.",
