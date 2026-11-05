@@ -1,7 +1,8 @@
 // @ts-strict
 // @ts-noany
 // Size of the atom symbols in the editor (Disegno): three sizes, kept in this browser. Ketcher takes it as its "fontsz" option;
-// only editor.setOptions applies it at once (ketcher.setSettings does not), and Ketcher keeps it in its own localStorage as well.
+// only editor.setOptions applies it at once (ketcher.setSettings does not), and Ketcher keeps it in its own localStorage as well. The same call turns off
+// Ketcher's stereo flag («ABS» beside every molecule with a stereo centre, e.g. a pasted PubChem isomeric SMILES): wedges and @/@@ already say it.
 const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.font") : "qqq.disegno.font";
 export const SIZES = /** @type {const} */ ([13, 16, 20]);        // small, medium (default), large
 export const DEFAULT = 16;
@@ -16,7 +17,7 @@ export function fontSize() {
  * @param {any} k the ketcher object
  * @param {number} [size] */
 export function applyFont(k, size = fontSize()) {
-  try { k.editor.setOptions(JSON.stringify({ fontsz: size })); } catch (_) { /* editor not ready: applied at its start */ }
+  try { k.editor.setOptions(JSON.stringify({ fontsz: size, showStereoFlags: false })); } catch (_) { /* editor not ready: applied at its start */ }
 }
 
 /** Draws the size choice (three radio buttons) in `box`.

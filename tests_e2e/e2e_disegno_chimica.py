@@ -26,6 +26,12 @@ try:
             assert "@" in canvas, canvas
             selection_smiles("C[C@H](N)C(=O)O", "s === " + json.dumps(canvas))
         step("the selection SMILES of L-alanine keeps @ (same as the canvas)", ala)
+        def no_abs():                                                   # Ketcher's stereo flag is off: no «ABS» beside a molecule with absolute centres (pasted isomeric SMILES)
+            pg.evaluate(f"{KJ}.setMolecule('C[C@H](N)C(=O)O.C[C@@H](O)CC')"); frames(pg, 6)
+            sm = pg.evaluate(f"{KJ}.getSmiles()"); assert sm.split(" ")[0].count("[C@") == 2, sm      # both centres kept
+            t = pg.evaluate(f"[...{KJ}.editor.render.paper.canvas.querySelectorAll('text')].map(t => t.textContent.trim())")
+            assert "ABS" not in t, t
+        step("a stereo molecule shows no ABS stereo flag", no_abs)
         step("the selection SMILES of [13CH4] keeps the isotope", lambda: selection_smiles("[13CH4]", "s === '[13CH4]'"))
         step("the selection SMILES of CD3OH keeps the three deuteria", lambda: selection_smiles("[2H]C([2H])([2H])O", "s.split('[2H]').length === 4"))
         step("the selection SMILES of trans-1,4-dimethylcyclohexane keeps both centres", lambda: selection_smiles("C[C@H]1CC[C@@H](C)CC1", "s.split('[C@').length === 3"))
