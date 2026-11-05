@@ -63,8 +63,7 @@ try:
         step("once the other tab lets go, the next start removes its orphan and names it", after_release)
         B.close(); B = opened(c.new_page())
         def silent():
-            attendi(B, f"ST.files.length === {N}", timeout=60000)
-            B.wait_for_timeout(1500)
+            attendi(B, f"ST.files.length === {N}", timeout=60000)   # the boot posts its notices before the reply the list is built from
             assert not B.evaluate("(window.__notes || []).filter(t => t === I18N.t('load.natInterrupted', { name: 'x.wiff' }) || /x\\.wiff|y\\.wiff|misto/.test(t))"), B.evaluate("window.__notes")
             assert all(k in B.evaluate(FILES) for k in kept), B.evaluate(FILES)
         step("no orphan: nothing said, nothing removed", silent)
