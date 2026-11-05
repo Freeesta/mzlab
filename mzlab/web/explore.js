@@ -461,8 +461,9 @@ async function bootSession0() {
   E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
     // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
     const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
-    const t = TIPOF.apply(s, s.file);
-    return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noExt(noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
+    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...CAMPIONI.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
+    // a file removed and waiting for its undo stays removed, the same object as in its «Removed · Undo» entry (lista-file.js fileRemoval): a file opened meanwhile does not bring it back
+    return o && o.gone ? Object.assign(o, e, { vis: false }) : e;
   }); uniqueLabels(E.files);
   paintFiles(); if (window.SIMUI) SIMUI.mark(E.files);
   if (window.HR) HR.notice(E.files);
