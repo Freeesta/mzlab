@@ -210,7 +210,10 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     let mut warn = String::new();
     match table(&c, &mut warn) {
-        Err(e) => Outcome::fail(&format!("{warn}{} {:?}", e.key, e.params)),
+        Err(e) => Outcome::fail(&format!(
+            "{warn}{}",
+            crate::testo_errore::umano(&e.to_string())
+        )),
         Ok(t) => {
             let mut o = crate::emit(t, &c.out);
             o.stderr.insert_str(0, &warn);

@@ -135,7 +135,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         .and_then(|_| leggi(&c, &tmp));
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
-        Err(e) => Outcome::fail(&format!("{} {:?}", e.key, e.params)),
+        Err(e) => Outcome::fail(&e.to_string()),
         Ok(t) => crate::emit(t + "\n", &c.out),
     }
 }
