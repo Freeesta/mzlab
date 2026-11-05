@@ -7,6 +7,7 @@ import { openSource } from "./lettura-sync.js";
 import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
 import { createEsterno } from "./lettore-esterno.js";
+import { loadModulo } from "./carica-modulo.js";
 
 export const MAGIC = "mzlab/nat1";
 export const INDEX_ERROR = "err.file.index";              // the key the engines give when the index of a file cannot be built (idxbuild.rs of crates/mzlab-desktop)
@@ -190,6 +191,15 @@ async function orphansDi(/** @type {any} */ ARCH, /** @type {(n: string) => Prom
 /** runs fn while holding the dataset's shared Web Lock (directly where the browser has none) */
 const held = (/** @type {string} */ key, /** @type {() => Promise<any>} */ fn) => { const L = locks(); return L ? L.request(LOCK + key, { mode: "shared" }, fn) : fn(); };
 
+/** The writer of «Download .mzML» for a stub: a .wiff sample is written by the `sciex` module with the options of `mzlab-cli convert` (no optical matrix), the engine alone
+ * leaves out what `estesi` writes (SRM dwell and energy, isolation offsets, TIC and BPC of a Full Scan); the other samples by the engine. Rejects with `err.file.wiffLoad`. */
+async function writerOf(/** @type {Stub} */ st, /** @type {Function} */ native_to_mzml) {
+  if (st.centroid || !st.members.some(x => /\.wiff$/i.test(x.name)))
+    return (/** @type {any[]} */ ...a) => native_to_mzml(a[0], a[1], a[2], a[3], st.centroid, a[4], a[5], a[6]);
+  const w = await loadModulo("sciex").catch(e => { throw JSON.stringify({ error_key: "err.file.wiffLoad", params: { family: "sciex", detail: String(e && e.message || e) } }); });
+  return (/** @type {any[]} */ ...a) => w.to_mzml_come(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
+}
+
 export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte }) {
   const ext = createEsterno(native_external);               // a Thermo .raw is read through the `thermo` module (lettore-esterno.js)
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
@@ -255,11 +265,12 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     if (!st) jerr("err.session.fileNotFound");
     const files = await memberFiles(/** @type {Stub} */ (st));
     await ext.prepara(/** @type {Stub} */ (st).members.map(x => x.name), /** @type {Stub} */ (st).members);
+    const write = await writerOf(/** @type {Stub} */ (st), native_to_mzml);
     const sink = await rawSink(m.dest);
     let written = 0, last = 0, scans = 0, scansTotal = null;
     const tick = (/** @type {boolean} */ force) => { const t = performance.now(); if (force || t - last > TICK) { last = t; post({ written, scans, scansTotal }); } };
     try {
-      await viaHandles(/** @type {Stub} */ (st), files, rd => native_to_mzml(/** @type {Stub} */ (st).members.map(x => x.name), Float64Array.from(files.map(f => f.size)), rd, /** @type {Stub} */ (st).c, /** @type {Stub} */ (st).centroid, m.compression || "standard",
+      await viaHandles(/** @type {Stub} */ (st), files, rd => write(/** @type {Stub} */ (st).members.map(x => x.name), Float64Array.from(files.map(f => f.size)), rd, /** @type {Stub} */ (st).c, m.compression || "standard",
         (/** @type {Uint8Array} */ piece) => { sink.write(piece); written += piece.length; tick(false); },
         (/** @type {number} */ d, /** @type {number} */ t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }));
     } catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }

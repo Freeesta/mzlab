@@ -258,30 +258,7 @@ impl<R: ReadAt> Mzml<R> {
     /// (time in minutes, intensity) of a chromatogram.
     pub fn chromatogram(&mut self, c: &Chrom) -> Result<(Vec<f64>, Vec<f64>)> {
         let chunk = self.read(c.start, c.end)?;
-        let (mut t, mut y): (Option<Vec<f64>>, Option<Vec<f64>>) = (None, None);
-        for (head, data) in arrays(&chunk) {
-            let a = decode(
-                &head,
-                data,
-                c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0),
-            )?;
-            if head.contains("MS:1000595") {
-                t.get_or_insert(a);
-            } else {
-                y.get_or_insert(a);
-            }
-        }
-        let (mut t, mut y) = (t.unwrap_or_default(), y.unwrap_or_default());
-        let n = t.len().min(y.len());
-        let list = find(&chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
-        let seconds =
-            text(part(&chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(&chunk);
-        if seconds {
-            t.iter_mut().for_each(|v| *v /= 60.0);
-        }
-        t.truncate(n);
-        y.truncate(n);
-        Ok((t, y))
+        lettura::pair_of(&chunk, c)
     }
 
     /// The unit of a chromatogram, or "": see `unita_traccia::resolve`.
