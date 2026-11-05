@@ -420,7 +420,6 @@ fn id_field(id: &str, key: &str) -> Option<usize> {
 }
 
 /// The TIC the index of the file holds for the block of `s`, when the block is where the spectrum number says and the value is usable.
-#[cfg(feature = "estesi")]
 fn header_tic(l: &LettoreWiff, s: &Spectrum) -> Option<f64> {
     let p = l
         .parti
@@ -440,10 +439,8 @@ fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
         .zip(id_field(&s.id, "experiment="))
         .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)));
     let mut extra = crate::mzmlwrite::SpectrumExtra::default();
-    #[cfg(feature = "estesi")]
-    {
-        extra.tic = header_tic(l, s);
-    }
+    // the vendor TIC of the block in every build: the engine (no `estesi`) writes the same mzML and index as the CLI and the app
+    extra.tic = header_tic(l, s);
     let Some(e) = e else { return extra };
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
     if let Some(sg) = super::modi::sigla(e.code) {
