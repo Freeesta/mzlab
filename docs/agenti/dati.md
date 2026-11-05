@@ -88,7 +88,7 @@ Il modulo centrale `mzlab/web/nomi.js` (`NOMI`, script classico in `index.html` 
 - **LocalStorage e SessionStorage**: funzione helper `NOMI.KEY(k)`. Mappa le eccezioni (`"theme"` → `"mzlab-theme"`, `"labels"` → `"mzlab-labels"`), preserva stringhe con prefisso `"mzlab"`, e per le altre antepone `"mzlab."` (es. `NOMI.KEY("prefs")` → `"mzlab.prefs"`). All'avvio sincrono `NOMI.migrateStorage()` copia le chiavi legacy `qqq.*` in `mzlab.*` con fallback in lettura (`NOMI.get(k)`). Al 3° avvio riuscito (`mzlab.avvii >= 3`) rimuove le chiavi vecchie.
   - *localStorage*: preferenze e tema (`mzlab.prefs`, `mzlab-theme`, `mzlab-labels`, `mzlab.a11y`),
     flag admin e dev (`mzlab.admin`, `mzlab.dev.qaqc`, `mzlab.dev.riferimento`), viste Dati (`mzlab.picchi`, `mzlab.qaqc`,
-    `mzlab.riferimento`, `mzlab.gradiente.ultimo`, `mzlab.kmd`, `mzlab.mappa`, `mzlab.ordine`, `mzlab.pca`, `mzlab.pfas`,
+    `mzlab.riferimento`, `mzlab.kmd`, `mzlab.mappa`, `mzlab.ordine`, `mzlab.pca`, `mzlab.pfas`,
     `mzlab.profilo`, `mzlab.fair`, `mzlab.flgrp`, `mzlab.tunit`, `mzlab.lib.soglie`), tour e aggiornamenti (`mzlab.tour.lr`,
     `mzlab.upd.last`, `mzlab.upd.seen`, `mzlab.logo.gold`, `mzlab.reset.note`), TP_Mine (`mzlab.attributio.reviewer`,
     `mzlab.tabui.decisioni`, `mzlab.pipeline.draft`).
