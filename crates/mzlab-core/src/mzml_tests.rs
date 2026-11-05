@@ -191,7 +191,8 @@ fn seconds_by_unit_name_or_accession_alone() {
 #[test]
 fn a_non_finite_peak_is_an_error_with_or_without_helpers() {
     let enc = |v: &[f64]| {
-        base64::engine::general_purpose::STANDARD.encode(v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>())
+        base64::engine::general_purpose::STANDARD
+            .encode(v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>())
     };
     for bad in [f64::NAN, f64::INFINITY] {
         let mut s = String::from(r#"<mzML><run><spectrumList>"#);
@@ -205,7 +206,11 @@ fn a_non_finite_peak_is_an_error_with_or_without_helpers() {
         }
         s += "</spectrumList></run></mzML>";
         for helpers in [0, 1, 3] {
-            assert_eq!(items(&s, helpers).1.as_deref(), Some("err.file.nonFinite"), "{bad}, {helpers} helpers");
+            assert_eq!(
+                items(&s, helpers).1.as_deref(),
+                Some("err.file.nonFinite"),
+                "{bad}, {helpers} helpers"
+            );
         }
     }
 }

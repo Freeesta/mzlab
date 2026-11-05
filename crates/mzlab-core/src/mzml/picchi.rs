@@ -96,7 +96,11 @@ pub(crate) fn assemble(s: Spec, p: Peaks) -> Result<(Spectrum, Option<Mobility>)
         .chain(mob.iter().flatten().map(|v| ("mobility", *v)))
         .find(|(_, v)| !v.is_finite());
     if let Some((cosa, v)) = guasto {
-        let chi = if s.id.is_empty() { (s.index + 1).to_string() } else { s.id.clone() };
+        let chi = if s.id.is_empty() {
+            (s.index + 1).to_string()
+        } else {
+            s.id.clone()
+        };
         return Err(crate::error::Error::new("err.file.nonFinite")
             .with("scan", chi)
             .with("what", cosa)

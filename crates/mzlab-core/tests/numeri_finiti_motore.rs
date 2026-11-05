@@ -87,9 +87,19 @@ fn il_file_buono_passa_ovunque() {
 
 #[test]
 fn un_tempo_o_un_tic_non_finito_ferma_la_tabella_delle_scansioni() {
-    for (rt, tic) in [("NaN", "1000"), ("inf", "1000"), ("-inf", "1000"), ("1.5", "inf"), ("1.5", "NaN")] {
+    for (rt, tic) in [
+        ("NaN", "1000"),
+        ("inf", "1000"),
+        ("-inf", "1000"),
+        ("1.5", "inf"),
+        ("1.5", "NaN"),
+    ] {
         let b = file(rt, tic, 150.0, 1.5);
-        assert_eq!(chiave_tabella(&b), "err.file.nonFinite", "rt {rt} tic {tic}");
+        assert_eq!(
+            chiave_tabella(&b),
+            "err.file.nonFinite",
+            "rt {rt} tic {tic}"
+        );
     }
 }
 

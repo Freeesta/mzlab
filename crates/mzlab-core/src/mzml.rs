@@ -280,17 +280,7 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     } else {
         (None, None)
     };
-    if let Some((cosa, v)) = t
-        .iter()
-        .map(|v| ("time", *v))
-        .chain(y.iter().map(|v| ("intensity", *v)))
-        .find(|(_, v)| !v.is_finite())
-    {
-        return Err(Error::new("err.file.nonFiniteTrace")
-            .with("trace", &c.id)
-            .with("what", cosa)
-            .with("value", v));
-    }
+    crate::mzmlarray::punti_finiti(&c.id, &t, &y)?;
     Ok(Chromatogram {
         index: c.index,
         id: c.id,

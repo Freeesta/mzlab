@@ -66,9 +66,13 @@ fn i_bordi_del_gzip_danno_la_stessa_chiave_su_app_e_sito() {
         ("cut in the middle", buono[..buono.len() / 2].to_vec()),
         ("zeros after the member", con_zeri),
     ];
+    let mut diversi = Vec::new();
     for (nome, b) in casi {
         let (a, s) = (app(&b), sito(&b));
-        assert_eq!(a, s, "{nome}: app {a}, site {s}");
+        if a != s {
+            diversi.push(format!("{nome}: app {a}, site {s}"));
+        }
     }
+    assert!(diversi.is_empty(), "{diversi:#?}");
     assert_eq!(app(&buono), "ok");
 }
