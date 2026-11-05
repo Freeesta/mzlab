@@ -45,9 +45,9 @@ try:
             b = pg.locator("#flst .fgh[data-gt=full]"); b.hover(); hold(pg, 900)
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "not yet at 0.9 s"
             hold(pg, 800); t = pg.inner_text("#qtip"); print(t[:120].replace("\n", " | "))
-            assert not pg.evaluate("document.querySelector('#qtip').hidden") and "Q1" in t and "Q3" in t, t
+            assert not pg.evaluate("document.querySelector('#qtip').hidden") and "Q1" in t, t      # the group header carries a short phrase naming the experiment (the Q1-q2-Q3 scheme is in the type help)
             assert pg.evaluate("TIP_DELAY") == 1250
-        step("2.3/2.5: no icons, tab label = Q1 -> q2 -> Q3 after TIP_DELAY (1250 ms)", tabs)
+        step("2.3/2.5: no icons, tab label names the experiment after TIP_DELAY (1250 ms)", tabs)
         def rows():
             drawer(pg); pg.evaluate("E.cur=E.files.find(f=>f.kind==='full').k;renderFileList()")
             pg.locator("#flst .fl small").nth(2).click(); attendi(pg, "E.cur===tabFiles('full')[2].k")
