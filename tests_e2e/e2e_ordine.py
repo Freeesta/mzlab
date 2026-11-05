@@ -24,9 +24,9 @@ try:
         pg = r.page(p)
         stage(pg, [D / "s_1d.mzML", D / "s_t30.mzML", D / "s_2h.mzML", D / "s_t5.mzML"]); show_table(pg)
         def order():
-            assert pg.evaluate(NAMES) == ["s_1d.mzML", "s_t30.mzML", "s_2h.mzML", "s_t5.mzML"], pg.evaluate(NAMES)      # order of arrival while nothing is edited
+            assert pg.evaluate(NAMES) == ["s_1d", "s_t30", "s_2h", "s_t5"], pg.evaluate(NAMES)      # order of arrival while nothing is edited
             thaw(pg)
-            assert pg.evaluate(NAMES) == ["s_t5.mzML", "s_t30.mzML", "s_2h.mzML", "s_1d.mzML"], pg.evaluate(NAMES)
+            assert pg.evaluate(NAMES) == ["s_t5", "s_t30", "s_2h", "s_1d"], pg.evaluate(NAMES)
         step("the rows keep the arrival order, then the table is in growing time, units mixed (5 min, 30 min, 2 h, 1 d)", order)
         def field():
             t = pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>[i.type,i.inputMode,i.value])")
@@ -46,7 +46,7 @@ try:
             pg.select_option("#tunit", "h")
             i = pg.locator("#flist input[data-k=time]").nth(0); i.fill("0,5"); i.press("Tab")
             attendi(pg, "Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>i.value)[0] === '0.5'")      # the commit is applied once the focus has moved
-            names = pg.evaluate(NAMES); assert names[0] == "s_t30.mzML" or names[1] == "s_t30.mzML", names     # 0.5 h = 30 min ties with s_t30: order by name
+            names = pg.evaluate(NAMES); assert names[0] == "s_t30" or names[1] == "s_t30", names     # 0.5 h = 30 min ties with s_t30: order by name
             j = pg.locator("#flist input[data-k=time]").nth(2); j.fill("abc"); j.press("Tab")
             assert pg.get_attribute("#flist input[aria-invalid=true]", "data-k") == "time"
         step("0,5 h is accepted (30 min), text is refused with aria-invalid", typed)
@@ -61,7 +61,7 @@ try:
             import lib; lib.AUTO_TEMPI = False       # the test is about names with no time: nothing is written for it
             stage(pg2, [D / "campione10.mzML", D / "campione2.mzML"]); show_table(pg2)
             thaw(pg2)
-            assert pg2.evaluate(NAMES) == ["campione2.mzML", "campione10.mzML"], pg2.evaluate(NAMES)
+            assert pg2.evaluate(NAMES) == ["campione2", "campione10"], pg2.evaluate(NAMES)
             assert pg2.is_visible("#tunit"), "the unit menu is in the header from the first row, even when no name gives a time"
         step("names without time: natural alphabetical order", nolabel)
 finally:

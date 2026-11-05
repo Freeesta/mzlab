@@ -26,7 +26,9 @@ try:
             for fx in (.2, .35, .5, .65, .8):
                 for fy in (.3, .5, .7):
                     pg.mouse.move(c[0] + c[2] * fx, c[1] + c[3] * fy); pg.wait_for_timeout(250); ready(pg); pg.wait_for_timeout(250)
-                    L = pg.evaluate(f"({M}._mz.lbls||[]).map(l=>({{...l}}))"); W = pg.evaluate(f"{M}._mz.sp.getBoundingClientRect().width")
+                    L = pg.evaluate(f"({M}._mz.lbls||[]).map(l=>({{...l}}))"); W = pg.evaluate(f"{M}._mz.sp.getBoundingClientRect().width"); gd = pg.evaluate(f"{M}._mz.gd")
+                    for l in L:                                                                # the dashed guide never runs through a label
+                        if gd: assert not (l["x"] < gd["end"] + 1 and l["y"] - 2 < gd["y"] < l["y"] + l["h"] + 2), (l, gd)
                     for l in L:
                         if l["right"]: assert l["x"] >= l["tip"] + 3, l                       # beyond the tip, never on the bar
                         else: assert l["y"] + l["h"] <= l["ly"] - 1, l                        # above the bar

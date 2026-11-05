@@ -238,6 +238,7 @@ I18N.add("en", {
   "scorc.chiudi": "Close",
   "scorc.xic": "XIC",
   "scorc.spettro": "Spectrum here",
+  "scorc.spettroSel": "Range spectrum",
   "scorc.picco": "MS2 or XIC",
   "scorc.integra": "Integrate",
   "scorc.misura": "Measure",

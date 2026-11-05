@@ -368,7 +368,7 @@ const LISTE = (() => {
     });
   }
 
-  // Per-list switches exist only when there are two or more lists; a single list (today Keller) is always on, whatever an old stored choice says
+  // Per-list switches exist only when there are two or more lists (the built-in ones are Keller and the pesticides); a single list is always on, whatever an old stored choice says
   const activeMap = () => (ST.lists.length + ST.userLists.length < 2 ? {} : rd(KEY_LISTS, {}));
 
   function reindex() {

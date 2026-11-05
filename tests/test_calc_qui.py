@@ -150,7 +150,7 @@ await LISTE.ready();const failed=LISTE.failed();
 await LISTE.ready();
 const g=await CQ.gruppi(CQ.arg('279',0),LR,{...dep,idx:LISTE.ensure()});
 console.log(JSON.stringify([failed,LISTE.failed(),n,g.filter(x=>x.id==='liste').map(x=>x.n)]))""" % str(WEB / "contaminanti.json"))
-    assert r == [True, False, 2, [4]]
+    assert r == [True, False, 2, [5]]                         # four Keller ions at nominal 279 and fenthion [M+H]+ of the pesticide list
 
 
 def test_contaminants_esi_negative_and_positive_lists_are_not_empty():
