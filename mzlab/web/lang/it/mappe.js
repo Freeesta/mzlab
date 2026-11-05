@@ -165,6 +165,6 @@ I18N.add("it", {
   "mappa.meta.snap": "Aggancio al massimo locale",
   "mappa.rz.top": "Maniglia del bordo alto del pannello: trascina o usa le frecce su e giù (doppio clic: altezza predefinita)",
   "mappa.rz.bot": "Maniglia del bordo basso del pannello: trascina o usa le frecce su e giù (doppio clic: altezza predefinita)",
-  "mappa.rz.title": "Trascina per cambiare l'altezza; doppio clic = altezza predefinita",
+  "mappa.rz.title": "Trascina per cambiare l'altezza",
   "mappa.meta.date": "Data"
 });

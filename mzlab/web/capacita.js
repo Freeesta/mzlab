@@ -2,6 +2,7 @@
 // What this browser can do, in one place: feature detection only (never the user agent). A function that needs something the browser lacks is turned off
 // by itself with the common notice (avviso-capacita.js) and comes back by itself when the browser has it: nothing is saved, the probes run at every load.
 // Used by the engine bridge, the folder pickers, the 3D map; classic scripts read it as window.CAPACITA.
+import "./compat.js";
 import { segnala } from "./avviso-capacita.js";
 
 /** @typedef {"simd128" | "opfs" | "opfsSync" | "cartellaLocale" | "webgl2" | "isolamento" | "offscreen2d" | "locks"} Nome */
