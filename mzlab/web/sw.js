@@ -158,7 +158,9 @@ sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUnti
  * queued the page behind the cache writes). */
 const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) => void} */ later) => {
   const cache = await abrirApp();
-  if (!visto) await manifestoSw();      // a restarted worker of an older version must not serve its old files to a newer page before it knows (one request, shared)
+  // a restarted worker of an older version must not serve its old files to a newer page before it knows (one request, shared); on a hung network
+  // the cache answers after NAV_MS, as for a page, and the manifest still sets `stale` for the requests after it
+  if (!visto) await Promise.race([manifestoSw(), new Promise(r => setTimeout(r, NAV_MS))]);
   if (!stale) { const hit = await buscar(cache, req); if (hit) return isolata(hit); }
   else {
     // a deploy changes few files: the cached copy still answers when its bytes are the ones of the newer version (no mixed JS/wasm pair)

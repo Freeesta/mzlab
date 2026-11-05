@@ -30,13 +30,13 @@ function mondo(net = { ...FILES }, man = manifest()) {
   const sw = { addEventListener: (n, f) => { listeners[n] = f; }, skipWaiting() {}, clients: { claim() {} }, registration: { update: async () => { st.updates++; } } };
   const ctx = {
     self: sw, location: { origin: "https://x.test", href: O + "sw.js" }, URL, Headers, Response, Request, crypto: crypto.webcrypto, importScripts() {},
-    setTimeout: (f, ms) => { timers.push(f); return timers.length; },
+    setTimeout: (f, ms) => { f.ms = ms; timers.push(f); return timers.length; },
     caches: { open, keys: async () => [...stores.keys()], delete: async n => stores.delete(n) },
     fetch: async (r, init) => {
       const u = new URL(typeof r === "string" ? r : r.url);
       st.fetches.push(u.pathname.slice(1));
       if (st.offline) throw new TypeError("offline");
-      if (u.pathname === "/static/sw-manifest.json") return new Response(man, { status: 200 });
+      if (u.pathname === "/static/sw-manifest.json") return st.hang ? new Promise(() => {}) : new Response(man, { status: 200 });
       const body = st.net[u.pathname.slice(1) || "index.html"];
       return body === undefined ? new Response("", { status: 404 }) : new Response(body, { status: 200 });
     },
@@ -135,6 +135,18 @@ function mondo(net = { ...FILES }, man = manifest()) {
   const n = w.st.waits;
   await w.get("static/app.js");
   assert.equal(w.st.waits, n, "stale: no event kept open (the newer worker activates only when the older one has none)");
+}
+{ // a hung network (not offline): a restarted worker waits for the manifest at most as long as a page (3 s), then its cache answers
+  const w = mondo();
+  await (await w.ctx.caches.open("mzlab-app-abc")).put(new Request(O + "static/lazy.js"), new Response("lazy()", { status: 200 }));
+  w.st.hang = true;
+  const p = w.get("static/lazy.js");
+  await new Promise(r => setTimeout(r, 20));
+  const t = w.timers.find(f => f.ms === 3000);
+  assert.ok(t, "the wait for the manifest has a timeout");
+  t();
+  assert.equal(await (await p).text(), "lazy()", "the cache answers once the timeout passes");
+  assert.equal(w.netCount("static/lazy.js"), 0);
 }
 { // old caches go, the current ones stay; an earlier app cache stays until this version's fill is done
   const w = mondo();
