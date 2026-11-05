@@ -38,12 +38,15 @@ try:
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
         pg.set_input_files("#pick", [str(x) for x in PAIR])
-        pg.wait_for_function("CONV.sources.size >= 1 && document.querySelectorAll('#flist [data-dl]').length >= 2", timeout=180000)
-        name, k = pg.evaluate("(() => { const [n, s] = [...CONV.sources][0]; return [n, s.c]; })()")
+        # the mzML files the module wrote at the loading (CONV.files: the pair goes to the module whole); sample 2 is the one the engine does not read
+        pg.wait_for_function("CONV.files.size >= 2 && document.querySelectorAll('#flist [data-dl]').length >= 2", timeout=180000)
+        name, k = sorted(pg.evaluate("[...CONV.files.keys()]"))[1], 1
         saved = {}
         def save(fmt):
             with pg.expect_download(timeout=120000) as d:
-                pg.evaluate("n => document.querySelector(`#flist [data-dl=\"${CSS.escape(n)}\"]`).click()", name); pg.click(".dlmenu [data-dlfmt=%s]" % fmt)
+                # the button of that row opens the menu and its item saves (both by script: the row may sit under the sticky header of the page)
+                pg.evaluate("n => document.querySelector(`#flist [data-dl=\"${CSS.escape(n)}\"]`).click()", name)
+                pg.wait_for_selector(".dlmenu"); pg.evaluate("f => document.querySelector(`.dlmenu [data-dlfmt=${f}]`).click()", fmt)
             path = D / f"site_{fmt}.mzML"; d.value.save_as(str(path)); saved[fmt] = path
         def same(fmt):
             save(fmt)
