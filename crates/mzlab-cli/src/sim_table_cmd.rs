@@ -94,9 +94,22 @@ fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-/// The name of the mzML the site makes for sample `id` (named `given` by the reader) of the `.wiff` `stem`: `conversione.js::wiffName` with `freeMzml`.
-fn wiff_name(stem: &str, id: u32, given: &str, taken: &[String]) -> String {
-    let named = given != format!("{stem}.wiff #{id}");
+/// Whether `given` is the reader's name of a lone sample without a DATA name: «<file> #<number>» (`wiff::nomi`), the extension as the file has it.
+fn lone_placeholder(stem: &str, given: &str) -> bool {
+    given
+        .strip_prefix(stem)
+        .and_then(|r| {
+            r.get(..5)
+                .filter(|e| e.eq_ignore_ascii_case(".wiff"))
+                .and(r.get(5..))
+        })
+        .and_then(|r| r.strip_prefix(" #"))
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// The name of the mzML the site makes for a sample (named `given` by the reader) of the `.wiff` `stem`: `conversione.js::wiffName` with `freeMzml`.
+fn wiff_name(stem: &str, given: &str, taken: &[String]) -> String {
+    let named = !lone_placeholder(stem, given);
     let clean: String = if named {
         given
             .trim()
@@ -153,19 +166,15 @@ fn samples_of(
         .map_or(name.as_str(), |s| s.0)
         .to_string();
     let wiff = lower.ends_with(".wiff");
-    let list: Vec<(u32, String)> = l
-        .campioni()
-        .iter()
-        .map(|c| (c.id, c.nome.clone()))
-        .collect();
+    let list: Vec<String> = l.campioni().iter().map(|c| c.nome.clone()).collect();
     let mut out = Vec::new();
-    for (c, (id, given)) in list.iter().enumerate() {
+    for (c, given) in list.iter().enumerate() {
         let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), c)?;
         let size = shell.len() as u64;
         let mut m = Mzml::new(shell, size);
         let chroms = m.chromatograms(0)?;
         let n = if wiff {
-            wiff_name(&stem, *id, given, taken)
+            wiff_name(&stem, given, taken)
         } else {
             format!("{stem}.mzML")
         };
