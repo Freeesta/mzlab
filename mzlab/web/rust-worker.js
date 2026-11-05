@@ -327,7 +327,7 @@ async function lrOp(m) {
       await ARCH.promote("idx", part, m.name + ".cen.mzidx");
       return { info: "{}" };
     } finally { ARCH.release(m.name); }
-    case "lr_cen_have": return { info: JSON.stringify(await flowCen().have(m)) };      // the Flow's centroid copy of a profile mzML (rust-flow-centroid.js)
+    case "lr_cen_have": return { info: JSON.stringify({ ...await flowCen().have(m), source: !!await ARCH.get("files", m.name) }) };      // the Flow's centroid copy of a profile mzML (rust-flow-centroid.js)
     case "lr_cen_adopt": await flowCen().adopt(m); return { info: "{}" };
     case "lr_entry": {
       const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");
