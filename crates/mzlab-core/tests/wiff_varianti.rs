@@ -260,7 +260,7 @@ fn wiff_campioni_nomi_data() {
 }
 
 /// A full scan experiment gives a TIC chromatogram, and the TIC of each spectrum in the mzML is the one of the header of its block when the file has one
-/// (here 1.5e6, not the sum of the profile), the sum of the profile where it has none.
+/// (here 1234567.891, not the sum of the profile), the sum of the profile where it has none.
 #[test]
 fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
     let Some((dir, want)) = reference() else {
