@@ -210,7 +210,8 @@ body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 #sb-panel-stat .qq-tab{width:100%;font-size:11px;border-collapse:collapse}
 #sb-panel-stat .qq-tab th,#sb-panel-stat .qq-tab td{padding:2px 4px;border-bottom:1px solid var(--line);text-align:left}
 #sb-panel-stat .qq-tab td.num{text-align:right;font-variant-numeric:tabular-nums}
-#sb-panel-stat .qq-scroll{overflow-x:auto}
+#sb-panel-stat .qq-scroll{overflow-x:auto}.qq-scroll:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#sb-panel-stat :is(input:not([type=file]),select){min-height:24px}
 #sb-panel-stat .qq-form{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:flex-end;margin:4px 0}
 #sb-panel-stat .qq-form label{display:flex;flex-direction:column;font-size:11px;color:var(--muted)}
 #sb-panel-stat .qq-n{display:inline-block;min-width:1.4em;color:var(--muted)}
