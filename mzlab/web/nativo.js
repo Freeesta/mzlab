@@ -44,6 +44,12 @@ const NATIVO = {
     const s = (await (samples ? samples() : rb.nativeSamples(mem))).samples;
     return hits.length === s.length ? list.filter(f => hits.includes(f.name)) : null;
   },
+  // one sample per dataset (a .raw, a .D): when `cached` finds it, its row says «from the cache» and true is returned (nothing to load)
+  async cachedOne(rb, mem, list) {
+    const hit = await NATIVO.cached(rb, mem, list, async () => ({ samples: [{ id: 1 }] })).catch(() => null);
+    for (const x of hit || []) { CONVROWS.add(x.name, "open"); CONVROWS.finish(x.name, "done", { scans: x.n_spectra || x.scans || 0, kind: x.kind, cached: true }); }
+    return !!hit;
+  },
   // the text key of a phase of the loading of a sample (the event mzlab-index carries `phase`), for CONVROWS and the rows of the loading
   rowState(phase) { return { read: "nread", open: "nopen", scans: "nscan", chrom: "nchrom" }[phase] || "index"; },
 };

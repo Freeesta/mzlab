@@ -28,6 +28,9 @@ WIFF_FILES = [WIFF_DIR / "uv.wiff", WIFF_DIR / "uv.wiff.scan"]
 RAW_DIR = Path(tempfile.mkdtemp(prefix="mzlab-raw-"))                  # a synthetic Thermo .raw (crates/mzlab-lettori examples/sintetici, invented numbers)
 subprocess.run(["cargo", "run", "-q", "-p", "mzlab-lettori", "--example", "sintetici", "--", str(RAW_DIR)], cwd=ROOT, check=True)
 RAW_FILE = RAW_DIR / "thermo" / "synt.raw"
+import agilent_sintetico  # noqa: E402  (synthetic Agilent .D folders, invented numbers)
+D_DIR = Path(tempfile.mkdtemp(prefix="mzlab-d-")) / "serie"
+agilent_sintetico.write(D_DIR, "uno.D", 120); agilent_sintetico.write(D_DIR / "sub", "due.D", 90)
 PAGE_PORT, ENGINE_PORT = 8841, 8842
 fails = []
 def step(name, fn):
@@ -362,6 +365,26 @@ try:
             give(); assert rows() == first, ("the same .raw picked again", first, rows())
             c5.close()
         step("desktop: the same .raw picked again keeps its one row and its one index (natsame)", raw_again)
+        def d_again():
+            c6 = b.new_context(user_agent=ctx_ua)
+            c6.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c6.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            q = c6.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            q.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); q.wait_for_selector("#drop", timeout=120000)
+            q.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true && typeof ST !== 'undefined'", timeout=30000)
+            count = "(() => { if (window.__ups === undefined) { const u = window.upload; window.__ups = 0; window.upload = async (...a) => { try { return await u(...a); } finally { window.__ups++; } }; } return window.__ups; })()"
+            idle = "UPBUSY === 0 && OPENNOW.busy() === 0"
+            def give():      # «Load a folder»: the webview gives Files, the shim sends their bytes (lr/upload)
+                n = q.evaluate(count); q.set_input_files("#pickdir", str(D_DIR)); q.wait_for_function(f"window.__ups > {n} && {idle}", timeout=180000)
+            own = lambda: sorted((p.name, p.stat().st_mtime_ns) for p in DATA.rglob("files/*MSScan.bin"))
+            rows = lambda: (q.evaluate("ST.files.map(f => f.name).filter(n => /^(uno|due)/.test(n)).sort()"), sorted(x.name for x in DATA.rglob("*.mzidx") if re.match(r"(uno|due)", x.name)))
+            give(); q.wait_for_function(f"['uno.mzML', 'due.mzML'].every(n => ST.files.some(f => f.name === n && OPENNOW.isOpen(n))) && {idle}", timeout=180000)
+            first, kept = rows(), own()
+            assert first == (["due.mzML", "uno.mzML"], ["due.mzML.mzidx", "uno.mzML.mzidx"]), first
+            assert len(kept) == 2, ("each .D keeps its own members", kept)
+            give(); assert rows() == first, ("the same .D folders picked again", first, rows())
+            assert own() == kept, ("the members are not sent again", kept, own())
+            c6.close()
+        step("desktop: the same .D folders picked again keep their rows, indexes and members (natsame, lr/upload)", d_again)
         def cold_start():
             c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
             q = c3.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
@@ -386,6 +409,6 @@ try:
         step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
         b.close()
 finally:
-    eng.kill(); page.shutdown(); shutil.rmtree(RAW_DIR, ignore_errors=True)
+    eng.kill(); page.shutdown(); shutil.rmtree(RAW_DIR, ignore_errors=True); shutil.rmtree(D_DIR.parent, ignore_errors=True)
 print("  ", ("result", "FAIL " + ", ".join(fails) if fails else "ok"))
 sys.exit(1 if fails else 0)

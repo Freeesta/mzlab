@@ -88,8 +88,8 @@ const AgilentD = (() => {
         // the folder is read as it is: its files are the members, a run is one sample
         const mem = Object.entries(r.files).map(([k, f]) => ({ name: r.name + "/" + relOf(k), blob: f }));
         try {
-          const nm = mzmlName(r, [...taken, ...out.files.map(f => f.name)]);
-          const s = (await rb.nativeSamples(mem)).samples;
+          if (await NATIVO.cachedOne(rb, mem, ST.files || [])) continue;      // the same .D again (same members, its copy and index stored): its sample stays the one of the list, no second row
+          const nm = mzmlName(r, [...taken, ...out.files.map(f => f.name)]), s = (await rb.nativeSamples(mem)).samples;
           out.files.push(NATIVO.sample(nm, NATIVO.key(r.name), mem, 0, s.length ? s[0].id : 1, false));
         } catch (e_) { const e = /** @type {Lanciato} */ (e_); const M = window.LETTORI_MOD, fam = M && e.json ? M.retriable(e.json.error || e.json.error_key) : ""; if (fam) out.files.push(M.stand(mzmlName(r, [...taken, ...out.files.map(f => f.name)]), mem, 0, fam)); else out.errs.push([e.json ? I18N.err(e.json).message : e.message, r.name]); }   // a variant the engine refuses: the readers module tries it (shell.js moduloToMzml)
       }
