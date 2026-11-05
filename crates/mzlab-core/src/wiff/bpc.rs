@@ -1,4 +1,4 @@
-//! The BPC of the full scan experiments of a `.wiff` for the readers module (feature `estesi`): the mzML writer reads every scan once and `LettoreWiff::watch`
+//! The BPC of the full scan experiments of a `.wiff`: the mzML writer reads every scan once and `LettoreWiff::watch`
 //! notes its base peak on the way, so the chromatograms are listed with the BPC only after that pass and no scan is ever decoded twice.
 
 use super::lettore::LettoreWiff;

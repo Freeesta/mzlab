@@ -8,7 +8,9 @@ use wasm_bindgen::prelude::*;
 
 use crate::nativi::{reader, Dataset, Membri, Nativi, Src, SHELLS};
 use crate::{error_json, Engine, JsReader};
+use mzlab_core::json::Value;
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::upload;
 
 impl Nativi {
     pub(crate) fn forget(&mut self, slot: u32) {
@@ -76,6 +78,7 @@ impl Nativi {
 impl Engine {
     /// Makes `slot` sample `c` of the dataset `ds` (`names`, `sizes`, `read(member, offset, length)`): the routes that read the file besides its index
     /// (`open_index`) read it through its reader. `centroid`: the profile scans become centroids (the same value the index was built with).
+    /// Refuses (`error.badIndex`) the index of the slot when it was built by an older generation of the readers (`upload::GENERAZIONE_LETTORI`).
     #[allow(clippy::too_many_arguments)]
     pub fn native_attach(
         &mut self,
@@ -87,6 +90,17 @@ impl Engine {
         c: u32,
         centroid: bool,
     ) -> Result<(), JsValue> {
+        // an index of an older generation of the readers (another chromatogram list) is refused at every attach until the worker has built it again (`lrIndex`)
+        let reader = self.idx.get(&slot).map(|r| {
+            r.idx
+                .source
+                .get("reader")
+                .and_then(Value::f64)
+                .unwrap_or(0.0)
+        });
+        if reader.is_some_and(|g| g < f64::from(upload::GENERAZIONE_LETTORI)) {
+            return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
+        }
         if self.nat.slots.get(&slot) == Some(&(ds.to_string(), c as usize))
             && self.nat.sets.contains_key(ds)
         {
