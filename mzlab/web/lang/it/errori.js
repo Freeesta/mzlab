@@ -243,6 +243,7 @@ I18N.add("it", {
   "err.flow.type": "Questi due passi non si possono collegare: {from} non va con {to}.",
   "err.flow.unavailable": "Il passo {step} non è disponibile su {platform}.",
   "err.flow.worker": "Il calcolo si è fermato prima di finire: riprova.",
+  "err.formula.offset": "Lo scarto {offset} non è un numero: dopo l'm/z o la formula scrivi un segno e un numero, ad es. +16 o -18.",
   "err.formula.noIon": "La formula {formula} non può essere uno ione di questo tipo: controlla la carica e l'addotto.",
   "err.formulaId.finder": "La ricerca delle formule non è partita ({why}).",
   "err.formulaId.param": "Il parametro {param} della ricerca delle formule non è valido.",

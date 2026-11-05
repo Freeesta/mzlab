@@ -146,7 +146,7 @@
     T.flow_propose_plan = async a => {
       const found = problems(a.plan);
       if (found.length) return { ok: false, content: { problems: found } };
-      const r = F.importText(JSON.stringify(a.plan));
+      const r = await F.migrated(F.importText(JSON.stringify(a.plan)), ctx.reg || (F.current && F.current.reg));
       if (r.error) return bad(r.error.key, r.error.params);
       return good({ applied: await ctx.propose(r.plan, String(a.note || "")) });
     };

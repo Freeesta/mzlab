@@ -29,6 +29,14 @@ def test_the_js_checker_gives_the_answers_of_the_rust_checker():
         assert g.get("got") == case.get("expect"), case["name"]
 
 
+def test_a_plan_saved_at_an_older_step_version_is_migrated_by_the_engine_not_refused_by_the_page():
+    # crates/mzlab-cli/src/flow_command_tests.rs: the route the page asks (flow/line) and the command line give the same plan; here the page replays that answer
+    m = json.loads(node("flow_grafico_nodo.js"))["migrate"]
+    assert m["before"] == ["f||err.flow.step.version|available=2,step=table.filter,version=1"] or any("err.flow.step.version" in x for x in m["before"])
+    assert m["calls"] == ["mzlab-cli flow run"]
+    assert m["step"] == "table.filter@2" and m["after"] == []
+
+
 def test_the_js_checker_gives_the_answers_of_the_rust_checker_for_meta_compare():
     # crates/mzlab-cli/src/flow_compare.rs `check` writes the answers (MZLAB_UPDATE_FLOW_CASES=1 cargo test -p mzlab-cli --lib the_shared_cases)
     cases = json.loads(COMPARE_CASES.read_text(encoding="utf-8"))
