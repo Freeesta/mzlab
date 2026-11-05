@@ -34,9 +34,12 @@ try:
             for w in ("Full Scan", "+ Chromatogram", "+ Spectrum", "+ RT-m/z map", "Method"): assert w.lower() in pg.inner_text("#v-data").lower(), w
         step("first view of Data: no Italian", first_view)
         def sidebar():
-            for t in ("calc", "addloss", "lists"):
+            for t in ("addloss", "lists"):      # the calculator is the top of Adducts & losses and has no button of its own
                 pg.click(f"#stbar [data-cmd={t}]"); attendi(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
                 it = italian(pg); assert not it, (t, it)
+                if t == "addloss":
+                    for sub in ("losses", "cont"):
+                        pg.click(f"#al-t-{sub}"); frames(pg, 2); it = italian(pg); assert not it, (sub, it)
             pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)
             close_side(pg); frames(pg, 3)
         step("sidebar tabs: calculator, losses, lists", sidebar)
