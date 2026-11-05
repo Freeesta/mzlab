@@ -239,14 +239,14 @@ enum Cell {
 impl Cell {
     fn of(hr: &HrProfile) -> Cell {
         if hr.on {
-            Cell::Ppm((3e-6f64).ln_1p())
+            Cell::Ppm(libm::log1p(3e-6f64))
         } else {
             Cell::Da
         }
     }
     fn at(&self, m: f64) -> i64 {
         match self {
-            Cell::Ppm(w) => (m.max(1e-9).ln() / w).floor() as i64,
+            Cell::Ppm(w) => (libm::log(m.max(1e-9)) / w).floor() as i64,
             Cell::Da => (m / 0.1).floor() as i64,
         }
     }

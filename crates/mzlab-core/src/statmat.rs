@@ -215,11 +215,11 @@ fn eigh2(a: f64, b: f64, c: f64) -> (Vec<f64>, Vec<f64>) {
     if b == 0.0 {
         return if a > c { (vec![c, a], vec![0.0, 1.0, 1.0, 0.0]) } else { (vec![a, c], vec![1.0, 0.0, 0.0, 1.0]) };
     }
-    let (mean, half) = ((a + c) / 2.0, ((a - c) / 2.0).hypot(b));
+    let (mean, half) = ((a + c) / 2.0, libm::hypot((a - c) / 2.0, b));
     let (lo, hi) = (mean - half, mean + half);
     // eigenvector of the larger eigenvalue ∝ (b, hi − a) (or (hi − c, b)); take the better conditioned one
     let (mut x, mut y) = if (hi - a).abs() >= (hi - c).abs() { (b, hi - a) } else { (hi - c, b) };
-    let nrm = x.hypot(y);
+    let nrm = libm::hypot(x, y);
     (x, y) = (x / nrm, y / nrm);
     // numpy (LAPACK, lower triangle): b < 0 → (−, +); b > 0 → (+, +) when a <= c, (−, −) when a > c
     let flip = if b < 0.0 { x > 0.0 } else if a <= c { x < 0.0 } else { x > 0.0 };

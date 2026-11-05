@@ -115,7 +115,7 @@ mod tests {
             let d: Vec<f64> = (0..n * m)
                 .map(|x| {
                     let (i, j) = ((x / m) as f64, x % m);
-                    let sig: f64 = (0..bumps).map(|b| (-((i - n as f64 * (0.25 + 0.25 * b as f64)) / (n as f64 * 0.05)).powi(2)).exp() * spectra[b][j]).sum();
+                    let sig: f64 = (0..bumps).map(|b| libm::exp(-((i - n as f64 * (0.25 + 0.25 * b as f64)) / (n as f64 * 0.05)).powi(2)) * spectra[b][j]).sum();
                     sig + rnd()
                 })
                 .collect();

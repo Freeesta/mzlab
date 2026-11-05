@@ -69,13 +69,13 @@ fn geomspace(start: f64, stop: f64, num: usize) -> Vec<f64> {
     if start <= 0.0 || stop <= 0.0 {
         return Vec::new();
     }
-    let log_start = start.log10();
-    let log_stop = stop.log10();
+    let log_start = libm::log10(start);
+    let log_stop = libm::log10(stop);
     let step = (log_stop - log_start) / ((num - 1) as f64);
     let mut res = Vec::with_capacity(num);
     for i in 0..num {
         let y = log_start + (i as f64) * step;
-        res.push(10.0_f64.powf(y));
+        res.push(libm::pow(10.0_f64, y));
     }
     if let Some(first) = res.first_mut() {
         *first = start;
@@ -116,7 +116,7 @@ fn fit_sigmoid(d: &[f64], v: &[f64], v_mean: f64) -> Option<SigmoidFit> {
             for &s in &s_grid {
                 let mut sse = 0.0;
                 for (&dk, &vk) in d.iter().zip(v.iter()) {
-                    let fit_k = ymax / (1.0 + (-(dk - dp50) / s).exp());
+                    let fit_k = ymax / (1.0 + libm::exp(-(dk - dp50) / s));
                     let diff = vk - fit_k;
                     sse += diff * diff;
                 }
@@ -139,7 +139,7 @@ fn fit_sigmoid(d: &[f64], v: &[f64], v_mean: f64) -> Option<SigmoidFit> {
     } else {
         f64::NAN
     };
-    let dp_appearance = best_dp50 - best_s * 9.0_f64.ln();
+    let dp_appearance = best_dp50 - best_s * libm::log(9.0_f64);
 
     Some(SigmoidFit {
         ymax: best_ymax,

@@ -1,5 +1,5 @@
 """HR_PANNELLO 1: the panels of the drawer in the high-resolution world are compact: no clipped text at 1280, 1440 and 1680 px, one title (the one of the drawer),
-m/z, ppm and search in compact rows, the two filters of the reference lists as small segmented controls."""
+m/z, ppm and search in compact rows, the view switch of the reference lists as a small segmented control."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -43,9 +43,11 @@ try:
         def lists():
             drawer(pg, "lists"); ready(pg)
             rows = pg.evaluate("[...document.querySelectorAll('#sb-panel-lists .lb-row')].map(r => [r.querySelectorAll('input').length, r.querySelectorAll('.seg').length])")
-            assert rows == [[2, 0], [1, 0], [0, 1]], rows
+            assert rows == [[2, 0]], rows          # m/z and ppm on one row (the search is the m/z box)
+            segs = pg.evaluate("[...document.querySelectorAll('#sb-panel-lists .seg')].map(e => Math.round(e.getBoundingClientRect().height))")
+            assert len(segs) == 1 and segs[0] < 30, segs          # the view switch (reference / target) is the one small segmented control; the sources are checkboxes
             rh = pg.evaluate("document.querySelector('#lst-tbody tr').getBoundingClientRect().height"); assert rh < 34, rh
-        step("reference lists: m/z and ppm on one row, search on one, two small segmented controls, compact rows", lists)
+        step("reference lists: m/z and ppm on one row, one small segmented control, compact rows", lists)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

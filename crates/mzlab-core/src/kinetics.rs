@@ -34,7 +34,7 @@ fn solve_decay(t: &[f64], yy: &[f64]) -> (f64, f64, f64) {
     let span = (t.iter().copied().fold(f64::MIN, f64::max) - t.iter().copied().fold(f64::MAX, f64::min)).max(1e-9);
     let mut ks = vec![0.0];
     ks.extend(geomspace(1e-3 / span, 50.0 / span, 160));
-    let shape = |k: f64| t.iter().map(|x| (-k * x).exp()).collect::<Vec<f64>>();
+    let shape = |k: f64| t.iter().map(|x| libm::exp(-k * x)).collect::<Vec<f64>>();
     for _ in 0..2 {
         let rows: Vec<f64> = ks.iter().map(|&k| best_on_grid(&[k], yy, &shape, false).2).collect();
         let i = argmin(&rows);
@@ -50,7 +50,7 @@ fn solve_decay(t: &[f64], yy: &[f64]) -> (f64, f64, f64) {
 /// First-order decay `y = A exp(-k t)`, `k >= 0`, with residual-bootstrap 95% interval of `k`.
 pub fn fit_decay(t: &[f64], y: &[f64], n_boot: usize, seed: u32) -> Value {
     let (a, k, sse) = solve_decay(t, y);
-    let fit: Vec<f64> = t.iter().map(|x| a * (-k * x).exp()).collect();
+    let fit: Vec<f64> = t.iter().map(|x| a * libm::exp(-k * x)).collect();
     let res: Vec<f64> = y.iter().zip(&fit).map(|(a, b)| a - b).collect();
     let mut rng = Pcg64::new(seed);
     let ks: Vec<f64> = (0..n_boot)
@@ -74,9 +74,9 @@ pub fn fit_decay(t: &[f64], y: &[f64], n_boot: usize, seed: u32) -> Value {
 fn consecutive_shape(t: &[f64], k1: f64, k2: f64) -> Vec<f64> {
     let d = k2 - k1;
     if d.abs() < 1e-6 * k1.max(1e-9) {
-        return t.iter().map(|x| k1 * x * (-k1 * x).exp()).collect();
+        return t.iter().map(|x| k1 * x * libm::exp(-k1 * x)).collect();
     }
-    t.iter().map(|x| k1 / d * ((-k1 * x).exp() - (-k2 * x).exp())).collect()
+    t.iter().map(|x| k1 / d * (libm::exp(-k1 * x) - libm::exp(-k2 * x))).collect()
 }
 
 fn solve_consecutive(t: &[f64], k1: f64, k2s: &[f64], yy: &[f64]) -> (f64, f64, f64) {
@@ -97,7 +97,7 @@ pub fn fit_consecutive(t: &[f64], y: &[f64], k1: f64, n_boot: usize, seed: u32) 
             solve_consecutive(t, k1, &k2s, &yb).1
         })
         .collect();
-    let t_max = if k2 > 0.0 && (k2 - k1).abs() > 1e-9 { (k2 / k1).ln() / (k2 - k1) } else { 1.0 / k1 };
+    let t_max = if k2 > 0.0 && (k2 - k1).abs() > 1e-9 { libm::log(k2 / k1) / (k2 - k1) } else { 1.0 / k1 };
     let o = Obj::new()
         .n("s", s)
         .n("k2", k2)
@@ -113,7 +113,7 @@ fn aicc(sse: f64, n: usize, k: usize) -> f64 {
         return f64::NAN;
     }
     let (n, k) = (n as f64, k as f64);
-    n * (sse / n).ln() + 2.0 * k + 2.0 * k * (k + 1.0) / (n - k - 1.0)
+    n * libm::log(sse / n) + 2.0 * k + 2.0 * k * (k + 1.0) / (n - k - 1.0)
 }
 
 fn get(v: &Value, k: &str) -> f64 {
