@@ -49,7 +49,8 @@ pub(super) struct Parte {
     pub(super) bpc: Vec<f64>,
     #[cfg(feature = "estesi")]
     pub(super) bpc_seen: usize,
-    /// A scan with points has a block version the engine's reader does not decode (it would list the sample with no scans): the module reads it.
+    /// A scan with points has a block version the engine's reader does not decode (it would list the sample with no scans), or an MRM block is sparse
+    /// (the engine reads MRM dense only): the module reads it.
     #[cfg(feature = "sciex")]
     other_version: bool,
     /// `scans` and `indice` are built (`apri_solo` builds only the injection it is asked for; the others on their first use).
@@ -384,9 +385,19 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
     let mut win = Window::until(scan, scan_len, stop);
     let (mut scans, mut indice) = (Vec::new(), Vec::new());
     #[cfg(feature = "sciex")]
-    let mut other = false;
+    let (mut other, mut mrm_seen) = (false, vec![false; w.experiments.len().max(1)]);
     for (i, r) in w.records.iter().enumerate() {
-        if !scan::point_count(&mut win, scan_len, r.at, r.end)?.is_some_and(|c| c > 0) {
+        let points = scan::point_count(&mut win, scan_len, r.at, r.end)?;
+        // the first MRM block of each experiment: a sparse (scheduled) one starts with `-(N + 0.01)`, even when the method has no `sMRM` stream to say so
+        #[cfg(feature = "sciex")]
+        if points.is_none() && r.size >= 4 && !w.scan_experiment(r.experiment) {
+            if let Some(seen) = mrm_seen.get_mut(r.experiment).filter(|s| !**s) {
+                *seen = true;
+                other |= scan::read_mrm(&mut win, scan_len, r.at, 1)?
+                    .is_some_and(|v| v.first().is_some_and(|x| *x < 0.0));
+            }
+        }
+        if !points.is_some_and(|c| c > 0) {
             continue;
         }
         #[cfg(feature = "sciex")]

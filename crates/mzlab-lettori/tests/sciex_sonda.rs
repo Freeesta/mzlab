@@ -72,3 +72,22 @@ fn a_pair_is_a_variant_when_any_of_its_samples_is() {
     assert!(!l.variante(0) && l.variante(1));
     assert!(mzlab_lettori::motivi(&mut *l, 0).contains(&"variante"));
 }
+
+/// A chromatogram-only MRM sample whose blocks are sparse while its method has no `sMRM` stream (the scheduling is only in the data): the block itself
+/// says the engine cannot read it, so the probe answers `"variante"` and the module reads all 136 traces.
+#[test]
+fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
+    let Some(dir) = genera("wiff_mrm_rado.py") else {
+        return;
+    };
+    let mut l = apri(&dir, "mrmrado");
+    assert!(l.variante(0), "its sparse MRM blocks are read by the module only");
+    assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
+    let srm = l
+        .cromatogrammi(0)
+        .unwrap()
+        .iter()
+        .filter(|c| c.id.starts_with("SRM SIC"))
+        .count();
+    assert_eq!(srm, 136);
+}
