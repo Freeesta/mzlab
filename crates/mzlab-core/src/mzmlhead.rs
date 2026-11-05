@@ -281,6 +281,18 @@ impl<R: ReadAt> Mzml<R> {
         }
         t.truncate(n);
         y.truncate(n);
+        // a NaN or infinite point is a damaged file, as in the parser (`mzml::finish_chromatogram`)
+        if let Some((cosa, v)) = t
+            .iter()
+            .map(|v| ("time", *v))
+            .chain(y.iter().map(|v| ("intensity", *v)))
+            .find(|(_, v)| !v.is_finite())
+        {
+            return Err(Error::new("err.file.nonFiniteTrace")
+                .with("trace", &c.id)
+                .with("what", cosa)
+                .with("value", v));
+        }
         Ok((t, y))
     }
 

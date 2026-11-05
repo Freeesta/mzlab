@@ -186,3 +186,26 @@ fn seconds_by_unit_name_or_accession_alone() {
     assert!(!is_seconds(Some("minute"), Some("UO:0000031")));
     assert!(!is_seconds(None, None));
 }
+
+/// A NaN or infinite peak is `err.file.nonFinite` with or without the helpers (a helper that decodes it hands the spectrum back to the parser).
+#[test]
+fn a_non_finite_peak_is_an_error_with_or_without_helpers() {
+    let enc = |v: &[f64]| {
+        base64::engine::general_purpose::STANDARD.encode(v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>())
+    };
+    for bad in [f64::NAN, f64::INFINITY] {
+        let mut s = String::from(r#"<mzML><run><spectrumList>"#);
+        for i in 0..40 {
+            let m = if i == 21 { bad } else { 150.0 };
+            s += &format!(
+                r#"<spectrum index="{i}" id="scan={i}" defaultArrayLength="2"><cvParam accession="MS:1000511" value="1"/><binaryDataArrayList><binaryDataArray><cvParam accession="MS:1000523"/><cvParam accession="MS:1000514"/><binary>{}</binary></binaryDataArray><binaryDataArray><cvParam accession="MS:1000523"/><cvParam accession="MS:1000515"/><binary>{}</binary></binaryDataArray></binaryDataArrayList></spectrum>"#,
+                enc(&[100.0, m]),
+                enc(&[5.0, 6.0])
+            );
+        }
+        s += "</spectrumList></run></mzML>";
+        for helpers in [0, 1, 3] {
+            assert_eq!(items(&s, helpers).1.as_deref(), Some("err.file.nonFinite"), "{bad}, {helpers} helpers");
+        }
+    }
+}

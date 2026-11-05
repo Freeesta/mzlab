@@ -65,9 +65,10 @@ pub(crate) fn decode_peaks<'a>(
     Ok(p)
 }
 
-/// The spectrum of the header `s` with its decoded arrays `p`.
+/// The spectrum of the header `s` with its decoded arrays `p`; a NaN or infinite RT or peak is a damaged file (`err.file.nonFinite`, like the readers'
+/// guard `mzlab_lettori::finiti`), checked here because both the parser and the helpers' answers pass through.
 #[inline(never)]
-pub(crate) fn assemble(s: Spec, p: Peaks) -> (Spectrum, Option<Mobility>) {
+pub(crate) fn assemble(s: Spec, p: Peaks) -> Result<(Spectrum, Option<Mobility>)> {
     let Peaks {
         mut mz,
         mut it,
@@ -88,13 +89,26 @@ pub(crate) fn assemble(s: Spec, p: Peaks) -> (Spectrum, Option<Mobility>) {
     }
     // an array of another length does not belong to these peaks
     let mob = mob.filter(|m| m.len() == n && n > 0);
+    let guasto = std::iter::once(("rt", s.rt))
+        .chain(mz.iter().map(|v| ("mz", *v)))
+        .chain(it.iter().map(|v| ("intensity", f64::from(*v))))
+        .chain(wide.iter().flatten().map(|v| ("intensity", *v)))
+        .chain(mob.iter().flatten().map(|v| ("mobility", *v)))
+        .find(|(_, v)| !v.is_finite());
+    if let Some((cosa, v)) = guasto {
+        let chi = if s.id.is_empty() { (s.index + 1).to_string() } else { s.id.clone() };
+        return Err(crate::error::Error::new("err.file.nonFinite")
+            .with("scan", chi)
+            .with("what", cosa)
+            .with("value", v));
+    }
     let mobility = (mob.is_some() || s.mobility_scan.is_some()).then_some(Mobility {
         index: s.index,
         values: mob,
         unit: mob_unit,
         scan: s.mobility_scan,
     });
-    (
+    Ok((
         Spectrum {
             index: s.index,
             id: s.id,
@@ -109,5 +123,5 @@ pub(crate) fn assemble(s: Spec, p: Peaks) -> (Spectrum, Option<Mobility>) {
             wide,
         },
         mobility,
-    )
+    ))
 }
