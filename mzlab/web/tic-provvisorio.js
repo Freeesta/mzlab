@@ -51,12 +51,12 @@ function sync() {
   const r = loading && !open && !S.sess ? pick() : null;
   if (!r) { hide(); return; }
   if (!box) {
-    const up = document.getElementById("up");
+    const up = document.getElementById("start");
     if (!up) return;
     box = document.createElement("section"); box.id = "ticprov"; box.className = "card";
     box.innerHTML = '<h3 id="ticprov-h"></h3><p class="sm muted" id="ticprov-n"></p><canvas id="ticprov-cv"></canvas>';
     box.setAttribute("aria-labelledby", "ticprov-h");
-    up.insertAdjacentElement("afterend", box);
+    up.insertAdjacentElement("afterend", box); // below the drop area, so the drop target never moves under the pointer
   }
   const t = /** @type {{ rt: number[], y: number[] }} */ (tics.get(r.name)), pc = r.state === "done" ? 100 : Math.round(r.pc || 0);
   /** @type {HTMLElement} */ (box.querySelector("#ticprov-n")).textContent = T("load.tprov.note", { pc: I18N.fix(pc, 0) });
