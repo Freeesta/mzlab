@@ -79,11 +79,11 @@ try:
         step("periodic table: hover shows masses and isotopes, click pins", periodic)
         def adducts():
             pg.click("#refx"); attendi(pg, "!document.querySelector('#refdlg').open")      # the periodic table is a modal dialog: close it before the calculator
-            pg.evaluate("QQQRef.open('ad')"); attendi(pg, "BARRA.curTab === 'calc' && !!document.querySelector('#calcin').offsetParent"); pg.fill("#calcin", "C14H13F4N3O2S"); attendi(pg, "document.querySelector('#calcout').innerText.includes('386')")
-            t = pg.inner_text("#calcout"); assert "364" in t and "386" in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+ in the calculator, which now holds the adducts
+            pg.evaluate("QQQRef.open('ad')"); attendi(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#calcin').offsetParent"); pg.fill("#calcin", "C14H13F4N3O2S"); attendi(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('386')")
+            t = pg.inner_text("#sb-panel-adducts"); assert "364" in t and "386" in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+ in the Adducts tab under the calculator
             pg.screenshot(path=SH + "66_adducts.png")      # docked in the sidebar: no close button
             pg.evaluate("QQQRef.open('ls')"); attendi(pg, "!!document.querySelector('#nl-list .nlr[data-f=g42]')"); m = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#nl-list .nlr')].map(r=>[r.dataset.f,r.querySelector('.nlm').textContent]))"); assert m.get("H2O") == "18" and m.get("g42") == "42", m
-            pg.click("#refx")
+            if pg.evaluate("Q('#refdlg').open"): pg.click("#refx")      # the tables are docked in the sidebar; a dialog is closed only if one is open
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
         if pg.evaluate("Q(\"#refdlg\").open"): pg.evaluate("Q(\"#refdlg\").close()")
         def isotopes():

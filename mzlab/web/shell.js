@@ -330,8 +330,13 @@ async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AV
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
   try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;syncWork();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok());OPENNOW.note()}}}
+// a file the user gives with "#" in its name enters with "_" (hashFree, conversione.js) and the notice says so, once per .wiff pair
+function hashRename(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ rep){const taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.map(f=>f.name)];
+  return files.map(f=>{const n=f instanceof File&&!f.mzlabNat&&!f.mzlabModulo?hashFree(f.name,taken):null;if(!n)return f;taken.push(n);if(!/\.scan$/i.test(n))rep.notes.push(I18N.t("load.note.hashRenamed",{from:f.name,to:n}));
+    return CartCarica.setDir(new File([f],n,{type:f.type,lastModified:f.lastModified}),CartCarica.dir(f))})}
 async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | undefined} */ into,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){
   const rep=/** @type {CaricaRep} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {FileCarica[]} */ ([]);
+  files=hashRename(files,rep);
   const one=async (/** @type {FileCarica} */ f)=>{const isDam=isMethodFile(f.name);
     if(signal.aborted){CONVROWS.finish(f.name,"cancel");PROGRESSO.end(f.name);return}
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);

@@ -8,7 +8,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, str(e).split("\n")[0][:240]))
 EDGES = """() => { const e = s => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.right]; };
   const t = document.createRange(); t.selectNodeContents(document.querySelector('#calcres')); const tr = t.getBoundingClientRect(), w = document.querySelector('#calcres').getBoundingClientRect();
-  return { input: e('#calcin'), well: e('#calcres'), nl: e('#calc-nl'), pad: e('#calcpad'), textMid: (tr.left + tr.right) / 2, wellMid: (w.left + w.right) / 2,
+  return { input: e('#al-find .sb-search-box'), well: e('#calcres'), nl: e('#calc-nl'), pad: e('#calcpad'), textMid: (tr.left + tr.right) / 2, wellMid: (w.left + w.right) / 2,
     textVMid: (tr.top + tr.bottom) / 2, wellVMid: (w.top + w.bottom) / 2 }; }"""
 def check(pg):
     d = pg.evaluate(EDGES)

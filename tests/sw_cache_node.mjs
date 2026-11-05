@@ -1,5 +1,5 @@
 // Loads mzlab/web/sw.js with a mocked service-worker scope: app files are cache-first by site version (hit, miss -> network -> checked against
-// the manifest -> put), navigations are network-first, a worker of an older version answers from its cache only the files the newer one did not change, the background fill, unchanged files carried over from the previous version, old caches go.
+// the manifest -> put), navigations are network-first, a worker of an older version answers from its cache only the files the newer one did not change, the background fill (retried after a failed file), unchanged files carried over from the previous version, old caches go.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -16,7 +16,7 @@ const manifest = (over = {}) => JSON.stringify({ app: "abc", files: Object.fromE
 
 /** Runs sw.js; `net` maps a path to its body (undefined: 404, "throw": offline). */
 function mondo(net = { ...FILES }, man = manifest()) {
-  const listeners = {}, timers = [], stores = new Map(), st = { fetches: [], updates: 0, waits: 0, offline: false, net };
+  const listeners = {}, timers = [], stores = new Map(), st = { fetches: [], updates: 0, waits: 0, offline: false, net, skew: 0 };
   const key = (r, o) => { const u = new URL(typeof r === "string" ? r : r.url); if (o?.ignoreSearch) u.search = ""; return u.href; };
   const open = async name => {
     if (!stores.has(name)) stores.set(name, new Map());
@@ -29,7 +29,7 @@ function mondo(net = { ...FILES }, man = manifest()) {
   };
   const sw = { addEventListener: (n, f) => { listeners[n] = f; }, skipWaiting() {}, clients: { claim() {} }, registration: { update: async () => { st.updates++; } } };
   const ctx = {
-    self: sw, location: { origin: "https://x.test", href: O + "sw.js" }, URL, Headers, Response, Request, crypto: crypto.webcrypto, importScripts() {},
+    self: sw, location: { origin: "https://x.test", href: O + "sw.js" }, Date: class extends Date { static now() { return Date.now() + st.skew; } }, URL, Headers, Response, Request, crypto: crypto.webcrypto, importScripts() {},
     setTimeout: (f, ms) => { f.ms = ms; timers.push(f); return timers.length; },
     caches: { open, keys: async () => [...stores.keys()], delete: async n => stores.delete(n) },
     fetch: async (r, init) => {
@@ -201,5 +201,26 @@ function mondo(net = { ...FILES }, man = manifest()) {
   const n = w.st.fetches.length;
   w.timers[0](); await new Promise(r => setTimeout(r, 50));
   assert.equal(w.st.fetches.length, n, "marked: no second fill");
+}
+{ // a fill with a failed file leaves no mark and is started again by a later request, after a pause, fetching only what is still missing
+  const w = mondo({ ...FILES, "static/lazy.js": undefined });
+  w.listeners.install(); w.timers[0]();
+  const cache = await w.ctx.caches.open("mzlab-app-abc");
+  for (let i = 0; i < 200 && !await cache.match(O + "static/big.wasm"); i++) await new Promise(r => setTimeout(r, 10));
+  await new Promise(r => setTimeout(r, 50));
+  assert.equal(await cache.match(O + ".fill-done"), undefined, "incomplete: no mark");
+  w.st.net["static/lazy.js"] = FILES["static/lazy.js"];
+  const t = w.timers.length;
+  await w.get("static/app.js");
+  assert.equal(w.timers.length, t, "no retry before the pause");
+  w.st.skew = 31000;
+  const n = w.netCount("static/big.wasm");
+  await w.get("static/app.js");
+  assert.equal(w.timers.length, t + 1, "a request after the pause starts the fill again");
+  w.timers[t]();
+  for (let i = 0; i < 200 && !await cache.match(O + ".fill-done"); i++) await new Promise(r => setTimeout(r, 10));
+  assert.ok(await cache.match(O + "static/lazy.js"), "the missing file is stored");
+  assert.ok(await cache.match(O + ".fill-done"));
+  assert.equal(w.netCount("static/big.wasm"), n, "files already stored are not fetched again");
 }
 console.log("sw_cache_node ok");

@@ -66,7 +66,7 @@ const AgilentD = (() => {
 
   // name of the mzML of a run: «x.D» → «x.mzML»; two runs of the same name in different folders take the name of the folder above (as cartella-carica.js does for equal names)
   function mzmlName(run, taken) {
-    const base = run.name.replace(/\.d$/i, "");
+    const base = run.name.replace(/\.d$/i, "").replace(/#/g, "_");
     const above = run.root.split("/").filter(Boolean).slice(0, -1).pop() || "";
     const seen = new Set(taken.map(n => n.toLowerCase()));
     let name = base + ".mzML";
