@@ -16,6 +16,9 @@ use crate::trace::filled;
 /// Half width, m/z, of the part of the apex spectrum kept around a feature; wider than any pattern the finder walks.
 const WINDOW: f64 = 12.0;
 
+/// One spectrum as (m/z, intensity) columns.
+type Spectrum = (Vec<f64>, Vec<f64>);
+
 /// The `Config` of the finder.
 pub fn config(s: &IsoFinder) -> Config {
     Config {
@@ -49,7 +52,7 @@ fn apex_spectra<R: ReadAt>(
     index: &mut Index<R>,
     si: usize,
     f: &FileFeatures,
-) -> Result<(Vec<u32>, Vec<(Vec<f64>, Vec<f64>)>)> {
+) -> Result<(Vec<u32>, Vec<Spectrum>)> {
     let n_scans = index.sections[si].n_scans;
     let mut slot = filled(n_scans, u32::MAX)?;
     let mut near: Vec<Vec<f64>> = Vec::new();
