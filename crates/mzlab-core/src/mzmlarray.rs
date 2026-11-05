@@ -217,5 +217,21 @@ pub(crate) fn decode_array(
     Ok((f64s, f32s))
 }
 
+/// A chromatogram whose time or intensity holds a NaN or infinite point is a damaged file (`err.file.nonFiniteTrace`, like the readers' guard
+/// `mzlab_lettori::finiti`): the parser (`mzml::finish_chromatogram`) and the page's chromatogram reader (`Mzml::chromatogram`) both ask here.
+pub(crate) fn punti_finiti(id: &str, t: &[f64], y: &[f64]) -> Result<()> {
+    let guasto = t
+        .iter()
+        .map(|v| ("time", *v))
+        .chain(y.iter().map(|v| ("intensity", *v)));
+    match guasto.into_iter().find(|(_, v)| !v.is_finite()) {
+        Some((cosa, v)) => Err(Error::new("err.file.nonFiniteTrace")
+            .with("trace", id)
+            .with("what", cosa)
+            .with("value", v)),
+        None => Ok(()),
+    }
+}
+
 #[cfg(test)]
 mod tests_decode;
