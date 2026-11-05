@@ -122,3 +122,30 @@ fn samples_without_a_method_of_their_own_read_the_transitions_of_method_one() {
         }
     }
 }
+
+/// A batch that mixes methods stores one `MethodN` per distinct method, so `MethodN` of sample N can be another method (here Method2, a full scan,
+/// next to sample 2): each sample reads the method whose `.dam` file name its `SampleDABE/DATA` gives.
+#[test]
+fn a_sample_reads_the_method_its_dam_file_names_not_the_one_with_its_number() {
+    let Some((dir, want)) = reference() else {
+        return;
+    };
+    let want = want["transizioni"]["transitions"].as_array().unwrap();
+    let ole = mzlab_core::wiff::container(
+        std::fs::read(dir.join("transizioni_misto.wiff")).unwrap(),
+        "transizioni_misto",
+    )
+    .unwrap();
+    let mut scan = std::fs::read(dir.join("transizioni_misto.wiff.scan")).unwrap();
+    for n in 1..=3 {
+        let w = mzlab_core::wiff::Wiff::open(&ole, "transizioni_misto", Some(scan.len() as u64), n)
+            .unwrap();
+        let run = w.run(&mut scan).unwrap();
+        let srm = run
+            .chromatograms
+            .iter()
+            .filter(|c| c.kind == mzlab_core::mzml::ChromKind::Srm)
+            .count();
+        assert_eq!(srm, want.len(), "sample {n}");
+    }
+}

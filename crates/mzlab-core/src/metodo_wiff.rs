@@ -233,7 +233,8 @@ fn ms_sec(method: Option<&crate::methodinfo::Method>, st: Option<&str>) -> Optio
 
 /// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `avvisi`.
 pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
-    let method = or_fallback(method_of_sample(ole, n), ole, n);
+    let method = method_of_sample(ole, crate::wiff::method_no(ole, n))
+        .or_else(|| or_fallback(method_of_sample(ole, n), ole, n));
     let sample = format!("SampleSubtree/Sample{n}/");
     let (log, data, cfr, props) = read_parts(ole, &sample);
     let prop = |id| {
