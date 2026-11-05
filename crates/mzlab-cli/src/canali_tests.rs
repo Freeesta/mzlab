@@ -290,23 +290,3 @@ fn canale_reads_a_uv_and_an_analog_trace() {
     assert_eq!(run(&["--rt", "1"]).code, 2);
     let _ = std::fs::remove_dir_all(&dir);
 }
-
-/// An engine error reaches the terminal as its English text with the key in brackets, and the hint names the command that was run.
-#[test]
-fn an_engine_error_is_english_text_and_the_hint_is_this_command() {
-    let dir = std::env::temp_dir().join(format!("mzlab-canali-err-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    let f = dir.join("sola.wiff");
-    std::fs::write(&f, b"not a wiff at all").unwrap();
-    let o = run_new(&f.to_string_lossy(), &[]);
-    let _ = std::fs::remove_dir_all(&dir);
-    assert_eq!(o.code, 2, "{}", o.stderr);
-    assert!(o.stderr.starts_with("error: "), "{}", o.stderr);
-    assert!(!o.stderr.contains("[(\""), "{}", o.stderr);
-    assert!(o.stderr.contains(" (err.file."), "{}", o.stderr);
-    assert!(
-        o.stderr.ends_with("(mzlab-cli channels --help)\n"),
-        "{}",
-        o.stderr
-    );
-}

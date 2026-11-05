@@ -79,56 +79,5 @@ pub(crate) fn con_aiuto(args: &[String], mut o: crate::Outcome) -> crate::Outcom
 }
 
 #[cfg(test)]
-mod tests {
-    use super::umano;
-    use mzlab_core::error::Error;
-
-    #[test]
-    fn a_key_becomes_its_english_text_with_the_key_kept() {
-        let e = Error::new("err.file.wiffNoScan").with("name", "X Y.wiff");
-        assert_eq!(
-            umano(&e.to_string()),
-            "The .wiff.scan file of X Y.wiff is missing: both are needed, with the same name. (err.file.wiffNoScan)"
-        );
-        let e = Error::new("err.file.zlib")
-            .with("detail", "truncated")
-            .with("at", 12);
-        assert_eq!(
-            umano(&e.to_string()),
-            "The file is damaged: a compressed peak array cannot be unpacked (truncated). Copy the file again or export it again from the instrument software. (err.file.zlib, at=12)"
-        );
-    }
-
-    #[test]
-    fn every_key_of_the_catalogue_is_found() {
-        let keys: Vec<&str> = super::CATALOGO
-            .lines()
-            .filter_map(|l| {
-                l.trim()
-                    .strip_prefix('"')?
-                    .split_once("\": \"")
-                    .map(|(k, _)| k)
-            })
-            .filter(|k| k.starts_with("err.") || k.starts_with("error."))
-            .collect();
-        assert!(keys.len() > 300, "{}", keys.len());
-        for k in keys {
-            assert!(
-                super::testo_di(k).is_some_and(|t| !t.is_empty() && !t.contains("\n")),
-                "{k}"
-            );
-        }
-    }
-
-    #[test]
-    fn other_messages_pass_unchanged() {
-        for m in [
-            "unknown option --x",
-            "err.nonexistent.key a=1",
-            "no input file",
-            "error: x",
-        ] {
-            assert_eq!(umano(m), m);
-        }
-    }
-}
+#[path = "testo_errore_tests.rs"]
+mod tests;
