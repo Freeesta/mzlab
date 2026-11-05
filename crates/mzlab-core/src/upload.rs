@@ -401,6 +401,15 @@ pub fn senza_sha1(fs: &mut FileSet) {
     }
 }
 
+/// The name of the dataset the members make, the one `mzlab-cli` gives the path: the shortest first component of their names (`X.raw`; `X.wiff` beside
+/// `X.wiff.scan`; the folder `X.D`), whatever name the page gives its list entry; `None` without members.
+pub fn nome_insieme(membri: &[Impronta]) -> Option<&str> {
+    membri
+        .iter()
+        .filter_map(|m| m.nome.split('/').next().filter(|s| !s.is_empty()))
+        .min_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)))
+}
+
 fn dalla_tabella(
     mut t: Table,
     l: &mut dyn Lettore,
@@ -418,7 +427,7 @@ fn dalla_tabella(
     let mut source = Out::default();
     source_head(
         &mut source,
-        name,
+        nome_insieme(membri).unwrap_or(name),
         membri.iter().map(|m| m.dim).sum(),
         &probe,
         &sha256,
