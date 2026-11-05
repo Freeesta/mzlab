@@ -138,6 +138,11 @@ fn finder<R: ReadAt>(
 }
 
 #[cfg(not(feature = "untargeted"))]
-fn finder<R: ReadAt>(_: &mut Index<R>, _: &mut FileFeatures, _: &Params, _: &IsoFinder) -> Result<()> {
+fn finder<R: ReadAt>(
+    _: &mut Index<R>,
+    _: &mut FileFeatures,
+    _: &Params,
+    _: &IsoFinder,
+) -> Result<()> {
     Err(mzlab_core::error::Error::new("error.badRecipe"))
 }

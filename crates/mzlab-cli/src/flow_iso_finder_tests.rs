@@ -123,7 +123,11 @@ fn the_finder_reads_the_apex_spectrum_where_the_averagine_grouping_reads_the_row
     assert!(joined(&fin, OFF, OFF_M1, 1));
     assert!(joined(&fin, Z3, Z3 + C13 / 3.0, 3) && joined(&fin, Z3, Z3 + 2.0 * C13 / 3.0, 3));
     // a tolerance below the offset loses the M+1 that is 12 ppm off
-    let tight = &["det.isotopes=finder", "det.finder_ppm=2", "det.finder_abs_da=0.0005"];
+    let tight = &[
+        "det.isotopes=finder",
+        "det.finder_ppm=2",
+        "det.finder_abs_da=0.0005",
+    ];
     let (tight, _) = features(&run("tight", tight));
     assert_eq!(iso(&tight, OFF_M1), (0, false, 0));
 }
@@ -137,8 +141,14 @@ fn every_parameter_of_the_finder_can_be_set_from_the_command_line() {
         ("det.finder_ppm=8", "\"finder_ppm\":8"),
         ("det.finder_abs_da=0.003", "\"finder_abs_da\":0.003"),
         ("det.finder_max_charge=2", "\"finder_max_charge\":2"),
-        ("det.finder_elements=C,H,N,O", "\"finder_elements\":\"C,H,N,O\""),
-        ("det.finder_require_c13=false", "\"finder_require_c13\":false"),
+        (
+            "det.finder_elements=C,H,N,O",
+            "\"finder_elements\":\"C,H,N,O\"",
+        ),
+        (
+            "det.finder_require_c13=false",
+            "\"finder_require_c13\":false",
+        ),
         ("det.finder_auto=false", "\"finder_auto\":false"),
     ] {
         let files = run("set", &[on, set]);
@@ -152,6 +162,9 @@ fn every_parameter_of_the_finder_can_be_set_from_the_command_line() {
 #[test]
 fn a_parameter_of_the_finder_without_the_finder_changes_nothing() {
     let base = features(&run("avg_base", &[]));
-    let set = features(&run("avg_set", &["det.finder_ppm=8", "det.finder_auto=false"]));
+    let set = features(&run(
+        "avg_set",
+        &["det.finder_ppm=8", "det.finder_auto=false"],
+    ));
     assert_eq!(set, base);
 }

@@ -86,8 +86,16 @@ fn set_finder(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         "finder_auto" => g.auto = v.bool().ok_or_else(|| bad(step, k))?,
         "finder_elements" => {
             let list = v.str().ok_or_else(|| bad(step, k))?;
-            let els: Vec<&str> = list.split(',').map(str::trim).filter(|e| !e.is_empty()).collect();
-            if els.is_empty() || els.iter().any(|e| mzlab_core::isoscore::isotopes_of(e).is_none()) {
+            let els: Vec<&str> = list
+                .split(',')
+                .map(str::trim)
+                .filter(|e| !e.is_empty())
+                .collect();
+            if els.is_empty()
+                || els
+                    .iter()
+                    .any(|e| mzlab_core::isoscore::isotopes_of(e).is_none())
+            {
                 return Err(bad(step, k));
             }
             g.elements = els.join(",");
