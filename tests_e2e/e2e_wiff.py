@@ -54,6 +54,15 @@ try:
             shown(pg, 1)
             assert names(pg) == ["one"], names(pg)
         step("its .wiff.scan arrives in another loading: the pair is converted into one.mzML", late_scan)
+        def twins():                                     # loose files of two folders with one name: no folder pairs them, neither pair is opened
+            for d in ("a", "b"):
+                (D / d).mkdir(exist_ok=True)
+                for x in ("wiff", "wiff.scan"): shutil.copy(D / f"one.{x}", D / d / f"twin.{x}")
+            pg.set_input_files("#pick", [str(D / d / f"twin.{x}") for d in ("a", "b") for x in ("wiff", "wiff.scan")])
+            pg.wait_for_function("document.querySelector('#unopen') && !document.querySelector('#unopen').hidden && document.querySelector('#unopen').innerText.includes('twin.wiff')", timeout=60000)
+            assert ".wiff.scan" in pg.inner_text("#unopen"), pg.inner_text("#unopen")
+            assert names(pg) == ["one"], names(pg)
+        step("two same-named pairs without folders in one pick: an error, neither is opened", twins)
         def several():
             pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#fl-up [aria-busy=true]').forEach(r => window.__rows.add(r.dataset.up))).observe(document.getElementById('flst'), { childList: true, subtree: true })")
             pg.set_input_files("#pick", [str(D / "two.wiff.scan"), str(D / "two.wiff"), str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
