@@ -168,6 +168,7 @@ pub(crate) fn around_apex(rt: &[f64], apex: usize, half: f64) -> (usize, usize) 
 
 /// The quality columns of one row, computed from its trace without touching the table (so that rows can be measured on several threads).
 pub(crate) struct RowQ {
+    area: f64,
     area_win: f64,
     snr: f32,
     pub(crate) shape: f32,
@@ -181,6 +182,7 @@ pub(crate) struct RowQ {
 impl RowQ {
     fn apply(&self, f: &mut FileFeatures, i: usize) {
         f.flags[i] &= !(FLAG_GOOD | FLAG_EDGE);
+        f.area[i] = self.area;
         f.area_win[i] = self.area_win;
         f.snr[i] = self.snr;
         f.shape[i] = self.shape;
@@ -215,6 +217,7 @@ pub(crate) fn row_quality(
         (f.scan_hi[i] as usize).min(nscan - 1),
     );
     let area_win = y[wa - w0..=wb - w0].iter().sum::<f64>() * f.dt;
+    let area = y[slo - w0..=shi - w0].iter().sum::<f64>() * f.dt;
     let (snr, shape, fwhm, asym, gaps) =
         measure(&rt[w0..w0 + y.len()], y, slo - w0, shi - w0, floor);
     let mut why = 0u8;
@@ -228,6 +231,7 @@ pub(crate) fn row_quality(
         why |= Q_POINTS;
     }
     RowQ {
+        area,
         area_win,
         snr: snr as f32,
         shape: shape as f32,
