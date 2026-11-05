@@ -149,7 +149,7 @@ impl Recipe {
     }
 
     /// Fingerprint (32 hex digits) of what the weak candidates of a file depend on (`series::weak_candidates`): versions, detection, quality and isotopes
-    /// (the grouper of mzmine written only when chosen).
+    /// (the grouper and the finder of mzmine written only when chosen).
     pub fn weak_hash(&self) -> String {
         let detect = Params {
             budget: Params::default().budget,
@@ -164,6 +164,10 @@ impl Recipe {
                 self.steps.iso
             ) + &if self.steps.use_grouper {
                 format!("\ngrouper={:?}", self.steps.grouper)
+            } else {
+                String::new()
+            } + &if self.steps.use_finder {
+                format!("\nfinder={:?}", self.steps.finder)
             } else {
                 String::new()
             }),

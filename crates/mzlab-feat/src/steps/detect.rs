@@ -131,9 +131,9 @@ pub(super) fn detect() -> Step {
 /// The isotope grouping of each file: the averagine grouping by default, or the isotope grouper of mzmine with the `iso_*` settings.
 fn isotope_params() -> Vec<Param> {
     vec![
-        Param::choice("isotopes", "Isotope grouping", &["averagine", "grouper"])
+        Param::choice("isotopes", "Isotope grouping", &["averagine", "grouper", "finder"])
             .default_str("averagine")
-            .doc("averagine tests the ratios natural abundance allows; grouper is the isotope grouper of mzmine, with no ratio test")
+            .doc("averagine tests natural ratios; grouper (mzmine) groups by m/z and RT; finder (mzmine) reads each apex spectrum")
             .advanced(),
         Param::number("iso_ppm", "Isotope m/z tolerance")
             .min(0.0)
@@ -166,6 +166,36 @@ fn isotope_params() -> Vec<Param> {
         Param::choice("iso_representative", "Group representative", &["most_intense", "lowest_mz"])
             .default_str("most_intense")
             .doc("grouper only: the row of a group that is not marked as an isotopologue")
+            .advanced(),
+        Param::number("finder_ppm", "Finder m/z tolerance")
+            .min(0.0)
+            .default_num(15.0)
+            .unit("ppm")
+            .doc("finder only: m/z tolerance in the spectrum, the larger of this and the absolute one")
+            .advanced(),
+        Param::number("finder_abs_da", "Finder absolute tolerance")
+            .min(0.0)
+            .default_num(0.005)
+            .unit("Da")
+            .doc("finder only: absolute lower bound of the m/z tolerance")
+            .advanced(),
+        Param::integer("finder_max_charge", "Finder largest charge")
+            .min(1.0)
+            .max(5.0)
+            .default_num(3.0)
+            .doc("finder only: the charges tried, from 1 up to this")
+            .advanced(),
+        Param::text("finder_elements", "Finder elements")
+            .default_str("H,C,N,O,S")
+            .doc("finder only: comma-separated elements whose isotopes are looked for")
+            .advanced(),
+        Param::boolean("finder_require_c13", "Require a 13C peak")
+            .default_bool(true)
+            .doc("finder only: a charge counts only with a 13C peak")
+            .advanced(),
+        Param::boolean("finder_auto", "Heavy elements from the spectrum")
+            .default_bool(true)
+            .doc("finder only: Cl, Br, S and Si seen in the spectrum widen the expected pattern")
             .advanced(),
     ]
 }
