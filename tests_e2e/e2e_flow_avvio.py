@@ -43,7 +43,7 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
         c.route(re.compile(r"/mzfinder/(lazy/.*\.js|steps-.*\.json)(\?.*)?$|\.wasm(\?.*)?$|/static/shell\.js(\?.*)?$"), route)
-        pg.goto(f"http://127.0.0.1:{PORT}/")
+        pg.goto(f"http://127.0.0.1:{PORT}/", wait_until="commit")   # "load" never comes: carica.js adds shell.js and the engine as scripts, and the test holds them
         pg.wait_for_selector(TAB, timeout=120000)
         def early():
             assert idx.get("early") == ["flow-tool.js"], idx.get("early")
