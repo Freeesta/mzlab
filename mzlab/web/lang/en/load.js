@@ -21,6 +21,7 @@ I18N.add("en", {
   "load.prog.count": "{done} of {n}",
   "load.err.oldBrowser": "this browser is too old: use a recent version of Chrome, Edge, Firefox or Safari.",
   "load.err.engineStart": "Cannot start the calculation engine: reload the page.",
+  "load.err.noStorage": "This window does not let the site keep files (a private window?): open {app} in a normal window, or use the app.",
   "load.err.engineMissing": "This browser cannot start the calculation engine: use a recent version of Chrome, Edge, Firefox or Safari.",
   "load.err.engineLost": "The calculation engine stopped: reload the page.",
   "load.phrase.1": "Ignoring the warnings",

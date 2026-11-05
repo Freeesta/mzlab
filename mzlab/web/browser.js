@@ -89,6 +89,8 @@
     // the module of the loading and the count of the stored files start with the engine, not after it
     const lrModule = import(new URL("lr.js", SRC).href);
     lrModule.catch(() => {});
+    // a private window (Safari, some Firefox) refuses the browser storage: say that, a reload would not help
+    try { await navigator.storage.getDirectory(); } catch (_) { fail("load.err.noStorage"); throw new Error("the browser storage is refused (private window?)"); }
     // reopening takes about 0.15 s per stored file (an index each): the limit grows with the files in the storage, 240 samples took 36 s
     const stored = (async () => { let n = 0; try { for await (const _ of /** @type {any} */ (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("files")).keys()) n++; } catch (_) { /* nothing stored yet */ } return n; })();
     const b = await rustReady;

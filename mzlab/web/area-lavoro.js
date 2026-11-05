@@ -88,7 +88,12 @@ workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   if (!t.closest("input")) queueMicrotask(() => { if (!E.panels.some((/** @type {Pannello} */ p) => p.el)) soloFile(E.files[+((/** @type {HTMLElement} */ (nm)).dataset.k || 0)]); });
 }, true);
 // «Sample table» of the side panel: the table in place of the panels and back; a click on a file of the side list goes back to the panels
-workQ("#samptab").onclick = () => { if (!S.sess && workState() === "landing") { workQ("#wtable").scrollIntoView({ block: "nearest" }); return; } S.table = !S.table; if (S.table && window.innerWidth < 900 && window.BARRA) { BARRA.close(false); document.getElementById("sb-toggle")?.focus({ preventScroll: true }); } syncWork(); };
+/** Before a session the table sits under the drop area: the button scrolls only when no row of it is on screen; a table that is partly in view stays where it is (no jump). */
+function tableOnScreen() {
+  const r = workQ("#wtable").getBoundingClientRect(), top = document.querySelector("header")?.getBoundingClientRect().bottom || 0;
+  return r.bottom > top && r.top < window.innerHeight - 24;
+}
+workQ("#samptab").onclick = () => { if (!S.sess && workState() === "landing") { if (!tableOnScreen()) workQ("#wtable").scrollIntoView({ block: "nearest" }); return; } S.table = !S.table; if (S.table && window.innerWidth < 900 && window.BARRA) { BARRA.close(false); document.getElementById("sb-toggle")?.focus({ preventScroll: true }); } syncWork(); };
 workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   const t = /** @type {HTMLElement} */ (e.target);
   if (S.table && t.closest(".fl:not(.up)")) { S.table = false; queueMicrotask(() => syncWork()); }

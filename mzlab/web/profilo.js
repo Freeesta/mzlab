@@ -96,7 +96,8 @@ const PROFILO = (() => {
   }
   function tableHtml(r) {
     const b = body(r);
-    return `<div class="qq-scroll"><table class="qq-tab" id="prof-tab"><thead><tr>${head(r).map(h => `<th scope="col">${eh(h)}</th>`).join("")}</tr></thead><tbody>${b.map((row, k) => `<tr${r.series.includes(k) ? "" : ' class="sm"'}>${row.map((c, i) => `<td${i > 1 ? ' class="num"' : ""}>${i > 1 && typeof c === "number" ? eh(fmt(c, i === 2 || i === 3 ? 2 : 1)) : eh(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    // rows without a control: the scrolling box itself takes the focus (keyboard scroll), named by the summary above it
+    return `<div class="qq-scroll" tabindex="0" role="region" aria-labelledby="prof-sum"><table class="qq-tab" id="prof-tab"><thead><tr>${head(r).map(h => `<th scope="col">${eh(h)}</th>`).join("")}</tr></thead><tbody>${b.map((row, k) => `<tr${r.series.includes(k) ? "" : ' class="sm"'}>${row.map((c, i) => `<td${i > 1 ? ' class="num"' : ""}>${i > 1 && typeof c === "number" ? eh(fmt(c, i === 2 || i === 3 ? 2 : 1)) : eh(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
   const tsv = r => [head(r)].concat(body(r)).map(l => l.map(c => String(c).replace(/[\t\r\n]+/g, " ")).join("\t")).join("\n") + "\n";
 
@@ -119,8 +120,15 @@ ${hr && qaOn() && !ions.length ? `<p class="sm">${t("prof.istd.hint")}</p>` : ""
     if (!el) return;
     if (res && !sameFiles(res)) res = null;
     if (!res) { el.innerHTML = ""; return; }
-    el.innerHTML = `<div class="sm">${t("prof.sum", { mz: fmt(res.ion.mz, 4), rt: fmt(res.ion.rt, 2) })}${res.normalized && res.istd ? " " + t("prof.sum.istd", { istd: eh(res.istd.label) }) : ""}</div>${chart(res)}${window.CAMPIONI ? CAMPIONI.gradientLegend() : ""}
+    el.innerHTML = `<div class="sm" id="prof-sum">${t("prof.sum", { mz: fmt(res.ion.mz, 4), rt: fmt(res.ion.rt, 2) })}${res.normalized && res.istd ? " " + t("prof.sum.istd", { istd: eh(res.istd.label) }) : ""}</div>${chart(res)}${window.CAMPIONI ? CAMPIONI.gradientLegend() : ""}
 ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("meta.copy")}</button><button type="button" id="prof-xlsx">Excel</button></div><div id="prof-note" class="sm" role="status"></div>`;
+  }
+  // a failed run drops the last result: the chart of the previous ion beside the new, wrong input would read as its answer
+  /** @param {Element} box @param {unknown} err_ */
+  function fail(box, err_) {
+    const err = /** @type {Lanciato} */ (err_), m = box.querySelector("#prof-msg");
+    if (m) m.textContent = String(err && err.message || err);
+    res = null; paintRes(box);
   }
   function mount(box) {
     paint(box);
@@ -141,7 +149,7 @@ ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("
       const msg = box.querySelector("#prof-msg"), go = box.querySelector("#prof-go");
       go.disabled = true; msg.textContent = "";
       try { await run(st.text, st.rt); paintRes(box); }
-      catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); }
+      catch (err_) { fail(box, err_); }
       go.disabled = false;
     };
   }
@@ -150,7 +158,7 @@ ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("
     st.text = String(mz); st.rt = String(rt); save();
     if (window.BARRA) BARRA.setTab("stat", { noFocus: true, instant: true });
     const box = document.querySelector("#stat-profile");
-    if (box) { paint(box); try { await run(st.text, st.rt); paintRes(box); } catch (err_) { const err = /** @type {Lanciato} */ (err_); const m = box.querySelector("#prof-msg"); if (m) m.textContent = String(err && err.message || err); } }
+    if (box) { paint(box); try { await run(st.text, st.rt); paintRes(box); } catch (err_) { fail(box, err_); } }
     return res;
   }
 

@@ -165,6 +165,6 @@ I18N.add("en", {
   "mappa.meta.snap": "Snap to the local maximum",
   "mappa.rz.top": "Top edge grip of the panel: drag or use the up and down arrows (double click: default height)",
   "mappa.rz.bot": "Bottom edge grip of the panel: drag or use the up and down arrows (double click: default height)",
-  "mappa.rz.title": "Drag to change the height; double click = default height",
+  "mappa.rz.title": "Drag to change the height",
   "mappa.meta.date": "Date"
 });
