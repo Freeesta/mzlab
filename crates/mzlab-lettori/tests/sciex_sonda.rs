@@ -81,7 +81,10 @@ fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
         return;
     };
     let mut l = apri(&dir, "mrmrado");
-    assert!(l.variante(0), "its sparse MRM blocks are read by the module only");
+    assert!(
+        l.variante(0),
+        "its sparse MRM blocks are read by the module only"
+    );
     assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
     let srm = l
         .cromatogrammi(0)
