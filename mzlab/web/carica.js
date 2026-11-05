@@ -26,6 +26,9 @@
   }
   window.carica = function (n) { return add(n); };
   // a smartphone gets only the card: no Dati, Disegno or shell
+  // the rest of the catalog first (i18n.js awaitRest): every script after it finds all its texts; a failed read is tried once more
+  var R = window.I18N && window.I18N.rest;
+  if (R) add(R).catch(function () { return add(R); }).catch(function (e) { console.error(e); });
   if (window.MZLAB_PHONE) { add("telefono-scheda.js"); return; }
   var classic = L.filter(function (n) { return n.slice(0, 2) !== "m:"; });
   var modules = L.filter(function (n) { return n.slice(0, 2) === "m:"; });

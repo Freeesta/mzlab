@@ -350,6 +350,8 @@ try:
         pg.click("#tour-btn-skip")
         steps.append(("without data: loads single example file and starts tour at step 1", "ok"))
 
+        late = [e for e in r.errs if "i18n: key asked before the rest" in str(e)]      # every page of the tour, Italian and English: no text asked before the whole catalog
+        assert not late and pg.evaluate("I18N.late.size") == 0, late
         steps.append(("no browser console errors", "ok"))
 
     r.close()
