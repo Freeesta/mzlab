@@ -15,8 +15,8 @@ def test_ordine_per_media_e_soglia():
           run("2026-10-22T02:00:00Z", **{"tests/a.py": (1, 9), "tests/b.py": (0, 30), "tests/c.py": (0, 2)}),
           run("2026-10-22T03:00:00Z", **{"tests/a.py": (1, 11), "tests/b.py": (0, 50), "tests/c.py": (0, 3)}),
           {"tipo": "test_durate", "python": "3.14", "ts_utc": "2026-10-22T03:00:00Z", "fasi": {"tests/x.py": [0, 500, 0]}}]
-    assert c.lenti(ev, ultimi=2, minimo=5) == ["tests/b.py", "tests/a.py"]
-    assert c.lenti(ev, ultimi=3, minimo=5)[:2] == ["tests/old.py", "tests/b.py"]     # the mean also counts the runs where the file did not appear
+    assert c.lenti(ev, ultimi=2, minimo=5) == [("tests/b.py", 40.0), ("tests/a.py", 11.0)]
+    assert [f for f, _ in c.lenti(ev, ultimi=3, minimo=5)[:2]] == ["tests/old.py", "tests/b.py"]     # the mean also counts the runs where the file did not appear
 
 
 def test_senza_dati_lista_vuota():
@@ -29,4 +29,4 @@ def test_gli_shard_della_stessa_corsa_si_uniscono():
 
     ev = [riga(1, "rest", {"tests/a.py": [0, 6, 0]}), riga(1, "solo311", {"tests/b.py": [0, 9, 0]}),
           riga(2, "rest", {"tests/a.py": [0, 4, 0]}), riga(2, "solo311", {"tests/b.py": [0, 7, 0]})]
-    assert c.lenti(ev, ultimi=8, minimo=5.0) == ["tests/b.py", "tests/a.py"]
+    assert c.lenti(ev, ultimi=8, minimo=5.0) == [("tests/b.py", 8.0), ("tests/a.py", 5.0)]
