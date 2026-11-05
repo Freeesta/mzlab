@@ -76,5 +76,8 @@ async function go({ files = pairFiles(), listed = [], same = [], samples = sampl
   const inDir = d => pairFiles().map(f => CartCarica.setDir(f, d));
   r = await go({ files: [...inDir("x/"), ...inDir("y/")] });
   assert.equal(r.calls.samples, 2, "one parse per pair"); assert.equal(r.res.errs.length, 0);
+  // the .wiff.scan first and the two names in another case: the samples are named after the .wiff, as the reader names them
+  r = await go({ files: [new File(["s"], "C.WIFF.SCAN"), new File(["w"], "c.wiff")], samples: [{ id: 1, name: "c.wiff #1", size: 1 }] });
+  assert.deepEqual(r.res.files.map(f => f.name), ["c.mzML"]);
   console.log("ok");
 })().catch(e => { console.error(e); process.exit(1); });
