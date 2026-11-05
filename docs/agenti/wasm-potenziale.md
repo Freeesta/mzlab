@@ -68,7 +68,7 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 | JS String Builtins | 130 | 134 | 26.2 | non usato da `wasm-bindgen` 0.2.129 |
 | WasmGC | 119 | 120 | 18.2 | **non serve a Rust** (memoria lineare propria) |
 
-**Minimo da dichiarare** con SIMD128: Chrome/Edge ≥ 91, Firefox ≥ 89, Safari ≥ 16.4 (già oggi Safari ≥ 15 per reference types). Ogni desktop aggiornato del 2026 lo supera di anni.
+**Minimo di SIMD128 da solo**: Chrome/Edge ≥ 91, Firefox ≥ 89, Safari ≥ 16.4; i browser minimi dichiarati sono nel §8.
 
 ## 5. Leve valutate
 - **(a) SIMD128**: compilazione `+simd128` sicura sul bersaglio; codice vettoriale esplicito (`core::arch::wasm32`) non giustificato: i cicli caldi misurati sono XML/base64/inflate (non vettoriali per natura) e AsLS/centroidi (divisioni e dipendenze in sequenza). `portable_simd` è ancora nightly. Determinismo: l'autovettorizzazione di LLVM non riassocia somme in virgola mobile senza fast-math: uscite identiche (misurato).
