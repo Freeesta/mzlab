@@ -252,6 +252,7 @@ declare var WIFF_WAIT: any;
 declare var WORKBACK: any;
 declare var WatersRaw: any;
 declare var XICDRAW: any;
+declare var XICNOMI: any;
 declare var XICPIECES: any;
 declare var XIC_ADDUCTS: any;
 declare var XIC_BELOW: any;
