@@ -282,12 +282,12 @@ function legend(p, all, note = "") {
   ibkChip(p);
   if (window.SUBREF) SUBREF.chip(p);
 }
-// with many traces the legend would cover the graph: a small chip («7 tracce») and the list when the pointer rests on it
+// with many traces the legend would cover the graph: a small chip («7 tracce») and the list when the pointer rests on it; a tap, Enter or Space keeps it open (no hover on touch or keys), Escape closes it
 function legCollapse(p) {
   const L = p.leg, n = L.querySelectorAll(".tg").length; if (n <= 4) return;
-  const lst = document.createElement("div"); lst.className = "lgl"; [...L.children].forEach(el => lst.appendChild(el));
-  const chip = document.createElement("span"); chip.className = "lgc"; chip.textContent = I18N.t("leg.traces", { n });
-  L.appendChild(chip); L.appendChild(lst);
+  const lst = document.createElement("div"); lst.className = "lgl"; lst.append(...L.children);
+  const chip = document.createElement("button"), set = (/** @type {boolean} */ on) => { chip.classList.toggle("on", on); chip.setAttribute("aria-expanded", String(on)); }; L.append(chip, lst);
+  chip.type = "button"; chip.className = "lgc"; chip.textContent = I18N.t("leg.traces", { n }); set(false); chip.onclick = () => set(!chip.classList.contains("on")); chip.onkeydown = lst.onkeydown = e => { if (e.key === "Escape" && chip.classList.contains("on")) { e.stopPropagation(); set(false); chip.focus(); } };
 }
 
 // the highest and the lowest value of a trace in view, leaving out the initial zone (solvent front); if nothing else is in view the scale takes it
