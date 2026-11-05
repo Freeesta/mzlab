@@ -160,6 +160,22 @@ try:
             assert not errs, errs
             c3.close()
         step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variante)
+        def download_is_convert():                       # «Download .mzML» of a sample the engine reads: written by the sciex module as `mzlab-cli convert` writes it (indexed, TIC and BPC of the Full Scan)
+            if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
+                print("   (download: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
+            c4 = b.new_context(viewport={"width": 1500, "height": 1800}, accept_downloads=True); c4.set_default_timeout(120000); pg = c4.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "one.wiff"), str(D / "one.wiff.scan")])
+            shown(pg, 1)
+            with pg.expect_download(timeout=120000) as d:
+                pg.evaluate("CONV.download('one.mzML')")
+            t = Path(d.value.path()).read_text(encoding="utf-8")
+            assert t.rstrip().endswith("</indexedmzML>") and 'id="BPC"' in t, (t[:300], t[-300:])
+            assert not errs, errs
+            c4.close()
+        step("«Download .mzML» of a .wiff sample is the file of mzlab-cli convert (sciex module)", download_is_convert)
         b.close()
 finally:
     srv.terminate()
