@@ -267,12 +267,13 @@ function nbSave(now = false) {
   };
   if (now) go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
 }
-let nbEverLoaded = false;
+let nbEverLoaded = false, nbNamed = /** @type {Set<string>} */ (new Set());      // nbNamed: the files the notebook names at load (open or removed), read by restoreRows (shell.js)
 async function nbLoad() {
   let j = {};
   try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
   const again = NBP.take(j, nbClean); if (again) j = again; Object.assign(NB, j); const snap = JSON.stringify(NB); nbBase = JSON.parse(snap); nbRemote = j; nbLast = snap;
   nbEverLoaded = true;
+  nbNamed = new Set([...(NB.session || []), ...((NB.ui && NB.ui.files) || [])].map((/** @type {Bag} */ f) => String(f.file).split("#")[0]));
   if (again) { nbLast = ""; nbSave(true); }
   // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
   if (CDOC.isOld(NB.session)) {
