@@ -61,6 +61,7 @@
     "../../mzlab/web/metodo-doc.js",
     "../../mzlab/web/chrom-primo.js",
     "../../mzlab/web/ask-suggerisci.js",
+    "../../mzlab/web/xic-nomi.js",
     "../../mzlab/web/lista-file.js",
     "../../mzlab/web/lista-file-menu.js",
     "../../mzlab/web/layout.js",

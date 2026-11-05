@@ -33,9 +33,11 @@
     if (!it || !it.idx) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
     if (!x.profile(it)) { await x.call("cached", { job: j }); return {}; }
     const rb = await G.MZLAB_RUST_READY, native = !!(rb && rb.isNative && rb.isNative(it.input));
-    if (native && it.cen) { await x.call("cached", { job: j }); return {}; }
+    if (it.cen) { await x.call("cached", { job: j }); return {}; }      // the centroid index Data keeps (the card says «centroided earlier»): the same answer in the browser and in the app
     const given = inst.params || {}, custom = given.fwhm != null || given.threshold != null;
     if (native ? !rb.nativeCentroidIndex : !rb || !rb.flowCentroid || it.hr || custom) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    // a profile file whose mzML is not in the session (only its index is) waits for the file; the other files go on
+    if (!native && rb.flowCentroid.can && (c => !c.source && !c.have)(await rb.flowCentroid.can(it.input))) { await x.call("block", { job: j, by: "input.missing" }); x.waitingSource.add(x.jk(spec)); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {

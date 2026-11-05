@@ -23,7 +23,7 @@
   const session = S => ({
     S, plan: S.plan, items: /** @type {any[]} */ ([]), ok: false, q: Promise.resolve(), seq: 0, sent: "", keys: new Map(), nodes: new Map(), info: new Map(), errors: new Map(), last: new Map(),
     running: new Map(), observing: new Map(), waitingInput: new Set(), memAsk: new Map(), allowed: new Set(), loading: new Map(), listeners: new Set(), log: /** @type {any[]} */ ([]), logFrom: 0,
-    waitingProfile: new Set(), files: new Map(), pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
+    waitingProfile: new Set(), waitingSource: new Set(), files: new Map(), pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
   });
 
   /** @param {any} x @param {string} op @param {any} [body] one call to the scheduler; the calls go one after the other, and a change is followed by a read of the events */
@@ -184,6 +184,10 @@
     for (const [key, spec] of [...x.observing]) { const it = x.item(spec.item); if (it && it.idx) { x.observing.delete(key); await call(x, "finished", { job: jobOf(key), result: { ms: 0 } }); } }
     for (const key of [...x.waitingInput]) { const it = x.item(jobOf(key).item); const inst = instOf(x, jobOf(key).instance); if (it && inst && (base(inst) === "features.detect" ? x.source(it) : it.idx)) { x.waitingInput.delete(key); await call(x, "unblock", { job: jobOf(key) }); } }
     for (const key of [...x.waitingProfile]) { const it = x.item(jobOf(key).item); if (!it || !x.profileHeld(it)) { x.waitingProfile.delete(key); await call(x, "unblock", { job: jobOf(key) }); } }
+    for (const key of [...x.waitingSource]) {
+      const it = x.item(jobOf(key).item), rb = await G.MZLAB_RUST_READY, c = it && rb && rb.flowCentroid && rb.flowCentroid.can ? await rb.flowCentroid.can(it.input) : null;
+      if (!it || (c && (c.source || c.have))) { x.waitingSource.delete(key); await call(x, "unblock", { job: jobOf(key) }); }
+    }
     for (const [stem] of [...x.loading]) if (x.items.some((/** @type {any} */ i) => i.stem === stem && i.idx)) x.loading.delete(stem);
   };
 
@@ -208,7 +212,7 @@
     x.sent = text;
     for (const c of await call(x, "update", { plan: JSON.parse(text) })) {
       const key = jk(c);
-      x.memAsk.delete(key); x.observing.delete(key); x.waitingInput.delete(key); x.waitingProfile.delete(key);
+      x.memAsk.delete(key); x.observing.delete(key); x.waitingInput.delete(key); x.waitingProfile.delete(key); x.waitingSource.delete(key);
       kit().poolIfAny()?.cancelJob(key);
     }
   };

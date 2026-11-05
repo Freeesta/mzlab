@@ -1,15 +1,17 @@
-"""Known contaminants: the built-in list (contaminants.json) expanded into ions with exact m/z computed from the formulas (elements.py).
+"""Known contaminants: the built-in lists (contaminants.json, Keller 2008 background; pesticides.csv, pesticides and environmental contaminants) expanded
+into ions with exact m/z computed from the formulas (elements.py).
 
 The result is a flat list of ions {list, id, name, cls, formula, adduct, z, mz, pol, series, source}; the matching, the series and the lists of the user are
 done in the browser by web/liste.js (one engine for every list of reference). A coincidence of m/z is a compatibility, never an identification.
 """
 from __future__ import annotations
 
+import csv
 import json
 from functools import lru_cache
 from pathlib import Path
 
-from .elements import ADDUCT_SHIFT, ELECTRON, MASS, mass, parse_formula
+from .elements import ADDUCT_SHIFT, ELECTRON, MASS, fmt, mass, parse_formula
 from ..i18n import UserError
 
 # adducts that elements.py does not have: ions of this list only. shift = mass added to the neutral, z = charge; mz = (M + shift) / z
@@ -31,6 +33,8 @@ EXTRA = {
 }
 PATH = Path(__file__).with_name("contaminants.json")
 PATH_EN = Path(__file__).with_name("contaminants_en.json")       # English names and classes, same ids (the page shows them when it is in English)
+PEST = Path(__file__).with_name("pesticides.csv")                # one row per compound: curated names, class, use, ions + PubChem columns
+PEST_META = Path(__file__).with_name("pesticides_meta.json")     # the list header and the closed vocabulary of classes and uses (Italian, English)
 
 
 def ion_shift(adduct: str) -> tuple[float, int]:
@@ -72,3 +76,26 @@ def builtin() -> dict:
     en = json.loads(PATH_EN.read_text(encoding="utf-8"))
     items = [i for e in d["entries"] for i in expand(e, d["id"], en)]
     return {"id": d["id"], "name": d["name"], "name_en": en["list"]["name"], "source": d["source"], "license": d["license"], "license_en": en["list"]["license"], "builtin": True, "items": items}
+
+
+@lru_cache(maxsize=1)
+def pesticides() -> dict:
+    """The second built-in list: target compounds, not background, so `background` is false (the mass-accuracy check skips it)."""
+    meta = json.loads(PEST_META.read_text(encoding="utf-8"))
+    items = []
+    for r in csv.DictReader(PEST.open(encoding="utf-8"), delimiter=";"):
+        f = parse_formula(r["formula"])
+        cls, use = meta["classes"][r["class"]], meta["uses"][r["use"]]
+        base = {"list": meta["id"], "id": r["id"], "cls": cls[0], "cls_en": cls[1], "source": f"PubChem CID {r['pubchem_cid']}", "note": None,
+                "name": r["name"], "name_en": r["name_en"], "formula": fmt(f), "tags": [f"chemical:{r['class']}", f"use:{r['use']}"],
+                "smiles": r["smiles"], "inchikey": r["inchikey"], "series": None, "mzonly": False}
+        for ad in r["ions"].split("|"):
+            sh, z = ion_shift(ad)
+            items.append({**base, "adduct": ad, "z": z, "mz": round((mass(f) + sh) / z, 5), "pol": 1 if ad.endswith("+") else -1})
+    return {"id": meta["id"], "name": meta["name"], "name_en": meta["name_en"], "source": meta["source"], "license": meta["license"], "license_en": meta["license_en"],
+            "builtin": True, "background": False, "items": items}
+
+
+def lists() -> list[dict]:
+    """Every built-in list, in the order the page shows them."""
+    return [builtin(), pesticides()]

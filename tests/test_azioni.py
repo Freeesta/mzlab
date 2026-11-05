@@ -56,7 +56,7 @@ def test_rows_of_one_action_and_order_inside_a_group():
 
 def test_spectrum_actions_have_texts_in_both_languages():
     """Every i18n key named by a registered action of the spectrum exists in it and en."""
-    src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("spettro.js", "dda.js", "liste.js", "elementare.js", "visualizza.js", "libreria.js", "workflow.js", "fair.js"))
+    src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("spettro.js", "dda.js", "liste.js", "elementare.js", "visualizza.js", "libreria.js", "workflow.js", "fair-azioni.js"))
     blocks = re.findall(r'id: "spec\.\w+".*', src)
     keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|cx|disp)\.[\w.]+)"', b))
     assert len(blocks) >= 24 and len(keys) >= 20, (len(blocks), len(keys))
