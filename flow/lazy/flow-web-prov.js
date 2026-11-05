@@ -49,6 +49,13 @@
         sources.set(it.input, s);
       }
       for (const f of doc.inputs || []) { const s = sources.get(f.name); if (!s) return null; f.sha256 = s.sha256; f.bytes = s.bytes; }
+      // the facets of each scan input as `flow run` writes them into plan.json (`fill_facets`, one file at a time): the engine's rule on the index of the file; what the plan writes is kept
+      for (const f of doc.inputs || []) {
+        const it = x.items.find((/** @type {any} */ i) => i.input === f.name);
+        if (!it || !["raw", "mzml", "mzidx"].includes(f.type)) continue;
+        const got = JSON.parse(await p.ident("proofs", "series_facets", { paths: [it.idx.path] }));
+        f.facets = { ...got, ...(f.facets || {}) };
+      }
       const planText = JSON.stringify(doc), first = x.source(x.items[0]).path;
       const fileOut = async (/** @type {any} */ inst, /** @type {string} */ path, /** @type {string} */ ext) => {
         const out = Object.entries(F.stepOf(reg, inst).out)[0], s = await ask(w, wasm, { op: "sha", paths: [path] });
