@@ -883,7 +883,7 @@ function renderNav() {
   const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");
   // one file shown (ticked) = the graphs follow it; several = overlaid, the active one drives the spectrum
   syncBrowse();
-  [Q("#fprev"), Q("#fnext"), Q("#fsel")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.title = one ? why : b.dataset.t0; });
+  [Q("#fprev"), Q("#fnext"), Q("#fsel")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.setAttribute("aria-disabled", String(one)); b.title = one ? why : b.dataset.t0; });   // aria-disabled with disabled: a stale "true" reads as disabled to screen readers (and to Playwright)
   if (cur && !s.disabled) s.title = cur.label;                       // the whole name, also when it had to be cut
   // the graphs' own file choosers depend on the mode
   const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach((/** @type {Pannello} */ q) => q.el && ctl(q)); }
