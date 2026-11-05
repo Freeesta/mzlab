@@ -32,8 +32,6 @@ function ricClassify(q) {
 }
 
 const ricHrNow = () => (typeof window.TBL_HR === "function" ? !!window.TBL_HR() : true);
-// a number follows the calculator's rule (calc-qui.js): the world of the open files, else the digits typed (18 = unit resolution, 18.011 = high)
-const ricHrFor = (/** @type {string} */ q) => (typeof CALCQUI !== "undefined" ? CALCQUI.isHr(CALCQUI.arg(q, 0)) : ricHrNow());
 const ricSub = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 const ricSg = (/** @type {number} */ x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(4);
 const ricLang = () => (I18N.lang === "it" ? "it" : "en");
@@ -57,9 +55,9 @@ const RIC_GO = {
   cont: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("cont", { q: String(x) }); }
 };
 
-/** @param {number} x  @param {string} q the text typed  @returns {Promise<RicGroup[]>} */
+/** @param {number} x  @param {string} q  @returns {Promise<RicGroup[]>} */
 async function ricForNumber(x, q) {
-  const hr = ricHrFor(q);
+  const hr = typeof CALCQUI !== "undefined" ? CALCQUI.isHr(CALCQUI.arg(q, 0)) : ricHrNow();      // as the calculator: 18 unit, 18.011 HR
   const items = await ricContaminants();
   const body = {
     x, hr, tol_mda: 3, tol_ppm: 5,

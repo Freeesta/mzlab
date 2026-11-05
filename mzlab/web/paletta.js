@@ -54,9 +54,8 @@ function palList(/** @type {{title: string, rows: any[]}[]} */ blocks, /** @type
       html += `<li role="option" id="pal-o-${i}" data-i="${i}" aria-selected="false"${r.aria ? ` aria-label="${EH(r.aria)}"` : ""}><span class="pal-i" aria-hidden="true">${r.ic}</span><span class="pal-t">${r.html}</span>${r.tail}</li>`;
     }
   }
-  // the hint or the «nothing found» line lives outside the listbox, which must hold options only; with no data the hint names a command that is there
-  const smooth = typeof BARRA !== "undefined" && BARRA.byId ? BARRA.byId("smooth") : null;
-  const hint = smooth && !BARRA.visible(smooth) ? "pal.try.nodata" : "pal.try";
+  // the hint or the «nothing found» line lives outside the listbox, which must hold options only
+  const sm = window.BARRA?.byId?.("smooth"), hint = sm && !BARRA.visible(sm) ? "pal.try.nodata" : "pal.try";
   const note = !rows.length && !pending ? I18N.t(query ? "pal.empty" : hint) : !query ? I18N.t(hint) : "";
   return { html, rows, note };
 }
@@ -106,7 +105,7 @@ const PALETTE = (() => {
     note.textContent = r.note;
     sel = Math.min(sel, Math.max(rows.length - 1, 0));
     if (rows.length) mark(sel, false); else input.setAttribute("aria-activedescendant", "");
-    live.textContent = rows.length ? t("pal.count", { n: rows.length }) : pending || !input.value.trim() ? "" : t("pal.empty");      // nothing typed yet: no «nothing found» for the screen reader
+    live.textContent = rows.length ? t("pal.count", { n: rows.length }) : pending || !input.value.trim() ? "" : t("pal.empty");
   }
 
   function render(q) {
