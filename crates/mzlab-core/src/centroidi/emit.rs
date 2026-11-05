@@ -206,32 +206,26 @@ mod tests {
     use super::{gaussian, Buf};
 
     // The site's wasm takes `ln` from libm, a native build from the system library: the centroid m/z written to the mzML
-    // is the same on every face only if the Gaussian apex uses libm everywhere.
+    // is the same on every face only if the Gaussian apex uses libm everywhere (the grid sits on 0 so no last bit is rounded away).
     #[test]
     fn the_gaussian_apex_gives_the_bits_of_libm_on_every_face() {
         for n in 1..5000u32 {
             let (a, b, c) = (
-                f64::from(n % 97 + 40),
-                f64::from(n % 89 + 200),
-                f64::from(n % 83 + 30),
+                f64::from(n) * 0.731 + 40.0,
+                f64::from(n) * 1.917 + 9000.0,
+                f64::from(n) * 0.613 + 30.0,
             );
             let buf = Buf {
-                x: vec![100.0, 100.001, 100.002],
+                x: vec![-1.0, 0.0, 1.0],
                 v: vec![a, b, c],
                 b: vec![0.0; 3],
                 ..Buf::default()
             };
             let (la, lb, lc) = (libm::log(a), libm::log(b), libm::log(c));
-            let got = gaussian(&buf, 1.0, 1).unwrap();
-            let d = 0.5 * (la - lc) / (la - 2.0 * lb + lc);
-            let step = if d > 0.0 {
-                100.002 - 100.001
-            } else {
-                100.001 - 100.0
-            };
+            let want = 0.5 * (la - lc) / (la - 2.0 * lb + lc);
             assert_eq!(
-                got.to_bits(),
-                (100.001 + d * step).to_bits(),
+                gaussian(&buf, 1.0, 1).unwrap().to_bits(),
+                want.to_bits(),
                 "apex of {a} {b} {c}"
             );
         }
