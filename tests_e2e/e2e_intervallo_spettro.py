@@ -62,7 +62,7 @@ try:
         step("Enter on the focused chart with a range opens its spectrum", enter)
         def tap2():
             drag(lo, hi); n0 = pg.evaluate(NS); x, y = (X(lo) + X(hi)) / 2, Ymid()
-            for _ in range(2): T("touchStart", [(x, y)]); T("touchEnd", []); pg.wait_for_timeout(80)
+            for _ in range(2): T("touchStart", [(x, y)]); T("touchEnd", [])
             ready(pg); assert pg.evaluate(NS) == n0 + 1, "double tap inside the range"
         step("double tap inside the range (touch)", tap2)
     r.close()
