@@ -76,6 +76,23 @@ try:
             inview = pg.evaluate("(() => { const b = document.getElementById('np-xic').getBoundingClientRect(), t = document.getElementById('tools').getBoundingClientRect(); return b.left >= t.left - 1 && b.right <= t.right + 1; })()")
             assert inview, "a focused button of the scrolling group is not brought into view"
         step("keyboard focus in the narrow row stays inside the toolbar", keyboard)
+        def very_long():
+            # a much longer name widens the side panel only as far as the row keeps its place (barra.js applyWidth); iPad sizes included
+            add = "#addf-input" if pg.locator("#addf-input").count() else "#pick"
+            pg.set_input_files(add, [{"name": LONG * 3 + "x.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t60"), "rb").read()}])
+            attendi(pg, "E.files.filter(f => !f.gone).length >= 4", 120000); ready(pg)
+            for z in (1, 1.5):
+                pg.evaluate("z => document.documentElement.style.setProperty('--z', z)", z)
+                for w, h in ((1024, 768), (1180, 820), (1366, 1024), (1600, 900), (3000, 900)):
+                    pg.set_viewport_size({"width": w, "height": h}); frames(pg, 4)
+                    # below 1100 px the panel hides by itself; opened there by hand at zoom 1.5 not even its landing width leaves the row its room
+                    if (z == 1 or w >= 1100) and not pg.evaluate("document.querySelector('#v-data').classList.contains('sb-open')"): pg.click("#sb-toggle"); fermo(pg, "#tools", 200)
+                    g = geo(pg); check_row(g, ("very long name", z, w)); assert abs(g["h"] - 32 * z) < 2, (z, w, "row height", g["h"])
+                    pw = pg.evaluate("document.querySelector('#v-data').classList.contains('sb-open') ? document.querySelector('#dfiles').getBoundingClientRect().width : 280")
+                    assert pw >= 279, (z, w, "the panel went below its landing width", pw)
+                    if z == 1 and w == 3000: assert pw > 300, ("with room to spare the names still widen the panel", pw)
+            pg.evaluate("document.documentElement.style.removeProperty('--z')")
+        step("a very long file name: the panel widens, the row stays one at iPad and desktop widths", very_long)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]
