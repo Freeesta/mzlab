@@ -47,10 +47,14 @@ fn bad(line: usize, message: &str) -> Error {
 }
 
 /// The ions of the lab list (`{"lists":[{"items":[{"name_en","adduct","formula","z","mz","pol"}]}]}`), in the order of the file.
+/// A list marked `"background": false` (target compounds such as pesticides, absent from a clean run) gives no reference ions.
 pub fn background(json: &[u8]) -> Result<Vec<RefIon>> {
     let doc = parse(json)?;
     let mut out = Vec::new();
     for list in doc.get("lists").map_or(&[][..], Value::arr) {
+        if list.get("background").and_then(Value::bool) == Some(false) {
+            continue;
+        }
         for it in list.get("items").map_or(&[][..], Value::arr) {
             let text = |k: &str| it.get(k).and_then(Value::str).unwrap_or("");
             let (adduct, listed) = (text("adduct"), it.get("mz").and_then(Value::f64));
