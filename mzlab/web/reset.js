@@ -17,7 +17,6 @@ const RESET = (function () {
   const KEEP_LS = /^((mzlab|qqq)\.(lang|prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.)|(mzlab|qqq)-(theme|labels))/;
   // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
   const RUN_KEY = NOMI.KEY("run");
-  const RUN_KEY_OLD = NOMI.OLD_KEY("run");
   const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
@@ -83,7 +82,7 @@ const RESET = (function () {
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
     let rep;
     try { rep = await wipe(mode); } catch (e) { window.QQ_RESETTING = false; throw e; }
-    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.setItem(RUN_KEY_OLD, "1"); } catch (e) { /* none */ } }
+    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
     const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1"); }
     // the same address (a "#/data" hash and no parameter to drop) would only be a same-page jump: reload for real
@@ -109,11 +108,9 @@ const RESET = (function () {
   // Without sessionStorage nothing is reset (it could never be told apart from a reload).
   function cold() {
     try {
-      if (sessionStorage.getItem(RUN_KEY) || sessionStorage.getItem(RUN_KEY_OLD)) return false;
-      sessionStorage.setItem(RUN_KEY, "1");
-      sessionStorage.setItem(RUN_KEY_OLD, "1");
+      if (sessionStorage.getItem(RUN_KEY)) return false;
+      sessionStorage.setItem(RUN_KEY, "1");               // probe: a storage that refuses writes is never treated as a new run
       sessionStorage.removeItem(RUN_KEY);
-      sessionStorage.removeItem(RUN_KEY_OLD);
     } catch (e) { return false; }
     run("cold", { mark: true });
     return true;

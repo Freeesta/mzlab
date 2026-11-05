@@ -357,7 +357,7 @@ try:
             q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("window.__before = 1"); q.reload(); q.wait_for_function(running, timeout=120000)
             s = state(); assert "invented-work" in s["opfs"] and "mzlab.mappa" in s["ls"] and "mzlab.barra.lato" in s["ls"], s            # a reload in the same run keeps the work
-            q.evaluate("window.__before = 1; sessionStorage.removeItem('mzlab.run')"); q.reload(); q.wait_for_function(running, timeout=120000)       # the app was closed and opened again
+            q.evaluate("window.__before = 1; sessionStorage.clear()"); q.reload(); q.wait_for_function(running, timeout=120000)       # the app was closed and opened again
             s = state()
             assert s["files"] == 0 and "invented-work" not in s["opfs"], s
             assert "mzlab.mappa" not in s["ls"] and q.evaluate("localStorage.getItem('mzlab.barra.lato')") != "l", s["ls"]        # the page writes its own defaults again
