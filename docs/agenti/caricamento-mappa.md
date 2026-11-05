@@ -45,7 +45,7 @@ Un solo worker del motore serve TUTTE le richieste (`rust-worker.js` `handle`): 
 
 Il motore del sito ha nel registro solo Agilent `.D` base e SCIEX `.wiff` (`lettori.rs` 270, `Limiti::sito()` 192 MB); ogni altra famiglia è un `.wasm` a parte (`crates/mzlab-lettori-wasm`), caricato solo quando arriva un file di quella famiglia (`lettori-modulo.js`, `lettori-worker.js`: UN worker per le conversioni, nessun parallelismo interno trovato). Trasporto modulo→motore: `trasporto.rs` (`PROTOCOLLO` 2, colonne binarie).
 
-Campioni nativi (`.raw`, `.wiff`, `.D`): `lr_put` con `nat` copia i membri in OPFS (nessun mzML), poi `build_mzidx_native` scrive l'indice v2 (fasi copy .2, sha .1, open .1, scans .35, chrom .25: `nativo-fasi.js`); `natsame` riconosce una coppia già caricata («dalla cache»). Dettagli: `lettura-nativa.md`.
+Campioni nativi (`.raw`, `.wiff`, `.D`): `lr_put` con `nat` copia i membri in OPFS (nessun mzML), poi `build_mzidx_native` scrive l'indice v2 (fasi copy .2, sha .1, open .1, scans .35, chrom .25: `nativo-fasi.js`); `natsame` riconosce una coppia `.wiff` o un `.raw` già caricati («dalla cache»). Dettagli: `lettura-nativa.md`.
 
 ## 3. App desktop
 

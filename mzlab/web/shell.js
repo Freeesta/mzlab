@@ -171,7 +171,10 @@ const DEMO_SETS=/** @type {Record<string, string[]>} */ ({full:[0,5,10,15,30].ma
 (()=>{const p=window.MZLAB_RUST_READY;if(p)p.then((/** @type {{ nativo?: boolean } | null} */ b)=>{const d=$("#drop");if(b&&d&&b.nativo){CONVERT_RAW=true}else $("#convhelp").hidden=false}); else $("#convhelp").hidden=false})()   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
-  return NATIVO.raws(files,(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name))}
+  // the same .raw again (same name, size and date, its copy and index still in the browser storage): its sample stays the one of the list, nothing is copied or read again, no second row
+  const out=[];for(const f of files){const hit=/\.raw$/i.test(f.name)?await NATIVO.cached(rb,[{name:f.name,blob:f}],ST.files||[],async()=>({samples:[{id:1}]})).catch(()=>null):null;
+    if(!hit){out.push(f);continue}for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:x.kind,cached:true})}}
+  return NATIVO.raws(out,(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name))}
 // an mzML with MS-Numpress arrays is read as it is by the engine through the `aperti` module (nativo.js numpress): no mzML is written, «Download .mzML» writes it on request
 // a .mzML.gz on the site: a stand-in File that the worker of the engine inflates into OPFS piece by piece (gz-flusso.js); a numpress one, or one without the stream, goes to the module (in memory, with a notice for a big file); a .mzXML.gz without the stream cannot be read here
 async function gzToEngine(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ rep){if(!files.some(f=>/\.gz$/i.test(f.name)))return files;await carica("m:gz-flusso.js");const G=window.GZFLUSSO,st=G.stream(),out=[];
