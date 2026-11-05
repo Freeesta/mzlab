@@ -1,9 +1,12 @@
 //! The subcommands of `mzlab-cli` that take their arguments as a plain list, and the old command names still accepted for them.
 
 use crate::{
-    campioni_cmd, canali_cmd, flow_explain, ion_mz_cmd, ion_pattern_cmd, llm, mol_label_cmd, msn_rules,
+    campioni_cmd, canali_cmd, flow_explain, ion_pattern_cmd, llm, mol_label_cmd, msn_rules,
     peaks_auto_cmd, peaks_edges_cmd, sim_table_cmd, steps_cmd, Outcome,
 };
+
+#[path = "ion_mz_cmd.rs"]
+mod ion_mz_cmd;
 
 /// The subcommands that take their arguments as a plain list.
 pub(crate) const PLAIN: [&str; 12] = [

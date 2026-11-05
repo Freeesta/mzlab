@@ -38,7 +38,14 @@ pub fn run(args: Vec<String>) -> Outcome {
     let [text] = pos.as_slice() else {
         return Outcome::fail("ion-mz needs one text");
     };
-    match mzlab_core::elements::formula_mz(text, if adduct.is_empty() { None } else { Some(&adduct) }) {
+    match mzlab_core::elements::formula_mz(
+        text,
+        if adduct.is_empty() {
+            None
+        } else {
+            Some(&adduct)
+        },
+    ) {
         Ok(j) => crate::emit(format!("{j}\n"), &out),
         Err(e) => Outcome::fail(&e.to_string()),
     }
@@ -59,12 +66,19 @@ mod tests {
         let want = mzlab_core::elements::formula_mz("C9H8O4+16", Some("[M+H]+")).unwrap();
         assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{want}\n"));
         let o = run(&["ion-mz", "288.2-18"]);
-        assert!(String::from_utf8(o.stdout).unwrap().contains("\"mz\":270.2"));
+        assert!(String::from_utf8(o.stdout)
+            .unwrap()
+            .contains("\"mz\":270.2"));
     }
 
     #[test]
     fn usage_and_malformed_shift_exit_2() {
-        for a in [vec!["ion-mz"], vec!["ion-mz", "C9H8O4+1.2.3"], vec!["ion-mz", "--nope"], vec!["ion-mz", "x", "--adduct"]] {
+        for a in [
+            vec!["ion-mz"],
+            vec!["ion-mz", "C9H8O4+1.2.3"],
+            vec!["ion-mz", "--nope"],
+            vec!["ion-mz", "x", "--adduct"],
+        ] {
             assert_eq!(run(&a).code, 2, "{a:?}");
         }
         assert_eq!(run(&["ion-mz", "--help"]).code, 0);

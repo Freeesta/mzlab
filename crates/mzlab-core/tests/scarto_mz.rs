@@ -3,7 +3,8 @@ use mzlab_core::elements::{formula_mz, split_offset};
 use serde_json::Value;
 
 fn get(f: &str, a: &str) -> Value {
-    serde_json::from_str(&formula_mz(f, if a.is_empty() { None } else { Some(a) }).unwrap()).unwrap()
+    serde_json::from_str(&formula_mz(f, if a.is_empty() { None } else { Some(a) }).unwrap())
+        .unwrap()
 }
 
 #[test]
@@ -28,7 +29,11 @@ fn a_formula_takes_the_shift_after_the_adduct() {
 #[test]
 fn a_malformed_shift_is_refused_and_an_adduct_is_not_a_shift() {
     for t in ["C9H8O4+1.2.3", "288.2+16x", "C9H8O4+2H"] {
-        assert_eq!(split_offset(t).unwrap_err().key, "err.formula.offset", "{t}");
+        assert_eq!(
+            split_offset(t).unwrap_err().key,
+            "err.formula.offset",
+            "{t}"
+        );
     }
     assert_eq!(split_offset("C9H8O4+Na").unwrap().1, None);
     assert_eq!(split_offset("C9H8O4 [M+H]+").unwrap().1, None);

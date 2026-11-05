@@ -362,20 +362,39 @@ pub fn split_offset(text: &str) -> Result<(String, Option<f64>)> {
     if !digits.chars().all(|c| c.is_ascii_digit() || c == '.') || !v.is_finite() {
         return Err(bad());
     }
-    Ok((t[..i].to_string(), Some(if t[i..].starts_with('-') { -v } else { v })))
+    Ok((
+        t[..i].to_string(),
+        Some(if t[i..].starts_with('-') { -v } else { v }),
+    ))
 }
 
 /// `/api/formula`: neutral mass and ion m/z of every adduct, exact, at 1 decimal and nominal. With the adduct `none` the text is an ion: an adduct written in it (`+H`, `[M+H]+`) is the one used, otherwise the mass of the formula is the m/z.
 pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     let (formula, offset) = split_offset(formula)?;
     let formula = formula.as_str();
-    let numeric = !formula.is_empty() && formula.chars().all(|c| c.is_ascii_digit() || c == '.' || c == ',');
+    let numeric = !formula.is_empty()
+        && formula
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == ',');
     if let (true, Some(d)) = (numeric, offset) {
         // a bare m/z with a shift: nothing to resolve, the answer has no formula
-        let base: f64 = formula.replace(',', ".").parse().map_err(|_| Error::new("err.formula.unreadable").with("formula", formula))?;
+        let base: f64 = formula
+            .replace(',', ".")
+            .parse()
+            .map_err(|_| Error::new("err.formula.unreadable").with("formula", formula))?;
         let z = base + d;
         let mut o = Out::default();
-        o.raw("{\"formula\":\"\",\"offset\":").num(d).raw(",\"adduct\":\"\",\"mz\":").num(round(z, 4)).raw(",\"mz5\":").num(round(z, 5)).raw(",\"mz1\":").num(round_half_up(z, 1)).raw(",\"nominal\":").int(round_half_up(z, 0) as i64).raw("}");
+        o.raw("{\"formula\":\"\",\"offset\":")
+            .num(d)
+            .raw(",\"adduct\":\"\",\"mz\":")
+            .num(round(z, 4))
+            .raw(",\"mz5\":")
+            .num(round(z, 5))
+            .raw(",\"mz1\":")
+            .num(round_half_up(z, 1))
+            .raw(",\"nominal\":")
+            .int(round_half_up(z, 0) as i64)
+            .raw("}");
         return Ok(o.0);
     }
     let (text, inner) = if adduct == Some(NO_ADDUCT) {
@@ -412,7 +431,10 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     o.raw("}");
     if adduct == Some(NO_ADDUCT) {
         o.raw(",\"adduct\":").str(inner.unwrap_or("")).raw(",");
-        row(&mut o, inner.and_then(|a| ion_mz(m, a)).unwrap_or(m) + offset.unwrap_or(0.0));
+        row(
+            &mut o,
+            inner.and_then(|a| ion_mz(m, a)).unwrap_or(m) + offset.unwrap_or(0.0),
+        );
     } else if let Some(a) = adduct {
         let z = ion_mz(m, a).ok_or_else(|| Error::new("err.adduct.unknown").with("adduct", a))?;
         o.raw(",\"adduct\":").str(a).raw(",");

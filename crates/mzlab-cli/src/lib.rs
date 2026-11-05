@@ -136,7 +136,6 @@ mod flow_tablematch;
 mod flow_tablematch_tests;
 mod flow_transitions;
 pub mod insilico_pack;
-mod ion_mz_cmd;
 mod ion_pattern_cmd;
 pub mod llm;
 mod llm_ctx;
@@ -178,8 +177,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help)
-       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help)
-       mzlab-cli ion-mz TEXT [--adduct A] [--out PATH]   the m/z of a formula or m/z with a signed shift (288.2+16) as JSON (ion-mz --help)
+       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
        mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help)
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)

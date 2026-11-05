@@ -918,6 +918,14 @@ function xicDirect(mz, after, panel, over) {
   return np;
 }
 const xicName = (/** @type {Pannello} */ q) => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(mzd(q)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : I18N.t("xic.empty"); };
+// a formula or a shifted m/z resolved by the engine (f = answer of api/formula): label, window, exact m/z and the note under the field. A signed shift closing the text
+// (+16, -18) was added to the m/z after the adduct as literal Da; the result is a candidate to extract, never an identification.
+const xicShiftRow = (/** @type {string} */ t, /** @type {Bag} */ f) => {
+  const off = f.offset ?? null, sh = off == null ? "" : (off < 0 ? "-" : "+") + String(Math.abs(off));
+  const interp = f.formula && off == null && t.replace(/\s+/g, "") !== f.formula ? I18N.t("xic.interpreted", { formula: fmtFormula(f.formula) }) + " " : "";
+  const shown = off == null ? "" : I18N.t("xic.shifted", { base: String(rh(f.mz - off, 4)), shift: sh, mz: String(rh(f.mz, 4)) }) + " ";
+  return { label: !f.formula ? t.replace(/\s+/g, "") : (f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`) + sh, win: xicWin(f.mz, false), ex: f.mz5 ?? f.mz, note: interp + shown };
+};
 // Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 /** @param {Pannello | null} [panel] */
@@ -954,12 +962,8 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
       try {
         const f = await getFormula(t, r.ad.value);
         if (ed !== r.edits) return;
-        // a signed shift closing the text (+16, -18) is added to the m/z after the adduct, as a literal Da value; the result is a candidate to extract
-        const off = f.offset ?? null, sh = off == null ? "" : (off < 0 ? "-" : "+") + String(Math.abs(off));
-        r.label = !f.formula ? t.replace(/\s+/g, "") : (f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`) + sh;
-        r.win = xicWin(f.mz, false); if (hrFile()) r.ex = f.mz5 ?? f.mz;
-        const shown = off == null ? "" : I18N.t("xic.shifted", { base: String(rh(f.mz - off, 4)), shift: sh, mz: String(rh(f.mz, 4)) }) + " ";
-        r.sum.innerHTML = (f.formula && t.replace(/\s+/g, "") !== f.formula && off == null ? I18N.t("xic.interpreted", { formula: fmtFormula(f.formula) }) + " " : "") + shown + sumText(r);
+        const x = xicShiftRow(t, f); r.label = x.label; r.win = x.win; if (hrFile()) r.ex = x.ex;
+        r.sum.innerHTML = x.note + sumText(r);
       } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (ed === r.edits) r.sum.innerHTML = `<span class="fail">${e.key === "err.formula.offset" ? e.message : I18N.t("xic.badFormula")}</span>`; }
     })();
   };
