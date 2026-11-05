@@ -11,7 +11,7 @@ const APPFX = typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "mzlab-app-", APP =
 const sw = /** @type {any} */ (self);
 const BASE = new URL("./", location.href);                       // the site root: this file sits there
 const NC = { cache: /** @type {RequestCache} */ ("no-cache") };  // revalidate: GitHub Pages sends max-age=600
-const NAV_MS = 3000, FILL_AFTER_MS = 2500, FILL_PARALLEL = 6;
+const NAV_MS = 3000, FILL_AFTER_MS = 2500, FILL_PARALLEL = 6, FILL_RETRY_MS = 30000, FILL_RETRY_MAX_MS = 600000;
 const MARK = new URL(".fill-done", BASE).href;                   // present in the app cache once the background fill finished
 const NEVER = new Set(["static/manifest.json", "static/build.json", "static/sw-manifest.json"]);   // answer for the build itself: always from the network
 const T0 = Date.now();
@@ -108,13 +108,14 @@ const olvidar = async () => {
 const guardar = async (/** @type {Cache} */ cache, /** @type {Request} */ req, /** @type {Response} */ res) => {
   try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ }
 };
-/** Fills the app cache with every file of the manifest the page has not loaded yet (a few at a time, not blocking anything). */
+/** Fills the app cache with every file of the manifest the page has not loaded yet (a few at a time, not blocking anything); true once no
+ * further attempt is needed (marked complete, or the worker is stale). */
 const llenar = async () => {
   try {
     const cache = await abrirApp();
-    if (await cache.match(MARK)) { await olvidar(); return; }
+    if (await cache.match(MARK)) { await olvidar(); return true; }
     const man = await manifestoSw();
-    if (!man) return;
+    if (!man) return false;
     const todo = Object.keys(man).filter(p => !nofill.has(p));
     const have = new Set((await cache.keys()).map(r => r.url));       // one listing: asking the cache once per file is slow
     let failed = 0;
@@ -134,12 +135,18 @@ const llenar = async () => {
       }
     };
     await Promise.all(Array.from({ length: FILL_PARALLEL }, worker));
-    if (!failed && !stale) { await cache.put(MARK, new Response("ok")); await olvidar(); }
-  } catch (_) { /* retried when the worker starts again */ }
+    if (!failed && !stale) { await cache.put(MARK, new Response("ok")); await olvidar(); return true; }
+    return stale;
+  } catch (_) { return false; }
 };
-let filled = false;
-/** Starts the fill once, FILL_AFTER_MS after the worker started, so the page's own requests go first. */
-const arrancar = () => fill || (fill = new Promise(r => setTimeout(r, Math.max(0, FILL_AFTER_MS - (Date.now() - T0)))).then(llenar).then(() => { filled = true; }));
+let filled = false, retry = FILL_RETRY_MS, notBefore = 0;
+/** Starts the fill FILL_AFTER_MS after the worker started, so the page's own requests go first. A fill with a failed file is started again by
+ * the first request after a pause that doubles each time (it fetches only what is still missing): otherwise one dropped file left the cache
+ * incomplete, and the site broken offline, for the whole life of the worker. */
+const arrancar = () => fill || (Date.now() < notBefore ? Promise.resolve() : (fill = new Promise(r => setTimeout(r, Math.max(0, FILL_AFTER_MS - (Date.now() - T0)))).then(llenar).then(done => {
+  if (done) { filled = true; return; }
+  notBefore = Date.now() + retry; retry = Math.min(retry * 2, FILL_RETRY_MAX_MS); fill = null;
+})));
 sw.addEventListener("install", () => {
   sw.skipWaiting();
   arrancar();                                                          // not in waitUntil: the first page must not wait for it
