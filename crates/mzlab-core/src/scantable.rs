@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use crate::budget::MemBudget;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::lettori::Posizione;
 use crate::stima;
@@ -452,23 +452,7 @@ fn is_hr(rows: &[&Row]) -> bool {
     }
 }
 
-/// Each spectrum's `[start, end)` and header text. Offsets come from the `indexList` when the file has a valid one, else the file is walked.
-struct Source<'a, R: ReadAt> {
-    r: &'a mut R,
-    size: u64,
-}
-
 impl<R: ReadAt> Source<'_, R> {
-    fn read(&mut self, a: u64, b: u64) -> Result<Vec<u8>> {
-        let b = b.min(self.size);
-        let mut v = Vec::new();
-        v.try_reserve_exact((b.saturating_sub(a)) as usize)
-            .map_err(|_| Error::memory_budget())?;
-        v.resize((b.saturating_sub(a)) as usize, 0);
-        self.r.read_at(a, &mut v)?;
-        Ok(v)
-    }
-
     /// `_spectrum_offsets`
     fn offsets(&mut self) -> Result<Option<Vec<u64>>> {
         let n = self.size;
@@ -529,27 +513,8 @@ impl<R: ReadAt> Source<'_, R> {
     }
 }
 
-fn find(h: &[u8], pat: &[u8]) -> Option<usize> {
-    if pat.is_empty() || h.len() < pat.len() {
-        return None;
-    }
-    let first = pat[0];
-    let mut i = 0;
-    while i + pat.len() <= h.len() {
-        {
-            let p = h[i..=h.len() - pat.len()]
-                .iter()
-                .position(|c| *c == first)?;
-            i += p;
-            if &h[i..i + pat.len()] == pat {
-                return Some(i);
-            }
-            i += 1;
-        }
-    }
-    None
-}
-
+mod fonte;
+use fonte::{find, Source};
 mod head_read;
 mod inerte;
 mod json;
@@ -679,7 +644,8 @@ fn read_walked<R: ReadAt>(
             if next >= size {
                 break None;
             }
-            buf = src.read(next, next + (1 << 20))?;
+            let old = std::mem::replace(&mut buf, src.read(next, next + (1 << 20))?);
+            src.give(old);
             buf_off = next;
             pos = next;
         };
@@ -688,9 +654,18 @@ fn read_walked<R: ReadAt>(
             stima::check_walk(b, rows.len(), a, size)?;
         }
         // find "</spectrum>" after a: in the buffer that holds `a` when the spectrum ends inside it, else by reading ahead
-        let from = (a - buf_off) as usize;
+        let mut from = (a - buf_off) as usize;
         let mut n: u64 = 1 << 16;
-        let b = if let Some(p) = find(&buf[from..], b"</spectrum>") {
+        let mut end = find(&buf[from..], b"</spectrum>");
+        if end.is_none() && from > 0 && buf_off + (buf.len() as u64) < size {
+            // the spectrum runs past the block: the block starts again at the spectrum, so the spectra after it are found in the same read
+            let old = std::mem::replace(&mut buf, src.read(a, a + (1 << 20))?);
+            src.give(old);
+            (buf_off, from) = (a, 0);
+            n = 4 * buf.len() as u64;
+            end = find(&buf, b"</spectrum>");
+        }
+        let b = if let Some(p) = end {
             let chunk = &buf[from..from + p];
             let hdr_end = find(chunk, b"<binaryDataArrayList").unwrap_or(p);
             push(rows, a, a + p as u64 + 11, &chunk[..hdr_end]);
@@ -745,7 +720,11 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
 /// `read` that refuses in order (`error.memoryBudget`, phase `table`) when the rows would not fit in `budget`: the estimate (`stima`) is made from the
 /// count of the spectra in the index of offsets before the first row is kept, or from the progress of the walk when the file has no index.
 pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> Result<Table> {
-    let mut src = Source { r, size };
+    let mut src = Source {
+        r,
+        size,
+        spare: Vec::new(),
+    };
     let mut rows = Rows::with(read_head(&mut src)?);
 
     // the spans of the spectra
@@ -773,3 +752,5 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
 mod tests_finestra;
 #[cfg(test)]
 mod tests_header;
+#[cfg(test)]
+mod tests_walk;
