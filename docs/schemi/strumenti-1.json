@@ -762,6 +762,12 @@
                   "iso_max_charge",
                   "iso_monotonic",
                   "iso_representative",
+                  "finder_ppm",
+                  "finder_abs_da",
+                  "finder_max_charge",
+                  "finder_elements",
+                  "finder_require_c13",
+                  "finder_auto",
                   "ppm",
                   "peak_width_s",
                   "snr",
@@ -829,9 +835,9 @@
                     "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
                   },
                   {
-                    "enum":["averagine","grouper"],
+                    "enum":["averagine","grouper","finder"],
                     "default":"averagine",
-                    "description":"averagine tests the ratios natural abundance allows; grouper is the isotope grouper of mzmine, with no ratio test"
+                    "description":"averagine tests natural ratios; grouper (mzmine) groups by m/z and RT; finder (mzmine) reads each apex spectrum"
                   },
                   {
                     "type":"number",
@@ -863,6 +869,36 @@
                     "enum":["most_intense","lowest_mz"],
                     "default":"most_intense",
                     "description":"grouper only: the row of a group that is not marked as an isotopologue"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":15,
+                    "description":"finder only: m/z tolerance in the spectrum, the larger of this and the absolute one"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.005,
+                    "description":"finder only: absolute lower bound of the m/z tolerance"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":5,
+                    "default":3,
+                    "description":"finder only: the charges tried, from 1 up to this"
+                  },
+                  {
+                    "type":"string",
+                    "default":"H,C,N,O,S",
+                    "description":"finder only: comma-separated elements whose isotopes are looked for"
+                  },
+                  {"type":"boolean","default":true,"description":"finder only: a charge counts only with a 13C peak"},
+                  {
+                    "type":"boolean",
+                    "default":true,
+                    "description":"finder only: Cl, Br, S and Si seen in the spectrum widen the expected pattern"
                   },
                   {
                     "anyOf":[
