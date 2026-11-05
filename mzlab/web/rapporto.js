@@ -102,7 +102,7 @@ table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}th,td{bord
   }
 
   async function exportReport(kind) {
-    if (typeof E === "undefined" || !E.files || !E.files.filter(f => !f.gone).length) { if (typeof info === "function") info(t("err.workflow.noFiles")); return null; }
+    if (typeof E === "undefined" || !E.files || !E.files.filter(f => !f.gone).length) { if (typeof info === "function") info(t("err.report.noFiles")); return null; }
     const rep = await build();
     const base = "rapporto_" + new Date().toISOString().slice(0, 10);
     if (kind === "json") dl(base + ".json", JSON.stringify(rep, null, 2), "application/json");
