@@ -19,7 +19,8 @@ try:
             g = pg.evaluate("(() => { const s = stackOrder().slice(-2); return s.map(q => [q.x, q.y, q.w, q.h]); })()")
             W = pg.evaluate("hostWidth()")
             assert g[0][1] == g[1][1] and g[0][3] == g[1][3], g            # same row: same y and height
-            assert g[0][0] == 0 and g[1][0] == g[0][2] + 6 and abs(g[1][0] + g[1][2] - W) <= 1, (g, W)
+            gap = pg.evaluate("pnlGap()")      # the CSS token --pnl-gap
+            assert g[0][0] == 0 and g[1][0] == g[0][2] + gap and abs(g[1][0] + g[1][2] - W) <= 1, (g, W)
             assert g[0][2] > g[1][2], g                                      # the shares: 60 / 40
         step("two panels of one row: side by side, one height, shares", side)
         def saved():
