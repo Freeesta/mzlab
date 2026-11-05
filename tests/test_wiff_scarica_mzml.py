@@ -1,6 +1,7 @@
 """«Download .mzML» of a .wiff sample on the site (rust-nativo.js `toMzml`: `to_mzml_come` of the `sciex` module, no optical matrix) is byte for byte the file of
 `mzlab-cli convert` with the same `--compression`, for a Full Scan, a product-ion and a dense MRM pair (the engine alone leaves out what `estesi` writes: SRM dwell and
 energy, isolation offsets, the TIC and BPC of a Full Scan). Synthetic pairs of tools/wiff_riferimento.py only. Skipped without cargo, wasm-bindgen or node."""
+import os
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,7 @@ def work(tmp_path_factory):
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "mod"), str(WASM / "mzlab_lettori_wasm.wasm"))
     run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli")
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(d / "ref")], check=True, capture_output=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto_pi.py"), str(d / "ref")], check=True, capture_output=True)
     return d
 
 
@@ -32,3 +34,15 @@ def test_the_download_is_the_file_of_the_cli(work, stem, comp):
     run(str(ROOT / "target/release/mzlab-cli"), "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1", "--compression", comp)
     cli = sorted(out.glob("*.mzML"))      # NAME.mzML, or NAME-ID.mzML per sample of a pair with several: sample 0 is the first
     assert cli and site.read_bytes() == cli[0].read_bytes(), cli
+
+
+@pytest.mark.parametrize("comp", ["standard", "smallest", "none"])
+def test_a_sample_of_the_readers_module_downloads_as_the_cli_writes_it(work, comp):
+    """The second sample of `mistopi` only the readers module reads (converted at the loading, shell.js `moduloToMzml`): «Download .mzML» in another compression
+    writes it again with `to_mzml_come` and the optical matrix of the loading (conversione.js `again`), the file of `mzlab-cli convert --set conv.dad=true`."""
+    pair = [work / "ref" / "mistopi.wiff", work / "ref" / "mistopi.wiff.scan"]
+    site, out = work / f"mistopi.{comp}.mzML", work / f"mistopi.{comp}"
+    subprocess.run(["node", str(ROOT / "tests" / "mzml_scarica_node.js"), str(work / "mod"), str(site), "1", comp, *map(str, pair)], check=True, env={**os.environ, "MZLAB_DAD": "1"})
+    run(str(ROOT / "target/release/mzlab-cli"), "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1", "--compression", comp, "--set", "conv.dad=true")
+    cli = sorted(out.glob("*.mzML"))
+    assert len(cli) == 2 and site.read_bytes() == cli[1].read_bytes(), cli
