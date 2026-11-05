@@ -16,7 +16,7 @@ Codice: `crates/mzlab-core/src/lettori.rs` (contratto `CONTRATTO = 1`). Lettori:
 - Numeri non finiti nell'mzML piano del sito: `scantable::read_in` (RT, TIC), `mzml::picchi::assemble` (RT, picchi, mobilità: parser e aiutanti), `mzml::finish_chromatogram` e `Mzml::chromatogram` (punti) danno le stesse chiavi dei lettori.
 - `FileSet`: i file di un insieme (`X.wiff` + `X.wiff.scan`, i membri di una cartella `.raw`/`.D`, un file solo) con nome logico e `ReadAt`; `testa(i, n)` dà i primi byte.
 - Nel sito: `crates/mzlab-wasm/src/nativi.rs` apre un insieme di file dal registro (`Membri`: nomi, dimensioni, `read(i, offset, lunghezza)`) con `native_samples`, `native_attach` (lettura per le rotte) e `build_mzidx_native` (indice v2).
-- `native_to_mzml(nomi, dimensioni, read, c, centroide, numpress, sink, progress)` scrive il campione come mzML a pezzi di circa 64 KB (zlib-rs livello 2; `numpress` true = MS-Numpress, con perdita, spento di default).
+- `native_to_mzml(nomi, dimensioni, read, c, centroide, numpress, sink, progress)` scrive il campione come mzML a pezzi di circa 64 KB (zlib-rs livello 2; `numpress` true = MS-Numpress, con perdita, spento di default). Un campione `.wiff` si scarica invece dal modulo `sciex` (`to_mzml_come`, `lettori-modulo.md`).
 - `Limiti { profondita, voci, byte }` (`Limiti::sito()`, `Limiti::desktop()`) passato a ogni `apri`: un lettore confronta con `voci_ok` e `profondita_ok` i numeri letti dal file prima di allocare o ricorrere.
 
 ## Aggiungere un formato
