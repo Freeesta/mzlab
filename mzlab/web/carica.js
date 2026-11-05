@@ -26,7 +26,7 @@
   }
   window.carica = function (n) { return add(n); };
   // a smartphone gets only the card: no Dati, Disegno or shell
-  if (window.QQQ_PHONE) { add("telefono-scheda.js"); return; }
+  if (window.MZLAB_PHONE) { add("telefono-scheda.js"); return; }
   var classic = L.filter(function (n) { return n.slice(0, 2) !== "m:"; });
   var modules = L.filter(function (n) { return n.slice(0, 2) === "m:"; });
   var rest = classic.concat(["shell.js"], modules);

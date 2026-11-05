@@ -38,7 +38,7 @@ def test_counts_of_the_real_export_and_the_import_time():
     b = _base(); m = b / "1 - mzMine" / "DDA_POS" / "merged"
     paths = {"full": _find(m, "merged_pos.csv"), "ann": _find(m, "merged_pos_annotations.csv"), "quant": _find(m, "merged_pos_GNPS_quant.csv"), "gnps": _find(b / "3 - GNPS", "merged_results_with_gnps.tsv")}
     code = f"""globalThis.window = globalThis; const store = {{}}; globalThis.localStorage = {{ getItem: k => (k in store ? store[k] : null), setItem: (k, v) => {{ store[k] = String(v); }} }};
-      require({str(WEB / 'livelli-1.js')!r}); require({str(WEB / 'livelli.js')!r}); const U = require({str(JS / '25_untarget.js')!r}); const fs = require('fs'); const P = {json.dumps({k: str(v) for k, v in paths.items()})};
+      globalThis.NOMI = require({str(WEB / 'nomi.js')!r}); require({str(WEB / 'livelli-1.js')!r}); require({str(WEB / 'livelli.js')!r}); const U = require({str(JS / '25_untarget.js')!r}); const fs = require('fs'); const P = {json.dumps({k: str(v) for k, v in paths.items()})};
       const rd = k => fs.readFileSync(P[k], 'utf8'); const out = {{}};
       let t0 = Date.now(); const q = U.readMzmineQuant(rd('quant'), {{ pol: 1 }}); out.quant = q.features.length; out.quantMs = Date.now() - t0;
       t0 = Date.now(); const t = U.readMzmineFull(rd('full'), {{ pol: 1 }}); out.full = t.features.length; out.fullMs = Date.now() - t0;

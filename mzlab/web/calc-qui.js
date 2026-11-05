@@ -15,7 +15,7 @@ const CALCQUI = (() => {
   // the choices; pol is 1 (ESI+), -1 (ESI−) or 0 (both), null while the student has not chosen (it follows the files shown)
   // unit: the tolerance unit chosen in each mode (null = the preset: ppm in high resolution, Da in low)
   const st = /** @type {CqState} */ ({ ppm: "5", da: "0.5", pol: null, unit: { hr: null, lr: null } });
-  const KEY = () => (typeof NOMI !== "undefined" ? NOMI.KEY("calcqui") : "mzlab.calcqui");
+  const KEY = () => (NOMI.KEY("calcqui"));
   const subs = /** @type {(() => void)[]} */ ([]);
   // what the open files say: { hr, name } (name = the instrument / analyzer that decided), or null when no file is open
   let filesMode = () => /** @type {{ hr: boolean, name: string } | null} */ (null), filesPol = () => /** @type {1 | -1 | 0} */ (1);

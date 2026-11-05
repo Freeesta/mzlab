@@ -82,6 +82,7 @@ NODE = shutil.which("node")
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
 def test_list_engine_with_node(tmp_path):
     code = r"""
+globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, 'nomi.js'));
 const L = require(process.argv[1]);
 const items = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'));
 const idx = L.buildIndex([{ id: "keller", name: "K", items }, L.labList([{ mz: 123.4567, name: "mio", formula: "", polarity: 1, note: "bianco" }])]);

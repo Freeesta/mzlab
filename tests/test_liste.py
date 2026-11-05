@@ -71,6 +71,7 @@ def test_differenze_addotti_huang1999():
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
 def test_list_engine_nominal_vs_ppm_and_csv(tmp_path):
     code = r"""
+globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, 'nomi.js'));
 const L = require(process.argv[1]);
 const items = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'));
 const idx = L.buildIndex([{ id: "keller", name: "Keller/Guo", items }]);

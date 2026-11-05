@@ -182,6 +182,7 @@ console.log(csv);
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
 def test_liste_target_integration():
     code = r"""
+globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, "nomi.js"));
 const L = require(process.argv[1]);
 const out = {
   hasOpenTarget: typeof L.openTargetScreening === 'function',
