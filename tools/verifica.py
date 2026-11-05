@@ -403,6 +403,11 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 1800, env=env)
         if rc:
             results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
+    if shutil.which("cargo") and any("cargo" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo):      # the tests that call `cargo run` would each wait on cargo's build-folder lock, or rebuild a stale tree, inside the timeout of their own: build the two binaries once
+        for pkg in (["-p", "mzlab-cli"], ["-p", "mzlab-feat-wasm", "--example", "nativo"]):
+            rc, _out, dt = sh(["cargo", "build", "--release", "-q", *pkg], LOG / "precompila.log", 3000, env=env)
+            if rc:
+                results.append((f"cargo build {' '.join(pkg)} (prima degli e2e)", "FAIL", dt, ["vedi .verifica/log/precompila.log"])); return
     # every test takes a free port and its own work folder (tests_e2e/lib.py), the site tests too: they all run in the same pool, the slowest first
     from concurrent.futures import ThreadPoolExecutor
     lenti = [n for n in LENTI if n in todo]
