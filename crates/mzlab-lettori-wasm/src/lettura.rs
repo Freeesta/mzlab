@@ -189,7 +189,7 @@ pub fn famiglia() -> String {
     mzlab_lettori::famiglia().into()
 }
 
-/// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
+/// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}` (a SCIEX pair counts the scans of sample 0 only, the others say 0). The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
 /// as scans), `"pda"` (UV traces), `"variante"` (a file whose points the engine would misread: an Agilent `.D` QqQ MRM or Q-TOF profile or flight times, a SCIEX file of the 3200 reader). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
 #[wasm_bindgen]
 pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<String, JsValue> {
@@ -198,7 +198,7 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     let mut motivi: Vec<&str> = Vec::new();
     #[cfg(any(feature = "agilent", feature = "tutte"))]
     motivi.extend(mzlab_lettori::motivi_insieme(&mut m.fileset()));
-    let mut l = match mzlab_lettori::apri(m.fileset(), &Limiti::sito()) {
+    let mut l = match apri_sonda(m.fileset()) {
         Ok(l) => l,
         // a SCIEX file the module itself refuses (a TOF, several periods, an unknown scan type) is a variant too: the engine would read it as a 3200 and be wrong
         #[cfg(feature = "sciex")]
@@ -223,6 +223,19 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     }
     o.raw("]}");
     Ok(o.0)
+}
+
+/// The reader of `fs` for `probe`: a SCIEX pair builds the index of sample 0 only (`apri_solo`), the method of the others is enough for `motivi`;
+/// any other set opens as `apri`.
+fn apri_sonda(
+    #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
+) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Lettore>> {
+    #[cfg(any(feature = "sciex", feature = "tutte"))]
+    if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::lettore::VOCE.id)
+    {
+        return mzlab_core::wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(0));
+    }
+    mzlab_lettori::apri(fs, &Limiti::sito())
 }
 
 /// The reader of `fs` for the mzML of sample `c`: a SCIEX pair reads the heads of the blocks of that injection only (`apri_solo`, as the engine does), any other set opens as `apri`.
