@@ -100,18 +100,19 @@ try:
         step("drawer open or pinned: headers stay on one row, nothing cut (1280, 1440, 1680)", cassetto)
 
         def ipad():
-            for w, h in ((1024, 1366), (1366, 1024)):
+            for w, h in ((1024, 1366), (1366, 1024), (768, 1024), (834, 1194), (1100, 900), (600, 900)):
                 ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True, locale="it-IT", reduced_motion="reduce")
                 q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached")
                 try:
                     load(q, [D / "HR_DDA-Exploris-t30.mzML", D / "HR_DDA-Fusion-t30.mzML"], 4000, 4); setup(q)        # the session lives in the browser: a new context opens the files itself
                     check(q, ("ipad", w))
-                    q.evaluate("BARRA.setTab('file',{noFocus:true})"); settle(q); check(q, ("ipad drawer", w))
+                    q.evaluate("BARRA.setTab('file',{noFocus:true})"); settle(q)
+                    if w >= 1000 or q.evaluate(CHECK): check(q, ("ipad drawer", w))      # a narrow window with the drawer open may cover every panel: nothing to measure
                     q.set_viewport_size({"width": h, "height": w}); settle(q); check(q, ("ipad rotated", h))
                 finally:
                     ctx.close()
-        step("iPad 1024×1366 and 1366×1024 (touch), drawer open, rotated: one row, nothing cut", ipad)
+        step("iPad 1024×1366, 1366×1024, 768, 834, 1100, 600 px wide (touch), drawer open, rotated: one row, nothing cut", ipad)
 
     print("\n".join(f"{n}: {s}" for n, s in steps))
     bad = [s for s in steps if s[1] != "ok"]
