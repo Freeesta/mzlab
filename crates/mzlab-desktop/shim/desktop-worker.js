@@ -50,12 +50,12 @@ const stub = (name, id) => new File([], name, { type: tag(id) });
 
 // The WASM worker does one thing at a time, in the order of the messages (a `reset` sent just before the `idxopen` of the new session cannot overtake it).
 // The native engine answers from several threads, so the messages are put in a line here; only the long ones that have a thread pool or a
-// progress of their own (index builds, the mzML of a sample written on request) do not wait for the others.
+// progress of their own (index builds, the mzML of a sample written on request) do not wait for the others, nor does «Cancel» of the loading (lr_cancel), which stops them.
 let line = Promise.resolve();
 onmessage = ev => {
   const m = ev.data;
   if (m.op === "recycle") return;
-  if (m.op === "lr_index" || m.op === "lr_index_cen" || m.op === "lr_warm" || m.op === "nat2mzml" || m.op === "mzml2cen") { handle(m); return; }
+  if (m.op === "lr_index" || m.op === "lr_index_cen" || m.op === "lr_cancel" || m.op === "lr_warm" || m.op === "nat2mzml" || m.op === "mzml2cen") { handle(m); return; }
   line = line.then(() => handle(m));
 };
 

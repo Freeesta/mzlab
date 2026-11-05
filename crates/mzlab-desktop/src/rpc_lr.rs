@@ -64,6 +64,7 @@ impl State {
             }
             "lr_put" => {
                 let name = clean(s("name"))?;
+                self.indexer()?.resume(name);                                   // a file cancelled before builds afresh
                 if p["nat"].is_object() {
                     return self.put_native(eng, name, &p["nat"]);
                 }
@@ -117,6 +118,13 @@ impl State {
         }
     }
 
+    /// `lr_remove`: the file leaves the list and its indexes leave the folder with it, as on the site.
+    fn forget_lr(&self, name: &str) -> Result<()> {
+        self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
+        self.indexer()?.remove_all(name);
+        Ok(())
+    }
+
     #[allow(unused_variables)]
     pub(crate) fn op_misc(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -151,7 +159,7 @@ impl State {
                     eng.idx.remove(&slot);
                     eng.nat.forget(slot);
                 }
-                self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
+                self.forget_lr(name)?;
                 text("{}")
             }
             "lr_valida" => self.validate_mzml(s("name")),

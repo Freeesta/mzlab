@@ -18,7 +18,6 @@ SOLO_SITO = {
     "lr_cen_adopt": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
     "lr_flow_line": "the app's page posts flow/line (flow-terminal.js)",
     "lr_flow_sched": "the app's page posts flow/live/<op> (flow-live-desktop.js)",
-    "lr_cancel": "gap: the app's index build is not stopped by «Cancel» (the files are mapped, nothing is copied); the outputs do not differ",
 }
 
 
