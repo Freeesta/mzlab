@@ -93,7 +93,7 @@ pub(super) fn detect() -> Step {
             .advanced(),
         Param::choice("area_from", "Area from", &["channel", "window"])
             .default_str("channel")
-            .doc("channel: the points of the trace that found the row; window: every point of its quality window (6 ppm in HR) over its scans, so an ion whose m/z wanders between channels keeps its whole area")
+            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
             .advanced(),
         Param::number("merge_overlap", "Merge overlap")
             .min(0.0)
