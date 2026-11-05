@@ -285,8 +285,8 @@ async function lrIndexOwn(m) {
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
   }
   if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
+    if (res.reason === "cancelled") { safe(() => Promise.all([part, part.replace(/\.part$/, ".sp.part"), ...(partCen ? [partCen] : [])].map(n => ARCH.removeHeld("idx", n)))); throw cancelled(); }      // the stopped builder still holds these files for a moment
     await ARCH.remove("idx", part);
-    if (res.reason === "cancelled") throw cancelled();
     if (res.reason === "memory") jerr("error.memoryBudget");
     let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
     if (key) throw res.text;
@@ -350,7 +350,7 @@ async function lrOp(m) {
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_ion_pattern": return { info: ion_pattern(m.f || "", m.adduct || "") };
     case "lr_remove": {
-      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await ARCH.remove("files", m.name); await tilesDrop(m.name, null); await safe(lrFree);      // the indexes of the file go with it
+      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await (CANCELLED.has(m.name) ? ARCH.removeHeld : ARCH.remove)("files", m.name); await tilesDrop(m.name, null); await safe(lrFree);      // the indexes of the file go with it
       await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name)));      // the members of a maker's file that no sample uses any more go
       return { info: "{}" };
     }
