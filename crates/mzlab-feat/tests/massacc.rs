@@ -261,3 +261,47 @@ fn the_offset_model_corrects_the_table_and_keeps_the_rows() {
     let (_, none) = check(|_, _| 4.0, 8, &Params::default(), Some(&bytes));
     assert!(none.is_none());
 }
+
+#[test]
+fn a_list_marked_not_background_gives_no_reference_ions() {
+    let doc = br#"{"lists":[{"id":"bg","items":[{"name_en":"A","adduct":"[M+H]+","formula":"C2H6O","z":1,"mz":47.04914,"pol":1}]},
+        {"id":"targets","background":false,"items":[{"name_en":"B","adduct":"[M+H]+","formula":"C8H14ClN5","z":1,"mz":216.10105,"pol":1}]}]}"#;
+    let ions = massacc::refs::background(doc).unwrap();
+    assert_eq!(
+        ions.iter().map(|i| i.name.as_str()).collect::<Vec<_>>(),
+        ["A [M+H]+"]
+    );
+    // the shipped file: only the always-present background list feeds the check, never the pesticide list
+    let shipped =
+        massacc::refs::background(include_bytes!("../../../mzlab/web/contaminanti.json")).unwrap();
+    let doc = parse(include_bytes!("../../../mzlab/web/contaminanti.json")).unwrap();
+    let lists = doc.get("lists").unwrap().arr();
+    let bg: usize = lists
+        .iter()
+        .filter(|l| l.get("background").and_then(|b| b.bool()) != Some(false))
+        .map(|l| l.get("items").unwrap().arr().len())
+        .sum();
+    assert!(shipped.len() <= bg && !shipped.is_empty());
+    assert!(
+        lists.len() >= 2,
+        "the pesticide list sits next to the background list"
+    );
+    // the m/z written by the generator are the engine's (elements::ion_mz), so site and app agree on every pesticide ion
+    let pest = lists
+        .iter()
+        .find(|l| l.get("id").and_then(|v| v.str()) == Some("pesticides"))
+        .unwrap();
+    for it in pest.get("items").unwrap().arr() {
+        let text = |k: &str| it.get(k).and_then(|v| v.str()).unwrap();
+        let f = mzlab_core::elements::parse_formula(text("formula")).unwrap();
+        let mz =
+            mzlab_core::elements::ion_mz(mzlab_core::elements::mass(&f), text("adduct")).unwrap();
+        let listed = it.get("mz").and_then(|v| v.f64()).unwrap();
+        assert!(
+            (mz - listed).abs() < 1e-5,
+            "{} {}: {mz} vs {listed}",
+            text("name_en"),
+            text("adduct")
+        );
+    }
+}

@@ -123,7 +123,7 @@ def test_static_file_equals_the_route():
     code, _ctype, body, _h = dispatch(App(), "GET", "/api/contaminants", {})
     assert code == 200
     assert g.OUT.read_text(encoding="utf-8") == body.decode("utf-8") == g.text()
-    assert len(json.loads(g.OUT.read_text(encoding="utf-8"))["lists"]) == 1
+    assert [l["id"] for l in json.loads(g.OUT.read_text(encoding="utf-8"))["lists"]] == ["keller", "pesticides"]
 
 
 def test_every_entry_has_english_name_and_class():

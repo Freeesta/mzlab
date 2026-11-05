@@ -2,7 +2,8 @@
 
 Run by hand, once:  python3 tools/genera_molecole.py
 Reads TP_Mine/data/composti.csv (catalog `tabui`, in its order) and tests/data/liste/sostanze_hrms.csv (catalog `hrms`; the 43 molecules in both are one record,
-joined by the whole InChIKey, with the name of composti.csv and every other name as a synonym). The file is written in the canonical form of the Rust writer
+joined by the whole InChIKey, with the name of composti.csv and every other name as a synonym). Every record with a SMILES also gets the `structure:` classes
+of tools/classi_struttura.py. The file is written in the canonical form of the Rust writer
 (`molecules::to_csv`): the test `crates/mzlab-core/tests/molecules.rs` checks that reading it and writing it back gives the same bytes.
 """
 import csv
@@ -12,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from mzlab.chem import elements  # noqa: E402  (the reference of the Rust masses)
+from classi_struttura import classes as structure_classes  # noqa: E402  (structure:* classes read from the SMILES by fixed rules)
 
 COMPOSTI = ROOT / "TP_Mine" / "data" / "composti.csv"
 HRMS = ROOT / "tests" / "data" / "liste" / "sostanze_hrms.csv"
@@ -41,7 +43,7 @@ def record(name, synonyms, formula, smiles, inchikey, catalogs, extra):
     return {
         "id": "ik:" + inchikey, "name": name.strip(), "synonyms": "|".join(tidy(synonyms, name)), "molecular_formula": elements.fmt(f), "charge": "",
         "monoisotopic_mass": f"{round(elements.mass(f), 6):.6f}", "smiles": smiles.strip(), "inchikey": inchikey.strip(),
-        "adducts": HRMS_ADDUCTS if "hrms" in catalogs else "", "collections": "", "classes": "|".join(sorted(extra.get("classes", []))),
+        "adducts": HRMS_ADDUCTS if "hrms" in catalogs else "", "collections": "", "classes": "|".join(sorted(extra.get("classes", []) + structure_classes(smiles))),
         "cas": extra.get("cas", ""), "pubchem_cid": extra.get("cid", ""), "notes": extra.get("notes", ""), "origin": "catalogo", "catalog": "|".join(catalogs),
     }
 
