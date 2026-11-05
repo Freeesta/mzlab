@@ -3,7 +3,7 @@
 its engine equal the Python reference's (tests_e2e/pyref.py); nothing is left to Python (window.MZLAB_LR_MISS stays empty, the app carries none). Run from
 the repository root:
   python3 tools/build_site.py && python3 crates/mzlab-desktop/prepare.py && python3 crates/mzlab-desktop/tests/e2e_shim.py"""
-import json, os, re, subprocess, sys, tempfile, threading, time, urllib.request
+import json, os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.request
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -25,6 +25,9 @@ _ts = [0.05 * k for k in range(40)]
 _w = wr.Writer(); _w.sample(1, [("scan", [(100 + k, 50 + k)], 1000.0 * k, 50.0 + k) for k in range(40)], {"Experiment0/ExperimentHeader": wr.header(15, 30.0)},
                             dad=(_ts, 200.0, 1.0, [[10 + 400 * math.exp(-((j - 60) / 12) ** 2) * math.exp(-((t - 1.0) / 0.2) ** 2) for j in range(201)] for t in _ts])); _w.save(WIFF_DIR, "uv")
 WIFF_FILES = [WIFF_DIR / "uv.wiff", WIFF_DIR / "uv.wiff.scan"]
+RAW_DIR = Path(tempfile.mkdtemp(prefix="mzlab-raw-"))                  # a synthetic Thermo .raw (crates/mzlab-lettori examples/sintetici, invented numbers)
+subprocess.run(["cargo", "run", "-q", "-p", "mzlab-lettori", "--example", "sintetici", "--", str(RAW_DIR)], cwd=ROOT, check=True)
+RAW_FILE = RAW_DIR / "thermo" / "synt.raw"
 PAGE_PORT, ENGINE_PORT = 8841, 8842
 fails = []
 def step(name, fn):
@@ -39,13 +42,13 @@ if not (DIST / "index.html").exists() or not all(f.exists() for f in LR_FILES + 
 subprocess.run(["cargo", "build", "-q", "-p", "mzlab-desktop", "--example", "serve"], cwd=ROOT, check=True)
 LIBDIR = Path(tempfile.mkdtemp(prefix="mzlab-libs-")) / "Librerie"      # the native folder of the libraries (does not exist yet: the app creates it)
 DATA = Path(tempfile.mkdtemp(prefix="mzlab-data-"))                    # the folder of the app: files.json, kv.json, the indexes
-eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES + WIFF_FILES)], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_APP_DIR": str(DATA)})
+eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES + WIFF_FILES + [RAW_FILE])], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_APP_DIR": str(DATA)})
 picked = {}
 for line in eng.stdout:
     if line.startswith("FILE "):
         _, i, name, size = line.split(); picked[name] = {"id": int(i), "name": name, "size": int(size)}
     if line.startswith("READY"): break
-LR_PICK = [picked[f.name] for f in LR_FILES]; HR_PICK = [picked[f.name] for f in HR_FILES]; WIFF_PICK = [picked[f.name] for f in WIFF_FILES]
+LR_PICK = [picked[f.name] for f in LR_FILES]; HR_PICK = [picked[f.name] for f in HR_FILES]; WIFF_PICK = [picked[f.name] for f in WIFF_FILES]; RAW_PICK = [picked[RAW_FILE.name]]
 
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -342,6 +345,23 @@ try:
             assert not miss, miss
             c4.close()
         step("desktop: PDA map, UV spectrum and λ trace of a .wiff with DAD", desktop_dad)
+        def raw_again():
+            c5 = b.new_context(user_agent=ctx_ua)
+            c5.add_init_script("window.__NEWRUN = true; window.__PICK = %s;\n" % json.dumps(RAW_PICK) + FAKE_TAURI); c5.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            q = c5.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            q.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); q.wait_for_selector("#drop", timeout=120000)
+            q.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true && typeof ST !== 'undefined'", timeout=30000)
+            # upload() counted: a loading has ended when the count grows; #drop may be hidden behind the list of the files, the shim takes its click
+            count = "(() => { if (window.__ups === undefined) { const u = window.upload; window.__ups = 0; window.upload = async (...a) => { try { return await u(...a); } finally { window.__ups++; } }; } return window.__ups; })()"
+            idle = "UPBUSY === 0 && OPENNOW.busy() === 0"
+            def give():
+                n = q.evaluate(count); q.evaluate("document.getElementById('drop').click()"); q.wait_for_function(f"window.__ups > {n} && {idle}", timeout=180000)
+            rows = lambda: (q.evaluate("ST.files.map(f => f.name).filter(n => n.startsWith('synt')).sort()"), sorted(x.name for x in DATA.rglob("synt*.mzidx")))
+            give(); q.wait_for_function(f"ST.files.some(f => f.name === 'synt.mzML' && OPENNOW.isOpen(f.name)) && {idle}", timeout=180000)
+            first = rows(); assert first == (["synt.mzML"], ["synt.mzML.mzidx"]), first
+            give(); assert rows() == first, ("the same .raw picked again", first, rows())
+            c5.close()
+        step("desktop: the same .raw picked again keeps its one row and its one index (natsame)", raw_again)
         def cold_start():
             c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
             q = c3.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
@@ -366,6 +386,6 @@ try:
         step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
         b.close()
 finally:
-    eng.kill(); page.shutdown()
+    eng.kill(); page.shutdown(); shutil.rmtree(RAW_DIR, ignore_errors=True)
 print("  ", ("result", "FAIL " + ", ".join(fails) if fails else "ok"))
 sys.exit(1 if fails else 0)

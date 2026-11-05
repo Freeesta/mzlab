@@ -115,3 +115,56 @@ fn a_native_d_is_listed_indexed_read_and_written_as_mzml() {
         "the files of the student are never touched"
     );
 }
+
+/// The same dataset given again (`natsame`): its sample once it has an index, picked anew from the same files (also in a new run); nothing before the index, for other
+/// members or once a member changed (the page then reads it again, as the site does).
+#[test]
+fn the_same_native_dataset_given_again_is_recognised() {
+    let dir = tempfile::tempdir().unwrap();
+    let d = dir.path().join("src/x.D/AcqData");
+    std::fs::create_dir_all(&d).unwrap();
+    let (idx, peak) = agilent_synth::encode(&agilent_synth::sample());
+    std::fs::write(d.join("MSScan.bin"), idx).unwrap();
+    std::fs::write(d.join("MSPeak.bin"), &peak).unwrap();
+    let st = state(dir.path());
+    let r = |op: &str, p: Value| st.rpc(op, &p, &[]);
+    let pick = || -> Vec<Value> {
+        ["MSScan.bin", "MSPeak.bin"]
+            .iter()
+            .map(|n| json!({"name": format!("x.D/AcqData/{n}"), "fid": st.pick(d.join(n)).unwrap().0}))
+            .collect()
+    };
+    let same = |members: Vec<Value>| -> Value {
+        serde_json::from_str(&text(
+            r("natsame", json!({"members": members, "names": ["x", "y"]})).unwrap(),
+        ))
+        .unwrap()
+    };
+    let nat = json!({"key": "k", "c": 0, "id": 0, "centroid": false, "members": pick()});
+    r("lr_put", json!({"name": "x", "nat": nat})).unwrap();
+    assert_eq!(same(pick())["names"], json!([]), "no index yet");
+    r("lr_index", json!({"name": "x"})).unwrap();
+    assert_eq!(
+        same(pick())["names"],
+        json!(["x"]),
+        "the same files picked again"
+    );
+    assert_eq!(
+        same(pick()[..1].to_vec())["names"],
+        json!([]),
+        "a part of the members"
+    );
+    let st2 = state(dir.path()); // a new run of the app on the same folders
+    let members: Vec<Value> = ["MSScan.bin", "MSPeak.bin"]
+        .iter()
+        .map(|n| json!({"name": format!("x.D/AcqData/{n}"), "fid": st2.pick(d.join(n)).unwrap().0}))
+        .collect();
+    let again = text(
+        st2.rpc("natsame", &json!({"members": members, "names": ["x"]}), &[])
+            .unwrap(),
+    );
+    assert_eq!(again, r#"{"names":["x"]}"#, "a new run of the app");
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    std::fs::write(d.join("MSPeak.bin"), [peak.as_slice(), &[0u8]].concat()).unwrap();
+    assert_eq!(same(pick())["names"], json!([]), "a member changed");
+}

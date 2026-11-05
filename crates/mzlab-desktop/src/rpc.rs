@@ -375,6 +375,7 @@ impl State {
             "lr_warm" => return self.lr_warm(p),                                            // the index of a file of the pointed folder, built ahead (`rpc_warm.rs`): it does not hold the engine
             "lr_warm_claim" => return self.lr_warm_claim(p),
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
+            "natsame" => return self.nat_same(p),                                           // the same dataset given again
             "nat2mzml" => return self.nat_to_mzml(p),
             "natregistro" => return self.nat_registro(p),                                   // one series of the instrument log of a .raw, read on request
             "natsrm" => return self.nat_srm(p),                                             // the traces of a sample for mzFinder (no mzML)
