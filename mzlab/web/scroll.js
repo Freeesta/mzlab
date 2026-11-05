@@ -123,13 +123,14 @@ function cursorLine(p) {
   const c = p.cl, a = p._a, h = p.ch; if (!c) return;
   // one cursor for the linked chromatograms
   if (p.tl && p.cur != null && !p._cs && isLine(p)) tabPanels(p.tab).forEach(q => { if (q !== p && q.tl && isLine(q) && q.cur !== p.cur) { q.cur = p.cur; q._cs = true; cursorLine(q); q._cs = false; } });
+  const bar = () => (typeof BARRE === "undefined" ? null : BARRE); if (bar()) bar().sync(p); else if (p.ints.length) carica("barre-maniglie.js").then(() => bar() && bar().sync(p));          // loaded when a window exists
   if (!a || !a.X || p.type === "spec" || p.type === "map" || p.cur == null || p.cur < a.x0 || p.cur > a.x1) { c.hidden = true; if (h) h.hidden = true; return; }
   c.hidden = false; c.style.left = p.cv.offsetLeft + a.X(p.cur) + "px"; c.style.top = p.cv.offsetTop + M.t + "px"; c.style.height = a.H - M.t - M.b + "px";
   // the peak labels sit in front of the line: it is cut where a label box crosses it
   const gaps = (a.lbls || []).filter((/** @type {any} */ l) => l.etpk && l.w && l.x <= a.X(p.cur) && a.X(p.cur) <= l.x + l.w).sort((u, v) => u.y - v.y);
   c.style.maskImage = c.style.webkitMaskImage = gaps.length ? `linear-gradient(to bottom, ${gaps.map((/** @type {any} */ l) => `#000 ${Math.max(0, l.y - M.t)}px, transparent ${Math.max(0, l.y - M.t)}px, transparent ${l.y + l.h - M.t}px, #000 ${l.y + l.h - M.t}px`).join(", ")})` : "";
   if (!h) return;
-  h.hidden = !!p._exp; h.style.left = c.style.left; h.style.top = p.cv.offsetTop + M.t + "px";
+  h.hidden = !!p._exp || p.imode === "man" || p.imode === "auto" || p.imode === "idel"; h.style.left = c.style.left; h.style.top = p.cv.offsetTop + M.t + "px";
   const t = I18N.t("cursor.handle"); h.setAttribute("aria-label", t); h.title = t;
   if (a.full) { h.setAttribute("aria-valuemin", a.full[0].toFixed(2)); h.setAttribute("aria-valuemax", a.full[1].toFixed(2)); }
   h.setAttribute("aria-valuenow", p.cur.toFixed(2)); h.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: p.cur.toFixed(2) }) + (window.GRADIENTE && p.overlay ? GRADIENTE.cursorText(p) : ""));

@@ -287,6 +287,11 @@ html{scroll-padding-top:60px;scroll-padding-bottom:16px}
 .clh{display:none;position:absolute;z-index:3;width:14px;height:14px;margin:-7px 0 0 -7px;padding:0;border-radius:50%;border:2px solid var(--panel);background:var(--accent);cursor:ew-resize;touch-action:none;box-shadow:0 0 0 1px var(--accent)}
 .clh::before{content:"";position:absolute;inset:-5px}
 .clh:hover,.clh.on{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.ibh{position:absolute;z-index:3;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:0;border-radius:50%;background:transparent;touch-action:none;cursor:ew-resize}
+.ibh:focus-visible{outline:2px solid var(--accent);outline-offset:-6px}
+.ibh.on{background:color-mix(in srgb,var(--accent) 25%,transparent)}
+html.ptr-mouse .ibh{pointer-events:none}
+@media (forced-colors:active){.ibh:focus-visible{outline-color:Highlight}.ibh.on{background:Highlight}}
 .clh:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media (pointer:coarse){.clh{display:block;width:18px;height:18px;margin:-9px 0 0 -9px}.clh::before{inset:-11px}}
 html.ptr-touch .clh{display:block}

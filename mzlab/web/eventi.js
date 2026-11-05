@@ -14,13 +14,13 @@ function attach(p) {
   const yAxisZone = (px, py) => canYZ(p._a) && px < M.l && inPlotY(py);               // the numbers at the left of the y axis
   const xAxisZone = (px, py) => p._a && !p._a.map && px >= M.l && px <= p._a.W - M.r && py > p._a.H - M.b;   // the numbers under the x axis
   const onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < 6;
+  const edgeOf = (it, e) => {
+    let mate = null; for (const o of p.ints) if (o !== it && o.key === it.key) for (const f of ["a", "b"]) if (Math.abs(o[f] - it[e]) < INT_EPS) mate = { it: o, e: f };      // a border shared with the next peak moves both
+    return { it, e, mate, snap: intSnap(p) };
+  };
   const edgeAt = px => {
     if (!p._a || p.type === "spec") return null;
-    for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) {
-      let mate = null; for (const o of p.ints) if (o !== it && o.key === it.key) for (const f of ["a", "b"]) if (Math.abs(o[f] - it[e]) < INT_EPS) mate = { it: o, e: f };      // a border shared with the next peak moves both
-      return { it, e, mate, snap: intSnap(p) };
-    }
-    return null;
+    for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) return edgeOf(it, e);
   };
   const edgeMove = (ed, x) => {                                              // the border stops at the neighbouring peak (touching is fine, overlapping is not)
     const { it, e, mate } = ed, o = e === "a" ? it.b : it.a, v = it[e], oth = p.ints.filter(i => i !== it && (!mate || i !== mate.it) && i.key === it.key);
@@ -30,6 +30,8 @@ function attach(p) {
     else { let l = mo != null ? Math.min(mo, v) : -Infinity; oth.forEach(i => { if (iHi(i) <= v + INT_EPS) l = Math.max(l, iHi(i)); }); nx = Math.min(o, Math.max(l, x)); }
     it[e] = nx; if (mate) mate.it[mate.e] = nx;
   };
+  // the bar handles (scroll.js, finger / pen / keyboard) drag a border through the same code as the mouse: begin, move to x (min), end = one undo step
+  p._bar = { begin: (it, e) => { drag = { edge: edgeOf(it, e) }; }, move: x => { if (drag && drag.edge && x != null) { edgeMove(drag.edge, x); draw(p); } }, end: () => p._up(null), xd };
   // the vertical line (or its dot) goes to x: the linked spectrum follows once per frame
   const moveCur = x => {
     const a = p._a; if (!a || x == null) return;
@@ -158,7 +160,7 @@ function attach(p) {
         return;
       }
       if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => hrTrace(s) ? autoAll(p, s) : autoInt(p, s, x0)); return; }
-      if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) { const go = () => t.forEach(s => addInt(p, s, x0, x1)); if (STORIA) STORIA.gruppo(go); else go(); } else draw(p); return; }
+      if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) { const go = () => t.forEach(s => addInt(p, s, x0, x1, true, true)); if (STORIA) STORIA.gruppo(go); else go(); } else draw(p); return; }
     }
     if (Math.abs(d.x - d.x0) > 4) {
       if (p.type === "spec") { pushZh(p); if (Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0)), true); p.zoom = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); }

@@ -141,7 +141,7 @@ I18N.add("it", {
   "int.tbl.overlap.title": "Si sovrappone a un'altra integrazione della traccia: eliminane una",
   "int.tbl.overlap": "⚠ sovrapposto",
   "int.tbl.del.title": "Elimina questa integrazione (anche dal grafico)",
-  "int.tbl.note": "Area: regola dei trapezi con baseline lineare tra i due bordi. Trascina le barre nel pannello per correggere i bordi.",
+  "int.tbl.note": "Area: regola dei trapezi; finestra manuale = traccia tra le barre fino allo zero, automatica = baseline lineare tra i bordi. Trascina le barre nel pannello per correggere i bordi.",
   "int.tbl.none": "Nessuna integrazione. Clic destro su un picco di un cromatogramma, di un XIC o di una transizione MRM e scegli «Integra».",
   "int.pickNoise.msg": "Trascina sul grafico una zona senza picchi, vicino al picco: ne uso la deviazione standard come rumore",
   "int.xlsx.file": "integrazioni.xlsx",

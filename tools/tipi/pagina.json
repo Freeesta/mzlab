@@ -108,6 +108,8 @@
     "../../mzlab/web/perdite.js",
     "../../mzlab/web/liste.js",
     "../../mzlab/web/liste-nomi.js",
+    "../../mzlab/web/integra-zero.js",
+    "../../mzlab/web/barre-maniglie.js",
     "../../mzlab/web/scroll.js",
     "../../mzlab/web/spettro-righello.js",
     "../../mzlab/web/spettro.js",

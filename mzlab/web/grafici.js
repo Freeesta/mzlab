@@ -423,12 +423,12 @@ async function drawLines(p) {
     if (seg) tri(/** @type {any} */ (seg).x);
   }
   // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js)
+  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js");
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    const r = integ(s, it.a, it.b, it.base); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, corr: corrText(p) });
-    const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
-    if (i1 > i0) {
+    const r = integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
+    if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
@@ -438,7 +438,7 @@ async function drawLines(p) {
       g.strokeStyle = s.color; g.lineWidth = 1; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(X(s.x[i0]), b0); g.lineTo(X(s.x[i1]), b1); g.stroke(); g.setLineDash([]);
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
-    for (const e of ["a", "b"]) { const px = X(s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
+    for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + I18N.sciE(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
     const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, copy: I18N.sciE(r.area), tip: I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) }) + `<div class="sm">${I18N.t("int.copy.tip")}</div>` }); g.font = fpx(12);

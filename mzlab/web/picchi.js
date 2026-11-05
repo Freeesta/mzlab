@@ -3,7 +3,8 @@
 // Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafici.js.
 // ------------------------------------------------------------------ peak integration
 // base = [t0, y0, t1, y1]: the baseline of an HR automatic integration (autoAll), a straight line through those two points, still valid when an edge is dragged
-function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, base = /** @type {number[] | null} */ (null)) {
+function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, base = /** @type {number[] | null} */ (null), zero = false) {
+  if (zero) return INTZERO.area(s, a, b);
   const xs = s.x, ys = s.y;
   let i0 = nearIdx(xs, Math.min(a, b)), i1 = nearIdx(xs, Math.max(a, b));
   if (i1 - i0 < 1) return { area: 0, height: 0, rt: xs[i0] };
@@ -98,7 +99,7 @@ function setNoiseZone(/** @type {Bag} */ p, /** @type {Bag} */ it, /** @type {nu
   INTOPT.sn = true;
 }
 function delInts(/** @type {Bag} */ p, /** @type {Bag[]} */ list) { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => !list.includes(i)); if (list.some((/** @type {Bag} */ i) => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
-function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, mirror = true) {
+function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, mirror = true, zero = false) {
   const lo = Math.min(a, b), hi = Math.max(a, b);
   if (p.type === "mrm") { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => i.key !== s.key); }       // calibration: one peak per transition and file, a new window replaces the old one
   else {
@@ -106,15 +107,15 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
     if (intClash(p, s.key, lo, hi)) { nearMsg(I18N.t("int.clash")); return false; }
   }
   if (p.type !== "mrm") pushIh(p);
-  p.ints.push(intRec(p, s, lo, hi));
+  p.ints.push(intRec(p, s, lo, hi, null, zero));
   draw(p);
   // MRM: the same window goes to the other transition panels (quantifier and qualifier), where it can still be moved on its own
-  if (p.type === "mrm" && mirror) tabPanels().filter((/** @type {Bag} */ q) => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach((/** @type {Bag} */ q) => { const s2 = q._a.sr.find((/** @type {Bag} */ x) => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false); });
+  if (p.type === "mrm" && mirror) tabPanels().filter((/** @type {Bag} */ q) => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach((/** @type {Bag} */ q) => { const s2 = q._a.sr.find((/** @type {Bag} */ x) => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false, zero); });
   return true;
 }
-function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null)) {
+function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null), zero = false) {
   const f = E.files[s.k];
-  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}) };
+  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}), ...(zero ? { zero: true } : {}) };
 }
 // a trace of a high-resolution file: the automatic tool integrates all its peaks at once (low resolution keeps one peak per click)
 const hrTrace = (/** @type {Bag} */ s) => { const f = E.files[s.k]; return !!f && !!window.HR && HR.isHr(f, f.lv); };
@@ -210,7 +211,7 @@ const INT_NEW = ["role", "q1", "q3", "transition"];
 const INT_NEW_HEADS = INT_NEW.map(k => I18N.t(`export.int.${k}`));
 function intExtra(/** @type {Bag} */ r) {
   const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === it.key);
-  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.base) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
+  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.zero ? INTZERO.base : it.base) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
   const h = Number.isFinite(r.height) ? r.height : pk ? pk.height : null;      // the height shown in the table, so S/N and «height» never disagree
   return { sn: h != null && sd ? h / sd : null, noise: !!z, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
 }
