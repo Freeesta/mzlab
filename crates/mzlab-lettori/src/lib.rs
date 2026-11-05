@@ -149,14 +149,14 @@ pub fn estensioni() -> Vec<&'static str> {
 }
 
 /// Why the engine does not do for sample `c` of `l`: `"srm"` when its SRM traces exist only as scans, `"variante"` when the file is of an instrument or a scan type the engine's reader
-/// was not written for (SCIEX other than the 3200 QTRAP).
+/// was not written for (SCIEX other than the 3200 QTRAP, scheduled MRM), in sample `c` or in any other sample: the page hands the whole pair to one reader.
 pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
     let mut m = Vec::new();
     if srm::ha_scansioni_srm(l, c) {
         m.push("srm");
     }
     #[cfg(feature = "sciex")]
-    if l.variante(c) {
+    if l.variante(c) || (0..l.campioni().len()).any(|k| k != c && l.variante(k)) {
         m.push("variante");
     }
     m
