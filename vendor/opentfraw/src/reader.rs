@@ -530,6 +530,18 @@ impl RawFileReader {
 
         // 5. Extract addresses
         let data_addr = raw_file_info.preamble.data_addr;
+        // no controller (all run-header addresses zero): the RawFileInfo of an acquisition that was never closed; reading a run header at 0 would read the header as one
+        if raw_file_info
+            .preamble
+            .run_header_addrs
+            .iter()
+            .all(|&a| a == 0)
+        {
+            return Err(Error::NoRun {
+                reason: "no controller",
+                file_len,
+            });
+        }
 
         // 6. Select the MS controller RunHeader.
         // Multi-controller files (e.g. UV + MS) have one RunHeader per controller.
@@ -578,6 +590,12 @@ impl RawFileReader {
         let first_scan = run_header.sample_info.first_scan_number;
         let last_scan = run_header.sample_info.last_scan_number;
         let num_scans = compute_num_scans(first_scan, last_scan);
+        if num_scans == 0 {
+            return Err(Error::NoRun {
+                reason: "the run header declares no scan",
+                file_len,
+            });
+        }
 
         // 7. Scan index. A file cut inside the index keeps the entries that are whole.
         let entry_size = ScanIndexEntry::min_size_for_version(version);

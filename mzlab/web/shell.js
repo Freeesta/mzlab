@@ -193,12 +193,12 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
   // two files of one name and kind in one loading (loose files of two folders): no folder tells which .wiff goes with which .wiff.scan, so neither pair is opened
   const kinds=new Set(),twins=new Set();
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};if(kinds.has(k+sc))twins.add(k);kinds.add(k+sc);e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
-  for(const k of twins){const e=WIFF_WAIT.get(k);WIFF_WAIT.delete(k);dropped.delete(k);res.errs.push([T("load.wiffTwin",{name:e.stem+".wiff"}),e.stem+".wiff"])}
+  for(const k of twins){const e=WIFF_WAIT.get(k);WIFF_WAIT.delete(k);dropped.delete(k);res.errs.push([T("load.wiffTwin"),e.stem+".wiff"])}
   const taken=[...res.files.map((/** @type {FileRiga} */ x)=>x.name),...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name)],pairs=[];
   // a pair is in the list as soon as its two files are together, before anything is read
   for(const [k,e] of [...WIFF_WAIT]){
     // a .wiff alone: after the loading it may turn out to be the method of an mzML (loneWiffs)
-    if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait",{name:e.scan.name}),e.scan.name])}continue}
+    if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait"),e.scan.name])}continue}
     WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open",memDesc([e.wiff,e.scan]))}
   // each sample (injection) is a file of the list: the .wiff and the .wiff.scan are read as they are
   for(const e of pairs){

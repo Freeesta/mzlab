@@ -26,7 +26,7 @@ pub(crate) fn cut_scans(raw: &RawFileReader) -> usize {
 }
 
 /// Maps an OpenTFRaw error to the key the page shows: a format version the reader does not know has its own message (`err.file.rawVersion`), so has a file that
-/// stops before its scans (`err.file.rawTruncated`); anything else keeps the generic `err.file.raw` with the reader's text, which names the structure, the
+/// stops before its scans (`err.file.rawTruncated`) and one with no finished run (`err.file.rawUnfinished`); anything else keeps the generic `err.file.raw` with the reader's text, which names the structure, the
 /// format version and the file size.
 pub fn thermo_error(e: &opentfraw::Error) -> Error {
     match e {
@@ -45,6 +45,9 @@ pub fn thermo_error(e: &opentfraw::Error) -> Error {
             .with("needed", needed)
             .with("readable", readable)
             .with("declared", declared),
+        opentfraw::Error::NoRun { reason, file_len } => Error::new("err.file.rawUnfinished")
+            .with("detail", reason)
+            .with("size", file_len),
         _ => Error::new("err.file.raw").with("detail", e),
     }
 }

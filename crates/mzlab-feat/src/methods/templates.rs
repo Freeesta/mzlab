@@ -38,3 +38,4 @@ pub(super) const TEMPLATES: &[(&str, &str, &str)] = &[
 
 /// Sentence added to the one of `features.detect` when `isotopes` is `grouper`.
 pub(super) const ISO_GROUPER: &str = "Isotopologues were grouped with the isotope grouper of mzmine 3 (m/z tolerance {iso_ppm} ppm or {iso_abs_da} Da, RT tolerance {iso_rt_tol} min, charges up to {iso_max_charge}, group representative {iso_representative}).";
+pub(super) const ISO_FINDER: &str = "Isotopologues were grouped with the isotope finder of mzmine 4 on the apex MS1 spectrum of each feature (m/z tolerance {finder_ppm} ppm or {finder_abs_da} Da, charges up to {finder_max_charge}, elements {finder_elements}, 13C peak requirement {finder_require_c13}, heavy elements from the spectrum {finder_auto}).";

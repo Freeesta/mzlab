@@ -114,6 +114,25 @@ def test_the_isotope_grouper_gives_the_same_bytes_native_and_in_node(built):
     feats = [f for f in names if f.endswith(".mzfeatf")]
     assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "grouper and averagine give the same files: the test proves nothing"
 
+FINDER = '{"fill": true, "layers": [{"step": "features.detect", "params": {"isotopes": "finder", "finder_auto": false}}]}'
+
+
+def test_the_isotope_finder_gives_the_same_bytes_native_and_in_node(built):
+    """The isotope grouping `finder` of `features.detect` (the isotope finder of mzmine, on the apex spectrum of each feature) writes the same
+    `.mzfeatf` of every file and the same `series.mzfeat` in the .wasm as natively, and not the files of the default `averagine`.
+    `series_evid.mzfeat` is left out for the reason given in the test of `adap_localmin`."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_finder", "--recipe", FINDER)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_finder", "--recipe", FINDER)
+    _, def_dir = native(root, idx, "nat_averagine_f", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    feats = [f for f in names if f.endswith(".mzfeatf")]
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "finder and averagine give the same files: the test proves nothing"
+
+
 @pytest.mark.parametrize("mode", ["ion", "family"])
 def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
     """The contract of memory: the `.mzfeatf`, the `.mzfeat` and the one with `evid` have the same SHA-256 in memory and under a budget (slabs of m/z,
