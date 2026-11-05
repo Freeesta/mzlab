@@ -364,6 +364,14 @@ impl State {
             self.warm_forget(None);                                                         // the indexes built ahead go with the session
         }
         match op {
+            "lr_cancel" => {
+                // «Cancel» of the loading: the index builds of these files stop now (`IdxBuilder::cancel`); it does not wait for the engine
+                let b = self.indexer()?;
+                for n in p["names"].as_array().into_iter().flatten().filter_map(|n| n.as_str()) {
+                    b.cancel(n);
+                }
+                return text("{}");
+            }
             "lr_warm" => return self.lr_warm(p),                                            // the index of a file of the pointed folder, built ahead (`rpc_warm.rs`): it does not hold the engine
             "lr_warm_claim" => return self.lr_warm_claim(p),
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either

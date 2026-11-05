@@ -18,7 +18,7 @@ Regola (`CLAUDE.md`): ogni funzione esiste nel sito (`.wasm` + OPFS) e nell'app 
 | Comando copiabile, riga corta (`lr_flow_command`, `flow/line`) | `.wasm` `rotte` | `rpc_lr.rs`, `flow/line` | `flow run` | `parita_flow_command.rs` |
 | Validazione mzML (`api/mzml_valida`) | modulo `valida` | `lr_valida` | `validate` | `test_valida_wasm.py`, `crates/mzlab-desktop/tests/rpc.rs` |
 | Solo sito per natura | `module`, `policy`, `budget`, `down`, `natsame`, `lr_gunzip`, `lr_cen_have`, `lr_cen_adopt`; `lr_flow_line`/`lr_flow_sched` (l'app usa `flow/line`, `flow/live/*`) | — | — | `SOLO_SITO` |
-| «Annulla» del caricamento (`lr_cancel`) | ferma copie e indici | manca: l'indice in costruzione finisce (i file sono mappati, niente copia); le uscite non cambiano | — | da fare, in `SOLO_SITO` come buco |
+| «Annulla» del caricamento (`lr_cancel`) | ferma copie e indici | `IdxBuilder::cancel`: le costruzioni dell'indice del file si fermano alla lettura o scrittura seguente e non lasciano file (né `.part` né indice); `lr_remove` toglie anche gli indici del file | — | `crates/mzlab-desktop/tests/annulla.rs`, `idxbuild_tests.rs` (app); `e2e_annulla_orfani.py` (sito) |
 
 ## Passi del Flow (`mzlab-cli steps`, esecutori del sito in `F.liveJobs`)
 | Passi | Sito | App/CLI | Prova |
