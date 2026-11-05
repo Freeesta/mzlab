@@ -54,7 +54,7 @@ def removal_holds():
             pg.set_input_files("#pick", fs)
             attendi(pg, "window.__rm !== null", 300000)
             gone = pg.evaluate("window.__rm")
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0", 300000)
+            attendi(pg, f"ST.files.length === {len(fs)} && UPBUSY === 0 && OPENNOW.busy() === 0", 300000)
             rows = pg.evaluate(ROWS)
             assert not any(n == gone and op for n, _, op in rows), f"{gone}, removed while the others opened, is open again: {rows}"
             assert len([n for n, use, op in rows if use and op]) == len(fs) - 1, rows
