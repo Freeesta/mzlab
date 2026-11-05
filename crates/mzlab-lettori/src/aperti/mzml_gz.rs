@@ -4,8 +4,8 @@
 
 use std::io::Read;
 
-use flate2::read::MultiGzDecoder;
 use mzlab_core::error::{Error, Result};
+use mzlab_core::gunzip::Membri;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{Fiducia, FileSet, Lettore, Limiti, Membro, VoceLettore, CONTRATTO};
 
@@ -75,7 +75,7 @@ fn vede(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
     }
     let mut text = Vec::new();
     // a short or cut stream still gives its first bytes; the error is the caller's at `apri`
-    let _ = MultiGzDecoder::new(&head[..])
+    let _ = Membri::new(&head[..])
         .take(TESTA as u64)
         .read_to_end(&mut text);
     let text = String::from_utf8_lossy(&text);
@@ -106,11 +106,14 @@ fn gonfia(mut fs: FileSet, suffisso: &str, limiti: &Limiti) -> Result<FileSet> {
     let m = fs.membri.swap_remove(i);
     let nome = m.nome[..m.nome.len() - ".gz".len()].to_string();
     let mut fuori = Vec::new();
-    let letto = MultiGzDecoder::new(Flusso {
-        dati: m.dati,
-        pos: 0,
-        dim: m.dim,
-    })
+    let letto = Membri::new(std::io::BufReader::with_capacity(
+        1 << 16,
+        Flusso {
+            dati: m.dati,
+            pos: 0,
+            dim: m.dim,
+        },
+    ))
     .take(limiti.byte + 1)
     .read_to_end(&mut fuori);
     // a cut stream (download stopped) keeps what it inflated; the spectra it lacks are counted by `mancanti`
