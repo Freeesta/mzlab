@@ -344,8 +344,40 @@ pub fn ion_text_mz(text: &str) -> Result<(f64, i8)> {
     }
 }
 
+/// A signed number closing the text of an ion (`288.2+16`, `C9H8O4-18`, `C9H8O4+Na+16`): the text without it and the shift in Da, a literal shift of the m/z
+/// (`+16` is 16.000, not the mass of an oxygen). No shift if the text ends in a sign or in letters (`+H`, `[M+H]+`); a sign followed by a number that
+/// does not read as one (`+1.2.3`, `+16x`) is `err.formula.offset`.
+pub fn split_offset(text: &str) -> Result<(String, Option<f64>)> {
+    let t: String = text.split_whitespace().collect();
+    let Some(i) = t.rfind(['+', '-']).filter(|&i| i > 0) else {
+        return Ok((t, None));
+    };
+    let tail = &t[i + 1..];
+    if !tail.starts_with(|c: char| c.is_ascii_digit() || c == '.' || c == ',') {
+        return Ok((t, None));
+    }
+    let bad = || Error::new("err.formula.offset").with("offset", &t[i..]);
+    let digits = tail.replace(',', ".");
+    let v: f64 = digits.parse().map_err(|_| bad())?;
+    if !digits.chars().all(|c| c.is_ascii_digit() || c == '.') || !v.is_finite() {
+        return Err(bad());
+    }
+    Ok((t[..i].to_string(), Some(if t[i..].starts_with('-') { -v } else { v })))
+}
+
 /// `/api/formula`: neutral mass and ion m/z of every adduct, exact, at 1 decimal and nominal. With the adduct `none` the text is an ion: an adduct written in it (`+H`, `[M+H]+`) is the one used, otherwise the mass of the formula is the m/z.
 pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
+    let (formula, offset) = split_offset(formula)?;
+    let formula = formula.as_str();
+    let numeric = !formula.is_empty() && formula.chars().all(|c| c.is_ascii_digit() || c == '.' || c == ',');
+    if let (true, Some(d)) = (numeric, offset) {
+        // a bare m/z with a shift: nothing to resolve, the answer has no formula
+        let base: f64 = formula.replace(',', ".").parse().map_err(|_| Error::new("err.formula.unreadable").with("formula", formula))?;
+        let z = base + d;
+        let mut o = Out::default();
+        o.raw("{\"formula\":\"\",\"offset\":").num(d).raw(",\"adduct\":\"\",\"mz\":").num(round(z, 4)).raw(",\"mz5\":").num(round(z, 5)).raw(",\"mz1\":").num(round_half_up(z, 1)).raw(",\"nominal\":").int(round_half_up(z, 0) as i64).raw("}");
+        return Ok(o.0);
+    }
     let (text, inner) = if adduct == Some(NO_ADDUCT) {
         let (t, a) = embedded_adduct(formula);
         (t, a)
@@ -380,11 +412,14 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     o.raw("}");
     if adduct == Some(NO_ADDUCT) {
         o.raw(",\"adduct\":").str(inner.unwrap_or("")).raw(",");
-        row(&mut o, inner.and_then(|a| ion_mz(m, a)).unwrap_or(m));
+        row(&mut o, inner.and_then(|a| ion_mz(m, a)).unwrap_or(m) + offset.unwrap_or(0.0));
     } else if let Some(a) = adduct {
         let z = ion_mz(m, a).ok_or_else(|| Error::new("err.adduct.unknown").with("adduct", a))?;
         o.raw(",\"adduct\":").str(a).raw(",");
-        row(&mut o, z);
+        row(&mut o, z + offset.unwrap_or(0.0));
+    }
+    if let Some(d) = offset {
+        o.raw(",\"offset\":").num(d);
     }
     o.raw("}");
     Ok(o.0)

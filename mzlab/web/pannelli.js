@@ -928,6 +928,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
   const dAd = pre.adduct || defAdduct(panel && E.panels.includes(panel) ? scanFiles(shown()) : undefined);
   const /** @type {Bag[]} */ rows = [];
   const isNum = (/** @type {string} */ t) => /^[\d.,\s]+$/.test(t);
+  const numShift = (/** @type {string} */ t) => /^[\d.,\s]+[+-]/.test(t);  // «288.2+16»: an m/z with a signed shift (parsed by the engine, no adduct applies)
   const renumber = () => {
     rows.forEach((r, i) => { r.lab.textContent = i === 0 ? I18N.t("xic.ion1") : I18N.t("xic.ionN", { n: i + 1 }); r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? I18N.t(r.ad.value === "none" ? "xic.placeholderIon" : "xic.placeholder") : I18N.t(r.ad.value === "none" ? "xic.optionalIon" : "xic.optional"); r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
     addB.disabled = rows.length >= XIC_MAXROWS;
@@ -941,7 +942,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
   };
   const evalRow = (/** @type {Bag} */ r) => {
     const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null;
-    r.ad.hidden = isNum(t);
+    r.ad.hidden = isNum(t) || numShift(t);
     if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
     if (isNum(t)) {
       const v = numMz1(t), x = numIt(t);
@@ -953,9 +954,13 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
       try {
         const f = await getFormula(t, r.ad.value);
         if (ed !== r.edits) return;
-        r.label = f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`; r.win = xicWin(f.mz, false); if (hrFile()) r.ex = f.mz;
-        r.sum.innerHTML = (t.replace(/\s+/g, "") !== f.formula ? I18N.t("xic.interpreted", { formula: fmtFormula(f.formula) }) + " " : "") + sumText(r);
-      } catch (e) { if (ed === r.edits) r.sum.innerHTML = `<span class="fail">${I18N.t("xic.badFormula")}</span>`; }
+        // a signed shift closing the text (+16, -18) is added to the m/z after the adduct, as a literal Da value; the result is a candidate to extract
+        const off = f.offset ?? null, sh = off == null ? "" : (off < 0 ? "-" : "+") + String(Math.abs(off));
+        r.label = !f.formula ? t.replace(/\s+/g, "") : (f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`) + sh;
+        r.win = xicWin(f.mz, false); if (hrFile()) r.ex = f.mz5 ?? f.mz;
+        const shown = off == null ? "" : I18N.t("xic.shifted", { base: String(rh(f.mz - off, 4)), shift: sh, mz: String(rh(f.mz, 4)) }) + " ";
+        r.sum.innerHTML = (f.formula && t.replace(/\s+/g, "") !== f.formula && off == null ? I18N.t("xic.interpreted", { formula: fmtFormula(f.formula) }) + " " : "") + shown + sumText(r);
+      } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (ed === r.edits) r.sum.innerHTML = `<span class="fail">${e.key === "err.formula.offset" ? e.message : I18N.t("xic.badFormula")}</span>`; }
     })();
   };
   const addRow = (/** @type {Bag} */ init = {}) => {
@@ -963,7 +968,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     el.innerHTML = `<label></label><div class="xin"><input class="mzf" autocomplete="off" inputmode="decimal" style="width:auto"><select title="${I18N.t("xic.adduct.title")}" aria-label="${I18N.t("xic.adduct.title")}">${XIC_ADDUCTS.map(a => `<option ${a === (init.adduct || dAd) ? "selected" : ""}>${a}</option>`).join("")}<option value="none" ${init.adduct === "none" ? "selected" : ""}>${I18N.t("xic.noAdduct")}</option></select><button class="xr-x" type="button" title="${I18N.t("xic.remove.title")}">&times;</button></div><div class="xr-sum"></div>`;
     const r = /** @type {Bag} */ ({ el, lab: el.querySelector("label"), inp: el.querySelector("input"), ad: el.querySelector("select"), x: el.querySelector(".xr-x"), sum: el.querySelector(".xr-sum"), win: null, label: "", obs: !!init.obs, edits: 0, pending: Promise.resolve(), tq: 0 });
     r.inp.value = init.text || "";
-    r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = false; r.tq = setTimeout(() => evalRow(r), 500); } };
+    r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = numShift(t); r.tq = setTimeout(() => evalRow(r), 500); } };
     r.ad.onchange = () => { renumber(); evalRow(r); };
     r.inp.onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Enter extracts at once (empty field: only the message); Shift+Enter moves to the next field
       if (e.key !== "Enter") return; e.preventDefault();
