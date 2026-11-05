@@ -104,3 +104,8 @@ workQ("#flist").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   if (S.table && /** @type {HTMLElement} */ (e.target).closest("[data-open]")) { S.table = false; queueMicrotask(() => syncWork()); }
 }, true);
 
+// the provisional TIC (tic-provvisorio.js) is loaded at the first scan table with its TIC, not at start-up; the events of the wait are handed over
+{ /** @type {any[] | null} */ let q = null;
+  addEventListener("mzlab-index", (/** @type {any} */ e) => { const d = e && e.detail, W = /** @type {any} */ (window); if (W.TICPROV || !(d && (q || d.early_tic))) return;
+    if (q) { q.push(d); return; }
+    q = [d]; carica("m:tic-provvisorio.js").then(() => { W.TICPROV.feed(q); q = null; }, () => { q = null; }); }); }

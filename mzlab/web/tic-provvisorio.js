@@ -1,7 +1,7 @@
 // @ts-check
 // The provisional TIC of the first file of a loading, drawn in the work area while its index is still being built: the MS1 rt/tic of the scan table (event mzlab-index
 // with early_tic, idx-worker.js) arrives seconds before the first panel can open. It shows only while nothing is open yet, and goes as soon as a file opens or the loading
-// ends; a TIC is the raw trace the file declares, not a result. ES module; syncWork (area-lavoro.js) and every mzlab-index event call TICPROV.sync.
+// ends; a TIC is the raw trace the file declares, not a result. Lazy ES module, loaded by area-lavoro.js at the first early_tic; syncWork and every mzlab-index event call TICPROV.sync.
 const W = /** @type {any} */ (window);
 const T = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
 /** @type {Map<string, { rt: number[], y: number[] }>} */ const tics = new Map();
@@ -69,10 +69,11 @@ function sync() {
   draw(cv, t);
   TDATI.series(cv, { title, xl: T("load.tprov.xl"), yl: T("load.tprov.yl"), series: [{ x: t.rt, y: t.y, name: r.name }] });
 }
-addEventListener("mzlab-index", (/** @type {any} */ e) => {
-  const d = e && e.detail;
+function onIndex(/** @type {any} */ d) {
   if (d && d.name && d.early_tic && d.early_tic.rt && d.early_tic.rt.length > 1) tics.set(d.name, { rt: d.early_tic.rt, y: d.early_tic.y || d.early_tic.tic });
   if (d && d.name && (d.early_tic || shownKey === d.name)) sync();
-});
+}
+addEventListener("mzlab-index", (/** @type {any} */ e) => onIndex(e && e.detail));
 addEventListener("resize", () => { if (shownKey && box && !box.hidden) { const t = tics.get(shownKey); if (t) draw(/** @type {HTMLCanvasElement} */ (box.querySelector("#ticprov-cv")), t); } });
-W.TICPROV = { sync };
+// feed: the events that arrived before this module was loaded (area-lavoro.js loads it at the first early_tic)
+W.TICPROV = { sync, feed: (/** @type {any[]} */ ds) => ds.forEach(onIndex) };
