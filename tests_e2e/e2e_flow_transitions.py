@@ -46,10 +46,15 @@ for o in OUTPUTS:
     NAT[o] = (run / ("out_" + o) / "tr.csv").read_text()
 assert NAT["peaks"].count(",ok,") + NAT["peaks"].count(",ok\n") >= 6, NAT["peaks"]
 assert len(NAT["candidates"].strip().splitlines()) == 3, NAT["candidates"]
+(run / "index.json").write_text(json.dumps({"format": "mzflow/2", "inputs": [{"name": n, "sha256": "", "type": "mzml"} for n in NAMES],
+                                           "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n for n in NAMES]}}]}))      # the index of each file, as Data keeps it in OPFS
+subprocess.run(CLI + ["flow", "run", str(run / "index.json"), "--in", str(run), "--out", str(run / "out_index")], cwd=ROOT, check=True, capture_output=True)
 data = site / "static" / "dati_flow_transitions"; data.mkdir()
-for n in NAMES: shutil.copy2(run / n, data / n)
+for n in NAMES: shutil.copy2(run / n, data / n); shutil.copy2(run / "out_index" / ("idx-" + n[:-5] + ".mzidx"), data / (n[:-5] + ".mzidx"))
 
-HOLD = """async (names) => { for (const name of names) { const b = await (await fetch("static/dati_flow_transitions/" + name)).blob(); window.MZLAB_RUST.noteUpload(name, b); } }"""
+HOLD = """async (names) => { let d = await navigator.storage.getDirectory(); for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
+  for (const name of names) { const w = await (await d.getFileHandle(name.replace(/\.mzML$/, "") + ".mzidx", { create: true })).createWritable(); await (await fetch("static/dati_flow_transitions/" + name.replace(/\.mzML$/, "") + ".mzidx")).body.pipeTo(w); }
+  for (const name of names) { const b = await (await fetch("static/dati_flow_transitions/" + name)).blob(); window.MZLAB_RUST.noteUpload(name, b); } }"""
 RUN = """async (plan) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
   S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs)); S.plan.steps = JSON.parse(JSON.stringify(plan.steps));
