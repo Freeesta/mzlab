@@ -65,6 +65,11 @@ pub(crate) fn decode_peaks<'a>(
     Ok(p)
 }
 
+/// True when `ok` holds for every value: `&` without short-circuit, so the loop has no branch and vectorises.
+fn tutti<T: Copy>(v: &[T], ok: impl Fn(T) -> bool) -> bool {
+    v.iter().fold(true, |a, &x| a & ok(x))
+}
+
 /// The spectrum of the header `s` with its decoded arrays `p`; a NaN or infinite RT or peak is a damaged file (`err.file.nonFinite`, like the readers'
 /// guard `mzlab_lettori::finiti`), checked here because both the parser and the helpers' answers pass through.
 #[inline(never)]
@@ -89,12 +94,22 @@ pub(crate) fn assemble(s: Spec, p: Peaks) -> Result<(Spectrum, Option<Mobility>)
     }
     // an array of another length does not belong to these peaks
     let mob = mob.filter(|m| m.len() == n && n > 0);
-    let guasto = std::iter::once(("rt", s.rt))
-        .chain(mz.iter().map(|v| ("mz", *v)))
-        .chain(it.iter().map(|v| ("intensity", f64::from(*v))))
-        .chain(wide.iter().flatten().map(|v| ("intensity", *v)))
-        .chain(mob.iter().flatten().map(|v| ("mobility", *v)))
-        .find(|(_, v)| !v.is_finite());
+    // a branch-free pass over each array (vectorised); the search that names the value runs only on a damaged file
+    let sani = s.rt.is_finite()
+        && tutti(&mz, |v| v.is_finite())
+        && tutti(&it, |v| v.is_finite())
+        && wide.as_deref().is_none_or(|w| tutti(w, |v| v.is_finite()))
+        && mob.as_deref().is_none_or(|m| tutti(m, |v| v.is_finite()));
+    let guasto = (!sani)
+        .then(|| {
+            std::iter::once(("rt", s.rt))
+                .chain(mz.iter().map(|v| ("mz", *v)))
+                .chain(it.iter().map(|v| ("intensity", f64::from(*v))))
+                .chain(wide.iter().flatten().map(|v| ("intensity", *v)))
+                .chain(mob.iter().flatten().map(|v| ("mobility", *v)))
+                .find(|(_, v)| !v.is_finite())
+        })
+        .flatten();
     if let Some((cosa, v)) = guasto {
         let chi = if s.id.is_empty() {
             (s.index + 1).to_string()
