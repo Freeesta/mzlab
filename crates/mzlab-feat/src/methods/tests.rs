@@ -127,3 +127,18 @@ fn the_isotope_finder_adds_its_sentence_to_the_detection() {
     assert!(!finder.contains("isotope grouper"));
     assert!(!run("averagine").contains("isotope finder"));
 }
+
+#[test]
+fn the_window_area_adds_its_sentence_to_the_detection() {
+    let run = |from: &str| {
+        let record = format!(
+            r#"{{"schema":"corsa/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+{{"name":"floor","value":20000,"state":"fixed"}},{{"name":"area_from","value":"{from}","state":"fixed"}}]}}]}}"#
+        );
+        methods_text(&style("paragraph"), record.as_bytes()).unwrap()
+    };
+    assert!(
+        run("window").contains("Feature areas were summed over every point within the m/z window")
+    );
+    assert!(!run("channel").contains("Feature areas were summed"));
+}

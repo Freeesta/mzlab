@@ -751,6 +751,7 @@
                   "min_points",
                   "max_gap",
                   "long_trace",
+                  "area_from",
                   "merge_overlap",
                   "budget",
                   "min_width",
@@ -813,6 +814,11 @@
                     "minimum":1,
                     "default":400,
                     "description":"A trace longer than this is background and is not taken"
+                  },
+                  {
+                    "enum":["channel","window"],
+                    "default":"channel",
+                    "description":"channel: the points of the trace that found the row; window: every point of its quality window (6 ppm in HR) over its scans, so an ion whose m/z wanders between channels keeps its whole area"
                   },
                   {
                     "type":"number",

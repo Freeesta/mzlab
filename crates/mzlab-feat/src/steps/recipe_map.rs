@@ -207,6 +207,13 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
+        ("features.detect", "area_from") => {
+            r.steps.quality.area_window = match v.str() {
+                Some("channel") => false,
+                Some("window") => true,
+                _ => return Err(bad(step, k)),
+            }
+        }
         ("features.detect", "min_width" | "min_snr") => set_gate(&mut r.detect, k, num()?),
         ("features.detect", _) if recipe_iso::owns(k) => recipe_iso::set(r, step, k, v)?,
         ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
@@ -316,6 +323,17 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("max_gap", n(f64::from(r.detect.max_gap))),
                 ("long_trace", n(f64::from(r.detect.long_trace))),
                 ("merge_overlap", n(r.detect.merge_overlap)),
+                (
+                    "area_from",
+                    Value::Str(
+                        if r.steps.quality.area_window {
+                            "window"
+                        } else {
+                            "channel"
+                        }
+                        .into(),
+                    ),
+                ),
                 ("min_width", n(r.detect.min_width)),
                 ("min_snr", n(r.detect.min_snr)),
             ];

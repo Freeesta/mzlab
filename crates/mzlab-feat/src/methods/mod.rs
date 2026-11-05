@@ -231,6 +231,10 @@ fn sentence(s: &Step) -> String {
             out.push(' ');
             out.push_str(&fill(t, s));
         }
+        if value_of(s, "area_from") == "window" {
+            out.push(' ');
+            out.push_str(templates::AREA_WINDOW);
+        }
     }
     if s.failed {
         out.push_str(" This step did not complete.");
