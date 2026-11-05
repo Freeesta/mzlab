@@ -35,7 +35,7 @@ Coppie sintetiche di `tools/wiff_grande.py` (3000 scansioni × 3333 punti di pro
 - **Spazio**: l'indice di un campione a profilo pesa 191-218 MB (circa 12 volte il suo `.wiff.scan`): 240 campioni chiedono ≈46 GB di OPFS. Con 134 campioni il disco del contenitore si è riempito a 25,7 GB: 117 caricati, 17 con `error.quota` al 96-99 % del loro indice (ogni campione fallisce da solo, nessun ricaricamento).
 - Il messaggio dice «ne restano 10240 MB» perché la quota del browser supera lo spazio vero del disco. Una finestra privata di Chromium regge circa 200 MB di OPFS.
 - **Costruttori**: al più 3 insieme (picco osservato con 4 CPU); la memoria della pagina (heap JS) resta sotto 230 MB.
-- **Riapertura**: 0,15 s per campione salvato (240 campioni: 36 s); il limite della schermata di avvio (`?ripresa=ms`) è 30 s più 1 s per file salvato, contato da quando il worker ha il motore (`api.up` di `rust-bridge.js`; dopo 5 min di download conta comunque).
+- **Riapertura**: 0,15 s per campione salvato (240 campioni: 36 s); il limite della schermata di avvio (`?ripresa=ms`) è 30 s più 1 s per file salvato, contato da quando il worker ha il motore (`api.up` di `rust-bridge.js`; un download fallito o di oltre 5 min lo fa partire subito, e un download fallito finisce sempre nell'errore).
 - **Elenco**: l'ordine è quello di `ordine.js` (tempo, concentrazione o ordine naturale dei nomi) applicato a tutta la lista, non quello d'arrivo: lo stesso con i file lasciati in ordine inverso.
 
 | carico (`mzlab-cli convert --peaks mzlab`) | `--workers` | s | s/file (mediana) | RSS massimo MB |
