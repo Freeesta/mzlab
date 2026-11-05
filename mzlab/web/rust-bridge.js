@@ -30,12 +30,14 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const api = BUD.attach({ enabled: true, disabled: false, stats, budgetMb: BUD.sessionLevel(), strikes: 0, pendingDown: /** @type {{ current: number, strikes: number } | null} */ (null), lastPanic: /** @type {string | null} */ (null) }); const death = { restarts: /** @type {number[]} */ ([]), ooms: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
   const base = n => String(n || "").split(/[\\/]/).pop() || "";
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled, limitMb: () => api.budgetMb || (api.choice && api.choice.mb) || 0 });
+  // resolved when a worker first has its engine (the .wasm downloaded and compiled): browser.js times the reopening of the stored files from here, not from the download
+  let upOk = () => {}; api.up = new Promise(r => { upOk = () => r(true); });
   const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));
   function spawn() {
     const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy, BUD.whenProbed, () => takeDown(api));
     w.onmessage = ev => {
       const m = ev.data;
-      if (m.op === "ready") { if (m.cap) { nota(m.cap); if (stato("motore") === "no") off(api, slots, notify, "cap.engine"); } return; } if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
+      if (m.op === "ready") { upOk(); if (m.cap) { nota(m.cap); if (stato("motore") === "no") off(api, slots, notify, "cap.engine"); } return; } if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
       if (m.op === "notice") { notify(m.key, m.params); return; }  if (m.op === "cap-off") { serve(m.fn); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; } if (m.op === "budget-down") { if (lowerTo(api, stats, m, BUD.lowered)) notify("error.engineLowered"); else { stop(worker, { dead: true }); off(api, slots, notify, "error.memoryBudget"); } return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);

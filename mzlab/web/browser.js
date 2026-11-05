@@ -97,8 +97,12 @@
     try {
       lr = (await lrModule).createLr({ rb: b });
       // the browser storage held by another tab: the loading screen says so
-      const u = new URL(location.href), stall = stored.then(n => +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * n);
-      const within = p => Promise.race([p, stall.then(ms => new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), ms)))]);
+      // the limit runs from when the worker has its engine (a slow first visit spends it on the download of the .wasm); with nothing stored and no other tab holding the storage
+      // there is nothing to reopen: a note, and the page keeps waiting. A download that never ends starts the limit after 5 minutes
+      const u = new URL(location.href), stall = stored.then(n => ({ n, ms: +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * n }));
+      const within = p => { let done = false; p.then(() => { done = true; }, () => { done = true; });
+        const late = (s, rej) => { if (done) return; if (s.n || (window.qqPhaseCur && window.qqPhaseCur.key === "load.blocked")) { rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })); return; } phase({ key: "load.slow", pct: null }); setTimeout(() => late(s, rej), s.ms); };
+        return Promise.race([p, Promise.all([stall, Promise.race([b.up, new Promise(r => setTimeout(r, 300000))])]).then(([s]) => new Promise((_, rej) => setTimeout(() => late(s, rej), s.ms)))]); };
       const fresh = u.searchParams.get("riparti") === "1";
       if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); u.searchParams.delete("ripn"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
