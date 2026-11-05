@@ -155,6 +155,38 @@ try:
         def a11y():
             stat_ok(pg); v = axe(pg, "#sb-pane"); assert not v, v
         cell(pg, "many files: axe on the statistics panel", a11y)
+        def reduced():
+            pg.emulate_media(reduced_motion="reduce"); ready(pg)
+            stat_ok(pg); mol_ok(pg); tab(pg, "file")
+            pg.emulate_media(reduced_motion="no-preference")
+        cell(pg, "many files: reduced motion", reduced)
+        def keyboard():
+            stat_ok(pg)
+            pg.focus("#sb-panel-stat details.stat-sec > summary")
+            first = pg.evaluate("document.activeElement.parentElement.dataset.s")
+            was = pg.evaluate("document.activeElement.parentElement.open")
+            pg.keyboard.press("Enter"); frames(pg)
+            assert pg.evaluate("document.activeElement.parentElement.open") != was, "Enter does not toggle the section"
+            pg.keyboard.press("Enter"); frames(pg)
+            seen = set()
+            for _ in range(60):
+                pg.keyboard.press("Tab"); frames(pg, 1)
+                inf = pg.evaluate("(() => { const a = document.activeElement; if (!a || a === document.body) return null; const r = a.getBoundingClientRect(); return {id: a.id || a.tagName, vis: r.width > 0 && r.height > 0, inpanel: !!a.closest('#sb-panel-stat')}; })()")
+                assert inf, "focus fell to the body"
+                if not inf["inpanel"]: break
+                assert inf["vis"], ("an invisible stop in the statistics panel", inf)
+                seen.add(inf["id"])
+            assert "prof-go" in seen or pg.locator("#prof-go").count() == 0, sorted(seen)
+            assert first
+        cell(pg, "many files: keyboard only through the statistics panel", keyboard)
+        def mol_keys():
+            pg.evaluate("carica('m:molecole-ui.js').then(() => window.MOLDB.apri())"); pg.wait_for_selector("#moldlg .mol-box", state="visible")
+            for _ in range(20):
+                pg.keyboard.press("Tab"); frames(pg, 1)
+                assert pg.evaluate("!!document.activeElement.closest('#moldlg')"), "focus left the molecules window"
+            pg.keyboard.press("Escape"); pg.wait_for_selector("#moldlg", state="hidden")
+            assert pg.evaluate("document.activeElement && document.activeElement !== document.body"), "focus fell to the body after closing"
+        cell(pg, "many files: molecules window by keyboard keeps the focus inside", mol_keys)
         def reload():
             saved(pg); pg.reload(); pg.wait_for_function("window.qqReady === true", timeout=60000)
             attendi(pg, "E.files.some(f => f.vis && !f.gone)", 60000); ready(pg); stat_ok(pg)
