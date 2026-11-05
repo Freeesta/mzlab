@@ -121,12 +121,11 @@ pub(crate) fn spectrum_head_into(
 }
 
 /// The `<precursorList>` of a spectrum whose reader gave only the selected m/z: the schema wants an `<activation>`, which is collision-induced dissociation
-/// when the file does not say otherwise. The readers that know a collision energy and an isolation half-width (`SpectrumExtra::ce`, `iso_half`) add them;
-/// the builds that carry no such reader (the ones under a size limit) leave them out.
+/// when the file does not say otherwise. The readers that know a collision energy and an isolation half-width (`SpectrumExtra::ce`, `iso_half`) add them,
+/// in every build: the engine reads a `.wiff` without `sciex` or `precursori`, and the row of its index is read back from this text.
 fn plain_precursor_into(s: &mut String, p: f64, extra: &SpectrumExtra) {
     s.push_str("<precursorList count=\"1\"><precursor><isolationWindow>");
     mz_cv_into(s, "MS:1000827", "isolation window target m/z", p);
-    #[cfg(any(feature = "sciex", feature = "precursori"))]
     if let Some(h) = extra.iso_half {
         mz_cv_into(s, "MS:1000828", "isolation window lower offset", h);
         mz_cv_into(s, "MS:1000829", "isolation window upper offset", h);
@@ -134,13 +133,10 @@ fn plain_precursor_into(s: &mut String, p: f64, extra: &SpectrumExtra) {
     s.push_str("</isolationWindow><selectedIonList count=\"1\"><selectedIon>");
     mz_cv_into(s, "MS:1000744", "selected ion m/z", p);
     s.push_str("</selectedIon></selectedIonList><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>");
-    #[cfg(any(feature = "sciex", feature = "precursori"))]
     if let Some(ce) = extra.ce {
         use std::fmt::Write;
         let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{ce}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>");
     }
-    #[cfg(not(any(feature = "sciex", feature = "precursori")))]
-    let _ = extra;
     s.push_str("</activation></precursor></precursorList>");
 }
 
