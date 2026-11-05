@@ -1,5 +1,5 @@
 """«What can this number be?» under the floating Calculator (Disegno), the Adducts and the Neutral losses tabs of Adducts & losses (no data file needed):
-groups for 214 / 30 / 18 / 100+114 / 21.98, resolution detected from the number (no switch), polarity, no observed field, no layout jump, cross-links, keystroke time, no engine miss."""
+groups for 214 / 30 / 18 / 100+114 / 21.98, resolution detected from the number (no switch), polarity, no observed field, no layout jump, cross-links, keystroke time, no engine miss; the contaminant list only once an m/z is typed."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -131,6 +131,16 @@ try:
         def nolr():
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")
         step("no engine miss", nolr)
+        def lists_on_demand():
+            asked = []
+            pg.context.on("request", lambda q: asked.append(q.url) if "contaminan" in q.url else None)       # the context sees the engine worker's requests too
+            pg.reload(); attendi(pg, "window.qqReady && !document.querySelector('#start').hidden")
+            pg.evaluate("setView('draw')"); attendi(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
+            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden && typeof CALCQUI !== 'undefined' && CALCQUI.calc"); frames(pg, 25)
+            assert not asked, "the contaminant list (447 KB) was fetched before an m/z was typed: " + str(asked)
+            type_("149.0233"); attendi(pg, "/ftal|phthal/i.test(document.querySelector('#calcout').innerText)")
+            assert asked and "liste" in str(groups()), (asked, groups())
+        step("the contaminant list is fetched once an m/z is typed, not at boot; 149.0233 finds the phthalate fragment", lists_on_demand)
 finally:
     r.close()
 r.report()
