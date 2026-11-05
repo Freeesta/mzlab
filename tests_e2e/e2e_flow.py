@@ -52,12 +52,13 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 52, pg.locator(".fl-it").count()
-            assert pg.locator(".fl-pal details").count() == 3
+            n = pg.evaluate("document.querySelector('.flx-list').__flow.reg.steps.length")      # every step of the registry is offered once; the registry grows with the steps
+            assert n >= 52 and pg.locator(".fl-it").count() == n and pg.locator(".fl-pal details").count() == 3, (n, pg.locator(".fl-it").count())
+            assert sum(int(t.rsplit("(", 1)[1].rstrip(")")) for t in pg.locator(".fl-pal summary").all_inner_texts()) == n
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 52
+            assert pg.locator(".fl-it:visible").count() < n
             pg.fill("#fl-filter", "")
-        step("palette: 52 steps in three packages, the filter narrows it", palette)
+        step("palette: every step of the registry in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
@@ -126,7 +127,8 @@ try:
             pg.evaluate("document.querySelector('details[data-pkg=attributio]').open = true")
             add(pg, "spectra.match")
             attendi(pg, "!!document.querySelector('#fl-card-match')")
-            assert pg.locator('button[aria-label="Compare algorithms of align"]').count() == 0 and pg.locator('button[aria-label="Compare algorithms of detect"]').count() == 1     # one available algorithm only / two
+            add(pg, "formula.ms1"); attendi(pg, "!!document.querySelector('#fl-card-ms1')")
+            assert pg.locator('button[aria-label="Compare algorithms of ms1"]').count() == 0 and pg.locator('button[aria-label="Compare algorithms of detect"]').count() == 1 and pg.locator('button[aria-label="Compare algorithms of align"]').count() == 1     # one available algorithm only / two / two
             pg.click('button[aria-label="Compare algorithms of match"]')
             attendi(pg, "!!document.querySelector('#fl-card-compare')")
             assert pg.locator("#fl-card-compare .fl-var").count() == 2
@@ -462,7 +464,7 @@ try:
             pg.evaluate("window.__missing = ''"); attendi(pg, "/^0 steps reused, \\d+ to compute$/.test(document.querySelector('.fl-cli [data-reuse]').textContent)")
             assert "flow/reuse" in pg.evaluate("window.__ops"); n = pg.evaluate("document.querySelector('.flx-list').__flow.plan.steps.length"); pg.evaluate("window.__reused = %d" % n)
             pg.click(go); attendi(pg, "document.querySelector('.fl-slots li').textContent.includes('done in 0.9 s')")      # while the run goes: the first step is done, the others wait
-            assert "Running" in pg.inner_text(".fl-cli .fl-note") and "waiting" in pg.inner_text(slots + ":last-child")
+            assert "Running" in pg.inner_text(".fl-cli .fl-note") and "waiting" in pg.inner_text(slots + ":last-child").lower()
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
             assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "reused" in pg.inner_text(slots + ":last-child") and "1 steps reused" in pg.inner_text(".fl-cli .fl-note") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
             attendi(pg, "document.querySelector('.fl-cli [data-reuse]').textContent === '%d steps reused, 0 to compute'" % n); pg.click('button[aria-label="Fit all steps in view"]'); pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
