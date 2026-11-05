@@ -814,6 +814,7 @@ declare var ricContP: any;
 declare var ricContaminants: any;
 declare var ricForFormula: any;
 declare var ricForNumber: any;
+declare var ricHrFor: any;
 declare var ricHrNow: any;
 declare var ricLang: any;
 declare var ricRisultati: any;

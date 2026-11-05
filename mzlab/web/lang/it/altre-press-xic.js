@@ -232,6 +232,7 @@ I18N.add("it", {
   "scorc.titolo.tip": "Tutti i tasti del programma (tasto ?)",
   "scorc.qui": "Su questo grafico",
   "scorc.ovunque": "Ovunque",
+  "scorc.grafici": "Sui grafici (con il fuoco sul grafico)",
   "scorc.altri": "Altri tasti",
   "scorc.chiudi": "Chiudi",
   "scorc.xic": "XIC",

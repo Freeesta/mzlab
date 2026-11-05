@@ -232,6 +232,7 @@ I18N.add("en", {
   "scorc.titolo.tip": "Every key of the program (key ?)",
   "scorc.qui": "On this chart",
   "scorc.ovunque": "Everywhere",
+  "scorc.grafici": "On charts (with the chart focused)",
   "scorc.altri": "Other keys",
   "scorc.chiudi": "Close",
   "scorc.xic": "XIC",

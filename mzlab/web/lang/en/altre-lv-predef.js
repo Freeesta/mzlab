@@ -22,6 +22,7 @@ I18N.add("en", {
   "pal.d.lr": "within ±0.5 Da",
   "pal.d.hr": "Δ {d} Da · {ppm} ppm",
   "pal.try": "Try: 18, C6H12O6+Na, smoothing",
+  "pal.try.nodata": "Try: 18, C6H12O6+Na, calculator",
   "pal.formula.mass": "M = {m}",
   "pal.formula.ion": "ion of {adduct}",
   "pal.more": "{n} more contaminants in the Lists",

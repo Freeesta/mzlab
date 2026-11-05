@@ -38,7 +38,7 @@
   reg({ id: "app.apri", gruppo: "tools", viste: ["*"], icona: "plus", scorciatoia: { tasto: "o", mod: true, dove: "view", et: "scorc.apri" },
     nome: () => T("scorc.apri"), tip: () => T("scorc.apri.tip"), disponibile: () => !!document.getElementById("pick"), esegui: () => { const i = document.getElementById("pick"); if (i) i.click(); } });
   reg({ id: "app.esporta", gruppo: "tools", viste: ["*"], icona: "save", scorciatoia: { tasto: "e", mod: true, dove: "view", et: "scorc.esporta" },
-    nome: () => T("scorc.esporta"), tip: () => T("scorc.esporta.tip"), disponibile: () => inData() && !!window.RAPPORTO, esegui: () => window.RAPPORTO && RAPPORTO.export("html") });
+    nome: () => T("scorc.esporta"), tip: () => T("scorc.esporta.tip"), disponibile: () => inData() && !!window.RAPPORTO && E.files.some((/** @type {any} */ f) => !f.gone), esegui: () => window.RAPPORTO && RAPPORTO.export("html") });      // no file, no report: Ctrl/⌘+E stays with the browser
   /** @param {string} k @param {string} v @param {string} code @param {() => string} nome */
   const vista = (k, v, code, nome) => reg({ id: "app." + k, gruppo: "tools", viste: ["*"], icona: "side", scorciatoia: { code, alt: true, dove: "view", et: "scorc." + k },
     nome, tip: () => T("scorc.vista.tip"), disponibile: () => typeof setView === "function", esegui: () => setView(v) });
@@ -60,9 +60,13 @@
     function elenco() {
       const p = typeof E !== "undefined" && E.active && E.active.el ? E.active : null, vista = p ? p.type : "";
       const tutte = AZIONI.voci.filter((/** @type {any} */ a) => a.scorciatoia);
-      const qui = vista ? tutte.filter((/** @type {any} */ a) => a.scorciatoia.dove === "chart" && (a.viste.includes(vista) || a.viste.includes("*"))) : [];
-      const resto = tutte.filter((/** @type {any} */ a) => !qui.includes(a) && (a.scorciatoia.dove === "view" || !vista));
-      return { qui, resto };
+      // one line per label and key: several views register the same key (X = XIC on the spectrum, on the map...)
+      const uno = (/** @type {any[]} */ l) => l.filter((a, i) => l.findIndex(b => b.scorciatoia.et === a.scorciatoia.et && AZIONI.testo(b.scorciatoia) === AZIONI.testo(a.scorciatoia)) === i);
+      const qui = vista ? uno(tutte.filter((/** @type {any} */ a) => a.scorciatoia.dove === "chart" && (a.viste.includes(vista) || a.viste.includes("*")))) : [];
+      const resto = tutte.filter((/** @type {any} */ a) => a.scorciatoia.dove === "view");
+      // with no chart in focus the chart keys get their own heading: they never work «everywhere»
+      const grafici = vista ? [] : uno(tutte.filter((/** @type {any} */ a) => a.scorciatoia.dove === "chart"));
+      return { qui, resto, grafici };
     }
     function apri() {
       if (!dlg) {
@@ -72,9 +76,10 @@
         document.head.appendChild(st); document.body.appendChild(dlg);
         dlg.addEventListener("close", () => { const b = /** @type {any} */ (dlg).prev; if (b && document.contains(b)) try { b.focus({ preventScroll: true }); } catch (_) { /* gone */ } });
       }
-      const { qui, resto } = elenco();
+      const { qui, resto, grafici } = elenco();
       dlg.innerHTML = h`<h2 id="scorc-t">${T("scorc.titolo")}</h2>${raw(qui.length ? h`<h3>${T("scorc.qui")}</h3><ul>${raw(qui.map(riga).join(""))}</ul>` : "")}` +
         h`<h3>${T("scorc.ovunque")}</h3><ul>${raw(resto.map(riga).join(""))}</ul>` +
+        (grafici.length ? h`<h3>${T("scorc.grafici")}</h3><ul>${raw(grafici.map(riga).join(""))}</ul>` : "") +
         h`<div class="row"><button type="button" class="bt" id="scorc-altri">${T("scorc.altri")}</button><button type="button" class="bt" id="scorc-x" autofocus>${T("scorc.chiudi")}</button></div>`;
       /** @type {any} */ (dlg).prev = document.activeElement;
       /** @type {HTMLElement} */ (dlg.querySelector("#scorc-x")).onclick = () => /** @type {HTMLDialogElement} */ (dlg).close();
