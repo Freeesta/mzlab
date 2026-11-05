@@ -13,8 +13,9 @@ on:
 permissions:
   contents: read
 
+# a push to main has a group of its own (run_id): a run waiting in a shared group would be replaced by the next one, and the deploy gate of its commit would never open
 concurrency:
-  group: rust-${{ github.ref }}
+  group: rust-${{ github.event_name == 'push' && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
