@@ -114,3 +114,35 @@ fn a_tiny_fixed_point_is_an_error_not_infinity() {
     let neg = [&(-1000f64).to_be_bytes()[..], &7u32.to_le_bytes()[..]].concat();
     assert_eq!(decode(Np::Linear, &neg, 1).unwrap(), vec![-0.007]);
 }
+
+// The site's wasm takes `exp` and `ln` from libm, a native build from the system library, and the two differ in the last bit on
+// about one value in ten: slof decodes and writes the same bits on every face only if it uses libm everywhere.
+#[test]
+fn slof_gives_the_bits_of_libm_on_every_face() {
+    for max in [1.0, 999.0, 2.5e5, 3.7e7, 1e12] {
+        let fp = slof_fixed_point(&[max]);
+        assert_eq!(
+            fp,
+            (65535.0 / libm::log(max + 1.0)).floor().clamp(1.0, 65535.0),
+            "fixed point of {max}"
+        );
+        let body: Vec<u8> = (0..=u16::MAX).flat_map(u16::to_le_bytes).collect();
+        let data = [fp.to_be_bytes().as_slice(), &body].concat();
+        let back = decode(Np::Slof, &data, 1 << 16).unwrap();
+        for (q, b) in back.iter().enumerate() {
+            assert_eq!(
+                b.to_bits(),
+                (libm::exp(q as f64 / fp) - 1.0).to_bits(),
+                "decode {q}/{fp}"
+            );
+        }
+        let v: Vec<f64> = (0..20_000)
+            .map(|i| f64::from(i) * max / 20_000.0 + 0.37)
+            .collect();
+        let enc = encode_slof(&v, fp);
+        for (x, c) in v.iter().zip(enc[8..].chunks_exact(2)) {
+            let want = (libm::log(x + 1.0) * fp + 0.5) as u16;
+            assert_eq!(u16::from_le_bytes([c[0], c[1]]), want, "encode {x}");
+        }
+    }
+}

@@ -3,6 +3,7 @@
 //! (MS:1002746, MS:1002747, MS:1002748). Served only by the readers modules (feature `estesi`): the engine of the page keeps the error `err.file.numpress`.
 //! Every count that comes from the file is bounded by `max`, the number of values the spectrum declares: a hostile array is an error with a key, never an allocation.
 //! The encoders follow the reference byte for byte; `mzmlwrite` writes with the `_into` forms (linear prediction and short logged float), the others serve the tests.
+//! Short logged float takes `exp` and `ln` from libm: the .wasm already does, a native build would take the system's, which differs in the last bit.
 
 use crate::error::{Error, Result};
 
@@ -235,7 +236,7 @@ fn slof(data: &[u8], max: usize) -> Result<Vec<f64>> {
         return Err(bad("more values than declared"));
     }
     body.chunks_exact(2)
-        .map(|c| (f64::from(u16::from_le_bytes([c[0], c[1]])) / fp).exp() - 1.0)
+        .map(|c| libm::exp(f64::from(u16::from_le_bytes([c[0], c[1]])) / fp) - 1.0)
         .map(|v| {
             v.is_finite()
                 .then_some(v)
@@ -356,7 +357,7 @@ fn slof_into(out: &mut Vec<u8>, values: impl Iterator<Item = f64>, n: usize, fp:
     out.reserve(8 + 2 * n);
     out.extend_from_slice(&fp.to_be_bytes());
     for v in values {
-        let x = ((v + 1.0).ln() * fp + 0.5) as u16;
+        let x = (libm::log(v + 1.0) * fp + 0.5) as u16;
         out.extend_from_slice(&x.to_le_bytes());
     }
 }
@@ -372,7 +373,7 @@ pub fn slof_fixed_point_f32(values: &[f32]) -> f64 {
 }
 
 fn slof_fp(max: f64) -> f64 {
-    (65535.0 / (max + 1.0).ln().max(1e-9))
+    (65535.0 / libm::log(max + 1.0).max(1e-9))
         .floor()
         .clamp(1.0, 65535.0)
 }
