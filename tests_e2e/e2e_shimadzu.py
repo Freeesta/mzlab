@@ -62,7 +62,7 @@ try:
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
             for nm, want in (("gc.mzML", qtic), ("lc.mzML", ltic)):
-                i = pg.evaluate("n => ST.files.findIndex(x => x.name === n)", nm)
+                i = pg.evaluate("n => E.files.findIndex(x => x.file === n)", nm)       # k of api/* is the position in the open session (E.files), which follows the order the conversions finish, not ST.files
                 r = pg.evaluate(TIC, i); y = r.get("y") or r.get("tic", {}).get("y")
                 assert y and len(y) == N, (nm, r.get('er'), r.get('pr'), r.get('n'), i); assert all(abs(a - c) <= 1e-3 * max(c, 1) for a, c in zip(y, want)), (nm, y and y[:3], want[:3])
                 assert r["miss"] == 0, r["miss"]
