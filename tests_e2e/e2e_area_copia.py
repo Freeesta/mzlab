@@ -42,7 +42,7 @@ try:
             l = lab(); pg.evaluate("navigator.clipboard.writeText('x')")
             names = pg.evaluate(f"(()=>{{const p={XP};return AZIONI.per({{vista:p.type,p,x:14.2,k:0,near:null,px:{l['x']}-p.cv.getBoundingClientRect().left,py:{l['y']}-p.cv.getBoundingClientRect().top}}).map(i=>i.label||i.nome)}})()")
             assert "Copia valore" in [str(x) for x in names], names
-            pg.mouse.click(l["x"], l["y"], button="right"); attendi(pg, "[...document.querySelectorAll('.ctx *')].some(e=>e.textContent==='Copia valore')")
+            pg.mouse.click(l["x"], l["y"], button="right"); attendi(pg, "[...document.querySelectorAll('#ctx *')].some(e=>e.textContent==='Copia valore')")
             pg.get_by_text("Copia valore", exact=True).click(); attendi(pg, "!!document.querySelector('.areacopied.show')")
             assert clip() == l["copy"]
         step("context menu: «Copia valore» does the same", menu_copies)
