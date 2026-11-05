@@ -455,6 +455,10 @@ fn a_file_of_sim_chromatograms_only_is_typed_sim_also_with_a_uv_trace() {
             ..Default::default()
         };
         let c = Canali::da(&[], &chroms, &facts, "s.mzML");
-        assert_eq!((c.tipo.proposto, c.tipo.motivo), ("lc-sim", "sim_only"), "pda={pda}");
+        assert_eq!(
+            (c.tipo.proposto, c.tipo.motivo),
+            ("lc-sim", "sim_only"),
+            "pda={pda}"
+        );
     }
 }
