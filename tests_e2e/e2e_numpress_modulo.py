@@ -1,6 +1,6 @@
 """«Download .mzML» of a sample the readers module converted at the loading (shell.js `moduloToMzml`) follows the format picked in the menu: the second sample of
 `mistopi` (tools/wiff_misto_pi.py: a product-ion scan only the `sciex` module reads) is saved as mzML and as mzML + Numpress, and each file is byte for byte the one
-of `mzlab-cli convert --set conv.dad=true --compression C` (the form of the loading, optical matrix included). Needs cargo, the site, the engine .wasm and the `sciex`
+of `mzlab-cli convert --compression C` (conv.dad false: the optical matrix of the file of the loading is for the UV panel only). Needs cargo, the site, the engine .wasm and the `sciex`
 module: python3 tools/prepara_sito.py, tools/build_lettori_wasm.sh site/static."""
 import os, socket, subprocess, sys, tempfile
 from pathlib import Path
@@ -22,7 +22,7 @@ PAIR = [D / "mistopi.wiff", D / "mistopi.wiff.scan"]
 cli = {}
 for k in ("standard", "smallest"):
     subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "convert", str(PAIR[0]), "--out", str(D / f"cli_{k}"), "--fresh", "--workers", "1",
-                    "--compression", k, "--set", "conv.dad=true"], check=True, cwd=ROOT)
+                    "--compression", k], check=True, cwd=ROOT)
     cli[k] = sorted((D / f"cli_{k}").glob("*.mzML"))      # NAME-ID.mzML, one per sample in the order of the pair
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 for _ in range(300000):      # wait for the server to listen (connection attempts, not a fixed pause)

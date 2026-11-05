@@ -113,8 +113,8 @@ def test_wiff_same_sample_name_never_gets_an_unexplained_sN():
 
 
 def test_a_download_of_a_module_sample_follows_the_compression():
-    """A sample the readers module converted at the loading (`CONV.sources`): "standard" saves the file of the loading, another compression writes it again once with
-    `to_mzml_come` (the optical matrix of the loading kept) and saves that."""
+    """A sample the readers module converted at the loading (`CONV.sources`): every compression, "standard" included, is written again once with `to_mzml_come`
+    without the optical matrix (the file of `convert`, conv.dad false) and saved; the file of the loading (UV panel) is never the download."""
     got = run("""
       const C = c.CONV, asked = [], saved = [];
       global.window = { LETTORI_MOD: { toMzml: async (fam, mem, k, dest, on, sig, opts) => { asked.push([fam, mem.map(m => m.name), k, opts]); return { size: 5, tag: "np" }; } },
@@ -128,5 +128,6 @@ def test_a_download_of_a_module_sample_follows_the_compression():
         C.compression = "smallest"; await C.download("a.mzML"); await C.download("a.mzML");
         console.log(JSON.stringify({ asked, saved }));
       })();""")
-    assert got == {"asked": [["sciex", ["a.wiff", "a.wiff.scan"], 1, {"dad": True, "compression": "smallest"}]],
-                   "saved": [["a.mzML", "std"], ["a.mzML", "np"], ["a.mzML", "np"]]}
+    assert got == {"asked": [["sciex", ["a.wiff", "a.wiff.scan"], 1, {"dad": False, "compression": "standard"}],
+                             ["sciex", ["a.wiff", "a.wiff.scan"], 1, {"dad": False, "compression": "smallest"}]],
+                   "saved": [["a.mzML", "np"], ["a.mzML", "np"], ["a.mzML", "np"]]}

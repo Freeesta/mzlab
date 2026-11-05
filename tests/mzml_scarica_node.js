@@ -1,6 +1,6 @@
 // «Download .mzML» of a .wiff sample as the engine worker writes it (rust-nativo.js toMzml): `to_mzml_come` of the `sciex` module with no optical matrix.
 // node tests/mzml_scarica_node.js PKG_DIR OUT.mzML C COMPRESSION MEMBER...   (MEMBER: a path; its name in the dataset is its file name)
-// MZLAB_DAD=1: with the optical matrix, as a sample the readers module converted at the loading is written again (conversione.js `again`).
+// MZLAB_DAD=1: with the optical matrix, the form of the file the readers module writes at the loading for the UV panel (`to_mzml`).
 const fs = require("fs"), path = require("path");
 const [pkg, out, c, comp, ...members] = process.argv.slice(2);
 const w = require(path.resolve(pkg, "mzlab_lettori_wasm.js"));
