@@ -190,7 +190,10 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t(rb?"err.file.wiffEngine":"err.file.wiffLoad"),f.name]));return res}
   if(!rb||rb.disabled||!rb.nativeSamples||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=/** @type {(k: string, p?: unknown) => string} */ ((k,p)=>I18N.t(k,p)),dropped=new Set();
-  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  // two files of one name and kind in one loading (loose files of two folders): no folder tells which .wiff goes with which .wiff.scan, so neither pair is opened
+  const kinds=new Set(),twins=new Set();
+  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};if(kinds.has(k+sc))twins.add(k);kinds.add(k+sc);e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  for(const k of twins){const e=WIFF_WAIT.get(k);WIFF_WAIT.delete(k);dropped.delete(k);res.errs.push([T("load.wiffTwin",{name:e.stem+".wiff"}),e.stem+".wiff"])}
   const taken=[...res.files.map((/** @type {FileRiga} */ x)=>x.name),...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name)],pairs=[];
   // a pair is in the list as soon as its two files are together, before anything is read
   for(const [k,e] of [...WIFF_WAIT]){

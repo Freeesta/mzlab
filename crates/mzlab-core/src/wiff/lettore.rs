@@ -94,6 +94,15 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
+/// Injection `c` is of a variant: its method (any time) or a block of another version (once its index is built; `apri_solo` leaves the other injections unbuilt,
+/// and the probe of the page does not read their blocks: the method says it for a pair of one instrument).
+#[cfg(feature = "sciex")]
+fn variante_di(parti: &[Parte], c: usize) -> bool {
+    parti
+        .get(c)
+        .is_some_and(|p| p.w.variante() || (p.pronta && p.other_version))
+}
+
 impl LettoreWiff {
     pub(super) fn parte(&self, c: usize) -> Result<&Parte> {
         self.parti
@@ -178,7 +187,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.pronta(c).is_ok_and(|p| p.w.variante() || p.other_version) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } #[cfg_attr(not(feature = "estesi"), allow(unused_variables))] fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { #[cfg(feature = "estesi")] self.watch(c, k, s); extra_of(self, s) }
+#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { variante_di(&self.parti, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } #[cfg_attr(not(feature = "estesi"), allow(unused_variables))] fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { #[cfg(feature = "estesi")] self.watch(c, k, s); extra_of(self, s) }
     fn formato(&self) -> Formato { Formato::SciexWiff }
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};

@@ -745,7 +745,23 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
         None => read_walked(&mut src, &mut rows, budget)?,
     };
     let n_chrom = count_chromatograms(&mut src, last_end)?;
-    Ok(rows.finish(n_chrom))
+    finiti(rows.finish(n_chrom))
+}
+
+/// A NaN or infinite retention time or TIC is a damaged file (`err.file.nonFinite`, the scan by its position), like the readers' guard
+/// (`mzlab_lettori::finiti`): it never reaches the index, the TIC or the charts.
+fn finiti(t: Table) -> Result<Table> {
+    for (k, r) in t.rows.iter().enumerate() {
+        for (cosa, x) in [("rt", r.rt), ("tic", r.tic)] {
+            if !x.is_finite() {
+                return Err(crate::error::Error::new("err.file.nonFinite")
+                    .with("scan", k + 1)
+                    .with("what", cosa)
+                    .with("value", x));
+            }
+        }
+    }
+    Ok(t)
 }
 
 #[cfg(test)]

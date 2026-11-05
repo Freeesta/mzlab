@@ -3,7 +3,7 @@
 // the engine does not read, and gives their mzML as a File of OPFS. `shell.js moduloToMzml` (rule R of upload0) decides which files go here. Module loaded by carica.js.
 
 /** @typedef {{ name: string, blob: Blob }} Member */
-/** @typedef {{ formato: string, campioni: { id: number, name: string, scans: number }[], motivi: string[] }} Probe */
+/** @typedef {{ formato: string, campioni: { id: number, name: string, scans: number }[], motivi: string[] }} Probe `scans`: 0 past sample 0 of a SCIEX pair (the probe indexes sample 0 only) */
 
 /** @type {Record<string, { ext: string[], membri: string[], errori: string[], soloModulo: string[], sonda?: boolean }>} */
 const FAM = /** @type {any} */ (window).LETTORI_FAM;

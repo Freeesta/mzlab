@@ -9,13 +9,13 @@ use std::sync::{Arc, Mutex};
 
 use mzlab_core::flow::{file_roots, parse, plan_json};
 use mzlab_core::json::Out;
-use mzlab_core::lettori::Limiti;
 
+use crate::convert_entries::{entries, Entry};
 use crate::convert_report::{compression_sets, head_of, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
-use crate::flow_set::{digest_known, file_set, is_set_folder, known_sha};
+use crate::flow_set::{digest_known, is_set_folder, known_sha};
 use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
@@ -151,77 +151,6 @@ fn gather(inputs: &[PathBuf], skip: &Path) -> Result<Vec<PathBuf>, String> {
         return Err("nothing to convert in the inputs".into());
     }
     Ok(out)
-}
-
-/// One mzML to make: the dataset, the name of the plan input (`NAME` or `NAME@ID`) and the file written.
-struct Entry {
-    input: PathBuf,
-    label: String,
-    out: String,
-}
-
-/// The ids of the samples of a dataset with more than one, else none (a dataset the reader cannot open is converted as one and fails there).
-fn sample_ids(p: &Path) -> Vec<u32> {
-    let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limiti::desktop()));
-    let ids: Vec<u32> = opened.map_or(Vec::new(), |l| l.campioni().iter().map(|s| s.id).collect());
-    if ids.len() > 1 {
-        ids
-    } else {
-        Vec::new()
-    }
-}
-
-/// `NAME.mzML` or `NAME-ID.mzML`, NAME without its extension unless `long`.
-fn out_name(name: &str, id: Option<u32>, long: bool) -> String {
-    let name = crate::convert_report::sans_gz(name);
-    let base = if long {
-        name
-    } else {
-        name.rsplit_once('.').map_or(name, |p| p.0)
-    };
-    id.map_or(format!("{base}.mzML"), |i| format!("{base}-{i}.mzML"))
-}
-
-/// The mzML files of the datasets: one per sample of a dataset with several; two that would get the same name keep the extension of their input.
-fn entries(units: &[PathBuf]) -> Vec<Entry> {
-    let mut all: Vec<(PathBuf, String, Option<u32>)> = Vec::new();
-    for p in units {
-        let name = p
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .into_owned();
-        let ids = sample_ids(p);
-        if ids.is_empty() {
-            all.push((p.clone(), name.clone(), None));
-        }
-        all.extend(
-            ids.into_iter()
-                .map(|id| (p.clone(), name.clone(), Some(id))),
-        );
-    }
-    let short: Vec<String> = all
-        .iter()
-        .map(|(_, n, id)| out_name(n, *id, false))
-        .collect();
-    let clash = |k: usize| short.iter().filter(|s| **s == short[k]).count() > 1;
-    let outs: Vec<String> = (0..all.len())
-        .map(|k| out_name(&all[k].1, all[k].2, clash(k)))
-        .collect();
-    let mut made = Vec::new();
-    for (k, (input, name, id)) in all.iter().enumerate() {
-        let plain = id.map_or(name.clone(), |i| format!("{name}@{i}"));
-        let unique = all.iter().filter(|(_, n, i)| (n, i) == (name, id)).count() == 1;
-        // two inputs of one name (two folders) keep their position in it, or the second file would replace the first
-        let taken = outs.iter().filter(|o| **o == outs[k]).count() > 1;
-        let (lead, mark) = (format!("{k}/"), format!("{k}-"));
-        made.push(Entry {
-            input: input.clone(),
-            label: format!("{}{plain}", if unique { "" } else { &lead }),
-            out: format!("{}{}", if taken { &mark } else { "" }, outs[k]),
-        });
-    }
-    made
 }
 
 /// The plan of the one step: every entry an input of the port `raw`.
@@ -469,7 +398,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(o) => return o,
     };
     let ended = Arc::new(Mutex::new(vec![None; list.len()]));
-    let names = list.iter().map(|e| e.label.clone()).collect();
+    let names = list.iter().map(Entry::shown).collect();
     let mut runner = FileRunner::located(&work, found, Vec::new(), None, a.fresh);
     // The jobs are reported through `with_done`, not as progress lines.
     runner.progress = None;

@@ -86,10 +86,10 @@ fn i_casi_ostili_danno_una_chiave() {
     let scan = scansioni();
     let buono = gz(&mzml_di(&scan, Cod::Piano, None));
     let chiave = |nome: &str, b: Vec<u8>, l: &Limiti| abre(nome, b, l).err();
-    // cut before anything inflated: nothing to open
+    // cut before anything inflated: a damaged gzip, the key of the page's inflate (tests/gz_bordi.rs)
     assert_eq!(
         chiave("a.mzML.gz", buono[..12].to_vec(), &Limiti::sito()),
-        Some("err.file.notAccepted")
+        Some("err.file.zlib")
     );
     // not gzip at all, and gzip of something that is not an mzML
     assert_eq!(

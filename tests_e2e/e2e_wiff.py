@@ -54,6 +54,15 @@ try:
             shown(pg, 1)
             assert names(pg) == ["one"], names(pg)
         step("its .wiff.scan arrives in another loading: the pair is converted into one.mzML", late_scan)
+        def twins():                                     # loose files of two folders with one name: no folder pairs them, neither pair is opened
+            for d in ("a", "b"):
+                (D / d).mkdir(exist_ok=True)
+                for x in ("wiff", "wiff.scan"): shutil.copy(D / f"one.{x}", D / d / f"twin.{x}")
+            pg.set_input_files("#pick", [str(D / d / f"twin.{x}") for d in ("a", "b") for x in ("wiff", "wiff.scan")])
+            pg.wait_for_function("document.querySelector('#unopen') && !document.querySelector('#unopen').hidden && document.querySelector('#unopen').innerText.includes('twin.wiff')", timeout=60000)
+            assert ".wiff.scan" in pg.inner_text("#unopen"), pg.inner_text("#unopen")
+            assert names(pg) == ["one"], names(pg)
+        step("two same-named pairs without folders in one pick: an error, neither is opened", twins)
         def several():
             pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#fl-up [aria-busy=true]').forEach(r => window.__rows.add(r.dataset.up))).observe(document.getElementById('flst'), { childList: true, subtree: true })")
             pg.set_input_files("#pick", [str(D / "two.wiff.scan"), str(D / "two.wiff"), str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
@@ -133,6 +142,19 @@ try:
             try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)
             except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"), diag(pg))
         step("mzFinder lists the converted Full Scan file", mzfinder)
+        def empty_injection():                           # an injection in the sample table that acquired nothing (no Idx): listed as an empty sample under its number, as `mzlab-cli convert` writes buchi-2.mzML
+            c5 = b.new_context(viewport={"width": 1500, "height": 1800}); c5.set_default_timeout(120000); pg = c5.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "buchi.wiff"), str(D / "buchi.wiff.scan")])
+            got = "ST.files.map(f => [f.name, f.kind || ''])"
+            try: pg.wait_for_function("ST.files.length === 3 && ST.files.every(f => f.kind) && UPBUSY === 0", timeout=60000)
+            except Exception: raise AssertionError(pg.evaluate(got))
+            assert sorted(pg.evaluate(got)) == [["buchi_s1.mzML", "full"], ["buchi_s2.mzML", "empty"], ["buchi_s3.mzML", "full"]], pg.evaluate(got)
+            assert not errs, errs
+            c5.close()
+        step("an injection that acquired nothing is listed as an empty sample under its own number", empty_injection)
         def variante():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
                 print("   (variante: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
