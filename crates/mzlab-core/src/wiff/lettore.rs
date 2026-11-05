@@ -438,9 +438,11 @@ fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
         .and_then(|n| l.parti.iter().find(|p| p.w.sample as usize == n))
         .zip(id_field(&s.id, "experiment="))
         .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)));
-    let mut extra = crate::mzmlwrite::SpectrumExtra::default();
     // the vendor TIC of the block in every build: the engine (no `estesi`) writes the same mzML and index as the CLI and the app
-    extra.tic = header_tic(l, s);
+    let mut extra = crate::mzmlwrite::SpectrumExtra {
+        tic: header_tic(l, s),
+        ..Default::default()
+    };
     let Some(e) = e else { return extra };
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
     if let Some(sg) = super::modi::sigla(e.code) {
