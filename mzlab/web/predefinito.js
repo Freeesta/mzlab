@@ -43,7 +43,7 @@ window.DESKDEF = (() => {
     const yes = btn("predef.yes", async () => {
       await answer("si");
       p.textContent = I18N.t({ win: "predef.guide.win", mac: "predef.guide.mac", linux: "predef.guide.linux" }[os()]);
-      if (os() === "linux") { const c = el("code", I18N.t("predef.guide.linux.cmd")); c.style.cssText = "display:block;margin-top:6px;user-select:all;overflow-wrap:anywhere"; p.appendChild(c); }
+      if (os() === "linux") { const c = el("code", I18N.t("predef.guide.linux.cmd")); c.style.cssText = "display:block;margin-top:6px;-webkit-user-select:all;user-select:all;overflow-wrap:anywhere"; p.appendChild(c); }
       h.textContent = I18N.t("predef.guide.title");
       bar.replaceChildren();
       btn("predef.done", end).focus();
