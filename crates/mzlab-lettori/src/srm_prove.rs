@@ -69,6 +69,17 @@ impl Lettore for Finto {
     fn metodo(&mut self, _: usize) -> Result<String> {
         Ok(self.metodo.clone())
     }
+    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+        let mut s = self.scansione(c, k)?;
+        s.profile = true;
+        Ok(Some(s))
+    }
+    fn testata_tabella(&mut self, _: usize) -> Result<Option<Header>> {
+        Ok(Some(Header {
+            run: "leggera".into(),
+            ..Header::default()
+        }))
+    }
 }
 
 fn finto(filtro: &str) -> SrmDaScansioni {
@@ -192,4 +203,15 @@ fn senza_filtro_srm_niente_tracce() {
 #[test]
 fn il_resoconto_dei_non_portati_e_quello_del_lettore_avvolto() {
     assert_eq!(finto("").non_portati(), &[("campo finto", "motivo finto")]);
+}
+
+#[test]
+fn il_profilo_e_la_testata_leggera_passano_il_lettore_avvolto() {
+    // a Thermo `.raw` keeps its profile next to the centroids: `--peaks profile` must reach it through the wrapper
+    let mut l = finto("+ c SRM ms2 300.000 [99.5-100.5]");
+    assert!(l
+        .scansione_profilo(0, 0)
+        .unwrap()
+        .is_some_and(|s| s.profile));
+    assert_eq!(l.testata_tabella(0).unwrap().unwrap().run, "leggera");
 }

@@ -68,7 +68,8 @@ pub(super) fn larghezza(righe: &[Riga], dat_len: u64) -> Option<u64> {
         let fine = righe.get(k + 1).map_or(dat_len, |n| n.offset);
         let d = fine.checked_sub(r.offset)?;
         let c = r.conta as u64;
-        (c > 0 && d > 0 && d.is_multiple_of(c)).then_some(d / c)
+        // `then`, not `then_some`: the division must not run for a scan of 0 records
+        (c > 0 && d > 0 && d.is_multiple_of(c)).then(|| d / c)
     })
 }
 
