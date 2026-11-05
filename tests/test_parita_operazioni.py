@@ -12,7 +12,6 @@ SOLO_SITO = {
     "policy": "the storage policy of OPFS: the app reads the disk",
     "budget": "memory budget of the wasm instance (4 GiB cap); the app has no cap",
     "down": "one memory level lower for the wasm instance; the app has no cap",
-    "natsame": "samples already in OPFS with their index; the page skips it in the app (nativo.js)",
     "lr_gunzip": "a .mzXML.gz unpacked into OPFS for the readers module; the page skips it in the app (gz-flusso.js) and the app reads .gz itself",
     "lr_cen_have": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
     "lr_cen_adopt": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
