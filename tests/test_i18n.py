@@ -50,6 +50,20 @@ def test_a_key_missing_in_english_falls_back_to_italian():
     assert r == ["solo italiano", []]
 
 
+@needs_node
+def test_until_the_rest_of_the_catalog_runs_a_key_gives_empty_text_never_the_key():
+    # the site's first part names the rest (awaitRest); a key of the rest asked before it gives "" and is noted in `late`; static elements keep
+    # their text and are filled by done()
+    r = node("""I.add('it', {'p.first': 'primo'}); I.awaitRest('lang/it-resto.js'); const err = console.error; const said = []; console.error = m => said.push(m);
+      const mk = k => { const a = {'data-i18n': k}; return { textContent: 'testo della pagina', isConnected: true, getAttribute: n => (n in a ? a[n] : null) }; };
+      const els = [mk('p.first'), mk('p.later')], root = { querySelectorAll: () => els };
+      const before = [I.rest, I.t('p.first'), I.t('p.later'), I.t('p.later'), [...I.late], said.length];
+      I.apply(root); const held = els.map(e => e.textContent);
+      I.add('it', {'p.later': 'dopo'}); I.done(); console.error = err;
+      console.log(JSON.stringify([before, held, els.map(e => e.textContent), I.rest, I.t('p.later')]))""")
+    assert r == [["lang/it-resto.js", "primo", "", "", ["p.later"], 1], ["primo", "testo della pagina"], ["primo", "dopo"], "", "dopo"]
+
+
 def test_the_checker_passes_on_the_repository():
     p = subprocess.run([sys.executable, str(ROOT / "tools" / "controlla_i18n.py")], capture_output=True, text=True, encoding="utf-8")
     assert p.returncode == 0, p.stdout + p.stderr
