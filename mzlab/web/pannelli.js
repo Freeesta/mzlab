@@ -834,7 +834,7 @@ function hdRestore(/** @type {Pannello} */ p) {
   l.slice().reverse().forEach((/** @type {HTMLElement & Bag} */ n) => { if (n._ph) { n._ph.replaceWith(n); n._ph = null; } n.classList.remove("hd-ov"); });
   const m = p.el && p.el.querySelector(".hmore"), b = p.el && p.el.querySelector('[data-a="more"]');
   if (m) m.hidden = true; if (b) { b.hidden = true; b.setAttribute("aria-expanded", "false"); }
-  const hd = p.el && p.el.querySelector(".hd"); if (hd) hd.classList.remove("hd-tight");
+  p.el?.querySelector(".hd")?.classList.remove("hd-tight");
 }
 function fitHd(/** @type {Pannello} */ p) {
   const el = p.el; if (!el || !el.isConnected || p._fitBusy) return;
@@ -855,15 +855,12 @@ function fitHd(/** @type {Pannello} */ p) {
       if (n.classList.contains("bnl")) { n.classList.add("hd-ov"); p._hm.push(n); continue; }
       const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); p._hm.push(n);
     }
-    if (over()) {  // last resort, everything movable is already in «⋯»: the title and the selects shrink (ellipsis), the fixed touch targets keep their size and the close button stays inside
-      hd.classList.add("hd-tight");
-      el.querySelectorAll(".hd .ctl select").forEach((/** @type {HTMLSelectElement} */ sl) => { const o = sl.selectedOptions[0]; if (o && o.textContent) sl.title = o.textContent.trim(); });
-    }
+    if (over()) hd.classList.add("hd-tight");  // last resort: title and selects shrink
     if (!p._hm.some((/** @type {HTMLElement & Bag} */ n) => n._ph)) mb.hidden = true;
     else if (open) { more.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); }
   } finally { p._fitBusy = false; }
 }
-function fitHdSoon(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); p._fitRaf = FRAME.next(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }  // a second pass: widgets that settle after the first layout (fonts, async parts of the header) must not leave it too wide
+function fitHdSoon(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); p._fitRaf = FRAME.next(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }  // second pass: late widgets (fonts, async header parts)
 // Fit in the same frame as the width change (observer callbacks run after layout and before paint): no frame shows the header at the old arrangement.
 function fitHdNow(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); fitHd(p); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }
 function hdMorePlace(/** @type {Pannello} */ p) { const hd = p.el.querySelector(".hd"), m = p.el.querySelector(".hmore"); if (hd && m) { m.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; m.style.maxHeight = Math.max(80, p.el.clientHeight - hd.offsetHeight - 16) + "px"; } }
