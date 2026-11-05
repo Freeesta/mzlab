@@ -55,6 +55,25 @@ impl Wiff {
                 .is_some_and(|m| m.uscita == Uscita::Spettro)
     }
 
+    /// The engine (no `estesi`) reads the native scan types only: a sample with an experiment of another code is refused when its data are read, never
+    /// taken for level-1 scans (the `sciex` module reads it; `Wiff::variante` routes the pair there). The other samples of the pair stay readable.
+    pub(crate) fn readable(&self) -> Result<()> {
+        #[cfg(not(feature = "estesi"))]
+        if let Some((k, e)) = self
+            .experiments
+            .iter()
+            .enumerate()
+            .find(|(_, e)| e.code.is_some() && !modi::nativo(e.code))
+        {
+            return Err(bad(&format!(
+                "scan type code {} (experiment {})",
+                e.code.unwrap_or(0),
+                k + 1
+            )));
+        }
+        Ok(())
+    }
+
     #[cfg(not(feature = "estesi"))]
     /// A row of a SIM experiment without values: left out, so that it does not cut the columns of the ions.
     pub(crate) fn empty_sim_row(&self, r: &Record) -> bool {

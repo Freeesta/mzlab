@@ -24,6 +24,8 @@ pub fn zlib(b: &[u8]) -> Vec<u8> {
 pub enum Cod {
     /// 64-bit floats and zlib: the twin of the numpress file.
     Piano,
+    /// 64-bit floats, no compression (every byte of the base64 is a value: the hostile-number tests flip them).
+    Nudo,
     /// Linear prediction for m/z, `intensita` for the intensities, with or without zlib after.
     Np { intensita: Np, zlib: bool },
 }
@@ -41,6 +43,10 @@ pub fn array(v: &[f64], cod: Cod, g: Genere) -> String {
         Cod::Piano => (
             "<cvParam cvRef=\"MS\" accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam cvRef=\"MS\" accession=\"MS:1000574\" name=\"zlib compression\"/>".into(),
             zlib(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()),
+        ),
+        Cod::Nudo => (
+            "<cvParam cvRef=\"MS\" accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam cvRef=\"MS\" accession=\"MS:1000576\" name=\"no compression\"/>".into(),
+            v.iter().flat_map(|x| x.to_le_bytes()).collect(),
         ),
         Cod::Np { intensita, zlib: z } => {
             let (np, bytes) = match (g, intensita) {
