@@ -91,6 +91,10 @@ pub(super) fn detect() -> Step {
             .unit("scans")
             .doc("A trace longer than this is background and is not taken")
             .advanced(),
+        Param::choice("area_from", "Area from", &["channel", "window"])
+            .default_str("channel")
+            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
+            .advanced(),
         Param::number("merge_overlap", "Merge overlap")
             .min(0.0)
             .max(1.0)

@@ -5,6 +5,8 @@
 use std::fmt::Write as _;
 
 // the finder of `features.detect` has the same shape of test (kept out of lib.rs, which is at its size limit)
+#[path = "flow_area_tests.rs"]
+mod area;
 #[path = "flow_iso_finder_tests.rs"]
 mod finder;
 

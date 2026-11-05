@@ -197,7 +197,9 @@ fn the_preset_then_the_file_then_the_algorithm_give_the_values() {
     assert_eq!(r.algorithm, Some(("masstrace".to_string(), 1)));
     assert_eq!(r.preset.as_deref(), Some("lr"));
     // sorted keys, shortest numbers
-    assert!(r.text().starts_with(r#"{"axis":"Da","budget":96000000,"#));
+    assert!(r
+        .text()
+        .starts_with(r#"{"area_from":"channel","axis":"Da","budget":96000000,"#));
 }
 
 /// A runner that makes every output from the hash of its inputs, the step and the parameters, and writes down how long it took in a way that varies.
