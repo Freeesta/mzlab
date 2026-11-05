@@ -19,7 +19,7 @@ const LISTENOMI = (() => {
     [...idx.pos, ...idx.neg].forEach((/** @type {Bag} */ x) => {
       if (!x.formula || !x.name) return;
       const f = plainFormula(x.formula), k = x.name + "|" + f, old = by.get(k);
-      if (!old || adRank(x.adduct) < adRank(old.adduct)) by.set(k, { name: x.name, formula: f, adduct: x.adduct || "", key: fold(x.name) });
+      if (!old || adRank(x.adduct) < adRank(old.adduct)) by.set(k, { name: x.name, formula: f, adduct: x.adduct || "", key: fold(x.name), keyEn: fold(x.name_en || x.name) });
     });
     NAMES = { idx, lang: I18N.lang, rows: [...by.values()] };
     return NAMES.rows;
@@ -31,10 +31,11 @@ const LISTENOMI = (() => {
     return nameRows().filter((/** @type {Bag} */ r) => w.every(t => r.key.includes(t)))
       .map((/** @type {Bag} */ r) => ({ r, k: r.key.startsWith(q1) ? 0 : r.key.includes(" " + q1) ? 1 : 2 })).sort((a, b) => a.k - b.k || a.r.key.length - b.r.key.length).slice(0, max).map(o => o.r);
   }
-  /** The text of the dialog as a name (optionally followed by an adduct): {formula, adduct} when ONE entry has exactly that name, else null. */
+  /** The text of the dialog as a name (optionally followed by an adduct): {formula, adduct} when ONE entry has exactly that name, else null.
+   *  The English (ISO) name of a built-in entry is accepted on an Italian page too: «thiamethoxam» is how papers write «tiametoxam». */
   function byName(/** @type {string} */ text) {
     const m = String(text).match(/^\s*(.*?)\s*(\[.*\].*)?$/); if (!m || !m[1]) return null;
-    const k = fold(m[1]), hit = nameRows().filter((/** @type {Bag} */ r) => r.key === k);
+    const k = fold(m[1]), exact = nameRows().filter((/** @type {Bag} */ r) => r.key === k), hit = exact.length ? exact : nameRows().filter((/** @type {Bag} */ r) => r.keyEn === k);
     return hit.length === 1 ? { formula: hit[0].formula, adduct: (m[2] || hit[0].adduct || "").trim() } : null;
   }
   return { suggest, byName };

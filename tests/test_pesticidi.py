@@ -77,3 +77,32 @@ def test_the_ions_carry_the_engine_masses():
 def test_the_list_sits_next_to_keller():
     assert [x["id"] for x in lists()] == ["keller", "pesticides"]
     assert lists()[0].get("background", True)
+
+
+NODE = __import__("shutil").which("node")
+
+
+@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.parametrize("lang", ["it", "en"])
+def test_the_formula_dialog_finds_neonicotinoids_by_name(lang):
+    """liste-nomi.js (formula dialog, XIC ion field) over the shipped lists: «imidacloprid» is one entry with its neutral formula and [M+H]+."""
+    code = r"""
+const fs = require('fs'), vm = require('vm'), web = process.argv[1];
+globalThis.I18N = { lang: process.argv[3], t: (k, o) => k + JSON.stringify(o || {}) };
+globalThis.NOMI = require(web + '/nomi.js');
+const L = require(web + '/liste.js');
+const lists = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')).lists;
+globalThis.LISTE = { ensure: () => L.buildIndex(lists, null) };
+vm.runInThisContext(fs.readFileSync(web + '/liste-nomi.js', 'utf8') + ';globalThis.LISTENOMI = LISTENOMI;');
+const names = ['imidacloprid', 'thiamethoxam', 'clothianidin', 'acetamiprid', 'thiacloprid', 'dinotefuran'];
+console.log(JSON.stringify({ hit: LISTENOMI.byName('imidacloprid'), plus: LISTENOMI.byName('Imidacloprid [M+Na]+'),
+  sug: LISTENOMI.suggest('imidaclo').map(r => r.name), all: names.map(n => !!LISTENOMI.byName(n)) }));
+"""
+    import subprocess
+    r = subprocess.run([NODE, "-e", code, str(ROOT / "mzlab" / "web"), str(ROOT / "mzlab" / "web" / "contaminanti.json"), lang],
+                       capture_output=True, text=True, encoding="utf-8")
+    assert r.returncode == 0, r.stderr
+    o = json.loads(r.stdout)
+    assert o["hit"] == {"formula": "C9H10ClN5O2", "adduct": "[M+H]+"}
+    assert o["plus"] == {"formula": "C9H10ClN5O2", "adduct": "[M+Na]+"}
+    assert o["sug"] == ["imidacloprid"] and all(o["all"])
