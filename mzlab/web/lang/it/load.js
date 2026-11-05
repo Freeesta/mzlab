@@ -104,6 +104,7 @@ I18N.add("it", {
   "load.note.gzMemory": "{name} ({mb} MB compressi) si apre decomprimendolo tutto in memoria, perché questo browser non lo scrive a pezzi nel suo spazio: un file grande può non entrarci. Se l'apertura fallisce, decomprimilo prima (per esempio con 7-Zip) e apri il .mzML.",
   "load.dup.one": "«{name}» è già caricato.",
   "load.dup.many": "{n} file già caricati: ignorati.",
+  "load.wiffTwin": "{name}: due coppie con questo nome nello stesso caricamento, da cartelle diverse, e niente dice quale .wiff va con quale .wiff.scan. Non apro nessuna delle due: carica ogni cartella (o ogni coppia) da sola.",
   "load.wiffWait": "{name}: aspetto l'altro file della coppia (.wiff e .wiff.scan con lo stesso nome).",
   "load.note.movedToDam": "Metodi messi nel riquadro 2: {name}",
   "load.note.movedToData": "File di dati messi nel riquadro 1: {name}",

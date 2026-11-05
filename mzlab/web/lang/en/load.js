@@ -104,6 +104,7 @@ I18N.add("en", {
   "load.note.gzMemory": "{name} ({mb} MB compressed) is opened by unpacking it whole in memory, because this browser cannot write it piece by piece into its storage: a big file may not fit. If opening fails, unpack it first (for example with 7-Zip) and open the .mzML.",
   "load.dup.one": "«{name}» is already loaded.",
   "load.dup.many": "{n} files already loaded: ignored.",
+  "load.wiffTwin": "{name}: two pairs with this name in one loading, from different folders, and nothing tells which .wiff goes with which .wiff.scan. Neither is opened: load each folder (or each pair) on its own.",
   "load.wiffWait": "{name}: waiting for the other file of the pair (.wiff and .wiff.scan with the same name).",
   "load.note.movedToDam": "Methods put in box 2: {name}",
   "load.note.movedToData": "Data files put in box 1: {name}",
