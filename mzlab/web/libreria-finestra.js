@@ -263,10 +263,10 @@ function lazyThumbs(/** @type {HTMLElement} */ box) {
     const el = /** @type {HTMLElement} */ (el0), smi = el.dataset.smi; if (!smi || el.dataset.done) return; el.dataset.done = "1";
     thumb(smi, 54, 38, "lwt").then(svg => { if (!el.isConnected) return; if (svg) el.innerHTML = h`${raw(svg)}`; else el.textContent = "–"; });
   };
-  const watch = (/** @type {ParentNode} */ root) => root.querySelectorAll(".lw-th").forEach(el => (io ? io.observe(el) : draw(el)));
-  const io = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { /** @type {IntersectionObserver} */ (io).unobserve(e.target); draw(e.target); } }), { root: box, rootMargin: "80px" });
+  const watch = (/** @type {ParentNode} */ root) => root.querySelectorAll(".lw-th").forEach(el => io.observe(el));
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); draw(e.target); } }), { root: box, rootMargin: "80px" });
   watch(box);
-  return { watch, stop: () => { if (io) io.disconnect(); } };
+  return { watch, stop: () => io.disconnect() };
 }
 function closeBig(/** @type {HTMLElement} */ d, back = true) {
   const w = d.querySelector("#li-big"); if (!w) return;

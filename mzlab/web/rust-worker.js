@@ -30,7 +30,7 @@ const take = len => bufs.take(len);
 // The page compiles the .wasm once and sends it first ({ op: "module", module }; null = compile it here); any other first message starts it too.
 let startInit = /** @type {(m: any) => void} */ (() => {}), wasmModule = null;
 const started = new Promise(res => { startInit = res; });
-const ready = started.then(module => { wasmModule = module || null; return module ? init({ module_or_path: module }) : init(); }).then(ex => { wasmMem = ex.memory; engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready", cap: { opfsSync: typeof FileSystemFileHandle !== "undefined" && !!FileSystemFileHandle.prototype.createSyncAccessHandle, offscreen2d: typeof OffscreenCanvas !== "undefined" && !!new OffscreenCanvas(1, 1).getContext("2d") } }));
+const ready = started.then(module => { wasmModule = module || null; return module ? init({ module_or_path: module }) : init(); }).then(ex => { wasmMem = ex.memory; engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready", cap: { opfsSync: typeof FileSystemFileHandle !== "undefined" && !!FileSystemFileHandle.prototype.createSyncAccessHandle } }));
 ready.then(() => ["./idx-worker.js", "./idx-spill.js", "./idx-aiuti.js", "./idx-aiuto.js"].forEach(f => fetch(new URL(f, import.meta.url)).catch(() => {})));      // the index builder scripts go into the service worker cache: an upload works offline too
 
 // The pyramid of map tiles of a level of a file (`maptiles.rs`) is kept in OPFS (mzlab/tiles/<file>.L<level>.mzt) beside the index: the first

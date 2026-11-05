@@ -105,7 +105,7 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 
 **Ordine per guadagno/costo**:
 1. **binaryen 133** in `tools/wasm_opt.sh` (DEV-1): stesso peso, `wasm-opt` 8× più veloce (≈ 11 s risparmiati per modulo, ~20 moduli, in parallelo con cargo). Rischio basso.
-2. **`+simd128`** (DEV-3): +5-15 % su lettura e indice, peso −1,5 %/+0,6 %, browser minimi Chrome 91 / Firefox 89 / Safari 16.4.
+2. **`+simd128`** (DEV-3): +5-15 % su lettura e indice, peso −1,5 %/+0,6 %, browser minimi nel §8.
 3. **O3 sui crate caldi** (DEV-2): lettura ×1,5, indice ×1,4, picchi ×2,7 (Chromium; ×1,6-2,9 in Node); peso motore +32 % (+570 KB, +205 KB gzip), HR +3 %, Attributio +1 %. Richiede di alzare i tetti.
 4. **zlib-rs** (DEV-4): inflate ×1,35-2,3, indice HR −9 %, +43 KB per modulo che legge mzML; cambia i byte del gzip/zlib che scriviamo (convertitore) se usato anche per comprimere.
 5. **Banco permanente** (DEV-5): il banco di questo studio nel repository, così ogni leva si misura allo stesso modo e i numeri finiscono in `misure-velocita.md`. Va fatto per primo: le altre PR lo usano.
@@ -114,7 +114,7 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 ## 8. Decisioni di Federico
 - **Tetti**: motore da 1 884 160 a ≈ 2 572 288 B (2 336 860 × 1,10 arrotondato a 4 KiB) se si accetta O3 su `mzlab-core`; HR e Attributio +3 % e +1 % (restano sotto i tetti: HR 1 324 332 contro `limit_hr` 1 339 392, di poco; Attributio 1 403 170 contro 1 536 000).
 - **Lettori**: peso a O3 da misurare in DEV-2 (`opentfraw` e `mzlab-lettori` fra i crate caldi).
-- **Browser minimi dichiarati**: Chrome/Edge 91, Firefox 89, Safari 16.4 desktop (con SIMD128).
+- **Browser minimi dichiarati** (il solo posto che li fissa): Chrome/Edge 111, Firefox 121, Safari 16.4. Il motore richiede SIMD128, OPFS e gli handle sincroni (`capacita.js`), `DecompressionStream` chiede Firefox 113, `:has()` Chrome 105 e Firefox 121. Sotto il pavimento il codice non ha ripieghi per `ResizeObserver`, `IntersectionObserver`, `MutationObserver`.
 - **zlib-rs**: è una feature di un crate già presente (non una dipendenza nuova), ma cambia i byte compressi del convertitore: o solo decompressione (zlib-rs diretto per l'inflate, miniz per scrivere) o `conv/1` nuova con prima/dopo (già previsto in `docs/studi/raw-mzml-immediato/DUBBI.md` punto 5).
 - **binaryen da GitHub** al posto di npm (`wasm-opt@1.4.0` è fermo dal 2023; `wasm-opt@2.0.1` è del 17 ott 2026, troppo nuovo e con pacchetti per piattaforma): tarball `version_133` con SHA-256 fissato.
 
