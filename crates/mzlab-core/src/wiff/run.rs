@@ -130,8 +130,7 @@ impl Wiff {
                 n += 1;
             } else if self.scan_experiment(r.experiment) || self.empty_sim_row(r) {
                 continue;
-            } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?
-            {
+            } else if let Some(v) = dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
                 let m = &mut mrm[r.experiment];
                 m.time.push(r.time_min);
                 m.tic.push(r.tic);
@@ -188,7 +187,7 @@ impl Wiff {
                 continue;
             }
             if let (Some(v), Some(m)) = (
-                scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?,
+                dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?,
                 mrm.get_mut(r.experiment),
             ) {
                 m.time.push(r.time_min);
@@ -243,10 +242,11 @@ impl Wiff {
     }
 
     /// The instrument of the header: the CV term of the model the Log names (the known models), otherwise the generic `instrument model` and
-    /// the name as a userParam of the run; without a Log, the 3200 QTRAP this reader was written for.
+    /// the name as a userParam of the run; without a Log, the generic term alone.
     fn instrument_terms(&self) -> ((String, String), Vec<(String, String)>) {
         match self.model.as_deref() {
-            None => (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new()),
+            // a file of another QTRAP (SCIEX OS) may have no Log either: never taken for a 3200
+            None => (("MS:1000031".into(), "instrument model".into()), Vec::new()),
             Some(m) if m.replace(' ', "").contains("3200QTRAP") => {
                 (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new())
             }
@@ -293,6 +293,22 @@ impl Wiff {
             }
         }
     }
+}
+
+/// The cps of an MRM block, read dense. A scheduled (sMRM) block, which starts with `-(N + 0.01)`, is `err.file.wiff`: only the readers module
+/// (`scan_estesi.rs`) reads it, and its skip markers must never become intensities.
+#[cfg(not(feature = "estesi"))]
+fn dense_mrm<R: ReadAt>(
+    scan: &mut R,
+    scan_len: u64,
+    at: u64,
+    n: usize,
+) -> Result<Option<Vec<f64>>> {
+    let v = scan::read_mrm(scan, scan_len, at, n)?;
+    if v.as_ref().and_then(|v| v.first()).is_some_and(|x| *x < 0.0) {
+        return Err(crate::error::Error::new("err.file.wiff").with("detail", "sparse MRM block"));
+    }
+    Ok(v)
 }
 
 /// The MRM blocks of one experiment: times (min), TIC, and one column per transition.
