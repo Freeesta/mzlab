@@ -17,7 +17,7 @@ function errOf(/** @type {any} */ e, /** @type {string} */ fam) {
   return { error_key: "err.file.wiffLoad", params: { family: fam, detail: String(e && e.message || e) } };
 }
 
-/** @param {{ op: string, id: number, fam: string, members: { name: string, blob: Blob }[], c?: number, dest?: string }} m */
+/** @param {{ op: string, id: number, fam: string, members: { name: string, blob: Blob }[], c?: number, dest?: string, dad?: boolean, compression?: string }} m */
 async function run(m) {
   const post = (/** @type {any} */ x, /** @type {Transferable[]} */ t = []) => /** @type {any} */ (self).postMessage({ id: m.id, ...x }, t);
   let sink = null;
@@ -28,10 +28,12 @@ async function run(m) {
     sink = await rawSink(/** @type {string} */ (m.dest));
     const s = sink;
     let written = 0, last = 0;
-    const missing = w.to_mzml(names, sizes, read, m.c || 0, (/** @type {Uint8Array} */ p) => { written += p.length; s.write(p); }, (/** @type {number} */ scans, /** @type {number} */ scansTotal) => {
+    const sinkOf = (/** @type {Uint8Array} */ p) => { written += p.length; s.write(p); }, tell = (/** @type {number} */ scans, /** @type {number} */ scansTotal) => {
       const t = performance.now(); if (t - last < 100 && scans < scansTotal) return; last = t;
       post({ progress: { scans, scansTotal, written } });
-    });
+    };
+    // with a compression: «Download .mzML» (`to_mzml_come`); without: the form of the loading
+    const missing = m.compression ? w.to_mzml_come(names, sizes, read, m.c || 0, !!m.dad, m.compression, sinkOf, tell) : w.to_mzml(names, sizes, read, m.c || 0, sinkOf, tell);
     const q = s.error(); if (q) throw q;
     const r = await s.finish(); sink = null;
     post(r.file ? { file: r.file, missing } : { parts: r.parts, missing });

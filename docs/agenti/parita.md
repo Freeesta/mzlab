@@ -35,6 +35,7 @@ Regola (`CLAUDE.md`): ogni funzione esiste nel sito (`.wasm` + OPFS) e nell'app 
 | Funzione | Sito | App/CLI | Prova |
 |---|---|---|---|
 | Conversione a mzML (8 famiglie) | moduli `wasm-lettori/*` (`to_mzml`) | `convert`, `nat2mzml` | `test_lettori_parita.py` (SHA-256 uguale, dati sintetici) |
+| «Download .mzML» in un'altra compressione (mzML + Numpress, non compresso) di un campione convertito dal modulo al caricamento | `conversione.js` `again` (`to_mzml_come`, matrice ottica come al caricamento) | `convert --compression C --set conv.dad=true` | `test_wiff_scarica_mzml.py` (`mistopi`, campione 2, byte per byte), `test_conversione.py`, `e2e_numpress_modulo.py` |
 | mzML con Numpress in ingresso | modulo `aperti` | percorso nativo | `numpress_mzml.rs` |
 | Lettura diretta senza mzML (6 famiglie) | via mzML in OPFS | diretta | limite di oggi (`formati-matrice.md`, punto 6) |
 | File oltre 4 GiB, fili dentro un file | no | sì | limite: memory64 e `atomics` (`wasm-potenziale.md`) |
