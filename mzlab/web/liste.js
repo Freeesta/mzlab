@@ -378,16 +378,28 @@ const LISTE = (() => {
     ST.runs = new WeakMap();
   }
 
-  // loads the built-in lists once; also loads persisted user suspect lists from IndexedDB
-  function ensure() {
-    if (ST.idx || ST.loading) return ST.idx;
-    const p1 = (typeof J === "function") ? J("api/contaminants").then((/** @type {Bag} */ j) => { ST.lists = j.lists || []; }).catch((/** @type {unknown} */ e) => { ST.err = e; }) : Promise.resolve();
-    const p2 = idbGetUserLists().then(u => { ST.userLists = u || []; }).catch(() => {});
+  // Loads the built-in lists; a failed read is not final (the index stays usable with the user lists and the read is tried again on the next
+  // ready(), or from ensure() at most every RETRY_MS). IndexedDB never holds the built-in lists back: past IDB_WAIT_MS they go ahead without the user ones.
+  const RETRY_MS = 5000, IDB_WAIT_MS = 4000;
+  let errAt = 0;
+  function load() {
+    const p1 = (typeof J === "function") ? J("api/contaminants").then((/** @type {Bag} */ j) => { ST.lists = j.lists || []; ST.err = null; }).catch((/** @type {unknown} */ e) => { ST.err = e; errAt = Date.now(); }) : Promise.resolve();
+    const p2 = Promise.race([idbGetUserLists(), new Promise(res => setTimeout(() => res(null), IDB_WAIT_MS))]).then(u => { if (u) ST.userLists = u; }).catch(() => {});
     ST.loading = Promise.all([p1, p2]).then(() => { reindex(); ST.loading = null; });
-    return null;
+  }
+  function ensure() {
+    if (ST.loading) return ST.idx;
+    if (!ST.idx || (ST.err && Date.now() - errAt > RETRY_MS)) load();
+    return ST.idx;
   }
 
-  const ready = () => { ensure(); return ST.idx ? Promise.resolve() : (ST.loading || Promise.resolve()); };
+  const ready = async () => {
+    if (!ST.loading && ST.err) load();               // the caller waits for an answer: read again now
+    else ensure();
+    if (ST.loading) await ST.loading;
+  };
+  /** True when the built-in lists could not be read (the index then holds the user lists only). */
+  const failed = () => !!ST.err;
 
   // For high resolution spectra only: tooltip box on hover. null if switch is off or NOT high resolution.
   function forSpec(/** @type {number[]} */ mzs, /** @type {number[]} */ ys, /** @type {string | number | null | undefined} */ polarity, /** @type {number} */ ppm) {
@@ -855,6 +867,7 @@ const LISTE = (() => {
     compat, isExcluded, keyFor, exclSet, exclReset, exclExport, exclImport, exclItems, split,
     ensure,
     ready,
+    failed,
     isOn,
     setOn,
     openLab,
