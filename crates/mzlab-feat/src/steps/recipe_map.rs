@@ -20,6 +20,16 @@ fn bad(step: &str, name: &str) -> Error {
         .with("param", name)
 }
 
+/// `area_from` of `features.detect`: `channel` (the area of the detection) or `window` (the one of the quality trace).
+fn set_area_from(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
+    r.steps.quality.area_window = match v.str() {
+        Some("channel") => false,
+        Some("window") => true,
+        _ => return Err(bad(step, k)),
+    };
+    Ok(())
+}
+
 /// A tolerance written on the wrong axis: `param` is in ppm on the unit axis or `tol_da`/`dup_da` on the ppm axis; never read as the other unit.
 fn wrong_axis(r: &Recipe, param: &str) -> Error {
     let axis = if r.detect.axis.is_da() { "Da" } else { "ppm" };
@@ -207,13 +217,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
-        ("features.detect", "area_from") => {
-            r.steps.quality.area_window = match v.str() {
-                Some("channel") => false,
-                Some("window") => true,
-                _ => return Err(bad(step, k)),
-            }
-        }
+        ("features.detect", "area_from") => set_area_from(r, step, k, v)?,
         ("features.detect", "min_width" | "min_snr") => set_gate(&mut r.detect, k, num()?),
         ("features.detect", _) if recipe_iso::owns(k) => recipe_iso::set(r, step, k, v)?,
         ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
