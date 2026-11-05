@@ -148,7 +148,7 @@ fn ellipse(pts: &[[f64; 2]]) -> Option<Value> {
     let cov = |a: usize, b: usize| psum(&pts.iter().map(|q| (q[a] - c[a]) * (q[b] - c[b])).collect::<Vec<_>>()) / (n - 1.0);
     let (w, v) = eigh(&[cov(0, 0), cov(0, 1), cov(1, 0), cov(1, 1)], 2);
     let chi2 = 5.991;
-    Some(Obj::new().n("cx", c[0]).n("cy", c[1]).n("a", (chi2 * w[1].max(0.0)).sqrt()).n("b", (chi2 * w[0].max(0.0)).sqrt()).n("angle", v[3].atan2(v[1])).done())
+    Some(Obj::new().n("cx", c[0]).n("cy", c[1]).n("a", (chi2 * w[1].max(0.0)).sqrt()).n("b", (chi2 * w[0].max(0.0)).sqrt()).n("angle", libm::atan2(v[3], v[1])).done())
 }
 
 fn ellipses(groups: &[Option<String>], sm: &[usize], f: &Fit, n: usize) -> Value {
@@ -218,7 +218,7 @@ pub fn pca_analysis(matrix: &[Vec<f64>], roles: &[String], groups: Option<&[Opti
 fn analyse(sm: &[usize], idx: Vec<usize>, filled: Vec<Vec<f64>>, n_imp: usize, steps: Vec<Obj>, groups: Option<&[Option<String>]>, o: &PcaOpts) -> R<Value> {
     let n = sm.len();
     let live: Vec<usize> = (0..idx.len()).filter(|&f| {
-        let z: Vec<f64> = filled[f].iter().map(|&v| if o.transform == "log" { v.log2() } else { v }).collect();
+        let z: Vec<f64> = filled[f].iter().map(|&v| if o.transform == "log" { libm::log2(v) } else { v }).collect();
         let m = psum(&z) / n as f64;
         psum(&z.iter().map(|v| (v - m) * (v - m)).collect::<Vec<_>>()) / (n as f64 - 1.0) > 0.0
     }).collect();
@@ -226,7 +226,7 @@ fn analyse(sm: &[usize], idx: Vec<usize>, filled: Vec<Vec<f64>>, n_imp: usize, s
         return user("err.stat.pca.nofeatures", "fewer than two features vary between the samples");
     }
     let p = live.len();
-    let zt: Vec<f64> = (0..n).flat_map(|j| live.iter().map(|&f| (j, f)).collect::<Vec<_>>()).map(|(j, f)| if o.transform == "log" { filled[f][j].log2() } else { filled[f][j] }).collect();
+    let zt: Vec<f64> = (0..n).flat_map(|j| live.iter().map(|&f| (j, f)).collect::<Vec<_>>()).map(|(j, f)| if o.transform == "log" { libm::log2(filled[f][j]) } else { filled[f][j] }).collect();
     let full = fit(&scale(&zt, n, p, &o.scaling), n, p, o.ncomp);
     let (stab_pc, ks) = loo_stability(&zt, n, p, &o.scaling, &full, 2);
     let stab: Vec<f64> = (0..p).map(|f| {

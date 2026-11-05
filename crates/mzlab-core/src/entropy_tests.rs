@@ -65,3 +65,20 @@ fn the_sorted_search_finds_the_pairs_of_the_double_loop() {
         }
     }
 }
+
+// The site's wasm takes `ln` and `pow` from libm, a native build from the system library, and the two differ in the last bit on
+// some values: the entropy, and so the similarity in the site and the app, is the same only if it uses libm everywhere.
+#[test]
+fn entropy_gives_the_bits_of_libm_on_every_face() {
+    for n in 1..2000u32 {
+        let p: Vec<f64> = (1..=7)
+            .map(|k| f64::from(n * 37 % 1013 + k * 101) / 9973.0)
+            .collect();
+        let want = -p.iter().map(|&v| v * libm::log(v)).sum::<f64>();
+        assert_eq!(
+            super::entropy(&p).to_bits(),
+            want.to_bits(),
+            "entropy of {p:?}"
+        );
+    }
+}
