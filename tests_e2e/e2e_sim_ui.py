@@ -1,4 +1,4 @@
-"""The SIM wording and controls of the Data view on the built site with the Rust engine (synthetic SIM .wiff pair of tools/wiff_sim.py, no laboratory data): the
+"""The SIM wording and controls of the Data view on the built site with the Rust engine (synthetic SIM .wiff pair of tools/wiff_sim.py, no laboratory data): the engine types every file «lc-sim», the
 experiment cell says «SIM · N ions» (not «no data»), the side list group, the panel title, the toolbar button and the channel picker speak of SIM ions, every ion has one
 colour that is the same in every sample, the chromatogram menu holds the «Extract ion ›» submenu (colour swatch, check mark, «All», click / Ctrl / Shift rules) in place
 of XIC, and the «Area» toggle fills the traces (on by default). Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_ui.py"""
@@ -23,6 +23,7 @@ try:
         pg = r.page(p)
         stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); attendi(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
         step("every file counts its SIM ions", lambda: need(pg.evaluate("E.files.every(f => f.sim === %d)" % N), pg.evaluate("E.files.map(f => f.sim)")))
+        step("every file is typed SIM by the engine (a SIM file is neither «empty» nor «UV only»)", lambda: need(pg.evaluate("Promise.all(E.files.map(f => CANALI.canali(f.k).then(j => j.tipo.proposto)))") == ["lc-sim"] * pg.evaluate("E.files.length"), pg.evaluate("Promise.all(E.files.map(f => CANALI.canali(f.k).then(j => j.tipo.proposto)))")))
         def cell():
             t = pg.evaluate("ST.files.map(f => expCell(f)).join('|')")
             need("no data" not in t and "nessun dato" not in t and ("SIM" in t) and (" %d " % N in t), t)

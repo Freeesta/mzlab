@@ -18,6 +18,7 @@ const ESP = (() => {
     "lc-ms2-mirato": { canale: "ms2", lente: true },
     "lc-dda": { canale: "ms1", lente: true },
     "lc-mrm": { canale: "srm", lente: true },
+    "lc-sim": { canale: "sim", lente: true },
     "infusione-msn": { canale: "profondo", lente: false },
     "misto": { canale: "tic", lente: true },
     "solo-uv": { canale: "uv", lente: true },
@@ -30,7 +31,7 @@ const ESP = (() => {
   const scegli = (tipo, v, quant) => {
     const d = predefinito(tipo).canale, liv = n => v.find(x => x.fam === "ms" && x.liv === n);
     return d === "ms1" ? liv(1) : d === "ms2" ? liv(2) : d === "profondo" ? v.filter(x => x.fam === "ms").sort((a, b) => b.liv - a.liv)[0]
-      : d === "srm" ? v.find(x => x.fam === "srm" && quant(x)) || v.find(x => x.fam === "srm") : d === "uv" ? v.find(x => x.fam === "uv") : null;
+      : d === "srm" ? v.find(x => x.fam === "srm" && quant(x)) || v.find(x => x.fam === "srm") : d === "uv" ? v.find(x => x.fam === "uv") : d === "sim" ? v.find(x => x.fam === "sim") || null : null;
   };
   // The types flagged `unico` (MS2) are never overlaid: of several ticked files of such a type only one is drawn, and the list never keeps two ticked.
   /** @param {any} f */

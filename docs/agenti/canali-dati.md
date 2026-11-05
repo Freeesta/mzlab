@@ -61,7 +61,7 @@ pub struct Canali { pub v: Vec<Canale>, pub scan_ids: Vec<u32>, pub tipo: Tipo }
 ```
 `scan_ids` è una partizione degli scan MS ordinata per canale (`Sorgente::Scan{da,a}` = fetta): 4 B per scan, nessun dato spettrale copiato. Costruzione O(n scan) dalla tabella già in memoria (`idx.scans`, ~640 B/scan) + la lista dei cromatogrammi (`Facts`/`mzmlhead::Chrom`); fatta una volta per file e tenuta nelle `Routes` (100 000 scan → 400 KB + qualche centinaio di canali). Niente cambio di formato del `.mzidx` nel primo passo; in un passo successivo (DEV-b) una colonna `exp` facoltativa (esperimento/periodo del `.wiff`) se il testo `native` non basta.
 
-**Tipo di esperimento come etichetta (`Tipo`).** `Tipo { proposto: &'static str, motivo, utente: Option<..> }` con valori descrittivi `lc-full`, `lc-ms2-mirato`, `lc-dda`, `lc-mrm`, `infusione-msn`, `misto`, `solo-uv`; calcolato da `infusione.rs` + canali; il valore dell'utente (menu di VISORE-ZOOM) vince e sta nella sessione. Serve SOLO ai default (§3): canale iniziale, lente XIC proposta o no, scheda «alb» aperta all'avvio.
+**Tipo di esperimento come etichetta (`Tipo`).** `Tipo { proposto: &'static str, motivo, utente: Option<..> }` con valori descrittivi `lc-full`, `lc-ms2-mirato`, `lc-dda`, `lc-mrm`, `lc-sim` (solo cromatogrammi SIM, anche con una traccia UV), `infusione-msn`, `misto`, `solo-uv`; calcolato da `infusione.rs` + canali; il valore dell'utente (menu di VISORE-ZOOM) vince e sta nella sessione. Serve SOLO ai default (§3): canale iniziale, lente XIC proposta o no, scheda «alb» aperta all'avvio.
 
 **API (rotte `/api`, stesse in wasm e desktop; JSON con versione).**
 - `GET api/canali?k` → `{"v":"canali/1","tipo":{…},"canali":[{id,fam,gen,liv,pol,sigla,et,omo,n,rt0,rt1,spettri}]}`.

@@ -437,3 +437,24 @@ fn sim_channels_without_q1_stay_apart_by_their_place_in_the_experiment() {
         Some("SIM #3 (+)")
     );
 }
+
+#[test]
+fn a_file_of_sim_chromatograms_only_is_typed_sim_also_with_a_uv_trace() {
+    let chroms: Vec<Chrom> = (0..2)
+        .map(|j| Chrom {
+            index: j,
+            id: format!("SIM SIC Q1=23{j}.1 sample=1 period=1 experiment=1 transition={j} polarity=positive"),
+            kind: "srm".into(),
+            n: Some(100),
+            ..Default::default()
+        })
+        .collect();
+    for pda in [false, true] {
+        let facts = Facts {
+            pda,
+            ..Default::default()
+        };
+        let c = Canali::da(&[], &chroms, &facts, "s.mzML");
+        assert_eq!((c.tipo.proposto, c.tipo.motivo), ("lc-sim", "sim_only"), "pda={pda}");
+    }
+}
