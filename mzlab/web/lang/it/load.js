@@ -1,6 +1,7 @@
 I18N.add("it", {
   "load.blocked": "I file salvati sono bloccati da un'altra scheda di {app}: chiudi le altre schede di {app} e questa ripartirà da sola.",
   "load.err.resumeTimeout": "La ripresa dei file salvati non risponde. Ripartire da zero cancella i file salvati in questo browser, il taccuino e le copie in memoria.",
+  "load.natInterrupted": "Il caricamento di {name} si è interrotto: caricalo di nuovo.",
   "load.slow": "La prima apertura scarica circa 15 MB: può volerci un minuto.",
   "load.engine.waiting": "{n} file in attesa",
   "load.engine.waitingOne": "1 file in attesa",
@@ -47,6 +48,7 @@ I18N.add("it", {
   "empty.lists": "Qui atterreranno i risultati!",
   "empty.losses": "Qui atterreranno le perdite!",
   "empty.adducts": "Qui atterreranno gli addotti!",
+  "empty.cont": "Qui compariranno i contaminanti!",
   "load.backwork": "Torna al lavoro!",
   "load.or": "oppure",
   "load.demo.title": "Carica file di esempio",

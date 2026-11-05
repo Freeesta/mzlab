@@ -12,6 +12,7 @@ use crate::lrnoise::set_gate;
 use crate::recipe::{Mode, Recipe};
 
 use super::recipe_algo;
+use super::recipe_iso;
 
 fn bad(step: &str, name: &str) -> Error {
     Error::new("err.flow.param.type")
@@ -58,11 +59,11 @@ fn set_tol_da(r: &mut Recipe, step: &str, x: f64) {
     }
 }
 
-/// Writes `params` (descriptor names, any order; `algorithm` and `axis` are applied before the rest; `algorithm` is `centwave`, `masstrace` or `adap_localmin` for `features.detect`, `groups` or `join` for `features.align`, `integrate` or `peak_finder` for `features.gapfill`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
+/// Writes `params` (descriptor names, any order; `algorithm`, `axis` and `isotopes` are applied before the rest; `algorithm` is `centwave`, `masstrace` or `adap_localmin` for `features.detect`, `groups` or `join` for `features.align`, `integrate` or `peak_finder` for `features.gapfill`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
 pub fn apply(r: &mut Recipe, step: &str, params: &[(String, Value)]) -> Result<()> {
     let mut sorted: Vec<&(String, Value)> = params.iter().collect();
     mzlab_core::sortc::slice_by_key(&mut sorted, |(k, _)| {
-        !matches!(k.as_str(), "algorithm" | "axis")
+        !matches!(k.as_str(), "algorithm" | "axis" | "isotopes")
     });
     for (k, v) in sorted {
         set(r, step, k, v)?;
@@ -207,6 +208,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
         ("features.detect", "min_width" | "min_snr") => set_gate(&mut r.detect, k, num()?),
+        ("features.detect", _) if recipe_iso::owns(k) => recipe_iso::set(r, step, k, v)?,
         ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
         _ if recipe_algo::owns(step, k) => recipe_algo::set(r, step, k, v)?,
         ("features.align", "mode") => {
@@ -318,6 +320,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("min_snr", n(r.detect.min_snr)),
             ];
             push_peak(&r.detect.peak, &mut v);
+            recipe_iso::values(r, &mut v);
             if let Some((a, b)) = r.rt_range {
                 v.push(("rt_range", Value::Arr(vec![n(a), n(b)])));
             }
