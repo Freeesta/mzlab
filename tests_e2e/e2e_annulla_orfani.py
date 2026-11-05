@@ -1,7 +1,7 @@
 # e2e_annulla_orfani: «Cancel» of a loading while builders are indexing leaves in OPFS only the files of the table: the copy of a cancelled file and its `.part`
 # index go even though the stopped builder's worker still holds them for a moment (archivio.js removeHeld). Synthetic files (tools/mzml_msconvert_sintetico.py),
 # no laboratory data. Needs the site and the .wasm: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_annulla_orfani.py
-import os, sys, tempfile, shutil, time; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import os, sys, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
 import mzml_msconvert_sintetico as gen
@@ -15,6 +15,9 @@ ARM = """() => { window.__at = null; const t = setInterval(() => { const b = doc
 OPFS = """async () => { const root = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'), o = { rows: ST.files.map(f => f.name) };
   for (const k of ['files', 'idx']) { o[k] = []; try { for await (const [n] of (await root.getDirectoryHandle(k)).entries()) o[k].push(n); } catch (_) { /* no folder */ } }
   return o; }"""
+# true once OPFS holds only the files of the table and no `.part` (the same rule as leftovers() below)
+CLEAN = "(" + OPFS + """)().then(o => { const rows = new Set(o.rows);
+  return o.files.every(f => rows.has(f)) && o.idx.every(x => !x.endsWith('.part') && rows.has(x.replace('.cen.mzidx', '').replace('.mzidx', ''))); })"""
 d = tempfile.mkdtemp(prefix="annulla_"); fs = []
 for i in range(6):
     p = os.path.join(d, f"lento_{i}.mzML"); gen.scrivi(p, scans=6000, peaks1=1500, peaks2=150); fs.append(p)
@@ -32,9 +35,9 @@ def cancel_cleans():
             attendi(pg, "window.__at !== null", 300000)
             at = pg.evaluate("window.__at")
             attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
-            o, t0 = pg.evaluate(OPFS), time.time()
-            while leftovers(o) and time.time() - t0 < 12:      # the cancelled files go within a few seconds
-                pg.wait_for_timeout(500); o = pg.evaluate(OPFS)
+            try: attendi(pg, CLEAN, 12000)      # the cancelled files go within a few seconds
+            except TimeoutError: pass
+            o = pg.evaluate(OPFS)
             assert o["rows"] and len(o["rows"]) < len(fs), f"the cancel came too late or too early: {at} → {o['rows']}"
             assert not leftovers(o), f"left in OPFS with no row after «Cancel»: {leftovers(o)} (rows at the cancel {at})"
             assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
