@@ -56,7 +56,9 @@ def test_wiff_sample_name_from_data():
         c.wiffName("FullMass", 1, false, [], "A/B\\\\:C*D?E\\\"F<G>H|I"),
         c.wiffName("FullMass", 1, false, [], "x".repeat(150)),
         c.wiffName("one", 1, false, [], "one.wiff #1"),
-        c.wiffName("two", 2, true, [], "two.wiff #2")
+        c.wiffName("two", 2, true, [], "two.wiff #2"),
+        c.wiffName("U", 1, false, [], "U.WIFF #1"),
+        c.wiffName("x", 1, false, [], "x.wiff #3")
     ]))""")
     assert got == [
         "Sample_A.mzML",
@@ -68,6 +70,8 @@ def test_wiff_sample_name_from_data():
         "x" * 120 + ".mzML",
         "one.mzML",
         "two_s2.mzML",
+        "U.mzML",
+        "x.mzML",
     ]
 
 

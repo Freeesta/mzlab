@@ -220,3 +220,16 @@ fn channels_lists_the_sim_channels_of_the_wiff() {
     assert!(t.contains("\"et\":\"SIM 251.1 (+) 20 ms «ionC»\""), "{t}");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn a_lone_unnamed_sample_is_named_after_its_file_in_any_case() {
+    // the reader names it «<file> #<number>» with the extension as the file has it (an upper-case .WIFF, a container number other than 1)
+    use super::wiff_name;
+    assert_eq!(wiff_name("U", "U.WIFF #1", &[]), "U.mzML");
+    assert_eq!(wiff_name("x", "x.wiff #3", &[]), "x.mzML");
+    assert_eq!(wiff_name("x", "x.wiff #3a", &[]), "x.wiff #3a.mzML");
+    assert_eq!(
+        wiff_name("x", "Named", &["named.mzML".into()]),
+        "Named.wiff.mzML"
+    );
+}
