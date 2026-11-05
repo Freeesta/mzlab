@@ -379,7 +379,7 @@
       if (!mol) { msg("Enter a formula or SMILES.", true); $("#tp-msg").dataset.field = "1"; FIELD().set(parentFields(), $("#tp-msg")); $("#tp-mol").focus(); return; }
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       const have = new Set(st.files.map(f => String(f.name || "").split(/[\\/]/).pop()));            // files loaded but not in this series: failed to read, or still being opened
-      const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
+      const lost = [...new Set([...(window.MZLAB_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
       $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
       setBusy(true); reattAuto("tpsStart");      // the reactivity of the parent waits for the TPs
       $("#tp-bar").style.width = "2%"; msg(useCond() && !hrMode ? `Aligning ${st.files.filter(f => f.kind === "full").length} files of ${st.cond.conditions.length} conditions...` : "Digging..."); const t0 = performance.now();

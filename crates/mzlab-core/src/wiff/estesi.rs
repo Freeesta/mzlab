@@ -8,10 +8,7 @@ use crate::error::Result;
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 
-pub use super::modi::{
-    spectrum_term, CODE_FULL, CODE_MRM, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_PRODUCT_ION,
-    CODE_Q1,
-};
+pub use super::modi::{spectrum_term, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_PRODUCT_ION};
 
 /// The detection window of each scheduled MRM experiment (`Experiment::window_s`).
 pub(crate) fn mark_windows(ole: &Ole, sample: u32, experiments: &mut [super::Experiment]) {

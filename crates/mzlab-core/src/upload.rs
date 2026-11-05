@@ -410,6 +410,10 @@ pub fn nome_insieme(membri: &[Impronta]) -> Option<&str> {
         .min_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)))
 }
 
+/// The generation of what the readers give besides the scans (the chromatogram list: `wiff/cromatogrammi.rs`), written in the `source` of an index of a
+/// vendor file set (`"reader"`): an index of an older generation (or without one) is built again once (`native_attach` of mzlab-wasm refuses it).
+pub const GENERAZIONE_LETTORI: u32 = 2;
+
 fn dalla_tabella(
     mut t: Table,
     l: &mut dyn Lettore,
@@ -446,7 +450,9 @@ fn dalla_tabella(
             .raw("}");
     }
     source
-        .raw("],\"sample\":{\"id\":")
+        .raw("],\"reader\":")
+        .int(i64::from(GENERAZIONE_LETTORI))
+        .raw(",\"sample\":{\"id\":")
         .int(i64::from(campione.id))
         .raw(",\"nome\":")
         .str(&campione.nome)

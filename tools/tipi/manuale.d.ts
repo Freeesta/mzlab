@@ -5,7 +5,6 @@ declare var APP_NAME: string;
 declare var MZLAB_VERSION: string;
 declare var MZLAB_COMMIT: string;
 declare var MZLAB_PHONE: boolean;
-declare var QQQ_PHONE: boolean;
 declare var MZLAB_DESKTOP: boolean;
 declare var MZLAB_LAB: any;
 declare var TOURCARICA: any;

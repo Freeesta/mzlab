@@ -45,11 +45,10 @@ pub(super) struct Parte {
     chroms: Option<Vec<Chromatogram>>,
     /// Base peak intensity of each scan as the mzML writer saw it (NaN: not yet) and how many it has seen: the BPC of the full scan experiments is listed
     /// once all of them were seen, so that listing the chromatograms never decodes a scan.
-    #[cfg(feature = "estesi")]
     pub(super) bpc: Vec<f64>,
-    #[cfg(feature = "estesi")]
     pub(super) bpc_seen: usize,
-    /// A scan with points has a block version the engine's reader does not decode (it would list the sample with no scans): the module reads it.
+    /// A scan with points has a block version the engine's reader does not decode (it would list the sample with no scans), or an MRM block is sparse
+    /// (the engine reads MRM dense only): the module reads it.
     #[cfg(feature = "sciex")]
     other_version: bool,
     /// `scans` and `indice` are built (`apri_solo` builds only the injection it is asked for; the others on their first use).
@@ -63,9 +62,7 @@ impl Parte {
             scans: Vec::new(),
             indice: Vec::new(),
             chroms: None,
-            #[cfg(feature = "estesi")]
             bpc: Vec::new(),
-            #[cfg(feature = "estesi")]
             bpc_seen: 0,
             #[cfg(feature = "sciex")]
             other_version: false,
@@ -187,7 +184,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { variante_di(&self.parti, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } #[cfg_attr(not(feature = "estesi"), allow(unused_variables))] fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { #[cfg(feature = "estesi")] self.watch(c, k, s); extra_of(self, s) }
+#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { variante_di(&self.parti, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) }
     fn formato(&self) -> Formato { Formato::SciexWiff }
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
@@ -213,7 +210,6 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     }
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         let mut v: Vec<VoceCromatogramma> = self.chromatograms(c)?.iter().map(|h| VoceCromatogramma { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }).collect();
-        #[cfg(feature = "estesi")]
         self.list_bpc(c, &mut v)?;
         if self.parte(c)?.w.dad.is_some() && !v.iter().any(|x| x.tipo == ChromKind::Pda) {
             v.push(VoceCromatogramma { id: "DAD TWC".into(), tipo: ChromKind::Pda, unita: "mAU".into() });
@@ -224,7 +220,6 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         if let Some(ch) = self.chromatograms(c)?.iter().find(|h| h.id == id).cloned() {
             return Ok(ch);
         }
-        #[cfg(feature = "estesi")]
         if let Some(ch) = self.bpc_chroms(c)?.into_iter().find(|h| h.id == id) {
             return Ok(ch);
         }
@@ -384,9 +379,21 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
     let mut win = Window::until(scan, scan_len, stop);
     let (mut scans, mut indice) = (Vec::new(), Vec::new());
     #[cfg(feature = "sciex")]
-    let mut other = false;
+    let (mut other, mut mrm_seen) = (false, vec![false; w.experiments.len().max(1)]);
     for (i, r) in w.records.iter().enumerate() {
-        if !scan::point_count(&mut win, scan_len, r.at, r.end)?.is_some_and(|c| c > 0) {
+        let points = scan::point_count(&mut win, scan_len, r.at, r.end)?;
+        // the first MRM block of each experiment: a sparse (scheduled) one starts with `-(N + 0.01)`, even when the method has no `sMRM` stream to say so
+        #[cfg(feature = "sciex")]
+        if points.is_none()
+            && r.size >= 4
+            && !w.scan_experiment(r.experiment)
+            && let Some(seen) = mrm_seen.get_mut(r.experiment).filter(|s| !**s)
+        {
+            *seen = true;
+            other |= scan::read_mrm(&mut win, scan_len, r.at, 1)?
+                .is_some_and(|v| v.first().is_some_and(|x| *x < 0.0));
+        }
+        if !points.is_some_and(|c| c > 0) {
             continue;
         }
         #[cfg(feature = "sciex")]

@@ -72,6 +72,9 @@ def walk(pg, where):
             pg.keyboard.press("Escape"); frames(pg, 3)
             if pg.evaluate(OPEN) != base and sel not in ("#np-pt", "#newrun", "#np-set", "#tb-search", "#tb-more"):
                 pg.click(sel); frames(pg, 3)
+            # leaving full screen is asynchronous (exitFullscreen resolves later): wait for it, bounded, before reading what is left
+            try: pg.wait_for_function("fs => !!document.fullscreenElement === fs", arg=base["fs"], timeout=5000)
+            except Exception: pass                     # still in full screen: the check below reports it
             # a window, menu or full screen must be gone; a tool of the side panel may close the panel (a second click hides it, dati-barra.md)
             left = {k: v for k, v in pg.evaluate(OPEN).items() if k in ("dlg", "exp", "fs") and v != base[k]}
             if left: bad.append(f"{sel}: left {left}")

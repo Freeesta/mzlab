@@ -11,13 +11,13 @@ const RESET = (function () {
   const KEEP_OPFS = ["librerie"];
   const OPFS_RETRY_MS = 10000;
   const KEEP_IDB = ["mzlab-libs", "mzlab-libdir"];                    // ... and their databases
-  const KNOWN_IDB = [NOMI.DB, typeof NOMI !== "undefined" && NOMI.DB_OLD ? NOMI.DB_OLD : "qqq_lab", "mzlab-libs", "mzlab-libdir"];
+  const KNOWN_IDB = [NOMI.DB, NOMI.DB_OLD, "mzlab-libs", "mzlab-libdir"];
   // "cold" (the desktop app, first page of a new run): the files and the session like "files", plus the working state kept in localStorage (map, peak and list
   // choices, sidebar layout...); what the user set on purpose stays: language, theme and settings, reading aids, the update notice, library settings, seen hints
   const KEEP_LS = /^((mzlab|qqq)\.(lang|prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.)|(mzlab|qqq)-(theme|labels))/;
   // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
-  const RUN_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("run") : "mzlab.run";
-  const RUN_KEY_OLD = typeof NOMI !== "undefined" && NOMI.OLD_KEY ? NOMI.OLD_KEY("run") : "qqq.run";
+  const RUN_KEY = NOMI.KEY("run");
+  const RUN_KEY_OLD = NOMI.OLD_KEY("run");
   const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
@@ -65,7 +65,7 @@ const RESET = (function () {
       } catch (e) { rep.errors.push("storage"); }
     } else {
       try {
-        const sk = typeof NOMI !== "undefined" ? NOMI.KEY("sessione") : "mzlab.sessione";
+        const sk = NOMI.KEY("sessione");
         try { localStorage.removeItem(sk); } catch (_) {}
         if (mode === "cold") {
           const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && /^(qqq|mzlab)/i.test(k) && !KEEP_LS.test(k)) ks.push(k); }

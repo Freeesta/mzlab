@@ -25,7 +25,7 @@ try:
         pg.goto(f"http://127.0.0.1:{PORT}/{BASE + '/' if BASE else ''}")
         def boot():
             pg.wait_for_selector("#drop", timeout=120000)
-            assert pg.evaluate("window.QQQ_BROWSER === true")
+            assert pg.evaluate("window.MZLAB_BROWSER === true")
         step("engine loads and the start screen appears", boot)
         def load():
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_MS2-t15"), mz("B_MRM-t0")])

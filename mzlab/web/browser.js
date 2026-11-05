@@ -5,7 +5,6 @@
 // This script is injected into index.html by tools/build_site.py (site) and by crates/mzlab-desktop/src/update.rs (app).
 (() => {
   window.MZLAB_BROWSER = true;
-  window.QQQ_BROWSER = true; // kept from the old name: backward compatibility
   const SRC = /** @type {HTMLScriptElement} */ (document.currentScript).src;
   // an old browser cannot run the engine: say it clearly instead of staying blank
   // OPFS keeps the files and their indexes
@@ -72,7 +71,7 @@
   // the scripts and styles of the first paint. Opening files waits for it anyway (AVVIO.pronto), so the shell is drawn first and the engine follows.
   window.addEventListener("mzlab:db-blocked", () => phase({ key: "load.blocked", pct: null }));
   const parsed = () => new Promise(ok => { if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => ok(null), { once: true }); else ok(null); });
-  const rustReady = modern && !window.QQQ_PHONE
+  const rustReady = modern && !window.MZLAB_PHONE
     ? parsed().then(() => import(new URL("rust-bridge.js", SRC).href)).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), notify: notice, onBlocked: () => phase({ key: "load.blocked", pct: null }) }); b.start(); window.MZLAB_RUST = b; return b; })
         .catch(e => { window.MZLAB_RUST_ERR = String(e && e.message || e); console.debug("[mzLab] Rust engine not available", e); return null; })
     : Promise.resolve(null);
@@ -84,7 +83,7 @@
   window.qqEngineStop = () => { try { if (window.MZLAB_RUST) window.MZLAB_RUST.stop(); } catch (_) { /* gone already */ } };
   let lr = null;
   const lrInit = async () => {
-    if (window.QQQ_PHONE) throw new Error("phone: engine not started");
+    if (window.MZLAB_PHONE) throw new Error("phone: engine not started");
     if (!modern) { fail("load.err.oldBrowser"); throw new Error("this browser is too old"); }
     // the module of the loading and the count of the stored files start with the engine, not after it
     const lrModule = import(new URL("lr.js", SRC).href);

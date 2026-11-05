@@ -23,11 +23,11 @@ def scenario(n_ms1, n_ms2, mb_each):
                 f = os.path.join(d, f"grande{k + 1}.mzML"); mzml_grande.write(f, n_ms1=n_ms1, n_ms2=n_ms2, seed=k + 1); names.append(f)
             pg.evaluate("window.__seen = []; new MutationObserver(() => window.__seen.push([...document.querySelectorAll('#fl-up [data-uptxt]')].map(t => t.textContent).join(' '))).observe(document.getElementById('flst'), {childList: true, characterData: true, subtree: true})")          # what the progress rows of the side list say, at every change
             pg.set_input_files("#pick", names)
-            pg.wait_for_function("UPBUSY > 0 || ST.files.length > 0 || QQQ_LOADFAIL.size > 0")
+            pg.wait_for_function("UPBUSY > 0 || ST.files.length > 0 || MZLAB_LOADFAIL.size > 0")
             t0 = time.time()
             while time.time() - t0 < 600 and pg.evaluate("UPBUSY") > 0: time.sleep(0.3)
             pg.wait_for_timeout(500)
-            return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...QQQ_LOADFAIL], document.body.innerText + ' ' + [...document.getElementById('start').querySelectorAll('*')].filter(e => !e.closest('.diagbox')).map(e => e.childNodes.length && [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ')).join(' ')]")
+            return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...MZLAB_LOADFAIL], document.body.innerText + ' ' + [...document.getElementById('start').querySelectorAll('*')].filter(e => !e.closest('.diagbox')).map(e => e.childNodes.length && [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ')).join(' ')]")
     finally:
         r.close()
         for f in names: os.remove(f)

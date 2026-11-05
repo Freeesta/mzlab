@@ -22,7 +22,7 @@ const AVVIO = (function () {
 
   // On a smartphone the engine does not use the web worker:
   if (typeof window !== "undefined") {
-    if (window.QQQ_PHONE) {
+    if (window.MZLAB_PHONE) {
       stato = "ready";
     finisciRiga();
     } else {

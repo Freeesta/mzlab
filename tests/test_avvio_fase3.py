@@ -98,7 +98,7 @@ def test_real_message_with_full_stop_is_not_a_key_and_unknown_key_is_generic():
 def test_failure_before_the_module_loaded_is_replayed():
     res = run_node(f"""
     {DOM}
-    global.QQQ_BROWSER = true; global.qqFailInfo = {{ key: 'load.err.engineStart' }};
+    global.MZLAB_BROWSER = true; global.qqFailInfo = {{ key: 'load.err.engineStart' }};
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     console.log(JSON.stringify({{ stato: AVVIO.stato, msg: reg['avvio-errore-msg'] && reg['avvio-errore-msg'].textContent }}));
     """)

@@ -17,8 +17,8 @@ def many_scans():
         with sync_playwright() as p:
             pg = r.page(p)
             pg.set_input_files("#pick", [f])
-            pg.wait_for_function("UPBUSY === 0 && (ST.files.length > 0 || QQQ_LOADFAIL.size > 0)", timeout=600000)
-            assert pg.evaluate("QQQ_LOADFAIL.size") == 0, pg.evaluate("[...QQQ_LOADFAIL]")
+            pg.wait_for_function("UPBUSY === 0 && (ST.files.length > 0 || MZLAB_LOADFAIL.size > 0)", timeout=600000)
+            assert pg.evaluate("MZLAB_LOADFAIL.size") == 0, pg.evaluate("[...MZLAB_LOADFAIL]")
             assert pg.evaluate("document.querySelector('#unopen .diag') === null"), pg.inner_text("#unopen")
             open_first(pg)
             ready(pg, timeout=600000)

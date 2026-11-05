@@ -69,7 +69,7 @@ const CartPuntVista = (() => {
     if (down) { late = true; return; }
     late = false;
     const T = (k, p) => I18N.t(k, p), nat = !!S.native;
-    pick.hidden = !!window.QQQ_PHONE; box.hidden = !!window.QQQ_PHONE;
+    pick.hidden = !!window.MZLAB_PHONE; box.hidden = !!window.MZLAB_PHONE;
     // no folder yet: the icon is the way to choose one
     if ((!nat && (!supported() || !S.handle)) || (nat && !S.name)) { box.innerHTML = ""; return; }
     const head = `<div class="sm"><b>${T("cartp.where", { name: esc(S.name) })}</b> <button type="button" class="sec" id="cartforget">${T("cartp.forget")}</button> <button type="button" class="sec" id="cartrefresh">${T("cartp.refresh")}</button></div>`;
@@ -122,7 +122,7 @@ const CartPuntApri = (() => {
 
   // the mzML of the folder are prepared in the background once the list is shown and the access is granted (riscalda.js, loaded here on first use)
   function warm() {
-    if (window.QQQ_PHONE || !(S.native || S.perm === "granted") || !S.items.length) return;
+    if (window.MZLAB_PHONE || !(S.native || S.perm === "granted") || !S.items.length) return;
     const items = CartPP.visible(S.items).filter(x => x.kind === "data" && /\.mzml$/i.test(x.name)).map(x => ({ key: x.path, name: x.name, size: (S.stats.get(x.path) || {}).size, get: () => fileOf(x) }));
     if (items.length && typeof carica === "function") carica("m:riscalda.js").then(() => riscaldaDi().offer(items)).catch(() => {});
   }

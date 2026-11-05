@@ -257,9 +257,9 @@ const LISTE = (() => {
     };
   }
 
-  const KEY_ROWS = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti") : "qqq.contaminanti",
-    KEY_ON = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti.on") : "qqq.contaminanti.on",
-    KEY_LISTS = typeof NOMI !== "undefined" ? NOMI.KEY("liste.attive") : "qqq.liste.attive";
+  const KEY_ROWS = NOMI.KEY("contaminanti"),
+    KEY_ON = NOMI.KEY("contaminanti.on"),
+    KEY_LISTS = NOMI.KEY("liste.attive");
   const IDB_STORE = "liste_utente";
 
   const ST = /** @type {{ lists: any[], userLists: any[], idx: any, loading: Promise<void> | null, err: any, runs: WeakMap<object, any> }} */ ({
@@ -276,7 +276,7 @@ const LISTE = (() => {
   const isOn = () => rd(KEY_ON, false) === true;
 
   // Exclusions (HR only): hide a compatible peak from the lists and the tables, never change the data. Stored in the browser, the same for every file.
-  const KEY_EXCL = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti.esclusi") : "qqq.contaminanti.esclusi";
+  const KEY_EXCL = NOMI.KEY("contaminanti.esclusi");
   const exclKinds = ["entry", "cls", "list"];
   // names of the stored object (user data: do not rename)
   const FLD = /** @type {Record<string, string>} */ ({ entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" });

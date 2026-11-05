@@ -4,8 +4,8 @@
 //! were decoded against ProteoWizard mzML of the same files. The code here is written anew.
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
-#[cfg(feature = "estesi")]
 mod bpc;
+mod cromatogrammi;
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
