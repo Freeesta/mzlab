@@ -451,7 +451,10 @@ async function bootSession0() {
   E.files.forEach((/** @type {FileAperto} */ f) => { mem[f.file] = f; });
   const oldVis = mem;
   E.key = key;
-  CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
+  // the answers are keyed by file index k: when the new session is the old one with files appended at the end (a list opened file by file) every old k still
+  // names the same file and its answers stay valid; clearing them made each step ask again for every open file (N files → N² requests)
+  const appended = oldNames.length > 0 && oldNames.length < j.session.length && oldNames.every((/** @type {string} */ n, /** @type {number} */ i) => j.session[i].file === n);
+  if (!appended) { CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); } }
   // seq: a list opened file by file, this is not its first step
   const seq = !!E._seq, waiting = !!(E.pending && E.pending.some((/** @type {Pendiente} */ x) => x.state === "wait"));
   E._seq = waiting; E._mem = waiting ? mem : null;
