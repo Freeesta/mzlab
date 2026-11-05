@@ -34,9 +34,11 @@ try:
         def page(url, init, hash=""):
             ctx = b.new_context(viewport={"width": 1500, "height": 1000}); pg = ctx.new_page(); pg.add_init_script(init)
             reqs = []; pg.on("request", lambda r: reqs.append(r.url)); pg.goto(url + hash, wait_until="commit"); return pg, reqs
+        def ready(pg, sel="#drop"):      # the first visit reloads once for cross-origin isolation (browser.js isolateOnce): assert only on the page that stays
+            pg.wait_for_selector(sel, timeout=120000); pg.wait_for_function("crossOriginIsolated === true", timeout=60000); pg.wait_for_selector(sel, timeout=120000)
         def hidden():
             pg, reqs = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z")      # admin flag already set: the lab must not honour it
-            pg.wait_for_selector("#drop", timeout=120000)
+            ready(pg)
             assert pg.evaluate("window.QTOOLS ? QTOOLS.list().length : 0") == 0 and pg.evaluate(NAV) == ["data", "draw"], pg.evaluate(NAV)
             assert not [u for u in reqs if "mzfinder/" in u]      # the small loader script is part of the page, inert in the lab (window.MZLAB_LAB); the Tabui and mzFlow package is never fetched, reqs
             assert not pg.evaluate("document.querySelector('#v-tpmine, #v-flow, [data-v=tpmine], [data-v=flow]')")
@@ -50,14 +52,14 @@ try:
         def routes():
             for h in ("#/flow", "#/tpmine", "#/attributio", "#/theory", "#/practice"):
                 pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z", h)
-                pg.wait_for_selector("#drop", timeout=120000)
+                ready(pg)
                 assert pg.evaluate("location.hash") == "#/data" and pg.evaluate("location.pathname.endsWith('/')"), (h, pg.url)
-            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z", "#/draw"); pg.wait_for_selector("#v-draw:not([hidden])", timeout=120000)
+            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z", "#/draw"); ready(pg, "#v-draw:not([hidden])")
             assert pg.evaluate("location.hash") == "#/draw"
         step("lab: other addresses go back to #/data, #/draw stays", routes)
         def banner():
             for lang in ("en", "it"):
-                pg, _ = page(LAB + "?lang=" + lang, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#drop", timeout=120000)
+                pg, _ = page(LAB + "?lang=" + lang, CLOCK % "2026-10-29T12:00:00Z"); ready(pg)
                 assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("document.body.innerText.includes('29 Dec') || document.body.innerText.includes('29 dic')") is False
         step("lab: no banner and no date shown", banner)
         def expiry():
@@ -70,7 +72,7 @@ try:
         step("lab: expiry page after the date, no app loaded", expiry)
         def noexamples():
             assert not (tmp / "lab" / "static" / "esempi").exists() and not list((tmp / "lab").rglob("*.mzML")) and not list((tmp / "lab").rglob("esempio-*.png"))
-            pg, reqs = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#drop", timeout=120000)
+            pg, reqs = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); ready(pg)
             assert pg.evaluate("(() => { const e = document.querySelector('#demo'); return !e || e.offsetParent === null })()"), "example chooser visible"
             assert not pg.is_visible("#demobtn") and not pg.is_visible("#demochoice")
             pg.wait_for_function("typeof setView === 'function'", timeout=120000); pg.evaluate("setView('draw')"); pg.wait_for_selector("#v-draw:not([hidden])", timeout=120000)      # setView comes from a script loaded after #drop exists
@@ -82,7 +84,7 @@ try:
         def tour():
             pg, _ = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z"); errs = []
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: m.type == "error" and errs.append(m.text))
-            pg.wait_for_selector("#drop", timeout=120000); attendi(pg, "typeof TOUR !== 'undefined' && typeof setView === 'function'", 120000)
+            ready(pg); attendi(pg, "typeof TOUR !== 'undefined' && typeof setView === 'function'", 120000)
             pg.click("#np-set"); pg.wait_for_selector("#uip-tour", timeout=30000)
             assert pg.inner_text("#uip-tour").strip() == "Fai il tour", pg.inner_text("#uip-tour")
             pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
@@ -100,13 +102,13 @@ try:
         step("lab: the tour runs with no file (waits at the first data step) and with one file, no console errors", tour)
         def gap():
             GAP = "() => { const b = [...document.querySelectorAll('#nav button')].filter(x => x.offsetParent).pop().getBoundingClientRect(), t = document.getElementById('sb-toggle').getBoundingClientRect(); return t.left - b.right }"
-            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#sb-toggle", timeout=120000); pg.wait_for_function("typeof setView === 'function'", timeout=120000)
+            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); ready(pg, "#sb-toggle"); pg.wait_for_function("typeof setView === 'function'", timeout=120000)
             g = pg.evaluate(GAP); assert 0 <= g < 60, g
             pg.set_viewport_size({"width": 390, "height": 800}); pg.evaluate("n => new Promise(ok => { const f = () => (--n > 0 ? requestAnimationFrame(f) : ok()); requestAnimationFrame(f) })", 3)
             h = pg.evaluate("(() => { const h = document.querySelector('header'); return [h.scrollWidth, h.clientWidth] })()"); assert h[0] <= h[1] + 2, ("header clipped at phone width", h)
         step("lab: the panels button follows the last tab (gap < 60 px), phone width fits", gap)
         def normal():
-            pg, reqs = page(NORMAL, ""); pg.wait_for_selector("#drop", timeout=120000)
+            pg, reqs = page(NORMAL, ""); ready(pg)
             assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("typeof MZLAB_LAB") == "undefined"
             assert not [u for u in reqs if u.split("?")[0].endswith("/lab.js")], reqs
             pg.wait_for_selector('#nav button[data-v="flow"]', timeout=60000)      # no flag, no click: Tabui and mzFlow are in the header of the normal build
