@@ -79,6 +79,7 @@ I18N.add("it", {
   "err.map.region": "Regione della mappa vuota o non valida: servono RT e m/z crescenti.",
   "err.scan.maxAverage": "Al massimo {n} scansioni per media.",
   "error.quota": "Non c'è abbastanza spazio nel browser: servono circa {serve_mb} MB e ne restano {libero_mb} MB. Libera spazio dal menu delle impostazioni.",
+  "error.quotaWrite": "Il browser ha rifiutato di scrivere circa {serve_mb} MB pur dichiarando spazio libero a sufficienza: una finestra privata tiene circa 1 GB qualunque cosa dichiari, oppure il disco del computer è pieno. Usa una finestra normale, o libera spazio sul disco o dal menu delle impostazioni.",
   "error.fileInUse": "Il file «{file}» è in uso in un'altra scheda di mzLab. Riprova tra poco.",
   "err.analog.none": "Questa traccia non esiste nel file.",
   "err.pda.none": "Questo file non ha la matrice del DAD.",

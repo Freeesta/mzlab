@@ -2,9 +2,7 @@
 //! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON, or one byte array for the index and a scan (`mzlab_core::trasporto`); an error is `{error_key, params}`.
 use std::collections::HashMap;
 
-use super::json_testo::{
-    campioni_json, cromatogramma_json, cromatogrammi_json, intestazione_json, testata_json,
-};
+use super::json_testo::{campioni_json, cromatogrammi_json, intestazione_json, testata_json};
 use mzlab_core::json::Out;
 use mzlab_core::lettori::Lettore;
 use mzlab_core::trasporto::{encode_indice, encode_scansione};
@@ -69,7 +67,9 @@ impl Sessioni {
 
     /// One chromatogram with its points: `{id, kind, q1, q3, unit, time, intensity}`.
     pub fn cromatogramma(&mut self, h: u32, c: usize, id: &str) -> Result<String> {
-        Ok(cromatogramma_json(&self.lettore(h)?.cromatogramma(c, id)?))
+        Ok(mzlab_lettori::json::cromatogramma_json(
+            &self.lettore(h)?.cromatogramma(c, id)?,
+        ))
     }
 
     /// The `metodo/1` document of sample `c`.

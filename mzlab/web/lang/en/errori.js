@@ -79,6 +79,7 @@ I18N.add("en", {
   "err.map.region": "Empty or invalid map region: RT and m/z must increase.",
   "err.scan.maxAverage": "At most {n} scans per average.",
   "error.quota": "There is not enough space in the browser: about {serve_mb} MB are needed and {libero_mb} MB are left. Free space from the settings menu.",
+  "error.quotaWrite": "The browser refused to write about {serve_mb} MB although it reports enough free space: a private window keeps about 1 GB whatever it reports, or the disk of the computer is full. Use a normal window, or free space on the disk or from the settings menu.",
   "error.fileInUse": "The file «{file}» is in use in another mzLab tab. Try again in a moment.",
   "err.analog.none": "This trace does not exist in the file.",
   "err.pda.none": "This file has no DAD matrix.",

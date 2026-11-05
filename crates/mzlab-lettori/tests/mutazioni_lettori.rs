@@ -403,3 +403,58 @@ fn bruker_mutato() {
     esigi_nessuno(esplora("bruker tdf", f.clone(), 0, false));
     esigi_nessuno(esplora("bruker bin", f, 1, false));
 }
+
+/// The site's own path for a plain mzML (scan table, `.mzidx`, chromatograms, parser): no panic, no hang, no NaN or infinite number passed on.
+fn motore_mzml(b: &[u8]) -> Result<(), String> {
+    let mut src = b.to_vec();
+    let Ok(p) = mzlab_core::upload::prepare(&mut src, b.len() as u64, "x.mzML") else {
+        return Ok(());
+    };
+    if let Some(r) = p
+        .table
+        .rt
+        .iter()
+        .chain(&p.table.tic)
+        .find(|r| !r.is_finite())
+    {
+        return Err(format!("scan table RT/TIC {r}"));
+    }
+    let _ = mzlab_core::mzidx::build_mzml_to_vec(&p.table, b, 64 << 20);
+    let mut m = mzlab_core::mzmlhead::Mzml::new(b.to_vec(), b.len() as u64);
+    let _ = m.metadata();
+    if let Ok(v) = m.chromatograms(0) {
+        for c in &v {
+            let Ok((t, y)) = m.chromatogram(c) else {
+                continue;
+            };
+            if t.iter().chain(&y).any(|x| !x.is_finite()) {
+                return Err(format!("chromatogram {} not finite", c.id));
+            }
+        }
+    }
+    let mut bad = None;
+    let _ = mzlab_core::mzml::parse(std::io::Cursor::new(b), |it| {
+        if let mzlab_core::mzml::Item::Spectrum(s) = it {
+            let fuori = !s.rt.is_finite()
+                || s.mz.iter().any(|x| !x.is_finite())
+                || s.intensity.iter().any(|x| !x.is_finite());
+            if bad.is_none() && fuori {
+                bad = Some(format!("parse: spectrum {} not finite", s.index));
+            }
+        }
+    });
+    bad.map_or(Ok(()), Err)
+}
+
+#[test]
+fn mzml_del_motore_mutato() {
+    let piano = mzml_di(&scansioni(), Cod::Nudo, None);
+    let mut caso = Caso(0x9E37_79B9_7F4A_7C15 ^ 0x6d6f746f7265);
+    let mut trovati = Vec::new();
+    for (nome, m) in mutanti_testo(&piano, &mut caso, giri()) {
+        if let Some(e) = sorveglia(&format!("engine {nome}"), move || motore_mzml(&m)) {
+            trovati.push(e);
+        }
+    }
+    esigi_nessuno(trovati);
+}

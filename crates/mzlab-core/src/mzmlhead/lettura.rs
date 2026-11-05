@@ -158,7 +158,7 @@ pub(super) fn pair_of(chunk: &[u8], c: &Chrom) -> Result<(Vec<f64>, Vec<f64>)> {
     }
     t.truncate(n);
     y.truncate(n);
-    Ok((t, y))
+    crate::mzmlarray::punti_finiti(&c.id, &t, &y).map(|()| (t, y))
 }
 
 #[cfg(test)]

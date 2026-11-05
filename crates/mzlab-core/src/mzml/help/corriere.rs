@@ -194,7 +194,7 @@ impl<'a> Sent<'a> {
             if let Some(Slot::Out(_, s)) = self.queue.pop_front() {
                 self.out -= 1;
                 let r = match got {
-                    Some(p) => Ok(assemble(s, p)),
+                    Some(p) => assemble(s, p),
                     None => finish_spectrum(s, &mut self.inf),
                 };
                 self.queue.push_front(Slot::Ready(items(r)));

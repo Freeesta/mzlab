@@ -140,6 +140,23 @@ fn the_synthetic_pairs_read_the_same_through_the_registry() {
     one_sample(&out, "two");
     mzml_of_one_sample(&out, "two");
     truncated(&out, "serie");
+    no_idx(&out, "buchi");
+}
+
+/// An injection in the sample table with no `Idx` stream (it acquired nothing) is listed with 0 scans and its number, not dropped: the samples after it keep theirs.
+fn no_idx(dir: &Path, name: &str) {
+    let mut l = lettori::apri(set(dir, name), &Limiti::sito()).unwrap();
+    let got: Vec<(u32, usize)> = l.campioni().iter().map(|c| (c.id, c.scansioni)).collect();
+    assert_eq!(got, [(1, 1), (2, 0), (3, 1)], "{name}: samples");
+    assert!(
+        l.indice(1).unwrap().is_empty(),
+        "{name}: the empty one has no scans"
+    );
+    assert_eq!(
+        l.indice(2).unwrap().len(),
+        1,
+        "{name}: the one after it reads"
+    );
 }
 
 /// A `.wiff.scan` cut in half: the scans beyond its end are counted by `mancanti` and left out of the index, the others still read.
