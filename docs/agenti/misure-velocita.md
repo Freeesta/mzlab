@@ -41,3 +41,23 @@ Le strade scartate o rimandate (senza guadagno) stanno in `ottimizzazioni-tentat
 | 3/11 | #2528 | `hrp` 400 × 50 000 profile (321 MB) / `hr15` 15 × 150 MB, site; `specexact` via `mzml_route` (spacing of the single-precision profile section from the mzML); bench without «Load data» | opening: never (25-27 min); G1 342 ms, G6 171 ms | opening: 13.1 s / 35.1 s; G1 65 ms, G6 7.3 ms | from never opening to opening |
 | 3/11 | #2505 | One-scan HR spectrum on the site (`Routes::select_scans`): `tools/bench_visore.py hrc`, synthetic 3000 × 3000 (150 MB), Chromium headless, 4 vCPU cloud, 30 reps, one run, engine `.wasm` as `pages.yml`; G1 = click on the TIC to spectrum drawn; `main` `def2a80` | site before: not measured (native 94.2 → 1.3 ms, row of 2/11) | G1 p50 / p95 60.8 / 80.5 ms (request 56.7, engine 42.4, JSON 1.2, drawing 3.2); G6 ArrowRight 4.7 / 6.9 ms | one build, no A/B; includes the worker round trip, so not comparable with the native 1.3 ms |
 | 4/11 | PERF-HOTPATHS-1 | mzML scan table walk and array decoding (`examples/mzml_tempi.rs`, native, 4 vCPU, `hrp` 114 MB zlib profile / `hr` 55 MB plain, 7 alternated runs, median; wasm: `banco_wasm.py site_d`, Node, 9 runs; `main` `bb77cd3d`) | table, prints known 116 / 118 ms; one-thread parse 421 / 254 ms; wasm HR read 731, `.mzidx` HR 3577 ms | 70 / 91; 337 / 214; wasm 645, 3260 | −40 / −23 %; −20 / −16 %; wasm −12 / −9 %; native `.mzidx` unchanged |
+| 4/11 | LOAD-FIRST-PAINT-1 | page load of the built site (`tests_e2e/misura_primo_paint.py`, local mirror with GitHub Pages headers, Chromium 4 vCPU cloud, median of 5; `main` `c7369d1eeb9c86e9be4fe56942242adf8131d6c3`): one catalog file per language, service-worker misses answered before the store, unused `features.js` preload removed | FCP cold 2105 ms, warm 436 ms; engine ready cold 4548 ms; 45 render-blocking files | FCP cold 341 ms, warm 188 ms; ready cold 1957 ms; 11 render-blocking | −84 % / −57 % FCP; table below |
+
+## Page load (current state)
+
+`python3 tests_e2e/misura_primo_paint.py --site site --runs 5` on the built site (engine `.wasm` from the live site), local mirror without network latency, Chromium headless 4 vCPU cloud, median of 5, ms from the navigation (cold = second page of the first visit, after the isolation reload). Guard: `tests_e2e/e2e_budget_avvio.py`.
+
+| Scenario | FCP | LCP | drop area | engine ready | CLS | longest task until ready +2 s | render-blocking | KB before FCP |
+|---|---|---|---|---|---|---|---|---|
+| cold | 341 | 399 | 334 | 1957 | 0 | 0 | 11 | 666 |
+| warm (service worker) | 188 | 227 | 168 | 815 | 0 | 0 | 11 | 788 |
+| cold `?lang=en` | 377 | 434 | 380 | 2022 | 0 | 0 | 11 | 655 |
+| warm, dark theme saved | 189 | 266 | 141 | 841 | 0 | 0 | 11 | — |
+| cold, CPU ×4 | 457 | 618 | 504 | 2435 | 0 | 184 | 11 | 665 |
+| warm, CPU ×4 | 492 | 546 | 484 | 1675 | 0 | 165 | 11 | 662 |
+| cold, iPad viewport + touch (Chromium) | 364 | 430 | 361 | 2045 | 0 | 0 | 11 | 666 |
+
+- **Views** (warm, click after the page is usable): Disegno 148 ms (2 files, 13 KB); Tabui 133 ms; Flow 200 ms when the Tabui package has loaded, 1.3–1.6 s when the click comes before it (its ~120 `mzfinder/` scripts load one after another at idle after `qqReady`).
+- **No flash**: theme and language are set in the head before the first paint (CLS 0, `<html lang>` right in every run); no notice or modal at load. Console at load: only Chrome's warning on the Ketcher frame (`allow-scripts` + `allow-same-origin`).
+- **Not measured here**: WebKit/Safari (not installed in the cloud), a real Fast 4G link (the CDP profile does not slow the mirror: same numbers as cold), a site update (`e2e_sw_versione`).
+- KB before FCP counts every request started before the paint: on a warm load non-blocking scripts start earlier, so the number grows when the page is faster.

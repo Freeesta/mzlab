@@ -1,4 +1,5 @@
-# e2e_ms2_titoli: MS2 panels read «MS² 229.1» (IT and EN, not truncated at 1280 px), the precursor menu lists numbers only, MS2 files are never ticked together
+# e2e_ms2_titoli: MS2 panels follow the naming scheme of docs/agenti/titoli-pannelli.md («TIC · MS² · precursor 229.1», «MS² of 229.1»; IT and EN, whole in the tooltip when the header cuts them),
+# the precursor menu and the legends list numbers only, MS2 files are never ticked together
 # (one MS2 trace per panel, no overlay control at level 2) and Full scan and MS2 never share a panel.
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -19,12 +20,14 @@ try:
             open_kind(pg, "ms2"); attendi(pg, "E.panels.filter(p => p.tab === 'ms2').length >= 2", 30000); frames(pg, 6)
             def titles(lang=lang, pg=pg):
                 t = pg.evaluate("E.panels.filter(p => p.tab === 'ms2').map(p => p.el.querySelector('.ttl').textContent)")
-                assert t == ["MS² 229.1", "MS² 229.1"], t
-                cut = pg.evaluate("E.panels.filter(p => p.tab === 'ms2').map(p => { const e = p.el.querySelector('.ttl'); return e.scrollWidth > e.clientWidth + 1; })")
-                assert not any(cut), ("title truncated", cut)
-                shown = " ".join(pg.evaluate("[...document.querySelectorAll('.pnl .ttl, .pnl select[data-o=prec] option, .pnl .leg, .pnl .leg2')].map(e => e.textContent)"))
+                want = {"it": ["TIC · MS² · precursore 229.1", "MS² di 229.1"], "en": ["TIC · MS² · precursor 229.1", "MS² of 229.1"]}[lang]  # two precursors in the files: the chromatogram names its one
+                assert t == want, t
+                # a narrow header may end the title with an ellipsis: the whole text stays in its tooltip
+                tips = pg.evaluate("E.panels.filter(p => p.tab === 'ms2').map(p => p.el.querySelector('.ttl').title.split('\\n')[0])")
+                assert tips == want, ("full title not in the tooltip", tips)
+                shown = " ".join(pg.evaluate("[...document.querySelectorAll('.pnl select[data-o=prec] option, .pnl .leg, .pnl .leg2')].map(e => e.textContent)"))
                 for bad in ("precursore", "precursor ", "prec."): assert bad not in shown, (bad, shown)
-            step(f"{lang}: MS2 panel titles read «MS² 229.1», whole", titles)
+            step(f"{lang}: MS2 panel titles follow the naming scheme, whole in the tooltip", titles)
             def menu(pg=pg):
                 for o in pg.evaluate("[...document.querySelectorAll('.pnl select[data-o=prec]')].map(s => [...s.options].map(o => o.textContent))"):
                     assert o[1:] == ["229.1", "305"] and len(o[0]) <= 8, o

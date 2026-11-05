@@ -105,14 +105,14 @@ async function rawSeries(p) {
   const mf = files.filter(f => f.kind === "mrm"), out = [], seen = new Map();
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
   data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
-  const list = [...seen.values()];
+  const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key));
   if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
   data.forEach(({ f, tr }, fi) => tr.forEach(t => {
     const key = trKey(t);
-    const matchTr = !p.tr || (Array.isArray(p.tr) ? p.tr.includes(key) : p.tr === key);
+    const matchTr = !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key);
     if (!matchTr) return;
-    const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);
-    const multiTr = Array.isArray(p.tr) && p.tr.length > 1;
+    const ti = list.findIndex(l => l.key === key), single = !!sel && !Array.isArray(sel);
+    const multiTr = Array.isArray(sel) && sel.length > 1;
     out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: t.q3 == null && window.SIMUI ? SIMUI.color(key) : (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
       dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${window.SIMUI ? SIMUI.label(key) : key} · ${f.label}` : `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim(), tid_label: `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim() });
   }));
@@ -168,11 +168,11 @@ function unionTime(p, lo, hi) {
 function syncView(p) {
   if (!isLine(p) || !p._a) return;
   p._needL = p.cv._needL || 0; p._needR = p.cv._needR || 0;
-  const all = tabPanels(p.tab).filter(q => isLine(q) && q.el && !q._exp), z = fz();
-  const L = maxOf(all.map(q => q._needL || 0), Math.round(66 * z)), R = maxOf(all.map(q => q._needR || 0), 14);
+  const lines = E.panels.filter(q => isLine(q) && q.el && !q._exp), z = fz();   // margins are one for the page: from the line panels of every tab, or tabs shown together reset them for each other forever
+  const L = maxOf(lines.map(q => q._needL || 0), Math.round(66 * z)), R = maxOf(lines.map(q => q._needR || 0), 14);
   const marg = L !== (window.MARG_L || 0) || R !== (window.MARG_R || 0);
   window.MARG_L = L; window.MARG_R = R;
-  all.forEach(q => { if (q === p) return; const st = q.tl && p.tl && q._u && p._u && (q._u[0] !== p._u[0] || q._u[1] !== p._u[1]); if (marg || st) drawSoon(q); });
+  lines.forEach(q => { if (q === p) return; const st = q.tab === p.tab && q.tl && p.tl && q._u && p._u && (q._u[0] !== p._u[0] || q._u[1] !== p._u[1]); if (marg || st) drawSoon(q); });
   if (marg && (M.l !== L || M.r !== R)) drawSoon(p);                       // this panel was drawn with the old margins
 }
 const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
