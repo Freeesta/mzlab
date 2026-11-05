@@ -8,6 +8,10 @@ const NBP = (() => {
     keep(/** @type {string} */ body) { try { localStorage.setItem(KEY, body); } catch (_) { /* private mode: the engine write alone */ } },
     /** The engine has `body`: nothing to keep any more. */
     done(/** @type {string} */ body) { try { if (localStorage.getItem(KEY) === body) localStorage.removeItem(KEY); } catch (_) { /* nothing */ } },
+    /** The same copy as `take` (newer than `stored`, else null) without removing it: the engine boot (lr.js) reopens its files before the notebook is read. */
+    peek(/** @type {Record<string, any>} */ stored) {
+      try { const raw = localStorage.getItem(KEY), q = raw ? JSON.parse(raw) : null; return q && q._t && q._t > ((stored && stored._t) || 0) ? q : null; } catch (_) { return null; }
+    },
     /** The unconfirmed flush of the previous page if it is newer (time stamp `_t`) than the stored notebook `stored`, else null; it is removed either way. */
     take(/** @type {Record<string, any>} */ stored, /** @type {(j: any) => Record<string, any>} */ clean) {
       try {

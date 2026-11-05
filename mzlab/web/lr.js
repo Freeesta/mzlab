@@ -90,7 +90,7 @@ export function createLr({ rb }) {
     await mr.refresh();
     if (fresh) return;
     try {
-      const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
+      const kv = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}"), nb = (typeof NBP !== "undefined" && NBP.peek(kv)) || kv;  // a newer copy kept at pagehide (nb-pendiente.js) wins: its files open
       const list = sessionFiles(nb.session, f => safeName(f) && files.has(safeName(f)), nb.ui && nb.ui.files);
       if (list.length) await explore({ samples: list });
     } catch (_) { items = null; hr = lr = false; }                    // a broken notebook never stops the program
