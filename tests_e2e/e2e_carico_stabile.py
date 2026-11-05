@@ -71,7 +71,6 @@ try:
         def shifts():
             first_open = next((fr[0] for fr in snaps if json.loads(fr[1])["work"] != "landing"), snaps[-1][0])
             start, end = snaps[0][0], first_open
-        def shifts():
             print('   window', round(start), round(end))
             tot = sum(e[1] for e in ls if start + 40 <= e[0] <= end and e[2])
             for e in ls:
