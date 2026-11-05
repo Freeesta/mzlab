@@ -40,7 +40,8 @@ Regola (`CLAUDE.md`): ogni funzione esiste nel sito (`.wasm` + OPFS) e nell'app 
 | File oltre 4 GiB, fili dentro un file | no | sì | limite: memory64 e `atomics` (`wasm-potenziale.md`) |
 | SRM: energia di collisione e dwell dell'id (`ce=`, `dwell=`) nell'mzML | ogni modulo lettori | `convert`, `nat2mzml` | `mzmlwrite/tests.rs` (`an_srm_id_with_energy_and_dwell_writes_them_in_every_build`): `srm_windows` senza `cfg(feature = "sciex")` |
 | Prodotto ionico: energia e finestra di isolamento del precursore nell'`.mzidx` di un `.wiff` | motore (senza `sciex` né `precursori`) | `flow run` (`index.mzidx`) | `test_wiff_energia_parita.py` (byte per byte, `energia.wiff` sintetico); `mzmlwrite/tests.rs` (`a_plain_precursor_keeps_its_energy_and_window_in_every_build`) |
+| Nome della sorgente (`source.name`) di un `.mzidx` letto da un file del produttore | motore (`upload::nome_insieme`) | `flow run` (`index.mzidx`) | `tests/mzidx_righe_dirette.rs` (`the_source_of_a_vendor_index_is_the_dataset_name`): `X.raw`, `X.wiff`, `X.D` qualunque nome dia la pagina alla voce dell'elenco |
 | Feature da un `.raw` e dal suo mzML | — | `features` | limite: stesso risultato solo per acquisizioni a centroidi; un `.raw` a profilo usa i centroidi del produttore, il suo mzML a profilo la centroidatura di mzLab (area di `features` e del lettore Thermo) |
 
 ## Verifiche su dati reali (fuori dal repository)
-- `.mzidx` di 6 mzML, canali (7 ingressi), `sim-table` di un `.wiff` (7 viste, 21 campioni): sito e CLI uguali byte per byte; differenze trovate e chiuse: TIC del `.wiff` (f32/f64), energia SRM e del precursore, tipo di una corsa solo SIM.
+- `.mzidx` di 6 mzML, canali (7 ingressi), `sim-table` di un `.wiff` (7 viste, 21 campioni): sito e CLI uguali byte per byte; differenze trovate e chiuse: TIC del `.wiff` (f32/f64), energia SRM e del precursore, tipo di una corsa solo SIM, nome della sorgente dell'indice nativo.

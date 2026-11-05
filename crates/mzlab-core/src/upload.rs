@@ -401,6 +401,15 @@ pub fn senza_sha1(fs: &mut FileSet) {
     }
 }
 
+/// The name of the dataset the members make, the one `mzlab-cli` gives the path: the shortest first component of their names (`X.raw`; `X.wiff` beside
+/// `X.wiff.scan`; the folder `X.D`), whatever name the page gives its list entry; `None` without members.
+pub fn nome_insieme(membri: &[Impronta]) -> Option<&str> {
+    membri
+        .iter()
+        .filter_map(|m| m.nome.split('/').next().filter(|s| !s.is_empty()))
+        .min_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)))
+}
+
 /// The generation of what the readers give besides the scans (the chromatogram list: `wiff/cromatogrammi.rs`), written in the `source` of an index of a
 /// vendor file set (`"reader"`): an index of an older generation (or without one) is built again once (`native_attach` of mzlab-wasm refuses it).
 pub const GENERAZIONE_LETTORI: u32 = 2;
@@ -422,7 +431,7 @@ fn dalla_tabella(
     let mut source = Out::default();
     source_head(
         &mut source,
-        name,
+        nome_insieme(membri).unwrap_or(name),
         membri.iter().map(|m| m.dim).sum(),
         &probe,
         &sha256,
