@@ -37,7 +37,7 @@ const BARRA = (() => {
   let _side = "left";
   let _w = 260;
   // false = the width follows the longest file name (never wider than the default); true = set by hand
-  let _wUser = false, _appliedW = 0;
+  let _wUser = false, _appliedW = 0, _namesW = 0;
   // until a file is shown (landing, loading table) the panel is open from the first paint at >= SHEET px with the default width; the saved choice stays (_landOpen)
   let _seen = false, /** @type {boolean | undefined} */ _landOpen;
   let /** @type {Record<string, string>} */ _last = { scan: "hdr", form: "cmp" };
@@ -210,7 +210,19 @@ const BARRA = (() => {
 
   // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
-    if (_appliedW || !Q1("#v-data.riga")) document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");     // the first paint of a restore keeps the width the last session had (avvio-progressivo.js)
+    if (!_appliedW && Q1("#v-data.riga")) return;          // the first paint of a restore keeps the width the last session had (avvio-progressivo.js)
+    const root = document.documentElement, set = (/** @type {number} */ w) => root.style.setProperty("--sb-w", (_appliedW = w) + "px");
+    set(_namesW = effW());
+    // long names widen the panel only as far as the toolbar of Data (#tools) keeps every item at its own width: its items shrink before the row overflows, so
+    // the free gap (.sp, flex 1 1 0) is the measure; the widest width that leaves it open is searched between the default and the names' width (a dragged width stays free)
+    const tb = Q1("#tools"), sp = Q1("#tools>.sp"), dflt = defaultW();
+    if (_wUser || _appliedW <= dflt || !tb || !sp || !tb.clientWidth || !Q1("#v-data.sb-open:not(.sb-sheet)")) return;
+    const fits = () => sp.getBoundingClientRect().width >= 1 && tb.scrollWidth <= tb.clientWidth;
+    if (fits()) return;
+    let lo = dflt, hi = _appliedW;
+    set(lo); if (!fits()) return;
+    while (hi - lo > 4) { const mid = Math.round((lo + hi) / 2); set(mid); if (fits()) lo = mid; else hi = mid; }
+    set(lo);
   }
 
   // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized
@@ -1091,7 +1103,7 @@ const BARRA = (() => {
     get side() { return _side; },
     get width() { return effW(); },
     /** The list changed: an automatic width follows the longest name. */
-    fitNames() { if (!_wUser && _appliedW !== effW()) applyLayout(); },
+    fitNames() { if (!_wUser && _namesW !== effW()) applyLayout(); },
     get open() { return _open && inData(); },
     get sheet() { return _open && inData() && sheet(); },
     get dockedWidth() { return _open && inData() && !sheet() ? effW() : 0; },

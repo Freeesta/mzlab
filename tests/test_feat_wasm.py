@@ -95,6 +95,25 @@ def test_the_join_aligner_and_the_peak_finder_give_the_same_bytes_native_and_in_
     assert (nat_dir / "series.mzfeat").read_bytes() != (def_dir / "series.mzfeat").read_bytes(), "join and groups give the same table: the test proves nothing"
 
 
+
+GROUPER = '{"fill": true, "layers": [{"step": "features.detect", "params": {"isotopes": "grouper", "iso_rt_tol": 0.1, "iso_representative": "lowest_mz"}}]}'
+
+
+def test_the_isotope_grouper_gives_the_same_bytes_native_and_in_node(built):
+    """The isotope grouping `grouper` of `features.detect` (the isotope grouper of mzmine) writes the same `.mzfeatf` of every file and the same
+    `series.mzfeat` in the .wasm as natively, and not the files of the default `averagine`. `series_evid.mzfeat` is left out for the reason given
+    in the test of `adap_localmin`."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_grouper", "--recipe", GROUPER)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_grouper", "--recipe", GROUPER)
+    _, def_dir = native(root, idx, "nat_averagine", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    feats = [f for f in names if f.endswith(".mzfeatf")]
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "grouper and averagine give the same files: the test proves nothing"
+
 @pytest.mark.parametrize("mode", ["ion", "family"])
 def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
     """The contract of memory: the `.mzfeatf`, the `.mzfeat` and the one with `evid` have the same SHA-256 in memory and under a budget (slabs of m/z,

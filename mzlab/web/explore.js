@@ -451,7 +451,7 @@ async function bootSession0() {
   E.files.forEach((/** @type {FileAperto} */ f) => { mem[f.file] = f; });
   const oldVis = mem;
   E.key = key;
-  CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
+  if (!(oldNames.length && oldNames.length < j.session.length && oldNames.every((/** @type {string} */ n, /** @type {number} */ i) => j.session[i].file === n))) { CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); } }  // answers are keyed by k: files only appended at the end keep every old k (else N files → N² requests)
   // seq: a list opened file by file, this is not its first step
   const seq = !!E._seq, waiting = !!(E.pending && E.pending.some((/** @type {Pendiente} */ x) => x.state === "wait"));
   E._seq = waiting; E._mem = waiting ? mem : null;
