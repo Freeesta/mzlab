@@ -236,6 +236,7 @@ I18N.add("it", {
   "scorc.chiudi": "Chiudi",
   "scorc.xic": "XIC",
   "scorc.spettro": "Spettro qui",
+  "scorc.spettroSel": "Spettro dell'intervallo",
   "scorc.picco": "MS2 o XIC",
   "scorc.integra": "Integra",
   "scorc.misura": "Misura",
