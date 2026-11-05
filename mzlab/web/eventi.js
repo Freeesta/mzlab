@@ -376,7 +376,7 @@ function ctxFor(p, e, x, px, py) {
   // the spectra of a trace: not for the MRM (it has no scans to average); not in the menu: a click or drag, the double click and Enter already do it
   /** @param {any} c */
   const spettri = c => ESP.spettri(c.p);
-  reg({ id: "chrom.avgSel", menu: false, gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
+  reg({ id: "chrom.avgSel", menu: false, gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel && c.p.kind !== "pda", nome: () => T("ctx.spec.avgSel"), scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettroSel" }, doppioOrd: 1.5, doppio: /** @param {any} c */ c => !!c.p.sel && c.p.kind !== "pda" && !!c.p._a && c.x >= c.p.sel[0] && c.x <= c.p.sel[1] && !c.p.el.classList.contains("max"), esegui: /** @param {any} c */ c => { const [r0, r1] = c.p.sel; newSpec(c.p, r0, r1, nearestFile(c.p, (r0 + r1) / 2)); } });  // inside the dragged range: double click / Enter; `doppioOrd` 1.5 < view.resetZoom, so the selection beats the zoom
   reg({ id: "chrom.specAtRt", menu: false, gruppo: "extract", visibile: spettri, scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettro" }, nome: () => T("ctx.spec.atRt"),
     doppio: /** @param {any} c */ c => !!c.p._a && !!E.files[c.k] && E.files[c.k].kind !== "mrm" && !c.p.el.classList.contains("max"),      // a MRM file has no spectra; full screen: nobody would see the new panel
     esegui: /** @param {any} c */ async c => {
