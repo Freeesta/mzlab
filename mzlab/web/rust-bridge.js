@@ -8,7 +8,7 @@
 // retried as it is: once the engine restarts with half the budget, a second time the engine is off with `error.memoryBudget`, never a loop of restarts.
 // The .wasm is compiled once here and the same WebAssembly.Module goes to every worker of the engine (null = the worker compiles it).
 import { infoRoute } from "./rust-bridge-info.js";
-import { hasScan, scanRoutes } from "./rust-scans.js";
+import { hasScan, scanRoutes, refusal } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
 import { makeConvertCentroids, makeFlowCentroid } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
@@ -192,7 +192,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       await s.opening;
       if (!s.idx || !s.idx.scans || s.bad || !s.blob || !Number.isInteger(sid) || sid < 0) return null;
       const r = await rpc({ op: "scaninfo", slot: k0, sid, blob: s.blob });
-      if (r.dead || r.error || !r.info) return null;                         // an error (scan outside the file) is worded by Python
+      if (r.dead || r.error || !r.info) return r.error ? refusal(r) : null;  // a scan outside the file: the engine's worded refusal
       stats.rust++;
       return { status: 200, text: r.info, ms: performance.now() - t0 };
     }
