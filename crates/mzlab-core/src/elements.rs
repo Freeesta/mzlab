@@ -409,7 +409,7 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     };
     // an unreadable head keeps the text and the shift in the error: the page may read the head as a name of the contaminant lists
     let f = parse_formula(&text).map_err(|e| match offset {
-        Some(d) => e.with("head", &text).with("offset", &format!("{d}")),
+        Some(d) => e.with("head", &text).with("offset", d),
         None => e,
     })?;
     let m = mass(&f);
