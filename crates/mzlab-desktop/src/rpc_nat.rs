@@ -1,5 +1,6 @@
 //! The operations of `rpc` about the samples of a maker's file read as they are (`nativi.rs`): the samples of a dataset the page describes (`natsamples`) and
-//! «Download .mzML» (`nat2mzml`: the mzML of one sample written on request to the temporary folder, registered like a picked file; progress by `rawprogress`).
+//! «Download .mzML» (`nat2mzml`: the mzML of one sample written on request to the temporary folder, registered like a picked file; progress by `rawprogress`)
+//! and one series of the instrument log of a `.raw` (`natregistro`, the same text as the readers module of the site).
 
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
@@ -82,5 +83,27 @@ impl State {
         );
         g.temps.push(tmp);
         text(json!({ "id": id, "size": size }).to_string())
+    }
+
+    /// `natregistro {name, serie}`: one series of the instrument log (`status:…`, `trailer:…`) of the sample `name`, as the readers module of the site
+    /// answers it (`registroDi` of `rust-nativo.js`): `{id, kind, q1, q3, unit, time, intensity}`, its points computed now. The reader is opened for the
+    /// request and closed after it (the site keeps its session 30 s because a copy of the file sits in memory; here the members are mapped).
+    pub(crate) fn nat_registro(&self, p: &Value) -> Result<Answer> {
+        let name = p["name"]
+            .as_str()
+            .unwrap_or("")
+            .split('#')
+            .next()
+            .unwrap_or("");
+        let nat = self
+            .store
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(name)
+            .and_then(|e| e.nat)
+            .ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
+        let mut l = nativi::open(&nat.members, false)?;
+        let c = l.cromatogramma(nat.c, p["serie"].as_str().unwrap_or(""))?;
+        text(mzlab_lettori::json::cromatogramma_json(&c))
     }
 }

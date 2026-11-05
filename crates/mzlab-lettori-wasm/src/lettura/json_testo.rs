@@ -1,25 +1,7 @@
-//! The pieces of the JSON texts of the module (`sessione.rs`, `lib.rs`), written with `mzlab_core::json::Out`: lists of strings, rows of strings, nullable strings, the samples and the points of a trace.
+//! The pieces of the JSON texts of the module (`sessione.rs`, `lib.rs`), written with `mzlab_core::json::Out`: lists of strings, rows of strings, nullable strings, the samples (a trace with its points: `mzlab_lettori::json`).
 use mzlab_core::json::Out;
 use mzlab_core::lettori::{Campione, Campo, VoceCromatogramma};
-use mzlab_core::mzml::Chromatogram;
 use mzlab_core::mzmlwrite::Header;
-
-/// `[n,...]` as `Out::floats` writes them (finite numbers as Rust prints them, NaN and infinities `null`), without the temporary `String` of `Out::num` per point.
-pub fn floats(o: &mut Out, a: &[f64]) {
-    use std::fmt::Write;
-    o.0.push('[');
-    for (i, &v) in a.iter().enumerate() {
-        if i > 0 {
-            o.0.push(',');
-        }
-        if v.is_finite() {
-            let _ = write!(o.0, "{v}");
-        } else {
-            o.0.push_str("null");
-        }
-    }
-    o.0.push(']');
-}
 
 /// `[{id,name,scans}]`, shared with the `probe` answer of `lib.rs`.
 pub fn campioni_json(o: &mut Out, campioni: &[Campione]) {
@@ -95,29 +77,6 @@ pub fn cromatogrammi_json(v: &[VoceCromatogramma]) -> String {
             .raw("}");
     }
     o.raw("]");
-    o.0
-}
-
-/// `{id,kind,q1,q3,unit,time,intensity}`.
-pub fn cromatogramma_json(x: &Chromatogram) -> String {
-    let mut o = Out(String::with_capacity(
-        96 + 20 * (x.time.len() + x.intensity.len()),
-    ));
-    o.raw("{\"id\":")
-        .str(&x.id)
-        .raw(",\"kind\":")
-        .str(&format!("{:?}", x.kind))
-        .raw(",\"q1\":")
-        .opt(x.q1)
-        .raw(",\"q3\":")
-        .opt(x.q3)
-        .raw(",\"unit\":")
-        .str(&x.unit)
-        .raw(",\"time\":");
-    floats(&mut o, &x.time);
-    o.raw(",\"intensity\":");
-    floats(&mut o, &x.intensity);
-    o.raw("}");
     o.0
 }
 
