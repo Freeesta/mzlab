@@ -49,7 +49,11 @@ impl<R: ReadAt> Mzml<R> {
     }
 
     /// The time axis of each chromatogram of `cs` (in file order), as `chromatogram_times` with the full read as fallback, handed to `each`.
-    pub fn chromatograms_times(&mut self, cs: &[&Chrom], mut each: impl FnMut(Vec<f64>)) -> Result<()> {
+    pub fn chromatograms_times(
+        &mut self,
+        cs: &[&Chrom],
+        mut each: impl FnMut(Vec<f64>),
+    ) -> Result<()> {
         self.in_spans(cs, |c, chunk| {
             each(match times_of(chunk, c)? {
                 Some(t) => t,
@@ -93,8 +97,10 @@ impl<R: ReadAt> Mzml<R> {
             }
             let span = self.read(a, b)?;
             for c in &cs[i..j] {
-                let lo = usize::try_from(c.start.saturating_sub(a)).map_or(span.len(), |v| v.min(span.len()));
-                let hi = usize::try_from(c.end.min(b).saturating_sub(a)).map_or(span.len(), |v| v.clamp(lo, span.len()));
+                let lo = usize::try_from(c.start.saturating_sub(a))
+                    .map_or(span.len(), |v| v.min(span.len()));
+                let hi = usize::try_from(c.end.min(b).saturating_sub(a))
+                    .map_or(span.len(), |v| v.clamp(lo, span.len()));
                 f(c, &span[lo..hi])?;
             }
             i = j;
@@ -118,7 +124,8 @@ fn times_of(chunk: &[u8], c: &Chrom) -> Result<Option<Vec<f64>>> {
         return Ok(None);
     }
     let list = find(chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
-    let seconds = text(part(chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(chunk);
+    let seconds =
+        text(part(chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(chunk);
     if seconds {
         t.iter_mut().for_each(|v| *v /= 60.0);
     }

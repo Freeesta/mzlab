@@ -1,5 +1,9 @@
 //! Chromatograms read together in spans against one read per chromatogram: the same arrays bit for bit, and a few reads for thousands of SRM traces.
-#![allow(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_precision_loss)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::cast_precision_loss
+)]
 use super::super::{Chrom, Mzml};
 use crate::error::Result;
 use crate::idxread::ReadAt;
@@ -26,9 +30,15 @@ fn b64(v: &[f64]) -> String {
 /// An mzML without scans: `n` SRM traces of `len` points. Every 4th has its times in seconds, every 5th declares one point too many
 /// (the reader then falls back to the full read), every 7th is preceded by a TIC that is not an SRM trace; `big` adds a trace longer than a span.
 fn mrm(n: usize, len: usize, big: bool) -> Vec<u8> {
-    let mut s = String::from("<?xml version=\"1.0\"?><mzML><run id=\"r\"><chromatogramList count=\"0\">\n");
+    let mut s =
+        String::from("<?xml version=\"1.0\"?><mzML><run id=\"r\"><chromatogramList count=\"0\">\n");
     let mut index = 0;
-    let mut one = |s: &mut String, id: String, len: usize, declared: usize, unit: &str, shift: f64| {
+    let mut one = |s: &mut String,
+                   id: String,
+                   len: usize,
+                   declared: usize,
+                   unit: &str,
+                   shift: f64| {
         let t: Vec<f64> = (0..len).map(|k| shift + k as f64 * 0.01).collect();
         let y: Vec<f64> = (0..len).map(|k| (k * 7 % 13) as f64).collect();
         s.push_str(&format!(
@@ -47,9 +57,23 @@ fn mrm(n: usize, len: usize, big: bool) -> Vec<u8> {
         }
         let unit = if i % 4 == 1 { "second" } else { "minute" };
         let declared = if i % 5 == 2 { len + 1 } else { len };
-        one(&mut s, format!("SRM SIC Q1=100.{i} Q3=50.{i}"), len, declared, unit, i as f64 * 0.1);
+        one(
+            &mut s,
+            format!("SRM SIC Q1=100.{i} Q3=50.{i}"),
+            len,
+            declared,
+            unit,
+            i as f64 * 0.1,
+        );
         if big && i == n / 2 {
-            one(&mut s, "SRM SIC Q1=300.5 Q3=150.5".into(), 1_100_000, 1_100_000, "minute", 2.0);
+            one(
+                &mut s,
+                "SRM SIC Q1=300.5 Q3=150.5".into(),
+                1_100_000,
+                1_100_000,
+                "minute",
+                2.0,
+            );
         }
     }
     s.push_str("</chromatogramList></run></mzML>\n");
@@ -70,11 +94,17 @@ fn spans_give_the_arrays_of_one_read_per_chromatogram() {
     let (mut pairs, mut times) = (vec![], vec![]);
     m.chromatograms_each(&srm, |c, (t, y)| pairs.push((c.index, bits(&t), bits(&y))))
         .unwrap();
-    m.chromatograms_times(&srm, |t| times.push(bits(&t))).unwrap();
+    m.chromatograms_times(&srm, |t| times.push(bits(&t)))
+        .unwrap();
     let mut fell_back = 0;
     for (k, c) in srm.iter().enumerate() {
         let (t, y) = m.chromatogram(c).unwrap();
-        assert_eq!(pairs[k], (c.index, bits(&t), bits(&y)), "chromatogram {}", c.index);
+        assert_eq!(
+            pairs[k],
+            (c.index, bits(&t), bits(&y)),
+            "chromatogram {}",
+            c.index
+        );
         let one = match m.chromatogram_times(c).unwrap() {
             Some(t) => t,
             None => {
@@ -84,7 +114,10 @@ fn spans_give_the_arrays_of_one_read_per_chromatogram() {
         };
         assert_eq!(times[k], bits(&one), "times of chromatogram {}", c.index);
     }
-    assert!(fell_back >= 8, "the fallback path is exercised: {fell_back}");
+    assert!(
+        fell_back >= 8,
+        "the fallback path is exercised: {fell_back}"
+    );
 }
 
 #[test]
