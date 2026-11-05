@@ -16,7 +16,7 @@ const manifest = (over = {}) => JSON.stringify({ app: "abc", files: Object.fromE
 
 /** Runs sw.js; `net` maps a path to its body (undefined: 404, "throw": offline). */
 function mondo(net = { ...FILES }, man = manifest()) {
-  const listeners = {}, timers = [], stores = new Map(), st = { fetches: [], updates: 0, offline: false, net };
+  const listeners = {}, timers = [], stores = new Map(), st = { fetches: [], updates: 0, waits: 0, offline: false, net };
   const key = (r, o) => { const u = new URL(typeof r === "string" ? r : r.url); if (o?.ignoreSearch) u.search = ""; return u.href; };
   const open = async name => {
     if (!stores.has(name)) stores.set(name, new Map());
@@ -44,7 +44,7 @@ function mondo(net = { ...FILES }, man = manifest()) {
   vm.runInNewContext(src, ctx);
   const get = async (p, extra = {}) => {
     let out; const later = [];
-    const e = { request: { method: "GET", url: O + p, headers: new Headers(), cache: "default", mode: "same-origin", ...extra }, respondWith: x => { out = x; }, waitUntil(x) { later.push(x); } };
+    const e = { request: { method: "GET", url: O + p, headers: new Headers(), cache: "default", mode: "same-origin", ...extra }, respondWith: x => { out = x; }, waitUntil(x) { later.push(x); st.waits++; } };
     listeners.fetch(e);
     if (!out) return null;
     const res = await out;
@@ -119,6 +119,15 @@ function mondo(net = { ...FILES }, man = manifest()) {
   assert.equal(w.st.updates, 1);
   await w.get("static/app.js");
   assert.equal(w.netCount("static/app.js"), 2, "stale: nothing stored, nothing served from the cache");
+}
+{ // a worker of an older version that the browser stopped and started again: its first request asks the manifest before the cache answers
+  const NEW = { ...FILES, "static/lazy.js": "lazy() v2" };
+  const w = mondo({ ...NEW }, manifest({ app: "zzz", files: Object.fromEntries(Object.entries(NEW).map(([k, v]) => [k, sha(v)])) }));
+  await (await w.ctx.caches.open("mzlab-app-abc")).put(new Request(O + "static/lazy.js"), new Response("lazy()", { status: 200 }));
+  assert.equal(await (await w.get("static/lazy.js")).text(), "lazy() v2", "never the older bytes to a page of the newer version");
+  const n = w.st.waits;
+  await w.get("static/app.js");
+  assert.equal(w.st.waits, n, "stale: no event kept open (the newer worker activates only when the older one has none)");
 }
 { // old caches go, the current ones stay
   const w = mondo();
