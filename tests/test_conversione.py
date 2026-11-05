@@ -106,3 +106,23 @@ def test_wiff_same_sample_name_never_gets_an_unexplained_sN():
       console.log(JSON.stringify(out))""")
     assert got == ["NF_t0_nospik.mzML", "NF_t0_spik_80L.mzML", "NF_t0_nospik.wiff.mzML", "NF_t0_spik_80L.wiff.mzML", "NF_t0_nospik_2.wiff.mzML"]
     assert not any("_s" in n.replace("_spik", "") for n in got)
+
+
+def test_a_download_of_a_module_sample_follows_the_compression():
+    """A sample the readers module converted at the loading (`CONV.sources`): "standard" saves the file of the loading, another compression writes it again once with
+    `to_mzml_come` (the optical matrix of the loading kept) and saves that."""
+    got = run("""
+      const C = c.CONV, asked = [], saved = [];
+      global.window = { LETTORI_MOD: { toMzml: async (fam, mem, k, dest, on, sig, opts) => { asked.push([fam, mem.map(m => m.name), k, opts]); return { size: 5, tag: "np" }; } },
+                        CONVCARD: () => ({ start: () => ({ update() {}, done() {}, fail() {} }), end() {} }) };
+      global.document = { getElementById: () => ({}), querySelectorAll: () => [] };
+      global.carica = async () => {};
+      global.saveBlob = (b, n) => saved.push([n, b.tag]);
+      C.add("a.mzML", { size: 9, tag: "std" }, { fam: "sciex", mem: [{ name: "a.wiff" }, { name: "a.wiff.scan" }], c: 1 });
+      (async () => {
+        C.compression = "standard"; await C.download("a.mzML");
+        C.compression = "smallest"; await C.download("a.mzML"); await C.download("a.mzML");
+        console.log(JSON.stringify({ asked, saved }));
+      })();""")
+    assert got == {"asked": [["sciex", ["a.wiff", "a.wiff.scan"], 1, {"dad": True, "compression": "smallest"}]],
+                   "saved": [["a.mzML", "std"], ["a.mzML", "np"], ["a.mzML", "np"]]}

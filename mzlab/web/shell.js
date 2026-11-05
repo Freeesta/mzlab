@@ -247,7 +247,7 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
     let ready=null;CONVROWS.set(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
     try{if(/\.mzxml\.gz$/i.test(f.name)){const x=await window.GZFLUSSO.mzxml(f,(/** @type {number} */ fr)=>CONVROWS.set(nm,"run",Math.floor(50*fr)),ui.signal);temp=x.mzlabTemp;mem=[{name:x.name,blob:x}]}      // its mzXML, inflated into conv/ (half of the row's bar)
       const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},ui.signal);
-      ui.done();CONV.add(nm,blob);if(/** @type {any} */ (blob).mzlabMissing)M.missing.set(nm,/** @type {any} */ (blob).mzlabMissing);ready=new File([blob],nm);out.push(ready)}
+      ui.done();CONV.add(nm,blob,temp?{fam:jobs.get(f),mem:[],c:0,gz:f}:{fam:jobs.get(f),mem,c:lot?lot.c:0});if(/** @type {any} */ (blob).mzlabMissing)M.missing.set(nm,/** @type {any} */ (blob).mzlabMissing);ready=new File([blob],nm);out.push(ready)}
     catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message,who=f.mzlabModulo?.shown||f.name;(rep.errs[m]=rep.errs[m]||[]).push(who);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:who,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm);if(temp)window.GZFLUSSO.drop(temp)}
     if(ready&&onFile)onFile(ready,g)}
