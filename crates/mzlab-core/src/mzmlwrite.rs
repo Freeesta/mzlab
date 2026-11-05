@@ -239,8 +239,7 @@ pub struct SpectrumExtra {
     /// The precursors, in order (the chain of an MSn scan is one per level, outermost first). Empty: `Spectrum::precursor` is written as target and selected ion.
     #[cfg(feature = "precursori")]
     pub precursors: Vec<Precursore>,
-    /// `MS:1000285` total ion current as the maker reports it (the readers module takes the header of the block); `None`: summed from the points.
-    #[cfg(any(feature = "precursori", feature = "estesi"))]
+    /// `MS:1000285` total ion current as the maker reports it (a `.wiff` takes the header of the block, in every build); `None`: summed from the points.
     pub tic: Option<f64>,
     /// `MS:1000504` / `MS:1000505` base peak (m/z, intensity) as the maker reports it; `None`: found in the points.
     #[cfg(feature = "precursori")]

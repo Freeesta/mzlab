@@ -173,6 +173,8 @@ I18N.add("en", {
   "err.file.agilent": "The Agilent file cannot be read ({detail}).",
   "err.file.base64": "The file is damaged: a peak array is not valid base64 ({detail}). Copy the file again or export it again from the instrument software.",
   "err.file.xml": "The file is not a complete mzML: the XML cannot be read ({detail}). If the copy was interrupted, copy the whole file again.",
+  "err.file.nonFinite": "The file is damaged: scan {scan} carries a number that is not finite ({what} = {value}). Copy the file again or export it again from the instrument software.",
+  "err.file.nonFiniteTrace": "The file is damaged: chromatogram {trace} carries a number that is not finite ({what} = {value}). Copy the file again or export it again from the instrument software.",
   "err.file.zlib": "The file is damaged: a compressed peak array cannot be unpacked ({detail}). Copy the file again or export it again from the instrument software.",
   "err.file.gzStream": "This browser cannot unpack a .gz file piece by piece into its storage (OPFS): unpack the file first (for example with 7-Zip) and open the .mzML or .mzXML, or use the app.",
   "err.flow.algorithm.unavailable": "The algorithm of this step is not available in this version of the program.",

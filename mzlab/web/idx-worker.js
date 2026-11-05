@@ -98,10 +98,11 @@ async function build(m) {
     if (fonte) fonte.close();
     if (aiuti) aiuti.chiudi();
     await dropSpill();
-    let text = typeof e === "string" ? e : String(e && e.message || e);
+    const busy = e && typeof e === "object" && e.name === "NoModificationAllowedError";      // another tab holds the same OPFS file: a key for the page, not a fault of this worker
+    let text = busy ? JSON.stringify({ error_key: "error.fileInUse", params: { file: m.name } }) : typeof e === "string" ? e : String(e && e.message || e);
     if (fullAt) text = await quotaError(fullAt).catch(() => text);
     // a JSON string {"error_key", "params"} is an error of the builder itself; anything else (RuntimeError: unreachable, out of memory) lost the instance
-    postMessage({ op: "error", text, fatal: !fullAt && !(typeof e === "string" && e.startsWith("{")) });
+    postMessage({ op: "error", text, fatal: !busy && !fullAt && !(typeof e === "string" && e.startsWith("{")) });
   }
 }
 
