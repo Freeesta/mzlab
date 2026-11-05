@@ -115,9 +115,9 @@ pub fn linspace(a: f64, b: f64, n: usize) -> Vec<f64> {
 
 /// `np.geomspace(a, b, n)` for positive `a`, `b`.
 pub fn geomspace(a: f64, b: f64, n: usize) -> Vec<f64> {
-    let mut v: Vec<f64> = linspace(a.log10(), b.log10(), n)
+    let mut v: Vec<f64> = linspace(libm::log10(a), libm::log10(b), n)
         .into_iter()
-        .map(|e| 10f64.powf(e))
+        .map(|e| libm::pow(10f64, e))
         .collect();
     v[0] = a;
     v[n - 1] = b;

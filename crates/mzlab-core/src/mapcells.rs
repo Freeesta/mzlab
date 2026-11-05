@@ -179,7 +179,7 @@ pub struct Sticks {
 /// Fraction of the m/z axis `[mz0, mz1]` at `mz`: linear, or by ln(m/z) for cells of equal ppm.
 pub(crate) fn frac(mz: f64, mz0: f64, mz1: f64, log: bool) -> f64 {
     if log {
-        (mz / mz0).ln() / (mz1 / mz0).ln()
+        libm::log(mz / mz0) / libm::log(mz1 / mz0)
     } else {
         (mz - mz0) / (mz1 - mz0)
     }

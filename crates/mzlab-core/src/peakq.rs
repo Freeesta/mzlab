@@ -74,7 +74,7 @@ pub fn quality(rt: &[f64], y: &[f64], lo: usize, hi: usize, noise: f64) -> Quali
         (None, None) => t[m - 1] - t[0],
     };
     let sigma = (fwhm / 2.354_820_045).max((t[m - 1] - t[0]) * 1e-6).max(1e-12);
-    let g: Vec<f64> = t.iter().map(|x| h * (-((x - t[k]).powi(2)) / (2.0 * sigma * sigma)).exp()).collect();
+    let g: Vec<f64> = t.iter().map(|x| h * libm::exp(-((x - t[k]).powi(2)) / (2.0 * sigma * sigma))).collect();
     let (mc, mg) = (c.iter().sum::<f64>() / m as f64, g.iter().sum::<f64>() / m as f64);
     let (mut sxy, mut sxx, mut syy) = (0.0, 0.0, 0.0);
     for j in 0..m {
@@ -259,13 +259,13 @@ mod tests {
     fn trace(parts: &[(f64, f64, f64)], tail: f64, noise: f64) -> (Vec<f64>, Vec<f64>) {
         let rt: Vec<f64> = (0..400).map(|i| i as f64 * 0.015).collect();
         let mut seed = 7u64;
-        let mut y: Vec<f64> = rt.iter().map(|t| parts.iter().map(|(c, s, h)| h * (-((t - c).powi(2)) / (2.0 * s * s)).exp()).sum::<f64>()).collect();
+        let mut y: Vec<f64> = rt.iter().map(|t| parts.iter().map(|(c, s, h)| h * libm::exp(-((t - c).powi(2)) / (2.0 * s * s))).sum::<f64>()).collect();
         if tail > 0.0 {
             let src = y.clone();
             for i in 0..y.len() {
                 let mut acc = 0.0;
                 for j in 0..=i {
-                    acc += src[j] * (-((i - j) as f64) * 0.015 / tail).exp();
+                    acc += src[j] * libm::exp(-((i - j) as f64) * 0.015 / tail);
                 }
                 y[i] = acc * 0.015 / tail;
             }
@@ -336,7 +336,7 @@ mod tests {
     #[test]
     fn zigzag_raises_the_noise_score() {
         let rt: Vec<f64> = (0..21).map(|i| i as f64 * 0.02).collect();
-        let clean: Vec<f64> = (0..21).map(|i| 1000.0 * (-((i as f64 - 10.0).powi(2)) / 18.0).exp()).collect();
+        let clean: Vec<f64> = (0..21).map(|i| 1000.0 * libm::exp(-((i as f64 - 10.0).powi(2)) / 18.0)).collect();
         let mut jag = clean.clone();
         for (i, v) in jag.iter_mut().enumerate() {
             *v += if i % 2 == 0 { 120.0 } else { -120.0 };

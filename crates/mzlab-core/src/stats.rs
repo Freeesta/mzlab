@@ -173,7 +173,7 @@ fn lgamma(x: f64) -> f64 {
         1.505_632_735_149_311_6e-7,
     ];
     if x < 0.5 {
-        return (std::f64::consts::PI / (std::f64::consts::PI * x).sin().abs()).ln()
+        return libm::log(std::f64::consts::PI / libm::sin(std::f64::consts::PI * x).abs())
             - lgamma(1.0 - x);
     }
     let x = x - 1.0;
@@ -182,7 +182,7 @@ fn lgamma(x: f64) -> f64 {
     for (i, c) in C.iter().enumerate().skip(1) {
         a += c / (x + i as f64);
     }
-    0.5 * (2.0 * std::f64::consts::PI).ln() + (x + 0.5) * t.ln() - t + a.ln()
+    0.5 * libm::log(2.0 * std::f64::consts::PI) + (x + 0.5) * libm::log(t) - t + libm::log(a)
 }
 
 /// Regularised upper incomplete gamma Q(a, x); the chi-square survival is Q(df / 2, chi2 / 2).
@@ -200,7 +200,7 @@ fn gammainc_q(a: f64, x: f64) -> f64 {
                 break;
             }
         }
-        return (1.0 - s * (-x + a * x.ln() - lgamma(a)).exp()).max(0.0);
+        return (1.0 - s * libm::exp(-x + a * libm::log(x) - lgamma(a))).max(0.0);
     }
     let mut b = x + 1.0 - a;
     let mut c = 1e300;
@@ -224,7 +224,7 @@ fn gammainc_q(a: f64, x: f64) -> f64 {
             break;
         }
     }
-    ((-x + a * x.ln() - lgamma(a)).exp() * h).min(1.0)
+    (libm::exp(-x + a * libm::log(x) - lgamma(a)) * h).min(1.0)
 }
 
 pub fn chi2_sf(x: f64, df: u32) -> f64 {
