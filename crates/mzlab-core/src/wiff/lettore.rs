@@ -390,12 +390,14 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
         let points = scan::point_count(&mut win, scan_len, r.at, r.end)?;
         // the first MRM block of each experiment: a sparse (scheduled) one starts with `-(N + 0.01)`, even when the method has no `sMRM` stream to say so
         #[cfg(feature = "sciex")]
-        if points.is_none() && r.size >= 4 && !w.scan_experiment(r.experiment) {
-            if let Some(seen) = mrm_seen.get_mut(r.experiment).filter(|s| !**s) {
-                *seen = true;
-                other |= scan::read_mrm(&mut win, scan_len, r.at, 1)?
-                    .is_some_and(|v| v.first().is_some_and(|x| *x < 0.0));
-            }
+        if points.is_none()
+            && r.size >= 4
+            && !w.scan_experiment(r.experiment)
+            && let Some(seen) = mrm_seen.get_mut(r.experiment).filter(|s| !**s)
+        {
+            *seen = true;
+            other |= scan::read_mrm(&mut win, scan_len, r.at, 1)?
+                .is_some_and(|v| v.first().is_some_and(|x| *x < 0.0));
         }
         if !points.is_some_and(|c| c > 0) {
             continue;
