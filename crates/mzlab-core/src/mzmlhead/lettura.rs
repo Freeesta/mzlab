@@ -84,26 +84,27 @@ impl<R: ReadAt> Mzml<R> {
         mut f: impl FnMut(&Chrom, &[u8]) -> Result<()>,
     ) -> Result<()> {
         const SPAN: u64 = 16 << 20;
-        let mut i = 0;
-        while i < cs.len() {
-            let a = cs[i].start;
-            let (mut b, mut j) = (cs[i].end, i + 1);
-            while j < cs.len()
-                && cs[j].start >= cs[j - 1].end
-                && cs[j].end.saturating_sub(a) <= SPAN
-            {
-                b = b.max(cs[j].end);
-                j += 1;
+        let mut rest = cs;
+        while let Some((first, more)) = rest.split_first() {
+            let (a, mut b, mut prev, mut n) = (first.start, first.end, first.end, 1);
+            for c in more {
+                if c.start < prev || c.end.saturating_sub(a) > SPAN {
+                    break;
+                }
+                b = b.max(c.end);
+                prev = c.end;
+                n += 1;
             }
+            let (group, tail) = rest.split_at_checked(n).unwrap_or((rest, &[]));
             let span = self.read(a, b)?;
-            for c in &cs[i..j] {
+            for c in group {
                 let lo = usize::try_from(c.start.saturating_sub(a))
                     .map_or(span.len(), |v| v.min(span.len()));
                 let hi = usize::try_from(c.end.min(b).saturating_sub(a))
                     .map_or(span.len(), |v| v.clamp(lo, span.len()));
-                f(c, &span[lo..hi])?;
+                f(c, span.get(lo..hi).unwrap_or_default())?;
             }
-            i = j;
+            rest = tail;
         }
         Ok(())
     }
