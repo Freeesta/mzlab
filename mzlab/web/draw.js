@@ -421,7 +421,7 @@ async function showInfo1() {
     const cuts = cutBonds(set);
     Q("#sel-body").innerHTML = all.map(p => {
       const smi = p.smi || "";                                                  // written by Ketcher (Indigo): the same SMILES as for the whole canvas
-      return smi ? `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><code style="word-break:break-all;flex:1;user-select:all">${EH(smi)}</code>${copyBtn(smi)}</div>` : '<div class="muted sm">' + EH(I18N.t("draw.selection.noFormula")) + '</div>';
+      return smi ? `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><code style="word-break:break-all;flex:1;-webkit-user-select:all;user-select:all">${EH(smi)}</code>${copyBtn(smi)}</div>` : '<div class="muted sm">' + EH(I18N.t("draw.selection.noFormula")) + '</div>';
     }).join("") + (cuts ? `<div class="muted sm">${EH(I18N.t("draw.selection.cuts", { n: cuts }))}</div>` : "");
   }
   // 2) property estimates: the selected pieces, or every structure of the drawing

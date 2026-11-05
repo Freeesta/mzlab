@@ -33,5 +33,9 @@
 | `svh`/`dvh`, `env(safe-area-inset-*)` | `app.css` (`#kframe`, `#phone`, barra laterale `#dfiles`) | 15.4, 11 | `100vh` prima, `@supports` dopo | — |
 | `:hover` (lista della legenda con più di 4 tracce) | `grafici.js` `legCollapse` | — (iPad: niente hover) | il chip «N tracce» è un `<button>` da 24 px: tocco, Invio o Spazio tengono aperta la lista (`aria-expanded`), Esc la chiude; l'apertura al passaggio solo con `(hover: hover)`, perché Safari tiene `:hover` sull'elemento toccato | `e2e_safari_ipad` |
 | `visualViewport` | `shell.js` (`dprNow`) | 13 | scala 1 | — |
+| CSS `user-select` | `app.css` (trascinare e allargare la barra laterale, canvas), `draw.js`, `predefinito.js`, `banco*.js`, `libreria-finestra.js` | solo `-webkit-user-select` | ogni dichiarazione ha accanto quella con `-webkit-` | `test_safari_prefissi` |
+| `scrollbar-width`, `scrollbar-gutter`, `fetch` `priority`, `FileSystemObserver` | `app.css` `#tools`, `tavola-periodica.js`, `first-paint.js`, `cartella-puntata.js` | 18.2 / assente | `::-webkit-scrollbar`; ignorati; nuova lettura della cartella | — |
+| `createSyncAccessHandle({mode})` | `lettura-sync.js` | modo ignorato (handle esclusivo) | un handle preso fa leggere dal Blob | — |
 | `prefers-reduced-motion`, `prefers-color-scheme` | molti | 10.1, 12.1 | — | `e2e_tema_impostazioni` |
 | service worker, Cache API | `sw.js`, `browser.js` | 11.1 | sito senza copia offline | `e2e_sw_versione` |
+- Non usati nel sito (Safari dopo 16.4, da non introdurre senza ripiego): `toSorted`/`toReversed`/`with`, `Object.groupBy`, `Promise.withResolvers`, metodi di `Set`, `Array.fromAsync`, aiutanti di `Iterator`, regex `/v`, `ReadableStream.from` e `for await` su uno stream, evento `scrollend`, attributo `popover`, `closedby`, CSS nesting, `@container style()`, `@starting-style`, `text-wrap`, `light-dark()`, `field-sizing`, ancore CSS. `for await` c'è solo su cartelle OPFS e generatori (15.2).
