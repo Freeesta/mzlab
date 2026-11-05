@@ -108,6 +108,7 @@ impl LettoreWiff {
             .get_mut(c)
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
         if !p.pronta {
+            p.w.readable()?;
             build(p, &mut self.scan, self.scan_len, self.scan_member)?;
             // the list of samples told 0 scans for an injection `apri_solo` left out
             if let Some(k) = self.campioni.get_mut(c) {
@@ -124,6 +125,7 @@ impl LettoreWiff {
             .get_mut(c)
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
         if p.chroms.is_none() {
+            p.w.readable()?;
             let mut win = Window::new(&mut self.scan, self.scan_len);
             p.chroms = Some(p.w.chromatograms(&mut win)?);
         }
@@ -325,7 +327,8 @@ pub fn apri_solo(
         total += w.records.len() as u64;
         limiti.voci_ok(total)?;
         let mut parte = Parte::new(w);
-        if solo.is_none_or(|c| c == i) {
+        // a sample the engine cannot read is left unbuilt: `pronta` refuses it when it is asked for, the others open
+        if solo.is_none_or(|c| c == i) && parte.w.readable().is_ok() {
             build(&mut parte, &mut scan, scan_len, membro)?;
         }
         raw_names.push((
