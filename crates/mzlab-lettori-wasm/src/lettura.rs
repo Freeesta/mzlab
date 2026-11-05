@@ -11,8 +11,8 @@ mod json_testo;
 pub mod sessione;
 use sessione::Sessioni;
 
-/// Bytes sent to `sink` at a time.
-const BLOCCO: usize = 64 << 10;
+/// Bytes sent to `sink` at a time (each call is an OPFS write in the page: 1 MiB blocks cost a quarter of 64 KiB ones per byte).
+const BLOCCO: usize = 1 << 20;
 
 fn error_text(e: &mzlab_core::Error) -> String {
     e.to_json()

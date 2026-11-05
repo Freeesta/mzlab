@@ -9,6 +9,7 @@ use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{analysis, budget::MemBudget, mzidx, mzml, peakq, peaks};
+pub(crate) use mzlab_core::accorpa::Accorpa;
 use std::collections::HashMap;
 use std::io::Write;
 use wasm_bindgen::prelude::*;
@@ -496,9 +497,10 @@ pub fn build_mzidx(
         hr1,
         declared: 0,
     };
-    let mut out = JsOutput { write };
+    // every call of `write` is an OPFS write and a read-back in the worker: contiguous writes go in blocks of 1 MiB (`accorpa`), same bytes
+    let mut out = Accorpa::new(JsOutput { write });
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
-    let mut spill = spill_put.zip(spill_get).map(|(put, get)| nativi::JsSpill { put, get });
+    let mut spill = spill_put.zip(spill_get).map(|(put, get)| Accorpa::new(nativi::JsSpill { put, get }));
     let st = mzidx::build_mzml_corriere(
         &table,
         js_blocks(read, size as u64),
@@ -507,6 +509,7 @@ pub fn build_mzidx(
         spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
         &mut corriere::JsCorriere::new(&aiuti),
     ).map_err(|e| error_json(&e))?;
+    out.fine().map_err(|e| error_json(&e))?;
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes

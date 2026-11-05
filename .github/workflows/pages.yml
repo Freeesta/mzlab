@@ -461,10 +461,26 @@ jobs:
         with:
           path: site
 
+  # Deploy gate: the required checks of a pull request (tools/ci_cancello.py: test, rust, sito-rust) must be green on THIS commit of main before the site is published.
+  # It polls while the build runs, so it adds time only when the tests last longer than the build; a red gate leaves the previous site published (a re-run of this job after a re-run of the red check opens it).
+  # Only the main of Freeesta/mzlab has those runs: a branch never deploys, and the lab copy (tools/lab/qqq-pages.yml) deploys without a gate.
+  gate:
+    if: github.ref == 'refs/heads/main' && github.repository == 'Freeesta/mzlab'
+    runs-on: ubuntu-latest
+    timeout-minutes: 160
+    permissions:
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Wait for the required checks of this commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cancello.py "$GITHUB_SHA"
+
   deploy:
-    needs: assemble
-    # a branch (workflow_dispatch to try the workflow) builds but never publishes
-    if: github.ref == 'refs/heads/main'
+    needs: [assemble, gate]
+    # a branch (workflow_dispatch to try the workflow) builds but never publishes; on main the gate must be green (skipped only in the lab copy, which has no tests)
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.assemble.result == 'success' && (needs.gate.result == 'success' || (needs.gate.result == 'skipped' && github.repository != 'Freeesta/mzlab')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
