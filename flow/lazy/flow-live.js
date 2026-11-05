@@ -92,8 +92,9 @@
     const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""), input = open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML"; return { input, stem, idx: f, cen: f.cen || null, mode: modeOf(input), ...sizeOf(input) }; });
     for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null, cen: null, mode: modeOf(stem + ".mzML"), ...sizeOf(stem + ".mzML") });
     // the files in the order of the plan's scan inputs, the order `flow run` aligns them in (a file the plan does not name follows, by name: the sort is stable)
-    const named = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml").map((/** @type {any} */ i) => stemOf(i.name));
-    const rank = (/** @type {any} */ i) => { const k = named.indexOf(i.stem); return k < 0 ? named.length : k; };
+    const named = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml").map((/** @type {any} */ i) => i.name);
+    // a file is the plan's input by its name, or by its stem (the index of a file is named after the file with or without its extension)
+    const rank = (/** @type {any} */ i) => { const k = named.findIndex((/** @type {string} */ n) => n === i.input || n === i.stem || stemOf(n) === i.stem || stemOf(n) === stemOf(i.stem)); return k < 0 ? named.length : k; };
     items.sort((a, b) => rank(a) - rank(b));
     // an MSn step reads the infusion open in Data, not the first file of the series: its key follows that file
     const infusion = (() => { try { return F.runPlanFromData(S).names[0]; } catch (_) { return ""; } })(), msnSteps = F.webMsn ? F.webMsn.STEPS : [];
@@ -101,6 +102,8 @@
     if (items.length && first) {
       const refs = items.map((/** @type {any} */ i) => "file:" + i.input);
       plan.inputs.splice(plan.inputs.indexOf(first), 1, ...items.map((/** @type {any} */ i) => ({ name: i.input, sha256: "", type: first.type })));
+      // the other scan inputs the plan already names are among the items now: each file once
+      plan.inputs = plan.inputs.filter((/** @type {any} */ i, /** @type {number} */ k, /** @type {any[]} */ all) => !(i.type === first.type && all.findIndex((/** @type {any} */ j) => j.name === i.name && j.type === i.type) !== k));
       for (const s of plan.steps) for (const [port, v] of Object.entries(s.in || {})) {
         const list = [].concat(/** @type {any} */ (v)), at = list.indexOf("file:" + first.name);
         if (at < 0) continue;
