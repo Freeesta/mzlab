@@ -8,13 +8,6 @@ const firstTab = () => (ESP.ids.find((/** @type {string} */ t) => tabFiles(t).le
 const pickTab = (/** @type {string | null | undefined} */ want) => (want && tabFiles(want).length ? want : firstTab());
 E.curBy = {};
 
-// the tooltip of a group of the file list: the scheme Q1 -> q2 -> Q3 in big, with the words (texts from modi.js)
-function modeSchema(/** @type {string} */ t) {
-  try {
-    const m = QMODI.M[ESP.didattica(t)], st = ["Q1", "q2", "Q3"].map((n, i) => `<div class="qb"><b>${n}</b><span>${m.q[i].replace(/^Q[123] /, "")}</span></div>`);
-    return `<div class="qs"><b>${m.name}</b><div class="qr">${st.join('<span class="qa">&rarr;</span>')}</div><div class="qw"><b>${m.what}.</b> ${m.use}</div></div>`;
-  } catch (e) { return ""; }
-}
 // the page goes to the first panel of an experiment type
 function scrollToBlock(/** @type {string} */ t) {
   setTimeout(() => { const f = E.panels.filter((/** @type {Pannello} */ q) => q.tab === t && q.el).sort((/** @type {Pannello} */ u, /** @type {Pannello} */ v) => u.y - v.y)[0]; if (f) f.el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 500);
@@ -162,6 +155,12 @@ function defaultLayoutTab(/** @type {string} */ t) {
     });
   }
 }
+// the channels an MRM / SIM panel draws: its choice (p.tr), or all of them when none of the chosen ones is in the files shown (a SIM file shown after the MRM
+// file whose quantifier / qualifier the layout chose would draw nothing); the choice itself stays for when those files come back (canali.js ticks the same)
+function mrmSel(/** @type {string | string[] | null | undefined} */ tr, /** @type {string[]} */ keys) {
+  const want = Array.isArray(tr) ? tr : tr ? [tr] : [];
+  return want.length && !want.some(k => keys.includes(k)) ? "" : tr;
+}
 const MRM_SHOW_MAX = 12;
 // beyond the cap only the first files are drawn: a visible, keyboard-reachable button shows them all
 function mrmShowAllNotice(/** @type {MzFile[]} */ mfs) {
@@ -184,28 +183,48 @@ function addMs2Spec(/** @type {Pannello} */ c, /** @type {Bag} */ e, /** @type {
   apexSpectrum(c, sp); return sp;
 }
 function addMs2Pair(/** @type {Bag} */ e, /** @type {number} */ y) { const c = addMs2Chrom(e, y); addMs2Spec(c, e, y + 260); return c; }
-// the MS2 files that hold a precursor become visible: a chromatogram of a hidden file would be empty («no file visible»)
+// the MS2 file drawn for a precursor: when the drawn one (one per never-overlaid type, ESP.soloUno) does not hold it, the first file that does becomes the
+// current and only ticked one of its type (a chromatogram of a hidden or undrawn file would be empty: «no file visible»); true when the ticks changed
 function ms2Show(/** @type {number | string} */ prec) {
-  const fs = tabFiles("ms2").filter((/** @type {MzFile} */ f) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - /** @type {number} */ (prec)) < 0.6) && !f.vis);
-  fs.forEach((/** @type {MzFile} */ f) => sibsOf(f).forEach((/** @type {MzFile} */ g) => { g.vis = true; })); return fs.length > 0;
+  if (ms2Drawn().some((/** @type {MzFile} */ f) => ms2Holds(f, prec))) return false;
+  const h = tabFiles("ms2").find((/** @type {MzFile} */ f) => !f.gone && ms2Holds(f, prec)); if (!h) return false;
+  STATO.file(h.k, "file"); fileViewDo(() => sibsOf(h).forEach((/** @type {MzFile} */ g) => { g.vis = true; })); return true;
 }
+// the MS2 files drawn now (ticked, and one per never-overlaid type)
+const ms2Drawn = () => ESP.soloUno(tabFiles("ms2").filter((/** @type {MzFile} */ f) => f.vis && !f.gone));
 const ms2PairOf = (/** @type {unknown} */ prec) => E.panels.find((/** @type {Pannello} */ p) => p.tab === "ms2" && p.type === "chrom" && String(p.prec) === String(prec));
 // sidebar of the MS2 tab: tick a precursor to show its chromatogram (created if missing; its spectrum comes on a double click on the name or on the chromatogram), untick to close its graphs, click the name to go to them
 // a row of the sidebar is one (file, precursor) pair: ticked when the precursor chromatogram exists and draws that file
-const ms2RowOn = (/** @type {number | string} */ prec, /** @type {number} */ k) => { const c = ms2PairOf(prec); return !!c && (!c.ks || c.ks.includes(k)); };
+const ms2RowOn = (/** @type {number | string} */ prec, /** @type {number} */ k) => { const c = ms2PairOf(prec); return !!c && shownFor(c).some((/** @type {MzFile} */ f) => f.k === k && !f.gone); };
 // the MS2 files that hold a precursor
-const ms2Holders = (/** @type {number | string} */ prec) => tabFiles("ms2").filter((/** @type {MzFile} */ f) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - /** @type {number} */ (prec)) < 0.6)).map((/** @type {MzFile} */ f) => f.k);
+const ms2Holds = (/** @type {MzFile} */ f, /** @type {unknown} */ prec) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - Number(prec)) < 0.6);
+// an MS2 pair draws only the drawn files (shownFor: ticked, one per never-overlaid type, kept by its rows) that hold its precursor; null for any other panel
+const ms2PairFiles = (/** @type {Pannello} */ p) => p.tab === ESP.ms2 && p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "" ? shownFor(p).filter((/** @type {MzFile} */ f) => !f.gone && ms2Holds(f, p.prec)) : null;
+const ms2Holders = (/** @type {number | string} */ prec) => tabFiles("ms2").filter((/** @type {MzFile} */ f) => ms2Holds(f, prec)).map((/** @type {MzFile} */ f) => f.k);
+// the top MS2 pair over a precursor no visible file holds (cleanupOrphanPanels) moves to the first precursor of the drawn MS2 file that no other pair shows; true when it moved
+function ms2Rehome(/** @type {Pannello} */ c) {
+  const top = tabPanels("ms2").filter((/** @type {Pannello} */ q) => q.type === "chrom").sort((/** @type {Pannello} */ a, /** @type {Pannello} */ b) => a.y - b.y)[0];
+  if (c !== top || c.tab !== ESP.ms2) return false;
+  const taken = tabPanels("ms2").filter((/** @type {Pannello} */ q) => q.type === "chrom" && q !== c).map((/** @type {Pannello} */ q) => Number(q.prec));
+  const prec = ms2Drawn().flatMap((/** @type {MzFile} */ f) => (f.ms2_exps || []).map((/** @type {Bag} */ e) => e.prec).filter((/** @type {number | null} */ v) => v != null).sort((/** @type {number} */ a, /** @type {number} */ b) => a - b))
+    .find((/** @type {number} */ v) => !taken.some((/** @type {number} */ t) => Math.abs(t - v) < 0.6));
+  if (prec == null) return false;
+  c.ks = null; ms2Switch(prec, false); return true;
+}
 function ms2Toggle(/** @type {number | string} */ prec, /** @type {boolean} */ on, /** @type {number | undefined} */ k = undefined) {
   let c = ms2PairOf(prec);
   if (k != null) {
     // one file only: the other rows of the same precursor keep their own state
+    // the row of a file that is not drawn: the file becomes the current and only ticked one of its type (its pair would be blank otherwise)
+    const f = E.files[k];
+    if (on && f && !ms2Drawn().includes(f)) { STATO.file(k, "file"); fileViewDo(() => sibsOf(f).forEach((/** @type {MzFile} */ g) => { g.vis = true; })); c = ms2PairOf(prec); }
     const cur = c ? (c.ks || ms2Holders(prec)) : [];
     const ks = on ? [...new Set([...cur, k])] : cur.filter((/** @type {number} */ q) => q !== k);
-    if (on) tabFiles("ms2").filter((/** @type {MzFile} */ f) => f.k === k).forEach((/** @type {MzFile} */ f) => sibsOf(f).forEach((/** @type {MzFile} */ g) => { g.vis = true; }));
     if (c) c.ks = ks;
     if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { c = addMs2Chrom(e, tabPanels().reduce((/** @type {number} */ m, /** @type {Pannello} */ q) => Math.max(m, q.y + q.h + pnlGap()), 0)); c.ks = ks; relayout(); fitHost(); } }
     if (on) redrawAll();
-    if (!on && c && !ks.length) { [...E.panels.filter((/** @type {Pannello} */ q) => q.link === c.id || q.src === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
+    // the pair closes when none of the files it keeps is drawn (it would be blank)
+    if (!on && c && !ms2Drawn().some((/** @type {MzFile} */ g) => ks.includes(g.k))) { [...E.panels.filter((/** @type {Pannello} */ q) => q.link === c.id || q.src === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
     else if (c) draw(c);
     renderFileList(); uiSave(); return;
   }
