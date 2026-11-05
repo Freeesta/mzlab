@@ -351,3 +351,58 @@ fn mutated_built_files_never_panic() {
     }
     eprintln!("mutated built files: {done} through the module");
 }
+
+/// Where the RawFileInfo keeps the address of the run header (`b.len() - 7408` in the built file): the controller count is 16 bytes before it, the data
+/// address 20.
+fn run_header_slot(b: &[u8]) -> usize {
+    let rh = ((b.len() - 7408) as u32).to_le_bytes();
+    b[..4096]
+        .windows(4)
+        .position(|w| w == rh)
+        .expect("run header address")
+}
+
+/// An acquisition never closed (REAL-BENCH, a v66 Orbitrap): the RawFileInfo has no controller, no run-header address and the data address at the end of the
+/// file. The reader read a run header at offset 0 and reported a scan index at an offset made of text; it is a file with no finished run.
+#[test]
+fn a_file_with_no_controller_has_no_finished_run() {
+    let mut b = Raw::tsq(63, 20).bytes();
+    let at = run_header_slot(&b);
+    let len = b.len() as u32;
+    b[at - 20..at - 16].copy_from_slice(&len.to_le_bytes());
+    b[at - 16..at - 12].copy_from_slice(&0u32.to_le_bytes());
+    b[at..at + 4].copy_from_slice(&0u32.to_le_bytes());
+    assert!(
+        matches!(
+            refused(&b),
+            Error::NoRun {
+                reason: "no controller",
+                ..
+            }
+        ),
+        "{}",
+        refused(&b)
+    );
+    let e = mzlab_core::raw::thermo_error(&refused(&b));
+    assert_eq!(e.key, "err.file.rawUnfinished");
+}
+
+/// A run header that declares no scan (`last < first`; REAL-BENCH, a v66 triple quad whose data area holds megabytes): the reader gave an empty run with no
+/// error, so `convert` wrote an mzML without spectra and `channels` said «empty».
+#[test]
+fn a_run_header_with_no_scan_has_no_finished_run() {
+    let mut b = Raw::tsq(63, 20).bytes();
+    let rh = b.len() - 7408;
+    b[rh + 12..rh + 16].copy_from_slice(&0u32.to_le_bytes());
+    assert!(
+        matches!(
+            refused(&b),
+            Error::NoRun {
+                reason: "the run header declares no scan",
+                ..
+            }
+        ),
+        "{}",
+        refused(&b)
+    );
+}
