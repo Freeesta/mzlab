@@ -78,6 +78,7 @@ try:
             assert not lst.is_visible() and chip.get_attribute("aria-expanded") == "false"
             chip.scroll_into_view_if_needed(); chip.tap()                              # a finger has no hover: the tap opens the list and keeps it open
             assert lst.is_visible() and chip.get_attribute("aria-expanded") == "true"
+            chip.hover()                                                                # Safari keeps :hover on the tapped element: the list must still close
             chip.focus(); pg.keyboard.press("Escape")
             assert not lst.is_visible() and chip.get_attribute("aria-expanded") == "false"
             pg.keyboard.press("Enter"); assert lst.is_visible()

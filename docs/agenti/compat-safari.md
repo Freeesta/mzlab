@@ -32,7 +32,7 @@
 | Pointer Events, `setPointerCapture`, `pressure` | `eventi.js`, `mappa.js`, `affianca.js`, Disegno | 13 | — | `e2e_disegno_tablet` |
 | CSS `:has()`, `@container`, `color-mix()`, `@property` | `app.css`, `canali.css`, `msngrafo-vista.js` | 15.4, 16, 16.2, 16.4 | sotto il pavimento | — |
 | `svh`/`dvh`, `env(safe-area-inset-*)` | `app.css` (`#kframe`, `#phone`, barra laterale `#dfiles`) | 15.4, 11 | `100vh` prima, `@supports` dopo | — |
-| `:hover` (lista della legenda con più di 4 tracce) | `grafici.js` `legCollapse` | — (iPad: niente hover) | il chip «N tracce» è un `<button>` da 24 px: tocco, Invio o Spazio tengono aperta la lista (`aria-expanded`), Esc la chiude | `e2e_safari_ipad` |
+| `:hover` (lista della legenda con più di 4 tracce) | `grafici.js` `legCollapse` | — (iPad: niente hover) | il chip «N tracce» è un `<button>` da 24 px: tocco, Invio o Spazio tengono aperta la lista (`aria-expanded`), Esc la chiude; l'apertura al passaggio solo con `(hover: hover)`, perché Safari tiene `:hover` sull'elemento toccato | `e2e_safari_ipad` |
 | `visualViewport` | `shell.js` (`dprNow`) | 13 | scala 1 | — |
 | `prefers-reduced-motion`, `prefers-color-scheme` | molti | 10.1, 12.1 | — | `e2e_tema_impostazioni` |
 | service worker, Cache API | `sw.js`, `browser.js` | 11.1 | sito senza copia offline | `e2e_sw_versione` |
