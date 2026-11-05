@@ -303,7 +303,7 @@ const flowCen = () => flowCenOps || (flowCenOps = createFlowCentroid({ ARCH, inf
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
-      await safe(() => gzClean(ARCH));                                    // what the inflate of a .gz left in a closed tab (rust-carica.js)
+      await safe(() => gzClean(ARCH)); for (const name of await safe(() => nativo.orphans()) || []) postMessage({ op: "notice", key: "load.natInterrupted", params: { name } });      // what the inflate of a .gz or the copy of a maker's file left in a closed tab (rust-carica.js, rust-nativo.js)
       if (!m.fresh) await lrMigrate(); const out = [], warm = new Set((await safe(() => ARCH.list("warm")) || []).map(e => e.name.replace(/\.json$/, "")));      // warm: built ahead, not opened, not in the list
       for (const e of await ARCH.list("files")) {
         if (/\.part$/.test(e.name) || warm.has(e.name)) continue;

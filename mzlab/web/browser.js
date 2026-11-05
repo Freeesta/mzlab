@@ -58,11 +58,11 @@
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
 
   // a short message under the header (a polite live region)
-  const notice = key => {
+  const notice = (key, params) => {
     const show = () => {
       let el = document.getElementById("rust-note");
       if (!el) { el = document.createElement("div"); el.id = "rust-note"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); el.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;max-width:90vw;padding:8px 14px;border-radius:8px;background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--accent,#888);font:14px system-ui,sans-serif"; document.body.appendChild(el); }
-      el.textContent = window.I18N ? I18N.t(key) : key; el.hidden = false;
+      el.textContent = window.I18N ? I18N.t(key, params) : key; el.hidden = false;
       clearTimeout(/** @type {any} */ (el)._t); /** @type {any} */ (el)._t = setTimeout(() => { el.hidden = true; }, 9000);
     };
     if (document.body) show(); else document.addEventListener("DOMContentLoaded", show);

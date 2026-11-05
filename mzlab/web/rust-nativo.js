@@ -127,6 +127,10 @@ async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: num
 }
 
 export const storeOf = (/** @type {any} */ nat, /** @type {{ name: string }} */ x) => PREFIX + nat.key + "~" + x.name.replace(/[\\/]/g, "~");
+export const LOCK = "mzlab-nat:";                          // Web Lock of a dataset, held (shared) by a tab while it copies the members and writes the stub
+const locks = () => /** @type {any} */ (self.navigator) && navigator.locks;
+/** the dataset key and the file name a member store stands for (`nat~<key>~<path>`: a key never holds «~») */
+export const storeParts = (/** @type {string} */ s) => { const [key, ...path] = s.slice(PREFIX.length).replace(/\.part$/, "").split("~"); return { key, name: path[path.length - 1] || "" }; };
 /** the bytes of the members of `nat` that are not in OPFS yet nor being written for another sample (a .wiff.scan shared by the samples of a .wiff counts for the first only) */
 async function missing(/** @type {any} */ ARCH, /** @type {Map<string, Promise<void>>} */ writing, /** @type {any} */ nat) {
   let n = 0;
@@ -159,6 +163,33 @@ async function sameDi(/** @type {(n: string) => Promise<Stub | null>} */ stubOf,
   return out;
 }
 
+/** the stores some stub of files/ points to, each stub read afresh (one that cannot be read throws: nothing is then taken for unused) */
+async function usedStores(/** @type {any} */ ARCH, /** @type {(n: string) => Promise<Stub | null>} */ fresh) {
+  const used = new Set();
+  for (const e of await ARCH.list("files")) if (/\.mzml$/i.test(e.name)) { const st = await fresh(e.name); if (st) st.members.forEach(x => used.add(x.store)); }
+  return used;
+}
+/** at boot: the members no stub points to are what a closed tab left of a copy it never finished; they go, unless another tab still holds the
+ *  lock of their dataset (it is copying them now). Checked again under the lock: a stub written in the meantime keeps its members. Returns the names of the files to load again. */
+async function orphansDi(/** @type {any} */ ARCH, /** @type {(n: string) => Promise<Stub | null>} */ fresh) {
+  const L = locks();
+  if (!L) return [];                                      // without Web Locks another tab's copy cannot be told apart: nothing is removed
+  const by = new Map(), used = await usedStores(ARCH, fresh), bare = (/** @type {string} */ n) => n.replace(/\.part$/, "");
+  for (const e of await ARCH.list("files")) if (e.name.startsWith(PREFIX) && !used.has(bare(e.name))) { const k = storeParts(e.name).key; by.set(k, [...(by.get(k) || []), e.name]); }
+  /** @type {string[]} */ const out = [];
+  for (const [k, names] of by) await L.request(LOCK + k, { ifAvailable: true }, async (/** @type {any} */ l) => {
+    if (!l) return;
+    const now = await usedStores(ARCH, fresh), gone = names.filter((/** @type {string} */ n) => !now.has(bare(n)));
+    for (const n of gone) await ARCH.remove("files", n);
+    const shown = [...new Set(gone.map((/** @type {string} */ n) => storeParts(n).name))];
+    if (shown.length) out.push(shown.find(n => !/\.scan$/i.test(n)) || shown[0]);
+  });
+  return out;
+}
+
+/** runs fn while holding the dataset's shared Web Lock (directly where the browser has none) */
+const held = (/** @type {string} */ key, /** @type {() => Promise<any>} */ fn) => { const L = locks(); return L ? L.request(LOCK + key, { mode: "shared" }, fn) : fn(); };
+
 export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte }) {
   const ext = createEsterno(native_external);               // a Thermo .raw is read through the `thermo` module (lettore-esterno.js)
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
@@ -183,7 +214,8 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
   }
 
   /** the members of an upload copied to OPFS (once per store name), then the stub; `tell(frac)` 0..1 of the copy */
-  async function put(/** @type {any} */ m, /** @type {(f: number) => void} */ tell) {
+  const put = (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => held(m.nat.key, () => putHeld(m, tell));   // under the lock: another tab's boot leaves these members alone
+  async function putHeld(/** @type {any} */ m, /** @type {(f: number) => void} */ tell) {
     const nat = m.nat, total = nat.members.reduce((/** @type {number} */ a, /** @type {any} */ x) => a + x.blob.size, 0);
     await ensureRoom(await missing(ARCH, writing, nat), m.name);      // room for the members still to write (and their index), held for this sample until lr_index ends
     let done = 0, last = 0;
@@ -236,5 +268,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
-  return { stubOf, attach, put, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, toMzml, samples, sweep, srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, forgetAll: () => { stubs.clear(); log.forgetAll(); }, registro: log.registro };
+  return { stubOf, attach, put, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, forgetAll: () => { stubs.clear(); log.forgetAll(); }, registro: log.registro };
 }
