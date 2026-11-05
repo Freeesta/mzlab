@@ -49,6 +49,7 @@ try:
             setg(pg, "FullScan_t15", ""); setg(pg, "FullScan_t0", ""); ready(pg)
             setg(pg, "FullScan_t0", "Blanks"); setg(pg, "FullScan_t5", "Blanks"); ready(pg)
             drag(pg, "FullScan_t15", '#flst .fgh[data-ug="Blanks"]'); assert lab(pg, "FullScan_t15") == "Blanks", "drag in"
+            if pg.get_attribute('#flst .fgh[data-ug="Blanks"] .chv', "aria-expanded") != "true": pg.click('#flst .fgh[data-ug="Blanks"] .chv'); ready(pg)   # only the first group opens by default: open the one to drag from
             drag(pg, "FullScan_t15", '#flst .fgh[data-gt="full"]')
             assert lab(pg, "FullScan_t15") is None, "drag out onto its own type header"
             drag(pg, "FullScan_t5", '#flst .fgh[data-gt="ms2"]'); assert lab(pg, "FullScan_t5") == "Blanks", "foreign type header must refuse"
