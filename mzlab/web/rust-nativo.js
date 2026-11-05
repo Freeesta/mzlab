@@ -223,8 +223,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     return true;
   }
 
-  /** the members of an upload copied to OPFS (once per store name), then the stub; `tell(frac)` 0..1 of the copy */
-  const put = (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => held(m.nat.key, () => putHeld(m, tell));   // under the lock: another tab's boot leaves these members alone
+  /** the members of an upload copied to OPFS (once per store name), then the stub, under the dataset lock (`put`: another tab's boot leaves them alone); `tell(frac)` 0..1 of the copy */
   async function putHeld(/** @type {any} */ m, /** @type {(f: number) => void} */ tell) {
     const nat = m.nat, total = nat.members.reduce((/** @type {number} */ a, /** @type {any} */ x) => a + x.blob.size, 0);
     await ensureRoom(await missing(ARCH, writing, nat), m.name);      // room for the members still to write (and their index), held for this sample until lr_index ends
@@ -279,5 +278,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
-  return { stubOf, attach, put, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, forgetAll: () => { stubs.clear(); log.forgetAll(); }, registro: log.registro };
+  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => held(m.nat.key, () => putHeld(m, tell)), same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, forgetAll: () => { stubs.clear(); log.forgetAll(); }, registro: log.registro };
 }
