@@ -30,9 +30,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const api = BUD.attach({ enabled: true, disabled: false, stats, budgetMb: BUD.sessionLevel(), strikes: 0, pendingDown: /** @type {{ current: number, strikes: number } | null} */ (null), lastPanic: /** @type {string | null} */ (null) }); const death = { restarts: /** @type {number[]} */ ([]), ooms: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
   const base = n => String(n || "").split(/[\\/]/).pop() || "";
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled, limitMb: () => api.budgetMb || (api.choice && api.choice.mb) || 0 });
-  // resolved when a worker first has its engine (the .wasm downloaded and compiled): browser.js times the reopening of the stored files from here, not from the download
-  let upOk = () => {}; api.up = new Promise(r => { upOk = () => r(true); });
-  const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));
+  let upOk = () => {}; api.up = new Promise(r => { upOk = () => r(true); }); const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));      // up: a worker first has its engine (.wasm downloaded, compiled); browser.js times the reopening of the stored files from it
   function spawn() {
     const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy, BUD.whenProbed, () => takeDown(api));
     w.onmessage = ev => {
