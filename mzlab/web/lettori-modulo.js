@@ -86,8 +86,9 @@ const LETTORI_MOD = {
   async valida(/** @type {Blob} */ blob, /** @type {string} */ name) { return /** @type {string} */ ((await ask({ op: "valida", fam: "valida", members: [{ name, blob }] })).text); },
   /** what the module sees in a dataset */
   async probe(/** @type {string} */ fam, /** @type {Member[]} */ members) { return /** @type {Probe} */ ((await ask({ op: "probe", fam, members })).info); },
-  /** the mzML of sample `c` of a dataset as a File of OPFS (a Blob without OPFS); `signal` ends the worker, so the conversion stops at once */
-  async toMzml(/** @type {string} */ fam, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ dest, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal) {
+  /** the mzML of sample `c` of a dataset as a File of OPFS (a Blob without OPFS); `signal` ends the worker, so the conversion stops at once; `opts` = {dad, compression}
+   * of «Download .mzML» (`to_mzml_come`), without it the form of the loading */
+  async toMzml(/** @type {string} */ fam, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ dest, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal, /** @type {{ dad: boolean, compression: string } | undefined} */ opts) {
     if (signal && signal.aborted) throw cancelled();
     const w = start(), drop = async () => {
       // the terminated worker may still hold the file for a moment: try again a few times
@@ -98,7 +99,7 @@ const LETTORI_MOD = {
     const onAbort = () => { w.postMessage({ op: "cancel" }, []); w.terminate(); if (w === worker) worker = null; const e = cancelled(); for (const p of wait.values()) p.no(e); wait.clear(); drop(); };
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     try {
-      const r = await ask({ op: "toMzml", fam, members, c, dest }, onProgress);
+      const r = await ask({ op: "toMzml", fam, members, c, dest, ...opts }, onProgress);
       const out = r.file || new Blob(r.parts, { type: "application/xml" });
       // the spectra a truncated file lacked: the converted mzML is whole, so the row of the loading learns it from here (`lr.js` adds it to the index's)
       if (r.missing) Object.defineProperty(out, "mzlabMissing", { value: r.missing });

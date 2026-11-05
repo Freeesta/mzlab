@@ -13,7 +13,7 @@ const CONV = {
   key(/** @type {string} */ name) { return this.compression + ":" + name; },
   // the estimate of the mzML files still to be written, "" when there is nothing to write
   estimate() {
-    const todo = (typeof ST !== "undefined" && ST.files || []).filter((/** @type {Bag} */ x) => this.native().includes(x.name) && !this.made.has(this.key(x.name)));
+    const todo = (typeof ST !== "undefined" && ST.files || []).filter((/** @type {Bag} */ x) => this.writes(x.name) && !this.made.has(this.key(x.name)));
     const total = todo.reduce((/** @type {number} */ a, /** @type {Bag} */ x) => a + (x.size || 0), 0) * (this.RATIO[this.compression] || 1);
     return total ? "≈ " + (total > 1e6 ? (total / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1e3)) + " kB") : "";
   },
@@ -23,28 +23,52 @@ const CONV = {
   },
   // the real size of the mzML already written for `name` (in the desktop app the file stays on the disk and its size comes from the native side)
   realSize(/** @type {string} */ name) {
-    const b = this.files.get(name) || this.made.get(this.key(name));
+    const b = this.held(name);
     const n = b ? b.size || /** @type {any} */ (b).mzlabSize || 0 : 0;
     return n ? (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " kB") : "";
   },
   made: new Map(),        // name -> mzML written on request for a sample of a maker's file (nativo.js)
-  add(/** @type {string} */ name, /** @type {Blob} */ blob) { this.files.set(name, blob); },
+  // name -> how the readers module wrote the mzML at the loading ({fam, mem, c}, `gz` = the .mzXML.gz it inflated): a download in another compression is written again from there
+  sources: /** @type {Map<string, { fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File }>} */ (new Map()),
+  add(/** @type {string} */ name, /** @type {Blob} */ blob, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File } | undefined} */ src) { this.files.set(name, blob); if (src) this.sources.set(name, src); },
+  // the mzML ready for `name` in the chosen compression (the one the readers module wrote at the loading is "standard")
+  held(/** @type {string} */ name) { return this.sources.has(name) && this.compression !== "standard" ? this.made.get(this.key(name)) : this.files.get(name) || this.made.get(this.key(name)); },
+  // whether the mzML of `name` in the chosen compression is written on request
+  writes(/** @type {string} */ name) { return this.native().includes(name) || this.compression !== "standard" && this.sources.has(name); },
   // the samples of the maker's files of this page: their mzML is written when it is asked for
   native() { const rb = typeof window !== "undefined" && window.MZLAB_RUST; return rb && rb.nativeNames ? rb.nativeNames() : []; },
   has(/** @type {string} */ name) { return this.files.has(name) || this.native().includes(name); },
   get size() { return new Set([...this.files.keys(), ...this.native()]).size; },
   // the mzML of a sample of a maker's file, written now into the box of the loading (a panel with the scans done and the cancel button); null if it was cancelled or failed
   async make(/** @type {string} */ name) {
+    const src = this.sources.get(name);
+    if (src) return this.again(name, src);
     const rb = window.MZLAB_RUST, box = document.getElementById("up");
     if (!rb || !rb.nativeToMzml || !rb.isNative(name) || !box) return null;
     const f = (typeof ST !== "undefined" && ST.files || []).find((/** @type {Bag} */ x) => x.name === name), g = await ConvUI.card(box, [1]), ui = g.start(1, name);
     try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, (/** @type {Bag} */ p) => ui.update(p), g.signal, this.compression); ui.done(); g.end(); this.made.set(this.key(name), blob); this.paintSizes(); return blob; }
     catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
   },
+  // a sample the readers module converted at the loading, written again in the chosen compression: the form of the loading (optical matrix included), so the file of
+  // `mzlab-cli convert --set conv.dad=true --compression C`; null if it was cancelled or failed
+  async again(/** @type {string} */ name, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File }} */ src) {
+    const M = window.LETTORI_MOD, box = document.getElementById("up");
+    if (!M || !box) return null;
+    const g = await ConvUI.card(box, [1]), ui = g.start(1, name), dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;
+    let temp = "";
+    try {
+      let mem = src.mem;
+      if (src.gz) { const x = await window.GZFLUSSO.mzxml(src.gz, () => {}, g.signal); temp = x.mzlabTemp; mem = [{ name: x.name, blob: x }]; }
+      const blob = await M.toMzml(src.fam, mem, src.c, dest, (/** @type {Bag} */ p) => ui.update(p), g.signal, { dad: true, compression: this.compression });
+      ui.done(); g.end(); this.made.set(this.key(name), blob); this.paintSizes(); return blob;
+    }
+    catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
+    finally { if (temp) window.GZFLUSSO.drop(temp); }
+  },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
   async download(/** @type {string} */ name) {
-    let blob = this.files.get(name) || this.made.get(this.key(name));
-    if (!blob && this.native().includes(name)) blob = await this.make(name);
+    let blob = this.held(name);
+    if (!blob && this.writes(name)) blob = await this.make(name);
     if (!blob) return false;
     if (window.MZLAB_DESKTOP) {
       if (blob.mzlabId == null || !/** @type {any} */ (window).MZLAB_SAVE_MZML) return false;
@@ -393,4 +417,4 @@ function convElapsed(/** @type {number} */ ms) {
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
 
-if (typeof module !== "undefined") module.exports = { CONVROWS, convName, wiffName, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { CONV, CONVROWS, convName, wiffName, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };
