@@ -365,18 +365,21 @@ fn rpc_route(state: &State, body: &[u8]) -> Option<Response> {
     })
 }
 
-/// `lr/upload?name&off&total`: a piece of a file that reaches the app as bytes; the answer holds the number of the file once the last piece is in.
+/// `lr/upload?name&off&total[&mtime]`: a piece of a file that reaches the app as bytes; the answer holds the number of the file once the last piece is in.
 fn upload_route(state: &State, q: &HashMap<&str, &str>, body: &[u8]) -> Option<Response> {
     let (name, off, total) = (
         q.get("name")?,
         q.get("off")?.parse().ok()?,
         q.get("total")?.parse().ok()?,
     );
-    Some(match state.upload_chunk(&decode(name), off, total, body) {
-        Ok(Some(id)) => json(200, format!("{{\"id\":{id}}}")),
-        Ok(None) => json(200, "{}".into()),
-        Err(e) => error(&e),
-    })
+    let mtime = q.get("mtime").and_then(|t| t.parse().ok());
+    Some(
+        match state.upload_chunk(&decode(name), off, total, mtime, body) {
+            Ok(Some(id)) => json(200, format!("{{\"id\":{id}}}")),
+            Ok(None) => json(200, "{}".into()),
+            Err(e) => error(&e),
+        },
+    )
 }
 
 #[cfg(test)]

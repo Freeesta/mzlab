@@ -41,18 +41,26 @@ impl State {
 
     /// A file that reaches the app as bytes (a file dragged into the page, not picked in the system dialog): pieces of `body` written at `off` into the folder
     /// of the files made by the app. Returns the number of the file when the last piece is in.
-    pub fn upload_chunk(&self, name: &str, off: u64, total: u64, body: &[u8]) -> Result<Option<u32>> {
+    /// `mtime` (ms, the File's `lastModified`): the received file keeps that date, and a file of the same name, size and date already here is not written again
+    /// (the same members picked again stay the same files, so `natsame` recognises their dataset).
+    pub fn upload_chunk(&self, name: &str, off: u64, total: u64, mtime: Option<u64>, body: &[u8]) -> Result<Option<u32>> {
         let name = crate::store::clean(name)?;
         if body.is_empty() && total > 0 {
             return Err(Error::new("err.file.unknown").with("detail", "empty upload"));      // a webview that drops the body of a POST must not look like a file that was received
         }
         let dir = self.store.lock().unwrap_or_else(|e| e.into_inner()).own_dir()?;
+        if off == 0 && mtime.is_some() && crate::store::stamp(&dir.join(name)) == mtime.map(|t| (total, t)) {
+            return Ok(Some(self.pick_path(&dir.join(name))));
+        }
         let part = dir.join(format!("{name}.part"));
         let mut f = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(&part).map_err(|e| io_error(&e))?;
         f.seek(SeekFrom::Start(off)).map_err(|e| io_error(&e))?;
         f.write_all(body).map_err(|e| io_error(&e))?;
         if off + body.len() as u64 >= total {
             f.set_len(total).map_err(|e| io_error(&e))?;
+            if let Some(t) = mtime {
+                f.set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_millis(t)).map_err(|e| io_error(&e))?;
+            }
             drop(f);
             let dest = dir.join(name);
             std::fs::rename(&part, &dest).map_err(|e| io_error(&e))?;
