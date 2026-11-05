@@ -1,5 +1,5 @@
 """SIM channels whose file gives no Q1 (synthetic SIM .wiff of tools/wiff_sim.py whose method names no ion, no laboratory data): the seven channels stay apart, each is called
-«ione N» (never «null»), the picker has one row per channel, the chromatogram menu extracts one of them and the plot keeps one trace, the banner of a long list says «SIM files»,
+«ione N» (never «null»), the picker has one row per channel, the chromatogram menu extracts one of them, the plot keeps one trace and the title names it, the banner of a long list says «SIM files»,
 and the method panel shows «—» for what the file does not say. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_senzaq1.py"""
 import subprocess, sys, os, tempfile
 from pathlib import Path
@@ -43,6 +43,9 @@ try:
             pg.locator("#ctx .ctxsub [role=menuitemcheckbox]").nth(3).click()
             attendi(pg, "%s._a && new Set(%s._a.sr.map(s => s.ion)).size === 1" % (PANEL, PANEL), timeout=30000)
         step("the menu extracts one channel and the plot keeps one ion", submenu)
+        def title():
+            attendi(pg, "(() => { const p = %s; return p && p.el.querySelector('.ttl').textContent === 'SIM · ione 3'; })()" % PANEL, timeout=15000)
+        step("the panel of one channel is titled by its name («SIM · ione 3»), never by its key", title)
         def banner():
             need(pg.evaluate("I18N.t('mrm.capNoticeSim', {n: 12, t: 27})").endswith("27 file SIM.") or "SIM files" in pg.evaluate("I18N.t('mrm.capNoticeSim', {n: 12, t: 27})"), "text")
         step("the long-list banner says SIM files", banner)

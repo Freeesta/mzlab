@@ -190,7 +190,10 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t(rb?"err.file.wiffEngine":"err.file.wiffLoad"),f.name]));return res}
   if(!rb||rb.disabled||!rb.nativeSamples||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=/** @type {(k: string, p?: unknown) => string} */ ((k,p)=>I18N.t(k,p)),dropped=new Set();
-  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  // two files of one name and kind in one loading (loose files of two folders): no folder tells which .wiff goes with which .wiff.scan, so neither pair is opened
+  const kinds=new Set(),twins=new Set();
+  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};if(kinds.has(k+sc))twins.add(k);kinds.add(k+sc);e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  for(const k of twins){const e=WIFF_WAIT.get(k);WIFF_WAIT.delete(k);dropped.delete(k);res.errs.push([T("load.wiffTwin",{name:e.stem+".wiff"}),e.stem+".wiff"])}
   const taken=[...res.files.map((/** @type {FileRiga} */ x)=>x.name),...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name)],pairs=[];
   // a pair is in the list as soon as its two files are together, before anything is read
   for(const [k,e] of [...WIFF_WAIT]){
@@ -204,12 +207,12 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD;let sp=/** @type {Promise<{ samples: any[] }> | null} */ (null);const parsed=()=>sp||(sp=rb.nativeSamples(mem));
       const hit=await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
       const probing=M0&&window.LETTORI_FAM.sciex.sonda;if(probing)parsed().catch(()=>{});const pr=probing?await M0.probe("sciex",mem).catch(()=>null):null;      // an engine error counts only when the module does not take the pair
-      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size))});CONVROWS.drop(e.row);continue}
+      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size,pr.campioni.length?undefined:e.wiff.name))});CONVROWS.drop(e.row);continue}
       const s=(await parsed()).samples,key=NATIVO.key(e.stem);
       // × on the row of the pair while it was parsed: its samples are not made (they would open by themselves)
       if(OPENNOW.held(e.row)){CONVROWS.finish(e.row,"cancel");continue}
       s.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
-    catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
+    catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam,undefined,e.wiff.name));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
     CONVROWS.drop(e.row)}
@@ -245,7 +248,7 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
     try{if(/\.mzxml\.gz$/i.test(f.name)){const x=await window.GZFLUSSO.mzxml(f,(/** @type {number} */ fr)=>CONVROWS.set(nm,"run",Math.floor(50*fr)),ui.signal);temp=x.mzlabTemp;mem=[{name:x.name,blob:x}]}      // its mzXML, inflated into conv/ (half of the row's bar)
       const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},ui.signal);
       ui.done();CONV.add(nm,blob);if(/** @type {any} */ (blob).mzlabMissing)M.missing.set(nm,/** @type {any} */ (blob).mzlabMissing);ready=new File([blob],nm);out.push(ready)}
-    catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
+    catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message,who=f.mzlabModulo?.shown||f.name;(rep.errs[m]=rep.errs[m]||[]).push(who);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:who,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm);if(temp)window.GZFLUSSO.drop(temp)}
     if(ready&&onFile)onFile(ready,g)}
   for(const nm of names.values())CONVROWS.drop(nm);
@@ -379,8 +382,11 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
-// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load
-function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods()}
+// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load;
+// they take the roles and times of the open files and ask no proposal from the names, which OPENNOW.sync would write over the saved ones
+function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
+  for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
+  FILETAB.flush(true);ST.methods=d.methods||[];renderMethods()}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();ST.files.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{CartCarica.fromInput(e.target.files);e.target.value=""};

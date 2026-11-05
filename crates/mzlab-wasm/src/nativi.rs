@@ -8,12 +8,13 @@ use std::rc::Rc;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::mzidx_spill::Spill;
 use mzlab_core::sorgente::SorgenteLettore;
 use mzlab_core::{lettori_centroidi, lettori_mzml, upload};
 use wasm_bindgen::prelude::*;
 
 use crate::esterno::{errore_del_modulo, LettoreEsterno, ModuloJs};
-use crate::{error_json, BlockWriter, JsOutput, JsReader};
+use crate::{error_json, Accorpa, BlockWriter, JsOutput, JsReader};
 
 /// Readers kept open at once (a `.wiff` holds its container in memory).
 const OPEN: usize = 4;
@@ -284,7 +285,7 @@ pub(crate) struct JsSpill {
     pub(crate) get: Function,
 }
 
-impl mzlab_core::mzidx_spill::Spill for JsSpill {
+impl Spill for JsSpill {
     fn put(&mut self, offset: u64, data: &[u8]) -> mzlab_core::Result<()> {
         self.put
             .call2(
@@ -360,14 +361,12 @@ pub fn build_mzidx_native(
     let c = c as usize;
     let mut l = crate::contato::apri(fs, |fs| m.apri_fs(fs), &tell, step, c)?;
     let cm = (c, l.mancanti(c));
-    let mut out = JsOutput { write };
-    // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round
+    let mut out = Accorpa::new(JsOutput { write });
+    // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round; OPFS writes in 1 MiB blocks (`accorpa`)
     let mut spill = spill_put
         .zip(spill_get)
-        .map(|(put, get)| JsSpill { put, get });
-    let spill = spill
-        .as_mut()
-        .map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill);
+        .map(|(put, get)| Accorpa::new(JsSpill { put, get }));
+    let spill = spill.as_mut().map(|s| s as &mut dyn Spill);
     // a profile sample that the page also wants as centroids: both indexes from one decoding of the scans
     if let Some(wc) = write_cen.filter(|_| !centroid && primo_ms1_profilo(&mut *l, c)) {
         return doppio(l, cm, impronte, name, out, wc, budget_mb, spill, &tell);
@@ -389,6 +388,7 @@ pub fn build_mzidx_native(
         &mut |n| tell(n),
     )
     .map_err(|e| error_json(&e))?;
+    out.fine().map_err(|e| error_json(&e))?;
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, cm.1
@@ -402,14 +402,14 @@ fn doppio(
     (c, missing): (usize, usize),
     impronte: Vec<upload::Impronta>,
     name: &str,
-    mut out: JsOutput,
+    mut out: Accorpa<JsOutput>,
     write_cen: Function,
     budget_mb: u32,
-    spill: Option<&mut dyn mzlab_core::mzidx_spill::Spill>,
+    spill: Option<&mut dyn Spill>,
     tell: &dyn Fn(u32),
 ) -> Result<String, JsValue> {
     let mut lc = lettori_centroidi::Centroidato::nuovo(l);
-    let mut out_cen = JsOutput { write: write_cen };
+    let mut out_cen = Accorpa::new(JsOutput { write: write_cen });
     tell(2);
     let ((st, sha256), (sc, _)) = upload::indicizza_lettore_doppio(
         &mut lc,
@@ -423,6 +423,8 @@ fn doppio(
         &mut |n| tell(n),
     )
     .map_err(|e| error_json(&e))?;
+    let fine = out.fine().and_then(|()| out_cen.fine());
+    fine.map_err(|e| error_json(&e))?;
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{},\"cen\":{{\"peaks\":{},\"bytes\":{}}}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, missing, sc.peaks, sc.bytes

@@ -69,8 +69,8 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
 }
 
 impl Wiff {
-    /// True when the engine's reader (written for the 3200 QTRAP: full scans, product-ion scans and MRM) would not read this sample as the file is:
-    /// another instrument model, or a scan type besides those three.
+    /// True when the engine's reader (written for the 3200 QTRAP: full scans, product-ion scans and dense MRM) would not read this sample as the file is:
+    /// another instrument model, a scan type besides those three, or a scheduled MRM experiment (its sparse blocks; a file with no Log has no model to tell).
     pub fn variante(&self) -> bool {
         let other_model = self
             .model
@@ -80,7 +80,7 @@ impl Wiff {
             || self
                 .experiments
                 .iter()
-                .any(|e| !super::modi::nativo(e.code))
+                .any(|e| !super::modi::nativo(e.code) || e.window_s.is_some())
     }
 }
 

@@ -3,7 +3,7 @@
     python3 tools/wiff_riferimento.py OUT
 
 Writes into OUT/ synthetic pairs in the layout of the 3200 QTRAP files (`one.wiff` + `.wiff.scan`: one sample with two experiments, a full scan and a
-product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `serie.wiff`: 80 profile scans with a chromatographic peak; `prodotto.wiff`: two samples of product-ion scans: one precursor 305.0, and two (229.1, 305.0), no reference entry), built with
+product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `buchi.wiff`: sample 2 in the table with no Idx stream (an injection that acquired nothing); `serie.wiff`: 80 profile scans with a chromatographic peak; `prodotto.wiff`: two samples of product-ion scans: one precursor 305.0, and two (229.1, 305.0), no reference entry), built with
 tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 The variants of the readers module (feature `estesi`): `variante.wiff` (Log model QTRAP 5500; survey scan V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1,
@@ -175,6 +175,12 @@ def main():
     w.sample(4, [("scan", FULL, 600.0, 1.0)])
     w.sample(5, [("scan", FULL, 600.0, 1.0)], data_name="Sample_A")
     w.save(out, "nomi")
+    w = Writer()  # an injection that acquired nothing: sample 2 is in the sample table with no Idx stream
+    w.sample(1, [("scan", FULL, 600.0, 1.0)])
+    w.sample(2, [])
+    w.sample(3, [("scan", FULL, 600.0, 1.0)])
+    del w.streams["SampleSubtree/Sample2/Idx"]
+    w.save(out, "buchi")
     cfb_scrivi.write({"SampleSubtree/Sample1/Idx": bytes(32)}, out / "lonely.wiff")
     w, series = Writer(), []
     for k in range(80):  # a peak at m/z ~229.1 (9 bins wide) eluting at 4 min, on sparse noise: enough points per scan for the profile step
@@ -226,13 +232,13 @@ def energy(out: Path):
 
 
 def full_tic(out: Path):
-    """A full scan experiment over three cycles: the header TIC of a block is not the sum of its profile (cycle 1), is missing (cycle 2, 0.0: the sum is written) or is the sum (cycle 3)."""
+    """A full scan experiment over three cycles: the header TIC of a block is not the sum of its profile nor a float32 value (cycle 1), is missing (cycle 2, 0.0: the sum is written) or is the sum (cycle 3)."""
     ys = [expected_scan(p)[1] for p in (FULL, LATE, LATE)]
     method = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
     w = Writer()
-    w.sample(1, [("scan", FULL, 1000.0, 1.5e6), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
+    w.sample(1, [("scan", FULL, 1000.0, 1234567.891), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
     w.save(out, "totale")
-    return {"bpc": [max(y) for y in ys], "tic": [1.5e6, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
+    return {"bpc": [max(y) for y in ys], "tic": [1234567.891, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
 
 
 def mrm_method(trs) -> bytes:

@@ -17,6 +17,8 @@ shimadzu = []
 # the SQLite reader is written in the crate (bruker/sqlite_min.rs); ruzstd (MIT, pure Rust) decodes the blocks of analysis.tdf_bin
 bruker = ["dep:ruzstd", "mzlab-core/precursori"]
 tutte = ["aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker"]
+# `cargo test -p mzlab-lettori` (the CI) runs the tests of every family; the .wasm modules take this crate with `default-features = false` and one family
+default = ["tutte"]
 
 [dependencies]
 # no default features: each family module carries only the readers of its own family (`thermo` turns on the Thermo reader of the core)

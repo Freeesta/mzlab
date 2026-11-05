@@ -85,12 +85,25 @@ try:
             for _ in range(4): pg.click("#samptab")
             ready(pg)
         cell(pg, "many files: sample table toggled 4 times", sample_table)
+        def stat_targets():
+            stat_ok(pg)                                    # WCAG 2.5.8: every field of the panel is at least 24 px tall
+            small = pg.evaluate("[...document.querySelectorAll('#sb-panel-stat :is(input:not([type=file]), select, button)')].filter(e => e.offsetParent && e.getBoundingClientRect().height < 24).map(e => (e.id || e.dataset.m) + ':' + e.getBoundingClientRect().height.toFixed(1))")
+            assert not small, small
+        cell(pg, "many files: statistics fields are 24 px targets", stat_targets)
         def profile():
             stat_ok(pg)
             pg.fill("#prof-mz", "364.4"); pg.fill("#prof-rt", "14.3"); pg.click("#prof-go")
             attendi(pg, "!!document.querySelector('#prof-tab') || !!document.querySelector('#prof-msg').textContent", 60000)
             assert pg.locator("#prof-tab tbody tr").count() >= 3, pg.inner_text("#prof-msg")
         cell(pg, "many files: time profile of an ion", profile)
+        def profile_a11y():
+            stat_ok(pg)                                    # the drawer is narrow: the result table scrolls sideways
+            box = "#prof-res .qq-scroll"
+            assert pg.evaluate(f"(e => e.scrollWidth > e.clientWidth)(document.querySelector('{box}'))"), "the table does not scroll: the cell tests nothing"
+            v = axe(pg, "#sb-pane"); assert not v, v
+            pg.focus(box); pg.keyboard.press("ArrowRight")                                   # the keyboard scrolls it
+            attendi(pg, f"document.querySelector('{box}').scrollLeft > 0", 5000)
+        cell(pg, "many files: profile result scrolls by keyboard (axe)", profile_a11y)
         def remove():
             k = pg.evaluate("E.files.find(f => !f.gone && f.file.includes('t30')).k")
             pg.evaluate(f"removeFile(E.files[{k}])"); ready(pg)
@@ -98,6 +111,13 @@ try:
             rows = pg.evaluate("[...document.querySelectorAll('#prof-tab tbody tr')].map(r => r.textContent)")
             assert not any("t30" in x for x in rows), rows
         cell(pg, "many files: a file removed, the profile forgets it", remove)
+        def profile_error():
+            profile()                                      # a result on screen, then a wrong retention time
+            pg.fill("#prof-rt", "-1"); pg.click("#prof-go")
+            attendi(pg, "!!document.querySelector('#prof-msg').textContent", 30000)
+            assert not pg.locator("#prof-res").inner_text().strip(), "the old result stays beside the error"
+            assert pg.evaluate("PROFILO.result") is None
+        cell(pg, "many files: an input error drops the old profile", profile_error)
         cell(pg, "many files: undo, redo", lambda: (pg.keyboard.press("Control+z"), ready(pg), pg.keyboard.press("Control+Shift+z"), ready(pg)))
         T30 = "E.files.find(f => f.file === 'M_t30.mzML' && !f.gone)"
         ROW30 = "ST.files.find(f => f.name === 'M_t30.mzML')"

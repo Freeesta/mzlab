@@ -31,6 +31,7 @@
     "../../mzlab/web/draw.js",
     "../../mzlab/web/errori.js",
     "../../mzlab/web/capacita.js",
+    "../../mzlab/web/compat.js",
     "../../mzlab/web/avviso-capacita.js",
     "../../mzlab/web/bug-report.js",
     "../../mzlab/web/bug-report-testo.js",
@@ -154,6 +155,7 @@
     "../../mzlab/web/sottrazione.js",
     "../../mzlab/web/tdati-pannelli.js",
     "../../mzlab/web/tdati.js",
+    "../../mzlab/web/tic-provvisorio.js",
     "../../mzlab/web/transizioni.js",
     "../../mzlab/web/workflow.js"
   ]

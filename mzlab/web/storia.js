@@ -109,7 +109,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     const t = setTimeout(() => { e.chiudi = null; const f = e.scade; e.scade = null; if (f) { pila.togli(e); sync(); f(); } }, 6000);
     e.chiudi = () => { clearTimeout(t); e.chiudi = null; };
   }
-  /** Records a removal that can be taken back and shows its notice. o = { what, tab?, p?, dati, undo, redo, scade? }: `tab` ties it to a tab (a file, a closed panel), `p` to a live panel (the marks), `scade` runs once the notice has closed without an undo. @param {any} o */
+  /** Records a removal that can be taken back and shows its notice. o = { what, tab?, p?, dati, undo, redo, scade? }: `tab` ties it to a tab (a closed panel), `p` to a live panel (the marks), `scade` runs once the notice has closed without an undo. @param {any} o */
   function tolto(o) {
     const e = pila.push({ tipo: "tolto", what: o.what, tab: o.tab, p: o.p, dati: o.dati || "", prima: "U" + (o.dati || ""), dopo: null, undo: o.undo, redo: o.redo, scade: o.scade || null, chiudi: null });
     sync(); avviso(e); return e;

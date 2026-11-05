@@ -195,6 +195,37 @@ fn a_wiff_with_several_samples_gives_one_mzml_per_sample() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// An injection in the sample table that acquired nothing (no `Idx`): an empty mzML under its own number, as the site lists it with 0 scans, and the samples after it keep theirs.
+#[test]
+fn an_empty_injection_keeps_its_number_and_gives_an_empty_mzml() {
+    let dir = folder("vuote");
+    let src = dir.join("in");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let made = Command::new("python3")
+        .arg(root.join("tools/wiff_riferimento.py"))
+        .arg(&src)
+        .output();
+    if !made.is_ok_and(|o| o.status.success()) {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        return;
+    }
+    let out = dir.join("out");
+    let o = convert(&[p(&src.join("buchi.wiff")), "--out", p(&out)]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let files = mzmls(&out);
+    let names: Vec<&str> = files.iter().map(|f| f.0.as_str()).collect();
+    assert_eq!(names, ["buchi-1.mzML", "buchi-2.mzML", "buchi-3.mzML"]);
+    let spectra = |b: &[u8]| String::from_utf8_lossy(b).matches("<spectrum ").count();
+    assert_eq!(
+        files.iter().map(|f| spectra(&f.1)).collect::<Vec<_>>(),
+        [1, 0, 1]
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn usage_errors_and_a_missing_input_have_their_codes() {
     let dir = folder("usage");

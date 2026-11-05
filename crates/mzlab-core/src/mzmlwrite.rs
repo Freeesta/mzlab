@@ -239,8 +239,7 @@ pub struct SpectrumExtra {
     /// The precursors, in order (the chain of an MSn scan is one per level, outermost first). Empty: `Spectrum::precursor` is written as target and selected ion.
     #[cfg(feature = "precursori")]
     pub precursors: Vec<Precursore>,
-    /// `MS:1000285` total ion current as the maker reports it (the readers module takes the header of the block); `None`: summed from the points.
-    #[cfg(any(feature = "precursori", feature = "estesi"))]
+    /// `MS:1000285` total ion current as the maker reports it (a `.wiff` takes the header of the block, in every build); `None`: summed from the points.
     pub tic: Option<f64>,
     /// `MS:1000504` / `MS:1000505` base peak (m/z, intensity) as the maker reports it; `None`: found in the points.
     #[cfg(feature = "precursori")]
@@ -294,20 +293,10 @@ fn esc_into(out: &mut String, s: &str) {
 }
 
 /// The dwell time (userParam, read back by `mzmlhead`), then the precursor with its activation and the product of an SRM transition. The collision energy and the dwell
-/// (ms) are the ones the id spells (`ce=`, `dwell=`) and only the SCIEX readers module (`sciex`) writes them.
+/// (ms) are the ones the id spells (`ce=`, `dwell=`), written by every build: a readers module without `sciex` gives the same mzML as `mzlab-cli convert`.
 fn srm_windows(c: &Chromatogram, q1: f64, q3: f64) -> String {
-    let (mut dwell, mut ce) = (String::new(), String::new());
-    #[cfg(feature = "sciex")]
-    {
-        if let Some(d) = crate::mzmlsrm::id_dwell(&c.id) {
-            dwell = format!("<userParam name=\"MS_dwell_time\" value=\"{d}\"/>");
-        }
-        if let Some(e) = crate::mzmlhead::srm_id(&c.id).2 {
-            ce = format!("<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{e}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>");
-        }
-    }
-    #[cfg(not(feature = "sciex"))]
-    let _ = (c, &mut dwell, &mut ce);
+    let dwell = crate::mzmlsrm::id_dwell(&c.id).map_or(String::new(), |d| format!("<userParam name=\"MS_dwell_time\" value=\"{d}\"/>"));
+    let ce = crate::mzmlhead::srm_id(&c.id).2.map_or(String::new(), |e| format!("<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{e}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>"));
     format!("{dwell}<precursor><isolationWindow>{}</isolationWindow><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>{ce}</activation></precursor><product><isolationWindow>{}</isolationWindow></product>", mz_cv("MS:1000827", "isolation window target m/z", q1), mz_cv("MS:1000827", "isolation window target m/z", q3))
 }
 

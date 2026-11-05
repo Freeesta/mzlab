@@ -75,6 +75,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
 | parità sito ↔ app (funzioni e passi del Flow presenti da una parte sola, operazioni del motore assenti nell'app, test di parità mancanti, prossimi passi) | `docs/studi/parita-browser.md` (formati: `docs/studi/formati-matrice.md`) |
+| tabella funzione × faccia (sito, app, CLI) × prova, guardia delle op di `rust-worker.js` senza ramo nell'app (`tests/test_parita_operazioni.py`), determinismo (ordine delle `HashMap`) | `docs/agenti/parita.md` |
 | potenziale di WebAssembly (profili `opt-level`, SIMD128, binaryen, zlib-rs, thread, memory64, browser minimi; misure e prompt DEV) | `docs/agenti/wasm-potenziale.md` (prompt: `docs/studi/PROMPT_WASM_POTENZIALE/`) |
 | service worker, cache per versione del sito, `sw-manifest.json`, aggiornamenti | `docs/agenti/service-worker.md` |
 | esportazione di tutti i dati dell'utente: inventario dello storage nel browser, scrittore ZIP (`zip.rs`) | `docs/agenti/esporta-dati.md` |
@@ -116,6 +117,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusione.rs` (chiavi, blocchi, nome), comando `diagnosi_infusione` | `docs/agenti/infusione-lente.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
+| Safari e iPadOS (WebKit): API usate × versione minima × ripiego, pavimento 16.4, ripieghi di `compat.js` (`AbortSignal.any`, `createWritable`, appunti, `accept` sull'iPad) | `docs/agenti/compat-safari.md` |
 | tooltip: regola (solo se aggiungono informazione), inventario, elenco completo dei testi (`tools/elenco_tooltip.py`), hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
 | file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
 | elenco degli esperimenti MSn di un file DDA nella finestra «Albero MSn» (schede Experiments/Tree, TIC e XIC di un precursore, `msn-elenco.js`, colonne `lev`/`z` di `/api/dda`, `ptol` di `/api/chrom`) | `docs/agenti/msn-elenco.md` |

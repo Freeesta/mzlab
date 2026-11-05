@@ -20,7 +20,7 @@ const run = new Function("window", "ST", "WIFF_WAIT", "NATIVO", "CartCarica", "w
 const pairFiles = () => [new File(["w"], "S.wiff"), new File(["s"], "S.wiff.scan")];
 const samples2 = [{ id: 1, name: "a", size: 1 }, { id: 2, name: "b", size: 1 }];
 
-async function go({ listed = [], same = [], samples = samples2, nativeError = null, probe = undefined, fam = true, retriable = "" }) {
+async function go({ files = pairFiles(), listed = [], same = [], samples = samples2, nativeError = null, probe = undefined, fam = true, retriable = "" }) {
   const calls = { samples: 0, probe: 0, same: 0, stand: 0, retriable: 0 };
   const rb = {
     nativeSamples: async () => { calls.samples++; if (nativeError) throw nativeError; return { samples }; },
@@ -34,7 +34,7 @@ async function go({ listed = [], same = [], samples = samples2, nativeError = nu
   const w = { MZLAB_RUST_READY: Promise.resolve(rb), LETTORI_MOD: probe === undefined ? null : M0, LETTORI_FAM: { sciex: { sonda: fam } } };
   global.window = w; rows.length = 0;
   const wf = run(w, { files: listed }, new Map(), NATIVO, CartCarica, global.wiffName, global.I18N, global.DIAG, global.memDesc, global.CONVROWS);
-  const res = await wf(pairFiles(), null, new AbortController().signal);
+  const res = await wf(files, null, new AbortController().signal);
   return { calls, res, rows: rows.slice() };
 }
 (async () => {
@@ -67,5 +67,14 @@ async function go({ listed = [], same = [], samples = samples2, nativeError = nu
   // × on the row of the pair while it is parsed: no sample is made, the row ends as cancelled
   held.add("S.wiff"); r = await go({}); held.clear();
   assert.equal(r.res.files.length, 0); assert.ok(r.rows.some(x => x[0] === "finish" && x[1] === "S.wiff" && x[2] === "cancel"));
+  // two pairs with one name and no folder (loose files from two folders in one drop or pick): neither is opened, an error names them (the second used to replace the first silently)
+  r = await go({ files: [...pairFiles(), ...pairFiles()] });
+  assert.equal(r.calls.samples, 0, "an ambiguous pair is not parsed");
+  assert.deepEqual(r.res.errs, [["load.wiffTwin", "S.wiff"]]);
+  assert.ok(!r.rows.some(x => x[0] === "add"), "no row for a pair that is not opened");
+  // the same two pairs in their folders: both are opened
+  const inDir = d => pairFiles().map(f => CartCarica.setDir(f, d));
+  r = await go({ files: [...inDir("x/"), ...inDir("y/")] });
+  assert.equal(r.calls.samples, 2, "one parse per pair"); assert.equal(r.res.errs.length, 0);
   console.log("ok");
 })().catch(e => { console.error(e); process.exit(1); });
