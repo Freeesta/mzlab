@@ -42,4 +42,4 @@ Regola (`CLAUDE.md`): ogni funzione esiste nel sito (`.wasm` + OPFS) e nell'app 
 | Feature da un `.raw` e dal suo mzML | — | `features` | limite: stesso risultato solo per acquisizioni a centroidi; un `.raw` a profilo usa i centroidi del produttore, il suo mzML a profilo la centroidatura di mzLab (area di `features` e del lettore Thermo) |
 
 ## Verifiche su dati reali (fuori dal repository)
-- `.mzidx` di 6 mzML, canali (7 ingressi), `sim-table` di un `.wiff` (7 viste, 21 campioni): sito e CLI uguali byte per byte; differenze trovate e chiuse: TIC del `.wiff` (f32/f64), energia SRM e del precursore, nome della sorgente dell'indice nativo.
+- `.mzidx` di 6 mzML, canali (7 ingressi), `sim-table` di un `.wiff` (7 viste, 21 campioni): sito e CLI uguali byte per byte; differenze trovate e chiuse: TIC del `.wiff` (f32/f64), energia SRM e del precursore.
