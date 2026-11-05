@@ -364,6 +364,18 @@ function convName(/** @type {string} */ rawName, /** @type {Iterable<string> | n
   const base = String(rawName).replace(/\.raw$/i, "");
   return freeMzml(base, ".raw", new Set([...(taken || [])].map(n => String(n).toLowerCase())));
 }
+// "#" separates a file from its items in the list ("x.mzML#MS1", lr.rs) and every page that splits there takes the first one: a file the user gives with a "#"
+// enters under the name with "_" (null when the name has none). Both files of a .wiff pair get the same name (the list name of their samples is made later);
+// another file takes a free name ("x_1_2.mzML"), `taken` = names in use (any case).
+function hashFree(/** @type {string} */ name, /** @type {Iterable<string> | null | undefined} */ taken) {
+  if (!String(name).includes("#")) return null;
+  const n = String(name).replace(/#/g, "_");
+  if (/\.wiff(\.scan)?$/i.test(n)) return n;
+  const used = new Set([...(taken || [])].map(x => String(x).toLowerCase())), m = /^(.*?)((?:\.[A-Za-z0-9]+)?(?:\.gz)?)$/.exec(n) || [n, n, ""];
+  let out = n;
+  for (let i = 2; used.has(out.toLowerCase()); i++) out = m[1] + "_" + i + m[2];
+  return out;
+}
 // "base.mzML", else "base<ext>.mzML", else "base_2<ext>.mzML", "base_3<ext>.mzML"...: a third file with the same name never takes the name of the second
 function freeMzml(/** @type {string} */ base, /** @type {string} */ ext, /** @type {Set<string>} */ used) {
   if (!used.has((base + ".mzML").toLowerCase())) return base + ".mzML";
@@ -378,7 +390,7 @@ function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sam
   const nm = sampleName == null ? null : String(sampleName);
   // the reader names a lone sample without a DATA name "<file> #<number>" (nomi.rs): the extension as the file has it, the number of the container
   const given = nm != null && !(nm.startsWith(stem) && /^\.wiff #\d+$/i.test(nm.slice(stem.length)));
-  const clean = given ? String(nm).trim().replace(/[/\\:*?"<>|]/g, "_").slice(0, 120) : "";
+  const clean = given ? String(nm).trim().replace(/[/\\:*?"<>|#]/g, "_").slice(0, 120) : "";
   const used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
   const base = clean || (several ? stem + "_s" + sample : String(stem));
   return freeMzml(base, ".wiff", used);
@@ -393,4 +405,4 @@ function convElapsed(/** @type {number} */ ms) {
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
 
-if (typeof module !== "undefined") module.exports = { CONVROWS, convName, wiffName, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { CONVROWS, convName, wiffName, hashFree, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };

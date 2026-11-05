@@ -201,6 +201,7 @@ declare var fileBase: any;
 declare var fileComparator: any;
 declare var fmtTime: any;
 declare var freeMzml: any;
+declare var hashFree: any;
 declare var hdrH: any;
 declare var hrGroup: any;
 declare var id: any;

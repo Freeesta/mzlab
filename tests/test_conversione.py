@@ -110,3 +110,11 @@ def test_wiff_same_sample_name_never_gets_an_unexplained_sN():
       console.log(JSON.stringify(out))""")
     assert got == ["NF_t0_nospik.mzML", "NF_t0_spik_80L.mzML", "NF_t0_nospik.wiff.mzML", "NF_t0_spik_80L.wiff.mzML", "NF_t0_nospik_2.wiff.mzML"]
     assert not any("_s" in n.replace("_spik", "") for n in got)
+
+
+def test_a_hash_in_a_file_name_becomes_an_underscore():
+    # "#" separates a file from its items in the list: the name the file enters under; both files of a pair alike; another file takes a free name
+    got = run("""console.log(JSON.stringify([c.hashFree("Q.mzML", []), c.hashFree("P#1.mzML", []), c.hashFree("P#1.mzML", ["p_1.mzml"]),
+        c.hashFree("P#1.mzML", ["p_1.mzml", "P_1_2.mzML"]), c.hashFree("A#1.wiff", ["a_1.wiff"]), c.hashFree("A#1.WIFF.SCAN", []), c.hashFree("x#.mzML.gz", ["x_.mzml.gz"]),
+        c.wiffName("S", 1, false, [], "Run #3")]))""")
+    assert got == [None, "P_1.mzML", "P_1_2.mzML", "P_1_3.mzML", "A_1.wiff", "A_1.WIFF.SCAN", "x__2.mzML.gz", "Run _3.mzML"]

@@ -521,6 +521,8 @@ declare var guardInt: any;
 declare var gzToEngine: any;
 declare var h: any;
 declare var hasDocked: any;
+declare var hashFree: any;
+declare var hashRename: any;
 declare var hashView: any;
 declare var hdMoreInit: any;
 declare var hdMorePlace: any;

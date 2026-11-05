@@ -112,6 +112,7 @@ I18N.add("it", {
   "load.dup.many": "{n} file già caricati: ignorati.",
   "load.wiffTwin": "Due coppie con questo nome nello stesso caricamento, da cartelle diverse, e niente dice quale .wiff va con quale .wiff.scan. Non apro nessuna delle due: carica ogni cartella (o ogni coppia) da sola.",
   "load.wiffWait": "Aspetto l'altro file della coppia (.wiff e .wiff.scan con lo stesso nome).",
+  "load.note.hashRenamed": "{from} aperto come {to}: il carattere # separa nell'elenco un file dalle sue parti.",
   "load.note.movedToDam": "Metodi messi nel riquadro 2: {name}",
   "load.note.movedToData": "File di dati messi nel riquadro 1: {name}",
   "load.hrmix.note": "Bassa e alta risoluzione non si aprono insieme: scegli quali caricare ora, gli altri restano in elenco per un secondo caricamento.",
