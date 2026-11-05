@@ -8,7 +8,7 @@
 |---|---|---|---|---|
 | WebAssembly SIMD128 | ogni `.wasm` (`.cargo/config.toml`) | 16.4 | motore spento, avviso `motore` | `e2e_capacita` (`cap-off=simd128`) |
 | bulk-memory, sign-ext, reference-types, multivalue | `.wasm` (predefiniti di rustc) | 15 | sotto il pavimento | — |
-| OPFS `getDirectory` | `archivio.js`, `lettura-sync.js`, molti | 15.2 | `capacita` `opfs`; finestra privata: avvio fallito con il banner di `AVVIO` | `e2e_capacita` |
+| OPFS `getDirectory` | `archivio.js`, `lettura-sync.js`, molti | 15.2 | `capacita` `opfs`; finestra privata: `lrInit` (`browser.js`) prova `getDirectory` prima del motore e, se rifiutato, il banner di `AVVIO` dice `load.err.noStorage` (finestra normale o app) | `e2e_capacita`, `e2e_safari_ipad` |
 | `createSyncAccessHandle` (worker) | `rust-worker.js`, `libreria-cartella.js`, `compat-scrivi-worker.js` | 15.2 (metodi con promesse prima di 16.4: attesi con `await` in `compat-scrivi-worker.js`) | `capacita` `opfsSync`; `libreria-worker.js` → IndexedDB | `e2e_capacita` |
 | `FileSystemFileHandle.createWritable` | `infusione-grafo-esporta.js`, `flow-web-msn.js`, `52_attributio_banco.js`, `libreria-cartella.js` | 26 | `compat.js`: pezzi in memoria, scritti a `close()` dal worker con handle sincrono (solo file OPFS; niente `seek`, `position`, `keepExistingData`) | `test_compat`, `e2e_safari_ipad` |
 | `FileSystemHandle.move(dir, nome)` | `archivio.js` | 15.2 (`move(nome)` rifiutato) | copia | `e2e_opfs_promote` |
@@ -31,7 +31,8 @@
 | `gesturestart` (pizzico) | `infusione-grafo-gesti.js` | solo WebKit | Pointer Events altrove | — |
 | Pointer Events, `setPointerCapture`, `pressure` | `eventi.js`, `mappa.js`, `affianca.js`, Disegno | 13 | — | `e2e_disegno_tablet` |
 | CSS `:has()`, `@container`, `color-mix()`, `@property` | `app.css`, `canali.css`, `msngrafo-vista.js` | 15.4, 16, 16.2, 16.4 | sotto il pavimento | — |
-| `svh`/`dvh`, `env(safe-area-inset-*)` | `app.css` (`#kframe`, `#phone`) | 15.4, 11 | `100vh` prima, `@supports` dopo | — |
+| `svh`/`dvh`, `env(safe-area-inset-*)` | `app.css` (`#kframe`, `#phone`, barra laterale `#dfiles`) | 15.4, 11 | `100vh` prima, `@supports` dopo | — |
+| `:hover` (lista della legenda con più di 4 tracce) | `grafici.js` `legCollapse` | — (iPad: niente hover) | il chip «N tracce» è un `<button>` da 24 px: tocco, Invio o Spazio tengono aperta la lista (`aria-expanded`), Esc la chiude; l'apertura al passaggio solo con `(hover: hover)`, perché Safari tiene `:hover` sull'elemento toccato | `e2e_safari_ipad` |
 | `visualViewport` | `shell.js` (`dprNow`) | 13 | scala 1 | — |
 | `prefers-reduced-motion`, `prefers-color-scheme` | molti | 10.1, 12.1 | — | `e2e_tema_impostazioni` |
 | service worker, Cache API | `sw.js`, `browser.js` | 11.1 | sito senza copia offline | `e2e_sw_versione` |
