@@ -246,6 +246,7 @@ function scanLine(p, data, d0) {
 // «Isotopic pattern…»: the formula (with its charge, or with the adduct) whose pattern is drawn over the spectrum, zoomed on it
 /** @param {any} p */
 async function isoAsk(p) {
+  await Promise.all([carica("ask-suggerisci.js"), carica("liste-nomi.js")]);
   const a = p._a, sug = { rows: (/** @type {string} */ q) => LISTENOMI.suggest(q), text: (/** @type {Bag} */ r) => r.formula + " " + (r.adduct || defAdduct(a.data.map(/** @param {any} x */ x => x.f))), ready: () => LISTE.ready() };
   const v = await ask(I18N.t("ctx.spec.iso.prompt", { adduct: EH(defAdduct(a.data.map(/** @param {any} x */ x => x.f))) }), p.iso ? p.iso.formula + " " + p.iso.ad : "", { suggest: sug, tip: I18N.t("ctx.spec.iso.tip") });
   if (!v) return;

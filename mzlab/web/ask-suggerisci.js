@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // Suggestions under the text field of the small question dialog (#askin): a combobox with a listbox (no <datalist>: Safari and iPad draw it badly).
-// Also the small question dialog itself, ask(): a title, a default text, and optionally these suggestions.
+// Lazy (carica("ask-suggerisci.js")): ask() in explore.js attaches it when its caller passes `suggest`.
 // The caller gives the rows for a text; a pick returns the text to put in the field. Keyboard: up/down move, Enter picks, Esc closes the list only.
 const ASKSUG = (() => {
   /** @param {HTMLInputElement} input
@@ -61,19 +61,3 @@ const ASKSUG = (() => {
   }
   return { attach };
 })();
-
-// opts.suggest = { rows, text, ready } adds the list of suggestions under the field (ask-suggerisci.js); opts.tip = the tooltip of the field
-function ask(/** @type {string} */ title, def = "", opts = /** @type {Bag} */ ({})) {
-  return new Promise(res => {
-    const d = Q("#askdlg"), i = Q("#askin");
-    i.hidden = false; Q("#askno").hidden = false;
-    Q("#asktxt").innerHTML = title; i.value = def; i.title = opts.tip || "";
-    const sug = opts.suggest ? ASKSUG.attach(i, opts.suggest) : null;
-    const done = (/** @type {string | null} */ v) => { if (sug) sug.detach(); i.title = ""; d.close(); Q("#askok").onclick = Q("#askno").onclick = i.onkeydown = null; res(v); };
-    Q("#askok").onclick = () => done(i.value.trim());
-    Q("#askno").onclick = () => done(null);
-    i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (sug && sug.key(e)) return; if (e.key === "Enter") { e.preventDefault(); done(i.value.trim()); } };
-    d.oncancel = () => done(null);
-    d.showModal(); i.focus(); i.select();
-  });
-}

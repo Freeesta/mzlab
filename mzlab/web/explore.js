@@ -902,6 +902,19 @@ function toolbar() {
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
 }
 // ------------------------------------------------------------------ piccole finestre e menu
+function ask(/** @type {string} */ title, def = "", opts = /** @type {Bag} */ ({})) {   // opts.suggest: ASKSUG rows under the field (lazy ask-suggerisci.js); opts.tip: its tooltip
+  return new Promise(res => {
+    const d = Q("#askdlg"), i = Q("#askin"), sug = opts.suggest ? ASKSUG.attach(i, opts.suggest) : null;
+    i.hidden = false; Q("#askno").hidden = false; i.title = opts.tip || "";
+    Q("#asktxt").innerHTML = title; i.value = def;
+    const done = (/** @type {string | null} */ v) => { if (sug) sug.detach(); d.close(); Q("#askok").onclick = Q("#askno").onclick = i.onkeydown = null; res(v); };
+    Q("#askok").onclick = () => done(i.value.trim());
+    Q("#askno").onclick = () => done(null);
+    i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (sug && sug.key(e)) return; if (e.key === "Enter") { e.preventDefault(); done(i.value.trim()); } };
+    d.oncancel = () => done(null);
+    d.showModal(); i.focus(); i.select();
+  });
+}
 function yesno(/** @type {string} */ html) {
   return new Promise(res => {
     const d = Q("#askdlg"); Q("#asktxt").innerHTML = html; Q("#askin").hidden = true; Q("#askno").hidden = false;
