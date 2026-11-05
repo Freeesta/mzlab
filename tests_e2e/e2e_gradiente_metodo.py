@@ -1,5 +1,5 @@
 """Gradient of a file whose own method document (metodo/1) carries the pump program (.raw, .wiff, .D, Waters): the Gradient section shows it, as read from the file,
-instead of «no gradient»; a document without a pump program keeps the «no gradient» section (the answer of api/metodo is replaced in the page: the engine's readers
+and the section is read-only (no insert / edit / import / course buttons); a document without a pump program shows no gradient section (the answer of api/metodo is replaced in the page: the engine's readers
 have their own parity tests)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -23,18 +23,23 @@ try:
         pg.evaluate(STUB)
         def none():
             assert pg.evaluate("(async () => await GRADIENTE.get(E.files[0]))()") is None
-            pg.click("#np-method"); pg.wait_for_selector("#grad-sec")
-            assert pg.is_visible("#grad-new") and not pg.is_visible("#grad-rm")
-        step("a method without pump program: no gradient", none)
+            pg.click("#np-method"); pg.wait_for_selector("#bigdlg[open]")
+            assert not pg.query_selector("#grad-sec")
+        step("a method without pump program: no gradient and no gradient section", none)
         def has():
             pg.evaluate("GRADIENTE.forget(); window.__gm = " + LC + "; 0")
             g = pg.evaluate("(async () => await GRADIENTE.get(E.files[0]))()")
             assert g and g["source"] == "file" and [q["b"] for q in g["points"]] == [10, 10, 90] and g["run_time"] == 15, g
         step("a method with a pump program: gradient read from the file", has)
         def shown():
-            pg.keyboard.press("Escape"); pg.click("#np-method"); pg.wait_for_selector("#grad-sec #grad-rm")
+            pg.keyboard.press("Escape"); pg.click("#np-method"); pg.wait_for_selector("#grad-sec")
             assert pg.is_visible("#grad-sec .lct") or pg.is_visible("#grad-sec table")
-        step("Method window shows the table of the gradient", shown)
+        step("Method window shows the table of the gradient read from the file", shown)
+        def readonly():
+            for i in ("grad-new", "grad-edit", "grad-rm", "grad-raw", "grad-csv", "grad-course", "grad-last", "grad-ed"): assert not pg.query_selector("#" + i), i
+            assert not pg.query_selector("#grad-sec button")
+            txt = pg.inner_text("#bigdlg").lower(); assert "corso" not in txt and "course" not in txt
+        step("the gradient section has no buttons and no mention of the course", readonly)
         errs = pg.evaluate("window.MZLAB_LR_MISS || []"); step("no engine misses", lambda: (_ for _ in ()).throw(AssertionError(errs)) if errs else None)
     r.close()
 except Exception as e:

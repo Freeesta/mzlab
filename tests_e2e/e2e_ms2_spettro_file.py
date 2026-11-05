@@ -1,6 +1,6 @@
 """The product-ion spectrum never asks a Full Scan file for MS2 scans (synthetic pairs of tools/wiff_misto.py and tools/wiff_modi.py, EPI of 55.5; no laboratory data):
 when the file of the spectrum lacks its precursor (the pair is switching, or the student picked another precursor) the spectrum falls back to a loaded file
-whose precursors include it, not to the first file without a precursor list (a Full Scan sample, answered «route unavailable»). Also after quick file switches.
+whose precursors include it, not to a file without a precursor list (a Full Scan sample, answered «route unavailable»), also when that sample is the target. Also after quick file switches.
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_ms2_spettro_file.py"""
 import json, random, subprocess, sys, os, tempfile
 from pathlib import Path
@@ -40,6 +40,15 @@ try:
             assert got and all(g[1] == "ms2" and g[2] > 0 for g in got), got
             clean(pg)
         step("a precursor the file of the spectrum lacks: the spectrum falls back to an MS2 file that has it", other_precursor)
+        def full_scan_target():
+            # the spectrum pointed at a Full Scan sample (no precursor list, no MS2 scans) with a precursor set: it falls back, never asks that file
+            k_full = pg.evaluate("E.files.find(f => !f.gone && f.kind === 'full' && !(f.precursors || []).length && !f.ms2).k")
+            pg.evaluate(f"""(async () => {{ const s = {SPEC}, b = E.browse; E.browse = false; s.k = {k_full}; s.kSet = true; s.prec = 305;
+              try {{ await draw(s); }} finally {{ E.browse = b; }} }})()"""); ready(pg); frames(pg, 3)
+            got = pg.evaluate(f"(() => {{ const s = {SPEC}; return (s._a && s._a.data || []).map(x => [x.f.file, x.f.kind, x.d.mz.length]); }})()")
+            assert got and all(g[1] == "ms2" and g[2] > 0 for g in got), got
+            clean(pg)
+        step("a Full Scan file as the target of a precursor spectrum: the spectrum falls back to an MS2 file that has it", full_scan_target)
         def switching():
             ks = pg.evaluate("E.files.filter(f => !f.gone).map(f => f.k)"); rnd = random.Random(1)
             for _ in range(3):

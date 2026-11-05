@@ -65,6 +65,8 @@ mod flow_inclusion;
 #[cfg(test)]
 mod flow_inclusion_tests;
 mod flow_insilico;
+#[cfg(test)]
+mod flow_iso_grouper_tests;
 mod flow_json;
 mod flow_kmd;
 mod flow_level;

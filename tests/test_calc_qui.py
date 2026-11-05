@@ -140,3 +140,23 @@ def test_both_polarities_list_the_adducts_and_losses_of_both_signs():
     r = run("const one=p=>({...LR,pol:p});const f=async p=>(await CQ.gruppi(CQ.arg('30',0),one(p),dep)).find(g=>g.id==='perdite');"
             "const n=async p=>{const g=await f(p);return g?g.items.length:0};console.log(JSON.stringify([await n(1),await n(-1),await n(0)]))")
     assert r[2] >= max(r[0], r[1])
+
+
+def test_contaminant_lists_survive_a_failed_first_read():
+    # the first read of api/contaminants fails (engine not up yet): the index must not stay empty for good; ready() reads again and the list answers
+    r = run("""let n=0;const real=JSON.parse(fs.readFileSync(%r,'utf8'));
+global.J=()=>++n===1?Promise.reject(new Error('engine lost')):Promise.resolve(real);
+await LISTE.ready();const failed=LISTE.failed();
+await LISTE.ready();
+const g=await CQ.gruppi(CQ.arg('279',0),LR,{...dep,idx:LISTE.ensure()});
+console.log(JSON.stringify([failed,LISTE.failed(),n,g.filter(x=>x.id==='liste').map(x=>x.n)]))""" % str(WEB / "contaminanti.json"))
+    assert r == [True, False, 2, [4]]
+
+
+def test_contaminants_esi_negative_and_positive_lists_are_not_empty():
+    # the shipped list has ions of both polarities; a number of the negative list is found with ESI- and not with ESI+
+    r = run("""const real=JSON.parse(fs.readFileSync(%r,'utf8'));const ix=LISTE.buildIndex(real.lists,null);
+const neg=ix.neg.find(x=>x.pol===-1&&x.mz>100);const d={...dep,idx:ix};
+const f=async(v,pol)=>(await CQ.gruppi(CQ.arg(String(Math.round(v)),0),{...LR,pol},d)).filter(x=>x.id==='liste').map(x=>x.n);
+console.log(JSON.stringify([ix.pos.length>0,ix.neg.length>0,(await f(neg.mz,-1))[0]>0]))""" % str(WEB / "contaminanti.json"))
+    assert r == [True, True, True]

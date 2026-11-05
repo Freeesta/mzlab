@@ -12,6 +12,7 @@ mod ident_spectra;
 pub use ident_spectra::table_match;
 mod qcreport;
 mod recipe_algo;
+mod recipe_iso;
 pub mod recipe_map;
 pub mod records;
 mod table_algo;

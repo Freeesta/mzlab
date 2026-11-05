@@ -191,4 +191,53 @@ const stubFile = (members) => new File([JSON.stringify({ mzlab: MAGIC, ds: "k", 
   assert.deepStrictEqual(gone, ["files/b.mzML.gz.part", "conv/gz~dead~x.mzXML"]);
   delete navigator.locks;
 }
+// ---- F6: at boot the members no stub points to (a copy a closed tab never finished) go, unless another tab holds the lock of their dataset
+{
+  const { LOCK } = await import(dir + "/rust-nativo.js");
+  // fake Web Locks: shared / exclusive, ifAvailable; `held` = what the "other tab" holds
+  const held = new Map(), asked = [];
+  navigator.locks = { async request(name, opts, fn) {
+    const mode = opts.mode || "exclusive", h = held.get(name);
+    asked.push([name, mode]);
+    if (h && !(mode === "shared" && h.mode === "shared")) { if (opts.ifAvailable) return fn(null); throw new Error("the fake lock would wait"); }
+    held.set(name, { mode, n: (h ? h.n : 0) + 1 });
+    try { return await fn({ name, mode }); } finally { const x = held.get(name); if (--x.n === 0) held.delete(name); }
+  } };
+  const ARCH = mkARCH(); store.clear();
+  const mk = () => createNativo({ ARCH, readerFor: null, fileOf: async n => store.get(n) || null, jerr: k => { throw k; }, native_samples: null, native_to_mzml: null, native_srm: null, native_external: null, impronte: undefined });
+  const kept = [{ name: "a.wiff", store: PREFIX + "a.wiff-k1~a.wiff", size: 10 }, { name: "a.wiff.scan", store: PREFIX + "a.wiff-k1~a.wiff.scan", size: 20 }];
+  store.set("a.mzML", stubFile(kept)); for (const m of kept) store.set(m.store, fakeFile(m.size));
+  // 0 orphans: nothing removed, nothing to say
+  assert.deepStrictEqual(await mk().orphans(), []);
+  assert.deepStrictEqual([...store.keys()].sort(), ["a.mzML", ...kept.map(m => m.store)].sort());
+  // a pair copied by a tab closed before its stub: it goes, named by its .wiff; the members a stub uses stay
+  store.set(PREFIX + "b.wiff-k2~d~b.wiff", fakeFile(5)); store.set(PREFIX + "b.wiff-k2~d~b.wiff.scan.part", fakeFile(3));
+  assert.deepStrictEqual(await mk().orphans(), ["b.wiff"]);
+  assert.deepStrictEqual([...store.keys()].sort(), ["a.mzML", ...kept.map(m => m.store)].sort());
+  // two tabs: the other one is copying c (holds the shared lock of its dataset) while this one boots: nothing of c is removed
+  store.set(PREFIX + "c.wiff-k3~c.wiff", fakeFile(5));
+  let free; const other = navigator.locks.request(LOCK + "c.wiff-k3", { mode: "shared" }, () => new Promise(r => { free = r; }));
+  assert.deepStrictEqual(await mk().orphans(), []);
+  assert.ok(store.has(PREFIX + "c.wiff-k3~c.wiff"), "a member another tab is copying stays");
+  // that tab writes its stub and lets go: the member is used, the next boot keeps it
+  store.set("c.mzML", stubFile([{ name: "c.wiff", store: PREFIX + "c.wiff-k3~c.wiff", size: 5 }])); free(); await other;
+  assert.deepStrictEqual(await mk().orphans(), []);
+  assert.ok(store.has(PREFIX + "c.wiff-k3~c.wiff"));
+  // a stub written between the first look and the lock keeps its members (checked again under the lock)
+  store.set(PREFIX + "e.wiff-k4~e.wiff", fakeFile(5));
+  const real = navigator.locks.request;
+  navigator.locks.request = (name, opts, fn) => { store.set("e.mzML", stubFile([{ name: "e.wiff", store: PREFIX + "e.wiff-k4~e.wiff", size: 5 }])); navigator.locks.request = real; return real.call(navigator.locks, name, opts, fn); };
+  assert.deepStrictEqual(await mk().orphans(), []);
+  assert.ok(store.has(PREFIX + "e.wiff-k4~e.wiff"));
+  // put holds the shared lock of its dataset while it copies and writes the stub
+  asked.length = 0;
+  const nat = { key: "c.wiff-k3", c: 0, id: 2, members: [fakeMember("c.wiff", 5, 0)] };
+  await mk().put({ name: "c2.mzML", nat }, () => {});
+  assert.deepStrictEqual(asked, [[LOCK + "c.wiff-k3", "shared"]]);
+  // without Web Locks another tab's copy cannot be told apart: nothing is removed
+  delete navigator.locks;
+  store.set(PREFIX + "f.wiff-k5~f.wiff", fakeFile(5));
+  assert.deepStrictEqual(await mk().orphans(), []);
+  assert.ok(store.has(PREFIX + "f.wiff-k5~f.wiff"));
+}
 console.log("ok");
