@@ -74,9 +74,15 @@ try:
         cell(pg, "one file: statistics sections are not empty", lambda: stat_ok(pg))
         cell(pg, "one file: molecules window", lambda: mol_ok(pg))
         # --- many files
+        ADD = lambda fs: pg.set_input_files("#addf-input" if pg.locator("#addf-input").count() else "#pick", [str(f) for f in fs])
+        def two():
+            ADD(F[1:2]); attendi(pg, "E.files.filter(f => !f.gone).length >= 2", 60000); loaded(pg); ready(pg)
+            # disabled with one file, the file arrows are enabled now: aria-disabled must not stay "true" (renderNav, explore.js)
+            nav = pg.evaluate("['#fprev', '#fsel', '#fnext'].map(q => { const b = document.querySelector(q); return [q, b.disabled, b.getAttribute('aria-disabled')]; })")
+            assert all(str(d).lower() == a for _, d, a in nav), nav
+        cell(pg, "two files: the file arrows are enabled for assistive technology too", two)
         def many():
-            pg.set_input_files("#addf-input" if pg.locator("#addf-input").count() else "#pick", [str(f) for f in F[1:]])
-            attendi(pg, "E.files.filter(f => !f.gone).length >= 4", 120000); loaded(pg); ready(pg)
+            ADD(F[2:]); attendi(pg, "E.files.filter(f => !f.gone).length >= 4", 120000); loaded(pg); ready(pg)
         cell(pg, "many files: added", many)
         cell(pg, "many files: statistics sections are not empty", lambda: stat_ok(pg))
         cell(pg, "many files: rapid clicks on the drawer tabs", lambda: ([pg.evaluate("BARRA.setTab('stat'); BARRA.setTab('file'); BARRA.setTab('stat'); BARRA.setTab('lists')") for _ in range(10)], ready(pg)))
