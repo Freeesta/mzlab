@@ -260,7 +260,7 @@ const BARRA = (() => {
   }
   function watchWorkspace() {
     const dp = Q1("#dpanels");
-    if (!dp || typeof ResizeObserver === "undefined") return;
+    if (!dp) return;
     FRAME.ro(dp, () => { if (dp.clientWidth !== _lastW) { snapFull(); refit(); } });
   }
 
@@ -1048,10 +1048,8 @@ const BARRA = (() => {
     bindAddLoss();
     bindGlobalEvents();
     dockCalc(true);
-    if (typeof ResizeObserver !== "undefined") {
-      const bar = Q1("#stbar");
-      if (bar) FRAME.ro(bar, () => schedFit());
-    }
+    const bar = Q1("#stbar");
+    if (bar) FRAME.ro(bar, () => schedFit());
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
     if (_open && inData() && validTab(_tab)) renderPane(_tab);
     applyLayout();

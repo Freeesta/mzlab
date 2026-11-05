@@ -691,6 +691,5 @@ export function open(p, opener) {
   // for the tests
   window.__m3d = { V, P, ptrs, markCell, setView, pick, project: (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => project(x, y, z), box, rtAt, mzAt, px, pz, heightAt, frame, close };
   dlg.showModal(); resize(); offRo = FRAME.ro(main, () => resize()); glc.focus({ preventScroll: true });
-  if (!window.ResizeObserver) resize();
   load().then(() => { raf = FRAME.next(loop); });
 }

@@ -53,7 +53,7 @@ I18N.add("en", {
   "err.request.tooLarge": "Request too large.",
   "error.engineRestarted": "The Rust engine restarted: your files were reopened.",
   "error.engineLowered": "The engine ran out of memory. Finished steps are saved; it restarts with less memory and your files were reopened.",
-  "error.noSimd": "This browser is too old for the calculation engine (it needs WebAssembly SIMD): update Chrome or Edge to 91 or later, Firefox to 89 or later, or Safari to 16.4 or later.",
+  "error.noSimd": "This browser is too old for the calculation engine (it needs WebAssembly SIMD): update Chrome or Edge to 111 or later, Firefox to 121 or later, or Safari to 16.4 or later.",
   "error.engineFallback": "The calculation engine stopped again: reload the page (the saved files stay).",
   "err.route.unavailable": "This operation is not available for this data.",
   "error.newerFormat": "Index or table prepared by a newer version of mzLab (format {version}): it stays as it is and is not overwritten. Update the page or the app to open it; it is not analysed here.",

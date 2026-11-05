@@ -157,7 +157,7 @@
     if (!LANGS.includes(lg)) return;
     store.set(lg);
     if (typeof location === "undefined") { lang = lg; return; }
-    try { const u = new URL(location.href); u.searchParams.delete("lang"); history.replaceState(null, "", u.toString()); } catch (_) { /* old browser */ }
+    const u = new URL(location.href); u.searchParams.delete("lang"); history.replaceState(null, "", u.toString());
     location.reload();
   }
 

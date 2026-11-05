@@ -21,8 +21,7 @@
 | `showDirectoryPicker` | `cartella-puntata.js`, `libreria-corpo.js` | assente | `capacita` `cartellaLocale`; `#pickdir` (`webkitdirectory`) o OPFS | `e2e_capacita` |
 | `webkitdirectory`, `webkitGetAsEntry` | `#pickdir`, `cartella-carica.js` | macOS 11.1; iPadOS: da provare sul dispositivo | trascinare i file | — |
 | `DecompressionStream` | `gz-flusso.js`, `normative-scarica.js`, `insilico-scarica.js`, `flow-xlsx.js` | 16.4 (`deflate-raw` 16.4) | `gz-flusso.js` risponde vuoto; gli altri sotto il pavimento | — |
-| `OffscreenCanvas` 2d (worker) | `rust-worker.js` | 16.4 | `capacita` `offscreen2d` | — |
-| `navigator.locks`, `BroadcastChannel` | `gz-flusso.js`, `migra.js`, `rust-carica.js`, `archivio.js` | 15.4 | `capacita` `locks`; `listen` in try | — |
+| `navigator.locks`, `BroadcastChannel` | `gz-flusso.js`, `migra.js`, `rust-carica.js`, `archivio.js` | 15.4 | senza `navigator.locks` si passa dritto (i test Node lo simulano); `listen` in try | — |
 | `storage.estimate` / `persist` | `archivio.js`, `shell.js`, `libreria-corpo.js` | 17 / 15.2 | in try: 0/0 | — |
 | WebGL2 | `mappa3d.js`, `mappa.js` | 15 | `capacita` `webgl2`, mappa 2D | `e2e_capacita` |
 | `<dialog>` `showModal`, `inert` | molti | 15.4, 15.5 | sotto il pavimento | — |
