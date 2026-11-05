@@ -58,13 +58,16 @@ fn i_bordi_del_gzip_danno_la_stessa_chiave_su_app_e_sito() {
     let buono = gz(&mzml_di(&scansioni(), Cod::Piano, None));
     let mut con_zeri = buono.clone();
     con_zeri.extend([0u8; 512]);
-    let casi: [(&str, Vec<u8>); 6] = [
+    let mut zeri_e_altro = con_zeri.clone();
+    zeri_e_altro.extend(gz(b"<mzML/>"));
+    let casi: [(&str, Vec<u8>); 7] = [
         ("good", buono.clone()),
         ("empty", Vec::new()),
         ("magic only", vec![0x1f, 0x8b]),
         ("header only", buono[..10].to_vec()),
         ("cut in the middle", buono[..buono.len() / 2].to_vec()),
-        ("zeros after the member", con_zeri),
+        ("zeros after the member", con_zeri.clone()),
+        ("a member after the zeros", zeri_e_altro.clone()),
     ];
     let mut diversi = Vec::new();
     for (nome, b) in casi {
@@ -75,4 +78,7 @@ fn i_bordi_del_gzip_danno_la_stessa_chiave_su_app_e_sito() {
     }
     assert!(diversi.is_empty(), "{diversi:#?}");
     assert_eq!(app(&buono), "ok");
+    // padding to a block size, as GNU gzip reads it: the file opens; something after the padding is damage
+    assert_eq!(app(&con_zeri), "ok");
+    assert_eq!(app(&zeri_e_altro), "err.file.zlib");
 }
