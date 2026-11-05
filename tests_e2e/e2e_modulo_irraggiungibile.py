@@ -12,7 +12,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:600]))
 D = Path(tempfile.mkdtemp(prefix="modirr_")); top = D / "cartella"; top.mkdir()
 agilent_sintetico.write_lcms(top, "perfil.D", "profile", n=200)
-NOTE = "[...document.querySelectorAll('[role=alert]')].map(n => n.innerText).join(' | ')"
+NOTE = "[...document.querySelectorAll('[role=alert],[role=status],.note,.toast')].map(n => n.innerText).join(' | ')"
 def note_in(lang, want, not_want):
     r = Run(port=8865 if lang == "it" else 8866, wd="/tmp/wd_modirr_" + lang)
     try:
