@@ -31,6 +31,16 @@ const CONV = {
   // name -> how the readers module wrote the mzML at the loading ({fam, mem, c}, `gz` = the .mzXML.gz it inflated): the download is written again from there
   sources: /** @type {Map<string, { fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File }>} */ (new Map()),
   add(/** @type {string} */ name, /** @type {Blob} */ blob, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File } | undefined} */ src) { this.files.set(name, blob); if (src) this.sources.set(name, src); },
+  // the mzML the module wrote into conv/ is copied into the engine's store (files/) by the loading: the reference moves to that copy and conv/ lets its own go (two full copies of every converted sample otherwise)
+  async settle(/** @type {string} */ name) {
+    const b = this.files.get(name);
+    if (!this.sources.has(name) || !(b instanceof File) || !/^[0-9a-z]+-[0-9a-z]+\.mzML$/.test(b.name) || !navigator.storage) return;      // the name shell.js moduloToMzml gave it in conv/
+    try {
+      const root = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab"), copy = await (await (await root.getDirectoryHandle("files")).getFileHandle(name)).getFile();
+      if (copy.size !== b.size) return;
+      this.files.set(name, copy); await (await root.getDirectoryHandle("conv")).removeEntry(b.name);
+    } catch (_) { /* not in the browser store (desktop), or already gone: the reference stays */ }
+  },
   // the mzML ready for `name` in the chosen compression (the file of the loading carries the optical matrix for the UV panel: never the download of a sample of the module)
   held(/** @type {string} */ name) { return this.sources.has(name) ? this.made.get(this.key(name)) : this.files.get(name) || this.made.get(this.key(name)); },
   // whether the mzML of `name` in the chosen compression is written on request

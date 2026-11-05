@@ -1,0 +1,32 @@
+{
+  "migrated": "{\"format\":\"mzflow/2\",\n\"inputs\":[\n {\"name\":\"table.mzfeat\",\"type\":\"mzfeat\"},\n {\"name\":\"samples.json\",\"type\":\"samples\"}],\n\"steps\":[\n {\"id\":\"f\",\"step\":\"table.filter@2\",\"in\":{\"samples\":\"file:samples.json\",\"table\":\"file:table.mzfeat\"},\"params\":{\"blank_cells\":\"all\",\"blank_ratio\":3}}]}\n",
+  "old": {
+    "format": "mzflow/2",
+    "inputs": [
+      {
+        "name": "table.mzfeat",
+        "sha256": "",
+        "type": "mzfeat"
+      },
+      {
+        "name": "samples.json",
+        "sha256": "",
+        "type": "samples"
+      }
+    ],
+    "program": "mzlab",
+    "steps": [
+      {
+        "id": "f",
+        "in": {
+          "samples": "file:samples.json",
+          "table": "file:table.mzfeat"
+        },
+        "params": {
+          "blank_ratio": 3
+        },
+        "step": "table.filter@1"
+      }
+    ]
+  }
+}

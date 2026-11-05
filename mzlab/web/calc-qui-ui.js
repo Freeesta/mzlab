@@ -27,7 +27,7 @@
   CALCQUI.follow(filesMode, () => { const n = files().some((/** @type {any} */ f) => f.polarity === "negative"), p = files().some((/** @type {any} */ f) => f.polarity === "positive"); return n && p ? 0 : n ? -1 : 1; });
   CALCQUI.load();
 
-  /** @param {boolean} lists only a typed m/z looks in the lists (CALCQUI.liste): the empty panel at boot must not fetch the 447 KB contaminant list */
+  /** @param {boolean} lists only a typed m/z looks in the lists (CALCQUI.liste): the empty panel at boot must not fetch the 700 KB contaminant lists */
   async function deps(lists) {
     const L = lists && window.LISTE;
     if (L) await LISTE.ready();                                                               // each numeric render asks again: a failed read is retried (liste.js)

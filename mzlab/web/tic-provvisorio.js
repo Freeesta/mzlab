@@ -47,9 +47,11 @@ function hide() { if (box) box.hidden = true; shownKey = ""; }
 function sync() {
   const loading = (typeof UPBUSY !== "undefined" && UPBUSY > 0) || OPENNOW.busy() > 0;
   if (!loading) tics.clear();
-  const open = E.files.some((/** @type {FileAperto} */ f) => !f.gone);
-  const r = loading && !open && !S.sess ? pick() : null;
-  if (!r) { hide(); return; }
+  // it goes with the landing (area-lavoro.js syncWork), not when the first file enters E.files: the landing stays some frames more and the table under it would move up
+  const land = /** @type {HTMLElement} */ (document.getElementById("v-workspace")).dataset.work === "landing";
+  // its file just read and about to open (row done, session begun): the box shown stays as it is until the panels take the landing's place
+  const stay = loading && land && !!shownKey && !!box && !box.hidden, r = loading && land && !S.sess ? pick() : null;
+  if (!r) { if (!stay) hide(); return; }
   if (!box) {
     const up = document.getElementById("start");
     if (!up) return;

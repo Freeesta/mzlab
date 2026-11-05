@@ -267,12 +267,12 @@ function nbSave(now = false) {
   };
   if (now) go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
 }
-let nbEverLoaded = false;
+let nbEverLoaded = false, nbNamed = /** @type {Set<string>} */ (new Set());      // nbNamed: the files the notebook names at load (open or removed), read by restoreRows (shell.js)
 async function nbLoad() {
   let j = {};
   try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
   const again = NBP.take(j, nbClean); if (again) j = again; Object.assign(NB, j); const snap = JSON.stringify(NB); nbBase = JSON.parse(snap); nbRemote = j; nbLast = snap;
-  nbEverLoaded = true;
+  nbEverLoaded = true; nbNamed = new Set([...(NB.session || []), ...((NB.ui && NB.ui.files) || [])].map((/** @type {Bag} */ f) => String(f.file).split("#")[0]));
   if (again) { nbLast = ""; nbSave(true); }
   // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
   if (CDOC.isOld(NB.session)) {
@@ -460,8 +460,8 @@ async function bootSession0() {
   E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
     // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
     const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
-    const t = TIPOF.apply(s, s.file);
-    return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noExt(noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
+    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...CAMPIONI.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
+    return o && o.gone ? Object.assign(o, e, { vis: false }) : e;      // a removed file stays removed, the same object as in its «Removed · Undo» entry (lista-file.js fileRemoval)
   }); uniqueLabels(E.files);
   paintFiles(); if (window.SIMUI) SIMUI.mark(E.files);
   if (window.HR) HR.notice(E.files);

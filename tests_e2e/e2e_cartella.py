@@ -15,7 +15,7 @@ for rel, seed in (("a.mzML", 1), ("sub/b.mzML", 2), ("sub/deeper/c.mzML", 3), ("
 for rel in ("note.txt", "msconvert.log", "sub/x.log", "sub/figura.pdf", ".nascosto.mzML"): (top / rel).write_text("x")   # .log/.txt are tool by-products: skipped silently
 src = (top / "a.mzML").read_bytes()
 import re
-def names(pg): return [re.match(r"(.+?\.mzML)", t.strip()).group(1) for t in pg.evaluate("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.children[1].textContent)")]
+def names(pg): return pg.evaluate("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.querySelector('.ldname').title)")      # the cell shows the name without its extension; its title is the file name
 def count(pg): return pg.evaluate("document.querySelectorAll('#flist input[data-k=use]').length")
 r = Run(port=8830 + 140, wd="/tmp/wd_cartella")
 try:

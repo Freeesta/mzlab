@@ -132,6 +132,19 @@ fn plan() -> Vec<Value> {
     ];
     steps.extend(stat_steps());
     steps.extend(name_steps());
+    // the signed shift of an ion text (`288.2+16`, `C9H8O4-18`) of the dialog «Extract ions»; a malformed shift is `err.formula.offset`
+    for (f, adduct) in [
+        ("288.2+16", ""),
+        ("288,2-18", ""),
+        ("C9H8O4+16", "[M+H]+"),
+        ("C9H8O4 - 18.5", "[M-H]-"),
+        ("C9H8O4+Na+16", "none"),
+        ("C9H8O4+1.2.3", "[M+H]+"),
+        ("288.2+", ""),
+        ("C9H8O4+16x", "[M+H]+"),
+    ] {
+        steps.push(json!({"op": "lr_formula", "f": f, "adduct": adduct}));
+    }
     steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
         json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),

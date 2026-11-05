@@ -355,7 +355,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
       if(j.error)throw I18N.err(j);const x=(j.files||[]).find((/** @type {FileRiga} */ y)=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files,true);ST.methods=j.methods||ST.methods;renderMethods();if(!isDam)OPENNOW.add(f.name);
-      LOADFAIL.delete(f.name)}
+      LOADFAIL.delete(f.name);CONV.settle(f.name)}
     catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));
       // a sample of a maker's file: the error stays on its row, with «Details» and the trace of the loading
@@ -391,6 +391,9 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
 // they take the roles and times of the open files and ask no proposal from the names, which OPENNOW.sync would write over the saved ones
 function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
   for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
+  // a file the notebook does not name was still loading when the page went away: it opens as on a first load (more than 50: a large folder, unticked as after «Choose»); one the student removed stays unticked
+  const late=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD&&!OPENNOW.isOpen(f.name));late.forEach((/** @type {FileRiga} */ f)=>{if(nbNamed.has(f.name))f.use=false});
+  const back=late.filter((/** @type {FileRiga} */ f)=>!nbNamed.has(f.name));if(back.length>50)back.forEach((/** @type {FileRiga} */ f)=>{f.use=false});else back.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));
   FILETAB.flush(true);ST.methods=d.methods||[];renderMethods()}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();ST.files.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
