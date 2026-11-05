@@ -27,7 +27,7 @@ try:
             assert pg.is_visible("#sb-by") and pg.evaluate("!document.querySelector('#tb-more') || !(document.querySelector('#tb-more').dataset.dropped || '').includes('by')")
         step("file list: «Gruppi» is fully visible", full)
         def only_files():
-            for t, tab in (("calc", "calc"), ("adducts", "addloss"), ("losses", "addloss"), ("lists", "lists")):
+            for t, tab in (("calc", "addloss"), ("adducts", "addloss"), ("losses", "addloss"), ("lists", "lists")):
                 pg.evaluate(f"BARRA.setTab('{t}')"); attendi(pg, f"BARRA.curTab === '{tab}'")
                 assert not pg.is_visible("#sb-by"), f"«Gruppi» shown in the {t} panel"
             pg.evaluate("BARRA.setTab('file')"); attendi(pg, "BARRA.curTab === 'file'")
