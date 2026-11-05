@@ -141,7 +141,7 @@ I18N.add("en", {
   "int.tbl.overlap.title": "Overlaps another integration of the trace: delete one",
   "int.tbl.overlap": "⚠ overlapping",
   "int.tbl.del.title": "Delete this integration (also from the chart)",
-  "int.tbl.note": "Area: trapezoidal rule with a linear baseline between the two edges. Drag the bars in the panel to correct the edges.",
+  "int.tbl.note": "Area: trapezoidal rule; manual window = trace between the bars down to zero, automatic = linear baseline between the edges. Drag the bars in the panel to correct the edges.",
   "int.tbl.none": "No integration. Right-click a peak of a chromatogram, of an XIC or of an MRM transition and choose «Integrate».",
   "int.pickNoise.msg": "Drag on the chart a zone without peaks, near the peak: I use its standard deviation as the noise",
   "int.xlsx.file": "integrations.xlsx",

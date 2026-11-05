@@ -275,6 +275,8 @@ I18N.add("it", {
   "calc.err.sign": "non capisco questo segno",
   "cursor.handle": "Posizione corrente nel cromatogramma: trascina il pallino col dito o la penna, oppure usa le frecce per spostarti di una scansione (Maiusc: cinque)",
   "cursor.handle.value": "{rt} min",
+  "int.bar.a": "Barra sinistra dell'integrazione: {rt} min",
+  "int.bar.b": "Barra destra dell'integrazione: {rt} min",
   "calc.err.closeParen": "parentesi chiusa di troppo",
   "calc.err.tooBig": "risultato troppo grande",
   "bug.title.empty": "descrivi il problema",
