@@ -55,6 +55,7 @@
     "../../mzlab/web/disegno-menu.js",
     "../../mzlab/web/parentesi.js",
     "../../mzlab/web/fair.js",
+    "../../mzlab/web/fair-azioni.js",
     "../../mzlab/web/gradiente.js",
     "../../mzlab/web/idxpool.js",
     "../../mzlab/web/bufpool.js",
