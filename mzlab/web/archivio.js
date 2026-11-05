@@ -40,6 +40,14 @@ export async function locked(kind, name, fn) {
   } finally { clearTimeout(timer); }
 }
 
+// A long job on one file (an index of a big file takes minutes) is serialised across tabs: a second tab waits its turn, with no time limit, instead of opening the
+// same OPFS handle (a NoModificationAllowedError) or deleting the partial file of the first. The key is not the one of `locked`: the job writes through `put`/`promote`, which take that one.
+export async function exclusive(/** @type {string} */ kind, /** @type {string} */ name, /** @type {() => Promise<any>} */ fn) {
+  const L = self.navigator && navigator.locks;
+  if (!L) return fn();
+  return L.request("mzlab-job:" + kind + "/" + name, { mode: "exclusive" }, () => fn());
+}
+
 // storage: persist() once (the first file); before a big write the room is checked (sources + their index take about 1.8 times the size)
 let asked = false;
 export async function persistOnce() {
@@ -84,10 +92,12 @@ export function writeFull(/** @type {FileSystemSyncAccessHandle} */ ah, /** @typ
   }
   return done;
 }
-// the error.quota of the page (as a string, like the other errors of the engine): `needed` bytes in all, the room left asked to the browser
+// the error of a refused write (as a string, like the other errors of the engine): `needed` bytes in all. error.quota gives the room left asked to the browser; when the browser
+// says it has room for the whole file, its estimate is what is wrong (a private window keeps about 1 GiB, a full disk), and error.quotaWrite does not quote it
 export async function quotaError(/** @type {number} */ needed) {
-  const e = await estimate(), free = e && e.quota ? Math.max(0, e.quota - e.usage) : 0;
-  return fail("error.quota", { serve_mb: Math.ceil(needed / 1048576), libero_mb: Math.floor(free / 1048576) });
+  const e = await estimate(), free = e && e.quota ? Math.max(0, e.quota - e.usage) : 0, serve_mb = Math.ceil(needed / 1048576);
+  if (free >= needed) return fail("error.quotaWrite", { serve_mb });
+  return fail("error.quota", { serve_mb, libero_mb: Math.floor(free / 1048576) });
 }
 export async function writeAll(/** @type {FileSystemSyncAccessHandle} */ ah, /** @type {Uint8Array} */ data, /** @type {number} */ at) { if (writeFull(ah, data, at) < data.length) throw await quotaError(at + data.length); }
 

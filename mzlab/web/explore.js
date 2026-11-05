@@ -645,7 +645,7 @@ function bindFileRows() {
       const f0 = E.files[+nm.dataset.k];
       // the first click (nothing shown yet, the work area holds the sample table): only this file, with the starting layout of its type
       if (f0 && !E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) { soloFile(f0); return; }
-      if (f0 && f0.kind !== "mrm") followSpectra(f0);
+      if (f0 && f0.kind !== "mrm") { followSpectra(f0); ms2Follow(f0); }
       // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {
         sibsOf(f0).forEach((/** @type {FileAperto} */ f) => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
@@ -809,7 +809,7 @@ function renderFileList() {
   const grpClosed = (/** @type {string} */ g) => compact && flGrpGet()[g] === 1;
   const gh = (/** @type {{ g: string, fs: FileAperto[] }} */ G, /** @type {string} */ label) => {
     if (G.g.startsWith("u:")) return ugHead(G, isExpOpen(G.g));
-    const gk = gkOf(G), open = isExpOpen(gk), tip = lrTog() && window.modeSchema ? ` data-tiph="${EH(modeSchema(gk))}"` : "";
+    const gk = gkOf(G), open = isExpOpen(gk), tip = lrTog() && ESP.voce(gk) ? ` title="${EH(I18N.t(`files.grp.tip.${gk}`))}"` : "";
     if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${grpClosed(G.g) ? "" : " on"}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
     return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
@@ -847,7 +847,7 @@ function renderFileList() {
   Q("#flst").querySelectorAll("input[data-k]").forEach((/** @type {CampoDati} */ x) => x.onchange = () => {
     fileViewDo(() => sibsOf(E.files[+x.dataset.k]).forEach((/** @type {FileAperto} */ f) => { f.vis = x.checked; }));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
-    renderNav(); redrawAll();
+    renderFileList(); renderNav(); redrawAll();   // the precursor rows tick what is drawn now
     uiSave();
   });
   Q("#flst").querySelectorAll(".fl").forEach((/** @type {ElementoDati} */ el) => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = (/** @type {MouseEvent} */ e) => fileCtx(e, E.files[+nm.dataset.k]); });
@@ -859,7 +859,7 @@ function renderFileList() {
 const vis = () => tabFiles().filter((/** @type {FileAperto} */ f) => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off
 const follow = (/** @type {string} */ tab) => !!(E.browse && E.files[E.cur] && E.files[E.cur].kind === tab);
-const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab ? [E.files[E.cur]] : ESP.soloUno(vis());
+const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab && E.files[E.cur].vis && !E.files[E.cur].gone ? [E.files[E.cur]] : ESP.soloUno(vis());   // an unticked current file is not drawn
 // the files a cell draws: those of ITS tab (the same as shown() unless, in the bench, the cell is not of the tab of the active cell)
 const shownFor = (/** @type {Bag} */ p) => {
   const l = p && p.tab && p.tab !== E.tab ? ESP.soloUno(tabFiles(p.tab).filter((/** @type {FileAperto} */ f) => f.vis)) : shown();

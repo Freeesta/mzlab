@@ -610,6 +610,7 @@
               "step":{"const":"features.align@1"},
               "name":{
                 "enum":[
+                  "algorithm",
                   "mode",
                   "ppm",
                   "tol_da",
@@ -625,11 +626,16 @@
                   "weak_files",
                   "link_rt",
                   "max_span",
-                  "min_dependent"
+                  "min_dependent",
+                  "mz_weight",
+                  "rt_weight",
+                  "rt_tol",
+                  "abs_da"
                 ]
               },
               "value":{
                 "anyOf":[
+                  {"enum":["groups","join"]},
                   {
                     "enum":["family","ion"],
                     "default":"family",
@@ -714,6 +720,15 @@
                     "minimum":1,
                     "default":1,
                     "description":"Family mode: an ion that is mostly the base of its own family joins a family only if it follows its root in this many files"
+                  },
+                  {"type":"number","minimum":0,"default":3,"description":"m/z weight"},
+                  {"type":"number","minimum":0,"default":1,"description":"RT weight"},
+                  {"type":"number","minimum":0,"default":0.2,"description":"Half width of the RT range of a row"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.0015,
+                    "description":"Lower bound of the m/z tolerance; the larger of it and ppm wins"
                   }
                 ]
               }
@@ -872,9 +887,23 @@
           {
             "properties":{
               "step":{"const":"features.gapfill@1"},
-              "name":{"enum":["floor","ppm","tol_da","rt_tol","min_points","max_gap","long_trace"]},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "floor",
+                  "ppm",
+                  "tol_da",
+                  "rt_tol",
+                  "min_points",
+                  "max_gap",
+                  "long_trace",
+                  "intensity_tol",
+                  "abs_da"
+                ]
+              },
               "value":{
                 "anyOf":[
+                  {"enum":["integrate","peak_finder"]},
                   {"type":"number","minimum":0,"default":20000,"description":"Noise floor"},
                   {
                     "type":"number",
@@ -896,6 +925,18 @@
                     "minimum":1,
                     "default":400,
                     "description":"A trace longer than this is background and is not taken"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"A point joins the peak while it is not above its neighbour toward the apex by more than this fraction"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.0015,
+                    "description":"Lower bound of the m/z tolerance; the larger of it and ppm wins"
                   }
                 ]
               }

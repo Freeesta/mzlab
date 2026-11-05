@@ -1,7 +1,7 @@
 I18N.add("en", {
   "zoom.mz": "m/z {lo}–{hi}",
   "zoom.rt": "RT {lo}–{hi} min",
-  "xicbtn.title": "XIC of the ion chosen in the spectrum, in the panel below (Shift: extra trace)",
+  "xicbtn.title": "XIC of the ion chosen in the spectrum, in the panel below",
   "xicbtn.n": "XIC of {n} files",
   "xicbtn.infusion": "Infusion: no chromatogram",
   "xicbtn.aria": "Extract the XIC of the chosen ion",

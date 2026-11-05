@@ -25,7 +25,7 @@ COMANDI.gestore("files.view", {
   },
 });
 /** @param {() => void} fn */
-const fileViewDo = fn => COMANDI.fai("files.view", COMANDI.GLOBALE, () => { const had = new Set(E.files.filter(f => f.vis).map(f => f.k)); fn(); ESP.unici(had); });   // two files of a never-overlaid type (MS2) are never ticked together
+const fileViewDo = fn => COMANDI.fai("files.view", COMANDI.GLOBALE, () => { const had = new Set(E.files.filter(f => f.vis).map(f => f.k)); fn(); ESP.unici(had); cleanupOrphanPanels(); });   // the panels follow the ticks in the same undo step; two files of a never-overlaid type (MS2) are never ticked together
 const setVisOf = (/** @type {any[]} */ fs, /** @type {boolean} */ on) => {
   fileViewDo(() => fs.forEach(f => sibsOf(f).forEach(g => { g.vis = on; })));
   if (!on) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
@@ -37,21 +37,28 @@ function soloFile(/** @type {any} */ f0) {
   // the panels area shows before the layout is built, so the panels take its real width (not the estimate of hostWidth)
   syncWork();
   STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind, false, "file");
-  cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
+  cleanupOrphanPanels(); ensureLayout(); ms2Follow(f0); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
 // The three steps of taking one file out: take (hide it), back (undo) and free (release its copy in OPFS and its indexes, only in the browser, when the notice closes without an undo).
 function fileRemoval(/** @type {any} */ f) {
-  const was = { vis: f.vis, cur: E.cur, ks: E.panels.filter(q => q.k === f.k && q.type !== "xic").map(q => /** @type {[any, number]} */ ([q, q.k])) };
+  // the panels and the current file are kept as objects, not indexes: a file freed meanwhile shifts the indexes (reindexAfterFree)
+  const was = { vis: f.vis, cur: E.cur === f.k, ps: E.panels.filter(q => q.k === f.k && q.type !== "xic") };
   const src = (/** @type {any} */ g) => (g.file || "").split("#")[0];
   const show = () => {
     paintFiles(); renderFileList(); renderNav();
     // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
   };
+  // the row of the loading table says whether the file is in the session: unticked while no sample of its source is open (as the tick itself does)
+  const syncRow = () => {
+    const r = ST.files.find((/** @type {any} */ x) => x.name === src(f));
+    if (r) { r.use = E.files.some(g => !g.gone && src(g) === src(f)); renderFiles(); }
+  };
   /** @type {any[]} */ let closed = [];
   const take = () => {
     const before = E.panels.map(q => /** @type {[any, any]} */ ([q, panelRec(q)]));
     f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k);
+    syncRow();
     E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
     if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
     // a panel left with no file of its tab closes (the undo opens it again)
@@ -61,21 +68,45 @@ function fileRemoval(/** @type {any} */ f) {
     show();
   };
   const back = () => {
-    f.gone = false; f.vis = was.vis; was.ks.forEach(([q, k]) => { if (E.panels.includes(q)) q.k = k; });
-    if (was.cur === f.k) STATO.file(f.k, "file-restored");
+    f.gone = false; f.vis = was.vis; was.ps.forEach(q => { if (E.panels.includes(q)) q.k = f.k; });
+    syncRow();
+    if (was.cur) STATO.file(f.k, "file-restored");
     closed.forEach(rec => riapriPannello(rec)); if (closed.length) { relayout(); fitHost(); }
     closed = [];
     show();
   };
   const free = () => {
-    if (window.MZLAB_BROWSER && f.gone && !E.files.some(g => g !== f && !g.gone && src(g) === src(f))) post("api/remove", { name: src(f) }).catch(() => { /* not in the browser store: nothing to free */ });
+    if (!(window.MZLAB_BROWSER && f.gone && !E.files.some(g => g !== f && !g.gone && src(g) === src(f)))) return Promise.resolve();
+    return post("api/remove", { name: src(f) }).then((/** @type {any} */ j) => { mergeFiles(j.files || []); renderFiles(); }).catch(() => { /* not in the browser store: nothing to free */ });
   };
   return { take, back, free };
+}
+let _reindex = Promise.resolve();
+/** api/remove takes the file out of the engine session, whose indexes shift: the entries of E.files (the same objects, so another removal still waiting for its undo keeps working) take the new indexes and every panel index follows its file name, as bootSession0 does for a new session. One at a time, so two frees never apply an older session over a newer one. */
+function reindexAfterFree() {
+  const one = async () => {
+    const sess = (await J("api/session")).session || [], oldNames = E.files.map(g => g.file), by = new Map(E.files.map(g => [g.file, g]));
+    const files = sess.map((/** @type {any} */ s) => by.get(s.file));
+    if (files.some((/** @type {any} */ g) => !g)) return bootSession();
+    if (files.length === E.files.length && files.every((/** @type {any} */ g, /** @type {number} */ k) => g.k === k)) return;
+    files.forEach((/** @type {any} */ g, /** @type {number} */ k) => { g.k = k; });
+    S.sess = sess; E.files = files; E.key = JSON.stringify(sess.map((/** @type {any} */ s) => s.file));
+    CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
+    const remap = (/** @type {any} */ o, /** @type {string} */ key, /** @type {any} */ none) => remapFileIndex(o, key, none, oldNames, files);
+    E.panels.forEach((/** @type {any} */ p) => { remap(p, "k", 0); remap(p, "ref", 0); remap(p, "bk", ""); if (p.bg !== "w" && p.bg !== "x") remap(p, "bg", ""); });
+    remap(E, "cur", 0);
+    if (S.ref.k !== "auto") remap(S.ref, "k", 0);
+    paintFiles(); renderFileList(); renderNav();
+    // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
+    toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
+  };
+  return (_reindex = _reindex.then(one, one));
 }
 /** Removes a file from the session; no question: «Removed · Undo» takes it back (the stack of storia.js). In the browser the copy in OPFS and its derived indexes are freed when the notice has closed without an undo (a shared source, like a .wiff with several samples, stays while another sample uses it). */
 function removeFile(/** @type {any} */ f) {
   const r = fileRemoval(f); r.take();
-  if (STORIA) STORIA.tolto({ what: f.label, tab: f.kind, dati: f.label, undo: r.back, redo: r.take, scade: window.MZLAB_BROWSER ? r.free : null });
+  // no `tab`: the list holds the files of every tab, so the removal is undone from whichever tab is on screen
+  if (STORIA) STORIA.tolto({ what: f.label, dati: f.label, undo: r.back, redo: r.take, scade: window.MZLAB_BROWSER ? () => r.free().then(reindexAfterFree) : null });
   else r.free();
 }
 /** Removes every file of the list (or of `fs`, a user group named `what`) with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). */
@@ -85,7 +116,7 @@ function removeAllFiles(fs = E.files.filter(f => !f.gone), /** @type {string | n
   // removed from a hidden side bar (palette, shortcut): bring it back so the notice and the empty list are in view
   if (window.BARRA && BARRA.isDataView() && !BARRA.open) BARRA.show("file");
   const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach(r => r[k]());
-  if (STORIA) STORIA.tolto({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => rs.forEach(r => r.free()) : null });
+  if (STORIA) STORIA.tolto({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => Promise.all(rs.map(r => r.free())).then(reindexAfterFree) : null });
   else rs.forEach(r => r.free());
 }
 let _lastBox = /** @type {number | null} */ (null);

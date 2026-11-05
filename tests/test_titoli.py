@@ -18,6 +18,9 @@ const lang = process.argv[1];
 globalThis.I18N_LANG = lang;
 require(%(web)r + "/i18n.js");
 for (const f of fs.readdirSync(path.join(%(web)r, "lang", lang)).sort()) new Function("I18N", fs.readFileSync(path.join(%(web)r, "lang", lang, f), "utf8"))(globalThis.I18N);
+globalThis.ESP = new Function(fs.readFileSync(%(web)r + "/esperimenti.js", "utf8") + "\\nreturn ESP;")();  // the page loads esperimenti.js before titoli.js
+globalThis.AZIONI = { registra() {} };
+new Function(fs.readFileSync(%(web)r + "/sim-ui.js", "utf8"))();  // the ion names of the SIM panels (the page loads sim-ui.js too)
 require(%(titoli)r);
 const cases = JSON.parse(process.argv[2]);
 console.log(JSON.stringify(cases.map(([p, ctx]) => TITOLI.nome(p, ctx))));
@@ -37,12 +40,14 @@ CASES = {
     "pda_range": ({"type": "chrom", "kind": "pda", "mz0": 250, "mz1": 260, "title": "@chrom"}, {}),
     "uv": ({"type": "spec", "uv": True, "level": 1, "title": "@uv"}, {}),
     "typed": ({"type": "chrom", "kind": "tic", "title": "My trace"}, {}),
+    "sim_no_q1": ({"type": "mrm", "tab": "mrm", "tr": ["i0"], "title": "@sim"}, {}),
+    "sim_q1": ({"type": "mrm", "tab": "mrm", "tr": ["305.1"], "title": "@sim"}, {}),
 }
 EXPECT = {
     "en": ["TIC · MS²", "TIC · MS² (all precursors)", "TIC · MS² · precursor 414.1", "MS² of 414.1", "TIC", "MS¹", "MRM", "MRM · 414.1>195.0",
-           "PDA (all λ)", "PDA 254 nm", "PDA 250–260 nm", "UV spectrum", "My trace"],
+           "PDA (all λ)", "PDA 254 nm", "PDA 250–260 nm", "UV spectrum", "My trace", "SIM · ion 1", "SIM · 305.1"],
     "it": ["TIC · MS²", "TIC · MS² (tutti i precursori)", "TIC · MS² · precursore 414.1", "MS² di 414.1", "TIC", "MS¹", "MRM", "MRM · 414.1>195.0",
-           "PDA (tutte le λ)", "PDA 254 nm", "PDA 250–260 nm", "Spettro UV", "My trace"],
+           "PDA (tutte le λ)", "PDA 254 nm", "PDA 250–260 nm", "Spettro UV", "My trace", "SIM · ione 1", "SIM · 305.1"],
 }
 
 

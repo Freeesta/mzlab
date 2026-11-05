@@ -35,6 +35,8 @@ Per tipo: 330 `title="…"`, 39 `data-i18n-title`, 85 `.title =` (26 righe tra q
 5. I suggerimenti sui gesti («Tasto destro: azioni») stanno nell'aiuto e nella Teoria, non nel tooltip.
 Elenco completo di tutti i testi dei tooltip (IT, EN, lunghezza, segnalazioni automatiche per le regole 20 e 21; fonti: siti, chiavi di catalogo, aiuto dei passi e parametri del Flow): `docs/studi/TOOLTIP_ELENCO.md` e `.csv`, generati da `python3 tools/elenco_tooltip.py` (`--check` dice se sono da rigenerare).
 Censimento chiave per chiave (verdetto e testo nuovo IT/EN, eccezioni, seguiti per impostazioni e addotti): `docs/studi/TOOLTIP_CENSUS.md`.
+Guardia dinamica: `tests_e2e/e2e_tooltip_dinamici.py` (sito costruito, file sintetici di ogni tipo: Full Scan, MS2, MRM, IDA, DDA ad alta risoluzione, .wiff Q1/PI/EPI e SIM; IT ed EN). Raccoglie ogni elemento con `title`, `data-tip` o `data-tiph` (le sole fonti del tooltip del programma) in ogni scheda di esperimento, poi passa il mouse sulle intestazioni dei gruppi, su ogni tooltip HTML e sui 25 testi più lunghi. Fallisce se un testo supera 60 caratteri o ha più di una frase, o se il riquadro disegnato è più largo di 28ch o più alto di 3 righe (`#qtip` ha `max-width:28ch`).
+Le intestazioni dei gruppi dell'elenco laterale (`files.grp.tip.*`) dicono solo il tipo di scansione; lo schema Q1 → q2 → Q3 è nell'aiuto del tipo (`QMODI.html`), non nel tooltip.
 Guardia: `tests/test_tooltip_inventario.py` (nessun tooltip uguale al testo del proprio elemento, nessuno fatto solo di «Right-click: actions»; le due eccezioni sono quelle di CROMA-CLICK-PICCO e solo calano).
 
 ## Hover dei grafici (da tenere insieme)

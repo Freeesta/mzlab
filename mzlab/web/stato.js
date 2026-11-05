@@ -34,6 +34,11 @@ const STATO = (() => {
       if (E.active && !E.panels.includes(E.active)) r.push("E.active is not in E.panels");
       if (E.files.length && !(E.cur >= 0 && E.cur < E.files.length)) r.push("E.cur outside E.files: " + E.cur);
       E.panels.forEach(p => { if (p.el && p.el.style.display === "none") r.push("panel " + p.id + " hidden while all experiments are shown together"); });
+      // an MS2 pair draws a file that holds its precursor (cleanupOrphanPanels keeps it so), else it is blank
+      if (typeof shownFor === "function" && typeof ms2Holds === "function" && !E.pending?.length) E.panels.forEach(p => {
+        if (p.tab === ESP.ms2 && p.type === "chrom" && p.prec != null && p.prec !== "" && E.files.some(f => f.vis && !f.gone) && !shownFor(p).some(f => !f.gone && ms2Holds(f, p.prec)))
+          r.push("MS2 pair " + p.prec + " draws no file that holds its precursor");
+      });
       return r;
     },
   };

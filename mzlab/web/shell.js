@@ -190,7 +190,10 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t(rb?"err.file.wiffEngine":"err.file.wiffLoad"),f.name]));return res}
   if(!rb||rb.disabled||!rb.nativeSamples||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=/** @type {(k: string, p?: unknown) => string} */ ((k,p)=>I18N.t(k,p)),dropped=new Set();
-  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  // two files of one name and kind in one loading (loose files of two folders): no folder tells which .wiff goes with which .wiff.scan, so neither pair is opened
+  const kinds=new Set(),twins=new Set();
+  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};if(kinds.has(k+sc))twins.add(k);kinds.add(k+sc);e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  for(const k of twins){const e=WIFF_WAIT.get(k);WIFF_WAIT.delete(k);dropped.delete(k);res.errs.push([T("load.wiffTwin",{name:e.stem+".wiff"}),e.stem+".wiff"])}
   const taken=[...res.files.map((/** @type {FileRiga} */ x)=>x.name),...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name)],pairs=[];
   // a pair is in the list as soon as its two files are together, before anything is read
   for(const [k,e] of [...WIFF_WAIT]){
@@ -298,7 +301,11 @@ async function loneWiffs(/** @type {{ lone?: { e: { stem: string, wiff: File }, 
     const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
 const INFLIGHT=new Set(),fkey=(/** @type {FileRiga} */ f)=>f.name+"|"+f.size;
 // the same file (name and size) already in the list, or being read now, is not loaded again: a short notice and its row lights up for a moment
-function dropDups(/** @type {FileCarica[]} */ files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
+function dropDups(/** @type {FileCarica[]} */ files){
+  // a file of the table that is not open (removed, set aside) is not a duplicate: picking it again ticks it, as its box in the table would
+  const row=(/** @type {FileCarica} */ f)=>ST.files.find((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size),again=files.filter(f=>{const g=row(f);return !INFLIGHT.has(fkey(f))&&g&&g.kind in GORD&&!OPENNOW.isOpen(g.name)});
+  if(again.length){again.forEach(f=>OPENNOW.tick(row(f),true));renderFiles();files=files.filter(f=>!again.includes(f))}
+  const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
   const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
   dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.children[1]&&r.children[1].textContent.trim().startsWith(f.name));if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
   return files.filter(f=>!dups.includes(f))}
@@ -375,8 +382,11 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.MZLAB_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
-// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load
-function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods()}
+// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load;
+// they take the roles and times of the open files and ask no proposal from the names, which OPENNOW.sync would write over the saved ones
+function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
+  for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
+  FILETAB.flush(true);ST.methods=d.methods||[];renderMethods()}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();ST.files.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{CartCarica.fromInput(e.target.files);e.target.value=""};
