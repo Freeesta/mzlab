@@ -265,6 +265,14 @@ export async function remove(/** @type {string} */ kind, /** @type {string} */ n
   try { await (await dir(kind)).removeEntry(name); told("del", kind, name, 0); return true; } catch (_) { return false; }
 }
 
+// removes kind/name that the worker of a builder stopped by «Cancel» may still hold for a moment (its handles close after terminate): tried again while it is there, about 5 s at most
+export async function removeHeld(/** @type {string} */ kind, /** @type {string} */ name) {
+  for (let i = 0; i < 10; i++) {
+    if (await remove(kind, name) || !(await get(kind, name))) return;
+    await new Promise(r => setTimeout(r, 50 << Math.min(i, 4)));
+  }
+}
+
 export async function clear(/** @type {string} */ kind) {
   for (const e of await list(kind)) await remove(kind, e.name);
 }
