@@ -1,0 +1,193 @@
+id;name_en;name;class;use;ions;query;pubchem_cid;formula;smiles;inchikey
+chlorpyrifos;chlorpyrifos;clorpirifos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;2730;C9H11Cl3NO3PS;CCOP(=S)(OCC)OC1=NC(=C(C=C1Cl)Cl)Cl;SBPBAQFWLVIOKP-UHFFFAOYSA-N
+chlorpyrifos_methyl;chlorpyrifos-methyl;clorpirifos-metile;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;21803;C7H7Cl3NO3PS;COP(=S)(OC)OC1=NC(=C(C=C1Cl)Cl)Cl;HRBKVYFZANMGRE-UHFFFAOYSA-N
+diazinon;diazinon;diazinone;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;3017;C12H21N2O3PS;CCOP(=S)(OCC)OC1=NC(=NC(=C1)C)C(C)C;FHIVAFMUCKRCQO-UHFFFAOYSA-N
+malathion;malathion;malation;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;4004;C10H19O6PS2;CCOC(=O)CC(C(=O)OCC)SP(=S)(OC)OC;JXSJBGJIGXNWCI-UHFFFAOYSA-N
+dimethoate;dimethoate;dimetoato;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;3082;C5H12NO3PS2;CNC(=O)CSP(=S)(OC)OC;MCWXGJITAZMZEV-UHFFFAOYSA-N
+omethoate;omethoate;ometoato;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;14210;C5H12NO4PS;CNC(=O)CSP(=O)(OC)OC;PZXOQEXFMJCDPG-UHFFFAOYSA-N
+azinphos_methyl;azinphos-methyl;azinfos-metile;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;2268;C10H12N3O3PS2;COP(=S)(OC)SCN1C(=O)C2=CC=CC=C2N=N1;CJJOSEISRRTUQB-UHFFFAOYSA-N
+phosmet;phosmet;fosmet;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;12901;C11H12NO4PS2;COP(=S)(OC)SCN1C(=O)C2=CC=CC=C2C1=O;LMNZTLDVJIUSHT-UHFFFAOYSA-N
+fenitrothion;fenitrothion;fenitrotion;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;31200;C9H12NO5PS;CC1=C(C=CC(=C1)OP(=S)(OC)OC)[N+](=O)[O-];ZNOLGFHPUIJIMJ-UHFFFAOYSA-N
+parathion;parathion;paration;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;991;C10H14NO5PS;CCOP(=S)(OCC)OC1=CC=C(C=C1)[N+](=O)[O-];LCCNCVORNKJIRZ-UHFFFAOYSA-N
+parathion_methyl;parathion-methyl;paration-metile;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;methyl parathion;4130;C8H10NO5PS;COP(=S)(OC)OC1=CC=C(C=C1)[N+](=O)[O-];RLBIQVVOMOPOHC-UHFFFAOYSA-N
+methamidophos;methamidophos;metamidofos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;4096;C2H8NO2PS;COP(=O)(N)SC;NNKVPIKMPCQWCG-UHFFFAOYSA-N
+acephate;acephate;acefate;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;1982;C4H10NO3PS;CC(=O)NP(=O)(OC)SC;YASYVMFAVPKPKE-UHFFFAOYSA-N
+profenofos;profenofos;profenofos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;38779;C11H15BrClO3PS;CCCSP(=O)(OCC)OC1=C(C=C(C=C1)Br)Cl;QYMMJNLHFKGANY-UHFFFAOYSA-N
+pirimiphos_methyl;pirimiphos-methyl;pirimifos-metile;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;34526;C11H20N3O3PS;CCN(CC)C1=NC(=CC(=N1)OP(=S)(OC)OC)C;QHOQHJPRIBSPCY-UHFFFAOYSA-N
+quinalphos;quinalphos;quinalfos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;26124;C12H15N2O3PS;CCOP(=S)(OCC)OC1=NC2=CC=CC=C2N=C1;JYQUHIFYBATCCY-UHFFFAOYSA-N
+triazophos;triazophos;triazofos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;32184;C12H16N3O3PS;CCOP(=S)(OCC)OC1=NN(C=N1)C2=CC=CC=C2;AMFGTOFWMRQMEM-UHFFFAOYSA-N
+ethoprophos;ethoprophos;etoprofos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;3289;C8H19O2PS2;CCCSP(=O)(OCC)SCCC;VJYFKVYYMZPMAB-UHFFFAOYSA-N
+fenthion;fenthion;fention;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;3346;C10H15O3PS2;CC1=C(C=CC(=C1)OP(=S)(OC)OC)SC;PNVJTZOFSHSLTO-UHFFFAOYSA-N
+dichlorvos;dichlorvos;diclorvos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;3039;C4H7Cl2O4P;COP(=O)(OC)OC=C(Cl)Cl;OEBRKCOSUFCWJD-UHFFFAOYSA-N
+chlorfenvinphos;chlorfenvinphos;clorfenvinfos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;10107;C12H14Cl3O4P;CCOP(=O)(OCC)OC(=CCl)C1=C(C=C(C=C1)Cl)Cl;FSAVDKDHPDSCTO-UHFFFAOYSA-N
+terbufos;terbufos;terbufos;organophosphates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;25670;C9H21O2PS3;CCOP(=S)(OCC)SCSC(C)(C)C;XLNZEKHULJKQBA-UHFFFAOYSA-N
+glyphosate;glyphosate;glifosate;phosphonates;herbicide;[M+H]+|[M+Na]+|[M-H]-;;3496;C3H8NO5P;C(C(=O)O)NCP(=O)(O)O;XDDAORKBJWWYJS-UHFFFAOYSA-N
+ampa;AMPA;AMPA (acido amminometilfosfonico);phosphonates;metabolite;[M+H]+|[M+Na]+|[M-H]-;aminomethylphosphonic acid;14017;CH6NO3P;C(N)P(=O)(O)O;MGRVRXRGTBOSHW-UHFFFAOYSA-N
+glufosinate;glufosinate;glufosinate;phosphonates;herbicide;[M+H]+|[M+Na]+|[M-H]-;;4794;C5H12NO4P;CP(=O)(CCC(C(=O)O)N)O;IAJOBQBIJHVGMQ-UHFFFAOYSA-N
+carbaryl;carbaryl;carbaril;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;6129;C12H11NO2;CNC(=O)OC1=CC=CC2=CC=CC=C21;CVXBEEMKQHEXEN-UHFFFAOYSA-N
+carbofuran;carbofuran;carbofuran;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;2566;C12H15NO3;CC1(CC2=C(O1)C(=CC=C2)OC(=O)NC)C;DUEPRVBVGDRKAG-UHFFFAOYSA-N
+3_hydroxycarbofuran;3-hydroxycarbofuran;3-idrossicarbofuran;carbamates;metabolite;[M+H]+|[M+Na]+|[M+NH4]+;;27975;C12H15NO4;CC1(C(C2=C(O1)C(=CC=C2)OC(=O)NC)O)C;RHSUJRQZTQNSLL-UHFFFAOYSA-N
+methomyl;methomyl;metomil;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;4109;C5H10N2O2S;CC(=NOC(=O)NC)SC;UHXUZOCRWCRNSJ-UHFFFAOYSA-N
+oxamyl;oxamyl;oxamil;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;31657;C7H13N3O3S;CNC(=O)ON=C(C(=O)N(C)C)SC;KZAUOCCYDRDERY-UHFFFAOYSA-N
+aldicarb;aldicarb;aldicarb;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;9570071;C7H14N2O2S;CC(C)(/C=N/OC(=O)NC)SC;QGLZXHRNAYXIBU-WEVVVXLNSA-N
+aldicarb_sulfoxide;aldicarb sulfoxide;aldicarb solfossido;carbamates;metabolite;[M+H]+|[M+Na]+|[M+NH4]+;;15437;C7H14N2O3S;CC(C)(C=NOC(=O)NC)S(=O)C;BXPMAGSOWXBZHS-UHFFFAOYSA-N
+aldicarb_sulfone;aldicarb sulfone;aldicarb solfone;carbamates;metabolite;[M+H]+|[M+Na]+|[M+NH4]+;aldoxycarb;9570093;C7H14N2O4S;CC(C)(/C=N/OC(=O)NC)S(=O)(=O)C;YRRKLBAKDXSTNC-WEVVVXLNSA-N
+pirimicarb;pirimicarb;pirimicarb;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;31645;C11H18N4O2;CC1=C(N=C(N=C1OC(=O)N(C)C)N(C)C)C;YFGYUFNIOHWBOB-UHFFFAOYSA-N
+propoxur;propoxur;propoxur;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;4944;C11H15NO3;CC(C)OC1=CC=CC=C1OC(=O)NC;ISRUGXGCCGIOQO-UHFFFAOYSA-N
+methiocarb;methiocarb;metiocarb;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;16248;C11H15NO2S;CC1=CC(=CC(=C1SC)C)OC(=O)NC;YFBPRJGDJKVWAH-UHFFFAOYSA-N
+thiodicarb;thiodicarb;tiodicarb;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;62155;C10H18N4O4S3;CC(=NOC(=O)N(C)SN(C)C(=O)ON=C(C)SC)SC;XDOTVMNBCQVZKG-UHFFFAOYSA-N
+fenoxycarb;fenoxycarb;fenoxicarb;carbamates;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;51605;C17H19NO4;CCOC(=O)NCCOC1=CC=C(C=C1)OC2=CC=CC=C2;HJUFTIJOISQSKQ-UHFFFAOYSA-N
+propamocarb;propamocarb;propamocarb;carbamates;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;32490;C9H20N2O2;CCCOC(=O)NCCCN(C)C;WZZLDXDUQPOXNW-UHFFFAOYSA-N
+chlorpropham;chlorpropham;clorprofam;carbamates;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;2728;C10H12ClNO2;CC(C)OC(=O)NC1=CC(=CC=C1)Cl;CWJSHJJYOPWUGX-UHFFFAOYSA-N
+diethofencarb;diethofencarb;dietofencarb;carbamates;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;91742;C14H21NO4;CCOC1=C(C=C(C=C1)NC(=O)OC(C)C)OCC;LNJNFVJKDJYTEU-UHFFFAOYSA-N
+atrazine;atrazine;atrazina;triazines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;2256;C8H14ClN5;CCNC1=NC(=NC(=N1)Cl)NC(C)C;MXWJVTOOROXGIU-UHFFFAOYSA-N
+simazine;simazine;simazina;triazines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;5216;C7H12ClN5;CCNC1=NC(=NC(=N1)Cl)NCC;ODCWYMIRDDJXKW-UHFFFAOYSA-N
+terbuthylazine;terbuthylazine;terbutilazina;triazines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;22206;C9H16ClN5;CCNC1=NC(=NC(=N1)Cl)NC(C)(C)C;FZXISNSWEXTPMF-UHFFFAOYSA-N
+propazine;propazine;propazina;triazines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;4937;C9H16ClN5;CC(C)NC1=NC(=NC(=N1)Cl)NC(C)C;WJNRPILHGGKWCK-UHFFFAOYSA-N
+cyanazine;cyanazine;cianazina;triazines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;30773;C9H13ClN6;CCNC1=NC(=NC(=N1)Cl)NC(C)(C)C#N;MZZBPDKVEFVLFF-UHFFFAOYSA-N
+prometryn;prometryn;prometrina;triazines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;4929;C10H19N5S;CC(C)NC1=NC(=NC(=N1)SC)NC(C)C;AAEVYOVXGOFMJO-UHFFFAOYSA-N
+terbutryn;terbutryn;terbutrina;triazines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;13450;C10H19N5S;CCNC1=NC(=NC(=N1)SC)NC(C)(C)C;IROINLKCQGIITA-UHFFFAOYSA-N
+ametryn;ametryn;ametrina;triazines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;13263;C9H17N5S;CCNC1=NC(=NC(=N1)SC)NC(C)C;RQVYBGPQFYCBGX-UHFFFAOYSA-N
+desethylatrazine;desethylatrazine;desetilatrazina;triazines;metabolite;[M+H]+|[M+Na]+|[M+NH4]+;;22563;C6H10ClN5;CC(C)NC1=NC(=NC(=N1)N)Cl;DFWFIQKMSFGDCQ-UHFFFAOYSA-N
+desisopropylatrazine;desisopropylatrazine;desisopropilatrazina;triazines;metabolite;[M+H]+|[M+Na]+|[M+NH4]+;;13878;C5H8ClN5;CCNC1=NC(=NC(=N1)N)Cl;IVENSCMCQBJAKW-UHFFFAOYSA-N
+desethylterbuthylazine;desethylterbuthylazine;desetilterbutilazina;triazines;metabolite;[M+H]+|[M+Na]+|[M+NH4]+;;108201;C7H12ClN5;CC(C)(C)NC1=NC(=NC(=N1)N)Cl;LMKQNTMFZLAJDV-UHFFFAOYSA-N
+metribuzin;metribuzin;metribuzin;triazinones;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;30479;C8H14N4OS;CC(C)(C)C1=NN=C(N(C1=O)N)SC;FOXFZRUHNHCZPX-UHFFFAOYSA-N
+hexazinone;hexazinone;esazinone;triazinones;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;39965;C12H20N4O2;CN1C(=NC(=O)N(C1=O)C2CCCCC2)N(C)C;CAWXEEYDBZRFPE-UHFFFAOYSA-N
+metamitron;metamitron;metamitron;triazinones;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;38854;C10H10N4O;CC1=NN=C(C(=O)N1N)C2=CC=CC=C2;VHCNQEUWZYOAEV-UHFFFAOYSA-N
+imidacloprid;imidacloprid;imidacloprid;neonicotinoids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;86287518;C9H10ClN5O2;C1CN(/C(=N/[N+](=O)[O-])/N1)CC2=CN=C(C=C2)Cl;YWTYJOPNNQFBPC-UHFFFAOYSA-N
+thiamethoxam;thiamethoxam;tiametoxam;neonicotinoids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;5821911;C8H10ClN5O3S;CN\1COCN(/C1=N/[N+](=O)[O-])CC2=CN=C(S2)Cl;NWWZPOKUUAIXIW-DHZHZOJOSA-N
+clothianidin;clothianidin;clotianidin;neonicotinoids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;86287519;C6H8ClN5O2S;CN/C(=N\[N+](=O)[O-])/NCC1=CN=C(S1)Cl;PGOOBECODWQEAB-UHFFFAOYSA-N
+acetamiprid;acetamiprid;acetamiprid;neonicotinoids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;213021;C10H11ClN4;CC(=NC#N)N(C)CC1=CN=C(C=C1)Cl;WCXDHFDTOYPNIE-UHFFFAOYSA-N
+thiacloprid;thiacloprid;tiacloprid;neonicotinoids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;115224;C10H9ClN4S;C1CSC(=NC#N)N1CC2=CN=C(C=C2)Cl;HOKKPVIRMVDYPB-UHFFFAOYSA-N
+dinotefuran;dinotefuran;dinotefuran;neonicotinoids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;197701;C7H14N4O3;CN=C(NCC1CCOC1)N[N+](=O)[O-];YKBZOVFACRVRJN-UHFFFAOYSA-N
+nitenpyram;nitenpyram;nitenpiram;neonicotinoids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;3034287;C11H15ClN4O2;CCN(CC1=CN=C(C=C1)Cl)/C(=C/[N+](=O)[O-])/NC;CFRPSFYHXJZSBI-DHZHZOJOSA-N
+azoxystrobin;azoxystrobin;azoxystrobin;strobilurins;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;3034285;C22H17N3O5;CO/C=C(\C1=CC=CC=C1OC2=NC=NC(=C2)OC3=CC=CC=C3C#N)/C(=O)OC;WFDXOXNFNRHQEC-GHRIWEEISA-N
+pyraclostrobin;pyraclostrobin;piraclostrobin;strobilurins;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;6422843;C19H18ClN3O4;COC(=O)N(C1=CC=CC=C1COC2=NN(C=C2)C3=CC=C(C=C3)Cl)OC;HZRSNVGNWUDEFX-UHFFFAOYSA-N
+trifloxystrobin;trifloxystrobin;trifloxystrobin;strobilurins;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;11664966;C20H19F3N2O4;C/C(=N\OCC1=CC=CC=C1/C(=N\OC)/C(=O)OC)/C2=CC(=CC=C2)C(F)(F)F;ONCZDRURRATYFI-TVJDWZFNSA-N
+kresoxim_methyl;kresoxim-methyl;kresoxim-metile;strobilurins;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;6112114;C18H19NO4;CC1=CC=CC=C1OCC2=CC=CC=C2/C(=N\OC)/C(=O)OC;ZOTBXTZVPHCKPN-HTXNQAPBSA-N
+picoxystrobin;picoxystrobin;picoxystrobin;strobilurins;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;11285653;C18H16F3NO4;CO/C=C(\C1=CC=CC=C1COC2=CC=CC(=N2)C(F)(F)F)/C(=O)OC;IBSNKSODLGJUMQ-SDNWHVSQSA-N
+fluoxastrobin;fluoxastrobin;fluoxastrobin;strobilurins;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;11048796;C21H16ClFN4O5;CO/N=C(\C1=CC=CC=C1OC2=C(C(=NC=N2)OC3=CC=CC=C3Cl)F)/C4=NOCCO4;UFEODZBUAFNAEU-NLRVBDNBSA-N
+dimoxystrobin;dimoxystrobin;dimoxystrobin;strobilurins;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;10936292;C19H22N2O3;CC1=CC(=C(C=C1)C)OCC2=CC=CC=C2/C(=N\OC)/C(=O)NC;WXUZAHCNPWONDH-DYTRJAOYSA-N
+tebuconazole;tebuconazole;tebuconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;86102;C16H22ClN3O;CC(C)(C)C(CCC1=CC=C(C=C1)Cl)(CN2C=NC=N2)O;PXMNMQRDXWABCY-UHFFFAOYSA-N
+propiconazole;propiconazole;propiconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;43234;C15H17Cl2N3O2;CCCC1COC(O1)(CN2C=NC=N2)C3=C(C=C(C=C3)Cl)Cl;STJLVHWMYQXCPB-UHFFFAOYSA-N
+difenoconazole;difenoconazole;difenoconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;86173;C19H17Cl2N3O3;CC1COC(O1)(CN2C=NC=N2)C3=C(C=C(C=C3)OC4=CC=C(C=C4)Cl)Cl;BQYJATMQXGBDHF-UHFFFAOYSA-N
+epoxiconazole;epoxiconazole;epossiconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;107901;C17H13ClFN3O;C1=CC=C(C(=C1)[C@@H]2[C@@](O2)(CN3C=NC=N3)C4=CC=C(C=C4)F)Cl;ZMYFCFLJBGAQRS-IAGOWNOFSA-N
+cyproconazole;cyproconazole;ciproconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;86132;C15H18ClN3O;CC(C1CC1)C(CN2C=NC=N2)(C3=CC=C(C=C3)Cl)O;UFNOUKDBUJZYDE-UHFFFAOYSA-N
+myclobutanil;myclobutanil;miclobutanil;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;6336;C15H17ClN4;CCCCC(CN1C=NC=N1)(C#N)C2=CC=C(C=C2)Cl;HZJKXKUJVSEEFU-UHFFFAOYSA-N
+penconazole;penconazole;penconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;91693;C13H15Cl2N3;CCCC(CN1C=NC=N1)C2=C(C=C(C=C2)Cl)Cl;WKBPZYKAUNRMKP-UHFFFAOYSA-N
+hexaconazole;hexaconazole;esaconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;66461;C14H17Cl2N3O;CCCCC(CN1C=NC=N1)(C2=C(C=C(C=C2)Cl)Cl)O;STMIIPIFODONDC-UHFFFAOYSA-N
+flusilazole;flusilazole;flusilazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;73675;C16H15F2N3Si;C[Si](CN1C=NC=N1)(C2=CC=C(C=C2)F)C3=CC=C(C=C3)F;FQKUGOMFVDPBIZ-UHFFFAOYSA-N
+triadimefon;triadimefon;triadimefon;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;39385;C14H16ClN3O2;CC(C)(C)C(=O)C(N1C=NC=N1)OC2=CC=C(C=C2)Cl;WURBVZBTWMNKQT-UHFFFAOYSA-N
+triadimenol;triadimenol;triadimenol;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;41368;C14H18ClN3O2;CC(C)(C)C(C(N1C=NC=N1)OC2=CC=C(C=C2)Cl)O;BAZVSMNPJJMILC-UHFFFAOYSA-N
+metconazole;metconazole;metconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;86210;C17H22ClN3O;CC1(CCC(C1(CN2C=NC=N2)O)CC3=CC=C(C=C3)Cl)C;XWPZUHJBOLQNMN-UHFFFAOYSA-N
+prothioconazole;prothioconazole;protioconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M-H]-;;6451142;C14H15Cl2N3OS;C1CC1(C(CC2=CC=CC=C2Cl)(CN3C(=S)N=CN3)O)Cl;MNHVNIJQQRJYDH-UHFFFAOYSA-N
+tetraconazole;tetraconazole;tetraconazolo;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;80277;C13H11Cl2F4N3O;C1=CC(=C(C=C1Cl)Cl)C(CN2C=NC=N2)COC(C(F)F)(F)F;LQDARGUHUSPFNL-UHFFFAOYSA-N
+flutriafol;flutriafol;flutriafol;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;91727;C16H13F2N3O;C1=CC=C(C(=C1)C(CN2C=NC=N2)(C3=CC=C(C=C3)F)O)F;JWUCHKBSVLQQCO-UHFFFAOYSA-N
+imazalil;imazalil;imazalil;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;37175;C14H14Cl2N2O;C=CCOC(CN1C=CN=C1)C2=C(C=C(C=C2)Cl)Cl;PZBPKYOVPCNPJY-UHFFFAOYSA-N
+prochloraz;prochloraz;procloraz;azoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;73665;C15H16Cl3N3O2;CCCN(CCOC1=C(C=C(C=C1Cl)Cl)Cl)C(=O)N2C=CN=C2;TVLSRXXIMLFWEO-UHFFFAOYSA-N
+diuron;diuron;diuron;phenylureas;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;3120;C9H10Cl2N2O;CN(C)C(=O)NC1=CC(=C(C=C1)Cl)Cl;XMTQQYYKAHVGBJ-UHFFFAOYSA-N
+linuron;linuron;linuron;phenylureas;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;9502;C9H10Cl2N2O2;CN(C(=O)NC1=CC(=C(C=C1)Cl)Cl)OC;XKJMBINCVNINCA-UHFFFAOYSA-N
+isoproturon;isoproturon;isoproturon;phenylureas;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;36679;C12H18N2O;CC(C)C1=CC=C(C=C1)NC(=O)N(C)C;PUIYMUZLKQOUOZ-UHFFFAOYSA-N
+chlortoluron;chlortoluron;clortoluron;phenylureas;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;27375;C10H13ClN2O;CC1=C(C=C(C=C1)NC(=O)N(C)C)Cl;JXCGFZXSOMJFOA-UHFFFAOYSA-N
+monuron;monuron;monuron;phenylureas;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;8800;C9H11ClN2O;CN(C)C(=O)NC1=CC=C(C=C1)Cl;BMLIZLVNXIYGCK-UHFFFAOYSA-N
+metobromuron;metobromuron;metobromuron;phenylureas;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;18290;C9H11BrN2O2;CN(C(=O)NC1=CC=C(C=C1)Br)OC;WLFDQEVORAMCIM-UHFFFAOYSA-N
+fluometuron;fluometuron;fluometuron;phenylureas;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;16562;C10H11F3N2O;CN(C)C(=O)NC1=CC=CC(=C1)C(F)(F)F;RZILCCPWPBTYDO-UHFFFAOYSA-N
+metoxuron;metoxuron;metoxuron;phenylureas;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;29863;C10H13ClN2O2;CN(C)C(=O)NC1=CC(=C(C=C1)OC)Cl;DSRNRYQBBJQVCW-UHFFFAOYSA-N
+cypermethrin;cypermethrin;cipermetrina;pyrethroids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;2912;C22H19Cl2NO3;CC1(C(C1C(=O)OC(C#N)C2=CC(=CC=C2)OC3=CC=CC=C3)C=C(Cl)Cl)C;KAATUXNTWXVJKI-UHFFFAOYSA-N
+deltamethrin;deltamethrin;deltametrina;pyrethroids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;40585;C22H19Br2NO3;CC1([C@H]([C@H]1C(=O)O[C@H](C#N)C2=CC(=CC=C2)OC3=CC=CC=C3)C=C(Br)Br)C;OWZREIFADZCYQD-NSHGMRRFSA-N
+permethrin;permethrin;permetrina;pyrethroids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;40326;C21H20Cl2O3;CC1(C(C1C(=O)OCC2=CC(=CC=C2)OC3=CC=CC=C3)C=C(Cl)Cl)C;RLLPVAHGXHCWKJ-UHFFFAOYSA-N
+lambda_cyhalothrin;lambda-cyhalothrin;lambda-cialotrina;pyrethroids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;cyhalothrin;5281873;C23H19ClF3NO3;CC1(C(C1C(=O)OC(C#N)C2=CC(=CC=C2)OC3=CC=CC=C3)/C=C(/C(F)(F)F)\Cl)C;ZXQYGBMAQZUVMI-UNOMPAQXSA-N
+bifenthrin;bifenthrin;bifentrin;pyrethroids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;6442842;C23H22ClF3O2;CC1=C(C=CC=C1C2=CC=CC=C2)COC(=O)[C@@H]3[C@@H](C3(C)C)/C=C(/C(F)(F)F)\Cl;OMFRMAHOUUJSGP-IRHGGOMRSA-N
+etofenprox;etofenprox;etofenprox;pyrethroids;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;71245;C25H28O3;CCOC1=CC=C(C=C1)C(C)(C)COCC2=CC(=CC=C2)OC3=CC=CC=C3;YREQHYQNNWYQCJ-UHFFFAOYSA-N
+metolachlor;metolachlor;metolaclor;chloroacetanilides;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;4169;C15H22ClNO2;CCC1=CC=CC(=C1N(C(C)COC)C(=O)CCl)C;WVQBLGZPHOPPFO-UHFFFAOYSA-N
+alachlor;alachlor;alaclor;chloroacetanilides;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;2078;C14H20ClNO2;CCC1=C(C(=CC=C1)CC)N(COC)C(=O)CCl;XCSGPAVHZFQHGE-UHFFFAOYSA-N
+acetochlor;acetochlor;acetoclor;chloroacetanilides;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;1988;C14H20ClNO2;CCC1=CC=CC(=C1N(COCC)C(=O)CCl)C;VTNQPKFIQCLBDU-UHFFFAOYSA-N
+dimethenamid;dimethenamid;dimetenamide;chloroacetanilides;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;91744;C12H18ClNO2S;CC1=CSC(=C1N(C(C)COC)C(=O)CCl)C;JLYFCTQDENRSOL-UHFFFAOYSA-N
+pretilachlor;pretilachlor;pretilaclor;chloroacetanilides;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;91644;C17H26ClNO2;CCCOCCN(C1=C(C=CC=C1CC)CC)C(=O)CCl;YLPGTOIOYRQOHV-UHFFFAOYSA-N
+metazachlor;metazachlor;metazaclor;chloroacetanilides;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;49384;C14H16ClN3O;CC1=C(C(=CC=C1)C)N(CN2C=CC=N2)C(=O)CCl;STEPQTYSZVCJPV-UHFFFAOYSA-N
+propachlor;propachlor;propaclor;chloroacetanilides;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;4931;C11H14ClNO;CC(C)N(C1=CC=CC=C1)C(=O)CCl;MFOUDYKPLGXPGO-UHFFFAOYSA-N
+metolachlor_esa;metolachlor ESA;metolaclor ESA;chloroacetanilides;metabolite;[M-H]-;metolachlor ethanesulfonic acid;6426849;C15H23NO5S;CCC1=CC=CC(=C1N(C(C)COC)C(=O)CS(=O)(=O)O)C;CIGKZVUEZXGYSV-UHFFFAOYSA-N
+metolachlor_oxa;metolachlor OXA;metolaclor OXA;chloroacetanilides;metabolite;[M+H]+|[M+Na]+|[M-H]-;metolachlor oxanilic acid;15842092;C15H21NO4;CCC1=CC=CC(=C1N(C(C)COC)C(=O)C(=O)O)C;LNOOSYCKMKZOJB-UHFFFAOYSA-N
+alachlor_esa;alachlor ESA;alaclor ESA;chloroacetanilides;metabolite;[M-H]-;alachlor ethanesulfonic acid;115236;C14H21NO5S;CCC1=C(C(=CC=C1)CC)N(COC)C(=O)CS(=O)(=O)O;UTCJUUGCHWHUNI-UHFFFAOYSA-N
+nicosulfuron;nicosulfuron;nicosulfuron;sulfonylureas;herbicide;[M+H]+|[M+Na]+|[M-H]-;;73281;C15H18N6O6S;CN(C)C(=O)C1=C(N=CC=C1)S(=O)(=O)NC(=O)NC2=NC(=CC(=N2)OC)OC;RTCOGUMHFFWOJV-UHFFFAOYSA-N
+rimsulfuron;rimsulfuron;rimsulfuron;sulfonylureas;herbicide;[M+H]+|[M+Na]+|[M-H]-;;91779;C14H17N5O7S2;CCS(=O)(=O)C1=C(N=CC=C1)S(=O)(=O)NC(=O)NC2=NC(=CC(=N2)OC)OC;MEFOUWRMVYJCQC-UHFFFAOYSA-N
+tribenuron_methyl;tribenuron-methyl;tribenuron-metile;sulfonylureas;herbicide;[M+H]+|[M+Na]+|[M-H]-;;153909;C15H17N5O6S;CC1=NC(=NC(=N1)OC)N(C)C(=O)NS(=O)(=O)C2=CC=CC=C2C(=O)OC;VLCQZHSMCYCDJL-UHFFFAOYSA-N
+metsulfuron_methyl;metsulfuron-methyl;metsulfuron-metile;sulfonylureas;herbicide;[M+H]+|[M+Na]+|[M-H]-;;52999;C14H15N5O6S;CC1=NC(=NC(=N1)OC)NC(=O)NS(=O)(=O)C2=CC=CC=C2C(=O)OC;RSMUVYRMZCOLBH-UHFFFAOYSA-N
+thifensulfuron_methyl;thifensulfuron-methyl;tifensulfuron-metile;sulfonylureas;herbicide;[M+H]+|[M+Na]+|[M-H]-;;73674;C12H13N5O6S2;CC1=NC(=NC(=N1)OC)NC(=O)NS(=O)(=O)C2=C(SC=C2)C(=O)OC;AHTPATJNIAFOLR-UHFFFAOYSA-N
+chlorsulfuron;chlorsulfuron;clorsulfuron;sulfonylureas;herbicide;[M+H]+|[M+Na]+|[M-H]-;;47491;C12H12ClN5O4S;CC1=NC(=NC(=N1)OC)NC(=O)NS(=O)(=O)C2=CC=CC=C2Cl;VJYIFXVZLXQVHO-UHFFFAOYSA-N
+2_4_d;2,4-D;2,4-D;phenoxy_acids;herbicide;[M-H]-;2,4-dichlorophenoxyacetic acid;1486;C8H6Cl2O3;C1=CC(=C(C=C1Cl)Cl)OCC(=O)O;OVSKIKFHRZPJSS-UHFFFAOYSA-N
+mcpa;MCPA;MCPA;phenoxy_acids;herbicide;[M-H]-;;7204;C9H9ClO3;CC1=C(C=CC(=C1)Cl)OCC(=O)O;WHKUVVPPKQRRBV-UHFFFAOYSA-N
+mecoprop;mecoprop;mecoprop;phenoxy_acids;herbicide;[M-H]-;;7153;C10H11ClO3;CC1=C(C=CC(=C1)Cl)OC(C)C(=O)O;WNTGYJSOUMFZEP-UHFFFAOYSA-N
+dichlorprop;dichlorprop;diclorprop;phenoxy_acids;herbicide;[M-H]-;;8427;C9H8Cl2O3;CC(C(=O)O)OC1=C(C=C(C=C1)Cl)Cl;MZHCENGPTKEIGP-UHFFFAOYSA-N
+mcpb;MCPB;MCPB;phenoxy_acids;herbicide;[M-H]-;;7207;C11H13ClO3;CC1=C(C=CC(=C1)Cl)OCCCC(=O)O;LLWADFLAOKUBDR-UHFFFAOYSA-N
+2_4_5_t;2,4,5-T;2,4,5-T;phenoxy_acids;herbicide;[M-H]-;2,4,5-trichlorophenoxyacetic acid;1480;C8H5Cl3O3;C1=C(C(=CC(=C1Cl)Cl)Cl)OCC(=O)O;SMYMJHWAQXWPDB-UHFFFAOYSA-N
+clopyralid;clopyralid;clopiralid;pyridine_acids;herbicide;[M+H]+|[M+Na]+|[M-H]-;;15553;C6H3Cl2NO2;C1=CC(=NC(=C1Cl)C(=O)O)Cl;HUBANNPOLNYSAD-UHFFFAOYSA-N
+triclopyr;triclopyr;triclopir;pyridine_acids;herbicide;[M-H]-;;41428;C7H4Cl3NO3;C1=C(C(=NC(=C1Cl)Cl)OCC(=O)O)Cl;REEQLXCGVXDJSQ-UHFFFAOYSA-N
+picloram;picloram;picloram;pyridine_acids;herbicide;[M+H]+|[M+Na]+|[M-H]-;;15965;C6H3Cl3N2O2;C1(=C(C(=NC(=C1Cl)Cl)C(=O)O)Cl)N;NQQVFXUMIDALNH-UHFFFAOYSA-N
+fluroxypyr;fluroxypyr;fluroxipir;pyridine_acids;herbicide;[M+H]+|[M+Na]+|[M-H]-;;50465;C7H5Cl2FN2O3;C(C(=O)O)OC1=NC(=C(C(=C1Cl)N)Cl)F;MEFQWPUMEMWTJP-UHFFFAOYSA-N
+dicamba;dicamba;dicamba;benzoic_acids;herbicide;[M-H]-;;3030;C8H6Cl2O3;COC1=C(C=CC(=C1C(=O)O)Cl)Cl;IWEDIXLBFLAXBO-UHFFFAOYSA-N
+carbendazim;carbendazim;carbendazim;benzimidazoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;25429;C9H9N3O2;COC(=O)NC1=NC2=CC=CC=C2N1;TWFZGCMQGLPBSX-UHFFFAOYSA-N
+thiabendazole;thiabendazole;tiabendazolo;benzimidazoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;5430;C10H7N3S;C1=CC=C2C(=C1)NC(=N2)C3=CSC=N3;WJCNZQLZVWNLKY-UHFFFAOYSA-N
+benomyl;benomyl;benomil;benzimidazoles;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;28780;C14H18N4O3;CCCCNC(=O)N1C2=CC=CC=C2N=C1NC(=O)OC;RIOXQFHNBCKOKP-UHFFFAOYSA-N
+pendimethalin;pendimethalin;pendimetalin;dinitroanilines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;38479;C13H19N3O4;CCC(CC)NC1=C(C=C(C(=C1[N+](=O)[O-])C)C)[N+](=O)[O-];CHIFOSRWCNZCFN-UHFFFAOYSA-N
+trifluralin;trifluralin;trifluralin;dinitroanilines;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;5569;C13H16F3N3O4;CCCN(CCC)C1=C(C=C(C=C1[N+](=O)[O-])C(F)(F)F)[N+](=O)[O-];ZSDSQXJSNMTJDA-UHFFFAOYSA-N
+oryzalin;oryzalin;orizalin;dinitroanilines;herbicide;[M+H]+|[M+Na]+|[M-H]-;;29393;C12H18N4O6S;CCCN(CCC)C1=C(C=C(C=C1[N+](=O)[O-])S(=O)(=O)N)[N+](=O)[O-];UNAHYJYOSSSJHH-UHFFFAOYSA-N
+bentazone;bentazone;bentazone;benzothiadiazinones;herbicide;[M-H]-;;2328;C10H12N2O3S;CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O;ZOMSMJKLGFBRBS-UHFFFAOYSA-N
+mesotrione;mesotrione;mesotrione;triketones;herbicide;[M+H]+|[M+Na]+|[M-H]-;;175967;C14H13NO7S;CS(=O)(=O)C1=CC(=C(C=C1)C(=O)C2C(=O)CCCC2=O)[N+](=O)[O-];KPUREKXXPHOJQT-UHFFFAOYSA-N
+sulcotrione;sulcotrione;sulcotrione;triketones;herbicide;[M+H]+|[M+Na]+|[M-H]-;;91760;C14H13ClO5S;CS(=O)(=O)C1=CC(=C(C=C1)C(=O)C2C(=O)CCCC2=O)Cl;PQTBTIFWAXVEPB-UHFFFAOYSA-N
+chloridazon;chloridazon;cloridazon;pyridazinones;herbicide;[M+H]+|[M+Na]+|[M+NH4]+;;15546;C10H8ClN3O;C1=CC=C(C=C1)N2C(=O)C(=C(C=N2)N)Cl;WYKYKTKDBLFHCY-UHFFFAOYSA-N
+boscalid;boscalid;boscalid;carboxamides;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;213013;C18H12Cl2N2O;C1=CC=C(C(=C1)C2=CC=C(C=C2)Cl)NC(=O)C3=C(N=CC=C3)Cl;WYEMLYFITZORAB-UHFFFAOYSA-N
+fluopyram;fluopyram;fluopiram;carboxamides;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;11158353;C16H11ClF6N2O;C1=CC=C(C(=C1)C(=O)NCCC2=C(C=C(C=N2)C(F)(F)F)Cl)C(F)(F)F;KVDJTXBXMWJJEF-UHFFFAOYSA-N
+fluxapyroxad;fluxapyroxad;fluxapiroxad;carboxamides;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;16095400;C18H12F5N3O;CN1C=C(C(=N1)C(F)F)C(=O)NC2=CC=CC=C2C3=CC(=C(C(=C3)F)F)F;SXSGXWCSHSVPGB-UHFFFAOYSA-N
+cyprodinil;cyprodinil;ciprodinil;anilinopyrimidines;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;86367;C14H15N3;CC1=CC(=NC(=N1)NC2=CC=CC=C2)C3CC3;HAORKNGNJCEJBX-UHFFFAOYSA-N
+pyrimethanil;pyrimethanil;pirimetanil;anilinopyrimidines;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;91650;C12H13N3;CC1=CC(=NC(=N1)NC2=CC=CC=C2)C;ZLIBICFPKPWGIZ-UHFFFAOYSA-N
+fludioxonil;fludioxonil;fludioxonil;phenylpyrroles;fungicide;[M-H]-;;86398;C12H6F2N2O2;C1=CC(=C2C(=C1)OC(O2)(F)F)C3=CNC=C3C#N;MUJOIMFVNIBMKC-UHFFFAOYSA-N
+metalaxyl;metalaxyl;metalaxil;phenylamides;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;42586;C15H21NO4;CC1=C(C(=CC=C1)C)N(C(C)C(=O)OC)C(=O)COC;ZQEIXNIJLIKNTD-UHFFFAOYSA-N
+dimethomorph;dimethomorph;dimetomorf;morpholines;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;86298;C21H22ClNO4;COC1=C(C=C(C=C1)C(=CC(=O)N2CCOCC2)C3=CC=C(C=C3)Cl)OC;QNBTYORWCCMPQP-UHFFFAOYSA-N
+spiroxamine;spiroxamine;spiroxamina;spiroketalamines;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;86160;C18H35NO2;CCCN(CC)CC1COC2(O1)CCC(CC2)C(C)(C)C;PUYXTUJWRLOUCW-UHFFFAOYSA-N
+iprodione;iprodione;iprodione;dicarboximides;fungicide;[M+H]+|[M+Na]+|[M+NH4]+;;37517;C13H13Cl2N3O3;CC(C)NC(=O)N1CC(=O)N(C1=O)C2=CC(=CC(=C2)Cl)Cl;ONUFESLQCSAYKA-UHFFFAOYSA-N
+fipronil;fipronil;fipronil;phenylpyrazoles;insecticide;[M-H]-;;3352;C12H4Cl2F6N4OS;C1=C(C=C(C(=C1Cl)N2C(=C(C(=N2)C#N)S(=O)C(F)(F)F)N)Cl)C(F)(F)F;ZOCSXAVNDGMNBV-UHFFFAOYSA-N
+fipronil_sulfone;fipronil sulfone;fipronil solfone;phenylpyrazoles;metabolite;[M-H]-;;3078139;C12H4Cl2F6N4O2S;C1=C(C=C(C(=C1Cl)N2C(=C(C(=N2)C#N)S(=O)(=O)C(F)(F)F)N)Cl)C(F)(F)F;LGHZJDKSVUTELU-UHFFFAOYSA-N
+chlorantraniliprole;chlorantraniliprole;clorantraniliprolo;diamides;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;11271640;C18H14BrCl2N5O2;CC1=CC(=CC(=C1NC(=O)C2=CC(=NN2C3=C(C=CC=N3)Cl)Br)C(=O)NC)Cl;PSOVNZZNOMJUBI-UHFFFAOYSA-N
+cyantraniliprole;cyantraniliprole;ciantraniliprolo;diamides;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;11578610;C19H14BrClN6O2;CC1=CC(=CC(=C1NC(=O)C2=CC(=NN2C3=C(C=CC=N3)Cl)Br)C(=O)NC)C#N;DVBUIBGJRQBEDP-UHFFFAOYSA-N
+indoxacarb;indoxacarb;indoxacarb;oxadiazines;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;107720;C22H17ClF3N3O7;COC(=O)[C@]12CC3=C(C1=NN(CO2)C(=O)N(C4=CC=C(C=C4)OC(F)(F)F)C(=O)OC)C=CC(=C3)Cl;VBCVPMMZEGZULK-NRFANRHFSA-N
+pymetrozine;pymetrozine;pimetrozina;pyridine_azomethines;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;9576037;C10H11N5O;CC1=NNC(=O)N(C1)/N=C/C2=CN=CC=C2;QHMTXANCGGJZRX-WUXMJOGZSA-N
+methoxyfenozide;methoxyfenozide;metossifenozide;diacylhydrazines;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;105010;C22H28N2O3;CC1=CC(=CC(=C1)C(=O)N(C(C)(C)C)NC(=O)C2=C(C(=CC=C2)OC)C)C;QCAWEPFNJXQPAN-UHFFFAOYSA-N
+tebufenozide;tebufenozide;tebufenozide;diacylhydrazines;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;91773;C22H28N2O2;CCC1=CC=C(C=C1)C(=O)NN(C(=O)C2=CC(=CC(=C2)C)C)C(C)(C)C;QYPNKSZPJQQLRK-UHFFFAOYSA-N
+pyriproxyfen;pyriproxyfen;piriproxifen;pyridyl_ethers;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;91753;C20H19NO3;CC(COC1=CC=C(C=C1)OC2=CC=CC=C2)OC3=CC=CC=N3;NHDHVHZZCFYRSB-UHFFFAOYSA-N
+spinosyn_a;spinosyn A;spinosina A;spinosyns;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;;443059;C41H65NO10;CC[C@H]1CCC[C@@H]([C@H](C(=O)C2=C[C@H]3[C@@H]4C[C@@H](C[C@H]4C=C[C@H]3[C@@H]2CC(=O)O1)O[C@H]5[C@@H]([C@@H]([C@H]([C@@H](O5)C)OC)OC)OC)C)O[C@H]6CC[C@@H]([C@H](O6)C)N(C)C;SRJQTHAZUNRMPR-UYQKXTDMSA-N
+abamectin;abamectin;abamectina (avermectina B1a);avermectins;insecticide;[M+H]+|[M+Na]+|[M+NH4]+;avermectin B1a;6434889;C48H72O14;CC[C@H](C)[C@@H]1[C@H](C=C[C@@]2(O1)C[C@@H]3C[C@H](O2)C/C=C(/[C@H]([C@H](/C=C/C=C/4\CO[C@H]5[C@@]4([C@@H](C=C([C@H]5O)C)C(=O)O3)O)C)O[C@H]6C[C@@H]([C@H]([C@@H](O6)C)O[C@H]7C[C@@H]([C@H]([C@@H](O7)C)O)OC)OC)\C)C;RRZXIRBKKLTSOM-XPNPUAGNSA-N
+pfoa;PFOA;PFOA (acido perfluoroottanoico);pfas;industrial;[M-H]-;perfluorooctanoic acid;9554;C8HF15O2;C(=O)(C(C(C(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)O;SNGREZUHAYWORS-UHFFFAOYSA-N
+pfos;PFOS;PFOS (acido perfluoroottansolfonico);pfas;industrial;[M-H]-;perfluorooctanesulfonic acid;74483;C8HF17O3S;C(C(C(C(C(F)(F)S(=O)(=O)O)(F)F)(F)F)(F)F)(C(C(C(F)(F)F)(F)F)(F)F)(F)F;YFSUTJLHUFNCNZ-UHFFFAOYSA-N
+pfhxs;PFHxS;PFHxS (acido perfluoroesansolfonico);pfas;industrial;[M-H]-;perfluorohexanesulfonic acid;67734;C6HF13O3S;C(C(C(C(F)(F)S(=O)(=O)O)(F)F)(F)F)(C(C(F)(F)F)(F)F)(F)F;QZHDEAJFRJCDMF-UHFFFAOYSA-N
+pfna;PFNA;PFNA (acido perfluorononanoico);pfas;industrial;[M-H]-;perfluorononanoic acid;67821;C9HF17O2;C(=O)(C(C(C(C(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)O;UZUFPBIDKMEQEQ-UHFFFAOYSA-N
+pfhxa;PFHxA;PFHxA (acido perfluoroesanoico);pfas;industrial;[M-H]-;perfluorohexanoic acid;67542;C6HF11O2;C(=O)(C(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)(F)F)O;PXUULQAPEKKVAH-UHFFFAOYSA-N
+pfbs;PFBS;PFBS (acido perfluorobutansolfonico);pfas;industrial;[M-H]-;perfluorobutanesulfonic acid;67815;C4HF9O3S;C(C(C(F)(F)S(=O)(=O)O)(F)F)(C(F)(F)F)(F)F;JGTNAGYHADQMCM-UHFFFAOYSA-N
+pfba;PFBA;PFBA (acido perfluorobutanoico);pfas;industrial;[M-H]-;perfluorobutanoic acid;9777;C4HF7O2;C(=O)(C(C(C(F)(F)F)(F)F)(F)F)O;YPJUNDFVDDCYIH-UHFFFAOYSA-N
+hfpo_da;HFPO-DA (GenX);HFPO-DA (GenX);pfas;industrial;[M-H]-;hexafluoropropylene oxide dimer acid;114481;C6HF11O3;C(=O)(C(C(F)(F)F)(OC(C(C(F)(F)F)(F)F)(F)F)F)O;CSEBNABAWMZWIF-UHFFFAOYSA-N
+bisphenol_a;bisphenol A;bisfenolo A;bisphenols;industrial;[M-H]-;;6623;C15H16O2;CC(C)(C1=CC=C(C=C1)O)C2=CC=C(C=C2)O;IISBACLAFKSPIT-UHFFFAOYSA-N
+bisphenol_s;bisphenol S;bisfenolo S;bisphenols;industrial;[M-H]-;;6626;C12H10O4S;C1=CC(=CC=C1O)S(=O)(=O)C2=CC=C(C=C2)O;VPWNQTHUCYMVMZ-UHFFFAOYSA-N
+bisphenol_f;bisphenol F;bisfenolo F;bisphenols;industrial;[M-H]-;;12111;C13H12O2;C1=CC(=CC=C1CC2=CC=C(C=C2)O)O;PXKLMJQFEQBVLD-UHFFFAOYSA-N
+methylparaben;methylparaben;metilparabene;parabens;personal_care;[M+H]+|[M+Na]+|[M-H]-;;7456;C8H8O3;COC(=O)C1=CC=C(C=C1)O;LXCFILQKKLGQFO-UHFFFAOYSA-N
+ethylparaben;ethylparaben;etilparabene;parabens;personal_care;[M+H]+|[M+Na]+|[M-H]-;;8434;C9H10O3;CCOC(=O)C1=CC=C(C=C1)O;NUVBSKCKDOMJSU-UHFFFAOYSA-N
+propylparaben;propylparaben;propilparabene;parabens;personal_care;[M+H]+|[M+Na]+|[M-H]-;;7175;C10H12O3;CCCOC(=O)C1=CC=C(C=C1)O;QELSKZZBTMNZEB-UHFFFAOYSA-N
+butylparaben;butylparaben;butilparabene;parabens;personal_care;[M+H]+|[M+Na]+|[M-H]-;;7184;C11H14O3;CCCCOC(=O)C1=CC=C(C=C1)O;QFOHBWFCKVYLES-UHFFFAOYSA-N
+triclosan;triclosan;triclosan;chlorophenols;personal_care;[M-H]-;;5564;C12H7Cl3O2;C1=CC(=C(C=C1Cl)O)OC2=C(C=C(C=C2)Cl)Cl;XEFQLINVKFYRCS-UHFFFAOYSA-N
+triclocarban;triclocarban;triclocarban;carbanilides;personal_care;[M+H]+|[M+Na]+|[M-H]-;;7547;C13H9Cl3N2O;C1=CC(=CC=C1NC(=O)NC2=CC(=C(C=C2)Cl)Cl)Cl;ICUTUKXCWQYESQ-UHFFFAOYSA-N
+tcep;TCEP;TCEP (tris(2-cloroetil) fosfato);organophosphate_esters;flame_retardant;[M+H]+|[M+Na]+|[M+NH4]+;tris(2-chloroethyl) phosphate;8295;C6H12Cl3O4P;C(CCl)OP(=O)(OCCCl)OCCCl;HQUQLFOMPYWACS-UHFFFAOYSA-N
+tcpp;TCPP;TCPP (tris(1-cloro-2-propil) fosfato);organophosphate_esters;flame_retardant;[M+H]+|[M+Na]+|[M+NH4]+;tris(1-chloro-2-propyl) phosphate;26176;C9H18Cl3O4P;CC(CCl)OP(=O)(OC(C)CCl)OC(C)CCl;KVMPUXDNESXNOH-UHFFFAOYSA-N
+tdcpp;TDCPP;TDCPP (tris(1,3-dicloro-2-propil) fosfato);organophosphate_esters;flame_retardant;[M+H]+|[M+Na]+|[M+NH4]+;tris(1,3-dichloro-2-propyl) phosphate;26177;C9H15Cl6O4P;C(C(CCl)OP(=O)(OC(CCl)CCl)OC(CCl)CCl)Cl;ASLWPAWFJZFCKF-UHFFFAOYSA-N
+tphp;TPHP;TPHP (trifenil fosfato);organophosphate_esters;flame_retardant;[M+H]+|[M+Na]+|[M+NH4]+;triphenyl phosphate;8289;C18H15O4P;C1=CC=C(C=C1)OP(=O)(OC2=CC=CC=C2)OC3=CC=CC=C3;XZZNDPSIHUTMOC-UHFFFAOYSA-N
+tbep;TBEP;TBEP (tris(2-butossietil) fosfato);organophosphate_esters;flame_retardant;[M+H]+|[M+Na]+|[M+NH4]+;tris(2-butoxyethyl) phosphate;6540;C18H39O7P;CCCCOCCOP(=O)(OCCOCCCC)OCCOCCCC;WTLBZVNBAKMVDP-UHFFFAOYSA-N
+tnbp;TnBP;TnBP (tributil fosfato);organophosphate_esters;industrial;[M+H]+|[M+Na]+|[M+NH4]+;tributyl phosphate;31357;C12H27O4P;CCCCOP(=O)(OCCCC)OCCCC;STCOOQWBFONSKY-UHFFFAOYSA-N
+benzotriazole;benzotriazole;benzotriazolo;benzotriazoles;industrial;[M+H]+|[M+Na]+|[M-H]-;1H-benzotriazole;7220;C6H5N3;C1=CC2=NNN=C2C=C1;QRUDEWIWKLJBPS-UHFFFAOYSA-N
+tolyltriazole;tolyltriazole;toliltriazolo;benzotriazoles;industrial;[M+H]+|[M+Na]+|[M-H]-;5-methyl-1H-benzotriazole;8705;C7H7N3;CC1=CC2=NNN=C2C=C1;LRUDIIUSNGCQKF-UHFFFAOYSA-N
+benzothiazole;benzothiazole;benzotiazolo;benzothiazoles;industrial;[M+H]+|[M+Na]+|[M+NH4]+;;7222;C7H5NS;C1=CC=C2C(=C1)N=CS2;IOJUPLGTWVMSFF-UHFFFAOYSA-N
+2_mercaptobenzothiazole;2-mercaptobenzothiazole;2-mercaptobenzotiazolo;benzothiazoles;industrial;[M+H]+|[M+Na]+|[M-H]-;;697993;C7H5NS2;C1=CC=C2C(=C1)NC(=S)S2;YXIWHUQXZSMYRE-UHFFFAOYSA-N
+1_3_diphenylguanidine;1,3-diphenylguanidine;1,3-difenilguanidina;guanidines;industrial;[M+H]+|[M+Na]+|[M+NH4]+;diphenylguanidine;7594;C13H13N3;C1=CC=C(C=C1)NC(=NC2=CC=CC=C2)N;OWRCNXZUPFZXOS-UHFFFAOYSA-N
+6ppd_quinone;6PPD-quinone;6PPD-chinone;ppd_quinones;industrial;[M+H]+|[M+Na]+|[M+NH4]+;6PPD-quinone;154926030;C18H22N2O2;CC(C)CC(C)NC1=CC(=O)C(=CC1=O)NC2=CC=CC=C2;UBMGKRIXKUIXFQ-UHFFFAOYSA-N
+melamine;melamine;melammina;triazines;industrial;[M+H]+|[M+Na]+|[M+NH4]+;;7955;C3H6N6;C1(=NC(=NC(=N1)N)N)N;JDSHMPZPIAZGSV-UHFFFAOYSA-N
+deet;DEET;DEET (N,N-dietil-m-toluammide);toluamides;insect_repellent;[M+H]+|[M+Na]+|[M+NH4]+;N,N-diethyl-meta-toluamide;4284;C12H17NO;CCN(CC)C(=O)C1=CC=CC(=C1)C;MMOXZBCLCQITDF-UHFFFAOYSA-N
+acesulfame;acesulfame;acesulfame;sweeteners;food_additive;[M-H]-;;36573;C4H5NO4S;CC1=CC(=O)NS(=O)(=O)O1;YGCFIWIQZPHFLU-UHFFFAOYSA-N
+sucralose;sucralose;sucralosio;sweeteners;food_additive;[M-H]-;;71485;C12H19Cl3O8;C([C@@H]1[C@@H]([C@@H]([C@H]([C@H](O1)O[C@]2([C@H]([C@@H]([C@H](O2)CCl)O)O)CCl)O)O)Cl)O;BAQAVOSOZGMPRM-QBMZZYIRSA-N
+4_tert_octylphenol;4-tert-octylphenol;4-terz-ottilfenolo;alkylphenols;industrial;[M-H]-;4-tert-octylphenol;8814;C14H22O;CC(C)(C)CC(C)(C)C1=CC=C(C=C1)O;ISAVYTVYFVQUDY-UHFFFAOYSA-N
