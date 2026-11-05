@@ -246,9 +246,12 @@ function scanLine(p, data, d0) {
 // «Isotopic pattern…»: the formula (with its charge, or with the adduct) whose pattern is drawn over the spectrum, zoomed on it
 /** @param {any} p */
 async function isoAsk(p) {
-  const a = p._a, v = await ask(I18N.t("ctx.spec.iso.prompt", { adduct: EH(defAdduct(a.data.map(/** @param {any} x */ x => x.f))) }), p.iso ? p.iso.formula + " " + p.iso.ad : "");
+  const a = p._a, sug = { rows: (/** @type {string} */ q) => LISTENOMI.suggest(q), text: (/** @type {Bag} */ r) => r.formula + " " + (r.adduct || defAdduct(a.data.map(/** @param {any} x */ x => x.f))), ready: () => LISTE.ready() };
+  const v = await ask(I18N.t("ctx.spec.iso.prompt", { adduct: EH(defAdduct(a.data.map(/** @param {any} x */ x => x.f))) }), p.iso ? p.iso.formula + " " + p.iso.ad : "", { suggest: sug, tip: I18N.t("ctx.spec.iso.tip") });
   if (!v) return;
-  const mm = v.match(/^\s*(\S+)\s*(\[.*\].*)?$/); if (!mm) return;
+  // a name of the list written in full (a pick not made) is read like the pick: its formula, the adduct of the text or of the list
+  const nm = await LISTE.ready().then(() => LISTENOMI.byName(v), () => null);
+  const mm = nm ? [v, nm.formula, nm.adduct || undefined] : v.match(/^\s*(\S+)\s*(\[.*\].*)?$/); if (!mm) return;
   let ftxt = mm[1], adt = mm[2];
   // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
   const chg = ftxt.match(/^(.+?)([+\-−])$/);
