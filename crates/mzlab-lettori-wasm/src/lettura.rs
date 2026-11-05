@@ -254,6 +254,8 @@ fn apri_campione(
 }
 
 /// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::mancanti`).
+/// Indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
+/// the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte.
 #[wasm_bindgen]
 pub fn to_mzml(
     names: js_sys::Array,
@@ -263,6 +265,25 @@ pub fn to_mzml(
     sink: Function,
     progress: Function,
 ) -> Result<f64, JsValue> {
+    to_mzml_come(names, sizes, read, c, true, "standard", sink, progress)
+}
+
+/// `to_mzml` with the optical matrix only when `dad` and the compression of «Download .mzML» (`mzmlwrite::opzioni_compressione`): with `dad` false the file of
+/// `mzlab-cli convert` with the same `conv.numpress`, byte for byte (the download of a `.wiff` sample, also one the engine reads: the engine leaves out what `estesi` writes).
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn to_mzml_come(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+    dad: bool,
+    compression: &str,
+    sink: Function,
+    progress: Function,
+) -> Result<f64, JsValue> {
+    let opz = mzlab_core::mzmlwrite::opzioni_compressione(compression)
+        .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     let m = Membri::new(names, sizes, read)?;
     let mut l = apri_campione(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
     let lacking = l.mancanti(c as usize);
@@ -277,14 +298,9 @@ pub fn to_mzml(
             &(total as f64).into(),
         );
     };
-    // indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
-    // the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte
     let conv = lettori_mzml::Conversione {
         steps: Some(&[]),
-        opz: mzlab_core::mzmlwrite::Opzioni {
-            dad: true,
-            ..mzlab_core::mzmlwrite::Opzioni::default()
-        },
+        opz: mzlab_core::mzmlwrite::Opzioni { dad, ..opz },
         ..lettori_mzml::Conversione::default()
     };
     conv.scrivi(&mut *l, c as usize, &mut out, &mut tell)
