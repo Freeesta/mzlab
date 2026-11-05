@@ -1,4 +1,4 @@
-import sys, json; import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, json, re; import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 def pt(pg, idx, x=None, y=None):
     """page coords of canvas point in panel idx at data x (and fractional y 0..1 of plot height)."""
@@ -7,9 +7,17 @@ def pt(pg, idx, x=None, y=None):
 def click_menu(pg, text):
     pg.locator("#ctx div", has_text=text).first.click()
 steps = []
+# a failure keeps Playwright's call log and a screenshot in .verifica/ (the CI artifact): a click that times out says what held it (disabled, covered, moving)
+FAILSHOT = ROOT / ".verifica" / "shots"
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:200]))
+    except Exception as e:
+        steps.append((name, "FAIL " + str(e).split("\n")[0][:200]))
+        print("FAIL DETAIL", name, "\n" + str(e)[:4000])
+        try:
+            FAILSHOT.mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(FAILSHOT / ("e2e3_" + re.sub(r"\W+", "_", name) + ".png")))
+            print("state", pg.evaluate("({cur: E.cur, browse: E.browse, tab: E.tab, fnext: (b => b && {dis: b.disabled, inert: !!b.closest('[inert]'), top: (r => { const t = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return t && t.tagName + (t.id ? '#' + t.id : '') + (t.getAttribute('class') ? '.' + t.getAttribute('class') : '') })(b.getBoundingClientRect())})(document.querySelector('#fnext')), dlg: [...document.querySelectorAll('dialog[open]')].map(d => d.id)})"))
+        except Exception as e2: print("no screenshot:", str(e2).split("\n")[0])
 r = Run()
 try:
     with sync_playwright() as p:
