@@ -207,6 +207,8 @@ try:
             jobs_until(pg, det, "j.filter(x => x[1] === 'done' || x[1] === 'reused').length >= 2")
             states = dict(pg.evaluate(JOBS, det))
             assert states.get(inputs[2]) not in ("done", "reused", "running"), states
+            cs = dict(pg.evaluate(JOBS, cen))      # no mzML of that file in the session: its centroid job waits (input.missing), it does not fail the step for the other files
+            assert cs.get(inputs[2]) == "blocked" and cs.get(inputs[0]) == "reused" and cs.get(inputs[1]) == "reused", cs
             pg.focus(CARD % cen); pg.keyboard.press("Enter")
             until(pg, "() => { const t = document.querySelector('.fl-insp .fln-files'); return t && !t.hidden && t.querySelectorAll('tbody tr').length > 0; }")
             rows = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files tbody tr')].map(r => [...r.children].map(c => c.textContent))")
