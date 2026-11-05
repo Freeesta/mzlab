@@ -692,6 +692,7 @@ declare var nbGen: any;
 declare var nbLast: any;
 declare var nbLoad: any;
 declare var nbMerge: any;
+declare var nbNamed: any;
 declare var nbPlain: any;
 declare var nbQueue: any;
 declare var nbRemote: any;

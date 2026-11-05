@@ -391,6 +391,9 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
 // they take the roles and times of the open files and ask no proposal from the names, which OPENNOW.sync would write over the saved ones
 function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
   for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
+  // a file the notebook does not name was still loading when the page went away: it opens as on a first load (more than 50: a large folder, unticked as after «Choose»); one the student removed stays unticked
+  const late=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD&&!OPENNOW.isOpen(f.name));late.forEach((/** @type {FileRiga} */ f)=>{if(nbNamed.has(f.name))f.use=false});
+  const back=late.filter((/** @type {FileRiga} */ f)=>!nbNamed.has(f.name));if(back.length>50)back.forEach((/** @type {FileRiga} */ f)=>{f.use=false});else back.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));
   FILETAB.flush(true);ST.methods=d.methods||[];renderMethods()}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();ST.files.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
