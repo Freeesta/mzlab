@@ -20,8 +20,8 @@ pub fn mrm_transitions<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom]) -> Result<S
     let mut o = Out::default();
     o.raw("[");
     let mut first = true;
-    for c in chroms.iter().filter(|c| c.kind == "srm") {
-        let (t, y) = m.chromatogram(c)?;
+    let srm: Vec<_> = chroms.iter().filter(|c| c.kind == "srm").collect();
+    m.chromatograms_each(&srm, |c, (t, y)| {
         o.raw(if first { "" } else { "," })
             .raw("{\"id\":")
             .int(c.index as i64)
@@ -41,7 +41,7 @@ pub fn mrm_transitions<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom]) -> Result<S
             .rounded(&y, 1)
             .raw("}");
         first = false;
-    }
+    })?;
     o.raw("]");
     Ok(o.0)
 }

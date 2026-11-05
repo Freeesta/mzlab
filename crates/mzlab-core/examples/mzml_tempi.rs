@@ -1,7 +1,7 @@
 //! Times the load of an mzML (scan table, fingerprints, `.mzidx`) and its writing, with no real file.
 //! `cargo run --release --example mzml_tempi -p mzlab-core -- genera OUT.mzML [SCANS] [PEAKS_PER_SCAN]` writes a synthetic mzML (made-up reader of
 //! `tests/lettore_finto`, timed); `cargo run --release --example mzml_tempi -p mzlab-core -- FILE.mzML [BUDGET_MB]` times, on any mzML, the
-//! scan table (`upload::prepare`, and `upload::prepare_parallelo` with the fingerprints on a second thread), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
+//! scan table (`upload::prepare`, `upload::prepare_con` with the fingerprints known as on the site, and `upload::prepare_parallelo` with the fingerprints on a second thread), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
 #[path = "../tests/lettore_finto/mod.rs"]
 mod finto;
 
@@ -78,6 +78,23 @@ fn main() {
         "parse (decode all)      {:>8.3} s ({n} peaks)",
         t.elapsed().as_secs_f64()
     );
+    // no spare core: the parse decodes on its own thread, as the .wasm of the site does
+    let t = Instant::now();
+    let mut n1 = 0usize;
+    {
+        let _all = mzlab_core::spare::busy(1 << 16);
+        mzml::parse(BufReader::new(File::open(path).expect("open")), |it| {
+            if let mzml::Item::Spectrum(s) = it {
+                n1 += s.mz.len();
+            }
+        })
+        .expect("parse");
+    }
+    assert_eq!(n1, n);
+    println!(
+        "parse (one thread)      {:>8.3} s",
+        t.elapsed().as_secs_f64()
+    );
     let _ = picco();
     let t = Instant::now();
     let mut f = File::open(path).expect("open");
@@ -89,6 +106,16 @@ fn main() {
         p.table.scans_json.len() as f64 / 1048576.0,
         picco()
     );
+    // the site's open: the page took the fingerprints while it copied the file, so only the scan table is read
+    let t = Instant::now();
+    let known = Some((p.sha256.clone(), String::new()));
+    let p3 = upload::prepare_con(&mut File::open(path).expect("open"), size, "x.mzML", known)
+        .expect("prepare");
+    println!(
+        "prepare (prints known)  {:>8.3} s",
+        t.elapsed().as_secs_f64()
+    );
+    drop(p3);
     let t = Instant::now();
     let p2 = upload::prepare_parallelo(
         &mut File::open(path).expect("open"),

@@ -99,6 +99,10 @@ fn push(out: &mut Vec<f64>, v: f64, max: usize) -> Result<()> {
     if out.len() >= max {
         return Err(bad("more values than declared"));
     }
+    // a damaged fixed point (a subnormal) divides an integer into infinity
+    if !v.is_finite() {
+        return Err(bad("value out of range"));
+    }
     out.push(v);
     Ok(())
 }
@@ -230,10 +234,14 @@ fn slof(data: &[u8], max: usize) -> Result<Vec<f64>> {
     if body.len() / 2 > max {
         return Err(bad("more values than declared"));
     }
-    Ok(body
-        .chunks_exact(2)
+    body.chunks_exact(2)
         .map(|c| (f64::from(u16::from_le_bytes([c[0], c[1]])) / fp).exp() - 1.0)
-        .collect())
+        .map(|v| {
+            v.is_finite()
+                .then_some(v)
+                .ok_or_else(|| bad("value out of range"))
+        })
+        .collect()
 }
 
 // ---- encoders (the reference, for the tests; `mzmlwrite` writes with the `_into` forms) ----

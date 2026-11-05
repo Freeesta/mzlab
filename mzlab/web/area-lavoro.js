@@ -45,7 +45,8 @@ function syncWork(/** @type {boolean} */ force = false) {
   SHEETLBL.refresh();
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
   const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
-  const simtab = () => { /** @type {any} */ (window).SIMTAB?.sync(); /** @type {any} */ (window).SIMUI?.help(); };   // the SIM table follows the loaded files and the state written here (sim-tabella.js)
+  // the SIM table follows the loaded files and the state written here (sim-tabella.js); the provisional TIC of a first loading too (tic-provvisorio.js)
+  const simtab = () => { /** @type {any} */ (window).SIMTAB?.sync(); /** @type {any} */ (window).SIMUI?.help(); /** @type {any} */ (window).TICPROV?.sync(); };
   if (sig === _workSig && !force) { simtab(); return; }
   const was = ws.dataset.work;
   _workSig = sig; ws.dataset.work = w;
@@ -103,3 +104,8 @@ workQ("#flist").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   if (S.table && /** @type {HTMLElement} */ (e.target).closest("[data-open]")) { S.table = false; queueMicrotask(() => syncWork()); }
 }, true);
 
+// the provisional TIC (tic-provvisorio.js) is loaded at the first scan table with its TIC, not at start-up; the events of the wait are handed over
+{ /** @type {any[] | null} */ let q = null;
+  addEventListener("mzlab-index", (/** @type {any} */ e) => { const d = e && e.detail, W = /** @type {any} */ (window); if (W.TICPROV || !(d && (q || d.early_tic))) return;
+    if (q) { q.push(d); return; }
+    q = [d]; carica("m:tic-provvisorio.js").then(() => { W.TICPROV.feed(q); q = null; }, () => { q = null; }); }); }

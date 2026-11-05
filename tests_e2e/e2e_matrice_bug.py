@@ -111,6 +111,13 @@ try:
             rows = pg.evaluate("[...document.querySelectorAll('#prof-tab tbody tr')].map(r => r.textContent)")
             assert not any("t30" in x for x in rows), rows
         cell(pg, "many files: a file removed, the profile forgets it", remove)
+        def profile_error():
+            profile()                                      # a result on screen, then a wrong retention time
+            pg.fill("#prof-rt", "-1"); pg.click("#prof-go")
+            attendi(pg, "!!document.querySelector('#prof-msg').textContent", 30000)
+            assert not pg.locator("#prof-res").inner_text().strip(), "the old result stays beside the error"
+            assert pg.evaluate("PROFILO.result") is None
+        cell(pg, "many files: an input error drops the old profile", profile_error)
         cell(pg, "many files: undo, redo", lambda: (pg.keyboard.press("Control+z"), ready(pg), pg.keyboard.press("Control+Shift+z"), ready(pg)))
         T30 = "E.files.find(f => f.file === 'M_t30.mzML' && !f.gone)"
         ROW30 = "ST.files.find(f => f.name === 'M_t30.mzML')"

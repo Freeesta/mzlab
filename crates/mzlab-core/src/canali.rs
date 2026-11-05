@@ -382,15 +382,18 @@ impl Canali {
 /// The proposed type of experiment from the structure of the channels (`infusione` decides the infusions).
 fn tipo_di(scans: &[Scan], v: &[Canale], facts: &Facts, nome: &str) -> Tipo {
     let srm = v.iter().any(|c| c.famiglia == Famiglia::Srm);
+    let sim = v.iter().any(|c| c.famiglia == Famiglia::Sim);
     let ms: Vec<&Canale> = v
         .iter()
         .filter(|c| matches!(c.famiglia, Famiglia::Ms | Famiglia::Dd))
         .collect();
     let t = |proposto, motivo| Tipo { proposto, motivo };
     if scans.is_empty() {
-        return match (srm, facts.pda) {
-            (true, _) => t("lc-mrm", "srm_only"),
-            (false, true) => t("solo-uv", "uv_only"),
+        // SIM channels are MS data: a SIM file is never "UV only" or "empty"
+        return match (srm, sim, facts.pda) {
+            (true, _, _) => t("lc-mrm", "srm_only"),
+            (false, true, _) => t("lc-sim", "sim_only"),
+            (false, false, true) => t("solo-uv", "uv_only"),
             _ => t("misto", "empty"),
         };
     }

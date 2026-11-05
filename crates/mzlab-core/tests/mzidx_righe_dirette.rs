@@ -1,6 +1,6 @@
 //! The scan table and the `.mzidx` of a reader built without the mzML text (`Rows::lettore`, one decoding for the table and pass 1) equal the old way:
 //! the mzML `lettori_mzml::scrivi` writes, read back by `scantable` and indexed by `build_mzml`. A made-up reader (`lettore_finto`) carries every optional
-//! field: precursor with and without a value, every polarity, empty scans, equal m/z in several scans, NaN and out-of-range m/z, 64-bit intensities,
+//! field: precursor with and without a value, every polarity, empty scans, equal m/z in several scans, out-of-range m/z, 64-bit intensities,
 //! arrays of unequal length, extras that name accessions the rows read. Header variants too (analyzer components, `MS:1000768`, names that need the text).
 #![allow(clippy::indexing_slicing)]
 #![allow(clippy::disallowed_methods)]

@@ -31,19 +31,19 @@ export function makeGate(size) {
 // moduleUrl: the .wasm of the builder, compiled ONCE here (compileStreaming) and handed to every worker as a WebAssembly.Module, so that a worker that lives for one file
 // does not compile it again (without it the worker compiles by itself, as the test workers do).
 // module: the WebAssembly.Module the engine already compiled (used as is); gate: the shared limit of workers (makeGate).
-export function createPool({ workerUrl, size, budget = 64, isolated = false, aiuti = /** @type {number | null} */ (null), notify = /** @type {(key?: string) => void} */ (() => {}), WorkerClass = Worker, moduleUrl = /** @type {any} */ (null), module = /** @type {any} */ (null), gate = /** @type {any} */ (null) }) {
-  let limit = size, active = 0, off = false, compiled = module ? Promise.resolve(module) : null;
+export function createPool({ workerUrl, size, budget = 64, isolated = false, aiuti = /** @type {number | null} */ (null), notify = /** @type {(key?: string) => void} */ (() => {}), WorkerClass = Worker, moduleUrl = /** @type {any} */ (null), module = /** @type {any} */ (null), gate = /** @type {any} */ (null), offMs = 5000 }) {
+  let limit = size, active = 0, off = false, offAt = 0, compiled = module ? Promise.resolve(module) : null;
   const getModule = () => compiled || (compiled = (async () => {
     try { return await WebAssembly.compileStreaming(fetch(moduleUrl)); }
     catch (_) { try { return await WebAssembly.compile(await (await fetch(moduleUrl)).arrayBuffer()); } catch (e) { compiled = null; return null; } }
   })());
   const queue = [], running = new Map();          // running: job -> worker
   const finish = (job, res) => { if (job.done) return; job.done = true; job.resolve(res); };
-
   function wake() { pump(); if (gate) for (const p of gate.pumps) if (p !== pump) p(); }
   function pump() {
     while (active < limit && (!gate || gate.used < gate.size) && queue.length) {
-      if (off) { finish(queue.shift(), { ok: false, reason: "unavailable" }); continue; }
+      if (off && performance.now() - offAt <= offMs) { finish(queue.shift(), { ok: false, reason: "unavailable" }); continue; }
+      off = false;       // a start that failed twice is not final: after offMs the next job tries a fresh worker
       run(queue.shift());
     }
   }
@@ -57,16 +57,17 @@ export function createPool({ workerUrl, size, budget = 64, isolated = false, aiu
       if (!job.tried) { job.tried = true; queue.unshift(job); } else finish(job, { ok: false, reason, text });
       wake();
     };
-    try { w = new WorkerClass(workerUrl, { type: "module" }); } catch (e) { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: String(e) }); return wake(); }
+    const noStart = (/** @type {string} */ text) => { end(); if (!job.started) { job.started = true; queue.unshift(job); } else { off = true; offAt = performance.now(); finish(job, { ok: false, reason: "unavailable", text }); } wake(); };      // a worker that does not start (module or .wasm not loaded): one more try on a fresh worker, then the pool is off for offMs
+    try { w = new WorkerClass(workerUrl, { type: "module" }); } catch (e) { end(); off = true; offAt = performance.now(); finish(job, { ok: false, reason: "unavailable", text: String(e) }); return wake(); }
     running.set(job, w);
     (moduleUrl || module ? getModule() : Promise.resolve(null)).then(module => { if (!job.done) { try { w.postMessage({ op: "module", module }); } catch (_) { /* gone */ } } });
-    w.onerror = e => { if (job.done || ended) return; if (inited) retry("crash", e.message); else { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: e.message }); wake(); } };
+    w.onerror = e => { if (job.done || ended) return; if (inited) retry("crash", e.message); else noStart(e.message); };
     w.onmessage = ev => {
       const m = ev.data;
       if (job.done || ended) return;
       if (m.op === "ready") { inited = true; w.postMessage(job.msg || { blob: job.blob, inputs: job.inputs, prep: job.prep, part: job.part, partCen: job.partCen, budget: job.budget || budget, cap: job.cap, nat: job.nat, name: job.name, aiuti: job.nat ? 0 : aiuti ?? aiutiPer(limit, gate ? gate.used : active, isolated) }, job.transfer || []); return; }   // aiuti: the helpers of an mzML builder (aiutiPer)
       if (m.op === "progress") { if (job.onProgress) job.onProgress(m); return; }
-      if (m.op === "unavailable") { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: m.text }); wake(); return; }
+      if (m.op === "unavailable") return noStart(m.text);
       if (m.op === "done") { end(); finish(job, { ok: true, stats: m.stats, ms: m.ms, parts: m.parts }); wake(); return; }
       if (m.op === "error") {
         if (m.fatal) return retry("crash", m.text);
@@ -83,7 +84,6 @@ export function createPool({ workerUrl, size, budget = 64, isolated = false, aiu
       }
     };
   }
-
   if (gate) gate.pumps.push(pump);
   return {
     // job: { name, blob, inputs | prep: { size, prints }, part, budget? } (prep: the worker makes the scan table itself) or { name, nat, part } (a dataset of a maker, rust-nativo.js) or { name, msg, transfer?, onProgress? }

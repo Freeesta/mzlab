@@ -14,10 +14,11 @@ const VALUES: [f64; 7] = [
     std::f64::consts::PI,
     1e-300,
     123456.789,
-    f64::INFINITY,
+    // the largest finite value: an infinite point is refused by the chromatogram reader (`err.file.nonFiniteTrace`)
+    f64::MAX,
 ];
 /// `VALUES` as little-endian f64 compressed by CPython's zlib at level 6 (a writer other than the one in the build).
-const FOREIGN: &str = "eJxjYEAGH+whNMsBCV2XkN+KnA6Rn38cks9byniybN98HpV/DlB19QAbTg3o";
+const FOREIGN: &str = "eJxjYEAGH+whNMsBCV2XkN+KnA6Rn38cks9byniybN98HpV/Dv/B4H09ADwrE+E=";
 
 fn file(b64: &str, n: usize) -> Vec<u8> {
     format!(

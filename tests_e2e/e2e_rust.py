@@ -107,8 +107,10 @@ try:
             assert pg.evaluate("ST.files.some(f => /\\.mzML$/.test(f.name) && f.name.startsWith(%r))" % os.path.splitext(os.path.basename(raws[0]))[0])
         step("a Thermo .raw is read by the engine and listed as an mzML", thermo_raw)
         def recycled():
-            pg.evaluate("window.MZLAB_RUST.recycler.now()")
-            assert pg.evaluate("window.MZLAB_RUST.stats.recycled") == 1 and pg.evaluate("window.MZLAB_RUST.stats.restarts") == 0
+            # recycler.now() does nothing while an engine request is in flight (never mid-answer): asked again until the engine is idle and it recycles
+            pg.wait_for_function("window.MZLAB_RUST.recycler.now(), (window.MZLAB_RUST.stats.recycled || 0) >= 1", timeout=30000)
+            st = pg.evaluate("({...window.MZLAB_RUST.stats})")
+            assert st.get("recycled") == 1 and st.get("restarts") == 0, st
             r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]      # files reopened, not a fault: nothing counted, no message
             assert not pg.evaluate("(document.querySelector('#rust-note') || {}).textContent || ''").strip(), "a recycle must be silent"
         step("a recycled worker (large and idle) is replaced silently: files reopened, no fault counted", recycled)

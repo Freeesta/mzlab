@@ -758,11 +758,8 @@ pub fn facts_from<M: ReadAt>(
     if need_mrm && (scans_end == 0 || f.srm > 0) {
         f.header_polarity = m.header_polarity()?;
         let (mut lo, mut hi): (Option<f64>, Option<f64>) = (None, None);
-        for c in chroms.iter().filter(|c| c.kind == "srm") {
-            let t = match m.chromatogram_times(c)? {
-                Some(t) => t,
-                None => m.chromatogram(c)?.0,
-            };
+        let srm: Vec<_> = chroms.iter().filter(|c| c.kind == "srm").collect();
+        m.chromatograms_times(&srm, |t| {
             if !t.is_empty() {
                 // Ascending times (the norm) make the ends the extremes; anything else (descending, NaN) keeps the fold.
                 let (a, b) = if t.windows(2).all(|w| w[0] <= w[1]) {
@@ -776,7 +773,7 @@ pub fn facts_from<M: ReadAt>(
                 lo = Some(lo.map_or(a, |x| x.min(a)));
                 hi = Some(hi.map_or(b, |x| x.max(b)));
             }
-        }
+        })?;
         f.srm_rt = lo.zip(hi);
     }
     Ok(f)

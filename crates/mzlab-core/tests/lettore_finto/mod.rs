@@ -134,8 +134,9 @@ impl Finto {
                 (0..np).map(|_| 50.0 + r.unit() * 1500.0).collect()
             };
             if k % 41 == 13 {
-                // out of range, rounding to 32 bits across a bucket edge, not a number
-                mz.extend([-5.0, 12345.6, 99.999_999_9, 9998.999_999_9, f64::NAN]);
+                // out of range, rounding to 32 bits across a bucket edge (a NaN never gets here: the readers' guard and the mzML parser refuse it,
+                // tests/numeri_finiti_motore.rs)
+                mz.extend([-5.0, 12345.6, 99.999_999_9, 9998.999_999_9]);
             }
             mz.sort_by(|a, b| a.total_cmp(b));
             let np = mz.len();

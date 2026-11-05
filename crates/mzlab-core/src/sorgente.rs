@@ -193,20 +193,20 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
     fn srm(&mut self) -> Result<Vec<crate::srm::Traccia>> {
         let list = self.lista()?.to_vec();
         let mut out = Vec::new();
-        for c in list.iter().filter(|c| c.kind == "srm") {
-            let (Some(q1), Some(q3)) = (c.q1, c.q3) else {
-                continue;
-            };
-            let (t, y) = self.m.chromatogram(c)?;
+        let srm: Vec<_> = list
+            .iter()
+            .filter(|c| c.kind == "srm" && c.q1.is_some() && c.q3.is_some())
+            .collect();
+        self.m.chromatograms_each(&srm, |c, (t, y)| {
             out.push(crate::srm::Traccia {
-                q1,
-                q3,
+                q1: c.q1.unwrap_or_default(),
+                q3: c.q3.unwrap_or_default(),
                 ce: c.ce,
                 name: c.name.clone(),
                 t,
                 y,
             });
-        }
+        })?;
         Ok(out)
     }
 }
