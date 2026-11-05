@@ -20,14 +20,23 @@ fn bad(step: &str, name: &str) -> Error {
         .with("param", name)
 }
 
-/// `area_from` of `features.detect`: `channel` (the area of the detection) or `window` (the one of the quality trace).
-fn set_area_from(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
-    r.steps.quality.area_window = match v.str() {
-        Some("channel") => false,
-        Some("window") => true,
+/// `area_from` of `features.detect` (`channel` or `window`, the area of the quality trace) and `stitch` (`strict` or `wide`): the second value turns its switch on.
+fn set_trace_choice(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
+    let (flag, on) = if k == "area_from" {
+        (&mut r.steps.quality.area_window, ["channel", "window"])
+    } else {
+        (&mut r.detect.stitch_wide, ["strict", "wide"])
+    };
+    *flag = match v.str() {
+        Some(x) if x == on[0] => false,
+        Some(x) if x == on[1] => true,
         _ => return Err(bad(step, k)),
     };
     Ok(())
+}
+
+fn choice(on: bool, yes: &str, no: &str) -> Value {
+    Value::Str(if on { yes } else { no }.into())
 }
 
 /// A tolerance written on the wrong axis: `param` is in ppm on the unit axis or `tol_da`/`dup_da` on the ppm axis; never read as the other unit.
@@ -217,7 +226,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
-        ("features.detect", "area_from") => set_area_from(r, step, k, v)?,
+        ("features.detect", "area_from" | "stitch") => set_trace_choice(r, step, k, v)?,
         ("features.detect", "min_width" | "min_snr") => set_gate(&mut r.detect, k, num()?),
         ("features.detect", _) if recipe_iso::owns(k) => recipe_iso::set(r, step, k, v)?,
         ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
@@ -329,15 +338,9 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("merge_overlap", n(r.detect.merge_overlap)),
                 (
                     "area_from",
-                    Value::Str(
-                        if r.steps.quality.area_window {
-                            "window"
-                        } else {
-                            "channel"
-                        }
-                        .into(),
-                    ),
+                    choice(r.steps.quality.area_window, "window", "channel"),
                 ),
+                ("stitch", choice(r.detect.stitch_wide, "wide", "strict")),
                 ("min_width", n(r.detect.min_width)),
                 ("min_snr", n(r.detect.min_snr)),
             ];

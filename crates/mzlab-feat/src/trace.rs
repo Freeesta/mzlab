@@ -45,6 +45,8 @@ pub struct Params {
     pub long_trace: u32,
     /// Two rows of different grids are one ion when their scans overlap by this share of the shorter one (0 = only the apex and edges test of `merge_grids`).
     pub merge_overlap: f64,
+    /// Pieces of neighbouring channels join when they touch whatever their height, and pieces down to a quarter of `min_height` take part (`channels::stitch`).
+    pub stitch_wide: bool,
     /// Noise rows of the unit profile: a row narrower than this share of the typical peak width of its file is dropped (0 = off, `lrnoise`).
     pub min_width: f64,
     /// A row whose apex is below this many times the noise of its flanks is dropped (0 = off, `lrnoise`).
@@ -67,6 +69,7 @@ impl Default for Params {
             max_gap: MAX_GAP,
             long_trace: LONG_TRACE,
             merge_overlap: 0.0,
+            stitch_wide: false,
             min_width: 0.0,
             min_snr: 0.0,
             axis: MassAxis::Ppm,

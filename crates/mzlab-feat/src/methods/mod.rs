@@ -235,6 +235,10 @@ fn sentence(s: &Step) -> String {
             out.push(' ');
             out.push_str(templates::AREA_WINDOW);
         }
+        if value_of(s, "stitch") == "wide" {
+            out.push(' ');
+            out.push_str(templates::STITCH_WIDE);
+        }
     }
     if s.failed {
         out.push_str(" This step did not complete.");

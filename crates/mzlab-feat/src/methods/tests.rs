@@ -142,3 +142,16 @@ fn the_window_area_adds_its_sentence_to_the_detection() {
     );
     assert!(!run("channel").contains("Feature areas were summed"));
 }
+
+#[test]
+fn the_wide_stitch_adds_its_sentence_to_the_detection() {
+    let run = |how: &str| {
+        let record = format!(
+            r#"{{"schema":"corsa/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+{{"name":"floor","value":20000,"state":"fixed"}},{{"name":"stitch","value":"{how}","state":"fixed"}}]}}]}}"#
+        );
+        methods_text(&style("paragraph"), record.as_bytes()).unwrap()
+    };
+    assert!(run("wide").contains("Pieces of a trace in neighbouring m/z channels were joined"));
+    assert!(!run("strict").contains("Pieces of a trace"));
+}

@@ -150,6 +150,24 @@ def test_the_window_area_gives_the_same_bytes_native_and_in_node(built):
     feats = [f for f in names if f.endswith(".mzfeatf")]
     assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "window and channel give the same files: the test proves nothing"
 
+
+WIDE = '{"fill": true, "layers": [{"step": "features.detect", "params": {"stitch": "wide"}}]}'
+
+
+def test_the_wide_stitch_gives_the_same_bytes_native_and_in_node(built):
+    """`stitch` = `wide` of `features.detect` (touching pieces of neighbouring channels joined at any height) writes the same files in the .wasm as
+    natively, and not the files of the default `strict`. `series_evid.mzfeat` is left out as above."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_wide", "--recipe", WIDE)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_wide", "--recipe", WIDE)
+    _, def_dir = native(root, idx, "nat_strict", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    feats = [f for f in names if f.endswith(".mzfeatf")]
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "wide and strict give the same files: the test proves nothing"
+
 @pytest.mark.parametrize("mode", ["ion", "family"])
 def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
     """The contract of memory: the `.mzfeatf`, the `.mzfeat` and the one with `evid` have the same SHA-256 in memory and under a budget (slabs of m/z,

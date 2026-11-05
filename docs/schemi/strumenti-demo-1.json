@@ -679,9 +679,10 @@
                   "min_points",
                   "max_gap",
                   "long_trace",
-                  "area_from",
                   "merge_overlap",
                   "budget",
+                  "area_from",
+                  "stitch",
                   "min_width",
                   "min_snr",
                   "isotopes",
@@ -744,11 +745,6 @@
                     "description":"A trace longer than this is background and is not taken"
                   },
                   {
-                    "enum":["channel","window"],
-                    "default":"channel",
-                    "description":"Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
-                  },
-                  {
                     "type":"number",
                     "minimum":0,
                     "maximum":1,
@@ -756,6 +752,16 @@
                     "description":"Rows within the mass tolerance are one ion when their scans overlap by this share of the shorter trace"
                   },
                   {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
+                  {
+                    "enum":["channel","window"],
+                    "default":"channel",
+                    "description":"Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
+                  },
+                  {
+                    "enum":["strict","wide"],
+                    "default":"strict",
+                    "description":"Wide also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row."
+                  },
                   {
                     "type":"number",
                     "minimum":0,

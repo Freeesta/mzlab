@@ -18,6 +18,9 @@ impl std::fmt::Debug for Params {
         if self.merge_overlap != 0.0 {
             d.field("merge_overlap", &self.merge_overlap);
         }
+        if self.stitch_wide {
+            d.field("stitch_wide", &true);
+        }
         if self.min_width != 0.0 {
             d.field("min_width", &self.min_width);
         }
