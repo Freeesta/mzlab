@@ -112,6 +112,7 @@ I18N.add("en", {
   "load.dup.many": "{n} files already loaded: ignored.",
   "load.wiffTwin": "Two pairs with this name in one loading, from different folders, and nothing tells which .wiff goes with which .wiff.scan. Neither is opened: load each folder (or each pair) on its own.",
   "load.wiffWait": "Waiting for the other file of the pair (.wiff and .wiff.scan with the same name).",
+  "load.note.hashRenamed": "{from} opened as {to}: in the list the # character separates a file from its parts.",
   "load.note.movedToDam": "Methods put in box 2: {name}",
   "load.note.movedToData": "Data files put in box 1: {name}",
   "load.hrmix.note": "Low and high resolution cannot be opened together: choose which to load now, the others stay in the list for a second load.",

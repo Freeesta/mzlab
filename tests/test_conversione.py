@@ -112,6 +112,14 @@ def test_wiff_same_sample_name_never_gets_an_unexplained_sN():
     assert not any("_s" in n.replace("_spik", "") for n in got)
 
 
+def test_a_hash_in_a_file_name_becomes_an_underscore():
+    # "#" separates a file from its items in the list: the name the file enters under; both files of a pair alike; another file takes a free name
+    got = run("""console.log(JSON.stringify([c.hashFree("Q.mzML", []), c.hashFree("P#1.mzML", []), c.hashFree("P#1.mzML", ["p_1.mzml"]),
+        c.hashFree("P#1.mzML", ["p_1.mzml", "P_1_2.mzML"]), c.hashFree("A#1.wiff", ["a_1.wiff"]), c.hashFree("A#1.WIFF.SCAN", []), c.hashFree("x#.mzML.gz", ["x_.mzml.gz"]),
+        c.wiffName("S", 1, false, [], "Run #3")]))""")
+    assert got == [None, "P_1.mzML", "P_1_2.mzML", "P_1_3.mzML", "A_1.wiff", "A_1.WIFF.SCAN", "x__2.mzML.gz", "Run _3.mzML"]
+
+
 def test_a_download_of_a_module_sample_follows_the_compression():
     """A sample the readers module converted at the loading (`CONV.sources`): "standard" saves the file of the loading, another compression writes it again once with
     `to_mzml_come` (the optical matrix of the loading kept) and saves that."""
