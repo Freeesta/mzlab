@@ -13,6 +13,7 @@ pub mod dad_map;
 pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
+mod metodo_nome;
 pub mod modi;
 pub mod nomi;
 mod run;
@@ -34,6 +35,9 @@ use modi::{Uscita, CODE_PRODUCT};
 /// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
 /// method), the nearest one before it.
 pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
+    if let Some(k) = metodo_nome::by_name(ole, sample) {
+        return k;
+    }
     let has = |k: u32| {
         ole.has(&format!(
             "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
@@ -266,10 +270,10 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         .read(&format!("{SAMPLES}Sample{sample}/Idx"))
         .map(|b| idx::parse(&b))
         .unwrap_or_default();
-    let mut experiments = experiments(ole, sample);
+    let mut experiments = self::experiments(ole, method_no(ole, sample));
     #[cfg(not(feature = "estesi"))]
     if experiments.is_empty() {
-        experiments = self::experiments(ole, method_no(ole, sample));
+        experiments = self::experiments(ole, sample);
     }
     #[cfg(feature = "estesi")]
     {
@@ -293,8 +297,8 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             experiment: k % n_exp,
         })
         .collect();
-    let method = methodinfo::method_of_sample(ole, sample);
-    let method = method.or_else(|| methodinfo::method_of_sample(ole, method_no(ole, sample)));
+    let method = methodinfo::method_of_sample(ole, method_no(ole, sample));
+    let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);
     let dad = dad::DadData::read(ole, sample);
     let (model, created, serial, source_type) = crate::metodo_wiff::run_facts_full(ole, sample);

@@ -265,6 +265,17 @@ def transitions(out: Path):
     for n in (2, 3):
         batch.sample(n, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], None)
     batch.save(out, "transizioni_lotto")
+    # a batch that mixes methods: Method1 is the MRM one, Method2 a full scan used by sample 4 only; samples 2 and 3 run the MRM method (named in their DATA)
+    # and sample 2 must not take Method2 for being its number
+    mixed = Writer()
+    full = {"Experiment0/ExperimentHeader": header(15, 30.0)}
+    mixed.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method, data_name="a\x01mrm_batch.dam")
+    for n in (2, 3):
+        mixed.sample(n, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], full if n == 2 else None, data_name="b\x01mrm_batch.dam")
+    mixed.sample(4, [], full, data_name="blank\x01full_blank.dam")
+    for k, dam in ((1, "mrm_batch.dam"), (2, "full_blank.dam")):
+        mixed.streams[f"MethodSubtree/Method{k}/AcqMethodFileInfoStm"] = bytes(6) + ("D:\\Methods\\" + dam).encode("utf-16le") + bytes(4)
+    mixed.save(out, "transizioni_misto")
     return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs]}
 
 
