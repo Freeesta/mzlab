@@ -10,16 +10,6 @@
 .flw .fl-term pre{margin:0;min-height:1.6em;max-height:30vh;overflow:auto;white-space:pre-wrap;word-break:break-word;background:var(--soft);border-radius:6px;padding:6px;font-size:12px}
 .flw .fl-term textarea.fl-script{width:100%;box-sizing:border-box;min-height:12em;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}.flw .fl-term .fl-copied{color:var(--accent)}`;
 
-  /** one call of the engine route `flow/line`: the text it answers; rejects with the Error of the engine ({key, params}) @param {any} S @param {string | null} line */
-  F.lineCall = async (S, line) => {
-    const plan = F.exportText(S.plan), extra = line == null ? {} : { line };
-    if (/** @type {any} */ (window).MZLAB_DESKTOP) return F.desktopPost("flow/line", { plan, ...extra });
-    const r = await fetch("api/flow/line", { method: "POST", body: JSON.stringify({ plan, registry: S.reg.steps, ...extra }) }), text = await r.text();
-    if (r.ok) return text;
-    let e = /** @type {any} */ ({}); try { e = JSON.parse(text); } catch (_) { /* a body that is not JSON */ }
-    throw { key: e.error_key || "err.flow.run", params: e.params || {} };
-  };
-
   /** the words of an error of the line: the CLI's own text for `err.cli.*` @param {any} e */
   const said = e => (e && e.key && String(e.key).startsWith("err.cli.") && e.params && e.params.message ? e.params.message : F.message(e));
 
