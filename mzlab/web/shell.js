@@ -379,8 +379,11 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
-// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load
-function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods()}
+// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load;
+// they take the roles and times of the open files and ask no proposal from the names, which OPENNOW.sync would write over the saved ones
+function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
+  for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
+  FILETAB.flush(true);ST.methods=d.methods||[];renderMethods()}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();ST.files.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{CartCarica.fromInput(e.target.files);e.target.value=""};
