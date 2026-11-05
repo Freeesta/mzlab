@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Bar handles of the integration windows (see below). Classic script, loaded before scroll.js; cursorLine() calls BARRE.sync(p).
+// Bar handles of the integration windows (see below). Classic script, loaded on demand (carica) by scroll.js; cursorLine() calls BARRE.sync(p).
 const BARRE = (() => {
 // the two bars of every integration window: a 44 px target over the bar's top handle for finger, pen and keyboard (mouse keeps dragging the bar itself);
 // ← → move the border one sample (Shift: five). The handle drawn on the canvas stays the visible dot.
@@ -23,7 +23,7 @@ function sync(/** @type {Bag} */ p) {
       return n;
     })());
     b._it = it; b._e = e; b._s = s; p._bh.push(b);
-    const x = it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])];
+    const x = it.zero && typeof INTZERO !== "undefined" ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])];
     b.style.left = p.cv.offsetLeft + a.X(x) + "px"; b.style.top = p.cv.offsetTop + M.t + 6 + "px"; b.hidden = false;
     const t = I18N.t(e === "a" ? "int.bar.a" : "int.bar.b", { rt: x.toFixed(2) }); b.setAttribute("aria-label", t); b.title = t;
     b.setAttribute("aria-valuenow", x.toFixed(2)); b.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: x.toFixed(2) }));

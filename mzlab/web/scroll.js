@@ -123,7 +123,7 @@ function cursorLine(p) {
   const c = p.cl, a = p._a, h = p.ch; if (!c) return;
   // one cursor for the linked chromatograms
   if (p.tl && p.cur != null && !p._cs && isLine(p)) tabPanels(p.tab).forEach(q => { if (q !== p && q.tl && isLine(q) && q.cur !== p.cur) { q.cur = p.cur; q._cs = true; cursorLine(q); q._cs = false; } });
-  BARRE.sync(p);
+  const bar = () => (typeof BARRE === "undefined" ? null : BARRE); if (bar()) bar().sync(p); else if (p.ints.length) carica("barre-maniglie.js").then(() => bar() && bar().sync(p));          // loaded when a window exists
   if (!a || !a.X || p.type === "spec" || p.type === "map" || p.cur == null || p.cur < a.x0 || p.cur > a.x1) { c.hidden = true; if (h) h.hidden = true; return; }
   c.hidden = false; c.style.left = p.cv.offsetLeft + a.X(p.cur) + "px"; c.style.top = p.cv.offsetTop + M.t + "px"; c.style.height = a.H - M.t - M.b + "px";
   // the peak labels sit in front of the line: it is cut where a label box crosses it

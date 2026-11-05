@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Manual integration window: the area under the trace between the two bars, cut vertically at each bar down to zero (no baseline, no neighbour
-// correction), and its shaded region. Classic script, loaded before picchi.js; integ() in picchi.js calls it for records with zero:true.
+// correction), and its shaded region. Classic script, loaded on demand (carica) by grafici.js before it draws a zero window; integ() in picchi.js calls it for records with zero:true.
 const INTZERO = (() => {
 // value of the trace at time t (linear between the two samples around it, the end samples outside the trace)
   function yAtT(/** @type {number[]} */ xs, /** @type {number[]} */ ys, /** @type {number} */ t) {
