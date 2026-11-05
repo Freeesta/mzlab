@@ -85,6 +85,11 @@ try:
             for _ in range(4): pg.click("#samptab")
             ready(pg)
         cell(pg, "many files: sample table toggled 4 times", sample_table)
+        def stat_targets():
+            stat_ok(pg)                                    # WCAG 2.5.8: every field of the panel is at least 24 px tall
+            small = pg.evaluate("[...document.querySelectorAll('#sb-panel-stat :is(input:not([type=file]), select, button)')].filter(e => e.offsetParent && e.getBoundingClientRect().height < 24).map(e => (e.id || e.dataset.m) + ':' + e.getBoundingClientRect().height.toFixed(1))")
+            assert not small, small
+        cell(pg, "many files: statistics fields are 24 px targets", stat_targets)
         def profile():
             stat_ok(pg)
             pg.fill("#prof-mz", "364.4"); pg.fill("#prof-rt", "14.3"); pg.click("#prof-go")
