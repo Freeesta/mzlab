@@ -118,3 +118,23 @@ def test_a_hash_in_a_file_name_becomes_an_underscore():
         c.hashFree("P#1.mzML", ["p_1.mzml", "P_1_2.mzML"]), c.hashFree("A#1.wiff", ["a_1.wiff"]), c.hashFree("A#1.WIFF.SCAN", []), c.hashFree("x#.mzML.gz", ["x_.mzml.gz"]),
         c.wiffName("S", 1, false, [], "Run #3")]))""")
     assert got == [None, "P_1.mzML", "P_1_2.mzML", "P_1_3.mzML", "A_1.wiff", "A_1.WIFF.SCAN", "x__2.mzML.gz", "Run _3.mzML"]
+
+
+def test_a_download_of_a_module_sample_follows_the_compression():
+    """A sample the readers module converted at the loading (`CONV.sources`): "standard" saves the file of the loading, another compression writes it again once with
+    `to_mzml_come` (the optical matrix of the loading kept) and saves that."""
+    got = run("""
+      const C = c.CONV, asked = [], saved = [];
+      global.window = { LETTORI_MOD: { toMzml: async (fam, mem, k, dest, on, sig, opts) => { asked.push([fam, mem.map(m => m.name), k, opts]); return { size: 5, tag: "np" }; } },
+                        CONVCARD: () => ({ start: () => ({ update() {}, done() {}, fail() {} }), end() {} }) };
+      global.document = { getElementById: () => ({}), querySelectorAll: () => [] };
+      global.carica = async () => {};
+      global.saveBlob = (b, n) => saved.push([n, b.tag]);
+      C.add("a.mzML", { size: 9, tag: "std" }, { fam: "sciex", mem: [{ name: "a.wiff" }, { name: "a.wiff.scan" }], c: 1 });
+      (async () => {
+        C.compression = "standard"; await C.download("a.mzML");
+        C.compression = "smallest"; await C.download("a.mzML"); await C.download("a.mzML");
+        console.log(JSON.stringify({ asked, saved }));
+      })();""")
+    assert got == {"asked": [["sciex", ["a.wiff", "a.wiff.scan"], 1, {"dad": True, "compression": "smallest"}]],
+                   "saved": [["a.mzML", "std"], ["a.mzML", "np"], ["a.mzML", "np"]]}
