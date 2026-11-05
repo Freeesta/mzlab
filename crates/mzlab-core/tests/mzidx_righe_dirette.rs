@@ -315,7 +315,10 @@ fn the_source_of_a_vendor_index_is_the_dataset_name() {
         (vec!["X.raw"], "X.raw"),
         (vec!["X.wiff.scan", "X.wiff"], "X.wiff"),
         (vec!["X.wiff", "X.wiff.scan"], "X.wiff"),
-        (vec!["X.D/AcqData/MSScan.bin", "X.D/AcqData/MSPeak.bin"], "X.D"),
+        (
+            vec!["X.D/AcqData/MSScan.bin", "X.D/AcqData/MSPeak.bin"],
+            "X.D",
+        ),
     ] {
         let membri: Vec<_> = membri.into_iter().map(imp).collect();
         for name in ["X.mzML", "X.raw.mzML", "X_2.raw.mzML"] {
