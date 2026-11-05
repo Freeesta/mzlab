@@ -169,6 +169,7 @@ try:
             assert pg.evaluate(f"{K}.editor.struct().atoms.size") == 4, "the pen draws a second bond"
         step("molecule editor: the pen draws", kpen)
         def kpinch():
+            wait(1000)          # palm rejection (touch.js PALM, 900 ms): a touch right after the pen is dropped; the pen step above has just ended
             c = pg.evaluate("(() => { const r = document.querySelector('#kframe').getBoundingClientRect(); return [r.left + r.width * 0.5, 300]; })()")
             z0 = pg.evaluate(f"{K}.editor.zoom()")
             T("touchStart", [(c[0] - 50, c[1]), (c[0] + 50, c[1])]); wait(60)
