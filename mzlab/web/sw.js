@@ -39,6 +39,7 @@ const rel = (/** @type {URL} */ u) => {
 };
 /** @type {Promise<Record<string, string> | null> | null} */
 let manP = null;
+let visto = false;   // this run of the worker has asked the manifest: the browser stops an idle worker and starts it again with `stale` forgotten
 /** @type {Set<string>} */
 let nofill = new Set();
 /** Path -> SHA-256 of the files of THIS version (null: manifest unreachable, or it describes another version, which sets `stale`). */
@@ -47,6 +48,7 @@ const manifestoSw = () => manP || (manP = (async () => {
     const r = await fetch(new URL("static/sw-manifest.json", BASE).href, NC);
     if (!r.ok) throw new Error("manifest");
     const j = await r.json();
+    visto = true;
     if (j.app !== APPV) { stale = true; sw.registration.update().catch(() => {}); return null; }
     stale = false;
     /** @type {Record<string, string>} */
@@ -54,7 +56,7 @@ const manifestoSw = () => manP || (manP = (async () => {
     nofill = new Set(j.nofill || []);
     for (const [k, v] of Object.entries(j.files || {})) out[k] = String(v);
     return out;
-  } catch (_) { manP = null; return null; }
+  } catch (_) { manP = null; visto = true; return null; }      // offline: the cache answers
 })());
 /** Expected SHA-256 of the cacheable file `u`, or undefined (not part of this build, never cached, library, vendor, API). */
 const expected = async (/** @type {URL} */ u) => {
@@ -128,6 +130,7 @@ sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUnti
  * queued the page behind the cache writes). */
 const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) => void} */ later) => {
   const cache = await abrirApp();
+  if (!visto) await manifestoSw();      // a restarted worker of an older version must not serve its old files to a newer page before it knows (one request, shared)
   if (!stale) { const hit = await buscar(cache, req); if (hit) return isolata(hit); }
   try {
     const { res, ok } = await traer(req, await expected(new URL(req.url)));
@@ -179,6 +182,6 @@ sw.addEventListener("fetch", (/** @type {FetchEvent} */ e) => {
   if (url.pathname.includes("/static/librerie/")) return;           // the spectral-library packages go to the folder of the user, not to a second copy in the cache
   if (url.pathname.includes("/api/")) return;                       // answers of the engine and files of the user are never cached
   const big = /\/static\/vendor\//.test(url.pathname);
-  if (!big && !filled) e.waitUntil(arrancar());                     // keeps the worker alive while it fills; one that was stopped finishes what is missing
+  if (!big && !filled && !stale) e.waitUntil(arrancar());           // keeps the worker alive while it fills; a stale one holds no event open (the newer worker activates only when the older has none)
   e.respondWith(big ? grande(req) : req.mode === "navigate" ? navegar(req) : app(req, p => e.waitUntil(p)));
 });

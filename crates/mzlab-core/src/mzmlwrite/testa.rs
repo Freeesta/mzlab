@@ -2,15 +2,12 @@
 
 use super::*;
 
-/// What the reader already knows of the totals: the maker's TIC and base peak (m/z, intensity), by feature (`precursori` both, `estesi` the TIC).
-#[allow(unused_variables)]
+/// What the reader already knows of the totals: the maker's TIC (every build) and base peak (m/z, intensity; `precursori`).
 fn known(extra: &SpectrumExtra) -> (Option<f64>, Option<(f64, f64)>) {
     #[cfg(feature = "precursori")]
     return (extra.tic, extra.base_peak);
-    #[cfg(all(feature = "estesi", not(feature = "precursori")))]
-    return (extra.tic, None);
-    #[cfg(not(any(feature = "precursori", feature = "estesi")))]
-    (None, None)
+    #[cfg(not(feature = "precursori"))]
+    (extra.tic, None)
 }
 
 /// Total ion current and base peak (m/z, intensity): the maker's values where the reader gives them, else taken from the points in one pass over them
