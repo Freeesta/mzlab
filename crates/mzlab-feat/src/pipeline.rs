@@ -3,7 +3,7 @@
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
-use crate::align_mzmine::IsoGrouper;
+use crate::align_mzmine::{IsoFinder, IsoGrouper};
 use crate::isotopes::{group, IsoParams};
 use crate::ms2::{link, Ms2Links, Ms2Params};
 use crate::prof::time;
@@ -24,9 +24,12 @@ pub struct Steps {
     /// The isotope grouper of mzmine in place of `iso` (`features.detect`, `isotopes` = `grouper`) and its settings, kept when it is off.
     pub use_grouper: bool,
     pub grouper: IsoGrouper,
+    /// The isotope finder of mzmine in place of `iso` (`isotopes` = `finder`) and its settings, kept when it is off.
+    pub use_finder: bool,
+    pub finder: IsoFinder,
 }
 
-/// The derived text with `grouper` written only when chosen: the recipe fingerprint of the default stays the same.
+/// The derived text with `grouper` and `finder` written only when chosen: the recipe fingerprint of the default stays the same.
 impl std::fmt::Debug for Steps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut d = f.debug_struct("Steps");
@@ -37,6 +40,9 @@ impl std::fmt::Debug for Steps {
             .field("split", &self.split);
         if self.use_grouper {
             d.field("grouper", &self.grouper);
+        }
+        if self.use_finder {
+            d.field("finder", &self.finder);
         }
         d.finish()
     }
@@ -52,6 +58,8 @@ impl Default for Steps {
             split: true,
             use_grouper: false,
             grouper: IsoGrouper::default(),
+            use_finder: false,
+            finder: IsoFinder::default(),
         }
     }
 }
@@ -85,7 +93,7 @@ pub fn analyse_with<R: ReadAt>(
     if p.min_width > 0.0 || p.min_snr > 0.0 {
         crate::lrnoise::reject(&mut f, &mut multi, p);
     }
-    time("detect: isotopes", || isotopes(&mut f, s))?;
+    time("detect: isotopes", || isotopes(index, &mut f, p, s))?;
     let links = time("detect: ms2 links", || link(index, &mut f, p, &s.ms2))?;
     time("detect: mixtures", || {
         mark_mixtures(index, &mut f, &links, &multi, p, &s.resolve)
@@ -93,9 +101,16 @@ pub fn analyse_with<R: ReadAt>(
     Ok((f, links))
 }
 
-/// The isotope groups of one file: the averagine grouping of `isotopes.rs`, or the isotope grouper of mzmine when `grouper` is chosen.
-pub(crate) fn isotopes(f: &mut FileFeatures, s: &Steps) -> Result<()> {
-    if s.use_grouper {
+/// The isotope groups of one file: the averagine grouping of `isotopes.rs`, or the isotope grouper or finder of mzmine when chosen.
+pub(crate) fn isotopes<R: ReadAt>(
+    index: &mut Index<R>,
+    f: &mut FileFeatures,
+    p: &Params,
+    s: &Steps,
+) -> Result<()> {
+    if s.use_finder {
+        finder(index, f, p, &s.finder)
+    } else if s.use_grouper {
         grouper(f, &s.grouper)
     } else {
         group(f, &s.iso)
@@ -109,5 +124,20 @@ fn grouper(f: &mut FileFeatures, g: &IsoGrouper) -> Result<()> {
 
 #[cfg(not(feature = "untargeted"))]
 fn grouper(_: &mut FileFeatures, _: &IsoGrouper) -> Result<()> {
+    Err(mzlab_core::error::Error::new("error.badRecipe"))
+}
+
+#[cfg(feature = "untargeted")]
+fn finder<R: ReadAt>(
+    index: &mut Index<R>,
+    f: &mut FileFeatures,
+    p: &Params,
+    s: &IsoFinder,
+) -> Result<()> {
+    crate::untargeted::flow_isofinder::group(index, f, p.polarity, s)
+}
+
+#[cfg(not(feature = "untargeted"))]
+fn finder<R: ReadAt>(_: &mut Index<R>, _: &mut FileFeatures, _: &Params, _: &IsoFinder) -> Result<()> {
     Err(mzlab_core::error::Error::new("error.badRecipe"))
 }

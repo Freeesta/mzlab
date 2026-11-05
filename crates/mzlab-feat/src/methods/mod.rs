@@ -221,9 +221,16 @@ fn sentence(s: &Step) -> String {
         None => format!("The step {} was run with {}.", s.id, listing(s)),
     };
     // the isotope grouping is a parameter, not the algorithm, of the detection
-    if s.id == "features.detect" && value_of(s, "isotopes") == "grouper" {
-        out.push(' ');
-        out.push_str(&fill(templates::ISO_GROUPER, s));
+    if s.id == "features.detect" {
+        let iso = match value_of(s, "isotopes").as_str() {
+            "grouper" => Some(templates::ISO_GROUPER),
+            "finder" => Some(templates::ISO_FINDER),
+            _ => None,
+        };
+        if let Some(t) = iso {
+            out.push(' ');
+            out.push_str(&fill(t, s));
+        }
     }
     if s.failed {
         out.push_str(" This step did not complete.");

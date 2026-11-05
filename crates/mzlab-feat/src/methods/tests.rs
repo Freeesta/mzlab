@@ -107,3 +107,23 @@ fn the_isotope_grouper_adds_its_sentence_to_the_detection() {
     );
     assert!(!run("averagine").contains("isotope grouper"));
 }
+
+#[test]
+fn the_isotope_finder_adds_its_sentence_to_the_detection() {
+    let run = |iso: &str| {
+        let record = format!(
+            r#"{{"schema":"corsa/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+{{"name":"floor","value":20000,"state":"fixed"}},{{"name":"isotopes","value":"{iso}","state":"fixed"}},{{"name":"finder_ppm","value":15,"state":"fixed"}},
+{{"name":"finder_abs_da","value":0.005,"state":"fixed"}},{{"name":"finder_max_charge","value":3,"state":"fixed"}},{{"name":"finder_elements","value":"H,C,N,O,S","state":"fixed"}},
+{{"name":"finder_require_c13","value":true,"state":"fixed"}},{{"name":"finder_auto","value":false,"state":"fixed"}}]}}]}}"#
+        );
+        methods_text(&style("paragraph"), record.as_bytes()).unwrap()
+    };
+    let finder = run("finder");
+    assert!(
+        finder.contains("isotope finder of mzmine 4 on the apex MS1 spectrum of each feature (m/z tolerance 15 ppm or 0.005 Da, charges up to 3, elements H,C,N,O,S, 13C peak requirement on, heavy elements from the spectrum off)"),
+        "{finder}"
+    );
+    assert!(!finder.contains("isotope grouper"));
+    assert!(!run("averagine").contains("isotope finder"));
+}

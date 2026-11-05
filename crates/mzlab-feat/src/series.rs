@@ -60,7 +60,7 @@ pub fn weak_candidates<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Fi
         assess(index, &mut w, &p, &r.steps.quality)
     })?;
     crate::prof::time("weak: isotopes", || {
-        crate::pipeline::isotopes(&mut w, &r.steps)
+        crate::pipeline::isotopes(index, &mut w, &p, &r.steps)
     })?;
     let mut out = FileFeatures {
         dt: w.dt,
