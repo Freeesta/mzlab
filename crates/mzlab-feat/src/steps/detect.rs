@@ -91,10 +91,6 @@ pub(super) fn detect() -> Step {
             .unit("scans")
             .doc("A trace longer than this is background and is not taken")
             .advanced(),
-        Param::choice("area_from", "Area from", &["channel", "window"])
-            .default_str("channel")
-            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
-            .advanced(),
         Param::number("merge_overlap", "Merge overlap")
             .min(0.0)
             .max(1.0)
@@ -108,6 +104,7 @@ pub(super) fn detect() -> Step {
             .noresult()
             .advanced(),
     ];
+    params.extend(trace_choices());
     params.extend(noise_gates());
     params.extend(isotope_params());
     Step {
@@ -200,6 +197,20 @@ fn isotope_params() -> Vec<Param> {
         Param::boolean("finder_auto", "Heavy elements from the spectrum")
             .default_bool(true)
             .doc("finder only: Cl, Br, S and Si seen in the spectrum widen the expected pattern")
+            .advanced(),
+    ]
+}
+
+/// How the pieces of a trace are joined and where the area of a row comes from; the defaults give the bytes of the files made before them.
+fn trace_choices() -> Vec<Param> {
+    vec![
+        Param::choice("area_from", "Area from", &["channel", "window"])
+            .default_str("channel")
+            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
+            .advanced(),
+        Param::choice("stitch", "Stitch", &["strict", "wide"])
+            .default_str("strict")
+            .doc("Wide also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row.")
             .advanced(),
     ]
 }

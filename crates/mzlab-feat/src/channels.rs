@@ -145,7 +145,13 @@ fn push_seg(
     p: &Params,
 ) -> Result<()> {
     let (a, z, tot, mzw, n, mx, _, apex) = c;
-    if n >= 2 && mx >= p.min_height {
+    // a low piece of a wandering ion counts once stitched to the rest; the rows still need `min_height` (`trace::one_grid`)
+    let least = if p.stitch_wide {
+        p.min_height / 4.0
+    } else {
+        p.min_height
+    };
+    if n >= 2 && mx >= least {
         reserve(out, 1)?;
         out.push(Seg {
             chan,
@@ -190,7 +196,9 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
     let m = segs.len();
     let (touch_ppm, touch_ratio) = (4.0f64, 10.0f64);
     let max_gap = p.max_gap as i64;
-    let touch_height = if p.axis.is_da() {
+    let touch_height = if p.stitch_wide {
+        0.0
+    } else if p.axis.is_da() {
         10.0 * p.min_height
     } else {
         TOUCH_HEIGHT

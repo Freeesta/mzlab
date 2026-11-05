@@ -1,6 +1,7 @@
 //! `area_from` of `features.detect` run from a Flow plan by `mzlab-cli flow run`, on one synthetic high-resolution file: six Gaussian ions
 //! (3e5 to 3e7 counts) whose m/z wanders ±2 ppm from scan to scan. With `channel` (the default) the points that fall into the next channel
-//! of `masstrace` are lost from the area; with `window` the area is the one of the Gaussian within a few hundredths of log2.
+//! of `masstrace` are lost from the area; with `window` the area is the one of the Gaussian within a few hundredths of log2. At ±3 ppm the
+//! `strict` stitch splits ions into pieces; `stitch=wide` keeps one row per ion.
 
 use std::fmt::Write as _;
 
@@ -19,7 +20,6 @@ const SCANS: usize = 400;
 const DT: f64 = 0.01;
 /// Width of the peaks, scans.
 const SIGMA: f64 = 4.0;
-const JITTER_PPM: f64 = 2.0;
 
 /// m/z, height and apex scan of the ions.
 fn ions() -> Vec<(f64, f64, f64)> {
@@ -38,7 +38,7 @@ fn rnd(seed: &mut u64) -> f64 {
 }
 
 /// One centroid MS1 run; points below 50 counts are not written, two flat traces at 1e3 keep every scan non-empty.
-fn mzml() -> String {
+fn mzml(jitter_ppm: f64) -> String {
     let mut seed = 7u64;
     let mut x = format!(
         r#"<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.ms.info/ms/mzml"><run id="r"><spectrumList count="{SCANS}">"#
@@ -48,7 +48,7 @@ fn mzml() -> String {
         let mut pts: Vec<(f64, f64)> = vec![(120.05, 1e3), (590.05, 1e3)];
         for (m, h, a) in ions() {
             let y = h * (-0.5 * ((k - a) / SIGMA).powi(2)).exp();
-            let e = (rnd(&mut seed) * 2.0 - 1.0) * JITTER_PPM * 1e-6 * m;
+            let e = (rnd(&mut seed) * 2.0 - 1.0) * jitter_ppm * 1e-6 * m;
             if y >= 50.0 {
                 pts.push((m + e, y));
             }
@@ -68,12 +68,16 @@ fn mzml() -> String {
     x + "</spectrumList></run></mzML>"
 }
 
-/// The files of the run folder of the plan with `set`.
+/// The files of the run folder of the plan with `set`, on the ions wandering ±2 ppm.
 fn run(tag: &str, set: &[&str]) -> Vec<(String, Vec<u8>)> {
+    run_at(tag, set, 2.0)
+}
+
+fn run_at(tag: &str, set: &[&str], jitter_ppm: f64) -> Vec<(String, Vec<u8>)> {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_area_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("data")).unwrap();
-    std::fs::write(dir.join("data/a.mzML"), mzml()).unwrap();
+    std::fs::write(dir.join("data/a.mzML"), mzml(jitter_ppm)).unwrap();
     std::fs::write(dir.join("plan.json"), PLAN).unwrap();
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
     let mut args = vec![p(&plan), "--in", p(&data), "--out", p(&out)];
@@ -107,6 +111,14 @@ fn bias(f: &FileFeatures) -> Vec<f64> {
         .collect()
 }
 
+/// Rows within 0.01 of the m/z of each ion.
+fn rows_per_ion(f: &FileFeatures) -> Vec<usize> {
+    ions()
+        .iter()
+        .map(|&(m, _, _)| f.mz.iter().filter(|&&x| (x - m).abs() < 0.01).count())
+        .collect()
+}
+
 fn median(v: &[f64]) -> f64 {
     let mut v = v.to_vec();
     v.sort_by(f64::total_cmp);
@@ -134,4 +146,35 @@ fn area_from_can_be_set_from_the_command_line() {
     let plan = String::from_utf8(plan.1.clone()).unwrap();
     assert!(plan.contains("\"area_from\":\"window\""), "{plan}");
     assert_ne!(features(&window).1, features(&base).1);
+}
+
+/// At ±3 ppm the pieces of an ion alternate between two channels and touch without overlapping: `strict` joins touching pieces only
+/// above 2e6 counts, `wide` joins them all and keeps the low ones, so each ion is one row with its whole area.
+#[test]
+fn the_wide_stitch_keeps_one_row_per_ion_at_three_ppm() {
+    let window = "det.area_from=window";
+    let strict = features(&run_at("strict3", &[window], 3.0)).0;
+    let wide = features(&run_at("wide3", &[window, "det.stitch=wide"], 3.0)).0;
+    let (n_strict, n_wide) = (rows_per_ion(&strict), rows_per_ion(&wide));
+    let (b_strict, b_wide) = (bias(&strict), bias(&wide));
+    eprintln!("rows strict {n_strict:?} wide {n_wide:?}\n|log2| strict {b_strict:.4?}\n|log2| wide   {b_wide:.4?}");
+    assert!(n_strict.iter().any(|&n| n > 1), "{n_strict:?}");
+    assert!(n_wide.iter().all(|&n| n == 1), "{n_wide:?}");
+    assert!(b_strict.iter().any(|&b| b > 0.5), "{b_strict:?}");
+    assert!(b_wide.iter().all(|&b| b <= 0.05), "{b_wide:?}");
+}
+
+/// `stitch` reaches the run like `area_from`; `strict` is the default.
+#[test]
+fn stitch_can_be_set_from_the_command_line() {
+    let base = run("sbase", &[]);
+    assert_eq!(
+        features(&run("sstrict", &["det.stitch=strict"])),
+        features(&base)
+    );
+    let wide = run("swide", &["det.stitch=wide"]);
+    let plan = wide.iter().find(|f| f.0 == "plan.json").unwrap();
+    let plan = String::from_utf8(plan.1.clone()).unwrap();
+    assert!(plan.contains("\"stitch\":\"wide\""), "{plan}");
+    assert_ne!(features(&wide).1, features(&base).1);
 }
