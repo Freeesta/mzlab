@@ -324,3 +324,23 @@ fn the_compression_kinds_are_the_short_forms_of_zlib_and_numpress() {
     assert_eq!(o.code, 2, "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// A method blob over the old 1 MiB head pushes `spectrumList` and `conv/1` far into the file: the report still reads both.
+#[test]
+fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
+    let dir = std::env::temp_dir().join(format!("mzlab-head-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    for blob in [0usize, 3 << 20] {
+        let file = dir.join(format!("h{blob}.mzML"));
+        let text = format!(
+            "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab metodo/1\" value=\"{}\"/>\
+             <userParam name=\"mzLab conv/1\" value=\"{{&quot;a&quot;:1}}\"/>\n<spectrumList count=\"7\" defaultDataProcessingRef=\"c\">\n\
+             <spectrum index=\"0\"/></spectrumList></run></mzML>\n",
+            "x".repeat(blob)
+        );
+        std::fs::write(&file, text).unwrap();
+        let (n, conv) = crate::convert_report::head_of(&file);
+        assert_eq!((n, conv.as_deref()), (7, Some("{\"a\":1}")), "blob {blob}");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

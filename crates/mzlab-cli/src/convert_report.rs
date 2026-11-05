@@ -7,9 +7,6 @@ use std::path::Path;
 
 use mzlab_core::json::Out;
 
-/// How much of the head of an mzML is looked at: the header, the `<run>` parameters and the opening of the spectrum list.
-const HEAD: u64 = 1 << 20;
-
 /// One input of the conversion as `--report` writes it.
 pub(crate) enum Item {
     Done {
@@ -27,13 +24,33 @@ pub(crate) enum Item {
     },
 }
 
-/// Number of spectra and the `conv/1` document of the mzML at `path`.
+/// The read step through the head of an mzML.
+const CHUNK: u64 = 1 << 20;
+
+/// Number of spectra and the `conv/1` document of the mzML at `path`. Both sit in the header before the first spectrum, after the `metodo/1`
+/// document, which can be many MiB: the head is read until the `spectrumList` opening (or the `chromatogramList`, or the end), not a fixed size.
 pub(crate) fn head_of(path: &Path) -> (usize, Option<String>) {
-    let mut text = Vec::new();
-    if let Ok(f) = File::open(path) {
-        let _ = f.take(HEAD).read_to_end(&mut text);
+    let mut bytes = Vec::new();
+    if let Ok(mut f) = File::open(path) {
+        loop {
+            let from = bytes.len().saturating_sub(64);
+            match (&mut f).take(CHUNK).read_to_end(&mut bytes) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {}
+            }
+            let new = &bytes[from..];
+            let end = |m: &[u8]| new.windows(m.len()).position(|w| w == m);
+            if let Some(i) = end(b"<spectrumList count=\"") {
+                // the count closes within a few bytes of its opening
+                if new[i..].iter().skip(21).any(|&b| b == b'"') {
+                    break;
+                }
+            } else if end(b"<chromatogramList").is_some() {
+                break;
+            }
+        }
     }
-    let text = String::from_utf8_lossy(&text);
+    let text = String::from_utf8_lossy(&bytes);
     let spectra = text
         .split_once("<spectrumList count=\"")
         .and_then(|(_, r)| r.split_once('"'))

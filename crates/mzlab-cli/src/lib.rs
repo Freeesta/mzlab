@@ -157,6 +157,7 @@ mod peaks_edges_cmd;
 mod plain;
 mod sim_table_cmd;
 mod steps_cmd;
+mod testo_errore;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 
@@ -318,7 +319,7 @@ impl Outcome {
         Outcome {
             code: 2,
             stdout: Vec::new(),
-            stderr: format!("error: {msg}\n(mzlab-cli features --help)\n"),
+            stderr: format!("error: {}\n", testo_errore::umano(msg)),
         }
     }
 }
@@ -410,6 +411,10 @@ fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
 
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
+    testo_errore::con_aiuto(args, eseguito(args))
+}
+
+fn eseguito(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
     let first = args.next();
     match first.as_deref().map(plain::canonical) {
