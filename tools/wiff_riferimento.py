@@ -226,13 +226,13 @@ def energy(out: Path):
 
 
 def full_tic(out: Path):
-    """A full scan experiment over three cycles: the header TIC of a block is not the sum of its profile (cycle 1), is missing (cycle 2, 0.0: the sum is written) or is the sum (cycle 3)."""
+    """A full scan experiment over three cycles: the header TIC of a block is not the sum of its profile nor a float32 value (cycle 1), is missing (cycle 2, 0.0: the sum is written) or is the sum (cycle 3)."""
     ys = [expected_scan(p)[1] for p in (FULL, LATE, LATE)]
     method = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
     w = Writer()
-    w.sample(1, [("scan", FULL, 1000.0, 1.5e6), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
+    w.sample(1, [("scan", FULL, 1000.0, 1234567.891), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
     w.save(out, "totale")
-    return {"bpc": [max(y) for y in ys], "tic": [1.5e6, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
+    return {"bpc": [max(y) for y in ys], "tic": [1234567.891, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
 
 
 def mrm_method(trs) -> bytes:
