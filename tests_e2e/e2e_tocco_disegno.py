@@ -39,6 +39,17 @@ try:
             if os.environ.get("DBG"): print(pg.evaluate("window.__ev"))
             b1 = nb(); assert b1 == b0 + 1, f"one tap on an atom must add ONE bond, bonds {b0} -> {b1}"
         step("molecule editor: one tap on an atom adds one bond", one)
+        def charge():
+            # the first atom of the drag is at (cx - 80, 450); the charge tool needs an atom and a fingertip is wider than one
+            x, y = pg.evaluate("(() => { const r = document.querySelector('#kframe').getBoundingClientRect(); return [r.left + r.width * 0.5 - 80, 450]; })()")
+            pg.evaluate("document.querySelector('#kframe').contentDocument.querySelector('[data-testid=charge-plus]').click()"); wait(300)
+            q = lambda: pg.evaluate(f"JSON.stringify([...{K}.editor.struct().atoms.values()].map(a => a.charge || 0))")
+            T("touchStart", [(x + 18, y + 6)]); wait(40); T("touchEnd", []); wait(700)
+            assert q() == "[1,0,0]" or q().startswith("[1,"), "a tap 19 px beside an atom with the charge tool charges it: " + q()
+            T("touchStart", [(x + 20, y + 120)]); wait(40); T("touchEnd", []); wait(500)
+            assert q().count("1") == 1, "a tap on empty space charges nothing: " + q()
+            assert "tap an atom" in pg.inner_text("body").lower() or "tocca un atomo" in pg.inner_text("body").lower(), "empty-space tap says what to do"
+        step("molecule editor: the charge tool works with a finger tap near an atom, and hints on empty space", charge)
         def nobar():
             assert pg.locator("#tbar").count() == 0, "no floating bar of scan keys"
         step("there is no floating bar of scan keys", nobar)

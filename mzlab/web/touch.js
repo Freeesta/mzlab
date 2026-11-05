@@ -31,6 +31,7 @@ const TOUCH = (() => {
   // hooks.surface(target) -> { el, ctx } | null   the element that takes the mouse events, and what the page knows about it
   // hooks.down(ctx)                               a finger / pen went down on it (bring the panel to the front, ...)
   // hooks.hit                                     true: the events go to the element under the finger, not to the surface itself
+  // hooks.snap(x, y)                              a tap about to be sent: the point to use instead (Ketcher's charge tool needs an atom; a fingertip is wider than one)
   // hooks.panDrag                                 true: a sideways pan is a Shift + drag and up / down scrolls the page (the graphs); false: both are wheel events (the editor)
   // Palm policy: a pen blocks every other pointer while it is down (penAt follows it, so PALM counts from its LAST event), and a pen down drops a touch that came first
   const penDown = pts => [...pts.values()].some(q => q.pen);
@@ -78,8 +79,10 @@ const TOUCH = (() => {
       if (g.mode === "long") menuUp = lastUp;                                            // the click that may follow the lift must not close that menu
       if (g.mode !== "wait") return;                                                     // a long press already opened the menu
       const dbl = Date.now() - lastTap.t < DTAP && lastTap.el === el && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 28;
-      const t = tgt(g.S, g.x0, g.y0);
-      mouse("mousedown", t, g.x0, g.y0); mouse("mouseup", t, g.x0, g.y0);                // a tap = a click
+      const sn = hooks.snap ? hooks.snap(g.x0, g.y0) : null, X = sn ? sn.x : g.x0, Y = sn ? sn.y : g.y0, t = tgt(g.S, X, Y);
+      if (sn) mouse("mousemove", t, X, Y, { buttons: 0 });                              // Ketcher highlights the atom it is about to act on
+      mouse("mousedown", t, X, Y); mouse("mouseup", t, X, Y);                            // a tap = a click
+      if (hooks.hit) mouse("click", t, X, Y);                                            // the editor's charge tool acts on «click», not on mouseup
       if (dbl) { mouse("dblclick", t, g.x0, g.y0, { detail: 2 }); lastTap = { t: 0, x: 0, y: 0, el: null }; }
       else lastTap = { t: Date.now(), x: g.x0, y: g.y0, el };
     }
@@ -170,7 +173,7 @@ const TOUCH = (() => {
     ketcherDoc = d;
     const st = d.createElement("style");                                                  // the drawing area takes the finger; no callout / selection on a long press
     st.textContent = `${CANVAS}{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}`; d.head.appendChild(st);
-    engine(d, { panDrag: false, hit: true, surface: t => { const c = t.closest(CANVAS); return c ? { el: c, ctx: null } : null; } });
+    engine(d, { panDrag: false, hit: true, snap: (x, y) => { const w = /** @type {any} */ (d.defaultView); return w && w.tpSnap ? w.tpSnap(x, y) : null; }, surface: t => { const c = t.closest(CANVAS); return c ? { el: c, ctx: null } : null; } });
   }
   setInterval(bridgeKetcher, 1000);
 
