@@ -100,7 +100,11 @@ fn gaussian(buf: &Buf, sigma: f64, apex: usize) -> Option<f64> {
     {
         return None;
     }
-    let (a, b, c) = (buf.v[m - 1].ln(), buf.v[m].ln(), buf.v[m + 1].ln());
+    let (a, b, c) = (
+        libm::log(buf.v[m - 1]),
+        libm::log(buf.v[m]),
+        libm::log(buf.v[m + 1]),
+    );
     let den = a - 2.0 * b + c;
     if den >= 0.0 {
         return None;
@@ -194,4 +198,36 @@ pub(super) fn emit(buf: &Buf, p: &Params, sigma: f64, groups: &[Group]) -> Vec<C
         one(buf, p, sigma, g, &mut out);
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::{gaussian, Buf};
+
+    // The site's wasm takes `ln` from libm, a native build from the system library: the centroid m/z written to the mzML
+    // is the same on every face only if the Gaussian apex uses libm everywhere (the grid sits on 0 so no last bit is rounded away).
+    #[test]
+    fn the_gaussian_apex_gives_the_bits_of_libm_on_every_face() {
+        for n in 1..5000u32 {
+            let (a, b, c) = (
+                f64::from(n) * 0.731 + 40.0,
+                f64::from(n) * 1.917 + 9000.0,
+                f64::from(n) * 0.613 + 30.0,
+            );
+            let buf = Buf {
+                x: vec![-1.0, 0.0, 1.0],
+                v: vec![a, b, c],
+                b: vec![0.0; 3],
+                ..Buf::default()
+            };
+            let (la, lb, lc) = (libm::log(a), libm::log(b), libm::log(c));
+            let want = 0.5 * (la - lc) / (la - 2.0 * lb + lc);
+            assert_eq!(
+                gaussian(&buf, 1.0, 1).unwrap().to_bits(),
+                want.to_bits(),
+                "apex of {a} {b} {c}"
+            );
+        }
+    }
 }

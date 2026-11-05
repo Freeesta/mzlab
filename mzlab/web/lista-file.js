@@ -126,6 +126,7 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
   if (!e.shiftKey || j < 0 || i < 0) return false;
   setVisOf(all.slice(Math.min(i, j), Math.max(i, j) + 1).map(b => E.files[+(b.dataset.k || 0)]), x.checked); return true;
 }
+let dn = -1e4, c1 = /** @type {any} */ (null);   // bindListaFile runs after every render: the double click state lives outside it
 function bindListaFile() {
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
   // the × of a row: removes the file (Undo within 6 s)
@@ -133,11 +134,18 @@ function bindListaFile() {
     const x = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".fl-x")); if (!x) return;
     e.stopPropagation(); e.preventDefault(); const g = E.files[+(x.dataset.rm || -1)]; if (g && !g.gone) removeFile(g);
   }, true);
+  // when the click pair did the double click itself: the native dblclick that may follow is ignored
   L.ondblclick = e => {
+    if (e.timeStamp - dn < 600) return;
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
     const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");
     if (sw) { e.stopPropagation(); const g = fileOf(sw.parentElement?.querySelector(".nm"), ".nm"); if (g) pickFileColor(g); return; }
     const f = fileOf(e.target, ".fl:not(.pr) .nm"); if (f) { if (lrTog()) soloFile(f); else renameFile(f); } };
+  // click 1 may rebuild the rows (a hidden file is shown): the browser then sends no dblclick, so the second click on the same name does it
+  if (!L.dataset.cap) L.addEventListener("click", e => {
+    const el = /** @type {Element} */ (e.target).closest(".fl:not(.pr) .nm"), p = c1; c1 = !el || e.ctrlKey || e.metaKey || e.shiftKey ? null : { el, k: fileOf(el, ".nm")?.k, t: e.timeStamp };
+    if (p && c1 && !p.el.isConnected && p.k === c1.k && c1.t - p.t < 400) { c1 = null; e.stopPropagation(); L.ondblclick?.(e); dn = e.timeStamp; }
+  }, true);
   // Ctrl / Cmd + click on a row (not on a box): adds the file to the visible ones or takes it away, the active file does not change
   if (!L.dataset.cap) L.addEventListener("click", e => {
     const row = /** @type {Element} */ (e.target).closest(".fl:not(.pr)");

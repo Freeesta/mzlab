@@ -23,6 +23,7 @@ I18N.add("en", {
   "err.simtab.output": "Unknown value or layout of the SIM table: {output}, {layout}.",
   "err.transitions.table": "The transition table has a wrong row ({row}).",
   "err.workflow.noFiles": "No open files to export in the workflow.",
+  "err.report.noFiles": "No open files: load data to export the report.",
   "err.http": "error {status}",
   "err.upload.network": "upload failed",
   "err.hr.mix": "Low- and high-resolution files cannot be in the same session. Open the high-resolution files in another session, or remove them from this one.",

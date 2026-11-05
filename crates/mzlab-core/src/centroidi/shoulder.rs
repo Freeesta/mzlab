@@ -32,7 +32,7 @@ fn residual(buf: &Buf, p: &Params, j: usize, x0: f64, h: f64) -> Option<(f64, f6
     let sg = p.w / 2.355;
     let (mut a, mut am, mut top, mut f) = (0.0, 0.0, 0.0f64, 0.0);
     for i in lo..=hi {
-        let r = buf.v[i] - buf.b[i] - h * (-(buf.x[i] - x0).powi(2) / (2.0 * sg * sg)).exp();
+        let r = buf.v[i] - buf.b[i] - h * libm::exp(-(buf.x[i] - x0).powi(2) / (2.0 * sg * sg));
         if r > 0.0 {
             a += r;
             am += r * buf.x[i];

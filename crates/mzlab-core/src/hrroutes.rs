@@ -60,7 +60,7 @@ impl<R: ReadAt> Routes<R> {
     /// precursor, at least 1 mDa, as `Item.ptol`). `None` = the file has no scans of this level.
     fn hr_window(&mut self, level: u8, (lo, hi): (f64, f64), precursor: Option<f64>, filt: Option<&str>, hr: &HrProfile) -> Result<Option<Binned>> {
         let (prec, cell) = Self::hr_cells(level, precursor, hr);
-        self.binned_cells(level, lo, hi, prec, filt, |m| (m.max(1e-9).ln() / cell).floor() as i64)
+        self.binned_cells(level, lo, hi, prec, filt, |m| (libm::log(m.max(1e-9)) / cell).floor() as i64)
     }
 
     /// The precursor with its tolerance and the log width of a 3 ppm cell.
@@ -69,7 +69,7 @@ impl<R: ReadAt> Routes<R> {
             Some(p) if level > 1 && p != 0.0 => (p * hr.ppm * 1e-6).max(1e-3),
             _ => 0.6,
         };
-        ((precursor, tol), (3e-6f64).ln_1p())
+        ((precursor, tol), libm::log1p(3e-6f64))
     }
 
     /// `/api/dda`: every MS2 (and MSn) of the file with its parent, isolation window, activation, level and charge, in columns, plus the survey scans.

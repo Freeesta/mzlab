@@ -61,7 +61,7 @@ fn collect_candidates(p: &AbbinaParams<'_>, na: usize, nb: usize) -> Vec<Candida
                 if (rtb - rta).abs() <= p.rt_tol {
                     let d_mz = (mzb - mza) / mza * 1e6 / p.ppm;
                     let d_rt = (rtb - rta) / p.rt_tol;
-                    let d = d_mz.hypot(d_rt);
+                    let d = libm::hypot(d_mz, d_rt);
                     candidates.push(Candidate { d, ia, ib });
                 }
             }
