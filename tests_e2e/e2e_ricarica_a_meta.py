@@ -12,10 +12,10 @@ def step(name, fn):
 d = tempfile.mkdtemp(prefix="ricarica_"); fs = []
 for i in range(6):      # three small files open while the three large ones dropped after them are still being read
     p = os.path.join(d, f"lento_{i}.mzML"); gen.scrivi(p, scans=1500 if i < 3 else 12000, peaks1=1500, peaks2=150, seed=i + 1); fs.append(p)
-# as soon as two files are open (the session keeps one after the removal) while others are still loading: the student removes an open file and, once the
+# as soon as two files are open (the session keeps one after the removal) while others are still loading, one of them already in the table: the student removes an open file and, once the
 # notebook holds that, the page reloads (sessionStorage carries what it saw)
 ARM = """() => { const t = setInterval(async () => { const open = typeof ST !== 'undefined' && typeof OPENNOW !== 'undefined' ? ST.files.filter(x => OPENNOW.isOpen(x.name)) : [];
-  if (open.length < 2 || UPBUSY === 0) return;
+  if (open.length < 2 || UPBUSY === 0 || open.length === ST.files.length) return;      // a row of the table is still being opened
   clearInterval(t); const f = open[0]; OPENNOW.tick(f, false); uiSave(true);
   const saved = async () => { const nb = await (await fetch('api/notebook')).json(); return !(nb.session || []).some(x => String(x.file).split('#')[0] === f.name) && ((nb.ui || {}).files || []).some(x => x.gone && String(x.file).split('#')[0] === f.name); };
   while (!(await saved())) await new Promise(r => requestAnimationFrame(r));
@@ -54,7 +54,7 @@ def removal_holds():
             pg.set_input_files("#pick", fs)
             attendi(pg, "window.__rm !== null", 300000)
             gone = pg.evaluate("window.__rm")
-            attendi(pg, f"ST.files.length === {len(fs)} && UPBUSY === 0 && OPENNOW.busy() === 0", 300000)
+            attendi(pg, f"ST.files.filter(f => f.name !== {gone!r}).length === {len(fs) - 1} && UPBUSY === 0 && OPENNOW.busy() === 0", 300000)      # the removed row goes when its notice closes
             rows = pg.evaluate(ROWS)
             assert not any(n == gone and op for n, _, op in rows), f"{gone}, removed while the others opened, is open again: {rows}"
             assert len([n for n, use, op in rows if use and op]) == len(fs) - 1, rows
