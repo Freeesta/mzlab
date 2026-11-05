@@ -45,24 +45,114 @@ impl<R: ReadAt> Mzml<R> {
     /// The time axis (minutes) of a chromatogram, decoding only the time array; `None` when the declared length does not equal the decoded one (the caller then reads both arrays).
     pub fn chromatogram_times(&mut self, c: &Chrom) -> Result<Option<Vec<f64>>> {
         let chunk = self.read(c.start, c.end)?;
-        let expected = c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0);
-        let mut t = None;
-        for (head, data) in arrays(&chunk) {
-            if has_accession(&head, "MS:1000595") {
-                t = Some(decode(&head, data, expected)?);
-                break;
+        times_of(&chunk, c)
+    }
+
+    /// The time axis of each chromatogram of `cs` (in file order), as `chromatogram_times` with the full read as fallback, handed to `each`.
+    pub fn chromatograms_times(&mut self, cs: &[&Chrom], mut each: impl FnMut(Vec<f64>)) -> Result<()> {
+        self.in_spans(cs, |c, chunk| {
+            each(match times_of(chunk, c)? {
+                Some(t) => t,
+                None => pair_of(chunk, c)?.0,
+            });
+            Ok(())
+        })
+    }
+
+    /// (time in minutes, intensity) of each chromatogram of `cs` (in file order), as `chromatogram`, handed to `each`.
+    pub fn chromatograms_each(
+        &mut self,
+        cs: &[&Chrom],
+        mut each: impl FnMut(&Chrom, (Vec<f64>, Vec<f64>)),
+    ) -> Result<()> {
+        self.in_spans(cs, |c, chunk| {
+            each(c, pair_of(chunk, c)?);
+            Ok(())
+        })
+    }
+
+    /// Calls `f` with each chromatogram of `cs` and its bytes. Neighbouring chromatograms are read together in spans of at most `SPAN` bytes:
+    /// a file of thousands of SRM traces costs a few reads, not one per trace (each read is a Blob slice in the site). A chromatogram longer
+    /// than `SPAN`, or out of file order, is a span of its own, so it reads (and refuses) exactly as `read(c.start, c.end)`.
+    fn in_spans(
+        &mut self,
+        cs: &[&Chrom],
+        mut f: impl FnMut(&Chrom, &[u8]) -> Result<()>,
+    ) -> Result<()> {
+        const SPAN: u64 = 16 << 20;
+        let mut i = 0;
+        while i < cs.len() {
+            let a = cs[i].start;
+            let (mut b, mut j) = (cs[i].end, i + 1);
+            while j < cs.len()
+                && cs[j].start >= cs[j - 1].end
+                && cs[j].end.saturating_sub(a) <= SPAN
+            {
+                b = b.max(cs[j].end);
+                j += 1;
             }
+            let span = self.read(a, b)?;
+            for c in &cs[i..j] {
+                let lo = usize::try_from(c.start.saturating_sub(a)).map_or(span.len(), |v| v.min(span.len()));
+                let hi = usize::try_from(c.end.min(b).saturating_sub(a)).map_or(span.len(), |v| v.clamp(lo, span.len()));
+                f(c, &span[lo..hi])?;
+            }
+            i = j;
         }
-        let Some(mut t) = t else { return Ok(None) };
-        if c.n != i64::try_from(t.len()).ok() {
-            return Ok(None);
-        }
-        let list = find(&chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
-        let seconds =
-            text(part(&chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(&chunk);
-        if seconds {
-            t.iter_mut().for_each(|v| *v /= 60.0);
-        }
-        Ok(Some(t))
+        Ok(())
     }
 }
+
+/// The time axis of one chromatogram from its bytes (`chunk` = start..end of the element).
+fn times_of(chunk: &[u8], c: &Chrom) -> Result<Option<Vec<f64>>> {
+    let expected = c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0);
+    let mut t = None;
+    for (head, data) in arrays(chunk) {
+        if has_accession(&head, "MS:1000595") {
+            t = Some(decode(&head, data, expected)?);
+            break;
+        }
+    }
+    let Some(mut t) = t else { return Ok(None) };
+    if c.n != i64::try_from(t.len()).ok() {
+        return Ok(None);
+    }
+    let list = find(chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
+    let seconds = text(part(chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(chunk);
+    if seconds {
+        t.iter_mut().for_each(|v| *v /= 60.0);
+    }
+    Ok(Some(t))
+}
+
+/// (time in minutes, intensity) of a chromatogram from its bytes (`chunk` = start..end of the element).
+pub(super) fn pair_of(chunk: &[u8], c: &Chrom) -> Result<(Vec<f64>, Vec<f64>)> {
+    let (mut t, mut y): (Option<Vec<f64>>, Option<Vec<f64>>) = (None, None);
+    for (head, data) in arrays(chunk) {
+        let a = decode(
+            &head,
+            data,
+            c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0),
+        )?;
+        if head.contains("MS:1000595") {
+            t.get_or_insert(a);
+        } else {
+            y.get_or_insert(a);
+        }
+    }
+    let (mut t, mut y) = (t.unwrap_or_default(), y.unwrap_or_default());
+    let n = t.len().min(y.len());
+    let list = find(chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
+    let seconds =
+        text(part(chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(chunk);
+    if seconds {
+        t.iter_mut().for_each(|v| *v /= 60.0);
+    }
+    t.truncate(n);
+    y.truncate(n);
+    Ok((t, y))
+}
+
+#[cfg(test)]
+#[path = "lettura_tests.rs"]
+mod tests;
