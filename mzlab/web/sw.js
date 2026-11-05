@@ -16,6 +16,8 @@ const MARK = new URL(".fill-done", BASE).href;                   // present in t
 const NEVER = new Set(["static/manifest.json", "static/build.json", "static/sw-manifest.json"]);   // answer for the build itself: always from the network
 const T0 = Date.now();
 let stale = false;     // the site on the network is a newer version than this worker: the cache is bypassed until the new worker takes over
+/** @type {Record<string, string>} */
+let nuevo = {};        // while stale: path -> SHA-256 of the newer version, so a cached file whose bytes did not change still answers from the cache
 /** @type {Promise<void> | null} */
 let fill = null;
 // Cross-origin isolation (SharedArrayBuffer) without server headers: every same-origin response gets COOP/COEP/CORP, also from the cache.
@@ -49,7 +51,7 @@ const manifestoSw = () => manP || (manP = (async () => {
     if (!r.ok) throw new Error("manifest");
     const j = await r.json();
     visto = true;
-    if (j.app !== APPV) { stale = true; sw.registration.update().catch(() => {}); return null; }
+    if (j.app !== APPV) { stale = true; nuevo = j.files || {}; sw.registration.update().catch(() => {}); return null; }
     stale = false;
     /** @type {Record<string, string>} */
     const out = {};
@@ -158,6 +160,11 @@ const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) 
   const cache = await abrirApp();
   if (!visto) await manifestoSw();      // a restarted worker of an older version must not serve its old files to a newer page before it knows (one request, shared)
   if (!stale) { const hit = await buscar(cache, req); if (hit) return isolata(hit); }
+  else {
+    // a deploy changes few files: the cached copy still answers when its bytes are the ones of the newer version (no mixed JS/wasm pair)
+    const want = nuevo[rel(new URL(req.url))], hit = want ? await buscar(cache, req) : undefined;
+    if (hit && hit.status === 200 && await shaDe(hit) === String(want)) return isolata(hit);
+  }
   try {
     const want = await expected(new URL(req.url));
     const prev = stale ? null : await heredado(req, want);

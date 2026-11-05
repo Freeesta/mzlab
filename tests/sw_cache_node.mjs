@@ -1,5 +1,5 @@
 // Loads mzlab/web/sw.js with a mocked service-worker scope: app files are cache-first by site version (hit, miss -> network -> checked against
-// the manifest -> put), navigations are network-first, a manifest of another version bypasses the cache, the background fill, unchanged files carried over from the previous version, old caches go.
+// the manifest -> put), navigations are network-first, a worker of an older version answers from its cache only the files the newer one did not change, the background fill, unchanged files carried over from the previous version, old caches go.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -113,12 +113,19 @@ function mondo(net = { ...FILES }, man = manifest()) {
   assert.equal(await (await w.get("", { mode: "navigate" })).text(), "<html>", "offline: from the cache");
   assert.equal(await (await w.get("static/app.js")).text(), "app()", "offline: app file from the cache");
 }
-{ // the site on the network is another version: cache bypassed, the worker asks for an update
-  const w = mondo({ ...FILES }, manifest({ app: "zzz" }));
-  await w.get("static/app.js");
+{ // the site on the network is another version: the worker asks for an update; a cached file answers only when its bytes are the newer version's
+  const NEW = { ...FILES, "static/lazy.js": "lazy() v2" };
+  const w = mondo({ ...NEW }, manifest({ app: "zzz", files: Object.fromEntries(Object.entries(NEW).map(([k, v]) => [k, sha(v)])) }));
+  const mine = await w.ctx.caches.open("mzlab-app-abc");
+  for (const p of ["static/app.js", "static/lazy.js"]) await mine.put(new Request(O + p), new Response(FILES[p], { status: 200 }));
+  await w.get("static/extra.js");
   assert.equal(w.st.updates, 1);
-  await w.get("static/app.js");
-  assert.equal(w.netCount("static/app.js"), 2, "stale: nothing stored, nothing served from the cache");
+  assert.equal(await (await w.get("static/app.js")).text(), "app()");
+  assert.equal(w.netCount("static/app.js"), 0, "unchanged in the newer version: from the cache " + w.st.fetches);
+  assert.equal(await (await w.get("static/lazy.js")).text(), "lazy() v2", "changed: the newer bytes, never the cached older ones");
+  await w.get("static/lazy.js"); await w.get("static/big.wasm"); await w.get("static/big.wasm");
+  assert.equal(w.netCount("static/lazy.js"), 2, "stale: nothing stored");
+  assert.equal(w.netCount("static/big.wasm"), 2, "stale: a miss is not stored");
 }
 { // a worker of an older version that the browser stopped and started again: its first request asks the manifest before the cache answers
   const NEW = { ...FILES, "static/lazy.js": "lazy() v2" };
