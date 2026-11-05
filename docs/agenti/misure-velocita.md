@@ -43,6 +43,7 @@ Le strade scartate o rimandate (senza guadagno) stanno in `ottimizzazioni-tentat
 | 4/11 | PERF-HOTPATHS-1 | mzML scan table walk and array decoding (`examples/mzml_tempi.rs`, native, 4 vCPU, `hrp` 114 MB zlib profile / `hr` 55 MB plain, 7 alternated runs, median; wasm: `banco_wasm.py site_d`, Node, 9 runs; `main` `bb77cd3d`) | table, prints known 116 / 118 ms; one-thread parse 421 / 254 ms; wasm HR read 731, `.mzidx` HR 3577 ms | 70 / 91; 337 / 214; wasm 645, 3260 | −40 / −23 %; −20 / −16 %; wasm −12 / −9 %; native `.mzidx` unchanged |
 | 4/11 | LOAD-FIRST-PAINT-1 | page load of the built site (`tests_e2e/misura_primo_paint.py`, local mirror with GitHub Pages headers, Chromium 4 vCPU cloud, median of 5; `main` `c7369d1eeb9c86e9be4fe56942242adf8131d6c3`): one catalog file per language, service-worker misses answered before the store, unused `features.js` preload removed | FCP cold 2105 ms, warm 436 ms; engine ready cold 4548 ms; 45 render-blocking files | FCP cold 341 ms, warm 188 ms; ready cold 1957 ms; 11 render-blocking | −84 % / −57 % FCP; table below |
 | 4/11 | LOAD-FIRST-PAINT-2 | Tabui package (60 scripts) loaded at idle, built site on the local mirror, Chromium 4 vCPU cloud, median of 5 (`main` `c6f867152a7a2e50952ea6cb8cd937c8e0a0eb3e`): all script tags inserted at once with `async=false` (same order) instead of one after another's `onload` | cold visit: package done 3126 ms, scripts 1102 ms; warm reload: done 1186 ms, scripts 413 ms | cold: done 2805 ms, scripts 735 ms; warm: done 1070 ms, scripts 378 ms | −33 % cold script time, −10 % package done |
+| 4/11 | LOAD-FIRST-PAINT-3 | page load, built site, `misura_primo_paint.py`, A and B run alternately, 7 rounds, median (`main` `c6f867152a7a2e50952ea6cb8cd937c8e0a0eb3e`): `carica.js` inserts the page scripts by slices of 48 with a yield between | CPU ×4 warm: longest task 136 ms, ready 1605; CPU ×4 cold: 109 ms, ready 2296; warm ready 858; cold ready 2117 | CPU ×4 warm: 52 ms, ready 1539; CPU ×4 cold: 60 ms, ready 2267; warm ready 801; cold ready 2073 | −62 % longest task at CPU ×4; ready −1 to −7 % |
 
 ## Page load (current state)
 
@@ -54,8 +55,8 @@ Le strade scartate o rimandate (senza guadagno) stanno in `ottimizzazioni-tentat
 | warm (service worker) | 188 | 227 | 168 | 815 | 0 | 0 | 11 | 788 |
 | cold `?lang=en` | 377 | 434 | 380 | 2022 | 0 | 0 | 11 | 655 |
 | warm, dark theme saved | 189 | 266 | 141 | 841 | 0 | 0 | 11 | — |
-| cold, CPU ×4 | 457 | 618 | 504 | 2435 | 0 | 184 | 11 | 665 |
-| warm, CPU ×4 | 492 | 546 | 484 | 1675 | 0 | 165 | 11 | 662 |
+| cold, CPU ×4 | 384 | 550 | 454 | 2267 | 0 | 60 | 11 | 666 |
+| warm, CPU ×4 | 425 | 554 | 496 | 1539 | 0 | 52 | 11 | 666 |
 | cold, iPad viewport + touch (Chromium) | 364 | 430 | 361 | 2045 | 0 | 0 | 11 | 666 |
 
 - **Views** (warm, click after the page is usable): Disegno 148 ms (2 files, 13 KB); Tabui 133 ms; Flow 200 ms when the Tabui package has loaded, longer when the click comes before it: the 60 `mzfinder/` scripts load at idle after `qqReady`, all tags inserted at once in order (package done ~1.1 s warm, ~2.8 s on a cold visit).
