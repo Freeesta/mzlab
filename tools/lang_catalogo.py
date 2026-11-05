@@ -11,12 +11,21 @@ def parti(lang: str) -> list[Path]:
     return sorted((LANG / lang).glob("*.js"))
 
 
+def _senza_doppi(coppie: list, path: Path) -> dict[str, str]:
+    visti: set[str] = set()
+    for k, _ in coppie:
+        if k in visti:
+            raise ValueError(f"{path.name}: key {k} is defined twice in the same file")
+        visti.add(k)
+    return dict(coppie)
+
+
 def parte(path: Path) -> dict[str, str]:
     lang = path.parent.name
     righe = path.read_text(encoding="utf-8").strip().splitlines()
     if righe[0] != f'I18N.add("{lang}", {{' or righe[-1].strip() != "});":
         raise ValueError(f'{path.name}: the first line must be `I18N.add("{lang}", {{` and the last `}});`')
-    return json.loads("{" + "\n".join(righe[1:-1]) + "}")
+    return json.loads("{" + "\n".join(righe[1:-1]) + "}", object_pairs_hook=lambda c: _senza_doppi(c, path))
 
 
 def catalogo(lang: str) -> dict[str, str]:
