@@ -16,7 +16,7 @@ const st = Object.assign({ ion: "[M-H]-", tol: 3, ms2tol: 5, minRel: 1 }, lsObj(
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
 
 /** @typedef {{i: number, id: string, mz: number, rt: number|null, formula: string|null, ppm: number|null, nCand: number, c: number, mc: number|null, mdc: number|null, series: number|null, ms2: any}} Row */
-/** @type {{rows: Row[], pol: number, nMs2: number}|null} */
+/** @type {{rows: Row[], pol: number, nMs2: number, total: number}|null} */
 let res = null;
 let selRow = /** @type {number|null} */ (null), curBox = /** @type {HTMLElement|null} */ (null), seq = 0;
 
