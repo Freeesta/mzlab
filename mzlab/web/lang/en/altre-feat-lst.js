@@ -327,7 +327,7 @@ I18N.add("en", {
   "feat.go": "Measure in the open files",
   "feat.err.lines": "{n} invalid lines (m/z and RT are needed): {list}.",
   "feat.err.empty": "No feature in the table.",
-  "feat.err.many": "Too many ions: at most {max} at a time.",
+  "feat.err.many": "The list has {n} ions: the table measures at most {max} at a time (each one is an XIC in every open file), so nothing was measured. Split the list into parts of at most {max} lines, or load a feature table file (CSV or TSV) instead.",
   "feat.err.columns": "The m/z and RT columns are needed (named «row m/z» and «row retention time»).",
   "feat.err.nofiles": "No column of the table matches an open file (the file name must appear in the column header).",
   "feat.err.nomzf": "There is no table loaded in Tabui.",

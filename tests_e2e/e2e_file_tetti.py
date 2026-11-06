@@ -1,5 +1,5 @@
 """The caps of the safe file reader (file-sicuri.js) shown to the user: a .mzflow over 8 MB opened with «Open workflow» gets one calm notice that names
-the limit, says the file was not opened and gives the next step, in English and Italian, without the «invalid format» prefix (the file was never read).
+the limit, says the file was not opened and gives the next step, in English and Italian, without the «invalid format» prefix (the file was never read); a typed ion list over 300 lines says its size and the cap.
 Synthetic bytes only."""
 import sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
@@ -25,6 +25,11 @@ try:
                 want = pg.evaluate("EH(I18N.t('workflow.err.tooBig', { mb: I18N.num(8) }))")
                 assert got == [want] and "8" in want and pg.evaluate("I18N.t('workflow.err.invalidFormat')") not in got[0], got
             step(f"{lang}: a .mzflow over 8 MB: one notice with the limit and the next step, no «invalid format»", huge)
+            def list_cap():
+                msg = pg.evaluate("TABELLA.fromList(Array.from({ length: 301 }, (_, i) => (100 + i) + '; 5').join('\\n')).then(() => 'measured', e => e.message)")
+                want = pg.evaluate("I18N.t('feat.err.many', { n: 301, max: 300 })")
+                assert msg == want and "301" in msg and "300" in msg, msg
+            step(f"{lang}: a typed list over 300 ions names its size and the cap, and nothing is measured", list_cap)
             errs = [e for e in r.errs if e[0] in ("pageerror",)]
             step(f"{lang}: no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
             pg.close()

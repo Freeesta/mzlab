@@ -327,7 +327,7 @@ I18N.add("it", {
   "feat.go": "Misura nei file aperti",
   "feat.err.lines": "{n} righe non valide (servono m/z e RT): {list}.",
   "feat.err.empty": "Nessuna feature nella tabella.",
-  "feat.err.many": "Troppi ioni: al massimo {max} per volta.",
+  "feat.err.many": "L'elenco ha {n} ioni: la tabella ne misura al massimo {max} per volta (ognuno è un XIC in ogni file aperto), quindi non è stato misurato nulla. Dividi l'elenco in parti di al massimo {max} righe, oppure carica un file di tabella delle feature (CSV o TSV).",
   "feat.err.columns": "Servono le colonne dell'm/z e dell'RT (chiamate «row m/z» e «row retention time»).",
   "feat.err.nofiles": "Nessuna colonna della tabella corrisponde ai file aperti (il nome del file deve comparire nell'intestazione della colonna).",
   "feat.err.nomzf": "In Tabui non c'è nessuna tabella caricata.",
