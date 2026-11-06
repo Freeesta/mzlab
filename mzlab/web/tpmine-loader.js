@@ -117,7 +117,7 @@
     const b = pre || document.createElement("button"); b.dataset.v = t.id; b.dataset.tname = t.name; b.title = t.desc || t.name;
     if (pre) pre.removeAttribute("data-late");
     else { b.innerHTML = label(t); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px"; nav.appendChild(b); }
-    const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.hidden = true; anchor.after(sec);
+    const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.setAttribute("role", "main"); sec.hidden = true; anchor.after(sec);
     /** @type {any} */ const x = { b, sec, fn: null, t, ph: !!t.ph, opened: false, late: !!pre };
     b.onclick = () => openView(t.id);
     x.fn = ev => {
