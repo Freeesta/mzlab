@@ -251,7 +251,7 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
   const g=ConvUI.group(),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.filter(f=>!jobs.has(f)).map(f=>f.name)];
   // every file of the batch has its row (Queued) from the start, so the count over the table is the count of the headline
   const names=new Map();for(const f of jobs.keys()){const lot=f.mzlabModulo||f.mzlabNat,nm=lot?f.name:M.mzmlName(f.name.replace(/\.gz$/i,""),taken);taken.push(nm);names.set(f,nm);CONVROWS.add(nm,"wait")}
-  let i=0;
+  let i=0;const given=new Set();
   for(const f of files){
     if(!jobs.has(f)){out.push(f);if(onFile)onFile(f,g);continue}
     i++;const lot=f.mzlabModulo||f.mzlabNat,nm=names.get(f);let mem=lot?lot.members:[{name:f.name,blob:f}],temp="";
@@ -262,8 +262,9 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
       ui.done();CONV.add(nm,blob,temp?{fam:jobs.get(f),mem:[],c:0,gz:f}:{fam:jobs.get(f),mem,c:lot?lot.c:0});if(/** @type {any} */ (blob).mzlabMissing)M.missing.set(nm,/** @type {any} */ (blob).mzlabMissing);ready=new File([blob],nm);out.push(ready)}
     catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message,who=f.mzlabModulo?.shown||f.name;(rep.errs[m]=rep.errs[m]||[]).push(who);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:who,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm);if(temp)window.GZFLUSSO.drop(temp)}
-    if(ready&&onFile)onFile(ready,g)}
-  for(const nm of names.values())CONVROWS.drop(nm);
+    if(ready){given.add(nm);if(onFile)onFile(ready,g)}}
+  // only the rows of files never handed on: a handed one has its own row again (onFile), with its count of missing spectra
+  for(const nm of names.values())if(!given.has(nm))CONVROWS.drop(nm);
   out.panel=g;return out}
 // true where the engine converts .raw itself (desktop): the guide then appears only for the formats it cannot convert
 let CONVERT_RAW=false;

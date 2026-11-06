@@ -58,20 +58,31 @@ const MAGIA: &[u8; 16] = b"SQLite format 3\0";
 
 /// A folder is Bruker's when its database starts with the SQLite magic and the file of the peaks is beside it; a folder with only `analysis.baf` is recognised to say why it does not open.
 pub(super) fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
+    let bin = fs.trova(&format!("{base}_bin")).is_some();
     let Some(i) = fs.trova(base) else {
-        return if fs.trova("analysis.baf").is_some()
-            && fs.trova("analysis.tdf").is_none()
-            && fs.trova("analysis.tsf").is_none()
+        // a `*_bin` without its database is this reader's folder, refused by `apri` with the file it lacks
+        return if bin
+            || (fs.trova("analysis.baf").is_some()
+                && fs.trova("analysis.tdf").is_none()
+                && fs.trova("analysis.tsf").is_none())
         {
             Fiducia::Forse
         } else {
             Fiducia::No
         };
     };
-    if fs.testa(i, 16) != MAGIA || fs.trova(&format!("{base}_bin")).is_none() {
-        return Fiducia::No;
+    // a database without its `*_bin`, or one that is not SQLite (an empty or cut copy): `apri` says which
+    if fs.testa(i, 16) != MAGIA || !bin {
+        return Fiducia::Forse;
     }
     Fiducia::Si
+}
+
+/// The error of a folder that lacks `file` (`analysis.tsf`, `analysis.tdf_bin`, ...); `nome`: a member of the folder.
+pub(super) fn manca(nome: &str, file: &str) -> Error {
+    Error::new("err.file.brukerNoBin")
+        .with("name", cartella(nome).unwrap_or(nome))
+        .with("file", file)
 }
 
 pub(super) fn prendi(fs: &mut FileSet, suffisso: &str) -> Option<Membro> {

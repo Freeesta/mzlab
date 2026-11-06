@@ -316,7 +316,13 @@
     // the record of the run (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run
     const record = F.webProv ? await F.webProv.record(live, /** @type {any[]} */ (await call(live, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
     // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})
-    return { record, steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.map((/** @type {any} */ i) => live.files.get(i.id)).filter(Boolean), llm: S.llmRef || null };
+    return { record, steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.flatMap((/** @type {any} */ i) => filesOf(live, i.id)), llm: S.llmRef || null };
+  };
+
+  /** the texts a step made in the live session `live`: one, or one per file of the plan for a per-file step (keyed by job, in the order of the files) @param {any} live @param {string} id */
+  const filesOf = (live, id) => {
+    const one = live.files.get(id), names = (live.plan.inputs || []).map((/** @type {any} */ f) => f.name);
+    return one ? [one] : names.map((/** @type {string} */ n) => live.files.get(id + "|" + n)).filter(Boolean);
   };
 
   /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null @param {any} S */

@@ -1,6 +1,7 @@
 # Lettore Bruker timsTOF (`.d` con `analysis.tdf` o `analysis.tsf`)
 
 `crates/mzlab-lettori/src/bruker/` (feature `bruker`, modulo `.wasm` `bruker`, tetto 524 288 B; misurato dopo `wasm_opt -Oz`: 416 514 B con `ruzstd`). Voci del registro: `bruker-tdf` (membri `x.d/analysis.tdf` + `analysis.tdf_bin`) e `bruker-tsf` (`analysis.tsf` + `analysis.tsf_bin`); un eventuale `-wal` accanto al database si legge (vince l'ultimo frame confermato). Una cartella con solo `analysis.baf` si riconosce (`Forse`) per dire `err.file.brukerBaf` («esporta in mzML con Bruker DataAnalysis o msconvert»): il BAF resta impossibile senza l'SDK.
+- Un database senza il suo `_bin`, un `_bin` senza il suo database o un database che non è SQLite (copia vuota o tagliata) sono `Forse`: `apri` dà `err.file.brukerNoBin` (`name` = cartella, `file` = il file che manca) o l'errore SQLite con chiave; la pagina fa lo stesso conto (`BrukerD.missing` in `agilent-d.js`).
 
 ## File del modulo
 - `sqlite_min.rs`, `sqlite_schema.rs`, `sqlite_wal.rs`: lettore SQLite 3 in sola lettura senza motore SQL (nessun `rusqlite`). Pagine b-tree di tabella (5, 13) e di indice (2, 10, per le tabelle `WITHOUT ROWID`, con le colonne riordinate: la chiave primaria per prima), overflow, log WAL. Visita iterativa con ogni puntatore, lunghezza, profondità e numero di pagine passati da `Limiti`; una pagina già vista o un ciclo è un errore, non un giro infinito.
@@ -33,7 +34,7 @@ Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` d
 - La mobilità per punto non entra nel motore. In `campi` di ogni spettro stanno l'intervallo di scansioni TIMS e, per TDF, l'avviso `meta.nonDecodificato` (vedi sotto).
 
 ## Metodo e testata
-`metodo/1` da `GlobalMetadata`, `Properties` e dalle calibrazioni (`MzCalibration`, `TimsCalibration`); `testata_mzml` con `Header::run_params` = `("mzLab metodo/1", documento)`, strumento, seriale, software, `startTimeStamp` e SHA-1 di `analysis.tdf` (solo TDF).
+`metodo/1` da `GlobalMetadata`, `Properties` e dalle calibrazioni (`MzCalibration`, `TimsCalibration`); `testata_mzml` con `Header::run_params` = `("mzLab metodo/1", documento)`, strumento, seriale, software, `startTimeStamp` e SHA-1 di `analysis.tdf` (solo TDF); componenti quadrupolo + time-of-flight + rivelatore a microcanali (il file non li nomina), da cui la tabella delle scansioni legge l'alta risoluzione (`hr1`, prova `un_timstof_e_ad_alta_risoluzione`).
 
 ## Prove
 - `cargo test -p mzlab-lettori --features bruker`: unitarie (varint, colonne, calibrazione, TSF) e `tests/robustezza_bruker.rs` (SQLite e `tdf_bin` costruiti nel test: WAL confermato, non confermato e con somma errata, `WITHOUT ROWID`, ciclo di pagine, varint lunghi, zstd falso e con finestra enorme, conteggi di picchi bugiardi, troncamenti a ogni passo, `tdf_bin` tagliato dentro un frame, BAF, cartella Agilent); `tests/test_lettori_parita.py` (`test_bruker_con_tdf_bin_tagliato_uguale_al_cli`): stesso mzML dal modulo e dal CLI per una cartella tagliata.

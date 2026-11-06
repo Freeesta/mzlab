@@ -30,7 +30,8 @@ Regola (`CLAUDE.md`): ogni funzione esiste nel sito (`.wasm` + OPFS) e nell'app 
 | `spectra.ms2`, `spectra.match`, `table.match`, `formula.ms2`, `formula.ms1`, `annot.level`, `qc.mass_accuracy`, `screen.suspects`, `annot.regulatory`, `spectra.insilico` | sì | sì | `e2e_flow_web_ident.py`, `e2e_flow_web_ident2.py`, `e2e_flow_qc_mass.py`, `e2e_flow_suspects.py`, `e2e_normative_screen.py`, `e2e_flow_insilico.py` |
 | `tp.*` (7), `spectra.msn_graph`, `msn.library_export`, `msn.table_export` | sì | sì | `e2e_flow_tp_*.py`, `e2e_flow_dig_lr.py`, `e2e_flow_msn.py` |
 | `structure.render`, `structure.reactivity`, `msn.figure` (svg, html) | sì | sì | `e2e_flow_web_struct.py` (`.wasm` `interp`, `chem`, `msnfigura`); il PNG resta al computer (resvg solo nativo) |
-| `import.raw`, `convert.mzml`, `features.estimate`, `features.table`, `table.plausible`, `spectra.chimeric`, `rt.predict`, `meta.compare`, `spectra.lookup`, `chrom.uv_peaks`, `quant.calibrate` | no come passo (molti nel `.wasm` di un pannello) | sì | da fare (area Flow, `parita-browser.md` punti 5, 7, 10); elenco in `SOLO_APP` di `tests/test_parita_passi.py` |
+| `features.estimate` (un `estimates/1` per file, `<istanza>-<radice>.json`) | sì | sì | `e2e_flow_web_estimate.py` (`.wasm` `hr`, `flow_estimate` = `run_estimate::estimate_of`); la radice del nome la dà lo scheduler (`root` di `next`) |
+| `import.raw`, `convert.mzml`, `features.table`, `table.plausible`, `spectra.chimeric`, `rt.predict`, `meta.compare`, `spectra.lookup`, `chrom.uv_peaks`, `quant.calibrate` | no come passo (molti nel `.wasm` di un pannello) | sì | da fare (area Flow, `parita-browser.md` punti 5, 7, 10); elenco in `SOLO_APP` di `tests/test_parita_passi.py` |
 | `features.ms2_link`, `annot.hazard` | no | no (solo descrittore) | — |
 | `structure.draw` | sì (editor) | no | limite: un disegno non è un calcolo |
 

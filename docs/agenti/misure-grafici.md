@@ -23,6 +23,15 @@ Costo del disegno dei cromatogrammi su tracce sintetiche dense: `python3 tools/b
 
 Prima ogni punto entrava due volte nel percorso (riempimento sotto la traccia e linea da 1,25 px); ora una colonna di pixel ha un vertice (il massimo della colonna, come nella vista sovrapposta) e la linea fitta è di 1 px (`hairline`). Il picco più alto di ogni traccia resta la cima della sua linea.
 
+## Zoom verticale sulla linea di base, CPU 1x (`main` `2c4704f975e51dadaae010b537d45b509be23feb` → `grafici.js` passa ogni linea per `DECIMA.clipY`; prova `e2e_zoom_y_denso`)
+| azione | prima | dopo |
+|---|---|---|
+| draw, zoom y 0-300, 20 file da 10^5 punti, ms | 326.5 | 148.6 |
+| draw, zoom y 0-300, un file da 10^6 punti, ms | 28.0 | 28.8 |
+| cima delle linee sopra la tela (4 file da 60 000 punti, zoom y 0-300), px | ~110 000 | ≤ 9 |
+
+Con lo zoom verticale i picchi (10^5) finivano ~10^5 px sopra la tela e la tela software pagava tutta la lunghezza delle linee (profilo: `drawImage` della legenda, che svuota il disegno in sospeso, 300 ms). Ora il tratto fuori dal grafico corre su un bordo 9 px oltre il ritaglio, tagliato esattamente dove lo attraversa: la parte visibile è la stessa (differenze solo di antialiasing). Il resto del tempo è la banda di rumore ingrandita a tutta altezza.
+
 Un file da 10^6 punti (stessa macchina): draw della vista intera 11 ms, dello zoom 0,9 ms; rotella, trascinamento e passaggio del mouse a 16,7 ms per fotogramma senza attività lunghe; ridimensionare ×10 = 15 chiamate a `draw()` (fotogrammi fino a 50 ms).
 
 ## Memoria su cicli ripetuti, un file LR sintetico (`main` `1913013` → `corrInfoWire` in `pannelli.js` chiude il vecchio ascoltatore con `abort(0)`; prova `e2e_memoria_zoom`)
