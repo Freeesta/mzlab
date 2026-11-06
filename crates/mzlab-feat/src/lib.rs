@@ -122,6 +122,7 @@ mod trace_text;
 pub mod untargeted;
 pub mod uv_bands;
 pub mod view;
+pub mod view_table;
 pub mod weakfile;
 
 /// Version of the feature table and of the rules that produce it (changes when the output of `detect` changes).
