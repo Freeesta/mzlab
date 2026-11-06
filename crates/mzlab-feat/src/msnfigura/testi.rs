@@ -1,6 +1,7 @@
 //! The label rule of the static figure: the text pieces of an ion and of a loss, the same as `mzlab/web/msngrafo-vista.js`, and the boxes they make.
 
 use super::scena::*;
+use crate::sortc::SortC;
 
 // ---- labels (the rule of msngrafo-vista.js) ------------------------------------------------------------------------------
 
@@ -137,7 +138,7 @@ pub(crate) fn scelta_di(i: &Ion) -> Option<String> {
 pub(crate) fn scatola(sc: &Scena, i: &Ion, p: &Pos, compatta: bool) -> Scatola {
     let chosen = scelta_di(i);
     let mut cs: Vec<&Cand> = i.cands.iter().collect();
-    cs.sort_by_key(|c| u8::from(Some(&c.formula) != chosen.as_ref()));
+    cs.sortc_by_key(|c| u8::from(Some(&c.formula) != chosen.as_ref()));
     let keep = if compatta { 1 } else { MAXC };
     let righe = cs
         .iter()

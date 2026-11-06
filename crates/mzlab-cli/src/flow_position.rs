@@ -7,7 +7,7 @@ use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
 
 use crate::flow::{read_one, write_made, FileRunner};
-use crate::flow_link::parent_of;
+use mzlab_feat::parent::parent_of;
 
 fn param(job: &Job, name: &str) -> Option<f64> {
     job.resolved
