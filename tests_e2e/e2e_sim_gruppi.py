@@ -58,6 +58,17 @@ try:
             attendi(pg, "document.querySelectorAll('#simtab .simtab-g [data-g]').length === 2")
             h = head(); need(len(h) == 11 and any("List B" in x for x in h), h)
         step("grouped: List A and List B apart, rows by group, the CLI bytes with group.", group)
+        def zero():
+            want = cli("sim-table", *FILES, *GROUPS, "--set", "baseline=zero")
+            pg.focus("#simtab [data-b]"); pg.keyboard.press("ArrowDown")
+            attendi(pg, "SIMTAB.state().csv['area_sum|samples|zero'] !== undefined && document.querySelector('#simtab [data-b]').value === 'zero'", timeout=60000)
+            got = pg.evaluate("SIMTAB.state().csv['area_sum|samples|zero']")
+            need(got == want and want.split("\n")[0].endswith(",baseline") and all(l.endswith(",zero") for l in want.strip().split("\n")[1:]), (got, want))
+            attendi(pg, "[...document.querySelectorAll('#simtab thead th')].pop()?.textContent === I18N.t('canali.simtab.h.baseline')")
+            need(pg.evaluate("[document.querySelectorAll('#simtab thead th').length, document.querySelectorAll('#simtab thead [data-c]').length]") == [12, 10], "no pick button on the baseline column")
+            need(pg.evaluate("SIMTAB.ask('peaks|samples|zero')") == cli("sim-table", *FILES, *GROUPS, "--set", "baseline=zero", "--set", "output=peaks"), "peaks from zero")
+            pg.select_option("#simtab [data-b]", ""); attendi(pg, "document.querySelectorAll('#simtab thead th').length === 11")
+        step("baseline from zero (keyboard): the CLI bytes with baseline=zero, a Baseline column, then back to the edges", zero)
         def fold():
             pg.click("#simtab [data-g='List A']")
             attendi(pg, "document.querySelector(\"#simtab [data-g='List A']\").getAttribute('aria-expanded') === 'false'")
