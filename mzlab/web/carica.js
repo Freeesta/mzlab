@@ -17,7 +17,7 @@
       if (mod) s.type = "module";
       // after start-up a carica(n) runs as soon as it arrives, ahead of tools waiting idle: in order (async=false) it queued behind every lazy script asked for before it
       s.async = booted;
-      if (booted) s.setAttribute("fetchpriority", "high");
+      if (booted) s.fetchPriority = "high";
       s.src = "static/" + f;
       s.onload = function () { ok(f); };
       // a failed script is forgotten, so a later carica(n) tries again
