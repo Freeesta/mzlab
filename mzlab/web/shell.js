@@ -189,6 +189,10 @@ async function gzToEngine(/** @type {FileCarica[]} */ files,/** @type {CaricaRep
     const n=G.memoryNote(f);if(n)rep.notes.push(n);out.push(f)}
   return out}
 async function numpressToNat(/** @type {FileCarica[]} */ files){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,M=window.LETTORI_MOD;if(!rb||rb.disabled||!rb.nativo||window.MZLAB_DESKTOP||!M)return files;return NATIVO.numpress(files,async(/** @type {FileCarica} */ f)=>(await M.variante(f))==="aperti")}
+// the desktop app reads the formats of the readers modules natively (NATIVO.desktop): its Files are stubs, a module of the page would get no bytes; an mzML of the disk asks the native side, one of the page its first bytes
+async function moduliToNat(/** @type {FileCarica[]} */ files){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,M=window.LETTORI_MOD;if(!rb||rb.disabled||!rb.nativo||!window.MZLAB_DESKTOP||!M)return files;
+  const taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.map(f=>f.name)],stub=(/** @type {FileCarica} */ f)=>/id=\d+/.test(f.type||"");
+  return NATIVO.desktop(files,M.extensions(),async(/** @type {FileCarica} */ f)=>stub(f)||(await M.variante(f))==="aperti",(/** @type {{ name: string, blob: Blob }[]} */ m)=>rb.nativeSamples(m),(/** @type {string} */ n)=>{const nm=M.mzmlName(n.replace(/\.gz$/i,""),taken);taken.push(nm);return nm})}
 // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 const WIFF_WAIT=new Map();
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine reads them as they are and each sample (injection) is a file of the list. Gives the files to go on with and the notices [message, name]
@@ -372,7 +376,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // a saved fragmentation graph (g.json) opens by itself, without raw data: infusione-grafo-apri.js
   if(files.some(f=>/\.json$/i.test(f.name))){await carica("m:infusione-grafo-apri.js");files=await INFGAPRI.take(files,rep)}
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
-  const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);files=await gzToEngine(files,rep);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);files=await moduliToNat(files);files=await gzToEngine(files,rep);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   // a file that is not for the list (a by-product, a format we do not read) is told in the notice; the others are kept
   const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name)){if(/\.log$/i.test(f.name))(rep.logs=rep.logs||[]).push(f.name);return false}const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
   // the same group dropped again: no second notice

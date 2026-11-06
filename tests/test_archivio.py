@@ -169,3 +169,10 @@ def test_a_failed_read_of_the_prefetched_block_still_removes_the_partial_file():
     return [err, files.has("big")];
   });""")
     assert got == ["read failed", False]
+
+
+def test_every_entry_of_idx_names_the_file_it_belongs_to():
+    # lrFree (rust-worker.js) keeps what a file of files/ owns: the key of its centroid copy and the parts of an index still being written are not orphans
+    names = ["a.mzML.mzidx", "a.mzML.cen.mzidx", "a.mzML.cen.key", "a.mzML.mzidx.part", "a.mzML.mzidx.sp.part", "a.mzML.cen.mzidx.part", "a.mzML.cen-tmp.mzML.mzidx"]
+    got = run(f"await out(() => {json.dumps(names)}.map(A.idxOwner));")
+    assert got == ["a.mzML"] * 6 + ["a.mzML.cen-tmp.mzML"]

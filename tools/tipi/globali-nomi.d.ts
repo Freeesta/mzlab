@@ -662,6 +662,7 @@ declare var minOf: any;
 declare var minW: any;
 declare var mixedText: any;
 declare var modeNote: any;
+declare var moduliToNat: any;
 declare var moduloToMzml: any;
 declare var moduloWants: any;
 declare var movePanel: any;

@@ -25,8 +25,12 @@ const UPROWS = /** @type {any} */ ((() => {
       `</div><button type="button" data-up-x="${lab}" aria-label="${EH(x)}" title="${EH(x)}">&times;</button></div>`;
   }
   const head = () => CONVROWS.running().length && CONVROWS.onCancel ? `<div class="fl-uphead sm muted"><span class="cp-num" data-cvhead>${EH(CONVROWS.ready())}</span><button type="button" class="sec sm" data-up-all title="${EH(T("load.cancel.title", {}))}">${EH(T("conv.cancel", {}))}</button></div>` : "";
+  // the shape of the box: the count line or not, the rows in order and which ones failed. The box is written again only when its shape changes (`box._k`); else every row
+  // and the count are brought up to date in place, as a new percent does (fill): 200 rows written again cost ~10 ms per repaint, many times a second while files arrive
+  const shape = (/** @type {string} */ hd, /** @type {ConvRow[]} */ rs) => (hd ? "h" : "") + rs.map(r => "\n" + (r.state === "fail" ? "!" : "") + r.name).join("");
+  let fresh = /** @type {string | null} */ (null);
   /** the rows, for renderFileList */
-  const html = () => `<div id="fl-up">${head()}${rows().map(one).join("")}</div>`;
+  const html = () => { const hd = head(), rs = rows(); fresh = shape(hd, rs); return `<div id="fl-up">${hd}${rs.map(one).join("")}</div>`; };
   // × on a running row: the engine stops that file (lr_cancel) and it is not opened; on an error: the row goes
   async function cancel(/** @type {string} */ name) {
     const r = CONVROWS.find(name); if (!r) return;
@@ -48,17 +52,29 @@ const UPROWS = /** @type {any} */ ((() => {
     let box = document.getElementById("fl-up");
     // before the first list is drawn (no session yet) the rows get their box at the end of the side list
     if (!box) { const fl = document.getElementById("flst"); if (!fl || !CONVROWS.rows.length) return; box = document.createElement("div"); box.id = "fl-up"; fl.appendChild(box); }
-    const h = head() + rows().map(one).join("");
-    if (box.innerHTML !== h) { box.innerHTML = h; wire(box); }
+    const b = /** @type {any} */ (box), hd = head(), rs = rows(), k = shape(hd, rs);
+    if (b._k === undefined && fresh != null) b._k = fresh;
+    fresh = null;
+    if (b._k !== k) { box.innerHTML = hd + rs.map(one).join(""); b._k = k; wire(box); }
+    else {
+      const at = new Map([...box.children].map(e => [/** @type {HTMLElement} */ (e).dataset.up, e]));
+      rs.forEach(r => { const el = at.get(r.name); if (el) fillRow(el, r); });
+      const c = box.querySelector("[data-cvhead]"), t = hd && CONVROWS.ready(); if (c && t && c.textContent !== t) c.textContent = t;
+    }
     const fl = document.getElementById("flst"); if (fl) fl.setAttribute("aria-busy", String(!!box.querySelector("[aria-busy=true]")));
   }
   /** a new percent: only its bar and its text */
   function fill(/** @type {ConvRow} */ r) {
     const el = document.querySelector(`#fl-up [data-up="${CSS.escape(r.name)}"]`); if (!el) { paint(); return; }
-    const t = el.querySelector("[data-uptxt]"), s = txt(r), l = CONVROWS.label(r); if (t && t.textContent !== s) t.textContent = s;
+    fillRow(el, r);
+  }
+  // what one() writes that moves while the file loads: the short text, the title, the bar and its label
+  function fillRow(/** @type {Element} */ el, /** @type {ConvRow} */ r) {
+    const t = el.querySelector("[data-uptxt]"), s = txt(r), l = CONVROWS.label(r), pc = String(pcOf(r)); if (t && t.textContent !== s) t.textContent = s;
     if (/** @type {HTMLElement} */ (el).title !== l) /** @type {HTMLElement} */ (el).title = l;
-    const b = el.querySelector(".prog"), i = b && /** @type {HTMLElement | null} */ (b.querySelector("i"));
-    if (b && i) { b.setAttribute("aria-valuenow", String(pcOf(r))); i.style.width = pcOf(r) + "%"; }
+    const b = el.querySelector(".prog"), i = b && /** @type {HTMLElement | null} */ (b.querySelector("i")), al = r.name + ": " + l;
+    if (b && i && b.getAttribute("aria-valuenow") !== pc) { b.setAttribute("aria-valuenow", pc); i.style.width = pc + "%"; }
+    if (b && b.getAttribute("aria-label") !== al) b.setAttribute("aria-label", al);
   }
   // CONVROWS updates the cells of the loading table in place and repaints it on a new row: the side rows follow the same calls
   const f0 = CONVROWS.fill.bind(CONVROWS), p0 = CONVROWS.paint.bind(CONVROWS);

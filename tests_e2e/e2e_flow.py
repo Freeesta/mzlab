@@ -167,7 +167,7 @@ try:
             assert ids == ["tp", "table", "lrtable", "identify", "msn", "bentazone", "targeted", "tpseries", "standards", "blankfree"], ids; pg.click(".flx-more summary"); assert pg.locator(".flx-more .flx-tc").first.is_visible()
             assert pg.evaluate("[...document.querySelectorAll('.flx-tc small:not(.flx-help)')].every(s => s.textContent.startsWith('Good for:'))")
             pg.click('.flx-tc[data-tpl="identify"]')
-            attendi(pg, "document.querySelectorAll('.fln').length === 7")
+            attendi(pg, "document.querySelectorAll('.fln').length === 7"); assert pg.evaluate("document.activeElement.getAttribute('aria-label')") == "Start from a template", "the focus fell with the card"
             assert "Ready" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
             n = pg.evaluate("window.__n"); total = n["click"] + n["key"]
             print(f"MISURA clic_canvas: tab 1 + template 1 = {total} clicks to a complete valid chain; with the {ADMIN} clicks of the logo {total + ADMIN}")
