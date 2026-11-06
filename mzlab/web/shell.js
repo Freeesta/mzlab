@@ -67,6 +67,7 @@ function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...TIPOF.apply(f,f.name),time,type,conc,use:o?o.use:true,
     // gC: concentration read from the name (yellow in the table until the student edits or confirms them)
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed,ugrp:o&&o.ugrp}});
+  if(typeof CONV!=="undefined")CONV.forget(Object.keys(old).filter(n=>!ST.files.some((/** @type {FileRiga} */ f)=>f.name===n)));
   if(list.some(f=>!old[f.name]))hrMixPreselect();
   // roles and times proposed from the names by the engine (campioni/2)
   if(defer)FILETAB.soon();else FILETAB.flush(true)}

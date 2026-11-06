@@ -139,3 +139,14 @@ def test_a_download_of_a_module_sample_follows_the_compression():
     assert got == {"asked": [["sciex", ["a.wiff", "a.wiff.scan"], 1, {"dad": False, "compression": "standard"}],
                              ["sciex", ["a.wiff", "a.wiff.scan"], 1, {"dad": False, "compression": "smallest"}]],
                    "saved": [["a.mzML", "np"], ["a.mzML", "np"], ["a.mzML", "np"]]}
+
+
+def test_a_sample_that_left_the_list_is_forgotten():
+    """CONV.forget: the mzML, the source of the readers module and every compression written for a name go; the other names stay."""
+    got = run("""
+      const C = c.CONV;
+      C.add("a.mzML", { size: 1 }, { fam: "agilent", mem: [], c: 0 }); C.add("b.mzML", { size: 2 }, { fam: "agilent", mem: [], c: 0 });
+      C.made.set("standard:a.mzML", {}); C.made.set("smallest:a.mzML", {}); C.made.set("standard:b.mzML", {});
+      C.forget(["a.mzML"]);
+      console.log(JSON.stringify([C.files.has("a.mzML"), C.sources.has("a.mzML"), [...C.made.keys()], C.files.has("b.mzML"), C.sources.has("b.mzML")]));""")
+    assert got == [False, False, ["standard:b.mzML"], True, True]
