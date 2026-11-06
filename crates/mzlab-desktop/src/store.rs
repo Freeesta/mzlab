@@ -122,11 +122,11 @@ impl Store {
     /// Stores `stamp` (size and date taken before an index of `name` was built or dropped) as the one its index belongs to.
     pub fn restamp(&mut self, name: &str, stamp: (u64, u64)) {
         self.load();
-        if let Some(e) = self.files.get_mut(name) {
-            if (e.size, e.mtime) != stamp {
-                (e.size, e.mtime) = stamp;
-                self.save_files();
-            }
+        if let Some(e) = self.files.get_mut(name)
+            && (e.size, e.mtime) != stamp
+        {
+            (e.size, e.mtime) = stamp;
+            self.save_files();
         }
     }
 
