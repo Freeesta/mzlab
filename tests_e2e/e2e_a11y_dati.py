@@ -1,9 +1,10 @@
-"""Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on six states,
+"""Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on nine states (start, file, MRM, map, settings, search, calculator, integration window, MSn tree),
 keyboard only (every visible control reachable with Tab, visible focus, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
 and reduced motion. Known gaps live in docs/agenti/a11y-da-sistemare.md and in KNOWN below (an id there is reported but does not fail).
 Unlike e2e_axe_grafici this test does NOT skip when axe is missing: in CI that is a failure."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+sys.path.insert(0, str(ROOT))
 
 
 AXE = axe_path()
@@ -48,6 +49,30 @@ try:
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert pg.evaluate("document.querySelector('#paletta').hidden"), "Esc must close the search bar"
         step("axe: search bar opens with Ctrl+K and closes with Esc", search)
 
+        def calc():
+            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent"); axe_ok(pg, "#calcdlg")
+            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "!BARRA.isOpen('calc')")
+        step("axe: calculator window", calc)
+        def integration():
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); attendi(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
+            pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic');addInt(p,p._a.sr[0],13.9,14.6);showInts()})()"); pg.wait_for_selector("#bigdlg[open]")
+            assert pg.evaluate("document.querySelectorAll('#bigbody table tr').length") > 1, "the integration table must list the peak"
+            axe_ok(pg, "#bigdlg"); pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#bigdlg').open")
+        step("axe: integration window", integration)
+        def msn():
+            from lib_hr import synth
+            from TP_Mine.tests.msn_synth import write_msn, caffeine_nodes
+            F = write_msn(synth("a11ymsn") / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
+            q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            try:
+                q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop", timeout=120000)
+                q.set_input_files("#pick", [str(F)]); q.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=180000)
+                q.click("text=Carica dati"); q.wait_for_function("E.files.length>=1", timeout=90000)
+                q.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'))"); q.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
+                q.add_script_tag(path=AXE); axe_ok(q, "#bigdlg")
+            finally: q.close()
+        step("axe: MSn tree window", msn)
         def esc_closes():
             pg.evaluate("E.panels.find(p=>p.type==='chrom').cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert not pg.evaluate("!!document.querySelector('#tdati[open]')"), "Esc must close the data table"

@@ -168,6 +168,8 @@ I18N.add("en", {
   "tree.col.prec": "Precursor",
   "tree.empty": "almost empty",
   "tree.clickNode": "Click on a node: its peaks.",
+  "tree.tbl.aria": "MSn tree: table of nodes",
+  "tree.pk.aria": "Peaks of the selected node",
   "tree.xlsx.prefix": "MSn_tree_",
   "tree.xlsx.paths": "Paths",
   "tree.xlsx.peaks": "Peaks",
