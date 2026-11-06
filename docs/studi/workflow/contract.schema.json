@@ -172,6 +172,18 @@
     "requires": {
      "$ref": "#/$defs/facets",
      "description": "facets the incoming data must have; checked by plan.check, or by the step when they are not known yet"
+    },
+    "written_if": {
+     "type": "object",
+     "required": ["input"],
+     "properties": {
+      "input": {"type": "string"},
+      "param": {"type": "string"},
+      "not": {"type": "string"}
+     },
+     "dependentRequired": {"param": ["not"], "not": ["param"]},
+     "additionalProperties": false,
+     "description": "an output written only when this input is wired and, with param, that parameter (resolved) is not the value not; plan.check refuses a wire to it otherwise (err.flow.port.unwritten)"
     }
    },
    "additionalProperties": false

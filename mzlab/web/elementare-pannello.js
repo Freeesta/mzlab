@@ -3,7 +3,7 @@
 "use strict";
 // The compact «Elemental composition» panel of the drawer (Formule ▾ → Composizione elementare, body `tCmp` of banco.js): mass and number of results, the table of
 // candidates (one cell = one copyable value), the limits and the elements in use. The numbers come from /api/composition; the elements table, the apply-to-spectrum
-// step and the copy helper are in elementare.js (ELEM). Results are CANDIDATES, never identifications. Module, loaded by carica.js after elementare.js.
+// step and the copy helper are in elementare.js (ELEM). Results are CANDIDATES, never identifications. Module, read with carica() at the first opening of the body (tCmp of banco.js).
 
 // at most CX_MAX candidates are asked for, CX_DEF by default; the table shows six rows (header included) and scrolls beyond them
 const CX_MAX = 10, CX_DEF = 5;

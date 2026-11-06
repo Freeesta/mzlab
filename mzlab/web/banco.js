@@ -437,7 +437,8 @@ const BANCO = (() => {
   const specOf = p => (p.type === "spec" ? p : E.panels.find(q => q.type === "spec" && q.link === p.id));
   // what the composition panel was built from: a click that leaves it unchanged must not rebuild the panel (the typed mass and the results stay)
   const cmpKey = p => { const sp = specOf(p), d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d; return `${sp && sp.id}|${topMz(sp)}|${d ? d.mz.length : 0}|${(cFile(p) || {}).polarity}`; };
-  function tCmp(b, p) {
+  async function tCmp(b, p, tok) {
+    await carica("m:elementare-pannello.js"); if (tok !== ist.tok) return;      // the panel code is read on its first opening (startup weight)
     const g = window.ELEM && ELEM.takeCtx(), sp0 = specOf(p), sp = (g && g.sp) || sp0, d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d;
     b._cmpKey = g ? null : cmpKey(p);
     ELEMP.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });

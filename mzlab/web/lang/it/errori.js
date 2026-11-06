@@ -224,6 +224,7 @@ I18N.add("it", {
   "err.flow.plan": "Il flusso non ha un piano da eseguire.",
   "err.flow.port.missing": "L'ingresso {port} non è collegato: collega una sorgente.",
   "err.flow.port.unknown": "L'uscita indicata qui non esiste nel passo di origine.",
+  "err.flow.port.unwritten": "L'uscita {ref} viene scritta solo se il suo ingresso {input} è collegato (e non con {param}): collegalo o cambia quell'impostazione.",
   "err.flow.position.smiles": "La struttura (SMILES) del prodotto di trasformazione è vuota: disegnala o incollala.",
   "err.flow.preset.unknown": "Preset sconosciuto: {preset}.",
   "err.flow.ref": "Il collegamento {ref} in {instance} (ingresso {port}) non è valido.",

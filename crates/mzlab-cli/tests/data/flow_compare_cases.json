@@ -461,5 +461,134 @@
         }
       ]
     }
+  },
+  {
+    "expect": [
+      "flt|table|err.flow.port.unwritten|ref=qc.table,input=table,param=model=none"
+    ],
+    "name": "an output written only with a table in is refused when no table comes in",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzidx",
+          "type": "mzidx"
+        },
+        {
+          "name": "t.mzfeat",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "qc",
+          "in": {
+            "raw": [
+              "file:a.mzidx"
+            ]
+          },
+          "step": "qc.mass_accuracy@1"
+        },
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "qc.table"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "flt|table|err.flow.port.unwritten|ref=qc.table,input=table,param=model=none"
+    ],
+    "name": "an output written only with a model is refused at the default model",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzidx",
+          "type": "mzidx"
+        },
+        {
+          "name": "t.mzfeat",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "qc",
+          "in": {
+            "raw": [
+              "file:a.mzidx"
+            ],
+            "table": "file:t.mzfeat"
+          },
+          "step": "qc.mass_accuracy@1"
+        },
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "qc.table"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "an output written only with a table and a model is accepted with both",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzidx",
+          "type": "mzidx"
+        },
+        {
+          "name": "t.mzfeat",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "qc",
+          "in": {
+            "raw": [
+              "file:a.mzidx"
+            ],
+            "table": "file:t.mzfeat"
+          },
+          "params": {
+            "model": "offset"
+          },
+          "step": "qc.mass_accuracy@1"
+        },
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "qc.table"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
   }
 ]
