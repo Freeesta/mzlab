@@ -74,6 +74,7 @@ pub mod ms2;
 pub mod ms2spec;
 pub mod nature;
 pub mod norm;
+mod histbin;
 pub mod params;
 pub mod params_drift;
 pub mod params_height;
