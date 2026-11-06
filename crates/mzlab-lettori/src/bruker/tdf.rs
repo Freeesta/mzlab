@@ -4,7 +4,7 @@ use super::blocco::{decodifica, leggi_blocco, Picchi};
 use super::spettri::{costruisci, somma, Desc};
 use super::sqlite_min::Sqlite;
 use super::tabelle::Dati;
-use super::tdf_aiuti::{cartella, indice_cattivo, somma_scan};
+use super::tdf_aiuti::{cartella, indice_cattivo, prendi, riconosci, somma_scan, tagliati};
 use super::testata::Testata;
 use super::tsf;
 use mzlab_core::error::{Error, Result};
@@ -19,8 +19,6 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
 
 const UNITA: &str = "Arbitrary Intensity Units";
-
-const MAGIA: &[u8; 16] = b"SQLite format 3\0";
 
 pub const VOCE: VoceLettore = VoceLettore {
     id: "bruker-tdf",
@@ -51,8 +49,15 @@ impl LettoreBruker {
         let db = Sqlite::apri(db_m.dati, db_m.dim, wal, limiti);
         let mut db = db?;
         let dati = Dati::leggi(&mut db, limiti)?;
-        let desc = costruisci(&dati);
+        let mut desc = costruisci(&dati);
         limiti.voci_ok(desc.len() as u64)?;
+        // a copy of `*_bin` cut short: the spectra of the frames past its end leave the index and are counted, the rest reads
+        let mut bin = bin_m.dati;
+        let pos: Vec<i64> = dati.frames.iter().map(|f| f.pos).collect();
+        let cut = tagliati(&pos, &mut *bin, bin_m.dim, tsf);
+        let tutti = desc.len();
+        desc.retain(|d| !cut[d.frame]);
+        let mancanti = tutti - desc.len();
         let testata = Testata::leggi(&dati, tsf);
         let compressione = dati
             .meta
@@ -70,7 +75,7 @@ impl LettoreBruker {
             nome: db_m.nome,
             nome_bin: bin_m.nome,
             db,
-            bin: bin_m.dati,
+            bin,
             dim_bin: bin_m.dim,
             dim_db: db_m.dim,
             dati,
@@ -83,6 +88,7 @@ impl LettoreBruker {
             cache: None,
             sha1: None,
             compressione,
+            mancanti,
         };
         l.costruisci_indice();
         Ok(l)
@@ -298,6 +304,10 @@ impl Lettore for LettoreBruker {
         &self.campioni
     }
 
+    fn mancanti(&mut self, _c: usize) -> usize {
+        self.mancanti
+    }
+
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         self.completa()?;
@@ -443,35 +453,12 @@ fn riconosci_tsf(fs: &mut FileSet) -> Fiducia {
     riconosci(fs, "analysis.tsf")
 }
 
-/// A folder is Bruker's when its database starts with the SQLite magic and the file of the peaks is beside it; a folder with only `analysis.baf` is recognised to say why it does not open.
-fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
-    let Some(i) = fs.trova(base) else {
-        return if fs.trova("analysis.baf").is_some()
-            && fs.trova("analysis.tdf").is_none()
-            && fs.trova("analysis.tsf").is_none()
-        {
-            Fiducia::Forse
-        } else {
-            Fiducia::No
-        };
-    };
-    if fs.testa(i, 16) != MAGIA || fs.trova(&format!("{base}_bin")).is_none() {
-        return Fiducia::No;
-    }
-    Fiducia::Si
-}
-
 fn apri_tdf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     LettoreBruker::apri(fs, limiti, false).map(|l| Box::new(l) as Box<dyn Lettore>)
 }
 
 fn apri_tsf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     LettoreBruker::apri(fs, limiti, true).map(|l| Box::new(l) as Box<dyn Lettore>)
-}
-
-fn prendi(fs: &mut FileSet, suffisso: &str) -> Option<mzlab_core::lettori::Membro> {
-    let i = fs.trova(suffisso)?;
-    Some(fs.membri.remove(i))
 }
 
 pub struct LettoreBruker {
@@ -493,4 +480,6 @@ pub struct LettoreBruker {
     cache: Option<(usize, Picchi)>,
     sha1: Option<Option<String>>,
     compressione: u32,
+    /// Spectra of frames whose block lies past the end of `*_bin`: not in the index.
+    mancanti: usize,
 }

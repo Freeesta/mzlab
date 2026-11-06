@@ -11,25 +11,57 @@ fn guasto(m: &str) -> Error {
     Error::new("err.dam.unreadable").with("message", format!("tdf_bin: {m}"))
 }
 
-/// The peaks of a frame, in scan order: scan index (0-based), TOF index, intensity.
-#[derive(Debug, Default, Clone, PartialEq)]
+/// The peaks of a frame, in scan order: the points of scan `s` (0-based) are `inizio[s]..inizio[s + 1]`, each a TOF index and an intensity.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Picchi {
-    pub scan: Vec<u32>,
+    pub inizio: Vec<usize>,
     pub tof: Vec<u32>,
     pub int: Vec<u32>,
 }
 
+impl Default for Picchi {
+    fn default() -> Picchi {
+        Picchi {
+            inizio: vec![0],
+            tof: Vec::new(),
+            int: Vec::new(),
+        }
+    }
+}
+
 impl Picchi {
+    /// Room for `ns` scans and `np` points (both already checked against `Limiti`).
+    fn con(ns: usize, np: usize) -> Picchi {
+        let mut inizio = Vec::with_capacity(ns + 1);
+        inizio.push(0);
+        Picchi {
+            inizio,
+            tof: Vec::with_capacity(np),
+            int: Vec::with_capacity(np),
+        }
+    }
     pub fn len(&self) -> usize {
         self.tof.len()
     }
     pub fn is_empty(&self) -> bool {
         self.tof.is_empty()
     }
-    fn push(&mut self, scan: u32, tof: u32, int: u32) {
-        self.scan.push(scan);
+    fn push(&mut self, tof: u32, int: u32) {
         self.tof.push(tof);
         self.int.push(int);
+    }
+    /// Closes the current scan.
+    fn fine_scan(&mut self) {
+        self.inizio.push(self.tof.len());
+    }
+    /// The points of the scans `a..b` (cut to the scans of the frame).
+    pub fn punti(&self, a: u32, b: u32) -> std::ops::Range<usize> {
+        let n = self.inizio.len().saturating_sub(1);
+        let (a, b) = ((a as usize).min(n), (b as usize).min(n));
+        if a >= b {
+            return 0..0;
+        }
+        self.inizio[a]..self.inizio[b]
     }
 }
 
@@ -147,7 +179,8 @@ fn decodifica2(z: &[u8], ns: usize, np: usize, limiti: &Limiti) -> Result<Picchi
             | u32::from(inner[2 * parole + i]) << 16
             | u32::from(inner[3 * parole + i]) << 24
     };
-    let mut out = Picchi::default();
+    // the zstd frame gave exactly the announced words, so the counts below are bounded by the block
+    let mut out = Picchi::con(ns, np);
     let mut letti = 0usize;
     for scan in 0..ns {
         let n = if scan + 1 < ns {
@@ -163,9 +196,10 @@ fn decodifica2(z: &[u8], ns: usize, np: usize, limiti: &Limiti) -> Result<Picchi
         let mut tof = u32::MAX;
         while letti < fine {
             tof = tof.wrapping_add(parola(ns + letti));
-            out.push(scan as u32, tof, parola(ns + letti + 1));
+            out.push(tof, parola(ns + letti + 1));
             letti += 2;
         }
+        out.fine_scan();
     }
     if out.len() != np {
         return Err(guasto("peak total"));
@@ -187,10 +221,11 @@ fn decodifica1(b: &[u8], ns: usize, np: usize, limiti: &Limiti) -> Result<Picchi
         }
         off.push(o);
     }
-    let mut out = Picchi::default();
+    let mut out = Picchi::con(ns, 0);
     let mut buf = Vec::new();
     for scan in 0..ns {
         if off[scan] == off[scan + 1] {
+            out.fine_scan();
             continue;
         }
         buf.clear();
@@ -206,12 +241,13 @@ fn decodifica1(b: &[u8], ns: usize, np: usize, limiti: &Limiti) -> Result<Picchi
                 if out.len() >= np {
                     return Err(guasto("more peaks than the frame table"));
                 }
-                out.push(scan as u32, tof, v as u32);
+                out.push(tof, v as u32);
                 tof = tof.wrapping_add(1);
             } else {
                 tof = tof.wrapping_add(v.unsigned_abs());
             }
         }
+        out.fine_scan();
     }
     if out.len() != np {
         return Err(guasto("peak total"));
