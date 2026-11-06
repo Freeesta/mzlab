@@ -3,7 +3,8 @@
 // Pool of short-lived Rust workers that build the .mzidx of the uploaded mzML files (idx-worker.js). Used by rust-worker.js, the engine's worker.
 //  - N workers at most (min(cores - 1, 4); 2 on Safari/iPad; at least 1), one file each, started in the order of the queue (prioritize() puts the list's order first);
 //  - supervisor: a worker that dies is replaced and its file goes back to the front of the queue (once; a second death fails the file with reason "crash");
-//  - memory: a builder that cannot reserve memory (error.memoryBudget) halves the pool and the budget and retries once; the page is told (notice);
+//  - memory: a builder that cannot reserve memory (error.memoryBudget without `fase`) halves the pool and the budget and retries once, until the pool is idle;
+//    a planned refusal (with `fase`, the builder's estimate) fails the file at once with its numbers; the page is told (notice);
 //  - no WASM / no OPFS: unavailable() is true and every job answers { ok: false, reason: "unavailable" } (the upload fails with an error key).
 // The same pool runs other short-lived workers (a worker of its own): a job may carry its own message to the worker (`msg`, with `transfer`), an `onProgress(m)`
 // for the { op: "progress" } messages of the worker, and the worker's `done` message may carry `parts` (the result's `parts`).
@@ -27,6 +28,14 @@ export function makeGate(size) {
   return { size: Math.max(1, size), used: 0, pumps: /** @type {Array<() => void>} */ ([]) };
 }
 
+// The error of a builder: "memory" = a reservation failed (error.memoryBudget without an estimate: fewer workers and a smaller budget may pass, until the pool
+// is idle again), "refused" = the builder's own estimate (with `fase`) says the file does not fit: the same at any budget not larger, so it fails at once with its numbers.
+export function errorKind(text) {
+  let err = /** @type {any} */ ({}); try { err = JSON.parse(text) || {}; } catch (_) { /* not JSON */ }
+  if (err.error_key !== "error.memoryBudget") return "error";
+  return err.params && err.params.fase ? "refused" : "memory";
+}
+
 // isolated: workers can share memory (crossOriginIsolated); aiuti: a fixed number of helpers per builder in place of the free places (tests).
 // moduleUrl: the .wasm of the builder, compiled ONCE here (compileStreaming) and handed to every worker as a WebAssembly.Module, so that a worker that lives for one file
 // does not compile it again (without it the worker compiles by itself, as the test workers do).
@@ -41,6 +50,7 @@ export function createPool({ workerUrl, size, budget = 64, isolated = false, aiu
   const finish = (job, res) => { if (job.done) return; job.done = true; job.resolve(res); };
   function wake() { pump(); if (gate) for (const p of gate.pumps) if (p !== pump) p(); }
   function pump() {
+    if (!active && !queue.length) limit = size;      // idle: a lowering after a failed reservation lasts only while that loading runs
     while (active < limit && (!gate || gate.used < gate.size) && queue.length) {
       if (off && performance.now() - offAt <= offMs) { finish(queue.shift(), { ok: false, reason: "unavailable" }); continue; }
       off = false;       // a start that failed twice is not final: after offMs the next job tries a fresh worker
@@ -72,14 +82,12 @@ export function createPool({ workerUrl, size, budget = 64, isolated = false, aiu
       if (m.op === "error") {
         if (m.fatal) return retry("crash", m.text);
         end();
-        let key = ""; try { key = JSON.parse(m.text).error_key || ""; } catch (_) { /* not JSON */ }
-        // fewer workers and a smaller budget; the page is told why the file fails
-        if (key === "error.memoryBudget") {
-          notify(key);
-          const was = limit; limit = Math.max(1, limit >> 1);
-          if (!job.shrunk && was > 1) { job.shrunk = true; job.budget = Math.max(8, (job.budget || budget) >> 1); queue.unshift(job); }
-          else finish(job, { ok: false, reason: "memory", text: m.text });
-        } else finish(job, { ok: false, reason: "error", text: m.text });
+        const kind = errorKind(m.text);
+        if (kind !== "memory" && kind !== "refused") { finish(job, { ok: false, reason: "error", text: m.text }); return wake(); }
+        notify("error.memoryBudget");
+        const was = limit; if (kind === "memory") limit = Math.max(1, limit >> 1);
+        if (kind === "memory" && !job.shrunk && was > 1) { job.shrunk = true; job.budget = Math.max(8, (job.budget || budget) >> 1); queue.unshift(job); }
+        else finish(job, { ok: false, reason: "memory", text: m.text });
         wake();
       }
     };
