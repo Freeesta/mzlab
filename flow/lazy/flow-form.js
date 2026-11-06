@@ -84,7 +84,7 @@
         ...step.algorithms.map((/** @type {any} */ a) => el("option", { value: a.id, selected: !!e.algorithm && a.id === e.algorithm.id, text: a.title + (a.status === "planned" ? " (planned)" : "") })));
       const tip = e.algorithm && e.algorithm.doc ? F.tip(sel, "Algorithm", e.algorithm.doc, `${id}-tip`) : null;
       box.append(el("label", { for: id, text: "Algorithm" }), el("span", { class: "fl-meta" }, sel, tip && tip.btn));
-      if (tip) box.append(el("span"), tip.note);
+      if (tip) box.append(tip.note);          // the note keeps to column 2 by itself (grid-column:2); a spacer would stay when the note is hidden and shift every row after it
     }
     if (F.msnMolecule && inst.step.startsWith("spectra.msn_graph@")) box.append(F.msnMolecule(inst, step, done));
     // the regulatory lists ticked in the Library window (libreria-normative.js keeps them as `lists` and `include`) become this step's own parameters
