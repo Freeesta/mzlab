@@ -1,7 +1,7 @@
 """Finds links and `backticked/paths` in the tracked .md files that point to a file that does not exist.
 
 A path counts as broken only if it has a file extension and no tracked file ends with it (crate-relative
-paths such as `tests/x.rs` match any crate). Historical documents (docs/studi, docs/archivio, the measurement diary), test fixtures and
+paths such as `tests/x.rs` match any crate). Paths inside fenced blocks and bare `e2e_*.py` names are checked too. Historical documents (docs/studi, docs/archivio, the measurement diary), test fixtures and
 vendored READMEs are skipped, and so are generated files that are not tracked. Run from the repository root; prints
 one line per document and exits 1 when something is broken (part of pre_pr)."""
 import os
@@ -14,6 +14,10 @@ SKIP = ("docs/studi/", "docs/archivio/", "docs/agenti/misure-diario.md", "tests/
 GENERATED = {"docs/agenti/mappa.md"}
 TICK = re.compile(r"`((?:docs|tools|crates|mzlab|tests|tests_e2e|TP_Mine|flow|fuzz|esperimenti|\.github|\.claude)/[A-Za-z0-9_./\-]+)`")
 LINK = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
+# paths typed inside fenced code blocks (commands) and bare e2e test names such as `e2e_x.py`
+FENCE = re.compile(r"```.*?```", re.S)
+BLOCK_PATH = re.compile(r"(?<![\w./\-])((?:docs|tools|crates|mzlab|tests|tests_e2e|TP_Mine|flow|fuzz|esperimenti)/[A-Za-z0-9_./\-]+)")
+BARE = re.compile(r"(?<![\w/.\-])(e2e_[a-z0-9_]+\.py)\b")
 EXT = re.compile(r"\.[a-z0-9]{1,5}$")
 
 
@@ -32,6 +36,11 @@ def main() -> int:
                 q = os.path.normpath(os.path.join(os.path.dirname(f), p))
                 if q not in have and EXT.search(q) and not os.path.exists(q):
                     broken.setdefault(f, set()).add(p)
+        for blk in FENCE.findall(text):
+            cands += [m.group(1).rstrip(".,:;") for m in BLOCK_PATH.finditer(blk) if not any(c in m.group(1) for c in "*<>{}$")]
+        for m in BARE.finditer(text):
+            if not any(t.endswith("/" + m.group(1)) for t in tracked):
+                broken.setdefault(f, set()).add(m.group(1))
         for p in cands:
             if EXT.search(p) and p not in have and p not in GENERATED and not any(t.endswith("/" + p) for t in tracked) and not os.path.exists(p):
                 broken.setdefault(f, set()).add(p)

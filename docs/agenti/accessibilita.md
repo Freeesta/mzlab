@@ -60,13 +60,12 @@ Verifica che i grafici e la tabella dei dati non presentino violazioni axe, cont
 python3 tests_e2e/e2e_axe_grafici.py
 ```
 
-### 3. Audit axe-core viste complementari (HR, Disegno, Pratica, Tour)
-Verifica l'assenza di violazioni su Banco HR, visualizzatore molecolare Disegno, esercizi pratici e passaggi del tour guidato:
+### 3. Audit axe-core viste complementari (HR, Disegno, Tour)
+Verifica l'assenza di violazioni su Banco HR, visualizzatore molecolare Disegno e passaggi del tour guidato (le pagine di Pratica non hanno ancora un test a11y proprio):
 ```bash
 python3 tests_e2e/e2e_axe_release.py
 python3 tests_e2e/e2e_a11y_disegno.py
 python3 tests_e2e/e2e_a11y_hr.py
-python3 tests_e2e/e2e_a11y_pratica.py
 ```
 
 
