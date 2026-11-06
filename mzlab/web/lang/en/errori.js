@@ -174,6 +174,7 @@ I18N.add("en", {
   "err.llm.key.missing": "The provider's key is missing: set it in the settings. Nothing was sent.",
   "err.llm.module": "The assistant module did not load: reload the page and try again.",
   "error.msngrafo.badFile": "{file} is not a fragmentation graph the program can read ({raw}).",
+  "error.msngrafo.tooBig": "{file} is a saved fragmentation graph of {mb} MB: this page opens saved graphs up to {max} MB, so it was not opened. To see it, open the raw data it was made from: the «Fragmentation graph» tab builds it again.",
   "err.canali.unknown": "Channel {id} does not exist in this file.",
   "err.cli.line": "The command line cannot be read: {message}.",
   "err.cli.set": "The setting “{set}” is not valid: {message}.",
