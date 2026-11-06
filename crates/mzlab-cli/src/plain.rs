@@ -7,9 +7,11 @@ use crate::{
 
 #[path = "ion_mz_cmd.rs"]
 mod ion_mz_cmd;
+#[path = "peak_area_cmd.rs"]
+pub(crate) mod peak_area_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 12] = [
+pub(crate) const PLAIN: [&str; 13] = [
     "llm",
     "steps",
     "explain-missing",
@@ -22,6 +24,7 @@ pub(crate) const PLAIN: [&str; 12] = [
     "peak-edges",
     "sim-table",
     "peak-auto",
+    "peak-area",
 ];
 
 /// Old command names still accepted on input, as `(old, new)`; they are never printed outside `--help`.
@@ -51,6 +54,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "samples" => campioni_cmd::run(args),
         "sim-table" => sim_table_cmd::run(args),
         "peak-auto" => peaks_auto_cmd::run(args),
+        "peak-area" => peak_area_cmd::run(args),
         _ => peaks_edges_cmd::run(args),
     }
 }
