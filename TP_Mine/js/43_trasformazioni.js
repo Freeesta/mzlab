@@ -31,14 +31,14 @@
   const css = `.tptr table{border-collapse:collapse;width:100%;font-size:12px}.tptr th,.tptr td{padding:3px 6px;text-align:left;border-bottom:1px solid var(--line)}
 .tptr .cls th{background:var(--panel);color:var(--muted);font-weight:600}.tptr td.num{text-align:right;font-variant-numeric:tabular-nums}.tptr tr.off td{color:var(--muted)}
 .tptr input[type=checkbox]{width:24px;height:24px;margin:0;cursor:pointer}.tptr .tr-add{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px}.tptr .tr-add input[type=text]{min-height:28px;min-width:90px;flex:1}
-.tptr button{min-height:28px;min-width:28px}.tptr .tr-bar{display:flex;gap:6px;align-items:center;margin:6px 0}.tptr .tr-msg{min-height:1.2em;font-size:12px}.tptr .tr-msg.err{color:var(--bad)}`;
+.tptr button{min-height:28px;min-width:28px}.tptr-s{min-height:24px;line-height:24px}.tptr .tr-bar{display:flex;gap:6px;align-items:center;margin:6px 0}.tptr .tr-msg{min-height:1.2em;font-size:12px}.tptr .tr-msg.err{color:var(--bad)}`;
 
   /** @param {HTMLTextAreaElement} ta the text of the list @param {(fn: string, ...a: any[]) => Promise<any>} call the worker */
   function mount(ta, call) {
     const det = /** @type {HTMLDetailsElement} */ (ta.closest("details"));
     if (!det || det.querySelector(".tptr")) { det && det.querySelector(".tptr") && /** @type {any} */ (det).tptr(); return; }
     if (!document.getElementById("tptr-css")) { const s = document.createElement("style"); s.id = "tptr-css"; s.textContent = css; document.head.appendChild(s); }
-    const sum = det.querySelector("summary"); if (sum) sum.textContent = "Transformations";
+    const sum = det.querySelector("summary"); if (sum) { sum.textContent = "Transformations"; sum.classList.add("tptr-s"); }
     const box = document.createElement("div"); box.className = "tptr";
     box.innerHTML = `<div class="tr-bar"><button type="button" class="tr-mode" aria-pressed="false" title="Show the list as plain text: name;change;note, # = off">Edit as text</button><span class="mut">Rows that are off are not searched.</span></div>
       <div class="tr-tab"></div>
