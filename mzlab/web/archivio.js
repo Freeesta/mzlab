@@ -251,6 +251,8 @@ export async function get(/** @type {string} */ kind, /** @type {string} */ name
   try { return await (await (await dir(kind)).getFileHandle(name)).getFile(); } catch (_) { return null; }
 }
 
+// the file of files/ an entry of idx/ belongs to: its index, centroid index and key (rust-flow-centroid.js), and the parts of an index still being written
+export const idxOwner = (/** @type {string} */ name) => name.replace(/(\.cen)?\.(mzidx(\.sp)?(\.part)?|key)$/, "");
 export async function list(/** @type {string} */ kind) {
   const out = [], d = await dir(kind);
   for await (const [name, h] of d.entries()) {

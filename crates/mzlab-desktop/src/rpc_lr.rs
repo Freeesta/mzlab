@@ -56,6 +56,7 @@ impl State {
                     if changed {
                         self.indexer()?.remove(&name);
                         Self::drop_slot(eng, &name);
+                        self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(&name, (e.size, e.mtime));
                     }
                     let indexed = mzml && self.open_lr(eng, &name).is_ok();
                     rows.push(json!({ "name": name, "size": e.size, "indexed": indexed, "nat": e.nat.is_some(), "id": self.pick_path(&e.path) }));
@@ -133,8 +134,8 @@ impl State {
         let q = || Query::parse(s("query"));
         match op {
             "lr_space" => {
-                let names: Vec<String> = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().into_iter().map(|(n, _, _)| n).collect();
-                let files: u64 = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().iter().map(|(_, e, _)| e.size).sum();
+                let (names, sizes): (Vec<String>, Vec<u64>) = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().into_iter().map(|(n, e, _)| (n, e.size)).unzip();
+                let files: u64 = sizes.iter().sum();
                 let b = self.indexer()?;
                 let (mut idx, mut gone, mut n_gone) = (0u64, 0u64, 0u64);
                 let derived = p["free"].as_str() == Some("derived");                           // every index can be made again from the sources: all of them go
