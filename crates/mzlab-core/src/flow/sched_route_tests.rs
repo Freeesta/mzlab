@@ -31,6 +31,8 @@ fn a_session_runs_through_the_route() {
     route("new", &body).unwrap();
     let next = route("next", "{}").unwrap();
     assert!(next.contains("\"instance\":\"conv\""), "{next}");
+    // a job of one item names the root of its input, the one `flow run` writes into `<instance>-<root>.<ext>`
+    assert!(next.contains("\"item\":\"a.raw\",\"root\":\"a\""), "{next}");
     let job = "{\"job\":{\"instance\":\"conv\",\"item\":\"a.raw\"}";
     assert_eq!(route("started", &format!("{job}}}")).unwrap(), "true");
     let done = format!("{job},\"result\":{{\"ms\":5}}}}");
