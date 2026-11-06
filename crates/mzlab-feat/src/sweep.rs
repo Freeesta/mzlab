@@ -1,7 +1,7 @@
 //! Walk through the peak table of a section once, handing every feature the peaks in its window of m/z.
 //!
-//! The ranges are sorted by their lower bound, like the peaks of the table, so a slab of at most `max_peaks` peaks serves every range
-//! that lies inside it; the result for a feature does not depend on the size of the slabs.
+//! The ranges are sorted by their lower bound, like the peaks of the table, so a slab of at most `max_peaks` peaks serves the next ranges;
+//! it reads only the runs of the table those ranges touch (sparse ranges skip the rest), and the result for a feature does not depend on the slabs.
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
@@ -144,21 +144,30 @@ fn walk_into(pos: &[u32], it: &[f64], w0: usize, y: &mut [f64]) {
 }
 
 impl Slab {
-    fn load<R: ReadAt>(&mut self, index: &mut Index<R>, si: usize, a: u64, b: u64) -> Result<()> {
+    /// The peaks of the runs `parts` of the table, one after the other.
+    fn load<R: ReadAt>(
+        &mut self,
+        index: &mut Index<R>,
+        si: usize,
+        parts: &[(u64, u64)],
+    ) -> Result<()> {
         self.mz.clear();
         self.it.clear();
         self.pos.clear();
         self.by_scan = OnceLock::new();
-        let n = (b - a) as usize;
+        let n = parts.iter().map(|&(a, b)| (b - a) as usize).sum();
         reserve(&mut self.mz, n)?;
         reserve(&mut self.it, n)?;
         reserve(&mut self.pos, n)?;
         let (mz, it, pos) = (&mut self.mz, &mut self.it, &mut self.pos);
-        index.each_peak(si, a, b, |p, m, y| {
-            mz.push(m);
-            it.push(y);
-            pos.push(p as u32);
-        })
+        for &(a, b) in parts {
+            index.each_peak(si, a, b, |p, m, y| {
+                mz.push(m);
+                it.push(y);
+                pos.push(p as u32);
+            })?;
+        }
+        Ok(())
     }
 }
 
@@ -232,6 +241,19 @@ impl Slab {
         }
     }
 
+    /// The table positions in `a..b` of the peaks of scan `s`, in table order (the ones of filtering `a..b` by scan), by bisection in the by-scan view.
+    pub(crate) fn of_scan(&self, s: u32, a: usize, b: usize) -> Result<&[u32]> {
+        let g = self.scans()?;
+        let s = s as usize;
+        if s + 1 >= g.start.len() {
+            return Ok(&[]);
+        }
+        let o = &g.orig[g.start[s] as usize..g.start[s + 1] as usize];
+        let from = o.partition_point(|&k| (k as usize) < a);
+        let to = from + o[from..].partition_point(|&k| (k as usize) < b);
+        Ok(&o[from..to])
+    }
+
     /// Whether the trace of the scans `w0..w1` over the table positions `a..b` is served by bisection.
     pub(crate) fn bisects(len: usize, a: usize, b: usize) -> bool {
         len.saturating_mul(BISECT_COST) < b - a
@@ -260,34 +282,71 @@ pub(crate) fn windows_by_slab<R: ReadAt>(
     max_peaks: usize,
     mut f: impl FnMut(&Slab, &[(usize, usize, usize)]) -> Result<()>,
 ) -> Result<()> {
-    let n_peaks = index.sections[si].n_peaks;
     // a high-resolution survey stores f32: the bounds are compared in f32, as the index search does
     let f4 = index.sections[si].f4;
     let cast = |v: f64| if f4 { v as f32 as f64 } else { v };
     let mut slab = Slab::default();
     let mut hits: Vec<(usize, usize, usize)> = Vec::new();
+    let mut parts: Vec<(u64, u64)> = Vec::new();
     let mut i = 0;
     while i < ranges.len() {
-        let a = index.search(si, ranges[i].0, false)?;
-        // a slab always holds the whole window of its first range (a trace has about one peak per scan)
-        let end = index.search(si, ranges[i].1, true)?;
-        let b = (a + max_peaks as u64).min(n_peaks).max(end);
-        slab.load(index, si, a, b)?;
-        let last = slab.mz.last().copied().unwrap_or(f64::MAX);
-        let more = b < n_peaks;
-        let mut j = i;
+        let j = slab_parts(index, si, &ranges[i..], max_peaks as u64, &mut parts)? + i;
+        slab.load(index, si, &parts)?;
         hits.clear();
-        while j < ranges.len() && (j == i || !more || ranges[j].1 < last) {
-            let (lo, hi) = (cast(ranges[j].0), cast(ranges[j].1));
+        for (k, r) in ranges.iter().enumerate().take(j).skip(i) {
+            let (lo, hi) = (cast(r.0), cast(r.1));
             let x = slab.mz.partition_point(|&m| m < lo);
             let y = slab.mz.partition_point(|&m| m <= hi);
-            hits.push((j, x, y));
-            j += 1;
+            hits.push((k, x, y));
         }
         f(&slab, &hits)?;
         i = j;
     }
     Ok(())
+}
+
+/// Peaks between two runs of a slab under which they are read as one (reading them costs less than another read).
+const GAP: u64 = 64;
+
+/// The runs of the table a slab reads for the first ranges of `ranges` (sorted by lower bound), in `parts`, and how many ranges they serve:
+/// every peak of each of those ranges (always the first, whatever its size), and at most `max_peaks` peaks in all. The runs ascend and do not
+/// overlap, so the slab stays sorted by m/z and a range finds the same peaks, in the same order, as in the whole table.
+fn slab_parts<R: ReadAt>(
+    index: &mut Index<R>,
+    si: usize,
+    ranges: &[(f64, f64)],
+    max_peaks: u64,
+    parts: &mut Vec<(u64, u64)>,
+) -> Result<usize> {
+    parts.clear();
+    let mut run = (0u64, 0u64);
+    let mut total = 0u64;
+    let mut n = 0;
+    for &(lo, hi) in ranges {
+        let a = index.search(si, lo, false)?;
+        let e = index.search(si, hi, true)?.max(a);
+        let joins = n > 0 && a <= run.1 + GAP;
+        let grow = if joins {
+            e.saturating_sub(run.1)
+        } else {
+            e - a
+        };
+        if n > 0 && total + (run.1 - run.0) + grow > max_peaks {
+            break;
+        }
+        if joins {
+            run.1 = run.1.max(e);
+        } else {
+            if n > 0 {
+                parts.push(run);
+                total += run.1 - run.0;
+            }
+            run = (a, e);
+        }
+        n += 1;
+    }
+    parts.push(run);
+    Ok(n)
 }
 
 #[cfg(test)]

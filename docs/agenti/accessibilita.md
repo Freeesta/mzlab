@@ -13,6 +13,7 @@ Questo documento riassume lo stato di conformità all'accessibilità (WCAG 2.1 l
   - Tutti i comandi interattivi visibili sono raggiungibili tramite sequenza sequenziale `Tab` / `Shift+Tab`.
   - Ogni elemento interattivo a fuoco mostra un indicatore visibile (outline o box-shadow ben contrastato tramite `:focus-visible`).
   - Assenza di trappole da tastiera (`keyboard traps`).
+  - Il fuoco non cade mai sul `body`: un comando che toglie se stesso (× di una riga di «Estrai ioni», `e2e_xic_fuoco`) passa il fuoco alla riga vicina, anche dentro un dialogo modale.
   - Tasto `Escape` chiude in modo consistente dialoghi, finestre modali, drawer, paletta comandi (`Ctrl+K`) e menu a comparsa.
   - Scorciatoie dedicate per navigazione senza trascinamento nei grafici (`+`, `-`, `[`, `]`, `0`).
 - **Contrasto cromatico (WCAG 1.4.3 & 1.4.11)**:
