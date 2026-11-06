@@ -1,7 +1,8 @@
 """Flow «This browser» runs features.group@1 (grouping of a per-ion table into compounds, module `flowtab`): six synthetic files where four compounds each give [M+H]+, its 13C
 isotope and [M+Na]+, with heights that change from file to file. The plan detect → align (`mode=ion`) → gapfill → features.group goes to `mzlab-cli flow run` (rc 0), and the ionnet/1
 text the browser keeps is the native file byte for byte (same SHA-256); a second run takes it from OPFS, the `flowtab` .wasm is fetched only when features.group runs, and the
-«Untargeted analysis» template aligns by ion and wires features.group to the gap-filled table. Builds the site and the .wasm (cargo, wasm-bindgen, numpy: SKIP without).
+«Untargeted analysis» template aligns by ion and wires features.group to the gap-filled table. features.group on a table.filter view of that table (the table the view
+stands for, `flow_table_of_view`) is the native file of the same plan too. Builds the site and the .wasm (cargo, wasm-bindgen, numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web_group.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -49,15 +50,22 @@ def write_mzml(path, k, seed):
     path.write_text(ds._hr_head("exploris", False, path.stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
                     + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
 
-def plan(group):
-    """The plan: index → detect → align by ion → gap filling, and (with `group`) the grouping."""
-    inputs = [{"name": n + ".mzML", "sha256": "", "type": "mzml"} for n in NAMES]
+def sample(k, n):
+    return {"composto": "", "concentrazione": None, "file": n + ".mzML", "istd": False, "note": "", "ordine_iniezione": k + 1, "replica": 1, "serie": "", "sha256": "", "tempo": k, "tempo_confermato": False,
+            "tempo_min": k, "tipo": "t0" if k == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
+SAMPLES = json.dumps({"campioni": [sample(k, n) for k, n in enumerate(NAMES)], "schema": "campioni/2"}, separators=(",", ":"))
+
+def plan(group, view=False):
+    """The plan: index → detect → align by ion → gap filling, and (with `group`) the grouping, of the gap-filled table or (with `view`) of a filter view of it."""
+    inputs = [{"name": n + ".mzML", "sha256": "", "type": "mzml"} for n in NAMES] + ([{"name": "samples.json", "sha256": "", "type": "samples"}] if view else [])
     st = [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in NAMES]}},
           {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},
           {"id": "ali", "step": "features.align@1", "in": {"peaks": ["det.peaks"]}, "params": {"mode": "ion"}},
           {"id": "gap", "step": "features.gapfill@1", "in": {"table": "ali.table", "index": ["idx.index"]}}]
+    if view:
+        st += [{"id": "flt", "step": "table.filter@2", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 4, "normalize": "sum"}}]
     if group:
-        st += [{"id": "grp", "step": "features.group@1", "in": {"table": "gap.table"}}]
+        st += [{"id": "grpv" if view else "grp", "step": "features.group@1", "in": {"table": "flt.table" if view else "gap.table"}}]
     return {"format": "mzflow/2", "inputs": inputs, "steps": st}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_group_"))
@@ -67,13 +75,14 @@ from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
 for i, n in enumerate(NAMES): write_mzml(run / (n + ".mzML"), i, 100 + i)
-(run / "group.json").write_text(json.dumps(plan(True)))
-out = run / "out"
-nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "group.json"), "--in", str(run), "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
-assert nat_run.returncode == 0, nat_run.stderr[-1500:]
+(run / "group.json").write_text(json.dumps(plan(True))); (run / "view.json").write_text(json.dumps(plan(True, True))); (run / "samples.json").write_text(SAMPLES)
+out, out_view = run / "out", run / "out_view"
+for name, to in (("group.json", out), ("view.json", out_view)):
+    nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / name), "--in", str(run), "--out", str(to)], cwd=ROOT, capture_output=True, text=True)
+    assert nat_run.returncode == 0, (name, nat_run.stderr[-1500:])
 data = site / "static" / "dati_flow_group"; data.mkdir()
 for n in NAMES: shutil.copy2(next(out.glob("*-" + n + ".mzidx")), data / (n + ".mzidx"))
-NATIVE = (out / "grp.json").read_bytes()
+NATIVE, NATIVE_VIEW = (out / "grp.json").read_bytes(), (out_view / "grpv.json").read_bytes()
 
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -81,8 +90,9 @@ PUT = """async (names) => {
   for (const n of names) { const w = await (await d.getFileHandle(n + ".mzidx", { create: true })).createWritable(); await (await fetch("static/dati_flow_group/" + n + ".mzidx")).body.pipeTo(w); }
 }"""
 # sets the plan and the files of the plan in the open Flow page, runs it, resolves with the events and the error key
-RUN = """async (plan) => {
+RUN = """async ([plan, samples]) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
+  S.samplesJson = S.samplesJson || {}; S.samplesJson['samples.json'] = samples;
   S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs)); S.plan.steps = JSON.parse(JSON.stringify(plan.steps));
   document.addEventListener('flow:web-step', on);
   try { await FLOW.runners.web.run(S); return { ev }; }
@@ -116,13 +126,13 @@ try:
         pg.evaluate(PUT, NAMES)
 
         def upstream():
-            r = pg.evaluate(RUN, plan(False)); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            r = pg.evaluate(RUN, [plan(False), SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             for i in ("det", "ali", "gap"): assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
             assert not asked, ("the flowtab module was fetched by a plan without features.group", asked)
         step("a plan without features.group does not fetch the flowtab module", upstream)
 
         def first():
-            r = pg.evaluate(RUN, plan(True)); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            r = pg.evaluate(RUN, [plan(True), SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             assert any(e["passo"] == "grp" and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), r["ev"][-6:]
             assert asked, "the flowtab module was not fetched when features.group ran"
             web = pg.evaluate(KEPT).get("grp.json"); assert web is not None
@@ -138,11 +148,19 @@ try:
 
         def again():
             before = len(asked)
-            r = pg.evaluate(RUN, plan(True)); assert not r.get("err"), r
+            r = pg.evaluate(RUN, [plan(True), SAMPLES]); assert not r.get("err"), r
             assert not [e for e in r["ev"] if e["passo"] == "grp" and e["stato"] == "running"], r["ev"]
             assert any(e["passo"] == "grp" and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), r["ev"][-6:]
             assert len(asked) == before, "the second run fetched the module again"
         step("a second run takes the text from OPFS", again)
+
+        def view():
+            r = pg.evaluate(RUN, [plan(True, True), SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            for i in ("flt", "grpv"): assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
+            web = pg.evaluate(KEPT).get("grpv.json"); assert web is not None
+            assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE_VIEW).hexdigest(), (web[:300], NATIVE_VIEW[:300])
+            assert NATIVE_VIEW != NATIVE and json.loads(web)["rows"] < json.loads(NATIVE)["rows"], "the view kept every row: the case proves nothing"
+        step("features.group on a table.filter view gives the native ionnet/1 of the same plan", view)
 
         def template():
             got = pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, F = FLOW;

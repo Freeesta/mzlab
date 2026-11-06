@@ -461,5 +461,370 @@
         }
       ]
     }
+  },
+  {
+    "expect": [
+      "flt|table|err.flow.port.unwritten|ref=qc.table,input=table,param=model=none"
+    ],
+    "name": "an output written only with a table in is refused when no table comes in",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzidx",
+          "type": "mzidx"
+        },
+        {
+          "name": "t.mzfeat",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "qc",
+          "in": {
+            "raw": [
+              "file:a.mzidx"
+            ]
+          },
+          "step": "qc.mass_accuracy@1"
+        },
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "qc.table"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "flt|table|err.flow.port.unwritten|ref=qc.table,input=table,param=model=none"
+    ],
+    "name": "an output written only with a model is refused at the default model",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzidx",
+          "type": "mzidx"
+        },
+        {
+          "name": "t.mzfeat",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "qc",
+          "in": {
+            "raw": [
+              "file:a.mzidx"
+            ],
+            "table": "file:t.mzfeat"
+          },
+          "step": "qc.mass_accuracy@1"
+        },
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "qc.table"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "an output written only with a table and a model is accepted with both",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzidx",
+          "type": "mzidx"
+        },
+        {
+          "name": "t.mzfeat",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "qc",
+          "in": {
+            "raw": [
+              "file:a.mzidx"
+            ],
+            "table": "file:t.mzfeat"
+          },
+          "params": {
+            "model": "offset"
+          },
+          "step": "qc.mass_accuracy@1"
+        },
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "qc.table"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "flt|table|err.flow.port.format|ref=tf.table,writes=filtri/1,reads=mzfeat"
+    ],
+    "name": "a registry of the filters is no feature table",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "x.tp.mzfeat",
+          "type": "tp"
+        },
+        {
+          "name": "h.json",
+          "type": "transform"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "tf",
+          "in": {
+            "hypotheses": "file:h.json",
+            "tp": "file:x.tp.mzfeat"
+          },
+          "step": "tp.filter@2"
+        },
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "tf.table"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "flt|table|err.flow.port.format|ref=t.csv,writes=csv,reads=mzfeat"
+    ],
+    "name": "a CSV file typed table is no feature table",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "t.csv",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "file:t.csv"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "a table file of no known extension is taken and checked at run",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "t.tsv",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        }
+      ],
+      "steps": [
+        {
+          "id": "flt",
+          "in": {
+            "samples": "file:s.json",
+            "table": "file:t.tsv"
+          },
+          "step": "table.filter@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "m|query|err.flow.port.format|ref=csv.report,writes=csv,reads=mgf / msp / mzml / msngrafo"
+    ],
+    "name": "a CSV export is no query of spectra",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "t.mzfeat",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "type": "samples"
+        },
+        {
+          "name": "lib.msp",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "csv",
+          "in": {
+            "samples": "file:s.json",
+            "table": "file:t.mzfeat"
+          },
+          "step": "export.table_csv@1"
+        },
+        {
+          "id": "m",
+          "in": {
+            "library": "file:lib.msp",
+            "query": "csv.report"
+          },
+          "step": "spectra.match@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "the fragmentation graph is a query of the tree algorithm",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.raw",
+          "type": "raw"
+        },
+        {
+          "name": "lib.json",
+          "type": "library"
+        }
+      ],
+      "steps": [
+        {
+          "id": "g",
+          "in": {
+            "source": "file:a.raw"
+          },
+          "step": "spectra.msn_graph@2"
+        },
+        {
+          "algorithm": "tree",
+          "id": "m",
+          "in": {
+            "library": "file:lib.json",
+            "query": "g.graph"
+          },
+          "step": "spectra.match@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "g|molecules|err.flow.port.format|ref=ali.table,writes=mzfeat,reads=csv"
+    ],
+    "name": "a feature table is no list of molecules",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "p.json",
+          "type": "peaks"
+        },
+        {
+          "name": "a.raw",
+          "type": "raw"
+        }
+      ],
+      "steps": [
+        {
+          "id": "ali",
+          "in": {
+            "peaks": "file:p.json"
+          },
+          "step": "features.align@1"
+        },
+        {
+          "id": "g",
+          "in": {
+            "molecules": "ali.table",
+            "source": "file:a.raw"
+          },
+          "step": "spectra.msn_graph@2"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "a CSV list of molecules typed table is taken",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "mols.csv",
+          "type": "table"
+        },
+        {
+          "name": "a.raw",
+          "type": "raw"
+        }
+      ],
+      "steps": [
+        {
+          "id": "g",
+          "in": {
+            "molecules": "file:mols.csv",
+            "source": "file:a.raw"
+          },
+          "step": "spectra.msn_graph@2"
+        }
+      ]
+    }
   }
 ]

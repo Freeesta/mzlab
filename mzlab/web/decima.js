@@ -115,6 +115,16 @@ export function polylineScan(x, y, x0, x1, X, V) {
   return out;
 }
 
+/** Points per pixel column above which a line is drawn 1 px wide: a wider stroke of a dense, jagged line (noise) costs tens of times more in a software canvas. */
+export const HAIR = 0.5;
+
+/** Whether the line of the points with x0 <= x <= x1 is drawn 1 px wide (more than HAIR points per pixel column; an unsorted x keeps the normal width). @param {Vec} x @param {number} x0 @param {number} x1 @param {(v: number) => number} X */
+export function hairline(x, x0, x1, X) {
+  if (!isSorted(x)) return false;
+  const [i0, i1] = windowIdx(x, x0, x1);
+  return i1 - i0 > Math.abs(X(x1) - X(x0)) * HAIR;
+}
+
 /**
  * Raw (unsmoothed) traces with more than `ppx` points per pixel: the highest value of each pixel column, joined by a thin line (peak envelope: no apex is lost, and the
  * line stays a line where first/lowest/highest/last per column fills the whole plot with a solid band). Fewer points per pixel (a zoom) or an unsorted x: polyline().
@@ -134,4 +144,23 @@ export function rawLine(x, y, x0, x1, X, V, ppx = 1.5) {
   }
   out.push(cx, V(top));
   return { v: out, thin: true };
+}
+
+/**
+ * The polyline v (x, y pairs) with every stretch beyond lo..hi moved onto that bound, cut exactly where it crosses it: the part inside is unchanged. A y zoom puts
+ * the peaks thousands of plot heights above the canvas, and a software canvas pays for the whole length of those strokes (0.3 s per draw for 20 traces).
+ * @param {number[]} v @param {number} lo @param {number} hi @returns {number[]}
+ */
+export function clipY(v, lo, hi) {
+  let i = 1;
+  while (i < v.length && v[i] >= lo && v[i] <= hi) i += 2;
+  if (i >= v.length) return v;
+  const cl = (/** @type {number} */ y) => y < lo ? lo : y > hi ? hi : y, out = [v[0], cl(v[1])];
+  for (let k = 2; k < v.length; k += 2) {
+    const xa = v[k - 2], ya = v[k - 1], xb = v[k], yb = v[k + 1];
+    const ts = [lo, hi].filter(b => (ya - b) * (yb - b) < 0).map(b => (b - ya) / (yb - ya)).sort((a, b) => a - b);
+    for (const t of ts) out.push(xa + (xb - xa) * t, ya + (yb - ya) * t);
+    out.push(xb, cl(yb));
+  }
+  return out;
 }

@@ -213,9 +213,11 @@ fn purities<R: ReadAt>(
     windows(index, si, &ranges, max_peaks, |k, a, b, slab| {
         let (cid, from, to) = used[k];
         let c = &cands[cid as usize];
-        let win: Vec<(f64, f64)> = (a..b)
-            .filter(|&j| slab.pos[j] == c.ppos)
-            .map(|j| (slab.mz[j], slab.it[j]))
+        // the peaks of the parent MS1 scan in the window, in table order: by bisection, not by walking the window over every scan
+        let win: Vec<(f64, f64)> = slab
+            .of_scan(c.ppos, a, b)?
+            .iter()
+            .map(|&j| (slab.mz[j as usize], slab.it[j as usize]))
             .collect();
         let total: f64 = win.iter().map(|w| w.1).sum();
         for &(_, fi) in &prs[from..to] {

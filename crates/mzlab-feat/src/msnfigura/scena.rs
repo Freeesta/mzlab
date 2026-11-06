@@ -1,5 +1,5 @@
 //! The model of the static figure: the scene read from `msngrafo/1` (ions, arcs, positions of the key `vista`), the text pieces of the LABEL RULE of
-//! `mzlab/web/msngrafo-vista.js` and the boxes of the ions. Used only by `msn_figura`.
+//! `mzlab/web/msngrafo-vista.js` and the boxes of the ions. Used only by `msnfigura`.
 
 use std::collections::{HashMap, HashSet};
 

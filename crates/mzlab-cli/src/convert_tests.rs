@@ -66,7 +66,7 @@ fn a_folder_gives_valid_mzml_and_the_broken_file_is_named_with_its_cause() {
     let o = convert(&[p(&src), "--out", p(&out), "--report", p(&rep)]);
     assert_eq!(o.code, 1, "{}", o.stderr);
     assert!(
-        o.stderr.contains("rotto.raw: err.file.notAccepted"),
+        o.stderr.contains("rotto.raw: err.file.notThisFormat"),
         "{}",
         o.stderr
     );

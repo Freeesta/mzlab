@@ -215,8 +215,10 @@ fn match_params() -> Vec<Param> {
 pub(super) fn match_spectra() -> Step {
     Step {
         ins: vec![
+            // a report is the graph of spectra.msn_graph (algorithm tree), never one of the CSV exports
             Port::new("query", DataType::Spectra, "Query spectra")
                 .accepts(&[DataType::Report])
+                .formats(&["mgf", "msp", "mzml", "msngrafo"])
                 .requires(ms2()),
             Port::new("library", DataType::Library, "Spectral library"),
         ],

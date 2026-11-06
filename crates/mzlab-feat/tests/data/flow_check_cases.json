@@ -232,7 +232,9 @@
   },
   {
     "expect": [
-      "fo|table|err.flow.cardinality|port=table,count=2"
+      "fo|table|err.flow.cardinality|port=table,count=2",
+      "fo|table|err.flow.port.format|ref=t1.csv,writes=csv,reads=mzfeat",
+      "fo|table|err.flow.port.format|ref=t2.csv,writes=csv,reads=mzfeat"
     ],
     "name": "cardinality: two files into a single port and a list into a single port",
     "plan": {

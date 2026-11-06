@@ -1,4 +1,4 @@
-"""Page-load probe of the built site (first paint to usable), for docs/agenti/misure-velocita.md: serves `site/` with GitHub-Pages-like headers
+"""Page-load probe of the built site (first paint to usable), for docs/agenti/misure-caricamento.md: serves `site/` with GitHub-Pages-like headers
 (tests_e2e/misura_ricarica.py Mirror) and measures, per scenario and as the median of --runs: FCP, LCP, CLS, long tasks until usable, requests and
 bytes before FCP and until usable, render-blocking files, engine ready, console warnings. Measures, never asserts (the guard is e2e_budget_avvio.py).
 

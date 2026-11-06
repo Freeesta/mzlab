@@ -51,7 +51,7 @@ pub fn folder(tag: &str) -> PathBuf {
     d
 }
 
-/// `in/` with `a.mzXML`, `b.cdf` and, with `broken`, `rotto.raw` (bytes no reader knows).
+/// `in/` with `a.mzXML`, `b.cdf` and, with `broken`, `rotto.raw` (bytes no reader knows: a .raw that is not one, `err.file.notThisFormat`).
 pub fn makers(dir: &Path, broken: bool) -> PathBuf {
     let src = dir.join("in");
     std::fs::create_dir_all(&src).unwrap();

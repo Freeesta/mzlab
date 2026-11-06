@@ -62,10 +62,11 @@ pub fn mrm_diff_post(files: &str, reference: &str, query: &str) -> String {
     }
 }
 
-/// `api/simtab`: the SIM table of `files` (`[{"name", "transitions"}]`, the transitions as `api/mrm` gives them); `output` one of `simtab::OUTPUTS`, `layout` `samples` or `channels`. "E" + JSON = the user's error.
+/// `api/simtab`: the SIM table of `files` (`[{"name", "transitions"}]`, the transitions as `api/mrm` gives them); `output` one of `simtab::OUTPUTS`, `layout` `samples` or `channels`,
+/// `baseline` one of `simtab::BASELINES`. "E" + JSON = the user's error.
 #[wasm_bindgen]
-pub fn sim_table(files: &str, output: &str, layout: &str) -> String {
-    match mzlab_core::simtab::table_text(files, output, layout) {
+pub fn sim_table(files: &str, output: &str, layout: &str, baseline: &str) -> String {
+    match mzlab_core::simtab::table_text_with(files, output, layout, baseline) {
         Ok(csv) => csv,
         Err(e) => format!("E{}", e.to_json()),
     }

@@ -146,7 +146,7 @@ def crea(fam: str, d: Path) -> Path:
     raise AssertionError(fam)
 
 
-SINTETICI_RUST = {"thermo": "thermo/synt.raw", "bruker": "bruker/synt.d", "andi": "andi/synt.cdf"}
+SINTETICI_RUST = {"thermo": "thermo/synt.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "andi": "andi/synt.cdf"}
 
 
 def sintetici(base: Path):
@@ -162,6 +162,15 @@ def test_mzml_del_modulo_uguale_a_quello_del_cli(tools, fam):
     cli = da_cli(tools, fam, ds)
     wasm = da_wasm(tools, fam, ds)
     assert sha(wasm) == sha(cli), (fam, len(wasm), len(cli), first_diff(wasm, cli))
+
+
+def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
+    """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte."""
+    ds = crea("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")
+    cli = da_cli(tools, "bruker_tagliato", ds)
+    wasm = da_wasm(tools, "bruker", ds)
+    assert cli.count(b"<spectrum ") == 3
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
 def test_wiff_con_dad_e_metodo_uguale_al_cli_con_dad(tools):

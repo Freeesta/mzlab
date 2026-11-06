@@ -31,10 +31,17 @@ fn byte_sconosciuti_sono_un_errore_con_chiave() {
     );
     assert_eq!(
         chiave(insieme("x.raw", vec![0x01, 0xA1, 0x46])),
-        "err.file.notAccepted"
+        "err.file.notThisFormat"
+    );
+    assert_eq!(chiave(insieme("x.wiff", Vec::new())), "err.file.empty");
+    // a name the registry does not know stays «not accepted»; a plain .mzML the engine reads is not called damaged by this crate
+    assert_eq!(chiave(insieme("x.cdf", Vec::new())), "err.file.empty");
+    assert_eq!(
+        chiave(insieme("x.cdf", b"CDF".to_vec())),
+        "err.file.notThisFormat"
     );
     assert_eq!(
-        chiave(insieme("x.wiff", Vec::new())),
+        chiave(insieme("x.mzML", b"<x/>".to_vec())),
         "err.file.notAccepted"
     );
 }

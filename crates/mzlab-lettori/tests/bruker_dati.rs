@@ -81,20 +81,17 @@ fn confronta_cartella(cartella: &str, mzml_rif: &str) {
     };
     let mut l = mzlab_lettori::apri_nudo(set_of(&base.join(cartella)), &Limiti::desktop()).unwrap();
     let rif = spettri_mzml(&base.join(mzml_rif));
-    assert_eq!(l.indice(0).unwrap().len(), rif.len());
-    for (k, r) in rif.iter().enumerate() {
-        let s = match l.scansione(0, k) {
-            Ok(s) => s,
-            // the copy of the test data keeps only the first 400 kB of `analysis.tdf_bin`: the MS1 frame at its end is cut
-            Err(e) => {
-                assert!(
-                    k + 1 == rif.len() && format!("{e:?}").contains("block length"),
-                    "{cartella} {k}: {e:?}"
-                );
-                eprintln!("{cartella} #{k}: block cut by the file ({e:?})");
-                continue;
-            }
-        };
+    // the copy of the test data keeps only the first 400 kB of `analysis.tdf_bin`: the spectra of the frames past its end leave the index and are counted
+    let n = l.indice(0).unwrap().len();
+    assert_eq!(n + l.mancanti(0), rif.len(), "{cartella}");
+    if n < rif.len() {
+        eprintln!(
+            "{cartella}: {} spectra past the end of the cut tdf_bin",
+            rif.len() - n
+        );
+    }
+    for (k, r) in rif.iter().enumerate().take(n) {
+        let s = l.scansione(0, k).unwrap();
         assert_eq!(s.level, r.level, "{cartella} {k}");
         assert!((s.rt - r.rt).abs() < 1e-6, "{cartella} {k}: rt");
         confronta(&s, r, 5.0, &format!("{cartella} #{k} {}", s.id));
