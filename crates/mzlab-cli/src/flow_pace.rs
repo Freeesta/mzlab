@@ -195,6 +195,9 @@ pub(crate) fn build_index_with(
     let name = path
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    std::fs::metadata(path).map_err(|e| {
+        Error::new("err.flow.io").with("detail", format!("{}: {e}", path.display()))
+    })?;
     let mut out = File::create(idx).map_err(io)?;
     if !path.is_dir() && name.to_lowercase().ends_with(".mzml") && !is_numpress_mzml(path) {
         let size = std::fs::metadata(path).map_err(io)?.len();
