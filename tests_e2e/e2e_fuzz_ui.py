@@ -26,7 +26,7 @@ def seed_run(p, **k):
 
 def leak_run(p):
     a = args(cicli=6)
-    rows = fz.Fuzz(a, fz.files_for("data", OUT / "dati")).leak(p)
+    rows = fz.leak(fz.Fuzz(a, fz.files_for("data", OUT / "dati")), p)
     grow = {k: (rows[-1][k] - rows[1][k]) / (len(rows) - 2) for k in ("nodes", "listeners")}
     assert grow["nodes"] <= 50 and grow["listeners"] <= 10, (grow, rows)
 

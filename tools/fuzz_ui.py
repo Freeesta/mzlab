@@ -78,12 +78,12 @@ TARGETS = r"""(touch) => {
 CYCLE_DIALOGS = ["#np-set", "#sb-help"]
 
 
-class Fuzz:
+class Page:
+    """The browser page: launch with the instrumentation, wait for quiet, CDP counters."""
     def __init__(s, args, files):
         s.a, s.files, s.log, s.fails, s.long = args, files, [], [], []
         s.chooser_files = files[:1]
 
-    # ---- page -------------------------------------------------------------------------------------------------------------------
     def open(s, p, r):
         s.r = r
         s.br = p.chromium.launch()
@@ -131,7 +131,48 @@ class Fuzz:
         m = {x["name"]: x["value"] for x in s.cdp.send("Performance.getMetrics")["metrics"]}
         return {"nodes": d["nodes"], "listeners": d["jsEventListeners"], "docs": d["documents"], "heap": int(m.get("JSHeapUsedSize", 0))}
 
-    # ---- steps ------------------------------------------------------------------------------------------------------------------
+
+
+class Pointer(Page):
+    """Mouse, touch and typing on one element."""
+    def pointer(s, st):
+        """A mouse, touch or typing step on the element of `st["sel"]`, at the fractions fx, fy of its box."""
+        pg, a = s.pg, st["a"]
+        loc, b = s.box(st["sel"])
+        if not b or b["width"] < 1: return False
+        x, y = b["x"] + b["width"] * st["fx"], b["y"] + b["height"] * st["fy"]
+        s.in_dlg = a in ("click", "tap") and pg.evaluate("([x, y]) => { const e = document.elementFromPoint(x, y); return !!(e && e.closest('dialog, [role=dialog], [aria-modal=true], [role=menu]') && e.closest('button, [role=menuitem], a')); }", [x, y])
+        if a == "click": pg.mouse.click(x, y)
+        elif a == "dbl": pg.mouse.dblclick(x, y)
+        elif a == "ctx": pg.mouse.click(x, y, button="right")
+        elif a == "hover": pg.mouse.move(x, y, steps=4)
+        elif a == "tap": pg.touchscreen.tap(x, y)
+        elif a == "wheel":
+            pg.mouse.move(x, y)
+            if st["ctrl"]: pg.keyboard.down("Control")
+            pg.mouse.wheel(0, st["dy"])
+            if st["ctrl"]: pg.keyboard.up("Control")
+        elif a == "drag":
+            tx, ty = b["x"] + b["width"] * st["tx"], b["y"] + b["height"] * st["ty"]
+            if st["shift"]: pg.keyboard.down("Shift")
+            pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move((x + tx) / 2, (y + ty) / 2, steps=3); pg.mouse.move(tx, ty, steps=3); pg.mouse.up()
+            if st["shift"]: pg.keyboard.up("Shift")
+        elif a == "type":
+            try:
+                loc.fill(st["text"], timeout=1500); pg.keyboard.press("Enter")
+            except Exception:
+                return False
+        return True
+
+    def box(s, sel):
+        loc = s.pg.locator(sel).first
+        if not loc.count(): return None, None
+        b = loc.bounding_box()
+        return loc, b
+
+
+class Steps(Pointer):
+    """Drawing a step from the seed and running it."""
     def gen(s, rng, step_no):
         """Draw the next step from the seed. Element picks keep the index draw and resolve to a selector at run time."""
         pg = s.pg
@@ -158,43 +199,13 @@ class Fuzz:
         if k == "remove": return {"a": "remove", "i": rng.randrange(8)}
         return {"a": "reload", "mid": rng.random() < 0.5}
 
-    def box(s, sel):
-        loc = s.pg.locator(sel).first
-        if not loc.count(): return None, None
-        b = loc.bounding_box()
-        return loc, b
-
     def run(s, st):
         """Run one step. Returns False when its target is gone (a skipped step, not a failure)."""
         pg, a = s.pg, st["a"]
         if a == "key":
             pg.keyboard.press(st["k"]); return True
         if a in ("click", "dbl", "drag", "wheel", "hover", "ctx", "tap", "type"):
-            loc, b = s.box(st["sel"])
-            if not b or b["width"] < 1: return False
-            x, y = b["x"] + b["width"] * st["fx"], b["y"] + b["height"] * st["fy"]
-            s.in_dlg = a in ("click", "tap") and pg.evaluate("([x, y]) => { const e = document.elementFromPoint(x, y); return !!(e && e.closest('dialog, [role=dialog], [aria-modal=true], [role=menu]') && e.closest('button, [role=menuitem], a')); }", [x, y])
-            if a == "click": pg.mouse.click(x, y)
-            elif a == "dbl": pg.mouse.dblclick(x, y)
-            elif a == "ctx": pg.mouse.click(x, y, button="right")
-            elif a == "hover": pg.mouse.move(x, y, steps=4)
-            elif a == "tap": pg.touchscreen.tap(x, y)
-            elif a == "wheel":
-                pg.mouse.move(x, y)
-                if st["ctrl"]: pg.keyboard.down("Control")
-                pg.mouse.wheel(0, st["dy"])
-                if st["ctrl"]: pg.keyboard.up("Control")
-            elif a == "drag":
-                tx, ty = b["x"] + b["width"] * st["tx"], b["y"] + b["height"] * st["ty"]
-                if st["shift"]: pg.keyboard.down("Shift")
-                pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move((x + tx) / 2, (y + ty) / 2, steps=3); pg.mouse.move(tx, ty, steps=3); pg.mouse.up()
-                if st["shift"]: pg.keyboard.up("Shift")
-            elif a == "type":
-                try:
-                    loc.fill(st["text"], timeout=1500); pg.keyboard.press("Enter")
-                except Exception:
-                    return False
-            return True
+            return s.pointer(st)
         if a == "resize":
             pg.set_viewport_size({"width": st["w"], "height": st["h"]}); return True
         if a == "view":
@@ -224,6 +235,10 @@ class Fuzz:
             pg.wait_for_load_state("load"); s.wait_ready(); return True
         raise ValueError(a)
 
+
+
+class Fuzz(Steps):
+    """Checks after every step, the starting state of a view and the runs."""
     def check(s, st, before, n0):
         """What is wrong after the step: a list of short strings (empty = fine)."""
         busy, after = s.quiet(s.a.busy)
@@ -248,7 +263,6 @@ class Fuzz:
         if s.a.ignora: out = [x for x in out if not re.search(s.a.ignora, x)]
         return out, after
 
-    # ---- runs -------------------------------------------------------------------------------------------------------------------
     def prepare(s):
         """The starting state of the chosen view: files loaded for Data and HR, the view open for Draw and Flow."""
         v = s.a.vista
@@ -293,28 +307,34 @@ class Fuzz:
             except Exception: pass
             r.close()
 
-    def leak(s, p):
-        """N cycles of open/close (settings, help, views, drawer tabs, language): DOM nodes, listeners and heap at cycle 2 and N."""
-        r = lib.Run(port=lib.free_port(), wd=f"/tmp/wd_fuzz_{os.getpid()}")
-        try:
-            s.open(p, r); s.prepare()
-            pg, rows = s.pg, []
-            for c in range(s.a.cicli):
-                for sel in CYCLE_DIALOGS:
-                    if pg.locator(sel).count() and pg.locator(sel).first.is_visible():
-                        pg.click(sel); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)
-                for v in ("draw", "flow", "data"):
-                    b = pg.locator(f"#nav [data-v={v}]")
-                    if b.count() and b.first.is_visible(): b.first.click(); s.quiet(20)
-                for t in ("addloss", "lists", "stat", "file"):
-                    pg.evaluate(f"typeof BARRA !== 'undefined' && BARRA.setTab('{t}', {{noFocus: true, instant: true}})"); s.quiet(10)
-                pg.evaluate("I18N.set(I18N.lang === 'en' ? 'it' : 'en')"); s.wait_ready(); s.quiet(20)
-                rows.append(s.counters())
-            return rows
-        finally:
-            try: s.br.close()
-            except Exception: pass
-            r.close()
+def leak(s, p):
+    """N cycles of open/close (settings, help, views, drawer tabs, language): DOM nodes, listeners and heap at cycle 2 and N."""
+    r = lib.Run(port=lib.free_port(), wd=f"/tmp/wd_fuzz_{os.getpid()}")
+    try:
+        s.open(p, r); s.prepare()
+        pg, rows = s.pg, []
+        for c in range(s.a.cicli):
+            for sel in CYCLE_DIALOGS:
+                if pg.locator(sel).count() and pg.locator(sel).first.is_visible():
+                    pg.click(sel); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)
+            for v in ("draw", "flow", "data"):
+                b = pg.locator(f"#nav [data-v={v}]")
+                if b.count() and b.first.is_visible(): b.first.click(); s.quiet(20)
+            pg.keyboard.press("Shift+?"); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)          # the shortcuts panel
+            pg.evaluate("carica('m:molecole-ui.js').then(() => window.MOLDB.apri())"); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)
+            n = pg.evaluate("E.panels.length")                  # a spectrum panel added and closed again
+            if pg.locator("#np-spec").first.is_visible():
+                pg.click("#np-spec"); s.quiet(20)
+                pg.evaluate(f"E.panels.length > {n} && closePanel(E.panels[E.panels.length - 1])"); s.quiet(10)
+            for t in ("addloss", "lists", "stat", "file"):
+                pg.evaluate(f"typeof BARRA !== 'undefined' && BARRA.setTab('{t}', {{noFocus: true, instant: true}})"); s.quiet(10)
+            pg.evaluate("I18N.set(I18N.lang === 'en' ? 'it' : 'en')"); s.wait_ready(); s.quiet(20)
+            rows.append(s.counters())
+        return rows
+    finally:
+        try: s.br.close()
+        except Exception: pass
+        r.close()
 
 
 def _foreign(e):
@@ -380,7 +400,7 @@ def main():
     files = files_for(a.vista, out / "dati")
     with sync_playwright() as p:
         if a.cicli:
-            rows = Fuzz(a, files).leak(p)
+            rows = leak(Fuzz(a, files), p)
             for i, r_ in enumerate(rows): print(i + 1, r_)
             d = {k: rows[-1][k] - rows[1][k] for k in ("nodes", "listeners")} if len(rows) > 2 else {}
             per = {k: v / (len(rows) - 2) for k, v in d.items()} if d else {}
