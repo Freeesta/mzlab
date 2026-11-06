@@ -53,8 +53,10 @@
     }
     return out;
   }
-  // THE number format of the whole program: decimal point in every language, no thousands separator (a comma would be read as a decimal one)
-  const NF = dec => new Intl.NumberFormat("en-US", dec === undefined ? { useGrouping: false } : { useGrouping: false, minimumFractionDigits: dec, maximumFractionDigits: dec });
+  // THE number format of the whole program: decimal point in every language, no thousands separator (a comma would be read as a decimal one).
+  // One formatter per number of decimals: building an Intl.NumberFormat costs ~25 µs, formatting with one ~0.5 µs, and the progress rows of a loading format thousands of numbers
+  const NFS = new Map();
+  const NF = dec => { let f = NFS.get(dec); if (!f) { f = new Intl.NumberFormat("en-US", dec === undefined ? { useGrouping: false } : { useGrouping: false, minimumFractionDigits: dec, maximumFractionDigits: dec }); NFS.set(dec, f); } return f; };
   function format(msg, params, lg) {
     params = params || {}; let out = "", i = 0;
     while (i < msg.length) {
