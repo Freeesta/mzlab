@@ -56,7 +56,7 @@ STATE = r"""() => {
  const dup = names.filter((x, i) => names.indexOf(x) !== i);
  const inv = typeof STATO !== 'undefined' && STATO.verifica ? STATO.verifica() : [];
  const pn = typeof E !== 'undefined' && E.panels ? E.panels.filter(p => !p.el || !p.el.isConnected).map(p => p.id + ':' + p.type) : [];
- return {dlg: [...new Set(dlg)].sort(), focus: lab(a), iframe: !!fr, busy, bad: [...new Set(bad)].slice(0, 6), dup, inv, orphan: pn,
+ return {page: performance.timeOrigin, dlg: [...new Set(dlg)].sort(), focus: lab(a), iframe: !!fr, busy, bad: [...new Set(bad)].slice(0, 6), dup, inv, orphan: pn,
    view: typeof S !== 'undefined' ? S.view : null, nodes: document.getElementsByTagName('*').length};
 }"""
 
@@ -167,6 +167,8 @@ class Pointer(Page):
     def box(s, sel):
         loc = s.pg.locator(sel).first
         if not loc.count(): return None, None
+        try: loc.scroll_into_view_if_needed(timeout=1000)   # a target scrolled out of its pane: a user scrolls to it first
+        except Exception: pass
         b = loc.bounding_box()
         return loc, b
 
@@ -256,9 +258,9 @@ class Fuzz(Steps):
         if after["dup"]: out.append("duplicated file rows: %s" % after["dup"][:3])
         if after["inv"]: out.append("state invariants: %s" % after["inv"][:3])
         if after["orphan"]: out.append("panels without element: %s" % after["orphan"][:3])
-        closed = before and before["dlg"] and not after["dlg"]
+        closed = before and before["dlg"] and not after["dlg"] and before["page"] == after["page"]   # a reload (a reset of the session) starts on the body
         by_user = st["a"] == "key" and st["k"] in ("Escape", "Enter", "Space") or st["a"] in ("click", "tap") and getattr(s, "in_dlg", False)
-        if closed and by_user and after["focus"] == "body" and not after["iframe"]:
+        if closed and by_user and before["focus"] != "body" and after["focus"] == "body" and not after["iframe"]:  # already on the body: a click on nothing, not the dialog
             out.append("focus fell to the body after closing %s" % before["dlg"])
         if s.a.ignora: out = [x for x in out if not re.search(s.a.ignora, x)]
         return out, after
@@ -414,7 +416,7 @@ def main():
             return 0
         print(f"FAIL seed {a.seed} at step {i}: {probs}")
         steps = done
-        if a.minimizza and not a.replay:
+        if a.minimizza:
             steps = minimise(a, files, p, done, probs)
         rep = {"seed": a.seed, "vista": a.vista, "tablet": a.tablet, "problems": probs, "steps": steps}
         fp = out / f"fail-{a.vista}-{a.seed}{'-tab' if a.tablet else ''}.json"
