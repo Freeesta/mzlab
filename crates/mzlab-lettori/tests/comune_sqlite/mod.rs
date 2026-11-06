@@ -162,22 +162,34 @@ pub fn blocco2() -> Vec<u8> {
 }
 
 pub fn tdf_minimo(num_peaks: i64) -> Vec<u8> {
-    let frames = foglia(&[vec![
-        V::N,
-        V::R(1.0),
-        V::T("+"),
-        V::I(0),
-        V::I(0),
-        V::I(0),
-        V::I(100),
-        V::I(50),
-        V::I(2),
-        V::I(num_peaks),
-        V::I(1),
-        V::R(25.0),
-        V::R(30.0),
-        V::R(100.0),
-    ]]);
+    tdf_frames(&[0], num_peaks)
+}
+
+/// A database of one MS1 frame per offset in `tims` (`TimsId`), each `num_peaks` peaks over 2 scans, 1 s apart.
+pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
+    let righe: Vec<Vec<V<'_>>> = tims
+        .iter()
+        .enumerate()
+        .map(|(i, &t)| {
+            vec![
+                V::N,
+                V::R(1.0 + i as f64),
+                V::T("+"),
+                V::I(0),
+                V::I(0),
+                V::I(t),
+                V::I(100),
+                V::I(50),
+                V::I(2),
+                V::I(num_peaks),
+                V::I(1),
+                V::R(25.0),
+                V::R(30.0),
+                V::R(100.0),
+            ]
+        })
+        .collect();
+    let frames = foglia(&righe);
     let cal = foglia(&[vec![
         V::N,
         V::I(1),
@@ -197,4 +209,85 @@ pub fn tdf_minimo(num_peaks: i64) -> Vec<u8> {
         ("Frames", "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL, Polarity TEXT, ScanMode INTEGER, MsMsType INTEGER, TimsId INTEGER, SummedIntensities INTEGER, MaxIntensity INTEGER, NumScans INTEGER, NumPeaks INTEGER, MzCalibration INTEGER, T1 REAL, T2 REAL, AccumulationTime REAL)", frames),
         ("MzCalibration", "CREATE TABLE MzCalibration (Id INTEGER PRIMARY KEY, ModelType INTEGER, DigitizerTimebase REAL, DigitizerDelay REAL, C0 REAL, C1 REAL, C2 REAL, C3 REAL, C4 REAL, T1 REAL, T2 REAL, dC1 REAL, dC2 REAL)", cal),
     ])
+}
+
+/// A database of tables of any size: `(name, CREATE text, rows)`, every table its leaves of `rows` and, past one leaf, an interior root (at most one level: a few thousand rows).
+pub fn db_righe(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
+    let mut pagine: Vec<Vec<u8>> = Vec::new();
+    let mut radici = Vec::new();
+    for (_, _, righe) in tabelle {
+        let celle: Vec<Vec<u8>> = righe
+            .iter()
+            .enumerate()
+            .map(|(i, r)| cella_foglia(i as u64 + 1, &record(r)))
+            .collect();
+        let mut foglie: Vec<(Vec<Vec<u8>>, u64)> = vec![(Vec::new(), 0)];
+        let mut usati = 8;
+        for (i, c) in celle.into_iter().enumerate() {
+            if usati + c.len() + 2 > PAG && !foglie.last().unwrap().0.is_empty() {
+                foglie.push((Vec::new(), 0));
+                usati = 8;
+            }
+            usati += c.len() + 2;
+            let f = foglie.last_mut().unwrap();
+            f.0.push(c);
+            f.1 = i as u64 + 1;
+        }
+        // pages are numbered from 2 (page 1 is the schema)
+        let primo = pagine.len() as u32 + 2;
+        for (c, _) in &foglie {
+            pagine.push(pagina(13, 0, c, 0));
+        }
+        if foglie.len() == 1 {
+            radici.push(primo);
+            continue;
+        }
+        let n = foglie.len() as u32;
+        let interne: Vec<Vec<u8>> = foglie[..foglie.len() - 1]
+            .iter()
+            .enumerate()
+            .map(|(j, (_, max))| {
+                let mut c = (primo + j as u32).to_be_bytes().to_vec();
+                c.extend(varint(*max));
+                c
+            })
+            .collect();
+        assert!(
+            interne.len() * 15 + 12 < PAG,
+            "table too large for one interior page"
+        );
+        radici.push(pagine.len() as u32 + 2);
+        pagine.push(pagina(5, 0, &interne, primo + n - 1));
+    }
+    let schema: Vec<Vec<u8>> = tabelle
+        .iter()
+        .zip(&radici)
+        .enumerate()
+        .map(|(i, ((n, sql, _), &r))| {
+            cella_foglia(
+                i as u64 + 1,
+                &record(&[
+                    V::T("table"),
+                    V::T(n),
+                    V::T(n),
+                    V::I(i64::from(r)),
+                    V::T(sql),
+                ]),
+            )
+        })
+        .collect();
+    let mut p1 = pagina(13, 100, &schema, 0);
+    p1[..16].copy_from_slice(b"SQLite format 3\0");
+    p1[16..18].copy_from_slice(&(PAG as u16).to_be_bytes());
+    p1[18] = 1;
+    p1[19] = 1;
+    p1[21..24].copy_from_slice(&[64, 32, 32]);
+    p1[28..32].copy_from_slice(&(pagine.len() as u32 + 1).to_be_bytes());
+    p1[44..48].copy_from_slice(&4u32.to_be_bytes());
+    p1[56..60].copy_from_slice(&1u32.to_be_bytes());
+    let mut out = p1;
+    for p in pagine {
+        out.extend(p);
+    }
+    out
 }

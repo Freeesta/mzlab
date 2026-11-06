@@ -19,8 +19,22 @@ Come si leggono le colonne: i secondi per passo sono la somma sulle 12 istanze (
 - Il passo detect è uguale per tutti i formati centroidati (0.44-0.51 s): il formato pesa solo sull'index.
 - Align e gapfill non dipendono dal formato.
 
+## Bruker timsTOF `.d` (DDA-PASEF sintetico)
+`cargo run --release -p mzlab-lettori --features bruker --example bruker_banco -- scrivi X.d --cicli 100` scrive 1100 frame (100 MS1 da 60 000 punti, 1000 PASEF da 15 000 punti con 12 precursori), `analysis.tdf_bin` 80 MB in zstd (codec 2); `misura X.d` dà i ms per fase e la firma FNV di tutti i punti (uguale prima e dopo ogni modifica). 4 CPU, file nella cache del sistema, rumore ±5 %.
+
+| fase (12 100 spettri, 16 M punti) | nativo ms | `.wasm` in Node (mzML) |
+|---|---|---|
+| apertura (tabelle) | 16 | — |
+| indice (TIC degli MS2: decodifica di ogni frame) | 423 | — |
+| BPC | 245 | — |
+| tutti gli spettri | 910 | — |
+| mzML (`lettori_mzml::scrivi`, nuova apertura) | 1 610 | 6 040 |
+
+- Profilo (callgrind, 88 frame, tutte le fasi): la decodifica dei frame è il 50 % delle istruzioni e zstd ne è il 58 %; il deflate dell'mzML scritto il 33 %. L'unione per indice TOF (radix a 11 bit da 1024 punti, `spettri::ordina_tof`) e il taglio per scansioni (offset `Picchi::inizio`) pesano meno del 10 %, contro il 41 % di ordinamento e filtro punto per punto che c'erano prima (stesse misure: indice 670 → 423 ms, BPC 335 → 245, tutti gli spettri 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8,97 → 6,04 s, stesso SHA-256).
+- Il passo indice decodifica ogni frame PASEF una volta per il TIC degli MS2, e la conversione li decodifica di nuovo: il doppio passaggio resta.
+
 ## Non misurato (servono i file del Mac di Federico)
-Thermo .raw (lettore nostro), Agilent .D, Bruker .d, SCIEX .wiff/.wiff.scan, .cdf di strumento e MGF: nel contenitore non ci sono file veri né i convertitori. Il rapporto con mzmine (serie 23-29: 0.56-0.64) non ha un numero nel repository, per cui non è riportato.
+Thermo .raw (lettore nostro), Agilent .D, Bruker .d veri, SCIEX .wiff/.wiff.scan, .cdf di strumento e MGF: nel contenitore non ci sono file veri né i convertitori. Il rapporto con mzmine (serie 23-29: 0.56-0.64) non ha un numero nel repository, per cui non è riportato.
 
 ## Caricamento di file SCIEX (.wiff + .wiff.scan) multi-campione
 Coppie sintetiche di `tools/wiff_grande.py` (3000 scansioni × 3333 punti di profilo per campione, 16 MB di `.wiff.scan` ciascuno); 4 CPU, 16 GB, Chromium con profilo su disco (una finestra normale), motore Rust del sito, `tests_e2e/e2e_wiff_240.py` (`MZLAB_CARICO_DIR=CARTELLA` misura una cartella con `counts.json` {file: campioni}). Il browser vuoto occupa già ≈1,1 GB; il picco è la somma dei processi Chromium.
