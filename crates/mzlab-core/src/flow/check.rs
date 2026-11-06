@@ -1,11 +1,11 @@
 //! Check of a whole plan against the step descriptors, before anything starts: unknown steps and versions, steps or algorithms that cannot run here,
 //! parameters out of range, ports (types, conversions, cardinality, facets) and cycles. It returns every problem, not the first.
 
-use super::canon::{declared, effective};
+use super::canon::{canonical, declared, effective};
 use super::order::{cyclic, plan_order};
 use super::{Instance, Observed, Plan, Ref};
 use crate::json::Value;
-use crate::step::{find, DataType, Kind, Param, Port, Status, Step};
+use crate::step::{find, DataType, Kind, Param, Port, Status, Step, WrittenIf};
 
 /// Where the plan is going to run: a step with no module for it is refused (`err.flow.unavailable`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -215,9 +215,26 @@ fn source_type(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref) -> Option<(DataT
                 add(c, i, port.name, "err.flow.port.unknown", &[("ref", &text)]);
                 return None;
             };
+            if let Some(w) = o.written_if.as_ref().filter(|w| !written(src, step, w)) {
+                let param = w.param.map(|(p, not)| format!("{p}={not}")).unwrap_or_default();
+                let p = [("ref", text.as_str()), ("input", w.input), ("param", &param)];
+                add(c, i, port.name, "err.flow.port.unwritten", &p);
+                return None;
+            }
             Some((o.ty, o.many))
         }
     }
+}
+
+/// Does instance `src` of `step` write an output written only on `w`? An instance whose parameters cannot be resolved is a problem of its own: yes.
+fn written(src: &Instance, step: &Step, w: &WrittenIf) -> bool {
+    let wired = src.ins.iter().any(|(n, r)| n == w.input && !r.is_empty());
+    let param_ok = w.param.is_none_or(|(name, not)| {
+        canonical(src, step).map_or(true, |r| {
+            r.params.iter().find(|(k, _)| k == name).and_then(|(_, v)| v.str()) != Some(not)
+        })
+    });
+    wired && param_ok
 }
 
 fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {

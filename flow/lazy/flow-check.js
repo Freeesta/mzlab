@@ -110,6 +110,15 @@
     }
     return o;
   }
+  /** does an instance meet the condition of an output it writes only sometimes (check.rs written): the input wired and the parameter, resolved, not the excluded value */
+  const written = (/** @type {any} */ src, /** @type {any} */ step, /** @type {any} */ w) => {
+    if (!src.ins.some((/** @type {any} */ x) => x[0] === w.input && x[1].length)) return false;
+    if (!w.param) return true;
+    const e = F.effective(src, step);
+    if (e.error) return true;
+    const v = Object.assign({}, ...F.declared(step, e.algorithm).filter((/** @type {any} */ x) => x[1].default !== undefined).map((/** @type {any} */ x) => ({ [x[0]]: x[1].default })), e.preset ? e.preset.params || {} : {}, Object.fromEntries(src.params))[w.param];
+    return v !== w.not;
+  };
   /** the closures of one check: the problems found so far (`st.problems`) and the checks of a step, its parameters, its ports and the facets of its data */
   const makeChecker = (/** @type {any} */ plan, /** @type {{steps: any[], byId: Map<string, any>}} */ reg, /** @type {"native" | "wasm"} */ platform) => {
     const st = { problems: /** @type {any[]} */ ([]) };
@@ -146,10 +155,10 @@
       }
       const text = r.instance + "." + r.port, src = plan.steps.find((/** @type {any} */ x) => x.id === r.instance);
       if (!src) return add(i, port.name, "err.flow.ref.unknown", { ref: text }), null;
-      const s = stepOf(src);
+      const s = stepOf(src), out = s && s.out && s.out[r.port], w = out && out.written_if;
       if (!s) return null;
-      const out = s.out && s.out[r.port];
       if (!out) return add(i, port.name, "err.flow.port.unknown", { ref: text }), null;
+      if (w && !written(src, s, w)) return add(i, port.name, "err.flow.port.unwritten", { ref: text, input: w.input, param: w.param ? w.param + "=" + w.not : "" }), null;
       return { ty: out.type, list: !!out.many };
     };
     const portsOf = (/** @type {any} */ i, /** @type {any} */ step, /** @type {any[]} */ seen) => {

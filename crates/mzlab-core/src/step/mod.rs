@@ -109,6 +109,15 @@ pub struct Port {
     /// Other types an input takes besides `ty`.
     pub accepts: Vec<DataType>,
     pub requires: Facets,
+    /// An output the step writes only on a condition: the check refuses a wire to it when the instance does not meet it.
+    pub written_if: Option<WrittenIf>,
+}
+
+/// The condition of an output: its input `input` is wired and, with `param`, that parameter (resolved) is not `not`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WrittenIf {
+    pub input: &'static str,
+    pub param: Option<(&'static str, &'static str)>,
 }
 
 impl Port {
@@ -121,6 +130,7 @@ impl Port {
             title,
             accepts: Vec::new(),
             requires: Facets::default(),
+            written_if: None,
         }
     }
     pub fn many(mut self) -> Port {
@@ -133,6 +143,11 @@ impl Port {
     }
     pub fn requires(mut self, f: Facets) -> Port {
         self.requires = f;
+        self
+    }
+    /// Written only when `input` is wired and, with `param`, that parameter is not the given value.
+    pub fn written_if(mut self, input: &'static str, param: Option<(&'static str, &'static str)>) -> Port {
+        self.written_if = Some(WrittenIf { input, param });
         self
     }
 }

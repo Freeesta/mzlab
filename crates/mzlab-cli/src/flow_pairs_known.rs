@@ -4,7 +4,6 @@ use std::collections::BTreeSet;
 
 /// The mismatches the registry has today, by consumer port, source and error key: the test fails on any other, and on one of these that is gone (drop it).
 /// - a `filtri/1` (`tp.filter`) is typed `table` like a `.mzfeat`;
-/// - `qc.mass_accuracy` writes `table` only when its optional `table` input is wired;
 /// - `spectra.match.query` accepts `report`, and the CSV exports are no spectra;
 /// - `spectra.msn_graph.molecules` (a molecules CSV) accepts `table`, and a `.mzfeat` is no CSV;
 /// - `features.gapfill` and `tp.link` need a table aligned in the same plan (`err.flow.lineage`);
@@ -19,10 +18,6 @@ const KNOWN: &[(&str, &str)] = &[
         "err.flow.lineage",
     ),
     (
-        "features.gapfill.table <- qc.mass_accuracy.table",
-        "err.flow.lineage",
-    ),
-    (
         "features.gapfill.table <- tp.filter.table",
         "err.flow.lineage",
     ),
@@ -30,30 +25,10 @@ const KNOWN: &[(&str, &str)] = &[
         "table.filter.table <- table of one sample",
         "error.badCampioni",
     ),
-    (
-        "table.filter.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
     ("table.filter.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "features.group.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
     ("features.group.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "table.stats.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
     ("table.stats.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "table.kmd.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
     ("table.kmd.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "table.plausible.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
     (
         "table.plausible.table <- tp.filter.table",
         "error.badMzfeat",
@@ -61,10 +36,6 @@ const KNOWN: &[(&str, &str)] = &[
     (
         "export.table_csv.table <- table of one sample",
         "error.badCampioni",
-    ),
-    (
-        "export.table_csv.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
     ),
     (
         "export.table_csv.table <- tp.filter.table",
@@ -75,16 +46,8 @@ const KNOWN: &[(&str, &str)] = &[
         "error.badCampioni",
     ),
     (
-        "export.mztab.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    (
         "export.mztab.table <- tp.filter.table",
         "err.flow.export.view",
-    ),
-    (
-        "spectra.chimeric.features <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
     ),
     (
         "spectra.chimeric.features <- tp.filter.table",
@@ -112,10 +75,6 @@ const KNOWN: &[(&str, &str)] = &[
     ),
     ("tp.link.table <- table with no row", "err.flow.lineage"),
     ("tp.link.table <- table of one sample", "err.flow.lineage"),
-    (
-        "tp.link.table <- qc.mass_accuracy.table",
-        "err.flow.lineage",
-    ),
     ("tp.link.table <- tp.filter.table", "err.flow.lineage"),
     ("spectra.msn_graph.molecules <- gap.table", "err.flow.io"),
     ("spectra.msn_graph.molecules <- ali.table", "err.flow.io"),
@@ -144,16 +103,8 @@ const KNOWN: &[(&str, &str)] = &[
         "error.badCampioni",
     ),
     (
-        "table.match.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    (
         "table.match.table <- tp.filter.table",
         "err.flow.export.view",
-    ),
-    (
-        "export.annotations.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
     ),
     (
         "export.annotations.table <- tp.filter.table",

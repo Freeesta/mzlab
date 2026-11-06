@@ -935,6 +935,7 @@
   "err.flow.param.type": "Messaggio d'errore del motore; {detail} = dettaglio tecnico, {instance} = nome del passo, {param} = nome del parametro.",
   "err.flow.param.unknown": "Messaggio d'errore del motore; {instance} = nome del passo, {param} = nome del parametro.",
   "err.flow.port.missing": "Messaggio d'errore del motore; {port} = ingresso.",
+  "err.flow.port.unwritten": "Messaggio d'errore del controllo del Flow; {ref} = uscita (istanza.porta), {input} = ingresso da collegare, {param} = impostazione che la esclude (nome=valore).",
   "err.flow.preset.unknown": "Messaggio d'errore del motore; {preset} = preset.",
   "err.flow.ref": "Messaggio d'errore del motore; {instance} = nome del passo, {port} = ingresso, {ref} = collegamento.",
   "err.flow.regulatory.imported": "Messaggio d'errore del motore; {file} = nome del file.",

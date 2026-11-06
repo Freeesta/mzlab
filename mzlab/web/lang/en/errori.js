@@ -221,6 +221,7 @@ I18N.add("en", {
   "err.flow.plan": "The flow has no plan to run.",
   "err.flow.port.missing": "The input {port} is not connected: connect a source.",
   "err.flow.port.unknown": "The output named here does not exist in the source step.",
+  "err.flow.port.unwritten": "The output {ref} is written only when its input {input} is connected (and not with {param}): connect it or change that setting.",
   "err.flow.position.smiles": "The structure (SMILES) of the transformation product is empty: draw or paste it.",
   "err.flow.preset.unknown": "Unknown preset: {preset}.",
   "err.flow.ref": "The link {ref} in {instance} (input {port}) is not valid.",
