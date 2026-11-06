@@ -127,6 +127,27 @@ try:
             pg.evaluate("BARRA.close(false)"); attendi(pg, "!BARRA.open")
             pg.evaluate("removeAllFiles()"); attendi(pg, "BARRA.open && BARRA.curTab === 'file'")
         step("Remove all brings the side bar back when hidden", remove_all_shows_bar)
+        SAFARI = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
+        CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        def righe_mac(ua):
+            c = r.b.new_context(user_agent=ua, viewport={"width": 1200, "height": 900}, reduced_motion="reduce")
+            c.add_init_script("Object.defineProperty(Navigator.prototype,'platform',{get:()=>'MacIntel'});try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+            q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); ready(q)
+            q.evaluate("SCORCIATOIE.apri()"); attendi(q, "document.querySelector('#scorc[open]')")
+            rows = q.evaluate("[...document.querySelectorAll('#scorc li')].map(li => [li.querySelector('kbd').textContent, li.querySelector('.sc-n').title])")
+            c.close(); return rows
+        def option_tab():
+            safari, chrome = righe_mac(SAFARI), righe_mac(CHROME)
+            tab = [x for x in safari if x[0] == "⌥Tab"]
+            assert tab and "⌥Tab" in tab[0][1] and "Safari" in tab[0][1], f"Safari on a Mac: no ⌥Tab row with its explanation in the panel: {safari}"
+            assert any(x[0].startswith("⌘") for x in safari), f"the Mac keys are not written as ⌘: {safari}"
+            assert not [x for x in chrome if x[0] == "⌥Tab"], f"⌥Tab row outside Safari: {chrome}"
+        step("Safari on a Mac: the panel says that ⌥Tab reaches buttons and links (not in other Mac browsers)", option_tab)
+        def option_tab_not_taken():
+            if not pg.evaluate("AZIONI.voci.some(a => a.id === 'app.tabSafari')"): return
+            pg.evaluate("window.__tabPrev = null; addEventListener('keydown', e => { if (e.key === 'Tab') window.__tabPrev = e.defaultPrevented; }, { once: true })")
+            pg.keyboard.press("Alt+Tab"); assert pg.evaluate("window.__tabPrev") is False, "the app took ⌥Tab from Safari"
+        step("⌥Tab is left to the browser", option_tab_not_taken)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

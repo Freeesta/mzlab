@@ -256,6 +256,8 @@ I18N.add("en", {
   "scorc.elimina.tip": "Deletes the selected integrated peak.",
   "scorc.esc": "Cancel",
   "scorc.esc.tip": "Closes one thing at a time: menus, measure, playback, full screen",
+  "scorc.tabSafari": "Tab to buttons and links too (Safari)",
+  "scorc.tabSafari.tip": "In Safari, Tab moves between text fields only: ⌥Tab also reaches buttons and links. To make plain Tab do it: Safari › Settings › Advanced › «Press Tab to highlight each item»",
   "scorc.integra.tip": "Integrates the peak under the cursor",
   "scorc.misura.tip": "Takes the highest visible peak as the reference of the measurement.",
   "scorc.schermo.tip": "Takes the panel to full screen and back to where it was.",

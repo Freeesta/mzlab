@@ -38,4 +38,5 @@
 | `createSyncAccessHandle({mode})` | `lettura-sync.js` | modo ignorato (handle esclusivo) | un handle preso fa leggere dal Blob | — |
 | `prefers-reduced-motion`, `prefers-color-scheme` | molti | 10.1, 12.1 | — | `e2e_tema_impostazioni` |
 | service worker, Cache API | `sw.js`, `browser.js` | 11.1 | sito senza copia offline | `e2e_sw_versione` |
+| Tab sui pulsanti e i link | tutta l'interfaccia | ogni versione: Tab passa solo fra i campi, salvo Safari › Impostazioni › Avanzate | il pannello «Scorciatoie» (`azioni-tasti.js`, `app.tabSafari`, solo Safari su Mac con puntatore fine) dice che ⌥Tab raggiunge pulsanti e link; il tasto resta di Safari | `e2e_scorciatoie` |
 - Non usati nel sito (Safari dopo 16.4, da non introdurre senza ripiego): `toSorted`/`toReversed`/`with`, `Object.groupBy`, `Promise.withResolvers`, metodi di `Set`, `Array.fromAsync`, aiutanti di `Iterator`, regex `/v`, `ReadableStream.from` e `for await` su uno stream, evento `scrollend`, attributo `popover`, `closedby`, CSS nesting, `@container style()`, `@starting-style`, `text-wrap`, `light-dark()`, `field-sizing`, ancore CSS. `for await` c'è solo su cartelle OPFS e generatori (15.2).
