@@ -1,4 +1,4 @@
-//! Unit tests of `tdf_aiuti`: folder names and the sums of scan ranges.
+//! Unit tests of `tdf_aiuti`: folder names, the sums of scan ranges and the frames of a cut `*_bin`.
 use super::*;
 use crate::bruker::spettri::somma;
 
@@ -69,4 +69,31 @@ fn overlapping_ranges_count_a_point_once_and_many_points_sort_as_few() {
         }
     }
     assert_eq!(somma(&q, &[(0, 300)]), atteso);
+}
+
+#[test]
+fn a_block_cut_by_the_end_of_the_file_is_told_apart() {
+    // TDF: blocks of 20 bytes (the length counts the header); TSF: 8 bytes of header and 12 of payload
+    let mut tdf = Vec::new();
+    let mut tsf = Vec::new();
+    for _ in 0..3 {
+        tdf.extend(20u32.to_le_bytes());
+        tdf.extend([0u8; 16]);
+        tsf.extend(4u32.to_le_bytes());
+        tsf.extend(8u32.to_le_bytes());
+        tsf.extend([0u8; 12]);
+    }
+    let pos = [0, 20, 40, -1];
+    for (b, t) in [(tdf, false), (tsf, true)] {
+        for (dim, attesi) in [
+            (60, [false, false, false, true]),
+            (59, [false, false, true, true]),
+            (44, [false, false, true, true]),
+            (40, [false, false, true, true]),
+            (39, [false, true, true, true]),
+        ] {
+            let mut c = b[..dim].to_vec();
+            assert_eq!(tagliati(&pos, &mut c, dim as u64, t), attesi, "{t} {dim}");
+        }
+    }
 }
