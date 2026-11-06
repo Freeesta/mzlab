@@ -65,3 +65,16 @@ def test_only_a_plain_numpress_mzml_becomes_a_native_sample_and_the_order_is_kep
     assert r["notNumpress"] == [["a.mzML", False], ["b.mzML", False]]
     assert r["skipped"] == []
     assert r["some"] == [["x.mzML", False], ["y.mzML", True], ["z.mzML", False]]
+
+
+def test_a_dataset_the_module_wrote_is_found_again_by_its_members():
+    """cachedModulo: the same members (names, sizes, dates) as the source of a listed sample -> its row says «from the cache»; any difference -> not found."""
+    r = run("""(()=>{const rows=[];global.CONVROWS={add:(k,s)=>rows.push(['add',k,s]),finish:(k,s,o)=>rows.push(['finish',k,s,o.cached])};
+      const mk=(n,sz,t)=>({name:n,blob:{size:sz,lastModified:t}}), src=[mk('x.D/AcqData/a.bin',10,5),mk('x.D/AcqData/b.bin',20,6)];
+      global.CONV={sources:new Map([['x.mzML',{fam:'agilent',mem:src,c:0}]])};
+      const list=[{name:'x.mzML'},{name:'other.mzML'}];
+      const same=n.cachedModulo([src[1],src[0]],list), rowsSame=rows.splice(0);
+      const size=n.cachedModulo([mk('x.D/AcqData/a.bin',11,5),src[1]],list), date=n.cachedModulo([mk('x.D/AcqData/a.bin',10,9),src[1]],list),
+        fewer=n.cachedModulo([src[0]],list), gone=n.cachedModulo(src,[{name:'other.mzML'}]);
+      return [same,rowsSame,size,date,fewer,gone,rows.length]})()""")
+    assert r == [True, [["add", "x.mzML", "open"], ["finish", "x.mzML", "done", True]], False, False, False, False, 0]
