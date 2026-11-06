@@ -35,6 +35,8 @@ I18N.add("it", {
   "err.flow.align.resolution": "Una tabella contiene una sola risoluzione: nella stessa serie ci sono file a risoluzione unitaria ({unit}) e file ad alta risoluzione ({high}). Dividi la serie, oppure rileva e allinea ogni risoluzione in un ramo suo.",
   "err.mzrun.read": "Questo file non è un registro di corsa di mzLab (mzrun/1).",
   "err.mzrun.build": "Il registro della corsa non si può costruire: {what} ({detail}).",
+  "err.file.empty": "Il file {name} è vuoto (0 byte): la copia non è finita. Copia di nuovo il file per intero.",
+  "err.file.notThisFormat": "L'inizio di {name} ({size} byte) non è quello di un file {ext}: la copia è probabilmente troncata o rovinata. Copia di nuovo il file per intero, o esportalo di nuovo dal software dello strumento.",
   "err.file.notAccepted": "Tipo di file non accettato: {name}. Si accettano: .mzML, .mzXML, .cdf, .wiff insieme al suo .wiff.scan, .raw, cartelle .d e metodi .dam. Qualsiasi altro file: convertilo prima in mzML con MSConvert.",
   "err.file.notMzml": "{name} non sembra un file mzML.",
   "err.file.netcdf4": "Questo è un file netCDF-4 (HDF5): esportalo in netCDF-3/AIA (.cdf) dal programma dello strumento.",

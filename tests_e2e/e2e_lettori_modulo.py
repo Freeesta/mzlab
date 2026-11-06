@@ -35,6 +35,8 @@ for nm, flag in (("npa", True), ("npb", False)):   # two folders of one mzML eac
 (tmp / "npt").mkdir()   # a numpress mzML cut after three quarters of its bytes: it opens with the spectra it holds and says how many are missing
 (tmp / "npt" / "np.mzML").write_bytes((tmp / "npa" / "np.mzML").read_bytes()[:(tmp / "npa" / "np.mzML").stat().st_size * 3 // 4])
 (tmp / "xml").mkdir(); XTIC = mzxml_file(tmp / "xml" / "x.mzXML")
+(tmp / "xmlt").mkdir()   # the same mzXML cut in half: it opens with the scans it holds and its scanCount says how many are missing
+(tmp / "xmlt" / "x.mzXML").write_bytes((tmp / "xml" / "x.mzXML").read_bytes()[:(tmp / "xml" / "x.mzXML").stat().st_size // 2])
 (tmp / "cdf").mkdir(); CTIC = cdf_file(tmp / "cdf" / "c.cdf")
 
 PORT = lib.free_port()
@@ -175,6 +177,15 @@ try:
             assert r["miss"] == 0, r["miss"]
             ks = [k for k in r["sp"] if isinstance(r["sp"][k], list) and len(r["sp"][k]) > 5]; assert ks and all(len(r["sp"][k]) == 30 for k in ks), list(r["sp"])
         step("an mzXML opens in the Dati view (through the «aperti» module) with its TIC and a spectrum", mzxml_opens)
+        def mzxml_truncated():
+            pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / "xmlt"))
+            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            pg.click("#opbtn")
+            pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
+            li = pg.locator("#flist .cvsum li[data-cvmiss]")
+            assert li.count() == 1, pg.inner_text("#flist")
+            n = int(li.get_attribute("data-cvmiss")); assert 15 <= n <= 25, n
+        step("an mzXML cut in half opens with the scans it holds and its row says how many are missing", mzxml_truncated)
         def cdf_opens():
             r = one("cdf"); assert r["files"] == ["c.mzML"], r["files"]
             y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, CTIC)), (y and y[:3], CTIC[:3])
