@@ -213,6 +213,23 @@ fn una_cartella_fatta_a_mano_si_apre_e_somma_le_scansioni() {
 }
 
 #[test]
+fn il_tic_di_un_ms2_letto_dopo_l_indice_leggero_e_lo_stesso() {
+    let apri = || mzlab_lettori::apri(cartella(blocco2(), tdf_tipo(3, 2)), &limiti()).unwrap();
+    let mut l = apri();
+    let pieno = l.indice(0).unwrap().to_vec();
+    assert_eq!((pieno.len(), pieno[0].livello, pieno[0].tic), (1, 2, 35.0));
+    let mut l = apri();
+    assert_eq!(l.indice_leggero(0).unwrap().len(), 1);
+    let s = l.scansione(0, 0).unwrap();
+    assert_eq!(
+        (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum::<f64>(),
+        35.0
+    );
+    // the pass filled the TIC: the full index reads nothing more and says the same
+    assert_eq!(l.indice(0).unwrap(), &pieno[..]);
+}
+
+#[test]
 fn zstd_falso_e_blocchi_guasti_sono_errori_con_chiave() {
     let chiave = |bin: Vec<u8>, np: i64| {
         let mut l = mzlab_lettori::apri(cartella(bin, tdf_minimo(np)), &limiti()).unwrap();

@@ -19,7 +19,7 @@
 `t = DigitizerDelay + DigitizerTimebase·tof`. Con `k = 1e6/√C1`, `u = t − C0 + C2·C4`, `s = 2u / (k + √(k² + 4·C2·u))`, `m/z = s² − C4`. Nessuno spostamento di centratura. Correzione di temperatura per frame: `m/z · (1 − 1e-6·(dC1·(T1frame − T1cal) + dC2·(T2frame − T2cal)))`. Costanti non finite o `C1 ≤ 0` danno un errore con chiave, non numeri.
 
 ## Intensità
-Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` della tabella `Frames` sono normalizzati a 100 ms: il TIC dell'indice è `SummedIntensities·AccumulationTime/100`. Indici TOF uguali nello stesso spettro si sommano (msconvert li lascia come punti separati: stesse somme).
+Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` della tabella `Frames` sono normalizzati a 100 ms: il TIC dell'indice è `SummedIntensities·AccumulationTime/100`; quello di uno spettro MS2 è la somma dei suoi punti, fatta da `indice` (`completa`) o tenuta da `scansione` quando lo spettro si legge: `indice_leggero` (`.mzidx`, mzML) non decodifica i frame MS2 in anticipo. Indici TOF uguali nello stesso spettro si sommano (msconvert li lascia come punti separati: stesse somme).
 
 ## Spettri
 - `MsMsType` 0 (MS1): un frame è uno spettro, mobilità sommata.

@@ -52,7 +52,7 @@ pub(crate) fn righe_prima<'a>(
 
 fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima<'_>>) -> Result<Table> {
     let mut rows = righe_vuote(l, c)?;
-    let n = l.indice(c)?.len();
+    let n = l.indice_leggero(c)?.len();
     for k in 0..n {
         let s = spettro(l, c, k)?;
         riga(&mut rows, l, k, &s, prima.as_deref_mut())?;
@@ -115,7 +115,7 @@ pub(crate) fn righe_prima_doppie(
 ) -> Result<(Table, Table)> {
     let mut rows = righe_vuote(l.semplice(), c)?;
     let mut rows_cen = righe_vuote(l, c)?;
-    let n = l.indice(c)?.len();
+    let n = l.indice_leggero(c)?.len();
     for k in 0..n {
         let s = taglia(l.grezza(c, k)?)?;
         riga(&mut rows, l.semplice(), k, &s, Some(&mut *prima))?;

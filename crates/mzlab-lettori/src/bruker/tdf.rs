@@ -79,7 +79,7 @@ impl LettoreBruker {
             testata,
             campioni,
             indice: Vec::new(),
-            tic_noto: false,
+            tic_noto: Vec::new(),
             cache: None,
             sha1: None,
             compressione,
@@ -107,7 +107,7 @@ impl LettoreBruker {
                 posizione: None,
             });
         }
-        self.tic_noto = self.desc.iter().all(|d| d.livello == 1);
+        self.tic_noto = self.desc.iter().map(|d| d.livello == 1).collect();
     }
 
     fn uno(&self, c: usize) -> Result<()> {
@@ -178,6 +178,9 @@ impl LettoreBruker {
             })?
             .clone();
         let (tof, y, profilo) = self.punti(&d)?;
+        if !self.tic_noto[k] {
+            (self.indice[k].tic, self.tic_noto[k]) = (y.iter().sum(), true);
+        }
         let largo = y.iter().any(|&x| x > 16_777_216.0);
         let fattore = cal.fattore(f.t1, f.t2);
         let mz: Vec<f64> = tof.iter().map(|&t| cal.mz(t) * fattore).collect();
@@ -197,21 +200,16 @@ impl LettoreBruker {
         })
     }
 
-    /// The TIC of the spectra cut from a frame, summed from their points (a frame's own sum is in `Frames`).
+    /// The TIC of the spectra cut from a frame, summed from their points (a frame's own sum is in `Frames`); a spectrum already read has its sum (`spettro` keeps it), so after a full pass this reads nothing.
     fn completa(&mut self) -> Result<()> {
-        if self.tic_noto {
-            return Ok(());
-        }
         for k in 0..self.desc.len() {
-            if self.desc[k].livello != 1 {
+            if !self.tic_noto[k] {
                 // a frame that cannot be read leaves a 0: the error comes when the spectrum itself is asked for
                 let d = self.desc[k].clone();
-                if let Some(t) = self.somma_punti(&d) {
-                    self.indice[k].tic = t;
-                }
+                (self.indice[k].tic, self.tic_noto[k]) =
+                    (self.somma_punti(&d).unwrap_or(0.0), true);
             }
         }
-        self.tic_noto = true;
         Ok(())
     }
 
@@ -302,6 +300,10 @@ impl Lettore for LettoreBruker {
         self.uno(c)?;
         self.completa()?;
         Ok(&self.indice)
+    }
+
+    fn indice_leggero(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.uno(c).map(|_| &self.indice[..])
     }
 
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
@@ -489,7 +491,8 @@ pub struct LettoreBruker {
     testata: Testata,
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
-    tic_noto: bool,
+    /// per spectrum: is `indice[k].tic` its sum (survey scans from `Frames`, the others once read)
+    tic_noto: Vec<bool>,
     cache: Option<(usize, Picchi)>,
     sha1: Option<Option<String>>,
     compressione: u32,

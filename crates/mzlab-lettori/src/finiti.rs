@@ -57,6 +57,24 @@ fn spettro(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
     Ok(s)
 }
 
+/// RT and TIC of every row of an index are finite numbers.
+fn finito(voci: &[VoceScansione]) -> Result<()> {
+    for v in voci {
+        for (cosa, x) in [("rt", v.rt), ("tic", v.tic)] {
+            if !x.is_finite() {
+                return Err(guasto("scan", &v.id, cosa, x));
+            }
+        }
+    }
+    Ok(())
+}
+
+impl Finiti {
+    fn visto(&self, c: usize) -> bool {
+        self.visti.get(c).copied().unwrap_or(false)
+    }
+}
+
 impl Lettore for Finiti {
     fn formato(&self) -> Formato {
         self.inner.formato()
@@ -65,20 +83,22 @@ impl Lettore for Finiti {
         self.inner.campioni()
     }
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        if !self.visti.get(c).copied().unwrap_or(false) {
-            for v in self.inner.indice(c)? {
-                for (cosa, x) in [("rt", v.rt), ("tic", v.tic)] {
-                    if !x.is_finite() {
-                        return Err(guasto("scan", &v.id, cosa, x));
-                    }
-                }
-            }
+        if !self.visto(c) {
+            finito(self.inner.indice(c)?)?;
             if self.visti.len() <= c {
                 self.visti.resize(c + 1, false);
             }
             self.visti[c] = true;
         }
         self.inner.indice(c)
+    }
+    fn indice_leggero(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        if self.visto(c) {
+            return self.inner.indice(c);
+        }
+        // checked every time: the TIC the full index sums later is checked by `indice`
+        finito(self.inner.indice_leggero(c)?)?;
+        self.inner.indice_leggero(c)
     }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         spettro(self.inner.scansione(c, k), k)

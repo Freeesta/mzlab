@@ -98,6 +98,7 @@ impl LettoreMzxml {
             "0" => true,
             _ => self.cabina.centroidi == Some(false),
         };
+        self.somme_da(k, &p);
         let s = Spectrum {
             index: k,
             id: v.id,
@@ -134,6 +135,19 @@ impl LettoreMzxml {
             }
         }
         Ok(())
+    }
+
+    /// The TIC and base peak intensity a decoded scan gives, kept where the attributes did not say them (the same sums as `somme_picchi`):
+    /// after a full pass `completa` has nothing left to parse.
+    fn somme_da(&mut self, k: usize, p: &scan::Picchi) {
+        let y = |&x: &f64| if p.a_64_bit { x } else { f64::from(x as f32) };
+        if !self.tic_noto[k] {
+            self.indice[k].tic = p.intensita.iter().map(y).sum();
+            self.tic_noto[k] = true;
+        }
+        if self.bpi[k].is_none() {
+            self.bpi[k] = Some(p.intensita.iter().map(y).fold(0.0, f64::max));
+        }
     }
 
     /// TIC and base peak intensity of scan `k` from its peaks, without building the spectrum.
@@ -212,6 +226,11 @@ impl Lettore for LettoreMzxml {
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         self.completa(true)?;
+        Ok(&self.indice)
+    }
+
+    fn indice_leggero(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.uno(c)?;
         Ok(&self.indice)
     }
 

@@ -161,6 +161,26 @@ fn the_tic_summed_from_the_points_is_that_of_the_scans_read() {
 }
 
 #[test]
+fn the_light_index_and_a_pass_give_the_full_index() {
+    let s: Vec<Vec<(f64, f64)>> = (0..5)
+        .map(|k| {
+            (0..10 + k)
+                .map(|i| (100.0 + i as f64, 1.0 + ((i * 3 + k) % 7) as f64 * 0.7))
+                .collect()
+        })
+        .collect();
+    for tipo_it in [4, 5, 6] {
+        let b = file(&s, 6, tipo_it, true, false);
+        let pieno = apri(b.clone()).0.indice(0).unwrap().to_vec();
+        let (mut l, _) = apri(b);
+        for k in 0..l.indice_leggero(0).unwrap().len() {
+            l.scansione(0, k).unwrap();
+        }
+        assert_eq!(l.indice(0).unwrap(), &pieno[..], "type {tipo_it}");
+    }
+}
+
+#[test]
 fn a_long_spectrum_crosses_windows_and_takes_few_reads() {
     let punti = |k: usize| -> Vec<(f64, f64)> {
         (0..40_000)

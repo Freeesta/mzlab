@@ -162,12 +162,17 @@ pub fn blocco2() -> Vec<u8> {
 }
 
 pub fn tdf_minimo(num_peaks: i64) -> Vec<u8> {
+    tdf_tipo(num_peaks, 0)
+}
+
+/// `tdf_minimo` with `MsMsType` `msms`; 2 (MRM) adds the frame's `FrameMsMsInfo` row, so its spectrum is an MS2 one.
+pub fn tdf_tipo(num_peaks: i64, msms: i64) -> Vec<u8> {
     let frames = foglia(&[vec![
         V::N,
         V::R(1.0),
         V::T("+"),
         V::I(0),
-        V::I(0),
+        V::I(msms),
         V::I(0),
         V::I(100),
         V::I(50),
@@ -193,8 +198,13 @@ pub fn tdf_minimo(num_peaks: i64) -> Vec<u8> {
         V::R(0.0),
         V::R(0.0),
     ]]);
-    db(&[
+    let info = foglia(&[vec![V::N, V::R(500.0), V::R(1.0), V::N, V::R(20.0)]]);
+    let mut t = vec![
         ("Frames", "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL, Polarity TEXT, ScanMode INTEGER, MsMsType INTEGER, TimsId INTEGER, SummedIntensities INTEGER, MaxIntensity INTEGER, NumScans INTEGER, NumPeaks INTEGER, MzCalibration INTEGER, T1 REAL, T2 REAL, AccumulationTime REAL)", frames),
         ("MzCalibration", "CREATE TABLE MzCalibration (Id INTEGER PRIMARY KEY, ModelType INTEGER, DigitizerTimebase REAL, DigitizerDelay REAL, C0 REAL, C1 REAL, C2 REAL, C3 REAL, C4 REAL, T1 REAL, T2 REAL, dC1 REAL, dC2 REAL)", cal),
-    ])
+    ];
+    if msms == 2 {
+        t.push(("FrameMsMsInfo", "CREATE TABLE FrameMsMsInfo (Frame INTEGER PRIMARY KEY, TriggerMass REAL, IsolationWidth REAL, PrecursorCharge INTEGER, CollisionEnergy REAL)", info));
+    }
+    db(&t)
 }

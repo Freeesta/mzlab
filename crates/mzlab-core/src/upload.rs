@@ -311,7 +311,7 @@ pub fn indicizza_lettore_con(
     let membri = membri()?;
     let p = dalla_tabella(t, l, c, &membri, name)?;
     fase(3);
-    let n = l.indice(c)?.len();
+    let n = l.indice_leggero(c)?.len();
     let st = crate::mzidx::build_dopo(
         &p.table,
         prima,
@@ -351,7 +351,7 @@ pub fn indicizza_lettore_doppio(
     let p = dalla_tabella(t, l.semplice(), c, &membri, name)?;
     let p_cen = dalla_tabella(t_cen, l.semplice(), c, &membri, name)?;
     fase(3);
-    let n = l.indice(c)?.len();
+    let n = l.indice_leggero(c)?.len();
     let st = crate::mzidx::build_dopo(
         &p.table,
         prima,
@@ -421,7 +421,7 @@ fn dalla_tabella(
     membri: &[Impronta],
     name: &str,
 ) -> Result<Prepared> {
-    let scans_json = mzidx_lettore::rows_json(&mut t, l.indice(c)?).into_bytes();
+    let scans_json = mzidx_lettore::rows_json(&mut t, l.indice_leggero(c)?).into_bytes();
     let campione = l
         .campioni()
         .get(c)

@@ -188,6 +188,11 @@ pub trait Lettore {
     fn campioni(&self) -> &[Campione];
     /// The scans of sample `c`, in the order of time.
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]>;
+    /// The index for a caller that reads every scan next (the `.mzidx` build, the mzML writer): the same rows as `indice`, but a `tic` the reader sums
+    /// from the points may still be 0 (those callers sum the points themselves), so a reader that sums them does not decode the whole file one more time.
+    fn indice_leggero(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.indice(c)
+    }
     /// Scan `k` of the index of sample `c`.
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum>;
     /// Scan `k` for a caller that holds the index already (the module of the readers, `trasporto.rs`): the points, level, polarity, profile, RT and precursor as `scansione`

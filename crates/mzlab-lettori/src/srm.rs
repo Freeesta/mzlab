@@ -235,6 +235,9 @@ impl Lettore for SrmDaScansioni {
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.inner.indice(c)
     }
+    fn indice_leggero(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.inner.indice_leggero(c)
+    }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.inner.scansione(c, k)
     }

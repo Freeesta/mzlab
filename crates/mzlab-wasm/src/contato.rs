@@ -49,6 +49,7 @@ impl Lettore for Contato {
     fn formato(&self) -> lettori::Formato { self.l.formato() }
     fn campioni(&self) -> &[lettori::Campione] { self.l.campioni() }
     fn indice(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.indice(c) }
+    fn indice_leggero(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.indice_leggero(c) }
     fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scansione(c, k); self.conta(c); s }
     fn scansione_dati(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scansione_dati(c, k); self.conta(c); s }
     fn intestazione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Campo>> { self.l.intestazione(c, k) }

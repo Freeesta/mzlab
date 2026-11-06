@@ -101,6 +101,30 @@ fn tic_e_bpc_si_calcolano_dai_picchi_quando_il_file_non_li_dice() {
 }
 
 #[test]
+fn dopo_l_indice_leggero_e_un_giro_l_indice_e_quello_pieno() {
+    let scan = corsa();
+    for opz in opzioni() {
+        let b = mzxml(
+            &scan,
+            Opz {
+                attributi: false,
+                ..opz
+            },
+        );
+        let pieno = apri_mzxml(b.clone()).indice(0).unwrap().to_vec();
+        let mut l = apri_mzxml(b);
+        let n = l.indice_leggero(0).unwrap().len();
+        assert_eq!(n, pieno.len());
+        for k in 0..n {
+            l.scansione(0, k).unwrap();
+        }
+        assert_eq!(l.indice(0).unwrap(), &pieno[..]);
+        let bpc = l.cromatogramma(0, "BPC").unwrap();
+        assert!(bpc.intensity.iter().all(|&x| x > 0.0));
+    }
+}
+
+#[test]
 fn le_scansioni_srm_diventano_cromatogrammi() {
     let mut scan = Vec::new();
     for (k, rt) in [6.0, 7.0, 8.0].iter().enumerate() {

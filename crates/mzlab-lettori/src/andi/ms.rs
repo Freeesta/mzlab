@@ -91,7 +91,7 @@ impl LettoreAndi {
         let tempo = col(self, "scan_acquisition_time")?;
         let tot = col(self, "total_intensity")?;
         let (lo, hi) = (col(self, "mass_range_min")?, col(self, "mass_range_max")?);
-        self.tic_noto = tot.is_some();
+        self.tic_noto = vec![tot.is_some(); n];
         let pol = self.tratti();
         for k in 0..n {
             let rt = match &tempo {
@@ -183,6 +183,9 @@ impl LettoreAndi {
             .cloned()
             .ok_or_else(|| indice_cattivo(k))?;
         let (mz, it, largo) = self.punti_di(k)?;
+        if !self.tic_noto[k] {
+            (self.indice[k].tic, self.tic_noto[k]) = (somma(&it, largo), true);
+        }
         Ok(Spectrum {
             index: k,
             id: v.id,
@@ -200,18 +203,12 @@ impl LettoreAndi {
 
     /// The TIC of the scans whose file has no `total_intensity`, summed from their points.
     fn completa(&mut self) -> Result<()> {
-        if self.tic_noto {
-            return Ok(());
-        }
         for k in 0..self.indice.len() {
-            let (_, it, largo) = self.punti_di(k)?;
-            // the sum of what `Spectrum::intensity_f64` gives: the narrow types are summed as f32
-            self.indice[k].tic = it
-                .iter()
-                .map(|&x| if largo { x } else { f64::from(x as f32) })
-                .sum();
+            if !self.tic_noto[k] {
+                let (_, it, largo) = self.punti_di(k)?;
+                (self.indice[k].tic, self.tic_noto[k]) = (somma(&it, largo), true);
+            }
         }
-        self.tic_noto = true;
         Ok(())
     }
 
@@ -270,6 +267,10 @@ impl Lettore for LettoreAndi {
         self.uno(c)?;
         self.completa()?;
         Ok(&self.indice)
+    }
+
+    fn indice_leggero(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.uno(c).map(|_| &self.indice[..])
     }
 
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
@@ -371,8 +372,8 @@ pub struct LettoreAndi {
     conti: Vec<u64>,
     /// The mass range of each scan, when the file says it.
     finestre: Vec<Option<(f64, f64)>>,
-    /// Whether the TIC of the scans is that of the file (else it is summed from the points when asked).
-    tic_noto: bool,
+    /// Per scan: is its TIC that of the file or already summed from its points (`spettro` keeps the sum).
+    tic_noto: Vec<bool>,
     profilo: bool,
     sim: bool,
     sha1: Option<Option<String>>,
@@ -412,6 +413,13 @@ fn colonna(
     Ok(Some(x))
 }
 
+/// The sum of what `Spectrum::intensity_f64` gives: the narrow types are summed as f32.
+fn somma(it: &[f64], largo: bool) -> f64 {
+    it.iter()
+        .map(|&x| if largo { x } else { f64::from(x as f32) })
+        .sum()
+}
+
 fn indice_cattivo(k: usize) -> Error {
     Error::new("error.badIndex").with("k", k)
 }
@@ -447,7 +455,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         inizi: Vec::new(),
         conti: Vec::new(),
         finestre: Vec::new(),
-        tic_noto: false,
+        tic_noto: Vec::new(),
         profilo: false,
         sim: false,
         sha1: None,

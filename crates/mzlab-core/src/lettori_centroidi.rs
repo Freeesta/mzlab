@@ -103,6 +103,9 @@ impl Lettore for Centroidato {
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.l.indice(c)
     }
+    fn indice_leggero(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.l.indice_leggero(c)
+    }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let mut s = match self.ultima.take() {
             Some((cc, kk, s)) if cc == c && kk == k => s,

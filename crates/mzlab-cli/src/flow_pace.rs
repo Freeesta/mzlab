@@ -336,6 +336,7 @@ impl Lettore for Scans<'_, '_> {
     fn formato(&self) -> Formato { self.l.formato() }
     fn campioni(&self) -> &[Campione] { self.l.campioni() }
     fn indice(&mut self, c: usize) -> mzlab_core::Result<&[VoceScansione]> { self.l.indice(c) }
+    fn indice_leggero(&mut self, c: usize) -> mzlab_core::Result<&[VoceScansione]> { self.l.indice_leggero(c) }
     fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scansione(c, k); self.count(c); s }
     fn scansione_dati(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scansione_dati(c, k); self.count(c); s }
     fn scansione_profilo(&mut self, c: usize, k: usize) -> mzlab_core::Result<Option<Spectrum>> { self.l.scansione_profilo(c, k) }
