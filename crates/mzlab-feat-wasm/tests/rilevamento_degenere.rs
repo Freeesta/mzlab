@@ -10,7 +10,7 @@ use mzlab_feat_wasm::run;
 const FULL: &str = "FTMS + p ESI Full ms [100.0000-1000.0000]";
 
 /// An HR index of the scans `(m/z, intensity)`, one every 0.01 min, or the refusal of the upload.
-fn index(scans: &[(Vec<f64>, Vec<f32>)]) -> Result<Index<Vec<u8>>, String> {
+fn index(scans: &[Scan]) -> Result<Index<Vec<u8>>, String> {
     let mut w = MzmlWriter::new(Vec::new(), &Header::default()).unwrap();
     w.open_spectra(scans.len()).unwrap();
     for (s, (mz, it)) in scans.iter().enumerate() {
@@ -40,7 +40,7 @@ fn index(scans: &[(Vec<f64>, Vec<f32>)]) -> Result<Index<Vec<u8>>, String> {
 }
 
 /// Estimate, detection and weak candidates: their bytes, or the error key of the first step that refused.
-fn detect(scans: &[(Vec<f64>, Vec<f32>)]) -> Result<(Vec<u8>, Vec<u8>), String> {
+fn detect(scans: &[Scan]) -> Result<(Vec<u8>, Vec<u8>), String> {
     let mut ix = index(scans)?;
     let r = run::recipe_for_estimated("", &mut ix).map_err(|e| e.to_string())?;
     let a = run::detect(&mut ix, "d", &r).map_err(|e| e.to_string())?;
@@ -52,29 +52,63 @@ fn gauss(s: usize, apex: f64, h: f64) -> f32 {
     (h * (-0.5 * ((s as f64 - apex) / 4.0).powi(2)).exp()) as f32
 }
 
+/// One scan: m/z ascending, intensities.
+type Scan = (Vec<f64>, Vec<f32>);
+
+/// `n` noise peaks of scan `s`, spread over 100-1000 and sorted by m/z.
+fn noise(s: usize, n: usize) -> Scan {
+    let mut mz: Vec<f64> = (0..n)
+        .map(|k| 100.0 + 900.0 * ((k * 7919 + s * 104_729) % 100_003) as f64 / 100_003.0)
+        .collect();
+    mz.sort_by(f64::total_cmp);
+    let it = (0..n)
+        .map(|k| (1e3 + ((k * 31 + s * 17) % 997) as f64) as f32)
+        .collect();
+    (mz, it)
+}
+
+/// A compound (M and its 13C isotope) eluting around scan 30.
+fn peak(s: usize) -> Scan {
+    (
+        vec![250.1234, 251.1268],
+        vec![gauss(s, 30.0, 1e7), gauss(s, 30.0, 1e6)],
+    )
+}
+
+/// 60 scans of 50 noise peaks with the intensities `bad` written at the slots `(s + offset) % 50`.
+fn spoiled(bad: &[(usize, f32)], moving: bool) -> Vec<Scan> {
+    (0..60)
+        .map(|s| {
+            let (mz, mut it) = noise(s, 50);
+            for &(off, v) in bad {
+                it[(if moving { s } else { 0 } + off) % 50] = v;
+            }
+            (mz, it)
+        })
+        .collect()
+}
+
+/// 60 scans of noise of varying length plus the compound, merged in m/z order.
+fn unequal() -> Vec<Scan> {
+    (0..60)
+        .map(|s| {
+            let (mz, it) = noise(s, s * 13 % 300);
+            let (pm, pi) = peak(s);
+            let mut p: Vec<(f64, f32)> = mz
+                .into_iter()
+                .zip(it)
+                .chain(pm.into_iter().zip(pi))
+                .collect();
+            p.sort_by(|a, b| a.0.total_cmp(&b.0));
+            p.into_iter().unzip()
+        })
+        .collect()
+}
+
 /// The degenerate series, by name.
-fn cases() -> Vec<(&'static str, Vec<(Vec<f64>, Vec<f32>)>)> {
-    let noise = |s: usize, n: usize| -> (Vec<f64>, Vec<f32>) {
-        let mz: Vec<f64> = (0..n)
-            .map(|k| 100.0 + 900.0 * ((k * 7919 + s * 104_729) % 100_003) as f64 / 100_003.0)
-            .collect();
-        let mut mz = mz;
-        mz.sort_by(f64::total_cmp);
-        (
-            mz,
-            (0..n)
-                .map(|k| (1e3 + ((k * 31 + s * 17) % 997) as f64) as f32)
-                .collect(),
-        )
-    };
-    let peak = |s: usize| {
-        (
-            vec![250.1234, 251.1268],
-            vec![gauss(s, 30.0, 1e7), gauss(s, 30.0, 1e6)],
-        )
-    };
+fn cases() -> Vec<(&'static str, Vec<Scan>)> {
     vec![
-        ("no peaks", (0..60).map(|_| (vec![], vec![])).collect()),
+        ("no peaks", vec![(vec![], vec![]); 60]),
         ("one scan", vec![noise(0, 200)]),
         ("one scan one peak", vec![(vec![300.0], vec![5e6])]),
         (
@@ -83,46 +117,11 @@ fn cases() -> Vec<(&'static str, Vec<(Vec<f64>, Vec<f32>)>)> {
         ),
         (
             "nan and inf",
-            (0..60)
-                .map(|s| {
-                    let (mz, mut it) = noise(s, 50);
-                    it[s % 50] = f32::NAN;
-                    it[(s + 7) % 50] = f32::INFINITY;
-                    it[(s + 13) % 50] = -5.0;
-                    (mz, it)
-                })
-                .collect(),
+            spoiled(&[(0, f32::NAN), (7, f32::INFINITY), (13, -5.0)], true),
         ),
-        (
-            "nan only",
-            (0..60)
-                .map(|s| {
-                    let (mz, mut it) = noise(s, 50);
-                    it[3] = f32::NAN;
-                    (mz, it)
-                })
-                .collect(),
-        ),
-        (
-            "inf only",
-            (0..60)
-                .map(|s| {
-                    let (mz, mut it) = noise(s, 50);
-                    it[3] = f32::INFINITY;
-                    (mz, it)
-                })
-                .collect(),
-        ),
-        (
-            "negative only",
-            (0..60)
-                .map(|s| {
-                    let (mz, mut it) = noise(s, 50);
-                    it[3] = -5.0;
-                    (mz, it)
-                })
-                .collect(),
-        ),
+        ("nan only", spoiled(&[(3, f32::NAN)], false)),
+        ("inf only", spoiled(&[(3, f32::INFINITY)], false)),
+        ("negative only", spoiled(&[(3, -5.0)], false)),
         (
             "one m/z repeated",
             (0..60)
@@ -130,23 +129,7 @@ fn cases() -> Vec<(&'static str, Vec<(Vec<f64>, Vec<f32>)>)> {
                 .collect(),
         ),
         ("one compound", (0..60).map(peak).collect()),
-        (
-            "unequal counts",
-            (0..60)
-                .map(|s| {
-                    let (mut mz, mut it) = noise(s, s * 13 % 300);
-                    let (pm, pi) = peak(s);
-                    mz.extend(pm);
-                    it.extend(pi);
-                    let mut o: Vec<usize> = (0..mz.len()).collect();
-                    o.sort_by(|&a, &b| mz[a].total_cmp(&mz[b]));
-                    (
-                        o.iter().map(|&k| mz[k]).collect(),
-                        o.iter().map(|&k| it[k]).collect(),
-                    )
-                })
-                .collect(),
-        ),
+        ("unequal counts", unequal()),
     ]
 }
 
@@ -177,7 +160,7 @@ fn degenerate_series_end_cleanly_and_give_the_same_bytes_twice() {
 #[test]
 fn the_bytes_do_not_depend_on_the_spare_cores() {
     // 600 scans of 400 peaks: slabs large enough to be grouped by scan on several threads
-    let scans: Vec<(Vec<f64>, Vec<f32>)> = (0..600)
+    let scans: Vec<Scan> = (0..600)
         .map(|s| {
             let mut p: Vec<(f64, f32)> = (0..380)
                 .map(|k| {
