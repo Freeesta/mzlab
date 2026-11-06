@@ -94,20 +94,19 @@ impl Store {
         write_atomic(&dir, "kv.json", &Value::Object(m).to_string());
     }
 
-    /// The files whose path still exists, with the size and date they have now. The second value of each pair is true when the file changed since
-    /// it was registered (its index, if any, no longer belongs to it).
+    /// The files whose path still exists, with the size and date they have now. The third value is true when the file changed since it was
+    /// registered or last `restamp`ed (its index, if any, no longer belongs to it). The stored stamp is kept, so the flag stays until the owner of
+    /// the index restamps: a listing for another purpose (space, methods) cannot hide a change from the next boot.
     pub fn list(&mut self) -> Vec<(String, Entry, bool)> {
         self.load();
         let mut gone = Vec::new();
         let mut out = Vec::new();
-        for (name, e) in self.files.iter_mut() {
+        for (name, e) in &self.files {
             match e.stamp() {
                 None => gone.push(name.clone()),
                 Some((size, mtime)) => {
                     let changed = size != e.size || mtime != e.mtime;
-                    e.size = size;
-                    e.mtime = mtime;
-                    out.push((name.clone(), e.clone(), changed));
+                    out.push((name.clone(), Entry { size, mtime, ..e.clone() }, changed));
                 }
             }
         }
@@ -116,10 +115,25 @@ impl Store {
                 self.files.remove(n);
             }
             self.save_files();
-        } else if out.iter().any(|(_, _, c)| *c) {
-            self.save_files();
         }
         out
+    }
+
+    /// Stores `stamp` (size and date taken before an index of `name` was built or dropped) as the one its index belongs to.
+    pub fn restamp(&mut self, name: &str, stamp: (u64, u64)) {
+        self.load();
+        if let Some(e) = self.files.get_mut(name) {
+            if (e.size, e.mtime) != stamp {
+                (e.size, e.mtime) = stamp;
+                self.save_files();
+            }
+        }
+    }
+
+    /// Size and date of `name` now (of all its members for a native sample).
+    pub fn stamp_now(&mut self, name: &str) -> Option<(u64, u64)> {
+        self.load();
+        self.files.get(name)?.stamp()
     }
 
     pub fn get(&mut self, name: &str) -> Option<Entry> {
@@ -329,6 +343,10 @@ mod tests {
         assert_eq!(t.kv_get("notebook").as_deref(), Some("{\"session\":[]}"));
         std::fs::write(&f, b"<mzML>x</mzML>").unwrap();
         assert!(t.list()[0].2, "a changed file is flagged");
+        assert!(t.list()[0].2, "and stays flagged until restamped");
+        let now = t.stamp_now("a.mzML").unwrap();
+        t.restamp("a.mzML", now);
+        assert!(!t.list()[0].2, "restamped: the index belongs to the file again");
         std::fs::remove_file(&f).unwrap();
         assert!(t.list().is_empty(), "a file that is gone is forgotten");
     }
