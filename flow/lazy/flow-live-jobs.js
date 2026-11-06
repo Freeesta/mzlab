@@ -224,6 +224,18 @@
     });
   };
 
+  /** the table on port `port` of `inst`: the alignment (or gap filling) of the plan kept in OPFS, or the table a `table.filter` view of it stands for (`flow_table_of_view` of the `table` .wasm, the Rust
+   * `flow run` calls before a step that reads a table); `key` names it for the cache, `read` gives its bytes. null when this browser does not hold it @param {any} x @param {any} p @param {any} inst @param {string} port */
+  const tableOf = async (x, p, inst, port) => {
+    let up0 = x.inst(String(F.refs(inst, port)[0] || "").split(".")[0]), view = "";
+    if (up0 && base(up0) === "table.filter") { const f = x.files.get(up0.id); if (!f) return null; view = f.text; up0 = x.inst(String(F.refs(up0, "table")[0] || "").split(".")[0]); }
+    const isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
+    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    if (!alKey || !await has(p, DIR + alKey + ".mzfeat")) return null;
+    const read = async () => { const t = await p.fs.read(DIR + alKey + ".mzfeat"); return view ? (await p.ident("table", "flow_table_of_view", { table: t, view }, true)).bytes : t; };
+    return { key: view ? alKey + "\n" + await sha(view) : alKey, read };
+  };
+
   /** export.table_csv, export.mztab: the table file of the alignment (the table of a gap filling is the alignment's) with the polarity its recipe and its files give and the roles of the samples, from the `table` .wasm
    * (`export_table_auto`, the Rust `flow run` calls); kept like the MSn results under the key of the job. A table that is not this plan's alignment (or its filter view) or without samples stays with the computer
    * @param {any} x @param {any} spec @param {any} inst */
@@ -289,5 +301,5 @@
     });
   };
 
-  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "features.group": (...a) => F.webGroup.run(...a), "table.stats": (...a) => F.webStat.run(...a), "table.pca": (...a) => F.webStat.run(...a), "table.kmd": (...a) => F.webStat.run(...a), "chrom.transitions": (...a) => F.webTransitions.run(...a), "export.annotations": (...a) => F.webExportAnnot.run(...a), "export.inclusion": (...a) => F.webInclusion.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings, "qc.run_order": (...a) => F.webQcReport.runOrder(...a), "report.methods": (...a) => F.webQcReport.methods(...a) };
+  F.liveJobs = { msnKey, tableOf, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "features.group": (...a) => F.webGroup.run(...a), "table.stats": (...a) => F.webStat.run(...a), "table.pca": (...a) => F.webStat.run(...a), "table.kmd": (...a) => F.webStat.run(...a), "chrom.transitions": (...a) => F.webTransitions.run(...a), "export.annotations": (...a) => F.webExportAnnot.run(...a), "export.inclusion": (...a) => F.webInclusion.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings, "qc.run_order": (...a) => F.webQcReport.runOrder(...a), "report.methods": (...a) => F.webQcReport.methods(...a) };
 })();

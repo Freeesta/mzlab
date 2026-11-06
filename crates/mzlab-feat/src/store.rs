@@ -142,7 +142,10 @@ impl<W: WriteAt> Seq<'_, W> {
 }
 
 /// Directory of the arrays: `(name, dtype, count, offset from the start of the data)` and the length of the data.
-fn plan(cols: &[(&'static str, Col)], evid: usize) -> (Vec<(&'static str, &'static str, usize, usize)>, usize) {
+fn plan(
+    cols: &[(&'static str, Col)],
+    evid: usize,
+) -> (Vec<(&'static str, &'static str, usize, usize)>, usize) {
     let (mut dir, mut at) = (Vec::with_capacity(cols.len() + 1), 0usize);
     let items = cols.iter().map(|(n, c)| (*n, c.shape()));
     for (name, (dtype, count, size)) in items.chain([("evid", ("u8", evid, 1))]) {
@@ -165,18 +168,13 @@ fn adducts_json(j: &mut Out) {
 /// The JSON meta: format, versions, recipe, fingerprints, inputs, times, shape and directory of the arrays.
 fn meta_json(
     kind: &str,
-    r: &Recipe,
+    text: &str,
     o: &Origin,
     shape: &[(&str, usize)],
     extra: &str,
     dir: &[(&'static str, &'static str, usize, usize)],
 ) -> String {
     let mut j = Out::default();
-    let text = if kind == "file" {
-        r.file_text()
-    } else {
-        r.table_text()
-    };
     j.raw("{\"format\":")
         .str(kind)
         .raw(",\"version\":")
@@ -186,9 +184,9 @@ fn meta_json(
     j.raw(",\"feat_version\":")
         .int(crate::FEAT_VERSION as i64)
         .raw(",\"recipe\":")
-        .str(&text);
+        .str(text);
     j.raw(",\"recipe_hash\":")
-        .str(&crate::recipe::fingerprint(&text))
+        .str(&crate::recipe::fingerprint(text))
         .raw(",\"inputs\":[");
     for (i, (name, sha)) in o.inputs.iter().enumerate() {
         j.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
@@ -245,7 +243,7 @@ fn meta_json(
 fn write_container<W: WriteAt>(
     sink: &mut W,
     kind: &str,
-    r: &Recipe,
+    recipe: &str,
     o: &Origin,
     shape: &[(&str, usize)],
     extra: &str,
@@ -253,7 +251,7 @@ fn write_container<W: WriteAt>(
     evid: &mut dyn Section,
 ) -> Result<()> {
     let (dir, _) = plan(cols, evid.len());
-    let meta = meta_json(kind, r, o, shape, extra, &dir);
+    let meta = meta_json(kind, recipe, o, shape, extra, &dir);
     let mut seq = Seq {
         sink,
         pos: 0,
@@ -304,14 +302,28 @@ fn file_cols(f: &FileFeatures) -> Vec<(&'static str, Col<'_>)> {
 }
 
 /// Writes the `.mzfeatf` of one file to `sink`.
-pub fn write_file_to<W: WriteAt>(sink: &mut W, f: &FileFeatures, r: &Recipe, o: &Origin) -> Result<()> {
+pub fn write_file_to<W: WriteAt>(
+    sink: &mut W,
+    f: &FileFeatures,
+    r: &Recipe,
+    o: &Origin,
+) -> Result<()> {
     let mut cols = file_cols(f);
     if !f.q3.is_empty() {
         cols.push(("q3", Col::F64(&f.q3)));
     }
     let dt = [f.dt];
     cols.push(("dt", Col::F64(&dt)));
-    write_container(sink, "file", r, o, &[("rows", f.len())], "", &cols, &mut (&[][..]))
+    write_container(
+        sink,
+        "file",
+        &r.file_text(),
+        o,
+        &[("rows", f.len())],
+        "",
+        &cols,
+        &mut (&[][..]),
+    )
 }
 
 /// Bytes of the `.mzfeatf` of one file.
@@ -355,6 +367,25 @@ pub fn write_table_tp<W: WriteAt>(
     t: &Aligned,
     tp: &TpBlock,
     r: &Recipe,
+    o: &Origin,
+    evid: &mut dyn Section,
+) -> Result<()> {
+    write_table_recipe(sink, t, tp, &r.table_text(), o, evid)
+}
+
+/// Bytes of the `.mzfeat` of a series whose recipe is the text `recipe` of another table (`"recipe"` of its meta), with no block `tp/1` and no graph of the proofs.
+pub fn write_table_like(t: &Aligned, recipe: &str, o: &Origin) -> Vec<u8> {
+    let mut v = Vec::new();
+    write_table_recipe(&mut v, t, &TpBlock::default(), recipe, o, &mut (&[][..]))
+        .expect("a Vec grows");
+    v
+}
+
+fn write_table_recipe<W: WriteAt>(
+    sink: &mut W,
+    t: &Aligned,
+    tp: &TpBlock,
+    recipe: &str,
     o: &Origin,
     evid: &mut dyn Section,
 ) -> Result<()> {
@@ -408,8 +439,12 @@ pub fn write_table_tp<W: WriteAt>(
     if iso {
         shape.push(("isotopes", 1));
     }
-    let tp = if tp_cols(tp, &mut cols) { format!(",\"tp\":{}", tp.meta_json()) } else { String::new() };
-    write_container(sink, "table", r, o, &shape, &tp, &cols, evid)
+    let tp = if tp_cols(tp, &mut cols) {
+        format!(",\"tp\":{}", tp.meta_json())
+    } else {
+        String::new()
+    };
+    write_container(sink, "table", recipe, o, &shape, &tp, &cols, evid)
 }
 
 /// Bytes of the `.mzfeat` of a series with the graph of the proofs (`evid/1`, JSON bytes of `evid::graph_json`) in the `evid` section.
