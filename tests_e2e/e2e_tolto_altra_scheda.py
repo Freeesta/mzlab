@@ -1,5 +1,5 @@
 """A file removed in another tab: tab B still lists it (the tabs are not kept in step), and ticking it says that it was removed in another tab or
-window, with its name, instead of «This file cannot be read: {name}». Two tabs of one browser profile share the folder of the site. Synthetic files only."""
+window, with its name, instead of «This file cannot be read: {name}», which in its turn now names the file. Two tabs of one browser profile share the folder of the site. Synthetic files only."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import misura_lista_molti as mlm
@@ -40,6 +40,14 @@ try:
             assert b.evaluate(f"!ST.files.find(f => f.name === {name!r}).use"), "the row stays unticked"
             assert b.evaluate("E.files.filter(f => !f.gone).length") == 0
         step("ticking a row whose file another tab removed names the file and says where it went", removed_elsewhere)
+        def index_lost():
+            # the copy stays and only its index is gone: «This file cannot be read» with the name filled in
+            g = mlm.small_files(Path("/tmp/wd_tolto_altra_scheda_in2"), 1)[0]; name = os.path.basename(g)
+            a.set_input_files("#pick", [g]); attendi(a, f"UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone && f.file === {name!r})", 120000)
+            a.evaluate(f"(async () => {{ const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx'); await d.removeEntry({name + '.mzidx'!r}); }})()")
+            msg = a.evaluate(f"post('api/explore', {{ samples: [{{ file: {name!r}, time: 0, type: 'sample', conc: null, cunit: null, label: null }}], append: true }}).then(() => '', e => String(e.message || e))")
+            assert name in msg and "{name}" not in msg, f"message: {msg!r}"
+        step("an index lost alone names the file in «This file cannot be read»", index_lost)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
