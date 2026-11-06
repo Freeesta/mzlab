@@ -16,6 +16,8 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).replace("\n", " ")[:900]))
 RUN = """(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
   .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
+RUN_MINOR = """() => axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']}})
+  .then(r => r.violations.filter(v => ['moderate','minor'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
 def axe_ok(pg, sel="body"):
     if not pg.evaluate("typeof axe !== 'undefined'"): pg.add_script_tag(path=AXE)
     v = pg.evaluate(RUN, sel); assert not v, v
@@ -36,6 +38,13 @@ try:
         def info():
             pg.evaluate("BARRA.setTab('hdr')"); attendi(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0"); axe_ok(pg, "#hrinfo")
         step("axe: the information bar of the HR bench", info)
+        def info_minor():
+            pg.evaluate("BARRA.setTab('hdr')"); attendi(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0")
+            for th in ("light", "dark"):
+                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th)
+                v = pg.evaluate(RUN_MINOR); assert not v, (th, v)
+            pg.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
+        step("axe moderate/minor (best practice): the information bar of the HR bench, light and dark", info_minor)
         def calc():
             pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#sb-panel-addloss:not([hidden]) #calcin"); axe_ok(pg, "#sb-panel-addloss")
             for t in ("losses", "cont"):
