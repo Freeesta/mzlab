@@ -243,8 +243,8 @@ fn insert_if_new(list: &mut Vec<Pt>, p: Pt) {
     }
 }
 
-/// Candidate isotope peaks of the spectrum `(mz, y)` around `target_mz` for one charge: the point nearest to the target, then a walk down from the top
-/// of the spectrum (a point is kept if adding a difference of `diffs` lands on a candidate) and a walk up (a point is kept if subtracting one lands on
+/// Candidate isotope peaks of the spectrum `(mz, y)` around `target_mz` for one charge: the point nearest to the target, then a walk down from `t - 1`
+/// (a point is kept if adding a difference of `diffs` lands on a candidate) and a walk up (a point is kept if subtracting one lands on
 /// one), both stopping `max_diff` beyond the last accepted point. Ascending in m/z.
 pub fn find_candidates(
     diffs: &[f64],
@@ -260,7 +260,7 @@ pub fn find_candidates(
     let n = mz.len() as i64;
     let mut cands = vec![(mz[t], y[t])];
     let (mut m, mut last) = (mz[t], mz[t]);
-    let mut dp = n - 1;
+    let mut dp = t as i64 - 1;
     while dp >= 0 && m >= last - max_diff {
         m = mz[dp as usize];
         if possible_isotope(m, &cands, diffs, tol, false) {

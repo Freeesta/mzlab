@@ -183,3 +183,212 @@ mod selection {
         assert!(detect(&engine(true), &[100.0], &[1e5], 100.0, 1).is_none());
     }
 }
+
+fn possible_isotope_old(
+    mz: f64,
+    known: &[mzlab_feat::untargeted::isofinder::Pt],
+    diffs: &[f64],
+    tol: &Tol,
+    up: bool,
+) -> bool {
+    for d in diffs {
+        let theo = if up { mz - d } else { mz + d };
+        let t = tol.for_mass(theo);
+        for k in known.iter().rev() {
+            if up && theo - t > k.0 || !up && k.0 > theo + t {
+                break;
+            }
+            if k.0 >= theo - t && k.0 <= theo + t {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn insert_if_new_old(
+    list: &mut Vec<mzlab_feat::untargeted::isofinder::Pt>,
+    p: mzlab_feat::untargeted::isofinder::Pt,
+) {
+    for c in (0..list.len()).rev() {
+        if list[c].0 == p.0 {
+            return;
+        }
+        if list[c].0 < p.0 {
+            list.insert(c + 1, p);
+            return;
+        }
+    }
+}
+
+fn find_candidates_old(
+    diffs: &[f64],
+    max_diff: f64,
+    tol: &Tol,
+    mz: &[f64],
+    y: &[f64],
+    target_mz: f64,
+) -> Vec<mzlab_feat::untargeted::isofinder::Pt> {
+    let Some(t) = mzlab_feat::untargeted::isofinder::ladder::closest_index(mz, target_mz) else {
+        return Vec::new();
+    };
+    let n = mz.len() as i64;
+    let mut cands = vec![(mz[t], y[t])];
+    let (mut m, mut last) = (mz[t], mz[t]);
+    let mut dp = n - 1;
+    while dp >= 0 && m >= last - max_diff {
+        m = mz[dp as usize];
+        if possible_isotope_old(m, &cands, diffs, tol, false) {
+            cands.push((m, y[dp as usize]));
+            last = m;
+        }
+        dp -= 1;
+    }
+    cands.sort_by(|a, b| a.0.total_cmp(&b.0));
+    m = mz[t];
+    let mut max_mz = m;
+    dp += 1;
+    while dp < n && m <= max_mz + max_diff {
+        m = mz[dp as usize];
+        if possible_isotope_old(m, &cands, diffs, tol, true) {
+            let p = (m, y[dp as usize]);
+            if m > max_mz {
+                cands.push(p);
+                max_mz = m;
+            } else {
+                insert_if_new_old(&mut cands, p);
+            }
+        }
+        dp += 1;
+    }
+    cands.sort_by(|a, b| a.0.total_cmp(&b.0));
+    cands
+}
+
+fn isotope_diffs_for(elements: &[&str], max_charge: i32) -> Vec<Vec<f64>> {
+    let mut out = vec![Vec::new(); max_charge as usize];
+    for el in elements {
+        let iso = mzlab_core::isoscore::isotopes_of(el).unwrap();
+        for i in 0..iso.len() {
+            for j in i + 1..iso.len() {
+                for z in 1..=max_charge {
+                    out[z as usize - 1].push((iso[j].0 - iso[i].0) / z as f64);
+                }
+            }
+        }
+    }
+    out.iter_mut().for_each(|d| d.sort_by(f64::total_cmp));
+    out
+}
+
+fn next_rand(state: &mut u64) -> f64 {
+    let mut x = *state;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    *state = x;
+    (x >> 11) as f64 * (1.0 / ((1u64 << 53) as f64))
+}
+
+fn make_random_spectrum(
+    spec_idx: usize,
+    max_charge: i32,
+    rng: &mut u64,
+) -> (Vec<f64>, Vec<f64>, f64) {
+    let as_f32 = spec_idx % 2 == 1;
+    let base_len = [1, 2, 8, 32, 120, 300][spec_idx % 6];
+    let mut pairs = Vec::with_capacity(base_len + 16);
+    let mut cur_mz = 80.0 + next_rand(rng) * 900.0;
+    for _ in 0..base_len {
+        let r = *rng;
+        let step = if r % 7 == 0 {
+            0.0
+        } else if r % 5 == 0 {
+            (1.0033548378 / ((r % 5 + 1) as f64)) + (next_rand(rng) - 0.5) * 0.008
+        } else {
+            next_rand(rng) * 4.5
+        };
+        cur_mz += step;
+        let inten = 1e2 + next_rand(rng) * 1e7;
+        pairs.push(if as_f32 {
+            (cur_mz as f32 as f64, inten as f32 as f64)
+        } else {
+            (cur_mz, inten)
+        });
+    }
+    let cluster_z = (spec_idx % max_charge as usize) + 1;
+    let cluster_m0 = 150.0 + next_rand(rng) * 600.0;
+    for iso_k in -2..=4 {
+        let m = cluster_m0
+            + (iso_k as f64) * (1.0033548378 / cluster_z as f64)
+            + (next_rand(rng) - 0.5) * 0.002;
+        let inten = 1e4 + next_rand(rng) * 5e6;
+        let pt = if as_f32 {
+            (m as f32 as f64, inten as f32 as f64)
+        } else {
+            (m, inten)
+        };
+        pairs.push(pt);
+        if *rng % 4 == 0 {
+            pairs.push((pt.0, pt.1 * 0.5));
+        }
+    }
+    pairs.sort_by(|a, b| a.0.total_cmp(&b.0));
+    (
+        pairs.iter().map(|p| p.0).collect(),
+        pairs.iter().map(|p| p.1).collect(),
+        cluster_m0,
+    )
+}
+
+#[test]
+fn find_candidates_from_t_minus_1_is_bit_identical_on_3000_random_spectra() {
+    let max_charge = 5;
+    let diffs_all = isotope_diffs_for(&["H", "C", "N", "O", "S", "Cl", "Br", "Si"], max_charge);
+    let tols = [
+        Tol {
+            abs: 0.005,
+            ppm: 15.0,
+        },
+        Tol {
+            abs: 0.002,
+            ppm: 5.0,
+        },
+        Tol {
+            abs: 0.015,
+            ppm: 25.0,
+        },
+    ];
+    let mut rng = 0x9E37_79B9_7F4A_7C15u64;
+    for spec_idx in 0..3_000 {
+        let tol = tols[spec_idx % tols.len()];
+        let (mz, y, cluster_m0) = make_random_spectrum(spec_idx, max_charge, &mut rng);
+        let n = mz.len();
+        let targets = [
+            mz[0] - 5.0,
+            mz[0],
+            mz[n / 2],
+            mz[n - 1],
+            mz[n - 1] + 5.0,
+            cluster_m0,
+        ];
+        for &target_mz in &targets {
+            for z in 1..=max_charge {
+                let diffs = &diffs_all[z as usize - 1];
+                let last_d = diffs.last().copied().unwrap_or(0.0);
+                let max_diff = last_d + 10.0 * tol.for_mass(last_d);
+                let old_c = find_candidates_old(diffs, max_diff, &tol, &mz, &y, target_mz);
+                let new_c = mzlab_feat::untargeted::isofinder::find_candidates(
+                    diffs, max_diff, &tol, &mz, &y, target_mz,
+                );
+                assert_eq!(old_c.len(), new_c.len(), "spec={spec_idx} z={z}");
+                for (pa, pb) in old_c.iter().zip(new_c.iter()) {
+                    assert_eq!(
+                        (pa.0.to_bits(), pa.1.to_bits()),
+                        (pb.0.to_bits(), pb.1.to_bits())
+                    );
+                }
+            }
+        }
+    }
+}
