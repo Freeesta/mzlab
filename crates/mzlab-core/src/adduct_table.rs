@@ -150,7 +150,8 @@ fn rows_json(
     let mut best: Option<(usize, f64)> = None;
     for (i, (a, &s)) in CATALOG.iter().zip(shifts).enumerate() {
         let (k, z) = (f64::from(a.k), f64::from(a.z.abs()));
-        let mz = m.map(|x| (k * x + s) / z);
+        // an ion or a neutral mass at or below zero is no candidate (m/z 1 typed, the formula H as [M-2H]2-): null, an empty cell
+        let mz = m.map(|x| (k * x + s) / z).filter(|c| round(*c, 4) > 0.0);
         let ppm = mz.zip(obs).map(|(c, v)| (v - c) / c * 1e6);
         if let Some(p) = ppm.filter(|p| p.abs() <= tol)
             && best.is_none_or(|(_, b)| p.abs() < b.abs())
@@ -186,7 +187,7 @@ fn rows_json(
             .opt(mz.map(|c| round_half_up(c, 0)));
         o.raw(",\"ppm\":").opt(ppm.map(|p| round(p, 2)));
         o.raw(",\"m_if\":")
-            .opt(obs.map(|v| round((v * z - s) / k, 4)))
+            .opt(obs.map(|v| round((v * z - s) / k, 4)).filter(|x| *x > 0.0))
             .raw("}");
     }
     best.map(|(i, _)| i)
