@@ -15,6 +15,7 @@ def step(name, fn):
 D = HERE / "shots" / "integra_modi_tmp"; D.mkdir(parents=True, exist_ok=True)
 LRF = D / "B_FullMass-t30.mzML"
 ds.full_scan(LRF, 30, np.random.default_rng(2026))
+IB = {"zero": 1, "line": 2}
 PN = "E.panels.find(q=>q.type==='xic')"
 IT = PN + ".ints[0]"
 
@@ -34,11 +35,18 @@ def mode(pg, m, level=False):
     pg.check(f"#bigdlg input[name=ib-m][value={m}]")
     if level: pg.check("#ib-lvl")
     pg.click("#ib-ok"); attendi(pg, "!document.querySelector('#bigdlg').open")
-    attendi(pg, f"Number.isFinite({IT}.area) && ({IT}.bm||'edges')===%r" % m)
+    attendi(pg, f"({IT}.bm||'edges')===%r" % m)
+    if m in IB: settle(pg, m)
     return pg.evaluate(f"(()=>{{const i={IT};return {{area:i.area,below:i.below,height:i.height,rt:i.rt,bm:i.bm,bl:i.bl}}}})()")
 
 def engine(pg, m, line=None):
     return json.loads(pg.evaluate(f"(([m,l])=>{{const p={PN},s=p._a.sr[0],i={IT};return QUALITA.peakArea(s.x,s.y,i.a,i.b,m,l)}})", [m, line or []]))
+
+def settle(pg, m):
+    """until the engine answers the panel shows the previous measure: wait for the engine's number for the record's current line"""
+    e = engine(pg, IB[m], pg.evaluate(f"{IT}.bl||[]"))
+    attendi(pg, f"{IT}.area==={e['area']!r} && {IT}.below==={e['below']!r}")
+    return e
 
 def point(pg, k):
     b = pg.locator(f".ibp[data-k='{k}']").bounding_box(); return b["x"] + b["width"] / 2, b["y"] + b["height"] / 2, b
@@ -75,7 +83,7 @@ try:
             before = pg.evaluate(f"{IT}.bl.slice()")
             pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x, y - 60, steps=6); pg.mouse.up()
             attendi(pg, f"{IT}.bl[1]>{before[1]}")
-            attendi(pg, f"Number.isFinite({IT}.area) && {IT}.area<{res['line']}")
+            settle(pg, "line"); assert pg.evaluate(f"{IT}.area") < res["line"]
             v = pg.evaluate(f"(()=>{{const i={IT};return {{a:i.area,b:i.below,bl:i.bl}}}})()"); e = engine(pg, 2, v["bl"])
             assert v["a"] == e["area"] and v["b"] == e["below"], (v, e)
         step("mouse: dragging point 1 up lowers the area, the engine's number", mouse)
@@ -84,7 +92,7 @@ try:
             for _ in range(8): pg.keyboard.press("Shift+ArrowUp")
             pg.keyboard.press("ArrowLeft")
             attendi(pg, f"{IT}.bl[3]>{y0} && {IT}.bl[2]<{t0}")
-            attendi(pg, f"{IT}.below>0")                                            # the line now cuts through the peak
+            settle(pg, "line"); assert pg.evaluate(f"{IT}.below") > 0               # the line now cuts through the peak
             v = pg.evaluate(f"(()=>{{const i={IT};return {{a:i.area,b:i.below,bl:i.bl}}}})()"); e = engine(pg, 2, v["bl"])
             assert v["a"] == e["area"] and v["b"] == e["below"] > 0, (v, e)
             assert pg.locator(".ibp[data-k='1']").get_attribute("aria-label"), "no accessible name"
@@ -126,7 +134,7 @@ try:
             y1 = tp.evaluate(f"{IT}.bl[1]"); cdp = tp.context.new_cdp_session(tp)
             ev = lambda t, yy: cdp.send("Input.dispatchTouchEvent", {"type": t, "touchPoints": [] if t == "touchEnd" else [{"x": x, "y": yy}]})
             ev("touchStart", y); [ev("touchMove", y - 8 * k) for k in range(1, 6)]; ev("touchEnd", y - 40)
-            attendi(tp, f"{IT}.bl[1]>{y1}")
+            attendi(tp, f"{IT}.bl[1]>{y1}"); settle(tp, "line")
             v = tp.evaluate(f"(()=>{{const i={IT};return {{a:i.area,bl:i.bl}}}})()"); e = engine(tp, 2, v["bl"])
             assert v["a"] == e["area"], (v, e)
             tp.screenshot(path=str(D / "modi-touch.png")); tp.close()
