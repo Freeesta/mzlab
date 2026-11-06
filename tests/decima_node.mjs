@@ -1,5 +1,5 @@
 // Checks mzlab/web/decima.js against the point-by-point loop it replaced (grafici.js drawLines), on synthetic traces; prints one JSON object. See tests/test_decima.py.
-import { amax, amin, isSorted, m4, polyline, polylineScan, windowIdx } from "../mzlab/web/decima.js";
+import { amax, amin, hairline, isSorted, m4, polyline, polylineScan, windowIdx } from "../mzlab/web/decima.js";
 
 let seed = 12345;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -78,4 +78,7 @@ out.window_idx_bad = bad;
 const big = Float64Array.from({ length: 1000000 }, (_, i) => Math.sin(i) * 1e3); big[777777] = 5e9; big[123456] = -7e9; big[5] = NaN;
 out.big = { max: amax(big), min: amin(big), range: amax(big, 0, 100), spread_throws: (() => { try { Math.max(...big); return false; } catch (e) { return e instanceof RangeError; } })() };
 out.sorted = [isSorted([1, 2, 2, 3]), isSorted([1, 3, 2])];
+// 1 px above half a point per pixel column, in the window only: 1000 points on 1000 px, 400 of them in a zoom 1000 px wide, 300 on 1000 px, an unsorted axis
+{ const x = Array.from({ length: 1000 }, (_, i) => i), X = r => r, Z = r => (r - 300) * 2.5;
+  out.hair = [hairline(x, 0, 999, X), hairline(x, 300, 700, Z), hairline(x, 300, 700, r => (r - 300) * 0.5), hairline(x.slice(0, 300), 0, 299, r => r * 3.4), hairline([3, 1, 2], 1, 3, r => r)]; }
 console.log(JSON.stringify(out));
