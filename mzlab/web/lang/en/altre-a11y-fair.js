@@ -116,6 +116,8 @@ I18N.add("en", {
   "export.int.q1": "Q1 (m/z)",
   "export.int.q3": "Q3 (m/z)",
   "export.int.transition": "Transition name",
+  "export.int.base": "Baseline",
+  "export.int.below": "Area below the line (counts·s)",
   "export.int.role.sample": "sample",
   "export.int.role.blank": "blank",
   "export.int.role.dark": "dark",
