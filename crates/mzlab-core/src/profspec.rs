@@ -14,7 +14,7 @@ const MAX_SCANS: usize = 60;
 
 impl<R: ReadAt> Routes<R> {
     /// m/z and intensity of the scans at the section positions `positions`, each in table order (m/z ascending).
-    fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
+    pub fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
         let mut out = vec![(Vec::new(), Vec::new()); positions.len()];
         if positions.is_empty() {
             return Ok(out);
@@ -33,7 +33,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `Item._step`: the spacing of the points, read from up to 20 scans in the middle of the run (the shortest gap above 1e-4 Da, to 4 decimals).
-    fn point_step(&mut self, si: usize) -> Result<Option<f64>> {
+    pub fn point_step(&mut self, si: usize) -> Result<Option<f64>> {
         let n_scans = self.idx.arrays(si)?.scan_ids.len();
         let mid = n_scans / 2;
         let positions: Vec<usize> = (mid..n_scans.min(mid + 20)).collect();
@@ -74,7 +74,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The spacing of the profile points of `level` when ALL its scans are profile and the file can be answered here.
-    pub(crate) fn profile_level(&mut self, level: u8) -> Result<Option<(usize, f64)>> {
+    pub fn profile_level(&mut self, level: u8) -> Result<Option<(usize, f64)>> {
         let of_level: Vec<&Scan> = self.idx.scans.iter().filter(|s| s.level == level).collect();
         let pool: Vec<&Scan> = if of_level.is_empty() { self.idx.scans.iter().collect() } else { of_level };
         if pool.is_empty() || pool.iter().any(|s| !s.profile) || of_level_count(&self.idx.scans, level) == 0 {
