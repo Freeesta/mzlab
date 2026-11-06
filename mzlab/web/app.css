@@ -31,7 +31,7 @@ button,select,input{font:inherit;color:var(--ink);background:var(--panel);border
 main{display:grid;grid-template-columns:minmax(380px,34%) 1fr;gap:10px;padding:10px 14px}
 @media (max-width:900px){main{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:var(--sp-4) 10px;margin-bottom:var(--sp-4)}
-.card h3{margin:0 0 6px;font-size:13px}.cartpick{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;padding:4px;margin:-4px -2px -4px 0}.cartpick[hidden]{display:none}@media (pointer:coarse){.cartpick{min-width:40px;min-height:40px}}.muted{color:var(--muted)}
+.card h3,#v-draw .card h2{margin:0 0 6px;font-size:13px}.cartpick{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;padding:4px;margin:-4px -2px -4px 0}.cartpick[hidden]{display:none}@media (pointer:coarse){.cartpick{min-width:40px;min-height:40px}}.muted{color:var(--muted)}
 input[aria-invalid="true"]{outline:2px solid var(--bad)}input.guess,select.guess,.guess{border:1px dashed var(--muted)}tr.grp td{background:var(--bg);font-weight:600;border-bottom:1px solid var(--line);padding:6px 6px 3px;font-size:.9em}table{border-collapse:collapse;width:100%}th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:3px 6px}
 td{padding:var(--row-py) 6px;border-bottom:1px solid var(--line);vertical-align:middle}tr.row{cursor:pointer}tr.row:hover{background:var(--sel)}tr.sel{background:var(--sel)}
 .num{text-align:right;font-variant-numeric:tabular-nums}

@@ -20,6 +20,18 @@ def axe(pg, ctx="document", exclude=None):
     if not pg.evaluate("typeof axe !== 'undefined'"): pg.add_script_tag(path=AXE)
     c = ctx if not exclude else "{include: [[%s]], exclude: [%s]}" % (ctx, ",".join("['%s']" % e for e in exclude))
     v = pg.evaluate(RUN % c); assert not v, v
+# moderate/minor (incl. best practice): no tolerance on the views listed in docs/agenti/a11y-da-sistemare.md
+KNOWN_MINOR = set()
+RUN_MINOR = ("axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']}}).then(r => r.violations"
+             ".filter(v => ['moderate','minor'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' ')).join(' | ')]))")
+def axe_minor(pg, view, exclude=None):
+    pg.click(f"#nav [data-v={view}]"); attendi(pg, f"!document.querySelector('#v-{view}').hidden")
+    if not pg.evaluate("typeof axe !== 'undefined'"): pg.add_script_tag(path=AXE)
+    c = "document" if not exclude else "{exclude: [%s]}" % ",".join("['%s']" % e for e in exclude)
+    for theme in ("light", "dark"):
+        pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme)
+        v = [x for x in pg.evaluate(RUN_MINOR % c) if x[0] not in KNOWN_MINOR]; assert not v, (theme, v)
+    pg.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
 D = synth("axe_rel")
 TMP = "/tmp/Esempio_FullScan_t15.mzML"; shutil.copy(str(ROOT / "mzlab" / "web" / "esempi" / "FullScan_t15.mzML"), TMP)
 r = Run(port=8868, wd="/tmp/wd_axe_rel")
@@ -41,6 +53,13 @@ try:
             attendi(pg, "!!(window.TPDraw && TPDraw.ready())", 60000)
             attendi(pg, "!!document.querySelector('#kframe')?.contentDocument?.querySelector('#tp-bar')", 60000); axe(pg, "'body'", ["#kframe"])
         step("axe: Disegno, outside the Ketcher iframe", draw)
+        def flow():
+            pg.click("#nav [data-v=flow]"); attendi(pg, "!!document.querySelector('#flx-root .flx-bar')", 60000); axe_minor(pg, "flow")
+        step("axe moderate/minor: Flow, light and dark", flow)
+        step("axe moderate/minor: Disegno outside the Ketcher iframe, light and dark", lambda: axe_minor(pg, "draw", ["#kframe"]))
+        def tabui():
+            pg.click("#nav [data-v=tpmine]"); attendi(pg, "!!document.querySelector('#tp-name')", 60000); axe_minor(pg, "tpmine")
+        step("axe moderate/minor: Tabui, light and dark", tabui)
         def tour():
             q = r.b.new_page(viewport={"width": 1500, "height": 1100}, reduced_motion="reduce")
             try:
