@@ -3,6 +3,6 @@ Obiettivo WCAG 2.2 AA; lettore di schermo di riferimento VoiceOver (macOS/iPad),
 - **Regole tollerate**: nessuna.
 - **Stati non coperti da axe in e2e_a11y_dati**: albero MSn, tour guidato (coperti invece da `e2e_axe_release.py`), finestre di integrazione e calcolatrice, app desktop. Per il quadro completo si veda [accessibilita.md](accessibilita.md).
 - **Coperti da test propri**: il Banco HR, il pannello formule e la barra informativa da `e2e_a11y_hr.py` (axe, nomi, Tab con fuoco visibile, bersagli ≥24 px, aree live); Disegno fuori dall'iframe di Ketcher da `e2e_a11y_disegno.py` (axe nei temi chiaro e scuro, nomi, Tab senza trappola, bersagli, annuncio del caricamento); ogni pagina di Pratica, in schema chiaro e scuro, da `e2e_a11y_pratica.py`.
-- **Livelli non controllati**: violazioni axe `moderate`/`minor`; l'ordine di lettura e le etichette dei grafici (`TDATI` dà l'alternativa testuale ma nessuno ha provato un lettore di schermo).
+- **Livelli non controllati**: violazioni axe `moderate`/`minor` fuori dalla vista Dati (dentro, il test non ne tollera nessuna); l'ordine di lettura e le etichette dei grafici (`TDATI` dà l'alternativa testuale ma nessuno ha provato un lettore di schermo).
 - **Tastiera**: il test verifica che Tab raggiunga almeno il 90 % dei comandi visibili e che ognuno mostri un indicatore del fuoco; non cerca trappole del fuoco dentro i grafici né l'ordine di Tab.
 - **Contrasto**: le legende con voce spenta (`.leg .tg.off`, opacità .38) non sono coperte dal test finché nessuno le spegne; vanno controllate se il test le spegne.

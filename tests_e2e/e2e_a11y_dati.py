@@ -1,4 +1,4 @@
-"""Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on six states,
+"""Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included; moderate/minor best practice on the Data view) on six states,
 keyboard only (every visible control reachable with Tab, visible focus, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
 and reduced motion. Known gaps live in docs/agenti/a11y-da-sistemare.md and in KNOWN below (an id there is reported but does not fail).
 Unlike e2e_axe_grafici this test does NOT skip when axe is missing: in CI that is a failure."""
@@ -19,6 +19,8 @@ def step(name, fn):
 r = Run(port=8868, wd="/tmp/wd_a11y")
 RUN = """(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
   .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
+RUN_MINOR = """() => axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']}})
+  .then(r => r.violations.filter(v => ['moderate','minor'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
 def axe_ok(pg, sel="body"):
     v = [x for x in pg.evaluate(RUN, sel) if x[0] not in KNOWN]; assert not v, v
 VISIBLE = """() => [...document.querySelectorAll('button, select, input:not([type=hidden]), a[href], [role=button], [role=tab], [tabindex="0"], summary')]
@@ -39,6 +41,9 @@ try:
         def mappa():
             pg.evaluate("addPanel('map',{tab:'full'})"); pg.wait_for_timeout(2500); ready(pg); axe_ok(pg)
         step("axe: RT x m/z map", mappa)
+        def minor():
+            pg.evaluate("setTab('full')"); attendi(pg, "E.tab === 'full'"); v = pg.evaluate(RUN_MINOR); assert not v, v
+        step("axe moderate/minor (best practice): Data view", minor)
         def settings():
             pg.click("#np-set"); pg.wait_for_selector("#uipset", state="visible"); axe_ok(pg)
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
