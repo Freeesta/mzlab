@@ -145,6 +145,7 @@ impl State {
     pub(crate) fn lr_index(&self, name: &str) -> Result<Answer> {
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let t0 = std::time::Instant::now();
+        let before = self.store.lock().unwrap_or_else(|e| e.into_inner()).stamp_now(name);   // taken before the build: a change during it stays flagged
         // the mapped old index goes before the build replaces its file (a mapped file cannot be replaced on Windows); the next request opens the new one
         self.drop_lr_index(name);
         let missing = if let Some(nat) = &e.nat {
@@ -153,6 +154,9 @@ impl State {
             self.indexer()?.build(&e.path, name, None)?.missing
         };
         self.drop_lr_index(name);
+        if let Some(st) = before {
+            self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(name, st);
+        }
         // missing: the spectra the file declares beyond the ones it holds (the row of the loading warns, as on the site)
         text(format!("{{\"ms\":{},\"missing\":{missing}}}", t0.elapsed().as_millis()))
     }
