@@ -95,3 +95,40 @@ fn a_changed_index_is_opened_again_not_copied() {
     assert_eq!(name(&again), name(&ix.get(0).unwrap()));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn past_the_cap_an_index_is_opened_on_demand() {
+    use crate::flow_base::flow_indexes::{weight, Indexes};
+    let (dir, _) = fixture("opens_cap");
+    let out = dir.join("out");
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&dir.join("data")),
+        "--out",
+        p(&out),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let names = ["idx-s_t000.mzidx", "idx-s_t010.mzidx", "idx-s_t030.mzidx"];
+    let paths: Vec<PathBuf> = names.iter().map(|f| out.join(f)).collect();
+    let mut ix = Indexes::open(&paths).unwrap();
+    assert_eq!(ix.all().len(), 3);
+    // room for the first index only: the other two are opened in full at each use, the first is copied
+    ix.keep(weight(&ix.all()[0]) + weight(&ix.all()[1]) - 1);
+    assert_eq!(ix.all().len(), 1);
+    let _ = take(&out);
+    let seen =
+        |i: &mzlab_core::idxread::Index<std::fs::File>| (i.scans.len(), format!("{:?}", i.source));
+    for (k, path) in paths.iter().enumerate() {
+        let opened = crate::flow_base::open(path).unwrap();
+        assert_eq!(seen(&ix.get(k).unwrap()), seen(&opened));
+    }
+    let n = |f: &str, c: usize| (f.to_string(), c);
+    assert_eq!(
+        take(&out),
+        vec![n(names[0], 1), n(names[1], 2), n(names[2], 2)]
+    );
+    ix.keep(0);
+    assert!(ix.all().is_empty());
+    let _ = std::fs::remove_dir_all(&dir);
+}

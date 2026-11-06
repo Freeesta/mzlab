@@ -235,9 +235,10 @@ fn align_recipe(
 /// Each index is opened once: the check of the kind, the recipe, the facts of the files and the filling read copies of it (`flow_indexes`).
 pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let lin = align_lineage(r, job)?;
-    let indexes = Indexes::open(&lin.index)?;
+    let mut indexes = Indexes::open(&lin.index)?;
     // one table holds one polarity and one resolution, as in the browser (`align_series_to`)
     mzlab_feat::nature::one_kind_of(indexes.all())?;
+    indexes.keep(flow_indexes::KEEP_BYTES);
     let first = lin
         .first
         .as_ref()
