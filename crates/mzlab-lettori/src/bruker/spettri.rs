@@ -150,13 +150,28 @@ fn riga_prm(d: &Dati, fi: usize, righe: &[usize], out: &mut Vec<Desc>) {
     }
 }
 
+/// The point ranges of `p` in the scan ranges `scan`, merged first so that overlapping ranges do not count a point twice.
+pub fn tratti(p: &Picchi, scan: &[(u32, u32)]) -> Vec<std::ops::Range<usize>> {
+    let mut r: Vec<(u32, u32)> = scan.iter().copied().filter(|x| x.0 < x.1).collect();
+    r.sort_unstable();
+    let mut uniti: Vec<(u32, u32)> = Vec::with_capacity(r.len());
+    for (a, b) in r {
+        match uniti.last_mut() {
+            Some(u) if a <= u.1 => u.1 = u.1.max(b),
+            _ => uniti.push((a, b)),
+        }
+    }
+    uniti.into_iter().map(|(a, b)| p.punti(a, b)).collect()
+}
+
 /// The points of `p` whose scan is in one of `scan`, added by TOF index (ordered by TOF, and so by m/z).
 pub fn somma(p: &Picchi, scan: &[(u32, u32)]) -> Vec<(u32, u64)> {
-    let mut v: Vec<(u32, u32)> = (0..p.len())
-        .filter(|&i| scan.iter().any(|&(a, b)| p.scan[i] >= a && p.scan[i] < b))
-        .map(|i| (p.tof[i], p.int[i]))
-        .collect();
-    v.sort_unstable_by_key(|x| x.0);
+    let t = tratti(p, scan);
+    let mut v: Vec<(u32, u32)> = Vec::with_capacity(t.iter().map(ExactSizeIterator::len).sum());
+    for r in t {
+        v.extend(r.map(|i| (p.tof[i], p.int[i])));
+    }
+    ordina_tof(&mut v);
     let mut out: Vec<(u32, u64)> = Vec::with_capacity(v.len());
     for (t, y) in v {
         match out.last_mut() {
@@ -165,4 +180,36 @@ pub fn somma(p: &Picchi, scan: &[(u32, u32)]) -> Vec<(u32, u64)> {
         }
     }
     out
+}
+
+/// Sorts by TOF index: least-significant-digit radix on 11-bit digits for many points (a MS1 frame), the library sort for a few. Equal TOF indices are added
+/// afterwards, so the order among them does not matter.
+fn ordina_tof(v: &mut Vec<(u32, u32)>) {
+    const BIT: u32 = 11;
+    if v.len() < 1024 {
+        v.sort_unstable_by_key(|x| x.0);
+        return;
+    }
+    let max = v.iter().map(|x| x.0).max().unwrap_or(0);
+    let mut tmp = vec![(0u32, 0u32); v.len()];
+    let mut shift = 0;
+    while shift < 32 && (max >> shift) > 0 {
+        let mut conta = [0usize; 1 << BIT];
+        for x in v.iter() {
+            conta[((x.0 >> shift) & ((1 << BIT) - 1)) as usize] += 1;
+        }
+        let mut pos = 0;
+        for c in conta.iter_mut() {
+            let n = *c;
+            *c = pos;
+            pos += n;
+        }
+        for &x in v.iter() {
+            let d = ((x.0 >> shift) & ((1 << BIT) - 1)) as usize;
+            tmp[conta[d]] = x;
+            conta[d] += 1;
+        }
+        std::mem::swap(v, &mut tmp);
+        shift += BIT;
+    }
 }
