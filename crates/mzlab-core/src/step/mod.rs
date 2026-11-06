@@ -37,6 +37,10 @@ pub enum DataType {
 }
 
 impl DataType {
+    /// The format a datum of this type has unless its port says otherwise: a `table` is a `.mzfeat`.
+    pub fn default_format(self) -> Option<&'static str> {
+        (self == DataType::Table).then_some("mzfeat")
+    }
     pub const ALL: [DataType; 20] = [
         DataType::Raw,
         DataType::Mzml,
@@ -111,6 +115,10 @@ pub struct Port {
     pub requires: Facets,
     /// An output the step writes only on a condition: the check refuses a wire to it when the instance does not meet it.
     pub written_if: Option<WrittenIf>,
+    /// The format an output writes when its type alone does not say it (`filtri/1` typed `table`); none = the default of its type.
+    pub format: Option<&'static str>,
+    /// The formats an input reads; empty = the default of its type, from a source of its own type only.
+    pub formats: Vec<&'static str>,
 }
 
 /// The condition of an output: its input `input` is wired and, with `param`, that parameter (resolved) is not `not`.
@@ -131,6 +139,8 @@ impl Port {
             accepts: Vec::new(),
             requires: Facets::default(),
             written_if: None,
+            format: None,
+            formats: Vec::new(),
         }
     }
     pub fn many(mut self) -> Port {
@@ -143,6 +153,16 @@ impl Port {
     }
     pub fn requires(mut self, f: Facets) -> Port {
         self.requires = f;
+        self
+    }
+    /// The format this output writes.
+    pub fn format(mut self, f: &'static str) -> Port {
+        self.format = Some(f);
+        self
+    }
+    /// The formats this input reads.
+    pub fn formats(mut self, f: &[&'static str]) -> Port {
+        self.formats = f.to_vec();
         self
     }
     /// Written only when `input` is wired and, with `param`, that parameter is not the given value.

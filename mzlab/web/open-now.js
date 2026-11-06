@@ -116,7 +116,8 @@ const OPENNOW = /** @type {any} */ ((() => {
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
   const many = async (/** @type {number} */ n) => (await rare()).many(n);
-  return { add, hold, held: (/** @type {string} */ n) => held.has(n), idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length, batchShown: () => batchShown, noAuto: () => { autoShown = true; },
+  return { add, hold, held: (/** @type {string} */ n) => held.has(n), release: (/** @type {string} */ n) => { held.delete(n); return n === cur || q.includes(n); },      // true: still on its way in, nothing to add
+    idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length, batchShown: () => batchShown, noAuto: () => { autoShown = true; },
     /** what the queue waits on (the message of a test that timed out) */
     state: () => ({ busy, q: q.slice(), cur, ms: cur ? Date.now() - t0 : 0, ahead: q.filter(ahead) }) };
 })());

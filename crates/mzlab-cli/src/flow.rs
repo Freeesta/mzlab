@@ -44,7 +44,7 @@ pub fn table_step() -> Step {
     let number = |name, title| Param::number(name, title).min(0.0);
     Step {
         ins: vec![Port::new("source", DataType::Raw, "Vendor files or mzML, one series").many().accepts(&[DataType::Mzml])],
-        outs: vec![Port::new("report", DataType::Report, "Feature table as CSV")],
+        outs: vec![Port::new("report", DataType::Report, "Feature table as CSV").format("csv")],
         params: vec![
             Param::choice_num("polarity", "Polarity", &[-1.0, 1.0]),
             Param::choice("mode", "Grouping", &["family", "ion"]),
