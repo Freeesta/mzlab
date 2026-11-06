@@ -168,6 +168,8 @@ I18N.add("it", {
   "tree.col.prec": "Precursore",
   "tree.empty": "quasi vuoto",
   "tree.clickNode": "Clic su un nodo: i suoi picchi.",
+  "tree.tbl.aria": "Albero MSn: tabella dei nodi",
+  "tree.pk.aria": "Picchi del nodo selezionato",
   "tree.xlsx.prefix": "albero_MSn_",
   "tree.xlsx.paths": "Percorsi",
   "tree.xlsx.peaks": "Picchi",
