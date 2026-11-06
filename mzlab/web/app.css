@@ -528,7 +528,7 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 #al-ctl .cq-ctl{margin:2px 0 6px;align-items:center;flex-wrap:nowrap;gap:3px}#al-ctl .cq-ctl .seg button{padding:2px 5px;min-width:0}#al-ctl .cq-tolf{gap:4px!important}#al-ctl .cq-tolf input{width:4ch!important;padding-left:2px;padding-right:2px}#al-ctl .cq-tl{font-size:12px}
 .cq-tolf{flex-direction:row!important;align-items:center;gap:6px!important;flex:none!important}
 .cq-tolf input{width:6ch!important;min-width:0;text-align:right;margin:0!important;min-height:32px;box-sizing:border-box;font-variant-numeric:tabular-nums}
-#al-tabs{display:flex;margin:4px 0 2px}#al-tabs button{flex:1 1 auto;min-width:0;min-height:32px;line-height:1.15;padding:2px 4px}
+#al-tabs{display:flex;flex-wrap:wrap;margin:4px 0 2px}#al-tabs button{flex:1 1 0;min-height:32px;line-height:1.15;padding:2px 4px}
 #al-tabs .cq-n[hidden]{display:none}
 #al-tabs [aria-selected="true"] .cq-n{color:inherit;border-color:currentColor}
 .al-body .cq-flat .cq-l{margin-left:0;list-style:none}.al-body .cq-flat .cq-l li{border-bottom:1px solid var(--line);padding:4px 2px;margin:0}
