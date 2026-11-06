@@ -321,10 +321,10 @@ function addPanel(type, o, after) {
   const onSize = () => {
     if (skip > 0) { skip--; return; }
     if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
-    FRAME.cancel(p._raf); p._raf = FRAME.next(() => draw(p));
+    FRAME.cancel(p._raf); p._raf = FRAME.next(() => drawSized(p));
     fitHdNow(p);
   };
-  const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap to more lines
+  const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap
   // full screen of THIS panel (any panel, also the ones added later): the button, Esc, and the graph is redrawn at the new size on the way in and out
   const fsB = el.querySelector('[data-a="max"]');
   p._setMax = (/** @type {boolean} */ on) => {
