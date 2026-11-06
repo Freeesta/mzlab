@@ -380,7 +380,7 @@ try:
             q.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true && typeof ST !== 'undefined'", timeout=30000)
             want = ["an.mzML", "gz.mzML", "l.mzML", "nc.mzML", "np.mzML", "q.mzML", "xm.mzML"]
             q.evaluate("document.getElementById('drop').click()")
-            q.wait_for_function("(w) => w.every(n => ST.files.some(f => f.name === n && OPENNOW.isOpen(n))) && UPBUSY === 0 && OPENNOW.busy() === 0", arg=want, timeout=180000)
+            q.wait_for_function(f"{json.dumps(want)}.every(n => ST.files.some(f => f.name === n && OPENNOW.isOpen(n))) && UPBUSY === 0 && OPENNOW.busy() === 0", timeout=180000)
             got = q.evaluate("ST.files.map(f => [f.name, f.n_spectra || f.scans || 0]).sort()")
             assert [g[0] for g in got] == want and all(g[1] > 0 for g in got), got
             assert not q.evaluate("CONV.files.size"), "nothing went to a readers module of the page"
