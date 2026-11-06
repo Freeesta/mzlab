@@ -111,8 +111,12 @@ try:
             assert not small, f"touch targets under 24x24 px: {small}"
         step("iPad: the × of the dialogs, «Skip the tour» and the file checkbox are at least 24x24 px", targets)
         def tap_outside():
-            pg = ipad(b, extra=IOS_TOUCH); cdp = pg.context.new_cdp_session(pg)
+            pg = ipad(b, extra=IOS_TOUCH); cdp = pg.context.new_cdp_session(pg) if BROWSER == "chromium" else None
             def touch(x, y, ms=0):
+                if not cdp:     # WebKit has no CDP: a tap is Playwright's, a long press is the right click it ends in (touch.js)
+                    if ms: pg.evaluate(f"document.elementFromPoint({x}, {y}).dispatchEvent(new MouseEvent('contextmenu', {{ bubbles: true, cancelable: true, clientX: {x}, clientY: {y} }}))")
+                    else: pg.touchscreen.tap(x, y)
+                    hold(pg, 300); return
                 cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y}]})
                 if ms: hold(pg, ms)
                 cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); hold(pg, 300)
