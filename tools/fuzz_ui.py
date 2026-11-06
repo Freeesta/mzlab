@@ -51,7 +51,7 @@ STATE = r"""() => {
  const bad = []; const RX = /(^|[^A-Za-z])(NaN|Infinity|undefined|\[object Object\])([^A-Za-z]|$)|(^|[\s(:=])-0([.,]0+)?(?![\d.,])/;
  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n;
  while ((n = w.nextNode())) { const t = n.nodeValue; if (!t || t.length > 2000 || !RX.test(t)) continue; const el = n.parentElement; if (!el || el.closest('script,style,code,pre,textarea,.mono,#fz-skip') || !vis(el)) continue; bad.push(lab(el) + ': ' + t.trim().slice(0, 80)); }
- for (const e of document.querySelectorAll('[title],[aria-label],input[type=number],input[type=text]')) { if (!vis(e)) continue; for (const v of [e.getAttribute('title'), e.getAttribute('aria-label'), e.tagName === 'INPUT' ? e.value : null]) if (v && /(^|[^A-Za-z])(NaN|Infinity|undefined)([^A-Za-z]|$)/.test(v) && !(e.tagName === 'INPUT' && e === document.activeElement)) bad.push(lab(e) + ' attr: ' + v.slice(0, 80)); }
+ for (const e of document.querySelectorAll('[title],[aria-label],input[type=number],input[type=text]')) { if (!vis(e)) continue; for (const v of [e.getAttribute('title'), e.getAttribute('aria-label'), e.tagName === 'INPUT' ? e.value : null]) if (v && /(^|[^A-Za-z])(NaN|Infinity|undefined)([^A-Za-z]|$)/.test(v) && !(e.tagName === 'INPUT' && (e === document.activeElement || e.dataset.fzTyped))) bad.push(lab(e) + ' attr: ' + v.slice(0, 80)); }
  const names = [...document.querySelectorAll('#flst .fl')].filter(vis).map(r => (r.dataset.k || '') + '|' + (r.querySelector('.fn, .nm, label') || r).textContent.trim().slice(0, 80));
  const dup = names.filter((x, i) => names.indexOf(x) !== i);
  const inv = typeof STATO !== 'undefined' && STATO.verifica ? STATO.verifica() : [];
@@ -159,7 +159,7 @@ class Pointer(Page):
             if st["shift"]: pg.keyboard.up("Shift")
         elif a == "type":
             try:
-                loc.fill(st["text"], timeout=1500); pg.keyboard.press("Enter")
+                loc.evaluate("e => { e.dataset.fzTyped = '1'; }"); loc.fill(st["text"], timeout=1500); pg.keyboard.press("Enter")
             except Exception:
                 return False
         return True

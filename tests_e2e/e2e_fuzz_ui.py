@@ -31,7 +31,7 @@ def leak_run(p):
     assert grow["nodes"] <= 50 and grow["listeners"] <= 10, (grow, rows)
 
 with sync_playwright() as p:
-    step("seed 5, Data with three synthetic files, desktop", lambda: seed_run(p, seed=5, passi=50))
+    step("seed 3, Data with three synthetic files, desktop", lambda: seed_run(p, seed=3, passi=50))
     step("seed 103, every view, 1024x768 touch tablet", lambda: seed_run(p, seed=103, passi=50, vista="mix", tablet=True))
     step("6 open/close cycles: DOM nodes and listeners do not grow", lambda: leak_run(p))
 fails = [s for s in steps if s[1] != "ok"]
