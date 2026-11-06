@@ -9,22 +9,23 @@
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
     const W = /** @type {any} */ (window), dt = k => (W.TPHELP ? ` data-tt="${k}"` : "");
     sec.innerHTML = `<div class="tp-wrap">
+<h1 class="tp-sr">Tabui</h1>
 <div class="tp-tools"><button type="button" id="tp-sb" aria-controls="tp-left" aria-pressed="false" aria-label="Hide the loading panel">Hide panel</button></div>
 <div class="tp">
 <div id="tp-left">
- <div class="card"><h3>1 · Files</h3>
+ <div class="card"><h2>1 · Files</h2>
   <div class="row"><button id="tp-page" title="Reload the files open in the Data tab">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-rmall" type="button" aria-label="Remove all the files" hidden>Remove all</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden>
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div>
   <details id="tp-cond" hidden><summary title="Label each file with its condition">Conditions of the files</summary><div id="tp-cfiles"></div></details><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
- <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div><div id="tp-reatt"></div><div id="tp-reatt-ctl" hidden></div>
+ <div class="card"><h2>2 · Parent compound</h2><div id="tp-struct"></div><div id="tp-reatt"></div><div id="tp-reatt-ctl" hidden></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"${dt("ft.f.name")}><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
   <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false"${dt("ft.f.formula")}></div>
   <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"${dt("ft.f.smiles")}><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
   <div id="tp-warn" role="status"></div>
   <div class="row"><label class="mut" for="tp-add"${dt("ft.f.adduct")}>Adduct</label><select id="tp-add"${dt("ft.f.adduct")}><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
   <div class="row"><label class="mut grow" for="tp-prt"${dt("ft.f.prt")}>RT (min)</label><input type="number" id="tp-prt"${dt("ft.f.prt")} step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
- <div class="card"><h3>3 · Settings</h3>
+ <div class="card"><h2>3 · Settings</h2>
   <div class="row"><button id="tp-est" type="button" title="Low resolution: proposes XIC window, RT tolerance and start from the loaded files">Estimate from data</button></div>
   <div class="row"><label class="mut grow" id="tp-tol-l" for="tp-tol"${dt("ft.f.tol")}>XIC ±Da</label><input type="number" id="tp-tol"${dt("ft.f.tol")} value="0.35" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow" for="tp-rtt"${dt("ft.f.rtt")}>RT ±min</label><input type="number" id="tp-rtt"${dt("ft.f.rtt")} value="0.25" step="0.05" min="0.05" style="width:70px"></div>
@@ -34,7 +35,7 @@
   <div class="row"><label id="tp-disc-h"${dt("ft.f.disc")}><input type="checkbox" id="tp-disc" checked> Unexpected ions</label></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
  <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
- <div class="card" id="tp-untcard"><h3>Feature tables</h3><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
+ <div class="card" id="tp-untcard"><h2>Feature tables</h2><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: Tabui calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and shows the prediction of each transformation (Prev. N). The identification level is yours to decide.</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
