@@ -59,9 +59,9 @@ KEPT = """async () => {
 }"""
 # the record of a run whose alignment failed: the jobs as the scheduler reports them (the gap filling blocked after it)
 FAILED = """async () => {
-  const x = FLOW.live.state(), item = x.plan.inputs[0].name;
-  const jobs = [{ instance: "idx", item, state: "reused" }, { instance: "det", item, state: "reused" },
-    { instance: "ali", item: null, state: "error", error_key: "err.flow.align.polarity", params: { positive: item, negative: "b.mzML" } }, { instance: "gap", item: null, state: "blocked" }];
+  const x = FLOW.live.state(), items = x.plan.inputs.map(i => i.name);
+  const jobs = [...items.map(item => ({ instance: "idx", item, state: "reused" })), ...items.map(item => ({ instance: "det", item, state: "reused" })),
+    { instance: "ali", item: null, state: "error", error_key: "err.flow.align.polarity", params: { positive: items[0], negative: "b.mzML" } }, { instance: "gap", item: null, state: "blocked" }];
   const r = await FLOW.webProv.record(x, jobs);
   const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow');
   return r && { prov: r.prov, kept: await (await (await d.getFileHandle('prov.json')).getFile()).text() };
@@ -119,7 +119,6 @@ try:
             r = pg.evaluate(FAILED); assert r, "a run with a failed job gave no record"
             web = json.loads(r["prov"]); nat = json.loads((run / "out" / "prov.json").read_text())
             assert r["kept"] == r["prov"], "the record of the failed run is not the one kept in OPFS"
-            assert "ali" in web["activity"], (sorted(web["activity"]), sorted(web["entity"]), {k: v.get("error") for k, v in web["activity"].items()})
             assert web["activity"]["ali"]["error"] == {"error_key": "err.flow.align.polarity", "params": {"positive": PLAN["inputs"][0]["name"], "negative": "b.mzML"}}, web["activity"]["ali"]
             assert "gap" not in web["activity"] and "gap.table" not in web["entity"], "the gap filling that did not run is in the record"
             for i in ("idx", "det"): assert blank(web["activity"][i]) == blank(nat["activity"][i]), (i, diff(blank(nat["activity"][i]), blank(web["activity"][i])))
