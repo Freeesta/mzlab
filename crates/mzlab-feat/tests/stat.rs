@@ -385,8 +385,8 @@ fn the_descriptors_carry_the_defaults_of_the_engine() {
     for id in ["table.stats", "table.pca", "table.kmd"] {
         let s = find(&reg, id).unwrap();
         assert!(
-            s.runs_in.wasm.is_none() && s.runs_in.native,
-            "{id} stays out of the .wasm table"
+            s.runs_in.wasm == Some("flowstat") && s.runs_in.native,
+            "{id} runs in the .wasm flowstat, not in table"
         );
     }
 }

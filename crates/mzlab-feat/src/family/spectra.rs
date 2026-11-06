@@ -61,6 +61,8 @@ fn best_scan(links: &Ms2Links, i: usize) -> Option<u32> {
 struct Top {
     mz: Vec<f64>,
     it: Vec<f64>,
+    /// Slot of the weakest kept peak (the first one on a tie) once the list is full; looked for again only after a replacement.
+    weakest: usize,
 }
 
 impl Top {
@@ -68,18 +70,27 @@ impl Top {
         if self.mz.len() < cap {
             self.mz.push(m);
             self.it.push(y);
+            if self.mz.len() == cap {
+                self.find_weakest();
+            }
             return;
         }
+        let w = self.weakest;
+        if w < self.it.len() && y > self.it[w] {
+            self.mz[w] = m;
+            self.it[w] = y;
+            self.find_weakest();
+        }
+    }
+
+    fn find_weakest(&mut self) {
         let mut w = 0;
         for k in 1..self.it.len() {
             if self.it[k] < self.it[w] {
                 w = k;
             }
         }
-        if y > self.it[w] {
-            self.mz[w] = m;
-            self.it[w] = y;
-        }
+        self.weakest = w;
     }
 }
 
@@ -140,3 +151,6 @@ pub fn gather<R: ReadAt>(
     }
     Ok(out)
 }
+
+#[cfg(test)]
+mod tests;

@@ -136,8 +136,8 @@ fn engine(files: &[File], areas: &[Vec<f64>], method: Method) -> String {
     let (_, meta) = mzlab_feat::store::read_table(&table(areas)).unwrap();
     let inputs = mzlab_feat::store::origin_from_meta(&meta).inputs;
     let json = campioni::to_json(&campioni_2(files));
-    let all = crate::flow_stats::samples_of(json.as_bytes()).unwrap();
-    let cols = crate::flow_stats::columns(&inputs, &all);
+    let all = mzlab_feat::samples::samples_of(json.as_bytes()).unwrap();
+    let cols = mzlab_feat::samples::columns(&inputs, &all);
     let b = batches_of(&cols, &design(files));
     let (t, _) = mzlab_feat::store::read_table(&table(areas)).unwrap();
     let d = correct(&t, &cols, &b, method).unwrap();

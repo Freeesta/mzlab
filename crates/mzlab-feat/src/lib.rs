@@ -55,6 +55,7 @@ pub mod flow_regulatory;
 #[cfg(feature = "attributio")]
 pub mod normative;
 pub mod flow_screen_suspects;
+pub mod flow_stat;
 pub mod gapfill;
 pub mod gruppi;
 pub mod hypo;
@@ -74,6 +75,7 @@ pub mod ms2;
 pub mod ms2spec;
 pub mod nature;
 pub mod norm;
+mod histbin;
 pub mod params;
 pub mod params_drift;
 pub mod params_height;

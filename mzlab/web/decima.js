@@ -115,6 +115,16 @@ export function polylineScan(x, y, x0, x1, X, V) {
   return out;
 }
 
+/** Points per pixel column above which a line is drawn 1 px wide: a wider stroke of a dense, jagged line (noise) costs tens of times more in a software canvas. */
+export const HAIR = 0.5;
+
+/** Whether the line of the points with x0 <= x <= x1 is drawn 1 px wide (more than HAIR points per pixel column; an unsorted x keeps the normal width). @param {Vec} x @param {number} x0 @param {number} x1 @param {(v: number) => number} X */
+export function hairline(x, x0, x1, X) {
+  if (!isSorted(x)) return false;
+  const [i0, i1] = windowIdx(x, x0, x1);
+  return i1 - i0 > Math.abs(X(x1) - X(x0)) * HAIR;
+}
+
 /**
  * Raw (unsmoothed) traces with more than `ppx` points per pixel: the highest value of each pixel column, joined by a thin line (peak envelope: no apex is lost, and the
  * line stays a line where first/lowest/highest/last per column fills the whole plot with a solid band). Fewer points per pixel (a zoom) or an unsorted x: polyline().

@@ -56,6 +56,8 @@ try:
         attendi(pg, "!!document.querySelector('.flx-tpl.show')")      # shown on the first screen: the button hides it, then shows it again
         pg.click('button[aria-label="Start from a template"]'); attendi(pg, "!document.querySelector('.flx-tpl.show')")
         pg.click('button[aria-label="Start from a template"]'); attendi(pg, "!!document.querySelector('.flx-tpl.show')")
+        pg.focus('.flx-tpl button:has-text("Start from scratch")'); pg.keyboard.press("Enter"); attendi(pg, "!document.querySelector('.flx-tpl.show')")
+        check("focus kept", pg.evaluate("document.activeElement.getAttribute('aria-label')") == "Start from a template", pg.evaluate("document.activeElement.tagName"))     # the card hides its own button
         w0 = pg.evaluate("document.querySelector('.flx-insp').getBoundingClientRect().width")
         pg.focus(".flx-split"); pg.keyboard.press("ArrowLeft"); pg.keyboard.press("ArrowLeft")
         check("split", pg.evaluate("document.querySelector('.flx-insp').getBoundingClientRect().width") > w0 + 50, str(w0))
