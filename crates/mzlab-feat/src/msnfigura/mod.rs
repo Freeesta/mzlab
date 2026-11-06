@@ -332,6 +332,22 @@ pub fn svg(graph: &str, vista: Vista) -> Result<String> {
     Ok(o + "</svg>\n")
 }
 
+/// The text of `msn.figure@1` in a format a library writes (`svg`, `html`), the bytes of `flow run` and of the `.wasm` `msnfigura`; `png` needs the
+/// rasteriser of the CLI and answers `err.msnfigura.png` here.
+pub fn figure_text(graph: &[u8], format: &str, view: &str) -> Result<String> {
+    let graph = std::str::from_utf8(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
+    if !["svg", "html", "png"].contains(&format) {
+        return Err(Error::new("err.flow.param.type").with("param", "format"));
+    }
+    let vista = Vista::da_nome(view)
+        .ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
+    match format {
+        "svg" => svg(graph, vista),
+        "html" => html::html(graph, vista),
+        _ => Err(Error::new("err.msnfigura.png")),
+    }
+}
+
 /// The texts of the figure, in drawing order, for the parity test with `msngrafo-vista.js`: one line per ion (`node`, id, m/z line, levels line, formula lines) and
 /// per loss (`arc`, from, to, first line, second line, rule).
 pub fn testi(graph: &str, vista: Vista) -> Result<Vec<String>> {

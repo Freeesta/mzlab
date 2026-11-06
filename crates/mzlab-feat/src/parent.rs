@@ -18,8 +18,9 @@ pub struct Parent {
     pub adduct: String,
 }
 
-/// The parent file: a JSON `{"formula"|"neutral", "smiles", "rt", "adduct"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
-pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
+/// What the parent file writes, before any structure graph: the JSON when it is one, the formula, the SMILES and the retention time. The file is a JSON
+/// `{"formula"|"neutral", "smiles", "rt", "adduct"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
+fn written(bytes: &[u8]) -> (Option<Value>, String, String, Option<f64>) {
     let text = String::from_utf8_lossy(bytes);
     let text = text.trim();
     let json = parse(text.as_bytes()).ok().filter(|v| {
@@ -28,7 +29,7 @@ pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
             || v.get("neutral").is_some()
             || v.get("smiles").is_some()
     });
-    let (mut formula, smiles, rt) = match &json {
+    let (formula, smiles, rt) = match &json {
         Some(v) => {
             let s = |k: &str| {
                 v.get(k)
@@ -57,6 +58,17 @@ pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
             }
         }
     };
+    (json, formula, smiles, rt)
+}
+
+/// The SMILES of the parent file ("" when it gives none), without the structure graph `parent_of` builds: all `structure.reactivity` reads.
+pub fn parent_smiles(bytes: &[u8]) -> String {
+    written(bytes).2
+}
+
+/// The parent file read whole: its structure graph when it has a SMILES, the formula from that graph when the file writes none, the adduct.
+pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
+    let (json, mut formula, smiles, rt) = written(bytes);
     let structure = if smiles.is_empty() {
         String::new()
     } else {

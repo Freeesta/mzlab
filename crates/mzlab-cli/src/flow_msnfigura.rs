@@ -1,6 +1,7 @@
 //! The native executor of `msn.figure@1`: the figure of the fragmentation graph `msngrafo/1` of `spectra.msn_graph` as an SVG, a stand-alone HTML or a PNG,
-//! the same bytes as `mzlab-cli msn-graph figure`. It is a step of its own, after the graph: the figure needs only the graph (the raw file is not read again),
-//! and a Flow output holds one file, so each format is one run of the step (`--set figure.format=html`).
+//! the same bytes as `mzlab-cli msn-graph figure` and, for svg and html, as the `.wasm` `msnfigura` of the browser. It is a step of its own, after the
+//! graph: the figure needs only the graph (the raw file is not read again), and a Flow output holds one file, so each format is one run of the step
+//! (`--set figure.format=html`).
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
@@ -9,7 +10,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{read_one, Exec, FileRunner};
 use crate::msn_uscite::{bytes, Formato};
-use mzlab_feat::msnfigura::Vista;
+use mzlab_feat::msnfigura::{figure_text, Vista};
 
 /// The executor of the step, read by the runner after its own list.
 pub(crate) const EXECUTORS: &[(&str, Exec)] = &[("msn.figure", Exec::File("figure", figure_job))];
@@ -22,14 +23,15 @@ pub fn figure_step() -> Step {
         params: vec![
             Param::choice("format", "Format", &["svg", "html", "png"])
                 .default_str("svg")
-                .doc("svg: the static figure, colours written in the file; html: one file with no external resource, two views, data table and downloads; png: the SVG rasterised (only in a build with the cargo feature `png`)"),
+                .doc("svg: the static figure, colours written in the file; html: one file with no external resource, two views, data table and downloads; png: the SVG rasterised (only in a build with the cargo feature `png`; the browser leaves it to the computer)"),
             Param::choice("view", "View", &["tree", "radial"])
                 .default_str("tree")
                 .doc("tree: columns by MS level; radial: the precursor in the centre, one ring per step of the best path (the HTML has both and opens on this one)"),
         ],
         runs_in: RunsIn {
+            wasm: Some("msnfigura"),
+            wasm_ceiling_bytes: Some(512_000),
             native: true,
-            ..RunsIn::default()
         },
         errors: vec!["err.msnfigura.bad", "err.msnfigura.empty", "err.msnfigura.png", "err.msnfigura.png.render"],
         ..Step::core(
@@ -49,15 +51,21 @@ fn param<'a>(job: &'a Job, name: &str) -> Option<&'a str> {
 }
 
 fn figure_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text = String::from_utf8(read_one(r, job, "graph")?.1)
-        .map_err(|_| Error::new("err.msnfigura.bad"))?;
-    let format = Formato::da_nome(param(job, "format").unwrap_or("svg"))
-        .ok_or_else(|| Error::new("err.flow.param.type").with("param", "format"))?;
-    let view = Vista::da_nome(param(job, "view").unwrap_or("tree"))
-        .ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
-    let out = r
-        .work
-        .join(format!("{}.{}", job.instance.id, format.estensione()));
-    std::fs::write(&out, bytes(&text, format, view)?).map_err(crate::flow::io)?;
+    let graph = read_one(r, job, "graph")?.1;
+    let (format, view) = (
+        param(job, "format").unwrap_or("svg"),
+        param(job, "view").unwrap_or("tree"),
+    );
+    // png is rasterised here (resvg, feature `png`); svg and html are the text the `.wasm` `msnfigura` writes too
+    let bytes = if format == "png" {
+        let text = String::from_utf8(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
+        let view = Vista::da_nome(view)
+            .ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
+        bytes(&text, Formato::Png, view)?
+    } else {
+        figure_text(&graph, format, view)?.into_bytes()
+    };
+    let out = r.work.join(format!("{}.{format}", job.instance.id));
+    std::fs::write(&out, bytes).map_err(crate::flow::io)?;
     r.keep(out, DataType::Report)
 }
