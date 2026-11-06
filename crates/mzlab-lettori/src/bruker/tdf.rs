@@ -17,6 +17,10 @@ use mzlab_core::metodo::SrcFile;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
+use tracce::massimo;
+
+#[path = "tracce.rs"]
+mod tracce;
 
 const UNITA: &str = "Arbitrary Intensity Units";
 
@@ -80,6 +84,7 @@ impl LettoreBruker {
             campioni,
             indice: Vec::new(),
             tic_noto: false,
+            massimi: Vec::new(),
             cache: None,
             sha1: None,
             compressione,
@@ -108,6 +113,7 @@ impl LettoreBruker {
             });
         }
         self.tic_noto = self.desc.iter().all(|d| d.livello == 1);
+        self.massimi = vec![None; self.desc.len()];
     }
 
     fn uno(&self, c: usize) -> Result<()> {
@@ -178,6 +184,7 @@ impl LettoreBruker {
             })?
             .clone();
         let (tof, y, profilo) = self.punti(&d)?;
+        self.massimi[k] = Some(massimo(&y));
         let largo = y.iter().any(|&x| x > 16_777_216.0);
         let fattore = cal.fattore(f.t1, f.t2);
         let mz: Vec<f64> = tof.iter().map(|&t| cal.mz(t) * fattore).collect();
@@ -222,44 +229,6 @@ impl LettoreBruker {
         }
         let p = self.picchi(d.frame).ok()?;
         Some(somma_scan(p, &d.scan))
-    }
-
-    fn traccia(&mut self, id: &str) -> Result<Chromatogram> {
-        let (tic, kind, index) = match id {
-            "TIC" => (true, ChromKind::Tic, 0),
-            "BPC" => (false, ChromKind::Bpc, 1),
-            _ => return Err(Error::new("error.badIndex").with("id", id)),
-        };
-        // the trace follows the survey scans; a run with none (MRM, PRM) is traced over all
-        let ms1 = self.desc.iter().any(|d| d.livello == 1);
-        let ks: Vec<usize> = (0..self.desc.len())
-            .filter(|&k| !ms1 || self.desc[k].livello == 1)
-            .collect();
-        // the TIC of a survey scan is in `Frames`: only a run without survey scans needs the points
-        if tic && !ms1 {
-            self.completa()?;
-        }
-        let mut intensity = Vec::with_capacity(ks.len());
-        for &k in &ks {
-            intensity.push(if tic {
-                self.indice[k].tic
-            } else {
-                // the peaks of the spectrum, without the m/z axis the maximum does not need
-                let d = self.desc.get(k).cloned().ok_or_else(|| indice_cattivo(k))?;
-                let (_, y, _) = self.punti(&d)?;
-                y.iter().fold(0.0f64, |m, &x| m.max(f64::from(x as f32)))
-            });
-        }
-        Ok(Chromatogram {
-            index,
-            id: id.into(),
-            kind,
-            q1: None,
-            q3: None,
-            unit: UNITA.into(),
-            time: ks.iter().map(|&k| self.indice[k].rt).collect(),
-            intensity,
-        })
     }
 
     fn file(&mut self) -> (Vec<SrcFile>, Vec<(String, Option<String>)>) {
@@ -490,6 +459,8 @@ pub struct LettoreBruker {
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
     tic_noto: bool,
+    /// The base peak intensity of every spectrum already decoded: the BPC after a full pass (index, mzML) decodes no frame again.
+    massimi: Vec<Option<f64>>,
     cache: Option<(usize, Picchi)>,
     sha1: Option<Option<String>>,
     compressione: u32,

@@ -213,6 +213,29 @@ fn una_cartella_fatta_a_mano_si_apre_e_somma_le_scansioni() {
 }
 
 #[test]
+fn bpc_uguale_prima_e_dopo_il_giro() {
+    // the BPC asked first decodes the frames; after every spectrum has been read it comes from the maxima kept by the reader
+    let apri = || mzlab_lettori::apri(cartella(blocco2(), tdf_minimo(3)), &limiti()).unwrap();
+    let prima = apri().cromatogramma(0, "BPC").unwrap();
+    let mut l = apri();
+    let n = l.indice(0).unwrap().len();
+    let massimi: Vec<f64> = (0..n)
+        .map(|k| {
+            l.scansione(0, k)
+                .unwrap()
+                .intensity
+                .iter()
+                .fold(0.0f64, |m, &y| m.max(f64::from(y)))
+        })
+        .collect();
+    let dopo = l.cromatogramma(0, "BPC").unwrap();
+    assert_eq!(prima.intensity, dopo.intensity);
+    assert_eq!(prima.time, dopo.time);
+    assert_eq!(dopo.intensity, massimi);
+    assert!(massimi[0] > 0.0);
+}
+
+#[test]
 fn zstd_falso_e_blocchi_guasti_sono_errori_con_chiave() {
     let chiave = |bin: Vec<u8>, np: i64| {
         let mut l = mzlab_lettori::apri(cartella(bin, tdf_minimo(np)), &limiti()).unwrap();
