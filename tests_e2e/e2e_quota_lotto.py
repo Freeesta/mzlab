@@ -2,7 +2,7 @@
 and loads the first ones that fit; when the copy runs out of room anyway the queue stops and ONE message counts the files loaded and not loaded,
 instead of one red error per file. The room is set over CDP (Storage.overrideQuotaForOrigin: real writes fail beyond it) and the page's
 storage.estimate() reports the same room. Synthetic files only (mzml_grande.py)."""
-import sys, os, tempfile
+import sys, os, re, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mzml_grande   # before lib: lib puts tools/ first on the path
 from lib import *
@@ -56,6 +56,28 @@ try:
             assert a.evaluate("document.querySelectorAll('#unopen .fail').length") == 0, "one error per file: " + a.evaluate("document.getElementById('unopen').innerText")[:300]
             assert a.evaluate("document.querySelectorAll('#flst .fl.up.err').length") == 0, "error rows left in the side list"
         step("«Try all» with no room: the queue stops at the first refusal, ONE message, no error per file", full)
+        WALK = """(async () => { const out = {}; const walk = async (h, p) => { for await (const [n, c] of h.entries()) { if (c.kind === 'file') out[p + n] = (await c.getFile()).size; else await walk(c, p + n + '/'); } };
+          await walk(await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'), ''); return out; })()"""
+        def clean():
+            o = a.evaluate(WALK)
+            assert not [k for k in o if k.endswith(".part")], ("a refused file left a partial copy or index", o)
+            src = {k.split("/", 1)[1] for k in o if k.startswith("files/")}
+            assert sorted(k for k in o if k.startswith("files/")) == sorted("files/" + n for n in a.evaluate("ST.files.map(f => f.name)")), o
+            assert all(k.split("/", 1)[1].rsplit(".mzidx", 1)[0] in src for k in o if k.startswith("idx/") and k.endswith(".mzidx")), ("an index without its file", o)
+        step("the refused files leave no partial copy, no half-written index: only the two loaded files and their indexes", clean)
+        def freed():
+            u0 = a.evaluate("navigator.storage.estimate().then(e => e.usage)")
+            a.evaluate("removeAllFiles()"); attendi(a, "ST.files.length === 0 && " + DONE, 30000)
+            attendi(a, "navigator.storage.estimate().then(e => e.usage < %d)" % (u0 - 40 * 2**20), 30000)
+        step("«Remove all» gives the room back at once (the estimate falls by the two files)", freed)
+        def one():
+            room(0, 10 * 2**20)
+            a.set_input_files("#pick", names[:1]); attendi(a, DONE + " && document.querySelectorAll('#unopen .quota-note').length === 1", 240000)     # under 50 MB: no question, the write is refused
+            assert a.evaluate(NOTE + ".length") == 1, a.evaluate("document.getElementById('unopen').innerText")
+            t = a.evaluate(NOTE + "[0].textContent")
+            assert len(re.findall(r"\d+ MB", t)) >= 2, "a single file says the MB it needs and the room: " + t
+            assert a.evaluate("document.querySelectorAll('#flst .fl.up.err').length + document.querySelectorAll('#unopen .fail').length") == 0, t
+        step("one big file with no room: the same calm notice, with the MB needed and the room the browser gives", one)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

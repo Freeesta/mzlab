@@ -374,7 +374,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
       LOADFAIL.delete(f.name);CONV.settle(f.name);rep.ok=(rep.ok||0)+1}
     catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
       // no room in the browser: no error of its own, it counts in the one message of the batch
-      if(e.key==="error.quota"||e.key==="error.quotaWrite"){CONVROWS.drop(f.name);await carica("m:quota-lotto.js");QUOTALOTTO.refused(rep,f,into,e.key);return}
+      if(e.key==="error.quota"||e.key==="error.quotaWrite"){CONVROWS.drop(f.name);await carica("m:quota-lotto.js");QUOTALOTTO.refused(rep,f,into,e.key,e.message);return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));
       // a sample of a maker's file: the error stays on its row, with «Details» and the trace of the loading
       if(CONVROWS.find(f.name)&&f.mzlabNat){CONVROWS.finish(f.name,"fail",{msg:e.message,diag:d});return}

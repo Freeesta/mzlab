@@ -44,16 +44,16 @@ async function prima(/** @type {any[]} */ files, /** @type {CaricaRep} */ rep, /
   rep.quota = { ok: 0, left: out, into };
   return files.filter(f => !out.includes(f));
 }
-/** a file refused for lack of room while it loaded: no error of its own, it counts in the one message of the batch */
-function refused(/** @type {CaricaRep} */ rep, /** @type {any} */ f, /** @type {string | undefined} */ into, /** @type {string} */ key) {
+/** a file refused for lack of room while it loaded: no error of its own, it counts in the one message of the batch; `msg` (the MB written, needed and free) is shown when it is the only one */
+function refused(/** @type {CaricaRep} */ rep, /** @type {any} */ f, /** @type {string | undefined} */ into, /** @type {string} */ key, /** @type {string} */ msg) {
   const q = rep.quota || (rep.quota = { ok: 0, left: [], into });
-  q.left.push(f); if (key === "error.quotaWrite") q.write = true;
+  q.left.push(f); q.msg = msg; if (key === "error.quotaWrite") q.write = true;
 }
 /** the message of a batch that ran out of room (HTML for reportLoad) */
 function nota(/** @type {CaricaRep} */ rep, /** @type {(s: string) => string} */ esc) {
   const T = I18N.t, q = rep.quota, names = q.left.map((/** @type {any} */ f) => f.name);
   last = { files: q.left, into: q.into };
-  return `<div class="quota-note" role="status"><p><b>${esc(T("load.quota.note", { ok: rep.ok || 0, no: names.length }))}</b> ${esc(T(q.write ? "load.quota.write" : "load.quota.why"))}</p>`
+  return `<div class="quota-note" role="status"><p><b>${esc(T("load.quota.note", { ok: rep.ok || 0, no: names.length }))}</b> ${esc(names.length === 1 && q.msg ? q.msg : T(q.write ? "load.quota.write" : "load.quota.why"))}</p>`
     + `<details class="unopen-names"><summary>${esc(T("unopen.names"))}</summary><ul>${names.slice(0, 5).map((/** @type {string} */ n) => `<li>${esc(n)}</li>`).join("")}${names.length > 5 ? `<li class="muted">${esc(T("unopen.more", { n: names.length - 5 }))}</li>` : ""}</ul></details>`
     + `<div class="row"><button type="button" class="sec" data-a="quota-retry">${esc(T("load.quota.retry"))}</button></div></div>`;
 }
