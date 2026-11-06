@@ -62,7 +62,7 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> ReadAt for BlockCache<F> {
             return (self.fetch)(off, buf);
         }
         let s = &mut self.slots[victim];
-        s.data.clear();
+        // the fetch overwrites the whole block: only the bytes a slot grows by are zeroed, not the block at every miss (on the site this was the biggest cost of the module)
         s.data.resize(n, 0);
         let r = (self.fetch)(off, &mut s.data);
         if r.is_err() {

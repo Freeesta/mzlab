@@ -21,7 +21,7 @@ fn con_blocco<R: Read + Seek, T>(
 ) -> Result<T> {
     BLOCCO.with(|b| {
         let mut b = b.borrow_mut();
-        b.clear();
+        // the read overwrites the `n` bytes: only what the buffer grows by is zeroed
         b.resize(n, 0);
         let letto = r.read_bytes_into(&mut b[..]);
         let esito = letto.map(|()| f(&b[..]));
