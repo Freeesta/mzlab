@@ -233,3 +233,20 @@ fn a_lone_unnamed_sample_is_named_after_its_file_in_any_case() {
         "Named.wiff.mzML"
     );
 }
+
+#[test]
+fn baseline_zero_adds_a_column_and_an_unknown_one_is_refused() {
+    let Some(d) = fixture("zero") else { return };
+    let w = d.join("sim3.wiff");
+    let edges = text(&table(&[&w], &[]));
+    assert_eq!(text(&table(&[&w], &["--set", "baseline=edges"])), edges);
+    let zero = text(&table(&[&w], &["--set", "baseline=zero"]));
+    assert!(
+        zero.lines().next().unwrap().ends_with(",baseline"),
+        "{zero}"
+    );
+    assert!(zero.lines().skip(1).all(|l| l.ends_with(",zero")), "{zero}");
+    assert_eq!(zero.lines().count(), edges.lines().count());
+    assert_ne!(table(&[&w], &["--set", "baseline=line"]).code, 0);
+    let _ = std::fs::remove_dir_all(&d);
+}

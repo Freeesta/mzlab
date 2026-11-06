@@ -66,7 +66,7 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
   return done(`{"files":[${parts.join(",")}]}`);
 }
 
-/** api/simtab?k=..&output=..&layout=samples|channels (simtab::OUTPUTS)[&g=JSON list of the group of each k, "" = none]: the `mrm` transitions of every slot,
+/** api/simtab?k=..&output=..&layout=samples|channels (simtab::OUTPUTS)[&baseline=zero][&g=JSON list of the group of each k, "" = none]: the `mrm` transitions of every slot,
  * then the op `simtab` of the worker; "E" + JSON (no SIM channel, unknown output) = a 400.
  * @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, stats: any, t0: number}} env */
 async function simtabRoute(u, { slots, rpc, stats, t0 }) {
@@ -79,7 +79,7 @@ async function simtabRoute(u, { slots, rpc, stats, t0 }) {
   const rs = await Promise.all(ks.map(k => rpc({ op: "mrm", slot: k, blob: slots[k].blob })));
   if (rs.some(r => r.dead || r.error || !r.info)) return null;
   const files = `[${ks.map((k, i) => `{"name":${JSON.stringify(slots[k].name)},"transitions":${rs[i].info}${gs[i] ? `,"group":${JSON.stringify(String(gs[i]))}` : ""}}`).join(",")}]`;
-  const r = await rpc({ op: "simtab", files, output, layout });
+  const r = await rpc({ op: "simtab", files, output, layout, baseline: q.get("baseline") });
   if (r.dead || r.error || !r.info) return null;
   stats.rust++;
   const bad = r.info[0] === "E";

@@ -22,6 +22,7 @@ I18N.add("en", {
   "err.transitions.noChannel": "No file of the step has a SIM or SRM chromatogram.",
   "err.simtab.noChannel": "No file has a SIM channel.",
   "err.simtab.output": "Unknown value or layout of the SIM table: {output}, {layout}.",
+  "err.simtab.baseline": "Unknown baseline of the SIM table: {baseline} (edges or zero).",
   "err.transitions.table": "The transition table has a wrong row ({row}).",
   "err.workflow.noFiles": "No open files to export in the workflow.",
   "err.report.noFiles": "No open files: load data to export the report.",
