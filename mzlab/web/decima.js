@@ -145,3 +145,22 @@ export function rawLine(x, y, x0, x1, X, V, ppx = 1.5) {
   out.push(cx, V(top));
   return { v: out, thin: true };
 }
+
+/**
+ * The polyline v (x, y pairs) with every stretch beyond lo..hi moved onto that bound, cut exactly where it crosses it: the part inside is unchanged. A y zoom puts
+ * the peaks thousands of plot heights above the canvas, and a software canvas pays for the whole length of those strokes (0.3 s per draw for 20 traces).
+ * @param {number[]} v @param {number} lo @param {number} hi @returns {number[]}
+ */
+export function clipY(v, lo, hi) {
+  let i = 1;
+  while (i < v.length && v[i] >= lo && v[i] <= hi) i += 2;
+  if (i >= v.length) return v;
+  const cl = (/** @type {number} */ y) => y < lo ? lo : y > hi ? hi : y, out = [v[0], cl(v[1])];
+  for (let k = 2; k < v.length; k += 2) {
+    const xa = v[k - 2], ya = v[k - 1], xb = v[k], yb = v[k + 1];
+    const ts = [lo, hi].filter(b => (ya - b) * (yb - b) < 0).map(b => (b - ya) / (yb - ya)).sort((a, b) => a - b);
+    for (const t of ts) out.push(xa + (xb - xa) * t, ya + (yb - ya) * t);
+    out.push(xb, cl(yb));
+  }
+  return out;
+}
