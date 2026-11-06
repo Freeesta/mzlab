@@ -70,3 +70,21 @@ fn an_engine_error_is_english_text_and_the_hint_is_this_command() {
         o.stderr
     );
 }
+
+#[test]
+fn a_missing_input_names_its_path_in_english() {
+    let p = std::env::temp_dir().join(format!("mzlab-absent-{} dir/x.mzML", std::process::id()));
+    let o = crate::execute(&["channels".to_string(), p.to_string_lossy().into_owned()]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert!(
+        o.stderr
+            .starts_with("error: A file or folder could not be read or written ("),
+        "{}",
+        o.stderr
+    );
+    assert!(
+        o.stderr.contains(&format!("{}: ", p.display())) && o.stderr.contains("(err.flow.io)"),
+        "{}",
+        o.stderr
+    );
+}

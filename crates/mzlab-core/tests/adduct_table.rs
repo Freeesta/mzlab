@@ -119,3 +119,26 @@ fn a_bad_formula_is_an_error_and_a_bad_number_is_ignored() {
     assert!(table("zz", "", "", "").is_err());
     assert!(get("CH4", "abc", "x", "")["best"].is_null());
 }
+
+#[test]
+fn no_negative_mass_for_an_impossible_adduct() {
+    // m/z 1 typed in the calculator: [M+H]+ would imply M = -0.0073 and [M+Na]+ M = -22; a mass below zero is no candidate (null, an empty cell)
+    let t = get("", "1", "", "");
+    for r in t["rows"].as_array().unwrap() {
+        assert!(
+            r["m_if"].is_null() || r["m_if"].as_f64().unwrap() > 0.0,
+            "{r}"
+        );
+    }
+    assert!(row(&t, "[M+H]+")["m_if"].is_null());
+    near(&row(&t, "[M-H]-")["m_if"], 2.007276, 1e-4);
+    // the formula H gives [M-2H]2- below zero m/z: no m/z, no ppm
+    assert!(row(&get("H", "", "", ""), "[M-2H]2-")["mz4"].is_null());
+    let h = get("H", "0.5", "", "");
+    for r in h["rows"].as_array().unwrap() {
+        for k in ["mz4", "mz5"] {
+            assert!(r[k].is_null() || r[k].as_f64().unwrap() > 0.0, "{k} {r}");
+        }
+        assert!(!r["mz4"].is_null() || r["ppm"].is_null(), "{r}");
+    }
+}
