@@ -3,6 +3,7 @@
 //! rows without an RT, the candidate peaks of their channel over all samples sorted by area (`candidates`). Isobaric rows share their candidates: which
 //! peak is which isomer is left to the user.
 
+use mzlab_core::baseline::Baseline;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
 
@@ -30,6 +31,8 @@ pub struct Settings {
     pub min_points: usize,
     pub max_candidates: usize,
     pub group_rt: f64,
+    /// What the areas are measured from: `Edges` (the line between the edges of the peak, the default) or `Zero`.
+    pub baseline: Baseline,
 }
 
 impl Default for Settings {
@@ -43,6 +46,7 @@ impl Default for Settings {
             min_points: 3,
             max_candidates: 5,
             group_rt: 0.1,
+            baseline: Baseline::Edges,
         }
     }
 }
@@ -68,6 +72,10 @@ impl Settings {
             min_points: count("min_points", d.min_points),
             max_candidates: count("max_candidates", d.max_candidates),
             group_rt: num("group_rt", d.group_rt),
+            baseline: match get("baseline").and_then(Value::str) {
+                Some("zero") => Baseline::Zero,
+                _ => Baseline::Edges,
+            },
         }
     }
 }
@@ -99,6 +107,8 @@ fn channel_of<'a>(row: &Row, ch: &'a [Channel], tol: f64) -> Option<&'a Channel>
 struct Cell {
     found: Option<Found>,
     flag: &'static str,
+    /// The part of the trace under the baseline (counts x s) when it is not `Edges`.
+    below: Option<f64>,
 }
 
 impl Cell {
@@ -112,10 +122,15 @@ impl Cell {
 fn integrate(row: &Row, c: Option<&Channel>, s: &Settings) -> Cell {
     let (Some(c), Some(rt)) = (c, row.rt) else {
         let flag = if c.is_none() { "no_trace" } else { "no_rt" };
-        return Cell { found: None, flag };
+        return Cell {
+            found: None,
+            flag,
+            below: None,
+        };
     };
     let w = row.rt_window.unwrap_or(s.rt_window);
-    let found = find_peak(&c.t, &c.y, Some(rt), w, s.smooth, s.min_points);
+    let mut found = find_peak(&c.t, &c.y, Some(rt), w, s.smooth, s.min_points);
+    let below = found.as_mut().and_then(|f| measured(c, f, s.baseline));
     let flag = match &found {
         None => "no_peak",
         Some(f) if !f.ok || f.snr < s.snr_min => "no_peak",
@@ -134,19 +149,47 @@ fn integrate(row: &Row, c: Option<&Channel>, s: &Settings) -> Cell {
             }
         }
     };
-    Cell { found, flag }
+    Cell { found, flag, below }
+}
+
+/// A peak's area measured against `base` in place of the one `find_peak` gives; the part under the line, `None` for `Edges`.
+fn measured(c: &Channel, f: &mut Found, base: Baseline) -> Option<f64> {
+    let (area, below) = mzlab_core::peak1d::area_against(&c.t, &c.y, f, base)?;
+    f.area = area;
+    Some(below)
 }
 
 /// Up to `s.max_candidates` peaks of a channel, highest first (`peak1d::peaks`).
 fn candidates(c: &Channel, s: &Settings) -> Vec<Found> {
-    mzlab_core::peak1d::peaks(
+    let mut v = mzlab_core::peak1d::peaks(
         &c.t,
         &c.y,
         s.smooth,
         s.min_points,
         s.snr_min,
         s.max_candidates,
-    )
+    );
+    v.iter_mut().for_each(|f| {
+        measured(c, f, s.baseline);
+    });
+    v
+}
+
+/// The trailing column that states the baseline of the areas, written only when it is not the default (`Edges`), so old plans keep their bytes.
+fn base_head(s: &Settings) -> &'static str {
+    if s.baseline == Baseline::Edges {
+        ""
+    } else {
+        ",baseline"
+    }
+}
+
+fn base_cell(s: &Settings) -> String {
+    if s.baseline == Baseline::Edges {
+        String::new()
+    } else {
+        format!(",{}", s.baseline.name())
+    }
 }
 
 /// A CSV field: quoted when it holds a comma, a quote or a line break.
@@ -178,13 +221,21 @@ fn row_cells(r: &Row) -> String {
 
 const ROW_HEAD: &str = "name,isomer_group,q1,q3,polarity,rt,rt_window";
 
-fn peaks_text(rows: &[Row], cells: &[(String, Vec<Cell>)]) -> String {
-    let mut out = format!("sample,{ROW_HEAD},apex_rt,area,height,snr,fwhm_s,peak\n");
+fn peaks_text(rows: &[Row], cells: &[(String, Vec<Cell>)], s: &Settings) -> String {
+    let below = if s.baseline == Baseline::Edges {
+        ""
+    } else {
+        ",below"
+    };
+    let mut out = format!(
+        "sample,{ROW_HEAD},apex_rt,area,height,snr,fwhm_s,peak{}{below}\n",
+        base_head(s)
+    );
     for (sample, v) in cells {
         for (r, c) in rows.iter().zip(v) {
             let f = c.found.as_ref();
             out += &format!(
-                "{},{},{},{},{},{},{},{}\n",
+                "{},{},{},{},{},{},{},{}",
                 field(sample),
                 row_cells(r),
                 opt(f.map(|f| f.apex_rt), 3),
@@ -194,12 +245,16 @@ fn peaks_text(rows: &[Row], cells: &[(String, Vec<Cell>)]) -> String {
                 opt(f.map(|f| f.fwhm), 1),
                 c.flag
             );
+            if s.baseline != Baseline::Edges {
+                out += &format!("{},{}", base_cell(s), opt(c.below, 1));
+            }
+            out.push('\n');
         }
     }
     out
 }
 
-fn table_text(rows: &[Row], cells: &[(String, Vec<Cell>)]) -> String {
+fn table_text(rows: &[Row], cells: &[(String, Vec<Cell>)], s: &Settings) -> String {
     let mut out = ROW_HEAD.to_string();
     for (sample, _) in cells {
         out += &format!(",{}", field(&format!("area {sample}")));
@@ -207,7 +262,7 @@ fn table_text(rows: &[Row], cells: &[(String, Vec<Cell>)]) -> String {
     for (sample, _) in cells {
         out += &format!(",{}", field(&format!("apex_rt {sample}")));
     }
-    out += ",n_peaks,rt_mean,rt_sd\n";
+    out += &format!(",n_peaks,rt_mean,rt_sd{}\n", base_head(s));
     for (k, r) in rows.iter().enumerate() {
         let found: Vec<Option<&Found>> = cells.iter().map(|(_, v)| v[k].counted()).collect();
         out += &row_cells(r);
@@ -223,7 +278,13 @@ fn table_text(rows: &[Row], cells: &[(String, Vec<Cell>)]) -> String {
         let sd = mean
             .filter(|_| n > 1.0)
             .map(|m| (rts.iter().map(|t| (t - m).powi(2)).sum::<f64>() / (n - 1.0)).sqrt());
-        out += &format!(",{},{},{}\n", rts.len(), opt(mean, 3), opt(sd, 3));
+        out += &format!(
+            ",{},{},{}{}\n",
+            rts.len(),
+            opt(mean, 3),
+            opt(sd, 3),
+            base_cell(s)
+        );
     }
     out
 }
@@ -231,7 +292,8 @@ fn table_text(rows: &[Row], cells: &[(String, Vec<Cell>)]) -> String {
 /// The candidates of the rows without an RT: the peaks of each sample grouped by apex RT (a gap above `group_rt` starts a new group), largest first.
 fn candidates_text(rows: &[Row], samples: &[(String, Vec<Channel>)], s: &Settings) -> String {
     let mut out = format!(
-        "{ROW_HEAD},candidate,apex_rt,apex_rt_min,apex_rt_max,samples,area_max,area_median\n"
+        "{ROW_HEAD},candidate,apex_rt,apex_rt_min,apex_rt_max,samples,area_max,area_median{}\n",
+        base_head(s)
     );
     for r in rows.iter().filter(|r| r.rt.is_none()) {
         let mut all: Vec<(f64, f64, usize)> = Vec::new();
@@ -275,7 +337,7 @@ fn candidates_text(rows: &[Row], samples: &[(String, Vec<Channel>)], s: &Setting
             .collect();
         rowsout.sortc_by(|a, b| b.0.total_cmp(&a.0));
         for (i, (_, t)) in rowsout.iter().enumerate() {
-            out += &format!("{},{},{t}\n", row_cells(r), i + 1);
+            out += &format!("{},{},{t}{}\n", row_cells(r), i + 1, base_cell(s));
         }
     }
     out
@@ -327,8 +389,8 @@ pub fn channels_text(
         })
         .collect();
     Ok(match s.output {
-        Output::Table => table_text(&rows, &cells),
-        _ => peaks_text(&rows, &cells),
+        Output::Table => table_text(&rows, &cells, &s),
+        _ => peaks_text(&rows, &cells, &s),
     })
 }
 

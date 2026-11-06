@@ -1,6 +1,8 @@
 //! `peaks.find_peak` of mzFinder for one trace: smoothing, the peak around a time (or the highest one), noise
 //! from the far points, edges, points across the peak, area (linear baseline removed, counts x s), FWHM (s) and S/N. Used for the MRM traces.
 
+use crate::peakq_lr::near_idx;
+
 /// The peak of a trace.
 #[derive(Debug, Clone, Copy)]
 pub struct Found {
@@ -112,6 +114,21 @@ fn area_of(rt: &[f64], y: &[f64], l: usize, r: usize) -> f64 {
         .map(|i| 0.5 * (f(i) + f(i + 1)) * (rt[i + 1] - rt[i]))
         .sum::<f64>()
         * 60.0
+}
+
+/// The area (counts x s) of a peak found here measured over its edges against `base` (`baseline::integrate`), and the part of the trace under
+/// that line; `None` for `Edges`, whose area is the one `find_peak` gives (the line between the edges, clipped at 0).
+pub fn area_against(
+    rt: &[f64],
+    y: &[f64],
+    f: &Found,
+    base: crate::baseline::Baseline,
+) -> Option<(f64, f64)> {
+    base.at(0.0)?;
+    let n = rt.len().min(y.len());
+    let (l, r) = (near_idx(&rt[..n], f.left), near_idx(&rt[..n], f.right));
+    let v = crate::baseline::integrate(rt, y, l, r, |t| base.at(t).unwrap_or(0.0));
+    Some((v.area * 60.0, v.below * 60.0))
 }
 
 /// `find_peak(rt, y, rt_center, rt_tol, smooth_k, min_points)`; `None` for an empty trace or no point in the window.
