@@ -21,7 +21,7 @@ export function createLabOps({ engine, ARCH, fileOf, lrOpen, slotOf, readerFor, 
   // the mzML of an item (name or name#tag) with its index open
   async function open(m) {
     const name = String(m.name).split("#")[0], f = await fileOf(name);
-    if (!(await lrOpen(name))) jerr("err.engine.index");
+    if (!(await lrOpen(name))) jerr("err.engine.index", { name });
     await ARCH.lease("files", name);       // the method and the other per-item ops read the header of hundreds of scans: ~1 ms each from a File, ~10 us from a SyncAccessHandle (a File read where the handle is taken)
     return { slot: slotOf(name), f, rd: readerFor(f, ["files", name]) };
   }
