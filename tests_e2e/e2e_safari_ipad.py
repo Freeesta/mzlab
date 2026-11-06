@@ -84,6 +84,17 @@ try:
             pg.keyboard.press("Enter"); assert lst.is_visible()
             pg.keyboard.press("Enter"); assert not lst.is_visible()
         step("iPad: the legend chip of many traces opens by tap and Enter, Escape closes it", legend_chip)
+        def drawer_fits():
+            pg = S["pg"]; pg.set_viewport_size({"width": 1024, "height": 768}); attendi(pg, "innerWidth === 1024"); frames(pg, 3)
+            pg.evaluate("BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()")
+            attendi(pg, "(t => !!t && t.offsetWidth > 0)(document.querySelector('#flist .ldtab'))", 20000); frames(pg, 2)
+            fw = pg.evaluate("(t => [...t.rows[0].cells].find(c => /^File$/.test(c.textContent.trim())).offsetWidth)(document.querySelector('#flist .ldtab'))")
+            pg.evaluate("BARRA.show('calc',{noFocus:true,instant:true})"); attendi(pg, "document.querySelector('#al-tabs').offsetWidth > 0", 20000); frames(pg, 2)
+            tabs = pg.evaluate("(a => [a.clientWidth, a.scrollWidth])(document.querySelector('#al-tabs'))")
+            pg.evaluate("BARRA.close()"); pg.set_viewport_size({"width": 1180, "height": 820}); attendi(pg, "innerWidth === 1180")
+            assert fw >= 120, f"the File column of the sample table is {fw} px wide at 1024 px"
+            assert tabs[1] <= tabs[0], f"the calculator tabs are clipped (box, content): {tabs}"
+        step("iPad 1024x768: the File column of the sample table is readable, the calculator tabs fit the drawer", drawer_fits)
         def fallbacks():
             pg = ipad(b, extra=TAKE_AWAY)
             got = pg.evaluate("window.__compat || []")
