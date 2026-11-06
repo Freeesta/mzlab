@@ -261,6 +261,54 @@ fn zstd_falso_e_blocchi_guasti_sono_errori_con_chiave() {
 }
 
 #[test]
+fn un_tdf_bin_tagliato_legge_i_frame_interi_e_conta_gli_altri() {
+    let b = blocco2();
+    let n = b.len() as i64;
+    let tims = [0, n, 2 * n, 3 * n, 4 * n];
+    let intero: Vec<u8> = b.iter().copied().cycle().take(b.len() * 5).collect();
+    let mut l =
+        mzlab_lettori::apri(cartella(intero.clone(), tdf_frames(&tims, 3)), &limiti()).unwrap();
+    assert_eq!((l.indice(0).unwrap().len(), l.mancanti(0)), (5, 0));
+    // cut inside the fourth block, at its first byte, and inside its header: three frames read, two counted
+    for taglio in [
+        3 * b.len() + 9,
+        3 * b.len(),
+        3 * b.len() + 3,
+        4 * b.len() - 1,
+    ] {
+        let mut l = mzlab_lettori::apri(
+            cartella(intero[..taglio].to_vec(), tdf_frames(&tims, 3)),
+            &limiti(),
+        )
+        .unwrap();
+        assert_eq!(l.indice(0).unwrap().len(), 3, "{taglio}");
+        assert_eq!(l.mancanti(0), 2, "{taglio}");
+        assert_eq!(l.campioni()[0].scansioni, 3);
+        for k in 0..3 {
+            let s = l.scansione(0, k).unwrap();
+            assert_eq!(s.mz.len(), 2);
+        }
+        assert!(l.scansione(0, 3).is_err());
+        let tic = l.cromatogramma(0, "TIC").unwrap();
+        let bpc = l.cromatogramma(0, "BPC").unwrap();
+        assert_eq!((tic.time.len(), bpc.time.len()), (3, 3));
+    }
+    // the frames out of order in the table, the cut one first
+    let mut l = mzlab_lettori::apri(
+        cartella(
+            intero[..2 * b.len() + 4].to_vec(),
+            tdf_frames(&[2 * n, 0, n], 3),
+        ),
+        &limiti(),
+    )
+    .unwrap();
+    assert_eq!((l.indice(0).unwrap().len(), l.mancanti(0)), (2, 1));
+    // nothing left: an empty index, every spectrum counted
+    let mut l = mzlab_lettori::apri(cartella(Vec::new(), tdf_frames(&tims, 3)), &limiti()).unwrap();
+    assert_eq!((l.indice(0).unwrap().len(), l.mancanti(0)), (0, 5));
+}
+
+#[test]
 fn ogni_troncamento_del_database_di_una_cartella_non_manda_in_panico() {
     let t = tdf_minimo(3);
     for n in (0..t.len()).step_by(211) {
