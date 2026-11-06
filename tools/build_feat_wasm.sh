@@ -54,6 +54,9 @@ wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem" @motor
 # the fragmentation graph of an MSn infusion (crates/mzlab-msngrafo-wasm: msngrafo/1), loaded by the worker of the engine on the first request of /api/msn_grafo
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-msngrafo-wasm
 wasm_pack "$out/msngrafo" $R/mzlab_msngrafo_wasm.wasm $limit_msngrafo "msngrafo" @motore
+# the figure of that graph (crates/mzlab-msnfigura-wasm: SVG and stand-alone HTML of msngrafo/1), loaded only by the executor of msn.figure in flow-web-struct.js; standard limit
+tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-msnfigura-wasm
+wasm_pack "$out/msnfigura" $R/mzlab_msnfigura_wasm.wasm $limit "msnfigura" @motore
 # the structure rules of that graph (crates/mzlab-msnregole-wasm: SMILES -> attese), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-msnregole-wasm
 wasm_pack "$out/msnregole" $R/mzlab_msnregole_wasm.wasm $limit_msnregole "msnregole" @motore
@@ -112,6 +115,8 @@ m["llm"] = {"js": "llm/mzlab_llm_wasm.js", "wasm": "llm/mzlab_llm_wasm_bg.wasm",
             "sha256": hashlib.sha256(open(f"{o}/llm/mzlab_llm_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzlab_msngrafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/msngrafo/mzlab_msngrafo_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["msnfigura"] = {"js": "msnfigura/mzlab_msnfigura_wasm.js", "wasm": "msnfigura/mzlab_msnfigura_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/msnfigura/mzlab_msnfigura_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["msnregole"] = {"js": "msnregole/mzlab_msnregole_wasm.js", "wasm": "msnregole/mzlab_msnregole_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/msnregole/mzlab_msnregole_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["rotte"] = {"js": "rotte/mzlab_rotte_wasm.js", "wasm": "rotte/mzlab_rotte_wasm_bg.wasm",

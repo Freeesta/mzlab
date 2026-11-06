@@ -1,14 +1,16 @@
-//! The drawing of a position that is only known as the JSON of its `site` (`sites/1` of `tp.position`, `structure.render`): the key is read back into a
+//! The drawing of a position that is only known as the JSON of its `site` (`sites/1` of `tp.position`, `structure.render` and its `render_text`): the key is read back into a
 //! `SiteReport` and drawn by `disegno::drawing`, the function that made the `drawing` stored in the block `interp`, so the bytes are the same.
 //! The candidate sites are not in the JSON; they are made again from the structure and the change, which is deterministic.
 
-use mzlab_core::json::Value;
+use mzlab_core::error::{Error, Result};
+use mzlab_core::json::{parse, Out, Value};
 
 use super::disegno::drawing;
 use super::sito::{SiteReport, Vote};
 use super::sito_json::drawing_json;
 use crate::chem::grafo::Mol;
 use crate::chem::posizioni::sites;
+use crate::parent::parent_of;
 
 fn atoms(v: Option<&Value>) -> Vec<usize> {
     v.map(|a| {
@@ -93,4 +95,39 @@ pub fn drawing_of_site(smiles: &str, site: Option<&Value>) -> String {
         Some(s) => drawing_json(&drawing(smiles, &report(smiles, s))),
         None => "null".to_string(),
     }
+}
+
+/// `drawings/1` of `structure.render` for the `sites/1` file and the parent file, the text of `flow run` and of the `.wasm` `interp`. The SMILES of the
+/// parent file wins over the one `sites/1` carries.
+pub fn render_text(sites: &[u8], parent: &[u8]) -> Result<String> {
+    let doc = parse(sites)?;
+    if doc.get("schema").and_then(|v| v.str()) != Some("sites/1") {
+        return Err(Error::new("err.flow.render.sites"));
+    }
+    let given = parent_of(parent)?.smiles;
+    let carried = doc.get("parent").and_then(|v| v.str()).unwrap_or("");
+    let smiles = if given.is_empty() { carried } else { &given };
+    if smiles.is_empty() {
+        return Err(Error::new("err.flow.position.smiles"));
+    }
+    let mut o = Out::default();
+    o.raw("{\"schema\":\"drawings/1\",\"parent\":")
+        .str(smiles)
+        .raw(",\"rows\":[");
+    for (i, r) in doc
+        .get("rows")
+        .map(|a| a.arr())
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"id\":")
+            .int(r.get("id").and_then(|v| v.f64()).unwrap_or(0.0) as i64)
+            .raw(",\"drawing\":")
+            .raw(&drawing_of_site(smiles, r.get("site")))
+            .raw("}");
+    }
+    o.raw("]}");
+    Ok(o.0)
 }

@@ -24,6 +24,8 @@ flow_formula = ["attributio", "mzlab-lib/flow"]
 untargeted = []
 # `interp`: the interpretation of each row of the feature table of the products (`interp/1`, `filtri/1`; `docs/agenti/interp.md`). Off by default; the `.wasm` `interp` carries it.
 interp = ["chem"]
+# `figura`: the static figure (SVG) and the stand-alone HTML of a fragmentation graph `msngrafo/1` (`msnfigura`; the molecule of the root read by `mzlab-mol`). Off by default; the CLI and the `.wasm` `msnfigura` carry it.
+figura = ["dep:mzlab-mol"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }

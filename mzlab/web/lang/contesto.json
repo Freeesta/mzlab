@@ -852,6 +852,7 @@
   "bn.idn.dl": "Nome accessibile e tooltip dell'icona di scarico; {name} = nome e versione della libreria.",
   "bn.idn.site": "Nome accessibile e tooltip dell'icona del globo; {name} = nome e versione della libreria.",
   "err.simtab.output": "Errore della Tabella SIM per un valore o una disposizione sconosciuti; {output} = valore chiesto, {layout} = disposizione chiesta.",
+  "err.simtab.baseline": "Errore della Tabella SIM per una linea di base sconosciuta; {baseline} = nome chiesto.",
   "load.note.logs.one": "Nota del caricamento per un file di log saltato (per esempio il .wiff.log di msconvert); {names} = nome del file.",
   "load.note.logs": "Nota del caricamento per i file di log saltati (per esempio i .wiff.log di msconvert); {n} = quanti, {names} = i primi nomi.",
   "canali.simtab.kin.title": "Titolo del grafico nel tempo della Tabella SIM; {value} = il valore scelto (es. «Somma delle aree dei picchi»).",
