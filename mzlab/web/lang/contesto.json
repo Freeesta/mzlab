@@ -720,6 +720,7 @@
   "pfas.progress": "Avanzamento del calcolo delle formule. {n} = ioni fatti, {m} = ioni totali.",
   "pfas.row.aria": "Etichetta accessibile di una riga o di un punto PFAS. {mz} = m/z, {rt} = RT.",
   "pfas.sum": "Riepilogo sopra il grafico PFAS. {n} = ioni, {f} = ioni con formula candidata, {e} = ioni con almeno una prova nelle MS2.",
+  "pfas.capped": "Sotto il riepilogo PFAS, solo se la tabella ha più ioni del tetto della vista. {m} = ioni della tabella, {n} = ioni esaminati (il tetto), {go} = etichetta del pulsante Calcola (kmd.go).",
   "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo.",
   "mapnav.where": "Prima riga del menu del tasto destro della mappa; {at} = coordinate già formattate (RT, m/z, intensità) del punto su cui agiscono i comandi.",
   "mapnav.where.locked": "Come sopra, quando il mirino è bloccato; {at} = coordinate già formattate del punto bloccato.",

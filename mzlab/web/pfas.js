@@ -71,7 +71,7 @@ async function compute(/** @type {HTMLElement} */ box) {
   await Promise.all(Array.from({ length: POOL }, work));
   if (my !== seq) return;
   if (msg) msg.textContent = "";
-  res = { rows, pol, nMs2: files.length };
+  res = { rows, pol, nMs2: files.length, total: tb.features.length };
   selRow = null;
   if (w.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("stat_pfas", { ion: st.ion, tol: st.tol, ms2tol: st.ms2tol, n: rows.length, withMs2: rows.filter(r => r.ms2).length });
   paintRes(box);
@@ -122,14 +122,15 @@ function formulaTable(/** @type {NonNullable<typeof res>} */ rs) {
     + `</tbody></table></div>` + (list.length > shown.length ? `<p class="sm">${eh(t("kmd.more", { n: shown.length, m: list.length }))}</p>` : "");
 }
 function evidenceTable(/** @type {NonNullable<typeof res>} */ rs) {
-  const list = rs.rows.filter(r => r.ms2).sort((a, b) => b.ms2.ev.n - a.ms2.ev.n || a.mz - b.mz).slice(0, MAX_ROWS);
+  const all = rs.rows.filter(r => r.ms2).sort((a, b) => b.ms2.ev.n - a.ms2.ev.n || a.mz - b.mz), list = all.slice(0, MAX_ROWS);
   if (!rs.nMs2) return `<p class="sm" role="status">${eh(t("pfas.noms2file"))}</p>`;
   if (!list.length) return `<p class="sm" role="status">${eh(t("pfas.noms2"))}</p>`;
   return `<div class="qq-scroll"><table class="qq-tab" id="pfas-ev"><thead><tr><th scope="col">ID</th><th scope="col">m/z</th><th scope="col">RT</th><th scope="col">${t("pfas.col.frags")}</th>`
     + `<th scope="col">${t("pfas.col.losses")}</th><th scope="col">${t("pfas.col.cf2")}</th><th scope="col">${t("pfas.col.evidence")}</th></tr></thead><tbody>`
     + list.map(r => `<tr data-i="${r.i}" tabindex="0" role="button" aria-label="${eh(t("pfas.row.aria", { mz: fmt(r.mz, 4), rt: fmt(r.rt, 2) }))}"${selRow === r.i ? ' aria-current="true" class="sel"' : ""}>`
       + `<td class="num">${eh(r.id)}</td><td class="num">${fmt(r.mz, 4)}</td><td class="num">${fmt(r.rt, 2)}</td><td>${eh(evText(r.ms2.ev))}</td><td>${eh(lossText(r.ms2.ev))}</td>`
-      + `<td class="num">${r.ms2.ev.cf2}</td><td class="num">${r.ms2.ev.n}</td></tr>`).join("") + `</tbody></table></div>`;
+      + `<td class="num">${r.ms2.ev.cf2}</td><td class="num">${r.ms2.ev.n}</td></tr>`).join("") + `</tbody></table></div>`
+    + (all.length > list.length ? `<p class="sm">${eh(t("kmd.more", { n: list.length, m: all.length }))}</p>` : "");
 }
 
 function paintRes(/** @type {HTMLElement} */ box) {
@@ -137,7 +138,7 @@ function paintRes(/** @type {HTMLElement} */ box) {
   if (!el) return;
   if (!res) { el.innerHTML = ""; return; }
   const withF = res.rows.filter(r => r.formula).length, withEv = res.rows.filter(r => r.ms2 && r.ms2.ev.n > 0).length;
-  el.innerHTML = `<p class="sm" role="status">${eh(t("pfas.sum", { n: res.rows.length, f: withF, e: withEv }))}</p>${plotSvg(res)}<p class="sm">${t("pfas.plot.note")}</p>`
+  el.innerHTML = `<p class="sm" role="status">${eh(t("pfas.sum", { n: res.rows.length, f: withF, e: withEv }))}</p>${res.total > res.rows.length ? `<p class="sm" id="pfas-capped">${eh(t("pfas.capped", { n: res.rows.length, m: res.total, go: t("kmd.go") }))}</p>` : ""}${plotSvg(res)}<p class="sm">${t("pfas.plot.note")}</p>`
     + `<h4 class="sm" style="margin:8px 0 2px">${t("pfas.formulas.title")}</h4>${formulaTable(res)}<p class="sm">${t("pfas.formulas.note")}</p>`
     + `<h4 class="sm" style="margin:8px 0 2px">${t("pfas.ev.title")}</h4>${evidenceTable(res)}<p class="sm">${t("pfas.ev.note")}</p>`
     + `<div class="qq-form"><button type="button" id="pfas-xlsx">Excel</button></div>`;
