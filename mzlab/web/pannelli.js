@@ -920,7 +920,7 @@ function xicDirect(mz, after, panel, over) {
   return np;
 }
 const xicName = (/** @type {Pannello} */ q) => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(mzd(q)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : I18N.t("xic.empty"); };
-// Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
+// Estrai ioni (XIC): 2-10 rows (m/z or neutral formula + adduct), ONE panel, one trace each; a removed row keeps the focus in the dialog.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 /** @param {Pannello | null} [panel] */
 function openXic(panel, /** @type {Bag} */ pre = {}) {
@@ -974,7 +974,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
       if (!r.inp.value.trim()) { err.textContent = I18N.t("xic.err.empty"); return; }
       Q("#xic-go").click();
     };
-    r.x.onclick = () => { if (rows.length < 2) return; rows.splice(rows.indexOf(r), 1); el.remove(); renumber(); };
+    r.x.onclick = () => { const i = rows.indexOf(r); if (!rows[1]) return; rows.splice(i, 1); el.remove(); renumber(); (rows[i] || rows[i - 1]).inp.focus(); };
     rows.push(r); host.appendChild(el); renumber(); evalRow(r);
     return r;
   };
