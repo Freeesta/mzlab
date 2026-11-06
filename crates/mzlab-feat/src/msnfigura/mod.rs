@@ -1,21 +1,16 @@
-//! The static figure (SVG) of a fragmentation graph `msngrafo/1`: tree or radial view, drawn from the key `vista`. Native only, never in a .wasm.
-//! It repeats the LABEL RULE at the top of `mzlab/web/msngrafo-vista.js` (the interactive drawer of the page, the Flow and the stand-alone HTML), so a
-//! test compares the texts of both. Colours are written in the file (Okabe-Ito, dark ink on white): the SVG lives alone. Used by `msn_html`, `msn_graph`
-//! (`--figura`, `figure`) and the step `msn.figure@1`.
+//! The static figure (SVG) of a fragmentation graph `msngrafo/1`: tree or radial view, drawn from the key `vista` (feature `figura`; the CLI and the `.wasm`
+//! `msnfigura` call it). It repeats the LABEL RULE at the top of `mzlab/web/msngrafo-vista.js` (the interactive drawer of the page, the Flow and the
+//! stand-alone HTML), so a test compares the texts of both. Colours are written in the file (Okabe-Ito, dark ink on white): the SVG lives alone. Used by
+//! `html`, `msn_graph` of the CLI (`--figura`, `figure`) and the step `msn.figure@1`.
 
 use std::collections::{HashMap, HashSet};
 
 use mzlab_core::error::{Error, Result};
 
-#[path = "msn_figura_disegno.rs"]
 mod disegno;
-#[path = "msn_figura_scena.rs"]
+pub mod html;
 mod scena;
-#[cfg(test)]
-#[path = "msn_figura_tests.rs"]
-mod tests;
-
-#[path = "msn_figura_testi.rs"]
+#[path = "testi.rs"]
 mod testi_;
 
 use disegno::*;

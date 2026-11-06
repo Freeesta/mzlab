@@ -8,7 +8,7 @@ use mzlab_core::step::DataType;
 use mzlab_feat::interp::redraw::drawing_of_site;
 
 use crate::flow::{read_one, write_made, FileRunner};
-use crate::flow_link::parent_of;
+use mzlab_feat::parent::parent_of;
 
 /// `drawings/1` text for the `sites/1` file and the parent file. The SMILES of the parent file wins over the one `sites/1` carries.
 pub fn render_text(sites: &[u8], parent: &[u8]) -> Result<String> {

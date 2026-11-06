@@ -8,7 +8,7 @@ use mzlab_core::json::Out;
 use mzlab_core::step::DataType;
 
 use crate::flow::{read_one, write_made, FileRunner};
-use crate::flow_link::parent_of;
+use mzlab_feat::parent::parent_of;
 
 /// The options the engine reads (`Opts::parse`), from the parameters the step resolved.
 fn opts_json(job: &Job) -> String {

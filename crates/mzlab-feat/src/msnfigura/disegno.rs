@@ -1,4 +1,4 @@
-//! The drawing half of the static figure: the molecule of the root, the arcs and the boxes as SVG elements. Child of `msn_figura`, which gives it the layout.
+//! The drawing half of the static figure: the molecule of the root, the arcs and the boxes as SVG elements. Child of `msnfigura`, which gives it the layout.
 
 use std::collections::HashSet;
 

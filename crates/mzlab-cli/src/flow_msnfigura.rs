@@ -8,8 +8,8 @@ use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{read_one, Exec, FileRunner};
-use crate::msn_figura::Vista;
 use crate::msn_uscite::{bytes, Formato};
+use mzlab_feat::msnfigura::Vista;
 
 /// The executor of the step, read by the runner after its own list.
 pub(crate) const EXECUTORS: &[(&str, Exec)] = &[("msn.figure", Exec::File("figure", figure_job))];

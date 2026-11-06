@@ -140,10 +140,10 @@ mod ion_pattern_cmd;
 pub mod llm;
 mod llm_ctx;
 mod mol_label_cmd;
-pub mod msn_figura;
+#[cfg(test)]
+mod msn_figura_tests;
 pub mod msn_graph;
 mod msn_graph_compare;
-pub mod msn_html;
 mod msn_lib;
 mod msn_png;
 mod msn_rules;
