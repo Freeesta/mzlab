@@ -21,9 +21,10 @@ pub fn msn_graph_step() -> Step {
                 optional: true,
                 ..Port::new("molecules", DataType::Structure, "Molecules list (CSV) for the name of the molecule")
                     .accepts(&[DataType::Table, DataType::Report])
+                    .formats(&["csv"])
             },
         ],
-        outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msngrafo/2)")],
+        outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msngrafo/2)").format("msngrafo")],
         params: params(),
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),
