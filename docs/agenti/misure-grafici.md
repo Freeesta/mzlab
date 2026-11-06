@@ -15,4 +15,12 @@ Costo del disegno dei cromatogrammi su tracce sintetiche dense: `python3 tools/b
 | Maiusc+trascina ×60 (con zoom): fotogrammi p95 / max, ms; attività lunghe | 233.3 / 250.0; 60 (253) | 66.7 / 83.3; 60 (88) |
 | ridimensiona la finestra ×10: chiamate a `draw()`; fotogrammi mediana / max, ms | 15; 116.7 / 183.3 | 15; 125.0 / 183.3 |
 
+## Vista a cascata, 20 file da 10^5 punti, CPU 1x (`main` `622c60ccc384e94cb663950740383717ee8af69e` → `grafici.js` disegna ogni traccia della cascata con `DECIMA.rawLine`; prova `e2e_cascata_densa`)
+| azione | prima | dopo |
+|---|---|---|
+| draw, vista a cascata, ms | 2903.3 | 88.4 |
+| vertici per traccia (tela di 1184 px, 60 000 punti) | 60 000 (riempimento e linea) | 1057 |
+
+Prima ogni punto entrava due volte nel percorso (riempimento sotto la traccia e linea da 1,25 px); ora una colonna di pixel ha un vertice (il massimo della colonna, come nella vista sovrapposta) e la linea fitta è di 1 px (`hairline`). Il picco più alto di ogni traccia resta la cima della sua linea.
+
 Un file da 10^6 punti (stessa macchina): draw della vista intera 11 ms, dello zoom 0,9 ms; rotella, trascinamento e passaggio del mouse a 16,7 ms per fotogramma senza attività lunghe; ridimensionare ×10 = 15 chiamate a `draw()` (fotogrammi fino a 50 ms).

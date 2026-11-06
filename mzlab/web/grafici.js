@@ -380,17 +380,16 @@ async function drawLines(p) {
   const tags = [];
   if (cas) {                                                     // back to front: white under every trace, so the ones behind are covered
     for (let k = cs.length - 1; k >= 0; k--) {
-      const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}; let first = null, last = null;
-      g.beginPath();
-      const pts = [];
-      const [a0, a1] = spanOf(s.x, x0, x1);                  // the window by binary search (the bounds are still tested)
-      for (let i = a0; i < a1; i++) { const r = s.x[i]; if (r < x0 || r > x1) continue; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; }
-      if (first == null) continue;
-      g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
-      baseLine(g, Y(0) + sy, X(x0) + sx, X(x1) + sx);
-      g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py));
-      g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
-      tags.push({ s, f, px: first, py: Y(0) + sy });
+      const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}, z = Y(0) + sy, Xs = (/** @type {number} */ r) => X(r) + sx;
+      const { v, thin } = DC.rawLine(s.x, s.ys, x0, x1, Xs, (/** @type {number} */ val) => Y(U(s, val)) + sy);   // the window by binary search; dense: one vertex per pixel column (decima.js)
+      if (!v.length) continue;
+      const first = v[0], last = v[v.length - 2];
+      g.beginPath(); g.moveTo(first, z); for (let i = 0; i < v.length; i += 2) g.lineTo(v[i], v[i + 1]);
+      g.lineTo(last, z); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
+      baseLine(g, z, X(x0) + sx, X(x1) + sx);
+      g.beginPath(); for (let i = 0; i < v.length; i += 2) if (i) g.lineTo(v[i], v[i + 1]); else g.moveTo(v[0], v[1]);
+      g.strokeStyle = s.color; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, Xs) ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
+      tags.push({ s, f, px: first, py: z });
     }
     g.restore(); g.save();                                       // time labels last (nothing draws over them), with a halo from --panel so they read on both themes
     g.font = fpx(12, "bold "); g.textAlign = "left"; g.lineWidth = 3; g.lineJoin = "round";
