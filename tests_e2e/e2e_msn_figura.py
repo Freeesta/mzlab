@@ -41,7 +41,7 @@ try:
         step("keyboard: Tab to an ion, Enter shows the detail", keys)
         def table():
             pg.evaluate("document.getElementById('data').open = true"); assert pg.locator("#table tr").count() > 10
-            pg.evaluate("window.__c=null; navigator.clipboard.writeText = t => { window.__c = t; return Promise.resolve(); }")
+            pg.evaluate("window.__c=null; navigator.clipboard.writeText = t => { window.__c = t; return Promise.resolve(); }; navigator.clipboard.write = async it => { window.__c = await (await it[0].getType('text/plain')).text(); }; 0")
             pg.click("#copy"); pg.wait_for_function("window.__c"); assert "\t" in pg.evaluate("window.__c")
         step("data table and Copy data", table)
         def svg_dl():

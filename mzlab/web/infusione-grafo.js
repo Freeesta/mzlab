@@ -42,7 +42,7 @@ function dataTable(pretty = false) {
 
 async function copyData() {
   const t = dataTable(false), tsv = [t.head, ...t.rows].map(r => r.join("\t")).join("\n");
-  try { await navigator.clipboard.writeText(await PROV.tsv(tsv, { table: "msn-graph" })); nearMsg(I18N.t("tdati.copied")); } catch (_) { nearMsg(I18N.t("msngrafo.copy.fail")); }
+  try { await copiaOra({ "text/plain": PROV.tsv(tsv, { table: "msn-graph" }) }); nearMsg(I18N.t("tdati.copied")); } catch (_) { nearMsg(I18N.t("msngrafo.copy.fail")); }
 }
 
 /** The spectrum of a node in the active cell: its own when it was isolated, else the one of the precursor it comes from. */

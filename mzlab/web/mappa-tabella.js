@@ -60,8 +60,8 @@ const MAPFORME = (/** @type {MappaCtx} */ c) => {
     if (csv) dlc(name, sheets, { p, table: "map-points" }); else dlx(name, sheets, { p, table: "map-points" });
   }
   async function copyRows(/** @type {Pannello} */ p) {
-    const txt = await PROV.tsv([headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n"), { p, table: "map-points" });
-    try { await navigator.clipboard.writeText(txt); nearMsg(T("mappa.tab.copied")); } catch (e) { nearMsg(T("mappa.tab.copyFail")); }
+    const txt = PROV.tsv([headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n"), { p, table: "map-points" });      // not awaited: Safari takes the clipboard only while the click runs
+    try { await copiaOra({ "text/plain": txt }); nearMsg(T("mappa.tab.copied")); } catch (e) { nearMsg(T("mappa.tab.copyFail")); }
   }
   return { grpShape, shapeNew, drawPoints, shapePath, COLS, COLK, excel, copyRows };
 };

@@ -73,9 +73,8 @@
   async function copy(p) {
     const r = rows(p), t = tsv(r), s = st(p);
     try {
-      if (window.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([t], { type: "text/plain" }), "text/html": new Blob([html(r)], { type: "text/html" }) })]);
-      else await navigator.clipboard.writeText(t);
-    } catch (_) { try { await navigator.clipboard.writeText(t); } catch (e) { return; } }
+      await copiaOra({ "text/plain": t, "text/html": html(r) });
+    } catch (_) { return; }
     const m = s.pop && s.pop.querySelector(".tp-ok"); if (!m) return;
     m.textContent = T("tabp.copied"); clearTimeout(s.tm); s.tm = setTimeout(() => { m.textContent = ""; }, 2000);
   }

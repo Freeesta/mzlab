@@ -98,13 +98,12 @@ function thrBind(/** @type {HTMLElement} */ root, /** @type {() => void} */ agai
 async function copyTable(/** @type {string[]} */ h, /** @type {any[][]} */ rs, /** @type {any} */ meta, /** @type {(s: string) => void} */ msg) {
   if (!rs.length) return msg(t("lib.nothingCopy"));
   const f = (/** @type {unknown} */ v) => (typeof v === "number" ? String(+v.toFixed(3)) : String(v ?? ""));
-  const tsv = await PROV.tsv(h.join("\t") + "\n" + rs.map(r => r.map(f).join("\t")).join("\n"), meta);
+  const tsv = PROV.tsv(h.join("\t") + "\n" + rs.map(r => r.map(f).join("\t")).join("\n"), meta);      // not awaited: Safari takes the clipboard only while the click runs
   const html = `<table><tr>${h.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map(r => `<tr>${r.map(v => `<td>${EHt(f(v))}</td>`).join("")}</tr>`).join("")}</table>`;
   try {
-    if (W_.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([tsv], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) })]);
-    else await navigator.clipboard.writeText(tsv);
+    await copiaOra({ "text/plain": tsv, "text/html": html });
     msg(t("lib.copied", { n: rs.length }));
-  } catch (_) { try { await navigator.clipboard.writeText(tsv); msg(t("lib.copied", { n: rs.length })); } catch (_2) { msg(t("lib.noCopy")); } }
+  } catch (_) { msg(t("lib.noCopy")); }
 }
 /** Rows of a table move with the arrows and are chosen with Enter or Space. */
 function rowKeys(/** @type {HTMLElement} */ box) {

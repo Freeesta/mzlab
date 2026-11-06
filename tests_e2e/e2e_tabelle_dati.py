@@ -8,6 +8,12 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_tabelle_dati.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
+# a clipboard as strict as Safari's: write()/writeText() only while the click is being dispatched (the provenance line comes from the engine later)
+SAFARI_CLIP = """(() => { window.__clip = null; window.__clipNo = false; let live = false;
+addEventListener('click', () => { live = true; }, true); addEventListener('click', () => { live = false; });
+const no = () => { window.__clipNo = true; return Promise.reject(new DOMException('not allowed', 'NotAllowedError')); };
+navigator.clipboard.writeText = t => live ? (window.__clip = t, Promise.resolve()) : no();
+navigator.clipboard.write = items => live ? items[0].getType('text/plain').then(b => b.text()).then(t => { window.__clip = t; }) : no(); })()"""
 r = Run(port=8866, wd="/tmp/wd_tabelle")
 CH = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic')"
 SP = "E.panels.find(p=>p.type==='spec'&&p.tab==='full')"
@@ -56,11 +62,12 @@ try:
         step("D reads the description through the polite live region", live)
         def copy():
             pg.evaluate(f"{CH}.cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
-            pg.evaluate("navigator.clipboard.writeText=async t=>{window.__clip=t}"); pg.click("#tdati [data-td=c]"); pg.wait_for_timeout(300)
+            pg.evaluate(SAFARI_CLIP); pg.click("#tdati [data-td=c]"); attendi(pg, "window.__clip !== null || window.__clipNo", 10000)
+            assert not pg.evaluate("window.__clipNo"), "the copy reached the clipboard after the click was over (Safari refuses it)"
             c = pg.evaluate("window.__clip"); ln = [l for l in c.split("\n") if not l.startswith("#")]      # the first line is the provenance comment
             assert ln[0].split("\t")[1] == "RT (min)" and "\t" in ln[1], c[:200]
             close()
-        step("Copy puts the table in the clipboard as tab separated text", copy)
+        step("Copy puts the table in the clipboard as tab separated text, handed over inside the click (Safari)", copy)
         def map_table():
             pg.evaluate("addPanel('map',{tab:'full'})"); pg.wait_for_timeout(2500); ready(pg)
             M_ = "E.panels.find(p=>p.type==='map'&&p.tab==='full')"
