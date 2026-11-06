@@ -23,7 +23,7 @@ pub fn figure_step() -> Step {
         params: vec![
             Param::choice("format", "Format", &["svg", "html", "png"])
                 .default_str("svg")
-                .doc("svg: the static figure, colours written in the file; html: one file with no external resource, two views, data table and downloads; png: the SVG rasterised (only in a build with the cargo feature `png`; the browser leaves it to the computer)"),
+                .doc("svg: the static figure, colours written in the file; html: one file with no external resource, two views, data table and downloads; png: the SVG rasterised (only in a build with the cargo feature `png`)"),
             Param::choice("view", "View", &["tree", "radial"])
                 .default_str("tree")
                 .doc("tree: columns by MS level; radial: the precursor in the centre, one ring per step of the best path (the HTML has both and opens on this one)"),
