@@ -123,7 +123,7 @@ function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el
   UPROWS.paint();syncWork()}
 const FILECHUNK={t:{}};
 // «Remove all files» of the toolbar: asks once, then removes them like the list's menu does (lista-file.js: one «Removed · Undo» entry takes them all back)
-async function confirmRemoveAll(){const n=E.files.filter((/** @type {FileAperto} */ f)=>!f.gone).length;if(n&&await yesno(I18N.t("load.table.removeAll.ask",{n})))removeAllFiles()}
+async function confirmRemoveAll(){const n=E.files.filter((/** @type {FileAperto} */ f)=>!f.gone).length+unopenedRows().length;if(n&&await yesno(I18N.t("load.table.removeAll.ask",{n})))removeAllFiles()}
 function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
   CONVROWS.wire(el);if(window.COLS)COLS.wire(el);else if(F.length)carica("colonne-campioni.js").then(renderFiles);if(window.GRUTAB)GRUTAB.wire(el);else if(F.length)carica("gruppi-tab.js").then(renderFiles);
   el.querySelectorAll("[data-open]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>soloFile(E.files.find((/** @type {FileAperto} */ x)=>!x.gone&&x.file.split("#")[0]===b.dataset.open)));

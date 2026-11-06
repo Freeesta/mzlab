@@ -2,7 +2,8 @@
 the list gets worse than the saved base (tools/soglie_base.json): a file or function over the limit that is not in the base, or one
 that grew by more than 10% (at least 10 lines) over its base. The base can only shrink.
 The agent documents (CLAUDE.md, docs/agenti/*.md except the generated mappa.md and misure-diario.md) have two more limits:
-lines over 600 characters (counted per file) and files over 25 KB.
+lines over 600 characters (counted per file) and files over 25 KB. It also fails on a web API newer than the Safari floor that
+tools/safari_api_ammesse.txt does not list (tools/safari_api.py).
 
     python3 tools/controlla.py             # report + exit 1 if worse than the base
     python3 tools/controlla.py --lista     # also print every entry over a limit
@@ -18,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import indice  # noqa: E402
 import html_sicuro  # noqa: E402
+import safari_api  # noqa: E402
 
 BASE = indice.ROOT / "tools" / "soglie_base.json"
 MAX_FILE, MAX_FUNC = 500, 80
@@ -269,7 +271,7 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_layout() + regole_esperimenti("--aggiorna" in sys.argv) + regole_frame("--aggiorna" in sys.argv) + regole_attese("--aggiorna" in sys.argv) + html_sicuro.peggiori(html_sicuro.misura(), json.loads(html_sicuro.BASE.read_text(encoding="utf-8")) if html_sicuro.BASE.exists() else {})
+    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_layout() + regole_esperimenti("--aggiorna" in sys.argv) + regole_frame("--aggiorna" in sys.argv) + regole_attese("--aggiorna" in sys.argv) + safari_api.controlla() + html_sicuro.peggiori(html_sicuro.misura(), json.loads(html_sicuro.BASE.read_text(encoding="utf-8")) if html_sicuro.BASE.exists() else {})
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))
