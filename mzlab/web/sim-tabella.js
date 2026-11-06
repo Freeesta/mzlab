@@ -1,8 +1,7 @@
 // @ts-check
-// The SIM table of the Data view (#simtab, between the sample table and the panels): with SIM files loaded (kind «mrm» with Q1-only transitions, e.g. a SCIEX
-// .wiff in SIM), every SIM channel of every file integrated by the engine (`api/simtab`, mzlab_core::simtab: one column per m/z, every resolved peak), as a
-// pivot (rows by sidebar group, folding) or swapped, or the peak table, against the edge line or from zero; its CSV = `mzlab-cli sim-table` after the
-// provenance line. Picked columns draw a kinetic plot (QAQC.chart over the file table's «Tempo»). Called by syncWork (area-lavoro.js). docs/agenti/transizioni.md.
+// The SIM table of the Data view (#simtab): with SIM files loaded (kind «mrm», Q1-only transitions, e.g. a SCIEX .wiff in SIM), every SIM channel of
+// every file integrated by the engine (`api/simtab`, mzlab_core::simtab: a column per m/z, every peak), as a pivot (rows by sidebar group) or swapped, or
+// the peak table, edge line or zero; CSV = `mzlab-cli sim-table`. Picked columns draw a kinetic plot (QAQC.chart). Called by syncWork. docs/agenti/transizioni.md.
 const G = /** @type {any} */ (window);
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => G.I18N.t(k, p);
 
@@ -11,7 +10,7 @@ const OUTS = () => /** @type {[string, string][]} */ ([["area_sum", t("canali.si
   ["apex_rt", t("canali.simtab.o.apex_rt")], ["n_peaks", t("canali.simtab.o.n_peaks")], ["peaks", t("canali.simtab.o.peaks")]]);
 /** The fixed column names of the CSV shown in the user's language; sample names and channel m/z stay as they are. */
 const HEADS = () => /** @type {Record<string, string>} */ ({ sample: t("canali.simtab.h.sample"), group: t("canali.simtab.h.group"), channel: t("canali.simtab.h.channel"), q1: t("canali.simtab.h.channel"), name: t("canali.simtab.h.name"),
-  peak: t("canali.simtab.h.peak"), apex_rt: t("canali.simtab.h.apex_rt"), area: t("canali.simtab.h.area"), height: t("canali.simtab.h.height"), snr: t("canali.simtab.h.snr"), fwhm_s: t("canali.simtab.h.fwhm_s"), baseline: t("canali.simtab.h.baseline") });
+  peak: t("canali.simtab.h.peak"), apex_rt: t("canali.simtab.h.apex_rt"), area: t("canali.simtab.h.area"), height: t("canali.simtab.h.height"), snr: t("canali.simtab.h.snr"), fwhm_s: t("canali.simtab.h.fwhm_s"), baseline: t("canali.simtab.base") });
 
 /** @typedef {{ k: number, g: string, f: any }} Entry */
 /** @type {{ sig: string, files: Entry[], out: string, layout: "samples" | "channels", base: string, csv: Record<string, string>, size: { channels: number, samples: number } | null, busy: number, sel: Set<string>, shut: Set<string>, ksig: string }} */
@@ -131,9 +130,9 @@ function draw() {
 <thead><tr>${raw(ths.join(""))}</tr></thead><tbody>${raw(bodyHtml(body, gcol, lead, cols.length))}</tbody></table></div>
 <section class="simtab-kin" aria-label="${t("canali.simtab.kin.aria")}">${raw(kin.html)}</section></details>`;
   el.hidden = false;
-  const sel = /** @type {HTMLSelectElement} */ (el.querySelector("[data-o]"));
-  sel.addEventListener("change", () => { st.out = sel.value; show("[data-o]"); });
-  const bs = /** @type {HTMLSelectElement} */ (el.querySelector("[data-b]")); bs.addEventListener("change", () => { st.base = bs.value; show("[data-b]"); });
+  for (const [k, q] of [["out", "[data-o]"], ["base", "[data-b]"]]) {
+    const s = /** @type {HTMLSelectElement} */ (el.querySelector(q)); s.addEventListener("change", () => { /** @type {any} */ (st)[k] = s.value; show(q); });
+  }
   el.querySelector("[data-flip]")?.addEventListener("click", () => { st.layout = st.layout === "samples" ? "channels" : "samples"; show("[data-flip]"); });
   el.querySelector("[data-dl]")?.addEventListener("click", () => { G.dl(`sim-table-${view().replace(/\|/g, "-")}.csv`, st.csv[view()], "text/csv", { table: "simtab" }); });
   el.querySelectorAll("[data-g]").forEach(b => b.addEventListener("click", () => {
@@ -170,7 +169,7 @@ async function ask(fs, v) {
   const [output, layout, base] = v.split("|");
   try {
     const g = fs.some(e => e.g) ? `&g=${encodeURIComponent(JSON.stringify(fs.map(e => e.g)))}` : "";
-    const r = await fetch(`api/simtab?k=${fs.map(e => e.k).join(",")}${g}&output=${output}&layout=${layout}${base ? "&baseline=" + base : ""}`);
+    const r = await fetch(`api/simtab?k=${fs.map(e => e.k).join(",")}${g}&output=${output}&layout=${layout}&baseline=${base || ""}`);
     if (!r.ok) return false;
     const text = await r.text();
     if (sigOf(fs) === st.sig) st.csv[v] = text;

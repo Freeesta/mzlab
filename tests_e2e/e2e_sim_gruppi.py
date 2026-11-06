@@ -64,7 +64,7 @@ try:
             attendi(pg, "SIMTAB.state().csv['area_sum|samples|zero'] !== undefined && document.querySelector('#simtab [data-b]').value === 'zero'", timeout=60000)
             got = pg.evaluate("SIMTAB.state().csv['area_sum|samples|zero']")
             need(got == want and want.split("\n")[0].endswith(",baseline") and all(l.endswith(",zero") for l in want.strip().split("\n")[1:]), (got, want))
-            attendi(pg, "[...document.querySelectorAll('#simtab thead th')].pop()?.textContent === I18N.t('canali.simtab.h.baseline')")
+            attendi(pg, "[...document.querySelectorAll('#simtab thead th')].pop()?.textContent === I18N.t('canali.simtab.base')")
             need(pg.evaluate("[document.querySelectorAll('#simtab thead th').length, document.querySelectorAll('#simtab thead [data-c]').length]") == [12, 10], "no pick button on the baseline column")
             need(pg.evaluate("SIMTAB.ask('peaks|samples|zero')") == cli("sim-table", *FILES, *GROUPS, "--set", "baseline=zero", "--set", "output=peaks"), "peaks from zero")
             pg.select_option("#simtab [data-b]", ""); attendi(pg, "document.querySelectorAll('#simtab thead th').length === 11")

@@ -70,7 +70,6 @@ I18N.add("it", {
   "canali.simtab.base": "Linea di base",
   "canali.simtab.base.edges": "Retta tra i bordi",
   "canali.simtab.base.zero": "Da zero",
-  "canali.simtab.h.baseline": "Linea di base",
   "canali.sim.cell": "SIM · {n} ioni",
   "canali.sim.cell1": "SIM · 1 ione",
   "canali.sim.kind": "SIM",
