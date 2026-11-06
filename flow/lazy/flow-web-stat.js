@@ -6,6 +6,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   // step -> the .wasm function and the plan files it reads besides the table
+  /** @type {Record<string, [string, string[]]>} */
   const OPS = { "table.stats": ["flow_stats", ["samples", "design"]], "table.pca": ["flow_pca", ["samples"]], "table.kmd": ["flow_kmd", []] };
   const STEPS = Object.keys(OPS);
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
@@ -24,7 +25,7 @@
 
   /** table.stats | table.pca | table.kmd @param {any} x @param {any} spec @param {any} inst */
   const run = async (x, spec, inst) => {
-    const [fn, ports] = OPS[/** @type {keyof typeof OPS} */ (base(inst))], j = J().job(spec), p = await kit().getPool();
+    const [fn, ports] = OPS[base(inst)], j = J().job(spec), p = await kit().getPool();
     const texts = ports.map(port => fileText(x, inst, port));
     const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
     const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
