@@ -4,7 +4,7 @@
 
 big   one SRM file, 4 transitions of 10^6 points (20 min), one shown
 many  20 SRM files of 10^5 points, all ticked and overlaid
-Per set: draw() time of the whole view and of a zoom on the noisy baseline (median of 8, ms; many also in the waterfall view), then the gestures (Ctrl+wheel x30, Shift+drag x60,
+Per set: draw() time of the whole view and of a zoom on the noisy baseline (median of 8, ms), of a y zoom on the baseline (many also in the waterfall view), then the gestures (Ctrl+wheel x30, Shift+drag x60,
 hover x120, window resize x10): draw() calls, frame intervals (median / p95 / max ms) and long tasks (> 50 ms: count / longest). Files in /tmp/mzlab_bench_grafici."""
 import sys, os, argparse, statistics
 from pathlib import Path
@@ -69,6 +69,7 @@ def run_set(p, port, name, rate):
         if name == "many": pg.evaluate("E.files.forEach(f => f.vis = true); syncBrowse(); renderFileList(); redrawAll(); 0"); ready(pg)
         pg.evaluate(HOOK); n = pg.evaluate(f"({P})._a.sr.length")
         rows.append(("draw, whole view", draw_ms(pg, "null"))); rows.append(("draw, zoom on the noisy baseline 9.45-9.62 min", draw_ms(pg, "[9.45, 9.615]")))
+        pg.evaluate(f"({P}).zoomY = [0, 300]"); rows.append(("draw, y zoom on the baseline 0-300", draw_ms(pg, "null"))); pg.evaluate(f"({P}).zoomY = null")
         if name == "many": pg.evaluate(f"({P}).mode = 'cas'"); rows.append(("draw, waterfall view", draw_ms(pg, "null"))); pg.evaluate(f"({P}).mode = ''"); ready(pg)
         x, y, w, h = pg.evaluate(f"(() => {{ const r = ({P}).cv.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }})()"); cx, cy = x + w / 2, y + h / 2
 
