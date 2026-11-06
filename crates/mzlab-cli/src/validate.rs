@@ -85,9 +85,12 @@ pub fn run(args: impl Iterator<Item = String>) -> Outcome {
         let name = f.file_name().map_or(f.display().to_string(), |n| {
             n.to_string_lossy().into_owned()
         });
-        let read = File::open(f)
-            .map_err(|e| e.to_string())
-            .and_then(|h| valida(h).map_err(|e| e.to_string()));
+        let read = (if f.is_dir() {
+            Err("a folder, not a file".to_string())
+        } else {
+            File::open(f).map_err(|e| e.to_string())
+        })
+        .and_then(|h| valida(h).map_err(|e| e.to_string()));
         let Ok(r) = read else {
             err += &format!(
                 "{name}: cannot be read: {}\n",
