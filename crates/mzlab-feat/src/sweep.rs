@@ -241,6 +241,19 @@ impl Slab {
         }
     }
 
+    /// The table positions in `a..b` of the peaks of scan `s`, in table order (the ones of filtering `a..b` by scan), by bisection in the by-scan view.
+    pub(crate) fn of_scan(&self, s: u32, a: usize, b: usize) -> Result<&[u32]> {
+        let g = self.scans()?;
+        let s = s as usize;
+        if s + 1 >= g.start.len() {
+            return Ok(&[]);
+        }
+        let o = &g.orig[g.start[s] as usize..g.start[s + 1] as usize];
+        let from = o.partition_point(|&k| (k as usize) < a);
+        let to = from + o[from..].partition_point(|&k| (k as usize) < b);
+        Ok(&o[from..to])
+    }
+
     /// Whether the trace of the scans `w0..w1` over the table positions `a..b` is served by bisection.
     pub(crate) fn bisects(len: usize, a: usize, b: usize) -> bool {
         len.saturating_mul(BISECT_COST) < b - a

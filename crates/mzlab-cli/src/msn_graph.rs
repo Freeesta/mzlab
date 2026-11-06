@@ -131,7 +131,7 @@ pub struct Args {
     interpreta: Option<f64>,
     rotture: Option<Parametri>,
     figura: Vec<crate::msn_uscite::Formato>,
-    vista: crate::msn_figura::Vista,
+    vista: mzlab_feat::msnfigura::Vista,
     pub out: Option<PathBuf>,
 }
 
@@ -148,8 +148,8 @@ fn numero(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
 
 /// The arguments after `msn-graph`; `Ok(None)` = `--help`.
 /// The view named after `--view`.
-fn vista_di(n: Option<String>) -> std::result::Result<crate::msn_figura::Vista, String> {
-    crate::msn_figura::Vista::da_nome(&n.unwrap_or_default())
+fn vista_di(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigura::Vista, String> {
+    mzlab_feat::msnfigura::Vista::da_nome(&n.unwrap_or_default())
         .ok_or_else(|| "--view needs tree or radial".into())
 }
 
@@ -166,7 +166,7 @@ pub fn parse_args(
     let (mut strutture, mut rot) = (None, Rot::default());
     let (mut interpreta, mut ppm_perdita) = (false, PPM_PERDITA);
     let (mut regole, mut regole_p) = (false, ParamRegole::default());
-    let (mut figura, mut vista) = (Vec::new(), crate::msn_figura::Vista::Albero);
+    let (mut figura, mut vista) = (Vec::new(), mzlab_feat::msnfigura::Vista::Albero);
     while let Some(x) = a.next().map(|x| crate::msn_uscite::canonical(ALIASES, x)) {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),

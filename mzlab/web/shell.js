@@ -19,6 +19,10 @@ function dprNow(){const s=(window.visualViewport&&window.visualViewport.scale)||
  if(window.visualViewport)window.visualViewport.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(redo,150)})}
 // layout size, not getBoundingClientRect: a panel sliding in (transizioni.js scales it) must not change the resolution
 function setup(/** @type {HTMLCanvasElement} */ c){const z=typeof fz==="function"?fz():1;M.l=Math.max(Math.round(66*z),window.MARG_L||0);M.r=Math.max(14,window.MARG_R||0);M.t=Math.round(14*z);M.b=Math.round(40*z);const r={width:c.clientWidth,height:c.clientHeight},d=dprNow();c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const g=/** @type {CanvasRenderingContext2D} */ (c.getContext("2d"));g.setTransform(d,0,0,d,0,0);return{g,W:r.width,H:r.height}}
+// a redraw asked only because the layout moved (window resize, workspace and panel observers: one resize drew every panel three times) is skipped while
+// the canvas has the size of its last drawing (p._sz, written by draw in grafici.js; a draw that did not paint, e.g. on a hidden canvas, clears it)
+function sizeKey(/** @type {Bag} */ p){return p.cv.clientWidth+"x"+p.cv.clientHeight+"@"+dprNow()+"/"+(typeof fz==="function"?fz():1)}
+function drawSized(/** @type {Bag} */ p){return p._sz===sizeKey(p)?undefined:draw(p)}
 function nice(/** @type {number} */ a,/** @type {number} */ b,/** @type {number} */ n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=s/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,o=[];for(let t=Math.ceil(a/st)*st;t<=b+1e-9;t+=st)o.push(+t.toFixed(10));return o}
 function smooth(/** @type {number[]} */ y,/** @type {number} */ k){if(!k)return y;const n=y.length,o=new Array(n);for(let i=0;i<n;i++){const v=y[i],a=i?y[i-1]??v:v,c=i<n-1?y[i+1]??v:v;o[i]=(a+2*v+c)/4}return o}
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles

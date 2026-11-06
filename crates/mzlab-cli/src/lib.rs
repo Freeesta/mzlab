@@ -140,10 +140,10 @@ mod ion_pattern_cmd;
 pub mod llm;
 mod llm_ctx;
 mod mol_label_cmd;
-pub mod msn_figura;
+#[cfg(test)]
+mod msn_figura_tests;
 pub mod msn_graph;
 mod msn_graph_compare;
-pub mod msn_html;
 mod msn_lib;
 mod msn_png;
 mod msn_rules;
@@ -182,7 +182,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
        mzlab-cli sim-table FILE... [--set output=area|apex_rt]   every SIM channel integrated, one column per sample, as CSV (sim-table --help)
-       mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help)
+       mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help); peak-area: one peak from zero or a line (peak-area --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)

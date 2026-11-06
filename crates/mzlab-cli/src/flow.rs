@@ -14,18 +14,16 @@ use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
-use crate::flow_cache::Cache;
 use crate::flow_digl::uv::uv_job;
 use crate::flow_estimate::estimate_job;
 pub(crate) use crate::flow_made::Made;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
-use crate::flow_pace::Watch;
-use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, prov_text, run_plan};
-use crate::flow_stats::stats_job;
+use crate::{flow_cache::Cache, flow_pace::Watch};
 use crate::{flow_insilico::insilico_job, flow_level::level_job};
+use crate::{flow_reactivity::reactivity_job, flow_stats::stats_job};
 
 #[path = "flow_live.rs"]
 pub mod live;
@@ -432,6 +430,8 @@ pub fn executable(id: &str) -> bool {
 }
 
 fn dispatch(r: &FileRunner, job: &Job) -> Result<Made> {
+    let views = crate::flow_export::view::resolve(r, job)?;
+    let job = views.as_ref().unwrap_or(job);
     let exec = all_executors().find(|(k, _)| *k == job.step.id);
     match exec.map(|e| &e.1) {
         Some(Exec::File(port, f)) => Ok(Made::new(port, f(r, job)?)),

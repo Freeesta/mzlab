@@ -28,12 +28,12 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `import.raw`, `convert.mzml` | sì | no come passo; sì da Dati («Scarica .mzML», moduli lettori) | no | da fare | M | 2 |
 | `features.ms2_link` | no | no | — | scelta: dentro `features.detect` (`flow_rule_tests.rs:13`, `BUCHI`) | — | — |
 | **Flow: tabella** | | | | | | |
-| `table.drift` | sì | `.wasm` `flowtab` (`flow_drift`, `mzlab-feat::flow_drift`): esecutore `F.webDrift` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_web_drift.py` (SHA-256 uguale al nativo, lineare e loess) | fatto | S | 1 |
-| `qc.run_order` | sì | `.wasm` `flowtab` (`flow_runorder`, `mzlab-feat::runorder`): esecutore `F.webQcReport.runOrder`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
-| `report.methods` | sì | `.wasm` `flowtab` (`flow_methods`, `mzlab-feat::methods`): esecutore `F.webQcReport.methods`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
-| `export.annotations` | sì | `.wasm` `flowtab` (`flow_export_annot`, `mzlab-feat::flow_export_annot`): esecutore `F.webExportAnnot` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_export_annot.py` (SHA-256 uguale al nativo, secondo giro `reused`) | fatto | S | 1 |
+| `table.drift` | sì | `.wasm` `flowstat` (`flow_drift`, `mzlab-feat::flow_drift`): esecutore `F.webDrift` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_web_drift.py` (SHA-256 uguale al nativo, lineare e loess) | fatto | S | 1 |
+| `qc.run_order` | sì | `.wasm` `flowstat` (`flow_runorder`, `mzlab-feat::runorder`): esecutore `F.webQcReport.runOrder`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
+| `report.methods` | sì | `.wasm` `flowstat` (`flow_methods`, `mzlab-feat::methods`): esecutore `F.webQcReport.methods`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
+| `export.annotations` | sì | `.wasm` `flowstat` (`flow_export_annot`, `mzlab-feat::flow_export_annot`): esecutore `F.webExportAnnot` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_export_annot.py` (SHA-256 uguale al nativo, secondo giro `reused`) | fatto | S | 1 |
 | `table.filter`, `table.plausible` | sì | pannello per plausibilità (`.wasm` `table`: `table_plausible`, `table_check`); filtro non verificato | `test_feat_table_wasm.py` per `check.json`; passi no | da fare: nessun esecutore in `F.liveJobs` | S | 1 |
-| `table.stats`, `table.pca`, `table.kmd` | sì | pannello (motore: `stat_post`; vista KMD/PCA) | `stat_route_parity.rs` è Rust↔Python | da fare | M | 2 |
+| `table.stats`, `table.pca`, `table.kmd` | sì | sì (`flow-web-stat.js`, `.wasm` `flowstat`) | `e2e_flow_web_stat.py` | fatto | M | 2 |
 | `export.table_csv`, `export.mztab` | sì | pannello (`export_table`); mzTab del passo no | no | da fare | M | 1 |
 | `export.inclusion` | sì | `.wasm` `interp` (`flow_inclusion`, `mzlab-feat::export_inclusione_tp`): esecutore `F.webInclusion` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_neg_lr.py` | fatto | S | 1 |
 | `table.match` | sì | sì (`F.webIdent.tableMatch`: `.wasm` `table` + `lib`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
@@ -54,8 +54,8 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network`, `tp.review`, `tp.dig_lr` | sì | sì | sì: `e2e_flow_tp_web.py`, `e2e_flow_tp_link.py`, `e2e_flow_tp_post.py`, `e2e_flow_tp_review.py`, `e2e_flow_dig_lr.py` contro `flow run` | — (avviso `warn.flow.link.noT0` non riportato dal sito) | S | 3 |
 | Modello «Bentazone / TP» (`flow-names.js:98`) | sì | sì (tutti i suoi passi hanno esecutore) | indiretto (passi sopra) | — | — | — |
 | `spectra.msn_graph`, `msn.library_export`, `msn.table_export` | sì | sì | sì: `test_msngrafo_wasm.py`, `e2e_flow_msn.py`, `e2e_msngrafo_nativo.py` | — | — | — |
-| `msn.figure` | sì | no come passo (figura nella scheda, disegnata in JS: nessun `.wasm`, quindi niente byte per byte) | `msn_figura_parita.js` (testi Rust = disegnatore, su grafi fissi); `test_msnfigura_wasm.py` (grafo dal `.wasm`: testi di ioni e perdite del SVG nativo = disegnatore della pagina) | da fare (passo) | S | 3 |
-| `structure.render`, `structure.reactivity` | sì | pannello (`feat-worker.js`, `.wasm` `chem` `reactivity`) | `crates/mzlab-desktop/tests/reattivita.rs` (app ↔ funzione del `.wasm`) | da fare come passo | S | 3 |
+| `msn.figure` | sì | sì (`flow-web-struct.js`, `.wasm` `msnfigura`: `mzlab_feat::msnfigura::figure_text`, svg e html; il PNG resta al computer) | `e2e_flow_web_struct.py` (SHA-256 uguale al nativo); `msn_figura_parita.js` (testi Rust = disegnatore) | fatto | S | 3 |
+| `structure.render`, `structure.reactivity` | sì | sì (`flow-web-struct.js`, `.wasm` `interp` `flow_render`, `chem` `flow_reactivity`) | `e2e_flow_web_struct.py` (SHA-256 uguale al nativo) | fatto | S | 3 |
 | `structure.draw` (Ketcher) | no | sì | — | limite: editor JS in iframe; un disegno non è un calcolo | — | — |
 | `chrom.uv_peaks`, `quant.calibrate` | sì | no | no | da fare | M | 3 |
 | **Flow: registro e controllo** | | | | | | |
@@ -108,4 +108,4 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 7. **Passi di Attributio nel sito** — `formula.ms1/ms2`, `spectra.chimeric`, `spectra.insilico`, `spectra.ms2`, `rt.predict`, `annot.level` e gli altri algoritmi di `spectra.match` come esecutori sopra `attributio-all`/`untargeted`/`lib`, con prova byte per byte. Chat: *Attributio*.
 8. **Controllo del piano e liste in Rust** — sostituire `flow-check.js` con `flow::check` nel motore (come `flow_line`) e servire `flow/liste` dal `.wasm`; `test_flow_grafico.py` resta come prova. Chat: *Flow*.
 9. **Lettura diretta nel sito** — Waters, Agilent LC/MS, Bruker, Shimadzu, ANDI, mzXML aperti per il motore come Thermo (`lettore-esterno.js`), senza mzML in OPFS; prima misurare tetti e tempi. Chat: *Lettori/formati*.
-10. **Il resto dei passi e un solo «dove gira»** — `table.stats/pca/kmd`, `structure.*`, `msn.figure`, `chrom.uv_peaks`, `quant.calibrate`, `meta.compare`, `table.match`, `spectra.lookup`, `features.estimate`, `import.raw`/`convert.mzml` nel sito; `runs_in` del descrittore allineato agli esecutori veri, con un test che li confronta. Chat: *Flow web* (passi) e *Coordinatore* (decisione su `annot.regulatory/hazard`, tutor nel sito).
+10. **Il resto dei passi e un solo «dove gira»** — `structure.draw`, `chrom.uv_peaks`, `quant.calibrate`, `meta.compare`, `table.match`, `spectra.lookup`, `features.estimate`, `import.raw`/`convert.mzml` nel sito; `runs_in` del descrittore allineato agli esecutori veri, con un test che li confronta. Chat: *Flow web* (passi) e *Coordinatore* (decisione su `annot.regulatory/hazard`, tutor nel sito).

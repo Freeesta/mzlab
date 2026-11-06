@@ -13,6 +13,10 @@ use mzlab_feat::store::Slice;
 use mzlab_feat_table_wasm::core::{table_file, view_origin};
 use mzlab_feat_table_wasm::pol;
 
+/// A view read by a step that wants a `.mzfeat` (every step but these exports): the table it stands for.
+#[path = "flow_view.rs"]
+pub(crate) mod view;
+
 /// Polarity of the table: the rule of `mzlab_feat_table_wasm::pol` (the recipe, else the files of its lineage), the one the browser applies.
 pub(crate) fn polarity_of(table: &[u8], files: &[PathBuf]) -> Result<i32> {
     let ix: Vec<_> = files.iter().filter_map(|p| open(p).ok()).collect();
@@ -20,7 +24,7 @@ pub(crate) fn polarity_of(table: &[u8], files: &[PathBuf]) -> Result<i32> {
 }
 
 /// The `.mzfeat` of this run (made by a step, a plan input, or in the working folder) whose SHA-256 is `sha`: the table a filter view was made from.
-fn table_by_sha(r: &FileRunner, sha: &str) -> Option<PathBuf> {
+pub(crate) fn table_by_sha(r: &FileRunner, sha: &str) -> Option<PathBuf> {
     let made: Vec<PathBuf> = {
         let m = r.made.lock().unwrap_or_else(|e| e.into_inner());
         m.values().cloned().collect()

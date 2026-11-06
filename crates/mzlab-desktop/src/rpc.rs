@@ -353,7 +353,7 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
-            "simtab" => text(match mzlab_core::simtab::table_text(s("files"), s("output"), s("layout")) {
+            "simtab" => text(match mzlab_core::simtab::table_text_with(s("files"), s("output"), s("layout"), if s("baseline").is_empty() { "edges" } else { s("baseline") }) {
                 Ok(csv) => csv,
                 Err(e) => format!("E{}", e.to_json()),
             }),

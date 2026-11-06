@@ -107,3 +107,55 @@ fn the_dialog_sn_leaves_out_a_weak_peak() {
     let n = |snr: f64| auto_integrate(&rt, &y, 0.0, 6.0, AutoParams::from_dialog(5, snr)).len();
     assert_eq!((n(5.0), n(200.0)), (2, 1));
 }
+
+#[test]
+fn the_baseline_mode_applies_to_every_peak() {
+    use mzlab_core::baseline::integrate;
+    let (rt, y) = trace();
+    let f = std::env::temp_dir().join("mzlab_peaks_auto_trace_base.csv");
+    let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
+    std::fs::write(&f, body.join("\n")).unwrap();
+    let p = f.to_str().unwrap();
+    let edges = run(args(&[p]));
+    assert_eq!(
+        run(args(&[p, "--set", "baseline=edges"])).stdout,
+        edges.stdout
+    );
+    let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
+    let o = run(args(&[p, "--set", "baseline=zero"]));
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    let got = v["peaks"].as_array().unwrap();
+    assert_eq!(got.len(), core.len());
+    for (g, k) in got.iter().zip(&core) {
+        // same boundaries and baseline ends, the area now from zero (the background of about 560 counts inside it)
+        assert_eq!(
+            (g["t0"].as_f64().unwrap(), g["b0"].as_f64().unwrap()),
+            (rt[k.lo], k.base_lo)
+        );
+        let z = integrate(&rt, &y, k.lo, k.hi, |_| 0.0);
+        assert_eq!(
+            (g["area"].as_f64().unwrap(), g["below"].as_f64().unwrap()),
+            (z.area, 0.0)
+        );
+        assert_eq!(g["baseline"], "zero");
+        assert!(z.area > k.area);
+    }
+    let o = run(args(&[
+        p,
+        "--set",
+        "baseline=line",
+        "--set",
+        "base_y0=1000",
+        "--set",
+        "base_t1=6",
+        "--set",
+        "base_y1=1000",
+    ]));
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert!(v["peaks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|g| g["baseline"] == "line" && g["below"].as_f64().unwrap() > 0.0));
+    assert_ne!(run(args(&[p, "--set", "baseline=valley"])).code, 0);
+}

@@ -57,6 +57,33 @@ fn grouping_a_big_slab_by_scan_matches_walking_the_window() {
     }
 }
 
+#[test]
+fn the_peaks_of_one_scan_are_the_ones_of_filtering_the_window() {
+    let mut slab = Slab::default();
+    let mut x = 0x0bad_cafe_f00d_1234u64;
+    for k in 0..3_000u32 {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        slab.mz.push(100.0 + k as f64 * 1e-3);
+        slab.it.push(k as f64);
+        slab.pos.push((x % 37) as u32);
+    }
+    for (a, b) in [(0, 3_000), (10, 11), (500, 1_700), (2_999, 3_000), (40, 40)] {
+        for s in 0..40u32 {
+            let want: Vec<u32> = (a..b)
+                .filter(|&j| slab.pos[j] == s)
+                .map(|j| j as u32)
+                .collect();
+            assert_eq!(
+                slab.of_scan(s, a, b).unwrap(),
+                &want[..],
+                "{a}..{b} scan {s}"
+            );
+        }
+    }
+}
+
 /// An HR index (f32 m/z, as an Orbitrap survey) of `nscan` scans of random peaks, some m/z repeated exactly across scans.
 fn random_index(nscan: usize, per: usize) -> Index<Vec<u8>> {
     use mzlab_core::mzml::Spectrum;
