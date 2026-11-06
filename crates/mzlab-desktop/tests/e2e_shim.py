@@ -31,6 +31,13 @@ RAW_FILE = RAW_DIR / "thermo" / "synt.raw"
 import agilent_sintetico  # noqa: E402  (synthetic Agilent .D folders, invented numbers)
 D_DIR = Path(tempfile.mkdtemp(prefix="mzlab-d-")) / "serie"
 agilent_sintetico.write(D_DIR, "uno.D", 120); agilent_sintetico.write(D_DIR / "sub", "due.D", 90)
+import gzip, shimadzu_sintetico  # noqa: E402,E401
+from formati_aperti import mzml_file, mzxml_file, cdf_file  # noqa: E402  (one synthetic file of each type only a readers module reads on the site, and a Numpress mzML)
+MOD_DIR = Path(tempfile.mkdtemp(prefix="mzlab-mod-"))
+mzml_file(MOD_DIR / "np.mzML", True); mzml_file(MOD_DIR / "zl.mzML", False); mzxml_file(MOD_DIR / "xm.mzXML"); cdf_file(MOD_DIR / "an.cdf"); cdf_file(MOD_DIR / "nc.nc")
+(MOD_DIR / "gz.mzML.gz").write_bytes(gzip.compress((MOD_DIR / "zl.mzML").read_bytes())); (MOD_DIR / "zl.mzML").unlink()
+(MOD_DIR / "q.qgd").write_bytes(shimadzu_sintetico.qgd()[0]); (MOD_DIR / "l.lcd").write_bytes(shimadzu_sintetico.lcd()[0])
+MOD_FILES = sorted(MOD_DIR.iterdir())
 PAGE_PORT, ENGINE_PORT = 8841, 8842
 fails = []
 def step(name, fn):
@@ -45,13 +52,13 @@ if not (DIST / "index.html").exists() or not all(f.exists() for f in LR_FILES + 
 subprocess.run(["cargo", "build", "-q", "-p", "mzlab-desktop", "--example", "serve"], cwd=ROOT, check=True)
 LIBDIR = Path(tempfile.mkdtemp(prefix="mzlab-libs-")) / "Librerie"      # the native folder of the libraries (does not exist yet: the app creates it)
 DATA = Path(tempfile.mkdtemp(prefix="mzlab-data-"))                    # the folder of the app: files.json, kv.json, the indexes
-eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES + WIFF_FILES + [RAW_FILE])], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_APP_DIR": str(DATA)})
+eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES + WIFF_FILES + [RAW_FILE] + MOD_FILES)], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_APP_DIR": str(DATA)})
 picked = {}
 for line in eng.stdout:
     if line.startswith("FILE "):
         _, i, name, size = line.split(); picked[name] = {"id": int(i), "name": name, "size": int(size)}
     if line.startswith("READY"): break
-LR_PICK = [picked[f.name] for f in LR_FILES]; HR_PICK = [picked[f.name] for f in HR_FILES]; WIFF_PICK = [picked[f.name] for f in WIFF_FILES]; RAW_PICK = [picked[RAW_FILE.name]]
+LR_PICK = [picked[f.name] for f in LR_FILES]; HR_PICK = [picked[f.name] for f in HR_FILES]; WIFF_PICK = [picked[f.name] for f in WIFF_FILES]; RAW_PICK = [picked[RAW_FILE.name]]; MOD_PICK = [picked[f.name] for f in MOD_FILES]
 
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -365,6 +372,20 @@ try:
             give(); assert rows() == first, ("the same .raw picked again", first, rows())
             c5.close()
         step("desktop: the same .raw picked again keeps its one row and its one index (natsame)", raw_again)
+        def module_types():                  # the site reads these through its readers modules, which need the bytes; the stubs of the app have none, so its native side reads them
+            c7 = b.new_context(user_agent=ctx_ua)
+            c7.add_init_script("window.__NEWRUN = true; window.__PICK = %s;\n" % json.dumps(MOD_PICK) + FAKE_TAURI); c7.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            q = c7.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            q.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); q.wait_for_selector("#drop", timeout=120000)
+            q.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true && typeof ST !== 'undefined'", timeout=30000)
+            want = ["an.mzML", "gz.mzML", "l.mzML", "nc.mzML", "np.mzML", "q.mzML", "xm.mzML"]
+            q.evaluate("document.getElementById('drop').click()")
+            q.wait_for_function(f"{json.dumps(want)}.every(n => ST.files.some(f => f.name === n && OPENNOW.isOpen(n))) && UPBUSY === 0 && OPENNOW.busy() === 0", timeout=180000)
+            got = q.evaluate("ST.files.map(f => [f.name, f.n_spectra || f.scans || 0]).sort()")
+            assert [g[0] for g in got] == want and all(g[1] > 0 for g in got), got
+            assert not q.evaluate("CONV.files.size"), "nothing went to a readers module of the page"
+            c7.close()
+        step("desktop: Numpress mzML, mzXML, .mzML.gz, .cdf, .nc, .qgd and .lcd open as the native side reads them (no module of the page, no bytes in the page)", module_types)
         def d_again():
             c6 = b.new_context(user_agent=ctx_ua)
             c6.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c6.route(re.compile(r"http://mzlab\.localhost/.*"), native)
@@ -409,6 +430,6 @@ try:
         step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
         b.close()
 finally:
-    eng.kill(); page.shutdown(); shutil.rmtree(RAW_DIR, ignore_errors=True); shutil.rmtree(D_DIR.parent, ignore_errors=True)
+    eng.kill(); page.shutdown(); shutil.rmtree(RAW_DIR, ignore_errors=True); shutil.rmtree(D_DIR.parent, ignore_errors=True); shutil.rmtree(MOD_DIR, ignore_errors=True)
 print("  ", ("result", "FAIL " + ", ".join(fails) if fails else "ok"))
 sys.exit(1 if fails else 0)
