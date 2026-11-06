@@ -9,7 +9,7 @@
 const BrukerD = {
   BRUKER: { tdf: "analysis.tdf", tdfbin: "analysis.tdf_bin", tdfwal: "analysis.tdf-wal", tsf: "analysis.tsf", tsfbin: "analysis.tsf_bin", tsfwal: "analysis.tsf-wal", baf: "analysis.baf" },
   is: (/** @type {any} */ r) => !!(r.files.tdf || r.files.tsf || r.files.baf || r.files.tdfbin || r.files.tsfbin),
-  /** the bin file of a database that has none, or the database of a bin file that has none (the same check as the Rust reader, `bruker::tdf_aiuti::riconosci`) */
+  /** the missing half of a database and bin pair (as `bruker::tdf_aiuti::riconosci`) */
   missing: (/** @type {any} */ r) => [["tdf", "tdfbin"], ["tsf", "tsfbin"]].flatMap(([a, b]) => r.files[a] && !r.files[b] ? [b] : !r.files[a] && r.files[b] ? [a] : []).map(k => BrukerD.BRUKER[k]),
   /** a Bruker run: an error with a key, or a sample the module writes as mzML (shell.js moduloToMzml) */
   toModulo(/** @type {any} */ r, /** @type {any} */ out, /** @type {any} */ T, /** @type {string} */ nm) {
