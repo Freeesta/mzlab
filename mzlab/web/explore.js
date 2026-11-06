@@ -984,7 +984,7 @@ function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
   m._ret = ev.kbd ? document.activeElement : null; m._lp = !!ev.lp; m._t = Date.now();
   // with a finger the menu opens beside it: lifting the finger must not click an item
   const off = document.documentElement.classList.contains("touch") ? 16 : 0;
-  m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
+  m.style.left = Math.max(4, Math.min(ev.clientX + off, innerWidth - m.offsetWidth - 8)) + "px";      // its real width: a finger makes the rows taller and wider
   m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
   if (ev.kbd) { const f = m.querySelector('div[role^=menuitem]:not(.dim)'); if (f) f.focus(); }
 }

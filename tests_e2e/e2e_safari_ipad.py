@@ -139,6 +139,9 @@ try:
                 for _ in range(2): pg.keyboard.press("Escape")
                 pg.evaluate("(() => { const c = document.getElementById('ctx'); if (c) c.hidden = true; for (const s of ['#colpop', '#fpop', '#uipset']) document.querySelector(s)?.remove(); })()")
             assert not left, f"still open after a tap outside them: {left}"
+            touch(bb["x"] + bb["width"] - 4, bb["y"] + bb["height"] * 0.5, 800); attendi(pg, ctx, 5000)       # opened at the right edge, the menu stays in the window
+            right = pg.evaluate("document.getElementById('ctx').getBoundingClientRect().right - innerWidth")
+            assert right <= 0, f"the chart menu sticks out of the window by {right} px"
             pg.context.close()
         step("iPad: a tap outside closes the menus and pop-ups (iOS sends no click to a plain area, touch.js keeps the click of a chart)", tap_outside)
         def fallbacks():
