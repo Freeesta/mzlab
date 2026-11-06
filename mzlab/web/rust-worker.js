@@ -126,7 +126,7 @@ async function lrOpen(name) {                                             // ope
   const f = await fileOf(name);
   for (;;) {
     const ix = await ARCH.get("idx", name + ".mzidx");
-    if (!ix) { openGate.drop(slotOf(name)); return false; }
+    if (!ix) { openGate.drop(slotOf(name)); if (!(await ARCH.get("files", name))) { lrFile.delete(name); jerr("err.file.removedElsewhere", { name }); } return false; }      // no copy nor index: another tab removed it (tabs are not kept in step)
     await ARCH.lease("idx", name + ".mzidx");
     if (!openGate.same(slotOf(name), ix)) { openGate.drop(slotOf(name)); engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"])); openGate.mark(slotOf(name), ix); }      // the same index already parsed in the slot is not parsed again
     await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader

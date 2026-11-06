@@ -50,6 +50,7 @@ I18N.add("en", {
   "err.upload.interrupted": "Upload interrupted.",
   "err.notebook.noWorkFolder": "No work folder: use the download button.",
   "err.session.fileNotFound": "File not found: {name}",
+  "err.file.removedElsewhere": "«{name}» is no longer in the browser storage: it was removed in another tab or window. Drop it again to open it.",
   "err.session.noFiles": "Add at least one file.",
   "err.session.noSuchFile": "This file is not in the session.",
   "err.scan.outside": "scan outside the file",

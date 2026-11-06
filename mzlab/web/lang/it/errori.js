@@ -50,6 +50,7 @@ I18N.add("it", {
   "err.upload.interrupted": "Caricamento interrotto.",
   "err.notebook.noWorkFolder": "Nessuna cartella di lavoro: usa il pulsante di scarico.",
   "err.session.fileNotFound": "File non trovato: {name}",
+  "err.file.removedElsewhere": "«{name}» non è più nella memoria del browser: è stato tolto in un'altra scheda o finestra. Trascinalo di nuovo per aprirlo.",
   "err.session.noFiles": "Aggiungi almeno un file.",
   "err.session.noSuchFile": "Questo file non è nella sessione.",
   "err.scan.outside": "scansione fuori dal file",
