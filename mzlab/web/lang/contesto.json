@@ -440,6 +440,7 @@
   "lib.copied": "Messaggio dopo la copia della tabella degli appunti; {n} = numero di righe.",
   "lib.doneN": "Esito della lettura di una libreria; {n} = spettri letti (già formattato).",
   "lib.droppedN": "Seguito di lib.doneN: spettri scartati; {n} = quanti (già formattato).",
+  "lib.cutN": "Seguito di lib.doneN: spettri tenuti con i soli primi picchi (tetto del motore); {n} = quanti, {max} = tetto dei picchi per spettro (già formattati).",
   "lib.noPrec": "Messaggio quando nessuna voce ha un precursore entro la tolleranza; {tol} = tolleranza con unità (es. «10 ppm»).",
   "lib.pairs.title": "Didascalia della tabella dei picchi corrispondenti sotto il grafico a specchio; {n} = numero di coppie.",
   "lib.plot.shared": "Etichetta in alto a destra nel grafico a specchio; {n} = numero di picchi in comune.",

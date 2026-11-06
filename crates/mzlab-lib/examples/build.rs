@@ -99,11 +99,13 @@ fn main() {
     let in_len = std::fs::metadata(input).unwrap().len();
     let _ = std::fs::remove_file(&scratch);
     println!(
-        "{:?}: {} spectra ({} dropped, {} emptied), {} peaks; {:.1} MB -> {:.1} MB ({:.1}x); parse+clean {:.1}s, total {:.1}s; peak RSS {:.0} MB",
+        "{:?}: {} spectra ({} dropped, {} emptied, {} cut at {} peaks), {} peaks; {:.1} MB -> {:.1} MB ({:.1}x); parse+clean {:.1}s, total {:.1}s; peak RSS {:.0} MB",
         fmt,
         info.n_spectra,
         st.dropped,
         info.emptied,
+        st.cut,
+        mzlab_lib::spec::MAX_RAW_PEAKS,
         info.n_peaks,
         in_len as f64 / 1e6,
         info.bytes as f64 / 1e6,
