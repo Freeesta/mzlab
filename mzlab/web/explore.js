@@ -891,7 +891,7 @@ function renderNav() {
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
 Q("#fsel").onchange = (/** @type {Event & { target: HTMLSelectElement }} */ e) => activeFile(+e.target.value);
 // ← → (scan by scan or file by file), Maiusc + ← →, Spazio and Esc: see scroll.js (scrollKeys)
-document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
+document.addEventListener("pointerdown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
 // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
 function toolbar() {
   if (window.BANCO) BANCO.bar();       // high-resolution bench: its toolbar (banco.js)
@@ -994,6 +994,13 @@ document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._
 // the Correzione menu closes when the click is elsewhere
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
+// a finger or a pen: iOS sends no click for a tap on a plain area and touch.js keeps the click of a chart, so the touch itself closes the menus it lands outside of
+document.addEventListener("pointerdown", e => {
+  if (e.pointerType === "mouse") return;
+  const t = /** @type {Node} */ (e.target), m = Q("#ctx");
+  if (!m.hidden && !m.contains(t)) m.hidden = true;
+  document.querySelectorAll(".corrm:not([hidden])").forEach(c => { if (!c.parentNode.contains(t)) c.hidden = true; });
+}, true);
 // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
 document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; if (/** @type {any} */ (e)._ctxWas) e.preventDefault(); Q("#ctx").hidden = true; } });
 // CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).

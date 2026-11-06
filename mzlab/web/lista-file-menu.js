@@ -30,7 +30,7 @@ function colorFile(f, ev) {
   d.querySelector("input").onchange = e => set(e.target.value);
   d.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); d.remove(); } });
   document.body.appendChild(d); (d.querySelector("[aria-pressed=true]") || d.querySelector("button"))?.focus(); const bx = d.getBoundingClientRect(); d.style.left = Math.max(COLOR_MARGIN, Math.min(ev.clientX, innerWidth - COLOR_MARGIN - bx.width)) + "px"; d.style.top = Math.max(COLOR_MARGIN, Math.min(ev.clientY, innerHeight - COLOR_MARGIN - bx.height)) + "px";
-  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+  setTimeout(() => document.addEventListener("pointerdown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("pointerdown", h); } }), 0);
 }
 function fileCtx(e, f) {
   if (!f) return; e.stopPropagation();
@@ -56,5 +56,5 @@ function fileMenu(btn) {
   };
   paint(); document.body.appendChild(d);
   const r = btn.getBoundingClientRect(); d.style.left = Math.min(r.left, innerWidth - 240) + "px"; d.style.top = r.bottom + 4 + "px";
-  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+  setTimeout(() => document.addEventListener("pointerdown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("pointerdown", h); } }), 0);
 }

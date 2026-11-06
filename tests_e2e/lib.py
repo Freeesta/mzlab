@@ -293,6 +293,19 @@ if BROWSER != "chromium":
         from playwright.sync_api import BrowserType as _BT
         _launch = _BT.launch
         _BT.launch = lambda self, **kw: _PersistentWebKit(self, kw) if self.name == "webkit" else _launch(self, **kw)
+# Two rules of iOS Safari that Chromium's touch emulation does not follow, for the iPad tests (an init script):
+# a long press fires no native contextmenu, and a tap fires mousedown / mouseup / click only when the touched node or an ancestor below <body>
+# responds to clicks (an interactive element, a click or mouse listener of its own, cursor:pointer); listeners on the document do not count.
+IOS_TOUCH = """(() => {
+  addEventListener('contextmenu', e => { if (e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  const own = new WeakSet(), T = new Set(['click', 'mousedown', 'mouseup']), add = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function (t, f, o) { if (T.has(t) && this instanceof Element) own.add(this); return add.call(this, t, f, o); };
+  const I = 'a[href],button,input,select,textarea,label,summary,[role=button],[role=menuitem],[role=link],[role=tab],[role=option],[role=checkbox],[onclick]';
+  const ok = n => { for (let e = n instanceof Element ? n : n && n.parentElement; e && e !== document.body && e !== document.documentElement; e = e.parentElement)
+    if (own.has(e) || e.onclick || e.onmousedown || e.onmouseup || e.matches(I) || getComputedStyle(e).cursor === 'pointer') return true; return false; };
+  let at = 0; addEventListener('touchend', () => { at = Date.now(); }, true);
+  for (const t of T) addEventListener(t, e => { if (e.isTrusted && Date.now() - at < 1000 && !ok(e.target)) e.stopImmediatePropagation(); }, true);
+})();"""
 FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MRM-t0"]
 # Paths are relative to this folder: code = parent of tests_e2e; the lab files come from the private data repository
 # (tools/dati_percorsi.py finds it), or from $MZLAB_MZML / $MZLAB_DAM (QQQ_* aliases)

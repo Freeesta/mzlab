@@ -207,5 +207,5 @@ document.addEventListener("keyup", e => {
   if (e.key === " " && walkTarget(true) && S.view === "data" && !typingNow()) e.preventDefault();
 });
 addEventListener("blur", () => { KEY.dir = 0; });
-document.addEventListener("mousedown", () => playStop(), true);      // a click stops the play
+document.addEventListener("pointerdown", () => playStop(), true);      // a click or a touch stops the play
 
