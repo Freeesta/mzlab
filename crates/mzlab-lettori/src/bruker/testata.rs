@@ -139,6 +139,15 @@ impl Testata {
             acquired: self.creato.clone(),
             sources: files.iter().map(|f| f.0.clone()).collect(),
             source_sha1: files.iter().filter_map(|f| f.1.clone()).collect(),
+            // every timsTOF is a quadrupole-TOF: the scan table reads the analyzer (high resolution) from these, the file does not name them
+            components: [
+                ("analyzer", "MS:1000081", "quadrupole"),
+                ("analyzer", "MS:1000084", "time-of-flight"),
+                ("detector", "MS:1000114", "microchannel plate detector"),
+            ]
+            .iter()
+            .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
+            .collect(),
             ..Header::default()
         };
         if let Some((n, v)) = &self.software {
