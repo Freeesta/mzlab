@@ -74,13 +74,13 @@ CRATE_SENZA_TESTO = {
 CRATE_KEY = re.compile(r"""\"((?:err|error|warn)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\"""")
 
 
-def crate_keys() -> dict[str, str]:
-    """Keys of messages written as literals in the Rust sources the page can reach: key -> first file."""
+def crate_keys(cli: bool = False) -> dict[str, str]:
+    """Literal message keys of the Rust the page reaches (`cli`: also the CLI, whose terminal text is this catalogue): key -> first file."""
     out: dict[str, str] = {}
     for p in sorted((ROOT / "crates").rglob("*.rs")):
         rel = p.relative_to(ROOT).as_posix()
         parts = rel.split("/")
-        if parts[1] in CRATE_ESCLUSI or "tests" in parts or "examples" in parts or "benches" in parts or p.stem.endswith("_tests") or p.stem.startswith("tests"):
+        if (parts[1] in CRATE_ESCLUSI and not (cli and parts[1] == "mzlab-cli")) or "tests" in parts or "examples" in parts or "benches" in parts or p.stem.endswith("_tests") or p.stem.startswith("tests"):
             continue
         for k in CRATE_KEY.findall(p.read_text(encoding="utf-8", errors="replace")):
             out.setdefault(k, rel)
@@ -466,7 +466,7 @@ def run(listing: bool = False) -> list[str]:
     for k, files in sorted(used.items()):
         if k not in it or k not in en:
             errs.append(f"key used but not in the catalogs: {k}  ({', '.join(sorted(files))})")
-    sent = set(crate_keys())
+    sent = set(crate_keys(cli=True))
     for k in sorted(set(it) | set(en)):
         if k not in used and k not in sent and not any(k.startswith(p) for p in prefixes):
             errs.append(f"orphan key (nobody uses it): {k}")
