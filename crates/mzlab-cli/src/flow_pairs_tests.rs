@@ -172,7 +172,8 @@ fn fixture(out: &Path) -> Fixture {
     for n in NAMES {
         let b = std::fs::read(out.join("identita").join(format!("{n}.mzML"))).unwrap();
         add(&format!("{n}.mzML"), "raw", &b);
-        add(&format!("m_{n}.mzML"), "mzml", &b);
+        // other bytes for the mzML copy: the run names an artifact after the first file with its SHA-256, and the samples name the raw files
+        add(&format!("m_{n}.mzML"), "mzml", &[&b[..], b"\n"].concat());
     }
     let files: Vec<_> = NAMES
         .iter()
