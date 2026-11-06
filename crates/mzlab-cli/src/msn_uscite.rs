@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
 
-use crate::msn_figura::Vista;
+use mzlab_feat::msnfigura::Vista;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Formato {
@@ -51,9 +51,9 @@ pub fn formati(lista: &str) -> std::result::Result<Vec<Formato>, String> {
 /// The bytes of the figure of `graph` in the format `f`.
 pub fn bytes(graph: &str, f: Formato, vista: Vista) -> Result<Vec<u8>> {
     match f {
-        Formato::Svg => Ok(crate::msn_figura::svg(graph, vista)?.into_bytes()),
-        Formato::Html => Ok(crate::msn_html::html(graph, vista)?.into_bytes()),
-        Formato::Png => crate::msn_png::png(&crate::msn_figura::svg(graph, vista)?),
+        Formato::Svg => Ok(mzlab_feat::msnfigura::svg(graph, vista)?.into_bytes()),
+        Formato::Html => Ok(mzlab_feat::msnfigura::html::html(graph, vista)?.into_bytes()),
+        Formato::Png => crate::msn_png::png(&mzlab_feat::msnfigura::svg(graph, vista)?),
     }
 }
 

@@ -10,8 +10,8 @@ use mzlab_feat_wasm::run_tp;
 
 use crate::flow::{all_inputs, read_one, write_made, FileRunner};
 use crate::flow_base::{open, rebuild, Files};
-use crate::flow_link::parent_of;
 use mzlab_core::flow::Artifact;
+use mzlab_feat::parent::parent_of;
 
 // `lib.rs` is at its line limit, so the module of `chrom.uv_peaks` hangs here, where the steps of the crate are listed.
 #[path = "flow_uv.rs"]
