@@ -84,6 +84,20 @@ try:
             pg.keyboard.press("Enter"); assert lst.is_visible()
             pg.keyboard.press("Enter"); assert not lst.is_visible()
         step("iPad: the legend chip of many traces opens by tap and Enter, Escape closes it", legend_chip)
+        def targets():
+            pg = S["pg"]; small = []
+            def size(sel, opener, closer="(()=>{for(const d of document.querySelectorAll('dialog[open]'))d.close()})()"):
+                pg.evaluate(opener); attendi(pg, f"(e => !!e && e.offsetWidth > 0)(document.querySelector({sel!r}))", 20000); frames(pg, 2)
+                w, h = pg.evaluate(f"(r => [r.width, r.height])(document.querySelector({sel!r}).getBoundingClientRect())")
+                if w < 24 or h < 24: small.append((sel, round(w), round(h)))
+                pg.evaluate(closer)
+            size("#bigx", "peakParams()")
+            size("#lib-x", "LIB.open()")
+            size("#refx", "document.getElementById('np-pt').click()")
+            size("#flist input[data-k=use]", "BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()", "BARRA.close()")
+            size("#tour-btn-skip", "TOUR.inizia(1,0)", "document.getElementById('tour-btn-skip').click()")
+            assert not small, f"touch targets under 24x24 px: {small}"
+        step("iPad: the × of the dialogs, «Skip the tour» and the file checkbox are at least 24x24 px", targets)
         def fallbacks():
             pg = ipad(b, extra=TAKE_AWAY)
             got = pg.evaluate("window.__compat || []")
