@@ -28,12 +28,12 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `import.raw`, `convert.mzml` | sì | no come passo; sì da Dati («Scarica .mzML», moduli lettori) | no | da fare | M | 2 |
 | `features.ms2_link` | no | no | — | scelta: dentro `features.detect` (`flow_rule_tests.rs:13`, `BUCHI`) | — | — |
 | **Flow: tabella** | | | | | | |
-| `table.drift` | sì | `.wasm` `flowtab` (`flow_drift`, `mzlab-feat::flow_drift`): esecutore `F.webDrift` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_web_drift.py` (SHA-256 uguale al nativo, lineare e loess) | fatto | S | 1 |
-| `qc.run_order` | sì | `.wasm` `flowtab` (`flow_runorder`, `mzlab-feat::runorder`): esecutore `F.webQcReport.runOrder`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
-| `report.methods` | sì | `.wasm` `flowtab` (`flow_methods`, `mzlab-feat::methods`): esecutore `F.webQcReport.methods`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
-| `export.annotations` | sì | `.wasm` `flowtab` (`flow_export_annot`, `mzlab-feat::flow_export_annot`): esecutore `F.webExportAnnot` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_export_annot.py` (SHA-256 uguale al nativo, secondo giro `reused`) | fatto | S | 1 |
+| `table.drift` | sì | `.wasm` `flowstat` (`flow_drift`, `mzlab-feat::flow_drift`): esecutore `F.webDrift` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_web_drift.py` (SHA-256 uguale al nativo, lineare e loess) | fatto | S | 1 |
+| `qc.run_order` | sì | `.wasm` `flowstat` (`flow_runorder`, `mzlab-feat::runorder`): esecutore `F.webQcReport.runOrder`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
+| `report.methods` | sì | `.wasm` `flowstat` (`flow_methods`, `mzlab-feat::methods`): esecutore `F.webQcReport.methods`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
+| `export.annotations` | sì | `.wasm` `flowstat` (`flow_export_annot`, `mzlab-feat::flow_export_annot`): esecutore `F.webExportAnnot` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_export_annot.py` (SHA-256 uguale al nativo, secondo giro `reused`) | fatto | S | 1 |
 | `table.filter`, `table.plausible` | sì | pannello per plausibilità (`.wasm` `table`: `table_plausible`, `table_check`); filtro non verificato | `test_feat_table_wasm.py` per `check.json`; passi no | da fare: nessun esecutore in `F.liveJobs` | S | 1 |
-| `table.stats`, `table.pca`, `table.kmd` | sì | sì (`flow-web-stat.js`, `.wasm` `flowtab`) | `e2e_flow_web_stat.py` | fatto | M | 2 |
+| `table.stats`, `table.pca`, `table.kmd` | sì | sì (`flow-web-stat.js`, `.wasm` `flowstat`) | `e2e_flow_web_stat.py` | fatto | M | 2 |
 | `export.table_csv`, `export.mztab` | sì | pannello (`export_table`); mzTab del passo no | no | da fare | M | 1 |
 | `export.inclusion` | sì | `.wasm` `interp` (`flow_inclusion`, `mzlab-feat::export_inclusione_tp`): esecutore `F.webInclusion` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_neg_lr.py` | fatto | S | 1 |
 | `table.match` | sì | sì (`F.webIdent.tableMatch`: `.wasm` `table` + `lib`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |

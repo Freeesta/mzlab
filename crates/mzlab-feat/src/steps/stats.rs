@@ -1,12 +1,12 @@
-//! Descriptors of the statistics steps over the feature table (`stat/`): `table.stats`, `table.pca`, `table.kmd`. They run natively and in the `.wasm` `flowtab`
+//! Descriptors of the statistics steps over the feature table (`stat/`): `table.stats`, `table.pca`, `table.kmd`. They run natively and in the `.wasm` `flowstat`
 //! (`flow_stat`), never in the `.wasm` `table`. Their defaults are those of `StatsOpts`, `PcaOpts` and `KmdOpts` (checked by `tests/stat.rs`).
 
 use crate::plausible::Limits;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
-fn flowtab() -> RunsIn {
+fn flowstat() -> RunsIn {
     RunsIn {
-        wasm: Some("flowtab"),
+        wasm: Some("flowstat"),
         wasm_ceiling_bytes: Some(super::FEAT_CEILING),
         native: true,
     }
@@ -34,7 +34,7 @@ pub(super) fn stats() -> Step {
         ],
         outs: vec![Port::new("report", DataType::Report, "Tests per comparison, ANOVA and heat map data (stat/1)")],
         params,
-        runs_in: flowtab(),
+        runs_in: flowstat(),
         errors: vec!["error.badStatInput", "error.stats.param", "error.stats.noReference", "error.stats.condition"],
         ..Step::core(
             "table.stats",
@@ -86,7 +86,7 @@ pub(super) fn pca() -> Step {
         ],
         outs: vec![Port::new("report", DataType::Report, "Scores, loadings, explained variance, stability and ellipses")],
         params,
-        runs_in: flowtab(),
+        runs_in: flowstat(),
         errors: vec!["error.badStatInput", "err.stat.pca.few", "err.stat.pca.nofeatures", "err.stat.pca.param", "err.stat.blank.param"],
         ..Step::core(
             "table.pca",
@@ -116,7 +116,7 @@ pub(super) fn kmd() -> Step {
         ins: vec![Port::new("table", DataType::Table, "Feature table")],
         outs: vec![Port::new("report", DataType::Report, "Kendrick values per ion and the candidate series")],
         params,
-        runs_in: flowtab(),
+        runs_in: flowstat(),
         errors: vec!["error.badStatInput"],
         ..Step::core(
             "table.kmd",

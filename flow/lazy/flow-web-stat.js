@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): table.stats, table.pca and table.kmd in this browser. The texts are `flow_stats`, `flow_pca`, `flow_kmd` of the `flowtab` .wasm (loaded here only, when one of
+// Flow (administrator mode): table.stats, table.pca and table.kmd in this browser. The texts are `flow_stats`, `flow_pca`, `flow_kmd` of the `flowstat` .wasm (loaded here only, when one of
 // these steps runs): `mzlab_feat::flow_stat`, the functions `flow run` calls, so stat/1, the PCA answer and the Kendrick text are the same bytes. The table is the alignment (or gap filling)
 // of the same plan, kept in OPFS; `samples` and `design` are files of the plan (their text in S.samplesJson). The text is kept like the other results, under the key of the job. English only.
 (() => {
@@ -40,7 +40,7 @@
       const m = { params, table: await p.fs.read(J().DIR + alKey + ".mzfeat") };
       ports.forEach((port, i) => { m[port] = enc(/** @type {string} */ (texts[i])); });
       let text;
-      try { text = await p.ident("flowtab", fn, m); } catch (e) { throw asError(e); }
+      try { text = await p.ident("flowstat", fn, m); } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text };
       await F.webMsn.keep(r.name, r.text); await J().remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
