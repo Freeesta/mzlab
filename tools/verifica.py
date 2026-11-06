@@ -57,8 +57,8 @@ NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 # About 3 minutes together on a laptop; the whole set (python3 tools/verifica.py) stays the rule before every merge.
 SMOKE = ["e2e3", "e2e_opfs_promote", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spettro", "e2e_hr_nearest", "e2e_hr_composizione", "e2e_pannelli2",
          "e2e_hr_isotopi", "e2e_picchi", "e2e_a11y_dati", "e2e_safari_ipad"]
-# Tabui, the guided tour, the header walk and the two-part catalog join the smoke round on Chromium Linux only (the PR job): not yet measured on Firefox, WebKit and Windows.
-SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_lab", "e2e_giro_intestazione", "e2e_lingua_parti"]
+# Tabui, the guided tour, the header walk, the two-part catalog and the integration drags join the smoke round on Chromium Linux only (the PR job): not yet measured on Firefox, WebKit and Windows.
+SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_lab", "e2e_giro_intestazione", "e2e_lingua_parti", "e2e_integrazioni"]
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"'reqfail', '[^']*/static/vendor/ketcher/[^']*', 'NS_BINDING_ABORTED'", r"JavaScript Error: \"Failed to load \S*\. A ServiceWorker intercepted the request and encountered an unexpected error\.\" \{file: \"[^\"]*/sw\.js\"", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded", r"cross-world service worker resource mismatch",
