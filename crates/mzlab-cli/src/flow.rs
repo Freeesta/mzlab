@@ -161,7 +161,7 @@ pub struct FileRunner {
     pub(crate) inputs: HashMap<String, PathBuf>,
     meter: Option<Meter>,
     pub(crate) made: Mutex<HashMap<String, PathBuf>>,
-    lineage: Mutex<HashMap<String, Lineage>>,
+    lineage: Mutex<(HashMap<String, Lineage>, HashMap<(String, usize), String>)>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
     pub(crate) progress: Option<Vec<String>>,
     /// Called after each job (the desktop app shows the steps as they finish).
@@ -184,7 +184,7 @@ impl FileRunner {
             inputs: HashMap::new(),
             meter,
             made: Mutex::new(HashMap::new()),
-            lineage: Mutex::new(HashMap::new()),
+            lineage: Mutex::default(),
             progress: None,
             done: None,
             cache: None,
@@ -229,16 +229,18 @@ pub(crate) struct Lineage {
     pub peaks: Vec<PathBuf>,
 }
 
-/// The lineage of the files the run makes (what the feature steps hand on).
+/// The lineage of the files the run makes (what the feature steps hand on) by SHA-256, and the SHA-256 each (instance, item) made: same bytes, not same place.
 impl FileRunner {
     pub(crate) fn trace(&self, a: &Artifact, l: Lineage) {
         let mut map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        map.insert(a.sha256.clone(), l);
+        map.1
+            .extend(l.item.map(|k| ((l.instance.clone(), k), a.sha256.clone())));
+        map.0.insert(a.sha256.clone(), l);
     }
 
     pub(crate) fn lineage(&self, a: &Artifact) -> Option<Lineage> {
         let map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        map.get(&a.sha256).cloned()
+        map.0.get(&a.sha256).cloned()
     }
 
     /// The name of the file an index was made from, else the file name of `a`.
@@ -251,11 +253,9 @@ impl FileRunner {
     pub(crate) fn first_of_series(&self, a: &Artifact) -> Option<PathBuf> {
         let me = self.lineage(a)?;
         let map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        let first = map
-            .iter()
-            .find(|(_, l)| l.instance == me.instance && l.item == Some(0))?;
+        let first = map.1.get(&(me.instance, 0))?;
         let made = self.made.lock().unwrap_or_else(|e| e.into_inner());
-        made.get(first.0).cloned()
+        made.get(first).cloned()
     }
 }
 
