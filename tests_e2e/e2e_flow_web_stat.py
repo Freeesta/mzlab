@@ -107,8 +107,9 @@ KEPT = """async () => {
   for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
   return out;
 }"""
-# the scheduler's jobs of one instance: [item, state, blocked_by]
-JOBS = """async (id) => (await (await fetch('api/flow/sched/jobs', { method: 'POST', body: '{}' })).json()).filter(j => j.instance === id).map(j => [j.item, j.state, j.blocked_by || ''])"""
+# why the scheduler holds the jobs of one instance: the blocked_by of its events (the jobs and nodes routes do not carry it)
+JOBS = """async (id) => { const r = await (await fetch('api/flow/sched/events', { method: 'POST', body: '{"since":0}' })).json(), all = Array.isArray(r) ? r : (r.events || []);
+  return all.filter(e => e.instance === id && e.state === 'blocked').map(e => [e.item, e.state, e.blocked_by || '']); }"""
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []; asked = []
