@@ -28,6 +28,7 @@
   × su una riga in corso = `OPENNOW.hold` + `ConvUI.stop` (conversione) o `lr_cancel` (il file resta senza spunta); un errore resta in rosso con «Dettagli» (`DIAG`) e × lo chiude. `CONVROWS.fill` aggiorna anche queste righe. (`.fl.pr` resta il precursore MS2.)
 - **Cartella grande** (`OPENNOW.many`, `#askdlg`): più di 50 file di dati in un rilascio chiedono una volta «Apri tutti» / «Scegli…»; «Scegli» (o Esc) li mette in tabella senza spunta (`OPENNOW.hold`).
 - **Tabella grande** (`renderFiles`): oltre 500 righe il corpo arriva a blocchi di 200 per fotogramma (`FRAME.next`, `FILECHUNK`).
+- **Ridisegni durante il carico** (`FILETAB`, `RUOLI.coalesce`): al più uno per fotogramma, e dopo un ridisegno costato c ms il successivo aspetta 8×c (200 righe ≈ 30 ms → ≈ 240 ms); con pochi file resta uno per fotogramma, `flush` a fine carico dipinge subito (`tests/ruoli_coalesce_node.mjs`).
 
 ## Gruppi della riga e riepilogo
 - **Gruppi della tabella** (`gruppi-tab.js`, `GRUTAB`; `e2e_carico_gruppi_trascina`): senza etichette le righe restano nell'ordine di arrivo (`CONVROWS.rank`; una modifica dello studente lo scioglie e `sortFiles` la riordina), senza intestazioni.

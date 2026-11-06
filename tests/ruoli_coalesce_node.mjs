@@ -1,10 +1,10 @@
-// RUOLI.coalesce (ruoli-carica.js): the table of a loading repaints once per frame and asks the proposals (`campioni/2 proponi`) once per batch; argv[2] = folder with the copied module.
+// RUOLI.coalesce (ruoli-carica.js): the table of a loading repaints once per frame (a costly repaint spaces the next ones) and asks the proposals (`campioni/2 proponi`) once per batch; argv[2] = folder with the copied module.
 import assert from "assert";
 import fs from "fs";
 import vm from "vm";
 const posts = [];
 const ctx = {
-  I18N: { t: k => k }, EH: s => s, darkTime: x => x, CAMPIONI: { apply() {} },
+  I18N: { t: k => k }, EH: s => s, darkTime: x => x, CAMPIONI: { apply() {} }, performance: { now: () => 0 }, setTimeout, clearTimeout,
   fetch: async (u, o) => ({ json: async () => { const b = JSON.parse(o.body); posts.push(b.files.map(f => f.name)); return { campioni: b.files.map(f => ({ file: f.name, tipo: "sample", tempo_min: 5 })) }; } }),
 };
 vm.createContext(ctx);
@@ -38,5 +38,18 @@ const files = n => Array.from({ length: n }, (_, i) => ({ name: `s${i}.mzML`, ki
 {
   let paints = 0; const ST = []; const m = RUOLI.coalesce(() => { paints++; }, () => RUOLI.propose(() => ST), () => 1, () => {});
   ST.push(...files(3)); m.soon(); assert.equal(paints, 0); await m.flush(); assert.equal(paints, 1);
+}
+// a repaint that cost 30 ms: the next one waits 8 × 30 ms after it ended (a timer, then a frame); a cheap one leaves the next frame free; the flush drops the timer
+{
+  let t = 0, paints = 0; const r = mkRaf(), timers = [];
+  ctx.setTimeout = (f, w) => { timers.push([f, w]); return timers.length; }; ctx.clearTimeout = k => { timers[k - 1] = null; };
+  const m = RUOLI.coalesce(() => { paints++; t += 30; }, () => undefined, r.raf, r.caf, () => t);
+  m.soon(); assert.equal(r.size(), 1); r.frame(); assert.equal(paints, 1);
+  m.soon(); assert.equal(r.size(), 0, "no frame right after a costly repaint"); assert.equal(timers.length, 1); assert.equal(timers[0][1], 240);
+  m.soon(); assert.equal(timers.length, 1, "one timer for every merge meanwhile");
+  t += 240; timers[0][0](); assert.equal(r.size(), 1); r.frame(); assert.equal(paints, 2);
+  m.soon(); assert.equal(timers.length, 2); m.flush(); assert.equal(timers[1], null, "the flush cancels the waiting repaint"); assert.equal(paints, 3);
+  const c = RUOLI.coalesce(() => { paints++; }, () => undefined, r.raf, r.caf, () => t);
+  c.soon(); r.frame(); c.soon(); assert.equal(r.size(), 1, "a free repaint asks the next frame at once");
 }
 console.log("ok");
