@@ -353,6 +353,24 @@ impl<R: ReadAt> Index<R> {
         })
     }
 
+    /// This index over `r`, another reader of the same bytes: the tables `open` read, with empty caches, so it is what `open` would give on
+    /// `r` without reading and parsing the file again.
+    pub fn over<S: ReadAt>(&self, r: S) -> Index<S> {
+        let n = self.sections.len();
+        Index {
+            r,
+            scans: self.scans.clone(),
+            keys: self.keys.clone(),
+            sections: self.sections.clone(),
+            source: self.source.clone(),
+            run: self.run.clone(),
+            cache: Vec::new(),
+            arrays: vec![None; n],
+            arrays_tick: vec![0; n],
+            fences: vec![None; n],
+        }
+    }
+
     /// Index of the section of a level and polarity (`None` = both), or `None` when the file has no such group.
     pub fn section_of(&self, level: u8, pol: Option<i8>) -> Option<usize> {
         let p = match pol {
