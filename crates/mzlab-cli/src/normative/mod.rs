@@ -183,7 +183,8 @@ pub fn run(args: Vec<String>) -> Outcome {
 
 /// `pack` and `listings`: no network, no cache.
 fn run_package(args: &[String]) -> Option<Outcome> {
-    let paths: Vec<&Path> = args[1..]
+    let rest = args.get(1..).unwrap_or_default();
+    let paths: Vec<&Path> = rest
         .iter()
         .filter(|a| !a.starts_with("--"))
         .map(Path::new)
@@ -191,7 +192,7 @@ fn run_package(args: &[String]) -> Option<Outcome> {
     let r = match (args.first().map(String::as_str), paths.as_slice()) {
         (Some("pack"), [i, o]) => pack::pack(i, o).map(|l| l.join("\n") + "\n"),
         (Some("listings"), [p]) => pack::listings(p),
-        (Some("import-official"), _) => import_official::run(&args[1..]),
+        (Some("import-official"), _) => import_official::run(rest),
         (Some("pack" | "listings"), _) => Err(NormError::usage("wrong number of paths")),
         _ => return None,
     };

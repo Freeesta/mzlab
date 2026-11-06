@@ -308,7 +308,8 @@ const TOUR = (() => {
       #tour-btn-skip {
         background: none;
         border: none;
-        padding: 0;
+        padding: 0 4px;
+        min-height: 24px;
         color: var(--muted, #687080);
         text-decoration: underline;
         font-size: 12px;

@@ -78,6 +78,10 @@ pub(crate) fn con_aiuto(args: &[String], mut o: crate::Outcome) -> crate::Outcom
     o
 }
 
+#[path = "stdout.rs"]
+mod stdout;
+pub use stdout::write_stdout;
+
 #[cfg(test)]
 #[path = "testo_errore_tests.rs"]
 mod tests;
