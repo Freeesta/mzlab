@@ -146,7 +146,11 @@ impl Port {
         self
     }
     /// Written only when `input` is wired and, with `param`, that parameter is not the given value.
-    pub fn written_if(mut self, input: &'static str, param: Option<(&'static str, &'static str)>) -> Port {
+    pub fn written_if(
+        mut self,
+        input: &'static str,
+        param: Option<(&'static str, &'static str)>,
+    ) -> Port {
         self.written_if = Some(WrittenIf { input, param });
         self
     }

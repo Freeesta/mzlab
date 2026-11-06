@@ -111,7 +111,14 @@ fn port(o: &mut Out, p: &Port) {
         key(o, "written_if");
         o.raw("{").str("input").raw(":").str(w.input);
         if let Some((name, not)) = w.param {
-            o.raw(",").str("param").raw(":").str(name).raw(",").str("not").raw(":").str(not);
+            o.raw(",")
+                .str("param")
+                .raw(":")
+                .str(name)
+                .raw(",")
+                .str("not")
+                .raw(":")
+                .str(not);
         }
         o.raw("}");
     }

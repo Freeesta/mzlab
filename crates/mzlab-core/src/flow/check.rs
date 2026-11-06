@@ -216,8 +216,15 @@ fn source_type(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref) -> Option<(DataT
                 return None;
             };
             if let Some(w) = o.written_if.as_ref().filter(|w| !written(src, step, w)) {
-                let param = w.param.map(|(p, not)| format!("{p}={not}")).unwrap_or_default();
-                let p = [("ref", text.as_str()), ("input", w.input), ("param", &param)];
+                let param = w
+                    .param
+                    .map(|(p, not)| format!("{p}={not}"))
+                    .unwrap_or_default();
+                let p = [
+                    ("ref", text.as_str()),
+                    ("input", w.input),
+                    ("param", &param),
+                ];
                 add(c, i, port.name, "err.flow.port.unwritten", &p);
                 return None;
             }
@@ -231,7 +238,11 @@ fn written(src: &Instance, step: &Step, w: &WrittenIf) -> bool {
     let wired = src.ins.iter().any(|(n, r)| n == w.input && !r.is_empty());
     let param_ok = w.param.is_none_or(|(name, not)| {
         canonical(src, step).map_or(true, |r| {
-            r.params.iter().find(|(k, _)| k == name).and_then(|(_, v)| v.str()) != Some(not)
+            r.params
+                .iter()
+                .find(|(k, _)| k == name)
+                .and_then(|(_, v)| v.str())
+                != Some(not)
         })
     });
     wired && param_ok

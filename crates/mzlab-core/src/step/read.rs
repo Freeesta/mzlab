@@ -1,7 +1,9 @@
 //! Reads `step/1` descriptors back from their JSON (the registry the Flow page already holds), keeping what the plan check, the canonical parameters and the
 //! scheduler use: ports, parameters, algorithms, presets, where a step runs. Texts for people (titles, docs, references) are left empty. Used by `flow::sched_route`.
 
-use super::{Algorithm, DataType, Facets, Kind, Param, Port, Preset, RunsIn, Status, Step, WrittenIf};
+use super::{
+    Algorithm, DataType, Facets, Kind, Param, Port, Preset, RunsIn, Status, Step, WrittenIf,
+};
 use crate::error::{Error, Result};
 use crate::json::Value;
 
