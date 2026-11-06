@@ -148,9 +148,9 @@ function closePanel(/** @type {Pannello} */ p) {
   const mates = E.panels.filter((/** @type {Pannello} */ q) => q !== p && q.full && q.tab === p.tab && q.riga != null && q.riga === p.riga);
   if (mates.length === 1) { mates[0].quota = null; mates[0].x = 0; mates[0].w = hostWidth(); }
   if (window.DDA) DDA.onClose(p);
-  fsInert(null, p);
+  fsInert(null, p); hideHover(p);
   if (p._ro) p._ro();
-  if (p._ac) p._ac.abort();  // every listener the panel put on document/window goes with it
+  if (p._ac) p._ac.abort();  // every listener it put on document/window goes too
   p._a = null;
   // the bitmaps go back now: whatever still holds the detached canvas (a late draw, the undo list) holds 1x1, not the picture (the undo draws a new panel)
   if (p.el) { p.el.querySelectorAll("canvas").forEach((/** @type {HTMLCanvasElement} */ c) => { c.width = c.height = 1; }); p.el.remove(); }
