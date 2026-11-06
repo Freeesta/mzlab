@@ -69,6 +69,13 @@ def again_module():
             assert same == first, ("module: same page", first, same)
             assert pg.evaluate("CONVROWS.rows.some(r => r.name === 'uno.mzML' && r.state === 'done' && r.cached)"), "no «from the cache» row"
             assert pg.evaluate("ST.files.every(f => OPENNOW.isOpen(f.name))"), "the sample is not open"
+            # removed from the loading table: its source and mzML leave CONV, so a later file of the same name is not taken for this .D (cachedModulo, «Download .mzML»)
+            pg.evaluate("document.querySelector('#flist [data-rm]').click()")
+            attendi(pg, f"ST.files.length === 0 && {IDLE}", 60000)
+            assert pg.evaluate("[CONV.sources.size, CONV.has('uno.mzML')]") == [0, False], "the removed sample stays in CONV"
+            give(pg)
+            attendi(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
+            assert pg.evaluate("CONV.sources.size") == 1 and state(pg)["rows"] == ["uno.mzML"], "given again after its removal, the .D is not read again"
             assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
     finally:
         r.close()

@@ -31,6 +31,8 @@ const CONV = {
   // name -> how the readers module wrote the mzML at the loading ({fam, mem, c}, `gz` = the .mzXML.gz it inflated): the download is written again from there
   sources: /** @type {Map<string, { fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File }>} */ (new Map()),
   add(/** @type {string} */ name, /** @type {Blob} */ blob, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File } | undefined} */ src) { this.files.set(name, blob); if (src) this.sources.set(name, src); },
+  // samples that left the list: their mzML and source go, so a later file of the same name is neither taken for them (NATIVO.cachedModulo) nor downloaded as them
+  forget(/** @type {string[]} */ names) { for (const n of names) { this.files.delete(n); this.sources.delete(n); for (const k of [...this.made.keys()]) if (k.slice(k.indexOf(":") + 1) === n) this.made.delete(k); } },
   // the mzML the module wrote into conv/ is copied into the engine's store (files/) by the loading: the reference moves to that copy and conv/ lets its own go (two full copies of every converted sample otherwise)
   async settle(/** @type {string} */ name) {
     const b = this.files.get(name);
