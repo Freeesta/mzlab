@@ -2,6 +2,7 @@
 // Images of a drawn fragmentation graph: a stand-alone SVG (computed styles written on the elements, so no stylesheet is needed) and a PNG drawn
 // from it with a canvas. Used by the Flow graph view; the stand-alone HTML of mzlab-cli carries the same logic in its page script.
 
+import { canvasScale } from "./compat.js";
 const STILI = ["fill", "stroke", "stroke-width", "stroke-dasharray", "opacity", "font-family", "font-size", "font-weight", "font-style", "text-anchor", "dominant-baseline", "paint-order"];
 
 /** A copy of `svg` that draws the same without the page's CSS. @param {SVGSVGElement} svg */
@@ -25,7 +26,8 @@ export function pngDa(testo, scala = 2) {
     const img = new Image(), url = URL.createObjectURL(new Blob([testo], { type: "image/svg+xml" }));
     img.onload = () => {
       const c = document.createElement("canvas");
-      c.width = Math.round(img.width * scala); c.height = Math.round(img.height * scala);
+      const k = canvasScale(img.width, img.height, scala);          // under Safari's canvas area cap
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
       const x = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d"));
       x.fillStyle = "#ffffff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);

@@ -670,10 +670,10 @@ async function image(/** @type {string} */ format) {
   svgText = svgText.replace(/<svg\b([^>]*)>/, (/** @type {string} */ m, /** @type {string} */ at) => `<svg${at}><title>${EH(I18N.t(clear ? "draw.export.svgTitle.clear" : "draw.export.svgTitle.white", { app: APP_NAME, stamp: stamp().slice(-15, -5) }))}</title>`);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
   if (format === "svg") return svg;
-  // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side
+  // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side nor 16.7 Mpx
   const img = new Image(), url = URL.createObjectURL(svg);
   await new Promise((ok, ko) => { img.onload = ok; img.onerror = ko; img.src = url; });
-  const sc = Math.min(8, Math.max(3, 3600 / Math.max(img.width, 1)), 12000 / Math.max(img.width, img.height, 1));
+  const sc = scalaTela(img.width, img.height, Math.min(8, Math.max(3, 3600 / Math.max(img.width, 1)), 12000 / Math.max(img.width, img.height, 1)));     // under Safari's canvas area cap
   const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
   const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")); if (!clear) { g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
   g.drawImage(img, 0, 0, c.width, c.height);

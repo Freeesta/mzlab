@@ -1,6 +1,6 @@
 // Checks the fallbacks of mzlab/web/compat.js on fake globals (what Safari/iPadOS lacks: AbortSignal.any, createWritable, a refused clipboard, the accept
 // list of the iPad file picker); prints one JSON object of named checks. See tests/test_compat.py.
-import { installa, anySignal, freeAccept } from "../mzlab/web/compat.js";
+import { installa, anySignal, freeAccept, canvasScale, MAX_CANVAS_PX } from "../mzlab/web/compat.js";
 
 const out = {};
 const check = async (name, fn) => { try { out[name] = (await fn()) === true ? true : "false"; } catch (e) { out[name] = "threw: " + (e && e.message || e); } };
@@ -119,6 +119,11 @@ await check("accept: input.click() from code and a tap (capture listener) both f
   const j = el("input", { type: "file", accept: ".raw" }), cap = d.listeners.find(([t, , c]) => t === "click" && c === true);
   cap[1]({ target: j });
   return done.includes("accept") && clicked === 1 && !i.hasAttribute("accept") && !j.hasAttribute("accept");
+});
+
+await check("canvas: a scale that would pass Safari's 16.7 Mpx cap is lowered, a small one kept", () => {
+  const big = canvasScale(1600, 1400, 3), w = Math.round(1600 * big), h = Math.round(1400 * big);
+  return MAX_CANVAS_PX === 16777216 && big < 3 && w * h <= MAX_CANVAS_PX && w * h > 0.99 * MAX_CANVAS_PX && canvasScale(400, 300, 8) === 8 && canvasScale(0, 10, 2) === 2;
 });
 
 process.stdout.write(JSON.stringify(out));

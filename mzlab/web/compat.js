@@ -74,6 +74,12 @@ export function freeAccept(g, i) {
 }
 
 /** Installs every fallback the global `g` needs; returns the names installed (for the tests and the diagnosis). @param {any} g @param {{worker?: () => any}} [o] */
+// Safari and iPadOS refuse a canvas over 16 777 216 pixels (toBlob gives null, the drawing is lost): canvasScale is the largest scale <= `s` that keeps
+// a w x h image under that area, for every export that rasterises at a multiple of its size (global scalaTela for the classic scripts).
+export const MAX_CANVAS_PX = 16777216;
+/** @param {number} w @param {number} h @param {number} s */
+export const canvasScale = (w, h, s) => (w > 0 && h > 0 ? Math.min(s, Math.sqrt(MAX_CANVAS_PX / (w * h)) * 0.999) : s);
+
 export function installa(g, o = {}) {
   /** @type {string[]} */ const done = [];
   if (g.AbortSignal && typeof g.AbortSignal.any !== "function") { g.AbortSignal.any = (/** @type {AbortSignal[]} */ s) => anySignal(g, s); done.push("AbortSignal.any"); }
@@ -104,4 +110,4 @@ export function installa(g, o = {}) {
 }
 
 const G = /** @type {any} */ (globalThis);
-if (typeof window !== "undefined" && !G.__compat) G.__compat = installa(G);
+if (typeof window !== "undefined" && !G.__compat) { G.__compat = installa(G); G.scalaTela = canvasScale; }

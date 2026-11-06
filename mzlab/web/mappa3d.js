@@ -669,7 +669,7 @@ export function open(p, opener) {
   });
   on("png", "click", () => exportPng());
   function exportPng() {
-    const s = Math.min(3, Math.floor(4096 / Math.max(V.W, V.H)) || 1), d = V.dpr; if (!V.g) return;
+    const d = V.dpr, s = scalaTela(V.W * d, V.H * d, Math.min(3, Math.floor(4096 / Math.max(V.W, V.H)) || 1)); if (!V.g) return;     // under Safari's canvas area cap
     const w0 = glc.width, h0 = glc.height;
     glc.width = Math.round(V.W * d * s); glc.height = Math.round(V.H * d * s); ovc.width = glc.width; ovc.height = glc.height;
     frame(s);
