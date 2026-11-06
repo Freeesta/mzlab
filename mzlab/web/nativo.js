@@ -44,11 +44,14 @@ const NATIVO = {
     const s = (await (samples ? samples() : rb.nativeSamples(mem))).samples;
     return hits.length === s.length ? list.filter(f => hits.includes(f.name)) : null;
   },
+  // «from the cache» on the row of each sample of `hit` (entries of the list)
+  cachedRows(hit) { for (const x of hit) { CONVROWS.add(x.name, "open"); CONVROWS.finish(x.name, "done", { scans: x.n_spectra || x.scans || 0, kind: x.kind, cached: true }); } return hit.length > 0; },
   // one sample per dataset (a .raw, a .D): when `cached` finds it, its row says «from the cache» and true is returned (nothing to load)
-  async cachedOne(rb, mem, list) {
-    const hit = await NATIVO.cached(rb, mem, list, async () => ({ samples: [{ id: 1 }] })).catch(() => null);
-    for (const x of hit || []) { CONVROWS.add(x.name, "open"); CONVROWS.finish(x.name, "done", { scans: x.n_spectra || x.scans || 0, kind: x.kind, cached: true }); }
-    return !!hit;
+  async cachedOne(rb, mem, list) { return NATIVO.cachedRows(await NATIVO.cached(rb, mem, list, async () => ({ samples: [{ id: 1 }] })).catch(() => null) || []); },
+  // the same for a dataset the readers module wrote as mzML in this page (it has no stub in OPFS for natsame): the sample of `list` whose source members (CONV.sources: names, sizes, dates) are these; lost with the page
+  cachedModulo(mem, list) {
+    const id = (/** @type {{ name: string, blob: any }[]} */ a) => a.map(m => m.name + "|" + m.blob.size + "|" + (m.blob.lastModified || 0)).sort().join("\n"), want = id(mem);
+    return NATIVO.cachedRows(list.filter(x => { const s = CONV.sources.get(x.name); return !!s && s.mem.length === mem.length && id(s.mem) === want; }));
   },
   // the text key of a phase of the loading of a sample (the event mzlab-index carries `phase`), for CONVROWS and the rows of the loading
   rowState(phase) { return { read: "nread", open: "nopen", scans: "nscan", chrom: "nchrom" }[phase] || "index"; },

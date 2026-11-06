@@ -50,6 +50,29 @@ def again():
             assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
     finally:
         r.close()
+# the module branch: the engine refuses the variant (err.file.agilent: nativeSamples shimmed to throw it), the readers module writes the mzML (agilent-d.js toMzml, nativo.js cachedModulo).
+# The members of a module sample live in the page (CONV.sources), so this one is checked in the same page only
+def again_module():
+    r = Run(port=8868, wd="/tmp/wd_agilent_riaggiunto_modulo")
+    try:
+        with sync_playwright() as p:
+            pg = r.page(p)
+            pg.wait_for_selector("#start:not([hidden])", timeout=60000)
+            pg.evaluate("""async () => { const rb = await window.MZLAB_RUST_READY; rb.nativeSamples = async () => { throw Object.assign(new Error('refused'), { json: { error: 'err.file.agilent', params: {} } }); }; }""")
+            give(pg)
+            attendi(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
+            assert pg.evaluate("CONV.sources.size") == 1, "the sample did not take the module path"
+            first = state(pg)
+            assert first["rows"] == ["uno.mzML"] and len(first["idx"]) == 1, first
+            give(pg)
+            same = state(pg)
+            assert same == first, ("module: same page", first, same)
+            assert pg.evaluate("CONVROWS.rows.some(r => r.name === 'uno.mzML' && r.state === 'done' && r.cached)"), "no «from the cache» row"
+            assert pg.evaluate("ST.files.every(f => OPENNOW.isOpen(f.name))"), "the sample is not open"
+            assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
+    finally:
+        r.close()
+step("a .D read by the module and given again keeps one row, one copy and one index", again_module)
 step("a .D given again keeps one row, one copy and one index (same page, then after a reload)", again)
 shutil.rmtree(D, ignore_errors=True)
 print("\nSTEPS"); [print(" ", s) for s in steps]
