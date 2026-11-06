@@ -115,6 +115,8 @@ try:
             assert "15.9949" in hyd, hyd
             box = pg.locator('.tptr input[aria-label="Search hydroxylation"]').bounding_box()
             assert box["width"] >= 24 and box["height"] >= 24, box
+            sm = pg.locator(".tptr").locator("xpath=ancestor::details[1]/summary").bounding_box()
+            assert sm["height"] >= 24, f"the «Transformations» summary is under 24 px: {sm}"
             pg.uncheck('.tptr input[aria-label="Search hydroxylation"]')
             assert pg.input_value("#tp-tr").startswith("# hydroxylation;+O"), pg.input_value("#tp-tr")[:60]
             pg.wait_for_selector(".tptr tr.off"); assert pg.locator(".tptr tr.off").count() == 1

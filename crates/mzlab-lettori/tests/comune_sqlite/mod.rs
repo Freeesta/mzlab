@@ -162,22 +162,34 @@ pub fn blocco2() -> Vec<u8> {
 }
 
 pub fn tdf_minimo(num_peaks: i64) -> Vec<u8> {
-    let frames = foglia(&[vec![
-        V::N,
-        V::R(1.0),
-        V::T("+"),
-        V::I(0),
-        V::I(0),
-        V::I(0),
-        V::I(100),
-        V::I(50),
-        V::I(2),
-        V::I(num_peaks),
-        V::I(1),
-        V::R(25.0),
-        V::R(30.0),
-        V::R(100.0),
-    ]]);
+    tdf_frames(&[0], num_peaks)
+}
+
+/// A database of one MS1 frame per offset in `tims` (`TimsId`), each `num_peaks` peaks over 2 scans, 1 s apart.
+pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
+    let righe: Vec<Vec<V<'_>>> = tims
+        .iter()
+        .enumerate()
+        .map(|(i, &t)| {
+            vec![
+                V::N,
+                V::R(1.0 + i as f64),
+                V::T("+"),
+                V::I(0),
+                V::I(0),
+                V::I(t),
+                V::I(100),
+                V::I(50),
+                V::I(2),
+                V::I(num_peaks),
+                V::I(1),
+                V::R(25.0),
+                V::R(30.0),
+                V::R(100.0),
+            ]
+        })
+        .collect();
+    let frames = foglia(&righe);
     let cal = foglia(&[vec![
         V::N,
         V::I(1),

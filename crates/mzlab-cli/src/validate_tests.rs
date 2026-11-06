@@ -124,6 +124,20 @@ fn usage_errors_and_unreadable_files_exit_2() {
     let o = run(&["validate", "/no/such/file.mzML"]);
     assert_eq!(o.code, 2);
     assert!(o.stderr.contains("cannot be read"), "{}", o.stderr);
+    let dir = std::env::temp_dir().join(format!("mzlab-validate-{}-dir", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let o = run(&["validate", dir.to_str().unwrap()]);
+    assert_eq!(
+        (o.code, o.stdout.len()),
+        (2, 0),
+        "a folder is not a file that is invalid: {}",
+        o.stderr
+    );
+    assert!(
+        o.stderr.contains("cannot be read: a folder"),
+        "{}",
+        o.stderr
+    );
     let h = run(&["validate", "--help"]);
     assert_eq!(h.code, 0);
     assert!(String::from_utf8(h.stdout)
