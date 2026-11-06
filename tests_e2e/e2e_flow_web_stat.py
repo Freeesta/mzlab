@@ -107,6 +107,8 @@ KEPT = """async () => {
   for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
   return out;
 }"""
+# the scheduler's jobs of one instance: [item, state, blocked_by]
+JOBS = """async (id) => (await (await fetch('api/flow/sched/jobs', { method: 'POST', body: '{}' })).json()).filter(j => j.instance === id).map(j => [j.item, j.state, j.blocked_by || ''])"""
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []; asked = []
@@ -158,9 +160,12 @@ try:
         step("a second run takes the texts from OPFS", again)
 
         def blocked():
-            p2 = plan(True); p2["steps"] = [s for s in p2["steps"] if s["id"] != "st"] + [{"id": "sx", "step": "table.stats@1", "in": {"table": "gap.table", "samples": "file:samples.json", "design": "file:none.json"}}]
+            # none.json is an input of the plan, but the page holds no text for it: the executor leaves the step to the computer
+            p2 = plan(True); p2["inputs"].append({"name": "none.json", "sha256": "", "type": "design"})
+            p2["steps"] = [s for s in p2["steps"] if s["id"] != "st"] + [{"id": "sx", "step": "table.stats@1", "in": {"table": "gap.table", "samples": "file:samples.json", "design": "file:none.json"}}]
             r = pg.evaluate(RUN, [p2, SAMPLES, DESIGN])
-            assert any(e["passo"] == "sx" and e["via"] == "computer" for e in r["ev"]), ("a design the browser does not hold must leave table.stats to the computer", r["ev"][-6:], r.get("err"))
+            assert not any(e["passo"] == "sx" and e["stato"] in ("done", "running") for e in r["ev"]), r["ev"][-6:]
+            jobs = pg.evaluate(JOBS, "sx"); assert jobs and all(j[1] == "blocked" and j[2] == "platform.computer" for j in jobs), jobs
         step("table.stats without its design stays at the computer", blocked)
 
         step("no request was left unserved by the engine", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
