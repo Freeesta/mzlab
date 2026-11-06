@@ -70,22 +70,28 @@ fn answers(mut r: Routes<Vec<u8>>) {
     }
 }
 
+/// Counts the heap of the calling thread only: the tests of this file run in parallel, and a process-wide count mixed their allocations.
 struct CountingAlloc;
 
-static ALLOC_CUR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-static ALLOC_PEAK: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+thread_local! {
+    static ALLOC_CUR: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
+    static ALLOC_PEAK: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
+}
 
 unsafe impl std::alloc::GlobalAlloc for CountingAlloc {
     unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8 {
         let p = unsafe { std::alloc::System.alloc(layout) };
         if !p.is_null() {
-            let cur = ALLOC_CUR.fetch_add(layout.size(), std::sync::atomic::Ordering::Relaxed) + layout.size();
-            ALLOC_PEAK.fetch_max(cur, std::sync::atomic::Ordering::Relaxed);
+            let _ = ALLOC_CUR.try_with(|c| {
+                let cur = c.get() + layout.size() as isize;
+                c.set(cur);
+                let _ = ALLOC_PEAK.try_with(|m| m.set(m.get().max(cur)));
+            });
         }
         p
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: std::alloc::Layout) {
-        ALLOC_CUR.fetch_sub(layout.size(), std::sync::atomic::Ordering::Relaxed);
+        let _ = ALLOC_CUR.try_with(|c| c.set(c.get() - layout.size() as isize));
         unsafe { std::alloc::System.dealloc(ptr, layout) };
     }
 }
@@ -93,12 +99,13 @@ unsafe impl std::alloc::GlobalAlloc for CountingAlloc {
 #[global_allocator]
 static GLOBAL_ALLOC: CountingAlloc = CountingAlloc;
 
+/// Peak heap of `f` above what the thread held when it started (signed: `f` may free memory allocated before it).
 fn measure_peak_heap<T>(f: impl FnOnce() -> T) -> (T, usize) {
-    let base = ALLOC_CUR.load(std::sync::atomic::Ordering::Relaxed);
-    ALLOC_PEAK.store(base, std::sync::atomic::Ordering::Relaxed);
+    let base = ALLOC_CUR.with(|c| c.get());
+    ALLOC_PEAK.with(|m| m.set(base));
     let out = f();
-    let peak = ALLOC_PEAK.load(std::sync::atomic::Ordering::Relaxed);
-    (out, peak.saturating_sub(base))
+    let peak = ALLOC_PEAK.with(|m| m.get());
+    (out, (peak - base).max(0) as usize)
 }
 
 struct CountingReader {
@@ -337,6 +344,7 @@ fn point_step_and_routes_stay_under_small_device_memory_and_match_across_targets
     let (s_old, old_peak_heap) = measure_peak_heap(|| old_point_step(&mut ref_ix, 0));
     let (s_new, new_peak_heap) = measure_peak_heap(|| step_r.point_step(0).unwrap());
     assert_eq!(step_bits(s_new), step_bits(s_old));
+    eprintln!("point_step peak heap: old {old_peak_heap} B, new {new_peak_heap} B");
     assert!(
         new_peak_heap < (2 << 20) && new_peak_heap * 2 < old_peak_heap,
         "new_peak_heap={new_peak_heap} old_peak_heap={old_peak_heap}"
@@ -378,4 +386,104 @@ fn point_step_and_routes_stay_under_small_device_memory_and_match_across_targets
     }
     assert!(counter.get() < (16 << 20), "excessive bytes read: {}", counter.get());
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A 64-bit linear congruential generator (Knuth's MMIX constants); the top 53 bits give a float in [0, 1).
+struct Lcg(u64);
+
+impl Lcg {
+    fn next(&mut self) -> f64 {
+        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (self.0 >> 11) as f64 / (1u64 << 53) as f64
+    }
+    fn below(&mut self, n: usize) -> usize {
+        ((self.next() * n as f64) as usize).min(n - 1)
+    }
+}
+
+/// The step of `main` computed from the spectra written to the mzML (not through the index): 20 scans from the middle, else up to 20 scans with
+/// more than 20 points over the run, else the shortest gap of all, then rounded to 4 decimals.
+fn step_from_input(scans: &[Vec<f64>]) -> Option<f64> {
+    let min_gap = |mz: &[f64]| mz.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min);
+    let quant = |g: f64| g.is_finite().then(|| (g * 1e4).round_ties_even() / 1e4).filter(|s| *s > 0.0);
+    let mid = scans.len() / 2;
+    if let Some(s) = scans[mid..scans.len().min(mid + 20)].iter().find(|s| s.len() > 20) {
+        return quant(min_gap(s));
+    }
+    let (mut gap, mut sparse, mut used) = (f64::INFINITY, f64::INFINITY, 0);
+    for s in scans {
+        let g = min_gap(s);
+        if s.len() > 20 && used < 20 {
+            used += 1;
+            gap = gap.min(g);
+        }
+        sparse = sparse.min(g);
+    }
+    quant(if used > 0 { gap } else { sparse })
+}
+
+#[test]
+fn random_multiblock_indexes_match_the_spectra_written() {
+    // Independent of the index reader: the expected points are the spectra given to the mzML writer (m/z ascending per scan, f32 on an FTMS
+    // section), the expected step is `main`'s rule applied to them. Scans of 1-6, 21-40 or 300-900 points over 100-1500 Da, so blocks of 16 384
+    // peaks hold a few scans each, with duplicate m/z, gaps under 1e-4 Da and of 5e-4 Da; random positions out of order, repeated and past the end.
+    let mut rng = Lcg(0x9E37_79B9_7F4A_7C15);
+    let (mut blocks, mut checked) = (0usize, 0usize);
+    for case in 0..24 {
+        let n_scans = [1, 2, 7, 40, 90, 160][case % 6];
+        let filter = if case % 4 == 3 { "FTMS + p ESI Full ms [100.0000-1500.0000]" } else { "ITMS + p ESI Full ms [100.00-1500.00]" };
+        let scans: Vec<Vec<f64>> = (0..n_scans)
+            .map(|i| {
+                // every third case leaves the 20 scans of the middle sparse, so the step comes from the walk over the whole section
+                let quiet = case % 3 == 0 && (n_scans / 2..n_scans / 2 + 20).contains(&i);
+                let np = match if quiet { 0 } else { rng.below(3) } {
+                    0 => 1 + rng.below(6),
+                    1 => 21 + rng.below(20),
+                    _ => 300 + rng.below(600),
+                };
+                let (mut m, step) = (100.0 + rng.next() * 1300.0, [0.06, 0.0423, 0.1, 0.0015][rng.below(4)]);
+                (0..np)
+                    .map(|_| {
+                        m += match rng.below(12) {
+                            0 => 0.0,
+                            1 => 0.00005,
+                            2 => 0.0005,
+                            _ => step,
+                        };
+                        m
+                    })
+                    .collect()
+            })
+            .collect();
+        let spectra = scans.iter().enumerate().map(|(i, mz)| custom_scan(i, mz.clone(), filter)).collect();
+        let (_, idx) = build_idx_from_spectra(spectra);
+        let mut r = Routes::new(Index::open(idx.clone(), idx.len() as u64).unwrap());
+        let f4 = r.idx.sections[0].f4;
+        assert_eq!(f4, case % 4 == 3, "case {case}: section precision");
+        assert_eq!(r.idx.sections[0].n_scans, n_scans, "case {case}: one section with every scan");
+        blocks += (r.idx.sections[0].n_peaks as usize).div_ceil(1 << 14);
+        let seen: Vec<Vec<f64>> = scans.iter().map(|s| s.iter().map(|&v| if f4 { v as f32 as f64 } else { v }).collect()).collect();
+        let want_y = |i: usize, n: usize| -> Vec<u64> { (0..n).map(|b| ((10.0 + (i + b) as f32) as f64).to_bits()).collect() };
+        assert_eq!(step_bits(r.point_step(0).unwrap()), step_bits(step_from_input(&seen)), "case {case}: step");
+        for _ in 0..12 {
+            let k = rng.below(30);
+            let pos: Vec<usize> = (0..k).map(|_| rng.below(n_scans + 2)).collect();
+            let got = r.scan_points(0, &pos).unwrap();
+            for (j, (&p, (gm, gy))) in pos.iter().zip(&got).enumerate() {
+                let (wm, wy): (Vec<u64>, Vec<u64>) = if p < n_scans {
+                    (seen[p].iter().map(|v| v.to_bits()).collect(), want_y(p, seen[p].len()))
+                } else {
+                    (Vec::new(), Vec::new())
+                };
+                let last = pos.iter().rposition(|&q| q == p).unwrap();
+                // the last copy of a repeated position holds the points, the others stay empty (the `HashMap` of `main`)
+                let (wm, wy) = if j == last { (wm, wy) } else { (Vec::new(), Vec::new()) };
+                assert_eq!(gm.iter().map(|v| v.to_bits()).collect::<Vec<_>>(), wm, "case {case} positions {pos:?} at {j}: m/z");
+                assert_eq!(gy.iter().map(|v| v.to_bits()).collect::<Vec<_>>(), wy, "case {case} positions {pos:?} at {j}: intensity");
+                checked += 1;
+            }
+        }
+    }
+    assert!(blocks > 25, "the cases must span many blocks of 16 384 peaks: {blocks}");
+    assert!(checked > 1000, "{checked}");
 }
