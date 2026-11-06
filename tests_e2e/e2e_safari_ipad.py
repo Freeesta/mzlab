@@ -1,6 +1,6 @@
 """Safari / iPad (docs/agenti/compat-safari.md): the site on an emulated iPad (touch only, no hover) is the full site, not the phone card; the file
 picker of «Load» opens with every file (compat.js frees the accept list that iPadOS would grey out) and an example file opens with its charts; the page
-keeps its width at Split View 1/3 and 1/2 and after a rotation; the legend chip of many traces opens by tap and keyboard; a private window
+keeps its width at Split View 1/3 and 1/2 and after a rotation; the side bar handle is 24 px wide and a double tap on a control does not zoom; the legend chip of many traces opens by tap and keyboard; a private window
 (storage refused) gets its own loading message; with AbortSignal.any and createWritable taken away (what Safari before 17.4 and 26
 lacks) compat.js stands in and an OPFS file written through createWritable reads back the same. No browser errors.
 The real engine of Safari is WebKit: with --browser webkit (the nightly round on macOS) every step runs in WebKit; the cloud has only Chromium, which
@@ -110,6 +110,18 @@ try:
             size("#tour-btn-skip", "TOUR.inizia(1,0)", "document.getElementById('tour-btn-skip').click()")
             assert not small, f"touch targets under 24x24 px: {small}"
         step("iPad: the × of the dialogs, «Skip the tour» and the file checkbox are at least 24x24 px", targets)
+        def touch_css():
+            pg = S["pg"]
+            pg.evaluate("BARRA.show('file',{noFocus:true,instant:true})"); attendi(pg, "(h => !!h && h.offsetWidth > 0)(document.getElementById('sidebar-resize-handle'))", 20000); frames(pg, 2)
+            hw = pg.evaluate("document.getElementById('sidebar-resize-handle').getBoundingClientRect().width")
+            ta = pg.evaluate("""[...document.querySelectorAll('#tools button, header button, #sb-header button, #flist input, select')].filter(e => e.offsetWidth > 0)
+                .map(e => [e.id || e.tagName, getComputedStyle(e).touchAction]).filter(([, t]) => t !== 'manipulation')""")
+            canv = pg.evaluate("getComputedStyle(document.querySelector('.pnl canvas')).touchAction")
+            pg.evaluate("BARRA.close()")
+            assert hw >= 24, f"the side bar handle is {hw} px wide on a touch screen"
+            assert not ta, f"controls a double tap would zoom: {ta[:6]}"
+            assert canv == "none", f"the chart canvas lost its own gestures: {canv}"
+        step("iPad: the side bar handle is 24 px wide, a double tap on a control does not zoom the page, the charts keep their gestures", touch_css)
         def fallbacks():
             pg = ipad(b, extra=TAKE_AWAY)
             got = pg.evaluate("window.__compat || []")
