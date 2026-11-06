@@ -252,3 +252,55 @@ fn the_list_editor_keeps_the_order_and_gives_the_csv_of_the_plan() {
         "{bad}"
     );
 }
+
+#[test]
+fn from_zero_the_area_is_the_trapezoid_of_the_trace_between_the_same_edges() {
+    let s = samples();
+    let edges = channels_text(&params("peaks"), TABLE, &s).unwrap();
+    assert!(!edges.lines().next().unwrap().contains("baseline"));
+    let mut p = params("peaks");
+    p.push(("baseline".into(), Value::Str("zero".into())));
+    let zero = channels_text(&p, TABLE, &s).unwrap();
+    assert!(zero
+        .lines()
+        .next()
+        .unwrap()
+        .ends_with(",peak,baseline,below"));
+    let (e, z) = (
+        line(&edges, "s1.mzML", "ionB"),
+        line(&zero, "s1.mzML", "ionB"),
+    );
+    for col in ["apex_rt", "height", "snr", "fwhm_s", "peak"] {
+        assert_eq!(get(&e, col), get(&z, col), "{col}");
+    }
+    assert_eq!((get(&z, "baseline"), get(&z, "below")), ("zero", "0.0"));
+    // the same edges as find_peak, then the plain trapezoid of y: what lay under the line between the edges is now inside the area
+    let c = &sim(1)[1];
+    let f = mzlab_core::peak1d::find_peak(&c.t, &c.y, Some(1.5), 0.3, 3, 3).unwrap();
+    let (l, r) = (
+        c.t.iter().position(|t| *t == f.left).unwrap(),
+        c.t.iter().position(|t| *t == f.right).unwrap(),
+    );
+    let trap: f64 = (l + 1..=r)
+        .map(|j| (c.y[j] + c.y[j - 1]) / 2.0 * (c.t[j] - c.t[j - 1]))
+        .sum::<f64>()
+        * 60.0;
+    assert_eq!(get(&z, "area"), format!("{trap:.1}"));
+    let (ae, az): (f64, f64) = (
+        get(&e, "area").parse().unwrap(),
+        get(&z, "area").parse().unwrap(),
+    );
+    let under = (c.y[l] + c.y[r]) / 2.0 * 60.0 * (f.right - f.left);
+    assert!((az - ae - under).abs() < 0.01 * under, "{ae} {az} {under}");
+    // the table and the candidates say it too
+    for out in ["table", "candidates"] {
+        let mut q = params(out);
+        q.push(("baseline".into(), Value::Str("zero".into())));
+        let t = channels_text(&q, TABLE, &s).unwrap();
+        assert!(
+            t.lines()
+                .all(|l| l.ends_with("baseline") || l.ends_with(",zero")),
+            "{t}"
+        );
+    }
+}
