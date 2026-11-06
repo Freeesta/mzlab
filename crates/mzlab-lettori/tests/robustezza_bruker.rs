@@ -340,6 +340,47 @@ fn solo_baf_dice_come_esportare() {
     assert_eq!(e.key, "err.file.brukerBaf");
 }
 
+/// A folder that lacks the database or its `*_bin` (TDF or TSF) names the file it lacks; a database that is not SQLite (an empty copy) is an error with a key, not «not accepted».
+#[test]
+fn una_cartella_senza_un_suo_file_dice_quale() {
+    let m = |n: &str, b: Vec<u8>| Membro {
+        nome: format!("x.d/{n}"),
+        dim: b.len() as u64,
+        dati: Box::new(b),
+        sha1: None,
+    };
+    for (nomi, manca) in [
+        (vec!["analysis.tsf_bin"], "analysis.tsf"),
+        (vec!["analysis.tdf_bin"], "analysis.tdf"),
+        (vec!["analysis.tsf"], "analysis.tsf_bin"),
+        (vec!["analysis.tdf"], "analysis.tdf_bin"),
+    ] {
+        let membri = nomi.iter().map(|n| m(n, tdf_minimo(1))).collect();
+        let e = mzlab_lettori::apri(FileSet { membri }, &limiti())
+            .err()
+            .unwrap();
+        assert_eq!(e.key, "err.file.brukerNoBin", "{nomi:?}");
+        assert!(
+            e.params.contains(&("file", manca.to_string())),
+            "{:?}",
+            e.params
+        );
+        assert!(
+            e.params.contains(&("name", "x.d".to_string())),
+            "{:?}",
+            e.params
+        );
+    }
+    let e = mzlab_lettori::apri(cartella(blocco2(), Vec::new()), &limiti())
+        .err()
+        .unwrap();
+    assert!(
+        e.key.starts_with("err.") && e.key != "err.file.notAccepted",
+        "{}",
+        e.key
+    );
+}
+
 #[test]
 fn una_cartella_agilent_non_e_di_bruker() {
     let m = |n: &str| Membro {

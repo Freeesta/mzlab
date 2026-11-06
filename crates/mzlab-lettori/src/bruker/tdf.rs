@@ -4,7 +4,7 @@ use super::blocco::{decodifica, leggi_blocco, Picchi};
 use super::spettri::{costruisci, somma, Desc};
 use super::sqlite_min::Sqlite;
 use super::tabelle::Dati;
-use super::tdf_aiuti::{cartella, indice_cattivo, prendi, riconosci, somma_scan, tagliati};
+use super::tdf_aiuti::{cartella, indice_cattivo, manca, prendi, riconosci, somma_scan, tagliati};
 use super::testata::Testata;
 use super::tsf;
 use mzlab_core::error::{Error, Result};
@@ -43,12 +43,19 @@ pub const VOCE_TSF: VoceLettore = VoceLettore {
 impl LettoreBruker {
     fn apri(mut fs: FileSet, limiti: &Limiti, tsf: bool) -> Result<LettoreBruker> {
         let base = if tsf { "analysis.tsf" } else { "analysis.tdf" };
+        let bin = format!("{base}_bin");
+        let primo = fs
+            .membri
+            .first()
+            .map(|m| m.nome.clone())
+            .unwrap_or_default();
         let Some(db_m) = prendi(&mut fs, base) else {
-            return Err(Error::new("err.file.brukerBaf"));
+            return Err(match fs.trova(&bin) {
+                Some(_) => manca(&primo, base),
+                None => Error::new("err.file.brukerBaf"),
+            });
         };
-        let bin_m = prendi(&mut fs, &format!("{base}_bin")).ok_or_else(|| {
-            Error::new("err.dam.unreadable").with("message", format!("no {base}_bin"))
-        })?;
+        let bin_m = prendi(&mut fs, &bin).ok_or_else(|| manca(&db_m.nome, &bin))?;
         let wal = prendi(&mut fs, &format!("{base}-wal")).map(|m| (m.dati, m.dim));
         let db = Sqlite::apri(db_m.dati, db_m.dim, wal, limiti);
         let mut db = db?;

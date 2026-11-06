@@ -209,6 +209,15 @@ impl Lettore for LettoreMzxml {
         &self.campioni
     }
 
+    fn mancanti(&mut self, c: usize) -> usize {
+        if c != 0 {
+            return 0;
+        }
+        self.dichiarati
+            .saturating_sub(self.indice.len())
+            .max(self.scartate)
+    }
+
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         self.completa(true)?;
@@ -289,7 +298,15 @@ impl LettoreMzxml {
     fn leggi_testa(&mut self) -> Result<()> {
         let fine = self.righe[0].start.min(TESTA_SCANSIONE);
         let b = self.leggi(0, fine)?;
-        self.cabina = testata::leggi(&String::from_utf8_lossy(&b), &self.limiti)?;
+        let testo = String::from_utf8_lossy(&b);
+        self.cabina = testata::leggi(&testo, &self.limiti)?;
+        scan::tags(&testo, &mut |g, _| {
+            if scan::nome(g) == "msRun" {
+                let n = numero(g, "scanCount").map_or(0, |n| n.max(0.0) as usize);
+                self.dichiarati = self.dichiarati.max(n);
+            }
+            true
+        });
         Ok(())
     }
 
@@ -339,6 +356,9 @@ pub struct LettoreMzxml {
     /// Whether the file says the TIC / the base peak intensity of each scan (`false`: computed from the peaks when asked).
     tic_noto: Vec<bool>,
     bpi: Vec<Option<f64>>,
+    /// The scans the file says it has (`scanCount`, the `<offset>`s of its index) and those the pass left out as damaged, to count those a damaged copy lacks.
+    dichiarati: usize,
+    scartate: usize,
     cabina: Cabina,
     sha1: Option<Option<String>>,
     /// The extra of the spectrum `scansione` read last (the writer asks for it right after).
@@ -422,7 +442,11 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .to_string();
     let dim = m.dim;
     let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
-    let righe = mzxml_indice::righe(&mut dati, dim, limiti)?;
+    let mzxml_indice::Passata {
+        righe,
+        scartate,
+        indicizzate,
+    } = mzxml_indice::righe(&mut dati, dim, limiti)?;
     if righe.is_empty() {
         return Err(Error::new("err.file.xml").with("detail", "no scans"));
     }
@@ -436,6 +460,8 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         indice: Vec::new(),
         tic_noto: Vec::new(),
         bpi: Vec::new(),
+        dichiarati: indicizzate,
+        scartate,
         cabina: Cabina::default(),
         sha1: None,
         ultima: RefCell::new(None),
