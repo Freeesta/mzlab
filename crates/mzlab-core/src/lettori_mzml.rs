@@ -334,9 +334,12 @@ pub fn guscio(l: &mut dyn Lettore, c: usize) -> Result<Vec<u8>> {
         w.close_spectra()?;
     }
     cromatogrammi(l, c, &mut w)?;
-    let (pos, neg) = l.indice_leggero(c)?.iter().fold((false, false), |(p, q), v| {
-        (p || v.polarita > 0, q || v.polarita < 0)
-    });
+    let (pos, neg) = l
+        .indice_leggero(c)?
+        .iter()
+        .fold((false, false), |(p, q), v| {
+            (p || v.polarita > 0, q || v.polarita < 0)
+        });
     let mut doc = w.finish()?;
     let tail = b"</run>\n</mzML>\n".len();
     let end = doc.len().saturating_sub(tail);
