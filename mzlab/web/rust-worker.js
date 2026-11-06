@@ -126,7 +126,7 @@ async function lrOpen(name) {                                             // ope
   const f = await fileOf(name);
   for (;;) {
     const ix = await ARCH.get("idx", name + ".mzidx");
-    if (!ix) { openGate.drop(slotOf(name)); return false; }
+    if (!ix) { openGate.drop(slotOf(name)); if (!(await ARCH.get("files", name))) { lrFile.delete(name); jerr("err.file.removedElsewhere", { name }); } return false; }      // no copy nor index: another tab removed it (tabs are not kept in step)
     await ARCH.lease("idx", name + ".mzidx");
     if (!openGate.same(slotOf(name), ix)) { openGate.drop(slotOf(name)); engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"])); openGate.mark(slotOf(name), ix); }      // the same index already parsed in the slot is not parsed again
     await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader
@@ -296,7 +296,7 @@ async function lrIndexOwn(m) {
   await ARCH.promote("idx", part, m.name + ".mzidx");
   let opened = false;
   try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
-  if (!opened) jerr("err.engine.index");
+  if (!opened) jerr("err.engine.index", { name: m.name });
   return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
 }
 let flowCenOps;
@@ -331,11 +331,11 @@ async function lrOp(m) {
     case "lr_cen_have": return { info: JSON.stringify({ ...await flowCen().have(m), source: !!await ARCH.get("files", m.name) }) };      // the Flow's centroid copy of a profile mzML (rust-flow-centroid.js)
     case "lr_cen_adopt": await flowCen().adopt(m); return { info: "{}" };
     case "lr_entry": {
-      const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");
+      const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index", { name: m.name });
       const info = engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)), st = await nativo.stubOf(m.name);
       return { info: st ? JSON.stringify({ ...JSON.parse(info), size: shownSize(st), nat: true }) : info };
     }
-    case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
+    case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index", { name: m.name }); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
     case "lr_isotope_fine": return { info: isotope_fine(m.query || "") };                  // an engine error is thrown as JSON with a key
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)
     case "lr_stat": return { info: (await rotte()).stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
