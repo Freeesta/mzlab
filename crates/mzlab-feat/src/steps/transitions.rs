@@ -46,6 +46,10 @@ pub fn transitions() -> Step {
                 .default_num(0.3)
                 .unit("min")
                 .doc("The peak is searched in RT plus and minus this when the row writes no window"),
+            Param::choice("baseline", "Baseline", &["edges", "zero"])
+                .default_str("edges")
+                .doc("edges: the area above the straight line between the edges of the peak; zero: the whole area under the trace down to zero between the same edges (signed; a baseline column says which)")
+                .tip("Line between the edges, or down to zero."),
             Param::number("snr_min", "Min. S/N")
                 .min(0.0)
                 .default_num(3.0)

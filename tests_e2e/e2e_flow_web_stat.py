@@ -1,7 +1,7 @@
 """Flow «This browser» runs table.stats@1, table.pca@1 and table.kmd@1 (module `flowstat`): a synthetic series of 2 blanks and 2 conditions of 4 injections (some compounds up in the treatment,
 a CH2 homologous series for the Kendrick mass defect). The plan detect → align → gapfill → stats, pca (two scalings) and kmd (CF2 and CH2) goes to `mzlab-cli flow run`, and every text the browser
 keeps is the native file byte for byte (same SHA-256); every job is `done` with `via: "browser"`, a second run takes the texts from OPFS, no request is left unserved (`MZLAB_LR_MISS`), and the
-`flowstat` .wasm is fetched only when one of these steps runs. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
+`flowstat` .wasm is fetched only when one of these steps runs. On a table.filter view of the table the same steps give the native texts too. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web_stat.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -54,6 +54,7 @@ SAMPLES = json.dumps({"campioni": [sample(f) for f in FILES], "schema": "campion
 DESIGN = json.dumps({"condizioni": [{"livelli": {}, "nome": n, "repliche": 4} for n in ("ref", "trt")], "confronti": [{"tipo": "vs_reference"}], "fattori": [], "lotti": [],
                      "riferimento": "ref", "schema": "disegno/1"}, separators=(",", ":"))
 IDS = ("st", "pc", "pa", "kf", "kc")
+VIEW = ("vst", "vpc", "vkm")   # the same steps on a table.filter view of the table
 
 def plan(stat):
     """The plan: index → detect → align → gap filling, and (with `stat`) the statistics of the table."""
@@ -67,7 +68,11 @@ def plan(stat):
                {"id": "pc", "step": "table.pca@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
                {"id": "pa", "step": "table.pca@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"scaling": "auto", "ncomp": 3}},
                {"id": "kf", "step": "table.kmd@1", "in": {"table": "gap.table"}},
-               {"id": "kc", "step": "table.kmd@1", "in": {"table": "gap.table"}, "params": {"unit": "CH2", "tol_mda": 2}}]
+               {"id": "kc", "step": "table.kmd@1", "in": {"table": "gap.table"}, "params": {"unit": "CH2", "tol_mda": 2}},
+               {"id": "flt", "step": "table.filter@2", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 4, "normalize": "sum"}},
+               {"id": "vst", "step": "table.stats@1", "in": {"table": "flt.table", "samples": "file:samples.json", "design": "file:design.json"}},
+               {"id": "vpc", "step": "table.pca@1", "in": {"table": "flt.table", "samples": "file:samples.json"}},
+               {"id": "vkm", "step": "table.kmd@1", "in": {"table": "flt.table"}, "params": {"unit": "CH2", "tol_mda": 2}}]
     return {"format": "mzflow/2", "inputs": inputs, "steps": st}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_stat_"))
@@ -84,7 +89,7 @@ nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", 
 assert nat_run.returncode == 0, nat_run.stderr[-1500:]
 data = site / "static" / "dati_flow_stat"; data.mkdir()
 for n in NAMES: shutil.copy2(next(out.glob("*-" + n + ".mzidx")), data / (n + ".mzidx"))
-NATIVE = {i: (out / (i + ".json")).read_bytes() for i in IDS}
+NATIVE = {i: (out / (i + ".json")).read_bytes() for i in IDS + VIEW}
 
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -138,7 +143,7 @@ try:
 
         def first():
             r = pg.evaluate(RUN, [plan(True), SAMPLES, DESIGN]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
-            for i in IDS: assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
+            for i in IDS + VIEW + ("flt",): assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
             assert asked, "the flowstat module was not fetched when the statistics ran"
             kept = pg.evaluate(KEPT)
             for i in IDS:
@@ -151,6 +156,14 @@ try:
             assert kept["pc.json"] != kept["pa.json"] and kept["kf.json"] != kept["kc.json"], "the parameters did not reach the engine"
             assert json.loads(kept["kc.json"]).get("series"), ("the CH2 series was not found", kept["kc.json"][:400])
         step("the browser gives the stat/1, PCA and Kendrick texts of the native flow run, byte for byte", first)
+
+        def view():
+            kept = pg.evaluate(KEPT)
+            for i in VIEW:
+                web = kept.get(i + ".json"); assert web is not None, (i, list(kept))
+                assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE[i]).hexdigest(), (i, NATIVE[i][:300], web[:300])
+            assert kept["vst.json"] != kept["st.json"] and kept["vpc.json"] != kept["pc.json"], "the view did not reach the engine"
+        step("on a table.filter view the browser gives the native texts of the same plan", view)
 
         def again():
             before = len(asked)

@@ -330,6 +330,7 @@
                   "output",
                   "mz_tol",
                   "rt_window",
+                  "baseline",
                   "snr_min",
                   "smooth",
                   "min_points",
@@ -360,6 +361,11 @@
                     "minimum":0,
                     "default":0.3,
                     "description":"The peak is searched in RT plus and minus this when the row writes no window"
+                  },
+                  {
+                    "enum":["edges","zero"],
+                    "default":"edges",
+                    "description":"edges: the area above the straight line between the edges of the peak; zero: the whole area under the trace down to zero between the same edges (signed; a baseline column says which)"
                   },
                   {
                     "type":"number",

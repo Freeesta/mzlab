@@ -123,6 +123,7 @@ pub mod mzmlwrite;
 pub mod mzmlvalida;
 pub mod pace;
 pub mod peak1d;
+pub mod baseline;
 pub mod peakq;
 pub mod peakq_auto;
 pub mod peakq_lr;

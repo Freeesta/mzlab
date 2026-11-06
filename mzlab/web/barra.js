@@ -231,7 +231,7 @@ const BARRA = (() => {
     const dp = Q1("#dpanels");
     if (dp) _lastW = dp.clientWidth;
     if (dp && _lastW < 100) return;                // the workspace is hidden (sheet) or not shown yet: nothing to draw
-    if (typeof fitWidth === "function" && typeof redrawAll === "function") { fitWidth(); redrawAll(); }
+    if (typeof fitWidth === "function" && typeof drawSized === "function") { fitWidth(); tabPanels().forEach(drawSized); }
   }
   function refit() {
     if (_refitRaf) return;
