@@ -20,7 +20,7 @@ const BANCO = (() => {
 #hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#sb-panels>#hrinfo #hri-ttl{display:none}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;-webkit-user-select:text;user-select:text}
 :is(#hri-body,.hri-body) .row label{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}:is(#hri-body,.hri-body) .row input[type=text],:is(#hri-body,.hri-body) .row input:not([type]){min-width:0;padding:2px 6px}:is(#hri-body,.hri-body) select{padding:2px 4px;max-width:100%;min-width:0}:is(#hri-body,.hri-body) button{padding:2px 8px}:is(#hri-body,.hri-body) .muted.sm{font-size:11px;line-height:1.35}
 :is(#hri-body,.hri-body) table{border-collapse:collapse;width:100%}:is(#hri-body,.hri-body) td,:is(#hri-body,.hri-body) th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}:is(#hri-body,.hri-body) td.num,:is(#hri-body,.hri-body) th.num{text-align:right}
-:is(#hri-body,.hri-body) td.v{white-space:normal;word-break:break-all}:is(#hri-body,.hri-body) h4{margin:8px 0 2px;font-size:12px}:is(#hri-body,.hri-body) .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
+:is(#hri-body,.hri-body) td.v{white-space:normal;word-break:break-all}:is(#hri-body,.hri-body) h2{margin:8px 0 2px;font-size:12px}:is(#hri-body,.hri-body) .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
 :is(#hri-list,.hri-list){position:relative;overflow:auto;height:100%}:is(#hri-list,.hri-list) .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
 :is(#hri-list,.hri-list) .hd span{cursor:pointer;padding:2px 2px;text-align:right}:is(#hri-list,.hri-list) .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}:is(#hri-list,.hri-list) .r span{text-align:right;padding-right:2px}.sb-n{font-weight:400;color:var(--muted)}
 :is(#hri-list,.hri-list) .r:hover{background:var(--sel)}:is(#hri-list,.hri-list) .r.cur{background:var(--sel);font-weight:600}
@@ -383,7 +383,7 @@ const BANCO = (() => {
     const top = [[I18N.t("bn.h.scan"), h.no], ["RT (min)", num(h.rt)], [I18N.t("bn.h.level"), { h: BFIL.msLv(h.level) }], [I18N.t("lib.col.polarity"), h.polarity === "positive" || h.polarity === "negative" ? I18N.t(`bn.h.pol.${h.polarity}`) : h.polarity], [I18N.t("bn.h.filter"), h.filter], [I18N.t("bn.add.kind"), h.key], [I18N.t("bn.h.prec"), num(h.prec, 5)],
       [I18N.t("bn.h.isoWin"), h.iso ? `${num(h.iso[0])} – ${num(h.iso[1])}` : ""], [I18N.t("bn.h.act"), [h.act, h.ce != null ? I18N.t("bn.h.energy") + " " + h.ce : ""].filter(Boolean).join(" ")], [I18N.t("bn.h.res"), h.res ? Math.round(h.res) : ""],
       [I18N.t("bn.h.analyzer"), h.analyzer || ""], [I18N.t("bn.h.spectrum"), h.profile ? I18N.t("hr.mode.profile") : I18N.t("hr.mode.centroid")], ["TIC", h.tic != null ? (+h.tic).toExponential(3) : ""]].filter(x => x[1] !== "" && x[1] != null);
-    b.innerHTML = `<div class="row"><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h4>${I18N.t("bn.h.all")}</h4>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
+    b.innerHTML = `<div class="row"><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h2>${I18N.t("bn.h.all")}</h2>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
   }
   function goScan(p, sid, rt, k) {
     if (p.stand) return;
@@ -452,11 +452,11 @@ const BANCO = (() => {
       <div class="row"><label>${I18N.t("bn.iso.formula")} <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:130px"></label></div>
       <div id="hri-ads">${adds.map((a, k) => adRow(a.ad, a.c == null ? 100 : a.c, k)).join("")}</div>
       <div class="row"><button type="button" id="hri-addad">${I18N.t("bn.iso.addAd")}</button></div>
-      <h4>${I18N.t("bn.iso.cd")}</h4>
+      <h2>${I18N.t("bn.iso.cd")}</h2>
       <div class="row"><label title="${I18N.t("bn.iso.cdTitle")}">${I18N.t("bn.iso.z0")} <input id="hri-z0" type="number" min="1" max="60" step="any" value="${cd.z0 ?? ""}" placeholder="1" style="width:52px"></label><label>${I18N.t("bn.iso.hw")} <input id="hri-hw" type="number" min="0" max="60" step="any" value="${cd.hw ?? ""}" placeholder="0" style="width:52px"></label></div>
-      <h4>${I18N.t("bn.iso.output")}</h4>
+      <h2>${I18N.t("bn.iso.output")}</h2>
       <div class="row"><label>${sel("hri-st", [["barre", I18N.t("bn.iso.bars")], ["profilo", I18N.t("bn.iso.profile")], ["centroidi", I18N.t("bn.iso.centroids")]], iso.style || "centroidi")}</label><label title="${I18N.t("bn.iso.ptsTitle")}">${I18N.t("bn.iso.pts")} <input id="hri-pts" value="${iso.pts || 10}" style="width:36px"></label></div>
-      <h4>${I18N.t("bn.iso.resolution")}</h4>
+      <h2>${I18N.t("bn.iso.resolution")}</h2>
       <div class="row"><label>${sel("hri-rm", [["R", I18N.t("bn.iso.rm.R")], ["da", I18N.t("bn.iso.rm.da")], ["ppm", I18N.t("bn.iso.rm.ppm")]], fw.mode || "R")} <input id="hri-r" placeholder="${I18N.t("bn.iso.auto")}" value="${fw.v != null ? fw.v : iso.R != null ? iso.R : ""}" style="width:72px"></label>
         <label title="${I18N.t("bn.iso.defTitle")}">${I18N.t("bn.iso.defAs")} ${sel("hri-df", [["fwhm", I18N.t("bn.iso.fwhm")], ["10", I18N.t("bn.iso.v10")], ["5", I18N.t("bn.iso.v5")]], iso.def || "fwhm")}</label></div>
       <div class="row"><button type="button" id="hri-go" class="go" title="${I18N.t("bn.iso.overTitle")}">${I18N.t("bn.iso.over")}</button><button type="button" id="hri-new" title="${I18N.t("bn.iso.newTitle")}">${I18N.t("bn.iso.new")}</button><button type="button" id="hri-rep" title="${I18N.t("bn.iso.repTitle")}">${I18N.t("bn.iso.rep")}</button><button type="button" id="hri-off">${I18N.t("lib.remove")}</button></div>

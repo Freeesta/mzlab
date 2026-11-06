@@ -25,7 +25,7 @@ export const msLv = l => `<span class="ms-lv">MS<sup>${esc(l)}</sup></span>`;
  *  @param {string} title @param {[string, string][]} rows */
 function section(title, rows) {
   const r = rows.filter(x => x[1] !== "");
-  return r.length ? `<h4>${esc(title)}</h4><dl class="fi-kv">${r.map(([a, v]) => `<dt>${esc(a)}</dt><dd>${v}</dd>`).join("")}</dl>` : "";
+  return r.length ? `<h2>${esc(title)}</h2><dl class="fi-kv">${r.map(([a, v]) => `<dt>${esc(a)}</dt><dd>${v}</dd>`).join("")}</dl>` : "";
 }
 
 /** @param {string[] | undefined} a @param {(s: string) => string} f */
@@ -44,7 +44,7 @@ export function fileHtml(j) {
   return section(t("side.file"), [[t("lib.col.name"), esc(j.file)], [t("bn.f.date"), esc(j.start || t("bn.f.noDate"))], [t("bn.f.rtRange"), range(j.rt)], [t("bn.f.mzRange"), mz], [t("lib.all.scans"), scans]])
     + section(t("bn.f.instrument"), [[t("bn.f.model"), esc(cap(j.instrument || ""))], [t("bn.f.serial"), esc(j.serial || "")], [t("bn.f.analyzers"), list(j.analyzers, s => esc(cap(s)))], [t("bn.f.components"), list(j.components, s => esc(cap(s)))]])
     + section(t("bn.f.software"), [["Software", sw], [t("bn.f.source"), list(j.source_files, esc)], [t("bn.f.conversion"), list(j.conversion, esc)]])
-    + (types ? `<h4>${esc(t("bn.f.byType"))}</h4><ul class="fi-types">${types}</ul>` : "");
+    + (types ? `<h2>${esc(t("bn.f.byType"))}</h2><ul class="fi-types">${types}</ul>` : "");
 }
 
 if (!document.getElementById("fi-css")) { const st = document.createElement("style"); st.id = "fi-css"; st.textContent = CSS; document.head.appendChild(st); }
