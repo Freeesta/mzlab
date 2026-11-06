@@ -243,6 +243,7 @@ I18N.add("it", {
   "scorc.spettroSel": "Spettro dell'intervallo",
   "scorc.picco": "MS2 o XIC",
   "scorc.integra": "Integra",
+  "scorc.base": "Linea di base",
   "scorc.misura": "Misura",
   "scorc.schermo": "Schermo intero",
   "scorc.apri": "Apri file",

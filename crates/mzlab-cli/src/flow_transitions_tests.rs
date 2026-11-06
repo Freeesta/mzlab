@@ -185,3 +185,50 @@ fn the_browser_entry_on_packed_files_gives_the_same_bytes() {
     assert_eq!(e.key, "err.transitions.manifest");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn from_zero_the_cli_and_the_browser_entry_agree_and_say_so() {
+    let Some(d) = fixture("zero") else {
+        return;
+    };
+    let mut o = Out::default();
+    o.raw(",\"params\":{\"output\":\"peaks\",\"baseline\":\"zero\",\"transitions\":")
+        .str(TABLE)
+        .raw("}");
+    let zero = run(&d, &o.0);
+    let edges = run(&d, &params("peaks", TABLE));
+    assert!(zero
+        .lines()
+        .next()
+        .unwrap()
+        .ends_with(",peak,baseline,below"));
+    let (az, ae): (f64, f64) = (
+        cell(&zero, "s1.mzML", "isoA", "area").parse().unwrap(),
+        cell(&edges, "s1.mzML", "isoA", "area").parse().unwrap(),
+    );
+    assert!(az > ae, "{az} {ae}");
+    for col in ["apex_rt", "height", "snr", "peak"] {
+        assert_eq!(
+            cell(&zero, "s1.mzML", "isoA", col),
+            cell(&edges, "s1.mzML", "isoA", col)
+        );
+    }
+    let (a, b) = (
+        std::fs::read(d.join("s1.mzML")).unwrap(),
+        std::fs::read(d.join("s2.mzML")).unwrap(),
+    );
+    let manifest = format!(
+        r#"[{{"name":"s1.mzML","len":{}}},{{"name":"s2.mzML","len":{}}}]"#,
+        a.len(),
+        b.len()
+    );
+    let packed = mzlab_feat::transitions::transitions_packed(
+        r#"{"output":"peaks","baseline":"zero"}"#,
+        TABLE,
+        &manifest,
+        &[a, b].concat(),
+    )
+    .unwrap();
+    assert_eq!(packed, zero);
+    let _ = std::fs::remove_dir_all(&d);
+}

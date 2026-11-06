@@ -243,6 +243,7 @@ I18N.add("en", {
   "scorc.spettroSel": "Range spectrum",
   "scorc.picco": "MS2 or XIC",
   "scorc.integra": "Integrate",
+  "scorc.base": "Baseline",
   "scorc.misura": "Measure",
   "scorc.schermo": "Full screen",
   "scorc.apri": "Open files",

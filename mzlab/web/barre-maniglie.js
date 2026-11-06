@@ -29,7 +29,7 @@ function sync(/** @type {Bag} */ p) {
     b.setAttribute("aria-valuenow", x.toFixed(2)); b.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: x.toFixed(2) }));
     if (a.full) { b.setAttribute("aria-valuemin", a.full[0].toFixed(2)); b.setAttribute("aria-valuemax", a.full[1].toFixed(2)); }
   }));
-  old.forEach(n => n.remove());
+  old.forEach(n => n.remove()); if (typeof INTBASE !== "undefined") INTBASE.sync(p);          // the points of a custom baseline (integra-base.js)
 }
   return { sync };
 })();
