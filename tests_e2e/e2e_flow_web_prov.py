@@ -63,7 +63,8 @@ FAILED = """async () => {
   const jobs = [{ instance: "idx", item, state: "reused" }, { instance: "det", item, state: "reused" },
     { instance: "ali", item: null, state: "error", error_key: "err.flow.align.polarity", params: { positive: item, negative: "b.mzML" } }, { instance: "gap", item: null, state: "blocked" }];
   const r = await FLOW.webProv.record(x, jobs);
-  return r && { prov: r.prov, kept: await (await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow')).getFileHandle('prov.json')).getFile()).text() };
+  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow');
+  return r && { prov: r.prov, kept: await (await (await d.getFileHandle('prov.json')).getFile()).text() };
 }"""
 # the fields of a record that differ by nature between the two runs: times, the memory peak, who ran it and whether the step was reused
 def diff(a, b, path=""):
@@ -73,9 +74,9 @@ def diff(a, b, path=""):
         return [d for i, (x, y) in enumerate(zip(a, b)) for d in diff(x, y, path + "/" + str(i))][:12]
     return [] if a == b else [(path, a, b)]
 BLANK = {"ms", "total_ms", "heap_peak_bytes", "cached", "reused", "platform", "version", "commit"}
-AGENT_BLANK = {"target", "modules"}       # who ran it: the platform (x86_64-linux / wasm32) and the executables hashed (the native binary only)
+AGENT_BLANK = {"target", "modules"}       # who ran it (`agent` of prov/1, `engine` of corsa/1): the platform (x86_64-linux / wasm32) and the executables hashed (the native binary only)
 def blank(v):
-    if isinstance(v, dict): return {k: ("ok" if k == "status" and x == "cached" else blank({a: b for a, b in x.items() if a not in AGENT_BLANK} if k == "agent" and isinstance(x, dict) else x)) for k, x in v.items() if k not in BLANK}
+    if isinstance(v, dict): return {k: ("ok" if k == "status" and x == "cached" else blank({a: b for a, b in x.items() if a not in AGENT_BLANK} if k in ("agent", "engine") and isinstance(x, dict) else x)) for k, x in v.items() if k not in BLANK}
     if isinstance(v, list): return [blank(x) for x in v]
     return v
 PORT = lib.free_port()
