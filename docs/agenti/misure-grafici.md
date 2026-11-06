@@ -24,3 +24,13 @@ Costo del disegno dei cromatogrammi su tracce sintetiche dense: `python3 tools/b
 Prima ogni punto entrava due volte nel percorso (riempimento sotto la traccia e linea da 1,25 px); ora una colonna di pixel ha un vertice (il massimo della colonna, come nella vista sovrapposta) e la linea fitta è di 1 px (`hairline`). Il picco più alto di ogni traccia resta la cima della sua linea.
 
 Un file da 10^6 punti (stessa macchina): draw della vista intera 11 ms, dello zoom 0,9 ms; rotella, trascinamento e passaggio del mouse a 16,7 ms per fotogramma senza attività lunghe; ridimensionare ×10 = 15 chiamate a `draw()` (fotogrammi fino a 50 ms).
+
+## Memoria su cicli ripetuti, un file LR sintetico (`main` `1913013` → `corrInfoWire` in `pannelli.js` chiude il vecchio ascoltatore con `abort(0)`; prova `e2e_memoria_zoom`)
+| 30 cicli zoom → zoom intero dopo 5 di riscaldamento, dopo GC | prima | dopo |
+|---|---|---|
+| nodi DOM | 5004 → 18 084 (+436 per ciclo) | 2410 → 2410 |
+| ascoltatori JS | 1213 → 3043 (+61 per ciclo) | 845 → 845 |
+
+Ogni zoom ricostruisce l'intestazione del pannello; `abort()` senza argomento crea una `DOMException` la cui pila trattiene la NodeList dell'intestazione, e il segnale interrotto resta raggiungibile da `AbortSignal.any` sul segnale del pannello: ogni intestazione vecchia restava in memoria, senza limite. Con una ragione senza pila (`0`) nodi e ascoltatori restano fermi (sonda a 50 cicli: 2797 nodi al ciclo 20 e al 40).
+
+Aprire, usare e chiudere 50 XIC trattiene invece ~280 nodi per ciclo nelle voci di annullamento (`storia.js`), che hanno un tetto (100 voci): si ferma a ~50 cicli, la memoria JS resta ~9 MB; nessuna modifica.
