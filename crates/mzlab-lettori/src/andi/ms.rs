@@ -15,6 +15,8 @@ use mzlab_core::metodo::sha1_hex;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
+mod bpc;
+
 /// The bytes of the start of the file that `riconosci` looks at: the names of the variables are in the header.
 const TESTA: usize = 1 << 18;
 const UNITA: &str = "Arbitrary Intensity Units";
@@ -183,6 +185,7 @@ impl LettoreAndi {
             .cloned()
             .ok_or_else(|| indice_cattivo(k))?;
         let (mz, it, largo) = self.punti_di(k)?;
+        self.nota_bpc(k, &it, largo);
         Ok(Spectrum {
             index: k,
             id: v.id,
@@ -205,6 +208,7 @@ impl LettoreAndi {
         }
         for k in 0..self.indice.len() {
             let (_, it, largo) = self.punti_di(k)?;
+            self.nota_bpc(k, &it, largo);
             // the sum of what `Spectrum::intensity_f64` gives: the narrow types are summed as f32
             self.indice[k].tic = it
                 .iter()
@@ -225,16 +229,7 @@ impl LettoreAndi {
         let intensity = if tic {
             self.indice.iter().map(|v| v.tic).collect()
         } else {
-            let mut o = Vec::new();
-            for k in 0..self.indice.len() {
-                let s = self.spettro(k)?;
-                o.push(
-                    (0..s.mz.len())
-                        .map(|i| s.intensity_f64(i))
-                        .fold(0.0, f64::max),
-                );
-            }
-            o
+            self.bpc_punti()?
         };
         Ok(Chromatogram {
             index,
@@ -373,6 +368,9 @@ pub struct LettoreAndi {
     finestre: Vec<Option<(f64, f64)>>,
     /// Whether the TIC of the scans is that of the file (else it is summed from the points when asked).
     tic_noto: bool,
+    /// The base peak of each scan, noted at each decode (NaN: not yet); `bpc_visti` counts the noted ones.
+    bpc: Vec<f64>,
+    bpc_visti: usize,
     profilo: bool,
     sim: bool,
     sha1: Option<Option<String>>,
@@ -448,6 +446,8 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         conti: Vec::new(),
         finestre: Vec::new(),
         tic_noto: false,
+        bpc: Vec::new(),
+        bpc_visti: 0,
         profilo: false,
         sim: false,
         sha1: None,
