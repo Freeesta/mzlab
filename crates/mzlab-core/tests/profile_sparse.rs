@@ -435,7 +435,7 @@ fn random_multiblock_indexes_match_the_spectra_written() {
         let scans: Vec<Vec<f64>> = (0..n_scans)
             .map(|i| {
                 // every third case leaves the 20 scans of the middle sparse, so the step comes from the walk over the whole section
-                let quiet = case % 3 == 0 && (n_scans / 2..n_scans / 2 + 20).contains(&i);
+                let quiet = case.is_multiple_of(3) && (n_scans / 2..n_scans / 2 + 20).contains(&i);
                 let np = match if quiet { 0 } else { rng.below(3) } {
                     0 => 1 + rng.below(6),
                     1 => 21 + rng.below(20),
