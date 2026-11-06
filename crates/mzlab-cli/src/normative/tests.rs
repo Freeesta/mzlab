@@ -184,6 +184,13 @@ fn built() -> Work {
 }
 
 #[test]
+fn normative_without_arguments_prints_the_help() {
+    let r = run_with(Vec::new(), Fake::empty());
+    assert_eq!(r.code, 0, "{}", r.stderr);
+    assert!(String::from_utf8_lossy(&r.stdout).contains("normative build"));
+}
+
+#[test]
 fn normative_canonical_bytes_of_a_list() {
     let w = Work::new("golden");
     let r = run_with(w.args(&["--update-pins"]), Fake::standard());
