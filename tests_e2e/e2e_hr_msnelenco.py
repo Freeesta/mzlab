@@ -46,6 +46,12 @@ try:
             v = pg.evaluate("[...document.querySelectorAll('#mt-pexp .msnl-r:not(.msnl-g):not(.msnl-h)')].map(r=>[+r.children[1].textContent,r.children[3].textContent,r.children[6].textContent])"); print(v[:3])
             assert all(abs(float(x[1].split(" ")[-1]) - PREC) < 0.01 and x[2] for x in v), v
         step("sort by precursor m/z (descending), filter by m/z, every scan of the precursor with its base peak", sort_filter)
+        def target_size():
+            hs = pg.evaluate("[...document.querySelectorAll('#mt-pexp .msnl-b .msnl-r button')].map(b=>{const r=b.getBoundingClientRect();return[Math.round(r.width),Math.round(r.height)]})")
+            assert hs and all(w >= 24 and h >= 24 for w, h in hs), f"TIC/XIC buttons under 24x24 px: {[x for x in hs if min(x) < 24][:4]}"
+            bx = pg.evaluate("(r=>[r.width,r.height])(document.querySelector('#bigx').getBoundingClientRect())")
+            assert min(bx) >= 24, f"the × of the window is under 24x24 px: {bx}"
+        step("the TIC/XIC buttons of a precursor and the × of the window are at least 24x24 px", target_size)
         def row_opens():
             sid = pg.evaluate("(async()=>{const f=E.files.find(x=>x.dda);const D=await DDA.get(f.k);const r=document.querySelector('#mt-pexp .msnl-r:not(.msnl-g):not(.msnl-h)');const no=+r.children[0].textContent;return D.sid[D.no.indexOf(no)]})()")
             pg.click("#mt-pexp .msnl-r:not(.msnl-g):not(.msnl-h)")

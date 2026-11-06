@@ -174,3 +174,32 @@ fn freeing_derived_indexes_closes_them_first() {
     st.rpc("lr_space", &json!({"free": "derived"}), &[]).unwrap();
     assert!(!slot_answers(&st), "the index is unmapped before its file is deleted");
 }
+
+#[test]
+fn a_file_changed_on_disk_loses_its_index_at_the_next_boot_even_after_another_listing() {
+    let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let data = tempfile::tempdir().unwrap();
+    let f = data.path().join("a.mzML");
+    std::fs::copy(&ex, &f).unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    st.set_index_folder(data.path().join("idx")).unwrap();
+    let (id, _) = st.pick(f.clone()).unwrap();
+    st.rpc("lr_put", &json!({"name": "a.mzML", "fid": id}), &[]).unwrap();
+    st.rpc("lr_index", &json!({"name": "a.mzML"}), &[]).unwrap();
+    let mut b = std::fs::read(&f).unwrap();
+    b.extend_from_slice(b"\n");
+    std::fs::write(&f, b).unwrap();                                       // the student writes the file again under the same name
+    st.rpc("lr_space", &json!({}), &[]).unwrap();                         // a listing that is not the boot
+    let st2 = State::new();
+    st2.set_data_folder(data.path().join("app"));
+    st2.set_index_folder(data.path().join("idx")).unwrap();
+    let boot = text(st2.rpc("lr_boot", &json!({}), &[]).unwrap());
+    assert!(boot.contains("\"indexed\":false"), "the index of the old bytes is dropped: {boot}");
+    st2.rpc("lr_index", &json!({"name": "a.mzML"}), &[]).unwrap();
+    let st3 = State::new();
+    st3.set_data_folder(data.path().join("app"));
+    st3.set_index_folder(data.path().join("idx")).unwrap();
+    let boot = text(st3.rpc("lr_boot", &json!({}), &[]).unwrap());
+    assert!(boot.contains("\"indexed\":true"), "the index built after the change is kept: {boot}");
+}
