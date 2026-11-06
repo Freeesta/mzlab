@@ -176,9 +176,10 @@ async function lrSpace() {
 }
 async function lrFree() {                                                 // the indexes of the files that were taken away go first
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
-  for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/(\.cen)?\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
+  for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(ARCH.idxOwner(e.name))) await ARCH.remove("idx", e.name);
   await tilesDrop(null, files);
 }
+let tidyT = /** @type {any} */ (0); const tidySoon = () => { clearTimeout(tidyT); tidyT = setTimeout(async () => { await safe(lrFree); await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name))); }, 300); };      // after removals ONE pass drops the orphan indexes and the members of a maker's file no sample uses: both list every file (getFile each), and 200 removals ran 200 passes side by side (the last answered 46 s after the first)
 async function lrFreeDerived() {                                         // every index and pipeline file can be made again from the sources: all of them go
   for (const kind of ["idx", "feat"]) for (const e of await safe(() => ARCH.list(kind)) || []) await safe(() => ARCH.remove(kind, e.name));
   await tilesDrop(null, null);
@@ -350,8 +351,7 @@ async function lrOp(m) {
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_ion_pattern": return { info: ion_pattern(m.f || "", m.adduct || "") };
     case "lr_remove": {
-      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await (CANCELLED.has(m.name) ? ARCH.removeHeld : ARCH.remove)("files", m.name); await tilesDrop(m.name, null); await safe(lrFree);      // the indexes of the file go with it
-      await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name)));      // the members of a maker's file that no sample uses any more go
+      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await (CANCELLED.has(m.name) ? ARCH.removeHeld : ARCH.remove)("files", m.name); await tilesDrop(m.name, null); for (const x of [".mzidx", ".cen.mzidx", ".cen.key"]) await ARCH.remove("idx", m.name + x); tidySoon();      // the indexes of the file go with it; the rest of the archive is tidied once per burst
       return { info: "{}" };
     }
     case "lr_space": { if (m.free) await (m.free === "derived" ? lrFreeDerived() : lrFree()); return { info: JSON.stringify(await lrSpace()) }; }
