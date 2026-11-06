@@ -59,12 +59,8 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
     let text = String::from_utf8_lossy(&bytes);
     // every precursor of a transition has its activation, the energy and the dwell are written for the readers that know them
     assert_eq!(text.matches("<activation>").count(), want.len());
-    // the dwell is written only by the SCIEX readers module
-    let with_dwell = cfg!(feature = "sciex");
-    assert_eq!(
-        text.matches("MS_dwell_time").count(),
-        if with_dwell { want.len() } else { 0 }
-    );
+    // the dwell the id spells is written by every build (`mzmlwrite::srm_windows`)
+    assert_eq!(text.matches("MS_dwell_time").count(), want.len());
 
     let size = bytes.len() as u64;
     let mut m = Mzml::new(bytes, size);
@@ -74,12 +70,7 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
     for (c, w) in srm.iter().zip(want) {
         assert_eq!((c.q1, c.q3), (w["q1"].as_f64(), w["q3"].as_f64()));
         assert_eq!(c.ce, w["ce"].as_f64(), "{}", c.id);
-        assert_eq!(
-            c.dwell,
-            w["dwell"].as_f64().filter(|_| with_dwell),
-            "{}",
-            c.id
-        );
+        assert_eq!(c.dwell, w["dwell"].as_f64(), "{}", c.id);
         assert_eq!(c.name, w["name"].as_str().unwrap());
     }
 }
