@@ -146,7 +146,7 @@ fn spectrum(k: usize, rng: &mut Lcg) -> (Vec<f64>, Vec<f64>) {
             .for_each(|p| *p = (p.0 as f32 as f64, p.1 as f32 as f64));
     }
     let (mut mz, y): (Vec<f64>, Vec<f64>) = pts.into_iter().unzip();
-    if k % 5 == 0 && !mz.is_empty() {
+    if k.is_multiple_of(5) && !mz.is_empty() {
         let n = mz.len();
         let at = [n - 1, n / 2, 0][(k / 5) % 3];
         mz[at] = [f64::NAN, f64::INFINITY, f64::NEG_INFINITY][(k / 15) % 3];
