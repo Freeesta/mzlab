@@ -160,7 +160,7 @@ mod peaks_edges_cmd;
 mod plain;
 mod sim_table_cmd;
 mod steps_cmd;
-mod testo_errore;
+pub mod testo_errore;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 
