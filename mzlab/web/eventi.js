@@ -698,21 +698,21 @@ Q("#calcin").oninput = calcRun;
   document.addEventListener("mouseout", e => { if (cur && !(e.relatedTarget && cur.contains(e.relatedTarget))) hide(); });
   ["mousedown", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, hide, true));
   // touch has no hover: a long press (0.6 s) on a button or control shows its tooltip for a moment; the click that follows the release is swallowed. Graphs and file rows keep their long press = right click (touch.js)
-  let lpT = null, lpX = 0, lpY = 0, lpDone = 0;
+  let lpT = null, lpX = 0, lpY = 0, lpDone = 0, lpUp = false;      // lpDone: the lift that ends a press whose tooltip came up; the click a finger sends on lifting (iOS and Chromium, however long the press) is swallowed for 700 ms after it
   const lpStop = () => clearTimeout(lpT);
   document.addEventListener("pointerdown", e => {
-    lpStop(); if (e.pointerType !== "touch") return;
+    lpStop(); lpUp = false; if (e.pointerType !== "touch") return; if (!tip.hidden) hide();      // the next touch puts the tooltip of a long press away
     const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
     if (!t || t.closest("dialog[open], canvas, .fl, .pnl .cv")) return;
     lpX = e.clientX; lpY = e.clientY;
     lpT = setTimeout(() => {
       if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
       if (!t.dataset.tip && !t.dataset.tiph) return;
-      show(t); lpDone = Date.now(); cur = t; clearTimeout(timer); timer = setTimeout(hide, 2800);
+      show(t); lpUp = true; cur = t; clearTimeout(timer); timer = setTimeout(hide, 2800);
     }, 600);
   }, true);
   document.addEventListener("pointermove", e => { if (lpT && Math.hypot(e.clientX - lpX, e.clientY - lpY) > 10) lpStop(); }, true);
-  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, lpStop, true));
+  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, () => { lpStop(); if (lpUp) { lpDone = Date.now(); lpUp = false; } }, true));
   document.addEventListener("click", e => { if (Date.now() - lpDone < 700) { e.stopPropagation(); e.preventDefault(); lpDone = 0; } }, true);
   addEventListener("scroll", hide, true);
 })();
