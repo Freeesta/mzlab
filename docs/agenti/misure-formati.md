@@ -31,7 +31,8 @@ Come si leggono le colonne: i secondi per passo sono la somma sulle 12 istanze (
 | mzML (`lettori_mzml::scrivi`, nuova apertura) | 1 610 | 6 040 |
 
 - Profilo (callgrind, 88 frame, tutte le fasi): la decodifica dei frame è il 50 % delle istruzioni e zstd ne è il 58 %; il deflate dell'mzML scritto il 33 %. L'unione per indice TOF (radix a 11 bit da 1024 punti, `spettri::ordina_tof`) e il taglio per scansioni (offset `Picchi::inizio`) pesano meno del 10 %, contro il 41 % di ordinamento e filtro punto per punto che c'erano prima (stesse misure: indice 670 → 423 ms, BPC 335 → 245, tutti gli spettri 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8,97 → 6,04 s, stesso SHA-256).
-- Il passo indice decodifica ogni frame PASEF una volta per il TIC degli MS2, e la conversione li decodifica di nuovo: il doppio passaggio resta.
+- Il passo indice decodifica ogni frame PASEF per il TIC degli MS2; il `.mzidx` e l'mzML chiedono invece `Lettore::indice_leggero` e sommano i punti mentre leggono (un passaggio solo): stessa corsa, via del costruttore vero (`upload::indicizza_lettore_con`, un passaggio con file di appoggio), `.mzidx` 2 861 → 2 368 ms e mzML 1 848 → 1 422 ms, stessi byte. Nel modulo `bruker` del sito l'mzML passa dallo stesso codice; il `.mzidx` del sito chiede ancora l'indice pieno attraverso il ponte dei moduli.
+- mzXML sintetico senza `totIonCurrent` (6000 scansioni × 3000 punti, 32 bit, zlib): con `indice_leggero` `.mzidx` 5 183 → 3 169 ms, mzML 3 934 → 2 483 ms, stessi byte.
 
 ## Non misurato (servono i file del Mac di Federico)
 Thermo .raw (lettore nostro), Agilent .D, Bruker .d veri, SCIEX .wiff/.wiff.scan, .cdf di strumento e MGF: nel contenitore non ci sono file veri né i convertitori. Il rapporto con mzmine (serie 23-29: 0.56-0.64) non ha un numero nel repository, per cui non è riportato.
