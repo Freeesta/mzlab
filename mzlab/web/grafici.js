@@ -1,7 +1,7 @@
 // @ts-strict
 // Chart drawing: chromatograms (TIC, XIC, corrections), hover line, zoom, RT x m/z map. Split from explore.js: classic script, loaded after pannelli.js.
 // ------------------------------------------------------------------ chart drawing
-// width (CSS px) of every trace line: thin like the vendor software; the high contrast palette adds its own extra (LWX)
+// width (CSS px) of every trace line: thin like the vendor software; 1 px when dense (decima.js hairline); the high contrast palette adds its own extra (LWX)
 const TRACE_LW = 1.25;
 // ---- corrections applied to the traces (fondo.js): the difference with a reference, then ONE background on the difference. Nothing is clipped here.
 // ---- internal blank: a stretch of the trace chosen by the student (for example 0-2 min, where nothing elutes) gives the background level, which is
@@ -399,7 +399,7 @@ async function drawLines(p) {
   } else for (const s of sr) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
     const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // the window by binary search (decima.js): smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
-    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
+    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
     for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }
