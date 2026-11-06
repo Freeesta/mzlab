@@ -49,7 +49,7 @@ Questo documento riassume lo stato di conformità all'accessibilità (WCAG 2.1 l
 Tutti i test possono essere eseguiti localmente dopo aver preparato il sito con `python3 tools/prepara_sito.py`.
 
 ### 1. Test veloce Dati (fast path CI / fumo)
-Esegue axe-core su 6 stati della vista Dati, controlla focus visibile da tastiera su tutti i controlli, chiusura con Esc, reflow a 320 px e modalità a contrasto forzato:
+Esegue axe-core su 9 stati (compresi calcolatrice, finestra di integrazione e albero MSn) della vista Dati, controlla focus visibile da tastiera su tutti i controlli, chiusura con Esc, reflow a 320 px e modalità a contrasto forzato:
 ```bash
 python3 tests_e2e/e2e_a11y_dati.py
 ```
