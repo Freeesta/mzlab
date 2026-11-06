@@ -313,180 +313,12 @@ fn safe(id: &str) -> String {
 /// Steps the harness leaves out: `meta.compare` wraps another step and has no ports of its own.
 const LEFT_OUT: &[&str] = &["meta.compare"];
 
-/// The mismatches the registry has today, by consumer port, source and error key: the test fails on any other, and on one of these that is gone (drop it).
-/// - a `filtri/1` (`tp.filter`) is typed `table` like a `.mzfeat`;
-/// - `qc.mass_accuracy` writes `table` only when its optional `table` input is wired;
-/// - `spectra.match.query` accepts `report`, and the CSV exports are no spectra;
-/// - `spectra.msn_graph.molecules` (a molecules CSV) accepts `table`, and a `.mzfeat` is no CSV;
-/// - `features.gapfill` and `tp.link` need a table aligned in the same plan (`err.flow.lineage`);
-/// - a table of one file with the samples of six (`error.badCampioni`): data the check does not read.
-const KNOWN: &[(&str, &str)] = &[
-    (
-        "features.gapfill.table <- table with no row",
-        "err.flow.lineage",
-    ),
-    (
-        "features.gapfill.table <- table of one sample",
-        "err.flow.lineage",
-    ),
-    (
-        "features.gapfill.table <- qc.mass_accuracy.table",
-        "err.flow.lineage",
-    ),
-    (
-        "features.gapfill.table <- tp.filter.table",
-        "err.flow.lineage",
-    ),
-    (
-        "table.filter.table <- table of one sample",
-        "error.badCampioni",
-    ),
-    (
-        "table.filter.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    ("table.filter.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "features.group.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    ("features.group.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "table.stats.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    ("table.stats.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "table.kmd.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    ("table.kmd.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "table.plausible.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    (
-        "table.plausible.table <- tp.filter.table",
-        "error.badMzfeat",
-    ),
-    (
-        "export.table_csv.table <- table of one sample",
-        "error.badCampioni",
-    ),
-    (
-        "export.table_csv.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    (
-        "export.table_csv.table <- tp.filter.table",
-        "err.flow.export.view",
-    ),
-    (
-        "export.mztab.table <- table of one sample",
-        "error.badCampioni",
-    ),
-    (
-        "export.mztab.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    (
-        "export.mztab.table <- tp.filter.table",
-        "err.flow.export.view",
-    ),
-    (
-        "spectra.chimeric.features <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    (
-        "spectra.chimeric.features <- tp.filter.table",
-        "err.flow.export.view",
-    ),
-    (
-        "spectra.match.query <- export.table_csv.report",
-        "err.flow.match.format",
-    ),
-    (
-        "spectra.match.query <- export.mztab.report",
-        "err.flow.match.format",
-    ),
-    (
-        "spectra.match.query <- features.table.report",
-        "err.flow.match.format",
-    ),
-    (
-        "spectra.match.query <- export.annotations.report",
-        "err.flow.match.format",
-    ),
-    (
-        "spectra.match.query <- export.inclusion.report",
-        "err.flow.match.format",
-    ),
-    ("tp.link.table <- table with no row", "err.flow.lineage"),
-    ("tp.link.table <- table of one sample", "err.flow.lineage"),
-    (
-        "tp.link.table <- qc.mass_accuracy.table",
-        "err.flow.lineage",
-    ),
-    ("tp.link.table <- tp.filter.table", "err.flow.lineage"),
-    ("spectra.msn_graph.molecules <- gap.table", "err.flow.io"),
-    ("spectra.msn_graph.molecules <- ali.table", "err.flow.io"),
-    (
-        "spectra.msn_graph.molecules <- table with no row",
-        "err.flow.io",
-    ),
-    (
-        "spectra.msn_graph.molecules <- table of one sample",
-        "err.flow.io",
-    ),
-    (
-        "spectra.msn_graph.molecules <- features.align.table",
-        "err.flow.io",
-    ),
-    (
-        "spectra.msn_graph.molecules <- features.gapfill.table",
-        "err.flow.io",
-    ),
-    (
-        "spectra.msn_graph.molecules <- table.filter.table",
-        "err.flow.io",
-    ),
-    (
-        "table.match.table <- table of one sample",
-        "error.badCampioni",
-    ),
-    (
-        "table.match.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    (
-        "table.match.table <- tp.filter.table",
-        "err.flow.export.view",
-    ),
-    (
-        "export.annotations.table <- qc.mass_accuracy.table",
-        "err.flow.port.missing",
-    ),
-    (
-        "export.annotations.table <- tp.filter.table",
-        "error.badMzfeat",
-    ),
-];
+#[path = "flow_pairs_known.rs"]
+mod known;
+use known::{report_and_assert, Verdict};
 
-/// Result of a consumer reading one source on one port.
-enum Verdict {
-    Refused(String),
-    Ran,
-    /// The canonical input of the port fails too: the pair says nothing.
-    Uncovered(String),
-    Mismatch(String),
-}
-
-#[test]
-fn what_the_check_accepts_runs() {
-    let Some(out) = series("pairs") else { return };
-    let fx = fixture(&out);
-    let mut pool = seeds();
-    // round by round, every step that can be built from the pool and runs adds its outputs (a step of a later round reads the outputs of the earlier ones)
+/// Round by round, every step that can be built from the pool and runs adds its outputs to `pool` (a step of a later round reads the outputs of the earlier ones).
+fn producers(fx: &Fixture, pool: &mut Vec<Source>) -> Vec<(String, Verdict)> {
     let mut tried: BTreeSet<String> = BTreeSet::new();
     let mut notes: Vec<(String, Verdict)> = Vec::new();
     for _round in 0..3 {
@@ -538,11 +370,19 @@ fn what_the_check_accepts_runs() {
             }
         }
     }
+    notes
+}
+
+/// Every consumer with a canonical instance that passes the check: its instance and one per (port, other source) that passes, all run in one plan.
+fn consumers(
+    fx: &Fixture,
+    pool: &[Source],
+    mut verdicts: Vec<(String, Verdict)>,
+) -> Vec<(String, Verdict)> {
     // the canonical source of a type is the first one of the pool
-    let canonical = pool.clone();
+    let canonical = pool.to_vec();
     let pick = |ty: DataType| canonical.iter().find(|s| s.ty == ty).cloned();
     // every consumer with a canonical instance that passes the check: its instance and one per (port, other source) that passes, all run in one plan
-    let mut verdicts = notes;
     let mut all: Vec<(String, String)> = Vec::new();
     let mut cases: Vec<(String, String, String)> = Vec::new();
     for step in fx.reg.iter().filter(|s| !LEFT_OUT.contains(&s.id)) {
@@ -595,54 +435,16 @@ fn what_the_check_accepts_runs() {
         };
         verdicts.push((what, v));
     }
-    let mut report = String::new();
-    for (what, v) in &verdicts {
-        let (kind, why) = match v {
-            Verdict::Refused(w) => ("refused by the check", w.as_str()),
-            Verdict::Ran => ("ran", ""),
-            Verdict::Uncovered(w) => ("not covered", w.as_str()),
-            Verdict::Mismatch(w) => ("MISMATCH", w.as_str()),
-        };
-        report.push_str(&format!("{what}\t{kind}\t{why}\n"));
-    }
-    std::fs::write(std::env::temp_dir().join("mzlab_pairs_report.tsv"), &report).unwrap();
-    let found: BTreeSet<(String, String)> = verdicts
-        .iter()
-        .filter_map(|(w, v)| match v {
-            Verdict::Mismatch(e) => Some((w.clone(), e.clone())),
-            _ => None,
-        })
-        .collect();
-    let known: BTreeSet<(String, String)> = KNOWN
-        .iter()
-        .map(|(w, e)| (w.to_string(), e.to_string()))
-        .collect();
-    let new: Vec<_> = found
-        .difference(&known)
-        .map(|(w, e)| format!("{w}: {e}"))
-        .collect();
-    let gone: Vec<_> = known
-        .difference(&found)
-        .map(|(w, e)| format!("{w}: {e}"))
-        .collect();
-    assert!(
-        new.is_empty(),
-        "check passes, run fails:\n{}",
-        new.join("\n")
-    );
-    assert!(
-        gone.is_empty(),
-        "no longer a mismatch, drop it from KNOWN:\n{}",
-        gone.join("\n")
-    );
-    // the view of `table.filter` runs wherever the check takes a table
-    for (w, v) in &verdicts {
-        if w.ends_with("<- table.filter.table") && !w.starts_with("spectra.msn_graph") {
-            assert!(
-                !matches!(v, Verdict::Mismatch(_) | Verdict::Refused(_)),
-                "{w}"
-            );
-        }
-    }
+    verdicts
+}
+
+#[test]
+fn what_the_check_accepts_runs() {
+    let Some(out) = series("pairs") else { return };
+    let fx = fixture(&out);
+    let mut pool = seeds();
+    let notes = producers(&fx, &mut pool);
+    let verdicts = consumers(&fx, &pool, notes);
+    report_and_assert(&verdicts);
     let _ = std::fs::remove_dir_all(&out);
 }
