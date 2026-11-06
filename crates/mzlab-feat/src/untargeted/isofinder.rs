@@ -243,9 +243,9 @@ fn insert_if_new(list: &mut Vec<Pt>, p: Pt) {
     }
 }
 
-/// Candidate isotope peaks of the spectrum `(mz, y)` around `target_mz` for one charge: the point nearest to the target, then a walk down from `t - 1`
-/// (a point is kept if adding a difference of `diffs` lands on a candidate) and a walk up (a point is kept if subtracting one lands on
-/// one), both stopping `max_diff` beyond the last accepted point. Ascending in m/z.
+/// Candidate isotope peaks of the spectrum `(mz, y)` (ascending m/z) around `target_mz` for one charge: the point nearest to the target, then a walk
+/// down from the top of the spectrum (a point is kept if adding a difference of `diffs` lands on a candidate) and a walk up (a point is kept if
+/// subtracting one lands on one), both stopping `max_diff` beyond the last accepted point. Ascending in m/z.
 pub fn find_candidates(
     diffs: &[f64],
     max_diff: f64,
@@ -260,7 +260,15 @@ pub fn find_candidates(
     let n = mz.len() as i64;
     let mut cands = vec![(mz[t], y[t])];
     let (mut m, mut last) = (mz[t], mz[t]);
-    let mut dp = t as i64 - 1;
+    // Same result as walking down from the top: with finite m/z, max_diff >= 0 and every difference wider than its tolerance between the target and the
+    // top (`for_mass` is convex: the ends bound it), a point at or above the target cannot land on a candidate (only the target, below it) nor stop the walk.
+    let (lo, top) = (mz[t], mz[n as usize - 1]);
+    let skip_top = max_diff >= 0.0
+        && mz.iter().all(|v| v.is_finite())
+        && diffs
+            .iter()
+            .all(|&d| d > tol.for_mass(lo + d).max(tol.for_mass(top + d)));
+    let mut dp = if skip_top { t as i64 - 1 } else { n - 1 };
     while dp >= 0 && m >= last - max_diff {
         m = mz[dp as usize];
         if possible_isotope(m, &cands, diffs, tol, false) {
