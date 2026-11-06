@@ -25,6 +25,11 @@ def test_a_bruker_folder_is_a_bruker_run_not_a_broken_agilent_one():
     assert runs[1] == ["m.d", True, ["tsf"], ["analysis.tsf_bin"]]
 
 
+def test_a_bin_without_its_database_is_a_bruker_run_that_names_it():
+    code = """(()=>a.group([F('analysis.tsf_bin','t/t.d/'),F('analysis.tdf_bin','t/u.d/')]).runs.map(r=>[r.name,r.bruker,r.missing]))()"""
+    assert run(code) == [["t.d", True, ["analysis.tsf"]], ["u.d", True, ["analysis.tdf"]]]
+
+
 def test_an_agilent_folder_is_not_bruker():
     code = """(()=>{const fs=[F('MSScan.bin','t/a.D/AcqData/'),F('MSPeak.bin','t/a.D/AcqData/')];return a.group(fs).runs.map(r=>[r.bruker,r.missing])})()"""
     assert run(code) == [[False, []]]
