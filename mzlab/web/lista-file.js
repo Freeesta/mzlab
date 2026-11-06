@@ -50,34 +50,35 @@ function fileRemoval(/** @type {any} */ f) {
     toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
   };
   // the row of the loading table says whether the file is in the session: unticked while no sample of its source is open (as the tick itself does)
-  const syncRow = () => {
+  const syncRow = (/** @type {boolean} */ quiet) => {
     const r = ST.files.find((/** @type {any} */ x) => x.name === src(f));
-    if (r) { r.use = E.files.some(g => !g.gone && src(g) === src(f)); renderFiles(); }
+    if (r) { r.use = E.files.some(g => !g.gone && src(g) === src(f)); if (!quiet) renderFiles(); }
   };
   /** @type {any[]} */ let closed = [];
-  const take = () => {
+  // quiet: one of a batch (removeAllFiles) whose last step repaints; every repaint draws the whole list, so one per file made a batch quadratic
+  const take = (quiet = false) => {
     const before = E.panels.map(q => /** @type {[any, any]} */ ([q, panelRec(q)]));
     f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k);
-    syncRow();
+    syncRow(quiet);
     E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
     if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
     // a panel left with no file of its tab closes (the undo opens it again)
     cleanupOrphanPanels();
     closed = before.filter(([q]) => !E.panels.includes(q)).map(([, rec]) => rec);
     if (closed.length) { relayout(); fitHost(); }
-    show();
+    if (!quiet) show();
   };
-  const back = () => {
+  const back = (quiet = false) => {
     f.gone = false; f.vis = was.vis; was.ps.forEach(q => { if (E.panels.includes(q)) q.k = f.k; });
-    syncRow();
+    syncRow(quiet);
     if (was.cur) STATO.file(f.k, "file-restored");
     closed.forEach(rec => riapriPannello(rec)); if (closed.length) { relayout(); fitHost(); }
     closed = [];
-    show();
+    if (!quiet) show();
   };
-  const free = () => {
+  const free = (quiet = false) => {
     if (!(window.MZLAB_BROWSER && f.gone && !E.files.some(g => g !== f && !g.gone && src(g) === src(f)))) return Promise.resolve();
-    return post("api/remove", { name: src(f) }).then((/** @type {any} */ j) => { mergeFiles(j.files || []); renderFiles(); }).catch(() => { /* not in the browser store: nothing to free */ });
+    return post("api/remove", { name: src(f) }).then((/** @type {any} */ j) => { mergeFiles(j.files || []); if (!quiet) renderFiles(); }).catch(() => { /* not in the browser store: nothing to free */ });
   };
   return { take, back, free };
 }
@@ -112,11 +113,11 @@ function removeFile(/** @type {any} */ f) {
 /** Removes every file of the list (or of `fs`, a user group named `what`) with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). */
 function removeAllFiles(fs = E.files.filter(f => !f.gone), /** @type {string | null} */ what = null) {
   const rs = fs.map(fileRemoval); if (!rs.length) return;
-  rs.forEach(r => r.take());
+  rs.forEach((r, i) => r.take(i < rs.length - 1));
   // removed from a hidden side bar (palette, shortcut): bring it back so the notice and the empty list are in view
   if (window.BARRA && BARRA.isDataView() && !BARRA.open) BARRA.show("file");
-  const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach(r => r[k]());
-  if (STORIA) STORIA.tolto({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => Promise.all(rs.map(r => r.free())).then(reindexAfterFree) : null });
+  const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach((r, i) => r[k](i < rs.length - 1));      // only the last step repaints
+  if (STORIA) STORIA.tolto({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => Promise.all(rs.map(r => r.free(true))).then(() => { renderFiles(); return reindexAfterFree(); }) : null });
   else rs.forEach(r => r.free());
 }
 let _lastBox = /** @type {number | null} */ (null);
