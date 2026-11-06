@@ -529,8 +529,7 @@ Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "ma
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
-let rzRaf = 0;
-addEventListener("resize", () => { fitWidth(); if (!rzRaf) rzRaf = FRAME.next(() => { rzRaf = 0; tabPanels().forEach(drawSized); }); });
+let rzRaf = 0; addEventListener("resize", () => { fitWidth(); if (!rzRaf) rzRaf = FRAME.next(() => { rzRaf = 0; tabPanels().forEach(drawSized); }); });
 document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
 // ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)

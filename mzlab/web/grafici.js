@@ -186,13 +186,8 @@ async function draw(p) {
     if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
     p._drawAt = t;
   }
-  p._sz = sizeKey(p);
-  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) { p._sz = ""; return; } afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { p._sz = ""; const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  p._sz = sizeKey(p); try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) { p._sz = ""; return; } afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { p._sz = ""; const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
-// a redraw asked only because the layout moved (window resize, workspace and panel observers) is skipped when the canvas still has the size of its
-// last drawing: one window resize fired three draws of every panel. A draw that did not paint (hidden canvas, superseded, error) clears the key.
-const sizeKey = p => p.cv.clientWidth + "x" + p.cv.clientHeight + "@" + dprNow() + "/" + (typeof fz === "function" ? fz() : 1);
-const drawSized = p => (p._sz === sizeKey(p) ? undefined : draw(p));
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
 
