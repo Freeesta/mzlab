@@ -34,7 +34,7 @@ Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` d
 - La mobilità per punto non entra nel motore. In `campi` di ogni spettro stanno l'intervallo di scansioni TIMS e, per TDF, l'avviso `meta.nonDecodificato` (vedi sotto).
 
 ## Metodo e testata
-`metodo/1` da `GlobalMetadata`, `Properties` e dalle calibrazioni (`MzCalibration`, `TimsCalibration`); `testata_mzml` con `Header::run_params` = `("mzLab metodo/1", documento)`, strumento, seriale, software, `startTimeStamp` e SHA-1 di `analysis.tdf` (solo TDF).
+`metodo/1` da `GlobalMetadata`, `Properties` e dalle calibrazioni (`MzCalibration`, `TimsCalibration`); `testata_mzml` con `Header::run_params` = `("mzLab metodo/1", documento)`, strumento, seriale, software, `startTimeStamp` e SHA-1 di `analysis.tdf` (solo TDF); componenti quadrupolo + time-of-flight + rivelatore a microcanali (il file non li nomina), da cui la tabella delle scansioni legge l'alta risoluzione (`hr1`, prova `un_timstof_e_ad_alta_risoluzione`).
 
 ## Prove
 - `cargo test -p mzlab-lettori --features bruker`: unitarie (varint, colonne, calibrazione, TSF) e `tests/robustezza_bruker.rs` (SQLite e `tdf_bin` costruiti nel test: WAL confermato, non confermato e con somma errata, `WITHOUT ROWID`, ciclo di pagine, varint lunghi, zstd falso e con finestra enorme, conteggi di picchi bugiardi, troncamenti a ogni passo, `tdf_bin` tagliato dentro un frame, BAF, cartella Agilent); `tests/test_lettori_parita.py` (`test_bruker_con_tdf_bin_tagliato_uguale_al_cli`): stesso mzML dal modulo e dal CLI per una cartella tagliata.

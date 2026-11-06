@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the step/1 descriptors as a registry, the data types of the ports and the rules of fit between them. Plain JS with no DOM:
 // the same file runs in the page and under node (tests/test_flow_grafico.py). Descriptors: docs/schemi/steps-1.json, steps-attributio-1.json, steps-tabui-1.json, steps-cli-1.json.
-/** @typedef {{name: string, type: string, many: boolean, optional: boolean, title: string, accepts: string[], requires: any}} FlowPort */
+/** @typedef {{name: string, type: string, many: boolean, optional: boolean, title: string, accepts: string[], requires: any, format: string | null, formats: string[]}} FlowPort */
 (() => {
   "use strict";
   const g = /** @type {any} */ (globalThis);
@@ -27,7 +27,12 @@
   /** @param {Record<string, any> | undefined} o @returns {FlowPort[]} */
   F.ports = o => Object.entries(o || {}).map(([name, p]) => ({
     name, type: p.type, many: !!p.many, optional: !!p.optional, title: p.title || name, accepts: p.accepts || [], requires: p.requires || {},
+    format: p.format || null, formats: p.formats || [],
   }));
+  /** the format a datum of a type has unless its port says otherwise (DataType::default_format): a table is a .mzfeat @param {string} ty */
+  F.defaultFormat = ty => ty === "table" ? "mzfeat" : null;
+  /** the format of an input file by its name (check.rs file_format): only the extensions whose format is certain @param {string} name */
+  F.fileFormat = name => { const n = name.toLowerCase(); return n.endsWith(".mzfeat") ? "mzfeat" : n.endsWith(".csv") ? "csv" : null; };
 
   /** @param {any[][]} lists step/1 arrays (any package order) @returns {{steps: any[], byId: Map<string, any>}} */
   F.registry = lists => {
