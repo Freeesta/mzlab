@@ -116,14 +116,19 @@ try:
             assert pg.evaluate("document.querySelector('.pnl.spec:not([style*=\"display: none\"]) canvas')") is not None
         step("S6/G2: MS2 spectrum starts in cps, no lock, shows scan and CE", ms2)
         def thin_trace():
-            # the TIC is a thin line (like the vendor software): every stroke of the trace is at most 1.25 px, and none is thinner than 1 px
-            w = pg.evaluate("""(async () => { const seen = [], o = CanvasRenderingContext2D.prototype.stroke;
+            # the TIC is a thin line (like the vendor software): every stroke is 1 to 1.25 px; 1 px where the line is dense (decima.js hairline: a wider
+            # stroke of dense noise is slow in a software canvas), TRACE_LW = 1.25 px on a zoom of a few points
+            widths = lambda zoom: pg.evaluate("""(async () => { const p = %s, x = p._a.sr[0].x; p.zoom = %s; const seen = [], o = CanvasRenderingContext2D.prototype.stroke;
                 CanvasRenderingContext2D.prototype.stroke = function () { seen.push(this.lineWidth); return o.apply(this, arguments); };
-                try { await draw(%s); } finally { CanvasRenderingContext2D.prototype.stroke = o; }
-                return seen; })()""" % CH)
-            assert w and min(w) >= 1 and 1.25 in w, w
+                try { await draw(p); } finally { CanvasRenderingContext2D.prototype.stroke = o; }
+                const z = p.zoom || [x[0], x[x.length - 1]], X = r => (r - z[0]) / (z[1] - z[0]) * p.cv.clientWidth, dense = DECIMA.hairline(x, z[0], z[1], X);
+                p.zoom = null; await draw(p); return [seen, dense]; })()""" % (CH, zoom))
+            w, dense = widths("null")
+            assert w and min(w) >= 1 and max(w) <= 1.25 and (1 in w if dense else 1.25 in w), (w, dense)
+            w, dense = widths("[x[0], x[12]]")
+            assert not dense and min(w) >= 1 and 1.25 in w, (w, dense)
             assert pg.evaluate("TRACE_LW") == 1.25
-        step("TIC line is thin (1.25 px)", thin_trace)
+        step("TIC line is thin (1 px dense, 1.25 px sparse)", thin_trace)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
