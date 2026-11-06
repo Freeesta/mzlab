@@ -191,14 +191,21 @@ fn params(c: &mut Ctx, i: &Instance, step: &Step) {
 }
 
 /// The type a reference gives: of an input file (when declared) or of an output of another instance.
-fn source_type(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref) -> Option<(DataType, bool)> {
+/// The type of a reference, whether it is a list, and its format when known (an input file: from its extension only).
+fn source_type(
+    c: &mut Ctx,
+    i: &Instance,
+    port: &Port,
+    r: &Ref,
+) -> Option<(DataType, bool, Option<&'static str>)> {
     match r {
         Ref::File(name) => {
             let Some(f) = c.plan.input(name) else {
                 add(c, i, port.name, "err.flow.input.unknown", &[("ref", name)]);
                 return None;
             };
-            Some((f.ty.as_deref().and_then(DataType::from_name)?, false))
+            let ty = f.ty.as_deref().and_then(DataType::from_name)?;
+            Some((ty, false, file_format(name)))
         }
         Ref::Out {
             instance,
@@ -228,7 +235,7 @@ fn source_type(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref) -> Option<(DataT
                 add(c, i, port.name, "err.flow.port.unwritten", &p);
                 return None;
             }
-            Some((o.ty, o.many))
+            Some((o.ty, o.many, o.format.or(o.ty.default_format())))
         }
     }
 }
@@ -248,6 +255,39 @@ fn written(src: &Instance, step: &Step, w: &WrittenIf) -> bool {
     wired && param_ok
 }
 
+/// The format an input file has by its name: only the extensions whose format is certain; any other name is unknown.
+fn file_format(name: &str) -> Option<&'static str> {
+    let n = name.to_ascii_lowercase();
+    [(".mzfeat", "mzfeat"), (".csv", "csv")]
+        .into_iter()
+        .find(|(ext, _)| n.ends_with(ext))
+        .map(|(_, f)| f)
+}
+
+/// A datum of the right type in a format the input does not read: refused only when both the format and what the input reads are known.
+fn format_fit(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref, ty: DataType, format: Option<&str>) {
+    let reads: Vec<&str> = if !port.formats.is_empty() {
+        port.formats.clone()
+    } else if ty == port.ty {
+        port.ty.default_format().into_iter().collect()
+    } else {
+        Vec::new()
+    };
+    let Some(writes) = format.filter(|f| !reads.is_empty() && !reads.contains(f)) else {
+        return;
+    };
+    let text = match r {
+        Ref::File(name) => name.clone(),
+        Ref::Out { instance, port } => format!("{instance}.{port}"),
+    };
+    let p = [
+        ("ref", text.as_str()),
+        ("writes", writes),
+        ("reads", &reads.join(" / ")),
+    ];
+    add(c, i, port.name, "err.flow.port.format", &p);
+}
+
 fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
     for (name, refs) in &i.ins {
         let Some(port) = step.ins.iter().find(|p| p.name == name) else {
@@ -264,7 +304,7 @@ fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
             );
         }
         for r in refs {
-            let Some((ty, list)) = source_type(c, i, port, r) else {
+            let Some((ty, list, format)) = source_type(c, i, port, r) else {
                 continue;
             };
             if list && !port.many {
@@ -277,7 +317,9 @@ fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
                 );
             }
             let fits = ty == port.ty || port.accepts.contains(&ty);
-            if !fits && conversion_path(c.registry, ty, port.ty).is_none() {
+            if fits {
+                format_fit(c, i, port, r, ty, format);
+            } else if conversion_path(c.registry, ty, port.ty).is_none() {
                 add(
                     c,
                     i,
