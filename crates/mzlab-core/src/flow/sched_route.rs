@@ -50,9 +50,17 @@ fn list<T>(items: &[T], each: impl Fn(&mut Out, &T)) -> String {
     o.raw("]").0.clone()
 }
 
-fn spec_json(o: &mut Out, j: &JobSpec) {
+/// A job to run; a job of one item has the file-name root of its input (`root`), for the names of what it writes.
+fn spec_json(o: &mut Out, j: &JobSpec, roots: &[(String, String)]) {
     o.raw("{");
     id_json(o, &j.id);
+    let root =
+        j.id.item
+            .as_ref()
+            .and_then(|n| roots.iter().find(|r| &r.0 == n));
+    if let Some((_, r)) = root {
+        o.raw(",\"root\":").str(r);
+    }
     o.raw(",\"key\":").str(&j.key).raw(",\"mb\":").num(j.mb);
     o.raw(",\"resources\":[");
     for (k, r) in j.resources.iter().enumerate() {
@@ -119,7 +127,8 @@ fn next(s: &Sched, body: &Value) -> String {
             .and_then(Value::f64)
             .unwrap_or(fallback)
     };
-    list(&s.next(&limits, estimate), spec_json)
+    let roots = s.roots();
+    list(&s.next(&limits, estimate), |o, j| spec_json(o, j, &roots))
 }
 
 fn finished(s: &mut Sched, body: &Value) -> String {
