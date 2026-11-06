@@ -127,6 +127,14 @@ try:
             T("touchEnd", []); wait(500)
             h1 = pg.evaluate(f"{CH}.h"); assert h1 > h0 + 60, (h0, h1)
         step("the grip changes the height of a panel", grip)
+        def targets():
+            # WCAG 2.5.8: the grip and the trace name / remove button of a legend are at least 24 x 24 px for a finger
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'},{id:E.seq++,mz:200.1,w:0.5,label:'m/z 200'}]})")
+            attendi(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p.leg&&p.leg.querySelector('[data-r]')&&p.el.querySelector('.rzg'))})()")
+            sz = pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic'),r=e=>{const b=e.getBoundingClientRect();return [Math.round(b.width),Math.round(b.height)]};return {grip:r(p.el.querySelector('.rzg')),x:r(p.leg.querySelector('[data-r]')),name:r(p.leg.querySelector('[data-t]'))}})()")
+            assert all(min(v) >= 24 for v in sz.values()), sz
+            pg.evaluate("closePanel(E.panels.find(p=>p.type==='xic'))")
+        step("touch targets: grip, legend name and remove button are at least 24 px", targets)
         def filelong():
             drawer(pg); b = pg.locator("#flst .fl .nm").first.bounding_box(); x, y = b["x"] + 10, b["y"] + b["height"] / 2
             T("touchStart", [(x, y)]); wait(800); T("touchEnd", []); wait(300)
