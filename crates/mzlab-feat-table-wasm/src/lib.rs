@@ -295,6 +295,18 @@ pub fn table_view_auto(
         .map_err(js_err)
 }
 
+/// The `.mzfeat` a `table.filter` view stands for (`mzlab_feat::view_table::table_of_view`, what `flow run` gives a step that reads a table from a view), made from the
+/// `.mzfeat` the view names (`table_read(k, offset, length)`, `size` bytes).
+#[wasm_bindgen]
+pub fn flow_table_of_view(
+    table_read: Function,
+    size: f64,
+    view: &str,
+) -> std::result::Result<Vec<u8>, JsValue> {
+    mzlab_feat::view_table::table_of_view_from(&mut table_reader(table_read), size as u64, view)
+        .map_err(js_err)
+}
+
 /// An MS2 file: `kind` is `mgf` (FBMN) or `sirius` (`.ms`). The spectra are read from the `.mzidx` of the file that holds the best MS2 of each row
 /// (`index_read(k, offset, length)`, `index_sizes[k]` bytes).
 #[wasm_bindgen]

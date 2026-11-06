@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): table.stats, table.pca and table.kmd in this browser. The texts are `flow_stats`, `flow_pca`, `flow_kmd` of the `flowstat` .wasm (loaded here only, when one of
 // these steps runs): `mzlab_feat::flow_stat`, the functions `flow run` calls, so stat/1, the PCA answer and the Kendrick text are the same bytes. The table is the alignment (or gap filling)
-// of the same plan, kept in OPFS; `samples` and `design` are files of the plan (their text in S.samplesJson). The text is kept like the other results, under the key of the job. English only.
+// of the same plan, kept in OPFS, or the table a `table.filter` view of it stands for (`F.liveJobs.tableOf`); `samples` and `design` are files of the plan (their text in S.samplesJson). The text is kept like the other results, under the key of the job. English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -27,17 +27,16 @@
   const run = async (x, spec, inst) => {
     const [fn, ports] = OPS[base(inst)], j = J().job(spec), p = await kit().getPool();
     const texts = ports.map(port => fileText(x, inst, port));
-    const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
-    if (!alKey || texts.includes(null) || !await J().has(p, J().DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const tab = await J().tableOf(x, p, inst, "table");
+    if (!tab || texts.includes(null)) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     const shas = await Promise.all(texts.map(t => J().sha(/** @type {string} */ (t))));
-    const key = await J().sha([spec.key, ...shas, alKey].join("\n")), hit = await J().recall(p, key);
+    const key = await J().sha([spec.key, ...shas, tab.key].join("\n")), hit = await J().recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
     return J().detached(x, spec, inst, async () => {
       /** @type {Record<string, any>} */
-      const m = { params, table: await p.fs.read(J().DIR + alKey + ".mzfeat") };
+      const m = { params, table: await tab.read() };
       ports.forEach((port, i) => { m[port] = enc(/** @type {string} */ (texts[i])); });
       let text;
       try { text = await p.ident("flowstat", fn, m); } catch (e) { throw asError(e); }
