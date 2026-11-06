@@ -1,5 +1,5 @@
 """Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on six states,
-keyboard only (every visible control reachable with Tab, visible focus, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
+keyboard only (every visible control reachable with Tab, visible focus, no focus trap in the charts, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
 and reduced motion. Known gaps live in docs/agenti/a11y-da-sistemare.md and in KNOWN below (an id there is reported but does not fail).
 Unlike e2e_axe_grafici this test does NOT skip when axe is missing: in CI that is a failure."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -75,6 +75,33 @@ try:
             assert len(seen) >= want * 0.9, f"Tab reached {len(seen)} of {want} visible controls"
             assert not bad, "no visible focus indicator on: " + ", ".join(bad[:12])
         step("keyboard: Tab reaches the visible controls, each with a visible focus indicator", tab_reach)
+        def no_trap():
+            # Tab and Shift+Tab leave each chart's canvas (and the panel itself within a few presses); Escape on a canvas does not pin the focus
+            def leaves(pid, key):
+                for i in range(60):
+                    pg.keyboard.press(key)
+                    if pg.evaluate(f"(() => {{ const a = document.activeElement, p = document.querySelector('[data-pid=\"{pid}\"]') || E.panels.find(q => q.id === {pid}).el; return !!a && a !== document.body && !p.contains(a); }})()"): return True
+                return False
+            def charts():
+                return pg.evaluate("E.panels.filter(p => p.el && p.el.isConnected && p.el.offsetParent && p.el.querySelector('canvas[tabindex=\"0\"]')).map(p => [p.id, p.type])")
+            pg.evaluate("setTab('full')"); attendi(pg, "E.tab === 'full'")
+            for t in ("xic", "map"):
+                if not any(c[1] == t for c in charts()):
+                    pg.evaluate("addPanel('" + t + "',{tab:'full'" + (",traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]" if t == "xic" else "") + "})"); ready(pg)
+                    attendi(pg, "E.panels.some(p => p.type === '" + t + "' && p.el && !!p.el.querySelector('canvas[tabindex]'))")
+            todo = charts(); assert len(todo) >= 3, todo
+            for pid, typ in todo:
+                for key in ("Tab", "Shift+Tab"):
+                    pg.evaluate(f"E.panels.find(q => q.id === {pid}).el.querySelector('canvas[tabindex=\"0\"]').focus()")
+                    if key == "Tab": pg.keyboard.press("Escape")
+                    assert leaves(pid, key), f"keyboard trap in the {typ} chart (panel {pid}) with {key}"
+            pg.evaluate("setTab('mrm')"); attendi(pg, "E.tab === 'mrm'"); ready(pg)
+            for pid, typ in charts():
+                for key in ("Tab", "Shift+Tab"):
+                    pg.evaluate(f"E.panels.find(q => q.id === {pid}).el.querySelector('canvas[tabindex=\"0\"]').focus()")
+                    assert leaves(pid, key), f"keyboard trap in the {typ} chart (panel {pid}) with {key}"
+            pg.evaluate("setTab('full')"); attendi(pg, "E.tab === 'full'")
+        step("keyboard: no trap in the chart views (Tab and Shift+Tab leave each chart)", no_trap)
         def reflow():
             ctx = r.b.new_context(viewport={"width": 320, "height": 800}, locale="it-IT"); q = ctx.new_page()
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
