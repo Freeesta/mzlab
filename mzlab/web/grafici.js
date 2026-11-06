@@ -180,13 +180,13 @@ const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
 const yTitleI = sr => { const b = sr.some(s => s.cb), f = sr.some(s => s.cf); return b || f ? I18N.t(b && f ? "axis.sampBlankFondo" : b ? "axis.sampBlank" : "axis.intFondo") : YT_I; };
 const analogTitle = (p, sr) => p.kind === "reg" ? REGISTRO.title(p, sr) : (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit ? ` (${sr[0].unit})` : "");
 async function draw(p) {
-  if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
+  if (!p.cv.clientWidth || p.cv.clientWidth < 30) { p._sz = ""; return; }
   if (p.type === "map") {                                          // gestures come faster than frames: at most one map redraw per frame, the last request wins
     const t = performance.now();
     if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
     p._drawAt = t;
   }
-  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  p._sz = sizeKey(p); try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) { p._sz = ""; return; } afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { p._sz = ""; const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
