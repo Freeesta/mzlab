@@ -45,6 +45,15 @@ def test_messages_placeholders_numbers_and_plurals():
 
 
 @needs_node
+def test_number_formats_are_built_once_per_decimals():
+    # the progress rows of a loading format thousands of numbers: one Intl.NumberFormat per number of decimals, the same text as a fresh one
+    r = node("""const N = Intl.NumberFormat; let made = 0; Intl.NumberFormat = function (...a) { made++; return new N(...a); };
+    const out = []; for (let i = 0; i < 500; i++) out.push(I.fix(i / 7, 1), I.fix(i * 1000.5, 0), I.format('{x, number}', {x: i / 3}, 'en'));
+    const ref = [1, 2].map(d => new N('en-US', {useGrouping: false, minimumFractionDigits: d, maximumFractionDigits: d}).format(1234.5678));
+    console.log(JSON.stringify([made, out.slice(0, 3), out.length, I.fix(1234.5678, 1), I.fix(1234.5678, 2), ref]))""")
+    assert r[0] == 3 and r[1] == ["0.0", "0", "0"] and r[2] == 1500 and r[3:5] == r[5]
+
+@needs_node
 def test_a_key_missing_in_english_falls_back_to_italian():
     r = node("""I.add('it', {only: 'solo italiano'}); console.log(JSON.stringify([I.t('only'), [...I.missing]]))""")
     assert r == ["solo italiano", []]

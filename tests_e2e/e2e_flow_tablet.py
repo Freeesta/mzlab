@@ -1,5 +1,5 @@
 """Flow first screen on a tablet (iPad 1024x768 landscape and 768x1024 portrait, touch) and on a desktop window: the template card leaves the view buttons of
-the canvas (zoom, fit, 100 %) free to tap, and the form of the selected step is two columns, every label in the first one (a hidden ⓘ note leaves no gap).
+the canvas (zoom, fit, 100 %) free to tap, and the form of the selected step is two columns, every label in the first one (a hidden ⓘ note leaves no gap), its «More (N)» summary at least 24 px tall.
 Run from the repo root: python3 tests_e2e/e2e_flow_tablet.py"""
 import socket, subprocess, sys, tempfile
 from pathlib import Path
@@ -47,6 +47,10 @@ try:
                 off = pg.evaluate(OFF)
                 assert not off, f"form labels out of the label column: {off}"
             step(f"{name}: every label of the step form is in the label column", columns)
+            def summary(pg=pg):
+                hs = pg.evaluate("[...document.querySelectorAll('.fl-insp details>summary')].filter(s => s.offsetWidth).map(s => [s.textContent.trim(), Math.round(s.getBoundingClientRect().height)])")
+                assert hs and all(h >= 24 for _, h in hs), f"summaries of the step form under 24 px: {hs}"
+            step(f"{name}: the «More» summary of the step form is at least 24 px tall", summary)
             pg.context.close()
         b.close()
 finally:
