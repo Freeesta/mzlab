@@ -2,6 +2,8 @@
 
 use std::collections::HashSet;
 
+use crate::sortc::SortC;
+
 use super::*;
 
 // ---- molecule ---------------------------------------------------------------------------------------------------------
@@ -129,7 +131,7 @@ pub(super) fn archi_svg(sc: &Scena, d: &Disposizione, vista: Vista, vis: &HashSe
         .iter()
         .filter(|a| vis.contains(a.da.as_str()) && vis.contains(a.a.as_str()))
         .collect();
-    arcs.sort_by_key(|a| sc.best.contains(&format!("{}>{}", a.da, a.a)));
+    arcs.sortc_by_key(|a| sc.best.contains(&format!("{}>{}", a.da, a.a)));
     let mut o = String::new();
     for a in arcs {
         let (p, q) = (d.caselle[&a.da], d.caselle[&a.a]);

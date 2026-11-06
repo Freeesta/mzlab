@@ -7,6 +7,8 @@ use std::collections::{HashMap, HashSet};
 
 use mzlab_core::error::{Error, Result};
 
+use crate::sortc::SortC;
+
 mod disegno;
 pub mod html;
 mod scena;
@@ -106,7 +108,7 @@ fn dispone_albero(
 ) -> HashMap<String, Box_> {
     let mut caselle = HashMap::new();
     let mut rows: Vec<i64> = vis.iter().map(|&k| sc.pos[&sc.ioni[k].id].riga).collect();
-    rows.sort_unstable();
+    rows.sortc();
     rows.dedup();
     let mut row_h = vec![0.0f64; rows.len()];
     for &k in vis {
