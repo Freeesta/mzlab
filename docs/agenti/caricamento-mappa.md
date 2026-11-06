@@ -41,7 +41,7 @@ Un solo worker del motore serve TUTTE le richieste (`rust-worker.js` `handle`): 
 | `.dam` | metodo SCIEX | `lr_put` senza indice (`rust-worker.js` 231) | idem | letto a richiesta |
 | mzMLb, imzML | – | non trovato | non trovato | – |
 | Librerie `.msp`, `.mgf`, `.json`, MassBank, `.mzlib` | – | non sono dati grezzi: `mzlab-lib` (`parse.rs` `detect`; `.mzlib` letto per directory, blocchi decodificati a richiesta); `libreria-worker.js` | – | `librerie.md` |
-| `.mzfeat`, `.mzflow` | – | derivati/piani, non dati grezzi (`file-sicuri.js`: 8 MB, profondità 32) | – | – |
+| `.mzfeat`, `.mzflow` | – | derivati/piani, non dati grezzi (`file-sicuri.js`: 8 MB, profondità 32; oltre, `workflow.err.too*`) | – | – |
 
 Il motore del sito ha nel registro solo Agilent `.D` base e SCIEX `.wiff` (`lettori.rs` 270, `Limiti::sito()` 192 MB); ogni altra famiglia è un `.wasm` a parte (`crates/mzlab-lettori-wasm`), caricato solo quando arriva un file di quella famiglia (`lettori-modulo.js`, `lettori-worker.js`: UN worker per le conversioni, nessun parallelismo interno trovato). Trasporto modulo→motore: `trasporto.rs` (`PROTOCOLLO` 2, colonne binarie).
 
