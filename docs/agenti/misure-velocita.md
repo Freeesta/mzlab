@@ -4,6 +4,8 @@ Una riga per ogni intervento di velocità (lettori, Flow, motore), dal più vecc
 
 Le strade scartate o rimandate (senza guadagno) stanno in `ottimizzazioni-tentate.md`: leggerlo prima di ottimizzare.
 
+Il caricamento della pagina (FCP, LCP, motore pronto per scenario) sta in `misure-caricamento.md`.
+
 | Data | PR | Passo | Prima | Dopo | % |
 |---|---|---|---|---|---|
 | 2026-10-22 | #1521 | tp.link, fase interpretazione (serie sintetica 15 file, 253 MB) | 3,3 s | 0,5 s | −85 % |
@@ -62,24 +64,4 @@ Le strade scartate o rimandate (senza guadagno) stanno in `ottimizzazioni-tentat
 | 6/11 | LOAD-REMOVE-1 | «Remove all» of N synthetic Full Scan files (120 scans, 266 KB each; built site, Chromium 4 vCPU cloud, CPU ×1): the batch repaints the list, side bar and panels once (`removeAllFiles`, last `take`/`back` only), on «Undo» and on the free too (`tests/test_rimozione_blocco.py`) | N=100: 8.6 s in one task; N=200: 41.6 s task, removed 46.7 s after the click | N=100: 0.08 s; N=200: 0.16 s task, removed 6.3 s after the click (the 6 s of «Undo») | −98 % / −99.6 % |
 | 6/11 | LOAD-REMOVE-2 | «Remove all» of 200 synthetic files as LOAD-REMOVE-1: `lr_remove` drops its own indexes, one trailing `lrFree` + `sweep` after the burst (`tidySoon`, `rust-worker.js`) | idx/ empty 16.4 s, last removal answered 52.4 s after the click | 7.0 s, 6.5 s | −57 % / −88 % |
 | 6/11 | LOAD-TABLE-1 | 200 synthetic Full Scan files loaded at once (266 KB each; built site, Chromium 4 vCPU, CPU ×1, 2 runs): the loading table waits 8× its last repaint before the next (`RUOLI.coalesce`) | `renderFiles` 165 calls 5.3 s; long tasks 9.7 s; 24.5-24.8 s | 77-88 calls 2.2-2.4 s; 4.1-4.2 s; 21.7-22.4 s | −57 % long tasks |
-
-## Page load (current state)
-
-`python3 tests_e2e/misura_primo_paint.py --site site --runs 5` on the built site (engine `.wasm` from the live site), local mirror without network latency, Chromium headless 4 vCPU cloud, median of 5, ms from the navigation (cold = second page of the first visit, after the isolation reload). Guard: `tests_e2e/e2e_budget_avvio.py`.
-
-| Scenario | FCP | LCP | drop area | engine ready | CLS | longest task until ready +2 s | render-blocking | KB before FCP |
-|---|---|---|---|---|---|---|---|---|
-| cold | 341 | 399 | 334 | 1957 | 0 | 0 | 11 | 666 |
-| warm (service worker) | 188 | 227 | 168 | 815 | 0 | 0 | 11 | 788 |
-| cold `?lang=en` | 377 | 434 | 380 | 2022 | 0 | 0 | 11 | 655 |
-| warm, dark theme saved | 189 | 266 | 141 | 841 | 0 | 0 | 11 | — |
-| cold, CPU ×4 | 384 | 550 | 454 | 2267 | 0 | 60 | 11 | 666 |
-| warm, CPU ×4 | 425 | 554 | 496 | 1539 | 0 | 52 | 11 | 666 |
-| cold, iPad viewport + touch (Chromium) | 364 | 430 | 361 | 2045 | 0 | 0 | 11 | 666 |
-
-- **Views** (warm, click after the page is usable): Disegno 148 ms (2 files, 13 KB); Tabui 133 ms; Flow 200 ms when the Tabui package has loaded, longer when the click comes before it: the 60 `mzfinder/` scripts load at idle after `qqReady`, all tags inserted at once in order (package done ~1.1 s warm, ~2.8 s on a cold visit). Stat panel 51 ms (×4: 157), Molecules window 222 ms the first time (module and archive; ×4: 363), then ~30 ms.
-- **No flash**: theme and language are set in the head before the first paint (CLS 0, `<html lang>` right in every run); no notice or modal at load. Console at load: only Chrome's warning on the Ketcher frame (`allow-scripts` + `allow-same-origin`).
-- **First visit**: `browser.js isolateOnce` reloads once for cross-origin isolation (~270 ms after the start, before the cold FCP): the engine is ready ~260 ms later than without it, once per browser; GitHub Pages cannot send COOP/COEP, so the service worker adds them.
-- **Not measured here**: WebKit/Safari (not installed in the cloud), a real Fast 4G link (the CDP profile does not slow the mirror: same numbers as cold).
-- **Site update**: see LOAD-FIRST-PAINT-5 (the page is ready in about 0.55 s on both reloads after a deploy; only the changed files are downloaded); behaviour in `e2e_sw_versione`.
-- KB before FCP counts every request started before the paint: on a warm load non-blocking scripts start earlier, so the number grows when the page is faster.
+| 6/11 | opt-flow-engine | detect estimate, histogram bins from edges (`histbin.rs`); `det_fasi`, synthetic HR file of `dati_sintetici_grandi.py`, best of 15, wasm = WASI in Node; `main` `9da7ef87165918b163e37c0c6f1b2abdf3d77ff7` | 0.234 s, wasm 0.108 | 0.075, wasm 0.105 | −68 %, wasm noise |
