@@ -42,3 +42,24 @@ def test_campione_del_log_senza_chiavi():
 def test_le_esportazioni_non_nominano_il_file_delle_chiavi():
     for p in list((ROOT / "mzlab/web").glob("*.js")) + list((ROOT / "crates/mzlab-cli/src").rglob("*.rs")):
         assert "llm-chiavi" not in p.read_text(encoding="utf-8"), p
+
+
+def test_la_frase_del_proprietario_resta_nel_trasporto():
+    """The owner passphrase of the demo (`x-mzlab-owner`) lives only in the transport document (site) or in the keys file read by Rust (app):
+    the page and the worker never carry it, and the session of the panel is the only demo value they send."""
+    web = ROOT / "mzlab/web/llm"
+    worker = (web / "llm-worker.js").read_text(encoding="utf-8")
+    assert re.findall(r"demo_send\([^;]*\)", worker) and all(c.endswith(', "")') for c in re.findall(r"demo_send\([^;]*\)", worker)), "the worker passes an owner"
+    clients = (web / "llm-clienti.js").read_text(encoding="utf-8")
+    assert not re.search(r"this\.owner|owner:\s*this", clients), "a client keeps the passphrase"
+    for p in list(web.glob("*.js")) + list((ROOT / "flow/lazy").glob("flow-llm*.js")):
+        if p.name != "trasporto.js":
+            assert "headers.set" not in p.read_text(encoding="utf-8"), p
+    transport = (web / "trasporto.js").read_text(encoding="utf-8")
+    assert "headers.set(st.owner, key)" in transport and 'const DB = "mzlab_llm"' in transport and "localStorage" not in transport
+    # in the app the passphrase is the demo's entry of llm-chiavi.json, read by Rust only and never echoed by `llm/providers`
+    app = (ROOT / "crates/mzlab-desktop/src/llm.rs").read_text(encoding="utf-8")
+    assert 'Some(k) if prov.id == DEMO_PROVIDER => k.as_str()' in app and 's("owner")' not in app
+    # neither the run record nor the exports name it
+    for p in list((ROOT / "mzlab/web").glob("*.js")) + list((ROOT / "crates/mzlab-cli/src").rglob("*.rs")) + list((ROOT / "flow/lazy").glob("*.js")):
+        assert "x-mzlab-owner" not in p.read_text(encoding="utf-8"), p
