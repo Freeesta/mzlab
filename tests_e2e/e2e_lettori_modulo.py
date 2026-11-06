@@ -74,7 +74,7 @@ def page(b, query):
 res = {}
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
+        b = p.chromium.launch(**({"executable_path": os.environ["MZLAB_CHROMIUM"]} if os.environ.get("MZLAB_CHROMIUM") else {}))
         eng = page(b, ""); mod = page(b, "&lettori=modulo")
         def engine_path():
             opened(eng); r = eng.evaluate(LOAD); assert r["files"] == ["uno.mzML"] and r["native"] and not r["loaded"], r
