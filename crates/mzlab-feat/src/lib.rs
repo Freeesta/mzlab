@@ -71,11 +71,15 @@ mod lrnoise;
 pub mod massacc;
 pub mod methods;
 pub mod mrm;
+#[cfg(feature = "figura")]
+pub mod msnfigura;
 pub mod ms2;
 pub mod ms2spec;
 pub mod nature;
 pub mod norm;
 mod histbin;
+#[cfg(feature = "chem")]
+pub mod parent;
 pub mod params;
 pub mod params_drift;
 pub mod params_height;
@@ -124,6 +128,7 @@ mod trace_text;
 pub mod untargeted;
 pub mod uv_bands;
 pub mod view;
+pub mod view_table;
 pub mod weakfile;
 
 /// Version of the feature table and of the rules that produce it (changes when the output of `detect` changes).

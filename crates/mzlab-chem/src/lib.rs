@@ -2,6 +2,7 @@
 
 pub mod eht;
 pub mod embed;
+pub mod flow;
 pub mod fukui;
 pub mod lengths;
 pub mod minimize;

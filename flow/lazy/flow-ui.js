@@ -82,6 +82,7 @@
       "err.flow.param.type": `Parameter ${q.param} has the wrong type.`,
       "err.flow.param.range": `Parameter ${q.param} is out of range.`,
       "err.flow.port.unknown": `Unknown input or output ${q.port || q.ref}.`,
+      "err.flow.port.unwritten": `${q.ref} is written only when input ${q.input} is connected${q.param ? " and " + q.param.replace("=", " is not ") : ""}.`,
       "err.flow.port.missing": `Input ${q.port} is not connected.`,
       "err.flow.input.unknown": `The plan has no input file ${q.ref}.`,
       "err.flow.ref.unknown": `No step ${q.ref}.`,

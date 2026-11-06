@@ -203,3 +203,68 @@ fn groups_order_the_rows_and_keep_channels_without_q1_apart() {
     let c = table_text(&set, "n_peaks", "channels").unwrap();
     assert_eq!(c.lines().next().unwrap(), "channel,name,a1,a2,b1,free");
 }
+
+#[test]
+fn from_zero_is_the_analytic_area_and_says_so() {
+    // no background: the area from zero over the detector's edges is the Gaussian's, h sigma sqrt(2 pi) (counts x s), the height its apex
+    let (h, s) = (6e4, 3.2);
+    let (t, y): (Vec<String>, Vec<String>) = (0..1500)
+        .map(|i| {
+            let x = i as f64 * 0.8 / 60.0;
+            (
+                format!("{x:.4}"),
+                format!("{:.3}", h * (-0.5 * ((x - 5.0) * 60.0 / s).powi(2)).exp()),
+            )
+        })
+        .unzip();
+    let tr = format!(
+        "{{\"id\":0,\"q1\":300.1,\"q3\":null,\"name\":\"G\",\"rt\":[{}],\"y\":[{}]}}",
+        t.join(","),
+        y.join(",")
+    );
+    let one = files(&[("g.mzML", vec![tr])]);
+    let peaks = table_text_with(&one, "peaks", "samples", "zero").unwrap();
+    let row: Vec<&str> = peaks.lines().nth(1).unwrap().split(',').collect();
+    let (area, height): (f64, f64) = (row[5].parse().unwrap(), row[6].parse().unwrap());
+    let exact = h * s * (2.0 * std::f64::consts::PI).sqrt();
+    assert!((area - exact).abs() < 0.01 * exact, "{area} {exact}");
+    assert_eq!((height, *row.last().unwrap()), (h, "zero"));
+    assert!(peaks.lines().next().unwrap().ends_with(",fwhm_s,baseline"));
+    // on a background of about 50 counts the area from zero is larger than the one against the edge line, in every output and layout
+    let (e, z) = (
+        table_text(&set(), "area_max", "samples").unwrap(),
+        table_text_with(&set(), "area_max", "samples", "zero").unwrap(),
+    );
+    let first = |t: &str| -> f64 {
+        t.lines()
+            .nth(1)
+            .unwrap()
+            .split(',')
+            .nth(1)
+            .unwrap()
+            .parse()
+            .unwrap()
+    };
+    assert!(first(&z) > first(&e), "{z}\n{e}");
+    for (o, l) in [
+        ("area_sum", "samples"),
+        ("n_peaks", "channels"),
+        ("peaks", "samples"),
+    ] {
+        let z = table_text_with(&set(), o, l, "zero").unwrap();
+        assert!(z.lines().next().unwrap().ends_with(",baseline"), "{z}");
+        assert!(z.lines().skip(1).all(|r| r.ends_with(",zero")), "{z}");
+        assert_eq!(
+            table_text_with(&set(), o, l, "edges").unwrap(),
+            table_text(&set(), o, l).unwrap()
+        );
+    }
+    for b in ["line", "valley"] {
+        let e = table_text_with(&set(), "area_sum", "samples", b).unwrap_err();
+        assert!(
+            e.to_json().contains("err.simtab.baseline"),
+            "{}",
+            e.to_json()
+        );
+    }
+}
