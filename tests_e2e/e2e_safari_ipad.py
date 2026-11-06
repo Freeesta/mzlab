@@ -89,12 +89,27 @@ try:
             pg.evaluate("BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()")
             attendi(pg, "(t => !!t && t.offsetWidth > 0)(document.querySelector('#flist .ldtab'))", 20000); frames(pg, 2)
             fw = pg.evaluate("(t => [...t.rows[0].cells].find(c => /^File$/.test(c.textContent.trim())).offsetWidth)(document.querySelector('#flist .ldtab'))")
+            pg.evaluate("document.getElementById('samptab').click()")                   # back to the charts: the toggle is left as found
             pg.evaluate("BARRA.show('calc',{noFocus:true,instant:true})"); attendi(pg, "document.querySelector('#al-tabs').offsetWidth > 0", 20000); frames(pg, 2)
             tabs = pg.evaluate("(a => [a.clientWidth, a.scrollWidth])(document.querySelector('#al-tabs'))")
             pg.evaluate("BARRA.close()"); pg.set_viewport_size({"width": 1180, "height": 820}); attendi(pg, "innerWidth === 1180")
             assert fw >= 120, f"the File column of the sample table is {fw} px wide at 1024 px"
             assert tabs[1] <= tabs[0], f"the calculator tabs are clipped (box, content): {tabs}"
         step("iPad 1024x768: the File column of the sample table is readable, the calculator tabs fit the drawer", drawer_fits)
+        def targets():
+            pg = S["pg"]; small = []
+            def size(sel, opener, closer="(()=>{for(const d of document.querySelectorAll('dialog[open]'))d.close()})()"):
+                pg.evaluate(opener); attendi(pg, f"(e => !!e && e.offsetWidth > 0)(document.querySelector({sel!r}))", 20000); frames(pg, 2)
+                w, h = pg.evaluate(f"(r => [r.width, r.height])(document.querySelector({sel!r}).getBoundingClientRect())")
+                if w < 24 or h < 24: small.append((sel, round(w), round(h)))
+                pg.evaluate(closer)
+            size("#bigx", "peakParams()")
+            size("#lib-x", "LIB.open()")
+            size("#refx", "document.getElementById('np-pt').click()")
+            size("#flist input[data-k=use]", "BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()", "BARRA.close()")
+            size("#tour-btn-skip", "TOUR.inizia(1,0)", "document.getElementById('tour-btn-skip').click()")
+            assert not small, f"touch targets under 24x24 px: {small}"
+        step("iPad: the × of the dialogs, «Skip the tour» and the file checkbox are at least 24x24 px", targets)
         def fallbacks():
             pg = ipad(b, extra=TAKE_AWAY)
             got = pg.evaluate("window.__compat || []")
