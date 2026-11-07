@@ -118,6 +118,8 @@ impl Sched {
                         }
                         j.state = State::Waiting;
                         j.ms = 0.0;
+                        // a hold was the page's answer for the old key (what it lacked then): a new key is asked again
+                        j.held = None;
                     }
                     j.node = node;
                     j
