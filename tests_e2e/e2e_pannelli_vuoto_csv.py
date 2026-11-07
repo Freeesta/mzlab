@@ -22,9 +22,9 @@ try:
             assert pg.locator("header #rmall").count() == 0, "no remove-all icon in the header"      # the conversion queue has its own (#2467)
             W = "document.getElementById('v-workspace').dataset.work"
             assert pg.evaluate(W) == "panels", "a file is ticked: the panels"
-            pg.evaluate("setVisOf(E.files, false)"); attendi(pg, W + " === 'landing'")
+            pg.evaluate("setVisOf(E.files, false)"); wait_for_js(pg, W + " === 'landing'")
             assert pg.is_visible("#wtable") and pg.is_visible("#start") and pg.is_hidden("#dpanels"), "no file shown: the landing (drop area and the loading table) in place of the panels"
-            pg.evaluate("setVisOf([E.files[0]], true)"); attendi(pg, W + " === 'panels'")
+            pg.evaluate("setVisOf([E.files[0]], true)"); wait_for_js(pg, W + " === 'panels'")
             assert pg.is_hidden("#wtable") and pg.is_visible("#dpanels")
         step("no ticked file: the landing with the loading table stands in for the panels, back when one is ticked", empty)
         def buttons():

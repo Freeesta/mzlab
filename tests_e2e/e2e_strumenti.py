@@ -38,9 +38,9 @@ try:
         def resize(w, h, p=None):
             """Resize and wait until the bar has measured itself for the new width (BARRA.fit runs once per frame after the resize)."""
             p = p or pg; n0 = p.evaluate("BARRA.fitStats.n"); same = p.viewport_size == {"width": w, "height": h}
-            p.set_viewport_size({"width": w, "height": h}); attendi(p, f"window.innerWidth === {w}" + ("" if same else f" && BARRA.fitStats.n > {n0}"))
+            p.set_viewport_size({"width": w, "height": h}); wait_for_js(p, f"window.innerWidth === {w}" + ("" if same else f" && BARRA.fitStats.n > {n0}"))
 
-        def barra():
+        def bar():
             assert pg.get_attribute("#stbar", "role") == "toolbar" and pg.get_attribute("#stbar", "aria-label") == "Strumenti"
             assert pg.locator("#sidebar-tablist").count() == 0, "no rail"
             ids = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.dataset.cmd)")
@@ -51,62 +51,62 @@ try:
                 if b.is_visible(): assert b.get_attribute("aria-label") and b.get_attribute("title") and b.query_selector("svg"), b.get_attribute("data-cmd")
             assert pg.evaluate("document.querySelectorAll('header button#np-pc, header button#np-bt').length") == 0, "PubChem and BioTransformer only in «Altro»"
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.curTab") == "file", "first start on a wide screen: the File panel is open"
-        step("barra in the header (role toolbar), file/adducts & losses (with the calculator)/lists/table in this order, words under the icons, no rail, File panel open at first start", barra)
+        step("barra in the header (role toolbar), file/adducts & losses (with the calculator)/lists/table in this order, words under the icons, no rail, File panel open at first start", bar)
 
-        def altro():
+        def other_menu():
             pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
             t = pg.inner_text("#stmenu"); assert "PubChem" in t and "BioTransformer" in t, t
             assert pg.get_attribute("#stmenu", "role") == "menu" and pg.get_attribute("#tb-more", "aria-expanded") == "true"
             pg.keyboard.press("Escape"); assert pg.locator("#stmenu").count() == 0 and pg.evaluate("document.activeElement.id") == "tb-more"
-        step("«Altro» menu: PubChem and BioTransformer, Esc closes and gives the focus back", altro)
+        step("«Altro» menu: PubChem and BioTransformer, Esc closes and gives the focus back", other_menu)
 
-        def apri_chiudi():
-            close_side(pg); gone("#dfiles"); attendi(pg, FOLLOW)      # open at first start: close it, then reopen with the tool button
+        def open_close():
+            close_side(pg); gone("#dfiles"); wait_for_js(pg, FOLLOW)      # open at first start: close it, then reopen with the tool button
             w0 = pg.evaluate("E.panels[0].w")
-            pg.click("#stbar [data-cmd=file]"); shown("#dfiles"); shown("#flst"); attendi(pg, f"E.panels[0].w < {w0} - 150 && document.querySelector('#dfiles').contains(document.activeElement)")
+            pg.click("#stbar [data-cmd=file]"); shown("#dfiles"); shown("#flst"); wait_for_js(pg, f"E.panels[0].w < {w0} - 150 && document.querySelector('#dfiles').contains(document.activeElement)")
             assert pg.is_visible("#dfiles") and pg.is_visible("#flst"), "file list in the panel"
             assert pg.get_attribute("#stbar [data-cmd=file]", "aria-pressed") == "true" and "on" in pg.get_attribute("#stbar [data-cmd=file]", "class")
             assert pg.evaluate("E.panels[0].w") < w0 - 150, "the panel is docked: the charts narrow"
             assert pg.evaluate("document.querySelector('#dfiles').contains(document.activeElement)"), "focus moves into the panel"
             pg.keyboard.press("Escape"); frames(pg, 6); assert pg.is_visible("#dfiles"), "docked: Esc does not close it"       # nothing should happen: a few frames are the whole wait
             pg.mouse.click(900, 500); frames(pg, 6); assert pg.is_visible("#dfiles"), "docked: a click on the charts does not close it"
-            pg.click("#stbar [data-cmd=file]"); gone("#dfiles"); attendi(pg, f"E.panels[0].w === {w0} && document.activeElement.dataset.cmd === 'file'")
+            pg.click("#stbar [data-cmd=file]"); gone("#dfiles"); wait_for_js(pg, f"E.panels[0].w === {w0} && document.activeElement.dataset.cmd === 'file'")
             assert not pg.is_visible("#dfiles") and pg.get_attribute("#stbar [data-cmd=file]", "aria-pressed") == "false", "the same button hides it"
             assert pg.evaluate("document.activeElement.dataset.cmd") == "file", "the focus goes back to the button"
             assert pg.evaluate("E.panels[0].w") == w0, "the charts get the page back"
             pg.click("#stbar [data-cmd=file]"); shown("#dfiles"); close_side(pg); gone("#dfiles"); assert not pg.is_visible("#dfiles")
-        step("panel: docks next to the charts (they narrow), the same button / × hide it, focus in and back", apri_chiudi)
+        step("panel: docks next to the charts (they narrow), the same button / × hide it, focus in and back", open_close)
 
-        def cambia():
-            pg.click("#stbar [data-cmd=addloss]"); shown("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Addotti e perdite' && document.querySelector('#stbar [data-cmd=addloss]').getAttribute('aria-pressed') === 'true'")
+        def change():
+            pg.click("#stbar [data-cmd=addloss]"); shown("#calcdlg"); wait_for_js(pg, "document.querySelector('#sb-title').innerText === 'Addotti e perdite' && document.querySelector('#stbar [data-cmd=addloss]').getAttribute('aria-pressed') === 'true'")
             assert pg.is_visible("#calcdlg") and pg.is_visible("#calcin"), "one page: the calculator on top of the lists"
             pg.click("#al-calc-tg"); gone("#calcdlg"); assert pg.get_attribute("#al-calc-tg", "aria-expanded") == "false" and pg.evaluate("!BARRA.isOpen('calc')")
             pg.click("#al-calc-tg"); shown("#calcdlg"); assert pg.evaluate("BARRA.isOpen('calc')")
             pg.click("#stbar [data-cmd=addloss]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=addloss]", "aria-pressed") == "false", "a second click on the same tool goes back to the previous one"
             pg.click("#stbar [data-cmd=lists]"); shown("#sb-panel-lists"); assert pg.is_visible("#sb-panel-lists")
-            pg.click("#stbar [data-cmd=ptable]"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
+            pg.click("#stbar [data-cmd=ptable]"); wait_for_js(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
             pg.evaluate("document.querySelector('#refdlg').close()")
             close_side(pg); gone("#dfiles"); assert not pg.is_visible("#dfiles")
-        step("one tool at a time in the drawer; the periodic table stays the window #refdlg", cambia)
+        step("one tool at a time in the drawer; the periodic table stays the window #refdlg", change)
 
         def larghezza():
             pg.click("#stbar [data-cmd=file]"); shown("#dfiles")
             h = pg.locator("#sidebar-resize-handle")
             assert h.get_attribute("role") == "separator" and h.get_attribute("aria-orientation") == "vertical" and h.get_attribute("tabindex") == "0"
             pg.evaluate("BARRA.setWidth(300)"); w300 = pg.evaluate("Q('#dpanels').clientWidth")
-            h.focus(); pg.keyboard.press("ArrowRight"); attendi(pg, f"BARRA.width === 316 && Q('#dpanels').clientWidth < {w300}")
+            h.focus(); pg.keyboard.press("ArrowRight"); wait_for_js(pg, f"BARRA.width === 316 && Q('#dpanels').clientWidth < {w300}")
             assert pg.evaluate("BARRA.width") == 316 and pg.evaluate("Q('#dpanels').clientWidth") < w300, "left panel: → widens it, the charts narrow"
-            pg.keyboard.press("Home"); attendi(pg, "BARRA.width === 280"); assert pg.evaluate("BARRA.width") == 280
-            pg.keyboard.press("End"); attendi(pg, "BARRA.width === 560"); assert pg.evaluate("BARRA.width") == 560
-            pg.keyboard.press("Enter"); attendi(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300
+            pg.keyboard.press("Home"); wait_for_js(pg, "BARRA.width === 280"); assert pg.evaluate("BARRA.width") == 280
+            pg.keyboard.press("End"); wait_for_js(pg, "BARRA.width === 560"); assert pg.evaluate("BARRA.width") == 560
+            pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300
             pg.evaluate("BARRA.setWidth(1000)"); assert pg.evaluate("BARRA.width") == 560, "never wider than 560 px"
-            attendi(pg, FOLLOW)
+            wait_for_js(pg, FOLLOW)
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"), "the charts follow the narrower page"
-            h.dblclick(); attendi(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300, "double click = the automatic width"
+            h.dblclick(); wait_for_js(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300, "double click = the automatic width"
             close_side(pg); gone("#dfiles")
         step("splitter (role separator): keyboard, Home/End, double click, 280-560 px", larghezza)
 
-        def lato():
+        def side():
             assert pg.locator("#sb-side-tog").count() == 0, "the useless «move to the right» button is gone"
             pg.click("#stbar [data-cmd=file]"); shown("#dfiles")
             b = pg.locator("#sb-title").bounding_box(); x0, y0 = b["x"] + 4, b["y"] + b["height"] / 2
@@ -117,38 +117,38 @@ try:
             for sel in (".sb-dz.l", ".sb-dz.r"):
                 assert abs(pg.evaluate(f"document.querySelector('{sel}').getBoundingClientRect().width") - pw) <= 2, "strip = the panel's real width"
             assert pg.locator(".sb-dz.hot").count() == 1, "exactly one highlighted target"
-            pg.mouse.move(1300, 300, steps=6); attendi(pg, "document.querySelector('.sb-dz.r').classList.contains('hot')")
+            pg.mouse.move(1300, 300, steps=6); wait_for_js(pg, "document.querySelector('.sb-dz.r').classList.contains('hot')")
             assert "hot" in pg.get_attribute(".sb-dz.r", "class") and "hot" not in pg.get_attribute(".sb-dz.l", "class") and pg.locator(".sb-dz.hot").count() == 1
-            attendi(pg, "document.body.dataset.sbShift === 'l'")
-            attendi(pg, "document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1")
+            wait_for_js(pg, "document.body.dataset.sbShift === 'l'")
+            wait_for_js(pg, "document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1")
             assert pg.evaluate("document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1"), "the plots are not covered by the target strip"
-            pg.mouse.move(750, 300, steps=4); attendi(pg, "document.querySelectorAll('.sb-dz.hot').length === 0")
+            pg.mouse.move(750, 300, steps=4); wait_for_js(pg, "document.querySelectorAll('.sb-dz.hot').length === 0")
             assert pg.evaluate("document.body.dataset.sbShift") == "", "outside the strips: preview back, nothing to drop"
-            pg.mouse.up(); attendi(pg, "document.querySelectorAll('.sb-dz').length === 0")
+            pg.mouse.up(); wait_for_js(pg, "document.querySelectorAll('.sb-dz').length === 0")
             assert pg.evaluate("BARRA.side") == "left" and pg.locator(".sb-dz").count() == 0, "release outside the strips cancels"
             pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x0 + 40, y0, steps=3); pg.mouse.move(1300, 300, steps=4)
-            pg.keyboard.press("Escape"); attendi(pg, "document.querySelectorAll('.sb-dz').length === 0"); pg.mouse.up()
+            pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelectorAll('.sb-dz').length === 0"); pg.mouse.up()
             assert pg.evaluate("BARRA.side") == "left" and pg.locator(".sb-dz").count() == 0, "Esc cancels the drag"
             pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x0 + 40, y0, steps=3)
-            pg.mouse.move(1300, 300, steps=6); attendi(pg, "document.querySelector('.sb-dz.r').classList.contains('hot')")
-            pg.mouse.up(); attendi(pg, "BARRA.side === 'right' && document.querySelector('#dfiles').getBoundingClientRect().right > 1480")
+            pg.mouse.move(1300, 300, steps=6); wait_for_js(pg, "document.querySelector('.sb-dz.r').classList.contains('hot')")
+            pg.mouse.up(); wait_for_js(pg, "BARRA.side === 'right' && document.querySelector('#dfiles').getBoundingClientRect().right > 1480")
             assert pg.evaluate("BARRA.side") == "right" and pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().right") > 1480, pg.evaluate("BARRA.side")
             assert pg.locator(".sb-dz").count() == 0
             assert pg.evaluate("localStorage.getItem('mzlab.barra.lato')") == "right"
-            pg.keyboard.press("Alt+Shift+ArrowLeft"); attendi(pg, "BARRA.side === 'left' && document.querySelector('#dfiles').getBoundingClientRect().left < 20")
+            pg.keyboard.press("Alt+Shift+ArrowLeft"); wait_for_js(pg, "BARRA.side === 'left' && document.querySelector('#dfiles').getBoundingClientRect().left < 20")
             assert pg.evaluate("BARRA.side") == "left" and pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().left") < 20
-            pg.keyboard.press("Alt+Shift+ArrowRight"); attendi(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
+            pg.keyboard.press("Alt+Shift+ArrowRight"); wait_for_js(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
             w_dp = pg.evaluate("Q('#dpanels').getBoundingClientRect().left")
             b = pg.locator("#sb-title").bounding_box(); x0, y0 = b["x"] + 4, b["y"] + b["height"] / 2
-            pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(100, 300, steps=6); pg.mouse.up(); attendi(pg, f"BARRA.side === 'left' && Q('#dpanels').getBoundingClientRect().left > {w_dp} + 150 && " + FOLLOW)
+            pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(100, 300, steps=6); pg.mouse.up(); wait_for_js(pg, f"BARRA.side === 'left' && Q('#dpanels').getBoundingClientRect().left > {w_dp} + 150 && " + FOLLOW)
             assert pg.evaluate("BARRA.side") == "left"
             assert pg.evaluate("Q('#dpanels').getBoundingClientRect().left") > w_dp + 150, "the charts move to the free side"
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")
             close_side(pg); gone("#dfiles")
-        step("side by drag and drop of the header (drop zones, preview, charts move) and Alt+Shift+arrows; remembered in mzlab.barra.lato", lato)
+        step("side by drag and drop of the header (drop zones, preview, charts move) and Alt+Shift+arrows; remembered in mzlab.barra.lato", side)
 
         def ricorda():
-            pg.click("#stbar [data-cmd=addloss]"); pg.click("#al-t-losses"); attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')")
+            pg.click("#stbar [data-cmd=addloss]"); pg.click("#al-t-losses"); wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')")
             pg.evaluate("BARRA.setWidth(320)"); pg.evaluate("BARRA.setSide('right')")
             st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "addloss" and st["sub"] == "losses" and st["open"] and "pinned" not in st, st
             pg.reload(); ready(pg)
@@ -164,7 +164,7 @@ try:
             assert pg.is_visible("#dfiles"), "first start: open"
         step("state remembered after reload (open, side, width, tool); old states (pinned, bad side, width 0 or huge) are cleaned", ricorda)
 
-        def larghezze():
+        def widths():
             # the richest level that fits: words on every button from 1280 px; a narrower bar loses words, then groups (into «Altro»), never a button cut or wrapped
             for panel in (False, True):
                 pg.evaluate("BARRA.show('file',{noFocus:true})" if panel else "BARRA.close(false)")
@@ -182,10 +182,10 @@ try:
                         for d in f["dropped"].split(","): assert pg.evaluate(f"BARRA.name(BARRA.byId('{d}'))") in txt, (w, d, txt)
                         pg.keyboard.press("Escape")
             pg.evaluate("BARRA.close(false)"); pg.set_viewport_size({"width": 1500, "height": 1000})
-        step("measured labels: words on every button from 1280 px, fewer words then fewer groups below, nothing wrapped or cut (with and without the panel, iPad included); the rest is in «Altro»", larghezze)
+        step("measured labels: words on every button from 1280 px, fewer words then fewer groups below, nothing wrapped or cut (with and without the panel, iPad included); the rest is in «Altro»", widths)
 
         def preferenza():
-            resize(1500, 1000); attendi(pg, "document.documentElement.dataset.barLab === 'all'")
+            resize(1500, 1000); wait_for_js(pg, "document.documentElement.dataset.barLab === 'all'")
             assert pg.evaluate("typeof BARRA.setLabels") == "undefined" and pg.evaluate(FIT)["lvl"] == "all"
             pg.click("#np-set"); pg.wait_for_selector("#uipset"); assert pg.locator("#uip-etich").count() == 0, "no labels option in the settings"
             pg.keyboard.press("Escape")
@@ -197,24 +197,24 @@ try:
             assert pg.evaluate("BARRA.fitStats.max") < 50
         step("labels are always automatic: no option in the settings, an old saved value is ignored", preferenza)
 
-        def disegno():
+        def drawing_view():
             pg.click("#nav [data-v=draw]"); gone("#stbar [data-cmd=file]")
             assert not pg.is_visible("#stbar [data-cmd=file]"), "no File outside the Dati view"
-            pg.click("#np-pt"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "in Disegno the tools are the windows of before"
+            pg.click("#np-pt"); wait_for_js(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "in Disegno the tools are the windows of before"
             pg.evaluate("document.querySelector('#refdlg').close()")
             pg.click("#np-calc2"); shown("#calcdlg"); assert pg.is_visible("#calcdlg") and pg.evaluate("!BARRA.open"), "in Disegno the calculator is the drop-down"
             pg.click("#np-calc2"); gone("#calcdlg"); assert not pg.is_visible("#calcdlg")
             pg.click("#nav [data-v=data]"); shown("#stbar [data-cmd=file]"); assert pg.is_visible("#stbar [data-cmd=file]")
-        step("in Disegno the same buttons open the windows of before; File only in the Dati view", disegno)
+        step("in Disegno the same buttons open the windows of before; File only in the Dati view", drawing_view)
 
         # ------------------------------------------------------------------ high resolution
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); ready(pg)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
 
-        def hr_barra():
+        def hr_bar():
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
             assert ids == ["file", "addloss", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
-            pg.set_viewport_size({"width": 1800, "height": 1000}); attendi(pg, "document.documentElement.dataset.barLab === 'all'")        # the words need room: the panel pill takes its own word from the bar
+            pg.set_viewport_size({"width": 1800, "height": 1000}); wait_for_js(pg, "document.documentElement.dataset.barLab === 'all'")        # the words need room: the panel pill takes its own word from the bar
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
             assert all(x in lab for x in ("Scansione", "Formule", "Librerie")), lab         # the HR group keeps its words as long as the main tools do
             assert "·" not in " ".join(lab) and not any(x.isupper() and len(x) == 3 for x in lab), lab
@@ -226,32 +226,32 @@ try:
                 resize(w, 900)
                 f = pg.evaluate(FIT); assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
             resize(1500, 1000)
-        step("HR: same bar plus Scansione ▾, Formule ▾, Librerie after a separator, in words (no HDR/LST…), fits at every width", hr_barra)
+        step("HR: same bar plus Scansione ▾, Formule ▾, Librerie after a separator, in words (no HDR/LST…), fits at every width", hr_bar)
 
         def hr_menu():
             pg.focus("#stbar [data-cmd-car=scan]"); pg.keyboard.press("ArrowDown"); pg.wait_for_selector("#stmenu")
             items = pg.evaluate("[...document.querySelectorAll('#stmenu [role^=menuitem]')].map(b=>b.innerText.trim())")
             assert items == ["Intestazione della scansione", "Elenco delle scansioni", "File e strumento", "Albero dei precursori"], items
-            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'lst' && document.querySelector('#sb-title').innerText.startsWith('Elenco delle scansioni')")
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); shown("#hrinfo"); wait_for_js(pg, "BARRA.curTab === 'lst' && document.querySelector('#sb-title').innerText.startsWith('Elenco delle scansioni')")
             assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "lst" and pg.inner_text("#sb-title").startswith("Elenco delle scansioni")
             assert pg.evaluate("document.querySelector('#stbar [data-cmd-main=scan]').getAttribute('aria-label')") == "Scansione: Elenco delle scansioni"
             assert pg.get_attribute("#stbar [data-cmd-main=scan]", "aria-pressed") == "true"
             pg.keyboard.press("Escape"); frames(pg, 3)
             if pg.is_visible("#dfiles"): close_side(pg)
             gone("#dfiles")
-            pg.click("#stbar [data-cmd-main=scan]"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'lst'")
+            pg.click("#stbar [data-cmd-main=scan]"); shown("#hrinfo"); wait_for_js(pg, "BARRA.curTab === 'lst'")
             assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "lst", "a click on the button reopens the last chosen item"
             pg.click("#stbar [data-cmd-car=scan]"); pg.wait_for_selector("#stmenu")
             assert pg.evaluate("document.querySelector('#stmenu [aria-checked=true]').innerText.trim()") == "Elenco delle scansioni"
             pg.keyboard.press("Escape"); gone("#stmenu")
             pg.click("#stbar [data-cmd-car=form]"); pg.wait_for_selector("#stmenu")
             items = pg.evaluate("[...document.querySelectorAll('#stmenu [role^=menuitem]')].map(b=>b.innerText.trim())"); assert items == ["Composizione elementare", "Simulazione isotopica"], items
-            pg.click("#stmenu [role^=menuitem] >> nth=1"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'iso'")
+            pg.click("#stmenu [role^=menuitem] >> nth=1"); shown("#hrinfo"); wait_for_js(pg, "BARRA.curTab === 'iso'")
             assert pg.evaluate("BARRA.curTab") == "iso" and pg.is_visible("#hrinfo")
-            pg.click("#stbar [data-cmd=idn]"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'idn'"); assert pg.evaluate("BARRA.curTab") == "idn" and pg.is_visible("#hrinfo")
-            pg.click("#stbar [data-cmd=idn]"); attendi(pg, "BARRA.curTab === 'iso'"); assert pg.is_visible("#hrinfo"), "a second click goes back to the previous tool"
+            pg.click("#stbar [data-cmd=idn]"); shown("#hrinfo"); wait_for_js(pg, "BARRA.curTab === 'idn'"); assert pg.evaluate("BARRA.curTab") == "idn" and pg.is_visible("#hrinfo")
+            pg.click("#stbar [data-cmd=idn]"); wait_for_js(pg, "BARRA.curTab === 'iso'"); assert pg.is_visible("#hrinfo"), "a second click goes back to the previous tool"
             for t in ("hdr", "fil", "cmp"):
-                pg.evaluate(f"BARRA.setTab('{t}')"); shown("#hrinfo"); attendi(pg, f"BARRA.curTab === '{t}'"); assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == t, t
+                pg.evaluate(f"BARRA.setTab('{t}')"); shown("#hrinfo"); wait_for_js(pg, f"BARRA.curTab === '{t}'"); assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == t, t
             close_side(pg)
         step("HR menus from the keyboard (↓ opens, ↓ Enter chooses), last item kept on the button and reopened by a click, 6 tools in all", hr_menu)
 
@@ -264,20 +264,20 @@ try:
         step("HR state in mzlab.barra.hr (pinned, width, tool, last item of each menu), separate from LR", hr_stato)
 
         # ------------------------------------------------------------------ narrow windows, iPad, phone
-        def stretta():
+        def narrow():
             resize(1500, 1000)
-            pg.evaluate("BARRA.setTab('calc',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'addloss' && BARRA.isOpen('calc')")
+            pg.evaluate("BARRA.setTab('calc',{noFocus:true})"); wait_for_js(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'addloss' && BARRA.isOpen('calc')")
             assert pg.evaluate("BARRA.open && !BARRA.sheet")
             pg.set_viewport_size({"width": 800, "height": 900})
-            attendi(pg, "!BARRA.open")           # below 1100 px the side panel closes by itself; the tool button gives it back, as a sheet
-            pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); attendi(pg, "BARRA.open && BARRA.sheet")
+            wait_for_js(pg, "!BARRA.open")           # below 1100 px the side panel closes by itself; the tool button gives it back, as a sheet
+            pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); wait_for_js(pg, "BARRA.open && BARRA.sheet")
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.sheet") and not pg.is_visible("#dpanels"), "below 900 px the panel is a sheet that replaces the workspace"
             assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") >= 800 - 30 and pg.is_visible("#sb-x")
             assert pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
             pg.keyboard.press("Escape"); gone("#dfiles"); shown("#dpanels")
             assert not pg.is_visible("#dfiles") and pg.is_visible("#dpanels")
             pg.evaluate("localStorage.removeItem('mzlab.barra.hr')"); pg.set_viewport_size({"width": 1500, "height": 1000})
-        step("under 900 px the panel is a sheet (replaces the workspace, × and Esc give it back)", stretta)
+        step("under 900 px the panel is a sheet (replaces the workspace, × and Esc give it back)", narrow)
 
         def ipad():
             for w, h in ((1024, 1366), (1366, 1024)):
@@ -290,11 +290,11 @@ try:
                     f = q.evaluate(FIT); assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
                     small = q.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).filter(b=>{const r=b.getBoundingClientRect();return r.width<39.5||r.height<39.5}).map(b=>b.dataset.cmd||b.dataset.cmdMain||b.dataset.cmdCar)")
                     assert not small, (w, small)
-                    q.evaluate("BARRA.setTab('file',{noFocus:true})"); shown("#dfiles", q); attendi(q, "BARRA.open")
+                    q.evaluate("BARRA.setTab('file',{noFocus:true})"); shown("#dfiles", q); wait_for_js(q, "BARRA.open")
                     assert q.is_visible("#dfiles") and (w > 900) == (not q.evaluate("BARRA.sheet")), (w, "iPad: docked when landscape, a sheet when portrait")
                     big = q.evaluate("[...document.querySelectorAll('#sb-header button')].filter(b=>b.offsetParent).filter(b=>{const r=b.getBoundingClientRect();return r.width<39.5||r.height<39.5}).length"); assert big == 0, big
-                    n0 = q.evaluate("BARRA.fitStats.n"); q.set_viewport_size({"width": h, "height": w}); attendi(q, f"window.innerWidth === {h} && BARRA.fitStats.n > {n0}")           # rotation
-                    attendi(q, "E.panels.filter(p=>p.el&&!p.el.classList.contains('max')).every(p=>p.x+p.w-document.getElementById('dpanels').clientWidth <= 2)")
+                    n0 = q.evaluate("BARRA.fitStats.n"); q.set_viewport_size({"width": h, "height": w}); wait_for_js(q, f"window.innerWidth === {h} && BARRA.fitStats.n > {n0}")           # rotation
+                    wait_for_js(q, "E.panels.filter(p=>p.el&&!p.el.classList.contains('max')).every(p=>p.x+p.w-document.getElementById('dpanels').clientWidth <= 2)")
                     ov = q.evaluate("[document.documentElement.scrollWidth - document.documentElement.clientWidth, E.panels.filter(p=>p.el&&!p.el.classList.contains('max')).map(p=>p.x+p.w-document.getElementById('dpanels').clientWidth).reduce((m,v)=>Math.max(m,v),-9)]")
                     assert ov[0] <= 1 and ov[1] <= 2, (w, ov)
                     f = q.evaluate(FIT); assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (h, f)
@@ -302,7 +302,7 @@ try:
                     ctx.close()
         step("iPad 1024×1366 and 1366×1024 (touch): buttons ≥ 40 px, the panel is only a drawer, rotation leaves charts and bar whole", ipad)
 
-        def telefono():
+        def phone():
             ctx = r.b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True, locale="it-IT", reduced_motion="reduce")
             q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); ready(q)
@@ -313,53 +313,53 @@ try:
                 assert vis == ["file", "more", "search"], vis
                 q.click("#tb-more"); q.wait_for_selector("#stmenu")
                 t = q.inner_text("#stmenu"); assert "Addotti e perdite" in t and "Tavola periodica" in t and "PubChem" in t, t
-                q.locator("#stmenu button", has_text="Addotti e perdite").click(); shown("#calcdlg", q); attendi(q, "document.querySelector('#dfiles').getBoundingClientRect().width <= 391")
+                q.locator("#stmenu button", has_text="Addotti e perdite").click(); shown("#calcdlg", q); wait_for_js(q, "document.querySelector('#dfiles').getBoundingClientRect().width <= 391")
                 assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 + 1
                 q.evaluate("BARRA.close(false)")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
             finally:
                 ctx.close()
-        step("phone (?telefono=0, 390 px): File, «Altro» and the search only, everything else under «Altro», page does not break", telefono)
+        step("phone (?telefono=0, 390 px): File, «Altro» and the search only, everything else under «Altro», page does not break", phone)
 
         # ------------------------------------------------------------------ command palette and keyboard
         resize(1500, 1000)
-        def paletta():
+        def palette_search():
             pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta:not([hidden])")
             assert pg.get_attribute("#paletta", "role") == "dialog" and pg.get_attribute("#pal-in", "role") == "combobox" and pg.get_attribute("#pal-l", "role") == "listbox"
             assert pg.evaluate("document.activeElement.id") == "pal-in"
-            pg.keyboard.type("isotop"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Simulazione isotopica')")
+            pg.keyboard.type("isotop"); wait_for_js(pg, "document.querySelector('#pal-l').innerText.includes('Simulazione isotopica')")
             t = pg.inner_text("#pal-l"); assert "Simulazione isotopica" in t, t
-            pg.keyboard.press("Control+a"); pg.keyboard.type("CALCOL"); attendi(pg, "(document.querySelector('#pal-o-0') || {innerText: ''}).innerText.includes('Calcolatrice')")
+            pg.keyboard.press("Control+a"); pg.keyboard.type("CALCOL"); wait_for_js(pg, "(document.querySelector('#pal-o-0') || {innerText: ''}).innerText.includes('Calcolatrice')")
             assert pg.inner_text("#pal-l #pal-o-0").startswith("Calcolatrice") or "Calcolatrice" in pg.inner_text("#pal-o-0"), pg.inner_text("#pal-l")
-            pg.keyboard.press("Control+a"); pg.keyboard.type("perdita"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Addotti e perdite')"); assert "Addotti e perdite" in pg.inner_text("#pal-l")       # singular finds the plural entry through its keywords
-            pg.keyboard.press("Control+a"); pg.keyboard.type("zzzzqq"); attendi(pg, "document.querySelector('#paletta').innerText.includes('Nessun risultato')"); assert "Nessun risultato" in pg.inner_text("#paletta")
-            pg.keyboard.press("Control+a"); pg.keyboard.type("metodo"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Metodo di acquisizione')"); assert "Metodo di acquisizione" in pg.inner_text("#pal-l")
-            pg.keyboard.press("Control+a"); pg.keyboard.type("pannello"); attendi(pg, "document.querySelectorAll('#pal-l li[role=option]').length >= 3")
+            pg.keyboard.press("Control+a"); pg.keyboard.type("perdita"); wait_for_js(pg, "document.querySelector('#pal-l').innerText.includes('Addotti e perdite')"); assert "Addotti e perdite" in pg.inner_text("#pal-l")       # singular finds the plural entry through its keywords
+            pg.keyboard.press("Control+a"); pg.keyboard.type("zzzzqq"); wait_for_js(pg, "document.querySelector('#paletta').innerText.includes('Nessun risultato')"); assert "Nessun risultato" in pg.inner_text("#paletta")
+            pg.keyboard.press("Control+a"); pg.keyboard.type("metodo"); wait_for_js(pg, "document.querySelector('#pal-l').innerText.includes('Metodo di acquisizione')"); assert "Metodo di acquisizione" in pg.inner_text("#pal-l")
+            pg.keyboard.press("Control+a"); pg.keyboard.type("pannello"); wait_for_js(pg, "document.querySelectorAll('#pal-l li[role=option]').length >= 3")
             assert pg.locator("#pal-l li[role=option]").count() >= 3, "several matches: the side of the panel, pin"
             n0 = pg.evaluate("document.querySelector('#pal-in').getAttribute('aria-activedescendant')"); pg.keyboard.press("ArrowDown")
             assert pg.evaluate("document.querySelector('#pal-in').getAttribute('aria-activedescendant')") != n0 and pg.evaluate("document.querySelectorAll('#pal-l [aria-selected=true]').length") == 1
             pg.keyboard.press("Escape"); gone("#paletta"); assert not pg.is_visible("#paletta")
-            pg.click("#tb-search"); pg.wait_for_selector("#paletta:not([hidden])"); pg.keyboard.type("calcol"); pg.keyboard.press("Enter"); gone("#paletta"); shown("#calcdlg"); attendi(pg, "BARRA.curTab === 'addloss'")
+            pg.click("#tb-search"); pg.wait_for_selector("#paletta:not([hidden])"); pg.keyboard.type("calcol"); pg.keyboard.press("Enter"); gone("#paletta"); shown("#calcdlg"); wait_for_js(pg, "BARRA.curTab === 'addloss'")
             assert not pg.is_visible("#paletta") and pg.evaluate("BARRA.curTab") == "addloss" and pg.is_visible("#calcdlg"), "Enter runs the command"
             pg.keyboard.press("Escape"); frames(pg, 3)
             if pg.is_visible("#dfiles"): close_side(pg)
             gone("#dfiles")
-        step("palette: Ctrl+K or 🔍, finds «isotop» and «calcol» without accents, partial words, ↑↓ Enter Esc, dialog/combobox/listbox", paletta)
+        step("palette: Ctrl+K or 🔍, finds «isotop» and «calcol» without accents, partial words, ↑↓ Enter Esc, dialog/combobox/listbox", palette_search)
 
-        def paletta_hr():
-            pg.keyboard.press("Control+k"); pg.keyboard.type("isotop"); attendi(pg, "document.querySelector('#pal-l').innerText.includes('Alta risoluzione')")
+        def palette_hr():
+            pg.keyboard.press("Control+k"); pg.keyboard.type("isotop"); wait_for_js(pg, "document.querySelector('#pal-l').innerText.includes('Alta risoluzione')")
             assert "Simulazione isotopica" in pg.inner_text("#pal-l") and "Alta risoluzione" in pg.inner_text("#pal-l")
-            pg.keyboard.press("Enter"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'iso'")
+            pg.keyboard.press("Enter"); shown("#hrinfo"); wait_for_js(pg, "BARRA.curTab === 'iso'")
             assert pg.evaluate("BARRA.curTab") == "iso" and pg.is_visible("#hrinfo")
-            close_side(pg); pg.keyboard.press("Control+k"); pg.keyboard.type("sinistra"); pg.keyboard.press("Enter"); attendi(pg, "BARRA.side === 'left'")
+            close_side(pg); pg.keyboard.press("Control+k"); pg.keyboard.type("sinistra"); pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.side === 'left'")
             assert pg.evaluate("BARRA.side") == "left"
-            pg.keyboard.press("Control+k"); pg.keyboard.type("destra"); pg.keyboard.press("Enter"); attendi(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
+            pg.keyboard.press("Control+k"); pg.keyboard.type("destra"); pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
             pg.evaluate("BARRA.setSide('left')")
-        step("palette in HR: the HR items are there («Pannello a sinistra / a destra» too), Enter opens the panel", paletta_hr)
+        step("palette in HR: the HR items are there («Pannello a sinistra / a destra» too), Enter opens the panel", palette_hr)
 
         def tastiera():
             pg.evaluate("BARRA.close(false)")
-            pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Alt+0"); attendi(pg, "!!document.activeElement.closest('#stbar')")
+            pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Alt+0"); wait_for_js(pg, "!!document.activeElement.closest('#stbar')")
             assert pg.evaluate("!!document.activeElement.closest('#stbar')"), "Alt+0 reaches the bar"
             a = pg.evaluate("document.activeElement.dataset.cmd||document.activeElement.dataset.cmdMain")
             pg.keyboard.press("ArrowRight"); b = pg.evaluate("document.activeElement.dataset.cmd||document.activeElement.dataset.cmdMain||document.activeElement.dataset.cmdCar"); assert a != b
@@ -372,7 +372,7 @@ try:
             # the arrows of the chromatograms are not taken by the bar when the focus is on a graph
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))")
             box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.click(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5); frames(pg, 3)
-            c0 = pg.evaluate("E.active.cur"); pg.keyboard.press("ArrowRight"); attendi(pg, f"E.active.cur !== {json.dumps(c0)}")
+            c0 = pg.evaluate("E.active.cur"); pg.keyboard.press("ArrowRight"); wait_for_js(pg, f"E.active.cur !== {json.dumps(c0)}")
             assert pg.evaluate("E.active.cur") != c0 and not pg.evaluate("!!document.activeElement.closest('#stbar')"), "← → move the cursor of the chromatogram"
         step("keyboard: Alt+0 / F6 reach the bar, arrows Home End inside it (roving tabindex), Esc goes back; arrows of the chromatograms unchanged", tastiera)
 

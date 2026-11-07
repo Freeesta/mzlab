@@ -9,8 +9,8 @@ def step(name, fn):
 r = Run(port=free_port(), wd="/tmp/wd_xicfuoco")
 try:
     with sync_playwright() as p:
-        pg = r.page(p); attendi(pg, "typeof openXic === 'function'")
-        pg.evaluate("openXic(null)"); attendi(pg, "document.querySelector('#xicdlg').open && document.querySelectorAll('#xic-rows .xrw').length === 2")
+        pg = r.page(p); wait_for_js(pg, "typeof openXic === 'function'")
+        pg.evaluate("openXic(null)"); wait_for_js(pg, "document.querySelector('#xicdlg').open && document.querySelectorAll('#xic-rows .xrw').length === 2")
         fo = "[...document.querySelectorAll('#xic-rows input')].indexOf(document.activeElement)"
         def middle():
             pg.click("#xic-add"); pg.click("#xic-add"); pg.locator("#xic-rows .xr-x").nth(1).click()
@@ -23,7 +23,7 @@ try:
             assert pg.locator("#xic-rows .xrw").count() == 1 and pg.evaluate(fo) == 0
         step("× from the keyboard on the last row: the one before; on the first: the one after", last)
         def esc():
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#xicdlg').open")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
         step("Esc still closes the window", esc)
     r.close()
 except Exception as e:

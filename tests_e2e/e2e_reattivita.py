@@ -57,7 +57,7 @@ def paracetamol():
             "conformers": {"n": 3, "chosen": 0, "f_minus_spread": 0.004}, "scc": {"converged": [True, True, True], "iterations": [9, 11, 11]},
             "notes": ["Test data written by hand."], "cite": ["Bannwarth et al. GFN2-xTB doi:10.1021/acs.jctc.8b01176", {"text": "Parr, Szentpaly, Liu: electrophilicity index", "doi": "10.1021/ja983494x"}]}
 
-REATT = paracetamol(); N = len(REATT["atoms"])
+REACT_MOL = paracetamol(); N = len(REACT_MOL["atoms"])
 tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
 subprocess.run(cmd, check=True)
@@ -82,7 +82,7 @@ try:
             pg.on("request", lambda r: reqs.append(r.url))
             pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url and "wasm-feat/manifest" not in r.url else None)
             if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); lib.attendi(pg, "typeof window.QTOOLS !== 'undefined'", 60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); lib.wait_for_js(pg, "typeof window.QTOOLS !== 'undefined'", 60000)
             return pg
         pg = fresh(False)
         step("without mzlab.admin there is no TPREATT, no panel and no .wasm chem", lambda: (_ for _ in ()).throw(AssertionError("TPREATT or panel present")) if pg.evaluate("typeof window.TPREATT !== 'undefined' || !!document.querySelector('.tpr')")
@@ -102,7 +102,7 @@ try:
         pg.wait_for_function("typeof window.TPREATT !== 'undefined' && typeof window.TPV3D !== 'undefined'", timeout=60000)
         step("the first structure loads them once, from mzfinder/lazy/", lambda: (_ for _ in ()).throw(AssertionError(reqs)) if sum(u.endswith("lazy/reattivita.js") for u in reqs) != 1 else None)
         def cards():
-            assert pg.evaluate(MOUNT, REATT)
+            assert pg.evaluate(MOUNT, REACT_MOL)
             tabs = pg.evaluate("[...document.querySelectorAll('#tpr-host [role=tab]')].map(b => b.textContent)")
             assert tabs == ["f(−)", "f(0)", "f(+)", "Info", "Notes", "JSON"], tabs
             assert pg.evaluate("document.querySelector('#tpr-host [role=tab][aria-selected=true]').textContent") == "f(−)", "f(−) is not the default card"
@@ -149,7 +149,7 @@ try:
             pg.focus("#tpr-t5"); pg.keyboard.press("ArrowRight"); assert pg.evaluate("document.querySelector('#tpr-host [role=tab][aria-selected=true]').textContent") == "f(−)", "arrow keys between the tabs"
         step("cards Info, Notes, JSON and f(0), f(+)", cardsswitch)
         def nulls():
-            eht = json.loads(json.dumps(REATT)); eht["method"] = "EHT"
+            eht = json.loads(json.dumps(REACT_MOL)); eht["method"] = "EHT"
             for at in eht["atoms"]: at["q"] = None; at["f_zero"] = None
             for k in ("ip_ev", "ea_ev", "mu_ev", "eta_ev", "omega_ev"): eht["global"][k] = None
             eht["conformers"]["f_minus_spread"] = None
@@ -158,13 +158,13 @@ try:
             assert all(c == ["—", "—"] for c in q), q[:3]
             pg.click("#tpr-t3"); t = pg.inner_text("#tpr-host #tpr-p")
             assert "EHT" in t and "HOMO" in t and "Ionisation" not in t and "Electrophilicity" not in t and "spread" not in t, t
-            assert pg.evaluate(MOUNT, REATT)
+            assert pg.evaluate(MOUNT, REACT_MOL)
         step("values the engine does not give (null: q and f(0) of EHT, ip/ea/ω) are «—» or left out", nulls)
         def exports():
             pg.click('#tpr-host button[data-ex="XYZ"]'); pg.click('#tpr-host button[data-ex="CSV"]'); pg.click('#tpr-host button[data-ex="SMILES"]'); pg.click('#tpr-host button[data-ex="JSON"]')
             d = pg.evaluate("window.__dl"); names = [x[0] for x in d]; assert len(d) == 4 and names[0].endswith(".xyz") and names[1].endswith(".csv"), names
             assert len(d[0][1].strip().split("\n")) == N + 2 and d[0][1].split("\n")[0] == str(N), "XYZ has N + 2 lines"
-            assert len(d[1][1].strip().split("\n")) == N + 1 and d[2][1].strip() == REATT["smiles"] and json.loads(d[3][1])["atoms"][0]["el"] == "C"
+            assert len(d[1][1].strip().split("\n")) == N + 1 and d[2][1].strip() == REACT_MOL["smiles"] and json.loads(d[3][1])["atoms"][0]["el"] == "C"
             t = pg.inner_text("#tpr-host .tpr-cite"); pg.click("#tpr-host .tpr-cite summary"); t = pg.inner_text("#tpr-host .tpr-cite")
             assert "doi:10.1021/ja983494x" in t and "mzlab-chem/0-test" in t and "10.1021/acs.jctc.8b01176" in t, t
         step("exports XYZ (N + 2 lines), CSV, SMILES, JSON and «How to cite»", exports)
@@ -177,7 +177,7 @@ try:
             res = pg.evaluate("""async (cases) => {
                 const OCL = await import(new URL('vendor/openchemlib.js', window.QTOOLS.ctx.base).href), out = [];
                 for (const r of cases) { const m = OCL.Molecule.fromSmiles(r.smiles), map = window.TPREATT.mapHeavy(m, r); out.push(map); }
-                return out; }""", [REATT, heavy_only("NC(=O)N1c2ccccc2C=Cc2ccccc12")])
+                return out; }""", [REACT_MOL, heavy_only("NC(=O)N1c2ccccc2C=Cc2ccccc12")])
             assert res[0] == list(range(11)), res[0]
             assert res[1] == list(range(len(res[1]))) and len(res[1]) == 18, res[1]
             # a relabelled graph: heavy_index permuted, the mapping by element and neighbours must give a valid correspondence
@@ -194,7 +194,7 @@ try:
         def axe():
             AXE = lib.axe_path()
             if not AXE: print("SKIP axe-core not available (pip install axe-playwright-python)"); return
-            pg.evaluate(MOUNT, REATT); pg.wait_for_selector("#tpr-host svg.tpr-2d", timeout=60000); pg.add_script_tag(path=AXE)
+            pg.evaluate(MOUNT, REACT_MOL); pg.wait_for_selector("#tpr-host svg.tpr-2d", timeout=60000); pg.add_script_tag(path=AXE)
             run = "axe.run('#tpr-host', {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' '))]))"
             v = pg.evaluate(run); assert not v, v
         step("axe: the panel has no serious or critical violation", axe)

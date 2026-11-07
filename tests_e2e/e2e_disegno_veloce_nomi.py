@@ -17,8 +17,8 @@ try:
         errors = []
         pg.on("pageerror", lambda e: errors.append(str(e)))
         pg.evaluate("() => { location.hash = '#/draw'; }")
-        attendi(pg, "!!(window.TPDraw && TPDraw.ready()) && document.getElementById('kframe').classList.contains('kwait') === false", timeout=90000)
-        attendi(pg, "document.getElementById('ex-smi').getAttribute('role') === 'combobox'", timeout=30000)
+        wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready()) && document.getElementById('kframe').classList.contains('kwait') === false", timeout=90000)
+        wait_for_js(pg, "document.getElementById('ex-smi').getAttribute('role') === 'combobox'", timeout=30000)
         smiles = lambda: pg.evaluate("async () => String(await TPDraw.smiles())")
         note = lambda: pg.evaluate("() => { const w = document.getElementById('smi-warn'); return w.hidden ? '' : w.textContent; }")
         def clear():
@@ -28,14 +28,14 @@ try:
 
         def name_enter():
             clear(); type_into("caffeina"); pg.keyboard.press("Enter")
-            attendi(pg, "document.getElementById('ex-smi').value === ''", timeout=60000)
+            wait_for_js(pg, "document.getElementById('ex-smi').value === ''", timeout=60000)
             s = smiles()
             assert "n" in s.lower() and "." not in s and len(s) > 10, s
         step("a name plus Enter draws the first suggestion", name_enter)
 
         def name_button():
             clear(); type_into("aspirina"); pg.click("#ex-load")
-            attendi(pg, "!document.getElementById('smi-warn').hidden", timeout=30000)
+            wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=30000)
             assert "SMILES" in note() and "invalid" not in note().lower() and "non valido" not in note().lower(), note()
             s = smiles()
             assert s == "" and "*" not in s, s
@@ -44,10 +44,10 @@ try:
 
         def plain():
             clear(); pg.fill("#ex-smi", "CCO"); pg.focus("#ex-smi"); pg.keyboard.press("Enter")
-            attendi(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
+            wait_for_js(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
             assert smiles() == "CCO", smiles()
             clear(); pg.fill("#ex-smi", "InChI=1S/CH4/h1H4"); pg.click("#ex-load")
-            attendi(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
+            wait_for_js(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
             assert smiles() == "C", smiles()
         step("SMILES and InChI still draw", plain)
 
@@ -55,7 +55,7 @@ try:
             clear()
             pg.evaluate("""() => { const d = document.getElementById('kframe').contentDocument, dt = new DataTransfer(); dt.setData('text/plain', 'aspirina');
               (d.activeElement || d.body).dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); }""")
-            attendi(pg, "!document.getElementById('smi-warn').hidden", timeout=15000)
+            wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=15000)
             assert smiles() == "", smiles()
         step("a name pasted on the canvas shows the note", paste)
         step("no page error", lambda: (_ for _ in ()).throw(AssertionError(errors[:2])) if errors else None)

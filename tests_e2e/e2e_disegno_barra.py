@@ -41,7 +41,7 @@ try:
             for grp, tid, nxt in (("charge", "charge-plus", "charge-minus"), ("rings", "template-2", "template-1")):
                 fr.locator(f"#tp-bar [data-tp={grp}]").click()
                 assert IN(pg, f"d => d.querySelector('#tp-bar [data-tp={grp}]').getAttribute('aria-expanded')") == "true", grp
-                attendi(pg, f"(()=>{{const d=document.querySelector('#kframe').contentDocument;return [...d.querySelector('[data-testid=\"{tid}\"]').classList].some(c=>/selected/i.test(c))}})()")
+                wait_for_js(pg, f"(()=>{{const d=document.querySelector('#kframe').contentDocument;return [...d.querySelector('[data-testid=\"{tid}\"]').classList].some(c=>/selected/i.test(c))}})()")
                 fr.locator(f"#tp-bar [data-tp={grp}]").click()
                 assert IN(pg, f"d => d.querySelector('#tp-bar [data-tp={grp}]').getAttribute('aria-expanded')") == "false", "a second click closes"
                 assert sel(tid), "and keeps the tool"

@@ -61,7 +61,7 @@ try:
                 assert (a["top"], a["bottom"]) == (b["top"], b["bottom"]), (w, "the row moved after first paint", a["bottom"], b["bottom"])
                 for k in ("closed", "open"):
                     seen = pg.evaluate(SAMPLE, 45); assert len(seen) == 1, (w, "the row moved while the side panel went", k, seen)
-                    fermo(pg, "#tools", 200); c = geo(pg); check_row(c, ("panel", k, w))
+                    wait_still(pg, "#tools", 200); c = geo(pg); check_row(c, ("panel", k, w))
                     assert (c["top"], c["bottom"]) == (a["top"], a["bottom"]), (w, "the row moved when the side panel toggled", a["bottom"], c["bottom"])
         step("work area does not move after first paint nor when the side panel toggles", stable)
         def resize_sweep():
@@ -80,13 +80,13 @@ try:
             # a much longer name widens the side panel only as far as the row keeps its place (barra.js applyWidth); iPad sizes included
             add = "#addf-input" if pg.locator("#addf-input").count() else "#pick"
             pg.set_input_files(add, [{"name": LONG * 3 + "x.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t60"), "rb").read()}])
-            attendi(pg, "E.files.filter(f => !f.gone).length >= 4", 120000); ready(pg)
+            wait_for_js(pg, "E.files.filter(f => !f.gone).length >= 4", 120000); ready(pg)
             for z in (1, 1.5):
                 pg.evaluate("z => document.documentElement.style.setProperty('--z', z)", z)
                 for w, h in ((1024, 768), (1180, 820), (1366, 1024), (1600, 900), (3000, 900)):
                     pg.set_viewport_size({"width": w, "height": h}); frames(pg, 4)
                     # below 1100 px the panel hides by itself; opened there by hand at zoom 1.5 not even its landing width leaves the row its room
-                    if (z == 1 or w >= 1100) and not pg.evaluate("document.querySelector('#v-data').classList.contains('sb-open')"): pg.click("#sb-toggle"); fermo(pg, "#tools", 200)
+                    if (z == 1 or w >= 1100) and not pg.evaluate("document.querySelector('#v-data').classList.contains('sb-open')"): pg.click("#sb-toggle"); wait_still(pg, "#tools", 200)
                     g = geo(pg); check_row(g, ("very long name", z, w)); assert abs(g["h"] - 32 * z) < 2, (z, w, "row height", g["h"])
                     pw = pg.evaluate("document.querySelector('#v-data').classList.contains('sb-open') ? document.querySelector('#dfiles').getBoundingClientRect().width : 280")
                     assert pw >= 279, (z, w, "the panel went below its landing width", pw)

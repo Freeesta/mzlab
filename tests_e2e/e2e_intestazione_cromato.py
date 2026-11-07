@@ -27,19 +27,19 @@ try:
             b = pg.locator(f'{X} .tbs [data-a=smooth]'); assert b.count() == 1 and b.locator("svg").count() == 1
             assert pg.locator(f'{X} .ctl [data-o=smooth]').count() == 0, "not in the left controls"
             assert b.get_attribute("aria-label") == "Smoothing" and b.get_attribute("aria-pressed") == "true" and "on" in b.get_attribute("class").split()
-            a = pg.evaluate(SH); b.click(); attendi(pg, f"{XP}.smooth === false && {SH} !== {json.dumps(a)}")
+            a = pg.evaluate(SH); b.click(); wait_for_js(pg, f"{XP}.smooth === false && {SH} !== {json.dumps(a)}")
             assert b.get_attribute("aria-pressed") == "false" and "on" not in b.get_attribute("class").split() and pg.evaluate("E.panels.find(p=>p.type==='xic').smooth") is False
             assert pg.evaluate(SH) != a, "the trace changes"
             assert pg.get_attribute(f'{C} [data-a=smooth]', "aria-pressed") == "true", "state per panel"
-            b.click(); attendi(pg, f"{XP}.smooth === true")
+            b.click(); wait_for_js(pg, f"{XP}.smooth === true")
         step("Smoothing: right-hand button, aria-pressed, effect on the trace, per panel", smooth)
         def log():
             b = pg.locator(f'{X} .tbs [data-a=log]'); assert b.count() == 1 and b.get_attribute("aria-label") == "Scala logaritmica" and b.get_attribute("aria-pressed") == "false"
             assert pg.locator(f'{X} [data-o=log]').count() == 0, "no checkbox any more"
-            b.click(); attendi(pg, f"{XP}.log === true")
+            b.click(); wait_for_js(pg, f"{XP}.log === true")
             assert b.get_attribute("aria-pressed") == "true" and pg.evaluate("E.panels.find(p=>p.type==='xic').log") is True
             assert pg.get_attribute(f'{C} [data-a=log]', "aria-pressed") == "false"
-            b.click(); attendi(pg, f"{XP}.log === false"); assert pg.evaluate("E.panels.find(p=>p.type==='xic').log") is False
+            b.click(); wait_for_js(pg, f"{XP}.log === false"); assert pg.evaluate("E.panels.find(p=>p.type==='xic').log") is False
             pg.click(f'{X} [data-a=cpar]'); assert pg.locator(f'{X} .cpop [data-o=log]').count() == 0, "log is not in the popover"; pg.click(f'{X} [data-a=cpar]')
         step("Log: right-hand button, out of the popover", log)
         def order():
@@ -50,36 +50,36 @@ try:
             b = pg.locator(f'{X} [data-a=cpar]'); assert b.inner_text().strip() == "Intervallo" and "on" not in b.get_attribute("class").split()
             assert pg.locator(f'{X} [data-a=rngx]').count() == 0
             b.click(); pg.wait_for_selector(f'{X} .cpop [data-o=rt0]')
-            pg.fill(f'{X} .cpop [data-o=rt0]', "1"); pg.fill(f'{X} .cpop [data-o=rt1]', "5"); pg.press(f'{X} .cpop [data-o=rt1]', "Enter"); attendi(pg, f"{XP}.zoom != null && !!document.querySelector('.pnl.xic [data-a=rngx]')")
+            pg.fill(f'{X} .cpop [data-o=rt0]', "1"); pg.fill(f'{X} .cpop [data-o=rt1]', "5"); pg.press(f'{X} .cpop [data-o=rt1]', "Enter"); wait_for_js(pg, f"{XP}.zoom != null && !!document.querySelector('.pnl.xic [data-a=rngx]')")
             assert "on" in pg.get_attribute(f'{X} [data-a=cpar]', "class").split() and pg.locator(f'{X} [data-a=rngx]').count() == 1
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').zoom") is not None
-            pg.click(f'{X} [data-a=rngx]'); attendi(pg, f"{XP}.zoom == null && !document.querySelector('.pnl.xic [data-a=rngx]')")
+            pg.click(f'{X} [data-a=rngx]'); wait_for_js(pg, f"{XP}.zoom == null && !document.querySelector('.pnl.xic [data-a=rngx]')")
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').zoom") is None and pg.locator(f'{X} [data-a=rngx]').count() == 0
             pg.click(f'{C} [data-a=cpar]'); pg.wait_for_selector(f'{C} .cpop [data-o=mz0]')
-            pg.fill(f'{C} .cpop [data-o=mz0]', "300"); pg.fill(f'{C} .cpop [data-o=mz1]', "400"); pg.press(f'{C} .cpop [data-o=mz1]', "Enter"); attendi(pg, "document.querySelector('.pnl.chrom [data-a=cpar]').classList.contains('on')")
+            pg.fill(f'{C} .cpop [data-o=mz0]', "300"); pg.fill(f'{C} .cpop [data-o=mz1]', "400"); pg.press(f'{C} .cpop [data-o=mz1]', "Enter"); wait_for_js(pg, "document.querySelector('.pnl.chrom [data-a=cpar]').classList.contains('on')")
             assert "on" in pg.get_attribute(f'{C} [data-a=cpar]', "class").split()
-            pg.click(f'{C} [data-a=rngx]'); attendi(pg, "(p=>p.mz0==null&&p.mz1==null)(E.panels.find(p=>p.type==='chrom'))")
+            pg.click(f'{C} [data-a=rngx]'); wait_for_js(pg, "(p=>p.mz0==null&&p.mz1==null)(E.panels.find(p=>p.type==='chrom'))")
             assert pg.evaluate("(p=>[p.mz0,p.mz1])(E.panels.find(p=>p.type==='chrom'))") == [None, None]
         step("Range: m/z and RT set and cleared, active state and ×", rng)
         def corr():
-            pg.click(f'{X} [data-o=corr]'); attendi(pg, "!document.querySelector('.pnl.xic .corrm').hidden")
+            pg.click(f'{X} [data-o=corr]'); wait_for_js(pg, "!document.querySelector('.pnl.xic .corrm').hidden")
             it = pg.locator(f'{X} .corrw >> nth=0 >> .corri'); assert it.count() == 2, it.count()          # «Sottrai»: none + the file; «Fondo» has its own menu
             assert pg.locator(f'{X} .corrm select').count() == 1, "one file chooser"
             assert pg.locator(f'{X} .corri', has_text="Sottrai file").count() == 1
             assert all(len(t) < 60 for t in pg.locator(f'{X} .corri .sm').all_inner_texts()), "one-line hints"
-            pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('.pnl.xic .corrm').hidden"); assert pg.evaluate("document.querySelector('.pnl.xic .corrm').hidden")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('.pnl.xic .corrm').hidden"); assert pg.evaluate("document.querySelector('.pnl.xic .corrm').hidden")
         step("Correz. menus: Sottrai (2 entries, one file chooser), Esc closes", corr)
         def pick():
             exp = pg.evaluate("(()=>{const r=SUBREF.autoFile('full');return r.label})()")
-            pg.click(f'{X} [data-o=corr]'); attendi(pg, "!document.querySelector('.pnl.xic .corrm').hidden")
+            pg.click(f'{X} [data-o=corr]'); wait_for_js(pg, "!document.querySelector('.pnl.xic .corrm').hidden")
             assert exp in pg.locator(f'{X} .corri', has_text="Sottrai file").get_attribute("aria-label"), "default = reference of the session (t0)"
             assert pg.eval_on_selector(f'{X} .corrsel', "s=>s.selectedOptions[0].textContent") == exp
             other = pg.eval_on_selector(f'{X} .corrsel', "s=>[...s.options].find(o=>!o.selected).value")
-            pg.select_option(f'{X} .corrsel', other); attendi(pg, f"{XP}.bk === {int(other)}"); ready(pg)
+            pg.select_option(f'{X} .corrsel', other); wait_for_js(pg, f"{XP}.bk === {int(other)}"); ready(pg)
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == int(other)
             assert pg.locator(f'{X} .subchip').count() == 1 and "on" in pg.get_attribute(f'{X} [data-o=corr]', "class").split()
             assert pg.eval_on_selector(f'{X} .subchip', "c=>c.textContent").find(pg.evaluate(f"E.files[{other}].label")) >= 0, "the legend chip names the file"
-            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrw >> nth=0 >> .corri', has_text="Nessuna").click(); attendi(pg, f"{XP}.bk === ''")
+            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrw >> nth=0 >> .corri', has_text="Nessuna").click(); wait_for_js(pg, f"{XP}.bk === ''")
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == ""
         step("Subtract file: default = session reference, choosing updates the chip", pick)
         def tlink():
@@ -90,20 +90,20 @@ try:
             pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom');newSpec(c,5,5.2,E.cur)})()"); ready(pg); pg.wait_for_selector(".pnl.spec .fol.on")
             S = ".pnl.spec"; fol = pg.locator(f'{S} .fol.on').first
             assert fol.inner_text().strip().startswith("\u2190") and "on" in fol.get_attribute("class").split() and "segue il pannello" in fol.get_attribute("aria-label")
-            fol.click(); attendi(pg, "!document.getElementById('ctx').hidden")
+            fol.click(); wait_for_js(pg, "!document.getElementById('ctx').hidden")
             t = pg.inner_text("#ctx"); assert "Nessuno (spettro fisso)" in t and "Pannello" in t, t
-            pg.locator("#ctx div", has_text="Nessuno").click(); attendi(pg, "E.panels.filter(p=>p.type==='spec').every(p=>!p.link)")
+            pg.locator("#ctx div", has_text="Nessuno").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>!p.link)")
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>!p.link)") and pg.locator(f'{S} .fol:not(.on)').count() >= 1 and "fisso" in pg.locator(f'{S} .fol:not(.on)').first.get_attribute("aria-label")
-            pg.locator(f'{S} .fol').first.click(); pg.locator("#ctx div", has_text="Pannello").first.click(); attendi(pg, "E.panels.some(p=>p.type==='spec'&&p.link)")
+            pg.locator(f'{S} .fol').first.click(); pg.locator("#ctx div", has_text="Pannello").first.click(); wait_for_js(pg, "E.panels.some(p=>p.type==='spec'&&p.link)")
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.link)")
         step("spectrum chip: follows panel N, menu picks the chromatogram or «none» (fixed)", follow)
         def spcorr():
-            S = ".pnl.spec"; pg.locator(f'{S} [data-o=corr]').first.click(); attendi(pg, "!document.querySelector('.pnl.spec .corrm').hidden")
+            S = ".pnl.spec"; pg.locator(f'{S} [data-o=corr]').first.click(); wait_for_js(pg, "!document.querySelector('.pnl.spec .corrm').hidden")
             n = (pg.locator(f'{S} .corrm').first.locator('.corri').count(), pg.locator(f'{S} .corrm').first.locator('select').count())
             assert n == (3, 1), n
-            pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Fondo di un tratto").click(); attendi(pg, "E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')")
+            pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Fondo di un tratto").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')")
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')") and pg.locator(f'{S} [data-o=bw0]').count() == 1
-            pg.locator(f'{S} [data-o=corr]').first.click(); pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Nessuna").click(); attendi(pg, "E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
+            pg.locator(f'{S} [data-o=corr]').first.click(); pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Nessuna").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
         step("spectrum Correzione: same menu as the chromatogram, without the baseline", spcorr)
         def single():

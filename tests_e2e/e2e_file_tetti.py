@@ -15,7 +15,7 @@ r = Run(port=8992, wd="/tmp/wd_file_tetti")
 try:
     with sync_playwright() as p:
         for lang in ("en", "it"):
-            pg = r.page(p); pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); attendi(pg, "typeof WORKFLOW !== 'undefined' && typeof FILESICURI !== 'undefined'")
+            pg = r.page(p); pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); wait_for_js(pg, "typeof WORKFLOW !== 'undefined' && typeof FILESICURI !== 'undefined'")
             def huge():
                 pg.evaluate("window.__info = []; const o = window.info; window.info = m => { __info.push(m); if (o) o(m); }")
                 pg.evaluate("WORKFLOW.open()")

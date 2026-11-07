@@ -50,9 +50,9 @@ try:
         def trackpad():
             pg.evaluate(f"zoomTo({CH}, 8, 16)"); ready(pg); frames(pg, 3)
             x, y = X(12), Ymid(); pg.mouse.move(x, y)
-            pg.mouse.wheel(120, 0); attendi(pg, f"{CH}.zoom && {CH}.zoom[0] > 8.05")
+            pg.mouse.wheel(120, 0); wait_for_js(pg, f"{CH}.zoom && {CH}.zoom[0] > 8.05")
             z = pg.evaluate(f"{CH}.zoom"); assert z[0] > 8.05 and abs((z[1] - z[0]) - 8) < 1e-6, z
-            pg.keyboard.down("Control"); pg.mouse.wheel(0, -200); pg.keyboard.up("Control"); attendi(pg, f"{CH}.zoom[1] - {CH}.zoom[0] < 7.9")
+            pg.keyboard.down("Control"); pg.mouse.wheel(0, -200); pg.keyboard.up("Control"); wait_for_js(pg, f"{CH}.zoom[1] - {CH}.zoom[0] < 7.9")
             z2 = pg.evaluate(f"{CH}.zoom"); assert (z2[1] - z2[0]) < 8 - 0.1, z2
             pg.evaluate(f"{CH}.zoom = null; draw({CH})"); ready(pg)
         step("trackpad: two fingers sideways pan, pinch / Ctrl+wheel zoom", trackpad)

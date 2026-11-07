@@ -25,7 +25,7 @@ KNOWN_MINOR = set()
 RUN_MINOR = ("axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']}}).then(r => r.violations"
              ".filter(v => ['moderate','minor'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' ')).join(' | ')]))")
 def axe_minor(pg, view, exclude=None):
-    pg.click(f"#nav [data-v={view}]"); attendi(pg, f"!document.querySelector('#v-{view}').hidden")
+    pg.click(f"#nav [data-v={view}]"); wait_for_js(pg, f"!document.querySelector('#v-{view}').hidden")
     if not pg.evaluate("typeof axe !== 'undefined'"): pg.add_script_tag(path=AXE)
     c = "document" if not exclude else "{exclude: [%s]}" % ",".join("['%s']" % e for e in exclude)
     for theme in ("light", "dark"):
@@ -45,20 +45,20 @@ try:
             assert pg.locator(".aff-grip").count() and not small, small
         step("WCAG 2.5.8: the panel grips (.aff-grip) are at least 24 x 24 px", grips)
         def hrinfo():
-            pg.evaluate("BARRA.setTab('hdr')"); attendi(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0"); axe(pg, "'#hrinfo'")
+            pg.evaluate("BARRA.setTab('hdr')"); wait_for_js(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0"); axe(pg, "'#hrinfo'")
         step("axe: the information panel of the HR bench", hrinfo)
         step("axe: the whole page with the HR bench open", lambda: axe(pg))
         def draw():
             pg.click("#nav [data-v=draw]")
-            attendi(pg, "!!(window.TPDraw && TPDraw.ready())", 60000)
-            attendi(pg, "!!document.querySelector('#kframe')?.contentDocument?.querySelector('#tp-bar')", 60000); axe(pg, "'body'", ["#kframe"])
+            wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready())", 60000)
+            wait_for_js(pg, "!!document.querySelector('#kframe')?.contentDocument?.querySelector('#tp-bar')", 60000); axe(pg, "'body'", ["#kframe"])
         step("axe: Disegno, outside the Ketcher iframe", draw)
         def flow():
-            pg.click("#nav [data-v=flow]"); attendi(pg, "!!document.querySelector('#flx-root .flx-bar')", 60000); axe_minor(pg, "flow")
+            pg.click("#nav [data-v=flow]"); wait_for_js(pg, "!!document.querySelector('#flx-root .flx-bar')", 60000); axe_minor(pg, "flow")
         step("axe moderate/minor: Flow, light and dark", flow)
         step("axe moderate/minor: Disegno outside the Ketcher iframe, light and dark", lambda: axe_minor(pg, "draw", ["#kframe"]))
         def tabui():
-            pg.click("#nav [data-v=tpmine]"); attendi(pg, "!!document.querySelector('#tp-name')", 60000); axe_minor(pg, "tpmine")
+            pg.click("#nav [data-v=tpmine]"); wait_for_js(pg, "!!document.querySelector('#tp-name')", 60000); axe_minor(pg, "tpmine")
         step("axe moderate/minor: Tabui, light and dark", tabui)
         def tour():
             q = r.b.new_page(viewport={"width": 1500, "height": 1100}, reduced_motion="reduce")
@@ -66,7 +66,7 @@ try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached")
                 q.evaluate("try{localStorage.removeItem('mzlab.tour.lr')}catch(_){}")
                 stage(q, [TMP])
-                q.click("text=Carica dati"); attendi(q, "typeof E !== 'undefined' && E.files.length >= 1")
+                q.click("text=Carica dati"); wait_for_js(q, "typeof E !== 'undefined' && E.files.length >= 1")
                 q.wait_for_selector("#tour-invito", timeout=5000); axe(q, "'#tour-invito'")
                 q.click("#tour-inv-no"); q.click("#np-set"); q.wait_for_selector("#uipset"); q.click("#uip-tour")
                 q.wait_for_selector("#tour-dialog", timeout=3000)
@@ -74,7 +74,7 @@ try:
                     axe(q, "'#tour-dialog'")
                     if not q.is_visible("#tour-btn-next") or q.get_attribute("#tour-btn-next", "disabled") is not None: break
                     hd = q.inner_text("#tour-dialog .tour-hd")
-                    q.click("#tour-btn-next"); attendi(q, "document.querySelector('#tour-dialog .tour-hd')?.textContent !== %r" % hd)
+                    q.click("#tour-btn-next"); wait_for_js(q, "document.querySelector('#tour-dialog .tour-hd')?.textContent !== %r" % hd)
             finally: q.close()
         step("axe: the invitation and the steps of the tour", tour)
         def landing_states():
@@ -92,7 +92,7 @@ try:
                 q = r.b.new_page(viewport={"width": w, "height": 900}, reduced_motion="reduce", locale="it-IT")
                 q.add_init_script(init)
                 try:
-                    q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_selector("#drop", state="attached"); attendi(q, "!document.querySelector('#v-data').hidden && document.querySelector('#sb-toggle').innerText.trim().length > 0 && !!document.querySelector('#v-workspace').dataset.work")   # the work area has taken its state
+                    q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_selector("#drop", state="attached"); wait_for_js(q, "!document.querySelector('#v-data').hidden && document.querySelector('#sb-toggle').innerText.trim().length > 0 && !!document.querySelector('#v-workspace').dataset.work")   # the work area has taken its state
                     axe(q)
                     small = q.evaluate("[...document.querySelectorAll('#stbar button:not([disabled]), #sb-toggle, #drop')].filter(e => { const b = e.getBoundingClientRect(); return b.width && (b.width < 24 || b.height < 24); }).length")
                     assert not small, ("targets below 24 px on the landing", w, small)
@@ -106,8 +106,8 @@ try:
                     assert live <= 1, ("more than one live region speaks", w, live)
                     q.wait_for_function("document.querySelectorAll('#flist tbody tr').length >= 5", timeout=90000); ready(q)
                     if w < 900:
-                        q.click("#sb-toggle"); attendi(q, "document.querySelector('#v-data').classList.contains('sb-open')")
-                    q.click("#samptab"); q.wait_for_function("document.querySelector('#v-workspace').dataset.work === 'table'"); attendi(q, "document.querySelector('#v-workspace').dataset.work === 'table'")
+                        q.click("#sb-toggle"); wait_for_js(q, "document.querySelector('#v-data').classList.contains('sb-open')")
+                    q.click("#samptab"); q.wait_for_function("document.querySelector('#v-workspace').dataset.work === 'table'"); wait_for_js(q, "document.querySelector('#v-workspace').dataset.work === 'table'")
                     axe(q)
                     q.locator("#flist .ldtab button[data-open]").nth(1).click(); q.wait_for_selector(".pnl", timeout=60000); ready(q)
                     axe(q)

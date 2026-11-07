@@ -5,7 +5,7 @@ import json, os, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
-lib.AUTO_TEMPI = False
+lib.AUTO_TIMES = False
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
 import numpy as np

@@ -6,7 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi, axe_path; PORT = free_port()
+from lib import free_port, wait_for_js, axe_path; PORT = free_port()
 TAB = '#nav button[data-v="flow"]'
 AXE = axe_path()
 steps = []; errs = []; reqs = []
@@ -36,7 +36,7 @@ try:
                                % (json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
-            pg.wait_for_selector("#flx-assistant", timeout=30000); attendi(pg, "!!FLOW.llmReaders")
+            pg.wait_for_selector("#flx-assistant", timeout=30000); wait_for_js(pg, "!!FLOW.llmReaders")
             pg.click("#flx-assistant"); pg.evaluate(DRIVE)
             return pg
 

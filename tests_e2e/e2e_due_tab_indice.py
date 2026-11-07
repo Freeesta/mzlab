@@ -28,13 +28,13 @@ try:
         pages = []
         for i in range(2):
             pg = c.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop"); attendi(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange")
+            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop"); wait_for_js(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange")
             pages.append(pg)
         A, B = pages
-        A.set_input_files("#pick", PAIR); attendi(A, DONE, timeout=120000)
+        A.set_input_files("#pick", PAIR); wait_for_js(A, DONE, timeout=120000)
         names = A.evaluate("ST.files.map(f => f.name)")
         step("tab A reads every sample", lambda: (len(names) == N) or (_ for _ in ()).throw(AssertionError(names)))
-        A.evaluate(HOLD, names); attendi(A, f"window.__held === {N}")
+        A.evaluate(HOLD, names); wait_for_js(A, f"window.__held === {N}")
         B.set_input_files("#pick", PAIR)
         def waits():
             B.wait_for_function("false", timeout=3000) if False else None
@@ -46,7 +46,7 @@ try:
         step("tab B waits while tab A holds the index (no error)", waits)
         A.evaluate("window.__free()")
         def finishes():
-            attendi(B, DONE, timeout=120000)
+            wait_for_js(B, DONE, timeout=120000)
             assert not B.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), B.evaluate("window.MZLAB_LR_MISS")
             assert B.evaluate("document.querySelectorAll('#fl-up .err, #fl-up [data-err]').length") == 0
         step("tab B reads every sample once tab A is done", finishes)

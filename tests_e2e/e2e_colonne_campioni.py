@@ -2,7 +2,7 @@
 and the TSV of the sample table (the export of the Statistica panel) carries the columns. Synthetic files."""
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
-lib.AUTO_TEMPI = False
+lib.AUTO_TIMES = False
 from lib import *
 import synth
 steps = []

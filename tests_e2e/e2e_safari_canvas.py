@@ -24,7 +24,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); ready(pg); pg.evaluate(CAP)          # a prototype stub, set after the load: a reload right after the first load had WebKit refuse the engine worker (COEP)
         def drawing():
-            pg.evaluate("setView('draw')"); attendi(pg, "TPDraw.ready()", 60000)
+            pg.evaluate("setView('draw')"); wait_for_js(pg, "TPDraw.ready()", 60000)
             pg.evaluate(f"document.getElementById('kframe').contentWindow.ketcher.setMolecule('{MOL}')"); frames(pg, 30)
             with pg.expect_download(timeout=60000) as d: pg.click("#ex-png")
             w, h = dims(d.value.path())

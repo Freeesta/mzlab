@@ -17,11 +17,11 @@ try:
         pg.set_input_files("#pick", [blob("B_FullMass-t30 (2).mzML", "B_FullMass-t15"), blob(LONG + ".mzML", "B_FullMass-t0")]); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(800)
-        pg.evaluate("soloFile(E.files[E.cur])"); attendi(pg, "E.browse")      # the file menu works with one file shown
+        pg.evaluate("soloFile(E.files[E.cur])"); wait_for_js(pg, "E.browse")      # the file menu works with one file shown
         sel = lambda: pg.evaluate("(() => { const s = Q('#fsel'); return {t: s.options[s.selectedIndex].textContent, w: s.offsetWidth, title: s.title, opts: [...s.options].map(o => o.textContent), bar: Q('#tools').offsetWidth}; })()")
         def name():
             pg.evaluate("E.cur = tabFiles().find(f => /t30/.test(f.label) && !/Campione/.test(f.label)).k; renderNav()")
-            attendi(pg, "Q('#fsel').offsetWidth >= 220")
+            wait_for_js(pg, "Q('#fsel').offsetWidth >= 220")
             s = sel(); assert "B_FullMass-t30 (2)" in s["t"], s
             assert s["w"] >= 220 and s["w"] <= 0.4 * 1280 + 2, s
             tw = pg.evaluate("(() => { const s = Q('#fsel'), g = document.createElement('canvas').getContext('2d'), cs = getComputedStyle(s); g.font = cs.fontSize + ' ' + cs.fontFamily; return g.measureText(s.options[s.selectedIndex].textContent).width; })()")
@@ -43,12 +43,12 @@ try:
             assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Scegli, nascondi, rinomina e colora i file caricati"
             ready(pg)
             if pg.is_visible("#flst"):          # the drawer remembers its state: start from the closed one, so the click below opens it
-                pg.click(b); attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
+                pg.click(b); wait_for_js(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
             pg.click(b)
-            attendi(pg, "(() => { const e = Q('#flst'); return !!e && e.getBoundingClientRect().width > 0 })()")
+            wait_for_js(pg, "(() => { const e = Q('#flst'); return !!e && e.getBoundingClientRect().width > 0 })()")
             assert pg.is_visible("#flst") and not pg.is_visible("#sb-x") and pg.is_visible("#sb-toggle")      # no second × on a wide screen: the panel button of the main header closes it
             close_side(pg)
-            attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
+            wait_for_js(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
             assert not pg.is_visible("#flst")
             # the only previous/next arrows left in the toolbar are the file arrows (SVG icons, named by their aria-label)
             assert pg.evaluate("[...document.querySelectorAll('#tools button')].filter(b => /precedente|successivo/i.test(b.getAttribute('aria-label') || '')).map(b => b.id)") == ["fprev", "fnext"]

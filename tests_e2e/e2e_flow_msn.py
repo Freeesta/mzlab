@@ -45,13 +45,13 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.evaluate("localStorage.setItem('mzlab.admin','1')"); pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
-        attendi(pg, "document.getElementById('pick').onchange !== null", 120000)
+        wait_for_js(pg, "document.getElementById('pick').onchange !== null", 120000)
         load(pg, [F], 6000, 1)
-        attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
+        wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web", timeout=120000)
         (None if pg.locator('.flx-tpl.show').count() else pg.click('button[aria-label="Start from a template"]')); pg.click('.flx-tc[data-tpl="msn"]')   # the button toggles the cards: open on the first screen
-        attendi(pg, "document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow && document.querySelector('.flx-list').__flow.plan.steps.length === 3")
+        wait_for_js(pg, "document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow && document.querySelector('.flx-list').__flow.plan.steps.length === 3")
         got = {}
         def runs():
             got["r"] = x = pg.evaluate(RUN, {"formula": ION})
@@ -126,7 +126,7 @@ try:
             pg.wait_for_selector(".flx-res .ig-node", timeout=60000)
             assert pg.locator(".flx-res .ig-node").count() == len(g["nodi"]), "one box per ion"
             assert pg.locator(".flx-res [aria-pressed=true]").first.inner_text() == "Graph"
-            attendi(pg, "document.activeElement && document.activeElement.matches('.flx-res h3')", 10000)
+            wait_for_js(pg, "document.activeElement && document.activeElement.matches('.flx-res h3')", 10000)
             kinds = pg.evaluate("Object.values(document.querySelector('.flx-list').__flow.results).flat().map(r => r.type).sort()")
             assert kinds == ["library", "report", "table"], kinds
             pg.locator(".flx-res .ig-node").nth(1).click()
@@ -162,7 +162,7 @@ try:
             assert pg.locator(".flx-res .ig-node").count() == len(g["nodi"]), "the radial view draws every ion"
             pg.locator(".flx-res .ig-node").first.click(); pg.wait_for_selector(".flx-res .ig-cands", timeout=10000)
             pg.click('.flx-res button:has-text("Open in Data")')
-            attendi(pg, "document.getElementById('ig-wrap') && document.querySelector('#ig-wrap .ig-node')", 60000)
+            wait_for_js(pg, "document.getElementById('ig-wrap') && document.querySelector('#ig-wrap .ig-node')", 60000)
             pg.click('#nav button[data-v="flow"]'); pg.evaluate("document.querySelector('.flx-res') && document.querySelector('.flx-res').remove()")
         step("the cards: Raw files, Fragmentation graph, Export and View graph; the view opens with Tree/Radial, the ion panel and Open in Data", cards)
         def empty():

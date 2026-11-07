@@ -17,17 +17,17 @@ try:
         for sel in ["#np-chrom", "#np-spec", "#np-map"]: pg.click(sel); ready(pg)
         dis = lambda s: pg.evaluate("s=>[...document.querySelectorAll(s)].map(x=>x.disabled)", s)
         def allmode():
-            pg.evaluate("tabFiles().forEach(f=>{f.vis=true});renderFileList();renderNav();redrawAll()"); attendi(pg, "!E.browse")
+            pg.evaluate("tabFiles().forEach(f=>{f.vis=true});renderFileList();renderNav();redrawAll()"); wait_for_js(pg, "!E.browse")
             assert not any(dis("#fprev,#fnext,#fsel")), dis("#fprev,#fnext,#fsel")      # the arrows walk through the ticked files
             assert not any(dis("[data-o=k]")) and not any(dis("[data-o=all]"))
         step("several files ticked: panel file choosers on", allmode)
         def selmode():
             pg.evaluate("soloFile(E.files[E.cur])")
-            attendi(pg, "[...document.querySelectorAll('.pnl:not(.map) [data-o=k],[data-o=all]')].every(x => x.disabled)")
+            wait_for_js(pg, "[...document.querySelectorAll('.pnl:not(.map) [data-o=k],[data-o=all]')].every(x => x.disabled)")
             assert not any(dis("#fprev,#fnext,#fsel"))
             assert all(dis(".pnl:not(.map) [data-o=k]")) and all(dis("[data-o=all]")), (dis("[data-o=k]"), dis("[data-o=all]"))       # the map keeps its chooser open (it only follows)
             pg.click("#fnext"); ready(pg)
-            attendi(pg, "[...document.querySelectorAll('.pnl [data-o=k]')].every(s=>+s.value===E.cur)")
+            wait_for_js(pg, "[...document.querySelectorAll('.pnl [data-o=k]')].every(s=>+s.value===E.cur)")
             cur = pg.evaluate("E.cur"); assert pg.evaluate("[...document.querySelectorAll('.pnl [data-o=k]')].every(s=>+s.value===E.cur)")
         step("one file ticked: arrows on, per-panel file choosers follow and are off", selmode)
         def norm():

@@ -17,9 +17,9 @@ try:
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "!!document.querySelector('#pick')")
+        pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "!!document.querySelector('#pick')")
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")])
-        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, f"!!{M}._mz")
+        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, f"!!{M}._mz")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         settle = lambda: ready(pg)
         btn = ".pnl.map [data-mz=mir]"
@@ -39,7 +39,7 @@ try:
             assert pg.locator(".pnl.map [data-mz=menu]").count() == 0, "no dropdown next to the sight"
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("m"); settle()
             c = pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
-            pg.mouse.click(c[0] + c[2] * .5, c[1] + c[3] * .5, button="right"); attendi(pg, "!document.querySelector('#ctx').hidden")
+            pg.mouse.click(c[0] + c[2] * .5, c[1] + c[3] * .5, button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden")
             assert pg.evaluate("!document.querySelector('#ctx').hidden"), "the right click still opens the menu"
             pg.keyboard.press("Escape")
         step("no «⋯» button; the right-click menu stays", nomenu)
@@ -53,7 +53,7 @@ try:
             assert abs(h1["mz"] - h0["mz"]) < 1e-9 and h1["rt"] != h0["rt"], (h0, h1)            # horizontal: same m/z
             pg.mouse.move(x0 + 90, y0 + 120, steps=6); h2 = hov()
             assert abs(h2["mz"] - h0["mz"]) < 1e-9 and h2["rt"] != h1["rt"], (h1, h2)            # the axis stays, even if the pointer wanders vertically
-            pg.keyboard.up("Shift"); attendi(pg, f"Math.abs({M}._mz.hov.mz - {h0['mz']}) > 1e-6"); h3 = hov()
+            pg.keyboard.up("Shift"); wait_for_js(pg, f"Math.abs({M}._mz.hov.mz - {h0['mz']}) > 1e-6"); h3 = hov()
             assert abs(h3["mz"] - h0["mz"]) > 1e-6, ("released: free again", h0, h3)
             pg.mouse.move(x0 + 3, y0 + 3); h4 = hov(); pg.keyboard.down("Shift")
             pg.mouse.move(x0 + 6, y0 + 90, steps=6); h5 = hov()

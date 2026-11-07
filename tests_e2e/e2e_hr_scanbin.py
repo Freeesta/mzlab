@@ -16,7 +16,7 @@ def walk(pg, n=8):
     pg.mouse.click(c["x"], c["y"]); pg.wait_for_timeout(1200)
     s0 = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.link!=null);return s?s.si:null})()")
     for _ in range(n): pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(120)
-    attendi(pg, "(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.link!=null);return !!s&&s.si!=null&&s.si>=5})()")
+    wait_for_js(pg, "(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.link!=null);return !!s&&s.si!=null&&s.si>=5})()")
     return s0, pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.link!=null);return s?s.si:null})()")
 try:
     with sync_playwright() as p:

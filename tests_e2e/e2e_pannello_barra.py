@@ -22,7 +22,7 @@ try:
     f1 = tmp / "B_FullMass-t15.mzML"; ds.full_scan(f1, 15, np.random.default_rng(2))
     with sync_playwright() as p:
         pg = r.page(p)
-        attendi(pg, "window.qqReady === true"); ready(pg)
+        wait_for_js(pg, "window.qqReady === true"); ready(pg)
         stage(pg, [f0, f1]); ready(pg)
         pg.click("#opbtn"); ready(pg)
         pg.click("#np-spec"); ready(pg)

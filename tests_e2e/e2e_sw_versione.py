@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from playwright.sync_api import sync_playwright
-from lib import ROOT, attendi, free_port
+from lib import ROOT, wait_for_js, free_port
 
 def serve(port: int, wd: Path):
     class Pages(BaseHTTPRequestHandler):
@@ -87,7 +87,7 @@ def static_hits(): return {k: v for k, v in state["hits"].items() if k.startswit
 def wait_big(pg, timeout=90):
     """Vendor files (Ketcher, openchemlib) go to the cache of big files when their download ends: a warm reload before that asks for them again."""
     want = json.dumps(sorted(k for k, _ in state["hits"].items() if k.startswith("/static/vendor/")))
-    attendi(pg, """(async () => { const ps = %s, n = (await caches.keys()).find(k => k.startsWith('mzlab-big-')); if (!n) return !ps.length;
+    wait_for_js(pg, """(async () => { const ps = %s, n = (await caches.keys()).find(k => k.startsWith('mzlab-big-')); if (!n) return !ps.length;
         const c = await caches.open(n); for (const p of ps) if (!(await c.match(new URL(p, location.origin).href))) return false; return true; })()""" % want, timeout * 1000)
 
 

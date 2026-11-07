@@ -4,7 +4,7 @@ import json, os, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
-lib.AUTO_TEMPI = False
+lib.AUTO_TIMES = False
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
 import numpy as np
@@ -42,7 +42,7 @@ def measure(pg, files):
     stage(pg, files)
     open_first(pg)
     ready(pg)
-    fermo(pg, "#dpanels .pnl"); frames(pg, 30)
+    wait_still(pg, "#dpanels .pnl"); frames(pg, 30)
     return pg.evaluate("(() => { window.__shift.stop = true; return window.__shift; })()")
 
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
                                 "window.__nav={cls:0,all:[]};try{new PerformanceObserver(l=>{for(const e of l.getEntries())if(!e.hadRecentInput){window.__nav.cls+=e.value;window.__nav.all.push([Math.round(e.startTime),+e.value.toFixed(4),(e.sources||[]).map(x=>{const n=x.node;return n&&n.nodeType===1?(n.id?'#'+n.id:n.tagName.toLowerCase()+'.'+String(n.className).split(' ')[0]):'?'}).join(' ')])}}).observe({type:'layout-shift',buffered:true})}catch(_){}")
             pg3.goto(f"http://127.0.0.1:{r.port}/")
             def landing_first_paint():
-                pg3.wait_for_selector("#start:not([hidden])", timeout=60000); attendi(pg3, "window.qqReady === true", 60000)
+                pg3.wait_for_selector("#start:not([hidden])", timeout=60000); wait_for_js(pg3, "window.qqReady === true", 60000)
                 st = pg3.evaluate("""() => ({open: document.querySelector('#v-data').classList.contains('sb-open'), hint: !document.querySelector('#fl-hint').hidden, dz: !document.querySelector('#fl-dz').hidden,
                   grey: getComputedStyle(document.querySelector('#np-chrom')).cursor === 'not-allowed',
                   big: document.querySelector('#drop').getBoundingClientRect().height >= innerHeight * 0.4,
@@ -145,7 +145,7 @@ if __name__ == "__main__":
                 assert pg3.evaluate("[...document.querySelectorAll('#start button, #start [tabindex], #start a, #start input:not([hidden]), #start summary')].filter(e => e.offsetParent)[0].id") == "drop"
                 pg3.evaluate("document.querySelector('#pick').addEventListener('click', () => { window.__picked = (window.__picked || 0) + 1 })")
                 pg3.keyboard.press("Enter"); pg3.keyboard.press("Space")
-                attendi(pg3, "window.__picked === 2", 5000)
+                wait_for_js(pg3, "window.__picked === 2", 5000)
             step("#drop is reached with Tab, first in the landing, and Enter opens the picker", drop_by_keyboard)
             def cls_from_navigation():
                 measure(pg3, files)

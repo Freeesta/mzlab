@@ -43,9 +43,9 @@ r = Run(port=8876, wd="/tmp/wd_sim_wiff")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Carica dati"); ready(pg); attendi(pg, "E.files.length >= 4", timeout=120000)
+        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
         def appears():
-            attendi(pg, SHOWN, timeout=60000)
+            wait_for_js(pg, SHOWN, timeout=60000)
             s = table_shape(pg)
             assert s["head"] == [pg.evaluate("I18N.t('canali.simtab.h.sample')")] + [str(i["q1"]) for i in TRUE["ioni"]], s
             assert s["rows"] == TRUE["campioni"], s
@@ -57,12 +57,12 @@ try:
         step("every view is the bytes of mzlab-cli sim-table", views)
         def ui():
             pg.select_option("#simtab [data-o]", "peaks")
-            attendi(pg, "document.querySelector('#simtab caption').textContent === I18N.t('canali.simtab.o.peaks')")
+            wait_for_js(pg, "document.querySelector('#simtab caption').textContent === I18N.t('canali.simtab.o.peaks')")
             assert pg.is_disabled("#simtab [data-flip]")
             assert len(table_shape(pg)["rows"]) == NAT["peaks|samples"].count("\n") - 1
             assert download(pg) == NAT["peaks|samples"]
             pg.select_option("#simtab [data-o]", "apex_rt"); pg.click("#simtab [data-flip]")
-            attendi(pg, "document.querySelector('#simtab [data-flip]').getAttribute('aria-pressed') === 'true'")
+            wait_for_js(pg, "document.querySelector('#simtab [data-flip]').getAttribute('aria-pressed') === 'true'")
             assert table_shape(pg)["rows"] == [str(i["q1"]) for i in TRUE["ioni"]]
             assert download(pg) == NAT["apex_rt|channels"]
         step("the peak table, the swapped layout and their CSV exports are the CLI output", ui)
@@ -84,9 +84,9 @@ r2 = Run(port=8877, wd="/tmp/wd_sim_wiff_cut")
 try:
     with sync_playwright() as p:
         pg = r2.page(p)
-        stage(pg, [D / "sim3_cut.wiff", D / "sim3_cut.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); attendi(pg, "E.files.length >= 3", timeout=120000)
+        stage(pg, [D / "sim3_cut.wiff", D / "sim3_cut.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
         def cut():
-            attendi(pg, SHOWN, timeout=60000)
+            wait_for_js(pg, SHOWN, timeout=60000)
             got = [l for l in pg.evaluate("SIMTAB.state().csv['area_sum|samples']").split("\n") if l]
             want = {l.split(",")[0]: l for l in CUT.split("\n") if l}
             assert got[0] == CUT.split("\n")[0] and len(got) >= 4, (got, CUT)
