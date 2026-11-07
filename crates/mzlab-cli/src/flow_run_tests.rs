@@ -1,6 +1,9 @@
 //! `mzlab-cli flow run` on three synthetic mzML files: the base chain of the Flow canvas (index, detect, align, gapfill) gives the table of the page,
 //! the run equals `run_plan` of the desktop route with 1 and 2 workers, `--set` reaches the parameters, `--dry-run` writes nothing, exit codes.
 
+#[path = "flow_max_gap_tests.rs"]
+mod flow_max_gap_tests;
+
 use std::path::{Path, PathBuf};
 
 use crate::tests::{layered_table, mzml, page_table};
@@ -265,7 +268,7 @@ fn dry_run_writes_nothing_and_the_exit_codes_say_what_is_wrong() {
     let text = String::from_utf8(o.stdout).unwrap();
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(
-        text.contains("[2/4] features.detect@1 (det)") && text.contains("s_t030.mzML"),
+        text.contains("[2/4] features.detect@2 (det)") && text.contains("s_t030.mzML"),
         "{text}"
     );
     assert!(!dry.exists());

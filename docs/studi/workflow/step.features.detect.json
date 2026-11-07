@@ -1,7 +1,7 @@
 {
  "schema": "step/1",
  "id": "features.detect",
- "version": 1,
+ "version": 2,
  "title": "Detect features",
  "doc": "Finds the chromatographic peaks of the MS1 scans of each file. The parameters are common to every algorithm; each algorithm adds its own.",
  "cv": "MS:1000035",
@@ -110,9 +110,10 @@
      },
      "max_gap": {
       "title": "Maximum gap",
+      "doc": "Scans a trace may miss between two of its points; 0 = consecutive scans",
       "type": "integer",
       "minimum": 0,
-      "default": 2,
+      "default": 1,
       "x-unit": "scans",
       "x-advanced": true
      },
