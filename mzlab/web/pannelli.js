@@ -480,7 +480,7 @@ function stepScan(/** @type {Pannello} */ p, /** @type {number} */ d, /** @type 
     rt = b.rt; i = b.i; k = b.k; lo = rt - b.g / 2; hi = rt + b.g / 2; tot = b.s.x.length;
   } else {
     const a = p._a, ok = (/** @type {Bag} */ s) => E.files[s.k]?.kind !== "mrm";
-    const cf = E.files[E.cur], k0 = cf && a.sr.some((/** @type {Bag} */ x) => x.k === cf.k && ok(x)) ? cf.k : p._sk != null && a.sr.some((/** @type {Bag} */ x) => x.k === p._sk && ok(x)) ? p._sk : nearestFile(p, p.cur);  // the file selected at the side first  // the same file all along, even if another one becomes the highest
+    const cf = E.files[E.cur], k0 = cf && a.sr.some((/** @type {Bag} */ x) => x.k === cf.k && ok(x)) ? cf.k : p._sk != null && a.sr.some((/** @type {Bag} */ x) => x.k === p._sk && ok(x)) ? p._sk : nearestFile(p, p.cur);  // the side-selected file first, then the same one even if another gets higher
     const s = a.sr.find((/** @type {Bag} */ x) => x.k === k0 && ok(x)) || a.sr.find(ok) || a.sr[0]; if (!s || !s.x.length) return false;
     const yy = s.y || s.ys, i0 = nearIdx(s.x, p.cur); i = i0;
     for (let j = 0; j < n; j++) {
@@ -661,7 +661,7 @@ function corrInfoWire(/** @type {Pannello} */ p, /** @type {HTMLElement} */ b) {
     (m.querySelector("button,input,select") || m).focus();
   };
   if (p._cinfoOff) p._cinfoOff();
-  const ac = new AbortController(); p._cinfoOff = () => ac.abort();
+  const ac = new AbortController(); p._cinfoOff = () => ac.abort(0);  // no stack: an abort() DOMException kept old headers
   const sig = { signal: AbortSignal.any([ac.signal, p._ac.signal]) };
   document.addEventListener("mousedown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!m.hidden && p.el.isConnected && !t.closest(".corrbar,#subpop,#ctx") && !t.closest('[data-o="cinfo"]')) shut(false); }, { capture: true, ...sig });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !m.hidden && p.el.isConnected && !document.querySelector("#subpop:not([hidden])")) { e.stopPropagation(); shut(true); } }, { capture: true, ...sig });
@@ -883,7 +883,7 @@ const numMz = (/** @type {string} */ t) => { const v = numIt(t); return isFinite
 // ONE rounding rule everywhere (half up on the decimal text, like mzlab.chem round_half_up): 364.15 gives 364.2 although 364.15*10 is 3641.4999... in binary
 const rh = (/** @type {unknown} */ v, d = 1) => { const n = Number(v); if (!isFinite(n)) return n; const sg = n < 0 ? -1 : 1; return sg * Number(Math.round(Number(Number(Math.abs(n).toFixed(9)) + "e" + d)) + "e-" + d); };   // the 9-digit prefilter is the same as round_half_up in elements.py
 window.rh = rh;
-const numMz1 = (/** @type {string} */ t) => { const v = numIt(t); return isFinite(v) && v > 0 ? rh(v, 1) : null; };   // XIC fields: one decimal only
+const numMz1 = (/** @type {string} */ t) => { const v = numIt(t); return isFinite(v) && v > 0 ? rh(v, 1) : null; };  // XIC fields: one decimal only
 const mzd = (/** @type {Pannello | null | undefined} */ p, lv = 1) => window.HR ? HR.dec(scanFiles(tabFiles(p ? p.tab || E.tab : E.tab)), p && p.level ? p.level : lv) : 1;
 const fmt2 = (/** @type {number | string} */ v) => String(+(+v).toFixed(2));
 /** @param {number | string} v @param {Pannello | null} [p] @param {number} [lv] */
@@ -892,8 +892,8 @@ const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trai
 // anchored to the nominal mass n of the calculated value: [n - XIC_BELOW, n + 1 - XIC_BELOW]. Every way to create an XIC (XIC button, warning when integrating from a TIC,
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
-const TIP_DELAY = 1250;   // ms before the label of a button appears (one value for the whole program; 1500 before 7 Oct 2026)
-const XIC_BELOW = 0.2;   // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (CLAUDE.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)
+const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
+const XIC_BELOW = 0.2;  // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (CLAUDE.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)
 const XIC_DRIFT = 0.25;  // mean offset (Da) of the observed centroids over the calculated m/z, used only to go from a CLICKED centroid back to the calculated nominal mass (364.37 -> 364.12 -> n = 364, not 365)
 const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };

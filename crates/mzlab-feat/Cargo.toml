@@ -115,6 +115,10 @@ name = "untargeted_isofinder"
 required-features = ["untargeted"]
 
 [[test]]
+name = "untargeted_isofinder_start"
+required-features = ["untargeted"]
+
+[[test]]
 name = "untargeted_isofinder_auto"
 required-features = ["untargeted"]
 
