@@ -153,3 +153,90 @@ fn an_hr_profile_file_gives_the_same_spectrum_in_the_app_and_in_the_wasm() {
         assert_eq!(app.is_empty(), k == 2, "step {k}: {app:.200}");
     }
 }
+
+fn unit_profile_mzml(n: usize, sparse_mid: bool) -> Vec<u8> {
+    use mzlab_core::mzml::Spectrum;
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let h = Header {
+        run: "lrp".into(),
+        sources: vec!["lrp.mzML".into()],
+        software: ("mzLab".into(), "0".into()),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::new(Vec::new(), &h).unwrap();
+    w.open_spectra(n).unwrap();
+    let mid = n / 2;
+    for t in 0..n {
+        let pts = if sparse_mid && (mid..mid + 20).contains(&t) {
+            4
+        } else {
+            250
+        };
+        let base = if t < mid {
+            100.0 + (t % 5) as f64
+        } else {
+            400.0 + (t % 5) as f64
+        };
+        let mz: Vec<f64> = (0..pts).map(|i| base + 0.06 * i as f64).collect();
+        let intensity: Vec<f32> = (0..pts)
+            .map(|i| 100.0 + ((t * 13 + i) % 89) as f32)
+            .collect();
+        let s = Spectrum {
+            index: t,
+            id: format!("controllerType=0 controllerNumber=1 scan={}", t + 1),
+            level: 1,
+            rt: 0.1 + 0.05 * t as f64,
+            polarity: 1,
+            profile: true,
+            filter: "ITMS + p ESI Full ms [100.00-600.00]".into(),
+            mz,
+            intensity,
+            ..Default::default()
+        };
+        w.spectrum(&s).unwrap();
+    }
+    w.close_spectra().unwrap();
+    w.finish().unwrap()
+}
+
+#[test]
+fn unit_profile_spectra_and_spectrum_match_across_site_desktop_and_cli() {
+    use mzlab_core::idxread::Index;
+    use mzlab_core::routes::{Query, Routes};
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("lrp.mzML");
+    std::fs::write(&file, unit_profile_mzml(80, true)).unwrap();
+    let st = State::new();
+    st.set_data_folder(dir.path().join("app"));
+    st.set_index_folder(dir.path().join("idx")).unwrap();
+    let (fid, _) = st.pick(file).unwrap();
+    st.rpc("lr_put", &json!({"name": "lrp.mzML", "fid": fid}), &[])
+        .unwrap();
+    st.rpc("lr_index", &json!({"name": "lrp.mzML"}), &[])
+        .unwrap();
+    st.rpc("idxopen", &json!({"slot": 0, "name": "lrp.mzML"}), &[])
+        .unwrap();
+    let idx_path = dir.path().join("idx").join("lrp.mzML.mzidx");
+    let idx_bytes = std::fs::read(&idx_path).unwrap();
+    let len = idx_bytes.len() as u64;
+    let mut r_site = Routes::new(Index::open(idx_bytes, len).unwrap());
+    let mut r_cli = Routes::new(Index::open(std::fs::File::open(&idx_path).unwrap(), len).unwrap());
+    for (path, q) in [
+        ("/api/spectrum", "?k=0&rt0=0.1&rt1=0.6&level=1"),
+        ("/api/spectrum", "?k=0&rt0=1.8&rt1=2.4&level=1"),
+        ("/api/spectra", "?k=0&level=1&i0=0&i1=9"),
+        ("/api/spectra", "?k=0&level=1&i0=35&i1=45"),
+        ("/api/spectra", "?k=0&level=1&i0=65&i1=79"),
+    ] {
+        let Answer::Text(desktop) = st
+            .rpc("route", &json!({"slot": 0, "path": path, "query": q}), &[])
+            .unwrap()
+        else {
+            panic!("expected text");
+        };
+        let site = r_site.handle(path, &Query::parse(q)).unwrap().unwrap();
+        let cli = r_cli.handle(path, &Query::parse(q)).unwrap().unwrap();
+        assert_eq!(desktop, site, "desktop vs site on {path}{q}");
+        assert_eq!(desktop, cli, "desktop vs cli on {path}{q}");
+    }
+}
