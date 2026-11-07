@@ -2,22 +2,23 @@
 //! member (indexes only, no scan is read); a scan reads only its own packet. The index comes from the scan index and the scan events (`scan_metadata`),
 //! so listing a run touches no peak data. Peaks are what the file holds (the centroid list of a scan, its profile when it has no other), as `raw::read`.
 
-use std::io::{Read, Seek, SeekFrom};
-
 use opentfraw::extra::scan_extras_with;
 use opentfraw::mzml::{extract_arrays, extract_spectrum, scan_metadata, ScanMetadata};
 use opentfraw::{ExtraFields, RawFileReader, ScanParams};
 
 use crate::error::{Error, Result};
-use crate::idxread::ReadAt;
 use crate::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
     VoceLettore, VoceScansione, CONTRATTO,
 };
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::mzmlwrite::{Header, SpectrumExtra};
+use flusso::Stream;
+#[cfg(test)]
+use flusso::{FINESTRA, FINESTRA_SALTO};
 
 mod extra;
+mod flusso;
 mod testata;
 
 const MAGIC: [u8; 18] = [
@@ -42,73 +43,6 @@ pub const VOCE: VoceLettore = VoceLettore {
     riconosci,
     apri,
 };
-
-/// The window of `Stream`: `opentfraw` reads a few bytes at a time and a read of the source can cost a call into JS (the logic of `window::Windowed`, owned here because `Stream` owns its source).
-const FINESTRA: usize = 1 << 16;
-
-/// A `ReadAt` seen as `Read + Seek` (what `opentfraw` reads from), with a window that serves the short reads.
-struct Stream {
-    inner: Box<dyn ReadAt>,
-    pos: u64,
-    len: u64,
-    at: u64,
-    buf: Vec<u8>,
-}
-
-impl Stream {
-    fn new(inner: Box<dyn ReadAt>, len: u64) -> Stream {
-        Stream {
-            inner,
-            pos: 0,
-            len,
-            at: 0,
-            buf: Vec::new(),
-        }
-    }
-}
-
-impl Read for Stream {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let n = usize::try_from(self.len.saturating_sub(self.pos))
-            .unwrap_or(usize::MAX)
-            .min(buf.len());
-        let Some(out) = buf.get_mut(..n) else {
-            return Ok(0);
-        };
-        let fine = self.pos + n as u64;
-        if n > FINESTRA {
-            self.inner
-                .read_at(self.pos, out)
-                .map_err(|e| std::io::Error::other(e.key))?;
-        } else if n > 0 {
-            if self.pos < self.at || fine > self.at + self.buf.len() as u64 {
-                let w = (self.len - self.pos).min(FINESTRA as u64) as usize;
-                self.buf.resize(w, 0);
-                self.at = self.pos;
-                if let Err(e) = self.inner.read_at(self.pos, &mut self.buf) {
-                    self.buf.clear();
-                    return Err(std::io::Error::other(e.key));
-                }
-            }
-            let a = (self.pos - self.at) as usize;
-            out.copy_from_slice(&self.buf[a..a + n]);
-        }
-        self.pos = fine;
-        Ok(n)
-    }
-}
-
-impl Seek for Stream {
-    fn seek(&mut self, to: SeekFrom) -> std::io::Result<u64> {
-        let p = match to {
-            SeekFrom::Start(p) => Some(p),
-            SeekFrom::End(d) => self.len.checked_add_signed(d),
-            SeekFrom::Current(d) => self.pos.checked_add_signed(d),
-        };
-        self.pos = p.ok_or_else(|| std::io::Error::other("seek before the start"))?;
-        Ok(self.pos)
-    }
-}
 
 pub struct LettoreRaw {
     raw: RawFileReader,

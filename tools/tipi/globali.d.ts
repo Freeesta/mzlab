@@ -33,6 +33,8 @@ declare var CartPuntDesk: any;
 declare var CartPuntScan: any;
 declare var CartPuntVista: any;
 declare var ConvUI: any;
+declare var DDAELENCO: any;
+declare var DDAMARK: any;
 declare var DESKDEF: any;
 declare var DESKUPD: any;
 declare var DIAG: any;
