@@ -188,6 +188,10 @@ pub trait Lettore {
     fn campioni(&self) -> &[Campione];
     /// The scans of sample `c`, in the order of time.
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]>;
+    /// The rows of `indice` for a caller that does not read their `tic`: a reader that sums it from the points of spectra it must decode (Bruker MS2) may leave it 0.
+    fn indice_senza_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.indice(c)
+    }
     /// Scan `k` of the index of sample `c`.
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum>;
     /// Scan `k` for a caller that holds the index already (the module of the readers, `trasporto.rs`): the points, level, polarity, profile, RT and precursor as `scansione`

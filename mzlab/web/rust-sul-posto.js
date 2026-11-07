@@ -1,14 +1,20 @@
 // @ts-check
 // A plain mzML of 50 MB or more with no room for its copy (ensureRoom refuses, or the browser stops the copy halfway) is read in place: the user's File is
 // the source (lettura-sync.js reads it through FileReaderSync), only its index goes to OPFS, and the marker idx/<name>.sul tells the next start that the
-// File went with the tab (Chromium keeps no File over a reload): the boot removes its index and says calmly to load it again. Used by rust-worker.js lrPut.
+// File went with the tab (Chromium keeps no File over a reload): the boot removes its index and says calmly to load it again. Used by rust-worker.js lrPut;
+// a maker's file (rust-nativo.js putHeld) keeps its members' Files the same way, with the stub marked `sul`.
 
-/** @param {{ ARCH: any, tilesDrop: (name: string, keep: null) => Promise<unknown>, post: (m: any) => void, safe: (f: () => any) => Promise<any> }} h */
-export function createSulPosto({ ARCH, tilesDrop, post, safe }) {
+/** @param {{ ARCH: any, tilesDrop: (name: string, keep: null) => Promise<unknown>, post: (m: any) => void, safe: (f: () => any) => Promise<any>, lost?: () => Promise<string[]> }} h `lost`: the samples of a maker's file read in place in a closed tab (rust-nativo.js), their stubs removed */
+export function createSulPosto({ ARCH, tilesDrop, post, safe, lost }) {
   const SUL = new Set();
   const quotaErr = (/** @type {any} */ e) => /quota/i.test(typeof e === "string" ? e : String(e && (e.name || e.message)));
   // a small file is copied (it survives a reload); a .gz, a maker's file or a file warmed ahead has its own path
   const can = (/** @type {any} */ m, /** @type {number} */ size) => !m.nat && !m.gz && !m.warm && /\.mzml$/i.test(m.name) && m.blob instanceof File && size >= ARCH.BIG;
+  const gone = async (/** @type {string} */ n, /** @type {boolean} */ say) => {
+    for (const x of [".mzidx", ".cen.mzidx", ".cen.key"]) await safe(() => ARCH.remove("idx", n + x));
+    await safe(() => tilesDrop(n, null));
+    if (say) post({ op: "notice", key: "load.sulRiapri", params: { name: n } });
+  };
   async function take(/** @type {any} */ m, /** @type {number} */ size) {
     await ARCH.ensureRoom(size * (ARCH.ROOM - 1) / ARCH.ROOM, m.name);      // the room of the index alone (ensureRoom asks bytes x ROOM)
     await ARCH.remove("files", m.name);                                     // an older copy of the same name would be read in place of the File
@@ -36,14 +42,10 @@ export function createSulPosto({ ARCH, tilesDrop, post, safe }) {
     async boot() {
       for (const e of await safe(() => ARCH.list("idx")) || []) {
         const n = e.name.replace(/\.sul$/, ""); if (n === e.name || SUL.has(n)) continue;
-        if (!(await safe(() => ARCH.get("files", n)))) {
-          const was = await safe(() => ARCH.get("idx", n + ".mzidx"));
-          for (const x of [".mzidx", ".cen.mzidx", ".cen.key"]) await safe(() => ARCH.remove("idx", n + x));
-          await safe(() => tilesDrop(n, null));
-          if (was) post({ op: "notice", key: "load.sulRiapri", params: { name: n } });
-        }
+        if (!(await safe(() => ARCH.get("files", n)))) await gone(n, !!(await safe(() => ARCH.get("idx", n + ".mzidx"))));
         await safe(() => ARCH.remove("idx", e.name));
       }
+      for (const n of (lost && await safe(lost)) || []) await gone(n, !!(await safe(() => ARCH.get("idx", n + ".mzidx"))));
     },
   };
 }
