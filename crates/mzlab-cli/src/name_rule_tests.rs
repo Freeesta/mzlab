@@ -39,6 +39,7 @@ const COMMANDS: &[&[&str]] = &[
     &["msn-lib"],
     &["msn-rules"],
     &["channels"],
+    &["dda-window"],
     &["ion-pattern"],
     &["ion-mz"],
     &["mol-label"],

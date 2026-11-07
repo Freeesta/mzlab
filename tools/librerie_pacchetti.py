@@ -47,11 +47,11 @@ MODES = ("site", "external", "link")
 GROUPS = ("base", "specialised")
 KINDS = ("experimental", "in_silico")
 TECHS = ("lc_msms", "gc_ei", "msn")
-UNITO_DIR = ROOT / "tests" / "golden" / "librerie" / "massbank_unito"
+MERGED_DIR = ROOT / "tests" / "golden" / "librerie" / "massbank_unito"
 
 ATTRIBUTION = ("Spettri di MassBank Europe (https://massbank.eu), release " + VERSION + " (doi:" + DOI + "): ogni record conserva autori, accessione e licenza "
                "(CC0, CC BY o CC BY-SA). Il pacchetto nel suo insieme si usa secondo CC BY-SA 4.0.")
-UNITO_ATTRIBUTION = ("Spettri degli standard misurati da Cristaudo F, Fabbri D, Calza P, Università di Torino (formato MassBank), licenza CC BY 4.0: "
+MERGED_ATTRIBUTION = ("Spettri degli standard misurati da Cristaudo F, Fabbri D, Calza P, Università di Torino (formato MassBank), licenza CC BY 4.0: "
                      "citare gli autori e l'accessione del record.")
 
 
@@ -228,9 +228,9 @@ def default_builder() -> list[str]:
     return [str(exe)]
 
 
-def unito_records(dest: Path) -> tuple[int, dict]:
+def merged_records(dest: Path) -> tuple[int, dict]:
     """The UniTO standards as one MassBank text; returns the count and the licences."""
-    files = sorted(UNITO_DIR.glob("MSBNK-UniTO-*.txt"))
+    files = sorted(MERGED_DIR.glob("MSBNK-UniTO-*.txt"))
     lics: dict = {}
     with open(dest, "w", encoding="utf-8", newline="\n") as o:
         for f in files:
@@ -267,13 +267,13 @@ def run(out_dir: Path, zip_path: Path | None, builder: list[str] | None, version
             build_mzlib(builder, work / f"{pol}.txt", mz)
             libs.append(entry(f"massbank-{pol}", f"MassBank Europe · {label} · MS2", sign, version, "MassBank Europe", "https://massbank.eu",
                               "Per record: CC0, CC BY o CC BY-SA 4.0; il pacchetto nel suo insieme: CC BY-SA 4.0", s["licenze"], s["contributori"], mz, out_dir, ATTRIBUTION))
-        n_unito, lic_unito = unito_records(work / "unito.txt")
-        if n_unito:
-            print(f"UniTO standards: {n_unito} records")
+        n_merged, lic_merged = merged_records(work / "unito.txt")
+        if n_merged:
+            print(f"UniTO standards: {n_merged} records")
             mz = work / "unito.mzlib"
             build_mzlib(builder, work / "unito.txt", mz)
             libs.append(entry("unito-standard", "Standard dell'Università di Torino (esempio HR)", 0, "1", "Università di Torino", "https://github.com/Freeesta/mzlab",
-                              "CC BY 4.0", lic_unito, {"UniTO": n_unito}, mz, out_dir, UNITO_ATTRIBUTION))
+                              "CC BY 4.0", lic_merged, {"UniTO": n_merged}, mz, out_dir, MERGED_ATTRIBUTION))
         fonti = load_sources()
         bad = check_sources(fonti)
         if bad:

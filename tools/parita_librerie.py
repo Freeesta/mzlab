@@ -1,7 +1,7 @@
-"""Dati d'oro di parità per le librerie spettrali (SOLO per i test): punteggi di riferimento calcolati con `ms_entropy` (Flash entropy search,
-Apache-2.0) e `matchms` (Apache-2.0) su spettri SINTETICI (nessun nome di composto) -> tests/golden/librerie/.
-Uso: python3 tools/parita_librerie.py [--uscita DIR]   (dipendenze di sviluppo: pip install ms_entropy matchms; vedi pyproject.toml)
-I test Rust (crates/mzlab-lib/tests/parita.rs) confrontano il percorso senza quantizzazione (1e-6) e quello con l'indice .mzlib (1e-4)."""
+"""Golden parity data for the spectral libraries (tests ONLY): reference scores computed with `ms_entropy` (Flash entropy search,
+Apache-2.0) and `matchms` (Apache-2.0) on SYNTHETIC spectra (no compound names) -> tests/golden/librerie/.
+Usage: python3 tools/parita_librerie.py [--uscita DIR]   (dev dependencies: pip install ms_entropy matchms; see pyproject.toml)
+The Rust tests (crates/mzlab-lib/tests/parita.rs) compare the path without quantization (1e-6) and the one with the .mzlib index (1e-4)."""
 from __future__ import annotations
 
 import argparse

@@ -46,7 +46,7 @@ fn version_2_with_old_names_is_renamed_and_the_new_name_wins() {
     assert_eq!(out, p(&[("isotopes", 1.0), ("rules", 1.0)]));
     assert_eq!(m.renamed, [("regole".to_string(), "rules".to_string())]);
     assert!(migrate_params("spectra.msn_graph", 2, &p(&[("low_mz", 1.0)])).is_none());
-    assert!(migrate_params("features.detect", 1, &p(&[("mz_basso", 1.0)])).is_none());
+    assert!(migrate_params("features.align", 1, &p(&[("mz_basso", 1.0)])).is_none());
 }
 
 #[test]
@@ -86,4 +86,27 @@ fn table_filter_1_keeps_the_filled_blank_cells_and_2_is_left_alone() {
     )];
     let (_, out, _) = migrate_params("table.filter", 1, &given).unwrap();
     assert_eq!(out, given);
+}
+
+#[test]
+fn features_detect_1_counts_max_gap_as_missed_scans_and_2_is_left_alone() {
+    // the scan distance N of version 1 is N - 1 missed scans, never below 0
+    for (old, new) in [(0.0, 0.0), (1.0, 0.0), (2.0, 1.0), (3.0, 2.0), (6.0, 5.0)] {
+        let (v, out, m) = migrate_params(
+            "features.detect",
+            1,
+            &p(&[("floor", 5e3), ("max_gap", old)]),
+        )
+        .unwrap();
+        assert_eq!((v, m.from, m.to), (2, 1, 2));
+        assert_eq!(out, p(&[("floor", 5e3), ("max_gap", new)]));
+        assert!(m.renamed.is_empty());
+    }
+    // left out, the default of the step applies (2 at version 1, 1 at version 2: the same traces)
+    let (v, out, _) = migrate_params("features.detect", 1, &p(&[("floor", 5e3)])).unwrap();
+    assert_eq!((v, out), (2, p(&[("floor", 5e3)])));
+    // a version 2 plan is not converted again
+    assert!(migrate_params("features.detect", 2, &p(&[("max_gap", 3.0)])).is_none());
+    // the name of a `--set` is not changed
+    assert_eq!(migrate_name("features.detect", 1, "max_gap"), None);
 }

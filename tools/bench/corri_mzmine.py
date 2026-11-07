@@ -27,8 +27,8 @@ RAW = '<parameter name="Raw data files" type="BATCH_LAST_FILES"/>'
 
 def _scarica(url: str, dest: Path, sha256: str | None = None) -> None:
     with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "mzlab-bench"}), timeout=600) as r, open(dest, "wb") as f:
-        while blocco := r.read(1 << 20):
-            f.write(blocco)
+        while block := r.read(1 << 20):
+            f.write(block)
     if sha256 and hashlib.sha256(dest.read_bytes()).hexdigest() != sha256:
         dest.unlink()
         raise SystemExit(f"sha256 of {url} differs from {sha256}")
@@ -56,10 +56,10 @@ def installa_39(cartella: Path | str = CASA_39) -> tuple[Path, Path]:
     return mm, next(jdk.glob("*/bin/java")).parents[1]
 
 
-def _tolleranza_mz(nome: str, comuni: bytes) -> bool:
+def _tolerance_mz(nome: str, common: bytes) -> bool:
     """`m/z tolerance (<title>)`: the name is built from the title of a `ToleranceType`."""
     m = re.fullmatch(r"m/z tolerance \((.+)\)", nome)
-    return bool(m) and m.group(1).encode() in comuni
+    return bool(m) and m.group(1).encode() in common
 
 
 def parametri_non_letti(xml: Path | str, mzmine: Path | str) -> list[str]:
@@ -70,17 +70,17 @@ def parametri_non_letti(xml: Path | str, mzmine: Path | str) -> list[str]:
     from xml.etree import ElementTree as ET
     lib = Path(mzmine) / "lib"
     jar = zipfile.ZipFile(next(iter(lib.glob("work-*.jar")), None) or next((lib / "app").glob("mzmine-community-*.jar")))      # 3.9: work-*.jar; 4.x: app/mzmine-community-*.jar
-    classi = [n for n in jar.namelist() if n.endswith("Parameters.class")]
-    comuni = b"".join(jar.read(n) for n in jar.namelist() if n.startswith("io/github/mzmine/parameters/") and n.endswith(".class"))      # names of the shared parameter types
+    classes = [n for n in jar.namelist() if n.endswith("Parameters.class")]
+    common = b"".join(jar.read(n) for n in jar.namelist() if n.startswith("io/github/mzmine/parameters/") and n.endswith(".class"))      # names of the shared parameter types
     out = []
-    for passo in ET.parse(xml).getroot().iter("batchstep"):
-        modulo = passo.get("method", "")
-        pacchetto = modulo.replace(".", "/").rsplit("/", 1)[0] + "/"
-        testo = comuni + b"".join(jar.read(n) for n in classi if n.startswith(pacchetto) or pacchetto.startswith(n.rsplit("/", 1)[0] + "/"))      # the package and the ones above it
-        for p in passo.iter("parameter"):
+    for step in ET.parse(xml).getroot().iter("batchstep"):
+        module = step.get("method", "")
+        package = module.replace(".", "/").rsplit("/", 1)[0] + "/"
+        testo = common + b"".join(jar.read(n) for n in classes if n.startswith(package) or package.startswith(n.rsplit("/", 1)[0] + "/"))      # the package and the ones above it
+        for p in step.iter("parameter"):
             nome = p.get("name", "")
-            if nome and nome.encode() not in testo and not _tolleranza_mz(nome, comuni):
-                out.append(f"{modulo.rsplit('.', 1)[-1]}: {nome}")
+            if nome and nome.encode() not in testo and not _tolerance_mz(nome, common):
+                out.append(f"{module.rsplit('.', 1)[-1]}: {nome}")
     return out
 
 
@@ -93,7 +93,7 @@ def batch_xml(files: list[Path], uscita: Path, par: dict, fasi: Path | None = No
     a, c, r, j, g = par["ADAPChromatogramBuilder"], par["MassDetection"], par["MinimumSearchResolver"], par["JoinAligner"], par["GapFilling"]
     pol = par["polarita"].upper()
     scans = f'<parameter name="Scans"><parameter name="Polarity">{pol}</parameter><parameter name="MS level filter" selected="MS1, level = 1">1</parameter></parameter>'
-    passi = [
+    steps = [
         (M + "io.import_rawdata_mzml.MSDKmzMLImportModule",
          "<parameter name=\"File names\">" + "".join(f"<file>{escape(str(f.resolve()))}</file>" for f in files) + "</parameter>"),
         (M + "dataprocessing.featdet_massdetection.MassDetectionModule",
@@ -134,23 +134,23 @@ def batch_xml(files: list[Path], uscita: Path, par: dict, fasi: Path | None = No
          '<parameter name="Filter rows">ALL</parameter>'),
     ]
     if fasi is not None or isotopi:
-        passi = _con_fasi(passi, par, fasi, isotopi)
-    corpo = "".join(f'<batchstep method="{m}" parameter_version="{v}">{p}</batchstep>\n' for m, p in passi for v in [2 if 'MinimumSearch' in m else 1])
-    return f'<?xml version="1.0" encoding="UTF-8"?>\n<batch mzmine_version="3.9.0">\n{corpo}</batch>\n'
+        steps = _with_phases(steps, par, fasi, isotopi)
+    body = "".join(f'<batchstep method="{m}" parameter_version="{v}">{p}</batchstep>\n' for m, p in steps for v in [2 if 'MinimumSearch' in m else 1])
+    return f'<?xml version="1.0" encoding="UTF-8"?>\n<batch mzmine_version="3.9.0">\n{body}</batch>\n'
 
 
-def _esporta(percorso: str) -> tuple[str, str]:
+def _export(percorso: str) -> tuple[str, str]:
     return (M + "io.export_features_csv.CSVExportModularModule",
             FL + f'<parameter name="Filename"><current_file>{escape(percorso)}</current_file></parameter>'
             '<parameter name="Field separator">,</parameter><parameter name="Identification separator">;</parameter>'
             '<parameter name="Remove empty columns">false</parameter><parameter name="Filter rows">ALL</parameter>')
 
 
-def _con_fasi(passi: list, par: dict, fasi: Path | None, isotopi: bool) -> list:
+def _with_phases(steps: list, par: dict, fasi: Path | None, isotopi: bool) -> list:
     """Adds the exports after every stage (and, for `isotopi`, the isotope grouper after the resolver and nothing after it)."""
-    nomi = ["import", "massa", "adap", "risolutore", "join", "riempimento", "csv"]
+    names = ["import", "massa", "adap", "risolutore", "join", "riempimento", "csv"]
     out = []
-    for nome, passo in zip(nomi, passi):
+    for nome, step in zip(names, steps):
         if nome in ("join", "riempimento") and isotopi:
             continue
         if nome == "csv":
@@ -160,13 +160,13 @@ def _con_fasi(passi: list, par: dict, fasi: Path | None, isotopi: bool) -> list:
                             '<parameter name="Mobility tolerance" selected="false"/><parameter name="Monotonic shape">false</parameter>'
                             '<parameter name="Maximum charge">2</parameter><parameter name="Representative isotope">Most intense</parameter>'
                             '<parameter name="Never remove feature with MS2">false</parameter><parameter name="Original feature list">REMOVE</parameter>'))
-                out.append(_esporta(str(fasi / "isotopi_{}.csv")))
+                out.append(_export(str(fasi / "isotopi_{}.csv")))
             if fasi is None:
-                out.append(passo)
+                out.append(step)
             continue
-        out.append(passo)
+        out.append(step)
         if fasi is not None and nome in ("adap", "risolutore", "join", "riempimento") and not (isotopi and nome == "adap"):
-            out.append(_esporta(str(fasi / f"{nome}_{{}}.csv")))
+            out.append(_export(str(fasi / f"{nome}_{{}}.csv")))
     return out
 
 
@@ -189,8 +189,8 @@ def main() -> None:
     fs = corri.file_mzml(a.mzml_dir, a.solo)
     nat = corri.cartella_nativa(a.out_dir, "mzmine", a.config)
     uscita = nat / "feature_list.csv"
-    for vecchio in nat.glob("feature_list*.csv"):
-        vecchio.unlink()
+    for old in nat.glob("feature_list*.csv"):
+        old.unlink()
     (nat / "batch.xml").write_text(batch_xml(fs, uscita, par), encoding="utf-8")
     mm, jh = (Path(a.mzmine), Path(a.java_home)) if a.mzmine and a.java_home else installa_39()
     r = esegui_batch(nat / "batch.xml", mm, jh, nat / "tmp")

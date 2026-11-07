@@ -114,7 +114,7 @@ pub fn link_bytes(
             peaks_again: &mut again,
             open: &mut reopen,
         },
-        &MemBudget::mb(r.budget_mb),
+        &MemBudget::mb(r.budget.job_mb()),
         &mut |_| laps.push(clock.elapsed()),
     )?;
     let mut infusion = made

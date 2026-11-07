@@ -12,7 +12,7 @@ import numpy as np
 from . import ROOT, nativo
 from .lr_criteri import Mrm, classifica, livello_da_nome
 
-ESEMPIO_MRM = ROOT / "target" / "release" / "examples" / "nativo_mrm"
+EXAMPLE_MRM = ROOT / "target" / "release" / "examples" / "nativo_mrm"
 
 
 def indici_lr(mzml: list[Path], cartella: Path) -> list[str]:
@@ -43,7 +43,7 @@ def esegui_mrm(mzml: list[Path], uscita: Path) -> dict:
     """Runs the MRM example on the files (in this order); returns {'sha': {file: digest}, 'tabella': bytes of series.mzfeat}."""
     subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo_mrm"], cwd=ROOT, check=True)
     uscita.mkdir(parents=True, exist_ok=True)
-    subprocess.run([str(ESEMPIO_MRM), str(uscita), *map(str, mzml)], cwd=ROOT, check=True, capture_output=True)
+    subprocess.run([str(EXAMPLE_MRM), str(uscita), *map(str, mzml)], cwd=ROOT, check=True, capture_output=True)
     sha = {}
     for p in sorted(uscita.glob("*.mzfeat*")):
         import hashlib

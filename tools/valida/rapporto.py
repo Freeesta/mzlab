@@ -7,11 +7,11 @@ from pathlib import Path
 import numpy as np
 
 
-def _pulisci(x):
+def _clean(x):
     if isinstance(x, dict):
-        return {str(k): _pulisci(v) for k, v in x.items()}
+        return {str(k): _clean(v) for k, v in x.items()}
     if isinstance(x, (list, tuple)):
-        return [_pulisci(v) for v in x]
+        return [_clean(v) for v in x]
     if isinstance(x, (np.floating, float)):
         return None if not np.isfinite(x) else float(f"{float(x):.6g}")
     if isinstance(x, np.integer):
@@ -21,13 +21,13 @@ def _pulisci(x):
     return x
 
 
-def senza_prestazioni(rapporto: dict) -> dict:
+def without_performance(rapporto: dict) -> dict:
     return {k: v for k, v in rapporto.items() if k != "prestazioni"}
 
 
 def a_json(rapporto: dict, prestazioni: bool = True) -> str:
-    r = rapporto if prestazioni else senza_prestazioni(rapporto)
-    return json.dumps(_pulisci(r), indent=1, sort_keys=True, ensure_ascii=False) + "\n"
+    r = rapporto if prestazioni else without_performance(rapporto)
+    return json.dumps(_clean(r), indent=1, sort_keys=True, ensure_ascii=False) + "\n"
 
 
 def _pct(x):
@@ -84,7 +84,7 @@ def scrivi(cartella, rapporto: dict, prestazioni: bool = True) -> tuple[Path, Pa
     d.mkdir(parents=True, exist_ok=True)
     j, m = d / "rapporto.json", d / "rapporto.md"
     j.write_text(a_json(rapporto, prestazioni), encoding="utf-8")
-    m.write_text(a_markdown(rapporto if prestazioni else senza_prestazioni(rapporto)), encoding="utf-8")
+    m.write_text(a_markdown(rapporto if prestazioni else without_performance(rapporto)), encoding="utf-8")
     return j, m
 
 
@@ -113,16 +113,16 @@ def scrivi_cancello(cartella, c: dict, det: dict, cancello_json: str) -> list[Pa
     """Writes `cancello.json` (where the panel reads it: `cancello_json`) and, in `cartella`, the report with all the numbers (`cancello_rapporto.json` / `.md`)."""
     d = Path(cartella)
     d.mkdir(parents=True, exist_ok=True)
-    testo = json.dumps(c, indent=1, sort_keys=True, ensure_ascii=False) + "\n"
+    text = json.dumps(c, indent=1, sort_keys=True, ensure_ascii=False) + "\n"
     out = [Path(cancello_json), d / "cancello_rapporto.json", d / "cancello_rapporto.md"]
     out[0].parent.mkdir(parents=True, exist_ok=True)
-    out[0].write_text(testo, encoding="utf-8")
-    out[1].write_text(json.dumps(_pulisci({"cancello": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    out[0].write_text(text, encoding="utf-8")
+    out[1].write_text(json.dumps(_clean({"cancello": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
     out[2].write_text(cancello_markdown(c, det), encoding="utf-8")
     return out
 
 
-def cancello_tp_markdown(c: dict, det: dict) -> str:
+def gate_tp_markdown(c: dict, det: dict) -> str:
     """Summary of the gate of the TP view: the criteria with PASS / FAIL / not measured and the numbers of the raw view."""
     L = [f"# Gate of the TP view: crate {c['crate_version']}, {c['dataset']}, {c['data']}", "", f"TP view: **{'open' if c['vista_tp'] else 'closed'}**.", "",
          "| criterion | value | threshold | outcome |", "|---|---|---|---|"]
@@ -140,6 +140,6 @@ def scrivi_cancello_tp(cartella, c: dict, det: dict, cancello_tp_json: str) -> l
     out = [Path(cancello_tp_json), d / "cancello_tp_rapporto.json", d / "cancello_tp_rapporto.md"]
     out[0].parent.mkdir(parents=True, exist_ok=True)
     out[0].write_text(json.dumps(c, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
-    out[1].write_text(json.dumps(_pulisci({"cancello_tp": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
-    out[2].write_text(cancello_tp_markdown(c, det), encoding="utf-8")
+    out[1].write_text(json.dumps(_clean({"cancello_tp": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    out[2].write_text(gate_tp_markdown(c, det), encoding="utf-8")
     return out

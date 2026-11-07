@@ -18,7 +18,7 @@ GEN_TRUTH = {"tp1": 0, "isomero": 0, "tp2": 1}                                  
 LIVELLI_ALTI = ("1", "2a", "2b", "3")
 
 
-def _frazione(n: int, d: int):
+def _fraction(n: int, d: int):
     return None if d == 0 else n / d
 
 
@@ -31,7 +31,7 @@ def _cerca(tab, mz: float, rt: float | None = None):
     return -1 if len(idx) == 0 else int(idx[np.argmin(np.abs(tab.mz[idx] - mz))])
 
 
-def altezza_max(o) -> float:
+def height_max(o) -> float:
     """Largest height of the most abundant component of a synthetic ion over the files."""
     h = o.amp if o.clip is None else np.minimum(o.amp, o.clip)
     return float(np.max(h))
@@ -42,24 +42,24 @@ def tp_timololo(ioni: list[dict], serie: Serie, colonne_trattate: list[int]) -> 
     the candidates (the identity has a proof in favour: the list of the panel), and the median rank among the candidates in the order of the panel (points, then the largest treated area). The baseline is the
     mzFinder Python of V0, which counted rows of the table."""
     tab = serie.tabella
-    voci = [(str(x["id"]), float(x["mz"]), float(rt)) for x in ioni if not x.get("parent") for rt in (x.get("rt_obs") or [])]
+    items = [(str(x["id"]), float(x["mz"]), float(rt)) for x in ioni if not x.get("parent") for rt in (x.get("rt_obs") or [])]
     amax = tab.massimo(colonne_trattate)
-    punti = {int(i["id"]): i["totale"] for i in serie.identita}
-    cand = sorted((int(r) for r in serie.candidati), key=lambda r: (-punti[r], -amax[r], r))
-    rango = {r: n for n, r in enumerate(cand, 1)}
-    trovati = nei_cand = 0
-    ranghi = []
-    for _, mz, rt in voci:
+    points = {int(i["id"]): i["totale"] for i in serie.identita}
+    cand = sorted((int(r) for r in serie.candidati), key=lambda r: (-points[r], -amax[r], r))
+    rank = {r: n for n, r in enumerate(cand, 1)}
+    trovati = in_cand = 0
+    ranks = []
+    for _, mz, rt in items:
         r = _cerca(tab, mz, rt)
         i = _identita_di(serie, mz, rt)
         if r < 0 and i is None:
             continue
         trovati += 1
         r = int(i["id"]) if i is not None else r
-        if r in rango:
-            nei_cand += 1
-            ranghi.append(rango[r])
-    return {"righe": len(tab), "candidati": len(cand), "valutabili": len(voci), "trovati": trovati, "nei_candidati": nei_cand, "candidati_con_ipotesi": sum(1 for i in serie.identita if i["ipotesi"] is not None and i["totale"] > 0), "rango_candidati_mediano": float(np.median(ranghi)) if ranghi else None}
+        if r in rank:
+            in_cand += 1
+            ranks.append(rank[r])
+    return {"righe": len(tab), "candidati": len(cand), "valutabili": len(items), "trovati": trovati, "nei_candidati": in_cand, "candidati_con_ipotesi": sum(1 for i in serie.identita if i["ipotesi"] is not None and i["totale"] > 0), "rango_candidati_mediano": float(np.median(ranks)) if ranks else None}
 
 
 def _valle(o) -> float:
@@ -78,7 +78,7 @@ def ione_riportato(o, serie: Serie, per_id: dict) -> bool:
 
 def richiamo(c, serie: Serie, minimo: float, massimo: float = np.inf):
     """Share of the synthetic ions (parent, products, isomers) with a height in [minimo, massimo) that are reported (`ione_riportato`)."""
-    ioni = [o for o in c.ioni if o.ruolo in BASI and minimo <= altezza_max(o) < massimo]
+    ioni = [o for o in c.ioni if o.ruolo in BASI and minimo <= height_max(o) < massimo]
     if not ioni:
         return None, 0
     per_id = {o.id: o for o in c.ioni}
@@ -88,18 +88,18 @@ def richiamo(c, serie: Serie, minimo: float, massimo: float = np.inf):
 def isomeri_separati(c, tab):
     """Pairs of isomers with a valley under 50 % of the lower apex (declared in the truth): share whose two members have each a row of their own."""
     per_id = {o.id: o for o in c.ioni}
-    coppie = []
+    pairs = []
     for o in c.ioni:
         if o.ruolo == "isomero" and o.isomero_di and o.id < o.isomero_di:
             valle = _valle(o)
-            altro = per_id[o.isomero_di]
-            if valle < 0.5 and min(altezza_max(o), altezza_max(altro)) >= 10 * FLOOR:
-                coppie.append((o, altro))
+            other = per_id[o.isomero_di]
+            if valle < 0.5 and min(height_max(o), height_max(other)) >= 10 * FLOOR:
+                pairs.append((o, other))
     ok = 0
-    for a, b in coppie:
+    for a, b in pairs:
         ia, ib = abbina([a.mz, b.mz], [a.rt, b.rt], tab.mz, tab.rt, PPM, RT_TOL)
         ok += int(len(ia) == 2 and ib[0] != ib[1])
-    return _frazione(ok, len(coppie)), len(coppie)
+    return _fraction(ok, len(pairs)), len(pairs)
 
 
 def errore_area(c, serie: Serie):
@@ -133,12 +133,12 @@ def righe_false_rumore(c, serie: Serie):
         return 0.0, 0
     mz_n, rt_n = c.rumore[0], c.rumore[1]
     fondo = np.array([m * (1 + d) for _, m, _, _ in c.fondo for d in (0.0, -2.5e-5, 2.5e-5)])
-    falsi = 0
+    false = 0
     for r in righe:
-        vero_rumore = bool(np.any((np.abs(mz_n - tab.mz[r]) <= tab.mz[r] * 2 * PPM * 1e-6) & (np.abs(rt_n - tab.rt[r]) <= 2 * RT_TOL)))
-        vero_fondo = bool(np.any(np.abs(fondo - tab.mz[r]) <= tab.mz[r] * 2 * PPM * 1e-6))
-        falsi += int(not (vero_rumore or vero_fondo))
-    return falsi / len(righe), len(righe)
+        true_noise = bool(np.any((np.abs(mz_n - tab.mz[r]) <= tab.mz[r] * 2 * PPM * 1e-6) & (np.abs(rt_n - tab.rt[r]) <= 2 * RT_TOL)))
+        true_background = bool(np.any(np.abs(fondo - tab.mz[r]) <= tab.mz[r] * 2 * PPM * 1e-6))
+        false += int(not (true_noise or true_background))
+    return false / len(righe), len(righe)
 
 
 def _identita_di(serie: Serie, mz: float, rt: float):
@@ -163,13 +163,13 @@ def famiglie_giuste(c, serie: Serie):
             continue
         totale += 1
         giusti += int(any(abs(m["mz"] - o.mz) <= o.mz * PPM * 1e-6 and abs(m["rt"] - base.rt) <= RT_TOL for m in ib["membri"]))
-    return _frazione(giusti, totale), totale
+    return _fraction(giusti, totale), totale
 
 
 def isf_senza_ms2(c, serie: Serie):
     """In-source fragments of the truth that have no fragment in the MS2 of the parent (`isf_finto`): share declared as ISF of that parent."""
     per_id = {o.id: o for o in c.ioni}
-    dichiarati = totale = 0
+    declared = totale = 0
     for o in c.ioni:
         if o.ruolo != "isf_finto" or o.progenitore not in per_id:
             continue
@@ -178,27 +178,27 @@ def isf_senza_ms2(c, serie: Serie):
         if ib is None:
             continue
         totale += 1
-        dichiarati += int(any(m["ruolo"] == "isf" and abs(m["mz"] - o.mz) <= o.mz * PPM * 1e-6 for m in ib["membri"]))
-    return _frazione(dichiarati, totale), totale
+        declared += int(any(m["ruolo"] == "isf" and abs(m["mz"] - o.mz) <= o.mz * PPM * 1e-6 for m in ib["membri"]))
+    return _fraction(declared, totale), totale
 
 
 def esche_alte(c, serie: Serie):
     """Decoys (hypotheses of invented rules, no signal): share whose m/z falls in an identity that reaches a level better than 4."""
-    esche = [o for o in c.ioni if o.ruolo == "esca"]
-    if not esche:
+    decoys = [o for o in c.ioni if o.ruolo == "esca"]
+    if not decoys:
         return None, 0
     alte = 0
-    for o in esche:
+    for o in decoys:
         alte += int(any(i["livello_max"] in LIVELLI_ALTI and any(abs(m["mz"] - o.mz) <= o.mz * PPM * 1e-6 for m in i["membri"]) for i in serie.identita))
-    return alte / len(esche), len(esche)
+    return alte / len(decoys), len(decoys)
 
 
-def _parametro(identita: dict | None, nome: str):
+def _parametro(identita: dict | None, name: str):
     if identita is None:
         return None
     for p in identita["contributi"]:
         if p["tipo"] == "cinetica":
-            return p["parametri"].get(nome)
+            return p["parametri"].get(name)
     return None
 
 
@@ -208,15 +208,15 @@ def cinetica(c, serie: Serie):
     forma = gen = totale = 0
     per_id = {o.id: o for o in c.ioni}
     for o in c.ioni:
-        if o.ruolo not in GEN_TRUTH or o.amp is None or altezza_max(o) < 10 * FLOOR:
+        if o.ruolo not in GEN_TRUTH or o.amp is None or height_max(o) < 10 * FLOOR:
             continue
         i = _identita_di(serie, o.mz, o.rt) or (_identita_di(serie, per_id[o.isomero_di].mz, per_id[o.isomero_di].rt) if o.isomero_di in per_id else None)
         shape, g = _parametro(i, "shape"), _parametro(i, "generation")
         totale += 1
-        istantanea = o.forma == "piatto" and shape is not None and int(shape) == 0 and _parametro(i, "coupling") == 3       # formation too fast to resolve: flat
-        forma += int(shape is not None and (int(shape) in SHAPE_TRUTH.get(o.forma, ()) or istantanea))
+        snapshot = o.forma == "piatto" and shape is not None and int(shape) == 0 and _parametro(i, "coupling") == 3       # formation too fast to resolve: flat
+        forma += int(shape is not None and (int(shape) in SHAPE_TRUTH.get(o.forma, ()) or snapshot))
         gen += int(g is not None and int(g) in (GEN_TRUTH[o.ruolo], 2))
-    return _frazione(forma, totale), _frazione(gen, totale), totale
+    return _fraction(forma, totale), _fraction(gen, totale), totale
 
 
 def purezza(c, serie: Serie):
@@ -239,25 +239,25 @@ def purezza(c, serie: Serie):
     return float(np.median(e)), float(np.mean(e <= 0.05)), len(e)
 
 
-def _ranghi(x: np.ndarray) -> np.ndarray:
+def _ranks(x: np.ndarray) -> np.ndarray:
     o = np.argsort(x, kind="stable")
     r = np.empty(len(x))
     r[o] = np.arange(len(x))
     return r
 
 
-def concordanza_mzmine(nativa, mzmine, colonne, soglia_area: float) -> dict:
+def concordanza_mzmine(nativa, mzmine, colonne, threshold_area: float) -> dict:
     """Native table against an mzmine table on the rows of mzmine with a largest treated area of at least 10 x the threshold: recall, precision, Spearman
     correlation of the log areas and median |log2 ratio| after a single scale factor (match within 5 ppm and 0.1 min)."""
     am, an = mzmine.massimo(colonne), nativa.massimo(colonne)
-    fm, fn = np.flatnonzero(am >= 10 * soglia_area), np.flatnonzero(an >= 10 * soglia_area)
+    fm, fn = np.flatnonzero(am >= 10 * threshold_area), np.flatnonzero(an >= 10 * threshold_area)
     if len(fm) == 0 or len(fn) == 0:
         return {"righe_mzmine": len(fm), "righe_native": len(fn)}
     ia, ib = abbina(mzmine.mz[fm], mzmine.rt[fm], nativa.mz[fn], nativa.rt[fn], PPM, 0.1)
     out = {"righe_mzmine": len(fm), "righe_native": len(fn), "abbinate": int(len(ia)), "richiamo": len(ia) / len(fm), "precisione": len(ia) / len(fn)}
     if len(ia) >= 3:
         x, y = np.log(am[fm][ia]), np.log(an[fn][ib])
-        out["spearman"] = float(np.corrcoef(_ranghi(x), _ranghi(y))[0, 1])
+        out["spearman"] = float(np.corrcoef(_ranks(x), _ranks(y))[0, 1])
         d = (y - x) / np.log(2)
         out["log2_mediano"] = float(np.median(np.abs(d - np.median(d))))
     return out
@@ -288,7 +288,7 @@ def concordanza_mzmine_ioni(nativa, mzmine, colonne, altezza_min: float) -> dict
     ok = (am[ia] > 0) & (an[ib] > 0)
     if int(ok.sum()) >= 3:
         x, y = np.log(am[ia][ok]), np.log(an[ib][ok])
-        out["spearman"] = float(np.corrcoef(_ranghi(x), _ranghi(y))[0, 1])
+        out["spearman"] = float(np.corrcoef(_ranks(x), _ranks(y))[0, 1])
         d = (y - x) / np.log(2)
         out["log2_mediano"] = float(np.median(np.abs(d)))
         out["log2_centrato"] = float(np.median(np.abs(d - np.median(d))))

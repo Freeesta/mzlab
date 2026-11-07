@@ -14,24 +14,29 @@ const MAX_SCANS: usize = 60;
 
 impl<R: ReadAt> Routes<R> {
     /// m/z and intensity of the scans at the section positions `positions`, each in table order (m/z ascending).
-    fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
+    pub fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
         let mut out = vec![(Vec::new(), Vec::new()); positions.len()];
-        let at: std::collections::HashMap<usize, usize> = positions.iter().enumerate().map(|(k, &p)| (p, k)).collect();
-        let n = self.idx.sections[si].n_peaks;
-        self.idx.each_peak(si, 0, n, |p, mz, y| {
-            if let Some(&k) = at.get(&p) {
-                out[k].0.push(mz);
-                out[k].1.push(y);
+        if positions.is_empty() {
+            return Ok(out);
+        }
+        let mut lut = vec![u32::MAX; self.idx.sections[si].n_scans];
+        for (k, &p) in positions.iter().enumerate() {
+            if p < lut.len() {
+                lut[p] = k as u32;
             }
+        }
+        self.idx.each_peak_for(si, &lut, |k, mz, y| {
+            out[k].0.push(mz);
+            out[k].1.push(y);
         })?;
         Ok(out)
     }
 
     /// `Item._step`: the spacing of the points, read from up to 20 scans in the middle of the run (the shortest gap above 1e-4 Da, to 4 decimals).
-    fn point_step(&mut self, si: usize) -> Result<Option<f64>> {
-        let ids = self.idx.arrays(si)?.scan_ids.clone();
-        let mid = ids.len() / 2;
-        let positions: Vec<usize> = (mid..ids.len().min(mid + 20)).collect();
+    pub fn point_step(&mut self, si: usize) -> Result<Option<f64>> {
+        let n_scans = self.idx.arrays(si)?.scan_ids.len();
+        let mid = n_scans / 2;
+        let positions: Vec<usize> = (mid..n_scans.min(mid + 20)).collect();
         for pts in self.scan_points(si, &positions)? {
             if pts.0.len() > 20 {
                 return Ok(step_of(&pts.0));
@@ -40,12 +45,26 @@ impl<R: ReadAt> Routes<R> {
         // A converter that leaves the zero bins out (the `.wiff` reader) gives baseline scans of a few points: when none of the 20 has more than 20, the
         // spacing is read from the scans of the whole section that do (up to 20, the shortest gap of all). When no scan has that many (the product-ion
         // and EPI scans of a 3200 QTRAP keep a handful of points each), the shortest gap of all the scans with two points or more.
-        let all: Vec<usize> = (0..ids.len()).collect();
+        // Streams `(pos, mz)` in `O(n_scans)` memory instead of loading all scans' peak vectors into RAM at once.
+        let n_peaks = self.idx.sections[si].n_peaks;
+        let mut last = vec![f64::NAN; n_scans];
+        let mut min_gap = vec![f64::INFINITY; n_scans];
+        let mut count = vec![0u32; n_scans];
+        self.idx.each_mz(si, 0, n_peaks, |p, mz| {
+            if p < n_scans {
+                let d = mz - last[p];
+                if d > 1e-4 && d < min_gap[p] {
+                    min_gap[p] = d;
+                }
+                last[p] = mz;
+                count[p] += 1;
+            }
+        })?;
         let (mut gap, mut sparse) = (f64::INFINITY, f64::INFINITY);
         let mut used = 0;
-        for pts in self.scan_points(si, &all)? {
-            let g = pts.0.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min);
-            if pts.0.len() > 20 && used < 20 {
+        for p in 0..n_scans {
+            let g = min_gap[p];
+            if count[p] > 20 && used < 20 {
                 used += 1;
                 gap = gap.min(g);
             }
@@ -55,7 +74,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The spacing of the profile points of `level` when ALL its scans are profile and the file can be answered here.
-    pub(crate) fn profile_level(&mut self, level: u8) -> Result<Option<(usize, f64)>> {
+    pub fn profile_level(&mut self, level: u8) -> Result<Option<(usize, f64)>> {
         let of_level: Vec<&Scan> = self.idx.scans.iter().filter(|s| s.level == level).collect();
         let pool: Vec<&Scan> = if of_level.is_empty() { self.idx.scans.iter().collect() } else { of_level };
         if pool.is_empty() || pool.iter().any(|s| !s.profile) || of_level_count(&self.idx.scans, level) == 0 {

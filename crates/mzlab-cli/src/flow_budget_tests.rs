@@ -69,6 +69,35 @@ fn a_budget_that_cannot_hold_the_table_is_refused_in_order() {
     assert_eq!(o.code, 1, "{}", o.stderr);
     let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
     assert!(prov.contains("error.memoryBudget"), "{prov}");
+    // the refusal is said in words with the next step, under the key and its numbers
+    assert!(
+        o.stderr
+            .contains("give more working memory with --budget-mb N"),
+        "{}",
+        o.stderr
+    );
+}
+
+#[test]
+fn an_index_refused_for_a_dense_mz_range_names_the_budget_to_set() {
+    let (dir, _) = fixture("budget_index");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let o = flow_run(&[
+        p(&plan),
+        "--in",
+        p(&data),
+        "--out",
+        p(&out),
+        "--set",
+        "idx.budget=1",
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    assert!(
+        o.stderr.contains("the densest 1-Da m/z range")
+            && o.stderr.contains("try --set idx.budget="),
+        "{}",
+        o.stderr
+    );
 }
 
 #[test]
@@ -101,4 +130,17 @@ fn the_family_mode_gives_the_same_bytes_with_and_without_a_budget() {
         "{}",
         text(&small, "prov.json")
     );
+}
+
+#[test]
+fn the_automatic_budget_is_shared_by_the_workers_and_budget_mb_is_kept_as_given() {
+    let auto = crate::flow_out::Budget::auto();
+    auto.run_with(4);
+    let shared = mzlab_core::budget_auto::share_mb(auto.mb, 4);
+    assert_eq!(auto.job_mb(), shared);
+    auto.run_with(1);
+    assert_eq!(auto.job_mb(), auto.mb);
+    let given = crate::flow_out::Budget::given(24.0);
+    given.run_with(4);
+    assert_eq!(given.job_mb(), 24.0);
 }

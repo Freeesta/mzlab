@@ -49,11 +49,26 @@ fn take_extra(
     )))
 }
 
-/// Deletes the files of a cache entry that is no longer used.
+/// Deletes the files of a cache entry that is no longer used, the weak candidates of a detection with them.
 fn forget(work: &Path, e: &Entry) {
     for file in std::iter::once(&e.file).chain(e.extra.iter().map(|x| &x.1)) {
         let _ = std::fs::remove_file(work.join(file));
     }
+    let _ = std::fs::remove_file(work.join(weak_name(&e.file)));
+}
+
+/// The file beside a detection that holds its weak candidates (`flow_base::detect_job`).
+fn weak_name(file: &str) -> String {
+    format!("{file}.weak")
+}
+
+/// Whether the weak candidates at `path` are there and read as a stored table (a truncated or changed file does not).
+fn weak_reads(path: &Path) -> bool {
+    let Ok(b) = std::fs::read(path) else {
+        return false;
+    };
+    let key = mzlab_feat::weakfile::stored_key(&b).unwrap_or_default();
+    matches!(mzlab_feat::weakfile::from_bytes(&b, key), Ok(Some(_)))
 }
 
 fn s(v: &str) -> Value {
@@ -115,6 +130,10 @@ impl Cache {
         let e = self.old.get(key)?;
         let a: Artifact = r.keep(self.work.join(&e.file), e.ty).ok()?;
         if a.sha256 != e.sha256 {
+            return None;
+        }
+        // the alignment and the gap filling read the weak candidates of a detection: without them the detection is made again
+        if job.step.id == "features.detect" && !weak_reads(&self.work.join(weak_name(&e.file))) {
             return None;
         }
         if let Some(l) = &e.lineage {
