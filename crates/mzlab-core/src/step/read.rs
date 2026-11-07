@@ -78,6 +78,14 @@ fn ports(v: Option<&Value>) -> Result<Vec<Port>> {
                 let param = text("param").zip(text("not"));
                 text("input").map(|input| WrittenIf { input, param })
             });
+            port.format = p.get("format").and_then(Value::str).map(leak);
+            port.formats = p
+                .get("formats")
+                .map(Value::arr)
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|f| f.str().map(leak))
+                .collect();
             Ok(port)
         })
         .collect()
