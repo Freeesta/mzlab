@@ -22,7 +22,7 @@ def dims(path):
 r = Run(port=8860, wd="/tmp/wd_safari_canvas")
 try:
     with sync_playwright() as p:
-        pg = r.page(p); pg.add_init_script(CAP); pg.reload(); ready(pg)
+        pg = r.page(p); ready(pg); pg.evaluate(CAP)          # a prototype stub, set after the load: a reload right after the first load had WebKit refuse the engine worker (COEP)
         def drawing():
             pg.evaluate("setView('draw')"); attendi(pg, "TPDraw.ready()", 60000)
             pg.evaluate(f"document.getElementById('kframe').contentWindow.ketcher.setMolecule('{MOL}')"); frames(pg, 30)
