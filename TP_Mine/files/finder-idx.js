@@ -69,6 +69,11 @@ async function stubIndexed(name, held, natives, cen, ask) {
   return false;
 }
 
+/** a tablet or a phone (as the pool of the engine, rust-worker.js: in a worker `maxTouchPoints` is not known) @param {any} nav */
+export const smallDevice = nav => { try { return /iPad|iPhone|Android/i.test(nav.userAgent || "") || (nav.platform === "MacIntel" && nav.maxTouchPoints > 1); } catch (_) { return false; } };
+/** the size and the peak budget (MB) of the pool of index builders: 2 workers of 32 MB at most on a tablet or a phone @param {any} nav @param {(small: boolean, cores: number) => number} poolSize */
+export const indexPool = (nav, poolSize) => { const small = smallDevice(nav); return { size: poolSize(small, nav.hardwareConcurrency), budget: small ? 32 : 64 }; };
+
 /** @param {string} base @param {(text: string) => void} say @param {(key: string, params: Record<string, string>) => void} [notify] */
 export function createIngress(base, say, notify = () => {}) {
   /** @type {Promise<any> | null} */ let lib = null;
@@ -81,7 +86,7 @@ export function createIngress(base, say, notify = () => {}) {
     const module = await WebAssembly.compileStreaming(fetch(url));
     const [wasm, pools, arch] = await Promise.all([import(base + "wasm/mzlab_wasm.js"), import(base + "idxpool.js"), import(base + "archivio.js")]);
     await wasm.default({ module_or_path: module });
-    const pool = pools.createPool({ workerUrl: new URL(base + "idx-worker.js"), moduleUrl: url, module, size: pools.poolSize(false, navigator.hardwareConcurrency), budget: 64 });
+    const pool = pools.createPool({ workerUrl: new URL(base + "idx-worker.js"), moduleUrl: url, module, ...indexPool(navigator, pools.poolSize) });
     return { wasm, pool, arch };
   })().catch(e => { lib = null; throw e; }));
 

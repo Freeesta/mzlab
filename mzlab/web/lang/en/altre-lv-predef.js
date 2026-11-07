@@ -49,6 +49,7 @@ I18N.add("en", {
   "predef.settings.title": "Offer again to make mzLab the default app for .mzML and Thermo .raw files",
   "memory.phase.table": "scan table",
   "memory.phase.index": "index",
+  "memory.phase.indexPeaks": "index peaks",
   "pol.positive": "ESI positive",
   "pol.negative": "ESI negative",
   "pol.mixed": "ESI positive and negative in the same file",

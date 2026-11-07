@@ -63,7 +63,7 @@ impl Membri {
         })
     }
 
-    fn fileset(&self) -> FileSet {
+    pub(crate) fn fileset(&self) -> FileSet {
         let membri = self
             .names
             .iter()
@@ -291,7 +291,7 @@ impl Spill for JsSpill {
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
 /// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`contato.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
-/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::mancanti`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`). `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
+/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::mancanti`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -304,7 +304,7 @@ pub fn build_mzidx_native(
     write: Function,
     budget_mb: u32,
     phase: Function,
-    prints: Option<js_sys::Array>,
+    prints: JsValue,
     spill_put: Option<Function>,
     spill_get: Option<Function>,
     write_cen: Option<Function>,
@@ -313,23 +313,8 @@ pub fn build_mzidx_native(
     let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
     let m = Membri::new(names, sizes, read)?;
     let mut fs = m.fileset();
-    // the fingerprints taken while the members were copied (`Passata`): [sha256, sha1, probe] of each; without them (or not matching) the members are read here
-    let given: Vec<String> = prints.map_or(vec![], |a| {
-        a.iter()
-            .map(|v| v.as_string().unwrap_or_default())
-            .collect()
-    });
-    let given: Vec<(String, String, String)> = given
-        .chunks_exact(3)
-        .map(|c| (c[0].clone(), c[1].clone(), c[2].clone()))
-        .collect();
-    let impronte = match upload::impronte_note(&mut fs, &given) {
-        Some(i) => i,
-        None => {
-            tell(1);
-            upload::impronte(&mut fs).map_err(|e| error_json(&e))?
-        }
-    };
+    let impronte = crate::impronte::Impronte::nuove(&mut fs, &prints, &tell)?;
+    let mut membri = || impronte.date(|| m.fileset());
     let c = c as usize;
     let mut l = crate::contato::apri(fs, |fs| m.apri_fs(fs), &tell, step, c)?;
     let cm = (c, l.mancanti(c));
@@ -341,7 +326,7 @@ pub fn build_mzidx_native(
     let spill = spill.as_mut().map(|s| s as &mut dyn Spill);
     // a profile sample that the page also wants as centroids: both indexes from one decoding of the scans
     if let Some(wc) = write_cen.filter(|_| !centroid && primo_ms1_profilo(&mut *l, c)) {
-        return doppio(l, cm, impronte, name, out, wc, budget_mb, spill, &tell);
+        return doppio(l, cm, &mut membri, name, out, wc, budget_mb, spill, &tell);
     }
     let mut l = if centroid {
         lettori_centroidi::centroidato(l)
@@ -352,7 +337,7 @@ pub fn build_mzidx_native(
     let (st, sha256) = upload::indicizza_lettore_con(
         &mut *l,
         c,
-        &mut || Ok(impronte.clone()),
+        &mut membri,
         name,
         &mut out,
         (budget_mb as usize) << 20,
@@ -372,7 +357,7 @@ pub fn build_mzidx_native(
 fn doppio(
     l: Box<dyn mzlab_core::lettori::Lettore>,
     (c, missing): (usize, usize),
-    impronte: Vec<upload::Impronta>,
+    membri: &mut dyn FnMut() -> mzlab_core::Result<Vec<upload::Impronta>>,
     name: &str,
     mut out: Accorpa<JsOutput>,
     write_cen: Function,
@@ -386,7 +371,7 @@ fn doppio(
     let ((st, sha256), (sc, _)) = upload::indicizza_lettore_doppio(
         &mut lc,
         c,
-        &mut || Ok(impronte.clone()),
+        membri,
         name,
         &mut out,
         &mut out_cen,

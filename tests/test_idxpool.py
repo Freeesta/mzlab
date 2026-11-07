@@ -10,7 +10,7 @@ JS = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "idxpool.js"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 PRELUDE = f"""
-import {{ createPool, poolSize }} from {JS.as_uri()!r};
+import {{ createPool, poolSize, builderBudget }} from {JS.as_uri()!r};
 const log = [], modules = [], seen = [];
 let live = 0, maxLive = 0;
 // script(job name, attempt) -> "done" | "die" | "mem" | "unavail" | "fail"
@@ -27,7 +27,7 @@ function fake(script) {{
       setTimeout(() => {{
         if (this.dead) return;
         const msg = {{ done: {{ op: "done", stats: {{ passes: 1 }} }}, mem: {{ op: "error", text: '{{"error_key":"error.memoryBudget","params":{{}}}}', fatal: false }},
-                      plan: {{ op: "error", text: '{{"error_key":"error.memoryBudget","params":{{"fase":"index","stima_mb":"139","budget_mb":"32","libero_mb":"32","eccesso_mb":"107"}}}}', fatal: false }},
+                      plan: {{ op: "error", text: '{{"error_key":"error.memoryBudget","params":{{"fase":"indexPeaks","stima_mb":"139","budget_mb":"64","libero_mb":"64","eccesso_mb":"75"}}}}', fatal: false }},
                       die: {{ op: "error", text: "unreachable", fatal: true }}, fail: {{ op: "error", text: '{{"error_key":"err.file.xml","params":{{}}}}', fatal: false }},
                       unavail: {{ op: "unavailable", text: "no wasm" }} }}[act];
         this.onmessage({{ data: msg }});
@@ -46,6 +46,12 @@ def run(body):
     r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, encoding="utf-8")
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout.strip().splitlines()[-1])
+
+
+def test_builder_budget_is_a_share_of_the_engine_budget_never_below_todays_default():
+    # no policy yet: the pool's default; tablet at 192 MB with 2 workers -> 64; computer at 2048 with 4 -> 409; at 3072 -> 512 (the top); a small engine budget keeps 64
+    got = run("console.log(JSON.stringify([builderBudget(0, false, 4) ?? null, builderBudget(192, true, 2), builderBudget(2048, false, 4), builderBudget(3072, false, 4), builderBudget(192, false, 4), builderBudget(64, true, 2)]))")
+    assert got == [None, 64, 409, 512, 64, 32]
 
 
 def test_pool_size_rule():
@@ -89,12 +95,14 @@ def test_memory_budget_halves_the_pool_and_the_budget_then_gives_up_once():
     got = run("""
 await out(async () => {
   const notes = [];
-  const p = createPool({ workerUrl: "x", size: 4, budget: 64, notify: k => notes.push(k), WorkerClass: fake((n, k) => n === "big" ? "mem" : "done") });
+  const p = createPool({ workerUrl: "x", size: 4, budget: 64, notify: (k, q) => notes.push([k, q]), WorkerClass: fake((n, k) => n === "big" ? "mem" : "done") });
   const r = await p.build(job("big"));
   return { r: r.reason, limit: p.limit, notes, log };
 });""")
     # the pool is whole again once it has nothing to do: one file that could not reserve memory does not slow the rest of the session
-    assert got["r"] == "memory" and got["limit"] == 4 and got["notes"] == ["error.memoryBudget"] * 2
+    # one notice per lowering, with the numbers the Diagnostics log keeps (the file's own row says why it failed)
+    assert got["r"] == "memory" and got["limit"] == 4
+    assert got["notes"] == [["error.poolLowered", {"from": 4, "to": 2, "mb": 32}], ["error.poolLowered", {"from": 2, "to": 1, "mb": 32}]]
     assert got["log"] == ["start big#1 b64", "start big#2 b32"]
 
 
@@ -120,8 +128,8 @@ await out(async () => {
   const r = await p.build(job("dense"));
   return { r: r.reason, params: JSON.parse(r.text).params, limit: p.limit, notes, log };
 });""")
-    assert got["r"] == "memory" and got["limit"] == 4 and got["log"] == ["start dense#1 b32"]
-    assert got["params"]["fase"] == "index" and got["params"]["stima_mb"] == "139"
+    assert got["r"] == "memory" and got["limit"] == 4 and got["log"] == ["start dense#1 b32"] and got["notes"] == []
+    assert got["params"]["fase"] == "indexPeaks" and got["params"]["stima_mb"] == "139"
 
 
 def test_no_wasm_means_unavailable_for_every_job():
@@ -274,3 +282,26 @@ await out(async () => {
   return { a: a.reason, offThen, soon: soon.reason, later: later.ok, off: p.unavailable() };
 });""")
     assert got == {"a": "unavailable", "offThen": True, "soon": "unavailable", "later": True, "off": False}
+
+
+def test_a_tablet_the_page_names_gets_a_gate_of_two_workers_even_if_the_worker_took_it_for_a_computer():
+    # an iPad with the Mac user agent: in a worker `maxTouchPoints` does not exist, so only the policy of the page knows it is small
+    got = run("""
+import { makeGate, fitGate } from %r;
+await out(async () => {
+  const gate = makeGate(poolSize(false, 8));
+  const before = gate.size;
+  fitGate(gate, true, 8);
+  const p = createPool({ workerUrl: "x", size: 4, gate, WorkerClass: fake(() => "done") });
+  const rs = await Promise.all("abcde".split("").map(n => p.build(job(n))));
+  const pc = makeGate(4); fitGate(pc, false, 8);
+  return { before, after: gate.size, ok: rs.every(r => r.ok), maxLive, computer: pc.size };
+});""" % JS.as_uri())
+    assert got == {"before": 4, "after": 2, "ok": True, "maxLive": 2, "computer": 4}
+
+
+def test_the_engine_takes_the_size_of_the_device_from_the_policy_of_the_page():
+    src = (JS.parent / "rust-worker.js").read_text(encoding="utf-8")
+    policy = src[src.index("function applyPolicy("):]
+    policy = policy[: policy.index("\n}\n")]
+    assert "fitGate(gate, true" in policy and "m.small" in policy

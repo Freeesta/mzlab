@@ -101,7 +101,7 @@ const RESET = (function () {
     d.addEventListener("close", () => d.remove());
     d.showModal(); /** @type {HTMLElement | null} */ (d.querySelector(".rs-cancel"))?.focus();
   }
-  // ---- once: «the files stay in the browser» (disattivato: nessun popup)
+  // ---- once: «the files stay in the browser» (off: no popup)
   function remind() {
   }
   // the desktop app calls this once at start (desktop-shim.js): the first page of a new run starts clean; a reload of the page in the same run keeps everything.
