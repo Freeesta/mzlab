@@ -1,6 +1,7 @@
 # Misure prima/dopo dei moduli .wasm
 Una riga per modifica: byte prima → dopo (dopo `wasm-bindgen` e `wasm-opt -O3 @motore`, binaryen 133, salvo dove la riga dice altro) e tetto, che sta in `tools/build_*_wasm.sh` (`docs/agenti/wasm-tetti.md`). I valori del passo «size» della CI fanno fede.
 
+- **`features.detect@2`, `max_gap` in missed scans** (`flow::migrate` row `features.detect` 1 → 2, distance `max_gap + 1` in `channels.rs`): bytes of `tools/cargo_wasm.sh build --release` before `wasm-opt`: `hr` 3 761 105 → 3 761 813 B (+708, +0.02 %), `rotte` 1 484 478 → 1 485 150 B (+672, +0.05 %); `llm` and engine identical; no cap changes.
 - **features.group, coppie già legate per bisezione** (`ionnet::group`, elenco ordinato con `sortc::by` al posto della scansione degli archi): `flowtab` prima di `wasm-opt` 1 058 595 → 1 061 186 B (+2 591, +0,24 %); un `HashSet` costava +12 351 B. Tetto standard invariato, il passo «size» della CI fa fede.
 - **Matrice DAD letta una volta** (`Mzml::dad_memo` in `mzml_dad.rs`, spettri `MS:1000804`): motore 2 033 700 → 2 035 249 B dopo `wasm-opt -O3 @motore` (+1 549 B, +0,08 %), sotto il tetto 2 174 976; nessun tetto cambia.
 - **Lettori, guardia dei numeri non finiti** (`finiti::Finiti` in `mzlab_lettori::apri_nudo`, `SrmDaScansioni` che inoltra profilo e testata leggera, valori di MS-Numpress controllati), byte dopo `wasm-bindgen` 0.2.129 e `tools/wasm_opt.sh`, tetti invariati:

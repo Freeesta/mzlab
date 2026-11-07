@@ -76,7 +76,9 @@ fn fixture() -> (PathBuf, Vec<(String, Vec<u8>)>) {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_max_gap_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("data")).unwrap();
-    let files: Vec<(String, Vec<u8>)> = (0..3).map(|s| (format!("g{s}.mzML"), mzml_gaps(s))).collect();
+    let files: Vec<(String, Vec<u8>)> = (0..3)
+        .map(|s| (format!("g{s}.mzML"), mzml_gaps(s)))
+        .collect();
     for (n, b) in &files {
         std::fs::write(dir.join("data").join(n), b).unwrap();
     }
@@ -96,7 +98,12 @@ fn tables(dir: &Path, tag: &str, plan: &str) -> Vec<(String, Vec<u8>)> {
             let n = f.to_string_lossy();
             n.ends_with(".mzfeat") || n.ends_with(".mzfeatf") || n.ends_with(".weak")
         })
-        .map(|f| (f.file_name().unwrap().to_string_lossy().into_owned(), std::fs::read(&f).unwrap()))
+        .map(|f| {
+            (
+                f.file_name().unwrap().to_string_lossy().into_owned(),
+                std::fs::read(&f).unwrap(),
+            )
+        })
         .collect();
     v.sort();
     v
@@ -115,9 +122,17 @@ fn a_detect_1_plan_with_scan_distance_n_gives_the_bytes_of_detect_2_with_n_minus
     assert_eq!(default, tables(&dir, "new_1", &plan(2, r#"{"max_gap":1}"#)));
     let mut seen: Vec<Vec<u8>> = Vec::new();
     for n in 1..=4u32 {
-        let new = tables(&dir, &format!("new_{n}"), &plan(2, &format!(r#"{{"max_gap":{}}}"#, n - 1)));
+        let new = tables(
+            &dir,
+            &format!("new_{n}"),
+            &plan(2, &format!(r#"{{"max_gap":{}}}"#, n - 1)),
+        );
         assert_eq!(
-            tables(&dir, &format!("old_{n}"), &plan(1, &format!(r#"{{"max_gap":{n}}}"#))),
+            tables(
+                &dir,
+                &format!("old_{n}"),
+                &plan(1, &format!(r#"{{"max_gap":{n}}}"#))
+            ),
             new,
             "old {n}"
         );
@@ -126,10 +141,20 @@ fn a_detect_1_plan_with_scan_distance_n_gives_the_bytes_of_detect_2_with_n_minus
         std::fs::create_dir_all(&desk).unwrap();
         let text = plan(1, &format!(r#"{{"max_gap":{n}}}"#));
         crate::flow::run_plan(text.as_bytes(), &dir.join("data"), &desk, 1, None).unwrap();
-        assert_eq!(std::fs::read(desk.join("gap.mzfeat")).unwrap(), get(&new, "gap.mzfeat"), "desktop {n}");
+        assert_eq!(
+            std::fs::read(desk.join("gap.mzfeat")).unwrap(),
+            get(&new, "gap.mzfeat"),
+            "desktop {n}"
+        );
         // the browser runner: the layers of the migrated plan
-        let layers = format!(r#"[{{"step":"features.detect","params":{{"max_gap":{}}}}}]"#, n - 1);
-        assert!(layered_table(&files, &layers, true) == get(&new, "ali.mzfeat"), "browser {n}");
+        let layers = format!(
+            r#"[{{"step":"features.detect","params":{{"max_gap":{}}}}}]"#,
+            n - 1
+        );
+        assert!(
+            layered_table(&files, &layers, true) == get(&new, "ali.mzfeat"),
+            "browser {n}"
+        );
         seen.push(get(&new, "gap.mzfeat").to_vec());
     }
     // the traces miss scans: each value gives its own table
@@ -149,14 +174,22 @@ fn the_page_route_migrates_a_detect_1_plan_to_the_plan_the_command_line_runs() {
         let cli = parse(text.as_bytes()).unwrap();
         let det = &cli.steps[1];
         assert_eq!(det.version, 2);
-        assert!(det.params.iter().any(|(k, v)| k == "max_gap" && v.f64() == Some(f64::from(new))), "{old}");
+        assert!(
+            det.params
+                .iter()
+                .any(|(k, v)| k == "max_gap" && v.f64() == Some(f64::from(new))),
+            "{old}"
+        );
         let body = serde_json::json!({"plan": text, "line": "mzlab-cli flow run"}).to_string();
         let page = line_route(&body, Some(&steps)).unwrap();
         assert_eq!(page, plan_json(&cli), "{old}");
         assert!(page.contains("features.detect@2"));
         // a plan already at version 2 is not converted again
         let v2 = parse(plan(2, &format!(r#"{{"max_gap":{old}}}"#)).as_bytes()).unwrap();
-        assert!(v2.steps[1].params.iter().any(|(k, v)| k == "max_gap" && v.f64() == Some(f64::from(old))));
+        assert!(v2.steps[1]
+            .params
+            .iter()
+            .any(|(k, v)| k == "max_gap" && v.f64() == Some(f64::from(old))));
     }
 }
 

@@ -105,7 +105,12 @@ fn registry_lists_the_twelve_steps_of_the_chain() {
     assert_eq!(ids, IDS);
     // version 2: `table.filter` (the blank rule counts the detected blank cells by default) and `features.detect` (`max_gap` counts the missed scans); the others are at 1
     assert!(reg.iter().all(|s| s.package == "core"
-        && s.version == if matches!(s.id, "table.filter" | "features.detect") { 2 } else { 1 }));
+        && s.version
+            == if matches!(s.id, "table.filter" | "features.detect") {
+                2
+            } else {
+                1
+            }));
 }
 
 #[test]
