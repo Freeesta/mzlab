@@ -23362,3 +23362,4 @@
 {"v":1,"ts_utc":"2026-11-07T09:55:16Z","tipo":"job","k":"128371369735","workflow":"rust","job":"rust-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":2830,"sha":"1fe3724b5303a495b71fe2f5a69d7c5d89cafbac","run_id":42361718037,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-07T09:55:33Z","tipo":"carico","k":"2026-11-07T09:5","job_in_coda":0,"job_in_corso":33}
 {"v":1,"ts_utc":"2026-11-07T09:55:56Z","tipo":"coda","k":"2026-11-07T09:55:56Z","aperte":7,"indietro":5,"sporche":1,"verdi_in_attesa":5,"piu_vecchia_aperta_s":309520,"piu_vecchia_verde_s":305200}
+{"v":1,"ts_utc":"2026-11-07T10:00:48Z","azione":"push","titolo":"docs: move the late-fingerprints speed row to misure-velocita-raw.md","merge_main":false,"aree":{"docs":2},"tipo":"pr","pr":2834,"sha":"2364fd58ba0d8050a36a3ccb59afcd97ab21c289"}
