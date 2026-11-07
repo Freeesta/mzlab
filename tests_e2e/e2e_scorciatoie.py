@@ -17,6 +17,37 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 950})
         if AXE: pg.add_script_tag(path=AXE)
+        # the Mac Safari pages come first: run last they held the test open until the late downloads of the page, which the teardown cut (a blob: request WebKit reports)
+        SAFARI = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
+        CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        def pagina_mac(ua):
+            c = r.b.new_context(user_agent=ua, viewport={"width": 1200, "height": 900}, reduced_motion="reduce")
+            c.add_init_script("Object.defineProperty(Navigator.prototype,'platform',{get:()=>'MacIntel'});try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+            q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); ready(q)
+            return c, q
+        def righe_mac(ua):
+            c, q = pagina_mac(ua)
+            q.evaluate("SCORCIATOIE.apri()"); attendi(q, "document.querySelector('#scorc[open]')")
+            rows = q.evaluate("[...document.querySelectorAll('#scorc li')].map(li => [li.querySelector('kbd').textContent, li.querySelector('.sc-n').textContent, li.querySelector('.sc-n').title])")
+            c.close(); return rows
+        def option_tab():
+            safari, chrome = righe_mac(SAFARI), righe_mac(CHROME)
+            tab = [x for x in safari if x[0] == "⌥Tab"]
+            assert tab and "Safari" in tab[0][1] and "Safari ›" in tab[0][2], f"Safari on a Mac: no ⌥Tab row with its name and the Safari setting in the panel: {safari}"
+            assert any(x[0].startswith("⌘") for x in safari), f"the Mac keys are not written as ⌘: {safari}"
+            assert not [x for x in chrome if x[0] == "⌥Tab"], f"⌥Tab row outside Safari: {chrome}"
+        step("Safari on a Mac: the panel says that ⌥Tab reaches buttons and links (not in other Mac browsers)", option_tab)
+        def option_tab_not_taken():
+            c, q = pagina_mac(SAFARI)
+            try:
+                assert q.evaluate("AZIONI.voci.some(a => a.id === 'app.tabSafari')"), "no ⌥Tab action with a Mac Safari UA"
+                # Alt+Tab sends an Alt keydown first: the listener keeps only the Tab one (a `once` listener would be spent on Alt)
+                q.evaluate("window.__tabPrev = null; addEventListener('keydown', e => { if (e.key === 'Tab') window.__tabPrev = e.defaultPrevented; })")
+                q.keyboard.press("Alt+Tab"); prev = q.evaluate("window.__tabPrev")
+                assert prev is False, f"the app took ⌥Tab from Safari (defaultPrevented: {prev})"
+            finally:
+                c.close()
+        step("⌥Tab is left to the browser", option_tab_not_taken)
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")])
         pg.click("#opbtn"); ready(pg)
         pnl = lambda t: f"E.panels.filter(q => q.type === '{t}')"

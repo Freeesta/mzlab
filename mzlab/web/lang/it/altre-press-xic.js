@@ -257,6 +257,8 @@ I18N.add("it", {
   "scorc.elimina.tip": "Elimina il picco integrato selezionato.",
   "scorc.esc": "Annulla",
   "scorc.esc.tip": "Chiude una cosa alla volta: menu, misura, riproduzione, schermo intero",
+  "scorc.tabSafari": "Tab anche su pulsanti e link (Safari)",
+  "scorc.tabSafari.tip": "Tab da solo: Safari › Impostazioni › Avanzate › «Premi Tab per evidenziare ogni elemento»",
   "scorc.integra.tip": "Integra il picco sotto il cursore",
   "scorc.misura.tip": "Prende il picco più alto visibile come riferimento della misura.",
   "scorc.schermo.tip": "Porta il pannello a schermo intero e di nuovo alla posizione di prima.",
