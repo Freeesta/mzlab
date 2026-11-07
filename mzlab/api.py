@@ -230,11 +230,6 @@ def _r_dda(app, q):        # DDA and single scans as stored in the file (high re
     return _json(app.dda(int(q["k"]), q.get("hr") != "0"))
 
 
-@_get("/api/dda_window", fail=(ValueError, KeyError))
-def _r_dda_window(app, q):  # the MS2 of the survey scans of a window, grouped by precursor
-    return _json(app.dda_window(int(q["k"]), float(q["r0"]), float(q["r1"]), q.get("hr") != "0"))
-
-
 @_get("/api/scan", fail=(ValueError, KeyError))
 def _r_scan(app, q):
     return _json(app.scan(int(q["k"]), int(q["sid"]), q.get("hr") != "0"))

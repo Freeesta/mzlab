@@ -1,6 +1,7 @@
 """Reference of `/api/dda_window` (the Rust route is `Routes::dda_window`, crates/mzlab-core/src/ddafinestra.rs): the MS2 started from the survey
 scans of a time window, grouped by precursor within the tolerance of the MS2 profile (ppm of a high-resolution profile, else 0.5 Da, as `tolOf`
-in dda.js). Groups: the most intense precursor first; members in order of acquisition. Parity test: crates/mzlab-core/tests/hr_parity.rs."""
+in dda.js). Groups: the most intense precursor first; members in order of acquisition. Parity test: crates/mzlab-core/tests/hr_parity.rs, through
+`tools/hr_riferimento.py`, which serves it as `/api/dda_window` of `mzlab.api` while it writes the reference answers (the package itself has no such route)."""
 
 
 def dda_window(run, prof: dict, r0: float, r1: float) -> dict:
