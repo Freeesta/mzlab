@@ -303,25 +303,25 @@ impl Finto {
 }
 
 impl Lettore for Finto {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         self.formato
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, _c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _c: usize) -> Result<&[VoceScansione]> {
         Ok(&self.indice)
     }
-    fn scansione(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
         self.schede
             .get(k)
             .map(|s| s.spettro.clone())
             .ok_or_else(|| Error::new("error.badIndex"))
     }
-    fn intestazione(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
         Ok(Vec::new())
     }
-    fn cromatogrammi(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(self
             .tracce
             .iter()
@@ -332,17 +332,17 @@ impl Lettore for Finto {
             })
             .collect())
     }
-    fn cromatogramma(&mut self, _c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _c: usize, id: &str) -> Result<Chromatogram> {
         self.tracce
             .iter()
             .find(|t| t.id == id)
             .cloned()
             .ok_or_else(|| Error::new("error.badIndex"))
     }
-    fn metodo(&mut self, _c: usize) -> Result<String> {
+    fn method(&mut self, _c: usize) -> Result<String> {
         Ok(String::new())
     }
-    fn testata_mzml(&mut self, _c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, _c: usize) -> Result<Option<Header>> {
         Ok(self.testata.clone())
     }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {

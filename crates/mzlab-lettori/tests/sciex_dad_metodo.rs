@@ -55,7 +55,7 @@ fn converti(dir: &Path, dad: bool) -> Vec<u8> {
     };
     let mut l = mzlab_lettori::apri(fs, &Limiti::sito()).unwrap();
     assert!(
-        l.variante(0),
+        l.variant(0),
         "version-1 blocks make the pair a variant of the module"
     );
     let conv = Conversione {
@@ -95,7 +95,7 @@ fn the_variant_mzml_carries_the_matrix_and_the_method() {
     );
 
     let doc: Value = serde_json::from_str(
-        &m.metodo("dadmetodo.mzML", 1 << 20)
+        &m.method("dadmetodo.mzML", 1 << 20)
             .unwrap()
             .expect("metodo/1 in the run"),
     )

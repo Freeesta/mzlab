@@ -72,6 +72,7 @@ I18N.add("it", {
   "lib.readN": "{n} spettri letti ({pct}%)",
   "lib.doneN": "{n} spettri",
   "lib.droppedN": "{n} scartati (senza precursore o senza picchi)",
+  "lib.cutN": "Spettri con più di {max} picchi: {n}. Di ciascuno sono stati tenuti i primi {max} picchi; per tenerli interi, centroida o filtra quegli spettri prima di importarli.",
   "lib.plot.exp": "sperimentale",
   "lib.plot.lib": "libreria",
   "lib.plot.rel": "intensità relativa",

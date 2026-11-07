@@ -102,7 +102,7 @@ fn i_cdf_veri_si_aprono_e_i_conti_tornano() {
         }
         let nome = p.file_name().unwrap().to_string_lossy().into_owned();
         let mut l = apri_andi(std::fs::read(&p).unwrap());
-        let n = l.campioni()[0].scansioni;
+        let n = l.samples()[0].scansioni;
         assert!(n > 100, "{nome}");
         for (prefisso, attese) in [
             ("MTBLS7740", 7231),
@@ -113,10 +113,10 @@ fn i_cdf_veri_si_aprono_e_i_conti_tornano() {
                 assert_eq!(n, attese, "{nome}");
             }
         }
-        let indice = l.indice(0).unwrap().to_vec();
+        let indice = l.index(0).unwrap().to_vec();
         assert!(indice.windows(2).all(|w| w[0].rt <= w[1].rt), "{nome}");
         for k in (0..n).step_by((n / 40).max(1)) {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert!(
                 !s.mz.is_empty() && s.mz.windows(2).all(|w| w[0] <= w[1]),
                 "{nome} scan {k}"
@@ -128,6 +128,6 @@ fn i_cdf_veri_si_aprono_e_i_conti_tornano() {
                 indice[k].tic
             );
         }
-        assert!(l.metodo(0).unwrap().contains("\"andi-ms\""), "{nome}");
+        assert!(l.method(0).unwrap().contains("\"andi-ms\""), "{nome}");
     }
 }

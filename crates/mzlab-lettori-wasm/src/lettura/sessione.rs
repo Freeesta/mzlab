@@ -33,62 +33,62 @@ impl Sessioni {
     }
 
     /// `{formato, campioni:[{id,name,scans}]}` of the reader.
-    pub fn campioni(&mut self, h: u32) -> Result<String> {
+    pub fn samples(&mut self, h: u32) -> Result<String> {
         let l = self.lettore(h)?;
         let mut o = Out::default();
         o.raw("{\"formato\":")
-            .str(l.formato().id())
+            .str(l.format().id())
             .raw(",\"campioni\":");
-        campioni_json(&mut o, l.campioni());
+        campioni_json(&mut o, l.samples());
         o.raw("}");
         Ok(std::mem::take(&mut o.0))
     }
 
     /// The index of sample `c` as one block of bytes in columns (`trasporto.rs`).
-    pub fn indice(&mut self, h: u32, c: usize) -> Result<Vec<u8>> {
-        Ok(encode_indice(self.lettore(h)?.indice(c)?))
+    pub fn index(&mut self, h: u32, c: usize) -> Result<Vec<u8>> {
+        Ok(encode_indice(self.lettore(h)?.index(c)?))
     }
 
     /// Scan `k` of sample `c` as one block of bytes: a fixed head, the m/z, the intensities (`trasporto.rs`). The id and the filter are those of the index.
-    pub fn scansione(&mut self, h: u32, c: usize, k: usize) -> Result<Vec<u8>> {
-        Ok(encode_scansione(&self.lettore(h)?.scansione_dati(c, k)?))
+    pub fn scan(&mut self, h: u32, c: usize, k: usize) -> Result<Vec<u8>> {
+        Ok(encode_scansione(&self.lettore(h)?.scan_data(c, k)?))
     }
 
-    pub fn intestazione(&mut self, h: u32, c: usize, k: usize) -> Result<String> {
-        Ok(intestazione_json(&self.lettore(h)?.intestazione(c, k)?))
+    pub fn scan_header(&mut self, h: u32, c: usize, k: usize) -> Result<String> {
+        Ok(intestazione_json(&self.lettore(h)?.scan_header(c, k)?))
     }
 }
 
 impl Sessioni {
     /// The chromatograms of sample `c` without their points.
-    pub fn cromatogrammi(&mut self, h: u32, c: usize) -> Result<String> {
-        Ok(cromatogrammi_json(&self.lettore(h)?.cromatogrammi(c)?))
+    pub fn chromatograms(&mut self, h: u32, c: usize) -> Result<String> {
+        Ok(cromatogrammi_json(&self.lettore(h)?.chromatograms(c)?))
     }
 
     /// One chromatogram with its points: `{id, kind, q1, q3, unit, time, intensity}`.
-    pub fn cromatogramma(&mut self, h: u32, c: usize, id: &str) -> Result<String> {
+    pub fn chromatogram(&mut self, h: u32, c: usize, id: &str) -> Result<String> {
         Ok(mzlab_lettori::json::cromatogramma_json(
-            &self.lettore(h)?.cromatogramma(c, id)?,
+            &self.lettore(h)?.chromatogram(c, id)?,
         ))
     }
 
     /// The `metodo/1` document of sample `c`.
-    pub fn metodo(&mut self, h: u32, c: usize) -> Result<String> {
-        self.lettore(h)?.metodo(c)
+    pub fn method(&mut self, h: u32, c: usize) -> Result<String> {
+        self.lettore(h)?.method(c)
     }
 
-    /// The spectra of sample `c` that a truncated file declares but does not hold (`Lettore::mancanti`).
-    pub fn mancanti(&mut self, h: u32, c: usize) -> Result<usize> {
-        Ok(self.lettore(h)?.mancanti(c))
+    /// The spectra of sample `c` that a truncated file declares but does not hold (`Lettore::missing`).
+    pub fn missing(&mut self, h: u32, c: usize) -> Result<usize> {
+        Ok(self.lettore(h)?.missing(c))
     }
 
-    /// The header of the mzML of sample `c` (`Lettore::testata_mzml`), `null` when the reader has none: `{run, sources, instrument:[acc,name]|null, components:[[kind,acc,name]],
+    /// The header of the mzML of sample `c` (`Lettore::mzml_header`), `null` when the reader has none: `{run, sources, instrument:[acc,name]|null, components:[[kind,acc,name]],
     /// software:[name,version], acquired, serial, source_sha1, source_cv:[[acc,name]], sample:[id,name]|null, run_params:[[name,value]], content:[[acc,name]],
     /// extra_software:[[acc,name,version]], centroided}`.
-    pub fn testata(&mut self, h: u32, c: usize) -> Result<String> {
+    pub fn file_header(&mut self, h: u32, c: usize) -> Result<String> {
         Ok(self
             .lettore(h)?
-            .testata_mzml(c)?
+            .mzml_header(c)?
             .map_or_else(|| "null".into(), |t| testata_json(&t)))
     }
 }

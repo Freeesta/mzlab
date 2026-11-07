@@ -39,9 +39,9 @@ fn ogni_forma_si_apre_e_torna_come_e_stata_scritta() {
             scan.clone()
         };
         let mut l = apri_mzxml(mzxml(&sorgente, o));
-        assert_eq!(l.campioni()[0].scansioni, scan.len());
+        assert_eq!(l.samples()[0].scansioni, scan.len());
         for (k, x) in scan.iter().enumerate() {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert_eq!(s.mz.len(), x.mz.len());
             for i in 0..s.mz.len() {
                 if o.a64 {
@@ -66,7 +66,7 @@ fn ogni_forma_si_apre_e_torna_come_e_stata_scritta() {
 fn l_indice_dice_livello_precursore_e_tic_senza_leggere_i_picchi() {
     let scan = corsa();
     let mut l = apri_mzxml(mzxml(&scan, PIATTO));
-    let ind = l.indice(0).unwrap();
+    let ind = l.index(0).unwrap();
     assert_eq!(ind.len(), 5);
     assert_eq!(ind[1].livello, 2);
     assert_eq!(ind[1].precursore, Some(412.25));
@@ -84,20 +84,20 @@ fn tic_e_bpc_si_calcolano_dai_picchi_quando_il_file_non_li_dice() {
             ..PIATTO
         },
     ));
-    let voci = l.cromatogrammi(0).unwrap();
+    let voci = l.chromatograms(0).unwrap();
     assert!(voci
         .iter()
         .any(|v| v.id == "TIC" && v.tipo == ChromKind::Tic));
-    let tic = l.cromatogramma(0, "TIC").unwrap();
+    let tic = l.chromatogram(0, "TIC").unwrap();
     let uno: Vec<&Sc> = scan.iter().filter(|x| x.livello == 1).collect();
     assert_eq!(tic.time.len(), uno.len());
     for (i, x) in uno.iter().enumerate() {
         assert!((tic.intensity[i] - x.it.iter().sum::<f64>()).abs() < 1e-9);
         assert!((tic.time[i] - x.rt_s / 60.0).abs() < 1e-12);
     }
-    let bpc = l.cromatogramma(0, "BPC").unwrap();
+    let bpc = l.chromatogram(0, "BPC").unwrap();
     assert!((bpc.intensity[0] - uno[0].it.iter().copied().fold(0.0, f64::max)).abs() < 1e-9);
-    assert!(l.cromatogramma(0, "XIC").is_err());
+    assert!(l.chromatogram(0, "XIC").is_err());
 }
 
 #[test]
@@ -117,13 +117,13 @@ fn le_scansioni_srm_diventano_cromatogrammi() {
     }
     let mut l = apri_mzxml(mzxml(&scan, PIATTO));
     let srm: Vec<_> = l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .into_iter()
         .filter(|v| v.tipo == ChromKind::Srm)
         .collect();
     assert_eq!(srm.len(), 3);
-    let c = l.cromatogramma(0, &srm[0].id).unwrap();
+    let c = l.chromatogram(0, &srm[0].id).unwrap();
     assert_eq!(c.time.len(), 3);
     assert_eq!(c.q1, Some(300.2));
     assert_eq!(c.q3, Some(150.1));
@@ -142,7 +142,7 @@ fn riconosce_dai_byte_non_dal_nome() {
 #[test]
 fn il_metodo_e_la_testata_portano_strumento_file_e_programmi() {
     let mut l = apri_mzxml(mzxml(&corsa(), PIATTO));
-    let m = l.metodo(0).unwrap();
+    let m = l.method(0).unwrap();
     for t in [
         "\"formato\":\"mzxml\"",
         "Thermo Scientific",
@@ -155,7 +155,7 @@ fn il_metodo_e_la_testata_portano_strumento_file_e_programmi() {
     ] {
         assert!(m.contains(t), "{t} missing in {m}");
     }
-    let h = l.testata_mzml(0).unwrap().unwrap();
+    let h = l.mzml_header(0).unwrap().unwrap();
     assert_eq!(
         h.instrument.as_ref().map(|i| i.1.as_str()),
         Some("Q Exactive")
@@ -174,7 +174,7 @@ fn il_metodo_e_la_testata_portano_strumento_file_e_programmi() {
 #[test]
 fn l_intestazione_porta_ogni_attributo_della_scansione() {
     let mut l = apri_mzxml(mzxml(&corsa(), PIATTO));
-    let campi = l.intestazione(0, 1).unwrap();
+    let campi = l.scan_header(0, 1).unwrap();
     let valore = |n: &str| campi.iter().find(|c| c.nome == n).map(|c| c.valore.clone());
     assert_eq!(valore("msLevel").as_deref(), Some("2"));
     assert_eq!(valore("scanType").as_deref(), Some("Full"));

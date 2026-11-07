@@ -126,14 +126,14 @@ fn openms_lineare_e_slof_hanno_il_tic_dell_intestazione() {
         return;
     };
     let mut l = apri(b);
-    let n = l.campioni()[0].scansioni;
+    let n = l.samples()[0].scansioni;
     assert_eq!(n, 10);
     for k in 0..n {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         assert!(!s.mz.is_empty());
         assert!(s.mz.windows(2).all(|w| w[0] <= w[1]), "m/z sorted");
         assert!(s.intensity.iter().all(|x| *x >= 0.0));
-        let tic = l.indice(0).unwrap()[k].tic;
+        let tic = l.index(0).unwrap()[k].tic;
         if tic > 0.0 {
             let somma: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
             assert!(
@@ -152,8 +152,8 @@ fn openms_lineare_e_pic_si_leggono() {
         return;
     };
     let mut l = apri(b);
-    for k in 0..l.campioni()[0].scansioni {
-        let s = l.scansione(0, k).unwrap();
+    for k in 0..l.samples()[0].scansioni {
+        let s = l.scan(0, k).unwrap();
         assert!(!s.mz.is_empty() && s.mz.windows(2).all(|w| w[0] <= w[1]));
         // pic gives whole numbers
         assert!(s.intensity.iter().all(|x| x.fract() == 0.0));
@@ -166,11 +166,11 @@ fn pymzml_cromatogrammi_srm_numpress() {
         return;
     };
     let mut l = apri(b);
-    assert_eq!(l.campioni()[0].scansioni, 0);
-    let v = l.cromatogrammi(0).unwrap();
+    assert_eq!(l.samples()[0].scansioni, 0);
+    let v = l.chromatograms(0).unwrap();
     assert!(!v.is_empty());
     for c in v {
-        let t = l.cromatogramma(0, &c.id).unwrap();
+        let t = l.chromatogram(0, &c.id).unwrap();
         assert_eq!(t.time.len(), t.intensity.len());
         assert!(!t.time.is_empty(), "{}", c.id);
         assert!(t.time.windows(2).all(|w| w[0] <= w[1]));

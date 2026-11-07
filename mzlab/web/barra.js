@@ -427,9 +427,11 @@ const BARRA = (() => {
     updateButtons();
     saveState();
     if (!opt.noFocus) {
+      // the pane takes the focus only if it is still where it was: a field focused in the meantime keeps it (and its keys)
+      const was = document.activeElement;
       setTimeout(() => {
-        const aside = Q1("#dfiles");
-        if (_open && aside && !aside.contains(document.activeElement)) {
+        const aside = Q1("#dfiles"), now = document.activeElement;
+        if (_open && aside && !aside.contains(now) && (now === was || !now || now === document.body)) {
           const pane = Q1("#sb-pane");
           if (pane) pane.focus({ preventScroll: true });
         }

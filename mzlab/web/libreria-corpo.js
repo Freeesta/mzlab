@@ -160,12 +160,14 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
     } catch (e_) { const e = /** @type {Lanciato} */ (e_); box.innerHTML = h`<p class="err">${e.message}</p>`; }
   }
   const CARTELLA_stem = (/** @type {string} */ n) => String(n).replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
+  // the result of an import: spectra, those discarded, and those kept with only the first peaks (the engine's cap, lib.cutN)
+  const doneLine = (/** @type {string} */ name, /** @type {Bag} */ i) => `<div class="sm">${EHt(name)}: ${I18N.t("lib.doneN", { n: fmtN(i.n) })}${i.dropped ? ", " + I18N.t("lib.droppedN", { n: fmtN(i.dropped) }) : ""}.${i.cut ? " " + I18N.t("lib.cutN", { n: fmtN(i.cut), max: fmtN(i.cutAt) }) : ""}</div>`;
   async function indexOne(/** @type {string} */ name) {
     const st = document.querySelector("#libdlg #lib-st");
     st.innerHTML = h`<div class="sm">${name}: ${raw(I18N.t("lib.reading"))}</div><progress max="1" value="0"></progress>`;
     try {
       const r = await call("index", { name }, (/** @type {Bag} */ m) => { st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.readN", { n: fmtN(m.n), pct: Math.round(m.read / m.total * 100) })}</div><progress max="${m.total}" value="${m.read}"></progress>`; });
-      st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.doneN", { n: fmtN(r.info.n) })}.</div>`;
+      st.innerHTML = doneLine(name, r.info);
     } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.innerHTML = h`<div class="err">${name}: ${e.message}</div>`; }
     await refresh();
   }
@@ -240,7 +242,7 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
       st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.reading")}</div><progress max="1" value="0"></progress>`;
       try {
         const r = await call("add", { file: f }, (/** @type {Bag} */ m) => { st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.readN", { n: fmtN(m.n), pct: Math.round(m.read / m.total * 100) })}</div><progress max="${m.total}" value="${m.read}"></progress>`; });
-        st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.doneN", { n: fmtN(r.info.n) })}${r.info.dropped ? ", " + I18N.t("lib.droppedN", { n: fmtN(r.info.dropped) }) : ""}.</div>`;
+        st.innerHTML = doneLine(f.name, r.info);
       } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.innerHTML = `<div class="err">${EHt(f.name)}: ${EHt(e.message)}</div>`; }
       await refresh();
     }
@@ -307,10 +309,9 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
     d.querySelector("#lr-copy").onclick = async () => {
       const { h, rs } = table(); if (!rs.length) return msg(I18N.t("lib.nothingCopy"));
       const f = (/** @type {unknown} */ v, /** @type {number} */ k) => typeof v === "number" ? String(k === 5 ? +v.toFixed(st.unit === "ppm" ? 1 : 4) : +v.toFixed(3)) : String(v ?? "");
-      const tsv = await PROV.tsv(h.join("\t") + "\n" + rs.map((/** @type {Bag} */ r) => r.map((/** @type {Bag} */ v, /** @type {number} */ k) => f(v, k)).join("\t")).join("\n"), { p, table: "library" });
+      const tsv = PROV.tsv(h.join("\t") + "\n" + rs.map((/** @type {Bag} */ r) => r.map((/** @type {Bag} */ v, /** @type {number} */ k) => f(v, k)).join("\t")).join("\n"), { p, table: "library" });
       const html = `<table><tr>${h.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map((/** @type {Bag} */ r) => `<tr>${r.map((/** @type {Bag} */ v, /** @type {number} */ k) => `<td>${EHt(f(v, k))}</td>`).join("")}</tr>`).join("")}</table>`;
-      try { if (window.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([tsv], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) })]); else await navigator.clipboard.writeText(tsv); msg(I18N.t("lib.copied", { n: rs.length })); }
-      catch (e) { try { await navigator.clipboard.writeText(tsv); msg(I18N.t("lib.copied", { n: rs.length })); } catch (e2) { msg(I18N.t("lib.noCopy")); } }
+      try { await clipboardCopy({ "text/plain": tsv, "text/html": html }); msg(I18N.t("lib.copied", { n: rs.length })); } catch (e) { msg(I18N.t("lib.noCopy")); }
     };
     d.querySelector("#lr-xlsx").onclick = () => { const { h, rs } = table(); if (!rs.length) return msg(I18N.t("lib.nothingSave")); dlx((typeof plotName === "function" ? plotName(p) : I18N.t("lib.xlsx.fallback")) + I18N.t("lib.xlsx.suffix"), [{ name: I18N.t("lib.xlsx.sheet"), head: h, rows: rs, widths: [5, 30, 10, 10, 16, 14, 8, 14, 12, 20] }], { p, table: "library" }); };
     d.showModal(); window.addEventListener("resize", draw, { once: true });

@@ -119,6 +119,9 @@ pub struct Port {
     pub format: Option<&'static str>,
     /// The formats an input reads; empty = the default of its type, from a source of its own type only.
     pub formats: Vec<&'static str>,
+    /// On an input: the table must be aligned in this plan (its lineage: the peaks, the indexes and the recipe it was made from). On an output: the table
+    /// hands such a lineage on, made here or (with a table input) passed from that input.
+    pub lineage: bool,
 }
 
 /// The condition of an output: its input `input` is wired and, with `param`, that parameter (resolved) is not `not`.
@@ -141,6 +144,7 @@ impl Port {
             written_if: None,
             format: None,
             formats: Vec::new(),
+            lineage: false,
         }
     }
     pub fn many(mut self) -> Port {
@@ -158,6 +162,11 @@ impl Port {
     /// The format this output writes.
     pub fn format(mut self, f: &'static str) -> Port {
         self.format = Some(f);
+        self
+    }
+    /// A table aligned in this plan (see `lineage`).
+    pub fn lineage(mut self) -> Port {
+        self.lineage = true;
         self
     }
     /// The formats this input reads.

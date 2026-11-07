@@ -337,12 +337,14 @@ const dnote = (/** @type {string} */ msg) => { const w = Q("#smi-warn"); w.textC
   return out.sort((a, b) => a.x - b.x || a.y - b.y);
 }
 /** @param {number[]} ids @param {Set<number>} [noCharge] */ const pieceMolfile = (ids, noCharge) => molfileOf(K.editor.struct(), ids, noCharge, isElement);
+// a piece whose conversion is stopped at SMILES_MS is told apart from a piece without a formula: the selection card names the limit
+const SMILES_MS = 20000; let smilesSlow = false;
 /** @param {number[]} ids @param {Set<number>} [noCharge] */ async function pieceSmiles(ids, noCharge) {
   const mf = pieceMolfile(ids, noCharge); if (!mf) return null;
   try {
-    const r = await Promise.race([indigo(() => K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {})), new Promise((_, ko) => setTimeout(() => ko(new Error("timeout")), 20000))]);
+    const r = await Promise.race([indigo(() => K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {})), new Promise((_, ko) => setTimeout(() => ko(new Error("timeout")), SMILES_MS))]);
     return String(r.struct || "").trim().split(/\s+/)[0] || null;
-  } catch (_) { return null; }
+  } catch (e) { if (e instanceof Error && e.message === "timeout") smilesSlow = true; return null; }
 }
 // Neutral form of a charged piece: drop |net charge| charges of the same sign from atoms that can take the H back (COO- -> COOH, NH3+ -> NH2,
 // pyridinium NH+ -> pyridine). A charge that cannot be dropped (quaternary ammonium, O+ ...) is permanent: null. Nitro and N-oxide groups (+ and -
@@ -404,7 +406,7 @@ async function showInfo1() {
   const ps = pieces(set.size ? set : null), lr = await labelsNow({ structures: ps.map(p => p.ids.map((/** @type {number} */ i) => atomOf(st.atoms.get(i)))), arrows: [] });
   const all = /** @type {any[]} */ (ps.map((p, i) => { const e = lr && lr.structures[i]; return { ...p, c: e && !e.error ? { q: e.charge, formula: e.formula } : null }; }));
   for (const p of all) {                                                       // SMILES (Ketcher) and molecule (OpenChemLib) of each piece
-    p.smi = await pieceSmiles(p.ids); p.mol = null;
+    smilesSlow = false; p.smi = await pieceSmiles(p.ids); p.slow = smilesSlow; p.mol = null;
     if (p.smi) { try { p.mol = OCL.Molecule.fromSmiles(p.smi); } catch (_) { /* no properties */ } }
     p.counter = !!p.c && p.c.q !== 0 && p.ids.length === 1;                     // Cl-, Na+ ... counter-ion: not a molecule of its own
     p.nmol = null;
@@ -421,7 +423,7 @@ async function showInfo1() {
     const cuts = cutBonds(set);
     Q("#sel-body").innerHTML = all.map(p => {
       const smi = p.smi || "";                                                  // written by Ketcher (Indigo): the same SMILES as for the whole canvas
-      return smi ? `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><code style="word-break:break-all;flex:1;-webkit-user-select:all;user-select:all">${EH(smi)}</code>${copyBtn(smi)}</div>` : '<div class="muted sm">' + EH(I18N.t("draw.selection.noFormula")) + '</div>';
+      return smi ? `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><code style="word-break:break-all;flex:1;-webkit-user-select:all;user-select:all">${EH(smi)}</code>${copyBtn(smi)}</div>` : p.slow ? '<div class="muted sm" role="status">' + EH(I18N.t("draw.selection.slow", { s: SMILES_MS / 1000 })) + '</div>' : '<div class="muted sm">' + EH(I18N.t("draw.selection.noFormula")) + '</div>';
     }).join("") + (cuts ? `<div class="muted sm">${EH(I18N.t("draw.selection.cuts", { n: cuts }))}</div>` : "");
   }
   // 2) property estimates: the selected pieces, or every structure of the drawing
@@ -670,10 +672,10 @@ async function image(/** @type {string} */ format) {
   svgText = svgText.replace(/<svg\b([^>]*)>/, (/** @type {string} */ m, /** @type {string} */ at) => `<svg${at}><title>${EH(I18N.t(clear ? "draw.export.svgTitle.clear" : "draw.export.svgTitle.white", { app: APP_NAME, stamp: stamp().slice(-15, -5) }))}</title>`);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
   if (format === "svg") return svg;
-  // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side
+  // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side nor 16.7 Mpx
   const img = new Image(), url = URL.createObjectURL(svg);
   await new Promise((ok, ko) => { img.onload = ok; img.onerror = ko; img.src = url; });
-  const sc = Math.min(8, Math.max(3, 3600 / Math.max(img.width, 1)), 12000 / Math.max(img.width, img.height, 1));
+  const sc = canvasScale(img.width, img.height, Math.min(8, Math.max(3, 3600 / Math.max(img.width, 1)), 12000 / Math.max(img.width, img.height, 1)));     // under Safari's canvas area cap
   const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
   const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")); if (!clear) { g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
   g.drawImage(img, 0, 0, c.width, c.height);

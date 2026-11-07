@@ -12,14 +12,14 @@ fn apri() -> Box<dyn Lettore> {
 #[test]
 fn the_scans_read_back_to_the_encoded_peaks() {
     let mut l = apri();
-    assert_eq!(l.formato().id(), "waters-raw");
-    let ix = l.indice(0).unwrap().to_vec();
+    assert_eq!(l.format().id(), "waters-raw");
+    let ix = l.index(0).unwrap().to_vec();
     assert_eq!(ix.len(), 3, "only the scanning function has spectra");
     for (k, v) in ix.iter().enumerate() {
         assert_eq!(v.livello, 1);
         assert!((v.rt - f64::from(RT[k])).abs() < 1e-6);
         assert_eq!(v.id, format!("function=1 process=0 scan={}", k + 1));
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         let want = picchi(k as u32);
         assert_eq!(s.mz.len(), want.len());
         for (i, (mz, int)) in want.iter().enumerate() {
@@ -34,7 +34,7 @@ fn the_scans_read_back_to_the_encoded_peaks() {
 #[test]
 fn the_mrm_function_is_chromatograms_not_spectra() {
     let mut l = apri();
-    let ch = l.cromatogrammi(0).unwrap();
+    let ch = l.chromatograms(0).unwrap();
     let ids: Vec<&str> = ch.iter().map(|c| c.id.as_str()).collect();
     assert_eq!(ids[0], "TIC");
     assert_eq!(ids.len(), 3, "{ids:?}");
@@ -43,7 +43,7 @@ fn the_mrm_function_is_chromatograms_not_spectra() {
             ids[1 + j],
             format!("SRM SIC Q1={q1} Q3={q3} function=2 offset={j}")
         );
-        let c = l.cromatogramma(0, ids[1 + j]).unwrap();
+        let c = l.chromatogram(0, ids[1 + j]).unwrap();
         assert_eq!(c.time.len(), 3);
         for (k, rt) in RT.iter().enumerate() {
             assert_eq!(c.intensity[k] as u32, canali_mrm(k as u32)[j]);
@@ -55,13 +55,13 @@ fn the_mrm_function_is_chromatograms_not_spectra() {
 #[test]
 fn the_method_and_the_header_carry_the_header_txt_and_hide_the_operator() {
     let mut l = apri();
-    let m = l.metodo(0).unwrap();
+    let m = l.method(0).unwrap();
     let doc = controlla_schema(&m, "synthetic");
     assert_eq!(doc["origine"]["formato"], "waters-raw");
     assert_eq!(doc["campione"]["nome"], "synthetic sample");
     assert_eq!(doc["campione"]["vial"], "1:34");
     assert!(m.contains("XEVO-TQXS"), "instrument");
-    let h = l.testata_mzml(0).unwrap().unwrap();
+    let h = l.mzml_header(0).unwrap().unwrap();
     let doc = &h
         .run_params
         .iter()

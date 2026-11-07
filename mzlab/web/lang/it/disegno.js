@@ -27,6 +27,7 @@ I18N.add("it", {
   "draw.quick.invalidNone": "SMILES non valido: non è stata aggiunta nessuna struttura.",
   "draw.quick.invalid": "SMILES non valido: {message}",
   "draw.selection.heading": "SMILES della selezione",
+  "draw.selection.slow": "La conversione della struttura non ha risposto entro {s} s ed è stata fermata: questo pezzo non ha uno SMILES. Seleziona un pezzo più piccolo, o ridisegnalo, e riprova.",
   "draw.selection.noFormula": "Atomo senza formula (gruppo R, abbreviazione...): niente SMILES.",
   "draw.selection.cuts": "{n, plural, one {# legame tagliato} other {# legami tagliati}}: i posti liberi sono chiusi con H.",
   "draw.props.heading": "Proprietà previste",

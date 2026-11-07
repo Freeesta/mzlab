@@ -13,6 +13,8 @@ use mzlab_core::sorgente::SorgenteLettore;
 use mzlab_core::{lettori_centroidi, lettori_mzml, upload};
 use wasm_bindgen::prelude::*;
 
+mod membro;
+
 use crate::esterno::{errore_del_modulo, LettoreEsterno, ModuloJs};
 use crate::{error_json, Accorpa, BlockWriter, JsOutput, JsReader};
 
@@ -32,33 +34,6 @@ thread_local! {
 #[wasm_bindgen]
 pub fn native_external(open: Function) {
     ESTERNO.with(|f| *f.borrow_mut() = Some(open));
-}
-
-/// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`.
-struct JsMember {
-    read: Function,
-    i: u32,
-}
-
-impl ReadAt for JsMember {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
-        let bad = || mzlab_core::Error::new("error.badIndex");
-        let v = self
-            .read
-            .call3(
-                &JsValue::NULL,
-                &self.i.into(),
-                &(off as f64).into(),
-                &(buf.len() as f64).into(),
-            )
-            .map_err(|_| bad())?;
-        let a: js_sys::Uint8Array = v.dyn_into().map_err(|_| bad())?;
-        if a.length() as usize != buf.len() {
-            return Err(bad());
-        }
-        a.copy_to(buf);
-        Ok(())
-    }
 }
 
 /// The members of a dataset as the page describes them: names (relative to the dataset), sizes, the read function.
@@ -88,7 +63,7 @@ impl Membri {
         })
     }
 
-    fn fileset(&self) -> FileSet {
+    pub(crate) fn fileset(&self) -> FileSet {
         let membri = self
             .names
             .iter()
@@ -97,10 +72,7 @@ impl Membri {
             .map(|(i, (n, &s))| Membro {
                 nome: n.clone(),
                 dim: s as u64,
-                dati: Box::new(JsMember {
-                    read: self.read.clone(),
-                    i: i as u32,
-                }),
+                dati: membro::membro(&self.read, i as u32, s as u64),
                 sha1: None,
             })
             .collect();
@@ -240,9 +212,9 @@ pub fn native_samples(
     let l = Membri::new(names, sizes, read)?.open(false)?;
     let mut o = Out::default();
     o.raw("{\"format\":")
-        .str(&format!("{:?}", l.formato()))
+        .str(&format!("{:?}", l.format()))
         .raw(",\"samples\":[");
-    for (i, s) in l.campioni().iter().enumerate() {
+    for (i, s) in l.samples().iter().enumerate() {
         let p = if i > 0 { ",{\"id\":" } else { "{\"id\":" };
         o.raw(p)
             .int(i64::from(s.id))
@@ -267,8 +239,8 @@ pub struct Passata(Option<upload::Passata>);
 #[wasm_bindgen]
 impl Passata {
     #[wasm_bindgen(constructor)]
-    pub fn new(size: f64, senza_sha1: Option<bool>) -> Passata {
-        Passata(Some(upload::Passata::scelta(size as u64, senza_sha1)))
+    pub fn new(size: f64, senza: Option<bool>, solo: Option<bool>) -> Passata {
+        Passata(Some(upload::Passata::scelta(size as u64, senza, solo)))
     }
     pub fn aggiorna(&mut self, piece: &[u8]) {
         self.0.as_mut().unwrap().aggiorna(piece);
@@ -319,7 +291,7 @@ impl Spill for JsSpill {
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
 /// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`contato.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
-/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::mancanti`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`). `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
+/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::missing`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -332,7 +304,7 @@ pub fn build_mzidx_native(
     write: Function,
     budget_mb: u32,
     phase: Function,
-    prints: Option<js_sys::Array>,
+    prints: JsValue,
     spill_put: Option<Function>,
     spill_get: Option<Function>,
     write_cen: Option<Function>,
@@ -341,27 +313,12 @@ pub fn build_mzidx_native(
     let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
     let m = Membri::new(names, sizes, read)?;
     let mut fs = m.fileset();
-    // the fingerprints taken while the members were copied (`Passata`): [sha256, sha1, probe] of each; without them (or not matching) the members are read here
-    let given: Vec<String> = prints.map_or(vec![], |a| {
-        a.iter()
-            .map(|v| v.as_string().unwrap_or_default())
-            .collect()
-    });
-    let given: Vec<(String, String, String)> = given
-        .chunks_exact(3)
-        .map(|c| (c[0].clone(), c[1].clone(), c[2].clone()))
-        .collect();
-    let impronte = match upload::impronte_note(&mut fs, &given) {
-        Some(i) => i,
-        None => {
-            tell(1);
-            upload::impronte(&mut fs).map_err(|e| error_json(&e))?
-        }
-    };
+    let impronte = crate::impronte::Impronte::nuove(&mut fs, &prints, &tell)?;
+    let mut membri = || impronte.date(|| m.fileset());
     let c = c as usize;
     let mut l = crate::contato::apri(fs, |fs| m.apri_fs(fs), &tell, step, c)?;
-    let cm = (c, l.mancanti(c));
-    let mut out = Accorpa::new(JsOutput { write });
+    let cm = (c, l.missing(c));
+    let mut out = Accorpa::flussi(JsOutput { write });
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round; OPFS writes in 1 MiB blocks (`accorpa`)
     let mut spill = spill_put
         .zip(spill_get)
@@ -369,7 +326,7 @@ pub fn build_mzidx_native(
     let spill = spill.as_mut().map(|s| s as &mut dyn Spill);
     // a profile sample that the page also wants as centroids: both indexes from one decoding of the scans
     if let Some(wc) = write_cen.filter(|_| !centroid && primo_ms1_profilo(&mut *l, c)) {
-        return doppio(l, cm, impronte, name, out, wc, budget_mb, spill, &tell);
+        return doppio(l, cm, &mut membri, name, out, wc, budget_mb, spill, &tell);
     }
     let mut l = if centroid {
         lettori_centroidi::centroidato(l)
@@ -380,7 +337,7 @@ pub fn build_mzidx_native(
     let (st, sha256) = upload::indicizza_lettore_con(
         &mut *l,
         c,
-        &mut || Ok(impronte.clone()),
+        &mut membri,
         name,
         &mut out,
         (budget_mb as usize) << 20,
@@ -395,12 +352,12 @@ pub fn build_mzidx_native(
     ))
 }
 
-/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`); `missing`: `Lettore::mancanti` of sample `c`.
+/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`); `missing`: `Lettore::missing` of sample `c`.
 #[allow(clippy::too_many_arguments)]
 fn doppio(
     l: Box<dyn mzlab_core::lettori::Lettore>,
     (c, missing): (usize, usize),
-    impronte: Vec<upload::Impronta>,
+    membri: &mut dyn FnMut() -> mzlab_core::Result<Vec<upload::Impronta>>,
     name: &str,
     mut out: Accorpa<JsOutput>,
     write_cen: Function,
@@ -409,12 +366,12 @@ fn doppio(
     tell: &dyn Fn(u32),
 ) -> Result<String, JsValue> {
     let mut lc = lettori_centroidi::Centroidato::nuovo(l);
-    let mut out_cen = Accorpa::new(JsOutput { write: write_cen });
+    let mut out_cen = Accorpa::flussi(JsOutput { write: write_cen });
     tell(2);
     let ((st, sha256), (sc, _)) = upload::indicizza_lettore_doppio(
         &mut lc,
         c,
-        &mut || Ok(impronte.clone()),
+        membri,
         name,
         &mut out,
         &mut out_cen,
@@ -434,13 +391,13 @@ fn doppio(
 /// The first MS1 scan of sample `c` is profile (false when it cannot be told: no MS1, a scan that does not decode).
 fn primo_ms1_profilo(l: &mut dyn mzlab_core::lettori::Lettore, c: usize) -> bool {
     let Some(k) = l
-        .indice(c)
+        .index(c)
         .ok()
         .and_then(|v| v.iter().position(|e| e.livello == 1))
     else {
         return false;
     };
-    l.scansione(c, k).is_ok_and(|s| s.profile)
+    l.scan(c, k).is_ok_and(|s| s.profile)
 }
 
 /// The SRM traces of sample `c` of a dataset as `mzlab_core::srm::impacchetta` writes them, given once to `sink(Uint8Array)` (the MRM files of mzFinder: no mzML is made of them).

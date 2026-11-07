@@ -27,19 +27,19 @@ def ione(formula: str, mz: float):
     if not formula:
         return None
     M = sum(MASS[e] * n for e, n in parse_formula(formula).items())
-    for nome, v in (("[M+H]+", M + PROTON), ("[M+Na]+", M + NA_ION)):
+    for name, v in (("[M+H]+", M + PROTON), ("[M+Na]+", M + NA_ION)):
         if abs(mz - v) / v * 1e6 < PPM:
-            return nome
+            return name
     return None
 
 
 def prepara(maf: str, rt_report: dict) -> dict:
-    righe = list(csv.DictReader(open(maf, newline="", encoding="utf-8"), delimiter="\t"))
-    vere = V.da_maf(maf, atteso="Compound concentration ratio")
+    rows = list(csv.DictReader(open(maf, newline="", encoding="utf-8"), delimiter="\t"))
+    true = V.da_maf(maf, atteso="Compound concentration ratio")
     rt = {c["id"]: c for c in rt_report["compounds"]}
-    formula = {f"{(r.get('metabolite_identification') or 'maf' + str(i))}@{i}": r.get("chemical_formula") for i, r in enumerate(righe)}
+    formula = {f"{(r.get('metabolite_identification') or 'maf' + str(i))}@{i}": r.get("chemical_formula") for i, r in enumerate(rows)}
     out = []
-    for c in vere:
+    for c in true:
         r = rt.get(c["id"], {})
         out.append({"id": c["id"], "mz": c["mz"], "rt": c["rt"], "atteso": c["atteso"], "formula": formula.get(c["id"]) or None,
                     "ione": ione(formula.get(c["id"]) or "", c["mz"]), "visto": bool(r.get("visto")), "d_rt": r.get("d")})

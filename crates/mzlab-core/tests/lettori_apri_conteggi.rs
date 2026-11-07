@@ -99,13 +99,13 @@ fn opening_every_sample_of_a_wiff_pair_reads_it_about_once() {
     let c = Rc::new(Conti::default());
     // the list of samples (`native_samples`)
     let l = lettori::apri(set(&dati, &c), &Limiti::sito()).unwrap();
-    assert_eq!(l.campioni().len(), SAMPLES);
+    assert_eq!(l.samples().len(), SAMPLES);
     drop(l);
     let lista = (c.reads.get(), c.bytes.get());
     // one index builder per sample, each in its own worker (`build_mzidx_native`)
     for s in 0..SAMPLES {
         let mut l = wiff::lettore::apri_solo(set(&dati, &c), &Limiti::sito(), Some(s)).unwrap();
-        assert!(!l.indice(s).unwrap().is_empty());
+        assert!(!l.index(s).unwrap().is_empty());
     }
     let tutto = (c.reads.get(), c.bytes.get());
     eprintln!(

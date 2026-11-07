@@ -57,7 +57,7 @@ const VARIANT_SCANS: usize = 64;
 /// True when the folder is a variant that the engine's reader (the one without `estesi`) opens or refuses but cannot read the points of: an xsd with nested types,
 /// or a record whose spectrum is not 16 bytes per point of the GC/MS layout (other formats, profile, compressed). Looks at the head of `MSScan.bin` and at the xsd
 /// only. A folder that is not an Agilent `.D` is not a variant.
-pub fn variante(fs: &mut FileSet) -> bool {
+pub fn variant(fs: &mut FileSet) -> bool {
     let Some(i) = find(fs, SCAN) else {
         return false;
     };

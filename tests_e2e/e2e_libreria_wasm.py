@@ -62,7 +62,7 @@ try:
         step("the WebAssembly engine loads (the .wasm is under 600 KB)", engine)
         def imp():
             info = pg.evaluate(ADD, ["prova.msp", MSP])
-            assert info["store"] == "mzlib" and info["n"] == 5 and info["dropped"] == 1 and info["noPrec"] == 1 and info["pos"] == 4 and info["neg"] == 1, info
+            assert info["store"] == "mzlib" and info["n"] == 5 and info["dropped"] == 1 and info["noPrec"] == 1 and info["pos"] == 4 and info["neg"] == 1 and info["cut"] == 0, info
             f = pg.evaluate(FILES); assert any(x.endswith(".mzlib") for x in f) and not any((x.endswith(".tmp") and x != "probe.tmp") or x.endswith(".idx") for x in f) and any(x.startswith("librerie/.mzlab/prova.msp.") for x in f), f
         step("import: an index in `.mzlab/` of the OPFS folder, no temporary file, one record discarded", imp)
         def search():
@@ -91,6 +91,16 @@ try:
             for x in pg.evaluate("LIB.call('list').then(r => r.libs.map(x => x.id))"): pg.evaluate("id => LIB.call('remove', { id })", x)
             f = pg.evaluate(FILES); assert not any(n.endswith((".mzlib", ".info.json")) or (n.endswith(".tmp") and n != "probe.tmp") for n in f), f
         step("remove: every file of the library goes", remove)
+        def cut():
+            big = rec("Molti", 900.1, [(50 + i * 0.001, 10) for i in range(200_001)]) + "\n" + rec("Pochi", 900.2, PEAKS)
+            pg.evaluate("LIB.open()"); pg.wait_for_selector("#libdlg #lib-file", state="attached", timeout=20000)
+            pg.set_input_files("#libdlg #lib-file", files=[{"name": "molti.msp", "mimeType": "text/plain", "buffer": big.encode()}])
+            want = pg.evaluate("I18N.t('lib.cutN', { n: I18N.num(1), max: I18N.num(200000) })")
+            pg.wait_for_function("() => !document.querySelector('#libdlg #lib-st progress') && !!document.querySelector('#libdlg #lib-st div')", timeout=60000)
+            st = pg.inner_html("#libdlg #lib-st"); assert want in st and "class=\"err\"" not in st, st
+            l = pg.evaluate("LIB.call('list').then(r => r.libs.map(x => [x.name, x.n, x.cut, x.id]))"); assert [x[:3] for x in l] == [["molti", 2, 1]], l
+            pg.click("#lib-x"); pg.evaluate("id => LIB.call('remove', { id })", l[0][3])
+        step("a spectrum over the engine's peak cap: one calm line in the import summary names the cap and what was kept", cut)
         def migrate():
             boot(URL + "?libjs=1"); e = pg.evaluate("LIB.engine.info()"); assert e["wasm"] is False, e
             info = pg.evaluate(ADD, ["vecchia.msp", MSP]); assert info.get("store") is None and info["n"] == 5, info

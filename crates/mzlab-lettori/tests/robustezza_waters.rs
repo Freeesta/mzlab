@@ -11,21 +11,21 @@ fn tutto(file: Vec<(String, Vec<u8>)>) {
     let Ok(mut l) = mzlab_lettori::apri_nudo(insieme(file), &Limiti::sito()) else {
         return;
     };
-    let n = l.campioni().len();
+    let n = l.samples().len();
     for c in 0..n {
-        if let Ok(ix) = l.indice(c).map(<[_]>::to_vec) {
+        if let Ok(ix) = l.index(c).map(<[_]>::to_vec) {
             for k in 0..ix.len().min(6) {
-                let _ = l.scansione(c, k);
-                let _ = l.intestazione(c, k);
+                let _ = l.scan(c, k);
+                let _ = l.scan_header(c, k);
             }
         }
-        if let Ok(v) = l.cromatogrammi(c) {
+        if let Ok(v) = l.chromatograms(c) {
             for h in v.iter().take(6) {
-                let _ = l.cromatogramma(c, &h.id);
+                let _ = l.chromatogram(c, &h.id);
             }
         }
-        let _ = l.metodo(c);
-        let _ = l.testata_mzml(c);
+        let _ = l.method(c);
+        let _ = l.mzml_header(c);
     }
 }
 

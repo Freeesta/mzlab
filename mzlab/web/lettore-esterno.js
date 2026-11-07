@@ -31,22 +31,22 @@ export function createEsterno(native_external) {
     if (!w) throw loadError(fam, "module not loaded");
     const sums = Array.from(names, (n, i) => (sha1 && sha1[i]) || known.get(n + "\0" + sizes[i]) || "");
     // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
-    const h = w.apri_con_sha1 && sums.some(Boolean) ? w.apri_con_sha1(names, sizes, read, sums) : w.apri(names, sizes, read);
+    const h = w.open_with_sha1 && sums.some(Boolean) ? w.open_with_sha1(names, sizes, read, sums) : w.open(names, sizes, read);
     return {
       // the version of the binary transport of the index and the scans (a module of an older build has none)
-      protocollo: () => (w.protocollo ? w.protocollo() : 1),
-      campioni: () => w.campioni(h),
+      protocol: () => (w.protocol ? w.protocol() : 1),
+      samples: () => w.samples(h),
       // one Uint8Array: the columns of the index (crates/mzlab-core/src/trasporto.rs)
-      indice: (/** @type {number} */ c) => w.indice(h, c),
-      scansione: (/** @type {number} */ c, /** @type {number} */ k) => w.scansione(h, c, k),
-      intestazione: (/** @type {number} */ c, /** @type {number} */ k) => w.intestazione(h, c, k),
-      cromatogrammi: (/** @type {number} */ c) => w.cromatogrammi(h, c),
-      cromatogramma: (/** @type {number} */ c, /** @type {string} */ id) => w.cromatogramma(h, c, id),
-      metodo: (/** @type {number} */ c) => w.metodo(h, c),
-      testata: (/** @type {number} */ c) => w.testata(h, c),
+      index: (/** @type {number} */ c) => w.index(h, c),
+      scan: (/** @type {number} */ c, /** @type {number} */ k) => w.scan(h, c, k),
+      scan_header: (/** @type {number} */ c, /** @type {number} */ k) => w.scan_header(h, c, k),
+      chromatograms: (/** @type {number} */ c) => w.chromatograms(h, c),
+      chromatogram: (/** @type {number} */ c, /** @type {string} */ id) => w.chromatogram(h, c, id),
+      method: (/** @type {number} */ c) => w.method(h, c),
+      file_header: (/** @type {number} */ c) => w.file_header(h, c),
       // the spectra a truncated file declares but does not hold (a module of an older build has none)
-      mancanti: (/** @type {number} */ c) => (w.mancanti ? w.mancanti(h, c) : 0),
-      chiudi: () => w.chiudi(h),
+      missing: (/** @type {number} */ c) => (w.missing ? w.missing(h, c) : 0),
+      close: () => w.close(h),
     };
   };
   return {
@@ -61,7 +61,7 @@ export function createEsterno(native_external) {
       try { loaded.set(fam, await loadModulo(fam)); } catch (e) { throw loadError(fam, e); }
     },
     /** a session of the module over the members of a dataset, for the page's own reads (the series of the instrument log); `prepara` first */
-    apri: open,
+    open,
     loaded: () => [...loaded.keys()],
   };
 }

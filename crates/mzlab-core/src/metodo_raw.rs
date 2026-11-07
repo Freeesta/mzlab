@@ -365,7 +365,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         ("registro", Some(V::Arr(registro::voci(&raw.error_log)))),
         (
             "serie_registro",
-            Some(V::Arr(serie::sezione(&serie::indice(raw, source)))),
+            Some(V::Arr(serie::sezione(&serie::index(raw, source)))),
         ),
         ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),

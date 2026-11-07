@@ -34,6 +34,10 @@
   // Esc is run by azioni-esc.js (one press, one thing, by priority); here it only has its line in the panel
   reg({ id: "app.esc", gruppo: "view", viste: ["*"], icona: "clear", scorciatoia: { tasto: "Escape", dove: "view", et: "scorc.esc" },
     nome: () => T("scorc.esc"), tip: () => T("scorc.esc.tip"), disponibile: () => false, esegui: () => {} });
+  // Safari on a Mac moves Tab between text fields only (unless set otherwise): the panel says that ⌥Tab reaches buttons and links. Safari runs it itself.
+  const ua = navigator.userAgent || "", safariMac = /Mac/.test(navigator.platform || "") && /Safari\//.test(ua) && !/Chrome|Chromium|Edg|Firefox|OPR/.test(ua) && !matchMedia("(hover: none) and (pointer: coarse)").matches;
+  if (safariMac) reg({ id: "app.tabSafari", gruppo: "view", viste: ["*"], icona: "list", scorciatoia: { tasto: "Tab", alt: true, dove: "view", et: "scorc.tabSafari" },
+    nome: () => T("scorc.tabSafari"), tip: () => T("scorc.tabSafari.tip"), disponibile: () => false, esegui: () => {} });
   const inData = () => typeof S !== "undefined" && S.view === "data";
   reg({ id: "app.apri", gruppo: "tools", viste: ["*"], icona: "plus", scorciatoia: { tasto: "o", mod: true, dove: "view", et: "scorc.apri" },
     nome: () => T("scorc.apri"), tip: () => T("scorc.apri.tip"), disponibile: () => !!document.getElementById("pick"), esegui: () => { const i = document.getElementById("pick"); if (i) i.click(); } });

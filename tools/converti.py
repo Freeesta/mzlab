@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 PWIZ = "chambm/pwiz-skyline-i-agree-to-the-vendor-licenses"       # MSConvert with the readers of the manufacturers, in Docker (it runs under wine)
-FILTRO = 'peakPicking vendor msLevel=1-'
+FILTER = 'peakPicking vendor msLevel=1-'
 
 
 def trova_trfp(percorso: str | None = None) -> list[str] | None:
@@ -39,18 +39,18 @@ def trova_trfp(percorso: str | None = None) -> list[str] | None:
     return None
 
 
-def comando_trfp(trfp: list[str], raw: Path, uscita: Path) -> list[str]:
+def command_trfp(trfp: list[str], raw: Path, uscita: Path) -> list[str]:
     """One .raw -> indexed mzML (-f 2), zlib (-z), centroids of the manufacturer (peak picking is on unless -p is given)."""
     return [*trfp, "-i", str(raw), "-o", str(uscita), "-f", "2", "-z"]
 
 
-def comando_docker(cartella: Path, nome: str, uscita: str = "/dati/mzML") -> str:
+def command_docker(cartella: Path, nome: str, uscita: str = "/dati/mzML") -> str:
     """MSConvert in Docker for a .wiff (it needs the .wiff.scan next to it) or a .d folder."""
     return (f'docker run -it --rm -e WINEDEBUG=-all -v "{cartella}":/dati {PWIZ} wine msconvert "/dati/{nome}" --mzML --zlib '
-            f'--filter "{FILTRO}" -o {uscita}')
+            f'--filter "{FILTER}" -o {uscita}')
 
 
-def converti(cartella: Path, uscita: Path, trfp_percorso: str | None = None, prova: bool = False, out=print) -> dict:
+def converti(cartella: Path, uscita: Path, trfp_path: str | None = None, prova: bool = False, out=print) -> dict:
     """Walks the folder. Returns {"fatti": [...], "saltati": [...], "da_fare": [comandi stampati], "errori": [...]}"""
     res = {"fatti": [], "saltati": [], "da_fare": [], "errori": []}
     cartella = cartella.resolve(); uscita = uscita.resolve()
@@ -61,7 +61,7 @@ def converti(cartella: Path, uscita: Path, trfp_percorso: str | None = None, pro
         out(f"Nessun file .raw, .wiff o .d in {cartella}.")
         return res
     if raws:
-        trfp = trova_trfp(trfp_percorso)
+        trfp = trova_trfp(trfp_path)
         if trfp is None and not prova:
             out("ThermoRawFileParser non trovato. Scaricalo da https://github.com/CompOmics/ThermoRawFileParser/releases e indicane il percorso con --trfp "
                 "(o nella variabile THERMORAWFILEPARSER). Fuori da Windows serve anche mono, oppure la versione per Linux/Mac.")
@@ -72,7 +72,7 @@ def converti(cartella: Path, uscita: Path, trfp_percorso: str | None = None, pro
                 dest = uscita / (r.stem + ".mzML")
                 if dest.exists():
                     out(f"già convertito: {r.name}"); res["saltati"].append(r.name); continue
-                cmd = comando_trfp(trfp or ["ThermoRawFileParser"], r, uscita)
+                cmd = command_trfp(trfp or ["ThermoRawFileParser"], r, uscita)
                 if prova:
                     out(" ".join(f'"{c}"' if " " in c else c for c in cmd)); res["da_fare"].append(cmd); continue
                 out(f"converto {r.name} …")
@@ -82,9 +82,9 @@ def converti(cartella: Path, uscita: Path, trfp_percorso: str | None = None, pro
                 else:
                     res["errori"].append(r.name); out(f"  non riuscito: {(p.stderr or p.stdout).strip().splitlines()[-1:] or ''}")
     for w in wiffs:
-        c = comando_docker(w.parent, w.name); out(c); res["da_fare"].append(c)
+        c = command_docker(w.parent, w.name); out(c); res["da_fare"].append(c)
     for d in ds:
-        c = comando_docker(d.parent, d.name); out(c); res["da_fare"].append(c)
+        c = command_docker(d.parent, d.name); out(c); res["da_fare"].append(c)
     if wiffs or ds:
         out("\nI file .wiff / .d si convertono con MSConvert (ProteoWizard): il comando qui sopra usa Docker. Sul .wiff deve stare accanto il suo .wiff.scan. "
             "In alternativa: MSConvert per Windows, Output format mzML, 64-bit, zlib, Numpress spento, filtro «peakPicking vendor msLevel=1-».")

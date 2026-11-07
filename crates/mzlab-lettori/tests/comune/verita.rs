@@ -74,7 +74,7 @@ impl Rapporto {
             .collect()
     }
     /// The levels that could not be compared (with what is missing).
-    pub fn mancanti(&self) -> Vec<String> {
+    pub fn missing(&self) -> Vec<String> {
         self.livelli
             .iter()
             .filter_map(|(l, e)| match e {
@@ -98,7 +98,7 @@ impl Rapporto {
         }
     }
     pub fn riga(&self) -> String {
-        let m = self.mancanti();
+        let m = self.missing();
         format!("{}\t{}\t{}", self.file, self.esito(), m.join("; "))
     }
 }
@@ -134,7 +134,7 @@ pub fn verita_in(dir: &Path) -> Vec<PathBuf> {
 /// F1 to F4 over sample `c` of an open reader; F0 is the caller's (it opened the file); F5 reads the `metodo/1` document.
 pub fn confronta(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol, nome: &str) -> Rapporto {
     let mut livelli: Vec<(&'static str, Esito)> = vec![("F0", Esito::Ok)];
-    let indice: Vec<VoceScansione> = match l.indice(c) {
+    let indice: Vec<VoceScansione> = match l.index(c) {
         Ok(i) => i.to_vec(),
         Err(e) => {
             livelli.push(("F1", Esito::Difetto(vec![format!("index: {}", e.key)])));
@@ -144,7 +144,7 @@ pub fn confronta(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol, nome: &str)
             };
         }
     };
-    let croms = l.cromatogrammi(c).unwrap_or_default();
+    let croms = l.chromatograms(c).unwrap_or_default();
     livelli.push(("F1", livelli_f::f1_conteggi(&indice, &croms, v)));
     livelli.push(("F2", livelli_f::f2_intestazioni(l, &indice, v, c, tol)));
     livelli.push(("F3", livelli_f::f3_punti(l, v, c, tol)));

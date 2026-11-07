@@ -82,8 +82,9 @@ pub(super) fn detect() -> Step {
             .advanced(),
         Param::integer("max_gap", "Maximum gap")
             .min(0.0)
-            .default_num(2.0)
+            .default_num(1.0)
             .unit("scans")
+            .doc("Scans a trace may miss between two of its points; 0 = consecutive scans")
             .advanced(),
         Param::integer("long_trace", "Long trace")
             .min(1.0)
@@ -108,6 +109,8 @@ pub(super) fn detect() -> Step {
     params.extend(noise_gates());
     params.extend(isotope_params());
     Step {
+        // 2: `max_gap` counts the missed scans (1 counted the scan distance); `flow::migrate` converts a saved @1
+        version: 2,
         cv: Some("MS:1000035"),
         ins: vec![Port::new("index", DataType::Mzidx, "Scan index")
             .many()
