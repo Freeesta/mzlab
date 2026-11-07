@@ -36,8 +36,8 @@ def appiattisci(x, prefisso="") -> dict:
 
 def da_trfp(mzml: Path, meta: Path, versione: str, nativo: Path | None) -> dict:
     d = verita.da_mzml(mzml, ("ThermoRawFileParser", versione, "-f 2 -m 0"), nativo, None)
-    for nome, v in appiattisci(json.loads(meta.read_text(encoding="utf-8-sig"))).items():
-        d["metadati"][f"trfp:{nome}"] = {"valore": v if isinstance(v, (str, int, float, bool)) else str(v), "produttore": "ThermoRawFileParser"}
+    for name, v in appiattisci(json.loads(meta.read_text(encoding="utf-8-sig"))).items():
+        d["metadati"][f"trfp:{name}"] = {"valore": v if isinstance(v, (str, int, float, bool)) else str(v), "produttore": "ThermoRawFileParser"}
     return d
 
 

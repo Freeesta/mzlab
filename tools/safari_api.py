@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-AMMESSE = ROOT / "tools" / "safari_api_ammesse.txt"
+ALLOWED = ROOT / "tools" / "safari_api_ammesse.txt"
 DIRS = ("mzlab/web", "flow", "TP_Mine")
 SKIP = ("mzlab/web/vendor/", "mzlab/web/esempi/", "mzlab/web/lang/", "mzlab/web/elements.js", "/tests/", "TP_Mine/data/")
 EXT = {".js", ".mjs", ".css", ".html"}
@@ -123,10 +123,10 @@ def scan() -> dict[tuple[str, str], list[int]]:
     return hits
 
 
-def ammesse() -> dict[tuple[str, str], int]:
+def allowed() -> dict[tuple[str, str], int]:
     """file::id::count  # the guard or fallback (one line per file and id)."""
     out: dict[tuple[str, str], int] = {}
-    for raw in AMMESSE.read_text(encoding="utf-8").splitlines():
+    for raw in ALLOWED.read_text(encoding="utf-8").splitlines():
         line = raw.split("#", 1)[0].strip()
         if not line:
             continue
@@ -136,7 +136,7 @@ def ammesse() -> dict[tuple[str, str], int]:
 
 
 def controlla() -> list[str]:
-    hits, ok = scan(), ammesse()
+    hits, ok = scan(), allowed()
     ver = {s[0]: s[1] for s in JS + CSS}
     bad = []
     for (f, sid), lines in sorted(hits.items()):
