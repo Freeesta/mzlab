@@ -109,7 +109,7 @@ function registroDi(stubOf, memberFiles, ext, jerr) {
   /** @type {{ name: string, s: any, timer: any } | null} */
   let log = null;
   const IDLE = 30000;
-  const close = () => { if (log) { clearTimeout(log.timer); try { log.s.chiudi(); } catch (_) { /* already closed */ } log = null; } };
+  const close = () => { if (log) { clearTimeout(log.timer); try { log.s.close(); } catch (_) { /* already closed */ } log = null; } };
   /** one series as the module's chromatogram JSON; the points are computed here, when asked for */
   async function registro(/** @type {string} */ name, /** @type {string} */ id) {
     if (!log || log.name !== name) {
@@ -118,14 +118,14 @@ function registroDi(stubOf, memberFiles, ext, jerr) {
       if (!st) jerr("err.session.fileNotFound");
       const files = await memberFiles(st);
       await ext.prepara(st.members.map(m => m.name));
-      const s = await viaHandles(st, files, rd => ext.apri(st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), rd));      // the session outlives the handles (idle: none held); its later reads use the Blobs
+      const s = await viaHandles(st, files, rd => ext.open(st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), rd));      // the session outlives the handles (idle: none held); its later reads use the Blobs
       if (!s) jerr("err.route.unavailable");
       log = { name, s, timer: 0 };
     }
     clearTimeout(log.timer);
     const cur = log;
     cur.timer = setTimeout(() => { if (log === cur) close(); }, IDLE);
-    return cur.s.cromatogramma(0, id);
+    return cur.s.chromatogram(0, id);
   }
   return { registro, forget: (/** @type {string} */ n) => { if (log && log.name === n) close(); }, forgetAll: close };
 }
@@ -240,7 +240,7 @@ async function writerOf(/** @type {Stub} */ st, /** @type {Function} */ native_t
   if (st.centroid || !st.members.some(x => /\.wiff$/i.test(x.name)))
     return (/** @type {any[]} */ ...a) => native_to_mzml(a[0], a[1], a[2], a[3], st.centroid, a[4], a[5], a[6]);
   const w = await loadModulo("sciex").catch(e => { throw JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: "sciex", detail: String(e && e.message || e) } }); });
-  return (/** @type {any[]} */ ...a) => w.to_mzml_come(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
+  return (/** @type {any[]} */ ...a) => w.to_mzml_with(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
 }
 
 const quotaErr = (/** @type {any} */ e) => /quota/i.test(typeof e === "string" ? e : String(e && (e.name || e.message)));

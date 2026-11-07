@@ -160,12 +160,14 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
     } catch (e_) { const e = /** @type {Lanciato} */ (e_); box.innerHTML = h`<p class="err">${e.message}</p>`; }
   }
   const CARTELLA_stem = (/** @type {string} */ n) => String(n).replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
+  // the result of an import: spectra, those discarded, and those kept with only the first peaks (the engine's cap, lib.cutN)
+  const doneLine = (/** @type {string} */ name, /** @type {Bag} */ i) => `<div class="sm">${EHt(name)}: ${I18N.t("lib.doneN", { n: fmtN(i.n) })}${i.dropped ? ", " + I18N.t("lib.droppedN", { n: fmtN(i.dropped) }) : ""}.${i.cut ? " " + I18N.t("lib.cutN", { n: fmtN(i.cut), max: fmtN(i.cutAt) }) : ""}</div>`;
   async function indexOne(/** @type {string} */ name) {
     const st = document.querySelector("#libdlg #lib-st");
     st.innerHTML = h`<div class="sm">${name}: ${raw(I18N.t("lib.reading"))}</div><progress max="1" value="0"></progress>`;
     try {
       const r = await call("index", { name }, (/** @type {Bag} */ m) => { st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.readN", { n: fmtN(m.n), pct: Math.round(m.read / m.total * 100) })}</div><progress max="${m.total}" value="${m.read}"></progress>`; });
-      st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.doneN", { n: fmtN(r.info.n) })}.</div>`;
+      st.innerHTML = doneLine(name, r.info);
     } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.innerHTML = h`<div class="err">${name}: ${e.message}</div>`; }
     await refresh();
   }
@@ -240,7 +242,7 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
       st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.reading")}</div><progress max="1" value="0"></progress>`;
       try {
         const r = await call("add", { file: f }, (/** @type {Bag} */ m) => { st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.readN", { n: fmtN(m.n), pct: Math.round(m.read / m.total * 100) })}</div><progress max="${m.total}" value="${m.read}"></progress>`; });
-        st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.doneN", { n: fmtN(r.info.n) })}${r.info.dropped ? ", " + I18N.t("lib.droppedN", { n: fmtN(r.info.dropped) }) : ""}.</div>`;
+        st.innerHTML = doneLine(f.name, r.info);
       } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.innerHTML = `<div class="err">${EHt(f.name)}: ${EHt(e.message)}</div>`; }
       await refresh();
     }

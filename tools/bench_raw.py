@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Times and measures the memory of the `thermo` module (or another family) of the readers, in Node, step by step: apri, campioni, indice, scansione (all the scans), testata, metodo, to_mzml.
+"""Times and measures the memory of the `thermo` module (or another family) of the readers, in Node, step by step: open, samples, index, scan (all the scans), file_header, method, to_mzml.
 One JSON line per step: {"step", "ms", "mem" (bytes of the WASM memory after the step), "bytes", "sha256" of the text/bytes the step produced}. Python is only the tool: the module is built by
 tools/build_lettori_wasm.sh's own cargo line (without wasm-opt, like the measures of docs/studi/RAW_VELOCE.md §2.3) and wrapped by `wasm-bindgen --target nodejs`.
-Use: python3 tools/bench_raw.py FILE.raw [--family thermo] [--steps apri,indice,...] [--no-build] [--keep DIR]
+Use: python3 tools/bench_raw.py FILE.raw [--family thermo] [--steps open,index,...] [--no-build] [--keep DIR]
 Needs: cargo with the wasm32-unknown-unknown target, wasm-bindgen (same version as Cargo.lock), node."""
 import argparse, os, shutil, subprocess, sys, tempfile
 
@@ -18,7 +18,7 @@ const sha = (x) => crypto.createHash('sha256').update(x).digest('hex');
 const out = (o) => console.log(JSON.stringify(o));
 let h = null, peak = 0;
 const step = (name, f) => {
-  if (name !== 'apri' && !steps.includes(name)) return;
+  if (name !== 'open' && !steps.includes(name)) return;
   const t = process.hrtime.bigint();
   let r;
   try { r = f() || {}; } catch (e) { out({ step: name, error: String(e && e.message || e), mem: mem() }); process.exit(1); }
@@ -26,18 +26,18 @@ const step = (name, f) => {
   peak = Math.max(peak, mem());
   out(Object.assign({ step: name, ms: Math.round(ms * 10) / 10, mem: mem() }, r));
 };
-step('apri', () => { h = m.apri(names, sizes, read); });
+step('open', () => { h = m.open(names, sizes, read); });
 let camp = null;
-step('campioni', () => { const s = m.campioni(h); camp = JSON.parse(s); return { bytes: s.length, sha256: sha(s) }; });
-step('indice', () => { const s = m.indice(h, 0); return { bytes: s.length, sha256: sha(Buffer.from(s.buffer, s.byteOffset, s.byteLength)) }; });
-step('scansione', () => {
+step('samples', () => { const s = m.samples(h); camp = JSON.parse(s); return { bytes: s.length, sha256: sha(s) }; });
+step('index', () => { const s = m.index(h, 0); return { bytes: s.length, sha256: sha(Buffer.from(s.buffer, s.byteOffset, s.byteLength)) }; });
+step('scan', () => {
   const n = camp.campioni[0].scans, hash = crypto.createHash('sha256'); let pts = 0, ns = 0n;
-  for (let k = 0; k < n; k++) { const t = process.hrtime.bigint(); const r = m.scansione(h, 0, k); ns += process.hrtime.bigint() - t; pts += new DataView(r.buffer, r.byteOffset).getUint32(4, true); hash.update(r); }
+  for (let k = 0; k < n; k++) { const t = process.hrtime.bigint(); const r = m.scan(h, 0, k); ns += process.hrtime.bigint() - t; pts += new DataView(r.buffer, r.byteOffset).getUint32(4, true); hash.update(r); }
   return { scans: n, points: pts, us_per_scan: Math.round(Number(ns) / n / 100) / 10, sha256: hash.digest('hex') };
 });
-step('intestazione', () => { const n = camp.campioni[0].scans, hash = crypto.createHash('sha256'); let b = 0; for (let k = 0; k < n; k += Math.max(1, Math.floor(n / 500))) { const s = m.intestazione(h, 0, k); b += s.length; hash.update(s); } return { bytes: b, sha256: hash.digest('hex') }; });
-step('testata', () => { const s = m.testata(h, 0); return { bytes: s.length, sha256: sha(s) }; });
-step('metodo', () => { const s = m.metodo(h, 0); return { bytes: s.length, sha256: sha(s) }; });
+step('scan_header', () => { const n = camp.campioni[0].scans, hash = crypto.createHash('sha256'); let b = 0; for (let k = 0; k < n; k += Math.max(1, Math.floor(n / 500))) { const s = m.scan_header(h, 0, k); b += s.length; hash.update(s); } return { bytes: b, sha256: hash.digest('hex') }; });
+step('file_header', () => { const s = m.file_header(h, 0); return { bytes: s.length, sha256: sha(s) }; });
+step('method', () => { const s = m.method(h, 0); return { bytes: s.length, sha256: sha(s) }; });
 step('to_mzml', () => {
   const hash = crypto.createHash('sha256'); let b = 0;
   m.to_mzml(names, sizes, read, 0, (u8) => { b += u8.length; hash.update(u8); }, () => {});
@@ -54,7 +54,7 @@ def main():
     a = argparse.ArgumentParser()
     a.add_argument("file")
     a.add_argument("--family", default="thermo")
-    a.add_argument("--steps", default="campioni,indice,scansione,intestazione,testata,metodo,to_mzml")
+    a.add_argument("--steps", default="samples,index,scan,scan_header,file_header,method,to_mzml")
     a.add_argument("--no-build", action="store_true", help="reuse the module of --keep")
     a.add_argument("--keep", help="folder of the wrapped module (default: a temporary one)")
     o = a.parse_args()
