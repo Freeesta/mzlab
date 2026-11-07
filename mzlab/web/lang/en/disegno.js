@@ -27,6 +27,7 @@ I18N.add("en", {
   "draw.quick.invalidNone": "Invalid SMILES: no structure was added.",
   "draw.quick.invalid": "Invalid SMILES: {message}",
   "draw.selection.heading": "SMILES of the selection",
+  "draw.selection.slow": "The structure conversion did not answer within {s} s and was stopped, so this piece has no SMILES. Select a smaller piece, or draw it again, and try once more.",
   "draw.selection.noFormula": "Atom without a formula (R group, abbreviation...): no SMILES.",
   "draw.selection.cuts": "{n, plural, one {# bond cut} other {# bonds cut}}: the open positions are closed with H.",
   "draw.props.heading": "Predicted properties",
