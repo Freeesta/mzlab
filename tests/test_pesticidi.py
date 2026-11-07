@@ -106,3 +106,24 @@ console.log(JSON.stringify({ hit: LISTENOMI.byName('imidacloprid'), plus: LISTEN
     assert o["hit"] == {"formula": "C9H10ClN5O2", "adduct": "[M+H]+"}
     assert o["plus"] == {"formula": "C9H10ClN5O2", "adduct": "[M+Na]+"}
     assert o["sug"] == ["imidacloprid"] and all(o["all"])
+
+
+@pytest.mark.skipif(not NODE, reason="node non disponibile")
+def test_a_name_with_its_bracket_is_found_by_either_part():
+    """«dibutilftalato (DBP)» of Keller: the name before the bracket and the short name inside it are the same entry; a bracket word shared by
+    many entries («dimero») finds none; the full name still works."""
+    code = r"""
+const fs = require('fs'), vm = require('vm'), web = process.argv[1];
+globalThis.I18N = { lang: 'it', t: (k, o) => k + JSON.stringify(o || {}) };
+globalThis.NOMI = require(web + '/nomi.js');
+const L = require(web + '/liste.js');
+globalThis.LISTE = { ensure: () => L.buildIndex(JSON.parse(fs.readFileSync(process.argv[2], 'utf8')).lists, null) };
+vm.runInThisContext(fs.readFileSync(web + '/liste-nomi.js', 'utf8') + ';globalThis.LISTENOMI = LISTENOMI;');
+const f = t => (LISTENOMI.byName(t) || {}).formula || null;
+console.log(JSON.stringify([f('dibutilftalato (DBP)'), f('dibutilftalato'), f('DBP'), f('dibutyl phthalate'), f('dimero'), f('DBP [M+Na]+')]));
+"""
+    import subprocess
+    r = subprocess.run([NODE, "-e", code, str(ROOT / "mzlab" / "web"), str(ROOT / "mzlab" / "web" / "contaminanti.json")],
+                       capture_output=True, text=True, encoding="utf-8")
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == ["C16H22O4"] * 4 + [None, "C16H22O4"]

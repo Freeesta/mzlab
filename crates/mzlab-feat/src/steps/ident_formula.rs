@@ -56,8 +56,10 @@ pub(super) fn ms1() -> Step {
     ];
     Step {
         ins: vec![
+            // the CSV of features.table; a .mzfeat stays accepted as the identify template wires it today
             Port::new("features", DataType::Table, "Aligned feature table")
                 .accepts(&[DataType::Report])
+                .formats(&["csv", "mzfeat"])
                 .requires(hr()),
             Port::new("index", DataType::Mzidx, "Scan index (MS1 at the apex)")
                 .many()
@@ -164,10 +166,13 @@ pub(super) fn rt_predict() -> Step {
     Step {
         ins: vec![
             Port::new("candidates", DataType::Candidates, "Candidates with a structure").requires(hr()),
-            Port::new("standards", DataType::Table, "Identified features of the campaign with their RT (CSV smiles,rt)"),
+            // CSV files typed table; a .mzfeat stays accepted as the page wires one today
+            Port::new("standards", DataType::Table, "Identified features of the campaign with their RT (CSV smiles,rt)")
+                .formats(&["csv", "mzfeat"]),
             Port {
                 optional: true,
                 ..Port::new("queries", DataType::Table, "Observed RT of each query (CSV query,rt); absent: the rt of the hit")
+                    .formats(&["csv", "mzfeat"])
             },
         ],
         outs: vec![Port::new("candidates", DataType::Candidates, "Candidates with the RT evidence")],
