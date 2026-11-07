@@ -2,7 +2,8 @@
 the MS2 panel reads its scans from the file of the Full Scan above it (two DDA files open), the markers of a second DDA file appear without a reload,
 an empty MS2 panel says why it is empty (precursors outside the m/z zoom, averaged Full Scan), with the same words for the screen reader,
 the «N MS²» button of the Full Scan (one scan and an average: the count of the engine, the list with the keyboard) and the flags of an averaged Full Scan,
-‹ › on the MS2 panel (the MS2 of the same precursor, Shift = in time) and ← → from an empty panel starting at the chromatogram cursor."""
+‹ › on the MS2 panel (the MS2 of the same precursor, Shift = in time) and ← → from an empty panel starting at the chromatogram cursor,
+a click on a peak (its MS2, or the closest in time) and the «▲ MS²» switch of the chromatogram."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -101,6 +102,37 @@ try:
                 v = pg.evaluate("(async d=>{const t=" + TRIO + ";const D=DDA.ready(t.s1.k),cur=D.rt[Math.floor(D.rt.length/2)]+1e-3;t.s2.sid=null;t.s2.ion=null;t.s2.avg=null;t.c.cur=cur;await DDA.step(t.s2,d);const want=d>0?D.rt.findIndex(r=>r>=cur):D.rt.length-1-[...D.rt].reverse().findIndex(r=>r<=cur);return {sid:t.s2.sid,want:D.sid[want],cur}})", d); print(v)
                 assert v["sid"] == v["want"], v
         step("‹ › of the MS2 panel: the MS2 of the same precursor (i/N), Shift = next in time; ← → from an empty panel start at the cursor", nav)
+        PX = "(m=>{const t=" + TRIO + ";const a=t.s1._a,r=t.s1.cv.getBoundingClientRect();return {x:r.left+M.l+(m-a.x0)/(a.x1-a.x0)*(a.W-M.l-M.r),y:r.top+a.H-M.b-4}})"
+        def peak():
+            pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);const j=D.sid.findIndex((_,i)=>D.parent[i]!=null&&(D.byParent.get(D.parent[i])||[]).length>1);await DDA.selectMs2(t.s2,D.sid[j]);window._pk=D.byParent.get(D.parent[j]).map(i=>D.sid[i]);window._pm=D.tgt[j]??D.prec[j];t.s2.sid=null;t.s2.ion=null;t.s2.avg=null;t.s1.zoom=[_pm-5,_pm+5];draw(t.s1);draw(t.s2)})()"); ready(pg)
+            attendi(pg, "(()=>{const t=" + TRIO + ";return t.s1._a&&t.s1._a.flags&&t.s1._a.flags.length>0&&t.s1._a.x0<=_pm&&t.s1._a.x1>=_pm})()")
+            w = pg.evaluate("(()=>{const t=" + TRIO + ";return t.s1._a.lbls.filter(l=>l.fl!=null||l.nb).map(l=>[l.w,l.h])})()"); assert w and all(a >= 24 and b >= 24 for a, b in w), w
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.s1.el.scrollIntoView({block:'center'})})()")
+            c = pg.evaluate(PX, pg.evaluate("_pm")); pg.mouse.click(c["x"], c["y"]); ready(pg)          # on the peak, far below its flag
+            attendi(pg, "(()=>{const t=" + TRIO + ";return t.s2.sid!=null&&_pk.includes(t.s2.sid)&&t.s2.ion==null})()")
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.s1.zoom=null;draw(t.s1)})()")
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.c.el.scrollIntoView({block:'center'})})()")
+            b = pg.evaluate("(()=>{const t=" + TRIO + ";const a=t.c._a,r=t.c.cv.getBoundingClientRect();return {x:r.left+M.l+(t.c.cur-a.x0)/(a.x1-a.x0)*(a.W-M.l-M.r),y:r.top+a.H/2}})()")
+            pg.mouse.click(b["x"], b["y"]); ready(pg)
+            for _ in range(80):                                   # walk to a Full Scan whose peaks were fragmented only in nearby scans (▽, dynamic exclusion)
+                if pg.evaluate("(()=>{const t=" + TRIO + ";const d=" + D0 + ",a=t.s1._a;return d&&d.scans===1&&a.flags.length===0&&a.lbls.some(l=>l.nb)})()"): break
+                pg.keyboard.press("ArrowRight"); ready(pg)
+            nb = pg.evaluate("(()=>{const t=" + TRIO + ";const D=DDA.ready(t.s1.k),l=t.s1._a.lbls.find(l=>l.nb);t.s2.sid=null;t.s2.ion=null;t.s2.avg=null;draw(t.s2);return {sid:D.sid[l.nb[0]],m:l.ion,n:t.s1._a.flags.length}})()"); print(nb)
+            assert nb["n"] == 0, nb
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.s1.el.scrollIntoView({block:'center'})})()")
+            c = pg.evaluate(PX, nb["m"]); pg.mouse.click(c["x"], c["y"]); ready(pg)
+            attendi(pg, "(()=>{const t=" + TRIO + ";return t.s2.sid===" + json.dumps(nb["sid"]) + "&&t.s2.ion!=null})()")
+            v = pg.evaluate("(()=>{const q=document.querySelector('#qnote');return q&&!q.hidden?q.textContent:''})()"); print(v)
+            assert v.startswith(pg.evaluate("I18N.t('dda.peak.near',{d:'X'}).split('X')[0]")), v
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.ion=null;t.c.el.scrollIntoView({block:'center'})})()")
+            T = "(()=>{const t=" + TRIO + ";const b=t.c.el.querySelector('[data-a=\"ms2tri\"]');return b&&{p:b.getAttribute('aria-pressed'),n:(t.c._a.tri||[]).length,w:b.getBoundingClientRect().width,h:b.getBoundingClientRect().height}})()"
+            attendi(pg, "(()=>{const v=" + T + ";return v&&v.p==='false'})()")
+            pg.locator("[data-a='ms2tri']").first.click(); ready(pg)
+            attendi(pg, "(()=>{const v=" + T + ";return v&&v.p==='true'&&v.n>0})()")
+            v = pg.evaluate(T); print(v); assert v["w"] >= 24 and v["h"] >= 24, v
+            pg.locator("[data-a='ms2tri']").first.focus(); pg.keyboard.press("Enter"); ready(pg)
+            attendi(pg, "(()=>{const v=" + T + ";return v&&v.p==='false'&&v.n===0})()")
+        step("a click on a peak: its MS2 (own scan, else the closest in time with a note); 24 px flag boxes; «▲ MS²» on the chromatogram", peak)
         def other_file():
             pg.locator("#flst .fl", has_text="HR_DDA-Fusion-t30").first.click(); ready(pg)
             attendi(pg, "(()=>{const t=" + TRIO + ";return t.s1.k===E.files.find(f=>f.label==='HR_DDA-Fusion-t30').k&&t.s1._a&&t.s1._a.markN!=null})()", 30000)
