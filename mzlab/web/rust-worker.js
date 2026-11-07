@@ -273,7 +273,7 @@ const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await A
 async function lrIndexOwn(m) {
   const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
   if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
-  const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
+  const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
   if (CANCELLED.has(m.name)) throw cancelled();
   const onProgress = p => { nativo.early.tell(m.name, m.id, p); postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic }); };      // wait: the pool has no free worker yet
   const early_tic = earlyTicOf(job);
@@ -321,7 +321,7 @@ async function lrOp(m) {
     case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); idxPool().cancel(n); ARCH.release(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
     case "lr_index": try { return await lrIndex(m); } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
-      const job = await nativo.indexJob(m.name), part = m.name + ".cen.mzidx.part";
+      const job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".cen.mzidx.part";
       if (!job) jerr("err.session.fileNotFound");
       const res = await idxPool().build({ name: m.name, nat: { ...job, st: { ...job.st, centroid: true } }, part });
       if (!res.ok) { await ARCH.remove("idx", part); throw JSON.stringify({ error_key: "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } }); }
