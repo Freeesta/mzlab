@@ -113,15 +113,20 @@ function why0(I, p, D, d0, f) {
 /** The text of an empty MS2 panel: the reason its Full Scan gave at its last drawing. @param {Bag} I @param {Bag} s2 @returns {string} */
 export function why(I, s2) {
   const s1 = I.byId(s2.dda), t = (s1 && s1._a && s1._a.ddaWhy) || T("dda.click");
-  s2._why = t; return t;
+  nav(I, s2); s2._why = t; return t;
 }
 /** The MS2: a dashed line on the precursor.
  * @param {Bag} I @param {Bag} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W */
 export function ms2(I, p, g, X, Y, W) {
+  nav(I, p);
   const j = p._scan; if (!j || j.prec == null || p.avg) return;
   const ac = css("--accent"), D = I.ready(p.k), i = D && D.idx.get(p.sid), m = (D && D.prec[i]) ?? j.prec;
   if (m < p._a.x0 || m > p._a.x1) return;
   g.save(); g.strokeStyle = ac; g.fillStyle = ac; g.lineWidth = 1; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m), p._a.H - M.b); g.lineTo(X(m), M.t + 14); g.stroke(); g.setLineDash([]);
   g.font = fpx(9.5); g.textAlign = "center"; g.fillText(T("dda.precursor"), Math.max(M.l + 26, Math.min(W - M.r - 26, X(m))), M.t + 11); g.restore();
+}
+/** ‹ i/N › in the header of the MS2 panel (dda-naviga.js, loaded on the first MS2 drawn). @param {Bag} I @param {Bag} p */
+function nav(I, p) {
+  if (window.DDANAV) window.DDANAV.sync(I, p); else if (p.sid != null) carica("m:dda-naviga.js").then(() => drawSoon(p), () => {});
 }
 window.DDAMARK = { full, ms2, why };

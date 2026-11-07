@@ -265,9 +265,23 @@ impl GenericRecord {
         index: Option<&Arc<Etichette>>,
     ) -> Result<Self> {
         let mut r = BinaryReader::new(Cursor::new(bytes));
+        let mut at = 0usize;
         let mut values = Vec::with_capacity(header.fields.len());
         for (desc, label) in header.fields.iter().zip(labels) {
-            values.push((Arc::clone(label), read_value(&mut r, desc)?));
+            // a number is taken from the slice; a string, or a field past the end, goes through the reader (its errors and its decoding)
+            let v = match number_at(bytes, at, desc.field_type) {
+                Some((v, n)) => {
+                    at += n;
+                    v
+                }
+                None => {
+                    r.seek_to(at as u64)?;
+                    let v = read_value(&mut r, desc)?;
+                    at = r.position() as usize;
+                    v
+                }
+            };
+            values.push((Arc::clone(label), v));
         }
         Ok(Self {
             values,
@@ -330,6 +344,37 @@ impl GenericRecord {
 }
 
 /// One value of the field `desc`, read at the current position.
+/// A numeric field at `at` of `bytes` and its width, as `read_value` reads it; `None` for a string or a field that does not fit.
+fn number_at(bytes: &[u8], at: usize, t: GenericType) -> Option<(GenericValue, usize)> {
+    let w = match t {
+        GenericType::Gap => return Some((GenericValue::Gap, 0)),
+        GenericType::Int8
+        | GenericType::UInt8
+        | GenericType::Bool
+        | GenericType::BoolYesNo
+        | GenericType::BoolOnOff => 1,
+        GenericType::Int16 | GenericType::UInt16 => 2,
+        GenericType::Int32 | GenericType::UInt32 | GenericType::Float32 => 4,
+        GenericType::Float64 => 8,
+        GenericType::AsciiString | GenericType::WideString => return None,
+    };
+    let b = bytes.get(at..at.checked_add(w)?)?;
+    let mut x = [0u8; 8];
+    x[..w].copy_from_slice(b);
+    let v = match t {
+        GenericType::Int8 => GenericValue::Int8(x[0] as i8),
+        GenericType::UInt8 => GenericValue::UInt8(x[0]),
+        GenericType::Int16 => GenericValue::Int16(i16::from_le_bytes([x[0], x[1]])),
+        GenericType::UInt16 => GenericValue::UInt16(u16::from_le_bytes([x[0], x[1]])),
+        GenericType::Int32 => GenericValue::Int32(i32::from_le_bytes([x[0], x[1], x[2], x[3]])),
+        GenericType::UInt32 => GenericValue::UInt32(u32::from_le_bytes([x[0], x[1], x[2], x[3]])),
+        GenericType::Float32 => GenericValue::Float32(f32::from_le_bytes([x[0], x[1], x[2], x[3]])),
+        GenericType::Float64 => GenericValue::Float64(f64::from_le_bytes(x)),
+        _ => GenericValue::Bool(x[0] != 0),
+    };
+    Some((v, w))
+}
+
 fn read_value<R: Read + Seek>(
     r: &mut BinaryReader<R>,
     desc: &GenericDataDescriptor,
