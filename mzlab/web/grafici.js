@@ -404,6 +404,7 @@ async function drawLines(p) {
   }
   g.restore(); g.setLineDash([]);
   p._a.tri = [];
+  const tb = p.el && p.el.querySelector('[data-a="ms2tri"]'); if (tb) { tb.setAttribute("aria-pressed", String(!!p.ms2tri)); tb.classList.toggle("on", !!p.ms2tri); }   // «▲ MS²» of a DDA trio (dda-elenco.js) follows the box switch too
   if (p.ms2tri && p.tab === "full") for (const s of sr) {              // MS2 events of the same physical file: a small triangle at the top at every MS2 scan
     const base = (E.files[s.k] || {}).file; if (!base) continue;
     const ev = window.DDA ? DDA.events(p, s.k) : null;                 // DDA file: its MS2 scans (only the followed ion's, if the student follows one)

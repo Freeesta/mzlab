@@ -433,6 +433,22 @@ fn cached_pause_and_a_held_job() {
 }
 
 #[test]
+fn a_held_job_is_tried_again_when_its_key_changes() {
+    let mut s = sched(&["f1.raw"]);
+    run(&mut s, "conv|f1.raw");
+    run(&mut s, "cen|f1.raw");
+    run(&mut s, "idx|f1.raw");
+    run(&mut s, "det|f1.raw");
+    // the page hands the step to the computer for what it lacks now (a sample list not yet given)
+    assert!(s.block(&jid("aln"), "platform.computer"));
+    s.update(&plan(&["f1.raw"], 1, 1));
+    assert_eq!(state(&s, "aln"), "blocked", "the same key stays held");
+    // a new key is a new job: the page decides again
+    s.update(&plan(&["f1.raw"], 1, 2));
+    assert_eq!(state(&s, "aln"), "ready");
+}
+
+#[test]
 fn a_step_that_does_not_exist_blocks_its_node_only() {
     let text = plan_text(&["f1.raw"], 1, 1).replace("t.centroid@1", "t.nothing@1");
     let s = Sched::new(&parse(text.as_bytes()).unwrap(), &registry(), "test-1", &[]);

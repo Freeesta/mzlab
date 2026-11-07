@@ -68,6 +68,7 @@ Il ponte WASM della pipeline L1-L9 di `mzlab-feat` (formati e livelli: `mzfeat.m
 
 ## Prove
 - `tests/test_feat_wasm.py` (+ `tests/feat_wasm_node.js`): `.mzfeatf`, `.mzfeat` ed `evid` del WASM hanno lo stesso SHA-256 del nativo sulla serie sintetica `piccolo`.
+- `crates/mzlab-feat-wasm/tests/rilevamento_degenere.rs`: stima, `detect` e `detect_weak` su indici HR degeneri (nessun picco, una scansione, intensità tutte zero o negative, un m/z ripetuto, un composto, conteggi diversi per scansione) danno byte, uguali in due giri e con i core di riserva occupati (`spare::busy`); NaN/inf nelle intensità sono rifiutati al caricamento con `err.file.nonFinite`, mai un panic.
 - `tests_e2e/feat_site.py` costruisce i `.wasm` e il server per i due e2e.
 - `tests_e2e/e2e_feat_worker.py`: costruisce i `.wasm`, pool su OPFS, worker ucciso e trappola, archivio senza `.part`, dimensioni.
 

@@ -67,8 +67,15 @@ pub fn probe<R: ReadAt>(r: &mut R, size: u64) -> Result<String> {
 }
 
 /// Reads the whole file once for its three fingerprints (`Passata`): `(sha256, sha1, probe)`.
+#[cfg(target_arch = "wasm32")]
 pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
     fingerprint(r, size, Passata::new(size))
+}
+
+/// Native: SHA-256 and SHA-1 on two threads (`passata::due_fili`).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
+    passata::due_fili(r, size, STEP)
 }
 
 fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String, String, String)> {
