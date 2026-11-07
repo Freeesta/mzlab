@@ -134,12 +134,12 @@ try:
             c.add_init_script("Object.defineProperty(Navigator.prototype,'platform',{get:()=>'MacIntel'});try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
             q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); ready(q)
             q.evaluate("SCORCIATOIE.apri()"); attendi(q, "document.querySelector('#scorc[open]')")
-            rows = q.evaluate("[...document.querySelectorAll('#scorc li')].map(li => [li.querySelector('kbd').textContent, li.querySelector('.sc-n').title])")
+            rows = q.evaluate("[...document.querySelectorAll('#scorc li')].map(li => [li.querySelector('kbd').textContent, li.querySelector('.sc-n').textContent, li.querySelector('.sc-n').title])")
             c.close(); return rows
         def option_tab():
             safari, chrome = righe_mac(SAFARI), righe_mac(CHROME)
             tab = [x for x in safari if x[0] == "⌥Tab"]
-            assert tab and "⌥Tab" in tab[0][1] and "Safari" in tab[0][1], f"Safari on a Mac: no ⌥Tab row with its explanation in the panel: {safari}"
+            assert tab and "Safari" in tab[0][1] and "Safari ›" in tab[0][2], f"Safari on a Mac: no ⌥Tab row with its name and the Safari setting in the panel: {safari}"
             assert any(x[0].startswith("⌘") for x in safari), f"the Mac keys are not written as ⌘: {safari}"
             assert not [x for x in chrome if x[0] == "⌥Tab"], f"⌥Tab row outside Safari: {chrome}"
         step("Safari on a Mac: the panel says that ⌥Tab reaches buttons and links (not in other Mac browsers)", option_tab)
