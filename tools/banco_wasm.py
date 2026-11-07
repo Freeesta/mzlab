@@ -81,7 +81,7 @@ def lock_version(name: str) -> str:
     return lines[i + 1].split('"')[1]
 
 
-def controlla_strumenti():
+def check_tools():
     for t in ("cargo", "node", "wasm-bindgen"):
         if not shutil.which(t):
             sys.exit(f"missing tool: {t} (wasm-bindgen: cargo install wasm-bindgen-cli --version {lock_version('wasm-bindgen')} --locked)")
@@ -90,15 +90,15 @@ def controlla_strumenti():
         sys.exit(f"wasm-bindgen must be {v} (Cargo.lock): cargo install wasm-bindgen-cli --version {v} --locked --force")
 
 
-def trova_raw() -> Path | None:
+def find_raw() -> Path | None:
     """A Thermo .raw of the private data repository, None without it."""
-    cartella = dati_percorsi.percorso("dati/HRMS")
-    if cartella is None:
+    folder = dati_percorsi.percorso("dati/HRMS")
+    if folder is None:
         return None
-    return next(iter(sorted(cartella.rglob("*.raw"))), None)
+    return next(iter(sorted(folder.rglob("*.raw"))), None)
 
 
-def prepara_dati(lav: Path, raw: Path | None) -> Path:
+def prepare_data(lav: Path, raw: Path | None) -> Path:
     """The two mzML of the study (seeded, so the same bytes every time) and the .raw if any, in lav/data."""
     d = lav / "data"
     d.mkdir(exist_ok=True)
@@ -116,20 +116,20 @@ def prepara_dati(lav: Path, raw: Path | None) -> Path:
 
 
 def costruisci(nome: str, lav: Path, thermo: bool) -> dict:
-    profilo, rf, feat, livello = VARIANTI[nome]
+    profile, rf, feat, level = VARIANTI[nome]
     feat = ",".join(f for f in (feat, "thermo" if thermo else "") if f)
     env = {**os.environ, "CARGO_TARGET_DIR": str(lav / "tgt" / nome), "RUSTFLAGS": f"{MEM} {rf}".strip()}
-    cmd = ["cargo", "build", "-q", "--profile", profilo, "--target", "wasm32-unknown-unknown"] + (["--features", feat] if feat else [])
+    cmd = ["cargo", "build", "-q", "--profile", profile, "--target", "wasm32-unknown-unknown"] + (["--features", feat] if feat else [])
     run(cmd, cwd=BANCO, env=env)
     out = lav / "v" / nome
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
-    wasm = lav / "tgt" / nome / "wasm32-unknown-unknown" / ("release" if profilo == "release" else profilo) / "wbench.wasm"
+    wasm = lav / "tgt" / nome / "wasm32-unknown-unknown" / ("release" if profile == "release" else profile) / "wbench.wasm"
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(out), str(wasm)])
     bg = out / "wbench_bg.wasm"
     crudo = bg.stat().st_size
     # the site's own wasm-opt (npm wasm-opt, flags of tools/wasm_opt.sh); the size gate is set out of reach
-    run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(bg), str(2**40), nome], env={**os.environ, "RUNNER_TEMP": str(lav / "tmp"), "MZLAB_WASM_OPT_LEVEL": livello})
+    run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(bg), str(2**40), nome], env={**os.environ, "RUNNER_TEMP": str(lav / "tmp"), "MZLAB_WASM_OPT_LEVEL": level})
     dati = bg.read_bytes()
     return {"variant": nome, "raw_bytes": crudo, "opt_bytes": len(dati), "gzip_bytes": len(gzip.compress(dati, 9))}
 
@@ -152,7 +152,7 @@ def in_browser(motore: str, nomi: list[str], lav: Path, giri: int) -> dict:
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     pidfile = lav / "server.pid"
     pidfile.write_text(str(srv.pid))
-    risultati = {}
+    results = {}
     try:
         time.sleep(1)
         with sync_playwright() as p:
@@ -166,27 +166,27 @@ def in_browser(motore: str, nomi: list[str], lav: Path, giri: int) -> dict:
                 pg = br.new_page()
                 pg.goto(f"http://127.0.0.1:{porta}/run.html?v={n}&reps={giri}")
                 pg.wait_for_function("window.RESULT", timeout=3_600_000)
-                risultati[n] = pg.evaluate("window.RESULT")
+                results[n] = pg.evaluate("window.RESULT")
                 pg.close()
-            risultati["_versione"] = br.version
+            results["_versione"] = br.version
             br.close()
     finally:
         os.kill(int(pidfile.read_text()), signal.SIGTERM)
         srv.wait()
         pidfile.unlink(missing_ok=True)
-    return risultati
+    return results
 
 
 def confronta(righe: list[dict], motore: str) -> list[str]:
     """Check values must be bit for bit the same in every variant: returns the differences found."""
-    errori = []
+    errors = []
     rif = righe[0]
     for r in righe[1:]:
         a, b = rif[motore].get("check", {}), r[motore].get("check", {})
         for lavoro in sorted(set(a) | set(b)):
             if a.get(lavoro) != b.get(lavoro):
-                errori.append(f"{motore}: {lavoro} differs between {rif['variant']} ({a.get(lavoro)!r}) and {r['variant']} ({b.get(lavoro)!r})")
-    return errori
+                errors.append(f"{motore}: {lavoro} differs between {rif['variant']} ({a.get(lavoro)!r}) and {r['variant']} ({b.get(lavoro)!r})")
+    return errors
 
 
 def tabella(righe: list[dict], motore: str):
@@ -197,8 +197,8 @@ def tabella(righe: list[dict], motore: str):
     for k, label in LAVORI:
         if k not in base[motore].get("ms", {}):
             continue
-        celle = [f"{base[motore]['ms'][k]:g}"] + [f"{r[motore]['ms'][k]:g} (x{base[motore]['ms'][k] / r[motore]['ms'][k]:.2f})" if r[motore]["ms"][k] else "-" for r in righe[1:]]
-        print(f"| {label} | " + " | ".join(celle) + " |")
+        cells = [f"{base[motore]['ms'][k]:g}"] + [f"{r[motore]['ms'][k]:g} (x{base[motore]['ms'][k] / r[motore]['ms'][k]:.2f})" if r[motore]["ms"][k] else "-" for r in righe[1:]]
+        print(f"| {label} | " + " | ".join(cells) + " |")
     print("| size (opt / gzip) | " + " | ".join(f"{r['opt_bytes']} / {r['gzip_bytes']}" for r in righe) + " |")
 
 
@@ -216,14 +216,14 @@ def main():
     for n in nomi:
         if n not in VARIANTI:
             sys.exit(f"unknown variant {n}")
-    controlla_strumenti()
-    raw = trova_raw() if a.raw else None
+    check_tools()
+    raw = find_raw() if a.raw else None
     if a.raw and raw is None:
         print("no .raw in the private data repository: the .raw jobs are skipped", file=sys.stderr)
     lav = Path(a.lavoro) if a.lavoro else Path(tempfile.mkdtemp(prefix="banco_wasm_"))
     lav.mkdir(parents=True, exist_ok=True)
     try:
-        prepara_dati(lav, raw)
+        prepare_data(lav, raw)
         righe = []
         for n in nomi:
             r = costruisci(n, lav, raw is not None)
@@ -239,17 +239,17 @@ def main():
             print(f"{m} {br['_versione']}", file=sys.stderr)
         for r in righe:
             print(json.dumps(r))
-        errori = confronta(righe, "node")
+        errors = confronta(righe, "node")
         for m in motori:
-            errori += confronta(righe, m)
+            errors += confronta(righe, m)
             for r in righe:
                 for k, v in r["node"]["check"].items():
                     if r[m]["check"].get(k) != v:
-                        errori.append(f"{r['variant']}: {k} differs between Node ({v!r}) and {m} ({r[m]['check'].get(k)!r})")
+                        errors.append(f"{r['variant']}: {k} differs between Node ({v!r}) and {m} ({r[m]['check'].get(k)!r})")
         for m in ["node"] + motori:
             tabella(righe, m)
-        if errori:
-            sys.exit("CHECK VALUES DIFFER:\n" + "\n".join(errori))
+        if errors:
+            sys.exit("CHECK VALUES DIFFER:\n" + "\n".join(errors))
         print(f"\ncheck values identical in {len(righe)} variants")
     finally:
         if not a.lavoro:

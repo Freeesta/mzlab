@@ -12,7 +12,7 @@ import numpy as np
 
 from . import FORMATO
 
-CAMPI = ("id", "mz", "rt", "rt_min", "rt_max", "aree", "altezze", "ms2_scan", "gruppo", "candidato", "livello", "punteggio")
+FIELDS = ("id", "mz", "rt", "rt_min", "rt_max", "aree", "altezze", "ms2_scan", "gruppo", "candidato", "livello", "punteggio")
 
 
 def tabella(strumento: str, dataset: str, config: str, file: list[str], righe: list[dict]) -> dict:
@@ -21,11 +21,11 @@ def tabella(strumento: str, dataset: str, config: str, file: list[str], righe: l
     for r in righe:
         if len(r["aree"]) != len(file):
             raise ValueError("one area per file is required")
-        r2.append({**{k: r.get(k) for k in CAMPI if k != "id"}, "_ident": r.get("ident")})
+        r2.append({**{k: r.get(k) for k in FIELDS if k != "id"}, "_ident": r.get("ident")})
     r2.sort(key=lambda r: (r["mz"], r["rt"], -float(max(r["aree"], default=0.0))))
     for i, r in enumerate(r2):
         r["id"] = i
-    t = {"formato": FORMATO, "strumento": strumento, "dataset": dataset, "config": config, "file": list(file), "righe": [{k: r[k] for k in CAMPI} for r in r2]}
+    t = {"formato": FORMATO, "strumento": strumento, "dataset": dataset, "config": config, "file": list(file), "righe": [{k: r[k] for k in FIELDS} for r in r2]}
     if any(r["_ident"] is not None for r in r2):
         # suspect hits of each row, best first; present only when the tool screened suspects, so other tables keep their bytes
         t["identificazioni"] = [{"riga": r["id"], "hits": [{"nome": h["nome"], "livello": h["livello"], "punteggio": h["punteggio"], "rango": n} for n, h in enumerate(r["_ident"], 1)]}
@@ -85,7 +85,7 @@ REGOLE = {
 }
 
 
-def _nome(x: str) -> str:
+def _name(x: str) -> str:
     return re.sub(r"\.(mzml|raw|mzxml)$", "", x.strip(), flags=re.I)
 
 
@@ -110,12 +110,12 @@ def da_csv(strumento: str, path, file: list[str], dataset: str, config: str = "p
     `full_feature_table`, patRoon `featureGroups` as CSV) -> `bench/1`. `file`: the names of the files, in the output order; their area columns are found
     by name (extension ignored); a missing file gets zeros. `sospetti` (patRoon only): the suspect hits CSV (`colpi_patroon`), joined to the rows by `group`:
     `candidato` = the group has a hit, `livello`/`punteggio` those of its best hit, and the document lists all the hits (`identificazioni`)."""
-    colpi = colpi_patroon(sospetti) if sospetti else None
-    mz_c, rt_c, rx, secondi = REGOLE[strumento]
+    hits = colpi_patroon(sospetti) if sospetti else None
+    mz_c, rt_c, rx, seconds = REGOLE[strumento]
     sep = sep or ("\t" if str(path).endswith((".tsv", ".txt")) else ",")
     with open(path, newline="", encoding="utf-8") as f:
         rd = csv.DictReader(f, delimiter=sep)
-        col = {_nome(m.group(1)): c for c in rd.fieldnames or [] if (m := re.match(rx, c)) and c not in (mz_c, rt_c)}
+        col = {_name(m.group(1)): c for c in rd.fieldnames or [] if (m := re.match(rx, c)) and c not in (mz_c, rt_c)}
         righe = []
         for r in rd:
             try:
@@ -125,14 +125,14 @@ def da_csv(strumento: str, path, file: list[str], dataset: str, config: str = "p
             aree = []
             for n in file:
                 try:
-                    aree.append(float(r[col[_nome(n)]] or 0.0))
+                    aree.append(float(r[col[_name(n)]] or 0.0))
                 except (KeyError, ValueError):
                     aree.append(0.0)
-            riga = {"mz": mz, "rt": rt / 60.0 if secondi else rt, "aree": [a if np.isfinite(a) else 0.0 for a in aree]}
+            riga = {"mz": mz, "rt": rt / 60.0 if seconds else rt, "aree": [a if np.isfinite(a) else 0.0 for a in aree]}
             if strumento == "patroon":
                 riga["gruppo"] = r.get("group")
-                if colpi is not None:
-                    h = colpi.get(riga["gruppo"], [])
+                if hits is not None:
+                    h = hits.get(riga["gruppo"], [])
                     riga.update(ident=h, candidato=bool(h), livello=h[0]["livello"] if h else None, punteggio=h[0]["punteggio"] if h else None)
             righe.append(riga)
-    return tabella(strumento, dataset, config, [_nome(n) for n in file], righe)
+    return tabella(strumento, dataset, config, [_name(n) for n in file], righe)
