@@ -4,6 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import controlla_inglese as ci  # noqa: E402
+import english_rename_map as rm  # noqa: E402
 
 
 def test_identifiers_split_and_match():
@@ -40,8 +41,25 @@ def test_lang_files_read_keys_only():
 
 def test_paths_and_rename_map():
     assert ci.name_hits("tests_e2e/e2e_apri_uno.py") == ["apri", "uno"]
-    assert ci.translate_component("lettore_finto")[0] == "fake_reader"
-    assert ci.translate_component("MSBNK-UniTO-1.txt")[0] == "MSBNK-UniTO-1.txt"
-    rows = ci.rename_map(["a/dati/x.py", "a/data/y.py", "b/progresso.js", "b/avanzamento2.js"])
+    assert rm.translate_component("MSBNK-UniTO-1.txt")[0] == "MSBNK-UniTO-1.txt"
+    rows = rm.rename_map(["a/dati/x.py", "a/data/y.py", "b/progresso.js", "b/avanzamento2.js"])
     assert ("dir", "a/dati", "a/data", "MERGE") in rows
     assert ("file", "b/progresso.js", "b/progress.js", "") in rows
+
+
+def test_word_order_rules():
+    t = lambda name: rm.translate_component(name)[0]  # noqa: E731
+    assert rm.translate_component("lettore_finto") == ("fake_reader", True)          # adjective after its noun
+    assert t("calibrazione_massa") == "mass_calibration"                               # head noun + complement
+    assert t("campioni_variabili") == "variable_samples"
+    assert t("regole-prove") == "rules-tests"                                          # file kind is not a complement
+    assert rm.translate_component("gruppi-vista") == ("groups-view", False)            # topic-first stays
+    assert t("acido_benzoico") == "benzoic_acid"
+
+
+def test_rust_module_dir_follows_its_file():
+    src = "crates/mzlab-core/src/"
+    rows = rm.rename_map([src + "msnalbero.rs", src + "msnalbero/x.rs", src + "msntree.rs"])
+    assert ("dir", src + "msnalbero", src + "msntree_build", "") in rows
+    assert ("file", src + "msnalbero.rs", src + "msntree_build.rs", "") in rows
+    assert not [r for r in rows if "COLLISION" in r[3]]

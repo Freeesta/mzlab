@@ -2,7 +2,7 @@
 Every identifier, comment, file and directory name of the code is English; the user-facing texts stay bilingual in `mzlab/web/lang/it/` and `lang/en/` (Italian text there is correct). Quotes of user-visible strings in comments are allowed. This file is the measured state; `tools/controlla_inglese.py` measures it again.
 
 ## The tool
-- `python3 tools/controlla_inglese.py`: counts per area (report only, exit 0). `--elenco`: one line per file. `--file PATH`: every hit with its line. `--rinomine`: the rename map as TSV (`kind`, old path, new path, note), deterministic for a given tree.
+- `python3 tools/controlla_inglese.py`: counts per area (report only, exit 0). `--elenco`: one line per file. `--file PATH`: every hit with its line. `--rinomine`: the rename map of `tools/english_rename_map.py` as TSV (`kind`, old path, new path, note), deterministic for a given tree.
 - Word list: `tools/italian_words.tsv` (Italian → proposed English), whole words only, no stemming, so `controller` or `integrate` never match. Names are split on `_`, `-`, `.`, camelCase; a name is Italian when one of its words is in the list.
 - Ambiguous words (also English or Latin: `solo`, `coda`, `piano`, `con`, `non`, `le`, `di`, `da`, `col`, `vista`, `tempo`, …, list `AMBIGUOUS`) count only next to a clear Italian word; proper nouns (`attributio`, `tabui`, `rosina`, …, list `PROPER`) never count. In paths every listed word counts.
 - Comments: a comment is Italian when it has an Italian-only accented word (`è`, `più`, `perché`, …), or at most three words with one Italian, or two Italian words making at least 25 % of its words. Quotes («», "", backticks), file names, JSDoc types and code-like tokens (`a.b`, `x_y`, camelCase, CAPS) are removed first; JSDoc types and `@typedef` names are counted as identifiers.
@@ -31,22 +31,24 @@ Counts per area. `identifiers` and `keys` are distinct names per file, summed ov
 - Comments are almost all English already (the tool's own files and this file carry Italian names because the task named them so; they follow the `tools/` and `docs/` renames): the 65 Italian comment lines outside `docs/` are section rulers of the classic scripts (`eventi.js`, `explore.js`, `pannelli.js`), the docstrings of `tests/data/nomi_tp/*.py`, a few test docstrings and the step comments of `tests_e2e/e2e_tour.py`.
 
 ## Rename map (summary of `--rinomine`)
-125 directories and 2418 files change name (file rows show the path after the directory renames). Word-by-word translation; an Italian adjective after its noun is swapped (`lettore_finto` → `fake_reader`); hand choices where a name collides (`OVERRIDES`: `flow/corsa.rs` → `run_report.rs`, `msnalbero.rs` → `msntree_build.rs`, `avanzamento.js` → `job-progress.js`); MassBank accessions (`MSBNK-…`) are kept.
+- 125 directories and 2418 files change name (file rows show the path after the directory renames). Word-by-word translation, then three Italian word-order rules: an adjective after its noun is swapped (`lettore_finto` → `fake_reader`, `campioni_variabili` → `variable_samples`), `X di Y` → `Y X`, and a head noun before its complement is swapped (`calibrazione_massa` → `mass_calibration`; heads in `HEADS`; quantifiers and file-kind words such as `prove`, `vista`, `tour` are never complements).
+- Topic-first names (`gruppi-vista`, `e2e_mappa_assi`) are already English order and keep it.
+- Hand choices where a name collides (`OVERRIDES`: `flow/corsa.rs` → `run_report.rs`, `msnalbero.rs` → `msntree_build.rs`, `avanzamento.js` → `job-progress.js`); a Rust module directory follows its file (`msnalbero/` → `msntree_build/`). MassBank accessions (`MSBNK-…`) are kept.
 
-| area | dir renames | file renames | files moved only by a dir rename | named by `.github/` | word order to read (`ORDER`) |
-|---|---|---|---|---|---|
-| `crates/` | 54 | 551 | 331 | 2 (`mzlab-lettori`, `mzlab-feat-grafo-wasm`) | 88 |
-| `mzlab/web/` | 2 | 300 | 2 | 4 | 88 |
-| `flow/` | 0 | 1 | 0 | 0 | 0 |
-| `TP_Mine/` | 0 | 27 | 0 | 0 | 5 |
-| `tools/` | 6 | 265 | 74 | 28 | 78 |
-| `tests_e2e/` | 0 | 467 | 0 | 1 | 193 |
-| `tests/` | 25 | 423 | 254 | 4 | 117 |
-| `docs/` | 36 | 355 | 623 | 8 (`docs/agenti`, `docs/schemi`, `docs/utenti`, …) | 129 |
-| `mzlab/*.py` | 0 | 3 | 0 | 0 | 0 |
-| other | 2 | 26 | 3 | 2 (the workflow files themselves) | 5 |
+| area | dir renames | file renames | named by `.github/` | word order fired (`REORDERED`) |
+|---|---|---|---|---|
+| `crates/` | 54 | 551 | 2 (`mzlab-lettori`, `mzlab-feat-grafo-wasm`) | 15 |
+| `mzlab/web/` | 2 | 300 | 4 | 11 |
+| `flow/` | 0 | 1 | 0 | 0 |
+| `TP_Mine/` | 0 | 27 | 0 | 0 |
+| `tools/` | 6 | 265 | 28 | 16 |
+| `tests_e2e/` | 0 | 467 | 1 | 31 |
+| `tests/` | 25 | 423 | 4 | 23 |
+| `docs/` | 36 | 355 | 8 (`docs/agenti`, `docs/schemi`, `docs/utenti`, …) | 32 |
+| `mzlab/*.py` | 0 | 3 | 0 | 0 |
+| other | 2 | 26 | 2 (the workflow files themselves) | 0 |
 
-- Notes of the map: `GITHUB` = a `.github/` file names the old path (crate names included): it is renamed only with Federico, together with the workflow. `MERGE` = the new directory exists (`tests/dati` → `tests/data`). `COLLISION` = two sources or an existing file get the same path (none left). `ORDER` = two or more Italian words: the English word order is a proposal to read before the rename.
+- Notes of the map: `GITHUB` = a `.github/` file names the old path (crate names included): it is renamed only with Federico, together with the workflow. `MERGE` = the new directory exists (`tests/dati` → `tests/data`). `COLLISION` = two sources, an existing file, or a module directory next to another module's file get the same path (none left). `REORDERED` = a word-order rule fired: read the row before the rename.
 - Crate renames (`mzlab-lettori` → `mzlab-readers`, `mzlab-picchi` → `mzlab-peaks`, `mzlab-rotte-wasm` → `mzlab-routes-wasm`, `mzlab-msngrafo-wasm`, `mzlab-msnfigura-wasm`, `mzlab-msnregole-wasm`, `mzlab-lettori-wasm`, `mzlab-feat-grafo-wasm`) also rename the `.wasm` files: `sw.js` precache, `tools/build_site.py`, the caps of `wasm-tetti.md` and the size checks follow.
 
 ## Batch plan, by risk

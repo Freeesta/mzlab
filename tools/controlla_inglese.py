@@ -5,7 +5,7 @@ Report only (exit 0): it measures the English migration, it does not gate it. Wo
     python3 tools/controlla_inglese.py                 # counts per area
     python3 tools/controlla_inglese.py --elenco        # also one line per file (comments / identifiers / keys / name)
     python3 tools/controlla_inglese.py --file PATH     # every hit of one file, with line numbers
-    python3 tools/controlla_inglese.py --rinomine      # proposed rename map (TSV: kind, old path, new path, note)
+    python3 tools/controlla_inglese.py --rinomine      # proposed rename map (tools/english_rename_map.py; TSV: kind, old, new, note)
 """
 from __future__ import annotations
 
@@ -304,78 +304,6 @@ def scan(files: list[str]) -> dict[str, dict]:
     return res
 
 
-# ---- rename map
-# Italian adjectives follow their noun: `lettore_finto` -> `fake_reader`, not `reader_fake`
-ADJECTIVES = set("""sintetico sintetica sintetici sintetiche veloce veloci comune comuni pubblici pubblico pubbliche noti unito finto grezzi
-grezza mirato diretta diretto nativo nativa nativi completa rapida rapido lenta lento lenti fresca stretto stretta nuovo nuova alta grandi
-grande piatte piatto leggera fluida morti rotti parziali singoli misti esterni esterno estesi esteso potenziale computazionale immediato
-variabili ostili danneggiati guidati fissi fisso fissa unica unico densa denso doppi doppio corti larghi enorme enormi incerto sicuri
-predefinito predefinita precalcolata ritagliata puntata centrata condiviso dinamici""".split())
-NO_RENAME = re.compile(r"(^|/)MSBNK-")          # MassBank accessions: third-party ids
-# names chosen by hand where the word-by-word form collides with an existing file
-OVERRIDES = {"crates/mzlab-core/src/flow/corsa.rs": "run_report.rs", "crates/mzlab-core/src/flow/corsa_tests.rs": "run_report_tests.rs",
-             "crates/mzlab-core/src/msnalbero.rs": "msntree_build.rs", "mzlab/web/avanzamento.js": "job-progress.js"}
-
-
-def translate_component(comp: str) -> tuple[str, int]:
-    """English form of one path component and the number of Italian words it had."""
-    toks = re.findall(r"[A-Z]?[a-zà-ÿ]+|[A-Z]+(?![a-z])|[^A-Za-zÀ-ÿ]+", comp)
-    for k in range(2, len(toks)):                  # noun, separator, adjective -> adjective, separator, noun
-        if toks[k].lower() in ADJECTIVES and toks[k - 1] in ("_", "-") and toks[k - 2].lower() in DICT:
-            toks[k - 2], toks[k] = toks[k], toks[k - 2]
-    out, hits = [], 0
-    for tok in toks:
-        w = tok.lower()
-        en = DICT.get(w, "") if w not in PROPER else ""
-        if en and tok[0].isalpha():
-            hits += 1
-            en = en.replace(" ", "_")
-            tok = en.upper() if tok.isupper() and len(tok) > 1 else en.capitalize() if tok[0].isupper() else en
-        out.append(tok)
-    return "".join(out), hits
-
-
-def rename_map(files: list[str]) -> list[tuple[str, str, str, str]]:
-    """Directories first, then the files whose own name changes (path shown after the directory renames).
-    Notes: GITHUB (a file of .github/ names the old path: not to be renamed without Federico), COLLISION (two sources, or an existing path, get the same name), MERGE (the new directory exists), ORDER (two or more
-    Italian words: the word order is a proposal to read)."""
-    dirs, rows = {}, []
-    existing = set(files)
-    existing_dirs = {f.rsplit("/", 1)[0] for f in files if "/" in f}
-    existing_dirs |= {"/".join(d.split("/")[:k]) for d in list(existing_dirs) for k in range(1, d.count("/") + 1)}
-    for rel in files:
-        parts = rel.split("/")
-        for k in range(1, len(parts)):
-            d = "/".join(parts[:k])
-            if d not in dirs:
-                dirs[d] = "/".join(translate_component(c)[0] for c in parts[:k])
-    for d, new in sorted(dirs.items()):
-        en, hits = translate_component(d.rsplit("/", 1)[-1])
-        if en != d.rsplit("/", 1)[-1]:
-            rows.append(("dir", d, new, "MERGE" if new in existing_dirs else "ORDER" if hits > 1 else ""))
-    targets = Counter()
-    for rel in files:
-        if NO_RENAME.search(rel):
-            continue
-        parts = rel.split("/")
-        en, hits = translate_component(parts[-1])
-        en = OVERRIDES.get(rel, en)
-        new = "/".join([translate_component(c)[0] for c in parts[:-1]] + [en])
-        if en != parts[-1]:
-            targets[new] += 1
-            rows.append(("file", rel, new, "ORDER" if hits > 1 else ""))
-    gh = "\n".join((ROOT / f).read_text(encoding="utf-8", errors="replace") for f in files if f.startswith(".github/"))
-    out = []
-    for k, o, n, note in rows:
-        if k == "file" and (targets[n] > 1 or (n in existing and n != o)):
-            note = "COLLISION"
-        names = [o] + ([o.split("/")[1], o.split("/")[1].replace("-", "_")] if k == "dir" and o.count("/") == 1 and o.startswith("crates/") else [])
-        if any(re.search(r"(?<![\w-])" + re.escape(x) + r"(?![\w-])", gh) for x in names):      # a workflow names it: renaming it needs Federico
-            note = (note + " GITHUB").strip()
-        out.append((k, o, n, note))
-    return out
-
-
 def summary(res: dict[str, dict]) -> dict[str, Counter]:
     per = defaultdict(Counter)
     for rel, r in res.items():
@@ -398,7 +326,8 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     files = tracked()
     if a.rinomine:
-        for row in rename_map(files):
+        import english_rename_map               # here: it imports this module
+        for row in english_rename_map.rename_map(files):
             print("\t".join(row))
         return 0
     if a.file:
