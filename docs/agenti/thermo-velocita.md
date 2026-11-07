@@ -110,6 +110,17 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - Non esistono ancora: colonne (B2), matrice (B3), centroidatura fusa (B4), feature table da `.raw` (B5). Le righe B2-B5 si riempiono nelle fasi T-7d e T-7e; `.raw` → centroidi → feature table contro mzmine richiede mzmine sul Mac (R-08). Il tempo del Flow `.raw` → mzML → feature table e i valori di mzmine su mzML (`mzfinder-benchmark.md`) non hanno qui uno SHA e non si riportano.
 - Mappa dei costi (SHA-256 dell'impronta, SHA-1 della testata mzML, zlib) e obiettivi di RV-03/RV-04/RV-06: `RAW_VELOCE.md` §2.2 e §3 (misure precedenti con `opt-level = "z"`, senza SHA).
 
+**B-2 · Cloud 4 vCPU, `wasm`, costruzione dell'`.mzidx` del sito in Node 22** (`build_mzidx_native` del motore con il modulo `thermo` come lettore esterno, letture `fs.readSync` a richiesta, scarto su file, budget 64 MB, impronte date; moduli senza `wasm-opt`; 10 corse alternate, mediana [min-max] in ms; stessi byte dell'`.mzidx`). File di `thermo_sintetico`: normale 288 MB (`--scans 5400 --peaks 600`), pesante 2,14 GB (`--scans 82500 --peaks 3000 --ms2 10`).
+
+Misura con i blocchi non azzerati e senza la finestra adattiva di `rawlettore::Stream`, le cui misure stanno in `misure-velocita-raw.md`.
+
+| file | apertura | scansioni | cromatogrammi | totale |
+|---|---|---|---|---|
+| normale | 68 [65-72] | 344 [306-381] | 196 [182-252] | 617 [555-672] |
+| pesante | 1246 [1199-1321] | 4018 [3393-4708] | 2691 [2468-2868] | 7920 [7085-8708] |
+
+- Le impronte (SHA-256 + SHA-1 + sonda di `Passata`, un solo worker) costano a parte 1,0 s sul normale e 7,4 s sul pesante, prima della costruzione.
+
 ## Righe da ripetere
 - Riga A sul Mac con il banco su entrambi i lettori (R-15, RFR contro `thermo_banco`): SHA nuovo, stessa tabella A-1 con le definizioni di `thermo_banco`; la ripetizione sul cloud dopo T-3 è A-2b.
 - Bersaglio `wasm`: A-3 va ripetuto con 5 ripetizioni e, per il rapporto con il nativo, con lo stesso profilo (`release`) dei due bersagli; tetto del modulo `thermo` 546 304 B (`wasm-tetti.md`).
