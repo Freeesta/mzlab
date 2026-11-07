@@ -211,7 +211,7 @@ try:
         assert "Passo 3 di 9 · Strumenti e movimenti" in hd, hd
         assert ttl == "Cambiare file", ttl
 
-        # Step 4: aggiungi
+        # Step 4: add
         pg.click("#tour-btn-next")
         attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 4 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
@@ -224,19 +224,19 @@ try:
         assert "Passo 5 di 9 · Strumenti e movimenti" in hd, hd
         assert pg.inner_text("#tour-dialog h3") == "Affiancare i grafici"
 
-        # Step 6: pannello
+        # Step 6: panel
         pg.click("#tour-btn-next")
         attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 6 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 6 di 9 · Strumenti e movimenti" in hd, hd
 
-        # Step 7: barra
+        # Step 7: bar
         pg.click("#tour-btn-next")
         attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 7 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 7 di 9 · Strumenti e movimenti" in hd, hd
 
-        # Step 8: metodo
+        # Step 8: method
         pg.click("#tour-btn-next")
         attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 8 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")

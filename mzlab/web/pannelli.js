@@ -2,7 +2,7 @@
 // @ts-noany
 // @ts-check
 // Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split from explore.js: classic script, loaded right after it (shared globals).
-// ------------------------------------------------------------------ pannelli mobili
+// ------------------------------------------------------------------ floating panels
 /** @param {number} [w] @param {number} [h] */
 function place(w, h) {
   // a new panel goes under the existing ones, as wide as the page
@@ -300,7 +300,7 @@ function addPanel(type, o, after) {
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
   STATO.aggiungi(p, "open"); apply(p); fitHost();
-  // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
+  // move (drag the header), bring to front, resize (handle at the bottom right), maximize
   el.addEventListener("mousedown", () => { front(el); setActive(p); });
   el.querySelector(".hd").addEventListener("mousedown", (/** @type {MouseEvent} */ e) => {
     if (/** @type {Element} */ (e.target).closest("input,select,button,label,option") || el.classList.contains("max")) return;

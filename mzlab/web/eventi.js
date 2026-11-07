@@ -444,7 +444,7 @@ function lcHtml(lc, row) {
    ${pda.start != null ? `<section class="msec"><h4>${I18N.t("method.pda.title")}</h4><table>${row(I18N.t("method.pda.range"), I18N.t("method.pda.value", { start: pda.start, stop: pda.stop, step: pda.step }))}</table></section>` : ""}`;
 }
 
-// ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
+// ------------------------------------------------------------------ acquisition method (read from the mzML)
 async function showMethod(sel) {
   const f = E.files[E.cur], held = METODO_M.any();      // the Agilent *.m method folders loaded outside any run (metodo-m.js) show here too
   if (!f) return held ? showHeldMethods("") : info(I18N.t("method.none"));
@@ -520,7 +520,7 @@ Q("#np-method").onclick = () => showMethod();
 function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noopener"); }
 window.openBT = openBT;
 
-// ------------------------------------------------------------------ barra strumenti
+// ------------------------------------------------------------------ toolbar
 Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
 Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
 Q("#np-xic").onclick = () => openXic(null);
@@ -532,7 +532,7 @@ Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { cons
 let rzRaf = 0; addEventListener("resize", () => { fitWidth(); if (!rzRaf) rzRaf = FRAME.next(() => { rzRaf = 0; tabPanels().forEach(drawSized); }); });
 document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
-// ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)
+// ------------------------------------------------------------------ formula -> m/z calculator (like «mass from formula» of Xcalibur)
 // the calculator is a drop-down under its button (no dark backdrop): the graphs stay visible and usable; it closes with the button, Esc or the ×
 const calcBox = Q("#calcdlg");
 Object.defineProperty(calcBox, "open", {
