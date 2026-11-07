@@ -193,7 +193,7 @@ def native_build(path: Path) -> dict:
             "import_s": float(m.group(4)) if m else None, "rss_peak_mb": int(m.group(5)) if m else None, "error": None if m else r.stderr[-300:]}
 
 
-def main_librerie(gb: bool) -> list:
+def main_libraries(gb: bool) -> list:
     import tempfile
     tmp = Path(tempfile.mkdtemp(prefix="mzlab-bench-lib-"))
     rows, nat = [], []
@@ -271,7 +271,7 @@ def main() -> None:
     if not (Path(a.site) / "index.html").exists():
         sys.exit("site/ missing: python3 tools/build_site.py")
     if a.librerie:
-        lines = main_librerie(a.gb)
+        lines = main_libraries(a.gb)
         print("\n".join(lines))
         if a.scrivi:
             md = ROOT / "docs" / "agenti" / "misure.md"

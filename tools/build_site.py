@@ -140,8 +140,8 @@ def bundle_lang(static: Path) -> None:
         names = re.findall(r'"([^"]+)"', re.search(r"document\.write\(\[([^\]]*)\]", loader).group(1))
         cat: dict = {}
         for n in names:
-            righe = (static / "lang" / lang / f"{n}.js").read_text(encoding="utf-8").strip().splitlines()
-            cat.update(json.loads("{" + "\n".join(righe[1:-1]) + "}"))
+            rows = (static / "lang" / lang / f"{n}.js").read_text(encoding="utf-8").strip().splitlines()
+            cat.update(json.loads("{" + "\n".join(rows[1:-1]) + "}"))
         assert cat, lang
         first = first_view_keys(static, set(cat))
         part = lambda ks: json.dumps({k: cat[k] for k in cat if k in ks}, ensure_ascii=False, indent=0)

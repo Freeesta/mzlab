@@ -152,3 +152,26 @@ fn a_reader_serves_the_trait() {
     assert!(l.indice(0).unwrap().is_empty());
     assert!(l.scansione(0, 3).is_err());
 }
+
+fn voce(rt: f64, livello: u8, tic: f64) -> VoceScansione {
+    VoceScansione {
+        id: String::new(),
+        rt,
+        livello,
+        polarita: 1,
+        tic,
+        picco_base: None,
+        filtro: String::new(),
+        precursore: None,
+        posizione: None,
+    }
+}
+
+#[test]
+fn the_early_tic_keeps_the_ms1_scans_or_every_scan_when_none_is_ms1() {
+    let v = [voce(0.1, 1, 10.0), voce(0.2, 2, 3.0), voce(0.3, 1, 12.0)];
+    assert_eq!(tic_ms1(&v), (vec![0.1, 0.3], vec![10.0, 12.0]));
+    let v = [voce(0.1, 2, 4.0), voce(0.2, 2, 5.0)];
+    assert_eq!(tic_ms1(&v), (vec![0.1, 0.2], vec![4.0, 5.0]));
+    assert_eq!(tic_ms1(&[]), (vec![], vec![]));
+}

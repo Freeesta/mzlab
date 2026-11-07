@@ -64,6 +64,17 @@ fn table_filter_1_2(mut p: Params) -> Params {
     p
 }
 
+/// `features.detect@1 → @2`: version 1 counted `max_gap` as the scan distance (1 = consecutive scans), version 2 counts the missed scans
+/// (0 = consecutive), as `features.gapfill`; N becomes N - 1 (at least 0) and an absent value keeps the default, which moved from 2 to 1.
+fn features_detect_1_2(p: Params) -> Params {
+    p.into_iter()
+        .map(|(k, v)| match (k.as_str(), &v) {
+            ("max_gap", Value::Num(n)) => (k, Value::Num((n - 1.0).max(0.0))),
+            _ => (k, v),
+        })
+        .collect()
+}
+
 /// Every migration of the engine, one row per step and version.
 pub const MIGRATIONS: &[Migration] = &[
     Migration {
@@ -78,6 +89,13 @@ pub const MIGRATIONS: &[Migration] = &[
         from: 1,
         to: 2,
         apply: table_filter_1_2,
+        from_only: true,
+    },
+    Migration {
+        step: "features.detect",
+        from: 1,
+        to: 2,
+        apply: features_detect_1_2,
         from_only: true,
     },
 ];

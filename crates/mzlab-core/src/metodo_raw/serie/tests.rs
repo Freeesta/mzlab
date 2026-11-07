@@ -12,6 +12,7 @@ fn d(t: GenericType, label: &str) -> GenericDataDescriptor {
 fn rec(v: Vec<(&str, GenericValue)>) -> GenericRecord {
     GenericRecord {
         values: v.into_iter().map(|(k, x)| (k.into(), x)).collect(),
+        index: None,
     }
 }
 
@@ -216,4 +217,57 @@ fn the_sections_of_a_log_read_from_bytes_give_the_series() {
             vec![3000.0, 3001.0, 3002.0, 3003.0]
         )
     );
+}
+
+/// The trailer's label index (`opentfraw::generic_data::Etichette`) gives what a scan of the fields gives: the first of equal labels, nothing for a label
+/// it lacks, and a scan when the record is not the one it was made for.
+#[test]
+fn the_label_index_finds_what_a_scan_of_the_fields_finds() {
+    let labels: Vec<std::sync::Arc<str>> = ["A:", "B:", "A:", "", "Charge State:"]
+        .iter()
+        .map(|&l| l.into())
+        .collect();
+    let values: Vec<(std::sync::Arc<str>, GenericValue)> = labels
+        .iter()
+        .enumerate()
+        .map(|(i, l)| (std::sync::Arc::clone(l), GenericValue::Int32(i as i32)))
+        .collect();
+    let plain = GenericRecord {
+        values: values.clone(),
+        index: None,
+    };
+    let fast = GenericRecord {
+        values: values.clone(),
+        index: Some(opentfraw::generic_data::Etichette::new(&labels)),
+    };
+    // an index of other labels (a record of another length) is not trusted
+    let other = GenericRecord {
+        values: values[..4].to_vec(),
+        index: Some(opentfraw::generic_data::Etichette::new(&labels)),
+    };
+    let short = GenericRecord {
+        values: values[..4].to_vec(),
+        index: None,
+    };
+    for l in [
+        "A:",
+        "B:",
+        "",
+        "Charge State:",
+        "Missing:",
+        "a:",
+        "Charge State",
+    ] {
+        assert_eq!(
+            fast.get(l).and_then(GenericValue::as_f64),
+            plain.get(l).and_then(GenericValue::as_f64),
+            "{l}"
+        );
+        assert_eq!(
+            other.get(l).and_then(GenericValue::as_f64),
+            short.get(l).and_then(GenericValue::as_f64),
+            "{l}"
+        );
+    }
+    assert_eq!(fast.get("A:").and_then(GenericValue::as_f64), Some(0.0));
 }

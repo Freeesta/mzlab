@@ -34,7 +34,7 @@ def abbina(mz_a, rt_a, mz_b, rt_b, ppm: float = 5.0, rt_tol: float = 0.15) -> tu
     return np.array(out_a, int)[oa], np.array(out_b, int)[oa]
 
 
-FRAZIONE_FWHM = 0.35           # a broad band accepts a row whose RT is within this share of its FWHM from the apex ...
+FRACTION_FWHM = 0.35           # a broad band accepts a row whose RT is within this share of its FWHM from the apex ...
 IOU_MIN = 0.40                 # ... or whose [rt_min, rt_max] overlaps the true interval at least this much (intersection over union)
 
 
@@ -52,7 +52,7 @@ def finestra_larghi(mz_a, rt_a, fwhm_a, larga_a, rt_min_a, rt_max_a, mz_b, rt_b,
     |dRT| <= rt_tol, exactly as `abbina`. A broad one accepts |dRT| <= max(rt_tol, 0.35 * FWHM) or an interval overlap (IoU) >= 0.40; `fwhm_a` is in minutes."""
     mz_a, rt_a, fwhm_a, rt_min_a, rt_max_a, mz_b, rt_b, rt_min_b, rt_max_b = (np.asarray(x, float) for x in (mz_a, rt_a, fwhm_a, rt_min_a, rt_max_a, mz_b, rt_b, rt_min_b, rt_max_b))
     larga_a = np.asarray(larga_a, bool)
-    tol = np.where(larga_a, np.maximum(rt_tol, FRAZIONE_FWHM * fwhm_a), rt_tol)[:, None] * np.ones((1, len(mz_b)))
+    tol = np.where(larga_a, np.maximum(rt_tol, FRACTION_FWHM * fwhm_a), rt_tol)[:, None] * np.ones((1, len(mz_b)))
     ok = np.abs(mz_b[None, :] - mz_a[:, None]) <= mz_a[:, None] * ppm * 1e-6
     ok &= np.abs(rt_b[None, :] - rt_a[:, None]) <= tol
     if larga_a.any():

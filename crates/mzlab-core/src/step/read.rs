@@ -86,6 +86,7 @@ fn ports(v: Option<&Value>) -> Result<Vec<Port>> {
                 .iter()
                 .filter_map(|f| f.str().map(leak))
                 .collect();
+            port.lineage = p.get("lineage").and_then(Value::bool).unwrap_or(false);
             Ok(port)
         })
         .collect()

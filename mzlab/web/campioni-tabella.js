@@ -52,7 +52,7 @@ function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOB
           const r = COMANDI.fai("samples.meta", COMANDI.GLOBALE, () => importTsv(tx));
           paint(box);
           msg(box, r.changed ? t("meta.imported", { n: r.changed }) + (r.unknown.length ? " " + t("meta.unknown", { list: r.unknown.join(", ") }) : "") : t("meta.imported.none"), !r.changed);
-        }, x => msg(box, I18N.t(x.key || "workflow.err.invalidFormat"), true));
+        }, x => msg(box, I18N.t(x.key || "workflow.err.invalidFormat", x.params), true));
         return;
       }
       if (!f) return;

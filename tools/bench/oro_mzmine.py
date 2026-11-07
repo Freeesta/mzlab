@@ -72,10 +72,10 @@ def componenti(nome: str) -> list[tuple[float, float, float, float]]:
 def sha_contenuto(dati: bytes) -> str:
     """sha256 of the mzML with every binary array decoded and written as text with 6 significant digits: neither the zlib bytes nor the last bits of the floats (libm and SIMD paths change with the CPU of the machine) enter the hash, the content does."""
     def arrotonda(m: re.Match) -> bytes:
-        testa, payload = m.group(1), m.group(2)
-        tipo = "<f8" if b"MS:1000523" in testa else "<f4"
+        head, payload = m.group(1), m.group(2)
+        tipo = "<f8" if b"MS:1000523" in head else "<f4"
         v = np.frombuffer(zlib.decompress(base64.b64decode(payload)), dtype=tipo)
-        return testa + b"<binary>" + " ".join(f"{x:.5e}" for x in v).encode() + b"</binary>"
+        return head + b"<binary>" + " ".join(f"{x:.5e}" for x in v).encode() + b"</binary>"
     return hashlib.sha256(re.sub(rb"(<binaryDataArray[^>]*>.*?)<binary>([^<]+)</binary>", arrotonda, dati, flags=re.S)).hexdigest()
 
 
@@ -113,72 +113,72 @@ def genera(cartella: Path) -> dict[str, str]:
     return {f"{n}.mzML": scrivi(cartella / f"{n}.mzML") for n in DERIVA}
 
 
-def _leggi(path: Path) -> list[dict]:
+def _read(path: Path) -> list[dict]:
     with open(path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
-def _numero(x: str) -> float | None:
+def _number(x: str) -> float | None:
     try:
         return float(x)
     except (TypeError, ValueError):
         return None
 
 
-def _per_file(fasi: Path, prefisso: str) -> list[tuple[str, list[dict]]]:
+def _per_file(fasi: Path, prefix: str) -> list[tuple[str, list[dict]]]:
     """The exports `<prefix>_<file>.mzML_<list name>.csv` of one stage, by file name."""
     out = []
-    for p in sorted(fasi.glob(f"{prefisso}_*.mzML_*.csv")):
-        out.append((re.match(rf"{prefisso}_(.+?)\.mzML", p.name).group(1), _leggi(p)))
+    for p in sorted(fasi.glob(f"{prefix}_*.mzML_*.csv")):
+        out.append((re.match(rf"{prefix}_(.+?)\.mzML", p.name).group(1), _read(p)))
     return out
 
 
-def _scrivi_csv(path: Path, colonne: list[str], righe: list[list], chiave: tuple[str, ...]) -> None:
+def _scrivi_csv(path: Path, columns: list[str], rows: list[list], chiave: tuple[str, ...]) -> None:
     """Rows sorted by the named columns (numbers as numbers), so that two runs write the same bytes."""
     def k(r):
-        return tuple((0, float(v), "") if _numero(v) is not None else (1, 0.0, str(v)) for v in (r[colonne.index(c)] for c in chiave))
-    righe = sorted(righe, key=k)
+        return tuple((0, float(v), "") if _number(v) is not None else (1, 0.0, str(v)) for v in (r[columns.index(c)] for c in chiave))
+    rows = sorted(rows, key=k)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, lineterminator="\n")
-        w.writerow(colonne)
-        w.writerows(righe)
+        w.writerow(columns)
+        w.writerows(rows)
 
 
-def _fase_per_file(fasi: Path, prefisso: str, area: bool) -> tuple[list[str], list[list]]:
+def _fase_per_file(fasi: Path, prefix: str, area: bool) -> tuple[list[str], list[list]]:
     col = ["file", "id", "mz", "rt", "rt_start", "rt_end", "height"] + (["area"] if area else [])
-    righe = [[f, r["id"], r["mz"], r["rt"], r["rt_range:min"], r["rt_range:max"], r["height"]] + ([r["area"]] if area else []) for f, rs in _per_file(fasi, prefisso) for r in rs]
-    return col, righe
+    rows = [[f, r["id"], r["mz"], r["rt"], r["rt_range:min"], r["rt_range:max"], r["height"]] + ([r["area"]] if area else []) for f, rs in _per_file(fasi, prefix) for r in rs]
+    return col, rows
 
 
 def _fase_allineata(csv_path: Path) -> tuple[list[str], list[list]]:
     """The aligned table in long form: one line per cell with a feature (detected or estimated)."""
     col = ["row", "mz", "rt", "aligned_features", "score", "file", "mz_file", "rt_file", "height", "area", "state"]
-    righe = []
-    for r in _leggi(csv_path):
+    rows = []
+    for r in _read(csv_path):
         for k in sorted({m.group(1) for c in r if (m := re.match(r"datafile:(oro_\d)\.mzML:area$", c))}):
-            if _numero(r[f"datafile:{k}.mzML:area"]) is None:
+            if _number(r[f"datafile:{k}.mzML:area"]) is None:
                 continue
             c = lambda n: r[f"datafile:{k}.mzML:{n}"]
-            righe.append([r["id"], r["mz"], r["rt"], r["alignment_scores:aligned_features_n"], r["alignment_scores:weighted_distance_score"], k, c("mz"), c("rt"), c("height"), c("area"), c("feature_state")])
-    return col, righe
+            rows.append([r["id"], r["mz"], r["rt"], r["alignment_scores:aligned_features_n"], r["alignment_scores:weighted_distance_score"], k, c("mz"), c("rt"), c("height"), c("area"), c("feature_state")])
+    return col, rows
 
 
 def _fase_isotopi(fasi: Path) -> tuple[list[str], list[list]]:
     """Per file: the rows that the grouper keeps (charge > 0: principal; charge 0: alone) and the ones it removes (isotopologues, attached to the principal of their charge)."""
     col = ["file", "id", "mz", "rt", "height", "charge", "role", "principal"]
-    righe = []
-    for f, tenute in _per_file(fasi, "isotopi"):
+    rows = []
+    for f, kept in _per_file(fasi, "isotopi"):
         tutte = dict(_per_file(fasi, "risolutore"))[f]
-        principali = {r["id"]: (float(r["mz"]), int(float(r["charge"] or 0)), float(r["rt"])) for r in tenute}
+        principali = {r["id"]: (float(r["mz"]), int(float(r["charge"] or 0)), float(r["rt"])) for r in kept}
         for r in tutte:
             mz, rt = float(r["mz"]), float(r["rt"])
             if r["id"] in principali:
                 z = principali[r["id"]][1]
-                righe.append([f, r["id"], r["mz"], r["rt"], r["height"], z, "principal" if z else "alone", ""])
+                rows.append([f, r["id"], r["mz"], r["rt"], r["height"], z, "principal" if z else "alone", ""])
                 continue
             cand = [(abs((mz - m) * z / ISO - round((mz - m) * z / ISO)), i) for i, (m, z, t) in principali.items() if z and m < mz and abs(t - rt) < 0.1 and 0 < round((mz - m) * z / ISO) < 5]
-            righe.append([f, r["id"], r["mz"], r["rt"], r["height"], "", "isotopologue", min(cand)[1] if cand else ""])
-    return col, righe
+            rows.append([f, r["id"], r["mz"], r["rt"], r["height"], "", "isotopologue", min(cand)[1] if cand else ""])
+    return col, rows
 
 
 def _sostituisci(testo: str, dir_: Path) -> str:
@@ -206,18 +206,18 @@ def scrivi_oro(dest: Path) -> None:
             if r.returncode or "SEVERE" in r.stdout + r.stderr:
                 raise SystemExit(f"mzmine failed on {x.name}:\n{(r.stdout + r.stderr)[-2000:]}")
         dest.mkdir(parents=True, exist_ok=True)
-        per_file, allineata = ("file", "id"), ("mz", "rt", "file")
-        for nome, (col, righe), chiave in [("adap.csv", _fase_per_file(fasi, "adap", False), per_file), ("resolved.csv", _fase_per_file(fasi, "risolutore", True), per_file),
-                                           ("aligned.csv", _fase_allineata(fasi / "join_Aligned_feature_list.csv"), allineata),
-                                           ("gapfilled.csv", _fase_allineata(fasi / "riempimento_Aligned_feature_list_gap-filled.csv"), allineata),
+        per_file, aligned = ("file", "id"), ("mz", "rt", "file")
+        for nome, (col, rows), chiave in [("adap.csv", _fase_per_file(fasi, "adap", False), per_file), ("resolved.csv", _fase_per_file(fasi, "risolutore", True), per_file),
+                                           ("aligned.csv", _fase_allineata(fasi / "join_Aligned_feature_list.csv"), aligned),
+                                           ("gapfilled.csv", _fase_allineata(fasi / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
                                            ("isotopes.csv", _fase_isotopi(fasi), per_file)]:
-            _scrivi_csv(dest / nome, col, righe, chiave)
+            _scrivi_csv(dest / nome, col, rows, chiave)
         java = subprocess.run([str(jh / "bin" / "java"), "-version"], capture_output=True, text=True).stderr.strip().splitlines()
         java = [x for x in java if x.startswith(("openjdk version", "OpenJDK Runtime"))]
         (dest / "LEGGIMI.md").write_text(_leggimi(shas, [java[0], java[1]] if len(java) > 1 else java, _sostituisci(xml_a.read_text(), t), _sostituisci(xml_b.read_text(), t)), encoding="utf-8")
 
 
-def scrivi_reali(cartella: Path, dest: Path, quanti: int = 2) -> None:
+def write_real(cartella: Path, dest: Path, quanti: int = 2) -> None:
     """Runs mzmine 3.9.0 on the first `quanti` mzML of `cartella` and writes `adap_<file>.csv` (columns of `adap.csv`) in `dest`: the lists the real-data test of the ADAP builder reads."""
     mm, jh = corri_mzmine.installa_39()
     par = corri.parametri("mzmine", "predefinita")
@@ -237,9 +237,9 @@ def scrivi_reali(cartella: Path, dest: Path, quanti: int = 2) -> None:
         if r.returncode or "SEVERE" in r.stdout + r.stderr:
             raise SystemExit(f"mzmine failed:\n{(r.stdout + r.stderr)[-2000:]}")
         dest.mkdir(parents=True, exist_ok=True)
-        col, righe = _fase_per_file(fasi, "adap", False)
-        for f in sorted({r[0] for r in righe}):
-            _scrivi_csv(dest / f"adap_{f}.csv", col, [r for r in righe if r[0] == f], ("id",))
+        col, rows = _fase_per_file(fasi, "adap", False)
+        for f in sorted({r[0] for r in rows}):
+            _scrivi_csv(dest / f"adap_{f}.csv", col, [r for r in rows if r[0] == f], ("id",))
 
 
 def _leggimi(shas: dict[str, str], java: list[str], xml_a: str, xml_b: str) -> str:
@@ -288,7 +288,7 @@ def main() -> None:
     if a.oro:
         scrivi_oro(Path(a.oro))
     if a.reale:
-        scrivi_reali(Path(a.reale[0]), Path(a.reale[1]))
+        write_real(Path(a.reale[0]), Path(a.reale[1]))
 
 
 if __name__ == "__main__":

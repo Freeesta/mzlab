@@ -29,7 +29,7 @@ mod export {
 
     /// The memory aligning the `.mzfeatf` of a series (an `Array` of `Uint8Array`) asks for under `budget_mb`: JSON `{"mb","via","files","rows"}`.
     #[wasm_bindgen]
-    pub fn stima_series(
+    pub fn estimate_series(
         files: Array,
         recipe: &str,
         budget_mb: f64,
