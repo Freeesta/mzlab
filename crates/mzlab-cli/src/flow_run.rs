@@ -222,6 +222,7 @@ pub(crate) fn run_checked(
     runner: &FileRunner,
     workers: usize,
 ) -> mzlab_core::Result<(Run, String)> {
+    runner.budget.run_with(workers);
     let run = execute(plan, &steps(), runner, workers)?;
     runner.save_cache()?;
     let prov = prov_text(text, &run);
