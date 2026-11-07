@@ -125,6 +125,16 @@
     const d = F.defaultFormat(port.type), reads = port.formats.length ? port.formats : s.ty === port.type && d ? [d] : [];
     return s.format && reads.length && !reads.includes(s.format) ? { ref: s.text, writes: s.format, reads: reads.join(" / ") } : null;
   };
+  /** check.rs aligned_here: whether the table of `r` was aligned in this plan, an output flagged lineage whose table inputs were too; a file never is, a source the check cannot follow is left to its own problems
+   * @param {any} plan @param {Function} stepOf @param {any} r @param {number} depth */
+  const alignedHere = (plan, stepOf, r, depth) => {
+    if (r.file != null) return false;
+    const src = plan.steps.find((/** @type {any} */ x) => x.id === r.instance), s = src && stepOf(src);
+    if (!s || depth > plan.steps.length) return true;
+    if (!(s.out && s.out[r.port] && s.out[r.port].lineage)) return false;
+    const tables = F.ports(s.in).filter((/** @type {FlowPort} */ p) => p.type === "table" || p.accepts.includes("table")).map((/** @type {FlowPort} */ p) => p.name);
+    return src.ins.filter((/** @type {any} */ x) => tables.includes(x[0])).flatMap((/** @type {any} */ x) => x[1]).every((/** @type {any} */ x) => alignedHere(plan, stepOf, x, depth + 1));
+  };
   /** the facets the data of an instance miss, one problem each @param {any} plan @param {Function} add @param {any} i @param {FlowPort[]} declared @param {any[]} seen */
   const facets = (plan, add, i, declared, seen) => {
     for (const port of declared) for (const [facet, want, h] of F.facetMisses(port.requires, observedBy(plan, i, seen))) add(i, port.name, "err.flow.facet", { facet, step: i.step, want, have: h });
@@ -184,6 +194,7 @@
           const fit = F.fit(reg, s.ty, port), miss = fit === "ok" && formatMiss(port, s);
           if (fit === "no") add(i, name, "err.flow.type", { from: s.ty, to: port.type });
           if (miss) add(i, name, "err.flow.port.format", miss);
+          if (fit === "ok" && port.lineage && !alignedHere(plan, stepOf, r, 0)) add(i, name, "err.flow.lineage", { step: i.step });
         }
       }
       for (const port of declared.filter((/** @type {FlowPort} */ p) => !p.optional)) {

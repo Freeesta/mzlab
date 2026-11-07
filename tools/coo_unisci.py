@@ -19,7 +19,7 @@ from pathlib import Path
 
 import ci_metrics
 
-RISCHI = ["Cargo.toml", "*/Cargo.toml", "Cargo.lock", ".github/workflows/*", "*.wasm", "crates/mzlab-desktop/*"]
+RISKS = ["Cargo.toml", "*/Cargo.toml", "Cargo.lock", ".github/workflows/*", "*.wasm", "crates/mzlab-desktop/*"]
 CSP = "mzlab/web/index.html"
 OK = ("success", "skipped", "neutral")
 
@@ -28,30 +28,30 @@ def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProce
     return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=check)
 
 
-def ci_verde(eventi: list[dict], sha: str) -> tuple[bool, str | None]:
+def ci_green(eventi: list[dict], sha: str) -> tuple[bool, str | None]:
     """(green, first failing job) from the `run` events of `sha`; `rust` may be absent (skipped by the path filter)."""
-    ultimo: dict[str, dict] = {}
+    last: dict[str, dict] = {}
     for r in eventi:
         if r.get("tipo") == "run" and r.get("sha") == sha:
-            v = ultimo.get(r["workflow"])
+            v = last.get(r["workflow"])
             if v is None or (r.get("run_attempt", 1), r["ts_utc"]) >= (v.get("run_attempt", 1), v["ts_utc"]):
-                ultimo[r["workflow"]] = r
-    if "test" not in ultimo:
+                last[r["workflow"]] = r
+    if "test" not in last:
         return False, "test (no run recorded)"
-    for nome in ("test", "rust"):
-        if nome in ultimo and ultimo[nome].get("esito") not in OK:
-            return False, nome
+    for name in ("test", "rust"):
+        if name in last and last[name].get("esito") not in OK:
+            return False, name
     return True, None
 
 
 def rischi(file: list[str], index_html_csp: bool) -> list[str]:
-    out = [f"VIA richiesto: {f}" for f in file if any(fnmatch.fnmatch(f, p) for p in RISCHI)]
+    out = [f"VIA richiesto: {f}" for f in file if any(fnmatch.fnmatch(f, p) for p in RISKS)]
     if index_html_csp:
         out.append(f"VIA richiesto: CSP in {CSP}")
     return out
 
 
-def csp_cambiato(repo: Path, sha: str) -> bool:
+def csp_changed(repo: Path, sha: str) -> bool:
     d = git(repo, "diff", "-U0", f"origin/main...{sha}", "--", CSP, check=False).stdout
     return any("Content-Security-Policy" in r for r in d.splitlines() if r[:1] in "+-")
 
@@ -79,17 +79,17 @@ def combine(repo: Path, sha: str) -> tuple[bool, str]:
 def valuta(repo: Path, pr: int, sha: str) -> dict:
     git(repo, "fetch", "-q", "origin", "main", "stat-ci")
     git(repo, "fetch", "-q", "origin", f"pull/{pr}/head")
-    testa = git(repo, "rev-parse", "FETCH_HEAD").stdout.strip()
+    head = git(repo, "rev-parse", "FETCH_HEAD").stdout.strip()
     res = {"pr": pr, "sha": sha, "verde": False, "combine": None, "rischi": [], "unire": False, "motivo": ""}
-    if testa != sha:
-        res["motivo"] = f"head SHA differs: PR is at {testa}"
+    if head != sha:
+        res["motivo"] = f"head SHA differs: PR is at {head}"
         return res
     eventi = ci_metrics.eventi_ramo(repo=str(repo))
-    res["verde"], job = ci_verde(eventi, sha)
+    res["verde"], job = ci_green(eventi, sha)
     if not res["verde"]:
         res["motivo"] = f"CI non verde: {job}"
         return res
-    res["rischi"] = rischi(git(repo, "diff", "--name-only", f"origin/main...{sha}").stdout.split(), csp_cambiato(repo, sha))
+    res["rischi"] = rischi(git(repo, "diff", "--name-only", f"origin/main...{sha}").stdout.split(), csp_changed(repo, sha))
     res["combine"], motivo = combine(repo, sha)
     res["motivo"] = motivo or "; ".join(res["rischi"])
     res["unire"] = bool(res["combine"] and not res["rischi"])

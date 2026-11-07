@@ -1,6 +1,6 @@
 //! The instrument log of a `.raw` as series over time: every numeric channel of the status log (`status:<section>/<label>`) and every numeric field of the scan trailer that changes
 //! (`trailer:<label>`, one point per scan). A channel with fewer than two different values stays in `campi` only. The list (`Voce`) carries no points; the points of one series are
-//! computed when it is asked for (`Lettore::cromatogramma`), never at opening. The series are not chromatograms of the file: they are not in the mzML nor in the `.mzidx`.
+//! computed when it is asked for (`Lettore::chromatogram`), never at opening. The series are not chromatograms of the file: they are not in the mzML nor in the `.mzidx`.
 
 use crate::metodo::{num, obj, text, V};
 use opentfraw::generic_data::{GenericDataHeader, GenericRecord, GenericValue};
@@ -310,7 +310,7 @@ fn scansioni(raw: &RawFileReader) -> Vec<Scansione> {
 }
 
 /// Every series of the file: the status log first, then the trailer.
-pub fn indice<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Voce> {
+pub fn index<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Voce> {
     let mut out = raw
         .status_log
         .as_ref()

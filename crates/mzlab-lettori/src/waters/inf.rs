@@ -51,7 +51,7 @@ impl Testata {
     }
 }
 
-pub(super) fn testata(t: &str) -> Testata {
+pub(super) fn file_header(t: &str) -> Testata {
     let mut h = Testata::default();
     for riga in t.lines() {
         let Some(r) = riga.trim().strip_prefix("$$") else {

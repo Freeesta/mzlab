@@ -230,6 +230,7 @@ pub(super) fn finish(c: &mut Rec, stats: &mut Stats) -> Option<Spectrum> {
     let rt = rt_minutes(c);
     let (ri, ei) = (ri_of(c), is_ei(c));
     stats.read += 1;
+    stats.cut += c.extra_peaks as u64;
     Some(Spectrum {
         prec,
         pol,

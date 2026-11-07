@@ -178,8 +178,8 @@ pub fn errore(byte: Vec<u8>) -> &'static str {
         Err(e) => e.key,
         Ok(mut l) => {
             // a hostile array is found when the scan is read
-            for k in 0..l.indice(0).map(|i| i.len()).unwrap_or(0) {
-                if let Err(e) = l.scansione(0, k) {
+            for k in 0..l.index(0).map(|i| i.len()).unwrap_or(0) {
+                if let Err(e) = l.scan(0, k) {
                     return e.key;
                 }
             }

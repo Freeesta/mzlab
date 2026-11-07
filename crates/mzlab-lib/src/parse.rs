@@ -26,6 +26,8 @@ pub struct Stats {
     pub no_prec: u64,
     pub no_peaks: u64,
     pub broken: u64,
+    /// spectra kept with only their first `MAX_RAW_PEAKS` peaks (the import summary names them: `lib.cutN`)
+    pub cut: u64,
 }
 
 /// Format by extension, otherwise by the first bytes. `lib.err.unsupported`: commercial binary libraries; `lib.err.unknown`: anything else.

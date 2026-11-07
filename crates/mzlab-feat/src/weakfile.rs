@@ -20,6 +20,12 @@ pub fn to_bytes(candidates: &FileFeatures, key: &str) -> Vec<u8> {
     b
 }
 
+/// The recipe fingerprint `bytes` were stored under, when they start as a stored table.
+pub fn stored_key(bytes: &[u8]) -> Option<&str> {
+    let k = bytes.get(MAGIC.len()..MAGIC.len() + KEY)?;
+    (bytes.starts_with(MAGIC)).then(|| std::str::from_utf8(k).ok())?
+}
+
 /// The candidates of stored `bytes` when they were made with the recipe of `key`; `None` for another recipe or for bytes that are not a stored table
 /// (the caller detects the file again).
 pub fn from_bytes(bytes: &[u8], key: &str) -> Result<Option<FileFeatures>> {

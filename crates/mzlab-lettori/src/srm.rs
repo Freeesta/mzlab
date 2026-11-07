@@ -114,16 +114,16 @@ impl SrmDaScansioni {
     fn costruisci(&mut self, c: usize) -> Result<Vec<Chromatogram>> {
         if self
             .inner
-            .cromatogrammi(c)?
+            .chromatograms(c)?
             .iter()
             .any(|v| v.tipo == ChromKind::Srm)
         {
             return Ok(Vec::new());
         }
-        let righe: Vec<VoceScansione> = self.inner.indice(c)?.to_vec();
+        let righe: Vec<VoceScansione> = self.inner.index_without_tic(c)?.to_vec();
         let mut tr = transizioni_dalle_scansioni(&mut *self.inner, c, &righe)?;
         if tr.iter().any(|t| t.ce.is_none())
-            && let Ok(m) = self.inner.metodo(c)
+            && let Ok(m) = self.inner.method(c)
         {
             completa_dal_metodo(&m, &mut tr);
         }
@@ -140,7 +140,7 @@ fn transizioni_dalle_scansioni(
     let mut tr: Vec<Transizione> = Vec::new();
     for (k, r) in righe.iter().enumerate().filter(|(_, r)| scansione_srm(r)) {
         let q1 = r.precursore.unwrap_or(0.0);
-        let s = inner.scansione(c, k)?;
+        let s = inner.scan(c, k)?;
         let ce = ce_del_filtro(&r.filtro);
         for (i, &q3) in s.mz.iter().enumerate() {
             let y = s.intensity_f64(i);
@@ -219,37 +219,40 @@ fn scansione_srm(v: &VoceScansione) -> bool {
 }
 
 impl Lettore for SrmDaScansioni {
-    fn formato(&self) -> Formato {
-        self.inner.formato()
+    fn format(&self) -> Formato {
+        self.inner.format()
     }
-    fn campioni(&self) -> &[Campione] {
-        self.inner.campioni()
+    fn samples(&self) -> &[Campione] {
+        self.inner.samples()
     }
-    fn mancanti(&mut self, c: usize) -> usize {
-        self.inner.mancanti(c)
+    fn missing(&mut self, c: usize) -> usize {
+        self.inner.missing(c)
     }
     // The account `conv/1` gives of the mzML is the reader's own: the wrapper adds traces, not gaps.
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
-        self.inner.non_portati()
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
+        self.inner.not_carried()
     }
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        self.inner.indice(c)
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.inner.index(c)
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.inner.scansione(c, k)
+    fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.inner.index_without_tic(c)
     }
-    fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.inner.scansione_dati(c, k)
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.inner.scan(c, k)
+    }
+    fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.inner.scan_data(c, k)
     }
     // the profile points of a Thermo scan: without this the wrapper answers `None` and `--peaks profile` refuses a file that has them
-    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
-        self.inner.scansione_profilo(c, k)
+    fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+        self.inner.scan_profile(c, k)
     }
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.inner.intestazione(c, k)
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+        self.inner.scan_header(c, k)
     }
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        let mut v = self.inner.cromatogrammi(c)?;
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+        let mut v = self.inner.chromatograms(c)?;
         let extra = self.tracce(c)?;
         v.extend(extra.iter().map(|t| VoceCromatogramma {
             id: t.id.clone(),
@@ -258,11 +261,11 @@ impl Lettore for SrmDaScansioni {
         }));
         Ok(v)
     }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         if let Some(t) = self.tracce(c)?.iter().find(|t| t.id == id) {
             return Ok(t.clone());
         }
-        self.inner.cromatogramma(c, id)
+        self.inner.chromatogram(c, id)
     }
     fn dad_map(&mut self, c: usize) -> Result<Option<String>> {
         self.inner.dad_map(c)
@@ -274,34 +277,34 @@ impl Lettore for SrmDaScansioni {
         self.inner.dad_wavelength(c, nm0, nm1)
     }
     #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
-    fn dad_dati(&mut self, c: usize) -> Result<Option<mzlab_core::wiff::dad::DadData>> {
-        self.inner.dad_dati(c)
+    fn dad_data(&mut self, c: usize) -> Result<Option<mzlab_core::wiff::dad::DadData>> {
+        self.inner.dad_data(c)
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.inner.metodo(c)
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.inner.method(c)
     }
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        self.inner.testata_mzml(c)
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
+        self.inner.mzml_header(c)
     }
     // the light header of the scan table (a Thermo `.raw` does not hash the whole file for it)
-    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
-        self.inner.testata_tabella(c)
+    fn table_header(&mut self, c: usize) -> Result<Option<Header>> {
+        self.inner.table_header(c)
     }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.inner.extra_mzml(s)
     }
-    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
-        self.inner.extra_scansione(c, k, s)
+    fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+        self.inner.scan_extra(c, k, s)
     }
     #[cfg(feature = "sciex")]
-    fn variante(&mut self, c: usize) -> bool {
-        self.inner.variante(c)
+    fn variant(&mut self, c: usize) -> bool {
+        self.inner.variant(c)
     }
 }
 
 /// True when sample `c` of `l` has scans that are SRM transitions.
 pub fn ha_scansioni_srm(l: &mut dyn Lettore, c: usize) -> bool {
-    l.indice(c)
+    l.index_without_tic(c)
         .map(|i| i.iter().any(scansione_srm))
         .unwrap_or(false)
 }

@@ -10,7 +10,7 @@ def all_to(pg, kind):
         i = pg.evaluate("kind => ST.files.map(f => f.kind).findIndex(k => k !== kind)", kind)
         if i < 0: return
         name = pg.evaluate("ST.files[%d].name" % i)
-        row = pg.locator("#flist tr", has_text=name).locator(SEL)
+        row = pg.locator("#flist tr", has=pg.locator(".ldname[title='%s']" % name)).locator(SEL)      # the cell shows the name without its extension, the title keeps it whole
         row.select_option(kind); frames(pg, 4)
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

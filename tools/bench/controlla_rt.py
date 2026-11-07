@@ -40,7 +40,7 @@ def apice(rt: np.ndarray, y: np.ndarray, rt0: float, finestra: float = FINESTRA,
 
 def controlla(verita: list[dict], tabelle: list, ppm: float = PPM, finestra: float = FINESTRA, soglia: float = SOGLIA) -> dict:
     """`tabelle`: PeakTable of every file (MS1). Returns the per-compound list and the summary."""
-    righe = []
+    rows = []
     for c in verita:
         tol = c["mz"] * ppm * 1e-6
         tot, rts = None, None
@@ -53,13 +53,13 @@ def controlla(verita: list[dict], tabelle: list, ppm: float = PPM, finestra: flo
             else:                                       # runs of different length: resample on the first run's time axis
                 tot += np.interp(rts, t.rt, y)
         rt, h, visto = apice(rts, tot, c["rt"], finestra, soglia)
-        righe.append({"id": c["id"], "mz": c["mz"], "rt": c["rt"], "apice": rt, "altezza": h, "visto": visto, "d": None if rt is None else rt - c["rt"]})
-    d = np.array([r["d"] for r in righe if r["visto"]], dtype=float)
+        rows.append({"id": c["id"], "mz": c["mz"], "rt": c["rt"], "apice": rt, "altezza": h, "visto": visto, "d": None if rt is None else rt - c["rt"]})
+    d = np.array([r["d"] for r in rows if r["visto"]], dtype=float)
     ass = np.abs(d)
-    return {"n": len(righe), "visti": int(len(d)), "non_visti": len(righe) - int(len(d)), "ppm": ppm, "finestra_min": finestra, "soglia": soglia,
+    return {"n": len(rows), "visti": int(len(d)), "non_visti": len(rows) - int(len(d)), "ppm": ppm, "finestra_min": finestra, "soglia": soglia,
             "d_percentili": {str(p): float(np.percentile(d, p)) for p in PERCENTILI} if len(d) else {},
             "assoluto_percentili": {str(p): float(np.percentile(ass, p)) for p in (50, 90, 95, 99)} if len(d) else {},
-            "entro": {str(t): int(np.sum(ass <= t)) for t in (0.05, 0.1, 0.15, 0.2, 0.3, 0.5)}, "compounds": righe}
+            "entro": {str(t): int(np.sum(ass <= t)) for t in (0.05, 0.1, 0.15, 0.2, 0.3, 0.5)}, "compounds": rows}
 
 
 def main(argv=None) -> int:

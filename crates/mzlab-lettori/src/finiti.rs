@@ -58,15 +58,15 @@ fn spettro(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
 }
 
 impl Lettore for Finiti {
-    fn formato(&self) -> Formato {
-        self.inner.formato()
+    fn format(&self) -> Formato {
+        self.inner.format()
     }
-    fn campioni(&self) -> &[Campione] {
-        self.inner.campioni()
+    fn samples(&self) -> &[Campione] {
+        self.inner.samples()
     }
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         if !self.visti.get(c).copied().unwrap_or(false) {
-            for v in self.inner.indice(c)? {
+            for v in self.inner.index(c)? {
                 for (cosa, x) in [("rt", v.rt), ("tic", v.tic)] {
                     if !x.is_finite() {
                         return Err(guasto("scan", &v.id, cosa, x));
@@ -78,28 +78,41 @@ impl Lettore for Finiti {
             }
             self.visti[c] = true;
         }
-        self.inner.indice(c)
+        self.inner.index(c)
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        spettro(self.inner.scansione(c, k), k)
+    // the same check on the rows the reader gives; `visti` stays unset, the full rows of `indice` are checked when asked for
+    fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        if !self.visti.get(c).copied().unwrap_or(false) {
+            for v in self.inner.index_without_tic(c)? {
+                for (cosa, x) in [("rt", v.rt), ("tic", v.tic)] {
+                    if !x.is_finite() {
+                        return Err(guasto("scan", &v.id, cosa, x));
+                    }
+                }
+            }
+        }
+        self.inner.index_without_tic(c)
     }
-    fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        spettro(self.inner.scansione_dati(c, k), k)
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        spettro(self.inner.scan(c, k), k)
     }
-    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+    fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        spettro(self.inner.scan_data(c, k), k)
+    }
+    fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
         self.inner
-            .scansione_profilo(c, k)?
+            .scan_profile(c, k)?
             .map(|s| spettro(Ok(s), k))
             .transpose()
     }
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.inner.intestazione(c, k)
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+        self.inner.scan_header(c, k)
     }
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        self.inner.cromatogrammi(c)
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+        self.inner.chromatograms(c)
     }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        let t = self.inner.cromatogramma(c, id)?;
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+        let t = self.inner.chromatogram(c, id)?;
         if let Some(v) = t.time.iter().find(|x| !x.is_finite()) {
             return Err(guasto("trace", id, "time", *v));
         }
@@ -118,32 +131,32 @@ impl Lettore for Finiti {
         self.inner.dad_wavelength(c, nm0, nm1)
     }
     #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
-    fn dad_dati(&mut self, c: usize) -> Result<Option<mzlab_core::wiff::dad::DadData>> {
-        self.inner.dad_dati(c)
+    fn dad_data(&mut self, c: usize) -> Result<Option<mzlab_core::wiff::dad::DadData>> {
+        self.inner.dad_data(c)
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.inner.metodo(c)
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.inner.method(c)
     }
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        self.inner.testata_mzml(c)
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
+        self.inner.mzml_header(c)
     }
-    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
-        self.inner.testata_tabella(c)
+    fn table_header(&mut self, c: usize) -> Result<Option<Header>> {
+        self.inner.table_header(c)
     }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.inner.extra_mzml(s)
     }
-    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
-        self.inner.extra_scansione(c, k, s)
+    fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+        self.inner.scan_extra(c, k, s)
     }
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
-        self.inner.non_portati()
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
+        self.inner.not_carried()
     }
-    fn mancanti(&mut self, c: usize) -> usize {
-        self.inner.mancanti(c)
+    fn missing(&mut self, c: usize) -> usize {
+        self.inner.missing(c)
     }
     #[cfg(feature = "sciex")]
-    fn variante(&mut self, c: usize) -> bool {
-        self.inner.variante(c)
+    fn variant(&mut self, c: usize) -> bool {
+        self.inner.variant(c)
     }
 }

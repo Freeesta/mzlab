@@ -17,19 +17,19 @@ use wasm_bindgen::prelude::*;
 /// The session interface of a module, as the engine uses it: JSON texts, and the index and the scans as bytes. An error is the `Error` of the module (same key).
 pub trait Modulo {
     /// The version of the transport the module speaks (`trasporto::PROTOCOLLO`).
-    fn protocollo(&mut self) -> Result<u32>;
-    fn campioni(&mut self) -> Result<String>;
+    fn protocol(&mut self) -> Result<u32>;
+    fn samples(&mut self) -> Result<String>;
     /// The index of sample `c` (`trasporto::encode_indice`).
-    fn indice(&mut self, c: usize) -> Result<Vec<u8>>;
+    fn index(&mut self, c: usize) -> Result<Vec<u8>>;
     /// Scan `k` of sample `c` (`trasporto::encode_scansione`).
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>>;
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<String>;
-    fn cromatogrammi(&mut self, c: usize) -> Result<String>;
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String>;
-    fn metodo(&mut self, c: usize) -> Result<String>;
-    fn testata(&mut self, c: usize) -> Result<String>;
+    fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>>;
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<String>;
+    fn chromatograms(&mut self, c: usize) -> Result<String>;
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<String>;
+    fn method(&mut self, c: usize) -> Result<String>;
+    fn file_header(&mut self, c: usize) -> Result<String>;
     /// The spectra a truncated file declares but does not hold (a module of an older build knows none: 0).
-    fn mancanti(&mut self, _c: usize) -> Result<u32> {
+    fn missing(&mut self, _c: usize) -> Result<u32> {
         Ok(0)
     }
 }
@@ -86,7 +86,7 @@ fn coppie(v: Option<&Value>) -> Vec<(String, String)> {
         .collect()
 }
 
-fn formato(id: &str) -> Formato {
+fn format(id: &str) -> Formato {
     match id {
         "thermo-raw" => Formato::ThermoRaw,
         "sciex-wiff" => Formato::SciexWiff,
@@ -131,7 +131,7 @@ pub(crate) struct Risposte;
 
 impl Risposte {
     /// `{formato, campioni:[{id,name,scans}]}`.
-    pub(crate) fn campioni(t: &str) -> Result<(Formato, Vec<Campione>)> {
+    pub(crate) fn samples(t: &str) -> Result<(Formato, Vec<Campione>)> {
         let v = doc(t)?;
         let c = v
             .get("campioni")
@@ -148,11 +148,11 @@ impl Risposte {
         if c.is_empty() {
             return Err(guasto("samples"));
         }
-        Ok((formato(&testo(v.get("formato"))), c))
+        Ok((format(&testo(v.get("formato"))), c))
     }
 
     /// The index as the module wrote it (`trasporto::decode_indice`).
-    pub(crate) fn indice(b: &[u8]) -> Result<Vec<VoceScansione>> {
+    pub(crate) fn index(b: &[u8]) -> Result<Vec<VoceScansione>> {
         decode_indice(b)
     }
 }
@@ -162,7 +162,7 @@ pub struct RisposteScansioni;
 
 impl RisposteScansioni {
     /// The scan as the module sends it, with the id and the filter of its row of the index.
-    pub(crate) fn scansione(k: usize, b: &[u8], riga: Option<&VoceScansione>) -> Result<Spectrum> {
+    pub(crate) fn scan(k: usize, b: &[u8], riga: Option<&VoceScansione>) -> Result<Spectrum> {
         let mut s = decode_scansione(k, b)?;
         if let Some(r) = riga {
             s.id = r.id.clone();
@@ -172,7 +172,7 @@ impl RisposteScansioni {
     }
 
     /// `[{name, value, unit, cv}]`.
-    pub(crate) fn intestazione(t: &str) -> Result<Vec<Campo>> {
+    pub(crate) fn scan_header(t: &str) -> Result<Vec<Campo>> {
         let opz = |v: Option<&Value>| v.and_then(Value::str).map(str::to_string);
         Ok(doc(t)?
             .arr()
@@ -187,7 +187,7 @@ impl RisposteScansioni {
     }
 
     /// `[{id, kind, unit}]` (`kind` is the name of the `ChromKind`).
-    pub(crate) fn cromatogrammi(t: &str) -> Result<Vec<VoceCromatogramma>> {
+    pub(crate) fn chromatograms(t: &str) -> Result<Vec<VoceCromatogramma>> {
         Ok(doc(t)?
             .arr()
             .iter()
@@ -205,7 +205,7 @@ pub struct RisposteTracce;
 
 impl RisposteTracce {
     /// `{id, kind, q1, q3, unit, time, intensity}`.
-    pub(crate) fn cromatogramma(t: &str) -> Result<Chromatogram> {
+    pub(crate) fn chromatogram(t: &str) -> Result<Chromatogram> {
         let x = doc(t)?;
         Ok(Chromatogram {
             index: 0,
@@ -220,7 +220,7 @@ impl RisposteTracce {
     }
 
     /// The header of the mzML (`null`: the reader has none); the fields are those of `Sessioni::testata` of the module.
-    pub(crate) fn testata(t: &str) -> Result<Option<Header>> {
+    pub(crate) fn file_header(t: &str) -> Result<Option<Header>> {
         let v = doc(t)?;
         if v.is_null() {
             return Ok(None);
@@ -282,12 +282,12 @@ pub struct LettoreEsterno<M: Modulo> {
 impl<M: Modulo> LettoreEsterno<M> {
     pub fn new(mut m: M) -> Result<Self> {
         // a module cached from another version of the site speaks another transport: the page asks to load it again
-        if m.protocollo()? != PROTOCOLLO {
+        if m.protocol()? != PROTOCOLLO {
             return Err(Error::new("err.file.wiffLoad")
                 .with("family", "thermo")
                 .with("detail", "protocol"));
         }
-        let (formato, campioni) = Risposte::campioni(&m.campioni()?)?;
+        let (formato, campioni) = Risposte::samples(&m.samples()?)?;
         Ok(LettoreEsterno {
             m,
             formato,
@@ -298,46 +298,46 @@ impl<M: Modulo> LettoreEsterno<M> {
 }
 
 impl<M: Modulo> Lettore for LettoreEsterno<M> {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         self.formato
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         if !self.indici.contains_key(&c) {
-            let r = Risposte::indice(&self.m.indice(c)?)?;
+            let r = Risposte::index(&self.m.index(c)?)?;
             self.indici.insert(c, r);
         }
         Ok(self.indici.get(&c).map_or(&[][..], Vec::as_slice))
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let b = self.m.scansione(c, k)?;
-        self.indice(c)?;
-        RisposteScansioni::scansione(k, &b, self.indici.get(&c).and_then(|v| v.get(k)))
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        let b = self.m.scan(c, k)?;
+        self.index(c)?;
+        RisposteScansioni::scan(k, &b, self.indici.get(&c).and_then(|v| v.get(k)))
     }
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        RisposteScansioni::intestazione(&self.m.intestazione(c, k)?)
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+        RisposteScansioni::scan_header(&self.m.scan_header(c, k)?)
     }
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        RisposteScansioni::cromatogrammi(&self.m.cromatogrammi(c)?)
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+        RisposteScansioni::chromatograms(&self.m.chromatograms(c)?)
     }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        RisposteTracce::cromatogramma(&self.m.cromatogramma(c, id)?)
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+        RisposteTracce::chromatogram(&self.m.chromatogram(c, id)?)
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.m.metodo(c)
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.m.method(c)
     }
-    fn mancanti(&mut self, c: usize) -> usize {
-        self.m.mancanti(c).unwrap_or(0) as usize
+    fn missing(&mut self, c: usize) -> usize {
+        self.m.missing(c).unwrap_or(0) as usize
     }
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        RisposteTracce::testata(&self.m.testata(c)?)
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
+        RisposteTracce::file_header(&self.m.file_header(c)?)
     }
 }
 
-/// The functions of a session of the module, as an object of JS functions `{campioni, indice, scansione, intestazione, cromatogrammi, cromatogramma, metodo, testata, mancanti}`
-/// that already hold the handle of the session: `campioni()`, `indice(c)`, `scansione(c, k)`, ...
+/// The functions of a session of the module, as an object of JS functions `{samples, index, scan, scan_header, chromatograms, chromatogram, method, file_header, missing}`
+/// that already hold the handle of the session: `samples()`, `index(c)`, `scan(c, k)`, ...
 pub(crate) struct ModuloJs {
     sessione: JsValue,
 }
@@ -379,45 +379,45 @@ impl ModuloJs {
 impl Drop for ModuloJs {
     /// Frees the session of the module.
     fn drop(&mut self) {
-        drop(self.chiama("chiudi", &[]));
+        drop(self.chiama("close", &[]));
     }
 }
 
 impl Modulo for ModuloJs {
-    fn protocollo(&mut self) -> Result<u32> {
-        self.chiama("protocollo", &[])?
+    fn protocol(&mut self) -> Result<u32> {
+        self.chiama("protocol", &[])?
             .as_f64()
             .map(|v| v as u32)
-            .ok_or_else(|| guasto("protocollo"))
+            .ok_or_else(|| guasto("protocol"))
     }
-    fn campioni(&mut self) -> Result<String> {
-        self.testo("campioni", &[])
+    fn samples(&mut self) -> Result<String> {
+        self.testo("samples", &[])
     }
-    fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
-        self.byte("indice", &[(c as f64).into()])
+    fn index(&mut self, c: usize) -> Result<Vec<u8>> {
+        self.byte("index", &[(c as f64).into()])
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
-        self.byte("scansione", &[(c as f64).into(), (k as f64).into()])
+    fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
+        self.byte("scan", &[(c as f64).into(), (k as f64).into()])
     }
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
-        self.testo("intestazione", &[(c as f64).into(), (k as f64).into()])
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<String> {
+        self.testo("scan_header", &[(c as f64).into(), (k as f64).into()])
     }
-    fn cromatogrammi(&mut self, c: usize) -> Result<String> {
-        self.testo("cromatogrammi", &[(c as f64).into()])
+    fn chromatograms(&mut self, c: usize) -> Result<String> {
+        self.testo("chromatograms", &[(c as f64).into()])
     }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String> {
-        self.testo("cromatogramma", &[(c as f64).into(), id.into()])
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<String> {
+        self.testo("chromatogram", &[(c as f64).into(), id.into()])
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.testo("metodo", &[(c as f64).into()])
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.testo("method", &[(c as f64).into()])
     }
-    fn testata(&mut self, c: usize) -> Result<String> {
-        self.testo("testata", &[(c as f64).into()])
+    fn file_header(&mut self, c: usize) -> Result<String> {
+        self.testo("file_header", &[(c as f64).into()])
     }
-    fn mancanti(&mut self, c: usize) -> Result<u32> {
+    fn missing(&mut self, c: usize) -> Result<u32> {
         // a session of an older module has no such function
         Ok(self
-            .chiama("mancanti", &[(c as f64).into()])
+            .chiama("missing", &[(c as f64).into()])
             .ok()
             .and_then(|v| v.as_f64())
             .map_or(0, |v| v as u32))

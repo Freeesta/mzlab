@@ -96,17 +96,17 @@ impl Write for Sink {
 pub fn apertura(src: &Sorgente, giri: usize) -> Value {
     let (g, l) = ripeti(giri, || src.apri());
     let mut l = l;
-    let n = l.indice(0).map_or(0, |v| v.len());
+    let n = l.index(0).map_or(0, |v| v.len());
     json!({"fase": "apertura", "scansioni": n, "misura": riassunto(&g)})
 }
 
 /// The header call (`testata_mzml`: SHA-1 of the whole input and the method text), on a fresh reader each run.
-pub fn testata(src: &Sorgente, giri: usize) -> (Value, Header) {
+pub fn file_header(src: &Sorgente, giri: usize) -> (Value, Header) {
     let mut h = None;
     let mut resto = Vec::new();
     for _ in 0..giri.max(1) {
         let mut l = src.apri();
-        let (g, r) = ripeti(1, || l.testata_mzml(0));
+        let (g, r) = ripeti(1, || l.mzml_header(0));
         resto.push(g.into_iter().next().expect("one run"));
         h = r.ok().flatten();
     }
@@ -149,7 +149,7 @@ fn ciclo(
     v: Variante,
     tmp: &std::path::Path,
 ) -> Result<Parti> {
-    let n = l.indice(0)?.len();
+    let n = l.index(0)?.len();
     let opz = Opzioni {
         livello: v.livello,
         numpress: false,
@@ -178,13 +178,13 @@ fn ciclo(
     for k in 0..n {
         let (a0, t0) = (Alloc::ora(), Instant::now());
         let mut s = if profilo {
-            l.scansione_profilo(0, k)?
+            l.scan_profile(0, k)?
                 .ok_or_else(|| mzlab_core::Error::new("err.conv.noProfile"))?
         } else {
-            l.scansione(0, k)?
+            l.scan(0, k)?
         };
         let (a1, t1) = (Alloc::ora(), Instant::now());
-        let extra = l.extra_scansione(0, k, &s);
+        let extra = l.scan_extra(0, k, &s);
         let (a2, t2) = (Alloc::ora(), Instant::now());
         if v.vuoto {
             s.mz.clear();
@@ -217,7 +217,7 @@ fn ciclo(
 fn byte_di(l: &mut dyn Lettore, h: &Header, profilo: bool, v: Variante) -> u64 {
     let mut v = v;
     v.su_file = false;
-    let n = l.indice(0).map_or(0, |x| x.len());
+    let n = l.index(0).map_or(0, |x| x.len());
     let opz = Opzioni {
         livello: v.livello,
         numpress: false,
@@ -228,11 +228,11 @@ fn byte_di(l: &mut dyn Lettore, h: &Header, profilo: bool, v: Variante) -> u64 {
     w.open_spectra(n).expect("open");
     for k in 0..n {
         let mut s = if profilo {
-            l.scansione_profilo(0, k).ok().flatten().expect("profile")
+            l.scan_profile(0, k).ok().flatten().expect("profile")
         } else {
-            l.scansione(0, k).expect("scan")
+            l.scan(0, k).expect("scan")
         };
-        let extra = l.extra_scansione(0, k, &s);
+        let extra = l.scan_extra(0, k, &s);
         if v.vuoto {
             s.mz.clear();
             s.intensity.clear();

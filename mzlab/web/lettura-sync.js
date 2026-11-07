@@ -14,7 +14,17 @@
  */
 export async function openSource(kind, name, blob) {
   const fr = new FileReaderSync();
-  const viaBlob = (/** @type {number} */ o, /** @type {number} */ n) => new Uint8Array(fr.readAsArrayBuffer(blob.slice(o, o + n)));
+  // the builder asks many small reads: through the Blob each one is a trip to the browser process, so a read-ahead serves them (+17 % -> +2 % on 1 GB);
+  // it starts at 64 KiB after a jump (a .raw member moves between its index and its scans) and doubles up to 16 MiB while the reads go on in order
+  const RA = 16 << 20, RA0 = 1 << 16; let ra = new Uint8Array(0), raAt = -1, step = RA0;
+  const viaBlob = (/** @type {number} */ o, /** @type {number} */ n) => {
+    if (n >= RA) return new Uint8Array(fr.readAsArrayBuffer(blob.slice(o, o + n)));
+    if (raAt < 0 || o < raAt || o + n > raAt + ra.length) {
+      step = raAt >= 0 && o >= raAt && o <= raAt + ra.length + step ? Math.min(RA, step * 2) : RA0;
+      raAt = o; ra = new Uint8Array(fr.readAsArrayBuffer(blob.slice(o, Math.min(blob.size, o + Math.max(n, step)))));
+    }
+    return ra.subarray(o - raAt, o - raAt + n);
+  };
   /** @type {any} */ let ah = null;
   try {
     const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle(kind);

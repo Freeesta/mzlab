@@ -23,19 +23,19 @@ fn voce(k: usize, rt: f64, filtro: &str, q1: f64) -> VoceScansione {
 }
 
 impl Lettore for Finto {
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         &[("campo finto", "motivo finto")]
     }
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("finto")
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
         Ok(&self.indice)
     }
-    fn scansione(&mut self, _: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         // Even scans: precursor 300 with products 100 and 150; odd ones: precursor 400 with product 200.
         let (mz, y): (Vec<f64>, Vec<f32>) = if k.is_multiple_of(2) {
             (vec![100.0, 150.001], vec![10.0 + k as f32, 5.0])
@@ -57,24 +57,24 @@ impl Lettore for Finto {
             wide: None,
         })
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
         Ok(vec![])
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(vec![])
     }
-    fn cromatogramma(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
         Err(Error::new("error.badIndex"))
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok(self.metodo.clone())
     }
-    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
-        let mut s = self.scansione(c, k)?;
+    fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+        let mut s = self.scan(c, k)?;
         s.profile = true;
         Ok(Some(s))
     }
-    fn testata_tabella(&mut self, _: usize) -> Result<Option<Header>> {
+    fn table_header(&mut self, _: usize) -> Result<Option<Header>> {
         Ok(Some(Header {
             run: "leggera".into(),
             ..Header::default()
@@ -115,7 +115,7 @@ fn finto_con(filtro: &str, pol: i8, metodo: &str) -> SrmDaScansioni {
 #[test]
 fn una_traccia_per_transizione() {
     let mut l = finto("+ c SRM ms2 300.0@cid25.0 [100.0-100.0]");
-    let v = l.cromatogrammi(0).unwrap();
+    let v = l.chromatograms(0).unwrap();
     let ids: Vec<&str> = v.iter().map(|c| c.id.as_str()).collect();
     assert_eq!(
         ids,
@@ -126,7 +126,7 @@ fn una_traccia_per_transizione() {
         ]
     );
     assert!(v.iter().all(|c| c.tipo == ChromKind::Srm));
-    let t = l.cromatogramma(0, "SRM SIC Q1=300 Q3=100 ce=25").unwrap();
+    let t = l.chromatogram(0, "SRM SIC Q1=300 Q3=100 ce=25").unwrap();
     assert_eq!(t.time, [0.0, 0.2]);
     assert_eq!(t.intensity, [10.0, 12.0]);
     assert_eq!((t.q1, t.q3), (Some(300.0), Some(100.0)));
@@ -146,7 +146,7 @@ const METODO_TSQ: &str = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
 fn filtro_tsq_senza_ce_prende_ce_e_polarita_dal_metodo() {
     let mut l = finto_con(FILTRO_TSQ, 1, METODO_TSQ);
     let ids: Vec<String> = l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .into_iter()
         .map(|c| c.id)
@@ -165,7 +165,7 @@ fn filtro_tsq_senza_ce_prende_ce_e_polarita_dal_metodo() {
 fn filtro_tsq_senza_metodo_non_inventa_il_ce() {
     let mut l = finto_con(FILTRO_TSQ, 1, "");
     let ids: Vec<String> = l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .into_iter()
         .map(|c| c.id)
@@ -173,7 +173,7 @@ fn filtro_tsq_senza_metodo_non_inventa_il_ce() {
     assert_eq!(ids[0], "SRM SIC Q1=300 Q3=100");
     let mut l = finto_con(FILTRO_TSQ, -1, "not json");
     assert_eq!(
-        l.cromatogrammi(0).unwrap()[0].id,
+        l.chromatograms(0).unwrap()[0].id,
         "SRM SIC Q1=300 Q3=100 polarity=negative"
     );
 }
@@ -184,34 +184,31 @@ fn transizione_duplicata_nel_metodo_resta_come_le_scansioni() {
 {"q1":300,"q3":100,"ce_eV":10,"polarita":"positive"},
 {"q1":300,"q3":100,"ce_eV":40,"polarita":"negative"}]}]}]}}"#;
     let mut l = finto_con(FILTRO_TSQ, 1, m);
-    assert_eq!(l.cromatogrammi(0).unwrap()[0].id, "SRM SIC Q1=300 Q3=100");
+    assert_eq!(l.chromatograms(0).unwrap()[0].id, "SRM SIC Q1=300 Q3=100");
 }
 
 #[test]
 fn crm_conta_come_srm() {
     let mut l = finto("+ c ESI CRM ms2 300.0@cid25.0 [100.0-100.0]");
-    assert_eq!(l.cromatogrammi(0).unwrap().len(), 3);
+    assert_eq!(l.chromatograms(0).unwrap().len(), 3);
 }
 
 #[test]
 fn senza_filtro_srm_niente_tracce() {
     let mut l = finto("+ c Full ms2 300.0@cid25.0 [50.0-400.0]");
-    assert!(l.cromatogrammi(0).unwrap().is_empty());
+    assert!(l.chromatograms(0).unwrap().is_empty());
     assert!(!ha_scansioni_srm(&mut l, 0));
 }
 
 #[test]
 fn il_resoconto_dei_non_portati_e_quello_del_lettore_avvolto() {
-    assert_eq!(finto("").non_portati(), &[("campo finto", "motivo finto")]);
+    assert_eq!(finto("").not_carried(), &[("campo finto", "motivo finto")]);
 }
 
 #[test]
 fn il_profilo_e_la_testata_leggera_passano_il_lettore_avvolto() {
     // a Thermo `.raw` keeps its profile next to the centroids: `--peaks profile` must reach it through the wrapper
     let mut l = finto("+ c SRM ms2 300.000 [99.5-100.5]");
-    assert!(l
-        .scansione_profilo(0, 0)
-        .unwrap()
-        .is_some_and(|s| s.profile));
-    assert_eq!(l.testata_tabella(0).unwrap().unwrap().run, "leggera");
+    assert!(l.scan_profile(0, 0).unwrap().is_some_and(|s| s.profile));
+    assert_eq!(l.table_header(0).unwrap().unwrap().run, "leggera");
 }

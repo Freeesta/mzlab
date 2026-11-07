@@ -73,7 +73,7 @@ impl Detail {
     }
 }
 
-/// Where a scan of a vendor file lies: the number of the scan in `Lettore::indice` and its place (written in place of `start`, `end`).
+/// Where a scan of a vendor file lies: the number of the scan in `Lettore::index` and its place (written in place of `start`, `end`).
 #[derive(Debug, Clone, Copy)]
 pub struct Dove {
     pub k: usize,

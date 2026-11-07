@@ -2,6 +2,8 @@ I18N.add("it", {
   "load.blocked": "I file salvati sono bloccati da un'altra scheda di {app}: chiudi le altre schede di {app} e questa ripartirà da sola.",
   "load.err.resumeTimeout": "La ripresa dei file salvati non risponde. Ripartire da zero cancella i file salvati in questo browser, il taccuino e le copie in memoria.",
   "load.natInterrupted": "Il caricamento di {name} si è interrotto: caricalo di nuovo.",
+  "load.sulPosto": "{name} si legge direttamente dal tuo disco, senza copia nel browser (non c'è spazio per una copia). Lascia il file dov'è; dopo aver ricaricato la pagina, caricalo di nuovo.",
+  "load.sulRiapri": "{name} era letto dal tuo disco senza copia, quindi non resta dopo un ricaricamento. Il file è ancora sul tuo disco: caricalo di nuovo per continuare.",
   "load.slow": "La prima apertura scarica circa 15 MB: può volerci un minuto.",
   "load.engine.waiting": "{n} file in attesa",
   "load.engine.waitingOne": "1 file in attesa",

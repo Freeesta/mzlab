@@ -19,7 +19,7 @@ try:
         pg.set_input_files("#pick", [str(D / "B_FullMass-t5.mzML"), str(D / "B_FullMass-t15.mzML")])
         pg.click("#opbtn"); ready(pg)
         def empty():
-            assert pg.locator("#rmall").count() == 0, "no remove-all icon"
+            assert pg.locator("header #rmall").count() == 0, "no remove-all icon in the header"      # the conversion queue has its own (#2467)
             W = "document.getElementById('v-workspace').dataset.work"
             assert pg.evaluate(W) == "panels", "a file is ticked: the panels"
             pg.evaluate("setVisOf(E.files, false)"); attendi(pg, W + " === 'landing'")
@@ -42,7 +42,7 @@ try:
         step("CSV of a panel: BOM, header on line 1, semicolon-separated, provenance as the last row", csv)
         def popover():
             b = pg.locator(".pnl.chrom [data-a=cpar]").first
-            assert b.get_attribute("aria-description") and b.get_attribute("aria-description") in b.get_attribute("title"), "the note is the tooltip and the description"
+            assert b.get_attribute("aria-description") and b.get_attribute("title"), "the note is the description, the tooltip says what the button is (short tooltips, #2609)"
             b.click()
             assert pg.locator(".pnl.chrom .cpop > .muted.sm").count() == 0, "no sentence above the fields"
         step("range popover: the sentence moved to the button", popover)

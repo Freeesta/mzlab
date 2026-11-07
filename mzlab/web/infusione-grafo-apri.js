@@ -1,18 +1,18 @@
 // @ts-strict
 // Opening a saved fragmentation graph (a g.json, msngrafo/1 or /2) without its raw data: a dropped or picked .json is recognised by its head, a graph without `vista`
-// is completed by the .wasm msngrafo (op `completa`; no calculation here) and shown read-only in a window with the same body as the «Fragmentation graph» tab.
+// is completed by the .wasm msngrafo (op `complete`; no calculation here) and shown read-only in a window with the same body as the «Fragmentation graph» tab.
 // Used by shell.js (upload0, the data area) and infusione-grafo.js (the tab). docs/agenti/infusione-grafo.md.
 import { G } from "./infusione-grafo-stato.js";
 import { mostraErrore } from "./infusione-grafo-avanza.js";
 
 const HEAD = /"formato"\s*:\s*"msngrafo\/(\d+)/;
 const KNOWN = 2;
-/** The graph window opens as the head of the file says, but a JSON this large is not a graph the page can draw. */
+/** A saved graph larger than this is not parsed (its text and objects would not fit in the memory of the page): error.msngrafo.tooBig says so. */
 const MAX_BYTES = 200e6;
 
 /** The version of msngrafo/N a file says in its first bytes, or 0 when it is not a graph. @param {File} f */
 export async function version(f) {
-  if (!/\.json$/i.test(f.name) || f.size > MAX_BYTES) return 0;
+  if (!/\.json$/i.test(f.name)) return 0;
   const m = HEAD.exec(await f.slice(0, 4096).text());
   return m ? +m[1] : 0;
 }
@@ -26,6 +26,7 @@ const fail = (key, params = {}) => I18N.err({ error_key: key, params });
  */
 async function read(f, v) {
   if (v > KNOWN) throw fail("error.newerFormat", { kind: "msngrafo", version: v, file: f.name });
+  if (f.size > MAX_BYTES) throw fail("error.msngrafo.tooBig", { file: f.name, mb: Math.round(f.size / 1e6), max: MAX_BYTES / 1e6 });
   let text = await f.text(), j;
   try { j = JSON.parse(text); } catch (e) { throw fail("error.msngrafo.badFile", { file: f.name, raw: String(/** @type {Error} */ (e).message) }); }
   if (!j || !/^msngrafo\/[12]$/.test(j.formato) || !Array.isArray(j.nodi) || !Array.isArray(j.archi)) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not an msngrafo graph" });
