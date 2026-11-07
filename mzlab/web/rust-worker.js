@@ -9,7 +9,7 @@ import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
 import { infoDi, nuovo } from "./manifesto.js";
-import { createPool, poolSize, makeGate, builderBudget } from "./idxpool.js";
+import { createPool, poolSize, makeGate, fitGate, builderBudget } from "./idxpool.js";
 import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
@@ -100,8 +100,8 @@ const lrSlot = new Map(), lrFile = new Map();
 let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const lrNameOf = (/** @type {number} */ slot) => { for (const [n, k] of lrSlot) if (k === slot) return n; return undefined; };
-const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
-const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the pool count against it (2 on iPad/phone)
+let SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
+const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the pool count against it (2 on iPad/phone: `applyPolicy`)
 const ISOLATED = !!self.crossOriginIsolated && typeof SharedArrayBuffer === "function";
 // the size from which a file gains from helper workers (the notice of capacita.js is only shown for such a file)
 const BIG_IDX = 32 << 20;
@@ -400,8 +400,8 @@ function idxXicBin(/** @type {any} */ m) {
 let BUDGET_MB = 0;
 function applyPolicy(/** @type {any} */ m) {
   const choice = JSON.parse(budget_choice(m.device_gb || 0, m.cores || 0, !!m.small, m.manual || 0, !!m.ios, m.probe_mb || 0));
-  BUDGET_MB = choice.mb; engine.set_budget_mb(choice.mb);
-  postMessage({ op: "budget-choice", choice });
+  BUDGET_MB = choice.mb; engine.set_budget_mb(choice.mb); postMessage({ op: "budget-choice", choice });
+  if (m.small && !SMALL) SMALL = fitGate(gate, true, navigator.hardwareConcurrency);   // an iPad with the Mac user agent, seen by the page only: 2 index workers of 32 MB
 }
 
 function lowerBudget(/** @type {any} */ m) {                                              // one level down by Rust's rule (0 = none lower); the answer tells the supervisor
