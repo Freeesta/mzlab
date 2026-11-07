@@ -23,7 +23,7 @@ fn a_bad_registry_is_an_error_key() {
 
 #[test]
 fn a_session_runs_through_the_route() {
-    let plan = plan_text(&["a.raw"], 1, 1);
+    let plan = plan_text(&["a.raw", "b.raw"], 1, 1);
     let body = format!(
         "{{\"plan\":{plan},\"registry\":{},\"version\":\"v\"}}",
         registry_json(&registry())
@@ -38,6 +38,13 @@ fn a_session_runs_through_the_route() {
     let done = format!("{job},\"result\":{{\"ms\":5}}}}");
     assert_eq!(route("finished", &done).unwrap(), "\"accepted\"");
     assert!(route("jobs", "{}").unwrap().contains("\"state\":\"done\""));
+    let job = "{\"job\":{\"instance\":\"conv\",\"item\":\"b.raw\"}";
+    assert_eq!(route("started", &format!("{job}}}")).unwrap(), "true");
+    let failed = format!("{job},\"result\":{{\"error_key\":\"err.flow.sample\",\"params\":{{\"sample\":\"b.raw\"}}}}}}");
+    assert_eq!(route("finished", &failed).unwrap(), "\"accepted\"");
+    // a failed job names its error and its parameters, as the record of the run writes them
+    let jobs = route("jobs", "{}").unwrap();
+    assert!(jobs.contains("\"state\":\"error\",\"error_key\":\"err.flow.sample\",\"params\":{\"sample\":\"b.raw\"}"), "{jobs}");
     assert_eq!(
         route("nope", "{}").unwrap_err().key,
         "err.route.unavailable"
