@@ -15,6 +15,7 @@ fn log() -> StatusLog {
             ("Status:".into(), GenericValue::String(b.into())),
             ("Fore Vacuum (mbar):".into(), GenericValue::Float64(c)),
         ],
+        index: None,
     };
     StatusLog::new(
         GenericDataHeader {

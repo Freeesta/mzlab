@@ -290,6 +290,12 @@ impl Lettore for LettoreBruker {
         Ok(&self.indice)
     }
 
+    // the decoding of every MS2 frame for its TIC is left to the callers that read it
+    fn indice_senza_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.uno(c)?;
+        Ok(&self.indice)
+    }
+
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.uno(c)?;
         self.spettro(k)

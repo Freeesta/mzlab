@@ -167,6 +167,7 @@ pub(super) fn gapfill() -> Step {
             .min(0.0)
             .default_num(2.0)
             .unit("scans")
+            .doc("Scans a trace may miss between two of its points; 0 = consecutive scans")
             .advanced(),
         Param::integer("long_trace", "Long trace")
             .min(1.0)

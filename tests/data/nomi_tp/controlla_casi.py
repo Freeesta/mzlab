@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Script di self-check e validazione dei casi di test per la nomenclatura dei TP.
+"""Self-check and validation of the test cases for TP naming.
 
-Verifica:
-  - Assenza di conteggi atomici negativi in tutte le formule.
-  - mz_nominal == round(mz_exact) per tutte le righe.
-  - Gruppi isomeri: medesima formula neutra e tempi di ritenzione distinti.
-  - Gruppi diversa formula: formule distinte, medesima m/z nominale e RT distinti.
-  - Unicita assoluta dei case_id.
-  - Rispetto di tutti i vincoli: >= 6 gruppi isomeri, >= 8 gruppi a diversa formula
-    (inclusa almeno una tripletta), >= 30 casi singoli, >= 1 caso a RT inverso rispetto
-    all'm/z esatto, >= 1 addotto [M-H]-.
+Checks:
+  - No negative atom counts in any formula.
+  - mz_nominal == round(mz_exact) for every row.
+  - Isomer groups: same neutral formula and distinct retention times.
+  - Different-formula groups: distinct formulas, same nominal m/z and distinct RTs.
+  - Every case_id is unique.
+  - All the constraints: >= 6 isomer groups, >= 8 different-formula groups
+    (at least one triplet), >= 30 single cases, >= 1 case with RT order inverse
+    to the exact m/z, >= 1 [M-H]- adduct.
 
-Utilizza esclusivamente la libreria standard di Python e pyteomics.
+Uses only the Python standard library and pyteomics.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ import pyteomics.mass
 
 
 def get_versions() -> tuple[str, str]:
-    """Restituisce le versioni correnti di Python e pyteomics."""
+    """Returns the current versions of Python and pyteomics."""
     py_ver = sys.version.split()[0]
     try:
         pyt_ver = importlib.metadata.version("pyteomics")
@@ -35,7 +35,7 @@ def get_versions() -> tuple[str, str]:
 
 
 def check_formula_atoms(formula: str, context: str) -> None:
-    """Verifica che la formula sia valida e non contenga conteggi atomici negativi o nulli."""
+    """Checks that the formula is valid and has no negative or zero atom counts."""
     comp = pyteomics.mass.Composition(formula=formula)
     for elem, count in comp.items():
         if count <= 0:
@@ -43,7 +43,7 @@ def check_formula_atoms(formula: str, context: str) -> None:
 
 
 def verify_trasformazioni(path: Path) -> dict[str, int]:
-    """Verifica vincoli strutturali e chimici di trasformazioni.csv."""
+    """Checks the structural and chemical constraints of trasformazioni.csv."""
     if not path.exists():
         raise FileNotFoundError(f"File mancante: {path}")
 
@@ -65,7 +65,7 @@ def verify_trasformazioni(path: Path) -> dict[str, int]:
 
 
 def verify_casi_nomi(path: Path) -> tuple[list[dict], dict[str, int]]:
-    """Verifica coerenza di base di casi_nomi.csv."""
+    """Checks the basic consistency of casi_nomi.csv."""
     if not path.exists():
         raise FileNotFoundError(f"File mancante: {path}")
 
@@ -102,7 +102,7 @@ def verify_casi_nomi(path: Path) -> tuple[list[dict], dict[str, int]]:
 
 
 def analyze_groups(rows: list[dict]) -> dict[str, int]:
-    """Analizza e valida tutti i gruppi (isomers, different_formula, single)."""
+    """Analyses and validates every group (isomers, different_formula, single)."""
     groups: dict[str, list[dict]] = defaultdict(list)
     for r in rows:
         groups[r["expected_group"]].append(r)
@@ -168,7 +168,7 @@ def analyze_groups(rows: list[dict]) -> dict[str, int]:
 
 
 def print_table(results: list[tuple[str, str, str, str]]) -> None:
-    """Stampa una tabella formattata pulita dei controlli."""
+    """Prints a clean formatted table of the checks."""
     col_w = [38, 14, 15, 8]
     sep = "+" + "+".join("-" * (w + 2) for w in col_w) + "+"
 

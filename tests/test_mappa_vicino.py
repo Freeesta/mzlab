@@ -1,4 +1,4 @@
-"""Frecce ◀ ▶ della mappa (mzlab/web/mappa-vicino.js): file precedente/successivo con salto del riferimento, verificato in Node da tests/mappa_vicino_node.js."""
+"""◀ ▶ arrows of the map (mzlab/web/mappa-vicino.js): previous/next file, skipping the reference, checked in Node by tests/mappa_vicino_node.js."""
 import subprocess
 from pathlib import Path
 
