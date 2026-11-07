@@ -192,3 +192,11 @@ const TOUCH = (() => {
   return { scan, get seen() { return seen; }, _state: () => ({ seen, pts: page.pts(), gesture: page.state(), ketcher: !!ketcherDoc }) };
 })();
 window.TOUCH = TOUCH;
+// a finger or a pen: iOS sends no click to a plain area and the click of a chart is kept above, so the touch itself closes the chart menu (#ctx) and the .corrm menus it lands outside of
+function closeOnTouch(/** @type {PointerEvent} */ e) {
+  if (e.pointerType === "mouse") return;
+  const t = /** @type {Node} */ (e.target), m = Q("#ctx");
+  if (m && !m.hidden && !m.contains(t)) m.hidden = true;
+  document.querySelectorAll(".corrm:not([hidden])").forEach(c => { if (c.parentNode && !c.parentNode.contains(t)) c.hidden = true; });
+}
+document.addEventListener("pointerdown", closeOnTouch, true);

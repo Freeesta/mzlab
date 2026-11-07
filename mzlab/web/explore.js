@@ -994,13 +994,6 @@ document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._
 // the Correzione menu closes when the click is elsewhere
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
-// a finger or a pen: iOS sends no click for a tap on a plain area and touch.js keeps the click of a chart, so the touch itself closes the menus it lands outside of
-document.addEventListener("pointerdown", e => {
-  if (e.pointerType === "mouse") return;
-  const t = /** @type {Node} */ (e.target), m = Q("#ctx");
-  if (!m.hidden && !m.contains(t)) m.hidden = true;
-  document.querySelectorAll(".corrm:not([hidden])").forEach(c => { if (!c.parentNode.contains(t)) c.hidden = true; });
-}, true);
 // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
 document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; if (/** @type {any} */ (e)._ctxWas) e.preventDefault(); Q("#ctx").hidden = true; } });
 // CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).
