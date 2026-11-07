@@ -53,6 +53,8 @@
   "load.err.engineMissing": "Schermata di attesa all'avvio: il browser non ha WebAssembly o il motore non c'è.",
   "load.blocked": "Schermata di attesa all'avvio: il database dei file salvati è bloccato da un'altra scheda; {app} = nome del programma.",
   "load.natInterrupted": "Avviso breve all'avvio: una scheda chiusa ha lasciato a metà la copia di un file del produttore (es. .wiff), che è stata tolta; {name} = nome del file da caricare di nuovo.",
+  "load.sulPosto": "Avviso breve al caricamento: un mzML senza spazio per la copia nel browser si legge dal disco dell'utente; {name} = nome del file. Tono calmo, dice cosa fare dopo un ricaricamento.",
+  "load.sulRiapri": "Avviso breve all'avvio: un mzML letto dal disco senza copia non c'è più dopo il ricaricamento; {name} = nome del file da caricare di nuovo. Tono calmo, il file è ancora sul disco.",
   "load.err.worker": "Errore del processo di calcolo nel browser, sulla schermata di attesa; {text} = testo tecnico (inglese).",
   "open.title": "Titolo dell'area di lavoro mentre si legge il primo file della lista: {file} = nome del primo file.",
   "load.prog.count": "Sotto la barra di caricamento, dopo la fase: {done} = file finiti, {n} = file del caricamento.",

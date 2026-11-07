@@ -76,6 +76,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 | altri 13 file ≤ 4,2 MB | 0,1-4,2 | 1-5396 | | 1,1-63,0 | ≤ 0,04 | 4-86 | 0,0-10,8 | | | 1-76 / 1-107 |
 
 - L'apertura è dominata da qualcosa che non è la lettura dei picchi: sugli SRM (PXD064022, MTBLS14496, PXD057351) apre in 214-437 ms e legge tutto in 21-43 ms, cioè l'apertura è 10-20× la lettura; è dove RFR vince (A-1). Cause da cercare nel profilo prima di T-7c (indice degli eventi e dei trailer, `GenericRecordStream`).
+- Opening an Orbitrap `.raw` looked up every `ScanParams` label in each scan's trailer by comparing strings field by field (`GenericRecord::get`); the label index of `Etichette`, built once per stream, makes each lookup a map hit. Numbers in `misure-velocita-raw.md`.
 - TIC/BPC e prima scansione sono già sotto il millisecondo e i 100 µs su tutti i file: per A6 il confronto con RFR è l'unico dato mancante.
 - La lettura a 0,7-1,1 GB/s con il file in memoria misura la decodifica, non il disco: il tempo da disco o OPFS sta in `file_read_ms` del banco e nelle letture a pezzi del browser.
 
