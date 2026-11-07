@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use super::json_testo::{campioni_json, cromatogrammi_json, intestazione_json, testata_json};
 use mzlab_core::json::Out;
 use mzlab_core::lettori::Lettore;
+use mzlab_core::mzml::Spectrum;
 use mzlab_core::trasporto::{encode_indice, encode_scansione};
 use mzlab_core::Result;
 
@@ -12,6 +13,8 @@ use mzlab_core::Result;
 pub struct Sessioni {
     aperti: HashMap<u32, Box<dyn Lettore>>,
     prossimo: u32,
+    // the last scan of `scan_parts`, whose columns the engine reads in place
+    ultima: Option<Spectrum>,
 }
 
 impl Sessioni {
@@ -52,6 +55,13 @@ impl Sessioni {
     /// Scan `k` of sample `c` as one block of bytes: a fixed head, the m/z, the intensities (`trasporto.rs`). The id and the filter are those of the index.
     pub fn scan(&mut self, h: u32, c: usize, k: usize) -> Result<Vec<u8>> {
         Ok(encode_scansione(&self.lettore(h)?.scan_data(c, k)?))
+    }
+
+    /// Scan `k` of sample `c` kept here until the next one: `scan_parts` hands over views of its columns instead of a block.
+    pub fn scan_parts(&mut self, h: u32, c: usize, k: usize) -> Result<&Spectrum> {
+        self.ultima = None;
+        let s = self.lettore(h)?.scan_data(c, k)?;
+        Ok(self.ultima.insert(s))
     }
 
     pub fn scan_header(&mut self, h: u32, c: usize, k: usize) -> Result<String> {
