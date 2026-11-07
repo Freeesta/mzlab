@@ -2,6 +2,8 @@
 // The fingerprints of a member (SHA-256, SHA-1, probe: `Passata` of the engine, crates/mzlab-wasm/src/nativi.rs) taken WHILE it is copied to OPFS, so that the file is read once. The default is a dedicated
 // worker (impronta-worker.js) that receives each piece as a Transferable after it was written and hashes it on another core while the copy goes on; without a Worker (or `mode: "qui"`) it hashes in the
 // worker of the copy at each piece. At most WINDOW pieces wait for the hash worker (the copy waits for it beyond that: the memory never holds the file).
+// The hash worker is started at once, without its .wasm: its script is fetched long before the first file. Until that script has arrived once (`up`) a member
+// is hashed in place: on a slow first visit it queued behind the page's own downloads and held the copy for 10-19 s.
 const WINDOW = 4;
 // the hash worker closes after this long without a member to hash (the memory of its .wasm never shrinks); the next member starts one again
 const IDLE_MS = 10000;
@@ -11,32 +13,39 @@ const IDLE_MS = 10000;
 /** @param {{ Passata: new (size: number, noSha1?: boolean) => { aggiorna: (b: Uint8Array) => void, fine: () => string[] | undefined }, workerUrl: URL, module: () => WebAssembly.Module | null, mode?: string }} h */
 export function createImpronte({ Passata, workerUrl, module, mode }) {
   /** @type {Worker | null} */ let w = null;
-  let dead = mode === "qui", seq = 0;
+  let dead = mode === "qui", seq = 0, up = false, armed = false;
   /** @type {ReturnType<typeof setTimeout> | undefined} */ let idle;
   const rest = () => { clearTimeout(idle); idle = setTimeout(() => { if (!jobs.size && w) { w.terminate(); w = null; } }, IDLE_MS); };
   /** @type {Map<number, { ack: (() => void) | null, out: ((v: string[] | null) => void) | null, open: number }>} */
   const jobs = new Map();
   const fail = () => { dead = true; w = null; for (const j of jobs.values()) { j.open = 0; j.ack?.(); j.out?.(null); } jobs.clear(); };
-  function worker() {
+  function spawn() {
     if (w || dead) return w;
     try {
       const x = new Worker(workerUrl, { type: "module" });
       x.onmessage = ev => {
         const m = ev.data, j = jobs.get(m.id);
+        if (m.op === "up") { up = true; return; }
         if (!j) return;
         if (m.op === "ack") { j.open--; if (j.open < WINDOW) { const a = j.ack; j.ack = null; a?.(); } } else if (m.op === "fine") { jobs.delete(m.id); j.out?.(m.out || null); if (!jobs.size) rest(); }
       };
       x.onerror = fail; x.onmessageerror = fail;
-      x.postMessage({ op: "module", module: module() });
-      w = x;
+      w = x; armed = false;
     } catch (_) { dead = true; w = null; }
     return w;
   }
+  // the .wasm goes in at the first member only (its memory never shrinks)
+  function worker() {
+    const x = spawn();
+    if (x && !armed) { x.postMessage({ op: "module", module: module() }); armed = true; }
+    return x;
+  }
+  spawn();
   return {
     /** the fingerprints of a member of `size` bytes: `add(piece)` in file order (the piece goes to the worker: do not use it afterwards), then `end()` gives [sha256, sha1, probe] or null */
     start(/** @type {number} */ size, /** @type {boolean=} */ noSha1) {
       clearTimeout(idle);
-      const wk = worker();
+      const wk = up ? worker() : (spawn(), null);
       if (wk) {
         const id = ++seq, j = { ack: /** @type {(() => void) | null} */ (null), out: /** @type {((v: string[] | null) => void) | null} */ (null), open: 0 };
         jobs.set(id, j);

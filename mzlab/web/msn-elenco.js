@@ -127,8 +127,8 @@ export async function mount(host, f) {
   }
   let pa = -1, pz = -1;
   function paint(/** @type {boolean} */ force = false) {
-    const a = Math.max(0, Math.floor((L.scrollTop - H * 2) / H)), z = Math.min(flat.length, a + Math.ceil((L.clientHeight || 400) / H) + 4);
-    if (!force && a === pa && z === pz) return;
+    const S = Math.ceil((L.clientHeight || 400) / H), f = Math.floor(L.scrollTop / H), n = flat.length, a = Math.max(0, f - S), z = Math.min(n, f + 2 * S);      // a screen of rows above and below, redrawn under half a screen of margin: the compositor scrolls before the scroll event (2+4 rows showed blank bands)
+    if (!force && pa <= Math.max(0, f - (S >> 1)) && pz >= Math.min(n, f + S + (S >> 1))) return;
     pa = a; pz = z;
     let s = ""; for (let r = a; r < z; r++) s += rowHtml(V, flat[r], r, r === st.cur, st.all || open.has(flat[r].g));
     R.innerHTML = s;
