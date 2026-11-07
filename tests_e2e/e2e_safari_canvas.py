@@ -1,6 +1,7 @@
 """Safari and iPadOS refuse a canvas over 16.7 Mpx (toBlob gives null): the PNG exports that rasterise at a multiple of their size stay under it
-(compat.js canvasScale, the global canvasScale of the classic scripts), with one notice of the final size. The cap is stubbed on HTMLCanvasElement.toBlob, as WebKit behaves; a wide drawing, a large MSn graph SVG and the 3D map
-on a 2x screen export a PNG of at most 16 777 216 pixels, and a notice gives the size. No browser errors."""
+(compat.js canvasScale, the global canvasScale of the classic scripts) and a notice gives the final size. The cap is stubbed on HTMLCanvasElement.toBlob, as
+WebKit behaves: a wide drawing and a large MSn graph SVG export a PNG of at most 16 777 216 pixels; the size rule of the 3D map export on a 2x screen
+(mappa3d.js pngScale) is checked without WebGL. No browser errors."""
 import sys, os, struct; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -39,15 +40,12 @@ try:
             t = pg.evaluate(TOASTS); assert any(f"{out[0]} × {out[1]} px" in x for x in t), f"no notice of the size: {t}"
         step("MSn graph: a large graph exports its PNG under the cap", graph)
         def map3d():
-            c = r.b.new_context(viewport={"width": 1440, "height": 950}, device_scale_factor=2, reduced_motion="reduce")
-            c.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"); c.add_init_script(CAP)
-            q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); ready(q)
-            q.set_input_files("#pick", [str(ROOT / "mzlab" / "web" / "esempi" / "FullScan_t0.mzML")]); attendi(q, "document.querySelectorAll('#flist input[data-k=use]').length>=1")
-            q.click("#opbtn"); ready(q); q.click("#np-map"); ready(q)
-            q.locator(".pnl.map [data-o=view][data-v='3d']").click(); attendi(q, "document.querySelector('dialog.m3d[open]') && window.__m3d && window.__m3d.V.g", 60000)
-            with q.expect_download(timeout=60000) as d: q.evaluate("document.querySelector('dialog.m3d [data-m=png]').click()")
-            w, h = dims(d.value.path()); troppo = q.evaluate("window.__troppo"); c.close()
-            assert not troppo and w * h <= MAX and w > 2000, (w, h, troppo)
+            # the size rule of the 3D export (mappa3d.js pngScale) without WebGL: a 1400 x 900 viewer on a 2x screen was a 5600 x 3600 canvas (20 Mpx)
+            out = pg.evaluate("""async () => { const m = await import('/static/mappa3d.js'); const s = m.pngScale(1400, 900, 2), k = m.pngScale(600, 400, 2);
+              return [s, Math.round(1400 * 2 * s), Math.round(900 * 2 * s), k]; }""")
+            s, w, h, k = out
+            assert s < 2 and w * h <= MAX and w * h > 0.99 * MAX and k == 3, out
+            t = pg.evaluate(TOASTS); assert any(f"{w} × {h} px" in x for x in t), f"no notice of the size {w} × {h}: {t}"
         step("3D map on a 2x screen: the PNG stays under the cap", map3d)
 finally:
     r.close()

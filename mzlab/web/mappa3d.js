@@ -130,6 +130,10 @@ dialog.m3d.hid .m3d-side{display:none}
 
 // Why the viewer could not open, said as it is: no WebGL2 at all | the shaders did not compile | a JavaScript error | the context was lost. `diag` collects what the browser says
 // (version, renderer, attributes, the first error) for the dialog and the console; nothing here is guessed.
+/** Scale of the PNG export of a W x H viewer (CSS px) on a `d` x screen: up to 3x and 4096 px a side, lowered under Safari's canvas area cap (global canvasScale, with its notice)
+ * @param {number} W @param {number} H @param {number} d */
+export const pngScale = (W, H, d) => canvasScale(W * d, H * d, Math.min(3, Math.floor(4096 / Math.max(W, H)) || 1));
+
 export class Fail extends Error {
   /** @param {string} kind @param {string} detail @param {Record<string, any>} [diag] */
   constructor(kind, detail, diag) { super(`${kind}: ${detail}`); this.kind = kind; this.detail = detail; this.diag = diag || {}; } }
@@ -669,7 +673,7 @@ export function open(p, opener) {
   });
   on("png", "click", () => exportPng());
   function exportPng() {
-    const d = V.dpr, s = canvasScale(V.W * d, V.H * d, Math.min(3, Math.floor(4096 / Math.max(V.W, V.H)) || 1)); if (!V.g) return;     // under Safari's canvas area cap
+    if (!V.g) return; const d = V.dpr, s = pngScale(V.W, V.H, d);
     const w0 = glc.width, h0 = glc.height;
     glc.width = Math.round(V.W * d * s); glc.height = Math.round(V.H * d * s); ovc.width = glc.width; ovc.height = glc.height;
     frame(s);
