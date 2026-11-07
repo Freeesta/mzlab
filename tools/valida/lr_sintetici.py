@@ -16,11 +16,11 @@ import dati_sintetici as DS     # noqa: E402
 
 LIVELLI = (1.0, 2.0, 5.0, 10.0, 20.0, 50.0)                      # mg/L, the six standards
 TRATTATI = (3.0, 7.0)                                            # mg/L equivalent of the treated files t0, t30
-TRANSIZIONI = ((263.1, 181.1, 5.00, 60.0, True, "Quant"), (263.1, 152.0, 5.02, 24.0, True, "Qual"), (300.2, 120.1, 8.00, 400.0, False, "Flat"))
+TRANSITIONS = ((263.1, 181.1, 5.00, 60.0, True, "Quant"), (263.1, 152.0, 5.02, 24.0, True, "Qual"), (300.2, 120.1, 8.00, 400.0, False, "Flat"))
 
 
-def _chrom(i: int, q1: float, q3: float, t: np.ndarray, y: np.ndarray, nome: str) -> str:
-    return DS._chrom(i, f"SRM SIC Q1={q1} Q3={q3} sample=1 period=1 experiment=1 transition={i} ce=20 name={nome}", t, y)
+def _chrom(i: int, q1: float, q3: float, t: np.ndarray, y: np.ndarray, name: str) -> str:
+    return DS._chrom(i, f"SRM SIC Q1={q1} Q3={q3} sample=1 period=1 experiment=1 transition={i} ce=20 name={name}", t, y)
 
 
 def scrivi_mrm(path: Path, conc: float, seme: int, sotto_soglia: bool = False, valore_guasto: float | None = None, piatta: bool = False) -> None:
@@ -28,14 +28,14 @@ def scrivi_mrm(path: Path, conc: float, seme: int, sotto_soglia: bool = False, v
     rng = np.random.default_rng(seme)
     t = 0.5 + 0.02 * np.arange(600)
     chroms = []
-    for i, (q1, q3, rt, amp, dip, nome) in enumerate(t for t in TRANSIZIONI if piatta or t[4]):
+    for i, (q1, q3, rt, amp, dip, name) in enumerate(t for t in TRANSITIONS if piatta or t[4]):
         a = amp * conc if dip else amp
-        if dip and sotto_soglia and nome == "Quant":
+        if dip and sotto_soglia and name == "Quant":
             a = 4.0
-        if valore_guasto is not None and nome == "Quant":
+        if valore_guasto is not None and name == "Quant":
             a = valore_guasto
         y = a * np.exp(-0.5 * ((t - rt) / 0.06) ** 2) + 2.0 * rng.random(t.size)
-        chroms.append(_chrom(i, q1, q3, t, y, nome))
+        chroms.append(_chrom(i, q1, q3, t, y, name))
     DS._write(Path(path), [], chroms)
 
 

@@ -16,10 +16,10 @@ from . import PPM, RT_TOL
 from .cancello_misure import _identita_di, _parametro
 from .nativo import Serie
 
-CODICE_GENERAZIONE = {1: 0, 2: 1, 3: 1}                 # true generation (1, 2, 3) -> code of the kinetic evidence (0 first, 1 later)
+CODE_GENERATION = {1: 0, 2: 1, 3: 1}                 # true generation (1, 2, 3) -> code of the kinetic evidence (0 first, 1 later)
 
 
-def _identita_tp(t: dict, serie: Serie):
+def _identity_tp(t: dict, serie: Serie):
     """The identity with a member at the mz of the product and any of its RT (the m/z alone if it has none)."""
     mz = float(t["mz"])
     for rt in (t.get("rt_obs") or [None]):
@@ -29,7 +29,7 @@ def _identita_tp(t: dict, serie: Serie):
     return None
 
 
-def _livello(i: dict | None) -> int | None:
+def _level(i: dict | None) -> int | None:
     m = re.match(r"(\d)", str(i.get("livello_max", ""))) if i else None
     return int(m.group(1)) if m else None
 
@@ -46,18 +46,18 @@ def misure_motore(verita: dict, serie: Serie, serie2: Serie | None = None) -> di
     if gen:
         ok = n = 0
         for t in gen:
-            i = _identita_tp(t, serie)
+            i = _identity_tp(t, serie)
             if i is None:
                 continue
             g = _parametro(i, "generation")
             n += 1
-            ok += int(g is not None and int(g) in (CODICE_GENERAZIONE.get(int(t["gen_attesa"]), 1), 2))
+            ok += int(g is not None and int(g) in (CODE_GENERATION.get(int(t["gen_attesa"]), 1), 2))
         m["generazione"], m["generazione_n"] = (ok / n if n else None), n
     liv = rilevabili(verita, "level")
     if liv:
         ok = n = 0
         for t in liv:
-            lv = _livello(_identita_tp(t, serie))
+            lv = _level(_identity_tp(t, serie))
             if lv is not None:
                 n += 1
                 ok += int(lv >= int(t["level"]))
@@ -66,6 +66,6 @@ def misure_motore(verita: dict, serie: Serie, serie2: Serie | None = None) -> di
     if reg:
         m["regione"], m["regione_n"] = None, len(reg)
     if serie2 is not None:
-        uguale = serie.sha == serie2.sha and serie.tp is not None and serie2.tp is not None and all(np.array_equal(serie.tp[k], serie2.tp[k]) for k in serie.tp)
-        m["determinismo_tp"] = int(uguale)
+        equal = serie.sha == serie2.sha and serie.tp is not None and serie2.tp is not None and all(np.array_equal(serie.tp[k], serie2.tp[k]) for k in serie.tp)
+        m["determinismo_tp"] = int(equal)
     return m

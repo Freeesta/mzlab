@@ -1,4 +1,4 @@
-"""Correzione del fondo (mzlab/web/fondo.js): proprietà verificate in Node da tests/fondo_node.js."""
+"""Background correction (mzlab/web/fondo.js): properties checked in Node by tests/fondo_node.js."""
 import subprocess
 from pathlib import Path
 

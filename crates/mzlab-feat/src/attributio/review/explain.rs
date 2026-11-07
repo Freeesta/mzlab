@@ -283,10 +283,40 @@ pub fn assign(mzs: &[f64], table: &SubTable, ppm: f64) -> Vec<Option<(usize, f64
         .collect()
 }
 
-/// (M+1/M, M+2/M) of an ion formula at the natural abundances (`composition::isotope_ratios`).
+/// (M+1/M, M+2/M) of an ion formula: nominal-mass isotopologue sums over the elements Attributio 1.12.0 `explain` lists, the others monoisotopic.
+/// Its own table, not `composition::isotope_ratios`: the reference keeps the IUPAC 1997 S and Si abundances here (S 0.9493/0.0076/0.0429),
+/// and the parity with it (`tests/attributio_spiegazioni.rs`) is the contract of this proof.
 pub fn iso_pattern(ion: &Formula) -> (f64, f64) {
-    let counts: Vec<(String, i64)> = ion.iter().map(|(e, n)| (e.clone(), *n)).collect();
-    mzlab_core::composition::isotope_ratios(&counts)
+    fn table(e: &str) -> [f64; 3] {
+        match e {
+            "C" => [0.9893, 0.0107, 0.0],
+            "H" => [0.999885, 0.000115, 0.0],
+            "N" => [0.99636, 0.00364, 0.0],
+            "O" => [0.99757, 0.00038, 0.00205],
+            "S" => [0.9493, 0.0076, 0.0429],
+            "Cl" => [0.7576, 0.0, 0.2424],
+            "Br" => [0.5069, 0.0, 0.4931],
+            "K" => [0.932581, 0.0, 0.067302],
+            "Si" => [0.9223, 0.0468, 0.0309],
+            _ => [1.0, 0.0, 0.0],
+        }
+    }
+    let mut dist = [1.0, 0.0, 0.0];
+    for (e, n) in ion {
+        let a = table(e);
+        for _ in 0..*n {
+            let mut next = [0.0; 3];
+            for (i, d) in dist.iter().enumerate() {
+                for (j, x) in a.iter().enumerate() {
+                    if i + j < 3 {
+                        next[i + j] += d * x;
+                    }
+                }
+            }
+            dist = next;
+        }
+    }
+    (dist[1] / dist[0], dist[2] / dist[0])
 }
 
 // ------------------------------------------------------------------------------ spectra

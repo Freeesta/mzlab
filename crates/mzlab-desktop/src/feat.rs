@@ -19,6 +19,11 @@ use sha2::{Digest, Sha256};
 use crate::engine::State;
 use crate::rpc::{map_file, text, Answer, MapAt};
 
+/// The working memory of a feature step: the budget the program chose for this computer (`ram.rs`), as in `mzlab-cli flow run`. The bytes do not depend on it.
+pub(crate) fn step_budget() -> MemBudget {
+    MemBudget::mb(crate::ram::native_budget_mb())
+}
+
 impl State {
     /// The `.mzidx` of the registered mzML `name`.
     pub(crate) fn open_idx(&self, name: &str) -> Result<Index<MapAt>> {
@@ -93,7 +98,7 @@ impl State {
     fn feat_family(&self, p: &Value) -> Result<Answer> {
         let mut ix = self.open_idx(p["name"].as_str().unwrap_or(""))?;
         let r = run::recipe_for(p["recipe"].as_str().unwrap_or(""), &mut ix)?;
-        let budget = MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
+        let budget = step_budget();
         text(mzlab_feat_wasm::family::record(
             &mut ix,
             p["name"].as_str().unwrap_or(""),
@@ -110,7 +115,7 @@ impl State {
             &mut self.open_idx(first)?,
         )?;
         let mut src = self.feat_stored(&ns)?;
-        let budget = MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
+        let budget = step_budget();
         let mut out = Vec::new();
         run::align_to(&mut src, &budget, &r, |k| self.open_idx(&ns[k]), &mut out)?;
         let a = written(&out);
@@ -177,7 +182,7 @@ impl State {
                 .map_err(crate::feat_finder::user)?
                 .map(|x| (m, x.1));
         }
-        let budget = MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
+        let budget = step_budget();
         let mut out = Vec::new();
         run::evidence_to(
             &mut Slice(table),
@@ -459,4 +464,17 @@ pub struct FeatState {
     pub(crate) lr: Option<(LrDig, Vec<String>)>,
     /// the MSn tree of the standard of the last `finder/dig` (none without an MSn file)
     pub(crate) msn: Option<crate::feat_msn::Msn>,
+}
+
+#[cfg(test)]
+mod tests_budget {
+    /// The feature steps of the app work within the budget the program chose for this computer, like `mzlab-cli flow run` (not a fixed 1 GB).
+    #[test]
+    fn a_step_works_within_the_budget_chosen_for_this_computer() {
+        let mb = crate::ram::native_budget_mb();
+        assert_eq!(
+            super::step_budget().cap(),
+            mzlab_core::budget::MemBudget::mb(mb).cap()
+        );
+    }
 }

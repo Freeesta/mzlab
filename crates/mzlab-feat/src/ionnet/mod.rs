@@ -77,11 +77,13 @@ pub fn group(t: &Aligned, p: &Params) -> Grouping {
     let group = net::components(n, iso_edges.iter().chain(&ion_edges).map(|e| (e.a, e.b)));
     let corr_group = net::components(n, corr.iter().map(|c| (c.a, c.b)));
     let mut edges: Vec<Edge> = ion_edges.into_iter().chain(iso_edges).collect();
+    // the pairs already linked, sorted for a binary search: a scan of `edges` per pair grew as rows^4 (12 730 rows took minutes);
+    // `pairs::all` gives each pair once, so the correlation edges pushed below never need to join the list
+    let mut linked: Vec<(usize, usize)> =
+        edges.iter().map(|e| (e.a.min(e.b), e.a.max(e.b))).collect();
+    crate::sortc::by(&mut linked, |x, y| x.cmp(y));
     for c in &corr {
-        if !edges
-            .iter()
-            .any(|e| (e.a.min(e.b), e.a.max(e.b)) == (c.a, c.b))
-        {
+        if linked.binary_search(&(c.a, c.b)).is_err() {
             edges.push(Edge {
                 a: c.a,
                 b: c.b,

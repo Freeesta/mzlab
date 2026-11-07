@@ -1338,6 +1338,23 @@ impl RawFileReader {
         ScanDataPacket::read(&mut r)
     }
 
+    /// The profile of a scan appended to `mz` and `int` (m/z > 0) as [`Self::read_scan`] and `Profile::to_mz_intensity_into` give it, without the chunks in
+    /// between; `Ok(false)`: the packet has no profile and nothing is appended. `coefficients`: those of the scan event (empty: already m/z).
+    pub fn read_profile_into<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+        coefficients: &[f64],
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) -> Result<bool> {
+        let entry = self.scan_index_entry(scan_number)?;
+        let abs_offset = self.data_addr.saturating_add(entry.offset);
+        source.seek(SeekFrom::Start(abs_offset))?;
+        let mut r = BinaryReader::new(source);
+        ScanDataPacket::read_profile_into(&mut r, coefficients, mz, int)
+    }
+
     /// Read a single scan packet's centroid peaks and FT label data
     /// (resolution / noise / baseline), skipping the profile signal for speed.
     ///
@@ -1583,6 +1600,16 @@ impl RawFileReader {
     ) -> Option<String> {
         let first = self.run_header.sample_info.first_scan_number;
         let idx = scan_number.checked_sub(first)? as usize;
+        self.scan_filter_of(idx, None, params)
+    }
+
+    /// The filter of scan `idx`, from its event when the caller already holds it (`scan_metadata_with`: one copy of the event per scan, not two).
+    pub(crate) fn scan_filter_of(
+        &self,
+        idx: usize,
+        event: Option<&crate::scan_event::ScanEvent>,
+        params: Option<&ScanParams<'_>>,
+    ) -> Option<String> {
         let entry = self.scan_index.get(idx)?;
 
         // SRM files have no scan events; build the filter string from
@@ -1595,7 +1622,14 @@ impl RawFileReader {
             return Some(text.clone());
         }
 
-        let event = self.scan_event(idx)?;
+        let owned;
+        let event = match event {
+            Some(e) => e,
+            None => {
+                owned = self.scan_event(idx)?;
+                &owned
+            }
+        };
         // Precursor m/z and activation energy come from the per-scan params
         // table (not the event body) for v66+. Fall back silently if missing.
         let precursor = params.and_then(|p| p.monoisotopic_mz());
@@ -1609,7 +1643,7 @@ impl RawFileReader {
             4
         };
         Some(crate::scan_filter::build_filter_with(
-            &event,
+            event,
             entry,
             precursor,
             energy,
