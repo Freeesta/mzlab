@@ -214,5 +214,19 @@ pub fn native_auto_mb() -> f64 {
     auto(&m).mb as f64
 }
 
+/// The peak budget in bytes of one `.mzidx` builder: its share of `auto_mb` with the `workers` builders that run at once, never below
+/// `mzidx::DEFAULT_BUDGET` nor above 1 GB. Rounds read from a scratch file stay small whatever it is (`mzidx::ROUND_MAX`): it raises the densest 1-Da
+/// range a file may have before the builder refuses it (the site's share is `idxpool.js::builderBudget`). The bytes written do not depend on it.
+pub fn index_budget(auto_mb: f64, workers: usize) -> usize {
+    let share = auto_mb.max(0.0) / (workers.max(1) + 1) as f64;
+    ((share as usize) << 20).clamp(crate::mzidx::DEFAULT_BUDGET, 1 << 30)
+}
+
+/// `index_budget` of this computer, for the builders of the desktop app and `mzlab-cli` (as many at once as `min(cores - 1, 4)`).
+pub fn native_index_budget() -> usize {
+    let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
+    index_budget(native_auto_mb(), cores.saturating_sub(1).clamp(1, 4))
+}
+
 #[cfg(test)]
 mod tests;

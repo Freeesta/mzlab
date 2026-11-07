@@ -41,6 +41,8 @@ pub(super) struct Parte {
     pub(super) w: Wiff,
     /// Indexes into `w.records` of the scans with points.
     pub(super) scans: Vec<usize>,
+    /// The point count of each record's head as `build` read it (`scan::point_count`): the chromatograms do not read the heads again.
+    counts: Vec<Option<u32>>,
     indice: Vec<VoceScansione>,
     chroms: Option<Vec<Chromatogram>>,
     /// Base peak intensity of each scan as the mzML writer saw it (NaN: not yet) and how many it has seen: the BPC of the full scan experiments is listed
@@ -60,6 +62,7 @@ impl Parte {
         Parte {
             w,
             scans: Vec::new(),
+            counts: Vec::new(),
             indice: Vec::new(),
             chroms: None,
             bpc: Vec::new(),
@@ -133,7 +136,8 @@ impl LettoreWiff {
         if p.chroms.is_none() {
             p.w.readable()?;
             let mut win = Window::new(&mut self.scan, self.scan_len);
-            p.chroms = Some(p.w.chromatograms(&mut win)?);
+            let counts = Some(&p.counts[..]).filter(|c| p.pronta && c.len() == p.w.records.len());
+            p.chroms = Some(p.w.chromatograms(&mut win, counts)?);
         }
         Ok(p.chroms.as_deref().unwrap_or_default())
     }
@@ -320,6 +324,8 @@ pub fn apri_solo(
     let ole = container(bytes, &nome)?;
     let sm = member(&mut fs, si)?;
     let scan_len = sm.dim;
+    // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `impronte_note`): the header does not read the whole file again
+    let scan_sha1 = sm.sha1.take().filter(|s| !s.is_empty()).map(Some);
     let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
@@ -362,7 +368,7 @@ pub fn apri_solo(
         scan_member: membro,
         campioni,
         parti,
-        scan_sha1: None,
+        scan_sha1,
     }))
 }
 
@@ -377,11 +383,13 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
         .max()
         .unwrap_or(0);
     let mut win = Window::until(scan, scan_len, stop);
-    let (mut scans, mut indice) = (Vec::new(), Vec::new());
+    let (mut scans, mut indice, mut counts) =
+        (Vec::new(), Vec::new(), Vec::with_capacity(w.records.len()));
     #[cfg(feature = "sciex")]
     let (mut other, mut mrm_seen) = (false, vec![false; w.experiments.len().max(1)]);
     for (i, r) in w.records.iter().enumerate() {
         let points = scan::point_count(&mut win, scan_len, r.at, r.end)?;
+        counts.push(points);
         // the first MRM block of each experiment: a sparse (scheduled) one starts with `-(N + 0.01)`, even when the method has no `sMRM` stream to say so
         #[cfg(feature = "sciex")]
         if points.is_none()
@@ -423,7 +431,7 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
         });
         scans.push(i);
     }
-    (p.scans, p.indice, p.pronta) = (scans, indice, true);
+    (p.scans, p.indice, p.counts, p.pronta) = (scans, indice, counts, true);
     #[cfg(feature = "sciex")]
     {
         p.other_version = other;
