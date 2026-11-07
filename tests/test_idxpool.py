@@ -27,6 +27,7 @@ function fake(script) {{
       setTimeout(() => {{
         if (this.dead) return;
         const msg = {{ done: {{ op: "done", stats: {{ passes: 1 }} }}, mem: {{ op: "error", text: '{{"error_key":"error.memoryBudget","params":{{}}}}', fatal: false }},
+                      plan: {{ op: "error", text: '{{"error_key":"error.memoryBudget","params":{{"fase":"index","stima_mb":"139","budget_mb":"32","libero_mb":"32","eccesso_mb":"107"}}}}', fatal: false }},
                       die: {{ op: "error", text: "unreachable", fatal: true }}, fail: {{ op: "error", text: '{{"error_key":"err.file.xml","params":{{}}}}', fatal: false }},
                       unavail: {{ op: "unavailable", text: "no wasm" }} }}[act];
         this.onmessage({{ data: msg }});
@@ -92,8 +93,35 @@ await out(async () => {
   const r = await p.build(job("big"));
   return { r: r.reason, limit: p.limit, notes, log };
 });""")
-    assert got["r"] == "memory" and got["limit"] == 1 and got["notes"] == ["error.memoryBudget"] * 2
+    # the pool is whole again once it has nothing to do: one file that could not reserve memory does not slow the rest of the session
+    assert got["r"] == "memory" and got["limit"] == 4 and got["notes"] == ["error.memoryBudget"] * 2
     assert got["log"] == ["start big#1 b64", "start big#2 b32"]
+
+
+def test_a_failed_reservation_halves_the_pool_while_other_files_still_run():
+    got = run("""
+await out(async () => {
+  const p = createPool({ workerUrl: "x", size: 4, budget: 64, WorkerClass: fake((n, k) => n === "big" && k === 1 ? "mem" : "done") });
+  const big = p.build(job("big"));
+  const rest = ["a", "b", "c", "d", "e", "f"].map(n => p.build(job(n)));
+  await big; const during = p.limit;
+  await Promise.all(rest);
+  return { during, after: p.limit };
+});""")
+    assert got["during"] == 2 and got["after"] == 4
+
+
+def test_a_planned_refusal_is_not_retried_and_keeps_its_numbers_and_the_pool():
+    # the builder's own estimate says the file does not fit (error with `fase`): the same budget, or half of it, would refuse it again after one more full read
+    got = run("""
+await out(async () => {
+  const notes = [];
+  const p = createPool({ workerUrl: "x", size: 4, budget: 32, notify: k => notes.push(k), WorkerClass: fake((n, k) => n === "dense" ? "plan" : "done") });
+  const r = await p.build(job("dense"));
+  return { r: r.reason, params: JSON.parse(r.text).params, limit: p.limit, notes, log };
+});""")
+    assert got["r"] == "memory" and got["limit"] == 4 and got["log"] == ["start dense#1 b32"]
+    assert got["params"]["fase"] == "index" and got["params"]["stima_mb"] == "139"
 
 
 def test_no_wasm_means_unavailable_for_every_job():

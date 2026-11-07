@@ -267,8 +267,8 @@ pub struct Passata(Option<upload::Passata>);
 #[wasm_bindgen]
 impl Passata {
     #[wasm_bindgen(constructor)]
-    pub fn new(size: f64, senza_sha1: Option<bool>) -> Passata {
-        Passata(Some(upload::Passata::scelta(size as u64, senza_sha1)))
+    pub fn new(size: f64, senza: Option<bool>, solo: Option<bool>) -> Passata {
+        Passata(Some(upload::Passata::scelta(size as u64, senza, solo)))
     }
     pub fn aggiorna(&mut self, piece: &[u8]) {
         self.0.as_mut().unwrap().aggiorna(piece);
@@ -361,7 +361,7 @@ pub fn build_mzidx_native(
     let c = c as usize;
     let mut l = crate::contato::apri(fs, |fs| m.apri_fs(fs), &tell, step, c)?;
     let cm = (c, l.mancanti(c));
-    let mut out = Accorpa::new(JsOutput { write });
+    let mut out = Accorpa::flussi(JsOutput { write });
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round; OPFS writes in 1 MiB blocks (`accorpa`)
     let mut spill = spill_put
         .zip(spill_get)
@@ -409,7 +409,7 @@ fn doppio(
     tell: &dyn Fn(u32),
 ) -> Result<String, JsValue> {
     let mut lc = lettori_centroidi::Centroidato::nuovo(l);
-    let mut out_cen = Accorpa::new(JsOutput { write: write_cen });
+    let mut out_cen = Accorpa::flussi(JsOutput { write: write_cen });
     tell(2);
     let ((st, sha256), (sc, _)) = upload::indicizza_lettore_doppio(
         &mut lc,
