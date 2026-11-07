@@ -8,6 +8,8 @@ import init, { Passata } from "./wasm/mzlab_wasm.js";
 /** @type {Map<number, { fine: () => string[] | undefined, aggiorna: (b: Uint8Array) => void}>} */
 const passate = new Map();
 let ready = /** @type {Promise<unknown> | null} */ (null);
+// the script and its engine glue are here: the page hashes in this worker from now on (impronta.js `up`)
+postMessage({ op: "up" });
 onmessage = async ev => {
   const m = ev.data;
   if (m.op === "module") { ready = (m.module ? init({ module_or_path: m.module }) : init()); return; }
