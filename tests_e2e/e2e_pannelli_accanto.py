@@ -15,7 +15,7 @@ try:
         for w in (500, 600, 700, 900, 1200):
             def chk(w=w):
                 pg.set_viewport_size({"width": w, "height": 900}); pg.reload()
-                attendi(pg, "document.querySelector('#stbar .tb') && !document.documentElement.classList.contains('i18n-wait')"); frames(pg, 5)
+                wait_for_js(pg, "document.querySelector('#stbar .tb') && !document.documentElement.classList.contains('i18n-wait')"); frames(pg, 5)
                 d = pg.evaluate(JS)
                 assert d["w"] > 0 and abs(d["dy"]) < 20 and 0 <= d["gap"] <= 16, (w, d)
             step(f"{w} px: the panels button follows the last tab within 16 px", chk)

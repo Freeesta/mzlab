@@ -26,14 +26,14 @@ try:
                 assert pg.evaluate("document.activeElement && document.activeElement.id") == "calcin", "the focus left the field"
             check("pad"); check("kbd")
         # the Disegno view: the calculator is the drop-down under its button
-        attendi(pg, "window.qqReady && !document.querySelector('#start').hidden"); pg.evaluate("setView('draw')")
-        attendi(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
-        pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden")
+        wait_for_js(pg, "window.qqReady && !document.querySelector('#start').hidden"); pg.evaluate("setView('draw')")
+        wait_for_js(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
+        pg.click("#np-calc2"); wait_for_js(pg, "!document.querySelector('#calcdlg').hidden")
         for k in KEYS: step(f"drop-down: {k!r} first keeps the panel open", lambda k=k: stays(k))
         pg.click("#calcx"); pg.evaluate("setView('data')")
         # the Dati view: the calculator sits on top of the Adducts & losses page of the side drawer
         pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Carica dati"); ready(pg)
-        pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "window.BARRA.curTab === 'addloss' && window.BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent")
+        pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "window.BARRA.curTab === 'addloss' && window.BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent")
         def stays_docked(first):
             def check():
                 pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type(first); frames(pg, 3)

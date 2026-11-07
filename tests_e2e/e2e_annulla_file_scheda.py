@@ -26,18 +26,18 @@ try:
         k = pg.evaluate("(E.files.find(f => !f.gone && f.kind !== E.tab) || {}).k")
         def remove():
             assert k is not None and pg.evaluate("E.tab") == "full", pg.evaluate("[E.tab, E.files.map(f => f.kind)]")
-            pg.evaluate(OPEN); pg.locator(f"#flst .fl[data-k='{k}'] .fl-x").click(); attendi(pg, f"E.files[{k}].gone === true"); ready(pg)
+            pg.evaluate(OPEN); pg.locator(f"#flst .fl[data-k='{k}'] .fl-x").click(); wait_for_js(pg, f"E.files[{k}].gone === true"); ready(pg)
             assert not pg.is_disabled("#np-undo")
         step("an MS2 file is taken out from the list while the Full Scan tab is on screen", remove)
         def undo_key():
-            pg.mouse.click(5, 5); pg.keyboard.press("Control+z"); attendi(pg, f"E.files[{k}].gone === false"); ready(pg)
+            pg.mouse.click(5, 5); pg.keyboard.press("Control+z"); wait_for_js(pg, f"E.files[{k}].gone === false"); ready(pg)
             assert pg.evaluate("E.tab") == "full"
         step("Ctrl+Z takes it back without leaving the tab", undo_key)
         def redo_key():
-            pg.keyboard.press("Control+y"); attendi(pg, f"E.files[{k}].gone === true"); ready(pg)
+            pg.keyboard.press("Control+y"); wait_for_js(pg, f"E.files[{k}].gone === true"); ready(pg)
         step("Ctrl+Y takes it out again", redo_key)
         def undo_button():
-            pg.click("#np-undo"); attendi(pg, f"E.files[{k}].gone === false"); ready(pg)
+            pg.click("#np-undo"); wait_for_js(pg, f"E.files[{k}].gone === false"); ready(pg)
             pg.evaluate(OPEN); assert pg.locator(f"#flst .fl[data-k='{k}']").count() == 1
         step("the Undo button takes it back and its row is in the list again", undo_button)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))

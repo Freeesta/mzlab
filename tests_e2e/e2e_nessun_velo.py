@@ -2,7 +2,7 @@
 (MRM and MS2 after a Full Scan) are read in the background, the page stays clickable and a tab opened for the first time shows no veil either."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
-lib.AUTO_TEMPI = False
+lib.AUTO_TIMES = False
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
 steps = []
@@ -29,7 +29,7 @@ try:
         def tabs_no_veil():
             for k in ("mrm", "ms2", "full"):
                 pg.evaluate(f"setTab('{k}')")
-                attendi(pg, f"E.tab === '{k}'")
+                wait_for_js(pg, f"E.tab === '{k}'")
                 ready(pg)
             assert pg.evaluate("window.__veil") is False, "the veil was shown by a tab"
         step("opening a tab for the first time: no veil", tabs_no_veil)

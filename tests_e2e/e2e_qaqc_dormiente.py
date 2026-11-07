@@ -32,20 +32,20 @@ try:
             pg.click("#tb-more"); pg.wait_for_selector("#stmenu"); assert "QA/QC" not in pg.inner_text("#stmenu"); pg.keyboard.press("Escape")
         step("off (default): not in the DOM, the bar or «Altro»", spento)
 
-        def paletta_spenta():
+        def palette_off():
             for q in ("qaqc", "QA/QC", "controllo qualità", "rapporto"):
                 assert "QA/QC" not in palette(pg, q), q
             assert "Nessun risultato" in palette(pg, "qaqc")
             assert "Rapporto di studio" in palette(pg, "rapporto"), "the study report stays"
-        step("off: the palette neither finds nor shows it; the study report stays", paletta_spenta)
+        step("off: the palette neither finds nor shows it; the study report stays", palette_off)
 
-        def tour_taccuino():
+        def tour_notebook():
             assert "qaqc" not in pg.evaluate("JSON.stringify(NB)").lower()
             for tab in ("file", "calc", "losses", "lists", "stat"):
                 drawer(pg, tab); assert "QA/QC" not in pg.inner_text("#sb-pane"), tab
             assert not pg.evaluate("(typeof TOUR!=='undefined'&&TOUR.steps?JSON.stringify(TOUR.steps):'')").count("qaqc")
             assert pg.evaluate("window.QAQC && typeof QAQC.roleOf") == "function", "roles (QC, dark) still work"
-        step("off: not in the drawer, the tour or the notebook; the roles of the files remain", tour_taccuino)
+        step("off: not in the drawer, the tour or the notebook; the roles of the files remain", tour_notebook)
 
         def pulita():
             bad = [e for e in r.errs if e[0] in ("pageerror", "console.error")]

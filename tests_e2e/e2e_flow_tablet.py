@@ -6,7 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi; PORT = free_port()
+from lib import free_port, wait_for_js; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -38,7 +38,7 @@ try:
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             pg.click('#nav button[data-v="flow"]'); pg.wait_for_selector(".flx-tpl.show", timeout=30000)
-            attendi(pg, "document.querySelectorAll('.fl-insp .fl-form label').length >= 3")
+            wait_for_js(pg, "document.querySelectorAll('.fl-insp .fl-form label').length >= 3")
             def free(pg=pg):
                 hidden = pg.evaluate(HIDDEN)
                 assert pg.locator(".fl-zoom button").count() == 4 and not hidden, f"view buttons under the template card: {hidden}"

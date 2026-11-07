@@ -27,42 +27,42 @@ try:
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "!!document.querySelector('#pick')")
+        pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "!!document.querySelector('#pick')")
         pg.set_input_files("#pick", [str(f) for f in files])
-        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, "!!E.panels.find(q=>q.type==='map')")
+        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, "!!E.panels.find(q=>q.type==='map')")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         nxt, prv = ".pnl.map [data-a=mapnav][data-d='1']", ".pnl.map [data-a=mapnav][data-d='-1']"
         lab = lambda: pg.evaluate(f"E.files.find(f=>f.k==={M}.k).label")
-        shown = lambda: (ready(pg), attendi(pg, f"!!{M}._a && {M}._a.f.k==={M}.k"))        # the map is drawn for the file of the panel
+        shown = lambda: (ready(pg), wait_for_js(pg, f"!!{M}._a && {M}._a.f.k==={M}.k"))        # the map is drawn for the file of the panel
         seen = {}
         def whole():
             shown(); seen[lab()] = view(pg)
             for _ in range(2):
-                before = lab(); pg.click(nxt); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label!=={before!r}"); shown(); seen[lab()] = view(pg)
+                before = lab(); pg.click(nxt); wait_for_js(pg, f"E.files.find(f=>f.k==={M}.k).label!=={before!r}"); shown(); seen[lab()] = view(pg)
             vs = list(seen.values()); assert len(vs) == 3 and vs[0] == vs[1] == vs[2], seen
             v = vs[0]; assert v["x"][0] < 1 and v["x"][1] > 19.9 and v["y"][0] < 131 and v["y"][1] > 349, v          # the union: the widest file sets the limits
         step("whole view: the same axes on every file, the union of the data", whole)
         def zoomed():
-            pg.evaluate(f"{M}.zoom=[3,8];{M}.zoomY=[200,260];draw({M})"); shown(); attendi(pg, f"{M}._a.x0===3")
-            pg.click(prv); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==='b-narrow'"); shown()
+            pg.evaluate(f"{M}.zoom=[3,8];{M}.zoomY=[200,260];draw({M})"); shown(); wait_for_js(pg, f"{M}._a.x0===3")
+            pg.click(prv); wait_for_js(pg, f"E.files.find(f=>f.k==={M}.k).label==='b-narrow'"); shown()
             v = view(pg); assert v == {"x": [3, 8], "y": [200, 260]}, v
         step("a chosen zoom stays when the file changes", zoomed)
         def menu():
-            pg.locator(".pnl.map select[data-o=k]").select_option(index=0); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==='a-wide'"); shown()
+            pg.locator(".pnl.map select[data-o=k]").select_option(index=0); wait_for_js(pg, f"E.files.find(f=>f.k==={M}.k).label==='a-wide'"); shown()
             assert view(pg) == {"x": [3, 8], "y": [200, 260]}
-            pg.evaluate(f"{M}.zoom=null;{M}.zoomY=null;draw({M})"); shown(); attendi(pg, f"{M}._a.x0<1")
+            pg.evaluate(f"{M}.zoom=null;{M}.zoomY=null;draw({M})"); shown(); wait_for_js(pg, f"{M}._a.x0<1")
             assert view(pg) == seen["a-wide"], (view(pg), seen["a-wide"])
         step("file menu: same behaviour; back to the whole view", menu)
         def scale():
             refs = lambda: pg.evaluate(f"{M}._img.ref")
             own = {}
             for lbl in ("a-wide", "b-narrow", "c-mid"):
-                pg.locator(".pnl.map select[data-o=k]").select_option(label=lbl); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==={lbl!r}"); shown(); own[lbl] = refs()
+                pg.locator(".pnl.map select[data-o=k]").select_option(label=lbl); wait_for_js(pg, f"E.files.find(f=>f.k==={M}.k).label==={lbl!r}"); shown(); own[lbl] = refs()
             assert len(set(own.values())) > 1, own                                        # each file has its own top of the scale
-            pg.locator(".pnl.map [data-mz=fix]").evaluate("e => e.click()"); attendi(pg, f"{M}._img.ref!=={own['c-mid']}"); shown()
+            pg.locator(".pnl.map [data-mz=fix]").evaluate("e => e.click()"); wait_for_js(pg, f"{M}._img.ref!=={own['c-mid']}"); shown()
             fixed = {}
             for lbl in ("a-wide", "b-narrow", "c-mid"):
-                pg.locator(".pnl.map select[data-o=k]").select_option(label=lbl); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==={lbl!r}"); shown(); fixed[lbl] = refs()
+                pg.locator(".pnl.map select[data-o=k]").select_option(label=lbl); wait_for_js(pg, f"E.files.find(f=>f.k==={M}.k).label==={lbl!r}"); shown(); fixed[lbl] = refs()
             assert len(set(fixed.values())) == 1 and fixed["a-wide"] == max(own.values()), (own, fixed)
         step("fixed colour scale: the same top on every file (the highest of the files)", scale)
         b.close()

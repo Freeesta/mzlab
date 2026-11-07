@@ -15,13 +15,13 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); attendi(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
+        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.el.scrollIntoView({{block:'center'}})}})()")
         zoom = lambda: pg.evaluate(f"{XP}.zoom")
         nint = lambda: pg.evaluate(f"{XP}.ints.length")
         mod = "Meta" if pg.evaluate("/Mac/.test(navigator.platform)") else "Control"
         def key(k): pg.keyboard.press(k)
-        def until(expr): attendi(pg, expr)
+        def until(expr): wait_for_js(pg, expr)
         def seq():
             pg.evaluate(f"(()=>{{const p={XP};pushZh(p);p.zoom=[13,17];draw(p)}})()")
             pg.evaluate(f"(()=>{{const p={XP};addInt(p,p._a.sr[0],13.9,14.6)}})()")

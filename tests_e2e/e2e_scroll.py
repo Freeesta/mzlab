@@ -21,11 +21,11 @@ try:
         def put_cursor(rt=14.0):
             c = pg.evaluate("(rt)=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='full'),r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(rt),py:r.top+r.height/2}}", rt)
             pg.mouse.click(c["px"], c["py"])
-            attendi(pg, f"(()=>{{const s={SPEC};return !!E.active&&E.active.cur!=null&&Math.abs(E.active.cur-{rt})<0.2&&!!s&&!!s._a}})()"); ready(pg)
+            wait_for_js(pg, f"(()=>{{const s={SPEC};return !!E.active&&E.active.cur!=null&&Math.abs(E.active.cur-{rt})<0.2&&!!s&&!!s._a}})()"); ready(pg)
         # one arrow press: waits until the linked spectrum has moved by `by` scans (or is on its first scan)
         def walk(key="ArrowRight", by=1):
             s0 = st()["si"]; pg.keyboard.press(key)
-            attendi(pg, f"{SPEC}.si != null" if s0 is None else f"{SPEC}.si === {s0 + by}")
+            wait_for_js(pg, f"{SPEC}.si != null" if s0 is None else f"{SPEC}.si === {s0 + by}")
         put_cursor()
         def prepare():
             assert pg.evaluate(f"!!({SPEC})"), "no linked spectrum"
@@ -35,7 +35,7 @@ try:
         def axes_fixed():
             walk()
             a0 = st(); assert not a0["lock"] and a0["si"] is not None, a0               # the lock is open by default and the arrows never close it
-            lockclick(); attendi(pg, f"{SPEC}.lock"); a0 = st(); assert a0["lock"], a0
+            lockclick(); wait_for_js(pg, f"{SPEC}.lock"); a0 = st(); assert a0["lock"], a0
             assert pg.evaluate(f"document.querySelector('.pnl.spec [data-a=lock]').classList.contains('on')")
             ys = [a0["ymax"]]
             for i in range(30):
@@ -48,15 +48,15 @@ try:
         def last_wins():
             a0 = st()
             for i in range(20): pg.keyboard.press("ArrowLeft")
-            attendi(pg, f"{SPEC}.si === {a0['si'] - 20}"); ready(pg)
+            wait_for_js(pg, f"{SPEC}.si === {a0['si'] - 20}"); ready(pg)
             a = st(); assert a["si"] == a0["si"] - 20, (a0["si"], a["si"])
             want = pg.evaluate(f"(()=>{{const p=E.active,s=p._a.sr.find(x=>x.k==={SPEC}.k);return s.x[{a['si']}]}})()")
             assert abs((a["r0"] + a["r1"]) / 2 - want) < 0.01 and abs(a["cur"] - want) < 1e-9, (a, want)
         step("20 quick presses: the last scan is the one shown", last_wins)
         def shift5():
-            a0 = st(); pg.keyboard.press("Shift+ArrowRight"); attendi(pg, f"{SPEC}.si === {a0['si'] + 5}")
+            a0 = st(); pg.keyboard.press("Shift+ArrowRight"); wait_for_js(pg, f"{SPEC}.si === {a0['si'] + 5}")
             assert st()["si"] == a0["si"] + 5, (a0["si"], st()["si"])
-            pg.keyboard.press("Shift+ArrowLeft"); attendi(pg, f"{SPEC}.si === {a0['si']}"); assert st()["si"] == a0["si"]
+            pg.keyboard.press("Shift+ArrowLeft"); wait_for_js(pg, f"{SPEC}.si === {a0['si']}"); assert st()["si"] == a0["si"]
         step("Maiusc + arrow = 5 scans", shift5)
         def held():
             a0 = st(); pg.keyboard.down("ArrowRight"); hold(pg, 1350); pg.keyboard.up("ArrowRight"); hold(pg, 300)
@@ -64,9 +64,9 @@ try:
             a1 = st(); hold(pg, 500); assert st()["si"] == a1["si"], "must stop when the key goes up"
         step("held key: ~15 scans/s, stops when released", held)
         def play():
-            a0 = st(); pg.keyboard.press(" "); attendi(pg, f"{SPEC}.si - {a0['si']} >= 6", timeout=5000); a1 = st(); assert a1["si"] - a0["si"] >= 6, (a0["si"], a1["si"])
+            a0 = st(); pg.keyboard.press(" "); wait_for_js(pg, f"{SPEC}.si - {a0['si']} >= 6", timeout=5000); a1 = st(); assert a1["si"] - a0["si"] >= 6, (a0["si"], a1["si"])
             pg.keyboard.press(" "); frames(pg, 3); a2 = st(); hold(pg, 600); assert st()["si"] == a2["si"], "Space again must stop"
-            pg.keyboard.press(" "); attendi(pg, f"{SPEC}.si !== {st()['si']}"); pg.keyboard.press("Escape"); frames(pg, 3); a3 = st(); hold(pg, 500); assert st()["si"] == a3["si"], "Esc must stop"
+            pg.keyboard.press(" "); wait_for_js(pg, f"{SPEC}.si !== {st()['si']}"); pg.keyboard.press("Escape"); frames(pg, 3); a3 = st(); hold(pg, 500); assert st()["si"] == a3["si"], "Esc must stop"
         step("Space plays and pauses, Esc stops", play)
         def play_sel():
             # a selection on the chromatogram: the play goes back and forth inside it
@@ -78,22 +78,22 @@ try:
         def lock_open_close():
             put_cursor(14.4); a = st(); assert not a["lock"], a
             walk(); assert not st()["lock"], "arrows never close the lock by themselves"
-            lockclick(); attendi(pg, f"{SPEC}.lock"); assert st()["lock"]
+            lockclick(); wait_for_js(pg, f"{SPEC}.lock"); assert st()["lock"]
             walk(); assert st()["lock"], "stays closed while walking"
-            lockclick(); attendi(pg, f"!{SPEC}.lock"); assert not st()["lock"]
+            lockclick(); wait_for_js(pg, f"!{SPEC}.lock"); assert not st()["lock"]
             walk(); assert not st()["lock"], "unlocked by hand stays unlocked"
-            lockclick(); attendi(pg, f"{SPEC}.lock"); assert st()["lock"]
+            lockclick(); wait_for_js(pg, f"{SPEC}.lock"); assert st()["lock"]
             c = pg.evaluate(f"(()=>{{const s={SPEC},r=s.cv.getBoundingClientRect();return {{x:r.left+r.width/2,y:r.top+r.height/2}}}})()")
-            pg.mouse.dblclick(c["x"], c["y"]); attendi(pg, f"!{SPEC}.lock"); assert not st()["lock"], "double click on the spectrum unlocks"
+            pg.mouse.dblclick(c["x"], c["y"]); wait_for_js(pg, f"!{SPEC}.lock"); assert not st()["lock"], "double click on the spectrum unlocks"
             walk(); assert not st()["lock"], "and the arrows do not lock it again"
-            lockclick(); attendi(pg, f"{SPEC}.lock"); assert st()["lock"]
+            lockclick(); wait_for_js(pg, f"{SPEC}.lock"); assert st()["lock"]
             # a zoom made by the student redefines the locked axes; "Vista intera" unlocks
-            a0 = st(); pg.evaluate(f"()=>{{const s={SPEC};s.zoom=[s._a.x0+(s._a.x1-s._a.x0)*0.3,s._a.x0+(s._a.x1-s._a.x0)*0.6];draw(s)}}"); attendi(pg, f"{SPEC}._a.x0 > {a0['x0']}")
+            a0 = st(); pg.evaluate(f"()=>{{const s={SPEC};s.zoom=[s._a.x0+(s._a.x1-s._a.x0)*0.3,s._a.x0+(s._a.x1-s._a.x0)*0.6];draw(s)}}"); wait_for_js(pg, f"{SPEC}._a.x0 > {a0['x0']}")
             a1 = st(); assert a1["lock"] and a1["x0"] > a0["x0"] and a1["x1"] < a0["x1"], (a0, a1)
             for i in range(5): walk()
             frames(pg, 2); a2 = st(); assert a2["x0"] == a1["x0"] and a2["x1"] == a1["x1"], (a1, a2)
-            pg.click(".pnl.spec [data-a=fit]"); attendi(pg, f"!{SPEC}.lock"); assert not st()["lock"], "Vista intera unlocks"
-            lockclick(); attendi(pg, f"{SPEC}.lock"); assert st()["lock"]
+            pg.click(".pnl.spec [data-a=fit]"); wait_for_js(pg, f"!{SPEC}.lock"); assert not st()["lock"], "Vista intera unlocks"
+            lockclick(); wait_for_js(pg, f"{SPEC}.lock"); assert st()["lock"]
             put_cursor(14.0); assert not st()["lock"], "a new click on the chromatogram unlocks"
         step("lock: only the student closes it; opens with click / double click / Vista intera / new click", lock_open_close)
         def blanks():
@@ -109,16 +109,16 @@ try:
         pg.screenshot(path=SH + "scroll_full.png")
         def ms2():
             open_kind(pg, "ms2")          # at the first load only the first file is open: a click in the list opens the MS2 file
-            attendi(pg, """(()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return !!p&&!!p._a})()""")
+            wait_for_js(pg, """(()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return !!p&&!!p._a})()""")
             info = True
             c = pg.evaluate("()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2'),s=p._a.sr[0];let j=s.y.indexOf(Math.max(...s.y)),r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(s.x[j]),py:r.top+r.height/2,j}}")
             pg.mouse.click(c["px"], c["py"])
-            attendi(pg, "(()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return p.cur!=null})()"); ready(pg)
+            wait_for_js(pg, "(()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return p.cur!=null})()"); ready(pg)
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2'))")
             got = []
             for i in range(25):
                 c0 = pg.evaluate("E.active.cur"); pg.keyboard.press("ArrowRight")
-                attendi(pg, f"E.active.cur !== {c0}", timeout=5000); frames(pg, 2)
+                wait_for_js(pg, f"E.active.cur !== {c0}", timeout=5000); frames(pg, 2)
                 got.append(pg.evaluate("""()=>{const p=E.active,s=p._a.sr[0],i=s.x.findIndex(v=>Math.abs(v-p.cur)<1e-9);return [i,s.y[i]]}"""))
             assert all(y > 0 for i, y in got), got                                   # never an empty scan
             idx = [i for i, y in got]; assert idx == sorted(set(idx)) and len(idx) >= 5, idx

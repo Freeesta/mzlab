@@ -9,7 +9,7 @@ r = Run(port=8880, wd="/tmp/wd_setpriv")
 try:
     with sync_playwright() as p:
         for lang in ("it", "en"):
-            pg = r.page(p); pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); attendi(pg, "!!document.querySelector('#np-set')", 30000)
+            pg = r.page(p); pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); wait_for_js(pg, "!!document.querySelector('#np-set')", 30000)
             pg.click("#np-set"); pg.wait_for_selector("#uipset", state="visible")
             def gone(pg=pg):
                 assert pg.locator("#uip-g-priv, #uip-export, #uip-import, #uip-import-file, #uip-export-st, #uip-import-box, #uip-import-st").count() == 0, "export/import controls still in Settings"

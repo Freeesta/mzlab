@@ -92,10 +92,10 @@ try:
               return {over:L.scrollWidth-L.clientWidth, name:by('Nome').width, right:Math.max(...['Entropia','Picchi','Δ ppm'].map(t=>by(t).right))-r.right, left:Math.min(...['Entropia','Picchi','Δ ppm'].map(t=>by(t).left))}})()""")
             assert geo["over"] <= 1 and geo["name"] >= 100 and geo["right"] <= 1, ("columns fit at 1280 px", geo)
             tot = pg.locator("#li-list .lw-th").count(); assert tot >= 8, tot
-            attendi(pg, "document.querySelectorAll('#li-list .lw-th svg').length > 0"); frames(pg, 3)
+            wait_for_js(pg, "document.querySelectorAll('#li-list .lw-th svg').length > 0"); frames(pg, 3)
             drawn = pg.locator("#li-list .lw-th svg").count(); assert 0 < drawn < tot, ("only the rows in view are drawn", drawn, tot)
             assert pg.locator("#li-list tr.row td.st", has_text="–").count() >= 1, "rows without a SMILES show a dash"
-            pg.evaluate("document.querySelector('#li-list').scrollTop = 1e6"); attendi(pg, f"document.querySelectorAll('#li-list .lw-th svg').length > {drawn}")
+            pg.evaluate("document.querySelector('#li-list').scrollTop = 1e6"); wait_for_js(pg, f"document.querySelectorAll('#li-list .lw-th svg').length > {drawn}")
             pg.evaluate("document.querySelector('#li-list').scrollTop = 0"); frames(pg)
             btn = pg.locator("#li-list .lw-th").first; smi = btn.get_attribute("data-smi"); btn.click()
             pg.wait_for_selector("#li-big .lw-bigsvg svg", timeout=20000)

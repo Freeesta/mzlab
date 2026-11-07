@@ -27,17 +27,17 @@ threading.Thread(target=srv.serve_forever, daemon=True).start()
 LOADED = "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === {}".format
 try:
     with sync_playwright() as p:
-        a = r.page(p); attendi(a, "window.qqReady === true", 60000)
+        a = r.page(p); wait_for_js(a, "window.qqReady === true", 60000)
         f1, f2 = mlm.small_files(Path("/tmp/wd_impronta_lenta_in"), 2)
         def first():
             a.set_input_files("#pick", [f1])
-            attendi(a, LOADED(1), 30000)     # on a copy that waits for the worker script this times out: the server holds it
+            wait_for_js(a, LOADED(1), 30000)     # on a copy that waits for the worker script this times out: the server holds it
             assert asked.is_set() and not served.is_set(), "the hash worker script was not held while the file loaded"
             assert a.evaluate("document.getElementById('err').textContent") == ""
         step("a file dropped while the hash worker script is held loads at once", first)
         def second():
             release.set(); assert served.wait(30), "the hash worker script was never served"
-            a.set_input_files("#pick", [f2]); attendi(a, LOADED(2), 60000)
+            a.set_input_files("#pick", [f2]); wait_for_js(a, LOADED(2), 60000)
             assert a.evaluate("document.getElementById('err').textContent") == ""
         step("a file dropped after the script arrived loads too", second)
     r.close()

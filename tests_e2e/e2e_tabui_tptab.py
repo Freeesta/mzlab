@@ -219,11 +219,11 @@ try:
             cols: [{ key: "lvl", label: "Lvl", sticky: true, width: 90, cell: r => TPTAB.level(models[r.id].level) }, { key: "identity", label: "Identity", sticky: true, width: 150, cell: r => esc(r.name) }] }, TPRIGA.hook(r => models[r.id])));
           window.__T2 = T; T.setRows(rows);
         }"""
-        def riga_mount():
+        def row_mount():
             pg.evaluate(MOUNT2); pg.wait_for_selector("#tr-t tr.clk"); pg.click('#tr-t [data-tg="0"]'); pg.wait_for_selector("#tp-det .tpr-ov svg")
-        step("TPRIGA: a model opens in the row", riga_mount)
+        step("TPRIGA: a model opens in the row", row_mount)
 
-        def riga_head():
+        def row_head():
             h = pg.inner_text("#tp-det .tpt-head")
             assert "Prev. 2" in h and "Decided" not in h and "Level" not in h and "+O" in h and "257.0591" in h, h
             assert pg.locator("#tp-det .tpt-head .lvb.pd-2").count() == 1 and pg.locator("#tp-det .tpt-head .lvb.lv-3").count() == 0, "the level only in the closed row"
@@ -231,9 +231,9 @@ try:
             pg.click('#tp-det [data-act="copy"]'); assert pg.evaluate("window.__act") == "copy"
             assert [t for t in pg.locator("#tp-det [role=tab]").all_inner_texts()] == ["Overview", "Samples", "Identity", "Quality", "Structure"]
             small = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-act')].filter(e => e.getBoundingClientRect().height < 24).length"); assert small == 0
-        step("TPRIGA: head with Prev. 2, the summary of the row, actions; five tabs", riga_head)
+        step("TPRIGA: head with Prev. 2, the summary of the row, actions; five tabs", row_head)
 
-        def riga_overview():
+        def row_overview():
             r = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-ov > .tpr-ch svg')].map(s => { const b = s.getBoundingClientRect(); return [b.left, b.top, b.width] })"); assert len(r) == 2, r
             assert abs(r[0][1] - r[1][1]) <= 2 and r[1][0] > r[0][0] + 100, ("side by side at 1280 px", r)
             band = pg.evaluate("(() => { const a = document.querySelector('#tp-det svg .ax').getBoundingClientRect(), b = document.querySelector('#tp-det svg .band').getBoundingClientRect(); return [a.left, a.right, b.left, b.right] })()")
@@ -248,9 +248,9 @@ try:
             pg.click("#tp-det .tpr-go"); assert pg.evaluate("window.__go") == "xic"
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height", h)
             pg.focus("#tp-det .tpr-ch:first-child svg"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]"); assert "6.500" in pg.inner_text("#tdati"); pg.keyboard.press("Escape")
-        step("TPRIGA overview: two charts side by side, shaded edges inside the axis, legend, tables of the data, height <= 420 px", riga_overview)
+        step("TPRIGA overview: two charts side by side, shaded edges inside the axis, legend, tables of the data, height <= 420 px", row_overview)
 
-        def riga_samples():
+        def row_samples():
             pg.click("#tr-t [data-tab=samples]"); settle()
             assert pg.locator("#tp-det .tpr-cell").count() == 6
             cells = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-cell')].map(c => [c.getBoundingClientRect().width, c.getBoundingClientRect().height, c.textContent.trim(), c.getAttribute('aria-label')])")
@@ -268,7 +268,7 @@ try:
             assert pg.locator("#tp-det .tpr-cell").count() == 12 and pg.locator("#tp-det .tpr-tw.sc").count() == 1, "inner scroll beyond 10 rows"
             assert pg.locator("#tp-det .tpr-cell .on-w, #tp-det .tpr-cell.on-w").count() > 0
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, ("panel height with 12 samples", h)
-        step("TPRIGA samples: one 24 px cell per sample with symbol and label, table, scroll beyond 10 rows, height", riga_samples)
+        step("TPRIGA samples: one 24 px cell per sample with symbol and label, table, scroll beyond 10 rows, height", row_samples)
 
         def cells_column():
             pg.evaluate("""() => { const d = document.createElement('div'); d.id = 'cc-t'; d.className = 'tp'; document.querySelector('#tp-right').appendChild(d);
@@ -284,7 +284,7 @@ try:
             pg.evaluate("document.getElementById('cc-t').remove()")
         step("Cells column: sample order, focusable symbols with help, area gradient", cells_column)
 
-        def riga_identity_quality():
+        def row_identity_quality():
             pg.click('#tr-t [data-tg="0"]'); settle()
             pg.click("#tr-t [data-tab=identity]"); settle()
             t = pg.inner_text("#tp-det"); assert "Neutral formula" in t and "[M+H]+ formula" not in t and "✗" in t and "✓" in t and "Persistent" in t, t
@@ -295,26 +295,26 @@ try:
             pg.click("#tr-t [data-tab=quality]"); settle()
             q = pg.inner_text("#tp-det dl.tpr-q"); assert "few points" in q and "0.11" in q and "142" in q and "absent, ratio 0.01" in q and "Left out of the view by" in q, q
             h = pg.evaluate("document.querySelector('#tp-det').getBoundingClientRect().height"); assert h <= 420, h
-        step("TPRIGA identity (candidates, proofs, +N) and quality (definition list)", riga_identity_quality)
+        step("TPRIGA identity (candidates, proofs, +N) and quality (definition list)", row_identity_quality)
 
-        def riga_partial():
+        def row_partial():
             pg.click("#tr-t [data-tab=overview]"); pg.click('#tr-t [data-tg="1"]'); settle()
             t = pg.inner_text("#tp-det .tpr-ov"); assert "Spectrum: not available for this row." in t, t
             assert pg.locator("#tp-det .tpr-ov svg").count() == 1 and pg.locator("#tp-det .tpr-line").count() == 0
             pg.click("#tr-t [data-tab=identity]"); assert "Identity: not available for this row." in pg.inner_text("#tp-det"), pg.inner_text("#tp-det")
             pg.click("#tr-t [data-tab=quality]"); assert "Quality: not available" in pg.inner_text("#tp-det")
             assert pg.locator("#tp-det .tpt-head .lvb.pd-1, #tp-det .tpt-head [class*=pd-]").count() == 0, "no prediction without a value"
-        step("TPRIGA: a model with only xic and samples says what is missing and draws no empty box", riga_partial)
+        step("TPRIGA: a model with only xic and samples says what is missing and draws no empty box", row_partial)
 
-        def riga_narrow():
+        def row_narrow():
             pg.click("#tr-t [data-tab=overview]"); pg.click('#tr-t [data-tg="2"]'); settle()
             pg.set_viewport_size({"width": 600, "height": 900}); settle()
             r = pg.evaluate("[...document.querySelectorAll('#tp-det .tpr-ov > .tpr-ch svg')].map(s => { const b = s.getBoundingClientRect(); return [b.left, b.top] })"); assert len(r) == 2, r
             assert r[1][1] > r[0][1] + 50 and abs(r[1][0] - r[0][0]) <= 2, ("one under the other at 600 px", r)
             pg.set_viewport_size({"width": 1280, "height": 900}); settle()
-        step("TPRIGA: the charts stack under 900 px", riga_narrow)
+        step("TPRIGA: the charts stack under 900 px", row_narrow)
 
-        def riga_axe(theme):
+        def row_axe(theme):
             def f():
                 pg.evaluate("t => { document.documentElement.dataset.theme = t; }", theme)
                 for tab in ("overview", "samples", "identity", "quality"):
@@ -327,8 +327,8 @@ try:
                 w = pg.evaluate("[document.querySelector('#tp-det').getBoundingClientRect().width, document.querySelector('#tr-host .tpt-wrap').clientWidth]"); assert w[0] <= w[1] + 2, w
                 pg.set_viewport_size({"width": 1280, "height": 900})
             return f
-        step("TPRIGA: axe without serious violations in the four tabs, light theme (+ shots 1280 and 390 px)", riga_axe("light"))
-        step("TPRIGA: axe without serious violations in the four tabs, dark theme (+ shots 1280 and 390 px)", riga_axe("dark"))
+        step("TPRIGA: axe without serious violations in the four tabs, light theme (+ shots 1280 and 390 px)", row_axe("light"))
+        step("TPRIGA: axe without serious violations in the four tabs, dark theme (+ shots 1280 and 390 px)", row_axe("dark"))
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

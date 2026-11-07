@@ -27,17 +27,17 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/")
-        attendi(pg, "document.querySelector('#pick')")
+        wait_for_js(pg, "document.querySelector('#pick')")
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")])
         pg.click("#opbtn"); ready(pg)
         pg.click("#np-map"); ready(pg)
-        attendi(pg, f"{M} && {M}._a")
+        wait_for_js(pg, f"{M} && {M}._a")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         frames(pg, 2)
 
         # Activate sight
         pg.click(".pnl.map [data-mz=mir]")
-        attendi(pg, f"MAPPA.st({M}).mir")
+        wait_for_js(pg, f"MAPPA.st({M}).mir")
         frames(pg, 2)
         box = lambda: pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
         at = lambda fx, fy: (lambda c: (c[0] + c[2] * fx, c[1] + c[3] * fy))(box())
@@ -45,7 +45,7 @@ try:
         # Move mouse over map center to set sight point
         x, y = at(.5, .5)
         pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-        try: attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+        try: wait_for_js(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
         except TimeoutError: raise AssertionError("sight never opened its spectrum and XIC: " + pg.evaluate(f"JSON.stringify({{mir: MAPPA.st({M}).mir, hov: MAPPA.st({M}).hov, lock: MAPPA.st({M}).lock, spec: !!{M}._mz.spec, xic: !!{M}._mz.xic, a: !!{M}._a, box: {box()!r}, mouse: [{x}, {y}], panels: E.panels.map(q => q.type)}})"))
         frames(pg, 2)
 
@@ -89,7 +89,7 @@ try:
             frames(pg, 3)
             x, y = at(.5, .5)
             pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-            attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+            wait_for_js(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
             frames(pg, 2)
             res = check_alignment()
             assert res is not None, "alignment data not available"
@@ -102,10 +102,10 @@ try:
         def step_resize():
             # Resize viewport to 1280px (narrower)
             pg.set_viewport_size({"width": 1280, "height": 850})
-            fermo(pg, ".pnl.map canvas")
+            wait_still(pg, ".pnl.map canvas")
             x, y = at(.5, .5)
             pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-            attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+            wait_for_js(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
             frames(pg, 2)
             res = check_alignment()
             assert res is not None, "alignment data not available after resize"
@@ -114,19 +114,19 @@ try:
 
             # Fullscreen toggle
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f")
-            attendi(pg, f"{M}.el.classList.contains('max')")
-            fermo(pg, ".pnl.map canvas")
+            wait_for_js(pg, f"{M}.el.classList.contains('max')")
+            wait_still(pg, ".pnl.map canvas")
             x, y = at(.5, .5)
             pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-            attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+            wait_for_js(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
             frames(pg, 2)
             res_fs = check_alignment()
             assert res_fs is not None, "alignment data not available in fullscreen"
             assert res_fs["diff_y"] <= 1.0, f"m/z alignment error in fullscreen: {res_fs['diff_y']}px"
             assert res_fs["diff_x"] <= 1.0, f"RT alignment error in fullscreen: {res_fs['diff_x']}px"
             pg.keyboard.press("f")
-            attendi(pg, f"!{M}.el.classList.contains('max')")
-            fermo(pg, ".pnl.map canvas")
+            wait_for_js(pg, f"!{M}.el.classList.contains('max')")
+            wait_still(pg, ".pnl.map canvas")
         step("Passo 3b: viewport resize and full screen: alignment preserved (<=1px)", step_resize)
 
         r.close()

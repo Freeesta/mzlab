@@ -11,18 +11,18 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("E.panels.filter(q => q.type === 'spec').slice(1).forEach(q => q.close && q.close())"); attendi(pg, "stackOrder().length === 2")
+        pg.evaluate("E.panels.filter(q => q.type === 'spec').slice(1).forEach(q => q.close && q.close())"); wait_for_js(pg, "stackOrder().length === 2")
         order = lambda: pg.evaluate("stackOrder().map(q => q.id)")
         rows = lambda: pg.evaluate("LAYOUT.righeDi(stackOrder()).map(r => r.map(q => q.id))")
         def drag(src, dst, fx, fy, release=True):
             seq = pg.evaluate("HSEQ")
-            attendi(pg, "stackOrder().every(q => Math.abs(q.el.getBoundingClientRect().top - document.querySelector('#dpanels').getBoundingClientRect().top - q.y) < 1.5)")       # the last move has settled
+            wait_for_js(pg, "stackOrder().every(q => Math.abs(q.el.getBoundingClientRect().top - document.querySelector('#dpanels').getBoundingClientRect().top - q.y) < 1.5)")       # the last move has settled
             b = pg.evaluate("(i) => { const q = stackOrder()[i]; q.el.dispatchEvent(new MouseEvent('mouseover')); const g = q.el.querySelector('.aff-grip').getBoundingClientRect(); return [g.x + g.width / 2, g.y + g.height / 2]; }", src)
             t = pg.evaluate("(i) => { const r = stackOrder()[i].el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }", dst)
             pg.mouse.move(*b); pg.mouse.down(); pg.mouse.move(b[0] + 20, b[1] + 20, steps=3)
-            pg.mouse.move(t[0] + t[2] * fx, t[1] + t[3] * fy, steps=6); attendi(pg, "document.querySelector('.aff-prev') !== null")
+            pg.mouse.move(t[0] + t[2] * fx, t[1] + t[3] * fy, steps=6); wait_for_js(pg, "document.querySelector('.aff-prev') !== null")
             lab = pg.evaluate("(() => { const e = document.querySelector('.aff-prev'); return e ? e.textContent : null })()")
-            if release: pg.mouse.up(); attendi(pg, f"HSEQ > {seq} && !document.querySelector('.aff-prev')")
+            if release: pg.mouse.up(); wait_for_js(pg, f"HSEQ > {seq} && !document.querySelector('.aff-prev')")
             return lab
         ids = order(); assert len(ids) == 2, ids
         top, bot = ids
@@ -39,9 +39,9 @@ try:
             assert order() == [top, bot], order()
         step("the top corners are also «above»; the TIC dropped above its own spectrum goes alone past it", corner)
         def keys():
-            pg.evaluate("stackOrder()[0].el.querySelector('.aff-grip').focus()"); pg.keyboard.press("Alt+ArrowDown"); attendi(pg, f"stackOrder()[0].id === {bot}")
+            pg.evaluate("stackOrder()[0].el.querySelector('.aff-grip').focus()"); pg.keyboard.press("Alt+ArrowDown"); wait_for_js(pg, f"stackOrder()[0].id === {bot}")
             assert order() == [bot, top], order()
-            pg.evaluate("stackOrder()[1].el.querySelector('.aff-grip').focus()"); pg.keyboard.press("Alt+ArrowUp"); attendi(pg, f"stackOrder()[0].id === {top}")
+            pg.evaluate("stackOrder()[1].el.querySelector('.aff-grip').focus()"); pg.keyboard.press("Alt+ArrowUp"); wait_for_js(pg, f"stackOrder()[0].id === {top}")
             assert order() == [top, bot], order()
         step("Alt+arrows swap the TIC with its own spectrum too", keys)
         def left():
@@ -63,7 +63,7 @@ try:
         def widen():
             # closing one of two side-by-side panels gives the other the whole row
             assert [len(x) for x in rows()] == [2], rows()
-            pg.evaluate("chiudiPannello(stackOrder()[1])"); attendi(pg, "stackOrder().length === 1")
+            pg.evaluate("chiudiPannello(stackOrder()[1])"); wait_for_js(pg, "stackOrder().length === 1")
             w = pg.evaluate("[stackOrder()[0].el.getBoundingClientRect().width, document.querySelector('#dpanels').getBoundingClientRect().width]")
             assert abs(w[0] - w[1]) < 2, w
         step("the panel left alone in its row returns to the full width", widen)

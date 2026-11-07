@@ -25,7 +25,7 @@ def count(pg, label): return pg.evaluate("(l) => E.files.filter(f => f.ugrp === 
 def label(pg, name): return pg.evaluate(f"({LABELS})[{name!r}]")
 def counts(pg): return (count(pg, "MQ"), count(pg, "TW"), pg.evaluate("E.files.filter(f => !f.gone && !f.ugrp).length"))
 def tick(pg, names):
-    pg.evaluate("(ns) => { E.files.forEach(f => { f.vis = ns.includes(fileBase(f.file).replace(/\\.mzML$/, '')); }); renderFileList(); }", names); fermo(pg, "#flst")
+    pg.evaluate("(ns) => { E.files.forEach(f => { f.vis = ns.includes(fileBase(f.file).replace(/\\.mzML$/, '')); }); renderFileList(); }", names); wait_still(pg, "#flst")
 def row(pg, name):
     k = pg.evaluate(f"E.files.findIndex(f => fileBase(f.file).replace(/\\.mzML$/, '') === {name!r})")
     return pg.locator(f'#flst .nm[data-k="{k}"]').locator("xpath=ancestor::div[contains(@class,'fl')][1]")
@@ -60,8 +60,8 @@ try:
         if AXE: pg.add_script_tag(path=AXE)
         BOX = "['#tools', '#dpanels', '#sb-header'].map(s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round).join(); }).join('|')"
         def matrix():
-            pg.click("#sb-by"); attendi(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
-            pg.locator(".gby-menu [role=menuitemradio]", has_text="Matrix").first.click(); attendi(pg, "!!E.ugBy && E.ugBy.by === 'matrix'", 10000); fermo(pg, "#flst")
+            pg.click("#sb-by"); wait_for_js(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
+            pg.locator(".gby-menu [role=menuitemradio]", has_text="Matrix").first.click(); wait_for_js(pg, "!!E.ugBy && E.ugBy.by === 'matrix'", 10000); wait_still(pg, "#flst")
             assert counts(pg) == (20, 9, 1), counts(pg)
             tick(pg, [])
         step("starting point: Group by → Matrix (MQ 20, TW 9, one file out), nothing ticked", matrix)
@@ -69,37 +69,37 @@ try:
             seen = []
             drag(pg, "MQ_PMS_T00", HEAD("TW"), hold=lambda: seen.extend([pg.evaluate(f"document.querySelector('{HEAD('TW')}').classList.contains('gdnd-over')"), pg.evaluate(LIVE)]))
             assert seen == [True, "Move to TW · 1 file"], seen
-            attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); fermo(pg, "#flst")
+            wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); wait_still(pg, "#flst")
             assert label(pg, "MQ_PMS_T00") == "TW" and counts(pg) == (19, 10, 1), counts(pg)
             assert pg.evaluate(LIVE) == "Moved to TW", pg.evaluate(LIVE)
             assert pg.evaluate("document.querySelectorAll('#flst .gdnd-over, #flst.gdnd-gap').length") == 0
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
-            redo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 5000); assert counts(pg) == (19, 10, 1), counts(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); fermo(pg, "#flst")
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
+            redo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 5000); assert counts(pg) == (19, 10, 1), counts(pg)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); wait_still(pg, "#flst")
             # the first history step lets the work area settle (the table of the empty work area hides): the boxes are taken from here
             global box0; box0 = pg.evaluate(BOX)
         step("a row dragged onto the TW header joins TW (header highlighted, «Move to TW · 1 file», «Moved to TW»); one undo and one redo", one)
         def three():
             names = ["MQ_N2_T00", "MQ_N2_T01", "MQ_N2_T02"]; tick(pg, names)
             drag(pg, "MQ_N2_T01", HEAD("TW"), hold=lambda: said("Move to TW · 3 files"))
-            attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); fermo(pg, "#flst")
+            wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); wait_still(pg, "#flst")
             assert all(label(pg, n) == "TW" for n in names) and counts(pg) == (17, 12, 1), counts(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
-            redo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 5000); assert counts(pg) == (17, 12, 1), counts(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); tick(pg, [])
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
+            redo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 5000); assert counts(pg) == (17, 12, 1), counts(pg)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); tick(pg, [])
         step("three ticked files travel together, one undo step", three)
         def ungroup():
             drag(pg, "TW_AIR_T00", AUTO, hold=lambda: said("Remove from groups · 1 file"))
-            attendi(pg, "!E.files.find(f => fileBase(f.file).startsWith('TW_AIR_T00')).ugrp", 10000); fermo(pg, "#flst")
+            wait_for_js(pg, "!E.files.find(f => fileBase(f.file).startsWith('TW_AIR_T00')).ugrp", 10000); wait_still(pg, "#flst")
             assert counts(pg) == (20, 8, 2), counts(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
             # the gap after the last group: the free space under the list, inside the pane
             b = pg.locator("#flst").bounding_box(); host = pg.locator("#sb-panels").bounding_box()
             assert host["y"] + host["height"] > b["y"] + b["height"] + 20, "no free space after the last group"
             drag(pg, "TW_H2O2_T05", (b["x"] + b["width"] / 2, b["y"] + b["height"] + 12))
-            attendi(pg, "!E.files.find(f => fileBase(f.file).startsWith('TW_H2O2_T05')).ugrp", 10000); fermo(pg, "#flst")
+            wait_for_js(pg, "!E.files.find(f => fileBase(f.file).startsWith('TW_H2O2_T05')).ugrp", 10000); wait_still(pg, "#flst")
             assert counts(pg) == (20, 8, 2), counts(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000)
         step("dropped on the Ungrouped header, or on the gap after the last group, a file leaves its group; undo", ungroup)
         def midflight():
             pg.evaluate("document.querySelector('#flst .fl').dataset.mark = '1'")
@@ -110,9 +110,9 @@ try:
                 assert pg.evaluate("!!document.querySelector('#flst .fl[data-mark]')"), "a repaint during the drag rebuilt the list"
             n0 = count(pg, "MQ")
             drag(pg, name, HEAD("TW"), hold=arrival)
-            attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); fermo(pg, "#flst")
+            wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); wait_still(pg, "#flst")
             assert count(pg, "MQ") == n0 - 1 and pg.evaluate("document.querySelectorAll('#flst .fl').length") >= 30
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000)
         step("a repaint of the list during a drag waits (the dragged row stays), the drop still works", midflight)
         def touch():
             def finger(name, target, esc=False):
@@ -120,42 +120,42 @@ try:
                 x, y = centre(row(pg, name)); tx, ty = centre(pg.locator(target))
                 ev = lambda t, px, py: f"el.dispatchEvent(new PointerEvent('{t}', {{bubbles: true, clientX: {px}, clientY: {py}, button: 0, pointerId: 7, pointerType: 'touch'}}))"
                 pg.evaluate(f"(() => {{ const el = document.querySelector('#flst .nm[data-k=\"{k}\"]').closest('.fl'); {ev('pointerdown', x, y)}; }})()")
-                attendi(pg, "window.GDND && GDND.busy()", 5000)
+                wait_for_js(pg, "window.GDND && GDND.busy()", 5000)
                 pg.evaluate(f"(() => {{ const el = document.querySelector('#flst .nm[data-k=\"{k}\"]').closest('.fl'); {ev('pointermove', tx, ty)}; }})()")
                 assert pg.evaluate(f"document.querySelector('{target}').classList.contains('gdnd-over')"), "the header is not highlighted"
                 if esc: pg.keyboard.press("Escape")
                 pg.evaluate(f"(() => {{ const el = document.querySelector('#flst .nm[data-k=\"{k}\"]').closest('.fl'); {ev('pointerup', tx, ty)}; }})()")
             finger("TW_blk", HEAD("MQ"))
-            attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); fermo(pg, "#flst")
+            wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); wait_still(pg, "#flst")
             assert label(pg, "TW_blk") == "MQ" and counts(pg) == (21, 8, 1), counts(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
-            finger("TW_blk", HEAD("MQ"), esc=True); fermo(pg, "#flst")
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
+            finger("TW_blk", HEAD("MQ"), esc=True); wait_still(pg, "#flst")
             assert label(pg, "TW_blk") == "TW" and counts(pg) == (20, 9, 1), counts(pg)
             assert pg.evaluate(LIVE) == "Move cancelled", pg.evaluate(LIVE)
             assert pg.evaluate("E.ugBy.by") == "matrix"
         step("a finger: long press, move over a header, lift drops it; Esc during the drag cancels (nothing changes)", touch)
         def menu():
-            row(pg, "MQ_O2_T05").click(button="right"); attendi(pg, "!document.querySelector('#ctx').hidden", 5000)
+            row(pg, "MQ_O2_T05").click(button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden", 5000)
             pg.locator("#ctx div[role=menuitem]", has_text="Move to group").click()
-            attendi(pg, "[...document.querySelectorAll('#ctx div[role=menuitem]')].some(d => d.textContent === 'TW')", 5000)
+            wait_for_js(pg, "[...document.querySelectorAll('#ctx div[role=menuitem]')].some(d => d.textContent === 'TW')", 5000)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div[role=menuitem]')].map(d => d.textContent)")
             assert items[:2] == ["MQ", "TW"] and "New group…" in items and "Ungrouped" in items, items
-            pg.locator("#ctx div[role=menuitem]", has_text="TW").click(); fermo(pg, "#flst")
+            pg.locator("#ctx div[role=menuitem]", has_text="TW").click(); wait_still(pg, "#flst")
             assert label(pg, "MQ_O2_T05") == "TW" and counts(pg) == (19, 10, 1), counts(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000)
             # a new group: the name offered comes from the names of the files
-            tick(pg, ["MQ_O2_T00", "MQ_O2_T01"]); row(pg, "MQ_O2_T00").click(button="right"); attendi(pg, "!document.querySelector('#ctx').hidden", 5000)
+            tick(pg, ["MQ_O2_T00", "MQ_O2_T01"]); row(pg, "MQ_O2_T00").click(button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden", 5000)
             pg.locator("#ctx div[role=menuitem]", has_text="Move to group").click()
-            pg.locator("#ctx div[role=menuitem]", has_text="New group").click(); attendi(pg, "document.querySelector('#askdlg').open", 5000)
+            pg.locator("#ctx div[role=menuitem]", has_text="New group").click(); wait_for_js(pg, "document.querySelector('#askdlg').open", 5000)
             offered = pg.input_value("#askin"); assert offered == "MQ_O2", offered
-            pg.fill("#askin", "Oxygen"); pg.click("#askok"); fermo(pg, "#flst")
+            pg.fill("#askin", "Oxygen"); pg.click("#askok"); wait_still(pg, "#flst")
             assert count(pg, "Oxygen") == 2 and counts(pg) == (18, 9, 1), counts(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg); tick(pg, [])
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg); tick(pg, [])
         step("right click → «Move to group ▸» lists the groups; «New group…» offers the common name of the ticked files", menu)
         def keyboard():
             tick(pg, [])
             def press(name, keys):
-                row(pg, name).locator("input").focus(); pg.keyboard.press(keys); fermo(pg, "#flst")
+                row(pg, name).locator("input").focus(); pg.keyboard.press(keys); wait_still(pg, "#flst")
             press("MQ_N2_T00", "Control+Shift+ArrowDown"); assert label(pg, "MQ_N2_T00") == "TW", label(pg, "MQ_N2_T00")
             assert pg.evaluate(LIVE) == "Moved to TW", pg.evaluate(LIVE)
             assert pg.evaluate("document.activeElement.matches('input[type=checkbox]') && document.activeElement.closest('.fl').textContent.includes('MQ_N2_T00')"), "the focus left the row"
@@ -164,16 +164,16 @@ try:
             press("MQ_N2_T00", "Control+Shift+ArrowUp"); assert label(pg, "MQ_N2_T00") == "TW", label(pg, "MQ_N2_T00")
             press("MQ_N2_T00", "Control+Shift+ArrowUp"); assert label(pg, "MQ_N2_T00") == "MQ", label(pg, "MQ_N2_T00")
             press("MQ_N2_T00", "Control+Shift+ArrowUp"); assert pg.evaluate(LIVE) == "No more groups in this direction", pg.evaluate(LIVE)
-            for _ in range(4): undo(pg); fermo(pg, "#flst")
-            attendi(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
+            for _ in range(4): undo(pg); wait_still(pg, "#flst")
+            wait_for_js(pg, "E.ugBy && E.ugBy.by === 'matrix'", 5000); assert counts(pg) == (20, 9, 1), counts(pg)
         step("Ctrl+Shift+↓/↑ on a row moves its file to the next / previous group, said in the live region, the focus stays; four undos", keyboard)
         def still():
             cls = pg.evaluate("window.__cls"); assert cls < 0.001, f"layout shift {cls}"
             assert pg.evaluate(BOX) == box0, (box0, pg.evaluate(BOX))
         step("no layout shift while dragging and regrouping, same boxes of the tools and the header", still)
         def reload():
-            drag(pg, "MQ_PMS_T00", HEAD("TW")); attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000)
-            saved(pg); pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.some(f => f.ugrp)", 120000); ready(pg)
+            drag(pg, "MQ_PMS_T00", HEAD("TW")); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000)
+            saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.some(f => f.ugrp)", 120000); ready(pg)
             assert label(pg, "MQ_PMS_T00") == "TW" and pg.evaluate("E.ugBy.by") == "custom"
         step("a reload keeps the labels and the key «custom»", reload)
         def axe():
@@ -182,7 +182,7 @@ try:
             v = pg.evaluate(RUN, "#sb-panel-file"); assert not v, v
         step("axe: the side list after the moves has no serious or critical violation", axe)
         def stable():
-            pg.evaluate("renderFileList()"); drawer(pg); fermo(pg, "#flst")
+            pg.evaluate("renderFileList()"); drawer(pg); wait_still(pg, "#flst")
             assert not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS")
         step("no engine miss", stable)
     r.close()

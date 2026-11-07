@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi, frames, axe_path; PORT = free_port(); AXE = axe_path()
+from lib import free_port, wait_for_js, frames, axe_path; PORT = free_port(); AXE = axe_path()
 subprocess.run([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], check=True)      # the site with the Rust engine (the grid asks it for the CSV and the checks)
 site = ROOT / "site"
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -23,11 +23,11 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
         errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
-        pg.click('#nav button[data-v="flow"]'); attendi(pg, "document.querySelectorAll('.fln').length === 2")
+        pg.click('#nav button[data-v="flow"]'); wait_for_js(pg, "document.querySelectorAll('.fln').length === 2")
         pg.evaluate("MZLAB_RUST_READY.then(() => fetch('api/session').then(r => r.text()))"); frames(pg, 30)      # the first sync of the session empties E.files: push after it
         pg.evaluate("n => { for (let i = 0; i < n; i++) E.files.push({file: 'run' + String(i).padStart(3, '0') + '.mzML', name: 'run' + i}); }", N)
-        pg.click('.fln:has-text("Import data")'); attendi(pg, "!!document.querySelector('.flx-imp [role=grid]')")
-        attendi(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N + 1}'")
+        pg.click('.fln:has-text("Import data")'); wait_for_js(pg, "!!document.querySelector('.flx-imp [role=grid]')")
+        wait_for_js(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N + 1}'")
         g = ".flx-imp [role=grid]"
         check("opens by itself", pg.locator(g).count() == 1)
         check("virtual rows", 0 < pg.locator(f"{g} .mg-bd [role=row]").count() < 60, pg.locator(f"{g} .mg-bd [role=row]").count())
@@ -46,7 +46,7 @@ try:
         check("paste says", "cells written" in said, said[:300])          # read in the same task as the paste: the check that follows the edit replaces this line with its own summary
         check("cell value", pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text() == "MQ-N2-T0" or pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text() == "TW-N2-T0", pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text())
         # the saved document: its SHA is the canonical one
-        attendi(pg, """(async () => { const S = FLOW.current, i = (S.plan.inputs || []).find(x => x.type === 'samples') || S.metaInput; return !!i && /^[0-9a-f]{64}$/.test(i.sha256) && (await CDOC.canonical(S.samples[i.name])).sha256 === i.sha256; })()""")
+        wait_for_js(pg, """(async () => { const S = FLOW.current, i = (S.plan.inputs || []).find(x => x.type === 'samples') || S.metaInput; return !!i && /^[0-9a-f]{64}$/.test(i.sha256) && (await CDOC.canonical(S.samples[i.name])).sha256 === i.sha256; })()""")
         same = pg.evaluate("""async () => { const S = FLOW.current, i = (S.plan.inputs || []).find(x => x.type === 'samples') || S.metaInput; const d = S.samples[i.name], c = await CDOC.canonical(d); return [c.sha256, i.sha256, d.schema, d.campioni.length]; }""")
         check("sha", same[0] == same[1] and same[2] == "campioni/3" and same[3] == N, same)
         check("window of ids", pg.evaluate("S0 = FLOW.current, Object.values(FLOW.current.samples)[0].campioni[7].campione_id") in ("TW-C-T1", "MQ-C-T1", "TW-N2-T1", "TW-O2-T1", "MQ-AIR-T1", "TW-AIR-T1", "TW-H2O2-T1", "TW-PMS-T1", "MQ-PMS-T1", "MQ-O2-T1", "MQ-N2-T1", "MQ-H2O2-T1") or True)
@@ -67,26 +67,26 @@ try:
         pg.click(f"{g} button[aria-label='Sort by Time']"); check("sort", pg.get_attribute(f"{g} [role=columnheader]:has(button[aria-label='Sort by Time'])", "aria-sort") == "ascending")
         pg.click(f"{g} button[aria-label='Sort by Time']"); check("sort desc", pg.get_attribute(f"{g} [role=columnheader]:has(button[aria-label='Sort by Time'])", "aria-sort") == "descending")
         pg.select_option(".flx-imp select[aria-label='Filter column']", label="Condition"); pg.fill(".flx-imp input[aria-label='Filter text']", "PMS"); pg.keyboard.press("Enter")
-        try: attendi(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N // 6 + 1}'")
+        try: wait_for_js(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N // 6 + 1}'")
         except TimeoutError: raise AssertionError("filter never reached %d rows: %s" % (N // 6, pg.evaluate("(() => { const g = document.querySelector('.flx-imp [role=grid]'); return JSON.stringify({rows: g.getAttribute('aria-rowcount'), chips: document.querySelectorAll('.mg-chip').length, col: document.querySelector('.flx-imp select[aria-label=\"Filter column\"]').value, text: document.querySelector('.flx-imp input[aria-label=\"Filter text\"]').value, bad: %s}) })()" % json.dumps(bad))))
         check("filter", pg.locator(".mg-chip").count() == 1)
-        pg.click(".mg-chip button"); attendi(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N + 1}'")
+        pg.click(".mg-chip button"); wait_for_js(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N + 1}'")
         # a free column
         pg.click(".flx-imp button[aria-label^='Add, rename']"); pg.fill(".flx-imp input[aria-label='Name of the new column']", "Operator"); pg.click(".flx-imp button[aria-label='Add the column']")
-        attendi(pg, "document.querySelectorAll('.flx-imp [role=columnheader]').length === 22")
+        wait_for_js(pg, "document.querySelectorAll('.flx-imp [role=columnheader]').length === 22")
         check("free column", pg.locator(f"{g} button[aria-label='Sort by Operator']").count() == 1)
         # a name pattern over the file names (run000 -> no ID in it: the parts stay empty, the preview says so)
         pg.click(".flx-imp button[aria-label^='Fill the grid']"); pg.fill(".flx-imp input[aria-label='Name pattern']", "run{replica}"); pg.click(".flx-imp button[aria-label^='Preview']")
-        attendi(pg, "!!document.querySelector('.flx-imp .mg-panel mark')")
+        wait_for_js(pg, "!!document.querySelector('.flx-imp .mg-panel mark')")
         check("pattern preview", "names match" in pg.inner_text(".flx-imp .mg-panel") and pg.locator(".mg-panel sub").first.inner_text().strip() == "replica", pg.inner_text(".flx-imp .mg-panel")[:200])
-        pg.click(".flx-imp button[aria-label^='Write the captured']"); attendi(pg, "/Pattern applied/.test(document.querySelector('.flx-imp').textContent)")
+        pg.click(".flx-imp button[aria-label^='Write the captured']"); wait_for_js(pg, "/Pattern applied/.test(document.querySelector('.flx-imp').textContent)")
         # CSV out
         with pg.expect_download() as dl: pg.click(".flx-imp button[aria-label='Download the grid as CSV']")
         txt = Path(dl.value.path()).read_text()
         check("csv export", txt.splitlines()[0].startswith("file") or "file" in txt.splitlines()[0], txt[:120]); check("csv rows", len(txt.strip().splitlines()) == N + 1, len(txt.splitlines()))
         # warnings of valida: a status line for the active cell, a mark on the cell
         pg.keyboard.press("Escape")
-        attendi(pg, "/guessed from file names|No problems|other problem|warning/.test(document.querySelector('.flx-imp').textContent)")
+        wait_for_js(pg, "/guessed from file names|No problems|other problem|warning/.test(document.querySelector('.flx-imp').textContent)")
         check("status roles", pg.locator(".flx-imp [role=status]").count() >= 2)
         check("colours from variables", "var(--" in pg.evaluate("[...document.styleSheets].flatMap(s => { try { return [...s.cssRules].map(r => r.cssText); } catch (e) { return []; } }).filter(t => t.includes('.mg-err')).join(' ')"))
         if AXE:
@@ -96,12 +96,12 @@ try:
         # times read from file names: said in plain words, one click confirms them all and the check runs again
         pg.evaluate("names => { E.files.length = 0; for (const n of names) E.files.push({file: n + '.mzML', name: n}); }", ["X_T00", "X_T01", "X_T02", "X_T05", "X_T2p5", "X_T10", "X_T24"])
         pg.click(".flx-imp button[aria-label='Take the roles, times and data of the files open in Data']")
-        attendi(pg, "/\\d+ times? guessed from file names: check/.test(document.querySelector('.flx-imp').textContent)")
+        wait_for_js(pg, "/\\d+ times? guessed from file names: check/.test(document.querySelector('.flx-imp').textContent)")
         says = pg.inner_text(".flx-imp [role=status]"); check("plain summary", "errors" not in says and "warnings" not in says, says)
         btn = ".flx-imp button[aria-label='Mark every time guessed from the file names as confirmed']"
         check("confirm visible", pg.is_visible(btn)); pg.screenshot(path=str(HERE / "shots" / "flow_meta_grid_guessed.png")) if (HERE / "shots").is_dir() else None
         pg.click(btn)
-        attendi(pg, "!/guessed from file names/.test(document.querySelector('.flx-imp').textContent) && /No problems|other problem|warning/.test(document.querySelector('.flx-imp').textContent)")
+        wait_for_js(pg, "!/guessed from file names/.test(document.querySelector('.flx-imp').textContent) && /No problems|other problem|warning/.test(document.querySelector('.flx-imp').textContent)")
         check("confirm gone", not pg.is_visible(btn))
         check("no page errors", not errs, errs[:3])
         b.close()

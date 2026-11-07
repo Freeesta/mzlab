@@ -244,7 +244,7 @@ def rules_frame(aggiorna: bool = False) -> list[str]:
 
 EXPECTED_BASE = indice.ROOT / "tools" / "attese_base.json"
 def fixed_expectations() -> dict[str, int]:
-    """Per e2e script of tests_e2e/: fixed pauses (wait_for_timeout / time.sleep); wait on the STATE instead (attendi() in lib.py)."""
+    """Per e2e script of tests_e2e/: fixed pauses (wait_for_timeout / time.sleep); wait on the STATE instead (wait_for_js() in lib.py)."""
     import re
     rx = re.compile(r"\bwait_for_timeout\(|\btime\.sleep\(")
     out = {}
@@ -260,7 +260,7 @@ def rules_expected(aggiorna: bool = False) -> list[str]:
     """Fixed pauses in the e2e scripts can only go down, file by file; a new script cannot have any (base: tools/attese_base.json)."""
     now = fixed_expectations()
     base = json.loads(EXPECTED_BASE.read_text(encoding="utf-8")) if EXPECTED_BASE.exists() else dict(now)
-    bad = [f"fixed pauses grew in {f}: {n} (base {base.get(f, 0)}); wait on the state with attendi() in tests_e2e/lib.py" for f, n in sorted(now.items()) if n > base.get(f, 0)]
+    bad = [f"fixed pauses grew in {f}: {n} (base {base.get(f, 0)}); wait on the state with wait_for_js() in tests_e2e/lib.py" for f, n in sorted(now.items()) if n > base.get(f, 0)]
     if aggiorna and not bad:
         EXPECTED_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return bad

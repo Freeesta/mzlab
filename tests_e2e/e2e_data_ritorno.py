@@ -18,13 +18,13 @@ try:
         r.b = p.chromium.launch()
         pg = r.b.new_page(viewport={"width": 1500, "height": 1000}, reduced_motion="no-preference")
         pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop"); attendi(pg, "window.qqReady === true", 60000)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
         stage(pg, FILES); pg.wait_for_selector("#dpanels .pnl canvas", timeout=60000); ready(pg)
         for other in ("draw", "tpmine"):
-            pg.click(f"nav button[data-v={other}]"); attendi(pg, f"S.view === '{other}'"); ready(pg); frames(pg, 3)
+            pg.click(f"nav button[data-v={other}]"); wait_for_js(pg, f"S.view === '{other}'"); ready(pg); frames(pg, 3)
             before = pg.evaluate("[...document.querySelectorAll('#dpanels>.pnl, #dfiles')].map(e => { const r = e.getBoundingClientRect(); return r.width })")
             seq = pg.evaluate(SAMPLE)
-            attendi(pg, "S.view === 'data'"); ready(pg)
+            wait_for_js(pg, "S.view === 'data'"); ready(pg)
             final = pg.evaluate("[...document.querySelectorAll('#dpanels>.pnl, #dfiles')].map(e => { const r = e.getBoundingClientRect(); return [e.id || e.className.split(' ')[0], Math.round(r.left * 10) / 10, Math.round(r.top * 10) / 10] })")
             assert len(final) >= 2, f"no Data panels found: {final}"
             bad = [s for s in seq if s != final]

@@ -6,7 +6,7 @@ import socket, hashlib, json, os, shutil, subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port
-from lib import copia as lib_copia
+from lib import copy_file as lib_copy_file
 
 PORT = free_port()
 errs = []
@@ -24,7 +24,7 @@ if not cli.exists():
 OUT = ROOT / "site" / "static" / "normative"
 shutil.rmtree(OUT, ignore_errors=True)
 subprocess.run([str(cli), "normative", "pack", str(ROOT / "normative"), str(OUT)], check=True, capture_output=True)
-lib_copia(ROOT / "mzlab" / "web" / "normative-scarica.js", ROOT / "site" / "static" / "normative-scarica.js")
+lib_copy_file(ROOT / "mzlab" / "web" / "normative-scarica.js", ROOT / "site" / "static" / "normative-scarica.js")
 RAW = (OUT / "normative.mzsus").read_bytes()
 CAT = json.loads((OUT / "catalogo.json").read_text(encoding="utf-8"))
 (OUT / "normative.mzsus").unlink()          # the raw file is not served: the pieces are the package

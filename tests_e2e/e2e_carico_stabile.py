@@ -6,7 +6,7 @@ site and the .wasm (python tools/build_site.py + the CI build). Run: python3 tes
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, attendi, free_port
+from lib import ROOT, wait_for_js, free_port
 import synth
 
 PORT = free_port()
@@ -48,8 +48,8 @@ try:
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         pg.evaluate(PROBE)
         pg.set_input_files("#pick", FILES)
-        attendi(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {N} && !PROGRESSO.busy() && UPBUSY === 0 && OPENNOW.busy() === 0", 240000)
-        attendi(pg, "(window.__end = window.__end || performance.now()) && performance.now() - window.__end > 600", 10000)      # some frames after the end
+        wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {N} && !PROGRESSO.busy() && UPBUSY === 0 && OPENNOW.busy() === 0", 240000)
+        wait_for_js(pg, "(window.__end = window.__end || performance.now()) && performance.now() - window.__end > 600", 10000)      # some frames after the end
         snaps = pg.evaluate("window.__snap"); ls = pg.evaluate("window.__ls")
         print("   frames of the loading:", len(snaps))
         import json
@@ -79,7 +79,7 @@ try:
             assert tot < 0.002, tot
         step("no layout-shift of the work area from the first row to the end", shifts)
         def done():
-            attendi(pg, "document.querySelectorAll('#fl-up [data-up]').length === 0", 30000)
+            wait_for_js(pg, "document.querySelectorAll('#fl-up [data-up]').length === 0", 30000)
             assert pg.evaluate("document.getElementById('v-workspace').dataset.work === 'panels' && E.files.filter(f => f.vis && !f.gone).length === 1"), "only the first file opened by itself"
             assert not pg.is_visible("#drop"), "drop area gone with the open panels"
             assert pg.evaluate("document.querySelectorAll('#flist input[data-k=use]').length") >= N

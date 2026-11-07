@@ -22,7 +22,7 @@ def run(port, wd, files, body):
     finally: r.close()
 def ms2(pg):
     open_ms2(pg); pg.locator('#flst [data-pg="229.1"]').dblclick()
-    attendi(pg, "E.panels.some(p => p.tab === 'ms2' && p.type === 'spec')"); ready(pg)
+    wait_for_js(pg, "E.panels.some(p => p.tab === 'ms2' && p.type === 'spec')"); ready(pg)
     top = pg.evaluate(TTL("E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom')")); spec = pg.evaluate(TTL("E.panels.find(p => p.tab === 'ms2' && p.type === 'spec')"))
     assert top == "TIC · MS² · precursore 229.1", top        # two precursors in the files: the trace is limited to one
     assert spec == "MS² di 229.1" and top != spec, spec

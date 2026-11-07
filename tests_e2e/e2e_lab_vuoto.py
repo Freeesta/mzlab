@@ -7,7 +7,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
-from lib import free_port, attendi; from lib_sito import add_wasm  # noqa: E402
+from lib import free_port, wait_for_js; from lib_sito import add_wasm  # noqa: E402
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -44,7 +44,7 @@ try:
         pg.on("popup", lambda q: q.close()); pg.on("filechooser", lambda fc: None); pg.on("dialog", lambda d: d.dismiss())
         pg.goto(URL, wait_until="commit")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("crossOriginIsolated === true", timeout=60000); pg.wait_for_selector("#drop", timeout=120000)
-        attendi(pg, "typeof setView === 'function' && typeof CMD !== 'undefined' && typeof PALETTE !== 'undefined'", 120000)
+        wait_for_js(pg, "typeof setView === 'function' && typeof CMD !== 'undefined' && typeof PALETTE !== 'undefined'", 120000)
         def check(what):
             eb = pg.evaluate(GONE)
             if eb: bad.append(f"{what}: error box {eb[:200]}")
@@ -53,7 +53,7 @@ try:
             assert not bad, "\n".join(dict.fromkeys(bad))
         def back(view):
             pg.keyboard.press("Escape"); pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d => d.close()); PALETTE.close(false); window.BARRA && BARRA.isOpen() && BARRA.close(false)")
-            if pg.evaluate("S.view") != view: pg.evaluate(f"setView('{view}')"); attendi(pg, f"S.view === '{view}'")
+            if pg.evaluate("S.view") != view: pg.evaluate(f"setView('{view}')"); wait_for_js(pg, f"S.view === '{view}'")
         def use(c):
             used.append(where[0]); loc = pg.locator(f"[data-vuoto='{c['k']}']")
             if c["tag"] in ("INPUT", "TEXTAREA") and c["type"] not in ("checkbox", "radio", "button", "submit", "range", "color"):
@@ -99,35 +99,35 @@ try:
                 pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press(k)
                 pg.evaluate("new Promise(r => setTimeout(r, 120))"); check(where[0])
                 if k == "Control+e": assert not pg.evaluate("!!document.querySelector('dialog[open]')"), "Ctrl/⌘+E with no file: no dialog " + pg.evaluate("[...document.querySelectorAll('dialog[open]')].map(d => d.innerText).join()")
-            back(view); pg.keyboard.press("Alt+2" if view == "data" else "Alt+1"); attendi(pg, "S.view === " + repr("draw" if view == "data" else "data")); back(view); check(f"{view}: Alt+1/2")
+            back(view); pg.keyboard.press("Alt+2" if view == "data" else "Alt+1"); wait_for_js(pg, "S.view === " + repr("draw" if view == "data" else "data")); back(view); check(f"{view}: Alt+1/2")
         def data():
             pg.evaluate("setView('data')"); walk("data"); commands("data"); keys("data")
             assert len(used) >= 40, ("the walk reached too few controls", len(used), used)
         step("data with no file: every control, every side-bar command and what it opens, every shortcut, no error", data)
         def hint():
             for view in ("data", "draw"):
-                back(view); pg.evaluate("PALETTE.open()"); attendi(pg, "!!document.querySelector('#paletta:not([hidden]) #pal-e')")
+                back(view); pg.evaluate("PALETTE.open()"); wait_for_js(pg, "!!document.querySelector('#paletta:not([hidden]) #pal-e')")
                 live = pg.inner_text("#pal-n"); assert not live.strip(), ("nothing typed: no «nothing found» for the screen reader", live)
                 tries = [t.strip() for t in pg.inner_text("#pal-e").split(":", 1)[1].split(",")]
                 assert len(tries) == 3, tries
                 for t in tries:
-                    pg.fill("#pal-in", t); attendi(pg, "document.querySelectorAll('#pal-l [role=option]').length > 0 || document.getElementById('pal-n').textContent !== ''", 15000)
+                    pg.fill("#pal-in", t); wait_for_js(pg, "document.querySelectorAll('#pal-l [role=option]').length > 0 || document.getElementById('pal-n').textContent !== ''", 15000)
                     assert pg.locator("#pal-l [role=option]").count() > 0, (view, t, pg.inner_text("#pal-e"))
                 where[0] = f"{view}: palette"; check(where[0])
             back("data")
         step("the hint of the search box gives results with no file (18 at unit resolution)", hint)
         def draw():
-            pg.evaluate("setView('draw')"); attendi(pg, "!!(window.TPDraw && TPDraw.ready())", 120000)
+            pg.evaluate("setView('draw')"); wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready())", 120000)
             K = "document.querySelector('#kframe').contentWindow.ketcher"
             walk("draw", root="#v-draw")
-            where[0] = "draw: export of the empty canvas"; pg.evaluate(f"{K}.setMolecule('')"); attendi(pg, f"{K}.editor.struct().isBlank()")
-            pg.click("#ex-png"); attendi(pg, "!document.getElementById('ex-warn').hidden"); assert pg.get_attribute("#ex-warn", "role") == "status"
-            pg.fill("#ex-smi", "CCO"); pg.click("#ex-load"); attendi(pg, f"!{K}.editor.struct().isBlank()")
-            attendi(pg, "document.getElementById('ex-warn').hidden", 10000)      # «Nothing to export» is stale once something is drawn
-            pg.evaluate(f"{K}.setMolecule('')"); attendi(pg, f"{K}.editor.struct().isBlank()")
+            where[0] = "draw: export of the empty canvas"; pg.evaluate(f"{K}.setMolecule('')"); wait_for_js(pg, f"{K}.editor.struct().isBlank()")
+            pg.click("#ex-png"); wait_for_js(pg, "!document.getElementById('ex-warn').hidden"); assert pg.get_attribute("#ex-warn", "role") == "status"
+            pg.fill("#ex-smi", "CCO"); pg.click("#ex-load"); wait_for_js(pg, f"!{K}.editor.struct().isBlank()")
+            wait_for_js(pg, "document.getElementById('ex-warn').hidden", 10000)      # «Nothing to export» is stale once something is drawn
+            pg.evaluate(f"{K}.setMolecule('')"); wait_for_js(pg, f"{K}.editor.struct().isBlank()")
             for v in ("C1CC", "zzzz qqqq", "InChI=1S/x"):
                 where[0] = f"draw: quick draw {v!r}"; pg.fill("#ex-smi", v); pg.click("#ex-load")
-                attendi(pg, "!document.getElementById('smi-warn').hidden", 15000); assert pg.get_attribute("#smi-warn", "role") == "status"; check(where[0])
+                wait_for_js(pg, "!document.getElementById('smi-warn').hidden", 15000); assert pg.get_attribute("#smi-warn", "role") == "status"; check(where[0])
             where[0] = "draw: canvas menu, empty canvas"
             pg.evaluate("(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:300,clientY:300}))})()")
             check(where[0])
@@ -140,7 +140,7 @@ try:
             assert len(used) - n0 >= 50, ("the walk reached too few controls in Draw", len(used) - n0)
         step("draw with no file: every control, quick draw with wrong text, exports and menu of the empty canvas, frame buttons, commands, shortcuts", draw)
         def shortcuts_panel():
-            back("data"); pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("?"); attendi(pg, "!!document.querySelector('#scorc[open]')")
+            back("data"); pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("?"); wait_for_js(pg, "!!document.querySelector('#scorc[open]')")
             heads = pg.evaluate("[...document.querySelectorAll('#scorc h3')].map(h => h.textContent)")
             assert heads == ["Ovunque", "Sui grafici (con il fuoco sul grafico)"], heads      # no chart: the chart keys are not listed as «everywhere»
             rows = pg.evaluate("[...document.querySelectorAll('#scorc li')].map(li => li.innerText)")

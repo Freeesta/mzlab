@@ -64,7 +64,7 @@ try:
             row = pg.locator(ROWS).first
             assert "C10H15NO" in row.inner_text() and "165.1154" in row.inner_text() and "Tua" in row.inner_text(), row.inner_text()
             assert "Salvata: Esempina" in pg.inner_text("#mol-st")
-            add(nome="Provolone B", formula="c12h17no2", carica="0", addotti="[M+H]+ [M+Na]+", raccolte="corso")
+            add(nome="Provolone B", formula="c12h17no2", carica="0", adducts="[M+H]+ [M+Na]+", raccolte="corso")
             assert names() == ["Esempina", "Provolone B"], names()
             assert "C12H17NO2" in pg.locator(ROWS).nth(1).inner_text(), "the formula is written in Hill order by the engine"
         step("add two molecules: the engine writes the formula and the mass, the level is «Tua»", adds)

@@ -62,7 +62,7 @@ try:
         step("D reads the description through the polite live region", live)
         def copy():
             pg.evaluate(f"{CH}.cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
-            pg.evaluate(SAFARI_CLIP); pg.click("#tdati [data-td=c]"); attendi(pg, "window.__clip !== null || window.__clipNo", 10000)
+            pg.evaluate(SAFARI_CLIP); pg.click("#tdati [data-td=c]"); wait_for_js(pg, "window.__clip !== null || window.__clipNo", 10000)
             assert not pg.evaluate("window.__clipNo"), "the copy reached the clipboard after the click was over (Safari refuses it)"
             c = pg.evaluate("window.__clip"); ln = [l for l in c.split("\n") if not l.startswith("#")]      # the first line is the provenance comment
             assert ln[0].split("\t")[1] == "RT (min)" and "\t" in ln[1], c[:200]

@@ -24,7 +24,7 @@ try:
         pg = r.page(p)
         load(pg, [LRF], 4000, 1)
         pg.evaluate("openXic(null)"); pg.wait_for_selector("#xic-mz"); pg.fill("#xic-mz", "253"); pg.select_option("#xic-file", index=1); pg.click("#xic-go"); ready(pg)
-        attendi(pg, "(()=>{const p=E.panels.find(q=>q.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
+        wait_for_js(pg, "(()=>{const p=E.panels.find(q=>q.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
         tr = pg.evaluate(TRACE)
         csv = D / "trace.csv"; csv.write_text("".join(f"{a!r},{b!r}\n" for a, b in zip(tr["x"], tr["y"])))
         a, b = tr["apex"] - 0.4, tr["apex"] + 0.4
