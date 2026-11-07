@@ -489,10 +489,10 @@ fn resolve_scan_arrays<R: Read + Seek>(
     nominal_scan_mode: Option<crate::ScanMode>,
 ) -> Option<(Vec<f64>, Vec<f32>, Option<crate::ScanMode>)> {
     if include_profile && !raw.flat_peaks {
-        let packet = raw.read_scan(source, scan_number).ok()?;
-        if let Some(profile) = packet.profile {
-            return Some(profile_arrays(&profile, event));
+        if let Some(arrays) = profile_arrays(raw, source, scan_number, event)? {
+            return Some(arrays);
         }
+        let packet = raw.read_scan(source, scan_number).ok()?;
         let mz: Vec<f64> = packet.peaks.iter().map(|p| p.mz).collect();
         let int: Vec<f32> = packet.peaks.iter().map(|p| p.abundance).collect();
         return Some((mz, int, Some(crate::ScanMode::Centroid)));
@@ -502,22 +502,27 @@ fn resolve_scan_arrays<R: Read + Seek>(
         .ok()?;
     if mz.is_empty() && !raw.flat_peaks && nominal_scan_mode == Some(crate::ScanMode::Profile) {
         // A profile scan without a centroid list: the profile is all the file holds (msconvert's default).
-        if let Some(profile) = raw.read_scan(source, scan_number).ok()?.profile {
-            return Some(profile_arrays(&profile, event));
+        if let Some(arrays) = profile_arrays(raw, source, scan_number, event)? {
+            return Some(arrays);
         }
     }
     Some((mz, int, Some(crate::ScanMode::Centroid)))
 }
 
-/// The profile points of a scan (m/z > 0) and the mode they are in.
-fn profile_arrays(
-    profile: &crate::scan_data::Profile,
+/// The profile points of a scan (m/z > 0) and the mode they are in; `Some(None)`: the packet has no profile; `None`: it cannot be read.
+#[allow(clippy::type_complexity)]
+fn profile_arrays<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    scan_number: u32,
     event: Option<&ScanEvent>,
-) -> (Vec<f64>, Vec<f32>, Option<crate::ScanMode>) {
+) -> Option<Option<(Vec<f64>, Vec<f32>, Option<crate::ScanMode>)>> {
     let coeffs = event.map(|e| e.coefficients.as_slice()).unwrap_or(&[]);
     let (mut mz, mut int) = (Vec::new(), Vec::new());
-    profile.to_mz_intensity_into(coeffs, &mut mz, &mut int);
-    (mz, int, Some(crate::ScanMode::Profile))
+    let con_profilo = raw
+        .read_profile_into(source, scan_number, coeffs, &mut mz, &mut int)
+        .ok()?;
+    Some(con_profilo.then_some((mz, int, Some(crate::ScanMode::Profile))))
 }
 
 // -- Adapter / canonical writer wrappers --
