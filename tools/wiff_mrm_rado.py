@@ -19,17 +19,17 @@ CYCLES = 40
 
 def blocco(c: int) -> list:
     """Cycle `c`: the transitions within 12 of `3.5 * c` were acquired (window of a made-up schedule), the others skipped."""
-    out, salto = [-(TRANSITIONS + 0.01)], 0
+    out, jump = [-(TRANSITIONS + 0.01)], 0
     for j in range(TRANSITIONS):
         if abs(j - 3.5 * c) <= 12:
-            if salto:
-                out.append(-(salto + 0.01))
-                salto = 0
+            if jump:
+                out.append(-(jump + 0.01))
+                jump = 0
             out.append(100.0 + 7.0 * j + c)
         else:
-            salto += 1
-    if salto:
-        out.append(-(salto + 0.01))
+            jump += 1
+    if jump:
+        out.append(-(jump + 0.01))
     return out
 
 

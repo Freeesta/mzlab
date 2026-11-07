@@ -13,7 +13,7 @@ import numpy as np
 from . import ROOT, nativo
 from .tabelle import Tabella
 
-ANTEPRIMA = ROOT / "target" / "release" / "examples" / "anteprima"
+PREVIEW = ROOT / "target" / "release" / "examples" / "anteprima"
 
 
 def esegui_senza_genitore(idx: list[str], uscita: Path) -> dict:
@@ -33,5 +33,5 @@ def esegui_senza_genitore(idx: list[str], uscita: Path) -> dict:
 def anteprima(idx: str) -> dict:
     """The JSON of the preview of one file (`noise.floor` is the proposed threshold, `ppm.value` and `fwhm.value` the estimated tolerances)."""
     subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat", "--example", "anteprima"], cwd=ROOT, check=True)
-    out = subprocess.run([str(ANTEPRIMA), idx], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
+    out = subprocess.run([str(PREVIEW), idx], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out[out.index("{"):])
