@@ -19,7 +19,7 @@ mod centroidi; mod panic; mod ricerca; mod adduct;
 pub mod esterno;
 mod contato;
 mod zip;
-mod nativi;
+mod nativi; mod impronte;
 mod corriere;
 mod nativi_motore;
 mod blocchi;

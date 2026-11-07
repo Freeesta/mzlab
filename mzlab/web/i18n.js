@@ -116,11 +116,13 @@
   function err(j) {
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
     // a refusal of the memory contract names the phase, the estimate and the budget: its own text says by how much the file overshoots
-    const k = j.error_key === "error.memoryBudget" && j.params && j.params.fase ? "error.memoryBudgetFase" : j.error_key;
+    // (a phase with a text of its own, `error.memoryBudgetFase.<id>`, names its real limit)
+    const fase = j.error_key === "error.memoryBudget" && j.params && j.params.fase, own = fase && (cat[lang]["error.memoryBudgetFase." + fase] || cat.it["error.memoryBudgetFase." + fase]);
+    const k = fase ? "error.memoryBudgetFase" : j.error_key;
     // the phase has a name for people when the catalog has one (`memory.phase.<id>`)
     const ph = j.params && j.params.fase && cat[lang]["memory.phase." + j.params.fase] ? t(`memory.phase.${j.params.fase}`) : "";
     const params = ph ? Object.assign({}, j.params, { fase: ph }) : j.params;
-    let msg = t(k, params || {});
+    let msg = own ? t(`error.memoryBudgetFase.${fase}`, params) : t(k, params || {});
     // a key with no text in the catalogs never reaches the student: the generic sentence carries the engine's own detail
     if (msg === k || msg === "") msg = t("error.generic", { detail: (j.params && j.params.detail) || j.error || "–" });
     return Object.assign(new Error(msg), { key: j.error_key, params: j.params });
