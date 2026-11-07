@@ -1,6 +1,7 @@
 //! A read cache of a few blocks over a member read from far apart: a reader like `opentfraw` asks a few bytes at a time and alternates between regions (the
 //! packets of the scans, the trailer records, the index), so one block thrown away at every far read is read again at the next. Used by the `thermo` module's
-//! `JsMember` (each fetch is a JS call) and by the `raw_tempi` simulator; it holds `slots` blocks and replaces the least recently used.
+//! `JsMember` (each fetch is a JS call) and by the `raw_tempi` simulator; it holds `slots` blocks and replaces the least recently used. With `read_ahead`, a miss that
+//! continues a block or lands a little after it (the reader going on in order, as along the scans) refills that same slot with a block twice as long, up to the cap: fewer and larger fetches.
 use crate::idxread::ReadAt;
 use crate::Result;
 
@@ -15,6 +16,8 @@ pub struct BlockCache<F> {
     fetch: F,
     dim: u64,
     size: usize,
+    /// The longest block a run of reads in order grows to (`size` without read-ahead).
+    max: usize,
     slots: Vec<Slot>,
     tick: u64,
 }
@@ -25,6 +28,7 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> BlockCache<F> {
             fetch,
             dim,
             size,
+            max: size,
             slots: (0..slots.max(1))
                 .map(|_| Slot {
                     start: 0,
@@ -34,6 +38,12 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> BlockCache<F> {
                 .collect(),
             tick: 0,
         }
+    }
+
+    /// Blocks that continue one another double up to `max` bytes (an OPFS or `File` read costs a fixed part per call: 1-4 MiB reads are 2-3x faster per byte than 256 KiB ones in Chromium).
+    pub fn read_ahead(mut self, max: usize) -> Self {
+        self.max = max.max(self.size);
+        self
     }
 }
 
@@ -45,8 +55,11 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> ReadAt for BlockCache<F> {
             return (self.fetch)(off, buf);
         };
         let (mut victim, mut oldest) = (0, u64::MAX);
+        let mut size = self.size;
+        let mut seguito = None;
         for (i, s) in self.slots.iter_mut().enumerate() {
-            if off >= s.start && end <= s.start + s.data.len() as u64 {
+            let fine = s.start + s.data.len() as u64;
+            if off >= s.start && end <= fine {
                 s.used = self.tick;
                 let a = (off - s.start) as usize;
                 buf.copy_from_slice(&s.data[a..a + buf.len()]);
@@ -55,9 +68,24 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> ReadAt for BlockCache<F> {
             if s.used < oldest {
                 (victim, oldest) = (i, s.used);
             }
+            // a read that runs past the end of a block, or starts after it by less than its length (the reader skips a profile to the centroids): the reader goes on in order
+            if seguito.is_none()
+                && !s.data.is_empty()
+                && off >= s.start
+                && off <= fine.saturating_add(s.data.len() as u64)
+            {
+                seguito = Some((i, s.data.len()));
+            }
         }
-        let n = self.dim.saturating_sub(off).min(self.size as u64) as usize;
-        if buf.len() >= self.size || n < buf.len() {
+        if self.max > self.size {
+            if let Some((i, len)) = seguito {
+                // the run refills its own slot (the block behind it is read) with a longer block, and leaves the other runs' blocks alone
+                victim = i;
+                size = len.saturating_mul(2).clamp(self.size, self.max);
+            }
+        }
+        let n = self.dim.saturating_sub(off).min(size as u64) as usize;
+        if buf.len() >= size || n < buf.len() {
             // big (or past the end, for the fetch to refuse): as asked
             return (self.fetch)(off, buf);
         }
