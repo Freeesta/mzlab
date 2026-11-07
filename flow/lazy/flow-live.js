@@ -258,6 +258,8 @@
     await replan(x);
   };
 
+  /** the record of the run of `x` (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run @param {any} x */
+  const recordOf = async (/** @type {any} */ x) => F.webProv ? F.webProv.record(x, /** @type {any[]} */ (await call(x, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
   const refused = (/** @type {any} */ x, /** @type {string} */ instance) => x.errors.get(instance) || Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: {} });
   /** the page asks to use more memory for the blocked alignments; the user answers once, and only here (never in the middle of an edit) @param {any} x @param {any} o */
   const answerAsks = async (x, o) => {
@@ -308,13 +310,13 @@
         await new Promise(res => { live.waiters.push(res); setTimeout(res, 5000); });
       }
       const bad = /** @type {any[]} */ ((await call(live, "nodes"))).find(n => n.state === "error" || n.state === "refused");
-      if (bad) throw refused(live, bad.instance);
+      // a run that failed keeps its record too, as `flow run` writes prov.json with the error of the step
+      if (bad) { await recordOf(live); throw refused(live, bad.instance); }
     } finally { live.listeners.delete(o.onEvent); }
     live.logFrom = live.log.length;
     const al = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.align"), key = al && live.keys.get(`${al.id}|`);
     const table = key ? await (await kit().getPool()).fs.read(F.liveJobs.DIR + key + ".mzfeat") : null;
-    // the record of the run (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run
-    const record = F.webProv ? await F.webProv.record(live, /** @type {any[]} */ (await call(live, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
+    const record = await recordOf(live);
     // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})
     return { record, steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.flatMap((/** @type {any} */ i) => filesOf(live, i.id)), llm: S.llmRef || null };
   };

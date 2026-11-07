@@ -31,7 +31,7 @@ try:
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")])
         pg.click("#opbtn"); ready(pg)
         def remove_all():
-            assert pg.locator("#rmall").count() == 0, "no remove-all icon in the header"
+            assert pg.locator("header #rmall").count() == 0, "no remove-all icon in the header"      # the conversion queue has its own (#2467)
             n = pg.evaluate(LIVE); assert n >= 2
             pg.evaluate("removeAllFiles()"); attendi(pg, f"{LIVE} === 0")
             assert pg.evaluate("document.querySelectorAll('dialog[open]').length") == 0, "no question"

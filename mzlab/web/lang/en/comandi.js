@@ -112,6 +112,7 @@ I18N.add("en", {
   "cmd.panel.hide": "Hide panels",
   "cmd.panel.show": "Show panels",
   "cmd.panel.files": "Files ({n})",
+  "cmd.panel.files0": "Files (0)",
   "cmd.panel.name": "Side panel",
   "cmd.panel.tip": "Shows or hides the side panel (Ctrl/⌘+B)",
   "cmd.panel.kw": "mostra nascondi pannello laterale side panel show hide toggle",

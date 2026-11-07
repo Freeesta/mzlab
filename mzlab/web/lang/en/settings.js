@@ -70,6 +70,7 @@ I18N.add("en", {
   "settings.mem.reason.ramUnknown": "RAM not readable, cautious value",
   "settings.mem.reason.manual": "chosen by hand",
   "settings.mem.reason.lowered": "lowered one level after a stop for lack of memory",
+  "settings.mem.reason.indexPool": "index builders: fewer at once and less memory each after a memory shortage, until that loading ends",
   "settings.mem.conf.high": "high",
   "settings.mem.conf.medium": "medium",
   "settings.mem.conf.low": "low",

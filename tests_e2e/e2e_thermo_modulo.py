@@ -61,6 +61,7 @@ try:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None, args=["--unlimited-storage"])       # the big .raw is copied into OPFS: a headless browser can have a small quota
         thermo = []; pg = page(b, thermo)
         def opens():
+            pg.evaluate("() => { window.__early = null; addEventListener('mzlab-index', e => { const d = e.detail; if (d.early_tic && !window.__early) window.__early = { tic: d.early_tic, at: d.phase }; }); }")
             pg.set_input_files("#pick", str(raw))
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=300000)
             names = pg.evaluate("ST.files.map(x => x.name)"); assert names == [name], names
@@ -78,6 +79,14 @@ try:
             bad = [(i, a, c) for i, (a, c) in enumerate(zip(y, ref["tic"]["y"])) if abs(a - c) > 0.06 + 1e-4 * abs(c)]
             assert not bad, ("tic", len(bad), bad[:3], list(t.keys()))
         step("the TIC is the one of the reader of the core", tic)
+        def early():
+            e = pg.evaluate("window.__early"); assert e, "no provisional TIC while the .raw was loaded"
+            assert e["at"] == "read", f"the provisional TIC of a .raw comes during the copy, not with the index: {e['at']}"
+            t = pg.evaluate(J, "api/chrom?k=0&level=1"); y = t.get("y") or t.get("tic")
+            assert len(e["tic"]["rt"]) == len(t["rt"]), (len(e["tic"]["rt"]), len(t["rt"]))
+            assert all(abs(a - c) <= 1e-6 for a, c in zip(e["tic"]["rt"], t["rt"])), "rt"
+            assert all(abs(a - c) <= 1e-6 * max(1, abs(c)) for a, c in zip(e["tic"]["y"], y)), "tic"
+        step("the provisional TIC of the .raw, shown during the copy, is the MS1 TIC of the opened file", early)
         def scan():
             s = pg.evaluate(J, f"api/scan?k=0&sid={ref['scan']['k']}")
             assert s["mz"] == ref["scan"]["mz"] or all(abs(a - c) < 1e-4 for a, c in zip(s["mz"], ref["scan"]["mz"])), "mz"

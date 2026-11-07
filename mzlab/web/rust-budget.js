@@ -117,6 +117,11 @@ export function lowered(/** @type {any} */ api) {
   record({ mb: api.budgetMb, mode: "automatic", reason: "lowered", confidence: "low", inputs: api.choice ? api.choice.inputs : {} }, "supervisor");
 }
 
+/** The pool of the index builders ran short of memory and works with fewer of them (`to` of `from`) at `mb` MB each until the loading ends: logged, not kept. */
+export function poolLowered(/** @type {any} */ api, /** @type {any} */ p) {
+  record({ mb: (p && p.mb) || 0, mode: "automatic", reason: "indexPool", confidence: "low", inputs: { ...(api.choice ? api.choice.inputs : {}), pool_from: p && p.from, pool_to: p && p.to } }, "supervisor");
+}
+
 /** Test hook: forgets the level of the session. */
 export function forgetLevel() { writeSession(KEY_LEVEL, null); }
 

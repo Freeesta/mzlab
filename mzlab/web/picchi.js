@@ -324,7 +324,7 @@ function makeSnap(/** @type {Bag[]} */ data, /** @type {(m: number) => number} *
 async function drawSpec(p, snapped) {
   if (p.iso && p._isoKey != null && p._isoKey !== JSON.stringify(p.zoom)) { p.iso = null; p._isoKey = null; }      // the student moved the zoom: the isotope simulation switches off
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
-  const say = (/** @type {string} */ t) => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
+  const say = (/** @type {string} */ t) => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; p._say = t; };      // _say: the same words for the screen reader (tdati-pannelli.js)
   const isDda = p.dda != null && !!window.DDA;                // MS2 panel of a DDA trio: shows one MS2 scan of the file (dda.js), whatever file is selected in the toolbar
   if (!isDda && !p.all && p.level === 1 && E.files[/** @type {number} */ (p.k)] && !E.files[/** @type {number} */ (p.k)].vis) { const v = shownFor(p).find((/** @type {Bag} */ x) => scanFiles([x]).length); if (v) { p.k = v.k; p.kSet = false; ctl(p); } }      // the file of the spectrum was unticked: the first ticked one
   const targetK = p.link ? /** @type {number} */ (p.k) : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : /** @type {number} */ (p.k));

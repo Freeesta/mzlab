@@ -13,8 +13,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::mzidx::{self, ScanTable, Stats, DEFAULT_BUDGET};
-use mzlab_core::{upload, Error};
+use mzlab_core::mzidx::{self, ScanTable, Stats};
+use mzlab_core::{budget_auto, upload, Error};
 
 use crate::mapped::Mapped;
 use crate::rpc::MapAt;
@@ -241,7 +241,7 @@ impl IdxBuilder {
                 table,
                 Fermabile::new(Cursor::new(map.bytes()), stop),
                 out,
-                DEFAULT_BUDGET,
+                budget_auto::native_index_budget(),
                 Some(spill),
             )
         })
