@@ -23667,3 +23667,4 @@
 {"v":1,"ts_utc":"2026-11-07T10:19:06Z","tipo":"coda","k":"2026-11-07T10:19:06Z","aperte":6,"indietro":3,"sporche":3,"verdi_in_attesa":2,"piu_vecchia_aperta_s":310910,"piu_vecchia_verde_s":306590}
 {"v":1,"ts_utc":"2026-11-07T10:22:54Z","azione":"push","titolo":"Merge branch 'main' into claude/english-audit","merge_main":true,"aree":{"rust":14,"docs":6,"web":8,"test":14,"tools":1},"tipo":"pr","pr":2832,"sha":"6734b155e5c98ccfaa531b5dd072a91cecdcf676"}
 {"v":1,"ts_utc":"2026-11-07T10:24:48Z","azione":"aperta","tipo":"pr","pr":2836,"sha":"0e13201c40558c1f6a945fe7271181e1a645c47f"}
+{"v":1,"ts_utc":"2026-11-07T10:25:16Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/limiti-indice-budget-main","merge_main":true,"aree":{"rust":14,"docs":7,"web":19,"test":15,"tools":1},"tipo":"pr","pr":2829,"sha":"49ae486e0640c72e4c0a4f7e49be0f2101919d35"}
