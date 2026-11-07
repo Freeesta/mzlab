@@ -246,3 +246,26 @@ await out(async () => {
   return { a: a.reason, offThen, soon: soon.reason, later: later.ok, off: p.unavailable() };
 });""")
     assert got == {"a": "unavailable", "offThen": True, "soon": "unavailable", "later": True, "off": False}
+
+
+def test_a_tablet_the_page_names_gets_a_gate_of_two_workers_even_if_the_worker_took_it_for_a_computer():
+    # an iPad with the Mac user agent: in a worker `maxTouchPoints` does not exist, so only the policy of the page knows it is small
+    got = run("""
+import { makeGate, fitGate } from %r;
+await out(async () => {
+  const gate = makeGate(poolSize(false, 8));
+  const before = gate.size;
+  fitGate(gate, true, 8);
+  const p = createPool({ workerUrl: "x", size: 4, gate, WorkerClass: fake(() => "done") });
+  const rs = await Promise.all("abcde".split("").map(n => p.build(job(n))));
+  const pc = makeGate(4); fitGate(pc, false, 8);
+  return { before, after: gate.size, ok: rs.every(r => r.ok), maxLive, computer: pc.size };
+});""" % JS.as_uri())
+    assert got == {"before": 4, "after": 2, "ok": True, "maxLive": 2, "computer": 4}
+
+
+def test_the_engine_takes_the_size_of_the_device_from_the_policy_of_the_page():
+    src = (JS.parent / "rust-worker.js").read_text(encoding="utf-8")
+    policy = src[src.index("function applyPolicy("):]
+    policy = policy[: policy.index("\n}\n")]
+    assert "fitGate(gate, true" in policy and "m.small" in policy

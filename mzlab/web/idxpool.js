@@ -26,6 +26,9 @@ export function aiutiPer(size, used, isolated) {
 export function makeGate(size) {
   return { size: Math.max(1, size), used: 0, pumps: /** @type {Array<() => void>} */ ([]) };
 }
+// The gate takes the size of the device the page names: a worker has no `maxTouchPoints`, so there an iPad with the Mac user agent looks like a
+// computer. Running workers end as they would; no new one starts past the new size. Returns `small`.
+export const fitGate = (/** @type {{ size: number }} */ gate, /** @type {boolean} */ small, /** @type {number} */ cores) => ((gate.size = Math.max(1, poolSize(small, cores))), small);
 
 // isolated: workers can share memory (crossOriginIsolated); aiuti: a fixed number of helpers per builder in place of the free places (tests).
 // moduleUrl: the .wasm of the builder, compiled ONCE here (compileStreaming) and handed to every worker as a WebAssembly.Module, so that a worker that lives for one file
