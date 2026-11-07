@@ -22,7 +22,7 @@
 
 ## Intensità
 Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` della tabella `Frames` sono normalizzati a 100 ms: il TIC dell'indice è `SummedIntensities·AccumulationTime/100`. Indici TOF uguali nello stesso spettro si sommano (msconvert li lascia come punti separati: stesse somme).
-- Cromatogrammi: TIC (MS1 da `Frames`, MS2 sommato dai punti alla prima chiamata di `indice`) e BPC, il massimo delle intensità a 32 bit di ogni spettro di rilievo; il lettore tiene il massimo di ogni spettro già decodificato (`massimi`, `tracce.rs`), così il BPC dopo un giro intero (indice `.mzidx`, mzML) non decodifica di nuovo nessun frame. Prova: `bpc_uguale_prima_e_dopo_il_giro` (`tests/robustezza_bruker.rs`).
+- Cromatogrammi: TIC (MS1 da `Frames`, MS2 sommato dai punti alla prima chiamata di `indice`; probe, mzML, `conv/1` e prova SRM chiedono `indice_senza_tic`, senza decodificare frame: `crates/mzlab-lettori/tests/bruker_senza_tic.rs`) e BPC, il massimo delle intensità a 32 bit di ogni spettro di rilievo; il lettore tiene il massimo di ogni spettro già decodificato (`massimi`, `tracce.rs`), così il BPC dopo un giro intero (indice `.mzidx`, mzML) non decodifica di nuovo nessun frame. Prova: `bpc_uguale_prima_e_dopo_il_giro` (`tests/robustezza_bruker.rs`).
 
 ## Spettri
 - `MsMsType` 0 (MS1): un frame è uno spettro, mobilità sommata.

@@ -39,7 +39,7 @@ fn coalesced_index_is_the_same() {
     let build = |join: bool| {
         let (mut out, mut sp) = (Conta::default(), Conta::default());
         let st = if join {
-            let (mut o, mut s) = (Accorpa::new(out), Accorpa::new(sp));
+            let (mut o, mut s) = (Accorpa::flussi(out), Accorpa::new(sp));
             let st =
                 mzidx::build_mzml_spill(&p.table, Cursor::new(&mz), &mut o, budget, Some(&mut s))
                     .unwrap();

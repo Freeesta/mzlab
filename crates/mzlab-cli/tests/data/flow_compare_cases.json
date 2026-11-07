@@ -400,7 +400,7 @@
             "index": "file:x.mzidx"
           },
           "params": {
-            "step": "features.detect@1",
+            "step": "features.detect@2",
             "variants": [
               {
                 "algorithm": "masstrace"

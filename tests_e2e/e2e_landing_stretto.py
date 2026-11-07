@@ -62,7 +62,7 @@ try:
         ph = r.b.new_page(viewport={"width": 390, "height": 800}, reduced_motion="reduce", locale="it-IT", has_touch=True)
         ph.add_init_script(L.INIT); ph.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         ph.goto(f"http://127.0.0.1:{r.port}/?telefono=1"); frames(ph, 10)
-        pw = ph.evaluate("() => ({sw: document.documentElement.scrollWidth, iw: innerWidth, tg: (document.querySelector('#sb-toggle') || {innerText: ''}).innerText})")
+        pw = ph.evaluate("() => ({sw: document.documentElement.scrollWidth, iw: innerWidth, tg: (t => t && t.checkVisibility() ? t.innerText : '')(document.querySelector('#sb-toggle'))})")      # innerText of a display:none element is its whole textContent, hidden fallback label included
         step("phone: no horizontal scroll and no «Files (N)» toggle", lambda: (_ for _ in ()).throw(AssertionError(pw)) if pw["sw"] > pw["iw"] or "(" in pw["tg"] else None)
         ph.close()
 finally:

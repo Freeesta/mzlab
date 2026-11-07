@@ -77,6 +77,8 @@ def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     ]
     if (ROOT / "tools" / "controlla_import.py").exists():
         p.append(("import degli e2e", [PY, "tools/controlla_import.py"]))
+    if shutil.which("cargo") and cambiato("vendor/opentfraw/"):  # the crate is out of the workspace: no CI job runs its own tests
+        p.append(("test lib di opentfraw", ["cargo", "test", "-q", "--manifest-path", "vendor/opentfraw/Cargo.toml", "--lib"]))
     if veloce:
         p.append(("hash CSP", [PY, "tools/csp_hash.py", "--check"]))
         if cambiato(*RUST):

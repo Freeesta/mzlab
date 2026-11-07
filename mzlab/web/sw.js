@@ -67,11 +67,11 @@ const expected = async (/** @type {URL} */ u) => {
   return ((await manifestoSw()) || {})[p];
 };
 /** Fetches `req`; `ok` is true when the body is the one the manifest promises (HTTP cache first, then a revalidation). */
-const traer = async (/** @type {Request} */ req, /** @type {string | undefined} */ want, fresh = false) => {
-  if (!want) return { res: await fetch(req, NC), ok: false };
-  let res = fresh ? await fetch(req, NC) : await fetch(req);
+const traer = async (/** @type {Request} */ req, /** @type {string | undefined} */ want, fresh = false, /** @type {AbortSignal | undefined} */ signal = undefined) => {
+  if (!want) return { res: await fetch(req, { ...NC, signal }), ok: false };
+  let res = await fetch(req, fresh ? { ...NC, signal } : { signal });
   if (res.status === 200 && await shaDe(res) === want) return { res, ok: true };
-  res = await fetch(req, NC);
+  res = await fetch(req, { ...NC, signal });
   return { res, ok: res.status === 200 && await shaDe(res) === want };
 };
 /** The app cache, opened once: opening it for each of the ~400 requests of a load is a queue of its own. */
@@ -105,6 +105,29 @@ const olvidar = async () => {
   for (const n of await previas()) await caches.delete(n);
   prevP = Promise.resolve([]);
 };
+/** The page's own network requests go first: while one is open the fill starts no fetch and the ones it has open are stopped (and fetched again
+ * once the page is served). On a slow link a module read on first use otherwise shared the link with six files of the fill. */
+let pageNet = 0, calmed = () => {};
+/** @type {Promise<void>} */
+let calm = Promise.resolve();
+/** @type {Set<AbortController>} */
+const fillNet = new Set();
+const primero = async (/** @type {() => Promise<any>} */ fn) => {
+  if (!pageNet++) calm = new Promise(r => { calmed = r; });
+  fillNet.forEach(c => c.abort());
+  try { return await fn(); } finally { if (!--pageNet) calmed(); }
+};
+/** `traer` for the fill: waits while the page has requests open, and starts again when one of them stopped it. */
+const traerFill = async (/** @type {Request} */ req, /** @type {string} */ want) => {
+  for (;;) {
+    while (pageNet) await calm;
+    const c = new AbortController();
+    fillNet.add(c);
+    try { return await traer(req, want, false, c.signal); }
+    catch (err) { if (!c.signal.aborted) throw err; }
+    finally { fillNet.delete(c); }
+  }
+};
 const guardar = async (/** @type {Cache} */ cache, /** @type {Request} */ req, /** @type {Response} */ res) => {
   try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ }
 };
@@ -126,7 +149,7 @@ const llenar = async () => {
           if (stale) { failed++; continue; }
           if (have.has(req.url)) continue;
           const prev = await heredado(req, man[p]);
-          const { res, ok } = prev ? { res: prev, ok: true } : await traer(req, man[p]);
+          const { res, ok } = prev ? { res: prev, ok: true } : await traerFill(req, man[p]);
           if (ok && !stale) {
             await guardar(cache, req, res);
             if (p.endsWith("index.html")) await guardar(cache, new Request(new URL(p.slice(0, -"index.html".length), BASE).href), res);   // the page is also asked for as its folder
@@ -178,7 +201,7 @@ const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) 
     const want = await expected(new URL(req.url));
     const prev = stale ? null : await heredado(req, want);
     if (prev) { later(guardar(cache, req, prev)); return isolata(prev); }
-    const { res, ok } = await traer(req, want);
+    const { res, ok } = await primero(() => traer(req, want));
     if (ok && !stale) later(guardar(cache, req, res));
     return isolata(res);
   } catch (err) {
@@ -192,7 +215,7 @@ const navegar = async (/** @type {Request} */ req) => {
   const cache = await abrirApp();
   manP = null;                    // the manifest too is asked again: it tells whether the site changed since this worker started
   const net = (async () => {
-    const { res, ok } = await traer(req, await expected(new URL(req.url)), true);
+    const { res, ok } = await primero(async () => traer(req, await expected(new URL(req.url)), true));
     if (ok && !stale) await guardar(cache, req, res);
     return res;
   })();
