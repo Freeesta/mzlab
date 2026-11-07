@@ -77,7 +77,8 @@ pub(crate) trait Num: Copy + Default + Send {
     const F32: bool;
     fn from64(x: f64) -> Self;
     fn to64(self) -> f64;
-    fn put(self, out: &mut Vec<u8>);
+    /// The little-endian bytes into `out`, which is `SIZE` long.
+    fn le(self, out: &mut [u8]);
 }
 fn get0<T: Copy + Default>(v: &[T], i: usize) -> T {
     v.get(i).copied().unwrap_or_default()
@@ -93,8 +94,8 @@ impl Num for f32 {
     fn to64(self) -> f64 {
         self as f64
     }
-    fn put(self, out: &mut Vec<u8>) {
-        out.extend_from_slice(&self.to_le_bytes());
+    fn le(self, out: &mut [u8]) {
+        out.copy_from_slice(&self.to_le_bytes());
     }
 }
 impl Num for f64 {
@@ -106,8 +107,8 @@ impl Num for f64 {
     fn to64(self) -> f64 {
         self
     }
-    fn put(self, out: &mut Vec<u8>) {
-        out.extend_from_slice(&self.to_le_bytes());
+    fn le(self, out: &mut [u8]) {
+        out.copy_from_slice(&self.to_le_bytes());
     }
 }
 
@@ -252,7 +253,7 @@ impl<T: Num> Sec<T> {
         }
     }
 
-    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values.
+    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values; one column at a time into fixed-width cells (no length check or `match` per value: this loop was the biggest cost of the rounds on the site).
     fn emit(&mut self, out: &mut dyn Output, off: &Offsets, peaks: &[Peak<T>]) -> Result<()> {
         const CHUNK: usize = 1 << 16;
         let mut g = (BLOCK - self.done % BLOCK) % BLOCK;
@@ -261,26 +262,25 @@ impl<T: Num> Sec<T> {
             g += BLOCK;
         }
         for chunk in peaks.chunks(CHUNK) {
-            let at = self.done;
-            for (field, base, width) in [
-                (0, off.mz, T::SIZE),
-                (1, off.inten, T::SIZE),
-                (2, off.pos, 4),
-            ] {
-                self.bytes.clear();
-                reserve(&mut self.bytes, chunk.len() * width)?;
-                for p in chunk {
-                    match field {
-                        0 => p.mz.put(&mut self.bytes),
-                        1 => p.it.put(&mut self.bytes),
-                        _ => self.bytes.extend_from_slice(&(p.pos as i32).to_le_bytes()),
-                    }
-                }
-                out.write_at(base + at * width as u64, &self.bytes)?;
+            let (need, at) = (chunk.len() * T::SIZE, self.done);
+            let more = need.saturating_sub(self.bytes.len());
+            reserve(&mut self.bytes, more)?;
+            self.bytes.resize(self.bytes.len().max(need), 0);
+            let b = self.bytes.get_mut(..need).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
+                p.mz.le(c);
             }
-            for p in chunk {
+            out.write_at(off.mz + at * T::SIZE as u64, b)?;
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
+                p.it.le(c);
+            }
+            out.write_at(off.inten + at * T::SIZE as u64, b)?;
+            let b = self.bytes.get_mut(..chunk.len() * 4).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(4).zip(chunk) {
+                c.copy_from_slice(&(p.pos as i32).to_le_bytes());
                 self.totals.add(p.pos as usize, p.mz.to64(), p.it.to64());
             }
+            out.write_at(off.pos + at * 4, b)?;
             self.done += chunk.len() as u64;
         }
         Ok(())
@@ -395,10 +395,10 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     fn finish(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()> {
-        let mut b = Vec::new();
-        for v in &self.fence {
-            v.put(&mut b);
-        }
+        let mut b = vec![0; self.fence.len() * T::SIZE];
+        b.chunks_exact_mut(T::SIZE)
+            .zip(&self.fence)
+            .for_each(|(c, v)| v.le(c));
         out.write_at(off.fence, &b)?;
         for (at, arr) in [
             (off.sumint, &self.totals.acc),
