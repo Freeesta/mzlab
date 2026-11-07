@@ -578,8 +578,9 @@
                   {
                     "type":"number",
                     "minimum":0,
+                    "maximum":100,
                     "default":5,
-                    "description":"At unit resolution the engine reads a negative value as Da"
+                    "description":"At unit resolution the engine reads a negative value as Da; a row never spans more than the largest m/z span, so a larger value has no effect"
                   },
                   {
                     "type":"number",
@@ -743,7 +744,12 @@
                     "description":"Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty"
                   },
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
-                  {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":2,
+                    "description":"Largest step in scan number between two points of one trace: 1 = consecutive scans only, 2 = one scan may be missing"
+                  },
                   {
                     "type":"integer",
                     "minimum":1,
@@ -819,6 +825,7 @@
                   {
                     "type":"number",
                     "minimum":0,
+                    "maximum":100,
                     "default":15,
                     "description":"finder only: m/z tolerance in the spectrum, the larger of this and the absolute one"
                   },
@@ -1005,6 +1012,7 @@
                   {
                     "type":"number",
                     "minimum":0,
+                    "maximum":5,
                     "default":0.1,
                     "description":"Largest distance between the RT of two rows of one compound"
                   },
@@ -1130,9 +1138,10 @@
                   {
                     "type":"integer",
                     "minimum":1,
+                    "maximum":10,
                     "description":"Absent: the isotope finder decides, and 1 when it finds no pattern; above 1 the formulas are those of the ion itself"
                   },
-                  {"type":"number","minimum":0,"default":5,"description":"m/z tolerance"},
+                  {"type":"number","minimum":0,"maximum":100,"default":5,"description":"m/z tolerance"},
                   {
                     "type":"string",
                     "description":"Ranges as C:0-50,H:0-100. Absent: C:0-50,H:0-100,N:0-8,O:0-15,P:0-2,S:0-3 plus the heavy elements the finder sees in the spectrum; the text given is searched as written"
@@ -1140,7 +1149,13 @@
                   {"enum":["none","odd","even"],"default":"none","description":"Nitrogen rule"},
                   {"type":"number","default":0,"description":"Smallest RDB"},
                   {"type":"integer","minimum":1,"default":10,"description":"Formulas kept"},
-                  {"type":"integer","minimum":1,"default":3,"description":"Charges the isotope finder looks at"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":10,
+                    "default":3,
+                    "description":"Charges the isotope finder looks at"
+                  },
                   {
                     "type":"boolean",
                     "default":true,
@@ -2269,7 +2284,13 @@
               "value":{
                 "anyOf":[
                   {"enum":["CF2","CF2O","C2F4","CH2"],"default":"CF2","description":"Unit of the Kendrick mass"},
-                  {"type":"number","minimum":0,"default":3,"description":"Width of the KMD window of a series"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":100,
+                    "default":3,
+                    "description":"Width of the KMD window of a series"
+                  },
                   {
                     "type":"integer",
                     "minimum":2,
@@ -2611,7 +2632,7 @@
                   },
                   {"type":"number","minimum":0,"default":5,"description":"Highest formula tolerance"},
                   {"type":"number","minimum":0,"default":0.0137,"description":"Decoy mass defect"},
-                  {"type":"integer","minimum":0,"default":5,"description":"Decoys per rule"},
+                  {"type":"integer","minimum":0,"maximum":100,"default":5,"description":"Decoys per rule"},
                   {
                     "type":"number",
                     "minimum":0,

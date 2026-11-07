@@ -100,6 +100,13 @@
     return null;
   };
 
+  /** the values a parameter takes, in symbols that read the same in every language (check.rs allowed) @param {any} p */
+  const allowed = (p) => {
+    if (p.enum) return p.enum.map(String).join(", ");
+    if (p.type === "array") return p.items && p.items.minimum != null ? `${p.items.minimum} ≤ x₁ ≤ x₂` : "x₁ ≤ x₂";
+    const lo = p.minimum != null, hi = p.maximum != null;
+    return lo && hi ? `${p.minimum} – ${p.maximum}` : lo ? `≥ ${p.minimum}` : hi ? `≤ ${p.maximum}` : "";
+  };
   /** the facets of the data an instance reads, from its input files and the instances before it */
   function observedBy(/** @type {any} */ plan, /** @type {any} */ i, /** @type {any[]} */ seen) {
     const o = { resolution: /** @type {any[]} */ ([]), polarity: /** @type {any[]} */ ([]), ms_levels: /** @type {any[]} */ ([]) };
@@ -153,7 +160,7 @@
         const p = known.find((/** @type {any} */ x) => x[0] === name);
         if (!p) { add(i, "", "err.flow.param.unknown", { param: name }); continue; }
         const key = paramError(p[1], v);
-        if (key) add(i, "", key, { param: name });
+        if (key) add(i, "", key, key === "err.flow.param.range" ? { param: name, allowed: allowed(p[1]) } : { param: name });
       }
     };
     /** the type a reference gives: of an input file or of an output of another instance; null when it cannot be known */

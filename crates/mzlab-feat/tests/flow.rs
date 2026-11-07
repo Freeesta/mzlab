@@ -137,9 +137,9 @@ fn types_cardinality_facets_cycles_and_ranges() {
          {"id":"c2","step":"table.filter@1","in":{"table":"c1.table","samples":"file:s.json"}}]}"#;
     // parameters first, then ports, then cycles; `samples` is a single input and `det.peaks` is a list
     let want = [
-        "det||err.flow.param.range|param=min_height",
-        "det||err.flow.param.range|param=axis",
-        "det||err.flow.param.range|param=polarity",
+        "det||err.flow.param.range|param=min_height,allowed=≥ 0",
+        "det||err.flow.param.range|param=axis,allowed=ppm, Da",
+        "det||err.flow.param.range|param=polarity,allowed=1, -1, 0",
         // the file only has MS2 scans: detection needs MS1
         "det|index|err.flow.facet|facet=ms_levels,step=features.detect,want=1,have=2",
         "bad|table|err.flow.cardinality|port=table,count=2",

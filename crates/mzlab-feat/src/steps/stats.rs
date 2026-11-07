@@ -104,6 +104,7 @@ pub(super) fn kmd() -> Step {
             .doc("Unit of the Kendrick mass"),
         Param::number("tol_mda", "KMD window")
             .min(0.0)
+            .max(100.0)
             .default_num(3.0)
             .unit("mDa")
             .doc("Width of the KMD window of a series"),

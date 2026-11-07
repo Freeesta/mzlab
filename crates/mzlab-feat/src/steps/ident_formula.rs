@@ -32,10 +32,12 @@ pub(super) fn ms1() -> Step {
         Param::choice("ion", "Ion", &IONS).default_str("[M+H]+"),
         Param::integer("z", "Charge")
             .min(1.0)
+            .max(10.0)
             .estimate()
             .doc("Absent: the isotope finder decides, and 1 when it finds no pattern; above 1 the formulas are those of the ion itself"),
         Param::number("tol_ppm", "m/z tolerance")
             .min(0.0)
+            .max(100.0)
             .default_num(5.0)
             .unit("ppm"),
         Param::text("elements", "Elements")
@@ -46,6 +48,7 @@ pub(super) fn ms1() -> Step {
         Param::integer("max_results", "Formulas kept").min(1.0).default_num(10.0),
         Param::integer("max_charge", "Highest charge tried")
             .min(1.0)
+            .max(10.0)
             .default_num(3.0)
             .doc("Charges the isotope finder looks at")
             .advanced(),

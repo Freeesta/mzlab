@@ -55,5 +55,8 @@ fn the_default_thresholds_give_the_registry_the_interpretation_stored() {
     assert!(decoys(&one).0 < rules, "one decoy per rule is fewer decoys");
     // a tolerance other than the default is read from the calibration of the files
     assert!(run(&dir, r#"{"tol_min":1,"tol_max":2}"#).is_ok());
+    // a floor above the ceiling is refused by name, not a crash
+    let e = run(&dir, r#"{"tol_min":6,"tol_max":5}"#).unwrap_err();
+    assert!(e.contains("err.flow.param.order"), "{e}");
     let _ = std::fs::remove_dir_all(&out);
 }

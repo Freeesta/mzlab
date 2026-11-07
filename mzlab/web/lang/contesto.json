@@ -936,6 +936,8 @@
   "err.transitions.table": "Messaggio d'errore del motore; {row} = riga, chiave e testo del primo errore della tabella.",
   "err.flow.massacc.references": "Messaggio d'errore del motore; {line} = numero di riga, {message} = messaggio.",
   "err.flow.match.format": "Messaggio d'errore del motore; {file} = nome del file.",
+  "err.flow.param.order": "Errore del motore di tp.filter: la soglia bassa è sopra quella alta. {low}/{high} = nomi dei due parametri, {low_value}/{high_value} = i loro valori.",
+  "err.flow.param.range": "Controllo del piano di Flow: un valore è fuori dai limiti del parametro. {param} = nome del parametro, {instance} = nome del passo, {allowed} = limiti in simboli (es. «0 – 100», «≥ 1», scelte separate da virgole), da non tradurre.",
   "err.flow.param.type": "Messaggio d'errore del motore; {detail} = dettaglio tecnico, {instance} = nome del passo, {param} = nome del parametro.",
   "err.flow.param.unknown": "Messaggio d'errore del motore; {instance} = nome del passo, {param} = nome del parametro.",
   "err.flow.port.missing": "Messaggio d'errore del motore; {port} = ingresso.",

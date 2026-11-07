@@ -109,6 +109,29 @@ fn param_error(p: &Param, v: &Value) -> Option<&'static str> {
     }
 }
 
+/// The values a parameter takes, in symbols that read the same in every language (`allowed` of `err.flow.param.range`; flow-check.js `allowed`).
+fn allowed(p: &Param) -> String {
+    match &p.kind {
+        Kind::Choice(all) => all
+            .iter()
+            .map(|v| match v {
+                Value::Str(s) => s.clone(),
+                Value::Num(n) => format!("{n}"),
+                _ => String::new(),
+            })
+            .collect::<Vec<_>>()
+            .join(", "),
+        Kind::Pair(min) if min.is_finite() => format!("{min} ≤ x₁ ≤ x₂"),
+        Kind::Pair(_) => "x₁ ≤ x₂".into(),
+        _ => match (p.min, p.max) {
+            (Some(a), Some(b)) => format!("{a} – {b}"),
+            (Some(a), None) => format!("≥ {a}"),
+            (None, Some(b)) => format!("≤ {b}"),
+            (None, None) => String::new(),
+        },
+    }
+}
+
 fn add(c: &mut Ctx, i: &Instance, port: &str, key: &'static str, params: &[(&'static str, &str)]) {
     let p = Problem {
         instance: i.id.clone(),
@@ -184,8 +207,12 @@ fn params(c: &mut Ctx, i: &Instance, step: &Step) {
             add(c, i, "", "err.flow.param.unknown", &[("param", name)]);
             continue;
         };
-        if let Some(key) = param_error(p, v) {
-            add(c, i, "", key, &[("param", name)]);
+        match param_error(p, v) {
+            Some(key @ "err.flow.param.range") => {
+                add(c, i, "", key, &[("param", name), ("allowed", &allowed(p))]);
+            }
+            Some(key) => add(c, i, "", key, &[("param", name)]),
+            None => {}
         }
     }
 }

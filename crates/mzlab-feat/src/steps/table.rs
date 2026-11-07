@@ -58,9 +58,10 @@ pub(super) fn align() -> Step {
             .doc("One row per family of ions (isotopologues, adducts, in-source fragments) or one per ion"),
         Param::number("ppm", "m/z tolerance")
             .min(0.0)
+            .max(100.0)
             .default_num(5.0)
             .unit("ppm")
-            .doc("At unit resolution the engine reads a negative value as Da"),
+            .doc("At unit resolution the engine reads a negative value as Da; a row never spans more than the largest m/z span, so a larger value has no effect"),
         tol_da(),
         Param::number("rt_gap", "RT gap")
             .min(0.0)

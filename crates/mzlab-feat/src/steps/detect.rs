@@ -81,9 +81,10 @@ pub(super) fn detect() -> Step {
             .default_num(5.0)
             .advanced(),
         Param::integer("max_gap", "Maximum gap")
-            .min(0.0)
+            .min(1.0)
             .default_num(2.0)
             .unit("scans")
+            .doc("Largest step in scan number between two points of one trace: 1 = consecutive scans only, 2 = one scan may be missing")
             .advanced(),
         Param::integer("long_trace", "Long trace")
             .min(1.0)
@@ -170,6 +171,7 @@ fn isotope_params() -> Vec<Param> {
             .advanced(),
         Param::number("finder_ppm", "Finder m/z tolerance")
             .min(0.0)
+            .max(100.0)
             .default_num(15.0)
             .unit("ppm")
             .doc("finder only: m/z tolerance in the spectrum, the larger of this and the absolute one")

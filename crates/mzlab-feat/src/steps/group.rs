@@ -19,6 +19,7 @@ fn params() -> Vec<Param> {
             .doc("Comma-separated species searched in negative mode, among [M-H]- [M+Cl]- [M+HCOO]- [M+CH3COO]- [M-H-H2O]- [M-2H]2- [2M-H]- [2M+HCOO]-"),
         Param::number("rt_tol", "RT tolerance")
             .min(0.0)
+            .max(5.0)
             .default_num(0.1)
             .unit("min")
             .doc("Largest distance between the RT of two rows of one compound"),

@@ -183,6 +183,7 @@ fn filter() -> Step {
                 .advanced(),
             Param::integer("decoy_k", "Decoys per rule")
                 .min(0.0)
+                .max(100.0)
                 .default_num(5.0)
                 .advanced(),
             Param::number("decoy_ppm", "Decoy tolerance")

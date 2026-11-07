@@ -82,6 +82,14 @@ pub fn refilter<R: ReadAt>(
     hyps: &[Hyp],
     p: &FilterParams,
 ) -> Result<Registry> {
+    // the tolerance of a file is kept between the two: a floor above the ceiling has no answer (and `clamp` would panic)
+    if p.tol_min > p.tol_max {
+        return Err(Error::new("err.flow.param.order")
+            .with("low", "tol_min")
+            .with("high", "tol_max")
+            .with("low_value", mzlab_core::json::fmt_g(p.tol_min))
+            .with("high_value", mzlab_core::json::fmt_g(p.tol_max)));
+    }
     let (t, _) = read_table_from(r, size)?;
     if t.tp.is_empty() {
         return Err(Error::new("error.interp.noTp"));

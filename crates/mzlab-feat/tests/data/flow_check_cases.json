@@ -320,9 +320,9 @@
   {
     "expect": [
       "d1||err.flow.param.type|param=floor",
-      "d1||err.flow.param.range|param=min_height",
+      "d1||err.flow.param.range|param=min_height,allowed=≥ 0",
       "d1||err.flow.param.unknown|param=nope",
-      "d1||err.flow.param.range|param=polarity",
+      "d1||err.flow.param.range|param=polarity,allowed=1, -1, 0",
       "d1|index|err.flow.type|from=mzml,to=mzidx",
       "d2||err.flow.algorithm.unavailable|step=features.detect,algorithm=threshold",
       "d2|index|err.flow.type|from=mzml,to=mzidx",
@@ -388,7 +388,7 @@
   },
   {
     "expect": [
-      "d1||err.flow.param.range|param=peak_width_s",
+      "d1||err.flow.param.range|param=peak_width_s,allowed=0 ≤ x₁ ≤ x₂",
       "d1|index|err.flow.type|from=mzml,to=mzidx",
       "d2||err.flow.param.type|param=min_points",
       "d2||err.flow.param.unknown|param=snr",
@@ -842,6 +842,75 @@
             "table": "al.table"
           },
           "step": "screen.suspects@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "de||err.flow.param.range|param=finder_ppm,allowed=0 – 100",
+      "de||err.flow.param.range|param=max_gap,allowed=≥ 1",
+      "al||err.flow.param.range|param=ppm,allowed=0 – 100",
+      "gr||err.flow.param.range|param=apex_fwhm,allowed=0 – 2",
+      "gr||err.flow.param.range|param=rt_tol,allowed=0 – 5"
+    ],
+    "name": "a value above a maximum, and a detect gap of zero scans, name the allowed range",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzML",
+          "sha256": "",
+          "type": "mzml"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "ix",
+          "in": {
+            "source": "file:a.mzML"
+          },
+          "step": "index.mzidx@1"
+        },
+        {
+          "id": "de",
+          "in": {
+            "index": [
+              "ix.index"
+            ]
+          },
+          "params": {
+            "finder_ppm": 1500,
+            "max_gap": 0
+          },
+          "step": "features.detect@1"
+        },
+        {
+          "id": "al",
+          "in": {
+            "peaks": [
+              "de.peaks"
+            ]
+          },
+          "params": {
+            "ppm": 1000
+          },
+          "step": "features.align@1"
+        },
+        {
+          "id": "gr",
+          "in": {
+            "table": "al.table"
+          },
+          "params": {
+            "apex_fwhm": 5,
+            "rt_tol": 30
+          },
+          "step": "features.group@1"
         }
       ]
     }

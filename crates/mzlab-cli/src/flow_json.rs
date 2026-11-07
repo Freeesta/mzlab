@@ -102,7 +102,25 @@ pub(crate) fn fail(st: Style, code: u8, err: &Error, msg: &str, hint: &str) -> O
 /// Exit 3 for a plan that is not valid: one problem per line on stderr, and with `--json` the `errore/1` document with the list.
 pub(crate) fn invalid(st: Style, problems: &[Problem]) -> Outcome {
     let list: Vec<String> = problems.iter().map(problem_text).collect();
-    let lines: Vec<String> = list.iter().map(|l| format!("  {l}")).collect();
+    // a value out of range also names the range, so the next --set is clear without the Flow page
+    let lines: Vec<String> = problems
+        .iter()
+        .zip(&list)
+        .map(|(p, l)| {
+            let arg = |k: &str| {
+                p.params
+                    .iter()
+                    .find(|(n, _)| *n == k)
+                    .map(|(_, v)| v.as_str())
+            };
+            match (arg("param"), arg("allowed")) {
+                (Some(name), Some(range)) if !range.is_empty() => {
+                    format!("  {l}: {name} is outside the allowed range ({range})")
+                }
+                _ => format!("  {l}"),
+            }
+        })
+        .collect();
     let hint = "fix the plan in the Flow page or with --set";
     let msg = format!("the plan is not valid:\n{}", lines.join("\n"));
     let mut o = crate::flow_run::fail(3, &msg, hint);
