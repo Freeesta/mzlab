@@ -193,7 +193,7 @@ try:
             pg.evaluate("ATTRIBUTIO_CORE.MAX_FILES = 3")
             try:
                 pg.set_input_files(FOLDER_INPUT, str(FOLDER))
-                attendi(pg, "(document.querySelector('#flx-camp-cut') || {}).textContent", 30000)
+                lib.attendi(pg, "(document.querySelector('#flx-camp-cut') || {}).textContent", 30000)
                 n = sum(1 for f in Path(FOLDER).rglob("*") if f.is_file())
                 txt = pg.inner_text("#flx-camp-cut")
                 assert txt.startswith(Path(FOLDER).name + ": only the first 3 files of " + str(n)) and "left out" in txt and "open it again" in txt, txt
