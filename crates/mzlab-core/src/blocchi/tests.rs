@@ -92,3 +92,20 @@ fn a_range_that_wraps_past_u64_max_goes_to_the_fetch_and_is_refused() {
     let mut b = [0u8; 16];
     c.read_at(100, &mut b).unwrap();
 }
+
+#[test]
+fn a_slot_reused_for_a_shorter_or_longer_block_holds_only_the_new_bytes() {
+    let data = file(10_000);
+    let (mut c, log) = cache(data.clone(), 4096, 1);
+    let mut b = [0u8; 8];
+    for off in [9_995u64, 0, 9_000, 4_000, 9_995, 100] {
+        c.read_at(off, &mut b[..5]).unwrap();
+        assert_eq!(b[..5], data[off as usize..off as usize + 5]);
+        // the next bytes of the same block come from the cache, not from the last block of the slot
+        if off + 8 <= 10_000 {
+            c.read_at(off, &mut b).unwrap();
+            assert_eq!(b, data[off as usize..off as usize + 8]);
+        }
+    }
+    assert_eq!(log.borrow().len(), 6);
+}
