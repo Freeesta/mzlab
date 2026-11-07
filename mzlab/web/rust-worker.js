@@ -9,7 +9,7 @@ import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
 import { infoDi, nuovo } from "./manifesto.js";
-import { createPool, poolSize, makeGate } from "./idxpool.js";
+import { createPool, poolSize, makeGate, builderBudget } from "./idxpool.js";
 import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
@@ -105,7 +105,8 @@ const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));          
 const ISOLATED = !!self.crossOriginIsolated && typeof SharedArrayBuffer === "function";
 // the size from which a file gains from helper workers (the notice of capacita.js is only shown for such a file)
 const BIG_IDX = 32 << 20;
-const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, isolated: ISOLATED, notify: key => postMessage({ op: "notice", key }) }));
+const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, isolated: ISOLATED, notify: (key, params) => postMessage({ op: "notice", key, params }) }));
+const idxBudget = () => builderBudget(BUDGET_MB, SMALL, gate.size);          // undefined until the policy arrives: the pool's default
 /** @type {(key: string, params?: object) => never} */
 const jerr = (key, params = {}) => { throw JSON.stringify({ error_key: key, params }); };
 const NO_RUN = 0xFFFFFFFF;                                                  // what count and spectra_len of the engine answer for a slot with no run open
@@ -199,7 +200,7 @@ function scanOp({ op, id, slot, path, query, blob }) {
 const derivata = createDerivata({ nativo, ARCH, indexPlain });
 async function indexPlain(name, blob, onProgress) {                             // the index of an mzML that is no file of the page (the one made for the graph of a maker's sample)
   const part = name + ".mzidx.part";
-  const res = await idxPool().build({ name, blob, prep: { size: blob.size, prints: [undefined, undefined] }, part, cap: BUDGET_MB, onProgress });
+  const res = await idxPool().build({ name, blob, prep: { size: blob.size, prints: [undefined, undefined] }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });
   if (!res.ok) {
     await ARCH.remove("idx", part);
     let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
@@ -280,15 +281,14 @@ async function lrIndexOwn(m) {
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
-  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
-    : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
+  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, budget: idxBudget(), onProgress }
+    : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
   }
   if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
     if (res.reason === "cancelled") { safe(() => Promise.all([part, part.replace(/\.part$/, ".sp.part"), ...(partCen ? [partCen] : [])].map(n => ARCH.removeHeld("idx", n)))); throw cancelled(); }      // the stopped builder still holds these files for a moment
     await ARCH.remove("idx", part);
-    if (res.reason === "memory") jerr("error.memoryBudget");
     let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
     if (key) throw res.text;
     throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
