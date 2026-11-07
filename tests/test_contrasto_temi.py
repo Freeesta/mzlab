@@ -47,16 +47,16 @@ def _themes():
 
 
 def test_riquadri_avviso_leggibili():
-    for nome, v in _themes().items():
+    for name, v in _themes().items():
         for kind in ("ok", "warn", "bad"):
             box = _mix(_rgb(v["--" + kind]), _rgb(v["--panel"]))
             for fg in ("--ink", "--" + kind):
                 r = _ratio(_rgb(v[fg]), box)
-                assert r >= 4.5, f"{nome}: {fg} su riquadro .avv.{kind} = {r:.2f}"
+                assert r >= 4.5, f"{name}: {fg} su riquadro .avv.{kind} = {r:.2f}"
 
 
 def test_testo_su_sfondi_base():
-    for nome, v in _themes().items():
+    for name, v in _themes().items():
         for bg in ("--bg", "--panel", "--soft", "--sel"):
             if bg not in v:
                 continue
@@ -64,7 +64,7 @@ def test_testo_su_sfondi_base():
                 if bg in ("--soft", "--sel") and fg != "--ink" and fg != "--muted":
                     continue
                 r = _ratio(_rgb(v[fg]), _rgb(v[bg]))
-                assert r >= 4.5, f"{nome}: {fg} su {bg} = {r:.2f}"
+                assert r >= 4.5, f"{name}: {fg} su {bg} = {r:.2f}"
 
 
 def test_nessuna_variabile_inventata():

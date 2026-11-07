@@ -11,7 +11,7 @@ DISJOINT = {"x": {"spec.xic", "chrom.xic", "chrom.wl", "uv.wlView", "xic.addIon"
 RESERVED = {("t", True, False), ("n", True, False), ("w", True, False), ("q", True, False), ("l", True, False), ("r", True, False), ("p", True, False), ("s", True, False), ("f", True, False)}
 
 
-def tasti():
+def keys():
     out = []
     for f in sorted(WEB.glob("*.js")):
         for m in re.finditer(r'id: "([\w.]+)"[^\n]*?scorciatoia: (\{[^}]*\})', f.read_text(encoding="utf8")):
@@ -19,34 +19,34 @@ def tasti():
     src = (WEB / "azioni-tasti.js").read_text(encoding="utf8")
     for k, v, code in re.findall(r'vista\("(\w+)", "(\w+)", "(Digit\d)"', src):
         out.append(("app." + k, {"code": f'"{code}"', "alt": "true", "dove": '"view"'}))
-    for k, tasto in re.findall(r'passo\("(\w+)", "[\w.]+", "(Arrow\w+)"', src):
-        out.append(("app." + k, {"tasto": f'"{tasto}"', "alt": "true", "dove": '"view"'}))
+    for k, key in re.findall(r'passo\("(\w+)", "[\w.]+", "(Arrow\w+)"', src):
+        out.append(("app." + k, {"tasto": f'"{key}"', "alt": "true", "dove": '"view"'}))
     return out
 
 
-def chiave(s):
+def key(s):
     q = lambda k: s.get(k, "").strip('"')
     return ((q("tasto") or q("code")).lower(), s.get("mod") == "true", s.get("alt") == "true")
 
 
 def test_found_the_wanted_keys():
-    ids = {i for i, _ in tasti()}
+    ids = {i for i, _ in keys()}
     for want in ("spec.xic", "chrom.specAtRt", "spec.peak", "chrom.intAuto", "spec.measureKey", "view.fullscreen", "app.apri", "app.esporta", "app.dati", "app.disegno", "app.scorciatoie", "app.pannelli", "app.filePrec", "app.fileSucc"):
         assert want in ids, want
 
 
 def test_no_key_twice_in_the_same_view():
     seen = {}
-    for i, s in tasti():
-        seen.setdefault(chiave(s), []).append(i)
+    for i, s in keys():
+        seen.setdefault(key(s), []).append(i)
     for k, ids in seen.items():
         if len(ids) > 1:
             assert set(ids) <= DISJOINT.get(k[0], set()), (k, ids)
 
 
 def test_no_key_reserved_by_the_browser():
-    for i, s in tasti():
-        assert chiave(s) not in RESERVED, i
+    for i, s in keys():
+        assert key(s) not in RESERVED, i
         if s.get("alt") == "true" and "code" in s:
             assert s["code"].strip('"') in ("Digit1", "Digit2", "Digit3"), i
         if s.get("dove") == '"chart"':

@@ -11,9 +11,9 @@ def test_shards_partition_the_collection():
 
 
 def test_a_dropped_a_duplicated_or_a_stale_test_is_reported():
-    pieno = ["t.py::a", "t.py::b", "t.py::c"]
-    assert sh.confronta(pieno, ["t.py::a", "t.py::b"], ["t.py::c"], [], []) == []
-    assert any("no shard" in g for g in sh.confronta(pieno, ["t.py::a"], ["t.py::c"], [], []))
-    assert any("both shards" in g for g in sh.confronta(pieno, ["t.py::a", "t.py::b"], ["t.py::b", "t.py::c"], [], []))
-    assert any("matches no test" in g for g in sh.confronta(pieno, ["t.py::a", "t.py::b", "t.py::c"], [], ["old.py"], []))
-    assert any("twice" in g for g in sh.confronta(pieno, pieno, [], [], ["t.py"]))
+    full = ["t.py::a", "t.py::b", "t.py::c"]
+    assert sh.confronta(full, ["t.py::a", "t.py::b"], ["t.py::c"], [], []) == []
+    assert any("no shard" in g for g in sh.confronta(full, ["t.py::a"], ["t.py::c"], [], []))
+    assert any("both shards" in g for g in sh.confronta(full, ["t.py::a", "t.py::b"], ["t.py::b", "t.py::c"], [], []))
+    assert any("matches no test" in g for g in sh.confronta(full, ["t.py::a", "t.py::b", "t.py::c"], [], ["old.py"], []))
+    assert any("twice" in g for g in sh.confronta(full, full, [], [], ["t.py"]))

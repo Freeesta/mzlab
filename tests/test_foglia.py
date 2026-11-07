@@ -42,8 +42,8 @@ def test_leaf_plays_once_and_rests_visible():
     last = re.search(r"@keyframes leaf-fall\{.*[,}](\d+%|to)\{([^}]*)\}\}", CSS)
     assert last.group(1) == "100%" and "opacity:1" in last.group(2), "ends visible at rest"
     assert "opacity:0" not in re.search(r"@keyframes leaf-fall\{.*\}\}", CSS).group(0).split("12%")[1], "never fades out after landing"
-    barra = (WEB / "barra.js").read_text(encoding="utf-8")
-    assert "played" in barra and "rest" in barra, "a re-render of the same line rests at once"
+    bar = (WEB / "barra.js").read_text(encoding="utf-8")
+    assert "played" in bar and "rest" in bar, "a re-render of the same line rests at once"
 
 
 def test_hidden_panel_pauses_the_loop():
@@ -52,7 +52,7 @@ def test_hidden_panel_pauses_the_loop():
 
 def test_one_drawing_shared_by_every_panel():
     assert len(re.findall(r'<svg class="leaf"', HTML)) == 1
-    barra = (WEB / "barra.js").read_text(encoding="utf-8")
-    assert "EMPTYLEAF" in barra and "svg.leaf" in barra
+    bar = (WEB / "barra.js").read_text(encoding="utf-8")
+    assert "EMPTYLEAF" in bar and "svg.leaf" in bar
     for f in ("liste.js", "tables.js", "calc-qui-ui.js"):
         assert "EMPTYLEAF" in (WEB / f).read_text(encoding="utf-8"), f
