@@ -122,7 +122,7 @@
       try { e = JSON.parse(await callRaw("estimate", JSON.stringify(names), parentMz ? String(parentMz) : "")); } catch (_) { /* no estimate: the defaults stay */ }
       if (!e || seq !== estSeq) return;
       const put = (id, v, dec, why) => { const el = $(id); if (v == null || !Number.isFinite(v) || el.dataset.user) return; el.value = v.toFixed(dec); el.classList.add("tp-est"); el.title = why; };
-      put("#tp-tol", e.da && e.da.value, 2, `From the data: 2 × the tolerance measured (3 × the scatter of m/z) on the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
+      put("#tp-tol", e.da && e.da.value, 2, `From the data: 2 × the tolerance measured (3 × the scatter of m/z) on the ${e.da && e.da.n} points of the strongest peaks of ${f.name}${e.da && e.da.capped ? `; the scatter is above the ${e.da.value} Da ceiling, so the ceiling is used: check the mass calibration` : ""}`);
       put("#tp-rtt", e.rt_tol, 2, e.drift && e.drift.value > 2 * (e.fwhm && e.fwhm.value || 0) ? `From the data: the RT of the parent drifts by ${e.drift.value.toFixed(2)} min over ${e.drift.n} files` : `From the data: 2 × the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
       put("#tp-rtmin", e.dead, 1, `From the data: the unretained front of ${f.name} ends here`);
     }
