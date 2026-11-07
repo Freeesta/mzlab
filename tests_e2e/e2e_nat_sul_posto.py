@@ -27,6 +27,7 @@ SHAS = """async () => { const d = await (await (await navigator.storage.getDirec
   return o; }"""
 STUBS = """async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('files'); const o = {};
   for await (const [n, h] of d.entries()) if (/\\.mzml$/i.test(n)) { try { o[n] = !!JSON.parse(await (await h.getFile()).text()).sul; } catch (_) { o[n] = null; } } return o; }"""
+CALM = "!window.qqFailed && document.getElementById('rust-note')?.getAttribute('role') === 'status' && ![...document.querySelectorAll('[role=alert]')].some(e => e.offsetParent && e.textContent.trim())"      # a notice, never the failure banner
 WHY = "[ST.files.map(f => [f.name, f.kind]), UPBUSY, document.getElementById('unopen')?.innerText.slice(0, 400), window.__notes]"
 try:
     with sync_playwright() as p:
@@ -58,6 +59,7 @@ try:
             st = a.evaluate(STUBS); assert len(st) == N and all(st.values()), st
             assert a.evaluate("document.querySelectorAll('#unopen .fail, #unopen .quota-note, #flst .fl.up.err').length") == 0, a.evaluate(WHY)
             assert any(t == a.evaluate("n => I18N.t('load.sulPosto', { name: n })", n) for n in st for t in a.evaluate("window.__notes || []")), a.evaluate("window.__notes")
+            assert a.evaluate(CALM), ("the notice looks like a failure", a.evaluate(WHY))
         step("the members refused: every sample loads in place, the .wiff is not copied, the stubs are marked sul, a calm notice", in_place)
         def same():
             now = a.evaluate(SHAS)
@@ -74,6 +76,7 @@ try:
             assert a.evaluate("n => I18N.t('load.sulRiapri', { name: n })", names[0]) in notes, notes
             o = a.evaluate(WALK)
             assert not [k for k in o if k.startswith("files/") or k.endswith(".mzidx")], ("stubs, members or indexes stayed after the reload", o)
+            assert a.evaluate(CALM), ("the reload notice looks like a failure", a.evaluate(WHY))
         step("after a reload: a calm notice says to load it again, no «interrupted copy» notice, stubs, members and indexes are gone", reload)
     r.close()
 except Exception as e:
