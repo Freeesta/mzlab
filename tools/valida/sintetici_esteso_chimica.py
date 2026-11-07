@@ -23,7 +23,7 @@ def parametri(rng, forma: str) -> dict:
     return {"monotona": lambda: dict(kf=u(0.05, 0.25)), "bateman": lambda: dict(kf=u(0.15, 0.3), kd=u(0.04, 0.1))}[forma]()
 
 
-def progenitore_alogenato(c, rng, alog: dict):
+def halogenated_parent(c, rng, alog: dict):
     """A halogenated progenitor: an invented formula without the halogen of the base model, the given halogens in place of hydrogens. Returns (formula, RT)."""
     while True:
         f = {e: n for e, n in formula_inventata(rng).items() if e != "Cl"}
@@ -35,10 +35,10 @@ def progenitore_alogenato(c, rng, alog: dict):
                 return f, rt
 
 
-def prodotti_alogenato(c, st, rng, p: Ione, f: dict, alog: dict, nome: str) -> None:
+def halogenated_products(c, st, rng, p: Ione, f: dict, alog: dict, nome: str) -> None:
     """The product that keeps the halogens (+O) and, for every halogen type, -X+H and -X+OH."""
-    passi = [("idrossilazione", "+O", {"O": 1})] + [(f"dealogenazione_{x}_{cl}", f"-{x}+{cl}", d) for x in sorted(alog) for cl, d in DEALOG[x]]
-    for j, (classe, testo, delta) in enumerate(passi):
+    steps = [("idrossilazione", "+O", {"O": 1})] + [(f"dealogenazione_{x}_{cl}", f"-{x}+{cl}", d) for x in sorted(alog) for cl, d in DEALOG[x]]
+    for j, (classe, text, delta) in enumerate(steps):
         forma = "bateman" if j % 2 == 0 else "monotona"
         g = somma(f, delta)
         if any(g == x for x in c.formule):                   # the same formula as another molecule: no product
@@ -56,7 +56,7 @@ def prodotti_alogenato(c, st, rng, p: Ione, f: dict, alog: dict, nome: str) -> N
         o.frammenti = frammenti_di(rng, o.mz)
         c.formule.append(g)
         st.neutre[o.id] = g
-        st.meta[o.id] = dict(classe=classe, delta=testo, via="regola", alogeni=sorted(sum(([e] * k for e, k in g.items() if e in ("Cl", "Br")), [])), t_max=None, raggiungibile=True,
+        st.meta[o.id] = dict(classe=classe, delta=text, via="regola", alogeni=sorted(sum(([e] * k for e, k in g.items() if e in ("Cl", "Br")), [])), t_max=None, raggiungibile=True,
                              debole=False, specie=nome)
         if classe.startswith("dealogenazione"):
             st.cont[f"dealog_{nome}_{classe.rsplit('_', 1)[1]}"] += 1
@@ -65,7 +65,7 @@ def prodotti_alogenato(c, st, rng, p: Ione, f: dict, alog: dict, nome: str) -> N
 def alogenati(c, st, rng) -> None:
     for i in range(int(st.P["n_alogenati"])):
         nome, alog = SPECIE[i % len(SPECIE)]
-        f, rt = progenitore_alogenato(c, rng, alog)
+        f, rt = halogenated_parent(c, rng, alog)
         c.formule.append(f)
         pid = c.id_mol()
         kd = round(float(rng.uniform(0.03, 0.08)), 3)
@@ -74,10 +74,10 @@ def alogenati(c, st, rng) -> None:
         st.meta[p.id] = dict(alogeni=sorted(sum(([e] * k for e, k in alog.items()), [])), specie=nome)
         st.neutre[p.id] = f
         st.cont[f"alog_{nome}"] += 1
-        prodotti_alogenato(c, st, rng, p, f, alog, nome)
+        halogenated_products(c, st, rng, p, f, alog, nome)
 
 
-def n_frammenti(rng, mz: float, n: int, evita=()) -> tuple:
+def n_fragments(rng, mz: float, n: int, evita=()) -> tuple:
     """`n` invented fragments of a precursor (sorted), none near an `evita` m/z."""
     f, r = [], []
     while len(f) < n:
@@ -88,22 +88,22 @@ def n_frammenti(rng, mz: float, n: int, evita=()) -> tuple:
     return np.array(f)[o], np.array(r)[o]
 
 
-def frammenti_gruppo(rng, mz: float, quota: float, base=None, n: int = 10) -> tuple:
+def fragments_group(rng, mz: float, quota: float, base=None, n: int = 10) -> tuple:
     """Fragments of an isomer: `n` in all, a share `quota` of them taken from `base` (the first isomer's), the rest new."""
     if base is None:
-        return n_frammenti(rng, mz, n)
+        return n_fragments(rng, mz, n)
     k = int(round(quota * n))
     sel = sorted(rng.permutation(len(base[0]))[:k].tolist())
-    nuovi = n_frammenti(rng, mz, n - k, evita=base[0])
-    f = np.concatenate([base[0][sel], nuovi[0]])
-    r = np.concatenate([base[1][sel], nuovi[1]])
+    new = n_fragments(rng, mz, n - k, evita=base[0])
+    f = np.concatenate([base[0][sel], new[0]])
+    r = np.concatenate([base[1][sel], new[1]])
     o = np.argsort(f, kind="stable")
     return f[o], r[o]
 
 
 def isomeri_vicini(c, st, rng) -> None:
     """`gruppi_per_dt` groups for every ΔRT of DT; groups of three on the odd rounds."""
-    padre = next(o for o in c.ioni if o.ruolo == "progenitore")
+    parent = next(o for o in c.ioni if o.ruolo == "progenitore")
     for j in range(len(DT) * int(st.P["gruppi_per_dt"])):
         d = DT[j % len(DT)]
         size = 3 if (j // len(DT)) % 2 == 1 else 2
@@ -118,12 +118,12 @@ def isomeri_vicini(c, st, rng) -> None:
         kf = round(float(rng.uniform(0.05, 0.25)), 3)
         scala = float(rng.uniform(1.0, 2.5)) * 1e7
         sep = valle_relativa(d, sg, 0.8) < 0.98
-        membri = []
+        members = []
         for m in range(size):
             mid = c.id_mol()
-            o = c.ione(mid, "isomero", membri[0].id if membri else mid, f, rt + m * d, sg, c.traccia("monotona", scala * 0.8 ** m, kf=kf), progenitore=padre.id, generazione=1, forma="monotona",
-                       k_form=kf, selezionabile=True, isomero_di=membri[0].id if membri else "")
-            o.frammenti = frammenti_gruppo(rng, o.mz, (1.0, 0.7, 0.3)[m], membri[0].frammenti if membri else None)
+            o = c.ione(mid, "isomero", members[0].id if members else mid, f, rt + m * d, sg, c.traccia("monotona", scala * 0.8 ** m, kf=kf), progenitore=parent.id, generazione=1, forma="monotona",
+                       k_form=kf, selezionabile=True, isomero_di=members[0].id if members else "")
+            o.frammenti = fragments_group(rng, o.mz, (1.0, 0.7, 0.3)[m], members[0].frammenti if members else None)
             o.note = f"delta_rt={d};fwhm={fw:.4f};sigma={sg:.4f};separabile={int(sep)}"
-            membri.append(o)
+            members.append(o)
         st.cont[f"iso_{d:g}"] += 1

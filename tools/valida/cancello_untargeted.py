@@ -20,8 +20,8 @@ from valida import ROOT, cancello_misure as M, nativo  # noqa: E402
 from valida.cancello import a_json, versione_crate  # noqa: E402
 
 PROTOCOLLO = "ion/height-floor/counts-s"
-SOGLIE_NUOVE = {"richiamo": (">=", 0.95), "precisione": (">=", 0.95), "spearman": (">=", 0.95), "log2_mediano": ("<=", 0.10)}
-SOGLIE_VECCHIE = {"richiamo": (">=", 0.90), "precisione": (">=", 0.80), "spearman": (">=", 0.90), "log2_mediano": ("<=", 0.25)}
+NEW_THRESHOLDS = {"richiamo": (">=", 0.95), "precisione": (">=", 0.95), "spearman": (">=", 0.95), "log2_mediano": ("<=", 0.10)}
+OLD_THRESHOLDS = {"richiamo": (">=", 0.90), "precisione": (">=", 0.80), "spearman": (">=", 0.90), "log2_mediano": ("<=", 0.25)}
 ESEMPIO = ROOT / "target" / "release" / "examples" / "untargeted"
 
 
@@ -48,18 +48,18 @@ def tabella(uscita: Path, nomi: list[str]):
     return Tabella("untargeted", nomi, a["mz"].copy(), a["rt"].copy(), area, altezza=alt), meta["crate"]
 
 
-def _passa(c: dict, soglie: dict) -> bool:
-    return all(k in c and (c[k] >= v if op == ">=" else c[k] <= v) for k, (op, v) in soglie.items())
+def _pass(c: dict, thresholds: dict) -> bool:
+    return all(k in c and (c[k] >= v if op == ">=" else c[k] <= v) for k, (op, v) in thresholds.items())
 
 
 def sezione(nativa, mzmine, colonne: list[int], altezza_min: float, crate: str) -> dict:
     """The section `untargeted` from the native table and the one of mzmine (the columns are the treated samples)."""
-    nuovo = M.concordanza_mzmine_ioni(nativa, mzmine, colonne, altezza_min)
-    vecchio = M.concordanza_mzmine(nativa, mzmine, colonne, 50.0)
-    ok = _passa(nuovo, SOGLIE_NUOVE) and _passa(vecchio, SOGLIE_VECCHIE)
-    return {"ok": ok, "crate_version": crate, "recall": nuovo.get("richiamo"), "precision": nuovo.get("precisione"), "spearman": nuovo.get("spearman"), "log2": nuovo.get("log2_mediano"),
-            "protocol": PROTOCOLLO, "old_protocol": {k: vecchio.get(k) for k in ("richiamo", "precisione", "spearman", "log2_mediano")}, "floor": altezza_min,
-            "rows_mzmine": nuovo.get("righe_mzmine"), "rows_native": nuovo.get("righe_native"), "files": len(colonne)}
+    new = M.concordanza_mzmine_ioni(nativa, mzmine, colonne, altezza_min)
+    old = M.concordanza_mzmine(nativa, mzmine, colonne, 50.0)
+    ok = _pass(new, NEW_THRESHOLDS) and _pass(old, OLD_THRESHOLDS)
+    return {"ok": ok, "crate_version": crate, "recall": new.get("richiamo"), "precision": new.get("precisione"), "spearman": new.get("spearman"), "log2": new.get("log2_mediano"),
+            "protocol": PROTOCOLLO, "old_protocol": {k: old.get(k) for k in ("richiamo", "precisione", "spearman", "log2_mediano")}, "floor": altezza_min,
+            "rows_mzmine": new.get("righe_mzmine"), "rows_native": new.get("righe_native"), "files": len(colonne)}
 
 
 def vuota() -> dict:

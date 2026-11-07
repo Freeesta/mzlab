@@ -22,12 +22,12 @@ import dati_sintetici as ds  # noqa: E402
 CICLO = 0.01                  # min between two survey scans
 RT0 = 0.5
 ISO_SEMI = 0.6                # half of the isolation window (1.2 m/z)
-SOGLIA_MS2 = 5e4              # minimum height of the apex to trigger a fragmentation
+THRESHOLD_MS2 = 5e4              # minimum height of the apex to trigger a fragmentation
 TOP_N = 3
 SD_PPM = 0.8e-6
 RUMORE = 100                  # random noise peaks per survey scan
 FIN_RT = 0.5                  # components farther than this (min) from the scan are not evaluated (5 sigma of the widest peak is 0.5)
-FILTRO1, FILTRO2 = "FTMS + p ESI Full ms [100.0000-900.0000]", "FTMS + p ESI d Full ms2 {p:.4f}@hcd30.00 [50.0000-{q:.4f}]"
+FILTRO1, FILTER2 = "FTMS + p ESI Full ms [100.0000-900.0000]", "FTMS + p ESI d Full ms2 {p:.4f}@hcd30.00 [50.0000-{q:.4f}]"
 
 
 def _arr(acc, name, data, f4=False) -> str:
@@ -53,7 +53,7 @@ def _scan(idx, rt, level, mz, it, prec="", filt="", res=0) -> str:
             + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it, f4=True) + "</binaryDataArrayList></spectrum>")
 
 
-def _precursore(idx_ms1, m, e, vint) -> str:
+def _precursor(idx_ms1, m, e, vint) -> str:
     cv = ds._cvp
     return ('<precursorList count="1">' + f'<precursor spectrumRef="controllerType=0 controllerNumber=1 scan={idx_ms1 + 1}"><isolationWindow>'
             + cv("MS:1000827", "isolation window target m/z", f"{m:.6f}", ds._U_MZ) + cv("MS:1000828", "isolation window lower offset", ISO_SEMI, ds._U_MZ)
@@ -63,7 +63,7 @@ def _precursore(idx_ms1, m, e, vint) -> str:
             + cv("MS:1000045", "collision energy", 30.0, ' unitCvRef="UO" unitAccession="UO:0000266" unitName="electronvolt"') + '</activation></precursor></precursorList>')
 
 
-def componenti_file(c, k: int):
+def components_file(c, k: int):
     """Arrays of the components present in file k (sorted by RT): m/z, RT, sigma, height, cap of the saturated ones (inf = none), the ions and the index of the
     most abundant component of each ion. The matrix noise features (c.rumore) are components of no ion."""
     ioni = [o for o in c.ioni if o.amp is not None and o.amp[k] >= 2e3 and o.picchi]
@@ -86,18 +86,18 @@ def componenti_file(c, k: int):
 
 def piano_ms2(ioni, k: int) -> dict:
     """{cycle: [index of ion]}: the apex cycle of every selectable ion, at most TOP_N per cycle (the rest slips to the next cycles)."""
-    carico, pian = {}, {}
+    load, pian = {}, {}
     for j, o in enumerate(ioni):
-        if o.selezionabile and o.amp[k] >= SOGLIA_MS2:
+        if o.selezionabile and o.amp[k] >= THRESHOLD_MS2:
             n = int(round((o.rt - RT0) / CICLO))
-            while carico.get(n, 0) >= TOP_N:
+            while load.get(n, 0) >= TOP_N:
                 n += 1
-            carico[n] = carico.get(n, 0) + 1
+            load[n] = load.get(n, 0) + 1
             pian.setdefault(n, []).append(j)
     return pian
 
 
-def spettro_ms2(rng, j, ioni, imz, v, mono, i1, idx, rt, s, e):
+def spectrum_ms2(rng, j, ioni, imz, v, mono, i1, idx, rt, s, e):
     """MS2 of ion o: fragments of every ion in the isolation window, in proportion to its current in the survey scan."""
     o = ioni[j]
     win = np.flatnonzero((np.abs(imz - o.mz) <= ISO_SEMI) & (v[mono] >= 2e3)).tolist()
@@ -111,13 +111,13 @@ def spettro_ms2(rng, j, ioni, imz, v, mono, i1, idx, rt, s, e):
     fm.append(rng.uniform(60, o.mz, 8)); fi.append(rng.lognormal(np.log(1.5e3), 0.5, 8))
     fm, fi = np.concatenate(fm), np.concatenate(fi)
     q = np.argsort(fm, kind="stable")
-    return _scan(idx, rt + 0.0015 * (s + 1), 2, fm[q], fi[q], prec=_precursore(i1, o.mz, e, float(v[mono[j]])), filt=FILTRO2.format(p=o.mz, q=o.mz + 10), res=15000)
+    return _scan(idx, rt + 0.0015 * (s + 1), 2, fm[q], fi[q], prec=_precursor(i1, o.mz, e, float(v[mono[j]])), filt=FILTER2.format(p=o.mz, q=o.mz + 10), res=15000)
 
 
 def scrivi_file(path: Path, k: int, c, seme: int) -> dict:
     """One file of the series (k = column of the plan)."""
     rng = np.random.default_rng([seme, 1000 + k])
-    ioni, cm, cr, cs, ch, cap, mono = componenti_file(c, k)
+    ioni, cm, cr, cs, ch, cap, mono = components_file(c, k)
     imz = np.array([o.mz for o in ioni])
     bg = np.array([[m, a, ph] for _, m, a, ph in c.fondo]) if c.fondo else np.zeros((0, 3))
     lob_mz = np.array([m * (1 + d) for m in bg[:, 0] for d in (-2.5e-5, 2.5e-5)])
@@ -145,7 +145,7 @@ def scrivi_file(path: Path, k: int, c, seme: int) -> dict:
         tic.append(float(it.sum())); idx += 1
         for s, j in enumerate(pian.get(n, [])):
             e = float(cm[mono[j]] * (1 + rng.normal(0, SD_PPM)))
-            specs.append(spettro_ms2(rng, j, ioni, imz, v, mono, i1, idx, rt, s, e))
+            specs.append(spectrum_ms2(rng, j, ioni, imz, v, mono, i1, idx, rt, s, e))
             idx += 1; n_ms2 += 1
     chroms = [ds._chrom(0, "TIC", rts, np.array(tic))]
     path.write_text(ds._hr_head("exploris", False, path.stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
@@ -156,8 +156,8 @@ def scrivi_file(path: Path, k: int, c, seme: int) -> dict:
 # ------------------------------------------------------------------------------------------------------------ bench lot of smeared peaks
 FWHM_K = 2 * math.sqrt(2 * math.log(2))      # FWHM = FWHM_K * sigma of a Gaussian
 N0 = 8e3                                     # median height of the noise peaks: S/N of a compound = its apex height / N0
-CICLO_LARGHI = 0.02                          # min between two survey scans of the lot (1.2 s: 6 points on a 8 s FWHM peak)
-RT_FINE_LARGHI = 30.0
+WIDE_CYCLE = 0.02                          # min between two survey scans of the lot (1.2 s: 6 points on a 8 s FWHM peak)
+RT_FINE_WIDE = 30.0
 MORFOLOGIE = ("a_gauss", "a_emg", "b_doppio", "c_banda")
 _erfc = np.frompyfunc(math.erfc, 1, 1)
 _FMAX: dict = {}
@@ -197,12 +197,12 @@ def _curva(comps: list, t):
     return sum(c["h"] * forma(t, c["mu"], c["sigma"], c["tau"]) for c in comps)
 
 
-def _griglia(comps: list):
+def _grid(comps: list):
     return np.arange(min(c["mu"] - 6 * c["sigma"] for c in comps), max(c["mu"] + 6 * c["sigma"] + 10 * c["tau"] for c in comps), 0.002)
 
 
 def _fwhm_s(comps: list) -> float:
-    t = _griglia(comps)
+    t = _grid(comps)
     y = _curva(comps, t)
     i = np.flatnonzero(y >= y.max() / 2)
     return float((t[i[-1]] - t[i[0]]) * 60.0)
@@ -230,7 +230,7 @@ def _sigma_sella(d: float, h2: float, frac: float) -> float:
 def _riga(id_: str, ruolo: str, morf: str, mz: float, comps: list, nfile: int, **extra) -> dict:
     """Truth row of one compound: apex RT (min; of a double plateau the midpoint of its two apexes), FWHM (s) and central 99 % interval of the area of the sum of
     its components, exact area (intensity * min, one value per file, 0 in the blank)."""
-    t = _griglia(comps)
+    t = _grid(comps)
     y = _curva(comps, t)
     ap = np.flatnonzero((y[1:-1] > y[:-2]) & (y[1:-1] >= y[2:])) + 1
     rt = float((t[ap[0]] + t[ap[-1]]) / 2) if morf == "b_doppio" and len(ap) > 1 else float(t[int(np.argmax(y))])
@@ -243,20 +243,20 @@ def _riga(id_: str, ruolo: str, morf: str, mz: float, comps: list, nfile: int, *
                  "componenti": [{k: round(float(c[k]), 6) for k in ("mu", "sigma", "tau", "h")} for c in comps]}, **extra)
 
 
-def costruisci_larghi(seme: int, n_larghi: int = 18, n_stretti: int = 12, n_fondo: int = 200, n_campioni: int = 3, rt_fine: float = RT_FINE_LARGHI):
+def costruisci_larghi(seme: int, n_larghi: int = 18, n_stretti: int = 12, n_fondo: int = 200, n_campioni: int = 3, rt_fine: float = RT_FINE_WIDE):
     """(truth rows, groups, background): the groups are the compounds as the instrument sees them (one m/z, the sum of the components of the row(s) on it)."""
     rng = np.random.default_rng([seme, 77])
     bg_mz = np.sort(rng.uniform(150, 800, n_fondo))
-    usati: list = []
+    used: list = []
 
-    def mz_libero() -> float:
+    def mz_free() -> float:
         while True:
             m = float(rng.uniform(150, 800))
-            if all(abs(m - x) >= 0.5 for x in usati) and np.all(np.abs(bg_mz - m) >= 0.02):
-                usati.append(m)
+            if all(abs(m - x) >= 0.5 for x in used) and np.all(np.abs(bg_mz - m) >= 0.02):
+                used.append(m)
                 return m
 
-    def posto(ext: float) -> float:
+    def place(ext: float) -> float:
         return float(rng.uniform(RT0 + 1.0 + ext, rt_fine - 1.0 - ext))
 
     def comp(mu, fwhm_s, snr, emg=False):
@@ -265,39 +265,39 @@ def costruisci_larghi(seme: int, n_larghi: int = 18, n_stretti: int = 12, n_fond
 
     n_a, n_b = round(n_larghi * 0.45), round(n_larghi * 0.275)
     morfs = ["a_gauss", "a_emg"] * (n_a // 2) + ["a_gauss"] * (n_a % 2) + ["b_doppio"] * n_b + ["c_banda"] * (n_larghi - n_a - n_b)
-    righe, gruppi, n_nsb = [], [], 0
+    rows, gruppi, n_nsb = [], [], 0
     for i, morf in enumerate(morfs):
-        mz = mz_libero()
+        mz = mz_free()
         if morf.startswith("a_"):
             f = float(rng.uniform(60, 240))
             c = comp(0.0, f, float(rng.uniform(4, 12)), emg=morf == "a_emg")
-            c["mu"] = posto(3.5 * c["sigma"] + 5 * c["tau"])
+            c["mu"] = place(3.5 * c["sigma"] + 5 * c["tau"])
             cs = [c]
         elif morf == "b_doppio":
             d, h2 = 1.5, 0.85
             sg = _sigma_sella(d, h2, 0.60)
-            mu = posto(d / 2 + 3.5 * sg)
+            mu = place(d / 2 + 3.5 * sg)
             snr = float(rng.uniform(4, 12))
             cs = [{"mu": mu - d / 2, "sigma": sg, "tau": 0.0, "h": snr * N0}, {"mu": mu + d / 2, "sigma": sg, "tau": 0.0, "h": snr * N0 * h2}]
         else:
-            band = comp(posto(3.5 * 150 / 60 / FWHM_K), 150.0, float(rng.uniform(6, 12)))
+            band = comp(place(3.5 * 150 / 60 / FWHM_K), 150.0, float(rng.uniform(6, 12)))
             cs = [band]
-        righe.append(_riga(f"BRD-{i + 1:03d}", "broad", morf, mz, cs, n_campioni))
+        rows.append(_riga(f"BRD-{i + 1:03d}", "broad", morf, mz, cs, n_campioni))
         todos = list(cs)
         if morf == "c_banda":
             for _ in range(int(rng.integers(1, 3))):
                 st = comp(float(cs[0]["mu"] + rng.uniform(-0.35, 0.35) * 150 / 60), 8.0, float(rng.uniform(8, 25)))
                 n_nsb += 1
-                righe.append(_riga(f"NSB-{n_nsb:03d}", "narrow", "stretto_su_banda", mz * (1 + float(rng.uniform(-3, 3)) * 1e-6), [st], n_campioni, su=f"BRD-{i + 1:03d}"))
+                rows.append(_riga(f"NSB-{n_nsb:03d}", "narrow", "stretto_su_banda", mz * (1 + float(rng.uniform(-3, 3)) * 1e-6), [st], n_campioni, su=f"BRD-{i + 1:03d}"))
                 todos.append(st)
         gruppi.append({"mz": mz, "comps": todos})
     for i in range(n_stretti):
-        mz = mz_libero()
-        st = comp(posto(1.0), float(rng.uniform(6, 12)), float(rng.uniform(15, 60)))
-        righe.append(_riga(f"NAR-{i + 1:03d}", "narrow", "stretto", mz, [st], n_campioni))
+        mz = mz_free()
+        st = comp(place(1.0), float(rng.uniform(6, 12)), float(rng.uniform(15, 60)))
+        rows.append(_riga(f"NAR-{i + 1:03d}", "narrow", "stretto", mz, [st], n_campioni))
         gruppi.append({"mz": mz, "comps": [st]})
     fondo = [(f"LAR-BG-{i + 1:03d}", float(m), float(rng.lognormal(np.log(6e4), 0.8)), float(rng.uniform(0, 6.28))) for i, m in enumerate(bg_mz)]
-    return righe, gruppi, fondo
+    return rows, gruppi, fondo
 
 
 def gradiente(rt: float) -> float:
@@ -318,7 +318,7 @@ class Lotto:
         self.mu, self.sg, self.tau, self.h = (np.array([c[k] for _, c in flat], float) for k in ("mu", "sigma", "tau", "h"))
         chiave = np.array([g["comps"][0]["mu"] for g in gruppi], float)
         self.rumore = (np.array([g["mz"] for g in gruppi], float), chiave, np.ones(self.n), np.ones(self.n))
-        self.fin = max([0.5] + [max(abs(t.min() - k), abs(t.max() - k)) + 0.1 for g, k in zip(gruppi, chiave) for t in (_griglia(g["comps"]),)])
+        self.fin = max([0.5] + [max(abs(t.min() - k), abs(t.max() - k)) + 0.1 for g, k in zip(gruppi, chiave) for t in (_grid(g["comps"]),)])
 
     def profilo(self, rt: float, lo: int, hi: int):
         return np.bincount(self.owner, weights=self.h * forma(rt, self.mu, self.sg, self.tau), minlength=self.n)[lo:hi]
@@ -328,19 +328,19 @@ class Lotto:
         return amp * gradiente(rt) * (1 + 0.1 * ds._sin(rt / 2.0 + ph))
 
 
-def genera_larghi(out: Path, seme: int = 11, n_campioni: int = 3, n_larghi: int = 18, n_stretti: int = 12, n_fondo: int = 200, ciclo: float = CICLO_LARGHI,
-                  rt_fine: float = RT_FINE_LARGHI) -> dict:
+def genera_larghi(out: Path, seme: int = 11, n_campioni: int = 3, n_larghi: int = 18, n_stretti: int = 12, n_fondo: int = 200, ciclo: float = WIDE_CYCLE,
+                  rt_fine: float = RT_FINE_WIDE) -> dict:
     """Writes `blank_01.mzML`, `camp_01..NN.mzML` and `verita.json` in out (same seed, same bytes). The truth is `bench/1`-style: `ioni` (id, ruolo broad|narrow,
     morfologia, mz, rt, fwhm_s, rt_min, rt_max, area_attesa per file, componenti) plus `file`. Units: RT min, FWHM s, area intensity * min. Compounds on a band
     (`su`) have a truth m/z within 3 ppm of it; in the file both are one centroid at the band m/z, as the instrument would merge them."""
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
-    righe, gruppi, fondo = costruisci_larghi(seme, n_larghi, n_stretti, n_fondo, n_campioni, rt_fine)
-    nomi = ["blank_01.mzML"] + [f"camp_{k:02d}.mzML" for k in range(1, n_campioni + 1)]
-    for k, nome in enumerate(nomi):
+    rows, gruppi, fondo = costruisci_larghi(seme, n_larghi, n_stretti, n_fondo, n_campioni, rt_fine)
+    names = ["blank_01.mzML"] + [f"camp_{k:02d}.mzML" for k in range(1, n_campioni + 1)]
+    for k, nome in enumerate(names):
         scrivi_file(out / nome, k, Lotto(gruppi if k else [], fondo, rt_fine, ciclo), seme)
-    verita = {"formato": "spal-bench/1", "seme": seme, "file": nomi, "blank": nomi[0], "n0": N0, "unita": {"rt": "min", "fwhm_s": "s", "area": "intensity*min"},
-              "fondo": {"canali": n_fondo, "gradiente": "G(t)=0.15+0.85/(1+exp(-(t-16)/5))", "ampiezza_mediana": 6e4}, "ioni": righe}
+    verita = {"formato": "spal-bench/1", "seme": seme, "file": names, "blank": names[0], "n0": N0, "unita": {"rt": "min", "fwhm_s": "s", "area": "intensity*min"},
+              "fondo": {"canali": n_fondo, "gradiente": "G(t)=0.15+0.85/(1+exp(-(t-16)/5))", "ampiezza_mediana": 6e4}, "ioni": rows}
     (out / "verita.json").write_text(json.dumps(verita, sort_keys=True, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     return verita
 

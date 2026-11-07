@@ -51,7 +51,7 @@ def up_to_date() -> bool:
     return all(f.stat().st_mtime <= t for f in sources if f.is_file())
 
 
-def add_rotte() -> None:
+def add_routes() -> None:
     """The lazy module `rotte` (statistics, molecules, Data and Flow routes, crates/mzlab-rotte-wasm) into site/static/wasm-feat with its manifest entry; the rest of the manifest is the CI's."""
     mod = ROOT / "site" / "static" / "wasm-feat" / "rotte"
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(mod), str(WASM.with_name("mzlab_rotte_wasm.wasm"))])
@@ -80,7 +80,7 @@ def main() -> int:
     if want and want not in have:
         run(["cargo", "install", "wasm-bindgen-cli", "--version", want, "--locked", "--force"])
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", "site/static/wasm", str(WASM)])
-    add_rotte()
+    add_routes()
     run([sys.executable, "tools/build_site.py", "--build-json"])      # the .wasm is in place now: build.json names its SHA-256
     return 0
 

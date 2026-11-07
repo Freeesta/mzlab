@@ -20,7 +20,7 @@ from . import ROOT
 from .tabelle import Tabella
 
 DTYPE = {"f64": "<f8", "f32": "<f4", "u32": "<u4", "u16": "<u2", "u8": "u1", "i8": "i1"}
-CELLA_RILEVATA, CELLA_MIRATA, CELLA_RIEMPITA, CELLA_ASSENTE = 0, 1, 2, 3
+CELLA_RILEVATA, TARGETED_CELL, FILLED_CELL, CELLA_ASSENTE = 0, 1, 2, 3
 ESEMPIO = ROOT / "target" / "release" / "examples" / "nativo"
 REGOLE = Path(os.environ.get("MZLAB_REGOLE") or ROOT / "TP_Mine" / "data" / "regole_tp_2.json")
 
@@ -31,11 +31,11 @@ def apri(dati: bytes) -> tuple[dict, dict]:
         raise ValueError("not a .mzfeat / .mzfeatf container")
     n = struct.unpack("<Q", dati[8:16])[0]
     meta = json.loads(dati[16:16 + n])
-    inizio = -(-(16 + n) // 64) * 64
+    start = -(-(16 + n) // 64) * 64
     arr = {}
     for a in meta["arrays"]:
         dt = np.dtype(DTYPE[a["dtype"]])
-        arr[a["name"]] = np.frombuffer(dati, dtype=dt, count=a["count"], offset=inizio + a["offset"])
+        arr[a["name"]] = np.frombuffer(dati, dtype=dt, count=a["count"], offset=start + a["offset"])
     return meta, arr
 
 
@@ -62,9 +62,9 @@ def leggi_serie(cartella, nomi: list[str]) -> Serie:
     n, k = meta["rows"], meta["files"]
     stato = a["state"].reshape(n, k)
     area = np.where(stato == CELLA_ASSENTE, 0.0, np.nan_to_num(a["area"].reshape(n, k)))
-    campioni = [re.sub(r"\.mzidx$", "", x) for x in nomi]
+    samples = [re.sub(r"\.mzidx$", "", x) for x in nomi]
     altezza = np.where(stato == CELLA_ASSENTE, 0.0, np.nan_to_num(a["height"].reshape(n, k).astype(float))) if "height" in a else None
-    tab = Tabella("nativo", campioni, a["mz"].copy(), a["rt"].copy(), area, altezza=altezza)
+    tab = Tabella("nativo", samples, a["mz"].copy(), a["rt"].copy(), area, altezza=altezza)
     ev = json.loads(a["evid"].tobytes()) if len(a["evid"]) else {"identita": []}
     ident = ev["identita"]
     cand = np.array(sorted(i["id"] for i in ident if i["totale"] > 0), dtype=int)
