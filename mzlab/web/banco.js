@@ -308,13 +308,13 @@ const BANCO = (() => {
       try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
       return /** @type {Promise<Blob>} */ (new Promise(r => cvs.toBlob(r)));
     })();
-    try { await copiaOra({ "image/png": png }); nearMsg(I18N.t("bn.copied.img")); }
+    try { await clipboardCopy({ "image/png": png }); nearMsg(I18N.t("bn.copied.img")); }
     catch (e) { saveBlob(await png, plotName(p) + ".png"); info(I18N.t("bn.copied.dl")); }
   }
   async function copyText(p) {
     const t = plotSheets(p); if (!t || !t[0]) return info(I18N.t("bn.noCopy"));
     const sh = t[0], txt = PROV.tsv([sh.head.join("\t"), ...sh.rows.map(r => r.map(v => (v == null ? "" : v)).join("\t"))].join("\n"), { p, table: "plot" });
-    try { await copiaOra({ "text/plain": txt }); nearMsg(I18N.t("bn.copied.txt")); } catch (e) { info(I18N.t("bn.noClip")); }
+    try { await clipboardCopy({ "text/plain": txt }); nearMsg(I18N.t("bn.copied.txt")); } catch (e) { info(I18N.t("bn.noClip")); }
   }
   function addCell(type) {
     const tab = tabOfAct() === "mrm" ? "full" : tabOfAct(), f = tabFiles(tab)[0]; if (!f) return;

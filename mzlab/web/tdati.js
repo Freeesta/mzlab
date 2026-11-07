@@ -42,7 +42,7 @@ function table(o) {
   d.addEventListener("cancel", e => { e.preventDefault(); close(); });
   d.querySelector('[data-td="c"]').onclick = async () => {
     const tsvP = PROV.tsv([o.head || [], ...(o.rows || [])].map(r => r.join("\t")).join("\n"), { table: String(o.title || "chart-data") });      // not awaited: Safari takes the clipboard only while the click runs
-    try { await copiaOra({ "text/plain": tsvP }); } catch (_) { const tsv = await tsvP, t = document.createElement("textarea"); t.value = tsv; d.appendChild(t); t.select(); try { document.execCommand("copy"); } catch (e) { /* the table itself can be selected and copied */ } t.remove(); }
+    try { await clipboardCopy({ "text/plain": tsvP }); } catch (_) { const tsv = await tsvP, t = document.createElement("textarea"); t.value = tsv; d.appendChild(t); t.select(); try { document.execCommand("copy"); } catch (e) { /* the table itself can be selected and copied */ } t.remove(); }
     /** @type {HTMLElement} */ (document.getElementById("tdati-n")).textContent = T("tdati.copied");
   };
   d.showModal();

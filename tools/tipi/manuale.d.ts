@@ -12,7 +12,7 @@ declare var SITO_PUBBLICO: { readonly scaricaApp: boolean };
 declare var MZLAB_TOFILE: ((f: { id: number; name: string; size: number }) => File) | undefined;
 declare var __TAURI__: any;
 // compat.js: a copy handed to the clipboard inside the click, its content still to come (Safari)
-declare var copiaOra: (parts: Record<string, string | Blob | Promise<string | Blob>>) => Promise<void>;
+declare var clipboardCopy: (parts: Record<string, string | Blob | Promise<string | Blob>>) => Promise<void>;
 declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 // Browser API not yet in lib.dom (File System Observer) and globals of the TP_Mine scripts, which load lazily after the page.
 declare var FileSystemObserver: any;

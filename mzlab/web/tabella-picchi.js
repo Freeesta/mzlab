@@ -73,7 +73,7 @@
   async function copy(p) {
     const r = rows(p), t = tsv(r), s = st(p);
     try {
-      await copiaOra({ "text/plain": t, "text/html": html(r) });
+      await clipboardCopy({ "text/plain": t, "text/html": html(r) });
     } catch (_) { return; }
     const m = s.pop && s.pop.querySelector(".tp-ok"); if (!m) return;
     m.textContent = T("tabp.copied"); clearTimeout(s.tm); s.tm = setTimeout(() => { m.textContent = ""; }, 2000);

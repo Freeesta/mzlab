@@ -77,7 +77,7 @@ function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOB
       if (e.target.id === "cmp-exp") {
         dl("metadata.tsv", tsvText(), "text/tab-separated-values", { table: "metadata" });
       } else if (e.target.id === "cmp-copy") {
-        copiaOra({ "text/plain": PROV.tsv(tsvText(), { table: "metadata" }) }).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));
+        clipboardCopy({ "text/plain": PROV.tsv(tsvText(), { table: "metadata" }) }).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));
       }
     };
   }

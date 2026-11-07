@@ -101,7 +101,7 @@ async function copyTable(/** @type {string[]} */ h, /** @type {any[][]} */ rs, /
   const tsv = PROV.tsv(h.join("\t") + "\n" + rs.map(r => r.map(f).join("\t")).join("\n"), meta);      // not awaited: Safari takes the clipboard only while the click runs
   const html = `<table><tr>${h.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map(r => `<tr>${r.map(v => `<td>${EHt(f(v))}</td>`).join("")}</tr>`).join("")}</table>`;
   try {
-    await copiaOra({ "text/plain": tsv, "text/html": html });
+    await clipboardCopy({ "text/plain": tsv, "text/html": html });
     msg(t("lib.copied", { n: rs.length }));
   } catch (_) { msg(t("lib.noCopy")); }
 }

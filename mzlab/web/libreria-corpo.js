@@ -309,7 +309,7 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
       const f = (/** @type {unknown} */ v, /** @type {number} */ k) => typeof v === "number" ? String(k === 5 ? +v.toFixed(st.unit === "ppm" ? 1 : 4) : +v.toFixed(3)) : String(v ?? "");
       const tsv = PROV.tsv(h.join("\t") + "\n" + rs.map((/** @type {Bag} */ r) => r.map((/** @type {Bag} */ v, /** @type {number} */ k) => f(v, k)).join("\t")).join("\n"), { p, table: "library" });
       const html = `<table><tr>${h.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map((/** @type {Bag} */ r) => `<tr>${r.map((/** @type {Bag} */ v, /** @type {number} */ k) => `<td>${EHt(f(v, k))}</td>`).join("")}</tr>`).join("")}</table>`;
-      try { await copiaOra({ "text/plain": tsv, "text/html": html }); msg(I18N.t("lib.copied", { n: rs.length })); } catch (e) { msg(I18N.t("lib.noCopy")); }
+      try { await clipboardCopy({ "text/plain": tsv, "text/html": html }); msg(I18N.t("lib.copied", { n: rs.length })); } catch (e) { msg(I18N.t("lib.noCopy")); }
     };
     d.querySelector("#lr-xlsx").onclick = () => { const { h, rs } = table(); if (!rs.length) return msg(I18N.t("lib.nothingSave")); dlx((typeof plotName === "function" ? plotName(p) : I18N.t("lib.xlsx.fallback")) + I18N.t("lib.xlsx.suffix"), [{ name: I18N.t("lib.xlsx.sheet"), head: h, rows: rs, widths: [5, 30, 10, 10, 16, 14, 8, 14, 12, 20] }], { p, table: "library" }); };
     d.showModal(); window.addEventListener("resize", draw, { once: true });

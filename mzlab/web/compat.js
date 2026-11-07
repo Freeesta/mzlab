@@ -141,4 +141,4 @@ export function installa(g, o = {}) {
 }
 
 const G = /** @type {any} */ (globalThis);
-if (typeof window !== "undefined" && !G.__compat) { G.__compat = installa(G); G.copiaOra = (/** @type {Record<string, any>} */ parts) => copyNow(G, parts); }
+if (typeof window !== "undefined" && !G.__compat) { G.__compat = installa(G); G.clipboardCopy = (/** @type {Record<string, any>} */ parts) => copyNow(G, parts); }
