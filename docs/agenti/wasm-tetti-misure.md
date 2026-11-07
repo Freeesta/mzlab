@@ -1,6 +1,7 @@
 # Misure prima/dopo dei moduli .wasm
 Una riga per modifica: byte prima → dopo (dopo `wasm-bindgen` e `wasm-opt -O3 @motore`, binaryen 133, salvo dove la riga dice altro) e tetto, che sta in `tools/build_*_wasm.sh` (`docs/agenti/wasm-tetti.md`). I valori del passo «size» della CI fanno fede.
 
+- **features.group, coppie già legate per bisezione** (`ionnet::group`, elenco ordinato con `sortc::by` al posto della scansione degli archi): `flowtab` prima di `wasm-opt` 1 058 595 → 1 061 186 B (+2 591, +0,24 %); un `HashSet` costava +12 351 B. Tetto standard invariato, il passo «size» della CI fa fede.
 - **Matrice DAD letta una volta** (`Mzml::dad_memo` in `mzml_dad.rs`, spettri `MS:1000804`): motore 2 033 700 → 2 035 249 B dopo `wasm-opt -O3 @motore` (+1 549 B, +0,08 %), sotto il tetto 2 174 976; nessun tetto cambia.
 - **Lettori, guardia dei numeri non finiti** (`finiti::Finiti` in `mzlab_lettori::apri_nudo`, `SrmDaScansioni` che inoltra profilo e testata leggera, valori di MS-Numpress controllati), byte dopo `wasm-bindgen` 0.2.129 e `tools/wasm_opt.sh`, tetti invariati:
 - **ANDI, BPC dai picchi base annotati** (`andi::ms::nota_bpc`): `andi` prima di `wasm-opt` 932 204 → 933 611 B (+1 407, +0,15 %); tetto invariato 344 064.
