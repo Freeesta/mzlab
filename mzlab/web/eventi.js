@@ -13,14 +13,14 @@ function attach(p) {
   const inPlotY = py => py >= M.t && py <= p._a.H - M.b;
   const yAxisZone = (px, py) => canYZ(p._a) && px < M.l && inPlotY(py);               // the numbers at the left of the y axis
   const xAxisZone = (px, py) => p._a && !p._a.map && px >= M.l && px <= p._a.W - M.r && py > p._a.H - M.b;   // the numbers under the x axis
-  const onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < 6;
+  const tol = () => (document.documentElement.classList.contains("ptr-touch") ? 14 : 6), onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < tol();   // tol: px to grab a line, a fingertip covers more than a mouse pointer
   const edgeOf = (it, e) => {
     let mate = null; for (const o of p.ints) if (o !== it && o.key === it.key) for (const f of ["a", "b"]) if (Math.abs(o[f] - it[e]) < INT_EPS) mate = { it: o, e: f };      // a border shared with the next peak moves both
     return { it, e, mate, snap: intSnap(p) };
   };
   const edgeAt = px => {
-    if (!p._a || p.type === "spec") return null;
-    for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) return edgeOf(it, e);
+    if (!p._a || p.type === "spec") return null; let best = null, bd = tol(); for (const it of p.ints) for (const e of ["a", "b"]) { const d = Math.abs(p._a.X(it[e]) - px); if (d < bd) { bd = d; best = { it, e }; } }
+    return best ? edgeOf(best.it, best.e) : null;                             // the nearest border: with a finger's tolerance two close borders both qualify
   };
   const edgeMove = (ed, x) => {                                              // the border stops at the neighbouring peak (touching is fine, overlapping is not)
     const { it, e, mate } = ed, o = e === "a" ? it.b : it.a, v = it[e], oth = p.ints.filter(i => i !== it && (!mate || i !== mate.it) && i.key === it.key);

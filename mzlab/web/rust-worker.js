@@ -9,7 +9,7 @@ import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
 import { infoDi, nuovo } from "./manifesto.js";
-import { createPool, poolSize, makeGate } from "./idxpool.js";
+import { createPool, poolSize, makeGate, fitGate, builderBudget } from "./idxpool.js";
 import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
@@ -100,12 +100,13 @@ const lrSlot = new Map(), lrFile = new Map();
 let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const lrNameOf = (/** @type {number} */ slot) => { for (const [n, k] of lrSlot) if (k === slot) return n; return undefined; };
-const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
-const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the pool count against it (2 on iPad/phone)
+let SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
+const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the pool count against it (2 on iPad/phone: `applyPolicy`)
 const ISOLATED = !!self.crossOriginIsolated && typeof SharedArrayBuffer === "function";
 // the size from which a file gains from helper workers (the notice of capacita.js is only shown for such a file)
 const BIG_IDX = 32 << 20;
-const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, isolated: ISOLATED, notify: key => postMessage({ op: "notice", key }) }));
+const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, isolated: ISOLATED, notify: (key, params) => postMessage({ op: "notice", key, params }) }));
+const idxBudget = () => builderBudget(BUDGET_MB, SMALL, gate.size);          // undefined until the policy arrives: the pool's default
 /** @type {(key: string, params?: object) => never} */
 const jerr = (key, params = {}) => { throw JSON.stringify({ error_key: key, params }); };
 const NO_RUN = 0xFFFFFFFF;                                                  // what count and spectra_len of the engine answer for a slot with no run open
@@ -199,7 +200,7 @@ function scanOp({ op, id, slot, path, query, blob }) {
 const derivata = createDerivata({ nativo, ARCH, indexPlain });
 async function indexPlain(name, blob, onProgress) {                             // the index of an mzML that is no file of the page (the one made for the graph of a maker's sample)
   const part = name + ".mzidx.part";
-  const res = await idxPool().build({ name, blob, prep: { size: blob.size, prints: [undefined, undefined] }, part, cap: BUDGET_MB, onProgress });
+  const res = await idxPool().build({ name, blob, prep: { size: blob.size, prints: [undefined, undefined] }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });
   if (!res.ok) {
     await ARCH.remove("idx", part);
     let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
@@ -273,22 +274,21 @@ const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await A
 async function lrIndexOwn(m) {
   const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
   if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
-  const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
+  const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
   if (CANCELLED.has(m.name)) throw cancelled();
   const onProgress = p => { nativo.early.tell(m.name, m.id, p); postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic }); };      // wait: the pool has no free worker yet
   const early_tic = earlyTicOf(job);
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
-  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
-    : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
+  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, budget: idxBudget(), onProgress }
+    : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
   }
   if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
     if (res.reason === "cancelled") { safe(() => Promise.all([part, part.replace(/\.part$/, ".sp.part"), ...(partCen ? [partCen] : [])].map(n => ARCH.removeHeld("idx", n)))); throw cancelled(); }      // the stopped builder still holds these files for a moment
     await ARCH.remove("idx", part);
-    if (res.reason === "memory") jerr("error.memoryBudget");
     let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
     if (key) throw res.text;
     throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
@@ -321,7 +321,7 @@ async function lrOp(m) {
     case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); idxPool().cancel(n); ARCH.release(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
     case "lr_index": try { return await lrIndex(m); } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
-      const job = await nativo.indexJob(m.name), part = m.name + ".cen.mzidx.part";
+      const job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".cen.mzidx.part";
       if (!job) jerr("err.session.fileNotFound");
       const res = await idxPool().build({ name: m.name, nat: { ...job, st: { ...job.st, centroid: true } }, part });
       if (!res.ok) { await ARCH.remove("idx", part); throw JSON.stringify({ error_key: "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } }); }
@@ -400,8 +400,8 @@ function idxXicBin(/** @type {any} */ m) {
 let BUDGET_MB = 0;
 function applyPolicy(/** @type {any} */ m) {
   const choice = JSON.parse(budget_choice(m.device_gb || 0, m.cores || 0, !!m.small, m.manual || 0, !!m.ios, m.probe_mb || 0));
-  BUDGET_MB = choice.mb; engine.set_budget_mb(choice.mb);
-  postMessage({ op: "budget-choice", choice });
+  BUDGET_MB = choice.mb; engine.set_budget_mb(choice.mb); postMessage({ op: "budget-choice", choice });
+  if (m.small && !SMALL) SMALL = fitGate(gate, true, navigator.hardwareConcurrency);   // an iPad with the Mac user agent, seen by the page only: 2 index workers of 32 MB
 }
 
 function lowerBudget(/** @type {any} */ m) {                                              // one level down by Rust's rule (0 = none lower); the answer tells the supervisor
