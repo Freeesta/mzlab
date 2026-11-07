@@ -35,7 +35,6 @@ fn review_settings() {
     for (id, name, want) in [
         ("spectra.chimeric", "chim_rel", r.chim_rel),
         ("spectra.chimeric", "chim_cap", r.chim_cap),
-        ("spectra.match", "tol_da", r.tol_da),
         ("spectra.match", "precursor_ppm", r.precursor_ppm),
         ("spectra.match", "top_n", r.top_n as f64),
         ("spectra.match", "analog_window_da", r.analog_window_da),
@@ -60,6 +59,17 @@ fn review_settings() {
     ] {
         assert_eq!(num(id, name), want, "{id} {name}");
     }
+    // 0 is "follow the query" (`flowmatch::resolution::follow`): a high-resolution query gets the review window.
+    assert_eq!(num("spectra.match", "tol_da"), 0.0, "spectra.match tol_da");
+}
+
+#[cfg(feature = "flow_formula")]
+#[test]
+fn unset_fragment_window_of_a_high_resolution_query_is_the_review_window() {
+    assert_eq!(
+        mzlab_lib::flowmatch::HR_FRAG_DA,
+        ReviewSettings::default().tol_da
+    );
 }
 
 #[test]

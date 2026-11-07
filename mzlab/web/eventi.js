@@ -13,14 +13,14 @@ function attach(p) {
   const inPlotY = py => py >= M.t && py <= p._a.H - M.b;
   const yAxisZone = (px, py) => canYZ(p._a) && px < M.l && inPlotY(py);               // the numbers at the left of the y axis
   const xAxisZone = (px, py) => p._a && !p._a.map && px >= M.l && px <= p._a.W - M.r && py > p._a.H - M.b;   // the numbers under the x axis
-  const onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < 6;
+  const tol = () => (document.documentElement.classList.contains("ptr-touch") ? 14 : 6), onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < tol();   // tol: px to grab a line, a fingertip covers more than a mouse pointer
   const edgeOf = (it, e) => {
     let mate = null; for (const o of p.ints) if (o !== it && o.key === it.key) for (const f of ["a", "b"]) if (Math.abs(o[f] - it[e]) < INT_EPS) mate = { it: o, e: f };      // a border shared with the next peak moves both
     return { it, e, mate, snap: intSnap(p) };
   };
   const edgeAt = px => {
-    if (!p._a || p.type === "spec") return null;
-    for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) return edgeOf(it, e);
+    if (!p._a || p.type === "spec") return null; let best = null, bd = tol(); for (const it of p.ints) for (const e of ["a", "b"]) { const d = Math.abs(p._a.X(it[e]) - px); if (d < bd) { bd = d; best = { it, e }; } }
+    return best ? edgeOf(best.it, best.e) : null;                             // the nearest border: with a finger's tolerance two close borders both qualify
   };
   const edgeMove = (ed, x) => {                                              // the border stops at the neighbouring peak (touching is fine, overlapping is not)
     const { it, e, mate } = ed, o = e === "a" ? it.b : it.a, v = it[e], oth = p.ints.filter(i => i !== it && (!mate || i !== mate.it) && i.key === it.key);
@@ -167,7 +167,7 @@ function attach(p) {
       else { p.sel = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); pushLinked(p, p.sel[0], p.sel[1], nearestFile(p, (x0 + x1) / 2)); }
     } else if (p.type === "spec") { if (window.DDA && DDA.click(p, d.x0, d.y0)) return; specClick(p, d.x0, d.y0); }
     else if (p.type !== "spec") {
-      const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 6 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
+      const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 12 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { if (window.DDA && DDA.onTri(p, tt)) return; goMs2(tt); return; }          // a triangle: that MS2 scan (in the DDA trio, or in the MS2 tab)
       const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); p.sel = null; p.cur = xs; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }

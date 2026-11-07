@@ -153,7 +153,7 @@ fn weak_path(peaks: &Path) -> PathBuf {
 /// Aligns the peaks of `lin` with `recipe` under the memory budget of the runner and writes the table of `job`; the table hands on `lin` with the
 /// parameters of `job`.
 fn table(r: &FileRunner, job: &Job, recipe: &Recipe, mut lin: Lineage) -> Result<Made> {
-    let budget = MemBudget::mb(r.budget_mb);
+    let budget = MemBudget::mb(r.budget.job_mb());
     let mut bytes = Vec::new();
     let mut src = Files(lin.peaks.clone());
     let gate = r.gate(job);
@@ -239,7 +239,7 @@ pub(crate) fn align_mem(r: &FileRunner, job: &Job, known: Option<Mem>) -> Option
 /// The memory the alignment of the `.mzfeatf` files `peaks` asks for under the budget of the runner.
 fn mem_of(r: &FileRunner, recipe: &Recipe, peaks: Vec<PathBuf>) -> Option<Mem> {
     let rows = slabs::rows_of(&mut Files(peaks)).ok()?;
-    let way = slabs::stima(&rows, recipe, (r.budget_mb * 1048576.0) as usize);
+    let way = slabs::stima(&rows, recipe, (r.budget.job_mb() * 1048576.0) as usize);
     Some(Mem {
         mb: way.bytes as f64 / 1048576.0,
         via: way.via.name(),
