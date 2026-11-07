@@ -10,7 +10,7 @@ const STEPS: &str = r#"[
 {"id":"t.convert","per_item":true,"ins":["raw*"],"outs":["mz*"]},
 {"id":"t.centroid","per_item":true,"ins":["mz*"],"outs":["mz*"]},
 {"id":"t.index","per_item":true,"ins":["mz*"],"outs":["index*"]},
-{"id":"features.detect","per_item":true,"ins":["index*"],"outs":["peaks*"],"params":{"q":1}},
+{"id":"features.detect","version":2,"per_item":true,"ins":["index*"],"outs":["peaks*"],"params":{"q":1}},
 {"id":"features.align","ins":["peaks*"],"outs":["table"],"params":{"q":1}}]"#;
 
 fn leak(s: &str) -> &'static str {
@@ -38,6 +38,7 @@ fn registry_from(spec: &Value) -> Vec<Step> {
         .iter()
         .map(|s| {
             let mut st = Step::core(leak(s.get("id").and_then(Value::str).unwrap()), "", "");
+            st.version = s.get("version").and_then(Value::f64).map_or(1, |v| v as u32);
             st.per_item = s.get("per_item").and_then(Value::bool).unwrap_or(false);
             st.runs_in.native = true;
             st.ins = ports(s.get("ins"));
@@ -69,7 +70,7 @@ pub(in crate::flow) fn plan_text(files: &[&str], dq: u32, aq: u32) -> String {
 {{\"id\":\"conv\",\"step\":\"t.convert@1\",\"in\":{{\"raw\":[{}]}}}},\
 {{\"id\":\"cen\",\"step\":\"t.centroid@1\",\"in\":{{\"mz\":[\"conv.mz\"]}}}},\
 {{\"id\":\"idx\",\"step\":\"t.index@1\",\"in\":{{\"mz\":[\"cen.mz\"]}}}},\
-{{\"id\":\"det\",\"step\":\"features.detect@1\",\"params\":{{\"q\":{dq}}},\"in\":{{\"index\":[\"idx.index\"]}}}},\
+{{\"id\":\"det\",\"step\":\"features.detect@2\",\"params\":{{\"q\":{dq}}},\"in\":{{\"index\":[\"idx.index\"]}}}},\
 {{\"id\":\"aln\",\"step\":\"features.align@1\",\"params\":{{\"q\":{aq}}},\"in\":{{\"peaks\":[\"det.peaks\"]}}}}]}}",
         inputs.join(","),
         refs.join(",")
@@ -312,7 +313,7 @@ fn the_order_of_the_keys_in_the_file_does_not_change_the_plan_keys() {
     // the steps in another order, the object keys in another order
     let text = "{\"steps\":[\
 {\"in\":{\"peaks\":[\"det.peaks\"]},\"params\":{\"q\":1},\"step\":\"features.align@1\",\"id\":\"aln\"},\
-{\"in\":{\"index\":[\"idx.index\"]},\"params\":{\"q\":1},\"step\":\"features.detect@1\",\"id\":\"det\"},\
+{\"in\":{\"index\":[\"idx.index\"]},\"params\":{\"q\":1},\"step\":\"features.detect@2\",\"id\":\"det\"},\
 {\"in\":{\"mz\":[\"cen.mz\"]},\"step\":\"t.index@1\",\"id\":\"idx\"},\
 {\"in\":{\"mz\":[\"conv.mz\"]},\"step\":\"t.centroid@1\",\"id\":\"cen\"},\
 {\"in\":{\"raw\":[\"file:f1.raw\",\"file:f2.raw\"]},\"step\":\"t.convert@1\",\"id\":\"conv\"}],\
