@@ -1,7 +1,8 @@
 """DDA trio, the ways to an MS2: the Full Scan reached with the arrows keeps its scan id (markers and «open the MS2» work while walking),
 the MS2 panel reads its scans from the file of the Full Scan above it (two DDA files open), the markers of a second DDA file appear without a reload,
 an empty MS2 panel says why it is empty (precursors outside the m/z zoom, averaged Full Scan), with the same words for the screen reader,
-the «N MS²» button of the Full Scan (one scan and an average: the count of the engine, the list with the keyboard) and the flags of an averaged Full Scan."""
+the «N MS²» button of the Full Scan (one scan and an average: the count of the engine, the list with the keyboard) and the flags of an averaged Full Scan,
+‹ › on the MS2 panel (the MS2 of the same precursor, Shift = in time) and ← → from an empty panel starting at the chromatogram cursor."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -76,6 +77,22 @@ try:
             c = xy(8.2); pg.mouse.click(c["x"], c["y"]); ready(pg)
             attendi(pg, "(()=>{const d=" + D0 + ";return d&&d.scans===1})()")
         step("«N MS²» button: the count of the engine, the list with the keyboard; flags on an averaged Full Scan, a click keeps the average", button)
+        NAV = "(()=>{const t=" + TRIO + ";const g=t.s2.el.querySelector('.ddanav');return g&&{n:g.querySelector('.ddann').textContent,prev:g.querySelector('[data-a=\"ddaprev\"]').getAttribute('aria-disabled'),sid:t.s2.sid}})()"
+        def nav():
+            pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k),f=E.files[t.s1.k];let l=[];for(let i=0;i<D.sid.length;i++){if(D.prec[i]==null)continue;const tl=DDA._in.tolOf(f,D.prec[i]),q=[];for(let j=0;j<D.sid.length;j++)if(D.prec[j]!=null&&Math.abs(D.prec[j]-D.prec[i])<=tl)q.push(j);if(q.length>l.length)l=q}window._nv=l.map(i=>D.sid[i]);window._nx=D.sid[l[0]+1];await DDA.selectMs2(t.s2,D.sid[l[0]],{zoom:false})})()"); ready(pg)
+            N = pg.evaluate("_nv.length"); assert N > 1, N
+            attendi(pg, "(()=>{const v=" + NAV + ";return v&&v.n==='1/" + str(N) + "'&&v.prev==='true'})()")
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.scrollIntoView({block:'center'})})()")
+            pg.locator(".ddanav [data-a='ddanext']").first.click(); ready(pg)
+            attendi(pg, "(()=>{const v=" + NAV + ";return v&&v.sid===_nv[1]&&v.n==='2/" + str(N) + "'})()")
+            pg.locator(".ddanav [data-a='ddaprev']").first.focus(); pg.keyboard.press("Space"); ready(pg)
+            attendi(pg, "(()=>{const v=" + NAV + ";return v&&v.sid===_nv[0]&&v.n==='1/" + str(N) + "'})()")
+            pg.locator(".ddanav [data-a='ddanext']").first.click(modifiers=["Shift"]); ready(pg)
+            attendi(pg, "(()=>{const v=" + NAV + ";return v&&v.sid===_nx})()")
+            for d in (1, -1):                       # an empty panel: the walk starts at the chromatogram cursor, not at the start of the file
+                v = pg.evaluate("(async d=>{const t=" + TRIO + ";const D=DDA.ready(t.s1.k),cur=D.rt[Math.floor(D.rt.length/2)]+1e-3;t.s2.sid=null;t.s2.ion=null;t.s2.avg=null;t.c.cur=cur;await DDA.step(t.s2,d);const want=d>0?D.rt.findIndex(r=>r>=cur):D.rt.length-1-[...D.rt].reverse().findIndex(r=>r<=cur);return {sid:t.s2.sid,want:D.sid[want],cur}})", d); print(v)
+                assert v["sid"] == v["want"], v
+        step("‹ › of the MS2 panel: the MS2 of the same precursor (i/N), Shift = next in time; ← → from an empty panel start at the cursor", nav)
         def other_file():
             pg.locator("#flst .fl", has_text="HR_DDA-Fusion-t30").first.click(); ready(pg)
             attendi(pg, "(()=>{const t=" + TRIO + ";return t.s1.k===E.files.find(f=>f.label==='HR_DDA-Fusion-t30').k&&t.s1._a&&t.s1._a.markN!=null})()", 30000)
