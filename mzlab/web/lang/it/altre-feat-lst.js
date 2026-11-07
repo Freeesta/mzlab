@@ -252,6 +252,7 @@ I18N.add("it", {
   "lst.lab.removeRow": "Toglie questa riga",
   "lst.lab.empty": "Nessuna sostanza. Clic destro su un picco → «Aggiungi ai contaminanti del laboratorio…», oppure «Aggiungi».",
   "lst.lab.newName": "nuovo fondo",
+  "lst.lab.importedCut": "Importate solo le prime {max} righe di {m}, il massimo preso da un file; le altre {rest} sono rimaste fuori. Per aggiungerle, dividi il CSV e importa il resto come secondo file.",
   "lst.lab.imported": "{n, plural, one {# riga importata} other {# righe importate}}",
   "lst.view.ref": "Liste di riferimento",
   "lst.view.target": "Screening target HRMS",

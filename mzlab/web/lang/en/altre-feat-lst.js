@@ -252,6 +252,7 @@ I18N.add("en", {
   "lst.lab.removeRow": "Removes this row",
   "lst.lab.empty": "No substance. Right-click a peak → «Add to the laboratory contaminants…», or «Add».",
   "lst.lab.newName": "new background",
+  "lst.lab.importedCut": "Only the first {max} rows of {m} were imported, the most taken from one file; the other {rest} were left out. To add them, split the CSV and import the rest as a second file.",
   "lst.lab.imported": "{n, plural, one {# row imported} other {# rows imported}}",
   "lst.view.ref": "Reference Lists",
   "lst.view.target": "HRMS Target Screening",

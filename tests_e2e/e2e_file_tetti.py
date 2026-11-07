@@ -1,5 +1,5 @@
 """The caps of the safe file reader (file-sicuri.js) shown to the user: a .mzflow over 8 MB opened with «Open workflow» gets one calm notice that names
-the limit, says the file was not opened and gives the next step, in English and Italian, without the «invalid format» prefix (the file was never read); a typed ion list over 300 lines says its size and the cap.
+the limit, says the file was not opened and gives the next step, in English and Italian, without the «invalid format» prefix (the file was never read); a typed ion list over 300 lines says its size and the cap; a contaminant CSV over 5000 rows says how many were imported and left out.
 Synthetic bytes only."""
 import sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
@@ -30,6 +30,17 @@ try:
                 want = pg.evaluate("I18N.t('feat.err.many', { n: 301, max: 300 })")
                 assert msg == want and "301" in msg and "300" in msg, msg
             step(f"{lang}: a typed list over 300 ions names its size and the cap, and nothing is measured", list_cap)
+            def lab_cut():                                              # a contaminant CSV over 5000 rows: the toast names the cap, the file's rows and the rest
+                pg.evaluate("window.__toast = []; window.toast = m => __toast.push(m)")
+                pg.evaluate("LISTE.openLab()"); pg.wait_for_selector("#lab-im", timeout=5000)
+                csv = "mz;name\n" + "\n".join(f"{100 + i * 0.01:.4f};synthetic {i}" for i in range(5003))
+                pg.set_input_files("#lab-f", files=[{"name": "lab.csv", "mimeType": "text/csv", "buffer": csv.encode()}])
+                pg.wait_for_function("__toast.length > 0", timeout=10000)
+                want = pg.evaluate("I18N.t('lst.lab.importedCut', { max: 5000, m: 5003, rest: 3 })")
+                got = pg.evaluate("__toast")
+                assert got == [want] and "5003" in want and not want.startswith("lst."), got
+                pg.keyboard.press("Escape")
+            step(f"{lang}: a contaminant CSV over 5000 rows: one toast with the cap, the count and the next step", lab_cut)
             errs = [e for e in r.errs if e[0] in ("pageerror",)]
             step(f"{lang}: no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
             pg.close()

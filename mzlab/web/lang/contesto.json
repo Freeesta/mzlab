@@ -386,6 +386,7 @@
   "lst.textMore": "Coda della frase che elenca i contaminanti compatibili con una formula; {n} = quanti altri.",
   "lst.askAdd": "Domanda con campo di testo; {mz} = valore con 4 decimali.",
   "lst.lab.empty": "I nomi tra virgolette sono la voce del menu del clic destro (ctx...) e il pulsante lst.lab.add.",
+  "lst.lab.importedCut": "Messaggio dopo l'importazione di un CSV di contaminanti più lungo del tetto: {max} = righe prese, {m} = righe del file, {rest} = righe lasciate fuori; dice il passo seguente.",
   "lst.lab.imported": "Messaggio dopo l'importazione di un CSV; {n} = numero di righe.",
   "lst.member": "Suggerimento su una riga di una serie omologa (es. PEG); {n} = numero di unità ripetitive (monomeri) nella catena.",
   "lst.unitName.one": "Nome di una riga di una serie omologa con una sola unità ripetitiva; {name} = nome della sostanza.",
