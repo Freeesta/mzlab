@@ -191,7 +191,10 @@ pub fn scan_metadata_with(
     } else {
         event.and_then(|e| e.preamble.scan_mode())
     };
-    let filter = raw.scan_filter_with(scan_number, params.as_ref());
+    let filter = match event {
+        Some(e) => raw.scan_filter_of(idx as usize, Some(e), params.as_ref()),
+        None => raw.scan_filter_with(scan_number, params.as_ref()),
+    };
     let is_ms1 = !is_srm && level == 1;
     let is_dia = event.is_some_and(|e| e.preamble.is_dia());
     let is_wideband = event.is_some_and(|e| e.preamble.is_wideband());
