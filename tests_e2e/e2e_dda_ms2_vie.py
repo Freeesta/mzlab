@@ -1,6 +1,7 @@
 """DDA trio, the ways to an MS2: the Full Scan reached with the arrows keeps its scan id (markers and «open the MS2» work while walking),
-the MS2 panel reads its scans from the file of the Full Scan above it (two DDA files open), the markers of a second DDA file appear without a reload."""
-import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+the MS2 panel reads its scans from the file of the Full Scan above it (two DDA files open), the markers of a second DDA file appear without a reload,
+an empty MS2 panel says why it is empty (precursors outside the m/z zoom, averaged Full Scan), with the same words for the screen reader."""
+import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
 steps = []
@@ -29,6 +30,30 @@ try:
             assert v["sid"] is not None and v["sid"] == v["want"], v
             assert v["markN"] is not None, v
         step("arrows on the chromatogram: the Full Scan keeps its scan id, the DDA markers are computed", arrows)
+        WHY = "(()=>{const t=" + TRIO + ";return {why:t.s2._why,say:t.s2._say,sr:TDATI_P.text(t.s2)}})()"
+        def reasons():
+            pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);const j=D.sid.findIndex((_,i)=>D.parent[i]!=null&&(D.byParent.get(D.parent[i])||[]).length>1);await DDA.selectMs2(t.s2,D.sid[j]);window._kids=D.byParent.get(D.parent[j]).map(i=>D.tgt[i]??D.prec[i])})()"); ready(pg)
+            attendi(pg, "(()=>{const t=" + TRIO + ";return t.s2._scan&&t.s1._a&&t.s1._a.flags&&t.s1._a.flags.length>0})()")
+            pg.evaluate("(()=>{const t=" + TRIO + ";const m=Math.max(..._kids);t.s1.zoom=[m+5,m+6];t.s2.sid=null;t.s2.ion=null;t.s2.avg=null;draw(t.s1);draw(t.s2)})()"); ready(pg)
+            want = pg.evaluate("I18N.t('dda.why.zoom',{n:_kids.length})")
+            attendi(pg, "(()=>{const t=" + TRIO + ";return t.s2._why===" + json.dumps(want) + "})()")
+            v = pg.evaluate(WHY); print(v)
+            assert v["why"] == want and v["say"] == want and v["sr"] == want, (v, want)
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.s1.zoom=null;draw(t.s1)})()"); ready(pg)
+            attendi(pg, "(()=>{const t=" + TRIO + ";return t.s2._why===I18N.t('dda.click')})()")
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.c.el.scrollIntoView({block:'center'})})()")
+            xy = lambda rt: pg.evaluate("(rt=>{const t=" + TRIO + ";const a=t.c._a,r=t.c.cv.getBoundingClientRect();return {x:r.left+M.l+(rt-a.x0)/(a.x1-a.x0)*(a.W-M.l-M.r),y:r.top+a.H/2}})", rt)
+            a, b = xy(8.0), xy(8.4)                     # a few MS1 scans in the middle of the run, a drag wider than the click slop
+            pg.mouse.move(a["x"], a["y"]); pg.mouse.down(); pg.mouse.move(b["x"], b["y"], steps=5); pg.mouse.up(); ready(pg)
+            attendi(pg, "(()=>{const d=" + D0 + ";return d&&d.scans>1})()")
+            n = pg.evaluate("(()=>{const d=" + D0 + ";return d.scans})()")
+            head = pg.evaluate("n=>I18N.t('dda.why.avg0',{n}).split(':')[0]", n)
+            attendi(pg, "(()=>{const t=" + TRIO + ";return (t.s2._why||'').startsWith(" + json.dumps(head) + ")})()")
+            v = pg.evaluate(WHY); print(v)
+            assert v["say"] == v["why"] and v["sr"] == v["why"], v
+            c = xy(8.2); pg.mouse.click(c["x"], c["y"]); ready(pg)          # back to one scan for the next step
+            attendi(pg, "(()=>{const d=" + D0 + ";return d&&d.scans===1})()")
+        step("empty MS2 panel: the reason (outside the m/z zoom, averaged Full Scan), the same words for the screen reader", reasons)
         def other_file():
             pg.locator("#flst .fl", has_text="HR_DDA-Fusion-t30").first.click(); ready(pg)
             attendi(pg, "(()=>{const t=" + TRIO + ";return t.s1.k===E.files.find(f=>f.label==='HR_DDA-Fusion-t30').k&&t.s1._a&&t.s1._a.markN!=null})()", 30000)
