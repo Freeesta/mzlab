@@ -13,6 +13,6 @@ I18N.add("it", {
   "valida.col.message": "Messaggio",
   "valida.col.location": "Posizione",
   "valida.caption": "Esito per {name}",
-  "valida.more": "Mostrati i primi {n} di {total} problemi.",
+  "valida.more": "Mostrati i primi {n} di {total} problemi, perché il rapporto resti leggibile. Correggi questi e valida di nuovo il file per vedere gli altri.",
   "valida.fail": "Non è stato possibile validare il file: {detail}"
 });

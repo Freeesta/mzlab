@@ -3,12 +3,12 @@ to the same browser, with the headers of GitHub Pages (ETag, max-age=600). Build
 1 a normal reload after a deploy shows the new version at once (static/version.js) and the page never mixes files of two builds;
 2 the old cache goes, the new one is filled, and the next reload asks the server for no static file at all (cache-first);
 3 «Full reset» (QQRESET.wipe, then the reload it does) brings the newest version although the HTTP cache holds the old files."""
-import hashlib, re, shutil, socket, subprocess, sys, tempfile, time
+import hashlib, json, re, shutil, socket, subprocess, sys, tempfile, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from playwright.sync_api import sync_playwright
-from lib import ROOT, free_port
+from lib import ROOT, attendi, free_port
 
 def serve(port: int, wd: Path):
     class Pages(BaseHTTPRequestHandler):
@@ -84,6 +84,13 @@ def step(name, fn):
 def static_hits(): return {k: v for k, v in state["hits"].items() if k.startswith("/static/") and not k.endswith(("manifest.json", "build.json"))}
 
 
+def wait_big(pg, timeout=90):
+    """Vendor files (Ketcher, openchemlib) go to the cache of big files when their download ends: a warm reload before that asks for them again."""
+    want = json.dumps(sorted(k for k, _ in state["hits"].items() if k.startswith("/static/vendor/")))
+    attendi(pg, """(async () => { const ps = %s, n = (await caches.keys()).find(k => k.startsWith('mzlab-big-')); if (!n) return !ps.length;
+        const c = await caches.open(n); for (const p of ps) if (!(await c.match(new URL(p, location.origin).href))) return false; return true; })()""" % want, timeout * 1000)
+
+
 def wait_cache(pg, app, timeout=150):
     """Waits for the background fill of the cache `app`; a page request now and then wakes a worker the browser stopped (the fill resumes where it was)."""
     t0 = time.time()
@@ -136,7 +143,7 @@ try:
             assert any(k.endswith(app["n1"]) for k in keys), keys
         step("the old cache goes, the new one is filled", page_n_keeps_n)
         def cache_first():
-            state["hits"].clear(); pg.reload(); pg.wait_for_load_state("load")
+            wait_big(pg); state["hits"].clear(); pg.reload(); pg.wait_for_load_state("load")
             assert ver() == "N1"
             h = static_hits()
             assert not h, ("static files asked to the server on a warm reload", list(h)[:8])

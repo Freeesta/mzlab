@@ -121,7 +121,7 @@ def test_a_hash_in_a_file_name_becomes_an_underscore():
 
 
 def test_a_download_of_a_module_sample_follows_the_compression():
-    """A sample the readers module converted at the loading (`CONV.sources`): every compression, "standard" included, is written again once with `to_mzml_come`
+    """A sample the readers module converted at the loading (`CONV.sources`): every compression, "standard" included, is written again once with `to_mzml_with`
     without the optical matrix (the file of `convert`, conv.dad false) and saved; the file of the loading (UV panel) is never the download."""
     got = run("""
       const C = c.CONV, asked = [], saved = [];

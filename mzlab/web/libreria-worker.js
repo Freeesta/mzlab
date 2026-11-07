@@ -483,7 +483,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       throw e;
     }
   }
-  const infoOfImport = (/** @type {string} */ id, /** @type {File} */ file, /** @type {LibMsg} */ r) => ({ id, name: file.name.replace(/\.(msp|mgf|json|jsonl|ndjson|txt)$/i, ""), file: file.name, size: file.size, n: r.n, pos: r.pos, neg: r.neg, dropped: r.dropped, noPrec: r.noPrec, noPeaks: r.noPeaks, broken: r.broken, peaks: r.peaks, date: Date.now(), store: "mzlib", bytes: r.bytes });
+  const infoOfImport = (/** @type {string} */ id, /** @type {File} */ file, /** @type {LibMsg} */ r) => ({ id, name: file.name.replace(/\.(msp|mgf|json|jsonl|ndjson|txt)$/i, ""), file: file.name, size: file.size, n: r.n, pos: r.pos, neg: r.neg, dropped: r.dropped, noPrec: r.noPrec, noPeaks: r.noPeaks, broken: r.broken, cut: r.cut || 0, cutAt: r.cutAt, peaks: r.peaks, date: Date.now(), store: "mzlib", bytes: r.bytes });
   async function addLibraryWasm(/** @type {any} */ w, /** @type {File} */ file, /** @type {unknown} */ reqId) {
     const { r, id, out } = await runImport(w, file, reqId), info = infoOfImport(id, file, r);
     await saveMzlib(id, info, out);

@@ -673,7 +673,7 @@ async function image(/** @type {string} */ format) {
   // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side nor 16.7 Mpx
   const img = new Image(), url = URL.createObjectURL(svg);
   await new Promise((ok, ko) => { img.onload = ok; img.onerror = ko; img.src = url; });
-  const sc = scalaTela(img.width, img.height, Math.min(8, Math.max(3, 3600 / Math.max(img.width, 1)), 12000 / Math.max(img.width, img.height, 1)));     // under Safari's canvas area cap
+  const sc = canvasScale(img.width, img.height, Math.min(8, Math.max(3, 3600 / Math.max(img.width, 1)), 12000 / Math.max(img.width, img.height, 1)));     // under Safari's canvas area cap
   const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
   const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")); if (!clear) { g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
   g.drawImage(img, 0, 0, c.width, c.height);

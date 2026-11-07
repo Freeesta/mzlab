@@ -41,7 +41,7 @@ try:
         step("keyboard: Tab to an ion, Enter shows the detail", keys)
         def table():
             pg.evaluate("document.getElementById('data').open = true"); assert pg.locator("#table tr").count() > 10
-            pg.evaluate("window.__c=null; navigator.clipboard.writeText = t => { window.__c = t; return Promise.resolve(); }")
+            pg.evaluate("window.__c=null; navigator.clipboard.writeText = t => { window.__c = t; return Promise.resolve(); }; navigator.clipboard.write = async it => { window.__c = await (await it[0].getType('text/plain')).text(); }; 0")
             pg.click("#copy"); pg.wait_for_function("window.__c"); assert "\t" in pg.evaluate("window.__c")
         step("data table and Copy data", table)
         def svg_dl():
@@ -52,6 +52,23 @@ try:
             with pg.expect_download() as d: pg.click("#dl-png")
             assert Path(d.value.path()).read_bytes()[:4] == b"\x89PNG"
         step("PNG download from the canvas", png_dl)
+        def png_cap():
+            # a figure of 4000 x 3000 px would be a 48 Mpx canvas at 2x: Safari refuses it (toBlob gives null, stubbed here), the page lowers the scale and says so
+            pg.evaluate("""(() => { const d = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'naturalWidth'), e = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'naturalHeight');
+              Object.defineProperty(HTMLImageElement.prototype, 'naturalWidth', { configurable: true, get() { return 4000; } });
+              Object.defineProperty(HTMLImageElement.prototype, 'naturalHeight', { configurable: true, get() { return 3000; } });
+              const tb = HTMLCanvasElement.prototype.toBlob; window.__big = null;
+              HTMLCanvasElement.prototype.toBlob = function (cb, ...a) { if (this.width * this.height > 16777216) { window.__big = [this.width, this.height]; setTimeout(() => cb(null)); return; } return tb.call(this, cb, ...a); };
+              window.__undo = () => { Object.defineProperty(HTMLImageElement.prototype, 'naturalWidth', d); Object.defineProperty(HTMLImageElement.prototype, 'naturalHeight', e); HTMLCanvasElement.prototype.toBlob = tb; }; })()""")
+            try:
+                with pg.expect_download() as d: pg.click("#dl-png")
+                assert Path(d.value.path()).read_bytes()[:4] == b"\x89PNG" and not pg.evaluate("window.__big"), pg.evaluate("window.__big")
+                st = pg.inner_text("#status"); assert "Image saved at" in st and "×" in st, st
+                w, h = [int(x) for x in st.split("at ")[1].split(" px")[0].split(" × ")]
+                assert w * h <= 16777216 and w * h > 0.99 * 16777216, (w, h)
+            finally:
+                pg.evaluate("window.__undo()")
+        step("PNG of a very large figure: under Safari's canvas cap, with a notice of the size", png_cap)
         def axe():
             if not AXE: return
             for mode in ("#v-tree", "#v-radial"):

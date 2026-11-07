@@ -4,6 +4,6 @@ use crate::error_json;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn ricerca_numero(req: &str) -> Result<String, JsValue> {
+pub fn search_number(req: &str) -> Result<String, JsValue> {
     mzlab_core::ricerca::match_number(req).map_err(|e| error_json(&e))
 }

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Generazione deterministica dei casi di test per la nomenclatura dei TP.
+"""Deterministic generation of the test cases for TP naming.
 
-Rigenera byte-per-byte:
-  - tests/data/nomi_tp/trasformazioni.csv (120 righe)
-  - tests/data/nomi_tp/casi_nomi.csv (110 righe)
+Regenerates byte for byte:
+  - tests/data/nomi_tp/trasformazioni.csv (120 rows)
+  - tests/data/nomi_tp/casi_nomi.csv (110 rows)
 
-Utilizza esclusivamente la libreria standard di Python e pyteomics.
+Uses only the Python standard library and pyteomics.
 """
 from __future__ import annotations
 
@@ -183,7 +183,7 @@ DIFF_SPEC = [
 
 
 def get_versions() -> tuple[str, str]:
-    """Restituisce le versioni di Python e pyteomics."""
+    """Returns the versions of Python and pyteomics."""
     py_ver = sys.version.split()[0]
     try:
         pyt_ver = importlib.metadata.version("pyteomics")
@@ -193,14 +193,14 @@ def get_versions() -> tuple[str, str]:
 
 
 def generate_trasformazioni_bytes() -> bytes:
-    """Genera deterministicamente i byte esatti di trasformazioni.csv."""
+    """Generates the exact bytes of trasformazioni.csv, deterministically."""
     lines = [line.strip("\r\n") for line in TRASFORMAZIONI_RAW.strip().splitlines()]
     content = "\r\n".join(lines) + "\r\n"
     return content.encode("utf-8")
 
 
 def build_casi_nomi_records(t_rows: list[dict[str, str]]) -> list[dict]:
-    """Costruisce i 110 casi di test secondo le specifiche di nomenclatura."""
+    """Builds the 110 test cases from the naming specs."""
     used_nominal_groups: set[tuple[str, int]] = set()
     for p, f, _ in ISOMERS_SPEC:
         mz = pyteomics.mass.calculate_mass(formula=f, charge=1)
@@ -264,7 +264,7 @@ def build_casi_nomi_records(t_rows: list[dict[str, str]]) -> list[dict]:
 
 
 def generate_casi_nomi_bytes(records: list[dict]) -> bytes:
-    """Genera i byte esatti di casi_nomi.csv (CRLF, UTF-8)."""
+    """Generates the exact bytes of casi_nomi.csv (CRLF, UTF-8)."""
     fieldnames = [
         "case_id", "parent_name", "tp_formula_neutral", "adduct",
         "mz_exact", "mz_nominal", "rt_min", "expected_group", "expected_kind"
@@ -288,7 +288,7 @@ def generate_casi_nomi_bytes(records: list[dict]) -> bytes:
 
 
 def verify_and_write(path: Path, new_bytes: bytes, label: str) -> None:
-    """Verifica la corrispondenza byte-per-byte se il file esiste, altrimenti scrive."""
+    """Checks the byte-for-byte match when the file exists, otherwise writes it."""
     if path.exists():
         existing_bytes = path.read_bytes()
         if existing_bytes != new_bytes:
@@ -300,7 +300,7 @@ def verify_and_write(path: Path, new_bytes: bytes, label: str) -> None:
 
 
 def cleanup_obsolete_scripts(target_dir: Path) -> None:
-    """Rimuove vecchi script scratch lasciati da iterazioni precedenti."""
+    """Removes old scratch scripts left by earlier iterations."""
     obsolete = target_dir / "generate_casi_nomi.py"
     if obsolete.exists():
         obsolete.unlink()
