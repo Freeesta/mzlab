@@ -109,6 +109,18 @@ export function pinchWheel(g) {
   d.addEventListener("gestureend", (/** @type {any} */ e) => { if (on && !e.defaultPrevented) e.preventDefault(); on = false; });
 }
 
+// Safari and iPadOS refuse a canvas over 16 777 216 pixels (toBlob gives null, the drawing is lost): canvasScale is the largest scale <= `s` that keeps
+// a w x h image under that area, for every export that rasterises at a multiple of its size. cappedScale also tells the user once per export when it lowered it.
+export const MAX_CANVAS_PX = 16777216;
+/** @param {number} w @param {number} h @param {number} s */
+export const canvasScale = (w, h, s) => (w > 0 && h > 0 ? Math.min(s, Math.sqrt(MAX_CANVAS_PX / (w * h)) * 0.999) : s);
+/** canvasScale plus a calm notice (g.toast, text from g.I18N) with the final size when the cap lowered the scale @param {any} g @param {number} w @param {number} h @param {number} s */
+export function cappedScale(g, w, h, s) {
+  const k = canvasScale(w, h, s);
+  if (k < s && typeof g.toast === "function" && g.I18N) g.toast(g.I18N.t("export.canvasCap", { w: Math.round(w * k), h: Math.round(h * k) }));
+  return k;
+}
+
 /** Installs every fallback the global `g` needs; returns the names installed (for the tests and the diagnosis). @param {any} g @param {{worker?: () => any}} [o] */
 export function installa(g, o = {}) {
   /** @type {string[]} */ const done = [];
@@ -141,4 +153,4 @@ export function installa(g, o = {}) {
 }
 
 const G = /** @type {any} */ (globalThis);
-if (typeof window !== "undefined" && !G.__compat) { G.__compat = installa(G); G.clipboardCopy = (/** @type {Record<string, any>} */ parts) => copyNow(G, parts); }
+if (typeof window !== "undefined" && !G.__compat) { G.__compat = installa(G); G.clipboardCopy = (/** @type {Record<string, any>} */ parts) => copyNow(G, parts); G.canvasScale = (/** @type {number} */ w, /** @type {number} */ h, /** @type {number} */ s) => cappedScale(G, w, h, s); }

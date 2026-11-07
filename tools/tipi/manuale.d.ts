@@ -4,6 +4,7 @@
 declare var APP_NAME: string;
 declare var MZLAB_VERSION: string;
 declare var MZLAB_COMMIT: string;
+declare var canvasScale: (w: number, h: number, s: number) => number;
 declare var MZLAB_PHONE: boolean;
 declare var MZLAB_DESKTOP: boolean;
 declare var MZLAB_LAB: any;
