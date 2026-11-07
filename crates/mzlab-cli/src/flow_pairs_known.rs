@@ -3,25 +3,7 @@
 use std::collections::BTreeSet;
 
 /// The mismatches the registry has today, by consumer port, source and error key: the test fails on any other, and on one of these that is gone (drop it).
-/// A table of one file with the samples of six (`error.badCampioni`): data the check does not read.
-const KNOWN: &[(&str, &str)] = &[
-    (
-        "table.filter.table <- table of one sample",
-        "error.badCampioni",
-    ),
-    (
-        "export.table_csv.table <- table of one sample",
-        "error.badCampioni",
-    ),
-    (
-        "export.mztab.table <- table of one sample",
-        "error.badCampioni",
-    ),
-    (
-        "table.match.table <- table of one sample",
-        "error.badCampioni",
-    ),
-];
+const KNOWN: &[(&str, &str)] = &[];
 
 /// The pairs the formats of the ports close (`format` / `formats`, `err.flow.port.format`): the check refuses each, with that key.
 const BY_FORMAT: &[&str] = &[
@@ -51,6 +33,27 @@ const BY_FORMAT: &[&str] = &[
     "tp.link.table <- tp.filter.table",
 ];
 
+/// The pairs refused by their data, not by the plan: a table of one file with the samples of six (`error.badCampioni`). The check reads the plan
+/// only, never the rows of a table, so these stay check-OK and must fail at run with that key: the run, not the check, is where they are caught.
+const BY_DATA: &[(&str, &str)] = &[
+    (
+        "export.mztab.table <- table of one sample",
+        "error.badCampioni",
+    ),
+    (
+        "export.table_csv.table <- table of one sample",
+        "error.badCampioni",
+    ),
+    (
+        "table.filter.table <- table of one sample",
+        "error.badCampioni",
+    ),
+    (
+        "table.match.table <- table of one sample",
+        "error.badCampioni",
+    ),
+];
+
 /// The pairs the lineage of the ports closes (`Port::lineage`, `err.flow.lineage`): a table file into a step that needs the table aligned in its plan.
 const BY_LINEAGE: &[&str] = &[
     "features.gapfill.table <- table of one sample",
@@ -68,7 +71,7 @@ pub(super) enum Verdict {
     Mismatch(String),
 }
 
-/// Writes the report and fails on a mismatch not in `KNOWN`, on a `KNOWN` entry that no longer fails, and on a view the check refuses or the run fails.
+/// Writes the report and fails on a mismatch not in `KNOWN` or `BY_DATA`, on an entry of either that no longer fails with its key, and on a view the check refuses or the run fails.
 pub(super) fn report_and_assert(verdicts: &[(String, Verdict)]) {
     let mut report = String::new();
     for (what, v) in verdicts {
@@ -90,6 +93,7 @@ pub(super) fn report_and_assert(verdicts: &[(String, Verdict)]) {
         .collect();
     let known: BTreeSet<(String, String)> = KNOWN
         .iter()
+        .chain(BY_DATA)
         .map(|(w, e)| (w.to_string(), e.to_string()))
         .collect();
     let new: Vec<_> = found
@@ -107,7 +111,7 @@ pub(super) fn report_and_assert(verdicts: &[(String, Verdict)]) {
     );
     assert!(
         gone.is_empty(),
-        "no longer a mismatch, drop it from KNOWN:\n{}",
+        "no longer a mismatch, drop it from KNOWN or BY_DATA:\n{}",
         gone.join("\n")
     );
     for (pairs, key) in [
