@@ -238,6 +238,7 @@
     "../../mzlab/web/registro-serie.js",
     "../../mzlab/web/tdati-pannelli.js",
     "../../mzlab/web/tdati.js",
+    "../../mzlab/web/tic-nativo.js",
     "../../mzlab/web/transizioni.js",
     "../../mzlab/web/workflow.js"
   ]

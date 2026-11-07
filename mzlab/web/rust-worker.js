@@ -118,7 +118,7 @@ async function fileOf(name) {
 const impronte = createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule });
 // size shown for a maker's sample: its own when the reader knows it, else the sum of its members (e.g. .wiff + .wiff.scan); stubs written before the sum was kept have `size` too
 const shownSize = (/** @type {{ dim?: number | null, size: number }} */ st) => st.dim != null ? st.dim : st.size;
-const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte });
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool: () => idxPool(), post: m => postMessage(m) });
 const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); return p && p.size === size ? [p.sha256, p.probe] : [undefined, undefined]; };
 const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
 const openGate = createOpenGate();
@@ -275,7 +275,7 @@ async function lrIndexOwn(m) {
   if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
   const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
   if (CANCELLED.has(m.name)) throw cancelled();
-  const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic });      // wait: the pool has no free worker yet
+  const onProgress = p => { nativo.early.tell(m.name, m.id, p); postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic }); };      // wait: the pool has no free worker yet
   const early_tic = earlyTicOf(job);
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
@@ -297,7 +297,7 @@ async function lrIndexOwn(m) {
   let opened = false;
   try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
   if (!opened) jerr("err.engine.index", { name: m.name });
-  return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
+  nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
 }
 let flowCenOps;
 const flowCen = () => flowCenOps || (flowCenOps = createFlowCentroid({ ARCH, infoDi, nuovo, safe, version, lrPut, lrIndex, lrFile, release: n => ARCH.release(n), close: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } }));
