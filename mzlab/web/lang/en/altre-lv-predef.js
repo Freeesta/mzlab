@@ -426,7 +426,7 @@ I18N.add("en", {
   "mol.import.done": "{n, plural, one {# molecule imported} other {# molecules imported}}; replaced: {replaced}; yours, left as they are: {kept}.",
   "mol.import.errors": "{n, plural, one {The file has # row to fix} other {The file has # rows to fix}}: no molecule was imported.",
   "mol.err.row": "Row {riga}:",
-  "mol.err.more": "… and {n} more errors.",
+  "mol.err.more": "… and {n} more errors, not listed so that the list stays short: fix the rows above and load the file again to see them.",
   "mol.err.load": "The molecules cannot be loaded.",
   "mol.err.save": "The molecules cannot be saved.",
   "mol.err.archive": "The molecules saved in this browser cannot be read and are not shown."
