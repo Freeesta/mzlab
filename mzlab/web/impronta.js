@@ -33,7 +33,7 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
         const m = ev.data, j = jobs.get(m.id);
         if (m.op === "up") { up[k] = true; return; }
         if (!j) return;
-        if (m.op === "ack") { j.open[k]--; if (Math.max(...j.open) < WINDOW) { const a = j.ack; j.ack = null; a?.(); } }
+        if (m.op === "ack") { j.open[k]--; if (j.open.every(n => n < WINDOW)) { const a = j.ack; j.ack = null; a?.(); } }
         else if (m.op === "fine") { j.got[k] = m.out || null; if (--j.left === 0) { jobs.delete(m.id); j.out?.(join(j.got)); if (!jobs.size) rest(); } }
       };
       x.onerror = fail; x.onmessageerror = fail;
@@ -67,7 +67,7 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
             if (second) { const c = b.slice(); j.open[1]++; second.postMessage({ op: "upd", id, b: c }, [c.buffer]); }
             j.open[0]++;
             first.postMessage({ op: "upd", id, b }, [b.buffer]);
-            if (Math.max(...j.open) >= WINDOW) return new Promise(r => { j.ack = r; });
+            if (j.open.some(n => n >= WINDOW)) return new Promise(r => { j.ack = r; });
           },
           end() { return dead ? Promise.resolve(null) : new Promise(r => { j.out = r; for (const x of wk) x.postMessage({ op: "end", id }); }); },
         });
