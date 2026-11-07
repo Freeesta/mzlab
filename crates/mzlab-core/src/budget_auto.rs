@@ -202,6 +202,14 @@ fn ram_mb() -> f64 {
         .map_or(0.0, |b| b / (1024.0 * 1024.0))
 }
 
+/// The working memory in MB of one of `workers` jobs that run at once on the native budget `auto_mb`: its share, never under 128 MB (nor over
+/// `auto_mb`), so that the jobs of a run fit together in the budget of the computer. The bytes written do not depend on it.
+pub fn share_mb(auto_mb: f64, workers: usize) -> f64 {
+    (auto_mb / workers.max(1) as f64)
+        .floor()
+        .max(auto_mb.min(128.0))
+}
+
 /// The automatic budget in MB of a native process (desktop app, `mzlab-cli`) on this computer.
 pub fn native_auto_mb() -> f64 {
     let cores = std::thread::available_parallelism().map_or(0, |n| n.get() as u32);

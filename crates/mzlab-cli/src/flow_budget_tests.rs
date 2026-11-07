@@ -102,3 +102,16 @@ fn the_family_mode_gives_the_same_bytes_with_and_without_a_budget() {
         text(&small, "prov.json")
     );
 }
+
+#[test]
+fn the_automatic_budget_is_shared_by_the_workers_and_budget_mb_is_kept_as_given() {
+    let auto = crate::flow_out::Budget::auto();
+    auto.run_with(4);
+    let shared = mzlab_core::budget_auto::share_mb(auto.mb, 4);
+    assert_eq!(auto.job_mb(), shared);
+    auto.run_with(1);
+    assert_eq!(auto.job_mb(), auto.mb);
+    let given = crate::flow_out::Budget::given(24.0);
+    given.run_with(4);
+    assert_eq!(given.job_mb(), 24.0);
+}

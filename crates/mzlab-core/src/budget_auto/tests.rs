@@ -126,3 +126,13 @@ fn a_manual_budget_is_kept_inside_the_limits_and_says_so() {
     assert!(j.starts_with("{\"mode\":\"manual\",\"mb\":128"));
     assert!(j.contains("\"levels\":[96,128,192,512,1024,2048,3072]"));
 }
+
+#[test]
+fn jobs_that_run_together_share_the_native_budget_but_never_drop_under_128_mb() {
+    assert_eq!(share_mb(4096.0, 1), 4096.0);
+    assert_eq!(share_mb(4096.0, 4), 1024.0);
+    assert_eq!(share_mb(1000.0, 3), 333.0);
+    assert_eq!(share_mb(256.0, 4), 128.0);
+    assert_eq!(share_mb(96.0, 4), 96.0);
+    assert_eq!(share_mb(4096.0, 0), 4096.0);
+}

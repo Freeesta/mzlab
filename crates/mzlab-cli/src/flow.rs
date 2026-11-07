@@ -170,8 +170,8 @@ pub struct FileRunner {
     cache: Option<crate::flow_cache::Cache>,
     /// Only look in the cache: a job whose key is not there fails with `err.flow.probe.miss` instead of running (`flow_probe.rs`).
     pub(crate) probe: bool,
-    /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
-    pub(crate) budget_mb: f64,
+    /// Working memory of the alignment (`--budget-mb`; else the automatic one of this computer, shared by the workers: `flow_out::Budget`).
+    pub(crate) budget: crate::flow_out::Budget,
     /// A live run: the cancel flag and the progress of each job it runs (`flow_live.rs`).
     watch: Option<Arc<dyn Watch>>,
 }
@@ -189,7 +189,7 @@ impl FileRunner {
             done: None,
             cache: None,
             probe: false,
-            budget_mb: mzlab_core::budget_auto::native_auto_mb(),
+            budget: crate::flow_out::Budget::auto(),
             watch: None,
         }
     }
@@ -197,7 +197,7 @@ impl FileRunner {
     /// The runner with the working memory of the alignment set to `mb` (None: the automatic budget).
     pub(crate) fn with_budget(mut self, mb: Option<f64>) -> FileRunner {
         if let Some(mb) = mb {
-            self.budget_mb = mb;
+            self.budget = crate::flow_out::Budget::given(mb);
         }
         self
     }
