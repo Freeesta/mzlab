@@ -1,4 +1,4 @@
-//! `/api/dda`, `/api/spectrum`, `/api/spectra`, `/api/scan`, `/api/scanavg` and `/api/scanbin` on HIGH-RESOLUTION centroid files answer from the index like `api.dispatch` (`tools/hr_riferimento.py`, two synthetic
+//! `/api/dda`, `/api/dda_window`, `/api/spectrum`, `/api/spectra`, `/api/scan`, `/api/scanavg` and `/api/scanbin` on HIGH-RESOLUTION centroid files answer from the index like `api.dispatch` (`tools/hr_riferimento.py`, two synthetic
 //! Orbitrap DDA files): the same columns and peaks, numbers within 1e-9; a window of one scan is read from the mzML (`spectrum_exact`; the index alone answers `None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_HR_DIR` = a folder already written by the script.
 

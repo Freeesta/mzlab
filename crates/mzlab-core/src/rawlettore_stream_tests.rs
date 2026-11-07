@@ -1,13 +1,16 @@
 //! `Stream`: the window serves short reads with the same bytes as the source and with far fewer `read_at` calls.
 use super::*;
+use crate::idxread::ReadAt;
 use std::cell::Cell;
+use std::io::{Read, Seek, SeekFrom};
 use std::rc::Rc;
 
-struct Contato(Vec<u8>, Rc<Cell<usize>>);
+struct Contato(Vec<u8>, Rc<Cell<usize>>, Rc<Cell<usize>>);
 
 impl ReadAt for Contato {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         self.1.set(self.1.get() + 1);
+        self.2.set(self.2.get() + buf.len());
         self.0.read_at(off, buf)
     }
 }
@@ -19,10 +22,20 @@ fn dati(n: usize) -> Vec<u8> {
 }
 
 fn flusso(d: &[u8]) -> (Stream, Rc<Cell<usize>>) {
-    let c = Rc::new(Cell::new(0));
+    let (s, c, _) = flusso_byte(d);
+    (s, c)
+}
+
+/// The stream, its count of `read_at` calls and of the bytes they asked for.
+fn flusso_byte(d: &[u8]) -> (Stream, Rc<Cell<usize>>, Rc<Cell<usize>>) {
+    let (c, b) = (Rc::new(Cell::new(0)), Rc::new(Cell::new(0)));
     (
-        Stream::new(Box::new(Contato(d.to_vec(), c.clone())), d.len() as u64),
+        Stream::new(
+            Box::new(Contato(d.to_vec(), c.clone(), b.clone())),
+            d.len() as u64,
+        ),
         c,
+        b,
     )
 }
 
@@ -36,10 +49,40 @@ fn short_reads_share_a_window_and_match_the_source() {
         got.extend_from_slice(&b);
     }
     assert_eq!(got[..], d[..got.len()]);
+    // the window starts at FINESTRA_SALTO and doubles up to FINESTRA: a few more calls than whole windows
+    let crescita = (FINESTRA / FINESTRA_SALTO).ilog2() as usize;
     assert!(
-        calls.get() <= d.len() / FINESTRA + 1,
+        calls.get() <= d.len() / FINESTRA + 1 + crescita,
         "{} calls",
         calls.get()
+    );
+}
+
+#[test]
+fn a_skipped_profile_is_not_read() {
+    // the centroid path of an Orbitrap scan: the packet header, a jump over the profile, then the centroid list
+    let (pacchetto, testa, lista) = (220_000usize, 40usize, 24_000usize);
+    let d = dati(pacchetto * 10);
+    let (mut s, _, byte) = flusso_byte(&d);
+    for k in 0..10 {
+        let inizio = k * pacchetto;
+        s.seek(SeekFrom::Start(inizio as u64)).unwrap();
+        let mut t = vec![0u8; testa];
+        s.read_exact(&mut t).unwrap();
+        assert_eq!(t[..], d[inizio..inizio + testa]);
+        let lista_da = inizio + pacchetto - lista - 4;
+        s.seek(SeekFrom::Start(lista_da as u64)).unwrap();
+        let mut conta = [0u8; 4];
+        s.read_exact(&mut conta).unwrap();
+        let mut l = vec![0u8; lista];
+        s.read_exact(&mut l).unwrap();
+        assert_eq!(l[..], d[lista_da + 4..lista_da + 4 + lista]);
+    }
+    // each scan asks for the header window, the list window and the list: never the 64 KiB windows over the profile
+    let per_scansione = byte.get() / 10;
+    assert!(
+        per_scansione <= 2 * FINESTRA_SALTO + lista + 4,
+        "{per_scansione} bytes per scan"
     );
 }
 

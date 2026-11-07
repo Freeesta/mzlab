@@ -32,6 +32,6 @@ def make_sources(d: Path):
     f4 = w("ci.csv", ["CID", "MolecularFormula", "ExactMass", "IKFB"],
            [[1, form[keys[40]], mass[keys[40]], keys[40]], [2, form[keys[41]], mass[keys[41]], keys[41]], [3, form[keys[42]], mass[keys[42]], keys[42]]])
     base = {"licenza": "CC-BY-4.0", "doi": "10.0000/x", "url": "http://x", "istituzione": "Inventata"}
-    fonti = [dict(base, id="susdat", nome="S", versione="1", files=[f1]), dict(base, id="pubchemlite", nome="P", versione="1", files=[f2]),
+    sources = [dict(base, id="susdat", nome="S", versione="1", files=[f1]), dict(base, id="pubchemlite", nome="P", versione="1", files=[f2]),
              dict(base, id="transpubchem", nome="T", versione="1", files=[f3, f4])]
-    return fonti, keys, mass, form
+    return sources, keys, mass, form

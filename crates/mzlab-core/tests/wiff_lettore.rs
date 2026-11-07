@@ -139,6 +139,7 @@ fn the_synthetic_pairs_read_the_same_through_the_registry() {
     assert!(n > 0);
     one_sample(&out, "two");
     mzml_of_one_sample(&out, "two");
+    mzml_with_known_sha1(&out, "two");
     truncated(&out, "serie");
     no_idx(&out, "buchi");
 }
@@ -254,6 +255,24 @@ fn mzml_of_one_sample(dir: &Path, name: &str) {
             all == solo,
             "{name}: mzML of sample {c} opened for it alone"
         );
+    }
+}
+
+/// The mzML is the same bytes when the members carry the SHA-1 their fingerprints gave (`upload::impronte`: the reader then does not hash the
+/// `.wiff.scan` again for the header), an empty one (hashed by the reader) or none.
+fn mzml_with_known_sha1(dir: &Path, name: &str) {
+    let mut known = set(dir, name);
+    mzlab_core::upload::impronte(&mut known).unwrap();
+    assert!(known.membri[1].sha1.as_ref().is_some_and(|s| s.len() == 40));
+    let mut empty = set(dir, name);
+    empty
+        .membri
+        .iter_mut()
+        .for_each(|m| m.sha1 = Some(String::new()));
+    let want = mzml_of(lettori::apri(set(dir, name), &Limiti::sito()).unwrap(), 0);
+    for (what, fs) in [("known", known), ("empty", empty)] {
+        let got = mzml_of(lettori::apri(fs, &Limiti::sito()).unwrap(), 0);
+        assert!(got == want, "{name}: mzML with a {what} SHA-1");
     }
 }
 

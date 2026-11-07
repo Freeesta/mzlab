@@ -44,8 +44,8 @@ from mzlab.chem import elements as E                     # noqa: E402
 from mzlab.chem import isoscore                          # noqa: E402
 
 NA_DELTA, NH4_DELTA = 21.98194, 17.02655          # [M+Na]+ and [M+NH4]+ minus [M+H]+ (checked by the tests against the element table)
-FORME_TP = ["monotona", "bateman", "piatto", "decrescente"]
-REGOLE_ESCA = [13.5731, 41.2087, -27.1914, 63.0412, 85.3329, -9.4476, 19.8765, 52.6108, -43.7219, 28.4057, -15.3342, 71.9163]
+SHAPES_TP = ["monotona", "bateman", "piatto", "decrescente"]
+RULES_DECOY = [13.5731, 41.2087, -27.1914, 63.0412, 85.3329, -9.4476, 19.8765, 52.6108, -43.7219, 28.4057, -15.3342, 71.9163]
 MZ_RUMORE = (150.0, 800.0)
 
 PROFILI = {
@@ -62,7 +62,7 @@ PROFILI["V1X"] = {**PROFILI["completo"], "esteso": ESTESO}
 PROFILI["V1X-piccolo"] = {**PROFILI["piccolo"], "esteso": {**ESTESO, "catene": {"3": 2, "2": 3}, "n_isf_variabile": 2, "n_travestiti": 4, "escala_k": 3.0, "t_limite": 16.0, "gap_tmax": 0.5,
                                                             "n_alogenati": 4, "gruppi_per_dt": 1}}
 LOSSES = ["C4H8", "H2O", "C2H4", "CH2O", "C3H6", "NH3", "C2H2O", "CO", "C2H6", "CH4O", "C3H4", "C4H6", "H2S", "C2H3N"]
-TRASF = [{k: v for k, v in (("C", dc), ("H", dh), ("O", do)) if v} for dc in range(-4, 5) for do in range(0, 4) for dh in range(-6, 7, 2) if (dc, dh, do) != (0, 0, 0)]
+TRANSF = [{k: v for k, v in (("C", dc), ("H", dh), ("O", do)) if v} for dc in range(-4, 5) for do in range(0, 4) for dh in range(-6, 7, 2) if (dc, dh, do) != (0, 0, 0)]
 
 
 @dataclass
@@ -132,7 +132,7 @@ def valle_relativa(d: float, sg: float, h2: float) -> float:
     return float(y[a:b + 1].min() / min(y[a], y[b]))
 
 
-def sigma_per_valle(d: float, target: float, h2: float = 0.8) -> float:
+def sigma_for_valley(d: float, target: float, h2: float = 0.8) -> float:
     lo, hi = 0.003, 1.0
     for _ in range(60):
         mid = 0.5 * (lo + hi)
@@ -189,7 +189,7 @@ class Derivati:
             r = round(float(rng.uniform(0.03, 0.12)), 3)
             self.ione(f"{base.id}_{nome}", "addotto", base.famiglia, neutra, base.rt + float(rng.uniform(-0.008, 0.008)), base.sg, base.amp * r, adduct=ad,
                       progenitore=base.id, forma="come_progenitore", note=f"ratio={r};delta_mz={delta}")
-        nuovi = []
+        new = []
         for j in range(isf + isf_finti):
             vera = j < isf
             while True:
@@ -205,14 +205,14 @@ class Derivati:
             o.picchi, mz, _ = modello(o.ion)
             o.mz = float(mz[0])
             self.ioni.append(o)
-            nuovi.append(o)
-        veri = [o for o in nuovi if o.ruolo == "isf"]
-        finti = [o for o in nuovi if o.ruolo == "isf_finto"]
-        base.frammenti = frammenti_di(rng, base.mz, extra=[(o.mz, float(rng.uniform(0.5, 0.9))) for o in veri], evita=[o.mz for o in finti])
-        return nuovi
+            new.append(o)
+        true = [o for o in new if o.ruolo == "isf"]
+        finti = [o for o in new if o.ruolo == "isf_finto"]
+        base.frammenti = frammenti_di(rng, base.mz, extra=[(o.mz, float(rng.uniform(0.5, 0.9))) for o in true], evita=[o.mz for o in finti])
+        return new
 
 
-class Costruttore(Derivati):
+class Builder(Derivati):
     def __init__(self, seme: int, profilo: str):
         self.rng = np.random.default_rng(seme)
         self.seme = seme
@@ -261,11 +261,11 @@ class Costruttore(Derivati):
         return {"monotona": lambda: dict(kf=u(0.05, 0.25)), "piatto": lambda: dict(kf=5.0), "bateman": lambda: dict(kf=u(0.15, 0.3), kd=u(0.04, 0.1)),
                 "decrescente": lambda: dict(kd=u(0.03, 0.08)), "ritardo": lambda: dict(kp=progenitore.k_form, ka=progenitore.k_dec, kb=u(0.01, 0.03))}[forma]()
 
-    def prodotto(self, progenitore: Ione, neutra_p: dict, forma="monotona", generazione=1, ruolo="tp1", sg=None, scala=None, rt=None):
+    def prodotto(self, progenitore: Ione, neutral_p: dict, forma="monotona", generazione=1, ruolo="tp1", sg=None, scala=None, rt=None):
         rng = self.rng
         rt = self.slot() if rt is None else rt
         while True:
-            f = somma(neutra_p, TRASF[int(rng.integers(0, len(TRASF)))])
+            f = somma(neutral_p, TRANSF[int(rng.integers(0, len(TRANSF)))])
             if self.libero(f, rt):
                 break
         self.formule.append(f)
@@ -281,7 +281,7 @@ class Costruttore(Derivati):
 
 
 # ---------------------------------------------------------------------------------------------------------------- the model
-def padre_e_famiglia(c: Costruttore):
+def parent_and_family(c: Builder):
     """The parent: first-order decay, saturated in the first times (flat apex, constant area, then collapse); isotopes, adducts, two true and two decoy in-source fragments."""
     rng = c.rng
     neutra = formula_inventata(rng)
@@ -296,11 +296,11 @@ def padre_e_famiglia(c: Costruttore):
     return padre, neutra
 
 
-def prodotti_cinetici(c: Costruttore, padre: Ione, neutra: dict) -> list:
+def kinetic_products(c: Builder, padre: Ione, neutra: dict) -> list:
     """First-generation products (one kinetics each, cycling), second-generation ones (delayed, from the products that rise and fall) and extra families."""
     P, out = c.P, []
     for i in range(P["n_tp"] + P["famiglie_extra"]):
-        o, f = c.prodotto(padre, neutra, forma=FORME_TP[i % len(FORME_TP)])
+        o, f = c.prodotto(padre, neutra, forma=SHAPES_TP[i % len(SHAPES_TP)])
         out.append((o, f))
         c.derivati(o, f, addotti=[("Na", NA_DELTA, "[M+Na]+")] if i % 2 == 0 else [("NH4", NH4_DELTA, "[M+NH4]+")] if i % 3 == 0 else [], isf=1 if i % 4 == 0 else 0, isf_finti=1 if i % 4 == 0 else 0)
     bat = [(o, f) for o, f in out if o.forma == "bateman"]
@@ -312,11 +312,11 @@ def prodotti_cinetici(c: Costruttore, padre: Ione, neutra: dict) -> list:
     return out
 
 
-def isomeri(c: Costruttore, padre: Ione, neutra: dict) -> None:
+def isomeri(c: Builder, padre: Ione, neutra: dict) -> None:
     """Pairs with the same formula, similar MS2, distance and valley between the peaks declared (sigma solved so that the valley is the declared share of the lower apex)."""
     rng = c.rng
     for d, v in c.P["isomeri"]:
-        sg = sigma_per_valle(d, v)
+        sg = sigma_for_valley(d, v)
         a, f = c.prodotto(padre, neutra, sg=sg, ruolo="isomero", scala=2e7)
         b = c.ione(c.id_mol(), "isomero", a.id, f, a.rt + d, sg, a.amp * 0.8, progenitore=padre.id, generazione=1, forma="monotona", k_form=a.k_form, selezionabile=True, isomero_di=a.id)
         b.frammenti = (a.frammenti[0], a.frammenti[1] * rng.uniform(0.9, 1.1, len(a.frammenti[1])))
@@ -326,7 +326,7 @@ def isomeri(c: Costruttore, padre: Ione, neutra: dict) -> None:
         c.slot(d + c.P["passo"] * 0.5)
 
 
-def chimeriche(c: Costruttore, padre: Ione, neutra: dict) -> None:
+def chimeriche(c: Builder, padre: Ione, neutra: dict) -> None:
     """Target and partner co-isolated; the partner follows the target with the ratio that gives the declared true purity."""
     rng = c.rng
     for p in c.P["purezze"]:
@@ -343,18 +343,18 @@ def chimeriche(c: Costruttore, padre: Ione, neutra: dict) -> None:
             c.derivati(t, f, isotopi=False)
 
 
-def ipotesi(c: Costruttore) -> None:
+def ipotesi(c: Builder) -> None:
     """Matrix noise (random m/z and RT, in every file) and the mass hypotheses of the invented rules: those with no signal are decoys (esca), those with a noise
     peak within +-5 ppm are coincidences (the peak is not a product). The expected number by chance goes to c.meta_coinc."""
     rng, P = c.rng, c.P
     n = P["n_rumore"]
     c.rumore = (rng.uniform(*MZ_RUMORE, n), rng.uniform(1.0, c.rt_fine - 0.3, n), rng.uniform(0.04, 0.08, n), rng.lognormal(np.log(6e5), 0.5, n))
-    veri = np.sort(np.array([m for o in c.ioni if o.amp is not None for m, _ in o.picchi] + [m for _, m, _, _ in c.fondo]))
+    true = np.sort(np.array([m for o in c.ioni if o.amp is not None for m, _ in o.picchi] + [m for _, m, _, _ in c.fondo]))
     basi = [o for o in c.ioni if o.ruolo in ("progenitore", "tp1", "tp2", "tp3", "isomero")]
-    hyp = [(b, r, REGOLE_ESCA[r], b.mz + REGOLE_ESCA[r]) for b in basi for r in range(P["n_regole"])]
-    hyp = [h for h in hyp if MZ_RUMORE[0] < h[3] < MZ_RUMORE[1] and (lambda i: min(abs(veri[min(i, len(veri) - 1)] - h[3]), abs(veri[max(i - 1, 0)] - h[3])) > h[3] * 2e-5)(np.searchsorted(veri, h[3]))]
+    hyp = [(b, r, RULES_DECOY[r], b.mz + RULES_DECOY[r]) for b in basi for r in range(P["n_regole"])]
+    hyp = [h for h in hyp if MZ_RUMORE[0] < h[3] < MZ_RUMORE[1] and (lambda i: min(abs(true[min(i, len(true) - 1)] - h[3]), abs(true[max(i - 1, 0)] - h[3])) > h[3] * 2e-5)(np.searchsorted(true, h[3]))]
     attese = sum(n * 2 * 5e-6 * h[3] / (MZ_RUMORE[1] - MZ_RUMORE[0]) for h in hyp)
-    esche, coinc = [], []
+    decoys, coinc = [], []
     for b, r, d, m in hyp:
         vic = np.flatnonzero(np.abs(c.rumore[0] - m) / m <= 5e-6)
         if len(vic):
@@ -362,19 +362,19 @@ def ipotesi(c: Costruttore) -> None:
             coinc.append(Ione(id=f"SIN-C-{len(coinc) + 1:03d}", ruolo="coincidenza", famiglia=b.id, rt=float(c.rumore[1][j]), sg=float(c.rumore[2][j]), progenitore=b.id,
                               mz=float(c.rumore[0][j]), forma="rumore", note=f"regola=R{r + 1:02d};delta={d};ipotesi_mz={m:.6f};ppm={(c.rumore[0][j] - m) / m * 1e6:.2f}"))
         else:
-            esche.append(Ione(id="", ruolo="esca", famiglia=b.id, progenitore=b.id, mz=m, presente=0, forma="ipotesi", note=f"regola=R{r + 1:02d};delta={d};ipotesi_su={b.id}"))
-    sel = sorted(rng.permutation(len(esche))[:P["n_esche"]].tolist())
+            decoys.append(Ione(id="", ruolo="esca", famiglia=b.id, progenitore=b.id, mz=m, presente=0, forma="ipotesi", note=f"regola=R{r + 1:02d};delta={d};ipotesi_su={b.id}"))
+    sel = sorted(rng.permutation(len(decoys))[:P["n_esche"]].tolist())
     for i, j in enumerate(sel, 1):
-        esche[j].id = f"SIN-E-{i:03d}"
-    c.ioni += coinc + [esche[j] for j in sel]
+        decoys[j].id = f"SIN-E-{i:03d}"
+    c.ioni += coinc + [decoys[j] for j in sel]
     c.meta_coinc = {"finestra_ppm": 5, "n_ipotesi": len(hyp), "n_rumore": n, "intervallo_mz": list(MZ_RUMORE), "attese": round(attese, 3), "osservate": len(coinc),
-                    "n_esche": len(sel), "regole_delta_mz": REGOLE_ESCA[:P["n_regole"]]}
+                    "n_esche": len(sel), "regole_delta_mz": RULES_DECOY[:P["n_regole"]]}
 
 
-def costruisci(seme: int, profilo: str) -> Costruttore:
-    c = Costruttore(seme, profilo)
-    padre, neutra = padre_e_famiglia(c)
-    prodotti_cinetici(c, padre, neutra)
+def costruisci(seme: int, profilo: str) -> Builder:
+    c = Builder(seme, profilo)
+    padre, neutra = parent_and_family(c)
+    kinetic_products(c, padre, neutra)
     isomeri(c, padre, neutra)
     chimeriche(c, padre, neutra)
     if c.P.get("degdma"):
@@ -398,17 +398,17 @@ def riga(o: Ione) -> dict:
             "generazione": o.generazione, "forma": o.forma, "purezza": o.purezza, "isf_in_ms2": o.isf_in_ms2, "presente": o.presente, "k_form": o.k_form, "k_dec": o.k_dec, "note": o.note}
 
 
-def righe_verita(c: Costruttore) -> list[dict]:
+def righe_verita(c: Builder) -> list[dict]:
     rows = [riga(o) for o in c.ioni]
-    vuota = {"rt_obs": [], "ion": "", "generazione": None, "purezza": None, "isf_in_ms2": None, "presente": 1, "k_form": None, "k_dec": None}
+    empty = {"rt_obs": [], "ion": "", "generazione": None, "purezza": None, "isf_in_ms2": None, "presente": 1, "k_form": None, "k_dec": None}
     for nome, m, a, _ in c.fondo:
-        rows.append({"id": nome, "ruolo": "fondo", "mz": round(m, 6), "famiglia": nome, "progenitore": "", "forma": "continuo", "note": f"altezza={a:.3g};tracce=tutte le scansioni", **vuota})
+        rows.append({"id": nome, "ruolo": "fondo", "mz": round(m, 6), "famiglia": nome, "progenitore": "", "forma": "continuo", "note": f"altezza={a:.3g};tracce=tutte le scansioni", **empty})
         for j, d in enumerate((-2.5e-5, 2.5e-5), 1):
-            rows.append({"id": f"{nome}_L{j}", "ruolo": "fondo", "mz": round(m * (1 + d), 6), "famiglia": nome, "progenitore": nome, "forma": "lobo_FT", "note": "ratio=0.02", **vuota})
+            rows.append({"id": f"{nome}_L{j}", "ruolo": "fondo", "mz": round(m * (1 + d), 6), "famiglia": nome, "progenitore": nome, "forma": "lobo_FT", "note": "ratio=0.02", **empty})
     return rows
 
 
-def scrivi_verita(out: Path, c: Costruttore, seme: int, profilo: str) -> None:
+def scrivi_verita(out: Path, c: Builder, seme: int, profilo: str) -> None:
     rows = righe_verita(c)
     with open(out / "verita.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, lineterminator="\n")

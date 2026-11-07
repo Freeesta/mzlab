@@ -7,11 +7,11 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ISTANTANEE = ROOT / "tests/data/attributio/istantanee_sintetiche"
-USCITA_TOX = ROOT / "tests/golden/attributio/tox"
+SNAPSHOTS = ROOT / "tests/data/attributio/istantanee_sintetiche"
+OUTPUT_TOX = ROOT / "tests/golden/attributio/tox"
 
 
-def stadio_tox_ghs():
+def stage_tox_ghs():
     """Thresholds of ecotox/ghs.py on a grid of values, taxon sets and H-statements."""
     from attributio.ecotox import ghs
     vals = [None, float("nan"), 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 50, 100, 500]
@@ -28,7 +28,7 @@ def stadio_tox_ghs():
     return out
 
 
-def stadio_tox_istantanee(dir_: Path, frame_rows):
+def stage_tox_snapshots(dir_: Path, frame_rows):
     """The snapshot readers (registry, membership, ECOTOX values, ECOSAR endpoints) on the synthetic snapshots."""
     from attributio.chem import registry
     from attributio.ecotox import hazard
@@ -42,7 +42,7 @@ def stadio_tox_istantanee(dir_: Path, frame_rows):
             "values": frame_rows(snap["values"]), "ecosar": frame_rows(snap["ecosar"])}
 
 
-def stadio_tox_registro():
+def stage_tox_registry():
     """Pure registry rules: representative CID, synonyms, aquatic H-codes, PubChemLite categories, predicted NORMAN toxicity."""
     from attributio.chem import norman, pubchem, pubchemlite
     props = {5: {"InChIKey": "AAAAAAAAAAAAAA-UHFFFAOYSA-N"}, 3: {"InChIKey": "AAAAAAAAAAAAAA-ABCDEFGHIJ-N"},
@@ -75,7 +75,7 @@ def stadio_tox_registro():
     return out
 
 
-def stadio_tox_pericolo(dir_: Path):
+def stage_tox_hazard(dir_: Path):
     """Hazard records of the synthetic snapshots: tiers, cross-checks, caveats, ECOSAR rules, coverage."""
     import pandas as pd
     from attributio.chem import registry
@@ -94,7 +94,7 @@ def stadio_tox_pericolo(dir_: Path):
             "coverage": hazard.coverage(table, pd.Series([True, False] * 6 + [True]))}
 
 
-def stadio_tox_amenabilita():
+def stage_tox_amenability():
     """LC-ESI amenability rules on hand cases (every branch of the decision list)."""
     from attributio.reglists import amenability as A
     nan = float("nan")
@@ -118,7 +118,7 @@ def stadio_tox_amenabilita():
     return {"cases": [[c[0], None if c[1] is None else c[1], c[2], c[3], None if c[4] is None else (None if c[4] != c[4] else c[4]), c[5], list(A.lc_esi_amenable("n", c[0], c[1], c[2], c[3], c[4], c[5]))] for c in C]}
 
 
-def stadio_tox_b1(dir_: Path, frame_rows, carica_tox):
+def stage_tox_b1(dir_: Path, frame_rows, load_tox):
     """B1 of the synthetic campaign against the invented membership table: inputs (identities, structures, list entries) and every output table."""
     import pandas as pd
     from attributio.chem import registry
@@ -127,7 +127,7 @@ def stadio_tox_b1(dir_: Path, frame_rows, carica_tox):
     from attributio.reglists import match as M
     from attributio.reglists.schema import read_membership
     registry.registry_path = lambda name="registry": dir_ / registry.FILES[name]
-    C = carica_tox()
+    C = load_tox()
     out = {}
     for window in (None, [100.0, 400.0]):
         C.cfg.setdefault("reglists", {})
@@ -157,7 +157,7 @@ def stadio_tox_b1(dir_: Path, frame_rows, carica_tox):
     return out
 
 
-def stadio_tox_schema(dir_: Path, frame_rows):
+def stage_tox_schema(dir_: Path, frame_rows):
     """Schema A1 and the membership tables: read, normalise, collapse by first block, write, long and wide join tables."""
     import io
     import pandas as pd
@@ -176,7 +176,7 @@ def stadio_tox_schema(dir_: Path, frame_rows):
             "long": frame_rows(long), "long_csv": mbuf.getvalue(), "wide": frame_rows(wide), "wide_columns": list(wide.columns)}
 
 
-def _b2_ambiente(dir_: Path, frame_rows):
+def _b2_environment(dir_: Path, frame_rows):
     """Invented features for B2/B3: the calibration of RT against logP, every adduct and class, the isolated adducts, the already identified suspects."""
     import numpy as np
     import pandas as pd
@@ -225,13 +225,13 @@ def _b2_ambiente(dir_: Path, frame_rows):
     return SC, C, b1, out
 
 
-B2_CASI = (([100.0, 400.0], ["HHP_PAN", "WHO_MIA", "EU_PS_2026_805"], {"PA": "HLB"}), (None, ["WHO_MIA"], {}))
+B2_CASES = (([100.0, 400.0], ["HHP_PAN", "WHO_MIA", "EU_PS_2026_805"], {"PA": "HLB"}), (None, ["WHO_MIA"], {}))
 
 
-def stadio_tox_b2(dir_: Path, frame_rows):
+def stage_tox_b2(dir_: Path, frame_rows):
     """B2 on the invented features, with and without the MS1 window."""
-    SC, C, b1, out = _b2_ambiente(dir_, frame_rows)
-    for window, lists, labels in B2_CASI:
+    SC, C, b1, out = _b2_environment(dir_, frame_rows)
+    for window, lists, labels in B2_CASES:
         cfg = {"b2_lists": lists, "mz_window": window, "sorbent_labels": labels}
         SC.reglists_config = lambda C, _c=cfg: _c
         b = SC.screen_campaign(C, b1, mem_path=dir_ / "b2_membership.csv")
@@ -243,14 +243,14 @@ def stadio_tox_b2(dir_: Path, frame_rows):
     return out
 
 
-def stadio_tox_b3(dir_: Path, frame_rows):
+def stage_tox_b3(dir_: Path, frame_rows):
     """B3 on the B2 candidates: SIRIUS tables (B3 export for POS, the campaign's top-1 for NEG), a MetFrag summary and the chemist's decisions."""
     import tempfile
     import pandas as pd
     from types import SimpleNamespace as NS
     from attributio.reglists import confirm as CF
-    SC, C, b1, out = _b2_ambiente(dir_, frame_rows)
-    window, lists, labels = B2_CASI[0]
+    SC, C, b1, out = _b2_environment(dir_, frame_rows)
+    window, lists, labels = B2_CASES[0]
     cfg = {"b2_lists": lists, "mz_window": window, "sorbent_labels": labels}
     SC.reglists_config = lambda C, _c=cfg: _c
     b2 = SC.screen_campaign(C, b1, mem_path=dir_ / "b2_membership.csv")
@@ -298,16 +298,16 @@ def stadio_tox_b3(dir_: Path, frame_rows):
             "formulas": [[f, CF.parse_formula(f)] for f in ["C9H10N2O", "N2OC9H10", "ClC6H5", "C6H5Cl", "Cl10", "", "H2O", "NaCl", "CSi"]]}
 
 
-def stadi_tox(frame_rows, scrivi, carica_tox) -> dict:
+def stadi_tox(frame_rows, scrivi, load_tox) -> dict:
     """The stage table: name -> function writing its golden file."""
     return {
-        "tox-ghs": lambda: scrivi(USCITA_TOX, "ghs.json", stadio_tox_ghs()),
-        "tox-istantanee": lambda: scrivi(USCITA_TOX, "istantanee.json", stadio_tox_istantanee(ISTANTANEE, frame_rows)),
-        "tox-amenabilita": lambda: scrivi(USCITA_TOX, "amenabilita.json", stadio_tox_amenabilita()),
-        "tox-schema": lambda: scrivi(USCITA_TOX, "schema.json", stadio_tox_schema(ISTANTANEE, frame_rows)),
-        "tox-b2": lambda: scrivi(USCITA_TOX, "b2.json", stadio_tox_b2(ISTANTANEE, frame_rows)),
-        "tox-b3": lambda: scrivi(USCITA_TOX, "b3.json", stadio_tox_b3(ISTANTANEE, frame_rows)),
-        "tox-b1": lambda: scrivi(USCITA_TOX, "b1.json", stadio_tox_b1(ISTANTANEE, frame_rows, carica_tox)),
-        "tox-pericolo": lambda: scrivi(USCITA_TOX, "pericolo.json", stadio_tox_pericolo(ISTANTANEE)),
-        "tox-registro": lambda: scrivi(USCITA_TOX, "registro.json", stadio_tox_registro()),
+        "tox-ghs": lambda: scrivi(OUTPUT_TOX, "ghs.json", stage_tox_ghs()),
+        "tox-istantanee": lambda: scrivi(OUTPUT_TOX, "istantanee.json", stage_tox_snapshots(SNAPSHOTS, frame_rows)),
+        "tox-amenabilita": lambda: scrivi(OUTPUT_TOX, "amenabilita.json", stage_tox_amenability()),
+        "tox-schema": lambda: scrivi(OUTPUT_TOX, "schema.json", stage_tox_schema(SNAPSHOTS, frame_rows)),
+        "tox-b2": lambda: scrivi(OUTPUT_TOX, "b2.json", stage_tox_b2(SNAPSHOTS, frame_rows)),
+        "tox-b3": lambda: scrivi(OUTPUT_TOX, "b3.json", stage_tox_b3(SNAPSHOTS, frame_rows)),
+        "tox-b1": lambda: scrivi(OUTPUT_TOX, "b1.json", stage_tox_b1(SNAPSHOTS, frame_rows, load_tox)),
+        "tox-pericolo": lambda: scrivi(OUTPUT_TOX, "pericolo.json", stage_tox_hazard(SNAPSHOTS)),
+        "tox-registro": lambda: scrivi(OUTPUT_TOX, "registro.json", stage_tox_registry()),
     }

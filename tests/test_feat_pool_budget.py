@@ -108,3 +108,21 @@ const p = createFeatPool({ workerUrl: "x", size: 1, idleMs: 0, wasm, WorkerClass
 await out(async () => { const r = await p.detectAll([{ name: "a", path: "a" }], "{}"); return { n: r.length, steps }; });
 """
     assert run(body) == {"n": 1, "steps": [["a", 1, 4], ["a", 4, 4]]}
+
+
+def test_steps_that_run_together_share_the_budget_and_a_step_alone_keeps_all_of_it():
+    # two series aligned at once in a pool of 2 workers: 1024 MB of the page for both, not 1024 each; then one alone gets it whole
+    assert run("""
+globalThis.MZLAB_RUST = { choice: { mb: 1024, high_mb: 3072 } };
+await out(async () => {
+  const p = pool(0, { size: 2 });
+  await Promise.all([p.align([new Uint8Array(1)], ["a"], "{}"), p.align([new Uint8Array(1)], ["b"], "{}")]);
+  await p.align([new Uint8Array(1)], ["c"], "{}");
+  return seen;
+});""") == [512, 512, 1024]
+
+
+def test_a_shared_budget_never_drops_under_64_mb_nor_rises_over_the_budget():
+    assert run("""
+import { shareOf } from %r;
+console.log(JSON.stringify([shareOf(1024, 1), shareOf(1024, 4), shareOf(192, 4), shareOf(48, 4), shareOf(0, 4)]));""" % JS.as_uri()) == [1024, 256, 64, 48, 0]

@@ -1,5 +1,5 @@
 // @ts-check
-// Fallbacks for APIs some engines lack (Safari/iPadOS first; table in docs/agenti/compat-safari.md). Feature detection only, never the user agent:
+// Fallbacks for APIs some engines lack or send differently (Safari/iPadOS first; table in docs/agenti/compat-safari.md). Feature detection only, never the user agent:
 // each block patches one missing or failing API, so callers stay the same everywhere. Imported first by capacita.js; installa(g) is exported for the
 // Node tests (tests/compat_node.mjs), which pass a fake global.
 
@@ -73,6 +73,25 @@ export function freeAccept(g, i) {
   return true;
 }
 
+/** Safari on a Mac sends a trackpad pinch as gesture* events, never as the Ctrl+wheel that the other browsers send and every chart zoom listens to:
+ *  each gesturechange becomes that wheel on the element under the fingers (deltaY = -100·ln of the step, as Chromium). Only over a surface that zooms
+ *  itself (touch-action:none) is the page zoom stopped; a gesture a view handles (defaultPrevented) and a pinch of fingers on a screen are left alone.
+ *  @param {any} g */
+export function pinchWheel(g) {
+  const d = g.document; let last = 1, on = false, touches = 0;
+  const zoomable = (/** @type {any} */ t) => { for (let e = t; e && e.nodeType === 1; e = e.parentElement) if (g.getComputedStyle(e).touchAction === "none") return true; return false; };
+  for (const [t, k] of [["pointerdown", 1], ["pointerup", -1], ["pointercancel", -1]]) d.addEventListener(t, (/** @type {any} */ e) => { if (e.pointerType === "touch") touches = Math.max(0, touches + /** @type {number} */ (k)); }, true);
+  d.addEventListener("gesturestart", (/** @type {any} */ e) => { last = 1; on = !e.defaultPrevented && !touches && zoomable(e.target); if (on) e.preventDefault(); });
+  d.addEventListener("gesturechange", (/** @type {any} */ e) => {
+    if (!on || e.defaultPrevented) return;
+    e.preventDefault();
+    const s = e.scale > 0 ? e.scale : last, r = s / last; last = s;
+    if (r === 1) return;
+    e.target.dispatchEvent(new g.WheelEvent("wheel", { bubbles: true, cancelable: true, composed: true, view: g, ctrlKey: true, clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY, deltaY: -100 * Math.log(r), deltaMode: 0 }));
+  });
+  d.addEventListener("gestureend", (/** @type {any} */ e) => { if (on && !e.defaultPrevented) e.preventDefault(); on = false; });
+}
+
 /** Installs every fallback the global `g` needs; returns the names installed (for the tests and the diagnosis). @param {any} g @param {{worker?: () => any}} [o] */
 export function installa(g, o = {}) {
   /** @type {string[]} */ const done = [];
@@ -100,6 +119,7 @@ export function installa(g, o = {}) {
     }
     done.push("accept");
   }
+  if (g.GestureEvent && g.document && typeof g.WheelEvent === "function" && typeof g.getComputedStyle === "function" && !touchOnly(g)) { pinchWheel(g); done.push("pinch"); }
   return done;
 }
 

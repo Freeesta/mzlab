@@ -148,7 +148,7 @@ def golden(path):
             }
         )
     doc = {"generator": "tools/struttura_dato/confronto.py --golden", "rdkit": Chem.rdBase.rdkitVersion, "cases": out, "smiles_cases": smiles_cases()}
-    doc["composti"] = composti_rows(str(pathlib.Path(__file__).resolve().parents[2] / "TP_Mine" / "data" / "composti.csv"))
+    doc["composti"] = compounds_rows(str(pathlib.Path(__file__).resolve().parents[2] / "TP_Mine" / "data" / "composti.csv"))
     pathlib.Path(path).write_text(json.dumps(doc, separators=(",", ":")) + "\n")
 
 
@@ -245,7 +245,7 @@ def smiles_cases():
     return out
 
 
-def composti_rows(path):
+def compounds_rows(path):
     """Per row of composti.csv: short digests of the RDKit atoms and defined stereo elements (written atom order) and the counts of potential and
     unspecified elements: the external truth for the reader on real data (the study quotes 286 rows with stereo elements, 111 with one unspecified)."""
     import csv

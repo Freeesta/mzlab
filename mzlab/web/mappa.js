@@ -381,7 +381,7 @@ window.MAPPA = (() => {
     const px = parseFloat(g.font) || 12.5, asc = Math.round(px * .8), hh = Math.round(px * 1.05);
     for (const i of order) {
       if (out.length >= limit) break; const q = get(i);
-      const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + Math.round(px * .35) : q.y - 3, bx = { x, y: by - asc, w, h: hh };
+      const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + Math.round(px * .35) : q.y - 4, bx = { x, y: by - asc, w, h: hh };
       if (out.some(o => bx.x < o.x + o.w + 2 && o.x < bx.x + bx.w + 2 && bx.y < o.y + o.h + 1 && o.y < bx.y + bx.h + 1)) continue;
       // the guide line never runs through text: a label that would meet it is left out (the marked peak's own label sits beyond the guide's end)
       if (guide && bx.x < guide.end + 1 && guide.y > bx.y - 2 && guide.y < bx.y + bx.h + 2) continue;

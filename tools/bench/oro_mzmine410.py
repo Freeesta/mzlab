@@ -51,7 +51,7 @@ def installa(versione: str) -> Path:
     return casa
 
 
-def _finder_passo(fasi: Path) -> str:
+def _finder_step(fasi: Path) -> str:
     tol = ('<parameter name="m/z tolerance (feature-to-scan)"><absolutetolerance>0.005</absolutetolerance><ppmtolerance>15.0</ppmtolerance></parameter>'
            '<parameter name="Require 13C isotope peak">true</parameter><parameter name="Maximum charge of isotope m/z">3</parameter>')
     return (f'<batchstep method="{FINDER}" parameter_version="2">{FL}<parameter name="Algorithm" selected_item="automatic"><module name="automatic">{tol}</module></parameter></batchstep>\n')
@@ -59,12 +59,12 @@ def _finder_passo(fasi: Path) -> str:
 
 # 4.10 parameters of type ModuleOptionsEnumComboParameter: the selected option is the attribute `selected_item` (the 3.9 ModuleComboParameter wrote `selected`; mzmine 4.10
 # ignores it WITHOUT A WORD and takes the default, for the mass detector the AUTO one whose noise level is far below the one of the batch)
-MODULO_ENUM = ("Mass detector", "Algorithm")
+MODULE_ENUM = ("Mass detector", "Algorithm")
 
 
-def controlla_selected(xml: str) -> None:
+def check_selected(xml: str) -> None:
     """Refuses a batch in which a parameter of type ModuleOptionsEnumComboParameter names its option with `selected` instead of `selected_item`, or is missing it."""
-    for nome in MODULO_ENUM:
+    for nome in MODULE_ENUM:
         for m in re.finditer(r'<parameter name="' + re.escape(nome) + r'"([^>]*)>', xml):
             if "selected_item=" not in m.group(1) or " selected=" in m.group(1):
                 raise SystemExit(f"parameter {nome!r}: it must use selected_item=..., found{m.group(1)!r}")
@@ -86,10 +86,10 @@ def batch_xml(files: list[Path], fasi: Path, par: dict, versione: str, finder: b
     x = x.replace('<parameter name="Detect isotope signals below noise level" selected="false"/>', "")
     x = x.replace('<parameter name="Mass detector" selected="Centroid">', '<parameter name="Mass detector" selected_item="Centroid">')
     if finder:
-        x = re.sub(r'<batchstep method="' + re.escape(GROUPER) + r'".*?</batchstep>\n', lambda _m: _finder_passo(fasi), x, flags=re.S)
+        x = re.sub(r'<batchstep method="' + re.escape(GROUPER) + r'".*?</batchstep>\n', lambda _m: _finder_step(fasi), x, flags=re.S)
         x = x.replace("/isotopi_{}.csv", "/finder_{}.csv")
     x = x.replace('<parameter name="Scans">', '<parameter name="Scan filters" selected="true">')
-    controlla_selected(x)
+    check_selected(x)
     controlla_filtro(x)
     return x
 
@@ -107,8 +107,8 @@ def senza_cromatogrammi(cartella: Path) -> dict[str, str]:
 def esegui(xml: Path, mm: Path, tmp: Path) -> subprocess.CompletedProcess:
     """`bin/mzmine -b xml -t tmp` (the package carries its JDK); the log goes next to the batch as `<xml>.log`."""
     # mzmine 4 refuses every batch without a logged-in user: `MZMINE_USER_FILE` is the .mzuser file of a (free) account; the script runs on a machine where the user is logged in, not in the CI
-    utente = ["-u", os.environ["MZMINE_USER_FILE"]] if os.environ.get("MZMINE_USER_FILE") else []
-    r = subprocess.run([str(mm / "bin" / "mzmine"), "-b", str(xml), "-t", str(tmp), *utente], capture_output=True, text=True)
+    user = ["-u", os.environ["MZMINE_USER_FILE"]] if os.environ.get("MZMINE_USER_FILE") else []
+    r = subprocess.run([str(mm / "bin" / "mzmine"), "-b", str(xml), "-t", str(tmp), *user], capture_output=True, text=True)
     xml.with_suffix(".log").write_text(r.stdout + r.stderr, encoding="utf-8")
     return r
 
@@ -121,20 +121,20 @@ def _fase_isotopi(fasi: Path) -> tuple[list[str], list[list]]:
     of the closest kept row within 0.1 min whose m/z is lower by 1 to 4 times 1.003355/z (z in 1..3, tolerance 0.01); the charge of a kept row is round(1.003355 / spacing of its nearest removed row) and every other removed row is a whole multiple of 1.003355/z.
     Kept rows with removed rows are principal (charge z), the others alone (charge 0)."""
     col = ["file", "id", "mz", "rt", "height", "charge", "role", "principal"]
-    righe = []
-    for f, tenute in oro._per_file(fasi, "isotopi"):
+    rows = []
+    for f, kept in oro._per_file(fasi, "isotopi"):
         tutte = dict(oro._per_file(fasi, "risolutore"))[f]
-        ids = {r["id"] for r in tenute}
-        base = {r["id"]: (float(r["mz"]), float(r["rt"])) for r in tenute}
+        ids = {r["id"] for r in kept}
+        base = {r["id"]: (float(r["mz"]), float(r["rt"])) for r in kept}
         rimosse, figlie = [], {i: [] for i in ids}
         for r in tutte:
             if r["id"] in ids:
                 continue
             mz, rt = float(r["mz"]), float(r["rt"])
             # kept rows that can have this row as the k-th isotopologue (k = 1..4) for some charge z in 1..3; the closest in m/z wins
-            trovate = [(mz - m, i) for i, (m, t) in base.items() if m < mz and abs(t - rt) < 0.1
+            found = [(mz - m, i) for i, (m, t) in base.items() if m < mz and abs(t - rt) < 0.1
                        and any(abs((mz - m) * z / ISO - round((mz - m) * z / ISO)) < 0.01 and 1 <= round((mz - m) * z / ISO) <= 4 for z in (1, 2, 3))]
-            i = min(trovate)[1] if trovate else ""
+            i = min(found)[1] if found else ""
             if i:
                 figlie[i].append(mz - base[i][0])
             rimosse.append([f, r["id"], r["mz"], r["rt"], r["height"], "", "isotopologue", i])
@@ -146,32 +146,32 @@ def _fase_isotopi(fasi: Path) -> tuple[list[str], list[list]]:
             if ds and not ok:
                 raise SystemExit(f"{f}: the removed rows of the kept row {i} fit no charge")
             cariche[i] = {ok[0]} if ds else set()
-        for r in tenute:
+        for r in kept:
             zs = cariche[r["id"]]
             z = next(iter(zs)) if zs else 0
-            righe.append([f, r["id"], r["mz"], r["rt"], r["height"], z, "principal" if zs else "alone", ""])
-        righe += rimosse
+            rows.append([f, r["id"], r["mz"], r["rt"], r["height"], z, "principal" if zs else "alone", ""])
+        rows += rimosse
         # expected by the design of the synthetic data: the kept 500.25 has z=1 and the kept 600.30 has z=2, with at least one removed row each (the M+2 peak is not always detected)
         for mz0, z0 in ((500.25, 1), (600.30, 2)):
-            k = [r for r in righe if r[0] == f and r[6] == "principal" and abs(float(r[2]) - mz0) < 0.01]
-            n = [r for r in righe if r[0] == f and r[6] == "isotopologue" and k and r[7] == k[0][1]]
+            k = [r for r in rows if r[0] == f and r[6] == "principal" and abs(float(r[2]) - mz0) < 0.01]
+            n = [r for r in rows if r[0] == f and r[6] == "isotopologue" and k and r[7] == k[0][1]]
             print(f"check {f}: kept {mz0} -> {[(r[1], r[5]) for r in k]}, removed {len(n)}")
             if len(k) != 1 or k[0][5] != z0 or not n:
                 raise SystemExit(f"{f}: the kept {mz0} must have charge {z0} and at least one removed row (got {[(r[1], r[5]) for r in k]}, {len(n)})")
-    return col, righe
+    return col, rows
 
 
-def _fase_finder(fasi: Path) -> tuple[list[str], list[list]]:
+def _phase_finder(fasi: Path) -> tuple[list[str], list[list]]:
     """Per file: what the finder writes on every resolved feature (charge, number of peaks of the pattern, m/z of the peaks)."""
     col = ["file", "id", "mz", "rt", "height", "charge", "pattern_peaks", "pattern_mz"]
-    righe = []
+    rows = []
     for f, rs in oro._per_file(fasi, "finder"):
         for r in rs:
             mzs = (r.get("isotope_pattern:mz") or "").split(";") if r.get("isotope_pattern:mz") else []
             # 4.10.90 exports the number of peaks of the pattern as `datafile:<file>.mzML:isotopes` (and not the m/z of the peaks: `pattern_mz` stays empty)
             n = r.get("isotope_pattern:n") or r.get(f"datafile:{f}.mzML:isotopes", "")
-            righe.append([f, r["id"], r["mz"], r["rt"], r["height"], r.get("charge", ""), n, " ".join(mzs)])
-    return col, righe
+            rows.append([f, r["id"], r["mz"], r["rt"], r["height"], r.get("charge", ""), n, " ".join(mzs)])
+    return col, rows
 
 
 def scrivi_oro(dest: Path, versione: str) -> None:
@@ -196,12 +196,12 @@ def scrivi_oro(dest: Path, versione: str) -> None:
             if r.returncode or "SEVERE" in r.stdout + r.stderr:
                 raise SystemExit(f"mzmine failed on {n}:\n{(r.stdout + r.stderr)[-3000:]}")
         dest.mkdir(parents=True, exist_ok=True)
-        per_file, allineata = ("file", "id"), ("mz", "rt", "file")
-        for nome, (col, righe), chiave in [("adap.csv", oro._fase_per_file(fasi, "adap", False), per_file), ("resolved.csv", oro._fase_per_file(fasi, "risolutore", True), per_file),
-                                           ("aligned.csv", oro._fase_allineata(fasi / "join_Aligned_feature_list.csv"), allineata),
-                                           ("gapfilled.csv", oro._fase_allineata(fasi / "riempimento_Aligned_feature_list_gap-filled.csv"), allineata),
-                                           ("isotopes.csv", _fase_isotopi(fasi), per_file), ("isotopes_finder.csv", _fase_finder(fasi), per_file)]:
-            oro._scrivi_csv(dest / nome, col, righe, chiave)
+        per_file, aligned = ("file", "id"), ("mz", "rt", "file")
+        for nome, (col, rows), key in [("adap.csv", oro._fase_per_file(fasi, "adap", False), per_file), ("resolved.csv", oro._fase_per_file(fasi, "risolutore", True), per_file),
+                                           ("aligned.csv", oro._fase_allineata(fasi / "join_Aligned_feature_list.csv"), aligned),
+                                           ("gapfilled.csv", oro._fase_allineata(fasi / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
+                                           ("isotopes.csv", _fase_isotopi(fasi), per_file), ("isotopes_finder.csv", _phase_finder(fasi), per_file)]:
+            oro._scrivi_csv(dest / nome, col, rows, key)
         (dest / "LEGGIMI.md").write_text(_leggimi(versione, shas, shas_410, mm, {n: oro._sostituisci(x, t) for n, x in xmls.items()}), encoding="utf-8")
 
 
@@ -210,7 +210,7 @@ def _leggimi(versione: str, shas: dict[str, str], shas_410: dict[str, str], mm: 
     java = [x for x in java if x.startswith(("openjdk version", "OpenJDK Runtime"))]
     plataforma = f"generated on macOS arm64 with mzmine.app {versione} and the Temurin JDK of the app" if sys.platform == "darwin" else "generated from the portable Linux package"
     file = "".join(f"- `{n}`: `{h}` (as read by mzmine: `{shas_410[n]}`)\n" for n, h in shas.items())
-    lotti = "".join(f"\n## Batch `{n}`\n```xml\n{x}```\n" for n, x in xmls.items())
+    batches = "".join(f"\n## Batch `{n}`\n```xml\n{x}```\n" for n, x in xmls.items())
     return f"""# Gold data of mzmine {versione} per stage (synthetic files)
 
 Output of mzmine {versione} on the four synthetic mzML files of the 3.9.0 set (`tests/data/untargeted/mzmine39/`, same numbers and same hashes), one CSV per stage, same formats. Reference of the parity tests `crates/mzlab-feat/tests/untargeted_*_410.rs`.
@@ -227,7 +227,7 @@ The mzML files are not in the repository: `tools/bench/oro_mzmine.py --genera DI
 {file}
 ## Files
 `adap.csv`, `resolved.csv`, `aligned.csv`, `gapfilled.csv`, `isotopes.csv` have the columns of the 3.9.0 set (see its LEGGIMI); `isotopes.csv` is the output of the isotope grouper («13C isotope filter»).
-{lotti}"""
+{batches}"""
 
 
 def main() -> None:

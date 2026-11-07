@@ -9,23 +9,23 @@ from valida.abbina import abbina, abbina_larghi, finestra_larghi
 from . import PPM, RT_TOL
 from .adatta import matrici
 from .verita import RUOLI_FEATURE, RUOLI_SPIEGANO, con_ruolo, esche, feature_vere, prodotti
-from .verita import larghi as composti_larghi
+from .verita import larghi as wide_compounds
 
 LIVELLI_ALTI = ("1", "2a", "2b", "3")             # better than level 4
-SOGLIA_RANGO = 0.9                               # share of the products to reach for "candidates to scan"
+THRESHOLD_RANK = 0.9                               # share of the products to reach for "candidates to scan"
 
 
-def _punti(comp: list[dict]) -> tuple[np.ndarray, np.ndarray]:
+def _points(comp: list[dict]) -> tuple[np.ndarray, np.ndarray]:
     return np.array([c["mz"] for c in comp], float), np.array([c["rt"] if c["rt"] is not None else np.nan for c in comp], float)
 
 
-def riga_di(comp: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) -> np.ndarray:
+def row_of(comp: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) -> np.ndarray:
     """For each compound the row matched to it one-to-one (-1 if none)."""
     out = np.full(len(comp), -1, int)
     if not comp or not t["righe"]:
         return out
     mz, rt, _ = matrici(t)
-    cm, cr = _punti(comp)
+    cm, cr = _points(comp)
     ia, ib = abbina(cm, cr, mz, rt, ppm, rt_tol)
     out[ia] = ib
     return out
@@ -40,7 +40,7 @@ def righe_vicine(comp: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT
 def p1(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """Recall of the true features: 1 if the compound has at least one matched row. Also by intensity band when the truth gives `fascia`."""
     comp = feature_vere(verita)
-    hit = (riga_di(comp, t, ppm, rt_tol) >= 0).astype(int)
+    hit = (row_of(comp, t, ppm, rt_tol) >= 0).astype(int)
     out = {"per_composto": hit.tolist(), "richiamo": float(hit.mean()) if len(hit) else None, "n": len(hit), "per_fascia": {}}
     for f in sorted({c["fascia"] for c in comp if c["fascia"]}):
         v = [h for h, c in zip(hit.tolist(), comp) if c["fascia"] == f]
@@ -53,7 +53,7 @@ def p2(verita: list[dict], t: dict, gruppi: dict | None = None, ppm: float = PPM
     compound `atteso` (ratio A/B): |log2(observed ratio / expected)| of the group means (D1). Else with `area_attesa` (one value per file): the relative error of
     the mean area over the files with a known value (D2). The summary is the median."""
     comp = feature_vere(verita)
-    riga = riga_di(comp, t, ppm, rt_tol)
+    riga = row_of(comp, t, ppm, rt_tol)
     _, _, area = matrici(t) if t["righe"] else (None, None, np.zeros((0, len(t["file"]))))
     err = np.full(len(comp), np.nan)
     for i, (c, r) in enumerate(zip(comp, riga)):
@@ -85,36 +85,36 @@ def p3(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) ->
     return {"per_composto": ok, "integrita": sum(ok) / len(ok) if ok else None, "n": len(ok)}
 
 
-def ordine_candidati(t: dict) -> list[int]:
+def candidate_order(t: dict) -> list[int]:
     """Rows in the order they are scanned: for a table with candidate flags the candidates by points then largest area (the order of the panel); for any other
     table all the rows by largest area. Ties by row number."""
     _, _, area = matrici(t) if t["righe"] else (None, None, np.zeros((0, len(t["file"]))))
     amax = area.max(1) if area.size else np.zeros(len(t["righe"]))
     righe = t["righe"]
     ha_flag = any(r["candidato"] is not None for r in righe)
-    scelte = [i for i, r in enumerate(righe) if (r["candidato"] if ha_flag else True)]
-    return sorted(scelte, key=lambda i: (-(righe[i]["punteggio"] or 0.0), -amax[i], i))
+    choices = [i for i, r in enumerate(righe) if (r["candidato"] if ha_flag else True)]
+    return sorted(choices, key=lambda i: (-(righe[i]["punteggio"] or 0.0), -amax[i], i))
 
 
 def p4(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """True products found among the candidates (flag 1 = matched to a candidate row) and their rank in the scanning order; `per_90`: the fewest candidates to
     scan to reach 90 % of ALL the products (None if never reached)."""
     comp = prodotti(verita)
-    riga = riga_di(comp, t, ppm, rt_tol)
-    rango = {r: n for n, r in enumerate(ordine_candidati(t), 1)}
+    riga = row_of(comp, t, ppm, rt_tol)
+    rango = {r: n for n, r in enumerate(candidate_order(t), 1)}
     nei = [int(r >= 0 and r in rango) for r in riga.tolist()]
     ranghi = sorted(rango[r] for r in riga.tolist() if r >= 0 and r in rango)
-    k = int(np.ceil(SOGLIA_RANGO * len(comp) - 1e-9))
+    k = int(np.ceil(THRESHOLD_RANK * len(comp) - 1e-9))
     return {"per_composto": nei, "richiamo_candidati": sum(nei) / len(nei) if nei else None, "n": len(nei), "trovati": int((riga >= 0).sum()), "ranghi": ranghi,
             "per_90": (ranghi[k - 1] if 0 < k <= len(ranghi) else None), "candidati": len(rango)}
 
 
-def _candidati(t: dict, solo_livelli_alti: bool) -> np.ndarray:
+def _candidati(t: dict, only_high_levels: bool) -> np.ndarray:
     """True for the rows that are candidates (the flag; a table with no flag offers every row); optionally only those with a level better than 4."""
     out = np.zeros(len(t["righe"]), bool)
     for i, r in enumerate(t["righe"]):
         if r["candidato"] is None or r["candidato"]:
-            out[i] = not solo_livelli_alti or r["livello"] is None or r["livello"] in LIVELLI_ALTI
+            out[i] = not only_high_levels or r["livello"] is None or r["livello"] in LIVELLI_ALTI
     return out
 
 
@@ -130,14 +130,14 @@ def p5(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) ->
         if c["rt"] is not None:
             dm &= np.abs(rt - c["rt"]) <= rt_tol
         falso.append(int(bool((dm & cand).any())))
-    vere = [c for c in verita if c["ruolo"] in RUOLI_FEATURE + ("isotopo",) and c["rt"] is not None]
-    spiegata = np.zeros(len(mz), bool)
-    for r in (np.concatenate(righe_vicine(vere, t, ppm, rt_tol)) if vere and len(mz) else []):
-        spiegata[int(r)] = True
+    true = [c for c in verita if c["ruolo"] in RUOLI_FEATURE + ("isotopo",) and c["rt"] is not None]
+    explained = np.zeros(len(mz), bool)
+    for r in (np.concatenate(righe_vicine(true, t, ppm, rt_tol)) if true and len(mz) else []):
+        explained[int(r)] = True
     tutti = _candidati(t, False)
     nc = int(tutti.sum())
     return {"per_composto": falso, "falsi": sum(falso) / len(falso) if falso else None, "n": len(falso), "candidati": nc,
-            "precisione_candidati": float((tutti & spiegata).sum() / nc) if nc else None}
+            "precisione_candidati": float((tutti & explained).sum() / nc) if nc else None}
 
 
 def secondarie(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
@@ -151,7 +151,7 @@ def secondarie(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT
     n = len(t["righe"])
     trovati = [len(v) for v in vic if len(v)]
     iso = [c for c in con_ruolo(verita, ("isomero",)) if c["rt"] is not None]
-    ir = riga_di(iso, t, ppm, rt_tol)
+    ir = row_of(iso, t, ppm, rt_tol)
     return {"righe": n, "righe_non_spiegate": int(n - cov.sum()), "precisione_righe": float(cov.sum() / n) if n else None,
             "righe_per_composto": float(np.mean(trovati)) if trovati else None, "isomeri_separati": int((ir >= 0).sum()), "isomeri": len(iso)}
 
@@ -159,7 +159,7 @@ def secondarie(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT
 # ---------------------------------------------------------------------------------------------------------------- suspect screening (identification endpoints)
 # Declared in docs/agenti/mzfinder-benchmark.md before the first real run. `strutture` maps a true compound id to the name its suspect list carries.
 # Levels are the tool's own strings: they are listed side by side per tool and never converted into each other.
-def colpi_di(t: dict) -> dict[int, list[dict]]:
+def hits_of(t: dict) -> dict[int, list[dict]]:
     """The suspect hits of each row of a table (empty when the tool did not screen suspects)."""
     return {int(x["riga"]): x["hits"] for x in t.get("identificazioni", [])}
 
@@ -169,24 +169,24 @@ def identificazione(verita: list[dict], t: dict, strutture: dict[str, str], ppm:
     the row (1 = best, None if absent); `livello` the tool's level of that hit. Per decoy (`esca` by m/z, `isf_finto` by m/z and RT): `falso` 1 if any row
     on it carries a hit. Summary: hit recall, false-positive rate on decoys, mean reciprocal rank of the true structure (0 when absent), and `livelli` =
     number of standards per level reached (key `none` = no hit with the true name)."""
-    colpi = colpi_di(t)
+    hits = hits_of(t)
     std = [c for c in feature_vere(verita) if c["id"] in strutture]
-    riga = riga_di(std, t, ppm, rt_tol)
+    riga = row_of(std, t, ppm, rt_tol)
     colpo, rango, livello = [], [], []
     for c, r in zip(std, riga.tolist()):
-        h = next((x for x in colpi.get(r, []) if x["nome"] == strutture[c["id"]]), None) if r >= 0 else None
+        h = next((x for x in hits.get(r, []) if x["nome"] == strutture[c["id"]]), None) if r >= 0 else None
         colpo.append(int(h is not None))
         rango.append(h["rango"] if h else None)
         livello.append(h["livello"] if h else None)
     dec = esche(verita)
     mz, rt, _ = matrici(t) if t["righe"] else (np.zeros(0), np.zeros(0), None)
-    con_colpo = np.array([bool(colpi.get(i)) for i in range(len(mz))], bool)
+    with_hit = np.array([bool(hits.get(i)) for i in range(len(mz))], bool)
     falso = []
     for c in dec:
         dm = np.abs(mz - c["mz"]) <= c["mz"] * ppm * 1e-6
         if c["rt"] is not None:
             dm &= np.abs(rt - c["rt"]) <= rt_tol
-        falso.append(int(bool((dm & con_colpo).any())))
+        falso.append(int(bool((dm & with_hit).any())))
     livelli: dict[str, int] = {}
     for lv in livello:
         livelli[lv or "none"] = livelli.get(lv or "none", 0) + 1
@@ -226,14 +226,14 @@ def larghi(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL
     - P2_broad: relative error of the mean area of the matched row against `area_attesa` (NaN if no row or no area; summary = median);
     - P3_split: rows emitted per true band = rows that accept the band and are not matched to a narrow peak (0 = lost; summary mean, median and share > 1);
     - P5_fp: rows that no true compound accepts (share of all the rows), e.g. the gradient background."""
-    comp = composti_larghi(verita)
+    comp = wide_compounds(verita)
     mz, rt, rmin, rmax = (*matrici(t)[:2], *_intervalli(t)) if t["righe"] else (np.zeros(0),) * 4
-    cm, cr, fw, larga, c0, c1 = _vero(comp)
-    ia, ib = abbina_larghi(cm, cr, fw, larga, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol)
+    cm, cr, fw, wide, c0, c1 = _vero(comp)
+    ia, ib = abbina_larghi(cm, cr, fw, wide, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol)
     riga = np.full(len(comp), -1, int)
     riga[ia] = ib
-    ok, _ = finestra_larghi(cm, cr, fw, larga, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol) if len(comp) and len(mz) else (np.zeros((len(comp), len(mz)), bool), None)
-    del_stretto = {int(r) for r, b in zip(riga.tolist(), larga.tolist()) if r >= 0 and not b}
+    ok, _ = finestra_larghi(cm, cr, fw, wide, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol) if len(comp) and len(mz) else (np.zeros((len(comp), len(mz)), bool), None)
+    narrow_rows = {int(r) for r, b in zip(riga.tolist(), wide.tolist()) if r >= 0 and not b}
 
     def richiamo(maschera):
         hit = [int(riga[i] >= 0) for i in np.flatnonzero(maschera)]
@@ -245,16 +245,16 @@ def larghi(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL
 
     _, _, area = matrici(t) if t["righe"] else (None, None, np.zeros((0, len(t["file"]))))
     err = []
-    for i in np.flatnonzero(larga):
+    for i in np.flatnonzero(wide):
         att = np.array([np.nan if v is None else v for v in (comp[i].get("area_attesa") or [])], float)
         sel = att > 0
         err.append(abs(area[riga[i], sel].mean() - att[sel].mean()) / att[sel].mean() if riga[i] >= 0 and sel.any() else np.nan)
     v = [x for x in err if not np.isnan(x)]
-    righe_banda = [int(sum(1 for r in np.flatnonzero(ok[i]).tolist() if r not in del_stretto)) for i in np.flatnonzero(larga)]
+    rows_band = [int(sum(1 for r in np.flatnonzero(ok[i]).tolist() if r not in narrow_rows)) for i in np.flatnonzero(wide)]
     spurie = int((~ok.any(0)).sum()) if len(comp) else len(mz)
-    return {"P1_narrow": richiamo(~larga), "P1_broad": richiamo(larga),
+    return {"P1_narrow": richiamo(~wide), "P1_broad": richiamo(wide),
             "P2_broad": {"per_composto": [None if np.isnan(x) else float(x) for x in err], "mediana": float(np.median(v)) if v else None, "n_misurati": len(v), "n": len(err)},
-            "P3_split": {"per_composto": righe_banda, "media": float(np.mean(righe_banda)) if righe_banda else None,
-                         "mediana": float(np.median(righe_banda)) if righe_banda else None, "divise": sum(1 for x in righe_banda if x > 1) / len(righe_banda) if righe_banda else None,
-                         "n": len(righe_banda)},
+            "P3_split": {"per_composto": rows_band, "media": float(np.mean(rows_band)) if rows_band else None,
+                         "mediana": float(np.median(rows_band)) if rows_band else None, "divise": sum(1 for x in rows_band if x > 1) / len(rows_band) if rows_band else None,
+                         "n": len(rows_band)},
             "P5_fp": {"righe": len(mz), "spurie": spurie, "frazione": spurie / len(mz) if len(mz) else None}}

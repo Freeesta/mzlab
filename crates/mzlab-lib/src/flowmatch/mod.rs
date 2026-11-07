@@ -10,6 +10,7 @@ mod resolution;
 use self::evidence::{self as ev, Pair};
 use self::filter::Filters;
 pub use self::json::{error_json, match_json, params_of_json};
+pub use self::resolution::HR_FRAG_DA;
 use crate::build::{build_in_memory, BuildOpts};
 use crate::contrib::{cosine_contributions, entropy_contributions, modified_cosine_contributions};
 use crate::decoy::{

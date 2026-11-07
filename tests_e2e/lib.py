@@ -349,10 +349,11 @@ def scrivi(dst, text):
     t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)
 def build_feat(static, env=None):
     """Give the copy of the site the .wasm of mzFinder: copied from site/static when built there, else tools/build_feat_wasm.sh, one process at a time: it shares cargo's target/ and its artefacts, so parallel tests would clash."""
-    import subprocess, tempfile
+    import json, subprocess, tempfile
     from flock_util import lock_exclusive
     ready = ROOT / "site" / "static"
-    if (ready / "wasm-feat" / "manifest.json").exists():          # already built in the shared site (CI, local runs): copy it instead of building again
+    man = ready / "wasm-feat" / "manifest.json"
+    if man.exists() and "feat" in json.loads(man.read_text()):          # already built in the shared site (CI, local runs): copy it instead of building again; a manifest of the routes only has no mzFinder
         for d in ("wasm-feat", "wasm-lettori"):
             if (ready / d).is_dir(): shutil.copytree(ready / d, Path(static) / d, dirs_exist_ok=True)
         return
