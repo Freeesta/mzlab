@@ -199,25 +199,32 @@ pub fn decode_indice(b: &[u8]) -> Result<Vec<VoceScansione>> {
         .collect()
 }
 
-/// A scan as a block of bytes: the fixed head, the m/z, the intensities.
-pub fn encode_scansione(s: &Spectrum) -> Vec<u8> {
-    let n = s.mz.len();
-    let larghe = s.wide.is_some();
-    let mut o: Vec<u8> = Vec::with_capacity(TESTA_SCANSIONE + n * if larghe { 16 } else { 12 });
+/// The fixed head of a scan: level, polarity, flags, the number of points, rt and precursor (NaN: none).
+pub fn testa_scansione(s: &Spectrum) -> [u8; TESTA_SCANSIONE] {
     let mut flag = 0u8;
     if s.profile {
         flag |= PROFILO;
     }
-    if larghe {
+    if s.wide.is_some() {
         flag |= LARGHE;
     }
     if s.precursor.is_some() {
         flag |= CON_PRECURSORE;
     }
-    o.extend_from_slice(&[s.level, s.polarity as u8, flag, 0]);
-    o.extend_from_slice(&u32_di(n).to_le_bytes());
-    o.extend_from_slice(&s.rt.to_le_bytes());
-    o.extend_from_slice(&s.precursor.unwrap_or(f64::NAN).to_le_bytes());
+    let mut t = [0u8; TESTA_SCANSIONE];
+    t[..4].copy_from_slice(&[s.level, s.polarity as u8, flag, 0]);
+    t[4..8].copy_from_slice(&u32_di(s.mz.len()).to_le_bytes());
+    t[8..16].copy_from_slice(&s.rt.to_le_bytes());
+    t[16..24].copy_from_slice(&s.precursor.unwrap_or(f64::NAN).to_le_bytes());
+    t
+}
+
+/// A scan as a block of bytes: the fixed head, the m/z, the intensities.
+pub fn encode_scansione(s: &Spectrum) -> Vec<u8> {
+    let n = s.mz.len();
+    let mut o: Vec<u8> =
+        Vec::with_capacity(TESTA_SCANSIONE + n * if s.wide.is_some() { 16 } else { 12 });
+    o.extend_from_slice(&testa_scansione(s));
     colonna(&mut o, s.mz.iter().copied());
     match &s.wide {
         Some(w) => colonna(&mut o, w.iter().take(n).copied()),
@@ -230,50 +237,34 @@ pub fn encode_scansione(s: &Spectrum) -> Vec<u8> {
     o
 }
 
-/// The scan `k` of a block written by `encode_scansione`; its `id` and `filter` are empty (the index has them).
-pub fn decode_scansione(k: usize, b: &[u8]) -> Result<Spectrum> {
-    if b.len() < TESTA_SCANSIONE {
+/// The intensities of a scan as the module sends them: 32-bit, or 64-bit (`Larghe`) when the file stores them so.
+pub enum Intensita {
+    Strette(Vec<f32>),
+    Larghe(Vec<f64>),
+}
+
+/// The scan `k` from its head and its columns, as `decode_scansione` gives it from the block (the columns cross separately, without the block).
+pub fn scansione_da_parti(k: usize, t: &[u8], mz: Vec<f64>, y: Intensita) -> Result<Spectrum> {
+    if t.len() != TESTA_SCANSIONE {
         return Err(guasto("scan"));
     }
-    let flag = b[2];
-    let n = u32::from_le_bytes([b[4], b[5], b[6], b[7]]) as usize;
-    let larghe = flag & LARGHE != 0;
-    let per_punto = if larghe { 16 } else { 12 };
-    if n.checked_mul(per_punto)
-        .and_then(|x| x.checked_add(TESTA_SCANSIONE))
-        != Some(b.len())
-    {
-        return Err(guasto("scan"));
-    }
-    let rt = f64_di(&b[8..16]);
-    let prec = f64_di(&b[16..24]);
-    let mz: Vec<f64> = b[TESTA_SCANSIONE..TESTA_SCANSIONE + 8 * n]
-        .chunks_exact(8)
-        .map(f64_di)
-        .collect();
-    let resto = &b[TESTA_SCANSIONE + 8 * n..];
-    let (intensity, wide) = if larghe {
-        let y: Vec<f64> = resto.chunks_exact(8).map(f64_di).collect();
-        let f: Vec<f32> = y.iter().map(|&x| x as f32).collect();
-        // 64-bit intensities that a 32-bit one cannot hold are kept as they are
-        let senza_perdita = y
-            .iter()
-            .zip(&f)
-            .all(|(&a, &c)| a == f64::from(c) || (a.is_nan() && c.is_nan()));
-        (f, (!senza_perdita).then_some(y))
-    } else {
-        let f: Vec<f32> = resto
-            .chunks_exact(4)
-            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect();
-        (f, None)
+    let flag = t[2];
+    let n = u32::from_le_bytes([t[4], t[5], t[6], t[7]]) as usize;
+    let (intensity, wide) = match y {
+        Intensita::Larghe(y) if flag & LARGHE != 0 && y.len() == n => larghe(y),
+        Intensita::Strette(f) if flag & LARGHE == 0 && f.len() == n => (f, None),
+        _ => return Err(guasto("scan")),
     };
+    if mz.len() != n {
+        return Err(guasto("scan"));
+    }
+    let prec = f64_di(&t[16..24]);
     Ok(Spectrum {
         index: k,
         id: String::new(),
-        level: b[0],
-        rt,
-        polarity: b[1] as i8,
+        level: t[0],
+        rt: f64_di(&t[8..16]),
+        polarity: t[1] as i8,
         profile: flag & PROFILO != 0,
         filter: String::new(),
         precursor: (flag & CON_PRECURSORE != 0).then_some(prec),
@@ -281,6 +272,47 @@ pub fn decode_scansione(k: usize, b: &[u8]) -> Result<Spectrum> {
         intensity,
         wide,
     })
+}
+
+/// 64-bit intensities as 32-bit ones, kept as they are only when a 32-bit one cannot hold them.
+fn larghe(y: Vec<f64>) -> (Vec<f32>, Option<Vec<f64>>) {
+    let f: Vec<f32> = y.iter().map(|&x| x as f32).collect();
+    let senza_perdita = y
+        .iter()
+        .zip(&f)
+        .all(|(&a, &c)| a == f64::from(c) || (a.is_nan() && c.is_nan()));
+    (f, (!senza_perdita).then_some(y))
+}
+
+/// The scan `k` of a block written by `encode_scansione`; its `id` and `filter` are empty (the index has them).
+pub fn decode_scansione(k: usize, b: &[u8]) -> Result<Spectrum> {
+    if b.len() < TESTA_SCANSIONE {
+        return Err(guasto("scan"));
+    }
+    let larghe = b[2] & LARGHE != 0;
+    let n = u32::from_le_bytes([b[4], b[5], b[6], b[7]]) as usize;
+    if n.checked_mul(if larghe { 16 } else { 12 })
+        .and_then(|x| x.checked_add(TESTA_SCANSIONE))
+        != Some(b.len())
+    {
+        return Err(guasto("scan"));
+    }
+    let mz: Vec<f64> = b[TESTA_SCANSIONE..TESTA_SCANSIONE + 8 * n]
+        .chunks_exact(8)
+        .map(f64_di)
+        .collect();
+    let resto = &b[TESTA_SCANSIONE + 8 * n..];
+    let y = if larghe {
+        Intensita::Larghe(resto.chunks_exact(8).map(f64_di).collect())
+    } else {
+        Intensita::Strette(
+            resto
+                .chunks_exact(4)
+                .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+                .collect(),
+        )
+    };
+    scansione_da_parti(k, &b[..TESTA_SCANSIONE], mz, y)
 }
 
 #[cfg(test)]

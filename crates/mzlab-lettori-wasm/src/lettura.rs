@@ -370,6 +370,30 @@ pub fn index(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
 pub fn scan(h: u32, c: u32, k: u32) -> Result<Vec<u8>, JsValue> {
     con(|s| s.scan(h, c as usize, k as usize))
 }
+/// A scan as `[head, m/z, intensities]`: the head of `trasporto::testa_scansione`, then views of this module's memory (`Float64Array`, and `Float32Array`
+/// or, for 64-bit intensities, `Float64Array`), valid until its next call: the engine copies each in one piece instead of a block copied twice.
+#[wasm_bindgen]
+pub fn scan_parts(h: u32, c: u32, k: u32) -> Result<js_sys::Array, JsValue> {
+    con(|s| {
+        let sp = s.scan_parts(h, c as usize, k as usize)?;
+        let n = sp.mz.len();
+        let a = js_sys::Array::new();
+        a.push(&js_sys::Uint8Array::from(
+            &mzlab_core::trasporto::testa_scansione(sp)[..],
+        ));
+        // SAFETY: nothing allocates in this module between here and the engine's copy (the views are read before any other call)
+        unsafe {
+            a.push(&js_sys::Float64Array::view(&sp.mz));
+            match &sp.wide {
+                Some(w) => a.push(&js_sys::Float64Array::view(&w[..n.min(w.len())])),
+                None => a.push(&js_sys::Float32Array::view(
+                    &sp.intensity[..n.min(sp.intensity.len())],
+                )),
+            };
+        }
+        Ok(a)
+    })
+}
 #[wasm_bindgen]
 pub fn scan_header(h: u32, c: u32, k: u32) -> Result<String, JsValue> {
     con(|s| s.scan_header(h, c as usize, k as usize))
