@@ -35,6 +35,7 @@ try:
             pg.evaluate("E.files.forEach(f=>{if(f)f.vis=false});cleanupOrphanPanels();renderFileList();redrawAll()")
             attendi(pg, "E.panels.length===0")
             k = pg.evaluate("E.files.find(f=>f&&f.kind==='mrm').k")
+            if not pg.is_visible(f"#flst .fl[data-k='{k}'] .nm"): pg.click("#flst .fgh[data-gt='mrm']"); pg.wait_for_selector(f"#flst .fl[data-k='{k}'] .nm", state="visible")      # only the first group starts open (#2488): open the MRM one as a student would
             pg.click(f"#flst .fl[data-k='{k}'] .nm")
             attendi(pg, "E.panels.some(p=>p.tab==='mrm'&&p.el)")
             assert pg.evaluate("E.panels.every(p=>E.files.some(f=>f&&f.kind===p.tab&&f.vis&&!f.gone))")
