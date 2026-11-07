@@ -110,6 +110,17 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - Non esistono ancora: colonne (B2), matrice (B3), centroidatura fusa (B4), feature table da `.raw` (B5). Le righe B2-B5 si riempiono nelle fasi T-7d e T-7e; `.raw` → centroidi → feature table contro mzmine richiede mzmine sul Mac (R-08). Il tempo del Flow `.raw` → mzML → feature table e i valori di mzmine su mzML (`mzfinder-benchmark.md`) non hanno qui uno SHA e non si riportano.
 - Mappa dei costi (SHA-256 dell'impronta, SHA-1 della testata mzML, zlib) e obiettivi di RV-03/RV-04/RV-06: `RAW_VELOCE.md` §2.2 e §3 (misure precedenti con `opt-level = "z"`, senza SHA).
 
+**B-2 · Cloud 4 vCPU, `wasm`, site `.mzidx` build in Node 22** (`build_mzidx_native` of the engine with the `thermo` module as external reader, `fs.readSync` reads on demand, spill to file, 64 MB budget, fingerprints given; modules without `wasm-opt`; 10 alternating runs, median [min-max] in ms; same `.mzidx` bytes). `thermo_sintetico` files: normal 288 MB (`--scans 5400 --peaks 600`), heavy 2.14 GB (`--scans 82500 --peaks 3000 --ms2 10`).
+
+Measured with the blocks no longer zero-filled and without the adaptive window of `rawlettore::Stream`, whose numbers are in `misure-velocita-raw.md`.
+
+| file | open | scans | chromatograms | total |
+|---|---|---|---|---|
+| normal | 68 [65-72] | 344 [306-381] | 196 [182-252] | 617 [555-672] |
+| heavy | 1246 [1199-1321] | 4018 [3393-4708] | 2691 [2468-2868] | 7920 [7085-8708] |
+
+- The fingerprints (SHA-256 + SHA-1 + `Passata` probe, one worker) cost a further 1.0 s on the normal file and 7.4 s on the heavy one, before the build.
+
 ## Righe da ripetere
 - Riga A sul Mac con il banco su entrambi i lettori (R-15, RFR contro `thermo_banco`): SHA nuovo, stessa tabella A-1 con le definizioni di `thermo_banco`; la ripetizione sul cloud dopo T-3 è A-2b.
 - Bersaglio `wasm`: A-3 va ripetuto con 5 ripetizioni e, per il rapporto con il nativo, con lo stesso profilo (`release`) dei due bersagli; tetto del modulo `thermo` 546 304 B (`wasm-tetti.md`).

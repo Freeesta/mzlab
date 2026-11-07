@@ -52,6 +52,21 @@ fn passata_equals_the_whole_file_hashes_whatever_the_pieces() {
 }
 
 #[test]
+fn the_two_halves_of_two_workers_give_the_three_values_of_one_pass() {
+    for n in [0, 1, 65537, 3_145_733] {
+        let b = bytes(n);
+        let (sha256, sha1, probe) = reference(&b);
+        let (mut x, mut y) = (Passata::senza_sha1(n as u64), Passata::solo_sha1(n as u64));
+        for c in b.chunks(100_000) {
+            x.aggiorna(c);
+            y.aggiorna(c);
+        }
+        assert_eq!(x.fine(), Some((sha256, String::new(), probe.clone())));
+        assert_eq!(y.fine(), Some((String::new(), sha1, probe)));
+    }
+}
+
+#[test]
 fn a_short_or_long_pass_gives_nothing() {
     let b = bytes(1000);
     let mut p = Passata::new(1001);
