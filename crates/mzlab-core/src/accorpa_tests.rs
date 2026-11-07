@@ -103,3 +103,66 @@ fn scratch_puts_join_across_the_slack_of_a_slot() {
     o.write_at(2, &[1]).unwrap();
     assert_eq!(o.dest.calls, 1, "an output joins only what is contiguous");
 }
+
+/// Writes of several columns in turn, each going on where it stopped, with now and then a rewrite across them (the header) and a gap.
+fn interleaved() -> Vec<(u64, Vec<u8>)> {
+    let mut v = Vec::new();
+    let mut at = [0u64, 1 << 20, 3 << 20, 5 << 20, 9 << 20, 11 << 20];
+    let mut x = 3u32;
+    for i in 0..900u32 {
+        x = x.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+        let c = (x >> 4) as usize % at.len();
+        let n = (x >> 8) as usize % 9000 + 1;
+        let d: Vec<u8> = (0..n).map(|k| (k as u32 ^ i ^ x) as u8).collect();
+        let o = match i % 53 {
+            7 => at[c] / 2,
+            19 => at[c] + 5,
+            _ => at[c],
+        };
+        at[c] = at[c].max(o + n as u64);
+        v.push((o, d));
+    }
+    v
+}
+
+#[test]
+fn several_streams_give_the_same_bytes_in_fewer_calls() {
+    for streams in [1, 2, 8] {
+        let mut direct = Conta::default();
+        let mut a = Accorpa::with_streams(Conta::default(), 64 << 10, streams);
+        for (o, d) in interleaved().into_iter().chain(writes()) {
+            direct.write_at(o, &d).unwrap();
+            a.write_at(o, &d).unwrap();
+        }
+        a.fine().unwrap();
+        let a = a.into_inner();
+        assert_eq!(a.c.get_ref(), direct.c.get_ref(), "{streams} streams");
+        if streams == 8 {
+            assert!(
+                a.calls * 5 < direct.calls,
+                "{} calls against {}",
+                a.calls,
+                direct.calls
+            );
+        }
+    }
+}
+
+#[test]
+fn a_write_over_a_pending_block_of_another_stream_sends_that_block_first() {
+    let mut a = Accorpa::with_streams(Conta::default(), 1 << 20, 8);
+    a.write_at(0, &[1; 10]).unwrap();
+    a.write_at(100, &[2; 10]).unwrap();
+    a.write_at(10, &[3; 95]).unwrap();
+    assert_eq!(
+        a.dest.calls, 1,
+        "the block at 100 goes first: the write goes over it"
+    );
+    a.write_at(105, &[4; 2]).unwrap();
+    a.fine().unwrap();
+    let a = a.into_inner();
+    let b = a.c.get_ref();
+    assert_eq!(&b[..10], &[1; 10]);
+    assert_eq!(&b[10..105], &[3; 95][..]);
+    assert_eq!(&b[105..110], &[4, 4, 2, 2, 2]);
+}

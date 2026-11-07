@@ -18,7 +18,7 @@ export function createTicNativo(pool, post) {
         if (by.get(m.name) !== e || !r.ok || !r.stats || r.stats.rt.length < 2) return;      // loaded again, cancelled, or not read: no provisional TIC, the real one comes with the index
         e.tic = r.stats;
         post({ ...e.p, op: "progress", id: e.id, early_tic: e.tic });
-      });
+      }).catch(() => {});                                                                  // a failed read shows nothing early: the real TIC comes with the index
     },
     /** the progress `p` of the rpc `id` that loads `name` now: a TIC read later goes with it */
     tell(/** @type {string} */ name, /** @type {number} */ id, /** @type {any} */ p) { const e = by.get(name); if (e) { e.id = id; e.p = p; } },
