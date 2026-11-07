@@ -66,7 +66,8 @@ try:
         def reload():
             names = a.evaluate("ST.files.map(f => f.name)")
             a.evaluate("window.__notes = []"); a.reload(); attendi(a, "window.qqReady === true && window.MZLAB_LR !== undefined", 60000)
-            attendi(a, "ST.files.length === 0 && (window.__notes || []).length > 0", 30000); a.wait_for_timeout(1500)
+            attendi(a, "ST.files.length === 0 && (window.__notes || []).length >= %d" % len(names), 30000)
+            attendi(a, "(" + WALK + ").then(o => !Object.keys(o).some(k => k.startsWith('files/') || k.endsWith('.mzidx')))", 30000)
             notes = a.evaluate("window.__notes")
             calm = [a.evaluate("n => I18N.t('load.sulRiapri', { name: n })", n) for n in names]
             assert notes and all(t in calm for t in notes), ("only the calm notice of the samples read in place, no «interrupted copy»", notes)
