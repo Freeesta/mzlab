@@ -160,6 +160,7 @@
     "../../mzlab/web/tic-nativo.js",
     "../../mzlab/web/tic-provvisorio.js",
     "../../mzlab/web/dda-marcatori.js",
+    "../../mzlab/web/dda-elenco.js",
     "../../mzlab/web/transizioni.js",
     "../../mzlab/web/workflow.js"
   ]
