@@ -190,7 +190,7 @@ impl Write for BlockWriter {
 
 /// The family of this module (`agilent`, `sciex`, `thermo`, ...).
 #[wasm_bindgen]
-pub fn famiglia() -> String {
+pub fn family() -> String {
     mzlab_lettori::famiglia().into()
 }
 
@@ -270,14 +270,14 @@ pub fn to_mzml(
     sink: Function,
     progress: Function,
 ) -> Result<f64, JsValue> {
-    to_mzml_come(names, sizes, read, c, true, "standard", sink, progress)
+    to_mzml_with(names, sizes, read, c, true, "standard", sink, progress)
 }
 
 /// `to_mzml` with the optical matrix only when `dad` and the compression of «Download .mzML» (`mzmlwrite::opzioni_compressione`): with `dad` false the file of
 /// `mzlab-cli convert` with the same `conv.numpress`, byte for byte (the download of a `.wiff` sample, also one the engine reads: the engine leaves out what `estesi` writes).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
-pub fn to_mzml_come(
+pub fn to_mzml_with(
     names: js_sys::Array,
     sizes: &[f64],
     read: Function,
@@ -325,16 +325,16 @@ fn con<T>(f: impl FnOnce(&mut Sessioni) -> mzlab_core::Result<T>) -> Result<T, J
         .map_err(|e| error_json(&e))
 }
 
-/// Opens a dataset and keeps it under a handle (`chiudi` frees it); `campioni(h)` says what it holds.
+/// Opens a dataset and keeps it under a handle (`close` frees it); `samples(h)` says what it holds.
 #[wasm_bindgen]
-pub fn apri(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<u32, JsValue> {
+pub fn open(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<u32, JsValue> {
     apri_membri(Membri::new(names, sizes, read)?.fileset())
 }
-/// `apri` with the SHA-1 of each member when the page took it while copying the file (empty text: unknown): the header of the mzML uses it instead of
+/// `open` with the SHA-1 of each member when the page took it while copying the file (empty text: unknown): the header of the mzML uses it instead of
 /// reading the file again. Only the `thermo` module has it (the other readers take their SHA-1 themselves).
 #[cfg(feature = "thermo")]
 #[wasm_bindgen]
-pub fn apri_con_sha1(
+pub fn open_with_sha1(
     names: js_sys::Array,
     sizes: &[f64],
     read: Function,
@@ -352,51 +352,51 @@ fn apri_membri(fs: FileSet) -> Result<u32, JsValue> {
     con(|s| Ok(s.inserisci(l)))
 }
 #[wasm_bindgen]
-pub fn campioni(h: u32) -> Result<String, JsValue> {
+pub fn samples(h: u32) -> Result<String, JsValue> {
     con(|s| s.campioni(h))
 }
 /// The version of the binary transport of the index and the scans (`mzlab_core::trasporto::PROTOCOLLO`): the engine refuses a module with another.
 #[wasm_bindgen]
-pub fn protocollo() -> u32 {
+pub fn protocol() -> u32 {
     mzlab_core::trasporto::PROTOCOLLO
 }
 /// The index of the sample as one `Uint8Array` (`mzlab_core::trasporto::encode_indice`).
 #[wasm_bindgen]
-pub fn indice(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
+pub fn index(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
     con(|s| s.indice(h, c as usize))
 }
 /// A scan as one `Uint8Array` (`mzlab_core::trasporto::encode_scansione`).
 #[wasm_bindgen]
-pub fn scansione(h: u32, c: u32, k: u32) -> Result<Vec<u8>, JsValue> {
+pub fn scan(h: u32, c: u32, k: u32) -> Result<Vec<u8>, JsValue> {
     con(|s| s.scansione(h, c as usize, k as usize))
 }
 #[wasm_bindgen]
-pub fn intestazione(h: u32, c: u32, k: u32) -> Result<String, JsValue> {
+pub fn scan_header(h: u32, c: u32, k: u32) -> Result<String, JsValue> {
     con(|s| s.intestazione(h, c as usize, k as usize))
 }
 #[wasm_bindgen]
-pub fn cromatogrammi(h: u32, c: u32) -> Result<String, JsValue> {
+pub fn chromatograms(h: u32, c: u32) -> Result<String, JsValue> {
     con(|s| s.cromatogrammi(h, c as usize))
 }
 #[wasm_bindgen]
-pub fn cromatogramma(h: u32, c: u32, id: &str) -> Result<String, JsValue> {
+pub fn chromatogram(h: u32, c: u32, id: &str) -> Result<String, JsValue> {
     con(|s| s.cromatogramma(h, c as usize, id))
 }
 #[wasm_bindgen]
-pub fn metodo(h: u32, c: u32) -> Result<String, JsValue> {
+pub fn method(h: u32, c: u32) -> Result<String, JsValue> {
     con(|s| s.metodo(h, c as usize))
 }
 /// The spectra of the sample that a truncated file declares but does not hold.
 #[wasm_bindgen]
-pub fn mancanti(h: u32, c: u32) -> Result<u32, JsValue> {
+pub fn missing(h: u32, c: u32) -> Result<u32, JsValue> {
     con(|s| s.mancanti(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
 }
 /// The header of the mzML of the sample as JSON (`null` when the reader has none).
 #[wasm_bindgen]
-pub fn testata(h: u32, c: u32) -> Result<String, JsValue> {
+pub fn file_header(h: u32, c: u32) -> Result<String, JsValue> {
     con(|s| s.testata(h, c as usize))
 }
 #[wasm_bindgen]
-pub fn chiudi(h: u32) {
+pub fn close(h: u32) {
     SESSIONI.with(|s| s.borrow_mut().chiudi(h));
 }
