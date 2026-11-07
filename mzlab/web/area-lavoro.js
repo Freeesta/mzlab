@@ -9,6 +9,7 @@
 // paint() returns true when it wrote that label; false leaves barra.js to write the usual one (and gives back the usual accessible name).
 const SHEETLBL = {
   paint(/** @type {HTMLElement} */ tg, /** @type {HTMLElement} */ tl, /** @type {boolean} */ narrow) {
+    tg.dataset.lbl = "1";      // from now on .tl holds the label (app.css shows .tln before)
     if (!narrow || S.view !== "data") { if (tg.dataset.sheet) { delete tg.dataset.sheet; tg.setAttribute("aria-label", I18N.t("cmd.panel.name")); } return false; }
     const txt = I18N.t("cmd.panel.files", { n: ST.files.length });
     delete tl.dataset.i18n; tl.textContent = txt; tg.dataset.sheet = "1"; tg.setAttribute("aria-label", txt);
