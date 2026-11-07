@@ -118,7 +118,7 @@ async function fileOf(name) {
 const impronte = createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule });
 // size shown for a maker's sample: its own when the reader knows it, else the sum of its members (e.g. .wiff + .wiff.scan); stubs written before the sum was kept have `size` too
 const shownSize = (/** @type {{ dim?: number | null, size: number }} */ st) => st.dim != null ? st.dim : st.size;
-const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte });
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, notice: (key, params) => postMessage({ op: "notice", key, params }) });
 const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); return p && p.size === size ? [p.sha256, p.probe] : [undefined, undefined]; };
 const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
 const openGate = createOpenGate();
@@ -232,7 +232,7 @@ async function lrMigrate() {                                              // wha
 let scaldaP = null; const scalda = () => scaldaP || (scaldaP = import("./rust-scalda.js").then(M => M.createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } })));      // the warm-up of the pointed folder (rust-scalda.js): loaded on first use, never at start-up
 const CANCELLED = new Set();                                              // names whose loading the page cancelled (lr_cancel): the copy and the index stop, a new lr_put starts afresh
 const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params: {} });
-const plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree(), gunzip: cap => new Gunzip(cap) }), sul = createSulPosto({ ARCH, tilesDrop, post: m => postMessage(m), safe });      // the copy of a plain upload (rust-carica.js); a big mzML with no room for it is read in place (rust-sul-posto.js)
+const plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree(), gunzip: cap => new Gunzip(cap) }), sul = createSulPosto({ ARCH, tilesDrop, post: m => postMessage(m), safe, lost: () => nativo.lost() });      // the copy of a plain upload (rust-carica.js); a big mzML with no room for it is read in place (rust-sul-posto.js)
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
   CANCELLED.delete(m.name);
   const size = m.gz ? await gzRoom(m.blob) : m.blob.size; let inPlace = false;      // a .mzML.gz asks the room of its mzML
