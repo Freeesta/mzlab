@@ -336,8 +336,8 @@ impl<M: Modulo> Lettore for LettoreEsterno<M> {
     }
 }
 
-/// The functions of a session of the module, as an object of JS functions `{campioni, indice, scansione, intestazione, cromatogrammi, cromatogramma, metodo, testata, mancanti}`
-/// that already hold the handle of the session: `campioni()`, `indice(c)`, `scansione(c, k)`, ...
+/// The functions of a session of the module, as an object of JS functions `{samples, index, scan, scan_header, chromatograms, chromatogram, method, file_header, missing}`
+/// that already hold the handle of the session: `samples()`, `index(c)`, `scan(c, k)`, ...
 pub(crate) struct ModuloJs {
     sessione: JsValue,
 }
@@ -379,45 +379,45 @@ impl ModuloJs {
 impl Drop for ModuloJs {
     /// Frees the session of the module.
     fn drop(&mut self) {
-        drop(self.chiama("chiudi", &[]));
+        drop(self.chiama("close", &[]));
     }
 }
 
 impl Modulo for ModuloJs {
     fn protocollo(&mut self) -> Result<u32> {
-        self.chiama("protocollo", &[])?
+        self.chiama("protocol", &[])?
             .as_f64()
             .map(|v| v as u32)
-            .ok_or_else(|| guasto("protocollo"))
+            .ok_or_else(|| guasto("protocol"))
     }
     fn campioni(&mut self) -> Result<String> {
-        self.testo("campioni", &[])
+        self.testo("samples", &[])
     }
     fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
-        self.byte("indice", &[(c as f64).into()])
+        self.byte("index", &[(c as f64).into()])
     }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
-        self.byte("scansione", &[(c as f64).into(), (k as f64).into()])
+        self.byte("scan", &[(c as f64).into(), (k as f64).into()])
     }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
-        self.testo("intestazione", &[(c as f64).into(), (k as f64).into()])
+        self.testo("scan_header", &[(c as f64).into(), (k as f64).into()])
     }
     fn cromatogrammi(&mut self, c: usize) -> Result<String> {
-        self.testo("cromatogrammi", &[(c as f64).into()])
+        self.testo("chromatograms", &[(c as f64).into()])
     }
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String> {
-        self.testo("cromatogramma", &[(c as f64).into(), id.into()])
+        self.testo("chromatogram", &[(c as f64).into(), id.into()])
     }
     fn metodo(&mut self, c: usize) -> Result<String> {
-        self.testo("metodo", &[(c as f64).into()])
+        self.testo("method", &[(c as f64).into()])
     }
     fn testata(&mut self, c: usize) -> Result<String> {
-        self.testo("testata", &[(c as f64).into()])
+        self.testo("file_header", &[(c as f64).into()])
     }
     fn mancanti(&mut self, c: usize) -> Result<u32> {
         // a session of an older module has no such function
         Ok(self
-            .chiama("mancanti", &[(c as f64).into()])
+            .chiama("missing", &[(c as f64).into()])
             .ok()
             .and_then(|v| v.as_f64())
             .map_or(0, |v| v as u32))
