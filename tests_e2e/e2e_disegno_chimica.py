@@ -61,6 +61,20 @@ try:
             t = pg.inner_text("#ctx"); pg.keyboard.press("Escape")
             assert "([C3H2O4]2-)" in t, t
         step("malonate: the copied formula is [C3H2O4]2-", dianion)
+        def slow():                                                     # a conversion that never answers: after 20 s the card names the limit, not «no formula»
+            pg.keyboard.press("Escape")
+            pg.evaluate(f"(() => {{ const K = {KJ}; window.__conv = K.structService.convert; K.structService.convert = () => new Promise(() => {{}}); }})()")
+            try:
+                pg.evaluate(f"{KJ}.setMolecule('CCO')")
+                pg.evaluate(f"(() => {{ const K = {KJ}; K.editor.selection({{ atoms: [...K.editor.struct().atoms.keys()] }}); }})()")
+                want = pg.evaluate("I18N.t('draw.selection.slow', { s: 20 })")
+                assert "20" in want and not want.startswith("draw."), want
+                try: pg.wait_for_function("t => (document.querySelector('#sel-body') || {}).textContent.includes(t)", arg=want, timeout=60000)
+                except Exception: raise AssertionError(pg.inner_text("#sel-body"))
+                assert pg.locator("#sel-body [role=status]").count() == 1
+            finally:
+                pg.evaluate(f"{KJ}.structService.convert = window.__conv")
+        step("a conversion that does not answer in 20 s gives one calm note with the limit and the next step", slow)
 finally:
     r.close()
 r.report()
