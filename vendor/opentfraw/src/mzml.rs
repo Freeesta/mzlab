@@ -1203,6 +1203,7 @@ mod tests {
                     .iter()
                     .map(|(l, v)| (l.to_string(), v.clone()))
                     .collect(),
+                index: None,
             },
         ))
     }
