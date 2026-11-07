@@ -370,7 +370,7 @@ pub(super) fn export_csv() -> Step {
             Port::new("table", DataType::Table, "Feature table"),
             Port::new("samples", DataType::Samples, "Roles and times of the files"),
         ],
-        outs: vec![Port::new("report", DataType::Report, "Table as CSV")],
+        outs: vec![Port::new("report", DataType::Report, "Table as CSV").format("csv")],
         params,
         runs_in: RunsIn {
             wasm: Some("table"),
@@ -413,7 +413,7 @@ pub(super) fn export_annotations() -> Step {
             optional(Port::new("formulas", DataType::Formulas, "Candidate formulas (formula.ms1, formula.ms2)").many()),
             optional(Port::new("annot", DataType::Annot, "Level and evidence per feature (annot.level)")),
         ],
-        outs: vec![Port::new("report", DataType::Report, "Annotations as CSV")],
+        outs: vec![Port::new("report", DataType::Report, "Annotations as CSV").format("csv")],
         params,
         runs_in: RunsIn {
             wasm: Some("flowtab"),
@@ -445,7 +445,7 @@ pub(super) fn export_inclusion() -> Step {
     ];
     Step {
         ins: vec![Port::new("tp", DataType::Tp, "Expected products with their RT (a JSON list, or the table of tp.link)")],
-        outs: vec![Port::new("report", DataType::Report, "Inclusion list as CSV")],
+        outs: vec![Port::new("report", DataType::Report, "Inclusion list as CSV").format("csv")],
         params,
         runs_in: RunsIn {
             wasm: Some(INTERP_WASM),
@@ -468,7 +468,7 @@ pub(super) fn export_mztab() -> Step {
             Port::new("table", DataType::Table, "Feature table"),
             Port::new("samples", DataType::Samples, "Roles and times of the files"),
         ],
-        outs: vec![Port::new("report", DataType::Report, "Table as mzTab-M")],
+        outs: vec![Port::new("report", DataType::Report, "Table as mzTab-M").format("mztab")],
         runs_in: RunsIn {
             wasm: Some("table"),
             wasm_ceiling_bytes: Some(FEAT_CEILING),

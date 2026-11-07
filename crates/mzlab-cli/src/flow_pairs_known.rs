@@ -3,9 +3,6 @@
 use std::collections::BTreeSet;
 
 /// The mismatches the registry has today, by consumer port, source and error key: the test fails on any other, and on one of these that is gone (drop it).
-/// - a `filtri/1` (`tp.filter`) is typed `table` like a `.mzfeat`;
-/// - `spectra.match.query` accepts `report`, and the CSV exports are no spectra;
-/// - `spectra.msn_graph.molecules` (a molecules CSV) accepts `table`, and a `.mzfeat` is no CSV;
 /// - `features.gapfill` and `tp.link` need a table aligned in the same plan (`err.flow.lineage`);
 /// - a table of one file with the samples of six (`error.badCampioni`): data the check does not read.
 const KNOWN: &[(&str, &str)] = &[
@@ -18,98 +15,51 @@ const KNOWN: &[(&str, &str)] = &[
         "err.flow.lineage",
     ),
     (
-        "features.gapfill.table <- tp.filter.table",
-        "err.flow.lineage",
-    ),
-    (
         "table.filter.table <- table of one sample",
         "error.badCampioni",
-    ),
-    ("table.filter.table <- tp.filter.table", "error.badMzfeat"),
-    ("features.group.table <- tp.filter.table", "error.badMzfeat"),
-    ("table.stats.table <- tp.filter.table", "error.badMzfeat"),
-    ("table.kmd.table <- tp.filter.table", "error.badMzfeat"),
-    (
-        "table.plausible.table <- tp.filter.table",
-        "error.badMzfeat",
     ),
     (
         "export.table_csv.table <- table of one sample",
         "error.badCampioni",
     ),
     (
-        "export.table_csv.table <- tp.filter.table",
-        "err.flow.export.view",
-    ),
-    (
         "export.mztab.table <- table of one sample",
         "error.badCampioni",
     ),
-    (
-        "export.mztab.table <- tp.filter.table",
-        "err.flow.export.view",
-    ),
-    (
-        "spectra.chimeric.features <- tp.filter.table",
-        "err.flow.export.view",
-    ),
-    (
-        "spectra.match.query <- export.table_csv.report",
-        "err.flow.match.format",
-    ),
-    (
-        "spectra.match.query <- export.mztab.report",
-        "err.flow.match.format",
-    ),
-    (
-        "spectra.match.query <- features.table.report",
-        "err.flow.match.format",
-    ),
-    (
-        "spectra.match.query <- export.annotations.report",
-        "err.flow.match.format",
-    ),
-    (
-        "spectra.match.query <- export.inclusion.report",
-        "err.flow.match.format",
-    ),
     ("tp.link.table <- table with no row", "err.flow.lineage"),
     ("tp.link.table <- table of one sample", "err.flow.lineage"),
-    ("tp.link.table <- tp.filter.table", "err.flow.lineage"),
-    ("spectra.msn_graph.molecules <- gap.table", "err.flow.io"),
-    ("spectra.msn_graph.molecules <- ali.table", "err.flow.io"),
-    (
-        "spectra.msn_graph.molecules <- table with no row",
-        "err.flow.io",
-    ),
-    (
-        "spectra.msn_graph.molecules <- table of one sample",
-        "err.flow.io",
-    ),
-    (
-        "spectra.msn_graph.molecules <- features.align.table",
-        "err.flow.io",
-    ),
-    (
-        "spectra.msn_graph.molecules <- features.gapfill.table",
-        "err.flow.io",
-    ),
-    (
-        "spectra.msn_graph.molecules <- table.filter.table",
-        "err.flow.io",
-    ),
     (
         "table.match.table <- table of one sample",
         "error.badCampioni",
     ),
-    (
-        "table.match.table <- tp.filter.table",
-        "err.flow.export.view",
-    ),
-    (
-        "export.annotations.table <- tp.filter.table",
-        "error.badMzfeat",
-    ),
+];
+
+/// The pairs the formats of the ports close (`format` / `formats`, `err.flow.port.format`): the check refuses each, with that key.
+const BY_FORMAT: &[&str] = &[
+    "export.annotations.table <- tp.filter.table",
+    "export.mztab.table <- tp.filter.table",
+    "export.table_csv.table <- tp.filter.table",
+    "features.gapfill.table <- tp.filter.table",
+    "features.group.table <- tp.filter.table",
+    "spectra.chimeric.features <- tp.filter.table",
+    "spectra.match.query <- export.annotations.report",
+    "spectra.match.query <- export.inclusion.report",
+    "spectra.match.query <- export.mztab.report",
+    "spectra.match.query <- export.table_csv.report",
+    "spectra.match.query <- features.table.report",
+    "spectra.msn_graph.molecules <- ali.table",
+    "spectra.msn_graph.molecules <- features.align.table",
+    "spectra.msn_graph.molecules <- features.gapfill.table",
+    "spectra.msn_graph.molecules <- gap.table",
+    "spectra.msn_graph.molecules <- table of one sample",
+    "spectra.msn_graph.molecules <- table with no row",
+    "spectra.msn_graph.molecules <- table.filter.table",
+    "table.filter.table <- tp.filter.table",
+    "table.kmd.table <- tp.filter.table",
+    "table.match.table <- tp.filter.table",
+    "table.plausible.table <- tp.filter.table",
+    "table.stats.table <- tp.filter.table",
+    "tp.link.table <- tp.filter.table",
 ];
 
 /// Result of a consumer reading one source on one port.
@@ -163,6 +113,13 @@ pub(super) fn report_and_assert(verdicts: &[(String, Verdict)]) {
         "no longer a mismatch, drop it from KNOWN:\n{}",
         gone.join("\n")
     );
+    for want in BY_FORMAT {
+        let v = verdicts.iter().find(|(w, _)| w == want).map(|(_, v)| v);
+        assert!(
+            matches!(v, Some(Verdict::Refused(why)) if why.contains("err.flow.port.format")),
+            "{want}: not refused by its format"
+        );
+    }
     // the view of `table.filter` runs wherever the check takes a table
     for (w, v) in verdicts {
         if w.ends_with("<- table.filter.table") && !w.starts_with("spectra.msn_graph") {
