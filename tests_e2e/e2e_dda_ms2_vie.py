@@ -1,6 +1,7 @@
 """DDA trio, the ways to an MS2: the Full Scan reached with the arrows keeps its scan id (markers and «open the MS2» work while walking),
 the MS2 panel reads its scans from the file of the Full Scan above it (two DDA files open), the markers of a second DDA file appear without a reload,
-an empty MS2 panel says why it is empty (precursors outside the m/z zoom, averaged Full Scan), with the same words for the screen reader."""
+an empty MS2 panel says why it is empty (precursors outside the m/z zoom, averaged Full Scan), with the same words for the screen reader,
+the «N MS²» button of the Full Scan (one scan and an average: the count of the engine, the list with the keyboard) and the flags of an averaged Full Scan."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -31,6 +32,7 @@ try:
             assert v["markN"] is not None, v
         step("arrows on the chromatogram: the Full Scan keeps its scan id, the DDA markers are computed", arrows)
         WHY = "(()=>{const t=" + TRIO + ";return {why:t.s2._why,say:t.s2._say,sr:TDATI_P.text(t.s2)}})()"
+        xy = lambda rt: pg.evaluate("(rt=>{const t=" + TRIO + ";const a=t.c._a,r=t.c.cv.getBoundingClientRect();return {x:r.left+M.l+(rt-a.x0)/(a.x1-a.x0)*(a.W-M.l-M.r),y:r.top+a.H/2}})", rt)
         def reasons():
             pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);const j=D.sid.findIndex((_,i)=>D.parent[i]!=null&&(D.byParent.get(D.parent[i])||[]).length>1);await DDA.selectMs2(t.s2,D.sid[j]);window._kids=D.byParent.get(D.parent[j]).map(i=>D.tgt[i]??D.prec[i])})()"); ready(pg)
             attendi(pg, "(()=>{const t=" + TRIO + ";return t.s2._scan&&t.s1._a&&t.s1._a.flags&&t.s1._a.flags.length>0})()")
@@ -42,7 +44,6 @@ try:
             pg.evaluate("(()=>{const t=" + TRIO + ";t.s1.zoom=null;draw(t.s1)})()"); ready(pg)
             attendi(pg, "(()=>{const t=" + TRIO + ";return t.s2._why===I18N.t('dda.click')})()")
             pg.evaluate("(()=>{const t=" + TRIO + ";t.c.el.scrollIntoView({block:'center'})})()")
-            xy = lambda rt: pg.evaluate("(rt=>{const t=" + TRIO + ";const a=t.c._a,r=t.c.cv.getBoundingClientRect();return {x:r.left+M.l+(rt-a.x0)/(a.x1-a.x0)*(a.W-M.l-M.r),y:r.top+a.H/2}})", rt)
             a, b = xy(8.0), xy(8.4)                     # a few MS1 scans in the middle of the run, a drag wider than the click slop
             pg.mouse.move(a["x"], a["y"]); pg.mouse.down(); pg.mouse.move(b["x"], b["y"], steps=5); pg.mouse.up(); ready(pg)
             attendi(pg, "(()=>{const d=" + D0 + ";return d&&d.scans>1})()")
@@ -54,6 +55,27 @@ try:
             c = xy(8.2); pg.mouse.click(c["x"], c["y"]); ready(pg)          # back to one scan for the next step
             attendi(pg, "(()=>{const d=" + D0 + ";return d&&d.scans===1})()")
         step("empty MS2 panel: the reason (outside the m/z zoom, averaged Full Scan), the same words for the screen reader", reasons)
+        BTN = "(()=>{const t=" + TRIO + ";const b=t.s1.el.querySelector('[data-a=\"ddaw\"]');return b&&{txt:b.textContent,dis:b.getAttribute('aria-disabled'),w:t.s1._dw}})()"
+        def button():
+            pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);const j=D.sid.findIndex((_,i)=>D.parent[i]!=null&&(D.byParent.get(D.parent[i])||[]).length>1);await DDA.selectMs2(t.s2,D.sid[j]);window._kn=D.byParent.get(D.parent[j]).length;t.s2.sid=null;t.s2.ion=null;t.s2.avg=null;draw(t.s2)})()"); ready(pg)
+            attendi(pg, "(()=>{const v=" + BTN + ";return v&&v.w&&v.txt===I18N.t('dda.win.btn',{n:_kn})&&v.dis==='false'})()")
+            pg.locator("[data-a='ddaw']").first.focus(); pg.keyboard.press("Enter")
+            attendi(pg, "(()=>{const l=document.querySelector('.dw-pop[role=listbox]');return l&&document.activeElement===l&&l.querySelectorAll('[role=option]').length>0})()")
+            pg.keyboard.press("End"); pg.keyboard.press("Enter"); ready(pg)
+            v = pg.evaluate("(()=>{const t=" + TRIO + ";const g=t.s1._dw.groups;return {sid:t.s2.sid,want:g[g.length-1].sid,pop:!!document.querySelector('.dw-pop'),focus:document.activeElement&&document.activeElement.dataset.a}})()"); print(v)
+            assert v["sid"] in v["want"] and not v["pop"] and v["focus"] == "ddaw", v
+            a, b = xy(8.0), xy(8.4)
+            pg.mouse.move(a["x"], a["y"]); pg.mouse.down(); pg.mouse.move(b["x"], b["y"], steps=5); pg.mouse.up(); ready(pg)
+            attendi(pg, "(()=>{const t=" + TRIO + ";const d=" + D0 + ";return d&&d.scans>1&&t.s1._dw&&t.s1._a.flags.length>0})()")
+            v = pg.evaluate("(()=>{const t=" + TRIO + ";const D=DDA.ready(t.s1.k),w=t.s1._dw;let m=0;D.ms1.sid.forEach((s,i)=>{if(D.ms1.rt[i]>=Math.min(t.s1.r0,t.s1.r1)-1e-4&&D.ms1.rt[i]<=Math.max(t.s1.r0,t.s1.r1)+1e-4)m+=(D.byParent.get(s)||[]).length});const b=t.s1.el.querySelector('[data-a=\"ddaw\"]');return {n:w.n,m,txt:b.textContent,f:t.s1._a.flags[0],r:t.s1.cv.getBoundingClientRect().toJSON()}})()"); print(v)
+            assert v["n"] == v["m"] and v["txt"] == pg.evaluate("n=>I18N.t('dda.win.btn',{n})", v["n"]), v
+            pg.mouse.click(v["r"]["x"] + v["f"]["px"], v["r"]["y"] + v["f"]["py"] - 8); ready(pg)
+            attendi(pg, "(()=>{const t=" + TRIO + ";return t.s2.sid!=null&&t.s2._scan})()")
+            v = pg.evaluate("(()=>{const t=" + TRIO + ";const d=" + D0 + ";return {scans:d.scans,sid:t.s2.sid,j:DDA.ready(t.s1.k).sid[t.s1._a.flags[0].j]}})()"); print(v)
+            assert v["scans"] > 1 and v["sid"] == v["j"], v
+            c = xy(8.2); pg.mouse.click(c["x"], c["y"]); ready(pg)
+            attendi(pg, "(()=>{const d=" + D0 + ";return d&&d.scans===1})()")
+        step("«N MS²» button: the count of the engine, the list with the keyboard; flags on an averaged Full Scan, a click keeps the average", button)
         def other_file():
             pg.locator("#flst .fl", has_text="HR_DDA-Fusion-t30").first.click(); ready(pg)
             attendi(pg, "(()=>{const t=" + TRIO + ";return t.s1.k===E.files.find(f=>f.label==='HR_DDA-Fusion-t30').k&&t.s1._a&&t.s1._a.markN!=null})()", 30000)

@@ -1,4 +1,4 @@
-"""Reference answers of `api/dda` and of `api/spectrum` on HIGH-RESOLUTION centroid files for the parity test of the Rust port
+"""Reference answers of `api/dda`, `api/dda_window` and of `api/spectrum` on HIGH-RESOLUTION centroid files for the parity test of the Rust port
 (crates/mzlab-core/tests/hr_parity.rs).
 
     python3 tools/hr_riferimento.py OUT
@@ -27,6 +27,8 @@ from mzlab.reader.mzml import Run  # noqa: E402
 
 QUERIES = [
     ("/api/dda", ""), ("/api/dda", "hr=0"),
+    ("/api/dda_window", "r0=13&r1=16"), ("/api/dda_window", "r0=16&r1=13&hr=0"), ("/api/dda_window", "r0=0&r1=1000"), ("/api/dda_window", "r0=500&r1=600"),
+    ("/api/dda_window", "r0=13"),
     ("/api/spectrum", "rt0=14.2&rt1=14.4&level=1"), ("/api/spectrum", "rt0=0&rt1=1000&level=1"), ("/api/spectrum", "rt0=0&rt1=1000&level=1&merge=1"),
     ("/api/spectrum", "rt0=14.2&rt1=14.4&level=1&hr=0"), ("/api/spectrum", "rt0=14.4&rt1=14.2&level=1"), ("/api/spectrum", "rt0=500&rt1=600&level=1"),
     ("/api/spectrum", "rt0=0&rt1=1000&level=2"), ("/api/spectrum", "rt0=0&rt1=1000&level=2&hr=0"), ("/api/spectrum", "rt0=13&rt1=16&level=2&precursor=PREC"),
@@ -84,7 +86,8 @@ def main(argv) -> int:
         filt = next((s.filter for s in item.run.scans if s.level == 1 and s.filter), "")
         rt1 = next(s.rt for s in item.run.scans if s.level == 1 and s.rt > 14.0)
         rt2 = next((s.rt for s in item.run.scans if s.level > 1), 1.0)
-        one = [("/api/spectrum", f"rt0={rt1 - 1e-4}&rt1={rt1 + 1e-4}&level=1"), ("/api/spectrum", f"rt0={rt2 - 1e-4}&rt1={rt2 + 1e-4}&level=2")]
+        one = [("/api/spectrum", f"rt0={rt1 - 1e-4}&rt1={rt1 + 1e-4}&level=1"), ("/api/spectrum", f"rt0={rt2 - 1e-4}&rt1={rt2 + 1e-4}&level=2"),
+               ("/api/dda_window", f"r0={rt1 - 1e-4}&r1={rt1 + 1e-4}")]
         s1 = [s.index for s in item.run.scans if s.level == 1]
         s2 = [s.index for s in item.run.scans if s.level > 1]
         scans = [("/api/scan", f"sid={s1[3]}"), ("/api/scan", f"sid={s2[5]}"), ("/api/scan", f"sid={s2[5]}&hr=0"), ("/api/scan", f"sid={s1[0]}&hr=0"),
