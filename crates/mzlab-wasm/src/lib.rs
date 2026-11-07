@@ -500,7 +500,7 @@ pub fn build_mzidx(
         declared: 0,
     };
     // every call of `write` is an OPFS write and a read-back in the worker: contiguous writes go in blocks of 1 MiB (`accorpa`), same bytes
-    let mut out = Accorpa::new(JsOutput { write });
+    let mut out = Accorpa::flussi(JsOutput { write });
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
     let mut spill = spill_put.zip(spill_get).map(|(put, get)| Accorpa::new(nativi::JsSpill { put, get }));
     let st = mzidx::build_mzml_corriere(
