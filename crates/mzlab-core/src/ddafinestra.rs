@@ -1,6 +1,6 @@
 //! `/api/dda_window?k&r0&r1[&hr=0]`: the MS2 started from the survey scans of a time window, grouped by precursor within the tolerance of the
 //! MS2 profile (ppm of a high-resolution profile, else 0.5 Da, as `tolOf` in dda.js). The most intense precursor first, members in order of
-//! acquisition. Reference: `mzlab/dda_finestra.py`; parity test: `tests/hr_parity.rs`.
+//! acquisition. Reference: `tools/dda_finestra_riferimento.py`; parity test: `tests/hr_parity.rs`.
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
