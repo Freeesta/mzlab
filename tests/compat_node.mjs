@@ -1,6 +1,6 @@
 // Checks the fallbacks of mzlab/web/compat.js on fake globals (what Safari/iPadOS lacks: AbortSignal.any, createWritable, a refused clipboard, the accept
-// list of the iPad file picker); prints one JSON object of named checks. See tests/test_compat.py.
-import { installa, anySignal, freeAccept } from "../mzlab/web/compat.js";
+// list of the iPad file picker, the gesture* pinch of a Mac trackpad); prints one JSON object of named checks. See tests/test_compat.py.
+import { installa, anySignal, freeAccept, pinchWheel } from "../mzlab/web/compat.js";
 
 const out = {};
 const check = async (name, fn) => { try { out[name] = (await fn()) === true ? true : "false"; } catch (e) { out[name] = "threw: " + (e && e.message || e); } };
@@ -119,6 +119,37 @@ await check("accept: input.click() from code and a tap (capture listener) both f
   const j = el("input", { type: "file", accept: ".raw" }), cap = d.listeners.find(([t, , c]) => t === "click" && c === true);
   cap[1]({ target: j });
   return done.includes("accept") && clicked === 1 && !i.hasAttribute("accept") && !j.hasAttribute("accept");
+});
+
+// a fake page for the pinch: a surface (touch-action:none) with a canvas, a plain paragraph; document listeners fired in order
+function pinchPage() {
+  const node = (ta, parent) => ({ nodeType: 1, parentElement: parent, ta, wheels: [], dispatchEvent(w) { this.wheels.push(w); return true; } });
+  const surf = node("none", null), canvas = node("auto", surf), para = node("auto", null), L = [];
+  const d = { addEventListener: (t, f, c) => L.push([t, f, c]) };
+  const fire = (t, o) => { const e = { defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...o }; for (const [k, f] of L) if (k === t) f(e); return e; };
+  class WheelEvent { constructor(type, o) { Object.assign(this, o, { type }); } }
+  const g = { document: d, WheelEvent, GestureEvent: function () {}, getComputedStyle: n => ({ touchAction: n.ta }), matchMedia: media(false) };
+  return { g, surf, canvas, para, fire };
+}
+await check("pinch: installed with gesture events and a fine pointer only", () => {
+  const a = pinchPage(), b = pinchPage(), c = pinchPage();
+  delete b.g.GestureEvent; c.g.matchMedia = media(true);
+  return installa(a.g).includes("pinch") && !installa(b.g).includes("pinch") && !installa(c.g).includes("pinch");
+});
+await check("pinch: gesturechange over a zoomable surface is a Ctrl+wheel there, the page does not zoom", () => {
+  const P = pinchPage(); pinchWheel(P.g);
+  const s = P.fire("gesturestart", { target: P.canvas, scale: 1 }), c1 = P.fire("gesturechange", { target: P.canvas, scale: 1.5, clientX: 10, clientY: 20 }), c2 = P.fire("gesturechange", { target: P.canvas, scale: 0.75, clientX: 10, clientY: 20 });
+  const e = P.fire("gestureend", { target: P.canvas, scale: 0.75 }), [w1, w2] = P.canvas.wheels;
+  return s.defaultPrevented && c1.defaultPrevented && e.defaultPrevented && P.canvas.wheels.length === 2 && w1.type === "wheel" && w1.ctrlKey && w1.cancelable && w1.bubbles
+    && w1.clientX === 10 && w1.clientY === 20 && Math.abs(w1.deltaY + 100 * Math.log(1.5)) < 1e-9 && Math.abs(w2.deltaY - 100 * Math.log(2)) < 1e-9 && w1.deltaY < 0 && w2.deltaY > 0;
+});
+await check("pinch: left alone outside a zoomable surface, when a view handles it, and with fingers on a screen", () => {
+  const P = pinchPage(); pinchWheel(P.g);
+  const s = P.fire("gesturestart", { target: P.para, scale: 1 }), c = P.fire("gesturechange", { target: P.para, scale: 2 });
+  P.fire("gesturestart", { target: P.canvas, scale: 1, defaultPrevented: true }); P.fire("gesturechange", { target: P.canvas, scale: 2, defaultPrevented: true });
+  P.fire("pointerdown", { pointerType: "touch" }); P.fire("gesturestart", { target: P.canvas, scale: 1 }); P.fire("gesturechange", { target: P.canvas, scale: 2 });
+  P.fire("pointerup", { pointerType: "touch" }); const s2 = P.fire("gesturestart", { target: P.canvas, scale: 1 }); P.fire("gesturechange", { target: P.canvas, scale: 2 });
+  return !s.defaultPrevented && !c.defaultPrevented && P.para.wheels.length === 0 && s2.defaultPrevented && P.canvas.wheels.length === 1;
 });
 
 process.stdout.write(JSON.stringify(out));
