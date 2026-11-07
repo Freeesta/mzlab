@@ -1208,6 +1208,7 @@ mod tests {
                     .iter()
                     .map(|(l, v)| (std::sync::Arc::from(*l), v.clone()))
                     .collect(),
+                index: None,
             },
         ))
     }
