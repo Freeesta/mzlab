@@ -208,3 +208,73 @@ fn a_probe_counts_the_steps_the_cache_would_give_back() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// The `.weak` files beside the `.mzfeatf` of `out`, by name.
+fn weak_files(out: &Path) -> Vec<String> {
+    let mut v: Vec<String> = made(out)
+        .into_iter()
+        .map(|(n, _)| n)
+        .filter(|n| n.ends_with(".mzfeatf.weak"))
+        .collect();
+    v.sort();
+    v
+}
+
+#[test]
+fn a_detection_whose_weak_file_is_gone_or_broken_is_made_again() {
+    let (dir, _) = fixture("cache_weak");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let run = |extra: &[&str]| {
+        let mut a = vec![p(&plan), "--in", p(&data), "--out", p(&out)];
+        a.extend(extra);
+        let o = flow_run(&a);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        let c = cached(&out);
+        move |id: &str| c.iter().find(|x| x.0 == id).unwrap().1
+    };
+    run(&[]);
+    let (first, index) = (
+        made(&out),
+        std::fs::read(out.join("cache").join("index.json")).unwrap(),
+    );
+    let weak = weak_files(&out);
+    assert_eq!(
+        weak.len(),
+        3,
+        "the detection writes the weak candidates of each file"
+    );
+
+    // deleted: the detection runs again and gives the same files; the index of the cache keeps its bytes
+    std::fs::remove_file(out.join(&weak[0])).unwrap();
+    assert!(!run(&[])("det"));
+    assert_eq!(made(&out), first);
+    assert_eq!(
+        std::fs::read(out.join("cache").join("index.json")).unwrap(),
+        index
+    );
+
+    // truncated: the same
+    let b = std::fs::read(out.join(&weak[1])).unwrap();
+    std::fs::write(out.join(&weak[1]), &b[..b.len() / 2]).unwrap();
+    assert!(!run(&[])("det"));
+    assert_eq!(made(&out), first);
+
+    // the weak tier off in the alignment: an intact weak file keeps the detection, and the table is the one of a fresh run
+    let of = run(&["--set", "ali.weak_files=0"]);
+    assert!(of("det") && !of("ali"));
+    let table = std::fs::read(out.join("ali.mzfeat")).unwrap();
+    run(&["--fresh", "--set", "ali.weak_files=0"]);
+    assert_eq!(std::fs::read(out.join("ali.mzfeat")).unwrap(), table);
+
+    // a file left out of the plan: its detection is forgotten with its weak candidates
+    let text = std::fs::read_to_string(&plan).unwrap();
+    let two = text
+        .replace(r#",{"name":"s_t030.mzML","type":"raw"}"#, "")
+        .replace(r#","file:s_t030.mzML""#, "");
+    assert_ne!(two, text);
+    std::fs::write(&plan, two).unwrap();
+    run(&[]);
+    assert!(!out.join("det-s_t030.mzfeatf").exists());
+    assert_eq!(weak_files(&out), weak[..2].to_vec());
+    let _ = std::fs::remove_dir_all(&dir);
+}
