@@ -23665,3 +23665,4 @@
 {"v":1,"ts_utc":"2026-11-07T10:17:22Z","tipo":"job","k":"128376018429","workflow":"rust","job":"rust-wasm","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":2835,"sha":"2d4905f091305502aa2a8fe0839ef13435159e2e","run_id":42363293834,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-07T10:18:25Z","tipo":"carico","k":"2026-11-07T10:1","job_in_coda":0,"job_in_corso":30}
 {"v":1,"ts_utc":"2026-11-07T10:19:06Z","tipo":"coda","k":"2026-11-07T10:19:06Z","aperte":6,"indietro":3,"sporche":3,"verdi_in_attesa":2,"piu_vecchia_aperta_s":310910,"piu_vecchia_verde_s":306590}
+{"v":1,"ts_utc":"2026-11-07T10:22:54Z","azione":"push","titolo":"Merge branch 'main' into claude/english-audit","merge_main":true,"aree":{"rust":14,"docs":6,"web":8,"test":14,"tools":1},"tipo":"pr","pr":2832,"sha":"6734b155e5c98ccfaa531b5dd072a91cecdcf676"}
