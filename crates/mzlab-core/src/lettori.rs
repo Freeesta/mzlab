@@ -319,5 +319,15 @@ pub fn estensioni() -> Vec<&'static str> {
     estensioni_in(LETTORI)
 }
 
+/// The MS1 retention times and TICs of an index, in scan order (every scan when none is MS1): the trace the page draws while the `.mzidx` of a sample is
+/// built, the same rule as for an mzML (`earlyTicInputs` of idx-aiuti.js over the scan table of `upload`).
+pub fn tic_ms1(voci: &[VoceScansione]) -> (Vec<f64>, Vec<f64>) {
+    let ms1 = voci.iter().any(|v| v.livello == 1);
+    voci.iter()
+        .filter(|v| !ms1 || v.livello == 1)
+        .map(|v| (v.rt, v.tic))
+        .unzip()
+}
+
 #[cfg(test)]
 mod tests;

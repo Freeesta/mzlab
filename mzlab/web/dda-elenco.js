@@ -43,7 +43,7 @@ function open(I, p, b) {
   pop.className = "sp-pop dw-pop"; pop.setAttribute("role", "listbox"); pop.tabIndex = 0; pop.setAttribute("aria-label", T("dda.win.list", { n: w.n }));
   /** @type {HTMLElement[]} */
   const opts = w.groups.map((/** @type {Bag} */ q, /** @type {number} */ i) => {
-    const o = document.createElement("div"), a = Math.min(...q.rt), z = Math.max(...q.rt);
+    const o = document.createElement("div"), a = minOf(q.rt), z = maxOf(q.rt);
     o.id = `dw${p.id}-${i}`; o.setAttribute("role", "option"); o.setAttribute("aria-selected", "false");
     o.textContent = T(q.sid.length > 1 ? "dda.win.rowN" : "dda.win.row1", { i: i + 1, prec: q.prec.toFixed(dec), n: q.sid.length, rt: a.toFixed(2), rt1: z.toFixed(2) });
     o.onclick = () => choose(I, p, q);

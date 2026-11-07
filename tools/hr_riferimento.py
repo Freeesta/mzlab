@@ -24,6 +24,14 @@ from mzlab.app import App  # noqa: E402
 from mzlab.explore import Session  # noqa: E402
 from mzlab.reader import mzidx  # noqa: E402
 from mzlab.reader.mzml import Run  # noqa: E402
+from mzlab import api  # noqa: E402
+from dda_finestra_riferimento import dda_window  # noqa: E402
+
+
+@api._get("/api/dda_window", fail=(ValueError, KeyError))
+def _r_dda_window(app, q):  # the reference of the Rust route, served only while the answers are written (the package has no Python route for it)
+    it = app._item(int(q["k"]))
+    return api._json(dda_window(it.run, it.profile(2, q.get("hr") != "0"), float(q["r0"]), float(q["r1"])))
 
 QUERIES = [
     ("/api/dda", ""), ("/api/dda", "hr=0"),

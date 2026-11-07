@@ -238,6 +238,7 @@
     "../../mzlab/web/registro-serie.js",
     "../../mzlab/web/tdati-pannelli.js",
     "../../mzlab/web/tdati.js",
+    "../../mzlab/web/tic-nativo.js",
     "../../mzlab/web/dda-marcatori.js",
     "../../mzlab/web/dda-elenco.js",
     "../../mzlab/web/dda-naviga.js",

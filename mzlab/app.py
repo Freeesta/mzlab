@@ -579,12 +579,6 @@ class App:
         """The MS2 scans of the physical file of item k with parent / isolation / activation (see Item.dda)."""
         return self._item(k).dda(hr)
 
-    def dda_window(self, k: int, r0: float, r1: float, hr: bool = True) -> dict:
-        """The MS2 started from the survey scans of [r0, r1] min, grouped by precursor (mzlab/dda_finestra.py)."""
-        from .dda_finestra import dda_window
-        it = self._item(k)
-        return dda_window(it.run, it.profile(2, hr), r0, r1)
-
     def scan(self, k: int, sid: int, hr: bool = True) -> dict:
         return self._item(k).scan(sid, hr)
 
