@@ -44,6 +44,10 @@ opt-level = 3
 [profile.release.package.sha2]
 opt-level = 3
 
+# The Thermo reader of the `thermo` readers module (profile decode, peaks): synthetic HR profile decode 0.56 -> 0.25 ms per scan in Node, `.mzidx` identical, module +3.9 % (wasm-tetti-misure.md). Wasm builds only: desktop and CLI are already at 3.
+[profile.release.package.opentfraw]
+opt-level = 3
+
 # Desktop app only (`cargo tauri build --features app -- --profile desktop`): speed over size; the .wasm builds keep `release`.
 [profile.desktop]
 inherits = "release"

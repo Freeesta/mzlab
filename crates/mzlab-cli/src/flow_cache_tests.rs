@@ -1,11 +1,14 @@
 //! The cache of a run folder: running the same plan again in the same `--out` takes every step from the cache (`cached` in `prov/1`, `reused` on
-//! stderr) with the same bytes; a changed parameter runs that step and what follows it only; `--fresh` runs everything; the desktop route keeps it too.
+//! stderr) with the same bytes; a changed parameter runs that step and what follows it only; `--fresh` runs everything; the desktop route keeps it too;
+//! the lineage of a series keeps the place of each item, also when two items have the same bytes.
 
 use std::path::Path;
 
 use mzlab_core::json::{parse, Value};
 
+use crate::flow::{FileRunner, Lineage};
 use crate::flow_run_tests::{fixture, flow_run, folder, p};
+use mzlab_core::step::DataType;
 
 /// `instance -> cached` of the `prov.json` of `out` (`activity` is keyed by instance).
 fn cached(out: &Path) -> Vec<(String, bool)> {
@@ -26,6 +29,36 @@ fn made(out: &Path) -> Vec<(String, Vec<u8>)> {
         .into_iter()
         .filter(|(n, _)| !skip.contains(&n.as_str()))
         .collect()
+}
+
+/// One index of the series `idx`, kept and traced as `index_job` does.
+fn index(r: &FileRunner, name: &str, bytes: &[u8], item: usize) -> mzlab_core::flow::Artifact {
+    let p = r.work.join(format!("idx-{item}.mzidx"));
+    std::fs::write(&p, bytes).unwrap();
+    let a = r.keep(p, DataType::Mzidx).unwrap();
+    let l = Lineage {
+        name: name.into(),
+        instance: "idx".into(),
+        item: Some(item),
+        ..Lineage::default()
+    };
+    r.trace(&a, l);
+    a
+}
+
+/// Two items of one series with the same bytes share a lineage entry: the later one must not hide item 0 (`first_of_series`).
+#[test]
+fn a_repeated_file_keeps_item_0_the_first_of_its_series() {
+    let d = std::env::temp_dir().join(format!("mzlab_series_first_{}", std::process::id()));
+    std::fs::create_dir_all(&d).unwrap();
+    let r = FileRunner::new(&d, &d, None);
+    let x = index(&r, "x.mzML", b"same bytes", 0);
+    let y = index(&r, "y.mzML", b"other bytes", 1);
+    index(&r, "x.mzML", b"same bytes", 2);
+    let first = r.first_of_series(&y);
+    let want = r.path(&x);
+    let _ = std::fs::remove_dir_all(&d);
+    assert_eq!(first, Some(want), "item 1 must read the profile of item 0");
 }
 
 #[test]
