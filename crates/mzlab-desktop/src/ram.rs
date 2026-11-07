@@ -1,7 +1,7 @@
 //! The memory of the computer and the budget the program chooses from it for the native engine (`mzlab-core::budget_auto`, mode Automatic).
 
 use mzlab_core::budget::MemBudget;
-use mzlab_core::mzidx::{ScanTable, DEFAULT_BUDGET};
+use mzlab_core::mzidx::ScanTable;
 use mzlab_core::{budget_auto, stima, Error};
 
 /// The budget in MB the program chooses for this computer (`budget_auto`, mode Automatic).
@@ -16,6 +16,6 @@ pub(crate) fn check_index(table: &ScanTable) -> Result<(), Error> {
         &budget,
         table.level.len(),
         table.scans_json.len(),
-        DEFAULT_BUDGET,
+        budget_auto::native_index_budget(),
     )
 }
