@@ -89,5 +89,13 @@ I18N.add("en", {
   "ctl.kind.press": "Pump pressure",
   "ctl.wl.title": "Mean of the DAD channels in this nm range",
   "ctl.kind.reg": "Instrument log",
-  "ctl.kind.reg.title": "Temperatures, voltages, vacuum and per-scan fields recorded by the instrument"
+  "ctl.kind.reg.title": "Temperatures, voltages, vacuum and per-scan fields recorded by the instrument",
+  "dda.nav.group": "MS² of the same precursor",
+  "dda.nav.prev": "Previous MS² of this precursor ({i}/{n}). Shift+click: previous in time, like ←",
+  "dda.nav.next": "Next MS² of this precursor ({i}/{n}). Shift+click: next in time, like →",
+  "dda.nav.first": "First MS² of this precursor",
+  "dda.nav.last": "Last MS² of this precursor",
+  "dda.nav.only": "No other MS² of this precursor",
+  "dda.peak.near": "MS² of this ion from a scan {d} min away",
+  "dda.tri.btn": "▲ MS²"
 });
