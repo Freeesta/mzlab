@@ -28,6 +28,7 @@
   "draw.export.metaDesc.white": "Come sopra, con sfondo bianco.",
   "draw.export.svgTitle.clear": "Elemento <title> dell'SVG esportato (sfondo trasparente); {app} = nome del programma, {stamp} = data AAAA-MM-GG.",
   "draw.export.svgTitle.white": "Come sopra, con sfondo bianco.",
+  "export.canvasCap": "Avviso dopo un'esportazione PNG rimpicciolita sotto il tetto di area del canvas di Safari/iPadOS; w e h sono la larghezza e l'altezza finali in pixel.",
   "draw.import.failed": "Avviso sotto il campo SMILES quando l'incolla di una struttura fallisce; {message} = testo di Ketcher (inglese).",
   "draw.props.failed": "Riquadro delle proprietà previste quando il calcolo fallisce; {message} = testo tecnico.",
   "draw.quick.invalid": "Avviso sotto «Disegna veloce» per uno SMILES rifiutato da Ketcher; {message} = testo di Ketcher (inglese).",

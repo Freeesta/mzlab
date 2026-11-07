@@ -83,6 +83,7 @@ I18N.add("it", {
   "export.sheet.notes": "Note",
   "export.col.pdaSignal": "Segnale PDA (unità arbitrarie, AU)",
   "export.stream.fail": "Esportazione non riuscita: spazio insufficiente o archivio del browser non disponibile.",
+  "export.canvasCap": "Immagine salvata a {w} × {h} px: il browser non ne consente una più grande.",
   "export.col.intensity": "Intensità (cps)",
   "export.meta.property": "Proprietà",
   "export.meta.value": "Valore",
