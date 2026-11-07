@@ -253,7 +253,7 @@ impl<T: Num> Sec<T> {
         }
     }
 
-    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values.
+    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values; one column at a time into fixed-width cells (no length check or `match` per value: this loop was the biggest cost of the rounds on the site).
     fn emit(&mut self, out: &mut dyn Output, off: &Offsets, peaks: &[Peak<T>]) -> Result<()> {
         const CHUNK: usize = 1 << 16;
         let mut g = (BLOCK - self.done % BLOCK) % BLOCK;
@@ -262,25 +262,25 @@ impl<T: Num> Sec<T> {
             g += BLOCK;
         }
         for chunk in peaks.chunks(CHUNK) {
-            // one column at a time into a buffer of fixed-width cells (no length check or `match` per value: this loop was the biggest cost of the rounds on the site)
             let (need, at) = (chunk.len() * T::SIZE, self.done);
-            if self.bytes.len() < need {
-                reserve(&mut self.bytes, need)?;
-                self.bytes.resize(need, 0);
-            }
-            for (c, p) in self.bytes[..need].chunks_exact_mut(T::SIZE).zip(chunk) {
+            let more = need.saturating_sub(self.bytes.len());
+            reserve(&mut self.bytes, more)?;
+            self.bytes.resize(self.bytes.len().max(need), 0);
+            let b = self.bytes.get_mut(..need).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
                 p.mz.le(c);
             }
-            out.write_at(off.mz + at * T::SIZE as u64, &self.bytes[..need])?;
-            for (c, p) in self.bytes[..need].chunks_exact_mut(T::SIZE).zip(chunk) {
+            out.write_at(off.mz + at * T::SIZE as u64, b)?;
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
                 p.it.le(c);
             }
-            out.write_at(off.inten + at * T::SIZE as u64, &self.bytes[..need])?;
-            for (c, p) in self.bytes[..chunk.len() * 4].chunks_exact_mut(4).zip(chunk) {
+            out.write_at(off.inten + at * T::SIZE as u64, b)?;
+            let b = self.bytes.get_mut(..chunk.len() * 4).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(4).zip(chunk) {
                 c.copy_from_slice(&(p.pos as i32).to_le_bytes());
                 self.totals.add(p.pos as usize, p.mz.to64(), p.it.to64());
             }
-            out.write_at(off.pos + at * 4, &self.bytes[..chunk.len() * 4])?;
+            out.write_at(off.pos + at * 4, b)?;
             self.done += chunk.len() as u64;
         }
         Ok(())
@@ -396,9 +396,9 @@ impl<T: Num> Sect for Sec<T> {
 
     fn finish(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()> {
         let mut b = vec![0; self.fence.len() * T::SIZE];
-        for (c, v) in b.chunks_exact_mut(T::SIZE).zip(&self.fence) {
-            v.le(c);
-        }
+        b.chunks_exact_mut(T::SIZE)
+            .zip(&self.fence)
+            .for_each(|(c, v)| v.le(c));
         out.write_at(off.fence, &b)?;
         for (at, arr) in [
             (off.sumint, &self.totals.acc),
