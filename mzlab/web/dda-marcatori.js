@@ -12,7 +12,13 @@ export function full(I, p, g, X, Y, W, c) {
   if (!D && f && f.dda) I.preload(f.k).then(() => { if (I.ready(f.k)) drawSoon(p); });
   p._a.flags = []; p._a.ddaWhy = why0(I, p, D, d0, f);
   if (s2 && s2.sid == null && s2.ion == null && !(s2.avg && s2.avg.length) && s2._why !== p._a.ddaWhy) drawSoon(s2);        // the empty MS2 panel says the reason of THIS view
-  if (!s2 || !D || d0.sid == null || d0.scans !== 1) return;
+  if (D && D.sid.length && p.r0 != null) {                      // the «N MS²» button: the MS2 of the scan(s) shown, from the engine
+    const wk = `${f.k}|${p.r0}|${p.r1}`;
+    if (p._dwk !== wk) { p._dwk = wk; p._dw = null; I.win(f.k, p.r0, p.r1).then((/** @type {Bag} */ w) => { if (p._dwk === wk) { p._dw = w; drawSoon(p); } }, () => {}); }
+    if (window.DDAELENCO) window.DDAELENCO.sync(I, p, p._dw, p._a.ddaWhy); else carica("m:dda-elenco.js").then(() => drawSoon(p), () => {});
+  }
+  if (!s2 || !D) return;
+  if (d0.scans !== 1 || d0.sid == null) { if (p._dw) averaged(I, p, g, X, Y, D, d0, f, s2); return; }
   const kids = D.byParent.get(d0.sid) || [], q2 = HR.prof(E.files[s2.k], 2);
   const ac = css("--accent"), tol = (/** @type {number} */ mz) => I.tolOf(f, mz), here = s2.sid != null ? D.idx.get(s2.sid) : null;
   if (here != null && D.parent[here] === d0.sid && D.lo[here] != null) {          // band of the isolation window of the chosen MS2 when its parent is this scan
@@ -47,6 +53,28 @@ export function full(I, p, g, X, Y, W, c) {
     const tip = `<b>${T("dda.kid.title", { i: n + 1, n: kids.length })}</b><div class="sm">${T("dda.kid.prec", { prec: (D.prec[j] ?? m).toFixed(q2.dec) })}${D.act[j] ? " · " + D.act[j] : ""}${D.ce[j] != null ? " · " + (D.nce ? "NCE " + I.fmt1(D.ce[j]) : "CE " + I.fmt1(D.ce[j]) + " eV") : ""}</div><div class="sm">${T("dda.kid.hint")}</div>`;
     p._a.flags.push({ j, px, py });
     p._a.lbls.push({ fl: j, ion: D.prec[j], x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
+  });
+  g.restore();
+}
+/** An averaged Full Scan: a flag over every precursor fragmented from its scans (the groups of /api/dda_window); a click shows the most intense MS2
+ * of the precursor and the average stays. @param {Bag} I @param {Bag} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X
+ * @param {(v: number) => number} Y @param {Bag} D @param {Bag} d0 @param {Bag} f @param {Bag} s2 */
+function averaged(I, p, g, X, Y, D, d0, f, s2) {
+  const gr = p._dw.groups, ac = css("--accent"), all = markOn(p), dec = HR.prof(E.files[s2.k], 2).dec, here = s2.sid != null ? D.idx.get(s2.sid) : null;
+  p._a.markN = gr.length;
+  g.save(); g.fillStyle = ac; g.font = fpx(9.5); g.textAlign = "center";
+  gr.forEach((/** @type {Bag} */ q, /** @type {number} */ n) => {
+    const m = q.prec; if (m < p._a.x0 || m > p._a.x1) return;
+    const best = q.sid[q.pint.reduce((/** @type {number} */ b, /** @type {number | null} */ v, /** @type {number} */ i) => ((v ?? -1) > (q.pint[b] ?? -1) ? i : b), 0)], j = D.idx.get(best);
+    if (j == null) return;
+    const tm = I.tolOf(f, m); let y0 = 0;
+    for (let i = I.lowerBound(d0.mz, m - tm); i < d0.mz.length && d0.mz[i] <= m + tm; i++) if (d0.y[i] > y0) y0 = d0.y[i];
+    const px = X(m), py = Math.max(M.t + MARK + 10, Math.min(Y(Math.min(y0, p._a.ymax)), p._a.H - M.b)) - 4, chosen = q.sid.some((/** @type {number} */ x) => D.idx.get(x) === here);
+    if (all || p._mk === j || chosen) { g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.fill(); g.fillText(String(n + 1), px, py - MARK - 6); }
+    if (chosen) { g.strokeStyle = ac; g.lineWidth = 1.5; g.strokeRect(px - MARK - 2, py - MARK - 5, 2 * MARK + 4, MARK + 7); }
+    const tip = `<b>${T("dda.grp.title", { i: n + 1, n: gr.length })}</b><div class="sm">${T("dda.grp.line", { prec: m.toFixed(dec), n: q.sid.length })}</div><div class="sm">${T("dda.grp.hint")}</div>`;
+    p._a.flags.push({ j, px, py });
+    p._a.lbls.push({ fl: j, keep: true, ion: m, x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
   });
   g.restore();
 }
