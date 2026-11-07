@@ -73,6 +73,23 @@ export function freeAccept(g, i) {
   return true;
 }
 
+/** A copy whose content is still being made (the provenance line asks the engine, an image is drawn): Safari writes the clipboard only while the
+ *  click runs, so the item is handed over now, as a ClipboardItem of Promises. Without ClipboardItem, or refused, the plain text goes through writeText
+ *  once ready (an image alone rejects: the caller saves it). @param {any} g @param {Record<string, string | Blob | Promise<string | Blob>>} parts MIME type -> content */
+export function copyNow(g, parts) {
+  const cb = g.navigator && g.navigator.clipboard;
+  if (!cb) return Promise.reject(new g.DOMException("no clipboard in this browser", "NotAllowedError"));
+  const plain = () => Promise.resolve(parts["text/plain"]).then(t => cb.writeText(String(t)));
+  if (typeof g.ClipboardItem !== "function" || typeof cb.write !== "function") return "text/plain" in parts ? plain() : Promise.reject(new g.DOMException("no ClipboardItem", "NotAllowedError"));
+  /** @type {Promise<void>} */ let w;
+  try {
+    /** @type {Record<string, Promise<Blob>>} */ const item = {};
+    for (const [t, v] of Object.entries(parts)) item[t] = Promise.resolve(v).then(x => (x instanceof g.Blob ? x : new g.Blob([String(x)], { type: t })));
+    w = cb.write([new g.ClipboardItem(item)]);
+  } catch (e) { w = Promise.reject(e); }
+  return w.catch(e => ("text/plain" in parts ? plain() : Promise.reject(e)));
+}
+
 /** Safari on a Mac sends a trackpad pinch as gesture* events, never as the Ctrl+wheel that the other browsers send and every chart zoom listens to:
  *  each gesturechange becomes that wheel on the element under the fingers (deltaY = -100·ln of the step, as Chromium). Only over a surface that zooms
  *  itself (touch-action:none) is the page zoom stopped; a gesture a view handles (defaultPrevented) and a pinch of fingers on a screen are left alone.
@@ -124,4 +141,4 @@ export function installa(g, o = {}) {
 }
 
 const G = /** @type {any} */ (globalThis);
-if (typeof window !== "undefined" && !G.__compat) G.__compat = installa(G);
+if (typeof window !== "undefined" && !G.__compat) { G.__compat = installa(G); G.clipboardCopy = (/** @type {Record<string, any>} */ parts) => copyNow(G, parts); }

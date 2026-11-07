@@ -16,7 +16,7 @@
 | `AbortSignal.any` | `pannelli.js` (riepilogo correzioni) | 17.4 | `compat.js` | `test_compat`, `e2e_safari_ipad` |
 | `Array.prototype.at`, `findLast`, `Object.hasOwn` | `avvio.js`, `flow-run-end.js`, `libreria-worker.js` | 15.4 | sotto il pavimento | — |
 | `requestIdleCallback` | `first-paint.js`, `mappa.js`, `shell.js`, `rust-budget.js`, `tpmine-loader.js`, `flow-tool.js`, `reatt-auto.js` | assente | ogni uso cade su `setTimeout` | — |
-| `navigator.clipboard.writeText` | ~30 pulsanti «Copia» | 13.1; rifiutato dopo un `await` (gesto consumato) | `compat.js`: `execCommand("copy")` con una textarea, poi il fuoco torna | `test_compat` |
+| `navigator.clipboard.writeText` / `write` | ~30 pulsanti «Copia», «Copia l'immagine» | 13.1; rifiutato dopo un `await` (gesto consumato) | `compat.js`: `clipboardCopy({tipo: valore o Promise})` crea il `ClipboardItem` dentro il clic e lo riempie dopo (riga PROV, PNG); se manca, `writeText`; un `writeText` rifiutato passa a `execCommand("copy")` con una textarea, poi il fuoco torna | `test_compat`, `e2e_tabelle_dati`, `e2e_banco_barra` |
 | `<input type=file accept=".raw,.wiff,…">` | `#pick`, librerie, liste, campioni | iPadOS ingrigisce le estensioni ignote | `compat.js`: su `(hover: none) and (pointer: coarse)` toglie `accept` (resta in `data-accept`) a tocco, `click()` o `showPicker()`; il tipo lo controlla l'app | `test_compat`, `e2e_safari_ipad` |
 | `showDirectoryPicker` | `cartella-puntata.js`, `libreria-corpo.js` | assente | `capacita` `cartellaLocale`; `#pickdir` (`webkitdirectory`) o OPFS | `e2e_capacita` |
 | `webkitdirectory`, `webkitGetAsEntry` | `#pickdir`, `cartella-carica.js` | macOS 11.1; iPadOS: da provare sul dispositivo | trascinare i file | — |
