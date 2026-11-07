@@ -117,15 +117,15 @@ fn points_out_of_order_are_sorted_and_ties_keep_the_file_order() {
     ];
     for registri in [true, false] {
         let (mut l, _) = apri(file(&s, 6, 6, registri, true));
-        let a = l.scansione(0, 0).unwrap();
+        let a = l.scan(0, 0).unwrap();
         assert_eq!(a.mz, vec![1.0, 1.0, 2.0, 3.0]);
         assert_eq!(
             (0..4).map(|i| a.intensity_f64(i)).collect::<Vec<_>>(),
             vec![10.0, 11.0, 20.0, 30.0]
         );
-        let b = l.scansione(0, 1).unwrap();
+        let b = l.scan(0, 1).unwrap();
         assert_eq!(b.mz, vec![5.0, 6.0]);
-        let c = l.scansione(0, 2).unwrap();
+        let c = l.scan(0, 2).unwrap();
         assert_eq!(c.mz, vec![8.0, 8.0, 9.0]);
         assert_eq!(
             (0..3).map(|i| c.intensity_f64(i)).collect::<Vec<_>>(),
@@ -151,9 +151,9 @@ fn the_tic_summed_from_the_points_is_that_of_the_scans_read() {
     // total_intensity absent; the intensity type decides whether the points are f32 or wider
     for tipo_it in [4, 5, 6] {
         let (mut l, _) = apri(file(&s, 6, tipo_it, true, false));
-        let indice = l.indice(0).unwrap().to_vec();
+        let indice = l.index(0).unwrap().to_vec();
         for (k, v) in indice.iter().enumerate() {
-            let sp = l.scansione(0, k).unwrap();
+            let sp = l.scan(0, k).unwrap();
             let somma: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
             assert_eq!(v.tic, somma, "type {tipo_it} scan {k}");
         }
@@ -177,7 +177,7 @@ fn a_long_spectrum_crosses_windows_and_takes_few_reads() {
         let (mut l, letture) = apri(file(&s, 6, 6, registri, true));
         let aperte = letture.get();
         for (k, scan) in s.iter().enumerate().take(2) {
-            let sp = l.scansione(0, k).unwrap();
+            let sp = l.scan(0, k).unwrap();
             assert_eq!(sp.mz.len(), 40_000);
             for (i, (mz, it)) in scan.iter().enumerate() {
                 assert_eq!(
@@ -214,7 +214,7 @@ fn every_type_of_the_arrays_reads_the_same_in_any_layout() {
         for (tm, ti) in [(3, 3), (4, 4), (5, 5), (6, 6), (6, 4), (5, 3)] {
             let (mut l, _) = apri(file(&s, tm, ti, registri, true));
             for (k, scan) in s.iter().enumerate().take(4) {
-                let sp = l.scansione(0, k).unwrap();
+                let sp = l.scan(0, k).unwrap();
                 let mut atteso = scan.clone();
                 atteso.sort_by(|a, b| a.0.total_cmp(&b.0));
                 assert_eq!(

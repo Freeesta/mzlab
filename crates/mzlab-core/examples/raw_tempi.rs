@@ -340,8 +340,8 @@ fn producer(l: &mut dyn Lettore, n: usize, c: &Counters) {
     let t = Instant::now();
     let mut pts = 0usize;
     for k in 0..n {
-        let s = l.scansione(0, k).unwrap();
-        let extra = l.extra_scansione(0, k, &s);
+        let s = l.scan(0, k).unwrap();
+        let extra = l.scan_extra(0, k, &s);
         pts += s.mz.len() + extra.params.len();
     }
     line(
@@ -356,7 +356,7 @@ fn producer(l: &mut dyn Lettore, n: usize, c: &Counters) {
 fn mzml(l: &mut dyn Lettore, n: usize, c: &Counters) {
     producer(&mut *l, n, c);
     let t = Instant::now();
-    let _ = l.testata_mzml(0).expect("header");
+    let _ = l.mzml_header(0).expect("header");
     line("header (testata_mzml)", t.elapsed().as_secs_f64(), c, "");
     let t = Instant::now();
     let mut sink = Sink(0, std::env::args().any(|a| a == "--sha").then(Sha256::new));
@@ -400,7 +400,7 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     let imp = upload::impronte(&mut fs).expect("fingerprint");
     line("fingerprint (SHA-256)", t.elapsed().as_secs_f64(), &c, "");
     let (mut l, c, t_open) = open(path, cen);
-    let n = l.indice(0).unwrap().len();
+    let n = l.index(0).unwrap().len();
     line("open (indexes)", t_open, &c, &format!("{n} scans"));
 
     // the decoding alone: every scan once
@@ -408,7 +408,7 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     let mut peaks = 0u64;
     let mut levels = [0usize; 4];
     for k in 0..n {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         peaks += s.mz.len() as u64;
         levels[usize::from(s.level.min(3))] += 1;
     }

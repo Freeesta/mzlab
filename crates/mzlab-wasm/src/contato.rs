@@ -18,7 +18,7 @@ struct Contato {
 
 impl Contato {
     fn nuovo(mut l: Box<dyn Lettore>, step: Function, c: usize) -> Contato {
-        let n = l.indice(c).map_or(0, |v| v.len() as u32);
+        let n = l.index(c).map_or(0, |v| v.len() as u32);
         drop(step.call2(&JsValue::NULL, &0.into(), &n.into()));
         Contato {
             l,
@@ -46,20 +46,20 @@ impl Contato {
 
 #[rustfmt::skip]
 impl Lettore for Contato {
-    fn formato(&self) -> lettori::Formato { self.l.formato() }
-    fn campioni(&self) -> &[lettori::Campione] { self.l.campioni() }
-    fn indice(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.indice(c) }
-    fn indice_senza_tic(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.indice_senza_tic(c) }
-    fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scansione(c, k); self.conta(c); s }
-    fn scansione_dati(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scansione_dati(c, k); self.conta(c); s }
-    fn intestazione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Campo>> { self.l.intestazione(c, k) }
-    fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::VoceCromatogramma>> { self.l.cromatogrammi(c) }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> { self.l.cromatogramma(c, id) }
-    fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.metodo(c) }
-    fn mancanti(&mut self, c: usize) -> usize { self.l.mancanti(c) }
-    fn testata_mzml(&mut self, c: usize) -> mzlab_core::Result<Option<mzlab_core::mzmlwrite::Header>> { self.l.testata_mzml(c) }
+    fn format(&self) -> lettori::Formato { self.l.format() }
+    fn samples(&self) -> &[lettori::Campione] { self.l.samples() }
+    fn index(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.index(c) }
+    fn index_without_tic(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.index_without_tic(c) }
+    fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan(c, k); self.conta(c); s }
+    fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan_data(c, k); self.conta(c); s }
+    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Campo>> { self.l.scan_header(c, k) }
+    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::VoceCromatogramma>> { self.l.chromatograms(c) }
+    fn chromatogram(&mut self, c: usize, id: &str) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> { self.l.chromatogram(c, id) }
+    fn method(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.method(c) }
+    fn missing(&mut self, c: usize) -> usize { self.l.missing(c) }
+    fn mzml_header(&mut self, c: usize) -> mzlab_core::Result<Option<mzlab_core::mzmlwrite::Header>> { self.l.mzml_header(c) }
     fn extra_mzml(&self, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.extra_mzml(s) }
-    fn extra_scansione(&mut self, c: usize, k: usize, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.extra_scansione(c, k, s) }
+    fn scan_extra(&mut self, c: usize, k: usize, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.scan_extra(c, k, s) }
 }
 
 /// The reader of the dataset for the index of sample `c`: phase 4 (`tell`) begins, the dataset opens (a SCIEX pair reads only the blocks of sample `c`, `wiff::lettore::apri_solo`:

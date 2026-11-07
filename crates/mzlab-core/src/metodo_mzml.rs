@@ -278,7 +278,7 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
 impl<R: ReadAt> Mzml<R> {
     /// The `metodo/1` of an mzML: the document it carries (`userParam mzLab metodo/1`) or, when it has none, what its header and first scans say.
     /// `name` is the name of the file; `None` when the file has no header to read.
-    pub fn metodo(&mut self, name: &str, doc_max: u64) -> Result<Option<String>> {
+    pub fn method(&mut self, name: &str, doc_max: u64) -> Result<Option<String>> {
         let run = self.run_head(doc_max)?;
         if let Some(doc) = crate::metodo::from_userparam(&run) {
             return Ok(Some(doc));

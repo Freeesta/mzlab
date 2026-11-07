@@ -320,7 +320,7 @@ pub fn indicizza_lettore_con(
     let campione = campione_di(l, c)?;
     let p = tabella(t, l, c, String::new(), String::new(), String::new())?;
     fase(3);
-    let n = l.indice(c)?.len();
+    let n = l.index(c)?.len();
     // the members are asked for last, where the source is written (`build_dopo`): their hash may still be running
     let mut sha256 = String::new();
     let mut tardi = || -> Result<String> {
@@ -400,12 +400,12 @@ fn tabella(
     sha256: String,
     probe: String,
 ) -> Result<Prepared> {
-    let scans_json = mzidx_lettore::rows_json(&mut t, l.indice(c)?).into_bytes();
+    let scans_json = mzidx_lettore::rows_json(&mut t, l.index(c)?).into_bytes();
     Ok(prepared(&t, scans_json, source, sha256, probe))
 }
 
 fn campione_di(l: &mut dyn Lettore, c: usize) -> Result<crate::lettori::Campione> {
-    l.campioni()
+    l.samples()
         .get(c)
         .cloned()
         .ok_or_else(|| Error::new("error.badIndex").with("c", c))

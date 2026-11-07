@@ -335,7 +335,7 @@ fn sezioni_sorgente(
     doc.insert("ingresso".into(), json!({"etichetta": src.etichetta, "peaks": format!("{:?}", src.picchi()), "origine": info}));
     let mut prima = Map::new();
     prima.insert("apertura".into(), fasi::apertura(src, a.giri));
-    let (th, h) = fasi::testata(src, a.giri);
+    let (th, h) = fasi::file_header(src, a.giri);
     let testata_s = th["misura"]["mediana_s"].as_f64().unwrap_or(f64::NAN);
     prima.insert("testata".into(), th);
     if voglio("fasi") {

@@ -127,32 +127,32 @@ impl DaMzml {
 }
 
 impl Lettore for DaMzml {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Mzml
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
         Ok(&self.indice)
     }
-    fn scansione(&mut self, _: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         self.run
             .spectra
             .get(k)
             .cloned()
             .ok_or_else(|| Error::new("error.badIndex"))
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
         Ok(Vec::new())
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(Vec::new())
     }
-    fn cromatogramma(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
         Err(Error::new("error.badIndex"))
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok(String::new())
     }
 }

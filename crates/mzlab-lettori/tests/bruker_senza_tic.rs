@@ -31,7 +31,7 @@ fn mzml_uguale_con_e_senza_il_tic_delle_ms2() {
     let senza = mzml(&mut *apri());
     let mut l = apri();
     assert!(l
-        .indice(0)
+        .index(0)
         .unwrap()
         .iter()
         .any(|v| v.livello > 1 && v.tic > 0.0));
@@ -47,19 +47,19 @@ fn mzml_uguale_con_e_senza_il_tic_delle_ms2() {
 
 #[test]
 fn indice_dopo_le_righe_leggere_ha_il_tic_delle_ms2() {
-    let pieno = apri().indice(0).unwrap().to_vec();
+    let pieno = apri().index(0).unwrap().to_vec();
     let mut l = apri();
     assert!(!mzlab_lettori::srm::ha_scansioni_srm(&mut *l, 0));
-    let leggere = l.indice_senza_tic(0).unwrap().to_vec();
+    let leggere = l.index_without_tic(0).unwrap().to_vec();
     assert_eq!(leggere.len(), pieno.len());
     assert!(leggere
         .iter()
         .zip(&pieno)
         .all(|(a, b)| a.id == b.id && a.rt == b.rt && a.livello == b.livello));
-    let dopo = l.indice(0).unwrap().to_vec();
+    let dopo = l.index(0).unwrap().to_vec();
     for (k, (a, b)) in dopo.iter().zip(&pieno).enumerate() {
         assert_eq!(a.tic, b.tic, "#{k}");
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         let somma: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
         if s.level > 1 {
             assert_eq!(somma, b.tic, "#{k}");

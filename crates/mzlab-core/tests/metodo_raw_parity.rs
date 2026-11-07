@@ -34,7 +34,7 @@ fn pairs(d: &Path) -> Vec<(PathBuf, PathBuf)> {
 }
 
 fn doc(p: &Path) -> String {
-    raw::metodo(BufReader::new(File::open(p).unwrap()), "sample.raw").unwrap()
+    raw::method(BufReader::new(File::open(p).unwrap()), "sample.raw").unwrap()
 }
 
 fn value_after(head: &str, accession: &str) -> Option<String> {

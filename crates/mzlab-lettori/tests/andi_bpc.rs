@@ -56,21 +56,21 @@ fn contato(
 /// Builds the `.mzidx` of sample 0, then asks the BPC; returns the bytes of points read by both.
 fn indice_e_bpc(l: &mut dyn Lettore, letti: &Cell<u64>) -> (u64, Vec<f64>) {
     // the SHA-1 of the header reads the whole file once: taken before counting
-    l.metodo(0).unwrap();
+    l.method(0).unwrap();
     letti.set(0);
     let mut out = Cursor::new(Vec::new());
     indicizza_lettore(l, 0, &[], "campione.cdf", &mut out, 64 << 20, &mut |_| {}).unwrap();
-    let bpc = l.cromatogramma(0, "BPC").unwrap().intensity;
+    let bpc = l.chromatogram(0, "BPC").unwrap().intensity;
     (letti.get(), bpc)
 }
 
 /// The bytes of points of one decode of every scan.
 fn una_passata(punti: fn(usize) -> Vec<(f64, f64)>, n: usize) -> u64 {
     let (mut l, letti) = contato(punti, n, true);
-    l.indice(0).unwrap();
+    l.index(0).unwrap();
     letti.set(0);
     for k in 0..n {
-        l.scansione(0, k).unwrap();
+        l.scan(0, k).unwrap();
     }
     letti.get()
 }
@@ -92,7 +92,7 @@ fn indice_e_bpc_decodificano_ogni_scansione_una_volta() {
     );
     // asked again: still nothing read
     letti.set(0);
-    l.cromatogramma(0, "BPC").unwrap();
+    l.chromatogram(0, "BPC").unwrap();
     assert_eq!(letti.get(), 0);
 }
 
@@ -132,8 +132,8 @@ fn senza_nan(k: usize) -> Vec<(f64, f64)> {
 /// The BPC and TIC of a fresh reader that answers before any scan is decoded.
 fn freddo(b: &[u8]) -> (Vec<u64>, Vec<u64>) {
     let mut l = apri_andi(b.to_vec());
-    let bpc = l.cromatogramma(0, "BPC").unwrap().intensity;
-    let tic = l.cromatogramma(0, "TIC").unwrap().intensity;
+    let bpc = l.chromatogram(0, "BPC").unwrap().intensity;
+    let tic = l.chromatogram(0, "TIC").unwrap().intensity;
     (bits(&bpc), bits(&tic))
 }
 
@@ -158,10 +158,10 @@ fn il_bpc_annotato_ha_i_bit_di_quello_decodificato() {
             )
             .unwrap();
             for _ in 0..2 {
-                let bpc = l.cromatogramma(0, "BPC").unwrap().intensity;
+                let bpc = l.chromatogram(0, "BPC").unwrap().intensity;
                 assert_eq!(bits(&bpc), bpc0, "type {tipo_it}, tic {tic}");
             }
-            let t = l.cromatogramma(0, "TIC").unwrap().intensity;
+            let t = l.chromatogram(0, "TIC").unwrap().intensity;
             assert_eq!(bits(&t), tic0, "type {tipo_it}, tic {tic}");
         }
     }
@@ -173,15 +173,15 @@ fn una_intensita_nan_da_nel_bpc_cio_che_dava_prima() {
         let c = Corsa { tipo_it, ..PIATTA };
         let b = andi_ms_con(&c, 40, punti_bordi, true);
         let bpc0 = apri_andi(b.clone())
-            .cromatogramma(0, "BPC")
+            .chromatogram(0, "BPC")
             .unwrap()
             .intensity;
         let mut l = apri_andi(b);
         // the guard refuses the scans with a NaN; the base peaks are noted all the same
         for k in 0..40 {
-            let _ = l.scansione(0, k);
+            let _ = l.scan(0, k);
         }
-        let bpc = l.cromatogramma(0, "BPC").unwrap().intensity;
+        let bpc = l.chromatogram(0, "BPC").unwrap().intensity;
         assert_eq!(bits(&bpc), bits(&bpc0));
         assert_eq!(bpc[5], 2.0);
     }

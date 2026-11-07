@@ -52,9 +52,9 @@ pub(crate) fn samples(members: &[(String, PathBuf)]) -> Result<String> {
     let l = open(members, false)?;
     let mut o = Out::default();
     o.raw("{\"format\":")
-        .str(&format!("{:?}", l.formato()))
+        .str(&format!("{:?}", l.format()))
         .raw(",\"samples\":[");
-    for (i, s) in l.campioni().iter().enumerate() {
+    for (i, s) in l.samples().iter().enumerate() {
         o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
             .int(i64::from(s.id))
             .raw(",\"name\":")

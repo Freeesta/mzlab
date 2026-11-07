@@ -1017,7 +1017,7 @@ pub fn build_mzml_spill<R: std::io::Read + Seek>(
     build_mzml_late(table, src, out, budget, spill, None)
 }
 
-/// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::indice(c)` in order (`mzidx_lettore`).
+/// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::index(c)` in order (`mzidx_lettore`).
 pub fn build_lettore(
     table: &ScanTable,
     l: &mut dyn crate::lettori::Lettore,
@@ -1025,7 +1025,7 @@ pub fn build_lettore(
     out: &mut dyn Output,
     budget: usize,
 ) -> Result<Stats> {
-    let n = l.indice(c)?.len();
+    let n = l.index(c)?.len();
     build(
         table,
         &mut |on| (0..n).try_for_each(|k| crate::mzidx_lettore::spettro(l, c, k).map(&mut *on)),

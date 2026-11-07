@@ -11,16 +11,16 @@ struct Finto {
 }
 
 impl Lettore for Finto {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("finto")
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
         Ok(&self.indice)
     }
-    fn scansione(&mut self, _: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         Ok(Spectrum {
             index: k,
             id: format!("scan={k}"),
@@ -35,7 +35,7 @@ impl Lettore for Finto {
             wide: None,
         })
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
         Ok(vec![Campo {
             nome: "a".into(),
             valore: "b".into(),
@@ -43,14 +43,14 @@ impl Lettore for Finto {
             cv: Some("MS:1".into()),
         }])
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(vec![VoceCromatogramma {
             id: "TIC".into(),
             tipo: ChromKind::Tic,
             unita: "u".into(),
         }])
     }
-    fn cromatogramma(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
         Ok(Chromatogram {
             index: 0,
             id: id.into(),
@@ -62,7 +62,7 @@ impl Lettore for Finto {
             intensity: vec![3.0, 4.0],
         })
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok("{}".into())
     }
 }
@@ -90,18 +90,17 @@ fn la_sessione_risponde_e_chiude() {
         }],
     };
     let h = s.inserisci(Box::new(fin));
-    let c: serde_json::Value = serde_json::from_str(&s.campioni(h).unwrap()).unwrap();
+    let c: serde_json::Value = serde_json::from_str(&s.samples(h).unwrap()).unwrap();
     assert_eq!(c["formato"], "finto");
     assert_eq!(c["campioni"][0]["scans"], 1);
-    let i = mzlab_core::trasporto::decode_indice(&s.indice(h, 0).unwrap()).unwrap();
+    let i = mzlab_core::trasporto::decode_indice(&s.index(h, 0).unwrap()).unwrap();
     assert_eq!((i[0].id.as_str(), i[0].filtro.as_str()), ("scan=0", "f"));
-    let sc = mzlab_core::trasporto::decode_scansione(0, &s.scansione(h, 0, 0).unwrap()).unwrap();
+    let sc = mzlab_core::trasporto::decode_scansione(0, &s.scan(h, 0, 0).unwrap()).unwrap();
     assert_eq!((sc.mz, sc.intensity), (vec![100.0, 200.0], vec![1.5, 2.5]));
     assert_eq!((sc.level, sc.polarity), (1, 1));
-    assert!(s.intestazione(h, 0, 0).unwrap().contains("MS:1"));
-    assert!(s.cromatogrammi(h, 0).unwrap().contains("Tic"));
-    let x: serde_json::Value =
-        serde_json::from_str(&s.cromatogramma(h, 0, "TIC").unwrap()).unwrap();
+    assert!(s.scan_header(h, 0, 0).unwrap().contains("MS:1"));
+    assert!(s.chromatograms(h, 0).unwrap().contains("Tic"));
+    let x: serde_json::Value = serde_json::from_str(&s.chromatogram(h, 0, "TIC").unwrap()).unwrap();
     assert_eq!(
         x["intensity"]
             .as_array()
@@ -111,10 +110,10 @@ fn la_sessione_risponde_e_chiude() {
             .collect::<Vec<_>>(),
         [3.0, 4.0]
     );
-    assert_eq!(s.metodo(h, 0).unwrap(), "{}");
-    assert_eq!(s.testata(h, 0).unwrap(), "null");
+    assert_eq!(s.method(h, 0).unwrap(), "{}");
+    assert_eq!(s.file_header(h, 0).unwrap(), "null");
     s.chiudi(h);
-    assert_eq!(s.campioni(h).err().map(|e| e.key), Some("error.badIndex"));
+    assert_eq!(s.samples(h).err().map(|e| e.key), Some("error.badIndex"));
 }
 
 /// The index crosses as bytes and comes back as it was, with every column (NaN, infinities, 64-bit offsets, the repeated filter once).
@@ -154,7 +153,7 @@ fn l_indice_in_byte_torna_uguale() {
         campioni: vec![],
         indice: voci.clone(),
     }));
-    let b = s.indice(h, 0).unwrap();
+    let b = s.index(h, 0).unwrap();
     assert_eq!(mzlab_core::trasporto::decode_indice(&b).unwrap(), voci);
 }
 
@@ -209,40 +208,40 @@ fn i_testi_json_valgono_quelli_di_serde_json() {
     let mut r = Duro;
 
     let vecchio: Vec<_> = r
-        .campioni()
+        .samples()
         .iter()
         .map(|c| json!({ "id": c.id, "name": c.nome, "scans": c.scansioni }))
         .collect();
     assert_eq!(
-        parse(s.campioni(h).unwrap()),
+        parse(s.samples(h).unwrap()),
         json(json!({ "formato": "duro", "campioni": vecchio }))
     );
 
     let vecchio: Vec<_> = r
-        .intestazione(0, 0)
+        .scan_header(0, 0)
         .unwrap()
         .iter()
         .map(|f| json!({ "name": f.nome, "value": f.valore, "unit": f.unita, "cv": f.cv }))
         .collect();
     assert_eq!(
-        parse(s.intestazione(h, 0, 0).unwrap()),
+        parse(s.scan_header(h, 0, 0).unwrap()),
         json(Value::Array(vecchio))
     );
 
     let vecchio: Vec<_> = r
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .iter()
         .map(|x| json!({ "id": x.id, "kind": format!("{:?}", x.tipo), "unit": x.unita }))
         .collect();
     assert_eq!(
-        parse(s.cromatogrammi(h, 0).unwrap()),
+        parse(s.chromatograms(h, 0).unwrap()),
         json(Value::Array(vecchio))
     );
 
-    let x = r.cromatogramma(0, STRANI).unwrap();
+    let x = r.chromatogram(0, STRANI).unwrap();
     let mut vecchio = json!({ "id": x.id, "kind": format!("{:?}", x.kind), "q1": x.q1, "q3": x.q3, "unit": x.unit, "time": x.time, "intensity": x.intensity });
-    let testo = s.cromatogramma(h, 0, STRANI).unwrap();
+    let testo = s.chromatogram(h, 0, STRANI).unwrap();
     let mut nuovo = parse(testo.clone());
     punti_identici(&testo, &x);
     for v in [&mut vecchio, &mut nuovo] {
@@ -252,7 +251,7 @@ fn i_testi_json_valgono_quelli_di_serde_json() {
     }
     assert_eq!(nuovo, json(vecchio));
 
-    let t = r.testata_mzml(0).unwrap().unwrap();
+    let t = r.mzml_header(0).unwrap().unwrap();
     let vecchio = json!({
         "run": t.run, "sources": t.sources, "instrument": t.instrument, "components": t.components,
         "software": [t.software.0, t.software.1], "acquired": t.acquired, "serial": t.serial,
@@ -260,8 +259,8 @@ fn i_testi_json_valgono_quelli_di_serde_json() {
         "run_params": t.run_params, "content": t.content, "extra_software": t.extra_software,
         "centroided": t.centroided,
     });
-    assert_eq!(parse(s.testata(h, 0).unwrap()), json(vecchio));
-    assert_eq!(s.testata(h, 1).unwrap(), "null");
+    assert_eq!(parse(s.file_header(h, 0).unwrap()), json(vecchio));
+    assert_eq!(s.file_header(h, 1).unwrap(), "null");
 }
 
 /// Speed of `cromatogramma` on a trace of 1M points (run with `cargo test -p mzlab-lettori-wasm --release -- --ignored --nocapture`).
@@ -270,25 +269,25 @@ fn i_testi_json_valgono_quelli_di_serde_json() {
 fn misura_cromatogramma_un_milione_di_punti() {
     struct Lungo(Vec<f64>);
     impl Lettore for Lungo {
-        fn formato(&self) -> Formato {
+        fn format(&self) -> Formato {
             Formato::Altro("lungo")
         }
-        fn campioni(&self) -> &[Campione] {
+        fn samples(&self) -> &[Campione] {
             &[]
         }
-        fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+        fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
             Ok(&[])
         }
-        fn scansione(&mut self, _: usize, _: usize) -> Result<Spectrum> {
+        fn scan(&mut self, _: usize, _: usize) -> Result<Spectrum> {
             Err(mzlab_core::Error::new("error.badIndex"))
         }
-        fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+        fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
             Ok(vec![])
         }
-        fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+        fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
             Ok(vec![])
         }
-        fn cromatogramma(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
+        fn chromatogram(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
             Ok(Chromatogram {
                 index: 0,
                 id: id.into(),
@@ -300,7 +299,7 @@ fn misura_cromatogramma_un_milione_di_punti() {
                 intensity: self.0.clone(),
             })
         }
-        fn metodo(&mut self, _: usize) -> Result<String> {
+        fn method(&mut self, _: usize) -> Result<String> {
             Ok("{}".into())
         }
     }
@@ -310,7 +309,7 @@ fn misura_cromatogramma_un_milione_di_punti() {
     let mut s = Sessioni::default();
     let h = s.inserisci(Box::new(Lungo(punti)));
     let t = std::time::Instant::now();
-    let n = s.cromatogramma(h, 0, "TIC").unwrap().len();
+    let n = s.chromatogram(h, 0, "TIC").unwrap().len();
     println!(
         "cromatogramma 1M points: {} ms, {} bytes",
         t.elapsed().as_millis(),

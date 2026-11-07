@@ -59,10 +59,10 @@ fn set(reads: &Rc<Cell<usize>>) -> FileSet {
 fn an_ion_with_no_points_is_an_empty_sic() {
     let reads = Rc::new(Cell::new(0));
     let mut l = lettori::apri(set(&reads), &Limiti::sito()).unwrap();
-    let c = l.cromatogramma(0, "SIC 99.00").unwrap();
+    let c = l.chromatogram(0, "SIC 99.00").unwrap();
     assert!(c.time.is_empty() && c.intensity.is_empty());
     assert_eq!(
-        l.cromatogramma(0, "SIC 57.00").unwrap().intensity,
+        l.chromatogram(0, "SIC 57.00").unwrap().intensity,
         [10.0, 20.0, 30.0]
     );
 }
@@ -80,11 +80,11 @@ fn the_mzml_of_a_run_with_a_missing_ion_converts_and_leaves_that_trace_out() {
 fn the_sim_scans_are_read_once_for_all_the_ions() {
     let reads = Rc::new(Cell::new(0));
     let mut l = lettori::apri(set(&reads), &Limiti::sito()).unwrap();
-    l.cromatogramma(0, "SIC 57.00").unwrap();
+    l.chromatogram(0, "SIC 57.00").unwrap();
     let after_first = reads.get();
     assert!(after_first > 0);
-    l.cromatogramma(0, "SIC 71.00").unwrap();
-    l.cromatogramma(0, "SIC 99.00").unwrap();
+    l.chromatogram(0, "SIC 71.00").unwrap();
+    l.chromatogram(0, "SIC 99.00").unwrap();
     assert_eq!(
         reads.get(),
         after_first,

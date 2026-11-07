@@ -124,7 +124,7 @@ fn nodi_di_rumore(rng: &mut Rng, primo_mz: f64, ultimo_mz: f64) -> Vec<u8> {
 }
 
 /// The 40-byte header of the packet (sizes in words, layout, low and high m/z).
-fn intestazione(
+fn scan_header(
     out: &mut Vec<u8>,
     [profilo, lista]: &[&Vec<u8>; 2],
     n: usize,
@@ -210,7 +210,7 @@ pub fn pacchetto(out: &mut Vec<u8>, p: &Parametri, k: usize, mut verita: Option<
         profilo.clear();
     }
     let nodi = nodi_di_rumore(&mut rng, primo_mz, ultimo_mz);
-    intestazione(out, &[&profilo, &lista], n, (primo_mz, ultimo_mz));
+    scan_header(out, &[&profilo, &lista], n, (primo_mz, ultimo_mz));
     out.extend_from_slice(&profilo);
     out.extend_from_slice(&lista);
     out.extend_from_slice(&descr);

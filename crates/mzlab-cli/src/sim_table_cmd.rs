@@ -180,7 +180,7 @@ fn samples_of(
         .map_or(name.as_str(), |s| s.0)
         .to_string();
     let wiff = lower.ends_with(".wiff");
-    let list: Vec<String> = l.campioni().iter().map(|c| c.nome.clone()).collect();
+    let list: Vec<String> = l.samples().iter().map(|c| c.nome.clone()).collect();
     let mut out = Vec::new();
     for (c, given) in list.iter().enumerate() {
         let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), c)?;
@@ -192,7 +192,7 @@ fn samples_of(
         } else {
             format!("{stem}.mzML")
         };
-        let missing = l.mancanti(c);
+        let missing = l.missing(c);
         if missing > 0 {
             *warn += &format!("warning: {n}: {missing} records past the end of the file (cut short?): only the points before the cut are integrated\n");
         }

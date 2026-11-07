@@ -100,17 +100,17 @@ fn every_real_run_opens_and_gives_its_scans_and_traces() {
             continue;
         }
         let mut l = open(&dir);
-        let n = l.campioni()[0].scansioni;
-        let index = l.indice(0).unwrap().to_vec();
+        let n = l.samples()[0].scansioni;
+        let index = l.index(0).unwrap().to_vec();
         assert_eq!(index.len(), n, "{label}");
-        let list = l.cromatogrammi(0).unwrap();
+        let list = l.chromatograms(0).unwrap();
         let srm = list.iter().filter(|c| c.tipo == ChromKind::Srm).count();
         // the first, a middle and the last spectrum, and every trace
         for k in [0, n / 2, n.saturating_sub(1)]
             .into_iter()
             .filter(|_| n > 0)
         {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert_eq!(s.mz.len(), s.intensity.len(), "{label} #{k}");
             assert!(
                 s.mz.windows(2).all(|w| w[0] <= w[1]),
@@ -120,12 +120,12 @@ fn every_real_run_opens_and_gives_its_scans_and_traces() {
             assert_eq!(s.polarity, index[k].polarita, "{label} #{k}");
         }
         for c in &list {
-            let h = l.cromatogramma(0, &c.id).unwrap();
+            let h = l.chromatogram(0, &c.id).unwrap();
             assert_eq!(h.time.len(), h.intensity.len(), "{label} {}", c.id);
         }
-        let tic = l.cromatogramma(0, "TIC").unwrap();
+        let tic = l.chromatogram(0, "TIC").unwrap();
         assert!(!tic.time.is_empty(), "{label}: TIC");
-        let m = l.metodo(0).unwrap();
+        let m = l.method(0).unwrap();
         assert!(m.contains("\"schema\":\"metodo/1\""), "{label}: method");
         eprintln!(
             "{label}: {n} spectra, {srm} SRM, TIC {} points",
@@ -169,9 +169,9 @@ fn srm_traces_match_msconvert() {
         let label = name(&dir);
         let mut l = open(&dir);
         let mut ours = Vec::new();
-        for c in l.cromatogrammi(0).unwrap() {
+        for c in l.chromatograms(0).unwrap() {
             if c.tipo == ChromKind::Srm {
-                ours.push(l.cromatogramma(0, &c.id).unwrap());
+                ours.push(l.chromatogram(0, &c.id).unwrap());
             }
         }
         let mut used = vec![false; ours.len()];
@@ -251,13 +251,13 @@ fn qtof_points_agree_with_their_records() {
             continue;
         }
         let mut l = open(&dir);
-        let n = l.campioni()[0].scansioni;
+        let n = l.samples()[0].scansioni;
         if n == 0 {
             continue;
         }
         for k in (0..n).step_by((n / 40).max(1)) {
-            let s = l.scansione(0, k).unwrap();
-            let h = l.intestazione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
+            let h = l.scan_header(0, k).unwrap();
             let (bp_mz, bp, tic) = (
                 field(&h, "BasePeakMZ"),
                 field(&h, "BasePeakValue"),
@@ -322,7 +322,7 @@ fn the_method_carries_the_lc_ms_sections() {
         if label.contains("MTBLS787") {
             continue;
         }
-        let m = open(&dir).metodo(0).unwrap();
+        let m = open(&dir).method(0).unwrap();
         eprintln!(
             "{label}: lc {} gradient {} modules {} sample {}",
             m.contains("\"lc\":{"),

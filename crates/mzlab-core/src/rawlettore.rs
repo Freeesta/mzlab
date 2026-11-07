@@ -270,33 +270,33 @@ fn field(nome: &str, valore: impl ToString, unita: Option<&str>, cv: Option<&str
 }
 
 impl Lettore for LettoreRaw {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::ThermoRaw
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::conv::THERMO
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.one(c)?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.decodificata(c, k, false)
     }
 
-    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+    fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
         self.decodificata(c, k, true).map(Some)
     }
 
     /// The points of the scan and the rest from the row of the index: no trailer, no filter, no precursors read again.
-    fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
         let idx = self.row(k)?;
         let (mz, intensity, modo) = extract_arrays(&self.raw, &mut self.src, idx)
@@ -320,36 +320,36 @@ impl Lettore for LettoreRaw {
         })
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        extra::intestazione(self, c, k)
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+        extra::scan_header(self, c, k)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.one(c)?;
         Ok(elenco_cromatogrammi(self))
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
         cromatogramma_di(self, id)
     }
 
-    fn mancanti(&mut self, _c: usize) -> usize {
+    fn missing(&mut self, _c: usize) -> usize {
         crate::raw::cut_scans(&self.raw)
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.nome))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         testata::completa(self, c)
     }
-    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
+    fn table_header(&mut self, c: usize) -> Result<Option<Header>> {
         testata::leggera(self, c)
     }
 
-    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+    fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
         extra::di_scansione(self, c, k, s)
     }
 }
