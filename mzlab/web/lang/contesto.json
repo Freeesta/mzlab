@@ -471,6 +471,8 @@
   "dda.nav.first": "Avviso breve: ‹ sulla prima MS2 dello stesso precursore.",
   "dda.nav.last": "Avviso breve: › sull'ultima MS2 dello stesso precursore.",
   "dda.nav.only": "Avviso breve: il precursore mostrato ha una sola MS2.",
+  "dda.peak.near": "Avviso breve dopo il clic su un picco della Full Scan senza MS2 propria: si apre la MS2 dello stesso ione più vicina nel tempo; {d} = distanza in minuti.",
+  "dda.tri.btn": "Interruttore nella testata del cromatogramma del trio DDA: mostra i triangoli delle MS2 acquisite (nome e suggerimento: ctl.ms2tri, ctl.ms2tri.title).",
   "dda.win.btn": "Pulsante nella testata della Full Scan del trio DDA; {n} = numero di MS2 partite dalle scansioni mostrate.",
   "dda.win.avg": "Tooltip del pulsante «N MS²» su una Full Scan mediata; {n} = scansioni nella media.",
   "dda.win.list": "Nome accessibile dell'elenco delle MS2; {n} = numero di MS2.",

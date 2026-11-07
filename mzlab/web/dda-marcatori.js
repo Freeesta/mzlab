@@ -15,7 +15,7 @@ export function full(I, p, g, X, Y, W, c) {
   if (D && D.sid.length && p.r0 != null) {                      // the «N MS²» button: the MS2 of the scan(s) shown, from the engine
     const wk = `${f.k}|${p.r0}|${p.r1}`;
     if (p._dwk !== wk) { p._dwk = wk; p._dw = null; I.win(f.k, p.r0, p.r1).then((/** @type {Bag} */ w) => { if (p._dwk === wk) { p._dw = w; drawSoon(p); } }, () => {}); }
-    if (window.DDAELENCO) window.DDAELENCO.sync(I, p, p._dw, p._a.ddaWhy); else carica("m:dda-elenco.js").then(() => drawSoon(p), () => {});
+    if (window.DDAELENCO) { window.DDAELENCO.sync(I, p, p._dw, p._a.ddaWhy); window.DDAELENCO.tri(I.byId(p.link)); } else carica("m:dda-elenco.js").then(() => drawSoon(p), () => {});
   }
   if (!s2 || !D) return;
   if (d0.scans !== 1 || d0.sid == null) { if (p._dw) averaged(I, p, g, X, Y, D, d0, f, s2); return; }
@@ -40,7 +40,7 @@ export function full(I, p, g, X, Y, W, c) {
     idxs.sort((/** @type {number} */ u, /** @type {number} */ v) => Math.abs(D.rt[u] - rt0) - Math.abs(D.rt[v] - rt0));
     if (seen("n" + idxs[0])) { g.save(); g.strokeStyle = muted; g.lineWidth = 1.4; g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.stroke(); g.restore(); }
     const tip = `<b>${T("dda.near.title")}</b><div class="sm">${T("dda.near.line", { n: idxs.length, min: I.NEAR_MIN, prec: (D.prec[idxs[0]]).toFixed(q2.dec) })}</div><div class="sm">${T("dda.near.hint")}</div>`;
-    p._a.lbls.push({ nb: idxs, ion: D.prec[idxs[0]], x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
+    p._a.lbls.push({ nb: idxs, ion: D.prec[idxs[0]], x: px - 12, y: py - MARK - 16, w: 24, h: MARK + 18, tip });
   });
   kids.forEach((/** @type {number} */ j, /** @type {number} */ n) => {
     const m = D.tgt[j] ?? D.prec[j]; if (m == null || m < p._a.x0 || m > p._a.x1) return;
@@ -52,7 +52,7 @@ export function full(I, p, g, X, Y, W, c) {
     if (chosen) { g.strokeStyle = ac; g.lineWidth = 1.5; g.strokeRect(px - MARK - 2, py - MARK - 5, 2 * MARK + 4, MARK + 7); }
     const tip = `<b>${T("dda.kid.title", { i: n + 1, n: kids.length })}</b><div class="sm">${T("dda.kid.prec", { prec: (D.prec[j] ?? m).toFixed(q2.dec) })}${D.act[j] ? " · " + D.act[j] : ""}${D.ce[j] != null ? " · " + (D.nce ? "NCE " + I.fmt1(D.ce[j]) : "CE " + I.fmt1(D.ce[j]) + " eV") : ""}</div><div class="sm">${T("dda.kid.hint")}</div>`;
     p._a.flags.push({ j, px, py });
-    p._a.lbls.push({ fl: j, ion: D.prec[j], x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
+    p._a.lbls.push({ fl: j, ion: D.prec[j], x: px - 12, y: py - MARK - 16, w: 24, h: MARK + 18, tip });
   });
   g.restore();
 }
@@ -74,7 +74,7 @@ function averaged(I, p, g, X, Y, D, d0, f, s2) {
     if (chosen) { g.strokeStyle = ac; g.lineWidth = 1.5; g.strokeRect(px - MARK - 2, py - MARK - 5, 2 * MARK + 4, MARK + 7); }
     const tip = `<b>${T("dda.grp.title", { i: n + 1, n: gr.length })}</b><div class="sm">${T("dda.grp.line", { prec: m.toFixed(dec), n: q.sid.length })}</div><div class="sm">${T("dda.grp.hint")}</div>`;
     p._a.flags.push({ j, px, py });
-    p._a.lbls.push({ fl: j, keep: true, ion: m, x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
+    p._a.lbls.push({ fl: j, keep: true, ion: m, x: px - 12, y: py - MARK - 16, w: 24, h: MARK + 18, tip });
   });
   g.restore();
 }
@@ -125,8 +125,26 @@ export function ms2(I, p, g, X, Y, W) {
   g.save(); g.strokeStyle = ac; g.fillStyle = ac; g.lineWidth = 1; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m), p._a.H - M.b); g.lineTo(X(m), M.t + 14); g.stroke(); g.setLineDash([]);
   g.font = fpx(9.5); g.textAlign = "center"; g.fillText(T("dda.precursor"), Math.max(M.l + 26, Math.min(W - M.r - 26, X(m))), M.t + 11); g.restore();
 }
+/** The MS2 of the peak clicked at m/z `m`: one started by the scan shown (the closest precursor), else the closest in time of that ion within
+ * ±NEAR_MIN min (`near`), else on an average the most intense of its group (`keep`: the average stays). @param {Bag} I @param {Bag} p @param {number} m
+ * @returns {{ j: number, near: boolean, keep: boolean, rt: number } | null} */
+export function peak(I, p, m) {
+  const f = E.files[p.k], D = f && I.ready(f.k), d0 = p._a && p._a.data && p._a.data[0] && p._a.data[0].d; if (!D || !d0) return null;
+  const t = I.tolOf(f, m), off = (/** @type {number} */ j) => { const q = D.tgt[j] ?? D.prec[j]; return q == null ? Infinity : Math.abs(q - m); };
+  if (d0.scans !== 1 || d0.sid == null) {
+    const q = p._dw && p._dw.groups.find((/** @type {Bag} */ g) => Math.abs(g.prec - m) <= t); if (!q) return null;
+    const best = q.sid[q.pint.reduce((/** @type {number} */ b, /** @type {number | null} */ v, /** @type {number} */ i) => ((v ?? -1) > (q.pint[b] ?? -1) ? i : b), 0)], j = D.idx.get(best);
+    return j == null ? null : { j, near: false, keep: true, rt: D.rt[j] };
+  }
+  const rt0 = D.ms1.rt[D.ms1pos.get(d0.sid)];
+  let k = -1; for (const j of D.byParent.get(d0.sid) || []) if (off(j) <= t && (k < 0 || off(j) < off(k))) k = j;
+  if (k >= 0) return { j: k, near: false, keep: false, rt: rt0 };
+  if (rt0 == null) return null;
+  for (let i = I.lowerBound(D.rt, rt0 - I.NEAR_MIN); i < D.rt.length && D.rt[i] <= rt0 + I.NEAR_MIN; i++) if (off(i) <= t && (k < 0 || Math.abs(D.rt[i] - rt0) < Math.abs(D.rt[k] - rt0))) k = i;
+  return k < 0 ? null : { j: k, near: true, keep: false, rt: rt0 };
+}
 /** ‹ i/N › in the header of the MS2 panel (dda-naviga.js, loaded on the first MS2 drawn). @param {Bag} I @param {Bag} p */
 function nav(I, p) {
   if (window.DDANAV) window.DDANAV.sync(I, p); else if (p.sid != null) carica("m:dda-naviga.js").then(() => drawSoon(p), () => {});
 }
-window.DDAMARK = { full, ms2, why };
+window.DDAMARK = { full, ms2, why, peak };

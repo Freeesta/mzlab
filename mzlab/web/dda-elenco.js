@@ -1,7 +1,7 @@
 // @ts-strict
 // The «N MS²» button of the Full Scan of a DDA trio: how many MS2 started from the scan(s) shown and their list, one row per precursor
 // (/api/dda_window, Rust). Click, Enter or Space opens the list; ↑ ↓ Home End move, Enter shows the most intense MS2 of the precursor, Esc closes.
-// Loaded by dda-marcatori.js on the first drawing of a DDA Full Scan; `I` is the inside of DDA. An MS2 is shown as acquired: no compound name.
+// Also «▲ MS²», the switch of the triangles of the MS2 on the chromatogram of the trio (`tri`). Loaded by dda-marcatori.js on the first drawing of a DDA Full Scan; `I` is the inside of DDA. An MS2 is shown as acquired: no compound name.
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 
 /** The button, made once, in its own group before the one of «XIC» in the header. @param {Bag} I @param {Bag} p @returns {HTMLButtonElement} */
@@ -76,4 +76,18 @@ function choose(I, p, q) {
   I.selectMs2(s2, q.sid[b], { parent: false, zoom: false });
   const bt = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="ddaw"]')); if (bt) bt.focus();
 }
-window.DDAELENCO = { sync };
+/** «▲ MS²» first among the buttons of the chromatogram (or followed XIC) of the trio: the triangles of the MS2 scans, otherwise only in its «Intervallo» box.
+ * @param {Bag | null} c */
+export function tri(c) {
+  if (!c || !c.el) return;
+  let b = /** @type {HTMLButtonElement | null} */ (c.el.querySelector('[data-a="ms2tri"]'));
+  if (!b) {
+    const at = c.el.querySelector(".hd .tbs"); if (!at) return;
+    b = document.createElement("button"); b.type = "button"; b.className = "bt tgl hdkeep"; b.dataset.a = "ms2tri"; b.textContent = T("dda.tri.btn");
+    b.title = T("ctl.ms2tri.title"); b.setAttribute("aria-label", T("ctl.ms2tri"));
+    b.onclick = () => { c.ms2tri = !c.ms2tri; ctl(c); draw(c); uiSave(); tri(c); };
+    const g = document.createElement("span"); g.className = "tbg"; g.append(b); at.prepend(g); fitHdSoon(c);          // a group of its own that a tight header keeps in sight (fitHd)
+  }
+  const on = String(!!c.ms2tri); if (b.getAttribute("aria-pressed") !== on) { b.setAttribute("aria-pressed", on); b.classList.toggle("on", !!c.ms2tri); }
+}
+window.DDAELENCO = { sync, tri };
