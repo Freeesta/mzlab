@@ -22220,3 +22220,4 @@
 {"v":1,"ts_utc":"2026-11-07T08:16:10Z","tipo":"job","k":"128350259809","workflow":"rust","job":"rust-det","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":2826,"sha":"a010ec047743d5e2b97a5be18785c7347d1f5542","run_id":42354730566,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-07T08:16:30Z","tipo":"carico","k":"2026-11-07T08:1","job_in_coda":0,"job_in_corso":16}
 {"v":1,"ts_utc":"2026-11-07T08:17:15Z","tipo":"coda","k":"2026-11-07T08:17:15Z","aperte":7,"indietro":6,"sporche":0,"verdi_in_attesa":6,"piu_vecchia_aperta_s":303599,"piu_vecchia_verde_s":299279}
+{"v":1,"ts_utc":"2026-11-07T08:24:34Z","azione":"aperta","tipo":"pr","pr":2829,"sha":"a1b941c06c895fc7753d288b548e1743a097b090"}
