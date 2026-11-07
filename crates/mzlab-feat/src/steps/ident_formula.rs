@@ -120,8 +120,9 @@ pub(super) fn ms2() -> Step {
                 .doc("Fragment against a sub-formula of the ion (the MS2 tolerance of SIRIUS)"),
             Param::integer("max_subformulas", "Sub-formula limit")
                 .min(1.0)
+                .max(20_000_000.0)
                 .default_num(3_000_000.0)
-                .doc("Above this many sub-formulas the table is not built")
+                .doc("Above this many sub-formulas the table is not built and the candidate explains no fragment; memory grows with the limit")
                 .advanced(),
         ],
         algorithms: vec![subformula(), h_rearrangement()],

@@ -1245,8 +1245,9 @@
                   {
                     "type":"integer",
                     "minimum":1,
+                    "maximum":20000000,
                     "default":3000000,
-                    "description":"Above this many sub-formulas the table is not built"
+                    "description":"Above this many sub-formulas the table is not built and the candidate explains no fragment; memory grows with the limit"
                   }
                 ]
               }
