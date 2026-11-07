@@ -257,7 +257,7 @@ export async function get(/** @type {string} */ kind, /** @type {string} */ name
 }
 
 // the file of files/ an entry of idx/ belongs to: its index, centroid index and key (rust-flow-centroid.js), and the parts of an index still being written
-export const idxOwner = (/** @type {string} */ name) => name.replace(/(\.cen)?\.(mzidx(\.sp)?(\.part)?|key)$/, "");
+export const idxOwner = (/** @type {string} */ name) => name.replace(/((\.cen)?\.(mzidx(\.sp)?(\.part)?|key)|\.sul)$/, "");
 export async function list(/** @type {string} */ kind) {
   const out = [], d = await dir(kind);
   for await (const [name, h] of d.entries()) {
