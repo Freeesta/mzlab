@@ -123,7 +123,7 @@ function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el
   UPROWS.paint();syncWork()}
 const FILECHUNK={t:{}};
 // «Remove all files» of the toolbar: asks once, then removes them like the list's menu does (lista-file.js: one «Removed · Undo» entry takes them all back)
-async function confirmRemoveAll(){const n=E.files.filter((/** @type {FileAperto} */ f)=>!f.gone).length;if(n&&await yesno(I18N.t("load.table.removeAll.ask",{n})))removeAllFiles()}
+async function confirmRemoveAll(){const n=E.files.filter((/** @type {FileAperto} */ f)=>!f.gone).length+unopenedRows().length;if(n&&await yesno(I18N.t("load.table.removeAll.ask",{n})))removeAllFiles()}
 function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
   CONVROWS.wire(el);if(window.COLS)COLS.wire(el);else if(F.length)carica("colonne-campioni.js").then(renderFiles);if(window.GRUTAB)GRUTAB.wire(el);else if(F.length)carica("gruppi-tab.js").then(renderFiles);
   el.querySelectorAll("[data-open]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>soloFile(E.files.find((/** @type {FileAperto} */ x)=>!x.gone&&x.file.split("#")[0]===b.dataset.open)));
@@ -289,6 +289,7 @@ function reportLoad(/** @type {CaricaRep} */ rep){
     L.push(`<details class="unopen-names"><summary>${T("unopen.names")}</summary><ul>${names.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join("")}${names.length>5?`<li class="muted">${T("unopen.more",{n:names.length-5})}</li>`:""}</ul></details>`)}
   if(rep.other.length)L.push(`<p>${T("unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
   const DG=/** @type {unknown[]} */ ([]);
+  if(rep.quota&&rep.quota.left.length)L.push(QUOTALOTTO.nota(rep,esc));
   for(const [msg,names] of Object.entries(rep.errs)){const d=(rep.diag||{})[msg],why=d&&d.causa!=="unknown"?` ${I18N.t(`diag.cause.${d.causa}`)}`:"";if(d)DG.push(d);
     L.push(`<div class="fail"><p>${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}${esc(why)}</p>${d?DIAG.html(d,esc,T):""}</div>`)}
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
@@ -299,7 +300,7 @@ function reportLoad(/** @type {CaricaRep} */ rep){
   const needHelp=rep.unopen.length||rep.other.length;
   u.innerHTML=L.join("")+`<div class="row">${needHelp?`<button type="button" class="sec" data-a="help">${T("unopen.how")}</button>`:""}<button type="button" class="sec" data-a="close">${T("common.close")}</button></div>`;
   u.hidden=false;
-  u.querySelector('[data-a=close]').onclick=closeUnopen;
+  u.querySelector('[data-a=close]').onclick=closeUnopen;if(rep.quota)QUOTALOTTO.wire(u);
   const hb=u.querySelector('[data-a=help]');if(hb)hb.onclick=()=>openConvHelp(true);
   u.querySelectorAll(".diag").forEach((/** @type {HTMLElement} */ el,/** @type {number} */ i)=>DIAG.cabla(el,DG[i],window.MZLAB_VERSION,T));
   if(rep.unopen.length){
@@ -350,6 +351,8 @@ function hashRename(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ r
 async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | undefined} */ into,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){
   const rep=/** @type {CaricaRep} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {FileCarica[]} */ ([]);
   files=hashRename(files,rep);
+  // a batch bigger than the room the browser gives this site asks once, before copying (quota-lotto.js)
+  if(window.MZLAB_BROWSER&&files.reduce((s,f)=>s+NATIVO.size(f),0)>=50<<20){if(files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");await carica("m:quota-lotto.js");files=await QUOTALOTTO.prima(files,rep,into);if(!files.length)return}
   const one=async (/** @type {FileCarica} */ f)=>{const isDam=isMethodFile(f.name);
     if(signal.aborted){CONVROWS.finish(f.name,"cancel");PROGRESSO.end(f.name);return}
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
@@ -368,8 +371,10 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
       if(j.error)throw I18N.err(j);const x=(j.files||[]).find((/** @type {FileRiga} */ y)=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files,true);ST.methods=j.methods||ST.methods;renderMethods();if(!isDam)OPENNOW.add(f.name);
-      LOADFAIL.delete(f.name);CONV.settle(f.name)}
+      LOADFAIL.delete(f.name);CONV.settle(f.name);rep.ok=(rep.ok||0)+1}
     catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
+      // no room in the browser: no error of its own, it counts in the one message of the batch
+      if(e.key==="error.quota"||e.key==="error.quotaWrite"){CONVROWS.drop(f.name);await carica("m:quota-lotto.js");QUOTALOTTO.refused(rep,f,into,e.key,e.message);return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));
       // a sample of a maker's file: the error stays on its row, with «Details» and the trace of the loading
       if(CONVROWS.find(f.name)&&f.mzlabNat){CONVROWS.finish(f.name,"fail",{msg:e.message,diag:d});return}

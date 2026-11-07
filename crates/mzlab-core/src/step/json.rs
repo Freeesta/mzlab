@@ -122,6 +122,16 @@ fn port(o: &mut Out, p: &Port) {
         }
         o.raw("}");
     }
+    if let Some(f) = p.format {
+        key(o, "format");
+        o.str(f);
+    }
+    if !p.formats.is_empty() {
+        key(o, "formats");
+        list(o, &p.formats, |o, f| {
+            o.str(f);
+        });
+    }
 }
 
 fn ports(o: &mut Out, ps: &[Port]) {

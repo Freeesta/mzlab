@@ -107,11 +107,13 @@ const DDA = (() => {
     }
     return I18N.t("dda.click");
   }
+  // the MS2 panel reads its scans by id from the Full Scan item above it (ctl() keeps a spectrum on a ticked Full Scan item; another DDA file may be shown since)
+  const own = (/** @type {Pannello} */ s2, /** @type {FileAperto} */ f) => { if (s2.k !== f.k) { s2.k = f.k; ctl(s2); } };
   async function selectMs2(/** @type {Pannello} */ s2, /** @type {string | number} */ sid, /** @type {Bag} */ o = {}) {
     try {
       const s1 = byId(s2.dda); if (!s1) return false;
       const c = s1.link != null ? byId(s1.link) : null, f = E.files[s1.k];
-      const D = await get(f.k), i = D.idx.get(sid); if (i == null) return false;
+      const D = await get(f.k), i = D.idx.get(sid); if (i == null) return false; own(s2, f);
       s2.sid = sid; s2.avg = null; s2.r0 = D.rt[i] - 1e-4; s2.r1 = D.rt[i] + 1e-4;
       s1.ddaSel = { sid, i };
       const dec = HR.prof(E.files[/** @type {number} */ (s2.k)], 2).dec;
@@ -211,6 +213,7 @@ const DDA = (() => {
   // the Full Scan: a flag over every peak that started an MS2 (only when the panel shows ONE scan), the isolation band of the chosen MS2
   function decorateFull(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {(v: number) => number} */ X, /** @type {(v: number) => number} */ Y, /** @type {number} */ W, /** @type {Bag} */ c) {
     const s2 = byId(p.duo), d0 = c.d0, f = c.files[0], D = ready(f.k);
+    if (!D && f && f.dda) preload(f.k).then(() => { if (ready(f.k)) drawSoon(p); });
     p._a.flags = []; if (!s2 || !D || d0.sid == null || d0.scans !== 1) return;
     const kids = D.byParent.get(d0.sid) || [], q2 = HR.prof(E.files[s2.k], 2);
     const ac = css("--accent"), tol = (/** @type {number} */ mz) => tolOf(f, mz), here = s2.sid != null ? D.idx.get(s2.sid) : null;
@@ -294,7 +297,7 @@ const DDA = (() => {
     try {
       const s2 = byId(s1.duo), f = E.files[s1.k], D = await get(f.k), l = around(D, f, ion, rt);
       if (!s2 || !l.length) return false;
-      if (l.length === 1) return selectMs2(s2, D.sid[l[0]], { parent: false, zoom: false });
+      if (l.length === 1) return selectMs2(s2, D.sid[l[0]], { parent: false, zoom: false }); own(s2, f);
       const dec = HR.prof(E.files[s2.k], 2).dec;
       s2.ion = ion; s2.sid = null; s2.avg = l.map(i => D.sid[i]); s2._mixed = null;
       s2.title = I18N.t("dda.avgTitle", { n: l.length, mz: ion.toFixed(dec) }); s2.r0 = D.rt[l[0]]; s2.r1 = D.rt[l[l.length - 1]]; ctl(s2); draw(s2); draw(s1); uiSave();
