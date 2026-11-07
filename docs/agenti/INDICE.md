@@ -30,6 +30,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
 | accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
+| inglese nel codice (identificatori, commenti, nomi di file e cartelle): inventario misurato, `tools/controlla_inglese.py`, `tools/italian_words.tsv`, mappa delle rinomine (`tools/english_rename_map.py`), piano a lotti | `docs/agenti/inglese.md` |
 | metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
 | mzFinder: Dig in diretta (`js/24_tpmine_diretta.js`, `TPLIVE`), coppie progenitore-TP e interfaccia HR (`js/21_tpmine_hr.js`, `mass_network`, previsione) | `docs/agenti/mzfinder-diretta.md`, `mzfinder-coppie.md` (nucleo: `mzfinder.md`) |
