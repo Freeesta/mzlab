@@ -1,6 +1,6 @@
 // Checks the fallbacks of mzlab/web/compat.js on fake globals (what Safari/iPadOS lacks: AbortSignal.any, createWritable, a refused clipboard, the accept
-// list of the iPad file picker, the gesture* pinch of a Mac trackpad); prints one JSON object of named checks. See tests/test_compat.py.
-import { installa, anySignal, freeAccept, pinchWheel } from "../mzlab/web/compat.js";
+// list of the iPad file picker, a copy handed over inside the click, the gesture* pinch of a Mac trackpad); prints one JSON object of named checks. See tests/test_compat.py.
+import { installa, anySignal, freeAccept, copyNow, pinchWheel } from "../mzlab/web/compat.js";
 
 const out = {};
 const check = async (name, fn) => { try { out[name] = (await fn()) === true ? true : "false"; } catch (e) { out[name] = "threw: " + (e && e.message || e); } };
@@ -119,6 +119,31 @@ await check("accept: input.click() from code and a tap (capture listener) both f
   const j = el("input", { type: "file", accept: ".raw" }), cap = d.listeners.find(([t, , c]) => t === "click" && c === true);
   cap[1]({ target: j });
   return done.includes("accept") && clicked === 1 && !i.hasAttribute("accept") && !j.hasAttribute("accept");
+});
+
+// a clipboard as strict as Safari's: write() and writeText() only while the click runs (here: before the first await of the test)
+function strictClip() {
+  const c = { live: true, got: null, text: null };
+  c.cb = {
+    write: async items => { if (!c.live) throw new DOMException("not allowed", "NotAllowedError"); const it = items[0], o = {}; for (const t of it.types) o[t] = await (await it.getType(t)).text(); c.got = o; },
+    writeText: async t => { if (!c.live) throw new DOMException("not allowed", "NotAllowedError"); c.text = t; },
+  };
+  class ClipboardItem { constructor(o) { this.o = o; this.types = Object.keys(o); } getType(t) { return Promise.resolve(this.o[t]); } }
+  return { c, g: { navigator: { clipboard: c.cb }, ClipboardItem, Blob, DOMException } };
+}
+await check("copy: handed over inside the click while the text is still being made", async () => {
+  const { c, g } = strictClip();
+  let ok; const later = new Promise(r => { ok = r; });
+  const done = copyNow(g, { "text/plain": later, "text/html": "<b>x</b>" });
+  c.live = false; ok("# mzLab 1\nm/z\t301.1");                       // the click is over before the text is ready
+  await done;
+  return c.got && c.got["text/plain"] === "# mzLab 1\nm/z\t301.1" && c.got["text/html"] === "<b>x</b>";
+});
+await check("copy: without ClipboardItem or refused, the plain text goes through writeText; an image alone rejects", async () => {
+  const a = strictClip(); delete a.g.ClipboardItem; await copyNow(a.g, { "text/plain": Promise.resolve("t1") });
+  const b = strictClip(); b.c.cb.write = async () => { throw new DOMException("no", "NotAllowedError"); }; await copyNow(b.g, { "text/plain": "t2" });
+  const c = strictClip(); delete c.g.ClipboardItem; let rej = false; await copyNow(c.g, { "image/png": new Blob(["png"]) }).catch(() => { rej = true; });
+  return a.c.text === "t1" && b.c.text === "t2" && rej && c.c.text === null;
 });
 
 // a fake page for the pinch: a surface (touch-action:none) with a canvas, a plain paragraph; document listeners fired in order

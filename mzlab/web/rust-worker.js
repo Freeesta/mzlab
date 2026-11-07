@@ -343,7 +343,7 @@ async function lrOp(m) {
     case "lr_flow_command": return { info: (await rotte()).flow_command(m.body || "") };                            // the copyable shell command of a mzflow/2 plan; "E" + JSON = an error
     case "lr_flow_line": { const r = await rotte(); try { return { info: r.flow_line(m.body || "") }; } catch (e) { return { info: "E" + String(e) }; } }   // the short line of a plan, or the plan with a line's --set applied; "E" + JSON = an error
     case "lr_flow_sched": return { info: (await rotte()).flow_sched(m.sop || "", m.body || "") };                   // the live scheduler of the Flow (sched_route): JSON in, JSON out
-    case "lr_campioni": return { info: (await rotte()).campioni(m.cop || "", m.body || "") };                       // campioni/2 (proponi, valida, ...): JSON in, JSON out
+    case "lr_campioni": return { info: (await rotte()).samples(m.cop || "", m.body || "") };                       // campioni/2 (proponi, valida, ...): JSON in, JSON out
     case "lr_molecules": return { info: (await rotte()).molecules(m.mop || "", m.body || "") };                     // molecules/1 (carica, cerca, get, da_csv, ...): JSON in, JSON out
     case "lr_molecole_archivio": return { info: await molecole(m.mop || "", m.body || "") };     // the molecules of the user, kept in the browser (IndexedDB) or, in the app, in a file
     case "lr_ricerca": return { info: search_number(m.body || "") };
