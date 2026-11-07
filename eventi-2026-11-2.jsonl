@@ -22623,3 +22623,4 @@
 {"v":1,"ts_utc":"2026-11-07T08:47:25Z","tipo":"carico","k":"2026-11-07T08:4","job_in_coda":0,"job_in_corso":22}
 {"v":1,"ts_utc":"2026-11-07T08:48:42Z","tipo":"coda","k":"2026-11-07T08:48:42Z","aperte":9,"indietro":7,"sporche":1,"verdi_in_attesa":5,"piu_vecchia_aperta_s":305486,"piu_vecchia_verde_s":301166}
 {"v":1,"ts_utc":"2026-11-07T08:50:31Z","azione":"push","titolo":"English audit: rename map in its own module, word-order rules fixed","merge_main":false,"aree":{"docs":2,"test":1,"tools":3},"tipo":"pr","pr":2832,"sha":"ac6dcdbadb924a245fa5f17fde230e8060bff6bf"}
+{"v":1,"ts_utc":"2026-11-07T08:55:25Z","azione":"push","titolo":"Docs: before/after size of the engine .wasm for the index budget change","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":2829,"sha":"7e8caeaf3bacf0cd16d6b3ed1d90a25bcea90366"}
