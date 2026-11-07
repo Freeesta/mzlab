@@ -1,13 +1,15 @@
 // @ts-check
 // Room for a batch of files in the browser's storage, loaded on first use by shell.js upload0. The browser copies every file, with its index, into the
-// share of free disk it gives this site (about ROOM times the file while it loads; not the RAM): a batch bigger than that asks once before copying
-// (`prima`), and the files refused for lack of room make ONE message with the count loaded / not loaded and «Retry the rest» (`nota`, `wire`).
+// share of free disk it gives this site (about ROOM times the file while it loads; not the RAM; a plain mzML that does not fit is read in place, its index alone): a batch bigger than that asks once before copying
+// (`prima`), and the files refused for lack of room make ONE message with the count loaded / not loaded, «Retry the rest» and «Free space» (`nota`, `wire`, `libera`).
 const ROOM = 1.8, MB = 1048576;
 const W = /** @type {any} */ (window);
 /** @type {{ files: any[], into: string | undefined }} */
 let last = { files: [], into: undefined };
 const human = (/** @type {number} */ b) => b >= 1024 * MB ? `${(b / 1024 / MB).toFixed(1)} GB` : `${Math.ceil(b / MB)} MB`;
 const isData = (/** @type {any} */ f) => !isMethodFile(f.name) && !fileKind(f.name) && !CartCarica.byproduct(f.name);
+// a plain mzML with no room for its copy is read in place from the disk (rust-sul-posto.js): only its index takes room
+const inPlace = (/** @type {any} */ f) => /\.mzml$/i.test(f.name) && !f.mzlabGz && !f.mzlabNat && f instanceof File && f.size >= 50 * MB;
 async function room() {
   try { const e = await navigator.storage.estimate(); return e.quota ? Math.max(0, e.quota - (e.usage || 0)) : Infinity; } catch (_) { return Infinity; }
 }
@@ -25,10 +27,13 @@ async function prima(/** @type {any[]} */ files, /** @type {CaricaRep} */ rep, /
   const data = files.filter(isData), free = await room();
   const need = data.reduce((s, f) => s + NATIVO.size(f) * ROOM, 0);
   if (need <= free) return files;
+  const share = (/** @type {any} */ f) => NATIVO.size(f) * (inPlace(f) ? ROOM - 1 : ROOM);
+  const least = data.reduce((s, f) => s + share(f), 0);
+  if (least <= free) return files;
   let k = 0, s = 0;
-  for (const f of data) { s += NATIVO.size(f) * ROOM; if (s > free) break; k++; }
+  for (const f of data) { s += share(f); if (s > free) break; k++; }
   const T = I18N.t, d = dialog(), b = (/** @type {string} */ q) => /** @type {HTMLButtonElement} */ (d.querySelector(`[data-q=${q}]`));
-  /** @type {HTMLElement} */ (d.querySelector("#quotatxt")).textContent = T("load.quota.ask", { n: data.length, serve: human(need), libero: human(free), k });
+  /** @type {HTMLElement} */ (d.querySelector("#quotatxt")).textContent = T("load.quota.ask", { n: data.length, serve: human(least), libero: human(free), k });
   /** @type {HTMLElement} */ (d.querySelector("#quotawhy")).textContent = T("load.quota.why");
   b("cancel").textContent = T("common.cancel"); b("all").textContent = T("load.quota.all"); b("first").textContent = T("load.quota.first", { k });
   b("first").hidden = k === 0;
@@ -55,11 +60,41 @@ function nota(/** @type {CaricaRep} */ rep, /** @type {(s: string) => string} */
   last = { files: q.left, into: q.into };
   return `<div class="quota-note" role="status"><p><b>${esc(T("load.quota.note", { ok: rep.ok || 0, no: names.length }))}</b> ${esc(names.length === 1 && q.msg ? q.msg : T(q.write ? "load.quota.write" : "load.quota.why"))}</p>`
     + `<details class="unopen-names"><summary>${esc(T("unopen.names"))}</summary><ul>${names.slice(0, 5).map((/** @type {string} */ n) => `<li>${esc(n)}</li>`).join("")}${names.length > 5 ? `<li class="muted">${esc(T("unopen.more", { n: names.length - 5 }))}</li>` : ""}</ul></details>`
-    + `<div class="row"><button type="button" class="sec" data-a="quota-retry">${esc(T("load.quota.retry"))}</button></div></div>`;
+    + `<div class="row"><button type="button" class="sec" data-a="quota-free">${esc(T("load.space.open"))}</button><button type="button" class="sec" data-a="quota-retry">${esc(T("load.quota.retry"))}</button></div></div>`;
 }
 /** «Retry the rest»: the files left out go in again (after the student removed some, the question tells how many fit now) */
 function wire(/** @type {HTMLElement} */ u) {
   const x = /** @type {HTMLElement | null} */ (u.querySelector("[data-a=quota-retry]"));
   if (x) x.onclick = () => { const { files, into } = last; closeUnopen(); upload(files, into); };
+  const y = /** @type {HTMLElement | null} */ (u.querySelector("[data-a=quota-free]"));
+  if (y) y.onclick = () => libera();
 }
-/** @type {any} */ (window).QUOTALOTTO = { prima, refused, nota, wire };
+const SMALL = 2048 * MB;      // a quota under 2 GB: what a private window gives (a normal one gives a share of the free disk, usually far more)
+const spazio = async (/** @type {string} */ q = "", post = false) => /** @type {any} */ (await (await fetch("api/spazio" + q, post ? { method: "POST" } : {})).json());
+/** «Free space»: what the site keeps in the browser (granted, used, files, leftovers of removed files) and the two ways to give it back */
+async function libera() {
+  let d = /** @type {HTMLDialogElement | null} */ (document.getElementById("spaziodlg"));
+  if (!d) {
+    d = document.createElement("dialog"); d.id = "spaziodlg"; d.setAttribute("aria-labelledby", "spaziotit");
+    d.innerHTML = `<h2 id="spaziotit"></h2><p id="spaziouso" role="status"></p><ul id="spaziovoci"></ul><p class="muted" id="spaziopriv"></p><div class="row"><button type="button" class="sec" data-s="close"></button><button type="button" class="sec" data-s="all"></button><button type="button" class="go" data-s="rest"></button></div>`;
+    document.body.appendChild(d);
+  }
+  const dl = d, T = I18N.t, b = (/** @type {string} */ k) => /** @type {HTMLButtonElement} */ (dl.querySelector(`[data-s=${k}]`));
+  const show = async (/** @type {any} */ j) => {
+    /** @type {HTMLElement} */ (dl.querySelector("#spaziotit")).textContent = T("load.space.title");
+    /** @type {HTMLElement} */ (dl.querySelector("#spaziouso")).textContent = j.quota ? T("load.space.use", { concesso: human(j.quota), usato: human(j.usage || 0) }) : T("load.space.unknown");
+    const n = ST.files.length, rest = j.idx_removed || 0;
+    /** @type {HTMLElement} */ (dl.querySelector("#spaziovoci")).innerHTML = [T("load.space.files", { n, size: human(j.files || 0) }), T("load.space.idx", { size: human(Math.max(0, (j.idx || 0) - rest) + (j.feat || 0)) }), T("load.space.rest", { n: j.n_removed || 0, size: human(rest) })]
+      .map(t => `<li>${t.replace(/[&<>]/g, c => c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;")}</li>`).join("");
+    /** @type {HTMLElement} */ (dl.querySelector("#spaziopriv")).textContent = j.quota && j.quota < SMALL ? T("load.space.private", { concesso: human(j.quota) }) : "";
+    b("close").textContent = T("common.close"); b("all").textContent = T("load.space.all"); b("rest").textContent = T("load.space.restGo");
+    b("all").hidden = n === 0; b("rest").hidden = !(j.n_removed > 0);
+  };
+  b("close").onclick = () => dl.close();
+  b("rest").onclick = async () => show(await spazio("", true));
+  b("all").onclick = async () => { removeAllFiles(); dl.close(); };
+  await show(await spazio());
+  if (!dl.open) dl.showModal();
+  (b("rest").hidden ? b("close") : b("rest")).focus();
+}
+/** @type {any} */ (window).QUOTALOTTO = { prima, refused, nota, wire, libera };

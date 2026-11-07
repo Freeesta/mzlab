@@ -18,7 +18,7 @@ from dati_percorsi import percorso
 FORMATO = "cancello_hr/1"
 ID_ROBUSTEZZA = ("hr_robustezza_gira", "hr_robustezza_deterministica", "hr_robustezza_soglia", "hr_robustezza_stati_coerenti")
 ID_MZMINE = ("mzmine_richiamo", "mzmine_precisione", "mzmine_spearman", "mzmine_log2_mediano")
-SOGLIA_AREA = 50.0             # counts x s, as the gate of the candidate view (`cancello.serie_reale`)
+THRESHOLD_AREA = 50.0             # counts x s, as the gate of the candidate view (`cancello.serie_reale`)
 
 
 def stati_coerenti(stato: np.ndarray, area: np.ndarray) -> tuple[int, int]:
@@ -57,7 +57,7 @@ def concordanza_d5(nativa: Tabella, csv: str | None, colonne: list[int]) -> tupl
     if not csv:
         return cancello.criteri_mzmine(None), {}
     serie = [{"nome": c} for c in nativa.campioni]
-    d = M.concordanza_mzmine(nativa, leggi_mzmine(csv, serie), colonne, SOGLIA_AREA)
+    d = M.concordanza_mzmine(nativa, leggi_mzmine(csv, serie), colonne, THRESHOLD_AREA)
     return cancello.criteri_mzmine(d), d
 
 
@@ -65,8 +65,8 @@ def trova_hr(cartella: str | None) -> Path | None:
     """The folder of the DDA files: `--robustezza`, else the first of `dati/HRMS` and `dati/HRMS/Esempio raw e mzML` of the data repository that holds the files; None when there is none."""
     if cartella:
         return Path(cartella) if Path(cartella).is_dir() else None
-    radice = percorso("dati/HRMS")
-    cand = [radice, radice / "Esempio raw e mzML"] if radice else []
+    root = percorso("dati/HRMS")
+    cand = [root, root / "Esempio raw e mzML"] if root else []
     return next((c for c in cand if c.is_dir() and any(c.glob("Orbitrap_*_DDApos_*.mzML"))), None)
 
 
@@ -87,17 +87,17 @@ def d5(cartella: str | None, csv: str | None, lavoro: Path) -> tuple[list[dict],
     serie = tabelle.trova_serie(cartella)
     idx = nativo.indici([Path(x["path"]) for x in serie], lavoro / "indici")
     run = H.esegui_senza_genitore(idx, lavoro / "nativo")
-    trattate = [k for k, x in enumerate(serie) if x["time"] and x["time"] > 0 and x["type"] == "sample"]
+    handled = [k for k, x in enumerate(serie) if x["time"] and x["time"] > 0 and x["type"] == "sample"]
     run["tabella"].campioni = [x["nome"] for x in serie]
-    return concordanza_d5(run["tabella"], csv, trattate)
+    return concordanza_d5(run["tabella"], csv, handled)
 
 
 def vista_tabella_hr(criteri: list[dict]) -> bool:
     """True when the robustness criteria were measured and pass, and the mzmine ones too if a CSV was given (all four measured, else all four skipped)."""
-    esito = {c["id"]: c["ok"] for c in criteri}
-    if not all(esito.get(i) is True for i in ID_ROBUSTEZZA):
+    outcome = {c["id"]: c["ok"] for c in criteri}
+    if not all(outcome.get(i) is True for i in ID_ROBUSTEZZA):
         return False
-    z = [esito.get(i) for i in ID_MZMINE]
+    z = [outcome.get(i) for i in ID_MZMINE]
     return all(v is None for v in z) or all(v is True for v in z)
 
 
@@ -105,9 +105,9 @@ def documento(criteri: list[dict], data: str, crate: str) -> dict:
     return {"concordanza_mzmine": cancello.concordanza(criteri), "criteri": criteri, "crate_version": crate, "data": data, "format": FORMATO, "vista_tabella_hr": vista_tabella_hr(criteri)}
 
 
-def misura(cartella_dda: str | None, serie: str | None, csv: str | None, lavoro: Path, data: str) -> tuple[dict, dict]:
+def misura(folder_dda: str | None, serie: str | None, csv: str | None, lavoro: Path, data: str) -> tuple[dict, dict]:
     """Robustness of the DDA files and, with a CSV, the agreement with mzmine. Returns (document, details)."""
-    base = trova_hr(cartella_dda)
+    base = trova_hr(folder_dda)
     misure, dr = robustezza(base, lavoro / "robustezza")
     cz, dz = d5(serie, csv, lavoro / "d5")
     det = {"robustezza": dr, "mzmine": dz, "dati_dda": "letti" if misure else "saltato: nessun file (MZLAB_DATI o --robustezza)",
@@ -116,10 +116,10 @@ def misura(cartella_dda: str | None, serie: str | None, csv: str | None, lavoro:
 
 
 def markdown(c: dict, det: dict) -> str:
-    riga = lambda k: f"| `{k['id']}` | {'saltato' if k['ok'] is None else ('passato' if k['ok'] else 'NON PASSATO')} | {k['valore']} | {k['soglia']} |"      # noqa: E731
+    row = lambda k: f"| `{k['id']}` | {'saltato' if k['ok'] is None else ('passato' if k['ok'] else 'NON PASSATO')} | {k['valore']} | {k['soglia']} |"      # noqa: E731
     out = [f"# High-resolution table view ({c['data']}, crate {c['crate_version']})", "",
            f"`vista_tabella_hr`: **{'open' if c['vista_tabella_hr'] else 'closed'}**; DDA files: {det['dati_dda']}; mzmine: {det['csv']}", "",
-           "| criterion | result | value | threshold |", "|---|---|---|---|"] + [riga(k) for k in c["criteri"]] + ["", "## Details", "```json",
+           "| criterion | result | value | threshold |", "|---|---|---|---|"] + [row(k) for k in c["criteri"]] + ["", "## Details", "```json",
            json.dumps(det, indent=1, sort_keys=True, ensure_ascii=False, default=str), "```", ""]
     return "\n".join(out)
 

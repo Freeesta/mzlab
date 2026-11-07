@@ -55,10 +55,10 @@ def main() -> None:
     fg = nat / "featureGroups.csv"
     if r.returncode != 0 or not fg.exists():
         raise SystemExit(f"patRoon failed (exit {r.returncode}):\n{r.stderr[-2000:]}")
-    versione = next((l.split()[1] for l in r.stdout.splitlines() if l.startswith("patRoon ")), "unknown")
+    version = next((l.split()[1] for l in r.stdout.splitlines() if l.startswith("patRoon ")), "unknown")
     sosp = nat / "suspects.csv"
     t = adatta.da_csv("patroon", fg, [f.stem for f in fs], a.dataset, a.config, sospetti=sosp if so and sosp.exists() else None)
-    print(corri.salva(t, a.out_dir, f"{versione} ({img})"), len(t["righe"]), "rows")
+    print(corri.salva(t, a.out_dir, f"{version} ({img})"), len(t["righe"]), "rows")
 
 
 if __name__ == "__main__":

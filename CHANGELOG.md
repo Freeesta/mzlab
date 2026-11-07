@@ -11,6 +11,7 @@ Before putting the tag `vX.Y.Z`: move the entries of «Unreleased» below into t
 - Desktop app: when a file is opened this way, every other time the app asks whether to make mzLab the default app for these files (with the steps for Windows, Mac and Linux) until you answer «Yes» or «Don't ask again»; Settings → «Default app» asks again.
 
 ### Changed
+- Flow, «Detect features»: «Maximum gap» counts the scans a trace may miss between two of its points (0 = consecutive scans), as in «Fill gaps»; the default is 1, the same traces as before. Plans and presets saved with the old count (step version 1) are converted on opening (N becomes N − 1) and give the same feature table.
 - Every entry of the right-click menu (spectrum, chromatogram, XIC, MRM, map) has its own icon on the left, in the colours of the theme.
 - Right-click menu of spectrum, chromatogram, XIC and MRM: entries that do not apply right now stay in place, greyed out, instead of disappearing («Reset zoom», «Edit/Delete annotation», interval average, isotope profile, drawn formulas, MS² of the peak, MassBank/SIRIUS exports). Only entries that do not concern that data stay hidden (HR only, bench only, MS² only).
 - «Reset zoom» is always the first entry, the annotations always the last.
