@@ -2,6 +2,8 @@ I18N.add("en", {
   "load.blocked": "The saved files are locked by another {app} tab: close the other {app} tabs and this one will carry on by itself.",
   "load.err.resumeTimeout": "Reopening the saved files is not answering. Starting from scratch deletes the files saved in this browser, the notebook and the stored copies.",
   "load.natInterrupted": "Loading of {name} was interrupted: load it again.",
+  "load.sulPosto": "{name} is read straight from your disk, without a copy in the browser (there is no room for one). Keep the file where it is; after reloading the page, load it again.",
+  "load.sulRiapri": "{name} was read from your disk without a copy, so it is not kept after a reload. The file is still on your disk: load it again to go on.",
   "load.slow": "The first visit downloads about 15 MB: it may take a minute.",
   "load.engine.waiting": "{n} files waiting",
   "load.engine.waitingOne": "1 file waiting",
