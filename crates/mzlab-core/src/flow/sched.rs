@@ -116,10 +116,8 @@ impl Sched {
                             cmds.push(Command::Cancel(node.id.clone()));
                             j.zombie = Some(j.node.key.clone());
                         }
-                        j.state = State::Waiting;
-                        j.ms = 0.0;
-                        // a hold was the page's answer for the old key (what it lacked then): a new key is asked again
-                        j.held = None;
+                        // a new key is a new job: a hold was the page's answer for the old one (what it lacked then)
+                        (j.state, j.ms, j.held) = (State::Waiting, 0.0, None);
                     }
                     j.node = node;
                     j
