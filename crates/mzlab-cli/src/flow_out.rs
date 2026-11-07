@@ -112,6 +112,22 @@ fn summary(run: &Run, steps: usize, out: &Path) -> Outcome {
             failed.join(", "),
             run.skipped.join(", ")
         );
+        // a memory refusal said in words, once per step, with the next step to try
+        let mut told: Vec<&str> = Vec::new();
+        for a in &run.activities {
+            let Some(e) = a.error.as_ref() else { continue };
+            let get = |k: &str| {
+                e.params
+                    .iter()
+                    .find(|(n, _)| n == k)
+                    .map(|(_, v)| v.clone())
+            };
+            let advice = crate::flow_run::memory_advice(&e.error_key, &get, &a.instance);
+            if !advice.is_empty() && !told.contains(&a.instance.as_str()) {
+                told.push(&a.instance);
+                stderr += &format!("{}: {}\n", a.instance, advice.trim_start());
+            }
+        }
         stderr += &format!(
             "hint: the other outputs, prov.json and corsa.json are in {}\n",
             out.display()
