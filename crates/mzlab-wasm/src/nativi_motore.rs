@@ -137,3 +137,19 @@ impl Engine {
         l.metodo(c).map_err(|e| error_json(&e))
     }
 }
+
+/// The provisional TIC of sample `c` of a dataset (`names`, `sizes`, `read` as for `native_samples`), from its scan index alone: `rt[n]` then `tic[n]`
+/// (`lettori::tic_ms1`). The page reads it from the dropped files while they are copied, before the `.mzidx` exists.
+#[wasm_bindgen]
+pub fn native_early_tic(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+) -> Result<js_sys::Float64Array, JsValue> {
+    let mut l = Membri::new(names, sizes, read)?.open(false)?;
+    let (mut rt, tic) =
+        mzlab_core::lettori::tic_ms1(l.indice(c as usize).map_err(|e| error_json(&e))?);
+    rt.extend(tic);
+    Ok(js_sys::Float64Array::from(&rt[..]))
+}
