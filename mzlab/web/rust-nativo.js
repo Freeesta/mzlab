@@ -8,6 +8,7 @@ import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
 import { createEsterno } from "./lettore-esterno.js";
 import { loadModulo } from "./carica-modulo.js";
+import { createTicNativo } from "./tic-nativo.js";
 
 export const MAGIC = "mzlab/nat1";
 export const INDEX_ERROR = "err.file.index";              // the key the engines give when the index of a file cannot be built (idxbuild.rs of crates/mzlab-desktop)
@@ -213,8 +214,8 @@ async function lostDi(/** @type {any} */ ARCH, /** @type {(n: string) => Promise
   return out;
 }
 /** @param {any} h the engine hooks, and `notice` (key, params) for the calm notice of a sample read in place */
-export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, notice }) {
-  const ext = createEsterno(native_external);               // a Thermo .raw is read through the `thermo` module (lettore-esterno.js)
+export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool, post, notice }) {
+  const ext = createEsterno(native_external), early = createTicNativo(pool, post);   // a .raw is read through `thermo` (lettore-esterno.js); its TIC is read while it is copied (tic-nativo.js)
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
   const taken = new Map();                                // store name -> [sha256, sha1, probe] taken while it was copied here (the other samples of the dataset find it again)
@@ -291,5 +292,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
-  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => held(m.nat.key, () => putHeld(m, tell)), same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
+  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
 }

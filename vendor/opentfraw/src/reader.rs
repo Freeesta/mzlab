@@ -1338,6 +1338,23 @@ impl RawFileReader {
         ScanDataPacket::read(&mut r)
     }
 
+    /// The profile of a scan appended to `mz` and `int` (m/z > 0) as [`Self::read_scan`] and `Profile::to_mz_intensity_into` give it, without the chunks in
+    /// between; `Ok(false)`: the packet has no profile and nothing is appended. `coefficients`: those of the scan event (empty: already m/z).
+    pub fn read_profile_into<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+        coefficients: &[f64],
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) -> Result<bool> {
+        let entry = self.scan_index_entry(scan_number)?;
+        let abs_offset = self.data_addr.saturating_add(entry.offset);
+        source.seek(SeekFrom::Start(abs_offset))?;
+        let mut r = BinaryReader::new(source);
+        ScanDataPacket::read_profile_into(&mut r, coefficients, mz, int)
+    }
+
     /// Read a single scan packet's centroid peaks and FT label data
     /// (resolution / noise / baseline), skipping the profile signal for speed.
     ///
