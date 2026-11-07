@@ -120,7 +120,7 @@ impl SrmDaScansioni {
         {
             return Ok(Vec::new());
         }
-        let righe: Vec<VoceScansione> = self.inner.indice(c)?.to_vec();
+        let righe: Vec<VoceScansione> = self.inner.indice_senza_tic(c)?.to_vec();
         let mut tr = transizioni_dalle_scansioni(&mut *self.inner, c, &righe)?;
         if tr.iter().any(|t| t.ce.is_none())
             && let Ok(m) = self.inner.metodo(c)
@@ -235,6 +235,9 @@ impl Lettore for SrmDaScansioni {
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.inner.indice(c)
     }
+    fn indice_senza_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.inner.indice_senza_tic(c)
+    }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.inner.scansione(c, k)
     }
@@ -301,7 +304,7 @@ impl Lettore for SrmDaScansioni {
 
 /// True when sample `c` of `l` has scans that are SRM transitions.
 pub fn ha_scansioni_srm(l: &mut dyn Lettore, c: usize) -> bool {
-    l.indice(c)
+    l.indice_senza_tic(c)
         .map(|i| i.iter().any(scansione_srm))
         .unwrap_or(false)
 }

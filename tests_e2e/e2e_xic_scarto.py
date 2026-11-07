@@ -31,7 +31,7 @@ try:
         step("a malformed shift keeps a clear message and blocks the extraction", bad)
         def extract():
             pg.fill("#xic-mz", "288.2+16"); attendi(pg, "document.querySelector('#xic-rows .xr-sum').textContent.includes('304.2')")
-            pg.click("#xic-go"); attendi(pg, "E.panels.some(p => p.type === 'xic' && p.traces.some(t => /304\\.2/.test(t.label)))")
+            pg.click("#xic-go"); attendi(pg, "E.panels.some(p => p.type === 'xic' && p.traces.some(t => /304\\.3/.test(t.label)))")      # the low-resolution unit window of 304.2 is [303.8, 304.8]: the trace is named by its centre
         step("the XIC is made on the shifted m/z", extract)
     r.close()
 except Exception as e:

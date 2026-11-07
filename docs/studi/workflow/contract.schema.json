@@ -192,7 +192,10 @@
     "formats": {
      "type": "array",
      "items": {"type": "string"},
-     "description": "the formats an input reads; absent: the default of its type, from a source of its own type only. plan.check refuses a source whose format is known and not listed (err.flow.port.format); an unknown format is never refused"
+     "description": "the formats an input reads; absent: the default of its type, from a source of its own type only. plan.check refuses a source whose format is known and not listed (err.flow.port.format); an unknown format is never refused"    },
+    "lineage": {
+     "type": "boolean",
+     "description": "on an input: the table must be aligned by features.align in this plan, directly or through outputs that hand the lineage on; plan.check refuses a file or any other source (err.flow.lineage). On an output: it hands such a lineage on, made here or passed from its table inputs"
     }
    },
    "additionalProperties": false

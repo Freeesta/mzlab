@@ -13,6 +13,6 @@ I18N.add("en", {
   "valida.col.message": "Message",
   "valida.col.location": "Location",
   "valida.caption": "Findings for {name}",
-  "valida.more": "Showing the first {n} of {total} findings.",
+  "valida.more": "Showing the first {n} of {total} findings, so that the report stays readable. Fix these and validate the file again to see the others.",
   "valida.fail": "The file could not be validated: {detail}"
 });

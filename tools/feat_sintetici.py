@@ -29,7 +29,7 @@ from mzlab.reader import mzidx  # noqa: E402
 from mzlab.reader.mzml import Run  # noqa: E402
 
 
-def piani() -> dict[str, tuple[int, list[tuple], float]]:
+def plans() -> dict[str, tuple[int, list[tuple], float]]:
     """name -> (seed, ions (m/z, RT, sigma, amplitude), RT end)."""
     rng = np.random.default_rng(11)
     deboli = [(float(m), float(c), 0.05, float(a)) for m, c, a in zip(rng.uniform(150, 800, 40), rng.uniform(1, 9, 40), 10 ** rng.uniform(5.3, 7, 40))]
@@ -77,11 +77,11 @@ def main(argv) -> int:
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "degdma":
         print("degdma", degdma(out))
         return 0
-    for nome, (seed, ioni, fine) in piani().items():
-        mz = out / f"{nome}.mzML"
-        ds.hr_series(mz, np.random.default_rng(seed), ioni, rt_end=fine, cyc=0.008 if nome == "fondo" else 0.04)   # "fondo": > 400 scans
-        indice(mz, out / f"{nome}.mzidx")
-        print(nome)
+    for name, (seed, ions, fine) in plans().items():
+        mz = out / f"{name}.mzML"
+        ds.hr_series(mz, np.random.default_rng(seed), ions, rt_end=fine, cyc=0.008 if name == "fondo" else 0.04)   # "fondo": > 400 scans
+        indice(mz, out / f"{name}.mzidx")
+        print(name)
     return 0
 
 

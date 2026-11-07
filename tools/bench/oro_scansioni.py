@@ -41,11 +41,11 @@ def scrivi(dest: Path) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         oro_mzmine.genera(Path(tmp))
         runs = {n: Run(Path(tmp) / f"{n}.mzML") for n in oro_mzmine.DERIVA}
-        righe = list(csv.DictReader((dest / "adap.csv").open()))
+        rows = list(csv.DictReader((dest / "adap.csv").open()))
         with (dest / "adap_scansioni.csv").open("w", newline="") as f:
             w = csv.writer(f, lineterminator="\n")
             w.writerow(["file", "id", "scan", "mz", "intensity"])
-            for r in righe:
+            for r in rows:
                 for i, mz, it in punti(runs[r["file"]], float(r["mz"])):
                     w.writerow([r["file"], r["id"], i, f"{mz:.6f}", f"{it:.1f}"])
         rts = [[s.rt for s in runs[n].scans] for n in runs]

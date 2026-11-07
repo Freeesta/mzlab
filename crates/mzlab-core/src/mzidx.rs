@@ -579,6 +579,7 @@ impl<'a> Prima<'a> {
         }
         g.n += n as u64;
         self.visti += 1;
+        self.troppo_denso()?;
         if self.keep {
             let held: usize = self.gruppi.iter().map(Gruppo::held).sum();
             if held > self.budget / 4 {
@@ -636,6 +637,9 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
 #[cfg(test)]
 mod tests_avvia;
 
+mod denso;
+use denso::{round_cap, slice_refusal};
+
 fn pad(n: u64) -> u64 {
     (ALIGN - n % ALIGN) % ALIGN
 }
@@ -657,11 +661,13 @@ pub fn build(
     budget: usize,
     nativo: bool,
 ) -> Result<Stats> {
-    build_con_spill(table, pass, out, budget, nativo, None, None)
+    build_con_spill(table, pass, out, budget, nativo, None, None, None)
 }
 
-/// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size.
-#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
+/// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size. `stop` is set
+/// when pass 1 fails (a refusal, a bad scan): a pass that can stop reading there (`late::Fermabile`) skips the rest. Indexes come from the table.
+#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)]
+#[allow(clippy::too_many_arguments)]
 pub fn build_con_spill(
     table: &ScanTable,
     pass: &mut Pass,
@@ -670,6 +676,7 @@ pub fn build_con_spill(
     nativo: bool,
     spill: Option<&mut dyn Spill>,
     late_source: Option<&mut dyn FnMut() -> Result<String>>,
+    stop: Option<&std::cell::Cell<bool>>,
 ) -> Result<Stats> {
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
@@ -692,12 +699,12 @@ pub fn build_con_spill(
             }
             if let Err(e) = prima.add(table.level[seen], table.polarity[seen], &sp) {
                 failure = Some(e);
+                stop.inspect(|s| s.set(true));
             }
         };
-        pass(&mut on)?;
-    }
-    if let Some(e) = failure {
-        return Err(e);
+        // a pass stopped on purpose ends with an error of its own: the failure that stopped it is the answer
+        let read = pass(&mut on);
+        failure.map_or(read, Err)?;
     }
     build_dopo(table, prima, pass, out, budget, nativo, late_source)
 }
@@ -865,12 +872,11 @@ pub(crate) fn build_dopo(
             .map(|b| secs.iter().map(|s| s.cost(b)).sum())
             .collect();
         let cost = |b: usize| costs[b];
-        // A round holds its peaks and, while it is written, the same peaks as byte arrays (about one more round): so it may use half of the
-        // budget, minus what the build holds whatever the round (table, member lists, per-scan arrays of the sections).
+        // what the build holds whatever the round (table, member lists, per-scan arrays of the sections): `round_cap`
         let fixed = table.scans_json.len()
             + n_scans * (18 + MEMBER_BYTES)
             + infos.iter().map(|s| s.ids.len() * 33).sum::<usize>();
-        let round_cap = (budget / 2).saturating_sub(fixed).max(budget / 8);
+        let round_cap = round_cap(budget, fixed, parti.is_some());
         let mut lo = 0usize;
         while lo < NB {
             let (mut hi, mut used) = (lo, 0usize);
@@ -879,11 +885,7 @@ pub(crate) fn build_dopo(
                 hi += 1;
             }
             if hi == lo {
-                return Err(crate::budget::refusal(
-                    "index",
-                    fixed + 2 * cost(lo),
-                    budget,
-                ));
+                return Err(slice_refusal(cost(lo), budget));
             }
             if used > 0 {
                 for sec in secs.iter_mut() {

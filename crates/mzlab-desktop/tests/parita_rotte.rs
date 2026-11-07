@@ -109,6 +109,8 @@ fn plan() -> Vec<Value> {
         r("/api/ms2tr", ""),
         r("/api/spectrum", "?k=0&level=1&rt0=0.2&rt1=0.4"),
         r("/api/dda", "?k=0"),
+        r("/api/dda_window", "?k=0&r0=0&r1=5"),
+        r("/api/dda_window", "?k=0&r0=0"),
         r("/api/msn_albero", "?k=0"),
         r("/api/scan_stats", "?k=0"),
         r("/api/nope", ""),
@@ -295,7 +297,7 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
         fid,
         &plan,
         &wasm,
-        &[1, 12, 15, 16, 23, 26, 27, 31, 32, 33, 34],
+        &[1, 11, 14, 17, 18, 25, 28, 29, 33, 34, 35, 36],
     );
     // a slot that was never opened is an error with the same key in both
     for w in &wasm[wasm.len() - 3..] {

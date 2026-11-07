@@ -113,7 +113,7 @@ def test_a_member_without_sha1_does_not_inherit_the_earlier_one(tmp_path):
     thermo.mkdir(parents=True)
     (tmp_path / "wasm-lettori" / "manifest.json").write_text(json.dumps({"thermo": {"sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}}))
     (thermo / "mzlab_lettori_wasm_bg.wasm").write_bytes(b"")
-    (thermo / "mzlab_lettori_wasm.js").write_text("export default async () => {}; export const apri_con_sha1 = (n, s, r, sums) => { globalThis.calls.push(sums); return 1; }; export const apri = () => { globalThis.calls.push(null); return 1; }; export const chiudi = () => {};")
+    (thermo / "mzlab_lettori_wasm.js").write_text("export default async () => {}; export const open_with_sha1 = (n, s, r, sums) => { globalThis.calls.push(sums); return 1; }; export const open = () => { globalThis.calls.push(null); return 1; }; export const close = () => {};")
     r = esm(tmp_path, ["lettore-esterno.js", "carica-modulo.js"], """
       import { readFileSync } from "node:fs"; import { fileURLToPath } from "node:url";
       globalThis.fetch = async u => { const b = readFileSync(fileURLToPath(u)); return { json: async () => JSON.parse(b.toString()), arrayBuffer: async () => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) }; };
@@ -121,9 +121,9 @@ def test_a_member_without_sha1_does_not_inherit_the_earlier_one(tmp_path):
       const { createEsterno } = await import("./lettore-esterno.js");
       let open; const e = createEsterno(o => { open = o; });
       await e.prepara(["a.raw"], [{ name: "a.raw", size: 5, sha1: "AA" }]);
-      const first = open(["a.raw"], [5], () => {}); first.chiudi();
+      const first = open(["a.raw"], [5], () => {}); first.close();
       await e.prepara(["a.raw"], [{ name: "a.raw", size: 5 }]);
-      open(["a.raw"], [5], () => {}).chiudi();
+      open(["a.raw"], [5], () => {}).close();
       console.log(JSON.stringify(calls));
       process.exit(0);
     """)

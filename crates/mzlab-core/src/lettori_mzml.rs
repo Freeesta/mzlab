@@ -57,7 +57,7 @@ pub enum Picchi {
 /// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam).
 #[cfg(not(target_family = "wasm"))]
 fn centroidi_di(l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Option<Params>> {
-    if l.indice(c)?.is_empty() || !l.scansione(c, 0)?.profile {
+    if l.indice_senza_tic(c)?.is_empty() || !l.scansione(c, 0)?.profile {
         return Ok(None);
     }
     let p = stima(l, c)?;
@@ -208,7 +208,7 @@ impl Conversione<'_> {
             }
             None => MzmlWriter::con_opzioni(out, &h, self.opz)?,
         };
-        let n = l.indice(c)?.len();
+        let n = l.indice_senza_tic(c)?.len();
         let dad = dad_di(self.opz, l, c)?;
         let uv = dad.as_ref().map_or(0, |d| d.points());
         if n + uv > 0 {
@@ -328,15 +328,18 @@ pub fn guscio(l: &mut dyn Lettore, c: usize) -> Result<Vec<u8>> {
         return Err(Error::new("error.badIndex").with("c", c));
     }
     let mut w = MzmlWriter::new(Vec::new(), &testata(l, c)?)?;
-    let n = l.indice(c)?.len();
+    let n = l.indice_senza_tic(c)?.len();
     if n > 0 {
         w.open_spectra(n)?;
         w.close_spectra()?;
     }
     cromatogrammi(l, c, &mut w)?;
-    let (pos, neg) = l.indice(c)?.iter().fold((false, false), |(p, q), v| {
-        (p || v.polarita > 0, q || v.polarita < 0)
-    });
+    let (pos, neg) = l
+        .indice_senza_tic(c)?
+        .iter()
+        .fold((false, false), |(p, q), v| {
+            (p || v.polarita > 0, q || v.polarita < 0)
+        });
     let mut doc = w.finish()?;
     let tail = b"</run>\n</mzML>\n".len();
     let end = doc.len().saturating_sub(tail);

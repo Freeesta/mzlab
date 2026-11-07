@@ -89,5 +89,13 @@ I18N.add("it", {
   "ctl.kind.press": "Pressione della pompa",
   "ctl.wl.title": "Media dei canali DAD in questo intervallo di nm",
   "ctl.kind.reg": "Registro dello strumento",
-  "ctl.kind.reg.title": "Temperature, tensioni, vuoto e campi per scansione registrati dallo strumento"
+  "ctl.kind.reg.title": "Temperature, tensioni, vuoto e campi per scansione registrati dallo strumento",
+  "dda.nav.group": "MS² dello stesso precursore",
+  "dda.nav.prev": "MS² precedente di questo precursore ({i}/{n}). Maiusc+clic: la precedente nel tempo, come ←",
+  "dda.nav.next": "MS² seguente di questo precursore ({i}/{n}). Maiusc+clic: la seguente nel tempo, come →",
+  "dda.nav.first": "Prima MS² di questo precursore",
+  "dda.nav.last": "Ultima MS² di questo precursore",
+  "dda.nav.only": "Nessun'altra MS² di questo precursore",
+  "dda.peak.near": "MS² di questo ione da una scansione a {d} min",
+  "dda.tri.btn": "▲ MS²"
 });

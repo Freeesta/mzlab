@@ -288,6 +288,33 @@ fn format_fit(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref, ty: DataType, for
     add(c, i, port.name, "err.flow.port.format", &p);
 }
 
+/// Whether the table of `r` was aligned in this plan: an output that hands a lineage on (`Port::lineage`), made by its step or passed from its table
+/// inputs; a file never is. A source the check cannot follow (unknown, a cycle) is left to its own problems.
+fn aligned_here(c: &Ctx, r: &Ref, depth: usize) -> bool {
+    let Ref::Out { instance, port } = r else {
+        return false;
+    };
+    let Some((src, step)) = c
+        .plan
+        .instance(instance)
+        .and_then(|s| Some((s, step_of(c, s)?)))
+    else {
+        return true;
+    };
+    if depth > c.plan.steps.len() {
+        return true;
+    }
+    if !step.outs.iter().any(|o| o.name == port && o.lineage) {
+        return false;
+    }
+    let table = |p: &Port| p.ty == DataType::Table || p.accepts.contains(&DataType::Table);
+    src.ins
+        .iter()
+        .filter(|(n, _)| step.ins.iter().any(|p| p.name == n && table(p)))
+        .flat_map(|(_, refs)| refs)
+        .all(|r| aligned_here(c, r, depth + 1))
+}
+
 fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
     for (name, refs) in &i.ins {
         let Some(port) = step.ins.iter().find(|p| p.name == name) else {
@@ -319,6 +346,9 @@ fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
             let fits = ty == port.ty || port.accepts.contains(&ty);
             if fits {
                 format_fit(c, i, port, r, ty, format);
+                if port.lineage && !aligned_here(c, r, 0) {
+                    add(c, i, name, "err.flow.lineage", &[("step", step.id)]);
+                }
             } else if conversion_path(c.registry, ty, port.ty).is_none() {
                 add(
                     c,

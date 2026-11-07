@@ -1,4 +1,4 @@
-"""«Download .mzML» of a .wiff sample on the site (rust-nativo.js `toMzml`: `to_mzml_come` of the `sciex` module, no optical matrix) is byte for byte the file of
+"""«Download .mzML» of a .wiff sample on the site (rust-nativo.js `toMzml`: `to_mzml_with` of the `sciex` module, no optical matrix) is byte for byte the file of
 `mzlab-cli convert` with the same `--compression` (conv.dad false), for a Full Scan, a product-ion, a dense MRM pair and one with a DAD (the engine alone leaves out what `estesi` writes: SRM dwell and
 energy, isolation offsets, the TIC and BPC of a Full Scan). Synthetic pairs of tools/wiff_riferimento.py only. Skipped without cargo, wasm-bindgen or node."""
 import os
@@ -39,7 +39,7 @@ def test_the_download_is_the_file_of_the_cli(work, stem, comp):
 @pytest.mark.parametrize("comp", ["standard", "smallest", "none"])
 def test_a_sample_of_the_readers_module_downloads_as_the_cli_writes_it(work, comp):
     """The second sample of `mistopi` only the readers module reads (converted at the loading, shell.js `moduloToMzml`): «Download .mzML» writes it again with
-    `to_mzml_come` without the optical matrix (conversione.js `again`), the file of `mzlab-cli convert` with the same compression (conv.dad false)."""
+    `to_mzml_with` without the optical matrix (conversione.js `again`), the file of `mzlab-cli convert` with the same compression (conv.dad false)."""
     pair = [work / "ref" / "mistopi.wiff", work / "ref" / "mistopi.wiff.scan"]
     site, out = work / f"mistopi.{comp}.mzML", work / f"mistopi.{comp}"
     run("node", str(ROOT / "tests" / "mzml_scarica_node.js"), str(work / "mod"), str(site), "1", comp, *map(str, pair))

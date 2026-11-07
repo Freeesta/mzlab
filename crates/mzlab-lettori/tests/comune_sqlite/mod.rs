@@ -5,6 +5,8 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
 use mzlab_lettori::bruker::sqlite_min::Sqlite;
 
+pub mod pasef;
+
 pub const PAG: usize = 4096;
 
 pub enum V<'a> {
