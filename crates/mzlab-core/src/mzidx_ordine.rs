@@ -95,7 +95,7 @@ fn finish_runs<P: Copy>(s: &mut [P], key: &impl Fn(&P) -> u64, tie: Tie<P>) {
 }
 
 /// Orders the peaks of a bucket by m/z (and by scan when `per_scansione`; equal ones keep their order): the radix sort on the 32-bit order bits
-/// of an `f32` m/z (and the scan below them), or on the high half of the order bits of an `f64` and then the runs of equal halves by comparison.
+/// of an `f32` m/z (and the scan below them), or on the high 48 order bits of an `f64` (about 1e-8 Th at m/z 500, so HR ions repeated across scans rarely tie) and then the runs of equal keys by comparison.
 #[allow(clippy::disallowed_methods)] // hot path: per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
 pub(crate) fn ordina<T: Num>(
     s: &mut [Peak<T>],
@@ -117,7 +117,7 @@ pub(crate) fn ordina<T: Num>(
         // the scan goes below the order bits; without `per_scansione` the digits of the scan are not looked at
         radix(s, tmp, key32::<T>, usize::from(!per_scansione) * 4, None)
     } else {
-        radix(s, tmp, key64::<T>, 4, Some(&cmp))
+        radix(s, tmp, key64::<T>, 2, Some(&cmp))
     }
 }
 
@@ -254,6 +254,51 @@ mod tests_secchi {
                 .all(|(p, q)| p.mz == q.mz && p.it == q.it && p.pos == q.pos));
         }
     }
+
+    /// A 64-bit m/z bucket as HR data fill it (the same ions in many scans, values a few ulps apart, NaN, both zeros) is ordered as the stable comparison sort orders it.
+    #[test]
+    #[allow(clippy::disallowed_methods)] // the reference order
+    fn hr_bucket_is_the_stable_sort() {
+        let mut x = 7u64;
+        let mut next = move || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x
+        };
+        let ioni = [445.120_31, 445.120_32, 445.5, 445.999_999_9];
+        let v: Vec<Peak<f64>> = (0..5000u32)
+            .map(|i| {
+                let mz = match next() % 10 {
+                    0 => f64::NAN,
+                    1 => [0.0, -0.0][(next() % 2) as usize],
+                    2 => 445.0 + (next() % 1_000_000) as f64 * 1e-6,
+                    k => f64::from_bits(ioni[k as usize % 4].to_bits() + next() % 3),
+                };
+                Peak {
+                    mz,
+                    it: f64::from(i),
+                    pos: (next() % 400) as u32,
+                }
+            })
+            .collect();
+        for per_scansione in [false, true] {
+            let (mut a, mut b, mut tmp) = (v.clone(), v.clone(), Vec::new());
+            ordina(&mut a, &mut tmp, per_scansione).unwrap();
+            b.sort_by(|x, y| {
+                let o = by_mz(x, y);
+                if per_scansione {
+                    o.then(x.pos.cmp(&y.pos))
+                } else {
+                    o
+                }
+            });
+            assert!(a
+                .iter()
+                .zip(&b)
+                .all(|(p, q)| p.mz.to_bits() == q.mz.to_bits() && p.it == q.it && p.pos == q.pos));
+        }
+    }
 }
 
 /// Bits that order like the value, NaN last, `-0.0` as `0.0` (as `by_mz`): the 32 of an `f32` m/z, the scan below them.
@@ -268,7 +313,7 @@ fn key32<T: Num>(p: &Peak<T>) -> u64 {
     (u64::from(k) << 32) | u64::from(p.pos)
 }
 
-/// The same for an `f64` m/z, keeping the high half (the runs of equal halves are ordered by comparison).
+/// The same for an `f64` m/z, keeping the high 48 bits (the runs of equal keys are ordered by comparison).
 #[inline(always)]
 fn key64<T: Num>(p: &Peak<T>) -> u64 {
     let x = p.mz.to64();
@@ -277,7 +322,7 @@ fn key64<T: Num>(p: &Peak<T>) -> u64 {
         b if b >> 63 == 1 => !b,
         b => b | 1 << 63,
     };
-    k & !0xFFFF_FFFF
+    k & !0xFFFF
 }
 
 #[cfg(test)]
