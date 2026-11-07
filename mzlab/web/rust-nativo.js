@@ -213,8 +213,7 @@ async function lostDi(/** @type {any} */ ARCH, /** @type {(n: string) => Promise
   if (out.length) { const used = await usedStores(ARCH, fresh); for (const n of drop) if (!used.has(n)) await ARCH.remove("files", n); }      // not named again as an interrupted copy
   return out;
 }
-/** @param {any} h the engine hooks, and `notice` (key, params) for the calm notice of a sample read in place */
-export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool, post, notice }) {
+export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool, post }) {
   const ext = createEsterno(native_external), early = createTicNativo(pool, post);   // a .raw is read through `thermo` (lettore-esterno.js); its TIC is read while it is copied (tic-nativo.js)
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
@@ -253,7 +252,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
       if (o) [member.sha256, member.sha1, member.probe] = o;
     }
     /** @type {Stub} */
-    const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total, dim: nat.size != null ? nat.size : null }; if (sul) { await ensureRoom(total * (ROOM - 1) / ROOM, m.name); st.sul = true; if (notice) notice("load.sulPosto", { name: m.name }); }      // the room of its index alone      // size = the sum of the members (what the index records); dim = the size of this sample to show
+    const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total, dim: nat.size != null ? nat.size : null }; if (sul) { await ensureRoom(total * (ROOM - 1) / ROOM, m.name); st.sul = true; if (post) post({ op: "notice", key: "load.sulPosto", params: { name: m.name } }); }      // the room of its index alone      // size = the sum of the members (what the index records); dim = the size of this sample to show
     stubs.delete(m.name);
     return ARCH.put("files", m.name, new TextEncoder().encode(JSON.stringify(st)));
   }

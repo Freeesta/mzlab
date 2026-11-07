@@ -118,7 +118,7 @@ async function fileOf(name) {
 const impronte = createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule });
 // size shown for a maker's sample: its own when the reader knows it, else the sum of its members (e.g. .wiff + .wiff.scan); stubs written before the sum was kept have `size` too
 const shownSize = (/** @type {{ dim?: number | null, size: number }} */ st) => st.dim != null ? st.dim : st.size;
-const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool: () => idxPool(), post: m => postMessage(m), notice: (key, params) => postMessage({ op: "notice", key, params }) });
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool: () => idxPool(), post: m => postMessage(m) });
 const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); return p && p.size === size ? [p.sha256, p.probe] : [undefined, undefined]; };
 const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
 const openGate = createOpenGate();
