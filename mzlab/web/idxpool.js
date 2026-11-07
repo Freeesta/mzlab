@@ -27,6 +27,9 @@ export function aiutiPer(size, used, isolated) {
 export function makeGate(size) {
   return { size: Math.max(1, size), used: 0, pumps: /** @type {Array<() => void>} */ ([]) };
 }
+// The gate takes the size of the device the page names: a worker has no `maxTouchPoints`, so there an iPad with the Mac user agent looks like a
+// computer. Running workers end as they would; no new one starts past the new size. Returns `small`.
+export const fitGate = (/** @type {{ size: number }} */ gate, /** @type {boolean} */ small, /** @type {number} */ cores) => ((gate.size = Math.max(1, poolSize(small, cores))), small);
 
 // The peak budget of one index builder in MB: its share of the engine's budget (`engineMb`, 0 = not chosen yet: undefined, the pool's default) with the
 // `slots` workers of the pool, never below the default (32 on a tablet or phone, 64) nor above 512. Rounds read from the scratch file stay at 32 MB whatever
