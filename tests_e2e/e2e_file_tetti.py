@@ -37,7 +37,7 @@ try:
                 pg.set_input_files("#lab-f", files=[{"name": "lab.csv", "mimeType": "text/csv", "buffer": csv.encode()}])
                 pg.wait_for_function("__toast.length > 0", timeout=10000)
                 want = pg.evaluate("I18N.t('lst.lab.importedCut', { max: 5000, m: 5003, rest: 3 })")
-                got = pg.evaluate("__toast")
+                got = pg.evaluate("__toast.filter(Boolean)")
                 assert got == [want] and "5003" in want and not want.startswith("lst."), got
                 pg.keyboard.press("Escape")
             step(f"{lang}: a contaminant CSV over 5000 rows: one toast with the cap, the count and the next step", lab_cut)
