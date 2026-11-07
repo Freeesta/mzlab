@@ -218,8 +218,9 @@ const DDA = (() => {
   function click(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number} */ py) {
     try {
       if (p.duo == null || !p._a || !p._a.lbls) return false;
-      const l = p._a.lbls.find((/** @type {Bag} */ b) => (b.fl != null || b.nb) && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h); if (!l) return false;
+      const l = p._a.lbls.find((/** @type {Bag} */ b) => (b.fl != null || b.nb) && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
       const s2 = target(p), D = ready(E.files[p.k].k); if (!s2 || !D) return false;
+      if (!l) return peak(p, s2, D, px, py);
       if (l.fl != null) { selectMs2(s2, D.sid[l.fl], l.keep ? { parent: false, zoom: false } : {}); return true; }      // keep: a flag of an averaged Full Scan, which stays as it is
       s2.ion = D.prec[l.nb[0]]; s2._mixed = null;                                // a peak fragmented in another scan: the closest MS2 in time, the Full Scan stays where it is
       selectMs2(s2, D.sid[l.nb[0]], { parent: false }); return true;
@@ -227,6 +228,14 @@ const DDA = (() => {
   }
 
   // ---------------------------------------------------------------- right click: average of the MS2 of an ion, follow an ion
+  // a click on a peak, away from the flags: its MS2 (dda-marcatori.js `peak`); the ruler, a measure and the waiting XIC button keep their click
+  function peak(/** @type {Bag} */ p, /** @type {Pannello} */ s2, /** @type {Bag} */ D, /** @type {number} */ px, /** @type {number} */ py) {
+    const X = window.XICBTN; if (!window.DDAMARK || !p._a.snap || p.rul || (p.meas && p.meas.ref != null) || (X && X.pending(p))) return false;
+    const b = p._a.snap(px), h = b && DDAMARK.peak(_in, p, b.m); if (!h) return false;
+    if (X) X.click(p, px, py);                                                // the peak is also the one of the XIC button, as a plain click makes it
+    if (h.near) { s2.ion = D.prec[h.j]; s2._mixed = null; nearMsg(I18N.t("dda.peak.near", { d: Math.abs(D.rt[h.j] - h.rt).toFixed(2) })); }
+    selectMs2(s2, D.sid[h.j], h.keep ? { parent: false, zoom: false } : h.near ? { parent: false } : {}); return true;
+  }
   function lowerBound(/** @type {number[]} */ a, /** @type {number} */ v) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < v) lo = m + 1; else hi = m; } return lo; }
   function nearest(/** @type {number[]} */ a, /** @type {number} */ v) { if (!a.length) return -1; const i = lowerBound(a, v); if (i <= 0) return 0; if (i >= a.length) return a.length - 1; return Math.abs(a[i] - v) < Math.abs(a[i - 1] - v) ? i : i - 1; }
   // the MS2 of an ion around a retention time: within +-NEAR_MIN min, the NEAR_MAX closest in time, in order of acquisition
