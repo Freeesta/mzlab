@@ -73,7 +73,7 @@ pub(crate) fn campioni_2() -> Vec<Campione> {
         .collect()
 }
 
-fn design() -> Disegno {
+pub(crate) fn design() -> Disegno {
     let condition = |name: &str| Condizione {
         name: name.into(),
         replicates: 3,

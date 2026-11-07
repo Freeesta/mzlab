@@ -33,7 +33,7 @@ const CALCADDHTML = (() => {
         + (hasM ? `<td class="num">${mz}</td>` : "") + (unit ? `<td class="num">${r.nominal}</td>` : "")
         + (hasM && hasObs ? `<td class="num">${errOf(r)}</td>` : "")
         + (mif ? `<td class="num">${r.m_if == null ? "" : r.m_if.toFixed(lr ? 1 : 4)}</td>` : "")
-        + (hasM ? `<td><button type="button" class="cxic" data-i="${idx(r)}" title="${I18N.t("calc.xic.title")}" aria-label="${EH(I18N.t("calc.xic.aria", { adduct: r.n, mz }))}">XIC</button></td>` : "") + "</tr>";
+        + (hasM ? (mz ? `<td><button type="button" class="cxic" data-i="${idx(r)}" title="${I18N.t("calc.xic.title")}" aria-label="${EH(I18N.t("calc.xic.aria", { adduct: r.n, mz }))}">XIC</button></td>` : "<td></td>") : "") + "</tr>";       // no m/z (below zero): nothing to extract
     };
     const common = mine.filter(r => r.common), rare = mine.filter(r => !r.common), open = st.more || (best != null && rare.includes(best));
     const more = `<tr class="cmore"><td colspan="${cols}"><button type="button" class="cadd-more" aria-expanded="${open}">${I18N.t("tbl.add.more")}</button></td></tr>`;

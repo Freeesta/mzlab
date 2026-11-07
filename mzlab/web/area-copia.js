@@ -24,7 +24,7 @@ const where = (/** @type {MouseEvent} */ e, /** @type {Bag} */ p) => { const r =
 const panelOf = (/** @type {EventTarget | null} */ t) => (t instanceof HTMLCanvasElement ? E.panels.find((/** @type {Bag} */ q) => q.cv === t) : undefined);
 document.addEventListener("mousedown", e => {
   down = null; const p = e.button === 0 && !e.shiftKey ? panelOf(e.target) : undefined; if (!p) return;
-  const [px, py] = where(e, p), l = hit(p, px, py); if (!l) return;
+  const [px, py] = where(e, p), l = hit(p, px, py); if (!l || p.ints.some((/** @type {Bag} */ i) => Math.abs(p._a.X(i.a) - px) < 6 || Math.abs(p._a.X(i.b) - px) < 6)) return;   // a border under the label still drags (eventi.js edgeAt)
   down = { p, l }; e.stopPropagation(); front(p.el); setActive(p);                  // no drag, no cursor move, no selection change; the panel still comes forward
 }, true);
 document.addEventListener("mouseup", e => {
@@ -34,4 +34,8 @@ document.addEventListener("mouseup", e => {
 if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "int.copyArea", gruppo: "tools", ordine: 0, viste: ["chrom", "xic", "mrm"],
   visibile: (/** @type {Bag} */ c) => !!target(c.p, c.x, c.px, c.py), nome: () => I18N.t("int.copy.menu"),
   esegui: (/** @type {Bag} */ c) => { const l = target(c.p, c.x, c.px, c.py); if (l) copy(c.p, l); } });
+// the baseline of the integration under the pointer or selected (key B): its dialog in integra-base.js, loaded on demand
+if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "int.baseline", gruppo: "tools", ordine: 0, viste: ["chrom", "xic", "mrm"], scorciatoia: { tasto: "b", dove: "chart", et: "scorc.base" },
+  visibile: (/** @type {Bag} */ c) => !!target(c.p, c.x, c.px, c.py), nome: () => I18N.t("int.base.menu"),
+  esegui: (/** @type {Bag} */ c) => { const l = target(c.p, c.x, c.px, c.py); if (l) carica("integra-base.js").then(() => INTBASE.open(c.p, l.int)); } });
 window.AREACOPY = { target, copy };

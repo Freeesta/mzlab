@@ -116,6 +116,8 @@ I18N.add("it", {
   "export.int.q1": "Q1 (m/z)",
   "export.int.q3": "Q3 (m/z)",
   "export.int.transition": "Nome della transizione",
+  "export.int.base": "Linea di base",
+  "export.int.below": "Area sotto la linea (conteggi·s)",
   "export.int.role.sample": "campione",
   "export.int.role.blank": "bianco",
   "export.int.role.dark": "buio",

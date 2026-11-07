@@ -29,11 +29,14 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
-/// What a container holds, from the names of its directory (a storage can be there and empty: the data are told by `carica::scegli`).
+/// What a container holds, from the names of its directory (a storage can be there and empty: the data are told by `carica::scegli`). `Ignoto` and `Rotto`: a `.qgd`/`.lcd`
+/// that is an OLE2 container of other storages (another instrument's data), or whose directory lies beyond its end (a cut copy): refused with what was found.
 enum Contenuto {
     Dati,
     QTof,
     SoloLc,
+    Ignoto(String),
+    Rotto,
 }
 
 fn contenuto(nomi: &[String]) -> Option<Contenuto> {
@@ -49,18 +52,39 @@ fn contenuto(nomi: &[String]) -> Option<Contenuto> {
     }
 }
 
-/// The member of `fs` that is a Shimadzu container, and what it holds.
+/// The member of `fs` that is a Shimadzu container, and what it holds; failing that, a `.qgd`/`.lcd` OLE2 container it cannot read the data of.
 fn trova(fs: &mut FileSet) -> Option<(usize, Contenuto)> {
-    (0..fs.membri.len()).find_map(|i| {
-        let c = contenuto(&dir::nomi(&mut fs.membri[i])?)?;
-        Some((i, c))
+    (0..fs.membri.len())
+        .find_map(|i| {
+            let c = contenuto(&dir::nomi(&mut fs.membri[i])?)?;
+            Some((i, c))
+        })
+        .or_else(|| (0..fs.membri.len()).find_map(|i| Some((i, altro(&mut fs.membri[i])?))))
+}
+
+/// A member named `.qgd`/`.lcd` that starts as an OLE2 container: the storages of its root (`Ignoto`), or `Rotto` when its directory cannot be followed.
+fn altro(m: &mut mzlab_core::lettori::Membro) -> Option<Contenuto> {
+    let n = m.nome.to_ascii_lowercase();
+    if !(n.ends_with(".qgd") || n.ends_with(".lcd")) || !dir::ole(m) {
+        return None;
+    }
+    Some(match dir::nomi(m) {
+        Some(v) => Contenuto::Ignoto(
+            v.iter()
+                .skip(1)
+                .take(8)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", "),
+        ),
+        None => Contenuto::Rotto,
     })
 }
 
 fn riconosci(fs: &mut FileSet) -> Fiducia {
     match trova(fs) {
         Some((_, Contenuto::Dati | Contenuto::QTof)) => Fiducia::Si,
-        Some((_, Contenuto::SoloLc)) => Fiducia::Forse,
+        Some((_, Contenuto::SoloLc | Contenuto::Ignoto(_) | Contenuto::Rotto)) => Fiducia::Forse,
         None => Fiducia::No,
     }
 }
@@ -71,6 +95,18 @@ fn rifiuto(detail: &str) -> Error {
 
 fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let (i, c) = trova(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted"))?;
+    match &c {
+        Contenuto::Ignoto(v) => {
+            return Err(rifiuto(&format!(
+                "not a LabSolutions/GCMSsolution data file (storages: {v})"
+            )))
+        }
+        Contenuto::Rotto => {
+            let d = fs.membri[i].dim;
+            return Err(rifiuto(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
+        }
+        _ => {}
+    }
     let mut m = fs.membri.swap_remove(i);
     // the container and the raw stream are both in memory
     if m.dim.saturating_mul(2) > limiti.byte {

@@ -24,7 +24,7 @@ const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.len
 // those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peak-edges / peak-auto --set only).
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
 /** @type {Record<string, number>} */
-const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5 };
+const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, base: 0 };      // base: 0 edges, 1 zero, 2 line (new integrations)
 const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 // Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
@@ -115,8 +115,11 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
 }
 function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null), zero = false) {
   const f = E.files[s.k];
-  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}), ...(zero ? { zero: true } : {}) };
+  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}), ...(zero ? { zero: true } : {}),
+    ...(!zero && PK.base ? PK.base === 1 ? { bm: "zero" } : { bm: "line", bl: edgeLine(s, lo, hi, base) } : {}) };
 }
+// [t0, y0, t1, y1] of the line between the edges: a custom line starts there
+const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? baseAt(base, s.x[i]) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
 // a trace of a high-resolution file: the automatic tool integrates all its peaks at once (low resolution keeps one peak per click)
 const hrTrace = (/** @type {Bag} */ s) => { const f = E.files[s.k]; return !!f && !!window.HR && HR.isHr(f, f.lv); };
 // every peak of the stretch shown, found and given its baseline by the Rust engine (auto_integrate, peakq_auto.rs), in one undoable step;
@@ -160,7 +163,7 @@ function peakParams() {
   const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
   const sec = (/** @type {string} */ k, /** @type {string[]} */ keys) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${keys.map(f).join("")}</fieldset>`;
   big(I18N.t("pk.title"), `<div class="muted sm pk-intro">${I18N.t("pk.intro")}</div>
-    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}</div>
+    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="base">${["edges", "zero", "line"].map((k, v) => `<option value="${v}"${PK.base === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
     <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
     Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
@@ -209,9 +212,11 @@ const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "r
 // appended after every other column of the export: role of the file, and the MRM transition (Q1, Q3, name; empty for an XIC)
 const INT_NEW = ["role", "q1", "q3", "transition"];
 const INT_NEW_HEADS = INT_NEW.map(k => I18N.t(`export.int.${k}`));
+// the baseline of a record by name (int.base.*)
+const bName = (/** @type {Bag} */ it) => it.bm || (it.zero ? "window" : "edges");
 function intExtra(/** @type {Bag} */ r) {
   const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === it.key);
-  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.zero ? INTZERO.base : it.base) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
+  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.bl || (it.zero || it.bm === "zero" ? [0, 0, 1, 0] : it.base)) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
   const h = Number.isFinite(r.height) ? r.height : pk ? pk.height : null;      // the height shown in the table, so S/N and «height» never disagree
   return { sn: h != null && sd ? h / sd : null, noise: !!z, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
 }
@@ -225,7 +230,7 @@ async function showInts() {
   const /** @type {Bag[]} */ rows = allInts().map((/** @type {Bag} */ r) => ({ ...r, ...intExtra(r) }));
   if (INTOPT.q) { const qs = await Promise.all(rows.map(qualityOf)); rows.forEach((/** @type {Bag} */ r, /** @type {number} */ i) => { r.qg = qs[i] ? qs[i].gaussian : null; r.qa = qs[i] ? qs[i].asymmetry : null; r.qn = qs[i] ? qs[i].noise : null; }); }
   const fx = (/** @type {number | null | undefined} */ v, /** @type {number} */ d) => v == null || !isFinite(v) ? "" : String(+v.toFixed(d));
-  const head = [INT_HEADS[0], INT_HEADS[1], INT_HEADS[2], I18N.t("int.tbl.time"), I18N.t("int.tbl.conc"), I18N.t("int.tbl.rt0"), I18N.t("int.tbl.rt1"), I18N.t("int.tbl.apex"), I18N.t("int.tbl.area"), I18N.t("int.tbl.height")], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1];
+  const head = [INT_HEADS[0], INT_HEADS[1], INT_HEADS[2], I18N.t("int.tbl.time"), I18N.t("int.tbl.conc"), I18N.t("int.tbl.rt0"), I18N.t("int.tbl.rt1"), I18N.t("int.tbl.apex"), I18N.t("int.tbl.area"), I18N.t("int.tbl.height"), I18N.t("int.tbl.base"), I18N.t("int.tbl.below")], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1];
   const th = (/** @type {string} */ t, /** @type {number} */ n) => `<th${n ? ' class="num"' : ""}>${t}</th>`;
   const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>1/2</sub> (min)", 1) + th(I18N.t("int.tbl.plates"), 1) + th(I18N.t("int.tbl.tail"), 1) : "") +
     (INTOPT.q ? ["gauss", "asym", "nscore"].map(k => `<th class="num" title="${I18N.t(`int.tbl.${k}.h`)}">${I18N.t(`int.tbl.${k}`)}</th>`).join("") : "");
@@ -234,11 +239,11 @@ async function showInts() {
     <label title="${I18N.t("int.tbl.par.title")}"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> ${I18N.t("int.tbl.par")}</label>
     <label title="${I18N.t("int.tbl.q.title")}"><input type="checkbox" id="ig-q" ${INTOPT.q ? "checked" : ""}> ${I18N.t("int.tbl.q")}</label></div>
     <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>${I18N.t("int.tbl.corr")}</th><th></th></tr>` +
-    rows.map((/** @type {Bag} */ r, /** @type {number} */ i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${I18N.sciE(r.area ?? 0, 5)}">${I18N.sciE(r.area ?? 0)}</td><td class="num">${I18N.sciE(r.height ?? 0)}</td>` +
+    rows.map((/** @type {Bag} */ r, /** @type {number} */ i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${I18N.sciE(r.area ?? 0, 5)}">${I18N.sciE(r.area ?? 0)}</td><td class="num">${I18N.sciE(r.height ?? 0)}</td><td>${I18N.t(`int.base.${bName(r._it)}`)}</td><td class="num">${r._it.bm ? I18N.sciE(r.below ?? 0) : ""}</td>` +
       (INTOPT.sn ? `<td class="num">${r.sn != null ? fx(r.sn, 1) : `<button data-nz="${i}" title="${I18N.t("int.tbl.pickNoise.title")}">${I18N.t("int.tbl.pickNoise")}</button>`}</td>` : "") +
       (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") +
       (INTOPT.q ? `<td class="num">${fx(r.qg, 3)}</td><td class="num">${fx(r.qa, 2)}</td><td class="num">${fx(r.qn, 2)}</td>` : "") + `<td>${EH(r.corr || I18N.t("ibk.no"))}</td><td>${intClash(r._p, r.key, r.a, r.b, r._it) ? `<span class="warn" title="${I18N.t("int.tbl.overlap.title")}">${I18N.t("int.tbl.overlap")}</span> ` : ""}<button data-del="${i}" title="${I18N.t("int.tbl.del.title")}">×</button></td></tr>`).join("") +
-    `</table><div class="muted sm">${I18N.t("int.tbl.note")}</div>`
+    `</table><div class="muted sm">${I18N.t("int.tbl.note")}</div>` + (rows.some((/** @type {Bag} */ r) => r.below > 0) ? `<div class="muted sm">${I18N.t("int.tbl.below.note")}</div>` : "")
     : `<div class="muted">${I18N.t("int.tbl.none")}</div>`, () => {
     if (!rows.length) return;
     Q("#ig-sn").onchange = (/** @type {Event} */ e) => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT.sn = /** @type {HTMLInputElement} */ (e.target).checked; }); showInts(); };
@@ -249,8 +254,9 @@ async function showInts() {
       const r = rows[Number(b.dataset.nz)]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
       stepMsg(r._p, I18N.t("int.pickNoise.msg"), true);
     });
-    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS],
-      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : []), ...INT_NEW.map(c => r[c])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18, 14, 10, 10, 22] }];
+    const bx = rows.some((/** @type {Bag} */ r) => r._it.bm);          // only then the two columns: old exports unchanged
+    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS, ...(bx ? [I18N.t("export.int.base"), I18N.t("export.int.below")] : [])],
+      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : []), ...INT_NEW.map(c => r[c]), ...(bx ? [I18N.t(`int.base.${bName(r._it)}`), r._it.bm ? r.below : null] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18, 14, 10, 10, 22] }];
     Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
     Q("#ig-csv").onclick = () => dlc(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
   });

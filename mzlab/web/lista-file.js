@@ -50,34 +50,35 @@ function fileRemoval(/** @type {any} */ f) {
     toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
   };
   // the row of the loading table says whether the file is in the session: unticked while no sample of its source is open (as the tick itself does)
-  const syncRow = () => {
+  const syncRow = (/** @type {boolean} */ quiet) => {
     const r = ST.files.find((/** @type {any} */ x) => x.name === src(f));
-    if (r) { r.use = E.files.some(g => !g.gone && src(g) === src(f)); renderFiles(); }
+    if (r) { r.use = E.files.some(g => !g.gone && src(g) === src(f)); if (!quiet) renderFiles(); }
   };
   /** @type {any[]} */ let closed = [];
-  const take = () => {
+  // quiet: one of a batch (removeAllFiles) whose last step repaints; every repaint draws the whole list, so one per file made a batch quadratic
+  const take = (quiet = false) => {
     const before = E.panels.map(q => /** @type {[any, any]} */ ([q, panelRec(q)]));
     f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k);
-    syncRow();
+    syncRow(quiet);
     E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
     if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
     // a panel left with no file of its tab closes (the undo opens it again)
     cleanupOrphanPanels();
     closed = before.filter(([q]) => !E.panels.includes(q)).map(([, rec]) => rec);
     if (closed.length) { relayout(); fitHost(); }
-    show();
+    if (!quiet) show();
   };
-  const back = () => {
+  const back = (quiet = false) => {
     f.gone = false; f.vis = was.vis; was.ps.forEach(q => { if (E.panels.includes(q)) q.k = f.k; });
-    syncRow();
+    syncRow(quiet);
     if (was.cur) STATO.file(f.k, "file-restored");
     closed.forEach(rec => riapriPannello(rec)); if (closed.length) { relayout(); fitHost(); }
     closed = [];
-    show();
+    if (!quiet) show();
   };
-  const free = () => {
+  const free = (quiet = false) => {
     if (!(window.MZLAB_BROWSER && f.gone && !E.files.some(g => g !== f && !g.gone && src(g) === src(f)))) return Promise.resolve();
-    return post("api/remove", { name: src(f) }).then((/** @type {any} */ j) => { mergeFiles(j.files || []); renderFiles(); }).catch(() => { /* not in the browser store: nothing to free */ });
+    return post("api/remove", { name: src(f) }).then((/** @type {any} */ j) => { mergeFiles(j.files || []); if (!quiet) renderFiles(); }).catch(() => { /* not in the browser store: nothing to free */ });
   };
   return { take, back, free };
 }
@@ -109,14 +110,41 @@ function removeFile(/** @type {any} */ f) {
   if (STORIA) STORIA.tolto({ what: f.label, dati: f.label, undo: r.back, redo: r.take, scade: window.MZLAB_BROWSER ? () => r.free().then(reindexAfterFree) : null });
   else r.free();
 }
-/** Removes every file of the list (or of `fs`, a user group named `what`) with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). */
-function removeAllFiles(fs = E.files.filter(f => !f.gone), /** @type {string | null} */ what = null) {
-  const rs = fs.map(fileRemoval); if (!rs.length) return;
-  rs.forEach(r => r.take());
+/** The rows of the loading table that are read but not open: waiting in the queue of OPENNOW, set aside («Choose», ×) or of the other world. */
+const unopenedRows = () => ST.files.filter((/** @type {FileRiga} */ r) => !OPENNOW.isOpen(r.name) && !E.files.some(g => g.gone && (g.file || "").split("#")[0] === r.name));
+/** «Remove all» on such a row: without it the copy, the index and the row stay, and the queue opens the file after the removal. Same three steps as fileRemoval. */
+function rowRemoval(/** @type {FileRiga} */ r0) {
+  const name = r0.name, was = { use: r0.use, held: OPENNOW.held(name) }, row = () => ST.files.find((/** @type {FileRiga} */ x) => x.name === name);
+  let undone = false, /** @type {any[]} */ late = [];
+  // the batch repaints once (removeAllFiles): the `quiet` flag of fileRemoval has nothing to skip here
+  const take = (_quiet = false) => {
+    undone = false; OPENNOW.hold([name]);
+    // the file being opened at this moment still opens: it joins the removal when it lands
+    OPENNOW.idle().then(() => { if (undone) return; late = E.files.filter(g => !g.gone && (g.file || "").split("#")[0] === name).map(fileRemoval); late.forEach((x, i) => x.take(i < late.length - 1)); });
+  };
+  const back = (_quiet = false) => {
+    undone = true; [...late].reverse().forEach(x => x.back()); late = [];
+    const r = row(); if (!r || was.held) return;
+    if (OPENNOW.release(name)) r.use = was.use; else if (was.use && !OPENNOW.isOpen(name)) OPENNOW.tick(r, true);      // a name still queued must not be queued twice
+  };
+  // after the queue: an opening slower than the window of Undo lands first, and is freed as one of `late`
+  const free = (_quiet = false) => OPENNOW.idle().then(() => {
+    if (undone) return;
+    if (late.length) return Promise.all(late.map(x => x.free(true)));
+    if (!window.MZLAB_BROWSER || !row() || OPENNOW.isOpen(name)) return;
+    return post("api/remove", { name }).then((/** @type {any} */ j) => mergeFiles(j.files || [])).catch((/** @type {any} */ e) => console.warn("remove", name, e));
+  });
+  return { take, back, free };
+}
+/** Removes every file of the list (or of `fs`, a user group named `what`) with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). The whole list also takes the rows read but not open (rowRemoval). */
+function removeAllFiles(/** @type {any[] | null} */ fs = null, /** @type {string | null} */ what = null) {
+  const rows = fs ? [] : unopenedRows().map(rowRemoval);
+  const rs = rows.concat((fs || E.files.filter(f => !f.gone)).map(fileRemoval)); if (!rs.length) return;      // the rows first: the last step repaints
+  rs.forEach((r, i) => r.take(i < rs.length - 1)); if (rows.length === rs.length) renderFiles();
   // removed from a hidden side bar (palette, shortcut): bring it back so the notice and the empty list are in view
   if (window.BARRA && BARRA.isDataView() && !BARRA.open) BARRA.show("file");
-  const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach(r => r[k]());
-  if (STORIA) STORIA.tolto({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => Promise.all(rs.map(r => r.free())).then(reindexAfterFree) : null });
+  const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach((r, i) => r[k](i < rs.length - 1));      // only the last step repaints
+  if (STORIA) STORIA.tolto({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => Promise.all(rs.map(r => r.free(true))).then(() => { renderFiles(); return reindexAfterFree(); }) : null });
   else rs.forEach(r => r.free());
 }
 let _lastBox = /** @type {number | null} */ (null);

@@ -105,8 +105,8 @@ fn read_all<R: ReadAt>(r: &mut R, size: u64) -> Result<Vec<u8>> {
     Ok(b)
 }
 
-/// `view_json` of a `table.filter` step: the same view with `"origine":{"tabella":<SHA-256 of the table>,"spec":<the rules>}` after it, so that an export that
-/// reads the view finds the table in the run and writes the rows the view keeps (`view_spec`).
+/// `view_json` of a `table.filter` step: the same view with `"origine":{"tabella":<SHA-256 of the table>,"spec":<the rules>,"campioni":<the samples>}` after it,
+/// so that an export that reads the view finds the table in the run and writes the rows the view keeps, and any other step reads `table_of_view`.
 pub fn view_json_origin<R: ReadAt>(
     r: &mut R,
     size: u64,
@@ -118,21 +118,12 @@ pub fn view_json_origin<R: ReadAt>(
     text.pop();
     let mut o = Out::default();
     o.raw(&text).raw(",\"origine\":{\"tabella\":").str(&sha);
-    o.raw(",\"spec\":").str(spec).raw("}}");
+    o.raw(",\"spec\":").str(spec);
+    o.raw(",\"campioni\":").str(samples_json).raw("}}");
     Ok(o.0)
 }
 
-/// The SHA-256 of the table and the rules a view of `view_json_origin` was made with; `err.flow.export.view` for any other text.
-pub fn view_origin(view: &str) -> Result<(String, String)> {
-    let bad = || Error::new("err.flow.export.view");
-    let v = mzlab_core::json::parse(view.as_bytes()).map_err(|_| bad())?;
-    let o = v.get("origine").ok_or_else(bad)?;
-    let get = |k: &str| o.get(k).and_then(|x| x.str()).map(str::to_string);
-    Ok((
-        get("tabella").ok_or_else(bad)?,
-        get("spec").ok_or_else(bad)?,
-    ))
-}
+pub use mzlab_feat::view_table::{is_view, table_of_view, view_origin};
 
 /// The `report/1` of a table under the view `spec` (empty = the whole table).
 pub fn report_json<R: ReadAt>(

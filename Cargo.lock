@@ -2352,7 +2352,6 @@ dependencies = [
  "mzlab-lettori",
  "mzlab-lib",
  "mzlab-llm",
- "mzlab-mol",
  "resvg",
  "rustls",
  "serde_json",
@@ -2535,6 +2534,15 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
+]
+
+[[package]]
+name = "mzlab-msnfigura-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
 ]
 
 [[package]]

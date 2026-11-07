@@ -57,14 +57,18 @@ const RUOLI = /** @type {any} */ ((() => {
     CAMPIONI.apply(F.filter(f => f.use).map(f => { const r = roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r }); if (TIMED.has(r)) { e.time = f.time ?? null; e.tconf = true; } return e; }), true);
   }
   /** Repaints and proposals for a table fed by many merges. `soon()` asks one repaint per animation frame (a hidden tab has no frame: `flush()` paints it); `flush(force)` paints now and asks
-   *  the proposals once for every entry merged since (only when something was merged, unless `force`). `raf`/`caf` default to FRAME.next/FRAME.cancel. The table of a loading repaints per frame and asks the proposals once when the loading flushes; a merge outside a loading flushes at once. */
-  function coalesce(/** @type {() => void} */ paint, /** @type {() => unknown} */ propose, /** @type {any} */ raf, /** @type {any} */ caf) {
+   *  the proposals once for every entry merged since (only when something was merged, unless `force`). `raf`/`caf` default to FRAME.next/FRAME.cancel. The table of a loading repaints per frame and asks the proposals once when the loading flushes; a merge outside a loading flushes at once.
+   *  After a repaint that cost c ms the next one of `soon()` waits GAP×c: a big table (200 rows ≈ 30 ms) then takes at most about a ninth of the main thread while files arrive, a small one still repaints every frame. `now` is the clock (tests). */
+  const GAP = 8;
+  function coalesce(/** @type {() => void} */ paint, /** @type {() => unknown} */ propose, /** @type {any} */ raf, /** @type {any} */ caf, /** @type {() => number} */ now = () => performance.now()) {
     const ask = raf || ((/** @type {() => void} */ f) => FRAME.next(f)), drop = caf || ((/** @type {any} */ h) => FRAME.cancel(h));
-    let h = /** @type {any} */ (null), dirty = false;
+    let h = /** @type {any} */ (null), tm = /** @type {any} */ (null), dirty = false, next = 0;
+    const run = () => { h = null; const t0 = now(); paint(); const t1 = now(); next = t1 + GAP * (t1 - t0); };
     return {
-      soon() { dirty = true; if (h == null) h = ask(() => { h = null; paint(); }); },
+      soon() { dirty = true; if (h != null || tm != null) return; const w = next - now(); if (w > 0) tm = setTimeout(() => { tm = null; h = ask(run); }, w); else h = ask(run); },
       flush(/** @type {boolean} */ force = false) {
         if (h != null) { drop(h); h = null; }
+        if (tm != null) { clearTimeout(tm); tm = null; }
         if (!dirty && !force) return undefined;
         dirty = false; paint();
         return propose();

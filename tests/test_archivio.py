@@ -136,7 +136,7 @@ def test_the_quota_error_of_the_raw_sink_counts_the_block_that_did_not_fit():
     return [threw, JSON.parse(await s.error())];
   });""" % (WEB / "rust-opfs.js").as_uri())
     assert got[0] is True
-    assert got[1] == {"error_key": "error.quotaWrite", "params": {"serve_mb": 4}}     # the fake browser says 100 MB are free: not quoted
+    assert got[1] == {"error_key": "error.quotaWrite", "params": {"serve_mb": 4, "scritti_mb": 2, "libero_mb": 100}}
 
 
 def test_a_refused_write_never_quotes_a_free_space_that_would_have_held_it():
@@ -145,7 +145,7 @@ def test_a_refused_write_never_quotes_a_free_space_that_would_have_held_it():
   let free = 3072 * 1048576;
   nav({ storage: { estimate: async () => ({ usage: 0, quota: free }) } });
   await out(async () => { const a = JSON.parse(await A.quotaError(17 << 20)); free = 3 << 20; return [a, JSON.parse(await A.quotaError(17 << 20))]; });""")
-    assert got == [{"error_key": "error.quotaWrite", "params": {"serve_mb": 17}},
+    assert got == [{"error_key": "error.quotaWrite", "params": {"serve_mb": 17, "scritti_mb": 0, "libero_mb": 3072}},
                    {"error_key": "error.quota", "params": {"serve_mb": 17, "libero_mb": 3}}]
 
 
@@ -169,3 +169,22 @@ def test_a_failed_read_of_the_prefetched_block_still_removes_the_partial_file():
     return [err, files.has("big")];
   });""")
     assert got == ["read failed", False]
+
+
+def test_every_entry_of_idx_names_the_file_it_belongs_to():
+    # lrFree (rust-worker.js) keeps what a file of files/ owns: the key of its centroid copy and the parts of an index still being written are not orphans
+    names = ["a.mzML.mzidx", "a.mzML.cen.mzidx", "a.mzML.cen.key", "a.mzML.mzidx.part", "a.mzML.mzidx.sp.part", "a.mzML.cen.mzidx.part", "a.mzML.cen-tmp.mzML.mzidx"]
+    got = run(f"await out(() => {json.dumps(names)}.map(A.idxOwner));")
+    assert got == ["a.mzML"] * 6 + ["a.mzML.cen-tmp.mzML"]
+
+
+def test_a_copy_refused_halfway_says_where_it_stopped_and_the_whole_size():
+    """A 1.6 GB .raw that the browser refused at about 800 MB read «refused to write about 808 MB»: the offset of the stop, not the size of the file."""
+    got = run(FAKE_OPFS + """
+  await out(async () => {
+    quotaLeft = 10 << 20;
+    const size = 20 << 20;
+    try { await A.putChunks("files", "big.raw", size, (o, n) => new Uint8Array(n)); return "written"; }
+    catch (e) { return [JSON.parse(e), files.has("big.raw")]; }
+  });""")
+    assert got == [{"error_key": "error.quotaWrite", "params": {"serve_mb": 20, "scritti_mb": 10, "libero_mb": 100}}, False]
