@@ -47,6 +47,8 @@ try:
             pg.wait_for_function("document.querySelector('.cprow.done')"); assert "caricato" in pg.inner_text(".cprow.done")
         step("a click loads the file and its row turns «caricato»", load)
         def remembered():
+            # with a saved session a return visit opens the panels, not the landing (#2201): empty the session first so the reload shows the folder
+            pg.evaluate("removeAllFiles()"); pg.wait_for_function("!E.files.some(f=>f)", timeout=30000)
             pg.reload(); pg.wait_for_selector("#cartbody .cprow", timeout=60000)
             assert "prova" in pg.inner_text("#cartbody") and rows(pg)[0] == "a.mzML", rows(pg)
         step("the folder is remembered after a reload", remembered)

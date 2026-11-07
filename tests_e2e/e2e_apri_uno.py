@@ -18,7 +18,9 @@ try:
         step("Full Scan + MS2 + MRM: only the first file is open", only_first)
         def click_opens():
             if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]")
-            pg.wait_for_selector("#flst .fl", state="visible"); pg.click("#flst .fl:has-text('MRM')")
+            pg.wait_for_selector("#flst .fl", state="visible")
+            if not pg.is_visible("#flst .fl:has-text('MRM')"): pg.click("#flst .fgh[data-gt='mrm']")      # only the first group starts open (#2488): open the MRM one as a student would
+            pg.click("#flst .fl:has-text('MRM')")
             attendi(pg, "E.files.filter(f=>f.vis).length === 2 && E.files.some(f=>f.vis&&f.kind==='mrm') && E.panels.some(p=>p.tab==='mrm')")
         step("a click on a closed file opens it", click_opens)
 finally:
