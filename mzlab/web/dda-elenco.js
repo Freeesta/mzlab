@@ -4,7 +4,7 @@
 // Loaded by dda-marcatori.js on the first drawing of a DDA Full Scan; `I` is the inside of DDA. An MS2 is shown as acquired: no compound name.
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 
-/** The button, made once, before «XIC» in the header. @param {Bag} I @param {Bag} p @returns {HTMLButtonElement} */
+/** The button, made once, in its own group before the one of «XIC» in the header. @param {Bag} I @param {Bag} p @returns {HTMLButtonElement} */
 function button(I, p) {
   const old = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="ddaw"]'));
   if (old) return old;
@@ -12,8 +12,10 @@ function button(I, p) {
   b.className = "bt ddaw"; b.dataset.a = "ddaw"; b.setAttribute("aria-haspopup", "listbox"); b.setAttribute("aria-expanded", "false");
   for (const t of ["keydown", "keyup"]) b.addEventListener(t, e => { if (/** @type {KeyboardEvent} */ (e).key === " ") e.stopPropagation(); });   // Space presses it: the walk over the scans must not take it
   b.onclick = () => { if (b.getAttribute("aria-disabled") !== "true") open(I, p, b); };
-  const xb = p.el.querySelector('[data-a="xicb"]');                 // in the group of «XIC», which a tight header never moves into «⋯» (fitHd)
-  if (xb) xb.before(b); else p.el.querySelector(".hd")?.append(b);
+  const g = document.createElement("span"); g.className = "tbg"; g.append(b);       // a group of its own: a tight header moves it into «⋯» (fitHd), «XIC» stays
+  const xg = p.el.querySelector('[data-a="xicb"]')?.closest(".tbg");
+  if (xg) xg.before(g); else p.el.querySelector(".hd")?.append(g);
+  fitHdSoon(p);
   return b;
 }
 /** The text of the button for the answer of the window (null = not here yet); `why` = the reason of an empty MS2 panel.
@@ -21,7 +23,7 @@ function button(I, p) {
 export function sync(I, p, w, why) {
   const b = button(I, p), n = w ? w.n : 0, one = w && w.ms1 === 1, txt = T("dda.win.btn", { n });
   const tip = !w ? T("dda.win.wait") : !n ? why : one ? T("dda.win.one") : T("dda.win.avg", { n: w.ms1 });
-  if (b.textContent !== txt) b.textContent = txt;
+  if (b.textContent !== txt) { b.textContent = txt; fitHdSoon(p); }
   if (b.title !== tip) { b.title = tip; b.setAttribute("aria-label", txt + ". " + tip); }
   b.setAttribute("aria-disabled", String(!n));
 }
