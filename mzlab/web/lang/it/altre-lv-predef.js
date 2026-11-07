@@ -352,6 +352,7 @@ I18N.add("it", {
   "pfas.col.cf2": "Coppie CF2",
   "pfas.col.evidence": "Prove MS2",
   "pfas.sum": "{n} ioni, {f} con una formula candidata, {e} con almeno una prova nelle MS2.",
+  "pfas.capped": "La tabella delle feature ha {m} ioni: questa vista esamina i primi {n}, nell'ordine della tabella, perché la ricerca delle formule resti rapida. Per esaminare gli altri, carica una tabella delle feature con meno righe e premi di nuovo «{go}».",
   "pfas.plot.note": "I quadrati hanno almeno una prova nelle MS2, i cerchi nessuna; il colore è la serie del grafico di Kendrick (grigio = nessuna). Clic su un punto o una riga: XIC e scansione MS2.",
   "pfas.formulas.title": "Formule candidate",
   "pfas.formulas.note": "Formula con l'errore di massa più piccolo tra quelle con almeno 3 F (C 1-30, H 0-10, O 0-6, N 0-1, S 0-1); «Candidate» è quante ne restano. A risoluzione alta più formule possono andare bene.",

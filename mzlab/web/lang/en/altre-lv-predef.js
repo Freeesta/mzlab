@@ -352,6 +352,7 @@ I18N.add("en", {
   "pfas.col.cf2": "CF2 pairs",
   "pfas.col.evidence": "MS2 evidence",
   "pfas.sum": "{n} ions, {f} with a candidate formula, {e} with at least one piece of evidence in the MS2.",
+  "pfas.capped": "The feature table has {m} ions: this view examines the first {n}, in the order of the table, so that the formula search stays quick. To examine the others, load a feature table with fewer rows and press «{go}» again.",
   "pfas.plot.note": "Squares have at least one piece of evidence in the MS2, circles none; the colour is the series of the Kendrick plot (grey = none). Click a point or a row: XIC and MS2 scan.",
   "pfas.formulas.title": "Candidate formulas",
   "pfas.formulas.note": "The formula with the smallest mass error among those with at least 3 F (C 1-30, H 0-10, O 0-6, N 0-1, S 0-1); «Candidates» is how many are left. At high resolution several formulas can fit.",
