@@ -719,7 +719,7 @@
               "file:a.mzidx"
             ]
           },
-          "step": "features.detect@1"
+          "step": "features.detect@2"
         },
         {
           "id": "al",
@@ -888,7 +888,7 @@
               "file:a.mzidx"
             ]
           },
-          "step": "features.detect@1"
+          "step": "features.detect@2"
         },
         {
           "id": "al",
