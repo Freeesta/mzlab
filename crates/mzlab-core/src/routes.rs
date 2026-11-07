@@ -106,6 +106,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/ms2tr" => r.ms2_transitions().map(Some),
             "/api/spectrum" => r.spectrum(q),
             "/api/dda" => r.dda(q),
+            "/api/dda_window" => r.dda_window(q),
             "/api/spectra" => r.spectra_profile(q),
             "/api/msn_albero" => r.msn_albero_route(q),
             _ => Ok(None),

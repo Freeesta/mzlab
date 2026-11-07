@@ -22,11 +22,11 @@ except ImportError:                                    # run as a script
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from bench.scarica import sha256_file
 
-FORMATO_MZML_INDICIZZATO = "2"                          # ThermoRawFileParser -f: 0 MGF, 1 mzML, 2 indexed mzML, 3 Parquet
+INDEXED_MZML_FORMAT = "2"                          # ThermoRawFileParser -f: 0 MGF, 1 mzML, 2 indexed mzML, 3 Parquet
 SCHEMA = "bench/conversione/1"
 
 
-def trova_parser(esplicito: str | None = None) -> str:
+def find_parser(esplicito: str | None = None) -> str:
     p = esplicito or os.environ.get("THERMORAWFILEPARSER") or shutil.which("ThermoRawFileParser") or shutil.which("thermorawfileparser")
     if not p:
         raise SystemExit("ThermoRawFileParser not found: pass --parser or set THERMORAWFILEPARSER")
@@ -48,7 +48,7 @@ def converti(parser: str, raw: Path, uscita: Path) -> Path:
     uscita.mkdir(parents=True, exist_ok=True)
     dest = uscita / (raw.stem + ".mzML")
     dest.unlink(missing_ok=True)
-    r = subprocess.run([parser, "-i", str(raw), "-o", str(uscita), "-f", FORMATO_MZML_INDICIZZATO], capture_output=True, text=True, env=_env())
+    r = subprocess.run([parser, "-i", str(raw), "-o", str(uscita), "-f", INDEXED_MZML_FORMAT], capture_output=True, text=True, env=_env())
     if r.returncode != 0 or not dest.exists() or dest.stat().st_size == 0:
         raise SystemExit(f"conversion of {raw.name} failed (exit {r.returncode}):\n{(r.stderr or r.stdout)[-800:]}")
     return dest
@@ -62,7 +62,7 @@ def main(argv=None) -> int:
     ap.add_argument("--solo", nargs="*", help="only these .raw names")
     ap.add_argument("--elimina-raw", action="store_true", help="delete each .raw after its mzML is written (disk)")
     a = ap.parse_args(argv)
-    parser = trova_parser(a.parser)
+    parser = find_parser(a.parser)
     raws = sorted(p for p in Path(a.raw_dir).glob("*.raw") if not a.solo or p.name in a.solo)
     if not raws:
         raise SystemExit("no .raw files to convert")
@@ -70,7 +70,7 @@ def main(argv=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     rec_path = out / "converti.json"
     rec = json.loads(rec_path.read_text()) if rec_path.exists() else {"schema": SCHEMA, "file": {}}
-    rec["convertitore"] = {"nome": "ThermoRawFileParser", "versione": versione(parser), "opzioni": f"-f {FORMATO_MZML_INDICIZZATO} (indexed mzML, peak picking on)"}
+    rec["convertitore"] = {"nome": "ThermoRawFileParser", "versione": versione(parser), "opzioni": f"-f {INDEXED_MZML_FORMAT} (indexed mzML, peak picking on)"}
     for raw in raws:
         print(f"{raw.name} ...", flush=True)
         sha_raw = sha256_file(raw)

@@ -57,6 +57,15 @@ KEPT = """async () => {
   out.report = await (await FLOW.lastRunReport()).text();
   return out;
 }"""
+# the record of a run whose alignment failed: the jobs as the scheduler reports them (the gap filling blocked after it)
+FAILED = """async () => {
+  const x = FLOW.live.state(), items = x.plan.inputs.map(i => i.name);
+  const jobs = [...items.map(item => ({ instance: "idx", item, state: "reused" })), ...items.map(item => ({ instance: "det", item, state: "reused" })),
+    { instance: "ali", item: null, state: "error", error_key: "err.flow.align.polarity", params: { positive: items[0], negative: "b.mzML" } }, { instance: "gap", item: null, state: "blocked" }];
+  const r = await FLOW.webProv.record(x, jobs);
+  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow');
+  return r && { prov: r.prov, kept: await (await (await d.getFileHandle('prov.json')).getFile()).text() };
+}"""
 # the fields of a record that differ by nature between the two runs: times, the memory peak, who ran it and whether the step was reused
 def diff(a, b, path=""):
     if isinstance(a, dict) and isinstance(b, dict):
@@ -65,9 +74,9 @@ def diff(a, b, path=""):
         return [d for i, (x, y) in enumerate(zip(a, b)) for d in diff(x, y, path + "/" + str(i))][:12]
     return [] if a == b else [(path, a, b)]
 BLANK = {"ms", "total_ms", "heap_peak_bytes", "cached", "reused", "platform", "version", "commit"}
-AGENT_BLANK = {"target", "modules"}       # who ran it: the platform (x86_64-linux / wasm32) and the executables hashed (the native binary only)
+AGENT_BLANK = {"target", "modules"}       # who ran it (prov/1 `agent`, corsa/1 `engine`): the platform (x86_64-linux / wasm32) and the executables hashed (the native binary only)
 def blank(v):
-    if isinstance(v, dict): return {k: ("ok" if k == "status" and x == "cached" else blank({a: b for a, b in x.items() if a not in AGENT_BLANK} if k == "agent" and isinstance(x, dict) else x)) for k, x in v.items() if k not in BLANK}
+    if isinstance(v, dict): return {k: ("ok" if k == "status" and x == "cached" else blank({a: b for a, b in x.items() if a not in AGENT_BLANK} if k in ("agent", "engine") and isinstance(x, dict) else x)) for k, x in v.items() if k not in BLANK}
     if isinstance(v, list): return [blank(x) for x in v]
     return v
 PORT = lib.free_port()
@@ -105,6 +114,15 @@ try:
             web = json.loads(r["record"]["prov"]); nat = json.loads((run / "out" / "prov.json").read_text())
             assert blank(web) == blank(nat), "the record of a run that reuses everything differs"
         step("a second run, which reuses every step, gives the same record", again)
+
+        def failed():
+            r = pg.evaluate(FAILED); assert r, "a run with a failed job gave no record"
+            web = json.loads(r["prov"]); nat = json.loads((run / "out" / "prov.json").read_text())
+            assert r["kept"] == r["prov"], "the record of the failed run is not the one kept in OPFS"
+            assert web["activity"]["ali"]["error"] == {"error_key": "err.flow.align.polarity", "params": {"positive": PLAN["inputs"][0]["name"], "negative": "b.mzML"}}, web["activity"]["ali"]
+            assert "gap" not in web["activity"] and "gap.table" not in web["entity"], "the gap filling that did not run is in the record"
+            for i in ("idx", "det"): assert blank(web["activity"][i]) == blank(nat["activity"][i]), (i, diff(blank(nat["activity"][i]), blank(web["activity"][i])))
+        step("a run whose alignment failed is recorded with the error and its parameters, without the steps after it", failed)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

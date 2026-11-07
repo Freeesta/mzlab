@@ -47,7 +47,7 @@ const RIGHE: usize = 64;
 pub(crate) fn resoconto(l: &mut dyn Lettore, c: usize) -> Result<String> {
     let mut visti = [false; 2];
     let mut ks = Vec::new();
-    for (k, v) in l.indice(c)?.iter().take(RIGHE).enumerate() {
+    for (k, v) in l.indice_senza_tic(c)?.iter().take(RIGHE).enumerate() {
         let i = usize::from(v.livello > 1);
         if !visti[i] {
             visti[i] = true;

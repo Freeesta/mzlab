@@ -22,7 +22,7 @@ export async function rawSink(dest) {
     write: p => { if (full) throw new Error("storage full"); const n = writeFull(ah, p, at); at += n; need = at; if (n < p.length) { need = at + (p.length - n); full = true; throw new Error("storage full"); } },
     abort: async () => { try { ah.close(); } catch (_) { /* closed */ } await dir.removeEntry(dest).catch(() => {}); },
     // the error the page shows if the disk filled up, else null; the mzML must also END as an mzML (a cut-short file is the cause of "cannot be read" later)
-    error: () => full ? quotaError(need) : null,
+    error: () => full ? quotaError(need, at) : null,
     finish: async () => {
       ah.flush(); ah.close();
       const file = await fh.getFile();

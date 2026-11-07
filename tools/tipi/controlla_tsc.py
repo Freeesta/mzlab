@@ -11,11 +11,11 @@ RADICE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 BASE = os.path.join(RADICE, "tools", "tipi", "base_errori.json")
 PROGETTI = ("pagina", "moduli", "worker", "stretto", "stretto-worker", "stretto2", "stretto2-worker", "stretto3", "stretto3-worker")
 TSC = ["npx", "--yes", "-p", "typescript@5.9.3", "tsc", "-p"]
-INSTALLA_S, INSTALLA_PROVE = 60, 3      # the install of tsc by npx sometimes hangs on the runner: 60 s per try, the first plus 2 retries
+INSTALL_S, INSTALL_TESTS = 60, 3      # the install of tsc by npx sometimes hangs on the runner: 60 s per try, the first plus 2 retries
 RIGA = re.compile(r"^(\S+?)\(\d+,\d+\): error TS\d+")
 
 
-def installa(cmd=None, timeout=INSTALLA_S, prove=INSTALLA_PROVE):
+def installa(cmd=None, timeout=INSTALL_S, prove=INSTALL_TESTS):
     """Runs `npx ... tsc -v` (which installs tsc) with a timeout; a hung try is killed with its whole process group (npx leaves children behind) and retried."""
     cmd = cmd or TSC[:-1] + ["-v"]
     for n in range(1, prove + 1):
@@ -34,13 +34,13 @@ def esegui(nome):
     r = subprocess.run(TSC + ["tools/tipi/%s.json" % nome], cwd=RADICE, capture_output=True, text=True)
     if r.returncode not in (0, 1, 2) or (r.returncode and not r.stdout.strip()):
         sys.exit("tsc failed on %s:\n%s%s" % (nome, r.stdout, r.stderr))
-    conta = {}
-    for riga in r.stdout.splitlines():
-        m = RIGA.match(riga)
+    count = {}
+    for row in r.stdout.splitlines():
+        m = RIGA.match(row)
         if m and "/vendor/" not in m.group(1) and "/wasm/" not in m.group(1):
             k = "%s:%s" % (nome, m.group(1))
-            conta[k] = conta.get(k, 0) + 1
-    return conta
+            count[k] = count.get(k, 0) + 1
+    return count
 
 
 def misura():
@@ -62,9 +62,9 @@ def main():
     if "--aggiorna" in sys.argv:
         if peggio:
             print("\n".join(peggio)); return 1
-        nuova = {k: n for k, n in ora.items() if n > 0}
+        new = {k: n for k, n in ora.items() if n > 0}
         with open(BASE, "w") as f:
-            json.dump(dict(sorted(nuova.items())), f, indent=1, ensure_ascii=False); f.write("\n")
+            json.dump(dict(sorted(new.items())), f, indent=1, ensure_ascii=False); f.write("\n")
         return 0
     if peggio:
         print("Worse than tools/tipi/base_errori.json (fix the new errors; the base only goes down):\n" + "\n".join(peggio)); return 1

@@ -14,6 +14,7 @@ pub fn no_scans(path: &str, q: &Query) -> Option<String> {
         ),
         "/api/spectrum" => "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}".to_string(),
         "/api/dda" => "{\"sid\":[],\"rt\":[],\"no\":[],\"prec\":[],\"tgt\":[],\"parent\":[],\"prt\":[],\"lo\":[],\"hi\":[],\"lev\":[],\"z\":[],\"act\":[],\"ce\":[],\"pint\":[],\"ms1\":{\"sid\":[],\"rt\":[]},\"nce\":false}".to_string(),
+        "/api/dda_window" => "{\"ms1\":0,\"n\":0,\"groups\":[]}".to_string(),
         _ => return None,
     })
 }

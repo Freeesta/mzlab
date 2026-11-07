@@ -49,6 +49,7 @@ I18N.add("it", {
   "predef.settings.title": "Torna a proporre di rendere mzLab l'app predefinita per i file .mzML e .raw Thermo",
   "memory.phase.table": "tabella delle scansioni",
   "memory.phase.index": "indice",
+  "memory.phase.indexPeaks": "picchi dell'indice",
   "pol.positive": "ESI positivo",
   "pol.negative": "ESI negativo",
   "pol.mixed": "ESI positivo e negativo nello stesso file",
@@ -426,7 +427,7 @@ I18N.add("it", {
   "mol.import.done": "{n, plural, one {# molecola importata} other {# molecole importate}}; sostituite: {replaced}; tue, lasciate come sono: {kept}.",
   "mol.import.errors": "{n, plural, one {Il file ha # riga da correggere} other {Il file ha # righe da correggere}}: non è stata importata nessuna molecola.",
   "mol.err.row": "Riga {riga}:",
-  "mol.err.more": "… e altri {n} errori.",
+  "mol.err.more": "… e altri {n} errori, non elencati perché l'elenco resti breve: correggi le righe qui sopra e carica di nuovo il file per vederli.",
   "mol.err.load": "Non riesco a caricare le molecole.",
   "mol.err.save": "Non riesco a salvare le molecole.",
   "mol.err.archive": "Le molecole salvate in questo browser non sono leggibili e non vengono mostrate."

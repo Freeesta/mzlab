@@ -10,7 +10,8 @@ use super::{hex, probe_hex, PROBE};
 pub struct Passata {
     size: u64,
     seen: u64,
-    sha256: Sha256,
+    /// `None` for the SHA-1 half of a member hashed by two workers (`solo_sha1`).
+    sha256: Option<Sha256>,
     /// `None` when the caller does not want the SHA-1 of every byte (an mzML upload: only the SHA-256 and the `probe` are used).
     sha1: Option<Sha1>,
     head: Vec<u8>,
@@ -22,7 +23,7 @@ impl Passata {
         Passata {
             size,
             seen: 0,
-            sha256: Sha256::new(),
+            sha256: Some(Sha256::new()),
             sha1: Some(Sha1::new()),
             head: Vec::with_capacity(size.min(PROBE) as usize),
             tail: Vec::with_capacity(size.min(PROBE) as usize),
@@ -35,16 +36,27 @@ impl Passata {
             ..Passata::new(size)
         }
     }
-    /// `senza_sha1` or `new` by a flag (the page asks for it per upload).
-    pub fn scelta(size: u64, senza: Option<bool>) -> Passata {
-        if senza == Some(true) {
+    /// Only the SHA-1 and the `probe`: `fine` gives an empty SHA-256. With `senza_sha1` on a second core, the two halves of `new` (the site's two hash workers).
+    pub fn solo_sha1(size: u64) -> Passata {
+        Passata {
+            sha256: None,
+            ..Passata::new(size)
+        }
+    }
+    /// `senza_sha1`, `solo_sha1` (the SHA-1 half of a member that two workers hash) or `new` by the page's flags.
+    pub fn scelta(size: u64, senza: Option<bool>, solo: Option<bool>) -> Passata {
+        if solo == Some(true) {
+            Passata::solo_sha1(size)
+        } else if senza == Some(true) {
             Passata::senza_sha1(size)
         } else {
             Passata::new(size)
         }
     }
     pub fn aggiorna(&mut self, b: &[u8]) {
-        self.sha256.update(b);
+        if let Some(h) = self.sha256.as_mut() {
+            h.update(b);
+        }
         if let Some(h) = self.sha1.as_mut() {
             h.update(b);
         }
@@ -70,9 +82,52 @@ impl Passata {
             return None;
         }
         Some((
-            hex(&self.sha256.finalize()),
+            self.sha256.map(|h| hex(&h.finalize())).unwrap_or_default(),
             self.sha1.map(|h| hex(&h.finalize())).unwrap_or_default(),
             probe_hex(self.size, &self.head, &self.tail),
         ))
     }
+}
+
+/// Native `upload::fingerprint3`: the SHA-1 is taken on a second thread from the same pieces (`solo_sha1`), as the site's second hash worker does; one read of the file.
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) fn due_fili(
+    r: &mut dyn crate::idxread::ReadAt,
+    size: u64,
+    step: u64,
+) -> crate::Result<(String, String, String)> {
+    use std::sync::{mpsc, Arc};
+    let mut x = Passata::senza_sha1(size);
+    std::thread::scope(|s| {
+        let (tx, rx) = mpsc::sync_channel::<Arc<Vec<u8>>>(4);
+        let half = s.spawn(move || {
+            let mut y = Passata::solo_sha1(size);
+            for piece in rx {
+                y.aggiorna(&piece);
+            }
+            y.fine()
+        });
+        let mut at = 0;
+        let mut read = Ok(());
+        while at < size {
+            let n = (size - at).min(step) as usize;
+            let mut buf = vec![0u8; n];
+            read = r.read_at(at, &mut buf);
+            if read.is_err() {
+                break;
+            }
+            x.aggiorna(&buf);
+            if tx.send(Arc::new(buf)).is_err() {
+                break;
+            }
+            at += n as u64;
+        }
+        drop(tx);
+        let y = half.join().ok().flatten();
+        read?;
+        match (x.fine(), y) {
+            (Some((sha256, _, probe)), Some((_, sha1, _))) => Ok((sha256, sha1, probe)),
+            _ => Err(crate::Error::new("err.file.unknown")),
+        }
+    })
 }

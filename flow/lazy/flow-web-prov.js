@@ -7,6 +7,8 @@
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
   const CHAIN = ["index.mzidx", "features.detect", "features.align", "features.gapfill"];
   const OUT = "mzlab/flow/";
+  // the states of a job in a run that has ended: what did not run after a failure (blocked, skipped) has no report; a stopped run has no record
+  const ENDED = ["done", "reused", "error", "refused", "blocked", "skipped"];
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
 
   /** one request to the facts worker @param {Worker} w @param {any} wasm @param {any} m */
@@ -30,12 +32,13 @@
     return t;
   };
 
-  /** the record of the run of the live session `x`, or null when the plan has a step outside the base chain, a job is not done or an input has no hash.
+  /** the record of the run of the live session `x`, or null when the plan has a step outside the base chain, a job has not finished or an input has no hash.
+   * A job that failed is recorded with its error and parameters (the steps after it are not started), as `flow run` records it.
    * Resolves with { prov, corsa } (the texts) @param {any} x @param {any[]} jobs the jobs the scheduler reports (`jobs`) */
   const record = async (x, jobs) => {
     const plan = x.plan;
     if (!plan.steps.every((/** @type {any} */ i) => CHAIN.includes(base(i))) || !x.items.length || !x.registry) return null;
-    if (!jobs.length || jobs.some(j => j.state !== "done" && j.state !== "reused")) return null;
+    if (!jobs.length || jobs.some(j => !ENDED.includes(j.state))) return null;
     const k = F.runners.web.kit, p = await k.getPool(), D = F.liveJobs.DIR, reg = x.S.reg;
     let alone = "";
     const w = new Worker(new URL("mzfinder/lazy/worker-flow-web.js", G.QTOOLS.ctx.base), { type: "module" });
@@ -64,6 +67,9 @@
       const reports = [];
       for (const j of jobs) {
         const inst = x.inst(j.instance), id = base(inst), key = x.keys.get(x.jk(j)), it = j.item ? x.item(j.item) : null, cached = j.state === "reused";
+        const at = { instance: j.instance, ...(j.item ? { item: j.item } : {}) };
+        if (j.state === "error" || j.state === "refused") { reports.push({ ...at, error_key: j.error_key, params: j.params || {} }); continue; }
+        if (j.state !== "done" && !cached) continue;
         let r;
         if (id === "index.mzidx") {
           if (!it) return null;
@@ -86,7 +92,7 @@
           }
           r = { outputs: [await fileOut(inst, path, "mzfeat")], ...meta };
         }
-        reports.push({ instance: j.instance, ...(j.item ? { item: j.item } : {}), ms: 0, cached, ...r });
+        reports.push({ ...at, ms: 0, cached, ...r });
       }
       const prov = await post("record_prov", { plan: planText, registry: x.registry, jobs: reports });
       const corsa = await post("record_corsa", { prov, uscite: [] });
