@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from dati_percorsi import percorso  # noqa: E402
 
 
-def _dati():
+def _data():
     """The MassBank library file and the HRMS folder of the data repository, or None."""
     lib, hrms = percorso("dati/librerie/massbank_eu_qft_pos.msp"), percorso("dati/HRMS")
     if lib and lib.is_file() and hrms and list(hrms.glob("*/*_TiO2_t010min.mzML")):
@@ -19,7 +19,7 @@ def _dati():
     return None
 
 
-pytestmark = pytest.mark.skipif(_dati() is None, reason="MZLAB_DATI / QQQ_DATI with librerie/ and HRMS/ not available")
+pytestmark = pytest.mark.skipif(_data() is None, reason="MZLAB_DATI / QQQ_DATI with librerie/ and HRMS/ not available")
 
 TARGETS = {"parent": (317.1642, 5.55, 5.85), "315": (315.1485, 5.15, 5.45), "291": (291.1485, 4.5, 4.75), "331": (331.1435, 4.6, 4.85),
            "319": (319.1435, 5.3, 5.5), "247": (247.1223, 2.6, 2.85)}
@@ -70,7 +70,7 @@ console.log(JSON.stringify(out));
 
 @pytest.fixture(scope="module")
 def result(tmp_path_factory):
-    d = _dati(); q, allq = _queries(d["hrms"])
+    d = _data(); q, allq = _queries(d["hrms"])
     tmp = tmp_path_factory.mktemp("ident"); qf = tmp / "q.json"; qf.write_text(json.dumps({"queries": q, "all": allq}))
     p = subprocess.run(["node", "-e", NODE, str(JS), str(d["lib"]), str(qf)], capture_output=True, encoding="utf-8", check=True)
     return json.loads(p.stdout)

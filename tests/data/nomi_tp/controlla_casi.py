@@ -42,7 +42,7 @@ def check_formula_atoms(formula: str, context: str) -> None:
             raise ValueError(f"Conteggio atomico non positivo ({elem}={count}) nella formula '{formula}' ({context})")
 
 
-def verify_trasformazioni(path: Path) -> dict[str, int]:
+def verify_transformations(path: Path) -> dict[str, int]:
     """Checks the structural and chemical constraints of trasformazioni.csv."""
     if not path.exists():
         raise FileNotFoundError(f"File mancante: {path}")
@@ -64,7 +64,7 @@ def verify_trasformazioni(path: Path) -> dict[str, int]:
     return {"rows": len(rows), "duplicate_ids": len(case_ids) - len(set(case_ids))}
 
 
-def verify_casi_nomi(path: Path) -> tuple[list[dict], dict[str, int]]:
+def verify_name_cases(path: Path) -> tuple[list[dict], dict[str, int]]:
     """Checks the basic consistency of casi_nomi.csv."""
     if not path.exists():
         raise FileNotFoundError(f"File mancante: {path}")
@@ -191,17 +191,17 @@ def main() -> int:
     print(f"Ambiente: Python {py_ver} | pyteomics {pyt_ver}")
     print("==========================================================================")
 
-    trasf_stats = verify_trasformazioni(target_dir / "trasformazioni.csv")
-    rows, casi_stats = verify_casi_nomi(target_dir / "casi_nomi.csv")
+    transf_stats = verify_transformations(target_dir / "trasformazioni.csv")
+    rows, cases_stats = verify_name_cases(target_dir / "casi_nomi.csv")
     group_stats = analyze_groups(rows)
 
     checks = [
-        ("Righe trasformazioni.csv", "== 120", str(trasf_stats["rows"]), "OK"),
-        ("ID duplicati (trasformazioni)", "0", str(trasf_stats["duplicate_ids"]), "OK"),
-        ("Righe casi_nomi.csv", "100..150", str(casi_stats["rows"]), "OK"),
-        ("ID duplicati (casi_nomi)", "0", str(casi_stats["duplicate_ids"]), "OK"),
+        ("Righe trasformazioni.csv", "== 120", str(transf_stats["rows"]), "OK"),
+        ("ID duplicati (trasformazioni)", "0", str(transf_stats["duplicate_ids"]), "OK"),
+        ("Righe casi_nomi.csv", "100..150", str(cases_stats["rows"]), "OK"),
+        ("ID duplicati (casi_nomi)", "0", str(cases_stats["duplicate_ids"]), "OK"),
         ("Atomi negativi nelle formule", "0", "0", "OK"),
-        ("Accoppiamento mz_nominal == round(mz)", "100%", f"{len(rows) - casi_stats['nominal_mismatches']}/{len(rows)}", "OK"),
+        ("Accoppiamento mz_nominal == round(mz)", "100%", f"{len(rows) - cases_stats['nominal_mismatches']}/{len(rows)}", "OK"),
         ("Gruppi isomeri (stessa formula, RT div)", ">= 6", str(group_stats["isomer_groups"]), "OK"),
         ("Gruppi diversa formula (stesso nom)", ">= 8", str(group_stats["diff_groups"]), "OK"),
         ("Triplette in gruppi diversa formula", ">= 1", str(group_stats["triplets"]), "OK"),
@@ -211,11 +211,11 @@ def main() -> int:
     ]
 
     all_passed = (
-        trasf_stats["rows"] == 120
-        and trasf_stats["duplicate_ids"] == 0
-        and (100 <= casi_stats["rows"] <= 150)
-        and casi_stats["duplicate_ids"] == 0
-        and casi_stats["nominal_mismatches"] == 0
+        transf_stats["rows"] == 120
+        and transf_stats["duplicate_ids"] == 0
+        and (100 <= cases_stats["rows"] <= 150)
+        and cases_stats["duplicate_ids"] == 0
+        and cases_stats["nominal_mismatches"] == 0
         and group_stats["isomer_groups"] >= 6
         and group_stats["diff_groups"] >= 8
         and group_stats["triplets"] >= 1

@@ -12,9 +12,9 @@ from valida import cancello_untargeted as U  # noqa: E402
 from valida.tabelle import Tabella  # noqa: E402
 
 
-def tab(mz, rt, area, nomi=("a", "b")):
+def tab(mz, rt, area, names=("a", "b")):
     a = np.array(area, float)
-    return Tabella("t", list(nomi), np.array(mz, float), np.array(rt, float), a, altezza=a / 10)
+    return Tabella("t", list(names), np.array(mz, float), np.array(rt, float), a, altezza=a / 10)
 
 
 def test_identical_tables_pass():

@@ -7,7 +7,7 @@ from pathlib import Path
 SHIM = Path(__file__).resolve().parent.parent / "tools" / "ci_cargo" / "cargo"
 
 
-def carica():
+def load():
     loader = importlib.machinery.SourceFileLoader("ci_cargo_shim", str(SHIM))
     spec = importlib.util.spec_from_loader("ci_cargo_shim", loader)
     mod = importlib.util.module_from_spec(spec)
@@ -16,7 +16,7 @@ def carica():
 
 
 def test_famiglie():
-    f = carica().famiglia
+    f = load().famiglia
     assert f(["build", "--release", "-p", "mzlab-cli", "--example", "flow"]) == "cli"
     assert f(["run", "--release", "-q", "-p", "mzlab-cli", "--", "msn-graph"]) == "cli"
     assert f(["build", "--release", "-p", "mzlab-feat-wasm", "--example", "nativo"]) == "feat"
@@ -33,7 +33,7 @@ def test_rispecchia(tmp_path):
     (fam / "release" / "examples" / "nativo").write_bytes(b"bin")
     (fam / "release" / "examples" / "nativo.d").write_text("dep")
     (fam / "release" / "mzlab-cli").write_bytes(b"cli")
-    carica().rispecchia(str(radice), str(fam))
+    load().rispecchia(str(radice), str(fam))
     assert (radice / "release" / "examples" / "nativo").read_bytes() == b"bin"
     assert (radice / "release" / "mzlab-cli").read_bytes() == b"cli"
     assert not (radice / "release" / "examples" / "nativo.d").exists()

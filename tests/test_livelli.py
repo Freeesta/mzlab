@@ -159,10 +159,10 @@ def test_points_section_shape():
     assert p["versione"] == 1 and set(p["prove"]) == {"massa", "isotopi", "MS2", "frammenti", "rete", "cinetica", "controlli", "RT", "frequenza", "esterne"}
     assert [g["punti"] for g in p["prove"]["massa"]["gradini"]] == [2, 1] and p["prove"]["MS2"]["gradini"][0] == {"soglia": "entropia_min", "punti": 3}
     assert p["prove"]["cinetica"]["massimo"] == 0 and p["prove"]["cinetica"]["massimo_se_pesata"] == 1           # K1: informative only
-    soglie = run("console.log(JSON.stringify(L.data.profili.mzlab.soglie))")
+    thresholds = run("console.log(JSON.stringify(L.data.profili.mzlab.soglie))")
     keys = [g["soglia"] for r in p["prove"].values() for g in r["gradini"] if isinstance(g["soglia"], str)] + [r["richiede"]["soglia"] for r in p["prove"].values() if "richiede" in r]
     keys += list(p["tolleranze"].values())
-    assert keys and all(k in soglie for k in keys)                                                               # every named threshold exists in `soglie`
+    assert keys and all(k in thresholds for k in keys)                                                               # every named threshold exists in `soglie`
     for r in p["prove"].values():
         pts = [g["punti"] for g in r["gradini"]]
         assert pts == sorted(pts, reverse=True) and all(x >= 0 for x in pts)                                    # best step first, never negative points

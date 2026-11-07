@@ -37,5 +37,5 @@ def test_a_noany_file_is_in_stretto3_only():
 
 
 def test_the_committed_stretto3_matches_the_generator():
-    for nome, testo in gg.stretti().items():
-        assert (ROOT / "tools" / "tipi" / nome).read_text() == testo, nome
+    for name, text in gg.stretti().items():
+        assert (ROOT / "tools" / "tipi" / name).read_text() == text, name
