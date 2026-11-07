@@ -43,7 +43,8 @@ BUILD = """(names) => {
 RUN = """async ([plan, samplesName, samples]) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
   S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs)); S.plan.steps = JSON.parse(JSON.stringify(plan.steps));
-  S.samplesJson = S.samplesJson || {}; S.samplesJson[samplesName] = samples;
+  // as the sample-list editor does (FLOW.samplesSet): the text and its SHA-256 on the input, so the live session that started with the template sees a new list
+  await FLOW.samplesSet(S, S.plan.inputs.find(i => i.name === samplesName), JSON.parse(samples));
   document.addEventListener('flow:web-step', on);
   try { await FLOW.runners.web.run(S); return { ev }; }
   catch (e) { return { ev, err: { key: e.key, params: e.params, msg: String(e && e.message || e) } }; }

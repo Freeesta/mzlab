@@ -128,7 +128,7 @@ pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .unwrap_or_default();
     let v = riconosci(&mut fs).ok_or_else(|| rifiuto(&fs, name))?;
     let mut l = (v.apri)(fs, limiti)?;
-    if l.formato() == lettori::Formato::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
+    if l.format() == lettori::Formato::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
         l = Box::new(srm::SrmDaScansioni::new(l));
     }
     Ok(Box::new(finiti::Finiti::new(l)))
@@ -198,7 +198,7 @@ pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
         m.push("srm");
     }
     #[cfg(feature = "sciex")]
-    if l.variante(c) || (0..l.campioni().len()).any(|k| k != c && l.variante(k)) {
+    if l.variant(c) || (0..l.samples().len()).any(|k| k != c && l.variant(k)) {
         m.push("variante");
     }
     m
@@ -209,7 +209,7 @@ pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
 #[cfg(any(feature = "agilent", feature = "tutte"))]
 pub fn motivi_insieme(fs: &mut FileSet) -> Vec<&'static str> {
     let mut m = Vec::new();
-    if mzlab_core::agilent::lettore::variante(fs) {
+    if mzlab_core::agilent::lettore::variant(fs) {
         m.push("variante");
     }
     m

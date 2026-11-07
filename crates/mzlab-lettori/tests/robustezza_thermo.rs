@@ -35,18 +35,18 @@ fn tutto(byte: Vec<u8>) {
     let Ok(mut l) = mzlab_lettori::apri(insieme(byte), &Limiti::sito()) else {
         return;
     };
-    let Ok(ix) = l.indice(0).map(<[_]>::to_vec) else {
+    let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
         return;
     };
     if !ix.is_empty() {
-        let _ = l.scansione(0, ix.len() / 2);
+        let _ = l.scan(0, ix.len() / 2);
     }
-    if let Ok(v) = l.cromatogrammi(0) {
+    if let Ok(v) = l.chromatograms(0) {
         for c in v.iter().take(4) {
-            let _ = l.cromatogramma(0, &c.id);
+            let _ = l.chromatogram(0, &c.id);
         }
     }
-    let _ = l.metodo(0);
+    let _ = l.method(0);
 }
 
 #[test]

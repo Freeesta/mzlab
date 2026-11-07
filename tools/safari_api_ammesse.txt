@@ -33,8 +33,5 @@ mzlab/web/app.css::scrollbar props::2  # ::-webkit-scrollbar beside it
 mzlab/web/tavola-periodica.js::scrollbar props::1  # scrollbar-gutter ignored: cosmetic
 mzlab/web/touch.js::wheel ctrlKey zoom::1  # the synthetic events of the e2e tests
 mzlab/web/draw.js::wheel ctrlKey zoom::1  # no zoom: only stops a sideways swipe going back in history
-flow/lazy/flow-canvas.js::wheel ctrlKey zoom::1  # a trackpad pinch on Safari: gesture* events, not yet translated (docs/agenti/compat-safari.md)
-mzlab/web/banco.js::ClipboardItem::1  # made after awaits: Safari can refuse, falls back to a PNG download
-mzlab/web/libreria-corpo.js::ClipboardItem::1  # made after an await: Safari can refuse, falls back to writeText
-mzlab/web/libreria-finestra.js::ClipboardItem::1  # made after an await: Safari can refuse, the message says so
-mzlab/web/tabella-picchi.js::ClipboardItem::1  # made in the click (no await before)
+flow/lazy/flow-canvas.js::wheel ctrlKey zoom::1  # Safari's gesture* pinch is turned into this wheel by compat.js pinchWheel (.fl-view is touch-action:none)
+mzlab/web/compat.js::wheel ctrlKey zoom::1  # pinchWheel: the Ctrl+wheel it dispatches for Safari's gesture* pinch

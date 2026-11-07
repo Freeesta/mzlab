@@ -24,7 +24,7 @@ def _per_scan(t):
     return np.asarray(t.pos)[o], np.asarray(t.mz, dtype=float)[o], np.asarray(t.inten, dtype=float)[o]
 
 
-def confronta_tabelle(a, b, ppm_max: float = 1.0) -> dict:
+def compare_tables(a, b, ppm_max: float = 1.0) -> dict:
     """Compare two PeakTable of the same level."""
     out = {"scan": [int(len(a.rt)), int(len(b.rt))], "picchi": [int(len(a.mz)), int(len(b.mz))]}
     if len(a.rt) != len(b.rt):
@@ -34,10 +34,10 @@ def confronta_tabelle(a, b, ppm_max: float = 1.0) -> dict:
     pa, ma, ia = _per_scan(a)
     pb, mb, ib = _per_scan(b)
     na, nb = np.bincount(pa, minlength=len(a.rt)), np.bincount(pb, minlength=len(b.rt))
-    diversi = np.flatnonzero(na != nb)
-    out["scan_con_numero_di_picchi_diverso"] = int(len(diversi))
-    ok_a = ~np.isin(pa, diversi)
-    ok_b = ~np.isin(pb, diversi)
+    different = np.flatnonzero(na != nb)
+    out["scan_con_numero_di_picchi_diverso"] = int(len(different))
+    ok_a = ~np.isin(pa, different)
+    ok_b = ~np.isin(pb, different)
     ma, ia, mb, ib = ma[ok_a], ia[ok_a], mb[ok_b], ib[ok_b]
     out["picchi_confrontati"] = int(len(ma))
     if len(ma):
@@ -46,7 +46,7 @@ def confronta_tabelle(a, b, ppm_max: float = 1.0) -> dict:
         out["mz_ppm_max"], out["mz_ppm_mediana"] = float(dppm.max()), float(np.median(dppm))
         out["intensita_rel_max"], out["intensita_rel_mediana"] = float(rel.max()), float(np.median(rel))
         out["picchi_oltre_ppm"] = int(np.sum(dppm > ppm_max))
-    out["uguali"] = bool(len(diversi) == 0 and out.get("picchi_oltre_ppm", 0) == 0)
+    out["uguali"] = bool(len(different) == 0 and out.get("picchi_oltre_ppm", 0) == 0)
     return out
 
 
@@ -62,7 +62,7 @@ def main(argv=None) -> int:
     for lv in (1, 2):
         na = sum(1 for s in ra.scans if s.level == lv)
         nb = sum(1 for s in rb.scans if s.level == lv)
-        rep[f"ms{lv}"] = confronta_tabelle(ra.table(lv), rb.table(lv)) if na and nb else {"scan": [na, nb]}
+        rep[f"ms{lv}"] = compare_tables(ra.table(lv), rb.table(lv)) if na and nb else {"scan": [na, nb]}
     print(json.dumps(rep, indent=1))
     if x.out:
         Path(x.out).write_text(json.dumps(rep, indent=1) + "\n")

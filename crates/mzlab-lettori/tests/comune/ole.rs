@@ -40,7 +40,7 @@ fn voce(v: &Voce) -> Vec<u8> {
 }
 
 /// The 512-byte header: `nf` FAT sectors from sector 0, the directory at `dir0`, the mini-stream cutoff at 0.
-fn intestazione(nf: usize, dir0: usize) -> Vec<u8> {
+fn scan_header(nf: usize, dir0: usize) -> Vec<u8> {
     let mut h = vec![0u8; 512];
     h[..8].copy_from_slice(&MAGIC);
     h[0x18..0x1A].copy_from_slice(&0x3Eu16.to_le_bytes());
@@ -145,7 +145,7 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
             at += n;
         }
     }
-    let h = intestazione(nf, dir0);
+    let h = scan_header(nf, dir0);
     let mut out = h;
     out.extend(fat.iter().flat_map(|x| x.to_le_bytes()));
     let mut d: Vec<u8> = v.iter().flat_map(voce).collect();

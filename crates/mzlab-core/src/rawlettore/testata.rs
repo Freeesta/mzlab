@@ -7,7 +7,7 @@ use crate::mzmlwrite::Header;
 
 /// The header of the mzML: the instrument, the run terms the Thermo converter writes (`opentfraw.*`), the start of the acquisition, the SHA-1 of the
 /// file and the `metodo/1` document, so that the download of a `.raw` loses none of them.
-fn testata(l: &mut LettoreRaw) -> Header {
+fn file_header(l: &mut LettoreRaw) -> Header {
     if l.sha1.is_none() {
         let len = l.src.len;
         l.sha1 = Some(sha1_hex(&mut l.src.inner, len).ok());
@@ -48,7 +48,7 @@ fn testata(l: &mut LettoreRaw) -> Header {
 
 /// The fields of `testata` that `scantable::Head::da_testata` reads (sources, instrument, analyzers), without the SHA-1 of the file or the `metodo/1`
 /// document: the table is the same, the header costs a fraction.
-fn testata_tabella(l: &mut LettoreRaw) -> Header {
+fn table_header(l: &mut LettoreRaw) -> Header {
     let t = opentfraw::mzml::run_terms(&l.raw);
     Header {
         sources: vec![l.nome.clone()],
@@ -68,10 +68,10 @@ fn testata_tabella(l: &mut LettoreRaw) -> Header {
 
 pub(super) fn completa(l: &mut LettoreRaw, c: usize) -> Result<Option<Header>> {
     l.one(c)?;
-    Ok(Some(testata(l)))
+    Ok(Some(file_header(l)))
 }
 
 pub(super) fn leggera(l: &mut LettoreRaw, c: usize) -> Result<Option<Header>> {
     l.one(c)?;
-    Ok(Some(testata_tabella(l)))
+    Ok(Some(table_header(l)))
 }

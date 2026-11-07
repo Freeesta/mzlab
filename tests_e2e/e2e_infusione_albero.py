@@ -60,7 +60,7 @@ try:
                 assert 1 < pg.locator("#inf-tree tbody tr").count() <= NODES + 1, sid
         step("Level, Tolerance, Energies and Spectrum redraw the table at once", controls)
         def copy():
-            pg.evaluate("window.__clip = null; navigator.clipboard.writeText = async t => { window.__clip = t; }")
+            pg.evaluate("window.__clip = null; navigator.clipboard.writeText = async t => { window.__clip = t; }; navigator.clipboard.write = async it => { window.__clip = await (await it[0].getType('text/plain')).text(); }; 0")
             pg.click("#inf-copy"); attendi(pg, "window.__clip !== null", 10000)
             lines = [l for l in pg.evaluate("window.__clip").split("\n") if not l.startswith("# ")]
             n = pg.locator("#inf-tree tbody tr").count()

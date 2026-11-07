@@ -13,8 +13,8 @@ DOPPI = ["tests/test_guardie_memoria.py", "tests/test_feat_wasm.py", "tests/test
 
 def filtro_rust() -> re.Pattern:
     """The path filter of the `changes` job of rust.yml (the `grep -qE '^(...)'` on the diff)."""
-    testo = (ROOT / ".github/workflows/rust.yml").read_text(encoding="utf-8")
-    m = re.search(r"git diff --name-only .*grep -qE '([^']+)'", testo)
+    text = (ROOT / ".github/workflows/rust.yml").read_text(encoding="utf-8")
+    m = re.search(r"git diff --name-only .*grep -qE '([^']+)'", text)
     if not m:
         raise ValueError("path filter not found in rust.yml")
     return re.compile(m.group(1))
@@ -29,14 +29,14 @@ def da_saltare(files: list[str], filtro: re.Pattern) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    saltare: list[str] = []
+    skip: list[str] = []
     try:
         if argv and argv[0] and not re.fullmatch(r"0+", argv[0]):
             out = subprocess.run(["git", "diff", "--name-only", "--no-renames", "-z", argv[0], "HEAD"], check=True, capture_output=True, encoding="utf-8").stdout
-            saltare = da_saltare([f for f in out.split("\0") if f], filtro_rust())
+            skip = da_saltare([f for f in out.split("\0") if f], filtro_rust())
     except (subprocess.CalledProcessError, OSError, ValueError):
-        saltare = []
-    line = "ignore=" + " ".join(f"--ignore={f}" for f in saltare)
+        skip = []
+    line = "ignore=" + " ".join(f"--ignore={f}" for f in skip)
     print(line)
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:

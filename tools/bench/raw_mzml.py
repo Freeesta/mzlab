@@ -33,13 +33,13 @@ def disco(tmp, mb=1024):
     """Sequential write then read of `mb` MB with dd (page cache dropped before the read when allowed); MB/s or None."""
     f = Path(tmp) / "raw_mzml_dd.tmp"
     out = {}
-    for nome, cmd in (("scrittura", f"dd if=/dev/zero of={f} bs=1M count={mb} conv=fdatasync"), ("lettura", f"dd if={f} of=/dev/null bs=1M")):
-        if nome == "lettura":
+    for name, cmd in (("scrittura", f"dd if=/dev/zero of={f} bs=1M count={mb} conv=fdatasync"), ("lettura", f"dd if={f} of=/dev/null bs=1M")):
+        if name == "lettura":
             sh(["sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches"])
         t = time.perf_counter()
         r = sh(["sh", "-c", cmd])
         s = time.perf_counter() - t
-        out[nome] = round(mb / s, 1) if r.returncode == 0 and s > 0 else None
+        out[name] = round(mb / s, 1) if r.returncode == 0 and s > 0 else None
     f.unlink(missing_ok=True)
     return out
 

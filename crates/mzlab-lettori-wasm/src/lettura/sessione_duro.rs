@@ -6,10 +6,10 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 pub const STRANI: &str = "a\0b\u{1}\u{1f}\u{7f}\"\\/\n\r\t\u{8}\u{c}é€😀\u{2028}";
 
 impl Lettore for Duro {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("duro")
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         static C: std::sync::OnceLock<Vec<Campione>> = std::sync::OnceLock::new();
         C.get_or_init(|| {
             vec![
@@ -28,13 +28,13 @@ impl Lettore for Duro {
             ]
         })
     }
-    fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
         Ok(&[])
     }
-    fn scansione(&mut self, _: usize, _: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _: usize, _: usize) -> Result<Spectrum> {
         Err(mzlab_core::Error::new("error.badIndex"))
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
         Ok(vec![
             Campo {
                 nome: STRANI.into(),
@@ -50,7 +50,7 @@ impl Lettore for Duro {
             },
         ])
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok([ChromKind::Tic, ChromKind::Srm, ChromKind::Analog]
             .iter()
             .map(|&tipo| VoceCromatogramma {
@@ -60,7 +60,7 @@ impl Lettore for Duro {
             })
             .collect())
     }
-    fn cromatogramma(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
         let n = numeri();
         Ok(Chromatogram {
             index: 3,
@@ -73,10 +73,10 @@ impl Lettore for Duro {
             intensity: n.iter().rev().copied().collect(),
         })
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok("{}".into())
     }
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<mzlab_core::mzmlwrite::Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<mzlab_core::mzmlwrite::Header>> {
         let t = |x: &str| x.to_string();
         Ok((c == 0).then(|| mzlab_core::mzmlwrite::Header {
             run: t(STRANI),

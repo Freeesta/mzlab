@@ -1,4 +1,4 @@
-"""Asse e tracciato del piccolo XIC della lente (mzlab/web/xic-lente-disegno.js): tacche intere, equidistanti, almeno 4; il picco stretto non si perde (tests/xic_lente_disegno_node.js)."""
+"""Axis and trace of the small XIC of the magnifier (mzlab/web/xic-lente-disegno.js): whole, evenly spaced ticks, at least 4; a narrow peak is not lost (tests/xic_lente_disegno_node.js)."""
 import subprocess
 from pathlib import Path
 

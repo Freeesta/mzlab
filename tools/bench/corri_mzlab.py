@@ -24,7 +24,7 @@ def extra(ap) -> None:
     ap.add_argument("--params", default="")
 
 
-def tabella_semplice(cartella: Path, nomi: list[str], dataset: str, config: str) -> dict:
+def table_simple(cartella: Path, nomi: list[str], dataset: str, config: str) -> dict:
     """`series.mzfeat` (no identities) -> `bench/1`."""
     meta, a = nativo.apri((cartella / "series.mzfeat").read_bytes())
     n, k = meta["rows"], meta["files"]
@@ -46,20 +46,20 @@ def main() -> None:
         from valida import cancello_untargeted as U
         uscita = nat / "uscita"
         U.esegui(idx, uscita, a.params)
-        t = tabella_semplice(uscita, nomi, a.dataset, a.config)
-        versione = nativo.apri((uscita / "series.mzfeat").read_bytes())[0]["crate"]
+        t = table_simple(uscita, nomi, a.dataset, a.config)
+        version = nativo.apri((uscita / "series.mzfeat").read_bytes())[0]["crate"]
     elif a.genitore:
-        serie = nativo.esegui(idx, a.genitore, a.mz_genitore, a.rt_genitore, nat / "uscita", a.smiles)
-        t = adatta.da_serie(serie, a.dataset, a.config)
-        versione = serie.versione_crate
+        series = nativo.esegui(idx, a.genitore, a.mz_genitore, a.rt_genitore, nat / "uscita", a.smiles)
+        t = adatta.da_serie(series, a.dataset, a.config)
+        version = series.versione_crate
     else:
         uscita = nat / "uscita"
         uscita.mkdir(exist_ok=True)
         cmd = [str(nativo.ESEMPIO), str(uscita), *idx] + (["--recipe", par["recipe"]] if par["recipe"] else [])
         subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True)
-        t = tabella_semplice(uscita, nomi, a.dataset, a.config)
-        versione = nativo.apri((uscita / "series.mzfeat").read_bytes())[0]["crate"]
-    print(corri.salva(t, a.out_dir, versione), len(t["righe"]), "rows")
+        t = table_simple(uscita, nomi, a.dataset, a.config)
+        version = nativo.apri((uscita / "series.mzfeat").read_bytes())[0]["crate"]
+    print(corri.salva(t, a.out_dir, version), len(t["righe"]), "rows")
 
 
 if __name__ == "__main__":

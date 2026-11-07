@@ -21,6 +21,7 @@ pub mod axisroutes;
 pub mod components;
 pub mod comproute;
 pub mod composition;
+pub mod ddafinestra;
 pub mod differenza;
 pub mod diffroute;
 pub mod elements;

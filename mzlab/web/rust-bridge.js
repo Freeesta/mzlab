@@ -36,7 +36,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") { upOk(true); if (m.cap) { nota(m.cap); if (stato("motore") === "no") off(api, slots, notify, "cap.engine"); } return; } if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
-      if (m.op === "notice") { notify(m.key, m.params); return; }  if (m.op === "cap-off") { serve(m.fn); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; } if (m.op === "budget-down") { if (lowerTo(api, stats, m, BUD.lowered)) notify("error.engineLowered"); else { stop(worker, { dead: true }); off(api, slots, notify, "error.memoryBudget"); } return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
+      if (m.op === "notice") { if (m.key === "error.poolLowered") BUD.poolLowered(api, m.params); notify(m.key, m.params); return; }  if (m.op === "cap-off") { serve(m.fn); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; } if (m.op === "budget-down") { if (lowerTo(api, stats, m, BUD.lowered)) notify("error.engineLowered"); else { stop(worker, { dead: true }); off(api, slots, notify, "error.engineOffMemory"); } return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
@@ -69,7 +69,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     const act = judgeDeath(death, info, peakMem);
     if (act === "down") { stepDown(api); respawn(); return; }       // a death for lack of memory: the new worker asks Rust for the level below
     if (act === "restart") { respawn(); notify("error.engineRestarted"); return; }
-    off(api, slots, notify, act === "oom" ? "error.memoryBudget" : "error.engineFallback");
+    off(api, slots, notify, act === "oom" ? "error.engineOffMemory" : "error.engineFallback");
   }
   // A file has ONE reader: its .mzidx (OPFS), which answers TIC, XIC, scan lists and filters without reading the mzML. The mzML itself is opened
   // only for what needs the spectra (single scans), the first time they are asked, or at once when the file has no index (no OPFS).
@@ -149,7 +149,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     stats.rust++;
     return { status: 200, text: r.info, ms: performance.now() - t0 };
   }
-  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero|canali|scan_stats)$/;
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|dda_window|scan_axis|msn_albero|canali|scan_stats)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {

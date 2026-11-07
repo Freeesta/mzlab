@@ -25,11 +25,11 @@ fn gli_offset_dell_indice_non_contano_le_scansioni_vengono_dalla_passata() {
     ] {
         let b = buono.replacen(danno.0, danno.1, 1);
         let mut l = apri_mzxml(b.into_bytes());
-        assert_eq!(l.campioni()[0].scansioni, 5);
-        assert_eq!(l.scansione(0, 4).unwrap().mz.len(), 10);
+        assert_eq!(l.samples()[0].scansioni, 5);
+        assert_eq!(l.scan(0, 4).unwrap().mz.len(), 10);
     }
     let fuori = buono.replacen("<indexOffset>", "<indexOffset>9999999", 1);
-    assert_eq!(apri_mzxml(fuori.into_bytes()).campioni()[0].scansioni, 5);
+    assert_eq!(apri_mzxml(fuori.into_bytes()).samples()[0].scansioni, 5);
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn piu_picchi_di_quelli_dichiarati_si_tagliano_o_sono_un_errore_se_compressi() {
     .replacen("peaksCount=\"30\"", "peaksCount=\"4\"", 1);
     assert_eq!(
         apri_mzxml(semplice.into_bytes())
-            .scansione(0, 0)
+            .scan(0, 0)
             .unwrap()
             .mz
             .len(),
@@ -147,19 +147,19 @@ fn lunga(n: u32, dichiarate: Option<u32>, o: Opz) -> Vec<u8> {
 fn parte_intatta(intero: &[u8], rotto: Vec<u8>, n: usize) -> usize {
     let mut tutto = apri_mzxml(intero.to_vec());
     let mut l = apri_mzxml(rotto);
-    let righe = l.indice(0).unwrap().to_vec();
+    let righe = l.index(0).unwrap().to_vec();
     assert!(righe.len() < n, "a damaged copy reads fewer scans");
     for (k, r) in righe.iter().enumerate() {
         let j = tutto
-            .indice(0)
+            .index(0)
             .unwrap()
             .iter()
             .position(|v| v.id == r.id)
             .unwrap();
-        let (a, b) = (l.scansione(0, k).unwrap(), tutto.scansione(0, j).unwrap());
+        let (a, b) = (l.scan(0, k).unwrap(), tutto.scan(0, j).unwrap());
         assert_eq!((a.mz, a.intensity), (b.mz, b.intensity), "scan {}", r.id);
     }
-    let m = l.mancanti(0);
+    let m = l.missing(0);
     assert!(m > 0, "the scans a damaged copy lacks are counted");
     righe.len() + m
 }
@@ -177,7 +177,7 @@ fn una_copia_tagliata_o_azzerata_dice_quante_scansioni_mancano() {
     ] {
         let b = lunga(n, Some(n), o);
         assert_eq!(
-            apri_mzxml(b.clone()).mancanti(0),
+            apri_mzxml(b.clone()).missing(0),
             0,
             "the whole file lacks nothing"
         );
@@ -250,9 +250,9 @@ fn ogni_mzxml_vero_dice_quello_che_dice_il_suo_mzml() {
         let nome = x.file_name().unwrap().to_string_lossy().into_owned();
         let mut l = apri_mzxml(std::fs::read(&x).unwrap());
         let rif = mzml_spettri(&m);
-        assert_eq!(l.campioni()[0].scansioni, rif.len(), "{nome}");
+        assert_eq!(l.samples()[0].scansioni, rif.len(), "{nome}");
         for (k, r) in rif.iter().enumerate() {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert_eq!(
                 (s.level, s.polarity),
                 (r.level, r.polarity),
@@ -305,15 +305,15 @@ fn i_mzxml_veri_si_aprono_e_i_conti_tornano() {
         }
         let nome = p.file_name().unwrap().to_string_lossy().into_owned();
         let mut l = apri_mzxml(std::fs::read(&p).unwrap());
-        let n = l.campioni()[0].scansioni;
+        let n = l.samples()[0].scansioni;
         assert!(n > 0, "{nome}");
         let attese = [("PXD070375", 1096), ("PXD005665", 5344)];
         if let Some((_, v)) = attese.iter().find(|(k, _)| nome.starts_with(k)) {
             assert_eq!(n, *v, "{nome}");
         }
-        let tic: Vec<f64> = l.indice(0).unwrap().iter().map(|v| v.tic).collect();
+        let tic: Vec<f64> = l.index(0).unwrap().iter().map(|v| v.tic).collect();
         for k in (0..n).step_by((n / 20).max(1)) {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert!(s.mz.windows(2).all(|w| w[0] <= w[1]), "{nome} scan {k}");
             assert!(
                 (0..s.mz.len()).all(|i| s.intensity_f64(i).is_finite() && s.mz[i] > 0.0),
@@ -321,6 +321,6 @@ fn i_mzxml_veri_si_aprono_e_i_conti_tornano() {
             );
             assert!(tic[k].is_finite() && tic[k] >= 0.0, "{nome} scan {k} tic");
         }
-        assert!(l.metodo(0).unwrap().contains("\"mzxml\""), "{nome}");
+        assert!(l.method(0).unwrap().contains("\"mzxml\""), "{nome}");
     }
 }

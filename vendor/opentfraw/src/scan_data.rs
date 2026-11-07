@@ -21,10 +21,12 @@ fn con_blocco<R: Read + Seek, T>(
 ) -> Result<T> {
     BLOCCO.with(|b| {
         let mut b = b.borrow_mut();
-        b.clear();
-        b.resize(n, 0);
-        let letto = r.read_bytes_into(&mut b[..]);
-        let esito = letto.map(|()| f(&b[..]));
+        // the read overwrites the bytes: only a longer block is zeroed (by the growth), not every block
+        if b.len() < n {
+            b.resize(n, 0);
+        }
+        let letto = r.read_bytes_into(&mut b[..n]);
+        let esito = letto.map(|()| f(&b[..n]));
         if b.capacity() > BLOCCO_MAX {
             *b = Vec::new();
         }
@@ -175,6 +177,24 @@ impl ScanDataPacket {
             resolutions,
             noise_nodes,
         })
+    }
+
+    /// The profile of the packet appended to `mz` and `int` as [`Profile::to_mz_intensity_into`] gives it from [`Self::read`] (`Ok(false)`: the packet has no profile,
+    /// nothing appended); the centroid list and the labels are still read, so a packet that [`Self::read`] refuses this refuses too.
+    pub(crate) fn read_profile_into<R: Read + Seek>(
+        r: &mut BinaryReader<R>,
+        coefficients: &[f64],
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) -> Result<bool> {
+        let header = PacketHeader::read(r)?;
+        if header.profile_size == 0 {
+            return Ok(false);
+        }
+        Profile::read_into(r, header.layout, coefficients, mz, int)?;
+        let peaks = Self::read_peaks(r, &header)?;
+        Self::read_labels(r, &header, peaks.len())?;
+        Ok(true)
     }
 
     /// Read peaks and FT label data while skipping the (potentially large)
@@ -459,6 +479,139 @@ impl Profile {
     }
 }
 
+/// `freq_to_mz` with the count of the coefficients resolved once per scan, not once per point: the same arithmetic in the same order.
+#[derive(Clone, Copy)]
+enum Conversione {
+    Nessuna,
+    Ft(f64, f64, f64),
+    Orbitrap(f64, f64, f64),
+}
+
+impl Conversione {
+    fn di(c: &[f64]) -> Self {
+        match c.len() {
+            4 => Conversione::Ft(c[1], c[2], c[3]),
+            5 | 7 => Conversione::Orbitrap(c[2], c[3], c[4]),
+            _ => Conversione::Nessuna,
+        }
+    }
+}
+
+/// The points of one chunk (the `f32` signal in `b`, bins from `first_bin`) appended to `mz` and `int`, keeping m/z > 0, as [`Profile::to_mz_intensity_into`]:
+/// every m/z is computed first (a loop the compiler can vectorise) and the rare points at or below zero are dropped after.
+#[inline(always)]
+fn punti_del_blocco(
+    b: &[u8],
+    first_bin: u32,
+    fudge: f64,
+    (first_value, step, origin): (f64, f64, f64),
+    conv: Conversione,
+    mz: &mut Vec<f64>,
+    int: &mut Vec<f32>,
+) {
+    let start = mz.len();
+    let base = first_bin as f64;
+    let freq = |i: usize| first_value + (base + i as f64 + origin) * step;
+    let n = b.len() / 4;
+    // one loop per conversion: the match is out of the loop over the points
+    match conv {
+        Conversione::Nessuna => mz.extend((0..n).map(|i| {
+            let f = freq(i);
+            (if f == 0.0 { 0.0 } else { f }) + fudge
+        })),
+        Conversione::Ft(a, bb, c) => mz.extend((0..n).map(|i| {
+            let f = freq(i);
+            (if f == 0.0 {
+                0.0
+            } else {
+                a + bb / f + c / (f * f)
+            }) + fudge
+        })),
+        Conversione::Orbitrap(a, bb, c) => mz.extend((0..n).map(|i| {
+            let f = freq(i);
+            let f2 = f * f;
+            (if f == 0.0 {
+                0.0
+            } else {
+                a + bb / f2 + c / (f2 * f2)
+            }) + fudge
+        })),
+    }
+    let ints = b
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]));
+    let tutti = mz[start..].iter().all(|m| *m > 0.0);
+    if tutti {
+        int.extend(ints);
+        return;
+    }
+    // a point at or below zero (or NaN) is not kept: the chunk is compacted in place
+    let mut w = start;
+    for (i, v) in ints.enumerate() {
+        let m = mz[start + i];
+        if m > 0.0 {
+            mz[w] = m;
+            int.push(v);
+            w += 1;
+        }
+    }
+    mz.truncate(w);
+}
+
+impl Profile {
+    /// [`Self::read`] and [`Self::to_mz_intensity_into`] in one pass: each chunk is decoded from the block it was read into and appended to `mz` and `int`,
+    /// without a `Vec` per chunk; the reads and their checks are those of [`Self::read`], so a profile that one refuses this one refuses too.
+    fn read_into<R: Read + Seek>(
+        r: &mut BinaryReader<R>,
+        layout: u32,
+        coefficients: &[f64],
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) -> Result<()> {
+        let (first_value, step, peak_count, _nbins) = con_blocco(r, 24, |b| {
+            Ok::<_, Error>((
+                read_f64_le(b, 0)?,
+                read_f64_le(b, 8)?,
+                read_u32_le(b, 16)?,
+                read_u32_le(b, 20)?,
+            ))
+        })??;
+        let has_fudge = layout & 0xFF != 0;
+        r.check_count(peak_count as u64, 8)?;
+        // A profile already in the m/z domain (ion trap) starts one step after its first value, as the vendor library gives it.
+        let origin = if coefficients.is_empty() { 1.0 } else { 0.0 };
+        let conv = Conversione::di(coefficients);
+        for _ in 0..peak_count {
+            let (first_bin, chunk_nbins, fudge) =
+                con_blocco(r, if has_fudge { 12 } else { 8 }, |b| {
+                    Ok::<_, Error>((
+                        read_u32_le(b, 0)?,
+                        read_u32_le(b, 4)?,
+                        if has_fudge {
+                            Some(read_f32_le(b, 8)?)
+                        } else {
+                            None
+                        },
+                    ))
+                })??;
+            let n = r.block_len(chunk_nbins as u64, 4)?;
+            let fudge = fudge.unwrap_or(0.0) as f64;
+            con_blocco(r, n, |b| {
+                punti_del_blocco(
+                    b,
+                    first_bin,
+                    fudge,
+                    (first_value, step, origin),
+                    conv,
+                    mz,
+                    int,
+                )
+            })?;
+        }
+        Ok(())
+    }
+}
+
 impl Profile {
     /// Convert profile bins to (mz, intensity) pairs using the conversion coefficients.
     pub fn to_mz_intensity(&self, coefficients: &[f64]) -> Vec<(f64, f64)> {
@@ -509,7 +662,8 @@ impl Profile {
                 let m = freq_to_mz(freq, coefficients) + fudge;
                 if m > 0.0 {
                     mz.push(m);
-                    int.push(f64::from(intensity) as f32);
+                    // the f32 of the file as it is: through an f64 a signalling NaN comes back quieted or not by build profile
+                    int.push(intensity);
                 }
             }
         }
@@ -916,14 +1070,16 @@ mod tests {
                 .filter(|(m, _)| *m > 0.0)
                 .map(|(m, _)| *m)
                 .collect();
+            // the intensities straight from the chunks: through the f64 of the pairs a signalling NaN may come back quieted
             let oi: Vec<f32> = pairs
                 .iter()
-                .filter(|(m, _)| *m > 0.0)
-                .map(|(_, i)| *i as f32)
+                .zip(profile.chunks.iter().flat_map(|c| &c.signal))
+                .filter(|((m, _), _)| *m > 0.0)
+                .map(|(_, i)| *i)
                 .collect();
             let (mut mz, mut int) = (Vec::new(), Vec::new());
             profile.to_mz_intensity_into(coefficients, &mut mz, &mut int);
-            assert_eq!(mz.len(), om.len());
+            assert_eq!((mz.len(), int.len()), (om.len(), oi.len()));
             assert!(mz.iter().zip(&om).all(|(a, b)| a.to_bits() == b.to_bits()));
             assert!(int.iter().zip(&oi).all(|(a, b)| a.to_bits() == b.to_bits()));
         }

@@ -13,8 +13,8 @@ use crate::mzmlwrite::MzmlWriter;
 pub trait Scansioni {
     /// The peaks of the scan of row `sc`: m/z and intensity, as many as the shorter array.
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)>;
-    /// The header fields of the scan: in an mzML every `cvParam` / `userParam` with a name (with its accession), from a reader `Lettore::intestazione`.
-    fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>>;
+    /// The header fields of the scan: in an mzML every `cvParam` / `userParam` with a name (with its accession), from a reader `Lettore::scan_header`.
+    fn scan_header(&mut self, sc: &Scan) -> Result<Vec<Campo>>;
     /// The ion mobility of the scan (a mobility array or a scan attribute of an mzML), `None` for a scan that has none and for a reader of a vendor file.
     fn mobilita(&mut self, _sc: &Scan) -> Result<Option<crate::mzml::Mobility>> {
         Ok(None)
@@ -53,7 +53,7 @@ impl<M: ReadAt> Scansioni for M {
         spettro_e_mobilita(&leggi_riga(self, sc)?)
     }
 
-    fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
         if sc.k.is_some() && self.lettore().is_some() {
             return Ok(crate::scaninfo::campi(&testo_scansione(self, sc)?));
         }
@@ -101,11 +101,11 @@ pub fn testo_scansione<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
 
 /// The chromatograms of a file and its header.
 pub trait Tracce {
-    fn cromatogrammi(&mut self) -> Result<Vec<VoceCromatogramma>>;
+    fn chromatograms(&mut self) -> Result<Vec<VoceCromatogramma>>;
     /// The first chromatogram with this id.
-    fn cromatogramma(&mut self, id: &str) -> Result<Chromatogram>;
+    fn chromatogram(&mut self, id: &str) -> Result<Chromatogram>;
     /// The text of the file before its first spectrum: the header up to `<run ` and what follows the tag (instrument, sources, run parameters).
-    fn testata(&mut self) -> Result<String>;
+    fn file_header(&mut self) -> Result<String>;
     /// The SRM chromatograms with Q1 and Q3, in the order of the file (`srm::leggi`).
     fn srm(&mut self) -> Result<Vec<crate::srm::Traccia>> {
         crate::srm::da_voci(self)
@@ -152,7 +152,7 @@ fn kind(c: &Chrom) -> ChromKind {
 }
 
 impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
-    fn cromatogrammi(&mut self) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self) -> Result<Vec<VoceCromatogramma>> {
         let list = self.lista()?.to_vec();
         list.iter()
             .map(|c| {
@@ -165,7 +165,7 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
             .collect()
     }
 
-    fn cromatogramma(&mut self, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, id: &str) -> Result<Chromatogram> {
         let c = self
             .lista()?
             .iter()
@@ -185,7 +185,7 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
         })
     }
 
-    fn testata(&mut self) -> Result<String> {
+    fn file_header(&mut self) -> Result<String> {
         self.m.info_head()
     }
 
@@ -211,7 +211,7 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
     }
 }
 
-/// Sample `c` of a reader: the rows of its index (version 2) carry `k`, the number of the scan in `Lettore::indice(c)`.
+/// Sample `c` of a reader: the rows of its index (version 2) carry `k`, the number of the scan in `Lettore::index(c)`.
 pub struct SorgenteLettore<'a> {
     pub l: &'a mut dyn Lettore,
     pub c: usize,
@@ -231,24 +231,24 @@ impl Scansioni for SorgenteLettore<'_> {
         Ok((s.mz, y))
     }
 
-    fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
         let k = self.k(sc)?;
-        self.l.intestazione(self.c, k)
+        self.l.scan_header(self.c, k)
     }
 }
 
 impl Tracce for SorgenteLettore<'_> {
-    fn cromatogrammi(&mut self) -> Result<Vec<VoceCromatogramma>> {
-        self.l.cromatogrammi(self.c)
+    fn chromatograms(&mut self) -> Result<Vec<VoceCromatogramma>> {
+        self.l.chromatograms(self.c)
     }
 
-    fn cromatogramma(&mut self, id: &str) -> Result<Chromatogram> {
-        self.l.cromatogramma(self.c, id)
+    fn chromatogram(&mut self, id: &str) -> Result<Chromatogram> {
+        self.l.chromatogram(self.c, id)
     }
 
     /// The header `lettori_mzml::scrivi` writes for the sample.
-    fn testata(&mut self) -> Result<String> {
-        let h = crate::lettori_mzml::testata(&mut *self.l, self.c)?;
+    fn file_header(&mut self) -> Result<String> {
+        let h = crate::lettori_mzml::file_header(&mut *self.l, self.c)?;
         let mut doc = MzmlWriter::new(Vec::new(), &h)?.finish()?;
         let tail = b"</run>\n</mzML>\n".len();
         doc.truncate(doc.len().saturating_sub(tail));

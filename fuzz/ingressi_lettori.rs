@@ -37,19 +37,19 @@ fn lettori_famiglia(nomi: &[&str], data: &[u8]) {
     let Ok(mut l) = mzlab_lettori::apri(insieme(membri), &Limiti::sito()) else {
         return;
     };
-    let _ = l.metodo(0);
-    let Ok(ix) = l.indice(0).map(<[_]>::to_vec) else {
+    let _ = l.method(0);
+    let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
         return;
     };
     for j in [0, ix.len() / 2, ix.len().saturating_sub(1)] {
         if j < ix.len() {
-            let _ = l.scansione(0, j);
-            let _ = l.intestazione(0, j);
+            let _ = l.scan(0, j);
+            let _ = l.scan_header(0, j);
         }
     }
-    if let Ok(cr) = l.cromatogrammi(0) {
+    if let Ok(cr) = l.chromatograms(0) {
         for v in cr.iter().take(2) {
-            let _ = l.cromatogramma(0, &v.id);
+            let _ = l.chromatogram(0, &v.id);
         }
     }
 }

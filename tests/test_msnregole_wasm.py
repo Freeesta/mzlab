@@ -1,4 +1,4 @@
-"""The msnregole .wasm gives the expectations of the structure rules that the command line computes, and `msn_grafo` fed with them (query key `attese`)
+"""The msnregole .wasm gives the expectations of the structure rules that the command line computes, and `msn_graph` fed with them (query key `attese`)
 gives the same bytes as `mzlab-cli msn-graph --regole --smiles` (the page = the command). Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil

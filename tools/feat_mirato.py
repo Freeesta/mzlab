@@ -22,9 +22,9 @@ from mzlab.reader import mzidx                         # noqa: E402
 from mzlab.reader.mzml import Run                      # noqa: E402
 
 DEBOLI = 5000
-ALTEZZE_DEBOLI = (7e4, 1.8e5)
+WEAK_HEIGHTS = (7e4, 1.8e5)
 si.PROFILI["debole"] = {**si.PROFILI["piccolo"], "debole": DEBOLI}
-PRODOTTI = ("tp1", "tp2", "isomero")
+PRODUCTS = ("tp1", "tp2", "isomero")
 
 
 def genera(seme: int, profilo: str, scala: float, out: Path) -> list[float]:
@@ -36,10 +36,10 @@ def genera(seme: int, profilo: str, scala: float, out: Path) -> list[float]:
         n = c.P["debole"]
         rm, rr, rs, rh = c.rumore
         c.rumore = (np.concatenate([rm, rng.uniform(*si.MZ_RUMORE, n)]), np.concatenate([rr, rng.uniform(1.0, c.rt_fine - 0.3, n)]),
-                    np.concatenate([rs, rng.uniform(0.04, 0.08, n)]), np.concatenate([rh, rng.uniform(*ALTEZZE_DEBOLI, n)]))
+                    np.concatenate([rs, rng.uniform(0.04, 0.08, n)]), np.concatenate([rh, rng.uniform(*WEAK_HEIGHTS, n)]))
     alte = []
     for o in c.ioni:
-        if o.ruolo in PRODOTTI and o.amp is not None:
+        if o.ruolo in PRODUCTS and o.amp is not None:
             o.amp = o.amp * scala
             alte.append(float(o.amp.max()))
     for k, (stem, _, _) in enumerate(c.file):
