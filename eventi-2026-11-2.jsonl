@@ -22223,3 +22223,4 @@
 {"v":1,"ts_utc":"2026-11-07T08:24:34Z","azione":"aperta","tipo":"pr","pr":2829,"sha":"a1b941c06c895fc7753d288b548e1743a097b090"}
 {"v":1,"ts_utc":"2026-11-07T08:25:19Z","azione":"aperta","tipo":"pr","pr":2830,"sha":"473181ec28b91e8dce86537a81f57099cf71e70c"}
 {"v":1,"ts_utc":"2026-11-07T08:26:11Z","azione":"aperta","tipo":"pr","pr":2831,"sha":"b374b57fb800d367174bc460fca22be23ed62428"}
+{"v":1,"ts_utc":"2026-11-07T08:27:27Z","azione":"push","titolo":"Speed row names #2831","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":2831,"sha":"6d06963d69f041e6e63ce6b95d7096cfafa145bf"}
