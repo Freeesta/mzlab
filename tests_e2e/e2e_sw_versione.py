@@ -84,6 +84,16 @@ def step(name, fn):
 def static_hits(): return {k: v for k, v in state["hits"].items() if k.startswith("/static/") and not k.endswith(("manifest.json", "build.json"))}
 
 
+def wait_big(pg, timeout=90):
+    """Vendor files (Ketcher, openchemlib) go to the cache of big files when their download ends: a warm reload before that asks for them again."""
+    want = sorted(k for k, _ in state["hits"].items() if k.startswith("/static/vendor/")); t0 = time.time()
+    while time.time() - t0 < timeout:
+        if pg.evaluate("""async ps => { const n = (await caches.keys()).find(k => k.startsWith('mzlab-big-')); if (!n) return !ps.length;
+            const c = await caches.open(n); for (const p of ps) if (!(await c.match(new URL(p, location.origin).href))) return false; return true; }""", want): return
+        time.sleep(0.5)
+    raise AssertionError(("vendor files not in the cache of big files in time", want[:6]))
+
+
 def wait_cache(pg, app, timeout=150):
     """Waits for the background fill of the cache `app`; a page request now and then wakes a worker the browser stopped (the fill resumes where it was)."""
     t0 = time.time()
@@ -136,7 +146,7 @@ try:
             assert any(k.endswith(app["n1"]) for k in keys), keys
         step("the old cache goes, the new one is filled", page_n_keeps_n)
         def cache_first():
-            state["hits"].clear(); pg.reload(); pg.wait_for_load_state("load")
+            wait_big(pg); state["hits"].clear(); pg.reload(); pg.wait_for_load_state("load")
             assert ver() == "N1"
             h = static_hits()
             assert not h, ("static files asked to the server on a warm reload", list(h)[:8])
