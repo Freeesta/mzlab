@@ -2,7 +2,7 @@
 picker of «Load» opens with every file (compat.js frees the accept list that iPadOS would grey out) and an example file opens with its charts; the page
 keeps its width at Split View 1/3 and 1/2 and after a rotation; the legend chip of many traces opens by tap and keyboard; a private window
 (storage refused) gets its own loading message; with AbortSignal.any and createWritable taken away (what Safari before 17.4 and 26
-lacks) compat.js stands in and an OPFS file written through createWritable reads back the same. No browser errors.
+lacks) compat.js stands in and an OPFS file written through createWritable reads back the same. No browser errors and no answer of 400 or more.
 The real engine of Safari is WebKit: with --browser webkit (the nightly round on macOS) every step runs in WebKit; the cloud has only Chromium, which
 emulates the iPad (touch, coarse pointer, mobile viewport) and the output says so."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +30,7 @@ def ipad(b, w=1180, h=820, extra=""):
     pg = c.new_page()
     pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
     pg.on("console", lambda m: r.errs.append(("console." + m.type, m.text)) if m.type == "error" else None)
+    pg.on("response", lambda x: r.errs.append((f"http {x.status}", x.url)) if x.status >= 400 else None)   # a worker's 404 is a console error in WebKit only
     pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg); return pg
 
 if BROWSER == "firefox":          # Playwright's Firefox cannot be a touch-only device (no isMobile, the pointer stays fine): nothing here would be an iPad

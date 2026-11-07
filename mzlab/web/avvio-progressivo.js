@@ -205,7 +205,7 @@ const AVVIO = (function () {
   }
 
   /**
-   * Attende che il motore sia pronto prima di procedere con l'upload.
+   * Waits until the engine is ready before the upload goes on.
    * @returns {Promise<boolean>}
    */
   function pronto() {
@@ -219,7 +219,7 @@ const AVVIO = (function () {
   }
 
   /**
-   * Segna il motore come pronto (chiamato alla fine di init()).
+   * Marks the engine as ready (called at the end of init()).
    */
   function segnaPronto() {
     if (stato !== "pending") return;
@@ -289,8 +289,8 @@ const AVVIO = (function () {
   }
 
   /**
-   * Segna l'avvio come fallito: UNA sola fonte per il testo (`errore` = testo del banner).
-   * @param {any} [err] `{ key, params }`, una chiave di catalogo, un testo vero o un Error
+   * Marks the start as failed: ONE source for the text (`errore` = banner text).
+   * @param {any} [err] `{ key, params }`, a catalogue key, a real text or an Error
    */
   function segnaFallito(err) {
     if (stato !== "pending") return;
@@ -317,7 +317,7 @@ const AVVIO = (function () {
   }
 
   /**
-   * Annulla i caricamenti attualmente in attesa del motore.
+   * Cancels the uploads that are waiting for the engine.
    */
   function annulla() {
     const coda = attesa;

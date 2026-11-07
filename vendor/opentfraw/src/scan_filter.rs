@@ -21,6 +21,8 @@
 /// - `ITMS + c NSI d Full ms2 520.2400@cid35.00 [135.0000-1060.0000]`
 /// - `FTMS + c NSI d Full ms2 649.1234@etd35.00@hcd28.00 [150.0000-2000.0000]` (EThcD)
 /// - `ITMS + c NSI d Full ms3 810.50@cid35.00 265.27@cid35.00 [100.0000-1000.0000]` (MS3)
+use std::fmt::Write as _;
+
 use crate::scan_event::ScanEvent;
 use crate::scan_index::ScanIndexEntry;
 use crate::types::{Activation, Analyzer, MsPower, ScanType};
@@ -133,7 +135,7 @@ pub fn build_filter_with(
     if n == 1 {
         out.push_str("ms");
     } else {
-        out.push_str(&format!("ms{n}"));
+        let _ = write!(out, "ms{n}");
     }
 
     // Precursor chain (only for MSn scans)
@@ -158,13 +160,13 @@ pub fn build_filter_with(
             // activation_energy from scan_params "HCD Energy:" = supplemental HCD NCE%.
             if let Some(rx) = reactions.iter().find(|r| r.precursor_mz > 0.0) {
                 out.push(' ');
-                out.push_str(&format!("{:.*}", mz_decimals, rx.precursor_mz));
+                let _ = write!(out, "{:.*}", mz_decimals, rx.precursor_mz);
                 out.push('@');
                 out.push_str("etd");
                 out.push('@');
                 out.push_str("hcd");
                 if let Some(e) = activation_energy {
-                    out.push_str(&format!("{e:.2}"));
+                    let _ = write!(out, "{e:.2}");
                 }
             }
         } else if !reactions.is_empty() {
@@ -182,7 +184,7 @@ pub fn build_filter_with(
                     continue;
                 }
                 out.push(' ');
-                out.push_str(&format!("{mz:.mz_decimals$}"));
+                let _ = write!(out, "{mz:.mz_decimals$}");
                 let own = step.next().and_then(|s| s.activation);
                 let ethcd = act == Some(Activation::EThcD);
                 if let Some(a) = if ethcd { act } else { own.or(act) } {
@@ -194,12 +196,12 @@ pub fn build_filter_with(
                     if is_last && is_ethcd {
                         out.push_str("etd");
                         if let Some(e) = activation_energy {
-                            out.push_str(&format!("{e:.2}"));
+                            let _ = write!(out, "{e:.2}");
                         }
                         out.push('@');
                         out.push_str("hcd");
                         if let Some(se) = supplemental_energy {
-                            out.push_str(&format!("{se:.2}"));
+                            let _ = write!(out, "{se:.2}");
                         }
                     } else {
                         let astr = activation_str(analyzer, a);
@@ -220,7 +222,7 @@ pub fn build_filter_with(
                             }
                         };
                         if let Some(e) = energy {
-                            out.push_str(&format!("{e:.2}"));
+                            let _ = write!(out, "{e:.2}");
                         }
                     }
                 }
@@ -228,23 +230,23 @@ pub fn build_filter_with(
         } else if let Some(mz) = precursor_mz {
             // Fallback: single precursor from scan_params.
             out.push(' ');
-            out.push_str(&format!("{mz:.mz_decimals$}"));
+            let _ = write!(out, "{mz:.mz_decimals$}");
             if let Some(a) = act {
                 out.push('@');
                 if a == Activation::EThcD {
                     out.push_str("etd");
                     if let Some(e) = activation_energy {
-                        out.push_str(&format!("{e:.2}"));
+                        let _ = write!(out, "{e:.2}");
                     }
                     out.push('@');
                     out.push_str("hcd");
                     if let Some(se) = supplemental_energy {
-                        out.push_str(&format!("{se:.2}"));
+                        let _ = write!(out, "{se:.2}");
                     }
                 } else {
                     out.push_str(activation_str(analyzer, a));
                     if let Some(e) = activation_energy {
-                        out.push_str(&format!("{e:.2}"));
+                        let _ = write!(out, "{e:.2}");
                     }
                 }
             }
@@ -258,10 +260,11 @@ pub fn build_filter_with(
             if i > 0 {
                 out.push_str(", ");
             }
-            out.push_str(&format!(
+            let _ = write!(
+                out,
                 "{:.*}-{:.*}",
                 mz_decimals, fc.low_mz, mz_decimals, fc.high_mz
-            ));
+            );
         }
         out.push(']');
         return out;
@@ -274,17 +277,19 @@ pub fn build_filter_with(
         && index_entry.high_mz > index_entry.low_mz
     {
         out.push(' ');
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "[{:.*}-{:.*}]",
             mz_decimals, index_entry.low_mz, mz_decimals, index_entry.high_mz
-        ));
+        );
     } else if let Some(fc) = event.fraction_collectors.first() {
         if fc.low_mz > 0.0 && fc.high_mz > fc.low_mz {
             out.push(' ');
-            out.push_str(&format!(
+            let _ = write!(
+                out,
                 "[{:.*}-{:.*}]",
                 mz_decimals, fc.low_mz, mz_decimals, fc.high_mz
-            ));
+            );
         }
     }
 

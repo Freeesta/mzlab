@@ -85,6 +85,7 @@
       "err.flow.port.format": `${q.ref} is in the ${q.writes} format; this input reads ${q.reads}.`,
       "err.flow.port.unwritten": `${q.ref} is written only when input ${q.input} is connected${q.param ? " and " + q.param.replace("=", " is not ") : ""}.`,
       "err.flow.port.missing": `Input ${q.port} is not connected.`,
+      "err.flow.lineage": `${q.step} needs a table aligned by features.align in this plan.`,
       "err.flow.input.unknown": `The plan has no input file ${q.ref}.`,
       "err.flow.ref.unknown": `No step ${q.ref}.`,
       "err.flow.type": `A ${q.from} cannot go into a ${q.to} input.`,

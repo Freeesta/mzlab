@@ -82,7 +82,7 @@ const TOUCH = (() => {
       const sn = hooks.snap ? hooks.snap(g.x0, g.y0) : null, X = sn ? sn.x : g.x0, Y = sn ? sn.y : g.y0, t = tgt(g.S, X, Y);
       if (sn) mouse("mousemove", t, X, Y, { buttons: 0 });                              // Ketcher highlights the atom it is about to act on
       mouse("mousedown", t, X, Y); mouse("mouseup", t, X, Y);                            // a tap = a click
-      if (hooks.hit) mouse("click", t, X, Y);                                            // the editor's charge tool acts on «click», not on mouseup
+      mouse("click", t, X, Y);                                                           // and «click» too: the editor's charge tool, the contaminant diamonds of a spectrum
       if (dbl) { mouse("dblclick", t, g.x0, g.y0, { detail: 2 }); lastTap = { t: 0, x: 0, y: 0, el: null }; }
       else lastTap = { t: Date.now(), x: g.x0, y: g.y0, el };
     }

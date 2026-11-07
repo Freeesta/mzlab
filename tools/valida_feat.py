@@ -31,7 +31,7 @@ def carica_verita(path) -> list[dict]:
     return out
 
 
-def main_cancello(a) -> int:
+def main_gate(a) -> int:
     import datetime
     from valida import cancello
     ioni = carica_verita(a.verita) if a.verita else []
@@ -42,16 +42,16 @@ def main_cancello(a) -> int:
     return 0
 
 
-def main_cancello_tp(a) -> int:
+def main_gate_tp(a) -> int:
     import datetime
     from valida import cancello, cancello_tp
     if not (a.serie and a.verita):
         raise SystemExit("--cancello-tp needs --serie and --verita")
     verita = json.loads(Path(a.verita).read_text(encoding="utf-8"))
     lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_tp"
-    _, run, trattate = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro)
+    _, run, handled = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro)
     _, run2, _ = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro / "bis")          # a second run: determinism of the TP view
-    c, det = cancello_tp.misura(verita, run, trattate, a.dataset, a.data or datetime.date.today().isoformat(), run2)
+    c, det = cancello_tp.misura(verita, run, handled, a.dataset, a.data or datetime.date.today().isoformat(), run2)
     for p in rapporto.scrivi_cancello_tp(Path(a.uscita) if a.uscita else lavoro, c, det, a.cancello_tp_json):
         print(p)
     return 0
@@ -118,9 +118,9 @@ def main(argv=None) -> int:
     if a.hr:
         return main_hr(a)
     if a.cancello_tp:
-        return main_cancello_tp(a)
+        return main_gate_tp(a)
     if a.cancello:
-        return main_cancello(a)
+        return main_gate(a)
     ap.error("choose one of --cancello, --cancello-tp, --lr, --hr")
     return 2
 

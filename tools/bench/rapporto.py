@@ -19,11 +19,11 @@ if __package__ in (None, ""):
 
 from . import FORMATO, metriche, statistica as S  # noqa: E402
 from valida.rapporto import a_json as _a_json  # noqa: E402  (after `.`: it puts tools/ on the path)
-from .adatta import a_json as tabella_a_json, corri_mzfinder_sintetico  # noqa: E402
+from .adatta import a_json as table_to_json, corri_mzfinder_sintetico  # noqa: E402
 
 ENDPOINT = {"P1": ("richiamo", "alto", "media"), "P2": ("mediana", "basso", "mediana"), "P3": ("integrita", "alto", "media"),
             "P4": ("richiamo_candidati", "alto", "media"), "P5": ("falsi", "basso", "media")}
-VALORE = {"P1": "richiamo", "P2": "mediana", "P3": "integrita", "P4": "richiamo_candidati", "P5": "falsi"}
+VALUE = {"P1": "richiamo", "P2": "mediana", "P3": "integrita", "P4": "richiamo_candidati", "P5": "falsi"}
 
 
 def misura(verita: list[dict], t: dict, gruppi: dict | None = None) -> dict:
@@ -47,40 +47,40 @@ def _vec(m: dict, p: str) -> list:
     return [float("nan") if x is None else x for x in m[p]["per_composto"]]
 
 
-def _strati(m: dict, p: str):
+def _layers(m: dict, p: str):
     return m.get("strati_p", {}).get(p)
 
 
 def riassunto(m: dict) -> dict:
     """Value and interval of each primary endpoint of one tool."""
     out = {}
-    for p, (_, _, quale) in ENDPOINT.items():
-        out[p] = S.intervallo(_vec(m, p), quale, _strati(m, p))
+    for p, (_, _, which) in ENDPOINT.items():
+        out[p] = S.intervallo(_vec(m, p), which, _layers(m, p))
     return out
 
 
 def confronto(a: dict, altri: list[dict]) -> list[dict]:
     """Paired comparisons a - b for each competitor and primary endpoint (the same compounds), with Holm over all of them. A positive difference is better for
     the endpoints where higher is better (P1, P3, P4); for P2 and P5 a negative one is better."""
-    righe = []
+    rows = []
     for b in altri:
-        for p, (_, direzione, quale) in ENDPOINT.items():
+        for p, (_, direzione, which) in ENDPOINT.items():
             va, vb = _vec(a, p), _vec(b, p)
             if len(va) != len(vb):
                 raise ValueError(f"{p}: the tools are not measured on the same compounds")
-            d = S.differenza(va, vb, quale, _strati(a, p))
-            riga = {"endpoint": p, "contro": f"{b['strumento']}/{b['config']}", "direzione": direzione, "differenza": d}
-            if quale == "media" and set(x for x in va + vb if x == x) <= {0, 1}:
-                riga["mcnemar"] = S.mcnemar_esatto([int(x) for x in va], [int(x) for x in vb])
-            righe.append(riga)
-    h = S.holm([r["differenza"]["p"] if r["differenza"]["p"] is not None else 1.0 for r in righe])
-    for r, adj, rif in zip(righe, h["p_corretto"], h["rifiutata"]):
+            d = S.differenza(va, vb, which, _layers(a, p))
+            row = {"endpoint": p, "contro": f"{b['strumento']}/{b['config']}", "direzione": direzione, "differenza": d}
+            if which == "media" and set(x for x in va + vb if x == x) <= {0, 1}:
+                row["mcnemar"] = S.mcnemar_esatto([int(x) for x in va], [int(x) for x in vb])
+            rows.append(row)
+    h = S.holm([r["differenza"]["p"] if r["differenza"]["p"] is not None else 1.0 for r in rows])
+    for r, adj, rif in zip(rows, h["p_corretto"], h["rifiutata"]):
         r["p_holm"], r["rifiutata_holm"] = adj, rif
         if r["endpoint"] in S.MARGINI:
             dirz, marg = S.MARGINI[r["endpoint"]]
             r["margine"], r["non_inferiore"] = marg, S.non_inferiore(r["differenza"], dirz, marg)
         r["superiore"] = S.superiore(r["differenza"], r["direzione"], rif)
-    return righe
+    return rows
 
 
 def rapporto(dataset: str, misura_a: dict, altri: list[dict] | None = None) -> dict:
@@ -101,8 +101,8 @@ def _f(x, k=3):
 def a_markdown(r: dict) -> str:
     L = [f"# Benchmark {r['dataset']}", "", f"Bootstrap of the compounds: {r['bootstrap']['n']} resamples, seed {r['bootstrap']['seme']}; 95 % percentile intervals.", "",
          "| tool | endpoint | n | value | 95 % interval |", "|---|---|---|---|---|"]
-    for nome, e in r["strumenti"].items():
-        L += [f"| {nome} | {p} | {v['n']} | {_f(v['valore'])} | {_f(v['ic_basso'])} to {_f(v['ic_alto'])} |" for p, v in e.items()]
+    for name, e in r["strumenti"].items():
+        L += [f"| {name} | {p} | {v['n']} | {_f(v['valore'])} | {_f(v['ic_basso'])} to {_f(v['ic_alto'])} |" for p, v in e.items()]
     if r["confronti"]:
         L += ["", "## Comparisons (first tool minus the other)", "", "| against | endpoint | difference | 95 % interval | p (Holm) | non-inferior | superior |", "|---|---|---|---|---|---|---|"]
         for c in r["confronti"]:
@@ -122,30 +122,30 @@ def identificazione_affiancata(verita: list[dict], tabelle: list[dict], struttur
 
 def identificazione_markdown(r: dict) -> str:
     L = ["| tool | standards | suspect-hit recall | mean reciprocal rank | decoy false positives | levels reached (own scale) |", "|---|---|---|---|---|---|"]
-    for nome, e in r.items():
-        L.append(f"| {nome} | {e['n']} | {_f(e['richiamo_colpi'])} | {_f(e['mrr'])} | {_f(e['falsi'])} | {', '.join(f'{k}: {v}' for k, v in e['livelli'].items())} |")
+    for name, e in r.items():
+        L.append(f"| {name} | {e['n']} | {_f(e['richiamo_colpi'])} | {_f(e['mrr'])} | {_f(e['falsi'])} | {', '.join(f'{k}: {v}' for k, v in e['livelli'].items())} |")
     return "\n".join(L) + "\n"
 
 
-def verita_di(path, tipo: str, solo_visti: bool = True) -> list[dict]:
+def truth_of(path, tipo: str, only_seen: bool = True) -> list[dict]:
     """The truth of a file of the private repository: `d1` (`bench/verita/1`, the compounds seen in the data: the others cannot be measured), `d2`/`d3` (`da_json`)."""
     if tipo == "d1":
         import json
         d = json.loads(Path(path).read_text(encoding="utf-8"))
         return [{"id": str(c["id"]), "mz": c["mz"], "rt": c["rt"], "ruolo": "tp1", "fascia": None, "atteso": c["atteso"], "area_attesa": None}
-                for c in d["composti"] if c["visto"] or not solo_visti]
+                for c in d["composti"] if c["visto"] or not only_seen]
     from .verita import da_json
     return da_json(path)
 
 
-def da_tabelle(verita: list[dict], percorsi: list[str], gruppi: dict | None, rt_tol: float, dataset: str) -> dict:
+def from_tables(verita: list[dict], percorsi: list[str], gruppi: dict | None, rt_tol: float, dataset: str) -> dict:
     """The report of tables written by the runners (`bench/1` files): the first is compared with the others."""
     from .adatta import leggi
-    ms = [misura_tol(verita, leggi(p), gruppi, rt_tol) for p in percorsi]
+    ms = [measure_tol(verita, leggi(p), gruppi, rt_tol) for p in percorsi]
     return rapporto(dataset, ms[0], ms[1:])
 
 
-def misura_tol(verita: list[dict], t: dict, gruppi: dict | None, rt_tol: float) -> dict:
+def measure_tol(verita: list[dict], t: dict, gruppi: dict | None, rt_tol: float) -> dict:
     """`gruppi` give file names; the metrics want column indices of the table."""
     if gruppi:
         gruppi = {k: [t["file"].index(n) for n in v] for k, v in gruppi.items()}
@@ -168,13 +168,13 @@ def main(argv=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     if a.tabelle:
         g = {k: v.split(",") for k, v in (x.split("=", 1) for x in a.gruppi)} or None
-        r = da_tabelle(verita_di(a.verita, a.tipo), a.tabelle, g, a.rt_tol, a.tipo.upper())
+        r = from_tables(truth_of(a.verita, a.tipo), a.tabelle, g, a.rt_tol, a.tipo.upper())
         (out / "rapporto.json").write_text(a_json(r), encoding="utf-8")
         (out / "rapporto.md").write_text(a_markdown(r), encoding="utf-8")
         print(a_markdown(r))
         return 0
     t, verita = corri_mzfinder_sintetico(a.seme, a.profilo, out / "lavoro")
-    (out / "bench1.json").write_text(tabella_a_json(t), encoding="utf-8")
+    (out / "bench1.json").write_text(table_to_json(t), encoding="utf-8")
     r = rapporto(f"D2/{a.profilo}/{a.seme}", misura(verita, t))
     (out / "rapporto.json").write_text(a_json(r), encoding="utf-8")
     (out / "rapporto.md").write_text(a_markdown(r), encoding="utf-8")

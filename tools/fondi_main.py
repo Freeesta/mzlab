@@ -48,24 +48,24 @@ def fondi(root: Path = ROOT, generati: dict[str, list[str]] = GENERATI, out=prin
     m = git(root, *ident, "merge", "--no-edit", "origin/main", check=False)
     if m.returncode == 0:
         return 0
-    conflitti = git(root, "diff", "--name-only", "--diff-filter=U").stdout.split()
-    if not conflitti:
+    conflicts = git(root, "diff", "--name-only", "--diff-filter=U").stdout.split()
+    if not conflicts:
         out("merge failed without conflicts: " + (m.stderr or m.stdout).strip()[:300])
         return 1
-    umani = [f for f in conflitti if f not in generati]
+    umani = [f for f in conflicts if f not in generati]
     if umani:
         out("conflicts in files to resolve by hand (merge left open):")
         for f in umani:
             out("  " + f)
         return 1
-    for f in conflitti:
+    for f in conflicts:
         git(root, "checkout", "--theirs", "--", f)
-    for cmd in {tuple(generati[f]) for f in conflitti}:
+    for cmd in {tuple(generati[f]) for f in conflicts}:
         out("regenerating: " + " ".join(cmd))
         subprocess.run(cmd, cwd=root, check=True)
-    git(root, "add", "--", *conflitti)
+    git(root, "add", "--", *conflicts)
     git(root, *ident, "-c", "core.editor=true", "commit", "--no-edit")
-    out("generated files taken from main and regenerated: " + ", ".join(conflitti))
+    out("generated files taken from main and regenerated: " + ", ".join(conflicts))
     return 0
 
 

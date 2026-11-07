@@ -24,7 +24,7 @@ const where = (/** @type {MouseEvent} */ e, /** @type {Bag} */ p) => { const r =
 const panelOf = (/** @type {EventTarget | null} */ t) => (t instanceof HTMLCanvasElement ? E.panels.find((/** @type {Bag} */ q) => q.cv === t) : undefined);
 document.addEventListener("mousedown", e => {
   down = null; const p = e.button === 0 && !e.shiftKey ? panelOf(e.target) : undefined; if (!p) return;
-  const [px, py] = where(e, p), l = hit(p, px, py); if (!l) return;
+  const [px, py] = where(e, p), l = hit(p, px, py); if (!l || p.ints.some((/** @type {Bag} */ i) => Math.abs(p._a.X(i.a) - px) < 6 || Math.abs(p._a.X(i.b) - px) < 6)) return;   // a border under the label still drags (eventi.js edgeAt)
   down = { p, l }; e.stopPropagation(); front(p.el); setActive(p);                  // no drag, no cursor move, no selection change; the panel still comes forward
 }, true);
 document.addEventListener("mouseup", e => {

@@ -1,5 +1,5 @@
-"""Barra strumenti dell'header e cassetto della vista Dati (LR e HR): un posto per strumento, cassetto chiuso/sovrapposto/fissato, Esc e fuoco,
-lato per trascinamento e da tastiera, stato ricordato, menu HR da tastiera, nessun pulsante a capo o tagliato a 1280/1440/1680 e su iPad."""
+"""Header toolbar and drawer of the Data view (LR and HR): one place per tool, drawer closed/overlaid/pinned, Esc and focus,
+side by drag and by keyboard, remembered state, HR menu by keyboard, no button wrapped or cut at 1280/1440/1680 and on iPad."""
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

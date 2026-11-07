@@ -18,19 +18,19 @@ def leggi(path: str) -> list[dict]:
     if not os.path.exists(path):
         return []
     with open(path, encoding="utf-8") as f:
-        return [json.loads(riga) for riga in f if riga.strip()]
+        return [json.loads(row) for row in f if row.strip()]
 
 
 def segmenti(dati: str) -> list[str]:
     """Data files of one series, oldest first: `dati` itself (the legacy single file, now frozen) then `<stem>-YYYY-MM[-N]<suffix>` of the same folder."""
     base, ext = os.path.splitext(dati)
-    cartella = os.path.dirname(dati) or "."
-    trovati = []
-    for nome in os.listdir(cartella) if os.path.isdir(cartella) else []:
-        m = re.fullmatch(re.escape(os.path.basename(base)) + r"-(\d{4}-\d{2})(?:-(\d+))?" + re.escape(ext), nome)
+    folder = os.path.dirname(dati) or "."
+    found = []
+    for name in os.listdir(folder) if os.path.isdir(folder) else []:
+        m = re.fullmatch(re.escape(os.path.basename(base)) + r"-(\d{4}-\d{2})(?:-(\d+))?" + re.escape(ext), name)
         if m:
-            trovati.append((m.group(1), int(m.group(2) or 1), os.path.join(cartella, nome)))
-    return ([dati] if os.path.exists(dati) else []) + [p for _, _, p in sorted(trovati)]
+            found.append((m.group(1), int(m.group(2) or 1), os.path.join(folder, name)))
+    return ([dati] if os.path.exists(dati) else []) + [p for _, _, p in sorted(found)]
 
 
 def leggi_tutti(dati: str) -> list[dict]:
@@ -51,9 +51,9 @@ def attivo(dati: str, ora: datetime | None = None) -> str:
 
 def eventi_ramo(ramo: str = "origin/stat-ci", repo: str | None = None) -> list[dict]:
     """All rows of every events file on a git branch (legacy `eventi.jsonl` and the monthly parts), for the read-only tools."""
-    nomi = subprocess.run(["git", "ls-tree", "--name-only", ramo], cwd=repo, capture_output=True, text=True).stdout.split()
+    names = subprocess.run(["git", "ls-tree", "--name-only", ramo], cwd=repo, capture_output=True, text=True).stdout.split()
     with tempfile.TemporaryDirectory() as d:
-        for n in nomi:
+        for n in names:
             if re.fullmatch(r"eventi(-\d{4}-\d{2}(-\d+)?)?\.jsonl", n):
                 with open(os.path.join(d, n), "w", encoding="utf-8") as f:
                     f.write(subprocess.run(["git", "show", f"{ramo}:{n}"], cwd=repo, capture_output=True, text=True).stdout)
