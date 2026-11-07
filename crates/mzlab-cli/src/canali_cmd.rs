@@ -5,7 +5,6 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::routes::Routes;
 
@@ -81,7 +80,7 @@ fn io(e: std::io::Error) -> Error {
 fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
     let file = &c.file;
     let idx = tmp.join("0.mzidx");
-    crate::build_index(file, &idx, DEFAULT_BUDGET)?;
+    crate::build_index(file, &idx, mzlab_core::budget_auto::native_index_budget())?;
     let mut r = Routes::new(crate::open(&idx)?);
     let nome = file
         .file_name()

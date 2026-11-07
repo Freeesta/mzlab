@@ -24,7 +24,7 @@ async function run(m) {
   try {
     // a module that did not download (offline, network, a file missing on the server) is told as such, not as an engine that did not load
     const w = await load(m.fam).catch(e => { throw JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: m.fam, detail: String(e && e.message || e) } }); }), names = m.members.map(x => x.name), sizes = Float64Array.from(m.members.map(x => x.blob.size)), read = reader(m.members.map(x => x.blob));
-    if (m.op === "valida") return post({ text: w.valida_mzml(names[0], sizes[0], read) });
+    if (m.op === "valida") return post({ text: w.validate_mzml(names[0], sizes[0], read) });
     if (m.op === "probe") return post({ info: JSON.parse(w.probe(names, sizes, read)) });
     sink = await rawSink(/** @type {string} */ (m.dest));
     const s = sink;
@@ -33,8 +33,8 @@ async function run(m) {
       const t = performance.now(); if (t - last < 100 && scans < scansTotal) return; last = t;
       post({ progress: { scans, scansTotal, written } });
     };
-    // with a compression: «Download .mzML» (`to_mzml_come`); without: the form of the loading
-    const missing = m.compression ? w.to_mzml_come(names, sizes, read, m.c || 0, !!m.dad, m.compression, sinkOf, tell) : w.to_mzml(names, sizes, read, m.c || 0, sinkOf, tell);
+    // with a compression: «Download .mzML» (`to_mzml_with`); without: the form of the loading
+    const missing = m.compression ? w.to_mzml_with(names, sizes, read, m.c || 0, !!m.dad, m.compression, sinkOf, tell) : w.to_mzml(names, sizes, read, m.c || 0, sinkOf, tell);
     const q = s.error(); if (q) throw q;
     const r = await s.finish(); sink = null;
     post(r.file ? { file: r.file, missing } : { parts: r.parts, missing });

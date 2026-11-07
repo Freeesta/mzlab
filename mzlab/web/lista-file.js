@@ -164,7 +164,7 @@ function bindListaFile() {
   }, true);
   // when the click pair did the double click itself: the native dblclick that may follow is ignored
   L.ondblclick = e => {
-    if (e.timeStamp - dn < 600) return;
+    if (e.type === "dblclick" && e.timeStamp - dn < 600) return;      // only the native one: a click pair that does it itself is never blocked by the one before
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
     const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");
     if (sw) { e.stopPropagation(); const g = fileOf(sw.parentElement?.querySelector(".nm"), ".nm"); if (g) pickFileColor(g); return; }

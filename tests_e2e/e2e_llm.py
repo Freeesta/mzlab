@@ -25,7 +25,7 @@ def call(n, cid, name, args, usage=(100, 20)):
         {"ev": "usage", "in": usage[0], "out": usage[1], "cache_read": 0}, {"ev": "stop", "reason": "tool"}]})
 def text(n, t): return json.dumps({"schema": "llmreg/1", "turn": n, "events": [{"ev": "text_delta", "text": t}, {"ev": "usage", "in": 90, "out": 10, "cache_read": 0}, {"ev": "stop", "reason": "end"}]})
 def rec(*lines): return "\n".join(lines) + "\n"
-L1_REC = rec(call(0, "c1", "flow_add_step", {"step": "features.detect@1"}), text(1, "Understood, I will not add it."))
+L1_REC = rec(call(0, "c1", "flow_add_step", {"step": "features.detect@2"}), text(1, "Understood, I will not add it."))
 L2_REC = rec(call(0, "c1", "flow_set_param", {"instance": "s", "step": "spectra.ms2@1", "name": "min_intensity", "value": 100}),
              call(1, "c2", "flow_run", {"executor": "web"}), call(2, "c3", "flow_read_result", {"instance": "s", "port": "spectra"}),
              call(3, "c4", "flow_add_step", {"step": "annot.level@1"}), call(4, "c5", "flow_add_step", {"step": "spectra.match@1"}),

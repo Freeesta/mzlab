@@ -210,7 +210,7 @@ try:
         def roles_names():
             r = pg.evaluate("""async () => {
               const url = URL.createObjectURL(new Blob([QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })), R = await import(url);
-              const m = await PIPEQC.engine(QTOOLS.ctx.base), call = (op, j) => m.campioni(op, j);
+              const m = await PIPEQC.engine(QTOOLS.ctx.base), call = (op, j) => m.samples(op, j);
               const cs = await R.build(call, ["S-t5.mzidx", "S-t30 (2).mzidx", "S_blank.mzidx", "S_dark.mzidx", "S_standard_direct-infusion_MSn.mzidx"], null, null);
               return { roles: cs.map(c => c.tipo), min: cs.map(c => c.tempo_min), conf: cs.map(c => c.tempo_confermato), tp: await R.forTp(call, cs), sha: (await R.canonical(call, cs)).sha256 };
             }""")
