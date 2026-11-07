@@ -23032,3 +23032,4 @@
 {"v":1,"ts_utc":"2026-11-07T09:31:31Z","tipo":"coda","k":"2026-11-07T09:31:31Z","aperte":7,"indietro":6,"sporche":0,"verdi_in_attesa":5,"piu_vecchia_aperta_s":308055,"piu_vecchia_verde_s":303735}
 {"v":1,"ts_utc":"2026-11-07T09:34:45Z","azione":"aperta","tipo":"pr","pr":2833,"sha":"0dcc0c20bf7d0cc523b33f2ba9901ded5cb40a15"}
 {"v":1,"ts_utc":"2026-11-07T09:35:56Z","azione":"push","titolo":"Speed row names #2833","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":2833,"sha":"3d1b63fc08ca8b530e587f3973e59718c08a8cb3"}
+{"v":1,"tipo":"pr","pr":2808,"sha":"42fc223156ff6fd6ccf0d3b5b316f29ce90e0f93","ts_utc":"2026-11-07T09:42:20Z","azione":"unita","aperta_s":30785,"commit_n":2,"cause_commit":{"merge di main":1},"merge_main":1,"righe_piu":2,"righe_meno":2,"file_n":2,"file":["mzlab/web/spettro.js","tests_e2e/e2e_ask_contaminante.py"],"aree":{"web":1,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":100}
