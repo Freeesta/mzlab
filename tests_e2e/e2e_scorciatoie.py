@@ -146,6 +146,14 @@ try:
             o = pg.evaluate("BARRA.open"); pg.keyboard.press("Shift+H"); attendi(pg, f"BARRA.open === {str(not o).lower()}")
             pg.keyboard.press("Shift+H"); attendi(pg, f"BARRA.open === {str(o).lower()}")
         step("Shift+H shows/hides the side panels", side_bar)
+        def bar_keeps_field_focus():
+            pg.evaluate("BARRA.close(false)"); attendi(pg, "!BARRA.open")
+            pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Shift+H"); attendi(pg, "BARRA.open")
+            pg.evaluate("(()=>{const i=document.createElement('input'); i.id='tmpin'; document.body.appendChild(i); i.focus()})()")
+            pg.evaluate("new Promise(ok => setTimeout(ok, 90))")      # queued after the side bar's own 90 ms focus timer, so it runs after that timer (order of timers, not a pause)
+            assert pg.evaluate("document.activeElement.id") == "tmpin", "the side bar must not take the focus from a field focused after it opened"
+            pg.evaluate("document.activeElement.blur(); document.getElementById('tmpin')?.remove()")
+        step("a field focused while the side bar opens keeps the focus", bar_keeps_field_focus)
         def files():
             pg.evaluate("document.activeElement && document.activeElement.blur()")
             k0 = pg.evaluate("E.cur"); pg.keyboard.press("Alt+ArrowRight"); attendi(pg, f"E.cur !== {k0}")
