@@ -23547,3 +23547,4 @@
 {"v":1,"ts_utc":"2026-11-07T10:03:56Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3105979,null],"static/wasm-feat/rotte/mzlab_rotte_wasm_bg.wasm":[1025256,884736]},"byte_totali":4131235,"margine_min_pct":-15.9,"pr":2834,"sha":"22a35e4b1c47031410d8a3908b24e4742baadf69","run_id":42361553667,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-07T10:04:15Z","tipo":"carico","k":"2026-11-07T10:0","job_in_coda":0,"job_in_corso":36}
 {"v":1,"ts_utc":"2026-11-07T10:05:17Z","tipo":"coda","k":"2026-11-07T10:05:17Z","aperte":6,"indietro":5,"sporche":0,"verdi_in_attesa":4,"piu_vecchia_aperta_s":310081,"piu_vecchia_verde_s":305761}
+{"v":1,"ts_utc":"2026-11-07T10:17:03Z","azione":"aperta","tipo":"pr","pr":2835,"sha":"2d4905f091305502aa2a8fe0839ef13435159e2e"}
