@@ -94,7 +94,7 @@ pub(super) fn align() -> Step {
     params.extend(family_link_params());
     Step {
         ins: vec![Port::new("peaks", DataType::Peaks, "Features of each file").many()],
-        outs: vec![Port::new("table", DataType::Table, "Aligned feature table")],
+        outs: vec![Port::new("table", DataType::Table, "Aligned feature table").lineage()],
         params,
         runs_in: feat_runs_in(),
         errors: vec!["error.memoryBudget", "error.newerFormat", "err.file.index", "error.badRecipe"],
@@ -178,10 +178,10 @@ pub(super) fn gapfill() -> Step {
     ];
     Step {
         ins: vec![
-            Port::new("table", DataType::Table, "Aligned feature table"),
+            Port::new("table", DataType::Table, "Aligned feature table").lineage(),
             Port::new("index", DataType::Mzidx, "Scan index").many(),
         ],
-        outs: vec![Port::new("table", DataType::Table, "Table with the gaps filled")],
+        outs: vec![Port::new("table", DataType::Table, "Table with the gaps filled").lineage()],
         params,
         runs_in: feat_runs_in(),
         errors: vec!["error.memoryBudget", "err.file.index", "error.badRecipe"],
@@ -238,7 +238,7 @@ pub(super) fn filter() -> Step {
             Port::new("table", DataType::Table, "Feature table"),
             Port::new("samples", DataType::Samples, "Roles and times of the files"),
         ],
-        outs: vec![Port::new("table", DataType::Table, "Table view with the rows kept")],
+        outs: vec![Port::new("table", DataType::Table, "Table view with the rows kept").lineage()],
         params,
         runs_in: RunsIn {
             wasm: Some("table"),
@@ -341,7 +341,7 @@ pub(super) fn drift() -> Step {
             Port::new("samples", DataType::Samples, "Roles and injection order of the files"),
             Port::new("design", DataType::Design, "Batches of the files"),
         ],
-        outs: vec![Port::new("table", DataType::Table, "Table view with a factor for every cell")],
+        outs: vec![Port::new("table", DataType::Table, "Table view with a factor for every cell").lineage()],
         params,
         runs_in: RunsIn {
             wasm: Some("flowtab"),

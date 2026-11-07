@@ -132,6 +132,10 @@ fn port(o: &mut Out, p: &Port) {
             o.str(f);
         });
     }
+    if p.lineage {
+        key(o, "lineage");
+        o.raw("true");
+    }
 }
 
 fn ports(o: &mut Out, ps: &[Port]) {
