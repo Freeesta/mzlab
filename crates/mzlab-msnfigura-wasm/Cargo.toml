@@ -1,0 +1,15 @@
+[package]
+name = "mzlab-msnfigura-wasm"
+description = "wasm-bindgen bridge of mzlab_feat::msnfigura (the SVG and the stand-alone HTML of a fragmentation graph msngrafo/1); a .wasm of its own, loaded by the pool of the Flow for msn.figure"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }
+# only the figure: no feature besides `figura`
+mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["figura"] }
+wasm-bindgen = "0.2"

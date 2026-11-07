@@ -1,21 +1,18 @@
-//! The static figure (SVG) of a fragmentation graph `msngrafo/1`: tree or radial view, drawn from the key `vista`. Native only, never in a .wasm.
-//! It repeats the LABEL RULE at the top of `mzlab/web/msngrafo-vista.js` (the interactive drawer of the page, the Flow and the stand-alone HTML), so a
-//! test compares the texts of both. Colours are written in the file (Okabe-Ito, dark ink on white): the SVG lives alone. Used by `msn_html`, `msn_graph`
-//! (`--figura`, `figure`) and the step `msn.figure@1`.
+//! The static figure (SVG) of a fragmentation graph `msngrafo/1`: tree or radial view, drawn from the key `vista` (feature `figura`; the CLI and the `.wasm`
+//! `msnfigura` call it). It repeats the LABEL RULE at the top of `mzlab/web/msngrafo-vista.js` (the interactive drawer of the page, the Flow and the
+//! stand-alone HTML), so a test compares the texts of both. Colours are written in the file (Okabe-Ito, dark ink on white): the SVG lives alone. Used by
+//! `html`, `msn_graph` of the CLI (`--figura`, `figure`) and the step `msn.figure@1`.
 
 use std::collections::{HashMap, HashSet};
 
 use mzlab_core::error::{Error, Result};
 
-#[path = "msn_figura_disegno.rs"]
-mod disegno;
-#[path = "msn_figura_scena.rs"]
-mod scena;
-#[cfg(test)]
-#[path = "msn_figura_tests.rs"]
-mod tests;
+use crate::sortc::SortC;
 
-#[path = "msn_figura_testi.rs"]
+mod disegno;
+pub mod html;
+mod scena;
+#[path = "testi.rs"]
 mod testi_;
 
 use disegno::*;
@@ -111,7 +108,7 @@ fn dispone_albero(
 ) -> HashMap<String, Box_> {
     let mut caselle = HashMap::new();
     let mut rows: Vec<i64> = vis.iter().map(|&k| sc.pos[&sc.ioni[k].id].riga).collect();
-    rows.sort_unstable();
+    rows.sortc();
     rows.dedup();
     let mut row_h = vec![0.0f64; rows.len()];
     for &k in vis {
@@ -335,6 +332,22 @@ pub fn svg(graph: &str, vista: Vista) -> Result<String> {
         o += &nodo_svg(&sc, i, p, &d.caselle[&i.id], vista, &mol);
     }
     Ok(o + "</svg>\n")
+}
+
+/// The text of `msn.figure@1` in a format a library writes (`svg`, `html`), the bytes of `flow run` and of the `.wasm` `msnfigura`; `png` needs the
+/// rasteriser of the CLI and answers `err.msnfigura.png` here.
+pub fn figure_text(graph: &[u8], format: &str, view: &str) -> Result<String> {
+    let graph = std::str::from_utf8(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
+    if !["svg", "html", "png"].contains(&format) {
+        return Err(Error::new("err.flow.param.type").with("param", "format"));
+    }
+    let vista = Vista::da_nome(view)
+        .ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
+    match format {
+        "svg" => svg(graph, vista),
+        "html" => html::html(graph, vista),
+        _ => Err(Error::new("err.msnfigura.png")),
+    }
 }
 
 /// The texts of the figure, in drawing order, for the parity test with `msngrafo-vista.js`: one line per ion (`node`, id, m/z line, levels line, formula lines) and

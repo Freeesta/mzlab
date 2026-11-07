@@ -1,7 +1,7 @@
 // @ts-strict
 // Chart drawing: chromatograms (TIC, XIC, corrections), hover line, zoom, RT x m/z map. Split from explore.js: classic script, loaded after pannelli.js.
 // ------------------------------------------------------------------ chart drawing
-// width (CSS px) of every trace line: thin like the vendor software; the high contrast palette adds its own extra (LWX)
+// width (CSS px) of every trace line: thin like the vendor software; 1 px when dense (decima.js hairline); the high contrast palette adds its own extra (LWX)
 const TRACE_LW = 1.25;
 // ---- corrections applied to the traces (fondo.js): the difference with a reference, then ONE background on the difference. Nothing is clipped here.
 // ---- internal blank: a stretch of the trace chosen by the student (for example 0-2 min, where nothing elutes) gives the background level, which is
@@ -180,13 +180,13 @@ const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
 const yTitleI = sr => { const b = sr.some(s => s.cb), f = sr.some(s => s.cf); return b || f ? I18N.t(b && f ? "axis.sampBlankFondo" : b ? "axis.sampBlank" : "axis.intFondo") : YT_I; };
 const analogTitle = (p, sr) => p.kind === "reg" ? REGISTRO.title(p, sr) : (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit ? ` (${sr[0].unit})` : "");
 async function draw(p) {
-  if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
+  if (!p.cv.clientWidth || p.cv.clientWidth < 30) { p._sz = ""; return; }
   if (p.type === "map") {                                          // gestures come faster than frames: at most one map redraw per frame, the last request wins
     const t = performance.now();
     if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
     p._drawAt = t;
   }
-  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  p._sz = sizeKey(p); try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) { p._sz = ""; return; } afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { p._sz = ""; const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
@@ -380,17 +380,16 @@ async function drawLines(p) {
   const tags = [];
   if (cas) {                                                     // back to front: white under every trace, so the ones behind are covered
     for (let k = cs.length - 1; k >= 0; k--) {
-      const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}; let first = null, last = null;
-      g.beginPath();
-      const pts = [];
-      const [a0, a1] = spanOf(s.x, x0, x1);                  // the window by binary search (the bounds are still tested)
-      for (let i = a0; i < a1; i++) { const r = s.x[i]; if (r < x0 || r > x1) continue; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; }
-      if (first == null) continue;
-      g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
-      baseLine(g, Y(0) + sy, X(x0) + sx, X(x1) + sx);
-      g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py));
-      g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
-      tags.push({ s, f, px: first, py: Y(0) + sy });
+      const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}, z = Y(0) + sy, Xs = (/** @type {number} */ r) => X(r) + sx;
+      const { v, thin } = DC.rawLine(s.x, s.ys, x0, x1, Xs, (/** @type {number} */ val) => Y(U(s, val)) + sy);   // the window by binary search; dense: one vertex per pixel column (decima.js)
+      if (!v.length) continue;
+      const first = v[0], last = v[v.length - 2];
+      g.beginPath(); g.moveTo(first, z); for (let i = 0; i < v.length; i += 2) g.lineTo(v[i], v[i + 1]);
+      g.lineTo(last, z); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
+      baseLine(g, z, X(x0) + sx, X(x1) + sx);
+      g.beginPath(); for (let i = 0; i < v.length; i += 2) if (i) g.lineTo(v[i], v[i + 1]); else g.moveTo(v[0], v[1]);
+      g.strokeStyle = s.color; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, Xs) ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
+      tags.push({ s, f, px: first, py: z });
     }
     g.restore(); g.save();                                       // time labels last (nothing draws over them), with a halo from --panel so they read on both themes
     g.font = fpx(12, "bold "); g.textAlign = "left"; g.lineWidth = 3; g.lineJoin = "round";
@@ -398,9 +397,9 @@ async function drawLines(p) {
     g.font = fpx(12);
   } else for (const s of sr) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
-    const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // the window by binary search (decima.js): smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
-    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
-    for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
+    const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
+    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
+    const w = DC.clipY(v, M.t - 9, H + 9); for (let k = 0; k < w.length; k += 2) if (k) g.lineTo(w[k], w[k + 1]); else g.moveTo(w[0], w[1]);
     g.stroke();
   }
   g.restore(); g.setLineDash([]);
@@ -423,12 +422,12 @@ async function drawLines(p) {
     if (seg) tri(/** @type {any} */ (seg).x);
   }
   // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js)
-  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js");
+  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js");
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    const r = integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
-    if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
+    const r = it.bm ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
+    if (it.bm) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
@@ -439,7 +438,7 @@ async function drawLines(p) {
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
     for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
-    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + I18N.sciE(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
+    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + (r.wait && !Number.isFinite(r.area) ? "…" : I18N.sciE(r.area)) + (it.bm ? " (" + I18N.t("int.base.tag." + it.bm) + ")" : "") + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
     const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, copy: I18N.sciE(r.area), tip: I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) }) + `<div class="sm">${I18N.t("int.copy.tip")}</div>` }); g.font = fpx(12);
   }

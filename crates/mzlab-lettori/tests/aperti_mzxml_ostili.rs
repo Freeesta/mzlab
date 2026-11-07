@@ -106,8 +106,12 @@ fn un_annidamento_profondo_e_un_errore_con_chiave() {
 fn senza_scansioni_o_con_un_altro_xml_non_si_apre() {
     let vuoto = format!("{}</msRun></mzXML>", TESTA_SENZA_SCAN());
     assert_eq!(errore_mzxml(vuoto.into_bytes()), "err.file.xml");
+    // named .mzXML but not one: a cut or damaged copy, said with its name and size; an empty one is told apart
     let r = mzlab_lettori::apri(insieme("x.mzXML", b"<altro/>".to_vec()), &Limiti::sito());
-    assert_eq!(r.err().map(|e| e.key), Some("err.file.notAccepted"));
+    let e = r.err().unwrap();
+    assert_eq!((e.key, e.params.len()), ("err.file.notThisFormat", 3));
+    let r = mzlab_lettori::apri(insieme("x.mzXML", Vec::new()), &Limiti::sito());
+    assert_eq!(r.err().map(|e| e.key), Some("err.file.empty"));
 }
 
 #[allow(non_snake_case)]
@@ -127,6 +131,80 @@ fn nessuna_lunghezza_del_file_manda_in_panico_il_lettore() {
     for n in (0..b.len()).step_by(97) {
         let _ = errore_mzxml(b[..n].to_vec());
     }
+}
+
+/// A run of `n` MS1 scans whose `scanCount` says `dichiarate` (`None`: no attribute).
+fn lunga(n: u32, dichiarate: Option<u32>, o: Opz) -> Vec<u8> {
+    let v: Vec<Sc> = (1..=n)
+        .map(|k| sc(k, 1, 6.0 + k as f64, 30, None))
+        .collect();
+    let conta = dichiarate.map_or(String::new(), |d| format!("scanCount=\"{d}\" "));
+    let t = String::from_utf8(mzxml(&v, o)).unwrap();
+    t.replacen("scanCount=\"5\" ", &conta, 1).into_bytes()
+}
+
+/// The scans a damaged copy still gives: each is the same as in the whole file, and with `mancanti` they make up the run.
+fn parte_intatta(intero: &[u8], rotto: Vec<u8>, n: usize) -> usize {
+    let mut tutto = apri_mzxml(intero.to_vec());
+    let mut l = apri_mzxml(rotto);
+    let righe = l.indice(0).unwrap().to_vec();
+    assert!(righe.len() < n, "a damaged copy reads fewer scans");
+    for (k, r) in righe.iter().enumerate() {
+        let j = tutto
+            .indice(0)
+            .unwrap()
+            .iter()
+            .position(|v| v.id == r.id)
+            .unwrap();
+        let (a, b) = (l.scansione(0, k).unwrap(), tutto.scansione(0, j).unwrap());
+        assert_eq!((a.mz, a.intensity), (b.mz, b.intensity), "scan {}", r.id);
+    }
+    let m = l.mancanti(0);
+    assert!(m > 0, "the scans a damaged copy lacks are counted");
+    righe.len() + m
+}
+
+#[test]
+fn una_copia_tagliata_o_azzerata_dice_quante_scansioni_mancano() {
+    let n = 40;
+    for o in [
+        PIATTO,
+        Opz {
+            indice: false,
+            zlib: false,
+            ..PIATTO
+        },
+    ] {
+        let b = lunga(n, Some(n), o);
+        assert_eq!(
+            apri_mzxml(b.clone()).mancanti(0),
+            0,
+            "the whole file lacks nothing"
+        );
+        for f in [0.5, 0.1] {
+            let cut = b[..(b.len() as f64 * f) as usize].to_vec();
+            assert_eq!(parte_intatta(&b, cut, n as usize), n as usize, "cut at {f}");
+        }
+        // a block of zeros: `scanCount` (or the index after the run) still says how many
+        let mut z = b.clone();
+        let l = z.len();
+        z[l / 3..l / 2].fill(0);
+        assert_eq!(parte_intatta(&b, z, n as usize), n as usize, "zeros");
+    }
+    // nothing declared: the scan the cut falls in is left out and counted
+    let b = lunga(
+        n,
+        None,
+        Opz {
+            indice: false,
+            ..PIATTO
+        },
+    );
+    let da = String::from_utf8_lossy(&b).rfind("<peaks").unwrap();
+    assert_eq!(
+        parte_intatta(&b, b[..da + 40].to_vec(), n as usize),
+        n as usize
+    );
 }
 
 // ---- real files (private data repository) ----

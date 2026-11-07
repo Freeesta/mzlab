@@ -1,6 +1,6 @@
-//! wasm-bindgen bridge of `mzlab-chem`: the SMILES of the parent gives its `reatt/1` (ETKDG geometry, GFN2-xTB charges and condensed Fukui
-//! functions of the neutral molecule, the cation and the anion, C–H sites; `docs/agenti/reattivita.md`). A `.wasm` of its own, loaded only in
-//! administrator mode. Memory: one call allocates its matrices and frees them on return; the output is one JSON string, no offsets
+//! wasm-bindgen bridge of `mzlab-chem`: `reatt/1` of a SMILES (ETKDG geometry, GFN2-xTB charges, condensed Fukui functions, C–H sites;
+//! `docs/agenti/reattivita.md`) for the page in administrator mode, and of the parent file of the Flow step `structure.reactivity` for the pool of the Flow.
+//! A `.wasm` of its own. Memory: one call allocates its matrices and frees them on return; the output is one JSON string, no offsets
 //! (`docs/agenti/memoria.md`). Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
@@ -19,4 +19,15 @@ pub fn version() -> String {
 #[wasm_bindgen]
 pub fn reactivity(smiles: &str, opts_json: &str) -> std::result::Result<String, JsValue> {
     mzlab_chem::reactivity_json(smiles, opts_json).map_err(js_err)
+}
+
+/// `structure.reactivity` of the Flow in the browser: `reatt/1` of the parent file under the step's parameters (a JSON object, defaults merged), the
+/// text `flow run` writes (`mzlab_chem::flow::reactivity_text`).
+#[wasm_bindgen]
+pub fn flow_reactivity(params_json: &str, parent: &[u8]) -> std::result::Result<String, JsValue> {
+    let params = match mzlab_core::json::parse(params_json.as_bytes()).map_err(js_err)? {
+        mzlab_core::json::Value::Obj(o) => o,
+        _ => Vec::new(),
+    };
+    mzlab_chem::flow::reactivity_text(&params, parent).map_err(js_err)
 }

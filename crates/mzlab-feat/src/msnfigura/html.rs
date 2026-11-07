@@ -1,13 +1,13 @@
 //! The stand-alone HTML of a fragmentation graph `msngrafo/1`: one file, no external resource. It holds the graph (JSON), the drawer `msngrafo-vista.js` of the
-//! page (the same code, `include_str!`), the page script `msn_html_pagina.js`, and both static figures (the SVG of the CLI, for the downloads). Native only.
+//! page (the same code, `include_str!`), the page script `pagina.js`, and both static figures (the SVG of `super::svg`, for the downloads).
 
 use mzlab_core::error::{Error, Result};
 
-use crate::msn_figura::{molecola_svg, svg, Vista};
+use super::{molecola_svg, svg, Vista};
 
-const MODELLO: &str = include_str!("msn_html.html");
-const VISTA_JS: &str = include_str!("../../../mzlab/web/msngrafo-vista.js");
-const PAGINA_JS: &str = include_str!("msn_html_pagina.js");
+const MODELLO: &str = include_str!("html.html");
+const VISTA_JS: &str = include_str!("../../../../mzlab/web/msngrafo-vista.js");
+const PAGINA_JS: &str = include_str!("pagina.js");
 
 /// The drawer as classic script text: the `export` keywords go (the page is not a module), the rest is the file as it is.
 fn vista_js() -> String {

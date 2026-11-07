@@ -44,6 +44,10 @@ pub mod spill_js; pub mod run_evid; pub mod series_js;
 pub mod run_ms2;
 #[cfg(feature = "flow_tab")]
 pub mod run_tab;
+#[cfg(feature = "flow_stat")]
+pub mod run_stat;
+#[cfg(feature = "detect")]
+pub mod run_estimate;
 pub mod run_tp; pub mod stima;
 #[cfg(feature = "proofs")]
 pub mod state;
@@ -212,6 +216,23 @@ pub fn preview_file(
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
     let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     run::preview(&mut ix, &r, run::floor_given(recipe)).map_err(js_err)
+}
+
+#[cfg(feature = "detect")]
+/// `features.estimate` of the Flow on one file: the `estimates/1` text (`run_estimate::estimate_of`, the function `flow run` calls) of the index read
+/// as `read(0, offset, length)`, `name` the name of its source, `params` the JSON object of the parameters the plan writes. Errors are JSON `{"error_key","params"}`.
+#[wasm_bindgen]
+pub fn flow_estimate(
+    read: Function,
+    size: f64,
+    name: &str,
+    params: &str,
+) -> std::result::Result<String, JsValue> {
+    let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    let given = mzlab_feat::flow_ms2::json_params(params).map_err(js_err)?;
+    run_estimate::estimate_of(&mut ix, name, &given)
+        .map(|(text, _)| text)
+        .map_err(js_err)
 }
 
 #[cfg(feature = "detect")]

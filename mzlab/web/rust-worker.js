@@ -126,7 +126,7 @@ async function lrOpen(name) {                                             // ope
   const f = await fileOf(name);
   for (;;) {
     const ix = await ARCH.get("idx", name + ".mzidx");
-    if (!ix) { openGate.drop(slotOf(name)); return false; }
+    if (!ix) { openGate.drop(slotOf(name)); if (!(await ARCH.get("files", name))) { lrFile.delete(name); jerr("err.file.removedElsewhere", { name }); } return false; }      // no copy nor index: another tab removed it (tabs are not kept in step)
     await ARCH.lease("idx", name + ".mzidx");
     if (!openGate.same(slotOf(name), ix)) { openGate.drop(slotOf(name)); engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"])); openGate.mark(slotOf(name), ix); }      // the same index already parsed in the slot is not parsed again
     await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader
@@ -176,9 +176,10 @@ async function lrSpace() {
 }
 async function lrFree() {                                                 // the indexes of the files that were taken away go first
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
-  for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/(\.cen)?\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
+  for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(ARCH.idxOwner(e.name))) await ARCH.remove("idx", e.name);
   await tilesDrop(null, files);
 }
+let tidyT = /** @type {any} */ (0); const tidySoon = () => { clearTimeout(tidyT); tidyT = setTimeout(async () => { await safe(lrFree); await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name))); }, 300); };      // after removals ONE pass drops the orphan indexes and the members of a maker's file no sample uses: both list every file (getFile each), and 200 removals ran 200 passes side by side (the last answered 46 s after the first)
 async function lrFreeDerived() {                                         // every index and pipeline file can be made again from the sources: all of them go
   for (const kind of ["idx", "feat"]) for (const e of await safe(() => ARCH.list(kind)) || []) await safe(() => ARCH.remove(kind, e.name));
   await tilesDrop(null, null);
@@ -295,7 +296,7 @@ async function lrIndexOwn(m) {
   await ARCH.promote("idx", part, m.name + ".mzidx");
   let opened = false;
   try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
-  if (!opened) jerr("err.engine.index");
+  if (!opened) jerr("err.engine.index", { name: m.name });
   return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
 }
 let flowCenOps;
@@ -330,11 +331,11 @@ async function lrOp(m) {
     case "lr_cen_have": return { info: JSON.stringify({ ...await flowCen().have(m), source: !!await ARCH.get("files", m.name) }) };      // the Flow's centroid copy of a profile mzML (rust-flow-centroid.js)
     case "lr_cen_adopt": await flowCen().adopt(m); return { info: "{}" };
     case "lr_entry": {
-      const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");
+      const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index", { name: m.name });
       const info = engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)), st = await nativo.stubOf(m.name);
       return { info: st ? JSON.stringify({ ...JSON.parse(info), size: shownSize(st), nat: true }) : info };
     }
-    case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
+    case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index", { name: m.name }); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
     case "lr_isotope_fine": return { info: isotope_fine(m.query || "") };                  // an engine error is thrown as JSON with a key
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)
     case "lr_stat": return { info: (await rotte()).stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
@@ -350,8 +351,7 @@ async function lrOp(m) {
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_ion_pattern": return { info: ion_pattern(m.f || "", m.adduct || "") };
     case "lr_remove": {
-      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await (CANCELLED.has(m.name) ? ARCH.removeHeld : ARCH.remove)("files", m.name); await tilesDrop(m.name, null); await safe(lrFree);      // the indexes of the file go with it
-      await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name)));      // the members of a maker's file that no sample uses any more go
+      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await (CANCELLED.has(m.name) ? ARCH.removeHeld : ARCH.remove)("files", m.name); await tilesDrop(m.name, null); for (const x of [".mzidx", ".cen.mzidx", ".cen.key"]) await ARCH.remove("idx", m.name + x); tidySoon();      // the indexes of the file go with it; the rest of the archive is tidied once per burst
       return { info: "{}" };
     }
     case "lr_space": { if (m.free) await (m.free === "derived" ? lrFreeDerived() : lrFree()); return { info: JSON.stringify(await lrSpace()) }; }
@@ -475,7 +475,7 @@ async function handle(ev) {
       case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
-      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;   case "simtab": info = sim_table(m.files, m.output, m.layout); break;   case "masscal": info = await masscal(m.name || tileName.get(m.slot) || "", m.params, readerFor); break;        // api/mrm with ref, from the transitions of the files; api/simtab: the SIM table (simtab.rs); api/masscal: the mass error of the background ions (massacc/1)
+      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;   case "simtab": info = sim_table(m.files, m.output, m.layout, m.baseline || "edges"); break;   case "masscal": info = await masscal(m.name || tileName.get(m.slot) || "", m.params, readerFor); break;        // api/mrm with ref, from the transitions of the files; api/simtab: the SIM table (simtab.rs); api/masscal: the mass error of the background ions (massacc/1)
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await msnGrafoOp(m, id); break;   // api/msn_grafo over the .mzidx and the mzML of the slot (of a maker's sample: the mzML made from it)
       case "down": lowerBudget(m); break; case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;   // down: one level lower by Rust's rule; budget: the value the supervisor sends at startup
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); openGate.clear(); blobs.clear(); tileName.clear(); break;

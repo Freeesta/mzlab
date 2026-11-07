@@ -34,6 +34,20 @@ const NATIVO = {
     }
     return out;
   },
+  // the desktop app: its Files are stubs without bytes (desktop-shim.js) that no module of the page can read, and its native side reads every family. A file with an extension only a module
+  // reads (`exts`) or an mzML the native readers take (`maybe(f)`, then MS-Numpress: a plain one is refused) becomes the samples the native side lists (`samplesOf`), named as the module names its mzML (`nameOf`)
+  async desktop(files, exts, maybe, samplesOf, nameOf) {
+    const out = [];
+    for (const f of files) {
+      const n = f.name.toLowerCase(), only = exts.some(e => n.endsWith(e));
+      if (f.mzlabNat || f.mzlabModulo || !(only || n.endsWith(".mzml") && await maybe(f))) { out.push(f); continue; }
+      const mem = [{ name: f.name, blob: f }], s = await samplesOf(mem).then(r => r.samples, () => null);
+      if (!s || !s.length) { out.push(f); continue; }
+      const key = NATIVO.key(f.name);
+      s.forEach((x, c) => out.push(NATIVO.sample(!only ? f.name : nameOf(s.length > 1 ? x.name : f.name), key, mem, c, x.id, false, s.length > 1 ? x.size : undefined)));
+    }
+    return out;
+  },
   // the samples of a pair that the browser storage already holds with a current index (the same members: names, sizes, dates): their entries of `list`, else null (a part of them only, an engine without natsame); the desktop app answers natsame from its own store
   // every name of the list is a candidate: a sample named by its DATA name does not start with the stem of the pair
   // `samples` (optional) is the caller's thunk for rb.nativeSamples(mem): the pair is then parsed once for the check and for the caller

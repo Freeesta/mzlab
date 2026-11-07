@@ -32,7 +32,8 @@ pub fn massacc_step() -> Step {
         ],
         outs: vec![
             Port::new("massacc", DataType::Qc, "Mass accuracy of each file (massacc/1)"),
-            Port::new("table", DataType::Table, "Feature table with the m/z corrected (only with a model)"),
+            // written only when a table comes in and a model is chosen: the check refuses a wire to it otherwise
+            Port::new("table", DataType::Table, "Feature table with the m/z corrected (only with a model)").written_if("table", Some(("model", "none"))),
         ],
         params: vec![
             Param::number("search_ppm", "Search window around each reference ion").default_num(d.search_ppm).min(1.0).unit("ppm"),

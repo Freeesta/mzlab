@@ -529,7 +529,7 @@ Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "ma
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
-addEventListener("resize", () => { fitWidth(); redrawSoon(); });
+let rzRaf = 0; addEventListener("resize", () => { fitWidth(); if (!rzRaf) rzRaf = FRAME.next(() => { rzRaf = 0; tabPanels().forEach(drawSized); }); });
 document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
 // ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)
@@ -543,11 +543,10 @@ Object.defineProperty(calcBox, "open", {
 });
 calcBox.close = () => {
   // the drop-down shown on the loading screen is not docked: the side panel has nothing to close
-  if (window.BARRA && BARRA.isDataView() && calcBox.classList.contains("sb-docked")) {
-    BARRA.close(true);
-  } else {
-    calcBox.hidden = true;
-  }
+  if (window.BARRA && BARRA.isDataView() && calcBox.classList.contains("sb-docked")) return BARRA.close(true);
+  const had = calcBox.contains(document.activeElement), b = Q("#np-calc2");   // a hidden field cannot keep the focus: back to the button that opens the calculator
+  calcBox.hidden = true;
+  if (had && b && b.offsetParent) b.focus();
 };
 function calcPlace() {
   const r = Q("#np-calc2").getBoundingClientRect(), w = Math.min(560, innerWidth - 16);

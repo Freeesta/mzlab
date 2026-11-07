@@ -20,6 +20,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | riscaldamento in background dei file della cartella puntata (coda, `lr_warm`, `lr_warm_claim`) | `docs/agenti/riscaldamento.md` |
 | mappa RT×m/z, mirino, navigazione | `docs/agenti/dati-mappa.md` (visore 3D: `dati-mappa-3d.md`) |
 | velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
+| costo del disegno dei cromatogrammi su tracce dense (`tools/bench_grafici.py`: 10^6 punti, 20 file sovrapposti, rotella, trascinamento, ridimensionamento, linea di 1 px) | `docs/agenti/misure-grafici.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
 | calcolatrice (gruppi «cosa può essere» sotto il numero), pannello Addotti, fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
 | mondo HR: Banco, formule, isotopi, librerie, albero MSn | `docs/agenti/alta-risoluzione.md` |
@@ -36,7 +37,8 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | scandump, oracolo RFR | `docs/agenti/scandump.md` |
 | velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_banco`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
 | conversione `.raw` → mzML: banco `raw_mzml_banco`, `tools/bench/raw_mzml.py`, T_min, punti di partenza V1-V9, cause di D8 e D11, caso denso sintetico | `docs/agenti/raw-mzml.md` |
-| tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` (tentativi scartati: `ottimizzazioni-tentate.md`) |
+| tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` (lettore `.raw`: `misure-velocita-raw.md`; tentativi scartati: `ottimizzazioni-tentate.md`) |
+| caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`) | `docs/agenti/misure-caricamento.md` |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`; specifica binaria: `wiff_specifica_completa.md`) |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
@@ -75,6 +77,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/campioni/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
+| misure prima/dopo dei .wasm per ogni modifica (byte dopo `wasm-opt`, tetti in vigore) | `docs/agenti/wasm-tetti-misure.md` |
 | parità sito ↔ app (funzioni e passi del Flow presenti da una parte sola, operazioni del motore assenti nell'app, test di parità mancanti, prossimi passi) | `docs/studi/parita-browser.md` (formati: `docs/studi/formati-matrice.md`) |
 | tabella funzione × faccia (sito, app, CLI) × prova, guardia delle op di `rust-worker.js` senza ramo nell'app (`tests/test_parita_operazioni.py`), determinismo (ordine delle `HashMap`) | `docs/agenti/parita.md` |
 | potenziale di WebAssembly (profili `opt-level`, SIMD128, binaryen, zlib-rs, thread, memory64, browser minimi; misure e prompt DEV) | `docs/agenti/wasm-potenziale.md` (prompt: `docs/studi/PROMPT_WASM_POTENZIALE/`) |

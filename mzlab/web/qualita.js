@@ -53,6 +53,9 @@ window.QUALITA = {
     const params = [pk.win, pk.edgeFrac, pk.snMin, pk.multi, pk.tail];
     return call({ op: "edges", rt: f64(x), y: f64(y), at, mrm: !!mrm, params: f64(params) });
   },
+  /** Area of the peak between the times a and b (min) from zero (mode 1) or from the line `line` = [t0, y0, t1, y1] (mode 2), by the engine (baseline.rs):
+   * the JSON text { baseline, area (signed, counts x s), below (the part under the line), height, rt }, the bytes of `mzlab-cli peak-area`; null without the engine. */
+  peakArea(x, y, a, b, mode, line) { return call({ op: "area", rt: f64(x), y: f64(y), a, b, mode, line: f64(line || []) }); },
   /** The peaks worth a label (at most maxN, height >= rel of the tallest, S/N >= snr), by RT: [{ apex, rt, height, snr }] (apex = index into the trace), or null. */
   labels(x, y, maxN, rel, snr, ends) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr, ends: !!ends }); },
   /** The tallest point of a spectrum { x, y } (m/z or nm; refine = parabola through the apex), null when none or without the engine. */

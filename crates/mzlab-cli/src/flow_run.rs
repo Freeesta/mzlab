@@ -200,13 +200,17 @@ pub(crate) fn problem_text(p: &Problem) -> String {
 
 /// The program that ran: the keys of `build_agent` and the SHA-256 of this executable as module `mzlab-cli` (left out when it can't be read).
 fn agent() -> Agent {
+    // the executable does not change while it runs: hashed once per process, not once per plan
+    static SHA: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
     let mut a = build_agent("mzLab");
-    if let Some(sha) = std::env::current_exe()
-        .ok()
-        .and_then(|p| std::fs::read(p).ok())
-        .map(|b| sha256_hex(&b))
-    {
-        a.modules.push(("mzlab-cli".into(), sha));
+    let sha = SHA.get_or_init(|| {
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| std::fs::read(p).ok())
+            .map(|b| sha256_hex(&b))
+    });
+    if let Some(sha) = sha {
+        a.modules.push(("mzlab-cli".into(), sha.clone()));
     }
     a
 }

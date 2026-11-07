@@ -172,6 +172,27 @@
     "requires": {
      "$ref": "#/$defs/facets",
      "description": "facets the incoming data must have; checked by plan.check, or by the step when they are not known yet"
+    },
+    "written_if": {
+     "type": "object",
+     "required": ["input"],
+     "properties": {
+      "input": {"type": "string"},
+      "param": {"type": "string"},
+      "not": {"type": "string"}
+     },
+     "dependentRequired": {"param": ["not"], "not": ["param"]},
+     "additionalProperties": false,
+     "description": "an output written only when this input is wired and, with param, that parameter (resolved) is not the value not; plan.check refuses a wire to it otherwise (err.flow.port.unwritten)"
+    },
+    "format": {
+     "type": "string",
+     "description": "the format an output writes when its type alone does not say it (filtri/1 typed table); absent: the default of the type (table = mzfeat, others unknown)"
+    },
+    "formats": {
+     "type": "array",
+     "items": {"type": "string"},
+     "description": "the formats an input reads; absent: the default of its type, from a source of its own type only. plan.check refuses a source whose format is known and not listed (err.flow.port.format); an unknown format is never refused"
     }
    },
    "additionalProperties": false

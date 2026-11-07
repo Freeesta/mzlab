@@ -282,3 +282,10 @@ pub fn flow_inclusion(params: &str, products: &[u8]) -> std::result::Result<Stri
     let half = set.get("rt_window").and_then(Value::f64).unwrap_or(0.5);
     mzlab_feat::export_inclusione_tp::inclusion_csv_of(products, adducts, half).map_err(js_err)
 }
+
+/// `structure.render` in the browser: `drawings/1` of the `sites/1` file over the parent file (`mzlab_feat::interp::redraw::render_text`, the function
+/// `flow run` calls).
+#[wasm_bindgen]
+pub fn flow_render(sites: &[u8], parent: &[u8]) -> std::result::Result<String, JsValue> {
+    mzlab_feat::interp::redraw::render_text(sites, parent).map_err(js_err)
+}

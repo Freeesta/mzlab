@@ -213,6 +213,37 @@ fn una_cartella_fatta_a_mano_si_apre_e_somma_le_scansioni() {
 }
 
 #[test]
+fn un_timstof_e_ad_alta_risoluzione() {
+    // the header names the quadrupole-TOF: the scan table reads the run as high resolution (hr1), as the page and the record show it
+    let mut l = mzlab_lettori::apri(cartella(blocco2(), tdf_minimo(3)), &limiti()).unwrap();
+    let p = mzlab_core::upload::prepare_lettore(&mut *l, 0, &[], "x.d").unwrap();
+    assert!(p.table.hr1);
+}
+
+#[test]
+fn bpc_uguale_prima_e_dopo_il_giro() {
+    // the BPC asked first decodes the frames; after every spectrum has been read it comes from the maxima kept by the reader
+    let apri = || mzlab_lettori::apri(cartella(blocco2(), tdf_minimo(3)), &limiti()).unwrap();
+    let prima = apri().cromatogramma(0, "BPC").unwrap();
+    let mut l = apri();
+    let n = l.indice(0).unwrap().len();
+    let massimi: Vec<f64> = (0..n)
+        .map(|k| {
+            l.scansione(0, k)
+                .unwrap()
+                .intensity
+                .iter()
+                .fold(0.0f64, |m, &y| m.max(f64::from(y)))
+        })
+        .collect();
+    let dopo = l.cromatogramma(0, "BPC").unwrap();
+    assert_eq!(prima.intensity, dopo.intensity);
+    assert_eq!(prima.time, dopo.time);
+    assert_eq!(dopo.intensity, massimi);
+    assert!(massimi[0] > 0.0);
+}
+
+#[test]
 fn zstd_falso_e_blocchi_guasti_sono_errori_con_chiave() {
     let chiave = |bin: Vec<u8>, np: i64| {
         let mut l = mzlab_lettori::apri(cartella(bin, tdf_minimo(np)), &limiti()).unwrap();
@@ -315,6 +346,47 @@ fn solo_baf_dice_come_esportare() {
     };
     let e = mzlab_lettori::apri(fs, &limiti()).err().unwrap();
     assert_eq!(e.key, "err.file.brukerBaf");
+}
+
+/// A folder that lacks the database or its `*_bin` (TDF or TSF) names the file it lacks; a database that is not SQLite (an empty copy) is an error with a key, not «not accepted».
+#[test]
+fn una_cartella_senza_un_suo_file_dice_quale() {
+    let m = |n: &str, b: Vec<u8>| Membro {
+        nome: format!("x.d/{n}"),
+        dim: b.len() as u64,
+        dati: Box::new(b),
+        sha1: None,
+    };
+    for (nomi, manca) in [
+        (vec!["analysis.tsf_bin"], "analysis.tsf"),
+        (vec!["analysis.tdf_bin"], "analysis.tdf"),
+        (vec!["analysis.tsf"], "analysis.tsf_bin"),
+        (vec!["analysis.tdf"], "analysis.tdf_bin"),
+    ] {
+        let membri = nomi.iter().map(|n| m(n, tdf_minimo(1))).collect();
+        let e = mzlab_lettori::apri(FileSet { membri }, &limiti())
+            .err()
+            .unwrap();
+        assert_eq!(e.key, "err.file.brukerNoBin", "{nomi:?}");
+        assert!(
+            e.params.contains(&("file", manca.to_string())),
+            "{:?}",
+            e.params
+        );
+        assert!(
+            e.params.contains(&("name", "x.d".to_string())),
+            "{:?}",
+            e.params
+        );
+    }
+    let e = mzlab_lettori::apri(cartella(blocco2(), Vec::new()), &limiti())
+        .err()
+        .unwrap();
+    assert!(
+        e.key.starts_with("err.") && e.key != "err.file.notAccepted",
+        "{}",
+        e.key
+    );
 }
 
 #[test]

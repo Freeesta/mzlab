@@ -1,0 +1,56 @@
+//! The TIC and BPC of a timsTOF run (docs/agenti/bruker.md): the TIC of a survey scan from `Frames`, of the other spectra from their points;
+//! the BPC from the maxima the reader keeps of the spectra already decoded, decoding only the frames not read yet.
+use super::{indice_cattivo, LettoreBruker, UNITA};
+use mzlab_core::error::{Error, Result};
+use mzlab_core::mzml::{ChromKind, Chromatogram};
+
+impl LettoreBruker {
+    pub(super) fn traccia(&mut self, id: &str) -> Result<Chromatogram> {
+        let (tic, kind, index) = match id {
+            "TIC" => (true, ChromKind::Tic, 0),
+            "BPC" => (false, ChromKind::Bpc, 1),
+            _ => return Err(Error::new("error.badIndex").with("id", id)),
+        };
+        // the trace follows the survey scans; a run with none (MRM, PRM) is traced over all
+        let ms1 = self.desc.iter().any(|d| d.livello == 1);
+        let ks: Vec<usize> = (0..self.desc.len())
+            .filter(|&k| !ms1 || self.desc[k].livello == 1)
+            .collect();
+        // the TIC of a survey scan is in `Frames`: only a run without survey scans needs the points
+        if tic && !ms1 {
+            self.completa()?;
+        }
+        let mut intensity = Vec::with_capacity(ks.len());
+        for &k in &ks {
+            intensity.push(if tic {
+                self.indice[k].tic
+            } else {
+                match self.massimi[k] {
+                    Some(m) => m,
+                    // the peaks of the spectrum, without the m/z axis the maximum does not need
+                    None => {
+                        let d = self.desc.get(k).cloned().ok_or_else(|| indice_cattivo(k))?;
+                        let m = massimo(&self.punti(&d)?.1);
+                        self.massimi[k] = Some(m);
+                        m
+                    }
+                }
+            });
+        }
+        Ok(Chromatogram {
+            index,
+            id: id.into(),
+            kind,
+            q1: None,
+            q3: None,
+            unit: UNITA.into(),
+            time: ks.iter().map(|&k| self.indice[k].rt).collect(),
+            intensity,
+        })
+    }
+}
+
+/// The base peak intensity of a spectrum, over its intensities as 32-bit numbers (those of `Spectrum::intensity`).
+pub(super) fn massimo(y: &[f64]) -> f64 {
+    y.iter().fold(0.0f64, |m, &x| m.max(f64::from(x as f32)))
+}
