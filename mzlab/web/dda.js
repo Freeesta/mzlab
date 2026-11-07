@@ -217,7 +217,7 @@ const DDA = (() => {
       if (p.duo == null || !p._a || !p._a.lbls) return false;
       const l = p._a.lbls.find((/** @type {Bag} */ b) => (b.fl != null || b.nb) && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h); if (!l) return false;
       const s2 = target(p), D = ready(E.files[p.k].k); if (!s2 || !D) return false;
-      if (l.fl != null) { selectMs2(s2, D.sid[l.fl]); return true; }
+      if (l.fl != null) { selectMs2(s2, D.sid[l.fl], l.keep ? { parent: false, zoom: false } : {}); return true; }      // keep: a flag of an averaged Full Scan, which stays as it is
       s2.ion = D.prec[l.nb[0]]; s2._mixed = null;                                // a peak fragmented in another scan: the closest MS2 in time, the Full Scan stays where it is
       selectMs2(s2, D.sid[l.nb[0]], { parent: false }); return true;
     } catch (e) { return fail("click", e); }
@@ -389,7 +389,9 @@ const DDA = (() => {
     AZIONI.registra({ id: "chrom.ddaShow", gruppo: "link", ordine: 1, viste: ["chrom"], voci: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
     AZIONI.registra({ id: "spec.ddaShow", gruppo: "link", ordine: 1, viste: ["spec"], voci: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
   }
-  const _in = { byId, ready, preload, tolOf, nearest, lowerBound, fmt1, NEAR_MIN };
+  // the MS2 started from the survey scans of [r0, r1] min, grouped by precursor (Rust: /api/dda_window)
+  const win = (/** @type {number} */ k, /** @type {number} */ r0, /** @type {number} */ r1) => memo(`ddw|${keyOf(k)}|${r0}|${r1}|${HR.q()}`, () => J(`api/dda_window?k=${k}&r0=${r0}&r1=${r1}` + HR.q()));
+  const _in = { byId, ready, preload, tolOf, nearest, lowerBound, fmt1, NEAR_MIN, win, target, selectMs2 };
   return { NEAR_MIN, NEAR_MAX, _in, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, nearest, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, openEntry, showMs2, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
 })();
 window.DDA = DDA;

@@ -50,7 +50,12 @@ fn da_js(read: &Function, i: u32, off: u64, n: usize) -> mzlab_core::Result<js_s
 #[cfg(feature = "thermo")]
 const BLOCCHI: usize = 3;
 
-/// Member `i` of a dataset, read through `read` and a cache of `BLOCCHI` blocks of `LETTURA` bytes (the small reads are served from them).
+/// The longest block of a run of reads in order (the profiles of the scans, one after the other): an OPFS sync-handle read costs about 0.25 ms per call
+/// plus 0.085 ms per 64 KiB, so 4 MiB blocks read the scans of a 422 MB `.raw` in about 100 calls instead of 1600 of 256 KiB.
+#[cfg(feature = "thermo")]
+const LETTURA_MAX: usize = 4 << 20;
+
+/// Member `i` of a dataset, read through `read` and a cache of `BLOCCHI` blocks of `LETTURA` bytes, growing to `LETTURA_MAX` along reads in order (the small reads are served from them).
 #[cfg(feature = "thermo")]
 fn membro_js(
     read: Function,
@@ -61,7 +66,7 @@ fn membro_js(
         da_js(&read, i, off, buf.len())?.copy_to(buf);
         Ok(())
     };
-    mzlab_core::blocchi::BlockCache::new(fetch, dim, LETTURA, BLOCCHI)
+    mzlab_core::blocchi::BlockCache::new(fetch, dim, LETTURA, BLOCCHI).read_ahead(LETTURA_MAX)
 }
 
 /// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`; the small reads are served from the last block read.

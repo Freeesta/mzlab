@@ -74,6 +74,23 @@ impl Read for Stream {
         self.pos = fine;
         Ok(n)
     }
+
+    /// The opening reads the index and the events a few bytes at a time: one that falls in the window is a copy, without the loop of the default `read_exact`.
+    fn read_exact(&mut self, mut buf: &mut [u8]) -> std::io::Result<()> {
+        let a = self.pos.wrapping_sub(self.at) as usize;
+        if self.pos >= self.at && a <= self.buf.len() && buf.len() <= self.buf.len() - a {
+            buf.copy_from_slice(&self.buf[a..a + buf.len()]);
+            self.pos += buf.len() as u64;
+            return Ok(());
+        }
+        while !buf.is_empty() {
+            match self.read(buf)? {
+                0 => return Err(std::io::ErrorKind::UnexpectedEof.into()),
+                k => buf = &mut buf[k..],
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Seek for Stream {

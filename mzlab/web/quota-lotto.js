@@ -1,6 +1,6 @@
 // @ts-check
 // Room for a batch of files in the browser's storage, loaded on first use by shell.js upload0. The browser copies every file, with its index, into the
-// share of free disk it gives this site (about ROOM times the file while it loads; not the RAM): a batch bigger than that asks once before copying
+// share of free disk it gives this site (about ROOM times the file while it loads; not the RAM; a plain mzML that does not fit is read in place, its index alone): a batch bigger than that asks once before copying
 // (`prima`), and the files refused for lack of room make ONE message with the count loaded / not loaded, «Retry the rest» and «Free space» (`nota`, `wire`, `libera`).
 const ROOM = 1.8, MB = 1048576;
 const W = /** @type {any} */ (window);
@@ -8,6 +8,8 @@ const W = /** @type {any} */ (window);
 let last = { files: [], into: undefined };
 const human = (/** @type {number} */ b) => b >= 1024 * MB ? `${(b / 1024 / MB).toFixed(1)} GB` : `${Math.ceil(b / MB)} MB`;
 const isData = (/** @type {any} */ f) => !isMethodFile(f.name) && !fileKind(f.name) && !CartCarica.byproduct(f.name);
+// a plain mzML with no room for its copy is read in place from the disk (rust-sul-posto.js): only its index takes room
+const inPlace = (/** @type {any} */ f) => /\.mzml$/i.test(f.name) && !f.mzlabGz && !f.mzlabNat && f instanceof File && f.size >= 50 * MB;
 async function room() {
   try { const e = await navigator.storage.estimate(); return e.quota ? Math.max(0, e.quota - (e.usage || 0)) : Infinity; } catch (_) { return Infinity; }
 }
@@ -25,10 +27,13 @@ async function prima(/** @type {any[]} */ files, /** @type {CaricaRep} */ rep, /
   const data = files.filter(isData), free = await room();
   const need = data.reduce((s, f) => s + NATIVO.size(f) * ROOM, 0);
   if (need <= free) return files;
+  const share = (/** @type {any} */ f) => NATIVO.size(f) * (inPlace(f) ? ROOM - 1 : ROOM);
+  const least = data.reduce((s, f) => s + share(f), 0);
+  if (least <= free) return files;
   let k = 0, s = 0;
-  for (const f of data) { s += NATIVO.size(f) * ROOM; if (s > free) break; k++; }
+  for (const f of data) { s += share(f); if (s > free) break; k++; }
   const T = I18N.t, d = dialog(), b = (/** @type {string} */ q) => /** @type {HTMLButtonElement} */ (d.querySelector(`[data-q=${q}]`));
-  /** @type {HTMLElement} */ (d.querySelector("#quotatxt")).textContent = T("load.quota.ask", { n: data.length, serve: human(need), libero: human(free), k });
+  /** @type {HTMLElement} */ (d.querySelector("#quotatxt")).textContent = T("load.quota.ask", { n: data.length, serve: human(least), libero: human(free), k });
   /** @type {HTMLElement} */ (d.querySelector("#quotawhy")).textContent = T("load.quota.why");
   b("cancel").textContent = T("common.cancel"); b("all").textContent = T("load.quota.all"); b("first").textContent = T("load.quota.first", { k });
   b("first").hidden = k === 0;
