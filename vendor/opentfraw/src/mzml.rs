@@ -1206,7 +1206,7 @@ mod tests {
             crate::generic_data::GenericRecord {
                 values: values
                     .iter()
-                    .map(|(l, v)| (l.to_string(), v.clone()))
+                    .map(|(l, v)| (std::sync::Arc::from(*l), v.clone()))
                     .collect(),
             },
         ))

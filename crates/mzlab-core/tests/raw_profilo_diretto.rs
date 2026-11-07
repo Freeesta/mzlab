@@ -21,8 +21,10 @@ fn u32s(v: &mut Vec<u8>, x: &[u32]) {
     x.iter().for_each(|x| v.extend_from_slice(&x.to_le_bytes()));
 }
 
-const STRANI: [f32; 8] = [
+const STRANI: [f32; 9] = [
     f32::NAN,
+    // a signalling NaN with a payload: kept to the bit, whatever the build profile
+    f32::from_bits(0x7f80_0001),
     -0.0,
     0.0,
     f32::INFINITY,
@@ -49,7 +51,7 @@ fn pacchetto(rng: &mut Rng, fudge: bool, first_value: f64, step: f64) -> Vec<u8>
         }
         for _ in 0..n {
             let v = if rng.below(10) == 0 {
-                STRANI[rng.below(8) as usize]
+                STRANI[rng.below(9) as usize]
             } else {
                 rng.below(1 << 24) as f32 * 0.37
             };

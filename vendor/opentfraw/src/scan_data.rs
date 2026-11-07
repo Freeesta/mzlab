@@ -539,7 +539,7 @@ fn punti_del_blocco(
     }
     let ints = b
         .chunks_exact(4)
-        .map(|c| f64::from(f32::from_le_bytes([c[0], c[1], c[2], c[3]])) as f32);
+        .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]));
     let tutti = mz[start..].iter().all(|m| *m > 0.0);
     if tutti {
         int.extend(ints);
@@ -662,7 +662,8 @@ impl Profile {
                 let m = freq_to_mz(freq, coefficients) + fudge;
                 if m > 0.0 {
                     mz.push(m);
-                    int.push(f64::from(intensity) as f32);
+                    // the f32 of the file as it is: through an f64 a signalling NaN comes back quieted or not by build profile
+                    int.push(intensity);
                 }
             }
         }
@@ -1069,14 +1070,16 @@ mod tests {
                 .filter(|(m, _)| *m > 0.0)
                 .map(|(m, _)| *m)
                 .collect();
+            // the intensities straight from the chunks: through the f64 of the pairs a signalling NaN may come back quieted
             let oi: Vec<f32> = pairs
                 .iter()
-                .filter(|(m, _)| *m > 0.0)
-                .map(|(_, i)| *i as f32)
+                .zip(profile.chunks.iter().flat_map(|c| &c.signal))
+                .filter(|((m, _), _)| *m > 0.0)
+                .map(|(_, i)| *i)
                 .collect();
             let (mut mz, mut int) = (Vec::new(), Vec::new());
             profile.to_mz_intensity_into(coefficients, &mut mz, &mut int);
-            assert_eq!(mz.len(), om.len());
+            assert_eq!((mz.len(), int.len()), (om.len(), oi.len()));
             assert!(mz.iter().zip(&om).all(|(a, b)| a.to_bits() == b.to_bits()));
             assert!(int.iter().zip(&oi).all(|(a, b)| a.to_bits() == b.to_bits()));
         }
