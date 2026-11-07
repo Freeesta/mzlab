@@ -2,7 +2,7 @@
 // Files of a maker (Thermo .raw, SCIEX .wiff + .wiff.scan, Agilent .D folder) read as they are, in the engine's worker (rust-worker.js): no mzML is written. The members of a dataset
 // are kept in OPFS `files/` under flat names; a sample is a «file» of the program called `x.mzML` whose bytes are a small JSON (the stub: which members, which sample), so the list of the
 // files, the index (`idx/x.mzML.mzidx`) and the removal work as for any mzML. The engine reads the members through their offsets (crates/mzlab-wasm/src/nativi.rs).
-import { putChunks, ensureRoom } from "./archivio.js";
+import { putChunks, ensureRoom, ROOM } from "./archivio.js";
 import { openSource } from "./lettura-sync.js";
 import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
@@ -20,7 +20,7 @@ const PHASES = { 1: "sha", 4: "open", 2: "scans", 3: "chrom" };        // the ph
 const SHOWN = { sha: "read", open: "open", scans: "scans", chrom: "chrom" };  // the name of the phase the page shows
 
 /** @typedef {{ name: string, store: string, size: number, mtime?: number, sha256?: string, sha1?: string, probe?: string }} StubMember (`mtime`: lastModified of the file given; the fingerprints taken during the copy; a stub without them gets them from the engine as before) */
-/** @typedef {{ mzlab: string, ds: string, c: number, id: number, centroid: boolean, members: StubMember[], size: number, dim?: number | null }} Stub */
+/** @typedef {{ mzlab: string, ds: string, c: number, id: number, centroid: boolean, members: StubMember[], size: number, dim?: number | null, sul?: boolean }} Stub */
 
 /** the stub in a File of the archive, or null when it is an ordinary file (an mzML, a member) */
 export async function readStub(/** @type {Blob} */ f) {
@@ -243,17 +243,29 @@ async function writerOf(/** @type {Stub} */ st, /** @type {Function} */ native_t
   return (/** @type {any[]} */ ...a) => w.to_mzml_come(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
 }
 
+const quotaErr = (/** @type {any} */ e) => /quota/i.test(typeof e === "string" ? e : String(e && (e.name || e.message)));
+/** at boot: a sample read in place (stub `sul`) whose members were the Files of a closed tab: the stub and the members it alone kept go; returns their names */
+async function lostDi(/** @type {any} */ ARCH, /** @type {(n: string) => Promise<Stub | null>} */ fresh) {
+  /** @type {string[]} */ const out = [], drop = new Set();
+  for (const e of await ARCH.list("files")) {
+    const st = /\.mzml$/i.test(e.name) ? await fresh(e.name) : null;
+    if (!st || !st.sul || (await Promise.all(st.members.map(x => ARCH.get("files", x.store)))).every(Boolean)) continue;
+    await ARCH.remove("files", e.name); out.push(e.name); st.members.forEach(x => drop.add(x.store));
+  }
+  if (out.length) { const used = await usedStores(ARCH, fresh); for (const n of drop) if (!used.has(n)) await ARCH.remove("files", n); }      // not named again as an interrupted copy
+  return out;
+}
 export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool, post }) {
   const ext = createEsterno(native_external), early = createTicNativo(pool, post);   // a .raw is read through `thermo` (lettore-esterno.js); its TIC is read while it is copied (tic-nativo.js)
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
   const taken = new Map(), hashing = new Map();          // store name -> [sha256, sha1, probe] taken while it was copied here (the other samples find it again); -> Promise of them while the hash goes on after the copy
-  const stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);
+  const posto = new Map(), stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);      // posto: store name -> the user's File of a member read in place, gone with the tab
 
   /** the Files of the members of a stub (read from OPFS) */
   async function memberFiles(/** @type {Stub} */ st) {
     const out = [];
-    for (const m of st.members) { const f = await ARCH.get("files", m.store); if (!f) jerr("err.session.fileNotFound"); out.push(f); }
+    for (const m of st.members) { const f = await ARCH.get("files", m.store) || posto.get(m.store); if (!f) jerr("err.session.fileNotFound"); out.push(f); }
     return out;
   }
   /** attaches slot `slot` (whose .mzidx is open) to its reader when `name` is a native sample; true when it is */
@@ -269,7 +281,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
   /** the members of an upload copied to OPFS (once per store name), then the stub, under the dataset lock (`put`: another tab's boot leaves them alone); `tell(frac)` 0..1 of the copy */
   async function putHeld(/** @type {any} */ m, /** @type {(f: number) => void} */ tell) {
     const nat = m.nat, total = nat.members.reduce((/** @type {number} */ a, /** @type {any} */ x) => a + x.blob.size, 0);
-    await ensureRoom(await missing(ARCH, writing, nat), m.name);      // room for the members still to write (and their index), held for this sample until lr_index ends
+    const can = nat.members.every((/** @type {any} */ x) => x.blob instanceof File), quota = (/** @type {any} */ e) => { if (!(can && quotaErr(e))) throw e; }; let sul = false; try { await ensureRoom(await missing(ARCH, writing, nat), m.name); } catch (e) { quota(e); sul = true; }      // room for the members still to write (and their index), held for this sample until lr_index ends; with none (refused before, or by the browser halfway) the members left, if all are the user's Files, are read in place (`posto`)
     let done = 0, last = 0;
     const bump = (/** @type {number} */ n) => { done += n; const t = performance.now(); if (t - last > TICK || done >= total) { last = t; tell(total ? Math.min(1, done / total) : 1); } };
     /** @type {StubMember[]} */ const members = [];
@@ -277,12 +289,12 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
       const store = storeOf(nat, x);
       const member = /** @type {StubMember} */ ({ name: x.name, store, size: x.blob.size, mtime: /** @type {any} */ (x.blob).lastModified || 0 });
       members.push(member);
-      await copyMember({ ARCH, impronte, writing, taken, hashing, known: (store, size, mtime) => known(ARCH, stubOf, store, size, mtime) }, x.blob, store, bump);
+      if (!sul) try { await copyMember({ ARCH, impronte, writing, taken, hashing, known: (store, size, mtime) => known(ARCH, stubOf, store, size, mtime) }, x.blob, store, bump); } catch (e) { quota(e); sul = true; } if (sul && !(await ARCH.get("files", store))) { posto.set(store, x.blob); bump(x.blob.size); }
       const o = taken.get(store);
       if (o) [member.sha256, member.sha1, member.probe] = o;
     }
     /** @type {Stub} */
-    const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total, dim: nat.size != null ? nat.size : null };      // size = the sum of the members (what the index records); dim = the size of this sample to show
+    const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total, dim: nat.size != null ? nat.size : null }; if (sul) { await ensureRoom(total * (ROOM - 1) / ROOM, m.name); st.sul = true; if (post) post({ op: "notice", key: "load.sulPosto", params: { name: m.name } }); }      // the room of its index alone      // size = the sum of the members (what the index records); dim = the size of this sample to show
     stubs.delete(m.name);
     return ARCH.put("files", m.name, new TextEncoder().encode(JSON.stringify(st)));
   }
@@ -321,5 +333,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
-  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, lateJob: (/** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) => lateJobDi(hashing, taken, job, isolated), toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); log.forgetAll(); }, registro: log.registro };
+  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, lateJob: (/** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) => lateJobDi(hashing, taken, job, isolated), toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
 }
