@@ -24125,3 +24125,4 @@
 {"v":1,"ts_utc":"2026-11-07T10:49:44Z","tipo":"coda","k":"2026-11-07T10:49:44Z","aperte":6,"indietro":5,"sporche":0,"verdi_in_attesa":2,"piu_vecchia_aperta_s":312748,"piu_vecchia_verde_s":308428}
 {"v":1,"ts_utc":"2026-11-07T10:56:29Z","azione":"aperta","tipo":"pr","pr":2837,"sha":"fa50041d0d82439d472724e799918b6984381059"}
 {"v":1,"ts_utc":"2026-11-07T10:58:07Z","azione":"push","titolo":"Study sketch of features.detect at version 2, max_gap default 1 in missed scans; the descriptor test knows detect is pas","merge_main":false,"aree":{"docs":1,"test":1},"tipo":"pr","pr":2836,"sha":"68fe64ecbfa7cca16b549f95baa8a04ad0cb22a4"}
+{"v":1,"ts_utc":"2026-11-07T10:58:44Z","azione":"aperta","tipo":"pr","pr":2838,"sha":"75f411bfd33830df928bef3726593cf6c762961e"}
