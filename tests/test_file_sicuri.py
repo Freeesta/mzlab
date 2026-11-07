@@ -42,10 +42,16 @@ def test_read_text_cap_and_key():
 (async () => {
   const ok = await FILESICURI.readText(new File(["a;b"], "x.csv"));
   let err = null;
-  try { await FILESICURI.readText(new File(["0123456789"], "y.csv"), 5); } catch (e) { err = { m: e.message, k: e.key }; }
-  console.log(JSON.stringify({ ok, err }));
+  try { await FILESICURI.readText(new File([new Uint8Array(1048577)], "y.csv"), 1048576); } catch (e) { err = { m: e.message, k: e.key, p: e.params }; }
+  let deep = null, many = null;
+  try { FILESICURI.parse("[[[]]]", { maxDepth: 2 }); } catch (e) { deep = { k: e.key, p: e.params }; }
+  try { FILESICURI.parse("[1,2,3,4]", { maxNodes: 3 }); } catch (e) { many = { m: e.message, k: e.key, p: e.params }; }
+  console.log(JSON.stringify({ ok, err, deep, many }));
 })();''')
-    assert out["ok"] == "a;b" and out["err"] == {"m": "tooBig", "k": "workflow.err.tooBig"}
+    # the error names its limit (the caller shows I18N.t(key, params)): MB, levels, values
+    assert out["ok"] == "a;b" and out["err"] == {"m": "tooBig", "k": "workflow.err.tooBig", "p": {"mb": "1"}}
+    assert out["deep"] == {"k": "workflow.err.tooDeep", "p": {"n": "2"}}
+    assert out["many"] == {"m": "tooBig", "k": "workflow.err.tooMany", "p": {"n": "3"}}
 
 
 @pytest.mark.skipif(not NODE, reason="node not available")

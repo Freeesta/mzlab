@@ -177,6 +177,7 @@ I18N.add("it", {
   "err.llm.key.missing": "Manca la chiave del fornitore: impostala nelle impostazioni. Nulla è stato inviato.",
   "err.llm.module": "Il modulo dell'assistente non si è caricato: ricarica la pagina e riprova.",
   "error.msngrafo.badFile": "{file} non è un grafo di frammentazione che il programma sa leggere ({raw}).",
+  "error.msngrafo.tooBig": "{file} è un grafo di frammentazione salvato di {mb} MB: questa pagina apre i grafi salvati fino a {max} MB, quindi non è stato aperto. Per vederlo, apri i dati grezzi da cui è stato fatto: la scheda «Grafo di frammentazione» lo ricostruisce.",
   "err.canali.unknown": "Il canale {id} non esiste in questo file.",
   "err.cli.line": "La riga di comando non si legge: {message}.",
   "err.cli.set": "L'impostazione «{set}» non è valida: {message}.",

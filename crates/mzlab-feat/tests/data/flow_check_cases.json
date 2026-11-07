@@ -692,11 +692,6 @@
           "type": "mzidx"
         },
         {
-          "name": "t.mzfeat",
-          "sha256": "",
-          "type": "table"
-        },
-        {
           "name": "s.json",
           "sha256": "",
           "type": "samples"
@@ -718,6 +713,24 @@
       },
       "steps": [
         {
+          "id": "d",
+          "in": {
+            "index": [
+              "file:a.mzidx"
+            ]
+          },
+          "step": "features.detect@2"
+        },
+        {
+          "id": "al",
+          "in": {
+            "peaks": [
+              "d.peaks"
+            ]
+          },
+          "step": "features.align@1"
+        },
+        {
           "id": "l",
           "in": {
             "hypotheses": "file:h.json",
@@ -726,7 +739,7 @@
             ],
             "parent": "file:p.json",
             "samples": "file:s.json",
-            "table": "file:t.mzfeat"
+            "table": "al.table"
           },
           "step": "tp.link@2"
         }
@@ -842,6 +855,138 @@
             "table": "al.table"
           },
           "step": "screen.suspects@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "lineage: a gap filling and a filter of the table aligned in this plan",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzidx",
+          "sha256": "",
+          "type": "mzidx"
+        },
+        {
+          "name": "s.json",
+          "sha256": "",
+          "type": "samples"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "d",
+          "in": {
+            "index": [
+              "file:a.mzidx"
+            ]
+          },
+          "step": "features.detect@2"
+        },
+        {
+          "id": "al",
+          "in": {
+            "peaks": [
+              "d.peaks"
+            ]
+          },
+          "step": "features.align@1"
+        },
+        {
+          "id": "g",
+          "in": {
+            "index": [
+              "file:a.mzidx"
+            ],
+            "table": "al.table"
+          },
+          "step": "features.gapfill@1"
+        },
+        {
+          "id": "f",
+          "in": {
+            "samples": "file:s.json",
+            "table": "g.table"
+          },
+          "step": "table.filter@2"
+        },
+        {
+          "id": "g2",
+          "in": {
+            "index": [
+              "file:a.mzidx"
+            ],
+            "table": "f.table"
+          },
+          "step": "features.gapfill@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [
+      "g|table|err.flow.lineage|step=features.gapfill",
+      "g2|table|err.flow.lineage|step=features.gapfill"
+    ],
+    "name": "lineage: a gap filling of a table file, straight or through a filter, is refused",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [
+        {
+          "name": "a.mzidx",
+          "sha256": "",
+          "type": "mzidx"
+        },
+        {
+          "name": "t.mzfeat",
+          "sha256": "",
+          "type": "table"
+        },
+        {
+          "name": "s.json",
+          "sha256": "",
+          "type": "samples"
+        }
+      ],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": [
+        {
+          "id": "g",
+          "in": {
+            "index": [
+              "file:a.mzidx"
+            ],
+            "table": "file:t.mzfeat"
+          },
+          "step": "features.gapfill@1"
+        },
+        {
+          "id": "f",
+          "in": {
+            "samples": "file:s.json",
+            "table": "file:t.mzfeat"
+          },
+          "step": "table.filter@2"
+        },
+        {
+          "id": "g2",
+          "in": {
+            "index": [
+              "file:a.mzidx"
+            ],
+            "table": "f.table"
+          },
+          "step": "features.gapfill@1"
         }
       ]
     }

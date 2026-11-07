@@ -311,6 +311,7 @@ const LISTE = (() => {
   // the compatible entries of a peak: vis = those not excluded (the peak keeps its mark); hid = there are some, and all are excluded (the peak is hidden)
   const split = (/** @type {Bag[]} */ ms) => { const vis = ms.filter((/** @type {Bag} */ x) => !isExcluded(x)); return { vis, hid: ms.length > 0 && !vis.length }; };
   function setOn(/** @type {unknown} */ v) { wr(KEY_ON, !!v); document.querySelectorAll("#lst-cont-signs").forEach(el => { el.checked = !!v; }); if (typeof redrawAll === "function") redrawAll(); }
+  const LAB_MAX = 5000;                                              // rows taken from one imported CSV: the rest is named in the toast, never dropped silently
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = (/** @type {Bag[]} */ rows) => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
@@ -485,7 +486,7 @@ const LISTE = (() => {
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
+            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n, all; try { all = csvParse(await FILESICURI.readText(f)); n = all.slice(0, LAB_MAX); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat", x.params)); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(all.length > LAB_MAX ? I18N.t("lst.lab.importedCut", { max: LAB_MAX, m: all.length, rest: all.length - LAB_MAX }) : I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }
