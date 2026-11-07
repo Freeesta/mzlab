@@ -56,6 +56,22 @@ try:
             assert a.evaluate("document.querySelectorAll('#unopen .fail').length") == 0, "one error per file: " + a.evaluate("document.getElementById('unopen').innerText")[:300]
             assert a.evaluate("document.querySelectorAll('#flst .fl.up.err').length") == 0, "error rows left in the side list"
         step("«Try all» with no room: the queue stops at the first refusal, ONE message, no error per file", full)
+        def panel():
+            a.click("#unopen [data-a=quota-free]"); attendi(a, "document.getElementById('spaziodlg')?.open === true", 30000)
+            attendi(a, "document.querySelectorAll('#spaziovoci li').length === 3", 30000)
+            t = a.evaluate("document.getElementById('spaziodlg').innerText")
+            assert re.search(r"\d[\d.]* (MB|GB)", a.evaluate("document.getElementById('spaziouso').textContent")), t
+            assert "2" in a.evaluate("document.querySelector('#spaziovoci li').textContent"), t       # the two files loaded
+            assert a.evaluate("document.getElementById('spaziopriv').textContent") == "", "a normal window is not called private: " + t
+            assert not a.evaluate("document.querySelector('#spaziodlg [data-s=all]').hidden")
+            a.keyboard.press("Escape"); attendi(a, "!document.getElementById('spaziodlg').open")
+            # a quota under 2 GB, as a private window gives: the panel says so and points to a normal window
+            a.evaluate("""() => { const f = window.fetch; window.__f0 = f; window.fetch = async (u, o) => { const r = await f(u, o); if (!String(u).startsWith('api/spazio')) return r;
+                const j = await r.json(); return new Response(JSON.stringify({ ...j, quota: 300 * 1048576 })); }; }""")
+            a.click("#unopen [data-a=quota-free]"); attendi(a, "document.getElementById('spaziopriv').textContent.length > 0", 30000)
+            assert "300 MB" in a.evaluate("document.getElementById('spaziopriv').textContent")
+            a.evaluate("window.fetch = window.__f0; 0"); a.keyboard.press("Escape")
+        step("«Free space»: granted and used in real numbers, files, indexes, leftovers; a quota under 2 GB names the private window", panel)
         WALK = """(async () => { const out = {}; const walk = async (h, p) => { for await (const [n, c] of h.entries()) { if (c.kind === 'file') out[p + n] = (await c.getFile()).size; else await walk(c, p + n + '/'); } };
           await walk(await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'), ''); return out; })()"""
         def clean():

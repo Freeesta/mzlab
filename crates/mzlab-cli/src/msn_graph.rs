@@ -15,7 +15,6 @@ use mzlab_core::msnalbero::Raggruppa;
 use mzlab_core::msngrafo::{
     con_interpretazione, esporta, grafo_json, Formato, Grafo, Opzioni, ParamRegole, PPM_PERDITA,
 };
-use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::Opzioni as MzmlOpzioni;
 
 pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/2) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
@@ -256,7 +255,7 @@ pub fn grafo(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
     }
     let source = if is_mzml { file } else { &converted };
     let idx = tmp.join("0.mzidx");
-    crate::build_index(source, &idx, DEFAULT_BUDGET)?;
+    crate::build_index(source, &idx, mzlab_core::budget_auto::native_index_budget())?;
     let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;

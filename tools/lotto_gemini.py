@@ -19,31 +19,31 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_KB = 200
-INTESTAZIONE = "=== FILE: {path} ({n} di {tot}) — file separati nel progetto, qui uniti in un unico documento ==="
+HEADER = "=== FILE: {path} ({n} di {tot}) — file separati nel progetto, qui uniti in un unico documento ==="
 FINE = "=== FINE FILE ==="
 
 
 def leggi_elenco(testo: str, lotto: int | None = None, radice: Path = ROOT) -> list[str]:
     """The paths of a list; with `lotto`, only those of that `@lotto N` section. Lines that are not paths of existing files are skipped
     (a Markdown file with prose can be passed), except in a plain list without `@lotto` where a missing path is reported by `unisci`."""
-    corrente: int | None = None
-    ha_sezioni = any(r.strip().startswith("@lotto") for r in testo.splitlines())
+    current: int | None = None
+    has_sections = any(r.strip().startswith("@lotto") for r in testo.splitlines())
     out: list[str] = []
-    for riga in testo.splitlines():
-        r = riga.strip().strip("`")
+    for row in testo.splitlines():
+        r = row.strip().strip("`")
         if not r or r.startswith("#"):
             continue
         if r.startswith("@lotto"):
             try:
-                corrente = int(r.split()[1])
+                current = int(r.split()[1])
             except (IndexError, ValueError):
-                raise SystemExit(f"bad lotto line: {riga!r}")
+                raise SystemExit(f"bad lotto line: {row!r}")
             continue
-        if lotto is not None and corrente != lotto:
+        if lotto is not None and current != lotto:
             continue
-        if ha_sezioni and (corrente is None or not (radice / r).is_file()):
+        if has_sections and (current is None or not (radice / r).is_file()):
             continue
-        if not ha_sezioni and lotto is None and not (radice / r).is_file() and " " in r:
+        if not has_sections and lotto is None and not (radice / r).is_file() and " " in r:
             continue
         out.append(r)
     return out
@@ -51,13 +51,13 @@ def leggi_elenco(testo: str, lotto: int | None = None, radice: Path = ROOT) -> l
 
 def unisci(percorsi: list[str], radice: Path = ROOT) -> tuple[str, int]:
     """The joined document and its size in bytes. A missing file raises FileNotFoundError."""
-    parti: list[str] = []
+    parts: list[str] = []
     for i, p in enumerate(percorsi, 1):
         f = radice / p
         if not f.is_file():
             raise FileNotFoundError(p)
-        parti.append(INTESTAZIONE.format(path=p, n=i, tot=len(percorsi)) + "\n" + f.read_text(encoding="utf-8", errors="replace").rstrip("\n") + "\n" + FINE + "\n")
-    doc = "\n".join(parti)
+        parts.append(HEADER.format(path=p, n=i, tot=len(percorsi)) + "\n" + f.read_text(encoding="utf-8", errors="replace").rstrip("\n") + "\n" + FINE + "\n")
+    doc = "\n".join(parts)
     return doc, len(doc.encode("utf-8"))
 
 

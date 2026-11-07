@@ -1,6 +1,7 @@
 //! `build_mzml_spill` with the `source` object of the metadata given at the end (`upload::prepare_late`): used by the CLI index builder; and with the
 //! arrays decoded by other instances (`build_mzml_corriere`: the helper workers of the browser).
 
+use std::cell::Cell;
 use std::io::{Read, Seek, SeekFrom};
 
 use super::{build_con_spill, io_error, Output, ScanTable, Stats};
@@ -42,18 +43,23 @@ fn con_parse<R: Read + Seek>(
     late_source: Option<&mut dyn FnMut() -> Result<String>>,
     mut c: Option<&mut dyn Corriere>,
 ) -> Result<Stats> {
+    let stop = Cell::new(false);
     build_con_spill(
         table,
         &mut |on| {
             src.seek(SeekFrom::Start(0)).map_err(io_error)?;
+            let src = Fermabile {
+                inner: &mut src,
+                stop: &stop,
+            };
             let f = |item| {
                 if let Item::Spectrum(s) = item {
                     on(s)
                 }
             };
             match c.as_deref_mut() {
-                Some(c) => mzml::parse_corriere(&mut src, f, c),
-                None => mzml::parse(&mut src, f),
+                Some(c) => mzml::parse_corriere(src, f, c),
+                None => mzml::parse(src, f),
             }
         },
         out,
@@ -61,5 +67,21 @@ fn con_parse<R: Read + Seek>(
         false,
         spill,
         late_source,
+        Some(&stop),
     )
+}
+
+/// The mzML of a pass, which stops being read once pass 1 has failed (`build_con_spill`): the parser ends with an error that is not the answer.
+struct Fermabile<'a, R> {
+    inner: &'a mut R,
+    stop: &'a Cell<bool>,
+}
+
+impl<R: Read> Read for Fermabile<'_, R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.stop.get() {
+            return Err(std::io::Error::other("index build stopped"));
+        }
+        self.inner.read(buf)
+    }
 }

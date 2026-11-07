@@ -3,19 +3,7 @@
 use std::collections::BTreeSet;
 
 /// The mismatches the registry has today, by consumer port, source and error key: the test fails on any other, and on one of these that is gone (drop it).
-/// `features.gapfill` and `tp.link` need a table aligned in the same plan (`err.flow.lineage`).
-const KNOWN: &[(&str, &str)] = &[
-    (
-        "features.gapfill.table <- table with no row",
-        "err.flow.lineage",
-    ),
-    (
-        "features.gapfill.table <- table of one sample",
-        "err.flow.lineage",
-    ),
-    ("tp.link.table <- table with no row", "err.flow.lineage"),
-    ("tp.link.table <- table of one sample", "err.flow.lineage"),
-];
+const KNOWN: &[(&str, &str)] = &[];
 
 /// The pairs the formats of the ports close (`format` / `formats`, `err.flow.port.format`): the check refuses each, with that key.
 const BY_FORMAT: &[&str] = &[
@@ -64,6 +52,14 @@ const BY_DATA: &[(&str, &str)] = &[
         "table.match.table <- table of one sample",
         "error.badCampioni",
     ),
+];
+
+/// The pairs the lineage of the ports closes (`Port::lineage`, `err.flow.lineage`): a table file into a step that needs the table aligned in its plan.
+const BY_LINEAGE: &[&str] = &[
+    "features.gapfill.table <- table of one sample",
+    "features.gapfill.table <- table with no row",
+    "tp.link.table <- table of one sample",
+    "tp.link.table <- table with no row",
 ];
 
 /// Result of a consumer reading one source on one port.
@@ -118,12 +114,17 @@ pub(super) fn report_and_assert(verdicts: &[(String, Verdict)]) {
         "no longer a mismatch, drop it from KNOWN or BY_DATA:\n{}",
         gone.join("\n")
     );
-    for want in BY_FORMAT {
-        let v = verdicts.iter().find(|(w, _)| w == want).map(|(_, v)| v);
-        assert!(
-            matches!(v, Some(Verdict::Refused(why)) if why.contains("err.flow.port.format")),
-            "{want}: not refused by its format"
-        );
+    for (pairs, key) in [
+        (BY_FORMAT, "err.flow.port.format"),
+        (BY_LINEAGE, "err.flow.lineage"),
+    ] {
+        for want in pairs {
+            let v = verdicts.iter().find(|(w, _)| w == want).map(|(_, v)| v);
+            assert!(
+                matches!(v, Some(Verdict::Refused(why)) if why.contains(key)),
+                "{want}: not refused with {key}"
+            );
+        }
     }
     // the view of `table.filter` runs wherever the check takes a table
     for (w, v) in verdicts {

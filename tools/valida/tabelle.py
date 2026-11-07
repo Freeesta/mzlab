@@ -52,13 +52,13 @@ class Tabella:
         return np.nan_to_num(self.altezza[:, colonne]).max(1) if colonne else np.zeros(len(self))
 
 
-def nome_file(path) -> str:
+def name_file(path) -> str:
     return re.sub(r"\.mzml$", "", Path(path).name, flags=re.I)
 
 
 def descrivi_file(path) -> dict:
     """time (min, None if unknown) and type of a file from its name: tNNmin, t0/dark/adsorption = reference at time 0, blank/bianco/control."""
-    n = nome_file(path)
+    n = name_file(path)
     low = n.lower()
     tipo = "blank" if re.search(r"blank|bianc", low) else "control" if "control" in low else "sample"
     m = re.search(r"(?:^|[_\-\s])t(\d+(?:[.,]\d+)?)\s*min", low) or re.search(r"(?:^|[_\-\s])t(\d+(?:[.,]\d+)?)(?:$|[_\-\s])", low)

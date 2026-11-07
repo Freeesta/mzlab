@@ -157,7 +157,11 @@
     "../../mzlab/web/sottrazione.js",
     "../../mzlab/web/tdati-pannelli.js",
     "../../mzlab/web/tdati.js",
+    "../../mzlab/web/tic-nativo.js",
     "../../mzlab/web/tic-provvisorio.js",
+    "../../mzlab/web/dda-marcatori.js",
+    "../../mzlab/web/dda-elenco.js",
+    "../../mzlab/web/dda-naviga.js",
     "../../mzlab/web/transizioni.js",
     "../../mzlab/web/workflow.js"
   ]

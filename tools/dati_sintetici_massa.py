@@ -16,17 +16,17 @@ def ioni(n: int = 12, pol: int = 1) -> list[tuple[str, float]]:
     voci = sorted({round(i["mz"], 4): i["name_en"] + " " + i["adduct"] for l in json.loads(LISTA.read_text(encoding="utf-8"))["lists"] if l.get("background", True) for i in l["items"]
                    if i.get("z") == 1 and i.get("pol") == pol and i["adduct"] in adducts and 150 <= i["mz"] <= 900}.items())
     lontani = [voci[0]]
-    for m, nome in voci[1:]:
+    for m, name in voci[1:]:
         if m - lontani[-1][0] >= 2.0:
-            lontani.append((m, nome))
-    passo = max(1, len(lontani) // n)
-    return [(nome, m) for m, nome in lontani[::passo][:n]]
+            lontani.append((m, name))
+    step = max(1, len(lontani) // n)
+    return [(name, m) for m, name in lontani[::step][:n]]
 
 
-def calibrazione(path: Path, rng, offset_ppm: float = 3.0, drift_ppm: float = 2.0, rt_end: float = 10.5, cyc: float = 0.1, pol: int = 1, n_ioni: int = 12) -> list[tuple[str, float]]:
+def calibrazione(path: Path, rng, offset_ppm: float = 3.0, drift_ppm: float = 2.0, rt_end: float = 10.5, cyc: float = 0.1, pol: int = 1, n_ions: int = 12) -> list[tuple[str, float]]:
     """Writes the file; the error of every ion is `offset_ppm` plus `drift_ppm` spread linearly over the run. Each ion stays all along, strongest at its own time (spread over the run),
     so the error against the RT of the apex shows the drift. Returns the ions (name, theoretical m/z as listed)."""
-    lista = ioni(n_ioni, pol)
+    lista = ioni(n_ions, pol)
     pre, specs, rts, tic = "controllerType=0 controllerNumber=1 scan=", [], [], []
     filt = f"FTMS {'+' if pol > 0 else '-'} p ESI Full ms [100.0000-900.0000]"
     t0 = 0.5
@@ -34,7 +34,7 @@ def calibrazione(path: Path, rng, offset_ppm: float = 3.0, drift_ppm: float = 2.
     for i, rt in enumerate(np.arange(t0, rt_end, cyc)):
         mz = list(rng.uniform(100, 900, 100)); it = list(rng.lognormal(np.log(3e3), 0.5, 100))
         err = offset_ppm + drift_ppm * (rt - t0) / (rt_end - t0)
-        for (nome, m), c in zip(lista, centri):
+        for (name, m), c in zip(lista, centri):
             mz.append(m * (1 + (err + rng.normal(0, 0.3)) * 1e-6)); it.append(3e4 + 3e5 * float(_g(rt, c, 2.5)))
         o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
         n, b = len(mz), int(np.argmax(it))

@@ -22,10 +22,10 @@ def raccogli(args: list[str]) -> list[str]:
     return [r for r in out.stdout.splitlines() if "::" in r and not r.startswith(" ")]
 
 
-def confronta(pieno: list[str], rest: list[str], solo: list[str], senza_test: list[str], doppie: list[str]) -> list[str]:
+def confronta(pieno: list[str], rest: list[str], solo: list[str], without_test: list[str], doppie: list[str]) -> list[str]:
     """Problems found between the full collection and the two shards (empty list = consistent)."""
     guai = [f"entry listed twice in the solo list: {v}" for v in doppie]
-    guai += [f"solo entry matches no test: {v}" for v in senza_test]
+    guai += [f"solo entry matches no test: {v}" for v in without_test]
     guai += [f"run by both shards: {t}" for t in sorted(set(rest) & set(solo))[:20]]
     guai += [f"run by no shard: {t}" for t in sorted(set(pieno) - set(rest) - set(solo))[:20]]
     guai += [f"run by a shard but not collected: {t}" for t in sorted((set(rest) | set(solo)) - set(pieno))[:20]]
@@ -40,8 +40,8 @@ def controlla() -> list[str]:
     pieno = raccogli(["tests"])
     rest = raccogli(["tests", *[a for v in elenco for a in ("--deselect", v)]])
     solo = raccogli(elenco)
-    senza_test = [v for v in elenco if not any(t == v or t.startswith(v + "::") for t in pieno)]
-    return confronta(pieno, rest, solo, senza_test, doppie)
+    without_test = [v for v in elenco if not any(t == v or t.startswith(v + "::") for t in pieno)]
+    return confronta(pieno, rest, solo, without_test, doppie)
 
 
 if __name__ == "__main__":

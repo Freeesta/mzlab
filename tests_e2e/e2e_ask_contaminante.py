@@ -17,7 +17,7 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         sp = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp);return s?s.id:null})()"); assert sp is not None
         def opened():
-            pg.evaluate(f"isoAsk(E.panels.find(q=>q.id=={sp}))"); pg.wait_for_selector("#askdlg[open]")
+            pg.evaluate(f"void isoAsk(E.panels.find(q=>q.id=={sp}))")      # async since #2687: its promise ends when the dialog closes; pg.wait_for_selector("#askdlg[open]")
         def used(): return pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id=={sp});return s.iso&&s.iso.formula+' '+s.iso.ad}})()")
         def reset(): pg.evaluate(f"(()=>{{E.panels.find(q=>q.id=={sp}).iso=null}})()")
         def by_name():
