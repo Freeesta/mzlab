@@ -860,6 +860,7 @@
   "err.llm.conversation": "Conversazione non valida; {field} = campo che manca o è sbagliato.",
   "err.llm.tools": "Catalogo degli strumenti non valido; {field} = campo che manca o è sbagliato.",
   "error.msngrafo.badFile": "Errore di un file di grafo salvato che non si legge; {file} = nome del file, {raw} = motivo tecnico.",
+  "error.msngrafo.tooBig": "Un grafo salvato (g.json) più grande del tetto della pagina non viene aperto; {file} = nome del file, {mb} = sua dimensione in MB, {max} = tetto in MB.",
   "msngrafo.file.ro": "Nota in cima alla finestra di un grafo aperto da file; {name} = nome del file.",
   "msngrafo.file.title": "Titolo della finestra di un grafo aperto da file; {name} = nome del file.",
   "xicbtn.apex": "Riga sotto lo XIC nato dal pulsante dello spettro; {rt} = RT dell'apice (min), {y} = intensità dell'apice.",
