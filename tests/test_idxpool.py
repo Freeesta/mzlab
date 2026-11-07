@@ -10,7 +10,7 @@ JS = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "idxpool.js"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 PRELUDE = f"""
-import {{ createPool, poolSize }} from {JS.as_uri()!r};
+import {{ createPool, poolSize, builderBudget }} from {JS.as_uri()!r};
 const log = [], modules = [], seen = [];
 let live = 0, maxLive = 0;
 // script(job name, attempt) -> "done" | "die" | "mem" | "unavail" | "fail"
@@ -27,6 +27,7 @@ function fake(script) {{
       setTimeout(() => {{
         if (this.dead) return;
         const msg = {{ done: {{ op: "done", stats: {{ passes: 1 }} }}, mem: {{ op: "error", text: '{{"error_key":"error.memoryBudget","params":{{}}}}', fatal: false }},
+                      plan: {{ op: "error", text: '{{"error_key":"error.memoryBudget","params":{{"fase":"indexPeaks","stima_mb":"139","budget_mb":"64","libero_mb":"64","eccesso_mb":"75"}}}}', fatal: false }},
                       die: {{ op: "error", text: "unreachable", fatal: true }}, fail: {{ op: "error", text: '{{"error_key":"err.file.xml","params":{{}}}}', fatal: false }},
                       unavail: {{ op: "unavailable", text: "no wasm" }} }}[act];
         this.onmessage({{ data: msg }});
@@ -45,6 +46,12 @@ def run(body):
     r = subprocess.run(["node", "--input-type=module", "-e", code], capture_output=True, encoding="utf-8")
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout.strip().splitlines()[-1])
+
+
+def test_builder_budget_is_a_share_of_the_engine_budget_never_below_todays_default():
+    # no policy yet: the pool's default; tablet at 192 MB with 2 workers -> 64; computer at 2048 with 4 -> 409; at 3072 -> 512 (the top); a small engine budget keeps 64
+    got = run("console.log(JSON.stringify([builderBudget(0, false, 4) ?? null, builderBudget(192, true, 2), builderBudget(2048, false, 4), builderBudget(3072, false, 4), builderBudget(192, false, 4), builderBudget(64, true, 2)]))")
+    assert got == [None, 64, 409, 512, 64, 32]
 
 
 def test_pool_size_rule():
@@ -88,12 +95,41 @@ def test_memory_budget_halves_the_pool_and_the_budget_then_gives_up_once():
     got = run("""
 await out(async () => {
   const notes = [];
-  const p = createPool({ workerUrl: "x", size: 4, budget: 64, notify: k => notes.push(k), WorkerClass: fake((n, k) => n === "big" ? "mem" : "done") });
+  const p = createPool({ workerUrl: "x", size: 4, budget: 64, notify: (k, q) => notes.push([k, q]), WorkerClass: fake((n, k) => n === "big" ? "mem" : "done") });
   const r = await p.build(job("big"));
   return { r: r.reason, limit: p.limit, notes, log };
 });""")
-    assert got["r"] == "memory" and got["limit"] == 1 and got["notes"] == ["error.memoryBudget"] * 2
+    # the pool is whole again once it has nothing to do: one file that could not reserve memory does not slow the rest of the session
+    # one notice per lowering, with the numbers the Diagnostics log keeps (the file's own row says why it failed)
+    assert got["r"] == "memory" and got["limit"] == 4
+    assert got["notes"] == [["error.poolLowered", {"from": 4, "to": 2, "mb": 32}], ["error.poolLowered", {"from": 2, "to": 1, "mb": 32}]]
     assert got["log"] == ["start big#1 b64", "start big#2 b32"]
+
+
+def test_a_failed_reservation_halves_the_pool_while_other_files_still_run():
+    got = run("""
+await out(async () => {
+  const p = createPool({ workerUrl: "x", size: 4, budget: 64, WorkerClass: fake((n, k) => n === "big" && k === 1 ? "mem" : "done") });
+  const big = p.build(job("big"));
+  const rest = ["a", "b", "c", "d", "e", "f"].map(n => p.build(job(n)));
+  await big; const during = p.limit;
+  await Promise.all(rest);
+  return { during, after: p.limit };
+});""")
+    assert got["during"] == 2 and got["after"] == 4
+
+
+def test_a_planned_refusal_is_not_retried_and_keeps_its_numbers_and_the_pool():
+    # the builder's own estimate says the file does not fit (error with `fase`): the same budget, or half of it, would refuse it again after one more full read
+    got = run("""
+await out(async () => {
+  const notes = [];
+  const p = createPool({ workerUrl: "x", size: 4, budget: 32, notify: k => notes.push(k), WorkerClass: fake((n, k) => n === "dense" ? "plan" : "done") });
+  const r = await p.build(job("dense"));
+  return { r: r.reason, params: JSON.parse(r.text).params, limit: p.limit, notes, log };
+});""")
+    assert got["r"] == "memory" and got["limit"] == 4 and got["log"] == ["start dense#1 b32"] and got["notes"] == []
+    assert got["params"]["fase"] == "indexPeaks" and got["params"]["stima_mb"] == "139"
 
 
 def test_no_wasm_means_unavailable_for_every_job():

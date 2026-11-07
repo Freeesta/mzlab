@@ -74,7 +74,7 @@ def diff(a, b, path=""):
         return [d for i, (x, y) in enumerate(zip(a, b)) for d in diff(x, y, path + "/" + str(i))][:12]
     return [] if a == b else [(path, a, b)]
 BLANK = {"ms", "total_ms", "heap_peak_bytes", "cached", "reused", "platform", "version", "commit"}
-AGENT_BLANK = {"target", "modules"}       # who ran it (`agent` of prov/1, `engine` of corsa/1): the platform (x86_64-linux / wasm32) and the executables hashed (the native binary only)
+AGENT_BLANK = {"target", "modules"}       # who ran it (prov/1 `agent`, corsa/1 `engine`): the platform (x86_64-linux / wasm32) and the executables hashed (the native binary only)
 def blank(v):
     if isinstance(v, dict): return {k: ("ok" if k == "status" and x == "cached" else blank({a: b for a, b in x.items() if a not in AGENT_BLANK} if k in ("agent", "engine") and isinstance(x, dict) else x)) for k, x in v.items() if k not in BLANK}
     if isinstance(v, list): return [blank(x) for x in v]

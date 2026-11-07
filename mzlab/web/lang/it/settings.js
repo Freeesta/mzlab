@@ -70,6 +70,7 @@ I18N.add("it", {
   "settings.mem.reason.ramUnknown": "RAM non leggibile, valore prudente",
   "settings.mem.reason.manual": "scelta a mano",
   "settings.mem.reason.lowered": "ridotta di un livello dopo un arresto per memoria",
+  "settings.mem.reason.indexPool": "costruttori degli indici: meno insieme e meno memoria ciascuno dopo una mancanza di memoria, fino alla fine di quel caricamento",
   "settings.mem.conf.high": "alta",
   "settings.mem.conf.medium": "media",
   "settings.mem.conf.low": "bassa",

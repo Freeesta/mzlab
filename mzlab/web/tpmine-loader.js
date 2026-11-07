@@ -137,13 +137,15 @@
   }
 
   // ---- loading (once per page): index, then extra files + the scripts' downloads in parallel, then the scripts run in order
-  async function load() {
-    const get = async (name, how) => { const r = await fetch(DIR + name); if (!r.ok) throw new Error(name + " missing"); return r[how](); };
+  /** @param {boolean} [low] started by the idle moment, not by a tab: low priority, so a script the page asks for meanwhile (carica) goes first */
+  async function load(low) {
+    const opt = low ? { priority: /** @type {"low"} */ ("low") } : {};
+    const get = async (name, how) => { const r = await fetch(DIR + name, opt); if (!r.ok) throw new Error(name + " missing"); return r[how](); };
     const idx = await get("indice.json", "json");
     const early = idx.early || [], js = idx.js || [], names = idx.files || [];
     const files = {};
     reg.ctx = { base: BASE, meta: idx.meta || {}, files };
-    const warm = [...early, ...js].map(n => fetch(DIR + n).catch(() => null));     // starts all downloads now (early ones first); the script tags below then hit the cache
+    const warm = [...early, ...js].map(n => fetch(DIR + n, opt).catch(() => null));     // starts all downloads now (early ones first); the script tags below then hit the cache
     for (const n of early) await runScript(n);                     // scripts that need neither the data files nor the other scripts (the Flow tab): they draw while the rest downloads
     if (on) showTabs();                                           // their tabs (Flow) appear now, not after the whole package
     earlyOk();
@@ -160,9 +162,9 @@
     render();
   }
   // one promise for the whole package: the idle start, a tab click and a tpview event all land here, so the downloads happen once
-  async function ensureLoaded() {
+  async function ensureLoaded(/** @type {boolean} */ low = false) {
     if (!on) return;
-    if (!loaded) loaded = load();
+    if (!loaded) loaded = load(low === true);
     try { await loaded; } catch (e) {
       loaded = null; console.error("Tabui failed to load:", e);
       const x = tabs.get(PLACEHOLDER.id); if (x && x.ph) x.sec.textContent = "Tabui failed to load. Reload the page to try again.";
@@ -190,7 +192,7 @@
     const pending = /** @type {any} */ (window).MZLAB_LATE_CLICK; /** @type {any} */ (window).MZLAB_LATE_CLICK = null;
     if (pending) { if (tabs.has(pending)) openView(pending); else openLate(pending); }
     document.addEventListener("tpview", ev => { const v = /** @type {CustomEvent} */ (ev).detail.view; if (!BUILTIN.has(v)) ensureLoaded(); });
-    const idle = () => { const run = () => { ensureLoaded(); }; if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 3000 }); else setTimeout(run, 1000); };
+    const idle = () => { const run = () => { ensureLoaded(true); }; if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 3000 }); else setTimeout(run, 1000); };
     // without an engine qqReady never comes (plain web folder, failed engine): start anyway after a long delay
     const t0 = Date.now();
     const wait = setInterval(() => { if (window.qqReady || Date.now() - t0 > 15000) { clearInterval(wait); idle(); } }, 200);

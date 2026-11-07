@@ -80,6 +80,19 @@ impl Lettore for Finiti {
         }
         self.inner.indice(c)
     }
+    // the same check on the rows the reader gives; `visti` stays unset, the full rows of `indice` are checked when asked for
+    fn indice_senza_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        if !self.visti.get(c).copied().unwrap_or(false) {
+            for v in self.inner.indice_senza_tic(c)? {
+                for (cosa, x) in [("rt", v.rt), ("tic", v.tic)] {
+                    if !x.is_finite() {
+                        return Err(guasto("scan", &v.id, cosa, x));
+                    }
+                }
+            }
+        }
+        self.inner.indice_senza_tic(c)
+    }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         spettro(self.inner.scansione(c, k), k)
     }

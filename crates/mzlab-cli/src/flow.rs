@@ -33,6 +33,8 @@ mod plausible;
 mod rtpredict;
 #[path = "flow_screen_suspects.rs"]
 mod screen_suspects;
+#[path = "flow_trace.rs"]
+mod trace;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -161,7 +163,7 @@ pub struct FileRunner {
     pub(crate) inputs: HashMap<String, PathBuf>,
     meter: Option<Meter>,
     pub(crate) made: Mutex<HashMap<String, PathBuf>>,
-    lineage: Mutex<HashMap<String, Lineage>>,
+    pub(crate) lineage: Mutex<trace::Traced>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
     pub(crate) progress: Option<Vec<String>>,
     /// Called after each job (the desktop app shows the steps as they finish).
@@ -170,8 +172,8 @@ pub struct FileRunner {
     cache: Option<crate::flow_cache::Cache>,
     /// Only look in the cache: a job whose key is not there fails with `err.flow.probe.miss` instead of running (`flow_probe.rs`).
     pub(crate) probe: bool,
-    /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
-    pub(crate) budget_mb: f64,
+    /// Working memory of the alignment (`--budget-mb`; else the automatic one of this computer, shared by the workers: `flow_out::Budget`).
+    pub(crate) budget: crate::flow_out::Budget,
     /// A live run: the cancel flag and the progress of each job it runs (`flow_live.rs`).
     watch: Option<Arc<dyn Watch>>,
 }
@@ -184,12 +186,12 @@ impl FileRunner {
             inputs: HashMap::new(),
             meter,
             made: Mutex::new(HashMap::new()),
-            lineage: Mutex::new(HashMap::new()),
+            lineage: Mutex::default(),
             progress: None,
             done: None,
             cache: None,
             probe: false,
-            budget_mb: mzlab_core::budget_auto::native_auto_mb(),
+            budget: crate::flow_out::Budget::auto(),
             watch: None,
         }
     }
@@ -197,7 +199,7 @@ impl FileRunner {
     /// The runner with the working memory of the alignment set to `mb` (None: the automatic budget).
     pub(crate) fn with_budget(mut self, mb: Option<f64>) -> FileRunner {
         if let Some(mb) = mb {
-            self.budget_mb = mb;
+            self.budget = crate::flow_out::Budget::given(mb);
         }
         self
     }
@@ -227,36 +229,6 @@ pub(crate) struct Lineage {
     pub layers: Vec<(String, Vec<(String, Value)>)>,
     pub index: Vec<PathBuf>,
     pub peaks: Vec<PathBuf>,
-}
-
-/// The lineage of the files the run makes (what the feature steps hand on).
-impl FileRunner {
-    pub(crate) fn trace(&self, a: &Artifact, l: Lineage) {
-        let mut map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        map.insert(a.sha256.clone(), l);
-    }
-
-    pub(crate) fn lineage(&self, a: &Artifact) -> Option<Lineage> {
-        let map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        map.get(&a.sha256).cloned()
-    }
-
-    /// The name of the file an index was made from, else the file name of `a`.
-    pub(crate) fn source_name(&self, a: &Artifact) -> String {
-        let l = self.lineage(a).map(|l| l.name).filter(|n| !n.is_empty());
-        l.unwrap_or_else(|| a.label.clone().unwrap_or_default())
-    }
-
-    /// The first index (item 0) made by the instance that made the index `a`.
-    pub(crate) fn first_of_series(&self, a: &Artifact) -> Option<PathBuf> {
-        let me = self.lineage(a)?;
-        let map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        let first = map
-            .iter()
-            .find(|(_, l)| l.instance == me.instance && l.item == Some(0))?;
-        let made = self.made.lock().unwrap_or_else(|e| e.into_inner());
-        made.get(first.0).cloned()
-    }
 }
 
 pub(crate) fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {

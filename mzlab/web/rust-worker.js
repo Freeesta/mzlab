@@ -9,12 +9,12 @@ import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
 import { infoDi, nuovo } from "./manifesto.js";
-import { createPool, poolSize, makeGate } from "./idxpool.js";
+import { createPool, poolSize, makeGate, builderBudget } from "./idxpool.js";
 import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
 import { leasePlan } from "./rust-lease-plan.js";
-import { createPlainPut, createOpenGate, gzRoom, gzClean } from "./rust-carica.js";
+import { createPlainPut, createOpenGate, gzRoom, gzClean } from "./rust-carica.js"; import { createSulPosto } from "./rust-sul-posto.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
@@ -105,7 +105,8 @@ const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));          
 const ISOLATED = !!self.crossOriginIsolated && typeof SharedArrayBuffer === "function";
 // the size from which a file gains from helper workers (the notice of capacita.js is only shown for such a file)
 const BIG_IDX = 32 << 20;
-const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, isolated: ISOLATED, notify: key => postMessage({ op: "notice", key }) }));
+const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, isolated: ISOLATED, notify: (key, params) => postMessage({ op: "notice", key, params }) }));
+const idxBudget = () => builderBudget(BUDGET_MB, SMALL, gate.size);          // undefined until the policy arrives: the pool's default
 /** @type {(key: string, params?: object) => never} */
 const jerr = (key, params = {}) => { throw JSON.stringify({ error_key: key, params }); };
 const NO_RUN = 0xFFFFFFFF;                                                  // what count and spectra_len of the engine answer for a slot with no run open
@@ -118,7 +119,7 @@ async function fileOf(name) {
 const impronte = createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule });
 // size shown for a maker's sample: its own when the reader knows it, else the sum of its members (e.g. .wiff + .wiff.scan); stubs written before the sum was kept have `size` too
 const shownSize = (/** @type {{ dim?: number | null, size: number }} */ st) => st.dim != null ? st.dim : st.size;
-const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte });
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool: () => idxPool(), post: m => postMessage(m) });
 const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); return p && p.size === size ? [p.sha256, p.probe] : [undefined, undefined]; };
 const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
 const openGate = createOpenGate();
@@ -126,7 +127,7 @@ async function lrOpen(name) {                                             // ope
   const f = await fileOf(name);
   for (;;) {
     const ix = await ARCH.get("idx", name + ".mzidx");
-    if (!ix) { openGate.drop(slotOf(name)); return false; }
+    if (!ix) { openGate.drop(slotOf(name)); if (!sul.has(name) && !(await ARCH.get("files", name))) { lrFile.delete(name); jerr("err.file.removedElsewhere", { name }); } return false; }      // no copy nor index: another tab removed it (tabs are not kept in step)
     await ARCH.lease("idx", name + ".mzidx");
     if (!openGate.same(slotOf(name), ix)) { openGate.drop(slotOf(name)); engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"])); openGate.mark(slotOf(name), ix); }      // the same index already parsed in the slot is not parsed again
     await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader
@@ -168,14 +169,14 @@ setTimeout(() => safe(async () => {
 const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);              // a database held by another tab never answers: «start from scratch» does not wait for it
 async function lrSpace() {
   const files = await safe(() => ARCH.list("files")) || [], idx = await safe(() => ARCH.list("idx")) || [];
-  const names = new Set(files.map(f => f.name)), gone = idx.filter(e => !names.has(e.name.replace(/(\.cen)?\.mzidx$/, "")));
+  const names = new Set([...files.map(f => f.name), ...sul.names()]), gone = idx.filter(e => !names.has(ARCH.idxOwner(e.name)));
   const sum = l => l.reduce((a, e) => a + e.size, 0), est = await ARCH.estimate();
   let persisted = false; try { persisted = !!(await navigator.storage.persisted()); } catch (_) { /* optional */ }
   const feat = await safe(() => ARCH.list("feat")) || [];
   return { opfs: true, files: sum(files), idx: sum(idx), feat: sum(feat), idx_removed: sum(gone), n_removed: gone.length, usage: est.usage, quota: est.quota, persisted };
 }
 async function lrFree() {                                                 // the indexes of the files that were taken away go first
-  const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
+  const files = new Set([...(await safe(() => ARCH.list("files")) || []).map(f => f.name), ...sul.names()]);      // a file read in place has no copy: its index stays
   for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(ARCH.idxOwner(e.name))) await ARCH.remove("idx", e.name);
   await tilesDrop(null, files);
 }
@@ -199,7 +200,7 @@ function scanOp({ op, id, slot, path, query, blob }) {
 const derivata = createDerivata({ nativo, ARCH, indexPlain });
 async function indexPlain(name, blob, onProgress) {                             // the index of an mzML that is no file of the page (the one made for the graph of a maker's sample)
   const part = name + ".mzidx.part";
-  const res = await idxPool().build({ name, blob, prep: { size: blob.size, prints: [undefined, undefined] }, part, cap: BUDGET_MB, onProgress });
+  const res = await idxPool().build({ name, blob, prep: { size: blob.size, prints: [undefined, undefined] }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });
   if (!res.ok) {
     await ARCH.remove("idx", part);
     let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
@@ -232,11 +233,11 @@ async function lrMigrate() {                                              // wha
 let scaldaP = null; const scalda = () => scaldaP || (scaldaP = import("./rust-scalda.js").then(M => M.createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } })));      // the warm-up of the pointed folder (rust-scalda.js): loaded on first use, never at start-up
 const CANCELLED = new Set();                                              // names whose loading the page cancelled (lr_cancel): the copy and the index stop, a new lr_put starts afresh
 const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params: {} });
-const plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree(), gunzip: cap => new Gunzip(cap) });      // the copy of a plain upload (rust-carica.js)
+const plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree(), gunzip: cap => new Gunzip(cap) }), sul = createSulPosto({ ARCH, tilesDrop, post: m => postMessage(m), safe, lost: () => nativo.lost() });      // the copy of a plain upload (rust-carica.js); a big mzML with no room for it is read in place (rust-sul-posto.js)
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
   CANCELLED.delete(m.name);
-  const size = m.gz ? await gzRoom(m.blob) : m.blob.size;      // a .mzML.gz asks the room of its mzML
-  if (!m.nat) { if (!m.warm && size >= ARCH.BIG) await (await scalda()).makeRoom(size * ARCH.ROOM); await ARCH.ensureRoom(size, m.name); }      // a real load wins over the files warmed ahead; room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
+  const size = m.gz ? await gzRoom(m.blob) : m.blob.size; let inPlace = false;      // a .mzML.gz asks the room of its mzML
+  if (!m.nat) { if (!m.warm && size >= ARCH.BIG) await (await scalda()).makeRoom(size * ARCH.ROOM); inPlace = await sul.room(m, size); }      // a real load wins over the files warmed ahead; room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
   idxPool().cancel(m.name);
   engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name));
   for (const ix of [m.name + ".mzidx", m.name + ".cen.mzidx"]) {         // an index of a newer program stays where it is (lr_index then answers error.newerFormat)
@@ -253,7 +254,7 @@ async function lrPut(m) {                                              // an upl
     return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
   }
   nativo.forget(m.name);                                               // a plain mzML of a name that held a sample of a maker's file: its stub is gone
-  f = await (m.gz ? plain.putGz(m) : plain.putPlain(m));
+  f = await sul.copy(m, size, inPlace, () => m.gz ? plain.putGz(m) : plain.putPlain(m));
   lrFile.set(m.name, f);
   if (/\.dam$/i.test(m.name)) ARCH.release(m.name);                    // a method has no index
   await ARCH.persistOnce();
@@ -273,22 +274,21 @@ const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await A
 async function lrIndexOwn(m) {
   const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
   if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
-  const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
+  const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
   if (CANCELLED.has(m.name)) throw cancelled();
-  const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic });      // wait: the pool has no free worker yet
+  const onProgress = p => { nativo.early.tell(m.name, m.id, p); postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic }); };      // wait: the pool has no free worker yet
   const early_tic = earlyTicOf(job);
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
-  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
-    : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
+  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, budget: idxBudget(), onProgress }
+    : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
   }
   if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
     if (res.reason === "cancelled") { safe(() => Promise.all([part, part.replace(/\.part$/, ".sp.part"), ...(partCen ? [partCen] : [])].map(n => ARCH.removeHeld("idx", n)))); throw cancelled(); }      // the stopped builder still holds these files for a moment
     await ARCH.remove("idx", part);
-    if (res.reason === "memory") jerr("error.memoryBudget");
     let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
     if (key) throw res.text;
     throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
@@ -296,15 +296,15 @@ async function lrIndexOwn(m) {
   await ARCH.promote("idx", part, m.name + ".mzidx");
   let opened = false;
   try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
-  if (!opened) jerr("err.engine.index");
-  return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
+  if (!opened) jerr("err.engine.index", { name: m.name });
+  nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
 }
 let flowCenOps;
 const flowCen = () => flowCenOps || (flowCenOps = createFlowCentroid({ ARCH, infoDi, nuovo, safe, version, lrPut, lrIndex, lrFile, release: n => ARCH.release(n), close: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } }));
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
-      await safe(() => gzClean(ARCH)); for (const name of await safe(() => nativo.orphans()) || []) postMessage({ op: "notice", key: "load.natInterrupted", params: { name } });      // what the inflate of a .gz or the copy of a maker's file left in a closed tab (rust-carica.js, rust-nativo.js)
+      await sul.boot(); await safe(() => gzClean(ARCH)); for (const name of await safe(() => nativo.orphans()) || []) postMessage({ op: "notice", key: "load.natInterrupted", params: { name } });      // what the inflate of a .gz or the copy of a maker's file left in a closed tab (rust-carica.js, rust-nativo.js)
       if (!m.fresh) await lrMigrate(); const out = [], warm = new Set((await safe(() => ARCH.list("warm")) || []).map(e => e.name.replace(/\.json$/, "")));      // warm: built ahead, not opened, not in the list
       for (const e of await ARCH.list("files")) {
         if (/\.part$/.test(e.name) || warm.has(e.name)) continue;
@@ -321,7 +321,7 @@ async function lrOp(m) {
     case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); idxPool().cancel(n); ARCH.release(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
     case "lr_index": try { return await lrIndex(m); } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
-      const job = await nativo.indexJob(m.name), part = m.name + ".cen.mzidx.part";
+      const job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".cen.mzidx.part";
       if (!job) jerr("err.session.fileNotFound");
       const res = await idxPool().build({ name: m.name, nat: { ...job, st: { ...job.st, centroid: true } }, part });
       if (!res.ok) { await ARCH.remove("idx", part); throw JSON.stringify({ error_key: "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } }); }
@@ -331,11 +331,11 @@ async function lrOp(m) {
     case "lr_cen_have": return { info: JSON.stringify({ ...await flowCen().have(m), source: !!await ARCH.get("files", m.name) }) };      // the Flow's centroid copy of a profile mzML (rust-flow-centroid.js)
     case "lr_cen_adopt": await flowCen().adopt(m); return { info: "{}" };
     case "lr_entry": {
-      const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");
+      const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index", { name: m.name });
       const info = engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)), st = await nativo.stubOf(m.name);
       return { info: st ? JSON.stringify({ ...JSON.parse(info), size: shownSize(st), nat: true }) : info };
     }
-    case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
+    case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index", { name: m.name }); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
     case "lr_isotope_fine": return { info: isotope_fine(m.query || "") };                  // an engine error is thrown as JSON with a key
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)
     case "lr_stat": return { info: (await rotte()).stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
@@ -351,7 +351,7 @@ async function lrOp(m) {
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_ion_pattern": return { info: ion_pattern(m.f || "", m.adduct || "") };
     case "lr_remove": {
-      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await (CANCELLED.has(m.name) ? ARCH.removeHeld : ARCH.remove)("files", m.name); await tilesDrop(m.name, null); for (const x of [".mzidx", ".cen.mzidx", ".cen.key"]) await ARCH.remove("idx", m.name + x); tidySoon();      // the indexes of the file go with it; the rest of the archive is tidied once per burst
+      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); sul.forget(m.name); nativo.forget(m.name); await (CANCELLED.has(m.name) ? ARCH.removeHeld : ARCH.remove)("files", m.name); await tilesDrop(m.name, null); for (const x of [".mzidx", ".cen.mzidx", ".cen.key", ".sul"]) await ARCH.remove("idx", m.name + x); tidySoon();      // the indexes of the file go with it; the rest of the archive is tidied once per burst
       return { info: "{}" };
     }
     case "lr_space": { if (m.free) await (m.free === "derived" ? lrFreeDerived() : lrFree()); return { info: JSON.stringify(await lrSpace()) }; }
@@ -359,7 +359,7 @@ async function lrOp(m) {
     case "lr_kv_set": { await safe(() => tx("kv", "readwrite", s => s.put(m.value, m.key))); return { info: "{}" }; }
     case "lr_clear": {                                                    // «New session» with fresh = true: files, indexes, notebook
       for (const n of [...lrFile.keys()]) engine.close(slotOf(n));
-      lrFile.clear(); openGate.clear(); nativo.forgetAll();
+      lrFile.clear(); sul.clear(); openGate.clear(); nativo.forgetAll();
       await safe(async () => { await ARCH.clear("files"); await ARCH.clear("idx"); await ARCH.clear("warm"); await tilesDrop(null, null); });
       await within(safe(() => tx("files", "readwrite", s => s.clear())), 5000); await within(safe(() => tx("kv", "readwrite", s => s.clear())), 5000);
       return { info: "{}" };
