@@ -211,12 +211,23 @@ impl SubTable {
     }
 }
 
+/// Cells of the sub-formula grid of `ion`: the product of (count + 1) over its elements.
+fn grid_cells(ion: &Formula) -> f64 {
+    ion.values().fold(1f64, |a, v| a * (*v + 1) as f64)
+}
+
+/// The grid of `ion` is too large to build under `max_n` (or for a `u32` row index).
+pub fn too_many_subformulas(ion: &Formula, max_n: i64) -> bool {
+    let total = grid_cells(ion);
+    total > max_n as f64 || total >= u32::MAX as f64
+}
+
 /// The sub-formulas of `ion`, or `None` when the grid would hold more than `max_n` cells (or an element is outside the 16). A Na/K adduct keeps its cation.
 pub fn subformula_table(ion: &Formula, pol: &str, adduct: &str, max_n: i64) -> Option<SubTable> {
     let els: Vec<String> = ion.keys().cloned().collect();
     let radix: Vec<i64> = els.iter().map(|e| ion[e] + 1).collect();
-    let total = radix.iter().fold(1f64, |a, r| a * *r as f64);
-    if total > max_n as f64 || total >= u32::MAX as f64 {
+    let total = grid_cells(ion);
+    if too_many_subformulas(ion, max_n) {
         return None;
     }
     let mass: Vec<f64> = els.iter().map(|e| atom_mass(e)).collect::<Option<_>>()?;
@@ -413,6 +424,8 @@ pub struct Explanation {
     pub n_expl: usize,
     pub frac_expl: f64,
     pub decoy_frac: f64,
+    /// The sub-formula grid of the ion is larger than `max_subformulas`: no peak could be tried.
+    pub too_many: bool,
 }
 
 impl Explanation {
@@ -426,6 +439,7 @@ impl Explanation {
             n_expl: 0,
             frac_expl: 0.0,
             decoy_frac: 0.0,
+            too_many: false,
         }
     }
     /// The precursor is explained within `ppm_ion`.
@@ -459,6 +473,7 @@ pub fn explain(
         return o;
     }
     let Some(table) = subformula_table(&am.ion, pol, &am.adduct, s.max_subformulas) else {
+        o.too_many = too_many_subformulas(&am.ion, s.max_subformulas);
         return o;
     };
     let total: f64 = exp.1.iter().sum();

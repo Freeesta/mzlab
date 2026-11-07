@@ -358,6 +358,7 @@ I18N.add("en", {
   "error.tpNoBlock": "The table has no block of transformation products for this parent compound.",
   "error.tpNoControls": "The table has no control files to compare with the treated ones: mark them.",
   "warn.flow.formula.ion": "The ion written here has a different polarity from the data.",
+  "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
   "warn.msngrafo.rottureCapped": "There are too many bond cleavages: only the first ones were tried.",
   "warn.qc.mass.few_refs": "Too few reference ions were found to judge the mass accuracy of this file.",
   "warn.qc.mass.is_area": "The area of the internal standard changes a lot between files.",
