@@ -19,7 +19,7 @@ Né il nome né la posizione dell'elemento entrano nella chiave: il file si iden
 - La chiave non dipende dall'esito dei lavori a monte, quindi si conosce prima di eseguire; la chiave di oggi (`cache_key`, SHA delle uscite) resta come verifica del file preso dalla cache.
 
 ## Stati
-`waiting` (ingressi non pronti) · `ready` · `running{frac}` · `done` · `reused` (dalla cache) · `stale` (c'è un'uscita di una chiave vecchia; il lavoro si rifà appena i suoi ingressi sono `done`/`reused`) · `cancelled` · `error{key,params}` · `refused` (`error.featMemory`) · `blocked{by}` (`plan.problem`, `platform.computer`, o il permesso dato a `block`) · `skipped` (un antenato è in errore, rifiutato, saltato o annullato) · `paused` (solo in vista: `ready` mentre lo scheduler è in pausa).
+`waiting` (ingressi non pronti) · `ready` · `running{frac}` · `done` · `reused` (dalla cache) · `stale` (c'è un'uscita di una chiave vecchia; il lavoro si rifà appena i suoi ingressi sono `done`/`reused`) · `cancelled` · `error{key,params}` · `refused` (`error.featMemory`) · `blocked{by}` (`plan.problem`, `platform.computer`, o il permesso dato a `block`; una chiave nuova toglie il blocco di `block`) · `skipped` (un antenato è in errore, rifiutato, saltato o annullato) · `paused` (solo in vista: `ready` mentre lo scheduler è in pausa).
 - Stati che restano finché la chiave non cambia: `running`, `done`, `reused`, `error`, `refused`, `cancelled`; `retry(id)` rimette in fila gli ultimi tre. Gli altri si ricavano a ogni cambio dai lavori da cui dipendono.
 - `finished(id, Err(e))`: `error.featMemory` → `refused`, `err.flow.cancelled` → `cancelled`, altro → `error`.
 

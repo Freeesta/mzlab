@@ -123,6 +123,18 @@ try:
             pg.evaluate("LISTE.exclReset()")
         step("keyboard: legend button -> menu -> exclude, arrows and Enter", kbd_menu)
 
+        def finger():
+            # a tap is a click (touch.js): the diamond of a sign opens the same menu as the mouse (iPad)
+            cdp = pg.context.new_cdp_session(pg); cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": True, "maxTouchPoints": 5})
+            pg.evaluate(f"document.getElementById('ctx').hidden=true;{SP}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
+            x, y = pg.evaluate(f"(()=>{{const p={SP},r=p.cv.getBoundingClientRect(),c=p._a.cmarks[0];return [r.left+c.x,r.top+c.y]}})()")
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y, "id": 0}]})
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+            attendi(pg, "!document.getElementById('ctx').hidden")
+            assert pg.evaluate("document.querySelector('#ctx [role=menuitem]') && document.getElementById('ctx').textContent").find(pg.evaluate("I18N.t('cont.ex.one')")) >= 0
+            pg.keyboard.press("Escape"); cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": False})
+        step("finger: a tap on the diamond of a sign opens its menu", finger)
+
         def sess():
             k = pg.evaluate(f"LISTE.keyFor('entry', {SP}._a.cont.match({SP}._a.cmarks[0].m)[0])")
             pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)"); attendi(pg, "LISTE.exclItems().length==1")

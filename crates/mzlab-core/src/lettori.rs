@@ -188,6 +188,10 @@ pub trait Lettore {
     fn campioni(&self) -> &[Campione];
     /// The scans of sample `c`, in the order of time.
     fn indice(&mut self, c: usize) -> Result<&[VoceScansione]>;
+    /// The rows of `indice` for a caller that does not read their `tic`: a reader that sums it from the points of spectra it must decode (Bruker MS2) may leave it 0.
+    fn indice_senza_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.indice(c)
+    }
     /// Scan `k` of the index of sample `c`.
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum>;
     /// Scan `k` for a caller that holds the index already (the module of the readers, `trasporto.rs`): the points, level, polarity, profile, RT and precursor as `scansione`
@@ -317,6 +321,16 @@ pub fn estensioni_in(registro: &[VoceLettore]) -> Vec<&'static str> {
 
 pub fn estensioni() -> Vec<&'static str> {
     estensioni_in(LETTORI)
+}
+
+/// The MS1 retention times and TICs of an index, in scan order (every scan when none is MS1): the trace the page draws while the `.mzidx` of a sample is
+/// built, the same rule as for an mzML (`earlyTicInputs` of idx-aiuti.js over the scan table of `upload`).
+pub fn tic_ms1(voci: &[VoceScansione]) -> (Vec<f64>, Vec<f64>) {
+    let ms1 = voci.iter().any(|v| v.livello == 1);
+    voci.iter()
+        .filter(|v| !ms1 || v.livello == 1)
+        .map(|v| (v.rt, v.tic))
+        .unzip()
 }
 
 #[cfg(test)]

@@ -32,7 +32,8 @@ pub(crate) fn taglia(mut s: Spectrum) -> Result<Spectrum> {
 }
 
 /// The scan table of sample `c`: every scan is decoded once and its row is built from the scan itself (`Rows::lettore`), the row that `Rows::spectrum`
-/// reads from the header text `mzmlwrite::spectrum_head` would write (the writer is only used for a scan whose extras could change that text).
+/// reads from the header text `mzmlwrite::spectrum_head` would write (the writer is only used for a scan whose extras could change that text: precursors
+/// and cvParams of `precursori`, accessions in ids, filters or userParams).
 /// `n_chromatograms` counts, as in the mzML, the chromatograms the writer writes (a kind it knows, at least one point).
 pub fn righe(l: &mut dyn Lettore, c: usize) -> Result<Table> {
     tabella(l, c, None)
@@ -78,8 +79,10 @@ fn riga(
     prima: Option<&mut Prima<'_>>,
 ) -> Result<()> {
     let extra = l.extra_mzml(s);
-    // the sum `spectrum_head` writes
-    let tic: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+    // the total `spectrum_head` writes: the maker's, else the sum of the points
+    let tic = extra
+        .tic
+        .unwrap_or_else(|| (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum());
     if !rows.lettore(s, &extra, tic) {
         rows.spectrum(0, 0, &mzmlwrite::spectrum_head(k, s, &extra));
     }
