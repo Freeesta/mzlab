@@ -126,3 +126,14 @@ fn a_manual_budget_is_kept_inside_the_limits_and_says_so() {
     assert!(j.starts_with("{\"mode\":\"manual\",\"mb\":128"));
     assert!(j.contains("\"levels\":[96,128,192,512,1024,2048,3072]"));
 }
+
+#[test]
+fn an_index_builder_gets_its_share_of_the_native_budget_within_limits() {
+    const MB: usize = 1 << 20;
+    // 16 GB computer (4096 MB) with 4 builders: 819 MB each; 64 GB: 1 GB at most; a small or unknown budget keeps the default
+    assert_eq!(index_budget(4096.0, 4), 819 * MB);
+    assert_eq!(index_budget(16384.0, 4), 1024 * MB);
+    assert_eq!(index_budget(192.0, 4), crate::mzidx::DEFAULT_BUDGET);
+    assert_eq!(index_budget(0.0, 0), crate::mzidx::DEFAULT_BUDGET);
+    assert_eq!(index_budget(1024.0, 1), 512 * MB);
+}

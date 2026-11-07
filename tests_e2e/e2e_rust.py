@@ -136,7 +136,7 @@ try:
             pg.evaluate("window.MZLAB_RUST.forgetFaults()")      # brings the engine back for the steps that follow
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 0 && window.MZLAB_RUST.disabled === false", timeout=30000)
             r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]
-        step("deaths with the signature of a lack of memory: one level lower, then 192 MB at most, then off with error.memoryBudget (no loop)", die_oom)
+        step("deaths with the signature of a lack of memory: one level lower, then 192 MB at most, then off with error.engineOffMemory (no loop)", die_oom)
         def die_once():
             pg.evaluate("window.MZLAB_RUST.crash()")
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 1", timeout=30000)

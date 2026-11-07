@@ -69,6 +69,35 @@ fn a_budget_that_cannot_hold_the_table_is_refused_in_order() {
     assert_eq!(o.code, 1, "{}", o.stderr);
     let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
     assert!(prov.contains("error.memoryBudget"), "{prov}");
+    // the refusal is said in words with the next step, under the key and its numbers
+    assert!(
+        o.stderr
+            .contains("give more working memory with --budget-mb N"),
+        "{}",
+        o.stderr
+    );
+}
+
+#[test]
+fn an_index_refused_for_a_dense_mz_range_names_the_budget_to_set() {
+    let (dir, _) = fixture("budget_index");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let o = flow_run(&[
+        p(&plan),
+        "--in",
+        p(&data),
+        "--out",
+        p(&out),
+        "--set",
+        "idx.budget=1",
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    assert!(
+        o.stderr.contains("the densest 1-Da m/z range")
+            && o.stderr.contains("try --set idx.budget="),
+        "{}",
+        o.stderr
+    );
 }
 
 #[test]
