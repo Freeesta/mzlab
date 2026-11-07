@@ -137,3 +137,13 @@ fn an_index_builder_gets_its_share_of_the_native_budget_within_limits() {
     assert_eq!(index_budget(0.0, 0), crate::mzidx::DEFAULT_BUDGET);
     assert_eq!(index_budget(1024.0, 1), 512 * MB);
 }
+
+#[test]
+fn jobs_that_run_together_share_the_native_budget_but_never_drop_under_128_mb() {
+    assert_eq!(share_mb(4096.0, 1), 4096.0);
+    assert_eq!(share_mb(4096.0, 4), 1024.0);
+    assert_eq!(share_mb(1000.0, 3), 333.0);
+    assert_eq!(share_mb(256.0, 4), 128.0);
+    assert_eq!(share_mb(96.0, 4), 96.0);
+    assert_eq!(share_mb(4096.0, 0), 4096.0);
+}
