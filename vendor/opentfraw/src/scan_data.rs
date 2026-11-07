@@ -21,10 +21,12 @@ fn con_blocco<R: Read + Seek, T>(
 ) -> Result<T> {
     BLOCCO.with(|b| {
         let mut b = b.borrow_mut();
-        b.clear();
-        b.resize(n, 0);
-        let letto = r.read_bytes_into(&mut b[..]);
-        let esito = letto.map(|()| f(&b[..]));
+        // the read overwrites the bytes: only a longer block is zeroed (by the growth), not every block
+        if b.len() < n {
+            b.resize(n, 0);
+        }
+        let letto = r.read_bytes_into(&mut b[..n]);
+        let esito = letto.map(|()| f(&b[..n]));
         if b.capacity() > BLOCCO_MAX {
             *b = Vec::new();
         }

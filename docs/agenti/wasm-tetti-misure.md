@@ -1,6 +1,7 @@
 # Misure prima/dopo dei moduli .wasm
 Una riga per modifica: byte prima → dopo (dopo `wasm-bindgen` e `wasm-opt -O3 @motore`, binaryen 133, salvo dove la riga dice altro) e tetto, che sta in `tools/build_*_wasm.sh` (`docs/agenti/wasm-tetti.md`). I valori del passo «size» della CI fanno fede.
 
+- **features.group, coppie già legate per bisezione** (`ionnet::group`, elenco ordinato con `sortc::by` al posto della scansione degli archi): `flowtab` prima di `wasm-opt` 1 058 595 → 1 061 186 B (+2 591, +0,24 %); un `HashSet` costava +12 351 B. Tetto standard invariato, il passo «size» della CI fa fede.
 - **Matrice DAD letta una volta** (`Mzml::dad_memo` in `mzml_dad.rs`, spettri `MS:1000804`): motore 2 033 700 → 2 035 249 B dopo `wasm-opt -O3 @motore` (+1 549 B, +0,08 %), sotto il tetto 2 174 976; nessun tetto cambia.
 - **Lettori, guardia dei numeri non finiti** (`finiti::Finiti` in `mzlab_lettori::apri_nudo`, `SrmDaScansioni` che inoltra profilo e testata leggera, valori di MS-Numpress controllati), byte dopo `wasm-bindgen` 0.2.129 e `tools/wasm_opt.sh`, tetti invariati:
 - **ANDI, BPC dai picchi base annotati** (`andi::ms::nota_bpc`): `andi` prima di `wasm-opt` 932 204 → 933 611 B (+1 407, +0,15 %); tetto invariato 344 064.
@@ -43,3 +44,4 @@ Una riga per modifica: byte prima → dopo (dopo `wasm-bindgen` e `wasm-opt -O3 
 - **Nome della sorgente di un `.mzidx` da lettore** (`upload::nome_insieme`): motore 3 418 454 → 3 419 233 B prima di `wasm-opt` (+779); tetto invariato.
 - **TIC provvisorio di un `.raw` durante la copia** (`native_early_tic`, `lettori::tic_ms1`): motore 2 046 647 → 2 047 887 B (+1 240, +0,06 %) dopo `wasm-bindgen` e `tools/wasm_opt.sh @motore`; tetto invariato 2 174 976.
 - **features.estimate nel browser** (`flow_estimate` del `hr` = `run_estimate::estimate_of`; `root` nei lavori di `next` dello scheduler, modulo `rotte`): hr 1 664 582 → 1 667 684 (+0,19 %, tetto 1 703 936), rotte 812 723 → 813 419 (+0,09 %, tetto 884 736), motore invariato 2 044 414; tetti fermi.
+- **Finestra adattiva delle letture `.raw`** (`rawlettore::Stream`; `con_blocco` e `BlockCache` senza azzerare): `thermo` 691 000 → 691 282 B (+282, +0,04 %); motore invariato (codice di `thermo` non compreso nel motore); tetto invariato 774 144.
