@@ -55,8 +55,8 @@
   async function copyTable(/** @type {HTMLElement} */ b) {
     const wrap = /** @type {any} */ (b.querySelector("#inf-wrap"));
     if (!wrap || !wrap._rows) return;
-    const txt = await PROV.tsv(tsvOf(wrap._j, wrap._rows), { table: "msn-precursors" });
-    try { await navigator.clipboard.writeText(txt); nearMsg(I18N.t("bn.copied.txt")); } catch (_) { info(I18N.t("bn.noClip")); }
+    const txt = PROV.tsv(tsvOf(wrap._j, wrap._rows), { table: "msn-precursors" });      // not awaited: Safari takes the clipboard only while the click runs
+    try { await clipboardCopy({ "text/plain": txt }); nearMsg(I18N.t("bn.copied.txt")); } catch (_) { info(I18N.t("bn.noClip")); }
   }
   /** Click, Enter, arrows and right-click of the table: the node goes to the active cell. */
   function wire(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @type {any} */ f, /** @type {HTMLElement} */ table, /** @type {any[]} */ rows) {
