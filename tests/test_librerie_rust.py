@@ -15,14 +15,14 @@ hr = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(hr)
 
 pytestmark = [
-    pytest.mark.skipif(hr._dati() is None, reason="MZLAB_DATI with librerie/ and HRMS/ not available"),
+    pytest.mark.skipif(hr._data() is None, reason="MZLAB_DATI with librerie/ and HRMS/ not available"),
     pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not available"),
 ]
 
 
 @pytest.fixture(scope="module")
 def result(tmp_path_factory):
-    d = hr._dati()
+    d = hr._data()
     q, allq = hr._queries(d["hrms"])
     tmp = tmp_path_factory.mktemp("rust_ident")
     qf = tmp / "q.json"

@@ -4,20 +4,20 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TETTI = {"aperti": 561152, "andi": 344064, "thermo": 774144, "agilent": 606208, "sciex": 475136, "waters": 380928, "shimadzu": 380928, "bruker": 532480, "valida": 479744}
+CAPS = {"aperti": 561152, "andi": 344064, "thermo": 774144, "agilent": 606208, "sciex": 475136, "waters": 380928, "shimadzu": 380928, "bruker": 532480, "valida": 479744}
 
 
 def tabella():
     s = (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
-    blocco = re.search(r'^tetti="(.*?)"', s, re.M | re.S).group(1)
-    return {f: int(n) for f, n in (r.split() for r in blocco.strip().splitlines())}
+    block = re.search(r'^tetti="(.*?)"', s, re.M | re.S).group(1)
+    return {f: int(n) for f, n in (r.split() for r in block.strip().splitlines())}
 
 
 def test_tetti_nello_script():
     t = tabella()
-    assert set(t) == set(TETTI)
+    assert set(t) == set(CAPS)
     for f, n in t.items():
-        assert n <= TETTI[f], (f, n)
+        assert n <= CAPS[f], (f, n)
 
 
 def test_il_motore_non_nomina_i_moduli():
@@ -28,14 +28,14 @@ def test_il_motore_non_nomina_i_moduli():
 def test_ogni_famiglia_ha_la_sua_feature():
     for crate in ("mzlab-lettori", "mzlab-lettori-wasm"):
         c = (ROOT / "crates" / crate / "Cargo.toml").read_text(encoding="utf-8")
-        for f in TETTI:
+        for f in CAPS:
             if f == "valida" and crate == "mzlab-lettori":    # the validator reads no maker's format
                 continue
             assert re.search(rf"^{f} = ", c, re.M), (crate, f)
 
 
 def test_costruiti_dentro_il_tetto():
-    for f, n in TETTI.items():
+    for f, n in CAPS.items():
         w = ROOT / "site/static/wasm-lettori" / f / "mzlab_lettori_wasm_bg.wasm"
         if w.exists():
             assert w.stat().st_size < n, (f, w.stat().st_size)
@@ -52,8 +52,8 @@ def test_passi_estesi_una_sola_lista():
     assert "@estesi" in (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
     assert "--converge" not in (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
     for wf in ("pages", "sito-rust", "release", "notte"):
-        righe = [r for r in (ROOT / f".github/workflows/{wf}.yml").read_text(encoding="utf-8").splitlines() if "tools/wasm_opt.sh site/static" in r]
-        assert len(righe) == 2 and all(r.rstrip().endswith("@motore") for r in righe), (wf, righe)
+        rows = [r for r in (ROOT / f".github/workflows/{wf}.yml").read_text(encoding="utf-8").splitlines() if "tools/wasm_opt.sh site/static" in r]
+        assert len(rows) == 2 and all(r.rstrip().endswith("@motore") for r in rows), (wf, rows)
 
 
 def test_wasm_opt_espande_estesi(tmp_path):
@@ -83,7 +83,7 @@ def test_wasm_opt_espande_estesi(tmp_path):
     assert r.returncode == 0 and "--converge" not in (tmp_path / "args").read_text()
 
 
-def _dati_minimi(b: bytes):
+def _minimal_data(b: bytes):
     """The lowest address of an active data segment of a .wasm (None without any)."""
     def leb(i):
         r = s = 0
@@ -117,5 +117,5 @@ def _dati_minimi(b: bytes):
 def test_la_memoria_sotto_1024_non_e_dei_dati():
     """`--low-memory-unused` is safe because rustc links the stack first: no data lives below 1024 (the .wasm built here or by the CI, when present)."""
     for w in [*(ROOT / "target/wasm32-unknown-unknown/release").glob("mzlab_*.wasm"), *(ROOT / "site/static").glob("wasm*/**/*_bg.wasm")]:
-        m = _dati_minimi(w.read_bytes())
+        m = _minimal_data(w.read_bytes())
         assert m is None or m >= 1024, (w.name, m)

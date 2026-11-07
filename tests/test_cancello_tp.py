@@ -16,8 +16,8 @@ from valida.tabelle import Tabella  # noqa: E402
 
 DATA = "2026-10-12"
 # rows: (mz, rt, area): 0 product A, 1 product B (isomer pair with 2), 2 product B', 3 inherited ion (constant ratio), 4 inherited ion that coelutes with a product, 5 noise
-RIGHE = [(300.1000, 2.00, 5e6), (320.2000, 3.00, 4e6), (320.2000, 3.20, 3e6), (250.1000, 5.00, 2e6), (270.1500, 5.00, 1e6), (410.3000, 6.00, 1e5)]
-VERITA = {"tps": [{"id": "A", "mz": 300.1, "rt_obs": [2.0]}, {"id": "B", "mz": 320.2, "rt_obs": [3.0, 3.2]}, {"id": "C", "mz": 500.0, "rt_obs": [4.0]}, {"id": "D", "mz": 270.15, "rt_obs": []}],
+ROWS = [(300.1000, 2.00, 5e6), (320.2000, 3.00, 4e6), (320.2000, 3.20, 3e6), (250.1000, 5.00, 2e6), (270.1500, 5.00, 1e6), (410.3000, 6.00, 1e5)]
+TRUTH = {"tps": [{"id": "A", "mz": 300.1, "rt_obs": [2.0]}, {"id": "B", "mz": 320.2, "rt_obs": [3.0, 3.2]}, {"id": "C", "mz": 500.0, "rt_obs": [4.0]}, {"id": "D", "mz": 270.15, "rt_obs": []}],
           "righe_isomeri": [{"id": "320-A", "gruppo": "320", "mz": 320.2, "rt_obs": 3.0, "rt_separabile": "osservato"}, {"id": "320-B", "gruppo": "320", "mz": 320.2, "rt_obs": 3.2, "rt_separabile": "osservato"},
                             {"id": "999-A", "gruppo": "999", "mz": 999.0, "rt_obs": None, "rt_separabile": "ignoto"}],
           "ereditati": [{"id": "ISF-250", "mz": 250.1, "rapporto_costante": True, "coeluisce_con_tp": None, "rt_atteso": 5.0},
@@ -25,15 +25,15 @@ VERITA = {"tps": [{"id": "A", "mz": 300.1, "rt_obs": [2.0]}, {"id": "B", "mz": 3
                         {"id": "ISF-var", "mz": 410.3, "rapporto_costante": False, "coeluisce_con_tp": None, "rt_atteso": 6.0}]}
 
 
-def serie(candidati=(0, 1, 2, 3, 4)) -> Serie:
-    mz, rt, area = (np.array(x, dtype=float) for x in zip(*RIGHE))
+def series(candidati=(0, 1, 2, 3, 4)) -> Serie:
+    mz, rt, area = (np.array(x, dtype=float) for x in zip(*ROWS))
     tab = Tabella("nativo", ["f1", "f2"], mz, rt, np.stack([area, area], axis=1))
-    ident = [{"id": r, "totale": 5 - r, "membri": [{"mz": RIGHE[r][0], "rt": RIGHE[r][1]}], "ipotesi": None} for r in range(len(RIGHE))]
-    return Serie(tabella=tab, stato=np.zeros((len(RIGHE), 2), dtype=np.uint8), identita=ident, candidati=np.array(candidati), per_file=[], versione_crate="9.9.9")
+    ident = [{"id": r, "totale": 5 - r, "membri": [{"mz": ROWS[r][0], "rt": ROWS[r][1]}], "ipotesi": None} for r in range(len(ROWS))]
+    return Serie(tabella=tab, stato=np.zeros((len(ROWS), 2), dtype=np.uint8), identita=ident, candidati=np.array(candidati), per_file=[], versione_crate="9.9.9")
 
 
 def test_raw_view_measures():
-    m = T.misure_vista_grezza(VERITA, serie(), [0, 1])
+    m = T.misure_vista_grezza(TRUTH, series(), [0, 1])
     assert m["tp_veri"] == 4 and m["tp_trovati"] == 3 and m["tp_in_vista"] == 3          # C has no row; D (no RT) is found by m/z alone
     assert m["vista_dimensione"] == 5 and m["rango_mediano"] == 2.0 and m["rango_90"] <= 5
     assert m["isomeri_righe_per_gruppo"] == {"320": 2}                                     # the group with unknown RT is skipped
@@ -42,12 +42,12 @@ def test_raw_view_measures():
 
 
 def test_view_membership_follows_the_candidates():
-    m = T.misure_vista_grezza(VERITA, serie(candidati=(0,)), [0, 1])
+    m = T.misure_vista_grezza(TRUTH, series(candidati=(0,)), [0, 1])
     assert m["tp_trovati"] == 3 and m["tp_in_vista"] == 1 and m["vista_dimensione"] == 1 and m["ereditati_come_tp"] == 0
 
 
 def test_criteria_and_open_rule():
-    c = T.criteri_tp(T.misure_vista_grezza(VERITA, serie(), [0, 1]))
+    c = T.criteri_tp(T.misure_vista_grezza(TRUTH, series(), [0, 1]))
     ok = {k["id"]: k["ok"] for k in c}
     assert ok["tp_trovati"] is False and ok["vista_dimensione"] is True and ok["ereditati_come_tp"] is False       # 3 < 22; 5 <= 200; one fault
     assert ok["generazione"] is None and ok["lr_tp"] is None and ok["determinismo_tp"] is None
@@ -65,7 +65,7 @@ def test_nothing_measured_without_truth():
 
 
 def test_report_files(tmp_path):
-    c, det = T.misura(VERITA, serie(), [0, 1], "D-X", DATA)
+    c, det = T.misura(TRUTH, series(), [0, 1], "D-X", DATA)
     assert c["crate_version"] == "9.9.9"
     out = rapporto.scrivi_cancello_tp(tmp_path / "r", c, det, tmp_path / "cancello_tp.json")
     assert json.loads(out[0].read_text(encoding="utf-8"))["format"] == "cancello_tp/1"

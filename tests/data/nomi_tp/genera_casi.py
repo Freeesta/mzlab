@@ -22,7 +22,7 @@ import pyteomics.mass
 # -----------------------------------------------------------------------------
 # Deterministic transformation data (120 rows over 8 parent molecules)
 # -----------------------------------------------------------------------------
-TRASFORMAZIONI_RAW = """case_id,parent_name,parent_smiles,parent_formula,transformation,net_change,tp_formula_neutral
+TRANSFORMATIONS_RAW = """case_id,parent_name,parent_smiles,parent_formula,transformation,net_change,tp_formula_neutral
 T001,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,idrossilazione,+O,C15H12N2O2
 T002,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,addizione di metano,+CH4,C16H16N2O
 T003,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,diidrossilazione,+2O,C15H12N2O3
@@ -192,14 +192,14 @@ def get_versions() -> tuple[str, str]:
     return py_ver, pyt_ver
 
 
-def generate_trasformazioni_bytes() -> bytes:
+def generate_transformations_bytes() -> bytes:
     """Generates the exact bytes of trasformazioni.csv, deterministically."""
-    lines = [line.strip("\r\n") for line in TRASFORMAZIONI_RAW.strip().splitlines()]
+    lines = [line.strip("\r\n") for line in TRANSFORMATIONS_RAW.strip().splitlines()]
     content = "\r\n".join(lines) + "\r\n"
     return content.encode("utf-8")
 
 
-def build_casi_nomi_records(t_rows: list[dict[str, str]]) -> list[dict]:
+def build_name_cases_records(t_rows: list[dict[str, str]]) -> list[dict]:
     """Builds the 110 test cases from the naming specs."""
     used_nominal_groups: set[tuple[str, int]] = set()
     for p, f, _ in ISOMERS_SPEC:
@@ -263,7 +263,7 @@ def build_casi_nomi_records(t_rows: list[dict[str, str]]) -> list[dict]:
     return all_cases
 
 
-def generate_casi_nomi_bytes(records: list[dict]) -> bytes:
+def generate_name_cases_bytes(records: list[dict]) -> bytes:
     """Generates the exact bytes of casi_nomi.csv (CRLF, UTF-8)."""
     fieldnames = [
         "case_id", "parent_name", "tp_formula_neutral", "adduct",
@@ -316,17 +316,17 @@ def main() -> None:
     print("=================================================================")
 
     # 1. Generate and check trasformazioni.csv
-    trasf_bytes = generate_trasformazioni_bytes()
-    trasf_path = target_dir / "trasformazioni.csv"
-    verify_and_write(trasf_path, trasf_bytes, "trasformazioni.csv")
+    transf_bytes = generate_transformations_bytes()
+    transf_path = target_dir / "trasformazioni.csv"
+    verify_and_write(transf_path, transf_bytes, "trasformazioni.csv")
 
     # 2. Load the transformation rows and generate casi_nomi.csv
-    reader = csv.DictReader(io.StringIO(trasf_bytes.decode("utf-8")))
+    reader = csv.DictReader(io.StringIO(transf_bytes.decode("utf-8")))
     t_rows = list(reader)
-    casi_records = build_casi_nomi_records(t_rows)
-    casi_bytes = generate_casi_nomi_bytes(casi_records)
-    casi_path = target_dir / "casi_nomi.csv"
-    verify_and_write(casi_path, casi_bytes, "casi_nomi.csv")
+    cases_records = build_name_cases_records(t_rows)
+    cases_bytes = generate_name_cases_bytes(cases_records)
+    cases_path = target_dir / "casi_nomi.csv"
+    verify_and_write(cases_path, cases_bytes, "casi_nomi.csv")
 
     # 3. Clean up obsolete scripts
     cleanup_obsolete_scripts(target_dir)
@@ -334,7 +334,7 @@ def main() -> None:
     print("-----------------------------------------------------------------")
     print(f"Rigenerazione deterministica completata con successo:")
     print(f"  - trasformazioni.csv: {len(t_rows)} righe, 11094 byte")
-    print(f"  - casi_nomi.csv:      {len(casi_records)} righe, 9324 byte")
+    print(f"  - casi_nomi.csv:      {len(cases_records)} righe, 9324 byte")
     print("=================================================================")
 
 

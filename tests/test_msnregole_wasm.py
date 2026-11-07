@@ -26,12 +26,12 @@ def pkg(tmp_path_factory):
     return d
 
 
-def attese(pkg, smiles):
+def expectations(pkg, smiles):
     return run("node", str(ROOT / "tests" / "msnregole_wasm_node.js"), str(pkg / "mzlab-msnregole-wasm"), smiles).stdout
 
 
 def test_attese_are_a_list_of_rule_formula_ion(pkg):
-    a = json.loads(attese(pkg, SMILES))
+    a = json.loads(expectations(pkg, SMILES))
     assert a and all(len(x) == 3 and x[2] in (0, 1) for x in a)
 
 
@@ -42,7 +42,7 @@ def test_a_bad_smiles_is_a_keyed_error(pkg):
 
 def test_graph_with_the_attese_of_the_wasm_is_the_graph_of_the_command(pkg):
     base = f"formula=C14H15N3O5%2B&regole=1&smiles={quote(SMILES, safe='')}"
-    query = f"{base}&attese={quote(attese(pkg, SMILES), safe='')}"
+    query = f"{base}&attese={quote(expectations(pkg, SMILES), safe='')}"
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "mzlab-msngrafo-wasm"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
     want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", SMILES, "--regole").stdout
     assert got + "\n" == want
