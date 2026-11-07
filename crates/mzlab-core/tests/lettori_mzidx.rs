@@ -103,8 +103,8 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
     }
     assert!(small == b, "{label}: the budget changes the index");
 
-    compare(label, &a, &b, &pb.sha256, membri.len(), l.campioni()[c].id);
-    let voci = l.indice(c).unwrap().to_vec();
+    compare(label, &a, &b, &pb.sha256, membri.len(), l.samples()[c].id);
+    let voci = l.index(c).unwrap().to_vec();
     // the reader of the index takes it, with the positions of the reader
     let idx = Index::open(b.clone(), b.len() as u64).unwrap();
     assert_eq!(idx.scans.len(), voci.len());
@@ -177,11 +177,11 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Letto
     let mut m = Mzml::new(by_offset, size);
     let mut tr = TracceMzml::new(&mut m, rows.last().map_or(0, |s| s.end));
     let written: Vec<VoceCromatogramma> = src
-        .cromatogrammi()
+        .chromatograms()
         .unwrap()
         .into_iter()
         .filter(|v| {
-            let t = src.cromatogramma(&v.id).unwrap();
+            let t = src.chromatogram(&v.id).unwrap();
             !t.time.is_empty()
                 && !matches!(
                     t.kind,
@@ -189,13 +189,13 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Letto
                 )
         })
         .collect();
-    let listed = tr.cromatogrammi().unwrap();
+    let listed = tr.chromatograms().unwrap();
     assert_eq!(listed.len(), written.len(), "{label}: chromatograms");
     for (x, y) in listed.iter().zip(&written) {
         assert_eq!((&x.id, x.tipo), (&y.id, y.tipo), "{label}");
         let (p, q) = (
-            tr.cromatogramma(&x.id).unwrap(),
-            src.cromatogramma(&y.id).unwrap(),
+            tr.chromatogram(&x.id).unwrap(),
+            src.chromatogram(&y.id).unwrap(),
         );
         assert!(
             p.time == q.time && p.intensity == q.intensity,
@@ -210,7 +210,7 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Letto
         srm_src,
         "{label}: SRM traces"
     );
-    let (ha, hb) = (tr.testata().unwrap(), src.testata().unwrap());
+    let (ha, hb) = (tr.file_header().unwrap(), src.file_header().unwrap());
     assert!(
         ha.starts_with(&hb) || hb.starts_with(&ha),
         "{label}: header"
@@ -221,7 +221,7 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Letto
 fn same_all(label: &str, make: &dyn Fn() -> FileSet) -> usize {
     let n = lettori::apri(make(), &Limiti::desktop())
         .unwrap()
-        .campioni()
+        .samples()
         .len();
     (0..n).map(|c| same(&format!("{label}#{c}"), make, c)).sum()
 }
@@ -335,7 +335,7 @@ fn the_real_files_give_the_index_of_their_mzml() {
     let mut count = |label: &str, make: &dyn Fn() -> FileSet| {
         let n = lettori::apri(make(), &Limiti::desktop())
             .unwrap()
-            .campioni()
+            .samples()
             .len();
         for c in 0..n {
             scans += same(&format!("{label}#{c}"), make, c);

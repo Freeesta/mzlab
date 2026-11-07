@@ -328,11 +328,11 @@ pub(crate) fn write_mzml_with(
 ) -> Result<(bool, u64, String)> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limiti::desktop())?;
-    let ids: Vec<u32> = reader.campioni().iter().map(|s| s.id).collect();
+    let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
-    let lacking = reader.mancanti(sample);
+    let lacking = reader.missing(sample);
     if lacking > 0 {
-        let have = reader.indice(sample)?.len();
+        let have = reader.index(sample)?.len();
         eprintln!(
             "warn.file.truncated: {}: {have} of {} spectra read, the file ends before the rest",
             path.display(),
@@ -341,8 +341,8 @@ pub(crate) fn write_mzml_with(
     }
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
     let profile = peaks == Picchi::File
-        && !reader.indice(sample)?.is_empty()
-        && reader.scansione(sample, 0)?.profile;
+        && !reader.index(sample)?.is_empty()
+        && reader.scan(sample, 0)?.profile;
     let conv = Conversione {
         peaks,
         opz,

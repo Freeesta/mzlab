@@ -219,9 +219,9 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     }
     let mut o = mzlab_core::json::Out::default();
     o.raw("{\"formato\":")
-        .str(l.formato().id())
+        .str(l.format().id())
         .raw(",\"campioni\":");
-    json_testo::campioni_json(&mut o, l.campioni());
+    json_testo::campioni_json(&mut o, l.samples());
     o.raw(",\"motivi\":[");
     for (i, m) in motivi.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(m);
@@ -258,7 +258,7 @@ fn apri_campione(
     mzlab_lettori::apri(fs, &Limiti::sito())
 }
 
-/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::mancanti`).
+/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::missing`).
 /// Indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
 /// the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte.
 #[wasm_bindgen]
@@ -291,7 +291,7 @@ pub fn to_mzml_with(
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     let m = Membri::new(names, sizes, read)?;
     let mut l = apri_campione(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
-    let lacking = l.mancanti(c as usize);
+    let lacking = l.missing(c as usize);
     let mut out = BlockWriter {
         sink,
         buf: Vec::new(),
@@ -353,7 +353,7 @@ fn apri_membri(fs: FileSet) -> Result<u32, JsValue> {
 }
 #[wasm_bindgen]
 pub fn samples(h: u32) -> Result<String, JsValue> {
-    con(|s| s.campioni(h))
+    con(|s| s.samples(h))
 }
 /// The version of the binary transport of the index and the scans (`mzlab_core::trasporto::PROTOCOLLO`): the engine refuses a module with another.
 #[wasm_bindgen]
@@ -363,38 +363,38 @@ pub fn protocol() -> u32 {
 /// The index of the sample as one `Uint8Array` (`mzlab_core::trasporto::encode_indice`).
 #[wasm_bindgen]
 pub fn index(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
-    con(|s| s.indice(h, c as usize))
+    con(|s| s.index(h, c as usize))
 }
 /// A scan as one `Uint8Array` (`mzlab_core::trasporto::encode_scansione`).
 #[wasm_bindgen]
 pub fn scan(h: u32, c: u32, k: u32) -> Result<Vec<u8>, JsValue> {
-    con(|s| s.scansione(h, c as usize, k as usize))
+    con(|s| s.scan(h, c as usize, k as usize))
 }
 #[wasm_bindgen]
 pub fn scan_header(h: u32, c: u32, k: u32) -> Result<String, JsValue> {
-    con(|s| s.intestazione(h, c as usize, k as usize))
+    con(|s| s.scan_header(h, c as usize, k as usize))
 }
 #[wasm_bindgen]
 pub fn chromatograms(h: u32, c: u32) -> Result<String, JsValue> {
-    con(|s| s.cromatogrammi(h, c as usize))
+    con(|s| s.chromatograms(h, c as usize))
 }
 #[wasm_bindgen]
 pub fn chromatogram(h: u32, c: u32, id: &str) -> Result<String, JsValue> {
-    con(|s| s.cromatogramma(h, c as usize, id))
+    con(|s| s.chromatogram(h, c as usize, id))
 }
 #[wasm_bindgen]
 pub fn method(h: u32, c: u32) -> Result<String, JsValue> {
-    con(|s| s.metodo(h, c as usize))
+    con(|s| s.method(h, c as usize))
 }
 /// The spectra of the sample that a truncated file declares but does not hold.
 #[wasm_bindgen]
 pub fn missing(h: u32, c: u32) -> Result<u32, JsValue> {
-    con(|s| s.mancanti(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
+    con(|s| s.missing(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
 }
 /// The header of the mzML of the sample as JSON (`null` when the reader has none).
 #[wasm_bindgen]
 pub fn file_header(h: u32, c: u32) -> Result<String, JsValue> {
-    con(|s| s.testata(h, c as usize))
+    con(|s| s.file_header(h, c as usize))
 }
 #[wasm_bindgen]
 pub fn close(h: u32) {

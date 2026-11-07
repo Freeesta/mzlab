@@ -134,7 +134,7 @@ impl Engine {
             return Ok(String::new());
         };
         let l = reader(&mut self.nat, ds)?;
-        l.metodo(c).map_err(|e| error_json(&e))
+        l.method(c).map_err(|e| error_json(&e))
     }
 }
 
@@ -149,7 +149,7 @@ pub fn native_early_tic(
 ) -> Result<js_sys::Float64Array, JsValue> {
     let mut l = Membri::new(names, sizes, read)?.open(false)?;
     let (mut rt, tic) =
-        mzlab_core::lettori::tic_ms1(l.indice(c as usize).map_err(|e| error_json(&e))?);
+        mzlab_core::lettori::tic_ms1(l.index(c as usize).map_err(|e| error_json(&e))?);
     rt.extend(tic);
     Ok(js_sys::Float64Array::from(&rt[..]))
 }

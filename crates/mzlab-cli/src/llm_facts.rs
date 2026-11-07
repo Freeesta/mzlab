@@ -84,7 +84,7 @@ fn file_source(path: &Path, sample: &Value, order: usize) -> String {
                 mzlab_core::fileroutes::mrm_transitions(&mut m, &chroms)?
             );
         }
-        if let Some(doc) = m.metodo(&name, DOC_MAX)? {
+        if let Some(doc) = m.method(&name, DOC_MAX)? {
             o += &format!(",\"method\":{doc}");
         }
         Ok(o)

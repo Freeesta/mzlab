@@ -121,7 +121,7 @@ fn a_reader_without_profile_refuses_the_profile_route_with_a_key() {
         &Limiti::sito(),
     )
     .unwrap();
-    assert!(l.scansione_profilo(0, 0).unwrap().is_none());
+    assert!(l.scan_profile(0, 0).unwrap().is_none());
     let conv = Conversione {
         peaks: Picchi::Profilo,
         ..Conversione::default()

@@ -276,7 +276,7 @@ fn warnings(d: &AgilentD) -> Vec<V> {
 
 impl AgilentD {
     /// The `metodo/1` document of the run. Never an error: what is missing is absent.
-    pub fn metodo(&self, src: &Source) -> String {
+    pub fn method(&self, src: &Source) -> String {
         let ident = ident(self);
         let created = self
             .acquired()

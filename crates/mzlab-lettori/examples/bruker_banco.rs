@@ -48,21 +48,21 @@ fn misura(dir: &Path, giri: usize) {
         let mut l = mzlab_lettori::apri(insieme(dir), &Limiti::desktop()).unwrap();
         let apri = ms(t);
         let t = Instant::now();
-        let n = l.indice(0).unwrap().len();
+        let n = l.index(0).unwrap().len();
         let indice = ms(t);
         let t = Instant::now();
-        std::hint::black_box(l.cromatogramma(0, "TIC").unwrap());
+        std::hint::black_box(l.chromatogram(0, "TIC").unwrap());
         let tic = ms(t);
         let t = Instant::now();
-        std::hint::black_box(l.cromatogramma(0, "BPC").unwrap());
+        std::hint::black_box(l.chromatogram(0, "BPC").unwrap());
         let bpc = ms(t);
         let t = Instant::now();
-        std::hint::black_box(l.scansione(0, 0).unwrap());
+        std::hint::black_box(l.scan(0, 0).unwrap());
         let primo = ms(t);
         let t = Instant::now();
         let (mut punti, mut firma) = (0usize, 0xcbf2_9ce4_8422_2325u64);
         for k in 0..n {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             punti += s.mz.len();
             // FNV-1a over the bits of every point: the same number before and after a change of the reader
             for (m, y) in s.mz.iter().zip(&s.intensity) {

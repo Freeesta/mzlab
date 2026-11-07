@@ -86,7 +86,7 @@ fn main() {
     let t = Instant::now();
     let mut s = 0usize;
     for k in 0..n {
-        s += l.scansione(0, k).unwrap().mz.len();
+        s += l.scan(0, k).unwrap().mz.len();
     }
     println!(
         "decode every scan          {:>8.3} s ({s} peaks)",

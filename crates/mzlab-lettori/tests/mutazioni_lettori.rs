@@ -54,17 +54,17 @@ fn leggi_tutto(membri: &[(String, Vec<u8>)]) -> Result<(), String> {
     let Ok(mut l) = mzlab_lettori::apri(insieme_di(membri), &Limiti::sito()) else {
         return Ok(());
     };
-    for c in 0..l.campioni().len() {
-        let _ = l.metodo(c);
-        let _ = l.testata_mzml(c);
-        let Ok(ix) = l.indice(c).map(<[_]>::to_vec) else {
+    for c in 0..l.samples().len() {
+        let _ = l.method(c);
+        let _ = l.mzml_header(c);
+        let Ok(ix) = l.index(c).map(<[_]>::to_vec) else {
             continue;
         };
         for (k, v) in ix.iter().enumerate() {
             if !v.rt.is_finite() {
                 return Err(format!("index RT of scan {k} is {}", v.rt));
             }
-            if let Ok(s) = l.scansione(c, k) {
+            if let Ok(s) = l.scan(c, k) {
                 if s.mz.len() != s.intensity.len() {
                     return Err(format!(
                         "scan {k}: {} m/z for {} intensities",
@@ -81,11 +81,11 @@ fn leggi_tutto(membri: &[(String, Vec<u8>)]) -> Result<(), String> {
                     return Err(format!("scan {k} carries {x}"));
                 }
             }
-            let _ = l.intestazione(c, k);
+            let _ = l.scan_header(c, k);
         }
-        if let Ok(cr) = l.cromatogrammi(c) {
+        if let Ok(cr) = l.chromatograms(c) {
             for v in &cr {
-                let Ok(t) = l.cromatogramma(c, &v.id) else {
+                let Ok(t) = l.chromatogram(c, &v.id) else {
                     continue;
                 };
                 if t.time.len() != t.intensity.len() {

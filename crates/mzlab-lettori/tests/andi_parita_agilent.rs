@@ -73,11 +73,11 @@ fn il_cdf_esportato_dice_quello_che_dice_la_sua_cartella_d() {
         membri(&dir, &dir, &mut m);
         let mut d_set = mzlab_lettori::apri(FileSet { membri: m }, &Limiti::desktop()).unwrap();
         let mut c_set = comune::andi::apri_andi(std::fs::read(cartella.join(cdf)).unwrap());
-        let n = d_set.campioni()[0].scansioni;
-        assert_eq!(c_set.campioni()[0].scansioni, n, "{cdf}");
+        let n = d_set.samples()[0].scansioni;
+        assert_eq!(c_set.samples()[0].scansioni, n, "{cdf}");
         let (id, ic) = (
-            d_set.indice(0).unwrap().to_vec(),
-            c_set.indice(0).unwrap().to_vec(),
+            d_set.index(0).unwrap().to_vec(),
+            c_set.index(0).unwrap().to_vec(),
         );
         for k in (0..n).step_by((n / 30).max(1)) {
             assert!(
@@ -92,10 +92,7 @@ fn il_cdf_esportato_dice_quello_che_dice_la_sua_cartella_d() {
                 id[k].tic,
                 ic[k].tic
             );
-            let (a, b) = (
-                d_set.scansione(0, k).unwrap(),
-                c_set.scansione(0, k).unwrap(),
-            );
+            let (a, b) = (d_set.scan(0, k).unwrap(), c_set.scan(0, k).unwrap());
             assert_eq!(a.mz.len(), b.mz.len(), "{cdf} scan {k}");
             for i in 0..a.mz.len() {
                 assert!(

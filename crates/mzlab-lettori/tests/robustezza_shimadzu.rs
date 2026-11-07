@@ -66,22 +66,22 @@ fn tutto(byte: Vec<u8>) {
     let Ok(mut l) = mzlab_lettori::apri(insieme(byte), &Limiti::sito()) else {
         return;
     };
-    let Ok(ix) = l.indice(0).map(<[_]>::to_vec) else {
+    let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
         return;
     };
     for k in [0, ix.len() / 2, ix.len().saturating_sub(1)] {
         if k < ix.len() {
-            let _ = l.scansione(0, k);
-            let _ = l.intestazione(0, k);
+            let _ = l.scan(0, k);
+            let _ = l.scan_header(0, k);
         }
     }
-    if let Ok(v) = l.cromatogrammi(0) {
+    if let Ok(v) = l.chromatograms(0) {
         for c in v.iter().take(4) {
-            let _ = l.cromatogramma(0, &c.id);
+            let _ = l.chromatogram(0, &c.id);
         }
     }
-    let _ = l.metodo(0);
-    let _ = l.testata_mzml(0);
+    let _ = l.method(0);
+    let _ = l.mzml_header(0);
 }
 
 fn prossimo(x: &mut u64) -> usize {

@@ -203,7 +203,7 @@ impl LettoreNumpress {
     }
 
     /// The header of the mzML we write (`testata_da`), with the SHA-1 of the file when the original names no source.
-    fn testata(&mut self) -> Result<Header> {
+    fn file_header(&mut self) -> Result<Header> {
         let head = self.testa_xml()?;
         let mut h = testata_da(&head, &self.nome, &self.limiti)?;
         if h.sources.is_empty() {
@@ -259,36 +259,36 @@ fn ha_numpress(text: &str) -> bool {
 }
 
 impl Lettore for LettoreNumpress {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("mzml-numpress")
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::non_portati::NUMPRESS
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn mancanti(&mut self, c: usize) -> usize {
+    fn missing(&mut self, c: usize) -> usize {
         if c != 0 {
             return 0;
         }
         self.dichiarati.saturating_sub(self.righe.len())
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.uno(c)?;
         self.spettro(k)
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.uno(c)?;
         let byte = self.byte(k)?;
         Ok(parametri(&byte)
@@ -297,26 +297,26 @@ impl Lettore for LettoreNumpress {
             .collect())
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.uno(c)?;
         self.voci_tracce()
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.uno(c)?;
         self.traccia(id)
     }
 
     /// The `metodo/1` document the mzML carries (written by mzLab); an mzML of another program has none (`{}`: no section).
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.uno(c)?;
         let head = self.testa_xml()?;
         Ok(metodo::from_userparam(&head).unwrap_or_else(|| "{}".to_string()))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.uno(c)?;
-        self.testata().map(Some)
+        self.file_header().map(Some)
     }
 
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {

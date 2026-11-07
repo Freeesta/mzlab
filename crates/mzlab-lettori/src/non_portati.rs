@@ -1,4 +1,4 @@
-//! What the readers of this crate leave out of the mzML (`Lettore::non_portati`), with the reason; written in `conv/1` (docs/agenti/estendere.md).
+//! What the readers of this crate leave out of the mzML (`Lettore::not_carried`), with the reason; written in `conv/1` (docs/agenti/estendere.md).
 
 use mzlab_core::conv::{FUORI_MODELLO, NON_DECODIFICATO, SENZA_TERMINE};
 
