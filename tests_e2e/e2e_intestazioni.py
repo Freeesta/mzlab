@@ -1,5 +1,5 @@
-"""Intestazioni dei pannelli (HR): una riga bassa, mai a capo né tagliata a 1280/1440/1680 px, a 700/900/1200 px, con il cassetto aperto o fissato e su iPad
-(1024×1366 e 1366×1024, anche ruotando); sotto la larghezza utile i gruppi vanno nel menu «⋯» (e tornano a posto con lo spazio); il grafico resta alto almeno 100 px."""
+"""Panel headers (HR): one low row, never wrapped or cut at 1280/1440/1680 px, at 700/900/1200 px, with the drawer open or pinned and on iPad
+(1024×1366 and 1366×1024, also rotating); below the usable width the groups go into the «⋯» menu (and come back with the space); the chart stays at least 100 px tall."""
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

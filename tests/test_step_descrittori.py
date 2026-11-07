@@ -43,7 +43,7 @@ def test_the_validation_is_not_vacuous():
 
 def test_the_steps_of_the_chain_in_order():
     assert [s["id"] for s in STEPS] == IDS
-    newer = {"table.filter": 2}  # steps whose descriptor moved past version 1 (their old plans are migrated)
+    newer = {"table.filter": 2, "features.detect": 2}  # steps whose descriptor moved past version 1 (their old plans are migrated)
     assert all(s["package"] == "core" and s["version"] == newer.get(s["id"], 1) and s["schema"] == "step/1" for s in STEPS)
 
 

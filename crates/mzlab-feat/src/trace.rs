@@ -1,6 +1,6 @@
 //! Ion traces of the MS1 peaks of one file and polarity: the `detect` of mzFinder.
 //!
-//! Log-ppm channels on two shifted grids; (channel, scan) cells; a segment is a run of scans in one channel with gaps <= `max_gap`.
+//! Log-ppm channels on two shifted grids; (channel, scan) cells; a segment is a run of scans in one channel that misses at most `max_gap` scans between two points.
 //! Segments of neighbouring channels that cover the same scans are stitched, the two grids are merged and the Fourier-transform side
 //! lobes of very intense ions are marked. The peaks come from the index in slabs of m/z (a slab ends only at a gap of 50 ppm or more
 //! between two peaks above the floor, where no trace can pass), so the memory is bounded and the result does not depend on the slabs.
@@ -26,7 +26,8 @@ pub const MIN_POINTS: u32 = 5;
 pub const LONG_TRACE: u32 = 400;
 /// Scans of a series for the common mode: the shortest trace that `TraceBank` counts as persistent.
 const PERSISTENT_SCANS: usize = 400;
-pub const MAX_GAP: u32 = 2;
+/// Scans a trace may miss between two of its points (0 = consecutive scans), as `gapfill::Params::max_gap`.
+pub const MAX_GAP: u32 = 1;
 pub const SLAB_PEAKS: usize = 1_500_000;
 pub const TOUCH_HEIGHT: f64 = 2e6;
 /// A slab never ends at a smaller gap (ppm) between neighbouring peaks.
@@ -41,6 +42,7 @@ pub struct Params {
     pub floor: f64,
     pub min_points: u32,
     pub min_height: f64,
+    /// Missed scans allowed between two points of a trace (0 = consecutive).
     pub max_gap: u32,
     pub long_trace: u32,
     /// Two rows of different grids are one ion when their scans overlap by this share of the shorter one (0 = only the apex and edges test of `merge_grids`).

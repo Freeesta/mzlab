@@ -126,10 +126,10 @@ async function ensureIdx(names) {
 async function pool() {
   if (featPool) return featPool;
   const m = await manifest(), url = base() + "mzfinder/feat-worker.js", mine = self.onmessage;
-  const mod = await import(url);
+  const mod = await import(url), { smallDevice } = await import(base() + "mzfinder/finder-idx.js");
   self.onmessage = mine;                         // feat-worker.js, imported inside a worker, takes onmessage for itself: it is given back
   const w = (/** @type {any} */ x) => ({ jsUrl: featUrl(x.js), wasmUrl: featUrl(x.wasm), sha256: x.sha256 });
-  featPool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(m.feat), proofs: w(m.proofs), ...(m.table ? { table: w(m.table) } : {}) } });
+  featPool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(smallDevice(navigator), navigator.hardwareConcurrency), wasm: { feat: w(m.feat), proofs: w(m.proofs), ...(m.table ? { table: w(m.table) } : {}) } });
   return featPool;
 }
 

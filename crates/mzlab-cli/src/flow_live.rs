@@ -197,6 +197,7 @@ impl LiveRun {
         dir: &Path,
         (workers, claim): (usize, &dyn Fn(&JobId) -> bool),
     ) -> Result<LiveRun> {
+        runner.budget.run_with(workers);
         let sched = Sched::new(&plan, &registry, env!("CARGO_PKG_VERSION"), &[]);
         let ctx = Ctx::new(&plan, &registry, &sched).ok();
         let core = Arc::new(Mutex::new(Core::new(sched, ctx)));
