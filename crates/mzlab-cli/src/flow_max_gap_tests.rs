@@ -36,7 +36,7 @@ fn mzml_gaps(seed: u32) -> Vec<u8> {
         let mut peaks: Vec<(f64, f32)> = IONS
             .iter()
             .enumerate()
-            .filter(|(k, _)| (i + 3 * k + seed as usize) % 6 != 0 && (i + k) % 13 > 1)
+            .filter(|(k, _)| !(i + 3 * k + seed as usize).is_multiple_of(6) && (i + k) % 13 > 1)
             .map(|(_, &(m, c, a))| (m, (a * (-0.5 * ((rt - c) / 0.15).powi(2)).exp()) as f32))
             .filter(|q| q.1 > 100.0)
             .collect();
