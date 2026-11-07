@@ -2,7 +2,6 @@
 //! runs) over the `.mzidx` of the index folder, with the same state as `feat/detect` and `feat/align` (the `.mzfeatf` of each file, the table), so that the views of the Pipeline
 //! panel read its table unchanged. `feat/formula_id` (`{mz[], y[], feature_mz, params}`) answers the JSON `formula_id/1` of `mzlab_feat::untargeted::formula_id`. `{op: "feat/untargeted/detect", name, params}` and `{op: "feat/untargeted/align", names, params}`; `params` is the JSON text of the recipe.
 
-use mzlab_core::budget::MemBudget;
 use mzlab_core::{Error, Result};
 use mzlab_feat::untargeted::formula_id::{identify, to_json, Opts};
 use mzlab_feat::untargeted::pipeline::UntParams;
@@ -50,7 +49,7 @@ impl State {
         }
         let params = UntParams::from_json(p["params"].as_str().unwrap_or(""))?;
         let mut src = self.feat_stored(&ns)?;
-        let budget = MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
+        let budget = crate::feat::step_budget();
         let mut out = Vec::new();
         untargeted::align_to(
             &mut src,

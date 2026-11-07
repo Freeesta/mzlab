@@ -31,7 +31,7 @@ try:
             pg.hover("#flst .fl[data-k]:not(.pr) >> nth=1"); check(pg, "#flst .fl[data-k]:not(.pr):hover", "hovered row with ×")
         step("hovered row with the × button", hover)
         def user():
-            pg.evaluate("carica('gruppi.js').then(() => GRUPPI.set([...ugBases()].slice(0, 2), 'Group 1', 'new'))"); ready(pg)
+            pg.evaluate("carica('gruppi.js').then(() => GRUPPI.set(E.files.filter(f => f && !f.gone).slice(0, 2).map(f => fileBase(f.file)), 'Group 1', 'new'))"); ready(pg)      # two loaded files: ugBases() holds only the shown ones (#2716)
             check(pg, "#flst .fgh[data-ug]", "user group header"); check(pg, "#flst .fl[data-k]:not(.pr)", "row under a user group")
         step("user group header and its rows", user)
 finally:

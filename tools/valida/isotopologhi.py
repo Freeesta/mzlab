@@ -40,7 +40,7 @@ def componenti(formula: str) -> tuple[list, list]:
     return mz, rel
 
 
-def picchi_da_verita(ioni: list[dict]) -> list[Picco]:
+def peaks_from_truth(ioni: list[dict]) -> list[Picco]:
     """One Picco per (true ion, observed RT); ions without an observed RT or formula cannot be extracted and are left out."""
     out = []
     for ion in ioni:

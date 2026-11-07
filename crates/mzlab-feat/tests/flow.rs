@@ -156,7 +156,7 @@ fn unknown_version_and_duplicates() {
     let plan = r#"{"steps":[{"id":"a","step":"features.detect@9"},{"id":"a","step":"features.detect@1","preset":"nope"}]}"#;
     let want = [
         "a||err.flow.instance.duplicate|",
-        "a||err.flow.step.version|step=features.detect,version=9,available=1",
+        "a||err.flow.step.version|step=features.detect,version=9,available=2",
         "a||err.flow.preset.unknown|preset=nope",
         "a|index|err.flow.port.missing|port=index",
     ];

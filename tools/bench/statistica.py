@@ -37,7 +37,7 @@ def _stat(x: np.ndarray, quale: str) -> np.ndarray:
         return np.nanmedian(x, axis=1)
 
 
-def _punto(x: np.ndarray, quale: str) -> float:
+def _point(x: np.ndarray, quale: str) -> float:
     if quale == "media":
         return float(np.mean(x)) if len(x) else float("nan")
     return float(np.nanmedian(x)) if len(x) and not np.all(np.isnan(x)) else float("nan")
@@ -50,7 +50,7 @@ def intervallo(x, quale: str = "media", strati=None, n_boot: int = N_BOOT, seme:
         return {"n": int(len(x)), "valore": None, "ic_basso": None, "ic_alto": None}
     s = _stat(x[indici_bootstrap(len(x), strati, n_boot, seme)], quale)
     lo, hi = np.nanpercentile(s, [2.5, 97.5])
-    return {"n": int(len(x)), "valore": _punto(x, quale), "ic_basso": float(lo), "ic_alto": float(hi)}
+    return {"n": int(len(x)), "valore": _point(x, quale), "ic_basso": float(lo), "ic_alto": float(hi)}
 
 
 def differenza(a, b, quale: str = "media", strati=None, n_boot: int = N_BOOT, seme: int = SEME) -> dict:
@@ -65,7 +65,7 @@ def differenza(a, b, quale: str = "media", strati=None, n_boot: int = N_BOOT, se
     d = d[~np.isnan(d)]
     lo, hi = np.percentile(d, [2.5, 97.5])
     p = min(1.0, 2 * min(((d <= 0).sum() + 1) / (len(d) + 1), ((d >= 0).sum() + 1) / (len(d) + 1)))
-    return {"n": int(len(a)), "valore": _punto(a, quale) - _punto(b, quale), "ic_basso": float(lo), "ic_alto": float(hi), "p": float(p)}
+    return {"n": int(len(a)), "valore": _point(a, quale) - _point(b, quale), "ic_basso": float(lo), "ic_alto": float(hi), "p": float(p)}
 
 
 def mcnemar_esatto(a, b) -> dict:
@@ -83,12 +83,12 @@ def mcnemar_esatto(a, b) -> dict:
 def holm(p: list[float], alfa: float = ALFA) -> dict:
     """Holm step-down: adjusted p-values (monotone, capped at 1) and which hypotheses are rejected at `alfa`, in the order of the input."""
     m = len(p)
-    ordine = sorted(range(m), key=lambda i: (p[i], i))
+    order = sorted(range(m), key=lambda i: (p[i], i))
     adj = [0.0] * m
-    corrente = 0.0
-    for r, i in enumerate(ordine):
-        corrente = max(corrente, min(1.0, (m - r) * p[i]))
-        adj[i] = corrente
+    current = 0.0
+    for r, i in enumerate(order):
+        current = max(current, min(1.0, (m - r) * p[i]))
+        adj[i] = current
     return {"p_corretto": adj, "rifiutata": [x < alfa for x in adj]}
 
 
@@ -104,5 +104,5 @@ def superiore(diff: dict, direzione: str, rifiutata: bool) -> bool | None:
     """Superiority of a over b: the whole interval on the favourable side of zero and the null rejected after Holm."""
     if diff.get("valore") is None:
         return None
-    lato = diff["ic_basso"] > 0 if direzione == "alto" else diff["ic_alto"] < 0
-    return bool(lato and rifiutata)
+    side = diff["ic_basso"] > 0 if direzione == "alto" else diff["ic_alto"] < 0
+    return bool(side and rifiutata)

@@ -222,6 +222,7 @@ pub(crate) fn run_checked(
     runner: &FileRunner,
     workers: usize,
 ) -> mzlab_core::Result<(Run, String)> {
+    runner.budget.run_with(workers);
     let run = execute(plan, &steps(), runner, workers)?;
     runner.save_cache()?;
     let prov = prov_text(text, &run);
@@ -262,7 +263,45 @@ pub(crate) fn progress_line(
     match err {
         None if cached => format!("{what} ... reused"),
         None => format!("{what} ... done in {:.1} s", ms / 1e3),
-        Some(e) => format!("{what} ... failed: {e}"),
+        Some(e) => {
+            let get = |k: &str| {
+                e.params
+                    .iter()
+                    .find(|(n, _)| *n == k)
+                    .map(|(_, v)| v.clone())
+            };
+            format!(
+                "{what} ... failed: {e}{}",
+                memory_advice(e.key, &get, &job.instance.id)
+            )
+        }
+    }
+}
+
+/// For a memory refusal, a second line that says it in words and names the next step: the budget of the index builder (`--set`), the working memory
+/// (`--budget-mb`) or fewer files at once. Empty for any other error.
+pub(crate) fn memory_advice(
+    key: &str,
+    get: &dyn Fn(&str) -> Option<String>,
+    instance: &str,
+) -> String {
+    if key != "error.memoryBudget" {
+        return String::new();
+    }
+    let p = |k: &str| get(k).and_then(|v| v.parse::<usize>().ok());
+    let fase = get("fase");
+    match (fase.as_deref(), p("stima_mb"), p("budget_mb")) {
+        (Some("indexPeaks"), Some(est), Some(cap)) => format!(
+            "\n    the densest 1-Da m/z range of this file holds at least {est} MB of peaks and the index builder holds {} of one range \
+             (twice its budget): try --set {instance}.budget={} (bytes; the index is the same at any budget)",
+            if cap > 0 { format!("at most {cap} MB") } else { "less than 1 MB".to_string() },
+            // the count may have stopped early (a lower bound): twice what it says, and never below the default
+            est.next_power_of_two().max(2 * cap).max(64) << 20
+        ),
+        (Some(f), Some(est), Some(cap)) => format!(
+            "\n    the {f} phase needs about {est} MB and the budget is {cap} MB: give more working memory with --budget-mb N, or run fewer files at once"
+        ),
+        _ => "\n    memory could not be reserved: close other programs or run fewer files at once (--workers 1)".to_string(),
     }
 }
 

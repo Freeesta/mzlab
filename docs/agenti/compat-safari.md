@@ -1,7 +1,7 @@
 # Safari (macOS, iPadOS) e WebKit: API usate, versione minima, ripiego
 
 - Pavimento del sito: **Safari / iPadOS 16.4** (SIMD128 di ogni `.wasm`, `opfsSync` nei worker, lookbehind delle regex di `calcola.js`). Sotto: il motore è spento con l'avviso comune di `capacita.js` (`motore`) o con `load.err.oldBrowser`; niente secondo `.wasm` senza SIMD (raddoppierebbe il peso e la parità), l'app desktop resta la via. Il motore non usa thread wasm, eccezioni wasm, tail call né memory64.
-- `compat.js` (modulo ES, primo import di `capacita.js`): ripieghi per API mancanti, solo feature detection. `installa(g)` restituisce i nomi installati (`window.__compat`). Test Node: `tests/compat_node.mjs` (`tests/test_compat.py`); nel browser con iPad emulato: `e2e_safari_ipad` (anche bersagli ≥24×24 px: la X delle finestre, «Salta il tour», la casella dei file della tabella campioni, 24 px con `pointer:coarse`).
+- `compat.js` (modulo ES, primo import di `capacita.js`): ripieghi per API mancanti, solo feature detection. `installa(g)` restituisce i nomi installati (`window.__compat`). Test Node: `tests/compat_node.mjs` (`tests/test_compat.py`); nel browser: `e2e_safari_mac` (Mac, pizzico) e, con iPad emulato, `e2e_safari_ipad` (anche bersagli ≥24×24 px: la X delle finestre, «Salta il tour», la casella dei file della tabella campioni, 24 px con `pointer:coarse`).
 - WebKit vero: nel cloud non c'è (Playwright ha solo Chromium); di notte `notte.yml` gira `--fumo` con `--browser webkit` su macOS, `e2e_safari_ipad` usa WebKit quando c'è e altrimenti Chromium con iPad emulato (lo dice nell'uscita). `webkit-mac.yml` (a mano) diagnostica l'avvio del motore.
 
 | API / funzione | Dove | Safari min | Ripiego | Test |
@@ -27,7 +27,7 @@
 | `<dialog>` `showModal`, `inert` | molti | 15.4, 15.5 | sotto il pavimento | — |
 | `startViewTransition` | `tema-morbido.js` | 18 | cambio di tema senza transizione | — |
 | `requestFullscreen` | `shell.js` `#fs-btn` | macOS 16.4, iPadOS 16.4 (elementi) | pulsante nascosto | — |
-| `gesturestart` (pizzico) | `infusione-grafo-gesti.js` | solo WebKit | Pointer Events altrove | — |
+| pizzico del trackpad (`gesture*`, mai Ctrl+rotella) | zoom con Ctrl+rotella: `eventi.js`, `mappa.js`, `flow-canvas.js`, albero di Tabui, `mappa3d.js` (`infusione-grafo-gesti.js` fa da sé) | solo WebKit | `compat.js` `pinch` (c'è `GestureEvent`, non solo dito): ogni `gesturechange` diventa una rotella con `ctrlKey` sotto le dita (deltaY = −100·ln del passo, come Chromium); zoom della pagina fermato solo su `touch-action:none`; gesto già gestito o dita sullo schermo: lasciato | `test_compat`, `e2e_safari_mac` |
 | Pointer Events, `setPointerCapture`, `pressure` | `eventi.js`, `mappa.js`, `affianca.js`, Disegno | 13 | — | `e2e_disegno_tablet` |
 | CSS `:has()`, `@container`, `color-mix()`, `@property` | `app.css`, `canali.css`, `msngrafo-vista.js` | 15.4, 16, 16.2, 16.4 | sotto il pavimento | — |
 | `svh`/`dvh`, `env(safe-area-inset-*)` | `app.css` (`#kframe`, `#phone`, barra laterale `#dfiles`) | 15.4, 11 | `100vh` prima, `@supports` dopo | — |

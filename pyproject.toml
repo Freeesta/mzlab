@@ -13,7 +13,7 @@ license = { text = "MIT" }
 [project.optional-dependencies]
 # jsonschema: only the test of the step descriptors (tests/test_step_descrittori.py); never in the site
 test = ["pytest", "jsonschema>=4.18"]
-# solo per rigenerare tests/golden/librerie/ con tools/parita_librerie.py (non servono ai test né al sito)
+# only to regenerate tests/golden/librerie/ with tools/parita_librerie.py (not needed by the tests or the site)
 parita = ["ms_entropy>=1.5", "matchms>=0.33"]
 
 [tool.setuptools.packages.find]

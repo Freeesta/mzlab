@@ -155,3 +155,16 @@ fn the_wide_stitch_adds_its_sentence_to_the_detection() {
     assert!(run("wide").contains("Pieces of a trace in neighbouring m/z channels were joined"));
     assert!(!run("strict").contains("Pieces of a trace"));
 }
+
+/// `max_gap` of the mass traces is named as the missed scans it counts, as in `features.gapfill`.
+#[test]
+fn the_mass_trace_sentence_names_the_missed_scans() {
+    let record = r#"{"schema":"corsa/1","steps":[{"instance":"det","step":"features.detect@2","algorithm":"masstrace@1","status":"ok","params":[
+{"name":"floor","value":20000,"state":"fixed"},{"name":"min_points","value":5,"state":"fixed"},{"name":"max_gap","value":1,"state":"fixed"}]}]}"#;
+    let text = methods_text(&style("paragraph"), record.as_bytes()).unwrap();
+    assert!(
+        text.contains("minimum points 5, maximum missed scans between two points of a trace 1)"),
+        "{text}"
+    );
+    assert!(!text.contains("maximum gap"), "{text}");
+}
