@@ -848,7 +848,7 @@ function fitHd(/** @type {Pannello} */ p) {
     const over = () => hd.scrollWidth > hd.clientWidth + 1 || (c && c.scrollWidth > c.clientWidth + 1);
     if (!over()) return;
     mb.hidden = false;
-    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
+    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     for (const n of [...cands, ...groups, ...kids]) {
       if (!over()) break;
       if (n.hidden || !n.offsetWidth) continue;
