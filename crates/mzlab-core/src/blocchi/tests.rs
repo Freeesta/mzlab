@@ -192,7 +192,7 @@ fn every_read_gives_the_bytes_of_the_file_with_read_ahead() {
             state ^= state << 17;
             let len = (state % 9000) as usize + 1;
             // mostly in order with some jumps, as the reader of a `.raw`
-            off = if state % 7 == 0 {
+            off = if state.is_multiple_of(7) {
                 (state >> 20) % (data.len() as u64 - len as u64)
             } else {
                 (off + (state % 3000)).min(data.len() as u64 - len as u64)

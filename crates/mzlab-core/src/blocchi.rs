@@ -77,12 +77,10 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> ReadAt for BlockCache<F> {
                 seguito = Some((i, s.data.len()));
             }
         }
-        if self.max > self.size {
-            if let Some((i, len)) = seguito {
-                // the run refills its own slot (the block behind it is read) with a longer block, and leaves the other runs' blocks alone
-                victim = i;
-                size = len.saturating_mul(2).clamp(self.size, self.max);
-            }
+        if let Some((i, len)) = seguito.filter(|_| self.max > self.size) {
+            // the run refills its own slot (the block behind it is read) with a longer block, and leaves the other runs' blocks alone
+            victim = i;
+            size = len.saturating_mul(2).clamp(self.size, self.max);
         }
         let n = self.dim.saturating_sub(off).min(size as u64) as usize;
         if buf.len() >= size || n < buf.len() {
