@@ -221,11 +221,14 @@ fn a_preset_at_msn_graph_1_applies_as_2_with_migrated_changes() {
 
 #[test]
 fn a_preset_with_nothing_to_migrate_keeps_its_content() {
-    let text = migrate(PRESET.as_bytes()).unwrap();
+    // the example preset at the current version of its step (it is saved at features.detect@1, which migrates)
+    let current = PRESET.replace("features.detect@1", "features.detect@2");
+    let text = migrate(current.as_bytes()).unwrap();
     assert_eq!(
         text,
-        crate::flow::value_text(&parse(PRESET.as_bytes()).unwrap()) + "\n"
+        crate::flow::value_text(&parse(current.as_bytes()).unwrap()) + "\n"
     );
+    assert_ne!(migrate(PRESET.as_bytes()).unwrap(), text);
     assert_eq!(
         migrate(b"{\"schema\":\"mzrun/1\",\"min_reader\":2}")
             .unwrap_err()

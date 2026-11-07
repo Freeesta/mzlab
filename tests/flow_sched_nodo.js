@@ -17,7 +17,7 @@ const call = (op, body) => JSON.parse(flow_sched(op, JSON.stringify(body)));
 const port = (t) => ({ type: "raw", many: t.endsWith("*") });
 const ports = (l) => Object.fromEntries(l.map((t) => [t.replace("*", ""), port(t)]));
 const stepDoc = (d) => ({
-  id: d.id, version: 1, in: ports(d.ins), out: ports(d.outs), per_item: d.per_item === true,
+  id: d.id, version: d.version || 1, in: ports(d.ins), out: ports(d.outs), per_item: d.per_item === true,
   params: { properties: Object.fromEntries(Object.entries(d.params || {}).map(([k, v]) => [k, { type: "number", default: v }])) },
   runs_in: { native: true, wasm: "hr" },
 });
