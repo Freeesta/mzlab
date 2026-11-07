@@ -64,6 +64,14 @@ try:
             pg.keyboard.press("End"); pg.keyboard.press("Enter"); ready(pg)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";const g=t.s1._dw.groups;return {sid:t.s2.sid,want:g[g.length-1].sid,pop:!!document.querySelector('.dw-pop'),focus:document.activeElement&&document.activeElement.dataset.a}})()"); print(v)
             assert v["sid"] in v["want"] and not v["pop"] and v["focus"] == "ddaw", v
+            pg.evaluate("(()=>{const t=" + TRIO + ";const st=t.s1.el.style;for(const k of ['width','min-width','max-width'])st.setProperty(k,'300px','important');fitHd(t.s1);return t.s1.el.offsetWidth})()")     # a tight header: the button goes into «⋯» and still opens the list
+            assert pg.evaluate("(()=>{const t=" + TRIO + ";return !!t.s1.el.querySelector('.hmore [data-a=\"ddaw\"]')&&!!t.s1.el.querySelector('.hd [data-a=\"xicb\"]')})()")
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.s1.el.querySelector('[data-a=more]').click()})()")
+            pg.locator(".hmore [data-a='ddaw']").first.click()
+            attendi(pg, "!!document.querySelector('.dw-pop[role=listbox]')"); pg.keyboard.press("Escape")
+            attendi(pg, "!document.querySelector('.dw-pop')")
+            pg.evaluate("(()=>{const t=" + TRIO + ";const st=t.s1.el.style;for(const k of ['width','min-width','max-width'])st.removeProperty(k);apply(t.s1);fitHd(t.s1)})()")
+            assert pg.evaluate("(()=>{const t=" + TRIO + ";return !t.s1.el.querySelector('.hmore [data-a=\"ddaw\"]')})()")
             a, b = xy(8.0), xy(8.4)
             pg.mouse.move(a["x"], a["y"]); pg.mouse.down(); pg.mouse.move(b["x"], b["y"], steps=5); pg.mouse.up(); ready(pg)
             attendi(pg, "(()=>{const t=" + TRIO + ";const d=" + D0 + ";return d&&d.scans>1&&t.s1._dw&&t.s1._a.flags.length>0})()")
@@ -75,7 +83,7 @@ try:
             assert v["scans"] > 1 and v["sid"] == v["j"], v
             c = xy(8.2); pg.mouse.click(c["x"], c["y"]); ready(pg)
             attendi(pg, "(()=>{const d=" + D0 + ";return d&&d.scans===1})()")
-        step("«N MS²» button: the count of the engine, the list with the keyboard; flags on an averaged Full Scan, a click keeps the average", button)
+        step("«N MS²» button: the count of the engine, the list with the keyboard, also from «⋯»; flags on an averaged Full Scan, a click keeps the average", button)
         def other_file():
             pg.locator("#flst .fl", has_text="HR_DDA-Fusion-t30").first.click(); ready(pg)
             attendi(pg, "(()=>{const t=" + TRIO + ";return t.s1.k===E.files.find(f=>f.label==='HR_DDA-Fusion-t30').k&&t.s1._a&&t.s1._a.markN!=null})()", 30000)
