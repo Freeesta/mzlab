@@ -12,7 +12,9 @@ from lib import ROOT, free_port, hold
 # render-blocking, CLS 0, longest task while the shell comes up ~50 ms at CPU x4. Margins: +30 % on counts and bytes, CLS and the long task at
 # the thresholds of the brief (0.02, 100 ms); a long task is counted from the navigation to the drop area visible.
 # lt_all_ms: longest task from the navigation until every script of L has run, CPU x4 (devtools trace: 34-61 ms, median 53, over 5 rounds).
+# Both long-task budgets take the best of ROUNDS reloads (CI runners spread 51-128 ms for the same code; an injected 120 ms task is in all 5).
 BUDGET = {"req_fcp": 29, "kb_fcp": 790, "blocking": 15, "cls": 0.02, "lt_ms": 100, "lt_all_ms": 100}
+ROUNDS = 5
 SRC = (ROOT / "mzlab" / "web" / "carica.js").read_text(encoding="utf-8")
 L = re.findall(r'"([^"]+)"', re.search(r"var L = \[(.*?)\];", SRC, re.S).group(1))
 # every script of L has run when carica(n) resolves for each (the promise of its tag's onload); a failed one rejects
@@ -92,19 +94,17 @@ try:
         check("reload: layout shift", round(warm["cls"], 4), BUDGET["cls"])
         cdp = ctx.new_cdp_session(pg)
         cdp.send("Emulation.setCPUThrottlingRate", {"rate": 4})
-        pg.reload(); wait_shell(pg)
-        slow = pg.evaluate(SNAP)
-        print("reload, CPU x4:", {k: v for k, v in slow.items() if k != "blocking"})
-        check("CPU x4: longest task until the drop area", max(slow["lt"] or [0]), BUDGET["lt_ms"])
-        check("CPU x4: layout shift", round(slow["cls"], 4), BUDGET["cls"])
-        longest = []          # median of 3 slowed reloads: one scheduler hiccup on a busy runner is not a regression
-        for i in range(3):
-            if i:
-                pg.reload(); wait_shell(pg)
+        # best of ROUNDS slowed reloads: a long task of our own code is in every reload, a busy runner only adds to some of them
+        to_drop, to_all, shift = [], [], 0
+        for _ in range(ROUNDS):
+            pg.reload(); wait_shell(pg)
+            slow = pg.evaluate(SNAP)
             every = pg.evaluate(ALL_L, L)
-            longest.append(max(every["lt"] or [0]))
-            print(f"CPU x4: all {len(L)} start-up scripts run at {every['ms']} ms, long tasks {every['lt']}")
-        check("CPU x4: longest task until every start-up script has run (median of 3)", sorted(longest)[1], BUDGET["lt_all_ms"])
+            to_drop.append(max(slow["lt"] or [0])); to_all.append(max(every["lt"] or [0])); shift = max(shift, slow["cls"])
+            print(f"CPU x4: drop area at {round(slow['drop'])} ms, all {len(L)} start-up scripts run at {every['ms']} ms, long tasks {every['lt']}")
+        check(f"CPU x4: longest task until the drop area (best of {ROUNDS})", min(to_drop), BUDGET["lt_ms"])
+        check("CPU x4: layout shift", round(shift, 4), BUDGET["cls"])
+        check(f"CPU x4: longest task until every start-up script has run (best of {ROUNDS})", min(to_all), BUDGET["lt_all_ms"])
         b.close()
 except Stop:
     pass
