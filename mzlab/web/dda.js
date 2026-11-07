@@ -143,9 +143,12 @@ const DDA = (() => {
   async function step(/** @type {Pannello} */ s2, /** @type {number} */ d) {
     try {
       const s1 = byId(s2.dda), f = E.files[s1.k], D = await get(f.k);
-      if (s2.sid == null) {                                                // nothing shown yet (an ion without MS2 of its own): the first / last scan that holds it in its window
+      if (s2.sid == null) {                                                // nothing shown yet: the first MS2 after (before) the chromatogram cursor, else the first / last one
         const l0 = list(s2, D); if (!l0.length) return false;
-        return selectMs2(s2, D.sid[d > 0 ? l0[0] : l0[l0.length - 1]], { zoom: false });
+        const c = s1.link != null ? byId(s1.link) : null, t = c && c.cur != null ? c.cur : s1.r0;
+        let at = d > 0 ? l0[l0.length - 1] : l0[0];
+        if (t != null) { const k = d > 0 ? l0.findIndex(i => D.rt[i] >= t) : l0.length - 1 - [...l0].reverse().findIndex(i => D.rt[i] <= t); if (k >= 0 && k < l0.length) at = l0[k]; }
+        return selectMs2(s2, D.sid[at], { zoom: false });
       }
       const lst = list(s2, D), here = D.idx.get(s2.sid); let j = -1;
       if (d > 0) j = lst.find(i => i > here) ?? -1; else for (let q = lst.length - 1; q >= 0; q--) if (lst[q] < here) { j = lst[q]; break; }
