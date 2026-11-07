@@ -10,7 +10,7 @@ use mzlab_lib::io::{Sink, Source};
 use mzlab_lib::parse::{detect, Parser};
 use mzlab_lib::read::{cache_budget, Library};
 use mzlab_lib::search::{analogs, identity, AnalogHit, AnalogOpts, Hit, IdentityOpts, Query, Tol};
-use mzlab_lib::spec::Spectrum;
+use mzlab_lib::spec::{Spectrum, MAX_RAW_PEAKS};
 use serde_json::{json, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -258,7 +258,7 @@ impl Importer {
         let info = info.map_err(js_err)?;
         Ok(json!({
             "n": info.n_spectra, "peaks": info.n_peaks, "bytes": info.bytes, "pos": info.pos, "neg": info.neg,
-            "read": stats.read, "dropped": stats.dropped + info.emptied, "noPrec": stats.no_prec, "noPeaks": stats.no_peaks + info.emptied, "broken": stats.broken,
+            "read": stats.read, "dropped": stats.dropped + info.emptied, "noPrec": stats.no_prec, "noPeaks": stats.no_peaks + info.emptied, "broken": stats.broken, "cut": stats.cut, "cutAt": MAX_RAW_PEAKS,
         })
         .to_string())
     }
