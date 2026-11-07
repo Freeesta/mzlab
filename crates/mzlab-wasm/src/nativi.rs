@@ -13,6 +13,8 @@ use mzlab_core::sorgente::SorgenteLettore;
 use mzlab_core::{lettori_centroidi, lettori_mzml, upload};
 use wasm_bindgen::prelude::*;
 
+mod membro;
+
 use crate::esterno::{errore_del_modulo, LettoreEsterno, ModuloJs};
 use crate::{error_json, Accorpa, BlockWriter, JsOutput, JsReader};
 
@@ -32,33 +34,6 @@ thread_local! {
 #[wasm_bindgen]
 pub fn native_external(open: Function) {
     ESTERNO.with(|f| *f.borrow_mut() = Some(open));
-}
-
-/// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`.
-struct JsMember {
-    read: Function,
-    i: u32,
-}
-
-impl ReadAt for JsMember {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
-        let bad = || mzlab_core::Error::new("error.badIndex");
-        let v = self
-            .read
-            .call3(
-                &JsValue::NULL,
-                &self.i.into(),
-                &(off as f64).into(),
-                &(buf.len() as f64).into(),
-            )
-            .map_err(|_| bad())?;
-        let a: js_sys::Uint8Array = v.dyn_into().map_err(|_| bad())?;
-        if a.length() as usize != buf.len() {
-            return Err(bad());
-        }
-        a.copy_to(buf);
-        Ok(())
-    }
 }
 
 /// The members of a dataset as the page describes them: names (relative to the dataset), sizes, the read function.
@@ -97,10 +72,7 @@ impl Membri {
             .map(|(i, (n, &s))| Membro {
                 nome: n.clone(),
                 dim: s as u64,
-                dati: Box::new(JsMember {
-                    read: self.read.clone(),
-                    i: i as u32,
-                }),
+                dati: membro::membro(&self.read, i as u32, s as u64),
                 sha1: None,
             })
             .collect();
