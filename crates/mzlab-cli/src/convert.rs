@@ -30,7 +30,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
   --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
   --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
                        points of the profile) or mzlab (centroids of mzLab)
-  --workers N          files converted at once (default 1; the bytes written do not depend on it)
+  --workers N          files converted at once (default: the cores but one, 1 to 4; the bytes written do not depend on it)
   --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1; or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
@@ -40,12 +40,12 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
 progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 4 an input is missing or holds nothing to convert";
 
 #[derive(Default)]
-struct Args {
+pub(crate) struct Args {
     inputs: Vec<PathBuf>,
     out: Option<PathBuf>,
     sets: Vec<String>,
     report: Option<PathBuf>,
-    workers: usize,
+    pub(crate) workers: usize,
     fresh: bool,
 }
 
@@ -53,9 +53,9 @@ fn value(it: &mut impl Iterator<Item = String>, name: &str) -> Result<String, St
     it.next().ok_or(format!("{name} needs a value"))
 }
 
-fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
+pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
     let mut a = Args {
-        workers: 1,
+        workers: crate::flow::live::default_workers(),
         ..Args::default()
     };
     let mut it = args.into_iter();

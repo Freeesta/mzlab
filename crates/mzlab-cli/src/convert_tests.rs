@@ -375,3 +375,16 @@ fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_files_are_converted_on_the_workers_of_the_computer_unless_workers_says_otherwise() {
+    let args = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    let auto = crate::convert::parse_args(args(&["a.raw", "--out", "x"]))
+        .unwrap()
+        .unwrap();
+    assert_eq!(auto.workers, crate::flow::live::default_workers());
+    let one = crate::convert::parse_args(args(&["a.raw", "--out", "x", "--workers", "1"]))
+        .unwrap()
+        .unwrap();
+    assert_eq!(one.workers, 1);
+}
