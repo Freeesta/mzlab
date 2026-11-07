@@ -60,11 +60,11 @@ fn run(wiff: &str, c: usize, cen: bool) {
     if cen {
         l = lettori_centroidi::centroidato(l);
     }
-    let n = l.indice(c).unwrap().len();
+    let n = l.index(c).unwrap().len();
     let t = Instant::now();
     let mut pts = 0usize;
     for k in 0..n {
-        pts += l.scansione(c, k).unwrap().mz.len();
+        pts += l.scan(c, k).unwrap().mz.len();
     }
     let dec = t.elapsed().as_secs_f64();
     println!(

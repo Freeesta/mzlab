@@ -263,7 +263,7 @@ fn index_reader(
     let mut fs = flow_set::file_set(path)?;
     let imp = impronte(&mut fs)?;
     let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-    let ids: Vec<u32> = l.campioni().iter().map(|s| s.id).collect();
+    let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     let sample = flow_set::sample_index(label, &ids)?;
     let mut l = Scans::new(l, sample, pace).stopping(stop);
     let scratch_path = idx.with_extension("mzidx.scratch");
@@ -301,7 +301,7 @@ pub(crate) struct Scans<'a, 'b> {
 
 impl<'a, 'b> Scans<'a, 'b> {
     pub(crate) fn new(mut l: Box<dyn Lettore>, c: usize, pace: &'a mut Pace<'b>) -> Self {
-        let n = l.indice(c).map_or(0, |v| v.len());
+        let n = l.index(c).map_or(0, |v| v.len());
         pace.at(0, n);
         Scans {
             l,
@@ -336,25 +336,25 @@ impl<'a, 'b> Scans<'a, 'b> {
 
 #[rustfmt::skip]
 impl Lettore for Scans<'_, '_> {
-    fn formato(&self) -> Formato { self.l.formato() }
-    fn campioni(&self) -> &[Campione] { self.l.campioni() }
-    fn indice(&mut self, c: usize) -> mzlab_core::Result<&[VoceScansione]> { self.l.indice(c) }
-    fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scansione(c, k); self.count(c); s }
-    fn scansione_dati(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scansione_dati(c, k); self.count(c); s }
-    fn scansione_profilo(&mut self, c: usize, k: usize) -> mzlab_core::Result<Option<Spectrum>> { self.l.scansione_profilo(c, k) }
-    fn intestazione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<Campo>> { self.l.intestazione(c, k) }
-    fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<VoceCromatogramma>> { self.l.cromatogrammi(c) }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> mzlab_core::Result<Chromatogram> { self.l.cromatogramma(c, id) }
+    fn format(&self) -> Formato { self.l.format() }
+    fn samples(&self) -> &[Campione] { self.l.samples() }
+    fn index(&mut self, c: usize) -> mzlab_core::Result<&[VoceScansione]> { self.l.index(c) }
+    fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scan(c, k); self.count(c); s }
+    fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scan_data(c, k); self.count(c); s }
+    fn scan_profile(&mut self, c: usize, k: usize) -> mzlab_core::Result<Option<Spectrum>> { self.l.scan_profile(c, k) }
+    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<Campo>> { self.l.scan_header(c, k) }
+    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<VoceCromatogramma>> { self.l.chromatograms(c) }
+    fn chromatogram(&mut self, c: usize, id: &str) -> mzlab_core::Result<Chromatogram> { self.l.chromatogram(c, id) }
     fn dad_map(&mut self, c: usize) -> mzlab_core::Result<Option<String>> { self.l.dad_map(c) }
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_spectrum(c, rt0, rt1) }
     fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_wavelength(c, nm0, nm1) }
-    fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.metodo(c) }
-    fn testata_mzml(&mut self, c: usize) -> mzlab_core::Result<Option<Header>> { self.l.testata_mzml(c) }
+    fn method(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.method(c) }
+    fn mzml_header(&mut self, c: usize) -> mzlab_core::Result<Option<Header>> { self.l.mzml_header(c) }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra { self.l.extra_mzml(s) }
-    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra { self.l.extra_scansione(c, k, s) }
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] { self.l.non_portati() }
-    fn mancanti(&mut self, c: usize) -> usize { self.l.mancanti(c) }
-    fn variante(&mut self, c: usize) -> bool { self.l.variante(c) }
+    fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra { self.l.scan_extra(c, k, s) }
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] { self.l.not_carried() }
+    fn missing(&mut self, c: usize) -> usize { self.l.missing(c) }
+    fn variant(&mut self, c: usize) -> bool { self.l.variant(c) }
 }
 
 /// A `Read` that tells `pace` how many of the `size` bytes of the file it has handed out.

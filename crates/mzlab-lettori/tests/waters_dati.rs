@@ -64,15 +64,15 @@ const CARTELLE: &[&str] = &[
 fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
     for rel in CARTELLE {
         let Some(mut l) = apri(rel) else { continue };
-        let idx = l.indice(0).unwrap().to_vec();
+        let idx = l.index(0).unwrap().to_vec();
         assert!(
             idx.windows(2).all(|w| w[0].rt <= w[1].rt),
             "{rel}: index in time order"
         );
-        let ch = l.cromatogrammi(0).unwrap();
+        let ch = l.chromatograms(0).unwrap();
         assert!(idx.len() + ch.len() > 0, "{rel}: nothing to show");
         for k in (0..idx.len()).step_by((idx.len() / 25).max(1)) {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert_eq!(s.mz.len(), s.intensity.len(), "{rel} scan {k}");
             assert!(
                 s.mz.iter().all(|m| m.is_finite() && *m > 0.0),
@@ -91,11 +91,11 @@ fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
                 );
             }
         }
-        let m = l.metodo(0).unwrap();
+        let m = l.method(0).unwrap();
         let doc = comune_waters::controlla_schema(&m, rel);
         assert_eq!(doc["origine"]["formato"], "waters-raw", "{rel}");
         assert!(m.len() < 400_000, "{rel}: metodo of {} B", m.len());
-        let h = l.testata_mzml(0).unwrap().unwrap();
+        let h = l.mzml_header(0).unwrap().unwrap();
         assert!(
             h.run_params.iter().any(|(k, _)| k == "mzLab metodo/1"),
             "{rel}"
@@ -141,8 +141,8 @@ fn chromatograms_match_the_msconvert_mzml() {
         return;
     };
     let theirs = mzml_cromi(&mz);
-    assert!(l.indice(0).unwrap().is_empty(), "MRM folder has no spectra");
-    let mine = l.cromatogrammi(0).unwrap();
+    assert!(l.index(0).unwrap().is_empty(), "MRM folder has no spectra");
+    let mine = l.chromatograms(0).unwrap();
     assert_eq!(mine.len(), theirs.len(), "number of traces");
     let (mut srm, mut other) = (0, 0);
     for t in &theirs {
@@ -168,7 +168,7 @@ fn chromatograms_match_the_msconvert_mzml() {
             })
             .id
             .clone();
-        let m = l.cromatogramma(0, &id).unwrap();
+        let m = l.chromatogram(0, &id).unwrap();
         assert_eq!(m.time.len(), t.time.len(), "{}", t.id);
         for (a, b) in m
             .time
@@ -199,7 +199,7 @@ fn folders_without_function_table_are_refused_with_a_key() {
     ] {
         let Some(fs) = cartella(rel) else { continue };
         match mzlab_lettori::apri_nudo(fs, &Limiti::sito()) {
-            Ok(mut l) => eprintln!("{rel}: opens, {} scans", l.indice(0).map_or(0, <[_]>::len)),
+            Ok(mut l) => eprintln!("{rel}: opens, {} scans", l.index(0).map_or(0, <[_]>::len)),
             Err(e) => assert!(e.key.starts_with("err.file."), "{rel}: {}", e.key),
         }
     }

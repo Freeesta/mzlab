@@ -36,7 +36,7 @@ impl IdxBuilder {
                         &mut |_| {},
                     )?;
                     // the spectra a truncated file declares beyond the ones it holds
-                    st.missing = l.mancanti(nat.c);
+                    st.missing = l.missing(nat.c);
                     Ok(st)
                 },
             )

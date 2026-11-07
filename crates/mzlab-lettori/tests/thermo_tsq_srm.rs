@@ -106,12 +106,12 @@ fn the_srm_traces_match_msconvert() {
     let mut l = lettore(&raw);
     let mut got = Vec::new();
     for v in l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .iter()
         .filter(|v| v.tipo == ChromKind::Srm)
     {
-        got.push(l.cromatogramma(0, &v.id).unwrap());
+        got.push(l.chromatogram(0, &v.id).unwrap());
     }
     assert_eq!(got.len(), want.len(), "number of transitions");
     for (q1, q3, t, y) in &want {

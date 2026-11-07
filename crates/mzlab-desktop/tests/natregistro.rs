@@ -29,7 +29,7 @@ fn module_answer(path: &std::path::Path, id: &str) -> Result<String, &'static st
         }],
     };
     let mut l = mzlab_lettori::apri(set, &Limiti::desktop()).unwrap();
-    l.cromatogramma(0, id)
+    l.chromatogram(0, id)
         .map(|c| mzlab_lettori::json::cromatogramma_json(&c))
         .map_err(|e| e.key)
 }

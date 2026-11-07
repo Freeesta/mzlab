@@ -34,7 +34,7 @@ pub fn indicizza_lettore_doppio(
     let p = tabella(t, l.semplice(), c, none(), none(), none())?;
     let mut p_cen = tabella(t_cen, l.semplice(), c, none(), none(), none())?;
     fase(3);
-    let n = l.indice(c)?.len();
+    let n = l.index(c)?.len();
     // as `indicizza_lettore_con`: the members are asked for once, where the first source is written; the second index has the same
     let (mut sha256, mut src) = (String::new(), String::new());
     let mut tardi = || -> Result<String> {

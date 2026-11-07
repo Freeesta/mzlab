@@ -39,11 +39,11 @@ fn hashes(path: &Path) -> (String, String, String, String) {
     let mzidx = hex(&out.into_inner());
     let mut mz = Sha256Sink::default();
     lettori_mzml::scrivi(&mut *l, 0, &mut mz, &mut |_, _| {}).expect("mzML");
-    let metodo = hex(l.metodo(0).expect("metodo").as_bytes());
-    let n = l.indice(0).unwrap().len();
+    let metodo = hex(l.method(0).expect("metodo").as_bytes());
+    let n = l.index(0).unwrap().len();
     let mut h = Sha256::new();
     for k in (0..n).step_by((n / 200).max(1)) {
-        for c in l.intestazione(0, k).expect("header") {
+        for c in l.scan_header(0, k).expect("header") {
             h.update(format!(
                 "{}={}|{:?}|{:?}\n",
                 c.nome, c.valore, c.unita, c.cv
@@ -178,15 +178,15 @@ fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
             }],
         };
         let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
-        let indice = l.indice(0).unwrap().to_vec();
+        let indice = l.index(0).unwrap().to_vec();
         let riletto =
             mzlab_core::trasporto::decode_indice(&mzlab_core::trasporto::encode_indice(&indice))
                 .unwrap();
         assert_eq!(riletto, indice, "{caso}: index through the transport");
         let passo = (indice.len() / 300).max(1);
         for k in (0..indice.len()).step_by(passo) {
-            let a = l.scansione(0, k).unwrap();
-            let b = l.scansione_dati(0, k).unwrap();
+            let a = l.scan(0, k).unwrap();
+            let b = l.scan_data(0, k).unwrap();
             assert_eq!(
                 (
                     a.index,
@@ -257,8 +257,8 @@ fn la_testata_della_tabella_ha_i_campi_della_testata_completa() {
         let Ok(mut l) = lettori::apri(fs, &Limiti::sito()) else {
             continue;
         };
-        let piena = l.testata_mzml(0).unwrap().expect("full header");
-        let leggera = l.testata_tabella(0).unwrap().expect("light header");
+        let piena = l.mzml_header(0).unwrap().expect("full header");
+        let leggera = l.table_header(0).unwrap().expect("light header");
         let campi = |h: &mzlab_core::mzmlwrite::Header| {
             format!(
                 "{:?}",

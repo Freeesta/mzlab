@@ -253,27 +253,27 @@ impl LettoreAndi {
 }
 
 impl Lettore for LettoreAndi {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("andi-ms")
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         self.completa()?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.uno(c)?;
         self.spettro(k)
     }
 
     /// Every per-scan variable of the file (times, ranges, counts) at scan `k`, with its unit.
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.uno(c)?;
         if k >= self.indice.len() {
             return Err(indice_cattivo(k));
@@ -305,7 +305,7 @@ impl Lettore for LettoreAndi {
         Ok(out)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.uno(c)?;
         if self.indice.is_empty() {
             return Ok(cromato::voci(&self.cdf, &mut self.dati, &self.limiti));
@@ -321,7 +321,7 @@ impl Lettore for LettoreAndi {
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.uno(c)?;
         if self.indice.is_empty() {
             return cromato::traccia(&self.cdf, &mut self.dati, &self.limiti, id);
@@ -329,13 +329,13 @@ impl Lettore for LettoreAndi {
         self.traccia(id)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.uno(c)?;
         let sha1 = self.sha1();
         Ok(self.testata.documento(&self.nome, self.dim, sha1))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.uno(c)?;
         let sha1 = self.sha1();
         let doc = self.testata.documento(&self.nome, self.dim, sha1.clone());

@@ -56,7 +56,7 @@ fn a_scheduled_mrm_pair_without_a_log_is_a_variant() {
     };
     let mut l = apri(&dir, "programmati");
     assert!(
-        l.variante(0),
+        l.variant(0),
         "its sparse MRM blocks are read by the module only"
     );
     assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
@@ -68,8 +68,8 @@ fn a_pair_is_a_variant_when_any_of_its_samples_is() {
         return;
     };
     let mut l = apri(&dir, "mistopi");
-    assert_eq!(l.campioni().len(), 2);
-    assert!(!l.variante(0) && l.variante(1));
+    assert_eq!(l.samples().len(), 2);
+    assert!(!l.variant(0) && l.variant(1));
     assert!(mzlab_lettori::motivi(&mut *l, 0).contains(&"variante"));
 }
 
@@ -82,12 +82,12 @@ fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
     };
     let mut l = apri(&dir, "mrmrado");
     assert!(
-        l.variante(0),
+        l.variant(0),
         "its sparse MRM blocks are read by the module only"
     );
     assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
     let srm = l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .iter()
         .filter(|c| c.id.starts_with("SRM SIC"))

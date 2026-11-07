@@ -94,11 +94,11 @@ impl LettoreWaters {
 }
 
 impl Lettore for LettoreWaters {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("waters-raw")
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use mzlab_core::conv::{FUORI_MODELLO, IDENTITA, NON_DECODIFICATO};
         &[
             ("drift time and mobility calibration", NON_DECODIFICATO),
@@ -108,18 +108,18 @@ impl Lettore for LettoreWaters {
         ]
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let (f, r, v) = self.voce(c, k)?;
         let (cod, dat) = (
             f.cod.ok_or_else(|| errore("record width"))?,
@@ -147,7 +147,7 @@ impl Lettore for LettoreWaters {
         })
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         let (f, r, v) = self.voce(c, k)?;
         let campo = |nome: &str, valore: String, unita: Option<&str>| Campo {
             nome: nome.into(),
@@ -203,7 +203,7 @@ impl Lettore for LettoreWaters {
         Ok(out)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(self
             .cromatogrammi_tutti(c)?
             .iter()
@@ -215,7 +215,7 @@ impl Lettore for LettoreWaters {
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.cromatogrammi_tutti(c)?
             .iter()
             .find(|h| h.id == id)
@@ -223,14 +223,14 @@ impl Lettore for LettoreWaters {
             .ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
-        super::doc::testata(self).map(Some)
+        super::doc::file_header(self).map(Some)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
@@ -398,7 +398,7 @@ fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     }
     let lista = funzioni::leggi(&inf, limiti)?;
     let testata = opzionale(&mut c, "_HEADER.TXT")
-        .map_or_else(Testata::default, |b| inf::testata(&testo(&b)));
+        .map_or_else(Testata::default, |b| inf::file_header(&testo(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
         .map_or_else(Extern::default, |b| inf::extern_inf(&testo(&b)));
     let inlet = opzionale(&mut c, "_INLET.INF").map(|b| inf::inlet(&testo(&b)));

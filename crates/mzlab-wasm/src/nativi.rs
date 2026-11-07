@@ -212,9 +212,9 @@ pub fn native_samples(
     let l = Membri::new(names, sizes, read)?.open(false)?;
     let mut o = Out::default();
     o.raw("{\"format\":")
-        .str(&format!("{:?}", l.formato()))
+        .str(&format!("{:?}", l.format()))
         .raw(",\"samples\":[");
-    for (i, s) in l.campioni().iter().enumerate() {
+    for (i, s) in l.samples().iter().enumerate() {
         let p = if i > 0 { ",{\"id\":" } else { "{\"id\":" };
         o.raw(p)
             .int(i64::from(s.id))
@@ -291,7 +291,7 @@ impl Spill for JsSpill {
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
 /// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`contato.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
-/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::mancanti`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
+/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::missing`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -317,7 +317,7 @@ pub fn build_mzidx_native(
     let mut membri = || impronte.date(|| m.fileset());
     let c = c as usize;
     let mut l = crate::contato::apri(fs, |fs| m.apri_fs(fs), &tell, step, c)?;
-    let cm = (c, l.mancanti(c));
+    let cm = (c, l.missing(c));
     let mut out = Accorpa::flussi(JsOutput { write });
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round; OPFS writes in 1 MiB blocks (`accorpa`)
     let mut spill = spill_put
@@ -352,7 +352,7 @@ pub fn build_mzidx_native(
     ))
 }
 
-/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`); `missing`: `Lettore::mancanti` of sample `c`.
+/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`); `missing`: `Lettore::missing` of sample `c`.
 #[allow(clippy::too_many_arguments)]
 fn doppio(
     l: Box<dyn mzlab_core::lettori::Lettore>,
@@ -391,13 +391,13 @@ fn doppio(
 /// The first MS1 scan of sample `c` is profile (false when it cannot be told: no MS1, a scan that does not decode).
 fn primo_ms1_profilo(l: &mut dyn mzlab_core::lettori::Lettore, c: usize) -> bool {
     let Some(k) = l
-        .indice(c)
+        .index(c)
         .ok()
         .and_then(|v| v.iter().position(|e| e.livello == 1))
     else {
         return false;
     };
-    l.scansione(c, k).is_ok_and(|s| s.profile)
+    l.scan(c, k).is_ok_and(|s| s.profile)
 }
 
 /// The SRM traces of sample `c` of a dataset as `mzlab_core::srm::impacchetta` writes them, given once to `sink(Uint8Array)` (the MRM files of mzFinder: no mzML is made of them).
