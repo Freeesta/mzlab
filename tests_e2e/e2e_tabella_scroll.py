@@ -17,7 +17,7 @@ r = Run(port=8893, wd="/tmp/wd_tabscroll")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.wait_for_selector("#drop"); attendi(pg, "window.qqReady === true", 60000)
+        pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
         def load(files, w=1400, h=800):
             pg.set_viewport_size({"width": w, "height": h}); pg.set_input_files("#pick", files); open_first(pg); ready(pg)
         def same(a, b, what, gap=True):
@@ -56,11 +56,11 @@ try:
             assert pg.evaluate("scrollY") > 0 or pg.evaluate("document.querySelector('#wtable').getBoundingClientRect().top < innerHeight"), "table not brought into view"
         step("before a session: a table out of view is brought into view", far)
         def one():
-            pg.reload(); attendi(pg, "window.qqReady === true", 60000)
+            pg.reload(); wait_for_js(pg, "window.qqReady === true", 60000)
             load(FILES[:1]); run_cycle(0)
         step("1 file: no jump", one)
         def narrow():
-            pg.reload(); attendi(pg, "window.qqReady === true", 60000)
+            pg.reload(); wait_for_js(pg, "window.qqReady === true", 60000)
             load(FILES, 800, 700)
             if pg.is_hidden("#samptab"): pg.click("#sb-toggle"); ready(pg)
             b = pg.evaluate(POS); press(); same(b, pg.evaluate(POS), "narrow window, table on", False)
@@ -68,7 +68,7 @@ try:
             press(); same(b, pg.evaluate(POS), "narrow window, table off", False)
         step("narrow window (< 900 px): no jump", narrow)
         def hidden_panel():
-            pg.reload(); attendi(pg, "window.qqReady === true", 60000)
+            pg.reload(); wait_for_js(pg, "window.qqReady === true", 60000)
             load(FILES)
             if pg.get_attribute("#sb-toggle", "aria-pressed") == "true": pg.click("#sb-toggle"); ready(pg)
             b = pg.evaluate(POS); pg.evaluate("document.querySelector('#samptab').click()"); ready(pg); same(b, pg.evaluate(POS), "side panel hidden")

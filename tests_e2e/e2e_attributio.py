@@ -62,7 +62,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         pg0 = new_page(b, False)
-        lib.attendi(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
+        lib.wait_for_js(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
         step("without the administrator mode there is no Attributio entry of its own", lambda: (_ for _ in ()).throw(AssertionError("entry found")) if pg0.locator("[data-v=attributio], #v-attributio").count() else None)
         pg0.close()
 
@@ -193,7 +193,7 @@ try:
             pg.evaluate("ATTRIBUTIO_CORE.MAX_FILES = 3")
             try:
                 pg.set_input_files(FOLDER_INPUT, str(FOLDER))
-                lib.attendi(pg, "(document.querySelector('#flx-camp-cut') || {}).textContent", 30000)
+                lib.wait_for_js(pg, "(document.querySelector('#flx-camp-cut') || {}).textContent", 30000)
                 n = sum(1 for f in Path(FOLDER).rglob("*") if f.is_file())
                 txt = pg.inner_text("#flx-camp-cut")
                 assert txt.startswith(Path(FOLDER).name + ": only the first 3 files of " + str(n)) and "left out" in txt and "open it again" in txt, txt

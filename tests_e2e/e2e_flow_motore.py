@@ -7,7 +7,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi
+from lib import free_port, wait_for_js
 
 site = ROOT / "site"
 if not ((site / "static" / "wasm-feat" / "manifest.json").exists() and (site / "static" / "wasm" / "mzlab_wasm.js").exists()):
@@ -37,11 +37,11 @@ try:
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_selector("#flx-add"); pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Confidence level")')
-        pg.click('.fln:has-text("Confidence level")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Confidence level'")
+        pg.click('.fln:has-text("Confidence level")'); wait_for_js(pg, "document.querySelector('.fl-insp h3').textContent === 'Confidence level'")
 
         def cascade():
             pg.set_input_files('.fl-insp input[type=file][webkitdirectory]', str(FOLDER))
-            try: attendi(pg, "document.querySelectorAll('.flx-res .tp tbody tr.clk').length > 0", 180000)
+            try: wait_for_js(pg, "document.querySelectorAll('.flx-res .tp tbody tr.clk').length > 0", 180000)
             except Exception: raise AssertionError("no rows: " + pg.inner_text(".fl-insp .fl-note") + " " + str(errs[:3]))
             n = pg.evaluate("document.querySelectorAll('.flx-res .tp tbody tr.clk').length")
             assert n == 15, n
@@ -59,7 +59,7 @@ try:
 
         def digest():
             pg.click('.flx-res button:has-text("Settings digest")')
-            attendi(pg, "(document.querySelector('.flw-digest code') || {textContent: ''}).textContent.length >= 8", 120000)
+            wait_for_js(pg, "(document.querySelector('.flw-digest code') || {textContent: ''}).textContent.length >= 8", 120000)
         step("the settings digest comes from the real evidence export", digest)
 
         def export():
@@ -70,8 +70,8 @@ try:
 
         def review():
             pg.click('.flx-res button:has-text("Review")')
-            attendi(pg, "document.querySelector('.flw-rv h3') || document.querySelector('.flw-review .fl-note')", 120000)
-            attendi(pg, "!/Loading the proofs/.test(document.querySelector('.flw-review').textContent) && document.querySelectorAll('.flw-rv-acts button').length > 0", 120000)
+            wait_for_js(pg, "document.querySelector('.flw-rv h3') || document.querySelector('.flw-review .fl-note')", 120000)
+            wait_for_js(pg, "!/Loading the proofs/.test(document.querySelector('.flw-review').textContent) && document.querySelectorAll('.flw-rv-acts button').length > 0", 120000)
             txt = pg.inner_text(".flw-review")
             assert "Review" in txt and pg.locator(".flw-rv-acts button").count() >= 3, txt[:300]
             pg.keyboard.press("Escape")

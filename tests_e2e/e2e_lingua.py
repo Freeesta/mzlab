@@ -47,10 +47,10 @@ try:
             assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "it"
             saved(pg)        # the open files come back from the saved session: wait until it is written
             with pg.expect_navigation(): pg.click("input[name=uip-lang][value=en]", force=True)
-            attendi(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
+            wait_for_js(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
             assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
             assert nav(pg) == ["Data", "Drawing", "Tabui", "Flow"]
-            attendi(pg, f"E.files.length === {n}", 60000)
+            wait_for_js(pg, f"E.files.length === {n}", 60000)
             assert pg.evaluate("E.files.length") == n, "open files must come back after the language change"
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "en"
             assert pg.inner_text("#uip-lang-l").lower().startswith("lingua / language"), "the label stays bilingual"

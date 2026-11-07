@@ -15,15 +15,15 @@ try:
         def empty_export():
             pg.evaluate("document.getElementById('ex-png').scrollIntoView()")
             downloads = []; pg.on("download", lambda d: downloads.append(d))
-            pg.click("#ex-png"); attendi(pg, "!document.getElementById('ex-warn').hidden")
+            pg.click("#ex-png"); wait_for_js(pg, "!document.getElementById('ex-warn').hidden")
             t = pg.inner_text("#ex-warn"); assert "Niente da esportare" in t, t
             assert not downloads, "a file was downloaded"
         step("PNG of an empty canvas warns and downloads nothing", empty_export)
         def quick():
             pg.evaluate("document.getElementById('ex-smi').scrollIntoView()")
             pg.fill("#ex-smi", "CCO"); pg.click("#ex-load")
-            attendi(pg, f"!{KJ}.editor.struct().isBlank()")
-            attendi(pg, "(() => { const r = document.getElementById('kframe').getBoundingClientRect(); return r.top >= 0 && r.top < innerHeight / 2 })()")
+            wait_for_js(pg, f"!{KJ}.editor.struct().isBlank()")
+            wait_for_js(pg, "(() => { const r = document.getElementById('kframe').getBoundingClientRect(); return r.top >= 0 && r.top < innerHeight / 2 })()")
         step("Quick draw brings the canvas into view", quick)
         def sizes():
             bad = pg.evaluate("""[...document.querySelectorAll('#v-draw input[type=checkbox], #v-draw input[type=radio], #v-draw summary, header .hq')].filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); return [e.id || e.tagName, Math.round(r.width), Math.round(r.height)] }).filter(x => x[1] < 24 || x[2] < 24)""")

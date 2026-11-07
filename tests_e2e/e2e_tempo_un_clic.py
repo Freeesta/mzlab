@@ -17,18 +17,18 @@ try:
             name = pg.locator(T).nth(1).evaluate("x => ST.files[+x.dataset.i].name")      # the row clicked below
             pg.locator(T).nth(0).fill("7")
             pg.locator(T).nth(1).click()   # every time is editable: the first is typed in, the second is clicked
-            attendi(pg, f"(()=>{{const a={ACT};return !!a&&a[0]===ST.files.find(f=>f.name===({name!r})).name&&a[1]==='time'}})()")
+            wait_for_js(pg, f"(()=>{{const a={ACT};return !!a&&a[0]===ST.files.find(f=>f.name===({name!r})).name&&a[1]==='time'}})()")
             pg.keyboard.type("5")
-            attendi(pg, f"{ACT}&&{ACT}[2].endsWith('5')")
+            wait_for_js(pg, f"{ACT}&&{ACT}[2].endsWith('5')")
         step("typing in a time, one click on the time of another row: the focus is there and typing goes in", click_other)
         def tab_next():
             pg.locator(T).nth(0).fill("9"); pg.keyboard.press("Tab")
-            attendi(pg, "document.activeElement && document.activeElement.dataset.mv !== undefined")      # the next stop after the time is the «move to group» button (then the remove button)
+            wait_for_js(pg, "document.activeElement && document.activeElement.dataset.mv !== undefined")      # the next stop after the time is the «move to group» button (then the remove button)
         step("Tab from a changed time keeps the focus on the next stop", tab_next)
         def select():
             pg.locator(T).nth(0).fill("3")
             pg.locator("#flist select[data-k=type]").nth(1).click()
-            attendi(pg, f"{ACT}&&{ACT}[1]==='type'")
+            wait_for_js(pg, f"{ACT}&&{ACT}[1]==='type'")
         step("one click on the type select of another row", select)
 finally:
     r.close(); r.report()

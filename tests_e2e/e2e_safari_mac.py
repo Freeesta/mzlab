@@ -42,9 +42,9 @@ try:
         def chart_pinch():
             with pg.expect_file_chooser() as fc: pg.evaluate("document.getElementById('pick').click()")
             fc.value.set_files([str(EX / "FullScan_t0.mzML")])
-            attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 60000)
+            wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 60000)
             pg.click("#opbtn"); ready(pg)
-            attendi(pg, "E.panels.some(q => q.type === 'chrom' && q._a && q._a.full && q.cv.width > 0)", 60000)
+            wait_for_js(pg, "E.panels.some(q => q.type === 'chrom' && q._a && q._a.full && q.cv.width > 0)", 60000)
             pg.evaluate("window.__chrom = E.panels.find(q => q.type === 'chrom'); window.__chrom.zoom = null; draw(window.__chrom)"); frames(pg, 2)
             stopped = pg.evaluate(PINCH, [pg.evaluate_handle("window.__chrom.cv"), [1.25, 1.6, 2.0]])
             assert all(stopped), f"the page zoom was not stopped on the chart: {stopped}"

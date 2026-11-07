@@ -29,15 +29,15 @@ try:
             n = pg.evaluate("fetch('api/mzml_valida?name=FullScan_t10.mzML').then(r=>r.json()).then(j=>j[0].problems.length)")
             assert rows == n and rows > 0, (rows, n)
         step("the dialog lists the findings of the report", report)
-        def only_valida():
+        def only_validate_module():
             fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
             assert fams == {"manifest.json", "valida"} or fams == {"valida"} or fams <= {"manifest.json", "valida"}, fams
             assert "valida" in fams
             assert pg.evaluate("(window.MZLAB_LR_MISS||[]).length") == 0
-        step("only the module valida was loaded and no route missed", only_valida)
+        step("only the module valida was loaded and no route missed", only_validate_module)
         def a11y():
             assert pg.locator("#bigbody [role=region][tabindex='0']").count() == 1
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#bigdlg[open]')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#bigdlg[open]')")
         step("the findings are reachable by keyboard and Esc closes the dialog", a11y)
 finally:
     r.close(); r.report()

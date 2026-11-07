@@ -27,7 +27,7 @@ try:
             assert abs(res["neu"] - ref) < 1e-6 * ref, (res, ref)
             assert abs(res["old"] - ref) > 0.05 * ref, "the sloped baseline must give a clearly different area on this pair"
         step("overlapping Gaussians: new area = trapezoids with exact bar interpolation, old sloped area differs", synthetic)
-        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); attendi(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
+        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode='man';p.intf=p._a.sr[0].key;p.el.scrollIntoView({{block:'center'}});cursorLine(p)}})()"); frames(pg, 3)
         def bars():
             c = pg.evaluate(f"(()=>{{const p={XP},a=p._a,q=p.cv.getBoundingClientRect();return {{l:q.left,t:q.top,a:a.X(13.93),b:a.X(14.57),y:a.H-M.b-6}}}})()")
@@ -37,7 +37,7 @@ try:
         def number():
             it = pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0],s=p._a.sr[0],xs=s.x,ys=s.y;const at=t=>{{let j=0;while(xs[j+1]<=t)j++;return ys[j]+(ys[j+1]-ys[j])*(t-xs[j])/(xs[j+1]-xs[j])}};const lo=Math.min(i.a,i.b),hi=Math.max(i.a,i.b),P=[[lo,at(lo)]];xs.forEach((x,j)=>{{if(x>lo&&x<hi)P.push([x,ys[j]])}});P.push([hi,at(hi)]);let ref=0;for(let j=1;j<P.length;j++)ref+=(P[j][1]+P[j-1][1])/2*(P[j][0]-P[j-1][0])*60;return {{area:i.area,ref,lab:p._a.lbls.find(l=>l.copy!=null).copy,txt:I18N.sciE(i.area)}}}})()")
             assert abs(it["area"] - it["ref"]) <= 1e-9 * max(1, it["ref"]) and it["lab"] == it["txt"], it
-            pg.evaluate("showInts()"); attendi(pg, "document.querySelector('#bigbody table')&&document.querySelector('#bigbody table').textContent.length>0")
+            pg.evaluate("showInts()"); wait_for_js(pg, "document.querySelector('#bigbody table')&&document.querySelector('#bigbody table').textContent.length>0")
             assert it["txt"] in pg.evaluate("document.querySelector('#bigbody table').textContent") or it["txt"].replace(".", ",") in pg.evaluate("document.querySelector('#bigbody table').textContent"), it
             pg.keyboard.press("Escape")
         step("label = trapezoid sum = number in the area table", number)

@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
-        pg.evaluate("openXic(null)"); attendi(pg, "document.querySelector('#xicdlg').open && document.querySelectorAll('#xic-rows .xrw').length === 2")
+        pg.evaluate("openXic(null)"); wait_for_js(pg, "document.querySelector('#xicdlg').open && document.querySelectorAll('#xic-rows .xrw').length === 2")
         sumtxt = lambda: pg.evaluate("document.querySelector('#xic-rows .xr-sum').textContent")
         def suggest():
             pg.click("#xic-mz"); pg.fill("#xic-mz", "dibutilftalato"); pg.wait_for_selector("#asksug li")
@@ -23,11 +23,11 @@ try:
         step("a name is suggested and a pick fills the formula (Enter does not extract)", suggest)
         def shifted_name():
             pg.select_option("#xic-ad", "[M+H]+"); pg.fill("#xic-mz", "dibutilftalato+16")
-            attendi(pg, "document.querySelector('#xic-rows .xr-sum').textContent.includes('295.159')")
+            wait_for_js(pg, "document.querySelector('#xic-rows .xr-sum').textContent.includes('295.159')")
         step("a name with a shift: formula, adduct, then +16 Da (279.159 -> 295.159)", shifted_name)
         def plain():
-            pg.fill("#xic-mz", "C16H22O4+16"); attendi(pg, "document.querySelector('#xic-rows .xr-sum').textContent.includes('295.159')")
-            pg.fill("#xic-mz", "no-such-name+16"); attendi(pg, "document.querySelector('#xic-rows .xr-sum .fail')")
+            pg.fill("#xic-mz", "C16H22O4+16"); wait_for_js(pg, "document.querySelector('#xic-rows .xr-sum').textContent.includes('295.159')")
+            pg.fill("#xic-mz", "no-such-name+16"); wait_for_js(pg, "document.querySelector('#xic-rows .xr-sum .fail')")
         step("a formula with a shift gives the same m/z; an unknown name is refused", plain)
     r.close()
 except Exception as e:

@@ -17,16 +17,16 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 1000})
         stage(pg, [mz(f) for f in FILES]); pg.click("text=Carica dati"); ready(pg)
         def close():
-            pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('#ctx').hidden")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#ctx').hidden")
         def keyboard(P):
             pg.evaluate(f"(()=>{{const p={P};p.cv.scrollIntoView({{block:'center'}});p.cv.focus()}})()")
-            pg.keyboard.press("Shift+F10"); attendi(pg, OPEN)
+            pg.keyboard.press("Shift+F10"); wait_for_js(pg, OPEN)
             assert pg.evaluate("document.activeElement.closest('#ctx')!==null"), "the focus is in the menu"
         def right_at(P, x, y):
             b = pg.evaluate(f"(()=>{{const r={P}.cv.getBoundingClientRect();return [r.left,r.top]}})()")
-            pg.mouse.click(b[0] + x, b[1] + y, button="right"); attendi(pg, OPEN)
+            pg.mouse.click(b[0] + x, b[1] + y, button="right"); wait_for_js(pg, OPEN)
         def map2d():
-            open_kind(pg, "full"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, MAP + "&&" + MAP + "._a")
+            open_kind(pg, "full"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, MAP + "&&" + MAP + "._a")
             want = pg.evaluate(f"AZIONI.per(MAPPA.ad2({MAP},null)).filter(i=>i!=='-').map(i=>i.id)")
             assert "mapxic" in want and "maphelp" in want and "map3top" not in want, want
             keyboard(MAP); kb = pg.evaluate(IDS)
@@ -42,7 +42,7 @@ try:
             assert set(want) <= set(pal), (want, pal)
         step("map 2D: right click = Shift+F10 = the registry; the bar and the palette use registered actions", map2d)
         def same(P, kind):
-            open_kind(pg, kind); ready(pg); attendi(pg, P + "&&" + P + "._a")
+            open_kind(pg, kind); ready(pg); wait_for_js(pg, P + "&&" + P + "._a")
             pg.evaluate("(()=>{if(window.__menuAt!==undefined)return;window.__menuAt=null;const m=window.menu;window.menu=(ev,items)=>{window.__menuAt=[ev.clientX,ev.clientY];return m(ev,items)}})()")     # where the menu was asked for
             keyboard(P); kb = pg.evaluate(LABELS); at = pg.evaluate("window.__menuAt")
             close(); assert pg.evaluate(f"document.activeElement==={P}.cv"), "Esc gives the focus back to the graph"
@@ -83,7 +83,7 @@ try:
             assert auto not in tic, ("a total chromatogram has no single peak to integrate", tic)
             assert not any(t in " ".join(tic) for t in (pg.evaluate("I18N.t('ctx.spec.avgSel')"), pg.evaluate("I18N.t('ctx.spec.atRt')"))), tic
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})")
-            XP = "E.panels.find(q=>q.type==='xic')"; attendi(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
+            XP = "E.panels.find(q=>q.type==='xic')"; wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
             assert auto in labels(XP), "an XIC keeps «Integrate the peak»"
         step("TIC: no «Integrate the peak», no spectrum entries; XIC keeps the integration", tic_vs_xic)
         def every_action():

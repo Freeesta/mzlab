@@ -25,12 +25,12 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         def offered():
             assert pg.evaluate("E.files[0].pda") is True
-            pg.click("#np-map"); ready(pg); attendi(pg, "E.files[0]._pdaMap === true")
-            attendi(pg, f"!!{M}.el.querySelector('select[data-o=mapKind]')")
+            pg.click("#np-map"); ready(pg); wait_for_js(pg, "E.files[0]._pdaMap === true")
+            wait_for_js(pg, f"!!{M}.el.querySelector('select[data-o=mapKind]')")
         step("the map offers MS / PDA for a .wiff with the optical detector", offered)
         def drawn():
             pg.select_option(f"#{{}} select[data-o=mapKind]".replace("#{}", "body"), "pda"); ready(pg)
-            attendi(pg, f"{M}._a && {M}._a.map && {M}._a.mat && {M}._a.mat.nmz === 201")
+            wait_for_js(pg, f"{M}._a && {M}._a.map && {M}._a.mat && {M}._a.mat.nmz === 201")
             a = pg.evaluate(f"({{nrt: {M}._a.mat.nrt, mz0: {M}._a.mat.mz0, dmz: {M}._a.mat.dmz, mx: Math.max(...{M}._a.mat.v)}})")
             assert a["nrt"] == 40 and a["mz0"] == 200 and a["dmz"] == 1 and a["mx"] > 300, a
         step("choosing PDA draws the matrix: 40 times x 201 nm, with the peak in it", drawn)

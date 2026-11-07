@@ -35,7 +35,7 @@ try:
         step("English menu", english)
         def nox():
             assert not pg.is_visible("#sb-x") and pg.is_visible("#sb-toggle")
-            close_side(pg); attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
+            close_side(pg); wait_for_js(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
         step("no second × on a wide screen; the header button closes the panel", nox)
 finally:
     r.close()

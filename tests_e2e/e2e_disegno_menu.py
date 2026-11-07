@@ -12,14 +12,14 @@ try:
         pg.click("#nav [data-v=draw]")
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         KJ = "document.querySelector('#kframe').contentWindow.ketcher"
-        pg.evaluate(f"{KJ}.addFragment('CCO')"); attendi(pg, f"!{KJ}.editor.struct().isBlank()")
+        pg.evaluate(f"{KJ}.addFragment('CCO')"); wait_for_js(pg, f"!{KJ}.editor.struct().isBlank()")
         def undo():
             pg.evaluate("document.activeElement && document.activeElement.blur()")
             if pg.locator("#errbox").count(): pg.evaluate("document.getElementById('errbox').remove()")       # an earlier error (e.g. a wasm not built) must not hide this check
             for _ in range(3): pg.keyboard.press("Control+z")
             pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); assert pg.locator("#errbox").count() == 0, "error box: " + (pg.locator("#errbox").inner_text() if pg.locator("#errbox").count() else "")
         step("3x Ctrl+Z with the focus outside the canvas raise no error box", undo)
-        pg.evaluate(f"{KJ}.addFragment('CCO')"); attendi(pg, f"!{KJ}.editor.struct().isBlank()")
+        pg.evaluate(f"{KJ}.addFragment('CCO')"); wait_for_js(pg, f"!{KJ}.editor.struct().isBlank()")
         OPEN = """(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()"""
         def opened():
             for _ in range(200):

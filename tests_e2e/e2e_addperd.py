@@ -7,7 +7,7 @@ if __name__ == "__main__":
     try:
         with sync_playwright() as p:
             pg = r.page(p)
-            pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
             def step(n, f):
                 try: f(); print("OK  ", n)
                 except Exception as e: print("FAIL", n, repr(e)[:300]); bad.append(n)
@@ -29,7 +29,7 @@ if __name__ == "__main__":
                 st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["sub"] == "losses", st
             step("last tab remembered", remembered)
             def palette():
-                pg.keyboard.press("Control+k"); attendi(pg, "document.querySelector('#pal-l')"); pg.keyboard.type("addotti")
+                pg.keyboard.press("Control+k"); wait_for_js(pg, "document.querySelector('#pal-l')"); pg.keyboard.type("addotti")
                 frames(pg, 6); assert "Addotti e perdite" in pg.inner_text("#pal-l"); pg.keyboard.press("Escape")
             step("palette finds the one command", palette)
     finally:

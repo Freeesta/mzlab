@@ -106,7 +106,7 @@ class Page:
         s.wait_ready()
 
     def wait_ready(s, t=60):
-        lib.attendi(s.pg, "window.qqReady === true", t * 1000)
+        lib.wait_for_js(s.pg, "window.qqReady === true", t * 1000)
 
     def quiet(s, limit=30.0):
         """Wait until nothing is in flight; returns what is still busy after `limit` seconds (empty = quiet)."""
@@ -270,7 +270,7 @@ class Fuzz(Steps):
         v = s.a.vista
         if v in ("data", "mix", "hr"):
             lib._real_sif(s.pg, "#pick", [str(f) for f in s.files])
-            lib.attendi(s.pg, f"typeof E !== 'undefined' && E.files.filter(f => !f.gone).length >= {len(s.files)}", 120000)
+            lib.wait_for_js(s.pg, f"typeof E !== 'undefined' && E.files.filter(f => !f.gone).length >= {len(s.files)}", 120000)
             lib.loaded(s.pg)
         if v in ("draw", "flow"):
             s.pg.click(f"#nav [data-v={v}]")

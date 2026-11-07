@@ -28,20 +28,20 @@ try:
             except Exception: pass
             c.close()
 
-        def dati():
+        def data_view():
             c, q = fresh(); q.goto(U + "#/data"); q.wait_for_function("window.qqReady===true", timeout=60000)
             assert q.is_visible("#start") or q.is_visible("#v-data")
             assert q.locator("#nav button.on").get_attribute("data-v") == "data" and "Analisi" in q.title(), q.title()
             shut(c, q)
-        step("cold #/data: data view, title", dati)
+        step("cold #/data: data view, title", data_view)
 
-        def disegno():
+        def drawing_view():
             c, q = fresh(); q.goto(U + "#/draw"); q.wait_for_selector("#v-draw:not([hidden])", timeout=60000)
             assert q.locator("#nav button.on").get_attribute("data-v") == "draw"
             q.wait_for_function("window.qqReady===true", timeout=60000)
             assert q.title().startswith("Disegno") and q.is_hidden("#v-data"), q.title()
             shut(c, q)
-        step("cold #/draw: drawing view at once, title", disegno)
+        step("cold #/draw: drawing view at once, title", drawing_view)
 
         def history():
             c, q = fresh(); q.goto(U); q.wait_for_function("window.qqReady===true", timeout=60000)

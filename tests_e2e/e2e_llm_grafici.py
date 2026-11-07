@@ -6,7 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi, axe_path; PORT = free_port()
+from lib import free_port, wait_for_js, axe_path; PORT = free_port()
 TAB = '#nav button[data-v="flow"]'
 AXE = axe_path()
 steps = []; LAST = []; CON = []; errs = []; reqs = []
@@ -55,7 +55,7 @@ try:
                                % (json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
-            pg.wait_for_selector("#flx-assistant", timeout=30000); attendi(pg, "!!window.MZLAB_LLM_AGENT && !!FLOW.llmChart")
+            pg.wait_for_selector("#flx-assistant", timeout=30000); wait_for_js(pg, "!!window.MZLAB_LLM_AGENT && !!FLOW.llmChart")
             pg.evaluate("s => { FLOW.chartSources = () => s; }", sources)
             if recording: pg.evaluate("t => window.MZLAB_LLM_AGENT.replay(t, false)", recording)
             return pg
@@ -99,10 +99,10 @@ try:
 
         def refused():
             pg = fresh(BAD_REC); ask(pg, "Plot nonsense.")
-            attendi(pg, "document.querySelector('#flx-llm-log').textContent.includes('That view does not exist.')")
+            wait_for_js(pg, "document.querySelector('#flx-llm-log').textContent.includes('That view does not exist.')")
             t = pg.inner_text("#flx-llm-log"); assert "There is no view nope:1" in t and pg.locator("#flx-llm figure.flx-chart").count() == 0, t
             pg.context.close(); pg = fresh(STYLE_REC); ask(pg, "Make it red.")
-            attendi(pg, "document.querySelector('#flx-llm-log').textContent.includes('no styles')")
+            wait_for_js(pg, "document.querySelector('#flx-llm-log').textContent.includes('no styles')")
             assert "belong to the program" in pg.inner_text("#flx-llm-log") and pg.locator("#flx-llm figure.flx-chart").count() == 0
             pg.context.close()
         step("a view that does not exist and a style are refused with the reason", refused)

@@ -14,9 +14,9 @@ try:
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         KJ = "document.querySelector('#kframe').contentWindow.ketcher"
         pg.evaluate(f"{KJ}.addFragment('CCO')")
-        attendi(pg, f"!{KJ}.editor.struct().isBlank()")
+        wait_for_js(pg, f"!{KJ}.editor.struct().isBlank()")
         label = "() => { const d = document.querySelector('#kframe').contentDocument; return [...d.querySelectorAll('svg text')].some(t => t.textContent.replace(/\\s/g, '') === 'C2H6O'); }"
-        try: attendi(pg, f"({label})()", timeout=15000)
+        try: wait_for_js(pg, f"({label})()", timeout=15000)
         except Exception: fail.append("no C2H6O label under the drawing")
         if pg.evaluate("() => !!document.getElementById('errbox') && !document.getElementById('errbox').hidden"): fail.append("an error box is shown: " + pg.inner_text("#errbox")[:200])
 finally:

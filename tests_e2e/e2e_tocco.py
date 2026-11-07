@@ -132,7 +132,7 @@ try:
         def nearedge():
             # the same tolerance for the border of an integrated peak: 10 px beside it, a finger moves the border
             XP = "E.panels.find(p=>p.type==='xic')"
-            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); attendi(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
             pg.evaluate(f"{XP}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
             xq = lambda rt: pg.evaluate(f"(()=>{{const p={XP},q=p.cv.getBoundingClientRect();return q.left+p._a.X({rt})}})()")
             y = pg.evaluate(f"(()=>{{const q={XP}.cv.getBoundingClientRect();return q.top+q.height*0.6}})()")
@@ -141,7 +141,7 @@ try:
                 for k in range(1, 9): T("touchMove", [(x0 + (x1 - x0) * k / 8, y)]); wait(30)
                 T("touchEnd", []); wait(500)
             pg.evaluate(f"{XP}.el.querySelector('[data-a=iman]').click()"); fdrag(xq(13.9), xq(14.8))
-            attendi(pg, f"{XP}.ints.length==1"); pg.evaluate(f"{XP}.imode=null; ctl({XP})"); frames(pg, 2)
+            wait_for_js(pg, f"{XP}.ints.length==1"); pg.evaluate(f"{XP}.imode=null; ctl({XP})"); frames(pg, 2)
             b0 = pg.evaluate(f"{XP}.ints[0].b"); x = xq(b0) + 10; fdrag(x, x + 40)
             b1 = pg.evaluate(f"{XP}.ints[0].b"); assert b1 > b0 + 0.1, (b0, b1, pg.evaluate(f"{XP}.sel"))
             pg.evaluate(f"closePanel({XP}); {CH}.el.scrollIntoView({{block:'start'}})"); frames(pg, 2)
@@ -156,7 +156,7 @@ try:
         def targets():
             # WCAG 2.5.8: the grip and the trace name / remove button of a legend are at least 24 x 24 px for a finger
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'},{id:E.seq++,mz:200.1,w:0.5,label:'m/z 200'}]})")
-            attendi(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p.leg&&p.leg.querySelector('[data-r]')&&p.el.querySelector('.rzg'))})()")
+            wait_for_js(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p.leg&&p.leg.querySelector('[data-r]')&&p.el.querySelector('.rzg'))})()")
             sz = pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic'),r=e=>{const b=e.getBoundingClientRect();return [Math.round(b.width),Math.round(b.height)]};return {grip:r(p.el.querySelector('.rzg')),x:r(p.leg.querySelector('[data-r]')),name:r(p.leg.querySelector('[data-t]'))}})()")
             assert all(min(v) >= 24 for v in sz.values()), sz
             pg.evaluate("closePanel(E.panels.find(p=>p.type==='xic'))")

@@ -148,7 +148,7 @@ def scenario(r, p, name, f):
     pg.goto(f"http://127.0.0.1:{r.port}/?perf=1")
     pg.wait_for_function("document.readyState === 'complete'")
     res["memory"]["1_page_opened"] = memory(pg, b, cdp)
-    attendi(pg, "window.qqReady === true"); ready(pg)
+    wait_for_js(pg, "window.qqReady === true"); ready(pg)
     res["start_ms"] = pg.evaluate("(() => { const m = {}; for (const x of PERF.rows) if (x.kind === 'start') m[x.what] = Math.round(x.ms); return m; })()")
     res["memory"]["2_engine_ready"] = memory(pg, b, cdp)
     res["proto"] = prototype(pg); res["memory"]["3_area_in_advance"] = memory(pg, b, cdp); prototype_undo(pg)
@@ -157,7 +157,7 @@ def scenario(r, p, name, f):
     cdp.send("Profiler.enable"); cdp.send("Profiler.setSamplingInterval", {"interval": 200}); cdp.send("Profiler.start")
     stage(pg, [f])
     open_first(pg)
-    attendi(pg, "window.__tA != null")
+    wait_for_js(pg, "window.__tA != null")
     prof = cdp.send("Profiler.stop")["profile"]; ready(pg)
     res["cpu_top"] = self_time(prof)
     res["t_area_ms"] = round(pg.evaluate("window.__tA"))
@@ -174,7 +174,7 @@ def scenario(r, p, name, f):
     # (c) the map, opened from the toolbar once the file is in
     t1 = pg.evaluate("performance.now()")
     pg.evaluate("document.querySelector('#np-map').click()")
-    attendi(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')"); ready(pg)
+    wait_for_js(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')"); ready(pg)
     mrow = pg.evaluate("PERF.rows.filter(x => x.kind === 'disegno' && x.what === 'draw map').map(x => ({t: x.t, ms: x.ms}))")[0]
     res["map_open_to_drawn_ms"] = round(mrow["t"] - t1); res["map_first_draw_ms"] = round(mrow["ms"])
     res["t_map_since_click_ms"] = round(mrow["t"] - t0)

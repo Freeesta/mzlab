@@ -24,7 +24,7 @@ def state(pg):
 def give(pg):
     n = pg.evaluate(COUNT)
     pg.set_input_files("#pick", str(RAW))
-    attendi(pg, f"window.__ups > {n} && {IDLE}", 180000)
+    wait_for_js(pg, f"window.__ups > {n} && {IDLE}", 180000)
 def again():
     r = Run(port=8867, wd="/tmp/wd_raw_riaggiunto")
     try:
@@ -32,14 +32,14 @@ def again():
             pg = r.page(p)
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             give(pg)
-            attendi(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
+            wait_for_js(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
             first = state(pg)
             assert len(first["copies"]) == 1, first
             give(pg)
             same = state(pg)
             assert same == first, ("same page", first, same)
             pg.reload()
-            attendi(pg, f"typeof ST !== 'undefined' && ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
+            wait_for_js(pg, f"typeof ST !== 'undefined' && ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
             give(pg)
             after = state(pg)
             assert after == first, ("after a reload", first, after)

@@ -14,7 +14,7 @@ return {h:document.querySelector("header").getBoundingClientRect().height,sw:doc
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_viewport_size({"width": 400, "height": 800}); pg.reload(); attendi(pg, "document.querySelector('#stbar .tb') && !document.documentElement.classList.contains('i18n-wait')"); frames(pg, 5)
+        pg.set_viewport_size({"width": 400, "height": 800}); pg.reload(); wait_for_js(pg, "document.querySelector('#stbar .tb') && !document.documentElement.classList.contains('i18n-wait')"); frames(pg, 5)
         d = pg.evaluate(JS)
         step("header height <= 80 px (two rows)", lambda: (_ for _ in ()).throw(AssertionError(d["h"])) if d["h"] > 80 else None)
         step("page does not scroll sideways", lambda: (_ for _ in ()).throw(AssertionError(d["sw"])) if d["sw"] > 400 else None)

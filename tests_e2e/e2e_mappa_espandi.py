@@ -15,12 +15,12 @@ try:
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "typeof E !== 'undefined'")
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2")
-        pg.click("#opbtn"); ready(pg); pg.click("#np-chrom"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, M + "._a && " + C + ".el")
+        pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined'")
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2")
+        pg.click("#opbtn"); ready(pg); pg.click("#np-chrom"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, M + "._a && " + C + ".el")
         box = lambda P: pg.evaluate(f"(()=>{{const r={P}.el.getBoundingClientRect();return [r.left+scrollX,r.top+scrollY,r.width,r.height].map(Math.round)}})()")
-        expand = lambda P: (pg.click(f".pnl.{P} [data-a=max]"), attendi(pg, f"document.querySelector('.pnl.{P}').classList.contains('max')"), ready(pg))
-        collapse = lambda P: (pg.click(f".pnl.{P} [data-a=max]"), attendi(pg, f"!document.querySelector('.pnl.{P}').classList.contains('max')"), ready(pg))
+        expand = lambda P: (pg.click(f".pnl.{P} [data-a=max]"), wait_for_js(pg, f"document.querySelector('.pnl.{P}').classList.contains('max')"), ready(pg))
+        collapse = lambda P: (pg.click(f".pnl.{P} [data-a=max]"), wait_for_js(pg, f"!document.querySelector('.pnl.{P}').classList.contains('max')"), ready(pg))
         vbox = lambda P: pg.evaluate(f"(()=>{{const r={P}.el.getBoundingClientRect();return [r.left,r.top,r.width,r.height].map(Math.round)}})()")        # viewport box: an expanded panel is fixed
         ref = {}
         def other_panel():
@@ -43,12 +43,12 @@ try:
             assert pg.evaluate(f"!{M}._mz.sp.hidden && !{M}._mz.xc.hidden"), "sight margin plots not shown when expanded"
         step("canvases: bitmap size matches the CSS box (map, spectrum, XIC)", canvases)
         def esc_works():
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('.pnl.map').classList.contains('max')"); ready(pg)
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('.pnl.map').classList.contains('max')"); ready(pg)
             assert box(M) == before["box"], (box(M), before["box"])
             assert pg.evaluate("document.fullscreenElement") is None
         step("Esc collapses; the previous box is restored", esc_works)
         def toggle_f():
-            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); attendi(pg, M + ".el.classList.contains('max')"); ready(pg)
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); wait_for_js(pg, M + ".el.classList.contains('max')"); ready(pg)
             assert pg.evaluate("document.fullscreenElement") is None and vbox(M) == ref["box"]
             collapse("map"); assert box(M) == before["box"], (box(M), before["box"])
         step("F key and the button toggle the same way", toggle_f)
