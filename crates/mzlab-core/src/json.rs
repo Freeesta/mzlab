@@ -61,17 +61,19 @@ impl Value {
     }
 }
 
-fn bad() -> Error {
+pub(crate) fn bad() -> Error {
     Error::new("error.badIndex")
 }
 
-struct P<'a> {
-    b: &'a [u8],
-    i: usize,
+pub(crate) struct P<'a> {
+    pub(crate) b: &'a [u8],
+    pub(crate) i: usize,
+    /// reused by `skip_string`
+    pub(crate) scratch: Vec<u8>,
 }
 
 impl P<'_> {
-    fn ws(&mut self) {
+    pub(crate) fn ws(&mut self) {
         while self
             .b
             .get(self.i)
@@ -80,7 +82,7 @@ impl P<'_> {
             self.i += 1;
         }
     }
-    fn eat(&mut self, c: u8) -> Result<()> {
+    pub(crate) fn eat(&mut self, c: u8) -> Result<()> {
         self.ws();
         if self.b.get(self.i) == Some(&c) {
             self.i += 1;
@@ -89,7 +91,7 @@ impl P<'_> {
             Err(bad())
         }
     }
-    fn lit(&mut self, s: &[u8], v: Value) -> Result<Value> {
+    pub(crate) fn lit(&mut self, s: &[u8], v: Value) -> Result<Value> {
         if self.b.get(self.i..).is_some_and(|r| r.starts_with(s)) {
             self.i += s.len();
             Ok(v)
@@ -97,7 +99,7 @@ impl P<'_> {
             Err(bad())
         }
     }
-    fn value(&mut self, depth: usize) -> Result<Value> {
+    pub(crate) fn value(&mut self, depth: usize) -> Result<Value> {
         if depth > 64 {
             return Err(bad());
         }
@@ -157,7 +159,7 @@ impl P<'_> {
             None => Err(bad()),
         }
     }
-    fn number(&mut self) -> Result<Value> {
+    pub(crate) fn number(&mut self) -> Result<Value> {
         let s = self.i;
         while self
             .b
@@ -173,17 +175,22 @@ impl P<'_> {
             .map(Value::Num)
             .ok_or_else(bad)
     }
-    fn string(&mut self) -> Result<String> {
+    pub(crate) fn string(&mut self) -> Result<String> {
+        let mut out: Vec<u8> = Vec::new();
+        self.string_into(&mut out)?;
+        String::from_utf8(out).map_err(|_| bad())
+    }
+    /// The bytes of a string appended to `out` (not yet checked as UTF-8).
+    pub(crate) fn string_into(&mut self, out: &mut Vec<u8>) -> Result<()> {
         if self.b.get(self.i) != Some(&b'"') {
             return Err(bad());
         }
         self.i += 1;
-        let mut out: Vec<u8> = Vec::new();
         loop {
             let c = *self.b.get(self.i).ok_or_else(bad)?;
             self.i += 1;
             match c {
-                b'"' => return String::from_utf8(out).map_err(|_| bad()),
+                b'"' => return Ok(()),
                 b'\\' => {
                     let e = *self.b.get(self.i).ok_or_else(bad)?;
                     self.i += 1;
@@ -224,7 +231,11 @@ impl P<'_> {
 }
 
 pub fn parse(b: &[u8]) -> Result<Value> {
-    let mut p = P { b, i: 0 };
+    let mut p = P {
+        b,
+        i: 0,
+        scratch: Vec::new(),
+    };
     let v = p.value(0)?;
     p.ws();
     if p.i == b.len() {
@@ -233,6 +244,8 @@ pub fn parse(b: &[u8]) -> Result<Value> {
         Err(bad())
     }
 }
+
+pub use crate::json_members::parse_members;
 
 /// JSON text builder: the routes write their answers straight into it.
 #[derive(Default)]

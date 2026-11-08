@@ -4,13 +4,43 @@
 
 const CATALOGO: &str = include_str!("../../../mzlab/web/lang/en/errori.js");
 
-/// The catalogue text of `key` (the catalogue is one `"key": "text",` per line, without escapes).
-fn testo_di(key: &str) -> Option<&'static str> {
+/// The people's names of the memory phases (`memory.phase.<id>`), the ones the page puts in the same sentence.
+const FASI: &str = include_str!("../../../mzlab/web/lang/en/altre-lv-predef.js");
+
+/// The text of `key` in a catalogue of one `"key": "text",` per line, without escapes.
+fn testo_in(catalogo: &'static str, key: &str) -> Option<&'static str> {
     let segno = format!("\n  \"{key}\": \"");
-    let da = CATALOGO.find(&segno)? + segno.len();
-    let riga = CATALOGO[da..].lines().next()?.trim_end();
+    let da = catalogo.find(&segno)? + segno.len();
+    let riga = catalogo[da..].lines().next()?.trim_end();
     let riga = riga.strip_suffix(',').unwrap_or(riga);
     riga.strip_suffix('"')
+}
+
+/// The catalogue text of `key`.
+fn testo_di(key: &str) -> Option<&'static str> {
+    testo_in(CATALOGO, key)
+}
+
+/// The key whose text the terminal shows, the same choice as `I18N.err` in the desktop app: a memory refusal that names its phase has the
+/// sentence with the numbers (`error.memoryBudgetFase[.<fase>]`), and a key with a `.native` text uses it (the limit is this computer's memory).
+fn chiave_resa(key: &str, fase: Option<&str>) -> String {
+    let base = match fase {
+        Some(f) if key == "error.memoryBudget" => {
+            let propria = format!("error.memoryBudgetFase.{f}");
+            if testo_di(&propria).is_some() {
+                propria
+            } else {
+                "error.memoryBudgetFase".to_string()
+            }
+        }
+        _ => key.to_string(),
+    };
+    let nativa = format!("{base}.native");
+    if testo_di(&nativa).is_some() {
+        nativa
+    } else {
+        base
+    }
 }
 
 /// The parameters of `Error`'s `Display` form (` k=v k2=v2`): a word that starts with `name=` opens a parameter, the others continue its value.
@@ -39,15 +69,33 @@ pub(crate) fn umano(msg: &str) -> String {
     if !(key.starts_with("err.") || key.starts_with("error.")) {
         return msg.to_string();
     }
-    let Some(testo) = testo_di(key) else {
+    rendi(msg, key, resto)
+}
+
+/// A calm notice (the one the desktop app gives its page as `{"key", "params"}`) as the terminal line: «text (key)».
+pub fn avviso(n: &crate::convert::Notice) -> String {
+    let resto: String = n.params.iter().map(|(k, v)| format!(" {k}={v}")).collect();
+    rendi(n.key, n.key, &resto)
+}
+
+fn rendi(msg: &str, key: &str, resto: &str) -> String {
+    let par = parametri(resto);
+    let fase = par
+        .iter()
+        .find(|(k, _)| k == "fase")
+        .map(|(_, v)| v.as_str());
+    let Some(testo) = testo_di(&chiave_resa(key, fase)) else {
         return msg.to_string();
     };
     let mut t = testo.to_string();
     let mut avanzo = String::new();
-    for (k, v) in parametri(resto) {
+    for (k, v) in par {
         let segno = format!("{{{k}}}");
         if t.contains(&segno) {
-            t = t.replace(&segno, &v);
+            let nome = (k == "fase")
+                .then(|| testo_in(FASI, &format!("memory.phase.{v}")))
+                .flatten();
+            t = t.replace(&segno, nome.unwrap_or(&v));
         } else {
             avanzo += &format!(", {k}={v}");
         }

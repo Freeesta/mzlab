@@ -1,6 +1,7 @@
 //! `corsa/1` on a hand-written `prov/1`: files and lists apart, estimated against fixed parameters, level counts and the included `report/1`.
 
 use super::*;
+use crate::json::parse;
 
 const PROV: &str = r#"{"schema":"prov/1","agent":{"name":"mzLab","version":"1.2.3","platform":"native"},"plan_sha256":"aa",
 "entity":{"file:a.mzML":{"sha256":"11","bytes":10,"type":"mzml"},"file:lib.msp":{"sha256":"22","bytes":5,"type":"library"},"d.table":{"sha256":"33","type":"table"}},

@@ -142,6 +142,11 @@ fn ari(a: &[usize], b: &[u32]) -> f64 {
     (sum_ij - exp) / (0.5 * (sa + sb) - exp)
 }
 
+/// The budget of the page when it asks for none (192 MB): the step must fit in it on these series, as in the browser.
+fn site() -> mzlab_core::budget::MemBudget {
+    mzlab_core::budget::MemBudget::from_request(0.0)
+}
+
 fn defaults() -> mzlab_feat::ionnet::Params {
     params_of(&[], 1).unwrap().0
 }
@@ -192,6 +197,9 @@ fn ion_identity_edges_are_found() {
     }
 }
 
+#[path = "ionnet_parti/files.rs"]
+mod files;
+
 #[test]
 fn every_row_stays() {
     let (t, _) = series(7, 40);
@@ -202,7 +210,7 @@ fn every_row_stays() {
         ..Origin::default()
     };
     let bytes = write_table(&t, &Recipe::default(), &origin);
-    let text = group_text(&[], &bytes).unwrap();
+    let text = group_text(&[], &bytes, &site()).unwrap().text;
     let v: Value = parse(text.as_bytes()).unwrap();
     assert_eq!(v.get("format").and_then(Value::str), Some("ionnet/1"));
     let ids: Vec<u32> = v
@@ -223,7 +231,7 @@ fn every_row_stays() {
         .iter()
         .all(|g| g.f64().unwrap() >= 1.0));
     // the same bytes twice
-    assert_eq!(group_text(&[], &bytes).unwrap(), text);
+    assert_eq!(group_text(&[], &bytes, &site()).unwrap().text, text);
 }
 
 #[test]
@@ -256,7 +264,7 @@ fn the_bytes_stay_on_a_crowded_table() {
     for (seed, n) in [(7u64, 40), (99, 300), (2026, 900)] {
         let t = crowded(seed, n);
         let bytes = write_table(&t, &Recipe::default(), &Origin::default());
-        let text = group_text(&[], &bytes).unwrap();
+        let text = group_text(&[], &bytes, &site()).unwrap().text;
         let g = group(&t, &defaults());
         // a pair of rows has at most one edge of each kind, and a correlation edge only when no other edge links them
         let mut seen = std::collections::BTreeSet::new();

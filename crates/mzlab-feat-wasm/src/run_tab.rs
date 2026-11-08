@@ -18,12 +18,38 @@ pub fn flow_drift(
     mzlab_feat::flow_drift::drift_text(&params, table, samples, design).map_err(crate::js_err)
 }
 
-/// The `ionnet/1` text of `table` (the bytes of a per-ion `.mzfeat`); `params_json` is the step's parameters merged with its defaults.
-/// Errors are JSON `{"error_key","params"}` texts.
+/// The `ionnet/1` text of `table` (the bytes of a per-ion `.mzfeat`) and its warnings; `params_json` is the step's parameters merged with its defaults,
+/// `budget_mb` the memory of the engine (0 = the default of the page). Errors are JSON `{"error_key","params"}` texts (`error.memoryBudget`, phase `group`).
 #[wasm_bindgen]
-pub fn flow_group(params_json: &str, table: &[u8]) -> std::result::Result<String, JsValue> {
+pub fn flow_group(
+    params_json: &str,
+    table: &[u8],
+    budget_mb: f64,
+) -> std::result::Result<Grouped, JsValue> {
     let params = json_params(params_json).map_err(crate::js_err)?;
-    mzlab_feat::ionnet::group_text(&params, table).map_err(crate::js_err)
+    let budget = mzlab_core::budget::MemBudget::from_request(budget_mb);
+    let g = mzlab_feat::ionnet::group_text(&params, table, &budget).map_err(crate::js_err)?;
+    Ok(Grouped(g))
+}
+
+/// What `flow_group` made: the text (taken once, not copied) and the `warn.*` keys of the record as a JSON array.
+#[wasm_bindgen]
+pub struct Grouped(mzlab_feat::ionnet::Grouped);
+
+#[wasm_bindgen]
+impl Grouped {
+    pub fn take_text(&mut self) -> String {
+        std::mem::take(&mut self.0.text)
+    }
+    pub fn warnings(&self) -> String {
+        let mut o = mzlab_core::json::Out::default();
+        o.raw("[");
+        for (k, w) in self.0.warnings.iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" }).str(w);
+        }
+        o.raw("]");
+        o.0
+    }
 }
 
 /// The `runorder/1` text of the sample table `samples`; `design` holds the batches (`disegno/1`), empty for none (the batch of the sample table). `params_json` is the step's parameters merged with its defaults.

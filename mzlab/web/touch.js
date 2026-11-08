@@ -25,7 +25,7 @@ const TOUCH = (() => {
   const kind = e => { const t = e.pointerType === "mouse" ? "ptr-mouse" : e.pointerType === "touch" || e.pointerType === "pen" ? "ptr-touch" : null; if (!t) return; const c = document.documentElement.classList; if (!c.contains(t)) { c.add(t); c.remove(t === "ptr-mouse" ? "ptr-touch" : "ptr-mouse"); } };
   addEventListener("pointerdown", kind, true); addEventListener("pointermove", kind, true);
 
-  function touchMode() { if (seen) return; seen = true; document.documentElement.classList.add("touch"); }
+  function touchMode() { if (seen) return; seen = true; document.documentElement.classList.add("touch"); carica("m:tocco-controlli.js").catch(() => {}); }   // double taps outside the graphs
 
   // ============================================================ the engine: one per document (the page, the editor)
   // hooks.surface(target) -> { el, ctx } | null   the element that takes the mouse events, and what the page knows about it
@@ -192,3 +192,11 @@ const TOUCH = (() => {
   return { scan, get seen() { return seen; }, _state: () => ({ seen, pts: page.pts(), gesture: page.state(), ketcher: !!ketcherDoc }) };
 })();
 window.TOUCH = TOUCH;
+// a finger or a pen: iOS sends no click to a plain area and the click of a chart is kept above, so the touch itself closes the chart menu (#ctx) and the .corrm menus it lands outside of
+function closeOnTouch(/** @type {PointerEvent} */ e) {
+  if (e.pointerType === "mouse") return;
+  const t = /** @type {Node} */ (e.target), m = Q("#ctx");
+  if (m && !m.hidden && !m.contains(t)) m.hidden = true;
+  document.querySelectorAll(".corrm:not([hidden])").forEach(c => { if (c.parentNode && !c.parentNode.contains(t)) c.hidden = true; });
+}
+document.addEventListener("pointerdown", closeOnTouch, true);

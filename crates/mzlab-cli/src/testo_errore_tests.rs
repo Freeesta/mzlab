@@ -112,3 +112,26 @@ fn a_missing_input_names_its_path_in_english() {
         o.stderr
     );
 }
+
+/// The memory refusals read as in the desktop app (`tests/dati/avvisi_memoria.json`, checked against `I18N.err` by tests/test_avviso_memoria.py):
+/// the limit is this computer's memory, the phase has its people's name, the key stays in brackets.
+#[test]
+fn a_memory_refusal_reads_as_in_the_desktop_app() {
+    let f: serde_json::Value =
+        serde_json::from_str(include_str!("../../../tests/dati/avvisi_memoria.json")).unwrap();
+    for caso in f["casi"].as_array().unwrap() {
+        let mut e = Error::memory_budget();
+        for p in caso["params"].as_array().unwrap() {
+            let k: &'static str = Box::leak(p[0].as_str().unwrap().to_string().into_boxed_str());
+            e = e.with(k, p[1].as_str().unwrap());
+        }
+        // after the text, the key and the parameters the text does not use, as for every key (the phase by its id, for scripts)
+        let resa = umano(&e.to_string());
+        let (testo, coda) = resa.split_once(" (error.memoryBudget").unwrap();
+        assert_eq!(testo, caso["testo"].as_str().unwrap());
+        assert!(
+            !coda.contains("stima_mb") && !coda.contains("index peaks"),
+            "{coda}"
+        );
+    }
+}
