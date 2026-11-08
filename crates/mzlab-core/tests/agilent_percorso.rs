@@ -10,13 +10,22 @@ use agilent_synth::{encode, sample};
 use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
 
 fn apri(scan: Vec<u8>, peak: Vec<u8>) -> mzlab_core::error::Result<Box<dyn lettori::Lettore>> {
+    apri_con(scan, "MSPeak.bin", peak)
+}
+
+/// The run with its points in `AcqData/<punti>` (`MSPeak.bin`, or `MSProfile.bin` of a folder without peaks).
+fn apri_con(
+    scan: Vec<u8>,
+    punti: &str,
+    peak: Vec<u8>,
+) -> mzlab_core::error::Result<Box<dyn lettori::Lettore>> {
     let membri = [
-        ("x.D/AcqData/MSScan.bin", scan),
-        ("x.D/AcqData/MSPeak.bin", peak),
+        ("x.D/AcqData/MSScan.bin".to_string(), scan),
+        (format!("x.D/AcqData/{punti}"), peak),
     ]
     .into_iter()
     .map(|(n, b)| Membro {
-        nome: n.into(),
+        nome: n,
         dim: b.len() as u64,
         dati: Box::new(b),
         sha1: None,
@@ -88,4 +97,19 @@ fn a_plain_run_reads_the_same_on_both_builds() {
     let got = lettura(&mut l);
     eprintln!("LETTURA\n{got}");
     assert_eq!(got, include_str!("agilent_percorso.txt").trim_end());
+}
+
+/// A folder with `MSProfile.bin` and no `MSPeak.bin`: the engine names the missing peaks with the hand-off key, and `agilent_ext` reads the profile file as the
+/// CLI does, with the same scans and TIC as the plain run.
+#[test]
+fn a_profile_only_folder_takes_the_module_route() {
+    let (scan, peak) = encode(&sample());
+    let r = apri_con(scan, "MSProfile.bin", peak);
+    #[cfg(not(feature = "estesi"))]
+    assert_eq!(r.err().expect("refused").key, "err.file.agilentNoPeaks");
+    #[cfg(feature = "estesi")]
+    assert_eq!(
+        lettura(&mut r.expect("opens")),
+        include_str!("agilent_percorso.txt").trim_end()
+    );
 }
