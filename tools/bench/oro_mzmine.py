@@ -100,7 +100,7 @@ def write(path: Path) -> str:
         mz += list(rng.uniform(100, 700, 20)); it += list(rng.lognormal(np.log(3e3), 0.5, 20))
         mz, it = np.array(mz), np.array(it)
         o = np.argsort(mz, kind="stable")
-        specs.append(sm._scan(n, rt, 1, mz[o], it[o], filt=sm.FILTRO1, res=60000))
+        specs.append(sm._scan(n, rt, 1, mz[o], it[o], filt=sm.FILTER1, res=60000))
         tic.append(float(it.sum()))
     chroms = [ds._chrom(0, "TIC", rts, np.array(tic))]
     path.write_text(ds._hr_head("exploris", False, nome) + f'<spectrumList count="{len(specs)}" defaultDataProcessingRef="pwiz_Reader_Thermo_conversion">' + "".join(specs) + "</spectrumList>"

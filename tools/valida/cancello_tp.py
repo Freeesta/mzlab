@@ -10,28 +10,28 @@ import numpy as np
 
 from . import PPM, RT_TOL
 from .cancello import crit
-from .cancello_misure import _cerca
-from .cancello_tp_motore import misure_motore
-from .nativo import Serie
+from .cancello_misure import _search
+from .cancello_tp_motore import engine_measures
+from .nativo import Series
 
-FORMATO = "cancello_tp/1"
+FORMAT = "cancello_tp/1"
 THRESHOLDS = {"tp_trovati": 22, "tp_in_vista": 20, "vista_dimensione": 200, "rango_mediano": 10, "rango_90": 40, "isomeri_righe_per_gruppo": 2, "ereditati_come_tp": 0,
           "generazione": 0.9, "regione": 0.8, "livelli": 1.0, "richiamo_deboli": 0.8, "esche": 0.01}
 NON_MISURABILI = ("generazione", "regione", "livelli", "richiamo_deboli", "esche")          # `generazione`, `livelli`, `regione` come from cancello_tp_motore (truth with fields)
 WITHOUT_THRESHOLD = ("lr_tp",)
 
 
-def position(series: Serie, mz: float, rt: float | None) -> int:
+def position(series: Series, mz: float, rt: float | None) -> int:
     """Row of the table (identity id when the point is a member of an identity) at (mz, rt); any RT when `rt` is None; -1 if none."""
     tol = mz * PPM * 1e-6
     for i in series.identita:
         for m in i["membri"]:
             if abs(m["mz"] - mz) <= tol and (rt is None or abs(m["rt"] - rt) <= RT_TOL):
                 return int(i["id"])
-    return _cerca(series.tabella, mz, rt)
+    return _search(series.tabella, mz, rt)
 
 
-def ranks_view(series: Serie, handled_columns: list[int]) -> dict[int, int]:
+def ranks_view(series: Series, handled_columns: list[int]) -> dict[int, int]:
     """Rank (1-based) of every row of the view. With the block `tp/1` in the table the view is the rows with status 0, in the order kinship, points, largest treated
     area; without it, the raw view: the candidates of the pipeline in the order of the panel (points, then the largest treated area)."""
     amax = series.tabella.massimo(handled_columns)
@@ -48,12 +48,12 @@ def _rts(x) -> list:
     return list(x) if isinstance(x, (list, tuple)) and x else [None] if x is None or isinstance(x, (list, tuple)) else [x]
 
 
-def _positions_tp(t: dict, series: Serie) -> list[int]:
+def _positions_tp(t: dict, series: Series) -> list[int]:
     rts = t.get("rt_obs") or [None]
     return [p for p in (position(series, float(t["mz"]), rt) for rt in rts) if p >= 0]
 
 
-def misure_vista_grezza(truth: dict, series: Serie, handled_columns: list[int]) -> dict:
+def raw_view_measures(truth: dict, series: Series, handled_columns: list[int]) -> dict:
     """The numbers of the raw view. A truth entry (`tps[]`) counts once: found when any of its RT (any RT if none is known) has a row, in the view when that row is a candidate."""
     rank = ranks_view(series, handled_columns)
     tps = truth.get("tps", [])
@@ -85,8 +85,8 @@ def misure_vista_grezza(truth: dict, series: Serie, handled_columns: list[int]) 
             "ereditati_coeluiti_nella_vista": sum(1 for e in in_view if e.get("coeluisce_con_tp"))}
 
 
-def criteri_tp(m: dict | None) -> list[dict]:
-    """The criteria of §5.2 from `misure_vista_grezza` (None: series or truth not available). The ones that need the TP engine stay not measured."""
+def criteria_tp(m: dict | None) -> list[dict]:
+    """The criteria of §5.2 from `raw_view_measures` (None: series or truth not available). The ones that need the TP engine stay not measured."""
     m = m or {}
     g = m.get("isomeri_righe_per_gruppo") or {}
     rows_333 = g.get("333")
@@ -103,11 +103,11 @@ def cancello_tp(criteria: list[dict], dataset: str, data: str, crate: str) -> di
     """The document `cancello_tp/1`: the TP view opens only if every criterion with a threshold was measured and passes."""
     richiesti = [c for c in criteria if c["id"] not in WITHOUT_THRESHOLD]
     vista = all(c["ok"] is True for c in richiesti)
-    return {"crate_version": crate, "criteri": criteria, "data": data, "dataset": dataset, "format": FORMATO, "vista_tp": vista}
+    return {"crate_version": crate, "criteri": criteria, "data": data, "dataset": dataset, "format": FORMAT, "vista_tp": vista}
 
 
-def misura(truth: dict, series: Serie, handled_columns: list[int], dataset: str, data: str, series2: Serie | None = None) -> tuple[dict, dict]:
+def misura(truth: dict, series: Series, handled_columns: list[int], dataset: str, data: str, series2: Series | None = None) -> tuple[dict, dict]:
     """Returns (cancello_tp, details) for a run of the native pipeline on a series with truth; `series2` is a second run (determinism of the TP view)."""
-    m = misure_vista_grezza(truth, series, handled_columns)
-    motore = misure_motore(truth, series, series2)
-    return cancello_tp(criteri_tp({**m, **{k: v for k, v in motore.items() if not k.endswith("_n")}}), dataset, data, series.versione_crate), {"vista_grezza": m, "motore": motore}
+    m = raw_view_measures(truth, series, handled_columns)
+    motore = engine_measures(truth, series, series2)
+    return cancello_tp(criteria_tp({**m, **{k: v for k, v in motore.items() if not k.endswith("_n")}}), dataset, data, series.versione_crate), {"vista_grezza": m, "motore": motore}

@@ -89,15 +89,15 @@ def scrivi(folder, rapporto: dict, performance: bool = True) -> tuple[Path, Path
 
 
 # ---------------------------------------------------------------------------------------------------------------- the gate
-ESITO = {True: "PASS", False: "FAIL", None: "not measured"}
+OUTCOME = {True: "PASS", False: "FAIL", None: "not measured"}
 
 
-def cancello_markdown(c: dict, det: dict) -> str:
+def gate_markdown(c: dict, det: dict) -> str:
     """Summary of the gate: the table of the criteria with PASS / FAIL, the result and the details of the measures."""
     L = [f"# Gate of quality: crate {c['crate_version']}, {c['data']}", "",
          f"Table view: **{'open' if c.get('vista_tabella') else 'closed'}**. Candidate view: **{'open' if c['vista_candidati'] else 'closed'}**. Agreement with mzmine: {c['concordanza_mzmine']}.", "",
          "| criterion | value | threshold | outcome |", "|---|---|---|---|"]
-    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {k['soglia']} | {ESITO[k['ok']]} |" for k in c["criteri"]]
+    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {k['soglia']} | {OUTCOME[k['ok']]} |" for k in c["criteri"]]
     if det.get("timololo"):
         L += ["", "## Real series", "", "| measure | value |", "|---|---|"] + [f"| {k} | {v} |" for k, v in det["timololo"].items()]
     if det.get("mzmine"):
@@ -109,7 +109,7 @@ def cancello_markdown(c: dict, det: dict) -> str:
     return "\n".join(L) + "\n"
 
 
-def scrivi_cancello(folder, c: dict, det: dict, gate_json: str) -> list[Path]:
+def write_gate(folder, c: dict, det: dict, gate_json: str) -> list[Path]:
     """Writes `cancello.json` (where the panel reads it: `gate_json`) and, in `folder`, the report with all the numbers (`cancello_rapporto.json` / `.md`)."""
     d = Path(folder)
     d.mkdir(parents=True, exist_ok=True)
@@ -118,7 +118,7 @@ def scrivi_cancello(folder, c: dict, det: dict, gate_json: str) -> list[Path]:
     out[0].parent.mkdir(parents=True, exist_ok=True)
     out[0].write_text(text, encoding="utf-8")
     out[1].write_text(json.dumps(_clean({"cancello": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
-    out[2].write_text(cancello_markdown(c, det), encoding="utf-8")
+    out[2].write_text(gate_markdown(c, det), encoding="utf-8")
     return out
 
 
@@ -126,14 +126,14 @@ def gate_tp_markdown(c: dict, det: dict) -> str:
     """Summary of the gate of the TP view: the criteria with PASS / FAIL / not measured and the numbers of the raw view."""
     L = [f"# Gate of the TP view: crate {c['crate_version']}, {c['dataset']}, {c['data']}", "", f"TP view: **{'open' if c['vista_tp'] else 'closed'}**.", "",
          "| criterion | value | threshold | outcome |", "|---|---|---|---|"]
-    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {'' if k['soglia'] is None else k['soglia']} | {ESITO[k['ok']]} |" for k in c["criteri"]]
+    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {'' if k['soglia'] is None else k['soglia']} | {OUTCOME[k['ok']]} |" for k in c["criteri"]]
     v = det.get("vista_grezza")
     if v:
         L += ["", "## Raw view (candidates of the pipeline)", "", "| measure | value |", "|---|---|"] + [f"| {k} | {x} |" for k, x in v.items()]
     return "\n".join(L) + "\n"
 
 
-def scrivi_cancello_tp(folder, c: dict, det: dict, gate_tp_json: str) -> list[Path]:
+def write_gate_tp(folder, c: dict, det: dict, gate_tp_json: str) -> list[Path]:
     """Writes `cancello_tp.json` (beside `cancello.json`) and, in `folder`, `cancello_tp_rapporto.json` / `.md`."""
     d = Path(folder)
     d.mkdir(parents=True, exist_ok=True)

@@ -11,7 +11,7 @@ import numpy as np
 
 
 @dataclass
-class Tabella:
+class Table:
     """Rows of (m/z, RT) with one area column per file. `lungo` tables (detected features of all files stacked) have `file` (column of every row) and a 1-d `area`."""
     nome: str
     campioni: list
@@ -66,7 +66,7 @@ def descrivi_file(path) -> dict:
     return {"nome": n, "path": str(path), "time": tempo, "type": tipo}
 
 
-def trova_serie(folder) -> list[dict]:
+def find_series(folder) -> list[dict]:
     """The HR LC series of a folder: mzML files with high-resolution MS1 (the MSn infusion of a standard and unit-resolution files are left out),
     sorted by time, then name."""
     from mzlab.reader.mzml import Run
@@ -85,7 +85,7 @@ def trova_serie(folder) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------------------------------------------------- mzmine
-def leggi_mzmine(path, series: list[dict]) -> Tabella:
+def read_mzmine(path, series: list[dict]) -> Table:
     """mzmine CSV (export 'full' or quant) as a table whose columns are the files of `series` (by name without .mzML); series files missing from the CSV stay at 0."""
     text = Path(path).read_text(encoding="utf-8-sig")
     head = text.splitlines()[0] if text else ""
@@ -130,4 +130,4 @@ def leggi_mzmine(path, series: list[dict]) -> Tabella:
         altezza = np.zeros((len(body), len(series)))
         for k, i in cols_h.items():
             altezza[:, k] = [num(r[i]) if i < len(r) else 0.0 for r in body]
-    return Tabella("mzmine", [x["nome"] for x in series], np.array([num(r[imz]) for r in body]), np.array([num(r[irt]) for r in body]), area, altezza=altezza)
+    return Table("mzmine", [x["nome"] for x in series], np.array([num(r[imz]) for r in body]), np.array([num(r[irt]) for r in body]), area, altezza=altezza)

@@ -2,15 +2,15 @@
 
 - M3 `alogenati`: progenitors with Cl, Br, ClBr and Cl2 (the isotope pattern of the program's isotope model: 35/37Cl 3:1, 79/81Br 1:1, Cl2 9:6:1). Each one has a product that keeps
   the halogens (+O) and the dealogenated products -X+H and -X+OH for every halogen type (simplified pattern). The truth carries the halogens kept by every row.
-- M4 `isomeri_vicini`: groups of two or three isomers (same m/z) whose RT distance is taken from {0.05, 0.1, 0.15, 0.2, 0.3} min, with a declared FWHM (0.08-0.15 min) and
+- M4 `close_isomers`: groups of two or three isomers (same m/z) whose RT distance is taken from {0.05, 0.1, 0.15, 0.2, 0.3} min, with a declared FWHM (0.08-0.15 min) and
   fragments that overlap only in part (the second isomer keeps 70% of the first one's fragments, the third 30%)."""
 from __future__ import annotations
 
 import numpy as np
 
 from mzlab.chem import elements as E
-from valida.sintetici_esteso import testo_delta  # noqa: F401
-from valida.sintetici_identita import Ione, formula_inventata, frammenti_di, somma, valida_formula, valle_relativa
+from valida.sintetici_esteso import delta_text  # noqa: F401
+from valida.sintetici_identita import Ion, formula_inventata, fragments_of, formula_sum, validate_formula, relative_valley
 
 SPECIE = [("Cl", {"Cl": 1}), ("Br", {"Br": 1}), ("ClBr", {"Cl": 1, "Br": 1}), ("Cl2", {"Cl": 2})]
 DEALOG = {"Cl": [("H", {"Cl": -1, "H": 1}), ("OH", {"Cl": -1, "O": 1, "H": 1})], "Br": [("H", {"Br": -1, "H": 1}), ("OH", {"Br": -1, "O": 1, "H": 1})]}
@@ -18,7 +18,7 @@ DT = (0.05, 0.1, 0.15, 0.2, 0.3)
 FWHM = 2.3548200450309493                      # sigma -> FWHM
 
 
-def parametri(rng, forma: str) -> dict:
+def parameters(rng, forma: str) -> dict:
     u = lambda a, b: round(float(rng.uniform(a, b)), 3)          # noqa: E731
     return {"monotona": lambda: dict(kf=u(0.05, 0.25)), "bateman": lambda: dict(kf=u(0.15, 0.3), kd=u(0.04, 0.1))}[forma]()
 
@@ -29,18 +29,18 @@ def halogenated_parent(c, rng, alog: dict):
         f = {e: n for e, n in formula_inventata(rng).items() if e != "Cl"}
         f["H"] -= sum(alog.values())
         f.update(alog)
-        if valida_formula(f) and not any(f == x for x in c.formule):
+        if validate_formula(f) and not any(f == x for x in c.formule):
             rt = c.slot()
             if c.libero(f, rt):
                 return f, rt
 
 
-def halogenated_products(c, st, rng, p: Ione, f: dict, alog: dict, nome: str) -> None:
+def halogenated_products(c, st, rng, p: Ion, f: dict, alog: dict, nome: str) -> None:
     """The product that keeps the halogens (+O) and, for every halogen type, -X+H and -X+OH."""
     steps = [("idrossilazione", "+O", {"O": 1})] + [(f"dealogenazione_{x}_{cl}", f"-{x}+{cl}", d) for x in sorted(alog) for cl, d in DEALOG[x]]
     for j, (classe, text, delta) in enumerate(steps):
         forma = "bateman" if j % 2 == 0 else "monotona"
-        g = somma(f, delta)
+        g = formula_sum(f, delta)
         if any(g == x for x in c.formule):                   # the same formula as another molecule: no product
             continue
         for _ in range(5):                                   # an RT whose neighbours are too close in m/z is skipped (the exclusion window is 0.6 min)
@@ -48,12 +48,12 @@ def halogenated_products(c, st, rng, p: Ione, f: dict, alog: dict, nome: str) ->
             if c.libero(g, rt):
                 break
             c.slot(0.7)
-        if not valida_formula(g) or not c.libero(g, rt):
+        if not validate_formula(g) or not c.libero(g, rt):
             continue
         mid = c.id_mol()
-        o = c.ione(mid, "tp1", mid, g, rt, float(rng.uniform(0.045, 0.07)), c.traccia(forma, float(rng.uniform(0.8, 3.0)) * 1e7, **parametri(rng, forma)), progenitore=p.id,
+        o = c.ione(mid, "tp1", mid, g, rt, float(rng.uniform(0.045, 0.07)), c.traccia(forma, float(rng.uniform(0.8, 3.0)) * 1e7, **parameters(rng, forma)), progenitore=p.id,
                    generazione=1, forma=forma, selezionabile=True)
-        o.frammenti = frammenti_di(rng, o.mz)
+        o.frammenti = fragments_of(rng, o.mz)
         c.formule.append(g)
         st.neutre[o.id] = g
         st.meta[o.id] = dict(classe=classe, delta=text, via="regola", alogeni=sorted(sum(([e] * k for e, k in g.items() if e in ("Cl", "Br")), [])), t_max=None, raggiungibile=True,
@@ -70,7 +70,7 @@ def alogenati(c, st, rng) -> None:
         pid = c.id_mol()
         kd = round(float(rng.uniform(0.03, 0.08)), 3)
         p = c.ione(pid, "progenitore_alog", pid, f, rt, 0.06, c.traccia("progenitore", 2e7, kd=kd), generazione=0, forma="progenitore", k_dec=kd, selezionabile=True)
-        p.frammenti = frammenti_di(rng, p.mz)
+        p.frammenti = fragments_of(rng, p.mz)
         st.meta[p.id] = dict(alogeni=sorted(sum(([e] * k for e, k in alog.items()), [])), specie=nome)
         st.neutre[p.id] = f
         st.cont[f"alog_{nome}"] += 1
@@ -81,7 +81,7 @@ def n_fragments(rng, mz: float, n: int, avoid=()) -> tuple:
     """`n` invented fragments of a precursor (sorted), none near an `avoid` m/z."""
     f, r = [], []
     while len(f) < n:
-        a, b = frammenti_di(rng, mz, avoid=list(avoid) + f)
+        a, b = fragments_of(rng, mz, avoid=list(avoid) + f)
         f += [x for x in a[:n - len(f)]]
         r += [x for x in b[:n - len(r)]]
     o = np.argsort(f, kind="stable")
@@ -101,7 +101,7 @@ def fragments_group(rng, mz: float, quota: float, base=None, n: int = 10) -> tup
     return f[o], r[o]
 
 
-def isomeri_vicini(c, st, rng) -> None:
+def close_isomers(c, st, rng) -> None:
     """`gruppi_per_dt` groups for every ΔRT of DT; groups of three on the odd rounds."""
     parent = next(o for o in c.ioni if o.ruolo == "progenitore")
     for j in range(len(DT) * int(st.P["gruppi_per_dt"])):
@@ -111,13 +111,13 @@ def isomeri_vicini(c, st, rng) -> None:
         sg = fw / FWHM
         rt = c.slot(d * (size - 1) + c.P["passo"] * 0.5)
         while True:
-            f = somma(c.formule[0], {"C": int(rng.integers(-3, 3)), "O": int(rng.integers(0, 4)), "H": 2 * int(rng.integers(-3, 4))})
-            if f != c.formule[0] and valida_formula(f) and not any(f == x for x in c.formule) and c.libero(f, rt):
+            f = formula_sum(c.formule[0], {"C": int(rng.integers(-3, 3)), "O": int(rng.integers(0, 4)), "H": 2 * int(rng.integers(-3, 4))})
+            if f != c.formule[0] and validate_formula(f) and not any(f == x for x in c.formule) and c.libero(f, rt):
                 break
         c.formule.append(f)
         kf = round(float(rng.uniform(0.05, 0.25)), 3)
         scala = float(rng.uniform(1.0, 2.5)) * 1e7
-        sep = valle_relativa(d, sg, 0.8) < 0.98
+        sep = relative_valley(d, sg, 0.8) < 0.98
         members = []
         for m in range(size):
             mid = c.id_mol()

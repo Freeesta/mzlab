@@ -132,7 +132,7 @@ def codice(results) -> None:
         results.append((name, "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
 
 
-def noti_rossi() -> dict[str, str]:
+def known_reds() -> dict[str, str]:
     """tools/noti_rossi.txt: `name | reason` per line, `#` comments. A FAIL of one of these is reported as NOTO (not blocking)."""
     f = ROOT / "tools" / "noti_rossi.txt"
     out: dict[str, str] = {}
@@ -144,10 +144,10 @@ def noti_rossi() -> dict[str, str]:
     return out
 
 
-NOTI_VERDI_GIRI = 3
+KNOWN_GREEN_ROUNDS = 3
 
 
-def noti_verdi(results, known: dict[str, str]):
+def known_greens(results, known: dict[str, str]):
     """A line of noti_rossi.txt whose e2e passes for NOTI_VERDI_GIRI runs in a row becomes a FAIL until the line is removed (streaks in .verifica/noti_verdi.json)."""
     f = OUT / "noti_verdi.json"
     try:
@@ -165,7 +165,7 @@ def noti_verdi(results, known: dict[str, str]):
         f.write_text(json.dumps(series), encoding="utf-8")
     except OSError:
         pass
-    return [(f"noti_rossi: {n}", "FAIL", 0, [f"green for {c} runs in a row: remove the line from tools/noti_rossi.txt"]) for n, c in series.items() if c >= NOTI_VERDI_GIRI]
+    return [(f"noti_rossi: {n}", "FAIL", 0, [f"green for {c} runs in a row: remove the line from tools/noti_rossi.txt"]) for n, c in series.items() if c >= KNOWN_GREEN_ROUNDS]
 
 
 def js_syntax(results) -> None:
@@ -238,7 +238,7 @@ def hrms_dirs() -> list[Path]:
     return [d for d in c if d and d.is_dir() and any(d.glob("*.mzML"))]
 
 
-def prova_hr(results) -> None:
+def hr_round(results) -> None:
     """Technical numbers of the real Orbitrap files (tools/prova_hr.py); nothing to check, only information."""
     dirs = hrms_dirs()
     if not dirs:
@@ -279,7 +279,7 @@ CORE_JS = ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js") 
 
 # --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
 # explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
-AREE = [
+AREAS = [
     ("mzlab/web/archivio.js", {"e2e_due_tab_indice"}), ("mzlab/web/rust-worker.js", {"e2e_due_tab_indice"}), ("mzlab/web/idx-worker.js", {"e2e_due_tab_indice"}), ("tests_e2e/e2e_due_tab_indice.py", {"e2e_due_tab_indice"}),
     ("mzlab/web/tavola-periodica.js", {"e2e28", "e2e6", "e2e_anelli", "e2e_tavola_fissa"}), ("mzlab/web/liste-target", {"e2e_liste_target"}), ("tests_e2e/e2e_liste_target.py", {"e2e_liste_target"}),
     ("mzlab/web/disegno-font.js", {"e2e_strumenti_ketcher"}), ("mzlab/web/disegno-cerca.js", {"e2e_disegno_cerca"}), ("tests_e2e/e2e_disegno_cerca.py", {"e2e_disegno_cerca"}), ("tests_e2e/e2e_disegno_chimica.py", {"e2e_disegno_chimica"}), ("mzlab/web/disegno-barra.js", {"e2e_disegno_barra", "e2e_strumenti_ketcher", "e2e_ketcher_grandi"}), ("mzlab/web/disegno-tablet.js", {"e2e_disegno_tablet_ketcher", "e2e_disegno_bersagli"}), ("tests_e2e/e2e_disegno_bersagli.py", {"e2e_disegno_bersagli"}), ("tests_e2e/e2e_disegno_tablet_ketcher.py", {"e2e_disegno_tablet_ketcher"}), ("mzlab/web/disegno-frammenti.js", {"e2e_frammenti", "e2e_parziali"}), ("mzlab/web/disegno-parziali.js", {"e2e_parziali"}), ("mzlab/web/disegno-molfile.js", {"e2e_disegno_chimica", "e2e_frammenti", "e2e_parziali"}), ("mzlab/web/disegno-etichette.js", {"e2e_disegno_chimica", "e2e_tour_disegno", "e2e_disegno_esporta"}), ("mzlab/web/parentesi.js", {"e2e_parziali"}), ("mzlab/web/draw.js", {"e2e_disegno_tablet_ketcher", "e2e_disegno_chimica", "e2e_cls", "e2e_rifiniture", "e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_tocco_disegno", "e2e_lingua_disegno"}),
@@ -346,7 +346,7 @@ def changed_tests(files: set[str] | None = None) -> tuple[set[str] | None, str]:
             if n.startswith("e2e"):
                 tests.add(n)
             continue
-        hit = [t for pre, t in AREE if f.startswith(pre)]
+        hit = [t for pre, t in AREAS if f.startswith(pre)]
         if not hit:
             return None, f"{f} è del nucleo: tutti gli e2e"
         for t in hit:
@@ -456,7 +456,7 @@ def main() -> None:
         codice(results)
         pytest(results, 1800)
         if not a.rapida:
-            prova_hr(results)
+            hr_round(results)
     if not a.senza_e2e:
         only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) | (set(SMOKE_CHROMIUM_LINUX) if browser_name() == "chromium" and sys.platform.startswith("linux") else set()) if a.rapida or a.fumo else set())
         if a.ultimi_falliti and not only:
@@ -470,8 +470,8 @@ def main() -> None:
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
         if run and not (a.ultimi_falliti and not only):
             e2e(results, only, a.timeout, "", a.paralleli, parte)
-    known = noti_rossi()
-    extra = noti_verdi(results, known)
+    known = known_reds()
+    extra = known_greens(results, known)
     results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known else
                (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
                for n, st, dt, notes in results] + extra

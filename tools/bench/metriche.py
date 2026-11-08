@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from valida.abbina import abbina, abbina_larghi, finestra_larghi
+from valida.abbina import match_points, match_wide, wide_window
 
 from . import PPM, RT_TOL
 from .adatta import matrices
@@ -26,7 +26,7 @@ def row_of(comp: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) 
         return out
     mz, rt, _ = matrices(t)
     cm, cr = _points(comp)
-    ia, ib = abbina(cm, cr, mz, rt, ppm, rt_tol)
+    ia, ib = match_points(cm, cr, mz, rt, ppm, rt_tol)
     out[ia] = ib
     return out
 
@@ -213,7 +213,7 @@ def _intervalli(t: dict) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _true_arrays(comp: list[dict]) -> tuple:
-    """Arrays of the true compounds read by `abbina_larghi` / `finestra_larghi`: m/z, RT, FWHM (min), broad?, rt_min, rt_max."""
+    """Arrays of the true compounds read by `match_wide` / `wide_window`: m/z, RT, FWHM (min), broad?, rt_min, rt_max."""
     g = lambda c, k: np.nan if c.get(k) is None else c[k]
     return (np.array([c["mz"] for c in comp], float), np.array([c["rt"] for c in comp], float), np.array([g(c, "fwhm_s") for c in comp], float) / 60.0,
             np.array([c["ruolo"] == "broad" for c in comp], bool), np.array([g(c, "rt_min") for c in comp], float), np.array([g(c, "rt_max") for c in comp], float))
@@ -221,7 +221,7 @@ def _true_arrays(comp: list[dict]) -> tuple:
 
 def larghi(truth: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """Endpoints of the smeared-peak lot, on the broad bands and the narrow peaks of the truth (`ruolo` broad / narrow) matched TOGETHER one-to-one to the rows
-    (a row cannot serve a band and a peak on it; `abbina_larghi`: a band accepts |dRT| <= max(tol, 0.35 FWHM) or an interval overlap >= 0.40):
+    (a row cannot serve a band and a peak on it; `match_wide`: a band accepts |dRT| <= max(tol, 0.35 FWHM) or an interval overlap >= 0.40):
     - P1_narrow, P1_broad: recall (also by morphology);
     - P2_broad: relative error of the mean area of the matched row against `area_attesa` (NaN if no row or no area; summary = median);
     - P3_split: rows emitted per true band = rows that accept the band and are not matched to a narrow peak (0 = lost; summary mean, median and share > 1);
@@ -229,10 +229,10 @@ def larghi(truth: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL)
     comp = wide_compounds(truth)
     mz, rt, rmin, rmax = (*matrices(t)[:2], *_intervalli(t)) if t["righe"] else (np.zeros(0),) * 4
     cm, cr, fw, wide, c0, c1 = _true_arrays(comp)
-    ia, ib = abbina_larghi(cm, cr, fw, wide, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol)
+    ia, ib = match_wide(cm, cr, fw, wide, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol)
     riga = np.full(len(comp), -1, int)
     riga[ia] = ib
-    ok, _ = finestra_larghi(cm, cr, fw, wide, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol) if len(comp) and len(mz) else (np.zeros((len(comp), len(mz)), bool), None)
+    ok, _ = wide_window(cm, cr, fw, wide, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol) if len(comp) and len(mz) else (np.zeros((len(comp), len(mz)), bool), None)
     narrow_rows = {int(r) for r, b in zip(riga.tolist(), wide.tolist()) if r >= 0 and not b}
 
     def richiamo(maschera):

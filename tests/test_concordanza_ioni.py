@@ -1,4 +1,4 @@
-"""The agreement with mzmine row by ion (`cancello_misure.concordanza_mzmine_ioni`), the reasons of the rows without a partner (`tools/bench/motivi_mzmine.py`) and the gold
+"""The agreement with mzmine row by ion (`cancello_misure.agreement_mzmine_ions`), the reasons of the rows without a partner (`tools/bench/motivi_mzmine.py`) and the gold
 data of mzmine 3.9.0 per stage (`tests/data/untargeted/mzmine39/`, `tools/bench/oro_mzmine.py`). No mzmine, no cargo and no private data needed."""
 import hashlib
 import re
@@ -14,7 +14,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "tools")]
 from bench import corri_mzmine, motivi_mzmine as MM, oro_mzmine  # noqa: E402
 from bench.motivi_mzmine import FileList  # noqa: E402
 from valida import cancello_misure as M  # noqa: E402
-from valida.tabelle import Tabella  # noqa: E402
+from valida.tabelle import Table  # noqa: E402
 
 ORO = ROOT / "tests" / "data" / "untargeted" / "mzmine39"
 
@@ -25,14 +25,14 @@ def tables(n: int = 40, k: int = 3):
     mz, rt = np.sort(rng.uniform(150, 800, n)), rng.uniform(1, 20, n)
     area = np.exp(rng.uniform(np.log(1e6), np.log(1e9), (n, k)))
     alt = area / 10.0
-    nat = Tabella("nativa", list("xyz"[:k]), mz, rt, area, altezza=alt.copy())
-    mm = Tabella("mzmine", list("xyz"[:k]), mz * (1 + 1e-6), rt + 0.01, area / M.MIN_A_S, altezza=alt.copy())
+    nat = Table("nativa", list("xyz"[:k]), mz, rt, area, altezza=alt.copy())
+    mm = Table("mzmine", list("xyz"[:k]), mz * (1 + 1e-6), rt + 0.01, area / M.MIN_A_S, altezza=alt.copy())
     return nat, mm
 
 
 def test_converted_units_give_zero_log_ratio_on_equal_areas():
     nat, mm = tables()
-    c = M.concordanza_mzmine_ioni(nat, mm, [0, 1, 2], 1e3)
+    c = M.agreement_mzmine_ions(nat, mm, [0, 1, 2], 1e3)
     assert c["richiamo"] == 1.0 and c["precisione"] == 1.0 and c["spearman"] > 0.999
     assert c["log2_mediano"] < 1e-9 and c["log2_centrato"] < 1e-9
 
@@ -40,17 +40,17 @@ def test_converted_units_give_zero_log_ratio_on_equal_areas():
 def test_without_the_conversion_the_ratio_is_the_factor_60():
     nat, mm = tables()
     mm.area = mm.area * M.MIN_A_S                      # mzmine areas in counts x s of ours would be 60 times too large after the conversion
-    c = M.concordanza_mzmine_ioni(nat, mm, [0, 1, 2], 1e3)
+    c = M.agreement_mzmine_ions(nat, mm, [0, 1, 2], 1e3)
     assert abs(c["log2_mediano"] - np.log2(60)) < 1e-9 and c["log2_centrato"] < 1e-9
 
 
 def test_a_row_under_the_floor_leaves_both_sides():
     nat, mm = tables(n=10, k=1)
     nat.altezza[3, 0] = mm.altezza[3, 0] = 5.0         # under the floor in both
-    c = M.concordanza_mzmine_ioni(nat, mm, [0], 100.0)
+    c = M.agreement_mzmine_ions(nat, mm, [0], 100.0)
     assert (c["righe_mzmine"], c["righe_native"], c["abbinate"]) == (9, 9, 9) and c["richiamo"] == 1.0 and c["precisione"] == 1.0
     mm.altezza[5, 0] = 5.0                              # under the floor only in mzmine: the native row has no partner, it is not a precision loss of the other side
-    c = M.concordanza_mzmine_ioni(nat, mm, [0], 100.0)
+    c = M.agreement_mzmine_ions(nat, mm, [0], 100.0)
     assert (c["righe_mzmine"], c["righe_native"]) == (8, 9) and c["richiamo"] == 1.0 and c["precisione"] < 1.0
 
 
@@ -58,11 +58,11 @@ def test_heights_are_required():
     nat, mm = tables(n=5, k=1)
     nat.altezza = None
     with pytest.raises(ValueError, match="no heights"):
-        M.concordanza_mzmine_ioni(nat, mm, [0], 1.0)
+        M.agreement_mzmine_ions(nat, mm, [0], 1.0)
 
 
-def uno(mz: float, rt: float, alt: float = 1e5, name: str = "t") -> Tabella:
-    return Tabella(name, ["a"], np.array(mz, float).reshape(-1), np.array(rt, float).reshape(-1), np.full(len(np.atleast_1d(mz)), alt * 10.0).reshape(-1, 1),
+def uno(mz: float, rt: float, alt: float = 1e5, name: str = "t") -> Table:
+    return Table(name, ["a"], np.array(mz, float).reshape(-1), np.array(rt, float).reshape(-1), np.full(len(np.atleast_1d(mz)), alt * 10.0).reshape(-1, 1),
                    altezza=np.full(len(np.atleast_1d(mz)), alt).reshape(-1, 1))
 
 

@@ -45,7 +45,7 @@ def write_mzml(path, k, seed):
                 y = h * shape * rng.normal(1, 0.01)
                 if y >= 2e3: mz.append(np.array([x * (1 + rng.normal(0, 0.8e-6))])); it.append(np.array([y]))
         mz, it = np.concatenate(mz), np.concatenate(it); o = np.argsort(mz, kind="stable")
-        specs.append(sm._scan(n, rt, 1, mz[o], it[o], filt=sm.FILTRO1, res=60000)); tic.append(float(it.sum()))
+        specs.append(sm._scan(n, rt, 1, mz[o], it[o], filt=sm.FILTER1, res=60000)); tic.append(float(it.sum()))
     chroms = [ds._chrom(0, "TIC", rts, np.array(tic))]
     path.write_text(ds._hr_head("exploris", False, path.stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
                     + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")

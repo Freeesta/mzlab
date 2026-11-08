@@ -4,17 +4,17 @@ from __future__ import annotations
 import numpy as np
 
 from . import PPM, RT_TOL
-from .abbina import abbina
-from .isotopologhi import K, Picco
-from .tabelle import Tabella
+from .abbina import match_points
+from .isotopologhi import K, Peak
+from .tabelle import Table
 
 
-def righe(tab: Tabella) -> dict:
+def righe(tab: Table) -> dict:
     per_file = [int(len(tab.presenti(k))) for k in range(len(tab.campioni))]
     return {"righe": int(len(tab)), "per_file": dict(zip(tab.campioni, per_file)), "mediana_per_file": float(np.median(per_file)) if per_file else 0.0}
 
 
-def _find_peaks(picchi: list[Picco], tab: Tabella, ppm: float, rt_tol: float) -> dict:
+def _find_peaks(picchi: list[Peak], tab: Table, ppm: float, rt_tol: float) -> dict:
     """{(index of the Picco, k): row of the table}: each reference peak is matched, in its reference file, with the rows present in that file."""
     out = {}
     for f in sorted({p.ref_file for p in picchi if p.ref_file >= 0}):
@@ -25,13 +25,13 @@ def _find_peaks(picchi: list[Picco], tab: Tabella, ppm: float, rt_tol: float) ->
             idx = [i for i, p in enumerate(picchi) if p.ref_file == f and p.area[k, f] > 0]
             if not idx:
                 continue
-            ia, ib = abbina([picchi[i].mz[k] for i in idx], [picchi[i].apex[k, f] for i in idx], tab.mz[rows_f], tab.rt[rows_f], ppm, rt_tol)
+            ia, ib = match_points([picchi[i].mz[k] for i in idx], [picchi[i].apex[k, f] for i in idx], tab.mz[rows_f], tab.rt[rows_f], ppm, rt_tol)
             for a, b in zip(ia.tolist(), ib.tolist()):
                 out[(idx[a], k)] = int(rows_f[b])
     return out
 
 
-def completezza(picchi: list[Picco], tab: Tabella, min_height: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+def completezza(picchi: list[Peak], tab: Table, min_height: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """Share of the detectable reference peaks (height >= min_height in the reference file) that have a row in the table, for M, M+1, M+2."""
     found = _find_peaks(picchi, tab, ppm, rt_tol)
     out = {}
@@ -42,7 +42,7 @@ def completezza(picchi: list[Picco], tab: Tabella, min_height: float, ppm: float
     return out
 
 
-def rapporto_isotopico(picchi: list[Picco], tab: Tabella, min_height: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+def isotopic_ratio(picchi: list[Peak], tab: Table, min_height: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """Error of the M+1/M area ratio, relative to the formula (obs / theory - 1), measured on the table rows and, as a baseline, on the reference traces."""
     found = _find_peaks(picchi, tab, ppm, rt_tol)
     err_tab, err_rif = [], []
@@ -63,7 +63,7 @@ def rapporto_isotopico(picchi: list[Picco], tab: Tabella, min_height: float, ppm
     return {"tabella": stat(err_tab), "riferimento": stat(err_rif)}
 
 
-def tp_veri(ioni: list[dict], tab: Tabella, handled_columns, candidati=None, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+def tp_true(ioni: list[dict], tab: Table, handled_columns, candidati=None, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """True products (not the parent) found in the aligned table within ppm / RT of the observed RT, with the rank by the largest treated area among all rows
     (`rango_tutte`) and, if `candidati` (rows that survived the filters) is given, among the candidates (`rango_candidati`)."""
     amax = tab.massimo(handled_columns)
@@ -78,7 +78,7 @@ def tp_veri(ioni: list[dict], tab: Tabella, handled_columns, candidati=None, ppm
     items = [(str(x["id"]), float(x["mz"]), float(rt)) for x in ioni if not x.get("parent") for rt in (x.get("rt_obs") or [])]
     without_rt = [str(x["id"]) for x in ioni if not x.get("parent") and not x.get("rt_obs")]
     if items:
-        ia, ib = abbina([v[1] for v in items], [v[2] for v in items], tab.mz, tab.rt, ppm, rt_tol)
+        ia, ib = match_points([v[1] for v in items], [v[2] for v in items], tab.mz, tab.rt, ppm, rt_tol)
         hit = dict(zip(ia.tolist(), ib.tolist()))
     else:
         hit = {}
@@ -107,10 +107,10 @@ def classes_intensity(area_max: np.ndarray, threshold: float) -> np.ndarray:
     return np.digitize(area_max, [10 * threshold, 100 * threshold])
 
 
-def jaccard(a: Tabella, b: Tabella, columns, threshold: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+def jaccard(a: Table, b: Table, columns, threshold: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """Jaccard index of two aligned tables (rows matched one-to-one within ppm / RT) overall and per intensity class of the row in `a` (of `b` when only there)."""
     ma, mb = a.massimo(columns), b.massimo(columns)
-    ia, ib = abbina(a.mz, a.rt, b.mz, b.rt, ppm, rt_tol)
+    ia, ib = match_points(a.mz, a.rt, b.mz, b.rt, ppm, rt_tol)
     ca, cb = classes_intensity(ma, threshold), classes_intensity(mb, threshold)
     match_b = np.zeros(len(b), bool)
     match_b[ib] = True
@@ -127,7 +127,7 @@ def jaccard(a: Tabella, b: Tabella, columns, threshold: float, ppm: float = PPM,
     return out
 
 
-def righe_nel_bianco(tab: Tabella, blank_columns) -> dict | None:
+def blank_rows(tab: Table, blank_columns) -> dict | None:
     cols = list(blank_columns)
     if not cols or tab.lungo:
         return None

@@ -26,7 +26,7 @@ def extra(ap) -> None:
 
 def table_simple(folder: Path, names: list[str], dataset: str, config: str) -> dict:
     """`series.mzfeat` (no identities) -> `bench/1`."""
-    meta, a = nativo.apri((folder / "series.mzfeat").read_bytes())
+    meta, a = nativo.open_data((folder / "series.mzfeat").read_bytes())
     n, k = meta["rows"], meta["files"]
     stato = a["state"].reshape(n, k)
     area = np.where(stato == nativo.CELLA_ASSENTE, 0.0, np.nan_to_num(a["area"].reshape(n, k)))
@@ -39,15 +39,15 @@ def main() -> None:
     par = corri.parameters("mzlab", a.config)
     fs = corri.file_mzml(a.mzml_dir, a.solo)
     nat = corri.native_folder(a.out_dir, "mzlab", a.config)
-    nativo.costruisci_esempio()
-    idx = nativo.indici(fs, nat / "indici")
+    nativo.build_example()
+    idx = nativo.indexes(fs, nat / "indici")
     names = [Path(x).stem for x in idx]
     if a.engine == "untargeted":
         from valida import cancello_untargeted as U
         output = nat / "uscita"
         U.esegui(idx, output, a.params)
         t = table_simple(output, names, a.dataset, a.config)
-        version = nativo.apri((output / "series.mzfeat").read_bytes())[0]["crate"]
+        version = nativo.open_data((output / "series.mzfeat").read_bytes())[0]["crate"]
     elif a.genitore:
         series = nativo.esegui(idx, a.genitore, a.mz_genitore, a.rt_genitore, nat / "uscita", a.smiles)
         t = adatta.from_series(series, a.dataset, a.config)
@@ -55,10 +55,10 @@ def main() -> None:
     else:
         output = nat / "uscita"
         output.mkdir(exist_ok=True)
-        cmd = [str(nativo.ESEMPIO), str(output), *idx] + (["--recipe", par["recipe"]] if par["recipe"] else [])
+        cmd = [str(nativo.EXAMPLE), str(output), *idx] + (["--recipe", par["recipe"]] if par["recipe"] else [])
         subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True)
         t = table_simple(output, names, a.dataset, a.config)
-        version = nativo.apri((output / "series.mzfeat").read_bytes())[0]["crate"]
+        version = nativo.open_data((output / "series.mzfeat").read_bytes())[0]["crate"]
     print(corri.salva(t, a.out_dir, version), len(t["righe"]), "rows")
 
 

@@ -347,7 +347,7 @@ def molfile_cases(m):
     }
 
 
-def composti(path):
+def compounds(path):
     """The suspect list of Tabui: does the InChIKey written next to each SMILES describe the same molecule, the same skeleton, or neither?"""
     import csv
 
@@ -392,7 +392,7 @@ def main():
         molfile_golden(a.golden_molfile)
         return
     if a.composti:
-        composti(a.composti)
+        compounds(a.composti)
         return
     rows = []
     for name, smi, note in SET:

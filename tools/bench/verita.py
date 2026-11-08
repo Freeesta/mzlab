@@ -1,6 +1,6 @@
 """Truths in the common format: a list of compounds `{id, mz, rt, ruolo, fascia, atteso, area_attesa}` (rt None when the compound has no signal at a known time).
 
-- D2 (synthetic, `verita.json` / rows of `sintetici_identita.righe_verita`) and D3 (real series, `tps` of the truth file): `da_righe`.
+- D2 (synthetic, `verita.json` / rows of `sintetici_identita.truth_rows`) and D3 (real series, `tps` of the truth file): `da_righe`.
 - D1 (spike-in with known concentration ratios, the MAF table of MetaboLights): `da_maf`, columns given by name.
 Roles: the true features are the compounds with signal (parent, products, isomers, adducts, in-source fragments); the true products are tp1, tp2, isomero;
 the decoys are `esca` (hypotheses absent from the data, looked for by m/z only) and `isf_finto` (a fragment that is not one of its parent). Isotopes, chimeric
@@ -14,7 +14,7 @@ from pathlib import Path
 FEATURE_ROLES = ("progenitore", "tp1", "tp2", "isomero", "addotto", "isf")
 TP_ROLES = ("tp1", "tp2", "isomero")
 ROLES_DECOY = ("esca", "isf_finto")
-WIDE_ROLES = ("broad", "narrow")             # the smeared-peak lot (`valida.sintetici_mzml.genera_larghi`): measured by `metriche.larghi`, not by P1-P5
+WIDE_ROLES = ("broad", "narrow")             # the smeared-peak lot (`valida.sintetici_mzml.generate_wide`): measured by `metriche.larghi`, not by P1-P5
 EXTRA_WIDE = ("morfologia", "fwhm_s", "rt_min", "rt_max", "su")
 EXPLAINING_ROLES = FEATURE_ROLES + ("isotopo", "isf_finto", "chimerica", "coincidenza", "fondo")
 

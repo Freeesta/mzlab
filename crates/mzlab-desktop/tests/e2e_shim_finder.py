@@ -268,7 +268,7 @@ try:
             rng = numpy.random.default_rng(3); pm = demo.PARENT_MZ + demo.SHIFT
             epi, std, t0 = (tmp / "lr" / n for n in ("lr_EPI.mzML", "lr_MRM-std.mzML", "lr_MRM-t0.mzML"))
             DS._write(epi, [DS._spec(i, 8.8 + 0.02 * i, numpy.array([pm - 61, pm - 44, pm - 17]), numpy.array([120., 500., 900.]) * rng.normal(1, 0.05), level=2, prec=pm, ce=30) for i in range(21)], [])
-            LS.scrivi_mrm(std, 10.0, 1); LS.scrivi_mrm(t0, 3.0, 2)
+            LS.write_mrm(std, 10.0, 1); LS.write_mrm(t0, 3.0, 2)
             pg.set_input_files("#tp-in", [str(x) for x in (epi, std, t0)])
             pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].filter(r => /lr_(EPI|MRM)/.test(r.textContent)).length >= 3", timeout=300000)
             files = LR_FILES + [{"name": epi.name, "type": "sample", "time": None, "kind": "ms2"}, {"name": std.name, "type": "standard", "time": None, "kind": "mrm"}, {"name": t0.name, "type": "sample", "time": 0, "kind": "mrm"}]

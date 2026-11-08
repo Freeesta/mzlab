@@ -18,7 +18,7 @@ from .cancello import crit
 
 TOL_MZ = 0.35                  # Da, the LR matching window (LR_TOL of mzlab-feat)
 TOL_RT = 0.25                  # min
-VALLE_MAX = 0.50               # two isomers are two rows when the valley between them is below this fraction of the lower apex
+VALLEY_MAX = 0.50               # two isomers are two rows when the valley between them is below this fraction of the lower apex
 CELL_DETECTED, CELL_TARGETED, CELL_FILLED, CELL_ABSENT = 0, 1, 2, 3
 ID_MRM = ("lr_mrm_rilevate_livelli", "lr_mrm_area_cresce", "lr_mrm_stati_coerenti")
 ID_FULLSCAN = ("lr_ioni_python_in_tabella", "lr_candidati_con_prove", "lr_isomeri_due_righe")
@@ -49,7 +49,7 @@ def classifica(nome: str) -> str:
     return "campione" if re.search(r"[_\-\s]t\d", low) else "altro"
 
 
-def livello_da_nome(nome: str) -> tuple[float | None, bool]:
+def level_from_name(nome: str) -> tuple[float | None, bool]:
     """(level, is a concentration) of a standard: '12ppb' -> 0.012 mg/L; 'STD_3' -> (3, False) an ordinal; (None, False) when the name says nothing."""
     low = nome.lower().replace(" ", "")
     m = re.search(r"(\d+(?:[._,]\d+)?)(ppm|ppb|ppt|mg/?l|ug/?l|ng/?l)", low)
@@ -60,7 +60,7 @@ def livello_da_nome(nome: str) -> tuple[float | None, bool]:
     return (float(m.group(1)), False) if m else (None, False)
 
 
-def ranghi(v) -> np.ndarray:
+def ranks(v) -> np.ndarray:
     """Ranks with ties averaged."""
     v = np.asarray(v, float)
     o = np.argsort(v, kind="stable")
@@ -75,7 +75,7 @@ def ranghi(v) -> np.ndarray:
 
 def spearman(x, y) -> float | None:
     """Rank correlation; None when either series is constant."""
-    rx, ry = ranghi(x), ranghi(y)
+    rx, ry = ranks(x), ranks(y)
     if np.ptp(rx) == 0 or np.ptp(ry) == 0:
         return None
     return float(np.corrcoef(rx, ry)[0, 1])
@@ -137,7 +137,7 @@ def inconsistent_cells(m: Mrm, cols: list[int]) -> tuple[int, int]:
     return bad, tot
 
 
-def criteri_mrm(m: Mrm | None) -> tuple[list[dict], dict]:
+def criteria_mrm(m: Mrm | None) -> tuple[list[dict], dict]:
     """The three MRM criteria and their details; `m` None: not measured."""
     if m is None:
         return [crit("lr_mrm_rilevate_livelli", None, 1.0, ">="), crit("lr_mrm_area_cresce", None, 0.90, ">="), crit("lr_mrm_stati_coerenti", None, 1.0, ">=")], {}
@@ -154,14 +154,14 @@ def criteri_mrm(m: Mrm | None) -> tuple[list[dict], dict]:
 
 
 # ---------------------------------------------------------------------------------------------------------------- full scan
-def righe_vicine(mz: float, rt: float, rows_mz, rows_rt, tol_mz: float = TOL_MZ, tol_rt: float = TOL_RT) -> np.ndarray:
+def close_rows(mz: float, rt: float, rows_mz, rows_rt, tol_mz: float = TOL_MZ, tol_rt: float = TOL_RT) -> np.ndarray:
     """Indexes of the table rows within the window of an ion."""
     return np.flatnonzero((np.abs(np.asarray(rows_mz) - mz) <= tol_mz) & (np.abs(np.asarray(rows_rt) - rt) <= tol_rt))
 
 
-def copertura(rif: list[dict], rows_mz, rows_rt) -> tuple[int, int, list[dict]]:
+def coverage(rif: list[dict], rows_mz, rows_rt) -> tuple[int, int, list[dict]]:
     """(found, total, missing ions) of the ions {mz, rt} of the reference in the rows of the table."""
-    miss = [x for x in rif if len(righe_vicine(x["mz"], x["rt"], rows_mz, rows_rt)) == 0]
+    miss = [x for x in rif if len(close_rows(x["mz"], x["rt"], rows_mz, rows_rt)) == 0]
     return len(rif) - len(miss), len(rif), miss
 
 
@@ -171,28 +171,28 @@ def candidate_tests(i: dict) -> bool:
     return bool(c) and all(x.get("tipo") and x.get("segno") and x.get("fonte") for x in c) and any(x["segno"] == "a favore" for x in c)
 
 
-def candidati_lr(identita: list[dict]) -> list[dict]:
+def lr_candidates(identita: list[dict]) -> list[dict]:
     """The LR candidates: the identities that a formula hypothesis explains (the others are unexpected ions)."""
     return [i for i in identita if i.get("formula")]
 
 
-def isomeri_separati(pairs: list[tuple], rows_mz, rows_rt) -> tuple[int, int]:
+def separated_isomers(pairs: list[tuple], rows_mz, rows_rt) -> tuple[int, int]:
     """(pairs with two distinct rows, pairs): `pairs` are ((mz, rt), (mz, rt)) of isomers that the profile separates; two distinct rows match the two points."""
     ok = 0
     for a, b in pairs:
-        ra, rb = righe_vicine(*a, rows_mz, rows_rt), righe_vicine(*b, rows_mz, rows_rt)
+        ra, rb = close_rows(*a, rows_mz, rows_rt), close_rows(*b, rows_mz, rows_rt)
         ok += any(x != y for x in ra for y in rb)
     return ok, len(pairs)
 
 
-def valle(ca: float, sa: float, aa: float, cb: float, sb: float, ab: float) -> float:
+def valley(ca: float, sa: float, aa: float, cb: float, sb: float, ab: float) -> float:
     """Valley between two Gaussian peaks (centres, sigmas, amplitudes) as a fraction of the lower apex: min of the sum between the centres / lower apex."""
     t = np.linspace(min(ca, cb), max(ca, cb), 400)
     y = aa * np.exp(-0.5 * ((t - ca) / sa) ** 2) + ab * np.exp(-0.5 * ((t - cb) / sb) ** 2)
     return float(y.min() / min(aa, ab))
 
 
-def coppie_isomeri(rif: list[dict], tol_rt: float = TOL_RT) -> list[tuple]:
+def isomer_pairs(rif: list[dict], tol_rt: float = TOL_RT) -> list[tuple]:
     """Pairs of reference ions with the same nominal mass whose RT differ by more than the matching window: the engine resolved two peaks."""
     out = []
     for i, a in enumerate(rif):
@@ -202,14 +202,14 @@ def coppie_isomeri(rif: list[dict], tol_rt: float = TOL_RT) -> list[tuple]:
     return out
 
 
-def criteri_fullscan(rif: list[dict] | None, rows_mz, rows_rt, identita: list[dict], pairs: list[tuple]) -> tuple[list[dict], dict]:
+def criteria_fullscan(rif: list[dict] | None, rows_mz, rows_rt, identita: list[dict], pairs: list[tuple]) -> tuple[list[dict], dict]:
     """The three full scan criteria and their details; `rif` None (no reference run): not measured."""
     if rif is None:
         return [crit("lr_ioni_python_in_tabella", None, 0.95, ">="), crit("lr_candidati_con_prove", None, 1.0, ">="), crit("lr_isomeri_due_righe", None, 1.0, ">=")], {}
-    found, n, miss = copertura(rif, rows_mz, rows_rt)
-    cand = candidati_lr(identita)
+    found, n, miss = coverage(rif, rows_mz, rows_rt)
+    cand = lr_candidates(identita)
     with_tests = sum(candidate_tests(i) for i in cand)
-    iso, np_ = isomeri_separati(pairs, rows_mz, rows_rt)
+    iso, np_ = separated_isomers(pairs, rows_mz, rows_rt)
     det = {"ioni_riferimento": n, "ioni_trovati": found, "ioni_mancanti": [{"mz": round(x["mz"], 2), "rt": round(x["rt"], 2)} for x in miss],
            "candidati": len(cand), "candidati_con_prove": with_tests, "coppie_isomeri": np_, "coppie_separate": iso, "righe": len(rows_mz)}
     return [crit("lr_ioni_python_in_tabella", found / n if n else None, 0.95, ">="),

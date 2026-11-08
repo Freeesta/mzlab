@@ -52,7 +52,7 @@ def matrices(t: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 # ---------------------------------------------------------------------------------------------------------------- mzFinder
 def from_series(series, dataset: str, config: str = "predefinita") -> dict:
-    """The table of a native run (`valida.nativo.Serie`): the areas of the aligned table (absent cells 0), and for each row whether its identity is a candidate
+    """The table of a native run (`valida.nativo.Series`): the areas of the aligned table (absent cells 0), and for each row whether its identity is a candidate
     (a proof in favour), its best level and its points."""
     tab = series.tabella
     cand = {int(i) for i in series.candidati}
@@ -70,8 +70,8 @@ def run_mzfinder_synthetic(seme: int, profile: str, work, dataset: str = "D2", c
     from valida import cancello
     from valida import sintetici_identita as si
     from .verita import from_rows
-    c, series, _, _ = cancello.esegui_sintetico(seme, profile, Path(work))
-    return from_series(series, dataset, config), from_rows(si.righe_verita(c))
+    c, series, _, _ = cancello.run_synthetic(seme, profile, Path(work))
+    return from_series(series, dataset, config), from_rows(si.truth_rows(c))
 
 
 # ---------------------------------------------------------------------------------------------------------------- other tools
