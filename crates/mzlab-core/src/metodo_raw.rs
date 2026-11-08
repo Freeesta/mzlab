@@ -292,7 +292,6 @@ fn experiments_of(
     (exps, settings)
 }
 
-/// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 /// The scan trailer read once, each record decoded once: its fields for `campi` and its series for `serie_registro`.
 fn trailer_pass<R: Read + Seek>(
     raw: &RawFileReader,
@@ -312,6 +311,7 @@ fn trailer_pass<R: Read + Seek>(
     (t.finish(raw), voci)
 }
 
+/// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Source) -> String {
     let s = &raw.seq_row;
     let (trailer, voci) = trailer_pass(raw, source);
