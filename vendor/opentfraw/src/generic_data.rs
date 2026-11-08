@@ -528,7 +528,12 @@ impl GenericRecordStream {
 
     fn decode(&self, rec: &[u8], field: usize) -> Option<GenericValue> {
         let desc = self.header.fields.get(field)?;
-        let mut r = BinaryReader::new(Cursor::new(rec.get(*self.offsets.get(field)?..)?));
+        let at = *self.offsets.get(field)?;
+        // a number straight from the slice, as `from_bytes` takes it; a string (or a field past the end) through the reader
+        if let Some((v, _)) = number_at(rec, at, desc.field_type) {
+            return Some(v);
+        }
+        let mut r = BinaryReader::new(Cursor::new(rec.get(at..)?));
         read_value(&mut r, desc).ok()
     }
 
