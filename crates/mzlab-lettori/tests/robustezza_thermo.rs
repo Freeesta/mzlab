@@ -6,7 +6,7 @@ use mzlab_core::lettori::{FileSet, Limiti, Membro};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn insieme(byte: Vec<u8>) -> FileSet {
+fn file_set(byte: Vec<u8>) -> FileSet {
     FileSet {
         membri: vec![Membro {
             nome: "x.raw".into(),
@@ -31,8 +31,8 @@ fn semi() -> Vec<Vec<u8>> {
     .collect()
 }
 
-fn tutto(byte: Vec<u8>) {
-    let Ok(mut l) = mzlab_lettori::apri(insieme(byte), &Limiti::sito()) else {
+fn everything(byte: Vec<u8>) {
+    let Ok(mut l) = mzlab_lettori::apri(file_set(byte), &Limiti::sito()) else {
         return;
     };
     let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
@@ -55,7 +55,7 @@ fn truncated_and_flipped_files_do_not_panic() {
         let n = s.len();
         for k in 0..40 {
             let cut = n * k / 40;
-            tutto(s[..cut].to_vec());
+            everything(s[..cut].to_vec());
         }
         let mut x: u64 = 0x2545_F491_4F6C_DD1D;
         for _ in 0..30 {
@@ -67,7 +67,7 @@ fn truncated_and_flipped_files_do_not_panic() {
                 let i = (x >> 20) as usize % m.len();
                 m[i] ^= 0xFF;
             }
-            tutto(m);
+            everything(m);
         }
     }
 }
@@ -78,14 +78,14 @@ fn a_bare_header_is_refused_with_a_key() {
         let mut b = vec![0x01, 0xA1];
         b.extend("Finnigan".encode_utf16().flat_map(u16::to_le_bytes));
         b.resize(len, 0);
-        if let Err(e) = mzlab_lettori::apri(insieme(b), &Limiti::sito()) {
+        if let Err(e) = mzlab_lettori::apri(file_set(b), &Limiti::sito()) {
             assert!(e.key.starts_with("err."), "{}", e.key);
         }
     }
 }
 
 /// A header as the reader expects it (1356 bytes: magic, "Finnigan" in UTF-16, version at byte 38) for any version number, followed by `tail`.
-fn con_versione(version: u32, tail: &[u8]) -> Vec<u8> {
+fn with_version(version: u32, tail: &[u8]) -> Vec<u8> {
     let mut b = vec![0x01, 0xA1];
     b.extend("Finnigan".encode_utf16().flat_map(u16::to_le_bytes));
     b.extend([0u8; 2]);
@@ -120,7 +120,7 @@ fn every_version_number_is_read_or_refused_with_a_key() {
         .iter()
         .enumerate()
         {
-            match mzlab_lettori::apri(insieme(con_versione(v, tail)), &Limiti::sito()) {
+            match mzlab_lettori::apri(file_set(with_version(v, tail)), &Limiti::sito()) {
                 Ok(_) => assert!(DICHIARATE.contains(&v), "version {v} (tail {k}) opened"),
                 Err(e) => {
                     assert!(e.key.starts_with("err."), "{}", e.key);
@@ -138,7 +138,7 @@ fn a_declared_version_with_a_random_body_never_panics() {
     for v in [8u32, 47, 57, 60, 62, 63, 64, 66] {
         for seed in 0..40u64 {
             let n = [0usize, 7, 300, 1500, 20_000][seed as usize % 5];
-            tutto(con_versione(
+            everything(with_version(
                 v,
                 &pseudocasuali(n, seed * 977 + u64::from(v)),
             ));

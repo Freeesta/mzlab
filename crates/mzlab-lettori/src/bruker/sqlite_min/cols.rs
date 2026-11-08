@@ -6,34 +6,34 @@ impl Sqlite {
     /// Rows of `t` with only the columns `colonne` (positions in the table, `None` = a column the file lacks, read as NULL), in that order and with the same values `righe` gives for them: the
     /// `INTEGER PRIMARY KEY` filled in from the rowid and the key of a `WITHOUT ROWID` table put back in its place. The other columns of the record are skipped, not decoded, and `f` gets a vector
     /// that is reused from row to row.
-    pub fn rows_cols<F>(&mut self, t: &Tabella, colonne: &[Option<usize>], mut f: F) -> Result<()>
+    pub fn rows_cols<F>(&mut self, t: &Table, columns: &[Option<usize>], mut f: F) -> Result<()>
     where
         F: FnMut(&[Val]) -> Result<bool>,
     {
         // where in the record each wanted column lies
         let pos: Vec<Option<usize>> = match &t.ordine {
-            Some(o) => colonne
+            Some(o) => columns
                 .iter()
                 .map(|c| c.and_then(|c| o.iter().rposition(|&x| x == c)))
                 .collect(),
-            None => colonne.to_vec(),
+            None => columns.to_vec(),
         };
         let mut mascherati = vec![false; pos.iter().flatten().max().map_or(0, |&m| m + 1)];
         for &p in pos.iter().flatten() {
             mascherati[p] = true;
         }
         // a position asked twice is cloned the first time and moved the last
-        let ultima: Vec<bool> = (0..pos.len())
+        let last: Vec<bool> = (0..pos.len())
             .map(|j| pos[j].is_none() || !pos[j + 1..].contains(&pos[j]))
             .collect();
         let alias = t.alias_rowid.filter(|_| t.ordine.is_none());
-        let mut out: Vec<Val> = Vec::with_capacity(colonne.len());
+        let mut out: Vec<Val> = Vec::with_capacity(columns.len());
         self.walk_with(t.radice, Some(&mascherati), |rowid, v| {
             out.clear();
             for (j, p) in pos.iter().enumerate() {
                 out.push(match p.and_then(|p| v.get_mut(p).map(|x| (p, x))) {
                     Some((p, Val::Null)) if alias == Some(p) => Val::Int(rowid),
-                    Some((_, x)) if ultima[j] => std::mem::replace(x, Val::Null),
+                    Some((_, x)) if last[j] => std::mem::replace(x, Val::Null),
                     Some((_, x)) => x.clone(),
                     None => Val::Null,
                 });

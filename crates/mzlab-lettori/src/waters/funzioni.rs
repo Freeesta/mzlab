@@ -12,7 +12,7 @@ pub(super) struct Funzione {
     /// 1-based, the `nnn` of `_FUNCnnn.*`.
     pub(super) indice: u32,
     pub(super) tipo: u8,
-    pub(super) sotto: u8,
+    pub(super) below: u8,
     /// Seconds per scan cycle (`+0x002`).
     pub(super) cycle_s: f32,
     pub(super) tof_depth: u16,
@@ -30,17 +30,17 @@ impl Funzione {
 
     /// Bit 7 of the subtype marks the function of the lock mass (the reference).
     pub(super) fn riferimento(&self) -> bool {
-        !self.mirato() && self.sotto & 0x80 != 0
+        !self.mirato() && self.below & 0x80 != 0
     }
 
     /// Acquisition range of a scanning function.
-    pub(super) fn intervallo(&self) -> Option<(f64, f64)> {
+    pub(super) fn interval(&self) -> Option<(f64, f64)> {
         let (a, b) = (*self.q1.first()?, *self.q3.first()?);
         (a.is_finite() && b.is_finite() && a > 0.0 && b > a).then_some((a as f64, b as f64))
     }
 
     /// The channels as (Q1, Q3, dwell s), slots with Q1 > 0 in order.
-    pub(super) fn canali(&self) -> Vec<(f32, f32, f32)> {
+    pub(super) fn channels(&self) -> Vec<(f32, f32, f32)> {
         (0..self.q1.len())
             .filter(|&i| self.q1[i] > 0.0)
             .map(|i| (self.q1[i], self.q3[i], self.dwell_s[i]))
@@ -49,7 +49,7 @@ impl Funzione {
 }
 
 /// The functions of `bytes` (`apri` refuses an empty file first); `None` when the size is no multiple of the record (a file cut inside a record).
-pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Funzione>>> {
+pub(super) fn read(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Funzione>>> {
     if !b.len().is_multiple_of(RECORD) {
         return Ok(None);
     }
@@ -64,7 +64,7 @@ pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Funzione>>> 
                 Funzione {
                     indice: i as u32 + 1,
                     tipo: r[0],
-                    sotto: r[1],
+                    below: r[1],
                     cycle_s: f32_at(r, 2),
                     tof_depth: u16_at(r, 0x10),
                     q1: slot(0xA0),

@@ -44,9 +44,9 @@ fn check(l: &mut dyn Lettore, id: &str) {
         declared.len(),
         "{id}: every declared gap is written"
     );
-    for (field, motivo) in declared {
+    for (field, reason) in declared {
         assert!(
-            !field.is_empty() && !motivo.is_empty(),
+            !field.is_empty() && !reason.is_empty(),
             "{id}: a gap without a reason: {field:?}"
         );
     }
@@ -55,9 +55,9 @@ fn check(l: &mut dyn Lettore, id: &str) {
 #[cfg(feature = "aperti")]
 #[test]
 fn mzxml_and_numpress_mzml_carry_conv() {
-    use comune::mzxml::{apri_mzxml, corsa, mzxml, PIATTO};
+    use comune::mzxml::{apri_mzxml, mzxml, run, FLAT};
     use comune::{apri, mzml_di, scansioni, Cod};
-    check(&mut *apri_mzxml(mzxml(&corsa(), PIATTO)), "mzxml");
+    check(&mut *apri_mzxml(mzxml(&run(), FLAT)), "mzxml");
     let np = Cod::Np {
         intensities: mzlab_core::numpress::Np::Slof,
         zlib: true,
@@ -68,8 +68,8 @@ fn mzxml_and_numpress_mzml_carry_conv() {
 #[cfg(feature = "andi")]
 #[test]
 fn andi_carries_conv() {
-    use comune::andi::{andi_ms, apri_andi, PIATTA};
-    check(&mut *apri_andi(andi_ms(&PIATTA)), "andi-ms");
+    use comune::andi::{andi_ms, apri_andi, FLAT_RUN};
+    check(&mut *apri_andi(andi_ms(&FLAT_RUN)), "andi-ms");
 }
 
 #[cfg(feature = "shimadzu")]
@@ -96,7 +96,6 @@ fn shimadzu_carries_conv() {
 #[test]
 fn waters_carries_conv() {
     use mzlab_core::lettori::Limiti;
-    let mut l =
-        mzlab_lettori::apri_nudo(comune_waters::insieme_sintetico(), &Limiti::sito()).unwrap();
+    let mut l = mzlab_lettori::apri_nudo(comune_waters::synthetic_set(), &Limiti::sito()).unwrap();
     check(&mut *l, "waters-raw");
 }

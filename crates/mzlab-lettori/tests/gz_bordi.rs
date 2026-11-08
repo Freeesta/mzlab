@@ -19,7 +19,7 @@ fn gz(b: &[u8]) -> Vec<u8> {
 
 /// The key the app gives (`"ok"` when the file opens and its index reads).
 fn app(b: &[u8]) -> String {
-    match mzlab_lettori::apri(insieme("x.mzML.gz", b.to_vec()), &Limiti::sito()) {
+    match mzlab_lettori::apri(file_set("x.mzML.gz", b.to_vec()), &Limiti::sito()) {
         Ok(mut l) => match l.index(0) {
             Ok(_) => "ok".into(),
             Err(e) => e.key.to_string(),
@@ -29,7 +29,7 @@ fn app(b: &[u8]) -> String {
 }
 
 /// The key the page gives: the inflate of `rust-carica.js`, then the plain upload of what it wrote.
-fn sito(b: &[u8]) -> String {
+fn site(b: &[u8]) -> String {
     let mut g = mzlab_core::gunzip::Gunzip::new(4 << 30);
     let mut out = Vec::new();
     for p in b.chunks(333) {
@@ -38,12 +38,12 @@ fn sito(b: &[u8]) -> String {
             Err(e) => return e.key.to_string(),
         }
     }
-    let (remainder, intero) = match g.finish() {
+    let (remainder, whole) = match g.finish() {
         Ok(f) => f,
         Err(e) => return e.key.to_string(),
     };
     out.extend(remainder);
-    if !intero && g.written() == 0 {
+    if !whole && g.written() == 0 {
         return "err.file.zlib".into();
     }
     let n = out.len() as u64;
@@ -54,11 +54,11 @@ fn sito(b: &[u8]) -> String {
 }
 
 #[test]
-fn i_bordi_del_gzip_danno_la_stessa_chiave_su_app_e_sito() {
+fn gzip_edges_give_the_same_key_on_app_and_site() {
     let buono = gz(&mzml_di(&scansioni(), Cod::Piano, None));
-    let mut con_zeri = buono.clone();
-    con_zeri.extend([0u8; 512]);
-    let mut zeri_e_altro = con_zeri.clone();
+    let mut with_zeros = buono.clone();
+    with_zeros.extend([0u8; 512]);
+    let mut zeri_e_altro = with_zeros.clone();
     zeri_e_altro.extend(gz(b"<mzML/>"));
     let casi: [(&str, Vec<u8>); 7] = [
         ("good", buono.clone()),
@@ -66,19 +66,19 @@ fn i_bordi_del_gzip_danno_la_stessa_chiave_su_app_e_sito() {
         ("magic only", vec![0x1f, 0x8b]),
         ("header only", buono[..10].to_vec()),
         ("cut in the middle", buono[..buono.len() / 2].to_vec()),
-        ("zeros after the member", con_zeri.clone()),
+        ("zeros after the member", with_zeros.clone()),
         ("a member after the zeros", zeri_e_altro.clone()),
     ];
-    let mut diversi = Vec::new();
-    for (nome, b) in casi {
-        let (a, s) = (app(&b), sito(&b));
+    let mut different = Vec::new();
+    for (name, b) in casi {
+        let (a, s) = (app(&b), site(&b));
         if a != s {
-            diversi.push(format!("{nome}: app {a}, site {s}"));
+            different.push(format!("{name}: app {a}, site {s}"));
         }
     }
-    assert!(diversi.is_empty(), "{diversi:#?}");
+    assert!(different.is_empty(), "{different:#?}");
     assert_eq!(app(&buono), "ok");
     // padding to a block size, as GNU gzip reads it: the file opens; something after the padding is damage
-    assert_eq!(app(&con_zeri), "ok");
+    assert_eq!(app(&with_zeros), "ok");
     assert_eq!(app(&zeri_e_altro), "err.file.zlib");
 }

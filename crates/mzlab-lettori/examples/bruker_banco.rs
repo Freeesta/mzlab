@@ -14,42 +14,42 @@ use comune_sqlite::pasef;
 
 fn scrivi(dir: &Path, cicli: usize, n1: usize, n2: usize) {
     std::fs::create_dir_all(dir).unwrap();
-    let (tdf, bin) = pasef::cartella(cicli, n1, n2);
+    let (tdf, bin) = pasef::folder(cicli, n1, n2);
     std::fs::write(dir.join("analysis.tdf"), tdf).unwrap();
     std::fs::write(dir.join("analysis.tdf_bin"), &bin).unwrap();
     eprintln!("{}: tdf_bin {} MB", dir.display(), bin.len() / 1_000_000);
 }
 
-fn insieme(dir: &Path) -> FileSet {
-    let nome = dir.file_name().unwrap().to_string_lossy().to_string();
-    let membri = ["analysis.tdf", "analysis.tdf_bin"]
+fn file_set(dir: &Path) -> FileSet {
+    let name = dir.file_name().unwrap().to_string_lossy().to_string();
+    let members = ["analysis.tdf", "analysis.tdf_bin"]
         .iter()
         .map(|m| {
             let f = std::fs::File::open(dir.join(m)).unwrap();
             let dim = f.metadata().unwrap().len();
             Membro {
-                nome: format!("{nome}/{m}"),
+                nome: format!("{name}/{m}"),
                 dim,
                 dati: Box::new(f),
                 sha1: None,
             }
         })
         .collect();
-    FileSet { membri }
+    FileSet { membri: members }
 }
 
 fn ms(t: Instant) -> f64 {
     t.elapsed().as_secs_f64() * 1e3
 }
 
-fn misura(dir: &Path, giri: usize) {
+fn measure(dir: &Path, giri: usize) {
     for g in 0..giri {
         let t = Instant::now();
-        let mut l = mzlab_lettori::apri(insieme(dir), &Limiti::desktop()).unwrap();
+        let mut l = mzlab_lettori::apri(file_set(dir), &Limiti::desktop()).unwrap();
         let apri = ms(t);
         let t = Instant::now();
         let n = l.index(0).unwrap().len();
-        let indice = ms(t);
+        let index = ms(t);
         let t = Instant::now();
         std::hint::black_box(l.chromatogram(0, "TIC").unwrap());
         let tic = ms(t);
@@ -71,13 +71,13 @@ fn misura(dir: &Path, giri: usize) {
                 }
             }
         }
-        let tutti = ms(t);
+        let all = ms(t);
         let t = Instant::now();
-        let mut l = mzlab_lettori::apri(insieme(dir), &Limiti::desktop()).unwrap();
+        let mut l = mzlab_lettori::apri(file_set(dir), &Limiti::desktop()).unwrap();
         mzlab_core::lettori_mzml::scrivi(&mut *l, 0, std::io::sink(), &mut |_, _| {}).unwrap();
         let mzml = ms(t);
         println!(
-            "{{\"giro\":{g},\"spettri\":{n},\"punti\":{points},\"firma\":\"{firma:016x}\",\"apri_ms\":{apri:.1},\"indice_ms\":{indice:.1},\"tic_ms\":{tic:.1},\"bpc_ms\":{bpc:.1},\"primo_ms\":{first_one:.2},\"tutti_ms\":{tutti:.1},\"mzml_ms\":{mzml:.1}}}"
+            "{{\"giro\":{g},\"spettri\":{n},\"punti\":{points},\"firma\":\"{firma:016x}\",\"apri_ms\":{apri:.1},\"indice_ms\":{index:.1},\"tic_ms\":{tic:.1},\"bpc_ms\":{bpc:.1},\"primo_ms\":{first_one:.2},\"tutti_ms\":{all:.1},\"mzml_ms\":{mzml:.1}}}"
         );
     }
 }
@@ -93,7 +93,7 @@ fn main() {
     };
     match (a.first().map(String::as_str), a.get(1)) {
         (Some("scrivi"), Some(d)) => scrivi(Path::new(d), opz("--cicli", 100), opz("--ms1", 60_000), opz("--ms2", 15_000)),
-        (Some("misura"), Some(d)) => misura(Path::new(d), opz("--giri", 3)),
+        (Some("misura"), Some(d)) => measure(Path::new(d), opz("--giri", 3)),
         _ => eprintln!("usage: bruker_banco scrivi DIR.d [--cicli N] [--ms1 N] [--ms2 N] | misura DIR.d [--giri N]"),
     }
 }

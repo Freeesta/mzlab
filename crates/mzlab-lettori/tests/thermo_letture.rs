@@ -22,12 +22,12 @@ impl ReadAt for Contato {
 fn opening_and_indexing_a_run_takes_few_reads() {
     let scans = 2000u32;
     let bytes = Raw::tsq(63, scans).bytes();
-    let chiamate = Rc::new(Cell::new(0));
+    let calls = Rc::new(Cell::new(0));
     let set = FileSet {
         membri: vec![Membro {
             nome: "x.raw".into(),
             dim: bytes.len() as u64,
-            dati: Box::new(Contato(bytes.clone(), chiamate.clone())),
+            dati: Box::new(Contato(bytes.clone(), calls.clone())),
             sha1: None,
         }],
     };
@@ -36,11 +36,11 @@ fn opening_and_indexing_a_run_takes_few_reads() {
     assert_eq!(n, scans as usize);
     eprintln!(
         "read_at calls: {} for {} scans, {} bytes",
-        chiamate.get(),
+        calls.get(),
         n,
         bytes.len()
     );
-    assert!(chiamate.get() < n / 4, "{} reads", chiamate.get());
+    assert!(calls.get() < n / 4, "{} reads", calls.get());
     // the rows are the same as from a plain slice
     let mut r = mzlab_lettori::apri(
         FileSet {

@@ -21,8 +21,8 @@ impl Finished {
     }
 }
 
-fn guasto(dove: &str, who: impl ToString, what: &str, v: f64) -> Error {
-    let (key, param) = if dove == "scan" {
+fn guasto(location: &str, who: impl ToString, what: &str, v: f64) -> Error {
+    let (key, param) = if location == "scan" {
         ("err.file.nonFinite", "scan")
     } else {
         ("err.file.nonFiniteTrace", "trace")

@@ -16,7 +16,7 @@ const TRFP: &str = "_oracoli/trfp/201208_15.mzML";
 const MSCONVERT: &str =
     "_oracoli/msconvert_windows/centroidi/thermo/raw/PXD043691_mrm/201208_15.mzML";
 
-fn dati(rel: &str) -> Option<PathBuf> {
+fn data(rel: &str) -> Option<PathBuf> {
     let mut radici: Vec<PathBuf> = std::env::var_os("MZLAB_ROSINA_DATI")
         .map(PathBuf::from)
         .into_iter()
@@ -28,7 +28,7 @@ fn dati(rel: &str) -> Option<PathBuf> {
         .find(|p| p.is_file())
 }
 
-fn lettore(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Lettore> {
+fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Lettore> {
     let bytes = std::fs::read(raw).unwrap();
     let set = FileSet {
         membri: vec![Membro {
@@ -47,7 +47,7 @@ fn close(a: f64, b: f64, rel: f64) -> bool {
 
 #[test]
 fn the_scans_match_thermorawfileparser() {
-    let (Some(raw), Some(oracle)) = (dati(RAW), dati(TRFP)) else {
+    let (Some(raw), Some(oracle)) = (data(RAW), data(TRFP)) else {
         eprintln!("SKIP raw_srm_tsq spectra: real file or ThermoRawFileParser oracle absent");
         return;
     };
@@ -84,7 +84,7 @@ fn the_scans_match_thermorawfileparser() {
 
 #[test]
 fn the_srm_traces_match_msconvert() {
-    let (Some(raw), Some(oracle)) = (dati(RAW), dati(MSCONVERT)) else {
+    let (Some(raw), Some(oracle)) = (data(RAW), data(MSCONVERT)) else {
         eprintln!("SKIP raw_srm_tsq traces: real file or msconvert oracle absent");
         return;
     };
@@ -103,7 +103,7 @@ fn the_srm_traces_match_msconvert() {
         want.push((q1.parse().unwrap(), q3.parse().unwrap(), t, y));
     }
     assert_eq!(want.len(), 14);
-    let mut l = lettore(&raw);
+    let mut l = reader(&raw);
     let mut got = Vec::new();
     for v in l
         .chromatograms(0)

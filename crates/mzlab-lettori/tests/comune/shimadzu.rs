@@ -31,10 +31,10 @@ pub fn file_property() -> Vec<u8> {
     b
 }
 
-fn scans(pesi: &[(u16, &[(u16, u64)])]) -> (Vec<u8>, Vec<u32>) {
+fn scans(weights: &[(u16, &[(u16, u64)])]) -> (Vec<u8>, Vec<u32>) {
     let mut raw = Vec::new();
     let mut off = Vec::new();
-    for (w, pts) in pesi {
+    for (w, pts) in weights {
         off.push(raw.len() as u32);
         let mut r = vec![0u8; 32];
         r[20..22].copy_from_slice(&w.to_le_bytes());
@@ -192,6 +192,6 @@ pub fn lcd_tlm(n: usize) -> Vec<u8> {
 pub fn lcd_qtof() -> Vec<u8> {
     ole(&[("QTFL RawData/MS Raw Data", vec![1, 2, 3, 4])])
 }
-pub fn lcd_solo_pda() -> Vec<u8> {
+pub fn lcd_pda_only() -> Vec<u8> {
     ole(&[("LSS Raw Data/x", vec![1, 2, 3])])
 }

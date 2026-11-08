@@ -13,7 +13,7 @@ mod dati_percorsi;
 // ---- hostile files ----
 
 #[test]
-fn piu_valori_di_quelli_dichiarati_e_un_errore() {
+fn more_values_than_declared_is_an_error() {
     let scan = scansioni();
     let mut b = String::from_utf8(mzml_di(
         &scan,
@@ -25,11 +25,11 @@ fn piu_valori_di_quelli_dichiarati_e_un_errore() {
     ))
     .unwrap();
     b = b.replacen("defaultArrayLength=\"40\"", "defaultArrayLength=\"3\"", 1);
-    assert_eq!(errore(b.into_bytes()), "err.file.numpress");
+    assert_eq!(error(b.into_bytes()), "err.file.numpress");
 }
 
 #[test]
-fn uno_zlib_che_si_gonfia_oltre_il_dichiarato_e_un_errore() {
+fn a_zlib_inflating_past_the_declared_size_is_an_error() {
     let scan = scansioni();
     let mut b = String::from_utf8(mzml_di(
         &scan,
@@ -45,11 +45,11 @@ fn uno_zlib_che_si_gonfia_oltre_il_dichiarato_e_un_errore() {
     let da = b.find("<binary>").unwrap() + 8;
     let a = da + b[da..].find("</binary>").unwrap();
     b.replace_range(da..a, &bomba);
-    assert_eq!(errore(b.into_bytes()), "error.memoryBudget");
+    assert_eq!(error(b.into_bytes()), "error.memoryBudget");
 }
 
 #[test]
-fn base64_rotta_e_dati_troncati_sono_errori_con_chiave() {
+fn broken_base64_and_truncated_data_are_keyed_errors() {
     let scan = scansioni();
     let ok = String::from_utf8(mzml_di(
         &scan,
@@ -62,15 +62,15 @@ fn base64_rotta_e_dati_troncati_sono_errori_con_chiave() {
     .unwrap();
     let da = ok.find("<binary>").unwrap() + 8;
     let rotta = format!("{}!!!{}", &ok[..da], &ok[da + 3..]);
-    assert_eq!(errore(rotta.into_bytes()), "err.file.base64");
+    assert_eq!(error(rotta.into_bytes()), "err.file.base64");
     // a linear array cut to 5 bytes: shorter than its fixed point
     let a = da + ok[da..].find("</binary>").unwrap();
-    let corta = format!("{}{}{}", &ok[..da], b64(&[1, 2, 3, 4, 5]), &ok[a..]);
-    assert_eq!(errore(corta.into_bytes()), "err.file.numpress");
+    let short = format!("{}{}{}", &ok[..da], b64(&[1, 2, 3, 4, 5]), &ok[a..]);
+    assert_eq!(error(short.into_bytes()), "err.file.numpress");
 }
 
 #[test]
-fn un_file_troncato_non_manda_in_panico() {
+fn a_truncated_file_does_not_panic() {
     let scan = scansioni();
     let ok = mzml_di(
         &scan,
@@ -81,19 +81,19 @@ fn un_file_troncato_non_manda_in_panico() {
         None,
     );
     for n in [0, 10, 700, 2500, ok.len() / 2, ok.len() - 5] {
-        let _ = errore(ok[..n].to_vec());
+        let _ = error(ok[..n].to_vec());
     }
 }
 
 #[test]
-fn righe_oltre_il_limite_sono_un_errore() {
+fn rows_over_the_limit_are_an_error() {
     let scan = scansioni();
     let limits = Limiti {
         voci: 2,
         ..Limiti::sito()
     };
     let r = mzlab_lettori::apri(
-        insieme(
+        file_set(
             "campione.mzML",
             mzml_di(
                 &scan,
@@ -111,18 +111,18 @@ fn righe_oltre_il_limite_sono_un_errore() {
 
 // ---- real files (the private data repository) ----
 
-fn vero(nome: &str) -> Option<Vec<u8>> {
+fn real(name: &str) -> Option<Vec<u8>> {
     let Some(d) = dati_percorsi::percorso("dati/formati/aperti/mzML_numpress") else {
-        eprintln!("SKIP aperti_numpress {nome}: no data repository (MZLAB_DATI)");
+        eprintln!("SKIP aperti_numpress {name}: no data repository (MZLAB_DATI)");
         return None;
     };
-    std::fs::read(d.join(nome)).ok()
+    std::fs::read(d.join(name)).ok()
 }
 
 /// The TIC an mzML header states against the sum of the decoded intensities.
 #[test]
-fn openms_lineare_e_slof_hanno_il_tic_dell_intestazione() {
-    let Some(b) = vero("OpenMS_FileFilter_37_output.mzML") else {
+fn openms_linear_and_slof_have_the_header_tic() {
+    let Some(b) = real("OpenMS_FileFilter_37_output.mzML") else {
         return;
     };
     let mut l = apri(b);
@@ -142,13 +142,13 @@ fn openms_lineare_e_slof_hanno_il_tic_dell_intestazione() {
             );
         }
     }
-    let t = String::from_utf8_lossy(&mzml_scritto(&mut l)).to_string();
+    let t = String::from_utf8_lossy(&written_mzml(&mut l)).to_string();
     assert!(!t.contains("MS:1002312"));
 }
 
 #[test]
-fn openms_lineare_e_pic_si_leggono() {
-    let Some(b) = vero("OpenMS_FileFilter_38_output.mzML") else {
+fn openms_linear_and_pic_are_read() {
+    let Some(b) = real("OpenMS_FileFilter_38_output.mzML") else {
         return;
     };
     let mut l = apri(b);
@@ -161,8 +161,8 @@ fn openms_lineare_e_pic_si_leggono() {
 }
 
 #[test]
-fn pymzml_cromatogrammi_srm_numpress() {
-    let Some(b) = vero("pymzML_mini_numpress.chrom.mzML") else {
+fn pymzml_srm_numpress_chromatograms() {
+    let Some(b) = real("pymzML_mini_numpress.chrom.mzML") else {
         return;
     };
     let mut l = apri(b);

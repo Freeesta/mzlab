@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 
-fn cartella() -> Option<FileSet> {
+fn folder() -> Option<FileSet> {
     let base = std::env::var_os("MZLAB_ROSINA_DATI")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("/Volumes/Fred/rosina"));
@@ -15,22 +15,22 @@ fn cartella() -> Option<FileSet> {
         eprintln!("SKIP waters_mse_oracolo: {} not found", d.display());
         return None;
     }
-    let nome = d.file_name()?.to_string_lossy().to_string();
-    let mut membri = Vec::new();
+    let name = d.file_name()?.to_string_lossy().to_string();
+    let mut members = Vec::new();
     for e in std::fs::read_dir(&d).ok()? {
         let p = e.ok()?.path();
         if !p.is_file() {
             continue;
         }
         let f = std::fs::File::open(&p).ok()?;
-        membri.push(Membro {
-            nome: format!("{nome}/{}", p.file_name()?.to_string_lossy()),
+        members.push(Membro {
+            nome: format!("{name}/{}", p.file_name()?.to_string_lossy()),
             dim: f.metadata().ok()?.len(),
             dati: Box::new(f),
             sha1: None,
         });
     }
-    Some(FileSet { membri })
+    Some(FileSet { membri: members })
 }
 
 /// (function, cycle, RT in minutes, TIC of the cycle, intensity-weighted mean m/z) of the oracle.
@@ -48,7 +48,7 @@ const ORACOLO: &[(u32, u32, f64, f64, f64)] = &[
 
 #[test]
 fn mse_and_lock_mass_match_the_msconvert_oracle() {
-    let Some(fs) = cartella() else { return };
+    let Some(fs) = folder() else { return };
     let mut l = mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap();
     let idx = l.index(0).unwrap().to_vec();
     // Cycles per function: 48400/200, 48200/200 and 19400/200 spectra of the oracle.
@@ -78,19 +78,19 @@ fn mse_and_lock_mass_match_the_msconvert_oracle() {
         // msconvert's 775 +- 725 m/z "precursor" of every MSe spectrum is the scan range, not an isolation.
         assert!(v.precursore.is_none(), "{id}: no precursor");
         let s = l.scan(0, k).unwrap();
-        let (mut summed, mut pesata) = (0.0, 0.0);
+        let (mut summed, mut weighted) = (0.0, 0.0);
         for (m, i) in s.mz.iter().zip(&s.intensity) {
             summed += f64::from(*i);
-            pesata += m * f64::from(*i);
+            weighted += m * f64::from(*i);
         }
         assert!(
             (summed - tic).abs() <= 2e-3 * tic,
             "{id}: sum {summed} vs {tic}"
         );
-        let medio = pesata / summed;
+        let mean = weighted / summed;
         assert!(
-            (medio - mz_medio).abs() <= 1e-6 * mz_medio,
-            "{id}: mean m/z {medio} vs {mz_medio}"
+            (mean - mz_medio).abs() <= 1e-6 * mz_medio,
+            "{id}: mean m/z {mean} vs {mz_medio}"
         );
     }
 }

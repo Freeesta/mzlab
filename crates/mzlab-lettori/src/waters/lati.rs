@@ -9,23 +9,23 @@ const PREAMBOLO: usize = 32;
 const DESCR: usize = 48;
 
 #[derive(Debug, Clone)]
-pub(super) struct Canale {
-    pub(super) nome: String,
+pub(super) struct Channel {
+    pub(super) name: String,
     /// 0: `u8`, 1: `i16`, 2: `u32`, 3: `f32`.
     tipo: u16,
     offset: usize,
 }
 
 #[derive(Debug, Clone, Default)]
-pub(super) struct Tabella {
-    pub(super) canali: Vec<Canale>,
+pub(super) struct Table {
+    pub(super) channels: Vec<Channel>,
     rec: usize,
-    dati: Vec<u8>,
+    data: Vec<u8>,
 }
 
-impl Tabella {
+impl Table {
     /// The table of `b`; `None` for a file that is not one (the table is optional: the scans do not depend on it).
-    pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Option<Tabella> {
+    pub(super) fn read(b: &[u8], limits: &Limiti) -> Option<Table> {
         let (start, rec, n) = (
             u16_at(b, 0) as usize,
             u16_at(b, 4) as usize,
@@ -35,12 +35,12 @@ impl Tabella {
             return None;
         }
         limits.voci_ok(n as u64).ok()?;
-        let canali: Vec<Canale> = (0..n)
+        let canali: Vec<Channel> = (0..n)
             .map(|i| {
                 let d = &b[PREAMBOLO + i * DESCR..PREAMBOLO + (i + 1) * DESCR];
                 let nome: Vec<u8> = d[6..].iter().copied().take_while(|&c| c != 0).collect();
-                Canale {
-                    nome: super::cartella::testo(&nome).trim().to_string(),
+                Channel {
+                    name: super::cartella::text(&nome).trim().to_string(),
                     tipo: u16_at(d, 2),
                     offset: u16_at(d, 4) as usize,
                 }
@@ -58,15 +58,15 @@ impl Tabella {
             return None;
         }
         let nrec = (b.len() - start) / rec;
-        Some(Tabella {
-            canali,
+        Some(Table {
+            channels: canali,
             rec,
-            dati: b[start..start + nrec * rec].to_vec(),
+            data: b[start..start + nrec * rec].to_vec(),
         })
     }
 
-    fn value_of(&self, c: &Canale, k: usize) -> Option<f64> {
-        let r = self.dati.get(k * self.rec..(k + 1) * self.rec)?;
+    fn value_of(&self, c: &Channel, k: usize) -> Option<f64> {
+        let r = self.data.get(k * self.rec..(k + 1) * self.rec)?;
         Some(match c.tipo {
             0 => f64::from(*r.get(c.offset)?),
             1 => f64::from(u16_at(r, c.offset) as i16),
@@ -76,16 +76,16 @@ impl Tabella {
     }
 
     /// The value of channel `nome` in record `k`.
-    pub(super) fn valore(&self, nome: &str, k: usize) -> Option<f64> {
-        let c = self.canali.iter().find(|c| c.nome == nome)?;
+    pub(super) fn value(&self, name: &str, k: usize) -> Option<f64> {
+        let c = self.channels.iter().find(|c| c.name == name)?;
         self.value_of(c, k)
     }
 
     /// Every channel of record `k` as (name, value): what `campi` keeps of a scan.
-    pub(super) fn tutti(&self, k: usize) -> Vec<(String, f64)> {
-        self.canali
+    pub(super) fn all(&self, k: usize) -> Vec<(String, f64)> {
+        self.channels
             .iter()
-            .filter_map(|c| Some((c.nome.clone(), self.value_of(c, k)?)))
+            .filter_map(|c| Some((c.name.clone(), self.value_of(c, k)?)))
             .filter(|(n, v)| !n.is_empty() && v.is_finite())
             .collect()
     }
@@ -100,7 +100,7 @@ pub(super) fn compound_names(b: &[u8], limits: &Limiti) -> Vec<String> {
         .chunks_exact(1024)
         .map(|r| {
             let n: Vec<u8> = r.iter().copied().take_while(|&c| c != 0).collect();
-            super::cartella::testo(&n).trim().to_string()
+            super::cartella::text(&n).trim().to_string()
         })
         .collect()
 }

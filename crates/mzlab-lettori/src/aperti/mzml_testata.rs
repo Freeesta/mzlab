@@ -10,7 +10,7 @@ const FIELDS_MAX: usize = 64;
 // ---- a tiny scanner of tags: the header of an mzML is cut before `<run` (and so not a document), and the module may not take a new XML crate ----
 
 pub(super) struct Tag {
-    pub(super) nome: String,
+    pub(super) name: String,
     pub(super) attr: Vec<(String, String)>,
     pub(super) chiusura: bool,
     pub(super) empty: bool,
@@ -75,7 +75,7 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
         let mut attr = Vec::new();
         let mut remainder = parts.next().unwrap_or("");
         while let Some(e) = remainder.find('=') {
-            let chiave = remainder[..e].trim().to_string();
+            let key = remainder[..e].trim().to_string();
             let v = remainder[e + 1..].trim_start();
             let Some(virgolette) = v.chars().next().filter(|c| *c == '"' || *c == '\'') else {
                 break;
@@ -83,11 +83,11 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
             let Some(fine) = v[1..].find(virgolette) else {
                 break;
             };
-            attr.push((chiave, unescape(&v[1..1 + fine])));
+            attr.push((key, unescape(&v[1..1 + fine])));
             remainder = &v[fine + 2..];
         }
         out.push(Tag {
-            nome,
+            name: nome,
             attr,
             chiusura,
             empty,
@@ -99,8 +99,8 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
 /// The cvParams of a spectrum header (everything before `<binaryDataArrayList`) and what the writer cannot say with its own fields.
 pub(super) struct Parameter {
     pub(super) acc: String,
-    pub(super) nome: String,
-    pub(super) valore: String,
+    pub(super) name: String,
+    pub(super) value: String,
     pub(super) unita: Option<String>,
 }
 
@@ -133,12 +133,12 @@ pub(super) fn param_list(spettro: &[u8]) -> Vec<Parameter> {
     let fine = t.find("<binaryDataArrayList").unwrap_or(t.len());
     tag_di(&t[..fine])
         .into_iter()
-        .filter(|g| !g.chiusura && g.nome == "cvParam")
+        .filter(|g| !g.chiusura && g.name == "cvParam")
         .take(FIELDS_MAX)
         .map(|g| Parameter {
             acc: g.get("accession").to_string(),
-            nome: g.get("name").to_string(),
-            valore: g.get("value").to_string(),
+            name: g.get("name").to_string(),
+            value: g.get("value").to_string(),
             unita: Some(g.get("unitName").to_string()).filter(|u| !u.is_empty()),
         })
         .collect()
@@ -149,13 +149,13 @@ pub(super) fn extra_di(spettro: &[u8]) -> SpectrumExtra {
     let mut e = SpectrumExtra::default();
     let (mut lo, mut hi) = (None, None);
     for p in param_list(spettro) {
-        let numero = p.valore.parse::<f64>().ok();
+        let number = p.value.parse::<f64>().ok();
         match p.acc.as_str() {
-            "MS:1000501" => lo = numero,
-            "MS:1000500" => hi = numero,
+            "MS:1000501" => lo = number,
+            "MS:1000500" => hi = number,
             a if SCRITTI.contains(&a) => {}
-            _ if p.valore.is_empty() => {}
-            a => e.params.push((format!("{a} {}", p.nome), p.valore)),
+            _ if p.value.is_empty() => {}
+            a => e.params.push((format!("{a} {}", p.name), p.value)),
         }
     }
     e.window = lo.zip(hi);
@@ -165,12 +165,12 @@ pub(super) fn extra_di(spettro: &[u8]) -> SpectrumExtra {
 // ---- the header of the original mzML ----
 
 /// A `referenceableParamGroup` or a component of the instrument: its id and its (accession, name, value) triples.
-type Gruppo = (String, Vec<(String, String, String)>);
+type Group = (String, Vec<(String, String, String)>);
 
 /// Where the walk over the header stands.
 #[derive(Default)]
-struct Stato {
-    gruppi: Vec<Gruppo>,
+struct State {
+    gruppi: Vec<Group>,
     ic_seen: usize,
     component_with_cv: bool,
     /// The `software` being read: its version and its first term.
@@ -178,7 +178,7 @@ struct Stato {
 }
 
 /// A `cvParam` of the header, by the element that holds it.
-fn cv_param(h: &mut Header, st: &mut Stato, parent: &str, g: &Tag) {
+fn cv_param(h: &mut Header, st: &mut State, parent: &str, g: &Tag) {
     let (a, n, v) = (g.get("accession"), g.get("name"), g.get("value"));
     match parent {
         "fileContent" if a != "MS:1000579" => h.content.push((a.into(), n.into())),
@@ -193,7 +193,7 @@ fn cv_param(h: &mut Header, st: &mut Stato, parent: &str, g: &Tag) {
                 cvs.push((a.into(), n.into(), v.into()));
             }
         }
-        "instrumentConfiguration" if st.ic_seen == 1 => modello(h, a, n, v),
+        "instrumentConfiguration" if st.ic_seen == 1 => model(h, a, n, v),
         "source" | "analyzer" | "detector" if st.ic_seen == 1 && !st.component_with_cv => {
             st.component_with_cv = true;
             h.components.push((parent.to_string(), a.into(), n.into()));
@@ -208,14 +208,14 @@ fn cv_param(h: &mut Header, st: &mut Stato, parent: &str, g: &Tag) {
 }
 
 /// The header of the mzML we write: the instrument, the sources with their SHA-1, the software and the run of the original, and mzLab as the program that wrote this file.
-pub(super) fn testata_da(head: &str, nome: &str, limits: &Limiti) -> Result<Header> {
+pub(super) fn testata_da(head: &str, name: &str, limits: &Limiti) -> Result<Header> {
     let mut h = Header {
-        run: nome.rsplit_once('.').map_or(nome, |(s, _)| s).to_string(),
+        run: name.rsplit_once('.').map_or(name, |(s, _)| s).to_string(),
         software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
         ..Header::default()
     };
     let mut pila: Vec<String> = Vec::new();
-    let mut st = Stato::default();
+    let mut st = State::default();
     for g in tag_di(head) {
         if g.chiusura {
             if pila.pop().as_deref() == Some("software") {
@@ -227,7 +227,7 @@ pub(super) fn testata_da(head: &str, nome: &str, limits: &Limiti) -> Result<Head
             continue;
         }
         let parent = pila.last().cloned().unwrap_or_default();
-        match g.nome.as_str() {
+        match g.name.as_str() {
             "referenceableParamGroup" => st.gruppi.push((g.get("id").to_string(), Vec::new())),
             "instrumentConfiguration" => st.ic_seen += 1,
             "sourceFile" => h.sources.push(g.get("name").to_string()),
@@ -246,7 +246,7 @@ pub(super) fn testata_da(head: &str, nome: &str, limits: &Limiti) -> Result<Head
                 let r = g.get("ref");
                 if let Some((_, cvs)) = st.gruppi.iter().find(|(id, _)| id == r) {
                     for (a, n, v) in cvs {
-                        modello(&mut h, a, n, v);
+                        model(&mut h, a, n, v);
                     }
                 }
             }
@@ -259,17 +259,17 @@ pub(super) fn testata_da(head: &str, nome: &str, limits: &Limiti) -> Result<Head
         }
         if !g.empty {
             limits.profondita_ok(pila.len() + 1)?;
-            pila.push(g.nome);
+            pila.push(g.name);
         }
     }
     Ok(h)
 }
 
 /// A cvParam of the instrument configuration: the serial number, else the first term is the model.
-fn modello(h: &mut Header, acc: &str, nome: &str, valore: &str) {
+fn model(h: &mut Header, acc: &str, name: &str, value: &str) {
     if acc == "MS:1000529" {
-        h.serial = Some(valore.to_string()).filter(|s| !s.is_empty());
+        h.serial = Some(value.to_string()).filter(|s| !s.is_empty());
     } else if h.instrument.is_none() {
-        h.instrument = Some((acc.to_string(), nome.to_string()));
+        h.instrument = Some((acc.to_string(), name.to_string()));
     }
 }

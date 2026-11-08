@@ -14,7 +14,7 @@ const FIELDS_MAX: usize = 2000;
 
 impl Testata {
     /// The attributes and the instrument variables of `cdf`.
-    pub(super) fn leggi(cdf: &Cdf, dati: &mut dyn ReadAt, limits: &Limiti) -> Result<Testata> {
+    pub(super) fn read(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti) -> Result<Testata> {
         let mut t = Testata::default();
         for a in &cdf.att {
             let v = match &a.val {
@@ -25,36 +25,36 @@ impl Testata {
                     .collect::<Vec<_>>()
                     .join(" "),
             };
-            if v.is_empty() || t.campi.len() >= FIELDS_MAX {
+            if v.is_empty() || t.fields.len() >= FIELDS_MAX {
                 continue;
             }
             let c = Campo::new("andi:global", &a.nome, &v);
             let c = mappa(&a.nome).map_or(c, |m| Campo::new("andi:global", &a.nome, &v).map(m));
-            t.campi.push(if identita(&a.nome) { c.id() } else { c });
+            t.fields.push(if identita(&a.nome) { c.id() } else { c });
         }
-        t.titolo = cdf.testo("experiment_title").map(str::to_string);
-        t.created = cdf.testo("experiment_date_time_stamp").map(str::to_string);
-        t.user = cdf.testo("operator_name").map(str::to_string);
-        t.ionizzazione = cdf.testo("test_ionization_mode").map(str::to_string);
-        t.detector = cdf.testo("test_detector_type").map(str::to_string);
+        t.titolo = cdf.text("experiment_title").map(str::to_string);
+        t.created = cdf.text("experiment_date_time_stamp").map(str::to_string);
+        t.user = cdf.text("operator_name").map(str::to_string);
+        t.ionizzazione = cdf.text("test_ionization_mode").map(str::to_string);
+        t.detector = cdf.text("test_detector_type").map(str::to_string);
         for v in cdf.var.iter().filter(|v| v.nome.starts_with("instrument_")) {
-            let s = unico(cdf.stringhe(dati, limits, v)?).unwrap_or_default();
-            if s.is_empty() || t.campi.len() >= FIELDS_MAX {
+            let s = unico(cdf.stringhe(data, limits, v)?).unwrap_or_default();
+            if s.is_empty() || t.fields.len() >= FIELDS_MAX {
                 continue;
             }
             let c = Campo::new("andi:instrument", &v.nome, &s);
-            t.campi.push(if identita(&v.nome) { c.id() } else { c });
+            t.fields.push(if identita(&v.nome) { c.id() } else { c });
             let ch = Some(s);
             match v.nome.as_str() {
                 "instrument_mfr" => t.maker = ch,
-                "instrument_model" => t.modello = ch,
-                "instrument_serial_no" => t.serie = ch,
+                "instrument_model" => t.model = ch,
+                "instrument_serial_no" => t.series = ch,
                 "instrument_sw_version" => t.software = ch,
                 "instrument_fw_version" => t.firmware = ch,
                 _ => {}
             }
         }
-        mzlab_core::sortc::slice_by(&mut t.campi, |a, b| {
+        mzlab_core::sortc::slice_by(&mut t.fields, |a, b| {
             (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
         });
         Ok(t)
@@ -84,8 +84,8 @@ impl Testata {
                 "strumento",
                 obj(vec![
                     ("produttore", s(&self.maker)),
-                    ("modello", s(&self.modello)),
-                    ("serie", s(&self.serie)),
+                    ("modello", s(&self.model)),
+                    ("serie", s(&self.series)),
                     ("firmware", s(&self.firmware)),
                     (
                         "software",
@@ -105,21 +105,21 @@ impl Testata {
             ),
             (
                 "campi",
-                Some(V::Arr(self.campi.iter().filter_map(Campo::json).collect())),
+                Some(V::Arr(self.fields.iter().filter_map(Campo::json).collect())),
             ),
         ]);
         doc.map_or_else(String::new, |d| d.json())
     }
 
     /// The header of the mzML: the instrument, this file as the source, the acquisition time and `doc` in the `<run>`.
-    pub(super) fn header(&self, nome: &str, sha1: Option<String>, doc: String) -> Header {
+    pub(super) fn header(&self, name: &str, sha1: Option<String>, doc: String) -> Header {
         let mut h = Header {
-            run: nome.rsplit_once('.').map_or(nome, |(s, _)| s).to_string(),
+            run: name.rsplit_once('.').map_or(name, |(s, _)| s).to_string(),
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
-            instrument: self.modello.clone().map(|m| ("MS:1000031".to_string(), m)),
-            serial: self.serie.clone(),
+            instrument: self.model.clone().map(|m| ("MS:1000031".to_string(), m)),
+            serial: self.series.clone(),
             acquired: self.created.as_deref().and_then(iso),
-            sources: vec![nome.to_string()],
+            sources: vec![name.to_string()],
             source_sha1: sha1.into_iter().collect(),
             ..Header::default()
         };
@@ -144,13 +144,13 @@ impl Testata {
 
 #[derive(Default)]
 pub(super) struct Testata {
-    pub(super) campi: Vec<Campo>,
+    pub(super) fields: Vec<Campo>,
     pub(super) titolo: Option<String>,
     pub(super) created: Option<String>,
     pub(super) user: Option<String>,
     pub(super) maker: Option<String>,
-    pub(super) modello: Option<String>,
-    pub(super) serie: Option<String>,
+    pub(super) model: Option<String>,
+    pub(super) series: Option<String>,
     pub(super) software: Option<String>,
     pub(super) firmware: Option<String>,
     pub(super) ionizzazione: Option<String>,
@@ -158,17 +158,17 @@ pub(super) struct Testata {
 }
 
 /// The attribute names that identify a person, a computer or a path of the acquisition.
-fn identita(nome: &str) -> bool {
+fn identita(name: &str) -> bool {
     matches!(
-        nome,
+        name,
         "operator_name" | "instrument_serial_no" | "source_file_reference" | "source_file_name"
-    ) || nome.starts_with("external_file_ref")
-        || nome.contains("path")
+    ) || name.starts_with("external_file_ref")
+        || name.contains("path")
 }
 
 /// Where a global attribute is also in the document.
-fn mappa(nome: &str) -> Option<&'static str> {
-    match nome {
+fn mappa(name: &str) -> Option<&'static str> {
+    match name {
         "experiment_title" => Some("campione.nome"),
         "operator_name" => Some("operatore.utente"),
         "test_ionization_mode" => Some("ms.sorgente.tipo"),

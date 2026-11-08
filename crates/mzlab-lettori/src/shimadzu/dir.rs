@@ -30,7 +30,7 @@ pub(super) fn ole(m: &mut Membro) -> bool {
 }
 
 /// The names of the entries (storages and streams) of the file, `None` when it is not an OLE2 container or its directory cannot be followed.
-pub(super) fn nomi(m: &mut Membro) -> Option<Vec<String>> {
+pub(super) fn names(m: &mut Membro) -> Option<Vec<String>> {
     let mut h = [0u8; 512];
     if m.dim < 512 || m.dati.read_at(0, &mut h).is_err() || h[..8] != MAGIC {
         return None;

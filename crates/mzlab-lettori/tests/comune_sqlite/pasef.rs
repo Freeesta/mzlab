@@ -3,12 +3,12 @@
 use super::V;
 
 const SCANSIONI: u32 = 918;
-const PASEF_PER_CICLO: usize = 10;
-const PRECURSORI_PER_FRAME: usize = 12;
+const PASEF_PER_CYCLE: usize = 10;
+const PRECURSORS_PER_FRAME: usize = 12;
 
 /// xorshift: the same numbers on every machine.
-pub struct Caso(pub u64);
-impl Caso {
+pub struct Case(pub u64);
+impl Case {
     pub fn n(&mut self) -> u64 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 7;
@@ -18,7 +18,7 @@ impl Caso {
 }
 
 /// A codec-2 block: `per_scan[s]` sorted TOF indices with their intensities.
-pub fn blocco(per_scan: &[Vec<(u32, u32)>]) -> Vec<u8> {
+pub fn block(per_scan: &[Vec<(u32, u32)>]) -> Vec<u8> {
     let ns = per_scan.len();
     let mut words: Vec<u32> = vec![0; ns];
     for s in 0..ns.saturating_sub(1) {
@@ -45,10 +45,10 @@ pub fn blocco(per_scan: &[Vec<(u32, u32)>]) -> Vec<u8> {
 }
 
 /// The peaks of a frame: `n` points spread over the scans `da..a`, TOF indices drawn around a few hundred ion lines.
-fn picchi(c: &mut Caso, n: usize, finestre: &[(u32, u32)]) -> (Vec<Vec<(u32, u32)>>, u64) {
+fn peaks(c: &mut Case, n: usize, windows: &[(u32, u32)]) -> (Vec<Vec<(u32, u32)>>, u64) {
     let mut per_scan: Vec<Vec<(u32, u32)>> = vec![Vec::new(); SCANSIONI as usize];
     for i in 0..n {
-        let (a, b) = finestre[i % finestre.len()];
+        let (a, b) = windows[i % windows.len()];
         let s = a + (c.n() % u64::from(b - a)) as u32;
         let line = (c.n() % 400) as u32 * 1000 + 20_000;
         let t = line + (c.n() % 40) as u32;
@@ -64,7 +64,7 @@ fn picchi(c: &mut Caso, n: usize, finestre: &[(u32, u32)]) -> (Vec<Vec<(u32, u32
 }
 
 /// The `Frames` row of frame `id`.
-fn riga_frame(id: i64, ms1: bool, pos: i64, summed: u64, np: u64) -> Vec<V<'static>> {
+fn frame_row(id: i64, ms1: bool, pos: i64, summed: u64, np: u64) -> Vec<V<'static>> {
     vec![
         V::N,
         V::R(0.1 * id as f64),
@@ -105,7 +105,7 @@ fn database(
         V::R(0.0),
     ]];
     let meta = vec![vec![V::T("TimsCompressionType"), V::T("2")]];
-    super::db_righe(&[
+    super::db_rows(&[
         ("GlobalMetadata", "CREATE TABLE GlobalMetadata (Key TEXT, Value TEXT)", meta),
         ("Frames", "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL, Polarity TEXT, ScanMode INTEGER, MsMsType INTEGER, TimsId INTEGER, SummedIntensities INTEGER, MaxIntensity INTEGER, NumScans INTEGER, NumPeaks INTEGER, MzCalibration INTEGER, T1 REAL, T2 REAL, AccumulationTime REAL)", frames),
         ("Precursors", "CREATE TABLE Precursors (Id INTEGER PRIMARY KEY, MonoisotopicMz REAL, LargestPeakMz REAL, Charge INTEGER, Intensity REAL)", prec),
@@ -115,34 +115,34 @@ fn database(
 }
 
 /// `analysis.tdf` and `analysis.tdf_bin` of `cicli` cycles of one MS1 frame (`n1` points) and 10 PASEF frames (`n2` points).
-pub fn cartella(cicli: usize, n1: usize, n2: usize) -> (Vec<u8>, Vec<u8>) {
-    let mut c = Caso(0x9E37_79B9_7F4A_7C15);
+pub fn folder(cicli: usize, n1: usize, n2: usize) -> (Vec<u8>, Vec<u8>) {
+    let mut c = Case(0x9E37_79B9_7F4A_7C15);
     let mut bin = Vec::new();
     let (mut frames, mut prec, mut pasef) = (Vec::new(), Vec::new(), Vec::new());
     let mut id = 0i64;
-    for ciclo in 0..cicli {
-        for j in 0..=PASEF_PER_CICLO {
+    for cycle in 0..cicli {
+        for j in 0..=PASEF_PER_CYCLE {
             id += 1;
             let ms1 = j == 0;
             let fin: Vec<(u32, u32)> = if ms1 {
                 vec![(0, SCANSIONI)]
             } else {
-                (0..PRECURSORI_PER_FRAME)
+                (0..PRECURSORS_PER_FRAME)
                     .map(|p| {
                         let a = 20 + p as u32 * 70;
                         (a, a + 30)
                     })
                     .collect()
             };
-            let (per_scan, np) = picchi(&mut c, if ms1 { n1 } else { n2 }, &fin);
+            let (per_scan, np) = peaks(&mut c, if ms1 { n1 } else { n2 }, &fin);
             let summed: u64 = per_scan.iter().flatten().map(|x| u64::from(x.1)).sum();
             let pos = bin.len() as i64;
-            bin.extend(blocco(&per_scan));
-            frames.push(riga_frame(id, ms1, pos, summed, np));
+            bin.extend(block(&per_scan));
+            frames.push(frame_row(id, ms1, pos, summed, np));
             if !ms1 {
                 for (p, &(a, b)) in fin.iter().enumerate() {
-                    let pid = (ciclo * PASEF_PER_CICLO * PRECURSORI_PER_FRAME
-                        + (j - 1) * PRECURSORI_PER_FRAME
+                    let pid = (cycle * PASEF_PER_CYCLE * PRECURSORS_PER_FRAME
+                        + (j - 1) * PRECURSORS_PER_FRAME
                         + p) as i64
                         + 1;
                     let mz = 300.0 + (pid % 900) as f64 * 1.37;

@@ -7,16 +7,16 @@ use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
 use mzlab_core::metodo_campi::Campo;
 use mzlab_core::mzmlwrite::Header;
 
-use super::mzxml_scan::{attr, each, nome, tags, Tag};
+use super::mzxml_scan::{attr, each, name, tags, Tag};
 
 /// The most fields kept from a header.
 const FIELDS_MAX: usize = 2000;
 
 #[derive(Default)]
 pub(super) struct Cabina {
-    pub(super) campi: Vec<Campo>,
+    pub(super) fields: Vec<Campo>,
     pub(super) maker: Option<String>,
-    pub(super) modello: Option<String>,
+    pub(super) model: Option<String>,
     pub(super) ionizzazione: Option<String>,
     pub(super) analizzatore: Option<String>,
     pub(super) detector: Option<String>,
@@ -29,8 +29,8 @@ pub(super) struct Cabina {
     pub(super) centroidi: Option<bool>,
 }
 
-fn mappa(chiave: &str) -> Option<&'static str> {
-    match chiave {
+fn mappa(key: &str) -> Option<&'static str> {
+    match key {
         "msManufacturer" => Some("strumento.produttore"),
         "msModel" => Some("strumento.modello"),
         "msIonisation" => Some("ms.sorgente.tipo"),
@@ -66,11 +66,11 @@ fn fields_of(o: &str, n: &str, g: Tag, dest: &mut Vec<Campo>) {
     });
 }
 
-fn annota(c: &mut Cabina, n: &str, g: Tag) {
+fn annotate(c: &mut Cabina, n: &str, g: Tag) {
     let v = |k: &str| Some(attr(g, k).trim().to_string()).filter(|v| !v.is_empty());
     match n {
         "msManufacturer" => c.maker = v("value"),
-        "msModel" => c.modello = v("value"),
+        "msModel" => c.model = v("value"),
         "msIonisation" => c.ionizzazione = v("value"),
         "msMassAnalyzer" => c.analizzatore = v("value"),
         "msDetector" => c.detector = v("value"),
@@ -93,36 +93,36 @@ fn annota(c: &mut Cabina, n: &str, g: Tag) {
 }
 
 /// The cabin of `head`, the text of the file before its first scan.
-pub(super) fn leggi(head: &str, limits: &Limiti) -> Result<Cabina> {
+pub(super) fn read(head: &str, limits: &Limiti) -> Result<Cabina> {
     let mut c = Cabina::default();
     let mut pila: Vec<&str> = Vec::new();
-    let mut errore = None;
+    let mut error = None;
     tags(head, &mut |g, _| {
-        let n = nome(g);
+        let n = name(g);
         if n.starts_with('/') {
             pila.pop();
             return true;
         }
-        if c.campi.len() < FIELDS_MAX && n != "mzXML" {
+        if c.fields.len() < FIELDS_MAX && n != "mzXML" {
             let mut o = String::from("mzxml:");
             for p in &pila {
                 o.push_str(p);
                 o.push('/');
             }
             o.push_str(n);
-            fields_of(&o, n, g, &mut c.campi);
+            fields_of(&o, n, g, &mut c.fields);
         }
-        annota(&mut c, n, g);
+        annotate(&mut c, n, g);
         if !g.ends_with('/') {
             if let Err(e) = limits.profondita_ok(pila.len() + 1) {
-                errore = Some(e);
+                error = Some(e);
                 return false;
             }
             pila.push(n);
         }
         true
     });
-    errore.map_or(Ok(c), Err)
+    error.map_or(Ok(c), Err)
 }
 
 /// The `metodo/1` document of the file `nome` (`dim` bytes, `sha1` when read).
@@ -149,7 +149,7 @@ pub(super) fn document(c: &Cabina, nome: &str, dim: u64, sha1: Option<String>) -
             "strumento",
             obj(vec![
                 ("produttore", s(&c.maker)),
-                ("modello", s(&c.modello)),
+                ("modello", s(&c.model)),
                 ("software", Some(V::Arr(software))),
             ]),
         ),
@@ -160,21 +160,21 @@ pub(super) fn document(c: &Cabina, nome: &str, dim: u64, sha1: Option<String>) -
         ),
         (
             "campi",
-            Some(V::Arr(c.campi.iter().filter_map(Campo::json).collect())),
+            Some(V::Arr(c.fields.iter().filter_map(Campo::json).collect())),
         ),
     ]);
     doc.map_or_else(String::new, |d| d.json())
 }
 
 /// The header of the mzML: the instrument, the files the data come from (this file when the mzXML names none), the programs, and `doc` in the `<run>`.
-pub(super) fn header(c: &Cabina, nome: &str, sha1: Option<String>, doc: String) -> Header {
+pub(super) fn header(c: &Cabina, name: &str, sha1: Option<String>, doc: String) -> Header {
     let mut h = Header {
-        run: nome.rsplit_once('.').map_or(nome, |(s, _)| s).to_string(),
+        run: name.rsplit_once('.').map_or(name, |(s, _)| s).to_string(),
         software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
-        instrument: c.modello.clone().map(|m| ("MS:1000031".to_string(), m)),
+        instrument: c.model.clone().map(|m| ("MS:1000031".to_string(), m)),
         ..Header::default()
     };
-    for (k, valore, acc, cv_name) in [
+    for (k, value, acc, cv_name) in [
         ("source", &c.ionizzazione, "MS:1000008", "ionization type"),
         (
             "analyzer",
@@ -184,7 +184,7 @@ pub(super) fn header(c: &Cabina, nome: &str, sha1: Option<String>, doc: String) 
         ),
         ("detector", &c.detector, "MS:1000026", "detector type"),
     ] {
-        if let Some(v) = valore {
+        if let Some(v) = value {
             h.components
                 .push((k.to_string(), acc.to_string(), format!("{cv_name}: {v}")));
         }
@@ -194,7 +194,7 @@ pub(super) fn header(c: &Cabina, nome: &str, sha1: Option<String>, doc: String) 
         h.source_sha1.push(sha.clone());
     }
     if h.sources.is_empty() {
-        h.sources.push(nome.to_string());
+        h.sources.push(name.to_string());
         h.source_sha1.extend(sha1);
     }
     h.extra_software = c

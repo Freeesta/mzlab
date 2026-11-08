@@ -26,14 +26,14 @@ fn dumps(dir: &Path) -> Vec<PathBuf> {
 }
 
 /// The `.raw` named `nome` anywhere under `dir` (the corpus has a few folders deep).
-fn trova(dir: &Path, nome: &str, fondo: usize) -> Option<PathBuf> {
+fn find(dir: &Path, name: &str, bottom: usize) -> Option<PathBuf> {
     for e in std::fs::read_dir(dir).ok()?.flatten() {
         let p = e.path();
-        if p.is_dir() && fondo > 0 {
-            if let Some(f) = trova(&p, nome, fondo - 1) {
+        if p.is_dir() && bottom > 0 {
+            if let Some(f) = find(&p, name, bottom - 1) {
                 return Some(f);
             }
-        } else if p.file_name().is_some_and(|n| n == nome) {
+        } else if p.file_name().is_some_and(|n| n == name) {
             return Some(p);
         }
     }
@@ -76,20 +76,20 @@ fn scandump_thermo() {
         eprintln!("SKIP scandump_thermo: no data repository or no dumps of RFR");
         return;
     };
-    let Some(dati) = dati_percorsi::percorso("dati") else {
+    let Some(data) = dati_percorsi::percorso("dati") else {
         return;
     };
     let tool = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/rosina/scandump_compare.py");
     let tmp = std::env::temp_dir().join(format!("scandump_thermo_{}", std::process::id()));
     std::fs::create_dir_all(&tmp).expect("tmp");
-    let (mut fatti, mut rotti) = (0, Vec::new());
+    let (mut done_ones, mut broken_ones) = (0, Vec::new());
     for (i, rfr) in dumps(&dir).iter().enumerate() {
         let stem = rfr
             .file_name()
             .unwrap()
             .to_string_lossy()
             .replace(".scandump.jsonl.gz", "");
-        let Some(raw) = trova(&dati, &stem, 4) else {
+        let Some(raw) = find(&data, &stem, 4) else {
             eprintln!("dump {i}: its .raw is not in the corpus, skipped");
             continue;
         };
@@ -113,34 +113,34 @@ fn scandump_thermo() {
             break;
         };
         let r: Value = serde_json::from_slice(&std::fs::read(&rep).expect("report")).expect("json");
-        let campi = r["fields"].as_object().expect("fields");
-        let (uguali, diversi, assenti) = campi.values().fold((0, 0, 0), |a, v| {
+        let fields = r["fields"].as_object().expect("fields");
+        let (equal, different, absent_ones) = fields.values().fold((0, 0, 0), |a, v| {
             (
                 a.0 + v["equal"].as_u64().unwrap_or(0),
                 a.1 + v["different"].as_u64().unwrap_or(0),
                 a.2 + v["absent_b"].as_u64().unwrap_or(0),
             )
         });
-        eprintln!("dump {i}: {} fields, equal {uguali}, different {diversi}, missing on our side {assenti}", campi.len());
-        for nome in VERIFICATI {
-            match campi.get(*nome) {
+        eprintln!("dump {i}: {} fields, equal {equal}, different {different}, missing on our side {absent_ones}", fields.len());
+        for name in VERIFICATI {
+            match fields.get(*name) {
                 Some(v)
                     if v["compared"].as_u64().unwrap_or(0) > 0
                         && v["different"] == 0
                         && v["absent_b"] == 0 => {}
-                other => rotti.push(format!(
-                    "dump {i}: {nome}: {}",
+                other => broken_ones.push(format!(
+                    "dump {i}: {name}: {}",
                     other.map_or("not compared".into(), |v| v["examples"].to_string())
                 )),
             }
         }
-        fatti += 1;
+        done_ones += 1;
     }
     std::fs::remove_dir_all(&tmp).ok();
-    eprintln!("scandump_thermo: {fatti} dumps compared");
+    eprintln!("scandump_thermo: {done_ones} dumps compared");
     assert!(
-        rotti.is_empty(),
+        broken_ones.is_empty(),
         "fields declared verified differ from RFR:\n{}",
-        rotti.join("\n")
+        broken_ones.join("\n")
     );
 }

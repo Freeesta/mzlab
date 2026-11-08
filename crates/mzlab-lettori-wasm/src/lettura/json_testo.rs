@@ -4,9 +4,9 @@ use mzlab_core::lettori::{Campione, Campo, VoceCromatogramma};
 use mzlab_core::mzmlwrite::Header;
 
 /// `[{id,name,scans}]`, shared with the `probe` answer of `lib.rs`.
-pub fn samples_json(o: &mut Out, campioni: &[Campione]) {
+pub fn samples_json(o: &mut Out, samples: &[Campione]) {
     o.raw("[");
-    for (i, c) in campioni.iter().enumerate() {
+    for (i, c) in samples.iter().enumerate() {
         o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
             .int(i64::from(c.id))
             .raw(",\"name\":")
@@ -45,10 +45,10 @@ pub fn rows<T>(o: &mut Out, v: &[T], row: impl Fn(&T) -> Vec<&str>) {
 }
 
 /// `[{name,value,unit,cv}]`.
-pub fn fields_json(campi: &[Campo]) -> String {
+pub fn fields_json(fields: &[Campo]) -> String {
     let mut o = Out::default();
     o.raw("[");
-    for (i, f) in campi.iter().enumerate() {
+    for (i, f) in fields.iter().enumerate() {
         o.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
             .str(&f.nome)
             .raw(",\"value\":")

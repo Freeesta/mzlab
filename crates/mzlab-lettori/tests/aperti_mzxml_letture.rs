@@ -18,7 +18,7 @@ impl ReadAt for Contato {
     }
 }
 
-fn corsa_lunga(n: u32) -> Vec<Sc> {
+fn long_run(n: u32) -> Vec<Sc> {
     (1..=n)
         .map(|i| {
             sc(
@@ -34,22 +34,16 @@ fn corsa_lunga(n: u32) -> Vec<Sc> {
 
 #[test]
 fn the_index_of_many_scans_takes_few_reads_and_the_same_rows() {
-    let scan = corsa_lunga(900);
+    let scan = long_run(900);
     for attributi in [true, false] {
-        let byte = mzxml(
-            &scan,
-            Opz {
-                attributi,
-                ..PIATTO
-            },
-        );
-        let chiamate = Rc::new(Cell::new(0));
-        let mut fs = comune::insieme("campione.mzXML", Vec::new());
+        let byte = mzxml(&scan, Opz { attributi, ..FLAT });
+        let calls = Rc::new(Cell::new(0));
+        let mut fs = comune::file_set("campione.mzXML", Vec::new());
         fs.membri[0].dim = byte.len() as u64;
-        fs.membri[0].dati = Box::new(Contato(byte.clone(), chiamate.clone()));
+        fs.membri[0].dati = Box::new(Contato(byte.clone(), calls.clone()));
         let mut l = mzlab_lettori::apri(fs, &mzlab_core::lettori::Limiti::sito()).unwrap();
         // opening: the header, the pass over the file for the starts of the scans, the windows of the index
-        assert!(chiamate.get() < scan.len() / 10, "{} reads", chiamate.get());
+        assert!(calls.get() < scan.len() / 10, "{} reads", calls.get());
         let mut r = apri_mzxml(byte);
         let (a, b) = (l.index(0).unwrap().to_vec(), r.index(0).unwrap().to_vec());
         assert_eq!(a, b);

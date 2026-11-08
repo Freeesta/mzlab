@@ -120,7 +120,7 @@ fn the_session_answers_and_closes() {
 #[test]
 fn the_index_bytes_round_trip() {
     use mzlab_core::lettori::Posizione;
-    let voci = vec![
+    let entries = vec![
         VoceScansione {
             id: "scan=1 \"q\"\n\u{8}é".into(),
             rt: 1.0,
@@ -151,10 +151,10 @@ fn the_index_bytes_round_trip() {
     let mut s = Sessions::default();
     let h = s.insert(Box::new(Fake {
         campioni: vec![],
-        indice: voci.clone(),
+        indice: entries.clone(),
     }));
     let b = s.index(h, 0).unwrap();
-    assert_eq!(mzlab_core::trasporto::decode_indice(&b).unwrap(), voci);
+    assert_eq!(mzlab_core::trasporto::decode_indice(&b).unwrap(), entries);
 }
 
 // `3` and `3.0` are the same number for the page (`JSON.parse`): compare every number as a double
@@ -174,8 +174,8 @@ fn norm(v: Value) -> Value {
 /// A reader whose answers hold the awkward values: control characters, quotes, non-ASCII, NaN, infinities, `-0.0`, numbers at both ends of the range.
 /// The points of a trace text are the doubles the reader gave (the sign of zero included), NaN and infinities being null: read here with `f64::from_str`, because serde_json's own
 /// reader is not exact to the last bit (no `float_roundtrip`) while `JSON.parse` is.
-fn identical_points(testo: &str, x: &Chromatogram) {
-    let (t_txt, i_txt) = testo
+fn identical_points(text: &str, x: &Chromatogram) {
+    let (t_txt, i_txt) = text
         .split_once("\"time\":[")
         .unwrap()
         .1
@@ -185,9 +185,9 @@ fn identical_points(testo: &str, x: &Chromatogram) {
         (t_txt, &x.time),
         (i_txt.strip_suffix("]}").unwrap(), &x.intensity),
     ] {
-        let letti: Vec<&str> = txt.split(',').collect();
-        assert_eq!(letti.len(), orig.len());
-        for (l, o) in letti.iter().zip(orig.iter()) {
+        let read_items: Vec<&str> = txt.split(',').collect();
+        assert_eq!(read_items.len(), orig.len());
+        for (l, o) in read_items.iter().zip(orig.iter()) {
             if o.is_finite() {
                 assert_eq!(l.parse::<f64>().unwrap().to_bits(), o.to_bits(), "{o:e}");
             } else {
@@ -207,17 +207,17 @@ fn the_json_texts_equal_serde_json() {
     let h = s.insert(Box::new(Hard));
     let mut r = Hard;
 
-    let vecchio: Vec<_> = r
+    let old: Vec<_> = r
         .samples()
         .iter()
         .map(|c| json!({ "id": c.id, "name": c.nome, "scans": c.scansioni }))
         .collect();
     assert_eq!(
         parse(s.samples(h).unwrap()),
-        json(json!({ "formato": "duro", "campioni": vecchio }))
+        json(json!({ "formato": "duro", "campioni": old }))
     );
 
-    let vecchio: Vec<_> = r
+    let old: Vec<_> = r
         .scan_header(0, 0)
         .unwrap()
         .iter()
@@ -225,10 +225,10 @@ fn the_json_texts_equal_serde_json() {
         .collect();
     assert_eq!(
         parse(s.scan_header(h, 0, 0).unwrap()),
-        json(Value::Array(vecchio))
+        json(Value::Array(old))
     );
 
-    let vecchio: Vec<_> = r
+    let old: Vec<_> = r
         .chromatograms(0)
         .unwrap()
         .iter()
@@ -236,30 +236,30 @@ fn the_json_texts_equal_serde_json() {
         .collect();
     assert_eq!(
         parse(s.chromatograms(h, 0).unwrap()),
-        json(Value::Array(vecchio))
+        json(Value::Array(old))
     );
 
     let x = r.chromatogram(0, ODD_CHARS).unwrap();
-    let mut vecchio = json!({ "id": x.id, "kind": format!("{:?}", x.kind), "q1": x.q1, "q3": x.q3, "unit": x.unit, "time": x.time, "intensity": x.intensity });
-    let testo = s.chromatogram(h, 0, ODD_CHARS).unwrap();
-    let mut nuovo = parse(testo.clone());
-    identical_points(&testo, &x);
-    for v in [&mut vecchio, &mut nuovo] {
+    let mut old = json!({ "id": x.id, "kind": format!("{:?}", x.kind), "q1": x.q1, "q3": x.q3, "unit": x.unit, "time": x.time, "intensity": x.intensity });
+    let text = s.chromatogram(h, 0, ODD_CHARS).unwrap();
+    let mut new_one = parse(text.clone());
+    identical_points(&text, &x);
+    for v in [&mut old, &mut new_one] {
         let m = v.as_object_mut().unwrap();
         m.remove("time");
         m.remove("intensity");
     }
-    assert_eq!(nuovo, json(vecchio));
+    assert_eq!(new_one, json(old));
 
     let t = r.mzml_header(0).unwrap().unwrap();
-    let vecchio = json!({
+    let old = json!({
         "run": t.run, "sources": t.sources, "instrument": t.instrument, "components": t.components,
         "software": [t.software.0, t.software.1], "acquired": t.acquired, "serial": t.serial,
         "source_sha1": t.source_sha1, "source_cv": t.source_cv, "sample": t.sample,
         "run_params": t.run_params, "content": t.content, "extra_software": t.extra_software,
         "centroided": t.centroided,
     });
-    assert_eq!(parse(s.file_header(h, 0).unwrap()), json(vecchio));
+    assert_eq!(parse(s.file_header(h, 0).unwrap()), json(old));
     assert_eq!(s.file_header(h, 1).unwrap(), "null");
 }
 
@@ -303,11 +303,11 @@ fn measure_a_chromatogram_of_a_million_points() {
             Ok("{}".into())
         }
     }
-    let punti: Vec<f64> = (0..1_000_000)
+    let points: Vec<f64> = (0..1_000_000)
         .map(|i| i as f64 * 0.0013 + (i % 97) as f64 / 7.0)
         .collect();
     let mut s = Sessions::default();
-    let h = s.insert(Box::new(Long(punti)));
+    let h = s.insert(Box::new(Long(points)));
     let t = std::time::Instant::now();
     let n = s.chromatogram(h, 0, "TIC").unwrap().len();
     println!(

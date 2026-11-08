@@ -23,7 +23,7 @@ impl Lettore for ShimadzuReader {
     }
 
     fn samples(&self) -> &[Campione] {
-        &self.campioni
+        &self.samples
     }
 
     fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
@@ -77,9 +77,9 @@ impl Lettore for ShimadzuReader {
             .get(k)
             .zip(self.d.pos.get(k))
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
-        let field = |nome: &str, valore: String| Campo {
-            nome: nome.into(),
-            valore,
+        let field = |name: &str, value: String| Campo {
+            nome: name.into(),
+            valore: value,
             unita: None,
             cv: None,
         };

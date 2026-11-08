@@ -8,9 +8,9 @@ mod comune_waters;
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::mzml::Spectrum;
 
-type Membri = Vec<(String, Vec<u8>)>;
+type Members = Vec<(String, Vec<u8>)>;
 
-fn fs(m: &Membri) -> FileSet {
+fn fs(m: &Members) -> FileSet {
     FileSet {
         membri: m
             .iter()
@@ -24,7 +24,7 @@ fn fs(m: &Membri) -> FileSet {
     }
 }
 
-struct Letto {
+struct ReadOne {
     scans: Vec<Spectrum>,
     missing: usize,
     /// Every chromatogram as (id, time, intensity) pairs.
@@ -37,7 +37,7 @@ fn ok<T>(r: Result<T, mzlab_core::error::Error>, at: &str, step: &str) -> T {
 }
 
 /// `Err`: the key of the error at open, the one notice a cut file may give; once open, every scan, chromatogram and the mzML must read (`panic` names the step).
-fn read(m: &Membri, at: &str) -> Result<Letto, &'static str> {
+fn read(m: &Members, at: &str) -> Result<ReadOne, &'static str> {
     let mut l = mzlab_lettori::apri(fs(m), &Limiti::sito()).map_err(|e| e.key)?;
     let n = ok(l.index(0).map(|v| v.len()), at, "the index");
     let scans: Vec<Spectrum> = (0..n).map(|k| ok(l.scan(0, k), at, "a scan")).collect();
@@ -58,33 +58,33 @@ fn read(m: &Membri, at: &str) -> Result<Letto, &'static str> {
         at,
         "the mzML",
     );
-    Ok(Letto {
+    Ok(ReadOne {
         scans,
         missing: l.missing(0),
         chroms,
     })
 }
 
-fn every_cut_is_counted(nome: &str, file: Membri) {
-    let want = read(&file, nome).unwrap();
+fn every_cut_is_counted(name: &str, file: Members) {
+    let want = read(&file, name).unwrap();
     assert!(
         !want.scans.is_empty() && want.missing == 0,
-        "{nome}: the whole file"
+        "{name}: the whole file"
     );
     for q in 0..file.len() {
         let len = file[q].1.len();
         for cut in (0..len).step_by(4) {
             let mut m = file.clone();
             m[q].1.truncate(cut);
-            let at = format!("{nome} {} cut at {cut}/{len}", file[q].0);
+            let at = format!("{name} {} cut at {cut}/{len}", file[q].0);
             // a text header cut outside a calibration line reads as a shorter header: only an empty one or a cut calibration line is told (lost whole lines are not)
-            let riga = file[q].1[..cut]
+            let row = file[q].1[..cut]
                 .rsplit(|&x| x == b'\n')
                 .next()
                 .unwrap_or_default();
             if file[q].0.ends_with(".TXT")
                 && cut > 0
-                && !riga.trim_ascii_start().starts_with(b"$$ Cal")
+                && !row.trim_ascii_start().starts_with(b"$$ Cal")
             {
                 continue;
             }
@@ -126,11 +126,14 @@ fn every_cut_is_counted(nome: &str, file: Membri) {
 fn an_andi_ms_file_cut_short_is_counted() {
     every_cut_is_counted(
         "andi-ms",
-        vec![("x.cdf".into(), comune::andi::andi_ms(&comune::andi::PIATTA))],
+        vec![(
+            "x.cdf".into(),
+            comune::andi::andi_ms(&comune::andi::FLAT_RUN),
+        )],
     );
 }
 
 #[test]
 fn a_waters_folder_cut_short_is_counted() {
-    every_cut_is_counted("waters", comune_waters::file_cartella());
+    every_cut_is_counted("waters", comune_waters::folder_file());
 }

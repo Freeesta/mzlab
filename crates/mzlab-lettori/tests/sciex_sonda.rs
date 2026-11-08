@@ -8,7 +8,7 @@ use std::process::Command;
 
 use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 
-fn genera(tool: &str) -> Option<PathBuf> {
+fn generate(tool: &str) -> Option<PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_sciex_sonda_{tool}_{}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tools")
@@ -31,10 +31,10 @@ fn genera(tool: &str) -> Option<PathBuf> {
 }
 
 fn apri(dir: &Path, stem: &str) -> Box<dyn Lettore> {
-    let membro = |nome: String| {
-        let b = std::fs::read(dir.join(&nome)).unwrap();
+    let member = |name: String| {
+        let b = std::fs::read(dir.join(&name)).unwrap();
         Membro {
-            nome,
+            nome: name,
             dim: b.len() as u64,
             dati: Box::new(b),
             sha1: None,
@@ -42,8 +42,8 @@ fn apri(dir: &Path, stem: &str) -> Box<dyn Lettore> {
     };
     let fs = FileSet {
         membri: vec![
-            membro(format!("{stem}.wiff")),
-            membro(format!("{stem}.wiff.scan")),
+            member(format!("{stem}.wiff")),
+            member(format!("{stem}.wiff.scan")),
         ],
     };
     mzlab_lettori::apri(fs, &Limiti::sito()).unwrap()
@@ -51,7 +51,7 @@ fn apri(dir: &Path, stem: &str) -> Box<dyn Lettore> {
 
 #[test]
 fn a_scheduled_mrm_pair_without_a_log_is_a_variant() {
-    let Some(dir) = genera("wiff_riferimento.py") else {
+    let Some(dir) = generate("wiff_riferimento.py") else {
         return;
     };
     let mut l = apri(&dir, "programmati");
@@ -64,7 +64,7 @@ fn a_scheduled_mrm_pair_without_a_log_is_a_variant() {
 
 #[test]
 fn a_pair_is_a_variant_when_any_of_its_samples_is() {
-    let Some(dir) = genera("wiff_misto_pi.py") else {
+    let Some(dir) = generate("wiff_misto_pi.py") else {
         return;
     };
     let mut l = apri(&dir, "mistopi");
@@ -77,7 +77,7 @@ fn a_pair_is_a_variant_when_any_of_its_samples_is() {
 /// says the engine cannot read it, so the probe answers `"variante"` and the module reads all 136 traces.
 #[test]
 fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
-    let Some(dir) = genera("wiff_mrm_rado.py") else {
+    let Some(dir) = generate("wiff_mrm_rado.py") else {
         return;
     };
     let mut l = apri(&dir, "mrmrado");

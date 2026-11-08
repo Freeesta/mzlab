@@ -1,10 +1,10 @@
 //! Hostile input for the registry of the module: bytes no reader knows are an error with a key (never a panic), and so are an empty set and a truncated header.
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 
-fn insieme(nome: &str, byte: Vec<u8>) -> FileSet {
+fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
         membri: vec![Membro {
-            nome: nome.into(),
+            nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
             sha1: None,
@@ -12,7 +12,7 @@ fn insieme(nome: &str, byte: Vec<u8>) -> FileSet {
     }
 }
 
-fn chiave(fs: FileSet) -> &'static str {
+fn key(fs: FileSet) -> &'static str {
     match mzlab_lettori::apri(fs, &Limiti::sito()) {
         Ok(_) => "ok",
         Err(e) => e.key,
@@ -20,40 +20,40 @@ fn chiave(fs: FileSet) -> &'static str {
 }
 
 #[test]
-fn byte_sconosciuti_sono_un_errore_con_chiave() {
+fn unknown_bytes_are_a_keyed_error() {
     assert_eq!(
-        chiave(insieme("x.dat", vec![0xAB; 4096])),
+        key(file_set("x.dat", vec![0xAB; 4096])),
         "err.file.notAccepted"
     );
     assert_eq!(
-        chiave(insieme("x.D/AcqData/MSScan.bin", vec![0; 8])),
+        key(file_set("x.D/AcqData/MSScan.bin", vec![0; 8])),
         "err.file.notAccepted"
     );
     assert_eq!(
-        chiave(insieme("x.raw", vec![0x01, 0xA1, 0x46])),
+        key(file_set("x.raw", vec![0x01, 0xA1, 0x46])),
         "err.file.notThisFormat"
     );
-    assert_eq!(chiave(insieme("x.wiff", Vec::new())), "err.file.empty");
+    assert_eq!(key(file_set("x.wiff", Vec::new())), "err.file.empty");
     // a name the registry does not know stays «not accepted»; a plain .mzML the engine reads is not called damaged by this crate
-    assert_eq!(chiave(insieme("x.cdf", Vec::new())), "err.file.empty");
+    assert_eq!(key(file_set("x.cdf", Vec::new())), "err.file.empty");
     assert_eq!(
-        chiave(insieme("x.cdf", b"CDF".to_vec())),
+        key(file_set("x.cdf", b"CDF".to_vec())),
         "err.file.notThisFormat"
     );
     assert_eq!(
-        chiave(insieme("x.mzML", b"<x/>".to_vec())),
+        key(file_set("x.mzML", b"<x/>".to_vec())),
         "err.file.notAccepted"
     );
 }
 
 #[test]
-fn insieme_vuoto() {
-    assert_eq!(chiave(FileSet::default()), "err.file.notAccepted");
+fn empty_set() {
+    assert_eq!(key(FileSet::default()), "err.file.notAccepted");
 }
 
 #[cfg(feature = "tutte")]
 #[test]
-fn le_estensioni_del_modulo_contengono_quelle_del_motore() {
+fn module_extensions_contain_the_engine_ones() {
     let m = mzlab_lettori::estensioni();
     for e in mzlab_core::lettori::estensioni() {
         assert!(m.contains(&e), "{e}");
@@ -62,28 +62,27 @@ fn le_estensioni_del_modulo_contengono_quelle_del_motore() {
 
 /// The row of each family in `lettori-famiglie.js` holds the extensions of every reader of the registry of this build (the page sends a file to the module by that table).
 #[test]
-fn le_estensioni_dei_lettori_stanno_nella_tabella_della_pagina() {
+fn reader_extensions_are_in_the_page_table() {
     let js = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../mzlab/web/lettori-famiglie.js"
     ))
     .unwrap();
-    let riga = |fam: &str| {
+    let row = |fam: &str| {
         js.lines()
             .find(|l| l.trim_start().starts_with(&format!("{fam}:")))
             .unwrap_or_else(|| panic!("no row for {fam}"))
             .to_string()
     };
-    let per_famiglia: [(&str, &str); 3] =
-        [("agilent", ".d"), ("sciex", ".wiff"), ("thermo", ".raw")];
-    for (fam, ext) in per_famiglia {
-        let attiva = mzlab_lettori::famiglia() == "tutte" || mzlab_lettori::famiglia() == fam;
-        if attiva {
-            assert!(riga(fam).contains(&format!("\"{ext}\"")), "{fam}: {ext}");
+    let per_family: [(&str, &str); 3] = [("agilent", ".d"), ("sciex", ".wiff"), ("thermo", ".raw")];
+    for (fam, ext) in per_family {
+        let active = mzlab_lettori::famiglia() == "tutte" || mzlab_lettori::famiglia() == fam;
+        if active {
+            assert!(row(fam).contains(&format!("\"{ext}\"")), "{fam}: {ext}");
         }
     }
     // `mzxml-gz` is a voice of the app and the CLI only: the page inflates a .mzXML.gz itself (gz-flusso.js) and gives the module the .mzXML
-    for v in mzlab_lettori::registro()
+    for v in mzlab_lettori::registry()
         .into_iter()
         .filter(|v| v.id != "mzxml-gz")
     {
@@ -94,7 +93,7 @@ fn le_estensioni_dei_lettori_stanno_nella_tabella_della_pagina() {
         .any(|f| {
             v.estensioni
                 .iter()
-                .all(|e| riga(f).contains(&format!("\"{e}\"")))
+                .all(|e| row(f).contains(&format!("\"{e}\"")))
         });
         assert!(in_table, "{}", v.id);
     }

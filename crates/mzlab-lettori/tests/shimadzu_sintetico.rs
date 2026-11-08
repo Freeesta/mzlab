@@ -6,11 +6,11 @@ use comune::shimadzu::*;
 use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 use mzlab_core::mzml::ChromKind;
 
-fn apri(nome: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Lettore>> {
+fn apri(name: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Lettore>> {
     mzlab_lettori::apri_nudo(
         FileSet {
             membri: vec![Membro {
-                nome: nome.into(),
+                nome: name.into(),
                 dim: b.len() as u64,
                 dati: Box::new(b),
                 sha1: None,
@@ -98,7 +98,7 @@ fn the_method_keeps_the_operator_apart() {
 fn qtof_and_pda_only_are_refused_with_a_key() {
     let e = apri("t.lcd", lcd_qtof()).err().expect("refused");
     assert_eq!(e.key, "err.file.shimadzu");
-    let e = apri("p.lcd", lcd_solo_pda()).err().expect("refused");
+    let e = apri("p.lcd", lcd_pda_only()).err().expect("refused");
     assert_eq!(e.key, "err.file.shimadzu");
 }
 

@@ -32,7 +32,7 @@ pub fn zlib(b: &[u8]) -> Vec<u8> {
     b.to_vec()
 }
 
-pub fn insieme(nome: &str, byte: Vec<u8>) -> FileSet {
+pub fn file_set(nome: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
         membri: vec![Membro {
             nome: nome.into(),
@@ -57,10 +57,10 @@ pub fn makers(dir: &Path, broken: bool) -> PathBuf {
     std::fs::create_dir_all(&src).unwrap();
     let o = mzxml::Opz {
         zlib: false,
-        ..mzxml::PIATTO
+        ..mzxml::FLAT
     };
-    std::fs::write(src.join("a.mzXML"), mzxml::mzxml(&mzxml::corsa(), o)).unwrap();
-    std::fs::write(src.join("b.cdf"), andi::andi_ms(&andi::PIATTA)).unwrap();
+    std::fs::write(src.join("a.mzXML"), mzxml::mzxml(&mzxml::run(), o)).unwrap();
+    std::fs::write(src.join("b.cdf"), andi::andi_ms(&andi::FLAT_RUN)).unwrap();
     if broken {
         std::fs::write(
             src.join("rotto.raw"),

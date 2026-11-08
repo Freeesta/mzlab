@@ -1,13 +1,13 @@
 //! Small helpers of `tdf`: the folder of a member name, the sum of the points of a spectrum, the frames a cut copy of `*_bin` lacks, and the recognition of a folder.
-use super::blocco::Picchi;
+use super::blocco::Peaks;
 use super::spettri::stretches;
 use mzlab_core::error::Error;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{Fiducia, FileSet, Membro};
 
 /// The folder part of a member name; both `/` and `\` separate (a folder picked on Windows names its members with `\`).
-pub(super) fn cartella(nome: &str) -> Option<&str> {
-    nome.rsplit_once(['/', '\\']).map(|x| x.0)
+pub(super) fn cartella(name: &str) -> Option<&str> {
+    name.rsplit_once(['/', '\\']).map(|x| x.0)
 }
 
 /// For each frame offset in `pos`, whether its block does not end inside the `*_bin` of `dim` bytes (a copy cut short). Blocks follow one another, so a block ends
@@ -46,7 +46,7 @@ pub(super) fn bad_index(k: impl std::fmt::Display) -> Error {
 }
 
 /// The sum of the intensities of the points of `p` in the scan ranges `scan`: the counts are whole numbers, so the order of the sum does not matter.
-pub(super) fn sum_scan(p: &Picchi, scan: &[(u32, u32)]) -> f64 {
+pub(super) fn sum_scan(p: &Peaks, scan: &[(u32, u32)]) -> f64 {
     let t: u64 = stretches(p, scan)
         .into_iter()
         .flat_map(|r| p.int[r].iter().map(|&y| u64::from(y)))
@@ -79,9 +79,9 @@ pub(super) fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
 }
 
 /// The error of a folder that lacks `file` (`analysis.tsf`, `analysis.tdf_bin`, ...); `nome`: a member of the folder.
-pub(super) fn absent(nome: &str, file: &str) -> Error {
+pub(super) fn absent(name: &str, file: &str) -> Error {
     Error::new("err.file.brukerNoBin")
-        .with("name", cartella(nome).unwrap_or(nome))
+        .with("name", cartella(name).unwrap_or(name))
         .with("file", file)
 }
 

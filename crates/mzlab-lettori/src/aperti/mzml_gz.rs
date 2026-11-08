@@ -12,7 +12,7 @@ use mzlab_core::lettori::{Fiducia, FileSet, Lettore, Limiti, Membro, VoceLettore
 /// The bytes of the start of the file that `riconosci` inflates to see the root element.
 const TESTA: usize = 4096;
 
-pub const VOCE: VoceLettore = VoceLettore {
+pub const ENTRY: VoceLettore = VoceLettore {
     id: "mzml-gz",
     contratto: CONTRATTO,
     estensioni: &[".mzml.gz"],
@@ -32,7 +32,7 @@ pub const ENTRY_MZXML: VoceLettore = VoceLettore {
 
 /// A `ReadAt` seen as a `Read`, from the start.
 struct Stream {
-    dati: Box<dyn ReadAt>,
+    data: Box<dyn ReadAt>,
     pos: u64,
     dim: u64,
 }
@@ -43,7 +43,7 @@ impl Read for Stream {
         if n == 0 {
             return Ok(0);
         }
-        self.dati
+        self.data
             .read_at(self.pos, &mut buf[..n])
             .map_err(|e| std::io::Error::other(e.to_string()))?;
         self.pos += n as u64;
@@ -95,7 +95,7 @@ fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
 
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
 fn apri_mzxml(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
-    (super::mzxml::VOCE.apri)(inflate(fs, ".mzxml.gz", limits)?, limits)
+    (super::mzxml::ENTRY.apri)(inflate(fs, ".mzxml.gz", limits)?, limits)
 }
 
 /// The set with its gzip member inflated into memory, named without `.gz`.
@@ -104,12 +104,12 @@ fn inflate(mut fs: FileSet, suffisso: &str, limits: &Limiti) -> Result<FileSet> 
         .trova(suffisso)
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
     let m = fs.membri.swap_remove(i);
-    let nome = m.nome[..m.nome.len() - ".gz".len()].to_string();
+    let name = m.nome[..m.nome.len() - ".gz".len()].to_string();
     let mut outside = Vec::new();
     let read_one = Membri::new(std::io::BufReader::with_capacity(
         1 << 16,
         Stream {
-            dati: m.dati,
+            data: m.dati,
             pos: 0,
             dim: m.dim,
         },
@@ -134,7 +134,7 @@ fn inflate(mut fs: FileSet, suffisso: &str, limits: &Limiti) -> Result<FileSet> 
     let dim = outside.len() as u64;
     Ok(FileSet {
         membri: vec![Membro {
-            nome,
+            nome: name,
             dim,
             dati: Box::new(outside),
             sha1: None,

@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 #[path = "verita_livelli.rs"]
 mod livelli_f;
 #[allow(unused_imports)]
-pub use livelli_f::{normalizza, percorso_json};
+pub use livelli_f::{json_path, normalize};
 
 /// Tolerances of F.2 (docs/studi/ROSINA.md): m/z by ppm (high resolution) or by Da (unit resolution), times in minutes, intensities relative.
 #[derive(Clone, Copy)]
@@ -46,26 +46,26 @@ impl Tol {
 
 /// What one level found: everything compared and equal, items the truth or the reader cannot give (named), or differences.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Esito {
+pub enum Outcome {
     Ok,
-    Manca(Vec<String>),
-    Difetto(Vec<String>),
+    Missing(Vec<String>),
+    Defect(Vec<String>),
 }
 
-pub const LIVELLI: [&str; 6] = ["F0", "F1", "F2", "F3", "F4", "F5"];
+pub const LEVELS: [&str; 6] = ["F0", "F1", "F2", "F3", "F4", "F5"];
 
 #[derive(Debug)]
 pub struct Rapporto {
     pub file: String,
-    pub livelli: Vec<(&'static str, Esito)>,
+    pub levels: Vec<(&'static str, Outcome)>,
 }
 
 impl Rapporto {
     pub fn difetti(&self) -> Vec<String> {
-        self.livelli
+        self.levels
             .iter()
             .filter_map(|(l, e)| match e {
-                Esito::Difetto(d) => {
+                Outcome::Defect(d) => {
                     Some(d.iter().map(|x| format!("{l}: {x}")).collect::<Vec<_>>())
                 }
                 _ => None,
@@ -75,35 +75,39 @@ impl Rapporto {
     }
     /// The levels that could not be compared (with what is missing).
     pub fn missing(&self) -> Vec<String> {
-        self.livelli
+        self.levels
             .iter()
             .filter_map(|(l, e)| match e {
-                Esito::Manca(m) => Some(format!("{l} ({})", m.join(", "))),
+                Outcome::Missing(m) => Some(format!("{l} ({})", m.join(", "))),
                 _ => None,
             })
             .collect()
     }
     /// `L`: F0-F5 compared and equal; `P`: equal where compared, some level missing; `NV`: only F0 (the truth has nothing to compare); a defect is `DIFETTO`.
-    pub fn esito(&self) -> &'static str {
+    pub fn outcome(&self) -> &'static str {
         if !self.difetti().is_empty() {
             return "DIFETTO";
         }
-        let confrontati = self.livelli.iter().filter(|(_, e)| *e == Esito::Ok).count();
-        if confrontati == self.livelli.len() {
+        let compared = self
+            .levels
+            .iter()
+            .filter(|(_, e)| *e == Outcome::Ok)
+            .count();
+        if compared == self.levels.len() {
             "L"
-        } else if confrontati <= 1 {
+        } else if compared <= 1 {
             "NV"
         } else {
             "P"
         }
     }
-    pub fn riga(&self) -> String {
+    pub fn row(&self) -> String {
         let m = self.missing();
-        format!("{}\t{}\t{}", self.file, self.esito(), m.join("; "))
+        format!("{}\t{}\t{}", self.file, self.outcome(), m.join("; "))
     }
 }
 
-pub fn leggi(p: &Path) -> Result<Value, String> {
+pub fn read(p: &Path) -> Result<Value, String> {
     let t = std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", p.display()))?;
     let v: Value = serde_json::from_str(&t).map_err(|e| format!("{}: {e}", p.display()))?;
     if v["schema"] != "verita/1" {
@@ -114,52 +118,52 @@ pub fn leggi(p: &Path) -> Result<Value, String> {
 
 /// Every `*.verita.json` under `dir`, sorted.
 pub fn verita_in(dir: &Path) -> Vec<PathBuf> {
-    fn giro(d: &Path, out: &mut Vec<PathBuf>) {
+    fn round_trip(d: &Path, out: &mut Vec<PathBuf>) {
         let Ok(rd) = std::fs::read_dir(d) else { return };
         for e in rd.flatten() {
             let p = e.path();
             if p.is_dir() {
-                giro(&p, out);
+                round_trip(&p, out);
             } else if p.to_string_lossy().ends_with(".verita.json") {
                 out.push(p);
             }
         }
     }
     let mut out = Vec::new();
-    giro(dir, &mut out);
+    round_trip(dir, &mut out);
     out.sort();
     out
 }
 
 /// F1 to F4 over sample `c` of an open reader; F0 is the caller's (it opened the file); F5 reads the `metodo/1` document.
-pub fn confronta(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol, nome: &str) -> Rapporto {
-    let mut livelli: Vec<(&'static str, Esito)> = vec![("F0", Esito::Ok)];
-    let indice: Vec<VoceScansione> = match l.index(c) {
+pub fn compare(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol, name: &str) -> Rapporto {
+    let mut livelli: Vec<(&'static str, Outcome)> = vec![("F0", Outcome::Ok)];
+    let index: Vec<VoceScansione> = match l.index(c) {
         Ok(i) => i.to_vec(),
         Err(e) => {
-            livelli.push(("F1", Esito::Difetto(vec![format!("index: {}", e.key)])));
+            livelli.push(("F1", Outcome::Defect(vec![format!("index: {}", e.key)])));
             return Rapporto {
-                file: nome.into(),
-                livelli,
+                file: name.into(),
+                levels: livelli,
             };
         }
     };
     let croms = l.chromatograms(c).unwrap_or_default();
-    livelli.push(("F1", livelli_f::f1_conteggi(&indice, &croms, v)));
-    livelli.push(("F2", livelli_f::f2_intestazioni(l, &indice, v, c, tol)));
-    livelli.push(("F3", livelli_f::f3_punti(l, v, c, tol)));
-    livelli.push(("F4", livelli_f::f4_cromatogrammi(l, &croms, v, c, tol)));
+    livelli.push(("F1", livelli_f::f1_counts(&index, &croms, v)));
+    livelli.push(("F2", livelli_f::f2_headers(l, &index, v, c, tol)));
+    livelli.push(("F3", livelli_f::f3_points(l, v, c, tol)));
+    livelli.push(("F4", livelli_f::f4_chromatograms(l, &croms, v, c, tol)));
     livelli.push(("F5", livelli_f::metadati(l, v, c)));
     Rapporto {
-        file: nome.into(),
-        livelli,
+        file: name.into(),
+        levels: livelli,
     }
 }
 
 /// Writes the report of the run (`file<TAB>L|P|NV<TAB>levels missing`) when `MZLAB_ROSINA_RAPPORTO` names a file; the nightly workflow of the private repository collects it.
-pub fn scrivi_rapporto(righe: &[Rapporto]) {
-    for r in righe {
-        eprintln!("ROSINA {}", r.riga());
+pub fn write_report(rows: &[Rapporto]) {
+    for r in rows {
+        eprintln!("ROSINA {}", r.row());
     }
     if let Some(p) = std::env::var_os("MZLAB_ROSINA_RAPPORTO") {
         use std::io::Write;
@@ -168,16 +172,16 @@ pub fn scrivi_rapporto(righe: &[Rapporto]) {
             .append(true)
             .open(p)
         {
-            for r in righe {
-                let _ = writeln!(f, "{}", r.riga());
+            for r in rows {
+                let _ = writeln!(f, "{}", r.row());
             }
         }
     }
 }
 
 /// Panics with every defect of the reports (a `P` or `NV` is not a failure: it is the honest level of the file).
-pub fn esigi(righe: &[Rapporto]) {
-    let tutti: Vec<String> = righe
+pub fn esigi(rows: &[Rapporto]) {
+    let all: Vec<String> = rows
         .iter()
         .flat_map(|r| {
             r.difetti()
@@ -185,58 +189,58 @@ pub fn esigi(righe: &[Rapporto]) {
                 .map(move |d| format!("{}: {d}", r.file))
         })
         .collect();
-    assert!(tutti.is_empty(), "{}", tutti.join("\n"));
+    assert!(all.is_empty(), "{}", all.join("\n"));
 }
 
 /// The native file (or folder) a truth belongs to: the path of the truth under `scratchpad/rosina/verita/`, without `.verita.json`, under `dati/formati/`.
-fn insieme_di(nativo: &Path) -> Option<mzlab_core::lettori::FileSet> {
+fn set_of(nativo: &Path) -> Option<mzlab_core::lettori::FileSet> {
     use mzlab_core::lettori::{FileSet, Membro};
-    fn membro(p: &Path, nome: String) -> Option<Membro> {
+    fn member(p: &Path, name: String) -> Option<Membro> {
         let f = std::fs::File::open(p).ok()?;
         Some(Membro {
-            nome,
+            nome: name,
             dim: f.metadata().ok()?.len(),
             dati: Box::new(f),
             sha1: None,
         })
     }
-    fn giro(d: &Path, prefisso: &str, out: &mut Vec<Membro>) {
+    fn round_trip(d: &Path, prefisso: &str, out: &mut Vec<Membro>) {
         let Ok(rd) = std::fs::read_dir(d) else { return };
-        let mut voci: Vec<_> = rd.flatten().map(|e| e.path()).collect();
-        voci.sort();
-        for p in voci {
-            let nome = format!(
+        let mut entries: Vec<_> = rd.flatten().map(|e| e.path()).collect();
+        entries.sort();
+        for p in entries {
+            let name = format!(
                 "{prefisso}/{}",
                 p.file_name().unwrap_or_default().to_string_lossy()
             );
             if p.is_dir() {
-                giro(&p, &nome, out);
-            } else if let Some(m) = membro(&p, nome) {
+                round_trip(&p, &name, out);
+            } else if let Some(m) = member(&p, name) {
                 out.push(m);
             }
         }
     }
     let base = nativo.file_name()?.to_string_lossy().into_owned();
-    let mut membri = Vec::new();
+    let mut members = Vec::new();
     if nativo.is_dir() {
-        giro(nativo, &base, &mut membri);
+        round_trip(nativo, &base, &mut members);
     } else {
-        membri.push(membro(nativo, base.clone())?);
+        members.push(member(nativo, base.clone())?);
         // a `.wiff` travels with its `.wiff.scan`
         let fratelli = nativo.parent()?.read_dir().ok()?;
         for e in fratelli.flatten() {
             let n = e.file_name().to_string_lossy().into_owned();
             if n != base && n.starts_with(&format!("{base}.")) {
-                membri.extend(membro(&e.path(), n));
+                members.extend(member(&e.path(), n));
             }
         }
     }
-    Some(FileSet { membri })
+    Some(FileSet { membri: members })
 }
 
 /// The tolerances a truth asks for: `"hr"`, `"lr"`, or an object that overrides single fields of the family default (`mz_ppm` null = by Da, `mz_da`, `rt_min`, `intensita_rel`, `cromatogramma_rel`),
 /// e.g. 1 ppm for a file with a calibration per scan (docs/studi/ROSINA.md F.2).
-pub fn tolleranza_di(v: &Value, base: Tol) -> Tol {
+pub fn tolerance_of(v: &Value, base: Tol) -> Tol {
     match &v["tolleranza"] {
         Value::String(s) if s == "hr" => Tol::HR,
         Value::String(s) if s == "lr" => Tol::LR,
@@ -265,7 +269,7 @@ pub fn tolleranza_di(v: &Value, base: Tol) -> Tol {
 /// file under `dati/formati/`. Skipped without the private data repository (`MZLAB_DATI`); `tol` is the default of the family, a truth may override it (`tolleranza_di`).
 pub fn corpus(
     famiglia: &str,
-    filtro: fn(&str) -> bool,
+    filter: fn(&str) -> bool,
     tol: Tol,
     file_path: fn(&str) -> Option<PathBuf>,
 ) {
@@ -273,7 +277,7 @@ pub fn corpus(
         eprintln!("SKIP verita_{famiglia}: no data repository");
         return;
     };
-    let mut rapporti = Vec::new();
+    let mut reports = Vec::new();
     for vp in verita_in(&dir) {
         let rel = vp
             .strip_prefix(&dir)
@@ -281,33 +285,33 @@ pub fn corpus(
             .to_string_lossy()
             .trim_end_matches(".verita.json")
             .to_string();
-        if !filtro(&rel) {
+        if !filter(&rel) {
             continue;
         }
         let Some(nativo) = file_path(&format!("dati/formati/{rel}")) else {
             eprintln!("SKIP {rel}: the native file is not in this checkout");
             continue;
         };
-        let v = leggi(&vp).unwrap_or_else(|e| panic!("{e}"));
-        let tol = tolleranza_di(&v, tol);
+        let v = read(&vp).unwrap_or_else(|e| panic!("{e}"));
+        let tol = tolerance_of(&v, tol);
         let c = v["file"]["campione"].as_u64().unwrap_or(0) as usize;
-        let fs = insieme_di(&nativo).unwrap_or_else(|| panic!("{rel}: cannot list the files"));
+        let fs = set_of(&nativo).unwrap_or_else(|| panic!("{rel}: cannot list the files"));
         let l = match mzlab_lettori::apri(fs, &mzlab_core::lettori::Limiti::desktop()) {
-            Ok(mut l) => confronta(&mut *l, &v, c, tol, &rel),
+            Ok(mut l) => compare(&mut *l, &v, c, tol, &rel),
             Err(e) => Rapporto {
                 file: rel.clone(),
-                livelli: vec![(
+                levels: vec![(
                     "F0",
-                    Esito::Difetto(vec![format!("does not open: {}", e.key)]),
+                    Outcome::Defect(vec![format!("does not open: {}", e.key)]),
                 )],
             },
         };
-        rapporti.push(l);
+        reports.push(l);
     }
-    if rapporti.is_empty() {
+    if reports.is_empty() {
         eprintln!("SKIP verita_{famiglia}: no truth for this family yet");
         return;
     }
-    scrivi_rapporto(&rapporti);
-    esigi(&rapporti);
+    write_report(&reports);
+    esigi(&reports);
 }

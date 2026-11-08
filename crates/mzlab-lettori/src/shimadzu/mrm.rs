@@ -18,7 +18,7 @@ const TESTA: usize = 44;
 const POINT: usize = 12;
 
 /// One transition and its points.
-pub(super) struct Serie {
+pub(super) struct Series {
     pub q1: f64,
     pub q3: f64,
     pub pol: i8,
@@ -28,15 +28,15 @@ pub(super) struct Serie {
 
 /// The series in the order of first appearance.
 #[derive(Default)]
-pub(super) struct Tracce {
+pub(super) struct Traces {
     chiavi: HashMap<(u32, u32, i8), usize>,
-    pub serie: Vec<Serie>,
+    pub series: Vec<Series>,
     points: usize,
 }
 
-impl Tracce {
+impl Traces {
     /// Adds a point; `q1`/`q3` are the integers of the file and `scala` what divides them to get m/z.
-    pub(super) fn aggiungi(
+    pub(super) fn add(
         &mut self,
         (q1, q3): (u32, u32),
         scale: f64,
@@ -50,26 +50,26 @@ impl Tracce {
         let j = match self.chiavi.get(&(q1, q3, pol)) {
             Some(&j) => j,
             None => {
-                limits.voci_ok(self.serie.len() as u64 + 1)?;
-                self.serie.push(Serie {
+                limits.voci_ok(self.series.len() as u64 + 1)?;
+                self.series.push(Series {
                     q1: f64::from(q1) / scale,
                     q3: f64::from(q3) / scale,
                     pol,
                     t: Vec::new(),
                     y: Vec::new(),
                 });
-                self.chiavi.insert((q1, q3, pol), self.serie.len() - 1);
-                self.serie.len() - 1
+                self.chiavi.insert((q1, q3, pol), self.series.len() - 1);
+                self.series.len() - 1
             }
         };
-        self.serie[j].t.push(t_min);
-        self.serie[j].y.push(y);
+        self.series[j].t.push(t_min);
+        self.series[j].y.push(y);
         Ok(())
     }
 
     /// The chromatograms, numbered from `da` (the TIC takes the ones before).
     pub(super) fn chromatograms(&self, da: usize) -> Vec<Chromatogram> {
-        self.serie
+        self.series
             .iter()
             .enumerate()
             .map(|(j, s)| Chromatogram {

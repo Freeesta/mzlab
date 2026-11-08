@@ -185,7 +185,7 @@ impl Members {
     }
 
     fn fileset(&self) -> FileSet {
-        let membri = self
+        let members = self
             .names
             .iter()
             .zip(&self.sizes)
@@ -197,7 +197,7 @@ impl Members {
                 sha1: None,
             })
             .collect();
-        FileSet { membri }
+        FileSet { membri: members }
     }
 }
 

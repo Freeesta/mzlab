@@ -108,7 +108,7 @@ pub fn add_downstream(
     name: &str,
     scans: &mut Scans,
 ) {
-    let voci = l.index(0).expect("index").to_vec();
+    let entries = l.index(0).expect("index").to_vec();
     let mut mzml = Vec::new();
     lettori_mzml::scrivi(l, 0, &mut mzml, &mut |_, _| {}).expect("mzML");
     let written = precursors_of(&String::from_utf8_lossy(&mzml));
@@ -122,7 +122,7 @@ pub fn add_downstream(
     let table = mzidx_lettore::righe(l, 0).expect("rows");
     for (k, (row, meta)) in scans.iter_mut().enumerate() {
         let mut d = Map::new();
-        d.insert("filter".into(), voci[k].filtro.clone().into());
+        d.insert("filter".into(), entries[k].filtro.clone().into());
         d.insert(
             "mzml".into(),
             json!({"precursors": written.get(k).cloned().unwrap_or_default()}),
@@ -142,7 +142,7 @@ pub fn add_downstream(
             z.insert("rt".into(), t.rt.into());
             d.insert("mzidx".into(), Value::Object(z));
         }
-        let chain = chain_of(&voci[k].filtro);
+        let chain = chain_of(&entries[k].filtro);
         if meta.ms_level > 1 && !chain.is_empty() {
             let node = msnalbero::node_id(&chain);
             let c: Vec<Value> = chain

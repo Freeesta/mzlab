@@ -11,10 +11,10 @@ const B: usize = 30;
 const MARCHI: [u8; 3] = [0x18, 0x4c, 0x08];
 
 #[derive(Debug, Clone, Copy)]
-pub(super) struct Riga {
+pub(super) struct Row {
     pub(super) offset: u64,
     /// Records of the scan: points of a scan, channels of a SIR or MRM scan.
-    pub(super) conta: u32,
+    pub(super) count: u32,
     pub(super) tic: f32,
     /// Minutes.
     pub(super) rt: f32,
@@ -38,7 +38,7 @@ fn variant_a(b: &[u8]) -> bool {
 }
 
 /// The rows of `b`; `None` when its size is no whole number of rows of either variant (an index cut inside a row).
-pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Riga>>> {
+pub(super) fn read(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Row>>> {
     if b.is_empty() {
         return Ok(Some(Vec::new()));
     }
@@ -46,17 +46,17 @@ pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Riga>>> {
         return Ok(None);
     }
     let a = variant_a(b);
-    let passo = if a { A } else { B };
-    limits.voci_ok((b.len() / passo) as u64)?;
+    let step = if a { A } else { B };
+    limits.voci_ok((b.len() / step) as u64)?;
     Ok(Some(
-        b.chunks_exact(passo)
-            .map(|r| Riga {
+        b.chunks_exact(step)
+            .map(|r| Row {
                 offset: if a {
                     u32_at(r, 0) as u64
                 } else {
                     u32_at(r, 22) as u64 | (u32_at(r, 26) as u64) << 32
                 },
-                conta: u32_at(r, 4) & 0x00FF_FFFF,
+                count: u32_at(r, 4) & 0x00FF_FFFF,
                 tic: f32_at(r, 8),
                 rt: f32_at(r, 12),
             })
@@ -65,27 +65,22 @@ pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Riga>>> {
 }
 
 /// Bytes per record of a function: the first scan whose extent (up to the offset of the next scan, or up to the end of the DAT for the last) is a whole number of records.
-pub(super) fn larghezza(righe: &[Riga], dat_len: u64) -> Option<u64> {
-    (0..righe.len()).find_map(|k| {
-        let r = righe[k];
-        let fine = righe.get(k + 1).map_or(dat_len, |n| n.offset);
+pub(super) fn width(rows: &[Row], dat_len: u64) -> Option<u64> {
+    (0..rows.len()).find_map(|k| {
+        let r = rows[k];
+        let fine = rows.get(k + 1).map_or(dat_len, |n| n.offset);
         let d = fine.checked_sub(r.offset)?;
-        let c = r.conta as u64;
+        let c = r.count as u64;
         // `then`, not `then_some`: the division must not run for a scan of 0 records
         (c > 0 && d > 0 && d.is_multiple_of(c)).then(|| d / c)
     })
 }
 
 /// (offset, length) of scan `k` given the record width, inside a DAT of `dat_len` bytes.
-pub(super) fn extension(
-    righe: &[Riga],
-    k: usize,
-    larghezza: u64,
-    dat_len: u64,
-) -> Result<(u64, u64)> {
-    let r = righe.get(k).ok_or_else(|| errore("scan out of range"))?;
-    let len = (r.conta as u64)
-        .checked_mul(larghezza)
+pub(super) fn extension(rows: &[Row], k: usize, width: u64, dat_len: u64) -> Result<(u64, u64)> {
+    let r = rows.get(k).ok_or_else(|| errore("scan out of range"))?;
+    let len = (r.count as u64)
+        .checked_mul(width)
         .ok_or_else(|| errore("scan size"))?;
     match r.offset.checked_add(len) {
         Some(fine) if fine <= dat_len => Ok((r.offset, len)),

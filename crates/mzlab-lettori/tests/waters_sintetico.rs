@@ -5,7 +5,7 @@ use comune_waters::*;
 use mzlab_core::lettori::{Lettore, Limiti};
 
 fn apri() -> Box<dyn Lettore> {
-    mzlab_lettori::apri_nudo(insieme_sintetico(), &Limiti::sito())
+    mzlab_lettori::apri_nudo(synthetic_set(), &Limiti::sito())
         .unwrap_or_else(|e| panic!("{}", e.key))
 }
 
@@ -20,7 +20,7 @@ fn the_scans_read_back_to_the_encoded_peaks() {
         assert!((v.rt - f64::from(RT[k])).abs() < 1e-6);
         assert_eq!(v.id, format!("function=1 process=0 scan={}", k + 1));
         let s = l.scan(0, k).unwrap();
-        let want = picchi(k as u32);
+        let want = peaks(k as u32);
         assert_eq!(s.mz.len(), want.len());
         for (i, (mz, int)) in want.iter().enumerate() {
             assert!((s.mz[i] - mz).abs() < 1e-6, "m/z {} vs {mz}", s.mz[i]);
@@ -46,7 +46,7 @@ fn the_mrm_function_is_chromatograms_not_spectra() {
         let c = l.chromatogram(0, ids[1 + j]).unwrap();
         assert_eq!(c.time.len(), 3);
         for (k, rt) in RT.iter().enumerate() {
-            assert_eq!(c.intensity[k] as u32, canali_mrm(k as u32)[j]);
+            assert_eq!(c.intensity[k] as u32, mrm_channels(k as u32)[j]);
             assert!((c.time[k] - f64::from(*rt)).abs() < 1e-6);
         }
     }
@@ -56,7 +56,7 @@ fn the_mrm_function_is_chromatograms_not_spectra() {
 fn the_method_and_the_header_carry_the_header_txt_and_hide_the_operator() {
     let mut l = apri();
     let m = l.method(0).unwrap();
-    let doc = controlla_schema(&m, "synthetic");
+    let doc = check_schema(&m, "synthetic");
     assert_eq!(doc["origine"]["formato"], "waters-raw");
     assert_eq!(doc["campione"]["nome"], "synthetic sample");
     assert_eq!(doc["campione"]["vial"], "1:34");

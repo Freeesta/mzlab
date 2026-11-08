@@ -1,5 +1,5 @@
 //! The write-ahead log of SQLite (`analysis.tdf-wal`).
-use super::sqlite_min::{guasto, leggi, u32_be};
+use super::sqlite_min::{guasto, read, u32_be};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
@@ -29,7 +29,7 @@ pub(super) fn read_wal(w: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<
     if dim < 32 {
         return Ok(None);
     }
-    let h = leggi(w, 0, 32)?;
+    let h = read(w, 0, 32)?;
     let magic = u32_be(&h, 0).unwrap_or(0);
     if magic != 0x377f_0682 && magic != 0x377f_0683 {
         return Ok(None);
@@ -44,15 +44,15 @@ pub(super) fn read_wal(w: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<
     if !(512..=65536).contains(&page) || !page.is_power_of_two() {
         return Err(guasto("log page size"));
     }
-    let passo = 24 + page as u64;
-    limits.voci_ok((dim - 32) / passo)?;
+    let step = 24 + page as u64;
+    limits.voci_ok((dim - 32) / step)?;
     let (mut c0, mut c1) = (s0, s1);
     let mut mappa: HashMap<u32, u64> = HashMap::new();
     let mut pending: Vec<(u32, u64)> = Vec::new();
     let mut pagine = 0u64;
     let mut off = 32u64;
-    while off + passo <= dim {
-        let f = leggi(w, off, passo as usize)?;
+    while off + step <= dim {
+        let f = read(w, off, step as usize)?;
         if f[8..16] != h[16..24] {
             break;
         }
@@ -64,12 +64,12 @@ pub(super) fn read_wal(w: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<
         (c0, c1) = (a, b);
         let n = u32_be(&f, 0).ok_or_else(|| guasto("log frame"))?;
         pending.push((n, off + 24));
-        let dopo = u32_be(&f, 4).unwrap_or(0);
-        if dopo != 0 {
+        let after = u32_be(&f, 4).unwrap_or(0);
+        if after != 0 {
             mappa.extend(pending.drain(..));
-            pagine = u64::from(dopo);
+            pagine = u64::from(after);
         }
-        off += passo;
+        off += step;
     }
     Ok((!mappa.is_empty()).then_some((page, mappa, pagine)))
 }

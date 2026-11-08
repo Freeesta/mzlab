@@ -13,13 +13,13 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 /// The bytes of the file that counts what is read at or after `da` (the points: the record variables are at the end of a netCDF-3).
-struct Conta {
+struct Counter {
     b: Vec<u8>,
     da: u64,
     read_items: Rc<Cell<u64>>,
 }
 
-impl ReadAt for Conta {
+impl ReadAt for Counter {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         if off >= self.da {
             self.read_items
@@ -35,7 +35,7 @@ fn contato(
     n: usize,
     tic: bool,
 ) -> (Box<dyn Lettore>, Rc<Cell<u64>>) {
-    let b = andi_ms_con(&PIATTA, n, points, tic);
+    let b = andi_ms_with(&FLAT_RUN, n, points, tic);
     let total: usize = (0..n).map(|k| points(k).len()).sum();
     let read_items = Rc::new(Cell::new(0));
     let da = (b.len() - 8 * total) as u64;
@@ -43,7 +43,7 @@ fn contato(
         membri: vec![Membro {
             nome: "campione.cdf".into(),
             dim: b.len() as u64,
-            dati: Box::new(Conta {
+            dati: Box::new(Counter {
                 b,
                 da,
                 read_items: read_items.clone(),
@@ -58,7 +58,7 @@ fn contato(
 }
 
 /// Builds the `.mzidx` of sample 0, then asks the BPC; returns the bytes of points read by both.
-fn indice_e_bpc(l: &mut dyn Lettore, read_items: &Cell<u64>) -> (u64, Vec<f64>) {
+fn index_and_bpc(l: &mut dyn Lettore, read_items: &Cell<u64>) -> (u64, Vec<f64>) {
     // the SHA-1 of the header reads the whole file once: taken before counting
     l.method(0).unwrap();
     read_items.set(0);
@@ -69,7 +69,7 @@ fn indice_e_bpc(l: &mut dyn Lettore, read_items: &Cell<u64>) -> (u64, Vec<f64>) 
 }
 
 /// The bytes of points of one decode of every scan.
-fn una_passata(points: fn(usize) -> Vec<(f64, f64)>, n: usize) -> u64 {
+fn one_pass(points: fn(usize) -> Vec<(f64, f64)>, n: usize) -> u64 {
     let (mut l, read_items) = contato(points, n, true);
     l.index(0).unwrap();
     read_items.set(0);
@@ -84,12 +84,12 @@ fn bits(v: &[f64]) -> Vec<u64> {
 }
 
 #[test]
-fn indice_e_bpc_decodificano_ogni_scansione_una_volta() {
+fn index_and_bpc_decode_each_scan_once() {
     let n = 300;
-    let passata = una_passata(points, n);
+    let passata = one_pass(points, n);
     assert!(passata > 0);
     let (mut l, read_items) = contato(points, n, true);
-    let (read_one, _) = indice_e_bpc(&mut *l, &read_items);
+    let (read_one, _) = index_and_bpc(&mut *l, &read_items);
     assert_eq!(
         read_one, passata,
         "bytes of points read: {read_one}, one pass: {passata}"
@@ -101,17 +101,17 @@ fn indice_e_bpc_decodificano_ogni_scansione_una_volta() {
 }
 
 #[test]
-fn senza_total_intensity_il_tic_dell_indice_lascia_anche_il_bpc() {
+fn without_total_intensity_the_index_tic_also_leaves_the_bpc() {
     let n = 300;
-    let passata = una_passata(points, n);
+    let passata = one_pass(points, n);
     let (mut l, read_items) = contato(points, n, false);
-    let (read_one, _) = indice_e_bpc(&mut *l, &read_items);
+    let (read_one, _) = index_and_bpc(&mut *l, &read_items);
     // one pass sums the TIC of the index, one builds the rows; the BPC reads nothing more
     assert_eq!(read_one, 2 * passata);
 }
 
 /// Ties, all-zero, empty, negative and NaN points; m/z out of order every fifth scan.
-fn punti_bordi(k: usize) -> Vec<(f64, f64)> {
+fn edge_points(k: usize) -> Vec<(f64, f64)> {
     match k % 7 {
         0 => vec![(100.0, 50.0), (101.0, 50.0), (102.0, 10.0)],
         1 => vec![(100.0, 0.0), (120.0, 0.0)],
@@ -125,11 +125,11 @@ fn punti_bordi(k: usize) -> Vec<(f64, f64)> {
     }
 }
 
-fn senza_nan(k: usize) -> Vec<(f64, f64)> {
+fn without_nan(k: usize) -> Vec<(f64, f64)> {
     if k % 7 == 5 {
         vec![(100.0, 4.0), (101.0, 2.0)]
     } else {
-        punti_bordi(k)
+        edge_points(k)
     }
 }
 
@@ -142,11 +142,14 @@ fn freddo(b: &[u8]) -> (Vec<u64>, Vec<u64>) {
 }
 
 #[test]
-fn il_bpc_annotato_ha_i_bit_di_quello_decodificato() {
+fn the_annotated_bpc_has_the_bits_of_the_decoded_one() {
     for tipo_it in [3, 4, 5, 6] {
         for tic in [true, false] {
-            let c = Corsa { tipo_it, ..PIATTA };
-            let b = andi_ms_con(&c, 40, senza_nan, tic);
+            let c = Run {
+                tipo_it,
+                ..FLAT_RUN
+            };
+            let b = andi_ms_with(&c, 40, without_nan, tic);
             let (bpc0, tic0) = freddo(&b);
             assert_eq!(bpc0.len(), 40);
             let mut l = apri_andi(b);
@@ -172,10 +175,13 @@ fn il_bpc_annotato_ha_i_bit_di_quello_decodificato() {
 }
 
 #[test]
-fn una_intensita_nan_da_nel_bpc_cio_che_dava_prima() {
+fn a_nan_intensity_gives_in_the_bpc_what_it_gave_before() {
     for tipo_it in [5, 6] {
-        let c = Corsa { tipo_it, ..PIATTA };
-        let b = andi_ms_con(&c, 40, punti_bordi, true);
+        let c = Run {
+            tipo_it,
+            ..FLAT_RUN
+        };
+        let b = andi_ms_with(&c, 40, edge_points, true);
         let bpc0 = apri_andi(b.clone())
             .chromatogram(0, "BPC")
             .unwrap()

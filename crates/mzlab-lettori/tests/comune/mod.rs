@@ -39,7 +39,7 @@ pub enum Genere {
 }
 
 pub fn array(v: &[f64], cod: Cod, g: Genere) -> String {
-    let (accessions, dati): (String, Vec<u8>) = match cod {
+    let (accessions, data): (String, Vec<u8>) = match cod {
         Cod::Piano => (
             "<cvParam cvRef=\"MS\" accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam cvRef=\"MS\" accession=\"MS:1000574\" name=\"zlib compression\"/>".into(),
             zlib(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()),
@@ -73,14 +73,14 @@ pub fn array(v: &[f64], cod: Cod, g: Genere) -> String {
         Genere::Intensita => "<cvParam cvRef=\"MS\" accession=\"MS:1000515\" name=\"intensity array\"/>",
         Genere::Tempo => "<cvParam cvRef=\"MS\" accession=\"MS:1000595\" name=\"time array\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>",
     };
-    format!("<binaryDataArray encodedLength=\"0\">{accessions}{kind}<binary>{}</binary></binaryDataArray>\n", b64(&dati))
+    format!("<binaryDataArray encodedLength=\"0\">{accessions}{kind}<binary>{}</binary></binaryDataArray>\n", b64(&data))
 }
 
 /// One scan of the synthetic run.
 pub struct Scan {
     pub mz: Vec<f64>,
     pub intensities: Vec<f64>,
-    pub livello: u8,
+    pub level: u8,
     pub rt_min: f64,
     pub precursore: Option<f64>,
 }
@@ -96,7 +96,7 @@ pub fn scansioni() -> Vec<Scan> {
                 intensities: (0..n)
                     .map(|i| 50.0 + f64::from(((i * 7919 + k * 31) % 997) as u32) * 11.0)
                     .collect(),
-                livello: if k % 3 == 2 { 2 } else { 1 },
+                level: if k % 3 == 2 { 2 } else { 1 },
                 rt_min: 0.5 + k as f64 * 0.25,
                 precursore: (k % 3 == 2).then_some(412.25 + k as f64),
             }
@@ -114,9 +114,9 @@ pub const TESTATA: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<indexedm
 <run id=\"campione\" defaultInstrumentConfigurationRef=\"IC1\" startTimeStamp=\"2024-03-05T10:11:12Z\">\n";
 
 /// The mzML: spectra, then a TIC chromatogram whose arrays are written as the spectra's. `metodo`: the userParam that carries a `metodo/1` document.
-pub fn mzml_di(scan: &[Scan], cod: Cod, metodo: Option<&str>) -> Vec<u8> {
+pub fn mzml_di(scan: &[Scan], cod: Cod, method: Option<&str>) -> Vec<u8> {
     let mut s = String::from(TESTATA);
-    if let Some(m) = metodo {
+    if let Some(m) = method {
         s += &format!(
             "<userParam name=\"mzLab metodo/1\" value=\"{}\"/>\n",
             m.replace('"', "&quot;")
@@ -132,7 +132,7 @@ pub fn mzml_di(scan: &[Scan], cod: Cod, metodo: Option<&str>) -> Vec<u8> {
 <scanWindowList count=\"1\"><scanWindow><cvParam cvRef=\"MS\" accession=\"MS:1000501\" name=\"scan window lower limit\" value=\"100\"/><cvParam cvRef=\"MS\" accession=\"MS:1000500\" name=\"scan window upper limit\" value=\"1000\"/></scanWindow></scanWindowList></scan></scanList>\n",
             k + 1,
             x.mz.len(),
-            x.livello,
+            x.level,
             x.intensities.iter().sum::<f64>(),
             x.rt_min
         );
@@ -158,10 +158,10 @@ pub fn mzml_di(scan: &[Scan], cod: Cod, metodo: Option<&str>) -> Vec<u8> {
     s.into_bytes()
 }
 
-pub fn insieme(nome: &str, byte: Vec<u8>) -> FileSet {
+pub fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
         membri: vec![Membro {
-            nome: nome.into(),
+            nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
             sha1: None,
@@ -170,11 +170,11 @@ pub fn insieme(nome: &str, byte: Vec<u8>) -> FileSet {
 }
 
 pub fn apri(byte: Vec<u8>) -> Box<dyn Lettore> {
-    mzlab_lettori::apri(insieme("campione.mzML", byte), &Limiti::sito()).unwrap()
+    mzlab_lettori::apri(file_set("campione.mzML", byte), &Limiti::sito()).unwrap()
 }
 
-pub fn errore(byte: Vec<u8>) -> &'static str {
-    match mzlab_lettori::apri(insieme("campione.mzML", byte), &Limiti::sito()) {
+pub fn error(byte: Vec<u8>) -> &'static str {
+    match mzlab_lettori::apri(file_set("campione.mzML", byte), &Limiti::sito()) {
         Err(e) => e.key,
         Ok(mut l) => {
             // a hostile array is found when the scan is read
@@ -188,7 +188,7 @@ pub fn errore(byte: Vec<u8>) -> &'static str {
     }
 }
 
-pub fn mzml_scritto(l: &mut Box<dyn Lettore>) -> Vec<u8> {
+pub fn written_mzml(l: &mut Box<dyn Lettore>) -> Vec<u8> {
     lettori_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {}).unwrap()
 }
 
