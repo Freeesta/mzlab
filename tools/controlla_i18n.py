@@ -403,9 +403,9 @@ def has_form(text: str, forms: list[str]) -> bool:
 
 def check_glossary(it: dict, en: dict, errs: list) -> None:
     g = json.loads((LANG / "glossario.json").read_text(encoding="utf-8"))
-    fonti = g.get("fonti", {})
+    sources = g.get("fonti", {})
     for v in g["voci"]:
-        if v.get("fonte") not in fonti:
+        if v.get("fonte") not in sources:
             errs.append(f"glossary: entry «{v['id']}» without a known source")
         for k, itxt in it.items():
             for ex in v.get("escludi_it", []):               # Italian phrases where the word has another meaning ("in fondo" = at the bottom)

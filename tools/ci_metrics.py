@@ -102,8 +102,8 @@ def categoria(job: dict, run_annullato: bool = False) -> tuple[str, str | None]:
     return "altro", passo
 
 
-def righe_run(evento: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
-    return righe_run_obj(evento["workflow_run"], api, fetch)
+def righe_run(event: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
+    return righe_run_obj(event["workflow_run"], api, fetch)
 
 
 def righe_run_obj(run: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
@@ -128,26 +128,26 @@ def righe_run_obj(run: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
     return out
 
 
-def righe_recenti(dati: str, api=api_get, fetch=dati_ci.scarica, ora: datetime | None = None, massimo: int = 40) -> tuple[list[dict], str]:
+def righe_recenti(data: str, api=api_get, fetch=dati_ci.scarica, ora: datetime | None = None, massimo: int = 40) -> tuple[list[dict], str]:
     """Rows of the runs completed after the cursor (`cursore.json` next to the data file), oldest first, plus the runner load; returns the new cursor too."""
     ora = ora or dati_ci.adesso_dt()
-    cur = os.path.join(os.path.dirname(dati) or ".", "cursore.json")
+    cur = os.path.join(os.path.dirname(data) or ".", "cursore.json")
     try:
         with open(cur, encoding="utf-8") as f:
-            ultimo = json.load(f)["ultimo"]
+            last = json.load(f)["ultimo"]
     except (OSError, KeyError, ValueError):
-        ultimo = (ora - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    dal = (ts(ultimo) - timedelta(hours=6)).strftime("%Y-%m-%d")
+        last = (ora - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    since = (ts(last) - timedelta(hours=6)).strftime("%Y-%m-%d")
     runs = []
     for page in (1, 2, 3):
-        r = api(f"/actions/runs?status=completed&created=>={dal}&per_page=100&page={page}").get("workflow_runs", [])
-        runs += [x for x in r if x["name"] in dati_ci.WORKFLOW_MISURATI and x["updated_at"] > ultimo]
+        r = api(f"/actions/runs?status=completed&created=>={since}&per_page=100&page={page}").get("workflow_runs", [])
+        runs += [x for x in r if x["name"] in dati_ci.WORKFLOW_MISURATI and x["updated_at"] > last]
         if len(r) < 100:
             break
     runs = sorted(runs, key=lambda x: x["updated_at"])[:massimo]
     out = [row for run in runs for row in righe_run_obj(run, api, fetch)]
     out += dati_ci.righe_carico(api, ora.strftime("%Y-%m-%dT%H:%M:%SZ"))
-    return out, runs[-1]["updated_at"] if runs else ultimo
+    return out, runs[-1]["updated_at"] if runs else last
 
 
 CAUSE_COMMIT = [("merge di main", r"Merge .*\bmain\b"), ("limite", r"limit|soglia|tetto|size|budget"),
@@ -177,14 +177,14 @@ def verde_il(sha: str, api) -> str | None:
     return max(c["completed_at"] for c in latest.values())
 
 
-def righe_pr(evento: dict, api=api_get) -> list[dict]:
-    pr, azione = evento["pull_request"], evento["action"]
+def righe_pr(event: dict, api=api_get) -> list[dict]:
+    pr, action = event["pull_request"], event["action"]
     row = {"tipo": "pr", "pr": pr["number"], "sha": pr["head"]["sha"]}
-    if azione in ("opened", "reopened"):
-        return [{"ts_utc": pr["created_at"] if azione == "opened" else adesso(), "azione": "aperta" if azione == "opened" else "riaperta", **row}]
-    if azione == "synchronize":
+    if action in ("opened", "reopened"):
+        return [{"ts_utc": pr["created_at"] if action == "opened" else adesso(), "azione": "aperta" if action == "opened" else "riaperta", **row}]
+    if action == "synchronize":
         return [{"ts_utc": adesso(), "azione": "push", **dati_ci.forma_commit(pr["head"]["sha"], api), **row}]
-    if azione != "closed":
+    if action != "closed":
         return []
     fine = pr.get("merged_at") or pr["closed_at"]
     row |= {"ts_utc": fine, "azione": "unita" if pr.get("merged") else "chiusa", "aperta_s": secs(pr["created_at"], fine), "commit_n": pr.get("commits"),
@@ -213,9 +213,9 @@ def riempi_verde(righe: list[dict], api=api_get, massimo: int = 30) -> int:
     return fatte
 
 
-def state_conflicts(dati: str) -> dict[int, bool]:
+def state_conflicts(data: str) -> dict[int, bool]:
     stato: dict[int, bool] = {}
-    for r in leggi_tutti(dati):
+    for r in leggi_tutti(data):
         if r["tipo"] in ("conflitto", "conflitto_risolto"):
             stato[r["pr"]] = r["tipo"] == "conflitto"
     return stato
@@ -231,27 +231,27 @@ def file_pr(n: int, api) -> set[str]:
     return out
 
 
-def righe_conflitti(evento: dict, dati: str, api=api_get, attesa=time.sleep, provare: bool = False) -> list[dict]:
-    if evento.get("ref") != "refs/heads/main":
+def righe_conflitti(event: dict, data: str, api=api_get, wait=time.sleep, provare: bool = False) -> list[dict]:
+    if event.get("ref") != "refs/heads/main":
         return []
-    sha = evento["after"]
+    sha = event["after"]
     commit = api(f"/commits/{sha}")
     main_file = {f["filename"] for f in commit.get("files", [])}
     m = re.search(r"Merge pull request #(\d+)|\(#(\d+)\)", commit["commit"]["message"])
-    unita = int(m.group(1) or m.group(2)) if m else None
-    prima = state_conflicts(dati)
+    unit = int(m.group(1) or m.group(2)) if m else None
+    prima = state_conflicts(data)
 
     def sporco(n: int) -> bool:
         for _ in range(4):
             d = api(f"/pulls/{n}")
             if d.get("mergeable") is not None:
                 break
-            attesa(2)
+            wait(2)
         return d.get("mergeable_state") == "dirty"
 
     def row(n: int, common: list[str]) -> dict:
         true = dati_ci.file_conflitto(n) if provare else []
-        return {"ts_utc": adesso(), "tipo": "conflitto", "pr": n, "sha": sha, "pr_unita": unita,
+        return {"ts_utc": adesso(), "tipo": "conflitto", "pr": n, "sha": sha, "pr_unita": unit,
                 "file_comuni": common[:5], "n_file_comuni": len(common), "file_conflitto": true}
 
     out, doubts = [], []
@@ -268,7 +268,7 @@ def righe_conflitti(evento: dict, dati: str, api=api_get, attesa=time.sleep, pro
             out.append({"ts_utc": adesso(), "tipo": "conflitto_risolto", "pr": n, "sha": sha})
     # Dirty with no file in common may be a transient GitHub state: it counts only if still dirty a minute later.
     if doubts:
-        attesa(RILETTURA_S)
+        wait(RILETTURA_S)
         out += [row(n, []) for n in doubts if sporco(n)]
     return out
 
@@ -277,10 +277,10 @@ def chiave(r: dict) -> tuple:
     return tuple(r.get(k) for k in KEY)
 
 
-def accoda(righe: list[dict], dati: str) -> int:
-    seen = {chiave(r) for r in leggi_tutti(dati)}
+def accoda(righe: list[dict], data: str) -> int:
+    seen = {chiave(r) for r in leggi_tutti(data)}
     new = [{"v": VERSIONE, **r} for r in righe if chiave(r) not in seen]
-    with open(attivo(dati), "a", encoding="utf-8") as f:
+    with open(attivo(data), "a", encoding="utf-8") as f:
         for r in new:
             f.write(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n")
     return len(new)
@@ -313,35 +313,35 @@ def colli(ev: list[dict]) -> list[tuple[str, int, int]]:
     """(label, count, estimated seconds lost) per bottleneck."""
     voci: dict[str, list[int]] = defaultdict(lambda: [0, 0])
 
-    def somma(name, n, perso):
+    def total(name, n, perso):
         voci[name][0] += n
         voci[name][1] += perso
 
     runs = [r for r in ev if r["tipo"] == "run"]
     for r in ev:
         if r["tipo"] == "job_fallito" and r["categoria"] != "annullato":
-            somma(f"job failed: {r['job']} [{r['categoria']}]", 1, r.get("durata_s") or 0)
+            total(f"job failed: {r['job']} [{r['categoria']}]", 1, r.get("durata_s") or 0)
     for r in runs:
         if r.get("run_attempt", 1) > 1:
-            somma(f"re-run of {r['workflow']}", 1, r.get("durata_s") or 0)
+            total(f"re-run of {r['workflow']}", 1, r.get("durata_s") or 0)
         if r.get("coda_s"):
-            somma(f"queue wait: {r['workflow']}", 1, r["coda_s"])
+            total(f"queue wait: {r['workflow']}", 1, r["coda_s"])
     per_pr = defaultdict(list)
     for r in runs:
         if r["workflow"] == "test" and r.get("pr") and r.get("run_attempt", 1) == 1:
             per_pr[r["pr"]].append(r.get("durata_s") or 0)
     for durations in per_pr.values():
         if len(durations) > 1:
-            somma("CI redone (test runs after the first, per PR)", len(durations) - 1, sum(sorted(durations)[:-1]))
+            total("CI redone (test runs after the first, per PR)", len(durations) - 1, sum(sorted(durations)[:-1]))
     for r in ev:
         if r["tipo"] == "conflitto":
             fs = r.get("file_comuni") or []
             for f in fs or ["(no file in common)"]:
-                somma(f"conflicts: {f}", 1, CONFLICT_S // max(1, len(fs)))
+                total(f"conflicts: {f}", 1, CONFLICT_S // max(1, len(fs)))
         if r["tipo"] == "pr" and r.get("merge_main"):
-            somma("merges of main into the PR branch", r["merge_main"], r["merge_main"] * FUSIONE_S)
+            total("merges of main into the PR branch", r["merge_main"], r["merge_main"] * FUSIONE_S)
         if r["tipo"] == "pr" and r.get("verde_a_unione_s"):
-            somma("wait between green CI and merge", 1, r["verde_a_unione_s"])
+            total("wait between green CI and merge", 1, r["verde_a_unione_s"])
     return sorted(((k, v[0], v[1]) for k, v in voci.items()), key=lambda x: -x[2])
 
 
@@ -376,8 +376,8 @@ def riepilogo(ev: list[dict], da: str | None = None, out=print) -> None:
     out(f"  merges of main per PR (closed PRs): mean {media([r.get('merge_main') for r in prs if r['azione'] in ('unita', 'chiusa')]):.1f}; PRs seen {len(pr_seen)}")
     fall = [r for r in ev if r["tipo"] == "job_fallito" and r["categoria"] not in giorno_ci.NON_VERI]
     rosse, views = giorno_ci.pr_con_rosso_vero(ev)
-    tutti = sum(r["tipo"] == "job_fallito" for r in ev)
-    out(f"\nJobs failing most often (real reds only: {tutti - len(fall)} of {tutti} failed jobs left out as cancelled or aggregate)")
+    everything = sum(r["tipo"] == "job_fallito" for r in ev)
+    out(f"\nJobs failing most often (real reds only: {everything - len(fall)} of {everything} failed jobs left out as cancelled or aggregate)")
     out(f"  PRs with a real red: {rosse} of {views} ({100 * rosse / views:.0f}%)" if views else "  PRs with a real red: -")
     for (job, cat), n in Counter((r["job"], r["categoria"]) for r in fall).most_common(10):
         out(f"  {n:4d}  {job} [{cat}]")
@@ -433,20 +433,20 @@ def main() -> int:
         else:
             riepilogo(ev, a.da)
         return 0
-    dati = a.dati or "eventi.jsonl"
+    data = a.dati or "eventi.jsonl"
     if a.comando == "accoda":
-        print(f"{accoda(leggi(a.file), dati)} new lines")
+        print(f"{accoda(leggi(a.file), data)} new lines")
         if a.cursore and os.path.exists(a.cursore):
-            avanza_cursore(a.cursore, os.path.join(os.path.dirname(dati) or ".", "cursore.json"))
+            avanza_cursore(a.cursore, os.path.join(os.path.dirname(data) or ".", "cursore.json"))
         return 0
     if a.comando == "compatta":
-        for p in segmenti(dati):
+        for p in segmenti(data):
             if os.path.getsize(p) < file_ci.LIMITE_B:
                 scrivi_righe(p, dati_ci.compatta(leggi(p), dati_ci.adesso_dt(), a.giorni))
         return 0
     if a.comando == "riempi-verde":
         remain = a.massimo
-        for p in reversed(segmenti(dati)):
+        for p in reversed(segmenti(data)):
             if remain <= 0 or os.path.getsize(p) >= file_ci.LIMITE_B:
                 continue
             righe = leggi(p)
@@ -455,21 +455,21 @@ def main() -> int:
         print(f"{a.massimo - remain} rows tried")
         return 0
     if a.comando == "registra-recenti":
-        righe, cursore = righe_recenti(dati)
+        righe, cursor = righe_recenti(data)
         if a.cursore:
             with open(a.cursore, "w", encoding="utf-8") as f:
-                json.dump({"ultimo": cursore}, f)
+                json.dump({"ultimo": cursor}, f)
     elif a.comando == "registra-coda":
         righe = giorno_ci.righe_coda(api_get, adesso())
     else:
         with open(a.evento, encoding="utf-8") as f:
-            evento = json.load(f)
-        righe = {"registra-run": lambda: righe_run(evento), "registra-pr": lambda: righe_pr(evento),
-                 "registra-conflitti": lambda: righe_conflitti(evento, dati, provare=True)}[a.comando]()
+            event = json.load(f)
+        righe = {"registra-run": lambda: righe_run(event), "registra-pr": lambda: righe_pr(event),
+                 "registra-conflitti": lambda: righe_conflitti(event, data, provare=True)}[a.comando]()
     if a.nuovi:
         scrivi_righe(a.nuovi, righe)
     else:
-        accoda(righe, dati)
+        accoda(righe, data)
     print(f"{len(righe)} events")
     return 0
 

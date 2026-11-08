@@ -13,10 +13,10 @@ import sys
 from pathlib import Path
 
 try:
-    from bench import verita as V
+    from bench import truth as V
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from bench import verita as V
+    from bench import truth as V
 from mzlab.chem.elements import MASS, PROTON, parse_formula
 
 PPM = 5.0
