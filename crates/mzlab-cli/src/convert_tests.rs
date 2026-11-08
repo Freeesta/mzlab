@@ -226,6 +226,56 @@ fn an_empty_injection_keeps_its_number_and_gives_an_empty_mzml() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A `.wiff` the readers refuse (a TOF experiment, a method of two periods) gives code 1 and a key whose catalogue text, the one the site shows, has its parameters filled in.
+#[test]
+fn a_refused_wiff_is_told_with_the_text_of_the_site() {
+    let dir = folder("rifiuti");
+    let src = dir.join("in");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let made = Command::new("python3")
+        .arg(root.join("tools/wiff_riferimento.py"))
+        .arg(&src)
+        .output();
+    if !made.is_ok_and(|o| o.status.success()) {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        return;
+    }
+    for (name, text) in [
+        (
+            "tof",
+            "Experiment 1 of this .wiff uses a scan type (code 8) this program does not read yet",
+        ),
+        (
+            "periodi",
+            "The method of this .wiff has 2 periods and this program reads one-period methods only",
+        ),
+    ] {
+        let o = convert(&[
+            p(&src.join(format!("{name}.wiff"))),
+            "--out",
+            p(&dir.join("out")),
+        ]);
+        assert_eq!(o.code, 1, "{name}: {}", o.stderr);
+        // the summary keeps the key for scripts; the progress line shows it through `umano`
+        let cause = o
+            .stderr
+            .lines()
+            .next()
+            .and_then(|l| l.split_once(".wiff: "))
+            .map(|c| c.1)
+            .unwrap_or_default();
+        assert!(
+            crate::testo_errore::umano(cause).contains(text),
+            "{name}: {}",
+            o.stderr
+        );
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn usage_errors_and_a_missing_input_have_their_codes() {
     let dir = folder("usage");
