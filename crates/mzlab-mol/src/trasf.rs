@@ -9,12 +9,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 /// The value of the `format` field.
-pub const TRASF_FORMAT: &str = "trasf/1";
+pub const TRANSFORMATION_FORMAT: &str = "trasf/1";
 
-impl Trasf {
+impl Transformation {
     /// Reads and validates a record.
-    pub fn from_json(text: &str) -> Result<Trasf, MolError> {
-        let t: Trasf = serde_json::from_str(text).map_err(|e| MolError::Json(e.to_string()))?;
+    pub fn from_json(text: &str) -> Result<Transformation, MolError> {
+        let t: Transformation =
+            serde_json::from_str(text).map_err(|e| MolError::Json(e.to_string()))?;
         t.validate()?;
         Ok(t)
     }
@@ -31,7 +32,7 @@ impl Trasf {
 
     /// Rules of the format that need no molecule: the shape of the map and of the lists, hashes, delta, probabilities.
     pub fn validate(&self) -> Result<(), MolError> {
-        if self.format != TRASF_FORMAT {
+        if self.format != TRANSFORMATION_FORMAT {
             return invalid(format!("format `{}`", self.format));
         }
         if !is_hash(&self.parent) || self.product.as_deref().is_some_and(|p| !is_hash(p)) {
@@ -186,7 +187,7 @@ pub struct Evidence {
 
 /// The record. `map` is `[parent atom, product atom or null if lost]`; field order is the order of the JSON.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Trasf {
+pub struct Transformation {
     pub format: String,
     pub parent: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]

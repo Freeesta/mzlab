@@ -4,7 +4,7 @@
 use crate::codec::MolError;
 use crate::delta;
 use crate::model::{Mol, Status, Stereo};
-use crate::trasf::{Evidence, TRegion, TSite, Trasf};
+use crate::trasf::{Evidence, TRegion, TSite, Transformation};
 use std::collections::BTreeSet;
 
 impl Stereo {
@@ -24,7 +24,7 @@ impl Stereo {
     }
 }
 
-impl Trasf {
+impl Transformation {
     /// The product atom a parent atom becomes (`None` if it is lost, or if the product is not known).
     pub fn product_atom(&self, parent_atom: u32) -> Option<u32> {
         self.map.get(parent_atom as usize).and_then(|m| m.1)
@@ -51,7 +51,7 @@ impl Trasf {
 
     /// The step after this one, as one step from the parent of `self` to the product of `next`. Both must have a product; an atom lost in either
     /// step is lost. Evidence is kept where it still names the same atoms (parent evidence of `self`, product evidence of `next`).
-    pub fn compose(&self, next: &Trasf) -> Result<Trasf, MolError> {
+    pub fn compose(&self, next: &Transformation) -> Result<Transformation, MolError> {
         if self.product.is_none() || next.product.is_none() {
             return invalid("a chain is composed from certain products only");
         }
@@ -90,7 +90,7 @@ impl Trasf {
             .cloned()
             .collect();
         evidence.extend(next.evidence.iter().filter(|e| e.on == "product").cloned());
-        let out = Trasf {
+        let out = Transformation {
             format: self.format.clone(),
             parent: self.parent.clone(),
             product: next.product.clone(),
@@ -115,7 +115,11 @@ impl Trasf {
     }
 
     /// The same transformation written on the canonical order of its two records, with the hashes of the renumbered records.
-    pub fn canonical(&self, parent: &Mol, product: Option<&Mol>) -> Result<Trasf, MolError> {
+    pub fn canonical(
+        &self,
+        parent: &Mol,
+        product: Option<&Mol>,
+    ) -> Result<Transformation, MolError> {
         self.validate_against(parent, product)?;
         let po = parent.canonical_order();
         let qo = product.map(Mol::canonical_order);
@@ -132,7 +136,7 @@ impl Trasf {
         let mut map: Vec<(u32, Option<u32>)> =
             self.map.iter().map(|m| (p(m.0), m.1.map(q))).collect();
         map.sort_unstable_by_key(|m| m.0);
-        let mut out = Trasf {
+        let mut out = Transformation {
             parent: parent.renumbered(&po)?.core_hash_hex(),
             product: match (product, &qo) {
                 (Some(m), Some(o)) => Some(m.renumbered(o)?.core_hash_hex()),

@@ -36,4 +36,4 @@ pub use model::{
     StereoGroup, FORMAT,
 };
 pub use sites::Site;
-pub use trasf::{Evidence, TRegion, TSite, Trasf, TRASF_FORMAT};
+pub use trasf::{Evidence, TRegion, TSite, Transformation, TRANSFORMATION_FORMAT};

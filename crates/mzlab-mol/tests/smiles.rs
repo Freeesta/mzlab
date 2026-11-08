@@ -66,7 +66,7 @@ fn digest<T: serde::Serialize>(v: &T) -> String {
 }
 
 #[test]
-fn composti_csv_reads_without_loss() {
+fn compounds_csv_reads_without_loss() {
     let text = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../TP_Mine/data/composti.csv"
@@ -212,7 +212,7 @@ fn golden_records_survive_write_and_read() {
 }
 
 #[test]
-fn composti_survive_write_and_read() {
+fn compounds_survive_write_and_read() {
     let text = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../TP_Mine/data/composti.csv"
