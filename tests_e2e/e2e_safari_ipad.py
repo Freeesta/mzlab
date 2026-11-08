@@ -122,7 +122,7 @@ try:
                 if ms: hold(pg, ms)
                 cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); hold(pg, 300)
             pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t5.mzML")])
-            pg.click("#opbtn"); ready(pg); attendi(pg, "E.panels.some(q => q.type === 'chrom' && q._a)", 60000); ready(pg)
+            pg.click("#opbtn"); ready(pg); wait_for_js(pg, "E.panels.some(q => q.type === 'chrom' && q._a)", 60000); ready(pg)
             pg.evaluate("BARRA.close()"); ready(pg)
             cv = pg.locator(".pnl.chrom canvas").first; cv.scroll_into_view_if_needed(); bb = cv.bounding_box()
             at = lambda fx: (bb["x"] + bb["width"] * fx, bb["y"] + bb["height"] * 0.5)
@@ -138,13 +138,13 @@ try:
                     ("file colour", lambda: pg.evaluate("colorFile(E.files[0], { clientX: 300, clientY: 200 })"), "!!document.getElementById('colpop')", empty),
                     ("file chooser of a graph", lambda: pg.evaluate("fileMenu(document.querySelector('.pnl .hd button'))"), "!!document.getElementById('fpop')", empty),
                     ("settings", lambda: touch(*(lambda r: (r["x"] + r["width"] / 2, r["y"] + r["height"] / 2))(pg.locator("#np-set").bounding_box())), "!!document.getElementById('uipset')", empty)):
-                opener(); attendi(pg, isopen, 5000)
+                opener(); wait_for_js(pg, isopen, 5000)
                 touch(*where)
                 if pg.evaluate(isopen): left.append(name)
                 for _ in range(2): pg.keyboard.press("Escape")
                 pg.evaluate("(() => { const c = document.getElementById('ctx'); if (c) c.hidden = true; for (const s of ['#colpop', '#fpop', '#uipset']) document.querySelector(s)?.remove(); })()")
             assert not left, f"still open after a tap outside them: {left}"
-            touch(bb["x"] + bb["width"] - 4, bb["y"] + bb["height"] * 0.5, 800); attendi(pg, ctx, 5000)       # opened at the right edge, the menu stays in the window
+            touch(bb["x"] + bb["width"] - 4, bb["y"] + bb["height"] * 0.5, 800); wait_for_js(pg, ctx, 5000)       # opened at the right edge, the menu stays in the window
             right = pg.evaluate("document.getElementById('ctx').getBoundingClientRect().right - innerWidth")
             assert right <= 0, f"the chart menu sticks out of the window by {right} px"
             pg.context.close()
