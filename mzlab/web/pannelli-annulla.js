@@ -28,9 +28,16 @@ COMANDI.gestore("xic.traces", {
   leggi: p => JSON.stringify([p.traces, p._xu ?? null, p.ints]),
   applica: (p, snap) => { const [t, u, i] = JSON.parse(snap); p.traces = t; p._xu = u; p.ints = i; p.isel = null; ctl(p); },
 });
-// keyboard of the double-click actions: F2 or Enter on a panel title or a legend trace renames it, Enter on a row of the map table opens its spectrum (as a double click)
+// keyboard of the double-click actions: F2 or Enter on a panel title or a legend trace renames it, Enter on a row of the map table opens its spectrum (as a double click).
+// The map table is one tab stop: the arrows, Home and End move between its rows (roving tabindex).
+{ const ROVE = { ArrowDown: 1, ArrowUp: -1, Home: -1e9, End: 1e9 };
 document.addEventListener("keydown", e => {
   const t = /** @type {HTMLElement} */ (e.target), ren = t.matches && t.matches(".pnl .ttl, .pnl .leg [data-t]"), row = !ren && t.matches && t.matches(".mztab tbody tr[data-i]");
+  if (row && e.key in ROVE) {
+    const all = [.../** @type {HTMLElement} */ (t.parentElement).querySelectorAll("tr[data-i]")], to = /** @type {HTMLElement} */ (all[Math.max(0, Math.min(all.length - 1, all.indexOf(t) + ROVE[/** @type {keyof typeof ROVE} */ (e.key)]))]);
+    e.preventDefault(); t.tabIndex = -1; to.tabIndex = 0; to.focus(); return;
+  }
   if (!(ren && (e.key === "F2" || e.key === "Enter")) && !(row && e.key === "Enter")) return;
   e.preventDefault(); if (row) t.click(); t.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, view: window, detail: 2 }));
 });
+}
