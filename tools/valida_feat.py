@@ -24,8 +24,8 @@ def carica_verita(path) -> list[dict]:
         p = d["parent"]
         rt = p.get("rt_obs")
         out.append({"id": str(p.get("name") or "parent"), "mz": float(p["mz"]), "ion": p.get("ion"), "rt_obs": [rt] if isinstance(rt, (int, float)) else list(rt or []), "parent": True, **({"smiles": p["smiles"]} if p.get("smiles") else {})})
-    lista = d if isinstance(d, list) else d.get("tps") or d.get("ioni") or []
-    for x in lista:
+    entries = d if isinstance(d, list) else d.get("tps") or d.get("ioni") or []
+    for x in entries:
         rt = x.get("rt_obs")
         out.append({"id": str(x["id"]), "mz": float(x["mz"]), "ion": x.get("ion"), "rt_obs": [rt] if isinstance(rt, (int, float)) else list(rt or []), "parent": bool(x.get("parent"))})
     return out
@@ -35,9 +35,9 @@ def main_gate(a) -> int:
     import datetime
     from valida import cancello
     ioni = carica_verita(a.verita) if a.verita else []
-    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello"
-    c, det = cancello.misura(Path(a.serie) if a.serie else None, ioni, a.mzmine, a.sintetico, a.seme, a.debole, lavoro, a.data or datetime.date.today().isoformat(), not a.senza_wasm)
-    for p in rapporto.scrivi_cancello(Path(a.uscita) if a.uscita else lavoro, c, det, a.cancello_json):
+    work = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello"
+    c, det = cancello.misura(Path(a.serie) if a.serie else None, ioni, a.mzmine, a.sintetico, a.seme, a.debole, work, a.data or datetime.date.today().isoformat(), not a.senza_wasm)
+    for p in rapporto.scrivi_cancello(Path(a.uscita) if a.uscita else work, c, det, a.cancello_json):
         print(p)
     return 0
 
@@ -47,12 +47,12 @@ def main_gate_tp(a) -> int:
     from valida import cancello, cancello_tp
     if not (a.serie and a.verita):
         raise SystemExit("--cancello-tp needs --serie and --verita")
-    verita = json.loads(Path(a.verita).read_text(encoding="utf-8"))
-    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_tp"
-    _, run, handled = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro)
-    _, run2, _ = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro / "bis")          # a second run: determinism of the TP view
-    c, det = cancello_tp.misura(verita, run, handled, a.dataset, a.data or datetime.date.today().isoformat(), run2)
-    for p in rapporto.scrivi_cancello_tp(Path(a.uscita) if a.uscita else lavoro, c, det, a.cancello_tp_json):
+    truth = json.loads(Path(a.verita).read_text(encoding="utf-8"))
+    work = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_tp"
+    _, run, handled = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), work)
+    _, run2, _ = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), work / "bis")          # a second run: determinism of the TP view
+    c, det = cancello_tp.misura(truth, run, handled, a.dataset, a.data or datetime.date.today().isoformat(), run2)
+    for p in rapporto.scrivi_cancello_tp(Path(a.uscita) if a.uscita else work, c, det, a.cancello_tp_json):
         print(p)
     return 0
 
@@ -65,12 +65,12 @@ def main_lr(a) -> int:
         p = next((x for x in carica_verita(a.verita) if x.get("parent")), None)
         if p and p.get("ion"):
             parent = (nativo.neutra_da_ione(p["ion"]), p["mz"], (p["rt_obs"] or [None])[0])
-    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_lr"
-    c, det = lr.misura(a.serie_lr, parent, lavoro, a.data or datetime.date.today().isoformat(), a.seme)
+    work = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_lr"
+    c, det = lr.misura(a.serie_lr, parent, work, a.data or datetime.date.today().isoformat(), a.seme)
     print(f"vista_tabella_lr: {c['vista_tabella_lr']}  (real data: {det['dati_reali']})")
     for k in c["criteri"]:
         print(f"  {k['id']:<34} {'skipped' if k['ok'] is None else ('ok' if k['ok'] else 'FAIL'):<8} {k['valore']} (threshold {k['soglia']})")
-    for p in lr.scrivi(Path(a.uscita) if a.uscita else lavoro, c, det, a.lr_json):
+    for p in lr.scrivi(Path(a.uscita) if a.uscita else work, c, det, a.lr_json):
         print(p)
     return 0
 
@@ -78,12 +78,12 @@ def main_lr(a) -> int:
 def main_hr(a) -> int:
     import datetime
     from valida import hr
-    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_hr"
-    c, det = hr.misura(a.robustezza, a.serie, a.mzmine, lavoro, a.data or datetime.date.today().isoformat())
+    work = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_hr"
+    c, det = hr.misura(a.robustezza, a.serie, a.mzmine, work, a.data or datetime.date.today().isoformat())
     print(f"vista_tabella_hr: {c['vista_tabella_hr']}  (DDA files: {det['dati_dda']}; mzmine: {det['csv']})")
     for k in c["criteri"]:
         print(f"  {k['id']:<34} {'skipped' if k['ok'] is None else ('ok' if k['ok'] else 'FAIL'):<8} {k['valore']} (threshold {k['soglia']})")
-    for p in hr.scrivi(Path(a.uscita) if a.uscita else lavoro, c, det, a.hr_json):
+    for p in hr.scrivi(Path(a.uscita) if a.uscita else work, c, det, a.hr_json):
         print(p)
     return 0
 

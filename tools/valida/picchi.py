@@ -30,15 +30,15 @@ def trova(feat: list[dict], mz: float, rt: float) -> int | None:
 
 
 def main(argv) -> int:
-    verita = json.loads((Path(argv[0]) / "verita.json").read_text(encoding="utf-8"))
-    ioni = {r["id"]: r for r in verita["ioni"]}
+    truth = json.loads((Path(argv[0]) / "verita.json").read_text(encoding="utf-8"))
+    ioni = {r["id"]: r for r in truth["ioni"]}
     pur = {"tp1": [0, 0], "chimerica": [0, 0]}
     iso = {1: [0, 0], 2: [0, 0]}
     errors = []
-    for f in verita["file"]:
+    for f in truth["file"]:
         tsv = Path(argv[1]) / f"{f['nome']}.tsv"
         feat = leggi(tsv)
-        for r in verita["ioni"]:
+        for r in truth["ioni"]:
             if not r["rt_obs"] or not r["presente"]:
                 continue
             i = trova(feat, r["mz"], r["rt_obs"][0])

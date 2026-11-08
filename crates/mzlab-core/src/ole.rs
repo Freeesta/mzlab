@@ -185,6 +185,14 @@ impl Ole {
     }
 
     /// SHA-1 (lower-case hex) of the whole container file.
+    /// The bytes the file needs to hold every sector its FAT marks as used, when it is shorter (a copy cut short): the streams of the missing
+    /// sectors would read empty, so a container that lists no sample is told as cut, not as empty.
+    pub fn cut_short(&self) -> Option<u64> {
+        let used = self.fat.iter().rposition(|&v| v != FREE)?;
+        let need = (used as u64 + 2).saturating_mul(self.ss as u64);
+        (need > self.data.len() as u64 + self.ss as u64 - 1).then_some(need)
+    }
+
     pub fn sha1_hex(&self) -> String {
         crate::metodo::sha1_hex_bytes(&self.data)
     }

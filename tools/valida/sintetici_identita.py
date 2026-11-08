@@ -160,12 +160,12 @@ def curva(forma: str, t, p: dict) -> np.ndarray:
     return f(t) / f(np.linspace(0, 400, 4001)).max()
 
 
-def frammenti_di(rng, mz: float, extra=(), evita=()) -> tuple:
-    """Invented MS2 of a precursor: 5 fragments (fractions of the precursor with a mass defect) plus the `extra` m/z (with relative intensity), none near an `evita` m/z."""
+def frammenti_di(rng, mz: float, extra=(), avoid=()) -> tuple:
+    """Invented MS2 of a precursor: 5 fragments (fractions of the precursor with a mass defect) plus the `extra` m/z (with relative intensity), none near an `avoid` m/z."""
     f, r = [], []
     while len(f) < 5:
         x = round(mz * float(rng.uniform(0.25, 0.93)), 4)
-        if all(abs(x - y) > 0.05 for y in evita) and all(abs(x - y) > 0.05 for y, _ in extra):
+        if all(abs(x - y) > 0.05 for y in avoid) and all(abs(x - y) > 0.05 for y, _ in extra):
             f.append(x)
             r.append(float(rng.uniform(0.15, 1.0)))
     for x, ri in extra:
@@ -177,7 +177,7 @@ def frammenti_di(rng, mz: float, extra=(), evita=()) -> tuple:
 
 class Derivati:
     """Ions derived from a base ion (isotopes, adducts, in-source fragments); needs `rng`, `ioni` and `ione` of the class that uses it."""
-    def derivati(self, base: Ione, neutra: dict, isotopi=True, addotti=(), isf=0, isf_finti=0):
+    def derivati(self, base: Ione, neutral: dict, isotopi=True, addotti=(), isf=0, isf_finti=0):
         """Isotopes (rows of the truth only: the pattern is already in the data), adducts, in-source fragments."""
         rng = self.rng
         if isotopi:
@@ -187,7 +187,7 @@ class Derivati:
                                       forma="come_progenitore", note=f"rel={rel[k]:.4f}", amp=None))
         for nome, delta, ad in addotti:
             r = round(float(rng.uniform(0.03, 0.12)), 3)
-            self.ione(f"{base.id}_{nome}", "addotto", base.famiglia, neutra, base.rt + float(rng.uniform(-0.008, 0.008)), base.sg, base.amp * r, adduct=ad,
+            self.ione(f"{base.id}_{nome}", "addotto", base.famiglia, neutral, base.rt + float(rng.uniform(-0.008, 0.008)), base.sg, base.amp * r, adduct=ad,
                       progenitore=base.id, forma="come_progenitore", note=f"ratio={r};delta_mz={delta}")
         new = []
         for j in range(isf + isf_finti):
@@ -208,7 +208,7 @@ class Derivati:
             new.append(o)
         true = [o for o in new if o.ruolo == "isf"]
         finti = [o for o in new if o.ruolo == "isf_finto"]
-        base.frammenti = frammenti_di(rng, base.mz, extra=[(o.mz, float(rng.uniform(0.5, 0.9))) for o in true], evita=[o.mz for o in finti])
+        base.frammenti = frammenti_di(rng, base.mz, extra=[(o.mz, float(rng.uniform(0.5, 0.9))) for o in true], avoid=[o.mz for o in finti])
         return new
 
 
@@ -239,11 +239,11 @@ class Builder(Derivati):
         """Amount per file: 0 in the blank, the curve at the time of the file elsewhere."""
         return scala * np.array([0.0 if k == "blank" else float(curva(forma, t, p)) for t, k in zip(self.tempi, self.tipi)])
 
-    def ione(self, id, ruolo, famiglia, neutra: dict | None, rt, sg, amp, adduct="[M+H]+", **kw) -> Ione:
+    def ione(self, id, ruolo, famiglia, neutral: dict | None, rt, sg, amp, adduct="[M+H]+", **kw) -> Ione:
         """An ion of a molecule (neutral formula)."""
         o = Ione(id=id, ruolo=ruolo, famiglia=famiglia, rt=float(rt), sg=float(sg), amp=amp, **kw)
-        if neutra is not None:
-            o.ion = E.fmt(somma(neutra, {"[M+H]+": {"H": 1}, "[M+Na]+": {"Na": 1}, "[M+NH4]+": {"N": 1, "H": 4}, "[M+K]+": {"K": 1}}[adduct]))
+        if neutral is not None:
+            o.ion = E.fmt(somma(neutral, {"[M+H]+": {"H": 1}, "[M+Na]+": {"Na": 1}, "[M+NH4]+": {"N": 1, "H": 4}, "[M+K]+": {"K": 1}}[adduct]))
             o.picchi, mz, rel = modello(o.ion)
             o.mz = float(mz[0])
         self.ioni.append(o)
@@ -284,23 +284,23 @@ class Builder(Derivati):
 def parent_and_family(c: Builder):
     """The parent: first-order decay, saturated in the first times (flat apex, constant area, then collapse); isotopes, adducts, two true and two decoy in-source fragments."""
     rng = c.rng
-    neutra = formula_inventata(rng)
-    c.formule.append(neutra)
+    neutral = formula_inventata(rng)
+    c.formule.append(neutral)
     pid = c.id_mol()
     kd = round(float(rng.uniform(0.03, 0.05)), 3)
     scala = 5e7
-    padre = c.ione(pid, "progenitore", pid, neutra, c.slot(1.0), 0.06, c.traccia("progenitore", scala, kd=kd), generazione=0, forma="progenitore", k_dec=kd, selezionabile=True)
-    padre.clip = np.full(len(c.file), scala * float(np.exp(-kd * c.P["t_sat"])))
-    padre.note = f"saturo_fino_a_t={c.P['t_sat']:g};altezza_massima={padre.clip[0]:.4g}"
-    c.derivati(padre, neutra, addotti=[("Na", NA_DELTA, "[M+Na]+"), ("NH4", NH4_DELTA, "[M+NH4]+")], isf=2, isf_finti=2)
-    return padre, neutra
+    parent = c.ione(pid, "progenitore", pid, neutral, c.slot(1.0), 0.06, c.traccia("progenitore", scala, kd=kd), generazione=0, forma="progenitore", k_dec=kd, selezionabile=True)
+    parent.clip = np.full(len(c.file), scala * float(np.exp(-kd * c.P["t_sat"])))
+    parent.note = f"saturo_fino_a_t={c.P['t_sat']:g};altezza_massima={parent.clip[0]:.4g}"
+    c.derivati(parent, neutral, addotti=[("Na", NA_DELTA, "[M+Na]+"), ("NH4", NH4_DELTA, "[M+NH4]+")], isf=2, isf_finti=2)
+    return parent, neutral
 
 
-def kinetic_products(c: Builder, padre: Ione, neutra: dict) -> list:
+def kinetic_products(c: Builder, parent: Ione, neutral: dict) -> list:
     """First-generation products (one kinetics each, cycling), second-generation ones (delayed, from the products that rise and fall) and extra families."""
     P, out = c.P, []
     for i in range(P["n_tp"] + P["famiglie_extra"]):
-        o, f = c.prodotto(padre, neutra, forma=SHAPES_TP[i % len(SHAPES_TP)])
+        o, f = c.prodotto(parent, neutral, forma=SHAPES_TP[i % len(SHAPES_TP)])
         out.append((o, f))
         c.derivati(o, f, addotti=[("Na", NA_DELTA, "[M+Na]+")] if i % 2 == 0 else [("NH4", NH4_DELTA, "[M+NH4]+")] if i % 3 == 0 else [], isf=1 if i % 4 == 0 else 0, isf_finti=1 if i % 4 == 0 else 0)
     bat = [(o, f) for o, f in out if o.forma == "bateman"]
@@ -312,13 +312,13 @@ def kinetic_products(c: Builder, padre: Ione, neutra: dict) -> list:
     return out
 
 
-def isomeri(c: Builder, padre: Ione, neutra: dict) -> None:
+def isomeri(c: Builder, parent: Ione, neutral: dict) -> None:
     """Pairs with the same formula, similar MS2, distance and valley between the peaks declared (sigma solved so that the valley is the declared share of the lower apex)."""
     rng = c.rng
     for d, v in c.P["isomeri"]:
         sg = sigma_for_valley(d, v)
-        a, f = c.prodotto(padre, neutra, sg=sg, ruolo="isomero", scala=2e7)
-        b = c.ione(c.id_mol(), "isomero", a.id, f, a.rt + d, sg, a.amp * 0.8, progenitore=padre.id, generazione=1, forma="monotona", k_form=a.k_form, selezionabile=True, isomero_di=a.id)
+        a, f = c.prodotto(parent, neutral, sg=sg, ruolo="isomero", scala=2e7)
+        b = c.ione(c.id_mol(), "isomero", a.id, f, a.rt + d, sg, a.amp * 0.8, progenitore=parent.id, generazione=1, forma="monotona", k_form=a.k_form, selezionabile=True, isomero_di=a.id)
         b.frammenti = (a.frammenti[0], a.frammenti[1] * rng.uniform(0.9, 1.1, len(a.frammenti[1])))
         a.note = f"delta_rt={d};valle={v};sigma={sg:.4f};altezze=1:0.8;isomero_di={b.id}"
         b.note = f"delta_rt={d};valle={v};sigma={sg:.4f};altezze=1:0.8;isomero_di={a.id}"
@@ -326,12 +326,12 @@ def isomeri(c: Builder, padre: Ione, neutra: dict) -> None:
         c.slot(d + c.P["passo"] * 0.5)
 
 
-def chimeriche(c: Builder, padre: Ione, neutra: dict) -> None:
+def chimeriche(c: Builder, parent: Ione, neutral: dict) -> None:
     """Target and partner co-isolated; the partner follows the target with the ratio that gives the declared true purity."""
     rng = c.rng
     for p in c.P["purezze"]:
         for _ in range(c.P["per_livello"]):
-            t, f = c.prodotto(padre, neutra, sg=0.06)
+            t, f = c.prodotto(parent, neutral, sg=0.06)
             t.purezza = p
             off = float(rng.uniform(0.25, 0.5)) * (1 if rng.random() < 0.5 else -1)
             par = Ione(id=f"{t.id}_COI", ruolo="chimerica", famiglia=t.id, rt=t.rt + float(rng.uniform(-0.005, 0.005)), sg=t.sg, progenitore=t.id, forma="come_progenitore",
@@ -353,7 +353,7 @@ def ipotesi(c: Builder) -> None:
     basi = [o for o in c.ioni if o.ruolo in ("progenitore", "tp1", "tp2", "tp3", "isomero")]
     hyp = [(b, r, RULES_DECOY[r], b.mz + RULES_DECOY[r]) for b in basi for r in range(P["n_regole"])]
     hyp = [h for h in hyp if MZ_RUMORE[0] < h[3] < MZ_RUMORE[1] and (lambda i: min(abs(true[min(i, len(true) - 1)] - h[3]), abs(true[max(i - 1, 0)] - h[3])) > h[3] * 2e-5)(np.searchsorted(true, h[3]))]
-    attese = sum(n * 2 * 5e-6 * h[3] / (MZ_RUMORE[1] - MZ_RUMORE[0]) for h in hyp)
+    expected = sum(n * 2 * 5e-6 * h[3] / (MZ_RUMORE[1] - MZ_RUMORE[0]) for h in hyp)
     decoys, coinc = [], []
     for b, r, d, m in hyp:
         vic = np.flatnonzero(np.abs(c.rumore[0] - m) / m <= 5e-6)
@@ -367,16 +367,16 @@ def ipotesi(c: Builder) -> None:
     for i, j in enumerate(sel, 1):
         decoys[j].id = f"SIN-E-{i:03d}"
     c.ioni += coinc + [decoys[j] for j in sel]
-    c.meta_coinc = {"finestra_ppm": 5, "n_ipotesi": len(hyp), "n_rumore": n, "intervallo_mz": list(MZ_RUMORE), "attese": round(attese, 3), "osservate": len(coinc),
+    c.meta_coinc = {"finestra_ppm": 5, "n_ipotesi": len(hyp), "n_rumore": n, "intervallo_mz": list(MZ_RUMORE), "attese": round(expected, 3), "osservate": len(coinc),
                     "n_esche": len(sel), "regole_delta_mz": RULES_DECOY[:P["n_regole"]]}
 
 
 def costruisci(seme: int, profilo: str) -> Builder:
     c = Builder(seme, profilo)
-    padre, neutra = parent_and_family(c)
-    kinetic_products(c, padre, neutra)
-    isomeri(c, padre, neutra)
-    chimeriche(c, padre, neutra)
+    parent, neutral = parent_and_family(c)
+    kinetic_products(c, parent, neutral)
+    isomeri(c, parent, neutral)
+    chimeriche(c, parent, neutral)
     if c.P.get("degdma"):
         from valida import sintetici_degdma                    # a hard family: weak [M+H]+, strong adducts, base-peak in-source fragment, same m/z from a product
         sintetici_degdma.aggiungi(c, somma, modello, Ione, frammenti_di)
@@ -415,10 +415,10 @@ def scrivi_verita(out: Path, c: Builder, seme: int, profilo: str) -> None:
         w.writerow(COLONNE)
         for r in rows:
             w.writerow([";".join(f"{x:.4f}" for x in r[k]) if k == "rt_obs" else "" if r[k] is None else f"{r[k]:.6f}" if k == "mz" else r[k] for k in COLONNE])
-    padre = next(o for o in c.ioni if o.ruolo == "progenitore")
+    parent = next(o for o in c.ioni if o.ruolo == "progenitore")
     d = {"_note": "Verità dei dati sintetici di tools/valida/sintetici_identita.py: tutte le molecole e i numeri sono inventati. `parent` e `tps` hanno il formato di timolol_truth.json; `ioni` ha tutte le righe.",
          "meta": {"seme": seme, "profilo": profilo, "colonne": COLONNE, "coincidenze": c.meta_coinc, "t_saturazione": c.P["t_sat"]},
-         "parent": {"name": padre.id, "ion": padre.ion, "mz": round(padre.mz, 6), "rt_obs": round(padre.rt, 4), "notes": padre.note, "k_dec": padre.k_dec},
+         "parent": {"name": parent.id, "ion": parent.ion, "mz": round(parent.mz, 6), "rt_obs": round(parent.rt, 4), "notes": parent.note, "k_dec": parent.k_dec},
          "tps": [r for r in rows if r["ruolo"] in ("tp1", "tp2", "tp3", "isomero")], "ioni": rows, "file": [{"nome": f"SIN_{s}", "tipo": k, "time": t} for s, k, t in c.file]}
     (out / "verita.json").write_bytes((json.dumps(d, indent=1, ensure_ascii=False) + "\n").encode("utf-8"))      # bytes: no CRLF on Windows
 
