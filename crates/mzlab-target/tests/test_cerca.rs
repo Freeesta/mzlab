@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use mzlab_core::mzml::Spectrum;
 use mzlab_target::{
-    cerca_targets, parse_target_csv, AdductType, CheckFlags, TargetEntry, TargetList,
+    parse_target_csv, search_targets, AdductType, CheckFlags, TargetEntry, TargetList,
     TargetSearchOptions,
 };
 
@@ -150,7 +150,7 @@ fn test_target_found_prev1_with_ms2_and_isotope() {
 
     let spectra = generate_chromatogram(&[peak_spec], &[(4.20, target_mz)], 50.0);
     let opts = TargetSearchOptions::default();
-    let matches = cerca_targets(&list, &spectra, &opts);
+    let matches = search_targets(&list, &spectra, &opts);
 
     assert_eq!(matches.len(), 1, "Expected exactly 1 match for caffeine");
     let m = &matches[0];
@@ -189,7 +189,7 @@ fn test_target_found_prev2_without_ms2() {
     // No MS2 precursor added
     let spectra = generate_chromatogram(&[peak_spec], &[], 50.0);
     let opts = TargetSearchOptions::default();
-    let matches = cerca_targets(&list, &spectra, &opts);
+    let matches = search_targets(&list, &spectra, &opts);
 
     assert_eq!(matches.len(), 1);
     let m = &matches[0];
@@ -218,7 +218,7 @@ fn test_target_found_prev3_without_isotope_and_ms2() {
     // No isotope M+1 and no MS2
     let spectra = generate_chromatogram(&[peak_spec], &[], 100.0);
     let opts = TargetSearchOptions::default();
-    let matches = cerca_targets(&list, &spectra, &opts);
+    let matches = search_targets(&list, &spectra, &opts);
 
     assert_eq!(matches.len(), 1);
     let m = &matches[0];
@@ -250,7 +250,7 @@ fn test_decoy_dataset_produces_zero_false_positives() {
 
     let spectra = generate_chromatogram(&[decoy_peak], &[(3.50, 489.1234)], 40.0);
     let opts = TargetSearchOptions::default();
-    let matches = cerca_targets(&list, &spectra, &opts);
+    let matches = search_targets(&list, &spectra, &opts);
 
     assert_eq!(
         matches.len(),
@@ -279,7 +279,7 @@ fn test_decoy_targets_produce_zero_matches() {
 
     let spectra = generate_chromatogram(&[peak_spec], &[(4.0, caffeine_mz)], 50.0);
     let opts = TargetSearchOptions::default();
-    let matches = cerca_targets(&list, &spectra, &opts);
+    let matches = search_targets(&list, &spectra, &opts);
 
     assert_eq!(
         matches.len(),
@@ -333,7 +333,7 @@ fn test_proposal_and_sn_sorting_order() {
         ..Default::default()
     };
 
-    let matches = cerca_targets(&list, &spectra, &opts);
+    let matches = search_targets(&list, &spectra, &opts);
     assert_eq!(matches.len(), 3);
 
     assert_eq!(matches[0].id, "substance_a");
@@ -371,7 +371,7 @@ fn test_real_645_substances_with_decoy_data() {
 
     let spectra = generate_chromatogram(&[decoy_peak], &[(3.0, 1250.60)], 50.0);
     let opts = TargetSearchOptions::default();
-    let matches = cerca_targets(&list, &spectra, &opts);
+    let matches = search_targets(&list, &spectra, &opts);
 
     assert_eq!(
         matches.len(),

@@ -10,7 +10,7 @@ fn path_sostanze_csv() -> PathBuf {
 }
 
 #[test]
-fn test_caricamento_e_validazione_645_sostanze() {
+fn test_loading_and_validation_of_645_substances() {
     let path = path_sostanze_csv();
     assert!(path.exists(), "Target CSV file not found at {path:?}");
 
@@ -33,7 +33,7 @@ fn test_caricamento_e_validazione_645_sostanze() {
 }
 
 #[test]
-fn test_gestione_7_righe_segnalate() {
+fn test_handling_of_7_flagged_rows() {
     let file = File::open(path_sostanze_csv()).expect("Failed to open target CSV");
     let entries = parse_target_csv(file).expect("Failed to parse target CSV");
     let list = TargetList::from_entries(entries);
@@ -79,7 +79,7 @@ fn test_gestione_7_righe_segnalate() {
 }
 
 #[test]
-fn test_ricerca_indice_mz_e_addotti() {
+fn test_mz_index_search_and_adducts() {
     let file = File::open(path_sostanze_csv()).expect("Failed to open target CSV");
     let entries = parse_target_csv(file).expect("Failed to parse target CSV");
     let list = TargetList::from_entries(entries);
@@ -130,7 +130,7 @@ fn test_ricerca_indice_mz_e_addotti() {
 }
 
 #[test]
-fn test_rfc4180_parsing_casi_limite() {
+fn test_rfc4180_parsing_edge_cases() {
     let raw = "col1,col2,col3\r\n\"a,b\",\"c\nd\",\"e\"\"f\"\r\nx,y,z\n";
     let records = parse_rfc4180_str(raw).expect("Failed to parse RFC 4180 string");
     assert_eq!(records.len(), 3);
@@ -192,7 +192,7 @@ fn row(mass: &str, mh: &str) -> String {
 }
 
 #[test]
-fn test_valori_non_finiti_rifiutati_dal_csv() {
+fn test_non_finite_values_rejected_by_the_csv() {
     assert!(parse_target_csv(Cursor::new(row("115.1361", "116.143376"))).is_ok());
     for bad in ["NaN", "nan", "-nan", "inf", "-inf", "infinity"] {
         for text in [row(bad, "116.143376"), row("115.1361", bad)] {
@@ -205,7 +205,7 @@ fn test_valori_non_finiti_rifiutati_dal_csv() {
 }
 
 #[test]
-fn test_valori_non_finiti_rifiutati_dalla_validazione() {
+fn test_non_finite_values_rejected_by_validation() {
     let mut entries = parse_target_csv(Cursor::new(row("115.1361", "116.143376"))).unwrap();
     assert!(validate_entries(&entries).is_valid());
     entries[0].monoisotopic_mass = f64::NAN;
