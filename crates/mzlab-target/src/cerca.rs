@@ -372,7 +372,7 @@ fn evaluate_peak(
 }
 
 /// Search an indexed target list against chromatographic spectra with HRMS verification.
-pub fn cerca_targets(
+pub fn search_targets(
     list: &TargetList,
     spectra: &[Spectrum],
     opts: &TargetSearchOptions,
