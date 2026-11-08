@@ -7,7 +7,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::flow::Plan;
 use mzlab_core::Result;
 
-/// Threads for reading the inputs: one per file, up to the cores of the machine less one (at most 4, like the live runner).
+/// Threads for reading the inputs: one per file, up to the cores of the machine less one (at most 4, like the live runner); 1 where the
+/// platform gives no count of its cores (WASI).
 fn threads(files: usize) -> usize {
     crate::flow::live::default_workers().min(files).max(1)
 }
@@ -15,6 +16,11 @@ fn threads(files: usize) -> usize {
 /// `f` on every element of `items` over a few threads; the results come back in the order of `items`.
 pub(crate) fn map_par<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
     use std::sync::atomic::{AtomicUsize, Ordering};
+    let n = threads(items.len());
+    if n <= 1 {
+        // one core, or WASI (`flow.wasm`), where a thread cannot be spawned: in place
+        return items.iter().map(f).collect();
+    }
     let next = AtomicUsize::new(0);
     let mut out: Vec<(usize, R)> = std::thread::scope(|s| {
         let work = || {
@@ -25,7 +31,7 @@ pub(crate) fn map_par<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync)
                 got.push((i, f(x)));
             }
         };
-        let hands: Vec<_> = (0..threads(items.len())).map(|_| s.spawn(work)).collect();
+        let hands: Vec<_> = (0..n).map(|_| s.spawn(work)).collect();
         hands
             .into_iter()
             .flat_map(|h| h.join().expect("input reader"))
