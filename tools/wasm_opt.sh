@@ -2,7 +2,8 @@
 # wasm-opt (level in $livello, -O3) on a .wasm of the site, then the size gate: tools/wasm_opt.sh <file> <limit in bytes> <label> [extra wasm-opt flags]
 # Used by pages.yml and sito-rust.yml, so the site that is tested is the site that is published.
 # wasm-opt is binaryen version_133 from the official GitHub tarball (SHA-256 pinned below), installed once per $RUNNER_TEMP
-# (under a lock, because tools/wasm_paralleli.sh runs several of these at the same time). If the tarball cannot be used it falls back to npm wasm-opt@1.4.0.
+# (under a lock, because tools/wasm_paralleli.sh runs several of these at the same time). If the tarball cannot be used it falls back to npm wasm-opt@1.4.0;
+# with neither, MZLAB_WASM_OPT_STRICT=1 (the production workflows) is an error, otherwise (local builds) a warning.
 # The ONE level for every module: -O3 runs the formula compositions 34-35 % faster in Firefox and WebKit than -Oz on the same rustc output, within the caps (docs/agenti/wasm-tetti.md).
 # MZLAB_WASM_OPT_LEVEL overrides it for tools/banco_wasm.py only (the -Oz baseline of the bench); the workflows never set it.
 # Never enable the relaxed vector (SIMD) proposal: its results depend on the CPU and site = app byte for byte (tests/test_guardie_regole.py).
@@ -38,7 +39,9 @@ if [ -n "$tarball" ]; then
   (
     flock 9; [ -e "$ok" ] && exit 0
     dl="$RUNNER_TEMP/binaryen-133.tar.gz"
-    curl -fsSL --retry 3 -o "$dl" "$base/$tarball" || { echo "::warning::binaryen 133 could not be downloaded"; exit 1; }
+    # a tarball already there (the actions/cache step of the workflows) is reused when its hash is the pinned one, else downloaded again
+    if [ -f "$dl" ] && [ "$(sha256_of "$dl")" = "$sha" ]; then echo "binaryen 133: cached tarball"
+    else curl -fsSL --retry 3 -o "$dl" "$base/$tarball" || { echo "::warning::binaryen 133 could not be downloaded"; exit 1; }; fi
     got=$(sha256_of "$dl")
     # a wrong hash is an error, never a fallback: the tarball is not the one that was reviewed
     [ "$got" = "$sha" ] || { echo "::error::binaryen 133 SHA-256 mismatch ($tarball: got $got, expected $sha)"; exit 2; }
@@ -59,6 +62,9 @@ if [ -e "$ok" ]; then
   "$wo" "$livello" --enable-bulk-memory --enable-sign-ext --enable-mutable-globals --enable-nontrapping-float-to-int --enable-reference-types --enable-multivalue --enable-simd "$@" -o "$bg" "$bg" || exit 1
   size=$(stat -c %s "$bg"); echo "$label .wasm (optimised): $size bytes"
   if [ "$size" -ge "$limit" ]; then echo "::error::the $label .wasm is $size bytes (limit $limit)"; exit 1; fi
+elif [ "${MZLAB_WASM_OPT_STRICT:-}" = 1 ]; then
+  # production builds (pages.yml, sito-rust.yml, release.yml) fail closed: an unoptimised .wasm would skip the size gate
+  echo "::error::wasm-opt could not be installed: the $label .wasm is not optimised and the size gate cannot run"; exit 1
 else
   echo "::warning::wasm-opt could not be installed: the $label .wasm is not optimised ($(stat -c %s "$bg") bytes)"
 fi
