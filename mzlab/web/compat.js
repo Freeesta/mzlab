@@ -161,5 +161,5 @@ const G = /** @type {any} */ (globalThis);
 if (typeof window !== "undefined" && !G.__compat) {
   G.__compat = installa(G); G.clipboardCopy = (/** @type {Record<string, any>} */ parts) => copyNow(G, parts); G.canvasScale = (/** @type {number} */ w, /** @type {number} */ h, /** @type {number} */ s) => cappedScale(G, w, h, s);
   const notice = () => { if (safariKind(G) && typeof G.carica === "function") G.carica("m:avviso-safari.js").catch(() => { /* offline: no notice */ }); };
-  if (G.document.readyState === "complete") notice(); else G.addEventListener("load", notice, { once: true });
+  if (G.document && G.document.readyState === "complete") notice(); else if (typeof G.addEventListener === "function") G.addEventListener("load", notice, { once: true });
 }

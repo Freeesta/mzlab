@@ -389,7 +389,7 @@ I18N.add("en", {
   "dda.add": "Add an MS2 panel beside",
   "dda.add.tip": "Another MS2 panel under the same Full Scan",
   "avviso.close": "Close the notice",
-  "safari.notice.mac": "It works in Safari too, but we recommend Chrome, Edge or Firefox: Safari may delete saved data after 7 days without a visit. Your original files are never touched.",
+  "safari.notice.mac": "It works in Safari too; for everyday use, Chrome, Edge or Firefox is a better fit: Safari may delete saved data after 7 days without a visit. Your original files are never touched.",
   "safari.notice.ipad": "Safari may delete saved data after 7 days without a visit; your original files are never touched. If you add the page to the Home Screen, only the days you use it count.",
   "disp.menu": "Options…",
   "disp.none": "Pick a chromatogram or a spectrum: a right click on the chart opens its options here.",
