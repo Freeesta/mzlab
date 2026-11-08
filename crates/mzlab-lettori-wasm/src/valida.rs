@@ -6,9 +6,9 @@ use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
 /// Bytes fetched from JS at once.
-const BLOCCO: usize = 256 << 10;
+const BLOCK: usize = 256 << 10;
 
-/// The file as a stream: `read(0, offset, length) -> Uint8Array` in blocks of `BLOCCO` bytes.
+/// The file as a stream: `read(0, offset, length) -> Uint8Array` in blocks of `BLOCK` bytes.
 struct JsStream {
     read: Function,
     dim: u64,
@@ -19,7 +19,7 @@ impl Read for JsStream {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let n = buf
             .len()
-            .min(BLOCCO)
+            .min(BLOCK)
             .min(self.dim.saturating_sub(self.pos) as usize);
         if n == 0 {
             return Ok(0);
