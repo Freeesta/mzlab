@@ -51,7 +51,7 @@ def test_rule_profiles_in_english():
     assert not bad, bad
 
 
-def test_composti_has_no_bare_formula_column():
+def test_compounds_has_no_bare_formula_column():
     with open(TP / "data" / "composti.csv", encoding="utf-8", newline="") as f:
         head = next(csv.reader(f))
     assert "formula" not in head and "neutral_formula" in head, head

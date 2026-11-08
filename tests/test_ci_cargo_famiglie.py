@@ -15,7 +15,7 @@ def load():
     return mod
 
 
-def test_famiglie():
+def test_families():
     f = load().famiglia
     assert f(["build", "--release", "-p", "mzlab-cli", "--example", "flow"]) == "cli"
     assert f(["run", "--release", "-q", "-p", "mzlab-cli", "--", "msn-graph"]) == "cli"

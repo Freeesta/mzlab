@@ -117,7 +117,7 @@ def test_robustness_end_to_end_on_files_named_like_the_dda_ones(tmp_path):
     assert "hr_robustezza_gira" in hr.markdown(c, det)
 
 
-def test_trova_hr_cerca_anche_nella_radice(tmp_path, monkeypatch):
+def test_find_hr_also_searches_the_root(tmp_path, monkeypatch):
     from valida import hr
     (tmp_path / "dati" / "HRMS").mkdir(parents=True)
     (tmp_path / "dati" / "INDICE.md").write_text("x")

@@ -14,7 +14,7 @@ def _bytes_lf(p: Path) -> int:
     return len(p.read_text(encoding="utf-8").encode("utf-8"))
 
 
-def test_stadi_presenti_e_piccoli():
+def test_stages_present_and_small():
     for s in STAGES:
         p = ORO / f"{s}.json"
         assert p.exists(), p
@@ -23,7 +23,7 @@ def test_stadi_presenti_e_piccoli():
     assert sum(_bytes_lf(p) for p in ORO.glob("*.json")) < 300_000
 
 
-def test_livelli_coincidono_con_attesi():
+def test_levels_match_expected():
     got = json.loads((ORO / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(EXPECTED, encoding="utf-8", newline="") as fh:
         att = list(csv.DictReader(fh, delimiter=";"))

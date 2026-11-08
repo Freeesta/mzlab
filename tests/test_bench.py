@@ -194,7 +194,7 @@ def test_csv_adapters(tmp_path):
 
 
 # ---------------------------------------------------------------------------------------------------------------- comparison on known outcomes
-def test_confronto_known_outcome():
+def test_comparison_known_outcome():
     v = [comp(f"t{i}", 100.0 + i, 1.0 + 0.5 * i, "tp1") for i in range(40)]
     good = A.tabella("buono", "T", "c", ["f"], [row(c["mz"], c["rt"], [1e6], candidato=True, livello="3", punteggio=3.0) for c in v])
     bad = A.tabella("cattivo", "T", "c", ["f"], [])
@@ -209,7 +209,7 @@ def test_confronto_known_outcome():
     assert "| buono/c | P1 | 40 | 1.000 |" in R.a_markdown(r) and "| cattivo/c | P1 |" in R.a_markdown(r)
 
 
-def test_unisci_stratifies_by_series():
+def test_merge_stratifies_by_series():
     v = [comp(f"t{i}", 100.0 + i, 1.0, "tp1") for i in range(5)]
     t = A.tabella("x", "T", "c", ["f"], [row(100.0, 1.0, [1.0], candidato=True)])
     m = R.misura(v, t)

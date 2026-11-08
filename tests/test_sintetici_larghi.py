@@ -29,7 +29,7 @@ def lotto(tmp_path_factory):
     return d, SM.genera_larghi(d, **SMALL)
 
 
-def test_stesso_seme_stessi_byte(lotto, tmp_path):
+def test_same_seed_same_bytes(lotto, tmp_path):
     d, _ = lotto
     SM.genera_larghi(tmp_path, **SMALL)
     assert _sha(d) == _sha(tmp_path)
@@ -37,7 +37,7 @@ def test_stesso_seme_stessi_byte(lotto, tmp_path):
     assert _sha(tmp_path / "altro")["verita.json"] != _sha(d)["verita.json"]
 
 
-def test_lotto_e_verita(lotto):
+def test_batch_and_truth(lotto):
     d, v = lotto
     assert sorted(p.name for p in d.iterdir()) == ["blank_01.mzML", "camp_01.mzML", "camp_02.mzML", "verita.json"]
     assert json.loads((d / "verita.json").read_text()) == v and v["file"][0] == "blank_01.mzML"
@@ -56,7 +56,7 @@ def test_lotto_e_verita(lotto):
     assert {sum(1 for r in sub if r["su"] == b["id"]) for b in wide if b["morfologia"] == "c_banda"} <= {1, 2}                # 1-2 narrow peaks per band
 
 
-def test_doppio_plateau_sella_al_60_per_cento(lotto):
+def test_double_plateau_saddle_at_60_percent(lotto):
     _, v = lotto
     for r in (r for r in v["ioni"] if r["morfologia"] == "b_doppio"):
         c = r["componenti"]
@@ -67,7 +67,7 @@ def test_doppio_plateau_sella_al_60_per_cento(lotto):
         assert len(m) == 2 and y[m[0]:m[1] + 1].min() / min(y[m]) == pytest.approx(0.60, abs=0.005)
 
 
-def test_area_attesa_e_l_integrale_numerico(lotto):
+def test_expected_area_is_the_numeric_integral(lotto):
     _, v = lotto
     for r in v["ioni"]:
         c = r["componenti"]
@@ -83,7 +83,7 @@ def test_snr_in_gamma(lotto):
             assert 4 <= r["componenti"][0]["h"] / SM.N0 <= 12
 
 
-def test_blank_senza_composti_con_fondo_a_gradiente(lotto):
+def test_blank_without_compounds_with_gradient_background(lotto):
     d, v = lotto
     bg = Run(d / "blank_01.mzML")
     camp = Run(d / "camp_01.mzML")

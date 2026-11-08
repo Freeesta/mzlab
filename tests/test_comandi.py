@@ -23,7 +23,7 @@ def rows():
     return doc_comandi.tabella()
 
 
-def test_tabella_ben_formata():
+def test_table_well_formed():
     ids = [r["id"] for r in rows()]
     assert len(ids) == len(set(ids)), "duplicate id"
     it, en = doc_comandi.etichette("it"), doc_comandi.etichette("en")
@@ -37,7 +37,7 @@ def test_tabella_ben_formata():
             assert r.get("motivo"), f"{r['id']}: a non-undoable action says why"
 
 
-def test_gestori_e_chiamate():
+def test_handlers_and_calls():
     ids = {r["id"] for r in rows()}
     commands = {r["id"]: r for r in rows() if r["annulla"] == "comando"}
     seen = set()
@@ -54,7 +54,7 @@ def test_gestori_e_chiamate():
     assert ids >= set(commands)
 
 
-def test_nessun_campo_registrato_fuori_dai_suoi_file():
+def test_no_field_registered_outside_its_files():
     """A state field of a registered action is assigned only in the files the action lists: a new place that changes it must be added to the table
     (and go through the undo) first."""
     bad = []
@@ -71,10 +71,10 @@ def test_nessun_campo_registrato_fuori_dai_suoi_file():
     assert not bad, "\n".join(bad[:20])
 
 
-def test_da_portare_solo_in_calo():
+def test_to_port_count_never_grows():
     n = sum(r["annulla"] == "da-portare" for r in rows())
     assert n <= TO_PORT_MAX, f"{n} actions not undoable (max {TO_PORT_MAX}): register the new action with its undo"
 
 
-def test_pagina_aggiornata():
+def test_page_up_to_date():
     assert doc_comandi.OUT.exists() and doc_comandi.OUT.read_text(encoding="utf-8") == doc_comandi.pagina(), "run python3 tools/doc_comandi.py"

@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import lotto_gemini as L  # noqa: E402
 
 
-def test_unisci_headers_and_order(tmp_path):
+def test_merge_headers_and_order(tmp_path):
     (tmp_path / "a.txt").write_text("alpha\n")
     (tmp_path / "b.txt").write_text("beta")
     doc, n = L.unisci(["a.txt", "b.txt"], tmp_path)
