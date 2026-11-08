@@ -7,7 +7,7 @@ use super::funzioni::{self, Funzione};
 use super::idx::{self, Riga};
 use super::inf::{self, Extern, FunzioneExt, Inlet, Modo, Testata};
 use super::lati::{nomi_composti, Tabella};
-use super::tagli::{elenco_intero, tagli, testata_intera};
+use super::tagli::{elenco_intero, nel_file, tagli, testata_intera};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
@@ -375,11 +375,8 @@ fn carica(
     let idx_b = opzionale(c, &nome("IDX"));
     let ha_idx = idx_b.is_some();
     let mut righe = match idx_b {
-        Some(b) => idx::leggi(&b, &c.limiti)?.ok_or_else(|| {
-            Error::new("err.file.indexCut")
-                .with("name", &c.nome)
-                .with("file", nome("IDX"))
-        })?,
+        Some(b) => idx::leggi(&b, &c.limiti)?
+            .ok_or_else(|| nel_file(c, "err.file.indexCut", &nome("IDX")))?,
         None => Vec::new(),
     };
     *spesa += righe.len() as u64;
@@ -392,11 +389,8 @@ fn carica(
     } else {
         larg.and_then(Codifica::da_larghezza)
     };
-    let tagliate = tagli(&mut righe, larg, dat.is_some(), dat_len, ha_idx).ok_or_else(|| {
-        Error::new("err.file.indexCut")
-            .with("name", &c.nome)
-            .with("file", nome("IDX"))
-    })?;
+    let tagliate = tagli(&mut righe, larg, dat.is_some(), dat_len, ha_idx)
+        .ok_or_else(|| nel_file(c, "err.file.indexCut", &nome("IDX")))?;
     let lim = c.limiti;
     let tab =
         |c: &mut Cartella, e: &str| opzionale(c, &nome(e)).and_then(|b| Tabella::leggi(&b, &lim));
@@ -431,27 +425,20 @@ fn carica(
     Ok((fun, avviso))
 }
 
-/// A folder without `_FUNCTNS.INF`, which every run has: a copy that left files behind.
-fn incompleta(c: &Cartella, file: &str) -> Error {
-    Error::new("err.file.folderIncomplete")
-        .with("name", &c.nome)
-        .with("file", file)
-}
-
 fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let mut c = Cartella::new(fs, *limiti);
-    let inf = c.leggi(FUNCTNS)?.ok_or_else(|| incompleta(&c, FUNCTNS))?;
+    // Every run has `_FUNCTNS.INF`: a folder without it is a copy that left files behind.
+    let inf = c
+        .leggi(FUNCTNS)?
+        .ok_or_else(|| nel_file(&c, "err.file.folderIncomplete", FUNCTNS))?;
     if c.cerca(PRIMA_DAT).is_none() {
         return Err(errore("_FUNC001.DAT is missing"));
     }
     if inf.is_empty() {
         return Err(Error::new("err.file.functionsEmpty").with("name", &c.nome));
     }
-    let lista = funzioni::leggi(&inf, limiti)?.ok_or_else(|| {
-        Error::new("err.file.folderFileCut")
-            .with("name", &c.nome)
-            .with("file", FUNCTNS)
-    })?;
+    let lista = funzioni::leggi(&inf, limiti)?
+        .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
     elenco_intero(&c, lista.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
     testata_intera(&c, header.as_deref())?;
