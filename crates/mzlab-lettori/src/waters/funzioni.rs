@@ -48,11 +48,8 @@ impl Funzione {
     }
 }
 
-/// The functions of `bytes`. A size that is no multiple of the record is a damaged file.
+/// The functions of `bytes` (`apri` refuses an empty file first). A size that is no multiple of the record is a damaged file.
 pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Vec<Funzione>> {
-    if b.is_empty() {
-        return Err(errore("_FUNCTNS.INF is empty"));
-    }
     if !b.len().is_multiple_of(RECORD) {
         return Err(errore("_FUNCTNS.INF size"));
     }

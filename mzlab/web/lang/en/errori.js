@@ -5,6 +5,8 @@ I18N.add("en", {
   "err.file.cutShort": "The file {name} is cut short: it is {size} bytes long but its own table needs {needed}, so its scans cannot be read whole and nothing was loaded. Copy the whole file again.",
   "err.file.functionsCut": "The folder {name} lists {listed} functions in _FUNCTNS.INF but holds the data of more: the list is cut short, so nothing was loaded. Copy the whole .raw folder again.",
   "err.file.indexCut": "In the folder {name} the index {file} is cut short or damaged: it does not match its data file, so nothing was loaded. Copy the whole folder again.",
+  "err.file.functionsEmpty": "In the folder {name} the file _FUNCTNS.INF is empty: it lists the acquisition functions of the run and without it no function can be read, so nothing was loaded. Copy the whole folder again.",
+  "err.file.recordVariant": "In the folder {name} function {function} (type {type}) stores its data in a record variant this program does not read yet, so nothing was loaded. Convert the folder to mzML with the instrument software and open that file.",
   "err.file.headerCut": "In the folder {name} the file {file} is cut short (empty, or a calibration line incomplete): it holds the mass calibration, so the m/z could not be trusted and nothing was loaded. Copy the whole folder again.",
   "err.file.moduleLoad": "The reader of this format did not download ({family}): check the connection, then reload the page (Ctrl/Cmd+Shift+R) and try again.",
   "err.file.wiffLoad": "The calculation engine did not load: reload the page (Ctrl/Cmd+Shift+R) and try again.",
