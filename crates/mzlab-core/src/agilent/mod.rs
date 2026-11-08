@@ -58,7 +58,12 @@ pub struct AgilentD {
     pub file_sha1: Vec<(String, String)>,
     /// The points of every scan when the run comes from `data.ms` (m/z and abundances; `MSPeak.bin` does not exist then).
     pub(crate) inline: Option<Vec<(Vec<f64>, Vec<f64>)>>,
+    /// Scans of a copy cut short that are left out (`scan::parse`): announced or begun in `MSScan.bin` but not whole in it or in `MSPeak.bin`.
+    pub missing: usize,
 }
+
+/// `ScanType` of a QqQ MRM visit (the twin of `agilent_ext::lcms::SCAN_MRM`).
+const SCAN_MRM: i32 = 256;
 
 impl AgilentD {
     /// `name`: the folder name (`xxx.D`). A folder without `AcqData/MSScan.bin` is `err.file.notAgilentD`, an index that is not understood is `err.file.agilent`.
@@ -75,9 +80,23 @@ impl AgilentD {
             None => scan::Layout::builtin(),
         };
         let announced = Some(segments.iter().map(|s| s.scans).sum::<usize>());
-        let records = scan::parse(f.ms_scan, &layout, f.ms_peak_len, announced)?;
+        let (records, missing) = scan::parse(f.ms_scan, &layout, f.ms_peak_len, announced)?;
         if records.is_empty() {
-            return Err(Error::new("err.file.agilent").with("detail", "no scans"));
+            // An index with no spectrum file behind it is not a cut copy: name the empty file.
+            return Err(if missing > 0 && f.ms_peak_len == 0 {
+                Error::new("err.file.agilentNoPeaks").with("name", name)
+            } else if missing > 0 {
+                Error::new("err.file.agilentCut").with("name", name)
+            } else {
+                Error::new("err.file.agilent").with("detail", "no scans")
+            });
+        }
+        // QqQ MRM visits make the SRM chromatograms that only the `agilent` module builds: refused here, the site hands the run to it, as the CLI reads it.
+        if let Some(r) = records.iter().find(|r| r.scan_type == SCAN_MRM) {
+            return Err(Error::new("err.file.agilent").with(
+                "detail",
+                format!("scan {}: ScanType {SCAN_MRM} (MRM)", r.id),
+            ));
         }
         Ok(AgilentD {
             name: name.to_string(),
@@ -91,6 +110,7 @@ impl AgilentD {
             extra_names: layout.extra_names(),
             file_sha1: hashes(f),
             inline: None,
+            missing,
         })
     }
 
