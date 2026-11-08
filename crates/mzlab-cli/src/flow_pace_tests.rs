@@ -147,7 +147,7 @@ fn the_fingerprints_taken_beside_the_scans_change_no_byte_and_a_cancel_stops() {
 
 #[test]
 fn a_dataset_hashed_before_its_index_is_not_read_again_for_its_prints_and_gives_the_same_bytes() {
-    let d = folder("pace_prints");
+    let d = folder("pace_digest");
     if !wiff(&d, "w", 2) {
         return;
     }
@@ -164,6 +164,15 @@ fn a_dataset_hashed_before_its_index_is_not_read_again_for_its_prints_and_gives_
     assert_eq!(crate::flow_set::known_prints(&src).unwrap(), Some(read));
     crate::build_index_of(&src, "w.wiff@2", &b, budget).unwrap();
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
+    // hashed without the SHA-1 (a plan that converts nothing): the prints are known, their SHA-1 empty, and the index the same bytes
+    assert!(wiff(&d, "v", 2));
+    let (src2, c, e) = (d.join("v.wiff"), d.join("c.mzidx"), d.join("e.mzidx"));
+    crate::build_index_of(&src2, "v.wiff@2", &c, budget).unwrap();
+    crate::flow_set::digest_for(&src2, false).unwrap();
+    let prints = crate::flow_set::known_prints(&src2).unwrap().unwrap();
+    assert!(prints.iter().all(|m| m.sha1.is_empty()));
+    crate::build_index_of(&src2, "v.wiff@2", &e, budget).unwrap();
+    assert_eq!(std::fs::read(&c).unwrap(), std::fs::read(&e).unwrap());
     // a member that changed since `digest` (another size) is read again, never taken from the stale hash
     let scan = d.join("w.wiff.scan");
     let mut bytes = std::fs::read(&scan).unwrap();
