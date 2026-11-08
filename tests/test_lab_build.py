@@ -119,9 +119,9 @@ def test_tabui_and_flow_are_ungated_in_the_normal_build_and_skipped_in_the_lab()
     """Tabui and mzFlow are always on (no administrator flag, no logo clicks); the only thing that keeps them out of the lab is window.MZLAB_LAB,
     set by lab.js and read by the loader (the e2e_lab.py run checks the built pages)."""
     web = ROOT / "mzlab" / "web"
-    loader, carica = (web / "tpmine-loader.js").read_text(encoding="utf-8"), (web / "carica.js").read_text(encoding="utf-8")
+    loader, load = (web / "tpmine-loader.js").read_text(encoding="utf-8"), (web / "carica.js").read_text(encoding="utf-8")
     flow = (ROOT / "flow" / "js" / "flow-tool.js").read_text(encoding="utf-8")
-    assert "admin" not in loader.lower() and "admin: true" not in flow and "admin" not in carica.lower()
+    assert "admin" not in loader.lower() and "admin: true" not in flow and "admin" not in load.lower()
     assert "!window.MZLAB_LAB" in loader
     assert "w.MZLAB_LAB = " in LAB_JS.read_text(encoding="utf-8")
 

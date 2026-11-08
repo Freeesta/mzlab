@@ -1,6 +1,6 @@
 // Checks the fallbacks of mzlab/web/compat.js on fake globals (what Safari/iPadOS lacks: AbortSignal.any, createWritable, a refused clipboard, the accept
-// list of the iPad file picker); prints one JSON object of named checks. See tests/test_compat.py.
-import { installa, anySignal, freeAccept } from "../mzlab/web/compat.js";
+// list of the iPad file picker, a copy handed over inside the click, the gesture* pinch of a Mac trackpad, the canvas area cap, who gets the Safari notice); prints one JSON object of named checks. See tests/test_compat.py.
+import { installa, anySignal, freeAccept, copyNow, pinchWheel, canvasScale, MAX_CANVAS_PX, safariKind } from "../mzlab/web/compat.js";
 
 const out = {};
 const check = async (name, fn) => { try { out[name] = (await fn()) === true ? true : "false"; } catch (e) { out[name] = "threw: " + (e && e.message || e); } };
@@ -119,6 +119,73 @@ await check("accept: input.click() from code and a tap (capture listener) both f
   const j = el("input", { type: "file", accept: ".raw" }), cap = d.listeners.find(([t, , c]) => t === "click" && c === true);
   cap[1]({ target: j });
   return done.includes("accept") && clicked === 1 && !i.hasAttribute("accept") && !j.hasAttribute("accept");
+});
+
+// a clipboard as strict as Safari's: write() and writeText() only while the click runs (here: before the first await of the test)
+function strictClip() {
+  const c = { live: true, got: null, text: null };
+  c.cb = {
+    write: async items => { if (!c.live) throw new DOMException("not allowed", "NotAllowedError"); const it = items[0], o = {}; for (const t of it.types) o[t] = await (await it.getType(t)).text(); c.got = o; },
+    writeText: async t => { if (!c.live) throw new DOMException("not allowed", "NotAllowedError"); c.text = t; },
+  };
+  class ClipboardItem { constructor(o) { this.o = o; this.types = Object.keys(o); } getType(t) { return Promise.resolve(this.o[t]); } }
+  return { c, g: { navigator: { clipboard: c.cb }, ClipboardItem, Blob, DOMException } };
+}
+await check("copy: handed over inside the click while the text is still being made", async () => {
+  const { c, g } = strictClip();
+  let ok; const later = new Promise(r => { ok = r; });
+  const done = copyNow(g, { "text/plain": later, "text/html": "<b>x</b>" });
+  c.live = false; ok("# mzLab 1\nm/z\t301.1");                       // the click is over before the text is ready
+  await done;
+  return c.got && c.got["text/plain"] === "# mzLab 1\nm/z\t301.1" && c.got["text/html"] === "<b>x</b>";
+});
+await check("copy: without ClipboardItem or refused, the plain text goes through writeText; an image alone rejects", async () => {
+  const a = strictClip(); delete a.g.ClipboardItem; await copyNow(a.g, { "text/plain": Promise.resolve("t1") });
+  const b = strictClip(); b.c.cb.write = async () => { throw new DOMException("no", "NotAllowedError"); }; await copyNow(b.g, { "text/plain": "t2" });
+  const c = strictClip(); delete c.g.ClipboardItem; let rej = false; await copyNow(c.g, { "image/png": new Blob(["png"]) }).catch(() => { rej = true; });
+  return a.c.text === "t1" && b.c.text === "t2" && rej && c.c.text === null;
+});
+
+// a fake page for the pinch: a surface (touch-action:none) with a canvas, a plain paragraph; document listeners fired in order
+function pinchPage() {
+  const node = (ta, parent) => ({ nodeType: 1, parentElement: parent, ta, wheels: [], dispatchEvent(w) { this.wheels.push(w); return true; } });
+  const surf = node("none", null), canvas = node("auto", surf), para = node("auto", null), L = [];
+  const d = { addEventListener: (t, f, c) => L.push([t, f, c]) };
+  const fire = (t, o) => { const e = { defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...o }; for (const [k, f] of L) if (k === t) f(e); return e; };
+  class WheelEvent { constructor(type, o) { Object.assign(this, o, { type }); } }
+  const g = { document: d, WheelEvent, GestureEvent: function () {}, getComputedStyle: n => ({ touchAction: n.ta }), matchMedia: media(false) };
+  return { g, surf, canvas, para, fire };
+}
+await check("pinch: installed with gesture events and a fine pointer only", () => {
+  const a = pinchPage(), b = pinchPage(), c = pinchPage();
+  delete b.g.GestureEvent; c.g.matchMedia = media(true);
+  return installa(a.g).includes("pinch") && !installa(b.g).includes("pinch") && !installa(c.g).includes("pinch");
+});
+await check("pinch: gesturechange over a zoomable surface is a Ctrl+wheel there, the page does not zoom", () => {
+  const P = pinchPage(); pinchWheel(P.g);
+  const s = P.fire("gesturestart", { target: P.canvas, scale: 1 }), c1 = P.fire("gesturechange", { target: P.canvas, scale: 1.5, clientX: 10, clientY: 20 }), c2 = P.fire("gesturechange", { target: P.canvas, scale: 0.75, clientX: 10, clientY: 20 });
+  const e = P.fire("gestureend", { target: P.canvas, scale: 0.75 }), [w1, w2] = P.canvas.wheels;
+  return s.defaultPrevented && c1.defaultPrevented && e.defaultPrevented && P.canvas.wheels.length === 2 && w1.type === "wheel" && w1.ctrlKey && w1.cancelable && w1.bubbles
+    && w1.clientX === 10 && w1.clientY === 20 && Math.abs(w1.deltaY + 100 * Math.log(1.5)) < 1e-9 && Math.abs(w2.deltaY - 100 * Math.log(2)) < 1e-9 && w1.deltaY < 0 && w2.deltaY > 0;
+});
+await check("pinch: left alone outside a zoomable surface, when a view handles it, and with fingers on a screen", () => {
+  const P = pinchPage(); pinchWheel(P.g);
+  const s = P.fire("gesturestart", { target: P.para, scale: 1 }), c = P.fire("gesturechange", { target: P.para, scale: 2 });
+  P.fire("gesturestart", { target: P.canvas, scale: 1, defaultPrevented: true }); P.fire("gesturechange", { target: P.canvas, scale: 2, defaultPrevented: true });
+  P.fire("pointerdown", { pointerType: "touch" }); P.fire("gesturestart", { target: P.canvas, scale: 1 }); P.fire("gesturechange", { target: P.canvas, scale: 2 });
+  P.fire("pointerup", { pointerType: "touch" }); const s2 = P.fire("gesturestart", { target: P.canvas, scale: 1 }); P.fire("gesturechange", { target: P.canvas, scale: 2 });
+  return !s.defaultPrevented && !c.defaultPrevented && P.para.wheels.length === 0 && s2.defaultPrevented && P.canvas.wheels.length === 1;
+});
+
+await check("canvas: a scale that would pass Safari's 16.7 Mpx cap is lowered, a small one kept", () => {
+  const big = canvasScale(1600, 1400, 3), w = Math.round(1600 * big), h = Math.round(1400 * big);
+  return MAX_CANVAS_PX === 16777216 && big < 3 && w * h <= MAX_CANVAS_PX && w * h > 0.99 * MAX_CANVAS_PX && canvasScale(400, 300, 8) === 8 && canvasScale(0, 10, 2) === 2;
+});
+
+await check("Safari notice: mac, ipad (touch-only or several touch points), none elsewhere (other engine, desktop app, phone layout, frame)", () => {
+  const g = (o = {}, coarse = false) => { const w = { GestureEvent: function () {}, navigator: { maxTouchPoints: 0 }, matchMedia: () => ({ matches: coarse }), ...o }; if (!("parent" in o)) w.parent = w; return w; };
+  return safariKind(g()) === "mac" && safariKind(g({}, true)) === "ipad" && safariKind(g({ navigator: { maxTouchPoints: 5 } })) === "ipad" &&
+    [g({ GestureEvent: undefined }), g({ MZLAB_DESKTOP: true }), g({ MZLAB_PHONE: true }), g({ parent: {} })].every(x => safariKind(x) === "");
 });
 
 process.stdout.write(JSON.stringify(out));

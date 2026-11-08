@@ -1,4 +1,4 @@
-//! `stima_json` (behind the export `stima_series`) reports the way and the memory that `slabs::stima` gives for the same series, and the page's budget
+//! `stima_json` (behind the export `estimate_series`) reports the way and the memory that `slabs::stima` gives for the same series, and the page's budget
 //! decides between memory, slabs and refusal. The files are synthetic `.mzfeatf` of a few features each.
 #![cfg(feature = "detect")]
 

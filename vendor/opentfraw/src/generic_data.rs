@@ -35,9 +35,57 @@ pub enum GenericValue {
 }
 
 /// A single record decoded using a GenericDataHeader.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GenericRecord {
     pub values: Vec<(Arc<str>, GenericValue)>,
+    /// Where the first field of each label is in `values`, shared by every record of a stream: a scan asks for a dozen labels of a trailer of a
+    /// few hundred fields, and a scan of the labels for each was most of the cost of opening a file. `None`: `get` scans `values`.
+    pub index: Option<Arc<Etichette>>,
+}
+
+/// Label -> position of its first field (FNV-1a over the bytes: no new dependency, and the labels are short).
+#[derive(Debug, Default)]
+pub struct Etichette {
+    map: std::collections::HashMap<Arc<str>, usize, std::hash::BuildHasherDefault<Fnv>>,
+    /// The number of labels: a record of another length is looked up by a scan.
+    n: usize,
+}
+
+/// FNV-1a, 64 bits.
+#[derive(Default)]
+pub struct Fnv(u64);
+
+impl std::hash::Hasher for Fnv {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        let mut h = if self.0 == 0 {
+            0xcbf2_9ce4_8422_2325
+        } else {
+            self.0
+        };
+        for &b in bytes {
+            h ^= u64::from(b);
+            h = h.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        self.0 = h;
+    }
+}
+
+impl Etichette {
+    /// The index of `labels`; the first of equal labels wins, as in a scan of the fields.
+    pub fn new(labels: &[Arc<str>]) -> Arc<Self> {
+        let mut map =
+            std::collections::HashMap::with_capacity_and_hasher(labels.len(), Default::default());
+        for (i, l) in labels.iter().enumerate() {
+            map.entry(Arc::clone(l)).or_insert(i);
+        }
+        Arc::new(Etichette {
+            map,
+            n: labels.len(),
+        })
+    }
 }
 
 impl GenericDataHeader {
@@ -206,21 +254,52 @@ impl GenericRecord {
             .iter()
             .map(|d| d.label.as_str().into())
             .collect();
-        Self::from_bytes(&bytes, header, &labels)
+        Self::from_bytes(&bytes, header, &labels, None)
     }
 
-    /// The record in `bytes`; `labels` are the labels of `header`, shared by every record of a stream instead of copied into each.
-    fn from_bytes(bytes: &[u8], header: &GenericDataHeader, labels: &[Arc<str>]) -> Result<Self> {
+    /// The record in `bytes`; `labels` are the labels of `header` and `index` their positions, shared by every record of a stream instead of copied into each.
+    fn from_bytes(
+        bytes: &[u8],
+        header: &GenericDataHeader,
+        labels: &[Arc<str>],
+        index: Option<&Arc<Etichette>>,
+    ) -> Result<Self> {
         let mut r = BinaryReader::new(Cursor::new(bytes));
+        let mut at = 0usize;
         let mut values = Vec::with_capacity(header.fields.len());
         for (desc, label) in header.fields.iter().zip(labels) {
-            values.push((Arc::clone(label), read_value(&mut r, desc)?));
+            // a number is taken from the slice; a string, or a field past the end, goes through the reader (its errors and its decoding)
+            let v = match number_at(bytes, at, desc.field_type) {
+                Some((v, n)) => {
+                    at += n;
+                    v
+                }
+                None => {
+                    r.seek_to(at as u64)?;
+                    let v = read_value(&mut r, desc)?;
+                    at = r.position() as usize;
+                    v
+                }
+            };
+            values.push((Arc::clone(label), v));
         }
-        Ok(Self { values })
+        Ok(Self {
+            values,
+            index: index.cloned(),
+        })
     }
 
     /// Look up a field by label and return a reference to its value.
     pub fn get(&self, label: &str) -> Option<&GenericValue> {
+        if let Some(ix) = self.index.as_ref().filter(|ix| ix.n == self.values.len()) {
+            // the index was made from these labels: a label it lacks is in no field
+            return ix
+                .map
+                .get(label)
+                .and_then(|&i| self.values.get(i))
+                .filter(|(l, _)| &**l == label)
+                .map(|(_, v)| v);
+        }
         self.values
             .iter()
             .find(|(l, _)| &**l == label)
@@ -265,6 +344,37 @@ impl GenericRecord {
 }
 
 /// One value of the field `desc`, read at the current position.
+/// A numeric field at `at` of `bytes` and its width, as `read_value` reads it; `None` for a string or a field that does not fit.
+fn number_at(bytes: &[u8], at: usize, t: GenericType) -> Option<(GenericValue, usize)> {
+    let w = match t {
+        GenericType::Gap => return Some((GenericValue::Gap, 0)),
+        GenericType::Int8
+        | GenericType::UInt8
+        | GenericType::Bool
+        | GenericType::BoolYesNo
+        | GenericType::BoolOnOff => 1,
+        GenericType::Int16 | GenericType::UInt16 => 2,
+        GenericType::Int32 | GenericType::UInt32 | GenericType::Float32 => 4,
+        GenericType::Float64 => 8,
+        GenericType::AsciiString | GenericType::WideString => return None,
+    };
+    let b = bytes.get(at..at.checked_add(w)?)?;
+    let mut x = [0u8; 8];
+    x[..w].copy_from_slice(b);
+    let v = match t {
+        GenericType::Int8 => GenericValue::Int8(x[0] as i8),
+        GenericType::UInt8 => GenericValue::UInt8(x[0]),
+        GenericType::Int16 => GenericValue::Int16(i16::from_le_bytes([x[0], x[1]])),
+        GenericType::UInt16 => GenericValue::UInt16(u16::from_le_bytes([x[0], x[1]])),
+        GenericType::Int32 => GenericValue::Int32(i32::from_le_bytes([x[0], x[1], x[2], x[3]])),
+        GenericType::UInt32 => GenericValue::UInt32(u32::from_le_bytes([x[0], x[1], x[2], x[3]])),
+        GenericType::Float32 => GenericValue::Float32(f32::from_le_bytes([x[0], x[1], x[2], x[3]])),
+        GenericType::Float64 => GenericValue::Float64(f64::from_le_bytes(x)),
+        _ => GenericValue::Bool(x[0] != 0),
+    };
+    Some((v, w))
+}
+
 fn read_value<R: Read + Seek>(
     r: &mut BinaryReader<R>,
     desc: &GenericDataDescriptor,
@@ -310,6 +420,8 @@ pub struct GenericRecordStream {
     header: GenericDataHeader,
     /// The labels of the fields of `header`, shared by the records `get` gives.
     labels: Vec<Arc<str>>,
+    /// Their positions, shared by the same records.
+    index: Arc<Etichette>,
     /// Byte offset of each field inside a record.
     offsets: Vec<usize>,
     record_size: usize,
@@ -325,6 +437,7 @@ impl Clone for GenericRecordStream {
         Self {
             header: self.header.clone(),
             labels: self.labels.clone(),
+            index: Arc::clone(&self.index),
             offsets: self.offsets.clone(),
             record_size: self.record_size,
             n: self.n,
@@ -359,6 +472,7 @@ impl GenericRecordStream {
         Self {
             header: GenericDataHeader { fields: Vec::new() },
             labels: Vec::new(),
+            index: Arc::default(),
             offsets: Vec::new(),
             record_size: 0,
             n: 0,
@@ -383,13 +497,15 @@ impl GenericRecordStream {
             offsets.push(at);
             at += GenericDataHeader::field_size(f);
         }
+        let labels: Vec<Arc<str>> = header
+            .fields
+            .iter()
+            .map(|d| d.label.as_str().into())
+            .collect();
         Ok(Self {
             header: header.clone(),
-            labels: header
-                .fields
-                .iter()
-                .map(|d| d.label.as_str().into())
-                .collect(),
+            index: Etichette::new(&labels),
+            labels,
             offsets,
             record_size,
             n,
@@ -412,12 +528,53 @@ impl GenericRecordStream {
 
     fn decode(&self, rec: &[u8], field: usize) -> Option<GenericValue> {
         let desc = self.header.fields.get(field)?;
-        let mut r = BinaryReader::new(Cursor::new(rec.get(*self.offsets.get(field)?..)?));
+        let at = *self.offsets.get(field)?;
+        // a number straight from the slice, as `from_bytes` takes it; a string (or a field past the end) through the reader
+        if let Some((v, _)) = number_at(rec, at, desc.field_type) {
+            return Some(v);
+        }
+        let mut r = BinaryReader::new(Cursor::new(rec.get(at..)?));
         read_value(&mut r, desc).ok()
     }
 
     /// Record `i`, read from `source` and decoded; `None` when out of range or not readable.
     pub fn get<R: Read + Seek>(&self, source: &mut R, i: usize) -> Option<GenericRecord> {
+        self.with_record(source, i, |rec| {
+            GenericRecord::from_bytes(rec, &self.header, &self.labels, Some(&self.index)).ok()
+        })?
+    }
+
+    /// Record `i` with only the fields at `fields` (positions in the header, ascending): the same values `get` gives for their labels, for a caller that
+    /// reads a known few of a trailer of a few hundred fields (decoding them all was most of the cost of opening a file).
+    pub fn get_fields<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        i: usize,
+        fields: &[usize],
+    ) -> Option<GenericRecord> {
+        self.with_record(source, i, |rec| GenericRecord {
+            values: fields
+                .iter()
+                .filter_map(|&f| Some((Arc::clone(self.labels.get(f)?), self.decode(rec, f)?)))
+                .collect(),
+            index: None,
+        })
+    }
+
+    /// The positions of the fields whose label `keep` takes, in order.
+    pub fn positions(&self, keep: impl Fn(&str) -> bool) -> Vec<usize> {
+        (0..self.labels.len())
+            .filter(|&f| keep(&self.labels[f]))
+            .collect()
+    }
+
+    /// `f` over the bytes of record `i`, read with its group (`GROUP`).
+    fn with_record<R: Read + Seek, T>(
+        &self,
+        source: &mut R,
+        i: usize,
+        f: impl FnOnce(&[u8]) -> T,
+    ) -> Option<T> {
         if i >= self.n {
             return None;
         }
@@ -435,7 +592,7 @@ impl GenericRecordStream {
             *g = (first, buf);
         }
         let at = (i - first) * self.record_size;
-        GenericRecord::from_bytes(&g.1[at..at + self.record_size], &self.header, &self.labels).ok()
+        Some(f(&g.1[at..at + self.record_size]))
     }
 
     /// Calls `f(i, record)` for every record in order, reading the file `CHUNK` records at a time. Stops (and says `false`) when the file cannot be read.

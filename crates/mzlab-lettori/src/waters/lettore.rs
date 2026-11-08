@@ -7,6 +7,7 @@ use super::funzioni::{self, Funzione};
 use super::idx::{self, Riga};
 use super::inf::{self, Extern, FunzioneExt, Inlet, Modo, Testata};
 use super::lati::{nomi_composti, Tabella};
+use super::tagli::{elenco_intero, nel_file, tagli, testata_intera};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
@@ -94,11 +95,11 @@ impl LettoreWaters {
 }
 
 impl Lettore for LettoreWaters {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("waters-raw")
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use mzlab_core::conv::{FUORI_MODELLO, IDENTITA, NON_DECODIFICATO};
         &[
             ("drift time and mobility calibration", NON_DECODIFICATO),
@@ -108,18 +109,26 @@ impl Lettore for LettoreWaters {
         ]
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn missing(&mut self, c: usize) -> usize {
+        if c == 0 {
+            self.funs.iter().map(|f| f.tagliate).sum()
+        } else {
+            0
+        }
+    }
+
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let (f, r, v) = self.voce(c, k)?;
         let (cod, dat) = (
             f.cod.ok_or_else(|| errore("record width"))?,
@@ -147,7 +156,7 @@ impl Lettore for LettoreWaters {
         })
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         let (f, r, v) = self.voce(c, k)?;
         let campo = |nome: &str, valore: String, unita: Option<&str>| Campo {
             nome: nome.into(),
@@ -203,7 +212,7 @@ impl Lettore for LettoreWaters {
         Ok(out)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(self
             .cromatogrammi_tutti(c)?
             .iter()
@@ -215,7 +224,7 @@ impl Lettore for LettoreWaters {
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.cromatogrammi_tutti(c)?
             .iter()
             .find(|h| h.id == id)
@@ -223,14 +232,14 @@ impl Lettore for LettoreWaters {
             .ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
-        super::doc::testata(self).map(Some)
+        super::doc::file_header(self).map(Some)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
@@ -282,6 +291,8 @@ pub(super) struct Fun {
     pub(super) nomi: Vec<String>,
     pub(super) livello: u8,
     pub(super) polarita: i8,
+    /// Scans of the index past the end of a DAT cut short (emptied in `righe`).
+    pub(super) tagliate: usize,
 }
 
 pub struct LettoreWaters {
@@ -331,6 +342,26 @@ fn livello_di(funs: &[Fun], i: usize) -> u8 {
     }
 }
 
+/// A folder that gives nothing (no scan, no channel, no analogue trace) because a function with data has records of a width not read yet is refused with
+/// that function named, rather than opened empty.
+fn variante_ignota(nome: &str, funs: &[Fun], senza_analogiche: bool) -> Result<()> {
+    let dati = |f: &Fun| f.dat.is_some() && f.righe.iter().any(|r| r.conta > 0);
+    if !senza_analogiche
+        || funs
+            .iter()
+            .any(|f| dati(f) && (f.f.mirato() || f.cod.is_some()))
+    {
+        return Ok(());
+    }
+    match funs.iter().find(|f| dati(f) && !f.f.mirato()) {
+        Some(f) => Err(Error::new("err.file.recordVariant")
+            .with("name", nome)
+            .with("function", f.f.indice.to_string())
+            .with("type", format!("0x{:02X}", f.f.tipo))),
+        None => Ok(()),
+    }
+}
+
 /// Everything of function `f`: its index, the DAT and the side tables.
 fn carica(
     c: &mut Cartella,
@@ -341,8 +372,11 @@ fn carica(
 ) -> Result<(Fun, Option<String>)> {
     let n = f.indice;
     let nome = |e: &str| format!("_FUNC{n:03}.{e}");
-    let righe = match opzionale(c, &nome("IDX")) {
-        Some(b) => idx::leggi(&b, &c.limiti)?,
+    let idx_b = opzionale(c, &nome("IDX"));
+    let ha_idx = idx_b.is_some();
+    let mut righe = match idx_b {
+        Some(b) => idx::leggi(&b, &c.limiti)?
+            .ok_or_else(|| nel_file(c, "err.file.indexCut", &nome("IDX")))?,
         None => Vec::new(),
     };
     *spesa += righe.len() as u64;
@@ -355,6 +389,8 @@ fn carica(
     } else {
         larg.and_then(Codifica::da_larghezza)
     };
+    let tagliate = tagli(&mut righe, larg, dat.is_some(), dat_len, ha_idx)
+        .ok_or_else(|| nel_file(c, "err.file.indexCut", &nome("IDX")))?;
     let lim = c.limiti;
     let tab =
         |c: &mut Cartella, e: &str| opzionale(c, &nome(e)).and_then(|b| Tabella::leggi(&b, &lim));
@@ -384,21 +420,29 @@ fn carica(
         nomi,
         livello: 1,
         polarita,
+        tagliate,
     };
     Ok((fun, avviso))
 }
 
 fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let mut c = Cartella::new(fs, *limiti);
+    // Every run has `_FUNCTNS.INF`: a folder without it is a copy that left files behind.
     let inf = c
         .leggi(FUNCTNS)?
-        .ok_or_else(|| errore("_FUNCTNS.INF is missing"))?;
+        .ok_or_else(|| nel_file(&c, "err.file.folderIncomplete", FUNCTNS))?;
     if c.cerca(PRIMA_DAT).is_none() {
         return Err(errore("_FUNC001.DAT is missing"));
     }
-    let lista = funzioni::leggi(&inf, limiti)?;
-    let testata = opzionale(&mut c, "_HEADER.TXT")
-        .map_or_else(Testata::default, |b| inf::testata(&testo(&b)));
+    if inf.is_empty() {
+        return Err(Error::new("err.file.functionsEmpty").with("name", &c.nome));
+    }
+    let lista = funzioni::leggi(&inf, limiti)?
+        .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
+    elenco_intero(&c, lista.len())?;
+    let header = opzionale(&mut c, "_HEADER.TXT");
+    testata_intera(&c, header.as_deref())?;
+    let testata = header.map_or_else(Testata::default, |b| inf::file_header(&testo(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
         .map_or_else(Extern::default, |b| inf::extern_inf(&testo(&b)));
     let inlet = opzionale(&mut c, "_INLET.INF").map(|b| inf::inlet(&testo(&b)));
@@ -423,6 +467,7 @@ fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         ));
     }
     let analogiche = super::cromi::analogiche(&mut c);
+    variante_ignota(&c.nome, &funs, analogiche.is_empty())?;
     let mut l = LettoreWaters {
         c,
         funs,

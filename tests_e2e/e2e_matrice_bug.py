@@ -76,13 +76,13 @@ try:
         # --- many files
         ADD = lambda fs: pg.set_input_files("#addf-input" if pg.locator("#addf-input").count() else "#pick", [str(f) for f in fs])
         def two():
-            ADD(F[1:2]); attendi(pg, "E.files.filter(f => !f.gone).length >= 2", 60000); loaded(pg); ready(pg)
+            ADD(F[1:2]); wait_for_js(pg, "E.files.filter(f => !f.gone).length >= 2", 60000); loaded(pg); ready(pg)
             # disabled with one file, the file arrows are enabled now: aria-disabled must not stay "true" (renderNav, explore.js)
             nav = pg.evaluate("['#fprev', '#fsel', '#fnext'].map(q => { const b = document.querySelector(q); return [q, b.disabled, b.getAttribute('aria-disabled')]; })")
             assert all(str(d).lower() == a for _, d, a in nav), nav
         cell(pg, "two files: the file arrows are enabled for assistive technology too", two)
         def many():
-            ADD(F[2:]); attendi(pg, "E.files.filter(f => !f.gone).length >= 4", 120000); loaded(pg); ready(pg)
+            ADD(F[2:]); wait_for_js(pg, "E.files.filter(f => !f.gone).length >= 4", 120000); loaded(pg); ready(pg)
         cell(pg, "many files: added", many)
         cell(pg, "many files: statistics sections are not empty", lambda: stat_ok(pg))
         cell(pg, "many files: rapid clicks on the drawer tabs", lambda: ([pg.evaluate("BARRA.setTab('stat'); BARRA.setTab('file'); BARRA.setTab('stat'); BARRA.setTab('lists')") for _ in range(10)], ready(pg)))
@@ -99,7 +99,7 @@ try:
         def profile():
             stat_ok(pg)
             pg.fill("#prof-mz", "364.4"); pg.fill("#prof-rt", "14.3"); pg.click("#prof-go")
-            attendi(pg, "!!document.querySelector('#prof-tab') || !!document.querySelector('#prof-msg').textContent", 60000)
+            wait_for_js(pg, "!!document.querySelector('#prof-tab') || !!document.querySelector('#prof-msg').textContent", 60000)
             assert pg.locator("#prof-tab tbody tr").count() >= 3, pg.inner_text("#prof-msg")
         cell(pg, "many files: time profile of an ion", profile)
         def profile_a11y():
@@ -108,7 +108,7 @@ try:
             assert pg.evaluate(f"(e => e.scrollWidth > e.clientWidth)(document.querySelector('{box}'))"), "the table does not scroll: the cell tests nothing"
             v = axe(pg, "#sb-pane"); assert not v, v
             pg.focus(box); pg.keyboard.press("ArrowRight")                                   # the keyboard scrolls it
-            attendi(pg, f"document.querySelector('{box}').scrollLeft > 0", 5000)
+            wait_for_js(pg, f"document.querySelector('{box}').scrollLeft > 0", 5000)
         cell(pg, "many files: profile result scrolls by keyboard (axe)", profile_a11y)
         def remove():
             k = pg.evaluate("E.files.find(f => !f.gone && f.file.includes('t30')).k")
@@ -120,7 +120,7 @@ try:
         def profile_error():
             profile()                                      # a result on screen, then a wrong retention time
             pg.fill("#prof-rt", "-1"); pg.click("#prof-go")
-            attendi(pg, "!!document.querySelector('#prof-msg').textContent", 30000)
+            wait_for_js(pg, "!!document.querySelector('#prof-msg').textContent", 30000)
             assert not pg.locator("#prof-res").inner_text().strip(), "the old result stays beside the error"
             assert pg.evaluate("PROFILO.result") is None
         cell(pg, "many files: an input error drops the old profile", profile_error)
@@ -130,25 +130,25 @@ try:
         def pick_again():
             assert pg.evaluate(f"!{T30} && {ROW30}.use === false"), pg.evaluate(f"[!!{T30}, {ROW30} && {ROW30}.use]")
             pg.set_input_files("#pick", [str(F[1])])
-            attendi(pg, f"!!{T30} && {ROW30}.use === true", 30000); loaded(pg); ready(pg)
+            wait_for_js(pg, f"!!{T30} && {ROW30}.use === true", 30000); loaded(pg); ready(pg)
         cell(pg, "removed file: its row is unticked and picking it again opens it", pick_again)
         def pick_freed():
             k = pg.evaluate(f"{T30}.k"); pg.evaluate(f"removeFile(E.files[{k}])")
-            attendi(pg, f"!{ROW30}", 30000)          # the copy is freed when the undo time is over: the row leaves the table
+            wait_for_js(pg, f"!{ROW30}", 30000)          # the copy is freed when the undo time is over: the row leaves the table
             pg.evaluate("soloFile(E.files.find(f => f.file === 'M_t60.mzML'))"); ready(pg)     # a file after the freed one: its index moved
             pg.set_input_files("#pick", [str(F[1])])
-            attendi(pg, f"!!{T30}", 60000); loaded(pg)
+            wait_for_js(pg, f"!!{T30}", 60000); loaded(pg)
             pg.evaluate(f"soloFile({T30})"); ready(pg)
         cell(pg, "freed file: picked again, it is read again and shown (no endless request)", pick_freed)
         def two_removals():
             t0 = pg.evaluate("removeFile(E.files.find(f => f.file === 'M_t30.mzML' && !f.gone)), performance.now()")
-            attendi(pg, f"performance.now() > {t0} + 3000", 10000)      # the second removal starts halfway through the 6 s of the first
+            wait_for_js(pg, f"performance.now() > {t0} + 3000", 10000)      # the second removal starts halfway through the 6 s of the first
             pg.evaluate("removeFile(E.files.find(f => f.file === 'M_Blank_1.mzML' && !f.gone))")
-            attendi(pg, f"!{ROW30}", 30000)          # the first is freed while the second still waits for its undo
+            wait_for_js(pg, f"!{ROW30}", 30000)          # the first is freed while the second still waits for its undo
             pg.evaluate("STORIA.annulla()"); ready(pg)
             assert pg.evaluate("E.files.some(f => f.file === 'M_Blank_1.mzML' && !f.gone) && E.files.every((f, k) => f.k === k)"), pg.evaluate("E.files.map(f => f.k + ':' + f.file + (f.gone ? ':gone' : ''))")
             pg.evaluate("soloFile(E.files.find(f => f.file === 'M_Blank_1.mzML'))"); ready(pg)
-            pg.set_input_files("#pick", [str(F[1])]); attendi(pg, f"!!{T30}", 60000); loaded(pg); ready(pg)
+            pg.set_input_files("#pick", [str(F[1])]); wait_for_js(pg, f"!!{T30}", 60000); loaded(pg); ready(pg)
         cell(pg, "two removals: the first freed, the undo of the second still brings it back", two_removals)
         cell(pg, "many files: theme dark then light", lambda: (pg.evaluate("document.documentElement.setAttribute('data-theme','dark')"), stat_ok(pg), pg.evaluate("document.documentElement.setAttribute('data-theme','light')")))
         def narrow():
@@ -195,7 +195,7 @@ try:
         cell(pg, "many files: molecules window by keyboard keeps the focus inside", mol_keys)
         def reload():
             saved(pg); pg.reload(); pg.wait_for_function("window.qqReady === true", timeout=60000)
-            attendi(pg, "E.files.some(f => f.vis && !f.gone)", 60000); ready(pg); stat_ok(pg)
+            wait_for_js(pg, "E.files.some(f => f.vis && !f.gone)", 60000); ready(pg); stat_ok(pg)
         cell(pg, "reload: session comes back, statistics ok", reload)
         def english():
             pg.evaluate("I18N.set('en')"); pg.wait_for_function("window.qqReady === true && I18N.lang === 'en'", timeout=60000)

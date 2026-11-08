@@ -18,7 +18,7 @@ try:
             pg.evaluate(f"document.querySelector('#refdlg') && document.querySelector('#refdlg').close()")
             if pg.evaluate("I18N.lang") != lang: pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); ready(pg)
             assert pg.evaluate("I18N.lang") == lang, lang
-            pg.evaluate("document.querySelector('#np-pt').click()"); attendi(pg, "document.querySelectorAll('#refbody .pt-c').length >= 118")
+            pg.evaluate("document.querySelector('#np-pt').click()"); wait_for_js(pg, "document.querySelectorAll('#refbody .pt-c').length >= 118")
             syms = pg.evaluate("[...document.querySelectorAll('#refbody .pt-c')].map(c=>c.dataset.s)")
             assert len(syms) >= 118, len(syms)
             # classic (non-overlay) scrollbars would narrow the box for elements with long isotope lists; headless overlay bars cannot show it, so pin the cause

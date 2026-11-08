@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         load(pg, [D / "B_FullMass-t0.mzML"], 6000, 1); ready(pg)
-        pg.evaluate("openXic(null,{})"); pg.wait_for_selector("#xic-mz", state="visible"); pg.fill("#xic-mz", "364.4"); pg.click("#xic-go"); attendi(pg, "E.panels.some(q => q.type === 'xic')"); frames(pg, 4); ready(pg)
+        pg.evaluate("openXic(null,{})"); pg.wait_for_selector("#xic-mz", state="visible"); pg.fill("#xic-mz", "364.4"); pg.click("#xic-go"); wait_for_js(pg, "E.panels.some(q => q.type === 'xic')"); frames(pg, 4); ready(pg)
 
         def closed():
             pg.evaluate(f"{TIC}.el.scrollIntoView({{block: 'center'}})"); frames(pg)

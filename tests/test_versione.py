@@ -16,11 +16,11 @@ def test_all_the_files_say_the_same_version():
     assert set(versione.versioni()) >= {"Cargo.toml", "crates/mzlab-desktop/tauri.conf.json", "CITATION.cff"}
 
 
-def _copia(tmp_path, cambia=None):
+def _copy(tmp_path, change=None):
     (tmp_path / "crates/mzlab-desktop").mkdir(parents=True)
     for f in ("Cargo.toml", "crates/mzlab-desktop/tauri.conf.json", "CITATION.cff", ".zenodo.json", "CHANGELOG.md"):
         (tmp_path / f).write_text((ROOT / f).read_text(encoding="utf-8"), encoding="utf-8")
-    for f, (a, b) in (cambia or {}).items():
+    for f, (a, b) in (change or {}).items():
         p = tmp_path / f
         p.write_text(p.read_text(encoding="utf-8").replace(a, b, 1), encoding="utf-8")
     return tmp_path
@@ -28,19 +28,19 @@ def _copia(tmp_path, cambia=None):
 
 def test_a_file_with_another_version_is_found(tmp_path):
     v = versione.versioni()["Cargo.toml"]
-    root = _copia(tmp_path, {"CITATION.cff": (f'version: "{v}"', 'version: "9.9.9"')})
+    root = _copy(tmp_path, {"CITATION.cff": (f'version: "{v}"', 'version: "9.9.9"')})
     assert any("differ" in e for e in versione.controlla(root))
 
 
 def test_the_tag_must_match(tmp_path):
-    root = _copia(tmp_path)
+    root = _copy(tmp_path)
     v = versione.versioni()["Cargo.toml"]
     assert versione.controlla(root, tag=f"v{v}") == []
     assert versione.controlla(root, tag="v9.9.9")
 
 
 def test_notes_come_from_the_section_of_the_version(tmp_path):
-    root = _copia(tmp_path)
+    root = _copy(tmp_path)
     (root / "CHANGELOG.md").write_text("# C\n\n## [Non rilasciato]\n- x\n\n## [1.2.3] - 2026-01-01\n- a\n- b\n\n## [1.2.2] - 2025-12-01\n- old\n", encoding="utf-8")
     assert versione.nota("v1.2.3", root) == "- a\n- b\n"
     with pytest.raises(SystemExit):

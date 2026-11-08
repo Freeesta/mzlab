@@ -68,7 +68,7 @@ impl Tracce {
     }
 
     /// The chromatograms, numbered from `da` (the TIC takes the ones before).
-    pub(super) fn cromatogrammi(&self, da: usize) -> Vec<Chromatogram> {
+    pub(super) fn chromatograms(&self, da: usize) -> Vec<Chromatogram> {
         self.serie
             .iter()
             .enumerate()

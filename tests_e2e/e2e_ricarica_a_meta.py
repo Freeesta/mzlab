@@ -32,10 +32,10 @@ def reload_resumes():
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             pg.evaluate(ARM)
             pg.set_input_files("#pick", fs)
-            attendi(pg, RELOADED, 300000)
+            wait_for_js(pg, RELOADED, 300000)
             gone, late = pg.evaluate("JSON.parse(sessionStorage.getItem('ricarica'))")
             ok = f"(() => {{ const rows = {ROWS}; return rows.length >= 2 && rows.every(([n, use, open]) => n === {gone!r} ? !use && !open : use && open); }})()"
-            try: attendi(pg, ok, 180000)
+            try: wait_for_js(pg, ok, 180000)
             except TimeoutError: raise AssertionError(f"after the reload (removed {gone}, still loading {late}) the rows [name, ticked, open] are {pg.evaluate(ROWS)}")
             assert any(n in late for n, _, _ in pg.evaluate(ROWS)), f"no file that was still loading came back: {late}"
             assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
@@ -52,9 +52,9 @@ def removal_holds():
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             pg.evaluate(RM)
             pg.set_input_files("#pick", fs)
-            attendi(pg, "window.__rm !== null", 300000)
+            wait_for_js(pg, "window.__rm !== null", 300000)
             gone = pg.evaluate("window.__rm")
-            attendi(pg, f"ST.files.filter(f => f.name !== {gone!r}).length === {len(fs) - 1} && UPBUSY === 0 && OPENNOW.busy() === 0", 300000)      # the removed row goes when its notice closes
+            wait_for_js(pg, f"ST.files.filter(f => f.name !== {gone!r}).length === {len(fs) - 1} && UPBUSY === 0 && OPENNOW.busy() === 0", 300000)      # the removed row goes when its notice closes
             rows = pg.evaluate(ROWS)
             assert not any(n == gone and op for n, _, op in rows), f"{gone}, removed while the others opened, is open again: {rows}"
             assert len([n for n, use, op in rows if use and op]) == len(fs) - 1, rows

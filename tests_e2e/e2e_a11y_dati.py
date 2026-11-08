@@ -39,11 +39,11 @@ try:
             pg.evaluate("setTab('mrm')"); pg.wait_for_timeout(2500); ready(pg); axe_ok(pg)
             pg.evaluate("setTab('full')"); pg.wait_for_timeout(800)
         step("axe: MRM tab", mrm)
-        def mappa():
+        def map_view():
             pg.evaluate("addPanel('map',{tab:'full'})"); pg.wait_for_timeout(2500); ready(pg); axe_ok(pg)
-        step("axe: RT x m/z map", mappa)
+        step("axe: RT x m/z map", map_view)
         def minor():
-            pg.evaluate("setTab('full')"); attendi(pg, "E.tab === 'full'"); v = pg.evaluate(RUN_MINOR); assert not v, v
+            pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'"); v = pg.evaluate(RUN_MINOR); assert not v, v
         step("axe moderate/minor (best practice): Data view", minor)
         def settings():
             pg.click("#np-set"); pg.wait_for_selector("#uipset", state="visible"); axe_ok(pg)
@@ -55,14 +55,14 @@ try:
         step("axe: search bar opens with Ctrl+K and closes with Esc", search)
 
         def calc():
-            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent"); axe_ok(pg, "#calcdlg")
-            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "!BARRA.isOpen('calc')")
+            pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent"); axe_ok(pg, "#calcdlg")
+            pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!BARRA.isOpen('calc')")
         step("axe: calculator window", calc)
         def integration():
-            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); attendi(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
             pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic');addInt(p,p._a.sr[0],13.9,14.6);showInts()})()"); pg.wait_for_selector("#bigdlg[open]")
             assert pg.evaluate("document.querySelectorAll('#bigbody table tr').length") > 1, "the integration table must list the peak"
-            axe_ok(pg, "#bigdlg"); pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#bigdlg').open")
+            axe_ok(pg, "#bigdlg"); pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#bigdlg').open")
         step("axe: integration window", integration)
         def msn():
             from lib_hr import synth
@@ -114,23 +114,23 @@ try:
                 return False
             def charts():
                 return pg.evaluate("E.panels.filter(p => p.el && p.el.isConnected && p.el.offsetParent && p.el.querySelector('canvas[tabindex=\"0\"]')).map(p => [p.id, p.type])")
-            pg.evaluate("setTab('full')"); attendi(pg, "E.tab === 'full'")
+            pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'")
             for t in ("xic", "map"):
                 if not any(c[1] == t for c in charts()):
                     pg.evaluate("addPanel('" + t + "',{tab:'full'" + (",traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]" if t == "xic" else "") + "})"); ready(pg)
-                    attendi(pg, "E.panels.some(p => p.type === '" + t + "' && p.el && !!p.el.querySelector('canvas[tabindex]'))")
+                    wait_for_js(pg, "E.panels.some(p => p.type === '" + t + "' && p.el && !!p.el.querySelector('canvas[tabindex]'))")
             todo = charts(); assert len(todo) >= 3, todo
             for pid, typ in todo:
                 for key in ("Tab", "Shift+Tab"):
                     pg.evaluate(f"E.panels.find(q => q.id === {pid}).el.querySelector('canvas[tabindex=\"0\"]').focus()")
                     if key == "Tab": pg.keyboard.press("Escape")
                     assert leaves(pid, key), f"keyboard trap in the {typ} chart (panel {pid}) with {key}"
-            pg.evaluate("setTab('mrm')"); attendi(pg, "E.tab === 'mrm'"); ready(pg)
+            pg.evaluate("setTab('mrm')"); wait_for_js(pg, "E.tab === 'mrm'"); ready(pg)
             for pid, typ in charts():
                 for key in ("Tab", "Shift+Tab"):
                     pg.evaluate(f"E.panels.find(q => q.id === {pid}).el.querySelector('canvas[tabindex=\"0\"]').focus()")
                     assert leaves(pid, key), f"keyboard trap in the {typ} chart (panel {pid}) with {key}"
-            pg.evaluate("setTab('full')"); attendi(pg, "E.tab === 'full'")
+            pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'")
         step("keyboard: no trap in the chart views (Tab and Shift+Tab leave each chart)", no_trap)
         def reflow():
             ctx = r.b.new_context(viewport={"width": 320, "height": 800}, locale="it-IT"); q = ctx.new_page()

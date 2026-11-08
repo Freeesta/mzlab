@@ -3,15 +3,15 @@
 //   - started as a module Worker (the same URL): the worker below. It reads the .mzidx files with OPFS synchronous handles (`createSyncAccessHandle`: the only reads the
 //     .wasm can do while it runs, no SharedArrayBuffer) and hands the page byte arrays that are transferred, never views on the memory of the .wasm.
 // One worker = one file at a time (detection) or one series (alignment, hypotheses, proofs: sequential, in the same worker); at most min(cores - 1, 4) workers (2 on iPad);
-// the .wasm of each works within the budget of its step (`budgetMb`). A worker that dies (a trap of the .wasm, out of memory, a crash) is terminated and replaced, the job runs again once
+// the .wasm of each works within the budget of its step (`budgetMb`, shared by the steps that run at once: `shareOf`). A worker that dies (a trap of the .wasm, out of memory, a crash) is terminated and replaced, the job runs again once
 // and the page is told (`notify`); a second death rejects the job. The OPFS files written here have the name of a finished file only when complete (written as `.part`).
 // Messages of the worker: { op, id, ... } -> { id, ok: true, ...result } | { id, error: { key, params, text }, fatal }. Errors of the .wasm are JSON { error_key, params } (a recipe the engine refuses is "error.badRecipe").
 const IN_WORKER = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
 // ---------------------------------------------------------------- page side
 export const poolSize = (small, cores) => { const n = Math.max(1, Math.min((cores || 2) - 1, 4)); return small ? Math.min(n, 2) : n; };
 const IDLE_MS = 20000;      // the memory of a .wasm never shrinks: a pool idle for this long closes its workers (the next job starts one again, a few tens of ms)
-// Working memory of a step in MB: `budgetMb` of the pool (a number or a function), else the safe budget of the engine of the page (`MZLAB_RUST`: its choice, or the level the supervisor lowered it to), else 0 (= 192)
-export const budgetOf = o => (typeof o.budgetMb === "function" ? o.budgetMb() : o.budgetMb) || (globalThis.MZLAB_RUST && (globalThis.MZLAB_RUST.budgetMb || (globalThis.MZLAB_RUST.choice && globalThis.MZLAB_RUST.choice.mb))) || 0;
+export const budgetOf = o => (typeof o.budgetMb === "function" ? o.budgetMb() : o.budgetMb) || (globalThis.MZLAB_RUST && (globalThis.MZLAB_RUST.budgetMb || (globalThis.MZLAB_RUST.choice && globalThis.MZLAB_RUST.choice.mb))) || 0;   // Working memory of a step in MB: `budgetMb` of the pool (a number or a function), else the safe budget of the engine of the page (`MZLAB_RUST`: its choice, or the level the supervisor lowered it to), else 0 (= 192)
+export const shareOf = (mb, n) => (mb > 0 && n > 1 ? Math.max(Math.floor(mb / n), Math.min(mb, 64)) : mb);   // n steps at once share the budget of the page, never under 64 MB (a step the share cannot hold asks for more, `error.featMemory`)
 const fail = (key, params, text) => Object.assign(new Error(text || key), { key, params: params || {} });
 // nothing queued, nothing running, no call to the archive worker for `idleMs`: the workers go (the state of a job lives in the page, never in an idle worker)
 function idleRest(idleMs, st, slots, queue, kill) {
@@ -104,7 +104,7 @@ function createCore(opts) {
   }
   const cancelJob = makeCancel({ queue, slots, kill, fail });
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
-  return { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText };
+  return { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText, budget: () => shareOf(budgetOf(opts), Math.min(limit, [...slots].filter(s => s.busy).length + queue.length)) };   // budget: a step's share among the jobs running or waiting, all of it alone
 }
 // the folder of a campaign as the worker reads it
 const folder = (root, files) => JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
@@ -161,7 +161,7 @@ function previewOps(submit, call, opts) {
 function driftOps(submit, call, copy) {
   return { drift: ({ stored, parentMz, baseRtTol }) => submit(async (slot, load) => { await load("feat"); return JSON.parse((await call(slot, { op: "drift", files: copy(stored), parentMz, baseRtTol })).json); }) };
 }
-function proofOps(submit, call, copy, opts) {
+function proofOps(submit, call, copy, opts, budget) {
   return {
     // L7 (hypotheses of the parent searched in every file) and L8-L9 (graph of the proofs on the table) in two workers of their own: the hypotheses worker is closed
     // when it has answered (its memory goes back) and the state it leaves (small) is loaded by the worker of the proofs. Each can be refused with `error.featMemory`.
@@ -180,7 +180,7 @@ function proofOps(submit, call, copy, opts) {
       return submit(async (slot, load) => {
         await load("proofs");
         const t0 = performance.now();
-        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: budgetOf(opts) });
+        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: budget() });
         slot.recycle = true;
         if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: e.mem / 1048576 });
         return { table: e.bytes };
@@ -216,7 +216,7 @@ function rowOps(submit, call) {
 }
 
 export function createFeatPool(opts) {
-  const { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText } = createCore(opts);
+  const { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText, budget } = createCore(opts);
   return {
     notify: (k, p) => (opts.notify || (() => {}))(k, p),
     // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx). Resolves with the .mzfeatf bytes in the order of `files`.
@@ -245,7 +245,7 @@ export function createFeatPool(opts) {
       return submit(async (slot, load) => {
         await load("untargeted");
         const t0 = performance.now();
-        const r = await call(slot, { op: "align_unt", files: copy(stored), paths, params, budgetMb: budgetOf(opts) });
+        const r = await call(slot, { op: "align_unt", files: copy(stored), paths, params, budgetMb: budget() });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       });
@@ -278,7 +278,7 @@ export function createFeatPool(opts) {
     ...exportOps(submit, call),
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
-    ...proofOps(submit, call, copy, opts),
+    ...proofOps(submit, call, copy, opts, budget),
     ...rowOps(submit, call),
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe, id, recycle) {
@@ -286,7 +286,7 @@ export function createFeatPool(opts) {
         await load("feat");
         if (recycle) slot.recycle = true;
         const t0 = performance.now();
-        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budgetOf(opts) });
+        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budget() });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       }, id);

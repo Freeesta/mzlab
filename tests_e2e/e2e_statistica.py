@@ -98,7 +98,7 @@ try:
         step("time gradient with a legend", gradient)
         def chart_legend():
             pg.evaluate("(()=>{E.files.forEach(f=>{f.vis=true});syncBrowse();redrawAll()})()"); ready(pg)      # E.browse follows the ticked files of the list
-            attendi(pg, "E.panels.some(p=>p.leg&&p.leg.querySelector('.tg'))")
+            wait_for_js(pg, "E.panels.some(p=>p.leg&&p.leg.querySelector('.tg'))")
             assert pg.evaluate("!E.panels.some(p=>p.leg&&p.leg.querySelector('.cmp-grad'))"), "the legend of the charts is a column of names, without the gradient bar"
         step("chart legend is a column of names, no gradient bar", chart_legend)
         def lr_profile():

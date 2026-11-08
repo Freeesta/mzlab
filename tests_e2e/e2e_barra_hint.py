@@ -37,20 +37,20 @@ with sync_playwright() as p:
         r, ctx, pg = fresh(p)
         try:
             load(pg); frames(pg, 3)
-            shut(pg); assert vis(pg); pg.click("#bar-hint button"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None      # × closes it
+            shut(pg); assert vis(pg); pg.click("#bar-hint button"); wait_for_js(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None      # × closes it
             shut(pg); shut(pg); assert vis(pg) is None, "the second hide does not show it"
             pg.wait_for_function("async()=>{const n=await (await fetch('api/notebook')).json();return !!(n.session && n.session.length)}", timeout=30000)      # the session is saved 800 ms after the last change: reload only once it is stored
-            pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.length >= 1", 60000); frames(pg, 5); shut(pg); assert vis(pg) is None, "not after a reload either"
+            pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.length >= 1", 60000); frames(pg, 5); shut(pg); assert vis(pg) is None, "not after a reload either"
         finally: ctx.close(); r.close()
     step("× closes it; the second hide and a reload never show it again", second)
     def esc_tool():
         r, ctx, pg = fresh(p)
         try:
             load(pg); frames(pg, 3); shut(pg); assert vis(pg)
-            pg.keyboard.press("Escape"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None
             assert pg.evaluate("BARRA.commands.every(c=>c.id!=='hint')"), "no palette command for the hint"
-            pg.evaluate("BARRA.hintShow()"); attendi(pg, "!!document.getElementById('bar-hint')"); assert vis(pg), "hintShow did not reopen it"
-            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None      # first tool closes it
+            pg.evaluate("BARRA.hintShow()"); wait_for_js(pg, "!!document.getElementById('bar-hint')"); assert vis(pg), "hintShow did not reopen it"
+            pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None      # first tool closes it
         finally: ctx.close(); r.close()
     step("Esc closes, hintShow reopens (no palette command), first tool closes", esc_tool)
     def seen():

@@ -9,19 +9,19 @@ use super::Denso;
 use crate::denso::COEFF;
 
 impl Lettore for Denso {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("denso-sintetico")
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         (c == 0)
             .then_some(&self.voci[..])
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))
     }
     /// The centroid list (the packet is read without its profile, as `extract_arrays` does).
-    fn scansione(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
         self.leggi(k)?;
         let picchi = decodifica_picchi(&self.buf).map_err(|_| Error::new("err.file.raw"))?;
         let mz = picchi.iter().map(|p| p.mz).collect();
@@ -29,7 +29,7 @@ impl Lettore for Denso {
         Ok(self.spettro(k, false, mz, int))
     }
     /// The profile points with m/z above 0, converted from the bins as `profile_arrays` does.
-    fn scansione_profilo(&mut self, _c: usize, k: usize) -> Result<Option<Spectrum>> {
+    fn scan_profile(&mut self, _c: usize, k: usize) -> Result<Option<Spectrum>> {
         self.leggi(k)?;
         let pacchetto = decodifica(&self.buf).map_err(|_| Error::new("err.file.raw"))?;
         let Some(profilo) = pacchetto.profile else {
@@ -48,17 +48,17 @@ impl Lettore for Denso {
             .collect();
         Ok(Some(self.spettro(k, true, mz, int)))
     }
-    fn intestazione(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
         Ok(Vec::new())
     }
-    fn cromatogrammi(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(vec![VoceCromatogramma {
             id: "TIC".into(),
             tipo: ChromKind::Tic,
             unita: "number of detector counts".into(),
         }])
     }
-    fn cromatogramma(&mut self, _c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _c: usize, id: &str) -> Result<Chromatogram> {
         let n = self.voci.len();
         Ok(Chromatogram {
             index: 0,
@@ -71,11 +71,11 @@ impl Lettore for Denso {
             intensity: vec![1.0e9; n],
         })
     }
-    fn metodo(&mut self, _c: usize) -> Result<String> {
+    fn method(&mut self, _c: usize) -> Result<String> {
         Ok(self.nome.clone())
     }
     /// The trailer fields of a Fusion scan as `opentfraw.*` userParams, to give the XML of a spectrum its real weight.
-    fn extra_scansione(&mut self, _c: usize, k: usize, _s: &Spectrum) -> SpectrumExtra {
+    fn scan_extra(&mut self, _c: usize, k: usize, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra {
             params: (0..self.campi_trailer)
                 .map(|i| {

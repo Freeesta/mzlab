@@ -33,9 +33,9 @@ fn un_mzml_gz_con_array_piani_torna_esatto() {
         &Limiti::sito(),
     )
     .unwrap();
-    assert_eq!(l.campioni()[0].scansioni, scan.len());
+    assert_eq!(l.samples()[0].scansioni, scan.len());
     for (k, x) in scan.iter().enumerate() {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         assert_eq!(s.mz, x.mz, "scan {k}");
     }
     // the mzML written from it is a plain file the engine reads
@@ -59,7 +59,7 @@ fn un_mzml_gz_con_numpress_si_apre() {
         &Limiti::sito(),
     )
     .unwrap();
-    assert_eq!(l.scansione(0, 0).unwrap().mz.len(), scan[0].mz.len());
+    assert_eq!(l.scan(0, 0).unwrap().mz.len(), scan[0].mz.len());
 }
 
 /// A download stopped midway: the spectra that inflated open, and `mancanti` counts those the run header declared and the cut took.
@@ -68,17 +68,17 @@ fn un_gz_troncato_si_apre_con_gli_spettri_che_ha() {
     let scan = scansioni();
     let buono = gz(&mzml_di(&scan, Cod::Piano, None));
     let mut intero = abre("a.mzML.gz", buono.clone(), &Limiti::sito()).unwrap();
-    assert_eq!(intero.mancanti(0), 0);
+    assert_eq!(intero.missing(0), 0);
     let mut l = abre(
         "a.mzML.gz",
         buono[..buono.len() * 3 / 4].to_vec(),
         &Limiti::sito(),
     )
     .unwrap();
-    let ha = l.campioni()[0].scansioni;
+    let ha = l.samples()[0].scansioni;
     assert!(ha > 0 && ha < scan.len(), "{ha} of {}", scan.len());
-    assert_eq!(ha + l.mancanti(0), scan.len());
-    assert_eq!(l.scansione(0, 0).unwrap().mz, scan[0].mz);
+    assert_eq!(ha + l.missing(0), scan.len());
+    assert_eq!(l.scan(0, 0).unwrap().mz, scan[0].mz);
 }
 
 #[test]
@@ -117,9 +117,9 @@ fn un_mzxml_gz_si_apre_come_il_suo_mzxml() {
     let piano = comune::mzxml::mzxml(&comune::mzxml::corsa(), comune::mzxml::PIATTO);
     let mut dal_gz = abre("run.mzXML.gz", gz(&piano), &Limiti::sito()).unwrap();
     let mut dal_piano = abre("run.mzXML", piano.clone(), &Limiti::sito()).unwrap();
-    let n = dal_piano.campioni()[0].scansioni;
+    let n = dal_piano.samples()[0].scansioni;
     assert!(n > 0);
-    assert_eq!(dal_gz.campioni()[0].scansioni, n);
+    assert_eq!(dal_gz.samples()[0].scansioni, n);
     assert_eq!(mzml_scritto(&mut dal_gz), mzml_scritto(&mut dal_piano));
     // the bytes the site writes into OPFS before the module reads them
     let mut g = mzlab_core::gunzip::Gunzip::new(u64::MAX);

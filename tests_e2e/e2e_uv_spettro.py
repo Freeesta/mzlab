@@ -30,11 +30,11 @@ try:
         pg.set_input_files("#pick", [str(D / "uv.wiff"), str(D / "uv.wiff.scan")])
         pg.click("text=Carica dati"); ready(pg)
         def map_dbl():
-            pg.click("#np-map"); ready(pg); attendi(pg, "E.files[0]._pdaMap === true")
+            pg.click("#np-map"); ready(pg); wait_for_js(pg, "E.files[0]._pdaMap === true")
             pg.select_option("body select[data-o=mapKind]", "pda"); ready(pg)
-            attendi(pg, "E.panels.find(q=>q.type==='map')._a && E.panels.find(q=>q.type==='map')._a.pda")
+            wait_for_js(pg, "E.panels.find(q=>q.type==='map')._a && E.panels.find(q=>q.type==='map')._a.pda")
             dbl(pg, "E.panels.find(q=>q.type==='map')", 1.0)
-            attendi(pg, f"!!({UV} && {UV}._a && {UV}._a.uvd)")
+            wait_for_js(pg, f"!!({UV} && {UV}._a && {UV}._a.uvd)")
             a = pg.evaluate(f"({{n: {UV}._a.uvd.nm.length, nm0: {UV}._a.uvd.nm[0], rt: {UV}._a.uvd.rt, mx: {UV}._a.uvd.nm[{UV}._a.uvd.y.indexOf(Math.max(...{UV}._a.uvd.y))]}})")
             assert a["n"] == 201 and a["nm0"] == 200 and abs(a["rt"] - 1.0) < 0.06 and abs(a["mx"] - 260) <= 1, a
         step("double click on the PDA map: the UV spectrum of that time, peak at 260 nm", map_dbl)
@@ -45,7 +45,7 @@ try:
         step("the table of the data has nm and mAU; the description speaks of the UV spectrum", table)
         LBU = f"({UV}._a.lbls || []).filter(l => l.etpk)"
         def uv_labels():
-            attendi(pg, f"{LBU}.length >= 1")
+            wait_for_js(pg, f"{LBU}.length >= 1")
             t = pg.evaluate(f"{LBU}.map(l => l.text)"); assert t == ["260 nm"], t
             b = pg.evaluate(f"{LBU}.map(l => [l.x, l.y, l.w, l.h])")[0]; cv = pg.evaluate(f"{UV}.cv.getBoundingClientRect().width")
             assert b[0] >= 0 and b[0] + b[2] <= cv and b[1] >= 0, b
@@ -53,12 +53,12 @@ try:
         def uv_labels_zoom():
             pg.evaluate(f"{UV}.zoom=[300,400]"); pg.evaluate(f"drawSoon({UV})"); frames(pg, 3)
             assert pg.evaluate(f"{LBU}.length") == 0, "the label of a maximum out of view stays"
-            pg.evaluate(f"{UV}.zoom=null"); pg.evaluate(f"drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
+            pg.evaluate(f"{UV}.zoom=null"); pg.evaluate(f"drawSoon({UV})"); wait_for_js(pg, f"{LBU}.length >= 1")
         step("the wavelength labels follow the zoom", uv_labels_zoom)
         def uv_labels_off():
             pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = false }}); drawSoon({UV})"); frames(pg, 3)
             assert pg.evaluate(f"{LBU}.length") == 0
-            pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
+            pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); wait_for_js(pg, f"{LBU}.length >= 1")
         step("the wavelength labels can be hidden and shown again", uv_labels_off)
         def header_rt():
             t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(fermo a )?\d+\.\d\d min", t.strip()), t
@@ -74,14 +74,14 @@ try:
         def chrom_dbl():
             n0 = pg.evaluate("E.panels.filter(q=>q.uv).length")
             pick_kind(pg, "pda")
-            ready(pg); attendi(pg, "E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'")
+            ready(pg); wait_for_js(pg, "E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'")
             dbl(pg, "E.panels.find(q=>q.type==='chrom')", 0.5)
-            attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
+            wait_for_js(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
             rt = pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); return E.panels.find(q=>q.uv&&q.src===c.id)._a.uvd.rt})()"); assert abs(rt - 0.5) < 0.06, rt
         step("double click on the PDA trace: the UV spectrum of that time", chrom_dbl)
         def live_uv():
             c = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')"; u = f"E.panels.filter(q=>q.uv&&q.src==={c}.id).pop()"
-            attendi(pg, f"!!({u}._a && {u}.link === {c}.id)")
+            wait_for_js(pg, f"!!({u}._a && {u}.link === {c}.id)")
             assert pg.evaluate(f"{u}.link === {c}.id") and pg.evaluate(f"{c}.cur != null"), "linked and the vertical line is drawn"
             fol = pg.evaluate(f"(()=>{{const b={u}.el.querySelector('.fol'); return b && b.offsetParent ? b.textContent : null}})()"); assert fol and fol.startswith("\u2190"), fol
             lg = pg.evaluate(f"{u}.leg.textContent"); assert " \u00b7 RT " in lg, lg
@@ -90,7 +90,7 @@ try:
             pg.evaluate("(()=>{window.__n=0; if(!window.__f){window.__f=window.fetch; window.fetch=function(u,...a){ if(/api\\/(uvspec|map)/.test(String(u))) window.__n++; return window.__f.call(this,u,...a)}}})()")
             for rt in (1.0, 1.5):
                 pg.evaluate(f"(()=>{{const c={c}; c.cur={rt}; pushLinked(c,{rt},{rt},0,true)}})()")
-                attendi(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
+                wait_for_js(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
                 assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "%.2f min" % pg.evaluate(f"{u}._a.uvd.rt")
                 assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in pg.evaluate(f"{u}.leg.textContent")
                 tx = pg.evaluate(f"TDATI_P.text({u})"); assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in tx, tx
@@ -99,13 +99,13 @@ try:
             assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("fermo a ")
             pg.evaluate(f"(()=>{{const c={c}; c.cur=0.5; pushLinked(c,0.5,0.5,0,true)}})()"); frames(pg, 3)
             assert abs(pg.evaluate(f"{u}._a.uvd.rt") - 1.5) < 0.06, "frozen: the UV spectrum does not follow"
-            pg.evaluate(f"spLinkFollow({u}, {c})"); attendi(pg, f"{u}.link === {c}.id && Math.abs({u}._a.uvd.rt - 0.5) < 0.06")
+            pg.evaluate(f"spLinkFollow({u}, {c})"); wait_for_js(pg, f"{u}.link === {c}.id && Math.abs({u}._a.uvd.rt - 0.5) < 0.06")
         step("UV spectrum from the PDA trace: linked, follows the line without requests, freezes and follows again", live_uv)
         def fol_once():
             c = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')"; u = f"E.panels.filter(q=>q.uv&&q.src==={c}.id).pop()"
             for i in range(5):
                 rt = 0.4 + 0.2 * i
-                pg.evaluate(f"(()=>{{const c={c}; c.cur={rt}; pushLinked(c,{rt},{rt},0,true)}})()"); attendi(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
+                pg.evaluate(f"(()=>{{const c={c}; c.cur={rt}; pushLinked(c,{rt},{rt},0,true)}})()"); wait_for_js(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
             pg.evaluate(f"spLinkFreeze({u})"); frames(pg, 2); pg.evaluate(f"spLinkFollow({u}, {c})"); frames(pg, 3)
             pg.evaluate(f"(()=>{{ctl({u}); ctl({u}); ctl({u})}})()"); frames(pg, 3)          # every redraw of the controls (new file, tab, level)
             assert pg.evaluate(f"{u}.el.querySelectorAll('.fol').length") == 1, "one «Follows» button, in the bar or in the «…» menu"
@@ -115,12 +115,12 @@ try:
             c = "E.panels.find(q=>q.type==='chrom')"
             assert pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').textContent") == "λ"
             pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').click()")
-            attendi(pg, "E.panels.filter(q=>q.type==='chrom').length === 2 && E.panels.filter(q=>q.type==='chrom')[1]._a")
+            wait_for_js(pg, "E.panels.filter(q=>q.type==='chrom').length === 2 && E.panels.filter(q=>q.type==='chrom')[1]._a")
             w = "E.panels.filter(q=>q.type==='chrom')[1]"
             assert pg.evaluate(f"[{w}.kind, {w}.mz0, {w}.mz1]") == ["pda", 250, 260]
             assert pg.evaluate(f"{w}.el.querySelectorAll('input[data-o=mz0], input[data-o=mz1]').length") == 2
             pg.evaluate(f"(()=>{{const i={w}.el.querySelector('input[data-o=mz0]'); i.value='258'; i.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
-            attendi(pg, f"{w}.mz0 === 258 && {w}._a")
+            wait_for_js(pg, f"{w}.mz0 === 258 && {w}._a")
             y = pg.evaluate("fetch('api/chrom?k=0&kind=pda&level=1&mz0=255&mz1=265').then(r=>r.json()).then(j=>Math.max(...j.y))"); assert y > 0, y
         step("PDA trace: the button is λ; it opens a trace by wavelength with an nm range that can be edited", wl_panel)
         def wl_menu():
@@ -128,8 +128,8 @@ try:
             assert "chrom.wl" in ids and "chrom.xic" not in ids, ids
         step("the right-click menu of a PDA trace offers λ and not XIC", wl_menu)
         def n_wl(): return pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")
-        def menu_click(azione):
-            pg.evaluate(f"(()=>{{const d=document.querySelector('#ctx [data-azione=\"{azione}\"]'); if(!d) throw new Error('no menu entry {azione}'); d.click()}})()")
+        def menu_click(action):
+            pg.evaluate(f"(()=>{{const d=document.querySelector('#ctx [data-azione=\"{action}\"]'); if(!d) throw new Error('no menu entry {action}'); d.click()}})()")
         def wl_from_map():
             n0 = n_wl()
             m = "E.panels.find(q=>q.type==='map')"
@@ -137,10 +137,10 @@ try:
             at = lambda: pg.evaluate(f"(()=>{{const p={m},b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X(0.5),y:b.y+a.Y(260),t:b.y}}}})()")
             box = at(); pg.mouse.move(box["x"], box["y"]); frames(pg, 3); box = at()       # the hover can move the layout: measure again
             pg.mouse.click(box["x"], box["y"], button="right")
-            attendi(pg, "!!document.querySelector('#ctx [data-azione=mapxic]')")
+            wait_for_js(pg, "!!document.querySelector('#ctx [data-azione=mapxic]')")
             want = pg.evaluate(f"{m}._a.mzAt({box['y'] - box['t']})")
             menu_click("mapxic")
-            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            wait_for_js(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
             w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
             assert abs(w[0] - want) < 10 and w[0] == w[1] and 200 <= w[0] <= 400, (w, want)
         step("right click on the PDA map, λ: a trace at the wavelength under the pointer", wl_from_map)
@@ -149,12 +149,12 @@ try:
             pg.evaluate(f"({UV}).zoom=null"); frames(pg, 2)
             box = pg.evaluate(f"(()=>{{const p={UV},b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X(255),y:b.y+M.t+(a.H-M.t-M.b)/2}}}})()")
             pg.mouse.click(box["x"], box["y"], button="right")
-            attendi(pg, "!!document.querySelector('#ctx [data-azione=\"uv.wlAt\"]')")
+            wait_for_js(pg, "!!document.querySelector('#ctx [data-azione=\"uv.wlAt\"]')")
             ids = pg.evaluate("[...document.querySelectorAll('#ctx [data-azione]')].map(d=>d.dataset.azione)")
             # without a zoom there is no visible range to trace: «X» (uv.wlView) is not offered here, the zoomed case is the next steps; no XIC either way
             assert "uv.wlAt" in ids and "uv.wlView" not in ids and "spec.xic" not in ids, ids
             menu_click("uv.wlAt")
-            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            wait_for_js(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
             w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()"); assert w[0] == w[1] and abs(w[0] - 255) < 3, w
         step("UV spectrum, right-click menu: λ at the pointer and no XIC", wl_from_uv)
         def wl_range():
@@ -162,7 +162,7 @@ try:
             pg.evaluate(f"({UV}).cv.focus()"); pg.keyboard.press("+"); frames(pg, 3)
             lo, hi = pg.evaluate(f"[{UV}._a.x0, {UV}._a.x1]"); assert hi - lo < 200, (lo, hi)
             pg.keyboard.press("x")
-            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            wait_for_js(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
             w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
             assert abs(w[0] - lo) < 0.06 and abs(w[1] - hi) < 0.06, (w, lo, hi)
         step("UV spectrum: zoom with the keys, then X traces the visible nm range (no dragging)", wl_range)
@@ -171,22 +171,22 @@ try:
             n0 = pg.evaluate(f"{WL}.length")
             pg.evaluate(f"({UV}).cv.focus()"); pg.keyboard.press("Escape")
             pg.evaluate(f"({UV}).zoom=[230,300]"); pg.evaluate(f"draw({UV})"); frames(pg, 3)
-            pg.keyboard.press("x"); attendi(pg, f"{WL}.length === {n0 + 1}")
-            pg.keyboard.press("Control+z"); attendi(pg, f"{WL}.length === {n0}")      # the opened trace is one undo step
-            pg.keyboard.press("Control+y"); attendi(pg, f"{WL}.length === {n0 + 1}")
+            pg.keyboard.press("x"); wait_for_js(pg, f"{WL}.length === {n0 + 1}")
+            pg.keyboard.press("Control+z"); wait_for_js(pg, f"{WL}.length === {n0}")      # the opened trace is one undo step
+            pg.keyboard.press("Control+y"); wait_for_js(pg, f"{WL}.length === {n0 + 1}")
             assert pg.evaluate(f"{WL}.pop().mz0") == 230
             w = f"{WL}[{n0}]"
             pg.evaluate(f"(()=>{{const i={w}.el.querySelector('input[data-o=mz0]'); i.value='240'; i.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
-            attendi(pg, f"{w}.mz0 === 240")
-            pg.evaluate(f"{w}.cv.focus()"); pg.keyboard.press("Control+z"); attendi(pg, f"{w}.mz0 === 230")      # the nm range is undone
+            wait_for_js(pg, f"{w}.mz0 === 240")
+            pg.evaluate(f"{w}.cv.focus()"); pg.keyboard.press("Control+z"); wait_for_js(pg, f"{w}.mz0 === 230")      # the nm range is undone
         step("lambda trace: opening it and changing its nm range can be undone and redone", undo_wl)
         def undo_uv():
             n0 = pg.evaluate("E.panels.filter(q=>q.uv).length")
             pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'&&q.kind==='pda');c.cv.focus()})()")
             dbl(pg, "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')", 0.7)
-            attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
-            pg.keyboard.press("Control+z"); attendi(pg, f"E.panels.filter(q=>q.uv).length === {n0}")
-            pg.keyboard.press("Control+y"); attendi(pg, f"E.panels.filter(q=>q.uv).length === {n0 + 1}")
+            wait_for_js(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
+            pg.keyboard.press("Control+z"); wait_for_js(pg, f"E.panels.filter(q=>q.uv).length === {n0}")
+            pg.keyboard.press("Control+y"); wait_for_js(pg, f"E.panels.filter(q=>q.uv).length === {n0 + 1}")
         step("UV spectrum: opening it can be undone and redone", undo_uv)
         def axe():
             if not AXE: steps.append(("axe-core not available (SKIP)", "ok")); return
@@ -199,12 +199,12 @@ try:
         def no_matrix():
             assert pg.evaluate("E.files[0].pda") is True
             pick_kind(pg, "pda"); ready(pg)
-            attendi(pg, "E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'")
+            wait_for_js(pg, "E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'")
             dbl(pg, "E.panels.find(q=>q.type==='chrom')", 10)
-            attendi(pg, "/DAD/.test(document.body.innerText)")
+            wait_for_js(pg, "/DAD/.test(document.body.innerText)")
             assert pg.evaluate("E.panels.filter(q=>q.uv).length") == 0
             pg.evaluate("E.panels.find(q=>q.type==='chrom').el.querySelector('[data-a=xic]').click()")
-            attendi(pg, "/DAD/.test(document.body.innerText)")
+            wait_for_js(pg, "/DAD/.test(document.body.innerText)")
             assert pg.evaluate("E.panels.filter(q=>q.type==='chrom').length") == 1
         step("a file with only the PDA trace: a clear message and no panel", no_matrix)
         pg.close()
@@ -215,12 +215,12 @@ try:
         def demo_uv_at(rt, nm):
             dbl(pg, CH, rt)
             AT = f"{UVS}.filter(q=>Math.abs(q._a.uvd.rt - {rt}) < 0.15)"      # a new spectrum goes under the graph, above the older ones: pick the one of this time, not the last
-            attendi(pg, f"{AT}.length > 0")
+            wait_for_js(pg, f"{AT}.length > 0")
             a = pg.evaluate(f"(()=>{{const u={AT}[0]._a.uvd; return {{n: u.nm.length, nm0: u.nm[0], nm1: u.nm[u.nm.length-1], rt: u.rt, mx: u.nm[u.y.indexOf(Math.max(...u.y))]}}}})()")
             assert a["n"] == 201 and a["nm0"] == 200 and a["nm1"] == 400 and abs(a["rt"] - rt) < 0.1 and abs(a["mx"] - nm) <= 4, a
         def demo_open():
             pick_kind(pg, "pda"); ready(pg)
-            attendi(pg, f"{CH}._a && {CH}.kind==='pda'")
+            wait_for_js(pg, f"{CH}._a && {CH}.kind==='pda'")
             demo_uv_at(14.30, 224)
         step("FullScan_t10 demo: double click on the PDA trace at 14.30 min opens the UV spectrum, maximum near 224 nm", demo_open)
         step("FullScan_t10 demo: at 7.07 min the UV spectrum has its maximum near 248 nm", lambda: demo_uv_at(7.07, 248))
@@ -229,10 +229,10 @@ try:
             UV1 = f"{UVS}.pop()"
             pg.evaluate(f"(()=>{{const u={UV1};u.zoom=[244,252];draw(u);u.cv.focus()}})()"); frames(pg, 3)
             pg.keyboard.press("x")
-            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            wait_for_js(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
             w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
             assert abs(w[0] - 244) < 0.06 and abs(w[1] - 252) < 0.06, w
-            attendi(pg, "E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
+            wait_for_js(pg, "E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
         step("FullScan_t10 demo: the trace at 248 +/- 4 nm is created without errors", demo_wl)
     r.close()
 except Exception as e:

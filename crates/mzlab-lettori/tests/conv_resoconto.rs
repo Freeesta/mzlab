@@ -27,7 +27,7 @@ fn conv_di(l: &mut dyn Lettore) -> json::Value {
 }
 
 fn controlla(l: &mut dyn Lettore, id: &str) {
-    assert_eq!(l.formato().id(), id);
+    assert_eq!(l.format().id(), id);
     let doc = conv_di(l);
     assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conv/1"));
     assert_eq!(doc.get("lettore").and_then(|s| s.str()), Some(id));
@@ -37,7 +37,7 @@ fn controlla(l: &mut dyn Lettore, id: &str) {
         .is_some_and(|v| !v.is_empty()));
     assert!(doc.get("campi_cv").and_then(|n| n.f64()).is_some());
     assert!(doc.get("campi_user").and_then(|n| n.f64()).is_some());
-    let declared = l.non_portati();
+    let declared = l.not_carried();
     let written = doc.get("non_portati").expect("non_portati").arr();
     assert_eq!(
         written.len(),

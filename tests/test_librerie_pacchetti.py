@@ -122,11 +122,11 @@ def test_an_unreachable_source_publishes_nothing_and_does_not_fail(tmp_path, mon
 
 
 def test_the_hand_written_catalog_passes_its_check_and_the_check_catches_mistakes():
-    fonti = lp.load_sources()
-    assert lp.check_sources(fonti) == []
-    first = fonti[0]
+    sources = lp.load_sources()
+    assert lp.check_sources(sources) == []
+    first = sources[0]
     for change, text in (({"modo": "site", "licenza": "CC-BY-NC-4.0"}, "free licence"), ({"modo": "external", "download": None}, "https download"),
-                         ({"verificato": None}, "date"), ({"id": fonti[1]["id"]}, "repeated"), ({"sha256": "abc"}, "malformed")):
-        bad = lp.check_sources([{**first, **change}, *fonti[1:]])
+                         ({"verificato": None}, "date"), ({"id": sources[1]["id"]}, "repeated"), ({"sha256": "abc"}, "malformed")):
+        bad = lp.check_sources([{**first, **change}, *sources[1:]])
         assert any(text in b for b in bad), (change, bad)
     assert lp.check_sources([{k: v for k, v in first.items() if k != "kind"}]) != []

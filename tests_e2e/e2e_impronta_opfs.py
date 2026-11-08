@@ -24,10 +24,10 @@ def one_copy():
         with sync_playwright() as p:
             pg = r.page(p)
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
-            attendi(pg, "window.MZLAB_LR !== undefined", 60000)
+            wait_for_js(pg, "window.MZLAB_LR !== undefined", 60000)
             pg.set_input_files("#pickdir", str(top))
-            attendi(pg, "ST.files.some(f => f.name === 'perfil.mzML' && OPENNOW.isOpen(f.name)) && UPBUSY === 0 && OPENNOW.busy() === 0", 180000)
-            try: attendi(pg, NOCONV, 15000)      # the module's copy goes right after the loading
+            wait_for_js(pg, "ST.files.some(f => f.name === 'perfil.mzML' && OPENNOW.isOpen(f.name)) && UPBUSY === 0 && OPENNOW.busy() === 0", 180000)
+            try: wait_for_js(pg, NOCONV, 15000)      # the module's copy goes right after the loading
             except TimeoutError: pass
             o = pg.evaluate(WALK)
             assert [k for k in o if k.startswith("conv/")] == [], f"the module's mzML stays in conv/ next to the engine's copy: {o}"

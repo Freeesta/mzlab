@@ -1,5 +1,6 @@
 //! Times the scan table and the `.mzidx` of a made-up reader (`tests/lettore_finto`): the work of `raw_tempi` without a real file.
-//! `cargo run --release --example mzidx_tempi -p mzlab-core -- [SCANS] [PEAKS_PER_SCAN] [BUDGET_MB]`
+//! `cargo run --release --example mzidx_tempi -p mzlab-core -- [SCANS] [PEAKS_PER_SCAN] [BUDGET_MB]`; `TIC=1` gives every scan a maker's TIC (as a `.wiff`
+//! does), `RIPETI=N` times the scan table N times and prints the median and the range.
 #[path = "../tests/lettore_finto/mod.rs"]
 mod finto;
 
@@ -75,12 +76,17 @@ fn main() {
         *a.get(2).unwrap_or(&192),
     );
     let mut l = finto::Finto::vario(n, peaks, 12345);
+    if std::env::var_os("TIC").is_some() {
+        for (k, s) in l.schede.iter_mut().enumerate() {
+            s.extra.tic = Some(1000.0 + k as f64 * 0.1);
+        }
+    }
     let np: usize = l.schede.iter().map(|s| s.spettro.mz.len()).sum();
     println!("{n} scans, {np} peaks, budget {budget} MB");
     let t = Instant::now();
     let mut s = 0usize;
     for k in 0..n {
-        s += l.scansione(0, k).unwrap().mz.len();
+        s += l.scan(0, k).unwrap().mz.len();
     }
     println!(
         "decode every scan          {:>8.3} s ({s} peaks)",
@@ -90,6 +96,13 @@ fn main() {
     // `SOLO=scratch`: only the run with a scratch file (the way the site and the desktop build the index), for a profiler
     if std::env::var("SOLO").as_deref() == Ok("scratch") {
         con_scratch(&mut l, budget);
+        return;
+    }
+    if let Some(r) = std::env::var("RIPETI")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+    {
+        ripeti(&mut l, r);
         return;
     }
     let t = Instant::now();
@@ -127,6 +140,26 @@ fn main() {
         st.passes
     );
     con_scratch(&mut l, budget);
+}
+
+/// `upload::prepare_lettore` `r` times: median and range in ms.
+#[allow(clippy::disallowed_methods)]
+fn ripeti(l: &mut finto::Finto, r: usize) {
+    let mut ms: Vec<f64> = (0..r)
+        .map(|_| {
+            let t = Instant::now();
+            let p = upload::prepare_lettore(l, 0, &[], "x.mzML").expect("table");
+            std::hint::black_box(p);
+            t.elapsed().as_secs_f64() * 1e3
+        })
+        .collect();
+    ms.sort_by(f64::total_cmp);
+    println!(
+        "prepare_lettore x{r}: median {:.2} ms [{:.2}-{:.2}]",
+        ms[r / 2],
+        ms[0],
+        ms[r - 1]
+    );
 }
 
 /// The same with a scratch file (a temporary file): the scans are decoded once whatever the budget.

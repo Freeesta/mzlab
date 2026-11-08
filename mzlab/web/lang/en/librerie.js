@@ -72,6 +72,7 @@ I18N.add("en", {
   "lib.readN": "{n} spectra read ({pct}%)",
   "lib.doneN": "{n} spectra",
   "lib.droppedN": "{n} discarded (no precursor or no peaks)",
+  "lib.cutN": "Spectra with more than {max} peaks: {n}. The first {max} peaks of each were kept; to keep them whole, centroid or filter those spectra before importing.",
   "lib.plot.exp": "experimental",
   "lib.plot.lib": "library",
   "lib.plot.rel": "relative intensity",

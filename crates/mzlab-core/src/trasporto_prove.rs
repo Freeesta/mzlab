@@ -76,7 +76,7 @@ fn un_indice_troncato_o_di_un_altra_versione_si_rifiuta() {
     assert!(decode_indice(&enorme).is_err());
 }
 
-fn scansione(wide: Option<Vec<f64>>) -> Spectrum {
+fn scan(wide: Option<Vec<f64>>) -> Spectrum {
     Spectrum {
         index: 7,
         id: "ignored".into(),
@@ -94,7 +94,7 @@ fn scansione(wide: Option<Vec<f64>>) -> Spectrum {
 
 #[test]
 fn la_scansione_torna_uguale_senza_id_e_filtro() {
-    let s = scansione(None);
+    let s = scan(None);
     let b = encode_scansione(&s);
     assert_eq!(b.len(), TESTA_SCANSIONE + 3 * 12);
     let d = decode_scansione(7, &b).unwrap();
@@ -121,7 +121,7 @@ fn le_intensita_larghe_restano_larghe_solo_se_servono() {
     let w = vec![1.5, 16777217.0, 3.0];
     let s = Spectrum {
         intensity: w.iter().map(|&x| x as f32).collect(),
-        ..scansione(Some(w.clone()))
+        ..scan(Some(w.clone()))
     };
     let b = encode_scansione(&s);
     assert_eq!(b.len(), TESTA_SCANSIONE + 3 * 16);
@@ -130,7 +130,7 @@ fn le_intensita_larghe_restano_larghe_solo_se_servono() {
     let esatte = vec![1.5, 2.0, 3.0];
     let s = Spectrum {
         intensity: esatte.iter().map(|&x| x as f32).collect(),
-        ..scansione(Some(esatte))
+        ..scan(Some(esatte))
     };
     assert!(decode_scansione(0, &encode_scansione(&s))
         .unwrap()
@@ -140,7 +140,7 @@ fn le_intensita_larghe_restano_larghe_solo_se_servono() {
 
 #[test]
 fn una_scansione_di_misura_sbagliata_si_rifiuta() {
-    let b = encode_scansione(&scansione(None));
+    let b = encode_scansione(&scan(None));
     assert!(decode_scansione(0, &b[..b.len() - 1]).is_err());
     assert!(decode_scansione(0, &b[..10]).is_err());
     let mut lungo = b.clone();
@@ -152,7 +152,7 @@ fn una_scansione_di_misura_sbagliata_si_rifiuta() {
     let vuota = Spectrum {
         mz: vec![],
         intensity: vec![],
-        ..scansione(None)
+        ..scan(None)
     };
     assert_eq!(
         decode_scansione(0, &encode_scansione(&vuota))
@@ -176,4 +176,38 @@ fn an_index_with_a_filter_count_at_the_limit_is_refused() {
     let mut b = encode_indice(&voci());
     b[8..12].copy_from_slice(&u32::MAX.to_le_bytes());
     assert!(decode_indice(&b).is_err());
+}
+
+/// The columns crossing apart (`scansione_da_parti`) give the scan that the block gives, wide or not; a part of the wrong size is refused.
+#[test]
+fn the_scan_from_its_parts_is_the_one_from_the_block() {
+    let w = vec![1.5, 16777217.0, 3.0];
+    let larga = Spectrum {
+        intensity: w.iter().map(|&x| x as f32).collect(),
+        ..scan(Some(w.clone()))
+    };
+    for s in [
+        scan(None),
+        larga,
+        Spectrum {
+            precursor: None,
+            profile: false,
+            ..scan(None)
+        },
+    ] {
+        let y = match &s.wide {
+            Some(w) => Intensita::Larghe(w.clone()),
+            None => Intensita::Strette(s.intensity.clone()),
+        };
+        let p = scansione_da_parti(4, &testa_scansione(&s), s.mz.clone(), y).unwrap();
+        let b = decode_scansione(4, &encode_scansione(&s)).unwrap();
+        assert_eq!(format!("{p:?}"), format!("{b:?}"));
+    }
+    let s = scan(None);
+    let t = testa_scansione(&s);
+    assert!(scansione_da_parti(0, &t, vec![1.0], Intensita::Strette(s.intensity.clone())).is_err());
+    assert!(scansione_da_parti(0, &t, s.mz.clone(), Intensita::Larghe(vec![1.0; 3])).is_err());
+    assert!(
+        scansione_da_parti(0, &t[..10], s.mz.clone(), Intensita::Strette(s.intensity)).is_err()
+    );
 }

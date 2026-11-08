@@ -21,7 +21,7 @@ try:
         pg.evaluate("window.__xss = 0")
         dialogs = []; pg.on("dialog", lambda d: (dialogs.append(d.message), d.dismiss()))
         pg.set_input_files("#pick", [str(bad)])
-        attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1")
+        wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1")
         pg.click("text=Carica dati"); ready(pg)
         def nothing_ran():
             assert pg.evaluate("window.__xss") == 0, "the payload ran"

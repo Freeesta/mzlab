@@ -101,7 +101,7 @@ fn the_collision_energy_of_each_experiment_is_read_and_written() {
     let mut t = mzlab_core::mzidx_lettore::righe(&mut *l, 0).unwrap();
     let rows: Value = serde_json::from_str(&mzlab_core::mzidx_lettore::rows_json(
         &mut t,
-        l.indice(0).unwrap(),
+        l.index(0).unwrap(),
     ))
     .unwrap();
     let rows = rows.as_array().unwrap();

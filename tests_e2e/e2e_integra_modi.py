@@ -21,11 +21,11 @@ IT = PN + ".ints[0]"
 
 def xic(pg, mz):
     pg.evaluate("openXic(null)"); pg.wait_for_selector("#xic-mz"); pg.fill("#xic-mz", mz); pg.select_option("#xic-file", index=1); pg.click("#xic-go"); ready(pg)
-    attendi(pg, f"(()=>{{const p={PN};return !!(p&&p._a&&p._a.sr&&p._a.sr.length)}})()")
+    wait_for_js(pg, f"(()=>{{const p={PN};return !!(p&&p._a&&p._a.sr&&p._a.sr.length)}})()")
 
 def integrate(pg, rt):
     pg.evaluate(f"(()=>{{const p={PN};p.ints=[];autoInt(p,p._a.sr[0],{rt});draw(p)}})()")
-    attendi(pg, f"{PN}.ints.length===1 && Number.isFinite({IT}.area)")
+    wait_for_js(pg, f"{PN}.ints.length===1 && Number.isFinite({IT}.area)")
 
 def mode(pg, m, level=False):
     """the dialog of the integration through its key (B), the mode chosen and applied; waits for the engine's number"""
@@ -34,8 +34,8 @@ def mode(pg, m, level=False):
     pg.keyboard.press("b"); pg.wait_for_selector("#bigdlg[open] input[name=ib-m]")
     pg.check(f"#bigdlg input[name=ib-m][value={m}]")
     if level: pg.check("#ib-lvl")
-    pg.click("#ib-ok"); attendi(pg, "!document.querySelector('#bigdlg').open")
-    attendi(pg, f"({IT}.bm||'edges')===%r" % m)
+    pg.click("#ib-ok"); wait_for_js(pg, "!document.querySelector('#bigdlg').open")
+    wait_for_js(pg, f"({IT}.bm||'edges')===%r" % m)
     if m in IB: settle(pg, m)
     return pg.evaluate(f"(()=>{{const i={IT};return {{area:i.area,below:i.below,height:i.height,rt:i.rt,bm:i.bm,bl:i.bl}}}})()")
 
@@ -45,7 +45,7 @@ def engine(pg, m, line=None):
 def settle(pg, m):
     """until the engine answers the panel shows the previous measure: wait for the engine's number for the record's current line"""
     e = engine(pg, IB[m], pg.evaluate(f"{IT}.bl||[]"))
-    attendi(pg, f"{IT}.area==={e['area']!r} && {IT}.below==={e['below']!r}")
+    wait_for_js(pg, f"{IT}.area==={e['area']!r} && {IT}.below==={e['below']!r}")
     return e
 
 def point(pg, k):
@@ -82,7 +82,7 @@ try:
             assert b["width"] >= 24 and b["height"] >= 24, b
             before = pg.evaluate(f"{IT}.bl.slice()")
             pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x, y - 60, steps=6); pg.mouse.up()
-            attendi(pg, f"{IT}.bl[1]>{before[1]}")
+            wait_for_js(pg, f"{IT}.bl[1]>{before[1]}")
             settle(pg, "line"); assert pg.evaluate(f"{IT}.area") < res["line"]
             v = pg.evaluate(f"(()=>{{const i={IT};return {{a:i.area,b:i.below,bl:i.bl}}}})()"); e = engine(pg, 2, v["bl"])
             assert v["a"] == e["area"] and v["b"] == e["below"], (v, e)
@@ -91,12 +91,12 @@ try:
             pg.locator(".ibp[data-k='1']").focus(); y0 = pg.evaluate(f"{IT}.bl[3]"); t0 = pg.evaluate(f"{IT}.bl[2]")
             for _ in range(8): pg.keyboard.press("Shift+ArrowUp")
             pg.keyboard.press("ArrowLeft")
-            attendi(pg, f"{IT}.bl[3]>{y0} && {IT}.bl[2]<{t0}")
+            wait_for_js(pg, f"{IT}.bl[3]>{y0} && {IT}.bl[2]<{t0}")
             settle(pg, "line"); assert pg.evaluate(f"{IT}.below") > 0               # the line now cuts through the peak
             v = pg.evaluate(f"(()=>{{const i={IT};return {{a:i.area,b:i.below,bl:i.bl}}}})()"); e = engine(pg, 2, v["bl"])
             assert v["a"] == e["area"] and v["b"] == e["below"] > 0, (v, e)
             assert pg.locator(".ibp[data-k='1']").get_attribute("aria-label"), "no accessible name"
-            pg.evaluate("STORIA.annulla()"); attendi(pg, f"{IT}.bl[2]=={t0}")         # one undo per key press
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"{IT}.bl[2]=={t0}")         # one undo per key press
         step("keyboard: arrows move point 2 (time and intensity), the part under the line is reported, undo", keys)
         def note():
             tab = pg.evaluate("(async()=>{await showInts();return document.querySelector('#bigbody').innerText})()")
@@ -105,7 +105,7 @@ try:
         step("the table carries the baseline, the part below and the note", note)
         def themes():
             for th in ("light", "dark"):
-                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th); pg.evaluate(f"draw({PN})"); attendi(pg, f"document.documentElement.dataset.theme===%r && Number.isFinite({IT}.area)" % th)
+                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th); pg.evaluate(f"draw({PN})"); wait_for_js(pg, f"document.documentElement.dataset.theme===%r && Number.isFinite({IT}.area)" % th)
                 pg.locator(".pnl.xic").first.screenshot(path=str(D / f"modi-{th}.png"))
                 hatched = pg.evaluate(f"""(()=>{{const p={PN},i={IT},s=p._a.sr[0],g=p.cv.getContext('2d'),d=devicePixelRatio,X=p._a.X,x=X(i.bl[2]-0.02);
                   const y0=p._a.Y(p._a.U(s,INTBASE.lineAt(i,i.bl[2]-0.02))),px=g.getImageData(Math.round(x*d)-4,Math.round(y0*d)+2,8,8).data;let n=0;for(let k=3;k<px.length;k+=4)if(px[k]>0)n++;return n}})()""")
@@ -127,14 +127,14 @@ try:
         def touch():
             tp = r.b.new_page(viewport={"width": 1024, "height": 768}, has_touch=True, reduced_motion="reduce")
             tp.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-            tp.goto(f"http://127.0.0.1:{r.port}/"); attendi(tp, "typeof E==='object' && !!document.querySelector('#pick')")
+            tp.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(tp, "typeof E==='object' && !!document.querySelector('#pick')")
             load(tp, [LRF], 4000, 1); xic(tp, "364"); integrate(tp, 14.3); mode(tp, "line")
             tp.locator(".ibp[data-k='0']").scroll_into_view_if_needed()
             x, y, b = point(tp, 0); assert b["width"] >= 24, b
             y1 = tp.evaluate(f"{IT}.bl[1]"); cdp = tp.context.new_cdp_session(tp)
             ev = lambda t, yy: cdp.send("Input.dispatchTouchEvent", {"type": t, "touchPoints": [] if t == "touchEnd" else [{"x": x, "y": yy}]})
             ev("touchStart", y); [ev("touchMove", y - 8 * k) for k in range(1, 6)]; ev("touchEnd", y - 40)
-            attendi(tp, f"{IT}.bl[1]>{y1}"); settle(tp, "line")
+            wait_for_js(tp, f"{IT}.bl[1]>{y1}"); settle(tp, "line")
             v = tp.evaluate(f"(()=>{{const i={IT};return {{a:i.area,bl:i.bl}}}})()"); e = engine(tp, 2, v["bl"])
             assert v["a"] == e["area"], (v, e)
             tp.screenshot(path=str(D / "modi-touch.png")); tp.close()

@@ -92,14 +92,19 @@ export function writeFull(/** @type {FileSystemSyncAccessHandle} */ ah, /** @typ
   }
   return done;
 }
-// the error of a refused write (as a string, like the other errors of the engine): `needed` bytes in all. error.quota gives the room left asked to the browser; when the browser
-// says it has room for the whole file, its estimate is what is wrong (a private window keeps about 1 GiB, a full disk), and error.quotaWrite does not quote it
-export async function quotaError(/** @type {number} */ needed) {
-  const e = await estimate(), free = e && e.quota ? Math.max(0, e.quota - e.usage) : 0, serve_mb = Math.ceil(needed / 1048576);
-  if (free >= needed) return fail("error.quotaWrite", { serve_mb });
-  return fail("error.quota", { serve_mb, libero_mb: Math.floor(free / 1048576) });
+// the error of a refused write (as a string, like the other errors of the engine): `needed` bytes the whole file takes, `written` of them already kept. error.quota gives the
+// room left asked to the browser; when the browser says it has room for the rest, its estimate is what is wrong (a full disk, a private window that keeps about 1 GiB), and
+// error.quotaWrite says where the write stopped, of how much, and the room the browser claims (the offset alone read as the size of the file)
+export async function quotaError(/** @type {number} */ needed, written = 0) {
+  const e = await estimate(), free = e && e.quota ? Math.max(0, e.quota - e.usage) : 0, serve_mb = Math.ceil(needed / 1048576), libero_mb = Math.floor(free / 1048576);
+  if (free >= needed - written) return fail("error.quotaWrite", { serve_mb, scritti_mb: Math.floor(written / 1048576), libero_mb });
+  return fail("error.quota", { serve_mb, libero_mb });
 }
-export async function writeAll(/** @type {FileSystemSyncAccessHandle} */ ah, /** @type {Uint8Array} */ data, /** @type {number} */ at) { if (writeFull(ah, data, at) < data.length) throw await quotaError(at + data.length); }
+// `total` = the size of the whole file when known (else the end of this piece)
+export async function writeAll(/** @type {FileSystemSyncAccessHandle} */ ah, /** @type {Uint8Array} */ data, /** @type {number} */ at, total = 0) {
+  const n = writeFull(ah, data, at);
+  if (n < data.length) throw await quotaError(Math.max(total, at + data.length), at + n);
+}
 
 // write `size` bytes produced by chunk(offset, length) -> Uint8Array into kind/name (replacing it); the partial file is removed if something fails
 /** @typedef {(offset: number, length: number) => Uint8Array | Promise<Uint8Array>} Chunker */
@@ -120,11 +125,11 @@ async function writeNow(/** @type {string} */ kind, /** @type {string} */ name, 
     for (let off = 0; off < size; off += STEP) {
       const b = await /** @type {Promise<Uint8Array>} */ (next);
       next = off + STEP < size ? read(off + STEP) : null;
-      await writeAll(ah, b, off); if (after) await after(b, off);
+      await writeAll(ah, b, off, size); if (after) await after(b, off);
     }
     ah.flush();
     // the browser took the writes but the file is shorter (quota reached)
-    if (ah.getSize() < size) throw await quotaError(size);
+    if (ah.getSize() < size) throw await quotaError(size, ah.getSize());
   } catch (e) {
     try { ah.close(); } catch (_) { /* already closed */ }
     try { await d.removeEntry(name); } catch (_) { /* nothing to remove */ }
@@ -151,7 +156,7 @@ export function putStream(/** @type {string} */ kind, /** @type {string} */ name
       ah.truncate(0);
       for (let p = await next(); p; p = await next()) { if (p.length) { await writeAll(ah, p, at); at += p.length; } }
       ah.flush();
-      if (ah.getSize() < at) throw await quotaError(at);
+      if (ah.getSize() < at) throw await quotaError(at, ah.getSize());
     } catch (e) {
       try { ah.close(); } catch (_) { /* already closed */ }
       try { await d.removeEntry(name); } catch (_) { /* nothing to remove */ }
@@ -252,7 +257,7 @@ export async function get(/** @type {string} */ kind, /** @type {string} */ name
 }
 
 // the file of files/ an entry of idx/ belongs to: its index, centroid index and key (rust-flow-centroid.js), and the parts of an index still being written
-export const idxOwner = (/** @type {string} */ name) => name.replace(/(\.cen)?\.(mzidx(\.sp)?(\.part)?|key)$/, "");
+export const idxOwner = (/** @type {string} */ name) => name.replace(/((\.cen)?\.(mzidx(\.sp)?(\.part)?|key)|\.sul)$/, "");
 export async function list(/** @type {string} */ kind) {
   const out = [], d = await dir(kind);
   for await (const [name, h] of d.entries()) {

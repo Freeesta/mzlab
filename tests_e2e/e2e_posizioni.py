@@ -20,7 +20,7 @@ subprocess.run(cmd, check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")          # the engine of the page is Rust: the .wasm goes in the copy of the site
 site = tmp / "site"
 
-def add_grafo(site):
+def add_graph(site):
     """the .wasm «grafo» and its manifest in the copy of the site: the one built by tools/build_feat_wasm.sh in site/static/wasm-feat (CI) or, without it, built here"""
     import hashlib
     src = ROOT / "site" / "static" / "wasm-feat"
@@ -31,7 +31,7 @@ def add_grafo(site):
     subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(dst / "grafo"), "target/wasm32-unknown-unknown/release/mzlab_feat_grafo_wasm.wasm"], cwd=ROOT, check=True)
     w = (dst / "grafo" / "mzlab_feat_grafo_wasm_bg.wasm").read_bytes()
     json.dump({"grafo": {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm", "sha256": hashlib.sha256(w).hexdigest()}}, open(dst / "manifest.json", "w"))
-add_grafo(site)
+add_graph(site)
 
 DPA = "Cc1ccc(Nc2ccccc2)cc1"
 LR = [[109.26, 100], [186.29, 50]]          # unit resolution (0.5 Da): C7H8O 109.0648 and C12H11NO 186.0913, both with the oxygen
@@ -54,7 +54,7 @@ try:
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url else None)
             if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); lib.attendi(pg, "typeof window.QTOOLS !== 'undefined'", 60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); lib.wait_for_js(pg, "typeof window.QTOOLS !== 'undefined'", 60000)
             return pg
         pg = fresh(False)
         step("without mzlab.admin there is no TPPOS and no button", lambda: (_ for _ in ()).throw(AssertionError("TPPOS exists")) if pg.evaluate("typeof window.TPPOS !== 'undefined' || !!document.querySelector('.tpp-btn')") else None)

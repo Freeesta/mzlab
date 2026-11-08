@@ -10,16 +10,16 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         def opens():
-            attendi(pg, "document.querySelector('#stbar [data-cmd=addloss]') && !document.querySelector('#start').hidden")
+            wait_for_js(pg, "document.querySelector('#stbar [data-cmd=addloss]') && !document.querySelector('#start').hidden")
             assert not pg.is_visible("#np-calc2"), "on the start page the calculator lives in Adducts & losses"
             pg.click("#stbar [data-cmd=addloss]")
-            attendi(pg, "(() => { const b = document.querySelector('#calcdlg').getBoundingClientRect(); return b.width > 100 && b.height > 50 })()")
+            wait_for_js(pg, "(() => { const b = document.querySelector('#calcdlg').getBoundingClientRect(); return b.width > 100 && b.height > 50 })()")
             assert pg.is_visible("#calcdlg") and pg.is_visible("#calcin") and pg.evaluate("document.querySelector('#al-calc-body').contains(document.querySelector('#calcdlg'))")
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")
         step("loading screen: Adducts & losses opens with the calculator in the side panel", opens)
         def closes():
-            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "document.querySelector('#sb-panel-addloss').hidden || !document.querySelector('#calcdlg').offsetParent")
-            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "!!document.querySelector('#calcdlg').offsetParent"); assert pg.is_visible("#calcdlg")
+            pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "document.querySelector('#sb-panel-addloss').hidden || !document.querySelector('#calcdlg').offsetParent")
+            pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!!document.querySelector('#calcdlg').offsetParent"); assert pg.is_visible("#calcdlg")
         step("a second press closes the panel, a third opens it again", closes)
 finally:
     r.close()

@@ -55,9 +55,9 @@ fn a_real_raw_reads_the_same_through_the_registry() {
     for f in files.iter().take(2) {
         let want = raw::read(std::fs::File::open(f).unwrap()).unwrap();
         let mut l = lettori::apri(set(f), &Limiti::sito()).unwrap();
-        assert_eq!(l.formato().id(), "thermo-raw");
-        assert_eq!(l.campioni().len(), 1);
-        let index = l.indice(0).unwrap().to_vec();
+        assert_eq!(l.format().id(), "thermo-raw");
+        assert_eq!(l.samples().len(), 1);
+        let index = l.index(0).unwrap().to_vec();
         assert!(index.len() >= want.spectra.len());
         let mut checked = 0;
         for w in &want.spectra {
@@ -74,7 +74,7 @@ fn a_real_raw_reads_the_same_through_the_registry() {
             assert_eq!(index[k].filtro, w.filter);
             assert!(index[k].posizione.is_some_and(|p| p.lunghezza > 0));
             if checked % 7 == 0 {
-                let got = l.scansione(0, k).unwrap();
+                let got = l.scan(0, k).unwrap();
                 assert_eq!(
                     (
                         &got.id,
@@ -86,14 +86,14 @@ fn a_real_raw_reads_the_same_through_the_registry() {
                     ),
                     (&w.id, w.level, w.profile, w.precursor, &w.mz, &w.intensity)
                 );
-                assert!(!l.intestazione(0, k).unwrap().is_empty());
+                assert!(!l.scan_header(0, k).unwrap().is_empty());
             }
             checked += 1;
         }
-        let tic = l.cromatogramma(0, "TIC").unwrap();
+        let tic = l.chromatogram(0, "TIC").unwrap();
         assert_eq!(tic.time.len(), tic.intensity.len());
         assert!(!tic.time.is_empty());
-        let doc = l.metodo(0).unwrap();
+        let doc = l.method(0).unwrap();
         assert!(doc.contains("thermo-raw"), "{doc}");
         eprintln!("{}: {} scans checked", f.display(), checked);
     }
@@ -108,13 +108,10 @@ fn the_profile_scan_is_the_same_scan_with_the_points_of_the_file() {
         return;
     };
     let mut l = lettori::apri(set(f), &Limiti::sito()).unwrap();
-    let n = l.indice(0).unwrap().len();
+    let n = l.index(0).unwrap().len();
     for k in (0..n).step_by((n / 20).max(1)) {
-        let a = l.scansione(0, k).unwrap();
-        let b = l
-            .scansione_profilo(0, k)
-            .unwrap()
-            .expect("a .raw has a profile");
+        let a = l.scan(0, k).unwrap();
+        let b = l.scan_profile(0, k).unwrap().expect("a .raw has a profile");
         assert_eq!(
             (&a.id, a.level, a.rt, a.precursor),
             (&b.id, b.level, b.rt, b.precursor)
@@ -152,9 +149,9 @@ fn the_noise_and_baseline_of_an_ft_scan_come_with_the_header_and_leave_the_peaks
         let mut src = std::io::BufReader::new(std::fs::File::open(f).unwrap());
         let first = direct.run_header.sample_info.first_scan_number;
         let mut l = lettori::apri(set(f), &Limiti::sito()).unwrap();
-        let n = l.indice(0).unwrap().len();
+        let n = l.index(0).unwrap().len();
         for k in (0..n).step_by((n / 12).max(1)) {
-            let head = l.intestazione(0, k).unwrap();
+            let head = l.scan_header(0, k).unwrap();
             let get = |name: &str| {
                 head.iter()
                     .find(|c| c.nome == name)
@@ -265,9 +262,9 @@ fn the_series_of_the_instrument_log_are_served_by_id_and_are_not_chromatograms_o
     }
     for f in files.iter().take(3) {
         let mut l = lettori::apri(set(f), &Limiti::sito()).unwrap();
-        let doc = mzlab_core::json::parse(l.metodo(0).unwrap().as_bytes()).unwrap();
+        let doc = mzlab_core::json::parse(l.method(0).unwrap().as_bytes()).unwrap();
         let listed: Vec<String> = l
-            .cromatogrammi(0)
+            .chromatograms(0)
             .unwrap()
             .into_iter()
             .map(|v| v.id)
@@ -275,7 +272,7 @@ fn the_series_of_the_instrument_log_are_served_by_id_and_are_not_chromatograms_o
         for s in doc.get("serie_registro").map_or(&[][..], |a| a.arr()) {
             let id = s.get("id").and_then(|i| i.str()).unwrap();
             assert!(!listed.iter().any(|x| x == id), "{id} is in the mzML list");
-            let c = l.cromatogramma(0, id).unwrap();
+            let c = l.chromatogram(0, id).unwrap();
             assert_eq!(c.time.len(), c.intensity.len());
             assert_eq!(
                 c.time.len() as f64,
@@ -284,7 +281,7 @@ fn the_series_of_the_instrument_log_are_served_by_id_and_are_not_chromatograms_o
             );
             assert!(c.time.windows(2).all(|w| w[0] <= w[1]), "{id}: time order");
         }
-        assert!(l.cromatogramma(0, "status:nothing/here").is_err());
+        assert!(l.chromatogram(0, "status:nothing/here").is_err());
     }
 }
 

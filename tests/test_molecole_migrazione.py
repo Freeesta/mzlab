@@ -46,7 +46,7 @@ def test_counts_and_order():
     assert all(r["catalog"] == "hrms" for r in rows[625:])
 
 
-def test_composti_rows_are_all_there():
+def test_compounds_rows_are_all_there():
     _, by_key = catalogue()
     for t in read("TP_Mine/data/composti.csv"):
         r = by_key[t["inchikey"]]

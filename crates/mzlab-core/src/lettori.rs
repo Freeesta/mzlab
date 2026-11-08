@@ -183,26 +183,30 @@ pub struct VoceCromatogramma {
 /// A reader of one dataset. Random access: `indice` is read once, `scansione` reads only the bytes of one scan; streaming is `scansione(c, 0..n)`.
 /// An error is a key (`err.file.*`), never a panic; what a file lacks is absent from the answer, not an error.
 pub trait Lettore {
-    fn formato(&self) -> Formato;
+    fn format(&self) -> Formato;
     /// At least one.
-    fn campioni(&self) -> &[Campione];
+    fn samples(&self) -> &[Campione];
     /// The scans of sample `c`, in the order of time.
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]>;
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]>;
+    /// The rows of `indice` for a caller that does not read their `tic`: a reader that sums it from the points of spectra it must decode (Bruker MS2) may leave it 0.
+    fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.index(c)
+    }
     /// Scan `k` of the index of sample `c`.
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum>;
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum>;
     /// Scan `k` for a caller that holds the index already (the module of the readers, `trasporto.rs`): the points, level, polarity, profile, RT and precursor as `scansione`
     /// gives them; `id` and `filter` may be empty (they are the ones of the row of the index).
-    fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.scansione(c, k)
+    fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.scan(c, k)
     }
     /// Scan `k` with the profile points of the file where the reader keeps them next to the vendor's centroids; `None` when it has no profile of its own.
-    fn scansione_profilo(&mut self, _c: usize, _k: usize) -> Result<Option<Spectrum>> {
+    fn scan_profile(&mut self, _c: usize, _k: usize) -> Result<Option<Spectrum>> {
         Ok(None)
     }
     /// The header fields of scan `k` (collision energy, isolation, trailer): `nome`, `valore`, `unita`, `cv`.
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>>;
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>>;
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram>;
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>>;
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>>;
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram>;
     /// Optical DAD / PDA 2D map JSON for sample `c`, if present.
     fn dad_map(&mut self, _c: usize) -> Result<Option<String>> {
         Ok(None)
@@ -217,18 +221,18 @@ pub trait Lettore {
     }
     /// The optical (DAD / PDA) matrix of sample `c` as the reader holds it, for `convert.mzml` with `dad`; `None` when the sample has none.
     #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
-    fn dad_dati(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
+    fn dad_data(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
         Ok(None)
     }
     /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`).
-    fn metodo(&mut self, c: usize) -> Result<String>;
+    fn method(&mut self, c: usize) -> Result<String>;
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `lettori_mzml::scrivi` makes a plain one from the format.
-    fn testata_mzml(&mut self, _c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, _c: usize) -> Result<Option<Header>> {
         Ok(None)
     }
     /// What the scan table needs of `testata_mzml` (instrument, sources, analyzers); a reader whose header is costly gives a lighter one. Default: `testata_mzml`.
-    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
-        self.testata_mzml(c)
+    fn table_header(&mut self, c: usize) -> Result<Option<Header>> {
+        self.mzml_header(c)
     }
     /// What the mzML says of a spectrum besides its points (SIM mark, scan window).
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
@@ -236,21 +240,21 @@ pub trait Lettore {
     }
     /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML
     /// writer asks this one; the index builders ask `extra_mzml` (cheap, no read), so what only this one gives is in the mzML and not in the rows of an index.
-    fn extra_scansione(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
+    fn scan_extra(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
         self.extra_mzml(s)
     }
     /// What the format holds and the mzML of the conversion does not carry, as (field, reason) with the reasons of `conv`: the account `conv/1` gives.
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         &[]
     }
     /// The scans the index of sample `c` lists but that lie beyond the end of the data file (a truncated copy): they are not in the index.
-    fn mancanti(&mut self, _c: usize) -> usize {
+    fn missing(&mut self, _c: usize) -> usize {
         0
     }
     /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is
     /// then the one to open it (`docs/agenti/lettori-modulo.md`).
     #[cfg(feature = "sciex")]
-    fn variante(&mut self, _c: usize) -> bool {
+    fn variant(&mut self, _c: usize) -> bool {
         false
     }
 }
@@ -317,6 +321,16 @@ pub fn estensioni_in(registro: &[VoceLettore]) -> Vec<&'static str> {
 
 pub fn estensioni() -> Vec<&'static str> {
     estensioni_in(LETTORI)
+}
+
+/// The MS1 retention times and TICs of an index, in scan order (every scan when none is MS1): the trace the page draws while the `.mzidx` of a sample is
+/// built, the same rule as for an mzML (`earlyTicInputs` of idx-aiuti.js over the scan table of `upload`).
+pub fn tic_ms1(voci: &[VoceScansione]) -> (Vec<f64>, Vec<f64>) {
+    let ms1 = voci.iter().any(|v| v.livello == 1);
+    voci.iter()
+        .filter(|v| !ms1 || v.livello == 1)
+        .map(|v| (v.rt, v.tic))
+        .unzip()
 }
 
 #[cfg(test)]

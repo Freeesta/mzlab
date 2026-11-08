@@ -66,16 +66,16 @@ try:
         step("an extra column comes after the built-in ones and shows the cell of the caller", extra)
         def redraw():
             pg.evaluate("() => { window.__fam[2] = '1 ion'; window.__mounted.redraw(); }")
-            lib.attendi(pg, "[...document.querySelectorAll('#ex-host #ft-t tbody tr')].map(tr => tr.lastElementChild.textContent.trim()).join() === '2 ions,1 ion'")
+            lib.wait_for_js(pg, "[...document.querySelectorAll('#ex-host #ft-t tbody tr')].map(tr => tr.lastElementChild.textContent.trim()).join() === '2 ions,1 ion'")
         step("redraw() draws the rows again with the new values", redraw)
         def tab():
             pg.click("#ex-host #ft-t tbody tr"); pg.wait_for_selector("#ex-host .tpt-tabs", timeout=20000)
             tabs = pg.evaluate("[...document.querySelectorAll('#ex-host .tpt-tabs button')].map(t => t.textContent.trim())")
             assert tabs[-1] == "Family" and len(tabs) == 6, tabs
             pg.click("#ex-host .tpt-tabs button[data-tab=fam]")
-            lib.attendi(pg, "/family of row \\d/.test(document.querySelector('#ex-host .tpt-body').textContent)")
+            lib.wait_for_js(pg, "/family of row \\d/.test(document.querySelector('#ex-host .tpt-body').textContent)")
             pg.click("#ex-host .tpt-tabs button[data-tab=samples]")
-            lib.attendi(pg, "!/family of row/.test(document.querySelector('#ex-host .tpt-body').textContent)")
+            lib.wait_for_js(pg, "!/family of row/.test(document.querySelector('#ex-host .tpt-body').textContent)")
         step("an extra tab opens in the row with the row, the built-in tabs still work", tab)
         step("no page error", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         b.close()

@@ -16,17 +16,17 @@ fn chiave(fs: mzlab_core::lettori::FileSet) -> String {
         Ok(l) => l,
         Err(e) => return e.key.to_string(),
     };
-    let n = match l.indice(0) {
+    let n = match l.index(0) {
         Ok(ix) => ix.len(),
         Err(e) => return e.key.to_string(),
     };
     for k in 0..n {
-        if let Err(e) = l.scansione(0, k) {
+        if let Err(e) = l.scan(0, k) {
             return e.key.to_string();
         }
     }
-    for v in l.cromatogrammi(0).unwrap_or_default() {
-        if let Err(e) = l.cromatogramma(0, &v.id) {
+    for v in l.chromatograms(0).unwrap_or_default() {
+        if let Err(e) = l.chromatogram(0, &v.id) {
             return e.key.to_string();
         }
     }

@@ -111,5 +111,5 @@ fn indexed_form_has_the_same_scans_and_a_working_index() {
         assert!(a[off..].starts_with(b"<spectrum ") || a[off..].starts_with(b"<chromatogram "));
     }
     let back = mzlab_core::mzml::read(&a[..]).unwrap();
-    assert_eq!(back.spectra.len(), l.indice(0).unwrap().len());
+    assert_eq!(back.spectra.len(), l.index(0).unwrap().len());
 }

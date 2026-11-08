@@ -67,7 +67,7 @@ class Bench:
         s.out[name] = {"n": len(g), "p50": pct(g, .5), "p95": pct(g, .95), "lost": lost, "long": len(fr["lt"]), "long_ms": round(sum(fr["lt"])), "secs": round(dt, 1)}
 
     def open_demo(s, port):
-        pg = s.pg; pg.goto(f"http://127.0.0.1:{port}/"); attendi(pg, "window.MZLAB_LR !== undefined", timeout=240000); pg.wait_for_selector("#demobtn", timeout=240000)
+        pg = s.pg; pg.goto(f"http://127.0.0.1:{port}/"); wait_for_js(pg, "window.MZLAB_LR !== undefined", timeout=240000); pg.wait_for_selector("#demobtn", timeout=240000)
         pg.evaluate("__M.wrap()")
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=full]")
         pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=600000)       # the five files downloaded and listed
@@ -118,7 +118,7 @@ class Gestures(Bench):
                               "() => E.panels.some(p => p.type === 'map' && p._a) && __M.fe.every(r => r.t1)"))
             pg.evaluate("(() => { const q = E.panels.filter(p => p.type === 'map'); q.forEach(closePanel); })()"); frames(pg, 3)
         s.put("map_2d", rows)
-        pg.click("#np-map"); attendi(pg, "E.panels.some(p => p.type === 'map' && p._a)", timeout=600000); frames(pg, 5)
+        pg.click("#np-map"); wait_for_js(pg, "E.panels.some(p => p.type === 'map' && p._a)", timeout=600000); frames(pg, 5)
         pg.evaluate("E.panels.find(p => p.type === 'map').el.scrollIntoView({block: 'center'})"); frames(pg, 20)
         if pg.locator(".pnl.map [data-o=view][data-v='3d']").count():
             rows = []

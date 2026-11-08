@@ -17,9 +17,9 @@ ds.make(D / "s")
 S = D / "s"
 ds.full_scan(D / "DAD-t0.mzML", 0, np.random.default_rng(3), dad=True)
 def load(pg, files):
-    stage(pg, files); pg.click("text=Carica dati"); ready(pg); attendi(pg, f"E.files.length >= {len(files)}")
+    stage(pg, files); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, f"E.files.length >= {len(files)}")
 def chans(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.canali.map(c => c.fam + ':' + c.omo))")
-def tipo(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.tipo.proposto)")
+def kind(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.tipo.proposto)")
 def idx(pg, label): return pg.evaluate(f"E.files.find(f => (f.label || f.name || '').includes({label!r})).k")
 r = Run(port=8873, wd="/tmp/wd_canali")
 try:
@@ -30,7 +30,7 @@ try:
             exp = {"K_MIRATO-t0": "lc-ms2-mirato", "K_BLOCCHI-t0": "infusione-msn", "B_MRM-t0": "lc-mrm", "B_FullMass-t0": "lc-full"}
             for lab, t in exp.items():
                 k = idx(pg, lab)
-                assert tipo(pg, k) == t, (lab, tipo(pg, k))
+                assert kind(pg, k) == t, (lab, kind(pg, k))
         step("the engine proposes the type of experiment", types)
         def defaults():
             want = {"K_MIRATO-t0": ("ms", 2), "K_BLOCCHI-t0": ("ms", 3), "B_MRM-t0": ("srm", 2), "B_FullMass-t0": ("tic", 0)}
@@ -43,13 +43,13 @@ try:
             assert any(c.startswith("ms:") for c in v) and any(c.startswith("tic") for c in v), v
         step("EMS/EPI file: channels of scans", ida)
         def dad():
-            k = idx(pg, "DAD-t0"); assert tipo(pg, k) in ("lc-full", "misto", "solo-uv"), tipo(pg, k)
+            k = idx(pg, "DAD-t0"); assert kind(pg, k) in ("lc-full", "misto", "solo-uv"), kind(pg, k)
         step("DAD file opens", dad)
         pg.evaluate("setTab('full')"); ready(pg)
         # ticking every file leaves the one-file view: the steps below compare several files
         pg.evaluate("E.files.forEach(f=>f.vis=true); renderFileList(); redrawAll()"); ready(pg)
         def tree():
-            pg.click("[data-o=kind]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
+            pg.click("[data-o=kind]"); wait_for_js(pg, "document.querySelector('.can-pop [role=treeitem]')")
             n = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert n >= 5, n
             assert pg.evaluate("document.querySelector('.can-pop [role=tree]').getAttribute('aria-label')")
             lv = pg.evaluate("[...document.querySelectorAll('.can-pop [role=treeitem]')].map(e => e.getAttribute('aria-level'))"); assert "2" in lv, lv
@@ -77,7 +77,7 @@ try:
             pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelector('.can-pop').hidden")
         step("keyboard: arrows, space, Escape", keys)
         def size():
-            pg.click("[data-o=kind]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
+            pg.click("[data-o=kind]"); wait_for_js(pg, "document.querySelector('.can-pop [role=treeitem]')")
             h = pg.evaluate("Math.min(...[...document.querySelectorAll('.can-pop .can-row')].filter(e => e.offsetParent).map(e => e.getBoundingClientRect().height))"); assert h >= 24, h
             b = pg.evaluate("document.querySelector('[data-o=kind]').getBoundingClientRect().height"); assert b >= 24, b
             pg.keyboard.press("Escape")
@@ -100,8 +100,8 @@ try:
         r.b.close(); pg = r.page(p)
         load(pg, [S / "B_MRM-t0.mzML", S / "B_MRM-t5.mzML"])
         def mrm():
-            pg.evaluate("setTab('mrm')"); ready(pg); attendi(pg, "document.querySelector('[data-o=canali]')")
-            pg.click("[data-o=canali]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
+            pg.evaluate("setTab('mrm')"); ready(pg); wait_for_js(pg, "document.querySelector('[data-o=canali]')")
+            pg.click("[data-o=canali]"); wait_for_js(pg, "document.querySelector('.can-pop [role=treeitem]')")
             rows = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert rows == 2, rows
             pg.click(".can-pop [role=treeitem] >> nth=1"); ready(pg); frames(pg, 6)
             tr = pg.evaluate("E.panels.find(p => p.type==='mrm').tr"); assert isinstance(tr, list) and len(tr) == 1, tr

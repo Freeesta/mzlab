@@ -10,7 +10,7 @@ use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
 use crate::mzidx_ordine::ordina_secchi;
-use crate::mzidx_spill::{leggi_parti, Parti, Spill};
+use crate::mzidx_spill::{allinea, leggi_parti, Parti, Spill};
 use crate::mzml::Spectrum;
 mod late;
 pub use late::{build_mzml_corriere, build_mzml_late};
@@ -77,7 +77,8 @@ pub(crate) trait Num: Copy + Default + Send {
     const F32: bool;
     fn from64(x: f64) -> Self;
     fn to64(self) -> f64;
-    fn put(self, out: &mut Vec<u8>);
+    /// The little-endian bytes into `out`, which is `SIZE` long.
+    fn le(self, out: &mut [u8]);
 }
 fn get0<T: Copy + Default>(v: &[T], i: usize) -> T {
     v.get(i).copied().unwrap_or_default()
@@ -93,8 +94,8 @@ impl Num for f32 {
     fn to64(self) -> f64 {
         self as f64
     }
-    fn put(self, out: &mut Vec<u8>) {
-        out.extend_from_slice(&self.to_le_bytes());
+    fn le(self, out: &mut [u8]) {
+        out.copy_from_slice(&self.to_le_bytes());
     }
 }
 impl Num for f64 {
@@ -106,8 +107,8 @@ impl Num for f64 {
     fn to64(self) -> f64 {
         self
     }
-    fn put(self, out: &mut Vec<u8>) {
-        out.extend_from_slice(&self.to_le_bytes());
+    fn le(self, out: &mut [u8]) {
+        out.copy_from_slice(&self.to_le_bytes());
     }
 }
 
@@ -252,7 +253,7 @@ impl<T: Num> Sec<T> {
         }
     }
 
-    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values.
+    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values; one column at a time into fixed-width cells (no length check or `match` per value: this loop was the biggest cost of the rounds on the site).
     fn emit(&mut self, out: &mut dyn Output, off: &Offsets, peaks: &[Peak<T>]) -> Result<()> {
         const CHUNK: usize = 1 << 16;
         let mut g = (BLOCK - self.done % BLOCK) % BLOCK;
@@ -261,26 +262,25 @@ impl<T: Num> Sec<T> {
             g += BLOCK;
         }
         for chunk in peaks.chunks(CHUNK) {
-            let at = self.done;
-            for (field, base, width) in [
-                (0, off.mz, T::SIZE),
-                (1, off.inten, T::SIZE),
-                (2, off.pos, 4),
-            ] {
-                self.bytes.clear();
-                reserve(&mut self.bytes, chunk.len() * width)?;
-                for p in chunk {
-                    match field {
-                        0 => p.mz.put(&mut self.bytes),
-                        1 => p.it.put(&mut self.bytes),
-                        _ => self.bytes.extend_from_slice(&(p.pos as i32).to_le_bytes()),
-                    }
-                }
-                out.write_at(base + at * width as u64, &self.bytes)?;
+            let (need, at) = (chunk.len() * T::SIZE, self.done);
+            let more = need.saturating_sub(self.bytes.len());
+            reserve(&mut self.bytes, more)?;
+            self.bytes.resize(self.bytes.len().max(need), 0);
+            let b = self.bytes.get_mut(..need).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
+                p.mz.le(c);
             }
-            for p in chunk {
+            out.write_at(off.mz + at * T::SIZE as u64, b)?;
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
+                p.it.le(c);
+            }
+            out.write_at(off.inten + at * T::SIZE as u64, b)?;
+            let b = self.bytes.get_mut(..chunk.len() * 4).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(4).zip(chunk) {
+                c.copy_from_slice(&(p.pos as i32).to_le_bytes());
                 self.totals.add(p.pos as usize, p.mz.to64(), p.it.to64());
             }
+            out.write_at(off.pos + at * 4, b)?;
             self.done += chunk.len() as u64;
         }
         Ok(())
@@ -395,10 +395,10 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     fn finish(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()> {
-        let mut b = Vec::new();
-        for v in &self.fence {
-            v.put(&mut b);
-        }
+        let mut b = vec![0; self.fence.len() * T::SIZE];
+        b.chunks_exact_mut(T::SIZE)
+            .zip(&self.fence)
+            .for_each(|(c, v)| v.le(c));
         out.write_at(off.fence, &b)?;
         for (at, arr) in [
             (off.sumint, &self.totals.acc),
@@ -497,7 +497,7 @@ impl Gruppo {
         } else if keep {
             self.kept.push(Peak { mz, it, pos });
         } else if let Some((parti, spill)) = scorta {
-            parti.push(spill, mz, it, pos)?;
+            parti.push(spill, mz, it, pos, self.level == 1)?;
         }
         Ok(())
     }
@@ -579,6 +579,7 @@ impl<'a> Prima<'a> {
         }
         g.n += n as u64;
         self.visti += 1;
+        self.troppo_denso()?;
         if self.keep {
             let held: usize = self.gruppi.iter().map(Gruppo::held).sum();
             if held > self.budget / 4 {
@@ -626,7 +627,7 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
                 // the kept values are `f32` widened: narrowing them back is exact
                 parti.push32(sp, mz as f32, it as f32, pos)?;
             } else {
-                parti.push(sp, mz, it, pos)?;
+                parti.push(sp, mz, it, pos, gruppi[i].level == 1)?;
             }
         }
     }
@@ -635,6 +636,9 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
 
 #[cfg(test)]
 mod tests_avvia;
+
+mod denso;
+use denso::{round_cap, slice_refusal};
 
 fn pad(n: u64) -> u64 {
     (ALIGN - n % ALIGN) % ALIGN
@@ -657,11 +661,13 @@ pub fn build(
     budget: usize,
     nativo: bool,
 ) -> Result<Stats> {
-    build_con_spill(table, pass, out, budget, nativo, None, None)
+    build_con_spill(table, pass, out, budget, nativo, None, None, None)
 }
 
-/// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size.
-#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
+/// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size. `stop` is set
+/// when pass 1 fails (a refusal, a bad scan): a pass that can stop reading there (`late::Fermabile`) skips the rest. Indexes come from the table.
+#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)]
+#[allow(clippy::too_many_arguments)]
 pub fn build_con_spill(
     table: &ScanTable,
     pass: &mut Pass,
@@ -670,6 +676,7 @@ pub fn build_con_spill(
     nativo: bool,
     spill: Option<&mut dyn Spill>,
     late_source: Option<&mut dyn FnMut() -> Result<String>>,
+    stop: Option<&std::cell::Cell<bool>>,
 ) -> Result<Stats> {
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
@@ -692,12 +699,12 @@ pub fn build_con_spill(
             }
             if let Err(e) = prima.add(table.level[seen], table.polarity[seen], &sp) {
                 failure = Some(e);
+                stop.inspect(|s| s.set(true));
             }
         };
-        pass(&mut on)?;
-    }
-    if let Some(e) = failure {
-        return Err(e);
+        // a pass stopped on purpose ends with an error of its own: the failure that stopped it is the answer
+        let read = pass(&mut on);
+        failure.map_or(read, Err)?;
     }
     build_dopo(table, prima, pass, out, budget, nativo, late_source)
 }
@@ -865,12 +872,11 @@ pub(crate) fn build_dopo(
             .map(|b| secs.iter().map(|s| s.cost(b)).sum())
             .collect();
         let cost = |b: usize| costs[b];
-        // A round holds its peaks and, while it is written, the same peaks as byte arrays (about one more round): so it may use half of the
-        // budget, minus what the build holds whatever the round (table, member lists, per-scan arrays of the sections).
+        // what the build holds whatever the round (table, member lists, per-scan arrays of the sections): `round_cap`
         let fixed = table.scans_json.len()
             + n_scans * (18 + MEMBER_BYTES)
             + infos.iter().map(|s| s.ids.len() * 33).sum::<usize>();
-        let round_cap = (budget / 2).saturating_sub(fixed).max(budget / 8);
+        let round_cap = round_cap(budget, fixed, parti.is_some());
         let mut lo = 0usize;
         while lo < NB {
             let (mut hi, mut used) = (lo, 0usize);
@@ -879,12 +885,9 @@ pub(crate) fn build_dopo(
                 hi += 1;
             }
             if hi == lo {
-                return Err(crate::budget::refusal(
-                    "index",
-                    fixed + 2 * cost(lo),
-                    budget,
-                ));
+                return Err(slice_refusal(cost(lo), budget));
             }
+            (hi, used) = allinea(parti.as_ref(), lo, hi, used, &cost);
             if used > 0 {
                 for sec in secs.iter_mut() {
                     sec.begin_round(lo, hi)?;
@@ -895,10 +898,9 @@ pub(crate) fn build_dopo(
                     // the peaks are in the scratch file: no decoding
                     secs.iter_mut().for_each(|s| s.per_scansione());
                     leggi_parti(p, sp, lo, hi, &mut |mz, it, pos| {
-                        for &(si, q) in &member[pos as usize] {
-                            secs[si].fill_pk(mz, it, q)?;
-                        }
-                        Ok(())
+                        member[pos as usize]
+                            .iter()
+                            .try_for_each(|&(si, q)| secs[si].fill_pk(mz, it, q))
                     })?;
                 } else {
                     let mut on = |sp: Spectrum| {
@@ -1015,7 +1017,7 @@ pub fn build_mzml_spill<R: std::io::Read + Seek>(
     build_mzml_late(table, src, out, budget, spill, None)
 }
 
-/// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::indice(c)` in order (`mzidx_lettore`).
+/// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::index(c)` in order (`mzidx_lettore`).
 pub fn build_lettore(
     table: &ScanTable,
     l: &mut dyn crate::lettori::Lettore,
@@ -1023,7 +1025,7 @@ pub fn build_lettore(
     out: &mut dyn Output,
     budget: usize,
 ) -> Result<Stats> {
-    let n = l.indice(c)?.len();
+    let n = l.index(c)?.len();
     build(
         table,
         &mut |on| (0..n).try_for_each(|k| crate::mzidx_lettore::spettro(l, c, k).map(&mut *on)),

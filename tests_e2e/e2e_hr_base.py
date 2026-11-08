@@ -42,7 +42,7 @@ try:
             assert "Alta risoluzione non disponibile per prova: aperto come bassa risoluzione" in t
         step("fallback notice (once per file)", notice)
         def reload():
-            saved(pg); pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.length >= 5", 90000); ready(pg)
+            saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.length >= 5", 90000); ready(pg)
             v = pg.evaluate("[E.files.length,HR.prof(E.files.find(f=>f.file.includes('Exploris')),1).dec]"); assert v[0] >= 5 and v[1] == 5, v
         step("after a reload the profiles are back", reload)
         
@@ -51,7 +51,7 @@ try:
             drawer(pg); pg.click("#addf"); pg.wait_for_timeout(500)
             pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"])
             pg.wait_for_timeout(500)
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#hrmix').hidden", 30000)          # LR and HR in the table: the open world (HR) stays, the LR file is set aside
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#hrmix').hidden", 30000)          # LR and HR in the table: the open world (HR) stays, the LR file is set aside
             assert pg.evaluate("ST.files.find(f => f.name === 'B_FullMass-t0.mzML').use") is False and pg.evaluate("OPENNOW.world()") is True
             assert pg.get_attribute("#hrmix-lr", "hidden") is None and pg.get_attribute("#hrmix-hr", "hidden") is not None, "one «Switch» button"
             pg.evaluate("document.querySelector('#hrmix-lr').click()")             # «Switch to low resolution» replaces the open files: no refusal, no second dialog

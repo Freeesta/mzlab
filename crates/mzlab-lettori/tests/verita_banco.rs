@@ -73,7 +73,7 @@ fn una_verita_giusta_non_ha_difetti() {
     assert!(r.difetti().is_empty(), "{:?}", r.difetti());
     // the truth has no chromatograms: F4 is declared missing, so the file is `P`, never `L`
     assert_eq!(r.esito(), "P", "{:?}", r.livelli);
-    assert!(r.mancanti().iter().any(|m| m.starts_with("F4")));
+    assert!(r.missing().iter().any(|m| m.starts_with("F4")));
     verita::scrivi_rapporto(&[r]);
 }
 

@@ -8,13 +8,13 @@ HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
 from dati_percorsi import percorso, radice
 SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "TP_Mine"))
-DATI = radice()    # the private data repository (tools/dati_percorsi.py); None: skipped
+DATA_DIR = radice()    # the private data repository (tools/dati_percorsi.py); None: skipped
 HRMS = percorso("dati/HRMS")
 GB = 1 << 30
-if not DATI or not HRMS:
+if not DATA_DIR or not HRMS:
     print("SKIP: the private data repository with dati/HRMS is not available"); sys.exit(0)
-truth = next((json.loads(f.read_text(encoding="utf-8")) for f in sorted((DATI / "scratchpad").glob("*_truth.json")) if "tps" in f.read_text(encoding="utf-8")), None)
-msn = next((json.loads(f.read_text(encoding="utf-8")) for f in sorted((DATI / "scratchpad").glob("*_truth.json")) if "nodes" in f.read_text(encoding="utf-8")), None)
+truth = next((json.loads(f.read_text(encoding="utf-8")) for f in sorted((DATA_DIR / "scratchpad").glob("*_truth.json")) if "tps" in f.read_text(encoding="utf-8")), None)
+msn = next((json.loads(f.read_text(encoding="utf-8")) for f in sorted((DATA_DIR / "scratchpad").glob("*_truth.json")) if "nodes" in f.read_text(encoding="utf-8")), None)
 series = sorted(glob.glob(str(HRMS / "*" / "*TiO2*.mzML")))
 if truth is None or msn is None or len(series) < 13:
     print("SKIP: truth files or the 13 series files not available"); sys.exit(0)
@@ -36,7 +36,7 @@ try:
         pg.wait_for_timeout(3200)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
-        files = sorted(series, key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if "min" in f else -1) + [str(DATI / msn["file"])]
+        files = sorted(series, key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if "min" in f else -1) + [str(DATA_DIR / msn["file"])]
         t0 = time.time()
         pg.set_input_files("#tp-in", files)
         pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 15", timeout=1200000)

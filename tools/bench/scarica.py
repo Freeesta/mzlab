@@ -19,33 +19,33 @@ import urllib.request
 from pathlib import Path
 
 GRUPPI = ("file_grezzi", "file_verita", "file_metadati")
-BLOCCO = 1 << 20
+BLOCK = 1 << 20
 TENTATIVI = 5
 
 
-def sha256_file(path, blocco: int = BLOCCO) -> str:
+def sha256_file(path, block: int = BLOCK) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
-        while chunk := f.read(blocco):
+        while chunk := f.read(block):
             h.update(chunk)
     return h.hexdigest()
 
 
-def voci(manifesto: dict, gruppi=GRUPPI, solo=None) -> list[dict]:
+def voci(manifest: dict, groups=GRUPPI, solo=None) -> list[dict]:
     """Entries `{nome, url, sha256, byte?}` of the chosen groups, in manifest order."""
-    out = [dict(v) for g in gruppi for v in manifesto.get(g, [])]
+    out = [dict(v) for g in groups for v in manifest.get(g, [])]
     if solo:
-        mancanti = sorted(set(solo) - {v["nome"] for v in out})
-        if mancanti:
-            raise SystemExit(f"not in the manifest: {', '.join(mancanti)}")
+        missing = sorted(set(solo) - {v["nome"] for v in out})
+        if missing:
+            raise SystemExit(f"not in the manifest: {', '.join(missing)}")
         out = [v for v in out if v["nome"] in set(solo)]
     return out
 
 
-def _scarica_parte(url: str, parte: Path, atteso: int | None) -> None:
+def _download_part(url: str, parte: Path, expected: int | None) -> None:
     for tentativo in range(TENTATIVI):
         pos = parte.stat().st_size if parte.exists() else 0
-        if atteso is not None and pos >= atteso:
+        if expected is not None and pos >= expected:
             return
         req = urllib.request.Request(url, headers={"Range": f"bytes={pos}-"} if pos else {})
         try:
@@ -53,7 +53,7 @@ def _scarica_parte(url: str, parte: Path, atteso: int | None) -> None:
                 if pos and r.status != 206:               # server ignored Range: start over
                     pos = 0
                 with open(parte, "ab" if pos else "wb") as f:
-                    while chunk := r.read(BLOCCO):
+                    while chunk := r.read(BLOCK):
                         f.write(chunk)
             return
         except urllib.error.HTTPError as e:
@@ -67,26 +67,26 @@ def _scarica_parte(url: str, parte: Path, atteso: int | None) -> None:
     raise SystemExit(f"download failed: {url}")
 
 
-def scarica(voce: dict, cartella: Path) -> Path:
-    """Download one entry into `cartella` and verify it; return the path. An existing file with the right hash is kept."""
-    cartella.mkdir(parents=True, exist_ok=True)
-    dest = cartella / voce["nome"]
-    atteso = voce.get("sha256")
-    if dest.exists() and atteso and sha256_file(dest) == atteso:
+def scarica(item: dict, folder: Path) -> Path:
+    """Download one entry into `folder` and verify it; return the path. An existing file with the right hash is kept."""
+    folder.mkdir(parents=True, exist_ok=True)
+    dest = folder / item["nome"]
+    expected = item.get("sha256")
+    if dest.exists() and expected and sha256_file(dest) == expected:
         return dest
     parte = dest.with_name(dest.name + ".part")
-    _scarica_parte(voce["url"], parte, voce.get("byte"))
+    _download_part(item["url"], parte, item.get("byte"))
     os.replace(parte, dest)
     dim = dest.stat().st_size
-    if voce.get("byte") is not None and dim != voce["byte"]:
+    if item.get("byte") is not None and dim != item["byte"]:
         dest.unlink()
-        raise SystemExit(f"{voce['nome']}: size {dim} != {voce['byte']}")
+        raise SystemExit(f"{item['nome']}: size {dim} != {item['byte']}")
     got = sha256_file(dest)
-    if atteso and got != atteso:
+    if expected and got != expected:
         dest.unlink()
-        raise SystemExit(f"{voce['nome']}: SHA-256 {got} != {atteso}")
-    if not atteso:
-        print(f"  {voce['nome']}: no hash in the manifest, computed {got}", file=sys.stderr)
+        raise SystemExit(f"{item['nome']}: SHA-256 {got} != {expected}")
+    if not expected:
+        print(f"  {item['nome']}: no hash in the manifest, computed {got}", file=sys.stderr)
     return dest
 
 
@@ -98,15 +98,15 @@ def main(argv=None) -> int:
     ap.add_argument("--solo", nargs="*", help="only these file names")
     ap.add_argument("--elimina", nargs="*", help="delete these downloaded files and exit")
     a = ap.parse_args(argv)
-    cartella = Path(a.cartella)
+    folder = Path(a.cartella)
     if a.elimina:
         for n in a.elimina:
-            (cartella / n).unlink(missing_ok=True)
+            (folder / n).unlink(missing_ok=True)
         return 0
     m = json.loads(Path(a.manifesto).read_text(encoding="utf-8"))
     for v in voci(m, a.gruppo or ("file_grezzi",), a.solo):
         print(f"{v['nome']} ...", flush=True)
-        p = scarica(v, cartella)
+        p = scarica(v, folder)
         print(f"  ok {p.stat().st_size} B sha256 {v.get('sha256', '')[:12]}", flush=True)
     return 0
 

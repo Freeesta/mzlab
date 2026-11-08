@@ -16,7 +16,7 @@ def test_comprimi_raw_and_gz():
     assert c["raw"] == 3000 and 0 < c["gz"] < 100 and c["br"] in (None, c["br"])
 
 
-def test_misura_wasm_headroom(tmp_path):
+def test_measure_wasm_headroom(tmp_path):
     (tmp_path / "wasm-feat" / "hr").mkdir(parents=True)
     (tmp_path / "wasm-feat" / "hr" / "x.wasm").write_bytes(b"\0" * 1000)
     (tmp_path / "wasm-feat" / "zz").mkdir()
@@ -27,14 +27,14 @@ def test_misura_wasm_headroom(tmp_path):
     assert out["wasm-feat/zz/y.wasm"]["cap"] is None and out["wasm-feat/zz/y.wasm"]["head_b"] is None
 
 
-def test_avvio_and_test_counts_of_this_repo():
+def test_startup_and_test_counts_of_this_repo():
     a = m.misura_avvio()
     assert a["raw"] <= a["cap"] and a["head_b"] == a["cap"] - a["raw"] and a["files"] > 10
     t = m.conta_test()
     assert t["pytest"] > 100 and t["cargo"] > 100 and t["e2e"] > 10
 
 
-def test_conta_test_synthetic(tmp_path):
+def test_count_tests_synthetic(tmp_path):
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_a.py").write_text("def test_one():\n    pass\n\nclass T:\n    def test_two(self):\n        pass\n\ndef helper(): pass\n")
     (tmp_path / "crates").mkdir()
@@ -52,7 +52,7 @@ def test_bench_input(tmp_path):
         m.carica_bench(None, ["novalue"])
 
 
-def test_accoda_dedup_and_merge_by_sha(tmp_path):
+def test_enqueue_dedup_and_merge_by_sha(tmp_path):
     d = str(tmp_path)
     r1 = m.riga("site", "aaa", "2026-10-01T00:00:00Z", tests={"pytest": 1})
     r2 = m.riga("manual", "aaa", "2026-10-01T00:00:00Z", manual={"hrc": 1.0})

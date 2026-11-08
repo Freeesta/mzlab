@@ -128,7 +128,7 @@ impl State {
             .and_then(|e| e.nat)
             .ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let mut l = nativi::open(&nat.members, false)?;
-        let c = l.cromatogramma(nat.c, p["serie"].as_str().unwrap_or(""))?;
+        let c = l.chromatogram(nat.c, p["serie"].as_str().unwrap_or(""))?;
         text(mzlab_lettori::json::cromatogramma_json(&c))
     }
 }

@@ -1,6 +1,6 @@
 //! `_FUNCTNS.INF`: one 416-byte record per acquisition function (scan time, dwell times, the acquisition range or the 32 slots of channels).
 
-use super::cartella::{errore, f32_at, u16_at};
+use super::cartella::{f32_at, u16_at};
 use mzlab_core::error::Result;
 use mzlab_core::lettori::Limiti;
 
@@ -48,30 +48,30 @@ impl Funzione {
     }
 }
 
-/// The functions of `bytes`. A size that is no multiple of the record is a damaged file.
-pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Vec<Funzione>> {
-    if b.is_empty() {
-        return Err(errore("_FUNCTNS.INF is empty"));
-    }
+/// The functions of `bytes` (`apri` refuses an empty file first); `None` when the size is no multiple of the record (a file cut inside a record).
+pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Option<Vec<Funzione>>> {
     if !b.len().is_multiple_of(RECORD) {
-        return Err(errore("_FUNCTNS.INF size"));
+        return Ok(None);
     }
     let n = limiti.voci_ok((b.len() / RECORD) as u64)?;
-    Ok((0..n)
-        .map(|i| {
-            let r = &b[i * RECORD..(i + 1) * RECORD];
-            let slot =
-                |base: usize| -> Vec<f32> { (0..SLOTS).map(|k| f32_at(r, base + 4 * k)).collect() };
-            Funzione {
-                indice: i as u32 + 1,
-                tipo: r[0],
-                sotto: r[1],
-                ciclo_s: f32_at(r, 2),
-                tof_depth: u16_at(r, 0x10),
-                q1: slot(0xA0),
-                q3: slot(0x120),
-                dwell_s: slot(0x20),
-            }
-        })
-        .collect())
+    Ok(Some(
+        (0..n)
+            .map(|i| {
+                let r = &b[i * RECORD..(i + 1) * RECORD];
+                let slot = |base: usize| -> Vec<f32> {
+                    (0..SLOTS).map(|k| f32_at(r, base + 4 * k)).collect()
+                };
+                Funzione {
+                    indice: i as u32 + 1,
+                    tipo: r[0],
+                    sotto: r[1],
+                    ciclo_s: f32_at(r, 2),
+                    tof_depth: u16_at(r, 0x10),
+                    q1: slot(0xA0),
+                    q3: slot(0x120),
+                    dwell_s: slot(0x20),
+                }
+            })
+            .collect(),
+    ))
 }

@@ -51,10 +51,12 @@ fn text() -> String {
     )
 }
 
-/// Makes each output from what the job reads and writes the report of the job as the page does; the second step fails when `tab_fails`.
+/// Makes each output from what the job reads and writes the report of the job as the page does; the second step fails when `tab_fails`;
+/// with `rich` each job also says warnings and what it did of its file, and the failure carries its parameters.
 struct Reporting {
     reports: Mutex<Vec<String>>,
     tab_fails: bool,
+    rich: bool,
 }
 
 impl Runner for Reporting {
@@ -67,9 +69,15 @@ impl Runner for Reporting {
             None => o.raw("null"),
         };
         if job.instance.id == "tab" && self.tab_fails {
-            o.raw(",\"error_key\":\"err.flow.sample\"}");
+            o.raw(",\"error_key\":\"err.flow.sample\"");
+            let e = Error::new("err.flow.sample");
+            if !self.rich {
+                self.reports.lock().unwrap().push(o.0.clone() + "}");
+                return Err(e);
+            }
+            o.raw(",\"params\":{\"sample\":\"b.mzML\"}}");
             self.reports.lock().unwrap().push(o.0.clone());
-            return Err(Error::new("err.flow.sample"));
+            return Err(e.with("sample", "b.mzML"));
         }
         let seen: Vec<&str> = job
             .inputs
@@ -91,6 +99,13 @@ impl Runner for Reporting {
         o.raw(",\"ext\":").str(ext).raw(",\"type\":").str(ty.name());
         o.raw(",\"sha256\":").str(&sha).raw(",\"bytes\":42}],");
         o.raw("\"estimates\":[{\"name\":\"ppm\",\"value\":5,\"proof\":\"profile\"}],");
+        let file = self.rich && *id == "idx";
+        if self.rich {
+            o.raw("\"warnings\":[\"warn.flow.sample\"],");
+        }
+        if file {
+            o.raw("\"file\":{\"via\":\"centroided\"},");
+        }
         o.raw("\"ms\":0.5,\"mem\":{\"mb\":3.9,\"via\":\"memory\"},\"cached\":false}");
         self.reports.lock().unwrap().push(o.0.clone());
         let a = Artifact {
@@ -107,6 +122,12 @@ impl Runner for Reporting {
                 mb: 3.9,
                 via: "memory",
             }),
+            warnings: if self.rich {
+                vec!["warn.flow.sample".into()]
+            } else {
+                Vec::new()
+            },
+            file: file.then(|| Value::Obj(vec![("via".into(), Value::Str("centroided".into()))])),
             ..Outcome::default()
         })
     }
@@ -123,10 +144,15 @@ fn agent() -> Agent {
 }
 
 fn both(tab_fails: bool) -> (String, String) {
+    both_of(tab_fails, false)
+}
+
+fn both_of(tab_fails: bool, rich: bool) -> (String, String) {
     let text = text();
     let r = Reporting {
         reports: Mutex::new(Vec::new()),
         tab_fails,
+        rich,
     };
     let native = execute(&parse(text.as_bytes()).unwrap(), &registry(), &r, 1).unwrap();
     // reports arrive in any order
@@ -164,10 +190,29 @@ fn a_failed_job_and_a_missing_report_are_recorded_as_in_execute() {
 }
 
 #[test]
+fn the_warnings_and_the_file_of_a_job_are_recorded_as_in_execute() {
+    let (native, web) = both_of(false, true);
+    assert!(
+        native.contains("warn.flow.sample") && native.contains("centroided"),
+        "{native}"
+    );
+    assert_eq!(web, native);
+}
+
+#[test]
+fn the_parameters_of_a_failure_are_recorded_as_in_execute() {
+    let (native, web) = both_of(true, true);
+    let tab = |p: &str| p[p.find("\"tab\":{").unwrap()..].to_string();
+    assert!(tab(&native).contains("b.mzML"), "{native}");
+    assert_eq!(tab(&web), tab(&native));
+}
+
+#[test]
 fn the_route_refuses_what_it_cannot_read() {
     let r = Reporting {
         reports: Mutex::new(Vec::new()),
         tab_fails: false,
+        rich: false,
     };
     execute(&parse(text().as_bytes()).unwrap(), &registry(), &r, 1).unwrap();
     let jobs = format!("[{}]", r.reports.into_inner().unwrap().join(","));

@@ -87,7 +87,7 @@
               "export.mztab@1",
               "export.table_csv@1",
               "features.align@1",
-              "features.detect@1",
+              "features.detect@2",
               "features.estimate@1",
               "features.gapfill@1",
               "features.group@1",
@@ -189,7 +189,7 @@
               "export.mztab@1",
               "export.table_csv@1",
               "features.align@1",
-              "features.detect@1",
+              "features.detect@2",
               "features.estimate@1",
               "features.gapfill@1",
               "features.group@1",
@@ -743,7 +743,7 @@
           },
           {
             "properties":{
-              "step":{"const":"features.detect@1"},
+              "step":{"const":"features.detect@2"},
               "name":{
                 "enum":[
                   "algorithm",
@@ -815,7 +815,12 @@
                     "description":"Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty"
                   },
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
-                  {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":1,
+                    "description":"Scans a trace may miss between two of its points; 0 = consecutive scans"
+                  },
                   {
                     "type":"integer",
                     "minimum":1,
@@ -1016,7 +1021,12 @@
                   },
                   {"type":"number","minimum":0,"default":0.1,"description":"Half width added to the window of RT"},
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
-                  {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":2,
+                    "description":"Scans a trace may miss between two of its points; 0 = consecutive scans"
+                  },
                   {
                     "type":"integer",
                     "minimum":1,
@@ -1245,8 +1255,9 @@
                   {
                     "type":"integer",
                     "minimum":1,
+                    "maximum":20000000,
                     "default":3000000,
-                    "description":"Above this many sub-formulas the table is not built"
+                    "description":"Above this many sub-formulas the table is not built and the candidate explains no fragment; memory grows with the limit"
                   }
                 ]
               }
@@ -2957,7 +2968,7 @@
                 "export.mztab@1",
                 "export.table_csv@1",
                 "features.align@1",
-                "features.detect@1",
+                "features.detect@2",
                 "features.estimate@1",
                 "features.gapfill@1",
                 "features.group@1",

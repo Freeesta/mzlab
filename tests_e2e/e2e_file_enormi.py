@@ -44,7 +44,7 @@ def one(r, p, spec, tmp):
     ctx.add_init_script(INIT)
     pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)[:200]))
-    pg.goto(f"http://127.0.0.1:{r.port}/?perf=1"); attendi(pg, "window.qqReady === true"); ready(pg)
+    pg.goto(f"http://127.0.0.1:{r.port}/?perf=1"); wait_for_js(pg, "window.qqReady === true"); ready(pg)
     root = browser_pid()
     peak_r, peak_w, how = 0.0, [], "loaded"
     pg.set_input_files("#pick", [str(f)])
@@ -62,7 +62,7 @@ def one(r, p, spec, tmp):
         bad = pg.evaluate("(document.querySelector('.toast-err, #fe-err, [role=alert]') || {}).innerText || ''")
         if bad.strip(): how = "error: " + bad.strip().replace("\n", " ")[:160]; break
         # sampling interval: ends early as soon as the first chromatogram is drawn
-        try: attendi(pg, DRAWN, 1500)
+        try: wait_for_js(pg, DRAWN, 1500)
         except Exception: pass
     else:
         if how == "loaded": how = "not finished"

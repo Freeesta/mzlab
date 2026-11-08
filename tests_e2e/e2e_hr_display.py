@@ -46,9 +46,9 @@ try:
         step("extendable: a package registers an option for a kind of chart", extend)
         def palette():
             drawer(pg, "file")      # leave the tab the previous step opened: the wait for 'disp' below must prove the command ran (the palette runs it after a timeout)
-            pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta", timeout=5000); attendi(pg, "document.activeElement && document.activeElement.id === 'pal-in'"); pg.keyboard.type("opzioni di vis")
-            attendi(pg, "document.querySelector('#pal-l') && document.querySelector('#pal-l').innerText.includes('Opzioni di visualizzazione')")
-            pg.keyboard.press("Enter"); attendi(pg, "BARRA.curTab === 'disp'")
+            pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta", timeout=5000); wait_for_js(pg, "document.activeElement && document.activeElement.id === 'pal-in'"); pg.keyboard.type("opzioni di vis")
+            wait_for_js(pg, "document.querySelector('#pal-l') && document.querySelector('#pal-l').innerText.includes('Opzioni di visualizzazione')")
+            pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.curTab === 'disp'")
         step("«Display options» is a command of the palette", palette)
         def iso():
             pg.evaluate("setActive(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp))")

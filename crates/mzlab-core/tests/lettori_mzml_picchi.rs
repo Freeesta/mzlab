@@ -65,32 +65,32 @@ fn spettro(k: usize, profile: bool) -> Spectrum {
 }
 
 impl Lettore for Finto {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("finto")
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, _c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _c: usize) -> Result<&[VoceScansione]> {
         Ok(&self.indice)
     }
     // The scans as the reader gives them: profile, or the centroids of the maker when `profilo_ok` is false.
-    fn scansione(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
         Ok(spettro(k, self.profilo_ok))
     }
-    fn scansione_profilo(&mut self, _c: usize, k: usize) -> Result<Option<Spectrum>> {
+    fn scan_profile(&mut self, _c: usize, k: usize) -> Result<Option<Spectrum>> {
         Ok(self.profilo_ok.then(|| spettro(k, true)))
     }
-    fn intestazione(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
         Ok(Vec::new())
     }
-    fn cromatogrammi(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(Vec::new())
     }
-    fn cromatogramma(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
         Err(Error::new("err.test"))
     }
-    fn metodo(&mut self, _c: usize) -> Result<String> {
+    fn method(&mut self, _c: usize) -> Result<String> {
         Ok(String::new())
     }
 }

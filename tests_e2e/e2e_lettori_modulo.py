@@ -196,10 +196,10 @@ try:
             fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
             assert "andi" in fams, asked
         step("the «andi» module was downloaded", andi_module)
-        def aperti_module():
+        def open_formats_module():
             fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
             assert "aperti" in fams, asked
-        step("the «aperti» module was downloaded", aperti_module)
+        step("the «aperti» module was downloaded", open_formats_module)
         b.close()
 finally:
     srv.terminate()

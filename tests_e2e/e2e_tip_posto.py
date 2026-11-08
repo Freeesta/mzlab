@@ -18,10 +18,10 @@ try:
         def clear():
             n = pg.locator("#tbz button").count(); assert n == 8
             for i in (0, 3, 7):
-                pg.locator("#tbz button").nth(i).hover(); attendi(pg, "!document.getElementById('qtip').hidden", 5000)
+                pg.locator("#tbz button").nth(i).hover(); wait_for_js(pg, "!document.getElementById('qtip').hidden", 5000)
                 v = pg.evaluate("(() => { const a = document.getElementById('qtip').getBoundingClientRect(), z = document.getElementById('tbz').getBoundingClientRect(); return [a.left < z.right && a.right > z.left && a.top < z.bottom && a.bottom > z.top, a.top, a.bottom, z.top, z.bottom]; })()")
                 assert v[0] is False, ("the tooltip of button %d covers its toolbar" % i, v)
-                pg.mouse.move(5, 5); attendi(pg, "document.getElementById('qtip').hidden", 5000)
+                pg.mouse.move(5, 5); wait_for_js(pg, "document.getElementById('qtip').hidden", 5000)
         step("the tooltip of a button of a two-row toolbar stays outside the whole toolbar", clear)
         def header():
             bad = []; seen = 0
@@ -31,12 +31,12 @@ try:
                     b = L.nth(i)
                     if not b.is_visible(): continue
                     b.hover(); 
-                    try: attendi(pg, "!document.getElementById('qtip').hidden", 3000)
+                    try: wait_for_js(pg, "!document.getElementById('qtip').hidden", 3000)
                     except Exception: pg.mouse.move(5, 5); continue
                     v = pg.evaluate(f"(() => {{ const a = document.getElementById('qtip').getBoundingClientRect(); let z = document.querySelectorAll('{sel}')[{i}]; for (let e = z.parentElement; e; e = e.parentElement) if (e.matches('#stbar, #tools, [role=toolbar]')) z = e; const b = z.getBoundingClientRect(); return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top; }})()")
                     seen += 1
                     if v: bad.append((sel, i))
-                    pg.mouse.move(5, 5); attendi(pg, "document.getElementById('qtip').hidden", 5000)
+                    pg.mouse.move(5, 5); wait_for_js(pg, "document.getElementById('qtip').hidden", 5000)
             assert seen >= 3, ("too few tooltips were checked", seen)
             assert not bad, bad
         step("the tooltips of the real toolbars (#stbar, #tools) never cover their toolbar", header)

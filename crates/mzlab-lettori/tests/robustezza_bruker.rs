@@ -202,9 +202,9 @@ fn cartella(bin: Vec<u8>, tdf: Vec<u8>) -> FileSet {
 #[test]
 fn una_cartella_fatta_a_mano_si_apre_e_somma_le_scansioni() {
     let mut l = mzlab_lettori::apri(cartella(blocco2(), tdf_minimo(3)), &limiti()).unwrap();
-    assert_eq!(l.formato().id(), "bruker-tdf");
-    assert_eq!(l.indice(0).unwrap().len(), 1);
-    let s = l.scansione(0, 0).unwrap();
+    assert_eq!(l.format().id(), "bruker-tdf");
+    assert_eq!(l.index(0).unwrap().len(), 1);
+    let s = l.scan(0, 0).unwrap();
     // equal TOF indices of different scans are one point
     assert_eq!(s.mz.len(), 2);
     assert!(s.mz[0] > 0.0 && s.mz[0] < s.mz[1]);
@@ -224,19 +224,19 @@ fn un_timstof_e_ad_alta_risoluzione() {
 fn bpc_uguale_prima_e_dopo_il_giro() {
     // the BPC asked first decodes the frames; after every spectrum has been read it comes from the maxima kept by the reader
     let apri = || mzlab_lettori::apri(cartella(blocco2(), tdf_minimo(3)), &limiti()).unwrap();
-    let prima = apri().cromatogramma(0, "BPC").unwrap();
+    let prima = apri().chromatogram(0, "BPC").unwrap();
     let mut l = apri();
-    let n = l.indice(0).unwrap().len();
+    let n = l.index(0).unwrap().len();
     let massimi: Vec<f64> = (0..n)
         .map(|k| {
-            l.scansione(0, k)
+            l.scan(0, k)
                 .unwrap()
                 .intensity
                 .iter()
                 .fold(0.0f64, |m, &y| m.max(f64::from(y)))
         })
         .collect();
-    let dopo = l.cromatogramma(0, "BPC").unwrap();
+    let dopo = l.chromatogram(0, "BPC").unwrap();
     assert_eq!(prima.intensity, dopo.intensity);
     assert_eq!(prima.time, dopo.time);
     assert_eq!(dopo.intensity, massimi);
@@ -247,7 +247,7 @@ fn bpc_uguale_prima_e_dopo_il_giro() {
 fn zstd_falso_e_blocchi_guasti_sono_errori_con_chiave() {
     let chiave = |bin: Vec<u8>, np: i64| {
         let mut l = mzlab_lettori::apri(cartella(bin, tdf_minimo(np)), &limiti()).unwrap();
-        l.scansione(0, 0).err().map(|e| e.key)
+        l.scan(0, 0).err().map(|e| e.key)
     };
     assert!(chiave(blocco2(), 3).is_none());
     // not a zstd frame
@@ -282,7 +282,7 @@ fn un_tdf_bin_tagliato_legge_i_frame_interi_e_conta_gli_altri() {
     let intero: Vec<u8> = b.iter().copied().cycle().take(b.len() * 5).collect();
     let mut l =
         mzlab_lettori::apri(cartella(intero.clone(), tdf_frames(&tims, 3)), &limiti()).unwrap();
-    assert_eq!((l.indice(0).unwrap().len(), l.mancanti(0)), (5, 0));
+    assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (5, 0));
     // cut inside the fourth block, at its first byte, and inside its header: three frames read, two counted
     for taglio in [
         3 * b.len() + 9,
@@ -295,16 +295,16 @@ fn un_tdf_bin_tagliato_legge_i_frame_interi_e_conta_gli_altri() {
             &limiti(),
         )
         .unwrap();
-        assert_eq!(l.indice(0).unwrap().len(), 3, "{taglio}");
-        assert_eq!(l.mancanti(0), 2, "{taglio}");
-        assert_eq!(l.campioni()[0].scansioni, 3);
+        assert_eq!(l.index(0).unwrap().len(), 3, "{taglio}");
+        assert_eq!(l.missing(0), 2, "{taglio}");
+        assert_eq!(l.samples()[0].scansioni, 3);
         for k in 0..3 {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert_eq!(s.mz.len(), 2);
         }
-        assert!(l.scansione(0, 3).is_err());
-        let tic = l.cromatogramma(0, "TIC").unwrap();
-        let bpc = l.cromatogramma(0, "BPC").unwrap();
+        assert!(l.scan(0, 3).is_err());
+        let tic = l.chromatogram(0, "TIC").unwrap();
+        let bpc = l.chromatogram(0, "BPC").unwrap();
         assert_eq!((tic.time.len(), bpc.time.len()), (3, 3));
     }
     // the frames out of order in the table, the cut one first
@@ -316,10 +316,10 @@ fn un_tdf_bin_tagliato_legge_i_frame_interi_e_conta_gli_altri() {
         &limiti(),
     )
     .unwrap();
-    assert_eq!((l.indice(0).unwrap().len(), l.mancanti(0)), (2, 1));
+    assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (2, 1));
     // nothing left: an empty index, every spectrum counted
     let mut l = mzlab_lettori::apri(cartella(Vec::new(), tdf_frames(&tims, 3)), &limiti()).unwrap();
-    assert_eq!((l.indice(0).unwrap().len(), l.mancanti(0)), (0, 5));
+    assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (0, 5));
 }
 
 #[test]
@@ -327,8 +327,8 @@ fn ogni_troncamento_del_database_di_una_cartella_non_manda_in_panico() {
     let t = tdf_minimo(3);
     for n in (0..t.len()).step_by(211) {
         if let Ok(mut l) = mzlab_lettori::apri(cartella(blocco2(), t[..n].to_vec()), &limiti()) {
-            let _ = l.indice(0).map(|v| v.len());
-            let _ = l.scansione(0, 0);
+            let _ = l.index(0).map(|v| v.len());
+            let _ = l.scan(0, 0);
         }
     }
 }
