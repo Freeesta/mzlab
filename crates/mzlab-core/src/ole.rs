@@ -184,6 +184,29 @@ impl Ole {
         self.streams.iter().map(|(p, _)| p.as_str())
     }
 
+    /// The bytes the header of an OLE2 file `data` points into (its directory, mini FAT, DIFAT and first FAT sectors), when they lie past its end: a
+    /// copy cut before `open` can follow its directory. `None` for a file that is not OLE2 or whose header sectors are all there.
+    pub fn header_cut(data: &[u8]) -> Option<u64> {
+        if data.get(..8) != Some(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1][..]) {
+            return None;
+        }
+        let ss = match u16_at(data, 0x1E).ok()? {
+            9 => 512u64,
+            12 => 4096,
+            _ => return None,
+        };
+        let n_fat = u32_at(data, 0x2C).ok()? as usize;
+        let fat = (0..n_fat.min(109)).filter_map(|i| u32_at(data, 0x4C + 4 * i).ok());
+        let sid = [0x30, 0x3C, 0x44]
+            .into_iter()
+            .filter_map(|o| u32_at(data, o).ok())
+            .chain(fat)
+            .filter(|&s| s < END)
+            .max()?;
+        let need = (sid as u64 + 2).saturating_mul(ss);
+        (need > data.len() as u64).then_some(need)
+    }
+
     /// The bytes the file needs to hold every sector its FAT marks as used, when it is shorter (a copy cut short): the streams of the missing
     /// sectors would read empty, so a container that lists no sample is told as cut, not as empty.
     pub fn cut_short(&self) -> Option<u64> {

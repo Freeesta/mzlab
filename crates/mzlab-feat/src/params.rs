@@ -434,10 +434,12 @@ pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> S
         .opt(est.ppm)
         .raw(",\"sigma\":")
         .num(est.ppm_sigma);
-    o.raw(",\"n\":")
-        .int(est.ppm_n as i64)
-        .raw("},\"fwhm\":{\"value\":")
-        .opt(est.fwhm);
+    o.raw(",\"n\":").int(est.ppm_n as i64);
+    // a measured scatter above the ceiling is set to the ceiling: said, so a badly calibrated file is not hidden
+    if est.ppm == Some(PPM_MAX) {
+        o.raw(",\"capped\":true");
+    }
+    o.raw("},\"fwhm\":{\"value\":").opt(est.fwhm);
     o.raw(",\"n\":")
         .int(est.fwhm_n as i64)
         .raw("},\"rt_tol\":")
@@ -449,8 +451,11 @@ pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> S
         .raw(",\"sigma\":")
         .num(est.da_sigma)
         .raw(",\"n\":")
-        .int(est.da_n as i64)
-        .raw("},\"examples\":[");
+        .int(est.da_n as i64);
+    if est.da == Some(DA_MAX) {
+        o.raw(",\"capped\":true");
+    }
+    o.raw("},\"examples\":[");
     for (i, e) in examples.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         example_json(&mut o, e);

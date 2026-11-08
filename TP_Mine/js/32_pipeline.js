@@ -147,7 +147,7 @@
   function showProofs(p, f) {
     const ns = p.noise, pp = p.ppm, fw = p.fwhm;
     $("#pipe-proof").innerHTML = (ns ? `<p class="proof"><b>Noise floor ${esc(sci(ns.floor))}</b>: the noise is the lump of the histogram centred on ${esc(sci(ns.mode))} (width σ = ${esc(ns.sigma.toFixed(2))} decades); the floor is 3σ above it (dashed line).</p>` : `<p class="proof">No noise lump in the histogram: no floor can be estimated, the default is kept.</p>`)
-      + (pp.value != null ? `<p class="proof"><b>Mass tolerance ${esc(pp.value.toFixed(1))} ppm</b>: three robust sigma (σ = ${esc(pp.sigma.toFixed(2))} ppm) of the m/z scatter of ${pp.n} points of the strongest traces.</p>` : `<p class="proof">Mass tolerance: too few strong traces (${pp.n} points) to estimate it.</p>`)
+      + (pp.value != null ? `<p class="proof"><b>Mass tolerance ${esc(pp.value.toFixed(1))} ppm</b>: three robust sigma (σ = ${esc(pp.sigma.toFixed(2))} ppm) of the m/z scatter of ${pp.n} points of the strongest traces.${pp.capped ? ` The measured scatter is above the ${esc(pp.value.toFixed(0))} ppm ceiling, so the ceiling is used: check the mass calibration of this file.` : ""}</p>` : `<p class="proof">Mass tolerance: too few strong traces (${pp.n} points) to estimate it.</p>`)
       + (fw.value != null ? `<p class="proof"><b>Median peak width ${esc(fw.value.toFixed(3))} min</b> (FWHM of ${fw.n} strong traces).</p>` : `<p class="proof">Peak width: too few strong traces (${fw.n}).</p>`);
     st.proofs = { noise: ns, ppm: pp, fwhm: fw, file: f, floor_chosen: values().floor };
   }
