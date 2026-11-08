@@ -98,7 +98,7 @@ fn sintetici() -> Option<PathBuf> {
     std::fs::create_dir_all(&d).unwrap();
     let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
     let script = "import sys; from pathlib import Path; import numpy as np; sys.path.insert(0, sys.argv[1]); import dati_sintetici as d, dati_sintetici_canali as k; o = Path(sys.argv[2]); \
-                  k.canali_casi(o / 'canali'); r = np.random.default_rng(3); d.ms2(o / 'B_MS2.mzML', r, 15); d.mrm(o / 'B_MRM.mzML', 1e5, r, 1); \
+                  k.channel_cases(o / 'canali'); r = np.random.default_rng(3); d.ms2(o / 'B_MS2.mzML', r, 15); d.mrm(o / 'B_MRM.mzML', 1e5, r, 1); \
                   d.mixed_ida(o / 'C_IDA.mzML', r); d.mixed_mrm_epi(o / 'C_MRM-EPI.mzML', r)";
     let ok = Command::new("python3")
         .args(["-c", script])
