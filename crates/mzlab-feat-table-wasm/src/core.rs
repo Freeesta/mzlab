@@ -161,14 +161,14 @@ pub fn tp_table_json<R: ReadAt>(
     mzlab_feat::tp::table_json(&t, &s, rows.as_deref())
 }
 
-/// `tp_table_json` with the conditions: `campioni_json` is the `campioni/2` of the files and `infos_json` the list `[{"row","neutral_formula","ion_formula","ppm"}]` of
+/// `tp_table_json` with the conditions: `series_json` is the `campioni/2` of the files and `infos_json` the list `[{"row","neutral_formula","ion_formula","ppm"}]` of
 /// what the caller knows of the best hypothesis of each row. With fewer than two conditions the text is the one of `tp_table_json`; with more it carries `gruppi`.
 pub fn tp_table_cond_json<R: ReadAt>(
     r: &mut R,
     size: u64,
     samples_json: &str,
     rows_json: &str,
-    campioni_json: &str,
+    series_json: &str,
     infos_json: &str,
 ) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
@@ -185,8 +185,8 @@ pub fn tp_table_cond_json<R: ReadAt>(
         )
     };
     let names = mzlab_feat::store::table_names(r, size)?;
-    let campioni_json = mzlab_core::campioni::order_like(campioni_json, &names)?;
-    let cs = mzlab_core::campioni::from_json(campioni_json.as_bytes())?;
+    let series_json = mzlab_core::campioni::order_like(series_json, &names)?;
+    let cs = mzlab_core::campioni::from_json(series_json.as_bytes())?;
     let infos = mzlab_feat::tp::infos_from_json(infos_json)?;
     mzlab_feat::tp::table_json_cond(&t, &s, rows.as_deref(), Some((&cs, &infos)))
 }
@@ -370,6 +370,6 @@ pub fn row_traces_json<R: ReadAt, I: ReadAt>(
 }
 
 /// `campioni/2` and `/3`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest` or `migra` (`mzlab_core::campioni::route`: no name models or CSV, they are over the cap of this .wasm).
-pub fn campioni_json(op: &str, input: &str) -> Result<String> {
+pub fn samples_route(op: &str, input: &str) -> Result<String> {
     mzlab_core::campioni::route(op, input)
 }
