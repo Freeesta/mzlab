@@ -25,6 +25,8 @@ use mzlab_feat::{store::Slice, tp::TpRoles};
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
+mod blocks_js;
 #[cfg(any(feature = "detect", feature = "untargeted"))]
 pub mod cache;
 #[cfg(feature = "detect")]
@@ -113,16 +115,16 @@ impl ReadAt for JsReader {
 }
 
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
-fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<JsReader>> {
+fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<blocks_js::Blocks>> {
     let r = JsReader {
         read: read.clone(),
         k: k as u32,
     };
-    Index::open(r, size as u64)
+    Index::open(blocks_js::Blocks::over(r, size as u64), size as u64)
 }
 
 #[cfg(feature = "proofs")]
-fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<JsReader>>> {
+fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<blocks_js::Blocks>>> {
     (0..sizes.len())
         .map(|k| open_one(read, k, sizes[k]))
         .collect()
