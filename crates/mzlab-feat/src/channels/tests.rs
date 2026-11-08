@@ -76,14 +76,25 @@ fn a_segment_is_48_bytes() {
     assert_eq!(std::mem::size_of::<Seg>(), 48);
 }
 
-/// The invariant `segments` relies on: walking `by_scan` visits the scans in ascending order, so `ps - last` never underflows.
+/// The order of a slab as a stable counting sort by scan gives it: the reference for `by_scan_in`.
+fn by_scan_all(pos: &[u32]) -> Vec<u32> {
+    let mut out: Vec<u32> = (0..pos.len() as u32).collect();
+    out.sort_by_key(|&i| pos[i as usize]);
+    out
+}
+
+/// The invariant `segments` relies on: the peaks of a channel come by ascending scan, so `ps - last` never underflows, ties in table order, the
+/// order the whole slab sorted by scan gives the block.
 #[test]
-fn by_scan_visits_scans_in_ascending_order() {
-    let pos: Vec<u32> = vec![5, 0, 3, 3, 9, 0, 1, 5, 2];
-    let order = by_scan(&pos).unwrap();
-    assert_eq!(order.len(), pos.len());
-    assert!(order
-        .windows(2)
-        .all(|w| pos[w[0] as usize] <= pos[w[1] as usize]));
-    assert!(by_scan(&[]).unwrap().is_empty());
+fn by_scan_in_visits_the_scans_of_a_channel_in_ascending_order() {
+    let pos: Vec<u32> = vec![5, 0, 3, 3, 9, 0, 1, 5, 2, 7, 7, 4];
+    let (mut keys, mut order) = (Vec::new(), Vec::new());
+    for block in [(0, pos.len()), (2, 9), (4, 4), (10, 12)] {
+        by_scan_in(&pos, block, &mut keys, &mut order).unwrap();
+        let want: Vec<u32> = by_scan_all(&pos)
+            .into_iter()
+            .filter(|&i| (block.0..block.1).contains(&(i as usize)))
+            .collect();
+        assert_eq!(order, want, "{block:?}");
+    }
 }

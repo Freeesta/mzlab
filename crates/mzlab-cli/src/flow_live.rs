@@ -465,7 +465,7 @@ fn ready_plan(text: &[u8], dir: &Path, known: &[FileInput], reg: &[Step]) -> Res
                 .then(|| dir.join(crate::flow_set::dataset_name(&f.name)))
         })
         .collect();
-    let read = crate::flow_inputs::map_par(&paths, |p| p.as_deref().map(crate::flow_set::digest));
+    let read = crate::flow_inputs::digest_all(&paths, crate::flow_set::wants_sha1(&plan));
     for ((f, k), dig) in plan.inputs.iter_mut().zip(kept).zip(read) {
         let Some(dig) = dig else {
             let k = k.expect("a kept input");
