@@ -66,9 +66,12 @@ pub(super) fn testata_intera(c: &Cartella, header: Option<&[u8]>) -> Result<()> 
                     .is_some_and(|r| r.trim_ascii_start().starts_with(b"$$ Cal")))
     };
     if header.is_some_and(tronca) {
-        return Err(Error::new("err.file.headerCut")
-            .with("name", &c.nome)
-            .with("file", "_HEADER.TXT"));
+        return Err(nel_file(c, "err.file.headerCut", "_HEADER.TXT"));
     }
     Ok(())
+}
+
+/// The error `chiave` about one `file` of the folder, with the folder name.
+pub(super) fn nel_file(c: &Cartella, chiave: &'static str, file: &str) -> Error {
+    Error::new(chiave).with("name", &c.nome).with("file", file)
 }

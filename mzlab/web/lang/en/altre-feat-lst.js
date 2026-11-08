@@ -227,6 +227,7 @@ I18N.add("en", {
   "lst.mzOnly": "m/z only",
   "lst.theoMz": "theoretical m/z",
   "lst.compatible": "Compatible with a known contaminant:",
+  "lst.cut": "Showing only the first {n} of {m} entries: type a name or an m/z to narrow the list.",
   "lst.more": "{n} more",
   "lst.tgt.upload.tip": "Load a custom target list from a CSV file",
   "lst.tgt.row.tip": "Click to view XIC and spectrum of this target",
