@@ -13,9 +13,9 @@ from bench import adatta, corri  # noqa: E402
 
 def main() -> None:
     a = corri.argomenti(__doc__)
-    par = corri.parametri("asari", a.config)
+    par = corri.parameters("asari", a.config)
     fs = corri.file_mzml(a.mzml_dir, a.solo)
-    nat = corri.cartella_nativa(a.out_dir, "asari", a.config)
+    nat = corri.native_folder(a.out_dir, "asari", a.config)
     entry = nat / "input"                                     # asari reads a directory: link the chosen files
     shutil.rmtree(entry, ignore_errors=True)
     entry.mkdir()

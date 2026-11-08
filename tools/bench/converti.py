@@ -43,7 +43,7 @@ def _env() -> dict:
     return dict(os.environ)
 
 
-def converti(parser: str, raw: Path, output: Path) -> Path:
+def convert(parser: str, raw: Path, output: Path) -> Path:
     """Convert one `.raw` into `uscita/<stem>.mzML` (peak picking on, no compression); return the mzML path."""
     output.mkdir(parents=True, exist_ok=True)
     dest = output / (raw.stem + ".mzML")
@@ -74,7 +74,7 @@ def main(argv=None) -> int:
     for raw in raws:
         print(f"{raw.name} ...", flush=True)
         sha_raw = sha256_file(raw)
-        mz = converti(parser, raw, out)
+        mz = convert(parser, raw, out)
         rec["file"][raw.name] = {"raw_sha256": sha_raw, "raw_byte": raw.stat().st_size, "mzml": mz.name, "mzml_sha256": sha256_file(mz), "mzml_byte": mz.stat().st_size}
         rec_path.write_text(json.dumps(rec, indent=1, sort_keys=True) + "\n")
         print(f"  ok {mz.stat().st_size} B", flush=True)

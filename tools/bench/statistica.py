@@ -10,7 +10,7 @@ import numpy as np
 N_BOOT = 2000
 SEME = 20261012
 ALFA = 0.05
-MARGINI = {"P1": ("alto", -0.02), "P2": ("basso", 0.05), "P3": ("alto", -0.02), "P5": ("basso", 0.01)}       # pre-registered; "alto": higher is better
+MARGINS = {"P1": ("alto", -0.02), "P2": ("basso", 0.05), "P3": ("alto", -0.02), "P5": ("basso", 0.01)}       # pre-registered; "alto": higher is better
 
 
 def indici_bootstrap(n: int, strati=None, n_boot: int = N_BOOT, seme: int = SEME) -> np.ndarray:
@@ -53,7 +53,7 @@ def intervallo(x, which: str = "media", strati=None, n_boot: int = N_BOOT, seme:
     return {"n": int(len(x)), "valore": _point(x, which), "ic_basso": float(lo), "ic_alto": float(hi)}
 
 
-def differenza(a, b, which: str = "media", strati=None, n_boot: int = N_BOOT, seme: int = SEME) -> dict:
+def difference(a, b, which: str = "media", strati=None, n_boot: int = N_BOOT, seme: int = SEME) -> dict:
     """Paired difference a - b (same compounds, same resamples): value, 95 % interval, and the two-sided bootstrap p-value (0 is the null)."""
     a, b = np.asarray(a, float), np.asarray(b, float)
     if len(a) != len(b):
@@ -68,7 +68,7 @@ def differenza(a, b, which: str = "media", strati=None, n_boot: int = N_BOOT, se
     return {"n": int(len(a)), "valore": _point(a, which) - _point(b, which), "ic_basso": float(lo), "ic_alto": float(hi), "p": float(p)}
 
 
-def mcnemar_esatto(a, b) -> dict:
+def mcnemar_exact(a, b) -> dict:
     """Exact two-sided McNemar test on paired 0/1 outcomes: only the discordant pairs count, under the null each is a fair coin."""
     a, b = np.asarray(a, int), np.asarray(b, int)
     n10, n01 = int(((a == 1) & (b == 0)).sum()), int(((a == 0) & (b == 1)).sum())
@@ -92,7 +92,7 @@ def holm(p: list[float], alfa: float = ALFA) -> dict:
     return {"p_corretto": adj, "rifiutata": [x < alfa for x in adj]}
 
 
-def non_inferiore(diff: dict, direction: str, margin: float) -> bool | None:
+def non_inferior(diff: dict, direction: str, margin: float) -> bool | None:
     """Non-inferiority of a - b: the interval of the difference must stay on the right side of the margin (a negative margin when higher is better:
     the lower end above it; a positive one when lower is better: the upper end below it). None if there is nothing to compare."""
     if diff.get("valore") is None:
@@ -100,7 +100,7 @@ def non_inferiore(diff: dict, direction: str, margin: float) -> bool | None:
     return bool(diff["ic_basso"] > margin) if direction == "alto" else bool(diff["ic_alto"] < margin)
 
 
-def superiore(diff: dict, direction: str, refused: bool) -> bool | None:
+def upper(diff: dict, direction: str, refused: bool) -> bool | None:
     """Superiority of a over b: the whole interval on the favourable side of zero and the null rejected after Holm."""
     if diff.get("valore") is None:
         return None

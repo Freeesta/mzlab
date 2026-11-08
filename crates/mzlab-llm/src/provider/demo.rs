@@ -64,3 +64,16 @@ pub fn for_send(
     }
     Ok(req)
 }
+
+/// The spend of the session the proxy reports on a 2xx answer (`x-mzlab-spend: <spent>/<cap>` in micro-dollars, `x-mzlab-soft` once past 80 % of
+/// the cap) as `{"spent":<µ$>,"cap":<µ$>,"soft":<bool>}`, or `None` for a header that is not two whole numbers with a cap above zero.
+pub fn spend_json(header: &str, soft: bool) -> Option<String> {
+    let (a, b) = header.trim().split_once('/')?;
+    let num = |s: &str| {
+        (!s.is_empty() && s.len() <= 15 && s.bytes().all(|c| c.is_ascii_digit()))
+            .then(|| s.parse::<u64>().ok())
+            .flatten()
+    };
+    let (spent, cap) = (num(a)?, num(b)?);
+    (cap > 0).then(|| format!("{{\"spent\":{spent},\"cap\":{cap},\"soft\":{soft}}}"))
+}

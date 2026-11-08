@@ -54,7 +54,7 @@ impl<R: ReadAt> Routes<R> {
             a.min(b),
             a.max(b),
             q.get("hr") != Some("0"),
-            &mut fill,
+            Some(&mut fill),
         )
         .map(Some)
     }
@@ -81,19 +81,17 @@ type Fill<'a> = dyn FnMut(usize, &[(f64, f64)]) -> Result<Vec<Option<f64>>> + 'a
 
 /// The answer for the scans of a file (also the empty answer of a file without scans).
 pub fn window_json(scans: &[crate::idxread::Scan], lo: f64, hi: f64, hr: bool) -> String {
-    window_with(scans, lo, hi, hr, &mut |_, w: &[(f64, f64)]| {
-        Ok(vec![None; w.len()])
-    })
-    .unwrap_or_default()
+    window_with(scans, lo, hi, hr, None).unwrap_or_default()
 }
 
-/// `fill(parent, [(m/z, tolerance)])` gives the intensities of the MS2 whose scan has none, one parent at a time (one spectrum held at once).
+/// `fill(parent, [(m/z, tolerance)])` gives the intensities of the MS2 whose scan has none, one parent at a time (one spectrum held at once);
+/// without a source they stay as the index has them.
 fn window_with(
     scans: &[crate::idxread::Scan],
     lo: f64,
     hi: f64,
     hr: bool,
-    fill: &mut Fill,
+    fill: Option<&mut Fill>,
 ) -> Result<String> {
     let p = hr_profile(scans, false, hr);
     let d = p.dec + 1;
@@ -132,7 +130,10 @@ fn window_with(
     for g in &mut groups {
         sortc::ord(&mut g.sid);
     }
-    let pint = filled(scans, &kids, fill)?;
+    let (pint, cut) = match fill {
+        Some(f) => filled(scans, &kids, f)?,
+        None => (scans.iter().map(|s| s.pint).collect(), false),
+    };
     let top = |g: &Group| {
         g.sid
             .iter()
@@ -148,15 +149,17 @@ fn window_with(
         kids.len(),
         &groups,
         &pint,
+        cut,
     ))
 }
 
-/// The intensity of every scan: its own, else from `fill` for the MS2 `kids` (one parent at a time, the first `MAX_PARENTS` parents).
+/// The intensity of every scan: its own, else from `fill` for the MS2 `kids` (one parent at a time, the first `MAX_PARENTS` parents);
+/// `true` when parents past the limit were left unread.
 fn filled(
     scans: &[crate::idxread::Scan],
     kids: &[(f64, usize)],
     fill: &mut Fill,
-) -> Result<Vec<Option<f64>>> {
+) -> Result<(Vec<Option<f64>>, bool)> {
     let mut pint: Vec<Option<f64>> = scans.iter().map(|s| s.pint).collect();
     let mut need: Vec<(usize, usize, f64)> = kids
         .iter()
@@ -166,14 +169,14 @@ fn filled(
     sortc::by(&mut need, |x, y| x.0.cmp(&y.0).then(x.1.cmp(&y.1)));
     for (n, run) in need.chunk_by(|x, y| x.0 == y.0).enumerate() {
         if n == MAX_PARENTS {
-            break;
+            return Ok((pint, true));
         }
         let w: Vec<(f64, f64)> = run.iter().map(|&(_, i, m)| (m, reach(&scans[i]))).collect();
         for (&(_, i, _), v) in run.iter().zip(fill(run[0].0, &w)?) {
             pint[i] = v;
         }
     }
-    Ok(pint)
+    Ok((pint, false))
 }
 
 fn answer(
@@ -182,6 +185,7 @@ fn answer(
     n: usize,
     groups: &[Group],
     pint: &[Option<f64>],
+    cut: bool,
 ) -> String {
     let mut o = Out::default();
     o.raw("{\"ms1\":")
@@ -207,6 +211,10 @@ fn answer(
         }
         o.raw("]}");
     }
-    o.raw("]}");
+    o.raw("]");
+    if cut {
+        o.raw(",\"pintCut\":").int(MAX_PARENTS as i64); // the intensities past these parents stay null: the page says so
+    }
+    o.raw("}");
     o.0
 }

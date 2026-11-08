@@ -23,12 +23,12 @@ except ImportError:                                    # run as a script
     from bench import truth as V
 
 PPM = 5.0
-FINESTRA = 1.0            # minutes around the truth RT where the apex is looked for
-SOGLIA = 5.0              # apex / median of the non-zero scans of the window
+WINDOW = 1.0            # minutes around the truth RT where the apex is looked for
+THRESHOLD = 5.0              # apex / median of the non-zero scans of the window
 PERCENTILI = (5, 25, 50, 75, 95)
 
 
-def apice(rt: np.ndarray, y: np.ndarray, rt0: float, finestra: float = FINESTRA, threshold: float = SOGLIA):
+def apex(rt: np.ndarray, y: np.ndarray, rt0: float, finestra: float = WINDOW, threshold: float = THRESHOLD):
     """(apex RT, apex height, seen) of a summed XIC in rt0 +- finestra, or (None, 0, False) when the window holds no signal."""
     k = np.flatnonzero((rt >= rt0 - finestra) & (rt <= rt0 + finestra))
     if not len(k) or not np.any(y[k] > 0):
@@ -38,7 +38,7 @@ def apice(rt: np.ndarray, y: np.ndarray, rt0: float, finestra: float = FINESTRA,
     return float(rt[j]), float(y[j]), bool(y[j] >= threshold * base)
 
 
-def controlla(truth: list[dict], tabelle: list, ppm: float = PPM, finestra: float = FINESTRA, threshold: float = SOGLIA) -> dict:
+def controlla(truth: list[dict], tabelle: list, ppm: float = PPM, finestra: float = WINDOW, threshold: float = THRESHOLD) -> dict:
     """`tabelle`: PeakTable of every file (MS1). Returns the per-compound list and the summary."""
     rows = []
     for c in truth:
@@ -52,7 +52,7 @@ def controlla(truth: list[dict], tabelle: list, ppm: float = PPM, finestra: floa
                 tot += y
             else:                                       # runs of different length: resample on the first run's time axis
                 tot += np.interp(rts, t.rt, y)
-        rt, h, seen = apice(rts, tot, c["rt"], finestra, threshold)
+        rt, h, seen = apex(rts, tot, c["rt"], finestra, threshold)
         rows.append({"id": c["id"], "mz": c["mz"], "rt": c["rt"], "apice": rt, "altezza": h, "visto": seen, "d": None if rt is None else rt - c["rt"]})
     d = np.array([r["d"] for r in rows if r["visto"]], dtype=float)
     ass = np.abs(d)

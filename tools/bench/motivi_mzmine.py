@@ -29,7 +29,7 @@ AREA_FACTOR = 2.0
 
 
 @dataclass
-class ListaFile:
+class FileList:
     """The features of one file before the alignment."""
     mz: np.ndarray
     rt: np.ndarray
@@ -63,7 +63,7 @@ def _family(members, mz: float, rt: float) -> bool:
     return bool(len(i))
 
 
-def _background(adap: list[ListaFile] | None, columns_row: list[int], mz: float, rt: float, fondo_min: float) -> bool:
+def _background(adap: list[FileList] | None, columns_row: list[int], mz: float, rt: float, fondo_min: float) -> bool:
     if adap is None:
         return False
     for k in columns_row:
@@ -74,7 +74,7 @@ def _background(adap: list[ListaFile] | None, columns_row: list[int], mz: float,
     return False
 
 
-def _contiene(nat: ListaFile, mm: ListaFile, mz: float, rt: float) -> bool:
+def _contiene(nat: FileList, mm: FileList, mz: float, rt: float) -> bool:
     """A feature of ours at this m/z holds the RT and two or more features of mzmine of the same file: mzmine cut a peak that we keep whole."""
     for j in np.flatnonzero((np.abs(nat.mz - mz) <= mz * PPM * 1e-6) & (nat.rt_inizio <= rt + 1e-9) & (nat.rt_fine >= rt - 1e-9)):
         inside = (np.abs(mm.mz - mz) <= mz * PPM * 1e-6) & (mm.rt >= nat.rt_inizio[j] - 1e-9) & (mm.rt <= nat.rt_fine[j] + 1e-9)
@@ -83,22 +83,22 @@ def _contiene(nat: ListaFile, mm: ListaFile, mz: float, rt: float) -> bool:
     return False
 
 
-def _split_mm(nat_file: list[ListaFile], mm_file: list[ListaFile], columns_row: list[int], mz: float, rt: float) -> bool:
+def _split_mm(nat_file: list[FileList], mm_file: list[FileList], columns_row: list[int], mz: float, rt: float) -> bool:
     return any(_contiene(nat_file[k], mm_file[k], mz, rt) for k in columns_row)
 
 
-def _align(nat_file: list[ListaFile], columns_row: list[int], mz: float, rt: float) -> bool:
+def _align(nat_file: list[FileList], columns_row: list[int], mz: float, rt: float) -> bool:
     """We have a feature at (mz, RT) in at least half of the files of the row of mzmine: the alignment took it elsewhere."""
     con = sum(1 for k in columns_row if len(_neighbors(nat_file[k].mz, nat_file[k].rt, mz, rt)))
     return bool(columns_row) and 2 * con >= len(columns_row)
 
 
-def _split_nat(mm_file: list[ListaFile], nat_file: list[ListaFile], columns_row: list[int], mz: float, rt: float) -> bool:
+def _split_nat(mm_file: list[FileList], nat_file: list[FileList], columns_row: list[int], mz: float, rt: float) -> bool:
     """Our feature of the file is wide and holds two or more features of mzmine."""
     return any(_contiene(nat_file[k], mm_file[k], mz, rt) for k in columns_row)
 
 
-def classifica(native: Tabella, mzmine: Tabella, columns, min_height: float, nat_file: list[ListaFile], mm_file: list[ListaFile], adap: list[ListaFile] | None = None,
+def classifica(native: Tabella, mzmine: Tabella, columns, min_height: float, nat_file: list[FileList], mm_file: list[FileList], adap: list[FileList] | None = None,
                members=None, fondo_min: float = 5.0) -> dict:
     """{"mzmine": {reason: [rows of mzmine without a partner]}, "nativa": {reason: [rows of ours without a partner]}, "area": [(row mzmine, row ours)], "senza_feature": [rows of mzmine in
     `other` of which we have no feature in any file, i.e. lost by the detection]}; the rows are indices of the full tables. `adap`: the chromatograms of mzmine per file (None = the reason `background` is not looked for)."""
@@ -159,11 +159,11 @@ def conteggi(outcome: dict) -> dict:
 
 # ---- the run on a folder of mzML (the real series of the private repository, or the synthetic gold files) ----
 
-def _native_list(folder: Path, names: list[str]) -> list[ListaFile]:
+def _native_list(folder: Path, names: list[str]) -> list[FileList]:
     out = []
     for n in names:
         _, f = nativo.apri((folder / f"{n}.mzfeatf").read_bytes())
-        out.append(ListaFile(f["mz"].astype(float), f["rt"].astype(float), f["left"].astype(float), f["right"].astype(float)))
+        out.append(FileList(f["mz"].astype(float), f["rt"].astype(float), f["left"].astype(float), f["right"].astype(float)))
     return out
 
 
@@ -177,14 +177,14 @@ def _native_table(folder: Path, names: list[str]):
     return Tabella("nativo", [Path(x).stem for x in names], a["mz"].astype(float), a["rt"].astype(float), area, altezza=altezza), members
 
 
-def _list_mzmine(phases: Path, prefix: str, stems: list[str]) -> list[ListaFile]:
+def _list_mzmine(phases: Path, prefix: str, stems: list[str]) -> list[FileList]:
     import csv
     out = []
     for s in stems:
         p = next(phases.glob(f"{prefix}_{s}.mzML_*.csv"))
         with open(p, newline="", encoding="utf-8") as f:
             r = list(csv.DictReader(f))
-        out.append(ListaFile(*(np.array([float(x[c]) for x in r]) for c in ("mz", "rt", "rt_range:min", "rt_range:max"))))
+        out.append(FileList(*(np.array([float(x[c]) for x in r]) for c in ("mz", "rt", "rt_range:min", "rt_range:max"))))
     return out
 
 
@@ -207,13 +207,13 @@ def misura(mzml: Path, work: Path, min_height: float, solo: list[str] | None = N
     fam, _ = _native_table(work / "famiglia", names)
     phases = work / "mzmine"
     phases.mkdir(exist_ok=True)
-    mm, jh = corri_mzmine.installa_39()
-    par = corri.parametri("mzmine", "predefinita")
+    mm, jh = corri_mzmine.install_39()
+    par = corri.parameters("mzmine", "predefinita")
     xml = phases / "fasi.xml"
     xml.write_text(corri_mzmine.batch_xml(fs, phases / "finale.csv", par, phases=phases), encoding="utf-8")
-    if (not_read := corri_mzmine.parametri_non_letti(xml, mm)):
+    if (not_read := corri_mzmine.unread_parameters(xml, mm)):
         raise SystemExit("mzmine would ignore: " + "; ".join(not_read))
-    r = corri_mzmine.esegui_batch(xml, mm, jh, phases / "tmp")
+    r = corri_mzmine.run_batch(xml, mm, jh, phases / "tmp")
     final = phases / "riempimento_Aligned_feature_list_gap-filled.csv"
     if r.returncode or not final.exists():
         raise SystemExit(f"mzmine failed:\n{(r.stdout + r.stderr)[-2000:]}")

@@ -18,10 +18,10 @@ import zipfile
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
-from ci_metrics_giorno import COLONNE_COO, giornaliero, righe_coo  # noqa: F401
+from ci_metrics_giorno import COO_COLUMNS, daily, coo_rows  # noqa: F401
 
-LENTO_S = 5
-AREE = [("workflow", r"^\.github/"), ("docs", r"^(docs/|CLAUDE\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto(-worker)?\.json|mappa\.md|manifest)"),
+SLOW_S = 5
+AREAS = [("workflow", r"^\.github/"), ("docs", r"^(docs/|CLAUDE\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto(-worker)?\.json|mappa\.md|manifest)"),
         ("rust", r"^(crates/|Cargo\.|vendor/)"), ("test", r"^tests(_e2e)?/"), ("tools", r"^tools/"), ("web", r"^mzlab/web/"), ("python", r"\.py$")]
 # Workflows the poll measures, and those that make up the critical path of a PR (the required checks: sito-e2e of `sito-rust` is the slowest).
 WORKFLOW_MISURATI = ("test", "rust", "sito-rust", "desktop", "pages")
@@ -30,14 +30,14 @@ PESANTI = ("passi", "file", "lenti", "fasi", "worker", "moduli")      # fields d
 
 
 def area(f: str) -> str:
-    return next((n for n, rx in AREE if re.search(rx, f)), "altro")
+    return next((n for n, rx in AREAS if re.search(rx, f)), "altro")
 
 
-def aree(files: list[str]) -> dict[str, int]:
+def areas(files: list[str]) -> dict[str, int]:
     return dict(Counter(area(f) for f in files))
 
 
-def scarica(path: str) -> bytes | None:
+def download(path: str) -> bytes | None:
     """Raw bytes of an API path whose answer is a redirect (job logs, artifact zips): the token goes to the API only, never to the storage URL."""
     base = os.environ.get("GITHUB_API_URL", "https://api.github.com")
     repo = os.environ.get("GITHUB_REPOSITORY", "Freeesta/mzlab")
@@ -60,17 +60,17 @@ def scarica(path: str) -> bytes | None:
     return None
 
 
-def passi(job: dict) -> list[list]:
+def steps(job: dict) -> list[list]:
     from ci_metrics import secs
     return [[s["name"], secs(s.get("started_at"), s.get("completed_at")), s.get("conclusion")] for s in job.get("steps", [])]
 
 
-def righe_job(run: dict, jobs: list[dict], base: dict) -> list[dict]:
+def job_rows(run: dict, jobs: list[dict], base: dict) -> list[dict]:
     """One row per completed job: queue, duration, outcome and every step with its time (attempts are rows of their own)."""
     from ci_metrics import secs
     return [{"ts_utc": j["completed_at"], "tipo": "job", "k": str(j["id"]), "workflow": run["name"], "job": j["name"], "esito": j.get("conclusion"),
              "coda_s": secs(j.get("created_at"), j.get("started_at")), "durata_s": secs(j.get("started_at"), j.get("completed_at")),
-             "passi": passi(j), **base} for j in jobs if j.get("status") == "completed" and j.get("completed_at")]
+             "passi": steps(j), **base} for j in jobs if j.get("status") == "completed" and j.get("completed_at")]
 
 
 def cache_da_log(testo: str) -> dict:
@@ -88,7 +88,7 @@ def cache_da_log(testo: str) -> dict:
     return out
 
 
-def righe_cache(run: dict, jobs: list[dict], base: dict, fetch) -> list[dict]:
+def cache_rows(run: dict, jobs: list[dict], base: dict, fetch) -> list[dict]:
     out = []
     for j in jobs:
         if j.get("status") != "completed" or not any(re.search("cache", s["name"], re.I) for s in j.get("steps", [])):
@@ -112,7 +112,7 @@ def zip_artifact(run: dict, prefix: str, api, fetch):
                 yield a["name"], z
 
 
-def righe_junit(run: dict, base: dict, api, fetch) -> list[dict]:
+def junit_rows(run: dict, base: dict, api, fetch) -> list[dict]:
     """Time per test file (setup + call + teardown) and the tests over LENTO_S, from the `junit-*` artifacts of the run; with `tempi-test.json`
     (tools/ci_pytest_tempi.py) also the setup/call/teardown split per file, the xdist worker of each file and the seconds each worker was busy."""
     out = []
@@ -127,7 +127,7 @@ def righe_junit(run: dict, base: dict, api, fetch) -> list[dict]:
                 f = (tc.get("file") or "tests/" + (cn.split(".")[1] if cn.startswith("tests.") and "." in cn else cn) + ".py")
                 per_file[f][0] += 1
                 per_file[f][1] += t
-                if t > LENTO_S:
+                if t > SLOW_S:
                     lenti.append([f"{cn}::{tc.get('name')}", round(t, 1)])
         row = {"ts_utc": run["updated_at"], "tipo": "test_durate", "k": name_art, "workflow": run["name"], "python": name_art[6:].split("-")[0], **({"parte": name_art.split("-", 2)[2]} if name_art.count("-") > 1 else {}),
                 "file": {f: [n, round(s, 1)] for f, (n, s) in sorted(per_file.items())}, "lenti": sorted(lenti, key=lambda x: -x[1])[:30], **base}
@@ -144,7 +144,7 @@ def righe_junit(run: dict, base: dict, api, fetch) -> list[dict]:
     return out
 
 
-def righe_wasm(run: dict, base: dict, api, fetch) -> list[dict]:
+def wasm_rows(run: dict, base: dict, api, fetch) -> list[dict]:
     """Size of every built .wasm and its cap (tools/ci_wasm_dimensioni.py), from the `wasm-dimensioni` artifact of the run."""
     out = []
     for name_art, z in zip_artifact(run, "wasm-dimensioni", api, fetch):
@@ -156,7 +156,7 @@ def righe_wasm(run: dict, base: dict, api, fetch) -> list[dict]:
     return out
 
 
-def riga_annullo(run: dict, jobs: list[dict], base: dict, api) -> list[dict]:
+def cancel_row(run: dict, jobs: list[dict], base: dict, api) -> list[dict]:
     """A cancelled run: runner minutes already spent and the SHA that replaced it (next run of the same workflow on the branch)."""
     from ci_metrics import secs
     spesi = sum(secs(j.get("started_at"), j.get("completed_at")) or 0 for j in jobs if j.get("started_at"))
@@ -167,7 +167,7 @@ def riga_annullo(run: dict, jobs: list[dict], base: dict, api) -> list[dict]:
              "sostituito_da": sost, **base}]
 
 
-def righe_carico(api, ora: str) -> list[dict]:
+def load_rows(api, ora: str) -> list[dict]:
     """Jobs queued and running on the whole repository now (the limit of concurrent runners)."""
     n = {"queued": 0, "in_progress": 0}
     for stato in n:
@@ -183,7 +183,7 @@ def forma_commit(sha: str, api) -> dict:
     c = api(f"/commits/{sha}")
     title = c["commit"]["message"].split("\n")[0]
     return {"titolo": title[:120], "merge_main": len(c.get("parents", [])) > 1 and bool(re.match(r"Merge .*\bmain\b", title)),
-            "aree": aree([f["filename"] for f in c.get("files", [])])}
+            "aree": areas([f["filename"] for f in c.get("files", [])])}
 
 
 def forma_pr(n: int, pr: dict, api, file_pr) -> dict:
@@ -191,12 +191,12 @@ def forma_pr(n: int, pr: dict, api, file_pr) -> dict:
     from ci_metrics import secs
     files = sorted(file_pr(n, api))
     revs = [r["submitted_at"] for r in api(f"/pulls/{n}/reviews?per_page=100") if r.get("submitted_at")]
-    a = aree(files)
+    a = areas(files)
     return {"righe_piu": pr.get("additions"), "righe_meno": pr.get("deletions"), "file_n": len(files), "file": files[:40], "aree": a,
             "solo_doc": bool(files) and set(a) <= {"docs"}, "prima_review_s": secs(pr["created_at"], min(revs)) if revs else None, "review_n": len(revs)}
 
 
-def file_conflitto(n: int, root: str = ".") -> list[str]:
+def file_conflict(n: int, root: str = ".") -> list[str]:
     """Files in conflict of a trial merge of the PR into origin/main (read-only `git merge-tree`; no code of the PR is run)."""
     def g(*a):
         return subprocess.run(["git", *a], cwd=root, capture_output=True, text=True)
@@ -209,7 +209,7 @@ def file_conflitto(n: int, root: str = ".") -> list[str]:
     return sorted(set(names))[:20]
 
 
-def compatta(ev: list[dict], today: datetime, giorni: int = 14) -> list[dict]:
+def compact(ev: list[dict], today: datetime, giorni: int = 14) -> list[dict]:
     """Rows older than `giorni`: heavy fields (steps, per-file times, slow tests) are replaced by a count, so the file stays small."""
     limit = (today - timedelta(days=giorni)).strftime("%Y-%m-%dT%H:%M:%SZ")
     for r in ev:
@@ -220,14 +220,14 @@ def compatta(ev: list[dict], today: datetime, giorni: int = 14) -> list[dict]:
     return ev
 
 
-def esporta(ev: list[dict], folder: str) -> list[str]:
+def export(ev: list[dict], folder: str) -> list[str]:
     """One CSV per row type (nested values as JSON text), plus `giornaliero-coo.csv`: the daily row in the layout of the COO's misure/giornaliero.csv."""
     os.makedirs(folder, exist_ok=True)
     for_type: dict[str, list[dict]] = defaultdict(list)
     for r in ev:
         for_type[r["tipo"]].append(r)
     written = []
-    for_type["giornaliero"] = giornaliero(ev)
+    for_type["giornaliero"] = daily(ev)
     for tipo, rows in for_type.items():
         cols = sorted({c for r in rows for c in r})
         path = os.path.join(folder, f"{tipo}.csv")
@@ -239,9 +239,9 @@ def esporta(ev: list[dict], folder: str) -> list[str]:
         written.append(path)
     path = os.path.join(folder, "giornaliero-coo.csv")
     with open(path, "w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=COLONNE_COO)
+        w = csv.DictWriter(f, fieldnames=COO_COLUMNS)
         w.writeheader()
-        w.writerows(righe_coo(ev))
+        w.writerows(coo_rows(ev))
     return written + [path]
 
 
@@ -309,7 +309,7 @@ def tabelle(ev: list[dict], out=print) -> None:
         out(f"\nRunner load: max {max(r['job_in_corso'] for r in car)} jobs running, max {max(r['job_in_coda'] for r in car)} queued ({len(car)} readings)")
 
 
-def percorso_critico(ev: list[dict], since: str = "") -> dict[str, dict]:
+def critical_path(ev: list[dict], since: str = "") -> dict[str, dict]:
     """Per PR type (docs / Rust / site+other): median and max minutes from push to the last required check, and the slowest jobs, over merged PRs.
 
     The critical path of a head sha is the longest run among WORKFLOW_CRITICI (first attempt, green); `dal` is an ISO timestamp lower bound.

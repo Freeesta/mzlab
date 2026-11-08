@@ -1,13 +1,14 @@
 // @ts-strict
 // Transport of the assistant (the document inside the iframe `llm/trasporto.html`, which has a CSP of its own): the only place that holds the API key and the only code that
 // fetches a model. No logic: the worker (`llm-worker.js`) builds each request and decodes the bytes; here the key goes into the header named by `auth`, the bytes come back unread.
-// Messages: the page sends `init` (labels, provider, port to the worker) with window.postMessage; the worker talks over that port (`send`, `abort` / `head`, `chunk`, `end`, `fail`).
+// For the demo provider the «key» is the owner passphrase (header named by `owner` in `init`, always kept in IndexedDB, «Forget» deletes it); `head` carries the proxy's spend headers.
+// Messages: the page sends `init` (labels, provider, owner header, port to the worker) with window.postMessage; the worker talks over that port (`send`, `abort` / `head`, `chunk`, `end`, `fail`).
 (() => {
   "use strict";
   const DB = "mzlab_llm", STORE = "llm_chiavi";
   const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementById(id));
-  /** @type {{provider: string, local: boolean, labels: Record<string, string>, port: MessagePort | null}} */
-  const st = { provider: "", local: false, labels: {}, port: null };
+  /** @type {{provider: string, local: boolean, owner: string, labels: Record<string, string>, port: MessagePort | null}} */
+  const st = { provider: "", local: false, owner: "", labels: {}, port: null };
   /** the key lives here and nowhere else; it is never posted out of this document @type {string} */
   let key = "";
   /** @type {Map<string, AbortController>} */
@@ -51,6 +52,7 @@
   const paint = () => {
     $("f").hidden = false;
     $("key").disabled = $("b-use").disabled = $("remember").disabled = st.local;
+    $("r-remember").hidden = !!st.owner;
     $("b-forget").disabled = st.local && !key;
     $("hint").textContent = st.labels[st.local ? "local" : "hint"] || "";
     say(st.local ? "local" : key ? "set" : "none");
@@ -67,9 +69,9 @@
       if (r.auth.header) {
         if (!key) throw { key: "err.llm.auth", params: { reason: "nokey" } };
         headers.set(r.auth.header, r.auth.prefix + key);
-      }
+      } else if (st.owner && key) headers.set(st.owner, key);
       const res = await fetch(r.url, { method: "POST", headers, body: r.body, signal: ctl.signal, credentials: "omit", referrerPolicy: "no-referrer" });
-      post({ t: "head", id, status: res.status });
+      post({ t: "head", id, status: res.status, spend: res.headers.get("x-mzlab-spend") || "", soft: !!res.headers.get("x-mzlab-soft") });
       const rd = res.body && res.body.getReader();
       if (rd) for (;;) { const { done, value } = await rd.read(); if (done) break; const b = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength); st.port && st.port.postMessage({ t: "chunk", id, bytes: b }, [b]); }
       post({ t: "end", id });
@@ -91,7 +93,7 @@
     if (ev.origin !== location.origin || ev.source !== window.parent) return;
     const m = ev.data || {};
     if (m.op === "init") {
-      st.provider = String(m.provider || ""); st.local = !!m.local; st.labels = m.labels || {};
+      st.provider = String(m.provider || ""); st.local = !!m.local; st.owner = String(m.owner || ""); st.labels = m.labels || {};
       $("t-key").textContent = st.labels.key || ""; $("b-use").textContent = st.labels.use || ""; $("b-forget").textContent = st.labels.forget || ""; $("t-remember").textContent = st.labels.remember || "";
       $("key").setAttribute("aria-label", st.labels.key || "");
       if (ev.ports[0]) { st.port = ev.ports[0]; st.port.onmessage = onPort; }
@@ -103,7 +105,7 @@
   });
   $("b-use").addEventListener("click", async () => {
     key = $("key").value.trim(); $("key").value = "";
-    try { if ($("remember").checked && key) await remember(key); else await store("k:" + st.provider, null); } catch (_) { /* storage blocked: the key stays for this session */ }
+    try { if (($("remember").checked || st.owner) && key) await remember(key); else await store("k:" + st.provider, null); } catch (_) { /* storage blocked: the key stays for this session */ }
     paint(); window.parent.postMessage({ op: "key", hasKey: !!key }, location.origin);
   });
   $("b-forget").addEventListener("click", async () => {

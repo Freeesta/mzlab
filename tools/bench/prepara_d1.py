@@ -23,7 +23,7 @@ PPM = 5.0
 NA_ION = MASS["Na"] - 0.000548579909
 
 
-def ione(formula: str, mz: float):
+def ion(formula: str, mz: float):
     if not formula:
         return None
     M = sum(MASS[e] * n for e, n in parse_formula(formula).items())
@@ -33,7 +33,7 @@ def ione(formula: str, mz: float):
     return None
 
 
-def prepara(maf: str, rt_report: dict) -> dict:
+def prepare(maf: str, rt_report: dict) -> dict:
     rows = list(csv.DictReader(open(maf, newline="", encoding="utf-8"), delimiter="\t"))
     true = V.da_maf(maf, atteso="Compound concentration ratio")
     rt = {c["id"]: c for c in rt_report["compounds"]}
@@ -42,11 +42,11 @@ def prepara(maf: str, rt_report: dict) -> dict:
     for c in true:
         r = rt.get(c["id"], {})
         out.append({"id": c["id"], "mz": c["mz"], "rt": c["rt"], "atteso": c["atteso"], "formula": formula.get(c["id"]) or None,
-                    "ione": ione(formula.get(c["id"]) or "", c["mz"]), "visto": bool(r.get("visto")), "d_rt": r.get("d")})
+                    "ione": ion(formula.get(c["id"]) or "", c["mz"]), "visto": bool(r.get("visto")), "d_rt": r.get("d")})
     return {"schema": "bench/verita/1", "dataset": "D1", "accessione": "MTBLS733", "n": len(out), "composti": out}
 
 
 if __name__ == "__main__":
-    t = prepara(sys.argv[1], json.loads(Path(sys.argv[2]).read_text()))
+    t = prepare(sys.argv[1], json.loads(Path(sys.argv[2]).read_text()))
     Path(sys.argv[3]).write_text(json.dumps(t, indent=1) + "\n")
     print(t["n"], "compounds")

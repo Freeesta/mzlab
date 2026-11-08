@@ -36,9 +36,9 @@ def table_simple(folder: Path, names: list[str], dataset: str, config: str) -> d
 
 def main() -> None:
     a = corri.argomenti(__doc__, extra)
-    par = corri.parametri("mzlab", a.config)
+    par = corri.parameters("mzlab", a.config)
     fs = corri.file_mzml(a.mzml_dir, a.solo)
-    nat = corri.cartella_nativa(a.out_dir, "mzlab", a.config)
+    nat = corri.native_folder(a.out_dir, "mzlab", a.config)
     nativo.costruisci_esempio()
     idx = nativo.indici(fs, nat / "indici")
     names = [Path(x).stem for x in idx]
@@ -50,7 +50,7 @@ def main() -> None:
         version = nativo.apri((output / "series.mzfeat").read_bytes())[0]["crate"]
     elif a.genitore:
         series = nativo.esegui(idx, a.genitore, a.mz_genitore, a.rt_genitore, nat / "uscita", a.smiles)
-        t = adatta.da_serie(series, a.dataset, a.config)
+        t = adatta.from_series(series, a.dataset, a.config)
         version = series.versione_crate
     else:
         output = nat / "uscita"
