@@ -113,10 +113,10 @@ def test_summary_separates_sensitive_and_storage(tmp_path):
     d = str(tmp_path)
     now = T0 + timedelta(hours=5)
     (tmp_path / "wf").mkdir()
-    assert m.registra_copilot(d, api, 14, tmp_path, now) == 20
+    assert m.record_copilot(d, api, 14, tmp_path, now) == 20
     # rows written less than 7 days after the merge are written again (follow-ups may have come since)
-    assert m.registra_copilot(d, api, 14, tmp_path, now) == 20
-    txt = c.summary(m.copilot_righe(d))
+    assert m.record_copilot(d, api, 14, tmp_path, now) == 20
+    txt = c.summary(m.copilot_rows(d))
     assert "Copilot PRs: 10 closed, 10 merged" in txt and "merged unchanged (no human/Claude commit): 10 of 10" in txt
     assert "Verdict, non-sensitive paths: too few samples yet (5 of 10" in txt and "Verdict, sensitive paths" in txt and "touching sensitive paths: 5" in txt
     assert c.summary([]) == "Copilot: no Copilot PRs recorded yet."

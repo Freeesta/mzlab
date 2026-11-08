@@ -6,7 +6,7 @@
 
 Sources (all CC BY 4.0): NORMAN SusDat, PubChemLite for Exposomics, Transformations in PubChem. Versions and SHA-256 are pinned below: a different file stops
 the build. The index is a list of suspects by monoisotopic mass (never a name for a feature); the format is specified in docs/agenti/sospetti.md.
-`leggi_sospetti()` is the reference reader (the Rust reader is crates/mzlab-feat/src/suspects.rs).
+`read_suspects()` is the reference reader (the Rust reader is crates/mzlab-feat/src/suspects.rs).
 """
 from __future__ import annotations
 
@@ -216,12 +216,12 @@ class Suspects:
         return [self.hit(i) for i in range(lo, hi)]
 
 
-def leggi_sospetti(src) -> Suspects:
+def read_suspects(src) -> Suspects:
     """`src`: bytes or a path of a raw `.mzsus`."""
     return Suspects(src if isinstance(src, (bytes, bytearray)) else Path(src).read_bytes())
 
 
-def prepara_fonti(fonti: list[dict], folder: Path, scarica: bool = True) -> dict[str, list[Path]]:
+def prepare_sources(fonti: list[dict], folder: Path, scarica: bool = True) -> dict[str, list[Path]]:
     """Every file of every source in `folder`, SHA-256 checked (a different file stops the build; a missing one is downloaded)."""
     folder.mkdir(parents=True, exist_ok=True)
     out: dict[str, list[Path]] = {}
@@ -243,7 +243,7 @@ def prepara_fonti(fonti: list[dict], folder: Path, scarica: bool = True) -> dict
 
 
 def genera(fonti: list[dict], folder: Path, scarica: bool = True) -> bytes:
-    files = prepara_fonti(fonti, folder, scarica)
+    files = prepare_sources(fonti, folder, scarica)
     streams = []
     for s in fonti:
         p = files[s["id"]]
@@ -268,7 +268,7 @@ def pacchetto(raw: bytes, out_dir: Path, fonti: list[dict] | None = None) -> dic
         name = f"{i // PIECE:03d}.bin"
         (out_dir / name).write_bytes(b)
         pieces.append({"file": name, "dimensione": len(b), "sha256": hashlib.sha256(b).hexdigest()})
-    man = leggi_sospetti(raw).manifest
+    man = read_suspects(raw).manifest
     cat = {"formato": CATALOG_FORMAT, "pezzo": PIECE, "compressione": "zlib", "dimensione_compressa": len(z), "dimensione": len(raw),
            "sha256": hashlib.sha256(raw).hexdigest(), "righe": man["righe"], "fonti": man["fonti"], "attribuzione": man["attribuzione"], "pezzi": pieces}
     (out_dir / "catalogo.json").write_text(json.dumps(cat, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
@@ -302,7 +302,7 @@ def cas_sidecar(susdat: Path) -> bytes:
     return ("# " + CAS_FORMAT + "\n" + "\n".join(sorted(out)) + "\n").encode("utf-8")
 
 
-def pacchetto_cas(raw: bytes, out_dir: Path) -> dict:
+def package_cas(raw: bytes, out_dir: Path) -> dict:
     """The sidecar as zlib pieces + `catalogo.json` (the keys of `normative/1`, so the Library window downloads and checks it with the same code)."""
     z = zlib.compress(raw, 9)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -331,17 +331,17 @@ def main() -> None:
         try:
             folder = a.fonte or Path(tmp)
             raw = genera(SOURCES, folder)
-            cas_raw = cas_sidecar(prepara_fonti(SOURCES, folder, False)["susdat"][0]) if a.pacchetto else b""
+            cas_raw = cas_sidecar(prepare_sources(SOURCES, folder, False)["susdat"][0]) if a.pacchetto else b""
         except ConnectionError as e:
             print(f"::warning::suspect index not built: the download failed ({e})")
             return
     if a.out:
         a.out.write_bytes(raw)
-    print(f".mzsus: {len(raw) / 1e6:.1f} MB raw, {leggi_sospetti(raw).n} rows")
+    print(f".mzsus: {len(raw) / 1e6:.1f} MB raw, {read_suspects(raw).n} rows")
     if a.pacchetto:
         cat = pacchetto(raw, a.pacchetto)
         print(f"package: {cat['dimensione_compressa'] / 1e6:.1f} MB compressed in {len(cat['pezzi'])} pieces")
-        cas = pacchetto_cas(cas_raw, a.pacchetto / "cas")
+        cas = package_cas(cas_raw, a.pacchetto / "cas")
         print(f"CAS sidecar: {cas['rows']} rows, {cas['size_compressed'] / 1e6:.1f} MB compressed")
 
 

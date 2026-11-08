@@ -24,7 +24,7 @@ def nostro(p: Path) -> bool:
     return p.is_file() and MARCA in p.read_text(encoding="utf-8", errors="replace")
 
 
-def installa(root: Path = ROOT) -> str:
+def install(root: Path = ROOT) -> str:
     dest = path_hook(root)
     if dest is None:
         return "not a git repository: nothing installed"
@@ -45,4 +45,4 @@ def togli(root: Path = ROOT) -> str:
 
 
 if __name__ == "__main__":
-    print(togli() if "--togli" in sys.argv else installa())
+    print(togli() if "--togli" in sys.argv else install())

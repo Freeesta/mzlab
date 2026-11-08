@@ -32,7 +32,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         for lang in ("it", "en"):
-            keys = [k for k in lang_catalogo.catalogo(lang) if re.fullmatch(r"[a-z][\w-]*(\.[\w-]+){2,}", k)]      # dotted keys long enough to never be prose
+            keys = [k for k in lang_catalogo.catalog(lang) if re.fullmatch(r"[a-z][\w-]*(\.[\w-]+){2,}", k)]      # dotted keys long enough to never be prose
             for size, kw in SIZES.items():
                 def run(lang=lang, size=size, kw=kw, keys=keys):
                     ctx = b.new_context(locale="it-IT", service_workers="block", **kw); pg = ctx.new_page(); pg.add_init_script(SKIP)

@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 from mzlab.chem import elements  # noqa: E402  (the reference of the Rust masses)
 from classi_struttura import classes as structure_classes  # noqa: E402  (structure:* classes read from the SMILES by fixed rules)
 
-COMPOSTI = ROOT / "TP_Mine" / "data" / "composti.csv"
+COMPOUNDS = ROOT / "TP_Mine" / "data" / "composti.csv"
 HRMS = ROOT / "tests" / "data" / "liste" / "sostanze_hrms.csv"
 OUT = ROOT / "mzlab" / "web" / "molecole" / "catalogo.csv"
 COLUMNS = ["id", "name", "synonyms", "molecular_formula", "charge", "monoisotopic_mass", "smiles", "inchikey", "adducts", "collections", "classes", "cas",
@@ -63,7 +63,7 @@ def hrms_names(r):
 
 def main():
     csv.field_size_limit(1 << 24)
-    tabui = list(csv.DictReader(open(COMPOSTI, encoding="utf-8", newline="")))
+    tabui = list(csv.DictReader(open(COMPOUNDS, encoding="utf-8", newline="")))
     hrms = list(csv.DictReader(open(HRMS, encoding="utf-8", newline="")))
     by_key = {r["inchikey"].strip(): r for r in hrms}
     in_tabui = {r["inchikey"].strip() for r in tabui}

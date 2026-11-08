@@ -486,10 +486,10 @@ def make(out: Path) -> Path:
     hr_dda(out / HR_NAMES["exploris"], rng4, "exploris"); hr_dda(out / HR_NAMES["fusion"], rng4, "fusion"); hr_dda(out / HR_NAMES["broken"], rng4, "exploris", broken=True)
     subtraction_series(out)                           # written last: nothing else changes
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from dati_sintetici_serie import dia, qc_series; from dati_sintetici_canali import canali_casi
+    from dati_sintetici_serie import dia, qc_series; from dati_sintetici_canali import channel_cases
     dia(out / "D_DIA-t0.mzML", np.random.default_rng(67))      # written last: nothing else changes
     qc_series(out)                                    # written last: nothing else changes
-    canali_casi(out / "canali")                       # written last, in a folder of its own: nothing else changes
+    channel_cases(out / "canali")                       # written last, in a folder of its own: nothing else changes
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 

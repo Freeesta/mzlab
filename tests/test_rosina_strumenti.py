@@ -42,7 +42,7 @@ def _without_variables(d: dict) -> dict:
 
 def test_the_synthetic_truth_is_valid_and_equal_to_the_committed_one():
     d = verita.da_mzml(FIX / "sintetico.mzML", ("generatore sintetico", "1", "tools/mzml_msconvert_sintetico.py"), FIX / "sintetico.mzML", None)
-    assert verita.valida(d) == []
+    assert verita.validate(d) == []
     assert _without_variables(d) == _without_variables(json.loads((FIX / "sintetico.verita.json").read_text()))
     assert d["conteggi"]["spettri"] == {"ms1": 1, "ms2": 3}
     assert len(d["punti"]) <= 8 and all(0 <= int(k) < len(d["scansioni"]) for k in d["punti"])
@@ -54,7 +54,7 @@ def test_the_validator_rejects_a_broken_truth():
     del d["conteggi"]
     d["schema"] = "verita/2"
     d["cromatogrammi"][0]["campione"] = [[0.0, 1.0]] * 17
-    problems = "\n".join(verita.valida(d))
+    problems = "\n".join(verita.validate(d))
     for atteso in ("missing conteggi", "polarita", "verita/1", "more than 16"):
         assert atteso in problems, problems
 
@@ -83,19 +83,19 @@ def test_trfp_flattens_the_json_without_knowing_its_shape(tmp_path):
     assert d["metadati"]["trfp:FileProperties.Instrument model"]["valore"] == "Q Exactive"
     assert d["metadati"]["trfp:Sample.Vial"]["valore"] == "A1"
     assert d["metadati"]["trfp:Lista.0.x"]["valore"] == 1
-    assert d["oracolo"]["nome"] == "ThermoRawFileParser" and verita.valida(d) == []
+    assert d["oracolo"]["nome"] == "ThermoRawFileParser" and verita.validate(d) == []
 
 
 def test_timsdata_adds_the_mobility_table(tmp_path):
     t = tmp_path / "k0.tsv"
     t.write_text("scan\tone_over_k0\n0\t1.45\n1\t1.449\n")
-    assert truth_timsdata.leggi_tabella(t) == {"scan": [0, 1], "one_over_k0": [1.45, 1.449]}
+    assert truth_timsdata.read_table(t) == {"scan": [0, 1], "one_over_k0": [1.45, 1.449]}
     t.write_text("frame\tk0\n0\t1.4\n")
     with pytest.raises(SystemExit):
-        truth_timsdata.leggi_tabella(t)
+        truth_timsdata.read_table(t)
     d = verita.da_mzml(FIX / "sintetico.mzML", ("msconvert+timsdata", "1", ""), None, None)
     d["mobilita"] = {"scan": [0], "one_over_k0": [1.4]}
-    assert verita.valida(d) == []
+    assert verita.validate(d) == []
 
 
 BODY = bytes(range(256)) * 400

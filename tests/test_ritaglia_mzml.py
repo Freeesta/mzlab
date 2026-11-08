@@ -39,7 +39,7 @@ def _file():
 
 
 def test_the_window_keeps_the_scans_inside_with_their_parent_and_is_anonymous():
-    out = rit.ritaglia(_file(), 4.0, 6.0, "HRMS_x")
+    out = rit.crop(_file(), 4.0, 6.0, "HRMS_x")
     assert re.search(r'<spectrumList count="3"', out)
     assert out.count("<spectrum ") == 3
     assert "scan=3" in out and "scan=4" in out and "scan=5" in out and "scan=1\"" not in out
@@ -50,5 +50,5 @@ def test_the_window_keeps_the_scans_inside_with_their_parent_and_is_anonymous():
 
 
 def test_an_ms2_in_the_window_brings_its_ms1_parent_from_before_the_window():
-    out = rit.ritaglia(_file(), 5.05, 5.3, "x")
+    out = rit.crop(_file(), 5.05, 5.3, "x")
     assert out.count("<spectrum ") == 3 and 'id="scan=3"' in out

@@ -22,7 +22,7 @@ def repo(tmp_path, monkeypatch):
 
 def test_no_repository_gives_none(tmp_path, monkeypatch):
     monkeypatch.setenv("MZLAB_DATI", str(tmp_path / "vuoto"))
-    monkeypatch.setattr(dp, "_candidati", lambda: [tmp_path / "vuoto"])
+    monkeypatch.setattr(dp, "_candidates", lambda: [tmp_path / "vuoto"])
     assert dp.radice() is None and dp.percorso("dati/HRMS") is None
 
 

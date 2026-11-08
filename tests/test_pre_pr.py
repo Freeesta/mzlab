@@ -29,7 +29,7 @@ def test_doc_only_uses_the_ci_doc_only_list():
 
 
 def test_doc_only_steps_are_cheap():
-    names = [n for n, _ in load().passi_solo_doc()]
+    names = [n for n, _ in load().doc_only_steps()]
     assert names[:2] == ["mappa del codice", "soglie di dimensione"]
     assert not any("clippy" in n or "e2e" in n for n in names)
 

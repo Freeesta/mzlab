@@ -1,4 +1,4 @@
-//! Reader of the offline suspect index `.mzsus` v1 (format: `docs/agenti/sospetti.md`; reference reader: `tools/genera_sospetti.py::leggi_sospetti`).
+//! Reader of the offline suspect index `.mzsus` v1 (format: `docs/agenti/sospetti.md`; reference reader: `tools/genera_sospetti.py::read_suspects`).
 //! `Suspects::open` parses the whole file into rows ordered by mass; `search` is a binary search of the window `|m - mass| <= mass * ppm * 1e-6`.
 //! A hit of mass is a candidate with its evidence, never a name for a feature.
 //! Flag bit 0 (`FLAG_LISTINGS`) marks the regulatory extension read by `Suspects::listings` (layout: `docs/agenti/sospetti.md`); `reader_min` stays 1.

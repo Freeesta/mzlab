@@ -15,7 +15,7 @@ import zlib
 from pathlib import Path
 
 SCAN_POINTS = 8
-PUNTI_CROMATOGRAMMA = 16
+CHROMATOGRAM_POINTS = 16
 
 # cvParam accessions that matter here (PSI-MS)
 MS_LEVEL, MS_PROFILE, MS_CENTROIDS = "MS:1000511", "MS:1000128", "MS:1000127"
@@ -96,7 +96,7 @@ def _array(b: ET.Element):
     return kind, list(struct.unpack("<" + fmt * n, raw[: n * w]))
 
 
-def _spettro(sp: ET.Element) -> dict:
+def _spectrum(sp: ET.Element) -> dict:
     cv = _cv(sp)
     kind_vals = {}
     for b in _iter(sp, "binaryDataArray"):
@@ -175,7 +175,7 @@ def _chromatogram(ch: ET.Element) -> dict:
     if unit_t == SECONDO:
         t = [x / 60.0 for x in t]
     n = len(y)
-    idx = sorted({round(i * (n - 1) / (PUNTI_CROMATOGRAMMA - 1)) for i in range(PUNTI_CROMATOGRAMMA)}) if n > 1 else list(range(n))
+    idx = sorted({round(i * (n - 1) / (CHROMATOGRAM_POINTS - 1)) for i in range(CHROMATOGRAM_POINTS)}) if n > 1 else list(range(n))
     cid = ch.get("id", "")
     return {
         "id": cid,
@@ -245,7 +245,7 @@ def da_mzml(path: Path, oracle: tuple, nativo: Path | None, sample: int | None) 
     if _loc(root.tag) == "indexedmzML":
         root = root.find("{*}mzML")
     for sp in _iter(root, "spectrum"):
-        d, mz, inten = _spettro(sp)
+        d, mz, inten = _spectrum(sp)
         scans.append(d)
         all_items.append((mz, inten))
     pt = {}
@@ -284,7 +284,7 @@ def da_mzml(path: Path, oracle: tuple, nativo: Path | None, sample: int | None) 
     }
 
 
-def valida(doc, schema=None, here="verita") -> list:
+def validate(doc, schema=None, here="verita") -> list:
     """Problems of `doc` against `verita-1.json` (the subset of JSON Schema that file uses: type, enum, const, required, properties, additionalProperties, items, oneOf,
     minimum, minItems, maxItems, pattern). An empty list: valid."""
     import re
@@ -294,7 +294,7 @@ def valida(doc, schema=None, here="verita") -> list:
     types = {"object": dict, "array": list, "string": str, "boolean": bool, "null": type(None)}
     errors = []
     if "oneOf" in schema:
-        if sum(1 for alt in schema["oneOf"] if not valida(doc, alt, here)) != 1:
+        if sum(1 for alt in schema["oneOf"] if not validate(doc, alt, here)) != 1:
             errors.append(f"{here}: matches none or several alternatives")
         return errors
     if "const" in schema and doc != schema["const"]:
@@ -326,11 +326,11 @@ def valida(doc, schema=None, here="verita") -> list:
         extra = schema.get("additionalProperties")
         for k, v in doc.items():
             if k in schema.get("properties", {}):
-                errors += valida(v, schema["properties"][k], f"{here}.{k}")
+                errors += validate(v, schema["properties"][k], f"{here}.{k}")
             elif extra is False:
                 errors.append(f"{here}: unexpected {k}")
             elif isinstance(extra, dict):
-                errors += valida(v, extra, f"{here}.{k}")
+                errors += validate(v, extra, f"{here}.{k}")
     if isinstance(doc, list):
         if "minItems" in schema and len(doc) < schema["minItems"]:
             errors.append(f"{here}: fewer than {schema['minItems']} items")
@@ -338,7 +338,7 @@ def valida(doc, schema=None, here="verita") -> list:
             errors.append(f"{here}: more than {schema['maxItems']} items")
         if "items" in schema:
             for i, v in enumerate(doc):
-                errors += valida(v, schema["items"], f"{here}[{i}]")
+                errors += validate(v, schema["items"], f"{here}[{i}]")
     return errors
 
 
@@ -350,7 +350,7 @@ def main(argv=None) -> int:
     ap.add_argument("--campione", type=int)
     a = ap.parse_args(argv)
     d = da_mzml(a.mzml, tuple(a.oracolo), a.nativo, a.campione)
-    for problema in valida(d):
+    for problema in validate(d):
         print(problema, file=sys.stderr)
     json.dump(d, sys.stdout, indent=1, ensure_ascii=False)
     sys.stdout.write("\n")

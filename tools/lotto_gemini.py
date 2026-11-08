@@ -23,7 +23,7 @@ HEADER = "=== FILE: {path} ({n} di {tot}) — file separati nel progetto, qui un
 FINE = "=== FINE FILE ==="
 
 
-def leggi_elenco(testo: str, lotto: int | None = None, radice: Path = ROOT) -> list[str]:
+def read_list(testo: str, lotto: int | None = None, radice: Path = ROOT) -> list[str]:
     """The paths of a list; with `lotto`, only those of that `@lotto N` section. Lines that are not paths of existing files are skipped
     (a Markdown file with prose can be passed), except in a plain list without `@lotto` where a missing path is reported by `unisci`."""
     current: int | None = None
@@ -70,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--strict", action="store_true", help="exit code 1 when over the limit")
     ap.add_argument("--controlla", action="store_true", help="only print the sizes, write nothing")
     a = ap.parse_args(argv)
-    paths = leggi_elenco(Path(a.elenco).read_text(encoding="utf-8"), a.lotto)
+    paths = read_list(Path(a.elenco).read_text(encoding="utf-8"), a.lotto)
     if not paths:
         print("no files in the list", file=sys.stderr)
         return 1

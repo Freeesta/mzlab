@@ -31,7 +31,7 @@ def tabella() -> list[dict]:
 
 
 def etichette(lang: str) -> dict[str, str]:
-    return lang_catalogo.catalogo(lang)
+    return lang_catalogo.catalog(lang)
 
 
 def pagina() -> str:

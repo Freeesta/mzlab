@@ -5,7 +5,7 @@ height of the products (tp1, tp2, isomer) multiplied by a factor, so that some p
 
 Writes in DIR the mzML files, `verita.json` / `verita.csv` (same format as the series; the ions are invented) and one `.mzidx` per file (the reader of the
 Rust crate). The molecules, the numbers and the seed are those of the series: only the heights of the products change.
-The profile `debole` is `piccolo` plus `DEBOLI` matrix features in every file with a height between `WEAK_RATIO` (0.3, `crates/mzlab-feat/src/recipe.rs`) and 1 of the
+The profile `debole` is `piccolo` plus `WEAK` matrix features in every file with a height between `WEAK_RATIO` (0.3, `crates/mzlab-feat/src/recipe.rs`) and 1 of the
 minimum height (2e5): the weak tier (`series::weak_tier`) makes tens of thousands of rows of them, enough for the weak tables to leave the memory of the module
 (`spill::Weak::add`) under a budget of a few MB."""
 import argparse
@@ -21,9 +21,9 @@ from valida.sintetici_mzml import scrivi_file          # noqa: E402
 from mzlab.reader import mzidx                         # noqa: E402
 from mzlab.reader.mzml import Run                      # noqa: E402
 
-DEBOLI = 5000
+WEAK = 5000
 WEAK_HEIGHTS = (7e4, 1.8e5)
-si.PROFILI["debole"] = {**si.PROFILI["piccolo"], "debole": DEBOLI}
+si.PROFILI["debole"] = {**si.PROFILI["piccolo"], "debole": WEAK}
 PRODUCTS = ("tp1", "tp2", "isomero")
 
 

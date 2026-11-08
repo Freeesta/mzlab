@@ -38,7 +38,7 @@ def test_lines_and_form(tmp_path):
 def test_deterministic_and_pieces(tmp_path):
     raw = sidecar(tmp_path)
     assert raw == sidecar(tmp_path)
-    cat = gs.pacchetto_cas(raw, tmp_path / "cas")
+    cat = gs.package_cas(raw, tmp_path / "cas")
     on_disk = json.loads((tmp_path / "cas" / "catalogo.json").read_text(encoding="utf-8"))
     assert on_disk == cat and cat["format"] == "mzlab-cas/1" and cat["rows"] == 2 and cat["raw"] == "cas.tsv"
     z = b"".join((tmp_path / "cas" / p["file"]).read_bytes() for p in cat["pieces"])

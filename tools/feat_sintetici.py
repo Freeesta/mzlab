@@ -42,19 +42,19 @@ def plans() -> dict[str, tuple[int, list[tuple], float]]:
             "vicini": (24, neighbours, 10.0), "vuoto": (25, [], 3.0)}
 
 
-def indice(mz: Path, ix: Path) -> None:
+def index(mz: Path, ix: Path) -> None:
     run = Run(mz, index_path=ix)
     mzidx.build(run, ix)
     run.close()
 
 
-def identita(out: Path) -> int:
+def identity(out: Path) -> int:
     from valida import sintetici_identita as si
     d = out / "identita"
     si.genera(7, "piccolo", d)
     files = sorted(d.glob("SIN_*.mzML"))
     for f in files:
-        indice(f, out / f"ri_{f.stem}.mzidx")
+        index(f, out / f"ri_{f.stem}.mzidx")
     shutil.copyfile(out / "ri_SIN_t10min.mzidx", out / "identita.mzidx")
     return len(files)
 
@@ -64,7 +64,7 @@ def degdma(out: Path) -> int:
     from valida import sintetici_identita as si
     d = out / "degdma"
     si.genera(7, "piccolo-degdma", d)
-    indice(d / "SIN_t10min.mzML", out / "degdma.mzidx")
+    index(d / "SIN_t10min.mzML", out / "degdma.mzidx")
     return 1
 
 
@@ -72,7 +72,7 @@ def main(argv) -> int:
     out = Path(argv[0])
     out.mkdir(parents=True, exist_ok=True)
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "identita":
-        print("identita", identita(out))
+        print("identita", identity(out))
         return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "degdma":
         print("degdma", degdma(out))
@@ -80,7 +80,7 @@ def main(argv) -> int:
     for name, (seed, ions, fine) in plans().items():
         mz = out / f"{name}.mzML"
         ds.hr_series(mz, np.random.default_rng(seed), ions, rt_end=fine, cyc=0.008 if name == "fondo" else 0.04)   # "fondo": > 400 scans
-        indice(mz, out / f"{name}.mzidx")
+        index(mz, out / f"{name}.mzidx")
         print(name)
     return 0
 

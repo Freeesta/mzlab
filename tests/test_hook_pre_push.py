@@ -25,12 +25,12 @@ def repo(tmp_path):
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows has no executable bit")
 def test_installs_removes_and_respects_foreign_hook(tmp_path):
     r = repo(tmp_path)
-    assert "installed" in ih.installa(r)
+    assert "installed" in ih.install(r)
     h = r / ".git" / "hooks" / "pre-push"
     assert h.is_file() and h.stat().st_mode & 0o111 and "pre_pr.py --veloce" in h.read_text()
     assert "removed" in ih.togli(r) and not h.exists()
     h.write_text("#!/bin/sh\necho mine\n")
-    assert "left alone" in ih.installa(r) and h.read_text().endswith("mine\n")
+    assert "left alone" in ih.install(r) and h.read_text().endswith("mine\n")
     assert "no hook" in ih.togli(r)
 
 

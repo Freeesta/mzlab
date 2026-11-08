@@ -117,7 +117,7 @@ def main(out: Path) -> None:
         sources, keys, mass, _ = make_sources(Path(tmp))
         raw = gs.genera(sources, Path(tmp), scarica=False)
     (out / "mini.mzsus").write_bytes(raw)
-    s = gs.leggi_sospetti(raw)
+    s = gs.read_suspects(raw)
     qs = [(mass[k] * f, ppm) for k in keys for f, ppm in ((1.0, 0.0), (1.0, 5.0), (1 + 4e-6, 5.0), (1 + 6e-6, 5.0), (1.0, 5000.0))] + [(50.0, 5.0), (700.0, 5.0)]
     cases = [{"mass": m, "ppm": ppm, "hits": [{"key": h.inchikey14, "mass": h.mass, "formula": h.formula, "sources": sum(gs.SOURCE_BITS[x] for x in h.sources),
                                               "pubmed": h.pubmed, "patents": h.patents, "reaction": h.reaction} for h in s.cerca(m, ppm)]} for m, ppm in qs]

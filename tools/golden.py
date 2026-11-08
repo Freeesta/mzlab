@@ -273,7 +273,7 @@ def _cmp_pressure(name, a, b, bad: list[str]) -> None:
         bad.append(f"{name}/analog: unit, points or values differ")
 
 
-def controlla(new: dict[str, dict], old: dict[str, dict], skip_missing: bool = False) -> list[str]:
+def check(new: dict[str, dict], old: dict[str, dict], skip_missing: bool = False) -> list[str]:
     bad: list[str] = []
     keys = (set(old) & set(new)) if skip_missing else (set(old) | set(new))
     for name in sorted(keys):
@@ -323,7 +323,7 @@ def main(argv=None) -> int:
     old = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(GOLDEN.glob("*.json"))}
     if not old:
         print("no golden files: run --crea"); return 1
-    bad = controlla(new, old, skip_missing=args.skip_missing)
+    bad = check(new, old, skip_missing=args.skip_missing)
     for b in bad:
         print("FAIL", b)
     print(f"golden: {'OK' if not bad else str(len(bad)) + ' differences'} ({len(old)} files)")

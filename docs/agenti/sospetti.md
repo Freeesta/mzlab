@@ -27,7 +27,7 @@ Testata (32 byte): magic `MZSU`; u16 versione (1); u16 versione minima del letto
 | blob formule | formule ASCII, ordinate, senza separatori |
 
 ## Lettore
-`leggi_sospetti(percorso_o_byte)` → `Suspects` (`.manifest`, `.n`, `.hit(i)`, `.cerca(massa, ppm)`): finestra `|m − massa| ≤ massa·ppm·1e-6` con ricerca binaria, righe in ordine di massa e chiave. Un file senza magic o più nuovo di quanto il lettore sappia è rifiutato (`ValueError`). Il test è `tests/test_sospetti.py` (mini-insieme sintetico di chiavi inventate).
+`read_suspects(percorso_o_byte)` → `Suspects` (`.manifest`, `.n`, `.hit(i)`, `.cerca(massa, ppm)`): finestra `|m − massa| ≤ massa·ppm·1e-6` con ricerca binaria, righe in ordine di massa e chiave. Un file senza magic o più nuovo di quanto il lettore sappia è rifiutato (`ValueError`). Il test è `tests/test_sospetti.py` (mini-insieme sintetico di chiavi inventate).
 
 ## Lettore Rust (`crates/mzlab-feat/src/suspects.rs`)
 `Suspects::open(&[u8])` legge il file grezzo (già decompresso) in righe `Hit` ordinate per massa (`mass`, `key` 14 byte, `formula` indice per `Suspects::formula`, `sources` bit `SRC_*`, `pubmed`, `patents`, `reaction`); `search(mass, ppm) -> &[Hit]` è una ricerca binaria con la stessa finestra del lettore Python. Errori: `Corrupt` e `Version`; nessuna dipendenza oltre il crate.

@@ -18,12 +18,12 @@ SI_NO = {"si", "no"}
 NO_LICENSE = {"", "-", "nessuna", "non dichiarata"}
 
 
-def leggi(p: Path) -> list:
+def read(p: Path) -> list:
     with p.open(newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f, delimiter="\t"))
 
 
-def controlla(righe: list, columns: list) -> list:
+def check(righe: list, columns: list) -> list:
     problems = [f"missing column: {c}" for c in COLONNE if c not in columns]
     seen = set()
     for i, r in enumerate(righe, start=2):
@@ -75,7 +75,7 @@ def main(argv=None) -> int:
     with a.tsv.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter="\t")
         righe, columns = list(reader), reader.fieldnames or []
-    problems = controlla(righe, columns)
+    problems = check(righe, columns)
     for p in problems:
         print(p, file=sys.stderr)
     if problems:

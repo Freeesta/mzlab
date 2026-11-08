@@ -1,4 +1,4 @@
-"""The files of the channel tests (see `dati_sintetici.py`, which calls `canali_casi` from `make`, and `mzlab-cli canali`): targeted MS2 in LC, MSn in blocks
+"""The files of the channel tests (see `dati_sintetici.py`, which calls `channel_cases` from `make`, and `mzlab-cli canali`): targeted MS2 in LC, MSn in blocks
 (an infusion) and DDA with 70 precursors, with Thermo-style filter strings. Every number is invented."""
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def channels_dda(path: Path, rng) -> None:
     _write(path, specs, [])
 
 
-def canali_casi(out: Path) -> Path:
+def channel_cases(out: Path) -> Path:
     """The files of the channel tests (`mzlab-cli canali`): K_MIRATO, K_BLOCCHI, K_DDA, in their own folder so that the globs of the other files are unchanged."""
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(97)

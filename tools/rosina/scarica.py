@@ -14,12 +14,12 @@ from pathlib import Path
 CAP_GB = 20
 
 
-def leggi(tsv: Path) -> list:
+def read(tsv: Path) -> list:
     with tsv.open(newline="", encoding="utf-8") as f:
         return [r for r in csv.DictReader(f, delimiter="\t") if (r.get("url") or "").strip() and not r["url"].startswith("#")]
 
 
-def dentro(dest: Path, rel: str) -> Path:
+def inside(dest: Path, rel: str) -> Path:
     """The destination path, refused when it leaves DEST."""
     p = (dest / rel).resolve()
     if dest.resolve() not in p.parents:
@@ -35,11 +35,11 @@ def sha256(p: Path) -> str:
     return h.hexdigest()
 
 
-def totale(righe: list) -> int:
+def total(righe: list) -> int:
     return sum(int(r.get("byte") or 0) for r in righe)
 
 
-def scarica(url: str, p: Path, byte: int) -> None:
+def download(url: str, p: Path, byte: int) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     partial = p.with_name(p.name + ".parte")
     done = partial.stat().st_size if partial.exists() else 0
@@ -74,8 +74,8 @@ def main(argv=None) -> int:
     ap.add_argument("--solo", help="only the rows whose `destinazione` contains this text")
     ap.add_argument("--prova", action="store_true", help="list what would be downloaded")
     a = ap.parse_args(argv)
-    righe = [r for r in leggi(a.tsv) if not a.solo or a.solo in (r.get("destinazione") or "")]
-    weight = totale(righe)
+    righe = [r for r in read(a.tsv) if not a.solo or a.solo in (r.get("destinazione") or "")]
+    weight = total(righe)
     if weight > a.tetto_gb * 1e9:
         print(f"refused: {weight / 1e9:.1f} GB asked, the ceiling is {a.tetto_gb} GB", file=sys.stderr)
         return 2
@@ -87,7 +87,7 @@ def main(argv=None) -> int:
             errors += 1
             continue
         try:
-            p = dentro(a.dest, rel)
+            p = inside(a.dest, rel)
         except ValueError as e:
             print(e, file=sys.stderr)
             errors += 1
@@ -96,7 +96,7 @@ def main(argv=None) -> int:
             print(f"{rel}\t{byte}")
             continue
         if not (p.exists() and (not byte or p.stat().st_size == byte)):
-            scarica(url, p, byte)
+            download(url, p, byte)
         if byte and p.stat().st_size != byte:
             print(f"wrong size: {rel} ({p.stat().st_size} of {byte})", file=sys.stderr)
             errors += 1
