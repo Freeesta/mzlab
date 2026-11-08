@@ -7,51 +7,51 @@ use wasm_bindgen::JsValue;
 /// The reader of a dataset that tells `step(done, total)` how many scans of sample `c` it has decoded, about once per 1 % of them: the page shows how far the index
 /// of the sample has got by its own scans, not by the bytes of the members (a `.wiff.scan` holds every sample, the open reads the heads of all of them).
 /// A later pass of the builder counts on from where the first one ended; the page counts from the start of each phase.
-struct Contato {
+struct Counting {
     l: Box<dyn Lettore>,
     step: Function,
     c: usize,
     n: u32,
-    fatte: u32,
-    detto: u32,
+    done: u32,
+    told: u32,
 }
 
-impl Contato {
-    fn nuovo(mut l: Box<dyn Lettore>, step: Function, c: usize) -> Contato {
+impl Counting {
+    fn new(mut l: Box<dyn Lettore>, step: Function, c: usize) -> Counting {
         let n = l.index(c).map_or(0, |v| v.len() as u32);
         drop(step.call2(&JsValue::NULL, &0.into(), &n.into()));
-        Contato {
+        Counting {
             l,
             step,
             c,
             n,
-            fatte: 0,
-            detto: 0,
+            done: 0,
+            told: 0,
         }
     }
-    fn conta(&mut self, c: usize) {
+    fn count(&mut self, c: usize) {
         if c != self.c {
             return;
         }
-        self.fatte += 1;
-        if self.fatte - self.detto >= (self.n / 100).max(1) {
-            self.detto = self.fatte;
+        self.done += 1;
+        if self.done - self.told >= (self.n / 100).max(1) {
+            self.told = self.done;
             drop(
                 self.step
-                    .call2(&JsValue::NULL, &self.fatte.into(), &self.n.into()),
+                    .call2(&JsValue::NULL, &self.done.into(), &self.n.into()),
             );
         }
     }
 }
 
 #[rustfmt::skip]
-impl Lettore for Contato {
+impl Lettore for Counting {
     fn format(&self) -> lettori::Formato { self.l.format() }
     fn samples(&self) -> &[lettori::Campione] { self.l.samples() }
     fn index(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.index(c) }
     fn index_without_tic(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.index_without_tic(c) }
-    fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan(c, k); self.conta(c); s }
-    fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan_data(c, k); self.conta(c); s }
+    fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan(c, k); self.count(c); s }
+    fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan_data(c, k); self.count(c); s }
     fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Campo>> { self.l.scan_header(c, k) }
     fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::VoceCromatogramma>> { self.l.chromatograms(c) }
     fn chromatogram(&mut self, c: usize, id: &str) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> { self.l.chromatogram(c, id) }
@@ -63,10 +63,10 @@ impl Lettore for Contato {
 }
 
 /// The reader of the dataset for the index of sample `c`: phase 4 (`tell`) begins, the dataset opens (a SCIEX pair reads only the blocks of sample `c`, `wiff::lettore::apri_solo`:
-/// a container may hold dozens of samples, one builder each; any other set with `apri_fs`), and it counts its scans for `step` when the page gave one.
-pub(crate) fn apri(
+/// a container may hold dozens of samples, one builder each; any other set with `open_fs`), and it counts its scans for `step` when the page gave one.
+pub(crate) fn open(
     mut fs: FileSet,
-    apri_fs: impl FnOnce(FileSet) -> mzlab_core::Result<Box<dyn Lettore>>,
+    open_fs: impl FnOnce(FileSet) -> mzlab_core::Result<Box<dyn Lettore>>,
     tell: &dyn Fn(u32),
     step: Option<Function>,
     c: usize,
@@ -75,11 +75,11 @@ pub(crate) fn apri(
     let l = if lettori::riconosci(&mut fs).is_some_and(|v| v.id == wiff::lettore::VOCE.id) {
         wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(c))
     } else {
-        apri_fs(fs)
+        open_fs(fs)
     }
     .map_err(|e| crate::error_json(&e))?;
     Ok(match step {
-        Some(step) => Box::new(Contato::nuovo(l, step, c)),
+        Some(step) => Box::new(Counting::new(l, step, c)),
         None => l,
     })
 }

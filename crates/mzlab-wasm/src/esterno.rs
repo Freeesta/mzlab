@@ -1,6 +1,6 @@
-//! A reader that lives in a readers module (`wasm-lettori/<family>/`, docs/agenti/lettori-modulo.md) and not in the engine: `LettoreEsterno` is a `Lettore` over the synchronous
+//! A reader that lives in a readers module (`wasm-lettori/<family>/`, docs/agenti/lettori-modulo.md) and not in the engine: `ExternalReader` is a `Lettore` over the synchronous
 //! functions of the session interface of the module, which the page loads in the same worker (`rust-nativo.js`). The conversion of the answers (JSON, typed arrays) into the types of
-//! the contract is in `Risposte` and does not touch JS, so it is tried natively with a fake `Modulo`; `ModuloJs` is the one that calls the functions. The index and the scans cross as
+//! the contract is in `Replies` and does not touch JS, so it is tried natively with a fake `Module`; `JsModule` is the one that calls the functions. The index and the scans cross as
 //! one byte array each (`mzlab_core::trasporto`), the rest as JSON.
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -17,7 +17,7 @@ use mzlab_core::trasporto::{
 use wasm_bindgen::prelude::*;
 
 /// The session interface of a module, as the engine uses it: JSON texts, and the index and the scans as bytes. An error is the `Error` of the module (same key).
-pub trait Modulo {
+pub trait Module {
     /// The version of the transport the module speaks (`trasporto::PROTOCOLLO`).
     fn protocol(&mut self) -> Result<u32>;
     fn samples(&mut self) -> Result<String>;
@@ -25,7 +25,7 @@ pub trait Modulo {
     fn index(&mut self, c: usize) -> Result<Vec<u8>>;
     /// Scan `k` of sample `c` (`trasporto::encode_scansione`).
     fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>>;
-    /// Scan `k` of sample `c` decoded: from the block of `scan`, unless the module hands its columns over apart (`ModuloJs`).
+    /// Scan `k` of sample `c` decoded: from the block of `scan`, unless the module hands its columns over apart (`JsModule`).
     fn scan_spectrum(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         decode_scansione(k, &self.scan(c, k)?)
     }
@@ -40,15 +40,15 @@ pub trait Modulo {
     }
 }
 
-fn guasto(what: &str) -> Error {
+fn broken(what: &str) -> Error {
     Error::new("err.file.notAccepted").with("detail", what)
 }
 
-thread_local! { static NOMI: RefCell<HashSet<&'static str>> = RefCell::new(HashSet::new()); }
+thread_local! { static NAMES: RefCell<HashSet<&'static str>> = RefCell::new(HashSet::new()); }
 
 /// The text as a `&'static str` (the keys and the names of the parameters of `Error` are static): each distinct text is kept once.
-fn statica(s: &str) -> &'static str {
-    NOMI.with(|n| {
+fn interned(s: &str) -> &'static str {
+    NAMES.with(|n| {
         let mut n = n.borrow_mut();
         if let Some(&k) = n.get(s) {
             return k;
@@ -60,17 +60,17 @@ fn statica(s: &str) -> &'static str {
 }
 
 /// The `Error` a module threw: `{"error_key": ..., "params": {...}}`; anything else is an unreadable answer.
-pub(crate) fn errore_del_modulo(e: &str) -> Error {
+pub(crate) fn module_error(e: &str) -> Error {
     let Ok(v) = json::parse(e.as_bytes()) else {
-        return guasto("module");
+        return broken("module");
     };
     let Some(key) = v.get("error_key").and_then(Value::str) else {
-        return guasto("module");
+        return broken("module");
     };
-    let mut err = Error::new(statica(key));
+    let mut err = Error::new(interned(key));
     if let Some(Value::Obj(p)) = v.get("params") {
         for (k, x) in p {
-            err = err.with(statica(k), x.str().unwrap_or_default());
+            err = err.with(interned(k), x.str().unwrap_or_default());
         }
     }
     err
@@ -80,15 +80,15 @@ fn doc(t: &str) -> Result<Value> {
     json::parse(t.as_bytes())
 }
 
-fn testo(v: Option<&Value>) -> String {
+fn text(v: Option<&Value>) -> String {
     v.and_then(Value::str).unwrap_or_default().to_string()
 }
 
-fn coppie(v: Option<&Value>) -> Vec<(String, String)> {
+fn pairs(v: Option<&Value>) -> Vec<(String, String)> {
     v.map(Value::arr)
         .unwrap_or_default()
         .iter()
-        .map(|p| (testo(p.at(0)), testo(p.at(1))))
+        .map(|p| (text(p.at(0)), text(p.at(1))))
         .collect()
 }
 
@@ -99,12 +99,12 @@ fn format(id: &str) -> Formato {
         "sciex-dam" => Formato::SciexDam,
         "agilent-d" => Formato::AgilentD,
         "mzml" => Formato::Mzml,
-        _ => Formato::Altro(statica(id)),
+        _ => Formato::Altro(interned(id)),
     }
 }
 
-fn tipo(nome: &str) -> ChromKind {
-    match nome {
+fn kind_of(name: &str) -> ChromKind {
+    match name {
         "Tic" => ChromKind::Tic,
         "Bpc" => ChromKind::Bpc,
         "Pda" => ChromKind::Pda,
@@ -116,15 +116,15 @@ fn tipo(nome: &str) -> ChromKind {
     }
 }
 
-fn numero(v: Option<&Value>) -> f64 {
+fn number(v: Option<&Value>) -> f64 {
     v.and_then(Value::f64).unwrap_or(f64::NAN)
 }
 
-fn opzionale(v: Option<&Value>) -> Option<f64> {
+fn optional(v: Option<&Value>) -> Option<f64> {
     v.and_then(Value::f64)
 }
 
-fn numeri(v: Option<&Value>) -> Vec<f64> {
+fn numbers(v: Option<&Value>) -> Vec<f64> {
     v.map(Value::arr)
         .unwrap_or_default()
         .iter()
@@ -133,9 +133,9 @@ fn numeri(v: Option<&Value>) -> Vec<f64> {
 }
 
 /// The conversions of the answers of a module into the types of the contract.
-pub(crate) struct Risposte;
+pub(crate) struct Replies;
 
-impl Risposte {
+impl Replies {
     /// `{formato, campioni:[{id,name,scans}]}`.
     pub(crate) fn samples(t: &str) -> Result<(Formato, Vec<Campione>)> {
         let v = doc(t)?;
@@ -145,16 +145,16 @@ impl Risposte {
             .unwrap_or_default()
             .iter()
             .map(|c| Campione {
-                id: numero(c.get("id")) as u32,
-                nome: testo(c.get("name")),
-                scansioni: numero(c.get("scans")) as usize,
+                id: number(c.get("id")) as u32,
+                nome: text(c.get("name")),
+                scansioni: number(c.get("scans")) as usize,
                 dimensione: c.get("size").and_then(Value::f64).map(|d| d as u64),
             })
             .collect::<Vec<_>>();
         if c.is_empty() {
-            return Err(guasto("samples"));
+            return Err(broken("samples"));
         }
-        Ok((format(&testo(v.get("formato"))), c))
+        Ok((format(&text(v.get("formato"))), c))
     }
 
     /// The index as the module wrote it (`trasporto::decode_indice`).
@@ -164,12 +164,12 @@ impl Risposte {
 }
 
 /// The answers about the scans and their headers.
-pub struct RisposteScansioni;
+pub struct ScanReplies;
 
-impl RisposteScansioni {
+impl ScanReplies {
     /// The scan as the module sends it, with the id and the filter of its row of the index.
-    pub(crate) fn scan(mut s: Spectrum, riga: Option<&VoceScansione>) -> Spectrum {
-        if let Some(r) = riga {
+    pub(crate) fn scan(mut s: Spectrum, row: Option<&VoceScansione>) -> Spectrum {
+        if let Some(r) = row {
             s.id = r.id.clone();
             s.filter = r.filtro.clone();
         }
@@ -178,15 +178,15 @@ impl RisposteScansioni {
 
     /// `[{name, value, unit, cv}]`.
     pub(crate) fn scan_header(t: &str) -> Result<Vec<Campo>> {
-        let opz = |v: Option<&Value>| v.and_then(Value::str).map(str::to_string);
+        let opt = |v: Option<&Value>| v.and_then(Value::str).map(str::to_string);
         Ok(doc(t)?
             .arr()
             .iter()
             .map(|f| Campo {
-                nome: testo(f.get("name")),
-                valore: testo(f.get("value")),
-                unita: opz(f.get("unit")),
-                cv: opz(f.get("cv")),
+                nome: text(f.get("name")),
+                valore: text(f.get("value")),
+                unita: opt(f.get("unit")),
+                cv: opt(f.get("cv")),
             })
             .collect())
     }
@@ -197,30 +197,30 @@ impl RisposteScansioni {
             .arr()
             .iter()
             .map(|x| VoceCromatogramma {
-                id: testo(x.get("id")),
-                tipo: tipo(&testo(x.get("kind"))),
-                unita: testo(x.get("unit")),
+                id: text(x.get("id")),
+                tipo: kind_of(&text(x.get("kind"))),
+                unita: text(x.get("unit")),
             })
             .collect())
     }
 }
 
 /// The answers about the chromatograms and the header of the mzML.
-pub struct RisposteTracce;
+pub struct TraceReplies;
 
-impl RisposteTracce {
+impl TraceReplies {
     /// `{id, kind, q1, q3, unit, time, intensity}`.
     pub(crate) fn chromatogram(t: &str) -> Result<Chromatogram> {
         let x = doc(t)?;
         Ok(Chromatogram {
             index: 0,
-            id: testo(x.get("id")),
-            kind: tipo(&testo(x.get("kind"))),
-            q1: opzionale(x.get("q1")),
-            q3: opzionale(x.get("q3")),
-            unit: testo(x.get("unit")),
-            time: numeri(x.get("time")),
-            intensity: numeri(x.get("intensity")),
+            id: text(x.get("id")),
+            kind: kind_of(&text(x.get("kind"))),
+            q1: optional(x.get("q1")),
+            q3: optional(x.get("q3")),
+            unit: text(x.get("unit")),
+            time: numbers(x.get("time")),
+            intensity: numbers(x.get("intensity")),
         })
     }
 
@@ -233,7 +233,7 @@ impl RisposteTracce {
         let pair = |k: &str| {
             v.get(k)
                 .filter(|p| !p.is_null())
-                .map(|p| (testo(p.at(0)), testo(p.at(1))))
+                .map(|p| (text(p.at(0)), text(p.at(1))))
         };
         let strs = |k: &str| {
             v.get(k)
@@ -243,9 +243,9 @@ impl RisposteTracce {
                 .map(|s| s.str().unwrap_or_default().to_string())
                 .collect::<Vec<_>>()
         };
-        let opz = |k: &str| v.get(k).and_then(Value::str).map(str::to_string);
+        let opt = |k: &str| v.get(k).and_then(Value::str).map(str::to_string);
         Ok(Some(Header {
-            run: testo(v.get("run")),
+            run: text(v.get("run")),
             sources: strs("sources"),
             instrument: pair("instrument"),
             components: v
@@ -253,22 +253,22 @@ impl RisposteTracce {
                 .map(Value::arr)
                 .unwrap_or_default()
                 .iter()
-                .map(|c| (testo(c.at(0)), testo(c.at(1)), testo(c.at(2))))
+                .map(|c| (text(c.at(0)), text(c.at(1)), text(c.at(2))))
                 .collect(),
             software: pair("software").unwrap_or_default(),
-            acquired: opz("acquired"),
-            serial: opz("serial"),
+            acquired: opt("acquired"),
+            serial: opt("serial"),
             source_sha1: strs("source_sha1"),
-            source_cv: coppie(v.get("source_cv")),
+            source_cv: pairs(v.get("source_cv")),
             sample: pair("sample"),
-            run_params: coppie(v.get("run_params")),
-            content: coppie(v.get("content")),
+            run_params: pairs(v.get("run_params")),
+            content: pairs(v.get("content")),
             extra_software: v
                 .get("extra_software")
                 .map(Value::arr)
                 .unwrap_or_default()
                 .iter()
-                .map(|c| (testo(c.at(0)), testo(c.at(1)), testo(c.at(2))))
+                .map(|c| (text(c.at(0)), text(c.at(1)), text(c.at(2))))
                 .collect(),
             centroided: v.get("centroided").and_then(Value::bool).unwrap_or(false),
             ..Header::default()
@@ -276,15 +276,15 @@ impl RisposteTracce {
     }
 }
 
-/// A `Lettore` over a `Modulo`.
-pub struct LettoreEsterno<M: Modulo> {
+/// A `Lettore` over a `Module`.
+pub struct ExternalReader<M: Module> {
     m: M,
-    formato: Formato,
-    campioni: Vec<Campione>,
-    indici: HashMap<usize, Vec<VoceScansione>>,
+    format: Formato,
+    samples: Vec<Campione>,
+    indexes: HashMap<usize, Vec<VoceScansione>>,
 }
 
-impl<M: Modulo> LettoreEsterno<M> {
+impl<M: Module> ExternalReader<M> {
     pub fn new(mut m: M) -> Result<Self> {
         // a module cached from another version of the site speaks another transport: the page asks to load it again
         if m.protocol()? != PROTOCOLLO {
@@ -292,46 +292,46 @@ impl<M: Modulo> LettoreEsterno<M> {
                 .with("family", "thermo")
                 .with("detail", "protocol"));
         }
-        let (formato, campioni) = Risposte::samples(&m.samples()?)?;
-        Ok(LettoreEsterno {
+        let (format, samples) = Replies::samples(&m.samples()?)?;
+        Ok(ExternalReader {
             m,
-            formato,
-            campioni,
-            indici: HashMap::new(),
+            format,
+            samples,
+            indexes: HashMap::new(),
         })
     }
 }
 
-impl<M: Modulo> Lettore for LettoreEsterno<M> {
+impl<M: Module> Lettore for ExternalReader<M> {
     fn format(&self) -> Formato {
-        self.formato
+        self.format
     }
     fn samples(&self) -> &[Campione] {
-        &self.campioni
+        &self.samples
     }
     fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        if !self.indici.contains_key(&c) {
-            let r = Risposte::index(&self.m.index(c)?)?;
-            self.indici.insert(c, r);
+        if !self.indexes.contains_key(&c) {
+            let r = Replies::index(&self.m.index(c)?)?;
+            self.indexes.insert(c, r);
         }
-        Ok(self.indici.get(&c).map_or(&[][..], Vec::as_slice))
+        Ok(self.indexes.get(&c).map_or(&[][..], Vec::as_slice))
     }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let s = self.m.scan_spectrum(c, k)?;
         self.index(c)?;
-        Ok(RisposteScansioni::scan(
+        Ok(ScanReplies::scan(
             s,
-            self.indici.get(&c).and_then(|v| v.get(k)),
+            self.indexes.get(&c).and_then(|v| v.get(k)),
         ))
     }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        RisposteScansioni::scan_header(&self.m.scan_header(c, k)?)
+        ScanReplies::scan_header(&self.m.scan_header(c, k)?)
     }
     fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        RisposteScansioni::chromatograms(&self.m.chromatograms(c)?)
+        ScanReplies::chromatograms(&self.m.chromatograms(c)?)
     }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        RisposteTracce::chromatogram(&self.m.chromatogram(c, id)?)
+        TraceReplies::chromatogram(&self.m.chromatogram(c, id)?)
     }
     fn method(&mut self, c: usize) -> Result<String> {
         self.m.method(c)
@@ -340,93 +340,93 @@ impl<M: Modulo> Lettore for LettoreEsterno<M> {
         self.m.missing(c).unwrap_or(0) as usize
     }
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
-        RisposteTracce::file_header(&self.m.file_header(c)?)
+        TraceReplies::file_header(&self.m.file_header(c)?)
     }
 }
 
 /// The functions of a session of the module, as an object of JS functions `{samples, index, scan, scan_header, chromatograms, chromatogram, method, file_header, missing}`
 /// that already hold the handle of the session: `samples()`, `index(c)`, `scan(c, k)`, ...
-pub(crate) struct ModuloJs {
-    sessione: JsValue,
+pub(crate) struct JsModule {
+    session: JsValue,
     // `scan_parts` of a module that hands a scan over as its head and two views of its columns (an older build has only `scan`)
-    parti: Option<Function>,
+    parts: Option<Function>,
 }
 
-impl ModuloJs {
-    pub(crate) fn new(sessione: JsValue) -> Self {
-        let parti = Reflect::get(&sessione, &JsValue::from_str("scan_parts"))
+impl JsModule {
+    pub(crate) fn new(session: JsValue) -> Self {
+        let parts = Reflect::get(&session, &JsValue::from_str("scan_parts"))
             .ok()
             .and_then(|f| f.dyn_into().ok());
-        ModuloJs { sessione, parti }
+        JsModule { session, parts }
     }
 
-    fn chiama(&self, nome: &str, args: &[JsValue]) -> Result<JsValue> {
-        let f: Function = Reflect::get(&self.sessione, &JsValue::from_str(nome))
+    fn call(&self, name: &str, args: &[JsValue]) -> Result<JsValue> {
+        let f: Function = Reflect::get(&self.session, &JsValue::from_str(name))
             .ok()
             .and_then(|f| f.dyn_into().ok())
-            .ok_or_else(|| guasto(nome))?;
+            .ok_or_else(|| broken(name))?;
         let a: Array = args.iter().collect();
-        f.apply(&self.sessione, &a).map_err(|e| dal_modulo(nome, e))
+        f.apply(&self.session, &a).map_err(|e| from_module(name, e))
     }
 
     /// A `Uint8Array` answer, copied once into the memory of the engine.
-    fn byte(&self, nome: &str, args: &[JsValue]) -> Result<Vec<u8>> {
+    fn byte(&self, name: &str, args: &[JsValue]) -> Result<Vec<u8>> {
         let a: Uint8Array = self
-            .chiama(nome, args)?
+            .call(name, args)?
             .dyn_into()
-            .map_err(|_| guasto(nome))?;
+            .map_err(|_| broken(name))?;
         Ok(a.to_vec())
     }
 
-    fn testo(&self, nome: &str, args: &[JsValue]) -> Result<String> {
-        self.chiama(nome, args)?
+    fn text(&self, name: &str, args: &[JsValue]) -> Result<String> {
+        self.call(name, args)?
             .as_string()
-            .ok_or_else(|| guasto(nome))
+            .ok_or_else(|| broken(name))
     }
 }
 
-impl Drop for ModuloJs {
+impl Drop for JsModule {
     /// Frees the session of the module.
     fn drop(&mut self) {
-        drop(self.chiama("close", &[]));
+        drop(self.call("close", &[]));
     }
 }
 
 /// The error a module threw: its JSON, or the key of a broken module.
-fn dal_modulo(nome: &str, e: JsValue) -> Error {
+fn from_module(name: &str, e: JsValue) -> Error {
     match e.as_string() {
-        Some(t) => errore_del_modulo(&t),
-        None => guasto(nome),
+        Some(t) => module_error(&t),
+        None => broken(name),
     }
 }
 
 /// The scan from `scan_parts`: the columns are views of the module's memory, valid until its next call, so each is copied here at once, in one piece.
-fn dalle_parti(k: usize, r: JsValue) -> Result<Spectrum> {
-    let a: Array = r.dyn_into().map_err(|_| guasto("scan"))?;
-    let testa: Uint8Array = a.get(0).dyn_into().map_err(|_| guasto("scan"))?;
-    let mz: Float64Array = a.get(1).dyn_into().map_err(|_| guasto("scan"))?;
+fn from_parts(k: usize, r: JsValue) -> Result<Spectrum> {
+    let a: Array = r.dyn_into().map_err(|_| broken("scan"))?;
+    let head: Uint8Array = a.get(0).dyn_into().map_err(|_| broken("scan"))?;
+    let mz: Float64Array = a.get(1).dyn_into().map_err(|_| broken("scan"))?;
     let mz = mz.to_vec();
     let y = a.get(2);
     let y = match y.dyn_ref::<Float64Array>() {
         Some(w) => Intensita::Larghe(w.to_vec()),
         None => Intensita::Strette(
             y.dyn_into::<Float32Array>()
-                .map_err(|_| guasto("scan"))?
+                .map_err(|_| broken("scan"))?
                 .to_vec(),
         ),
     };
-    scansione_da_parti(k, &testa.to_vec(), mz, y)
+    scansione_da_parti(k, &head.to_vec(), mz, y)
 }
 
-impl Modulo for ModuloJs {
+impl Module for JsModule {
     fn protocol(&mut self) -> Result<u32> {
-        self.chiama("protocol", &[])?
+        self.call("protocol", &[])?
             .as_f64()
             .map(|v| v as u32)
-            .ok_or_else(|| guasto("protocol"))
+            .ok_or_else(|| broken("protocol"))
     }
     fn samples(&mut self) -> Result<String> {
-        self.testo("samples", &[])
+        self.text("samples", &[])
     }
     fn index(&mut self, c: usize) -> Result<Vec<u8>> {
         self.byte("index", &[(c as f64).into()])
@@ -435,33 +435,33 @@ impl Modulo for ModuloJs {
         self.byte("scan", &[(c as f64).into(), (k as f64).into()])
     }
     fn scan_spectrum(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let Some(f) = &self.parti else {
+        let Some(f) = &self.parts else {
             return decode_scansione(k, &self.scan(c, k)?);
         };
         let r = f
-            .call2(&self.sessione, &(c as f64).into(), &(k as f64).into())
-            .map_err(|e| dal_modulo("scan", e))?;
-        dalle_parti(k, r)
+            .call2(&self.session, &(c as f64).into(), &(k as f64).into())
+            .map_err(|e| from_module("scan", e))?;
+        from_parts(k, r)
     }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<String> {
-        self.testo("scan_header", &[(c as f64).into(), (k as f64).into()])
+        self.text("scan_header", &[(c as f64).into(), (k as f64).into()])
     }
     fn chromatograms(&mut self, c: usize) -> Result<String> {
-        self.testo("chromatograms", &[(c as f64).into()])
+        self.text("chromatograms", &[(c as f64).into()])
     }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<String> {
-        self.testo("chromatogram", &[(c as f64).into(), id.into()])
+        self.text("chromatogram", &[(c as f64).into(), id.into()])
     }
     fn method(&mut self, c: usize) -> Result<String> {
-        self.testo("method", &[(c as f64).into()])
+        self.text("method", &[(c as f64).into()])
     }
     fn file_header(&mut self, c: usize) -> Result<String> {
-        self.testo("file_header", &[(c as f64).into()])
+        self.text("file_header", &[(c as f64).into()])
     }
     fn missing(&mut self, c: usize) -> Result<u32> {
         // a session of an older module has no such function
         Ok(self
-            .chiama("missing", &[(c as f64).into()])
+            .call("missing", &[(c as f64).into()])
             .ok()
             .and_then(|v| v.as_f64())
             .map_or(0, |v| v as u32))
