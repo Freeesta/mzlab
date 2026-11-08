@@ -1,5 +1,5 @@
 """Confidence levels (mzlab/web/livelli.js + the data file livelli-1.js): synthetic cases for every level, the evidence lines, the chemist's decision
-(2b is never assigned by the program), the thresholds (storage, old format, workflow file) and the hidden «attributio» profile."""
+(2b is never assigned by the program), the thresholds (storage, workflow file) and the hidden «attributio» profile."""
 import json
 import shutil
 import subprocess
@@ -12,7 +12,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 PRE = f"""globalThis.window = globalThis; const store = {{}};
 globalThis.localStorage = {{ getItem: k => (k in store ? store[k] : null), setItem: (k, v) => {{ store[k] = String(v); }} }};
-require({str(WEB / 'livelli-1.js')!r}); const L = require({str(WEB / 'livelli.js')!r});
+globalThis.NOMI = require({str(WEB / 'nomi.js')!r}); require({str(WEB / 'livelli-1.js')!r}); const L = require({str(WEB / 'livelli.js')!r});
 const c = (ent, shared, dprec, name = 'A', ik = 'AAAAAAAAAAAAAA-X', extra = {{}}) => ({{ ent, cos: ent - 0.05, shared, dprec, name, ik, lib: 'LIB', nlib: 30, ...extra }});
 """
 
@@ -114,13 +114,6 @@ def test_thresholds_are_editable_stored_and_exported():
     assert r == [0.75, 0.9, "3a", False, False, "livelli/1", "mzlab", 0.9, 0.75, 0.9]
 
 
-def test_old_threshold_format_is_still_read():
-    r = lv("""localStorage.setItem('qqq.lib.soglie', JSON.stringify({ent: .8, shared: 7, ppm: 3, ent2: .5}));
-      const t = L.thresholds(); const o = [t.entropia_min, t.picchi_min, t.precursore_ppm_max, t.entropia_provvisorio];
-      L.importState({ent: .7, shared: 5, ppm: 4, ent2: .55}); o.push(L.thresholds().entropia_min, L.thresholds().picchi_min); return o""")
-    assert r == [0.8, 7, 3, 0.5, 0.7, 5]
-
-
 def test_attributio_profile_cascade():
     base = "L.assess({cands: [%s], nScans: 1}, 'attributio')"
     assert lv("return " + base % "c(.9, 5, 10, 'A', 'AAAAAAAAAAAAAA-X', {cos: .75})")["proposed"] == "2a"        # cosine 0.75, 5 shared ions, 10 ppm: a valid source
@@ -166,10 +159,10 @@ def test_points_section_shape():
     assert p["versione"] == 1 and set(p["prove"]) == {"massa", "isotopi", "MS2", "frammenti", "rete", "cinetica", "controlli", "RT", "frequenza", "esterne"}
     assert [g["punti"] for g in p["prove"]["massa"]["gradini"]] == [2, 1] and p["prove"]["MS2"]["gradini"][0] == {"soglia": "entropia_min", "punti": 3}
     assert p["prove"]["cinetica"]["massimo"] == 0 and p["prove"]["cinetica"]["massimo_se_pesata"] == 1           # K1: informative only
-    soglie = run("console.log(JSON.stringify(L.data.profili.mzlab.soglie))")
+    thresholds = run("console.log(JSON.stringify(L.data.profili.mzlab.soglie))")
     keys = [g["soglia"] for r in p["prove"].values() for g in r["gradini"] if isinstance(g["soglia"], str)] + [r["richiede"]["soglia"] for r in p["prove"].values() if "richiede" in r]
     keys += list(p["tolleranze"].values())
-    assert keys and all(k in soglie for k in keys)                                                               # every named threshold exists in `soglie`
+    assert keys and all(k in thresholds for k in keys)                                                               # every named threshold exists in `soglie`
     for r in p["prove"].values():
         pts = [g["punti"] for g in r["gradini"]]
         assert pts == sorted(pts, reverse=True) and all(x >= 0 for x in pts)                                    # best step first, never negative points

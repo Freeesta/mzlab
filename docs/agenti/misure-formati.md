@@ -19,8 +19,22 @@ Come si leggono le colonne: i secondi per passo sono la somma sulle 12 istanze (
 - Il passo detect è uguale per tutti i formati centroidati (0.44-0.51 s): il formato pesa solo sull'index.
 - Align e gapfill non dipendono dal formato.
 
+## Bruker timsTOF `.d` (DDA-PASEF sintetico)
+`cargo run --release -p mzlab-lettori --features bruker --example bruker_banco -- scrivi X.d --cicli 100` scrive 1100 frame (100 MS1 da 60 000 punti, 1000 PASEF da 15 000 punti con 12 precursori), `analysis.tdf_bin` 80 MB in zstd (codec 2); `misura X.d` dà i ms per fase e la firma FNV di tutti i punti (uguale prima e dopo ogni modifica). 4 CPU, file nella cache del sistema, rumore ±5 %.
+
+| fase (12 100 spettri, 16 M punti) | nativo ms | `.wasm` in Node (mzML) |
+|---|---|---|
+| apertura (tabelle) | 16 | — |
+| indice (TIC degli MS2: decodifica di ogni frame) | 423 | — |
+| BPC | 245 | — |
+| tutti gli spettri | 910 | — |
+| mzML (`lettori_mzml::scrivi`, nuova apertura) | 1 610 | 6 040 |
+
+- Profilo (callgrind, 88 frame, tutte le fasi): la decodifica dei frame è il 50 % delle istruzioni e zstd ne è il 58 %; il deflate dell'mzML scritto il 33 %. L'unione per indice TOF (radix a 11 bit da 1024 punti, `spettri::ordina_tof`) e il taglio per scansioni (offset `Picchi::inizio`) pesano meno del 10 %, contro il 41 % di ordinamento e filtro punto per punto che c'erano prima (stesse misure: indice 670 → 423 ms, BPC 335 → 245, tutti gli spettri 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8,97 → 6,04 s, stesso SHA-256).
+- Il passo indice decodifica ogni frame PASEF una volta per il TIC degli MS2, e la conversione li decodifica di nuovo: il doppio passaggio resta.
+
 ## Non misurato (servono i file del Mac di Federico)
-Thermo .raw (lettore nostro), Agilent .D, Bruker .d, SCIEX .wiff/.wiff.scan, .cdf di strumento e MGF: nel contenitore non ci sono file veri né i convertitori. Il rapporto con mzmine (serie 23-29: 0.56-0.64) non ha un numero nel repository, per cui non è riportato.
+Thermo .raw (lettore nostro), Agilent .D, Bruker .d veri, SCIEX .wiff/.wiff.scan, .cdf di strumento e MGF: nel contenitore non ci sono file veri né i convertitori. Il rapporto con mzmine (serie 23-29: 0.56-0.64) non ha un numero nel repository, per cui non è riportato.
 
 ## Caricamento di file SCIEX (.wiff + .wiff.scan) multi-campione
 Coppie sintetiche di `tools/wiff_grande.py` (3000 scansioni × 3333 punti di profilo per campione, 16 MB di `.wiff.scan` ciascuno); 4 CPU, 16 GB, Chromium con profilo su disco (una finestra normale), motore Rust del sito, `tests_e2e/e2e_wiff_240.py` (`MZLAB_CARICO_DIR=CARTELLA` misura una cartella con `counts.json` {file: campioni}). Il browser vuoto occupa già ≈1,1 GB; il picco è la somma dei processi Chromium.
@@ -35,7 +49,7 @@ Coppie sintetiche di `tools/wiff_grande.py` (3000 scansioni × 3333 punti di pro
 - **Spazio**: l'indice di un campione a profilo pesa 191-218 MB (circa 12 volte il suo `.wiff.scan`): 240 campioni chiedono ≈46 GB di OPFS. Con 134 campioni il disco del contenitore si è riempito a 25,7 GB: 117 caricati, 17 con `error.quota` al 96-99 % del loro indice (ogni campione fallisce da solo, nessun ricaricamento).
 - Il messaggio dice «ne restano 10240 MB» perché la quota del browser supera lo spazio vero del disco. Una finestra privata di Chromium regge circa 200 MB di OPFS.
 - **Costruttori**: al più 3 insieme (picco osservato con 4 CPU); la memoria della pagina (heap JS) resta sotto 230 MB.
-- **Riapertura**: 0,15 s per campione salvato (240 campioni: 36 s); il limite della schermata di avvio (`?ripresa=ms`) è 30 s più 1 s per file salvato (era fisso a 30 s: con 240 campioni la pagina non si riapriva).
+- **Riapertura**: 0,15 s per campione salvato (240 campioni: 36 s); il limite della schermata di avvio (`?ripresa=ms`) è 30 s più 1 s per file salvato, contato da quando il worker ha il motore (`api.up` di `rust-bridge.js`; un download fallito o di oltre 5 min lo fa partire subito, e un download fallito finisce sempre nell'errore).
 - **Elenco**: l'ordine è quello di `ordine.js` (tempo, concentrazione o ordine naturale dei nomi) applicato a tutta la lista, non quello d'arrivo: lo stesso con i file lasciati in ordine inverso.
 
 | carico (`mzlab-cli convert --peaks mzlab`) | `--workers` | s | s/file (mediana) | RSS massimo MB |

@@ -14,19 +14,16 @@ use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
-use crate::flow_cache::Cache;
 use crate::flow_digl::uv::uv_job;
-use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
 pub(crate) use crate::flow_made::Made;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
-use crate::flow_pace::Watch;
-use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, prov_text, run_plan};
-use crate::flow_stats::stats_job;
+use crate::{flow_cache::Cache, flow_pace::Watch};
 use crate::{flow_insilico::insilico_job, flow_level::level_job};
+use crate::{flow_reactivity::reactivity_job, flow_stats::stats_job};
 
 #[path = "flow_live.rs"]
 pub mod live;
@@ -36,6 +33,8 @@ mod plausible;
 mod rtpredict;
 #[path = "flow_screen_suspects.rs"]
 mod screen_suspects;
+#[path = "flow_trace.rs"]
+mod trace;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -47,7 +46,7 @@ pub fn table_step() -> Step {
     let number = |name, title| Param::number(name, title).min(0.0);
     Step {
         ins: vec![Port::new("source", DataType::Raw, "Vendor files or mzML, one series").many().accepts(&[DataType::Mzml])],
-        outs: vec![Port::new("report", DataType::Report, "Feature table as CSV")],
+        outs: vec![Port::new("report", DataType::Report, "Feature table as CSV").format("csv")],
         params: vec![
             Param::choice_num("polarity", "Polarity", &[-1.0, 1.0]),
             Param::choice("mode", "Grouping", &["family", "ion"]),
@@ -159,12 +158,12 @@ pub type DoneFn = Arc<dyn Fn(&str, Option<usize>, f64, bool, Option<String>) + S
 
 /// Runs the steps of this crate on files: inputs are found by name in `inputs`, else in `dir`; what steps make is written to `work`.
 pub struct FileRunner {
-    dir: PathBuf,
+    pub(crate) dir: PathBuf,
     pub(crate) work: PathBuf,
-    inputs: HashMap<String, PathBuf>,
+    pub(crate) inputs: HashMap<String, PathBuf>,
     meter: Option<Meter>,
     pub(crate) made: Mutex<HashMap<String, PathBuf>>,
-    lineage: Mutex<HashMap<String, Lineage>>,
+    pub(crate) lineage: Mutex<trace::Traced>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
     pub(crate) progress: Option<Vec<String>>,
     /// Called after each job (the desktop app shows the steps as they finish).
@@ -173,8 +172,8 @@ pub struct FileRunner {
     cache: Option<crate::flow_cache::Cache>,
     /// Only look in the cache: a job whose key is not there fails with `err.flow.probe.miss` instead of running (`flow_probe.rs`).
     pub(crate) probe: bool,
-    /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
-    pub(crate) budget_mb: f64,
+    /// Working memory of the alignment (`--budget-mb`; else the automatic one of this computer, shared by the workers: `flow_out::Budget`).
+    pub(crate) budget: crate::flow_out::Budget,
     /// A live run: the cancel flag and the progress of each job it runs (`flow_live.rs`).
     watch: Option<Arc<dyn Watch>>,
 }
@@ -187,12 +186,12 @@ impl FileRunner {
             inputs: HashMap::new(),
             meter,
             made: Mutex::new(HashMap::new()),
-            lineage: Mutex::new(HashMap::new()),
+            lineage: Mutex::default(),
             progress: None,
             done: None,
             cache: None,
             probe: false,
-            budget_mb: mzlab_core::budget_auto::native_auto_mb(),
+            budget: crate::flow_out::Budget::auto(),
             watch: None,
         }
     }
@@ -200,7 +199,7 @@ impl FileRunner {
     /// The runner with the working memory of the alignment set to `mb` (None: the automatic budget).
     pub(crate) fn with_budget(mut self, mb: Option<f64>) -> FileRunner {
         if let Some(mb) = mb {
-            self.budget_mb = mb;
+            self.budget = crate::flow_out::Budget::given(mb);
         }
         self
     }
@@ -230,36 +229,6 @@ pub(crate) struct Lineage {
     pub layers: Vec<(String, Vec<(String, Value)>)>,
     pub index: Vec<PathBuf>,
     pub peaks: Vec<PathBuf>,
-}
-
-/// The lineage of the files the run makes (what the feature steps hand on).
-impl FileRunner {
-    pub(crate) fn trace(&self, a: &Artifact, l: Lineage) {
-        let mut map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        map.insert(a.sha256.clone(), l);
-    }
-
-    pub(crate) fn lineage(&self, a: &Artifact) -> Option<Lineage> {
-        let map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        map.get(&a.sha256).cloned()
-    }
-
-    /// The name of the file an index was made from, else the file name of `a`.
-    pub(crate) fn source_name(&self, a: &Artifact) -> String {
-        let l = self.lineage(a).map(|l| l.name).filter(|n| !n.is_empty());
-        l.unwrap_or_else(|| a.label.clone().unwrap_or_default())
-    }
-
-    /// The first index (item 0) made by the instance that made the index `a`.
-    pub(crate) fn first_of_series(&self, a: &Artifact) -> Option<PathBuf> {
-        let me = self.lineage(a)?;
-        let map = self.lineage.lock().unwrap_or_else(|e| e.into_inner());
-        let first = map
-            .iter()
-            .find(|(_, l)| l.instance == me.instance && l.item == Some(0))?;
-        let made = self.made.lock().unwrap_or_else(|e| e.into_inner());
-        made.get(first.0).cloned()
-    }
 }
 
 pub(crate) fn one_input(r: &FileRunner, job: &Job, port: &str) -> Result<PathBuf> {
@@ -347,7 +316,6 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("table.stats", Exec::File("report", stats_job)),
     ("table.kmd", Exec::File("report", crate::flow_kmd::kmd_job)),
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
-    ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
     ("spectra.insilico", Exec::File("candidates", insilico_job)),
     ("formula.ms1", Exec::Made(crate::flow_formula::ms1_job)),
@@ -424,6 +392,8 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(flow_methods::EXECUTORS)
         .chain(flow_export_annot::EXECUTORS)
         .chain(crate::flow_transitions::EXECUTORS)
+        .chain(crate::flow_drift::EXECUTORS)
+        .chain(crate::flow_group::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?
@@ -432,6 +402,8 @@ pub fn executable(id: &str) -> bool {
 }
 
 fn dispatch(r: &FileRunner, job: &Job) -> Result<Made> {
+    let views = crate::flow_export::view::resolve(r, job)?;
+    let job = views.as_ref().unwrap_or(job);
     let exec = all_executors().find(|(k, _)| *k == job.step.id);
     match exec.map(|e| &e.1) {
         Some(Exec::File(port, f)) => Ok(Made::new(port, f(r, job)?)),

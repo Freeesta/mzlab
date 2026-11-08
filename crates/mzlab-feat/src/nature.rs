@@ -3,7 +3,7 @@
 //! `features.align` refuses a series that mixes them (`one_kind_of`).
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{Observed, Plan};
+use mzlab_core::flow::{FileInput, Observed, Plan};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{write_value, Out, Value};
 use mzlab_core::scantable::Table;
@@ -180,12 +180,17 @@ pub fn facets_json(o: &Observed) -> String {
     out.0
 }
 
+/// Whether `fill_facets` asks the facts of the file of `f`: a scan input that misses its resolution or its polarity.
+pub fn wants_facets(f: &FileInput) -> bool {
+    let scan = matches!(f.ty.as_deref(), Some("raw" | "mzml" | "mzidx"));
+    scan && (f.observed.resolution.is_empty() || f.observed.polarity.is_empty())
+}
+
 /// The scan inputs of `plan` (`raw`, `mzml`, `mzidx`) take the facets their file gives (`facts`, None = not read) for the ones the plan does not
 /// write: a resolution or a polarity written by hand is kept.
 pub fn fill_facets(plan: &mut Plan, facts: impl Fn(&str) -> Option<(i8, Option<bool>)>) {
     for f in &mut plan.inputs {
-        let scan = matches!(f.ty.as_deref(), Some("raw" | "mzml" | "mzidx"));
-        if !scan || (!f.observed.resolution.is_empty() && !f.observed.polarity.is_empty()) {
+        if !wants_facets(f) {
             continue;
         }
         let Some(one) = facts(&f.name) else { continue };

@@ -437,3 +437,47 @@ fn one_scan_dda_file_like_before() {
     assert!(seen[2] > 50, "{seen:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_scan_outside_the_file_is_refused_with_its_reason() {
+    // the site has no other engine to ask: a request the file cannot satisfy is an error with its key, never "not answered here"
+    let dir = scratch("fuori");
+    let (mut r, mut mzml, scans) = open(&dir, "hrc", synthetic(30));
+    let n1 = scans.iter().filter(|s| s.0 == 1).count();
+    let key = |r: &mut Routes<File>, mzml: &mut File, path: &str, q: &str| {
+        r.mzml_route(path, &Query::parse(q), mzml)
+            .map(|a| if a.is_some() { "ok" } else { "none" })
+            .unwrap_or_else(|e| e.key)
+    };
+    let cases = [
+        ("/api/spectra", "level=1&i0=0&i1=0", "ok"),
+        (
+            "/api/spectra",
+            format!("level=1&i0={n1}&i1={n1}").leak() as &str,
+            "err.scan.outsideN",
+        ),
+        ("/api/spectra", "level=1&i0=-1&i1=0", "err.scan.outsideN"),
+        ("/api/spectra", "level=1&i0=3&i1=2", "err.scan.range"),
+        ("/api/spectra", "level=1&i0=0&i1=60", "err.scan.maxRequest"),
+        ("/api/scan", "sid=0", "ok"),
+        ("/api/scan", "sid=30", "err.scan.outside"),
+        ("/api/scan", "sid=-1", "err.scan.outside"),
+        ("/api/scanavg", "sids=0,3", "ok"),
+        ("/api/scanavg", "sids=30,99", "err.scan.noneValid"),
+    ];
+    for (path, q, want) in cases {
+        assert_eq!(key(&mut r, &mut mzml, path, q), want, "{path}?{q}");
+    }
+    let e = r
+        .mzml_route(
+            "/api/spectra",
+            &Query::parse(&format!("level=1&i0={n1}&i1={n1}")),
+            &mut mzml,
+        )
+        .unwrap_err();
+    assert_eq!(
+        e.to_json(),
+        format!("{{\"error_key\":\"err.scan.outsideN\",\"params\":{{\"n\":\"{n1}\"}}}}")
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

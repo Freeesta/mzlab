@@ -1,7 +1,7 @@
 // @ts-strict
 // The readers modules in the workers of the ENGINE (rust-worker.js, idx-worker.js): the engine (mzlab-wasm) has no reader for a Thermo `.raw`; the dataset is opened on the `thermo` module, loaded in the same
 // worker on the first `.raw` (carica-modulo.js, never for other files), and the engine reads it through `LettoreEsterno` (crates/mzlab-wasm/src/esterno.rs): synchronous calls, no mzML in between.
-// The index and the scans cross as one Uint8Array each, read by the engine (`trasporto.rs`); the engine refuses a module whose `protocollo()` is not its own (err.file.wiffLoad).
+// The index crosses as one Uint8Array and a scan as its head and views of its columns, read by the engine (`trasporto.rs`); the engine refuses a module whose `protocollo()` is not its own (err.file.wiffLoad).
 // `native_external(open)` of the engine takes `open(names, sizes, read)` -> the object of a session of the module, or null for a dataset no module reads. The module is loaded BEFORE the engine asks
 // (`prepara`, async): the engine cannot wait for a download.
 import { loadModulo } from "./carica-modulo.js";
@@ -14,7 +14,7 @@ export function famigliaEsterna(/** @type {string[]} */ names) {
 
 /** the error the page translates when the module cannot be loaded (thrown as the engine's own errors: a JSON string) */
 function loadError(/** @type {string} */ fam, /** @type {any} */ e) {
-  return JSON.stringify({ error_key: "err.file.wiffLoad", params: { family: fam, detail: String(e && e.message || e) } });
+  return JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: fam, detail: String(e && e.message || e) } });
 }
 
 /** @param {Function} native_external the one of the .wasm of this worker */
@@ -31,26 +31,28 @@ export function createEsterno(native_external) {
     if (!w) throw loadError(fam, "module not loaded");
     const sums = Array.from(names, (n, i) => (sha1 && sha1[i]) || known.get(n + "\0" + sizes[i]) || "");
     // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
-    const h = w.apri_con_sha1 && sums.some(Boolean) ? w.apri_con_sha1(names, sizes, read, sums) : w.apri(names, sizes, read);
+    const h = w.open_with_sha1 && sums.some(Boolean) ? w.open_with_sha1(names, sizes, read, sums) : w.open(names, sizes, read);
     return {
       // the version of the binary transport of the index and the scans (a module of an older build has none)
-      protocollo: () => (w.protocollo ? w.protocollo() : 1),
-      campioni: () => w.campioni(h),
+      protocol: () => (w.protocol ? w.protocol() : 1),
+      samples: () => w.samples(h),
       // one Uint8Array: the columns of the index (crates/mzlab-core/src/trasporto.rs)
-      indice: (/** @type {number} */ c) => w.indice(h, c),
-      scansione: (/** @type {number} */ c, /** @type {number} */ k) => w.scansione(h, c, k),
-      intestazione: (/** @type {number} */ c, /** @type {number} */ k) => w.intestazione(h, c, k),
-      cromatogrammi: (/** @type {number} */ c) => w.cromatogrammi(h, c),
-      cromatogramma: (/** @type {number} */ c, /** @type {string} */ id) => w.cromatogramma(h, c, id),
-      metodo: (/** @type {number} */ c) => w.metodo(h, c),
-      testata: (/** @type {number} */ c) => w.testata(h, c),
+      index: (/** @type {number} */ c) => w.index(h, c),
+      scan: (/** @type {number} */ c, /** @type {number} */ k) => w.scan(h, c, k),
+      // the scan as its head and views of the module's columns, copied by the engine in one piece each (a module of an older build has only `scan`)
+      ...(w.scan_parts ? { scan_parts: (/** @type {number} */ c, /** @type {number} */ k) => w.scan_parts(h, c, k) } : {}),
+      scan_header: (/** @type {number} */ c, /** @type {number} */ k) => w.scan_header(h, c, k),
+      chromatograms: (/** @type {number} */ c) => w.chromatograms(h, c),
+      chromatogram: (/** @type {number} */ c, /** @type {string} */ id) => w.chromatogram(h, c, id),
+      method: (/** @type {number} */ c) => w.method(h, c),
+      file_header: (/** @type {number} */ c) => w.file_header(h, c),
       // the spectra a truncated file declares but does not hold (a module of an older build has none)
-      mancanti: (/** @type {number} */ c) => (w.mancanti ? w.mancanti(h, c) : 0),
-      chiudi: () => w.chiudi(h),
+      missing: (/** @type {number} */ c) => (w.missing ? w.missing(h, c) : 0),
+      close: () => w.close(h),
     };
   };
   return {
-    /** loads the module of the family that reads the dataset with these members (nothing for the others) and registers `open` on the engine; rejects with the JSON `err.file.wiffLoad` */
+    /** loads the module of the family that reads the dataset with these members (nothing for the others) and registers `open` on the engine; rejects with the JSON `err.file.moduleLoad` */
     async prepara(/** @type {string[]} */ names, /** @type {{ name: string, size: number, sha1?: string }[] | undefined} */ members) {
       // a member without a SHA-1 must not inherit the one of an earlier member with the same name and size
       for (const m of members || []) { const k = m.name + "\0" + m.size; if (m.sha1) known.set(k, m.sha1); else known.delete(k); }
@@ -61,7 +63,7 @@ export function createEsterno(native_external) {
       try { loaded.set(fam, await loadModulo(fam)); } catch (e) { throw loadError(fam, e); }
     },
     /** a session of the module over the members of a dataset, for the page's own reads (the series of the instrument log); `prepara` first */
-    apri: open,
+    open,
     loaded: () => [...loaded.keys()],
   };
 }

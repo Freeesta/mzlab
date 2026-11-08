@@ -23,16 +23,16 @@ fn voce(k: usize) -> VoceScansione {
 }
 
 impl Lettore for Alternato {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("finto")
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, _c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _c: usize) -> Result<&[VoceScansione]> {
         Ok(&self.indice)
     }
-    fn scansione(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
         let profile = k % 2 == 1;
         let (mz, y): (Vec<f64>, Vec<f64>) = if profile {
             (0..400)
@@ -53,16 +53,16 @@ impl Lettore for Alternato {
             ..Spectrum::default()
         })
     }
-    fn intestazione(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
         Ok(Vec::new())
     }
-    fn cromatogrammi(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(Vec::new())
     }
-    fn cromatogramma(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
         Err(crate::error::Error::new("err.test"))
     }
-    fn metodo(&mut self, _c: usize) -> Result<String> {
+    fn method(&mut self, _c: usize) -> Result<String> {
         Ok(String::new())
     }
 }
@@ -81,7 +81,7 @@ fn centroids_of_the_reader_are_not_touched() {
     };
     let mut c = centroidato(Box::new(l));
     for k in 0..n {
-        let s = c.scansione(0, k).unwrap();
+        let s = c.scan(0, k).unwrap();
         assert!(!s.profile, "scan {k}");
         if k % 2 == 0 {
             assert_eq!(s.mz, vec![101.0, 102.5, 103.0], "scan {k} kept as is");

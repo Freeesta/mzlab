@@ -19,6 +19,10 @@ function dprNow(){const s=(window.visualViewport&&window.visualViewport.scale)||
  if(window.visualViewport)window.visualViewport.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(redo,150)})}
 // layout size, not getBoundingClientRect: a panel sliding in (transizioni.js scales it) must not change the resolution
 function setup(/** @type {HTMLCanvasElement} */ c){const z=typeof fz==="function"?fz():1;M.l=Math.max(Math.round(66*z),window.MARG_L||0);M.r=Math.max(14,window.MARG_R||0);M.t=Math.round(14*z);M.b=Math.round(40*z);const r={width:c.clientWidth,height:c.clientHeight},d=dprNow();c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const g=/** @type {CanvasRenderingContext2D} */ (c.getContext("2d"));g.setTransform(d,0,0,d,0,0);return{g,W:r.width,H:r.height}}
+// a redraw asked only because the layout moved (window resize, workspace and panel observers: one resize drew every panel three times) is skipped while
+// the canvas has the size of its last drawing (p._sz, written by draw in grafici.js; a draw that did not paint, e.g. on a hidden canvas, clears it)
+function sizeKey(/** @type {Bag} */ p){return p.cv.clientWidth+"x"+p.cv.clientHeight+"@"+dprNow()+"/"+(typeof fz==="function"?fz():1)}
+function drawSized(/** @type {Bag} */ p){return p._sz===sizeKey(p)?undefined:draw(p)}
 function nice(/** @type {number} */ a,/** @type {number} */ b,/** @type {number} */ n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=s/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,o=[];for(let t=Math.ceil(a/st)*st;t<=b+1e-9;t+=st)o.push(+t.toFixed(10));return o}
 function smooth(/** @type {number[]} */ y,/** @type {number} */ k){if(!k)return y;const n=y.length,o=new Array(n);for(let i=0;i<n;i++){const v=y[i],a=i?y[i-1]??v:v,c=i<n-1?y[i+1]??v:v;o[i]=(a+2*v+c)/4}return o}
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
@@ -40,11 +44,11 @@ function applyView(){const v=S.view,d=v==="data";
   { const tb=document.querySelector('#nav button[data-v="'+v+'"]'),tn=tb&&tb.dataset.tname,T=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||""}):(tn||I18N.t("nav.draw"))+" · "+(window.APP_NAME||"")); if(document.title!==T)document.title=T; }
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
 // the header stays in view (sticky): --hh is its real height (it can wrap on a narrow window), used by the file list, the full-screen panel and the scrolls to a panel
-{const hd=document.querySelector("header"),hh=()=>{document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");hd.classList.toggle("scrolled",scrollY>4)};
- hh();addEventListener("scroll",()=>hd.classList.toggle("scrolled",scrollY>4),{passive:true});addEventListener("resize",hh);if(window.ResizeObserver)new ResizeObserver(hh).observe(hd)}
+{const hd=document.querySelector("header"),hh=()=>{document.documentElement.style.setProperty("--hh",Math.ceil(hd.getBoundingClientRect().height)+"px");hd.classList.toggle("scrolled",scrollY>4)};
+ hh();addEventListener("scroll",()=>hd.classList.toggle("scrolled",scrollY>4),{passive:true});addEventListener("resize",hh);new ResizeObserver(hh).observe(hd)}
 window.hdrH=()=>document.querySelector("header").offsetHeight;
 // Back and Forward walk through the views
-/** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){v=VIEW_ALIAS[v]||v;STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
+/** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
 document.querySelectorAll("#nav button:not([data-late])").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 // Back/Forward and typed addresses: the view follows the hash
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
@@ -67,6 +71,7 @@ function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...TIPOF.apply(f,f.name),time,type,conc,use:o?o.use:true,
     // gC: concentration read from the name (yellow in the table until the student edits or confirms them)
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed,ugrp:o&&o.ugrp}});
+  if(typeof CONV!=="undefined")CONV.forget(Object.keys(old).filter(n=>!ST.files.some((/** @type {FileRiga} */ f)=>f.name===n)));
   if(list.some(f=>!old[f.name]))hrMixPreselect();
   // roles and times proposed from the names by the engine (campioni/2)
   if(defer)FILETAB.soon();else FILETAB.flush(true)}
@@ -107,7 +112,7 @@ function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el
     ents.push({f,i,h:xr(f,`<tr data-grp="${loadGrp(f).key}"><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td><span class="ldname" title="${esc(f.name)}">${OPENNOW.isOpen(f.name)?`<button type="button" class="lnk" data-open="${esc(f.name)}" aria-label="${esc(I18N.t("load.table.open",{name:f.name}))}">${esc(noExt(f.name))}</button>`:esc(noExt(f.name))}</span>${f.hr?` <span class="muted sm">${I18N.t("load.row.hr")}</span>`:""}${CONVQ.label(f.name)?` <span class="muted sm" data-cvq="${esc(f.name)}">${esc(CONVQ.label(f.name))}</span>`:""} ${typeof polSign==="function"?polSign(f,F):""}</td><td>${expCell(f)}</td>`+
    RUOLI.roleCell(f,i)+RUOLI.timeCell(f,i,tu)+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
-   `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm dlic" data-dl="${esc(f.name)}" aria-haspopup="menu" aria-label="${I18N.t("conv.dl")}" title="${I18N.t("conv.dl.title")}${CONV.realSize(f.name)?" ("+CONV.realSize(f.name)+")":""}">${CONV.ICON}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`)})});
+   `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm dlic" data-dl="${esc(f.name)}" aria-haspopup="menu" aria-label="${I18N.t("conv.dl")}" title="${I18N.t("conv.dl.title")}">${CONV.ICON}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`)})});
   const R=window.GRUTAB?GRUTAB.rows(ents,ncol):ents.map(x=>x.h);
   // above 500 rows the body comes in chunks of 200 per frame (1000 rows in one go cost 150 ms); the handlers are wired once the last chunk is in
   const tok=FILECHUNK.t={},big=R.length>500;rows=(big?R.slice(0,200):R).join("");
@@ -118,7 +123,7 @@ function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el
   UPROWS.paint();syncWork()}
 const FILECHUNK={t:{}};
 // «Remove all files» of the toolbar: asks once, then removes them like the list's menu does (lista-file.js: one «Removed · Undo» entry takes them all back)
-async function confirmRemoveAll(){const n=E.files.filter((/** @type {FileAperto} */ f)=>!f.gone).length;if(n&&await yesno(I18N.t("load.table.removeAll.ask",{n})))removeAllFiles()}
+async function confirmRemoveAll(){const n=E.files.filter((/** @type {FileAperto} */ f)=>!f.gone).length+unopenedRows().length;if(n&&await yesno(I18N.t("load.table.removeAll.ask",{n})))removeAllFiles()}
 function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
   CONVROWS.wire(el);if(window.COLS)COLS.wire(el);else if(F.length)carica("colonne-campioni.js").then(renderFiles);if(window.GRUTAB)GRUTAB.wire(el);else if(F.length)carica("gruppi-tab.js").then(renderFiles);
   el.querySelectorAll("[data-open]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>soloFile(E.files.find((/** @type {FileAperto} */ x)=>!x.gone&&x.file.split("#")[0]===b.dataset.open)));
@@ -148,13 +153,13 @@ function modeNote(){hrMixNote();const h=$("#hrnote");if(h)h.hidden=!ST.files.som
 // a file of the table that can be opened (an mzML with no data cannot)
 const usable=(/** @type {FileRiga} */ f)=>f.use&&["full","ms2","mrm","infusion"].includes(f.kind);
 // names of the files that could not be read: mzFinder warns that they are missing from its series
-let UPBUSY=0;const LOADFAIL=window.QQQ_LOADFAIL=new Set();
+let UPBUSY=0;const LOADFAIL=window.MZLAB_LOADFAIL=new Set();
 // hook for a progress bar on the loading screen: loadingStato("phase", 40) shows the phase and 40 % in place of the phrase, loadingStato(null) gives the phrases back
 /** @param {number | null} [pct] */ function loadingStato(/** @type {string | null} */ text,pct){ldMsg=text?{text,pct:pct==null?null:pct}:null;ldRefresh()}
 const IDLE=/** @type {((v?: unknown) => void)[]} */ ([]);
 const idle=()=>UPBUSY>0?new Promise(ok=>IDLE.push(ok)):Promise.resolve();
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
-const sendFile=(/** @type {string} */ url,/** @type {Blob} */ f,/** @type {(loaded: number, total: number) => void} */ onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
+const sendFile=(/** @type {string} */ url,/** @type {Blob} */ f,/** @type {(loaded: number, total: number) => void} */ onp)=>window.MZLAB_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error(I18N.t("err.upload.network")));x.send(f)});
 const DEMO_SETS=/** @type {Record<string, string[]>} */ ({full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].map(t=>`MS2_t${t}.mzML`),mrm:["0.6","2.4","7.2","18"].map(c=>`MRM_std_${c}ppm.mzML`),hrms:[0,5,10,30].map(t=>`HRMS_t${String(t).padStart(3,"0")}.mzML`)});
 (()=>{const d=$("#demo");if(!d)return;
@@ -171,24 +176,41 @@ const DEMO_SETS=/** @type {Record<string, string[]>} */ ({full:[0,5,10,15,30].ma
 (()=>{const p=window.MZLAB_RUST_READY;if(p)p.then((/** @type {{ nativo?: boolean } | null} */ b)=>{const d=$("#drop");if(b&&d&&b.nativo){CONVERT_RAW=true}else $("#convhelp").hidden=false}); else $("#convhelp").hidden=false})()   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
-  return NATIVO.raws(files,(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name))}
+  // the same .raw again (same name, size and date, its copy and index still in the browser storage): its sample stays the one of the list, nothing is copied or read again, no second row
+  const out=[];for(const f of files){const hit=/\.raw$/i.test(f.name)?await NATIVO.cached(rb,[{name:f.name,blob:f}],ST.files||[],async()=>({samples:[{id:1}]})).catch(()=>null):null;
+    if(!hit){out.push(f);continue}for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:x.kind,cached:true})}}
+  return NATIVO.raws(out,(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name))}
 // an mzML with MS-Numpress arrays is read as it is by the engine through the `aperti` module (nativo.js numpress): no mzML is written, «Download .mzML» writes it on request
+// a .mzML.gz on the site: a stand-in File that the worker of the engine inflates into OPFS piece by piece (gz-flusso.js); a numpress one, or one without the stream, goes to the module (in memory, with a notice for a big file); a .mzXML.gz without the stream cannot be read here
+async function gzToEngine(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ rep){if(!files.some(f=>/\.gz$/i.test(f.name)))return files;await carica("m:gz-flusso.js");const G=window.GZFLUSSO,st=G.stream(),out=[];
+  for(const f of files){if(!G.isGz(f.name)||f.mzlabNat||f.mzlabModulo){out.push(f);continue}
+    if(/\.mzxml\.gz$/i.test(f.name)){if(st)out.push(f);else{const m=I18N.t("err.file.gzStream");(rep.errs[m]=rep.errs[m]||[]).push(f.name)}continue}
+    if(st&&!(await G.numpress(f))){out.push(G.stand(f));continue}
+    const n=G.memoryNote(f);if(n)rep.notes.push(n);out.push(f)}
+  return out}
 async function numpressToNat(/** @type {FileCarica[]} */ files){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,M=window.LETTORI_MOD;if(!rb||rb.disabled||!rb.nativo||window.MZLAB_DESKTOP||!M)return files;return NATIVO.numpress(files,async(/** @type {FileCarica} */ f)=>(await M.variante(f))==="aperti")}
+// the desktop app reads the formats of the readers modules natively (NATIVO.desktop): its Files are stubs, a module of the page would get no bytes; an mzML of the disk asks the native side, one of the page its first bytes
+async function moduliToNat(/** @type {FileCarica[]} */ files){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,M=window.LETTORI_MOD;if(!rb||rb.disabled||!rb.nativo||!window.MZLAB_DESKTOP||!M)return files;
+  const taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.map(f=>f.name)],stub=(/** @type {FileCarica} */ f)=>/id=\d+/.test(f.type||"");
+  return NATIVO.desktop(files,M.extensions(),async(/** @type {FileCarica} */ f)=>stub(f)||(await M.variante(f))==="aperti",(/** @type {{ name: string, blob: Blob }[]} */ m)=>rb.nativeSamples(m),(/** @type {string} */ n)=>{const nm=M.mzmlName(n.replace(/\.gz$/i,""),taken);taken.push(nm);return nm})}
 // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 const WIFF_WAIT=new Map();
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine reads them as they are and each sample (injection) is a file of the list. Gives the files to go on with and the notices [message, name]
 async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res=/** @type {any} */ ({files,errs:[]}),isW=(/** @type {FileCarica} */ f)=>/\.wiff(\.scan)?$/i.test(f.name);
   // the engine exists but cannot convert now (it stopped twice in a minute, or the page and its scripts are of two versions): say so, not «cannot be opened in the browser»
-  if((rb?(rb.disabled||!rb.nativeSamples):window.MZLAB_RUST_ERR&&!window.QQQ_PHONE)&&files.some(isW)){
+  if((rb?(rb.disabled||!rb.nativeSamples):window.MZLAB_RUST_ERR&&!window.MZLAB_PHONE)&&files.some(isW)){
     res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t(rb?"err.file.wiffEngine":"err.file.wiffLoad"),f.name]));return res}
   if(!rb||rb.disabled||!rb.nativeSamples||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=/** @type {(k: string, p?: unknown) => string} */ ((k,p)=>I18N.t(k,p)),dropped=new Set();
-  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  // two files of one name and kind in one loading (loose files of two folders): no folder tells which .wiff goes with which .wiff.scan, so neither pair is opened
+  const kinds=new Set(),twins=new Set();
+  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};if(kinds.has(k+sc))twins.add(k);kinds.add(k+sc);e[sc?"scan":"wiff"]=f;if(!sc)e.stem=stem;WIFF_WAIT.set(k,e);dropped.add(k)}
+  for(const k of twins){const e=WIFF_WAIT.get(k);WIFF_WAIT.delete(k);dropped.delete(k);res.errs.push([T("load.wiffTwin"),e.stem+".wiff"])}
   const taken=[...res.files.map((/** @type {FileRiga} */ x)=>x.name),...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name)],pairs=[];
   // a pair is in the list as soon as its two files are together, before anything is read
   for(const [k,e] of [...WIFF_WAIT]){
     // a .wiff alone: after the loading it may turn out to be the method of an mzML (loneWiffs)
-    if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait",{name:e.scan.name}),e.scan.name])}continue}
+    if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait"),e.scan.name])}continue}
     WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open",memDesc([e.wiff,e.scan]))}
   // each sample (injection) is a file of the list: the .wiff and the .wiff.scan are read as they are
   for(const e of pairs){
@@ -197,12 +219,12 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD;let sp=/** @type {Promise<{ samples: any[] }> | null} */ (null);const parsed=()=>sp||(sp=rb.nativeSamples(mem));
       const hit=await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
       const probing=M0&&window.LETTORI_FAM.sciex.sonda;if(probing)parsed().catch(()=>{});const pr=probing?await M0.probe("sciex",mem).catch(()=>null):null;      // an engine error counts only when the module does not take the pair
-      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size))});CONVROWS.drop(e.row);continue}
+      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size,pr.campioni.length?undefined:e.wiff.name))});CONVROWS.drop(e.row);continue}
       const s=(await parsed()).samples,key=NATIVO.key(e.stem);
       // × on the row of the pair while it was parsed: its samples are not made (they would open by themselves)
       if(OPENNOW.held(e.row)){CONVROWS.finish(e.row,"cancel");continue}
       s.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
-    catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
+    catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam,undefined,e.wiff.name));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
     CONVROWS.drop(e.row)}
@@ -212,7 +234,7 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
 const LETT_FORCE=/[?&]lettori=modulo\b/.test(location.search);
 /** the family whose module takes `f` ("" = none): a sample the engine refused, a file with an extension only a module reads, a dataset the module of its family says the engine cannot do (probe) */
 async function moduloWants(/** @type {typeof LETTORI_MOD} */ M,/** @type {FileCarica} */ f){
-  if(f.mzlabModulo)return f.mzlabModulo.fam;const n=f.name.toLowerCase();
+  if(f.mzlabModulo)return f.mzlabModulo.fam;if(f.mzlabGz)return "";const n=f.name.toLowerCase();if(n.endsWith(".mzxml.gz"))return "aperti";      // gzToEngine kept it: inflated into OPFS, then read as an mzXML
   if(M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return M.famigliaDi([n]);
   // an mzML with numpress arrays: the engine refuses it (err.file.numpress), the module writes it again with zlib
   if(n.endsWith(".mzml")&&!f.mzlabNat){const v=await M.variante(f);if(v)return v}
@@ -228,21 +250,23 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
   const jobs=new Map();for(const f of files){const fam=await moduloWants(M,f);if(fam)jobs.set(f,fam)}if(!jobs.size){if(onFile)files.forEach(f=>onFile(f,null));return files}
   const g=ConvUI.group(),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.filter(f=>!jobs.has(f)).map(f=>f.name)];
   // every file of the batch has its row (Queued) from the start, so the count over the table is the count of the headline
-  const names=new Map();for(const f of jobs.keys()){const lot=f.mzlabModulo||f.mzlabNat,nm=lot?f.name:M.mzmlName(f.name,taken);taken.push(nm);names.set(f,nm);CONVROWS.add(nm,"wait")}
-  let i=0;
+  const names=new Map();for(const f of jobs.keys()){const lot=f.mzlabModulo||f.mzlabNat,nm=lot?f.name:M.mzmlName(f.name.replace(/\.gz$/i,""),taken);taken.push(nm);names.set(f,nm);CONVROWS.add(nm,"wait")}
+  let i=0;const given=new Set();
   for(const f of files){
     if(!jobs.has(f)){out.push(f);if(onFile)onFile(f,g);continue}
-    i++;const lot=f.mzlabModulo||f.mzlabNat,mem=lot?lot.members:[{name:f.name,blob:f}],nm=names.get(f);
+    i++;const lot=f.mzlabModulo||f.mzlabNat,nm=names.get(f);let mem=lot?lot.members:[{name:f.name,blob:f}],temp="";
     if(g.signal.aborted||OPENNOW.held(nm))continue;
     let ready=null;CONVROWS.set(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
-    try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},ui.signal);
-      ui.done();CONV.add(nm,blob);if(/** @type {any} */ (blob).mzlabMissing)M.missing.set(nm,/** @type {any} */ (blob).mzlabMissing);ready=new File([blob],nm);out.push(ready)}
-    catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
-    finally{CONVROWS.drop(nm)}
-    if(ready&&onFile)onFile(ready,g)}
-  for(const nm of names.values())CONVROWS.drop(nm);
+    try{if(/\.mzxml\.gz$/i.test(f.name)){const x=await window.GZFLUSSO.mzxml(f,(/** @type {number} */ fr)=>CONVROWS.set(nm,"run",Math.floor(50*fr)),ui.signal);temp=x.mzlabTemp;mem=[{name:x.name,blob:x}]}      // its mzXML, inflated into conv/ (half of the row's bar)
+      const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},ui.signal);
+      ui.done();CONV.add(nm,blob,temp?{fam:jobs.get(f),mem:[],c:0,gz:f}:{fam:jobs.get(f),mem,c:lot?lot.c:0});if(/** @type {any} */ (blob).mzlabMissing)M.missing.set(nm,/** @type {any} */ (blob).mzlabMissing);ready=new File([blob],nm);out.push(ready)}
+    catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message,who=f.mzlabModulo?.shown||f.name;(rep.errs[m]=rep.errs[m]||[]).push(who);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:who,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
+    finally{CONVROWS.drop(nm);if(temp)window.GZFLUSSO.drop(temp)}
+    if(ready){given.add(nm);if(onFile)onFile(ready,g)}}
+  // only the rows of files never handed on: a handed one has its own row again (onFile), with its count of missing spectra
+  for(const nm of names.values())if(!given.has(nm))CONVROWS.drop(nm);
   out.panel=g;return out}
-// true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
+// true where the engine converts .raw itself (desktop): the guide then appears only for the formats it cannot convert
 let CONVERT_RAW=false;
 function fileKind(/** @type {string} */ name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return null;return window.FORMATI_NOTI.classify(n)||"other"}
 function ssGet(/** @type {string} */ k){try{return sessionStorage.getItem(k)}catch(e){return null}}
@@ -265,6 +289,7 @@ function reportLoad(/** @type {CaricaRep} */ rep){
     L.push(`<details class="unopen-names"><summary>${T("unopen.names")}</summary><ul>${names.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join("")}${names.length>5?`<li class="muted">${T("unopen.more",{n:names.length-5})}</li>`:""}</ul></details>`)}
   if(rep.other.length)L.push(`<p>${T("unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
   const DG=/** @type {unknown[]} */ ([]);
+  if(rep.quota&&rep.quota.left.length)L.push(QUOTALOTTO.nota(rep,esc));
   for(const [msg,names] of Object.entries(rep.errs)){const d=(rep.diag||{})[msg],why=d&&d.causa!=="unknown"?` ${I18N.t(`diag.cause.${d.causa}`)}`:"";if(d)DG.push(d);
     L.push(`<div class="fail"><p>${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}${esc(why)}</p>${d?DIAG.html(d,esc,T):""}</div>`)}
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
@@ -275,7 +300,7 @@ function reportLoad(/** @type {CaricaRep} */ rep){
   const needHelp=rep.unopen.length||rep.other.length;
   u.innerHTML=L.join("")+`<div class="row">${needHelp?`<button type="button" class="sec" data-a="help">${T("unopen.how")}</button>`:""}<button type="button" class="sec" data-a="close">${T("common.close")}</button></div>`;
   u.hidden=false;
-  u.querySelector('[data-a=close]').onclick=closeUnopen;
+  u.querySelector('[data-a=close]').onclick=closeUnopen;if(rep.quota)QUOTALOTTO.wire(u);
   const hb=u.querySelector('[data-a=help]');if(hb)hb.onclick=()=>openConvHelp(true);
   u.querySelectorAll(".diag").forEach((/** @type {HTMLElement} */ el,/** @type {number} */ i)=>DIAG.cabla(el,DG[i],window.MZLAB_VERSION,T));
   if(rep.unopen.length){
@@ -290,7 +315,11 @@ async function loneWiffs(/** @type {{ lone?: { e: { stem: string, wiff: File }, 
     const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
 const INFLIGHT=new Set(),fkey=(/** @type {FileRiga} */ f)=>f.name+"|"+f.size;
 // the same file (name and size) already in the list, or being read now, is not loaded again: a short notice and its row lights up for a moment
-function dropDups(/** @type {FileCarica[]} */ files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
+function dropDups(/** @type {FileCarica[]} */ files){
+  // a file of the table that is not open (removed, set aside) is not a duplicate: picking it again ticks it, as its box in the table would
+  const row=(/** @type {FileCarica} */ f)=>ST.files.find((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size),again=files.filter(f=>{const g=row(f);return !INFLIGHT.has(fkey(f))&&g&&g.kind in GORD&&!OPENNOW.isOpen(g.name)});
+  if(again.length){again.forEach(f=>OPENNOW.tick(row(f),true));renderFiles();files=files.filter(f=>!again.includes(f))}
+  const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
   const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
   dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.children[1]&&r.children[1].textContent.trim().startsWith(f.name));if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
   return files.filter(f=>!dups.includes(f))}
@@ -315,17 +344,24 @@ async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AV
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
   try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;syncWork();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok());OPENNOW.note()}}}
+// a file the user gives with "#" in its name enters with "_" (hashFree, conversione.js) and the notice says so, once per .wiff pair
+function hashRename(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ rep){const taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.map(f=>f.name)];
+  return files.map(f=>{const n=f instanceof File&&!f.mzlabNat&&!f.mzlabModulo?hashFree(f.name,taken):null;if(!n)return f;taken.push(n);if(!/\.scan$/i.test(n))rep.notes.push(I18N.t("load.note.hashRenamed",{from:f.name,to:n}));
+    return CartCarica.setDir(new File([f],n,{type:f.type,lastModified:f.lastModified}),CartCarica.dir(f))})}
 async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | undefined} */ into,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){
   const rep=/** @type {CaricaRep} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {FileCarica[]} */ ([]);
+  files=hashRename(files,rep);
+  // a batch bigger than the room the browser gives this site asks once, before copying (quota-lotto.js)
+  if(window.MZLAB_BROWSER&&files.reduce((s,f)=>s+NATIVO.size(f),0)>=50<<20){if(files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");await carica("m:quota-lotto.js");files=await QUOTALOTTO.prima(files,rep,into);if(!files.length)return}
   const one=async (/** @type {FileCarica} */ f)=>{const isDam=isMethodFile(f.name);
     if(signal.aborted){CONVROWS.finish(f.name,"cancel");PROGRESSO.end(f.name);return}
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     // a converted file: its index is the last phase of the bar of the conversion
-    const pn=panel&&CONV.has(f.name)?panel:null,QQQ_NET=!window.QQQ_BROWSER,mono=()=>Math.floor(100*PROGRESSO.file(f.name));
+    const pn=panel&&CONV.has(f.name)?panel:null,mono=()=>Math.floor(100*PROGRESSO.file(f.name));
     // the bar of the row: load 0-40, read 40-85, index 85-100 (rowPc, progresso.js) whatever the reader; the same fraction of the model always gives the same percent
     const rp=()=>Math.min(99,Math.floor(rowPc(!!f.mzlabNat,PROGRESSO.file(f.name)))),rowSt=(/** @type {string} */ phase,/** @type {number} */ pc)=>phase==="load"?"load":f.mzlabNat?NATIVO.rowState(phase):pc>=85?"idx":"nscan";let tot=0;
     CONVROWS.set(f.name,f.mzlabNat?"index":"load",0);if(pn)pn.index(f.name,0);
-    /** @param {{ done: number, total: number }} [det] */ const put=(/** @type {number} */ frac,/** @type {string} */ phase,/** @type {{ done: number, total: number } | null | undefined} */ sub,det)=>{PROGRESSO.set(f.name,QQQ_NET?PROG_NET.send+(1-PROG_NET.send)*frac:frac,phase);const pc=rp();CONVROWS.set(f.name,rowSt(phase,pc),pc,sub,det);if(pn)pn.index(f.name,Math.min(99,mono()))};
+    /** @param {{ done: number, total: number }} [det] */ const put=(/** @type {number} */ frac,/** @type {string} */ phase,/** @type {{ done: number, total: number } | null | undefined} */ sub,det)=>{PROGRESSO.set(f.name,frac,phase);const pc=rp();CONVROWS.set(f.name,rowSt(phase,pc),pc,sub,det);if(pn)pn.index(f.name,Math.min(99,mono()))};
     // the worker tells the phase, the fraction, the scans of the sample done (done/total) or that the file waits for a free builder (wait); the last message goes to the diagnosis
     const onIdx=(/** @type {Event} */ e)=>{const d=/** @type {CustomEvent} */ (e).detail;if(d.name!==f.name)return;CONVROWS.note(f.name,`${d.phase||"?"} ${(+d.frac||0).toFixed(3)}${d.total?` scans ${d.done}/${d.total}`:""}${d.wait?" queued":""}`);
       if(d.wait){CONVROWS.set(f.name,"wait",rp());return}
@@ -333,10 +369,12 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
       if(d.total)tot=d.total;      // the scans of an mzML are known from its first event; the builder then tells the position in the file, so the scans read are that share of them
       put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:!f.mzlabNat&&tot?{done:Math.round(tot*Math.max(0,Math.min(1,(d.frac-0.4)/0.585))),total:tot}:null)};
     addEventListener("mzlab-index",onIdx);
-    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
+    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
       if(j.error)throw I18N.err(j);const x=(j.files||[]).find((/** @type {FileRiga} */ y)=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files,true);ST.methods=j.methods||ST.methods;renderMethods();if(!isDam)OPENNOW.add(f.name);
-      LOADFAIL.delete(f.name)}
+      LOADFAIL.delete(f.name);CONV.settle(f.name);rep.ok=(rep.ok||0)+1}
     catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
+      // no room in the browser: no error of its own, it counts in the one message of the batch
+      if(e.key==="error.quota"||e.key==="error.quotaWrite"){CONVROWS.drop(f.name);await carica("m:quota-lotto.js");QUOTALOTTO.refused(rep,f,into,e.key,e.message);return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));
       // a sample of a maker's file: the error stays on its row, with «Details» and the trace of the loading
       if(CONVROWS.find(f.name)&&f.mzlabNat){CONVROWS.finish(f.name,"fail",{msg:e.message,diag:d});return}
@@ -344,7 +382,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // a saved fragmentation graph (g.json) opens by itself, without raw data: infusione-grafo-apri.js
   if(files.some(f=>/\.json$/i.test(f.name))){await carica("m:infusione-grafo-apri.js");files=await INFGAPRI.take(files,rep)}
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
-  const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);files=await moduliToNat(files);files=await gzToEngine(files,rep);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   // a file that is not for the list (a by-product, a format we do not read) is told in the notice; the others are kept
   const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name)){if(/\.log$/i.test(f.name))(rep.logs=rep.logs||[]).push(f.name);return false}const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
   // the same group dropped again: no second notice
@@ -354,7 +392,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   if(piped&&files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");
   const early=piped?(/** @type {FileCarica} */ f,/** @type {any} */ g)=>{if(g)panel=g;if(!keep(f))return;PROGRESSO.begin(f.name,NATIVO.size(f));CONVROWS.add(f.name,"wait",f.mzlabNat?memDesc(f.mzlabNat.members.map(m=>({name:m.name,size:m.blob.size}))):"");CONVROWS.base(f.name,0);
     // browser: the engine's pool of workers queues the reads; desktop: one at a time
-    if(window.QQQ_BROWSER)runs.push(one(f));else chain=chain.then(()=>one(f))}:undefined;
+    if(window.MZLAB_BROWSER)runs.push(one(f));else chain=chain.then(()=>one(f))}:undefined;
   files=await moduloToMzml(files,box,rep,early);panel=/** @type {FileCarica[] & { panel?: typeof panel }} */ (files).panel||panel;
   if(piped){dedupeNotice();await Promise.all(runs);await chain;FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep);return}
   if(files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");
@@ -365,10 +403,16 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // all the files of this loading are in the batch before the first one is read: the total only grows in precision, never goes back
   for(const f of files){PROGRESSO.begin(f.name,NATIVO.size(f));CONVROWS.add(f.name,"wait",f.mzlabNat?memDesc(f.mzlabNat.members.map(m=>({name:m.name,size:m.blob.size}))):"");CONVROWS.base(f.name,0)}
   // in the browser the engine builds the indexes of several files at once (pool of workers)
-  if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
+  if(window.MZLAB_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
-// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load
-function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods()}
+// a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load;
+// they take the roles and times of the open files and ask no proposal from the names, which OPENNOW.sync would write over the saved ones
+function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
+  for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
+  // a file the notebook does not name was still loading when the page went away: it opens as on a first load (more than 50: a large folder, unticked as after «Choose»); one the student removed stays unticked
+  const late=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD&&!OPENNOW.isOpen(f.name));late.forEach((/** @type {FileRiga} */ f)=>{if(nbNamed.has(f.name))f.use=false});
+  const back=late.filter((/** @type {FileRiga} */ f)=>!nbNamed.has(f.name));if(back.length>50)back.forEach((/** @type {FileRiga} */ f)=>{f.use=false});else back.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));
+  FILETAB.flush(true);ST.methods=d.methods||[];renderMethods()}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();ST.files.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{CartCarica.fromInput(e.target.files);e.target.value=""};

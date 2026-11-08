@@ -11,10 +11,10 @@ try:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0")])
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("openXic(null)"); attendi(pg, "document.querySelector('#xicdlg').open && document.querySelectorAll('#xic-rows .xrw').length === 2")
+        pg.evaluate("openXic(null)"); wait_for_js(pg, "document.querySelector('#xicdlg').open && document.querySelectorAll('#xic-rows .xrw').length === 2")
         box = lambda sel: pg.evaluate("s => { const o = [...document.querySelectorAll(s)].map(e => { const b = e.getBoundingClientRect(); return [b.left, b.width]; }); return o; }", sel)
         def aligned():
-            pg.fill("#xic-mz", "C9H10Cl2N2O"); attendi(pg, "!document.querySelector('#xic-rows .xrw select').hidden")
+            pg.fill("#xic-mz", "C9H10Cl2N2O"); wait_for_js(pg, "!document.querySelector('#xic-rows .xrw select').hidden")
             for sel in ("#xic-rows .xrw > label", "#xic-rows .xrw input", "#xic-rows .xrw select"):
                 a, b = box(sel)
                 assert abs(a[0] - b[0]) < 0.5 and abs(a[1] - b[1]) < 0.5, (sel, a, b)

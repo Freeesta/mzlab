@@ -3,7 +3,7 @@
 // mass error of the contaminant ions that stay in the MS1 scans (massacc/1, the Rust engine; the lab list contaminanti.json) and shows it as a table, two charts
 // (error against m/z and against RT, each with its data table) and a summary line. Numbers only: the threshold colours the errors, it never gives a verdict. Loaded on first use.
 const T = (/** @type {string} */ k, /** @type {Record<string, unknown>} */ p = {}) => I18N.t(k, p);
-const KEY = () => (typeof NOMI !== "undefined" ? NOMI.KEY("masscal") : "mzlab.masscal");
+const KEY = () => (NOMI.KEY("masscal"));
 const MIN_REFS = 3;                                       // as the step: fewer references are listed but no offset is given
 const COLS = ["masscal.col.ion", "masscal.col.mz", "masscal.col.obs", "masscal.col.err", "masscal.col.scans", "masscal.col.int", "masscal.col.rt"];
 const W = 380, H = 220, M = { l: 46, r: 12, t: 12, b: 34 };

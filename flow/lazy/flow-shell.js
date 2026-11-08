@@ -57,7 +57,9 @@
     const pal = F.palette(reg0, (/** @type {string} */ id) => { let made = /** @type {any} */ (null); go(() => { made = F.addStep(S.plan, S.reg, id); }); selected = made.id; redraw(); cv.reveal(made.id); });
     palHost.append(pal.root); const pf = pal.root.querySelector("#fl-filter"); if (pf) pf.id = "flx-filter";
     const tplBox = el("div", { class: "flx-tpl", role: "dialog", "aria-label": "Start from a template" });
-    tplBox.addEventListener("keydown", e => { if (e.key === "Escape") { dismissed = true; redraw(); tplBtn.focus(); } });
+    // every way out of the card (Esc, a template, «Start from scratch») hides the focused button: the focus goes back to the button that opened it
+    const closeTpl = () => { dismissed = true; redraw(); tplBtn.focus(); };
+    tplBox.addEventListener("keydown", e => { if (e.key === "Escape") closeTpl(); });
     cv.root.append(tplBox);
     const planView = el("pre", { class: "flx-plan", tabindex: 0, "aria-label": "The plan as mzflow/2" });
     const status = el("span", { class: "fl-st", role: "status", id: "flx-status" });
@@ -97,9 +99,9 @@
       tplBox.replaceChildren(el("h3", { text: "Start from a template" }), el("p", { class: "fl-note", text: "The base is already here. A template adds analyses to it; you can change everything afterwards." }),
         el("div", { class: "flx-tpls" }, ...F.TEMPLATES.filter((/** @type {any} */ t) => !t.more).map(tplCard)),
         el("details", { class: "flx-more" }, el("summary", { text: "More templates" }), el("div", { class: "flx-tpls" }, ...F.TEMPLATES.filter((/** @type {any} */ t) => t.more).map(tplCard))),
-        el("div", { class: "fl-meta" }, btn("x", "Start from the base only", () => { dismissed = true; redraw(); }, "Start from scratch")));
+        el("div", { class: "fl-meta" }, btn("x", "Start from the base only", closeTpl, "Start from scratch")));
     };
-    const applyTemplate = (/** @type {any} */ t) => { go(() => { S.plan = F.templatePlan(reg0, t); }); selected = tableKey(); dismissed = true; redraw(); cv.fit(); };
+    const applyTemplate = (/** @type {any} */ t) => { go(() => { S.plan = F.templatePlan(reg0, t); }); selected = tableKey(); closeTpl(); cv.fit(); };
 
     const modeBtns = ["simple", "advanced"].map(m => el("button", { type: "button", "data-mode": m, "aria-pressed": String((m === "simple") === simple), onclick: () => { simple = m === "simple"; try { localStorage.setItem("mzlab.flow.mode", m); } catch (_) { /* ignore */ } selected = ""; redraw(); cv.fit(); } }, el("span", { text: m === "simple" ? "Simple" : "Advanced" })));
     const tplBtn = btn("flow", "Start from a template", () => { if (tplBox.classList.contains("show")) { dismissed = true; redraw(); return; } dismissed = false; tplCards(); tplBox.classList.add("show"); const f = tplBox.querySelector("button"); if (f) /** @type {HTMLElement} */ (f).focus(); }, "Templates");
@@ -131,6 +133,9 @@
     const tabs = ["canvas", "list"].map(t => el("button", { type: "button", "aria-pressed": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : "List" })));
     const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, redoBtn, fitBtn, status, run, termBtn, moreBtn);
     bar.insertBefore(el("span", { class: "flx-seg flx-views", role: "group", "aria-label": "View" }, ...tabs), bar.children[1]);
+    // the live controls (Auto-run, and Pause once a job runs) arrive with a late module: invisible twins hold their place, so Run, Terminal and More do not jump when they land
+    const slot = el("span", { class: "flx-live-slot", "aria-hidden": "true" }, el("button", { type: "button", class: "fl-b", tabindex: "-1" }, el("span", { text: "Auto-run" })), btn("stop", "", () => {}, "Pause"));
+    slot.setAttribute("inert", ""); bar.insertBefore(slot, run);
     const issuesHost = el("div", { class: "flx-issues-host" });
     // the divider between the canvas and the settings: drag, or the arrow keys (the width is kept for the session of the page)
     const split = el("div", { class: "flx-split", role: "separator", "aria-orientation": "vertical", "aria-label": "Width of the settings panel", tabindex: 0, "aria-valuemin": 240, "aria-valuemax": 900, "aria-valuenow": 500 });

@@ -9,15 +9,17 @@ use mzlab_core::budget::{sha256_hex, MemBudget};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Out;
-use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
 mod campioni_cmd;
 mod canali_cmd;
 pub mod convert;
+mod convert_entries;
 mod convert_report;
 pub mod flow;
+#[cfg(test)]
+mod flow_align_join_tests;
 mod flow_apply;
 mod flow_base;
 #[cfg(test)]
@@ -33,6 +35,8 @@ mod flow_chimeric;
 mod flow_chimeric_tests;
 mod flow_compare;
 #[cfg(test)]
+mod flow_detect_adap_tests;
+#[cfg(test)]
 mod flow_detect_algorithm_tests;
 mod flow_digl;
 mod flow_drift;
@@ -47,6 +51,9 @@ mod flow_formula;
 #[cfg(test)]
 mod flow_formula_web_tests;
 mod flow_generate;
+mod flow_group;
+#[cfg(test)]
+mod flow_group_tests;
 mod flow_hash;
 #[cfg(test)]
 mod flow_hr_tests;
@@ -56,7 +63,10 @@ mod flow_import_tests;
 mod flow_inclusion;
 #[cfg(test)]
 mod flow_inclusion_tests;
+mod flow_inputs;
 mod flow_insilico;
+#[cfg(test)]
+mod flow_iso_grouper_tests;
 mod flow_json;
 mod flow_kmd;
 mod flow_level;
@@ -129,10 +139,11 @@ pub mod insilico_pack;
 mod ion_pattern_cmd;
 pub mod llm;
 mod llm_ctx;
-pub mod msn_figura;
+mod mol_label_cmd;
+#[cfg(test)]
+mod msn_figura_tests;
 pub mod msn_graph;
 mod msn_graph_compare;
-pub mod msn_html;
 mod msn_lib;
 mod msn_png;
 mod msn_rules;
@@ -144,10 +155,12 @@ mod name_rule_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
+mod peaks_auto_cmd;
 mod peaks_edges_cmd;
 mod plain;
 mod sim_table_cmd;
 mod steps_cmd;
+pub mod testo_errore;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 
@@ -163,11 +176,13 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
-       mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help)
-       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help)
+       mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
+       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
+       mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help)
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
        mzlab-cli sim-table FILE... [--set output=area|apex_rt]   every SIM channel integrated, one column per sample, as CSV (sim-table --help)
+       mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help); peak-area: one peak from zero or a line (peak-area --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
@@ -307,7 +322,7 @@ impl Outcome {
         Outcome {
             code: 2,
             stdout: Vec::new(),
-            stderr: format!("error: {msg}\n(mzlab-cli features --help)\n"),
+            stderr: format!("error: {}\n", testo_errore::umano(msg)),
         }
     }
 }
@@ -399,6 +414,10 @@ fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
 
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
+    testo_errore::con_aiuto(args, eseguito(args))
+}
+
+fn eseguito(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
     let first = args.next();
     match first.as_deref().map(plain::canonical) {

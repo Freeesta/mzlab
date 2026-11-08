@@ -1,4 +1,4 @@
-//! `/api/dda`, `/api/spectrum`, `/api/spectra`, `/api/scan`, `/api/scanavg` and `/api/scanbin` on HIGH-RESOLUTION centroid files answer from the index like `api.dispatch` (`tools/hr_riferimento.py`, two synthetic
+//! `/api/dda`, `/api/dda_window`, `/api/spectrum`, `/api/spectra`, `/api/scan`, `/api/scanavg` and `/api/scanbin` on HIGH-RESOLUTION centroid files answer from the index like `api.dispatch` (`tools/hr_riferimento.py`, two synthetic
 //! Orbitrap DDA files): the same columns and peaks, numbers within 1e-9; a window of one scan is read from the mzML (`spectrum_exact`; the index alone answers `None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_HR_DIR` = a folder already written by the script.
 
@@ -13,6 +13,16 @@ use serde_json::Value;
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+/// The answer of Rust to one case: the single scans from the mzML, the rest from the index.
+fn ask(r: &mut Routes<std::fs::File>, mzml: &Path, path: &str, query: &str) -> mzlab_core::error::Result<Option<String>> {
+    let q = Query::parse(query);
+    match path {
+        "/api/scanbin" => r.scanbin_route(&q, &mut std::fs::File::open(mzml).unwrap()).map(|o| o.map(|b| decode_bin(&b))),
+        "/api/spectra" | "/api/scan" | "/api/scanavg" => r.mzml_route(path, &q, &mut std::fs::File::open(mzml).unwrap()),
+        _ => Ok(r.handle(path, &q).unwrap()),
+    }
 }
 
 fn same(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
@@ -82,15 +92,15 @@ fn hr_routes_like_python() {
         if path == "/api/scanbin" && k == 2 {
             continue;                                          // the profile file: Python's
         }
-        let from_mzml = ["/api/spectra", "/api/scan", "/api/scanavg"].contains(&path);
-        let got = if path == "/api/scanbin" {
-            let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
-            routes[k].scanbin_route(&Query::parse(query), &mut mzml).unwrap().map(|b| decode_bin(&b))
-        } else if from_mzml {
-            let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
-            routes[k].mzml_route(path, &Query::parse(query), &mut mzml).unwrap()
-        } else {
-            routes[k].handle(path, &Query::parse(query)).unwrap()
+        // a refusal of Rust is Python's refusal, with the same key
+        let got = match ask(&mut routes[k], &out.join(format!("h{k}.mzML")), path, query) {
+            Ok(g) => g,
+            Err(e) => {
+                if c["status"] == 200 || c["result"]["error_key"] != e.key {
+                    bad.push(format!("k={k} {path}?{query}: Rust refuses with {}, Python gives {} {}", e.key, c["status"], c["result"]["error_key"]));
+                }
+                continue;
+            }
         };
         if c["single"] == true {
             if got.is_some() {

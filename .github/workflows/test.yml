@@ -35,6 +35,9 @@ jobs:
           - {python: "3.11", parte: rest-a}
           - {python: "3.11", parte: rest-b}
           - {python: "3.11", parte: solo311}
+    permissions:
+      contents: read
+      actions: read   # tools/ci_cache_fresca.py lists the caches of main
     runs-on: ubuntu-latest
     # safety net only: the run lasts far less since the crates of the cache are reused (tools/ci_cargo_mtime.py)
     timeout-minutes: 30
@@ -145,11 +148,18 @@ jobs:
       - name: Unit tests (documents only)
         if: steps.solo.outputs.solo == 'true' && matrix.parte != 'solo311'
         run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_doc.py --pytest)
+      # main saves at most once every 6 h per shard (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "pytest-wasm-v3-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -198,7 +208,9 @@ jobs:
       # a run that installs nothing (documents only) leaves no pip folder, and the post step of setup-python fails on a cache miss without it
       - name: Pip cache folder
         run: mkdir -p ~/.cache/pip
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # the browser cache is saved on main only: a pull request's copy serves no other pull request and evicted the caches of main
+      - id: pwcache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pyproject.toml') }}
@@ -223,6 +235,11 @@ jobs:
         run: |
           python -m pip install -e ".[test]" playwright axe-playwright-python
           python -m playwright install --with-deps chromium
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.solo.outputs.kind != 'doc' && github.ref == 'refs/heads/main' && steps.pwcache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.pwcache.outputs.cache-primary-key }}
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
         run: python tools/verifica.py --browser chromium --fumo
@@ -264,6 +281,64 @@ jobs:
           path: .verifica/
           include-hidden-files: true
           if-no-files-found: ignore
+
+  # Pull requests only, NOT a required check: the e2e of the changed files (tools/ci_e2e_cambiati.py, the map of tools/verifica.py) minus the smoke round of `browser`
+  # and the tests of sito-e2e and the night. A core file selects every e2e: this job then runs none and says so, notte.yml runs them all. Caches are restored, never saved.
+  e2e-cambiati:
+    name: e2e changed files (chromium)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: scelta
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE"
+          python3 tools/ci_e2e_cambiati.py "$BASE"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: steps.scelta.outputs.e2e != ''
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.scelta.outputs.e2e != ''
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pyproject.toml') }}
+          restore-keys: playwright-${{ runner.os }}-chromium-
+      - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
+        if: steps.scelta.outputs.e2e != ''
+        run: python tools/ci_toolchain.py
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.scelta.outputs.e2e != ''
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          restore-keys: sito-e2e-${{ runner.os }}-
+      - name: Install
+        if: steps.scelta.outputs.e2e != ''
+        run: |
+          python -m pip install -e ".[test]" playwright axe-playwright-python
+          python -m playwright install --with-deps chromium
+      - name: e2e of the changed files
+        if: steps.scelta.outputs.e2e != ''
+        env:
+          E2E: ${{ steps.scelta.outputs.e2e }}
+        run: python tools/verifica.py --browser chromium --solo "$E2E"
+      - name: Print the logs of the failed tests (readable in the job log)
+        if: failure()
+        shell: bash
+        run: |
+          [ -f .verifica/ultimo.md ] || { echo "No .verifica/ultimo.md: verifica.py stopped before writing its report (see the log of the failed step above)"; exit 0; }
+          cat .verifica/ultimo.md | cut -c1-600
+          for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
 
   javascript:
     runs-on: ubuntu-latest

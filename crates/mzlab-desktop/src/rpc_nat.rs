@@ -1,5 +1,6 @@
 //! The operations of `rpc` about the samples of a maker's file read as they are (`nativi.rs`): the samples of a dataset the page describes (`natsamples`) and
-//! «Download .mzML» (`nat2mzml`: the mzML of one sample written on request to the temporary folder, registered like a picked file; progress by `rawprogress`).
+//! the samples already registered from the same members (`natsame`), «Download .mzML» (`nat2mzml`: the mzML of one sample written on request to the temporary folder, registered like a picked file; progress by `rawprogress`)
+//! and one series of the instrument log of a `.raw` (`natregistro`, the same text as the readers module of the site).
 
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
@@ -34,6 +35,31 @@ impl State {
             return Err(Error::new("err.file.notAccepted").with("name", ""));
         }
         text(nativi::samples(&members)?)
+    }
+
+    /// `natsame {members: [{name, fid}], names}`: `{"names"}`, those of `names` that are samples of these very members (same names and paths, unchanged since
+    /// they were registered) with their index kept: the same dataset given again, which the page does not list twice (the twin of `natsame` of the site worker).
+    pub(crate) fn nat_same(&self, p: &Value) -> Result<Answer> {
+        let mut members: Vec<(String, PathBuf)> = Vec::new();
+        for m in p["members"].as_array().map_or(&[][..], |a| a.as_slice()) {
+            members.push((
+                m["name"].as_str().unwrap_or("").to_string(),
+                self.picked(m["fid"].as_u64().unwrap_or(0) as u32)?.path,
+            ));
+        }
+        let idx = self.indexer()?;
+        let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+        let names: Vec<&str> = p["names"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|n| n.as_str())
+            .collect();
+        let out: Vec<&str> = names
+            .into_iter()
+            .filter(|n| !members.is_empty() && store.same_nat(n, &members) && idx.size(n).is_some())
+            .collect();
+        text(json!({ "names": out }).to_string())
     }
 
     /// `nat2mzml {name, pid}`: the mzML of the sample `name` in the temporary folder; `{"id", "size"}` of the new file (read with `file`, saved with `save_mzml`).
@@ -82,5 +108,27 @@ impl State {
         );
         g.temps.push(tmp);
         text(json!({ "id": id, "size": size }).to_string())
+    }
+
+    /// `natregistro {name, serie}`: one series of the instrument log (`status:…`, `trailer:…`) of the sample `name`, as the readers module of the site
+    /// answers it (`registroDi` of `rust-nativo.js`): `{id, kind, q1, q3, unit, time, intensity}`, its points computed now. The reader is opened for the
+    /// request and closed after it (the site keeps its session 30 s because a copy of the file sits in memory; here the members are mapped).
+    pub(crate) fn nat_registro(&self, p: &Value) -> Result<Answer> {
+        let name = p["name"]
+            .as_str()
+            .unwrap_or("")
+            .split('#')
+            .next()
+            .unwrap_or("");
+        let nat = self
+            .store
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(name)
+            .and_then(|e| e.nat)
+            .ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
+        let mut l = nativi::open(&nat.members, false)?;
+        let c = l.chromatogram(nat.c, p["serie"].as_str().unwrap_or(""))?;
+        text(mzlab_lettori::json::cromatogramma_json(&c))
     }
 }

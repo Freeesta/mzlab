@@ -10,8 +10,8 @@ use mzlab_feat_wasm::run_tp;
 
 use crate::flow::{all_inputs, read_one, write_made, FileRunner};
 use crate::flow_base::{open, rebuild, Files};
-use crate::flow_link::parent_of;
 use mzlab_core::flow::Artifact;
+use mzlab_feat::parent::parent_of;
 
 // `lib.rs` is at its line limit, so the module of `chrom.uv_peaks` hangs here, where the steps of the crate are listed.
 #[path = "flow_uv.rs"]
@@ -44,7 +44,7 @@ pub fn dig_lr_step() -> Step {
     };
     Step {
         ins: vec![
-            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(lr.clone()),
+            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(lr.clone()).lineage(),
             Port::new("samples", DataType::Samples, "Roles and times of the files"),
             Port::new("parent", DataType::Structure, "Parent compound: formula or SMILES"),
             Port::new("index", DataType::Mzidx, "Scan index of each file of the series, in the order of the table").many().requires(lr),

@@ -29,10 +29,10 @@ fn legge(nome: String, b: Vec<u8>, dim: u64) -> Vec<String> {
     };
     let _ = lettori::riconosci(&mut set());
     if let Some(mut l) = nota(lettori::apri(set(), &Limiti::sito()), &mut k) {
-        if let Some(ix) = nota(l.indice(0), &mut k).map(<[_]>::to_vec) {
-            (0..ix.len().min(4)).for_each(|j| drop(nota(l.scansione(0, j), &mut k)));
+        if let Some(ix) = nota(l.index(0), &mut k).map(<[_]>::to_vec) {
+            (0..ix.len().min(4)).for_each(|j| drop(nota(l.scan(0, j), &mut k)));
         }
-        nota(l.metodo(0), &mut k);
+        nota(l.method(0), &mut k);
     }
     k
 }

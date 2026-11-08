@@ -4,8 +4,10 @@
 //! `pipeline::analyse` adds the quality of every peak (`quality`), the isotopologues (`isotopes`) and the MS2 with purity (`ms2`).
 
 #![forbid(unsafe_code)]
+pub mod adap_peak;
 pub mod adducts;
 pub mod align;
+pub mod align_mzmine;
 mod aligned;
 mod aligned_meta;
 mod aligned_ops;
@@ -53,12 +55,14 @@ pub mod flow_regulatory;
 #[cfg(feature = "attributio")]
 pub mod normative;
 pub mod flow_screen_suspects;
+pub mod flow_stat;
 pub mod gapfill;
 pub mod gruppi;
 pub mod hypo;
 pub mod import;
 #[cfg(feature = "interp")]
 pub mod interp;
+pub mod ionnet;
 pub mod isotopes;
 pub mod kinetic;
 pub mod legacy;
@@ -67,10 +71,15 @@ mod lrnoise;
 pub mod massacc;
 pub mod methods;
 pub mod mrm;
+#[cfg(feature = "figura")]
+pub mod msnfigura;
 pub mod ms2;
 pub mod ms2spec;
 pub mod nature;
 pub mod norm;
+mod histbin;
+#[cfg(feature = "chem")]
+pub mod parent;
 pub mod params;
 pub mod params_drift;
 pub mod params_height;
@@ -119,6 +128,7 @@ mod trace_text;
 pub mod untargeted;
 pub mod uv_bands;
 pub mod view;
+pub mod view_table;
 pub mod weakfile;
 
 /// Version of the feature table and of the rules that produce it (changes when the output of `detect` changes).

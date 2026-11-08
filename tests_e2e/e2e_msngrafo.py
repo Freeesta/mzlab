@@ -14,7 +14,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
 
 import lib_msngrafo
-lib_msngrafo.prepara()
+lib_msngrafo.prepare()
 
 D = synth("msngrafo")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)

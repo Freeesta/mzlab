@@ -165,7 +165,7 @@ fn filter() -> Step {
             Port::new("tp", DataType::Tp, "Table of the products with the interpretation of its rows (tp.link)").requires(any_resolution()),
             Port::new("hypotheses", DataType::Transform, "Hypotheses of the parent (tp.generate): the rule masses of the decoys and the masses F5 compares with"),
         ],
-        outs: vec![Port::new("table", DataType::Table, "Registry filtri/1: the rows hidden by each of F1-F5 and the decoys that passed")],
+        outs: vec![Port::new("table", DataType::Table, "Registry filtri/1: the rows hidden by each of F1-F5 and the decoys that passed").format("filtri/1")],
         params: vec![
             Param::number("tol_min", "Lowest formula tolerance")
                 .min(0.0)

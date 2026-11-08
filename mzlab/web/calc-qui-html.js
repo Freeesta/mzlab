@@ -11,11 +11,7 @@ const CALCQUIHTML = (() => {
   const err = (/** @type {number} */ d, /** @type {number} */ dec) => sgn(d) + Math.abs(d).toFixed(dec);
   const loss = (/** @type {Bag} */ l) => (window.QQQRef ? QQQRef.lossName(l) : `<b>${EH(l.f)}</b>`);
 
-  /** The resolution chip: «Unit resolution» or «High resolution», its title says where it comes from. @param {{ hr: boolean, mode: { src: string, name: string } }} o */
-  const resText = o => T(o.hr ? "cq.res.hr" : "cq.res.lr");
-  const SRC = /** @type {Record<string, string>} */ ({ files: "cq.res.src.files", formula: "cq.res.src.formula", decimals: "cq.res.src.decimals", short: "cq.res.src.short", none: "cq.res.src.none" });
-  const resTitle = (/** @type {{ hr: boolean, mode: { src: string, name: string } }} */ o) => T(SRC[o.mode.src] || SRC.none, { name: o.mode.name || "" });
-  /** The choices row: tolerance (field, then its name), unit, polarity (ESI+ and ESI− toggle on their own: both can be on), resolution. Ids are `<idp>tol|unit|pol|res`.
+  /** The choices row: tolerance (field, then its name), unit, polarity (ESI+ and ESI− toggle on their own: both can be on). Ids are `<idp>tol|unit|pol`.
    * @param {string} idp @param {{ hr: boolean, unit: string, tol: number, pol: number, mode: { src: string, name: string } }} o */
   function ctrlHtml(idp, o) {
     const on = (/** @type {boolean} */ b) => ` class="${b ? "on" : ""}" aria-pressed="${b}"`;
@@ -23,7 +19,6 @@ const CALCQUIHTML = (() => {
       <label class="cadd-f cq-tolf"><input id="${idp}tol" inputmode="decimal" autocomplete="off" value="${o.tol}"><span class="cq-tl">${T("calc.tol.plain")}</span></label>
       <span class="seg" id="${idp}unit" role="group" aria-label="${EH(T("cq.unit"))}"><button type="button" data-u="da"${on(o.unit === "da")}>Da</button><button type="button" data-u="ppm"${on(o.unit === "ppm")}>ppm</button></span>
       <span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}"><button type="button" data-p="1"${on(o.pol !== -1)}>ESI+</button><button type="button" data-p="-1"${on(o.pol !== 1)}>ESI&minus;</button></span>
-      <span class="cq-res" id="${idp}res" data-mode="${o.hr ? "hr" : "lr"}" title="${EH(resTitle(o))}">${resText(o)}</span>
       </div>`;
   }
 
@@ -71,5 +66,5 @@ const CALCQUIHTML = (() => {
       return `<details class="cq-g" data-g="${g.id}"${open ? " open" : ""}><summary>${T(/** @type {Bag} */ (TITLE)[g.id])}${n}</summary>${body}</details>`;
     }).join("");
   }
-  return { ctrlHtml, groupsHtml, resText, resTitle };
+  return { ctrlHtml, groupsHtml };
 })();

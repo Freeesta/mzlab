@@ -26,6 +26,7 @@ const BARRA = (() => {
   const DROP_ORDER = ["ptable", "qaqc", "lists", "addloss", "idn", "form", "scan"];       // first to go into "Altro" (File never does)
 
   let _tab = "file";
+  let _prev = "";                   // the tool shown before the current one while the panel stayed open: a second click on the current one goes back to it
   let _sub = "adducts";             // the tab of the Adducts & losses page ("adducts" | "losses" | "cont"): the last one used is remembered
   const SUBS = ["adducts", "losses", "cont"];
   let _open = false;
@@ -36,7 +37,7 @@ const BARRA = (() => {
   let _side = "left";
   let _w = 260;
   // false = the width follows the longest file name (never wider than the default); true = set by hand
-  let _wUser = false, _appliedW = 0;
+  let _wUser = false, _appliedW = 0, _namesW = 0;
   // until a file is shown (landing, loading table) the panel is open from the first paint at >= SHEET px with the default width; the saved choice stays (_landOpen)
   let _seen = false, /** @type {boolean | undefined} */ _landOpen;
   let /** @type {Record<string, string>} */ _last = { scan: "hdr", form: "cmp" };
@@ -64,9 +65,9 @@ const BARRA = (() => {
   const seen = () => (_seen = typeof S !== "undefined" && !S.sess ? false
     : _seen || (typeof E !== "undefined" && E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)));
   const landing = () => (typeof S === "undefined" ? !document.documentElement.classList.contains("in-draw") : S.view === "data" && !(S.sess && S.adding)) && !seen();
-  const byNames = () => typeof namesWidth === "function" && seen();                 // the names set the width once a file is shown
+  const byNames = () => typeof namesWidth === "function" && seen();                 // the landing width stays unless the names need more room (the panel never narrows by itself)
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
-  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.min(defaultW(), namesWidth(defaultW())) : defaultW()));
+  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.max(defaultW(), namesWidth(defaultW())) : defaultW()));
   const validTab = (/** @type {string} */ id) => ["file", "addloss", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
@@ -209,7 +210,19 @@ const BARRA = (() => {
 
   // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
-    if (_appliedW || !Q1("#v-data.riga")) document.documentElement.style.setProperty("--sb-w", (_appliedW = effW()) + "px");     // the first paint of a restore keeps the width the last session had (avvio-progressivo.js)
+    if (!_appliedW && Q1("#v-data.riga")) return;          // the first paint of a restore keeps the width the last session had (avvio-progressivo.js)
+    const root = document.documentElement, set = (/** @type {number} */ w) => root.style.setProperty("--sb-w", (_appliedW = w) + "px");
+    set(_namesW = effW());
+    // long names widen the panel only as far as the toolbar of Data (#tools) keeps every item at its own width: its items shrink before the row overflows, so
+    // the free gap (.sp, flex 1 1 0) is the measure; the widest width that leaves it open is searched between the default and the names' width (a dragged width stays free)
+    const tb = Q1("#tools"), sp = Q1("#tools>.sp"), dflt = defaultW();
+    if (_wUser || _appliedW <= dflt || !tb || !sp || !tb.clientWidth || !Q1("#v-data.sb-open:not(.sb-sheet)")) return;
+    const fits = () => sp.getBoundingClientRect().width >= 1 && tb.scrollWidth <= tb.clientWidth;
+    if (fits()) return;
+    let lo = dflt, hi = _appliedW;
+    set(lo); if (!fits()) return;
+    while (hi - lo > 4) { const mid = Math.round((lo + hi) / 2); set(mid); if (fits()) lo = mid; else hi = mid; }
+    set(lo);
   }
 
   // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized
@@ -218,7 +231,7 @@ const BARRA = (() => {
     const dp = Q1("#dpanels");
     if (dp) _lastW = dp.clientWidth;
     if (dp && _lastW < 100) return;                // the workspace is hidden (sheet) or not shown yet: nothing to draw
-    if (typeof fitWidth === "function" && typeof redrawAll === "function") { fitWidth(); redrawAll(); }
+    if (typeof fitWidth === "function" && typeof drawSized === "function") { fitWidth(); tabPanels().forEach(drawSized); }
   }
   function refit() {
     if (_refitRaf) return;
@@ -247,7 +260,7 @@ const BARRA = (() => {
   }
   function watchWorkspace() {
     const dp = Q1("#dpanels");
-    if (!dp || typeof ResizeObserver === "undefined") return;
+    if (!dp) return;
     FRAME.ro(dp, () => { if (dp.clientWidth !== _lastW) { snapFull(); refit(); } });
   }
 
@@ -364,11 +377,15 @@ const BARRA = (() => {
     }
   }
 
-  // Dock or undock #calcdlg
+  // Dock or undock #calcdlg; docked, its field #calcin is the one field of the page and leaves the foldable body (back above the result when undocked)
   function dockCalc(/** @type {boolean} */ inSidebar) {
     const dlg = Q1("#calcdlg");
-    const pnl = Q1("#al-calc-body");
+    const pnl = Q1("#al-calc-body"), box = Q1("#al-find .sb-search-box"), inp = Q1("#calcin");
     if (!dlg || !pnl) return;
+    if (box && inp) {
+      if (inSidebar) { if (inp.parentElement !== box) box.appendChild(inp); }
+      else if (inp.parentElement !== dlg) dlg.insertBefore(inp, Q1("#calcres-wrap"));
+    }
     if (inSidebar) {
       if (dlg.parentElement !== pnl) pnl.appendChild(dlg);
       dlg.classList.add("sb-docked");
@@ -401,6 +418,7 @@ const BARRA = (() => {
     if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
     if (!(inDataOrOpening() || landing()) || !validTab(id)) return false;
     const wasOpen = _open;
+    if (wasOpen && _tab !== id && validTab(_tab)) _prev = _tab;
     _tab = id;
     _open = true; _restore = false; _forced = innerWidth < AUTO_W;
     if (!_opener || !wasOpen) _opener = opt.opener || openerFor(id);
@@ -409,9 +427,11 @@ const BARRA = (() => {
     updateButtons();
     saveState();
     if (!opt.noFocus) {
+      // the pane takes the focus only if it is still where it was: a field focused in the meantime keeps it (and its keys)
+      const was = document.activeElement;
       setTimeout(() => {
-        const aside = Q1("#dfiles");
-        if (_open && aside && !aside.contains(document.activeElement)) {
+        const aside = Q1("#dfiles"), now = document.activeElement;
+        if (_open && aside && !aside.contains(now) && (now === was || !now || now === document.body)) {
           const pane = Q1("#sb-pane");
           if (pane) pane.focus({ preventScroll: true });
         }
@@ -422,7 +442,7 @@ const BARRA = (() => {
 
   function toggle(/** @type {string} */ id) {
     const away = !(inData() || landing()) && /** @type {Record<string, () => void>} */ ({ calc: () => window.calcToggleFloat && window.calcToggleFloat(), adducts: () => window.QQQRef && QQQRef.open("ad"), losses: () => window.QQQRef && QQQRef.open("ls"), addloss: () => window.QQQRef && QQQRef.open(_sub === "losses" ? "ls" : "ad"), lists: () => window.LISTE && LISTE.open() })[id];      // outside Dati (Disegno, Tabui, Flow) the drawer is hidden: the calculator and the lists open their windows; Adducts & losses lives only in the side panel, so it goes back to Dati (show())
-    if (away) away(); else if (_open && _tab === id) { if (id !== "file" && landing() && !inData()) show("file"); else close(true); } else show(id);      // the empty landing keeps its panel: closing a tool gives the file list back
+    if (away) away(); else if (_open && _tab === id) { const back = _prev && _prev !== id && validTab(_prev) ? _prev : (id !== "file" && landing() && !inData() ? "file" : ""); _prev = ""; if (back) { show(back); _prev = ""; } else close(true); } else show(id);      // a second click goes back to the previous tool (the file list on the empty landing); with none to go back to, it hides the panel
   }
 
   function close(/** @type {boolean} */ restoreFocus) {
@@ -986,7 +1006,7 @@ const BARRA = (() => {
     if (mark) hintMark();
   }
   function hintShow() {
-    if (document.getElementById("bar-hint") || !inData() || window.QQQ_PHONE) return false;
+    if (document.getElementById("bar-hint") || !inData() || window.MZLAB_PHONE) return false;
     const bar = Q1("#stbar");
     if (!bar || bar.offsetParent === null) return false;
     const el = document.createElement("div");
@@ -1030,10 +1050,8 @@ const BARRA = (() => {
     bindAddLoss();
     bindGlobalEvents();
     dockCalc(true);
-    if (typeof ResizeObserver !== "undefined") {
-      const bar = Q1("#stbar");
-      if (bar) FRAME.ro(bar, () => schedFit());
-    }
+    const bar = Q1("#stbar");
+    if (bar) FRAME.ro(bar, () => schedFit());
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
     if (_open && inData() && validTab(_tab)) renderPane(_tab);
     applyLayout();
@@ -1085,7 +1103,7 @@ const BARRA = (() => {
     get side() { return _side; },
     get width() { return effW(); },
     /** The list changed: an automatic width follows the longest name. */
-    fitNames() { if (!_wUser && _appliedW !== effW()) applyLayout(); },
+    fitNames() { if (!_wUser && _namesW !== effW()) applyLayout(); },
     get open() { return _open && inData(); },
     get sheet() { return _open && inData() && sheet(); },
     get dockedWidth() { return _open && inData() && !sheet() ? effW() : 0; },
@@ -1100,9 +1118,10 @@ const BARRA = (() => {
 if (typeof window !== "undefined") {
   window.BARRA = BARRA;
   // quiet empty state of the side panels: the leaf of the file list (one drawing, cloned) and one short line
+  const played = new Set();                                  // lines whose leaf already fell: a re-render rests at once
   /** @type {any} */ (window).EMPTYLEAF = (/** @type {string} */ key) => {
     const box = document.createElement("div"), line = document.createElement("span"), leaf = document.querySelector("#fl-hint svg.leaf");
-    box.className = "empty-leaf muted"; line.textContent = I18N.t(key);
+    box.className = played.has(key) ? "empty-leaf muted rest" : "empty-leaf muted"; played.add(key); line.textContent = I18N.t(key);
     if (leaf) box.append(leaf.cloneNode(true));
     box.append(line);
     return box.outerHTML;

@@ -9,10 +9,13 @@ pub(super) const TEMPLATES: &[(&str, &str, &str)] = &[
     ("spectra.centroid", "", "Profile spectra were centroided (FWHM {fwhm}, threshold {threshold})."),
     ("features.estimate", "", "The detection parameters were estimated from the data (polarity {polarity}, mass axis {axis})."),
     ("features.detect", "centwave", "Features were detected with the centWave algorithm (polarity {polarity}, mass axis {axis}, intensity floor {floor}, minimum height {min_height}, minimum width {min_width}, minimum S/N {min_snr}, minimum points {min_points})."),
-    ("features.detect", "masstrace", "Features were detected by building mass traces (polarity {polarity}, mass axis {axis}, intensity floor {floor}, minimum height {min_height}, minimum points {min_points}, maximum gap {max_gap} scans)."),
+    ("features.detect", "masstrace", "Features were detected by building mass traces (polarity {polarity}, mass axis {axis}, intensity floor {floor}, minimum height {min_height}, minimum points {min_points}, maximum missed scans between two points of a trace {max_gap})."),
+    ("features.detect", "adap_localmin", "Features were detected as in mzmine 3: ADAP chromatograms (m/z tolerance {ppm} ppm, noise {floor}, factor of lowest signal {noise_factor}, minimum height {min_height}, minimum consecutive scans {min_points}), Savitzky-Golay smoothing window {smooth_window} scans and the local-minimum resolver (chromatographic threshold {chrom_threshold}, search range {search_rt} min, top/edge ratio {min_ratio})."),
     ("features.detect", "threshold", "Features were detected by intensity thresholding (polarity {polarity}, mass axis {axis}, intensity floor {floor}, minimum height {min_height})."),
     ("features.detect", "", "Features were detected (polarity {polarity}, mass axis {axis}, intensity floor {floor}, minimum height {min_height}, minimum points {min_points})."),
+    ("features.align", "join", "Features were aligned across the files with the join aligner of mzmine 3, one row per ion (m/z tolerance {ppm} ppm or {abs_da} Da, RT tolerance {rt_tol} min, m/z weight {mz_weight}, RT weight {rt_weight})."),
     ("features.align", "", "Features were aligned across the files in {mode} mode (m/z tolerance {ppm} ppm, RT gap {rt_gap} min, RT warping {rt_warp})."),
+    ("features.gapfill", "peak_finder", "Missing values were filled with the peak finder of mzmine 3 (noise {floor}, m/z tolerance {ppm} ppm or {abs_da} Da, RT tolerance {rt_tol} min, intensity tolerance {intensity_tol}, minimum points {min_points})."),
     ("features.gapfill", "", "Missing values were filled from the raw data (intensity floor {floor}, m/z tolerance {ppm} ppm, RT tolerance {rt_tol} min, minimum points {min_points})."),
     ("table.filter", "", "The feature table was filtered (minimum detections {min_detected}, minimum area {min_area}, blank ratio {blank_ratio}, maximum QC CV {qc_cv_max}, normalisation {normalize})."),
     ("table.drift", "", "The drift of the areas was corrected on the QC injections of each batch with a {method} curve (LOESS span {span})."),
@@ -32,3 +35,9 @@ pub(super) const TEMPLATES: &[(&str, &str, &str)] = &[
     ("export.mztab", "", "The feature table was exported as mzTab-M 2.0."),
     ("report.methods", "", "This methods text was written from the record of the run."),
 ];
+
+/// Sentence added to the one of `features.detect` when `isotopes` is `grouper`.
+pub(super) const ISO_GROUPER: &str = "Isotopologues were grouped with the isotope grouper of mzmine 3 (m/z tolerance {iso_ppm} ppm or {iso_abs_da} Da, RT tolerance {iso_rt_tol} min, charges up to {iso_max_charge}, group representative {iso_representative}).";
+pub(super) const AREA_WINDOW: &str = "Feature areas were summed over every point within the m/z window of the quality measures between the edges of each feature, not over the points of the trace that found it.";
+pub(super) const STITCH_WIDE: &str = "Pieces of a trace in neighbouring m/z channels were joined when they touched, whatever their height, and pieces down to a quarter of the minimum height took part.";
+pub(super) const ISO_FINDER: &str = "Isotopologues were grouped with the isotope finder of mzmine 4 on the apex MS1 spectrum of each feature (m/z tolerance {finder_ppm} ppm or {finder_abs_da} Da, charges up to {finder_max_charge}, elements {finder_elements}, 13C peak requirement {finder_require_c13}, heavy elements from the spectrum {finder_auto}).";

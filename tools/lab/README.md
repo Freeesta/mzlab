@@ -16,4 +16,5 @@ GitHub switches off a scheduled workflow after 60 days without activity in the r
 builds stop, press **Run workflow** (or push any commit).
 
 To change the date, edit `MZLAB_LAB_EXPIRES` in that workflow. Local test:
-`MZLAB_LAB=1 MZLAB_LAB_EXPIRES=2026-12-29 python3 tools/build_site.py`.
+`MZLAB_LAB=1 MZLAB_LAB_EXPIRES=2026-12-29 python3 tools/build_site.py`. `tests_e2e/e2e_lab_vuoto.py` uses every control of Data and Draw with no file
+loaded and fails on any console error, uncaught exception or error box.

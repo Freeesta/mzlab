@@ -34,11 +34,15 @@
   // Esc is run by azioni-esc.js (one press, one thing, by priority); here it only has its line in the panel
   reg({ id: "app.esc", gruppo: "view", viste: ["*"], icona: "clear", scorciatoia: { tasto: "Escape", dove: "view", et: "scorc.esc" },
     nome: () => T("scorc.esc"), tip: () => T("scorc.esc.tip"), disponibile: () => false, esegui: () => {} });
+  // Safari on a Mac moves Tab between text fields only (unless set otherwise): the panel says that ⌥Tab reaches buttons and links. Safari runs it itself.
+  const ua = navigator.userAgent || "", safariMac = /Mac/.test(navigator.platform || "") && /Safari\//.test(ua) && !/Chrome|Chromium|Edg|Firefox|OPR/.test(ua) && !matchMedia("(hover: none) and (pointer: coarse)").matches;
+  if (safariMac) reg({ id: "app.tabSafari", gruppo: "view", viste: ["*"], icona: "list", scorciatoia: { tasto: "Tab", alt: true, dove: "view", et: "scorc.tabSafari" },
+    nome: () => T("scorc.tabSafari"), tip: () => T("scorc.tabSafari.tip"), disponibile: () => false, esegui: () => {} });
   const inData = () => typeof S !== "undefined" && S.view === "data";
   reg({ id: "app.apri", gruppo: "tools", viste: ["*"], icona: "plus", scorciatoia: { tasto: "o", mod: true, dove: "view", et: "scorc.apri" },
     nome: () => T("scorc.apri"), tip: () => T("scorc.apri.tip"), disponibile: () => !!document.getElementById("pick"), esegui: () => { const i = document.getElementById("pick"); if (i) i.click(); } });
   reg({ id: "app.esporta", gruppo: "tools", viste: ["*"], icona: "save", scorciatoia: { tasto: "e", mod: true, dove: "view", et: "scorc.esporta" },
-    nome: () => T("scorc.esporta"), tip: () => T("scorc.esporta.tip"), disponibile: () => inData() && !!window.RAPPORTO, esegui: () => window.RAPPORTO && RAPPORTO.export("html") });
+    nome: () => T("scorc.esporta"), tip: () => T("scorc.esporta.tip"), disponibile: () => inData() && !!window.RAPPORTO && E.files.some(f => !f.gone), esegui: () => window.RAPPORTO && RAPPORTO.export("html") });
   /** @param {string} k @param {string} v @param {string} code @param {() => string} nome */
   const vista = (k, v, code, nome) => reg({ id: "app." + k, gruppo: "tools", viste: ["*"], icona: "side", scorciatoia: { code, alt: true, dove: "view", et: "scorc." + k },
     nome, tip: () => T("scorc.vista.tip"), disponibile: () => typeof setView === "function", esegui: () => setView(v) });
@@ -60,9 +64,10 @@
     function elenco() {
       const p = typeof E !== "undefined" && E.active && E.active.el ? E.active : null, vista = p ? p.type : "";
       const tutte = AZIONI.voci.filter((/** @type {any} */ a) => a.scorciatoia);
-      const qui = vista ? tutte.filter((/** @type {any} */ a) => a.scorciatoia.dove === "chart" && (a.viste.includes(vista) || a.viste.includes("*"))) : [];
-      const resto = tutte.filter((/** @type {any} */ a) => !qui.includes(a) && (a.scorciatoia.dove === "view" || !vista));
-      return { qui, resto };
+      // chart keys once per label and key; with no chart in focus under their own heading
+      const k = (/** @type {any} */ a) => a.scorciatoia.et + AZIONI.testo(a.scorciatoia);
+      const c = tutte.filter(a => a.scorciatoia.dove === "chart" && (!vista || a.viste.includes(vista) || a.viste.includes("*"))), g = c.filter((a, i) => c.findIndex(b => k(b) === k(a)) === i);
+      return { qui: vista ? g : [], resto: tutte.filter(a => a.scorciatoia.dove === "view"), grafici: vista ? [] : g };
     }
     function apri() {
       if (!dlg) {
@@ -72,9 +77,9 @@
         document.head.appendChild(st); document.body.appendChild(dlg);
         dlg.addEventListener("close", () => { const b = /** @type {any} */ (dlg).prev; if (b && document.contains(b)) try { b.focus({ preventScroll: true }); } catch (_) { /* gone */ } });
       }
-      const { qui, resto } = elenco();
-      dlg.innerHTML = h`<h2 id="scorc-t">${T("scorc.titolo")}</h2>${raw(qui.length ? h`<h3>${T("scorc.qui")}</h3><ul>${raw(qui.map(riga).join(""))}</ul>` : "")}` +
-        h`<h3>${T("scorc.ovunque")}</h3><ul>${raw(resto.map(riga).join(""))}</ul>` +
+      const { qui, resto, grafici } = elenco();
+      const sez = (/** @type {string} */ t, /** @type {any[]} */ l) => l.length ? h`<h3>${T(t)}</h3><ul>${raw(l.map(riga).join(""))}</ul>` : "";
+      dlg.innerHTML = h`<h2 id="scorc-t">${T("scorc.titolo")}</h2>` + sez("scorc.qui", qui) + sez("scorc.ovunque", resto) + sez("scorc.grafici", grafici) +
         h`<div class="row"><button type="button" class="bt" id="scorc-altri">${T("scorc.altri")}</button><button type="button" class="bt" id="scorc-x" autofocus>${T("scorc.chiudi")}</button></div>`;
       /** @type {any} */ (dlg).prev = document.activeElement;
       /** @type {HTMLElement} */ (dlg.querySelector("#scorc-x")).onclick = () => /** @type {HTMLDialogElement} */ (dlg).close();

@@ -1,6 +1,6 @@
 # Grouping files by their names: «Group by», name variables, drag and drop
 
-Study for Federico's request of 30/10/2026: when files arrive, mzLab understands how their NAMES split them (matrix, condition, time, role, concentration, replicate), offers a «Group by» menu built from that, keeps a manual fallback (token position, «contains»), and lets the user move files between groups by dragging, in the side list and in the loading area. Build prompts: `docs/studi/prompt_gruppi/` (order and dependencies in `LEGGIMI.md`).
+Study for Federico's request of 30/10/2026: when files arrive, mzLab understands how their NAMES split them (matrix, condition, time, role, concentration, replicate), offers a «Group by» menu built from that, keeps a manual fallback (token position, «contains»), and lets the user move files between groups by dragging, in the side list and in the loading area. Build prompts: `docs/archivio/studi/prompt_gruppi/` (order and dependencies in `LEGGIMI.md`).
 
 ## Summary for Federico
 1. **The name parser already exists, in Rust** (`crates/mzlab-core/src/campioni/`): it reads role, time, concentration, replicate, matrix (`MQ_`, `TW_`) and the `MAT-COND` group from names like yours. What is missing is the general step: split every name into tokens, find which positions/kinds VARY across the set, and rank them as grouping keys. That is one new pure Rust function (`variabili`), served by the existing `api/campioni/<op>` route in the site and in the app: no new JS logic, no start-up weight.

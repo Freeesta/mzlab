@@ -11,12 +11,16 @@ impl std::fmt::Debug for Params {
             .field("floor", &self.floor)
             .field("min_points", &self.min_points)
             .field("min_height", &self.min_height)
-            .field("max_gap", &self.max_gap)
+            // the scan distance (missed scans + 1), the number this field held before it counted missed scans: same result, same fingerprint
+            .field("max_gap", &(self.max_gap + 1))
             .field("long_trace", &self.long_trace)
             .field("axis", &self.axis)
             .field("budget", &self.budget);
         if self.merge_overlap != 0.0 {
             d.field("merge_overlap", &self.merge_overlap);
+        }
+        if self.stitch_wide {
+            d.field("stitch_wide", &true);
         }
         if self.min_width != 0.0 {
             d.field("min_width", &self.min_width);

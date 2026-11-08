@@ -102,7 +102,8 @@ fn msp_blocks_fields_and_discarded() {
             dropped: 3,
             no_prec: 2,
             no_peaks: 1,
-            broken: 0
+            broken: 0,
+            cut: 0
         }
     );
 }
@@ -323,8 +324,11 @@ fn very_long_names_and_huge_peak_lists_do_not_panic() {
     for i in 0..250_000 {
         big.push_str(&format!("{} 10\n", 10 + i));
     }
-    let (out, _) = parse_all(Format::Msp, big.as_bytes());
+    big.push_str("\nName: Few\nPrecursorMZ: 200\n50 10\n");
+    let (out, st) = parse_all(Format::Msp, big.as_bytes());
     assert_eq!(out[0].mz.len(), 200_000);
+    // the import summary names the spectra cut at the cap (lib.cutN): the short one after it is not counted
+    assert_eq!((st.read, st.cut), (2, 1));
 }
 
 #[test]

@@ -338,7 +338,7 @@ pub(super) fn documento(l: &mut LettoreWaters) -> Result<String> {
 }
 
 /// The header of the mzML: the instrument, the data files with their SHA-1 and the document.
-pub(super) fn testata(l: &mut LettoreWaters) -> Result<Header> {
+pub(super) fn file_header(l: &mut LettoreWaters) -> Result<Header> {
     let doc = documento(l)?;
     let sha = impronte(l).to_vec();
     let (modello, serie) = strumento_di(l);

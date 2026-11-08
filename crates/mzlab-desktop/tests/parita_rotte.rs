@@ -109,6 +109,8 @@ fn plan() -> Vec<Value> {
         r("/api/ms2tr", ""),
         r("/api/spectrum", "?k=0&level=1&rt0=0.2&rt1=0.4"),
         r("/api/dda", "?k=0"),
+        r("/api/dda_window", "?k=0&r0=0&r1=5"),
+        r("/api/dda_window", "?k=0&r0=0"),
         r("/api/msn_albero", "?k=0"),
         r("/api/scan_stats", "?k=0"),
         r("/api/nope", ""),
@@ -119,6 +121,7 @@ fn plan() -> Vec<Value> {
         json!({"op": "mrmchrom", "slot": 0, "kind": "tic"}),
         json!({"op": "mzmlroute", "slot": 0, "path": "/api/spectra", "query": "?k=0&level=1&rt0=0.2&rt1=0.4"}),
         json!({"op": "mzmlroute", "slot": 0, "path": "/api/scan", "query": "?k=0&sid=3"}),
+        json!({"op": "mzmlroute", "slot": 0, "path": "/api/dda_window", "query": "?k=0&r0=0&r1=5"}),
         json!({"op": "scanbin", "slot": 0, "query": "?k=0&sid=3"}),
         json!({"op": "specexact", "slot": 0, "query": "?k=0&level=1&rt0=0.2&rt1=0.2"}),
         json!({"op": "map", "path": "/api/map", "items": items, "query": "?k=0&level=1"}),
@@ -132,6 +135,19 @@ fn plan() -> Vec<Value> {
     ];
     steps.extend(stat_steps());
     steps.extend(name_steps());
+    // the signed shift of an ion text (`288.2+16`, `C9H8O4-18`) of the dialog «Extract ions»; a malformed shift is `err.formula.offset`
+    for (f, adduct) in [
+        ("288.2+16", ""),
+        ("288,2-18", ""),
+        ("C9H8O4+16", "[M+H]+"),
+        ("C9H8O4 - 18.5", "[M-H]-"),
+        ("C9H8O4+Na+16", "none"),
+        ("C9H8O4+1.2.3", "[M+H]+"),
+        ("288.2+", ""),
+        ("C9H8O4+16x", "[M+H]+"),
+    ] {
+        steps.push(json!({"op": "lr_formula", "f": f, "adduct": adduct}));
+    }
     steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
         json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
@@ -282,7 +298,7 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
         fid,
         &plan,
         &wasm,
-        &[1, 12, 15, 16, 23, 26, 27, 31, 32, 33, 34],
+        &[1, 11, 14, 17, 18, 25, 28, 29, 33, 34, 35, 36],
     );
     // a slot that was never opened is an error with the same key in both
     for w in &wasm[wasm.len() - 3..] {

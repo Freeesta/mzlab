@@ -29,7 +29,7 @@ I18N.add("en", {
   "bn.grp.msn": "Successive fragmentations (MSn)",
   "bn.addBtn.title": "Adds a chart stacked on the same time axis",
   "bn.stack": "Stacked charts",
-  "bn.stack.title": "Each chart has its own chromatogram type; «×» removes it",
+  "bn.stack.title": "One chart for each chromatogram type",
   "bn.norm.title": "0–100 scale for each chart; the maximum stays written as NL",
   "bn.drop": "Remove the chart: {name}",
   "bn.pin.on": "Cell pinned: click to unpin it",

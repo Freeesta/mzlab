@@ -7,6 +7,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 
 use crate::axis::{da, estimate_defect, half, MassAxis, LR_TOL};
+use crate::histbin::Edges;
 pub use crate::params_unit::{
     da_from_offsets, dead_time, DA_MAX, DA_MIN, RT_FACTOR, RT_TOL_MAX, RT_TOL_MIN,
 };
@@ -41,8 +42,10 @@ impl Hist {
     /// Counts `v` (> 0); values outside the range go in the first or last bin.
     pub fn add(&mut self, v: f64) {
         if v > 0.0 {
-            let i = ((libm::log10(v) - LO) / BIN).floor();
-            self.counts[(i.max(0.0) as usize).min(BINS - 1)] += 1;
+            // the bin of `floor((log10(v) - LO) / BIN)`, found among the edges (a logarithm per peak was most of the estimate)
+            static EDGES: std::sync::OnceLock<Edges> = std::sync::OnceLock::new();
+            let e = EDGES.get_or_init(|| Edges::new(LO, BIN, BINS));
+            self.counts[e.bin(v)] += 1;
         }
     }
     /// Intensity at the lower edge of bin `i`.
@@ -431,10 +434,12 @@ pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> S
         .opt(est.ppm)
         .raw(",\"sigma\":")
         .num(est.ppm_sigma);
-    o.raw(",\"n\":")
-        .int(est.ppm_n as i64)
-        .raw("},\"fwhm\":{\"value\":")
-        .opt(est.fwhm);
+    o.raw(",\"n\":").int(est.ppm_n as i64);
+    // a measured scatter above the ceiling is set to the ceiling: said, so a badly calibrated file is not hidden
+    if est.ppm == Some(PPM_MAX) {
+        o.raw(",\"capped\":true");
+    }
+    o.raw("},\"fwhm\":{\"value\":").opt(est.fwhm);
     o.raw(",\"n\":")
         .int(est.fwhm_n as i64)
         .raw("},\"rt_tol\":")
@@ -446,8 +451,11 @@ pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> S
         .raw(",\"sigma\":")
         .num(est.da_sigma)
         .raw(",\"n\":")
-        .int(est.da_n as i64)
-        .raw("},\"examples\":[");
+        .int(est.da_n as i64);
+    if est.da == Some(DA_MAX) {
+        o.raw(",\"capped\":true");
+    }
+    o.raw("},\"examples\":[");
     for (i, e) in examples.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         example_json(&mut o, e);

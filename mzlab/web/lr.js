@@ -90,7 +90,7 @@ export function createLr({ rb }) {
     await mr.refresh();
     if (fresh) return;
     try {
-      const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
+      const kv = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}"), nb = (typeof NBP !== "undefined" && NBP.peek(kv)) || kv;  // a newer copy kept at pagehide (nb-pendiente.js) wins: its files open
       const list = sessionFiles(nb.session, f => safeName(f) && files.has(safeName(f)), nb.ui && nb.ui.files);
       if (list.length) await explore({ samples: list });
     } catch (_) { items = null; hr = lr = false; }                    // a broken notebook never stops the program
@@ -99,11 +99,11 @@ export function createLr({ rb }) {
   async function upload(name, blob) {
     const n = safeName(name);
     if (!n) return fail("err.file.notAccepted", { name }, `file type not accepted: ${name}`);
-    const nat = /** @type {any} */ (blob).mzlabNat || null;                   // a sample of a maker's file (nativo.js): the members go to the browser storage with it
+    const nat = /** @type {any} */ (blob).mzlabNat || null, gz = !!(/** @type {any} */ (blob).mzlabGz);      // a sample of a maker's file (nativo.js): its members go to the browser storage with it; gz: a .mzML.gz the worker inflates into OPFS (rust-carica.js putGz)
     if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
     let fase = "copy";                                                 // where it fails, for the diagnosis (diagnosi.js): copy → index → open
     try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
-      const hit = nat || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob), put = hit || await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : p => tellIndex(n, 0.4 * p.frac, "load", p));
+      const hit = nat || gz || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob), put = hit || await rpc({ op: "lr_put", name: n, blob, nat, gz }, nat ? p => tellIndex(n, W.copy * p.frac, "read", p) : p => tellIndex(n, 0.4 * p.frac, "load", p));
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
@@ -169,7 +169,7 @@ export function createLr({ rb }) {
       items = items.filter(it => base(it.file.split("#")[0]) !== n);      // a mixed file's items are named `file#tag`
       if (!items.length) { items = null; hr = lr = false; }
     }
-    rb.noteRemove(n); rb.noteExplore(null);
+    rb.noteRemove(n); rb.noteExplore(items ? { samples: items.map(it => ({ file: it.file })) } : null);      // the files left open again at their new indexes (the page follows by name: reindexAfterFree)
     return json({ files: sorted(), methods: mr.list() });
   }
 

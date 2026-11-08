@@ -12,10 +12,13 @@
 //    translated pieces together (genders and articles differ between the languages).
 //  - Numbers that are DATA (m/z, RT, intensity, ppm, areas) go through I18N.num: always a decimal point, in both languages.
 //  - What the user writes (file names, annotations, labels) is never translated.
+//  - On the site the catalog comes in two parts (tools/build_site.py bundle_lang): the keys of the first view before the first paint, the rest
+//    right after (carica.js loads it before any other script). Until then a key of the rest gives "" (never the bare key) and is noted in
+//    `late` (the e2e tests require it empty); static HTML keeps its text until the rest re-applies it.
 (function (root) {
   const LANGS = ["it", "en"], KEY = "mzlab.lang";   // "qqq.lang" (old QqQ-lab site, same origin) is ignored on purpose
-  const cat = { it: {}, en: {} }, missing = new Set();
-  let lang = "it";
+  const cat = { it: {}, en: {} }, missing = new Set(), late = new Set(), held = new Set();
+  let lang = "it", rest = "";      // rest: path of the second part of the catalog while it is still to come
 
   const store = {
     get() { try { return localStorage.getItem(KEY); } catch (_) { return null; } },
@@ -50,8 +53,10 @@
     }
     return out;
   }
-  // THE number format of the whole program: decimal point in every language, no thousands separator (a comma would be read as a decimal one)
-  const NF = dec => new Intl.NumberFormat("en-US", dec === undefined ? { useGrouping: false } : { useGrouping: false, minimumFractionDigits: dec, maximumFractionDigits: dec });
+  // THE number format of the whole program: decimal point in every language, no thousands separator (a comma would be read as a decimal one).
+  // One formatter per number of decimals: building an Intl.NumberFormat costs ~25 µs, formatting with one ~0.5 µs, and the progress rows of a loading format thousands of numbers
+  const NFS = new Map();
+  const NF = dec => { let f = NFS.get(dec); if (!f) { f = new Intl.NumberFormat("en-US", dec === undefined ? { useGrouping: false } : { useGrouping: false, minimumFractionDigits: dec, maximumFractionDigits: dec }); NFS.set(dec, f); } return f; };
   function format(msg, params, lg) {
     params = params || {}; let out = "", i = 0;
     while (i < msg.length) {
@@ -85,10 +90,19 @@
   function t(key, params) {
     let m = cat[lang][key];
     if (m === undefined) m = cat.it[key];
+    if (m === undefined && rest) { if (!late.has(key)) { late.add(key); try { console.error("i18n: key asked before the rest of the catalog: " + key); } catch (_) { /* no console */ } } return ""; }
     if (m === undefined) { if (!missing.has(key)) { missing.add(key); try { console.warn("i18n: missing key " + key); } catch (_) { /* no console */ } } return key; }
     return params === undefined && m.indexOf("{") < 0 ? m : format(m, withApp(m, params), lang);
   }
   function add(lg, dict) { Object.assign(cat[lg] || (cat[lg] = {}), dict); }
+  // first part of the catalog: the rest (a path under static/) is still to come; the rest calls done() at its end, then apply runs again
+  // on the elements it had to leave as they were
+  function awaitRest(path) { rest = path; }
+  function done() {
+    rest = "";
+    const els = [...held]; held.clear();
+    els.forEach(el => { if (el.isConnected) fill(el); });
+  }
   // fixed decimals, always with the point (file sizes inside prose: "1.5 MB"); data values use num()
   const fix = (x, dec) => NF(dec).format(+x);
   // table cells: "–" for a missing or non-finite value, else fixed decimals; sci() switches to 2-digit scientific notation for >= 1e4 or < 0.01
@@ -98,17 +112,23 @@
   const sciE = (x, d = 3) => { if (x === null || x === undefined || x === "" || !isFinite(+x)) return ""; const [m, e] = (+x === 0 ? 0 : +x).toExponential(d).split("e"); return `${m}E${+e < 0 ? "-" : "+"}${String(Math.abs(+e)).padStart(2, "0")}`; };
   const num = (x, dec) => (x === null || x === undefined || Number.isNaN(+x)) ? "" : (dec === undefined ? String(+x) : (+x).toFixed(dec));
 
+  // the texts written for the desktop app, where the limit is the memory of the computer and not of the browser
+  const NATIVE = new Set(["error.memoryBudget.native", "error.memoryBudgetFase.native", "error.memoryBudgetFase.indexPeaks.native"]);
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
   function err(j) {
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
     // a refusal of the memory contract names the phase, the estimate and the budget: its own text says by how much the file overshoots
-    const k = j.error_key === "error.memoryBudget" && j.params && j.params.fase ? "error.memoryBudgetFase" : j.error_key;
+    // (a phase with a text of its own, `error.memoryBudgetFase.<id>`, names its real limit)
+    // in the desktop app the limit is the memory of the computer, not of the browser: a key with a `.native` text uses that one (testo_errore.rs, same choice)
+    const nat = key => (typeof window !== "undefined" && window.MZLAB_DESKTOP && NATIVE.has(key + ".native") ? key + ".native" : key), FP = "error.memoryBudgetFase.";
+    const fase = j.error_key === "error.memoryBudget" && j.params && j.params.fase, own = fase && (cat[lang][FP + fase] || cat.it[FP + fase]) && nat(FP + fase).slice(FP.length);
+    const k = nat(fase ? "error.memoryBudgetFase" : j.error_key);
     // the phase has a name for people when the catalog has one (`memory.phase.<id>`)
     const ph = j.params && j.params.fase && cat[lang]["memory.phase." + j.params.fase] ? t(`memory.phase.${j.params.fase}`) : "";
     const params = ph ? Object.assign({}, j.params, { fase: ph }) : j.params;
-    let msg = t(k, params || {});
+    let msg = own ? t(`error.memoryBudgetFase.${own}`, params) : t(k, params || {});
     // a key with no text in the catalogs never reaches the student: the generic sentence carries the engine's own detail
-    if (msg === k) msg = t("error.generic", { detail: (j.params && j.params.detail) || j.error || "–" });
+    if (msg === k || msg === "") msg = t("error.generic", { detail: (j.params && j.params.detail) || j.error || "–" });
     return Object.assign(new Error(msg), { key: j.error_key, params: j.params });
   }
 
@@ -116,12 +136,26 @@
   const ATTRS = [["data-i18n-title", "title"], ["data-i18n-placeholder", "placeholder"], ["data-i18n-aria-label", "aria-label"]];
   function apply(rootEl) {
     const r = rootEl || (typeof document !== "undefined" ? document : null); if (!r) return;
+    if (rest) { applyKnown(r); return; }
     // {app} = the visible name of the program (appname.js)
     const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "" };
     r.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n"), P); });
     // catalog text with b/i/u/code/sub/sup/a/br (trusted)
     r.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html"), P); });
     ATTRS.forEach(([a, target]) => r.querySelectorAll("[" + a + "]").forEach(el => el.setAttribute(target, t(el.getAttribute(a), P))));
+  }
+  // while the rest is to come: an element whose key is not here yet keeps its text (the Italian of the page) and waits for done()
+  const ALL = "[data-i18n],[data-i18n-html]," + ATTRS.map(([a]) => "[" + a + "]").join(",");
+  function applyKnown(r) { r.querySelectorAll(ALL).forEach(el => { if (!fill(el)) held.add(el); }); }
+  // the keys of one element; false when one of them is not in the catalog yet (that one is left as it is)
+  function fill(el) {
+    const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "" }, has = k => !rest || cat[lang][k] !== undefined || cat.it[k] !== undefined;
+    let all = true;
+    const put = (a, f) => { const k = el.getAttribute(a); if (k === null) return; if (has(k)) f(t(k, P)); else all = false; };
+    put("data-i18n", v => { el.textContent = v; });
+    put("data-i18n-html", v => { el.innerHTML = v; });
+    ATTRS.forEach(([a, target]) => put(a, v => el.setAttribute(target, v)));
+    return all;
   }
   function setLangAttr() { if (typeof document !== "undefined") document.documentElement.setAttribute("lang", lang); }
 
@@ -131,7 +165,7 @@
     if (!LANGS.includes(lg)) return;
     store.set(lg);
     if (typeof location === "undefined") { lang = lg; return; }
-    try { const u = new URL(location.href); u.searchParams.delete("lang"); history.replaceState(null, "", u.toString()); } catch (_) { /* old browser */ }
+    const u = new URL(location.href); u.searchParams.delete("lang"); history.replaceState(null, "", u.toString());
     location.reload();
   }
 
@@ -144,7 +178,7 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
   }
 
-  const I18N = { add, t, apply, set, num, fix, dash, sci, sciE, err, detect, format, get lang() { return lang; }, LANGS, KEY, missing };
+  const I18N = { add, t, apply, set, num, fix, dash, sci, sciE, err, detect, format, get lang() { return lang; }, LANGS, KEY, missing, late, awaitRest, done, get rest() { return rest; } };
   /** @type {any} */ (root).I18N = I18N;
   if (typeof module !== "undefined" && module.exports) module.exports = I18N;
 })(typeof window !== "undefined" ? window : globalThis);

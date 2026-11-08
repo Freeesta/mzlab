@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
-        attendi(pg, "window.TPDraw && TPDraw.ready()", 60000)
+        wait_for_js(pg, "window.TPDraw && TPDraw.ready()", 60000)
         pg.add_script_tag(path=AXE)
         def contrast(theme, extra=None):
             pg.evaluate("t => { document.documentElement.dataset.theme = t[0]; if (t[1]) document.documentElement.dataset.a11yBg = t[1]; else delete document.documentElement.dataset.a11yBg; }", [theme, extra])
@@ -27,7 +27,7 @@ try:
             assert ratio[0] != "rgba(0, 0, 0, 0)", ("the pill needs its own background", ratio)
         for hidden in (False, True):
             name = "panels hidden («Show panels»)" if hidden else "panels shown («Hide panels»)"
-            if hidden and not pg.evaluate("document.querySelector('#v-draw').classList.contains('noside')"): pg.click("#side-toggle"); attendi(pg, "document.querySelector('#v-draw').classList.contains('noside')")
+            if hidden and not pg.evaluate("document.querySelector('#v-draw').classList.contains('noside')"): pg.click("#side-toggle"); wait_for_js(pg, "document.querySelector('#v-draw').classList.contains('noside')")
             step(f"dark theme, {name}: text contrast", lambda: contrast("dark"))
             step(f"high-contrast dark, {name}: text contrast", lambda: contrast("dark", "hc"))
             step(f"light theme, {name}: text contrast", lambda: contrast("light"))

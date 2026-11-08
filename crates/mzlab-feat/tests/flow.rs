@@ -156,7 +156,7 @@ fn unknown_version_and_duplicates() {
     let plan = r#"{"steps":[{"id":"a","step":"features.detect@9"},{"id":"a","step":"features.detect@1","preset":"nope"}]}"#;
     let want = [
         "a||err.flow.instance.duplicate|",
-        "a||err.flow.step.version|step=features.detect,version=9,available=1",
+        "a||err.flow.step.version|step=features.detect,version=9,available=2",
         "a||err.flow.preset.unknown|preset=nope",
         "a|index|err.flow.port.missing|port=index",
     ];
@@ -197,7 +197,9 @@ fn the_preset_then_the_file_then_the_algorithm_give_the_values() {
     assert_eq!(r.algorithm, Some(("masstrace".to_string(), 1)));
     assert_eq!(r.preset.as_deref(), Some("lr"));
     // sorted keys, shortest numbers
-    assert!(r.text().starts_with(r#"{"axis":"Da","budget":96000000,"#));
+    assert!(r
+        .text()
+        .starts_with(r#"{"area_from":"channel","axis":"Da","budget":96000000,"#));
 }
 
 /// A runner that makes every output from the hash of its inputs, the step and the parameters, and writes down how long it took in a way that varies.

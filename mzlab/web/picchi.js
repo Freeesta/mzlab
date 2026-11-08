@@ -3,7 +3,8 @@
 // Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafici.js.
 // ------------------------------------------------------------------ peak integration
 // base = [t0, y0, t1, y1]: the baseline of an HR automatic integration (autoAll), a straight line through those two points, still valid when an edge is dragged
-function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, base = /** @type {number[] | null} */ (null)) {
+function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, base = /** @type {number[] | null} */ (null), zero = false) {
+  if (zero) return INTZERO.area(s, a, b);
   const xs = s.x, ys = s.y;
   let i0 = nearIdx(xs, Math.min(a, b)), i1 = nearIdx(xs, Math.max(a, b));
   if (i1 - i0 < 1) return { area: 0, height: 0, rt: xs[i0] };
@@ -17,12 +18,14 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
 // end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
 const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
-// Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
-// hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
 // the colour of a spectrum of the panel: the one of its file, or of its precursor when one file gives several (the bars and the legend entry use this one)
 const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color);
-const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0, hrSmooth: 5, hrSn: 5, hrProm: 1, hrScans: 3, hrHalf: 0, hrSlope: 3 };
-const PK = (() => { const o = lsObj(NOMI.KEY("picchi")); const { method: _old, ...rest } = o; return { ...PK_DEF, ...rest }; })();
+// Settings of the automatic integration (dialog «Rilevamento dei picchi»), saved in this browser; any other stored key is dropped. The defaults are
+// those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peak-edges / peak-auto --set only).
+// hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
+/** @type {Record<string, number>} */
+const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, base: 0 };      // base: 0 edges, 1 zero, 2 line (new integrations)
+const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 // Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
 // moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
@@ -30,10 +33,10 @@ function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringif
 // goes from + to -. Each edge is where the signal falls below (local baseline + 3% of the peak height, and at least 3 times the noise), or where
 // the derivative changes sign again (a valley before the next peak) for a sustained stretch. Baseline = straight line between the two edges (integ()).
 // The detector is Rust (crates/mzlab-core/src/peakq_lr.rs through QUALITA.edges); this asks it with the parameters of the dialog.
-/** Limits [t0, t1] (min) of the peak at time x on the trace s; null below the S/N threshold or without the engine. @param {Bag} s @param {number} x @param {number} [ref] */
-async function autoEdges(s, x, ref = 0) {
+/** Limits [t0, t1] (min) of the peak at time x on the trace s; null below the S/N threshold or without the engine. @param {Bag} s @param {number} x */
+async function autoEdges(s, x) {
   const isMrm = (s.key && s.key.startsWith("m|")) || s.tr != null;
-  const r = window.QUALITA ? await QUALITA.edges(s.x, s.y, x, ref, isMrm, PK) : null;
+  const r = window.QUALITA ? await QUALITA.edges(s.x, s.y, x, isMrm, PK) : null;
   return r && r.length ? r : null;
 }
 // trace to integrate at time x: the clicked row when stacked, otherwise the most intense one
@@ -96,7 +99,7 @@ function setNoiseZone(/** @type {Bag} */ p, /** @type {Bag} */ it, /** @type {nu
   INTOPT.sn = true;
 }
 function delInts(/** @type {Bag} */ p, /** @type {Bag[]} */ list) { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => !list.includes(i)); if (list.some((/** @type {Bag} */ i) => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
-function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, mirror = true) {
+function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, mirror = true, zero = false) {
   const lo = Math.min(a, b), hi = Math.max(a, b);
   if (p.type === "mrm") { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => i.key !== s.key); }       // calibration: one peak per transition and file, a new window replaces the old one
   else {
@@ -104,24 +107,26 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
     if (intClash(p, s.key, lo, hi)) { nearMsg(I18N.t("int.clash")); return false; }
   }
   if (p.type !== "mrm") pushIh(p);
-  p.ints.push(intRec(p, s, lo, hi));
+  p.ints.push(intRec(p, s, lo, hi, null, zero));
   draw(p);
   // MRM: the same window goes to the other transition panels (quantifier and qualifier), where it can still be moved on its own
-  if (p.type === "mrm" && mirror) tabPanels().filter((/** @type {Bag} */ q) => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach((/** @type {Bag} */ q) => { const s2 = q._a.sr.find((/** @type {Bag} */ x) => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false); });
+  if (p.type === "mrm" && mirror) tabPanels().filter((/** @type {Bag} */ q) => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach((/** @type {Bag} */ q) => { const s2 = q._a.sr.find((/** @type {Bag} */ x) => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false, zero); });
   return true;
 }
-function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null)) {
+function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null), zero = false) {
   const f = E.files[s.k];
-  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}) };
+  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}), ...(zero ? { zero: true } : {}),
+    ...(!zero && PK.base ? PK.base === 1 ? { bm: "zero" } : { bm: "line", bl: edgeLine(s, lo, hi, base) } : {}) };
 }
+// [t0, y0, t1, y1] of the line between the edges: a custom line starts there
+const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? baseAt(base, s.x[i]) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
 // a trace of a high-resolution file: the automatic tool integrates all its peaks at once (low resolution keeps one peak per click)
 const hrTrace = (/** @type {Bag} */ s) => { const f = E.files[s.k]; return !!f && !!window.HR && HR.isHr(f, f.lv); };
 // every peak of the stretch shown, found and given its baseline by the Rust engine (auto_integrate, peakq_auto.rs), in one undoable step;
 // windows that would overlap an integration already there are left out
 async function autoAll(/** @type {Bag} */ p, /** @type {Bag} */ s) {
   const a = p._a; if (!a) return;
-  const o = { smooth: PK.hrSmooth, snr: PK.hrSn, rel: PK.hrProm / 100, scans: PK.hrScans, half: PK.hrHalf, slope: PK.hrSlope / 100 };
-  const lim = window.QUALITA ? await QUALITA.autoIntegrate(s.x, s.y, a.x0, a.x1, o) : null;
+  const lim = window.QUALITA ? await QUALITA.autoIntegrate(s.x, s.y, a.x0, a.x1, { smooth: PK.hrSmooth, snr: PK.hrSn }) : null;
   if (!lim) { nearMsg(I18N.t("int.autoOff")); return; }
   const add = lim.map((/** @type {Bag} */ w) => [s.x[w.lo], s.x[w.hi], w.b0, w.b1]).filter((/** @type {number[]} */ w) => w[1] - w[0] > INT_EPS && !intClash(p, s.key, w[0], w[1]));
   if (!add.length) { nearMsg(I18N.t(lim.length ? "int.clash" : "int.autoNone")); return; }
@@ -131,9 +136,8 @@ async function autoAll(/** @type {Bag} */ p, /** @type {Bag} */ s) {
 }
 // automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
 async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ x) {
-  const same = p.ints.filter((/** @type {Bag} */ i) => i.key === s.key).map((/** @type {Bag} */ i) => iHi(i) - iLo(i)).sort((/** @type {number} */ u, /** @type {number} */ v) => u - v);
   if (!window.QUALITA) { nearMsg(I18N.t("int.autoOff")); return; }
-  const ed = await autoEdges(s, x, same.length ? same[same.length >> 1] : 0);
+  const ed = await autoEdges(s, x);
   if (!ed) { nearMsg(I18N.t("int.belowSn")); return; }
   let [l, r] = ed;
   if (p.type !== "mrm") {
@@ -154,27 +158,19 @@ function intAt(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number
   }
   return null;
 }
-// dialog of the automatic-integration parameters (applies to every panel; the defaults reproduce the behaviour that always was)
+// dialog of the automatic-integration settings (applies to every panel): two blocks side by side, one row per setting (label, field, one-line hint)
 function peakParams() {
-  // one row per parameter: label | field | short hint, in a single aligned column; the sections group what belongs together
-  const f = (/** @type {string} */ k, hint = true) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${hint ? I18N.t(`pk.${k}.h`) : ""}</span></label>`;
-  const sec = (/** @type {string} */ k, /** @type {string} */ rows) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${rows}</fieldset>`;
-  const opt = (/** @type {string} */ k) => `<option value="${k}"${PK.noise === k ? " selected" : ""}>${I18N.t(`pk.noise.${k}`)}</option>`;
-  big(I18N.t("pk.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("pk.intro")}</div>
-    ${sec("noise", f("win") + f("areaNoise"))}
-    ${sec("edges", f("edgeFrac") + f("snMin") + f("tail"))}
-    ${sec("multi", f("multi"))}
-    ${sec("hr", f("hrSmooth") + f("hrSn") + f("hrProm") + f("hrScans") + f("hrHalf") + f("hrSlope"))}
-    <details id="pk-adv"><summary>${I18N.t("pk.sec.adv")}</summary><fieldset class="pk-sec"><legend class="sr-only">${I18N.t("pk.sec.adv")}</legend>
-      <label class="pk-row"><span>${I18N.t("pk.noise")}</span><select data-pk="noise" style="grid-column:2/4;justify-self:start">${["mad", "rms", "manual"].map(opt).join("")}</select></label>
-      ${f("nr0")}${f("nr1", false)}${f("constrain")}${f("minHalf")}</fieldset></details>
-    <div style="margin-top:8px"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
-    const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = PK[i.dataset.pk]; });
+  const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
+  const sec = (/** @type {string} */ k, /** @type {string[]} */ keys) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${keys.map(f).join("")}</fieldset>`;
+  big(I18N.t("pk.title"), `<div class="muted sm pk-intro">${I18N.t("pk.intro")}</div>
+    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="base">${["edges", "zero", "line"].map((k, v) => `<option value="${v}"${PK.base === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
+    <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
+    const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
     Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
     Q("#pk-ok").onclick = () => {
       COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => {
-        document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const k = i.dataset.pk; if (k === "noise") PK[k] = i.value; else { const v = numIt(i.value); if (v >= 0) PK[k] = v; } });
-        PK.minHalf = Math.max(1, Math.round(PK.minHalf)); PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1); PK.hrScans = Math.max(2, Math.round(PK.hrScans)); PK.hrHalf = Math.min(30, Math.round(PK.hrHalf));
+        document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const v = numIt(i.value); if (v >= 0) PK[i.dataset.pk] = v; });
+        PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1);
       });
       pkSave(); Q("#bigdlg").close();
     };
@@ -216,9 +212,11 @@ const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "r
 // appended after every other column of the export: role of the file, and the MRM transition (Q1, Q3, name; empty for an XIC)
 const INT_NEW = ["role", "q1", "q3", "transition"];
 const INT_NEW_HEADS = INT_NEW.map(k => I18N.t(`export.int.${k}`));
+// the baseline of a record by name (int.base.*)
+const bName = (/** @type {Bag} */ it) => it.bm || (it.zero ? "window" : "edges");
 function intExtra(/** @type {Bag} */ r) {
   const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === it.key);
-  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.base) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
+  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.bl || (it.zero || it.bm === "zero" ? [0, 0, 1, 0] : it.base)) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
   const h = Number.isFinite(r.height) ? r.height : pk ? pk.height : null;      // the height shown in the table, so S/N and «height» never disagree
   return { sn: h != null && sd ? h / sd : null, noise: !!z, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
 }
@@ -232,7 +230,7 @@ async function showInts() {
   const /** @type {Bag[]} */ rows = allInts().map((/** @type {Bag} */ r) => ({ ...r, ...intExtra(r) }));
   if (INTOPT.q) { const qs = await Promise.all(rows.map(qualityOf)); rows.forEach((/** @type {Bag} */ r, /** @type {number} */ i) => { r.qg = qs[i] ? qs[i].gaussian : null; r.qa = qs[i] ? qs[i].asymmetry : null; r.qn = qs[i] ? qs[i].noise : null; }); }
   const fx = (/** @type {number | null | undefined} */ v, /** @type {number} */ d) => v == null || !isFinite(v) ? "" : String(+v.toFixed(d));
-  const head = [INT_HEADS[0], INT_HEADS[1], INT_HEADS[2], I18N.t("int.tbl.time"), I18N.t("int.tbl.conc"), I18N.t("int.tbl.rt0"), I18N.t("int.tbl.rt1"), I18N.t("int.tbl.apex"), I18N.t("int.tbl.area"), I18N.t("int.tbl.height")], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1];
+  const head = [INT_HEADS[0], INT_HEADS[1], INT_HEADS[2], I18N.t("int.tbl.time"), I18N.t("int.tbl.conc"), I18N.t("int.tbl.rt0"), I18N.t("int.tbl.rt1"), I18N.t("int.tbl.apex"), I18N.t("int.tbl.area"), I18N.t("int.tbl.height"), I18N.t("int.tbl.base"), I18N.t("int.tbl.below")], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1];
   const th = (/** @type {string} */ t, /** @type {number} */ n) => `<th${n ? ' class="num"' : ""}>${t}</th>`;
   const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>1/2</sub> (min)", 1) + th(I18N.t("int.tbl.plates"), 1) + th(I18N.t("int.tbl.tail"), 1) : "") +
     (INTOPT.q ? ["gauss", "asym", "nscore"].map(k => `<th class="num" title="${I18N.t(`int.tbl.${k}.h`)}">${I18N.t(`int.tbl.${k}`)}</th>`).join("") : "");
@@ -241,11 +239,11 @@ async function showInts() {
     <label title="${I18N.t("int.tbl.par.title")}"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> ${I18N.t("int.tbl.par")}</label>
     <label title="${I18N.t("int.tbl.q.title")}"><input type="checkbox" id="ig-q" ${INTOPT.q ? "checked" : ""}> ${I18N.t("int.tbl.q")}</label></div>
     <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>${I18N.t("int.tbl.corr")}</th><th></th></tr>` +
-    rows.map((/** @type {Bag} */ r, /** @type {number} */ i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${I18N.sciE(r.area ?? 0, 5)}">${I18N.sciE(r.area ?? 0)}</td><td class="num">${I18N.sciE(r.height ?? 0)}</td>` +
+    rows.map((/** @type {Bag} */ r, /** @type {number} */ i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${I18N.sciE(r.area ?? 0, 5)}">${I18N.sciE(r.area ?? 0)}</td><td class="num">${I18N.sciE(r.height ?? 0)}</td><td>${I18N.t(`int.base.${bName(r._it)}`)}</td><td class="num">${r._it.bm ? I18N.sciE(r.below ?? 0) : ""}</td>` +
       (INTOPT.sn ? `<td class="num">${r.sn != null ? fx(r.sn, 1) : `<button data-nz="${i}" title="${I18N.t("int.tbl.pickNoise.title")}">${I18N.t("int.tbl.pickNoise")}</button>`}</td>` : "") +
       (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") +
       (INTOPT.q ? `<td class="num">${fx(r.qg, 3)}</td><td class="num">${fx(r.qa, 2)}</td><td class="num">${fx(r.qn, 2)}</td>` : "") + `<td>${EH(r.corr || I18N.t("ibk.no"))}</td><td>${intClash(r._p, r.key, r.a, r.b, r._it) ? `<span class="warn" title="${I18N.t("int.tbl.overlap.title")}">${I18N.t("int.tbl.overlap")}</span> ` : ""}<button data-del="${i}" title="${I18N.t("int.tbl.del.title")}">×</button></td></tr>`).join("") +
-    `</table><div class="muted sm">${I18N.t("int.tbl.note")}</div>`
+    `</table><div class="muted sm">${I18N.t("int.tbl.note")}</div>` + (rows.some((/** @type {Bag} */ r) => r.below > 0) ? `<div class="muted sm">${I18N.t("int.tbl.below.note")}</div>` : "")
     : `<div class="muted">${I18N.t("int.tbl.none")}</div>`, () => {
     if (!rows.length) return;
     Q("#ig-sn").onchange = (/** @type {Event} */ e) => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT.sn = /** @type {HTMLInputElement} */ (e.target).checked; }); showInts(); };
@@ -256,8 +254,9 @@ async function showInts() {
       const r = rows[Number(b.dataset.nz)]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
       stepMsg(r._p, I18N.t("int.pickNoise.msg"), true);
     });
-    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS],
-      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : []), ...INT_NEW.map(c => r[c])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18, 14, 10, 10, 22] }];
+    const bx = rows.some((/** @type {Bag} */ r) => r._it.bm);          // only then the two columns: old exports unchanged
+    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS, ...(bx ? [I18N.t("export.int.base"), I18N.t("export.int.below")] : [])],
+      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : []), ...INT_NEW.map(c => r[c]), ...(bx ? [I18N.t(`int.base.${bName(r._it)}`), r._it.bm ? r.below : null] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18, 14, 10, 10, 22] }];
     Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
     Q("#ig-csv").onclick = () => dlc(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
   });
@@ -325,7 +324,7 @@ function makeSnap(/** @type {Bag[]} */ data, /** @type {(m: number) => number} *
 async function drawSpec(p, snapped) {
   if (p.iso && p._isoKey != null && p._isoKey !== JSON.stringify(p.zoom)) { p.iso = null; p._isoKey = null; }      // the student moved the zoom: the isotope simulation switches off
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
-  const say = (/** @type {string} */ t) => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
+  const say = (/** @type {string} */ t) => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; p._say = t; };      // _say: the same words for the screen reader (tdati-pannelli.js)
   const isDda = p.dda != null && !!window.DDA;                // MS2 panel of a DDA trio: shows one MS2 scan of the file (dda.js), whatever file is selected in the toolbar
   if (!isDda && !p.all && p.level === 1 && E.files[/** @type {number} */ (p.k)] && !E.files[/** @type {number} */ (p.k)].vis) { const v = shownFor(p).find((/** @type {Bag} */ x) => scanFiles([x]).length); if (v) { p.k = v.k; p.kSet = false; ctl(p); } }      // the file of the spectrum was unticked: the first ticked one
   const targetK = p.link ? /** @type {number} */ (p.k) : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : /** @type {number} */ (p.k));
@@ -333,8 +332,11 @@ async function drawSpec(p, snapped) {
   let files = scanFiles(base.filter(Boolean));
   if (!files.length) return say(I18N.t("spec.isMrm"));
   if (!isDda && p.level === 2 && p.prec != null && p.prec !== "") {          // an MS2 experiment is a precursor: only the files that have it (as the chromatograms)
-    const hasPr = (/** @type {Bag} */ f) => !(f.precursors || []).length || f.precursors.some((/** @type {number} */ v) => Math.abs(v - p.prec) < 0.6);
-    const has = files.filter(hasPr), other = has.length ? has : scanFiles(E.files.filter(Boolean)).filter(hasPr).slice(0, 1);      // none of them: the first loaded file that has it
+    const owns = (/** @type {Bag} */ f) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - p.prec) < 0.6);
+    // a file without a precursor list counts only if it has MS2 scans: a Full Scan sample has none to give, also when it is the target
+    const hasPr = (/** @type {Bag} */ f) => (f.precursors || []).length ? owns(f) : (f.ms2 || 0) > 0;
+    // none of them: the first loaded file whose precursors include it
+    const has = files.filter(hasPr), other = has.length ? has : scanFiles(E.files.filter(Boolean)).filter(owns).slice(0, 1);
     if (!other.length) return say(I18N.t("spec.noPrec", { v: p.prec }));
     files = other;
   }

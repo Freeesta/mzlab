@@ -5,13 +5,13 @@ use mzlab_core::lettori::Posizione;
 struct Finto;
 
 impl Modulo for Finto {
-    fn campioni(&mut self) -> Result<String> {
+    fn samples(&mut self) -> Result<String> {
         Ok(r#"{"formato":"thermo-raw","campioni":[{"id":1,"name":"a","scans":2}]}"#.into())
     }
-    fn protocollo(&mut self) -> Result<u32> {
+    fn protocol(&mut self) -> Result<u32> {
         Ok(PROTOCOLLO)
     }
-    fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
+    fn index(&mut self, c: usize) -> Result<Vec<u8>> {
         if c != 0 {
             return Err(Error::new("error.badIndex"));
         }
@@ -44,7 +44,7 @@ impl Modulo for Finto {
             },
         ]))
     }
-    fn scansione(&mut self, _: usize, _: usize) -> Result<Vec<u8>> {
+    fn scan(&mut self, _: usize, _: usize) -> Result<Vec<u8>> {
         Ok(mzlab_core::trasporto::encode_scansione(&Spectrum {
             level: 1,
             rt: 0.5,
@@ -56,24 +56,24 @@ impl Modulo for Finto {
             ..Spectrum::default()
         }))
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<String> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<String> {
         Ok(r#"[{"name":"a","value":"b","unit":"volt","cv":null}]"#.into())
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<String> {
+    fn chromatograms(&mut self, _: usize) -> Result<String> {
         Ok(r#"[{"id":"TIC","kind":"Tic","unit":"u"},{"id":"x","kind":"Nuovo","unit":""}]"#.into())
     }
-    fn cromatogramma(&mut self, _: usize, id: &str) -> Result<String> {
+    fn chromatogram(&mut self, _: usize, id: &str) -> Result<String> {
         Ok(format!(
             r#"{{"id":"{id}","kind":"Srm","q1":300.1,"q3":null,"unit":"u","time":[0.0,1.5],"intensity":[3.0,4.0]}}"#
         ))
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok("{}".into())
     }
-    fn mancanti(&mut self, _: usize) -> Result<u32> {
+    fn missing(&mut self, _: usize) -> Result<u32> {
         Ok(3)
     }
-    fn testata(&mut self, _: usize) -> Result<String> {
+    fn file_header(&mut self, _: usize) -> Result<String> {
         Ok(r#"{"run":"r","sources":["r.raw"],"instrument":["MS:1","Orbitrap"],"components":[["analyzer","MS:2","orbitrap"]],"software":["mzLab","1.0"],"acquired":"2026-01-01T00:00:00","serial":null,"source_sha1":["ab"],"source_cv":[["MS:3","Thermo RAW format"]],"sample":null,"run_params":[["k","v"]],"content":[],"extra_software":[],"centroided":true}"#.into())
     }
 }
@@ -81,9 +81,9 @@ impl Modulo for Finto {
 #[test]
 fn le_risposte_diventano_i_tipi_del_contratto() {
     let mut l = LettoreEsterno::new(Finto).unwrap();
-    assert_eq!(l.formato(), Formato::ThermoRaw);
-    assert_eq!(l.campioni()[0].scansioni, 2);
-    let i = l.indice(0).unwrap().to_vec();
+    assert_eq!(l.format(), Formato::ThermoRaw);
+    assert_eq!(l.samples()[0].scansioni, 2);
+    let i = l.index(0).unwrap().to_vec();
     assert_eq!(i.len(), 2);
     // the numbers come back exactly (the index of the file is made of them)
     assert_eq!(i[0].rt, 0.1234567890123);
@@ -101,28 +101,28 @@ fn le_risposte_diventano_i_tipi_del_contratto() {
         (None, Some(445.5), -1)
     );
     assert_eq!((i[1].picco_base, i[1].posizione), (Some(200.25), None));
-    assert_eq!(l.indice(1).err().map(|e| e.key), Some("error.badIndex"));
-    let s = l.scansione(0, 1).unwrap();
+    assert_eq!(l.index(1).err().map(|e| e.key), Some("error.badIndex"));
+    let s = l.scan(0, 1).unwrap();
     assert_eq!((s.index, s.level, s.profile, s.mz.len()), (1, 1, true, 2));
     // the id and the filter are the ones of the row of the index
     assert_eq!((s.id.as_str(), s.filter.as_str()), ("scan=2", "g"));
     // 16777217 does not fit a 32-bit float: the scan keeps the 64-bit intensities
     assert_eq!(s.wide.as_deref(), Some(&[1.5, 16777217.0][..]));
     assert_eq!(
-        l.intestazione(0, 0).unwrap()[0].unita.as_deref(),
+        l.scan_header(0, 0).unwrap()[0].unita.as_deref(),
         Some("volt")
     );
-    let c = l.cromatogrammi(0).unwrap();
+    let c = l.chromatograms(0).unwrap();
     assert_eq!((c[0].tipo, c[1].tipo), (ChromKind::Tic, ChromKind::Other));
-    let x = l.cromatogramma(0, "SRM").unwrap();
+    let x = l.chromatogram(0, "SRM").unwrap();
     assert_eq!(
         (x.kind, x.q1, x.q3, x.intensity),
         (ChromKind::Srm, Some(300.1), None, vec![3.0, 4.0])
     );
-    assert_eq!(l.metodo(0).unwrap(), "{}");
+    assert_eq!(l.method(0).unwrap(), "{}");
     // the count of a truncated file comes from the module; a module with none (the wrapper below) says 0
-    assert_eq!(l.mancanti(0), 3);
-    let t = l.testata_mzml(0).unwrap().unwrap();
+    assert_eq!(l.missing(0), 3);
+    let t = l.mzml_header(0).unwrap().unwrap();
     assert_eq!(t.instrument, Some(("MS:1".into(), "Orbitrap".into())));
     assert_eq!(
         (t.software, t.sample, t.serial, t.centroided),
@@ -135,32 +135,32 @@ fn le_risposte_diventano_i_tipi_del_contratto() {
 fn un_modulo_di_un_altro_protocollo_si_rifiuta() {
     struct Vecchio(Finto);
     impl Modulo for Vecchio {
-        fn protocollo(&mut self) -> Result<u32> {
+        fn protocol(&mut self) -> Result<u32> {
             Ok(PROTOCOLLO - 1)
         }
-        fn campioni(&mut self) -> Result<String> {
-            self.0.campioni()
+        fn samples(&mut self) -> Result<String> {
+            self.0.samples()
         }
-        fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
-            self.0.indice(c)
+        fn index(&mut self, c: usize) -> Result<Vec<u8>> {
+            self.0.index(c)
         }
-        fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
-            self.0.scansione(c, k)
+        fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
+            self.0.scan(c, k)
         }
-        fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
-            self.0.intestazione(c, k)
+        fn scan_header(&mut self, c: usize, k: usize) -> Result<String> {
+            self.0.scan_header(c, k)
         }
-        fn cromatogrammi(&mut self, c: usize) -> Result<String> {
-            self.0.cromatogrammi(c)
+        fn chromatograms(&mut self, c: usize) -> Result<String> {
+            self.0.chromatograms(c)
         }
-        fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String> {
-            self.0.cromatogramma(c, id)
+        fn chromatogram(&mut self, c: usize, id: &str) -> Result<String> {
+            self.0.chromatogram(c, id)
         }
-        fn metodo(&mut self, c: usize) -> Result<String> {
-            self.0.metodo(c)
+        fn method(&mut self, c: usize) -> Result<String> {
+            self.0.method(c)
         }
-        fn testata(&mut self, c: usize) -> Result<String> {
-            self.0.testata(c)
+        fn file_header(&mut self, c: usize) -> Result<String> {
+            self.0.file_header(c)
         }
     }
     let e = LettoreEsterno::new(Vecchio(Finto)).err().unwrap();

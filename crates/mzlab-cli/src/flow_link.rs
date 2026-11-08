@@ -7,14 +7,11 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use mzlab_core::budget::MemBudget;
-use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
-use mzlab_core::json::{parse, Value};
-use mzlab_feat::chem::grafo::analyse_json;
-use mzlab_feat::hypo::Structure;
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::run::run_to_with;
+use mzlab_feat::parent::parent_of;
 use mzlab_feat::store::Slice;
 use mzlab_feat::tp::TpRoles;
 use mzlab_feat_wasm::run_tp::{link_evidence, LinkParent, Series as LinkSeries};
@@ -27,16 +24,6 @@ use mzlab_feat::nature::{open_polarity, polarity_estimate};
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
-/// The parent of the file: neutral formula, SMILES when there is one, and the retention time and the adduct when the file says them.
-pub struct Parent {
-    pub formula: String,
-    pub smiles: String,
-    pub structure: String,
-    pub rt: Option<f64>,
-    /// The adduct of the parent ion when the file says it (`[M-H]-`): its sign is the polarity of the products; `[M+H]+` otherwise.
-    pub adduct: String,
-}
-
 fn param(job: &Job, name: &str) -> Option<f64> {
     job.resolved
         .params
@@ -48,71 +35,6 @@ fn param(job: &Job, name: &str) -> Option<f64> {
 /// The thresholds of the step over `LinkParams::default()`.
 pub fn link_params(job: &Job) -> LinkParams {
     mzlab_feat_wasm::interp::link_params(&|n| param(job, n))
-}
-
-/// The parent file: a JSON `{"formula"|"neutral", "smiles", "rt", "adduct"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
-pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
-    let text = String::from_utf8_lossy(bytes);
-    let text = text.trim();
-    let json = parse(text.as_bytes()).ok().filter(|v| {
-        v.get("rt").is_some()
-            || v.get("formula").is_some()
-            || v.get("neutral").is_some()
-            || v.get("smiles").is_some()
-    });
-    let (mut formula, smiles, rt) = match &json {
-        Some(v) => {
-            let s = |k: &str| {
-                v.get(k)
-                    .and_then(Value::str)
-                    .unwrap_or("")
-                    .trim()
-                    .to_string()
-            };
-            let f = [s("formula"), s("neutral")]
-                .into_iter()
-                .find(|x| !x.is_empty());
-            (
-                f.unwrap_or_default(),
-                s("smiles"),
-                v.get("rt").and_then(Value::f64).filter(|t| t.is_finite()),
-            )
-        }
-        None => {
-            let line = text.lines().next().unwrap_or("").trim().to_string();
-            let is_formula =
-                elements::parse_formula(&line).is_ok_and(|f| elements::fmt(&f) == line);
-            if is_formula {
-                (line, String::new(), None)
-            } else {
-                (String::new(), line, None)
-            }
-        }
-    };
-    let structure = if smiles.is_empty() {
-        String::new()
-    } else {
-        analyse_json(&smiles)?
-    };
-    if formula.is_empty() {
-        formula = Structure::parse(&structure)?.formula.unwrap_or_default();
-    }
-    if formula.is_empty() {
-        return Err(Error::new("error.hypo.noParent"));
-    }
-    let adduct = json
-        .as_ref()
-        .and_then(|v| v.get("adduct").and_then(Value::str))
-        .map(|a| a.trim().to_string())
-        .filter(|a| elements::ion_mz(0.0, a).is_some())
-        .unwrap_or_else(|| "[M+H]+".into());
-    Ok(Parent {
-        formula,
-        smiles,
-        structure,
-        rt,
-        adduct,
-    })
 }
 
 /// The plan sets the polarity of the link only when the instance writes it; else the detection's polarity decides.
@@ -192,7 +114,7 @@ pub fn link_bytes(
             peaks_again: &mut again,
             open: &mut reopen,
         },
-        &MemBudget::mb(r.budget_mb),
+        &MemBudget::mb(r.budget.job_mb()),
         &mut |_| laps.push(clock.elapsed()),
     )?;
     let mut infusion = made

@@ -31,18 +31,18 @@ try:
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")])
         pg.click("#opbtn"); ready(pg)
         def remove_all():
-            assert pg.locator("#rmall").count() == 0, "no remove-all icon in the header"
+            assert pg.locator("header #rmall").count() == 0, "no remove-all icon in the header"      # the conversion queue has its own (#2467)
             n = pg.evaluate(LIVE); assert n >= 2
-            pg.evaluate("removeAllFiles()"); attendi(pg, f"{LIVE} === 0")
+            pg.evaluate("removeAllFiles()"); wait_for_js(pg, f"{LIVE} === 0")
             assert pg.evaluate("document.querySelectorAll('dialog[open]').length") == 0, "no question"
             assert pg.evaluate("document.getElementById('tolto-box')") is None
-            pg.keyboard.press("Control+z"); attendi(pg, f"{LIVE} === {n}")      # the bar is hidden with no files: the key undoes
+            pg.keyboard.press("Control+z"); wait_for_js(pg, f"{LIVE} === {n}")      # the bar is hidden with no files: the key undoes
         step("remove all: no notice, no question, Ctrl+Z puts every file back", remove_all)
         def drop_lr():
             n = pg.evaluate(LIVE)
             drop(pg, [D / "B_FullMass-t5.mzML"])
             assert pg.evaluate("window.__dz")[0] is True, "drop zone visible while dragging"
-            attendi(pg, f"{LIVE} === {n + 1}", timeout=60000); ready(pg)
+            wait_for_js(pg, f"{LIVE} === {n + 1}", timeout=60000); ready(pg)
             assert pg.evaluate("window.__ldSeen") is False, "no loading screen"
             assert pg.get_attribute("#fl-note", "role") == "status" and pg.is_hidden("#fl-dz")
             assert not pg.evaluate("document.querySelector('#v-data').hidden") and pg.evaluate("S.adding") is False
@@ -53,7 +53,7 @@ try:
         step("dropping the same file again adds nothing", drop_dup)
         def drop_hr():
             n = pg.evaluate(LIVE); drop(pg, [D / "HR_DDA-Exploris-t0.mzML"])
-            attendi(pg, "!document.querySelector('#fl-note').hidden && /LR|HR|risoluzione|resolution/.test(document.querySelector('#fl-note').textContent)", timeout=60000); ready(pg)
+            wait_for_js(pg, "!document.querySelector('#fl-note').hidden && /LR|HR|risoluzione|resolution/.test(document.querySelector('#fl-note').textContent)", timeout=60000); ready(pg)
             assert pg.evaluate(LIVE) == n, "a file of the other resolution is not opened"
             assert pg.locator("#gomsg .fail").count() == 0
         step("a file of the other resolution is left out with a gentle note", drop_hr)
@@ -62,7 +62,7 @@ try:
             assert pg.evaluate("document.querySelector('#fl-note').hidden || !/Added|Aggiunt/.test(document.querySelector('#fl-note').textContent)"), "an addition never leaves an «Added» note"
             pg.set_viewport_size({"width": 1440, "height": 950})
             pg.set_input_files("#pick", [str(EX / "MS2_t15.mzML"), str(EX / "MRM_std_0.6ppm.mzML")]); ready(pg)
-            attendi(pg, "document.querySelectorAll('#flst .fgh[data-gt]').length >= 2", timeout=60000)
+            wait_for_js(pg, "document.querySelectorAll('#flst .fgh[data-gt]').length >= 2", timeout=60000)
             op = pg.evaluate("[...document.querySelectorAll('#flst .fgh[data-gt] .chv')].map(c => c.classList.contains('on'))")
             assert op[0] and not any(op[1:]), f"only the first group is open: {op}"
             pg.evaluate("document.querySelectorAll('#flst .fgh[data-gt] .chv')[1].click()")

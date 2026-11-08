@@ -110,6 +110,35 @@
     }
     return o;
   }
+  /** does an instance meet the condition of an output it writes only sometimes (check.rs written): the input wired and the parameter, resolved, not the excluded value */
+  const written = (/** @type {any} */ src, /** @type {any} */ step, /** @type {any} */ w) => {
+    if (!src.ins.some((/** @type {any} */ x) => x[0] === w.input && x[1].length)) return false;
+    if (!w.param) return true;
+    const e = F.effective(src, step);
+    if (e.error) return true;
+    const v = Object.assign({}, ...F.declared(step, e.algorithm).filter((/** @type {any} */ x) => x[1].default !== undefined).map((/** @type {any} */ x) => ({ [x[0]]: x[1].default })), e.preset ? e.preset.params || {} : {}, Object.fromEntries(src.params))[w.param];
+    return v !== w.not;
+  };
+  /** check.rs format_fit: the params of the refusal of a datum in a format the input does not read, or null; null whenever the format or what the input reads is unknown
+   * @param {FlowPort} port @param {any} s the source (sourceType) */
+  const formatMiss = (port, s) => {
+    const d = F.defaultFormat(port.type), reads = port.formats.length ? port.formats : s.ty === port.type && d ? [d] : [];
+    return s.format && reads.length && !reads.includes(s.format) ? { ref: s.text, writes: s.format, reads: reads.join(" / ") } : null;
+  };
+  /** check.rs aligned_here: whether the table of `r` was aligned in this plan, an output flagged lineage whose table inputs were too; a file never is, a source the check cannot follow is left to its own problems
+   * @param {any} plan @param {Function} stepOf @param {any} r @param {number} depth */
+  const alignedHere = (plan, stepOf, r, depth) => {
+    if (r.file != null) return false;
+    const src = plan.steps.find((/** @type {any} */ x) => x.id === r.instance), s = src && stepOf(src);
+    if (!s || depth > plan.steps.length) return true;
+    if (!(s.out && s.out[r.port] && s.out[r.port].lineage)) return false;
+    const tables = F.ports(s.in).filter((/** @type {FlowPort} */ p) => p.type === "table" || p.accepts.includes("table")).map((/** @type {FlowPort} */ p) => p.name);
+    return src.ins.filter((/** @type {any} */ x) => tables.includes(x[0])).flatMap((/** @type {any} */ x) => x[1]).every((/** @type {any} */ x) => alignedHere(plan, stepOf, x, depth + 1));
+  };
+  /** the facets the data of an instance miss, one problem each @param {any} plan @param {Function} add @param {any} i @param {FlowPort[]} declared @param {any[]} seen */
+  const facets = (plan, add, i, declared, seen) => {
+    for (const port of declared) for (const [facet, want, h] of F.facetMisses(port.requires, observedBy(plan, i, seen))) add(i, port.name, "err.flow.facet", { facet, step: i.step, want, have: h });
+  };
   /** the closures of one check: the problems found so far (`st.problems`) and the checks of a step, its parameters, its ports and the facets of its data */
   const makeChecker = (/** @type {any} */ plan, /** @type {{steps: any[], byId: Map<string, any>}} */ reg, /** @type {"native" | "wasm"} */ platform) => {
     const st = { problems: /** @type {any[]} */ ([]) };
@@ -142,15 +171,15 @@
       if (r.file != null) {
         const f = plan.inputs.find((/** @type {any} */ x) => x.name === r.file);
         if (!f) return add(i, port.name, "err.flow.input.unknown", { ref: r.file }), null;
-        return f.type && F.TYPES[f.type] ? { ty: f.type, list: false } : null;
+        return f.type && F.TYPES[f.type] ? { ty: f.type, list: false, format: F.fileFormat(r.file), text: r.file } : null;
       }
       const text = r.instance + "." + r.port, src = plan.steps.find((/** @type {any} */ x) => x.id === r.instance);
       if (!src) return add(i, port.name, "err.flow.ref.unknown", { ref: text }), null;
-      const s = stepOf(src);
+      const s = stepOf(src), out = s && s.out && s.out[r.port], w = out && out.written_if;
       if (!s) return null;
-      const out = s.out && s.out[r.port];
       if (!out) return add(i, port.name, "err.flow.port.unknown", { ref: text }), null;
-      return { ty: out.type, list: !!out.many };
+      if (w && !written(src, s, w)) return add(i, port.name, "err.flow.port.unwritten", { ref: text, input: w.input, param: w.param ? w.param + "=" + w.not : "" }), null;
+      return { ty: out.type, list: !!out.many, format: out.format || F.defaultFormat(out.type), text };
     };
     const portsOf = (/** @type {any} */ i, /** @type {any} */ step, /** @type {any[]} */ seen) => {
       const declared = F.ports(step.in);
@@ -162,18 +191,17 @@
           const s = sourceType(i, port, r);
           if (!s) continue;
           if (s.list && !port.many) add(i, name, "err.flow.cardinality", { port: name, count: "many" });
-          if (F.fit(reg, s.ty, port) === "no") add(i, name, "err.flow.type", { from: s.ty, to: port.type });
+          const fit = F.fit(reg, s.ty, port), miss = fit === "ok" && formatMiss(port, s);
+          if (fit === "no") add(i, name, "err.flow.type", { from: s.ty, to: port.type });
+          if (miss) add(i, name, "err.flow.port.format", miss);
+          if (fit === "ok" && port.lineage && !alignedHere(plan, stepOf, r, 0)) add(i, name, "err.flow.lineage", { step: i.step });
         }
       }
       for (const port of declared.filter((/** @type {FlowPort} */ p) => !p.optional)) {
         if (!i.ins.some((/** @type {any} */ x) => x[0] === port.name && x[1].length)) add(i, port.name, "err.flow.port.missing", { port: port.name });
       }
-      facets(i, declared, seen);
+      facets(plan, add, i, declared, seen);
     };
-    const facets = (/** @type {any} */ i, /** @type {FlowPort[]} */ declared, /** @type {any[]} */ seen) => {
-      for (const port of declared) for (const [facet, want, h] of F.facetMisses(port.requires, observedBy(plan, i, seen))) add(i, port.name, "err.flow.facet", { facet, step: i.step, want, have: h });
-    };
-
     return { st, add, stepLevel, paramsOf, portsOf };
   };
 

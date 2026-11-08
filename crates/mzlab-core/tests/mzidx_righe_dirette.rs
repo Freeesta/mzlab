@@ -1,6 +1,6 @@
 //! The scan table and the `.mzidx` of a reader built without the mzML text (`Rows::lettore`, one decoding for the table and pass 1) equal the old way:
 //! the mzML `lettori_mzml::scrivi` writes, read back by `scantable` and indexed by `build_mzml`. A made-up reader (`lettore_finto`) carries every optional
-//! field: precursor with and without a value, every polarity, empty scans, equal m/z in several scans, NaN and out-of-range m/z, 64-bit intensities,
+//! field: precursor with and without a value, every polarity, empty scans, equal m/z in several scans, out-of-range m/z, 64-bit intensities,
 //! arrays of unequal length, extras that name accessions the rows read. Header variants too (analyzer components, `MS:1000768`, names that need the text).
 #![allow(clippy::indexing_slicing)]
 #![allow(clippy::disallowed_methods)]
@@ -80,7 +80,7 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
             assert!(x == b, "{label}: build_lettore differs at budget {budget}");
         }
     }
-    if l.indice(0).unwrap().len() > 200 {
+    if l.index(0).unwrap().len() > 200 {
         assert!(saw_many, "{label}: no budget forced the rounds");
     }
     con_scratch(label, &mut l, &pb, &name, &b);
@@ -160,7 +160,7 @@ fn con_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b:
             "{label}: the index with a scratch file differs at budget {budget}"
         );
     }
-    if l.indice(0).unwrap().len() > 200 && !ripassa {
+    if l.index(0).unwrap().len() > 200 && !ripassa {
         assert!(spilled, "{label}: no budget used the scratch file");
     }
 }
@@ -298,4 +298,34 @@ fn primo_ms1_a_bassa_risoluzione_in_un_file_ad_alta() {
     let p = upload::prepare_lettore(&mut l, 0, &[], "x.mzML").unwrap();
     assert!(p.table.hr1);
     prova("primo ITMS", l);
+}
+
+/// The source of an index straight from a reader is named after the dataset, as `mzlab-cli` names the path it is given, whatever name the caller
+/// passes (the page passes the name of its list entry, `X.mzML` or `X.raw.mzML`): the same `.mzidx` on the site, in the app and from the CLI.
+#[test]
+fn the_source_of_a_vendor_index_is_the_dataset_name() {
+    let imp = |nome: &str| upload::Impronta {
+        nome: nome.into(),
+        dim: 1,
+        sha256: String::new(),
+        sha1: String::new(),
+        probe: String::new(),
+    };
+    for (membri, atteso) in [
+        (vec!["X.raw"], "X.raw"),
+        (vec!["X.wiff.scan", "X.wiff"], "X.wiff"),
+        (vec!["X.wiff", "X.wiff.scan"], "X.wiff"),
+        (
+            vec!["X.D/AcqData/MSScan.bin", "X.D/AcqData/MSPeak.bin"],
+            "X.D",
+        ),
+    ] {
+        let membri: Vec<_> = membri.into_iter().map(imp).collect();
+        for name in ["X.mzML", "X.raw.mzML", "X_2.raw.mzML"] {
+            let mut l = Finto::vario(10, 5, 3);
+            let p = upload::prepare_lettore(&mut l, 0, &membri, name).unwrap();
+            let src = json::parse(p.table.source_json.as_bytes()).unwrap();
+            assert_eq!(src.get("name").and_then(Value::str), Some(atteso), "{name}");
+        }
+    }
 }

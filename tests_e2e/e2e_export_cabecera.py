@@ -8,7 +8,7 @@ try:
         pg = r.page(p); D = synth("exp_head")
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); pg.evaluate("setTab('full')"); ready(pg)
         pg.evaluate("(async()=>{const s2=E.panels.find(p=>p.level===2),s1=E.panels.find(p=>p.level===1&&p.type==='spec'),D=await DDA.get(s1.k);await DDA.selectMs2(s2,D.sid[0]);})(); 0")
-        attendi(pg, "!!E.panels.find(p=>p.level===2&&p._scan&&p._a)")
+        wait_for_js(pg, "!!E.panels.find(p=>p.level===2&&p._scan&&p._a)")
         h2 = pg.evaluate("(async()=>await PROV.tsv('a\\tb', {p:E.panels.find(p=>p.level===2), table:'plot'}))()")
         line = h2.split("\n")[0]; print(line)
         for k in ("precursor=", "rt=", "scan=", "polarity=", "table=plot"): assert k in line, (k, line)

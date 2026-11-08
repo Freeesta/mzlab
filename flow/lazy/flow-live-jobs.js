@@ -33,9 +33,11 @@
     if (!it || !it.idx) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
     if (!x.profile(it)) { await x.call("cached", { job: j }); return {}; }
     const rb = await G.MZLAB_RUST_READY, native = !!(rb && rb.isNative && rb.isNative(it.input));
-    if (native && it.cen) { await x.call("cached", { job: j }); return {}; }
+    if (it.cen) { await x.call("cached", { job: j }); return {}; }      // the centroid index Data keeps (the card says «centroided earlier»): the same answer in the browser and in the app
     const given = inst.params || {}, custom = given.fwhm != null || given.threshold != null;
     if (native ? !rb.nativeCentroidIndex : !rb || !rb.flowCentroid || it.hr || custom) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    // a profile file whose mzML is not in the session (only its index is) waits for the file; the other files go on
+    if (!native && rb.flowCentroid.can && (c => !c.source && !c.have)(await rb.flowCentroid.can(it.input))) { await x.call("block", { job: j, by: "input.missing" }); x.waitingSource.add(x.jk(spec)); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
@@ -222,13 +224,28 @@
     });
   };
 
+  /** the table on port `port` of `inst`: the alignment (or gap filling) of the plan kept in OPFS, or the table a `table.filter` view of it stands for (`flow_table_of_view` of the `table` .wasm, the Rust
+   * `flow run` calls before a step that reads a table); `key` names it for the cache, `read` gives its bytes. null when this browser does not hold it @param {any} x @param {any} p @param {any} inst @param {string} port */
+  const tableOf = async (x, p, inst, port) => {
+    let up0 = x.inst(String(F.refs(inst, port)[0] || "").split(".")[0]), view = "";
+    if (up0 && base(up0) === "table.filter") { const f = x.files.get(up0.id); if (!f) return null; view = f.text; up0 = x.inst(String(F.refs(up0, "table")[0] || "").split(".")[0]); }
+    const isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
+    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    if (!alKey || !await has(p, DIR + alKey + ".mzfeat")) return null;
+    const read = async () => { const t = await p.fs.read(DIR + alKey + ".mzfeat"); return view ? (await p.ident("table", "flow_table_of_view", { table: t, view }, true)).bytes : t; };
+    return { key: view ? alKey + "\n" + await sha(view) : alKey, read };
+  };
+
   /** export.table_csv, export.mztab: the table file of the alignment (the table of a gap filling is the alignment's) with the polarity its recipe and its files give and the roles of the samples, from the `table` .wasm
-   * (`export_table_auto`, the Rust `flow run` calls); kept like the MSn results under the key of the job. A table that is not this plan's alignment (a filter view) or without samples stays with the computer
+   * (`export_table_auto`, the Rust `flow run` calls); kept like the MSn results under the key of the job. A table that is not this plan's alignment (or its filter view) or without samples stays with the computer
    * @param {any} x @param {any} spec @param {any} inst */
   const tableExport = async (x, spec, inst) => {
     const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
-    const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
+    let up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), view = "";
+    // a `table.filter` view: the rows it keeps are exported (its text names the rules and the table it was made from)
+    if (up0 && base(up0) === "table.filter" && x.files.get(up0.id)) { view = x.files.get(up0.id).text; up0 = x.inst(String(F.refs(up0, "table")[0] || "").split(".")[0]); }
+    const isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
     const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null })), up = al ? x.upstream(al) : [];
     const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
     if (!alKey || !samples || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
@@ -236,7 +253,7 @@
     const t0 = performance.now(), csv = base(inst) === "export.table_csv", kind = csv ? ({ ...F.defaults(inst, F.stepOf(x.S.reg, inst)), ...(inst.params || {}) }).kind || "full" : "mztab";
     return detached(x, spec, inst, async () => {
       const table = await p.fs.read(DIR + alKey + ".mzfeat"), hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", table))].map(b => b.toString(16).padStart(2, "0")).join("");
-      const r = { name: inst.id + (csv ? ".csv" : ".mzTab"), text: await p.tableFile({ table, samples, sha: hex, kind, paths: up.map((/** @type {any} */ u) => u.path) }) };
+      const r = { name: inst.id + (csv ? ".csv" : ".mzTab"), text: await p.tableFile({ table, samples, sha: hex, kind, view, paths: up.map((/** @type {any} */ u) => u.path) }) };
       await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
@@ -284,5 +301,5 @@
     });
   };
 
-  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "chrom.transitions": (...a) => F.webTransitions.run(...a), "export.annotations": (...a) => F.webExportAnnot.run(...a), "export.inclusion": (...a) => F.webInclusion.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings, "qc.run_order": (...a) => F.webQcReport.runOrder(...a), "report.methods": (...a) => F.webQcReport.methods(...a) };
+  F.liveJobs = { msnKey, tableOf, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "features.group": (...a) => F.webGroup.run(...a), "table.stats": (...a) => F.webStat.run(...a), "table.pca": (...a) => F.webStat.run(...a), "table.kmd": (...a) => F.webStat.run(...a), "structure.render": (...a) => F.webStruct.run(...a), "structure.reactivity": (...a) => F.webStruct.run(...a), "msn.figure": (...a) => F.webStruct.run(...a), "features.estimate": (...a) => F.webEstimate.run(...a), "chrom.transitions": (...a) => F.webTransitions.run(...a), "export.annotations": (...a) => F.webExportAnnot.run(...a), "export.inclusion": (...a) => F.webInclusion.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings, "qc.run_order": (...a) => F.webQcReport.runOrder(...a), "report.methods": (...a) => F.webQcReport.methods(...a) };
 })();

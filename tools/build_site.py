@@ -137,6 +137,39 @@ def pack_mzfinder(static: Path) -> None:
     (dst / "indice.json").write_text(json.dumps({"early": early, "js": js, "lazy": lazy, "files": files + data}, indent=1), encoding="utf-8")
 
 
+def first_view_keys(static: Path, keys: set[str]) -> set[str]:
+    """Catalog keys the page can ask for before carica.js runs its first script: the keys written in index.html and in the scripts it loads
+    before carica.js (plus the three first-paint.js reads), and every key under a prefix those scripts build at run time ("cmd." + id).
+    The e2e tests check that nothing else is asked for that early (I18N.late stays empty)."""
+    html = (static / "index.html").read_text(encoding="utf-8")
+    heads = [h for h in re.findall(r'src="static/([\w./-]+\.js)"', html) if h != "carica.js"] + ["features.js", "icons-modi.js", "barra.js"]
+    src = html + "".join((static / h).read_text(encoding="utf-8") for h in dict.fromkeys(heads) if (static / h).is_file())
+    words = set(re.findall(r'["\'`]([a-zA-Z][\w.-]*)["\'`$]', src)) | set(re.findall(r'data-i18n[\w-]*="([^"]+)"', src))
+    prefixes = tuple(set(re.findall(r'["\'`]([a-zA-Z][\w-]*(?:\.[\w-]+)*\.)(?:["\'`]\s*\+|\$\{)', src)))
+    return {k for k in keys if k in words or k.startswith(prefixes)}
+
+
+def bundle_lang(static: Path) -> None:
+    """lang/<lang>.js of the site is the catalog in two files instead of the loader that writes one <script> per area: lang/<lang>.js holds
+    the keys of the first view (render-blocking, before the first paint), lang/<lang>-resto.js the rest, loaded by carica.js before any other
+    script (I18N.awaitRest / I18N.done in i18n.js). The area folders stay (tools and tests read them)."""
+    for lang in ("it", "en"):
+        loader = (static / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        names = re.findall(r'"([^"]+)"', re.search(r"document\.write\(\[([^\]]*)\]", loader).group(1))
+        cat: dict = {}
+        for n in names:
+            rows = (static / "lang" / lang / f"{n}.js").read_text(encoding="utf-8").strip().splitlines()
+            cat.update(json.loads("{" + "\n".join(rows[1:-1]) + "}"))
+        assert cat, lang
+        first = first_view_keys(static, set(cat))
+        part = lambda ks: json.dumps({k: cat[k] for k in cat if k in ks}, ensure_ascii=False, indent=0)
+        rest = f"lang/{lang}-resto.js"
+        (static / "lang" / f"{lang}.js").write_text(f"// Interface catalog ({lang}), keys of the first view (tools/build_site.py bundle_lang)\n"
+                                                     f'I18N.add("{lang}", {part(first)});\nI18N.awaitRest("{rest}");\n', encoding="utf-8")
+        (static / rest).write_text(f"// Interface catalog ({lang}), the keys after the first view (tools/build_site.py bundle_lang)\n"
+                                   f'I18N.add("{lang}", {part(set(cat) - first)});\nI18N.done();\n', encoding="utf-8")
+
+
 def file_hashes(out: Path) -> dict:
     """SHA-256 and size of every file of the site, by path under `out` (sw.js, the manifest itself and the service worker's manifest left out)."""
     files = {}
@@ -241,6 +274,7 @@ def main() -> None:
         shutil.rmtree(out)
     static = out / "static"
     shutil.copytree(ROOT / "mzlab" / "web", static)
+    bundle_lang(static)
     for lic in ("LICENSE", "LICENZE-TERZI.md"):            # the licences travel with the site (Apache-2.0, BSD-3, MPL-2.0 ask for the notices)
         if (ROOT / lic).exists():
             shutil.copy2(ROOT / lic, out / lic)

@@ -238,7 +238,7 @@ def rows_of(snap):
     return [(round(mb, 1), lab, kind, how) for mb, lab, kind, how in out]
 
 
-def attendi_workers(pg, n0, limit_s=40):
+def wait_workers(pg, n0, limit_s=40):
     """Wait, sampling once a second, until a worker is gone or `limit_s` seconds pass (bounded: the baseline never closes one)."""
     import time as _t
     t0 = _t.time()
@@ -255,13 +255,13 @@ def scenario(r, p, files):
     pg.goto(f"http://127.0.0.1:{r.port}/?perf=1")
     pg.wait_for_function("document.readyState === 'complete'")
     snaps["1_page_opened"] = measure(pg, ctx, cdp)
-    attendi(pg, "window.qqReady === true"); ready(pg)
+    wait_for_js(pg, "window.qqReady === true"); ready(pg)
     snaps["2_engine_ready"] = measure(pg, ctx, cdp)
     stage(pg, files); pg.click("#opbtn")
-    attendi(pg, "!document.querySelector('#v-data').hidden && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')", 90000); ready(pg)
+    wait_for_js(pg, "!document.querySelector('#v-data').hidden && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')", 90000); ready(pg)
     snaps["3_demo_files_open"] = measure(pg, ctx, cdp)
     pg.evaluate("document.querySelector('#np-map').click()")
-    attendi(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')", 60000); ready(pg)
+    wait_for_js(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')", 60000); ready(pg)
     snaps["4_after_map"] = measure(pg, ctx, cdp)
     try:
         # Tabui takes the files already open in the page
@@ -293,7 +293,7 @@ def scenario(r, p, files):
     snaps["6_after_pipeline"] = measure(pg, ctx, cdp)
     # idle: the workers of the Pipeline and of Tabui are not needed any more; wait (by state, bounded) until one of them is gone
     n0 = len(pg.workers)
-    attendi_workers(pg, n0)
+    wait_workers(pg, n0)
     snaps["7_pipeline_idle"] = measure(pg, ctx, cdp)
     notes.append(f"workers alive: {n0} after the Pipeline, {len(pg.workers)} after the idle wait")
     # back to the Data tab, every panel closed: what the canvases of the closed panels keep

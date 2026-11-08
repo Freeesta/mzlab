@@ -169,9 +169,9 @@ const grpOf = (/** @type {FileAperto} */ f) => f.ugrp ? "u:" + f.ugrp : (window.
 const GRP_HR = /** @type {Record<string, () => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }); const grpLabel = (/** @type {string} */ g) => g.startsWith("u:") ? g.slice(2) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
 // the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
 const sibsOf = (/** @type {FileAperto} */ f) => E.files.filter((/** @type {FileAperto} */ x) => fileBase(x.file) === fileBase(f.file));
-const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
+const TOL0 = 1.0;                                   // dated instrument: XIC window of +-1 Da
 
-// ------------------------------------------------------------------ schermata di caricamento
+// ------------------------------------------------------------------ loading screen
 // small inline icons (no external files): download arrow and "fit to window" corners
 const IC_DL = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M6 1v7M3 5.5 6 8.5 9 5.5M1.5 11h9"/></svg>';
 // peak with its area + sparkle = automatic
@@ -229,8 +229,8 @@ let ldSlow = 0;
   };
 })();
 
-// ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
-let nbTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null), nbLast = "", nbBase = /** @type {Bag} */ ({}), nbRemote = /** @type {Bag | null} */ (null);
+// ------------------------------------------------------------------ notebook (saved next to the data)
+let nbTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null), nbLast = "", nbBase = /** @type {Bag} */ ({}), nbRemote = /** @type {Bag | null} */ (null), nbGen = 0, nbQueue = /** @type {Promise<unknown>} */ (Promise.resolve());      // one save at a time; a save overtaken by a newer one is dropped (its stale read of the stored copy, merged after the newer save moved nbBase, would write the old notebook back)
 // schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format campioni/2)
 const NB_V = 2;
 const nbPlain = (/** @type {unknown} */ v) => !!v && typeof v === "object" && !Array.isArray(v);
@@ -256,23 +256,23 @@ function nbMerge(/** @type {Bag} */ remote) {
 }
 function nbSave(now = false) {
   clearTimeout(/** @type {number} */ (nbTimer));
-  const go = async () => {
+  const go = async (/** @type {number} */ gen) => {
     // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
-    if (!nbEverLoaded || JSON.stringify(NB) === nbLast) return;
+    if (gen !== nbGen || !nbEverLoaded || JSON.stringify(NB) === nbLast) return;
     let remote = nbRemote;
-    if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } }
+    if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } if (gen !== nbGen) return; }
     const out = nbMerge(remote || nbBase), body = JSON.stringify(out);
     const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out; if (now) NBP.keep(body);
-    fetch("api/notebook", { method: "POST", body, keepalive: true }).then(r => { if (r && r.ok) NBP.done(body); }).catch(() => { nbLast = ""; });
+    return fetch("api/notebook", { method: "POST", body, keepalive: true }).then(r => { if (r && r.ok) NBP.done(body); }).catch(() => { nbLast = ""; });
   };
-  if (now) go(); else nbTimer = setTimeout(go, 500);
+  if (now) go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
 }
-let nbEverLoaded = false;
+let nbEverLoaded = false, nbNamed = /** @type {Set<string>} */ (new Set());      // nbNamed: the files the notebook names at load (open or removed), read by restoreRows (shell.js)
 async function nbLoad() {
   let j = {};
   try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
   const again = NBP.take(j, nbClean); if (again) j = again; Object.assign(NB, j); const snap = JSON.stringify(NB); nbBase = JSON.parse(snap); nbRemote = j; nbLast = snap;
-  nbEverLoaded = true;
+  nbEverLoaded = true; nbNamed = new Set([...(NB.session || []), ...((NB.ui && NB.ui.files) || [])].map((/** @type {Bag} */ f) => String(f.file).split("#")[0]));
   if (again) { nbLast = ""; nbSave(true); }
   // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
   if (CDOC.isOld(NB.session)) {
@@ -451,7 +451,7 @@ async function bootSession0() {
   E.files.forEach((/** @type {FileAperto} */ f) => { mem[f.file] = f; });
   const oldVis = mem;
   E.key = key;
-  CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
+  if (!(oldNames.length && oldNames.length < j.session.length && oldNames.every((/** @type {string} */ n, /** @type {number} */ i) => j.session[i].file === n))) { CACHE.clear(); CHROM1.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); } }  // answers are keyed by k: files only appended at the end keep every old k (else N files → N² requests)
   // seq: a list opened file by file, this is not its first step
   const seq = !!E._seq, waiting = !!(E.pending && E.pending.some((/** @type {Pendiente} */ x) => x.state === "wait"));
   E._seq = waiting; E._mem = waiting ? mem : null;
@@ -460,8 +460,8 @@ async function bootSession0() {
   E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
     // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
     const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
-    const t = TIPOF.apply(s, s.file);
-    return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noExt(noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
+    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...CAMPIONI.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
+    return o && o.gone ? Object.assign(o, e, { vis: false }) : e;      // a removed file stays removed, the same object as in its «Removed · Undo» entry (lista-file.js fileRemoval)
   }); uniqueLabels(E.files);
   paintFiles(); if (window.SIMUI) SIMUI.mark(E.files);
   if (window.HR) HR.notice(E.files);
@@ -645,7 +645,7 @@ function bindFileRows() {
       const f0 = E.files[+nm.dataset.k];
       // the first click (nothing shown yet, the work area holds the sample table): only this file, with the starting layout of its type
       if (f0 && !E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) { soloFile(f0); return; }
-      if (f0 && f0.kind !== "mrm") followSpectra(f0);
+      if (f0 && f0.kind !== "mrm") { followSpectra(f0); ms2Follow(f0); }
       // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {
         sibsOf(f0).forEach((/** @type {FileAperto} */ f) => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
@@ -809,7 +809,7 @@ function renderFileList() {
   const grpClosed = (/** @type {string} */ g) => compact && flGrpGet()[g] === 1;
   const gh = (/** @type {{ g: string, fs: FileAperto[] }} */ G, /** @type {string} */ label) => {
     if (G.g.startsWith("u:")) return ugHead(G, isExpOpen(G.g));
-    const gk = gkOf(G), open = isExpOpen(gk), tip = lrTog() && window.modeSchema ? ` data-tiph="${EH(modeSchema(gk))}"` : "";
+    const gk = gkOf(G), open = isExpOpen(gk), tip = lrTog() && ESP.voce(gk) ? ` title="${EH(I18N.t(`files.grp.tip.${gk}`))}"` : "";
     if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${grpClosed(G.g) ? "" : " on"}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
     return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
@@ -847,7 +847,7 @@ function renderFileList() {
   Q("#flst").querySelectorAll("input[data-k]").forEach((/** @type {CampoDati} */ x) => x.onchange = () => {
     fileViewDo(() => sibsOf(E.files[+x.dataset.k]).forEach((/** @type {FileAperto} */ f) => { f.vis = x.checked; }));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
-    renderNav(); redrawAll();
+    renderFileList(); renderNav(); redrawAll();   // the precursor rows tick what is drawn now
     uiSave();
   });
   Q("#flst").querySelectorAll(".fl").forEach((/** @type {ElementoDati} */ el) => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = (/** @type {MouseEvent} */ e) => fileCtx(e, E.files[+nm.dataset.k]); });
@@ -859,7 +859,7 @@ function renderFileList() {
 const vis = () => tabFiles().filter((/** @type {FileAperto} */ f) => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off
 const follow = (/** @type {string} */ tab) => !!(E.browse && E.files[E.cur] && E.files[E.cur].kind === tab);
-const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab ? [E.files[E.cur]] : ESP.soloUno(vis());
+const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab && E.files[E.cur].vis && !E.files[E.cur].gone ? [E.files[E.cur]] : ESP.soloUno(vis());   // an unticked current file is not drawn
 // the files a cell draws: those of ITS tab (the same as shown() unless, in the bench, the cell is not of the tab of the active cell)
 const shownFor = (/** @type {Bag} */ p) => {
   const l = p && p.tab && p.tab !== E.tab ? ESP.soloUno(tabFiles(p.tab).filter((/** @type {FileAperto} */ f) => f.vis)) : shown();
@@ -868,7 +868,7 @@ const shownFor = (/** @type {Bag} */ p) => {
 };
 /** @template {{ kind?: unknown }} T @param {T[]} l */ const scanFiles = l => l.filter(f => f.kind !== "mrm");
 
-// ------------------------------------------------------------------ barra: frecce tra i file, metodo, esporta
+// ------------------------------------------------------------------ bar: arrows between files, method, export
 function renderNav() {
   const s = Q("#fsel"); if (!s) return;
   // a very long name is cut in the middle, so the final time stays visible
@@ -883,7 +883,7 @@ function renderNav() {
   const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");
   // one file shown (ticked) = the graphs follow it; several = overlaid, the active one drives the spectrum
   syncBrowse();
-  [Q("#fprev"), Q("#fnext"), Q("#fsel")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.title = one ? why : b.dataset.t0; });
+  [Q("#fprev"), Q("#fnext"), Q("#fsel")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.setAttribute("aria-disabled", String(one)); b.title = one ? why : b.dataset.t0; });   // aria-disabled with disabled: a stale "true" reads as disabled to screen readers (and to Playwright)
   if (cur && !s.disabled) s.title = cur.label;                       // the whole name, also when it had to be cut
   // the graphs' own file choosers depend on the mode
   const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach((/** @type {Pannello} */ q) => q.el && ctl(q)); }
@@ -902,15 +902,15 @@ function toolbar() {
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
 }
 // ------------------------------------------------------------------ piccole finestre e menu
-function ask(/** @type {string} */ title, def = "") {
+function ask(/** @type {string} */ title, def = "", opts = /** @type {Bag} */ ({})) {   // opts.suggest: ASKSUG rows under the field (lazy ask-suggerisci.js); opts.tip: its tooltip
   return new Promise(res => {
-    const d = Q("#askdlg"), i = Q("#askin");
-    i.hidden = false; Q("#askno").hidden = false;
+    const d = Q("#askdlg"), i = Q("#askin"), sug = opts.suggest ? ASKSUG.attach(i, opts.suggest) : null;
+    i.hidden = false; Q("#askno").hidden = false; i.title = opts.tip || "";
     Q("#asktxt").innerHTML = title; i.value = def;
-    const done = (/** @type {string | null} */ v) => { d.close(); Q("#askok").onclick = Q("#askno").onclick = i.onkeydown = null; res(v); };
+    const done = (/** @type {string | null} */ v) => { if (sug) sug.detach(); d.close(); Q("#askok").onclick = Q("#askno").onclick = i.onkeydown = null; res(v); };
     Q("#askok").onclick = () => done(i.value.trim());
     Q("#askno").onclick = () => done(null);
-    i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") { e.preventDefault(); done(i.value.trim()); } };
+    i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (sug && sug.key(e)) return; if (e.key === "Enter") { e.preventDefault(); done(i.value.trim()); } };
     d.oncancel = () => done(null);
     d.showModal(); i.focus(); i.select();
   });
@@ -1015,7 +1015,8 @@ const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the
 function plotSheets(/** @type {Pannello} */ p) {
   const a = p._a; if (!a) return null;
   const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") + (a.sr && a.sr[0] && a.sr[0].unit ? ` (${a.sr[0].unit})` : "") : I18N.t("export.col.intensity");
-  if (p.type === "spec" && a.uvd) cols.push(["nm", a.uvd.nm], [I18N.t("tdati.col.mau"), a.uvd.y]);
+  if (p.type === "spec" && a.uvd && a.uvd.ser && a.uvd.ser.length > 1) a.uvd.ser.forEach((/** @type {Bag} */ s) => { cols.push([`nm - ${s.label}`, s.nm], [`${I18N.t("tdati.col.mau")} - ${s.label}`, s.y]); });
+  else if (p.type === "spec" && a.uvd) cols.push(["nm", a.uvd.nm], [I18N.t("tdati.col.mau"), a.uvd.y]);
   else if (p.type === "spec") a.data.forEach((/** @type {Bag} */ x) => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
   else if (a.sr) {
     // total chromatograms of one run type share the time axis: one RT column
@@ -1027,10 +1028,10 @@ function plotSheets(/** @type {Pannello} */ p) {
   const n = maxOf(cols.map(c => c[1].length)), rows = [];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? c[1][i] : null)));
   /** @type {any[]} */
-  const out = [{ name: ptitle(p.title) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
+  const out = [{ name: ptitleP(p) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
   const metaRows = [
     [{ v: I18N.t("export.meta.property"), b: true }, { v: I18N.t("export.meta.value"), b: true }],
-    [{ v: I18N.t("export.meta.title"), b: true }, ptitle(p.title) || I18N.t("export.meta.chart")],
+    [{ v: I18N.t("export.meta.title"), b: true }, ptitleP(p) || I18N.t("export.meta.chart")],
     [{ v: I18N.t("export.meta.type"), b: true }, (/** @type {Record<string, string>} */ ({ chrom: I18N.t("export.type.chrom", { kind: (p.kind || "").toUpperCase() }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: p.level === 2 ? "MS²" : "MS¹" }), map: I18N.t("panel.title.map") }))[p.type] || p.type],
     [{ v: I18N.t("export.meta.samples"), b: true }, plotFiles(p).map((/** @type {FileAperto} */ f) => f.label).join(", ")],
     [{ v: I18N.t("export.meta.caption"), b: true }, plotCaption(p)],

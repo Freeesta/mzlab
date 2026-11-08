@@ -3,13 +3,15 @@
 // wasm-feat/manifest.json (crates/mzlab-msngrafo-wasm) is fetched on the first request, checked against its SHA-256, and reads the .mzidx of
 // OPFS and the mzML of the file through `readerFor`. The engine itself is not touched. docs/agenti/msn-grafo.md.
 
+import { featManifest } from "./feat-manifesto.js";
+
 /** @type {Record<string, Promise<any>>} */ const loading = {};
 
 /** the module `key` of wasm-feat/manifest.json, fetched on first use and checked against its SHA-256 @param {string} key */
 export function load(key) {
   if (!loading[key]) loading[key] = (async () => {
     const base = new URL("./wasm-feat/", import.meta.url);
-    const man = (await (await fetch(new URL("manifest.json", base))).json())[key];
+    const man = (await featManifest(base))[key];
     if (!man) throw JSON.stringify({ error_key: "err.route.unavailable", params: {} });
     const bytes = await (await fetch(new URL(man.wasm, base))).arrayBuffer();
     const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -29,7 +31,7 @@ export function load(key) {
 async function conAttese(query) {
   const q = new URLSearchParams(query);
   if (q.get("regole") !== "1" || !q.get("smiles") || q.get("attese")) return query;
-  try { q.set("attese", (await load("msnregole")).attese(q.get("smiles"))); } catch { return query; }
+  try { q.set("attese", (await load("msnregole")).expectations(q.get("smiles"))); } catch { return query; }
   return q.toString();
 }
 
@@ -47,7 +49,7 @@ async function indexOf(name) {
  */
 export async function msnGrafo(name, blob, query, readerFor, esporta = false, idxFile = undefined) {
   const [m, idx] = await Promise.all([load("msngrafo"), idxFile || indexOf(name)]);
-  const f = esporta ? m.msn_grafo_export : m.msn_grafo;
+  const f = esporta ? m.msn_graph_export : m.msn_graph;
   return f(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query));
 }
 
@@ -56,7 +58,7 @@ export async function msnGrafo(name, blob, query, readerFor, esporta = false, id
  * @param {string} json
  */
 export async function msnCompleta(json) {
-  return (await load("msngrafo")).completa(json);
+  return (await load("msngrafo")).complete(json);
 }
 
 /**
@@ -68,7 +70,7 @@ export async function msnCompleta(json) {
  */
 export async function msnLibAggiungi(name, blob, query, libreria, molecola, readerFor, idxFile = undefined) {
   const [m, idx] = await Promise.all([load("msngrafo"), idxFile || indexOf(name)]);
-  return m.msnlib_aggiungi(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query), libreria, molecola);
+  return m.msnlib_add(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query), libreria, molecola);
 }
 
 /**
@@ -79,5 +81,5 @@ export async function msnLibAggiungi(name, blob, query, libreria, molecola, read
  */
 export async function msnLibCerca(name, blob, query, libreria, readerFor, idxFile = undefined) {
   const [m, idx] = await Promise.all([load("msngrafo"), idxFile || indexOf(name)]);
-  return m.msnlib_cerca(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query), libreria);
+  return m.msnlib_search(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query), libreria);
 }

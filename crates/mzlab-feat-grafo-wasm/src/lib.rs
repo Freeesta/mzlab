@@ -5,7 +5,7 @@ use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/5";
+const BRIDGE: &str = "mzfeat-grafo/6";
 
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())
@@ -34,6 +34,13 @@ pub fn fragments(molfile: &str, a: i32, b: i32) -> std::result::Result<String, J
 #[wasm_bindgen]
 pub fn partial(molfile: &str, delta: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::frammenti::partial_json(molfile, delta).map_err(js_err)
+}
+
+/// `etich/1` of the structures and arrows of a drawing: formula with isotopes, charge, monoisotopic and nominal mass, m/z, and the change
+/// across each arrow (see `mzlab_feat::chem::etichette::labels_json`; the same as `mzlab-cli mol-label`).
+#[wasm_bindgen]
+pub fn labels(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::etichette::labels_json(request).map_err(js_err)
 }
 
 /// `posiz/1` of a SMILES, a transformation («+O», «-CH2», «+O-2H», «+Cl-H», «+Br-H») and the MS2 of the product (`peaks_json` `[[mz,int],..]`): the classes of positions

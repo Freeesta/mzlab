@@ -18,23 +18,23 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         def open_below():
             assert not pg.is_visible("#np-calc2"), "in Dati the calculator lives in Adducts & losses"
-            pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "window.BARRA.curTab === 'addloss' && BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent")
+            pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "window.BARRA.curTab === 'addloss' && BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent")
             assert pg.evaluate("document.querySelector('#sb-panel-addloss').contains(document.querySelector('#calcdlg'))")
             # In Disegno view, np-calc2 opens floating dropdown right under its button, not modal, >= 520px wide
             pg.click("#nav [data-v=draw]"); frames(pg, 3)
-            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden"); frames(pg, 3)
+            pg.click("#np-calc2"); wait_for_js(pg, "!document.querySelector('#calcdlg').hidden"); frames(pg, 3)
             b = pg.evaluate("(()=>{const a=document.querySelector('#np-calc2').getBoundingClientRect(),c=document.querySelector('#calcdlg');const r=c.getBoundingClientRect();return {ab:a.bottom,ct:r.top,w:r.width,vis:!c.hidden,modal:c.matches(':modal')}})()")
             assert b["vis"] and not b["modal"] and 0 < b["ct"] - b["ab"] < 20 and b["w"] >= 520, b
-            pg.click("#calcx"); attendi(pg, "document.querySelector('#calcdlg').hidden")
+            pg.click("#calcx"); wait_for_js(pg, "document.querySelector('#calcdlg').hidden")
             pg.click("#nav [data-v=data]"); frames(pg, 3)
             if not pg.evaluate("!!document.querySelector('#calcin').offsetParent"):    # the sidebar tab stays open across views: the button is a toggle
-                pg.evaluate("BARRA.setTab('calc')"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
+                pg.evaluate("BARRA.setTab('calc')"); wait_for_js(pg, "!!document.querySelector('#calcin').offsetParent")
         step("in Dati opens sidebar tab, in Disegno opens right under its button >= 520 px wide", open_below)
         def usable():
             frames(pg, 3)               # docked next to the charts the calculator stays open while the student works on them
             c = pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='chrom'&&q.tab==='full'),r=p.cv.getBoundingClientRect();return {x:r.left+p._a.X(14.3),y:r.bottom-60}})()")
             pg.evaluate("window.scrollTo(0,0)")
-            pg.mouse.click(c["x"], c["y"] if c["y"] < 700 else 400); attendi(pg, "E.panels.find(q=>q.type==='chrom'&&q.tab==='full').cur != null"); frames(pg, 3)
+            pg.mouse.click(c["x"], c["y"] if c["y"] < 700 else 400); wait_for_js(pg, "E.panels.find(q=>q.type==='chrom'&&q.tab==='full').cur != null"); frames(pg, 3)
             assert pg.evaluate("document.querySelector('#calcdlg').hidden") is False, "stays open while the student works on the graphs"
             assert pg.evaluate("E.panels.find(q=>q.type==='chrom'&&q.tab==='full').cur") is not None
         step("the graphs stay usable with the calculator open", usable)
@@ -50,17 +50,16 @@ try:
             pg.evaluate("BARRA.setTab('calc')") if not pg.evaluate("!!document.querySelector('#calcin').offsetParent") else None
             pg.fill("#calcin", "364.4-194.2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '170.2'")
             assert pg.inner_text("#calcres").strip() == "170.2" and not pg.evaluate("document.querySelector('#calcpad').hidden")
-            assert pg.is_visible("#calc-nl") and "170.2" in pg.get_attribute("#calc-nl", "title")
+            assert pg.is_visible("#calc-nl") and pg.get_attribute("#calc-nl", "title")
             pg.fill("#calcin", "364,4 \u2212 194,2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '170.2'"); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
             pg.fill("#calcin", "(229.1-171.2)*2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '115.8'"); assert pg.inner_text("#calcres").strip() == "115.8"
             pg.click("#calc-nl"); until(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
-            assert pg.input_value("#al-q") == "115.8"
-            attendi(pg, "document.activeElement.id === 'al-q'")         # «Cerca» hands the focus to the page field
+            assert pg.input_value("#calcin") == "(229.1-171.2)*2"         # «Cerca» only picks the tab: one field, left as typed
             pg.fill("#calcin", "96-66"); pg.keyboard.press("Enter"); until(pg, "document.querySelector('#calcin').value === '30'")
-            pg.click("#al-t-adducts"); pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'losses' && document.querySelector('#al-q').value === '30'")       # after «=» the difference still picks the losses
+            pg.click("#al-t-adducts"); pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'losses' && document.querySelector('#calcin').value === '30'")       # after «=» the difference still picks the losses
             pg.evaluate("CALC.tape.length = 0")
-        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), «Cerca» puts it in the page field on the losses tab", arithmetic)
+        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), «Cerca» picks the losses tab", arithmetic)
         def keypad():
             pg.fill("#calcin", ""); frames(pg, 2)
             for k in ("1", "+", "2"): pg.click(f"#calcpad [data-k='{k}']")
@@ -79,13 +78,13 @@ try:
         def formula_hides_pad():
             pg.fill("#calcin", "C9H10Cl2N2O"); until(pg, "document.querySelector('#calcpad').hidden && !document.querySelector('#calc-nl').hidden")
             assert pg.evaluate("document.querySelector('#calcres').hidden") and pg.locator("#calcout .cadd-wrap").count() == 0, "docked: no table under the calculator, the page answers"
-            pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'adducts' && document.querySelector('#al-q').value === 'C9H10Cl2N2O' && !!document.querySelector('#sb-panel-adducts .cadd-wrap table')")
+            pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'adducts' && document.querySelector('#calcin').value === 'C9H10Cl2N2O' && !!document.querySelector('#sb-panel-adducts .cadd-wrap table')")
             pg.fill("#calcin", ""); until(pg, "!document.querySelector('#calcpad').hidden")
         step("a formula: no keypad, «Cerca» shows its adducts on the page", formula_hides_pad)
         VIS = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!!w.offsetParent)"       # the page and the Disegno drop-down each draw a table: only the visible one is read
         TXT = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!!w.offsetParent).flatMap(w=>[...w.querySelectorAll('tbody tr:not(.cmore)')]).map(tr=>[...tr.children].map(c=>c.textContent.replace(/\\s+/g,' ').trim()))"
         def table_rows():
-            pg.fill("#al-q", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
             rows = pg.evaluate(TXT); names = [x[0] for x in rows]
             assert names[:4] == ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+"], names
             assert rows[0][1] == "+1.0073" and rows[0][2] == "239.2" and rows[0][3] == "239", rows[0]
@@ -108,16 +107,16 @@ try:
         def no_observed_field():
             assert pg.locator("#calcobs").count() == 0 and pg.locator("#al-ctl [data-r]").count() == 0, "no observed m/z field and no High/Low switch"
             assert pg.locator("#calcctl .cq-mode").count() == 0 and pg.locator("#calcqui .cq-t").count() == 0, "no resolution line and no «what can this be» heading"
-            assert pg.get_attribute("#al-ctl .cq-ctl", "data-mode") in ("hr", "lr") and pg.get_attribute("#alres", "data-mode") in ("hr", "lr")
+            assert pg.get_attribute("#al-ctl .cq-ctl", "data-mode") in ("hr", "lr")
             pg.fill("#altol", "100000"); frames(pg, 25); pg.fill("#altol", "5")
         step("no observed m/z field, no High/Low switch; the tolerance field stays", no_observed_field)
         def typed_number():
-            pg.fill("#al-q", "239.2230"); until(pg, "!document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
+            pg.fill("#calcin", "239.2230"); until(pg, "!document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
             rows = pg.evaluate(TXT); assert rows[0][0] == "[M+H]+" and rows[0][-1] == "238.2", rows[0]
             assert pg.locator("#sb-panel-adducts .cxic").count() == 0, "no XIC without a formula"
         step("a typed number is the m/z looked up: M if this adduct", typed_number)
         def diffs():
-            pg.fill("#al-q", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#cadd-diffs')")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#cadd-diffs')")
             assert pg.get_attribute("#cadd-diffs", "open") is None, "closed by default"
             pg.click("#cadd-diffs summary"); pg.fill("#cadd-delta", "21.9819"); pg.wait_for_function("document.querySelector('#cadd-dres').textContent.includes('Na')")
             assert "Na" in pg.inner_text("#cadd-dres")
@@ -126,11 +125,11 @@ try:
         step("mass differences: closed by default, a delta between two peaks names the adduct pair", diffs)
         def menu():
             assert pg.locator("#stbar [data-cmd=addloss]").count() == 1 and pg.locator("#stbar [data-cmd=adducts], #stbar [data-cmd=losses], #np-ad, #np-nl").count() == 0, "one toolbar entry for Adducts & losses, no leftover old ones"
-            pg.evaluate("BARRA.setTab('adducts')"); attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'adducts') && !document.querySelector('#sb-panel-adducts').hidden")
-            pg.evaluate("BARRA.setTab('losses')"); pg.evaluate("QQQRef.open('ad')"); attendi(pg, "BARRA.curTab === 'addloss' && BARRA.curSub === 'adducts'")      # the old «adducts» request of the references opens the Adducts tab
+            pg.evaluate("BARRA.setTab('adducts')"); wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'adducts') && !document.querySelector('#sb-panel-adducts').hidden")
+            pg.evaluate("BARRA.setTab('losses')"); pg.evaluate("QQQRef.open('ad')"); wait_for_js(pg, "BARRA.curTab === 'addloss' && BARRA.curSub === 'adducts'")      # the old «adducts» request of the references opens the Adducts tab
         step("the Adducts entry opens its panel, the references request too; no dead menu entry", menu)
         def xic_click():
-            pg.fill("#al-q", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cxic')")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cxic')")
             pg.click("#sb-panel-adducts .cadd-wrap button.cxic >> nth=1"); pg.wait_for_selector("#xic-mz", state="visible")
             assert "NH4" in pg.input_value("#xic-ad") or "NH4" in pg.inner_text("#xic-sum") or pg.input_value("#xic-mz"), "XIC window prefilled"
             pg.click("#xic-no")
@@ -141,28 +140,28 @@ try:
         step("the composition list of the page equals the Rust catalogue", composition)
         def narrow():
             pg.click("#nav [data-v=draw]"); frames(pg, 3)
-            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden")        # the floating drop-down: same content as the sidebar tab
+            pg.click("#np-calc2"); wait_for_js(pg, "!document.querySelector('#calcdlg').hidden")        # the floating drop-down: same content as the sidebar tab
             pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cadd-wrap table >> visible=true")
-            pg.set_viewport_size({"width": 320, "height": 800}); attendi(pg, "innerWidth === 320"); frames(pg, 3)
+            pg.set_viewport_size({"width": 320, "height": 800}); wait_for_js(pg, "innerWidth === 320"); frames(pg, 3)
             try:
                 assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "no page-level horizontal scroll at 320 px"
                 assert pg.evaluate("(()=>{const r=document.querySelector('#calcdlg').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})()"), "the calculator fits 320 px"
             finally:
-                pg.set_viewport_size({"width": 1440, "height": 900}); attendi(pg, "innerWidth === 1440"); frames(pg, 3)
+                pg.set_viewport_size({"width": 1440, "height": 900}); wait_for_js(pg, "innerWidth === 1440"); frames(pg, 3)
                 pg.click("#calcx")
                 pg.click("#nav [data-v=data]"); frames(pg, 3)
         step("320 px: no horizontal scroll of the page", narrow)
         def closes():
             pg.click("#nav [data-v=draw]"); frames(pg, 3)
-            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden")
+            pg.click("#np-calc2"); wait_for_js(pg, "!document.querySelector('#calcdlg').hidden")
             assert not pg.evaluate("document.querySelector('#calcdlg').hidden")
-            pg.fill("#calcin", ""); pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('#calcdlg').hidden")
+            pg.fill("#calcin", ""); pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#calcdlg').hidden")
             assert pg.evaluate("document.querySelector('#calcdlg').hidden")
             pg.click("#nav [data-v=data]"); frames(pg, 3)
             assert pg.locator("#np-iso").count() == 0, "the Isotopi button is gone from the header"
         step("Esc closes the calculator; no Isotopi button in the header", closes)
         def xic_dlg():
-            pg.evaluate("openXic(null,{})"); pg.wait_for_selector("#xic-mz", state="visible"); pg.fill("#xic-mz", "c14h13f4n3o2s"); attendi(pg, "document.querySelector('#xic-sum').innerText.includes('interpretata come')")
+            pg.evaluate("openXic(null,{})"); pg.wait_for_selector("#xic-mz", state="visible"); pg.fill("#xic-mz", "c14h13f4n3o2s"); wait_for_js(pg, "document.querySelector('#xic-sum').innerText.includes('interpretata come')")
             assert "interpretata come" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum"); pg.click("#xic-no")
         step("XIC window too", xic_dlg)
     r.close()

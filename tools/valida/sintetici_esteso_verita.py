@@ -29,7 +29,7 @@ def delta_ioni(o, pred) -> dict:
     return {e: n for e, n in f.items() if n}
 
 
-def alogeni_di(o) -> list:
+def halogens_of(o) -> list:
     f = E.parse_formula(o.ion)
     return sorted(sum(([e] * f[e] for e in ("Br", "Cl") if e in f), []))
 
@@ -38,37 +38,37 @@ def classe_di(delta: dict) -> str | None:
     return next((cl for cl, d in REGOLE if chiave(d) == chiave(delta)), None)
 
 
-def riga_tp(c, o, per_id: dict, principale) -> dict:
+def row_tp(c, o, per_id: dict, main) -> dict:
     """One product: change from the ion it forms from, generation, route and the side data of the extension."""
     st = c.vx.meta.get(o.id, {})
-    pred = per_id.get(o.progenitore, principale)
+    pred = per_id.get(o.progenitore, main)
     d = delta_ioni(o, pred)
     return {"id": o.id, "mz": round(o.mz, 6), "ion": o.ion, "rt_obs": [round(o.rt, 4)], "change": testo_delta(d), "delta_formula": testo_delta(d), "gen_attesa": o.generazione,
-            "pred_atteso": "parent" if pred is principale else pred.id, "gen_origine": "costruita", "region": None, "loc_test": False, "level": 4,
+            "pred_atteso": "parent" if pred is main else pred.id, "gen_origine": "costruita", "region": None, "loc_test": False, "level": 4,
             "rilevabile": bool(o.amp.max() >= 1e6), "classe": st.get("classe") or classe_di(d), "via": st.get("via", "regola" if classe_di(d) else "non_in_tabella"),
-            "alogeni": alogeni_di(o), "forma": o.forma, "t_max": st.get("t_max"), "catena": st.get("catena"), "delta_totale": st.get("delta_totale"),
+            "alogeni": halogens_of(o), "forma": o.forma, "t_max": st.get("t_max"), "catena": st.get("catena"), "delta_totale": st.get("delta_totale"),
             "raggiungibile_2_passi": st.get("raggiungibile"), "debole": bool(st.get("debole", False)), "isf_di": st.get("isf_di")}
 
 
 def righe_isomeri(c) -> tuple[list, list]:
     """(rows of the isomers, one product entry per group). The id of a member is `<nominal m/z>-A/B/C`; a nominal m/z met again gets `~n` after the number."""
-    gruppi: dict[str, list] = {}
+    groups: dict[str, list] = {}
     for o in c.ioni:
         if o.ruolo == "isomero":
-            gruppi.setdefault(o.famiglia, []).append(o)
-    righe, prodotti, visti = [], [], Counter()
-    for fam, mem in gruppi.items():
+            groups.setdefault(o.famiglia, []).append(o)
+    rows, products, seen = [], [], Counter()
+    for fam, mem in groups.items():
         mem.sort(key=lambda o: o.rt)
         nom = int(round(mem[0].mz))
-        visti[nom] += 1
-        base = f"{nom}" if visti[nom] == 1 else f"{nom}~{visti[nom]}"
+        seen[nom] += 1
+        base = f"{nom}" if seen[nom] == 1 else f"{nom}~{seen[nom]}"
         d = round(mem[1].rt - mem[0].rt, 4)
         sep = valle_relativa(d, mem[0].sg, 0.8) < 0.98
         for k, o in enumerate(mem):
-            righe.append({"id": f"{base}-{'ABC'[k]}", "gruppo": base, "mz": round(o.mz, 6), "ion": o.ion, "rt_obs": round(o.rt, 4), "regione": None, "rt_separabile": d,
+            rows.append({"id": f"{base}-{'ABC'[k]}", "gruppo": base, "mz": round(o.mz, 6), "ion": o.ion, "rt_obs": round(o.rt, 4), "regione": None, "rt_separabile": d,
                           "separabile_atteso": sep, "fwhm": round(o.sg * FWHM, 4), "origine": o.id, "note": ""})
-        prodotti.append((mem[0], base, d))
-    return righe, prodotti
+        products.append((mem[0], base, d))
+    return rows, products
 
 
 def ereditati(c) -> list:
@@ -77,13 +77,13 @@ def ereditati(c) -> list:
     for o in c.ioni:
         if o.ruolo not in TIPI or o.forma == "isf_variabile" and o.id not in st.ere:
             continue
-        padre = per_id.get(o.progenitore)
+        parent = per_id.get(o.progenitore)
         extra = st.ere.get(o.id, {})
         note = dict(p.split("=", 1) for p in o.note.split(";") if "=" in p)
-        out.append({"id": o.id, "tipo": TIPI[o.ruolo], "ereditato": True, "mz": round(o.mz, 6), "ion": o.ion, "delta": testo_delta(delta_ioni(o, padre)) if padre and o.ion else None,
+        out.append({"id": o.id, "tipo": TIPI[o.ruolo], "ereditato": True, "mz": round(o.mz, 6), "ion": o.ion, "delta": testo_delta(delta_ioni(o, parent)) if parent and o.ion else None,
                     "rt_atteso": [round(o.rt, 4)], "rapporto_costante": extra.get("rapporto_costante", True), "coeluisce_con_tp": extra.get("coeluisce_con_tp"),
                     "rel_atteso": float(note["ratio"]) if "ratio" in note else float(note["rel"]) if "rel" in note else None,
-                    "padre": "parent" if padre is not None and padre.ruolo == "progenitore" else o.progenitore, **{k: v for k, v in extra.items() if k not in ("rapporto_costante", "coeluisce_con_tp")}})
+                    "padre": "parent" if parent is not None and parent.ruolo == "progenitore" else o.progenitore, **{k: v for k, v in extra.items() if k not in ("rapporto_costante", "coeluisce_con_tp")}})
     return out
 
 
@@ -105,20 +105,20 @@ def contatori(c) -> dict:
 
 def documento(c, seme: int, profilo: str, budget_mb: float) -> dict:
     per_id = {o.id: o for o in c.ioni}
-    principale = next(o for o in c.ioni if o.ruolo == "progenitore")
-    righe_iso, gruppi = righe_isomeri(c)
-    tps = [riga_tp(c, o, per_id, principale) for o in c.ioni if o.ruolo in RUOLI_TP and o.amp is not None]
-    for m, base, d in gruppi:
-        r = riga_tp(c, m, per_id, principale)
+    main = next(o for o in c.ioni if o.ruolo == "progenitore")
+    rows_iso, groups = righe_isomeri(c)
+    tps = [row_tp(c, o, per_id, main) for o in c.ioni if o.ruolo in RUOLI_TP and o.amp is not None]
+    for m, base, d in groups:
+        r = row_tp(c, m, per_id, main)
         r.update(id=base, rt_obs=sorted(round(x.rt, 4) for x in c.ioni if x.ruolo == "isomero" and x.famiglia == m.famiglia), isomeri=base)
         tps.append(r)
-    esche = [{"mz": round(o.mz, 6), "rt": round(per_id[o.progenitore].rt, 4)} for o in c.ioni if o.ruolo == "esca"]
+    decoys = [{"mz": round(o.mz, 6), "rt": round(per_id[o.progenitore].rt, 4)} for o in c.ioni if o.ruolo == "esca"]
     alog = [{"id": o.id, "ion": o.ion, "mz": round(o.mz, 6), "rt_obs": round(o.rt, 4), "formula_neutra": E.fmt(c.vx.neutre[o.id]), "alogeni": c.vx.meta[o.id]["alogeni"]}
             for o in c.ioni if o.ruolo == "progenitore_alog"]
     return {"schema": "verita_tp/1", "dataset": "D-V1X", "stato": "verita", "polarita": "+", "adotto_ref": "[M+H]+",
-            "parent": {"id": principale.id, "nome": None, "smiles": None, "ion": principale.ion, "mz": round(principale.mz, 6), "rt_obs": round(principale.rt, 4),
+            "parent": {"id": main.id, "nome": None, "smiles": None, "ion": main.ion, "mz": round(main.mz, 6), "rt_obs": round(main.rt, 4),
                        "formula_neutra": E.fmt(c.formule[0]), "alogeni": [], "regioni": []},
-            "progenitori_alogenati": alog, "tps": tps, "righe_isomeri": righe_iso, "ereditati": ereditati(c), "esche": esche, "regole_ref": "regole_tp/2@fotocatalisi",
+            "progenitori_alogenati": alog, "tps": tps, "righe_isomeri": rows_iso, "ereditati": ereditati(c), "esche": decoys, "regole_ref": "regole_tp/2@fotocatalisi",
             "metriche_attese": contatori(c), "meta": {"seme": seme, "profilo": profilo, "budget_mb": budget_mb, "parametri": c.vx.P},
             "note": "Sintetico: molecole e numeri inventati. `tps` ha un'entry per prodotto e una per gruppo di isomeri (id = numero nominale); `isf_di` = il prodotto coeluisce con l'ISF di quel composto; "
                     "`raggiungibile_2_passi` = la variazione totale dal progenitore e' una o due regole della tabella (falso: serve la rete osservata); nessuna misura di velocita'."}

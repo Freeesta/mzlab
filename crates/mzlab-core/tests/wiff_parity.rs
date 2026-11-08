@@ -83,9 +83,8 @@ fn synthetic_pairs_match_the_reference() {
             for (b, g) in back.chromatograms.iter().zip(&run.chromatograms) {
                 assert!(b.id == g.id && b.time == g.time && b.intensity == g.intensity, "{}: mzML", g.id);
             }
-            // the TIC/BPC of a full scan sample exist only in the `estesi` build; the MRM chromatograms are in both
-            let all = r["chromatograms"].as_array().unwrap();
-            let ch: &[Value] = if cfg!(feature = "estesi") || sp.is_empty() { all } else { &[] };
+            // the engine and the `estesi` build give the same list (`wiff/cromatogrammi.rs`): the TIC/BPC of a full scan sample too
+            let ch: &[Value] = r["chromatograms"].as_array().unwrap();
             assert_eq!(run.chromatograms.len(), ch.len(), "{name}/{s}: chromatograms");
             for (g, e) in run.chromatograms.iter().zip(ch) {
                 assert_eq!(g.id, e["id"].as_str().unwrap());

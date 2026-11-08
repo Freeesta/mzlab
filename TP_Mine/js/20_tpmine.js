@@ -9,22 +9,23 @@
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
     const W = /** @type {any} */ (window), dt = k => (W.TPHELP ? ` data-tt="${k}"` : "");
     sec.innerHTML = `<div class="tp-wrap">
+<h1 class="tp-sr">Tabui</h1>
 <div class="tp-tools"><button type="button" id="tp-sb" aria-controls="tp-left" aria-pressed="false" aria-label="Hide the loading panel">Hide panel</button></div>
 <div class="tp">
 <div id="tp-left">
- <div class="card"><h3>1 · Files</h3>
-  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-rmall" type="button" aria-label="Remove all the files" hidden>Remove all</button></div>
+ <div class="card"><h2>1 · Files</h2>
+  <div class="row"><button id="tp-page" title="Reload the files open in the Data tab">Reload from Data</button><button id="tp-pick" title=".mzML, .raw, .wiff (+ .wiff.scan)">Choose files...</button><button id="tp-rmall" type="button" aria-label="Remove all the files" hidden>Remove all</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden>
   <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div>
-  <details id="tp-cond" hidden><summary title="Label each file with its condition (gas, photocatalyst...) to compare them">Conditions of the files</summary><div id="tp-cfiles"></div></details><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
- <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div><div id="tp-reatt"></div><div id="tp-reatt-ctl" hidden></div>
+  <details id="tp-cond" hidden><summary title="Label each file with its condition">Conditions of the files</summary><div id="tp-cfiles"></div></details><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
+ <div class="card"><h2>2 · Parent compound</h2><div id="tp-struct"></div><div id="tp-reatt"></div><div id="tp-reatt-ctl" hidden></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"${dt("ft.f.name")}><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
   <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Neutral formula" aria-label="Neutral molecular formula" spellcheck="false"${dt("ft.f.formula")}></div>
   <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"${dt("ft.f.smiles")}><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
   <div id="tp-warn" role="status"></div>
   <div class="row"><label class="mut" for="tp-add"${dt("ft.f.adduct")}>Adduct</label><select id="tp-add"${dt("ft.f.adduct")}><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
   <div class="row"><label class="mut grow" for="tp-prt"${dt("ft.f.prt")}>RT (min)</label><input type="number" id="tp-prt"${dt("ft.f.prt")} step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
- <div class="card"><h3>3 · Settings</h3>
+ <div class="card"><h2>3 · Settings</h2>
   <div class="row"><button id="tp-est" type="button" title="Low resolution: proposes XIC window, RT tolerance and start from the loaded files">Estimate from data</button></div>
   <div class="row"><label class="mut grow" id="tp-tol-l" for="tp-tol"${dt("ft.f.tol")}>XIC ±Da</label><input type="number" id="tp-tol"${dt("ft.f.tol")} value="0.35" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow" for="tp-rtt"${dt("ft.f.rtt")}>RT ±min</label><input type="number" id="tp-rtt"${dt("ft.f.rtt")} value="0.25" step="0.05" min="0.05" style="width:70px"></div>
@@ -34,7 +35,7 @@
   <div class="row"><label id="tp-disc-h"${dt("ft.f.disc")}><input type="checkbox" id="tp-disc" checked> Unexpected ions</label></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
  <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
- <div class="card" id="tp-untcard"><h3>Feature tables</h3><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
+ <div class="card" id="tp-untcard"><h2>Feature tables</h2><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: Tabui calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and shows the prediction of each transformation (Prev. N). The identification level is yours to decide.</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
@@ -121,7 +122,7 @@
       try { e = JSON.parse(await callRaw("estimate", JSON.stringify(names), parentMz ? String(parentMz) : "")); } catch (_) { /* no estimate: the defaults stay */ }
       if (!e || seq !== estSeq) return;
       const put = (id, v, dec, why) => { const el = $(id); if (v == null || !Number.isFinite(v) || el.dataset.user) return; el.value = v.toFixed(dec); el.classList.add("tp-est"); el.title = why; };
-      put("#tp-tol", e.da && e.da.value, 2, `From the data: 2 × the tolerance measured (3 × the scatter of m/z) on the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
+      put("#tp-tol", e.da && e.da.value, 2, `From the data: 2 × the tolerance measured (3 × the scatter of m/z) on the ${e.da && e.da.n} points of the strongest peaks of ${f.name}${e.da && e.da.capped ? `; the scatter is above the ${e.da.value} Da ceiling, so the ceiling is used: check the mass calibration` : ""}`);
       put("#tp-rtt", e.rt_tol, 2, e.drift && e.drift.value > 2 * (e.fwhm && e.fwhm.value || 0) ? `From the data: the RT of the parent drifts by ${e.drift.value.toFixed(2)} min over ${e.drift.n} files` : `From the data: 2 × the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
       put("#tp-rtmin", e.dead, 1, `From the data: the unretained front of ${f.name} ends here`);
     }
@@ -196,7 +197,7 @@
           $("#tp-tol-l").textContent = "XIC ±ppm"; t.value = 5; t.step = 1; t.min = 1;
           const span = Math.max(0, ...st.files.filter(f => f.kind === "hr").map(f => f.rt_max || 0));
           r.value = span ? Math.max(0.05, Math.round(span * 0.005 / 0.05) * 0.05).toFixed(2) : "0.10";      // 0.5 % of the gradient length (20 min: 0.10)
-          r.title = "From the chromatographic method (0.5 % of the run length)";
+          r.title = "From the chromatographic method";
         } else { $("#tp-tol-l").textContent = "XIC ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
       }
       const n = st.files.length;
@@ -379,7 +380,7 @@
       if (!mol) { msg("Enter a formula or SMILES.", true); $("#tp-msg").dataset.field = "1"; FIELD().set(parentFields(), $("#tp-msg")); $("#tp-mol").focus(); return; }
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       const have = new Set(st.files.map(f => String(f.name || "").split(/[\\/]/).pop()));            // files loaded but not in this series: failed to read, or still being opened
-      const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
+      const lost = [...new Set([...(window.MZLAB_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
       $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
       setBusy(true); reattAuto("tpsStart");      // the reactivity of the parent waits for the TPs
       $("#tp-bar").style.width = "2%"; msg(useCond() && !hrMode ? `Aligning ${st.files.filter(f => f.kind === "full").length} files of ${st.cond.conditions.length} conditions...` : "Digging..."); const t0 = performance.now();

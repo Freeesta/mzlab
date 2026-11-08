@@ -16,6 +16,7 @@ pytestmark = pytest.mark.skipif(not NODE, reason="node non disponibile")
 PRELUDE = r"""
 const fs = require('fs');
 const web = process.argv[1];
+globalThis.NOMI = require(web + '/nomi.js');
 // the helpers of numeri.js, evaluated alone
 const gsrc = fs.readFileSync(web + '/numeri.js', 'utf8');
 const H = new Function(gsrc + '; return { maxOf, minOf, maxAbs, lowerIdx, spanOf, b64F32 };')();
@@ -56,7 +57,7 @@ console.log(JSON.stringify(out));
     assert r["span"] is True
 
 
-def test_liste_series_hasmatch_csv_equal_to_the_old_code():
+def test_lists_series_hasmatch_csv_equal_to_the_old_code():
     r = run(r"""
 globalThis.I18N = { lang: 'it', t: (k, p) => (p && p.name !== undefined ? p.name + ' n=' + p.n : k) };
 const L = require(web + '/liste.js');

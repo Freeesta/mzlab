@@ -41,18 +41,26 @@ impl State {
 
     /// A file that reaches the app as bytes (a file dragged into the page, not picked in the system dialog): pieces of `body` written at `off` into the folder
     /// of the files made by the app. Returns the number of the file when the last piece is in.
-    pub fn upload_chunk(&self, name: &str, off: u64, total: u64, body: &[u8]) -> Result<Option<u32>> {
+    /// `mtime` (ms, the File's `lastModified`): the received file keeps that date, and a file of the same name, size and date already here is not written again
+    /// (the same members picked again stay the same files, so `natsame` recognises their dataset).
+    pub fn upload_chunk(&self, name: &str, off: u64, total: u64, mtime: Option<u64>, body: &[u8]) -> Result<Option<u32>> {
         let name = crate::store::clean(name)?;
         if body.is_empty() && total > 0 {
             return Err(Error::new("err.file.unknown").with("detail", "empty upload"));      // a webview that drops the body of a POST must not look like a file that was received
         }
         let dir = self.store.lock().unwrap_or_else(|e| e.into_inner()).own_dir()?;
+        if off == 0 && mtime.is_some() && crate::store::stamp(&dir.join(name)) == mtime.map(|t| (total, t)) {
+            return Ok(Some(self.pick_path(&dir.join(name))));
+        }
         let part = dir.join(format!("{name}.part"));
         let mut f = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(&part).map_err(|e| io_error(&e))?;
         f.seek(SeekFrom::Start(off)).map_err(|e| io_error(&e))?;
         f.write_all(body).map_err(|e| io_error(&e))?;
         if off + body.len() as u64 >= total {
             f.set_len(total).map_err(|e| io_error(&e))?;
+            if let Some(t) = mtime {
+                f.set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_millis(t)).map_err(|e| io_error(&e))?;
+            }
             drop(f);
             let dest = dir.join(name);
             std::fs::rename(&part, &dest).map_err(|e| io_error(&e))?;
@@ -137,6 +145,7 @@ impl State {
     pub(crate) fn lr_index(&self, name: &str) -> Result<Answer> {
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let t0 = std::time::Instant::now();
+        let before = self.store.lock().unwrap_or_else(|e| e.into_inner()).stamp_now(name);   // taken before the build: a change during it stays flagged
         // the mapped old index goes before the build replaces its file (a mapped file cannot be replaced on Windows); the next request opens the new one
         self.drop_lr_index(name);
         let missing = if let Some(nat) = &e.nat {
@@ -145,6 +154,9 @@ impl State {
             self.indexer()?.build(&e.path, name, None)?.missing
         };
         self.drop_lr_index(name);
+        if let Some(st) = before {
+            self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(name, st);
+        }
         // missing: the spectra the file declares beyond the ones it holds (the row of the loading warns, as on the site)
         text(format!("{{\"ms\":{},\"missing\":{missing}}}", t0.elapsed().as_millis()))
     }
@@ -341,7 +353,7 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
-            "simtab" => text(match mzlab_core::simtab::table_text(s("files"), s("output"), s("layout")) {
+            "simtab" => text(match mzlab_core::simtab::table_text_with(s("files"), s("output"), s("layout"), if s("baseline").is_empty() { "edges" } else { s("baseline") }) {
                 Ok(csv) => csv,
                 Err(e) => format!("E{}", e.to_json()),
             }),
@@ -364,10 +376,20 @@ impl State {
             self.warm_forget(None);                                                         // the indexes built ahead go with the session
         }
         match op {
+            "lr_cancel" => {
+                // «Cancel» of the loading: the index builds of these files stop now (`IdxBuilder::cancel`); it does not wait for the engine
+                let b = self.indexer()?;
+                for n in p["names"].as_array().into_iter().flatten().filter_map(|n| n.as_str()) {
+                    b.cancel(n);
+                }
+                return text("{}");
+            }
             "lr_warm" => return self.lr_warm(p),                                            // the index of a file of the pointed folder, built ahead (`rpc_warm.rs`): it does not hold the engine
             "lr_warm_claim" => return self.lr_warm_claim(p),
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
+            "natsame" => return self.nat_same(p),                                           // the same dataset given again
             "nat2mzml" => return self.nat_to_mzml(p),
+            "natregistro" => return self.nat_registro(p),                                   // one series of the instrument log of a .raw, read on request
             "natsrm" => return self.nat_srm(p),                                             // the traces of a sample for mzFinder (no mzML)
             "mzml2cen" => return self.mzml_to_cen(p),                                       // a centroid copy of a profile mzML: long, it does not hold the engine
             "lr_index_cen" => return self.lr_index_cen(p["name"].as_str().unwrap_or("")),   // the index of a sample as centroids, on a thread of the build pool

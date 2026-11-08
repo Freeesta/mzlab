@@ -28,6 +28,8 @@
       const word = pause.querySelector("span"); if (word) word.textContent = held ? "Resume" : "Pause";
       now.hidden = !F.liveView.askingMemory();
     };
+    // the group keeps the width of the invisible twins, so Pause appearing later moves nothing
+    bar.querySelectorAll(".flx-live-slot").forEach(n => { group.style.minWidth = n.offsetWidth + "px"; n.remove(); });
     before.before(group);
     sync();
     // the listeners go with the page: a shell that is drawn again brings its own

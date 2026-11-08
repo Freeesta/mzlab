@@ -3,8 +3,8 @@
 
 use std::path::PathBuf;
 
-use crate::msn_figura::{svg, testi, Vista};
-use crate::msn_html::html;
+use mzlab_feat::msnfigura::html::html;
+use mzlab_feat::msnfigura::{svg, testi, Vista};
 
 fn fixtures() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/msn_figura")

@@ -1,6 +1,7 @@
 I18N.add("it", {
   "cq.ctl": "Opzioni della ricerca",
   "cq.none": "nessuna corrispondenza entro ±{tol}",
+  "cq.liste.err": "Non riesco a leggere le liste dei contaminanti. Riprova fra poco.",
   "cq.all": "mostra tutto ({n})",
   "cq.less": "mostra meno",
   "cq.g.liste": "Contaminanti e liste",
@@ -17,12 +18,5 @@ I18N.add("it", {
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "nessun addotto entro {tol} Da",
   "icon.ad": "Addotti",
-  "cq.res.lr": "Risoluzione unitaria",
-  "cq.res.hr": "Alta risoluzione",
-  "cq.res.src.files": "Dai file aperti: {name}",
-  "cq.res.src.formula": "Da una formula: masse esatte",
-  "cq.res.src.decimals": "Dal numero scritto (tre o più decimali)",
-  "cq.res.src.short": "Dal numero scritto (meno di tre decimali)",
-  "cq.res.src.none": "Nessun file aperto: risoluzione unitaria",
   "cq.g.combos": "Combinazioni di perdite"
 });

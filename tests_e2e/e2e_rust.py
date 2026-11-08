@@ -107,8 +107,10 @@ try:
             assert pg.evaluate("ST.files.some(f => /\\.mzML$/.test(f.name) && f.name.startsWith(%r))" % os.path.splitext(os.path.basename(raws[0]))[0])
         step("a Thermo .raw is read by the engine and listed as an mzML", thermo_raw)
         def recycled():
-            pg.evaluate("window.MZLAB_RUST.recycler.now()")
-            assert pg.evaluate("window.MZLAB_RUST.stats.recycled") == 1 and pg.evaluate("window.MZLAB_RUST.stats.restarts") == 0
+            # recycler.now() does nothing while an engine request is in flight (never mid-answer): asked again until the engine is idle and it recycles
+            pg.wait_for_function("window.MZLAB_RUST.recycler.now(), (window.MZLAB_RUST.stats.recycled || 0) >= 1", timeout=30000)
+            st = pg.evaluate("({...window.MZLAB_RUST.stats})")
+            assert st.get("recycled") == 1 and st.get("restarts") == 0, st
             r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]      # files reopened, not a fault: nothing counted, no message
             assert not pg.evaluate("(document.querySelector('#rust-note') || {}).textContent || ''").strip(), "a recycle must be silent"
         step("a recycled worker (large and idle) is replaced silently: files reopened, no fault counted", recycled)
@@ -134,7 +136,7 @@ try:
             pg.evaluate("window.MZLAB_RUST.forgetFaults()")      # brings the engine back for the steps that follow
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 0 && window.MZLAB_RUST.disabled === false", timeout=30000)
             r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]
-        step("deaths with the signature of a lack of memory: one level lower, then 192 MB at most, then off with error.memoryBudget (no loop)", die_oom)
+        step("deaths with the signature of a lack of memory: one level lower, then 192 MB at most, then off with error.engineOffMemory (no loop)", die_oom)
         def die_once():
             pg.evaluate("window.MZLAB_RUST.crash()")
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 1", timeout=30000)
@@ -150,10 +152,10 @@ try:
         step("second death within a minute: the engine stops, an error with a key, the page asks to reload", die_twice)
         def no_simd():
             # a browser without SIMD128 (forced by the test switch): the engine does not start and the note names the minimum versions
-            pg2 = ctx.new_page(); pg2.add_init_script("window.MZLAB_NO_SIMD = true")
+            pg2 = ctx.new_page(); pg2.add_init_script("window.MZLAB_CAP_OFF = ['simd128']")
             pg2.goto(f"http://127.0.0.1:{PORT}/"); pg2.wait_for_function("window.MZLAB_RUST !== undefined", timeout=60000)
             pg2.wait_for_function("window.MZLAB_RUST.disabled === true", timeout=30000)
-            note = pg2.inner_text("#rust-note"); assert "91" in note and "16.4" in note, note
+            note = pg2.inner_text("#rust-note"); assert "111" in note and "121" in note and "16.4" in note, note
             pg2.close()
         step("browser without SIMD128: the engine stays off and the note gives the minimum browser versions", no_simd)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])

@@ -6,7 +6,7 @@ It builds on two parallel studies and does not repeat them:
 - `docs/studi/WORKFLOW_MODULARI.md` (PR #1095): `passo/1` (typed ports, params as JSON Schema), `mzflow/2` (the plan), `prov/1`, and above all `workflow/COMUNICAZIONE.md` (link rule, proposed conversion, order, cache, canvas ↔ engine messages). **Here is only the way to show them.**
 - `docs/studi/STRUTTURA_DATO.md` (PR #1098): the `mol/1` record behind the `structure` port and `trasf/1` behind `transform`.
 
-Study files (`docs/studi/flow_grafica/`, probes: not shipped in the site, `tools/indice.py` skips `docs/studi/`):
+Study files (`docs/archivio/studi/flow_grafica/`, probes: not shipped in the site, `tools/indice.py` skips `docs/studi/`):
 - `prototipo.html` + `flow-proto-model.js` (rules, 153 lines) + `flow-proto.js` (canvas, 405 lines) + `flow-proto.css` (74 lines): a chain of fake modules with typed ports, plain JS, no dependency;
 - `misura.py`: 7 acceptance checks + axe + smoothness measures with Playwright (§9).
 
@@ -132,7 +132,7 @@ Why:
 What it needs: `flow/` added to `SKIP_DIRS` of `tools/controlla_i18n.py` as `TP_Mine/` is (V, line 35), and the guard of `tests/test_tabui_inglese.py` (English only, never the word "formula" alone) extended to `flow/`. The only bilingual labels are the header button and the tour step, as `lang/` keys of the main app.
 
 ## 9. Probes and acceptance criteria
-`python3 docs/studi/flow_grafica/misura.py [--cpu 4]` (Chromium 1194 of `/opt/pw-browsers`, window 1366×768, cloud container with 4 CPUs). Today: **7/7 functional checks green, axe WCAG 2.2 AA 0 violations in light and dark** (V). Measures are noisy (shared container): every row gives the range of 2-3 runs.
+`python3 docs/archivio/studi/flow_grafica/misura.py [--cpu 4]` (Chromium 1194 of `/opt/pw-browsers`, window 1366×768, cloud container with 4 CPUs). Today: **7/7 functional checks green, axe WCAG 2.2 AA 0 violations in light and dark** (V). Measures are noisy (shared container): every row gives the range of 2-3 runs.
 
 | Functional check (V) | Result |
 |---|---|

@@ -257,9 +257,9 @@ const LISTE = (() => {
     };
   }
 
-  const KEY_ROWS = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti") : "qqq.contaminanti",
-    KEY_ON = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti.on") : "qqq.contaminanti.on",
-    KEY_LISTS = typeof NOMI !== "undefined" ? NOMI.KEY("liste.attive") : "qqq.liste.attive";
+  const KEY_ROWS = NOMI.KEY("contaminanti"),
+    KEY_ON = NOMI.KEY("contaminanti.on"),
+    KEY_LISTS = NOMI.KEY("liste.attive");
   const IDB_STORE = "liste_utente";
 
   const ST = /** @type {{ lists: any[], userLists: any[], idx: any, loading: Promise<void> | null, err: any, runs: WeakMap<object, any> }} */ ({
@@ -276,7 +276,7 @@ const LISTE = (() => {
   const isOn = () => rd(KEY_ON, false) === true;
 
   // Exclusions (HR only): hide a compatible peak from the lists and the tables, never change the data. Stored in the browser, the same for every file.
-  const KEY_EXCL = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti.esclusi") : "qqq.contaminanti.esclusi";
+  const KEY_EXCL = NOMI.KEY("contaminanti.esclusi");
   const exclKinds = ["entry", "cls", "list"];
   // names of the stored object (user data: do not rename)
   const FLD = /** @type {Record<string, string>} */ ({ entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" });
@@ -311,6 +311,7 @@ const LISTE = (() => {
   // the compatible entries of a peak: vis = those not excluded (the peak keeps its mark); hid = there are some, and all are excluded (the peak is hidden)
   const split = (/** @type {Bag[]} */ ms) => { const vis = ms.filter((/** @type {Bag} */ x) => !isExcluded(x)); return { vis, hid: ms.length > 0 && !vis.length }; };
   function setOn(/** @type {unknown} */ v) { wr(KEY_ON, !!v); document.querySelectorAll("#lst-cont-signs").forEach(el => { el.checked = !!v; }); if (typeof redrawAll === "function") redrawAll(); }
+  const LAB_MAX = 5000;                                              // rows taken from one imported CSV: the rest is named in the toast, never dropped silently
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = (/** @type {Bag[]} */ rows) => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
@@ -368,7 +369,7 @@ const LISTE = (() => {
     });
   }
 
-  // Per-list switches exist only when there are two or more lists; a single list (today Keller) is always on, whatever an old stored choice says
+  // Per-list switches exist only when there are two or more lists (the built-in ones are Keller and the pesticides); a single list is always on, whatever an old stored choice says
   const activeMap = () => (ST.lists.length + ST.userLists.length < 2 ? {} : rd(KEY_LISTS, {}));
 
   function reindex() {
@@ -378,16 +379,28 @@ const LISTE = (() => {
     ST.runs = new WeakMap();
   }
 
-  // loads the built-in lists once; also loads persisted user suspect lists from IndexedDB
-  function ensure() {
-    if (ST.idx || ST.loading) return ST.idx;
-    const p1 = (typeof J === "function") ? J("api/contaminants").then((/** @type {Bag} */ j) => { ST.lists = j.lists || []; }).catch((/** @type {unknown} */ e) => { ST.err = e; }) : Promise.resolve();
-    const p2 = idbGetUserLists().then(u => { ST.userLists = u || []; }).catch(() => {});
+  // Loads the built-in lists; a failed read is not final (the index stays usable with the user lists and the read is tried again on the next
+  // ready(), or from ensure() at most every RETRY_MS). IndexedDB never holds the built-in lists back: past IDB_WAIT_MS they go ahead without the user ones.
+  const RETRY_MS = 5000, IDB_WAIT_MS = 4000;
+  let errAt = 0;
+  function load() {
+    const p1 = (typeof J === "function") ? J("api/contaminants").then((/** @type {Bag} */ j) => { ST.lists = j.lists || []; ST.err = null; }).catch((/** @type {unknown} */ e) => { ST.err = e; errAt = Date.now(); }) : Promise.resolve();
+    const p2 = Promise.race([idbGetUserLists(), new Promise(res => setTimeout(() => res(null), IDB_WAIT_MS))]).then(u => { if (u) ST.userLists = u; }).catch(() => {});
     ST.loading = Promise.all([p1, p2]).then(() => { reindex(); ST.loading = null; });
-    return null;
+  }
+  function ensure() {
+    if (ST.loading) return ST.idx;
+    if (!ST.idx || (ST.err && Date.now() - errAt > RETRY_MS)) load();
+    return ST.idx;
   }
 
-  const ready = () => { ensure(); return ST.idx ? Promise.resolve() : (ST.loading || Promise.resolve()); };
+  const ready = async () => {
+    if (!ST.loading && ST.err) load();               // the caller waits for an answer: read again now
+    else ensure();
+    if (ST.loading) await ST.loading;
+  };
+  /** True when the built-in lists could not be read (the index then holds the user lists only). */
+  const failed = () => !!ST.err;
 
   // For high resolution spectra only: tooltip box on hover. null if switch is off or NOT high resolution.
   function forSpec(/** @type {number[]} */ mzs, /** @type {number[]} */ ys, /** @type {string | number | null | undefined} */ polarity, /** @type {number} */ ppm) {
@@ -473,7 +486,7 @@ const LISTE = (() => {
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
+            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n, all; try { all = csvParse(await FILESICURI.readText(f)); n = all.slice(0, LAB_MAX); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat", x.params)); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(all.length > LAB_MAX ? I18N.t("lst.lab.importedCut", { max: LAB_MAX, m: all.length, rest: all.length - LAB_MAX }) : I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }
@@ -565,18 +578,8 @@ const LISTE = (() => {
         <div id="lst-ref-box" style="display:flex;flex-direction:column;gap:6px;flex:1">
         <div class="liste-bar">
           <div class="lb-row">
-            <label><span><i>m/z</i></span> <input type="text" id="lst-mz" value="${EH(state.mz)}" placeholder="${I18N.t("lst.mzPh")}" aria-label="m/z"></label>
+            <label class="lb-grow"><span><i>m/z</i></span> <input type="text" id="lst-q" value="${EH(state.q)}" placeholder="${I18N.t("lst.qPh")}" aria-label="${I18N.t("lst.qPh")}"></label>
             <label id="lst-tol-wrap"${state.mode === "da" ? " hidden" : ""}><span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span> <input type="number" id="lst-tol" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" aria-label="${I18N.t("lst.tolAria")}"></label>
-          </div>
-          <div class="lb-row">
-            <label class="lb-grow"><span>${I18N.t("lst.search")}</span> <input type="text" id="lst-txt" value="${EH(state.text)}" placeholder="${I18N.t("lst.searchPh")}"></label>
-          </div>
-          <div class="lb-row">
-            <span class="seg" id="lst-pol-seg" title="${I18N.t("lst.polFilter")}">
-              <button type="button" data-p="1" class="${state.pol === 1 ? "on" : ""}">ESI+</button>
-              <button type="button" data-p="-1" class="${state.pol === -1 ? "on" : ""}">ESI&minus;</button>
-              <button type="button" data-p="0" class="${state.pol === 0 ? "on" : ""}">${I18N.t("lst.all")}</button>
-            </span>
           </div>
         </div>
 
@@ -594,13 +597,13 @@ const LISTE = (() => {
 
         <div id="lst-userlists-bar" style="font-size:12px;padding:4px 8px;background:var(--panel,#fff);border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
         <div id="lst-excl" class="sm" style="padding:4px 8px;border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
-        <span id="lst-count" hidden></span>
+        <span id="lst-count" class="sm muted" role="status" hidden></span>
 
         <div id="lst-table-wrap" style="flex:1;min-height:220px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-radius:6px;background:var(--panel,#fff)">
           <table class="lct" style="width:100%;border-collapse:collapse;font-size:12px">
             <thead>
               <tr style="position:sticky;top:0;background:var(--soft,#f1f5f9);z-index:2">
-                <th class="num" style="width:${state.mode === "da" ? 56 : 84}px"><i>m/z</i>${state.mode === "da" ? "" : " " + I18N.t("lst.th.theo")}</th>
+                <th class="num" style="width:${state.mode === "da" ? 76 : 84}px"><i>m/z</i>${state.mode === "da" ? "" : " " + I18N.t("lst.th.theo")}</th>
                 ${state.mode === "da" ? "" : `<th class="num" style="width:70px">&Delta;</th>`}
                 <th>${I18N.t("lst.col.name")}</th>
                 ${state.mode === "da" ? "" : `<th>${I18N.t("lst.th.series")}</th>`}
@@ -653,20 +656,17 @@ const LISTE = (() => {
 
     // Initial state of controls
     const /** @type {Bag} */ state = {
-      mz: opt.mz != null ? String(opt.mz) : "",
+      q: opt.mz != null ? String(opt.mz) : "",
       mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.TBL_HR ? (TBL_HR() ? "ppm" : "da") : "ppm")),
       tolDa: 0.5,
-      tolPpm: typeof UIP !== "undefined" && UIP.hrPpm ? UIP.hrPpm : 5,
-      text: "",
-      pol: opt.polarity === "positive" || opt.polarity === 1 ? 1 : opt.polarity === "negative" || opt.polarity === -1 ? -1 : 0
+      tolPpm: typeof UIP !== "undefined" && UIP.hrPpm ? UIP.hrPpm : 5
     };
 
     container.innerHTML = panelHtml(state);
     setupViewSwitcher(container, opt);
 
-    const elMz = container.querySelector("#lst-mz");
+    const elQ = container.querySelector("#lst-q");
     const elTol = container.querySelector("#lst-tol");
-    const elTxt = container.querySelector("#lst-txt");
     const elTbody = container.querySelector("#lst-tbody");
     const elCount = container.querySelector("#lst-count");
     const elChecks = container.querySelector("#lst-src-checks");
@@ -729,19 +729,21 @@ const LISTE = (() => {
         return;
       }
 
-      const qMz = numIt(state.mz);
-      const hasMz = isFinite(qMz) && qMz > 0;
-      const qTxt = state.text.trim().toLowerCase();
+      // one field: a plain number (comma or dot) ranks by m/z, anything else filters by name, formula, class or source
+      const qRaw = state.q.trim();
+      const hasMz = /^\d+(?:[.,]\d*)?$|^[.,]\d+$/.test(qRaw) && numIt(qRaw) > 0;
+      const qMz = hasMz ? numIt(qRaw) : NaN;
+      const qTxt = hasMz ? "" : qRaw.toLowerCase();
       const isNom = state.mode === "da";
       const tolVal = numIt(state.tol) || (isNom ? 0.5 : 5);
 
       /** @type {Bag[]} */ let items = [];
       if (hasMz) {
-        items = isNom ? findNominal(idx, state.pol, qMz, tolVal) : find(idx, state.pol, qMz, tolVal, false);
+        items = isNom ? findNominal(idx, 0, qMz, tolVal) : find(idx, 0, qMz, tolVal, false);
       } else {
         // Collect all items from active lists for browsing
         const act = activeMap();
-        const pool = arrays(idx, state.pol);
+        const pool = arrays(idx, 0);
         const seen = new Set();
         pool.forEach(arr => {
           arr.forEach((/** @type {Bag} */ it) => {
@@ -761,7 +763,11 @@ const LISTE = (() => {
 
       const limit = 400;
       const shown = items.slice(0, limit);
-      if (elCount) elCount.innerHTML = "";
+      if (elCount) {                                          // a calm note on the cut, never a silent one
+        const cut = items.length > limit;
+        elCount.hidden = !cut;
+        elCount.textContent = cut ? I18N.t("lst.cut", { n: limit, m: items.length }) : "";
+      }
 
       if (!shown.length) {
         elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;
@@ -771,18 +777,18 @@ const LISTE = (() => {
       elTbody.innerHTML = shown.map(it => {
         const delta = hasMz ? (isNom ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
                                     : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
-        const polBadge = it.pol === 1 ? `<span class="pol pos" style="font-size:10px">ESI+</span>` : it.pol === -1 ? `<span class="pol neg" style="font-size:10px">ESI&minus;</span>` : `<span class="pol both" style="font-size:10px">&plusmn;</span>`;
+        const polBadge = it.pol === 1 ? `<span class="pol pos" title="${I18N.t("lst.pol.pos")}" style="font-size:12px">+</span>` : it.pol === -1 ? `<span class="pol neg" title="${I18N.t("lst.pol.neg")}" style="font-size:12px">&minus;</span>` : `<span class="pol both" title="${I18N.t("lst.pol.both")}" style="font-size:12px">&plusmn;</span>`;
         const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">${I18N.t(it.series.n === 1 ? "lst.unitShort.one" : "lst.unitShort.many", { n: it.series.n })}</span>` : "";
         if (isNom) return `<tr>
-          <td class="num font-mono"><b>${Math.round(it.mz)}</b></td>
-          <td><b>${EH(it.name)}</b></td>
+          <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
+          <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
           <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
           <td>${polBadge}</td>
         </tr>`;
         return `<tr>
           <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
           <td class="num sm muted">${delta}</td>
-          <td><b>${EH(it.name)}</b></td>
+          <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
           <td>${seriesInfo}</td>
           <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
           <td>${it.formula ? fmtSub(it.formula) : "<span class='muted'>&ndash;</span>"}</td>
@@ -794,22 +800,13 @@ const LISTE = (() => {
     }
 
     // Bind event listeners
-    elMz.oninput = (/** @type {Event} */ e) => { state.mz = /** @type {HTMLInputElement} */ (e.target).value; render(); };
-    elTxt.oninput = (/** @type {Event} */ e) => { state.text = /** @type {HTMLInputElement} */ (e.target).value; render(); };
+    elQ.oninput = (/** @type {Event} */ e) => { state.q = /** @type {HTMLInputElement} */ (e.target).value; render(); };
     elTol.oninput = (/** @type {Event} */ e) => {
       const v = parseFloat(/** @type {HTMLInputElement} */ (e.target).value);
       if (state.mode === "da") state.tolDa = v || 0.5;
       else state.tolPpm = v || 5;
       render();
     };
-
-    container.querySelectorAll("#lst-pol-seg button").forEach((/** @type {HTMLElement} */ b) => {
-      b.onclick = () => {
-        state.pol = Number(b.dataset.p);
-        container.querySelectorAll("#lst-pol-seg button").forEach((/** @type {HTMLElement} */ x) => x.classList.toggle("on", x === b));
-        render();
-      };
-    });
 
     ready().then(() => {
       renderSourceChecks();
@@ -847,12 +844,12 @@ const LISTE = (() => {
   // the actions of the spectrum menu (registry azioni/1): the lists of contaminants, the known ones at this m/z (high resolution), add a laboratory contaminant
   if (typeof AZIONI !== "undefined") {
     const S = ["spec"], T = I18N.t.bind(I18N);
-    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, menu: false, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.contLists"), esegui: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a.hrp }) });
+    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, menu: false, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.contLists"), esegui: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a?.hrp }) });
     AZIONI.registra({ id: "spec.known", gruppo: "cont", viste: S, voci: (/** @type {Bag} */ c) => {
-      const kn = c.a.hrp && c.has && isOn() && c.a.cont ? c.a.cont.match(c.m) : [];
+      const kn = c.a?.hrp && c.has && isOn() && c.a.cont ? c.a.cont.match(c.m) : [];
       return kn.length ? [{ nome: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, info: true, esegui: () => {} }] : [];
     } });
-    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, menu: false, visibile: (/** @type {Bag} */ c) => !!c.a.hrp, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.addLab"), esegui: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
+    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, menu: false, visibile: (/** @type {Bag} */ c) => !!c.a?.hrp, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.addLab"), esegui: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
   }
   return {
     tolDa,
@@ -875,6 +872,7 @@ const LISTE = (() => {
     compat, isExcluded, keyFor, exclSet, exclReset, exclExport, exclImport, exclItems, split,
     ensure,
     ready,
+    failed,
     isOn,
     setOn,
     openLab,

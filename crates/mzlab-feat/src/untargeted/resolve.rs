@@ -269,10 +269,16 @@ fn make_feature(rt: &[f64], c: &Chrom, s: usize, e: usize) -> Feature {
 /// Resolves one trace: `c` covers the whole run (zeros included), `rt` is the RT of each scan in min, strictly increasing. A trace whose `y` and
 /// `rt` differ in length gives nothing. The input is not modified (the threshold works on a copy; the peaks keep their original intensities).
 pub fn resolve(c: &Chrom, rt: &[f64], p: &MinParams) -> Vec<Feature> {
-    if c.y.len() != rt.len() || c.mz.len() != rt.len() {
+    resolve_on(c, &c.y, rt, p)
+}
+
+/// [`resolve`] walking on `shape` (the smoothed trace, same length) instead of the trace itself: the limits come from `shape`, height, area, apex and
+/// m/z from `c`. With `shape == c.y` it is [`resolve`].
+pub fn resolve_on(c: &Chrom, shape: &[f64], rt: &[f64], p: &MinParams) -> Vec<Feature> {
+    if c.y.len() != rt.len() || c.mz.len() != rt.len() || shape.len() != rt.len() {
         return Vec::new();
     }
-    let mut y = c.y.clone();
+    let mut y = shape.to_vec();
     regions(rt, &mut y, p)
         .into_iter()
         .map(|(s, e)| make_feature(rt, c, s, e))

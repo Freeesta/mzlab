@@ -31,31 +31,34 @@ async function fileId(blob, name) {
   const nm = name || blob.name;
   if (!nm) throw JSON.stringify({ error_key: "err.file.raw", params: { detail: "no file" } });
   let id = null;
+  // the File's date goes along: the app keeps it, and a file of the same name, size and date already there answers at the first piece (nothing sent again)
+  const q = blob.lastModified ? { mtime: blob.lastModified } : {};
   for (let off = 0; off === 0 || off < blob.size; off += CHUNK) {
     // bytes, not a Blob: WKWebView (macOS) hands a custom-scheme handler an empty body for a Blob
     const piece = new Uint8Array(await blob.slice(off, off + CHUNK).arrayBuffer());
-    const j = await (await post("lr/upload", { name: nm, off, total: blob.size }, piece)).json();
-    if (j.id) id = j.id;
+    const j = await (await post("lr/upload", { name: nm, off, total: blob.size, ...q }, piece)).json();
+    if (j.id) { id = j.id; break; }
   }
   if (!id) throw JSON.stringify({ error_key: "err.file.unknown", params: { detail: "upload" } });
   known.set(blob, id);
   return id;
 }
 
-// the members of a dataset (`[{ name, blob }]`, the Files of the window) as `[{ name, fid }]`
-const members = list => Promise.all(list.map(async x => ({ name: x.name, fid: await fileId(x.blob) })));
+// the members of a dataset (`[{ name, blob }]`, the Files of the window) as `[{ name, fid }]`; a member sent as bytes is named by its path in the picked
+// folder (`/` -> `~`), so the MSScan.bin of two .D folders are two files
+const members = list => Promise.all(list.map(async x => ({ name: x.name, fid: await fileId(x.blob, (x.blob.webkitRelativePath || x.name).replace(/[\\/]/g, "~")) })));
 
 // the File the bridge keeps for a file of the app: empty, with its number in `type` (the bridge only passes it back)
 const stub = (name, id) => new File([], name, { type: tag(id) });
 
 // The WASM worker does one thing at a time, in the order of the messages (a `reset` sent just before the `idxopen` of the new session cannot overtake it).
 // The native engine answers from several threads, so the messages are put in a line here; only the long ones that have a thread pool or a
-// progress of their own (index builds, the mzML of a sample written on request) do not wait for the others.
+// progress of their own (index builds, the mzML of a sample written on request) do not wait for the others, nor does «Cancel» of the loading (lr_cancel), which stops them.
 let line = Promise.resolve();
 onmessage = ev => {
   const m = ev.data;
   if (m.op === "recycle") return;
-  if (m.op === "lr_index" || m.op === "lr_index_cen" || m.op === "lr_warm" || m.op === "nat2mzml" || m.op === "mzml2cen") { handle(m); return; }
+  if (m.op === "lr_index" || m.op === "lr_index_cen" || m.op === "lr_cancel" || m.op === "lr_warm" || m.op === "nat2mzml" || m.op === "mzml2cen") { handle(m); return; }
   line = line.then(() => handle(m));
 };
 
@@ -93,7 +96,7 @@ async function handle(m) {
         for (const [k, v] of Object.entries(m)) if (k !== "id" && k !== "blob" && k !== "nat" && k !== "members") p[k] = v;
         if (m.nat) p.nat = { key: m.nat.key, c: m.nat.c, id: m.nat.id, centroid: m.nat.centroid, members: await members(m.nat.members) };      // a sample of a maker's file: its members stay on the disk
         else if (m.blob) p.fid = await fileId(m.blob, m.op === "lr_put" || m.op === "lr_warm" || m.op === "lr_warm_claim" ? m.name : undefined);
-        if (m.op === "natsamples") p.members = await members(m.members);
+        if (m.op === "natsamples" || m.op === "natsame") p.members = await members(m.members);
         if (m.op === "idxopen") tileName.set(m.slot, m.name);
         if (m.op === "msngrafo") p.name = tileName.get(m.slot) || "";
         const r = await post("rpc", undefined, JSON.stringify(p));

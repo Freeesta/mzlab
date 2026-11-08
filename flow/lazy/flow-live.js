@@ -23,7 +23,7 @@
   const session = S => ({
     S, plan: S.plan, items: /** @type {any[]} */ ([]), ok: false, q: Promise.resolve(), seq: 0, sent: "", keys: new Map(), nodes: new Map(), info: new Map(), errors: new Map(), last: new Map(),
     running: new Map(), observing: new Map(), waitingInput: new Set(), memAsk: new Map(), allowed: new Set(), loading: new Map(), listeners: new Set(), log: /** @type {any[]} */ ([]), logFrom: 0,
-    waitingProfile: new Set(), files: new Map(), pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
+    waitingProfile: new Set(), waitingSource: new Set(), files: new Map(), pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
   });
 
   /** @param {any} x @param {string} op @param {any} [body] one call to the scheduler; the calls go one after the other, and a change is followed by a read of the events */
@@ -92,8 +92,9 @@
     const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""), input = open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML"; return { input, stem, idx: f, cen: f.cen || null, mode: modeOf(input), ...sizeOf(input) }; });
     for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null, cen: null, mode: modeOf(stem + ".mzML"), ...sizeOf(stem + ".mzML") });
     // the files in the order of the plan's scan inputs, the order `flow run` aligns them in (a file the plan does not name follows, by name: the sort is stable)
-    const named = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml").map((/** @type {any} */ i) => stemOf(i.name));
-    const rank = (/** @type {any} */ i) => { const k = named.indexOf(i.stem); return k < 0 ? named.length : k; };
+    const named = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml").map((/** @type {any} */ i) => i.name);
+    // a file is the plan's input by its name, or by its stem (the index of a file is named after the file with or without its extension)
+    const rank = (/** @type {any} */ i) => { const k = named.findIndex((/** @type {string} */ n) => n === i.input || n === i.stem || stemOf(n) === i.stem || stemOf(n) === stemOf(i.stem)); return k < 0 ? named.length : k; };
     items.sort((a, b) => rank(a) - rank(b));
     // an MSn step reads the infusion open in Data, not the first file of the series: its key follows that file
     const infusion = (() => { try { return F.runPlanFromData(S).names[0]; } catch (_) { return ""; } })(), msnSteps = F.webMsn ? F.webMsn.STEPS : [];
@@ -101,6 +102,8 @@
     if (items.length && first) {
       const refs = items.map((/** @type {any} */ i) => "file:" + i.input);
       plan.inputs.splice(plan.inputs.indexOf(first), 1, ...items.map((/** @type {any} */ i) => ({ name: i.input, sha256: "", type: first.type })));
+      // the other scan inputs the plan already names are among the items now: each file once
+      plan.inputs = plan.inputs.filter((/** @type {any} */ i, /** @type {number} */ k, /** @type {any[]} */ all) => !(i.type === first.type && all.findIndex((/** @type {any} */ j) => j.name === i.name && j.type === i.type) !== k));
       for (const s of plan.steps) for (const [port, v] of Object.entries(s.in || {})) {
         const list = [].concat(/** @type {any} */ (v)), at = list.indexOf("file:" + first.name);
         if (at < 0) continue;
@@ -184,6 +187,10 @@
     for (const [key, spec] of [...x.observing]) { const it = x.item(spec.item); if (it && it.idx) { x.observing.delete(key); await call(x, "finished", { job: jobOf(key), result: { ms: 0 } }); } }
     for (const key of [...x.waitingInput]) { const it = x.item(jobOf(key).item); const inst = instOf(x, jobOf(key).instance); if (it && inst && (base(inst) === "features.detect" ? x.source(it) : it.idx)) { x.waitingInput.delete(key); await call(x, "unblock", { job: jobOf(key) }); } }
     for (const key of [...x.waitingProfile]) { const it = x.item(jobOf(key).item); if (!it || !x.profileHeld(it)) { x.waitingProfile.delete(key); await call(x, "unblock", { job: jobOf(key) }); } }
+    for (const key of [...x.waitingSource]) {
+      const it = x.item(jobOf(key).item), rb = await G.MZLAB_RUST_READY, c = it && rb && rb.flowCentroid && rb.flowCentroid.can ? await rb.flowCentroid.can(it.input) : null;
+      if (!it || (c && (c.source || c.have))) { x.waitingSource.delete(key); await call(x, "unblock", { job: jobOf(key) }); }
+    }
     for (const [stem] of [...x.loading]) if (x.items.some((/** @type {any} */ i) => i.stem === stem && i.idx)) x.loading.delete(stem);
   };
 
@@ -208,7 +215,7 @@
     x.sent = text;
     for (const c of await call(x, "update", { plan: JSON.parse(text) })) {
       const key = jk(c);
-      x.memAsk.delete(key); x.observing.delete(key); x.waitingInput.delete(key); x.waitingProfile.delete(key);
+      x.memAsk.delete(key); x.observing.delete(key); x.waitingInput.delete(key); x.waitingProfile.delete(key); x.waitingSource.delete(key);
       kit().poolIfAny()?.cancelJob(key);
     }
   };
@@ -251,6 +258,8 @@
     await replan(x);
   };
 
+  /** the record of the run of `x` (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run @param {any} x */
+  const recordOf = async (/** @type {any} */ x) => F.webProv ? F.webProv.record(x, /** @type {any[]} */ (await call(x, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
   const refused = (/** @type {any} */ x, /** @type {string} */ instance) => x.errors.get(instance) || Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: {} });
   /** the page asks to use more memory for the blocked alignments; the user answers once, and only here (never in the middle of an edit) @param {any} x @param {any} o */
   const answerAsks = async (x, o) => {
@@ -301,15 +310,21 @@
         await new Promise(res => { live.waiters.push(res); setTimeout(res, 5000); });
       }
       const bad = /** @type {any[]} */ ((await call(live, "nodes"))).find(n => n.state === "error" || n.state === "refused");
-      if (bad) throw refused(live, bad.instance);
+      // a run that failed keeps its record too, as `flow run` writes prov.json with the error of the step
+      if (bad) { await recordOf(live); throw refused(live, bad.instance); }
     } finally { live.listeners.delete(o.onEvent); }
     live.logFrom = live.log.length;
     const al = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.align"), key = al && live.keys.get(`${al.id}|`);
     const table = key ? await (await kit().getPool()).fs.read(F.liveJobs.DIR + key + ".mzfeat") : null;
-    // the record of the run (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run
-    const record = F.webProv ? await F.webProv.record(live, /** @type {any[]} */ (await call(live, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
+    const record = await recordOf(live);
     // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})
-    return { record, steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.map((/** @type {any} */ i) => live.files.get(i.id)).filter(Boolean), llm: S.llmRef || null };
+    return { record, steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.flatMap((/** @type {any} */ i) => filesOf(live, i.id)), llm: S.llmRef || null };
+  };
+
+  /** the texts a step made in the live session `live`: one, or one per file of the plan for a per-file step (keyed by job, in the order of the files) @param {any} live @param {string} id */
+  const filesOf = (live, id) => {
+    const one = live.files.get(id), names = (live.plan.inputs || []).map((/** @type {any} */ f) => f.name);
+    return one ? [one] : names.map((/** @type {string} */ n) => live.files.get(id + "|" + n)).filter(Boolean);
   };
 
   /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null @param {any} S */

@@ -47,7 +47,7 @@ try:
             assert pg.locator("#bug-prev").count() == 0 and pg.locator("#bug-exp").count() == 0 and pg.locator("#bug-diag").count() == 0
             assert pg.evaluate("document.querySelector('#uipset').getAttribute('role')") == "dialog"
             assert pg.get_attribute("#bug-what", "id") == "bug-what" and pg.locator("label[for=bug-what]").count() == 1, "the field has a label"
-            pg.click("#uip-bug details > summary"); attendi(pg, "document.querySelector('#bug-diagtxt').textContent !== ''")
+            pg.click("#uip-bug details > summary"); wait_for_js(pg, "document.querySelector('#bug-diagtxt').textContent !== ''")
             assert pg.is_visible("#bug-what"), "form still open"
             t = pg.inner_text("#bug-diagtxt")
             assert "- mzLab:" in t and "- Mode: web" in t and "- Loaded files: 1 (mzML" in t and "- Service worker:" in t and "Recent errors:" in t, t
@@ -59,7 +59,7 @@ try:
             t = report(); assert "## Cosa è successo\n\nIl grafico" in t and "Cosa mi aspettavo" not in t and "## Diagnostica" in t and "- mzLab:" in t
         step("the field builds the text; the diagnostics are always added", field)
         def copy():
-            pg.click("#bug-copy"); attendi(pg, "document.querySelector('#bug-st').textContent !== ''")
+            pg.click("#bug-copy"); wait_for_js(pg, "document.querySelector('#bug-st').textContent !== ''")
             clip = pg.evaluate("navigator.clipboard.readText()"); assert clip == report() and "## Cosa è successo" in clip
             assert pg.inner_text("#bug-st") == "Rapporto copiato"
         step("Copy report puts the whole text on the clipboard", copy)
@@ -86,9 +86,9 @@ try:
             assert pg.evaluate("document.activeElement.id") == "np-set", "Esc closes the settings and gives the focus back to the gear"
         step("keyboard: Tab moves through the panel, Esc closes it and returns the focus to the gear", keys)
         def other_views():
-            pg.click("#nav button[data-v=draw]"); attendi(pg, "document.querySelector('#nav button[data-v=draw]').classList.contains('on')")
+            pg.click("#nav button[data-v=draw]"); wait_for_js(pg, "document.querySelector('#nav button[data-v=draw]').classList.contains('on')")
             assert pg.locator("#bug-btn").count() == 0
-            pg.click("#nav button[data-v=draw]"); attendi(pg, "document.querySelector('#nav button[data-v=draw]').classList.contains('on')")
+            pg.click("#nav button[data-v=draw]"); wait_for_js(pg, "document.querySelector('#nav button[data-v=draw]').classList.contains('on')")
             opengroup(); assert "draw" in report(); closepanel()
             pg.click("#nav button[data-v=data]")
         step("the report is in the settings of Dati and Disegno", other_views)
@@ -100,8 +100,8 @@ try:
             assert "## What happened" in report(); closepanel(); pg.evaluate("I18N.set('it')"); pg.wait_for_function("window.qqReady===true && I18N.lang === 'it'", timeout=60000)
         step("English", english)
         def narrow():
-            pg.set_viewport_size({"width": 390, "height": 800}); attendi(pg, "innerWidth === 390")
-            try: attendi(pg, "document.documentElement.scrollWidth <= innerWidth + 1", 5000)      # the header relayouts on the resize event
+            pg.set_viewport_size({"width": 390, "height": 800}); wait_for_js(pg, "innerWidth === 390")
+            try: wait_for_js(pg, "document.documentElement.scrollWidth <= innerWidth + 1", 5000)      # the header relayouts on the resize event
             except TimeoutError: raise AssertionError("no horizontal scroll: " + pg.evaluate("JSON.stringify({sw: document.documentElement.scrollWidth, iw: innerWidth, wide: [...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 5).map(e => e.id || e.className || e.tagName)})"))
             pg.set_viewport_size({"width": 1500, "height": 2200})
         step("narrow window: the header does not overflow", narrow)

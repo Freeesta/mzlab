@@ -4,14 +4,16 @@
 declare var APP_NAME: string;
 declare var MZLAB_VERSION: string;
 declare var MZLAB_COMMIT: string;
+declare var canvasScale: (w: number, h: number, s: number) => number;
 declare var MZLAB_PHONE: boolean;
-declare var QQQ_PHONE: boolean;
 declare var MZLAB_DESKTOP: boolean;
 declare var MZLAB_LAB: any;
 declare var TOURCARICA: any;
 declare var SITO_PUBBLICO: { readonly scaricaApp: boolean };
 declare var MZLAB_TOFILE: ((f: { id: number; name: string; size: number }) => File) | undefined;
 declare var __TAURI__: any;
+// compat.js: a copy handed to the clipboard inside the click, its content still to come (Safari)
+declare var clipboardCopy: (parts: Record<string, string | Blob | Promise<string | Blob>>) => Promise<void>;
 declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 // Browser API not yet in lib.dom (File System Observer) and globals of the TP_Mine scripts, which load lazily after the page.
 declare var FileSystemObserver: any;
@@ -49,7 +51,7 @@ interface FileSystemDirectoryHandle { entries(): AsyncIterableIterator<[string, 
 interface FileSystemSyncAccessHandle { close(): void; flush(): void; getSize(): number; truncate(size: number): void; read(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number; write(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number }
 type DrawKet = any;  // Ketcher editor object or one of its parts (vendor bundle, untyped)
 type DrawLine = [string | number, string][];  // one line of a drawing label: pieces [text, "sub" | "sup" | "it" | ""]
-type DrawStruct = { formula: string, mass: number, n: Record<string, number>, q: number, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing
+type DrawStruct = { formula: string, text: string, mass: number, nominal: number, mz: number | null, q: number, error?: string, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing (numbers from `etich/1`)
 /** A file of the loading table / of ST.files as the engine reports it (shell.js, explore.js): the fields differ by experiment, so only `name` is fixed. */
 type FileRiga = { name: string; [k: string]: any };
 /** A file open in the session (E.files): `file` is its name in the session, `gone` marks one taken away. */
@@ -57,7 +59,7 @@ type FileAperto = { file: string; label?: string; gone?: boolean; color?: string
 /** A file still to be opened one by one (E.pending). */
 type Pendiente = { file: string; label: string; state: string; msg?: string };
 /** A file as the loading code handles it: the File of the picker or of a converter, plus the records that makers (Rust engine, readers module) attach. */
-type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { motivi: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any } };
+type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { motivi: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any }; mzlabGz?: { name: string; size: number }; mzlabTemp?: string };
 /** What one loading collects for the notice after it (shell.js reportLoad). */
 type CaricaRep = { unopen: { name: string; ext: string; label: string; st: string }[]; other: string[]; errs: Record<string, string[]>; moved: { dam: string[]; data: string[] }; notes: string[]; diag?: Record<string, any>; [k: string]: any };
 

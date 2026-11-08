@@ -225,7 +225,12 @@ fn split_duplicates(
 }
 
 /// Appends one group to `out` (largest area per file gives apex and limits; weighted m/z and RT).
-fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned, adj: Option<&RtMap>) {
+pub(crate) fn push_group(
+    files: &[&FileFeatures],
+    items: &[Item],
+    out: &mut Aligned,
+    adj: Option<&RtMap>,
+) {
     let nf = out.n_files;
     let base = out.area.len();
     out.area.resize(base + nf, 0.0);

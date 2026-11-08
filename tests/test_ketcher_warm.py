@@ -1,4 +1,5 @@
-"""first-paint.js: Ketcher is warmed by ONE policy (low-priority prefetch links, only after the page and any file load are quiet), never read into memory."""
+"""first-paint.js: Ketcher is warmed by ONE policy (low-priority prefetch links, only after the page and any file load are quiet), never read into memory;
+a click on a tool tab (Flow, Tabui) before the loader exists is kept for tpmine-loader.js to replay."""
 import json, pathlib, shutil, subprocess
 import pytest
 
@@ -9,9 +10,10 @@ HARNESS = r'''
 const src = require("fs").readFileSync(process.argv[1], "utf8");
 function make(o) {
   const log = { fetches: [], links: [], idle: 0 }, tm = [], ev = {}; let now = 0;
-  const el = () => ({ attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k] ?? null; } });
-  const win = { QQQ_PHONE: !!o.phone, requestIdleCallback: f => { log.idle++; tm.push([now, f]); } };
-  const doc = { getElementById: () => Object.assign(el(), { removeAttribute() {}, contentWindow: {} }), write() {}, createElement: () => el(), head: { appendChild: l => log.links.push(l) },
+  const el = () => ({ attrs: {}, on: {}, setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k] ?? null; }, addEventListener(n, f) { (this.on[n] = this.on[n] || []).push(f); } });
+  const byId = {};
+  const win = { MZLAB_PHONE: !!o.phone, requestIdleCallback: f => { log.idle++; tm.push([now, f]); } };
+  const doc = { getElementById: id => byId[id] || (byId[id] = Object.assign(el(), { removeAttribute() {}, contentWindow: {} })), write() {}, createElement: () => el(), head: { appendChild: l => log.links.push(l) },
     };
   const ctx = { window: win, document: doc, location: { hash: o.hash || "", href: "http://x/" }, URL, DOMParser: class { parseFromString() {
       return { querySelectorAll: () => [Object.assign(el(), { attrs: { src: "./assets/a.js", crossorigin: "" } })] }; } },
@@ -20,7 +22,7 @@ function make(o) {
     addEventListener: (n, f) => { (ev[n] = ev[n] || []).push(f); }, setTimeout: (f, d) => tm.push([now + d, f]), Date: { now: () => now } };
   ctx.window.addEventListener = ctx.addEventListener;
   require("vm").runInNewContext(src, Object.assign(ctx, win));
-  return { ctx, log, fire: n => (ev[n] || []).forEach(f => f({})),
+  return { ctx, log, byId, fire: n => (ev[n] || []).forEach(f => f({})),
     at: ms => { while (true) { tm.sort((a, b) => a[0] - b[0]); if (!tm.length || tm[0][0] > ms) break; const [t, f] = tm.shift(); now = Math.max(now, t); f(); } now = ms; } };
 }
 '''
@@ -72,6 +74,19 @@ console.log(JSON.stringify(r));
 ''')
     assert out["save"][0] == 0 and out["off"] == [0, "function"] and out["phone"] == [0, "undefined"] and out["draw"][0] == 0
     assert out["hover"] == 1
+
+
+@pytest.mark.skipif(not NODE, reason="node not available")
+def test_a_tool_tab_clicked_before_the_loader_is_kept_for_the_replay():
+    out = run('''
+const h = make({}); const nav = h.byId.nav; const w = h.ctx.window;
+const click = v => nav.on.click.forEach(f => f({ target: { closest: s => s === "[data-late]" && v ? { dataset: { v } } : null } }));
+click(null); const plain = w.MZLAB_LATE_CLICK === undefined ? "unset" : w.MZLAB_LATE_CLICK;
+click("flow"); const early = w.MZLAB_LATE_CLICK;
+w.QTOOLS = {}; w.MZLAB_LATE_CLICK = null; click("tpmine"); const late = w.MZLAB_LATE_CLICK;
+console.log(JSON.stringify({ n: nav.on.click.length, plain, early, late }));
+''')
+    assert out == {"n": 1, "plain": "unset", "early": "flow", "late": None}
 
 
 def test_shell_has_no_second_ketcher_policy():

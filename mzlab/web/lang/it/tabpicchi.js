@@ -1,5 +1,5 @@
 I18N.add("it", {
-  "tabp.btn.title": "Tabella picchi: elenco dei picchi dello spettro da copiare",
+  "tabp.btn.title": "Tabella picchi: i picchi dello spettro",
   "tabp.title": "Tabella picchi",
   "tabp.f.sample": "Campione",
   "tabp.f.scan": "Scansione",
@@ -20,6 +20,10 @@ I18N.add("it", {
   "tabp.c.rel": "Intensità relativa (%)",
   "tabp.c.dmz": "Δm/z dal precursore",
   "tabp.c.nl": "Perdita neutra",
+  "tabp.f.range": "Intervallo m/z",
+  "tabp.csv": "Scarica CSV",
+  "tabp.file": "picchi",
+  "tabp.dl": "Elenco picchi (CSV)",
   "tabp.copy": "Copia",
   "tabp.close": "Chiudi",
   "tabp.copied": "Copiato",

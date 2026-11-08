@@ -52,7 +52,7 @@ function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOB
           const r = COMANDI.fai("samples.meta", COMANDI.GLOBALE, () => importTsv(tx));
           paint(box);
           msg(box, r.changed ? t("meta.imported", { n: r.changed }) + (r.unknown.length ? " " + t("meta.unknown", { list: r.unknown.join(", ") }) : "") : t("meta.imported.none"), !r.changed);
-        }, x => msg(box, I18N.t(x.key || "workflow.err.invalidFormat"), true));
+        }, x => msg(box, I18N.t(x.key || "workflow.err.invalidFormat", x.params), true));
         return;
       }
       if (!f) return;
@@ -77,7 +77,7 @@ function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOB
       if (e.target.id === "cmp-exp") {
         dl("metadata.tsv", tsvText(), "text/tab-separated-values", { table: "metadata" });
       } else if (e.target.id === "cmp-copy") {
-        PROV.tsv(tsvText(), { table: "metadata" }).then(tx => navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));
+        clipboardCopy({ "text/plain": PROV.tsv(tsvText(), { table: "metadata" }) }).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));
       }
     };
   }

@@ -123,12 +123,29 @@ fn uploading_the_same_name_again_is_found_by_its_new_size() {
     let data = tempfile::tempdir().unwrap();
     let st = State::new();
     st.set_data_folder(data.path().join("app"));
-    let first = st.upload_chunk("again.mzML", 0, 3, b"abc").unwrap().unwrap();
+    let first = st.upload_chunk("again.mzML", 0, 3, None, b"abc").unwrap().unwrap();
     assert_eq!(st.find("again.mzML", 3), Some(first));
-    let second = st.upload_chunk("again.mzML", 0, 5, b"abcde").unwrap().unwrap();
+    let second = st.upload_chunk("again.mzML", 0, 5, None, b"abcde").unwrap().unwrap();
     assert_eq!(second, first, "same path, same number");
     assert_eq!(st.find("again.mzML", 5), Some(first), "the lookup by the new size works");
     assert_eq!(st.find("again.mzML", 3), None, "the old size is gone");
+}
+
+#[test]
+fn a_file_sent_again_with_its_date_is_not_written_again() {
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    let t = 1_700_000_000_123u64;
+    let first = st.upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t), b"abc").unwrap().unwrap();
+    let path = data.path().join("app/files/uno.D~AcqData~MSScan.bin");
+    let ms = |p: &Path| std::fs::metadata(p).unwrap().modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
+    assert_eq!(ms(&path), t, "the received file keeps the date of the File");
+    let again = st.upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t), b"xyz").unwrap().unwrap();
+    assert_eq!(again, first, "same path, same number");
+    assert_eq!(std::fs::read(&path).unwrap(), b"abc", "same name, size and date: the first piece is not written");
+    st.upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t + 1), b"xyz").unwrap().unwrap();
+    assert_eq!((std::fs::read(&path).unwrap(), ms(&path)), (b"xyz".to_vec(), t + 1), "another date: the file is written again");
 }
 
 /// Registers the example, builds its index and opens it in the first slot of the page's list (1_000_001); returns the engine, the name and the keep-alive folders.
@@ -156,4 +173,33 @@ fn freeing_derived_indexes_closes_them_first() {
     assert!(slot_answers(&st));
     st.rpc("lr_space", &json!({"free": "derived"}), &[]).unwrap();
     assert!(!slot_answers(&st), "the index is unmapped before its file is deleted");
+}
+
+#[test]
+fn a_file_changed_on_disk_loses_its_index_at_the_next_boot_even_after_another_listing() {
+    let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let data = tempfile::tempdir().unwrap();
+    let f = data.path().join("a.mzML");
+    std::fs::copy(&ex, &f).unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    st.set_index_folder(data.path().join("idx")).unwrap();
+    let (id, _) = st.pick(f.clone()).unwrap();
+    st.rpc("lr_put", &json!({"name": "a.mzML", "fid": id}), &[]).unwrap();
+    st.rpc("lr_index", &json!({"name": "a.mzML"}), &[]).unwrap();
+    let mut b = std::fs::read(&f).unwrap();
+    b.extend_from_slice(b"\n");
+    std::fs::write(&f, b).unwrap();                                       // the student writes the file again under the same name
+    st.rpc("lr_space", &json!({}), &[]).unwrap();                         // a listing that is not the boot
+    let st2 = State::new();
+    st2.set_data_folder(data.path().join("app"));
+    st2.set_index_folder(data.path().join("idx")).unwrap();
+    let boot = text(st2.rpc("lr_boot", &json!({}), &[]).unwrap());
+    assert!(boot.contains("\"indexed\":false"), "the index of the old bytes is dropped: {boot}");
+    st2.rpc("lr_index", &json!({"name": "a.mzML"}), &[]).unwrap();
+    let st3 = State::new();
+    st3.set_data_folder(data.path().join("app"));
+    st3.set_index_folder(data.path().join("idx")).unwrap();
+    let boot = text(st3.rpc("lr_boot", &json!({}), &[]).unwrap());
+    assert!(boot.contains("\"indexed\":true"), "the index built after the change is kept: {boot}");
 }

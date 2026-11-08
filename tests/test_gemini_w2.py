@@ -90,7 +90,7 @@ def test_f7_a_failed_script_is_loaded_again_by_a_later_call(tmp_path):
 const added = [], timers = [];
 let fail = true;
 const body = { appendChild(s) { added.push(s); setImmediate(() => (fail ? s.onerror() : s.onload())); } };
-global.window = { QQQ_PHONE: false };
+global.window = { MZLAB_PHONE: false };
 global.document = { body, createElement: () => ({ parentNode: null }), addEventListener() {} };
 global.localStorage = { getItem: () => null }; global.setTimeout = (f) => { timers.push(f); return 0; };
 const src = require("fs").readFileSync(%r, "utf8").replace(/var L = \\[[^\\]]*\\];/, "var L = [];");

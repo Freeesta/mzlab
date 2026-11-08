@@ -1,11 +1,10 @@
-"""An Agilent MassHunter .D folder loaded with «Load a folder» (cartella-carica.js + agilent-d.js), on the built site with the Rust engine and WITHOUT Pyodide
-(?motore=rust&lr=1): the folder becomes one mzML (named like the folder), listed and indexed like any file, with its TIC; a .D without MSPeak.bin gives a notice;
+"""An Agilent MassHunter .D folder loaded with «Load a folder» (cartella-carica.js + agilent-d.js), on the built site with the Rust engine and WITHOUT Pyodide: the folder becomes one mzML (named like the folder), listed and indexed like any file, with its TIC; a .D without MSPeak.bin gives a notice;
 two .D folders give two files. Synthetic folders of tools/agilent_sintetico.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
 import os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, attendi
+from lib import ROOT, wait_for_js
 sys.path.insert(0, str(ROOT / "tools"))
 import agilent_sintetico
 sys.path.insert(0, str(ROOT / "tests_e2e"))
@@ -47,7 +46,7 @@ try:
         c.on("request", lambda r: reqs.append(r.url)); pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def folder():
             pg.set_input_files("#pickdir", str(top))
@@ -64,7 +63,7 @@ try:
         def tidy():
             pg.wait_for_function("document.querySelector('#cartinfo').hidden || !document.querySelector('#cartinfo').textContent", timeout=60000)       # «Folder …: n files to load» goes away when the load is done
             assert ".D" in pg.inner_text("#drop")
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#samptab').hidden", 60000)
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#samptab').hidden", 60000)
             pg.wait_for_selector("#dpanels .pnl canvas", timeout=120000)      # the first file read opens by itself, the others wait in the list
             assert pg.evaluate("document.querySelectorAll('#flist input[data-k=use]').length") >= 4      # the others wait in the list
         step("loaded: no leftover «files to load» line, .D in the drop text, the first file open, the others listed", tidy)

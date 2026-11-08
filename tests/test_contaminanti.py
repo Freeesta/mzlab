@@ -22,7 +22,7 @@ def one(i, ad, n=None):
     return r[0]
 
 
-def test_valori_calcolati_del_prompt():
+def test_computed_values_of_the_prompt():
     assert one("siloxano_ciclico", "[M+H]+", 6) == pytest.approx(445.1200, abs=5e-5)
     assert one("siloxano_ciclico", "[M+NH4]+", 6) == pytest.approx(462.1466, abs=5e-5)
     assert one("erucamide", "[M+H]+") == pytest.approx(338.3417, abs=5e-5)
@@ -41,7 +41,7 @@ def test_peg_series_and_double_charge():
     assert one("siloxano_ciclico", "[M+H]+", 7) - one("siloxano_ciclico", "[M+H]+", 6) == pytest.approx(74.0188, abs=1e-3)
 
 
-def test_polarita_negativa_e_solo_mz():
+def test_negative_polarity_and_mz_only():
     it = [x for x in builtin()["items"] if x["id"] == "phosphoric_acid"][0]
     assert it["pol"] == -1 and it["mz"] == pytest.approx(96.9696, abs=5e-4)
     assert one("tfa", "[M-H]-") == pytest.approx(112.9856, abs=5e-4)
@@ -50,7 +50,7 @@ def test_polarita_negativa_e_solo_mz():
     assert {x["pol"] for x in builtin()["items"]} == {1, -1}
 
 
-def test_voci_keller_si_espandono_e_combaciano():
+def test_keller_entries_expand_and_match():
     """Every entry comes from Keller 2008 and expands; masses computed by us (not copied from the table) of some of the entries added after the comparison."""
     d = json.loads((ROOT / "mzlab/chem/contaminants.json").read_text(encoding="utf-8"))
     assert all(e["source"] == "Keller 2008" for e in d["entries"])
@@ -67,7 +67,7 @@ def test_voci_keller_si_espandono_e_combaciano():
     assert one("dehp", "[M+CH3CN+Na]+") == pytest.approx(454.2928, abs=2e-3)
 
 
-def test_ogni_voce_ha_fonte_e_ioni():
+def test_every_entry_has_source_and_ions():
     d = json.loads((ROOT / "mzlab/chem/contaminants.json").read_text(encoding="utf-8"))
     for e in d["entries"]:
         assert e["source"] and e["id"]
@@ -82,6 +82,7 @@ NODE = shutil.which("node")
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
 def test_list_engine_with_node(tmp_path):
     code = r"""
+globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, 'nomi.js'));
 const L = require(process.argv[1]);
 const items = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'));
 const idx = L.buildIndex([{ id: "keller", name: "K", items }, L.labList([{ mz: 123.4567, name: "mio", formula: "", polarity: 1, note: "bianco" }])]);
@@ -122,7 +123,7 @@ def test_static_file_equals_the_route():
     code, _ctype, body, _h = dispatch(App(), "GET", "/api/contaminants", {})
     assert code == 200
     assert g.OUT.read_text(encoding="utf-8") == body.decode("utf-8") == g.text()
-    assert len(json.loads(g.OUT.read_text(encoding="utf-8"))["lists"]) == 1
+    assert [l["id"] for l in json.loads(g.OUT.read_text(encoding="utf-8"))["lists"]] == ["keller", "pesticides"]
 
 
 def test_every_entry_has_english_name_and_class():

@@ -30,8 +30,9 @@ const run = s => {
     case "map": return { s: e.map_route(s.path, s.items, s.query || "") };
     case "diff": return { s: e.diff_traces(s.path, s.query || "") };
     case "flow_command": return { s: rotte().flow_command(s.body) };
+    case "lr_formula": return { s: wasm.formula_mz(s.f, s.adduct) };
     case "lr_stat": return { s: rotte().stat_post(s.path, s.body) };
-    case "lr_campioni": return { s: rotte().campioni(s.cop, s.body) };
+    case "lr_campioni": return { s: rotte().samples(s.cop, s.body) };
     case "open": return { s: e.open(s.slot, mzml.length, rdMzml) };
     case "tic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.tic(s.slot, s.level, s.px || 0, out), out); }
     case "xic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.xic(s.slot, s.level, s.mz, s.tol, s.px || 0, out), out); }

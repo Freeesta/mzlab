@@ -20,7 +20,7 @@ READERS = {
 
 
 def run(code):
-    out = subprocess.run(["node", "-e", f"const m=require({str(JS)!r});const {{PROGRESSO:P,progCompose:C,PROG_NET:N,rowPc:R}}=m;{code}"], check=True, capture_output=True, encoding="utf-8").stdout
+    out = subprocess.run(["node", "-e", f"const m=require({str(JS)!r});const {{PROGRESSO:P,progCompose:C,rowPc:R}}=m;{code}"], check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out)
 
 
@@ -71,8 +71,8 @@ def test_the_phase_shown_is_the_one_of_the_slowest_file():
 
 
 def test_compose_uses_the_weights_and_clamps():
-    out = run("""console.log(JSON.stringify([C('conversione','convert',0),C('conversione','convert',1),C('conversione','index',0),C('conversione','index',1),C('conversione','index',2),C('conversione','convert',0.5),C('x','y',0.4),N.send]))""")
-    assert out == [0, 0.75, 0.75, 1, 1, 0.375, 0.4, 0.3]
+    out = run("""console.log(JSON.stringify([C('conversione','convert',0),C('conversione','convert',1),C('conversione','index',0),C('conversione','index',1),C('conversione','index',2),C('conversione','convert',0.5),C('x','y',0.4)]))""")
+    assert out == [0, 0.75, 0.75, 1, 1, 0.375, 0.4]
 
 
 def test_fuzz_never_back_never_complete():

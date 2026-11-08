@@ -129,14 +129,64 @@ fn mztab_is_the_file_of_the_page() {
 }
 
 #[test]
-fn a_view_of_a_filter_is_refused_with_its_key() {
+fn a_view_without_its_origin_is_refused_with_its_key() {
     let d = dir("view");
     std::fs::write(
         d.join("table.mzfeat"),
         r#"{"digest":"x","righe":[],"fattori":[],"conteggi":{}}"#,
     )
     .unwrap();
-    assert!(run(&d, "export.mztab@1", "{}", "e.mzTab").is_err());
+    let err = run(&d, "export.mztab@1", "{}", "e.mzTab").unwrap_err();
+    assert!(err.contains("err.flow.export.view"), "{err}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// filter -> export: the plan exits cleanly and writes the rows the filter keeps, the bytes of the page for the same rules.
+#[test]
+fn a_filter_then_an_export_writes_the_rows_of_the_view() {
+    let d = dir("filter");
+    for (kind, ext, step) in [
+        ("full", "csv", "export.table_csv@1"),
+        ("mztab", "mzTab", "export.mztab@1"),
+    ] {
+        let params = if kind == "mztab" {
+            "{}".to_string()
+        } else {
+            format!(r#"{{"kind":"{kind}"}}"#)
+        };
+        let plan = format!(
+            r#"{{"format":"mzflow/2","inputs":[{{"name":"table.mzfeat","type":"table"}},{{"name":"samples.json","type":"samples"}}],"steps":[
+            {{"id":"f","step":"table.filter@2","in":{{"table":"file:table.mzfeat","samples":"file:samples.json"}},"params":{{"blank_ratio":3}}}},
+            {{"id":"e","step":"{step}","in":{{"table":"f.table","samples":"file:samples.json"}},"params":{params}}}]}}"#
+        );
+        let (run, prov) =
+            crate::flow::run_plan(plan.as_bytes(), &d, &d.join("work"), 1, None).unwrap();
+        assert!(
+            run.skipped.is_empty() && !prov.contains("\"error\""),
+            "{prov}"
+        );
+        let got = std::fs::read_to_string(d.join("work").join(format!("e.{ext}"))).unwrap();
+        let view = std::fs::read_to_string(d.join("work/f.json")).unwrap();
+        let (_, spec) = mzlab_feat_table_wasm::core::view_origin(&view).unwrap();
+        let t = table();
+        let want = table_file(
+            &mut Slice(&t),
+            t.len() as u64,
+            &samples_text(),
+            &spec,
+            &sha256_hex(&t),
+            1,
+            kind,
+        )
+        .unwrap();
+        assert_eq!(got, want, "{kind}");
+        // only the row with no blank peak (m/z 250.1) is left; the whole table has all three
+        let whole = page_of(&t, 1, kind);
+        assert!(
+            got.contains("250.1") && !got.contains("300.2") && whole.contains("300.2"),
+            "{got}"
+        );
+    }
     let _ = std::fs::remove_dir_all(&d);
 }
 

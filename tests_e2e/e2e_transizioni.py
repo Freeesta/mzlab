@@ -61,7 +61,7 @@ try:
         step("left: slide, exact final geometry, one refit, focus kept", lambda: run(1440, None, "left"))
         step("right: same", lambda: run(1440, {"mzlab.barra.lato": "right"}, "right"))
         step("sheet under 900 px: same", lambda: run(800, None, "sheet"))
-        def vicini():
+        def neighbours():
             r, ctx, pg, errs = cold(p, 1440, 900, False)
             try:
 
@@ -73,7 +73,7 @@ try:
                 assert pg.evaluate("document.getAnimations().some(a => a.effect && a.effect.target && a.effect.target.classList.contains('pnl') && a.effect.getKeyframes().some(k => k.transform && k.transform !== 'none'))"), "the neighbour slides up"
                 pg.wait_for_function(SETTLED); assert pg.evaluate("E.panels.every(q => q.el.getBoundingClientRect().top >= 0 || true)")
             finally: ctx.close(); r.close()
-        step("closing a panel: the neighbours slide to their new place", vicini)
+        step("closing a panel: the neighbours slide to their new place", neighbours)
         def reduced():
             r, ctx, pg, errs = cold(p, 1440, 900, True)
             try:

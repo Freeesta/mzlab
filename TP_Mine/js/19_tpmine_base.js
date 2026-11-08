@@ -4,7 +4,7 @@
   "use strict";
   const ctx = () => QTOOLS.ctx;
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const specHtml = sp => !sp ? "" : `<div class="card"><h3>Specificity <span class="mut">(${esc(sp.file)}, ${sp.from}-${sp.to} min)</span></h3><div class="mut" title="Neighbours at ±1, ±2 Da and decoys at ±0.5 Da: one as strong as the ion means the signal is not specific">ion ${fmtA(sp.signal)}</div><table><tr><th>Δ m/z</th><th>Signal</th></tr>${[...sp.neighbours, ...sp.decoys].map(w => `<tr><td class="n">${w.dm > 0 ? "+" : ""}${w.dm}</td><td class="n">${fmtA(w.signal)}</td></tr>`).join("")}</table><div class="mut">As strong as the ion: ${sp.stronger.neighbours} of ${sp.neighbours.length} neighbours, ${sp.stronger.decoys} of ${sp.decoys.length} decoys.</div></div>`;
+  const specHtml = sp => !sp ? "" : `<div class="card"><h3>Specificity <span class="mut">(${esc(sp.file)}, ${sp.from}-${sp.to} min)</span></h3><div class="mut" title="Signal of the neighbours at ±1, ±2 Da and of the decoys at ±0.5 Da">ion ${fmtA(sp.signal)}</div><table><tr><th>Δ m/z</th><th>Signal</th></tr>${[...sp.neighbours, ...sp.decoys].map(w => `<tr><td class="n">${w.dm > 0 ? "+" : ""}${w.dm}</td><td class="n">${fmtA(w.signal)}</td></tr>`).join("")}</table><div class="mut">As strong as the ion: ${sp.stronger.neighbours} of ${sp.neighbours.length} neighbours, ${sp.stronger.decoys} of ${sp.decoys.length} decoys.</div></div>`;
   const fmtA = v => /** @type {any} */ (window).TPTAB ? /** @type {any} */ (window).TPTAB.area(v) : String(Math.round(v));   // engineering notation, e.g. 821.43e+6
   /** the same sample read from two sources (Data tab, chosen files) has one key: base name, no .mzML (repeated or not), lower case @param {string} n */
   const fileKey = n => (String(n || "").split(/[\\/]/).pop() || "").replace(/(\.mzml)+$/i, "").toLowerCase();
@@ -35,7 +35,7 @@
 .tp.tp-nol{grid-template-columns:1fr}.tp.tp-nol #tp-left{display:none}
 .tp-tools{padding:8px 16px 0}.tp-tools button{box-sizing:border-box;min-height:28px;min-width:28px;padding:2px 10px;font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}.tp-tools button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media(pointer:coarse){.tp-tools button{min-height:40px}}
 .tp .tp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.tp .tp-rm{box-sizing:border-box;min-width:24px;min-height:24px;padding:0 6px;font:inherit;line-height:1;cursor:pointer;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}.tp .tp-rm:focus-visible,.tp .tp-fn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media(pointer:coarse){.tp .tp-rm{min-width:40px;min-height:40px}}
-.tp h3{margin:0 0 6px;font-size:14px}.tp .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.tp h3,.tp .card>h2{margin:0 0 6px;font-size:14px}.tp .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px}
 .tp .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.tp .grow{flex:1;min-width:120px}.tp input[type=text],.tp textarea,.tp input[type=number]{width:100%;box-sizing:border-box}
 .tp .mut{color:var(--muted);font-size:12px}.tp table{border-collapse:collapse;width:100%;font-size:12px}.tp th,.tp td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 .tp th{position:sticky;top:0;background:var(--panel);font-weight:600;color:var(--muted)}.tp td.n{text-align:right;font-variant-numeric:tabular-nums}
@@ -163,7 +163,7 @@
   async function idbFiles() {
     try {
       // "qqq_lab" is the name of the browser database (kept from the old name: renaming it would lose the users' data)
-      const dbName = typeof NOMI !== "undefined" ? NOMI.DB : "qqq_lab";
+      const dbName = NOMI.DB;
       if (!indexedDB.databases || !(await indexedDB.databases()).some(d => d.name === dbName)) return [];
       return await new Promise(res => {
         const r = indexedDB.open(dbName);

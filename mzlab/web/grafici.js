@@ -1,7 +1,7 @@
 // @ts-strict
 // Chart drawing: chromatograms (TIC, XIC, corrections), hover line, zoom, RT x m/z map. Split from explore.js: classic script, loaded after pannelli.js.
 // ------------------------------------------------------------------ chart drawing
-// width (CSS px) of every trace line: thin like the vendor software; the high contrast palette adds its own extra (LWX)
+// width (CSS px) of every trace line: thin like the vendor software; 1 px when dense (decima.js hairline); the high contrast palette adds its own extra (LWX)
 const TRACE_LW = 1.25;
 // ---- corrections applied to the traces (fondo.js): the difference with a reference, then ONE background on the difference. Nothing is clipped here.
 // ---- internal blank: a stretch of the trace chosen by the student (for example 0-2 min, where nothing elutes) gives the background level, which is
@@ -105,14 +105,14 @@ async function rawSeries(p) {
   const mf = files.filter(f => f.kind === "mrm"), out = [], seen = new Map();
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
   data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
-  const list = [...seen.values()];
+  const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key));
   if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
   data.forEach(({ f, tr }, fi) => tr.forEach(t => {
     const key = trKey(t);
-    const matchTr = !p.tr || (Array.isArray(p.tr) ? p.tr.includes(key) : p.tr === key);
+    const matchTr = !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key);
     if (!matchTr) return;
-    const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);
-    const multiTr = Array.isArray(p.tr) && p.tr.length > 1;
+    const ti = list.findIndex(l => l.key === key), single = !!sel && !Array.isArray(sel);
+    const multiTr = Array.isArray(sel) && sel.length > 1;
     out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: t.q3 == null && window.SIMUI ? SIMUI.color(key) : (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
       dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${window.SIMUI ? SIMUI.label(key) : key} · ${f.label}` : `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim(), tid_label: `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim() });
   }));
@@ -168,11 +168,11 @@ function unionTime(p, lo, hi) {
 function syncView(p) {
   if (!isLine(p) || !p._a) return;
   p._needL = p.cv._needL || 0; p._needR = p.cv._needR || 0;
-  const all = tabPanels(p.tab).filter(q => isLine(q) && q.el && !q._exp), z = fz();
-  const L = maxOf(all.map(q => q._needL || 0), Math.round(66 * z)), R = maxOf(all.map(q => q._needR || 0), 14);
+  const lines = E.panels.filter(q => isLine(q) && q.el && !q._exp), z = fz();   // margins are one for the page: from the line panels of every tab, or tabs shown together reset them for each other forever
+  const L = maxOf(lines.map(q => q._needL || 0), Math.round(66 * z)), R = maxOf(lines.map(q => q._needR || 0), 14);
   const marg = L !== (window.MARG_L || 0) || R !== (window.MARG_R || 0);
   window.MARG_L = L; window.MARG_R = R;
-  all.forEach(q => { if (q === p) return; const st = q.tl && p.tl && q._u && p._u && (q._u[0] !== p._u[0] || q._u[1] !== p._u[1]); if (marg || st) drawSoon(q); });
+  lines.forEach(q => { if (q === p) return; const st = q.tab === p.tab && q.tl && p.tl && q._u && p._u && (q._u[0] !== p._u[0] || q._u[1] !== p._u[1]); if (marg || st) drawSoon(q); });
   if (marg && (M.l !== L || M.r !== R)) drawSoon(p);                       // this panel was drawn with the old margins
 }
 const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
@@ -180,13 +180,13 @@ const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
 const yTitleI = sr => { const b = sr.some(s => s.cb), f = sr.some(s => s.cf); return b || f ? I18N.t(b && f ? "axis.sampBlankFondo" : b ? "axis.sampBlank" : "axis.intFondo") : YT_I; };
 const analogTitle = (p, sr) => p.kind === "reg" ? REGISTRO.title(p, sr) : (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit ? ` (${sr[0].unit})` : "");
 async function draw(p) {
-  if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
+  if (!p.cv.clientWidth || p.cv.clientWidth < 30) { p._sz = ""; return; }
   if (p.type === "map") {                                          // gestures come faster than frames: at most one map redraw per frame, the last request wins
     const t = performance.now();
     if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
     p._drawAt = t;
   }
-  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  p._sz = sizeKey(p); try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) { p._sz = ""; return; } afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { p._sz = ""; const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
@@ -265,7 +265,7 @@ function legend(p, all, note = "") {
     // one trace: the trace is in the title of the panel and the legend lists only the files; several traces: two levels, the traces in bold, then the files
     const files = scanFiles(shownFor(p)), one = p.traces.length === 1;
     const dsw = (c, d) => d && d.length ? `<i style="background:repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)"></i>` : sw(c);
-    const trs = one ? "" : `<span class="lvl">` + p.traces.map(t => `<span class="tr${off(p.hid["t" + t.mz])}"><span class="tg" data-h="t${t.mz}">${sw(PAL[p.traces.indexOf(t) % PAL.length])}</span><b data-t="${t.id}">${fmtFormula(t.label)}</b> ${t.w == null ? `<span>(${t.mz} ±${p.tol})</span>` : ""}<button data-r="${t.id}" title="${I18N.t("xic.remove.title")}">&times;</button></span>`).join("") + `</span>`;
+    const trs = one ? "" : `<span class="lvl">` + p.traces.map(t => `<span class="tr${off(p.hid["t" + t.mz])}"><span class="tg" data-h="t${t.mz}">${sw(PAL[p.traces.indexOf(t) % PAL.length])}</span><b data-t="${t.id}" tabindex="0" role="button" title="${I18N.t("leg.ion.hint")}">${fmtFormula(t.label)}</b> ${t.w == null ? `<span>(${t.mz} ±${p.tol})</span>` : ""}<button data-r="${t.id}" title="${I18N.t("xic.remove.title")}">&times;</button></span>`).join("") + `</span>`;
     const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}${files.length > 1 && f.k === E.cur ? " act" : ""}" data-h="x|${f.k}|${p.traces[0].mz}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
@@ -282,12 +282,12 @@ function legend(p, all, note = "") {
   ibkChip(p);
   if (window.SUBREF) SUBREF.chip(p);
 }
-// with many traces the legend would cover the graph: a small chip («7 tracce») and the list when the pointer rests on it
+// with many traces the legend would cover the graph: a small chip («7 tracce») and the list when the pointer rests on it; a tap, Enter or Space keeps it open (no hover on touch or keys), Escape closes it
 function legCollapse(p) {
   const L = p.leg, n = L.querySelectorAll(".tg").length; if (n <= 4) return;
-  const lst = document.createElement("div"); lst.className = "lgl"; [...L.children].forEach(el => lst.appendChild(el));
-  const chip = document.createElement("span"); chip.className = "lgc"; chip.textContent = I18N.t("leg.traces", { n });
-  L.appendChild(chip); L.appendChild(lst);
+  const lst = document.createElement("div"); lst.className = "lgl"; lst.append(...L.children);
+  const chip = document.createElement("button"), set = (/** @type {boolean} */ on) => { chip.classList.toggle("on", on); chip.setAttribute("aria-expanded", String(on)); }; L.append(chip, lst);
+  chip.type = "button"; chip.className = "lgc"; chip.textContent = I18N.t("leg.traces", { n }); set(false); chip.onclick = () => set(!chip.classList.contains("on")); chip.onkeydown = lst.onkeydown = e => { if (e.key === "Escape" && chip.classList.contains("on")) { e.stopPropagation(); set(false); chip.focus(); } };
 }
 
 // the highest and the lowest value of a trace in view, leaving out the initial zone (solvent front); if nothing else is in view the scale takes it
@@ -380,17 +380,16 @@ async function drawLines(p) {
   const tags = [];
   if (cas) {                                                     // back to front: white under every trace, so the ones behind are covered
     for (let k = cs.length - 1; k >= 0; k--) {
-      const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}; let first = null, last = null;
-      g.beginPath();
-      const pts = [];
-      const [a0, a1] = spanOf(s.x, x0, x1);                  // the window by binary search (the bounds are still tested)
-      for (let i = a0; i < a1; i++) { const r = s.x[i]; if (r < x0 || r > x1) continue; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; }
-      if (first == null) continue;
-      g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
-      baseLine(g, Y(0) + sy, X(x0) + sx, X(x1) + sx);
-      g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py));
-      g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
-      tags.push({ s, f, px: first, py: Y(0) + sy });
+      const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}, z = Y(0) + sy, Xs = (/** @type {number} */ r) => X(r) + sx;
+      const { v, thin } = DC.rawLine(s.x, s.ys, x0, x1, Xs, (/** @type {number} */ val) => Y(U(s, val)) + sy);   // the window by binary search; dense: one vertex per pixel column (decima.js)
+      if (!v.length) continue;
+      const first = v[0], last = v[v.length - 2];
+      g.beginPath(); g.moveTo(first, z); for (let i = 0; i < v.length; i += 2) g.lineTo(v[i], v[i + 1]);
+      g.lineTo(last, z); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
+      baseLine(g, z, X(x0) + sx, X(x1) + sx);
+      g.beginPath(); for (let i = 0; i < v.length; i += 2) if (i) g.lineTo(v[i], v[i + 1]); else g.moveTo(v[0], v[1]);
+      g.strokeStyle = s.color; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, Xs) ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
+      tags.push({ s, f, px: first, py: z });
     }
     g.restore(); g.save();                                       // time labels last (nothing draws over them), with a halo from --panel so they read on both themes
     g.font = fpx(12, "bold "); g.textAlign = "left"; g.lineWidth = 3; g.lineJoin = "round";
@@ -398,13 +397,14 @@ async function drawLines(p) {
     g.font = fpx(12);
   } else for (const s of sr) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
-    const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // the window by binary search (decima.js): smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
-    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
-    for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
+    const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
+    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
+    const w = DC.clipY(v, M.t - 9, H + 9); for (let k = 0; k < w.length; k += 2) if (k) g.lineTo(w[k], w[k + 1]); else g.moveTo(w[0], w[1]);
     g.stroke();
   }
   g.restore(); g.setLineDash([]);
   p._a.tri = [];
+  const tb = p.el && p.el.querySelector('[data-a="ms2tri"]'); if (tb) { tb.setAttribute("aria-pressed", String(!!p.ms2tri)); tb.classList.toggle("on", !!p.ms2tri); }   // «▲ MS²» of a DDA trio (dda-elenco.js) follows the box switch too
   if (p.ms2tri && p.tab === "full") for (const s of sr) {              // MS2 events of the same physical file: a small triangle at the top at every MS2 scan
     const base = (E.files[s.k] || {}).file; if (!base) continue;
     const ev = window.DDA ? DDA.events(p, s.k) : null;                 // DDA file: its MS2 scans (only the followed ion's, if the student follows one)
@@ -423,12 +423,12 @@ async function drawLines(p) {
     if (seg) tri(/** @type {any} */ (seg).x);
   }
   // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js)
+  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js");
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    const r = integ(s, it.a, it.b, it.base); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, corr: corrText(p) });
-    const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
-    if (i1 > i0) {
+    const r = it.bm ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
+    if (it.bm) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
@@ -438,10 +438,10 @@ async function drawLines(p) {
       g.strokeStyle = s.color; g.lineWidth = 1; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(X(s.x[i0]), b0); g.lineTo(X(s.x[i1]), b1); g.stroke(); g.setLineDash([]);
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
-    for (const e of ["a", "b"]) { const px = X(s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
-    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + I18N.sciE(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
+    for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
+    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + (r.wait && !Number.isFinite(r.area) ? "…" : I18N.sciE(r.area)) + (it.bm ? " (" + I18N.t("int.base.tag." + it.bm) + ")" : "") + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) }) }); g.font = fpx(12);
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, copy: I18N.sciE(r.area), tip: I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) }) + `<div class="sm">${I18N.t("int.copy.tip")}</div>` }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {

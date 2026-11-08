@@ -81,6 +81,36 @@ pub(super) fn align() -> Step {
             .unit("min")
             .doc("A row with two features of one file (close isomers) is cut at the RT gaps above this")
             .advanced(),
+    ];
+    params.extend(warp_params());
+    params.push(
+        Param::integer("weak_files", "Weak tier files")
+            .min(0.0)
+            .default_num(5.0)
+            .unit("files")
+            .doc("Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier")
+            .advanced(),
+    );
+    params.extend(family_link_params());
+    Step {
+        ins: vec![Port::new("peaks", DataType::Peaks, "Features of each file").many()],
+        outs: vec![Port::new("table", DataType::Table, "Aligned feature table").lineage()],
+        params,
+        runs_in: feat_runs_in(),
+        errors: vec!["error.memoryBudget", "error.newerFormat", "err.file.index", "error.badRecipe"],
+        algorithms: super::table_algo::align(),
+        default_algorithm: Some("groups"),
+        ..Step::core(
+            "features.align",
+            "Align features",
+            "Groups the features of all the files into rows by m/z and RT and writes the aligned table. Today one call (series::align_and_fill) does this and the filling of the gaps.",
+        )
+    }
+}
+
+/// The RT correction parameters of `features.align` (`rtwarp`).
+fn warp_params() -> Vec<Param> {
+    vec![
         Param::choice("rt_warp", "RT correction", &["off", "piecewise", "loess", "ransac"])
             .default_str("off")
             .doc("Brings the RT of every file to a common one before the features are grouped, from anchors (peaks every file shows) found by a coarse alignment: piecewise (medians by blocks), loess (local regression), ransac (a line robust to wrong anchors); off: the RT as the files give it"),
@@ -107,26 +137,7 @@ pub(super) fn align() -> Step {
             .default_num(0.0)
             .doc("Seed of the random samples of the line (ransac); the same seed gives the same correction")
             .advanced(),
-        Param::integer("weak_files", "Weak tier files")
-            .min(0.0)
-            .default_num(5.0)
-            .unit("files")
-            .doc("Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier")
-            .advanced(),
-    ];
-    params.extend(family_link_params());
-    Step {
-        ins: vec![Port::new("peaks", DataType::Peaks, "Features of each file").many()],
-        outs: vec![Port::new("table", DataType::Table, "Aligned feature table")],
-        params,
-        runs_in: feat_runs_in(),
-        errors: vec!["error.memoryBudget", "error.newerFormat", "err.file.index"],
-        ..Step::core(
-            "features.align",
-            "Align features",
-            "Groups the features of all the files into rows by m/z and RT and writes the aligned table. Today one call (series::align_and_fill) does this and the filling of the gaps.",
-        )
-    }
+    ]
 }
 
 /// `features.gapfill`: integrates the raw traces where a file has no feature (`gapfill`).
@@ -156,6 +167,7 @@ pub(super) fn gapfill() -> Step {
             .min(0.0)
             .default_num(2.0)
             .unit("scans")
+            .doc("Scans a trace may miss between two of its points; 0 = consecutive scans")
             .advanced(),
         Param::integer("long_trace", "Long trace")
             .min(1.0)
@@ -166,13 +178,15 @@ pub(super) fn gapfill() -> Step {
     ];
     Step {
         ins: vec![
-            Port::new("table", DataType::Table, "Aligned feature table"),
+            Port::new("table", DataType::Table, "Aligned feature table").lineage(),
             Port::new("index", DataType::Mzidx, "Scan index").many(),
         ],
-        outs: vec![Port::new("table", DataType::Table, "Table with the gaps filled")],
+        outs: vec![Port::new("table", DataType::Table, "Table with the gaps filled").lineage()],
         params,
         runs_in: feat_runs_in(),
-        errors: vec!["error.memoryBudget", "err.file.index"],
+        errors: vec!["error.memoryBudget", "err.file.index", "error.badRecipe"],
+        algorithms: super::table_algo::gapfill(),
+        default_algorithm: Some("integrate"),
         ..Step::core(
             "features.gapfill",
             "Fill gaps",
@@ -202,27 +216,9 @@ pub(super) fn filter() -> Step {
             .min(0.0)
             .unit("counts")
             .doc("The largest height over the files is at least this; left empty, the rule is off"),
-        Param::number("blank_ratio", "Sample to blank ratio")
-            .min(0.0)
-            .unit("fraction")
-            .doc("The largest area of a sample is at least this many times the mean area of the blanks; needs a blank in the samples; left empty, the rule is off"),
-        Param::choice("blank_quantity", "Blank quantity", &["area", "height", "norm_area"])
-            .default_str("area")
-            .doc("What is compared with the blank: area, height or normalised area; used with the sample to blank ratio only"),
-        Param::choice("blank_stat", "Blank level", &["mean", "max"])
-            .default_str("mean")
-            .doc("The blank level of a row: mean or maximum over the blank files (a blank without a peak counts as 0)"),
-        Param::choice("blank_scope", "Blank comparison", &["max_feature", "each_feature"])
-            .default_str("max_feature")
-            .doc("max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"),
-        Param::boolean("blank_subtract", "Subtract the blank")
-            .doc("The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"),
-        Param::choice("blank_match", "Blank matching", &["all", "batch", "matrix"])
-            .default_str("all")
-            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction")
-            .tip("Compare each sample only with the blanks of its batch or matrix; others use all blanks."),
-        Param::boolean("blank_keep_istd", "Keep the internal standard")
-            .doc("The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"),
+    ];
+    params.extend(blank_params());
+    params.extend([
         Param::boolean("qc_zero", "Count missing QC as 0")
             .doc("The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"),
         Param::number("qc_cv_max", "Maximum QC CV")
@@ -234,14 +230,15 @@ pub(super) fn filter() -> Step {
             .default_num(3.0)
             .unit("files")
             .doc("QC files with a peak that the row needs for the QC rule, and QC files that the series needs"),
-    ];
+    ]);
     params.extend(filter_tail_params());
     Step {
+        version: 2,
         ins: vec![
             Port::new("table", DataType::Table, "Feature table"),
             Port::new("samples", DataType::Samples, "Roles and times of the files"),
         ],
-        outs: vec![Port::new("table", DataType::Table, "Table view with the rows kept")],
+        outs: vec![Port::new("table", DataType::Table, "Table view with the rows kept").lineage()],
         params,
         runs_in: RunsIn {
             wasm: Some("table"),
@@ -255,6 +252,37 @@ pub(super) fn filter() -> Step {
             "Keeps the rows that pass an ordered list of rules over the samples (campioni/2); blanks and dark files never count as samples, and a rule that cannot be evaluated is an error.",
         )
     }
+}
+
+/// The blank rule of `table.filter`: the ratio and the options of what is compared with the blank.
+fn blank_params() -> Vec<Param> {
+    vec![
+        Param::number("blank_ratio", "Sample to blank ratio")
+            .min(0.0)
+            .unit("fraction")
+            .doc("The largest area of a sample is at least this many times the mean area of the blanks; needs a blank in the samples; left empty, the rule is off"),
+        Param::choice("blank_quantity", "Blank quantity", &["area", "height", "norm_area"])
+            .default_str("area")
+            .doc("What is compared with the blank: area, height or normalised area; used with the sample to blank ratio only"),
+        Param::choice("blank_stat", "Blank level", &["mean", "max"])
+            .default_str("mean")
+            .doc("The blank level of a row: mean or maximum over the blank files (a blank without a peak counts as 0)"),
+        Param::choice("blank_scope", "Blank comparison", &["max_feature", "each_feature"])
+            .default_str("max_feature")
+            .doc("max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"),
+        Param::choice("blank_cells", "Blank cells", &["detected", "all"])
+            .default_str("detected")
+            .doc("detected counts only the blank cells the detection found (a gap-filled or missing blank cell is 0, as in mzmine); all also counts the gap-filled blank cells, the behaviour of version 1")
+            .tip("Which blank cells set the blank level: only the detected ones, or the gap-filled ones too."),
+        Param::boolean("blank_subtract", "Subtract the blank")
+            .doc("The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"),
+        Param::choice("blank_match", "Blank matching", &["all", "batch", "matrix"])
+            .default_str("all")
+            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction")
+            .tip("Compare each sample only with the blanks of its batch or matrix; others use all blanks."),
+        Param::boolean("blank_keep_istd", "Keep the internal standard")
+            .doc("The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"),
+    ]
 }
 
 /// The last parameters of `table.filter`: duplicates, MS2, normalisation and its internal standard.
@@ -313,7 +341,7 @@ pub(super) fn drift() -> Step {
             Port::new("samples", DataType::Samples, "Roles and injection order of the files"),
             Port::new("design", DataType::Design, "Batches of the files"),
         ],
-        outs: vec![Port::new("table", DataType::Table, "Table view with a factor for every cell")],
+        outs: vec![Port::new("table", DataType::Table, "Table view with a factor for every cell").lineage()],
         params,
         runs_in: RunsIn {
             wasm: Some("flowtab"),
@@ -343,7 +371,7 @@ pub(super) fn export_csv() -> Step {
             Port::new("table", DataType::Table, "Feature table"),
             Port::new("samples", DataType::Samples, "Roles and times of the files"),
         ],
-        outs: vec![Port::new("report", DataType::Report, "Table as CSV")],
+        outs: vec![Port::new("report", DataType::Report, "Table as CSV").format("csv")],
         params,
         runs_in: RunsIn {
             wasm: Some("table"),
@@ -386,7 +414,7 @@ pub(super) fn export_annotations() -> Step {
             optional(Port::new("formulas", DataType::Formulas, "Candidate formulas (formula.ms1, formula.ms2)").many()),
             optional(Port::new("annot", DataType::Annot, "Level and evidence per feature (annot.level)")),
         ],
-        outs: vec![Port::new("report", DataType::Report, "Annotations as CSV")],
+        outs: vec![Port::new("report", DataType::Report, "Annotations as CSV").format("csv")],
         params,
         runs_in: RunsIn {
             wasm: Some("flowtab"),
@@ -418,7 +446,7 @@ pub(super) fn export_inclusion() -> Step {
     ];
     Step {
         ins: vec![Port::new("tp", DataType::Tp, "Expected products with their RT (a JSON list, or the table of tp.link)")],
-        outs: vec![Port::new("report", DataType::Report, "Inclusion list as CSV")],
+        outs: vec![Port::new("report", DataType::Report, "Inclusion list as CSV").format("csv")],
         params,
         runs_in: RunsIn {
             wasm: Some(INTERP_WASM),
@@ -441,7 +469,7 @@ pub(super) fn export_mztab() -> Step {
             Port::new("table", DataType::Table, "Feature table"),
             Port::new("samples", DataType::Samples, "Roles and times of the files"),
         ],
-        outs: vec![Port::new("report", DataType::Report, "Table as mzTab-M")],
+        outs: vec![Port::new("report", DataType::Report, "Table as mzTab-M").format("mztab")],
         runs_in: RunsIn {
             wasm: Some("table"),
             wasm_ceiling_bytes: Some(FEAT_CEILING),

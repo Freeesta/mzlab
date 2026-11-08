@@ -8,14 +8,14 @@
   const NS = "http://www.w3.org/2000/svg";
   /** one mark for each look, so that the state does not hang on the colour */
   const MARKS = /** @type {Record<string, string>} */ ({
-    wait: "M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", run: "M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5", ok: "M5 12l5 5 9-10", again: "M4 12a8 8 0 0 1 14-5M20 4v4h-4M20 12a8 8 0 0 1-14 5M4 20v-4h4",
+    run: "M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5", ok: "M5 12l5 5 9-10", again: "M4 12a8 8 0 0 1 14-5M20 4v4h-4M20 12a8 8 0 0 1-14 5M4 20v-4h4",
     stale: "M12 8v5M12 16.5v.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", bad: "M15 9l-6 6M9 9l6 6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", lock: "M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z",
-    pause: "M9 5v14M15 5v14", skip: "M6 12h12",
+    pause: "M9 5v14M15 5v14", hold: "M10 9v6M14 9v6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", skip: "M6 12h12",
   });
   const mark = (/** @type {string} */ name) => {
     const s = document.createElementNS(NS, "svg"), p = document.createElementNS(NS, "path");
     for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" })) s.setAttribute(k, String(v));
-    p.setAttribute("d", MARKS[name] || MARKS.wait); s.append(p);
+    p.setAttribute("d", MARKS[name] || MARKS.hold); s.append(p);
     return s;
   };
   const ids = (/** @type {Element} */ n) => String(/** @type {HTMLElement} */ (n).dataset.ids || "").split(" ").filter(Boolean);

@@ -1,5 +1,5 @@
 """SIM channels whose file gives no Q1 (synthetic SIM .wiff of tools/wiff_sim.py whose method names no ion, no laboratory data): the seven channels stay apart, each is called
-«ione N» (never «null»), the picker has one row per channel, the chromatogram menu extracts one of them and the plot keeps one trace, the banner of a long list says «SIM files»,
+«ione N» (never «null»), the picker has one row per channel, the chromatogram menu extracts one of them, the plot keeps one trace and the title names it, the banner of a long list says «SIM files»,
 and the method panel shows «—» for what the file does not say. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_senzaq1.py"""
 import subprocess, sys, os, tempfile
 from pathlib import Path
@@ -20,10 +20,10 @@ PANEL = "E.panels.find(p => p.type === 'mrm')"
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim_senzaq1.wiff", D / "sim_senzaq1.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); attendi(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
+        stage(pg, [D / "sim_senzaq1.wiff", D / "sim_senzaq1.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
         step("every file counts its seven channels", lambda: need(pg.evaluate("E.files.every(f => f.sim === %d)" % N), pg.evaluate("E.files.map(f => f.sim)")))
         open_first(pg)
-        pg.click("#np-mrm"); attendi(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
+        pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         def names():
             t = pg.evaluate("SIMUI.ions(%s).map(x => SIMUI.label(x.key))" % PANEL)
             need(len(t) == N and len(set(t)) == N and all(x.startswith(("ione", "ion")) for x in t) and not any("null" in x for x in t), t)
@@ -41,8 +41,11 @@ try:
             need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub:not([hidden]) [role=menuitemcheckbox]').length") == N + 1, "rows")
             need(not pg.evaluate("[...document.querySelectorAll('#ctx .ctxsub')].some(e => /null/.test(e.textContent))"), "null in the menu")
             pg.locator("#ctx .ctxsub [role=menuitemcheckbox]").nth(3).click()
-            attendi(pg, "%s._a && new Set(%s._a.sr.map(s => s.ion)).size === 1" % (PANEL, PANEL), timeout=30000)
+            wait_for_js(pg, "%s._a && new Set(%s._a.sr.map(s => s.ion)).size === 1" % (PANEL, PANEL), timeout=30000)
         step("the menu extracts one channel and the plot keeps one ion", submenu)
+        def title():
+            wait_for_js(pg, "(() => { const p = %s; return p && p.el.querySelector('.ttl').textContent === 'SIM · ione 3'; })()" % PANEL, timeout=15000)
+        step("the panel of one channel is titled by its name («SIM · ione 3»), never by its key", title)
         def banner():
             need(pg.evaluate("I18N.t('mrm.capNoticeSim', {n: 12, t: 27})").endswith("27 file SIM.") or "SIM files" in pg.evaluate("I18N.t('mrm.capNoticeSim', {n: 12, t: 27})"), "text")
         step("the long-list banner says SIM files", banner)

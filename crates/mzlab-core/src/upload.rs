@@ -14,11 +14,13 @@ use crate::mzidx::ScanTable;
 use crate::mzidx_lettore;
 use crate::scantable::{self, Table};
 use crate::window::Windowed;
+mod doppio;
 mod late;
 mod non_mzml;
 mod passata;
 #[cfg(test)]
 mod tests;
+pub use doppio::indicizza_lettore_doppio;
 #[cfg(not(target_arch = "wasm32"))]
 pub use late::prepare_late;
 pub use passata::Passata;
@@ -67,8 +69,15 @@ pub fn probe<R: ReadAt>(r: &mut R, size: u64) -> Result<String> {
 }
 
 /// Reads the whole file once for its three fingerprints (`Passata`): `(sha256, sha1, probe)`.
+#[cfg(target_arch = "wasm32")]
 pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
     fingerprint(r, size, Passata::new(size))
+}
+
+/// Native: SHA-256 and SHA-1 on two threads (`passata::due_fili`).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
+    passata::due_fili(r, size, STEP)
 }
 
 fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String, String, String)> {
@@ -308,10 +317,17 @@ pub fn indicizza_lettore_con(
     fase: &mut dyn FnMut(u32),
 ) -> Result<(crate::mzidx::Stats, String)> {
     let (t, prima) = mzidx_lettore::righe_prima(l, c, budget, spill)?;
-    let membri = membri()?;
-    let p = dalla_tabella(t, l, c, &membri, name)?;
+    let campione = campione_di(l, c)?;
+    let p = tabella(t, l, c, String::new(), String::new(), String::new())?;
     fase(3);
-    let n = l.indice(c)?.len();
+    let n = l.index(c)?.len();
+    // the members are asked for last, where the source is written (`build_dopo`): their hash may still be running
+    let mut sha256 = String::new();
+    let mut tardi = || -> Result<String> {
+        let (source, sha, _) = sorgente(&membri()?, &campione, name);
+        sha256 = sha;
+        Ok(source)
+    };
     let st = crate::mzidx::build_dopo(
         &p.table,
         prima,
@@ -319,58 +335,9 @@ pub fn indicizza_lettore_con(
         out,
         budget,
         true,
-        None,
+        Some(&mut tardi),
     )?;
-    Ok((st, p.sha256))
-}
-
-/// The two `.mzidx` of a sample whose scans may be profile, from ONE decoding of them: `out` gets the index with the scans as the file has them (what
-/// `indicizza_lettore_con` writes) and `out_cen` the one with the profile scans as centroids (what it writes for a reader wrapped by `centroidato`).
-/// The bytes are those of the two separate builds; the budget is shared (half each) and so is the scratch file (`mzidx_spill::Meta`).
-#[allow(clippy::too_many_arguments)]
-pub fn indicizza_lettore_doppio(
-    l: &mut crate::lettori_centroidi::Centroidato,
-    c: usize,
-    membri: &mut dyn FnMut() -> Result<Vec<Impronta>>,
-    name: &str,
-    out: &mut dyn crate::mzidx::Output,
-    out_cen: &mut dyn crate::mzidx::Output,
-    budget: usize,
-    spill: Option<&mut dyn crate::mzidx_spill::Spill>,
-    fase: &mut dyn FnMut(u32),
-) -> Result<((crate::mzidx::Stats, String), (crate::mzidx::Stats, String))> {
-    use crate::mzidx_spill::{Meta, Spill};
-    let meta = budget / 2;
-    let cell = spill.map(std::cell::RefCell::new);
-    let mut m0 = cell.as_ref().map(|sp| Meta { sp, quale: 0 });
-    let mut m1 = cell.as_ref().map(|sp| Meta { sp, quale: 1 });
-    let mut prima = crate::mzidx::Prima::new(meta, m0.as_mut().map(|m| m as &mut dyn Spill));
-    let mut prima_cen = crate::mzidx::Prima::new(meta, m1.as_mut().map(|m| m as &mut dyn Spill));
-    let (t, t_cen) = mzidx_lettore::righe_prima_doppie(l, c, &mut prima, &mut prima_cen)?;
-    let membri = membri()?;
-    let p = dalla_tabella(t, l.semplice(), c, &membri, name)?;
-    let p_cen = dalla_tabella(t_cen, l.semplice(), c, &membri, name)?;
-    fase(3);
-    let n = l.indice(c)?.len();
-    let st = crate::mzidx::build_dopo(
-        &p.table,
-        prima,
-        &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l.semplice(), c, k).map(&mut *on)),
-        out,
-        meta,
-        true,
-        None,
-    )?;
-    let st_cen = crate::mzidx::build_dopo(
-        &p_cen.table,
-        prima_cen,
-        &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l, c, k).map(&mut *on)),
-        out_cen,
-        meta,
-        true,
-        None,
-    )?;
-    Ok(((st, p.sha256), (st_cen, p_cen.sha256)))
+    Ok((st, sha256))
 }
 
 /// Native only: the fingerprints of the members are taken by a second thread (`recipe` makes its own file set, since a reader does not cross threads)
@@ -393,6 +360,19 @@ pub fn con_impronte_parallele<R>(
     })
 }
 
+/// WASI and the browser cannot spawn a thread: the fingerprints are taken in place when `lavoro` asks for them, the same bytes as the native build.
+#[cfg(target_arch = "wasm32")]
+pub fn con_impronte_parallele<R>(
+    recipe: impl FnOnce() -> Result<FileSet> + Send,
+    lavoro: impl FnOnce(&mut dyn FnMut() -> Result<Vec<Impronta>>) -> Result<R>,
+) -> Result<R> {
+    let mut recipe = Some(recipe);
+    lavoro(&mut || match recipe.take() {
+        Some(r) => r().and_then(|mut fs| impronte(&mut fs)),
+        None => Err(Error::new("err.file.unknown")),
+    })
+}
+
 /// Marks the members as having a SHA-1 already (empty), so the reader does not read the whole file for the header of an mzML nobody asked for: the
 /// index never uses it.
 pub fn senza_sha1(fs: &mut FileSet) {
@@ -401,24 +381,60 @@ pub fn senza_sha1(fs: &mut FileSet) {
     }
 }
 
+/// The name of the dataset the members make, the one `mzlab-cli` gives the path: the shortest first component of their names (`X.raw`; `X.wiff` beside
+/// `X.wiff.scan`; the folder `X.D`), whatever name the page gives its list entry; `None` without members.
+pub fn nome_insieme(membri: &[Impronta]) -> Option<&str> {
+    membri
+        .iter()
+        .filter_map(|m| m.nome.split('/').next().filter(|s| !s.is_empty()))
+        .min_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)))
+}
+
+/// The generation of what the readers give besides the scans (the chromatogram list: `wiff/cromatogrammi.rs`), written in the `source` of an index of a
+/// vendor file set (`"reader"`): an index of an older generation (or without one) is built again once (`native_attach` of mzlab-wasm refuses it).
+pub const GENERAZIONE_LETTORI: u32 = 2;
+
 fn dalla_tabella(
-    mut t: Table,
+    t: Table,
     l: &mut dyn Lettore,
     c: usize,
     membri: &[Impronta],
     name: &str,
 ) -> Result<Prepared> {
-    let scans_json = mzidx_lettore::rows_json(&mut t, l.indice(c)?).into_bytes();
-    let campione = l
-        .campioni()
+    let (source, sha256, probe) = sorgente(membri, &campione_di(l, c)?, name);
+    tabella(t, l, c, source, sha256, probe)
+}
+
+fn tabella(
+    mut t: Table,
+    l: &mut dyn Lettore,
+    c: usize,
+    source: String,
+    sha256: String,
+    probe: String,
+) -> Result<Prepared> {
+    let scans_json = mzidx_lettore::rows_json(&mut t, l.index(c)?).into_bytes();
+    Ok(prepared(&t, scans_json, source, sha256, probe))
+}
+
+fn campione_di(l: &mut dyn Lettore, c: usize) -> Result<crate::lettori::Campione> {
+    l.samples()
         .get(c)
         .cloned()
-        .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
+        .ok_or_else(|| Error::new("error.badIndex").with("c", c))
+}
+
+/// The `source` of the index of sample `campione` of the members, its SHA-256 and probe.
+fn sorgente(
+    membri: &[Impronta],
+    campione: &crate::lettori::Campione,
+    name: &str,
+) -> (String, String, String) {
     let (sha256, probe) = impronta_insieme(membri, campione.id);
     let mut source = Out::default();
     source_head(
         &mut source,
-        name,
+        nome_insieme(membri).unwrap_or(name),
         membri.iter().map(|m| m.dim).sum(),
         &probe,
         &sha256,
@@ -437,10 +453,12 @@ fn dalla_tabella(
             .raw("}");
     }
     source
-        .raw("],\"sample\":{\"id\":")
+        .raw("],\"reader\":")
+        .int(i64::from(GENERAZIONE_LETTORI))
+        .raw(",\"sample\":{\"id\":")
         .int(i64::from(campione.id))
         .raw(",\"nome\":")
         .str(&campione.nome)
         .raw("}}");
-    Ok(prepared(&t, scans_json, source.0, sha256, probe))
+    (source.0, sha256, probe)
 }

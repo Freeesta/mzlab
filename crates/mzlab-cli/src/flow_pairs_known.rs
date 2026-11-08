@@ -1,0 +1,138 @@
+//! The check-OK / run-fail pairs of `flow_pairs_tests` the registry has today, the verdict of a pair and the report: kept apart so the harness stays readable.
+
+use std::collections::BTreeSet;
+
+/// The mismatches the registry has today, by consumer port, source and error key: the test fails on any other, and on one of these that is gone (drop it).
+const KNOWN: &[(&str, &str)] = &[];
+
+/// The pairs the formats of the ports close (`format` / `formats`, `err.flow.port.format`): the check refuses each, with that key.
+const BY_FORMAT: &[&str] = &[
+    "export.annotations.table <- tp.filter.table",
+    "export.mztab.table <- tp.filter.table",
+    "export.table_csv.table <- tp.filter.table",
+    "features.gapfill.table <- tp.filter.table",
+    "features.group.table <- tp.filter.table",
+    "spectra.chimeric.features <- tp.filter.table",
+    "spectra.match.query <- export.annotations.report",
+    "spectra.match.query <- export.inclusion.report",
+    "spectra.match.query <- export.mztab.report",
+    "spectra.match.query <- export.table_csv.report",
+    "spectra.match.query <- features.table.report",
+    "spectra.msn_graph.molecules <- ali.table",
+    "spectra.msn_graph.molecules <- features.align.table",
+    "spectra.msn_graph.molecules <- features.gapfill.table",
+    "spectra.msn_graph.molecules <- gap.table",
+    "spectra.msn_graph.molecules <- table of one sample",
+    "spectra.msn_graph.molecules <- table with no row",
+    "spectra.msn_graph.molecules <- table.filter.table",
+    "table.filter.table <- tp.filter.table",
+    "table.kmd.table <- tp.filter.table",
+    "table.match.table <- tp.filter.table",
+    "table.plausible.table <- tp.filter.table",
+    "table.stats.table <- tp.filter.table",
+    "tp.link.table <- tp.filter.table",
+];
+
+/// The pairs refused by their data, not by the plan: a table of one file with the samples of six (`error.badCampioni`). The check reads the plan
+/// only, never the rows of a table, so these stay check-OK and must fail at run with that key: the run, not the check, is where they are caught.
+const BY_DATA: &[(&str, &str)] = &[
+    (
+        "export.mztab.table <- table of one sample",
+        "error.badCampioni",
+    ),
+    (
+        "export.table_csv.table <- table of one sample",
+        "error.badCampioni",
+    ),
+    (
+        "table.filter.table <- table of one sample",
+        "error.badCampioni",
+    ),
+    (
+        "table.match.table <- table of one sample",
+        "error.badCampioni",
+    ),
+];
+
+/// The pairs the lineage of the ports closes (`Port::lineage`, `err.flow.lineage`): a table file into a step that needs the table aligned in its plan.
+const BY_LINEAGE: &[&str] = &[
+    "features.gapfill.table <- table of one sample",
+    "features.gapfill.table <- table with no row",
+    "tp.link.table <- table of one sample",
+    "tp.link.table <- table with no row",
+];
+
+/// Result of a consumer reading one source on one port.
+pub(super) enum Verdict {
+    Refused(String),
+    Ran,
+    /// The canonical input of the port fails too: the pair says nothing.
+    Uncovered(String),
+    Mismatch(String),
+}
+
+/// Writes the report and fails on a mismatch not in `KNOWN` or `BY_DATA`, on an entry of either that no longer fails with its key, and on a view the check refuses or the run fails.
+pub(super) fn report_and_assert(verdicts: &[(String, Verdict)]) {
+    let mut report = String::new();
+    for (what, v) in verdicts {
+        let (kind, why) = match v {
+            Verdict::Refused(w) => ("refused by the check", w.as_str()),
+            Verdict::Ran => ("ran", ""),
+            Verdict::Uncovered(w) => ("not covered", w.as_str()),
+            Verdict::Mismatch(w) => ("MISMATCH", w.as_str()),
+        };
+        report.push_str(&format!("{what}\t{kind}\t{why}\n"));
+    }
+    std::fs::write(std::env::temp_dir().join("mzlab_pairs_report.tsv"), &report).unwrap();
+    let found: BTreeSet<(String, String)> = verdicts
+        .iter()
+        .filter_map(|(w, v)| match v {
+            Verdict::Mismatch(e) => Some((w.clone(), e.clone())),
+            _ => None,
+        })
+        .collect();
+    let known: BTreeSet<(String, String)> = KNOWN
+        .iter()
+        .chain(BY_DATA)
+        .map(|(w, e)| (w.to_string(), e.to_string()))
+        .collect();
+    let new: Vec<_> = found
+        .difference(&known)
+        .map(|(w, e)| format!("{w}: {e}"))
+        .collect();
+    let gone: Vec<_> = known
+        .difference(&found)
+        .map(|(w, e)| format!("{w}: {e}"))
+        .collect();
+    assert!(
+        new.is_empty(),
+        "check passes, run fails:\n{}",
+        new.join("\n")
+    );
+    assert!(
+        gone.is_empty(),
+        "no longer a mismatch, drop it from KNOWN or BY_DATA:\n{}",
+        gone.join("\n")
+    );
+    for (pairs, key) in [
+        (BY_FORMAT, "err.flow.port.format"),
+        (BY_LINEAGE, "err.flow.lineage"),
+    ] {
+        for want in pairs {
+            let v = verdicts.iter().find(|(w, _)| w == want).map(|(_, v)| v);
+            assert!(
+                matches!(v, Some(Verdict::Refused(why)) if why.contains(key)),
+                "{want}: not refused with {key}"
+            );
+        }
+    }
+    // the view of `table.filter` runs wherever the check takes a table
+    for (w, v) in verdicts {
+        if w.ends_with("<- table.filter.table") && !w.starts_with("spectra.msn_graph") {
+            assert!(
+                !matches!(v, Verdict::Mismatch(_) | Verdict::Refused(_)),
+                "{w}"
+            );
+        }
+    }
+}

@@ -103,7 +103,7 @@ fn spettro(n: usize) -> Spectrum {
     }
 }
 
-fn intestazione() -> Header {
+fn scan_header() -> Header {
     Header {
         run: "bench".into(),
         software: ("mzLab".into(), "bench".into()),
@@ -134,14 +134,14 @@ fn xml() -> Value {
     for punti in [0usize, 64, 526] {
         let s = spettro(punti);
         let mut w =
-            MzmlWriter::con_opzioni(Sink::nuovo(false), &intestazione(), opz).expect("writer");
+            MzmlWriter::con_opzioni(Sink::nuovo(false), &scan_header(), opz).expect("writer");
         w.open_spectra(1 << 30).expect("open");
         let ns = ns_per_op(|| {
             w.spectrum_with(black_box(&s), black_box(&extra))
                 .expect("spectrum");
         });
         let mut w1 =
-            MzmlWriter::con_opzioni(Sink::nuovo(false), &intestazione(), opz).expect("writer");
+            MzmlWriter::con_opzioni(Sink::nuovo(false), &scan_header(), opz).expect("writer");
         w1.spectrum_with(&s, &extra).expect("spectrum");
         let b = w1.finish().expect("finish").n;
         righe.push(

@@ -14,7 +14,7 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); pg.evaluate("setTab('full')"); ready(pg)
         MS2 = "E.panels.find(p=>p.type==='spec'&&p.level===2&&p._a)"
         pg.evaluate("(async()=>{const D=await DDA.get(E.panels.find(p=>p.level===1&&p.type==='spec').k);await DDA.selectMs2(E.panels.find(p=>p.level===2),D.sid[0]);})(); 0")
-        attendi(pg, f"!!({MS2})")
+        wait_for_js(pg, f"!!({MS2})")
         def rows(has=True):
             pg.evaluate(f"""(()=>{{const p={MS2},a=p._a;window.__c={{vista:'spec',p,a,m:a.data[0].d.mz[0],has:{str(has).lower()},pol:1,lab:'',e:{{clientX:50,clientY:50,preventDefault(){{}}}},px:50,py:50}};
               menu({{preventDefault(){{}},clientX:50,clientY:50}},[{{label:'m/z',dim:true}},'-',...AZIONI.per(__c)])}})()""")
@@ -28,8 +28,8 @@ try:
         def known_cont():
             assert "spec.cont" in rows(), "«Is it a known contaminant?» in the peak menu"
             pg.evaluate("__c.lab = __c.m.toFixed(4); AZIONI.esegui('spec.cont', __c)")
-            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')")
-            assert pg.input_value("#al-q") == pg.evaluate("__c.lab"), pg.input_value("#al-q")
+            wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')")
+            assert pg.input_value("#calcin") == pg.evaluate("__c.lab"), pg.input_value("#calcin")
             assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
             pg.evaluate("BARRA.close(false)")
         step("«Is it a known contaminant?» opens the Contaminants tab on the peak m/z", known_cont)

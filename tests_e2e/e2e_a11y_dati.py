@@ -1,9 +1,10 @@
-"""Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on six states,
-keyboard only (every visible control reachable with Tab, visible focus, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
+"""Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on nine states (start, file, MRM, map, settings, search, calculator, integration window, MSn tree; moderate/minor best practice on the Data view),
+keyboard only (every visible control reachable with Tab, visible focus, no focus trap in the charts, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
 and reduced motion. Known gaps live in docs/agenti/a11y-da-sistemare.md and in KNOWN below (an id there is reported but does not fail).
 Unlike e2e_axe_grafici this test does NOT skip when axe is missing: in CI that is a failure."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+sys.path.insert(0, str(ROOT))
 
 
 AXE = axe_path()
@@ -19,6 +20,8 @@ def step(name, fn):
 r = Run(port=8868, wd="/tmp/wd_a11y")
 RUN = """(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
   .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
+RUN_MINOR = """() => axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']}})
+  .then(r => r.violations.filter(v => ['moderate','minor'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
 def axe_ok(pg, sel="body"):
     v = [x for x in pg.evaluate(RUN, sel) if x[0] not in KNOWN]; assert not v, v
 VISIBLE = """() => [...document.querySelectorAll('button, select, input:not([type=hidden]), a[href], [role=button], [role=tab], [tabindex="0"], summary')]
@@ -36,9 +39,12 @@ try:
             pg.evaluate("setTab('mrm')"); pg.wait_for_timeout(2500); ready(pg); axe_ok(pg)
             pg.evaluate("setTab('full')"); pg.wait_for_timeout(800)
         step("axe: MRM tab", mrm)
-        def mappa():
+        def map_view():
             pg.evaluate("addPanel('map',{tab:'full'})"); pg.wait_for_timeout(2500); ready(pg); axe_ok(pg)
-        step("axe: RT x m/z map", mappa)
+        step("axe: RT x m/z map", map_view)
+        def minor():
+            pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'"); v = pg.evaluate(RUN_MINOR); assert not v, v
+        step("axe moderate/minor (best practice): Data view", minor)
         def settings():
             pg.click("#np-set"); pg.wait_for_selector("#uipset", state="visible"); axe_ok(pg)
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
@@ -48,6 +54,30 @@ try:
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert pg.evaluate("document.querySelector('#paletta').hidden"), "Esc must close the search bar"
         step("axe: search bar opens with Ctrl+K and closes with Esc", search)
 
+        def calc():
+            pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent"); axe_ok(pg, "#calcdlg")
+            pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!BARRA.isOpen('calc')")
+        step("axe: calculator window", calc)
+        def integration():
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
+            pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic');addInt(p,p._a.sr[0],13.9,14.6);showInts()})()"); pg.wait_for_selector("#bigdlg[open]")
+            assert pg.evaluate("document.querySelectorAll('#bigbody table tr').length") > 1, "the integration table must list the peak"
+            axe_ok(pg, "#bigdlg"); pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#bigdlg').open")
+        step("axe: integration window", integration)
+        def msn():
+            from lib_hr import synth
+            from TP_Mine.tests.msn_synth import write_msn, caffeine_nodes
+            F = write_msn(synth("a11ymsn") / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
+            q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            try:
+                q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop", timeout=120000)
+                q.set_input_files("#pick", [str(F)]); q.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=180000)
+                q.click("text=Carica dati"); q.wait_for_function("E.files.length>=1", timeout=90000)
+                q.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'))"); q.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
+                q.add_script_tag(path=AXE); axe_ok(q, "#bigdlg")
+            finally: q.close()
+        step("axe: MSn tree window", msn)
         def esc_closes():
             pg.evaluate("E.panels.find(p=>p.type==='chrom').cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert not pg.evaluate("!!document.querySelector('#tdati[open]')"), "Esc must close the data table"
@@ -75,6 +105,33 @@ try:
             assert len(seen) >= want * 0.9, f"Tab reached {len(seen)} of {want} visible controls"
             assert not bad, "no visible focus indicator on: " + ", ".join(bad[:12])
         step("keyboard: Tab reaches the visible controls, each with a visible focus indicator", tab_reach)
+        def no_trap():
+            # Tab and Shift+Tab leave each chart's canvas (and the panel itself within a few presses); Escape on a canvas does not pin the focus
+            def leaves(pid, key):
+                for i in range(60):
+                    pg.keyboard.press(key)
+                    if pg.evaluate(f"(() => {{ const a = document.activeElement, p = document.querySelector('[data-pid=\"{pid}\"]') || E.panels.find(q => q.id === {pid}).el; return !!a && a !== document.body && !p.contains(a); }})()"): return True
+                return False
+            def charts():
+                return pg.evaluate("E.panels.filter(p => p.el && p.el.isConnected && p.el.offsetParent && p.el.querySelector('canvas[tabindex=\"0\"]')).map(p => [p.id, p.type])")
+            pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'")
+            for t in ("xic", "map"):
+                if not any(c[1] == t for c in charts()):
+                    pg.evaluate("addPanel('" + t + "',{tab:'full'" + (",traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]" if t == "xic" else "") + "})"); ready(pg)
+                    wait_for_js(pg, "E.panels.some(p => p.type === '" + t + "' && p.el && !!p.el.querySelector('canvas[tabindex]'))")
+            todo = charts(); assert len(todo) >= 3, todo
+            for pid, typ in todo:
+                for key in ("Tab", "Shift+Tab"):
+                    pg.evaluate(f"E.panels.find(q => q.id === {pid}).el.querySelector('canvas[tabindex=\"0\"]').focus()")
+                    if key == "Tab": pg.keyboard.press("Escape")
+                    assert leaves(pid, key), f"keyboard trap in the {typ} chart (panel {pid}) with {key}"
+            pg.evaluate("setTab('mrm')"); wait_for_js(pg, "E.tab === 'mrm'"); ready(pg)
+            for pid, typ in charts():
+                for key in ("Tab", "Shift+Tab"):
+                    pg.evaluate(f"E.panels.find(q => q.id === {pid}).el.querySelector('canvas[tabindex=\"0\"]').focus()")
+                    assert leaves(pid, key), f"keyboard trap in the {typ} chart (panel {pid}) with {key}"
+            pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'")
+        step("keyboard: no trap in the chart views (Tab and Shift+Tab leave each chart)", no_trap)
         def reflow():
             ctx = r.b.new_context(viewport={"width": 320, "height": 800}, locale="it-IT"); q = ctx.new_page()
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")

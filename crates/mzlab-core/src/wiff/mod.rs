@@ -4,8 +4,8 @@
 //! were decoded against ProteoWizard mzML of the same files. The code here is written anew.
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
-#[cfg(feature = "estesi")]
 mod bpc;
+mod cromatogrammi;
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
@@ -13,6 +13,7 @@ pub mod dad_map;
 pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
+mod metodo_nome;
 pub mod modi;
 pub mod nomi;
 mod run;
@@ -34,6 +35,9 @@ use modi::{Uscita, CODE_PRODUCT};
 /// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
 /// method), the nearest one before it.
 pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
+    if let Some(k) = metodo_nome::by_name(ole, sample) {
+        return k;
+    }
     let has = |k: u32| {
         ole.has(&format!(
             "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
@@ -53,6 +57,25 @@ impl Wiff {
             && code
                 .and_then(modi::modo)
                 .is_some_and(|m| m.uscita == Uscita::Spettro)
+    }
+
+    /// The engine (no `estesi`) reads the native scan types only: a sample with an experiment of another code is refused when its data are read, never
+    /// taken for level-1 scans (the `sciex` module reads it; `Wiff::variante` routes the pair there). The other samples of the pair stay readable.
+    pub(crate) fn readable(&self) -> Result<()> {
+        #[cfg(not(feature = "estesi"))]
+        if let Some((k, e)) = self
+            .experiments
+            .iter()
+            .enumerate()
+            .find(|(_, e)| e.code.is_some() && !modi::nativo(e.code))
+        {
+            return Err(bad(&format!(
+                "scan type code {} (experiment {})",
+                e.code.unwrap_or(0),
+                k + 1
+            )));
+        }
+        Ok(())
     }
 
     #[cfg(not(feature = "estesi"))]
@@ -88,11 +111,22 @@ pub struct Record {
     /// Start of the payload and of the next one (the end of the data of this block).
     pub at: u64,
     pub end: u64,
+    /// Length of the payload as the index row tells it.
     pub size: u32,
     pub time_min: f64,
     pub tic: f64,
     pub cycle: usize,
     pub experiment: usize,
+}
+
+impl Record {
+    /// The block does not lie whole in a `.wiff.scan` of `scan_len` bytes (a copy cut short): the last block ends at the end of the file, so its own
+    /// length tells whether it was cut.
+    pub fn cut(&self, scan_len: u64) -> bool {
+        self.at >= scan_len
+            || self.end > scan_len
+            || self.at.saturating_add(u64::from(self.size)) > scan_len
+    }
 }
 
 /// One sample (injection) of a `.wiff`.
@@ -121,18 +155,35 @@ fn bad(detail: &str) -> Error {
     Error::new("err.file.wiff").with("detail", detail)
 }
 
-/// The container of a `.wiff`.
+/// The container of a `.wiff`; one cut short (sectors its header or its FAT use lie past the end) is refused whole: its streams would read empty or short,
+/// so the samples, the index or the method would be missing unsaid.
 pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
-    Ole::open(wiff, name).map_err(|_| Error::new("err.file.notWiff").with("name", name))
+    let size = wiff.len();
+    let cut = Ole::header_cut(&wiff);
+    let ole = Ole::open(wiff, name).map_err(|_| match cut {
+        Some(needed) => truncated(name, size, needed),
+        None => Error::new("err.file.notWiff").with("name", name),
+    })?;
+    match ole.cut_short() {
+        Some(needed) => Err(truncated(name, size, needed)),
+        None => Ok(ole),
+    }
 }
 
-/// The numbers of the samples that have scans, in order.
+fn truncated(name: &str, size: usize, needed: u64) -> Error {
+    Error::new("err.file.wiffTruncated")
+        .with("name", name)
+        .with("size", size)
+        .with("needed", needed)
+}
+
+/// The numbers of the samples of the sample table, in order: an injection that acquired nothing (no `Idx` stream) is a sample with no scans,
+/// listed like the others so that the site and `mzlab-cli convert` both show it as empty instead of dropping it unsaid.
 pub fn samples(ole: &Ole) -> Vec<u32> {
     let mut v: Vec<u32> = ole
         .read(&format!("{SAMPLES}SampleIdxTable"))
         .map(|t| idx::sections(&t).into_iter().map(|s| s.0).collect())
         .unwrap_or_default();
-    v.retain(|n| ole.has(&format!("{SAMPLES}Sample{n}/Idx")));
     crate::sortc::slice_ord(&mut v);
     v.dedup();
     v
@@ -243,14 +294,14 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         .find(|s| s.0 == sample)
         .ok_or_else(|| bad("no such sample"))?
         .1;
-    let entries = idx::parse(
-        &ole.read(&format!("{SAMPLES}Sample{sample}/Idx"))
-            .ok_or_else(|| bad("no Idx"))?,
-    );
-    let mut experiments = experiments(ole, sample);
+    let entries = ole
+        .read(&format!("{SAMPLES}Sample{sample}/Idx"))
+        .map(|b| idx::parse(&b))
+        .unwrap_or_default();
+    let mut experiments = self::experiments(ole, method_no(ole, sample));
     #[cfg(not(feature = "estesi"))]
     if experiments.is_empty() {
-        experiments = self::experiments(ole, method_no(ole, sample));
+        experiments = self::experiments(ole, sample);
     }
     #[cfg(feature = "estesi")]
     {
@@ -274,8 +325,8 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             experiment: k % n_exp,
         })
         .collect();
-    let method = methodinfo::method_of_sample(ole, sample);
-    let method = method.or_else(|| methodinfo::method_of_sample(ole, method_no(ole, sample)));
+    let method = methodinfo::method_of_sample(ole, method_no(ole, sample));
+    let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);
     let dad = dad::DadData::read(ole, sample);
     let (model, created, serial, source_type) = crate::metodo_wiff::run_facts_full(ole, sample);

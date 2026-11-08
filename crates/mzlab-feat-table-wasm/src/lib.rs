@@ -221,18 +221,32 @@ pub fn export_table(
     .map_err(js_err)
 }
 
-/// A table file as `export_table`, written in the polarity the table and the files of its lineage give (`pol::of_table`), the one `flow run` uses; the view is the whole table.
+/// A table file as `export_table`, written in the polarity the table and the files of its lineage give (`pol::of_table`), the one `flow run` uses; the view is the whole table,
+/// or, when `view_json` is the text `table_view_auto` made, the rows it keeps (its table must be this one: `err.flow.export.view` otherwise).
 /// The `.mzidx` of the files are read as `index_read(k, offset, length)`, `index_sizes[k]` bytes each (none when they are not at hand).
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn export_table_auto(
     table_read: Function,
     size: f64,
     samples_json: &str,
     table_sha256: &str,
     kind: &str,
+    view_json: &str,
     index_read: Function,
     index_sizes: Vec<f64>,
 ) -> std::result::Result<String, JsValue> {
+    let spec = if view_json.trim().is_empty() {
+        String::new()
+    } else {
+        let (sha, spec) = core::view_origin(view_json).map_err(js_err)?;
+        if sha != table_sha256 {
+            return Err(js_err(mzlab_core::error::Error::new(
+                "err.flow.export.view",
+            )));
+        }
+        spec
+    };
     let mut ix = Vec::new();
     for (k, s) in index_sizes.iter().enumerate() {
         if let Ok(i) = Index::open(
@@ -252,7 +266,7 @@ pub fn export_table_auto(
         &mut table_reader(table_read),
         size as u64,
         &samples,
-        "",
+        &spec,
         table_sha256,
         pol,
         kind,
@@ -277,7 +291,20 @@ pub fn table_view_auto(
     let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
     let spec = filterspec::spec_from_json_with_samples(params_json, samples_json.as_bytes())
         .map_err(js_err)?;
-    core::view_json(&mut table_reader(table_read), size as u64, &samples, &spec).map_err(js_err)
+    core::view_json_origin(&mut table_reader(table_read), size as u64, &samples, &spec)
+        .map_err(js_err)
+}
+
+/// The `.mzfeat` a `table.filter` view stands for (`mzlab_feat::view_table::table_of_view`, what `flow run` gives a step that reads a table from a view), made from the
+/// `.mzfeat` the view names (`table_read(k, offset, length)`, `size` bytes).
+#[wasm_bindgen]
+pub fn flow_table_of_view(
+    table_read: Function,
+    size: f64,
+    view: &str,
+) -> std::result::Result<Vec<u8>, JsValue> {
+    mzlab_feat::view_table::table_of_view_from(&mut table_reader(table_read), size as u64, view)
+        .map_err(js_err)
 }
 
 /// An MS2 file: `kind` is `mgf` (FBMN) or `sirius` (`.ms`). The spectra are read from the `.mzidx` of the file that holds the best MS2 of each row
@@ -428,7 +455,7 @@ pub fn table_row_traces(
 
 /// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp`; JSON in, JSON out.
 #[wasm_bindgen]
-pub fn campioni(op: &str, input: &str) -> std::result::Result<String, JsValue> {
+pub fn samples(op: &str, input: &str) -> std::result::Result<String, JsValue> {
     core::campioni_json(op, input).map_err(js_err)
 }
 

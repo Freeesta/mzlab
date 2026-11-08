@@ -5,8 +5,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ORO = ROOT / "tests/golden/attributio/sintetica"
-ATTESI = ROOT / "tests/data/attributio/campagna_sintetica/livelli_attesi.csv"
-STADI = ["campagna", "letture", "rilevazione", "livelli", "identita", "proposte", "decisioni", "abbinamenti", "spiegazioni", "frammenti"]
+EXPECTED = ROOT / "tests/data/attributio/campagna_sintetica/livelli_attesi.csv"
+STAGES = ["campagna", "letture", "rilevazione", "livelli", "identita", "proposte", "decisioni", "abbinamenti", "spiegazioni", "frammenti"]
 
 
 def _bytes_lf(p: Path) -> int:
@@ -14,8 +14,8 @@ def _bytes_lf(p: Path) -> int:
     return len(p.read_text(encoding="utf-8").encode("utf-8"))
 
 
-def test_stadi_presenti_e_piccoli():
-    for s in STADI:
+def test_stages_present_and_small():
+    for s in STAGES:
         p = ORO / f"{s}.json"
         assert p.exists(), p
         assert _bytes_lf(p) < 100_000
@@ -23,9 +23,9 @@ def test_stadi_presenti_e_piccoli():
     assert sum(_bytes_lf(p) for p in ORO.glob("*.json")) < 300_000
 
 
-def test_livelli_coincidono_con_attesi():
+def test_levels_match_expected():
     got = json.loads((ORO / "livelli.json").read_text(encoding="utf-8"))["features"]
-    with open(ATTESI, encoding="utf-8", newline="") as fh:
+    with open(EXPECTED, encoding="utf-8", newline="") as fh:
         att = list(csv.DictReader(fh, delimiter=";"))
     assert len(got) == len(att) == 15
     for g, a in zip(got, att):

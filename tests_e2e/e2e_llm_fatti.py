@@ -7,10 +7,10 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi, axe_path, stage; PORT = free_port()
+from lib import free_port, wait_for_js, axe_path, stage; PORT = free_port()
 AXE = axe_path()
 TAB = '#nav button[data-v="flow"]'
-FATTI = ["B_FullMass-t0.mzML", "B_MRM-t0.mzML", "C_IDA-t0.mzML"]   # crates/mzlab-cli/src/llm_facts_tests.rs
+FACTS = ["B_FullMass-t0.mzML", "B_MRM-t0.mzML", "C_IDA-t0.mzML"]   # crates/mzlab-cli/src/llm_facts_tests.rs
 GOLD = ROOT / "tests" / "data" / "llm" / "fatti"
 steps = []; errs = []; reqs = []
 def step(name, fn):
@@ -19,7 +19,7 @@ def step(name, fn):
 
 tmp = Path(tempfile.mkdtemp())
 subprocess.run([sys.executable, str(ROOT / "tools" / "dati_sintetici.py"), str(tmp / "dati")], check=True, stdout=subprocess.DEVNULL)
-FILES = [tmp / "dati" / f for f in FATTI]
+FILES = [tmp / "dati" / f for f in FACTS]
 subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")], check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(tmp / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -39,7 +39,7 @@ try:
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             stage(pg, FILES)
             # a file with two parts (MS1, MS2) has two rows: wait for every file
-            attendi(pg, "new Set(E.files.map(f => String(f.file).split('#')[0])).size >= %d" % len(FATTI), 90000)
+            wait_for_js(pg, "new Set(E.files.map(f => String(f.file).split('#')[0])).size >= %d" % len(FACTS), 90000)
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
             pg.wait_for_selector("#flx-facts .flx-facts-file", timeout=60000)
             return pg
@@ -47,7 +47,7 @@ try:
         pg = fresh()
         def card():
             names = pg.eval_on_selector_all("#flx-facts .flx-facts-file h4", "e => e.map(x => x.textContent)")
-            assert names == [f"f{i + 1}: {n}" for i, n in enumerate(FATTI)], names
+            assert names == [f"f{i + 1}: {n}" for i, n in enumerate(FACTS)], names
             text = pg.inner_text("#flx-facts")
             for want in ("Polarity", "positive", "Resolution", "unit (mass_decimals:1)", "Acquisition", "mrm", "dda", "Isolation", "36 windows", "Role", "t0 (proposed)", "Proposed parameters"):
                 assert want in text, want
@@ -100,7 +100,7 @@ try:
 
         def readers():
             q = fresh(on=True)
-            q.wait_for_selector("#flx-assistant", timeout=30000); attendi(q, "!!window.MZLAB_LLM_AGENT")
+            q.wait_for_selector("#flx-assistant", timeout=30000); wait_for_js(q, "!!window.MZLAB_LLM_AGENT")
             route = json.dumps({"route": "inspect", "need_data": ["inspection"], "language": "en", "suspicious": False})
             ok = json.dumps({"schema": "lettura/1", "kind": "acquisition", "findings": [{"id": "F1", "topic": "polarity", "statement": "f1 is ESI+ full scan at unit resolution",
                              "evidence": ["ispezione.files.f1.polarity", "ispezione.files.f1.class"], "confidence": "high", "action": {"type": "none"}}], "questions": [], "numbers": []})

@@ -7,7 +7,7 @@ pub const UNIT_FRAG_DA: f64 = 0.5;
 /// Precursor window (Da) of a unit-resolution query that the plan did not write: the 0.7 FWHM peak width of the 3200 QTRAP quadrupoles.
 pub const UNIT_PRECURSOR_DA: f64 = 0.7;
 /// Fragment window (Da) of a query that is not unit resolution and a plan that did not write one, the GNPS convention.
-const HR_FRAG_DA: f64 = 0.02;
+pub const HR_FRAG_DA: f64 = 0.02;
 
 /// A query written by the unit-resolution export carries the note `# unit resolution` at its top (`export_ms::mgf_unit`; `table.match` writes it for unit-resolution files).
 pub fn is_unit_query(bytes: &[u8]) -> bool {

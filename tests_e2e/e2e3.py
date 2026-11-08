@@ -1,4 +1,4 @@
-import sys, json; import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, json, re; import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 def pt(pg, idx, x=None, y=None):
     """page coords of canvas point in panel idx at data x (and fractional y 0..1 of plot height)."""
@@ -7,9 +7,17 @@ def pt(pg, idx, x=None, y=None):
 def click_menu(pg, text):
     pg.locator("#ctx div", has_text=text).first.click()
 steps = []
+# a failure keeps Playwright's call log and a screenshot in .verifica/ (the CI artifact): a click that times out says what held it (disabled, covered, moving)
+FAILSHOT = ROOT / ".verifica" / "shots"
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:200]))
+    except Exception as e:
+        steps.append((name, "FAIL " + str(e).split("\n")[0][:200]))
+        print("FAIL DETAIL", name, "\n" + str(e)[:4000])
+        try:
+            FAILSHOT.mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(FAILSHOT / ("e2e3_" + re.sub(r"\W+", "_", name) + ".png")))
+            print("state", pg.evaluate("({cur: E.cur, browse: E.browse, tab: E.tab, fnext: (b => b && {dis: b.disabled, inert: !!b.closest('[inert]'), top: (r => { const t = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return t && t.tagName + (t.id ? '#' + t.id : '') + (t.getAttribute('class') ? '.' + t.getAttribute('class') : '') })(b.getBoundingClientRect())})(document.querySelector('#fnext')), dlg: [...document.querySelectorAll('dialog[open]')].map(d => d.id)})"))
+        except Exception as e2: print("no screenshot:", str(e2).split("\n")[0])
 r = Run()
 try:
     with sync_playwright() as p:
@@ -24,7 +32,7 @@ try:
         rt = info["rt"]
         def drag_spec():
             a = pt(pg, 0, rt - 0.15); b = pt(pg, 0, rt + 0.15)
-            pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=8); pg.mouse.up(); attendi(pg, "!!E.panels[1] && E.panels[1].r0 != null")
+            pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=8); pg.mouse.up(); wait_for_js(pg, "!!E.panels[1] && E.panels[1].r0 != null")
             assert pg.evaluate("E.panels[1].r0") is not None
         step("drag chromatogram -> spectrum", drag_spec)
         pg.screenshot(path=SH + "11_spectrum.png")
@@ -33,8 +41,8 @@ try:
             top = pg.evaluate("""()=>{const p=E.panels[1],d=p._a.data[0].d;let m=0;d.y.forEach((v,i)=>{if(v>d.y[m])m=i});return {mz:d.mz[m]}}""")
             print("spec top m/z", top)
             c = pt(pg, 1, top["mz"])
-            pg.mouse.click(c["px"], c["py"], button="right"); attendi(pg, "document.querySelectorAll('#ctx div').length>0")
-            click_menu(pg, "Estrai l'XIC"); attendi(pg, "E.panels.some(p=>p.type==='xic' && p._a)")      # the XIC appears at once, no window
+            pg.mouse.click(c["px"], c["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
+            click_menu(pg, "Estrai l'XIC"); wait_for_js(pg, "E.panels.some(p=>p.type==='xic' && p._a)")      # the XIC appears at once, no window
             assert pg.evaluate("E.panels.some(p=>p.type==='xic')")
         step("spectrum right-click -> XIC panel", xic_from_spec)
         pg.screenshot(path=SH + "12_xic.png")
@@ -45,15 +53,15 @@ try:
             assert pg.evaluate(f"E.panels[{xi}].traces.length") == 2
         step("add second ion", add_ion)
         def split_merge():
-            pg.locator('.pnl.xic [data-o="split"]').first.click(); attendi(pg, "E.panels.filter(p=>p.type==='xic').length===2")
+            pg.locator('.pnl.xic [data-o="split"]').first.click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='xic').length===2")
             n = pg.evaluate("E.panels.filter(p=>p.type==='xic').length"); assert n == 2, n
         step("split XIC", split_merge)
         def integrate():
             xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
             rt2 = pg.evaluate(f"""()=>{{const s=E.panels[{xi}]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{{if(v>s.ys[m])m=i}});return s.x[m]}}""")
             c = pt(pg, xi, rt2)
-            pg.mouse.click(c["px"], c["py"], button="right"); attendi(pg, "document.querySelectorAll('#ctx div').length>0")
-            click_menu(pg, "Integra il picco"); attendi(pg, f"E.panels[{xi}].ints.length>=1")
+            pg.mouse.click(c["px"], c["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
+            click_menu(pg, "Integra il picco"); wait_for_js(pg, f"E.panels[{xi}].ints.length>=1")
             n = pg.evaluate(f"E.panels[{xi}].ints.length"); assert n >= 1, n
             # drag a bar edge
             it = pg.evaluate(f"E.panels[{xi}].ints[0]")
@@ -77,20 +85,20 @@ try:
             pg.evaluate("E.browse=false;E.cur=0;renderFileList();renderNav();redrawAll()")
         step("method popup (full + mrm)", method)
         def nav():
-            pg.evaluate("E.browse=true;renderNav();redrawAll()"); attendi(pg, "!document.querySelector('#fnext').disabled")      # the file arrows work with "Solo il file selezionato" (with "Tutti sovrapposti" they are disabled)
+            pg.evaluate("E.browse=true;renderNav();redrawAll()"); wait_for_js(pg, "!document.querySelector('#fnext').disabled")      # the file arrows work with "Solo il file selezionato" (with "Tutti sovrapposti" they are disabled)
             pg.click("#fnext"); ready(pg); c1 = pg.evaluate("E.cur"); pg.click("#fnext"); ready(pg)
             pg.keyboard.press("ArrowLeft"); ready(pg); frames(pg, 2)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length>=1)")
         step("file arrows keep XIC", nav)
         pg.screenshot(path=SH + "18_nav.png")
-        pg.evaluate("uiSave(true)"); attendi(pg, "!!NB.session && !!NB.ui")   # autosave
+        pg.evaluate("uiSave(true)"); wait_for_js(pg, "!!NB.session && !!NB.ui")   # autosave
         # reload page: session restore
-        pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.length >= 1", 60000)
+        pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.length >= 1", 60000)
         pg.screenshot(path=SH + "20_restored.png")
         print("after reload", pg.evaluate("({f:E.files.length,p:E.panels.map(p=>p.type+':'+(p.traces||[]).length+':'+p.ints.length)})"))
-        attendi(pg, "document.querySelectorAll('#nav button[data-v=tpmine], #nav button[data-v=flow]').length === 2", 60000)
+        wait_for_js(pg, "document.querySelectorAll('#nav button[data-v=tpmine], #nav button[data-v=flow]').length === 2", 60000)
         step("tabs Dati, Disegno, Tabui and Flow at first load", lambda: (lambda n: None if sorted(n) == sorted(["data", "draw", "tpmine", "flow"]) else (_ for _ in ()).throw(AssertionError(n)))(pg.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.v)")))
-        pg.click("text=Disegno"); attendi(pg, "!document.querySelector('#v-draw').hidden"); pg.screenshot(path=SH + "22_draw.png")
+        pg.click("text=Disegno"); wait_for_js(pg, "!document.querySelector('#v-draw').hidden"); pg.screenshot(path=SH + "22_draw.png")
         b = None
 finally:
     r.close(); r.report()

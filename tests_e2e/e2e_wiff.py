@@ -1,4 +1,4 @@
-"""SCIEX .wiff + .wiff.scan dropped in the start page, on the built site with the Rust engine and WITHOUT Pyodide (?motore=rust&lr=1): the pair is matched by name
+"""SCIEX .wiff + .wiff.scan dropped in the start page, on the built site with the Rust engine and WITHOUT Pyodide: the pair is matched by name
 (also when its two files come in different loadings), a .wiff alone gets a notice, a .wiff with several samples gives one file per sample (read as they are, no mzML is made), the samples are
 listed (with the button to save their mzML on request), are recognised as Full Scan / MS2 / MRM and Pyodide is never requested. Synthetic pairs of tools/wiff_riferimento.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
@@ -40,7 +40,7 @@ try:
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
         def alone():
             pg.set_input_files("#pick", [str(D / "one.wiff")])
@@ -54,6 +54,15 @@ try:
             shown(pg, 1)
             assert names(pg) == ["one"], names(pg)
         step("its .wiff.scan arrives in another loading: the pair is converted into one.mzML", late_scan)
+        def twins():                                     # loose files of two folders with one name: no folder pairs them, neither pair is opened
+            for d in ("a", "b"):
+                (D / d).mkdir(exist_ok=True)
+                for x in ("wiff", "wiff.scan"): shutil.copy(D / f"one.{x}", D / d / f"twin.{x}")
+            pg.set_input_files("#pick", [str(D / d / f"twin.{x}") for d in ("a", "b") for x in ("wiff", "wiff.scan")])
+            pg.wait_for_function("document.querySelector('#unopen') && !document.querySelector('#unopen').hidden && document.querySelector('#unopen').innerText.includes('twin.wiff')", timeout=60000)
+            assert ".wiff.scan" in pg.inner_text("#unopen"), pg.inner_text("#unopen")
+            assert names(pg) == ["one"], names(pg)
+        step("two same-named pairs without folders in one pick: an error, neither is opened", twins)
         def several():
             pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#fl-up [aria-busy=true]').forEach(r => window.__rows.add(r.dataset.up))).observe(document.getElementById('flst'), { childList: true, subtree: true })")
             pg.set_input_files("#pick", [str(D / "two.wiff.scan"), str(D / "two.wiff"), str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
@@ -116,7 +125,7 @@ try:
             c2 = b.new_context(viewport={"width": 1500, "height": 1800}); c2.set_default_timeout(120000); pg = c2.new_page()          # a clean session of its own
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
-            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "prodotto.wiff"), str(D / "prodotto.wiff.scan")])
             pg.wait_for_function("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).filter(tr => /^prodotto/.test(tr.children[1].textContent.trim())).length === 2", timeout=120000)
             pg.click("#opbtn"); pg.wait_for_function("E.files.length === 2 && E.pending.length === 0 && E.panels.some(q => q.type === 'spec')", timeout=120000); pg.wait_for_timeout(1500)
@@ -133,7 +142,20 @@ try:
             try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)
             except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"), diag(pg))
         step("mzFinder lists the converted Full Scan file", mzfinder)
-        def variante():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
+        def empty_injection():                           # an injection in the sample table that acquired nothing (no Idx): listed as an empty sample under its number, as `mzlab-cli convert` writes buchi-2.mzML
+            c5 = b.new_context(viewport={"width": 1500, "height": 1800}); c5.set_default_timeout(120000); pg = c5.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "buchi.wiff"), str(D / "buchi.wiff.scan")])
+            got = "ST.files.map(f => [f.name, f.kind || ''])"
+            try: pg.wait_for_function("ST.files.length === 3 && ST.files.every(f => f.kind) && UPBUSY === 0", timeout=60000)
+            except Exception: raise AssertionError(pg.evaluate(got))
+            assert sorted(pg.evaluate(got)) == [["buchi_s1.mzML", "full"], ["buchi_s2.mzML", "empty"], ["buchi_s3.mzML", "full"]], pg.evaluate(got)
+            assert not errs, errs
+            c5.close()
+        step("an injection that acquired nothing is listed as an empty sample under its own number", empty_injection)
+        def variant():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
                 print("   (variante: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
             c3 = b.new_context(viewport={"width": 1500, "height": 1800}); c3.set_default_timeout(120000); asked = []; c3.on("request", lambda r: asked.append(r.url)); pg = c3.new_page()
@@ -141,7 +163,7 @@ try:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
             pg.add_init_script("window.MZLAB_TRACE = [];")      # the requests the page makes, with their timing: said by the message of a red run
-            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "variante.wiff"), str(D / "variante.wiff.scan")])
             shown(pg, 1)
             assert names(pg) == ["variante"], names(pg)
@@ -150,7 +172,37 @@ try:
             assert not pyodide(asked) and not miss, (miss, pg.evaluate("(window.MZLAB_TRACE || []).slice(-40)"), pg.evaluate("window.MZLAB_LR_ERR || null"), diag(pg))
             assert not errs, errs
             c3.close()
-        step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variante)
+        step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variant)
+        def rejected_named():                            # a pair the engine and the module both refuse (a TOF experiment): the error is told under the dropped .wiff, not under the «tof.mzML» that stood for it
+            if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
+                print("   (rejected: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
+            c6 = b.new_context(viewport={"width": 1500, "height": 1800}); c6.set_default_timeout(120000); pg = c6.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "tof.wiff"), str(D / "tof.wiff.scan")])
+            pg.wait_for_function("document.querySelector('#unopen') && /scan type code 8/.test(document.querySelector('#unopen').innerText)", timeout=120000)
+            told = pg.evaluate("document.querySelector('#unopen').innerText")
+            assert "tof.wiff" in told and "tof.mzML" not in told, told
+            assert not errs, errs
+            c6.close()
+        step("a pair the module refuses is named by its .wiff in the notice", rejected_named)
+        def download_is_convert():                       # «Download .mzML» of a sample the engine reads: written by the sciex module as `mzlab-cli convert` writes it (indexed, TIC and BPC of the Full Scan)
+            if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
+                print("   (download: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
+            c4 = b.new_context(viewport={"width": 1500, "height": 1800}, accept_downloads=True); c4.set_default_timeout(120000); pg = c4.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "one.wiff"), str(D / "one.wiff.scan")])
+            shown(pg, 1)
+            with pg.expect_download(timeout=120000) as d:
+                pg.evaluate("CONV.download('one.mzML')")
+            t = Path(d.value.path()).read_text(encoding="utf-8")
+            assert t.rstrip().endswith("</indexedmzML>") and 'id="BPC"' in t, (t[:300], t[-300:])
+            assert not errs, errs
+            c4.close()
+        step("«Download .mzML» of a .wiff sample is the file of mzlab-cli convert (sciex module)", download_is_convert)
         b.close()
 finally:
     srv.terminate()

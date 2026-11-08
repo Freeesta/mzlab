@@ -1,10 +1,10 @@
 //! Single scans of CENTROID files read from their source (`sorgente::Scansioni`: the mzML by offset, the scan table of the index giving `start..end`
 //! of each `<spectrum>`, or a vendor reader; the whole file is never held): `/api/spectra` (`App.spectra`: the scans `i0..=i1` of a level, each with its own centroids in high resolution, binned and
 //! optionally merged by nominal mass otherwise), `/api/scan` (`Item.scan`: one scan as the file has it, with its parent and activation) and
-//! `/api/scanavg` (`Item.scan_avg`: the mean of up to 200 scans on cells of 3 ppm or 0.1 Da). `Ok(None)` = Python's (profile scans, a request
-//! Python must refuse, a scan the index does not know).
+//! `/api/scanavg` (`Item.scan_avg`: the mean of up to 200 scans on cells of 3 ppm or 0.1 Da). `Ok(None)` = not answered here (profile scans, a
+//! scan the index does not know); a request the file cannot satisfy (a scan outside it, too many scans) is an error with the key of `App`.
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::iteminfo::{hr_profile, HrProfile};
 use crate::json::{round, Out};
@@ -40,6 +40,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/scan" => self.scan_route(q, mzml),
             "/api/scanavg" => self.scanavg_route(q, mzml),
             "/api/msntree" => self.msntree_route(q, mzml),
+            "/api/dda_window" => self.dda_window_src(q, mzml),
             _ => Ok(None),
         }
     }
@@ -88,8 +89,15 @@ impl<R: ReadAt> Routes<R> {
         };
         let filt = q.some("filt").or(q.some("filter"));
         let sel = self.selected(level, si, precursor, tol, filt)?;
-        if i0 > i1 || i1 - i0 + 1 > MAX_SCANS || i0 < 0 || i0 as usize >= sel.len() {
-            return Ok(None);
+        // the refusals of `App.spectra`, worded: the site has no other engine to ask
+        if i0 > i1 {
+            return Err(Error::new("err.scan.range"));
+        }
+        if i1 - i0 + 1 > MAX_SCANS {
+            return Err(Error::new("err.scan.maxRequest").with("n", MAX_SCANS));
+        }
+        if i0 < 0 || i0 as usize >= sel.len() {
+            return Err(Error::new("err.scan.outsideN").with("n", sel.len()));
         }
         let (ar, scans) = self.idx.arrays_scans(si)?;
         let merge = q.get("merge") == Some("1") && !hr.on;
@@ -110,7 +118,10 @@ impl<R: ReadAt> Routes<R> {
 
     /// `/api/scan`: one scan with its own centroids and what the file says about it.
     fn scan_route<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
-        let Some(sid) = int(q, "sid").filter(|s| *s >= 0 && (*s as usize) < self.idx.scans.len()) else { return Ok(None) };
+        let Some(sid) = int(q, "sid") else { return Ok(None) };
+        if sid < 0 || sid as usize >= self.idx.scans.len() {
+            return Err(Error::new("err.scan.outside"));
+        }
         let sid = sid as usize;
         let scans = &self.idx.scans;
         let s = &scans[sid];
@@ -169,11 +180,11 @@ impl<R: ReadAt> Routes<R> {
             sids.push(v);
         }
         if sids.len() > MAX_AVERAGE {
-            return Ok(None);
+            return Err(Error::new("err.scan.maxAverage").with("n", MAX_AVERAGE));
         }
         let n_all = self.idx.scans.len() as i64;
         sids.retain(|s| *s >= 0 && *s < n_all);
-        let Some(&first) = sids.first() else { return Ok(None) };
+        let Some(&first) = sids.first() else { return Err(Error::new("err.scan.noneValid")) };
         let level = self.idx.scans[first as usize].level;
         let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
         let cell = Cell::of(&hr);
@@ -229,14 +240,14 @@ enum Cell {
 impl Cell {
     fn of(hr: &HrProfile) -> Cell {
         if hr.on {
-            Cell::Ppm((3e-6f64).ln_1p())
+            Cell::Ppm(libm::log1p(3e-6f64))
         } else {
             Cell::Da
         }
     }
     fn at(&self, m: f64) -> i64 {
         match self {
-            Cell::Ppm(w) => (m.max(1e-9).ln() / w).floor() as i64,
+            Cell::Ppm(w) => (libm::log(m.max(1e-9)) / w).floor() as i64,
             Cell::Da => (m / 0.1).floor() as i64,
         }
     }

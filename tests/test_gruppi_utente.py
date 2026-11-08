@@ -20,7 +20,7 @@ globalThis.KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" }; g
 globalThis.fileBase = n => String(n).split("#")[0];
 globalThis.ESP = { voce: k => ({ spettri: k !== "mrm" }), unici() {} };
 globalThis.BENCH = false; globalThis.lrTog = () => !BENCH;
-globalThis.renderFileList = () => {}; globalThis.uiSave = () => {}; globalThis.STORIA = null; globalThis.removed = [];
+globalThis.renderFileList = () => {}; globalThis.cleanupOrphanPanels = () => {}; globalThis.uiSave = () => {}; globalThis.STORIA = null; globalThis.removed = [];
 """
 
 

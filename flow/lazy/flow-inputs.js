@@ -76,6 +76,26 @@
     return { plan: { format: "mzflow/2", program: v.program || F.newPlan().program, ...(v.profile === "as_is" ? { profile: "as_is" } : {}), inputs: (v.inputs || []).map((/** @type {any} */ f) => ({ ...f, sha256: f.sha256 || "" })), steps: v.steps || [] } };
   };
 
+  /** one call of the engine route `flow/line`: the text it answers; rejects with the Error of the engine ({key, params}) @param {any} S @param {string | null} line */
+  F.lineCall = async (S, line) => {
+    const plan = F.exportText(S.plan), extra = line == null ? {} : { line };
+    if (/** @type {any} */ (window).MZLAB_DESKTOP) return F.desktopPost("flow/line", { plan, ...extra });
+    const r = await fetch("api/flow/line", { method: "POST", body: JSON.stringify({ plan, registry: S.reg.steps, ...extra }) }), text = await r.text();
+    if (r.ok) return text;
+    let e = /** @type {any} */ ({}); try { e = JSON.parse(text); } catch (_) { /* a body that is not JSON */ }
+    throw { key: e.error_key || "err.flow.run", params: e.params || {} };
+  };
+
+  /** a plan read from a file or sent by the assistant, with every step saved at an older version brought to the current one by the engine (`mzlab_core::flow::migrate`, through
+   * `flow/line` with no --set), so the page never keeps its own list of migrations. If the engine cannot be reached the plan is returned as read and the checker names the old version
+   * @param {{plan: any, error?: any}} r the result of F.importText @param {any} reg */
+  F.migrated = async (r, reg) => {
+    if (r.error) return r;
+    const old = (/** @type {any} */ i) => { const st = reg.byId.get(String(i.step).split("@")[0]); return !!st && Number(String(i.step).split("@")[1]) < st.version; };
+    if (!r.plan.steps.some(old)) return r;
+    try { const m = F.importText(await F.lineCall({ plan: r.plan, reg }, "mzlab-cli flow run")); return m.error ? r : m; } catch (_) { return r; }
+  };
+
   /** can the chain reach the identification (F.GOAL_STEPS)? `reached`: it has the step; `canReach`: every type it needs can be made from the plan's inputs and outputs;
    * `missing`: input types to add when not; `next`: steps to add now that lead there. @param {any} plan @param {any} reg */
   F.goal = (plan, reg) => {

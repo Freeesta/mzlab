@@ -29,7 +29,7 @@ I18N.add("it", {
   "bn.grp.msn": "Frammentazioni successive (MSn)",
   "bn.addBtn.title": "Aggiunge un grafico impilato sullo stesso asse del tempo",
   "bn.stack": "Grafici impilati",
-  "bn.stack.title": "Ogni grafico ha il suo tipo di cromatogramma; «×» lo toglie",
+  "bn.stack.title": "Un grafico per ogni tipo di cromatogramma",
   "bn.norm.title": "Scala 0–100 per ogni grafico; il massimo resta scritto come NL",
   "bn.drop": "Togli il grafico: {name}",
   "bn.pin.on": "Cella fissata: clic per sganciarla",

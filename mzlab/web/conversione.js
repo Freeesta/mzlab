@@ -13,38 +13,74 @@ const CONV = {
   key(/** @type {string} */ name) { return this.compression + ":" + name; },
   // the estimate of the mzML files still to be written, "" when there is nothing to write
   estimate() {
-    const todo = (typeof ST !== "undefined" && ST.files || []).filter((/** @type {Bag} */ x) => this.native().includes(x.name) && !this.made.has(this.key(x.name)));
+    const todo = (typeof ST !== "undefined" && ST.files || []).filter((/** @type {Bag} */ x) => this.writes(x.name) && !this.made.has(this.key(x.name)));
     const total = todo.reduce((/** @type {number} */ a, /** @type {Bag} */ x) => a + (x.size || 0), 0) * (this.RATIO[this.compression] || 1);
     return total ? "≈ " + (total > 1e6 ? (total / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1e3)) + " kB") : "";
   },
-  // the tooltip of each «Download mzML» button of the table with the real size of the file written for the compression now selected (in place: the table is not drawn again)
+  // the tooltip of each «Download mzML» button of the table (in place: the table is not drawn again)
   paintSizes() {
-    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {HTMLElement} */ b) => { const s = this.realSize(b.dataset.dl || ""); b.title = I18N.t("conv.dl.title") + (s ? " (" + s + ")" : ""); });
+    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {HTMLElement} */ b) => { b.title = I18N.t("conv.dl.title"); });
   },
   // the real size of the mzML already written for `name` (in the desktop app the file stays on the disk and its size comes from the native side)
   realSize(/** @type {string} */ name) {
-    const b = this.files.get(name) || this.made.get(this.key(name));
+    const b = this.held(name);
     const n = b ? b.size || /** @type {any} */ (b).mzlabSize || 0 : 0;
     return n ? (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " kB") : "";
   },
   made: new Map(),        // name -> mzML written on request for a sample of a maker's file (nativo.js)
-  add(/** @type {string} */ name, /** @type {Blob} */ blob) { this.files.set(name, blob); },
+  // name -> how the readers module wrote the mzML at the loading ({fam, mem, c}, `gz` = the .mzXML.gz it inflated): the download is written again from there
+  sources: /** @type {Map<string, { fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File }>} */ (new Map()),
+  add(/** @type {string} */ name, /** @type {Blob} */ blob, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File } | undefined} */ src) { this.files.set(name, blob); if (src) this.sources.set(name, src); },
+  // samples that left the list: their mzML and source go, so a later file of the same name is neither taken for them (NATIVO.cachedModulo) nor downloaded as them
+  forget(/** @type {string[]} */ names) { for (const n of names) { this.files.delete(n); this.sources.delete(n); for (const k of [...this.made.keys()]) if (k.slice(k.indexOf(":") + 1) === n) this.made.delete(k); } },
+  // the mzML the module wrote into conv/ is copied into the engine's store (files/) by the loading: the reference moves to that copy and conv/ lets its own go (two full copies of every converted sample otherwise)
+  async settle(/** @type {string} */ name) {
+    const b = this.files.get(name);
+    if (!this.sources.has(name) || !(b instanceof File) || !/^[0-9a-z]+-[0-9a-z]+\.mzML$/.test(b.name) || !navigator.storage) return;      // the name shell.js moduloToMzml gave it in conv/
+    try {
+      const root = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab"), copy = await (await (await root.getDirectoryHandle("files")).getFileHandle(name)).getFile();
+      if (copy.size !== b.size) return;
+      this.files.set(name, copy); await (await root.getDirectoryHandle("conv")).removeEntry(b.name);
+    } catch (_) { /* not in the browser store (desktop), or already gone: the reference stays */ }
+  },
+  // the mzML ready for `name` in the chosen compression (the file of the loading carries the optical matrix for the UV panel: never the download of a sample of the module)
+  held(/** @type {string} */ name) { return this.sources.has(name) ? this.made.get(this.key(name)) : this.files.get(name) || this.made.get(this.key(name)); },
+  // whether the mzML of `name` in the chosen compression is written on request
+  writes(/** @type {string} */ name) { return this.native().includes(name) || this.sources.has(name); },
   // the samples of the maker's files of this page: their mzML is written when it is asked for
   native() { const rb = typeof window !== "undefined" && window.MZLAB_RUST; return rb && rb.nativeNames ? rb.nativeNames() : []; },
   has(/** @type {string} */ name) { return this.files.has(name) || this.native().includes(name); },
   get size() { return new Set([...this.files.keys(), ...this.native()]).size; },
   // the mzML of a sample of a maker's file, written now into the box of the loading (a panel with the scans done and the cancel button); null if it was cancelled or failed
   async make(/** @type {string} */ name) {
+    const src = this.sources.get(name);
+    if (src) return this.again(name, src);
     const rb = window.MZLAB_RUST, box = document.getElementById("up");
     if (!rb || !rb.nativeToMzml || !rb.isNative(name) || !box) return null;
     const f = (typeof ST !== "undefined" && ST.files || []).find((/** @type {Bag} */ x) => x.name === name), g = await ConvUI.card(box, [1]), ui = g.start(1, name);
     try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, (/** @type {Bag} */ p) => ui.update(p), g.signal, this.compression); ui.done(); g.end(); this.made.set(this.key(name), blob); this.paintSizes(); return blob; }
     catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
   },
+  // a sample the readers module converted at the loading, written again in the chosen compression without the optical matrix: the file of
+  // `mzlab-cli convert --compression C` (conv.dad false), as the download of a sample the engine reads; null if it was cancelled or failed
+  async again(/** @type {string} */ name, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File }} */ src) {
+    const M = window.LETTORI_MOD, box = document.getElementById("up");
+    if (!M || !box) return null;
+    const g = await ConvUI.card(box, [1]), ui = g.start(1, name), dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;
+    let temp = "";
+    try {
+      let mem = src.mem;
+      if (src.gz) { const x = await window.GZFLUSSO.mzxml(src.gz, () => {}, g.signal); temp = x.mzlabTemp; mem = [{ name: x.name, blob: x }]; }
+      const blob = await M.toMzml(src.fam, mem, src.c, dest, (/** @type {Bag} */ p) => ui.update(p), g.signal, { dad: false, compression: this.compression });
+      ui.done(); g.end(); this.made.set(this.key(name), blob); this.paintSizes(); return blob;
+    }
+    catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
+    finally { if (temp) window.GZFLUSSO.drop(temp); }
+  },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
   async download(/** @type {string} */ name) {
-    let blob = this.files.get(name) || this.made.get(this.key(name));
-    if (!blob && this.native().includes(name)) blob = await this.make(name);
+    let blob = this.held(name);
+    if (!blob && this.writes(name)) blob = await this.make(name);
     if (!blob) return false;
     if (window.MZLAB_DESKTOP) {
       if (blob.mzlabId == null || !/** @type {any} */ (window).MZLAB_SAVE_MZML) return false;
@@ -364,6 +400,18 @@ function convName(/** @type {string} */ rawName, /** @type {Iterable<string> | n
   const base = String(rawName).replace(/\.raw$/i, "");
   return freeMzml(base, ".raw", new Set([...(taken || [])].map(n => String(n).toLowerCase())));
 }
+// "#" separates a file from its items in the list ("x.mzML#MS1", lr.rs) and every page that splits there takes the first one: a file the user gives with a "#"
+// enters under the name with "_" (null when the name has none). Both files of a .wiff pair get the same name (the list name of their samples is made later);
+// another file takes a free name ("x_1_2.mzML"), `taken` = names in use (any case).
+function hashFree(/** @type {string} */ name, /** @type {Iterable<string> | null | undefined} */ taken) {
+  if (!String(name).includes("#")) return null;
+  const n = String(name).replace(/#/g, "_");
+  if (/\.wiff(\.scan)?$/i.test(n)) return n;
+  const used = new Set([...(taken || [])].map(x => String(x).toLowerCase())), m = /^(.*?)((?:\.[A-Za-z0-9]+)?(?:\.gz)?)$/.exec(n) || [n, n, ""];
+  let out = n;
+  for (let i = 2; used.has(out.toLowerCase()); i++) out = m[1] + "_" + i + m[2];
+  return out;
+}
 // "base.mzML", else "base<ext>.mzML", else "base_2<ext>.mzML", "base_3<ext>.mzML"...: a third file with the same name never takes the name of the second
 function freeMzml(/** @type {string} */ base, /** @type {string} */ ext, /** @type {Set<string>} */ used) {
   if (!used.has((base + ".mzML").toLowerCase())) return base + ".mzML";
@@ -375,8 +423,10 @@ function freeMzml(/** @type {string} */ base, /** @type {string} */ ext, /** @ty
 // name of the mzML of a sample of a SCIEX .wiff: its DATA name, else "x.mzML" or "x_s3.mzML" (sample number, for a sample without a name in a .wiff with several);
 // a name already taken goes through the counter of freeMzml ("S.wiff.mzML", "S_2.wiff.mzML"), the same as a .raw
 function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sample, /** @type {boolean} */ several, /** @type {Iterable<string> | null | undefined} */ taken, /** @type {string | null | undefined} */ sampleName) {
-  const given = sampleName != null && String(sampleName) !== stem + ".wiff #" + sample;      // the reader names a sample without a DATA name "x.wiff #3"
-  const clean = given ? String(sampleName).trim().replace(/[/\\:*?"<>|]/g, "_").slice(0, 120) : "";
+  const nm = sampleName == null ? null : String(sampleName);
+  // the reader names a lone sample without a DATA name "<file> #<number>" (nomi.rs): the extension as the file has it, the number of the container
+  const given = nm != null && !(nm.startsWith(stem) && /^\.wiff #\d+$/i.test(nm.slice(stem.length)));
+  const clean = given ? String(nm).trim().replace(/[/\\:*?"<>|#]/g, "_").slice(0, 120) : "";
   const used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
   const base = clean || (several ? stem + "_s" + sample : String(stem));
   return freeMzml(base, ".wiff", used);
@@ -391,4 +441,4 @@ function convElapsed(/** @type {number} */ ms) {
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
 
-if (typeof module !== "undefined") module.exports = { CONVROWS, convName, wiffName, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { CONV, CONVROWS, convName, wiffName, hashFree, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };

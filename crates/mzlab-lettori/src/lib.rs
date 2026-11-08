@@ -10,6 +10,8 @@ pub mod andi;
 pub mod aperti;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 pub mod bruker;
+pub mod finiti;
+pub mod json;
 pub mod non_portati;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
 pub mod shimadzu;
@@ -24,6 +26,9 @@ static VOCE_MZML_NUMPRESS: VoceLettore = aperti::mzml_numpress::VOCE;
 static VOCE_MZXML: VoceLettore = aperti::mzxml::VOCE;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 static VOCE_MZML_GZ: VoceLettore = aperti::mzml_gz::VOCE;
+// the page gunzips an mzXML.gz itself (OPFS): only the app and the CLI carry this voice, so the module `aperti` keeps its size
+#[cfg(feature = "tutte")]
+static VOCE_MZXML_GZ: VoceLettore = aperti::mzml_gz::VOCE_MZXML;
 #[cfg(any(feature = "andi", feature = "tutte"))]
 static VOCE_ANDI: VoceLettore = andi::ms::VOCE;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
@@ -75,6 +80,8 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         Some(&VOCE_MZXML),
         #[cfg(any(feature = "aperti", feature = "tutte"))]
         Some(&VOCE_MZML_GZ),
+        #[cfg(feature = "tutte")]
+        Some(&VOCE_MZXML_GZ),
         #[cfg(any(feature = "andi", feature = "tutte"))]
         Some(&VOCE_ANDI),
         #[cfg(any(feature = "agilent", feature = "tutte"))]
@@ -111,20 +118,60 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
 }
 
 /// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans), except
-/// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmDaScansioni`).
+/// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmDaScansioni`). Every reader
+/// answers through `finiti::Finiti`: a NaN or infinite number of the file is an error, not a value.
 pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let name = fs
         .membri
         .first()
         .map(|m| m.nome.clone())
         .unwrap_or_default();
-    let v =
-        riconosci(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
+    let v = riconosci(&mut fs).ok_or_else(|| rifiuto(&fs, name))?;
     let mut l = (v.apri)(fs, limiti)?;
-    if l.formato() == lettori::Formato::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
+    if l.format() == lettori::Formato::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
         l = Box::new(srm::SrmDaScansioni::new(l));
     }
-    Ok(l)
+    Ok(Box::new(finiti::Finiti::new(l)))
+}
+
+/// The extensions that name one format read only by this crate: a file so named that no reader takes is a cut or damaged copy, not another format (`.mzML`, `.mzML.gz`,
+/// `.wiff` and the folders are left out: the engine reads the plain ones, a `.wiff` needs its pair, a folder member is named by its folder).
+const SOLO_QUI: [&str; 8] = [
+    ".mzxml",
+    ".mzxml.gz",
+    ".cdf",
+    ".nc",
+    ".qgd",
+    ".lcd",
+    ".raw",
+    ".wiff.scan",
+];
+
+/// Why no reader takes `fs`: a member named like a format of the registry that is empty (`err.file.empty`), or whose start is not that of its format
+/// (`err.file.notThisFormat`, a cut or damaged copy); anything else is `err.file.notAccepted` (the engine of the site then asks the readers module).
+fn rifiuto(fs: &FileSet, name: String) -> Error {
+    let breve = |n: &str| n.rsplit(['/', '\\']).next().unwrap_or(n).to_string();
+    for m in &fs.membri {
+        let n = m.nome.to_ascii_lowercase();
+        let tutte = estensioni();
+        let Some(e) = tutte
+            .iter()
+            .filter(|e| n.ends_with(**e))
+            .max_by_key(|e| e.len())
+        else {
+            continue;
+        };
+        if m.dim == 0 {
+            return Error::new("err.file.empty").with("name", breve(&m.nome));
+        }
+        if SOLO_QUI.contains(e) {
+            return Error::new("err.file.notThisFormat")
+                .with("name", breve(&m.nome))
+                .with("ext", e)
+                .with("size", m.dim);
+        }
+    }
+    Error::new("err.file.notAccepted").with("name", name)
 }
 
 /// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).
@@ -144,14 +191,14 @@ pub fn estensioni() -> Vec<&'static str> {
 }
 
 /// Why the engine does not do for sample `c` of `l`: `"srm"` when its SRM traces exist only as scans, `"variante"` when the file is of an instrument or a scan type the engine's reader
-/// was not written for (SCIEX other than the 3200 QTRAP).
+/// was not written for (SCIEX other than the 3200 QTRAP, scheduled MRM), in sample `c` or in any other sample: the page hands the whole pair to one reader.
 pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
     let mut m = Vec::new();
     if srm::ha_scansioni_srm(l, c) {
         m.push("srm");
     }
     #[cfg(feature = "sciex")]
-    if l.variante(c) {
+    if l.variant(c) || (0..l.samples().len()).any(|k| k != c && l.variant(k)) {
         m.push("variante");
     }
     m
@@ -162,7 +209,7 @@ pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
 #[cfg(any(feature = "agilent", feature = "tutte"))]
 pub fn motivi_insieme(fs: &mut FileSet) -> Vec<&'static str> {
     let mut m = Vec::new();
-    if mzlab_core::agilent::lettore::variante(fs) {
+    if mzlab_core::agilent::lettore::variant(fs) {
         m.push("variante");
     }
     m

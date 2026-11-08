@@ -2,7 +2,7 @@
 //! per session in this module and the Flow page talks to it with `api/flow/sched/<op>`. Texts in and out are JSON; a job is `{"instance","item"}`.
 //! The registry is the `step/1` array the page already holds (`step::registry_from_value`). Design: `docs/agenti/flow-live.md`.
 
-use super::sched::{Command, Done, JobId, JobSpec, Landed, Limits, NodeView, Sched};
+use super::sched::{Command, Done, JobId, JobSpec, Landed, Limits, NodeView, Sched, State};
 use super::{build_agent, parse, value_text, Agent, Plan};
 use crate::error::{Error, Result};
 use crate::json::{self, Out, Value};
@@ -50,9 +50,17 @@ fn list<T>(items: &[T], each: impl Fn(&mut Out, &T)) -> String {
     o.raw("]").0.clone()
 }
 
-fn spec_json(o: &mut Out, j: &JobSpec) {
+/// A job to run; a job of one item has the file-name root of its input (`root`), for the names of what it writes.
+fn spec_json(o: &mut Out, j: &JobSpec, roots: &[(String, String)]) {
     o.raw("{");
     id_json(o, &j.id);
+    let root =
+        j.id.item
+            .as_ref()
+            .and_then(|n| roots.iter().find(|r| &r.0 == n));
+    if let Some((_, r)) = root {
+        o.raw(",\"root\":").str(r);
+    }
     o.raw(",\"key\":").str(&j.key).raw(",\"mb\":").num(j.mb);
     o.raw(",\"resources\":[");
     for (k, r) in j.resources.iter().enumerate() {
@@ -119,7 +127,8 @@ fn next(s: &Sched, body: &Value) -> String {
             .and_then(Value::f64)
             .unwrap_or(fallback)
     };
-    list(&s.next(&limits, estimate), spec_json)
+    let roots = s.roots();
+    list(&s.next(&limits, estimate), |o, j| spec_json(o, j, &roots))
 }
 
 fn finished(s: &mut Sched, body: &Value) -> String {
@@ -183,7 +192,16 @@ pub fn ask(s: &Sched, op: &str, body: &Value) -> Option<String> {
         "jobs" => list(&s.jobs(), |o, (id, st)| {
             o.raw("{");
             id_json(o, id);
-            o.raw(",\"state\":").str(st.name()).raw("}");
+            o.raw(",\"state\":").str(st.name());
+            // a failed job names its error as the result it was given (`result_of`): the record of the run carries it
+            if let State::Error { key, params } | State::Refused { key, params } = st {
+                o.raw(",\"error_key\":").str(key).raw(",\"params\":{");
+                for (n, (k, v)) in params.iter().enumerate() {
+                    o.raw(if n > 0 { "," } else { "" }).str(k).raw(":").str(v);
+                }
+                o.raw("}");
+            }
+            o.raw("}");
         }),
         "nodes" => list(&s.nodes(), node_json),
         "events" => s.events_since(body.get("since").and_then(Value::f64).unwrap_or(0.0) as u64),

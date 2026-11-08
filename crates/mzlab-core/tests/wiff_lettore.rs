@@ -32,7 +32,7 @@ fn set(dir: &Path, name: &str) -> FileSet {
 
 fn same(dir: &Path, name: &str) -> usize {
     let mut l = lettori::apri(set(dir, name), &Limiti::sito()).unwrap();
-    assert_eq!(l.formato().id(), "sciex-wiff");
+    assert_eq!(l.format().id(), "sciex-wiff");
     let ole = container(
         std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(),
         name,
@@ -40,13 +40,13 @@ fn same(dir: &Path, name: &str) -> usize {
     .unwrap();
     let mut scan = std::fs::read(dir.join(format!("{name}.wiff.scan"))).unwrap();
     let ids = samples(&ole);
-    assert_eq!(l.campioni().len(), ids.len(), "{name}: samples");
+    assert_eq!(l.samples().len(), ids.len(), "{name}: samples");
     let mut checked = 0;
     for (c, s) in ids.into_iter().enumerate() {
         let mut w = Wiff::open(&ole, name, Some(scan.len() as u64), s).unwrap();
         w.wiff_sha1 = Some(ole.sha1_hex());
         let run = w.run(&mut scan).unwrap();
-        let index = l.indice(c).unwrap().to_vec();
+        let index = l.index(c).unwrap().to_vec();
         assert_eq!(index.len(), run.spectra.len(), "{name}/{s}: index");
         for (k, want) in run.spectra.iter().enumerate() {
             assert_eq!(
@@ -57,7 +57,7 @@ fn same(dir: &Path, name: &str) -> usize {
             assert!(index[k]
                 .posizione
                 .is_some_and(|p| p.membro == 1 && p.lunghezza > 0));
-            let got = l.scansione(c, k).unwrap();
+            let got = l.scan(c, k).unwrap();
             assert_eq!(
                 (
                     &got.id,
@@ -85,7 +85,7 @@ fn same(dir: &Path, name: &str) -> usize {
             checked += 1;
         }
         // the BPC is listed only after the mzML writer has gone through the scans (`extra_scansione`): this test reads them one by one
-        let listed = l.cromatogrammi(c).unwrap();
+        let listed = l.chromatograms(c).unwrap();
         let chroms: Vec<_> = run
             .chromatograms
             .iter()
@@ -93,7 +93,7 @@ fn same(dir: &Path, name: &str) -> usize {
             .collect();
         assert_eq!(listed.len(), chroms.len(), "{name}/{s}: chromatograms");
         for want in chroms {
-            assert_eq!(&l.cromatogramma(c, &want.id).unwrap(), want);
+            assert_eq!(&l.chromatogram(c, &want.id).unwrap(), want);
         }
         let via = mzlab_core::lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
         let back = mzlab_core::mzml::read(&via[..]).unwrap();
@@ -102,7 +102,7 @@ fn same(dir: &Path, name: &str) -> usize {
             back.chromatograms, run.chromatograms,
             "{name}/{s}: mzML chromatograms"
         );
-        let doc = l.metodo(c).unwrap();
+        let doc = l.method(c).unwrap();
         assert!(
             doc.contains("sciex-wiff") && doc.contains(&format!("{name}.wiff")),
             "{doc}"
@@ -139,7 +139,25 @@ fn the_synthetic_pairs_read_the_same_through_the_registry() {
     assert!(n > 0);
     one_sample(&out, "two");
     mzml_of_one_sample(&out, "two");
+    mzml_with_known_sha1(&out, "two");
     truncated(&out, "serie");
+    no_idx(&out, "buchi");
+}
+
+/// An injection in the sample table with no `Idx` stream (it acquired nothing) is listed with 0 scans and its number, not dropped: the samples after it keep theirs.
+fn no_idx(dir: &Path, name: &str) {
+    let mut l = lettori::apri(set(dir, name), &Limiti::sito()).unwrap();
+    let got: Vec<(u32, usize)> = l.samples().iter().map(|c| (c.id, c.scansioni)).collect();
+    assert_eq!(got, [(1, 1), (2, 0), (3, 1)], "{name}: samples");
+    assert!(
+        l.index(1).unwrap().is_empty(),
+        "{name}: the empty one has no scans"
+    );
+    assert_eq!(
+        l.index(2).unwrap().len(),
+        1,
+        "{name}: the one after it reads"
+    );
 }
 
 /// A `.wiff.scan` cut in half: the scans beyond its end are counted by `mancanti` and left out of the index, the others still read.
@@ -152,59 +170,56 @@ fn truncated(dir: &Path, name: &str) {
     scan.dim = bytes.len() as u64;
     scan.dati = Box::new(bytes);
     let mut cut = mzlab_core::wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(0)).unwrap();
-    let (n, k) = (whole.indice(0).unwrap().len(), cut.indice(0).unwrap().len());
-    assert_eq!(whole.mancanti(0), 0, "{name}: the whole pair lacks nothing");
+    let (n, k) = (whole.index(0).unwrap().len(), cut.index(0).unwrap().len());
+    assert_eq!(whole.missing(0), 0, "{name}: the whole pair lacks nothing");
     assert!(
-        k < n && cut.mancanti(0) > 0,
+        k < n && cut.missing(0) > 0,
         "{name}: {k} of {n} scans, {} missing",
-        cut.mancanti(0)
+        cut.missing(0)
     );
     assert!(
-        k + cut.mancanti(0) >= n,
+        k + cut.missing(0) >= n,
         "{name}: every scan left out is counted"
     );
     for s in 0..k {
-        cut.scansione(0, s).unwrap();
+        cut.scan(0, s).unwrap();
     }
 }
 
 /// `apri_solo` (the builder of one index): sample `c` gives the index of the whole opening, the others are listed with 0 scans and give their own index when asked.
 fn one_sample(dir: &Path, name: &str) {
     let mut all = lettori::apri(set(dir, name), &Limiti::sito()).unwrap();
-    let n = all.campioni().len();
+    let n = all.samples().len();
     assert!(n > 1, "{name}: a container with more samples");
     for c in 0..n {
         let mut solo =
             mzlab_core::wiff::lettore::apri_solo(set(dir, name), &Limiti::sito(), Some(c)).unwrap();
         let want: Vec<_> = (0..n)
-            .map(|k| all.campioni()[k].scansioni * usize::from(k == c))
+            .map(|k| all.samples()[k].scansioni * usize::from(k == c))
             .collect();
-        let got: Vec<_> = solo.campioni().iter().map(|x| x.scansioni).collect();
+        let got: Vec<_> = solo.samples().iter().map(|x| x.scansioni).collect();
         assert_eq!(got, want, "{name}: counts with sample {c} alone");
         for k in (c..n).chain(0..c) {
             let a: Vec<_> = all
-                .indice(k)
+                .index(k)
                 .unwrap()
                 .iter()
                 .map(|v| (v.id.clone(), v.rt, v.posizione))
                 .collect();
             let b: Vec<_> = solo
-                .indice(k)
+                .index(k)
                 .unwrap()
                 .iter()
                 .map(|v| (v.id.clone(), v.rt, v.posizione))
                 .collect();
             assert_eq!(a, b, "{name}: index of sample {k} opened for {c}");
             assert_eq!(
-                solo.campioni()[k].scansioni,
-                all.campioni()[k].scansioni,
+                solo.samples()[k].scansioni,
+                all.samples()[k].scansioni,
                 "{name}: scans listed for sample {k} once its index is built"
             );
             if let Some(s) = a.len().checked_sub(1) {
-                assert_eq!(
-                    all.scansione(k, s).unwrap().mz,
-                    solo.scansione(k, s).unwrap().mz
-                );
+                assert_eq!(all.scan(k, s).unwrap().mz, solo.scan(k, s).unwrap().mz);
             }
         }
     }
@@ -224,7 +239,7 @@ fn mzml_of(mut l: Box<dyn lettori::Lettore>, c: usize) -> Vec<u8> {
 fn mzml_of_one_sample(dir: &Path, name: &str) {
     let n = lettori::apri(set(dir, name), &Limiti::sito())
         .unwrap()
-        .campioni()
+        .samples()
         .len();
     for c in 0..n {
         let all = mzml_of(lettori::apri(set(dir, name), &Limiti::sito()).unwrap(), c);
@@ -237,6 +252,24 @@ fn mzml_of_one_sample(dir: &Path, name: &str) {
             all == solo,
             "{name}: mzML of sample {c} opened for it alone"
         );
+    }
+}
+
+/// The mzML is the same bytes when the members carry the SHA-1 their fingerprints gave (`upload::impronte`: the reader then does not hash the
+/// `.wiff.scan` again for the header), an empty one (hashed by the reader) or none.
+fn mzml_with_known_sha1(dir: &Path, name: &str) {
+    let mut known = set(dir, name);
+    mzlab_core::upload::impronte(&mut known).unwrap();
+    assert!(known.membri[1].sha1.as_ref().is_some_and(|s| s.len() == 40));
+    let mut empty = set(dir, name);
+    empty
+        .membri
+        .iter_mut()
+        .for_each(|m| m.sha1 = Some(String::new()));
+    let want = mzml_of(lettori::apri(set(dir, name), &Limiti::sito()).unwrap(), 0);
+    for (what, fs) in [("known", known), ("empty", empty)] {
+        let got = mzml_of(lettori::apri(fs, &Limiti::sito()).unwrap(), 0);
+        assert!(got == want, "{name}: mzML with a {what} SHA-1");
     }
 }
 

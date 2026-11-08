@@ -11,13 +11,12 @@ const RESET = (function () {
   const KEEP_OPFS = ["librerie"];
   const OPFS_RETRY_MS = 10000;
   const KEEP_IDB = ["mzlab-libs", "mzlab-libdir"];                    // ... and their databases
-  const KNOWN_IDB = [NOMI.DB, typeof NOMI !== "undefined" && NOMI.DB_OLD ? NOMI.DB_OLD : "qqq_lab", "mzlab-libs", "mzlab-libdir"];
+  const KNOWN_IDB = [NOMI.DB, NOMI.DB_OLD, "mzlab-libs", "mzlab-libdir"];
   // "cold" (the desktop app, first page of a new run): the files and the session like "files", plus the working state kept in localStorage (map, peak and list
   // choices, sidebar layout...); what the user set on purpose stays: language, theme and settings, reading aids, the update notice, library settings, seen hints
   const KEEP_LS = /^((mzlab|qqq)\.(lang|prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.)|(mzlab|qqq)-(theme|labels))/;
   // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
-  const RUN_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("run") : "mzlab.run";
-  const RUN_KEY_OLD = typeof NOMI !== "undefined" && NOMI.OLD_KEY ? NOMI.OLD_KEY("run") : "qqq.run";
+  const RUN_KEY = NOMI.KEY("run");
   const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
@@ -52,8 +51,6 @@ const RESET = (function () {
     const rep = { mode, opfs: [], idb: [], blocked: [], caches: [], sw: 0, keys: 0, errors: /** @type {string[]} */ ([]) };
     // the engine worker holds sync handles on the files: it must go first
     try { if (window.qqEngineStop) window.qqEngineStop(); } catch (e) { /* no engine */ }
-    // the development server keeps the session in memory
-    if (!window.QQQ_BROWSER) await wait(fetch("api/new", { method: "POST", body: JSON.stringify({ fresh: true }) }));
     // OPFS, IndexedDB, caches and the worker registration are independent: they go at the same time, each with its own timeout
     await Promise.all([
       navigator.storage && /** @type {any} */ (navigator.storage).getDirectory ? wait(opfs(mode, rep), OPFS_RETRY_MS + 4000) : null,
@@ -67,7 +64,7 @@ const RESET = (function () {
       } catch (e) { rep.errors.push("storage"); }
     } else {
       try {
-        const sk = typeof NOMI !== "undefined" ? NOMI.KEY("sessione") : "mzlab.sessione";
+        const sk = NOMI.KEY("sessione");
         try { localStorage.removeItem(sk); } catch (_) {}
         if (mode === "cold") {
           const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && /^(qqq|mzlab)/i.test(k) && !KEEP_LS.test(k)) ks.push(k); }
@@ -85,7 +82,7 @@ const RESET = (function () {
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
     let rep;
     try { rep = await wipe(mode); } catch (e) { window.QQ_RESETTING = false; throw e; }
-    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.setItem(RUN_KEY_OLD, "1"); } catch (e) { /* none */ } }
+    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
     const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1"); }
     // the same address (a "#/data" hash and no parameter to drop) would only be a same-page jump: reload for real
@@ -104,18 +101,16 @@ const RESET = (function () {
     d.addEventListener("close", () => d.remove());
     d.showModal(); /** @type {HTMLElement | null} */ (d.querySelector(".rs-cancel"))?.focus();
   }
-  // ---- once: «the files stay in the browser» (disattivato: nessun popup)
+  // ---- once: «the files stay in the browser» (off: no popup)
   function remind() {
   }
   // the desktop app calls this once at start (desktop-shim.js): the first page of a new run starts clean; a reload of the page in the same run keeps everything.
   // Without sessionStorage nothing is reset (it could never be told apart from a reload).
   function cold() {
     try {
-      if (sessionStorage.getItem(RUN_KEY) || sessionStorage.getItem(RUN_KEY_OLD)) return false;
-      sessionStorage.setItem(RUN_KEY, "1");
-      sessionStorage.setItem(RUN_KEY_OLD, "1");
+      if (sessionStorage.getItem(RUN_KEY)) return false;
+      sessionStorage.setItem(RUN_KEY, "1");               // probe: a storage that refuses writes is never treated as a new run
       sessionStorage.removeItem(RUN_KEY);
-      sessionStorage.removeItem(RUN_KEY_OLD);
     } catch (e) { return false; }
     run("cold", { mark: true });
     return true;

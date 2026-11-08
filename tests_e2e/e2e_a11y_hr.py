@@ -16,6 +16,8 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).replace("\n", " ")[:900]))
 RUN = """(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
   .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
+RUN_MINOR = """() => axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']}})
+  .then(r => r.violations.filter(v => ['moderate','minor'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
 def axe_ok(pg, sel="body"):
     if not pg.evaluate("typeof axe !== 'undefined'"): pg.add_script_tag(path=AXE)
     v = pg.evaluate(RUN, sel); assert not v, v
@@ -34,13 +36,20 @@ try:
         step("axe: the HR bench", lambda: axe_ok(pg, "#dpanels"))
         step("axe: the whole page with the HR bench open", lambda: axe_ok(pg))
         def info():
-            pg.evaluate("BARRA.setTab('hdr')"); attendi(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0"); axe_ok(pg, "#hrinfo")
+            pg.evaluate("BARRA.setTab('hdr')"); wait_for_js(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0"); axe_ok(pg, "#hrinfo")
         step("axe: the information bar of the HR bench", info)
+        def info_minor():
+            pg.evaluate("BARRA.setTab('hdr')"); wait_for_js(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0")
+            for th in ("light", "dark"):
+                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th)
+                v = pg.evaluate(RUN_MINOR); assert not v, (th, v)
+            pg.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
+        step("axe moderate/minor (best practice): the information bar of the HR bench, light and dark", info_minor)
         def calc():
             pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#sb-panel-addloss:not([hidden]) #calcin"); axe_ok(pg, "#sb-panel-addloss")
             for t in ("losses", "cont"):
-                pg.click(f"#al-t-{t}"); pg.wait_for_selector(f"#sb-panel-{t}:not([hidden])"); pg.fill("#al-q", "149.0233"); frames(pg, 25); axe_ok(pg, "#sb-panel-addloss")
-            pg.fill("#al-q", ""); pg.click("#al-t-adducts")
+                pg.click(f"#al-t-{t}"); pg.wait_for_selector(f"#sb-panel-{t}:not([hidden])"); pg.fill("#calcin", "149.0233"); frames(pg, 25); axe_ok(pg, "#sb-panel-addloss")
+            pg.fill("#calcin", ""); pg.click("#al-t-adducts")
         step("axe: Adducts & losses with the calculator, on its three tabs", calc)
         step("every visible control of the HR bench has an accessible name", lambda: (lambda bad: (_ for _ in ()).throw(AssertionError(bad[:15])) if bad else None)(pg.evaluate(NAME)))
         def tab_reach():
@@ -70,7 +79,7 @@ try:
             assert n >= 3, f"only {n} live regions on the page"
         step("dynamic updates: live regions exist", live)
         def esc():
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog[open]')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog[open]')")
         step("keyboard: Esc leaves no open dialog", esc)
     r.close()
 except Exception as e:

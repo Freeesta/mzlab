@@ -46,7 +46,7 @@ def test_counts_and_order():
     assert all(r["catalog"] == "hrms" for r in rows[625:])
 
 
-def test_composti_rows_are_all_there():
+def test_compounds_rows_are_all_there():
     _, by_key = catalogue()
     for t in read("TP_Mine/data/composti.csv"):
         r = by_key[t["inchikey"]]
@@ -65,7 +65,8 @@ def test_hrms_rows_are_all_there():
         assert r["molecular_formula"] == hill(h["neutral_formula"])
         assert r["smiles"] == h["smiles"]
         assert (r["cas"], r["pubchem_cid"], r["notes"]) == (h["cas"].strip(), h["pubchem_cid"].strip(), h["check"].strip())
-        assert set(filter(None, r["classes"].split("|"))) == {f"{k}:{h[c].strip()}" for c, k in CLASS_KEYS if h[c].strip()}
+        kept = {t for t in r["classes"].split("|") if t and not t.startswith("structure:")}           # structure:* come from the SMILES (test_classi_struttura.py)
+        assert kept == {f"{k}:{h[c].strip()}" for c, k in CLASS_KEYS if h[c].strip()}
         assert abs(float(r["monoisotopic_mass"]) - float(h["monoisotopic_mass"])) <= 0.0005, h["id"]
         assert r["adducts"] == "[M+H]+|[M+Na]+|[M+NH4]+"
         assert "hrms" in r["catalog"].split("|")

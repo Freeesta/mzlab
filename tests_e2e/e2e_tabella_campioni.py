@@ -37,7 +37,7 @@ try:
         def no_underline():
             for n in NAMES:
                 d = pg.evaluate("n => getComputedStyle(document.querySelector('[data-open=\"' + n + '\"]')).textDecorationLine", n); assert d == "none", (n, d)
-            assert NAMES[2] in pg.inner_text("#flist")
+            assert NAMES[2][:-len(".mzML")] in pg.inner_text("#flist")
         step("file names are not underlined (the underscores read)", no_underline)
         def last_column():
             for w in (1400, 900, 600):
@@ -73,7 +73,7 @@ try:
             pg.click("#rmall"); pg.wait_for_selector("#askdlg[open]"); pg.click("#askno"); frames(pg, 3)
             assert pg.evaluate("E.files.every(f => !f.gone)"), "Cancel keeps the files"
             pg.click("#rmall"); pg.wait_for_selector("#askdlg[open]"); pg.click("#askok")
-            attendi(pg, "E.files.every(f => f.gone)", 30000)
+            wait_for_js(pg, "E.files.every(f => f.gone)", 30000)
         step("«Remove all files» asks first, Cancel keeps them, OK removes them all", remove_all)
 finally:
     r.close(); r.report()

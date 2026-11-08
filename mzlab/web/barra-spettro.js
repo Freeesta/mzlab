@@ -9,7 +9,7 @@
   function title(p, t) {
     const rl = p.el.querySelector(".rtl"); if (rl) rl.title = T("ctl.spec.rt");
     if (!t) return;
-    if (p.uv || p.title !== PT.spec) { t.removeAttribute("role"); t.removeAttribute("aria-label"); return; }
+    if (p.uv || p.title !== PT.spec || (p.level > 1 && p.prec != null)) { t.removeAttribute("role"); t.removeAttribute("aria-label"); return; }
     const n = p.level > 1 ? p.level : 1;
     if (t.firstChild?.nodeValue !== "MS" || t.querySelector("sup")?.textContent !== String(n)) { const u = document.createElement("sup"); u.textContent = String(n); t.replaceChildren("MS", u); }
     t.setAttribute("role", "img"); t.setAttribute("aria-label", T("ctl.spec.lv", { n }));

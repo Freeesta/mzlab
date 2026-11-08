@@ -66,22 +66,22 @@ fn tutto(byte: Vec<u8>) {
     let Ok(mut l) = mzlab_lettori::apri(insieme(byte), &Limiti::sito()) else {
         return;
     };
-    let Ok(ix) = l.indice(0).map(<[_]>::to_vec) else {
+    let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
         return;
     };
     for k in [0, ix.len() / 2, ix.len().saturating_sub(1)] {
         if k < ix.len() {
-            let _ = l.scansione(0, k);
-            let _ = l.intestazione(0, k);
+            let _ = l.scan(0, k);
+            let _ = l.scan_header(0, k);
         }
     }
-    if let Ok(v) = l.cromatogrammi(0) {
+    if let Ok(v) = l.chromatograms(0) {
         for c in v.iter().take(4) {
-            let _ = l.cromatogramma(0, &c.id);
+            let _ = l.chromatogram(0, &c.id);
         }
     }
-    let _ = l.metodo(0);
-    let _ = l.testata_mzml(0);
+    let _ = l.method(0);
+    let _ = l.mzml_header(0);
 }
 
 fn prossimo(x: &mut u64) -> usize {
@@ -144,4 +144,31 @@ fn a_table_over_the_limit_is_refused_with_a_key() {
             e.key
         );
     }
+}
+
+#[test]
+fn a_cut_empty_or_foreign_container_says_what_it_is() {
+    let chiave = |b: Vec<u8>| {
+        mzlab_lettori::apri(insieme(b), &Limiti::sito())
+            .err()
+            .map(|e| (e.key, e.params))
+    };
+    for s in semi() {
+        assert_eq!(chiave(Vec::new()).unwrap().0, "err.file.empty");
+        assert_eq!(chiave(s[..7].to_vec()).unwrap().0, "err.file.notThisFormat");
+        // the OLE2 header is there, the directory is not: a Shimadzu refusal that says the copy is cut, never «not accepted»
+        for cut in [8, 511, 600] {
+            let (k, p) = chiave(s[..cut].to_vec()).unwrap();
+            assert_eq!(k, "err.file.shimadzu", "cut at {cut}");
+            assert!(
+                p.iter()
+                    .any(|(n, v)| *n == "detail" && v.contains("cut short")),
+                "{p:?}"
+            );
+        }
+    }
+    // an OLE2 container of another program's storages, named .lcd
+    let (k, p) = chiave(comune::ole::ole(&[("Altro/Flusso", vec![1; 64])])).unwrap();
+    assert_eq!(k, "err.file.shimadzu");
+    assert!(p.iter().any(|(_, v)| v.contains("Altro")), "{p:?}");
 }

@@ -6,16 +6,18 @@
 // The big, rarely changing files (Ketcher; the Python of mzFinder) live in their own cache. Offline, everything comes from the caches.
 try { importScripts("static/nomi.js"); } catch (_) { /* local testing */ }
 const APPV = "__APP__";
-const APP = (typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "mzlab-app-") + APPV, BIG = (typeof NOMI !== "undefined" ? NOMI.CACHE_BIG : "mzlab-big-") + "__BIG__";
+const APPFX = typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "mzlab-app-", APP = APPFX + APPV, BIG = (typeof NOMI !== "undefined" ? NOMI.CACHE_BIG : "mzlab-big-") + "__BIG__";
 /** @type {ServiceWorkerGlobalScope} */
 const sw = /** @type {any} */ (self);
 const BASE = new URL("./", location.href);                       // the site root: this file sits there
 const NC = { cache: /** @type {RequestCache} */ ("no-cache") };  // revalidate: GitHub Pages sends max-age=600
-const NAV_MS = 3000, FILL_AFTER_MS = 2500, FILL_PARALLEL = 6;
+const NAV_MS = 3000, FILL_AFTER_MS = 2500, FILL_PARALLEL = 6, FILL_RETRY_MS = 30000, FILL_RETRY_MAX_MS = 600000;
 const MARK = new URL(".fill-done", BASE).href;                   // present in the app cache once the background fill finished
 const NEVER = new Set(["static/manifest.json", "static/build.json", "static/sw-manifest.json"]);   // answer for the build itself: always from the network
 const T0 = Date.now();
 let stale = false;     // the site on the network is a newer version than this worker: the cache is bypassed until the new worker takes over
+/** @type {Record<string, string>} */
+let nuevo = {};        // while stale: path -> SHA-256 of the newer version, so a cached file whose bytes did not change still answers from the cache
 /** @type {Promise<void> | null} */
 let fill = null;
 // Cross-origin isolation (SharedArrayBuffer) without server headers: every same-origin response gets COOP/COEP/CORP, also from the cache.
@@ -39,6 +41,7 @@ const rel = (/** @type {URL} */ u) => {
 };
 /** @type {Promise<Record<string, string> | null> | null} */
 let manP = null;
+let visto = false;   // this run of the worker has asked the manifest: the browser stops an idle worker and starts it again with `stale` forgotten
 /** @type {Set<string>} */
 let nofill = new Set();
 /** Path -> SHA-256 of the files of THIS version (null: manifest unreachable, or it describes another version, which sets `stale`). */
@@ -47,14 +50,15 @@ const manifestoSw = () => manP || (manP = (async () => {
     const r = await fetch(new URL("static/sw-manifest.json", BASE).href, NC);
     if (!r.ok) throw new Error("manifest");
     const j = await r.json();
-    if (j.app !== APPV) { stale = true; sw.registration.update().catch(() => {}); return null; }
+    visto = true;
+    if (j.app !== APPV) { stale = true; nuevo = j.files || {}; sw.registration.update().catch(() => {}); return null; }
     stale = false;
     /** @type {Record<string, string>} */
     const out = {};
     nofill = new Set(j.nofill || []);
     for (const [k, v] of Object.entries(j.files || {})) out[k] = String(v);
     return out;
-  } catch (_) { manP = null; return null; }
+  } catch (_) { manP = null; visto = true; return null; }      // offline: the cache answers
 })());
 /** Expected SHA-256 of the cacheable file `u`, or undefined (not part of this build, never cached, library, vendor, API). */
 const expected = async (/** @type {URL} */ u) => {
@@ -63,11 +67,11 @@ const expected = async (/** @type {URL} */ u) => {
   return ((await manifestoSw()) || {})[p];
 };
 /** Fetches `req`; `ok` is true when the body is the one the manifest promises (HTTP cache first, then a revalidation). */
-const traer = async (/** @type {Request} */ req, /** @type {string | undefined} */ want, fresh = false) => {
-  if (!want) return { res: await fetch(req, NC), ok: false };
-  let res = fresh ? await fetch(req, NC) : await fetch(req);
+const traer = async (/** @type {Request} */ req, /** @type {string | undefined} */ want, fresh = false, /** @type {AbortSignal | undefined} */ signal = undefined) => {
+  if (!want) return { res: await fetch(req, { ...NC, signal }), ok: false };
+  let res = await fetch(req, fresh ? { ...NC, signal } : { signal });
   if (res.status === 200 && await shaDe(res) === want) return { res, ok: true };
-  res = await fetch(req, NC);
+  res = await fetch(req, { ...NC, signal });
   return { res, ok: res.status === 200 && await shaDe(res) === want };
 };
 /** The app cache, opened once: opening it for each of the ~400 requests of a load is a queue of its own. */
@@ -76,16 +80,65 @@ let appCache = null;
 const abrirApp = () => appCache || (appCache = caches.open(APP).catch(err => { appCache = null; throw err; }));
 /** The copy in `cache`; a URL with a query is looked up ignoring it (the query only busts browser caches), which scans the cache, so only then. */
 const buscar = (/** @type {Cache} */ cache, /** @type {Request} */ req) => cache.match(req, new URL(req.url).search ? { ignoreSearch: true } : undefined);
+/** The app caches of earlier versions, kept until this version's fill is done: a file whose bytes did not change is copied from them, not
+ * downloaded again (after a deploy most files are the same; the HTTP cache of a visit days later no longer has them). */
+/** @type {Promise<string[]> | null} */
+let prevP = null;
+const previas = () => prevP || (prevP = caches.keys().then(k => k.filter(n => n.startsWith(APPFX) && n !== APP)).catch(() => []));
+/** The copy of `req` in an earlier version's cache when its SHA-256 is the one this version's manifest promises, else null. */
+const heredado = async (/** @type {Request} */ req, /** @type {string | undefined} */ want) => {
+  if (!want) return null;
+  for (const n of await previas()) {
+    try {
+      const hit = await buscar(await caches.open(n), req);
+      if (hit && hit.status === 200 && await shaDe(hit) === want) return hit;
+    } catch (_) { /* that cache is gone: the network answers */ }
+  }
+  return null;
+};
+/** Deletes the earlier versions' caches once this version's cache is complete. Only the worker of the version on the network does it (manifest
+ * asked again): an older worker still running would otherwise drop the cache of the newer one. */
+const olvidar = async () => {
+  if (!(await previas()).length) return;
+  manP = null;
+  if (!await manifestoSw() || stale) return;
+  for (const n of await previas()) await caches.delete(n);
+  prevP = Promise.resolve([]);
+};
+/** The page's own network requests go first: while one is open the fill starts no fetch and the ones it has open are stopped (and fetched again
+ * once the page is served). On a slow link a module read on first use otherwise shared the link with six files of the fill. */
+let pageNet = 0, calmed = () => {};
+/** @type {Promise<void>} */
+let calm = Promise.resolve();
+/** @type {Set<AbortController>} */
+const fillNet = new Set();
+const primero = async (/** @type {() => Promise<any>} */ fn) => {
+  if (!pageNet++) calm = new Promise(r => { calmed = r; });
+  fillNet.forEach(c => c.abort());
+  try { return await fn(); } finally { if (!--pageNet) calmed(); }
+};
+/** `traer` for the fill: waits while the page has requests open, and starts again when one of them stopped it. */
+const traerFill = async (/** @type {Request} */ req, /** @type {string} */ want) => {
+  for (;;) {
+    while (pageNet) await calm;
+    const c = new AbortController();
+    fillNet.add(c);
+    try { return await traer(req, want, false, c.signal); }
+    catch (err) { if (!c.signal.aborted) throw err; }
+    finally { fillNet.delete(c); }
+  }
+};
 const guardar = async (/** @type {Cache} */ cache, /** @type {Request} */ req, /** @type {Response} */ res) => {
   try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ }
 };
-/** Fills the app cache with every file of the manifest the page has not loaded yet (a few at a time, not blocking anything). */
+/** Fills the app cache with every file of the manifest the page has not loaded yet (a few at a time, not blocking anything); true once no
+ * further attempt is needed (marked complete, or the worker is stale). */
 const llenar = async () => {
   try {
     const cache = await abrirApp();
-    if (await cache.match(MARK)) return;
+    if (await cache.match(MARK)) { await olvidar(); return true; }
     const man = await manifestoSw();
-    if (!man) return;
+    if (!man) return false;
     const todo = Object.keys(man).filter(p => !nofill.has(p));
     const have = new Set((await cache.keys()).map(r => r.url));       // one listing: asking the cache once per file is slow
     let failed = 0;
@@ -95,7 +148,8 @@ const llenar = async () => {
           const req = new Request(new URL(p.split("/").map(encodeURIComponent).join("/"), BASE).href);
           if (stale) { failed++; continue; }
           if (have.has(req.url)) continue;
-          const { res, ok } = await traer(req, man[p]);
+          const prev = await heredado(req, man[p]);
+          const { res, ok } = prev ? { res: prev, ok: true } : await traerFill(req, man[p]);
           if (ok && !stale) {
             await guardar(cache, req, res);
             if (p.endsWith("index.html")) await guardar(cache, new Request(new URL(p.slice(0, -"index.html".length), BASE).href), res);   // the page is also asked for as its folder
@@ -104,12 +158,18 @@ const llenar = async () => {
       }
     };
     await Promise.all(Array.from({ length: FILL_PARALLEL }, worker));
-    if (!failed && !stale) await cache.put(MARK, new Response("ok"));
-  } catch (_) { /* retried when the worker starts again */ }
+    if (!failed && !stale) { await cache.put(MARK, new Response("ok")); await olvidar(); return true; }
+    return stale;
+  } catch (_) { return false; }
 };
-let filled = false;
-/** Starts the fill once, FILL_AFTER_MS after the worker started, so the page's own requests go first. */
-const arrancar = () => fill || (fill = new Promise(r => setTimeout(r, Math.max(0, FILL_AFTER_MS - (Date.now() - T0)))).then(llenar).then(() => { filled = true; }));
+let filled = false, retry = FILL_RETRY_MS, notBefore = 0;
+/** Starts the fill FILL_AFTER_MS after the worker started, so the page's own requests go first. A fill with a failed file is started again by
+ * the first request after a pause that doubles each time (it fetches only what is still missing): otherwise one dropped file left the cache
+ * incomplete, and the site broken offline, for the whole life of the worker. */
+const arrancar = () => fill || (Date.now() < notBefore ? Promise.resolve() : (fill = new Promise(r => setTimeout(r, Math.max(0, FILL_AFTER_MS - (Date.now() - T0)))).then(llenar).then(done => {
+  if (done) { filled = true; return; }
+  notBefore = Date.now() + retry; retry = Math.min(retry * 2, FILL_RETRY_MAX_MS); fill = null;
+})));
 sw.addEventListener("install", () => {
   sw.skipWaiting();
   arrancar();                                                          // not in waitUntil: the first page must not wait for it
@@ -117,19 +177,32 @@ sw.addEventListener("install", () => {
 sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUntil((async () => {
   const pfx = typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-";
   for (const k of await caches.keys()) {
-    if (k.startsWith("qqq-") || (k.startsWith(pfx) && k !== APP && k !== BIG)) {
+    if (k.startsWith("qqq-") || (k.startsWith(pfx) && !k.startsWith(APPFX) && k !== BIG)) {     // earlier app caches stay until the fill (previas)
       await caches.delete(k);
     }
   }
   await sw.clients.claim();
 })()));
-/** An app file: from the cache of this version; a miss goes to the network and is stored once it matches the manifest. */
-const app = async (/** @type {Request} */ req) => {
+/** An app file: from the cache of this version; a miss goes to the network and is stored once it matches the manifest. The page gets the
+ * checked body at once and the store runs after, kept alive by `later` (a cold load is ~70 misses before the first paint: awaiting each put first
+ * queued the page behind the cache writes). */
+const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) => void} */ later) => {
   const cache = await abrirApp();
+  // a restarted worker of an older version must not serve its old files to a newer page before it knows (one request, shared); on a hung network
+  // the cache answers after NAV_MS, as for a page, and the manifest still sets `stale` for the requests after it
+  if (!visto) await Promise.race([manifestoSw(), new Promise(r => setTimeout(r, NAV_MS))]);
   if (!stale) { const hit = await buscar(cache, req); if (hit) return isolata(hit); }
+  else {
+    // a deploy changes few files: the cached copy still answers when its bytes are the ones of the newer version (no mixed JS/wasm pair)
+    const want = nuevo[rel(new URL(req.url))], hit = want ? await buscar(cache, req) : undefined;
+    if (hit && hit.status === 200 && await shaDe(hit) === String(want)) return isolata(hit);
+  }
   try {
-    const { res, ok } = await traer(req, await expected(new URL(req.url)));
-    if (ok && !stale) await guardar(cache, req, res);
+    const want = await expected(new URL(req.url));
+    const prev = stale ? null : await heredado(req, want);
+    if (prev) { later(guardar(cache, req, prev)); return isolata(prev); }
+    const { res, ok } = await primero(() => traer(req, want));
+    if (ok && !stale) later(guardar(cache, req, res));
     return isolata(res);
   } catch (err) {
     const hit = await buscar(cache, req);
@@ -142,7 +215,7 @@ const navegar = async (/** @type {Request} */ req) => {
   const cache = await abrirApp();
   manP = null;                    // the manifest too is asked again: it tells whether the site changed since this worker started
   const net = (async () => {
-    const { res, ok } = await traer(req, await expected(new URL(req.url)), true);
+    const { res, ok } = await primero(async () => traer(req, await expected(new URL(req.url)), true));
     if (ok && !stale) await guardar(cache, req, res);
     return res;
   })();
@@ -177,6 +250,6 @@ sw.addEventListener("fetch", (/** @type {FetchEvent} */ e) => {
   if (url.pathname.includes("/static/librerie/")) return;           // the spectral-library packages go to the folder of the user, not to a second copy in the cache
   if (url.pathname.includes("/api/")) return;                       // answers of the engine and files of the user are never cached
   const big = /\/static\/vendor\//.test(url.pathname);
-  if (!big && !filled) e.waitUntil(arrancar());                     // keeps the worker alive while it fills; one that was stopped finishes what is missing
-  e.respondWith(big ? grande(req) : req.mode === "navigate" ? navegar(req) : app(req));
+  if (!big && !filled && !stale) e.waitUntil(arrancar());           // keeps the worker alive while it fills; a stale one holds no event open (the newer worker activates only when the older has none)
+  e.respondWith(big ? grande(req) : req.mode === "navigate" ? navegar(req) : app(req, p => e.waitUntil(p)));
 });

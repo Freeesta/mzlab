@@ -28,10 +28,10 @@ def main() -> None:
     for p in sorted((out / "lavoro").glob("SIN_*.mzML")):
         p.replace(mzml / p.name)
     si.scrivi_verita(out, c, a.seme, a.profilo)
-    padre = next(o for o in c.ioni if o.ruolo == "progenitore")
-    serie = nativo.esegui(idx, nativo.neutra_da_ione(padre.ion), padre.mz, padre.rt, out / "nativo")
-    t = adatta.da_serie(serie, f"D2-{a.profilo}-{a.seme}")
-    (out / f"mzlab_D2_predefinita.json").write_text(adatta.a_json(dict(t, versione=serie.versione_crate)), encoding="utf-8")
+    parent = next(o for o in c.ioni if o.ruolo == "progenitore")
+    series = nativo.esegui(idx, nativo.neutra_da_ione(parent.ion), parent.mz, parent.rt, out / "nativo")
+    t = adatta.da_serie(series, f"D2-{a.profilo}-{a.seme}")
+    (out / f"mzlab_D2_predefinita.json").write_text(adatta.a_json(dict(t, versione=series.versione_crate)), encoding="utf-8")
     print(out, len(t["righe"]), "rows,", len(list(mzml.glob('*.mzML'))), "files")
 
 

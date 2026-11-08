@@ -24,6 +24,7 @@
           "features.detect",
           "features.estimate",
           "features.gapfill",
+          "features.group",
           "features.table",
           "formula.ms1",
           "formula.ms2",
@@ -86,9 +87,10 @@
               "export.mztab@1",
               "export.table_csv@1",
               "features.align@1",
-              "features.detect@1",
+              "features.detect@2",
               "features.estimate@1",
               "features.gapfill@1",
+              "features.group@1",
               "features.ms2_link@1",
               "features.table@1",
               "formula.ms1@1",
@@ -116,7 +118,7 @@
               "structure.reactivity@1",
               "structure.render@1",
               "table.drift@1",
-              "table.filter@1",
+              "table.filter@2",
               "table.kmd@1",
               "table.match@1",
               "table.pca@1",
@@ -328,6 +330,7 @@
                   "output",
                   "mz_tol",
                   "rt_window",
+                  "baseline",
                   "snr_min",
                   "smooth",
                   "min_points",
@@ -358,6 +361,11 @@
                     "minimum":0,
                     "default":0.3,
                     "description":"The peak is searched in RT plus and minus this when the row writes no window"
+                  },
+                  {
+                    "enum":["edges","zero"],
+                    "default":"edges",
+                    "description":"edges: the area above the straight line between the edges of the peak; zero: the whole area under the trace down to zero between the same edges (signed; a baseline column says which)"
                   },
                   {
                     "type":"number",
@@ -536,6 +544,7 @@
               "step":{"const":"features.align@1"},
               "name":{
                 "enum":[
+                  "algorithm",
                   "mode",
                   "ppm",
                   "tol_da",
@@ -551,11 +560,16 @@
                   "weak_files",
                   "link_rt",
                   "max_span",
-                  "min_dependent"
+                  "min_dependent",
+                  "mz_weight",
+                  "rt_weight",
+                  "rt_tol",
+                  "abs_da"
                 ]
               },
               "value":{
                 "anyOf":[
+                  {"enum":["groups","join"]},
                   {
                     "enum":["family","ion"],
                     "default":"family",
@@ -640,6 +654,15 @@
                     "minimum":1,
                     "default":1,
                     "description":"Family mode: an ion that is mostly the base of its own family joins a family only if it follows its root in this many files"
+                  },
+                  {"type":"number","minimum":0,"default":3,"description":"m/z weight"},
+                  {"type":"number","minimum":0,"default":1,"description":"RT weight"},
+                  {"type":"number","minimum":0,"default":0.2,"description":"Half width of the RT range of a row"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.0015,
+                    "description":"Lower bound of the m/z tolerance; the larger of it and ppm wins"
                   }
                 ]
               }
@@ -648,7 +671,7 @@
           },
           {
             "properties":{
-              "step":{"const":"features.detect@1"},
+              "step":{"const":"features.detect@2"},
               "name":{
                 "enum":[
                   "algorithm",
@@ -664,18 +687,40 @@
                   "long_trace",
                   "merge_overlap",
                   "budget",
+                  "area_from",
+                  "stitch",
                   "min_width",
                   "min_snr",
+                  "isotopes",
+                  "iso_ppm",
+                  "iso_abs_da",
+                  "iso_rt_tol",
+                  "iso_max_charge",
+                  "iso_monotonic",
+                  "iso_representative",
+                  "finder_ppm",
+                  "finder_abs_da",
+                  "finder_max_charge",
+                  "finder_elements",
+                  "finder_require_c13",
+                  "finder_auto",
                   "ppm",
                   "peak_width_s",
                   "snr",
                   "broad_peaks",
+                  "noise_factor",
+                  "abs_da",
+                  "smooth_window",
+                  "chrom_threshold",
+                  "search_rt",
+                  "min_ratio",
+                  "duration",
                   "smooth"
                 ]
               },
               "value":{
                 "anyOf":[
-                  {"enum":["masstrace","centwave","threshold"]},
+                  {"enum":["masstrace","centwave","adap_localmin","threshold"]},
                   {"enum":["hr","lr"]},
                   {"enum":[1,-1,0],"default":1,"description":"1 positive, -1 negative, 0 all MS1 scans"},
                   {
@@ -698,7 +743,12 @@
                     "description":"Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty"
                   },
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
-                  {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":1,
+                    "description":"Scans a trace may miss between two of its points; 0 = consecutive scans"
+                  },
                   {
                     "type":"integer",
                     "minimum":1,
@@ -714,6 +764,16 @@
                   },
                   {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
                   {
+                    "enum":["channel","window"],
+                    "default":"channel",
+                    "description":"Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
+                  },
+                  {
+                    "enum":["strict","wide"],
+                    "default":"strict",
+                    "description":"Wide also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row."
+                  },
+                  {
                     "type":"number",
                     "minimum":0,
                     "default":0,
@@ -725,7 +785,78 @@
                     "default":0,
                     "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
                   },
-                  {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
+                  {
+                    "enum":["averagine","grouper","finder"],
+                    "default":"averagine",
+                    "description":"averagine tests natural ratios; grouper (mzmine) groups by m/z and RT; finder (mzmine) reads each apex spectrum"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"grouper only: m/z tolerance of an isotope step, the larger of this and the absolute one"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.0015,
+                    "description":"grouper only: absolute lower bound of the m/z tolerance"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.05,
+                    "description":"grouper only: largest RT distance of an isotopologue to the start row"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":3,
+                    "default":2,
+                    "description":"grouper only: the charges tried, from 1 up to this"
+                  },
+                  {"type":"boolean","default":false,"description":"grouper only: look only above the start row"},
+                  {
+                    "enum":["most_intense","lowest_mz"],
+                    "default":"most_intense",
+                    "description":"grouper only: the row of a group that is not marked as an isotopologue"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":15,
+                    "description":"finder only: m/z tolerance in the spectrum, the larger of this and the absolute one"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.005,
+                    "description":"finder only: absolute lower bound of the m/z tolerance"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":5,
+                    "default":3,
+                    "description":"finder only: the charges tried, from 1 up to this"
+                  },
+                  {
+                    "type":"string",
+                    "default":"H,C,N,O,S",
+                    "description":"finder only: comma-separated elements whose isotopes are looked for"
+                  },
+                  {"type":"boolean","default":true,"description":"finder only: a charge counts only with a 13C peak"},
+                  {
+                    "type":"boolean",
+                    "default":true,
+                    "description":"finder only: Cl, Br, S and Si seen in the spectrum widen the expected pattern"
+                  },
+                  {
+                    "anyOf":[
+                      {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
+                      {"type":"number","minimum":0,"default":5,"description":"m/z tolerance"}
+                    ]
+                  },
                   {
                     "type":"array",
                     "items":{"type":"number","minimum":0},
@@ -739,6 +870,30 @@
                     "type":"boolean",
                     "default":false,
                     "description":"Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A point below this many times the lowest signal of its scan is not taken; 0 = the noise floor"
+                  },
+                  {"type":"number","minimum":0,"default":0.002,"description":"Absolute m/z tolerance"},
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Savitzky-Golay window before the minimum search, 0 for none; height and area stay those of the raw trace."
+                  },
+                  {"type":"number","minimum":0,"maximum":1,"default":0.85,"description":"Chromatographic threshold"},
+                  {"type":"number","minimum":0,"default":0.1,"description":"Minimum search range"},
+                  {"type":"number","minimum":0,"default":1.7,"description":"Top/edge ratio"},
+                  {
+                    "type":"array",
+                    "items":{"type":"number","minimum":0},
+                    "minItems":2,
+                    "maxItems":2,
+                    "default":[0,1],
+                    "description":"Peak duration"
                   },
                   {"type":"integer","minimum":1,"default":5,"description":"Smoothing window"}
                 ]
@@ -762,9 +917,23 @@
           {
             "properties":{
               "step":{"const":"features.gapfill@1"},
-              "name":{"enum":["floor","ppm","tol_da","rt_tol","min_points","max_gap","long_trace"]},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "floor",
+                  "ppm",
+                  "tol_da",
+                  "rt_tol",
+                  "min_points",
+                  "max_gap",
+                  "long_trace",
+                  "intensity_tol",
+                  "abs_da"
+                ]
+              },
               "value":{
                 "anyOf":[
+                  {"enum":["integrate","peak_finder"]},
                   {"type":"number","minimum":0,"default":20000,"description":"Noise floor"},
                   {
                     "type":"number",
@@ -780,12 +949,103 @@
                   },
                   {"type":"number","minimum":0,"default":0.1,"description":"Half width added to the window of RT"},
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
-                  {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":2,
+                    "description":"Scans a trace may miss between two of its points; 0 = consecutive scans"
+                  },
                   {
                     "type":"integer",
                     "minimum":1,
                     "default":400,
                     "description":"A trace longer than this is background and is not taken"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"A point joins the peak while it is not above its neighbour toward the apex by more than this fraction"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.0015,
+                    "description":"Lower bound of the m/z tolerance; the larger of it and ppm wins"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.group@1"},
+              "name":{
+                "enum":[
+                  "polarity",
+                  "ions_pos",
+                  "ions_neg",
+                  "rt_tol",
+                  "apex_fwhm",
+                  "min_corr",
+                  "min_corr_samples",
+                  "ppm",
+                  "mz_abs",
+                  "max_charge"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["auto","positive","negative"],
+                    "default":"auto",
+                    "description":"Which list of ion species is searched; auto = the polarity of the files of the table"
+                  },
+                  {
+                    "type":"string",
+                    "default":"[M+H]+,[M+Na]+,[M+NH4]+,[M+K]+,[M+H-H2O]+,[M+2H]2+,[2M+H]+,[2M+Na]+",
+                    "description":"Comma-separated species searched in positive mode, among [M+H]+ [M+Na]+ [M+NH4]+ [M+K]+ [M+H-H2O]+ [M+H-2H2O]+ [M+2H]2+ [M+H+Na]2+ [2M+H]+ [2M+Na]+ [2M+NH4]+"
+                  },
+                  {
+                    "type":"string",
+                    "default":"[M-H]-,[M+Cl]-,[M+HCOO]-,[M+CH3COO]-,[M-H-H2O]-,[M-2H]2-,[2M-H]-",
+                    "description":"Comma-separated species searched in negative mode, among [M-H]- [M+Cl]- [M+HCOO]- [M+CH3COO]- [M-H-H2O]- [M-2H]2- [2M-H]- [2M+HCOO]-"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"Largest distance between the RT of two rows of one compound"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":2,
+                    "default":0.6,
+                    "description":"Largest apex distance in the shared files, as a share of the wider peak width (CAMERA perfwhm)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":-1,
+                    "maximum":1,
+                    "default":0.75,
+                    "description":"Smallest Pearson correlation of the heights of two rows over the files (CAMERA cor_eic_th)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":2,
+                    "default":3,
+                    "description":"The heights are compared only when both rows are measured in at least this many files"
+                  },
+                  {"type":"number","minimum":0,"default":5,"description":"m/z tolerance"},
+                  {"type":"number","minimum":0,"default":0.001,"description":"Floor of the m/z tolerance at low mass"},
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":3,
+                    "default":2,
+                    "description":"Largest charge an isotope step is read with"
                   }
                 ]
               }
@@ -795,7 +1055,7 @@
           {
             "properties":{
               "step":{"const":"features.ms2_link@1"},
-              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak"]},
+              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak","margin_s"]},
               "value":{
                 "anyOf":[
                   {
@@ -822,6 +1082,12 @@
                     "maximum":1,
                     "default":0.5,
                     "description":"Purity below which an MS2 is weak evidence; it is not dropped"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Seconds added on each side of the feature RT range to pair MS2 scans, 0 meaning one MS1 cycle."
                   }
                 ]
               }
@@ -917,8 +1183,9 @@
                   {
                     "type":"integer",
                     "minimum":1,
+                    "maximum":20000000,
                     "default":3000000,
-                    "description":"Above this many sub-formulas the table is not built"
+                    "description":"Above this many sub-formulas the table is not built and the candidate explains no fragment; memory grows with the limit"
                   }
                 ]
               }
@@ -1863,7 +2130,7 @@
           },
           {
             "properties":{
-              "step":{"const":"table.filter@1"},
+              "step":{"const":"table.filter@2"},
               "name":{
                 "enum":[
                   "min_detected",
@@ -1874,6 +2141,7 @@
                   "blank_quantity",
                   "blank_stat",
                   "blank_scope",
+                  "blank_cells",
                   "blank_subtract",
                   "blank_match",
                   "blank_keep_istd",
@@ -1932,6 +2200,11 @@
                     "enum":["max_feature","each_feature"],
                     "default":"max_feature",
                     "description":"max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"
+                  },
+                  {
+                    "enum":["detected","all"],
+                    "default":"detected",
+                    "description":"detected counts only the blank cells the detection found (a gap-filled or missing blank cell is 0, as in mzmine); all also counts the gap-filled blank cells, the behaviour of version 1"
                   },
                   {
                     "type":"boolean",
@@ -2578,9 +2851,10 @@
                 "export.mztab@1",
                 "export.table_csv@1",
                 "features.align@1",
-                "features.detect@1",
+                "features.detect@2",
                 "features.estimate@1",
                 "features.gapfill@1",
+                "features.group@1",
                 "features.ms2_link@1",
                 "features.table@1",
                 "formula.ms1@1",
@@ -2608,7 +2882,7 @@
                 "structure.reactivity@1",
                 "structure.render@1",
                 "table.drift@1",
-                "table.filter@1",
+                "table.filter@2",
                 "table.kmd@1",
                 "table.match@1",
                 "table.pca@1",

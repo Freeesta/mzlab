@@ -60,6 +60,114 @@ def test_wasm_and_native_give_the_same_mzfeat_bytes(built):
         assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
 
 
+ADAP = '{"fill": true, "layers": [{"step": "features.detect", "params": {"algorithm": "adap_localmin", "floor": 10000, "min_height": 30000, "smooth_window": 5, "noise_factor": 1.5}}]}'
+
+
+def test_the_adap_localmin_detection_gives_the_same_bytes_native_and_in_node(built):
+    """The algorithm `adap_localmin` of the Flow step `features.detect` (layers of a Flow run) writes the same `.mzfeatf` of every file and the same
+    `series.mzfeat` in the .wasm as natively, and not those of the default `masstrace`. `series_evid.mzfeat` is left out: the proofs entries of the
+    .wasm read the recipe without its layers (`recipe_from_json`), so a layered recipe gives other proofs there whatever the algorithm."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_adap", "--recipe", ADAP)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_adap", "--recipe", ADAP)
+    _, mt_dir = native(root, idx, "nat_mt", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    assert (nat_dir / "series.mzfeat").read_bytes() != (mt_dir / "series.mzfeat").read_bytes(), "adap_localmin and masstrace give the same table: the test proves nothing"
+
+
+JOIN = '{"fill": true, "layers": [{"step": "features.align", "params": {"algorithm": "join"}}, {"step": "features.gapfill", "params": {"algorithm": "peak_finder"}}]}'
+
+
+def test_the_join_aligner_and_the_peak_finder_give_the_same_bytes_native_and_in_node(built):
+    """The algorithms `join` of `features.align` and `peak_finder` of `features.gapfill` write the same files in the .wasm as natively, and not the
+    table of the defaults `groups` and `integrate`. `series_evid.mzfeat` is left out for the reason given in the test above."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_join", "--recipe", JOIN)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_join", "--recipe", JOIN)
+    _, def_dir = native(root, idx, "nat_groups", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    assert (nat_dir / "series.mzfeat").read_bytes() != (def_dir / "series.mzfeat").read_bytes(), "join and groups give the same table: the test proves nothing"
+
+
+
+GROUPER = '{"fill": true, "layers": [{"step": "features.detect", "params": {"isotopes": "grouper", "iso_rt_tol": 0.1, "iso_representative": "lowest_mz"}}]}'
+
+
+def test_the_isotope_grouper_gives_the_same_bytes_native_and_in_node(built):
+    """The isotope grouping `grouper` of `features.detect` (the isotope grouper of mzmine) writes the same `.mzfeatf` of every file and the same
+    `series.mzfeat` in the .wasm as natively, and not the files of the default `averagine`. `series_evid.mzfeat` is left out for the reason given
+    in the test of `adap_localmin`."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_grouper", "--recipe", GROUPER)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_grouper", "--recipe", GROUPER)
+    _, def_dir = native(root, idx, "nat_averagine", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    feats = [f for f in names if f.endswith(".mzfeatf")]
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "grouper and averagine give the same files: the test proves nothing"
+
+FINDER = '{"fill": true, "layers": [{"step": "features.detect", "params": {"isotopes": "finder", "finder_auto": false}}]}'
+
+
+def test_the_isotope_finder_gives_the_same_bytes_native_and_in_node(built):
+    """The isotope grouping `finder` of `features.detect` (the isotope finder of mzmine, on the apex spectrum of each feature) writes the same
+    `.mzfeatf` of every file and the same `series.mzfeat` in the .wasm as natively, and not the files of the default `averagine`.
+    `series_evid.mzfeat` is left out for the reason given in the test of `adap_localmin`."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_finder", "--recipe", FINDER)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_finder", "--recipe", FINDER)
+    _, def_dir = native(root, idx, "nat_averagine_f", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    feats = [f for f in names if f.endswith(".mzfeatf")]
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "finder and averagine give the same files: the test proves nothing"
+
+
+WINDOW = '{"fill": true, "layers": [{"step": "features.detect", "params": {"area_from": "window"}}]}'
+
+
+def test_the_window_area_gives_the_same_bytes_native_and_in_node(built):
+    """`area_from` = `window` of `features.detect` (the area of a row summed over its quality window) writes the same `.mzfeatf` of every file and
+    the same `series.mzfeat` in the .wasm as natively, and not the files of the default `channel`. `series_evid.mzfeat` is left out as above."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_window", "--recipe", WINDOW)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_window", "--recipe", WINDOW)
+    _, def_dir = native(root, idx, "nat_channel", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    feats = [f for f in names if f.endswith(".mzfeatf")]
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "window and channel give the same files: the test proves nothing"
+
+
+WIDE = '{"fill": true, "layers": [{"step": "features.detect", "params": {"stitch": "wide"}}]}'
+
+
+def test_the_wide_stitch_gives_the_same_bytes_native_and_in_node(built):
+    """`stitch` = `wide` of `features.detect` (touching pieces of neighbouring channels joined at any height) writes the same files in the .wasm as
+    natively, and not the files of the default `strict`. `series_evid.mzfeat` is left out as above."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_wide", "--recipe", WIDE)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_wide", "--recipe", WIDE)
+    _, def_dir = native(root, idx, "nat_strict", "--recipe", '{"fill": true, "layers": []}')
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    feats = [f for f in names if f.endswith(".mzfeatf")]
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "wide and strict give the same files: the test proves nothing"
+
 @pytest.mark.parametrize("mode", ["ion", "family"])
 def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
     """The contract of memory: the `.mzfeatf`, the `.mzfeat` and the one with `evid` have the same SHA-256 in memory and under a budget (slabs of m/z,

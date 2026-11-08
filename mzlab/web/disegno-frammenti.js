@@ -4,6 +4,8 @@
 // of the molecule. The numbers come from the Rust graph (crates/mzlab-feat-grafo-wasm, `fragments`), fed with the V2000 molfile of the piece so that the atom
 // order is the one of Ketcher (a SMILES from Indigo is renumbered). Hydrogens: each side takes one H per bond order, as in mzFinder's cleavages.
 
+import { featManifest } from "./feat-manifesto.js";
+
 /** @typedef {{ atoms: number[], formula: string, mass: number, mz: number }} Side */
 /** @typedef {{ a: number, b: number, order: number, kind: string, sides: Side[] }} Cut */
 
@@ -15,7 +17,7 @@ async function sha256(/** @type {ArrayBuffer} */ b) {
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256", b))].map(x => x.toString(16).padStart(2, "0")).join("");
 }
 
-/** the app: the same two functions as the .wasm, asked of the native engine (`feat/grafo`); an error is thrown as the text `{error_key, params}`, as the .wasm throws it */
+/** the app: the same functions as the .wasm, asked of the native engine (`feat/grafo`); an error is thrown as the text `{error_key, params}`, as the .wasm throws it */
 function nativo() {
   const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
   const ask = async (/** @type {Record<string, any>} */ body) => {
@@ -27,6 +29,7 @@ function nativo() {
   return {
     fragments: (/** @type {string} */ molfile, /** @type {number} */ a, /** @type {number} */ b) => ask({ kind: "fragments", molfile, a, b }),
     partial: (/** @type {string} */ molfile, /** @type {string} */ delta) => ask({ kind: "partial", molfile, delta }),
+    labels: (/** @type {string} */ request) => ask({ kind: "labels", request }),
   };
 }
 
@@ -35,7 +38,7 @@ export function carica() {
   if (modulo) return modulo;
   if (/** @type {any} */ (window).MZLAB_DESKTOP) return (modulo = Promise.resolve(nativo()));
   modulo = (async () => {
-    const base = new URL("./wasm-feat/", import.meta.url), man = await (await fetch(new URL("manifest.json", base))).json(), e = man.grafo;
+    const base = new URL("./wasm-feat/", import.meta.url), man = await featManifest(base), e = man.grafo;
     if (!e) throw new Error("grafo");
     const bytes = await (await fetch(new URL(e.wasm, base))).arrayBuffer();
     if ((await sha256(bytes)) !== e.sha256) throw new Error("sha");
@@ -88,13 +91,14 @@ export async function fragmentItems(/** @type {any} */ K, /** @type {MouseEvent}
   const st = K.editor.struct(), b = hit.map === "bonds" ? st.bonds.get(hit.id) : null, atom = b ? b.begin : hit.id;
   const piece = h.pieces().find(p => p.ids.includes(atom)), mf = piece && h.pieceMolfile(piece.ids); if (!piece || !mf) return [];
   /** @type {Item[]} */ const items = [];
+  let live = true;                                                  // false when the engine (.wasm) cannot answer: «All cuts…» would do nothing
   if (b) {
     const r = await cutsOf(mf, piece.ids.indexOf(b.begin), piece.ids.indexOf(b.end));
     if (r === "ring") items.push({ text: h.t("draw.frag.ring") });
     else if (r && r[0]) r[0].sides.forEach(s => { const line = sideLine(s, h.num, h.t); items.push({ text: line, run: () => h.copy(line) }); });
-    else items.push({ text: h.t("draw.frag.off") });
-  }
-  items.push({ text: h.t("draw.frag.all"), title: h.t("draw.frag.all.title"), run: async () => {
+    else { items.push({ text: h.t("draw.frag.off") }); live = false; }
+  } else live = await carica().then(() => true, () => false);
+  if (live) items.push({ text: h.t("draw.frag.all"), title: h.t("draw.frag.all.title"), run: async () => {
     const cuts = await cutsOf(mf);
     if (Array.isArray(cuts)) h.table(cutsTable(cuts, piece.ids.map(i => st.atoms.get(i).label), h.num, h.t));
   } });

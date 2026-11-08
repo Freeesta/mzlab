@@ -28,7 +28,7 @@ pub const REASON_ESTIMATED: u8 = 1 << 4;
 /// Half width, minutes, of the window around the apex that gives `FileFeatures::area_win`.
 pub const AREA_HALF_WINDOW: f64 = 0.05;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct QParams {
     /// Window of m/z of the trace around the m/z of the feature, ppm.
     pub window_ppm: f64,
@@ -37,6 +37,24 @@ pub struct QParams {
     pub min_shape: f64,
     pub min_snr: f64,
     pub min_points: u16,
+    /// The area of a row is the sum of its trace over its scans (`area_from` = `window` of `features.detect`), not the one of the detection.
+    pub area_window: bool,
+}
+
+// written by hand so that `area_window` appears only when on: the fingerprints of the recipes without it stay the same
+impl std::fmt::Debug for QParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("QParams");
+        d.field("window_ppm", &self.window_ppm)
+            .field("pad", &self.pad)
+            .field("min_shape", &self.min_shape)
+            .field("min_snr", &self.min_snr)
+            .field("min_points", &self.min_points);
+        if self.area_window {
+            d.field("area_window", &self.area_window);
+        }
+        d.finish()
+    }
 }
 
 impl Default for QParams {
@@ -47,6 +65,7 @@ impl Default for QParams {
             min_shape: 0.5,
             min_snr: 3.0,
             min_points: 5,
+            area_window: false,
         }
     }
 }
@@ -168,6 +187,7 @@ pub(crate) fn around_apex(rt: &[f64], apex: usize, half: f64) -> (usize, usize) 
 
 /// The quality columns of one row, computed from its trace without touching the table (so that rows can be measured on several threads).
 pub(crate) struct RowQ {
+    area: Option<f64>,
     area_win: f64,
     snr: f32,
     pub(crate) shape: f32,
@@ -181,6 +201,9 @@ pub(crate) struct RowQ {
 impl RowQ {
     fn apply(&self, f: &mut FileFeatures, i: usize) {
         f.flags[i] &= !(FLAG_GOOD | FLAG_EDGE);
+        if let Some(a) = self.area {
+            f.area[i] = a;
+        }
         f.area_win[i] = self.area_win;
         f.snr[i] = self.snr;
         f.shape[i] = self.shape;
@@ -215,6 +238,10 @@ pub(crate) fn row_quality(
         (f.scan_hi[i] as usize).min(nscan - 1),
     );
     let area_win = y[wa - w0..=wb - w0].iter().sum::<f64>() * f.dt;
+    // the formula of the pieces of `resolve::look`, so a row and its pieces are measured alike
+    let area = q
+        .area_window
+        .then(|| y[slo - w0..=shi - w0].iter().sum::<f64>() * f.dt);
     let (snr, shape, fwhm, asym, gaps) =
         measure(&rt[w0..w0 + y.len()], y, slo - w0, shi - w0, floor);
     let mut why = 0u8;
@@ -228,6 +255,7 @@ pub(crate) fn row_quality(
         why |= Q_POINTS;
     }
     RowQ {
+        area,
         area_win,
         snr: snr as f32,
         shape: shape as f32,

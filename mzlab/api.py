@@ -262,8 +262,8 @@ def _r_composition(app, q):   # formulas that fit an exact m/z (mzlab.chem.compo
 
 @_get("/api/contaminants")
 def _r_contaminants(app, q):   # built-in list of known contaminants, expanded into ions (mzlab.chem.contaminants); matching is done in the browser (web/liste.js)
-    from .chem.contaminants import builtin
-    return _json({"lists": [builtin()]})
+    from .chem.contaminants import lists
+    return _json({"lists": lists()})
 
 
 @_get("/api/msntree", fail=(ValueError, KeyError))

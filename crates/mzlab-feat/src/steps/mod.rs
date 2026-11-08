@@ -3,6 +3,7 @@
 //! from these defaults and compares its fingerprint with `Recipe::default()`. The identification chain is in `ident*.rs` (`attributio()`).
 
 mod detect;
+mod group;
 mod ident;
 mod ident_annot;
 mod ident_formula;
@@ -10,8 +11,11 @@ mod ident_screen;
 mod ident_spectra;
 pub use ident_spectra::table_match;
 mod qcreport;
+mod recipe_algo;
+mod recipe_iso;
 pub mod recipe_map;
 pub mod records;
+mod table_algo;
 pub use qcreport::{methods, run_order};
 mod stats;
 mod table;
@@ -52,6 +56,7 @@ pub fn registry() -> Vec<Step> {
         table::gapfill(),
         table::filter(),
         table::drift(),
+        group::group(),
         stats::stats(),
         stats::pca(),
         stats::kmd(),

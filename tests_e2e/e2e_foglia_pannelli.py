@@ -16,7 +16,7 @@ KEY = {"lists": "empty.lists", "losses": "empty.losses", "adducts": "empty.adduc
 def show(pg, which):
     if which == "lists":
         pg.click('#stbar [data-cmd="lists"]'); frames(pg, 6)
-        pg.fill("#lst-txt", "zzzzqqqq"); frames(pg, 20)
+        pg.fill("#lst-q", "zzzzqqqq"); frames(pg, 20)
     else:
         pg.click('#stbar [data-cmd="addloss"]'); frames(pg, 6)
         pg.click("#al-t-" + ("losses" if which == "losses" else "adducts")); frames(pg, 4)
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     try:
         with sync_playwright() as p:
             pg = r.page(p)
-            pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
             for which in ("lists", "losses", "adducts"):
                 show(pg, which)
                 S = HOLD[which] + " .empty-leaf"
@@ -51,7 +51,7 @@ if __name__ == "__main__":
             ctx = pg.context.browser.new_context(viewport={"width": 1100, "height": 800}, reduced_motion="no-preference")
             pm = ctx.new_page()
             pm.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
-            pm.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); attendi(pm, "window.qqReady && document.querySelector('#fl-hint')"); frames(pm, 5)
+            pm.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); wait_for_js(pm, "window.qqReady && document.querySelector('#fl-hint')"); frames(pm, 5)
             pm.evaluate("document.getElementById('fl-hint').hidden = false; document.getElementById('dfiles').style.width = '280px'")      # the narrowest side panel (below 900 px the panel is not shown at all)
             samples = []
             for _ in range(6):

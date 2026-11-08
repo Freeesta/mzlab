@@ -50,28 +50,28 @@ try:
 
         # Click "Non ora" -> closes; the invitation is recorded as already shown
         pg.click("#tour-inv-no")
-        attendi(pg, "!document.querySelector('#tour-invito') || document.querySelector('#tour-invito').hidden || !document.querySelector('#tour-invito').offsetParent", 5000)
+        wait_for_js(pg, "!document.querySelector('#tour-invito') || document.querySelector('#tour-invito').hidden || !document.querySelector('#tour-invito').offsetParent", 5000)
         assert not pg.is_visible("#tour-invito"), "invitation closed by Non ora"
         pg.wait_for_selector("#tour-later.on")
-        assert pg.inner_text("#tour-later") == "Potrai fare il tour più tardi dalle Impostazioni." and pg.get_attribute("#tour-later", "aria-live") == "polite"
+        assert pg.inner_text("#tour-later") == "Il tour si rifà dalle Impostazioni." and pg.get_attribute("#tour-later", "aria-live") == "polite"
         lb, gb = pg.locator("#tour-later").bounding_box(), pg.locator("#np-set").bounding_box()
         assert lb["y"] >= gb["y"] + gb["height"] and lb["x"] <= gb["x"] + gb["width"] and lb["x"] + lb["width"] >= gb["x"], ("bubble under the gear", lb, gb)
         pg.mouse.click(300, 300)
-        attendi(pg, "!document.querySelector('#tour-later')", 3000)
+        wait_for_js(pg, "!document.querySelector('#tour-later')", 3000)
         st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
         assert st["stato"] == "invitato", st
 
         # Reload: invitation does not come back (the session is saved first: the reload resumes from the notebook)
         saved(pg)
         pg.reload()
-        attendi(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the invitation shows once the data are up: wait for that state, then check it stays away
+        wait_for_js(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the invitation shows once the data are up: wait for that state, then check it stays away
         ready(pg)
         frames(pg, 30)
         assert not pg.is_visible("#tour-invito"), "invitation does not return on reload"
         steps.append(("invitation shown on first LR load, closed by Non ora, not repeated on reload", "ok"))
 
         # 2. Replay tour from gear: all 15 steps tested
-        attendi(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the label reads «Rifai» only once the reloaded file is back
+        wait_for_js(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the label reads «Rifai» only once the reloaded file is back
         pg.click("#np-set")
         pg.wait_for_selector("#uipset", timeout=3000)
         assert pg.is_visible("#uip-tour") and "Rifai il tour" in pg.inner_text("#uip-tour")
@@ -140,7 +140,7 @@ try:
 
         # Try it: right-click a peak in the spectrum -> extract XIC
         # Find a label box in the spectrum
-        attendi(pg, "(() => { const p = E.panels.find(q => q.type === 'spec'); return !!(p && p._a && p._a.lbls && p._a.lbls.some(x => x.m != null)); })()")   # the labels are laid out once the spectrum is drawn: without them the click would land on an empty spot
+        wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'spec'); return !!(p && p._a && p._a.lbls && p._a.lbls.some(x => x.m != null)); })()")   # the labels are laid out once the spectrum is drawn: without them the click would land on an empty spot
         frames(pg)
         lb = pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'spec'); const q = p.cv.getBoundingClientRect(); const l = p._a && p._a.lbls && p._a.lbls.filter(x => x.m != null)[0]; return l ? { x: q.left + l.x + l.w / 2, y: q.top + l.y + l.h / 2 } : { x: q.left + q.width / 2, y: q.top + q.height / 2 }; })()")
         pg.mouse.click(lb["x"], lb["y"], button="right")
@@ -211,40 +211,40 @@ try:
         assert "Passo 3 di 9 · Strumenti e movimenti" in hd, hd
         assert ttl == "Cambiare file", ttl
 
-        # Step 4: aggiungi
+        # Step 4: add
         pg.click("#tour-btn-next")
-        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 4 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 4 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 4 di 9 · Strumenti e movimenti" in hd, hd
 
         # Step 5: affianca (the handle of the panels)
         pg.click("#tour-btn-next")
-        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 5 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 5 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 5 di 9 · Strumenti e movimenti" in hd, hd
         assert pg.inner_text("#tour-dialog h3") == "Affiancare i grafici"
 
-        # Step 6: pannello
+        # Step 6: panel
         pg.click("#tour-btn-next")
-        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 6 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 6 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 6 di 9 · Strumenti e movimenti" in hd, hd
 
-        # Step 7: barra
+        # Step 7: bar
         pg.click("#tour-btn-next")
-        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 7 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 7 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 7 di 9 · Strumenti e movimenti" in hd, hd
 
-        # Step 8: metodo
+        # Step 8: method
         pg.click("#tour-btn-next")
-        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 8 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 8 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Passo 8 di 9 · Strumenti e movimenti" in hd, hd
 
         # Step 9: ingranaggio
         pg.click("#tour-btn-next")
-        attendi(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 9 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 9 di 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 9 di 9 · Strumenti e movimenti" in hd, hd
@@ -350,6 +350,8 @@ try:
         pg.click("#tour-btn-skip")
         steps.append(("without data: loads single example file and starts tour at step 1", "ok"))
 
+        late = [e for e in r.errs if "i18n: key asked before the rest" in str(e)]      # every page of the tour, Italian and English: no text asked before the whole catalog
+        assert not late and pg.evaluate("I18N.late.size") == 0, late
         steps.append(("no browser console errors", "ok"))
 
     r.close()

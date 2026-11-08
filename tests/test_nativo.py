@@ -65,3 +65,34 @@ def test_only_a_plain_numpress_mzml_becomes_a_native_sample_and_the_order_is_kep
     assert r["notNumpress"] == [["a.mzML", False], ["b.mzML", False]]
     assert r["skipped"] == []
     assert r["some"] == [["x.mzML", False], ["y.mzML", True], ["z.mzML", False]]
+
+
+def test_a_dataset_the_module_wrote_is_found_again_by_its_members():
+    """cachedModulo: the same members (names, sizes, dates) as the source of a listed sample -> its row says «from the cache»; any difference -> not found."""
+    r = run("""(()=>{const rows=[];global.CONVROWS={add:(k,s)=>rows.push(['add',k,s]),finish:(k,s,o)=>rows.push(['finish',k,s,o.cached])};
+      const mk=(n,sz,t)=>({name:n,blob:{size:sz,lastModified:t}}), src=[mk('x.D/AcqData/a.bin',10,5),mk('x.D/AcqData/b.bin',20,6)];
+      global.CONV={sources:new Map([['x.mzML',{fam:'agilent',mem:src,c:0}]])};
+      const list=[{name:'x.mzML'},{name:'other.mzML'}];
+      const same=n.cachedModulo([src[1],src[0]],list), rowsSame=rows.splice(0);
+      const size=n.cachedModulo([mk('x.D/AcqData/a.bin',11,5),src[1]],list), date=n.cachedModulo([mk('x.D/AcqData/a.bin',10,9),src[1]],list),
+        fewer=n.cachedModulo([src[0]],list), gone=n.cachedModulo(src,[{name:'other.mzML'}]);
+      return [same,rowsSame,size,date,fewer,gone,rows.length]})()""")
+    assert r == [True, [["add", "x.mzML", "open"], ["finish", "x.mzML", "done", True]], False, False, False, False, 0]
+
+
+def test_the_desktop_turns_the_module_types_into_the_samples_its_native_side_lists():
+    """desktop: an extension only a module reads, or an mzML `maybe` lets through that the native side lists (Numpress), becomes its samples; a plain mzML the native side
+    refuses, a file of another type, an mzML `maybe` stops and a sample already made go on as they are; the samples share one key and the stub as member."""
+    r = run("""(async()=>{
+      const mk=(...ns)=>ns.map(x=>new File(['zz'],x)), asked=[], flagged=n.sample('f.mzML','k',[{name:'f.raw',blob:new Blob(['x'])}],0,1,false);
+      const samplesOf=async m=>{asked.push(m[0].name);if(m[0].name==='plain.mzML')throw new Error('err.file.notAccepted');
+        return m[0].name==='two.lcd'?{samples:[{id:3,name:'A',size:7},{id:4,name:'B',size:9}]}:{samples:[{id:0,name:'s'}]}};
+      const nameOf=x=>x.replace(/\\.[^.]+$/,'')+'.mzML', maybe=async f=>f.name!=='page.mzML';
+      const out=await n.desktop([...mk('np.mzML','plain.mzML','page.mzML','x.mzXML','t.txt','two.lcd'),flagged],['.mzxml','.lcd'],maybe,samplesOf,nameOf);
+      return {rows:out.map(f=>[f.name,f.mzlabNat?[f.mzlabNat.c,f.mzlabNat.id,f.mzlabNat.size,f.mzlabNat.members[0].name]:null]),
+        keys:out.filter(f=>f.name==='A.mzML'||f.name==='B.mzML').map(f=>f.mzlabNat.key),asked,flagged:out[out.length-1]===flagged};
+    })()""")
+    assert r["rows"][:-1] == [["np.mzML", [0, 0, 2, "np.mzML"]], ["plain.mzML", None], ["page.mzML", None], ["x.mzML", [0, 0, 2, "x.mzXML"]], ["t.txt", None],
+                              ["A.mzML", [0, 3, 7, "two.lcd"]], ["B.mzML", [1, 4, 9, "two.lcd"]]]
+    assert len(set(r["keys"])) == 1 and r["flagged"]
+    assert r["asked"] == ["np.mzML", "plain.mzML", "x.mzXML", "two.lcd"]

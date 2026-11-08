@@ -197,6 +197,7 @@ impl LiveRun {
         dir: &Path,
         (workers, claim): (usize, &dyn Fn(&JobId) -> bool),
     ) -> Result<LiveRun> {
+        runner.budget.run_with(workers);
         let sched = Sched::new(&plan, &registry, env!("CARGO_PKG_VERSION"), &[]);
         let ctx = Ctx::new(&plan, &registry, &sched).ok();
         let core = Arc::new(Mutex::new(Core::new(sched, ctx)));
@@ -449,21 +450,33 @@ impl Drop for LiveRun {
 /// The plan of `text` as it runs: inputs hashed (those of `known` keep their hash), comparisons expanded, every step with a native executor.
 fn ready_plan(text: &[u8], dir: &Path, known: &[FileInput], reg: &[Step]) -> Result<Plan> {
     let mut plan = parse(text)?;
-    for f in &mut plan.inputs {
-        match known.iter().find(|k| k.name == f.name) {
-            Some(k) if f.sha256.is_empty() || f.sha256 == k.sha256 => {
-                (f.sha256, f.bytes) = (k.sha256.clone(), k.bytes);
-            }
-            _ => {
-                let path = dir.join(crate::flow_set::dataset_name(&f.name));
-                let (bytes, sha) =
-                    crate::flow_set::digest(&path).map_err(|e| e.with("input", &f.name))?;
-                if !f.sha256.is_empty() && f.sha256 != sha {
-                    return Err(Error::new("err.flow.input.sha").with("input", &f.name));
-                }
-                (f.sha256, f.bytes) = (sha, Some(bytes));
-            }
+    // the files the caller has not hashed, read on several threads (`flow_inputs::map_par`) and checked in plan order
+    let kept: Vec<Option<&FileInput>> = (plan.inputs.iter())
+        .map(|f| {
+            known
+                .iter()
+                .find(|k| k.name == f.name)
+                .filter(|k| f.sha256.is_empty() || f.sha256 == k.sha256)
+        })
+        .collect();
+    let paths: Vec<Option<PathBuf>> = (plan.inputs.iter().zip(&kept))
+        .map(|(f, k)| {
+            k.is_none()
+                .then(|| dir.join(crate::flow_set::dataset_name(&f.name)))
+        })
+        .collect();
+    let read = crate::flow_inputs::map_par(&paths, |p| p.as_deref().map(crate::flow_set::digest));
+    for ((f, k), dig) in plan.inputs.iter_mut().zip(kept).zip(read) {
+        let Some(dig) = dig else {
+            let k = k.expect("a kept input");
+            (f.sha256, f.bytes) = (k.sha256.clone(), k.bytes);
+            continue;
+        };
+        let (bytes, sha) = dig.map_err(|e| e.with("input", &f.name))?;
+        if !f.sha256.is_empty() && f.sha256 != sha {
+            return Err(Error::new("err.flow.input.sha").with("input", &f.name));
         }
+        (f.sha256, f.bytes) = (sha, Some(bytes));
     }
     let check = |problems: Vec<mzlab_core::flow::Problem>| {
         let list: Vec<String> = problems.iter().map(crate::flow_run::problem_text).collect();

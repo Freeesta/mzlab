@@ -7,15 +7,53 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-/// Single files the app is associated with: mzML and Thermo `.raw`. Folders (Agilent `.D`, Bruker `.d`, Waters `.raw`) cannot be associated.
-const EXT: [&str; 2] = ["mzml", "raw"];
+/// Extensions that name a folder (Agilent `.D`, Bruker `.d`): the file dialog cannot pick them, the system cannot associate them.
+const FOLDER_ONLY: [&str; 1] = [".d"];
+/// Too generic to claim from the system (netCDF is also climate and model data): the dialog offers it, the associations do not.
+const NOT_ASSOCIATED: [&str; 1] = [".nc"];
 
-/// Does the path name a file (not a folder) with an extension of `EXT`?
+/// ONE source: the extensions of the readers' registry (`mzlab_lettori::estensioni()`, the same list the site's pickers get), without the folder-only ones.
+/// Lower case with the dot; a companion such as `.wiff.scan` is kept whole.
+pub fn file_extensions() -> Vec<String> {
+    mzlab_lettori::estensioni()
+        .into_iter()
+        .filter(|e| !FOLDER_ONLY.contains(e))
+        .map(str::to_string)
+        .collect()
+}
+
+/// The extensions the dialog filter takes: the last component without dot (a filter cannot hold `mzml.gz`, so `gz` is offered), in both lower and UPPER case (the OS filters differ in case handling).
+pub fn dialog_extensions() -> Vec<String> {
+    let mut v = Vec::new();
+    for e in file_extensions() {
+        let b = e.rsplit('.').next().unwrap_or_default().to_string();
+        v.push(b.to_ascii_uppercase());
+        v.push(b);
+    }
+    v.sort();
+    v.dedup();
+    v
+}
+
+/// The extensions registered as file associations (no dot, lower case, without repeats; companions such as `.wiff.scan` and compressed `.mzml.gz` are not associated): what `tauri.conf.json` must list.
+pub fn associated_extensions() -> Vec<String> {
+    let mut v: Vec<String> = file_extensions()
+        .into_iter()
+        .filter(|e| !NOT_ASSOCIATED.contains(&e.as_str()) && e.matches('.').count() == 1)
+        .map(|e| e.trim_start_matches('.').to_string())
+        .collect();
+    v.sort();
+    v.dedup();
+    v
+}
+
+/// Does the path name a file (not a folder) whose name ends with an extension of the readers' registry?
 pub fn is_openable(p: &Path) -> bool {
-    let ext = p
-        .extension()
-        .map(|e| e.to_string_lossy().to_ascii_lowercase());
-    ext.is_some_and(|e| EXT.contains(&e.as_str())) && p.is_file()
+    let name = p
+        .file_name()
+        .map(|n| n.to_string_lossy().to_ascii_lowercase())
+        .unwrap_or_default();
+    file_extensions().iter().any(|e| name.ends_with(e.as_str())) && p.is_file()
 }
 
 /// The files among the command line arguments (program name already removed); relative paths are taken from `cwd`. Options and anything else are ignored.

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
-def test_decima_matches_the_point_by_point_loop():
+def test_decimate_matches_the_point_by_point_loop():
     r = subprocess.run(["node", str(ROOT / "tests" / "decima_node.mjs")], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stderr[-2000:]
     o = json.loads(r.stdout)
@@ -21,3 +21,4 @@ def test_decima_matches_the_point_by_point_loop():
     assert o["unsorted_ok"] is True
     assert o["big"]["max"] == 5e9 and o["big"]["min"] == -7e9 and abs(o["big"]["range"]) <= 1e3
     assert o["sorted"] == [True, False]
+    assert o["hair"] == [True, False, True, False, False]       # 1 px only above half a point per pixel, counted in the window

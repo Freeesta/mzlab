@@ -66,7 +66,7 @@ fn a_folder_gives_valid_mzml_and_the_broken_file_is_named_with_its_cause() {
     let o = convert(&[p(&src), "--out", p(&out), "--report", p(&rep)]);
     assert_eq!(o.code, 1, "{}", o.stderr);
     assert!(
-        o.stderr.contains("rotto.raw: err.file.notAccepted"),
+        o.stderr.contains("rotto.raw: err.file.notThisFormat"),
         "{}",
         o.stderr
     );
@@ -192,6 +192,37 @@ fn a_wiff_with_several_samples_gives_one_mzml_per_sample() {
         .iter()
         .all(|f| f.0.starts_with("c-") && f.1.starts_with(b"<?xml")));
     assert_ne!(files[0].1, files[1].1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// An injection in the sample table that acquired nothing (no `Idx`): an empty mzML under its own number, as the site lists it with 0 scans, and the samples after it keep theirs.
+#[test]
+fn an_empty_injection_keeps_its_number_and_gives_an_empty_mzml() {
+    let dir = folder("vuote");
+    let src = dir.join("in");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let made = Command::new("python3")
+        .arg(root.join("tools/wiff_riferimento.py"))
+        .arg(&src)
+        .output();
+    if !made.is_ok_and(|o| o.status.success()) {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        return;
+    }
+    let out = dir.join("out");
+    let o = convert(&[p(&src.join("buchi.wiff")), "--out", p(&out)]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let files = mzmls(&out);
+    let names: Vec<&str> = files.iter().map(|f| f.0.as_str()).collect();
+    assert_eq!(names, ["buchi-1.mzML", "buchi-2.mzML", "buchi-3.mzML"]);
+    let spectra = |b: &[u8]| String::from_utf8_lossy(b).matches("<spectrum ").count();
+    assert_eq!(
+        files.iter().map(|f| spectra(&f.1)).collect::<Vec<_>>(),
+        [1, 0, 1]
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -322,5 +353,25 @@ fn the_compression_kinds_are_the_short_forms_of_zlib_and_numpress() {
         "tiny",
     ]);
     assert_eq!(o.code, 2, "{}", o.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A method blob over the old 1 MiB head pushes `spectrumList` and `conv/1` far into the file: the report still reads both.
+#[test]
+fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
+    let dir = std::env::temp_dir().join(format!("mzlab-head-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    for blob in [0usize, 3 << 20] {
+        let file = dir.join(format!("h{blob}.mzML"));
+        let text = format!(
+            "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab metodo/1\" value=\"{}\"/>\
+             <userParam name=\"mzLab conv/1\" value=\"{{&quot;a&quot;:1}}\"/>\n<spectrumList count=\"7\" defaultDataProcessingRef=\"c\">\n\
+             <spectrum index=\"0\"/></spectrumList></run></mzML>\n",
+            "x".repeat(blob)
+        );
+        std::fs::write(&file, text).unwrap();
+        let (n, conv) = crate::convert_report::head_of(&file);
+        assert_eq!((n, conv.as_deref()), (7, Some("{\"a\":1}")), "blob {blob}");
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -23,7 +23,7 @@ w.sample(1, blocks, {"Experiment0/ExperimentHeader": wr.header(15, 30.0)}, dad=(
 CH = "E.panels.find(q=>q.type==='chrom')"
 LB = f"({CH}._a.lbls || []).filter(l => l.etpk)"
 def labels(pg, n=1):
-    attendi(pg, f"{LB}.length >= {n}")
+    wait_for_js(pg, f"{LB}.length >= {n}")
     return pg.evaluate(f"{LB}.map(l => [l.text, l.x, l.y, l.w, l.h])")
 def overlap(a, b): return a[1] < b[1] + b[3] and b[1] < a[1] + a[3] and a[2] < b[2] + b[4] and b[2] < a[2] + a[4]
 r = Run(port=8877, wd="/tmp/wd_etichette_picchi")
@@ -76,7 +76,7 @@ try:
                 assert sp is not None and abs(sp - o["rt"]) < 0.05, (dx, sp, o["rt"])
         step("a click on the label (also 5 px to the side) opens the spectrum at the RT of the apex", click_label)
         def spec_label_tip():
-            attendi(pg, "(E.panels.find(q => q.type === 'spec')?._a?.lbls || []).some(l => l.m != null)")
+            wait_for_js(pg, "(E.panels.find(q => q.type === 'spec')?._a?.lbls || []).some(l => l.m != null)")
             tips = pg.evaluate("E.panels.find(q => q.type === 'spec')._a.lbls.filter(l => l.m != null).map(l => l.tip)")
             assert tips and all("m/z" in t and "intensit" in t and "Right-click" not in t and "Tasto destro" not in t for t in tips), tips[:2]
         step("the label of a spectrum peak shows m/z and intensity, no right-click hint", spec_label_tip)
@@ -109,8 +109,8 @@ try:
             pg.set_input_files("#pick", [str(D / "pda.wiff"), str(D / "pda.wiff.scan")]); pg.click("text=Carica dati"); ready(pg)
             def pda():
                 pick_kind(pg, "pda", CH)
-                attendi(pg, f"{CH}.kind==='pda' && {CH}._a")
-                attendi(pg, f"{LB}.filter(l => l.etpk && /^\\d+\\.\\d{{2}}$/.test(l.text)).length >= 2")
+                wait_for_js(pg, f"{CH}.kind==='pda' && {CH}._a")
+                wait_for_js(pg, f"{LB}.filter(l => l.etpk && /^\\d+\\.\\d{{2}}$/.test(l.text)).length >= 2")
                 ls = labels(pg, 2); txt = sorted(l[0] for l in ls)
                 for i, a in enumerate(ls):
                     for b in ls[i + 1:]: assert not overlap(a, b), (a, b)
@@ -118,6 +118,28 @@ try:
             step("PDA: two peaks (maxima at 260 and 320 nm), time labels apart", pda)
     finally:
         r2.close()
+    r3 = Run(port=8879, wd="/tmp/wd_etichette_picchi3")
+    try:
+        with sync_playwright() as p:
+            pg = r3.page(p)
+            M = D / "mrm.mzML"; ds.mrm(M, 1.0, np.random.default_rng(3), 1)
+            pg.set_input_files("#pick", [str(M)]); pg.click("text=Carica dati"); ready(pg)
+            MP = "E.panels.find(q=>q.type==='mrm')"; ML = f"({MP}._a.lbls || []).filter(l => l.etpk)"
+            def mrm_off():
+                wait_for_js(pg, f"{MP} && {MP}._a && {MP}._a.sr.length > 0"); frames(pg, 3)
+                assert pg.evaluate(f"{MP}.etpk") is None or pg.evaluate(f"{MP}.etpk") is False
+                assert pg.evaluate(f"ETPK.on({MP}, {MP}._a.sr.length)") is False and pg.evaluate(f"{ML}.length") == 0
+            step("MRM: no peak time labels by default", mrm_off)
+            def mrm_on():
+                pg.evaluate(f"ETPK.toggle({MP})"); wait_for_js(pg, f"{ML}.length >= 1")
+                assert pg.evaluate(f"{MP}.etpk") is True
+            step("MRM: the control turns the labels on", mrm_on)
+            def others():
+                pg.evaluate(f"(() => {{ const p = {MP}; p.etpk = undefined; }})()")
+                assert pg.evaluate("ETPK.on({type:'chrom', kind:'tic'}, 1) && ETPK.on({type:'xic', kind:'xic'}, 1) && !ETPK.on({type:'chrom', kind:'tic'}, 2)")
+            step("chromatogram and XIC defaults unchanged", others)
+    finally:
+        r3.close()
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

@@ -1,6 +1,6 @@
 """The msn.figure of the native side (`mzlab-cli msn-graph figure`, Rust SVG) and of the browser (the page drawer on the graph the .wasm gives) show the same
-ion and loss texts on the public synthetic infusion. The browser has no .wasm for the figure (the page draws it in JS), so the parity is on the labels, not on the bytes
-of the SVG; the graph itself is byte-equal in both sides (tests/test_msngrafo_wasm.py). Skipped without cargo, wasm-bindgen or node."""
+ion and loss texts on the public synthetic infusion. The page draws its figure in JS (the Flow step msn.figure has the .wasm msnfigura, tests_e2e/e2e_flow_web_struct.py), so here the parity is on the
+labels, not on the bytes of the SVG; the graph itself is byte-equal in both sides (tests/test_msngrafo_wasm.py). Skipped without cargo, wasm-bindgen or node."""
 import collections
 import html
 import json

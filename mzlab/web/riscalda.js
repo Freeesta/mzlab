@@ -22,7 +22,7 @@ function watchInput() {
 /** the device can afford background work */
 function allowed() {
   const nav = /** @type {any} */ (navigator), c = nav.connection || {};
-  if (window.QQQ_PHONE || c.saveData || (nav.deviceMemory && nav.deviceMemory < 4)) return false;
+  if (window.MZLAB_PHONE || c.saveData || (nav.deviceMemory && nav.deviceMemory < 4)) return false;
   if (battery && !battery.charging && battery.level < 0.25) return false;
   return true;
 }

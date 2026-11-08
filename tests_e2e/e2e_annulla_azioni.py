@@ -96,14 +96,14 @@ try:
             assert meas() is not None, "inside a text field the browser keeps Ctrl+Z"
             pg.evaluate("document.getElementById('tmpt').remove()")
         step("keys: Ctrl+Z in a text field stays the browser's", text_field)
-        def registro_e_raffica():
+        def registry_and_burst():
             reset()
             assert pg.evaluate("COMANDI.senzaGestore()") == [], "every command of the table has its handler"
             pg.evaluate(f"(()=>{{const p={SPEC};COMANDI.fai('spec.ruler',p,()=>{{p.rul=true}},{{unisci:'g'}});COMANDI.fai('spec.ruler',p,()=>{{p.rul=false;p.meas={{ref:1,list:[],key:measKey(p)}}}},{{unisci:'g'}})}})()")
             assert pg.evaluate("STORIA.pila.v.length") == 1, "steps of one gesture (same unisci, less than 0.8 s) are ONE entry"
             undo(); assert meas() is None and not rul(), "one Ctrl+Z takes the whole gesture back"
             assert pg.evaluate("(()=>{try{COMANDI.fai('nope.x',null,()=>1);return 'no'}catch(e){return 'throws'}})()") == "throws", "an action outside the registry is refused"
-        step("registry: handlers present, a gesture is one step, unknown id refused", registro_e_raffica)
+        step("registry: handlers present, a gesture is one step, unknown id refused", registry_and_burst)
         def pan_drag():
             reset()
             pg.evaluate(f"(()=>{{const p={SPEC};pushZh(p);p.zoom=[100,400];draw(p)}})()"); tick()
@@ -113,13 +113,13 @@ try:
             assert pg.evaluate("STORIA.pila.v.length") == n0 + 1, "a whole pan drag is ONE step"
             undo(); assert pg.evaluate(f"{SPEC}.zoom") == [100, 400], "Ctrl+Z puts the view before the pan back"
         step("view: a pan drag is one undoable step", pan_drag)
-        def annotazioni():
+        def annotations():
             reset()
             pg.evaluate(f"(()=>{{const p={SPEC};p.anns=p.anns||[];COMANDI.fai('spec.annotation',p,()=>p.anns.push({{x:364.4,text:'a'}}));draw(p)}})()")
             assert pg.evaluate(f"{SPEC}.anns.length") == 1
             undo(); assert pg.evaluate(f"{SPEC}.anns.length") == 0, "Ctrl+Z takes the note back"
             redo(); assert pg.evaluate(f"{SPEC}.anns.length") == 1, "redo puts it back"
-        step("annotation: add, undo, redo", annotazioni)
+        step("annotation: add, undo, redo", annotations)
         def opzioni():
             reset()
             old = pg.evaluate(f"{SPEC}.thr")

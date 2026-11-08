@@ -20,7 +20,7 @@ use crate::window::Windowed;
 
 #[path = "lettore_lc.rs"]
 mod lc;
-pub use lc::variante;
+pub use lc::variant;
 use lc::PROFILE;
 
 impl LettoreAgilent {
@@ -263,7 +263,7 @@ fn document(l: &LettoreAgilent) -> String {
             bytes: l.peak_len,
         });
     }
-    l.d.metodo(&Source {
+    l.d.method(&Source {
         format: "agilent-d",
         files,
         sample: None,
@@ -425,51 +425,58 @@ fn listed(l: &mut LettoreAgilent) -> Result<Vec<VoceCromatogramma>> {
 }
 
 impl Lettore for LettoreAgilent {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::AgilentD
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::conv::AGILENT_EXT
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.one(c)?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
         let r = self.record(k)?.1.clone();
         let (mz, it) = self.points(&r)?;
         Ok(self.d.spectrum_of(k, &r, mz, it))
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.one(c)?;
         Ok(header_fields(&self.d, self.record(k)?.1))
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn missing(&mut self, c: usize) -> usize {
+        if c == 0 {
+            self.d.missing
+        } else {
+            0
+        }
+    }
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.one(c)?;
         listed(self)
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
         trace(self, id)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         Ok(document(self))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.one(c)?;
         let sha = match (&mut self.peak, self.d.inline.is_some()) {
             (Some(p), false) => sha1_of(&mut Windowed::new(p, self.peak_len), self.peak_len)?,

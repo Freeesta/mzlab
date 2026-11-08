@@ -23,16 +23,16 @@ RIGHE = (("P1_narrow (recall)", "P1_narrow", "richiamo", "{:.2f}"), ("P1_broad (
          ("P5_fp (share of the rows)", "P5_fp", "frazione", "{:.2f}"))
 
 
-def confronto(verita: list[dict], tabelle: dict[str, dict]) -> dict:
+def confronto(truth: list[dict], tabelle: dict[str, dict]) -> dict:
     """{column name: endpoints} for the tables given, in order."""
-    return {nome: metriche.larghi(verita, t) for nome, t in tabelle.items()}
+    return {name: metriche.larghi(truth, t) for name, t in tabelle.items()}
 
 
 def a_markdown(misure: dict[str, dict]) -> str:
     """Markdown table: one row per endpoint, one column per tool; '-' where the endpoint cannot be measured."""
-    cella = lambda m, p, k, f: "-" if m[p][k] is None else f.format(m[p][k])
+    cell = lambda m, p, k, f: "-" if m[p][k] is None else f.format(m[p][k])
     out = ["| endpoint | " + " | ".join(misure) + " |", "|---|" + "---|" * len(misure)]
-    out += [f"| {nome} | " + " | ".join(cella(m, p, k, f) for m in misure.values()) + " |" for nome, p, k, f in RIGHE]
+    out += [f"| {name} | " + " | ".join(cell(m, p, k, f) for m in misure.values()) + " |" for name, p, k, f in RIGHE]
     return "\n".join(out) + "\n"
 
 

@@ -1,11 +1,11 @@
 //! Check of a whole plan against the step descriptors, before anything starts: unknown steps and versions, steps or algorithms that cannot run here,
 //! parameters out of range, ports (types, conversions, cardinality, facets) and cycles. It returns every problem, not the first.
 
-use super::canon::{declared, effective};
+use super::canon::{canonical, declared, effective};
 use super::order::{cyclic, plan_order};
 use super::{Instance, Observed, Plan, Ref};
 use crate::json::Value;
-use crate::step::{find, DataType, Kind, Param, Port, Status, Step};
+use crate::step::{find, DataType, Kind, Param, Port, Status, Step, WrittenIf};
 
 /// Where the plan is going to run: a step with no module for it is refused (`err.flow.unavailable`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -191,14 +191,21 @@ fn params(c: &mut Ctx, i: &Instance, step: &Step) {
 }
 
 /// The type a reference gives: of an input file (when declared) or of an output of another instance.
-fn source_type(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref) -> Option<(DataType, bool)> {
+/// The type of a reference, whether it is a list, and its format when known (an input file: from its extension only).
+fn source_type(
+    c: &mut Ctx,
+    i: &Instance,
+    port: &Port,
+    r: &Ref,
+) -> Option<(DataType, bool, Option<&'static str>)> {
     match r {
         Ref::File(name) => {
             let Some(f) = c.plan.input(name) else {
                 add(c, i, port.name, "err.flow.input.unknown", &[("ref", name)]);
                 return None;
             };
-            Some((f.ty.as_deref().and_then(DataType::from_name)?, false))
+            let ty = f.ty.as_deref().and_then(DataType::from_name)?;
+            Some((ty, false, file_format(name)))
         }
         Ref::Out {
             instance,
@@ -215,9 +222,97 @@ fn source_type(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref) -> Option<(DataT
                 add(c, i, port.name, "err.flow.port.unknown", &[("ref", &text)]);
                 return None;
             };
-            Some((o.ty, o.many))
+            if let Some(w) = o.written_if.as_ref().filter(|w| !written(src, step, w)) {
+                let param = w
+                    .param
+                    .map(|(p, not)| format!("{p}={not}"))
+                    .unwrap_or_default();
+                let p = [
+                    ("ref", text.as_str()),
+                    ("input", w.input),
+                    ("param", &param),
+                ];
+                add(c, i, port.name, "err.flow.port.unwritten", &p);
+                return None;
+            }
+            Some((o.ty, o.many, o.format.or(o.ty.default_format())))
         }
     }
+}
+
+/// Does instance `src` of `step` write an output written only on `w`? An instance whose parameters cannot be resolved is a problem of its own: yes.
+fn written(src: &Instance, step: &Step, w: &WrittenIf) -> bool {
+    let wired = src.ins.iter().any(|(n, r)| n == w.input && !r.is_empty());
+    let param_ok = w.param.is_none_or(|(name, not)| {
+        canonical(src, step).map_or(true, |r| {
+            r.params
+                .iter()
+                .find(|(k, _)| k == name)
+                .and_then(|(_, v)| v.str())
+                != Some(not)
+        })
+    });
+    wired && param_ok
+}
+
+/// The format an input file has by its name: only the extensions whose format is certain; any other name is unknown.
+fn file_format(name: &str) -> Option<&'static str> {
+    let n = name.to_ascii_lowercase();
+    [(".mzfeat", "mzfeat"), (".csv", "csv")]
+        .into_iter()
+        .find(|(ext, _)| n.ends_with(ext))
+        .map(|(_, f)| f)
+}
+
+/// A datum of the right type in a format the input does not read: refused only when both the format and what the input reads are known.
+fn format_fit(c: &mut Ctx, i: &Instance, port: &Port, r: &Ref, ty: DataType, format: Option<&str>) {
+    let reads: Vec<&str> = if !port.formats.is_empty() {
+        port.formats.clone()
+    } else if ty == port.ty {
+        port.ty.default_format().into_iter().collect()
+    } else {
+        Vec::new()
+    };
+    let Some(writes) = format.filter(|f| !reads.is_empty() && !reads.contains(f)) else {
+        return;
+    };
+    let text = match r {
+        Ref::File(name) => name.clone(),
+        Ref::Out { instance, port } => format!("{instance}.{port}"),
+    };
+    let p = [
+        ("ref", text.as_str()),
+        ("writes", writes),
+        ("reads", &reads.join(" / ")),
+    ];
+    add(c, i, port.name, "err.flow.port.format", &p);
+}
+
+/// Whether the table of `r` was aligned in this plan: an output that hands a lineage on (`Port::lineage`), made by its step or passed from its table
+/// inputs; a file never is. A source the check cannot follow (unknown, a cycle) is left to its own problems.
+fn aligned_here(c: &Ctx, r: &Ref, depth: usize) -> bool {
+    let Ref::Out { instance, port } = r else {
+        return false;
+    };
+    let Some((src, step)) = c
+        .plan
+        .instance(instance)
+        .and_then(|s| Some((s, step_of(c, s)?)))
+    else {
+        return true;
+    };
+    if depth > c.plan.steps.len() {
+        return true;
+    }
+    if !step.outs.iter().any(|o| o.name == port && o.lineage) {
+        return false;
+    }
+    let table = |p: &Port| p.ty == DataType::Table || p.accepts.contains(&DataType::Table);
+    src.ins
+        .iter()
+        .filter(|(n, _)| step.ins.iter().any(|p| p.name == n && table(p)))
+        .flat_map(|(_, refs)| refs)
+        .all(|r| aligned_here(c, r, depth + 1))
 }
 
 fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
@@ -236,7 +331,7 @@ fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
             );
         }
         for r in refs {
-            let Some((ty, list)) = source_type(c, i, port, r) else {
+            let Some((ty, list, format)) = source_type(c, i, port, r) else {
                 continue;
             };
             if list && !port.many {
@@ -249,7 +344,12 @@ fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
                 );
             }
             let fits = ty == port.ty || port.accepts.contains(&ty);
-            if !fits && conversion_path(c.registry, ty, port.ty).is_none() {
+            if fits {
+                format_fit(c, i, port, r, ty, format);
+                if port.lineage && !aligned_here(c, r, 0) {
+                    add(c, i, name, "err.flow.lineage", &[("step", step.id)]);
+                }
+            } else if conversion_path(c.registry, ty, port.ty).is_none() {
                 add(
                     c,
                     i,

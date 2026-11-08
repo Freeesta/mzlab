@@ -107,6 +107,35 @@ fn port(o: &mut Out, p: &Port) {
         key(o, "requires");
         facets(o, &p.requires);
     }
+    if let Some(w) = &p.written_if {
+        key(o, "written_if");
+        o.raw("{").str("input").raw(":").str(w.input);
+        if let Some((name, not)) = w.param {
+            o.raw(",")
+                .str("param")
+                .raw(":")
+                .str(name)
+                .raw(",")
+                .str("not")
+                .raw(":")
+                .str(not);
+        }
+        o.raw("}");
+    }
+    if let Some(f) = p.format {
+        key(o, "format");
+        o.str(f);
+    }
+    if !p.formats.is_empty() {
+        key(o, "formats");
+        list(o, &p.formats, |o, f| {
+            o.str(f);
+        });
+    }
+    if p.lineage {
+        key(o, "lineage");
+        o.raw("true");
+    }
 }
 
 fn ports(o: &mut Out, ps: &[Port]) {

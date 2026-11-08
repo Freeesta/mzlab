@@ -1,6 +1,6 @@
 # Landing on the work area, option D (Federico's design)
 
-Previous study: `docs/studi/LANDING_AREA_LAVORO.md` (option C: start card in the empty work area, staging table, «Load data» kept for the first load). Federico replaced C with his own design, called D here. This study maps D onto the code, answers the hard questions with evidence, adds how files are **added and removed** in D (Coordinator's request), and gives build prompts in `docs/studi/prompt_landing_d/`.
+Previous study: `docs/archivio/studi/LANDING_AREA_LAVORO.md` (option C: start card in the empty work area, staging table, «Load data» kept for the first load). Federico replaced C with his own design, called D here. This study maps D onto the code, answers the hard questions with evidence, adds how files are **added and removed** in D (Coordinator's request), and gives build prompts in `docs/archivio/studi/prompt_landing_d/`.
 
 **Short answer: D is buildable with what the page already has, and it is simpler than C.** Almost every piece exists and is tested: the side-panel drop that opens files at once (`directDone`), the progressive opening (`E.pending`), the soft removal with undo (`fileRemoval`, `STORIA.tolto`), the LR/HR rule for additions (`#fl-note`), the empty-area hint (`syncWorkEmpty`). What D adds is one rule for the work area and three pieces of new code: progress rows in the side list *during* the upload, a write-through from the sample table to the open files, and the «nothing shown yet» state of a new session. What D removes is a whole mode (`S.adding`, `#loaded`, `#cancadd`, «Load data»). Measured: §1 (Playwright, built site with the Rust engine). Not verified: §9.
 
@@ -338,7 +338,7 @@ Below 900 px (side panel closed; the table is the list; a file name opens it):
 
 ## 10. Build prompts
 
-`docs/studi/prompt_landing_d/` (`LEGGIMI.md` = order and waves). Old prompts in `docs/studi/prompt_landing/`: L1, L3 superseded by D1, D3, D5; L2 reused as D2 (extended); L4 reused as D4 (restore and tour parts unchanged, the «Open with» part now asserts the side list); L5 reused as D6 (sheet rules changed by §4 e).
+`docs/archivio/studi/prompt_landing_d/` (`LEGGIMI.md` = order and waves). Old prompts in `docs/archivio/studi/prompt_landing/`: L1, L3 superseded by D1, D3, D5; L2 reused as D2 (extended); L4 reused as D4 (restore and tour parts unchanged, the «Open with» part now asserts the side list); L5 reused as D6 (sheet rules changed by §4 e).
 
 | Wave | Prompt | Zone (owned files) |
 |---|---|---|

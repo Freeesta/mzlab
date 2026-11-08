@@ -414,7 +414,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     el.innerHTML = `<div class="gv" data-gv>
 <div id="gv-warn"></div>
 <div class="gv-bar" role="group" aria-label="Exports">
- <button type="button" data-ex="long" title="One row per TP × condition × time (rows now shown)">Comparison (CSV, long)</button><button type="button" data-ex="wide" title="One row per TP (rows now shown)">Comparison (CSV, wide)</button>
+ <button type="button" data-ex="long" title="One row per TP × condition × time">Comparison (CSV, long)</button><button type="button" data-ex="wide" title="One row per TP">Comparison (CSV, wide)</button>
  <button type="button" data-ex="sets" title="The sets of conditions and their rows">Sets (CSV)</button><button type="button" data-ex="json" title="The complete gruppi/1 output">gruppi/1 (JSON)</button></div>
 <h3 id="gv-h-mx">Comparison matrix</h3>
 <div class="gv-bar"><label for="gv-flt">Filter</label><select id="gv-flt"></select><span id="gv-n" role="status" aria-live="polite" class="sr-only"></span><span id="gv-nv" class="gv-sub"></span></div>

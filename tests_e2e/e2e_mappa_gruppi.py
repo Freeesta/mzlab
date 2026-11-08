@@ -63,7 +63,7 @@ try:
             add(20.0, 400.0); add(20.07, 410.0); add(20.1, 420.0); settle(n0 + 3)
             g = rows()[-3:]; assert g[0] == g[1] == g[2], g                                   # a wider window groups apexes a few scans apart
             assert pg.is_visible(".pnl.map .mztab [data-t=align]")
-            pg.check(".pnl.map .mztab [data-t=align]"); attendi(pg, f"MAPPA.pts({M}).slice(-3).every(q => q.rt === 20)"); settle(n0 + 3)
+            pg.check(".pnl.map .mztab [data-t=align]"); wait_for_js(pg, f"MAPPA.pts({M}).slice(-3).every(q => q.rt === 20)"); settle(n0 + 3)
             rts = pg.evaluate(f"MAPPA.pts({M}).slice(-3).map(q => q.rt)"); assert rts == [20.0, 20.0, 20.0], rts   # all on the RT of the first one
             pg.uncheck(".pnl.map .mztab [data-t=align]"); pg.click(".pnl.map [data-mz=snap]")
         step("align: points of a group go to the RT of the first one", align)

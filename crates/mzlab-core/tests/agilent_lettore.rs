@@ -61,10 +61,10 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
             "{label}"
         );
         let mut l = lettori::apri(set_of(&f), &Limiti::sito()).unwrap();
-        assert_eq!(l.formato(), Formato::AgilentD);
-        assert_eq!(l.campioni().len(), 1);
-        assert_eq!(l.campioni()[0].scansioni, run.spectra.len(), "{label}");
-        let index = l.indice(0).unwrap().to_vec();
+        assert_eq!(l.format(), Formato::AgilentD);
+        assert_eq!(l.samples().len(), 1);
+        assert_eq!(l.samples()[0].scansioni, run.spectra.len(), "{label}");
+        let index = l.index(0).unwrap().to_vec();
         assert_eq!(index.len(), run.spectra.len(), "{label}");
         for (k, (e, s)) in index.iter().zip(&run.spectra).enumerate() {
             assert_eq!(
@@ -92,14 +92,10 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
         }
         // by position, in any order: the last scan first, then the first
         for k in [index.len() - 1, 0, index.len() / 2] {
-            assert_eq!(
-                l.scansione(0, k).unwrap(),
-                run.spectra[k],
-                "{label}: scan {k}"
-            );
+            assert_eq!(l.scan(0, k).unwrap(), run.spectra[k], "{label}: scan {k}");
         }
-        assert!(l.scansione(0, index.len()).is_err() && l.scansione(1, 0).is_err());
-        let h = l.intestazione(0, 0).unwrap();
+        assert!(l.scan(0, index.len()).is_err() && l.scan(1, 0).is_err());
+        let h = l.scan_header(0, 0).unwrap();
         let r0 = d.records.iter().find(|r| r.points > 0).unwrap();
         assert!(
             h.len() >= 19 + r0.extra.len(),
@@ -116,7 +112,7 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
 
 /// The TIC and the BPC from the records, one SIC per ion of a SIM method, and the `metodo/1` document.
 fn chromatograms_and_method(l: &mut dyn Lettore, run: &Run, label: &str) {
-    let listed = l.cromatogrammi(0).unwrap();
+    let listed = l.chromatograms(0).unwrap();
     for c in &run.chromatograms {
         if matches!(c.kind, ChromKind::Tic | ChromKind::Bpc | ChromKind::Sic) {
             assert!(
@@ -124,11 +120,11 @@ fn chromatograms_and_method(l: &mut dyn Lettore, run: &Run, label: &str) {
                 "{label}: {} is not listed",
                 c.id
             );
-            assert_eq!(&l.cromatogramma(0, &c.id).unwrap(), c, "{label}: {}", c.id);
+            assert_eq!(&l.chromatogram(0, &c.id).unwrap(), c, "{label}: {}", c.id);
         }
     }
-    assert!(l.cromatogramma(0, "nothing").is_err());
-    let doc = l.metodo(0).unwrap();
+    assert!(l.chromatogram(0, "nothing").is_err());
+    let doc = l.method(0).unwrap();
     assert!(
         doc.contains("\"formato\":\"agilent-d\"") && doc.contains("MSPeak.bin"),
         "{label}"
@@ -155,8 +151,8 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
     };
     // the good set opens and reads
     let mut l = lettori::apri(set(&idx, true), &Limiti::sito()).unwrap();
-    assert_eq!(l.indice(0).unwrap().len(), 3);
-    assert_eq!(l.scansione(0, 1).unwrap().mz.len(), 3);
+    assert_eq!(l.index(0).unwrap().len(), 3);
+    assert_eq!(l.scan(0, 1).unwrap().mz.len(), 3);
     // without MSPeak.bin the folder is only possible, not sure
     assert_eq!(
         lettori::riconosci(&mut set(&idx, false)).map(|v| v.id),
@@ -200,7 +196,7 @@ fn a_gc_run_is_not_a_variant() {
     let Some(all) = folders() else { return };
     for f in all {
         assert!(
-            !mzlab_core::agilent::lettore::variante(&mut set_of(&f)),
+            !mzlab_core::agilent::lettore::variant(&mut set_of(&f)),
             "{f:?}"
         );
     }

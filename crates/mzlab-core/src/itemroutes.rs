@@ -164,7 +164,7 @@ pub fn pda_map<M: ReadAt>(m: &mut Mzml<M>) -> Result<String> {
             return Ok(json);
         }
     #[cfg(feature = "mappa-dad")]
-    if let Some(d) = m.dad()? {
+    if let Some(d) = m.dad_memo()? {
         return Ok(dad_to_map_json(&d));
     }
     Err(Error::new("err.pda.none"))
@@ -177,7 +177,7 @@ pub fn pda_wavelength<M: ReadAt>(m: &mut Mzml<M>, nm0: f64, nm1: f64) -> Result<
             return Ok(json);
         }
     #[cfg(feature = "mappa-dad")]
-    if let Some(json) = m.dad()?.and_then(|d| dad_wavelength_json(&d, nm0, nm1)) {
+    if let Some(json) = m.dad_memo()?.and_then(|d| dad_wavelength_json(&d, nm0, nm1)) {
         return Ok(json);
     }
     Err(Error::new("err.pda.none"))
@@ -190,7 +190,7 @@ pub fn pda_spectrum<M: ReadAt>(m: &mut Mzml<M>, rt0: f64, rt1: f64) -> Result<St
             return Ok(json);
         }
     #[cfg(feature = "mappa-dad")]
-    if let Some(json) = m.dad()?.and_then(|d| dad_spectrum_json(&d, rt0, rt1)) {
+    if let Some(json) = m.dad_memo()?.and_then(|d| dad_spectrum_json(&d, rt0, rt1)) {
         return Ok(json);
     }
     Err(Error::new("err.pda.none"))

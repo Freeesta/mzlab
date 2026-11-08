@@ -35,6 +35,8 @@ flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 opentfraw = { path = "../../vendor/opentfraw", optional = true }
 sha1 = { version = "0.11", default-features = false }
 sha2 = { version = "0.11", default-features = false }
+# exp and ln with the same bits in the .wasm and in a native build (the system library differs in the last bit)
+libm = "0.2"
 
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }

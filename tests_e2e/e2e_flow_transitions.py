@@ -1,6 +1,6 @@
 """Flow «This browser» runs chrom.transitions@1 (flow/lazy/flow-web-transitions.js, `flow_transitions` of the `flowtab` .wasm): the two samples of the synthetic SIM .wiff
 (tools/wiff_sim.py) converted to mzML by `mzlab-cli convert`, a transition table with two isomers on one ion, a negative ion and a row without RT; the CSV the browser keeps is
-the one of `mzlab-cli flow run` byte for byte for the three outputs, the job runs `via: "browser"` and no request is left unserved (`MZLAB_LR_MISS`). Builds the site and the
+the one of `mzlab-cli flow run` byte for byte for the three outputs and for the areas from zero (`baseline` = zero), the job runs `via: "browser"` and no request is left unserved (`MZLAB_LR_MISS`). Builds the site and the
 .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_transitions.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -35,20 +35,34 @@ CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]
 subprocess.run(CLI + ["convert", str(tmp / "w" / "sim.wiff"), "--out", str(run)], cwd=ROOT, check=True, capture_output=True)
 assert all((run / n).exists() for n in NAMES), sorted(p.name for p in run.iterdir())
 
-def plan(output):
-    return {"format": "mzflow/2", "inputs": [{"name": n, "sha256": "", "type": "mzml"} for n in NAMES],
-            "steps": [{"id": "tr", "step": "chrom.transitions@1", "in": {"source": ["file:" + n for n in NAMES]}, "params": {"output": output, "transitions": TABLE}}]}
+ZERO = "peaks_zero"   # the peaks output with the areas from zero
+def plan(output, names=NAMES):
+    extra = {"output": "peaks", "baseline": "zero"} if output == ZERO else {"output": output}
+    return {"format": "mzflow/2", "inputs": [{"name": n, "sha256": "", "type": "mzml"} for n in names],
+            "steps": [{"id": "tr", "step": "chrom.transitions@1", "in": {"source": ["file:" + n for n in names]}, "params": {**extra, "transitions": TABLE}}]}
 
 NAT = {}
-for o in OUTPUTS:
+for o in OUTPUTS + [ZERO]:
     (run / (o + ".json")).write_text(json.dumps(plan(o)))
     subprocess.run(CLI + ["flow", "run", str(run / (o + ".json")), "--in", str(run), "--out", str(run / ("out_" + o))], cwd=ROOT, check=True, capture_output=True)
     NAT[o] = (run / ("out_" + o) / "tr.csv").read_text()
 assert NAT["peaks"].count(",ok,") + NAT["peaks"].count(",ok\n") >= 6, NAT["peaks"]
 assert len(NAT["candidates"].strip().splitlines()) == 3, NAT["candidates"]
+assert len({NAT[o] for o in OUTPUTS}) == 3, "the three outputs of the native run must differ"
+assert NAT[ZERO].splitlines()[0].endswith(",peak,baseline,below") and NAT[ZERO] != NAT["peaks"], NAT[ZERO][:300]
 data = site / "static" / "dati_flow_transitions"; data.mkdir()
 for n in NAMES: shutil.copy2(run / n, data / n)
+# the page finds a file of a plan through its OPFS index (mzlab/idx/<stem>.mzidx), made here by the native index step
+(run / "idx.json").write_text(json.dumps({"format": "mzflow/2", "inputs": [{"name": n, "sha256": "", "type": "mzml"} for n in NAMES],
+    "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n for n in NAMES]}}]}))
+subprocess.run(CLI + ["flow", "run", str(run / "idx.json"), "--in", str(run), "--out", str(run / "out_idx")], cwd=ROOT, check=True, capture_output=True)
+for n in NAMES: shutil.copy2(run / "out_idx" / ("idx-" + n[:-5] + ".mzidx"), data / (n[:-5] + ".mzidx"))
 
+PUT = """async (names) => {
+  let d = await navigator.storage.getDirectory();
+  for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
+  for (const n of names) { const w = await (await d.getFileHandle(n + ".mzidx", { create: true })).createWritable(); await (await fetch("static/dati_flow_transitions/" + n + ".mzidx")).body.pipeTo(w); }
+}"""
 HOLD = """async (names) => { for (const name of names) { const b = await (await fetch("static/dati_flow_transitions/" + name)).blob(); window.MZLAB_RUST.noteUpload(name, b); } }"""
 RUN = """async (plan) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
@@ -59,9 +73,8 @@ RUN = """async (plan) => {
   finally { document.removeEventListener('flow:web-step', on); }
 }"""
 KEPT = """async () => {
-  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), msn = await d.getDirectoryHandle('msn'), out = {};
-  for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
-  return out;
+  const d = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'), f = await (await d.getDirectoryHandle('flow')).getFileHandle('tr.csv');
+  return { "tr.csv": await (await f.getFile()).text() };
 }"""
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -81,19 +94,23 @@ try:
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("window.QTOOLS", timeout=120000)
         pg.wait_for_function("!!(window.MZLAB_RUST && window.MZLAB_RUST.noteUpload)", timeout=120000)
-        pg.evaluate(HOLD, NAMES)
+        pg.evaluate(HOLD, NAMES); pg.evaluate(PUT, [n[:-5] for n in NAMES])
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
 
+        WEBS = {}
         def same(output):
             def check():
-                r = pg.evaluate(RUN, plan(output)); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+                r = pg.evaluate(RUN, plan(output, NAMES[:1])); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
                 assert any(e["passo"] == "tr" and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "tr"][-3:]
                 assert asked, "the flowtab module was not fetched when chrom.transitions ran"
                 web = pg.evaluate(KEPT).get("tr.csv"); assert web is not None
+                WEBS[output] = web
                 assert sha(web) == sha(NAT[output]), (output, NAT[output][:400], web[:400])
             return check
         for o in OUTPUTS: step(f"the browser gives the {o} CSV of the native flow run, byte for byte", same(o))
+        step("the areas from zero (baseline = zero) are the native ones, byte for byte", same(ZERO))
+        step("the three outputs give three different CSVs in the browser", lambda: (len(WEBS) == 4 and len(set(WEBS.values())) == 4) or (_ for _ in ()).throw(AssertionError(sorted(WEBS))))
         step("no request was left unserved by the engine", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         b.close()
 finally:

@@ -21,14 +21,14 @@ try:
             frames(pg, 20)
             return pg.evaluate(f"(()=>{{const p={sp},q=p.cv.getBoundingClientRect(),l=p._a.lbls.filter(l=>l.m!=null).sort((u,v)=>u.y-v.y)[0];return {{mz:l.m,x:q.left+l.x+l.w/2,y:q.top+l.y+l.h/2}}}})()")
         def extract(sp):
-            attendi(pg, f"!!{sp}&&!!{sp}._a&&{sp}._a.data[0].d.mz.length>0")
+            wait_for_js(pg, f"!!{sp}&&!!{sp}._a&&{sp}._a.data[0].d.mz.length>0")
             pk = top_peak(sp)
             pg.evaluate(f"{sp}.el.querySelector('[data-a=xicb]').click()"); pg.mouse.click(pk["x"], pk["y"]); ready(pg)
-            attendi(pg, "(()=>{const x=E.panels.find(p=>p.type==='xic');return !!x&&!!x._a&&!!x._a.sr&&x._a.sr.length>0})()")
+            wait_for_js(pg, "(()=>{const x=E.panels.find(p=>p.type==='xic');return !!x&&!!x._a&&!!x._a.sr&&x._a.sr.length>0})()")
             return pk
         def second_file():
             pg.evaluate(f"newSpec(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'), 14.9, 15.1, {ks[1]})"); ready(pg)
-            attendi(pg, f"!!{spec_of(ks[1])}")
+            wait_for_js(pg, f"!!{spec_of(ks[1])}")
             pk = extract(spec_of(ks[1]))
             sr = pg.evaluate("E.panels.find(p=>p.type==='xic')._a.sr.map(s=>s.k)")
             assert ks[1] in sr, (sr, ks)
@@ -43,13 +43,13 @@ try:
         step("files overlaid: the XIC of the chosen peak is drawn", overlaid)
         def ms2():
             open_kind(pg, "ms2")
-            attendi(pg, "(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec');return !!p&&!!p._a&&p._a.data[0].d.mz.length>0})()")
+            wait_for_js(pg, "(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec');return !!p&&!!p._a&&p._a.data[0].d.mz.length>0})()")
             sp = "E.panels.find(p=>p.type==='spec'&&p.tab==='ms2')"
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic'&&p.tab==='ms2').length")
             pg.evaluate(f"{sp}.el.scrollIntoView({{block:'center'}})"); frames(pg, 20)
             assert pg.evaluate(f"{sp}.level") == 2 and pg.evaluate(f"{sp}.el.querySelector('[data-a=xicb]').hidden"), "an MS2 spectrum has no XIC button"
             pk = top_peak(sp)
-            attendi(pg, f"document.elementFromPoint({pk['x']},{pk['y']})==={sp}.cv")
+            wait_for_js(pg, f"document.elementFromPoint({pk['x']},{pk['y']})==={sp}.cv")
             pg.mouse.click(pk["x"], pk["y"]); ready(pg)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic'&&p.tab==='ms2').length") == n0, "a click on an MS2 peak extracts nothing"
         step("MS2 file (full scan filter): no XIC button, a click on a fragment extracts nothing", ms2)

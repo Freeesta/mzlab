@@ -6,7 +6,7 @@ site and the .wasm (python tools/build_site.py + the CI build). Run: python3 tes
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, attendi, free_port
+from lib import ROOT, wait_for_js, free_port
 import synth
 
 PORT = free_port()
@@ -44,12 +44,12 @@ try:
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         pg.evaluate(PROBE)
         pg.set_input_files("#pick", FILES)
-        attendi(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {N} && !PROGRESSO.busy() && UPBUSY === 0 && OPENNOW.busy() === 0", 240000)
-        attendi(pg, "(window.__end = window.__end || performance.now()) && performance.now() - window.__end > 600", 10000)      # some frames after the end
+        wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {N} && !PROGRESSO.busy() && UPBUSY === 0 && OPENNOW.busy() === 0", 240000)
+        wait_for_js(pg, "(window.__end = window.__end || performance.now()) && performance.now() - window.__end > 600", 10000)      # some frames after the end
         snaps = pg.evaluate("window.__snap"); ls = pg.evaluate("window.__ls")
         print("   frames of the loading:", len(snaps))
         import json
@@ -71,7 +71,6 @@ try:
         def shifts():
             first_open = next((fr[0] for fr in snaps if json.loads(fr[1])["work"] != "landing"), snaps[-1][0])
             start, end = snaps[0][0], first_open
-        def shifts():
             print('   window', round(start), round(end))
             tot = sum(e[1] for e in ls if start + 40 <= e[0] <= end and e[2])
             for e in ls:
@@ -80,7 +79,7 @@ try:
             assert tot < 0.002, tot
         step("no layout-shift of the work area from the first row to the end", shifts)
         def done():
-            attendi(pg, "document.querySelectorAll('#fl-up [data-up]').length === 0", 30000)
+            wait_for_js(pg, "document.querySelectorAll('#fl-up [data-up]').length === 0", 30000)
             assert pg.evaluate("document.getElementById('v-workspace').dataset.work === 'panels' && E.files.filter(f => f.vis && !f.gone).length === 1"), "only the first file opened by itself"
             assert not pg.is_visible("#drop"), "drop area gone with the open panels"
             assert pg.evaluate("document.querySelectorAll('#flist input[data-k=use]').length") >= N

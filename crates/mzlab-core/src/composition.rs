@@ -822,9 +822,12 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
         .str(o.unit)
         .raw(",\"ion\":")
         .str(o.ion);
-    out.raw(",\"n_candidates\":")
-        .int(n_candidates as i64)
-        .raw(",\"results\":[");
+    out.raw(",\"n_candidates\":").int(n_candidates as i64);
+    // only the `take` closest masses get an isotope or fragment fit: say so when that left some out, never a silent cut
+    if scored && n_candidates > take {
+        out.raw(",\"scored\":").int(take as i64);
+    }
+    out.raw(",\"results\":[");
     for (i, r) in res.iter().enumerate() {
         out.raw(if i > 0 { "," } else { "" })
             .raw("{\"formula\":")
@@ -935,5 +938,5 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
 
 /// The Gaussian mass term of the combined score, from the rounded error in ppm.
 fn mass_t_raw(delta_ppm: f64, sigma_ppm: f64) -> f64 {
-    (-0.5 * (delta_ppm / sigma_ppm).powi(2)).exp()
+    libm::exp(-0.5 * (delta_ppm / sigma_ppm).powi(2))
 }

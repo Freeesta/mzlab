@@ -16,14 +16,14 @@ use mzlab_feat::steps::recipe_map;
 /// A value the plan leaves out: name, value, proof.
 pub type Estimate = (String, Value, Value);
 
-/// What the plan writes for `job`: the algorithm it chose, the values of its preset, then its own parameters (descriptor names).
+/// What the plan writes for `job`: the algorithm it chose (feature steps only), the values of its preset, then its own parameters (descriptor names).
 pub fn written(job: &Job) -> Vec<(String, Value)> {
     let mut v: Vec<(String, Value)> = Vec::new();
     if let Some(a) = job
         .instance
         .algorithm
         .as_deref()
-        .filter(|_| job.step.id == "features.detect")
+        .filter(|_| LAYERED.contains(&job.step.id))
     {
         v.push(("algorithm".to_string(), Value::Str(a.into())));
     }

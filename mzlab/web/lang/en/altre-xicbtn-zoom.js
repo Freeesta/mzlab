@@ -1,7 +1,7 @@
 I18N.add("en", {
   "zoom.mz": "m/z {lo}–{hi}",
   "zoom.rt": "RT {lo}–{hi} min",
-  "xicbtn.title": "XIC of the ion chosen in the spectrum, in the panel below (Shift: extra trace)",
+  "xicbtn.title": "XIC of the ion chosen in the spectrum, in the panel below",
   "xicbtn.n": "XIC of {n} files",
   "xicbtn.infusion": "Infusion: no chromatogram",
   "xicbtn.aria": "Extract the XIC of the chosen ion",
@@ -21,6 +21,6 @@ I18N.add("en", {
   "xicdlg.desc": "XIC (Extracted Ion Chromatogram): the chromatogram of the only signals with m/z inside an interval 1 Da wide around the nominal mass of the ion. You integrate from here. In each row type an m/z or a neutral formula (with the adduct).",
   "xicdlg.add.title": "Up to 10 ions in the same chart",
   "xicdlg.add": "+ ion",
-  "xicdlg.file.title": "Applies only at the start; later use the chart's File selector",
+  "xicdlg.file.title": "File to extract the XICs from",
   "xicdlg.go": "Extract"
 });

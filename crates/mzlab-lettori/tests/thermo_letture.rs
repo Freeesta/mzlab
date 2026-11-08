@@ -32,7 +32,7 @@ fn opening_and_indexing_a_run_takes_few_reads() {
         }],
     };
     let mut l = mzlab_lettori::apri(set, &Limiti::sito()).unwrap();
-    let n = l.indice(0).unwrap().len();
+    let n = l.index(0).unwrap().len();
     assert_eq!(n, scans as usize);
     eprintln!(
         "read_at calls: {} for {} scans, {} bytes",
@@ -54,5 +54,5 @@ fn opening_and_indexing_a_run_takes_few_reads() {
         &Limiti::sito(),
     )
     .unwrap();
-    assert_eq!(l.indice(0).unwrap(), r.indice(0).unwrap());
+    assert_eq!(l.index(0).unwrap(), r.index(0).unwrap());
 }

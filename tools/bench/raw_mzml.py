@@ -33,13 +33,13 @@ def disco(tmp, mb=1024):
     """Sequential write then read of `mb` MB with dd (page cache dropped before the read when allowed); MB/s or None."""
     f = Path(tmp) / "raw_mzml_dd.tmp"
     out = {}
-    for nome, cmd in (("scrittura", f"dd if=/dev/zero of={f} bs=1M count={mb} conv=fdatasync"), ("lettura", f"dd if={f} of=/dev/null bs=1M")):
-        if nome == "lettura":
+    for name, cmd in (("scrittura", f"dd if=/dev/zero of={f} bs=1M count={mb} conv=fdatasync"), ("lettura", f"dd if={f} of=/dev/null bs=1M")):
+        if name == "lettura":
             sh(["sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches"])
         t = time.perf_counter()
         r = sh(["sh", "-c", cmd])
         s = time.perf_counter() - t
-        out[nome] = round(mb / s, 1) if r.returncode == 0 and s > 0 else None
+        out[name] = round(mb / s, 1) if r.returncode == 0 and s > 0 else None
     f.unlink(missing_ok=True)
     return out
 
@@ -68,9 +68,9 @@ def main():
     }
     for backend, feat in (("miniz_oxide", ""),) + ((("zlib-rs", "banco-zlib-rs"),) if a.zlib_rs else ()):
         build(feat)
-        etichetta = a.etichetta or (Path(a.file).stem if a.file else f"denso-{a.denso}gb")
-        dest = OUT / f"{etichetta}.{backend}.json"
-        cmd = [str(EXE), "--giri", str(a.giri), "--etichetta", etichetta, "--json", str(dest), "--tmp", a.tmp, "--meta", f"backend={backend}"]
+        label = a.etichetta or (Path(a.file).stem if a.file else f"denso-{a.denso}gb")
+        dest = OUT / f"{label}.{backend}.json"
+        cmd = [str(EXE), "--giri", str(a.giri), "--etichetta", label, "--json", str(dest), "--tmp", a.tmp, "--meta", f"backend={backend}"]
         cmd += ["--file", a.file] if a.file else ["--denso", str(Path(a.tmp) / "raw_mzml_denso"), "--gb", str(a.denso), "--cancella"]
         for k, v in {**meta, "bw_lettura_mb_s": bw.get("lettura"), "bw_scrittura_mb_s": bw.get("scrittura")}.items():
             cmd += ["--meta", f"{k}={v}"]

@@ -45,9 +45,32 @@ def test_messages_placeholders_numbers_and_plurals():
 
 
 @needs_node
+def test_number_formats_are_built_once_per_decimals():
+    # the progress rows of a loading format thousands of numbers: one Intl.NumberFormat per number of decimals, the same text as a fresh one
+    r = node("""const N = Intl.NumberFormat; let made = 0; Intl.NumberFormat = function (...a) { made++; return new N(...a); };
+    const out = []; for (let i = 0; i < 500; i++) out.push(I.fix(i / 7, 1), I.fix(i * 1000.5, 0), I.format('{x, number}', {x: i / 3}, 'en'));
+    const ref = [1, 2].map(d => new N('en-US', {useGrouping: false, minimumFractionDigits: d, maximumFractionDigits: d}).format(1234.5678));
+    console.log(JSON.stringify([made, out.slice(0, 3), out.length, I.fix(1234.5678, 1), I.fix(1234.5678, 2), ref]))""")
+    assert r[0] == 3 and r[1] == ["0.0", "0", "0"] and r[2] == 1500 and r[3:5] == r[5]
+
+@needs_node
 def test_a_key_missing_in_english_falls_back_to_italian():
     r = node("""I.add('it', {only: 'solo italiano'}); console.log(JSON.stringify([I.t('only'), [...I.missing]]))""")
     assert r == ["solo italiano", []]
+
+
+@needs_node
+def test_until_the_rest_of_the_catalog_runs_a_key_gives_empty_text_never_the_key():
+    # the site's first part names the rest (awaitRest); a key of the rest asked before it gives "" and is noted in `late`; static elements keep
+    # their text and are filled by done()
+    r = node("""I.add('it', {'p.first': 'primo'}); I.awaitRest('lang/it-resto.js'); const err = console.error; const said = []; console.error = m => said.push(m);
+      const mk = k => { const a = {'data-i18n': k}; return { textContent: 'testo della pagina', isConnected: true, getAttribute: n => (n in a ? a[n] : null) }; };
+      const els = [mk('p.first'), mk('p.later')], root = { querySelectorAll: () => els };
+      const before = [I.rest, I.t('p.first'), I.t('p.later'), I.t('p.later'), [...I.late], said.length];
+      I.apply(root); const held = els.map(e => e.textContent);
+      I.add('it', {'p.later': 'dopo'}); I.done(); console.error = err;
+      console.log(JSON.stringify([before, held, els.map(e => e.textContent), I.rest, I.t('p.later')]))""")
+    assert r == [["lang/it-resto.js", "primo", "", "", ["p.later"], 1], ["primo", "testo della pagina"], ["primo", "dopo"], "", "dopo"]
 
 
 def test_the_checker_passes_on_the_repository():

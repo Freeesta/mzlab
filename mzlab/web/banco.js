@@ -17,10 +17,10 @@ const BANCO = (() => {
 #tools.one{flex-wrap:nowrap;overflow:hidden;align-items:center}#tools.one .tbx{flex-wrap:nowrap}#tools.one #fsel{min-width:110px;max-width:min(34vw,340px)}#tools.one .sp{flex:1 1 0;min-width:0}#tools.one #navfile{display:inline-flex;align-items:center;gap:var(--sp-2);flex-wrap:nowrap}#tools.one .tbx,#tools.one #hrbar,#tools.one #np-method{flex:none}#tools.one #g-file{flex:0 1 auto}#tools.one #fsel{flex:0 1 auto}
 #hrinfo{margin-top:10px;display:flex;flex-direction:column;resize:vertical;overflow:hidden;height:340px;min-height:170px;max-height:80vh;padding:0}
 #hrinfo[hidden]{display:none}#sb-panels>#hrinfo{height:100%!important;min-height:0;max-height:none;resize:none;margin:0;border:0;border-radius:0}
-#hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#sb-panels>#hrinfo #hri-ttl{display:none}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;user-select:text}
+#hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#sb-panels>#hrinfo #hri-ttl{display:none}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;-webkit-user-select:text;user-select:text}
 :is(#hri-body,.hri-body) .row label{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}:is(#hri-body,.hri-body) .row input[type=text],:is(#hri-body,.hri-body) .row input:not([type]){min-width:0;padding:2px 6px}:is(#hri-body,.hri-body) select{padding:2px 4px;max-width:100%;min-width:0}:is(#hri-body,.hri-body) button{padding:2px 8px}:is(#hri-body,.hri-body) .muted.sm{font-size:11px;line-height:1.35}
 :is(#hri-body,.hri-body) table{border-collapse:collapse;width:100%}:is(#hri-body,.hri-body) td,:is(#hri-body,.hri-body) th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}:is(#hri-body,.hri-body) td.num,:is(#hri-body,.hri-body) th.num{text-align:right}
-:is(#hri-body,.hri-body) td.v{white-space:normal;word-break:break-all}:is(#hri-body,.hri-body) h4{margin:8px 0 2px;font-size:12px}:is(#hri-body,.hri-body) .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
+:is(#hri-body,.hri-body) td.v{white-space:normal;word-break:break-all}:is(#hri-body,.hri-body) h2{margin:8px 0 2px;font-size:12px}:is(#hri-body,.hri-body) .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
 :is(#hri-list,.hri-list){position:relative;overflow:auto;height:100%}:is(#hri-list,.hri-list) .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
 :is(#hri-list,.hri-list) .hd span{cursor:pointer;padding:2px 2px;text-align:right}:is(#hri-list,.hri-list) .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}:is(#hri-list,.hri-list) .r span{text-align:right;padding-right:2px}.sb-n{font-weight:400;color:var(--muted)}
 :is(#hri-list,.hri-list) .r:hover{background:var(--sel)}:is(#hri-list,.hri-list) .r.cur{background:var(--sel);font-weight:600}
@@ -302,16 +302,19 @@ const BANCO = (() => {
   const tabOfAct = () => (act() && act().tab) || E.tab;
   function barBtn(id, tip, ic, fn, label) { return `<button type="button" data-hb="${id}" title="${EH(tip)}" aria-label="${EH(tip)}">${ic}${label ? `<span class="hl">${EH(label)}</span>` : ""}</button>`; }
   async function copyPng(p) {
-    let cvs; p._exp = true; EXPORTING = true; paintFiles();
-    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
-    const blob = await new Promise(r => cvs.toBlob(r));
-    try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); nearMsg(I18N.t("bn.copied.img")); }
-    catch (e) { saveBlob(blob, plotName(p) + ".png"); info(I18N.t("bn.copied.dl")); }
+    // handed to the clipboard before the image is drawn: Safari takes it only while the click runs
+    const png = (async () => {
+      let cvs; p._exp = true; EXPORTING = true; paintFiles();
+      try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
+      return /** @type {Promise<Blob>} */ (new Promise(r => cvs.toBlob(r)));
+    })();
+    try { await clipboardCopy({ "image/png": png }); nearMsg(I18N.t("bn.copied.img")); }
+    catch (e) { saveBlob(await png, plotName(p) + ".png"); info(I18N.t("bn.copied.dl")); }
   }
   async function copyText(p) {
     const t = plotSheets(p); if (!t || !t[0]) return info(I18N.t("bn.noCopy"));
-    const sh = t[0], txt = await PROV.tsv([sh.head.join("\t"), ...sh.rows.map(r => r.map(v => (v == null ? "" : v)).join("\t"))].join("\n"), { p, table: "plot" });
-    try { await navigator.clipboard.writeText(txt); nearMsg(I18N.t("bn.copied.txt")); } catch (e) { info(I18N.t("bn.noClip")); }
+    const sh = t[0], txt = PROV.tsv([sh.head.join("\t"), ...sh.rows.map(r => r.map(v => (v == null ? "" : v)).join("\t"))].join("\n"), { p, table: "plot" });
+    try { await clipboardCopy({ "text/plain": txt }); nearMsg(I18N.t("bn.copied.txt")); } catch (e) { info(I18N.t("bn.noClip")); }
   }
   function addCell(type) {
     const tab = tabOfAct() === "mrm" ? "full" : tabOfAct(), f = tabFiles(tab)[0]; if (!f) return;
@@ -383,7 +386,7 @@ const BANCO = (() => {
     const top = [[I18N.t("bn.h.scan"), h.no], ["RT (min)", num(h.rt)], [I18N.t("bn.h.level"), { h: BFIL.msLv(h.level) }], [I18N.t("lib.col.polarity"), h.polarity === "positive" || h.polarity === "negative" ? I18N.t(`bn.h.pol.${h.polarity}`) : h.polarity], [I18N.t("bn.h.filter"), h.filter], [I18N.t("bn.add.kind"), h.key], [I18N.t("bn.h.prec"), num(h.prec, 5)],
       [I18N.t("bn.h.isoWin"), h.iso ? `${num(h.iso[0])} – ${num(h.iso[1])}` : ""], [I18N.t("bn.h.act"), [h.act, h.ce != null ? I18N.t("bn.h.energy") + " " + h.ce : ""].filter(Boolean).join(" ")], [I18N.t("bn.h.res"), h.res ? Math.round(h.res) : ""],
       [I18N.t("bn.h.analyzer"), h.analyzer || ""], [I18N.t("bn.h.spectrum"), h.profile ? I18N.t("hr.mode.profile") : I18N.t("hr.mode.centroid")], ["TIC", h.tic != null ? (+h.tic).toExponential(3) : ""]].filter(x => x[1] !== "" && x[1] != null);
-    b.innerHTML = `<div class="row"><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h4>${I18N.t("bn.h.all")}</h4>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
+    b.innerHTML = `<div class="row"><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h2>${I18N.t("bn.h.all")}</h2>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
   }
   function goScan(p, sid, rt, k) {
     if (p.stand) return;
@@ -437,7 +440,8 @@ const BANCO = (() => {
   const specOf = p => (p.type === "spec" ? p : E.panels.find(q => q.type === "spec" && q.link === p.id));
   // what the composition panel was built from: a click that leaves it unchanged must not rebuild the panel (the typed mass and the results stay)
   const cmpKey = p => { const sp = specOf(p), d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d; return `${sp && sp.id}|${topMz(sp)}|${d ? d.mz.length : 0}|${(cFile(p) || {}).polarity}`; };
-  function tCmp(b, p) {
+  async function tCmp(b, p, tok) {
+    await carica("m:elementare-pannello.js"); if (tok !== ist.tok) return;      // the panel code is read on its first opening (startup weight)
     const g = window.ELEM && ELEM.takeCtx(), sp0 = specOf(p), sp = (g && g.sp) || sp0, d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d;
     b._cmpKey = g ? null : cmpKey(p);
     ELEMP.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
@@ -452,11 +456,11 @@ const BANCO = (() => {
       <div class="row"><label>${I18N.t("bn.iso.formula")} <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:130px"></label></div>
       <div id="hri-ads">${adds.map((a, k) => adRow(a.ad, a.c == null ? 100 : a.c, k)).join("")}</div>
       <div class="row"><button type="button" id="hri-addad">${I18N.t("bn.iso.addAd")}</button></div>
-      <h4>${I18N.t("bn.iso.cd")}</h4>
+      <h2>${I18N.t("bn.iso.cd")}</h2>
       <div class="row"><label title="${I18N.t("bn.iso.cdTitle")}">${I18N.t("bn.iso.z0")} <input id="hri-z0" type="number" min="1" max="60" step="any" value="${cd.z0 ?? ""}" placeholder="1" style="width:52px"></label><label>${I18N.t("bn.iso.hw")} <input id="hri-hw" type="number" min="0" max="60" step="any" value="${cd.hw ?? ""}" placeholder="0" style="width:52px"></label></div>
-      <h4>${I18N.t("bn.iso.output")}</h4>
+      <h2>${I18N.t("bn.iso.output")}</h2>
       <div class="row"><label>${sel("hri-st", [["barre", I18N.t("bn.iso.bars")], ["profilo", I18N.t("bn.iso.profile")], ["centroidi", I18N.t("bn.iso.centroids")]], iso.style || "centroidi")}</label><label title="${I18N.t("bn.iso.ptsTitle")}">${I18N.t("bn.iso.pts")} <input id="hri-pts" value="${iso.pts || 10}" style="width:36px"></label></div>
-      <h4>${I18N.t("bn.iso.resolution")}</h4>
+      <h2>${I18N.t("bn.iso.resolution")}</h2>
       <div class="row"><label>${sel("hri-rm", [["R", I18N.t("bn.iso.rm.R")], ["da", I18N.t("bn.iso.rm.da")], ["ppm", I18N.t("bn.iso.rm.ppm")]], fw.mode || "R")} <input id="hri-r" placeholder="${I18N.t("bn.iso.auto")}" value="${fw.v != null ? fw.v : iso.R != null ? iso.R : ""}" style="width:72px"></label>
         <label title="${I18N.t("bn.iso.defTitle")}">${I18N.t("bn.iso.defAs")} ${sel("hri-df", [["fwhm", I18N.t("bn.iso.fwhm")], ["10", I18N.t("bn.iso.v10")], ["5", I18N.t("bn.iso.v5")]], iso.def || "fwhm")}</label></div>
       <div class="row"><button type="button" id="hri-go" class="go" title="${I18N.t("bn.iso.overTitle")}">${I18N.t("bn.iso.over")}</button><button type="button" id="hri-new" title="${I18N.t("bn.iso.newTitle")}">${I18N.t("bn.iso.new")}</button><button type="button" id="hri-rep" title="${I18N.t("bn.iso.repTitle")}">${I18N.t("bn.iso.rep")}</button><button type="button" id="hri-off">${I18N.t("lib.remove")}</button></div>

@@ -37,6 +37,9 @@ fn blank_extra(job: &[(String, Value)]) -> String {
     if param(job, "blank_subtract").and_then(|v| v.bool()) == Some(true) {
         o.push_str(",\"sottrai\":true");
     }
+    if text("blank_cells") == Some("detected") {
+        o.push_str(",\"celle_bianco\":\"rilevate\"");
+    }
     if param(job, "blank_keep_istd").and_then(|v| v.bool()) == Some(true) {
         o.push_str(",\"istd_esente\":true");
     }

@@ -6,7 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi, axe_path; PORT = free_port()
+from lib import free_port, wait_for_js, axe_path; PORT = free_port()
 TAB = '#nav button[data-v="flow"]'
 steps = []
 def step(name, fn):
@@ -43,7 +43,7 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
         c.route(re.compile(r"/mzfinder/(lazy/.*\.js|steps-.*\.json)(\?.*)?$|\.wasm(\?.*)?$|/static/shell\.js(\?.*)?$"), route)
-        pg.goto(f"http://127.0.0.1:{PORT}/")
+        pg.goto(f"http://127.0.0.1:{PORT}/", wait_until="commit")   # "load" never comes: carica.js adds shell.js and the engine as scripts, and the test holds them
         pg.wait_for_selector(TAB, timeout=120000)
         def early():
             assert idx.get("early") == ["flow-tool.js"], idx.get("early")
@@ -60,7 +60,7 @@ try:
             assert pg.locator("#flx-sk .flx-sk-cv").count() == 1
         step("the skeleton (bar, tabs, canvas) is there while NOTHING of CORE, the lists or the .wasm has arrived", skeleton)
         def nothing_heavy():
-            attendi(pg, "!!document.querySelector('#flx-sk')")      # a round trip to the page: the route handler has seen the requests by now
+            wait_for_js(pg, "!!document.querySelector('#flx-sk')")      # a round trip to the page: the route handler has seen the requests by now
             done = pg.evaluate("[...performance.getEntriesByType('resource')].map(e => e.name).filter(n => /mzfinder\\/(lazy\\/flow-|steps-)/.test(n))")
             assert not done, done
             assert pg.evaluate("typeof FLOW") == "undefined", "no Flow module has run yet"
@@ -75,31 +75,31 @@ try:
         step("CORE and the lists let through: the real shell replaces the skeleton, the late modules are still absent", shell)
         def late_busy():
             pg.click("#flx-run")
-            attendi(pg, "document.querySelector('#flx-run').getAttribute('aria-busy') === 'true'")
+            wait_for_js(pg, "document.querySelector('#flx-run').getAttribute('aria-busy') === 'true'")
             assert pg.locator("#flx-add").is_enabled(), "the rest of the bar stays usable"
             pg.click("#flx-add"); pg.wait_for_selector(".flx-pop button", timeout=10000); pg.keyboard.press("Escape")
         step("a click that needs a late module waits on that button only (aria-busy), the rest stays usable", late_busy)
         def late_arrives():
             release("late"); release("wasm")
-            attendi(pg, "typeof FLOW.resultsCard === 'function' && typeof FLOW.desktopRunUi === 'function' && typeof FLOW.webRunUi === 'function'", 60000)
-            attendi(pg, "document.querySelector('#flx-run').getAttribute('aria-busy') !== 'true' && !!document.querySelector('.fl-cli')", 30000)
+            wait_for_js(pg, "typeof FLOW.resultsCard === 'function' && typeof FLOW.desktopRunUi === 'function' && typeof FLOW.webRunUi === 'function'", 60000)
+            wait_for_js(pg, "document.querySelector('#flx-run').getAttribute('aria-busy') !== 'true' && !!document.querySelector('.fl-cli')", 30000)
         step("once the late modules arrive the waiting Run proceeds (the command box opens)", late_arrives)
         def works():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Confidence level")')
             pg.click('.fln:has-text("Confidence level")')
-            attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Confidence level'")
+            wait_for_js(pg, "document.querySelector('.fl-insp h3').textContent === 'Confidence level'")
             assert pg.locator('.fl-insp input[type=file][webkitdirectory]').count() == 1
         step("after everything arrived the shell works as before (add an analysis, open its inspector)", works)
         def shell_late():
             assert pg.evaluate("typeof setView") == "undefined", "the page shell must still be held at this point"
             assert pg.evaluate("document.getElementById('v-flow').hidden") is False and pg.evaluate("document.getElementById('v-data').hidden") is True
             release("shell")
-            attendi(pg, "typeof S !== 'undefined' && S.view === 'flow'", 60000)
+            wait_for_js(pg, "typeof S !== 'undefined' && S.view === 'flow'", 60000)
             assert pg.evaluate("document.getElementById('v-flow').hidden") is False and pg.locator("#flx-root").count() == 1
             pg.click('#nav button[data-v="data"]')
-            attendi(pg, "S.view === 'data' && document.getElementById('v-flow').hidden === true")
+            wait_for_js(pg, "S.view === 'data' && document.getElementById('v-flow').hidden === true")
             pg.click(TAB)
-            attendi(pg, "S.view === 'flow' && document.getElementById('v-flow').hidden === false")
+            wait_for_js(pg, "S.view === 'flow' && document.getElementById('v-flow').hidden === false")
         step("the tab works before the page shell (shell.js) has run; the shell then takes over (Dati and back)", shell_late)
         def axe():
             path = axe_path()
@@ -112,7 +112,7 @@ try:
             pg2 = c.new_page(); pg2.on("pageerror", lambda e: errs.append(str(e)))
             pg2.goto(f"http://127.0.0.1:{PORT}/"); pg2.wait_for_selector(TAB, timeout=120000)
             # CORE and the lists are fetched and run as soon as the tab registers, not at the click: the click finds the shell modules there and draws the real shell
-            attendi(pg2, "typeof FLOW !== 'undefined' && typeof FLOW.shell === 'function'", 60000)
+            wait_for_js(pg2, "typeof FLOW !== 'undefined' && typeof FLOW.shell === 'function'", 60000)
             pg2.click(TAB); pg2.wait_for_selector("#flx-root", timeout=30000)
             assert pg2.locator("#flx-sk").count() == 0 and pg2.locator("#flx-run").count() == 1
             pg2.close()

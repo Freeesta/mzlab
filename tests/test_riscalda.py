@@ -19,7 +19,7 @@ globalThis.document = { hidden: false };
 Object.defineProperty(globalThis, 'UPBUSY', { get: () => busy, configurable: true });
 globalThis.ST = { files: [] };
 globalThis.MZLAB_DESKTOP = false;
-Object.defineProperty(globalThis, 'QQQ_PHONE', { get: () => phone, configurable: true });
+Object.defineProperty(globalThis, 'MZLAB_PHONE', { get: () => phone, configurable: true });
 let delay = 20, answer = () => ({ warmed: true }), reject = false;
 globalThis.fetch = async (url, o) => { if (reject) throw new Error('boom'); calls.push(decodeURIComponent(String(url).split('name=')[1])); await new Promise(r => setTimeout(r, delay)); return { json: async () => answer() }; };
 const fileOf = (n, size = 1000) => ({ name: n, size });

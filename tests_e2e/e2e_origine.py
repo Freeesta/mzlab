@@ -15,13 +15,13 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("setTab('full',true)"); ready(pg)
         def entry():
-            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:194.3,w:0.5,label:'m/z 194'}]})"); attendi(pg, "E.panels.some(q=>q.type==='xic')"); ready(pg)
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:194.3,w:0.5,label:'m/z 194'}]})"); wait_for_js(pg, "E.panels.some(q=>q.type==='xic')"); ready(pg)
             assert pg.locator("[data-o=orig]").count() == 0, "the button is hidden (decision of 7/10: the window stays in the code, no entry point)"
-            pg.evaluate("openOrigin({mz:194.3,k:E.files.find(f=>f.kind==='full').k,rt:14.3})"); attendi(pg, "document.getElementById('ogdlg').open")
+            pg.evaluate("openOrigin({mz:194.3,k:E.files.find(f=>f.kind==='full').k,rt:14.3})"); wait_for_js(pg, "document.getElementById('ogdlg').open")
             assert pg.evaluate("document.getElementById('ogdlg').open") and pg.input_value("#og-mz") == "194.3"
         step("no entry point in the interface; the window still opens from code with the ion filled", entry)
         def run():
-            pg.fill("#og-par", "364.4"); pg.click("#og-go"); pg.wait_for_selector("#og-tb", timeout=60000); attendi(pg, "[...document.querySelectorAll('#og-out section')].filter(s=>s.offsetParent).length===5"); ready(pg)
+            pg.fill("#og-par", "364.4"); pg.click("#og-go"); pg.wait_for_selector("#og-tb", timeout=60000); wait_for_js(pg, "[...document.querySelectorAll('#og-out section')].filter(s=>s.offsetParent).length===5"); ready(pg)
             assert pg.locator("#og-out section:visible").count() == 5
             txt = pg.inner_text("#og-out")
             for w in ["Pearson", "F contro P", "cinetica", "La tua ipotesi"]: assert w.lower() in txt.lower(), w
@@ -31,11 +31,11 @@ try:
         step("evidence computed on real files: five sections, table, no verdict", run)
         def overlay():
             n0 = pg.locator("#og-chips span").count()
-            pg.locator("#og-tb tr[data-m]").first.click(); attendi(pg, f"document.querySelectorAll('#og-chips span').length==={n0 + 1}")
+            pg.locator("#og-tb tr[data-m]").first.click(); wait_for_js(pg, f"document.querySelectorAll('#og-chips span').length==={n0 + 1}")
             assert pg.locator("#og-chips span").count() == n0 + 1 and pg.locator("#og-tb tr.sel").count() == 1
         step("clicking a table row adds that ion to the overlaid XICs", overlay)
         def hyp():
-            pg.fill("#og-hyp", "Ipotesi di prova"); attendi(pg, "JSON.stringify(NB.origin).includes('Ipotesi di prova')")
+            pg.fill("#og-hyp", "Ipotesi di prova"); wait_for_js(pg, "JSON.stringify(NB.origin).includes('Ipotesi di prova')")
             assert "Ipotesi di prova" in pg.evaluate("JSON.stringify(NB.origin)")
         step("the hypothesis goes in the notebook", hyp)
         def xl():
@@ -46,7 +46,7 @@ try:
         step("xlsx export with the hypothesis", xl)
         def menus():
             pg.evaluate("document.getElementById('ogdlg').close()")
-            pg.evaluate("addPanel('map',{k:E.files.find(f=>f.kind==='full').k})"); attendi(pg, "E.panels.some(q=>q.type==='map')"); ready(pg)
+            pg.evaluate("addPanel('map',{k:E.files.find(f=>f.kind==='full').k})"); wait_for_js(pg, "E.panels.some(q=>q.type==='map')"); ready(pg)
             pos = pg.evaluate("(()=>{const q=E.panels.find(x=>x.type==='map');q.el.scrollIntoView({block:'center'});const c=q.cv.getBoundingClientRect();return [c.left+c.width*0.4,c.top+c.height*0.5]})()")
             pg.mouse.click(pos[0], pos[1], button="right"); pg.wait_for_selector("#ctx:not([hidden])")
             assert pg.locator("#ctx div", has_text="Da dove viene").count() == 0

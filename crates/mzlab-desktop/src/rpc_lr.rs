@@ -56,6 +56,7 @@ impl State {
                     if changed {
                         self.indexer()?.remove(&name);
                         Self::drop_slot(eng, &name);
+                        self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(&name, (e.size, e.mtime));
                     }
                     let indexed = mzml && self.open_lr(eng, &name).is_ok();
                     rows.push(json!({ "name": name, "size": e.size, "indexed": indexed, "nat": e.nat.is_some(), "id": self.pick_path(&e.path) }));
@@ -64,6 +65,7 @@ impl State {
             }
             "lr_put" => {
                 let name = clean(s("name"))?;
+                self.indexer()?.resume(name);                                   // a file cancelled before builds afresh
                 if p["nat"].is_object() {
                     return self.put_native(eng, name, &p["nat"]);
                 }
@@ -117,6 +119,13 @@ impl State {
         }
     }
 
+    /// `lr_remove`: the file leaves the list and its indexes leave the folder with it, as on the site.
+    fn forget_lr(&self, name: &str) -> Result<()> {
+        self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
+        self.indexer()?.remove_all(name);
+        Ok(())
+    }
+
     #[allow(unused_variables)]
     pub(crate) fn op_misc(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -125,8 +134,8 @@ impl State {
         let q = || Query::parse(s("query"));
         match op {
             "lr_space" => {
-                let names: Vec<String> = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().into_iter().map(|(n, _, _)| n).collect();
-                let files: u64 = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().iter().map(|(_, e, _)| e.size).sum();
+                let (names, sizes): (Vec<String>, Vec<u64>) = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().into_iter().map(|(n, e, _)| (n, e.size)).unzip();
+                let files: u64 = sizes.iter().sum();
                 let b = self.indexer()?;
                 let (mut idx, mut gone, mut n_gone) = (0u64, 0u64, 0u64);
                 let derived = p["free"].as_str() == Some("derived");                           // every index can be made again from the sources: all of them go
@@ -151,7 +160,7 @@ impl State {
                     eng.idx.remove(&slot);
                     eng.nat.forget(slot);
                 }
-                self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
+                self.forget_lr(name)?;
                 text("{}")
             }
             "lr_valida" => self.validate_mzml(s("name")),

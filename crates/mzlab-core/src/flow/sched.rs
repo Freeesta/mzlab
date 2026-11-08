@@ -54,6 +54,17 @@ impl Sched {
         self.apply(plan)
     }
 
+    /// The file-name root of each input of the plan, by name (`file_roots`, the root of `<instance>-<root>.<ext>` that `flow run` writes).
+    pub fn roots(&self) -> Vec<(String, String)> {
+        let roots = crate::flow::file_roots(&self.plan);
+        self.plan
+            .inputs
+            .iter()
+            .map(|f| f.name.clone())
+            .zip(roots)
+            .collect()
+    }
+
     /// Sets the fingerprint of a plan input that has no `sha256` (takes effect at the next `update`).
     pub fn set_identity(&mut self, name: &str, text: &str) {
         match self.identities.iter_mut().find(|i| i.0 == name) {
@@ -105,8 +116,8 @@ impl Sched {
                             cmds.push(Command::Cancel(node.id.clone()));
                             j.zombie = Some(j.node.key.clone());
                         }
-                        j.state = State::Waiting;
-                        j.ms = 0.0;
+                        // a new key is a new job: a hold was the page's answer for the old one (what it lacked then)
+                        (j.state, j.ms, j.held) = (State::Waiting, 0.0, None);
                     }
                     j.node = node;
                     j

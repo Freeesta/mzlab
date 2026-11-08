@@ -5,7 +5,10 @@ ctx.FLOW = { message: p => `msg(${p.key})` };
 ctx.globalThis = ctx;
 vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../flow/lazy/flow-live-view.js"), "utf8"), ctx);
 const V = ctx.FLOW.liveView, w = e => V.look(e).word, t = e => V.look(e).title;
-assert.strictEqual(w({ state: "waiting" }), "waiting");
+assert.strictEqual(w({ state: "waiting" }), "Waiting…");
+// waiting for an earlier step (a file still importing) is blue «wait» with the hold mark, never the plan-error text; a real plan problem keeps its text
+for (const e of [{ state: "waiting" }, { state: "blocked", blocked_by: "input.missing" }]) { const v = V.look(e); assert.deepStrictEqual([v.word, v.icon, v.tone, v.title], ["Waiting…", "hold", "wait", "Waiting for an earlier step to finish"]); }
+for (const by of ["plan.problem", undefined]) { const v = V.look({ state: "blocked", blocked_by: by }); assert.deepStrictEqual([v.word, v.tone], ["Fix the plan first", "warn"]); }
 assert.strictEqual(w({ state: "running", frac: 0.42, di: 6, parte: 3 }), "3 of 6 files · 42 %");
 assert.strictEqual(w({ state: "running" }), "working");
 assert.strictEqual(w({ state: "done", ms: 12000 }), "done in 12 s");
@@ -27,6 +30,13 @@ for (const st of ["waiting", "running", "done", "reused", "stale", "blocked", "e
 assert.strictEqual(w({ state: "skipped" }), "skipped");
 assert.strictEqual(w({ state: "paused" }), "paused");
 assert.strictEqual(w({ state: "cancelled" }), "cancelled");
+// live: the second card waits while the import runs, and leaves «Waiting…» by itself when the event of the import arrives
+const ev = (instance, state, extra = {}) => ({ format: "flowlive/1", rev: 1, kind: "node", instance, state, ...extra });
+V.ingest([ev("index", "running", { frac: 0.5 }), ev("detect", "blocked", { blocked_by: "input.missing" })]);
+assert.strictEqual(V.look(V.node("detect")).word, "Waiting…");
+V.ingest([ev("index", "done"), ev("detect", "running", { frac: 0.1 })]);
+assert.strictEqual(V.look(V.node("detect")).word, "10 %");
+V.clear();
 // the card «Centroid spectra»: (files, files with a known mode, profile files with a centroid index, files that were centroid)
 const c = V.centroidWords;
 assert.strictEqual(c(7, 7, 0, 7), "7 files ready (already centroided)");

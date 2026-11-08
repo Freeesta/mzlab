@@ -3,7 +3,7 @@
 // Open data: files for MassBank (record, text format 2.x) and SIRIUS 6 (.ms) from ONE high-resolution MS2 spectrum. Nothing is sent anywhere: the files are downloaded and the user
 // decides if and where to upload them (NORMAN 2023 guidance, FAIR data). Never in low resolution (Principle 1: no record with annotations there).
 // The compound fields (name, SMILES, InChIKey) are typed by the user (SMILES may come from «Disegno»); instrument, ionisation, collision energy, precursor and peaks come from the mzML.
-// The pure functions (record, check, siriusMs, adductMass) are tested with node; the dialog is at the bottom. The untargeted tables of mzFinder use `siriusMs` through TP_Mine/js/30_untarget_fair.js.
+// The pure functions (record, check, siriusMs, adductMass) are tested with node; the dialog is at the bottom. The menu entries are in fair-azioni.js (start-up); this file loads on their first use. The untargeted tables of mzFinder use `siriusMs` through TP_Mine/js/30_untarget_fair.js.
 const FAIR = (() => {
   // the licences MassBank accepts for contributed records
   const LICENSES = ["CC BY", "CC0", "CC BY-SA", "CC BY-NC", "CC BY-NC-SA"];
@@ -97,7 +97,7 @@ const FAIR = (() => {
   // literal keys, so that tools/controlla_i18n.py sees them
   const MSG = { lr: "fair.err.lr", peaks: "fair.err.peaks", prec: "fair.err.prec", name: "fair.err.name", smiles: "fair.err.smiles", smilesBad: "fair.err.smilesBad", inchikey: "fair.err.inchikey", authors: "fair.err.authors", license: "fair.err.license", contributor: "fair.err.contributor", id: "fair.err.id", instrument: "fair.err.instrument", itype: "fair.err.itype", precType: "fair.err.precType", polarity: "fair.err.polarity", precMismatch: "fair.warn.precMismatch", noCe: "fair.warn.noCe" };
   const EHt = s => EH(s == null ? "" : s);
-  const mem = { get: () => { return lsObj(typeof NOMI !== "undefined" ? NOMI.KEY("fair") : "qqq.fair"); }, set: v => { try { localStorage.setItem(typeof NOMI !== "undefined" ? NOMI.KEY("fair") : "qqq.fair", JSON.stringify(v)); } catch (_) { /* storage blocked */ } } };
+  const mem = { get: () => { return lsObj(NOMI.KEY("fair")); }, set: v => { try { localStorage.setItem(NOMI.KEY("fair"), JSON.stringify(v)); } catch (_) { /* storage blocked */ } } };
 
   async function ocl() {
     if (window.OCL) return window.OCL;
@@ -180,10 +180,4 @@ const FAIR = (() => {
 })();
 if (typeof window !== "undefined") window.FAIR = FAIR;
 // the actions of the spectrum menu (registry azioni/1): a high-resolution MS2 spectrum as a MassBank record or a SIRIUS .ms file
-if (typeof AZIONI !== "undefined") {
-  /** @param {any} c */
-  const ok = c => c.p.level === 2, can = c => FAIR.available(c.p);
-  AZIONI.registra({ id: "spec.exportMassbank", gruppo: "lib", ordine: 3, viste: ["spec"], menu: false, scarico: true, visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportMassbank"), esegui: /** @param {any} c */ c => FAIR.massbank(c.p) });
-  AZIONI.registra({ id: "spec.exportSirius", gruppo: "lib", ordine: 3, viste: ["spec"], menu: false, scarico: true, visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportSirius"), esegui: /** @param {any} c */ c => FAIR.sirius(c.p) });
-}
 if (typeof module !== "undefined") module.exports = FAIR;

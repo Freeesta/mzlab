@@ -2,7 +2,7 @@
 // @ts-noany
 // @ts-check
 // Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split from explore.js: classic script, loaded right after it (shared globals).
-// ------------------------------------------------------------------ pannelli mobili
+// ------------------------------------------------------------------ floating panels
 /** @param {number} [w] @param {number} [h] */
 function place(w, h) {
   // a new panel goes under the existing ones, as wide as the page
@@ -121,7 +121,8 @@ const PT = { chrom: "@chrom", spec: "@spec", xic: "@xic", mrm: "@mrm", map: "@ma
 /** @type {Record<string, string>} */
 const PT_OLD = { "Cromatogramma": PT.chrom, "Spettro di massa": PT.spec, "Ione estratto (XIC)": PT.xic, "Transizioni MRM": PT.mrm, "Mappa RT-m/z": PT.map, "Spettro degli ioni prodotto": PT.product, "Simulazione isotopica": PT.isosim, "Spettro composito": PT.composite };
 const ptProduct = (/** @type {number | null} */ prec) => prec != null ? `@product:${prec}` : PT.product;
-const ptMs2 = (/** @type {number | null} */ prec) => prec != null ? `@ms2prec:${prec}` : "MS²";
+// a chromatogram of the MS2 tab is a TIC of its experiment; it names a precursor only when the file holds several (titoli.js)
+const ptMs2 = (/** @type {number | null} */ prec) => prec == null ? "@ms2tic" : window.TITOLI && TITOLI.nPrecOf(tabFiles("ms2")) <= 1 ? "@ms2tic" : `@ms2prec:${prec}`;
 const ptComposite = (/** @type {string} */ t0, /** @type {string} */ t1) => `@composite:${t0}:${t1}`;
 function ptNorm(/** @type {string} */ s) {
   if (!s || typeof s !== "string") return s;
@@ -134,20 +135,22 @@ function ptNorm(/** @type {string} */ s) {
 function ptitle(/** @type {string} */ s) {  // the title to show
   if (!s || s[0] !== "@") return s || "";
   const [c, ...a] = s.slice(1).split(":");
-  if (c === "product") return a[0] != null ? I18N.t("panel.title.ms2prec", { prec: a[0] }) : I18N.t("panel.title.product");
+  if (c === "product") return a[0] != null ? I18N.t("panel.title.productOf", { prec: a[0] }) : I18N.t("panel.title.product");
+  if (c === "ms2tic") return I18N.t("panel.title.ticMs2");
   if (c === "ms2prec") return I18N.t("panel.title.ms2prec", { prec: a[0] });
   if (c === "composite") return a.length ? I18N.t("panel.title.composite", { t0: a[0], t1: a[1] }) : I18N.t("panel.title.compositeBare");
   return ["chrom", "spec", "xic", "mrm", "sim", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
 }
+const ptitleP = (/** @type {Pannello} */ p) => window.TITOLI ? TITOLI.di(p) : ptitle(p.title);  // the shown title of a live panel (a typed title is kept)
 function closePanel(/** @type {Pannello} */ p) {
   if (!p) return;
   // the last mate of a row goes back to the full width (a panel resized alone is not touched: it has no mates)
   const mates = E.panels.filter((/** @type {Pannello} */ q) => q !== p && q.full && q.tab === p.tab && q.riga != null && q.riga === p.riga);
   if (mates.length === 1) { mates[0].quota = null; mates[0].x = 0; mates[0].w = hostWidth(); }
   if (window.DDA) DDA.onClose(p);
-  fsInert(null, p);
+  fsInert(null, p); hideHover(p);
   if (p._ro) p._ro();
-  if (p._ac) p._ac.abort();  // every listener the panel put on document/window goes with it
+  if (p._ac) p._ac.abort();  // every listener it put on document/window goes too
   p._a = null;
   // the bitmaps go back now: whatever still holds the detached canvas (a late draw, the undo list) holds 1x1, not the picture (the undo draws a new panel)
   if (p.el) { p.el.querySelectorAll("canvas").forEach((/** @type {HTMLCanvasElement} */ c) => { c.width = c.height = 1; }); p.el.remove(); }
@@ -160,11 +163,13 @@ function chiudiPannello(p) {
   const dati = JSON.stringify(panelRec(p)), tab = p.tab, rel = { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo };
   const what = typeof p.title === "string" && p.title ? p.title : I18N.t("storia.pannello");
   const after = () => { relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
+  const vis0 = visNow();
   let cur = p;
-  const chiudi = () => { closePanel(cur); after(); };
+  const chiudi = () => { closePanel(cur); if (!E.panels.length) untickAll(); after(); };
   chiudi();
   if (!STORIA) return;
   STORIA.tolto({ what, tab, dati, redo: chiudi, undo: () => {
+    visBack(vis0);
     const sp = JSON.parse(dati); sp.y = (sp.y || 0) - 0.5;  // ahead of the panels that moved up into its place (relayout sorts by y)
     const q = riapriPannello(sp);
     for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = rel[k] != null && E.panels.some((/** @type {Pannello} */ x) => x.id === rel[k]) ? rel[k] : null;
@@ -172,15 +177,32 @@ function chiudiPannello(p) {
   } });
 }
 
+/** The files ticked in the side list, to give them back with the undo of the close that emptied the work area. */
+const visNow = () => E.files.filter((/** @type {MzFile} */ f) => f.vis).map((/** @type {MzFile} */ f) => f.k);
+/** Closing the last panel leaves no file ticked: the work area goes back to the landing. */
+function untickAll() { E.files.forEach((/** @type {MzFile} */ f) => { f.vis = false; }); renderFileList(); renderNav(); syncWork(); }
+function visBack(/** @type {number[]} */ ks) { E.files.forEach((/** @type {MzFile} */ f) => { f.vis = ks.includes(f.k); }); }
+
+/** The X of the toolbar: every panel closes and no file stays ticked; one entry of the stack opens them all again with the ticks. */
 function closeAllPanels() {
-  const all = E.panels.slice();
-  all.forEach((/** @type {Pannello} */ p) => closePanel(p));
-  relayout();
-  fitHost();
-  uiSave();
-  if (tabFiles("ms2").length) renderFileList();
-  redrawAll();
-  workClosedAll();
+  const recs = E.panels.map((/** @type {Pannello} */ p) => /** @type {[number, any, any]} */ ([p.id, panelRec(p), { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo }])), vis0 = visNow();
+  const go = () => {
+    E.panels.slice().forEach((/** @type {Pannello} */ p) => closePanel(p));
+    untickAll(); relayout(); fitHost(); uiSave();
+    if (tabFiles("ms2").length) renderFileList();
+    redrawAll();
+    workClosedAll();
+  };
+  go();
+  if (!STORIA || !recs.length) return;
+  STORIA.tolto({ what: I18N.t("storia.pannelli"), dati: JSON.stringify(recs.map((/** @type {any[]} */ r) => r[1])), redo: go, undo: () => {
+    visBack(vis0); workClosedAll(false);
+    const made = /** @type {Map<number, Pannello>} */ (new Map());
+    recs.forEach((/** @type {[number, any, any]} */ [id, rec]) => made.set(id, riapriPannello(rec)));
+    const now = (/** @type {number | null} */ id) => id == null ? null : made.get(id)?.id ?? null;
+    recs.forEach((/** @type {[number, any, any]} */ [id, , rel]) => { const q = /** @type {any} */ (made.get(id)); for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = now(rel[k]); });
+    relayout(); fitHost(); renderFileList(); renderNav(); syncWork(); uiSave(); made.forEach(q => ctl(q)); redrawAll();
+  } });
 }
 
 function cleanupOrphanPanels() {
@@ -195,7 +217,8 @@ function cleanupOrphanPanels() {
           if (!linked || toClose.includes(linked)) {
             toClose.push(p);
           } else if (!f || !f.vis || f.gone) {
-            const nf = vis()[0] || tabFiles(p.tab).find((/** @type {MzFile} */ x) => x.vis && !x.gone);
+            // a file of its own tab; an MS2 spectrum takes one holding its precursor
+            const vf = tabFiles(p.tab || E.tab).filter((/** @type {MzFile} */ x) => x.vis && !x.gone), nf = (p.level > 1 && p.prec != null ? vf.find((/** @type {MzFile} */ x) => ms2Holds(x, p.prec)) : null) || vf[0];
             if (nf) { p.k = nf.k; if (p.el) draw(p); }
             else toClose.push(p);
           }
@@ -211,8 +234,8 @@ function cleanupOrphanPanels() {
         }
       } else if (p.type === "chrom" || p.type === "mrm" || p.type === "xic") {
         const tab = p.tab || E.tab;
-        const fs = (tab && tab !== E.tab ? tabFiles(tab) : shownFor(p)).filter((/** @type {MzFile} */ f) => f.vis && !f.gone);
-        if (fs.length === 0) {
+        const fs = ms2PairFiles(p) || (tab && tab !== E.tab ? tabFiles(tab) : shownFor(p)).filter((/** @type {MzFile} */ f) => f.vis && !f.gone);
+        if (fs.length === 0 && !ms2Rehome(p)) {
           toClose.push(p);
         }
       }
@@ -258,7 +281,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" title="${EH(shortHelp("pnl-" + type))} ${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
+  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" tabindex="0" title="${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
     // button groups, separated by a vertical bar: [zoom + reset] | [integration] | [XIC] | [PNG / Excel] □ ×
     const lens = type === "chrom" || type === "xic" || type === "mrm";
     const fit = `<button class="bt" data-a="fit" disabled title="${I18N.t("panel.fit.title")}">${IC_FIT}</button>`;
@@ -277,7 +300,7 @@ function addPanel(type, o, after) {
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
   STATO.aggiungi(p, "open"); apply(p); fitHost();
-  // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
+  // move (drag the header), bring to front, resize (handle at the bottom right), maximize
   el.addEventListener("mousedown", () => { front(el); setActive(p); });
   el.querySelector(".hd").addEventListener("mousedown", (/** @type {MouseEvent} */ e) => {
     if (/** @type {Element} */ (e.target).closest("input,select,button,label,option") || el.classList.contains("max")) return;
@@ -298,10 +321,10 @@ function addPanel(type, o, after) {
   const onSize = () => {
     if (skip > 0) { skip--; return; }
     if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
-    FRAME.cancel(p._raf); p._raf = FRAME.next(() => draw(p));
+    FRAME.cancel(p._raf); p._raf = FRAME.next(() => drawSized(p));
     fitHdNow(p);
   };
-  const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap to more lines
+  const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap
   // full screen of THIS panel (any panel, also the ones added later): the button, Esc, and the graph is redrawn at the new size on the way in and out
   const fsB = el.querySelector('[data-a="max"]');
   p._setMax = (/** @type {boolean} */ on) => {
@@ -342,14 +365,14 @@ function addPanel(type, o, after) {
       ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.csv"), icon: IC_DL, fn: () => {
         const t = plotSheets(p); if (t) dlc(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
       }}]),
-      ...(p.type === "spec" ? AZIONI.scarichi({ vista: "spec", p, a: p._a }) : []),
+      ...(p.type === "spec" ? [...(window.TABPICCHI && !p.uv ? [TABPICCHI.item(p, IC_DL)] : []), ...AZIONI.scarichi({ vista: "spec", p, a: p._a })] : []),
       ...(window.BANCO && BANCO.on() ? [{ label: I18N.t("panel.dl.copyPng"), fn: () => BANCO.copyPng(p) }, ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.copyData"), fn: () => BANCO.copyText(p) }])] : [])
     ]);
   };
   const bZ = el.querySelector('[data-a="izoom"]'), bA = el.querySelector('[data-a="iauto"]'), bM = el.querySelector('[data-a="iman"]'), bD = el.querySelector('[data-a="idel"]'), bT = el.querySelector('[data-a="itab"]'), bX = el.querySelector('[data-a="xic"]');
   if (bA) {  // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval), delete integration (click a peak)
     const /** @type {Record<string, Element | null>} */ btns = { zoom: bZ, auto: bA, man: bM, idel: bD };
-    const setMode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; if (p.imode && p.imode !== "zoom") toOverlaid(p); Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
+    const setMode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; if (p.imode && p.imode !== "zoom") toOverlaid(p); Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); cursorLine(p); };
     if (p.imode && btns[p.imode]) { /** @type {Element} */ (btns[p.imode]).classList.add("on"); p.cv.style.cursor = p.imode === "idel" ? "pointer" : "cell"; }  // MRM panels open with the manual integration tool ready
     bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); if (bD) bD.onclick = () => setMode("idel"); bT.onclick = showInts;
     el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
@@ -457,7 +480,7 @@ function stepScan(/** @type {Pannello} */ p, /** @type {number} */ d, /** @type 
     rt = b.rt; i = b.i; k = b.k; lo = rt - b.g / 2; hi = rt + b.g / 2; tot = b.s.x.length;
   } else {
     const a = p._a, ok = (/** @type {Bag} */ s) => E.files[s.k]?.kind !== "mrm";
-    const cf = E.files[E.cur], k0 = cf && a.sr.some((/** @type {Bag} */ x) => x.k === cf.k && ok(x)) ? cf.k : p._sk != null && a.sr.some((/** @type {Bag} */ x) => x.k === p._sk && ok(x)) ? p._sk : nearestFile(p, p.cur);  // the file selected at the side first  // the same file all along, even if another one becomes the highest
+    const cf = E.files[E.cur], k0 = cf && a.sr.some((/** @type {Bag} */ x) => x.k === cf.k && ok(x)) ? cf.k : p._sk != null && a.sr.some((/** @type {Bag} */ x) => x.k === p._sk && ok(x)) ? p._sk : nearestFile(p, p.cur);  // the side-selected file first, then the same one even if another gets higher
     const s = a.sr.find((/** @type {Bag} */ x) => x.k === k0 && ok(x)) || a.sr.find(ok) || a.sr[0]; if (!s || !s.x.length) return false;
     const yy = s.y || s.ys, i0 = nearIdx(s.x, p.cur); i = i0;
     for (let j = 0; j < n; j++) {
@@ -531,10 +554,11 @@ function plotName(/** @type {Pannello} */ p) {
   const lst = (/** @type {any[]} */ arr, /** @type {(v: any) => any} */ f) => arr.length <= 3 ? arr.map(f).join("+") : I18N.t("export.file.ions", { n: arr.length });
   const rtm = p.r0 != null ? "RT" + ((p.r0 + p.r1) / 2).toFixed(1) : "";
   let parts;
-  if (p.type === "chrom") parts = [p.kind.toUpperCase(), ft];
+  const pr = p.prec != null && p.prec !== "" ? "prec" + +(+p.prec).toFixed(2) : "";  // the ion a panel belongs to is in its file name too
+  if (p.type === "chrom") parts = [p.kind.toUpperCase() + (p.kind === "pda" && p.mz0 != null ? "-" + p.mz0 + (p.mz1 != null && p.mz1 !== p.mz0 ? "-" + p.mz1 : "") + "nm" : ""), pr, ft];
   else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, (/** @type {number} */ v) => +v.toFixed(mzd(p))) : "", ft];
   else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, (/** @type {string} */ v) => String(v).replace(">", "-")) : "", ft];
-  else if (p.type === "spec") parts = [p.uv ? "UV" : I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, rtm];
+  else if (p.type === "spec") parts = [p.uv ? "UV" : I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, p.level === 2 ? pr : "", rtm];
   else parts = [I18N.t("export.file.map"), ft];
   if (p.title && p.title[0] !== "@") parts = [p.title, ft];  // a title typed by the student names the file; the default titles are codes
   return fname(parts.filter(Boolean).join("_")).slice(0, 60) || I18N.t("export.file.chart");
@@ -549,7 +573,7 @@ function plotMeta(/** @type {Pannello} */ p) {
   else if (p.fondo && p.fondo.mode === "auto") d.push(I18N.t("export.desc.fondoAuto", { text: fondoText(p) }));
   if (window.SUBREF && SUBREF.text(p)) d.push(SUBREF.text(p));
   if (a.x0 != null) d.push(I18N.t("export.desc.axis", { a: a.x0.toFixed(p.type === "spec" ? 1 : 2), b: a.x1.toFixed(p.type === "spec" ? 1 : 2) }));
-  return [["Title", ptitle(p.title) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
+  return [["Title", ptitleP(p) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
 }
 // writes tEXt chunks (Latin-1) right after the IHDR of a PNG
 const CRCT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -637,7 +661,7 @@ function corrInfoWire(/** @type {Pannello} */ p, /** @type {HTMLElement} */ b) {
     (m.querySelector("button,input,select") || m).focus();
   };
   if (p._cinfoOff) p._cinfoOff();
-  const ac = new AbortController(); p._cinfoOff = () => ac.abort();
+  const ac = new AbortController(); p._cinfoOff = () => ac.abort(0);  // no stack: an abort() DOMException kept old headers
   const sig = { signal: AbortSignal.any([ac.signal, p._ac.signal]) };
   document.addEventListener("mousedown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!m.hidden && p.el.isConnected && !t.closest(".corrbar,#subpop,#ctx") && !t.closest('[data-o="cinfo"]')) shut(false); }, { capture: true, ...sig });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !m.hidden && p.el.isConnected && !document.querySelector("#subpop:not([hidden])")) { e.stopPropagation(); shut(true); } }, { capture: true, ...sig });
@@ -648,7 +672,8 @@ const ms2Scans = (/** @type {MzFile} */ x, /** @type {number} */ v) => (x.ms2_ex
 function ctl(/** @type {Pannello} */ p) {
   hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl"), wl = p.type === "chrom" ? wlCtl(p) : "";
-  t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === PT.xic ? I18N.t("panel.title.xicOne", { label: p.traces[0].label }) : ptitle(p.title);  // a single trace is named in the title
+  const full = ptitleP(p); t.textContent = full;  // titoli.js: the title says what the panel shows
+  t.dataset.tip = t.dataset.tip || t.title; t.title = full ? full + "\n" + t.dataset.tip : t.dataset.tip;  // a title cut by its ellipsis stays readable whole in the tooltip
   if (window.SPECBAR && p.type === "spec") SPECBAR.title(p, t);
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";  // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some((/** @type {Pannello} */ q) => q.id === p.link) || E.panels.some((/** @type {Pannello} */ q) => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
@@ -684,7 +709,7 @@ function ctl(/** @type {Pannello} */ p) {
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
-  const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}. ${I18N.t("ctl.range.note")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
+  const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
   const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${p._trs.map((/** @type {Bag} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</select>` : "";
   const canBtn = p.type === "chrom" ? "" : window.CANALI?.html(p) ?? "";
@@ -809,6 +834,7 @@ function hdRestore(/** @type {Pannello} */ p) {
   l.slice().reverse().forEach((/** @type {HTMLElement & Bag} */ n) => { if (n._ph) { n._ph.replaceWith(n); n._ph = null; } n.classList.remove("hd-ov"); });
   const m = p.el && p.el.querySelector(".hmore"), b = p.el && p.el.querySelector('[data-a="more"]');
   if (m) m.hidden = true; if (b) { b.hidden = true; b.setAttribute("aria-expanded", "false"); }
+  p.el?.querySelector(".hd")?.classList.remove("hd-tight");
 }
 function fitHd(/** @type {Pannello} */ p) {
   const el = p.el; if (!el || !el.isConnected || p._fitBusy) return;
@@ -822,18 +848,19 @@ function fitHd(/** @type {Pannello} */ p) {
     const over = () => hd.scrollWidth > hd.clientWidth + 1 || (c && c.scrollWidth > c.clientWidth + 1);
     if (!over()) return;
     mb.hidden = false;
-    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
+    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     for (const n of [...cands, ...groups, ...kids]) {
       if (!over()) break;
       if (n.hidden || !n.offsetWidth) continue;
       if (n.classList.contains("bnl")) { n.classList.add("hd-ov"); p._hm.push(n); continue; }
       const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); p._hm.push(n);
     }
+    if (over()) hd.classList.add("hd-tight");  // last resort: title and selects shrink
     if (!p._hm.some((/** @type {HTMLElement & Bag} */ n) => n._ph)) mb.hidden = true;
     else if (open) { more.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); }
   } finally { p._fitBusy = false; }
 }
-function fitHdSoon(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); p._fitRaf = FRAME.next(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }  // a second pass: widgets that settle after the first layout (fonts, async parts of the header) must not leave it too wide
+function fitHdSoon(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); p._fitRaf = FRAME.next(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }  // second pass: late widgets (fonts, async header parts)
 // Fit in the same frame as the width change (observer callbacks run after layout and before paint): no frame shows the header at the old arrangement.
 function fitHdNow(/** @type {Pannello} */ p) { FRAME.cancel(p._fitRaf); fitHd(p); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }
 function hdMorePlace(/** @type {Pannello} */ p) { const hd = p.el.querySelector(".hd"), m = p.el.querySelector(".hmore"); if (hd && m) { m.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; m.style.maxHeight = Math.max(80, p.el.clientHeight - hd.offsetHeight - 16) + "px"; } }
@@ -856,7 +883,7 @@ const numMz = (/** @type {string} */ t) => { const v = numIt(t); return isFinite
 // ONE rounding rule everywhere (half up on the decimal text, like mzlab.chem round_half_up): 364.15 gives 364.2 although 364.15*10 is 3641.4999... in binary
 const rh = (/** @type {unknown} */ v, d = 1) => { const n = Number(v); if (!isFinite(n)) return n; const sg = n < 0 ? -1 : 1; return sg * Number(Math.round(Number(Number(Math.abs(n).toFixed(9)) + "e" + d)) + "e-" + d); };   // the 9-digit prefilter is the same as round_half_up in elements.py
 window.rh = rh;
-const numMz1 = (/** @type {string} */ t) => { const v = numIt(t); return isFinite(v) && v > 0 ? rh(v, 1) : null; };   // XIC fields: one decimal only
+const numMz1 = (/** @type {string} */ t) => { const v = numIt(t); return isFinite(v) && v > 0 ? rh(v, 1) : null; };  // XIC fields: one decimal only
 const mzd = (/** @type {Pannello | null | undefined} */ p, lv = 1) => window.HR ? HR.dec(scanFiles(tabFiles(p ? p.tab || E.tab : E.tab)), p && p.level ? p.level : lv) : 1;
 const fmt2 = (/** @type {number | string} */ v) => String(+(+v).toFixed(2));
 /** @param {number | string} v @param {Pannello | null} [p] @param {number} [lv] */
@@ -865,8 +892,8 @@ const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trai
 // anchored to the nominal mass n of the calculated value: [n - XIC_BELOW, n + 1 - XIC_BELOW]. Every way to create an XIC (XIC button, warning when integrating from a TIC,
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
-const TIP_DELAY = 1250;   // ms before the label of a button appears (one value for the whole program; 1500 before 7 Oct 2026)
-const XIC_BELOW = 0.2;   // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (CLAUDE.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)
+const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
+const XIC_BELOW = 0.2;  // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (CLAUDE.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)
 const XIC_DRIFT = 0.25;  // mean offset (Da) of the observed centroids over the calculated m/z, used only to go from a CLICKED centroid back to the calculated nominal mass (364.37 -> 364.12 -> n = 364, not 365)
 const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
@@ -893,7 +920,7 @@ function xicDirect(mz, after, panel, over) {
   return np;
 }
 const xicName = (/** @type {Pannello} */ q) => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(mzd(q)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : I18N.t("xic.empty"); };
-// Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
+// Estrai ioni (XIC): 2-10 rows (m/z or neutral formula + adduct), ONE panel, one trace each; a removed row keeps the focus in the dialog.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 /** @param {Pannello | null} [panel] */
 function openXic(panel, /** @type {Bag} */ pre = {}) {
@@ -903,6 +930,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
   const dAd = pre.adduct || defAdduct(panel && E.panels.includes(panel) ? scanFiles(shown()) : undefined);
   const /** @type {Bag[]} */ rows = [];
   const isNum = (/** @type {string} */ t) => /^[\d.,\s]+$/.test(t);
+  const ns = (/** @type {string} */ t) => /^[\d.,\s]+[+-]/.test(t);
   const renumber = () => {
     rows.forEach((r, i) => { r.lab.textContent = i === 0 ? I18N.t("xic.ion1") : I18N.t("xic.ionN", { n: i + 1 }); r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? I18N.t(r.ad.value === "none" ? "xic.placeholderIon" : "xic.placeholder") : I18N.t(r.ad.value === "none" ? "xic.optionalIon" : "xic.optional"); r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
     addB.disabled = rows.length >= XIC_MAXROWS;
@@ -916,7 +944,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
   };
   const evalRow = (/** @type {Bag} */ r) => {
     const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null;
-    r.ad.hidden = isNum(t);
+    r.ad.hidden = isNum(t) || ns(t);
     if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
     if (isNum(t)) {
       const v = numMz1(t), x = numIt(t);
@@ -926,18 +954,18 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     r.win = null; r.sum.textContent = "";
     r.pending = (async () => {
       try {
-        const f = await getFormula(t, r.ad.value);
+        const x = await carica("xic-nomi.js").then(() => XICNOMI.row(t, r.ad.value, hrFile()));
         if (ed !== r.edits) return;
-        r.label = f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`; r.win = xicWin(f.mz, false); if (hrFile()) r.ex = f.mz;
-        r.sum.innerHTML = (t.replace(/\s+/g, "") !== f.formula ? I18N.t("xic.interpreted", { formula: fmtFormula(f.formula) }) + " " : "") + sumText(r);
-      } catch (e) { if (ed === r.edits) r.sum.innerHTML = `<span class="fail">${I18N.t("xic.badFormula")}</span>`; }
+        Object.assign(r, x);
+        r.sum.innerHTML = x.note + sumText(r);
+      } catch (e) {if (ed === r.edits) r.sum.innerHTML = `<span class="fail">${/** @type {any} */ (e).message}</span>`}
     })();
   };
   const addRow = (/** @type {Bag} */ init = {}) => {
     const el = document.createElement("div"); el.className = "xrw";
     el.innerHTML = `<label></label><div class="xin"><input class="mzf" autocomplete="off" inputmode="decimal" style="width:auto"><select title="${I18N.t("xic.adduct.title")}" aria-label="${I18N.t("xic.adduct.title")}">${XIC_ADDUCTS.map(a => `<option ${a === (init.adduct || dAd) ? "selected" : ""}>${a}</option>`).join("")}<option value="none" ${init.adduct === "none" ? "selected" : ""}>${I18N.t("xic.noAdduct")}</option></select><button class="xr-x" type="button" title="${I18N.t("xic.remove.title")}">&times;</button></div><div class="xr-sum"></div>`;
     const r = /** @type {Bag} */ ({ el, lab: el.querySelector("label"), inp: el.querySelector("input"), ad: el.querySelector("select"), x: el.querySelector(".xr-x"), sum: el.querySelector(".xr-sum"), win: null, label: "", obs: !!init.obs, edits: 0, pending: Promise.resolve(), tq: 0 });
-    r.inp.value = init.text || "";
+    r.inp.value = init.text || ""; r.inp.onfocus = () => carica("xic-nomi.js").then(() => XICNOMI.wire(r.inp), Object);
     r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = false; r.tq = setTimeout(() => evalRow(r), 500); } };
     r.ad.onchange = () => { renumber(); evalRow(r); };
     r.inp.onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Enter extracts at once (empty field: only the message); Shift+Enter moves to the next field
@@ -946,7 +974,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
       if (!r.inp.value.trim()) { err.textContent = I18N.t("xic.err.empty"); return; }
       Q("#xic-go").click();
     };
-    r.x.onclick = () => { if (rows.length < 2) return; rows.splice(rows.indexOf(r), 1); el.remove(); renumber(); };
+    r.x.onclick = () => { const i = rows.indexOf(r); if (!rows[1]) return; rows.splice(i, 1); el.remove(); renumber(); (rows[i] || rows[i - 1]).inp.focus(); };
     rows.push(r); host.appendChild(el); renumber(); evalRow(r);
     return r;
   };

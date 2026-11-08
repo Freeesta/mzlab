@@ -8,8 +8,9 @@ use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
 use mzlab_core::mzmlhead::Mzml;
 use serde_json::Value;
 
-fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_mrm_{}", std::process::id()));
+/// The reference files of test `tag`: one folder per test, since the tests run in parallel and the script rewrites its folder.
+fn reference(tag: &str) -> Option<(PathBuf, Value)> {
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_mrm_{}_{tag}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
     let ok = Command::new("python3")
         .arg(script)
@@ -50,7 +51,8 @@ fn pair(dir: &Path, name: &str) -> FileSet {
 
 #[test]
 fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
-    let Some((dir, want)) = reference() else {
+    let Some((dir, want)) = reference("the_transitions_of_the_method_survive_wiff_to_mzml_to_read")
+    else {
         return;
     };
     let want = want["transizioni"]["transitions"].as_array().unwrap();
@@ -59,12 +61,8 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
     let text = String::from_utf8_lossy(&bytes);
     // every precursor of a transition has its activation, the energy and the dwell are written for the readers that know them
     assert_eq!(text.matches("<activation>").count(), want.len());
-    // the dwell is written only by the SCIEX readers module
-    let with_dwell = cfg!(feature = "sciex");
-    assert_eq!(
-        text.matches("MS_dwell_time").count(),
-        if with_dwell { want.len() } else { 0 }
-    );
+    // the dwell the id spells is written by every build (`mzmlwrite::srm_windows`)
+    assert_eq!(text.matches("MS_dwell_time").count(), want.len());
 
     let size = bytes.len() as u64;
     let mut m = Mzml::new(bytes, size);
@@ -74,12 +72,7 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
     for (c, w) in srm.iter().zip(want) {
         assert_eq!((c.q1, c.q3), (w["q1"].as_f64(), w["q3"].as_f64()));
         assert_eq!(c.ce, w["ce"].as_f64(), "{}", c.id);
-        assert_eq!(
-            c.dwell,
-            w["dwell"].as_f64().filter(|_| with_dwell),
-            "{}",
-            c.id
-        );
+        assert_eq!(c.dwell, w["dwell"].as_f64(), "{}", c.id);
         assert_eq!(c.name, w["name"].as_str().unwrap());
     }
 }
@@ -88,7 +81,9 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
 /// in the engine build (no `estesi`) as well as in the readers module.
 #[test]
 fn samples_without_a_method_of_their_own_read_the_transitions_of_method_one() {
-    let Some((dir, want)) = reference() else {
+    let Some((dir, want)) =
+        reference("samples_without_a_method_of_their_own_read_the_transitions_of_method_one")
+    else {
         return;
     };
     let want = want["transizioni"]["transitions"].as_array().unwrap();
@@ -120,5 +115,34 @@ fn samples_without_a_method_of_their_own_read_the_transitions_of_method_one() {
                 c.id
             );
         }
+    }
+}
+
+/// A batch that mixes methods stores one `MethodN` per distinct method, so `MethodN` of sample N can be another method (here Method2, a full scan,
+/// next to sample 2): each sample reads the method whose `.dam` file name its `SampleDABE/DATA` gives.
+#[test]
+fn a_sample_reads_the_method_its_dam_file_names_not_the_one_with_its_number() {
+    let Some((dir, want)) =
+        reference("a_sample_reads_the_method_its_dam_file_names_not_the_one_with_its_number")
+    else {
+        return;
+    };
+    let want = want["transizioni"]["transitions"].as_array().unwrap();
+    let ole = mzlab_core::wiff::container(
+        std::fs::read(dir.join("transizioni_misto.wiff")).unwrap(),
+        "transizioni_misto",
+    )
+    .unwrap();
+    let mut scan = std::fs::read(dir.join("transizioni_misto.wiff.scan")).unwrap();
+    for n in 1..=3 {
+        let w = mzlab_core::wiff::Wiff::open(&ole, "transizioni_misto", Some(scan.len() as u64), n)
+            .unwrap();
+        let run = w.run(&mut scan).unwrap();
+        let srm = run
+            .chromatograms
+            .iter()
+            .filter(|c| c.kind == mzlab_core::mzml::ChromKind::Srm)
+            .count();
+        assert_eq!(srm, want.len(), "sample {n}");
     }
 }

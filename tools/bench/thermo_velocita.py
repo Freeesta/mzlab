@@ -17,10 +17,10 @@ COLS = ["id", "family", "bytes", "n_scans", "rfr_ok", "our_ok", "rfr_open_ms", "
 
 
 def unisci(ours_path, rfr_path):
-    def leggi(p):
+    def read(p):
         return {j["id"]: j for j in map(json.loads, open(p)) if j.get("schema") == "banco/1"}
 
-    a, b = leggi(ours_path), leggi(rfr_path)
+    a, b = read(ours_path), read(rfr_path)
     w = csv.writer(sys.stdout, delimiter="\t", lineterminator="\n")
     w.writerow(COLS)
     for k in sorted(set(a) | set(b)):
@@ -54,16 +54,16 @@ def riga(nome, rs):
 
 def tabella(path, sha, maquina):
     rows = list(csv.DictReader(open(path), delimiter="\t"))
-    comuni = [r for r in rows if r["rfr_ok"] == "ok" and r["our_ok"] == "ok"]
+    common = [r for r in rows if r["rfr_ok"] == "ok" and r["our_ok"] == "ok"]
     fam = collections.defaultdict(list)
-    for r in comuni:
+    for r in common:
         fam[r["family"] or "(none)"].append(r)
-    print(f"main `{sha}` · {maquina or 'machine not declared'} · files opened by both readers: {len(comuni)} of {len(rows)}\n")
+    print(f"main `{sha}` · {maquina or 'machine not declared'} · files opened by both readers: {len(common)} of {len(rows)}\n")
     print("| Family | Files | MB | Scans | Open s (RFR / ours) | Read all s (RFR / ours) | Scans/s (RFR / ours) | MB/s (RFR / ours) | Median file ratio |")
     print("|---|---|---|---|---|---|---|---|---|")
     for k, v in sorted(fam.items(), key=lambda x: -len(x[1])):
         print(riga(k, v))
-    print(riga("**All**", comuni))
+    print(riga("**All**", common))
     apart = collections.Counter(
         "RFR opens, ours does not" if r["rfr_ok"] == "ok" else "ours opens, RFR does not" if r["our_ok"] == "ok" else "neither opens"
         for r in rows if not (r["rfr_ok"] == "ok" and r["our_ok"] == "ok"))

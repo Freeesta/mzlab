@@ -82,8 +82,9 @@ pub(super) fn detect() -> Step {
             .advanced(),
         Param::integer("max_gap", "Maximum gap")
             .min(0.0)
-            .default_num(2.0)
+            .default_num(1.0)
             .unit("scans")
+            .doc("Scans a trace may miss between two of its points; 0 = consecutive scans")
             .advanced(),
         Param::integer("long_trace", "Long trace")
             .min(1.0)
@@ -104,8 +105,12 @@ pub(super) fn detect() -> Step {
             .noresult()
             .advanced(),
     ];
+    params.extend(trace_choices());
     params.extend(noise_gates());
+    params.extend(isotope_params());
     Step {
+        // 2: `max_gap` counts the missed scans (1 counted the scan distance); `flow::migrate` converts a saved @1
+        version: 2,
         cv: Some("MS:1000035"),
         ins: vec![Port::new("index", DataType::Mzidx, "Scan index")
             .many()
@@ -125,6 +130,92 @@ pub(super) fn detect() -> Step {
             "Finds the chromatographic peaks of the MS1 scans of each file, with their quality, isotopologues and families. The parameters are common to every algorithm; each algorithm adds its own.",
         )
     }
+}
+
+/// The isotope grouping of each file: the averagine grouping by default, or the isotope grouper of mzmine with the `iso_*` settings.
+fn isotope_params() -> Vec<Param> {
+    vec![
+        Param::choice("isotopes", "Isotope grouping", &["averagine", "grouper", "finder"])
+            .default_str("averagine")
+            .doc("averagine tests natural ratios; grouper (mzmine) groups by m/z and RT; finder (mzmine) reads each apex spectrum")
+            .advanced(),
+        Param::number("iso_ppm", "Isotope m/z tolerance")
+            .min(0.0)
+            .default_num(5.0)
+            .unit("ppm")
+            .doc("grouper only: m/z tolerance of an isotope step, the larger of this and the absolute one")
+            .advanced(),
+        Param::number("iso_abs_da", "Isotope absolute tolerance")
+            .min(0.0)
+            .default_num(0.0015)
+            .unit("Da")
+            .doc("grouper only: absolute lower bound of the m/z tolerance")
+            .advanced(),
+        Param::number("iso_rt_tol", "Isotope RT tolerance")
+            .min(0.0)
+            .default_num(0.05)
+            .unit("min")
+            .doc("grouper only: largest RT distance of an isotopologue to the start row")
+            .advanced(),
+        Param::integer("iso_max_charge", "Isotope largest charge")
+            .min(1.0)
+            .max(3.0)
+            .default_num(2.0)
+            .doc("grouper only: the charges tried, from 1 up to this")
+            .advanced(),
+        Param::boolean("iso_monotonic", "Only heavier isotopes")
+            .default_bool(false)
+            .doc("grouper only: look only above the start row")
+            .advanced(),
+        Param::choice("iso_representative", "Group representative", &["most_intense", "lowest_mz"])
+            .default_str("most_intense")
+            .doc("grouper only: the row of a group that is not marked as an isotopologue")
+            .advanced(),
+        Param::number("finder_ppm", "Finder m/z tolerance")
+            .min(0.0)
+            .default_num(15.0)
+            .unit("ppm")
+            .doc("finder only: m/z tolerance in the spectrum, the larger of this and the absolute one")
+            .advanced(),
+        Param::number("finder_abs_da", "Finder absolute tolerance")
+            .min(0.0)
+            .default_num(0.005)
+            .unit("Da")
+            .doc("finder only: absolute lower bound of the m/z tolerance")
+            .advanced(),
+        Param::integer("finder_max_charge", "Finder largest charge")
+            .min(1.0)
+            .max(5.0)
+            .default_num(3.0)
+            .doc("finder only: the charges tried, from 1 up to this")
+            .advanced(),
+        Param::text("finder_elements", "Finder elements")
+            .default_str("H,C,N,O,S")
+            .doc("finder only: comma-separated elements whose isotopes are looked for")
+            .advanced(),
+        Param::boolean("finder_require_c13", "Require a 13C peak")
+            .default_bool(true)
+            .doc("finder only: a charge counts only with a 13C peak")
+            .advanced(),
+        Param::boolean("finder_auto", "Heavy elements from the spectrum")
+            .default_bool(true)
+            .doc("finder only: Cl, Br, S and Si seen in the spectrum widen the expected pattern")
+            .advanced(),
+    ]
+}
+
+/// How the pieces of a trace are joined and where the area of a row comes from; the defaults give the bytes of the files made before them.
+fn trace_choices() -> Vec<Param> {
+    vec![
+        Param::choice("area_from", "Area from", &["channel", "window"])
+            .default_str("channel")
+            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
+            .advanced(),
+        Param::choice("stitch", "Stitch", &["strict", "wide"])
+            .default_str("strict")
+            .doc("Wide also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row.")
+            .advanced(),
+    ]
 }
 
 /// The two gates against noise rows (`lrnoise`): the S/N gate is on by default only in the unit profile, the width gate is a choice.
@@ -181,7 +272,7 @@ fn preset_lr() -> Preset {
 }
 
 fn algorithms() -> Vec<Algorithm> {
-    vec![masstrace(), centwave(), threshold()]
+    vec![masstrace(), centwave(), adap_localmin(), threshold()]
 }
 
 fn masstrace() -> Algorithm {
@@ -228,6 +319,66 @@ fn centwave() -> Algorithm {
             Param::boolean("broad_peaks", "Broad peaks")
                 .default_bool(false)
                 .doc("Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"),
+        ],
+        status: Status::Available,
+    }
+}
+
+/// The detection of mzmine 3 (`untargeted/`): defaults of `adap_peak::AdapPeak`; `floor`, `min_height` and `min_points` are the common parameters.
+fn adap_localmin() -> Algorithm {
+    Algorithm {
+        id: "adap_localmin",
+        version: 1,
+        title: "ADAP and local minimum",
+        doc: "The detection of mzmine 3: mass detection, ADAP chromatograms, optional Savitzky-Golay smoothing, then the local-minimum resolver. floor is the noise and the group intensity, min_height the highest point and the peak height, min_points the consecutive scans; the trace parameters max_gap, long_trace and merge_overlap do not apply.",
+        references: vec![
+            Reference {
+                doi: "10.1021/acs.analchem.7b00947",
+                citation_key: "myers2017one",
+                note: "ADAP chromatogram builder",
+            },
+            Reference {
+                doi: "10.1038/s41587-023-01690-2",
+                citation_key: "schmid2023integrative",
+                note: "MZmine 3: mass detection and the local-minimum resolver",
+            },
+        ],
+        applicability: Applicability {
+            resolution: vec!["hr"],
+            spectrum_mode: vec!["centroid"],
+            note: "High resolution centroided data, as mzmine expects",
+            ..Applicability::default()
+        },
+        params: vec![
+            Param::number("noise_factor", "Factor of lowest signal")
+                .min(0.0)
+                .default_num(0.0)
+                .doc("A point below this many times the lowest signal of its scan is not taken; 0 = the noise floor"),
+            Param::number("ppm", "m/z tolerance").min(0.0).default_num(5.0).unit("ppm"),
+            Param::number("abs_da", "Absolute m/z tolerance")
+                .min(0.0)
+                .default_num(0.002)
+                .unit("Da")
+                .advanced(),
+            Param::integer("smooth_window", "Smoothing window")
+                .min(0.0)
+                .default_num(0.0)
+                .unit("scans")
+                .doc("Savitzky-Golay window before the minimum search, 0 for none; height and area stay those of the raw trace."),
+            Param::number("chrom_threshold", "Chromatographic threshold")
+                .min(0.0)
+                .max(1.0)
+                .default_num(0.85)
+                .advanced(),
+            Param::number("search_rt", "Minimum search range")
+                .min(0.0)
+                .default_num(0.1)
+                .unit("min"),
+            Param::number("min_ratio", "Top/edge ratio").min(0.0).default_num(1.7),
+            Param::pair("duration", "Peak duration", 0.0)
+                .default_pair(0.0, 1.0)
+                .unit("min")
+                .advanced(),
         ],
         status: Status::Available,
     }
@@ -284,6 +435,12 @@ pub(super) fn ms2_link() -> Step {
                 .default_num(0.5)
                 .unit("fraction")
                 .doc("Purity below which an MS2 is weak evidence; it is not dropped"),
+            Param::number("margin_s", "Trigger margin")
+                .min(0.0)
+                .default_num(0.0)
+                .unit("s")
+                .doc("Seconds added on each side of the feature RT range to pair MS2 scans, 0 meaning one MS1 cycle.")
+                .advanced(),
         ],
         runs_in: feat_runs_in(),
         errors: vec!["error.memoryBudget", "err.file.index"],

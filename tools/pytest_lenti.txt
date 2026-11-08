@@ -1,17 +1,54 @@
-tests/test_guardie_memoria.py
-tests/test_ionfamily.py
-tests/test_feat_wasm.py
-tests/test_mzidx.py
-tests/test_golden.py
-tests/test_bench.py
-tests/test_valida_tp.py
-tests/test_cancello.py
-tests/test_sintetici_esteso.py
-tests/test_boot_reset.py
-tests/test_valida_lr.py
-tests/test_feat_table_wasm.py
-tests/test_sintetici_identita.py
-tests/test_msngrafo_wasm.py
-tests/test_livelli.py
-tests/test_sessione_append.py
-tests/test_avvio_progressivo.py
+tests/test_lettori_parita.py	700.7
+tests/test_normative_screen_wasm.py	404.7
+tests/test_msngrafo_wasm.py	345.7
+tests/test_canali_wasm.py	343.5
+tests/test_valida_wasm.py	326.8
+tests/test_wiff_scarica_mzml.py	305.1
+tests/test_attributio_descr_wasm.py	258.9
+tests/test_wiff_programmati_sito.py	255.3
+tests/test_feat_grafo_wasm.py	240.2
+tests/test_msnfigura_wasm.py	214.9
+tests/test_wiff_cromatogrammi.py	203.3
+tests/test_wiff_sonda_leggera.py	168.5
+tests/test_cli_json.py	158.3
+tests/test_normative_import_parity.py	154.3
+tests/test_corsa_schema.py	152.5
+tests/test_feat_wasm.py	149.2
+tests/test_parita_rotte_app.py	137.1
+tests/test_cancello.py	128.4
+tests/test_bench.py	125.6
+tests/test_librerie_fdr_wasm.py	111.9
+tests/test_pipeline_contract.py	105.3
+tests/test_wiff_energia_parita.py	99.1
+tests/test_wiff_codice_motore.py	97.3
+tests/test_normative_imported_app_parity.py	92.3
+tests/test_proxy.py	78.0
+tests/test_guardie_memoria.py	72.9
+tests/test_untarget.py	70.3
+tests/test_normative_wasm.py	68.8
+tests/test_msnregole_wasm.py	63.8
+tests/test_feat_transf_deuterio_wasm.py	60.9
+tests/test_fair.py	60.1
+tests/test_msnlib_schema.py	58.8
+tests/test_valida_hr.py	55.1
+tests/test_wiff_tic_parita.py	47.6
+tests/test_feat_table_wasm.py	46.7
+tests/test_untarget_match.py	45.5
+tests/test_zip_stored.py	34.3
+tests/test_flow_sched_wasm.py	28.7
+tests/test_convalida_regole.py	23.1
+tests/test_riscalda.py	20.1
+tests/test_valida_tp.py	17.2
+tests/test_valida_lr.py	17.1
+tests/test_sintetici_esteso.py	17.1
+tests/test_mzidx.py	17.0
+tests/test_golden.py	15.9
+tests/test_sintetici_larghi.py	14.2
+tests/test_ionfamily.py	12.6
+tests/test_boot_reset.py	10.7
+tests/test_sintetici_identita.py	10.6
+tests/test_subformulas.py	9.6
+tests/test_verita_identificazione.py	6.0
+tests/test_calc_qui.py	5.5
+tests/test_sessione_append.py	5.3
+tests/test_avvio_progressivo.py	5.0

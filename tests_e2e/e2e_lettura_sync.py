@@ -1,5 +1,5 @@
-"""Source files of the index builder read from OPFS with a read-only SyncAccessHandle (lettura-sync.js): the same bytes as the Blob, and the Blob fallback
-when the file is taken (a writer holds it), has another size or is missing. Run in a worker, the only place where handles exist."""
+"""Source files of the index builder read from OPFS with a read-only SyncAccessHandle (lettura-sync.js): the same bytes as the Blob, also read `into` a view of a
+WebAssembly.Memory, and the Blob fallback when the file is taken (a writer holds it), has another size or is missing. Run in a worker, the only place where handles exist."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -20,9 +20,13 @@ onmessage = async () => {
     const f = await (await d.getFileHandle(name)).getFile();
     const blocks = [[0, 1000], [5, 1048576], [1000000, 1500000], [2999000, 1000]];
     const same = (s, ref) => blocks.every(([o, n]) => o + n > ref.length || eq(s.read(o, n), ref.subarray(o, o + n)));
-    let s = await openSource("files", name, f); out.direct = s.hand; out.directSame = same(s, data); s.close();
+    // `into` fills a view of a WebAssembly.Memory, as the engine and the readers modules give it
+    const mem = new WebAssembly.Memory({ initial: 40 });
+    const into = s => blocks.every(([o, n]) => { const v = new Uint8Array(mem.buffer, 8, n); return s.into(o, v) === n && eq(v, data.subarray(o, o + n)); });
+    let s = await openSource("files", name, f); out.direct = s.hand; out.directSame = same(s, data); out.directInto = into(s); s.close();
+    out.closedInto = into(s);
     const w = await (await d.getFileHandle(name)).createSyncAccessHandle();
-    s = await openSource("files", name, f); out.lockedHand = s.hand; out.lockedSame = same(s, data); s.close(); w.close();
+    s = await openSource("files", name, f); out.lockedHand = s.hand; out.lockedSame = same(s, data); out.lockedInto = into(s); s.close(); w.close();
     s = await openSource("files", name, new Blob([data.subarray(0, 1000)])); out.sizeHand = s.hand; out.sizeSame = eq(s.read(0, 1000), data.subarray(0, 1000)); s.close();
     s = await openSource("files", "ls-missing.bin", f); out.missHand = s.hand; out.missSame = same(s, data); s.close();
     await d.removeEntry(name);
@@ -41,6 +45,8 @@ try:
         }""", WORKER % "__U__")
         def direct(): assert not res.get("error"), res; assert res["direct"] and res["directSame"], res
         step("read-only handle: same bytes as the Blob, blocks of any size", direct)
+        def into(): assert res["directInto"] and res["closedInto"] and res["lockedInto"], res
+        step("into: the bytes straight into a view of a WebAssembly.Memory (handle, closed handle, Blob)", into)
         def locked(): assert res["lockedHand"] is False and res["lockedSame"], res
         step("file held by a writer: falls back to the Blob", locked)
         def size(): assert res["sizeHand"] is False and res["sizeSame"], res

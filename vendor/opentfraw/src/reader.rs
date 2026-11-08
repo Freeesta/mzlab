@@ -364,6 +364,8 @@ pub struct RawFileReader {
     pub scan_parameters_header: GenericDataHeader,
     /// The trailer records, left in the file (read when asked: [`Self::scan_parameters`], `GenericRecordStream::for_each`).
     pub scan_parameters: GenericRecordStream,
+    /// The positions in the trailer of the fields [`ScanParams`] reads (`SCAN_PARAM_LABELS`), for [`Self::scan_params_known`].
+    scan_param_fields: Vec<usize>,
     pub error_log: Vec<ErrorEntry>,
     // Instrument log uses same structure
     pub inst_log_header: GenericDataHeader,
@@ -530,6 +532,18 @@ impl RawFileReader {
 
         // 5. Extract addresses
         let data_addr = raw_file_info.preamble.data_addr;
+        // no controller (all run-header addresses zero): the RawFileInfo of an acquisition that was never closed; reading a run header at 0 would read the header as one
+        if raw_file_info
+            .preamble
+            .run_header_addrs
+            .iter()
+            .all(|&a| a == 0)
+        {
+            return Err(Error::NoRun {
+                reason: "no controller",
+                file_len,
+            });
+        }
 
         // 6. Select the MS controller RunHeader.
         // Multi-controller files (e.g. UV + MS) have one RunHeader per controller.
@@ -578,6 +592,12 @@ impl RawFileReader {
         let first_scan = run_header.sample_info.first_scan_number;
         let last_scan = run_header.sample_info.last_scan_number;
         let num_scans = compute_num_scans(first_scan, last_scan);
+        if num_scans == 0 {
+            return Err(Error::NoRun {
+                reason: "the run header declares no scan",
+                file_len,
+            });
+        }
 
         // 7. Scan index. A file cut inside the index keeps the entries that are whole.
         let entry_size = ScanIndexEntry::min_size_for_version(version);
@@ -1024,6 +1044,7 @@ impl RawFileReader {
             scan_index,
             scan_events,
             scan_parameters_header,
+            scan_param_fields: scan_parameters.positions(is_scan_param_label),
             scan_parameters,
             error_log,
             inst_log_header,
@@ -1320,6 +1341,23 @@ impl RawFileReader {
         ScanDataPacket::read(&mut r)
     }
 
+    /// The profile of a scan appended to `mz` and `int` (m/z > 0) as [`Self::read_scan`] and `Profile::to_mz_intensity_into` give it, without the chunks in
+    /// between; `Ok(false)`: the packet has no profile and nothing is appended. `coefficients`: those of the scan event (empty: already m/z).
+    pub fn read_profile_into<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+        coefficients: &[f64],
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) -> Result<bool> {
+        let entry = self.scan_index_entry(scan_number)?;
+        let abs_offset = self.data_addr.saturating_add(entry.offset);
+        source.seek(SeekFrom::Start(abs_offset))?;
+        let mut r = BinaryReader::new(source);
+        ScanDataPacket::read_profile_into(&mut r, coefficients, mz, int)
+    }
+
     /// Read a single scan packet's centroid peaks and FT label data
     /// (resolution / noise / baseline), skipping the profile signal for speed.
     ///
@@ -1528,6 +1566,20 @@ impl RawFileReader {
             .map(|r| ScanParams(std::borrow::Cow::Owned(r)))
     }
 
+    /// [`Self::scan_params`] with only the fields its accessors read: every accessor gives the same value, at a fraction of the cost (a trailer has a few
+    /// hundred fields, `scan_metadata` reads a dozen). Not for a caller that lists the record (`extra::scan_extras_with`).
+    pub fn scan_params_known<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Option<ScanParams<'static>> {
+        let first = self.run_header.sample_info.first_scan_number;
+        let idx = scan_number.checked_sub(first)? as usize;
+        self.scan_parameters
+            .get_fields(source, idx, &self.scan_param_fields)
+            .map(|r| ScanParams(std::borrow::Cow::Owned(r)))
+    }
+
     /// Return the raw instrument-log record for a given scan number, or
     /// `None` if the scan is out of range or no instrument log was found.
     ///
@@ -1565,6 +1617,16 @@ impl RawFileReader {
     ) -> Option<String> {
         let first = self.run_header.sample_info.first_scan_number;
         let idx = scan_number.checked_sub(first)? as usize;
+        self.scan_filter_of(idx, None, params)
+    }
+
+    /// The filter of scan `idx`, from its event when the caller already holds it (`scan_metadata_with`: one copy of the event per scan, not two).
+    pub(crate) fn scan_filter_of(
+        &self,
+        idx: usize,
+        event: Option<&crate::scan_event::ScanEvent>,
+        params: Option<&ScanParams<'_>>,
+    ) -> Option<String> {
         let entry = self.scan_index.get(idx)?;
 
         // SRM files have no scan events; build the filter string from
@@ -1577,7 +1639,14 @@ impl RawFileReader {
             return Some(text.clone());
         }
 
-        let event = self.scan_event(idx)?;
+        let owned;
+        let event = match event {
+            Some(e) => e,
+            None => {
+                owned = self.scan_event(idx)?;
+                &owned
+            }
+        };
         // Precursor m/z and activation energy come from the per-scan params
         // table (not the event body) for v66+. Fall back silently if missing.
         let precursor = params.and_then(|p| p.monoisotopic_mz());
@@ -1591,7 +1660,7 @@ impl RawFileReader {
             4
         };
         Some(crate::scan_filter::build_filter_with(
-            &event,
+            event,
             entry,
             precursor,
             energy,
@@ -1748,6 +1817,69 @@ fn extract_utf16le_texts(buf: &[u8], min_chars: usize) -> Vec<String> {
 /// }
 /// ```
 pub struct ScanParams<'a>(pub std::borrow::Cow<'a, GenericRecord>);
+
+/// Every label the accessors of [`ScanParams`] read (a test checks the list against them), besides `SPS Mass N:`.
+const SCAN_PARAM_LABELS: &[&str] = &[
+    "AGC Fill:",
+    "AGC Target:",
+    "AGC:",
+    "API Source CID Energy:",
+    "Analyzer Temperature:",
+    "CE:",
+    "Charge State:",
+    "Collision Energy (eV):",
+    "Conversion Parameter A:",
+    "Conversion Parameter B:",
+    "Conversion Parameter C:",
+    "Dynamic RT Shift (min):",
+    "Elapsed Scan Time (sec):",
+    "Error in isotopic envelope fit:",
+    "FAIMS CV:",
+    "FAIMS Voltage On:",
+    "FT Resolution:",
+    "HCD Energy (eV):",
+    "HCD Energy V:",
+    "HCD Energy eV:",
+    "HCD Energy:",
+    "Ion Inject Time (ms):",
+    "Ion Injection Time (ms):",
+    "Isolation Center M/Z:",
+    "Isolation Width (M/Z):",
+    "LM Correction (ppm):",
+    "LM m/z-Correction (ppm):",
+    "MS2 Isolation M/Z:",
+    "MS2 Isolation Offset:",
+    "MS2 Isolation Width (M/Z):",
+    "MS2 Isolation Width:",
+    "MSn Isolation Width:",
+    "Master Index:",
+    "Master Scan Number:",
+    "Max. Ion Time (ms):",
+    "Micro Scan Count:",
+    "Monoisotopic M/Z:",
+    "Multi Inject Info:",
+    "Normalized Collision Energy:",
+    "Number of LM Found:",
+    "Number of Lock Masses:",
+    "Orbitrap Resolution:",
+    "PS Inj. Time (ms):",
+    "Possible Charge States:",
+    "Precursor M/Z:",
+    "RawOvFtT:",
+    "Reagent Ion AGC:",
+    "Reagent Ion Injection Time (ms):",
+    "S-Lens RF Level:",
+    "Scan Description:",
+    "Source CID eV:",
+    "Supplemental Activation CE:",
+    "Supplemental Activation:",
+    "Target M/Z:",
+];
+
+/// Whether [`ScanParams`] reads the field `label`.
+fn is_scan_param_label(label: &str) -> bool {
+    SCAN_PARAM_LABELS.contains(&label) || label.starts_with("SPS Mass ")
+}
 
 impl<'a> ScanParams<'a> {
     /// Return the raw `GenericRecord` for direct field access.
@@ -2277,6 +2409,23 @@ fn trailer_records_fit(tail: u64, num_scans: u32, record_size: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_known_labels_are_every_label_the_scan_params_read() {
+        // `scan_params_known` keeps only these fields: an accessor that reads another label would see nothing there
+        let src = include_str!("reader.rs");
+        let start = src.find("impl<'a> ScanParams<'a> {").unwrap();
+        let body = &src[start..start + src[start..].find("\n}\n").unwrap()];
+        for lit in body.split('"').skip(1).step_by(2) {
+            if lit.ends_with(':') && !lit.contains('{') {
+                assert!(
+                    is_scan_param_label(lit),
+                    "{lit} is not in SCAN_PARAM_LABELS"
+                );
+            }
+        }
+        assert!(is_scan_param_label("SPS Mass 7:"));
+    }
 
     #[test]
     fn a_shared_event_table_is_read_through_the_index_rows() {

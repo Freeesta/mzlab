@@ -127,8 +127,8 @@ export async function mount(host, f) {
   }
   let pa = -1, pz = -1;
   function paint(/** @type {boolean} */ force = false) {
-    const a = Math.max(0, Math.floor((L.scrollTop - H * 2) / H)), z = Math.min(flat.length, a + Math.ceil((L.clientHeight || 400) / H) + 4);
-    if (!force && a === pa && z === pz) return;
+    const S = Math.ceil((L.clientHeight || 400) / H), f = Math.floor(L.scrollTop / H), n = flat.length, a = Math.max(0, f - S), z = Math.min(n, f + 2 * S);      // a screen of rows above and below, redrawn under half a screen of margin: the compositor scrolls before the scroll event (2+4 rows showed blank bands)
+    if (!force && pa <= Math.max(0, f - (S >> 1)) && pz >= Math.min(n, f + S + (S >> 1))) return;
     pa = a; pz = z;
     let s = ""; for (let r = a; r < z; r++) s += rowHtml(V, flat[r], r, r === st.cur, st.all || open.has(flat[r].g));
     R.innerHTML = s;
@@ -174,7 +174,7 @@ const css = document.createElement("style");
 css.textContent = `.msnl{position:relative;overflow:auto;height:min(60vh,560px);border:1px solid var(--line);font-variant-numeric:tabular-nums}.msnl:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .msnl-r{display:grid;grid-template-columns:72px 92px 40px minmax(130px,1.4fr) 32px minmax(90px,1fr) 78px 104px;align-items:center;height:${H}px;line-height:${H}px;white-space:nowrap;cursor:pointer;position:absolute;left:0;right:0;min-width:640px}
 .msnl-r>span{overflow:hidden;text-overflow:ellipsis;padding:0 4px;text-align:right}.msnl-r>span:nth-child(6){text-align:left}.msnl-r:hover,.msnl-r.cur{background:var(--sel)}.msnl-r.cur{box-shadow:inset 2px 0 var(--accent)}
-.msnl-g{font-weight:500;border-top:1px solid var(--line)}.msnl-g>span:first-child{text-align:left}.msnl-r button{min-height:22px;min-width:40px;padding:0 6px;margin-left:4px;font-size:.85em;line-height:20px}
+.msnl-g{font-weight:500;border-top:1px solid var(--line)}.msnl-g>span:first-child{text-align:left}.msnl-r button{min-height:24px;min-width:40px;padding:0 6px;margin-left:4px;font-size:.85em;line-height:22px}
 .msnl-h{position:sticky;top:0;z-index:1;background:var(--panel);border-bottom:1px solid var(--line);cursor:default}.msnl-h button{background:none;border:0;font-weight:600;padding:0;color:inherit;cursor:pointer;margin:0;min-width:24px;min-height:24px}
 .msnl-h [aria-sort=ascending] button::after{content:" ▲"}.msnl-h [aria-sort=descending] button::after{content:" ▼"}.msnl-b{position:relative}
 .mt-tabs{display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid var(--line)}.mt-tabs [role=tab]{border:1px solid var(--line);border-bottom:0;border-radius:6px 6px 0 0;min-height:28px;padding:2px 12px;background:none;color:inherit}.mt-tabs [aria-selected=true]{background:var(--sel);font-weight:600}`;

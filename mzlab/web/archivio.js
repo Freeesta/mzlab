@@ -40,6 +40,14 @@ export async function locked(kind, name, fn) {
   } finally { clearTimeout(timer); }
 }
 
+// A long job on one file (an index of a big file takes minutes) is serialised across tabs: a second tab waits its turn, with no time limit, instead of opening the
+// same OPFS handle (a NoModificationAllowedError) or deleting the partial file of the first. The key is not the one of `locked`: the job writes through `put`/`promote`, which take that one.
+export async function exclusive(/** @type {string} */ kind, /** @type {string} */ name, /** @type {() => Promise<any>} */ fn) {
+  const L = self.navigator && navigator.locks;
+  if (!L) return fn();
+  return L.request("mzlab-job:" + kind + "/" + name, { mode: "exclusive" }, () => fn());
+}
+
 // storage: persist() once (the first file); before a big write the room is checked (sources + their index take about 1.8 times the size)
 let asked = false;
 export async function persistOnce() {
@@ -84,12 +92,19 @@ export function writeFull(/** @type {FileSystemSyncAccessHandle} */ ah, /** @typ
   }
   return done;
 }
-// the error.quota of the page (as a string, like the other errors of the engine): `needed` bytes in all, the room left asked to the browser
-export async function quotaError(/** @type {number} */ needed) {
-  const e = await estimate(), free = e && e.quota ? Math.max(0, e.quota - e.usage) : 0;
-  return fail("error.quota", { serve_mb: Math.ceil(needed / 1048576), libero_mb: Math.floor(free / 1048576) });
+// the error of a refused write (as a string, like the other errors of the engine): `needed` bytes the whole file takes, `written` of them already kept. error.quota gives the
+// room left asked to the browser; when the browser says it has room for the rest, its estimate is what is wrong (a full disk, a private window that keeps about 1 GiB), and
+// error.quotaWrite says where the write stopped, of how much, and the room the browser claims (the offset alone read as the size of the file)
+export async function quotaError(/** @type {number} */ needed, written = 0) {
+  const e = await estimate(), free = e && e.quota ? Math.max(0, e.quota - e.usage) : 0, serve_mb = Math.ceil(needed / 1048576), libero_mb = Math.floor(free / 1048576);
+  if (free >= needed - written) return fail("error.quotaWrite", { serve_mb, scritti_mb: Math.floor(written / 1048576), libero_mb });
+  return fail("error.quota", { serve_mb, libero_mb });
 }
-export async function writeAll(/** @type {FileSystemSyncAccessHandle} */ ah, /** @type {Uint8Array} */ data, /** @type {number} */ at) { if (writeFull(ah, data, at) < data.length) throw await quotaError(at + data.length); }
+// `total` = the size of the whole file when known (else the end of this piece)
+export async function writeAll(/** @type {FileSystemSyncAccessHandle} */ ah, /** @type {Uint8Array} */ data, /** @type {number} */ at, total = 0) {
+  const n = writeFull(ah, data, at);
+  if (n < data.length) throw await quotaError(Math.max(total, at + data.length), at + n);
+}
 
 // write `size` bytes produced by chunk(offset, length) -> Uint8Array into kind/name (replacing it); the partial file is removed if something fails
 /** @typedef {(offset: number, length: number) => Uint8Array | Promise<Uint8Array>} Chunker */
@@ -110,11 +125,11 @@ async function writeNow(/** @type {string} */ kind, /** @type {string} */ name, 
     for (let off = 0; off < size; off += STEP) {
       const b = await /** @type {Promise<Uint8Array>} */ (next);
       next = off + STEP < size ? read(off + STEP) : null;
-      await writeAll(ah, b, off); if (after) await after(b, off);
+      await writeAll(ah, b, off, size); if (after) await after(b, off);
     }
     ah.flush();
     // the browser took the writes but the file is shorter (quota reached)
-    if (ah.getSize() < size) throw await quotaError(size);
+    if (ah.getSize() < size) throw await quotaError(size, ah.getSize());
   } catch (e) {
     try { ah.close(); } catch (_) { /* already closed */ }
     try { await d.removeEntry(name); } catch (_) { /* nothing to remove */ }
@@ -130,6 +145,35 @@ async function writeNow(/** @type {string} */ kind, /** @type {string} */ name, 
 // `after(piece, offset)`, when given, is awaited once the piece is written (the page takes the fingerprints of the file there: impronta.js); the piece is its to keep
 /** @type {(kind: string, name: string, size: number, chunk: Chunker, after?: AfterPiece) => Promise<File>} */
 export const putChunks = (kind, name, size, chunk, after) => write(kind, name, size, chunk, after);
+
+// pieces of a size known only at the end (the mzML a .mzML.gz inflates to, rust-carica.js putGz): `next()` gives the next piece, null at the end; the partial file is removed if something fails
+export function putStream(/** @type {string} */ kind, /** @type {string} */ name, /** @type {() => Promise<Uint8Array | null>} */ next) {
+  return locked(kind, name, async () => {
+    await dropLease(kind, name);
+    const d = await dir(kind), fh = await d.getFileHandle(name, { create: true }), ah = await fh.createSyncAccessHandle();
+    let at = 0;
+    try {
+      ah.truncate(0);
+      for (let p = await next(); p; p = await next()) { if (p.length) { await writeAll(ah, p, at); at += p.length; } }
+      ah.flush();
+      if (ah.getSize() < at) throw await quotaError(at, ah.getSize());
+    } catch (e) {
+      try { ah.close(); } catch (_) { /* already closed */ }
+      try { await d.removeEntry(name); } catch (_) { /* nothing to remove */ }
+      throw e;
+    }
+    ah.close();
+    const f = await fh.getFile();
+    told("put", kind, name, f.size);
+    return f;
+  });
+}
+// removes kind/name unless a tab is writing it now (its Web Lock is held): the leftovers of a write that a closed tab or a crash stopped
+export async function removeIfFree(/** @type {string} */ kind, /** @type {string} */ name) {
+  const L = self.navigator && navigator.locks;
+  if (!L) return remove(kind, name);
+  await L.request("mzlab-file:" + kind + "/" + name, { ifAvailable: true }, async l => { if (l) await remove(kind, name); });
+}
 
 // a Blob, an ArrayBuffer or a Uint8Array -> File in OPFS
 export async function put(/** @type {string} */ kind, /** @type {string} */ name, /** @type {Blob | ArrayBuffer | Uint8Array} */ data) {
@@ -212,6 +256,8 @@ export async function get(/** @type {string} */ kind, /** @type {string} */ name
   try { return await (await (await dir(kind)).getFileHandle(name)).getFile(); } catch (_) { return null; }
 }
 
+// the file of files/ an entry of idx/ belongs to: its index, centroid index and key (rust-flow-centroid.js), and the parts of an index still being written
+export const idxOwner = (/** @type {string} */ name) => name.replace(/((\.cen)?\.(mzidx(\.sp)?(\.part)?|key)|\.sul)$/, "");
 export async function list(/** @type {string} */ kind) {
   const out = [], d = await dir(kind);
   for await (const [name, h] of d.entries()) {
@@ -224,6 +270,14 @@ export async function list(/** @type {string} */ kind) {
 export async function remove(/** @type {string} */ kind, /** @type {string} */ name) {
   await dropLease(kind, name);
   try { await (await dir(kind)).removeEntry(name); told("del", kind, name, 0); return true; } catch (_) { return false; }
+}
+
+// removes kind/name that the worker of a builder stopped by «Cancel» may still hold for a moment (its handles close after terminate): tried again while it is there, about 5 s at most
+export async function removeHeld(/** @type {string} */ kind, /** @type {string} */ name) {
+  for (let i = 0; i < 10; i++) {
+    if (await remove(kind, name) || !(await get(kind, name))) return;
+    await new Promise(r => setTimeout(r, 50 << Math.min(i, 4)));
+  }
 }
 
 export async function clear(/** @type {string} */ kind) {

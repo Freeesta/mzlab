@@ -75,7 +75,7 @@ const geom = s => ({ x: num(s, "left"), y: num(s, "top"), w: num(s, "width"), h:
 let mo = null;
 function watchPanels() {
   const dp = Q1("#dpanels");
-  if (!dp || typeof MutationObserver === "undefined") return;
+  if (!dp) return;
   const born = new WeakSet();
   const opt = { attributes: true, attributeFilter: ["style"], attributeOldValue: true };
   mo = new MutationObserver(recs => {

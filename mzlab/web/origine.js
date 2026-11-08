@@ -1,5 +1,5 @@
 // @ts-strict
-// "Da dove viene questo ione?" (Origin of an ion). ES module (loaded after explore.js); only openOrigin goes on window.
+// "Da dove viene questo ione?" (Origin of an ion). ES module read on first use (carica() from the openOrigin stub of carica.js); only openOrigin goes on window.
 // ONE window (like openXic) that shows the EVIDENCE computed by mzlab/ionfamily.py (/api/origin) and never a verdict:
 //   (a) normalised XICs of the ion, of the candidate precursor and of the co-eluting ions the student picks,
 //   (b) table of the co-eluting ions sorted by correlation, with the difference in apex time and in mass (neutral losses are hints),
@@ -71,7 +71,7 @@ async function ogRun() {
   err.hidden = true;
   if (mz == null || par == null) { err.textContent = I18N.t("og.needBoth"); err.hidden = false; return; }
   if (mz === par) { err.textContent = I18N.t("og.differ"); err.hidden = false; return; }
-  q("#og-go").disabled = true; const t0 = Date.now(), webNote = window.QQQ_BROWSER ? " " + I18N.t("og.webNote") : "";
+  q("#og-go").disabled = true; const t0 = Date.now(), webNote = window.MZLAB_BROWSER ? " " + I18N.t("og.webNote") : "";
   q("#og-out").innerHTML = `<p class="why" id="og-wait">${I18N.t("og.wait")}${webNote}</p>`;
   const tick = setInterval(() => { const w = document.getElementById("og-wait"); if (w && w.firstChild) w.firstChild.textContent = I18N.t("og.waitN", { s: Math.round((Date.now() - t0) / 1000) }); }, 1000);
   const my = ++OG.busy;

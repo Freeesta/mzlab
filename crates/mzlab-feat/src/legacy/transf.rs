@@ -3,7 +3,7 @@
 //! file with the new rows appended (a change that a rule already has is not added twice; a `lit:` comment turns the rule of that change into a literature rule).
 //! The error texts are those of the Python.
 
-use mzlab_core::elements::parse_formula;
+use mzlab_core::elements::parse_term;
 use mzlab_core::json::{self, Out, Value};
 
 use super::formula::formula_text;
@@ -35,7 +35,7 @@ pub fn parse_delta(text: &str) -> Res<Delta> {
                 .find(|&j| !c[j].is_ascii_alphanumeric())
                 .unwrap_or(c.len());
             let body: String = c[i + 1..end].iter().collect();
-            for (el, n) in parse_formula(&body).map_err(|e| formula_text(&e))? {
+            for (el, n) in parse_term(&body).map_err(|e| formula_text(&e))? {
                 let k = if c[i] == '+' { n as i64 } else { -(n as i64) };
                 match out.iter_mut().find(|(e, _)| *e == el) {
                     Some((_, v)) => *v += k,

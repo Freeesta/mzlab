@@ -2,11 +2,12 @@
 //! `grafo/1` of a SMILES, `kind: "fragments"` (`molfile`, `a`, `b`) the cuts of a molfile (`frag/1`) and `kind: "partial"` (`molfile`, `delta`) a partial structure (`parz/1`).
 //! `kind: "positions"` (`smiles`, `transform`, `peaks` as JSON text, `tol`, `ppm`, `positive`, optional `reatt` as the `reatt/1` text of the parent) gives the `posiz/1`
 //! of a product (the classes of positions its MS2 supports; with `reatt`, also `prior`).
+//! `kind: "labels"` (`request` as a JSON object or text) gives the `etich/1` of the structures of a drawing (`mzlab-cli mol-label`).
 //! `kind: "reactivity"` (`smiles`, `opts` as a JSON object or text) gives the `reatt/1` of `mzlab_chem::reactivity_json` (the same function as the `.wasm` `chem`).
 //! An error keeps its key (`error.grafo.ring`, `error.grafo.delta.neg`, ...) as the `.wasm` throws it.
 
 use mzlab_core::{Error, Result};
-use mzlab_feat::chem::{frammenti, grafo, posizioni};
+use mzlab_feat::chem::{etichette, frammenti, grafo, posizioni};
 use serde_json::Value;
 
 use crate::engine::State;
@@ -29,6 +30,14 @@ impl State {
                 p["positive"].as_bool().unwrap_or(true),
                 s("reatt"),
             )?),
+            "labels" => {
+                let req = if p["request"].is_object() {
+                    p["request"].to_string()
+                } else {
+                    s("request").to_string()
+                };
+                text(etichette::labels_json(&req)?)
+            }
             "reactivity" => {
                 let opts = if p["opts"].is_object() {
                     p["opts"].to_string()

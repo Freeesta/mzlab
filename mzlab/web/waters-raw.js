@@ -33,7 +33,7 @@ const WatersRaw = (() => {
 
   // name of the mzML of a run: «x.raw» → «x.mzML»; two runs of the same name in different folders take the name of the folder above (as agilent-d.js does)
   function mzmlName(/** @type {{ name: string, root: string }} */ run, /** @type {string[]} */ taken) {
-    const base = run.name.replace(/\.raw$/i, ""), above = run.root.split("/").filter(Boolean).slice(0, -1).pop() || "", seen = new Set(taken.map(n => n.toLowerCase()));
+    const base = run.name.replace(/\.raw$/i, "").replace(/#/g, "_"), above = run.root.split("/").filter(Boolean).slice(0, -1).pop() || "", seen = new Set(taken.map(n => n.toLowerCase()));
     let name = base + ".mzML";
     for (let i = 1; seen.has(name.toLowerCase()); i++) name = `${base} (${above || i}${above && i > 1 ? " " + i : ""}).mzML`;
     return name;

@@ -72,6 +72,7 @@ I18N.add("it", {
   "lib.readN": "{n} spettri letti ({pct}%)",
   "lib.doneN": "{n} spettri",
   "lib.droppedN": "{n} scartati (senza precursore o senza picchi)",
+  "lib.cutN": "Spettri con più di {max} picchi: {n}. Di ciascuno sono stati tenuti i primi {max} picchi; per tenerli interi, centroida o filtra quegli spettri prima di importarli.",
   "lib.plot.exp": "sperimentale",
   "lib.plot.lib": "libreria",
   "lib.plot.rel": "intensità relativa",
@@ -96,7 +97,7 @@ I18N.add("it", {
   "lib.search.tol": "tolleranza",
   "lib.search.peaksWithin": "picchi entro",
   "lib.search.go": "Cerca",
-  "lib.copy.title": "Incollata in Excel riempie righe e colonne",
+  "lib.copy.title": "Copia la tabella con le tabulazioni",
   "lib.copy": "Copia la tabella",
   "lib.libs": "Librerie…",
   "lib.col.name": "Nome",
@@ -213,6 +214,6 @@ I18N.add("it", {
   "lib.err.tooLarge": "La libreria supera un limite del formato ({what}).",
   "lib.err.io": "Lettura o scrittura del file della libreria non riuscita.",
   "lib.err.needWasm": "Questa libreria usa il motore veloce, che qui non parte: ricarica la pagina.",
-  "lib.err.restarted": "Il lettore delle librerie si è riavviato: puoi continuare.",
+  "lib.err.restarted": "Il lettore delle librerie si è riavviato.",
   "lib.err.fallback": "Il lettore delle librerie si è fermato di nuovo: ricarica la pagina per usare di nuovo il motore veloce."
 });

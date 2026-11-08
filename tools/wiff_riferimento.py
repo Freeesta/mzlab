@@ -3,7 +3,7 @@
     python3 tools/wiff_riferimento.py OUT
 
 Writes into OUT/ synthetic pairs in the layout of the 3200 QTRAP files (`one.wiff` + `.wiff.scan`: one sample with two experiments, a full scan and a
-product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `serie.wiff`: 80 profile scans with a chromatographic peak; `prodotto.wiff`: two samples of product-ion scans: one precursor 305.0, and two (229.1, 305.0), no reference entry), built with
+product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `buchi.wiff`: sample 2 in the table with no Idx stream (an injection that acquired nothing); `serie.wiff`: 80 profile scans with a chromatographic peak; `prodotto.wiff`: two samples of product-ion scans: one precursor 305.0, and two (229.1, 305.0), no reference entry), built with
 tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 The variants of the readers module (feature `estesi`): `variante.wiff` (Log model QTRAP 5500; survey scan V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1,
@@ -175,6 +175,12 @@ def main():
     w.sample(4, [("scan", FULL, 600.0, 1.0)])
     w.sample(5, [("scan", FULL, 600.0, 1.0)], data_name="Sample_A")
     w.save(out, "nomi")
+    w = Writer()  # an injection that acquired nothing: sample 2 is in the sample table with no Idx stream
+    w.sample(1, [("scan", FULL, 600.0, 1.0)])
+    w.sample(2, [])
+    w.sample(3, [("scan", FULL, 600.0, 1.0)])
+    del w.streams["SampleSubtree/Sample2/Idx"]
+    w.save(out, "buchi")
     cfb_scrivi.write({"SampleSubtree/Sample1/Idx": bytes(32)}, out / "lonely.wiff")
     w, series = Writer(), []
     for k in range(80):  # a peak at m/z ~229.1 (9 bins wide) eluting at 4 min, on sparse noise: enough points per scan for the profile step
@@ -204,11 +210,11 @@ def main():
     energia = energy(out)
     transizioni = transitions(out)
     programmati = scheduled(out)
-    variante, rifiuti = variants(out)
-    totale = full_tic(out)
+    variante, refusals = variants(out)
+    total = full_tic(out)
     blocchi = blocks_v13(out)
     dad = dad_method(out)
-    (out / "riferimento.json").write_text(json.dumps({"dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti, "totale": totale, "blocchi": blocchi}))
+    (out / "riferimento.json").write_text(json.dumps({"dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi}))
 
 
 def energy(out: Path):
@@ -226,13 +232,13 @@ def energy(out: Path):
 
 
 def full_tic(out: Path):
-    """A full scan experiment over three cycles: the header TIC of a block is not the sum of its profile (cycle 1), is missing (cycle 2, 0.0: the sum is written) or is the sum (cycle 3)."""
+    """A full scan experiment over three cycles: the header TIC of a block is not the sum of its profile nor a float32 value (cycle 1), is missing (cycle 2, 0.0: the sum is written) or is the sum (cycle 3)."""
     ys = [expected_scan(p)[1] for p in (FULL, LATE, LATE)]
     method = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
     w = Writer()
-    w.sample(1, [("scan", FULL, 1000.0, 1.5e6), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
+    w.sample(1, [("scan", FULL, 1000.0, 1234567.891), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
     w.save(out, "totale")
-    return {"bpc": [max(y) for y in ys], "tic": [1.5e6, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
+    return {"bpc": [max(y) for y in ys], "tic": [1234567.891, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
 
 
 def mrm_method(trs) -> bytes:
@@ -259,6 +265,17 @@ def transitions(out: Path):
     for n in (2, 3):
         batch.sample(n, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], None)
     batch.save(out, "transizioni_lotto")
+    # a batch that mixes methods: Method1 is the MRM one, Method2 a full scan used by sample 4 only; samples 2 and 3 run the MRM method (named in their DATA)
+    # and sample 2 must not take Method2 for being its number
+    mixed = Writer()
+    full = {"Experiment0/ExperimentHeader": header(15, 30.0)}
+    mixed.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method, data_name="a\x01mrm_batch.dam")
+    for n in (2, 3):
+        mixed.sample(n, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], full if n == 2 else None, data_name="b\x01mrm_batch.dam")
+    mixed.sample(4, [], full, data_name="blank\x01full_blank.dam")
+    for k, dam in ((1, "mrm_batch.dam"), (2, "full_blank.dam")):
+        mixed.streams[f"MethodSubtree/Method{k}/AcqMethodFileInfoStm"] = bytes(6) + ("D:\\Methods\\" + dam).encode("utf-16le") + bytes(4)
+    mixed.save(out, "transizioni_misto")
     return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs]}
 
 
@@ -302,31 +319,31 @@ def variants(out: Path):
     w.sample(1, [("scan", FULL, 100.0, 1.0, 2), ("scan", PRODUCT, 200.0, 1.0, 3)], {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 239.0)}, log="3200 QTRAP")
     w.save(out, "epi3200")
     variante = {"1": {"polarity": 1, "model": "QTRAP 5500", "spectra": want, "chromatograms": []}}
-    rifiuti = {}
+    refusals = {}
     one = [("scan", FULL, 1000.0, 1.0)]
     w = Writer()  # two periods: the reader has no real file with one, so it refuses
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0), "Period1/Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 6500+")
     w.save(out, "periodi")
-    rifiuti["periodi"] = "periods=2"
+    refusals["periodi"] = "periods=2"
     w = Writer()  # a TOF MS experiment
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(8, 0.0)}, log="TripleTOF 6600")
     w.save(out, "tof")
-    rifiuti["tof"] = "scan type code 8 (experiment 1)"
+    refusals["tof"] = "scan type code 8 (experiment 1)"
     w = Writer()  # an unknown code
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(21, 0.0)}, log="QTRAP 5500")
     w.save(out, "codice")
-    rifiuti["codice"] = "scan type code 21 (experiment 1)"
+    refusals["codice"] = "scan type code 21 (experiment 1)"
     w = Writer()  # a block of the TOF family under a scan experiment
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 5500")
     w.scan[44:48] = b"\xff\xff\xff\xff"
     w.save(out, "bloccotof")
-    rifiuti["bloccotof"] = "TOF block"
+    refusals["bloccotof"] = "TOF block"
     w = Writer()  # a scan block of a version nobody knows
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 5500")
     w.scan[48:52] = struct.pack("<I", 4)
     w.save(out, "versione4")
-    rifiuti["versione4"] = "scan block version 4"
-    return variante, rifiuti
+    refusals["versione4"] = "scan block version 4"
+    return variante, refusals
 
 
 def blocks_v13(out: Path):

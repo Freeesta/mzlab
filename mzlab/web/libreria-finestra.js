@@ -54,7 +54,7 @@ const CSS = `#libwhat{width:96vw;height:92vh;max-width:none;max-height:none;min-
 #libwhat .lw-more table{width:auto}#libwhat .lw-more dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:4px 0}#libwhat .lw-more dt{color:var(--muted)}#libwhat .lw-more dd{margin:0;overflow-wrap:anywhere}
 #libwhat .lw-more summary{cursor:pointer}@media (max-width:900px){#libwhat .lw-main{grid-template-columns:minmax(0,1fr);overflow:auto}#libwhat .lw-tbl{max-height:45vh}}
 #libwhat .lw-th{display:block;width:56px;height:40px;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--muted);cursor:zoom-in;overflow:hidden}#libwhat .lw-th svg{width:100%;height:100%;display:block}#libwhat td.st{padding:2px 4px}
-#libwhat .lw-big{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;gap:6px;align-items:flex-end;padding:10px;max-width:min(92vw,400px);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.35)}#libwhat .lw-big .lw-bigsvg{width:360px;max-width:100%;height:260px;display:grid;place-items:center}#libwhat .lw-big svg{width:100%;height:100%}#libwhat .lw-big code{align-self:stretch;user-select:text;overflow-wrap:anywhere;font-size:12px}
+#libwhat .lw-big{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;gap:6px;align-items:flex-end;padding:10px;max-width:min(92vw,400px);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.35)}#libwhat .lw-big .lw-bigsvg{width:360px;max-width:100%;height:260px;display:grid;place-items:center}#libwhat .lw-big svg{width:100%;height:100%}#libwhat .lw-big code{align-self:stretch;-webkit-user-select:text;user-select:text;overflow-wrap:anywhere;font-size:12px}
 @media (pointer:coarse){#libwhat button,#libwhat summary,#libwhat select,#libwhat input,#libwhat tr.row td{min-height:40px}}`;
 function ensureCss() {
   if (document.getElementById("lwcss")) return;
@@ -98,13 +98,12 @@ function thrBind(/** @type {HTMLElement} */ root, /** @type {() => void} */ agai
 async function copyTable(/** @type {string[]} */ h, /** @type {any[][]} */ rs, /** @type {any} */ meta, /** @type {(s: string) => void} */ msg) {
   if (!rs.length) return msg(t("lib.nothingCopy"));
   const f = (/** @type {unknown} */ v) => (typeof v === "number" ? String(+v.toFixed(3)) : String(v ?? ""));
-  const tsv = await PROV.tsv(h.join("\t") + "\n" + rs.map(r => r.map(f).join("\t")).join("\n"), meta);
+  const tsv = PROV.tsv(h.join("\t") + "\n" + rs.map(r => r.map(f).join("\t")).join("\n"), meta);      // not awaited: Safari takes the clipboard only while the click runs
   const html = `<table><tr>${h.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map(r => `<tr>${r.map(v => `<td>${EHt(f(v))}</td>`).join("")}</tr>`).join("")}</table>`;
   try {
-    if (W_.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([tsv], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) })]);
-    else await navigator.clipboard.writeText(tsv);
+    await clipboardCopy({ "text/plain": tsv, "text/html": html });
     msg(t("lib.copied", { n: rs.length }));
-  } catch (_) { try { await navigator.clipboard.writeText(tsv); msg(t("lib.copied", { n: rs.length })); } catch (_2) { msg(t("lib.noCopy")); } }
+  } catch (_) { msg(t("lib.noCopy")); }
 }
 /** Rows of a table move with the arrows and are chosen with Enter or Space. */
 function rowKeys(/** @type {HTMLElement} */ box) {
@@ -263,10 +262,10 @@ function lazyThumbs(/** @type {HTMLElement} */ box) {
     const el = /** @type {HTMLElement} */ (el0), smi = el.dataset.smi; if (!smi || el.dataset.done) return; el.dataset.done = "1";
     thumb(smi, 54, 38, "lwt").then(svg => { if (!el.isConnected) return; if (svg) el.innerHTML = h`${raw(svg)}`; else el.textContent = "–"; });
   };
-  const watch = (/** @type {ParentNode} */ root) => root.querySelectorAll(".lw-th").forEach(el => (io ? io.observe(el) : draw(el)));
-  const io = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { /** @type {IntersectionObserver} */ (io).unobserve(e.target); draw(e.target); } }), { root: box, rootMargin: "80px" });
+  const watch = (/** @type {ParentNode} */ root) => root.querySelectorAll(".lw-th").forEach(el => io.observe(el));
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); draw(e.target); } }), { root: box, rootMargin: "80px" });
   watch(box);
-  return { watch, stop: () => { if (io) io.disconnect(); } };
+  return { watch, stop: () => io.disconnect() };
 }
 function closeBig(/** @type {HTMLElement} */ d, back = true) {
   const w = d.querySelector("#li-big"); if (!w) return;

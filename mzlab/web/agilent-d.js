@@ -8,15 +8,16 @@
 // A Bruker timsTOF `.d` folder shares the extension with Agilent's: its members tell it (analysis.tdf/.tsf with their bin, or only a BAF). The readers module `bruker` reads it; the engine does not.
 const BrukerD = {
   BRUKER: { tdf: "analysis.tdf", tdfbin: "analysis.tdf_bin", tdfwal: "analysis.tdf-wal", tsf: "analysis.tsf", tsfbin: "analysis.tsf_bin", tsfwal: "analysis.tsf-wal", baf: "analysis.baf" },
-  is: (/** @type {any} */ r) => !!(r.files.tdf || r.files.tsf || r.files.baf),
-  /** the bin file of a database that has none */
-  missing: (/** @type {any} */ r) => [["tdf", "tdfbin"], ["tsf", "tsfbin"]].filter(([a, b]) => r.files[a] && !r.files[b]).map(([, b]) => BrukerD.BRUKER[b]),
+  is: (/** @type {any} */ r) => !!(r.files.tdf || r.files.tsf || r.files.baf || r.files.tdfbin || r.files.tsfbin),
+  /** the missing half of a database and bin pair (as `bruker::tdf_aiuti::riconosci`) */
+  missing: (/** @type {any} */ r) => [["tdf", "tdfbin"], ["tsf", "tsfbin"]].flatMap(([a, b]) => r.files[a] && !r.files[b] ? [b] : !r.files[a] && r.files[b] ? [a] : []).map(k => BrukerD.BRUKER[k]),
   /** a Bruker run: an error with a key, or a sample the module writes as mzML (shell.js moduloToMzml) */
   toModulo(/** @type {any} */ r, /** @type {any} */ out, /** @type {any} */ T, /** @type {string} */ nm) {
     const M = window.LETTORI_MOD, mem = Object.entries(r.files).filter(([n]) => n !== "baf" && BrukerD.BRUKER[n]).map(([n, f]) => ({ name: r.name + "/" + BrukerD.BRUKER[n], blob: f }));
     if (r.missing.length) out.errs.push([T("err.file.brukerNoBin", { name: r.name, file: r.missing[0] }), r.name]);
     else if (!mem.length) out.errs.push([T("err.file.brukerBaf"), r.name]);
     else if (!M) out.errs.push([T("err.file.notAccepted", { name: r.name }), r.name]);
+    else if (NATIVO.cachedModulo(mem, ST.files || [])) return;      // the same folder again: its sample stays the one of the list
     else out.files.push(M.stand(nm, mem, 0, "bruker"));
   },
 };
@@ -66,7 +67,7 @@ const AgilentD = (() => {
 
   // name of the mzML of a run: «x.D» → «x.mzML»; two runs of the same name in different folders take the name of the folder above (as cartella-carica.js does for equal names)
   function mzmlName(run, taken) {
-    const base = run.name.replace(/\.d$/i, "");
+    const base = run.name.replace(/\.d$/i, "").replace(/#/g, "_");
     const above = run.root.split("/").filter(Boolean).slice(0, -1).pop() || "";
     const seen = new Set(taken.map(n => n.toLowerCase()));
     let name = base + ".mzML";
@@ -88,10 +89,10 @@ const AgilentD = (() => {
         // the folder is read as it is: its files are the members, a run is one sample
         const mem = Object.entries(r.files).map(([k, f]) => ({ name: r.name + "/" + relOf(k), blob: f }));
         try {
-          const nm = mzmlName(r, [...taken, ...out.files.map(f => f.name)]);
-          const s = (await rb.nativeSamples(mem)).samples;
+          if (await NATIVO.cachedOne(rb, mem, ST.files || [])) continue;      // the same .D again (same members, its copy and index stored): its sample stays the one of the list, no second row
+          const nm = mzmlName(r, [...taken, ...out.files.map(f => f.name)]), s = (await rb.nativeSamples(mem)).samples;
           out.files.push(NATIVO.sample(nm, NATIVO.key(r.name), mem, 0, s.length ? s[0].id : 1, false));
-        } catch (e_) { const e = /** @type {Lanciato} */ (e_); const M = window.LETTORI_MOD, fam = M && e.json ? M.retriable(e.json.error || e.json.error_key) : ""; if (fam) out.files.push(M.stand(mzmlName(r, [...taken, ...out.files.map(f => f.name)]), mem, 0, fam)); else out.errs.push([e.json ? I18N.err(e.json).message : e.message, r.name]); }   // a variant the engine refuses: the readers module tries it (shell.js moduloToMzml)
+        } catch (e_) { const e = /** @type {Lanciato} */ (e_); const M = window.LETTORI_MOD, fam = M && e.json ? M.retriable(e.json.error || e.json.error_key) : ""; if (fam) { if (!NATIVO.cachedModulo(mem, ST.files || [])) out.files.push(M.stand(mzmlName(r, [...taken, ...out.files.map(f => f.name)]), mem, 0, fam)); } else out.errs.push([e.json ? I18N.err(e.json).message : e.message, r.name]); }   // a variant the engine refuses: the readers module tries it (shell.js moduloToMzml)
       }
     }
     out.errs.forEach(([msg, nm]) => { const d = document.createElement("div"); d.className = "fail"; d.textContent = nm + ": " + msg; box.appendChild(d); });

@@ -19,10 +19,11 @@ pub(super) fn each_slab<R: ReadAt>(
     mut f: impl FnMut(Vec<AdapChrom>),
 ) -> Result<()> {
     let n = ix.sections[si].n_peaks;
-    let (noise, mut sorted) = (p.adap.noise, true);
+    let noise = scan_noise(ix, si, nscans, p)?;
+    let mut sorted = true;
     let mut stream = SlabStream::new(nscans, &p.adap, p.slab_bytes);
     ix.each_peak(si, 0, n, |pos, mz, inten| {
-        if inten >= noise && pos < nscans {
+        if pos < nscans && inten >= noise.as_ref().map_or(p.adap.noise, |v| v[pos]) {
             sorted &= stream.push(mz, inten as f32, pos as u32, &mut f);
         }
     })?;
@@ -31,6 +32,28 @@ pub(super) fn each_slab<R: ReadAt>(
     }
     stream.finish(&mut f);
     Ok(())
+}
+
+/// The noise of each scan for the factor-of-lowest-signal mass detection (`UntParams::noise_factor` times the lowest positive intensity of the scan, one
+/// pass over the peak table); `None` when the factor is off and the absolute `adap.noise` holds for every scan.
+fn scan_noise<R: ReadAt>(
+    ix: &mut Index<R>,
+    si: usize,
+    nscans: usize,
+    p: &UntParams,
+) -> Result<Option<Vec<f64>>> {
+    if p.noise_factor <= 0.0 {
+        return Ok(None);
+    }
+    let mut low = crate::trace::filled(nscans, f64::INFINITY)?;
+    let n = ix.sections[si].n_peaks;
+    ix.each_peak(si, 0, n, |pos, _, inten| {
+        if pos < nscans && inten > 0.0 && inten < low[pos] {
+            low[pos] = inten;
+        }
+    })?;
+    low.iter_mut().for_each(|x| *x *= p.noise_factor);
+    Ok(Some(low))
 }
 
 /// The trace of the ADAP chromatograms on ALL the scans that the resolver wants (zero where there is no point), one buffer for the whole file: loading a

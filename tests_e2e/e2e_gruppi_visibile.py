@@ -19,7 +19,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", PATHS); pg.click("text=Carica dati"); ready(pg, timeout=180000); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
-        attendi(pg, "BARRA.curTab === 'file' && !document.querySelector('#sb-by').hidden", 20000)
+        wait_for_js(pg, "BARRA.curTab === 'file' && !document.querySelector('#sb-by').hidden", 20000)
         def full():
             assert pg.inner_text("#sb-by").strip() == "Gruppi", pg.inner_text("#sb-by")
             w = pg.evaluate("(() => { const b = document.querySelector('#sb-by'), s = b.querySelector('span'); return [b.scrollWidth - b.clientWidth, s.scrollWidth - s.clientWidth]; })()")
@@ -27,10 +27,10 @@ try:
             assert pg.is_visible("#sb-by") and pg.evaluate("!document.querySelector('#tb-more') || !(document.querySelector('#tb-more').dataset.dropped || '').includes('by')")
         step("file list: «Gruppi» is fully visible", full)
         def only_files():
-            for t, tab in (("calc", "calc"), ("adducts", "addloss"), ("losses", "addloss"), ("lists", "lists")):
-                pg.evaluate(f"BARRA.setTab('{t}')"); attendi(pg, f"BARRA.curTab === '{tab}'")
+            for t, tab in (("calc", "addloss"), ("adducts", "addloss"), ("losses", "addloss"), ("lists", "lists")):
+                pg.evaluate(f"BARRA.setTab('{t}')"); wait_for_js(pg, f"BARRA.curTab === '{tab}'")
                 assert not pg.is_visible("#sb-by"), f"«Gruppi» shown in the {t} panel"
-            pg.evaluate("BARRA.setTab('file')"); attendi(pg, "BARRA.curTab === 'file'")
+            pg.evaluate("BARRA.setTab('file')"); wait_for_js(pg, "BARRA.curTab === 'file'")
             assert pg.is_visible("#sb-by"), "back on the file list it is there again"
         step("hidden in Calculator / Adducts / Losses / Lists, back on the file list", only_files)
         def english():

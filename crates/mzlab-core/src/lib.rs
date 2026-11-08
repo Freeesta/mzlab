@@ -21,6 +21,7 @@ pub mod axisroutes;
 pub mod components;
 pub mod comproute;
 pub mod composition;
+pub mod ddafinestra;
 pub mod differenza;
 pub mod diffroute;
 pub mod elements;
@@ -40,6 +41,7 @@ pub mod hrscans;
 pub mod error;
 pub mod provenance;
 pub mod gradient;
+pub mod gunzip;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod idxcache;
 pub mod idxnuovo;
@@ -53,11 +55,14 @@ pub mod isofine;
 pub mod isoscore;
 #[cfg(feature = "isotopi-tutti")]
 pub mod isotable;
+pub mod nuclidi;
 pub mod itemroutes;
 pub mod infusione;
 pub mod iteminfo;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod json;
+#[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
+pub mod json_members;
 pub mod labmethods;
 pub mod kinetics;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
@@ -82,6 +87,7 @@ pub mod mzidx;
 pub mod mzidx_lettore;
 mod mzidx_ordine;
 pub mod mzidx_spill;
+pub mod accorpa;
 pub mod msnalbero;
 pub mod msngrafo;
 pub mod msnroute;
@@ -120,6 +126,7 @@ pub mod mzmlwrite;
 pub mod mzmlvalida;
 pub mod pace;
 pub mod peak1d;
+pub mod baseline;
 pub mod peakq;
 pub mod peakq_auto;
 pub mod peakq_lr;

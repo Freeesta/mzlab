@@ -69,7 +69,7 @@
   const color = (/** @type {string} */ key) => PAL[colorIdx(key) % PAL.length];
 
   /** the keys the panel plots now (all when it names none) @param {any} p @param {Ione[]} all */
-  const picked = (p, all) => !panelTr(p) ? [] : (!p.tr || (Array.isArray(p.tr) && !p.tr.length)) ? all.map(x => x.key) : (Array.isArray(p.tr) ? p.tr : [p.tr]);
+  const picked = (p, all) => { if (!panelTr(p)) return []; const tr = mrmSel(p.tr, all.map(x => x.key)); return !tr || (Array.isArray(tr) && !tr.length) ? all.map(x => x.key) : (Array.isArray(tr) ? tr : [tr]); };
 
   /** the entries of the «Extract ion ›» submenu: «All», then one per ion with its colour; click = only this one, Ctrl/⌘+click adds or removes it, Shift+click takes the range
    * from the last one clicked @param {any} c the context of the menu @returns {any[]} */

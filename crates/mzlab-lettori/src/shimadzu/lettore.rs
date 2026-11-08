@@ -9,11 +9,11 @@ use super::carica::Fam;
 use super::{meta, rec, rifiuto, LettoreShimadzu, F32_EXACT};
 
 impl Lettore for LettoreShimadzu {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("shimadzu")
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use mzlab_core::conv::{IDENTITA, NON_DECODIFICATO};
         &[
             ("oven and injector programs, GCMS Configuration, embedded .qgm method, Status curves, MS Status Data, Mass Parameters", NON_DECODIFICATO),
@@ -22,16 +22,16 @@ impl Lettore for LettoreShimadzu {
         ]
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         Ok(&self.d.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.uno(c)?;
         let (v, &(a, n, f)) = self
             .d
@@ -69,7 +69,7 @@ impl Lettore for LettoreShimadzu {
         })
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.uno(c)?;
         let (v, &(a, _, f)) = self
             .d
@@ -94,7 +94,7 @@ impl Lettore for LettoreShimadzu {
         Ok(out)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.uno(c)?;
         Ok(self
             .d
@@ -108,7 +108,7 @@ impl Lettore for LettoreShimadzu {
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.uno(c)?;
         self.d
             .cromat
@@ -118,7 +118,7 @@ impl Lettore for LettoreShimadzu {
             .ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.uno(c)?;
         Ok(meta::documento(
             self.id(),
@@ -129,7 +129,7 @@ impl Lettore for LettoreShimadzu {
         ))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.uno(c)?;
         Ok(Some(meta::header(self.id(), self.fam, &self.d, &self.meta)))
     }

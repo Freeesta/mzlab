@@ -50,7 +50,7 @@ const ORACOLO: &[(u32, u32, f64, f64, f64)] = &[
 fn mse_and_lock_mass_match_the_msconvert_oracle() {
     let Some(fs) = cartella() else { return };
     let mut l = mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap();
-    let idx = l.indice(0).unwrap().to_vec();
+    let idx = l.index(0).unwrap().to_vec();
     // Cycles per function: 48400/200, 48200/200 and 19400/200 spectra of the oracle.
     for (f, n) in [(1, 242), (2, 241), (3, 97)] {
         let c = idx
@@ -77,7 +77,7 @@ fn mse_and_lock_mass_match_the_msconvert_oracle() {
         );
         // msconvert's 775 +- 725 m/z "precursor" of every MSe spectrum is the scan range, not an isolation.
         assert!(v.precursore.is_none(), "{id}: no precursor");
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         let (mut somma, mut pesata) = (0.0, 0.0);
         for (m, i) in s.mz.iter().zip(&s.intensity) {
             somma += f64::from(*i);

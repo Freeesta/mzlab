@@ -8,7 +8,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, str(e).split("\n")[0][:240]))
 EDGES = """() => { const e = s => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.right]; };
   const t = document.createRange(); t.selectNodeContents(document.querySelector('#calcres')); const tr = t.getBoundingClientRect(), w = document.querySelector('#calcres').getBoundingClientRect();
-  return { input: e('#calcin'), well: e('#calcres'), nl: e('#calc-nl'), pad: e('#calcpad'), textMid: (tr.left + tr.right) / 2, wellMid: (w.left + w.right) / 2,
+  return { input: e('#al-find .sb-search-box'), well: e('#calcres'), nl: e('#calc-nl'), pad: e('#calcpad'), textMid: (tr.left + tr.right) / 2, wellMid: (w.left + w.right) / 2,
     textVMid: (tr.top + tr.bottom) / 2, wellVMid: (w.top + w.bottom) / 2 }; }"""
 def check(pg):
     d = pg.evaluate(EDGES)
@@ -21,9 +21,9 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")])
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
-        pg.fill("#calcin", "4+5"); attendi(pg, "document.querySelector('#calcres').innerText.trim() === '9'")
-        attendi(pg, "!document.querySelector('#calc-nl').hidden")
+        pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!!document.querySelector('#calcin').offsetParent")
+        pg.fill("#calcin", "4+5"); wait_for_js(pg, "document.querySelector('#calcres').innerText.trim() === '9'")
+        wait_for_js(pg, "!document.querySelector('#calc-nl').hidden")
         step("desktop, light: same edges, centred result", lambda: check(pg))
         def dark():
             pg.emulate_media(color_scheme="dark"); frames(pg, 3); check(pg)
@@ -31,8 +31,8 @@ try:
         def phone():
             pg.set_viewport_size({"width": 390, "height": 800}); frames(pg, 5)
             if not pg.evaluate("!!document.querySelector('#calcin').offsetParent"):
-                pg.evaluate("BARRA.setTab('calc')"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
-            pg.fill("#calcin", "4+5"); attendi(pg, "document.querySelector('#calcres').innerText.trim() === '9' && !document.querySelector('#calc-nl').hidden")
+                pg.evaluate("BARRA.setTab('calc')"); wait_for_js(pg, "!!document.querySelector('#calcin').offsetParent")
+            pg.fill("#calcin", "4+5"); wait_for_js(pg, "document.querySelector('#calcres').innerText.trim() === '9' && !document.querySelector('#calc-nl').hidden")
             check(pg)
         step("phone width", phone)
 finally:

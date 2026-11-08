@@ -3,15 +3,18 @@
 //! index is written to the cache folder of the app as `<name>.mzidx` (first as `.mzidx.part`, then renamed; the peaks past the budget wait in
 //! `<name>.mzidx.sp.part`, removed at the end). The page asks over `mzlab://`:
 //! `idx/build` (POST, body = the scan table, see `decode_inputs`), `idx/read` (the index in pieces, to put it in the archive of the page), `idx/remove`.
+//! «Cancel» of the loading (`lr_cancel`, `cancel`) stops the builds of a name at their next read or write and leaves no file of them, as on the site.
 
+use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
-use mzlab_core::mzidx::{self, ScanTable, Stats, DEFAULT_BUDGET};
-use mzlab_core::{upload, Error};
+use mzlab_core::idxread::ReadAt;
+use mzlab_core::mzidx::{self, ScanTable, Stats};
+use mzlab_core::{budget_auto, upload, Error};
 
 use crate::mapped::Mapped;
 use crate::rpc::MapAt;
@@ -27,6 +30,61 @@ pub fn pool_size() -> usize {
 pub struct IdxBuilder {
     pub(crate) dir: PathBuf,
     pub(crate) pool: rayon::ThreadPool,
+    /// name -> its stop flag: set by «Cancel», replaced by a new upload of the name (a stopped build keeps the flag it took)
+    pub(crate) stops: Mutex<HashMap<String, Arc<AtomicBool>>>,
+}
+
+/// The error of a build stopped by «Cancel»: the page then removes the file (`lr_remove`), as the site does.
+pub(crate) fn cancelled() -> Error {
+    Error::new("err.load.cancelled")
+}
+
+/// A file or source of a build that fails at its next read or write once the build is stopped.
+pub(crate) struct Fermabile<'a, T> {
+    inner: T,
+    stop: &'a AtomicBool,
+}
+
+impl<'a, T> Fermabile<'a, T> {
+    pub(crate) fn new(inner: T, stop: &'a AtomicBool) -> Self {
+        Fermabile { inner, stop }
+    }
+    fn go(&self) -> std::io::Result<()> {
+        if self.stop.load(Ordering::Relaxed) {
+            return Err(std::io::Error::other("cancelled"));
+        }
+        Ok(())
+    }
+}
+
+impl<T: Read> Read for Fermabile<'_, T> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.go()?;
+        self.inner.read(buf)
+    }
+}
+
+impl<T: Write> Write for Fermabile<'_, T> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.go()?;
+        self.inner.write(buf)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+impl<T: Seek> Seek for Fermabile<'_, T> {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        self.inner.seek(pos)
+    }
+}
+
+impl<T: ReadAt> ReadAt for Fermabile<'_, T> {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<(), Error> {
+        self.go().map_err(|_| cancelled())?;
+        self.inner.read_at(off, buf)
+    }
 }
 
 /// The body of `idx/build`: eight items, each as a little-endian `u32` length and the bytes: levels (u8), polarities (i8), RT (f64 LE), TIC (f64 LE),
@@ -75,7 +133,30 @@ impl IdxBuilder {
             .num_threads(pool_size())
             .build()
             .map_err(|e| Error::new("err.file.index").with("detail", e))?;
-        Ok(IdxBuilder { dir, pool })
+        Ok(IdxBuilder {
+            dir,
+            pool,
+            stops: Mutex::default(),
+        })
+    }
+
+    fn stop_of(&self, name: &str) -> Arc<AtomicBool> {
+        let mut g = self.stops.lock().unwrap_or_else(|e| e.into_inner());
+        g.entry(name.to_string()).or_default().clone()
+    }
+
+    /// «Cancel» of the loading of `name`: its builds (the index and the one as centroids) stop now and the ones asked later fail, until `resume`.
+    pub fn cancel(&self, name: &str) {
+        for n in [name.to_string(), format!("{name}.cen")] {
+            self.stop_of(&n).store(true, Ordering::Relaxed);
+        }
+    }
+
+    /// A new upload of `name` (`lr_put`) builds afresh.
+    pub fn resume(&self, name: &str) {
+        let mut g = self.stops.lock().unwrap_or_else(|e| e.into_inner());
+        g.remove(name);
+        g.remove(&format!("{name}.cen"));
     }
 
     pub fn path(&self, name: &str) -> Result<PathBuf, Error> {
@@ -100,6 +181,12 @@ impl IdxBuilder {
         if let Ok(p) = self.path(name) {
             let _ = std::fs::remove_file(p);
         }
+    }
+
+    /// The index of `name` and its index as centroids (`lr_remove`).
+    pub fn remove_all(&self, name: &str) {
+        self.remove(name);
+        self.remove(&format!("{name}.cen"));
     }
 
     /// `(size)` of an index in the folder, if there is one.
@@ -136,14 +223,14 @@ impl IdxBuilder {
         name: &str,
         table: Option<&ScanTable>,
     ) -> Result<Stats, Error> {
-        self.scrivi(name, |out, spill| {
+        self.scrivi(name, |out, spill, stop| {
             let map = Arc::new(Mapped::open(source).map_err(|e| io_error(&e))?);
             let size = map.bytes().len() as u64;
             let letta = match table {
                 Some(_) => None,
                 None => Some(upload::prepare_parallelo(
-                    &mut MapAt(map.clone()),
-                    MapAt(map.clone()),
+                    &mut Fermabile::new(MapAt(map.clone()), stop),
+                    Fermabile::new(MapAt(map.clone()), stop),
                     size,
                     name,
                 )?),
@@ -152,9 +239,9 @@ impl IdxBuilder {
             crate::ram::check_index(table)?;
             mzidx::build_mzml_spill(
                 table,
-                Cursor::new(map.bytes()),
+                Fermabile::new(Cursor::new(map.bytes()), stop),
                 out,
-                DEFAULT_BUDGET,
+                budget_auto::native_index_budget(),
                 Some(spill),
             )
         })
@@ -162,19 +249,30 @@ impl IdxBuilder {
 
     /// Runs `f` on a thread of the pool with the index file (`<name>.mzidx.<n>.part`, renamed `<name>.mzidx` when `f` succeeds, removed when it fails)
     /// and the scratch file (`<name>.mzidx.<n>.sp.part`: the peaks past the budget wait there, so the scans are decoded once; always removed).
+    /// Both fail once «Cancel» stops `name` (`stop`, for the sources `f` reads); a build stopped, even one that ended past the cancel, leaves no file.
     pub(crate) fn scrivi(
         &self,
         name: &str,
-        f: impl FnOnce(&mut File, &mut File) -> Result<Stats, Error> + Send,
+        f: impl FnOnce(
+                &mut Fermabile<&mut File>,
+                &mut Fermabile<&mut File>,
+                &AtomicBool,
+            ) -> Result<Stats, Error>
+            + Send,
     ) -> Result<Stats, Error> {
         let _indexing = crate::conv_coda::Indexing::new();
         let dest = self.path(name)?;
+        let stop = self.stop_of(name);
+        let stopped = || stop.load(Ordering::Relaxed);
         // a suffix per build: two builds of one name must not truncate each other's files
         static BUILD_SEQ: AtomicU64 = AtomicU64::new(0);
         let n = BUILD_SEQ.fetch_add(1, Ordering::Relaxed);
         let part = self.dir.join(format!("{}.mzidx.{n}.part", clean(name)?));
         let sp = self.dir.join(format!("{}.mzidx.{n}.sp.part", clean(name)?));
         let r = self.pool.install(|| -> Result<Stats, Error> {
+            if stopped() {
+                return Err(cancelled()); // cancelled while it waited for a thread of the pool
+            }
             let mut out = File::create(&part).map_err(|e| io_error(&e))?;
             let mut spill = File::options()
                 .read(true)
@@ -183,9 +281,14 @@ impl IdxBuilder {
                 .truncate(true)
                 .open(&sp)
                 .map_err(|e| io_error(&e))?;
-            f(&mut out, &mut spill)
+            f(
+                &mut Fermabile::new(&mut out, &stop),
+                &mut Fermabile::new(&mut spill, &stop),
+                &stop,
+            )
         });
         let _ = std::fs::remove_file(&sp);
+        let r = if stopped() { Err(cancelled()) } else { r };
         match r {
             Ok(st) => {
                 std::fs::rename(&part, &dest).map_err(|e| io_error(&e))?;

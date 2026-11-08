@@ -1,12 +1,14 @@
 //! A sample as the `Run` that the rest of the program reads: scans become spectra (profile, empty ones left out as msconvert does)
-//! and the MRM blocks become a TIC and one SRM chromatogram per transition (one SIM chromatogram per ion for a Q1MI / Q3MI experiment).
+//! and the chromatograms are those of `cromatogrammi.rs` (a TIC per experiment, SRM / SIM per transition or ion, BPC of a full scan).
 
+#[cfg(not(feature = "estesi"))]
+use super::cromatogrammi::Blocks;
 use super::{scan, Wiff};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::methodinfo::{Kind, Transition};
 #[cfg(not(feature = "estesi"))]
-use crate::mzml::{ChromKind, Chromatogram};
+use crate::mzml::Chromatogram;
 use crate::mzml::{Run, Spectrum};
 use crate::mzmlwrite::Header;
 
@@ -117,30 +119,25 @@ impl Wiff {
         scan: &mut R,
         on: &mut dyn FnMut(Spectrum) -> Result<()>,
     ) -> Result<Vec<Chromatogram>> {
-        let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1))
-            .map(|_| Mrm::default())
-            .collect();
+        let mut blocks = Blocks::new(self.experiments.len().max(1));
         let mut n = 0;
-        for r in &self.records {
+        for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
             if let Some(p) = scan::read_scan(scan, self.scan_len, r.at, r.end)? {
                 if p.mz.is_empty() {
                     continue;
+                }
+                if self.is_full_scan(r.experiment) {
+                    blocks.add_tic(r, p.intensity.iter().copied().reduce(f64::max));
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
             } else if self.scan_experiment(r.experiment) || self.empty_sim_row(r) {
                 continue;
-            } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?
-            {
-                let m = &mut mrm[r.experiment];
-                m.time.push(r.time_min);
-                m.tic.push(r.tic);
-                m.cols.resize(v.len(), Vec::new());
-                v.iter().zip(&mut m.cols).for_each(|(x, col)| col.push(*x));
+            } else if let Some(v) = dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
+                blocks.add_dense(r, v);
             }
         }
-        let mut chroms = Vec::new();
-        self.add_chromatograms(&mut chroms, mrm);
+        let mut chroms = self.chromatograms_of(blocks);
         if let Some(dad) = &self.dad {
             chroms.push(dad.twc_chromatogram(chroms.len()));
         }
@@ -174,31 +171,38 @@ impl Wiff {
         }
     }
 
-    /// The chromatograms of the MRM blocks only (no scan is decoded).
+    /// The chromatograms of the MRM blocks only (no scan is decoded). `counts`: the point count of each record's head when the reader already read them.
     #[cfg(not(feature = "estesi"))]
-    pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
-        let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1))
-            .map(|_| Mrm::default())
-            .collect();
-        for r in &self.records {
-            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some()
-                || self.scan_experiment(r.experiment)
-                || self.empty_sim_row(r)
-            {
+    pub fn chromatograms<R: ReadAt>(
+        &self,
+        scan: &mut R,
+        counts: Option<&[Option<u32>]>,
+    ) -> Result<Vec<Chromatogram>> {
+        let mut blocks = Blocks::new(self.experiments.len().max(1));
+        for (i, r) in self
+            .records
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| !r.cut(self.scan_len))
+        {
+            let count = match counts.and_then(|c| c.get(i)) {
+                Some(&c) => c,
+                None => scan::point_count(scan, self.scan_len, r.at, r.end)?,
+            };
+            if let Some(count) = count {
+                if count > 0 && self.is_full_scan(r.experiment) {
+                    blocks.add_tic(r, None);
+                }
                 continue;
             }
-            if let (Some(v), Some(m)) = (
-                scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?,
-                mrm.get_mut(r.experiment),
-            ) {
-                m.time.push(r.time_min);
-                m.tic.push(r.tic);
-                m.cols.resize(v.len(), Vec::new());
-                v.iter().zip(&mut m.cols).for_each(|(x, col)| col.push(*x));
+            if self.scan_experiment(r.experiment) || self.empty_sim_row(r) {
+                continue;
+            }
+            if let Some(v) = dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
+                blocks.add_dense(r, v);
             }
         }
-        let mut chroms = Vec::new();
-        self.add_chromatograms(&mut chroms, mrm);
+        let mut chroms = self.chromatograms_of(blocks);
         if let Some(dad) = &self.dad {
             chroms.push(dad.twc_chromatogram(chroms.len()));
         }
@@ -208,7 +212,7 @@ impl Wiff {
     /// How many spectra `visit` will give (reads the head of each block only).
     pub fn spectrum_count<R: ReadAt>(&self, scan: &mut R) -> Result<usize> {
         let mut n = 0;
-        for r in &self.records {
+        for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
             n += scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some_and(|c| c > 0)
                 as usize;
         }
@@ -243,10 +247,11 @@ impl Wiff {
     }
 
     /// The instrument of the header: the CV term of the model the Log names (the known models), otherwise the generic `instrument model` and
-    /// the name as a userParam of the run; without a Log, the 3200 QTRAP this reader was written for.
+    /// the name as a userParam of the run; without a Log, the generic term alone.
     fn instrument_terms(&self) -> ((String, String), Vec<(String, String)>) {
         match self.model.as_deref() {
-            None => (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new()),
+            // a file of another QTRAP (SCIEX OS) may have no Log either: never taken for a 3200
+            None => (("MS:1000031".into(), "instrument model".into()), Vec::new()),
             Some(m) if m.replace(' ', "").contains("3200QTRAP") => {
                 (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new())
             }
@@ -256,52 +261,41 @@ impl Wiff {
             ),
         }
     }
-
-    #[cfg(not(feature = "estesi"))]
-    fn add_chromatograms(&self, chroms: &mut Vec<Chromatogram>, mrm: Vec<Mrm>) {
-        let unit = "number of detector counts";
-        for (e, Mrm { time, tic, cols }) in mrm
-            .into_iter()
-            .enumerate()
-            .filter(|(_, m)| !m.time.is_empty())
-        {
-            if chroms.is_empty() {
-                chroms.push(Chromatogram {
-                    index: 0,
-                    id: "TIC".into(),
-                    kind: ChromKind::Tic,
-                    q1: None,
-                    q3: None,
-                    unit: unit.into(),
-                    time: time.clone(),
-                    intensity: tic,
-                });
-            }
-            let known = self.mrm_transitions(e);
-            for (j, col) in cols.into_iter().enumerate() {
-                let (id, kind, q1, q3) = self.trace_of(e, j, known.get(j));
-                chroms.push(Chromatogram {
-                    index: chroms.len(),
-                    id,
-                    kind,
-                    q1,
-                    q3,
-                    unit: unit.into(),
-                    time: time.clone(),
-                    intensity: col,
-                });
-            }
-        }
-    }
 }
 
-/// The MRM blocks of one experiment: times (min), TIC, and one column per transition.
-#[derive(Default)]
+/// The cps of an MRM block, read dense. A scheduled (sMRM) block, which starts with `-(N + 0.01)`, is `err.file.wiff`: only the readers module
+/// (`scan_estesi.rs`) reads it, and its skip markers must never become intensities.
 #[cfg(not(feature = "estesi"))]
-struct Mrm {
-    time: Vec<f64>,
-    tic: Vec<f64>,
-    cols: Vec<Vec<f64>>,
+fn dense_mrm<R: ReadAt>(
+    scan: &mut R,
+    scan_len: u64,
+    at: u64,
+    n: usize,
+) -> Result<Option<Vec<f64>>> {
+    let v = scan::read_mrm(scan, scan_len, at, n)?;
+    if v.as_ref().and_then(|v| v.first()).is_some_and(|x| *x < 0.0) {
+        return Err(crate::error::Error::new("err.file.wiff").with("detail", "sparse MRM block"));
+    }
+    Ok(v)
+}
+
+/// A dense MRM block: a point of the TIC of its experiment and one of each of its transitions.
+#[cfg(not(feature = "estesi"))]
+impl Blocks {
+    fn add_dense(&mut self, r: &super::Record, v: Vec<f64>) {
+        let Some(e) = self.experiments.get_mut(r.experiment) else {
+            return;
+        };
+        e.time.push(r.time_min);
+        e.tic.push(r.tic);
+        if e.cols.len() < v.len() {
+            e.cols.resize_with(v.len(), Default::default);
+        }
+        for (x, col) in v.into_iter().zip(&mut e.cols) {
+            col.0.push(r.time_min);
+            col.1.push(x);
+        }
+    }
 }
 
 #[cfg(feature = "estesi")]

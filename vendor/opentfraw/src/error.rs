@@ -50,6 +50,11 @@ pub enum Error {
         declared: u32,
     },
 
+    /// The file holds no finished run: no controller in the RawFileInfo, or a run header that declares no scan (an acquisition stopped before the instrument
+    /// closed the file); `reason` says which, `file_len` is the file size.
+    #[error("no finished run in a file of {file_len} bytes: {reason}")]
+    NoRun { reason: &'static str, file_len: u64 },
+
     #[error(
         "refusing to allocate for {requested} bytes at offset {offset:#x}: \
          only {available} bytes remain in the input"

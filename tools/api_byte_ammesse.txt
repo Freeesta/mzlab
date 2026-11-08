@@ -9,8 +9,8 @@ finder.rs::finder_transformations
 # the pyramid of map tiles (about 1/8 of the index) is handed once per file to the worker, which writes it to OPFS
 cache.rs::tiles_export
 # RV-05: the readers module hands the index and each scan to the engine as one binary block (`trasporto.rs`), by design
-lettura.rs::indice
-lettura.rs::scansione
+lettura.rs::index
+lettura.rs::scan
 # W2: the export/import ZIP is built in one pass and handed to the worker once; the old size+write pair parsed it twice and copied it in and out
 zip.rs::zip
 zip.rs::unzip
@@ -18,3 +18,5 @@ zip.rs::unzip
 run_massacc.rs::table
 # normative import: the private .mzsus of ONE list the user imported (a few hundred entries, smaller than the CSV the page already holds); the worker writes it to OPFS at once
 lib.rs::import_official
+# table of a table.filter view: no larger than the table the page already holds; the worker hands it straight to flow_group or flow_drift (F.liveJobs.tableOf)
+lib.rs::flow_table_of_view

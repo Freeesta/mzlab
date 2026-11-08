@@ -1,6 +1,6 @@
 //! Ion traces of the MS1 peaks of one file and polarity: the `detect` of mzFinder.
 //!
-//! Log-ppm channels on two shifted grids; (channel, scan) cells; a segment is a run of scans in one channel with gaps <= `max_gap`.
+//! Log-ppm channels on two shifted grids; (channel, scan) cells; a segment is a run of scans in one channel that misses at most `max_gap` scans between two points.
 //! Segments of neighbouring channels that cover the same scans are stitched, the two grids are merged and the Fourier-transform side
 //! lobes of very intense ions are marked. The peaks come from the index in slabs of m/z (a slab ends only at a gap of 50 ppm or more
 //! between two peaks above the floor, where no trace can pass), so the memory is bounded and the result does not depend on the slabs.
@@ -26,7 +26,8 @@ pub const MIN_POINTS: u32 = 5;
 pub const LONG_TRACE: u32 = 400;
 /// Scans of a series for the common mode: the shortest trace that `TraceBank` counts as persistent.
 const PERSISTENT_SCANS: usize = 400;
-pub const MAX_GAP: u32 = 2;
+/// Scans a trace may miss between two of its points (0 = consecutive scans), as `gapfill::Params::max_gap`.
+pub const MAX_GAP: u32 = 1;
 pub const SLAB_PEAKS: usize = 1_500_000;
 pub const TOUCH_HEIGHT: f64 = 2e6;
 /// A slab never ends at a smaller gap (ppm) between neighbouring peaks.
@@ -41,10 +42,13 @@ pub struct Params {
     pub floor: f64,
     pub min_points: u32,
     pub min_height: f64,
+    /// Missed scans allowed between two points of a trace (0 = consecutive).
     pub max_gap: u32,
     pub long_trace: u32,
     /// Two rows of different grids are one ion when their scans overlap by this share of the shorter one (0 = only the apex and edges test of `merge_grids`).
     pub merge_overlap: f64,
+    /// Pieces of neighbouring channels join when they touch whatever their height, and pieces down to a quarter of `min_height` take part (`channels::stitch`).
+    pub stitch_wide: bool,
     /// Noise rows of the unit profile: a row narrower than this share of the typical peak width of its file is dropped (0 = off, `lrnoise`).
     pub min_width: f64,
     /// A row whose apex is below this many times the noise of its flanks is dropped (0 = off, `lrnoise`).
@@ -67,6 +71,7 @@ impl Default for Params {
             max_gap: MAX_GAP,
             long_trace: LONG_TRACE,
             merge_overlap: 0.0,
+            stitch_wide: false,
             min_width: 0.0,
             min_snr: 0.0,
             axis: MassAxis::Ppm,
@@ -175,6 +180,9 @@ pub fn detect_with<R: ReadAt>(
     p: &Params,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<FileFeatures> {
+    if let Peak::Adap(a) = &p.peak {
+        return adap(index, p, a);
+    }
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(FileFeatures::default());
     };
@@ -187,6 +195,25 @@ pub fn detect_with<R: ReadAt>(
         run_slab(slab, &rt, dt, p, &mut rows)
     })?;
     finish(rows, dt, p.axis, p.merge_overlap)
+}
+
+/// The ADAP route of `adap_localmin` (`untargeted::flow`); a build without the feature `untargeted` refuses the recipe.
+#[cfg(feature = "untargeted")]
+fn adap<R: ReadAt>(
+    index: &mut Index<R>,
+    p: &Params,
+    a: &crate::adap_peak::AdapPeak,
+) -> Result<FileFeatures> {
+    crate::untargeted::flow::detect(index, p, a)
+}
+
+#[cfg(not(feature = "untargeted"))]
+fn adap<R: ReadAt>(
+    _: &mut Index<R>,
+    _: &Params,
+    _: &crate::adap_peak::AdapPeak,
+) -> Result<FileFeatures> {
+    Err(Error::new("error.badRecipe"))
 }
 
 /// `detect_with` for a sample whose blank run `blank` is open in the same batch: with the pointwise blank option of the broad pass on, the traces of

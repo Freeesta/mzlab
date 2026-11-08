@@ -36,22 +36,22 @@ try:
             keys = pg.evaluate("[...document.querySelectorAll('.bsp [data-sp=type] option')].map(o=>o.value).filter(Boolean)")
             g = pg.evaluate(f"+[...document.querySelectorAll('.bsp [data-sp=type] option')].find(o=>o.value==={keys[0]!r}).textContent.split('\u00d7').pop().replace(/\\s/g,'')")      # the menu lists the channels of the file (channelsOf), with their counts
             cnt = "+document.querySelector('.bsp [data-sp=n]').textContent.split(' ')[0].replace(/\\s/g,'')"
-            pg.select_option(".bsp [data-sp=type]", keys[0]); attendi(pg, f"{cnt}==={g}")
-            pg.select_option(".bsp [data-sp=type]", ""); attendi(pg, f"{cnt}!=={g}")
+            pg.select_option(".bsp [data-sp=type]", keys[0]); wait_for_js(pg, f"{cnt}==={g}")
+            pg.select_option(".bsp [data-sp=type]", ""); wait_for_js(pg, f"{cnt}!=={g}")
         step("the type menu inside narrows the list", typefilter)
         def esc():
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('.bsp')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('.bsp')")
         step("Esc closes it", esc)
         def open_at(where, idx):
             n0 = pg.evaluate("E.panels.length"); ids0 = pg.evaluate("E.panels.map(p=>p.id)")
             opener(); pg.select_option(".bsp [data-sp=where]", where)
-            pg.evaluate(f"document.querySelectorAll('.bsp .r')[{idx}].click()"); attendi(pg, f"E.panels.length=={n0 + 2}")
+            pg.evaluate(f"document.querySelectorAll('.bsp .r')[{idx}].click()"); wait_for_js(pg, f"E.panels.length=={n0 + 2}")
             assert pg.evaluate("E.panels.length") == n0 + 2, "a TIC and a spectrum are added"
             return pg.evaluate("(ids0=>{const o=stackOrder().map(q=>[q.id,q.type,q.link]);return {o,ids0}})", ids0)
         def at_end():
             g = open_at("end", 3); o, ids0 = g["o"], g["ids0"]
             assert o[-1][1] == "spec" and o[-2][1] == "chrom" and o[-2][0] not in ids0 and o[-1][2] == o[-2][0], o
-            attendi(pg, "stackOrder().at(-2).cur!=null")
+            wait_for_js(pg, "stackOrder().at(-2).cur!=null")
         step("«At the end»: new TIC with its spectrum under it", at_end)
         def at_top():
             g = open_at("top", 5); o, ids0 = g["o"], g["ids0"]
@@ -65,7 +65,7 @@ try:
                 else: assert o[i + 1][1] == "chrom" and o[i + 2][1] == "spec", o
         step("«Above / below this chart»", above_below)
         def keyboard():
-            opener(); pg.keyboard.press("ArrowDown"); pg.keyboard.press("ArrowDown"); n0 = pg.evaluate("E.panels.length"); pg.keyboard.press("Enter"); attendi(pg, f"E.panels.length=={n0 + 2}")
+            opener(); pg.keyboard.press("ArrowDown"); pg.keyboard.press("ArrowDown"); n0 = pg.evaluate("E.panels.length"); pg.keyboard.press("Enter"); wait_for_js(pg, f"E.panels.length=={n0 + 2}")
         step("keyboard: arrows + Enter", keyboard)
         step("state is coherent", lambda: pg.evaluate("STATO.verifica()") == [] or (_ for _ in ()).throw(AssertionError("stato")))
     errs = [e for e in r.errs if not (e[0].startswith("console") and ("GL" in str(e[1]) or "sandbox" in str(e[1])))]

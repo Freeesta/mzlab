@@ -31,6 +31,8 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 ## Banco
 - `cargo run --profile cli -p mzlab-lettori --features thermo --example thermo_banco -- FILE.raw --sha SHA40 --machine TESTO --profile cli [--reps 5] [--target native]`: una riga `banco/1` (apertura, TIC/BPC dall'indice, prima scansione, tutte le scansioni, 100 scansioni a posizioni fisse, MB/s, scansioni/s; `first_lap`, `median`, `best`, `noise`). Il file è letto in memoria prima del giro (`file_read_ms` a parte): non misura il disco. Le 100 posizioni sono xorshift64 da `0x9E3779B97F4A7C15`, `k = x % n`: l'oracolo RFR deve usare le stesse.
 - `python3 tools/bench/thermo_velocita.py unisci BANCO.jsonl RFR.jsonl > UNITO.tsv` poi `tabella UNITO.tsv --sha SHA40 --maquina TESTO`: tabelle per famiglia solo sui file aperti da entrambi, conteggio dei restanti a parte, nessun nome di file. `RFR.jsonl` = righe `banco/1` con `reader: "rfr"` e le stesse fasi.
+- File sostitutivo Orbitrap v66 per i banchi di velocità (nessun dato reale): `cargo run --release -p mzlab-lettori --example thermo_sintetico -- OUT.raw [--scans 2000] [--peaks 2000] [--bins 16] [--ms2 0] [--ms2-peaks 200] [--trailer 600] [--seed 1]` (MS1 FTMS in profilo con centroidi, `--ms2 K` MS2 HCD dipendenti in centroide dopo ogni MS1, scritto a flusso; stesso seme, stessi byte).
+- Taglie del file sostitutivo: pesante ≈ 2,1 GB `--scans 82500 --peaks 3000 --ms2 10`; normale ≈ 290 MB `--scans 5400 --peaks 600`. Test `thermo_sintetico_hr.rs`: ciclo, stesso seme, e un hash fissato di tutte le scansioni decodificate (centroidi e profilo) di un file in profilo, il cancello di ogni modifica del decodificatore.
 - Fasi del percorso verso la mappa e dell'mzML (livello B, nativo): `cargo run --profile cli -p mzlab-core --features thermo --example raw_tempi -- FILE.raw` (`RAW_VELOCE.md` §1). Browser: `python3 tools/bench_raw.py FILE.raw` (serve `wasm-bindgen`).
 - Dump di `thermo_scandump` (`scandump.md`): il suo `read_all_ms` include trailer e righe del dump per scansione, il suo `open_ms` apre due volte e copia il file; NON è lo stesso lavoro di `thermo_banco` e non va confrontato con esso.
 
@@ -76,6 +78,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 | altri 13 file ≤ 4,2 MB | 0,1-4,2 | 1-5396 | | 1,1-63,0 | ≤ 0,04 | 4-86 | 0,0-10,8 | | | 1-76 / 1-107 |
 
 - L'apertura è dominata da qualcosa che non è la lettura dei picchi: sugli SRM (PXD064022, MTBLS14496, PXD057351) apre in 214-437 ms e legge tutto in 21-43 ms, cioè l'apertura è 10-20× la lettura; è dove RFR vince (A-1). Cause da cercare nel profilo prima di T-7c (indice degli eventi e dei trailer, `GenericRecordStream`).
+- Opening an Orbitrap `.raw` looked up every `ScanParams` label in each scan's trailer by comparing strings field by field (`GenericRecord::get`); the label index of `Etichette`, built once per stream, makes each lookup a map hit. Numbers in `misure-velocita-raw.md`.
 - TIC/BPC e prima scansione sono già sotto il millisecondo e i 100 µs su tutti i file: per A6 il confronto con RFR è l'unico dato mancante.
 - La lettura a 0,7-1,1 GB/s con il file in memoria misura la decodifica, non il disco: il tempo da disco o OPFS sta in `file_read_ms` del banco e nelle letture a pezzi del browser.
 
@@ -109,6 +112,17 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 
 - Non esistono ancora: colonne (B2), matrice (B3), centroidatura fusa (B4), feature table da `.raw` (B5). Le righe B2-B5 si riempiono nelle fasi T-7d e T-7e; `.raw` → centroidi → feature table contro mzmine richiede mzmine sul Mac (R-08). Il tempo del Flow `.raw` → mzML → feature table e i valori di mzmine su mzML (`mzfinder-benchmark.md`) non hanno qui uno SHA e non si riportano.
 - Mappa dei costi (SHA-256 dell'impronta, SHA-1 della testata mzML, zlib) e obiettivi di RV-03/RV-04/RV-06: `RAW_VELOCE.md` §2.2 e §3 (misure precedenti con `opt-level = "z"`, senza SHA).
+
+**B-2 · Cloud 4 vCPU, `wasm`, site `.mzidx` build in Node 22** (`build_mzidx_native` of the engine with the `thermo` module as external reader, `fs.readSync` reads on demand, spill to file, 64 MB budget, fingerprints given; modules without `wasm-opt`; 10 alternating runs, median [min-max] in ms; same `.mzidx` bytes). `thermo_sintetico` files: normal 288 MB (`--scans 5400 --peaks 600`), heavy 2.14 GB (`--scans 82500 --peaks 3000 --ms2 10`).
+
+Measured with the blocks no longer zero-filled and without the adaptive window of `rawlettore::Stream`, whose numbers are in `misure-velocita-raw.md`.
+
+| file | open | scans | chromatograms | total |
+|---|---|---|---|---|
+| normal | 68 [65-72] | 344 [306-381] | 196 [182-252] | 617 [555-672] |
+| heavy | 1246 [1199-1321] | 4018 [3393-4708] | 2691 [2468-2868] | 7920 [7085-8708] |
+
+- The fingerprints (SHA-256 + SHA-1 + `Passata` probe, one worker) cost a further 1.0 s on the normal file and 7.4 s on the heavy one, before the build.
 
 ## Righe da ripetere
 - Riga A sul Mac con il banco su entrambi i lettori (R-15, RFR contro `thermo_banco`): SHA nuovo, stessa tabella A-1 con le definizioni di `thermo_banco`; la ripetizione sul cloud dopo T-3 è A-2b.

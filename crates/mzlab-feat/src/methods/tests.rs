@@ -87,3 +87,84 @@ fn every_placeholder_of_a_template_is_a_word_of_the_table() {
         }
     }
 }
+
+/// The isotope grouper of mzmine adds its sentence to the one of the detection; the averagine default adds nothing.
+#[test]
+fn the_isotope_grouper_adds_its_sentence_to_the_detection() {
+    let run = |iso: &str| {
+        let record = format!(
+            r#"{{"schema":"corsa/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+{{"name":"floor","value":20000,"state":"fixed"}},{{"name":"isotopes","value":"{iso}","state":"fixed"}},{{"name":"iso_ppm","value":5,"state":"fixed"}},
+{{"name":"iso_abs_da","value":0.0015,"state":"fixed"}},{{"name":"iso_rt_tol","value":0.05,"state":"fixed"}},{{"name":"iso_max_charge","value":2,"state":"fixed"}},
+{{"name":"iso_representative","value":"most_intense","state":"fixed"}}]}}]}}"#
+        );
+        methods_text(&style("paragraph"), record.as_bytes()).unwrap()
+    };
+    let grouper = run("grouper");
+    assert!(
+        grouper.contains("isotope grouper of mzmine 3 (m/z tolerance 5 ppm or 0.0015 Da, RT tolerance 0.05 min, charges up to 2, group representative most_intense)"),
+        "{grouper}"
+    );
+    assert!(!run("averagine").contains("isotope grouper"));
+}
+
+#[test]
+fn the_isotope_finder_adds_its_sentence_to_the_detection() {
+    let run = |iso: &str| {
+        let record = format!(
+            r#"{{"schema":"corsa/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+{{"name":"floor","value":20000,"state":"fixed"}},{{"name":"isotopes","value":"{iso}","state":"fixed"}},{{"name":"finder_ppm","value":15,"state":"fixed"}},
+{{"name":"finder_abs_da","value":0.005,"state":"fixed"}},{{"name":"finder_max_charge","value":3,"state":"fixed"}},{{"name":"finder_elements","value":"H,C,N,O,S","state":"fixed"}},
+{{"name":"finder_require_c13","value":true,"state":"fixed"}},{{"name":"finder_auto","value":false,"state":"fixed"}}]}}]}}"#
+        );
+        methods_text(&style("paragraph"), record.as_bytes()).unwrap()
+    };
+    let finder = run("finder");
+    assert!(
+        finder.contains("isotope finder of mzmine 4 on the apex MS1 spectrum of each feature (m/z tolerance 15 ppm or 0.005 Da, charges up to 3, elements H,C,N,O,S, 13C peak requirement on, heavy elements from the spectrum off)"),
+        "{finder}"
+    );
+    assert!(!finder.contains("isotope grouper"));
+    assert!(!run("averagine").contains("isotope finder"));
+}
+
+#[test]
+fn the_window_area_adds_its_sentence_to_the_detection() {
+    let run = |from: &str| {
+        let record = format!(
+            r#"{{"schema":"corsa/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+{{"name":"floor","value":20000,"state":"fixed"}},{{"name":"area_from","value":"{from}","state":"fixed"}}]}}]}}"#
+        );
+        methods_text(&style("paragraph"), record.as_bytes()).unwrap()
+    };
+    assert!(
+        run("window").contains("Feature areas were summed over every point within the m/z window")
+    );
+    assert!(!run("channel").contains("Feature areas were summed"));
+}
+
+#[test]
+fn the_wide_stitch_adds_its_sentence_to_the_detection() {
+    let run = |how: &str| {
+        let record = format!(
+            r#"{{"schema":"corsa/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+{{"name":"floor","value":20000,"state":"fixed"}},{{"name":"stitch","value":"{how}","state":"fixed"}}]}}]}}"#
+        );
+        methods_text(&style("paragraph"), record.as_bytes()).unwrap()
+    };
+    assert!(run("wide").contains("Pieces of a trace in neighbouring m/z channels were joined"));
+    assert!(!run("strict").contains("Pieces of a trace"));
+}
+
+/// `max_gap` of the mass traces is named as the missed scans it counts, as in `features.gapfill`.
+#[test]
+fn the_mass_trace_sentence_names_the_missed_scans() {
+    let record = r#"{"schema":"corsa/1","steps":[{"instance":"det","step":"features.detect@2","algorithm":"masstrace@1","status":"ok","params":[
+{"name":"floor","value":20000,"state":"fixed"},{"name":"min_points","value":5,"state":"fixed"},{"name":"max_gap","value":1,"state":"fixed"}]}]}"#;
+    let text = methods_text(&style("paragraph"), record.as_bytes()).unwrap();
+    assert!(
+        text.contains("minimum points 5, maximum missed scans between two points of a trace 1)"),
+        "{text}"
+    );
+    assert!(!text.contains("maximum gap"), "{text}");
+}

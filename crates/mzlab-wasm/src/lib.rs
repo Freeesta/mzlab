@@ -9,6 +9,7 @@ use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{analysis, budget::MemBudget, mzidx, mzml, peakq, peaks};
+pub(crate) use mzlab_core::accorpa::Accorpa;
 use std::collections::HashMap;
 use std::io::Write;
 use wasm_bindgen::prelude::*;
@@ -18,10 +19,13 @@ mod centroidi; mod panic; mod ricerca; mod adduct;
 pub mod esterno;
 mod contato;
 mod zip;
-mod nativi;
+mod nativi; mod impronte;
 mod corriere;
 mod nativi_motore;
 mod blocchi;
+mod gunzip;
+mod peak_area;
+pub use peak_area::peak_area;
 pub(crate) use blocchi::{js_blocks, BLOCK};
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
@@ -402,24 +406,6 @@ impl Engine {
     }
 }
 
-/// Writes to JS at offsets: `write(offset, Uint8Array)` (the worker puts them in a file of OPFS).
-struct JsOutput {
-    write: Function,
-}
-
-impl mzidx::Output for JsOutput {
-    fn write_at(&mut self, offset: u64, data: &[u8]) -> mzlab_core::Result<()> {
-        self.write
-            .call2(
-                &JsValue::NULL,
-                &(offset as f64).into(),
-                &Uint8Array::from(data),
-            )
-            .map(|_| ())
-            .map_err(|_| mzlab_core::Error::new("err.file.index").with("detail", "write"))
-    }
-}
-
 fn f64s(b: &[u8]) -> Vec<f64> {
     b.chunks_exact(8)
         .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
@@ -495,9 +481,10 @@ pub fn build_mzidx(
         hr1,
         declared: 0,
     };
-    let mut out = JsOutput { write };
+    // every call of `write` is an OPFS write and a read-back in the worker: contiguous writes go in blocks of 1 MiB (`accorpa`), same bytes
+    let mut out = Accorpa::flussi(nativi::JsOutput { write });
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
-    let mut spill = spill_put.zip(spill_get).map(|(put, get)| nativi::JsSpill { put, get });
+    let mut spill = spill_put.zip(spill_get).map(|(put, get)| Accorpa::new(nativi::JsSpill { put, get }));
     let st = mzidx::build_mzml_corriere(
         &table,
         js_blocks(read, size as u64),
@@ -506,6 +493,7 @@ pub fn build_mzidx(
         spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
         &mut corriere::JsCorriere::new(&aiuti),
     ).map_err(|e| error_json(&e))?;
+    out.fine().map_err(|e| error_json(&e))?;
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes
@@ -602,13 +590,10 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
 
 /// Every peak whose apex is between `x0` and `x1` (minutes), by RT, into `out` as `[lo, hi, baseline at lo, baseline at hi, area]` (indices,
 /// counts, counts x min): the one-click integration of high-resolution traces (`peakq_auto`). `smooth` = Savitzky-Golay window of the apex
-/// picking (points), `snr` = prominence over the noise, `rel` = prominence over the highest point (fraction), `min_scans` = narrowest peak,
-/// `half_window` = smoothing of the edges (0 = from the peak width), `slope` = flat-flank stop (fraction). Returns the number of peaks written.
+/// picking (points), `snr` = prominence over the noise (`AutoParams::from_dialog`). Returns the number of peaks written.
 #[wasm_bindgen]
-#[allow(clippy::too_many_arguments)]
-pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, rel: f64, min_scans: u32, half_window: u32, slope: f64, out: &mut [f64]) -> u32 {
-    let pick = peakq::ProminenceParams { snr, rel_prominence: rel, min_scans: min_scans as usize, smooth: smooth as usize, local_snr: 5.0, ..Default::default() };
-    let p = mzlab_core::peakq_auto::AutoParams { pick, half_window: half_window as usize, slope, ..Default::default() };
+pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, out: &mut [f64]) -> u32 {
+    let p = mzlab_core::peakq_auto::AutoParams::from_dialog(smooth as usize, snr);
     let found = mzlab_core::peakq_auto::auto_integrate(rt, y, x0, x1, p);
     let room = out.len() / 5;
     for (i, k) in found.iter().take(room).enumerate() {
@@ -617,16 +602,16 @@ pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr:
     found.len().min(room) as u32
 }
 
-/// Limits (min) of the peak at time `at` on a low-resolution trace into `out[0..2]` (`peakq_lr`, the page's `autoEdges`): `params` = the 11 numbers
-/// of `LrParams::from_slice`. Returns 2, or 0 when the peak is under the S/N threshold or the arguments do not fit.
+/// Limits (min) of the peak at time `at` on a low-resolution trace into `out[0..2]` (`peakq_lr`, the page's `autoEdges`): `params` = the 5 numbers
+/// of `LrParams::from_dialog`. Returns 2, or 0 when the peak is under the S/N threshold or the arguments do not fit.
 #[wasm_bindgen]
-pub fn lr_edges(rt: &[f64], y: &[f64], at: f64, reference: f64, mrm: bool, params: &[f64], out: &mut [f64]) -> u32 {
-    let Some(pk) = mzlab_core::peakq_lr::LrParams::from_slice(params) else { return 0 };
+pub fn lr_edges(rt: &[f64], y: &[f64], at: f64, mrm: bool, params: &[f64], out: &mut [f64]) -> u32 {
+    let Some(pk) = mzlab_core::peakq_lr::LrParams::from_dialog(params) else { return 0 };
     let n = rt.len().min(y.len());
     if out.len() < 2 || n == 0 {
         return 0;
     }
-    match mzlab_core::peakq_lr::lr_edges(&rt[..n], &y[..n], at, reference, mrm, &pk) {
+    match mzlab_core::peakq_lr::lr_edges(&rt[..n], &y[..n], at, 0.0, mrm, &pk) {
         Some((a, b)) => {
             out[0] = a;
             out[1] = b;
@@ -681,10 +666,10 @@ mod tests {
         assert_eq!(core.len(), 3);
         let row = |k: &mzlab_core::peakq_auto::AutoPeak| vec![k.lo as f64, k.hi as f64, k.base_lo, k.base_hi, k.area];
         let mut out = vec![0.0; 5 * 64];
-        let n = super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, 0, 0.03, &mut out) as usize;
+        let n = super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, &mut out) as usize;
         assert_eq!(out[..5 * n].to_vec(), core.iter().flat_map(row).collect::<Vec<f64>>());
         let mut short = vec![0.0; 10];
-        assert_eq!(super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, 0, 0.03, &mut short), 2);
+        assert_eq!(super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, &mut short), 2);
         assert_eq!(short, core[..2].iter().flat_map(row).collect::<Vec<f64>>());
     }
 

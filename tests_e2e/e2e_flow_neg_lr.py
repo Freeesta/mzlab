@@ -86,8 +86,8 @@ def plan(pol, hr):
          {"id": "lnk", "step": "tp.link@2", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"], "hypotheses": "gen.hypotheses"}},
          {"id": "flt", "step": "tp.filter@2", "in": {"tp": "lnk.tp", "hypotheses": "gen.hypotheses"}},
          {"id": "net", "step": "tp.network@1", "in": {"tp": "lnk.tp", "table": "lnk.tp", "samples": "file:samples.json"}},
-         {"id": "fil", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
-         {"id": "fdu", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"dup_ppm": 10} if hr else {"dup_da": 0.3}},
+         {"id": "fil", "step": "table.filter@2", "in": {"table": "gap.table", "samples": "file:samples.json"}},
+         {"id": "fdu", "step": "table.filter@2", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"dup_ppm": 10} if hr else {"dup_da": 0.3}},
          {"id": "csv", "step": "export.table_csv@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
          {"id": "mzt", "step": "export.mztab@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
          {"id": "inc", "step": "export.inclusion@1", "in": {"tp": "lnk.tp"}}]

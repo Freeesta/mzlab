@@ -1,6 +1,6 @@
 # Rust engine (crates/): tests, WASM build and a check of the dependencies in the WASM graph.
 # The only check of the protected main branch for the Rust engine is the always-on job `rust-ok`. fmt, clippy and deny block this workflow (clippy and fmt against tools/clippy_base.json, which can only shrink).
-# Cache: every run restores the newest one; runs on main save a new one when the Rust sources changed (key on crates/, vendor/, Cargo.lock), a pull request only while the newest cache has no tree record (tools/ci_cargo_mtime.py): a cache saved on a pull request is not visible to the other pull requests and would only push the ones of main out of the 10 GB of the repository.
+# Cache: every run restores the newest one; runs on main save a new one when the Rust sources changed (key on crates/, vendor/, Cargo.lock) and the newest one of main is older than 6 h (tools/ci_cache_fresca.py), a pull request only while the newest cache has no tree record (tools/ci_cargo_mtime.py): a cache saved on a pull request is not visible to the other pull requests and would only push the ones of main out of the 10 GB of the repository.
 name: rust
 
 on:
@@ -12,9 +12,11 @@ on:
 
 permissions:
   contents: read
+  actions: read   # tools/ci_cache_fresca.py lists the caches of main
 
+# a push to main has a group of its own (run_id): a run waiting in a shared group would be replaced by the next one, and the deploy gate of its commit would never open
 concurrency:
-  group: rust-${{ github.ref }}
+  group: rust-${{ github.event_name == 'push' && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
@@ -38,7 +40,7 @@ jobs:
           if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$' || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             echo "rust=true" >> "$GITHUB_OUTPUT"; echo "core=true" >> "$GITHUB_OUTPUT"; echo "deny=true" >> "$GITHUB_OUTPUT"; echo "misca=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|vendor/|Cargo\.|rust-toolchain\.toml|\.cargo/|\.github/workflows/rust\.yml|deny\.toml|tools/controlla_rust\.py|tools/ci_binari_test\.py|tools/ci_cargo_mtime\.py|tools/clippy_base\.json|tools/feat_mirato\.py|tests/test_feat_wasm\.py|tests/feat_wasm_node\.js|tests/test_guardie_memoria\.py)'; then
+          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|vendor/|Cargo\.|rust-toolchain\.toml|\.cargo/|\.github/workflows/rust\.yml|deny\.toml|tools/controlla_rust\.py|tools/ci_binari_test\.py|tools/ci_cargo_mtime\.py|tools/ci_cache_fresca\.py|tools/clippy_base\.json|tools/feat_mirato\.py|tests/test_feat_wasm\.py|tests/feat_wasm_node\.js|tests/test_guardie_memoria\.py)'; then
             echo "rust=true" >> "$GITHUB_OUTPUT"
           else
             echo "rust=false" >> "$GITHUB_OUTPUT"
@@ -103,12 +105,19 @@ jobs:
         run: |
           command -v cargo-machete >/dev/null || cargo install cargo-machete --locked --version 0.9.2
           cargo machete
+      # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "rust-v3-${{ runner.os }}-lint-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -164,12 +173,19 @@ jobs:
               echo "::error::forbidden dependency in the WASM graph of $p"; exit 1
             fi
           done
+      # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "rust-v3-${{ runner.os }}-wasm-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -219,12 +235,19 @@ jobs:
         run: |
           python -m pip install pytest
           python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
+      # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "rust-v3-${{ runner.os }}-wasmguard-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -272,12 +295,19 @@ jobs:
           rustup target add wasm32-wasip1
           python -m pip install jsonschema
           python -m pytest -q tests/test_flow_determinismo.py
+      # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "rust-v3-${{ runner.os }}-det-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -333,12 +363,21 @@ jobs:
           # the graph view of a mol/1 record is not a default feature either
           cargo test --locked --release -p mzlab-feat --features record --test grafo_record --test posizioni_record --test frammenti_record
           cargo test --locked --release -p mzlab-feat --features record,interp --test interp_record
+          # the Attributio cascade and its neighbours compile only with the feature `attributio` (one feature set, one build)
+          cargo test --locked --release -p mzlab-feat --features attributio,untargeted,record --test attributio_auto2b --test attributio_checks --test attributio_confirm --test attributio_export --test attributio_formula --test attributio_identita --test attributio_letture --test attributio_livelli --test attributio_matching --test attributio_ms2_engine --test attributio_proposte --test attributio_reglists --test attributio_regole --test attributio_screen --test attributio_sirius --test attributio_spiegazioni --test attributio_standard --test attributio_tox --test normative_official --test score_terms_insilico --test score_terms_rt --test untargeted_to_attributio --test steps_attributio_parity --test rt_descriptors
+      # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "rust-v3-${{ runner.os }}-testfeat-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -391,12 +430,19 @@ jobs:
         run: |
           # one build, then the test binaries four at a time (tools/ci_binari_test.py), one log group per binary
           python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-core -p mzlab-lettori -p mzlab-lib -p mzlab-mol -p mzlab-target
+      # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "rust-v3-${{ runner.os }}-testcore-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -452,12 +498,19 @@ jobs:
           # the fused .wasm of Attributio (feature all) is not a default feature: its own tests run here
           python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-attributio-wasm --features all
           python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-chem --features record --test mol3d_record
+      # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "rust-v3-${{ runner.os }}-testmisca-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -510,12 +563,19 @@ jobs:
         run: |
           # every other crate of the workspace (a new crate lands here unless it is added to a list above or to rust-misc-a)
           python3 tools/ci_binari_test.py -j 4 -- --locked --release --workspace --exclude mzlab-feat --exclude mzlab-core --exclude mzlab-lettori --exclude mzlab-lib --exclude mzlab-mol --exclude mzlab-target --exclude mzlab-attributio-wasm --exclude mzlab-chem --exclude mzlab-chem-wasm --exclude mzlab-llm --exclude mzlab-llm-wasm
+      # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
+      - id: fresca
+        name: Skip the save while the cache of main is fresh
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_cache_fresca.py "rust-v3-${{ runner.os }}-testmiscb-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-"
       # saved last and also after a red step (main only)
       - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && ((github.ref == 'refs/heads/main' && steps.fresca.outputs.fresh != 'true') || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry

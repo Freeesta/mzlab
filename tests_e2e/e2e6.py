@@ -19,9 +19,9 @@ try:
         def gone(sel): pg.wait_for_selector(sel, state="hidden")
         def lbl(want, sort=False):
             """Wait until the labels under the molecules read `want` (the molecule is drawn and labelled in the background)."""
-            attendi(pg, f"(l => JSON.stringify({'l.sort()' if sort else 'l'}) === {json.dumps(json.dumps(sorted(want) if sort else want, separators=(',', ':'), ensure_ascii=False))})({LBL})")
-        def lbl_any(cond): attendi(pg, f"{LBL}.some(x => {cond})")
-        def hole(): attendi(pg, "document.querySelector('#ctx') && !document.getElementById('ctx').hidden")
+            wait_for_js(pg, f"(l => JSON.stringify({'l.sort()' if sort else 'l'}) === {json.dumps(json.dumps(sorted(want) if sort else want, separators=(',', ':'), ensure_ascii=False))})({LBL})")
+        def lbl_any(cond): wait_for_js(pg, f"{LBL}.some(x => {cond})")
+        def hole(): wait_for_js(pg, "document.querySelector('#ctx') && !document.getElementById('ctx').hidden")
         def layout():
             P = pg.evaluate("E.panels.map(p=>({t:p.type,x:p.x,y:p.y,w:p.w,full:p.full,r0:p.r0,k:p.k,cur:p.cur}))"); W = pg.evaluate("Q('#dpanels').clientWidth")
             assert P[0]["t"] == "chrom" and P[1]["t"] == "spec", P
@@ -51,11 +51,11 @@ try:
             if wb: assert isinstance(wb.active.cell(2, 1).value, (int, float)) and wb.active.cell(1, 1).font.b
         step("plot Excel (.xlsx: numeric cells, units in headers)", lambda: (xlsxexcel(), pg.evaluate("setTab('full')"), ready(pg)))
         def fold():
-            if pg.is_visible("#dfiles"): close_side(pg); gone("#dfiles"); attendi(pg, "E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")      # open at first start
-            w0 = pg.evaluate("E.panels[0].w"); drawer(pg); shown("#dfiles"); attendi(pg, f"E.panels[0].w < {w0} - 150")
+            if pg.is_visible("#dfiles"): close_side(pg); gone("#dfiles"); wait_for_js(pg, "E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")      # open at first start
+            w0 = pg.evaluate("E.panels[0].w"); drawer(pg); shown("#dfiles"); wait_for_js(pg, f"E.panels[0].w < {w0} - 150")
             w1 = pg.evaluate("E.panels[0].w"); assert w1 < w0 - 150 and pg.is_visible("#dfiles"), (w0, w1)         # pinned next to the charts: they narrow
             pg.screenshot(path=SH + "61_folded.png")
-            close_side(pg); gone("#dfiles"); attendi(pg, f"E.panels[0].w === {w0}"); assert pg.evaluate("E.panels[0].w") == w0 and not pg.is_visible("#dfiles")
+            close_side(pg); gone("#dfiles"); wait_for_js(pg, f"E.panels[0].w === {w0}"); assert pg.evaluate("E.panels[0].w") == w0 and not pg.is_visible("#dfiles")
         step("pinned file list narrows the panels, closing it widens them", fold)
         def png():
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "png")
@@ -69,25 +69,25 @@ try:
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.open && BARRA.curTab === 'file'"); close_side(pg); gone("#dfiles")
         step("open file list is restored after reload", restore)
         def periodic():
-            pg.click("#np-pt"); attendi(pg, "document.querySelectorAll('.pt-c').length === 118")
+            pg.click("#np-pt"); wait_for_js(pg, "document.querySelectorAll('.pt-c').length === 118")
             assert pg.locator(".pt-c").count() == 118
-            pg.hover('.pt-c[data-s="Cl"]'); attendi(pg, "['Cloro', '34.96885', '75.76', '24.24'].every(s => document.querySelector('#pt-info').innerText.includes(s))")
+            pg.hover('.pt-c[data-s="Cl"]'); wait_for_js(pg, "['Cloro', '34.96885', '75.76', '24.24'].every(s => document.querySelector('#pt-info').innerText.includes(s))")
             t = pg.inner_text("#pt-info"); assert "Cloro" in t and "34.96885" in t and "75.76" in t and "24.24" in t, t
-            pg.click('.pt-c[data-s="Br"]'); pg.hover('.pt-c[data-s="C"]'); attendi(pg, "document.querySelector('#pt-info').innerText.includes('Bromo')")
+            pg.click('.pt-c[data-s="Br"]'); pg.hover('.pt-c[data-s="C"]'); wait_for_js(pg, "document.querySelector('#pt-info').innerText.includes('Bromo')")
             assert "Bromo" in pg.inner_text("#pt-info"), "click should pin the element"
             pg.screenshot(path=SH + "65_periodic.png")
         step("periodic table: hover shows masses and isotopes, click pins", periodic)
         def adducts():
-            pg.click("#refx"); attendi(pg, "!document.querySelector('#refdlg').open")      # the periodic table is a modal dialog: close it before the calculator
-            pg.evaluate("QQQRef.open('ad')"); attendi(pg, "BARRA.curTab === 'calc' && !!document.querySelector('#calcin').offsetParent"); pg.fill("#calcin", "C14H13F4N3O2S"); attendi(pg, "document.querySelector('#calcout').innerText.includes('386')")
-            t = pg.inner_text("#calcout"); assert "364" in t and "386" in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+ in the calculator, which now holds the adducts
+            pg.click("#refx"); wait_for_js(pg, "!document.querySelector('#refdlg').open")      # the periodic table is a modal dialog: close it before the calculator
+            pg.evaluate("QQQRef.open('ad')"); wait_for_js(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#calcin').offsetParent"); pg.fill("#calcin", "C14H13F4N3O2S"); wait_for_js(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('386')")
+            t = pg.inner_text("#sb-panel-adducts"); assert "364" in t and "386" in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+ in the Adducts tab under the calculator
             pg.screenshot(path=SH + "66_adducts.png")      # docked in the sidebar: no close button
-            pg.evaluate("QQQRef.open('ls')"); attendi(pg, "!!document.querySelector('#nl-list .nlr[data-f=g42]')"); m = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#nl-list .nlr')].map(r=>[r.dataset.f,r.querySelector('.nlm').textContent]))"); assert m.get("H2O") == "18" and m.get("g42") == "42", m
-            pg.click("#refx")
+            pg.evaluate("QQQRef.open('ls')"); wait_for_js(pg, "!!document.querySelector('#nl-list .nlr[data-f=g42]')"); m = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#nl-list .nlr')].map(r=>[r.dataset.f,r.querySelector('.nlm').textContent]))"); assert m.get("H2O") == "18" and m.get("g42") == "42", m
+            if pg.evaluate("Q('#refdlg').open"): pg.click("#refx")      # the tables are docked in the sidebar; a dialog is closed only if one is open
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
         if pg.evaluate("Q(\"#refdlg\").open"): pg.evaluate("Q(\"#refdlg\").close()")
         def isotopes():
-            pg.click("#np-pt"); attendi(pg, "document.querySelector('#reftitle') && document.querySelector('#reftitle').innerText.trim() === 'Tavola periodica'")
+            pg.click("#np-pt"); wait_for_js(pg, "document.querySelector('#reftitle') && document.querySelector('#reftitle').innerText.trim() === 'Tavola periodica'")
             assert pg.locator("#reftabs").count() == 0 and pg.inner_text("#reftitle").strip() == "Tavola periodica", "no tab bar: only the title"
             # periodic table keeps the same size whatever element is shown
             hs = []
@@ -98,7 +98,7 @@ try:
         step("no Isotopi tab; fixed-size periodic table", isotopes)
         def overlay():
             sp = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')")
-            pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); attendi(pg, "(l => l.includes('profilo teorico') && l.includes('allineato al picco'))([...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' '))")
+            pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); wait_for_js(pg, "(l => l.includes('profilo teorico') && l.includes('allineato al picco'))([...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' '))")
             leg = pg.evaluate("[...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' ')"); print("ISO LEG:", leg.replace("\n", " | "))
             assert "profilo teorico" in leg and "allineato al picco" in leg, leg
             pg.screenshot(path=SH + "70_iso_overlay.png")
@@ -106,11 +106,11 @@ try:
         step("isotope overlay on the spectrum, aligned to the observed peak", overlay)
         pg.click("#nav button[data-v=draw]"); pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=60000)
         def labels():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
-            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "nominal mass 151"], t            # one text per line: formula, then mass
-            pg.select_option("#lb-dec", "4"); lbl(["C8H9NO2", "exact mass 151.0633"])
-            assert pg.evaluate(LBL) == ["C8H9NO2", "exact mass 151.0633"], pg.evaluate(LBL)
-            pg.select_option("#lb-dec", "0"); lbl(["C8H9NO2", "nominal mass 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
+            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "massa nominale 151"], t            # one text per line: formula, then mass
+            pg.select_option("#lb-dec", "4"); lbl(["C8H9NO2", "massa esatta 151.0633"])
+            assert pg.evaluate(LBL) == ["C8H9NO2", "massa esatta 151.0633"], pg.evaluate(LBL)
+            pg.select_option("#lb-dec", "0"); lbl(["C8H9NO2", "massa nominale 151"])
         step("label under the molecule (formula, nominal mass)", labels)
         def ion():
             pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); lbl(["C8H10NO2+", "m/z 152"])
@@ -118,7 +118,7 @@ try:
             pg.screenshot(path=SH + "62_ion.png")
         step("charged structure shows m/z", ion)
         def breakbond():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
             # erase the amide C-N bond with Ketcher's own eraser tool (as a student would)
             pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); frames(pg, 5)      # first the tool: the layout may move, the position is read after it
             pos = pg.evaluate("""(()=>{const k=%s, st=k.editor.struct();let bid=null;st.bonds.forEach((b,id)=>{const a=st.atoms.get(b.begin).label,c=st.atoms.get(b.end).label;
@@ -126,21 +126,21 @@ try:
                const b=st.bonds.get(bid),p1=st.atoms.get(b.begin).pp,p2=st.atoms.get(b.end).pp;
                const c=k.editor.render.paper.canvas, r=c.getBoundingClientRect(), vb=c.viewBox.baseVal, f=document.getElementById('kframe').getBoundingClientRect();
                const ux=(p1.x+p2.x)/2*40, uy=(p1.y+p2.y)/2*40; return {x:f.left+r.left+(ux-vb.x)*r.width/vb.width, y:f.top+r.top+(uy-vb.y)*r.height/vb.height}})()""" % KQ)
-            pg.mouse.click(pos["x"], pos["y"]); lbl(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"], sort=True)
-            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"]), t
+            pg.mouse.click(pos["x"], pos["y"]); lbl(["C2H4O", "massa nominale 44", "C6H7NO", "massa nominale 109"], sort=True)
+            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "massa nominale 44", "C6H7NO", "massa nominale 109"]), t
             pg.screenshot(path=SH + "63_broken.png")
-            pg.evaluate(KQ + ".editor.undo()"); lbl(["C8H9NO2", "nominal mass 151"]); assert pg.evaluate(LBL) == ["C8H9NO2", "nominal mass 151"]
+            pg.evaluate(KQ + ".editor.undo()"); lbl(["C8H9NO2", "massa nominale 151"]); assert pg.evaluate(LBL) == ["C8H9NO2", "massa nominale 151"]
         step("erasing a bond gives two labels; undo restores", breakbond)
         def no_boxes():
             # the boxes that did the student's work are gone for good; the cream background option too
             assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-on','ex-bg'].every(i=>!document.getElementById(i))")
         step("caption / adduct table / fragment-calculation boxes and cream option removed", no_boxes)
         def sel_smiles():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
             assert not pg.is_visible("#sel-card")
             # no selection: only the hint; the table appears once the molecule is selected
             assert pg.is_visible("#prop-card") and "Seleziona una molecola" in pg.inner_text("#prop-body") and pg.locator("#prop-body table").count() == 0
-            pg.evaluate(SELALL); attendi(pg, "(c => !!c && !isNaN(parseFloat(c.textContent)))(document.querySelector('#prop-body tr:nth-child(2) td:nth-child(2)'))")
+            pg.evaluate(SELALL); wait_for_js(pg, "(c => !!c && !isNaN(parseFloat(c.textContent)))(document.querySelector('#prop-body tr:nth-child(2) td:nth-child(2)'))")
             assert pg.is_visible("#prop-card"); t = pg.inner_text("#prop-body"); print("PROP:", t.replace("\n", " | ")[:200])
             lp = float(pg.inner_text("#prop-body tr:nth-child(2) td:nth-child(2)")); assert 0.3 < lp < 1.8, lp
             # select the 4-aminophenol part (N, ring, OH), acetyl C(=O)CH3 stays out: a PIECE, 1 cut bond
@@ -148,21 +148,21 @@ try:
                st.bonds.forEach(b=>{const a=st.atoms.get(b.begin),c=st.atoms.get(b.end);if(b.type===2&&(a.label==='O'||c.label==='O')){acyl.add(b.begin);acyl.add(b.end)}});
                const co=[...acyl].find(i=>st.atoms.get(i).label==='C');st.bonds.forEach(b=>{if(b.begin===co&&st.atoms.get(b.end).label==='C')acyl.add(b.end);if(b.end===co&&st.atoms.get(b.begin).label==='C')acyl.add(b.begin)});
                st.atoms.forEach((a,i)=>{if(!acyl.has(i))keep.push(i)});k.editor.selection({atoms:keep})})()""" % KQ)
-            attendi(pg, "document.querySelector('#sel-body').innerText.includes('1 legame tagliato') && document.querySelector('#prop-body').innerText.includes('Selezione')")
+            wait_for_js(pg, "document.querySelector('#sel-body').innerText.includes('1 legame tagliato') && document.querySelector('#prop-body').innerText.includes('Selezione')")
             assert pg.is_visible("#sel-card"); t = pg.inner_text("#sel-body"); print("SEL:", t.replace("\n", " | "))
             assert "Nc1ccc(O)cc1" in t or "Oc1ccc(N)cc1" in t, t
             assert "1 legame tagliato" in t, t
             assert pg.is_visible("#prop-card") and "Selezione" in pg.inner_text("#prop-body")
             pg.screenshot(path=SH + "66_sel_smiles.png")
             # whole molecule selected: its full SMILES; the copy button works on the text
-            pg.evaluate("(()=>{const k=%s;k.editor.selection({atoms:[...k.editor.struct().atoms.keys()]})})()" % KQ); attendi(pg, "(t => t.length > 0 && !t.includes('legam'))(document.querySelector('#sel-body').innerText)")
+            pg.evaluate("(()=>{const k=%s;k.editor.selection({atoms:[...k.editor.struct().atoms.keys()]})})()" % KQ); wait_for_js(pg, "(t => t.length > 0 && !t.includes('legam'))(document.querySelector('#sel-body').innerText)")
             whole = pg.evaluate("(async()=>%s.getSmiles())()" % KQ)      # the selection of everything = the SMILES Ketcher gives for the canvas
             t = pg.inner_text("#sel-body"); assert whole in t and "legam" not in t, (whole, t)
             assert pg.get_attribute("#sel-body [data-cp]", "data-cp") == whole
             pg.evaluate(KQ + ".editor.selection(null)"); gone("#sel-card"); assert not pg.is_visible("#sel-card")
         step("selection shows its SMILES (also a piece); properties table (logP...)", sel_smiles)
         def props_ion():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); attendi(pg, f"{LBL}.length === 4"); pg.evaluate(SELALL); pg.wait_for_function("document.querySelectorAll('#prop-body tr').length===3", timeout=20000)
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); wait_for_js(pg, f"{LBL}.length === 4"); pg.evaluate(SELALL); pg.wait_for_function("document.querySelectorAll('#prop-body tr').length===3", timeout=20000)
             rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS:", rows)
             # default: charge excluded -> the ion is computed on its neutral form (4-aminophenol, C6H7NO)
             assert len(rows) == 2 and rows[1][0] == "C6H7NO" and rows[1][1] != "\u2013" and rows[0][1] != "\u2013", rows
@@ -180,13 +180,13 @@ try:
                 const g=c.getContext('2d');g.drawImage(i,0,0);return Array.from(g.getImageData(2,2,1,1).data)}"""
             assert pg.evaluate(corner) == [255, 255, 255, 255], "default: white background"
             assert pg.is_enabled("#ex-jpg")
-            pg.check("#ex-nobg"); attendi(pg, "document.getElementById('ex-jpg').disabled")
+            pg.check("#ex-nobg"); wait_for_js(pg, "document.getElementById('ex-jpg').disabled")
             assert not pg.is_enabled("#ex-jpg"), "JPEG must be off without background"
             assert pg.evaluate(corner)[3] == 0, "transparent PNG"
             with pg.expect_download() as d: pg.click("#ex-svg")
             svg = open(d.value.path(), encoding="utf-8").read()
             assert "rgb(100%, 100%, 100%)" not in svg and "<text" in svg, "SVG: no background rectangle, labels kept"
-            pg.uncheck("#ex-nobg"); attendi(pg, "!document.getElementById('ex-jpg').disabled")
+            pg.uncheck("#ex-nobg"); wait_for_js(pg, "!document.getElementById('ex-jpg').disabled")
             assert pg.is_enabled("#ex-jpg") and pg.evaluate(corner) == [255, 255, 255, 255]
         step("\"senza sfondo\": transparent PNG and SVG, JPEG disabled; off = white", nobg)
         def ion_choice():
@@ -196,7 +196,7 @@ try:
         step("a drawn charge: C8H10NO2+ m/z 152", ion_choice)
         def arrow_off():
             assert not pg.is_checked("#lb-a"), "the arrow labels are off by default"
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1>>CC(=O)Nc1ccc(O)c(O)c1')"); attendi(pg, f"{LBL}.length >= 4")
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1>>CC(=O)Nc1ccc(O)c(O)c1')"); wait_for_js(pg, f"{LBL}.length >= 4")
             t = pg.evaluate(LBL); assert not any("\u0394m" in x for x in t), t
         step("arrow labels (neutral loss, Δm) are off by default", arrow_off)
         def labelmenu():
@@ -230,10 +230,10 @@ try:
             assert pg.is_visible("#smi-warn") and "SMILES" in pg.inner_text("#smi-warn"), "warning line missing"
             pg.fill("#ex-smi", "Nc1ccc(O)cc1"); pg.click("#ex-load"); gone("#smi-warn")
             assert not pg.is_visible("#smi-warn"), "warning should disappear after a valid SMILES"
-            pg.click("#ex-link"); attendi(pg, "(l => l.length >= 2 && l.every(i => i.naturalWidth > 500))([...document.querySelectorAll('#bigbody img')])")
+            pg.click("#ex-link"); wait_for_js(pg, "(l => l.length >= 2 && l.every(i => i.naturalWidth > 500))([...document.querySelectorAll('#bigbody img')])")
             w = pg.evaluate("[...document.querySelectorAll('#bigbody img')].map(i=>[i.getAttribute('src'),i.naturalWidth])")
             assert [x[0] for x in w] == ["static/esempio-trasformazione.png", "static/esempio-frammentazione.png"] and all(x[1] > 500 for x in w), w
-            pg.screenshot(path=SH + "69_examples.png"); pg.click("#bigx"); attendi(pg, "!document.getElementById('bigdlg').open")
+            pg.screenshot(path=SH + "69_examples.png"); pg.click("#bigx"); wait_for_js(pg, "!document.getElementById('bigdlg').open")
         step("invalid SMILES warning line; example link shows the two schemes", smiles_and_examples)
         def macro():
             n = pg.evaluate("[...document.getElementById('kframe').contentDocument.querySelectorAll('[data-testid=polymer-toggler]')].filter(e=>e.getBoundingClientRect().width>0).length")
@@ -241,15 +241,15 @@ try:
         step("macromolecule mode switch hidden", macro)
         def zoom():
             b0 = pg.evaluate("document.getElementById('kframe').contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect().width")
-            pg.evaluate(KQ + ".editor.zoom(2)"); attendi(pg, f"document.getElementById('kframe').contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect().width > {b0} * 1.6")
+            pg.evaluate(KQ + ".editor.zoom(2)"); wait_for_js(pg, f"document.getElementById('kframe').contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect().width > {b0} * 1.6")
             b1 = pg.evaluate("document.getElementById('kframe').contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect().width")
             assert b1 > b0 * 1.6, (b0, b1); pg.evaluate(KQ + ".editor.zoom(1)")
         step("label follows the zoom", zoom)
         def off():
-            pg.uncheck("#lb-a"); attendi(pg, f"!{LBL}.some(x => x.includes('\u0394m'))")           # (the arrow labels are optional and were switched on by the previous steps)
+            pg.uncheck("#lb-a"); wait_for_js(pg, f"!{LBL}.some(x => x.includes('\u0394m'))")           # (the arrow labels are optional and were switched on by the previous steps)
             n0 = len(pg.evaluate(LBL)); assert n0 >= 1
-            pg.uncheck("#lb-f"); pg.uncheck("#lb-m"); attendi(pg, f"{LBL}.length === 0"); assert pg.evaluate(LBL) == []
-            pg.check("#lb-f"); pg.check("#lb-m"); attendi(pg, f"{LBL}.length === {n0}"); assert len(pg.evaluate(LBL)) == n0
+            pg.uncheck("#lb-f"); pg.uncheck("#lb-m"); wait_for_js(pg, f"{LBL}.length === 0"); assert pg.evaluate(LBL) == []
+            pg.check("#lb-f"); pg.check("#lb-m"); wait_for_js(pg, f"{LBL}.length === {n0}"); assert len(pg.evaluate(LBL)) == n0
         step("labels can be switched off", off)
         def export():
             ket = pg.evaluate("(async()=>{const k=%s;return k.getKet()})()" % KQ)

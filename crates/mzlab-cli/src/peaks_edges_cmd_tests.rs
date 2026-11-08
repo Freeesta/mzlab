@@ -80,3 +80,14 @@ fn the_command_name_has_an_alias() {
     }
     let _ = std::fs::remove_file(f);
 }
+
+#[test]
+fn dialog_numbers_at_their_defaults_are_the_engine_defaults() {
+    use mzlab_core::peakq_lr::LrParams;
+    let d = LrParams::default();
+    assert_eq!(
+        LrParams::from_dialog(&[d.win, d.edge_frac, d.sn_min, d.multi, d.tail]),
+        Some(d)
+    );
+    assert_eq!(LrParams::from_dialog(&[1.0, 2.0]), None);
+}

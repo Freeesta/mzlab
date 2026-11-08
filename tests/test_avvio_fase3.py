@@ -37,7 +37,7 @@ def run_node(code: str) -> dict:
     return json.loads([ln for ln in r.stdout.strip().splitlines() if ln.strip()][-1])
 
 
-def test_banner_alert_same_text_as_errore_and_restoring_box_removed():
+def test_banner_alert_same_text_as_error_and_restoring_box_removed():
     res = run_node(f"""
     {DOM}
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
@@ -98,7 +98,7 @@ def test_real_message_with_full_stop_is_not_a_key_and_unknown_key_is_generic():
 def test_failure_before_the_module_loaded_is_replayed():
     res = run_node(f"""
     {DOM}
-    global.QQQ_BROWSER = true; global.qqFailInfo = {{ key: 'load.err.engineStart' }};
+    global.MZLAB_BROWSER = true; global.qqFailInfo = {{ key: 'load.err.engineStart' }};
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     console.log(JSON.stringify({{ stato: AVVIO.stato, msg: reg['avvio-errore-msg'] && reg['avvio-errore-msg'].textContent }}));
     """)

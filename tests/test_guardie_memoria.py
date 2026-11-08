@@ -21,7 +21,10 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 
 def run(*a, **kw):
-    return subprocess.run(a, cwd=ROOT, check=True, capture_output=True, encoding="utf-8", **kw).stdout
+    r = subprocess.run(a, cwd=ROOT, capture_output=True, encoding="utf-8", **kw)
+    # the tail of stderr goes into the failure, or a red build in CI shows only the exit status
+    assert r.returncode == 0, f"{' '.join(a)} exited {r.returncode}:\n{r.stderr[-4000:]}"
+    return r.stdout
 
 
 needs = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")

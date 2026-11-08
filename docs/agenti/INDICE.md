@@ -7,6 +7,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | integrazione dei picchi nella vista Dati (strumento automatico, un clic = tutti i picchi in HR, parametri, `auto_integrate`) | `docs/agenti/dati-integrazione.md` |
 | primo caricamento di più file (si apre solo il primo), campi della tabella di carico | `docs/agenti/dati-carico.md` |
 | barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
+| titoli dei pannelli (regole uniche per tipo di pannello × segnale, `titoli.js`, etichetta «spettro di», nomi dei file esportati) | `docs/agenti/titoli-pannelli.md` |
 | affiancare e spostare i pannelli (maniglia, zone di rilascio, divisori, annulla) | `docs/agenti/pannelli-affianca.md` |
 | esportazioni a pezzi in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenienza, pulizia di `export/`) | `docs/agenti/dati-esporta.md` |
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
@@ -19,6 +20,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | riscaldamento in background dei file della cartella puntata (coda, `lr_warm`, `lr_warm_claim`) | `docs/agenti/riscaldamento.md` |
 | mappa RT×m/z, mirino, navigazione | `docs/agenti/dati-mappa.md` (visore 3D: `dati-mappa-3d.md`) |
 | velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
+| costo del disegno dei cromatogrammi su tracce dense (`tools/bench_grafici.py`: 10^6 punti, 20 file sovrapposti, rotella, trascinamento, ridimensionamento, linea di 1 px) | `docs/agenti/misure-grafici.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
 | calcolatrice (gruppi «cosa può essere» sotto il numero), pannello Addotti, fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
 | mondo HR: Banco, formule, isotopi, librerie, albero MSn | `docs/agenti/alta-risoluzione.md` |
@@ -28,6 +30,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
 | accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
+| inglese nel codice (identificatori, commenti, nomi di file e cartelle): inventario misurato, `tools/controlla_inglese.py`, `tools/italian_words.tsv`, mappa delle rinomine (`tools/english_rename_map.py`), piano a lotti | `docs/agenti/inglese.md` |
 | metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
 | mzFinder: Dig in diretta (`js/24_tpmine_diretta.js`, `TPLIVE`), coppie progenitore-TP e interfaccia HR (`js/21_tpmine_hr.js`, `mass_network`, previsione) | `docs/agenti/mzfinder-diretta.md`, `mzfinder-coppie.md` (nucleo: `mzfinder.md`) |
@@ -35,7 +38,8 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | scandump, oracolo RFR | `docs/agenti/scandump.md` |
 | velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_banco`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
 | conversione `.raw` → mzML: banco `raw_mzml_banco`, `tools/bench/raw_mzml.py`, T_min, punti di partenza V1-V9, cause di D8 e D11, caso denso sintetico | `docs/agenti/raw-mzml.md` |
-| tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` (tentativi scartati: `ottimizzazioni-tentate.md`) |
+| tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` (lettori dei produttori, `.raw`, `.wiff`, `.D`: `misure-velocita-raw.md`; tentativi scartati: `ottimizzazioni-tentate.md`) |
+| caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`) | `docs/agenti/misure-caricamento.md` |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`; specifica binaria: `wiff_specifica_completa.md`) |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
@@ -67,13 +71,16 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | estremi di array grandi senza spread, ricerca binaria dei punti in una finestra (`numeri.js`: `maxOf`, `minOf`, `maxAbs`, `spanOf`) | `docs/agenti/numeri.md` |
 | tabella delle transizioni SIM/MRM di un triplo quadrupolo (`chrom.transitions`, `transitions/`, integrazione per campione, candidati di RT, preset di esempio) | `docs/agenti/transizioni.md` |
+| lista integrata di pesticidi e contaminanti ambientali (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/scarica_pesticidi.py`, seconda lista di `contaminanti.json`) | `docs/agenti/pesticidi.md` |
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
 | database delle molecole (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV e JSON canonico, ricerca, livelli catalogo/importata/utente, catalogo `mzlab/web/molecole/catalogo.csv`, rotte `api/molecules/*`) | `docs/agenti/molecules.md` (studio e piano a PR: `docs/studi/molecules/README.md`) |
 | canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; piano DEV-a…f) | `docs/agenti/canali-dati.md` (prompt dei DEV: `docs/archivio/prompt-canali/a.md`…`f.md`) |
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/campioni/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
-| tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio), build separata `MZLAB_WASM_SEPARATI` | `docs/agenti/wasm-tetti.md` |
+| tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
+| misure prima/dopo dei .wasm per ogni modifica (byte dopo `wasm-opt`, tetti in vigore) | `docs/agenti/wasm-tetti-misure.md` |
 | parità sito ↔ app (funzioni e passi del Flow presenti da una parte sola, operazioni del motore assenti nell'app, test di parità mancanti, prossimi passi) | `docs/studi/parita-browser.md` (formati: `docs/studi/formati-matrice.md`) |
+| tabella funzione × faccia (sito, app, CLI) × prova, guardia delle op di `rust-worker.js` senza ramo nell'app (`tests/test_parita_operazioni.py`), determinismo (ordine delle `HashMap`) | `docs/agenti/parita.md` |
 | potenziale di WebAssembly (profili `opt-level`, SIMD128, binaryen, zlib-rs, thread, memory64, browser minimi; misure e prompt DEV) | `docs/agenti/wasm-potenziale.md` (prompt: `docs/studi/PROMPT_WASM_POTENZIALE/`) |
 | service worker, cache per versione del sito, `sw-manifest.json`, aggiornamenti | `docs/agenti/service-worker.md` |
 | esportazione di tutti i dati dell'utente: inventario dello storage nel browser, scrittore ZIP (`zip.rs`) | `docs/agenti/esporta-dati.md` |
@@ -92,9 +99,10 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | misure dei motori | `docs/agenti/misure.md` (misure Rust e dei moduli: `misure-rust.md`; clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
+| tagli della CI già misurati e scartati, tempi dei job Rust | `docs/agenti/ci-tagli.md` |
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | Dependabot, CodeQL, impostazioni di sicurezza da accendere a mano | `docs/agenti/sicurezza.md` |
-| sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`) |
+| sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`, `tests_e2e/e2e_lab_vuoto.py` = giro senza file) |
 | contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
 | modulo «aperti» (mzML con numpress, mzXML: `crates/mzlab-lettori/src/aperti/`, `numpress.rs`) | `docs/agenti/lettori-aperti.md` |
 | matrice di conformità mzML (varianti, fixture `tools/mzml_varianti.py`, buchi noti) | `docs/agenti/mzml-matrice.md` |
@@ -102,7 +110,8 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | moduli lettori, uno per famiglia (`crates/mzlab-lettori*`, `.wasm` a parte in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, regola R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, tetti) | `docs/agenti/lettori-modulo.md` |
 | rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`cancello_rilascio.py`) | `docs/agenti/rilascio.md` |
 | Flow grafico (scheda: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`; copertura di Tabui: `flow-copertura-tabui.md`, `flow-pacchetto-tabui.md`; griglia dei metadati dei campioni: `flow-meta-griglia.md`) |
-| esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `stima_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
+| esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `estimate_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
+| raggruppamento degli ioni di un composto (`features.group`, `ionnet/1`: correlazione, isotopi, ion identity networking, archi per GNPS; `crates/mzlab-feat/src/ionnet/`) | `docs/agenti/gruppi-ioni.md` |
 | `qc.mass_accuracy` (accuratezza di massa, correzione della tabella, controllo della calibrazione dal tasto destro del TIC `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-massa.md` |
 | usabilità del Flow (modello MSn infusione: grafo dopo la corsa, suggerimenti dei campi, Raw files, nomi, barra, terminale; prompt dei lavori) | `docs/agenti/flow-ux.md` |
 | lanciare la verifica nel container cloud (Chromium, `--setup`, test col sito costruito) | `docs/agenti/ambiente-cloud.md` |
@@ -111,9 +120,11 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
 | pulsante «XIC» nella barra dello spettro, lente XIC al passaggio sul picco (`xic-lente.js`), banco e tabella di partenza dei tempi del visualizzatore (`tools/bench_visore.py`, `visore_tempi.rs`) | `docs/agenti/visore-veloce.md` |
 | pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusione.rs` (chiavi, blocchi, nome), comando `diagnosi_infusione` | `docs/agenti/infusione-lente.md` |
+| scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset` | `docs/agenti/xic-scarto.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
-| tooltip: regola (solo se aggiungono informazione), inventario, hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
+| Safari e iPadOS (WebKit): API usate × versione minima × ripiego, pavimento 16.4, ripieghi di `compat.js` (`AbortSignal.any`, `createWritable`, appunti, `accept` sull'iPad) | `docs/agenti/compat-safari.md` |
+| tooltip: regola (solo se aggiungono informazione), inventario, elenco completo dei testi (`tools/elenco_tooltip.py`), hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
 | file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
 | elenco degli esperimenti MSn di un file DDA nella finestra «Albero MSn» (schede Experiments/Tree, TIC e XIC di un precursore, `msn-elenco.js`, colonne `lev`/`z` di `/api/dda`, `ptol` di `/api/chrom`) | `docs/agenti/msn-elenco.md` |
 | audit delle pagine (ogni vista × campioni × pulsanti dell'header: CLS, pannelli che si spostano, memoria, errori; `tests_e2e/audit_pagine.py`, test di fumo `e2e_giro_intestazione`) | `docs/studi/AUDIT_PAGINE.md` |

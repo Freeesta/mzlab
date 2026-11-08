@@ -34,10 +34,10 @@ r = Run(port=8979, wd="/tmp/wd_infregole")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1900})
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); attendi(pg, "window.qqReady === true")
-        pg.set_input_files("#pick", [str(F)]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 180000)
-        pg.click("text=Load data"); attendi(pg, "E.files.length>=1", 90000)
-        attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
+        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); wait_for_js(pg, "window.qqReady === true")
+        pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 180000)
+        pg.click("text=Load data"); wait_for_js(pg, "E.files.length>=1", 90000)
+        wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         pg.evaluate(STAND_IN, [FX, RX]); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=30000)
         def labels():
@@ -70,7 +70,7 @@ try:
         def flt():
             n0 = pg.locator(".ig-node").count(); a0 = pg.locator(".ig-arc").count()
             box = pg.locator(".ig-flt:has(#ig-rf)").bounding_box(); assert box["height"] >= 24 and box["width"] >= 24, box
-            pg.focus("#ig-rf"); pg.keyboard.press("Space"); attendi(pg, "INFG.G.rf === true")
+            pg.focus("#ig-rf"); pg.keyboard.press("Space"); wait_for_js(pg, "INFG.G.rf === true")
             assert pg.locator(".ig-arc").count() == 3 < a0 and pg.locator(".ig-node").count() < n0, (pg.locator(".ig-arc").count(), pg.locator(".ig-node").count())
             assert pg.evaluate("document.activeElement.id") == "ig-rf"
             assert pg.get_attribute("#ig-rf", "aria-label")
@@ -81,7 +81,7 @@ try:
             rows = pg.inner_text("dialog#tdati tbody"); assert "loss_co2" in rows and "DEM16 (doi:10.1039/c5np00073d)" in rows, rows
             assert pg.locator("dialog#tdati tbody tr").count() == 3 + 3 and "n0>n1" not in rows, (pg.locator("dialog#tdati tbody tr").count(), rows[:600])
             pg.keyboard.press("Escape")
-            pg.click("#ig-copyd"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('loss_co2'))")
+            pg.click("#ig-copyd"); wait_for_js(pg, "navigator.clipboard.readText().then(t => t.includes('loss_co2'))")
         step("the data table and «Copy data» have the columns rule, source and priority (filtered like the graph)", data)
         AXE = axe_path()
         def axe():
@@ -90,7 +90,7 @@ try:
             v = pg.evaluate("axe.run('#hrinfo', {runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r=>r.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>[v.id,v.nodes.length]))")
             assert not v, v
         if AXE: step("axe: no serious or critical violation with the rules shown", axe)
-        pg3 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg3.goto(f"http://127.0.0.1:{r.port}/?lang=it"); attendi(pg3, "window.qqReady === true")
+        pg3 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg3.goto(f"http://127.0.0.1:{r.port}/?lang=it"); wait_for_js(pg3, "window.qqReady === true")
         load(pg3, [F], 6000, 1); pg3.evaluate(STAND_IN, [FX, RX]); drawer(pg3, "gra"); pg3.wait_for_selector(".ig-node", timeout=30000)
         def it():
             assert "Solo perdite con una regola" in pg3.inner_text(".ig-flt")

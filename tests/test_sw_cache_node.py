@@ -1,4 +1,4 @@
-"""mzlab/web/sw.js with a mocked scope: app files are cache-first by site version, checked against the manifest, navigations network-first; the first-paint scripts are preloaded."""
+"""mzlab/web/sw.js with a mocked scope: app files are cache-first by site version, checked against the manifest, navigations network-first; the first-paint scripts are preloaded (but features.js)."""
 import re
 import shutil
 import subprocess
@@ -19,5 +19,7 @@ def test_first_paint_scripts_are_preloaded():
     web = ROOT / "mzlab" / "web"
     names = re.search(r'\[((?:"[\w-]+",?\s*)+)\]\.forEach', (web / "first-paint.js").read_text()).group(1)
     html = (web / "index.html").read_text()
+    # features.js is not preloaded: Chrome never used that preload (cross-world service worker resource mismatch) and fetched the file twice
     for n in re.findall(r'"([\w-]+)"', names):
-        assert f'<link rel="preload" as="script" href="static/{n}.js">' in html, n
+        tag = f'<link rel="preload" as="script" href="static/{n}.js">'
+        assert (tag not in html) if n == "features" else (tag in html), n

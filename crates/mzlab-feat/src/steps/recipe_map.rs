@@ -5,15 +5,38 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
 
+use crate::adap_peak::AdapPeak;
 use crate::axis::{da, MassAxis};
 use crate::centwave::{CentWave, Peak};
 use crate::lrnoise::set_gate;
 use crate::recipe::{Mode, Recipe};
 
+use super::recipe_algo;
+use super::recipe_iso;
+
 fn bad(step: &str, name: &str) -> Error {
     Error::new("err.flow.param.type")
         .with("instance", step)
         .with("param", name)
+}
+
+/// `area_from` of `features.detect` (`channel` or `window`, the area of the quality trace) and `stitch` (`strict` or `wide`): the second value turns its switch on.
+fn set_trace_choice(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
+    let (flag, on) = if k == "area_from" {
+        (&mut r.steps.quality.area_window, ["channel", "window"])
+    } else {
+        (&mut r.detect.stitch_wide, ["strict", "wide"])
+    };
+    *flag = match v.str() {
+        Some(x) if x == on[0] => false,
+        Some(x) if x == on[1] => true,
+        _ => return Err(bad(step, k)),
+    };
+    Ok(())
+}
+
+fn choice(on: bool, yes: &str, no: &str) -> Value {
+    Value::Str(if on { yes } else { no }.into())
 }
 
 /// A tolerance written on the wrong axis: `param` is in ppm on the unit axis or `tol_da`/`dup_da` on the ppm axis; never read as the other unit.
@@ -55,11 +78,11 @@ fn set_tol_da(r: &mut Recipe, step: &str, x: f64) {
     }
 }
 
-/// Writes `params` (descriptor names, any order; `algorithm` and `axis` are applied before the rest; `algorithm` is `centwave` or `masstrace` for `features.detect`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
+/// Writes `params` (descriptor names, any order; `algorithm`, `axis` and `isotopes` are applied before the rest; `algorithm` is `centwave`, `masstrace` or `adap_localmin` for `features.detect`, `groups` or `join` for `features.align`, `integrate` or `peak_finder` for `features.gapfill`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
 pub fn apply(r: &mut Recipe, step: &str, params: &[(String, Value)]) -> Result<()> {
     let mut sorted: Vec<&(String, Value)> = params.iter().collect();
     mzlab_core::sortc::slice_by_key(&mut sorted, |(k, _)| {
-        !matches!(k.as_str(), "algorithm" | "axis")
+        !matches!(k.as_str(), "algorithm" | "axis" | "isotopes")
     });
     for (k, v) in sorted {
         set(r, step, k, v)?;
@@ -67,15 +90,21 @@ pub fn apply(r: &mut Recipe, step: &str, params: &[(String, Value)]) -> Result<(
     Ok(())
 }
 
-/// The peak model of `features.detect`: the algorithm, and the parameters that only the wavelet model has.
-/// Detect parameters that belong to the peak model.
-const PEAK_KEYS: [&str; 6] = [
+/// Detect parameters that belong to the peak model: the algorithm, those of the wavelet model and those of `adap_localmin`.
+const PEAK_KEYS: [&str; 13] = [
     "algorithm",
     "ppm",
     "peak_width_s",
     "width_s",
     "snr",
     "broad_peaks",
+    "noise_factor",
+    "abs_da",
+    "smooth_window",
+    "chrom_threshold",
+    "search_rt",
+    "min_ratio",
+    "duration",
 ];
 
 /// `[min, max]` minutes (`Some(None)` for null = all rows); `None` when the value is not a range.
@@ -83,8 +112,7 @@ fn rt_range(v: &Value) -> Option<Option<(f64, f64)>> {
     if matches!(v, Value::Null) {
         return Some(None);
     }
-    let (a, b) = (v.at(0)?.f64()?, v.at(1)?.f64()?);
-    (a.is_finite() && b.is_finite() && b >= a).then_some(Some((a, b)))
+    pair(v).map(Some)
 }
 
 fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
@@ -92,9 +120,13 @@ fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         r.detect.peak = match v.str() {
             Some("centwave") => Peak::CentWave(CentWave::default()),
             Some("masstrace") => Peak::Minima,
+            Some("adap_localmin") => Peak::Adap(AdapPeak::default()),
             _ => return Err(bad(step, k)),
         };
         return Ok(());
+    }
+    if let Peak::Adap(a) = &mut r.detect.peak {
+        return set_adap(a, step, k, v);
     }
     let Peak::CentWave(c) = &mut r.detect.peak else {
         return Err(Error::new("err.flow.param.unknown").with("param", k));
@@ -126,6 +158,34 @@ fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
             }
         }
         _ => return Err(bad(step, k)),
+    }
+    Ok(())
+}
+
+/// A `[min, max]` pair of finite numbers with `max >= min`.
+fn pair(v: &Value) -> Option<(f64, f64)> {
+    let (a, b) = (v.at(0)?.f64()?, v.at(1)?.f64()?);
+    (a.is_finite() && b.is_finite() && b >= a).then_some((a, b))
+}
+
+fn set_adap(a: &mut AdapPeak, step: &str, k: &str, v: &Value) -> Result<()> {
+    if k == "duration" {
+        a.duration = pair(v).ok_or_else(|| bad(step, k))?;
+        return Ok(());
+    }
+    let x = v
+        .f64()
+        .filter(|x| x.is_finite() && *x >= 0.0)
+        .ok_or_else(|| bad(step, k))?;
+    match k {
+        "noise_factor" => a.noise_factor = x,
+        "ppm" => a.ppm = x,
+        "abs_da" => a.tol_da = x,
+        "smooth_window" => a.smooth_window = x as usize,
+        "chrom_threshold" => a.chrom_threshold = x.min(1.0),
+        "search_rt" => a.search_rt = x,
+        "min_ratio" => a.min_ratio = x,
+        _ => return Err(Error::new("err.flow.param.unknown").with("param", k)),
     }
     Ok(())
 }
@@ -166,8 +226,11 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
+        ("features.detect", "area_from" | "stitch") => set_trace_choice(r, step, k, v)?,
         ("features.detect", "min_width" | "min_snr") => set_gate(&mut r.detect, k, num()?),
+        ("features.detect", _) if recipe_iso::owns(k) => recipe_iso::set(r, step, k, v)?,
         ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
+        _ if recipe_algo::owns(step, k) => recipe_algo::set(r, step, k, v)?,
         ("features.align", "mode") => {
             r.mode = match v.str() {
                 Some("family") => Mode::Family,
@@ -206,6 +269,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.ms2_link", "default_half_window") => r.steps.ms2.default_half_window = num()?,
         ("features.ms2_link", "tol_ppm") => r.steps.ms2.tol_ppm = num()?,
         ("features.ms2_link", "weak") => r.steps.ms2.weak = num()? as f32,
+        ("features.ms2_link", "margin_s") => r.steps.ms2.margin_s = num()?,
         _ => {
             return Err(Error::new("err.flow.param.unknown")
                 .with("instance", step)
@@ -235,6 +299,29 @@ fn push_tols(r: &Recipe, step: &str, v: &mut Vec<(&'static str, Value)>) {
     }
 }
 
+/// The parameters of the peak model of `features.detect` that the masstrace default does not carry.
+fn push_peak(peak: &Peak, v: &mut Vec<(&'static str, Value)>) {
+    let n = |x: f64| Value::Num(x);
+    if let Peak::CentWave(c) = peak {
+        let (a, b) = c.width_s;
+        v.push(("ppm", n(c.ppm)));
+        v.push(("peak_width_s", Value::Arr(vec![n(a), n(b)])));
+        v.push(("snr", n(c.snr)));
+        v.push(("broad_peaks", Value::Bool(c.broad.enabled)));
+    }
+    if let Peak::Adap(a) = peak {
+        let (lo, hi) = a.duration;
+        v.push(("noise_factor", n(a.noise_factor)));
+        v.push(("ppm", n(a.ppm)));
+        v.push(("abs_da", n(a.tol_da)));
+        v.push(("smooth_window", n(a.smooth_window as f64)));
+        v.push(("chrom_threshold", n(a.chrom_threshold)));
+        v.push(("search_rt", n(a.search_rt)));
+        v.push(("min_ratio", n(a.min_ratio)));
+        v.push(("duration", Value::Arr(vec![n(lo), n(hi)])));
+    }
+}
+
 /// The values `r` holds for every parameter of `step` that `apply` knows (sorted by name; `mass_defect` only on the unit axis).
 pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
     let n = |x: f64| Value::Num(x);
@@ -249,16 +336,16 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("max_gap", n(f64::from(r.detect.max_gap))),
                 ("long_trace", n(f64::from(r.detect.long_trace))),
                 ("merge_overlap", n(r.detect.merge_overlap)),
+                (
+                    "area_from",
+                    choice(r.steps.quality.area_window, "window", "channel"),
+                ),
+                ("stitch", choice(r.detect.stitch_wide, "wide", "strict")),
                 ("min_width", n(r.detect.min_width)),
                 ("min_snr", n(r.detect.min_snr)),
             ];
-            if let Peak::CentWave(c) = &r.detect.peak {
-                let (a, b) = c.width_s;
-                v.push(("ppm", n(c.ppm)));
-                v.push(("peak_width_s", Value::Arr(vec![n(a), n(b)])));
-                v.push(("snr", n(c.snr)));
-                v.push(("broad_peaks", Value::Bool(c.broad.enabled)));
-            }
+            push_peak(&r.detect.peak, &mut v);
+            recipe_iso::values(r, &mut v);
             if let Some((a, b)) = r.rt_range {
                 v.push(("rt_range", Value::Arr(vec![n(a), n(b)])));
             }
@@ -299,10 +386,12 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
         "features.ms2_link" => vec![
             ("default_half_window", n(r.steps.ms2.default_half_window)),
             ("weak", n(f64::from(r.steps.ms2.weak))),
+            ("margin_s", n(r.steps.ms2.margin_s)),
         ],
         _ => Vec::new(),
     };
     push_tols(r, step, &mut v);
+    recipe_algo::values(r, step, &mut v);
     mzlab_core::sortc::slice_by(&mut v, |a, b| a.0.cmp(b.0));
     v.into_iter().map(|(k, x)| (k.to_string(), x)).collect()
 }

@@ -13,6 +13,7 @@ Questo documento riassume lo stato di conformità all'accessibilità (WCAG 2.1 l
   - Tutti i comandi interattivi visibili sono raggiungibili tramite sequenza sequenziale `Tab` / `Shift+Tab`.
   - Ogni elemento interattivo a fuoco mostra un indicatore visibile (outline o box-shadow ben contrastato tramite `:focus-visible`).
   - Assenza di trappole da tastiera (`keyboard traps`).
+  - Il fuoco non cade mai sul `body`: un comando che toglie se stesso (× di una riga di «Estrai ioni», `e2e_xic_fuoco`) passa il fuoco alla riga vicina, anche dentro un dialogo modale.
   - Tasto `Escape` chiude in modo consistente dialoghi, finestre modali, drawer, paletta comandi (`Ctrl+K`) e menu a comparsa.
   - Scorciatoie dedicate per navigazione senza trascinamento nei grafici (`+`, `-`, `[`, `]`, `0`).
 - **Contrasto cromatico (WCAG 1.4.3 & 1.4.11)**:
@@ -49,7 +50,7 @@ Questo documento riassume lo stato di conformità all'accessibilità (WCAG 2.1 l
 Tutti i test possono essere eseguiti localmente dopo aver preparato il sito con `python3 tools/prepara_sito.py`.
 
 ### 1. Test veloce Dati (fast path CI / fumo)
-Esegue axe-core su 6 stati della vista Dati, controlla focus visibile da tastiera su tutti i controlli, chiusura con Esc, reflow a 320 px e modalità a contrasto forzato:
+Esegue axe-core su 9 stati (compresi calcolatrice, finestra di integrazione e albero MSn) della vista Dati, controlla focus visibile da tastiera su tutti i controlli, chiusura con Esc, reflow a 320 px e modalità a contrasto forzato:
 ```bash
 python3 tests_e2e/e2e_a11y_dati.py
 ```
@@ -60,13 +61,12 @@ Verifica che i grafici e la tabella dei dati non presentino violazioni axe, cont
 python3 tests_e2e/e2e_axe_grafici.py
 ```
 
-### 3. Audit axe-core viste complementari (HR, Disegno, Pratica, Tour)
-Verifica l'assenza di violazioni su Banco HR, visualizzatore molecolare Disegno, esercizi pratici e passaggi del tour guidato:
+### 3. Audit axe-core viste complementari (HR, Disegno, Tour)
+Verifica l'assenza di violazioni su Banco HR, visualizzatore molecolare Disegno e passaggi del tour guidato (le pagine di Pratica non hanno ancora un test a11y proprio):
 ```bash
 python3 tests_e2e/e2e_axe_release.py
 python3 tests_e2e/e2e_a11y_disegno.py
 python3 tests_e2e/e2e_a11y_hr.py
-python3 tests_e2e/e2e_a11y_pratica.py
 ```
 
 

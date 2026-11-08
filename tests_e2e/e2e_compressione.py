@@ -28,7 +28,7 @@ JSON = """async u => { const r = await fetch(u); return { status: r.status, j: a
 def fresh(b):
     c = b.new_context(viewport={"width": 1500, "height": 1800}, accept_downloads=True); c.set_default_timeout(120000); pg = c.new_page()
     pg.on("pageerror", lambda e: errs.append(("pageerror", str(e)))); pg.add_init_script(INIT)
-    pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000)
+    pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
     pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
     return c, pg
 

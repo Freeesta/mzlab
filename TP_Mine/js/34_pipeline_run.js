@@ -20,7 +20,7 @@
       <div class="row"><strong>Roles and times</strong><label>Time unit <select id="pr-unit" aria-label="Unit of the times of the files">${["min", "s", "h", "d"].map(u => `<option>${u}</option>`).join("")}</select></label>
         <button type="button" id="pr-all" title="Accept the times proposed from the names (yellow)">Confirm times</button></div>
       <table id="pr-tab"><caption class="mut">Role and treatment time of each file; a time proposed from the name is yellow until you confirm it (Enter or «Confirm times»)</caption></table><div id="pr-warn" role="status"></div></div>
-    <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><label class="pipe-both"><input type="checkbox" id="pipe-both" aria-label="Both polarities: run the other polarity too and look for the same neutral mass in it"> Both polarities</label><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><button type="button" id="pipe-cc" aria-label="Clear cache: delete the stored detections of the files" title="Deletes the detections kept for the next run; the next run detects every file again">Clear cache</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
+    <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><label class="pipe-both"><input type="checkbox" id="pipe-both" aria-label="Both polarities: run the other polarity too and look for the same neutral mass in it"> Both polarities</label><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><button type="button" id="pipe-cc" aria-label="Clear cache: delete the stored detections of the files" title="Deletes the detections kept for the next run">Clear cache</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
     <div id="pipe-res"></div></details>`;
 
   function mount(box, ctx) {
@@ -100,13 +100,13 @@
   // ------------------------------------------------------------ roles and times (campioni/2): the Rust proposes and checks, the page packs and shows
   const WARN = { noT0: "No t0: more false positives", noBlank: "No blank: background stays", onePoint: "One time point: no kinetics", timeUnconfirmed: "Times not confirmed", timeMissing: "Time missing",
     t0WithTime: "A t0 has a time other than 0", noControls: "No t0, blank or dark control", noTreated: "No treated sample" };
-  const qaqcRoles = () => { try { return JSON.parse(localStorage.getItem(typeof NOMI !== "undefined" ? NOMI.KEY("qaqc") : "qqq.qaqc") || "{}").roles || null; } catch (_) { return null; } };
+  const qaqcRoles = () => { try { return JSON.parse(localStorage.getItem(NOMI.KEY("qaqc")) || "{}").roles || null; } catch (_) { return null; } };
   const fail = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return Object.assign(new Error(j ? j.error_key : String(e && e.message || e)), j ? { key: j.error_key, params: j.params } : {}); };
   async function loadRoles() {
     try {
       if (!st.R) { const url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })); st.R = await import(url); }
       if (window.MZLAB_DESKTOP) { const pool = await st.ctx.pool(); st.call = (op, j) => pool.campioni(op, j); }     // the app: the native route finder/campioni
-      else { const m = await /** @type {any} */ (window).PIPEQC.engine(window.QTOOLS.ctx.base); st.call = (op, j) => { try { return m.campioni(op, j); } catch (e) { throw fail(e); } }; }
+      else { const m = await /** @type {any} */ (window).PIPEQC.engine(window.QTOOLS.ctx.base); st.call = (op, j) => { try { return m.samples(op, j); } catch (e) { throw fail(e); } }; }
       st.cs = await st.R.build(st.call, st.files, typeof NB !== "undefined" ? NB : null, qaqcRoles());
       await drawRoles();
     } catch (e) { st.cs = null; st.block = "The roles of the files could not be read."; await drawRoles(); msg(st.ctx.msg(e.key || "error.featFailed", e.params), true); }

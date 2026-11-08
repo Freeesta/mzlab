@@ -1,14 +1,16 @@
 # The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
-# Runs on every pull request, on the merge queue (merge_group), by hand and once a night on main. `sito-changes` decides from the changed paths whether the build and the e2e run; the jobs it skips
+# Runs on every pull request, on the merge queue (merge_group), on every push to main (the deploy gate of pages.yml waits for it), by hand and once a night on main. `sito-changes` decides from the changed paths whether the build and the e2e run; the jobs it skips
 # report "skipped", which a required check accepts, so `sito` can be required without hanging a pull request that touches none of those paths.
 # `sito-wasm-core`, `sito-wasm-feat-a` and `sito-wasm-feat-b` build the .wasm in parallel and hand them over as artifacts; `sito-e2e` runs the quick checks of tools/verifica.py
 # (JS syntax and the shell, i18n, code map, sizes), builds the site, adds the artifacts and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
 # (3.11 and 3.14, with the wasm32 toolchain, so also the tests this job would skip).
-# The run on main fills the Rust caches (core, feat, e2e) when the Rust sources changed (every run restores the newest one); a cache saved on a pull request is not visible to the other pull requests.
+# The nightly run on main fills the Rust caches (core, feat, e2e) when the Rust sources changed (every run restores the newest one; pages.yml saves the same builds on every push); a cache saved on a pull request is not visible to the other pull requests.
 name: sito-rust
 
 on:
-  # not on every push to main (the pull request already ran it, ~9 merges an hour): once a night on main instead
+  # every push to main too: the deploy gate of pages.yml (tools/ci_cancello.py) waits for `sito` on the pushed commit; `sito-changes` filters on the diff of the push
+  push:
+    branches: [main]
   schedule:
     - cron: "11 3 * * *"
   pull_request:
@@ -24,8 +26,9 @@ on:
 permissions:
   contents: read
 
+# a push to main has a group of its own (run_id): a run waiting in a shared group would be replaced by the next one, and the gate of its commit would never open
 concurrency:
-  group: sito-rust-${{ github.ref }}
+  group: sito-rust-${{ github.event_name == 'push' && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 # The .wasm are built once, in three parallel jobs (engine + libraries + readers, mzFinder part a, mzFinder part b), and `sito-e2e` downloads them as artifacts.
@@ -40,10 +43,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: diff
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
-          if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE" || true; fi
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$'; then git fetch --no-tags --depth=1 origin "$BASE" || true; fi
+          if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$' || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|Cargo\.|mzlab/|flow/|TP_Mine/|tests_e2e/|tests/golden/|tools/(build_site\.py|dati_sintetici\.py|verifica\.py|wasm_opt\.sh|wasm_paralleli\.sh|build_feat_wasm\.sh|build_lettori_wasm\.sh)$|\.github/workflows/sito-rust\.yml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
@@ -55,10 +58,16 @@ jobs:
     if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # same commands as pages.yml's wasm-core: its records vouch for this build too (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: wasm-core
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the build identity of pages.yml: option_env! in mzlab-core reads it, and a different value would rebuild every crate of the cache below
+      - name: Build identity of the WASM modules (as pages.yml)
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -68,8 +77,9 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: sito-v2-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
-          # the cache of this kind first, then the older single cache, so the first run is not cold
+          # pages.yml saves this build on every push to main (the caches of this workflow, saved once a night, are evicted within the hour)
           restore-keys: |
+            pages-core-${{ runner.os }}-
             sito-v2-core-${{ runner.os }}-
             sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
@@ -91,12 +101,12 @@ jobs:
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
           # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
           tools/build_lettori_wasm.sh site/static
-      # saved right after the build, so a red e2e does not lose the cache (main only)
+      # saved right after the build, so a red e2e does not lose the cache (nightly main only)
       - name: Record the tree of the cache
-        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true'
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true'
         with:
           path: |
             ~/.cargo/registry
@@ -118,10 +128,16 @@ jobs:
     if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # same commands as pages.yml's wasm-feat-a: its records vouch for this build too (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: wasm-feat-a
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the build identity of pages.yml: option_env! in mzlab-core reads it, and a different value would rebuild every crate of the cache below
+      - name: Build identity of the WASM modules (as pages.yml)
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -131,8 +147,9 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: sito-v2-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
-          # the cache of this kind first, then the older single cache, so the first run is not cold
+          # pages.yml saves this build on every push to main (the caches of this workflow, saved once a night, are evicted within the hour)
           restore-keys: |
+            pages-feat-a-${{ runner.os }}-
             sito-v2-feat-a-${{ runner.os }}-
             sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
@@ -147,12 +164,12 @@ jobs:
         run: |
           mkdir -p site/static
           tools/build_feat_wasm.sh site/static a
-      # saved right after the build, so a red e2e does not lose the cache (main only)
+      # saved right after the build, so a red e2e does not lose the cache (nightly main only)
       - name: Record the tree of the cache
-        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true'
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true'
         with:
           path: |
             ~/.cargo/registry
@@ -172,10 +189,16 @@ jobs:
     if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # same commands as pages.yml's wasm-feat-b: its records vouch for this build too (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: wasm-feat-b
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the build identity of pages.yml: option_env! in mzlab-core reads it, and a different value would rebuild every crate of the cache below
+      - name: Build identity of the WASM modules (as pages.yml)
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -185,8 +208,9 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: sito-v2-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
-          # the cache of this kind first, then the older single cache, so the first run is not cold
+          # pages.yml saves this build on every push to main (the caches of this workflow, saved once a night, are evicted within the hour)
           restore-keys: |
+            pages-feat-b-${{ runner.os }}-
             sito-v2-feat-b-${{ runner.os }}-
             sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
@@ -201,12 +225,12 @@ jobs:
         run: |
           mkdir -p site/static
           tools/build_feat_wasm.sh site/static b
-      # saved right after the build, so a red e2e does not lose the cache (main only)
+      # saved right after the build, so a red e2e does not lose the cache (nightly main only)
       - name: Record the tree of the cache
-        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true'
         run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true'
         with:
           path: |
             ~/.cargo/registry
@@ -221,10 +245,18 @@ jobs:
           path: site/static
           retention-days: 1
 
+  # starts with the .wasm jobs, not after them: setup, site and native release builds overlap theirs; it waits for them (tools/ci_attendi_job.py) before downloading
   sito-e2e:
-    needs: [sito-wasm-core, sito-wasm-feat-a, sito-wasm-feat-b]
+    needs: sito-changes
+    if: needs.sito-changes.outputs.run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read   # the job list of this run, read by tools/ci_attendi_job.py
+    # pages.yml's `native-e2e` runs the same native builds and saves their cache on every Rust change of main: its records count here (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: native-e2e
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -232,8 +264,9 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: pyproject.toml
+      # the browser cache is saved on main only: a pull request's copy serves no other pull request and evicted the caches of main
       - id: pwcache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: sito-pw-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
@@ -241,11 +274,16 @@ jobs:
         run: |
           python -m pip install -e ".[test]" playwright
           python -m playwright install --with-deps chromium
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: github.ref == 'refs/heads/main' && steps.pwcache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.pwcache.outputs.cache-primary-key }}
       # the checks of tools/verifica.py that are not pytest nor e2e, first: a syntax error stops the job in seconds
       # the e2e tests call cargo (native build) side by side: one verified install of the pinned toolchain before them, else each asks rustup for it and they corrupt each other
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: python tools/ci_toolchain.py
-      # the two slow e2e (e2e_indice_parallelo, e2e_flow_msn) compile mzlab-core (example mzidx) and mzlab-cli in release natively: with the crates cached they only link (main saves the cache, as in test.yml)
+      # the two slow e2e (e2e_indice_parallelo, e2e_flow_msn) compile mzlab-core (example mzidx) and mzlab-cli in release natively: with the crates cached they only link (pages.yml `native-e2e` saves the cache)
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -253,8 +291,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: sito-v2-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py') }}-m1
+          key: pages-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           restore-keys: |
+            pages-e2e-${{ runner.os }}-
             sito-v2-e2e-${{ runner.os }}-
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -274,6 +313,15 @@ jobs:
           PY
       - name: Build the site
         run: python tools/build_site.py
+      # the same commands the two slow e2e run (`cargo run` then only finds them built): e2e_indice_parallelo (mzidx example) and e2e_flow_msn (mzlab-cli)
+      - name: Native release builds of the slow e2e (while the .wasm build)
+        run: |
+          cargo build -q --release -p mzlab-core --example mzidx
+          cargo build -q --release --locked -p mzlab-cli
+      - name: Wait for the three .wasm jobs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/ci_attendi_job.py sito-wasm-core sito-wasm-feat-a sito-wasm-feat-b
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: wasm-*
@@ -290,13 +338,13 @@ jobs:
           python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_indice_parallelo,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_lettori_modulo,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf,e2e_flow_motore,e2e_flow_msn,e2e_msn_un_clic,e2e_flow_live' }}"
       # saved right after the e2e (a red one keeps the build); incremental data is dropped so the cache stays small
       - name: Prepare the cache of the native builds
-        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true' }}
         run: |
           find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
           python3 tools/ci_cargo_mtime.py record
           du -sm target | awk '{print "target to cache:", $1, "MB"}'
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true' }}
         with:
           path: |
             ~/.cargo/registry

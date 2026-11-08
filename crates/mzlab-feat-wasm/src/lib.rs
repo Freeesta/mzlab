@@ -25,6 +25,8 @@ use mzlab_feat::{store::Slice, tp::TpRoles};
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+mod blocks_js;
 #[cfg(any(feature = "detect", feature = "untargeted"))]
 pub mod cache;
 #[cfg(feature = "detect")]
@@ -44,6 +46,10 @@ pub mod spill_js; pub mod run_evid; pub mod series_js;
 pub mod run_ms2;
 #[cfg(feature = "flow_tab")]
 pub mod run_tab;
+#[cfg(feature = "flow_stat")]
+pub mod run_stat;
+#[cfg(feature = "detect")]
+pub mod run_estimate;
 pub mod run_tp; pub mod stima;
 #[cfg(feature = "proofs")]
 pub mod state;
@@ -108,19 +114,26 @@ impl ReadAt for JsReader {
     }
 }
 
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
-fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<JsReader>> {
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+/// Index `k` of `together` open at the same time (their blocks share one budget, `blocks_js::shape`).
+fn open_in(read: &Function, k: usize, size: f64, together: usize) -> Result<Index<blocks_js::Blocks>> {
     let r = JsReader {
         read: read.clone(),
         k: k as u32,
     };
-    Index::open(r, size as u64)
+    Index::open(blocks_js::Blocks::over(r, size as u64, together), size as u64)
 }
 
-#[cfg(feature = "proofs")]
-fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<JsReader>>> {
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<blocks_js::Blocks>> {
+    open_in(read, k, size, 1)
+}
+
+#[cfg(any(feature = "detect", feature = "proofs"))]
+/// Every index of the series, all open together.
+fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<blocks_js::Blocks>>> {
     (0..sizes.len())
-        .map(|k| open_one(read, k, sizes[k]))
+        .map(|k| open_in(read, k, sizes[k], sizes.len()))
         .collect()
 }
 
@@ -212,6 +225,23 @@ pub fn preview_file(
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
     let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     run::preview(&mut ix, &r, run::floor_given(recipe)).map_err(js_err)
+}
+
+#[cfg(feature = "detect")]
+/// `features.estimate` of the Flow on one file: the `estimates/1` text (`run_estimate::estimate_of`, the function `flow run` calls) of the index read
+/// as `read(0, offset, length)`, `name` the name of its source, `params` the JSON object of the parameters the plan writes. Errors are JSON `{"error_key","params"}`.
+#[wasm_bindgen]
+pub fn flow_estimate(
+    read: Function,
+    size: f64,
+    name: &str,
+    params: &str,
+) -> std::result::Result<String, JsValue> {
+    let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    let given = mzlab_feat::flow_ms2::json_params(params).map_err(js_err)?;
+    run_estimate::estimate_of(&mut ix, name, &given)
+        .map(|(text, _)| text)
+        .map_err(js_err)
 }
 
 #[cfg(feature = "detect")]

@@ -51,12 +51,16 @@ function mapData(p) {
 function uvData(p) {
   const a = p._a; if (!a || !a.uvd) return null;
   const ix = pick(a.uvd.nm, a.x0, a.x1);
-  return { title: ptitle(p), head: ["nm", T("tdati.col.mau")], rows: ix.map(i => [nm(a.uvd.nm[i], 1), nm(a.uvd.y[i], 2)]), note: T("tdati.note.uv", { a: nm(a.x0, 0), b: nm(a.x1, 0), n: MAXROWS }) };
+  const ser = a.uvd.ser && a.uvd.ser.length > 1 ? a.uvd.ser : null;            // overlaid samples: one absorbance column each, at the nearest wavelength of its own grid
+  const at = (s, w) => { let b = 0; for (let j = 1; j < s.nm.length; j++) if (Math.abs(s.nm[j] - w) < Math.abs(s.nm[b] - w)) b = j; return s.y[b]; };
+  const head = ser ? ["nm", ...ser.map(s => `${T("tdati.col.mau")} - ${s.label}`)] : ["nm", T("tdati.col.mau")];
+  const rows = ix.map(i => [nm(a.uvd.nm[i], 1), ...(ser ? ser.map((s, j) => nm(j ? at(s, a.uvd.nm[i]) : s.y[i], 2)) : [nm(a.uvd.y[i], 2)])]);
+  return { title: ptitle(p), head, rows, note: T("tdati.note.uv", { a: nm(a.x0, 0), b: nm(a.x1, 0), n: MAXROWS }) };
 }
 const data = p => (p.uv ? uvData(p) : p.type === "spec" ? specData(p) : p.type === "map" ? mapData(p) : lineData(p));
 
 function text(p) {
-  const a = p._a; if (!a) return T("a11y.empty");
+  const a = p._a; if (!a) return p._say || T("a11y.empty");
   if (p.uv && a.uvd) return T("a11y.uv", { title: ptitle(p), rt: a.uvd.n > 1 ? a.uvd.rt.toFixed(2) + "–" + a.uvd.rt1.toFixed(2) : a.uvd.rt.toFixed(2), a: nm(a.x0, 0), b: nm(a.x1, 0), y: nm(maxOf(a.uvd.y), 1) });
   if (p.type === "spec") {
     // the top of the spectrum once, not once per peak (a spectrum of thousands of peaks made every drawing wait for a second)

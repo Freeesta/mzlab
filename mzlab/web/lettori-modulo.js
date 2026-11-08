@@ -3,7 +3,7 @@
 // the engine does not read, and gives their mzML as a File of OPFS. `shell.js moduloToMzml` (rule R of upload0) decides which files go here. Module loaded by carica.js.
 
 /** @typedef {{ name: string, blob: Blob }} Member */
-/** @typedef {{ formato: string, campioni: { id: number, name: string, scans: number }[], motivi: string[] }} Probe */
+/** @typedef {{ formato: string, campioni: { id: number, name: string, scans: number }[], motivi: string[] }} Probe `scans`: 0 past sample 0 of a SCIEX pair (the probe indexes sample 0 only) */
 
 /** @type {Record<string, { ext: string[], membri: string[], errori: string[], soloModulo: string[], sonda?: boolean }>} */
 const FAM = /** @type {any} */ (window).LETTORI_FAM;
@@ -74,19 +74,21 @@ const LETTORI_MOD = {
     const base = name.replace(/\.[^./]+$/, ""), used = new Set(taken.map(n => n.toLowerCase()));
     return used.has((base + ".mzML").toLowerCase()) ? name + ".mzML" : base + ".mzML";
   },
-  /** the File that stands for a sample the engine refused, in the list of the files until `shell.js moduloToMzml` converts it (members: [{ name, blob }]) */
-  stand(/** @type {string} */ name, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ fam, /** @type {number | null | undefined} */ sampleSize = undefined) {
+  /** the File that stands for a sample the engine refused, in the list of the files until `shell.js moduloToMzml` converts it (members: [{ name, blob }]);
+   *  `shown`: the file the user dropped, when the stand-in is the whole of it and not one of its samples (an error of the module is told under that name) */
+  stand(/** @type {string} */ name, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ fam, /** @type {number | null | undefined} */ sampleSize = undefined, /** @type {string | undefined} */ shown = undefined) {
     const f = new File([JSON.stringify({ mzlab: "modulo1" })], name);
     const size = sampleSize != null ? sampleSize : (members.length === 1 ? members[0].blob.size : null);
-    Object.defineProperty(f, "mzlabModulo", { value: { members, c, fam, size } });
+    Object.defineProperty(f, "mzlabModulo", { value: { members, c, fam, size, shown } });
     return f;
   },
   /** the JSON text of `mzlab-cli validate --json` for an mzML, from the module `valida` (loaded now, apart from the readers) */
   async valida(/** @type {Blob} */ blob, /** @type {string} */ name) { return /** @type {string} */ ((await ask({ op: "valida", fam: "valida", members: [{ name, blob }] })).text); },
   /** what the module sees in a dataset */
   async probe(/** @type {string} */ fam, /** @type {Member[]} */ members) { return /** @type {Probe} */ ((await ask({ op: "probe", fam, members })).info); },
-  /** the mzML of sample `c` of a dataset as a File of OPFS (a Blob without OPFS); `signal` ends the worker, so the conversion stops at once */
-  async toMzml(/** @type {string} */ fam, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ dest, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal) {
+  /** the mzML of sample `c` of a dataset as a File of OPFS (a Blob without OPFS); `signal` ends the worker, so the conversion stops at once; `opts` = {dad, compression}
+   * of «Download .mzML» (`to_mzml_with`), without it the form of the loading */
+  async toMzml(/** @type {string} */ fam, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ dest, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal, /** @type {{ dad: boolean, compression: string } | undefined} */ opts) {
     if (signal && signal.aborted) throw cancelled();
     const w = start(), drop = async () => {
       // the terminated worker may still hold the file for a moment: try again a few times
@@ -97,7 +99,7 @@ const LETTORI_MOD = {
     const onAbort = () => { w.postMessage({ op: "cancel" }, []); w.terminate(); if (w === worker) worker = null; const e = cancelled(); for (const p of wait.values()) p.no(e); wait.clear(); drop(); };
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     try {
-      const r = await ask({ op: "toMzml", fam, members, c, dest }, onProgress);
+      const r = await ask({ op: "toMzml", fam, members, c, dest, ...opts }, onProgress);
       const out = r.file || new Blob(r.parts, { type: "application/xml" });
       // the spectra a truncated file lacked: the converted mzML is whole, so the row of the loading learns it from here (`lr.js` adds it to the index's)
       if (r.missing) Object.defineProperty(out, "mzlabMissing", { value: r.missing });

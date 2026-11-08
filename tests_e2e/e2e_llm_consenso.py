@@ -35,14 +35,14 @@ try:
             assert pg.locator("#uip-llm").count() == 0, "no LLM element with the profile corso"
             assert not llm_urls(), llm_urls()
         step("demo: the settings have no LLM element and no llm/ file", corso)
-        def demo_flusso():
+        def demo_flow():
             pg.keyboard.press("Escape")
             pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000); pg.evaluate("window.FLOW.whenLate")
             pg.wait_for_selector("#flx-assistant-try", timeout=30000)
             assert pg.locator("#flx-assistant").count() == 0 and pg.locator("#flx-llm").count() == 0
             assert not llm_urls() and not [u for u in seen if "flow-llm" in u], llm_urls()
-        step("demo: the Flow page shows only «Try the assistant», nothing of llm/ before it", demo_flusso)
-        def demo_prova():
+        step("demo: the Flow page shows only «Try the assistant», nothing of llm/ before it", demo_flow)
+        def demo_try():
             pg.click("#flx-assistant-try"); pg.wait_for_selector("dialog[open]", timeout=60000)
             assert "mzlab-demo" in pg.inner_text("dialog[open]")
             pg.click("#llm-c-ok"); pg.wait_for_selector("#flx-llm:not([hidden])", timeout=30000)
@@ -50,12 +50,12 @@ try:
             assert pg.locator("#flx-llm [data-chip]").count() == 2 and pg.locator("#flx-assistant-try").count() == 0
             pg.evaluate("t => window.MZLAB_LLM_AGENT.replay(t, false)", REC_DEMO)
             pg.click('#flx-llm [data-chip="llm.chip.explain"]')
-            attendi(pg, "document.getElementById('flx-llm-log').textContent.includes('Seven full-scan files from the recording')")
+            wait_for_js(pg, "document.getElementById('flx-llm-log').textContent.includes('Seven full-scan files from the recording')")
             assert "Explain these files" in pg.inner_text("#flx-llm-log")
             sent = pg.evaluate("document.getElementById('flx-llm-sent').textContent")
             assert "proxy.invalid/v1/messages" in sent and '"flow_run"' not in sent and '"flow_propose_plan"' in sent, sent[:300]
-        step("demo: «Try the assistant» asks the consent, opens L1 with two chips, a chip sends its fixed text", demo_prova)
-        def corso_flusso():
+        step("demo: «Try the assistant» asks the consent, opens L1 with two chips, a chip sends its fixed text", demo_try)
+        def course_flow():
             # a context of its own without the service worker (it would serve settings.js past the route), with the switch of settings.js turned off
             c = r.b.new_context(service_workers="block", viewport={"width": 1500, "height": 1200}); q = c.new_page(); urls = []
             q.on("request", lambda x: urls.append(x.url))
@@ -67,43 +67,43 @@ try:
             assert q.locator("#flx-assistant-try").count() == 0 and q.locator("#flx-assistant").count() == 0, "no element of the assistant"
             assert not [u for u in urls if "/llm/" in u or "wasm-feat/llm" in u or "flow-llm" in u], urls
             c.close()
-        step("corso (UIP_DEMO off): the Flow without any element of the assistant, no llm/ file", corso_flusso)
-        def ricerca_spento():
+        step("corso (UIP_DEMO off): the Flow without any element of the assistant, no llm/ file", course_flow)
+        def search_off():
             pg.evaluate("localStorage.setItem('mzlab.admin','1'); localStorage.setItem('mzlab.lang','en')"); seen.clear(); pg.reload(); ready(pg)
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             pg.evaluate("document.getElementById('uip-g-llm').open = true")
             pg.wait_for_selector("#uip-llm #llm-on")
             assert not pg.is_checked("#llm-on")
             assert not llm_urls(), llm_urls()
-        step("ricerca with the switch off: no request to llm/", ricerca_spento)
-        def consenso():
+        step("ricerca with the switch off: no request to llm/", search_off)
+        def consent():
             pg.click("#uip-llm label:has(#llm-on)")
             pg.wait_for_selector("dialog[open]")
             assert pg.evaluate("document.querySelector('dialog[open]').contains(document.activeElement)"), "focus inside the dialog"
             t = pg.inner_text("dialog[open]")
             assert "raw files never leave this computer" in t.lower() or "never leave" in t.lower(), t
-            pg.keyboard.press("Escape"); attendi(pg, "document.querySelectorAll('dialog[open]').length === 0")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelectorAll('dialog[open]').length === 0")
             assert pg.locator("dialog[open]").count() == 0 and not pg.is_checked("#llm-on")
             pg.click("#uip-llm label:has(#llm-on)"); pg.wait_for_selector("dialog[open]"); pg.click("#llm-c-ok")
             pg.wait_for_selector("#llm-prev", timeout=10000)
             assert "mzlab.llm.consenso" in pg.evaluate("Object.keys(localStorage).join(' ')")
-        step("turning on asks the consent (Esc closes it, accepting stores it)", consenso)
-        def anteprima():
+        step("turning on asks the consent (Esc closes it, accepting stores it)", consent)
+        def preview():
             pg.fill("#llm-msg", "hello"); pg.click("#llm-prev"); pg.wait_for_selector("#llm-prevout:not([hidden])")
             assert "localhost:11434" in pg.inner_text("#llm-prevout") and "hello" in pg.inner_text("#llm-prevout")
             assert "sk-" not in pg.inner_text("#llm-prevout")
-        step("preview «What will be sent»", anteprima)
+        step("preview «What will be sent»", preview)
         def replay():
             pg.evaluate("window.MZLAB_LLM.replay(%s, false)" % json.dumps(REC))
             pg.fill("#llm-msg", "hello"); pg.click("#llm-send")
-            attendi(pg, "document.getElementById('llm-out').textContent.includes('Hello from the recording')")
+            wait_for_js(pg, "document.getElementById('llm-out').textContent.includes('Hello from the recording')")
             assert any("wasm-feat/llm/" in u for u in seen), "the module was served from the site"
             assert any("trasporto.html" in u for u in seen) or True
         step("replay transport from 'self'", replay)
-        def fuori():
+        def outside():
             ext = [u for u in seen if not u.startswith("http://127.0.0.1:%d/" % r.port) and not u.startswith(("data:", "blob:"))]
             assert not ext, ext
-        step("no request to an external host", fuori)
+        step("no request to an external host", outside)
         def axe():
             if not AXE: return
             pg.add_script_tag(path=AXE)

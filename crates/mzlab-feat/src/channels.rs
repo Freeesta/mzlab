@@ -113,7 +113,7 @@ pub(crate) fn segments(
             }
             // `order` is sorted by scan (`by_scan`), so `ps >= c.1` and the subtraction cannot underflow.
             match cur.as_mut() {
-                Some(c) if ps - c.1 <= p.max_gap => {
+                Some(c) if ps - c.1 <= p.max_gap + 1 => {
                     c.1 = ps;
                     c.2 += ii;
                     c.3 += mw;
@@ -145,7 +145,13 @@ fn push_seg(
     p: &Params,
 ) -> Result<()> {
     let (a, z, tot, mzw, n, mx, _, apex) = c;
-    if n >= 2 && mx >= p.min_height {
+    // a low piece of a wandering ion counts once stitched to the rest; the rows still need `min_height` (`trace::one_grid`)
+    let least = if p.stitch_wide {
+        p.min_height / 4.0
+    } else {
+        p.min_height
+    };
+    if n >= 2 && mx >= least {
         reserve(out, 1)?;
         out.push(Seg {
             chan,
@@ -189,8 +195,11 @@ pub(crate) fn stitch(segs: Vec<Seg>, p: &Params) -> Result<Vec<Seg>> {
 fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
     let m = segs.len();
     let (touch_ppm, touch_ratio) = (4.0f64, 10.0f64);
-    let max_gap = p.max_gap as i64;
-    let touch_height = if p.axis.is_da() {
+    // `reach` is the scan distance: `max_gap` missed scans plus one
+    let reach = p.max_gap as i64 + 1;
+    let touch_height = if p.stitch_wide {
+        0.0
+    } else if p.axis.is_da() {
         10.0 * p.min_height
     } else {
         TOUCH_HEIGHT
@@ -206,15 +215,15 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
         let (lo, hi) = (next.1, next.2);
         let si = &segs[i];
         // The segments of a channel come in scan order and apart (both `a` and `z` ascend), so those within reach of `si` are a run of them.
-        let reach = si.a as i64 - max_gap;
-        let from = lo + segs[lo..hi].partition_point(|s| (s.z as i64) < reach);
+        let first = si.a as i64 - reach;
+        let from = lo + segs[lo..hi].partition_point(|s| (s.z as i64) < first);
         for (j, sj) in segs.iter().enumerate().take(hi).skip(from) {
-            if sj.a as i64 > si.z as i64 + max_gap {
+            if sj.a as i64 > si.z as i64 + reach {
                 break;
             }
             let ov = sj.z.min(si.z) as i64 - sj.a.max(si.a) as i64 + 1;
             // neither the half overlap nor the touching test can hold below this
-            if ov < 1 - max_gap {
+            if ov < 1 - reach {
                 continue;
             }
             let short = (si.z as i64 - si.a as i64 + 1).min(sj.z as i64 - sj.a as i64 + 1);
@@ -230,7 +239,7 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
             // a unit channel holds distinct ions a dalton apart: pieces are one ion only if their centroids are close
             let overlap = ov as f64 >= 0.5 * short as f64
                 && (!p.axis.is_da() || (si.mzc - sj.mzc).abs() <= LR_STITCH);
-            let ok = overlap || (ov >= 1 - max_gap && ov <= max_gap + 1 && like);
+            let ok = overlap || (ov >= 1 - reach && ov <= reach + 1 && like);
             if ok {
                 let (ra, rb) = (find(parent, i as u32), find(parent, j as u32));
                 if ra != rb {

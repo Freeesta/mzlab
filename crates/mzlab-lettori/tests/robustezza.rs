@@ -31,10 +31,17 @@ fn byte_sconosciuti_sono_un_errore_con_chiave() {
     );
     assert_eq!(
         chiave(insieme("x.raw", vec![0x01, 0xA1, 0x46])),
-        "err.file.notAccepted"
+        "err.file.notThisFormat"
+    );
+    assert_eq!(chiave(insieme("x.wiff", Vec::new())), "err.file.empty");
+    // a name the registry does not know stays «not accepted»; a plain .mzML the engine reads is not called damaged by this crate
+    assert_eq!(chiave(insieme("x.cdf", Vec::new())), "err.file.empty");
+    assert_eq!(
+        chiave(insieme("x.cdf", b"CDF".to_vec())),
+        "err.file.notThisFormat"
     );
     assert_eq!(
-        chiave(insieme("x.wiff", Vec::new())),
+        chiave(insieme("x.mzML", b"<x/>".to_vec())),
         "err.file.notAccepted"
     );
 }
@@ -75,7 +82,11 @@ fn le_estensioni_dei_lettori_stanno_nella_tabella_della_pagina() {
             assert!(riga(fam).contains(&format!("\"{ext}\"")), "{fam}: {ext}");
         }
     }
-    for v in mzlab_lettori::registro() {
+    // `mzxml-gz` is a voice of the app and the CLI only: the page inflates a .mzXML.gz itself (gz-flusso.js) and gives the module the .mzXML
+    for v in mzlab_lettori::registro()
+        .into_iter()
+        .filter(|v| v.id != "mzxml-gz")
+    {
         let in_tabella = [
             "agilent", "sciex", "thermo", "aperti", "andi", "waters", "shimadzu", "bruker",
         ]

@@ -1,4 +1,4 @@
-//! `mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=..] [--set group.SAMPLE=GROUP] [--out PATH]`: the SIM table of the Data view (`mzlab_core::simtab`):
+//! `mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=..] [--set baseline=..] [--set group.SAMPLE=GROUP] [--out PATH]`: the SIM table of the Data view (`mzlab_core::simtab`):
 //! the peaks of every SIM channel of every sample, or a pivot (one row per sample and one column per channel, or the reverse). Each file gives the `/api/mrm` transitions the engine gives the page (an mzML read as it is, a vendor file through the
 //! chromatograms of `lettori_mzml::guscio`, as the site reads it), so the CSV is the bytes of the page's export. A `.wiff` gives one column per sample,
 //! named as the site names its mzML (`conversione.js::wiffName`).
@@ -16,13 +16,15 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli sim-table: every SIM channel of the files integrated with the default settings, as CSV.
 
-usage: mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=samples|channels] [--set group.SAMPLE=GROUP]... [--out PATH]
+usage: mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=samples|channels] [--set baseline=edges|zero] [--set group.SAMPLE=GROUP]... [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in injection order
   --set output=area_sum    sum of the peak areas of each channel in each sample (default; 0.0 = no peak)
          output=area_max   area of the largest peak; height_max its height; apex_rt its apex time (min); n_peaks the number of peaks
          output=peaks      the peak table: one row per resolved peak (sample, q1, name, peak, apex_rt, area, height, snr, fwhm_s)
   --set layout=samples     one row per sample, one column per channel (its Q1 m/z; ion N without one, N = place in the list) (default); layout=channels the reverse
+  --set baseline=edges     areas and heights against the straight line between each peak's edges (default); baseline=zero from y = 0
+                           over the same edges, with a last column baseline (zero) in every row
   --set group.SAMPLE=GROUP the sample (its row name) in a group, as the sidebar groups of the site: rows by group in the order the groups first appear,
                            then the samples without one; a group column; channels without Q1 apart per group (ion N [GROUP])
   --out PATH  write there instead of the standard output
@@ -35,6 +37,7 @@ struct Chiesta {
     files: Vec<PathBuf>,
     output: String,
     layout: String,
+    baseline: String,
     groups: Vec<(String, String)>,
     out: Option<PathBuf>,
 }
@@ -47,6 +50,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
         None,
         Vec::new(),
     );
+    let mut baseline = "edges".to_string();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -68,6 +72,15 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
                     Some(("layout", l)) => {
                         return Err(format!("layout is samples or channels, not {l}"))
                     }
+                    Some(("baseline", b)) if mzlab_core::simtab::BASELINES.contains(&b) => {
+                        baseline = b.to_string()
+                    }
+                    Some(("baseline", b)) => {
+                        return Err(format!(
+                            "baseline is one of {}, not {b}",
+                            mzlab_core::simtab::BASELINES.join(", ")
+                        ))
+                    }
                     Some((k, g)) if k.starts_with("group.") && k.len() > 6 => {
                         groups.push((k[6..].to_string(), g.to_string()))
                     }
@@ -85,6 +98,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
         files,
         output,
         layout,
+        baseline,
         groups,
         out,
     }))
@@ -94,9 +108,22 @@ fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-/// The name of the mzML the site makes for sample `id` (named `given` by the reader) of the `.wiff` `stem`: `conversione.js::wiffName` with `freeMzml`.
-fn wiff_name(stem: &str, id: u32, given: &str, taken: &[String]) -> String {
-    let named = given != format!("{stem}.wiff #{id}");
+/// Whether `given` is the reader's name of a lone sample without a DATA name: «<file> #<number>» (`wiff::nomi`), the extension as the file has it.
+fn lone_placeholder(stem: &str, given: &str) -> bool {
+    given
+        .strip_prefix(stem)
+        .and_then(|r| {
+            r.get(..5)
+                .filter(|e| e.eq_ignore_ascii_case(".wiff"))
+                .and(r.get(5..))
+        })
+        .and_then(|r| r.strip_prefix(" #"))
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// The name of the mzML the site makes for a sample (named `given` by the reader) of the `.wiff` `stem`: `conversione.js::wiffName` with `freeMzml`.
+fn wiff_name(stem: &str, given: &str, taken: &[String]) -> String {
+    let named = !lone_placeholder(stem, given);
     let clean: String = if named {
         given
             .trim()
@@ -153,23 +180,19 @@ fn samples_of(
         .map_or(name.as_str(), |s| s.0)
         .to_string();
     let wiff = lower.ends_with(".wiff");
-    let list: Vec<(u32, String)> = l
-        .campioni()
-        .iter()
-        .map(|c| (c.id, c.nome.clone()))
-        .collect();
+    let list: Vec<String> = l.samples().iter().map(|c| c.nome.clone()).collect();
     let mut out = Vec::new();
-    for (c, (id, given)) in list.iter().enumerate() {
+    for (c, given) in list.iter().enumerate() {
         let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), c)?;
         let size = shell.len() as u64;
         let mut m = Mzml::new(shell, size);
         let chroms = m.chromatograms(0)?;
         let n = if wiff {
-            wiff_name(&stem, *id, given, taken)
+            wiff_name(&stem, given, taken)
         } else {
             format!("{stem}.mzML")
         };
-        let missing = l.mancanti(c);
+        let missing = l.missing(c);
         if missing > 0 {
             *warn += &format!("warning: {n}: {missing} records past the end of the file (cut short?): only the points before the cut are integrated\n");
         }
@@ -199,7 +222,7 @@ fn table(c: &Chiesta, warn: &mut String) -> Result<String> {
         }
     }
     o.raw("]");
-    mzlab_core::simtab::table_text(&o.0, &c.output, &c.layout)
+    mzlab_core::simtab::table_text_with(&o.0, &c.output, &c.layout, &c.baseline)
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
@@ -210,7 +233,10 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     let mut warn = String::new();
     match table(&c, &mut warn) {
-        Err(e) => Outcome::fail(&format!("{warn}{} {:?}", e.key, e.params)),
+        Err(e) => Outcome::fail(&format!(
+            "{warn}{}",
+            crate::testo_errore::umano(&e.to_string())
+        )),
         Ok(t) => {
             let mut o = crate::emit(t, &c.out);
             o.stderr.insert_str(0, &warn);

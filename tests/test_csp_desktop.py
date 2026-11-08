@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 EXTRA = " mzlab: http://mzlab.localhost ipc: http://ipc.localhost"
 
 
-def test_csp_desktop_uguale_a_quella_della_pagina():
+def test_desktop_csp_equals_the_page_csp():
     html = (ROOT / "mzlab/web/index.html").read_text(encoding="utf-8")
     page = re.search(r'Content-Security-Policy" content="([^"]+)"', html).group(1)
     conf = json.loads((ROOT / "crates/mzlab-desktop/tauri.conf.json").read_text(encoding="utf-8"))

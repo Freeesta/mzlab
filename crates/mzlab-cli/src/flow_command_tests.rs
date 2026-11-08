@@ -76,3 +76,52 @@ fn a_missing_plan_is_an_orderly_error() {
     assert!(o.stderr.contains("plan.json"));
     assert_eq!(execute(&["flow", "command"]).code, 2);
 }
+
+// A saved plan at an older step version: the route the page asks (`api/flow/line`) and the command line (`parse` + `check`) migrate it to the same plan, so the site and the app
+// accept the same plans. `tests/test_flow_grafico.py` replays the route's answer through the page.
+use mzlab_core::flow::{check, line_route, parse, plan_json, Platform};
+
+const CASE: &str = include_str!("../tests/data/flow_migrate_case.json");
+
+fn old_plan() -> String {
+    let v: serde_json::Value = serde_json::from_str(CASE).unwrap();
+    v["old"].to_string()
+}
+
+#[test]
+fn the_page_route_and_the_command_line_migrate_a_v1_filter_to_the_same_plan() {
+    let steps = crate::flow::steps();
+    let cli = parse(old_plan().as_bytes()).unwrap();
+    assert_eq!(cli.steps[0].version, 2);
+    assert!(check(&cli, &steps, Platform::Native).is_empty());
+    let body = serde_json::json!({"plan": old_plan(), "line": "mzlab-cli flow run"}).to_string();
+    let page = line_route(&body, Some(&steps)).unwrap();
+    if std::env::var("MZLAB_UPDATE_FLOW_CASES").is_ok() {
+        let mut v: serde_json::Value = serde_json::from_str(CASE).unwrap();
+        v["migrated"] = page.clone().into();
+        std::fs::write(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/data/flow_migrate_case.json"
+            ),
+            serde_json::to_string_pretty(&v).unwrap() + "\n",
+        )
+        .unwrap();
+        return;
+    }
+    let again = parse(page.as_bytes()).unwrap();
+    assert_eq!(again.steps[0].version, 2);
+    assert_eq!(
+        page,
+        plan_json(&cli),
+        "same bytes as the plan the command line runs"
+    );
+    let v: serde_json::Value = serde_json::from_str(CASE).unwrap();
+    assert_eq!(
+        page,
+        v["migrated"].as_str().unwrap(),
+        "the answer the page test replays (MZLAB_UPDATE_FLOW_CASES=1 rewrites it)"
+    );
+    assert!(page.contains("table.filter@2") && page.contains("blank_cells"));
+    assert!(check(&again, &steps, Platform::Native).is_empty());
+}

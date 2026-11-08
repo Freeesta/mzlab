@@ -18,7 +18,10 @@ flow_ms2 = []
 flow_formula = ["mzlab-feat/untargeted"]
 # `flow_tab` = the Flow table steps that do not fit `table` (`run_tab.rs`: `table.drift`): a .wasm of its own, `flowtab`, loaded only by their executors; NOT among the defaults.
 flow_tab = []
-detect = []
+# `flow_stat` = `table.stats`, `table.pca`, `table.kmd` of the Flow (`run_stat.rs`): a .wasm of its own, `flowstat`, loaded only by their executor (`flow-web-stat.js`); NOT among the defaults.
+flow_stat = []
+# `detect` carries `mzlab-feat/untargeted` for the algorithm `adap_localmin` of `features.detect` (`untargeted::flow`); only the ADAP route is linked.
+detect = ["mzlab-feat/untargeted"]
 proofs = []
 finder = ["mzlab-feat/chem"]
 finder_msn = ["mzlab-feat/chem"]

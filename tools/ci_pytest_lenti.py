@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rewrites tools/pytest_lenti.txt (the files ci_pytest_ordine.py collects first) from the real times of the 3.11 job recorded by stat-ci.
+"""Rewrites tools/pytest_lenti.txt (file and mean seconds: the files ci_pytest_ordine.py collects first, split between rest-a and rest-b by ci_pytest_meta.py) from the real times of the 3.11 job recorded by stat-ci.
 
     python3 tools/ci_pytest_lenti.py [--dati eventi.jsonl] [--ultimi 8] [--minimo 5] [--scrivi]   # default data: every events file of origin/stat-ci; without --scrivi it only prints
 
@@ -17,20 +17,20 @@ import ci_metrics
 LISTA = Path(__file__).with_name("pytest_lenti.txt")
 
 
-def lenti(ev: list[dict], ultimi: int = 8, minimo: float = 5.0) -> list[str]:
-    """Test files whose mean time over the last `ultimi` 3.11 runs with phase data is at least `minimo` seconds, slowest first."""
+def lenti(ev: list[dict], ultimi: int = 8, minimo: float = 5.0) -> list[tuple[str, float]]:
+    """(file, mean seconds) of the test files whose mean time over the last `ultimi` 3.11 runs with phase data is at least `minimo` seconds, slowest first."""
     # since the 3.11 job runs as shards, a run has several rows (one per shard) with disjoint files: they are merged per run
-    righe = [r for r in ev if r.get("tipo") == "test_durate" and r.get("python") == "3.11" and isinstance(r.get("fasi"), dict)]
+    rows = [r for r in ev if r.get("tipo") == "test_durate" and r.get("python") == "3.11" and isinstance(r.get("fasi"), dict)]
     per_run: dict = {}
-    for r in sorted(righe, key=lambda r: r["ts_utc"]):
+    for r in sorted(rows, key=lambda r: r["ts_utc"]):
         per_run.setdefault(r.get("run_id", r["ts_utc"]), {}).update(r["fasi"])
     runs = list(per_run.values())[-ultimi:]
-    tempi: dict[str, list[float]] = defaultdict(list)
-    for fasi_run in runs:
-        for f, fasi in fasi_run.items():
-            tempi[f].append(sum(fasi))
-    media = {f: sum(v) / len(runs) for f, v in tempi.items()}
-    return [f for f, s in sorted(media.items(), key=lambda x: (-x[1], x[0])) if s >= minimo]
+    times: dict[str, list[float]] = defaultdict(list)
+    for phases_run in runs:
+        for f, phases in phases_run.items():
+            times[f].append(sum(phases))
+    media = {f: sum(v) / len(runs) for f, v in times.items()}
+    return [(f, round(s, 1)) for f, s in sorted(media.items(), key=lambda x: (-x[1], x[0])) if s >= minimo]
 
 
 def main() -> int:
@@ -41,12 +41,13 @@ def main() -> int:
     ap.add_argument("--scrivi", action="store_true")
     a = ap.parse_args()
     ev = ci_metrics.leggi_tutti(a.dati) if a.dati else ci_metrics.eventi_ramo()
-    elenco = lenti(ev, a.ultimi, a.minimo)
-    if not elenco:
+    listing = lenti(ev, a.ultimi, a.minimo)
+    if not listing:
         sys.exit("no 3.11 run with phase data: the list is left as it is")
-    print("\n".join(elenco))
+    text = "".join(f"{f}\t{s}\n" for f, s in listing)
+    print(text, end="")
     if a.scrivi:
-        LISTA.write_text("\n".join(elenco) + "\n", encoding="utf-8")
+        LISTA.write_text(text, encoding="utf-8")
     return 0
 
 

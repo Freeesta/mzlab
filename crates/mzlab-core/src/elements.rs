@@ -4,7 +4,7 @@
 use crate::error::{Error, Result};
 use crate::json::{round, Out};
 
-pub const MASS: [(&str, f64); 14] = [
+pub const MASS: [(&str, f64); 15] = [
     ("H", 1.00782503223),
     ("C", 12.0),
     ("N", 14.00307400443),
@@ -19,6 +19,8 @@ pub const MASS: [(&str, f64); 14] = [
     ("K", 38.9637064),
     ("Si", 27.9769265350),
     ("Se", 79.9165218),
+    // Deuterium (2H), so that «+D» / «+2D» read as a delta.
+    ("D", 2.01410177812),
 ];
 pub const ELECTRON: f64 = 0.000548579909;
 /// Proton mass (CODATA); the neutral-to-ion shift of `[M+H]+` is this, not H.
@@ -32,7 +34,15 @@ const COMMON2: [&str; 16] = [
 ];
 
 pub fn mass_of(el: &str) -> Option<f64> {
+    if let Some(i) = el.find(|c: char| !c.is_ascii_digit()).filter(|i| *i > 0) {
+        return isotope_mass(el[..i].parse().ok()?, &el[i..]);
+    }
     MASS.iter().find(|(e, _)| *e == el).map(|(_, m)| *m)
+}
+
+/// Mass of an isotope written «13C», from the nuclide table.
+fn isotope_mass(a: u32, el: &str) -> Option<f64> {
+    nuclide(el, Some(u16::try_from(a).ok()?)).map(|(_, m)| m)
 }
 
 /// Ion m/z = neutral mass + shift; the order is the one of `ADDUCT_SHIFT`.
@@ -142,6 +152,18 @@ pub fn parse_formula_lenient(s: &str) -> std::collections::BTreeMap<String, u64>
         i = j;
     }
     d
+}
+
+/// A term of a delta: `parse_formula`, plus «2D» -> D2 (a count before deuterium only; «2O» stays unreadable, as in the Python reference).
+pub fn parse_term(s: &str) -> Result<Formula> {
+    let d = s.bytes().take_while(u8::is_ascii_digit).count();
+    if d == 0 || &s[d..] != "D" {
+        return parse_formula(s);
+    }
+    let k: u64 = s[..d]
+        .parse()
+        .map_err(|_| Error::new("err.formula.unreadable").with("formula", s))?;
+    Ok(vec![("D".to_string(), k)])
 }
 
 /// 'C15H12N2O' -> [("C",15),("H",12),("N",2),("O",1)]. Parentheses are allowed: 'C(OH)2'.
@@ -322,15 +344,74 @@ pub fn ion_text_mz(text: &str) -> Result<(f64, i8)> {
     }
 }
 
+/// A signed number closing the text of an ion (`288.2+16`, `C9H8O4-18`, `C9H8O4+Na+16`): the text without it and the shift in Da, a literal shift of the m/z
+/// (`+16` is 16.000, not the mass of an oxygen). No shift if the text ends in a sign or in letters (`+H`, `[M+H]+`); a sign followed by a number that
+/// does not read as one (`+1.2.3`, `+16x`) is `err.formula.offset`.
+pub fn split_offset(text: &str) -> Result<(String, Option<f64>)> {
+    let t: String = text.split_whitespace().collect();
+    let Some(i) = t.rfind(['+', '-']).filter(|&i| i > 0) else {
+        return Ok((t, None));
+    };
+    let tail = &t[i + 1..];
+    if !tail.starts_with(|c: char| c.is_ascii_digit() || c == '.' || c == ',') {
+        return Ok((t, None));
+    }
+    let bad = || Error::new("err.formula.offset").with("offset", &t[i..]);
+    let digits = tail.replace(',', ".");
+    let v: f64 = digits.parse().map_err(|_| bad())?;
+    if !digits.chars().all(|c| c.is_ascii_digit() || c == '.') || !v.is_finite() {
+        return Err(bad());
+    }
+    Ok((
+        t[..i].to_string(),
+        Some(if t[i..].starts_with('-') { -v } else { v }),
+    ))
+}
+
+/// The answer for a bare m/z with a shift (`288.2+16`): nothing to resolve, so no formula.
+fn shifted_mz(text: &str, d: f64) -> Result<String> {
+    let base: f64 = text
+        .replace(',', ".")
+        .parse()
+        .map_err(|_| Error::new("err.formula.unreadable").with("formula", text))?;
+    let z = base + d;
+    let mut o = Out::default();
+    o.raw("{\"formula\":\"\",\"offset\":")
+        .num(d)
+        .raw(",\"adduct\":\"\",\"mz\":")
+        .num(round(z, 4))
+        .raw(",\"mz5\":")
+        .num(round(z, 5))
+        .raw(",\"mz1\":")
+        .num(round_half_up(z, 1))
+        .raw(",\"nominal\":")
+        .int(round_half_up(z, 0) as i64)
+        .raw("}");
+    Ok(o.0)
+}
+
 /// `/api/formula`: neutral mass and ion m/z of every adduct, exact, at 1 decimal and nominal. With the adduct `none` the text is an ion: an adduct written in it (`+H`, `[M+H]+`) is the one used, otherwise the mass of the formula is the m/z.
 pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
+    let (formula, offset) = split_offset(formula)?;
+    let formula = formula.as_str();
+    let numeric = !formula.is_empty()
+        && formula
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == ',');
+    if let (true, Some(d)) = (numeric, offset) {
+        return shifted_mz(formula, d);
+    }
     let (text, inner) = if adduct == Some(NO_ADDUCT) {
         let (t, a) = embedded_adduct(formula);
         (t, a)
     } else {
         (formula.to_string(), None)
     };
-    let f = parse_formula(&text)?;
+    // an unreadable head keeps the text and the shift in the error: the page may read the head as a name of the contaminant lists
+    let f = parse_formula(&text).map_err(|e| match offset {
+        Some(d) => e.with("head", &text).with("offset", d),
+        None => e,
+    })?;
     let m = mass(&f);
     let mut o = Out::default();
     o.raw("{\"formula\":")
@@ -358,12 +439,32 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     o.raw("}");
     if adduct == Some(NO_ADDUCT) {
         o.raw(",\"adduct\":").str(inner.unwrap_or("")).raw(",");
-        row(&mut o, inner.and_then(|a| ion_mz(m, a)).unwrap_or(m));
+        row(
+            &mut o,
+            inner.and_then(|a| ion_mz(m, a)).unwrap_or(m) + offset.unwrap_or(0.0),
+        );
     } else if let Some(a) = adduct {
         let z = ion_mz(m, a).ok_or_else(|| Error::new("err.adduct.unknown").with("adduct", a))?;
         o.raw(",\"adduct\":").str(a).raw(",");
-        row(&mut o, z);
+        row(&mut o, z + offset.unwrap_or(0.0));
+    }
+    if let Some(d) = offset {
+        o.raw(",\"offset\":").num(d);
     }
     o.raw("}");
     Ok(o.0)
+}
+
+/// Mass number and exact mass of a nuclide of `el` (`None` = its monoisotopic isotope), from the generated table `nuclidi`; `D` and `T` are
+/// hydrogen 2 and 3. `None` for a symbol outside the table or a mass number it does not list.
+pub fn nuclide(el: &str, a: Option<u16>) -> Option<(u16, f64)> {
+    let (el, a) = match el {
+        "D" => ("H", Some(a.unwrap_or(2))),
+        "T" => ("H", Some(a.unwrap_or(3))),
+        _ => (el, a),
+    };
+    let (_, mono, a0, d) = crate::nuclidi::NUCLIDES.iter().find(|(e, ..)| *e == el)?;
+    let a = a.unwrap_or(*mono);
+    let off = d.get(a.checked_sub(*a0)? as usize)?;
+    Some((a, a as f64 + *off as f64 * 1e-9))
 }

@@ -83,7 +83,7 @@ try:
             pg.screenshot(path=SH + "52_specbg.png")
         step("spectrum background subtraction", spec_bg)
         def calc():
-            pg.evaluate("BARRA.setTab('adducts')"); pg.wait_for_selector("#al-q", state="visible"); pg.fill("#al-q", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
+            pg.evaluate("BARRA.setTab('adducts')"); pg.wait_for_selector("#calcin", state="visible"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
             t = pg.inner_text("#sb-panel-adducts"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "363.1" in t and "364.07" not in t and "1 decimale" not in t
             pg.screenshot(path=SH + "53_calc.png")
             pg.locator("#sb-panel-adducts button.cxic").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
@@ -97,9 +97,9 @@ try:
             # the boxes that did the student's work (caption, formula/adduct table, fragment selection) no longer exist
             assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-part','cap-ad','cap-on','cap-txt','cap-copy'].every(i=>!document.getElementById(i))")
             LB = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#mzlab-labels text')].map(t=>t.textContent)"
-            assert pg.evaluate(LB) == ["C7H7NO2", "nominal mass 137"], pg.evaluate(LB)
+            assert pg.evaluate(LB) == ["C7H7NO2", "massa nominale 137"], pg.evaluate(LB)
             pg.select_option("#lb-dec", "4"); pg.wait_for_timeout(300)
-            assert pg.evaluate(LB) == ["C7H7NO2", "exact mass 137.0477"], pg.evaluate(LB)
+            assert pg.evaluate(LB) == ["C7H7NO2", "massa esatta 137.0477"], pg.evaluate(LB)
             pg.select_option("#lb-dec", "0"); pg.wait_for_timeout(300)
             pg.fill("#ex-smi", "Oc1ccc(cc1)C(=O)[NH3+]"); pg.click("#ex-load"); pg.wait_for_timeout(2500)         # a structure drawn with its charge: formula of the ion and m/z
             pg.evaluate("(()=>{const k=document.getElementById('kframe').contentWindow.ketcher;k.setMolecule('Oc1ccc(cc1)C(=O)[NH3+]')})()"); pg.wait_for_timeout(1500)

@@ -79,7 +79,6 @@ const WORKFLOW = (() => {
       soglie_libreria: soglieLib,
       contaminanti_esclusi: window.LISTE ? LISTE.exclExport() : null,
       qaqc: window.QAQC ? QAQC.exportState() : null,
-      gradienti: window.GRADIENTE ? GRADIENTE.exportState() : null,       // only what the student entered (the gradient of a .dam or .raw is not stored)
     };
 
     const panels = (typeof E !== "undefined" && E.panels ? E.panels : []).map(p => ({
@@ -166,8 +165,9 @@ const WORKFLOW = (() => {
         const wf = await FILESICURI.readJson(file);
         await applyWorkflow(wf, file.name);
       } catch (err_) { const err = /** @type {Lanciato} */ (err_);
-        const why = err && (err.message === "tooBig" || err.message === "tooDeep") ? I18N.t(err.message === "tooBig" ? "workflow.err.tooBig" : "workflow.err.tooDeep") : EH(err && err.message || "");
-        info(EH(I18N.t("workflow.err.invalidFormat")) + " " + why);
+        // a size or depth limit names itself (the file was not read, so it is not «invalid»); any other error is an unreadable format
+        if (err && err.key && /^workflow\.err\.too/.test(err.key)) info(EH(I18N.t(err.key, err.params)));
+        else info(EH(I18N.t("workflow.err.invalidFormat")) + " " + EH(err && err.message || ""));
       }
     };
     inp.click();
@@ -234,7 +234,6 @@ const WORKFLOW = (() => {
       LISTE.exclImport(p.contaminanti_esclusi);
     }
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
-    if (p.gradienti && window.GRADIENTE) GRADIENTE.importState(p.gradienti);
     await restoreCampioni(wf, neededFiles, p);
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
     if (Array.isArray(wf.operazioni) && typeof NB !== "undefined") {

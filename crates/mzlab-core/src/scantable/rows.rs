@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use super::inerte::extra_inerte;
+use super::inerte::{extra_inerte, tic_letto};
 use super::*;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, SpectrumExtra};
@@ -370,7 +370,10 @@ impl Rows {
                 .filter(|v| *v != 0.0)
                 .unwrap_or(0.0),
             an: self.head.analyzer(filt, icref),
-            kind: (level > 1).then(|| super::kind_of(h, filt)).flatten(),
+            kind: (level > 1)
+                .then(|| super::kind_of(h, filt))
+                .flatten()
+                .or_else(|| crate::wiff::modi::scan_type_of(h)),
             mob: super::mobility_of_header(h),
             filter: self.intern(filt),
             profile: h.contains("accession=\"MS:1000128\""),
@@ -393,8 +396,8 @@ fn esc(s: &str) -> String {
 
 impl Rows {
     /// One scan of a reader, as `spectrum` would read the header `mzmlwrite::spectrum_head(k, sp, extra)` writes for it, without writing it: the same
-    /// fields from the same values (`sp` with its arrays cut to the shorter one, `tic` the sum of its intensities). `false` and nothing added when an
-    /// extra could change what the text says (`extra_inerte`): the caller then gives `spectrum` the text.
+    /// fields from the same values (`sp` with its arrays cut to the shorter one, `tic` the total the writer writes: `extra.tic`, else the sum of the
+    /// intensities). `false` and nothing added when an extra could change what the text says (`extra_inerte`): the caller then gives `spectrum` the text.
     pub(crate) fn lettore(&mut self, sp: &Spectrum, extra: &SpectrumExtra, tic: f64) -> bool {
         if !extra_inerte(sp, extra) {
             return false;
@@ -434,9 +437,12 @@ impl Rows {
             level,
             rt: sp.rt,
             polarity,
-            tic: Some(tic).filter(|v| *v != 0.0).unwrap_or(0.0),
+            tic: Some(tic_letto(tic)).filter(|v| *v != 0.0).unwrap_or(0.0),
             an: self.head.analyzer(filt, None),
-            kind: (level > 1).then(|| super::kind_of("", filt)).flatten(),
+            kind: (level > 1)
+                .then(|| super::kind_of("", filt))
+                .flatten()
+                .or_else(|| crate::wiff::modi::scan_type_param(&extra.params)),
             filter: self.intern(filt),
             profile: sp.profile,
             parent: None,

@@ -1,13 +1,13 @@
 """Campaign table of Attributio inside Flow (flow/lazy/flow-campaign.js, TP_Mine/js/51_attributio_table.js, feat-worker.js, the .wasm `attributio`). Without `mzlab.admin` there is no entry; with it the
 synthetic campaign folder (tests/data/attributio/campagna_sintetica) goes through the node «Confidence level» with set_input_files, the table has 15 features with the levels of livelli_attesi.csv, the filters and the sort
-work, CSV and XLSX are downloaded, the result and its fingerprint reach the notebook, the old view name «attributio» leads to Flow, the controls are at least 24 x 24 px and MZLAB_LR_MISS stays empty. Builds the site and the .wasm
+work, CSV and XLSX are downloaded, the result and its fingerprint reach the notebook, the controls are at least 24 x 24 px and MZLAB_LR_MISS stays empty. Builds the site and the .wasm
 (SKIP without cargo and wasm-bindgen); MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses a site. Run from the repo root: python3 tests_e2e/e2e_attributio.py"""
 import csv, io, json, os, re, shutil, subprocess, sys, tempfile, threading, urllib.request, zipfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401
-from lib_flow import open_campaign
+from lib_flow import open_campaign, FOLDER_INPUT
 
 steps = []
 AXE = lib.axe_path()
@@ -62,7 +62,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         pg0 = new_page(b, False)
-        lib.attendi(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
+        lib.wait_for_js(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
         step("without the administrator mode there is no Attributio entry of its own", lambda: (_ for _ in ()).throw(AssertionError("entry found")) if pg0.locator("[data-v=attributio], #v-attributio").count() else None)
         pg0.close()
 
@@ -153,11 +153,6 @@ try:
             assert d.value.suggested_filename.endswith(".xlsx") and Path(d.value.path()).read_bytes()[:2] == b"PK"
         step("Export CSV and Export XLSX download the table", exports)
 
-        def alias():
-            pg.evaluate("setView('attributio')")
-            assert pg.evaluate("S.view") == "flow" and pg.locator("#v-flow:not([hidden])").count() == 1
-        step("the old view name «attributio» leads to Flow", alias)
-
         def notebook():
             op = pg.evaluate("(NB.ops || []).filter(o => o.op === 'attributio').pop() || null")
             assert op and len(op["attributio"]["fingerprint"]) == 24 and op["attributio"]["counts"]["1"] == 1, op
@@ -193,6 +188,18 @@ try:
             sir = inner(got["sirius"][1]); assert got["sirius"][0].startswith("sirius_") and any(n.endswith(".ms") for n in sir) and any(n.endswith(".mgf") for n in sir), list(sir)
             gr = first_row(got["gradient"][1]); assert gr[:2] == ["canonical_name", "status"], gr
         step("Export gives the six files and the spreadsheets open with their headers", export_menu)
+        def cut():
+            # a folder over the read cap (lowered here: the synthetic folder is small) gets one calm line with the cap, the count and the next step
+            pg.evaluate("ATTRIBUTIO_CORE.MAX_FILES = 3")
+            try:
+                pg.set_input_files(FOLDER_INPUT, str(FOLDER))
+                lib.wait_for_js(pg, "(document.querySelector('#flx-camp-cut') || {}).textContent", 30000)
+                n = sum(1 for f in Path(FOLDER).rglob("*") if f.is_file())
+                txt = pg.inner_text("#flx-camp-cut")
+                assert txt.startswith(Path(FOLDER).name + ": only the first 3 files of " + str(n)) and "left out" in txt and "open it again" in txt, txt
+            finally:
+                pg.evaluate("ATTRIBUTIO_CORE.MAX_FILES = 20000")
+        step("a campaign folder over the read cap says how many files were read and what to do", cut)
 
         step("no request is left unserved and the page has no error", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if (errs or pg.evaluate("(window.MZLAB_LR_MISS || []).length")) else None)
         b.close()

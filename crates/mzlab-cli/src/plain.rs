@@ -1,21 +1,33 @@
 //! The subcommands of `mzlab-cli` that take their arguments as a plain list, and the old command names still accepted for them.
 
 use crate::{
-    campioni_cmd, canali_cmd, flow_explain, ion_pattern_cmd, llm, msn_rules, peaks_edges_cmd,
-    sim_table_cmd, steps_cmd, Outcome,
+    campioni_cmd, canali_cmd, flow_explain, ion_pattern_cmd, llm, mol_label_cmd, msn_rules,
+    peaks_auto_cmd, peaks_edges_cmd, sim_table_cmd, steps_cmd, Outcome,
 };
 
+#[path = "dda_window_cmd.rs"]
+mod dda_window_cmd;
+#[path = "ion_mz_cmd.rs"]
+mod ion_mz_cmd;
+#[path = "peak_area_cmd.rs"]
+pub(crate) mod peak_area_cmd;
+
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 9] = [
+pub(crate) const PLAIN: [&str; 14] = [
     "llm",
     "steps",
     "explain-missing",
     "msn-rules",
     "channels",
+    "dda-window",
     "ion-pattern",
+    "ion-mz",
+    "mol-label",
     "samples",
     "peak-edges",
     "sim-table",
+    "peak-auto",
+    "peak-area",
 ];
 
 /// Old command names still accepted on input, as `(old, new)`; they are never printed outside `--help`.
@@ -39,9 +51,14 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "explain-missing" => flow_explain::run(args),
         "msn-rules" => msn_rules::run(args),
         "channels" => canali_cmd::run(args),
+        "dda-window" => dda_window_cmd::run(args),
         "ion-pattern" => ion_pattern_cmd::run(args),
+        "ion-mz" => ion_mz_cmd::run(args),
+        "mol-label" => mol_label_cmd::run(args),
         "samples" => campioni_cmd::run(args),
         "sim-table" => sim_table_cmd::run(args),
+        "peak-auto" => peaks_auto_cmd::run(args),
+        "peak-area" => peak_area_cmd::run(args),
         _ => peaks_edges_cmd::run(args),
     }
 }

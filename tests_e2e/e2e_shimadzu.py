@@ -40,7 +40,7 @@ def page(b):
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("request", lambda r: asked.append(r.url) if "wasm-lettori/" in r.url else None)
     pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-    pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000)
+    pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
     pg.wait_for_function("window.MZLAB_RUST_READY !== undefined", timeout=60000)
     return pg
 TIC = """async (k) => { await window.MZLAB_RUST_READY; const t = await (await fetch("api/chrom?k=" + k + "&level=1")).json(); return { y: t.y, keys: Object.keys(t), er: t.error_key || "", pr: JSON.stringify(t.params || {}), n: ST.files.length, files: ST.files.map(x => x.name), miss: (window.MZLAB_LR_MISS || []).length }; }"""
@@ -62,7 +62,7 @@ try:
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
             for nm, want in (("gc.mzML", qtic), ("lc.mzML", ltic)):
-                i = pg.evaluate("n => ST.files.findIndex(x => x.name === n)", nm)
+                i = pg.evaluate("n => E.files.findIndex(x => x.file === n)", nm)       # k of api/* is the position in the open session (E.files), which follows the order the conversions finish, not ST.files
                 r = pg.evaluate(TIC, i); y = r.get("y") or r.get("tic", {}).get("y")
                 assert y and len(y) == N, (nm, r.get('er'), r.get('pr'), r.get('n'), i); assert all(abs(a - c) <= 1e-3 * max(c, 1) for a, c in zip(y, want)), (nm, y and y[:3], want[:3])
                 assert r["miss"] == 0, r["miss"]

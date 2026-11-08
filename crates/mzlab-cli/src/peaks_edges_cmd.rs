@@ -13,12 +13,12 @@ usage: mzlab-cli peak-edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME
   --at MIN     the time of the click
   --ref MIN    base width of the peaks already integrated (used with --set constrain=PERCENT)
   --mrm        the trace is an MRM transition
-  --set        win, area_noise, edge_frac, sn_min, noise (mad|rms|manual), min_half, multi, tail, constrain, nr0, nr1 (the dialog of the page)
+  --set        the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, noise (mad|rms|manual), min_half, constrain, nr0, nr1
   output       {\"edges\":[t0,t1]}, or {\"edges\":null} when the S/N is under sn_min
 
 old names still accepted: peaks-edges, areaNoise, edgeFrac, snMin, minHalf";
 
-fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
+pub(crate) fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
     let text = if src == "-" {
         let mut t = String::new();
         std::io::Read::read_to_string(&mut std::io::stdin(), &mut t).map_err(|e| e.to_string())?;

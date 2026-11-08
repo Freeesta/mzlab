@@ -37,6 +37,10 @@ pub enum DataType {
 }
 
 impl DataType {
+    /// The format a datum of this type has unless its port says otherwise: a `table` is a `.mzfeat`.
+    pub fn default_format(self) -> Option<&'static str> {
+        (self == DataType::Table).then_some("mzfeat")
+    }
     pub const ALL: [DataType; 20] = [
         DataType::Raw,
         DataType::Mzml,
@@ -109,6 +113,22 @@ pub struct Port {
     /// Other types an input takes besides `ty`.
     pub accepts: Vec<DataType>,
     pub requires: Facets,
+    /// An output the step writes only on a condition: the check refuses a wire to it when the instance does not meet it.
+    pub written_if: Option<WrittenIf>,
+    /// The format an output writes when its type alone does not say it (`filtri/1` typed `table`); none = the default of its type.
+    pub format: Option<&'static str>,
+    /// The formats an input reads; empty = the default of its type, from a source of its own type only.
+    pub formats: Vec<&'static str>,
+    /// On an input: the table must be aligned in this plan (its lineage: the peaks, the indexes and the recipe it was made from). On an output: the table
+    /// hands such a lineage on, made here or (with a table input) passed from that input.
+    pub lineage: bool,
+}
+
+/// The condition of an output: its input `input` is wired and, with `param`, that parameter (resolved) is not `not`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WrittenIf {
+    pub input: &'static str,
+    pub param: Option<(&'static str, &'static str)>,
 }
 
 impl Port {
@@ -121,6 +141,10 @@ impl Port {
             title,
             accepts: Vec::new(),
             requires: Facets::default(),
+            written_if: None,
+            format: None,
+            formats: Vec::new(),
+            lineage: false,
         }
     }
     pub fn many(mut self) -> Port {
@@ -133,6 +157,30 @@ impl Port {
     }
     pub fn requires(mut self, f: Facets) -> Port {
         self.requires = f;
+        self
+    }
+    /// The format this output writes.
+    pub fn format(mut self, f: &'static str) -> Port {
+        self.format = Some(f);
+        self
+    }
+    /// A table aligned in this plan (see `lineage`).
+    pub fn lineage(mut self) -> Port {
+        self.lineage = true;
+        self
+    }
+    /// The formats this input reads.
+    pub fn formats(mut self, f: &[&'static str]) -> Port {
+        self.formats = f.to_vec();
+        self
+    }
+    /// Written only when `input` is wired and, with `param`, that parameter is not the given value.
+    pub fn written_if(
+        mut self,
+        input: &'static str,
+        param: Option<(&'static str, &'static str)>,
+    ) -> Port {
+        self.written_if = Some(WrittenIf { input, param });
         self
     }
 }

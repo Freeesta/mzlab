@@ -42,7 +42,7 @@ fn mzml(extra_run: &str) -> Vec<u8> {
 fn doc(bytes: Vec<u8>) -> Value {
     let n = bytes.len() as u64;
     let s = Mzml::new(bytes, n)
-        .metodo("x.mzML", 1 << 20)
+        .method("x.mzML", 1 << 20)
         .unwrap()
         .unwrap();
     serde_json::from_str(&s).unwrap()
@@ -120,7 +120,7 @@ fn a_document_the_file_carries_wins_and_a_file_without_run_has_none() {
     assert_eq!(d["x"], 1);
     let junk = b"<mzML><cvList/></mzML>".to_vec();
     let n = junk.len() as u64;
-    assert_eq!(Mzml::new(junk, n).metodo("x", 1 << 20).unwrap(), None);
+    assert_eq!(Mzml::new(junk, n).method("x", 1 << 20).unwrap(), None);
 }
 
 #[test]
@@ -129,9 +129,9 @@ fn hostile_and_cut_files_never_panic() {
     for cut in [10, 400, full.len() / 2, full.len() - 5] {
         let part = full[..cut].to_vec();
         let n = part.len() as u64;
-        let _ = Mzml::new(part, n).metodo("x", 1 << 20);
+        let _ = Mzml::new(part, n).method("x", 1 << 20);
     }
     let junk = b"<run <run <spectrumList <spectrum \"\"\"".to_vec();
     let n = junk.len() as u64;
-    let _ = Mzml::new(junk, n).metodo("x", 1 << 20);
+    let _ = Mzml::new(junk, n).method("x", 1 << 20);
 }
