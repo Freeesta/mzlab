@@ -20,12 +20,12 @@ def filtro_rust() -> re.Pattern:
     return re.compile(m.group(1))
 
 
-def rust_gira(files: list[str], filtro: re.Pattern) -> bool:
-    return any(filtro.match(f) for f in files)
+def rust_gira(files: list[str], selected_filter: re.Pattern) -> bool:
+    return any(selected_filter.match(f) for f in files)
 
 
-def da_saltare(files: list[str], filtro: re.Pattern) -> list[str]:
-    return DOPPI if rust_gira(files, filtro) else []
+def da_saltare(files: list[str], selected_filter: re.Pattern) -> list[str]:
+    return DOPPI if rust_gira(files, selected_filter) else []
 
 
 def main(argv: list[str]) -> int:

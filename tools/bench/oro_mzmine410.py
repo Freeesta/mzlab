@@ -51,7 +51,7 @@ def installa(versione: str) -> Path:
     return casa
 
 
-def _finder_step(fasi: Path) -> str:
+def _finder_step(phases: Path) -> str:
     tol = ('<parameter name="m/z tolerance (feature-to-scan)"><absolutetolerance>0.005</absolutetolerance><ppmtolerance>15.0</ppmtolerance></parameter>'
            '<parameter name="Require 13C isotope peak">true</parameter><parameter name="Maximum charge of isotope m/z">3</parameter>')
     return (f'<batchstep method="{FINDER}" parameter_version="2">{FL}<parameter name="Algorithm" selected_item="automatic"><module name="automatic">{tol}</module></parameter></batchstep>\n')
@@ -78,15 +78,15 @@ def controlla_filtro(xml: str) -> None:
             raise SystemExit(f"step {m.group(1)}: the scan filter must be <parameter name=\"Scan filters\" selected=\"true\">")
 
 
-def batch_xml(files: list[Path], fasi: Path, par: dict, versione: str, finder: bool = False, isotopi: bool = False) -> str:
+def batch_xml(files: list[Path], phases: Path, par: dict, versione: str, finder: bool = False, isotopi: bool = False) -> str:
     """The batch of `corri_mzmine.batch_xml` for the 4.10 file format; `finder`: the isotope grouper step is replaced by the reworked finder (it removes no row)."""
-    x = corri_mzmine.batch_xml(files, fasi / "finale.csv", par, fasi=fasi, isotopi=isotopi or finder)
+    x = corri_mzmine.batch_xml(files, phases / "finale.csv", par, phases=phases, isotopi=isotopi or finder)
     x = x.replace('mzmine_version="3.9.0"', f'mzmine_version="{versione}"')
     # the centroid detector of 4.10 has no `Detect isotope signals below noise level` any more
     x = x.replace('<parameter name="Detect isotope signals below noise level" selected="false"/>', "")
     x = x.replace('<parameter name="Mass detector" selected="Centroid">', '<parameter name="Mass detector" selected_item="Centroid">')
     if finder:
-        x = re.sub(r'<batchstep method="' + re.escape(GROUPER) + r'".*?</batchstep>\n', lambda _m: _finder_step(fasi), x, flags=re.S)
+        x = re.sub(r'<batchstep method="' + re.escape(GROUPER) + r'".*?</batchstep>\n', lambda _m: _finder_step(phases), x, flags=re.S)
         x = x.replace("/isotopi_{}.csv", "/finder_{}.csv")
     x = x.replace('<parameter name="Scans">', '<parameter name="Scan filters" selected="true">')
     check_selected(x)
@@ -94,11 +94,11 @@ def batch_xml(files: list[Path], fasi: Path, par: dict, versione: str, finder: b
     return x
 
 
-def senza_cromatogrammi(cartella: Path) -> dict[str, str]:
+def senza_cromatogrammi(folder: Path) -> dict[str, str]:
     """The parser of 4.10 fails on the TIC chromatogram of the files (its time array comes out empty, `ConversionUtils.removeDuplicateRtDataPoints`; 3.9 read it): drops the `chromatogramList` in place
     and returns the sha256 of the files as mzmine reads them. No stage uses it: the scans and their arrays are the ones of the 3.9.0 set."""
     out = {}
-    for f in sorted(cartella.glob("*.mzML")):
+    for f in sorted(folder.glob("*.mzML")):
         f.write_text(re.sub(r"<chromatogramList.*?</chromatogramList>", "", f.read_text(encoding="utf-8"), flags=re.S), encoding="utf-8", newline="\n")
         out[f.name] = oro.sha_contenuto(f.read_bytes())
     return out
@@ -116,14 +116,14 @@ def esegui(xml: Path, mm: Path, tmp: Path) -> subprocess.CompletedProcess:
 ISO = 1.003355      # mass difference of 13C - 12C
 
 
-def _fase_isotopi(fasi: Path) -> tuple[list[str], list[list]]:
+def _fase_isotopi(phases: Path) -> tuple[list[str], list[list]]:
     """Per file: the rows that the grouper keeps and the ones it removes. The 4.10 export has no charge column, so the charge is derived: a removed row is an isotopologue
     of the closest kept row within 0.1 min whose m/z is lower by 1 to 4 times 1.003355/z (z in 1..3, tolerance 0.01); the charge of a kept row is round(1.003355 / spacing of its nearest removed row) and every other removed row is a whole multiple of 1.003355/z.
     Kept rows with removed rows are principal (charge z), the others alone (charge 0)."""
     col = ["file", "id", "mz", "rt", "height", "charge", "role", "principal"]
     rows = []
-    for f, kept in oro._per_file(fasi, "isotopi"):
-        tutte = dict(oro._per_file(fasi, "risolutore"))[f]
+    for f, kept in oro._per_file(phases, "isotopi"):
+        tutte = dict(oro._per_file(phases, "risolutore"))[f]
         ids = {r["id"] for r in kept}
         base = {r["id"]: (float(r["mz"]), float(r["rt"])) for r in kept}
         rimosse, figlie = [], {i: [] for i in ids}
@@ -161,11 +161,11 @@ def _fase_isotopi(fasi: Path) -> tuple[list[str], list[list]]:
     return col, rows
 
 
-def _phase_finder(fasi: Path) -> tuple[list[str], list[list]]:
+def _phase_finder(phases: Path) -> tuple[list[str], list[list]]:
     """Per file: what the finder writes on every resolved feature (charge, number of peaks of the pattern, m/z of the peaks)."""
     col = ["file", "id", "mz", "rt", "height", "charge", "pattern_peaks", "pattern_mz"]
     rows = []
-    for f, rs in oro._per_file(fasi, "finder"):
+    for f, rs in oro._per_file(phases, "finder"):
         for r in rs:
             mzs = (r.get("isotope_pattern:mz") or "").split(";") if r.get("isotope_pattern:mz") else []
             # 4.10.90 exports the number of peaks of the pattern as `datafile:<file>.mzML:isotopes` (and not the m/z of the peaks: `pattern_mz` stays empty)
@@ -183,24 +183,24 @@ def scrivi_oro(dest: Path, versione: str) -> None:
         shas = oro.genera(t / "mzml")
         shas_410 = senza_cromatogrammi(t / "mzml")
         fs = sorted((t / "mzml").glob("*.mzML"))
-        fasi = t / "fasi"
-        fasi.mkdir()
-        xmls = {"fasi.xml": batch_xml(fs, fasi, par, versione), "isotopi.xml": batch_xml(fs, fasi, par, versione, isotopi=True), "finder.xml": batch_xml(fs, fasi, par, versione, finder=True)}
+        phases = t / "fasi"
+        phases.mkdir()
+        xmls = {"fasi.xml": batch_xml(fs, phases, par, versione), "isotopi.xml": batch_xml(fs, phases, par, versione, isotopi=True), "finder.xml": batch_xml(fs, phases, par, versione, finder=True)}
         for n, x in xmls.items():
-            (fasi / n).write_text(x, encoding="utf-8")
-        ignoti = [i for n in xmls for i in corri_mzmine.parametri_non_letti(fasi / n, mm)]
+            (phases / n).write_text(x, encoding="utf-8")
+        ignoti = [i for n in xmls for i in corri_mzmine.parametri_non_letti(phases / n, mm)]
         if ignoti:
             raise SystemExit("mzmine would ignore these parameters: " + "; ".join(ignoti))
         for n in xmls:
-            r = esegui(fasi / n, mm, t / "tmp")
+            r = esegui(phases / n, mm, t / "tmp")
             if r.returncode or "SEVERE" in r.stdout + r.stderr:
                 raise SystemExit(f"mzmine failed on {n}:\n{(r.stdout + r.stderr)[-3000:]}")
         dest.mkdir(parents=True, exist_ok=True)
         per_file, aligned = ("file", "id"), ("mz", "rt", "file")
-        for nome, (col, rows), key in [("adap.csv", oro._fase_per_file(fasi, "adap", False), per_file), ("resolved.csv", oro._fase_per_file(fasi, "risolutore", True), per_file),
-                                           ("aligned.csv", oro._fase_allineata(fasi / "join_Aligned_feature_list.csv"), aligned),
-                                           ("gapfilled.csv", oro._fase_allineata(fasi / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
-                                           ("isotopes.csv", _fase_isotopi(fasi), per_file), ("isotopes_finder.csv", _phase_finder(fasi), per_file)]:
+        for nome, (col, rows), key in [("adap.csv", oro._fase_per_file(phases, "adap", False), per_file), ("resolved.csv", oro._fase_per_file(phases, "risolutore", True), per_file),
+                                           ("aligned.csv", oro._fase_allineata(phases / "join_Aligned_feature_list.csv"), aligned),
+                                           ("gapfilled.csv", oro._fase_allineata(phases / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
+                                           ("isotopes.csv", _fase_isotopi(phases), per_file), ("isotopes_finder.csv", _phase_finder(phases), per_file)]:
             oro._scrivi_csv(dest / nome, col, rows, key)
         (dest / "LEGGIMI.md").write_text(_leggimi(versione, shas, shas_410, mm, {n: oro._sostituisci(x, t) for n, x in xmls.items()}), encoding="utf-8")
 

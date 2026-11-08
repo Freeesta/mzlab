@@ -75,18 +75,18 @@ def main() -> int:
     args = ap.parse_args()
     folder = registri(args)
     with tempfile.TemporaryDirectory(prefix="mzlab-regole-") as tmp:
-        lista, righe = Path(tmp) / "lista.txt", Path(tmp) / "righe.jsonl"
-        lista.write_text("".join(f"{p}\n" for p in sorted(folder.glob("*.txt"))))
+        entries, righe = Path(tmp) / "lista.txt", Path(tmp) / "righe.jsonl"
+        entries.write_text("".join(f"{p}\n" for p in sorted(folder.glob("*.txt"))))
         base = cli(args)
         for command in (
-            [*base, "msn-rules", "--lista", str(lista), "--regole", "--decoy", args.seme, "--out", str(righe)],
+            [*base, "msn-rules", "--lista", str(entries), "--regole", "--decoy", args.seme, "--out", str(righe)],
         ):
             subprocess.run(command, cwd=ROOT, check=True)
-        somma = subprocess.run([*base, "msn-rules", "somma", str(righe)], cwd=ROOT, check=True, capture_output=True, text=True).stdout
+        total = subprocess.run([*base, "msn-rules", "somma", str(righe)], cwd=ROOT, check=True, capture_output=True, text=True).stdout
     if args.out:
-        Path(args.out).write_text(somma, encoding="utf-8")
+        Path(args.out).write_text(total, encoding="utf-8")
     else:
-        sys.stdout.write(somma)
+        sys.stdout.write(total)
     return 0
 
 

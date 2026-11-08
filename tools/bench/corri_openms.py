@@ -47,13 +47,13 @@ def align_and_merge(maps: list, par: dict) -> oms.ConsensusMap:
     return cons
 
 
-def scrivi_csv(cons: oms.ConsensusMap, nomi: list[str], path: Path) -> None:
-    """The map index of a consensus handle is the position of the map in the list given to the linker, i.e. the order of `nomi`."""
+def scrivi_csv(cons: oms.ConsensusMap, names: list[str], path: Path) -> None:
+    """The map index of a consensus handle is the position of the map in the list given to the linker, i.e. the order of `names`."""
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["mz", "rt"] + [f"intensity_{n}" for n in nomi])
+        w.writerow(["mz", "rt"] + [f"intensity_{n}" for n in names])
         for c in cons:
-            v = [0.0] * len(nomi)
+            v = [0.0] * len(names)
             for fh in c.getFeatureList():
                 v[fh.getMapIndex()] += float(fh.getIntensity())
             w.writerow([c.getMZ(), c.getRT()] + v)

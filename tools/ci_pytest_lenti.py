@@ -27,8 +27,8 @@ def lenti(ev: list[dict], ultimi: int = 8, minimo: float = 5.0) -> list[tuple[st
     runs = list(per_run.values())[-ultimi:]
     times: dict[str, list[float]] = defaultdict(list)
     for phases_run in runs:
-        for f, fasi in phases_run.items():
-            times[f].append(sum(fasi))
+        for f, phases in phases_run.items():
+            times[f].append(sum(phases))
     media = {f: sum(v) / len(runs) for f, v in times.items()}
     return [(f, round(s, 1)) for f, s in sorted(media.items(), key=lambda x: (-x[1], x[0])) if s >= minimo]
 
@@ -41,10 +41,10 @@ def main() -> int:
     ap.add_argument("--scrivi", action="store_true")
     a = ap.parse_args()
     ev = ci_metrics.leggi_tutti(a.dati) if a.dati else ci_metrics.eventi_ramo()
-    elenco = lenti(ev, a.ultimi, a.minimo)
-    if not elenco:
+    listing = lenti(ev, a.ultimi, a.minimo)
+    if not listing:
         sys.exit("no 3.11 run with phase data: the list is left as it is")
-    text = "".join(f"{f}\t{s}\n" for f, s in elenco)
+    text = "".join(f"{f}\t{s}\n" for f, s in listing)
     print(text, end="")
     if a.scrivi:
         LISTA.write_text(text, encoding="utf-8")

@@ -101,10 +101,10 @@ def righe_cache(run: dict, jobs: list[dict], base: dict, fetch) -> list[dict]:
     return out
 
 
-def zip_artifact(run: dict, prefisso: str, api, fetch):
-    """Yield (artifact name, ZipFile) of the not expired artifacts of the run whose name starts with `prefisso`."""
+def zip_artifact(run: dict, prefix: str, api, fetch):
+    """Yield (artifact name, ZipFile) of the not expired artifacts of the run whose name starts with `prefix`."""
     for a in api(f"/actions/runs/{run['id']}/artifacts?per_page=50").get("artifacts", []):
-        if not a["name"].startswith(prefisso) or a.get("expired"):
+        if not a["name"].startswith(prefix) or a.get("expired"):
             continue
         raw = fetch(f"/actions/artifacts/{a['id']}/zip")
         if raw:
@@ -132,13 +132,13 @@ def righe_junit(run: dict, base: dict, api, fetch) -> list[dict]:
         row = {"ts_utc": run["updated_at"], "tipo": "test_durate", "k": name_art, "workflow": run["name"], "python": name_art[6:].split("-")[0], **({"parte": name_art.split("-", 2)[2]} if name_art.count("-") > 1 else {}),
                 "file": {f: [n, round(s, 1)] for f, (n, s) in sorted(per_file.items())}, "lenti": sorted(lenti, key=lambda x: -x[1])[:30], **base}
         if "tempi-test.json" in z.namelist():
-            tempi = json.loads(z.read("tempi-test.json"))
+            times = json.loads(z.read("tempi-test.json"))
             occupato: Counter = Counter()
-            for f, t in tempi.items():
+            for f, t in times.items():
                 for w in t["worker"][:1]:
                     occupato[w] += t["setup"] + t["call"] + t["teardown"]
-            row["fasi"] = {f: [t["setup"], t["call"], t["teardown"]] for f, t in tempi.items()}
-            row["worker"] = {f: t["worker"] for f, t in tempi.items()}
+            row["fasi"] = {f: [t["setup"], t["call"], t["teardown"]] for f, t in times.items()}
+            row["worker"] = {f: t["worker"] for f, t in times.items()}
             row["worker_occupato_s"] = {w: round(s, 1) for w, s in sorted(occupato.items())}
         out.append(row)
     return out
@@ -148,10 +148,10 @@ def righe_wasm(run: dict, base: dict, api, fetch) -> list[dict]:
     """Size of every built .wasm and its cap (tools/ci_wasm_dimensioni.py), from the `wasm-dimensioni` artifact of the run."""
     out = []
     for name_art, z in zip_artifact(run, "wasm-dimensioni", api, fetch):
-        moduli = json.loads(z.read("wasm-dimensioni.json"))
-        margins = [100 * (1 - m["byte"] / m["tetto"]) for m in moduli.values() if m.get("tetto")]
+        modules = json.loads(z.read("wasm-dimensioni.json"))
+        margins = [100 * (1 - m["byte"] / m["tetto"]) for m in modules.values() if m.get("tetto")]
         out.append({"ts_utc": run["updated_at"], "tipo": "wasm", "k": name_art, "workflow": run["name"],
-                    "moduli": {f: [m["byte"], m.get("tetto")] for f, m in moduli.items()}, "byte_totali": sum(m["byte"] for m in moduli.values()),
+                    "moduli": {f: [m["byte"], m.get("tetto")] for f, m in modules.items()}, "byte_totali": sum(m["byte"] for m in modules.values()),
                     "margine_min_pct": round(min(margins), 1) if margins else None, **base})
     return out
 
@@ -181,8 +181,8 @@ def righe_carico(api, ora: str) -> list[dict]:
 def forma_commit(sha: str, api) -> dict:
     """Title, kind (merge of main or not) and areas of the files of one commit."""
     c = api(f"/commits/{sha}")
-    titolo = c["commit"]["message"].split("\n")[0]
-    return {"titolo": titolo[:120], "merge_main": len(c.get("parents", [])) > 1 and bool(re.match(r"Merge .*\bmain\b", titolo)),
+    title = c["commit"]["message"].split("\n")[0]
+    return {"titolo": title[:120], "merge_main": len(c.get("parents", [])) > 1 and bool(re.match(r"Merge .*\bmain\b", title)),
             "aree": aree([f["filename"] for f in c.get("files", [])])}
 
 
@@ -209,9 +209,9 @@ def file_conflitto(n: int, root: str = ".") -> list[str]:
     return sorted(set(names))[:20]
 
 
-def compatta(ev: list[dict], oggi: datetime, giorni: int = 14) -> list[dict]:
+def compatta(ev: list[dict], today: datetime, giorni: int = 14) -> list[dict]:
     """Rows older than `giorni`: heavy fields (steps, per-file times, slow tests) are replaced by a count, so the file stays small."""
-    limit = (oggi - timedelta(days=giorni)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    limit = (today - timedelta(days=giorni)).strftime("%Y-%m-%dT%H:%M:%SZ")
     for r in ev:
         if r["ts_utc"] < limit:
             for c in PESANTI:
@@ -220,9 +220,9 @@ def compatta(ev: list[dict], oggi: datetime, giorni: int = 14) -> list[dict]:
     return ev
 
 
-def esporta(ev: list[dict], cartella: str) -> list[str]:
+def esporta(ev: list[dict], folder: str) -> list[str]:
     """One CSV per row type (nested values as JSON text), plus `giornaliero-coo.csv`: the daily row in the layout of the COO's misure/giornaliero.csv."""
-    os.makedirs(cartella, exist_ok=True)
+    os.makedirs(folder, exist_ok=True)
     for_type: dict[str, list[dict]] = defaultdict(list)
     for r in ev:
         for_type[r["tipo"]].append(r)
@@ -230,14 +230,14 @@ def esporta(ev: list[dict], cartella: str) -> list[str]:
     for_type["giornaliero"] = giornaliero(ev)
     for tipo, rows in for_type.items():
         cols = sorted({c for r in rows for c in r})
-        path = os.path.join(cartella, f"{tipo}.csv")
+        path = os.path.join(folder, f"{tipo}.csv")
         with open(path, "w", encoding="utf-8", newline="") as f:
             w = csv.writer(f)
             w.writerow(cols)
             for r in rows:
                 w.writerow([json.dumps(r[c], ensure_ascii=False, separators=(",", ":")) if isinstance(r.get(c), (dict, list)) else r.get(c, "") for c in cols])
         written.append(path)
-    path = os.path.join(cartella, "giornaliero-coo.csv")
+    path = os.path.join(folder, "giornaliero-coo.csv")
     with open(path, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=COLONNE_COO)
         w.writeheader()
@@ -309,7 +309,7 @@ def tabelle(ev: list[dict], out=print) -> None:
         out(f"\nRunner load: max {max(r['job_in_corso'] for r in car)} jobs running, max {max(r['job_in_coda'] for r in car)} queued ({len(car)} readings)")
 
 
-def percorso_critico(ev: list[dict], dal: str = "") -> dict[str, dict]:
+def percorso_critico(ev: list[dict], since: str = "") -> dict[str, dict]:
     """Per PR type (docs / Rust / site+other): median and max minutes from push to the last required check, and the slowest jobs, over merged PRs.
 
     The critical path of a head sha is the longest run among WORKFLOW_CRITICI (first attempt, green); `dal` is an ISO timestamp lower bound.
@@ -318,7 +318,7 @@ def percorso_critico(ev: list[dict], dal: str = "") -> dict[str, dict]:
     corse: dict[str, dict[str, dict]] = defaultdict(dict)
     for x in ev:
         if x.get("tipo") == "run" and not x.get("main") and x.get("sha") in unite and x.get("workflow") in WORKFLOW_CRITICI \
-                and x.get("run_attempt") == 1 and x.get("esito") == "success" and x["ts_utc"] >= dal:
+                and x.get("run_attempt") == 1 and x.get("esito") == "success" and x["ts_utc"] >= since:
             corse[x["sha"]][x["workflow"]] = x
     durations: dict[str, list[float]] = defaultdict(list)
     jobs: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
