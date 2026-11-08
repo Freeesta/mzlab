@@ -32,7 +32,7 @@ fn concurrent_builds_of_one_name_write_their_own_part_files() {
         for tag in *b"ab" {
             let (b, barrier, seen) = (&b, &barrier, &seen);
             s.spawn(move || {
-                b.scrivi("same.mzML", |out, _, _| {
+                b.write("same.mzML", |out, _, _| {
                     out.write_all(&[tag; 8]).unwrap();
                     barrier.wait();
                     seen.lock().unwrap().push(parts(&b.dir));
@@ -59,7 +59,7 @@ fn a_cancelled_build_stops_at_its_next_write_and_leaves_no_file() {
     let d = tempfile::tempdir().unwrap();
     let b = IdxBuilder::new(d.path().to_path_buf()).unwrap();
     let e = b
-        .scrivi("x.mzML", |out, spill, _| {
+        .write("x.mzML", |out, spill, _| {
             out.write_all(b"head").unwrap();
             spill.write_all(b"peaks").unwrap();
             b.cancel("x.mzML");
@@ -78,13 +78,13 @@ fn a_cancelled_build_stops_at_its_next_write_and_leaves_no_file() {
     assert!(left.is_empty(), "{left:?}");
     // cancelled before it starts (it waited for a thread): it fails without creating a file
     let e = b
-        .scrivi("x.mzML", |_, _, _| {
+        .write("x.mzML", |_, _, _| {
             unreachable!("a cancelled build does not run")
         })
         .unwrap_err();
     assert_eq!(e.key, "err.load.cancelled");
     b.resume("x.mzML");
-    b.scrivi("x.mzML", |out, _, _| {
+    b.write("x.mzML", |out, _, _| {
         out.write_all(b"ok").unwrap();
         Ok(Stats::default())
     })
@@ -98,7 +98,7 @@ fn a_build_that_ends_past_the_cancel_leaves_no_index() {
     let d = tempfile::tempdir().unwrap();
     let b = IdxBuilder::new(d.path().to_path_buf()).unwrap();
     let e = b
-        .scrivi("y.mzML", |out, _, _| {
+        .write("y.mzML", |out, _, _| {
             out.write_all(b"all").unwrap();
             b.cancel("y.mzML");
             Ok(Stats::default())

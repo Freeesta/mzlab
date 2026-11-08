@@ -23,12 +23,12 @@ pub(super) const SHELLS: usize = 32 << 20;
 /// The members of a dataset mapped from the disk.
 pub(crate) fn fileset(members: &[(String, PathBuf)]) -> Result<FileSet> {
     let mut out = Vec::new();
-    for (nome, path) in members {
+    for (name, path) in members {
         let map = Mapped::open(path)
             .map_err(|e| Error::new("err.file.raw").with("detail", e.to_string()))?;
         let dim = map.bytes().len() as u64;
         out.push(Membro {
-            nome: nome.clone(),
+            nome: name.clone(),
             dim,
             dati: Box::new(MapAt(Arc::new(map))),
             sha1: None,

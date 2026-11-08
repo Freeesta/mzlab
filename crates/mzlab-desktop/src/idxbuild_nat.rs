@@ -10,7 +10,7 @@ use crate::store::Nat;
 impl IdxBuilder {
     /// Builds the index of sample `nat.c` of a maker's file straight from its reader (version 2: the rows say where each scan lies in the members) as `<name>.mzidx`.
     pub fn build_nat(&self, nat: &Nat, name: &str) -> Result<Stats, Error> {
-        self.scrivi(name, |out, spill, _| {
+        self.write(name, |out, spill, _| {
             // the fingerprints are taken by a second thread (its own mapping of the members) while the scans are decoded; the members this one opens say
             // they have a SHA-1 already (empty): the index never reads it
             let mut fs = nativi::fileset(&nat.members)?;

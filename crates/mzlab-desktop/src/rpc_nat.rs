@@ -113,7 +113,7 @@ impl State {
     /// `natregistro {name, serie}`: one series of the instrument log (`status:…`, `trailer:…`) of the sample `name`, as the readers module of the site
     /// answers it (`registroDi` of `rust-nativo.js`): `{id, kind, q1, q3, unit, time, intensity}`, its points computed now. The reader is opened for the
     /// request and closed after it (the site keeps its session 30 s because a copy of the file sits in memory; here the members are mapped).
-    pub(crate) fn nat_registro(&self, p: &Value) -> Result<Answer> {
+    pub(crate) fn nat_registry(&self, p: &Value) -> Result<Answer> {
         let name = p["name"]
             .as_str()
             .unwrap_or("")

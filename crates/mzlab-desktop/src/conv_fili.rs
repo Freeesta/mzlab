@@ -3,15 +3,15 @@
 
 use serde_json::{json, Value};
 
-use super::Coda;
+use super::Queue;
 
-impl Coda {
+impl Queue {
     /// A queue on the default threads of a computer whose native budget is `mb`.
     #[cfg(test)]
-    pub(crate) fn with_budget(mb: f64) -> Coda {
-        Coda {
+    pub(crate) fn with_budget(mb: f64) -> Queue {
+        Queue {
             auto_mb: mb,
-            ..Coda::default()
+            ..Queue::default()
         }
     }
 

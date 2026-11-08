@@ -1,6 +1,6 @@
 //! The routes `flow/live/<op>` of `rpc`: a plan that runs on this computer and takes changes while it runs (`mzlab_cli::flow::live::LiveRun`), with the
 //! very bodies and answers of `api/flow/sched/<op>` of the site (`new` is `start`) and `cancel`. The conversions the background queue (`conv_coda.rs`)
-//! makes are the `convert.mzml` jobs of the plan: the workers leave them to the queue, which tells how they stand (`sync_coda`). One run at a time; its folders
+//! makes are the `convert.mzml` jobs of the plan: the workers leave them to the queue, which tells how they stand (`sync_queue`). One run at a time; its folders
 //! are the ones of `flow/run`, so `flow/read` and `flow/report` read what it made, and `finish` gives the `prov/1` of the plan as it stands.
 
 use std::path::PathBuf;
@@ -58,7 +58,7 @@ impl State {
         if op == "finish" {
             return finish(live, p);
         }
-        self.sync_coda(&live.run);
+        self.sync_queue(&live.run);
         let body = mzlab_core::json::parse(p.to_string().as_bytes())?;
         let answer = live
             .run
@@ -172,7 +172,7 @@ impl State {
             .map(|i| i.id.clone())
             .collect();
         move |id| {
-            let held = self.coda.list();
+            let held = self.queue.list();
             let rows = held["jobs"].as_array().map_or(&[][..], Vec::as_slice);
             let queued = |r: &&Value| r["name"].as_str() == id.item.as_deref();
             steps.contains(&id.instance)
@@ -185,8 +185,8 @@ impl State {
 
     /// Tells the run how the queue stands: a file being converted is a job that runs, one whose mzML is ready is a job done (its file is the output),
     /// one that failed is a job in error; one the queue has dropped goes back to the workers.
-    fn sync_coda(&self, run: &LiveRun) {
-        let held = self.coda.list();
+    fn sync_queue(&self, run: &LiveRun) {
+        let held = self.queue.list();
         for row in held["jobs"].as_array().into_iter().flatten() {
             let Some(name) = row["name"].as_str() else {
                 continue;

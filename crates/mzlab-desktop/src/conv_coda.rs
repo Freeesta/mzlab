@@ -137,7 +137,7 @@ impl Inner {
 mod fili;
 
 #[derive(Default)]
-pub(crate) struct Coda {
+pub(crate) struct Queue {
     pub(crate) inner: Arc<Mutex<Inner>>,
     folder: Mutex<Option<PathBuf>>,
     /// threads at most; 0 = those of `convert` on the budget `auto_mb`
@@ -149,22 +149,22 @@ pub(crate) struct Coda {
     recheck_ms: u64,
 }
 
-impl Coda {
+impl Queue {
     #[cfg(test)]
-    pub(crate) fn with_workers(n: usize) -> Coda {
-        Coda {
+    pub(crate) fn with_workers(n: usize) -> Queue {
+        Queue {
             workers: n,
-            ..Coda::default()
+            ..Queue::default()
         }
     }
 
     /// A one-worker queue whose job waits `ms` before it re-checks for an index that started after it was queued.
     #[cfg(test)]
-    pub(crate) fn with_recheck(ms: u64) -> Coda {
-        Coda {
+    pub(crate) fn with_recheck(ms: u64) -> Queue {
+        Queue {
             workers: 1,
             recheck_ms: ms,
-            ..Coda::default()
+            ..Queue::default()
         }
     }
 
@@ -185,7 +185,7 @@ fn lock(m: &Mutex<Inner>) -> std::sync::MutexGuard<'_, Inner> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-impl Coda {
+impl Queue {
     /// Queues the dataset `root` for the page file `name` (sample `id`); a dataset already queued, running or ready only learns the name again.
     pub(crate) fn add(&self, name: &str, id: u32, root: &Path) {
         if self.enqueue(name, id, root, stamp(root)) {
@@ -277,7 +277,7 @@ pub(crate) fn dataset_root(members: &[(String, PathBuf)]) -> Option<PathBuf> {
 
 impl State {
     pub fn set_convert_folder(&self, dir: PathBuf) {
-        self.coda.set_folder(dir);
+        self.queue.set_folder(dir);
     }
 
     /// `conv_add {name}`: queues the maker's file `name` of the list (nothing for a file that is already an mzML).
@@ -292,30 +292,30 @@ impl State {
         if let Some(nat) = nat
             && let Some(root) = dataset_root(&nat.members)
         {
-            self.coda.add(name, nat.id, &root);
+            self.queue.add(name, nat.id, &root);
         }
-        text(self.coda.list().to_string())
+        text(self.queue.list().to_string())
     }
 
     /// `conv_list {}`: `{"jobs": [{name, state: queued|run|done|failed|cancelled, error}]}`.
     pub(crate) fn conv_list(&self, _p: &Value) -> Result<Answer> {
-        text(self.coda.list().to_string())
+        text(self.queue.list().to_string())
     }
 
     /// `conv_cancel {name?}`: stops the files that have not started.
     pub(crate) fn conv_cancel(&self, p: &Value) -> Result<Answer> {
-        self.coda.cancel(p["name"].as_str());
-        text(self.coda.list().to_string())
+        self.queue.cancel(p["name"].as_str());
+        text(self.queue.list().to_string())
     }
 
     /// `conv_save {dest}`: the ready mzML files in the folder `dest`; `{"saved": n}`.
     pub fn conv_save(&self, dest: &Path) -> Result<usize> {
-        self.coda.save(dest)
+        self.queue.save(dest)
     }
 
     /// The ready mzML of the page file `name`, for `flow/run`.
     pub(crate) fn conv_ready(&self, name: &str) -> Option<PathBuf> {
-        self.coda.ready(name)
+        self.queue.ready(name)
     }
 }
 
@@ -428,7 +428,7 @@ fn file_of(job: &Job, id: u32) -> Option<PathBuf> {
     }
 }
 
-impl Coda {
+impl Queue {
     /// The ready mzML of the page file `name`, if its dataset is unchanged since it was converted.
     pub(crate) fn ready(&self, name: &str) -> Option<PathBuf> {
         let g = lock(&self.inner);

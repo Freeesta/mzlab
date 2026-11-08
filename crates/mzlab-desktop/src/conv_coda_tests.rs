@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::conv_coda::{dataset_root, Coda, Indexing};
+use crate::conv_coda::{dataset_root, Indexing, Queue};
 
 #[path = "../../mzlab-lettori/tests/comune/mzxml.rs"]
 mod mzxml;
@@ -30,10 +30,10 @@ fn zlib(b: &[u8]) -> Vec<u8> {
 }
 
 #[allow(dead_code)]
-fn insieme(nome: &str, byte: Vec<u8>) -> mzlab_core::lettori::FileSet {
+fn insieme(name: &str, byte: Vec<u8>) -> mzlab_core::lettori::FileSet {
     mzlab_core::lettori::FileSet {
         membri: vec![mzlab_core::lettori::Membro {
-            nome: nome.into(),
+            nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
             sha1: None,
@@ -51,7 +51,7 @@ fn mzxml_file(path: &Path, n: usize) {
     std::fs::write(path, mzxml::mzxml(&scans, o)).unwrap();
 }
 
-fn wait(c: &Coda, name: &str, state: &str) {
+fn wait(c: &Queue, name: &str, state: &str) {
     for _ in 0..600 {
         if c.list()["jobs"]
             .as_array()
@@ -72,7 +72,7 @@ fn two_files_give_the_bytes_of_the_command_line_and_cancel_stops_the_second() {
     let (a, b) = (d.path().join("a.mzXML"), d.path().join("b.mzXML"));
     mzxml_file(&a, 4);
     mzxml_file(&b, 3);
-    let c = Coda::with_workers(1);
+    let c = Queue::with_workers(1);
     c.set_folder(d.path().join("cache"));
     // an index being built keeps the queue still until the second file is stopped
     let busy = Indexing::new();
@@ -113,7 +113,7 @@ fn a_file_that_cannot_be_converted_fails_with_its_cause() {
     let d = tempfile::tempdir().unwrap();
     let bad = d.path().join("rotto.raw");
     std::fs::write(&bad, b"not a raw file at all").unwrap();
-    let c = Coda::with_workers(1);
+    let c = Queue::with_workers(1);
     c.set_folder(d.path().join("cache"));
     c.add("rotto.raw", 0, &bad);
     wait(&c, "rotto.raw", "failed");
@@ -134,13 +134,13 @@ fn the_root_of_a_dataset_is_found_from_its_members() {
     assert_eq!(dataset_root(&w), Some(PathBuf::from("/s/x.wiff")));
 }
 
-fn queued(c: &Coda, name: &str, root: &str, stamp: (u64, u64)) {
+fn queued(c: &Queue, name: &str, root: &str, stamp: (u64, u64)) {
     c.enqueue(name, 0, Path::new(root), Some(stamp));
 }
 
 #[test]
 fn a_job_replaced_while_it_runs_cannot_corrupt_the_queue() {
-    let c = Coda::with_workers(2);
+    let c = Queue::with_workers(2);
     queued(&c, "a", "/s/a.raw", (1, 1));
     queued(&c, "b", "/s/b.raw", (1, 1));
     let a = c.inner.lock().unwrap().take_for_test();
@@ -160,7 +160,7 @@ fn a_job_replaced_while_it_runs_cannot_corrupt_the_queue() {
 
 #[test]
 fn a_new_job_of_a_running_dataset_waits_for_it() {
-    let c = Coda::with_workers(2);
+    let c = Queue::with_workers(2);
     queued(&c, "a", "/s/a.raw", (1, 1));
     let first = c.inner.lock().unwrap().take_for_test();
     queued(&c, "a", "/s/a.raw", (2, 2));
@@ -213,7 +213,7 @@ fn an_index_that_starts_just_after_queueing_holds_the_job_back() {
     mzxml_file(&a, 3);
     // a long re-check pause keeps the worker inside its window however slow the machine is, so the order is fixed:
     // job queued, then the index starts, then the worker re-checks
-    let c = Coda::with_recheck(3000);
+    let c = Queue::with_recheck(3000);
     c.set_folder(d.path().join("cache"));
     c.add("a.mzXML", 0, &a);
     let busy = Indexing::new();
@@ -227,7 +227,7 @@ fn an_index_that_starts_just_after_queueing_holds_the_job_back() {
 #[test]
 fn a_small_budget_converts_fewer_datasets_at_once_with_the_notice_of_the_cli() {
     let d = tempfile::tempdir().unwrap();
-    let c = Coda::with_budget(128.0);
+    let c = Queue::with_budget(128.0);
     c.set_folder(d.path().join("cache"));
     let wanted = mzlab_core::budget_auto::convert_wanted();
     assert_eq!(c.limit(), 1);
@@ -253,7 +253,7 @@ fn a_small_budget_converts_fewer_datasets_at_once_with_the_notice_of_the_cli() {
     c.cancel(None);
     drop(busy);
     // the budget of a large computer runs the default and says nothing
-    let big = Coda::with_budget(8192.0);
+    let big = Queue::with_budget(8192.0);
     assert_eq!(big.limit(), wanted);
     assert!(big.list().get("notice").is_none());
 }
