@@ -44,4 +44,4 @@ def aggiungi(c, somma, modello, Ione, frammenti_di) -> None:
     twin = Ione(id=f"{tp.id}_ISFF1", ruolo="isf_finto", famiglia=tp.id, rt=tp.rt + float(rng.uniform(-0.008, 0.008)), sg=tp.sg, progenitore=tp.id, forma="come_progenitore",
                 isf_in_ms2=0, amp=tp.amp * 0.8, mz=frag.mz, ion=frag.ion, picchi=list(frag.picchi), note="ratio=0.8;stesso_mz_di=" + frag.id)
     c.ioni.append(twin)
-    tp.frammenti = frammenti_di(rng, tp.mz, evita=[frag.mz])
+    tp.frammenti = frammenti_di(rng, tp.mz, avoid=[frag.mz])
