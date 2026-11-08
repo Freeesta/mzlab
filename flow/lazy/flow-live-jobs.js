@@ -131,10 +131,10 @@
   const recall = async (p, key) => {
     try { return await has(p, MSN_DIR + key + ".json") ? JSON.parse(new TextDecoder().decode(await p.fs.read(MSN_DIR + key + ".json"))) : null; } catch (_) { return null; }
   };
-  /** keeps a result and forgets the oldest ones past MSN_KEEP @param {any} p @param {string} key @param {{ name: string, text: string }} r */
+  /** keeps a result (and its warnings, when it has any) and forgets the oldest ones past MSN_KEEP @param {any} p @param {string} key @param {{ name: string, text: string, warnings?: string[] }} r */
   const remember = async (p, key, r) => {
     try {
-      await p.fs.write(MSN_DIR + key + ".json", new TextEncoder().encode(JSON.stringify({ name: r.name, text: r.text })));
+      await p.fs.write(MSN_DIR + key + ".json", new TextEncoder().encode(JSON.stringify({ name: r.name, text: r.text, ...(r.warnings && r.warnings.length ? { warnings: r.warnings } : {}) })));
       let list = [];
       try { list = JSON.parse(new TextDecoder().decode(await p.fs.read(MSN_DIR + "index.json"))); } catch (_) { /* no index yet */ }
       list = [...list.filter((/** @type {string} */ k) => k !== key), key];

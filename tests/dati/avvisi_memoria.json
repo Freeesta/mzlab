@@ -1,0 +1,10 @@
+{
+  "_": "Memory refusals and the English text the desktop app (I18N.err with MZLAB_DESKTOP) and the CLI (testo_errore::umano) both show: one file, two readers.",
+  "casi": [
+    {"params": [], "testo": "This file does not fit in the memory chosen for the engine on this computer. Close other programs or process fewer files at once."},
+    {"params": [["fase", "table"], ["stima_mb", "900"], ["budget_mb", "512"], ["libero_mb", "400"], ["eccesso_mb", "500"]],
+     "testo": "This file does not fit in the memory chosen for the engine on this computer: the «scan table» phase would need about 900 MB and the budget is 512 MB, of which 400 are free (about 500 MB short). Close other programs, process fewer files at once, or convert the file again with fewer scans (for example only the useful RT range)."},
+    {"params": [["fase", "indexPeaks"], ["stima_mb", "300"], ["budget_mb", "256"], ["libero_mb", "200"], ["eccesso_mb", "100"]],
+     "testo": "In one narrow m/z range (1 Da) this file has at least 300 MB of peaks, more than the index of one file holds on this computer (256 MB of one range). Close other programs and process fewer files at once, or convert the file again with fewer scans (for example only the useful RT range)."}
+  ]
+}

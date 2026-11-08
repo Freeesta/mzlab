@@ -4,6 +4,18 @@
 // of a DDA Full Scan (carica in DDA.decorate); `I` is the inside of DDA (DDA._in). Nothing here names a compound: an MS2 is shown as acquired.
 const MARK = 6;
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
+/** A DIA file (the engine's `acq`): its MS2 are isolation windows fragmented cycle after cycle, not ions picked from the Full Scan. @param {Bag | undefined} f */
+export const dia = f => !!(f && Array.isArray(f.acq) && f.acq.includes("DIA"));
+/** The MS2 among `js` whose isolation window holds m/z `m`: the narrowest, then the one centred closest. @param {Bag} D @param {Iterable<number>} js @param {number} m */
+function holding(D, js, m) {
+  let k = -1, kw = Infinity, kc = Infinity;
+  for (const j of js) {
+    const a = D.lo[j], b = D.hi[j]; if (a == null || b == null || m < a || m > b) continue;
+    const w = b - a, c = Math.abs((a + b) / 2 - m);
+    if (w < kw || (w === kw && c < kc)) { k = j; kw = w; kc = c; }
+  }
+  return k;
+}
 
 /** The Full Scan: a flag over every peak that started an MS2 (only when the panel shows ONE scan), the isolation band of the chosen MS2.
  * @param {Bag} I @param {Bag} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W @param {Bag} c */
@@ -18,6 +30,7 @@ export function full(I, p, g, X, Y, W, c) {
     if (window.DDAELENCO) { window.DDAELENCO.sync(I, p, p._dw, p._a.ddaWhy); window.DDAELENCO.tri(I.byId(p.link)); } else carica("m:dda-elenco.js").then(() => drawSoon(p), () => {});
   }
   if (!s2 || !D) return;
+  if (dia(f)) { p._a.markN = 0; diaBand(p, g, X, D, s2); return; }          // windows, not ions: no flag claims a peak, the band of the chosen window stays
   if (d0.scans !== 1 || d0.sid == null) { if (p._dw) averaged(I, p, g, X, Y, D, d0, f, s2); return; }
   const kids = D.byParent.get(d0.sid) || [], q2 = HR.prof(E.files[s2.k], 2);
   const ac = css("--accent"), tol = (/** @type {number} */ mz) => I.tolOf(f, mz), here = s2.sid != null ? D.idx.get(s2.sid) : null;
@@ -55,6 +68,13 @@ export function full(I, p, g, X, Y, W, c) {
     p._a.lbls.push({ fl: j, ion: D.prec[j], x: px - 12, y: py - MARK - 16, w: 24, h: MARK + 18, tip });
   });
   g.restore();
+}
+/** The isolation window of the MS2 shown, as a band over the Full Scan of a DIA file (any scan: every cycle has the same windows).
+ * @param {Bag} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {Bag} D @param {Bag} s2 */
+function diaBand(p, g, X, D, s2) {
+  const j = s2.sid != null ? D.idx.get(s2.sid) : null; if (j == null || D.lo[j] == null || D.hi[j] == null) return;
+  const a = Math.max(M.l, X(D.lo[j])), b = Math.min(p._a.W - M.r, X(D.hi[j])); if (!(b > a)) return;
+  g.save(); g.globalAlpha = 0.10; g.fillStyle = css("--accent"); g.fillRect(a, M.t, b - a, p._a.H - M.t - M.b); g.restore();
 }
 /** An averaged Full Scan: a flag over every precursor fragmented from its scans (the groups of /api/dda_window); a click shows the most intense MS2
  * of the precursor and the average stays. @param {Bag} I @param {Bag} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X
@@ -98,6 +118,7 @@ function nearby(I, p, D, d0, f, kids) {
 function why0(I, p, D, d0, f) {
   if (!D || !d0) return T("dda.click");
   if (!D.sid.length) return T("dda.why.file");
+  if (dia(f)) return T("dda.dia.why");
   if (d0.scans !== 1 || d0.sid == null) {                    // an average: how many MS2 started from the Full Scans of its window
     const lo = I.lowerBound(D.ms1.rt, p.r0 - 1e-9), hi = I.lowerBound(D.ms1.rt, p.r1 + 1e-9); let m = 0;
     for (let i = lo; i < hi; i++) m += (D.byParent.get(D.ms1.sid[i]) || []).length;
@@ -119,7 +140,7 @@ export function why(I, s2) {
  * @param {Bag} I @param {Bag} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W */
 export function ms2(I, p, g, X, Y, W) {
   nav(I, p);
-  const j = p._scan; if (!j || j.prec == null || p.avg) return;
+  const j = p._scan; if (!j || j.prec == null || p.avg || dia(E.files[p.k])) return;      // a DIA window has no precursor ion: its centre is no peak
   const ac = css("--accent"), D = I.ready(p.k), i = D && D.idx.get(p.sid), m = (D && D.prec[i]) ?? j.prec;
   if (m < p._a.x0 || m > p._a.x1) return;
   g.save(); g.strokeStyle = ac; g.fillStyle = ac; g.lineWidth = 1; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m), p._a.H - M.b); g.lineTo(X(m), M.t + 14); g.stroke(); g.setLineDash([]);
@@ -131,6 +152,7 @@ export function ms2(I, p, g, X, Y, W) {
 export function peak(I, p, m) {
   const f = E.files[p.k], D = f && I.ready(f.k), d0 = p._a && p._a.data && p._a.data[0] && p._a.data[0].d; if (!D || !d0) return null;
   const t = I.tolOf(f, m), off = (/** @type {number} */ j) => { const q = D.tgt[j] ?? D.prec[j]; return q == null ? Infinity : Math.abs(q - m); };
+  if (dia(f)) return diaPeak(I, p, D, d0, m);
   if (d0.scans !== 1 || d0.sid == null) {
     const q = p._dw && p._dw.groups.find((/** @type {Bag} */ g) => Math.abs(g.prec - m) <= t); if (!q) return null;
     const best = q.sid[q.pint.reduce((/** @type {number} */ b, /** @type {number | null} */ v, /** @type {number} */ i) => ((v ?? -1) > (q.pint[b] ?? -1) ? i : b), 0)], j = D.idx.get(best);
@@ -143,8 +165,19 @@ export function peak(I, p, m) {
   for (let i = I.lowerBound(D.rt, rt0 - I.NEAR_MIN); i < D.rt.length && D.rt[i] <= rt0 + I.NEAR_MIN; i++) if (off(i) <= t && (k < 0 || Math.abs(D.rt[i] - rt0) < Math.abs(D.rt[k] - rt0))) k = i;
   return k < 0 ? null : { j: k, near: true, keep: false, rt: rt0 };
 }
+/** The DIA window holding m/z `m`: of the scan shown, or on an average the window of the scans averaged, its most intense MS2 (the average stays).
+ * @param {Bag} I @param {Bag} p @param {Bag} D @param {Bag} d0 @param {number} m @returns {{ j: number, near: boolean, keep: boolean, rt: number } | null} */
+function diaPeak(I, p, D, d0, m) {
+  if (d0.scans !== 1 || d0.sid == null) {
+    const q = p._dw && p._dw.groups.find((/** @type {Bag} */ g) => holding(D, g.sid.map((/** @type {number} */ s) => D.idx.get(s)).filter((/** @type {number | undefined} */ j) => j != null), m) >= 0); if (!q) return null;
+    const best = q.sid[q.pint.reduce((/** @type {number} */ b, /** @type {number | null} */ v, /** @type {number} */ i) => ((v ?? -1) > (q.pint[b] ?? -1) ? i : b), 0)], j = D.idx.get(best);
+    return j == null ? null : { j, near: false, keep: true, rt: D.rt[j] };
+  }
+  const k = holding(D, D.byParent.get(d0.sid) || [], m);
+  return k < 0 ? null : { j: k, near: false, keep: false, rt: D.ms1.rt[D.ms1pos.get(d0.sid)] };
+}
 /** ‹ i/N › in the header of the MS2 panel (dda-naviga.js, loaded on the first MS2 drawn). @param {Bag} I @param {Bag} p */
 function nav(I, p) {
   if (window.DDANAV) window.DDANAV.sync(I, p); else if (p.sid != null) carica("m:dda-naviga.js").then(() => drawSoon(p), () => {});
 }
-window.DDAMARK = { full, ms2, why, peak };
+window.DDAMARK = { full, ms2, why, peak, dia };

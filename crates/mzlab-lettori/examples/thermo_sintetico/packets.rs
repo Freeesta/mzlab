@@ -35,6 +35,8 @@ pub(crate) struct Scan {
     pub(crate) base_mz: f64,
     pub(crate) ms2: bool,
     pub(crate) precursor: f64,
+    /// The centroids of an MS1 (empty for an MS2): `--dda` picks its precursors among them.
+    pub(crate) cents: Vec<(f32, f32)>,
 }
 
 pub(crate) fn put_u32(b: &mut Vec<u8>, x: u32) {
@@ -142,6 +144,7 @@ pub(crate) fn ms1(o: &Opt, rng: &mut Rng) -> Scan {
         base_mz: bm,
         ms2: false,
         precursor: 0.0,
+        cents,
     }
 }
 
@@ -180,5 +183,6 @@ pub(crate) fn ms2(o: &Opt, rng: &mut Rng, precursor: f64) -> Scan {
         base_mz: bm,
         ms2: true,
         precursor,
+        cents: Vec::new(),
     }
 }

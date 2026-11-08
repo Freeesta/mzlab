@@ -178,6 +178,14 @@ fn is_numpress_mzml(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// True when the index of `path` comes from its mzML text (scan rows by offset), not from a reader (scan rows by number).
+pub(crate) fn reads_as_mzml(path: &Path) -> bool {
+    let name = path
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().to_lowercase());
+    !path.is_dir() && name.ends_with(".mzml") && !is_numpress_mzml(path)
+}
+
 /// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
 pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
     build_index_with(path, label, idx, budget, &mut |_, _| {}, &None)
@@ -201,7 +209,7 @@ pub(crate) fn build_index_with(
         Error::new("err.flow.io").with("detail", format!("{}: {e}", path.display()))
     })?;
     let mut out = File::create(idx).map_err(io)?;
-    if !path.is_dir() && name.to_lowercase().ends_with(".mzml") && !is_numpress_mzml(path) {
+    if reads_as_mzml(path) {
         let size = std::fs::metadata(path).map_err(io)?.len();
         let mut file = File::open(path).map_err(io)?;
         let (table, mut late) = match flow_set::known_sha(path) {
@@ -282,25 +290,41 @@ fn index_reader(
         stop: stop.clone(),
         halt: halt.clone(),
     };
-    let built = con_impronte_parallele(
-        move || hashing.file_set(path),
-        |imp| {
-            let r = indicizza_lettore_con(
+    // the members hashed before the index (`flow_set::digest`) are not read again: only their probes
+    let built = match flow_set::known_prints(path)? {
+        Some(prints) => {
+            let mut prints = Some(prints);
+            indicizza_lettore_con(
                 &mut l,
                 sample,
-                imp,
+                &mut || prints.take().ok_or_else(|| Error::new("err.file.unknown")),
                 &name,
                 out,
                 budget,
                 Some(&mut scratch),
                 &mut |_| {},
-            );
-            if r.is_err() {
-                halt.store(true, Ordering::Relaxed);
-            }
-            r
-        },
-    );
+            )
+        }
+        None => con_impronte_parallele(
+            move || hashing.file_set(path),
+            |imp| {
+                let r = indicizza_lettore_con(
+                    &mut l,
+                    sample,
+                    imp,
+                    &name,
+                    out,
+                    budget,
+                    Some(&mut scratch),
+                    &mut |_| {},
+                );
+                if r.is_err() {
+                    halt.store(true, Ordering::Relaxed);
+                }
+                r
+            },
+        ),
+    };
     drop(scratch);
     let _ = std::fs::remove_file(&scratch_path);
     built.map(|_| ())

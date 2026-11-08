@@ -1,10 +1,10 @@
 //! What the readers module (feature `estesi`) adds to the `.wiff` reader: the scan types of the other QTRAPs and the check that nothing
 //! the reader does not know is read as a full scan. Known: Q1 full scan (0), MRM (4), precursor-ion scan (5), product-ion scan (6), neutral-loss scan (7), product-ion / EPI (11) and
-//! survey / full scan (15). The TOF codes, any other code and a method with more than one period are `err.file.wiff` with the cause in `detail`.
+//! survey / full scan (15). The TOF codes and any other code are `err.file.wiffScanType`, a method of several periods `err.file.wiffPeriods`, a sample kept in a .wiff2 `err.file.wiffNeeds2`.
 
 use super::{bad, Experiment, Wiff, HEADER_PRECURSOR};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 
@@ -39,7 +39,7 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
     }
     let p = periods(ole, sample);
     if p > 1 {
-        return Err(bad(&format!("periods={p}")));
+        return Err(Error::new("err.file.wiffPeriods").with("periods", p));
     }
     for (i, e) in ex.iter_mut().enumerate() {
         match e.code {
@@ -54,9 +54,11 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
             }
             Some(c) if !super::modi::confermato(Some(c)) => {
                 if crate::wiff::dad::wiff2_sample_info(ole, sample).is_some() {
-                    return Err(bad("wiff2"));
+                    return Err(Error::new("err.file.wiffNeeds2"));
                 }
-                return Err(bad(&format!("scan type code {c} (experiment {})", i + 1)));
+                return Err(Error::new("err.file.wiffScanType")
+                    .with("code", c)
+                    .with("experiment", i + 1));
             }
             Some(_) => {}
             None => return Err(bad(&format!("no scan type code (experiment {})", i + 1))),

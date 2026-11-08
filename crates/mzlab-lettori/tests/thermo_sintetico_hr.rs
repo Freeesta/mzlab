@@ -206,3 +206,103 @@ fn the_metadata_from_the_known_trailer_fields_is_the_metadata_from_the_whole_rec
         assert!(b.is_some_and(|m| k % 11 == 0 || m.precursor.is_some()));
     }
 }
+
+/// `/api/dda_window` of a DDA `.raw` written with `args`, for the queries `qs(last RT)`: (page, app and CLI, index alone) per query. The page reads
+/// the index and source of the mzML the reader writes, the app and CLI those of the reader.
+fn dda_windows(
+    name: &str,
+    args: &[&str],
+    qs: impl Fn(f64) -> Vec<String>,
+) -> Vec<(String, String, String)> {
+    use mzlab_core::idxread::Index;
+    use mzlab_core::routes::{Query, Routes};
+    use mzlab_core::sorgente::SorgenteLettore;
+    use mzlab_core::{lettori_mzml, mzidx, upload};
+    let d = cartella(name);
+    let f = d.join("dda.raw");
+    genera(&f, args);
+    let b = std::fs::read(&f).unwrap();
+    let _ = std::fs::remove_dir_all(&d);
+    let mut set = FileSet {
+        membri: vec![Membro {
+            nome: "dda.raw".into(),
+            dim: b.len() as u64,
+            dati: Box::new(b),
+            sha1: None,
+        }],
+    };
+    let membri = upload::impronte(&mut set).unwrap();
+    let mut l = mzlab_lettori::apri(set, &Limiti::desktop()).expect("open");
+    let mzml = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "dda.mzML").unwrap();
+    let (ia, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, mzidx::DEFAULT_BUDGET).unwrap();
+    let pb = upload::prepare_lettore(&mut *l, 0, &membri, "dda.mzML").unwrap();
+    let mut ib = std::io::Cursor::new(Vec::new());
+    mzidx::build_lettore(&pb.table, &mut *l, 0, &mut ib, mzidx::DEFAULT_BUDGET).unwrap();
+    let ib = ib.into_inner();
+    let mut ra = Routes::new(Index::open(ia.clone(), ia.len() as u64).unwrap());
+    let mut rb = Routes::new(Index::open(ib.clone(), ib.len() as u64).unwrap());
+    let hi = ra.idx.scans.iter().map(|s| s.rt).fold(0.0, f64::max);
+    qs(hi)
+        .iter()
+        .map(|q| {
+            let q = Query::parse(q);
+            let a = ra
+                .mzml_route("/api/dda_window", &q, &mut mzml.clone())
+                .unwrap()
+                .unwrap();
+            let c = rb
+                .mzml_route(
+                    "/api/dda_window",
+                    &q,
+                    &mut SorgenteLettore { l: &mut *l, c: 0 },
+                )
+                .unwrap()
+                .unwrap();
+            let plain = ra.handle("/api/dda_window", &q).unwrap().unwrap();
+            (a, c, plain)
+        })
+        .collect()
+}
+
+/// A reader that gives no precursor intensity: the page and the app and CLI give the same bytes, the intensities filled from the parent survey scans.
+#[test]
+fn the_dda_window_of_a_raw_fills_its_precursor_intensities_alike() {
+    let args = [
+        "--scans", "60", "--peaks", "200", "--ms2", "5", "--seed", "7", "--dda",
+    ];
+    let qs = |hi: f64| {
+        vec![
+            format!("r0=0&r1={hi}"),
+            format!("r0={}&r1={}", hi / 3.0, hi / 2.0),
+            format!("r0=0&r1={hi}&hr=0"),
+        ]
+    };
+    for (a, c, plain) in dda_windows("ddaw", &args, qs) {
+        assert_eq!(a, c);
+        assert!(!a.contains("null"), "a precursor without intensity: {a}");
+        assert!(!a.contains("pintCut"), "{a}");
+        assert!(
+            plain.contains("null"),
+            "the reader gives intensities: {plain}"
+        );
+    }
+}
+
+/// Past 400 parent survey scans the rest stay null and the answer says so (`pintCut`, the notice of the «N MS²» list), alike on every surface;
+/// a narrower window is filled whole and the index alone never claims the cut.
+#[test]
+fn the_dda_window_of_a_raw_says_where_it_stops_filling() {
+    let args = [
+        "--scans", "830", "--peaks", "20", "--ms2", "1", "--seed", "11", "--dda",
+    ];
+    let qs = |hi: f64| vec![format!("r0=0&r1={hi}"), format!("r0=0&r1={}", hi / 4.0)];
+    let r = dda_windows("ddacut", &args, qs);
+    let (a, c, plain) = &r[0];
+    assert_eq!(a, c);
+    assert!(a.contains(r#""pintCut":400"#) && a.contains("null"), "{a}");
+    assert!(!plain.contains("pintCut"), "{plain}");
+    let (a, c, _) = &r[1];
+    assert_eq!(a, c);
+    assert!(!a.contains("pintCut") && !a.contains("null"), "{a}");
+}

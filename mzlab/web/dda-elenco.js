@@ -1,6 +1,6 @@
 // @ts-strict
 // The «N MS²» button of the Full Scan of a DDA trio: how many MS2 started from the scan(s) shown and their list, one row per precursor
-// (/api/dda_window, Rust). Click, Enter or Space opens the list; ↑ ↓ Home End move, Enter shows the most intense MS2 of the precursor, Esc closes.
+// (/api/dda_window, Rust; one row per isolation window in a DIA file). Click, Enter or Space opens the list; ↑ ↓ Home End move, Enter shows the most intense MS2 of the precursor, Esc closes.
 // Also «▲ MS²», the switch of the triangles of the MS2 on the chromatogram of the trio (`tri`). Loaded by dda-marcatori.js on the first drawing of a DDA Full Scan; `I` is the inside of DDA. An MS2 is shown as acquired: no compound name.
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 
@@ -22,7 +22,8 @@ function button(I, p) {
  * @param {Bag} I @param {Bag} p @param {Bag | null} w @param {string} why */
 export function sync(I, p, w, why) {
   const b = button(I, p), n = w ? w.n : 0, one = w && w.ms1 === 1, txt = T("dda.win.btn", { n });
-  const tip = !w ? T("dda.win.wait") : !n ? why : one ? T("dda.win.one") : T("dda.win.avg", { n: w.ms1 });
+  const cut = w && w.pintCut ? ". " + T("dda.win.cut", { n: w.pintCut }) : "";             // past these parents the precursor intensities stay unread
+  const tip = (!w ? T("dda.win.wait") : !n ? why : one ? T("dda.win.one") : T("dda.win.avg", { n: w.ms1 })) + (n ? cut : "");
   if (b.textContent !== txt) { b.textContent = txt; fitHdSoon(p); }
   if (b.title !== tip) { b.title = tip; b.setAttribute("aria-label", txt + ". " + tip); }
   b.setAttribute("aria-disabled", String(!n));
@@ -38,19 +39,25 @@ function close(p) {
 function open(I, p, b) {
   const w = p._dw; if (!w || !w.n) return;
   if (p.el.querySelector(".dw-pop")) { close(p); return; }
-  const s2 = I.target(p), dec = HR.prof(E.files[s2 ? s2.k : p.k], 2).dec;
+  const s2 = I.target(p), dec = HR.prof(E.files[s2 ? s2.k : p.k], 2).dec, f = E.files[p.k], D = f && I.ready(f.k), dia = !!(D && window.DDAMARK && window.DDAMARK.dia(f));
   const pop = document.createElement("div");
   pop.className = "sp-pop dw-pop"; pop.setAttribute("role", "listbox"); pop.tabIndex = 0; pop.setAttribute("aria-label", T("dda.win.list", { n: w.n }));
   /** @type {HTMLElement[]} */
   const opts = w.groups.map((/** @type {Bag} */ q, /** @type {number} */ i) => {
     const o = document.createElement("div"), a = minOf(q.rt), z = maxOf(q.rt);
     o.id = `dw${p.id}-${i}`; o.setAttribute("role", "option"); o.setAttribute("aria-selected", "false");
-    o.textContent = T(q.sid.length > 1 ? "dda.win.rowN" : "dda.win.row1", { i: i + 1, prec: q.prec.toFixed(dec), n: q.sid.length, rt: a.toFixed(2), rt1: z.toFixed(2) });
+    const j = dia ? D.idx.get(q.sid[0]) : null, win = j != null && D.lo[j] != null && D.hi[j] != null;          // a DIA row names its isolation window: no ion was picked
+    o.textContent = win ? T(q.sid.length > 1 ? "dda.win.diaN" : "dda.win.dia1", { i: i + 1, lo: D.lo[j].toFixed(1), hi: D.hi[j].toFixed(1), n: q.sid.length, rt: a.toFixed(2), rt1: z.toFixed(2) })
+      : T(q.sid.length > 1 ? "dda.win.rowN" : "dda.win.row1", { i: i + 1, prec: q.prec.toFixed(dec), n: q.sid.length, rt: a.toFixed(2), rt1: z.toFixed(2) });
     o.onclick = () => choose(I, p, q);
     return o;
   });
   let at = 0;
   const move = (/** @type {number} */ i) => { opts[at].setAttribute("aria-selected", "false"); at = Math.max(0, Math.min(opts.length - 1, i)); opts[at].setAttribute("aria-selected", "true"); pop.setAttribute("aria-activedescendant", opts[at].id); opts[at].scrollIntoView({ block: "nearest" }); };
+  if (w.pintCut) {                                    // one calm line over the rows, read with the list (a listbox holds only options)
+    const note = document.createElement("small"); note.id = `dw${p.id}-cut`; note.setAttribute("aria-hidden", "true");
+    note.textContent = T("dda.win.cut", { n: w.pintCut }); pop.append(note); pop.setAttribute("aria-describedby", note.id);
+  }
   pop.append(...opts);
   pop.addEventListener("keydown", e => {
     const k = e.key, step = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: opts.length - 1 }[k];
@@ -66,7 +73,7 @@ function open(I, p, b) {
   p.el.append(pop); b.setAttribute("aria-expanded", "true"); move(0); pop.focus();
   const ac = new AbortController(); p._dwOff = () => ac.abort();
   p._ac.signal.addEventListener("abort", () => ac.abort(), { once: true, signal: ac.signal });   // the panel closing ends the listener too (the floor is Safari 16.4)
-  document.addEventListener("mousedown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!t.closest(".dw-pop") && !t.closest('[data-a="ddaw"]')) close(p); }, { capture: true, signal: ac.signal });
+  document.addEventListener("pointerdown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!t.closest(".dw-pop") && !t.closest('[data-a="ddaw"]')) close(p); }, { capture: true, signal: ac.signal });   // pointerdown: a tap on a plain area of iPad Safari gives no mousedown
 }
 /** The most intense MS2 of a precursor in the MS2 panel; the Full Scan stays as it is. @param {Bag} I @param {Bag} p @param {Bag} q */
 function choose(I, p, q) {
