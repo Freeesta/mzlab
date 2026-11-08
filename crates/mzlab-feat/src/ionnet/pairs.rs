@@ -70,12 +70,13 @@ pub fn corr(t: &Aligned, p: &Params, a: usize, b: usize) -> Option<Corr> {
     Some(Corr { a, b, r })
 }
 
-/// Every pair of rows that correlates, `a < b`, in row order (rows visited by RT, so the cost is the RT window and not all pairs).
-pub fn all(t: &Aligned, p: &Params) -> Vec<Corr> {
+/// Every pair of rows that correlates, `a < b`, in row order (rows visited by RT, so the cost is the RT window and not all pairs). Past `cap` pairs
+/// none is kept and the rest is only counted: `Err(count)`, so a dense table is refused with its true size and never held.
+pub fn all(t: &Aligned, p: &Params, cap: usize) -> Result<Vec<Corr>, usize> {
     let order = crate::sortc::order(t.len(), &mut |i, j| {
         crate::sortc::asc_nan_last(t.rt[i], t.rt[j]).then(i.cmp(&j))
     });
-    let mut out = Vec::new();
+    let (mut out, mut count) = (Vec::new(), 0usize);
     for (k, &i) in order.iter().enumerate() {
         let i = i as usize;
         for &j in &order[k + 1..] {
@@ -84,10 +85,18 @@ pub fn all(t: &Aligned, p: &Params) -> Vec<Corr> {
                 break;
             }
             if let Some(c) = corr(t, p, i.min(j), i.max(j)) {
-                out.push(c);
+                count += 1;
+                if count <= cap {
+                    out.push(c);
+                } else if count == cap + 1 {
+                    out = Vec::new();
+                }
             }
         }
     }
+    if count > cap {
+        return Err(count);
+    }
     crate::sortc::by(&mut out, |x, y| x.a.cmp(&y.a).then(x.b.cmp(&y.b)));
-    out
+    Ok(out)
 }
