@@ -9,6 +9,9 @@ export const DEMO_SPEND_CAP = 0.5;
 /** the script chips of the demo panel: the label (lang/ key) and the text sent, fixed in every language so that a strict recording replays it */
 export const DEMO_CHIPS = [["llm.chip.explain", "Explain these files"], ["llm.chip.setup", "Set up mzFlow for me"]];
 
+/** the words of the demo panel (lang/ keys): «Assistant not available», what still works, the spend counter and its one notice */
+export const DEMO_WORDS = { unavailable: "llm.unavailable", rules: "llm.unavailable.rules", spend: "llm.spend", soft: "llm.spend.soft" };
+
 /** @type {{provider: string, model: string, level: string, hideNames: boolean, spendCap: number, session: string} | null} */
 let active = null;
 

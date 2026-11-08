@@ -891,7 +891,7 @@ function renderNav() {
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
 Q("#fsel").onchange = (/** @type {Event & { target: HTMLSelectElement }} */ e) => activeFile(+e.target.value);
 // ← → (scan by scan or file by file), Maiusc + ← →, Spazio and Esc: see scroll.js (scrollKeys)
-document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
+document.addEventListener("pointerdown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
 // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
 function toolbar() {
   if (window.BANCO) BANCO.bar();       // high-resolution bench: its toolbar (banco.js)
@@ -984,7 +984,7 @@ function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
   m._ret = ev.kbd ? document.activeElement : null; m._lp = !!ev.lp; m._t = Date.now();
   // with a finger the menu opens beside it: lifting the finger must not click an item
   const off = document.documentElement.classList.contains("touch") ? 16 : 0;
-  m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
+  m.style.left = Math.max(4, Math.min(ev.clientX + off, innerWidth - m.offsetWidth - 8)) + "px";      // its real width: a finger makes the rows taller and wider
   m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
   if (ev.kbd) { const f = m.querySelector('div[role^=menuitem]:not(.dim)'); if (f) f.focus(); }
 }
