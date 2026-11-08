@@ -15,8 +15,7 @@ fn threads(files: usize) -> usize {
     std::thread::available_parallelism()
         .map_or(1, |n| n.get())
         .min(files)
-        .min(MAX_READERS)
-        .max(1)
+        .clamp(1, MAX_READERS)
 }
 
 /// Upper bound of the input readers, whatever the cores and the files.
