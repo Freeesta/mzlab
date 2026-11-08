@@ -61,6 +61,8 @@ pub mod infusione;
 pub mod iteminfo;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod json;
+#[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
+pub mod json_members;
 pub mod labmethods;
 pub mod kinetics;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
