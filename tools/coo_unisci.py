@@ -28,10 +28,10 @@ def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProce
     return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=check)
 
 
-def ci_green(eventi: list[dict], sha: str) -> tuple[bool, str | None]:
+def ci_green(events: list[dict], sha: str) -> tuple[bool, str | None]:
     """(green, first failing job) from the `run` events of `sha`; `rust` may be absent (skipped by the path filter)."""
     last: dict[str, dict] = {}
-    for r in eventi:
+    for r in events:
         if r.get("tipo") == "run" and r.get("sha") == sha:
             v = last.get(r["workflow"])
             if v is None or (r.get("run_attempt", 1), r["ts_utc"]) >= (v.get("run_attempt", 1), v["ts_utc"]):
@@ -84,14 +84,14 @@ def valuta(repo: Path, pr: int, sha: str) -> dict:
     if head != sha:
         res["motivo"] = f"head SHA differs: PR is at {head}"
         return res
-    eventi = ci_metrics.eventi_ramo(repo=str(repo))
-    res["verde"], job = ci_green(eventi, sha)
+    events = ci_metrics.eventi_ramo(repo=str(repo))
+    res["verde"], job = ci_green(events, sha)
     if not res["verde"]:
         res["motivo"] = f"CI non verde: {job}"
         return res
     res["rischi"] = rischi(git(repo, "diff", "--name-only", f"origin/main...{sha}").stdout.split(), csp_changed(repo, sha))
-    res["combine"], motivo = combine(repo, sha)
-    res["motivo"] = motivo or "; ".join(res["rischi"])
+    res["combine"], reason = combine(repo, sha)
+    res["motivo"] = reason or "; ".join(res["rischi"])
     res["unire"] = bool(res["combine"] and not res["rischi"])
     return res
 

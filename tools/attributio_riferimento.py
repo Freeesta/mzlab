@@ -54,19 +54,19 @@ def frame_rows(df, cols=None):
     return [{c: jsonable(row[c]) for c in cols} for _, row in df.iterrows()]
 
 
-def scrivi(uscita: Path, nome: str, dati) -> None:
-    uscita.mkdir(parents=True, exist_ok=True)
-    text = json.dumps(jsonable(dati), indent=1, sort_keys=True, ensure_ascii=False)
-    (uscita / nome).write_text(text + "\n", encoding="utf-8")
+def scrivi(output: Path, nome: str, data) -> None:
+    output.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(jsonable(data), indent=1, sort_keys=True, ensure_ascii=False)
+    (output / nome).write_text(text + "\n", encoding="utf-8")
 
 
-def carica(src: Path, campagna: Path):
+def carica(src: Path, campaign: Path):
     os.environ["UNTARGET_OFFLINE"] = "1"
     os.environ.setdefault("MPLBACKEND", "Agg")
     sys.path.insert(0, str(src))
     warnings.simplefilter("ignore")
     from attributio import load_campaign
-    return load_campaign(campagna / "campaign.toml")
+    return load_campaign(campaign / "campaign.toml")
 
 
 def stage_campaign(C):
@@ -647,8 +647,8 @@ def stage_publication(src):
     from attributio.diagnostics import publication_table as pt
     C, _ = campagna_esportazione(src)
     _without_hazard_data(pt)
-    vuoto = (pd.DataFrame(columns=["inchikey_first_block"]), pd.DataFrame(columns=["name", "first_block", "campaign"]))
-    res = pt.build(C, "all", registry=vuoto)
+    empty = (pd.DataFrame(columns=["inchikey_first_block"]), pd.DataFrame(columns=["name", "first_block", "campaign"]))
+    res = pt.build(C, "all", registry=empty)
     rd = pt.readme(res, "Title", "Description", {})
     return {"identities": sheet("Identities", res["Identities"]), "excluded": sheet("Excluded", res["Excluded"]),
             "readme": sheet("README", rd), "counts": res["counts"], "sites": res["sites"], "short": res["short"],
@@ -691,9 +691,9 @@ def stage_gradient(src):
     return out
 
 
-def controlla(uscita: Path, campagna: Path) -> int:
-    got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
-    with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
+def controlla(output: Path, campaign: Path) -> int:
+    got = json.loads((output / "livelli.json").read_text(encoding="utf-8"))["features"]
+    with open(campaign / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
         att = list(csv.DictReader(fh, delimiter=";"))
     if len(got) != len(att):
         print(f"FAIL: {len(got)} features, {len(att)} expected")

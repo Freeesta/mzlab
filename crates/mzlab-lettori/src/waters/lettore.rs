@@ -342,6 +342,26 @@ fn livello_di(funs: &[Fun], i: usize) -> u8 {
     }
 }
 
+/// A folder that gives nothing (no scan, no channel, no analogue trace) because a function with data has records of a width not read yet is refused with
+/// that function named, rather than opened empty.
+fn variante_ignota(nome: &str, funs: &[Fun], senza_analogiche: bool) -> Result<()> {
+    let dati = |f: &Fun| f.dat.is_some() && f.righe.iter().any(|r| r.conta > 0);
+    if !senza_analogiche
+        || funs
+            .iter()
+            .any(|f| dati(f) && (f.f.mirato() || f.cod.is_some()))
+    {
+        return Ok(());
+    }
+    match funs.iter().find(|f| dati(f) && !f.f.mirato()) {
+        Some(f) => Err(Error::new("err.file.recordVariant")
+            .with("name", nome)
+            .with("function", f.f.indice.to_string())
+            .with("type", format!("0x{:02X}", f.f.tipo))),
+        None => Ok(()),
+    }
+}
+
 /// Everything of function `f`: its index, the DAT and the side tables.
 fn carica(
     c: &mut Cartella,
@@ -415,6 +435,9 @@ fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     if c.cerca(PRIMA_DAT).is_none() {
         return Err(errore("_FUNC001.DAT is missing"));
     }
+    if inf.is_empty() {
+        return Err(Error::new("err.file.functionsEmpty").with("name", &c.nome));
+    }
     let lista = funzioni::leggi(&inf, limiti)?;
     elenco_intero(&c, lista.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
@@ -444,6 +467,7 @@ fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         ));
     }
     let analogiche = super::cromi::analogiche(&mut c);
+    variante_ignota(&c.nome, &funs, analogiche.is_empty())?;
     let mut l = LettoreWaters {
         c,
         funs,
