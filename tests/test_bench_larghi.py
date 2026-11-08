@@ -80,7 +80,7 @@ def test_window_of_the_wide_ones():
     assert find(10.1, wide_one=False) and not find(10.2, wide_one=False)     # a narrow truth keeps +-0.15
 
 
-def test_narrow_ones_stay_as_abbina():
+def test_narrow_ones_stay_as_match_points():
     rng = np.random.default_rng(3)
     for _ in range(40):
         na, nb = int(rng.integers(1, 12)), int(rng.integers(1, 12))

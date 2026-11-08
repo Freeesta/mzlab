@@ -38,7 +38,7 @@ def test_transport_listed_hosts_only():
     assert "<script src=" in t and not re.search(r"<script(?![^>]*\bsrc=)[^>]*>\s*\S", t)
 
 
-def test_il_sito_costruito_aggiunge_solo_il_proxy():
+def test_the_built_site_adds_only_the_proxy():
     t = (ROOT / "mzlab/web/llm/trasporto.html").read_text(encoding="utf-8")
     host = "https://assist.example.org"
     built = set(re.search(r"connect-src ([^;]+)", csp(build_site.transport_csp(t, host))).group(1).split())

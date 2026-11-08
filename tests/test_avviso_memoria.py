@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-CASI = json.loads((ROOT / "tests" / "dati" / "avvisi_memoria.json").read_text(encoding="utf-8"))["casi"]
+CASES = json.loads((ROOT / "tests" / "dati" / "avvisi_memoria.json").read_text(encoding="utf-8"))["casi"]
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 # the English catalogs, then I18N.err on every case, in the app (MZLAB_DESKTOP) or on the site
@@ -22,13 +22,13 @@ console.log(JSON.stringify(casi.map(c => I18N.err({ error_key: "error.memoryBudg
 
 
 def rese(desktop: bool):
-    out = subprocess.run(["node", "-e", JS, str(ROOT / "mzlab" / "web"), "1" if desktop else "0", json.dumps(CASI)],
+    out = subprocess.run(["node", "-e", JS, str(ROOT / "mzlab" / "web"), "1" if desktop else "0", json.dumps(CASES)],
                          check=True, capture_output=True, text=True, encoding="utf-8").stdout
     return json.loads(out)
 
 
 def test_the_desktop_app_shows_the_text_of_the_cli():
-    assert rese(True) == [c["testo"] for c in CASI]
+    assert rese(True) == [c["testo"] for c in CASES]
 
 
 def test_the_site_keeps_the_browser_text_with_the_numbers():

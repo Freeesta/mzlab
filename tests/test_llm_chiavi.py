@@ -44,7 +44,7 @@ def test_exports_do_not_name_the_keys_file():
         assert "llm-chiavi" not in p.read_text(encoding="utf-8"), p
 
 
-def test_la_frase_del_proprietario_resta_nel_trasporto():
+def test_the_owner_sentence_stays_in_transport():
     """The owner passphrase of the demo (`x-mzlab-owner`) lives only in the transport document (site) or in the keys file read by Rust (app):
     the page and the worker never carry it, and the session of the panel is the only demo value they send."""
     web = ROOT / "mzlab/web/llm"
