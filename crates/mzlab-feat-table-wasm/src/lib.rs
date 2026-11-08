@@ -456,7 +456,7 @@ pub fn table_row_traces(
 /// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp`; JSON in, JSON out.
 #[wasm_bindgen]
 pub fn samples(op: &str, input: &str) -> std::result::Result<String, JsValue> {
-    core::campioni_json(op, input).map_err(js_err)
+    core::samples_route(op, input).map_err(js_err)
 }
 
 /// `screen.suspects` in the browser: the `screen/1` text `flow run` writes (`mzlab_feat::flow_screen_suspects::screen_text`). `params_json` is the parameters of the step merged with its
