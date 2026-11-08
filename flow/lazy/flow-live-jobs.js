@@ -71,6 +71,7 @@
     const raise = !!est && est.via === "refused" && x.allowed.has(jk);
     if (est && est.via === "refused" && !raise) {
       const err = refusal(est, budget, "detect");
+      x.info.set(inst.id, { mb: est.mb, modo: "refused" });
       if (est.mb <= high && high > budget) { x.memAsk.set(jk, { spec, est, err }); await x.call("block", { job: j, by: "permission.memory" }); return {}; }
       x.errors.set(inst.id, err);
       await x.call("started", { job: j });

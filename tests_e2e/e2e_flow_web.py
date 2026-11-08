@@ -123,7 +123,9 @@ try:
             assert r["err"] and r["err"]["key"] == "error.featMemory", (r["err"], r["ev"][-3:])
             q = r["err"]["params"]
             assert q["fase"] == "detect" and int(q["stima_mb"]) > 8 and int(q["budget_mb"]) == 8, q
-            assert of(r, "detect", "refused") and not of(r, "align", "running"), r["ev"]
+            det = of(r, "detect")
+            assert any(e["stato"] == "refused" for e in det) and not of(r, "align", "running"), det[-4:]
+            assert any(e["modo"] == "refused" and e["mb"] == int(q["stima_mb"]) for e in det), det[-4:]
         step("a file the budget cannot detect is refused before it starts, with its numbers", detect_refused)
 
         def phone_note():
