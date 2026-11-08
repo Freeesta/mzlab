@@ -54,10 +54,10 @@ class Serie:
     membri: tuple | None = None            # (member_start, member_mz, member_rt) of the rows in "per family" mode; empty starts in "per ion" mode
 
 
-def leggi_serie(cartella, nomi: list[str]) -> Serie:
+def leggi_serie(folder, nomi: list[str]) -> Serie:
     """Reads `series_evid.mzfeat` and the `.mzfeatf` of the files (`nomi`: names of the index files, in the order of the run)."""
-    cartella = Path(cartella)
-    dati = (cartella / "series_evid.mzfeat").read_bytes()
+    folder = Path(folder)
+    dati = (folder / "series_evid.mzfeat").read_bytes()
     meta, a = apri(dati)
     n, k = meta["rows"], meta["files"]
     stato = a["state"].reshape(n, k)
@@ -70,24 +70,24 @@ def leggi_serie(cartella, nomi: list[str]) -> Serie:
     cand = np.array(sorted(i["id"] for i in ident if i["totale"] > 0), dtype=int)
     per_file = []
     for nome in nomi:
-        m, f = apri((cartella / f"{nome}.mzfeatf").read_bytes())
+        m, f = apri((folder / f"{nome}.mzfeatf").read_bytes())
         per_file.append({"nome": nome, "mz": f["mz"].astype(float), "rt": f["rt"].astype(float), "purezza": f["purity"].astype(float), "altezza": f["height"].astype(float),
                          "area": f["area"].astype(float), "rt_inizio": f["left"].astype(float), "rt_fine": f["right"].astype(float)})
-    sha = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(cartella.glob("*.mzfeat*"))}
+    sha = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(folder.glob("*.mzfeat*"))}
     tp = {"stato": a["tp_status"].astype(int), "parentela": a["tp_kinship"].astype(int), "note": a["tp_notes"].astype(int)} if "tp_status" in a else None
     membri = (a["member_start"].astype(int), a["member_mz"].astype(float), a["member_rt"].astype(float)) if "member_start" in a else None
     return Serie(tab, stato, ident, cand, per_file, sha, meta["crate"], meta["feat_version"], tp, membri)
 
 
-def indici(mzml: list[Path], cartella: Path) -> list[str]:
-    """Builds (if missing) the `.mzidx` of every mzML in `cartella` and returns their paths. `..._t05` becomes `..._t05min`: the example reads the minutes from the name."""
+def indici(mzml: list[Path], folder: Path) -> list[str]:
+    """Builds (if missing) the `.mzidx` of every mzML in `folder` and returns their paths. `..._t05` becomes `..._t05min`: the example reads the minutes from the name."""
     from mzlab.reader import mzidx
     from mzlab.reader.mzml import Run
-    cartella.mkdir(parents=True, exist_ok=True)
+    folder.mkdir(parents=True, exist_ok=True)
     out = []
     for p in mzml:
         stem = re.sub(r"_t(\d+(?:\.\d+)?)$", r"_t\1min", p.stem)
-        dest = cartella / f"{stem}.mzidx"
+        dest = folder / f"{stem}.mzidx"
         if not dest.exists():
             run = Run(p, index_path=dest)
             mzidx.build(run, dest)
@@ -100,10 +100,10 @@ def costruisci_esempio() -> None:
     subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo"], cwd=ROOT, check=True)
 
 
-def esegui(percorsi_idx: list[str], formula_neutra: str, mz_genitore: float, rt_genitore: float, uscita: Path, smiles: str = "") -> Serie:
-    """Runs the example on the indexes (in this order) and reads the result from `uscita`; `smiles` is the structure of the parent, as the page passes it."""
-    uscita.mkdir(parents=True, exist_ok=True)
-    cmd = [str(ESEMPIO), str(uscita), *percorsi_idx, "--parent", formula_neutra, *(["--smiles", smiles] if smiles else []), "--rules", str(REGOLE), "--parent-mz", repr(mz_genitore), "--parent-rt", repr(rt_genitore)]
+def esegui(idx_paths: list[str], neutral_formula: str, parent_mz: float, parent_rt: float, output: Path, smiles: str = "") -> Serie:
+    """Runs the example on the indexes (in this order) and reads the result from `output`; `smiles` is the structure of the parent, as the page passes it."""
+    output.mkdir(parents=True, exist_ok=True)
+    cmd = [str(ESEMPIO), str(output), *idx_paths, "--parent", neutral_formula, *(["--smiles", smiles] if smiles else []), "--rules", str(REGOLE), "--parent-mz", repr(parent_mz), "--parent-rt", repr(parent_rt)]
     # another xdist worker building the same target with other features can replace the binary under us: rebuild once, then say what is there
     for tentativo in range(2):
         costruisci_esempio()
@@ -112,9 +112,9 @@ def esegui(percorsi_idx: list[str], formula_neutra: str, mz_genitore: float, rt_
             break
         except FileNotFoundError:
             if tentativo:
-                cartella = ESEMPIO.parent
-                raise FileNotFoundError(f"{ESEMPIO} missing after a second build; {cartella} holds {sorted(x.name for x in cartella.iterdir()) if cartella.is_dir() else 'nothing (no such folder)'}")
-    return leggi_serie(uscita, [Path(x).name for x in percorsi_idx])
+                folder = ESEMPIO.parent
+                raise FileNotFoundError(f"{ESEMPIO} missing after a second build; {folder} holds {sorted(x.name for x in folder.iterdir()) if folder.is_dir() else 'nothing (no such folder)'}")
+    return leggi_serie(output, [Path(x).name for x in idx_paths])
 
 
 def neutra_da_ione(ione: str) -> str:

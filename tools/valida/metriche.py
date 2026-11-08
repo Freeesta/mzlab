@@ -33,18 +33,18 @@ def _find_peaks(picchi: list[Picco], tab: Tabella, ppm: float, rt_tol: float) ->
 
 def completezza(picchi: list[Picco], tab: Tabella, min_height: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """Share of the detectable reference peaks (height >= min_height in the reference file) that have a row in the table, for M, M+1, M+2."""
-    trovati = _find_peaks(picchi, tab, ppm, rt_tol)
+    found = _find_peaks(picchi, tab, ppm, rt_tol)
     out = {}
     for k in K:
         det = [i for i, p in enumerate(picchi) if p.ref_file >= 0 and p.height[k, p.ref_file] >= min_height]
-        got = [i for i in det if (i, k) in trovati]
+        got = [i for i in det if (i, k) in found]
         out[f"M+{k}" if k else "M"] = {"rilevabili": len(det), "trovati": len(got), "frazione": round(len(got) / len(det), 4) if det else None}
     return out
 
 
 def rapporto_isotopico(picchi: list[Picco], tab: Tabella, min_height: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """Error of the M+1/M area ratio, relative to the formula (obs / theory - 1), measured on the table rows and, as a baseline, on the reference traces."""
-    trovati = _find_peaks(picchi, tab, ppm, rt_tol)
+    found = _find_peaks(picchi, tab, ppm, rt_tol)
     err_tab, err_rif = [], []
     for i, p in enumerate(picchi):
         f = p.ref_file
@@ -52,8 +52,8 @@ def rapporto_isotopico(picchi: list[Picco], tab: Tabella, min_height: float, ppm
             continue
         teo = p.rel[1] / p.rel[0]
         err_rif.append(p.area[1, f] / p.area[0, f] / teo - 1)
-        if (i, 0) in trovati and (i, 1) in trovati:
-            a0, a1 = tab.area_di(f, trovati[(i, 0)]), tab.area_di(f, trovati[(i, 1)])
+        if (i, 0) in found and (i, 1) in found:
+            a0, a1 = tab.area_di(f, found[(i, 0)]), tab.area_di(f, found[(i, 1)])
             if a0 > 0:
                 err_tab.append(float(a1 / a0) / teo - 1)
 
@@ -63,10 +63,10 @@ def rapporto_isotopico(picchi: list[Picco], tab: Tabella, min_height: float, ppm
     return {"tabella": stat(err_tab), "riferimento": stat(err_rif)}
 
 
-def tp_veri(ioni: list[dict], tab: Tabella, colonne_trattate, candidati=None, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+def tp_veri(ioni: list[dict], tab: Tabella, handled_columns, candidati=None, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """True products (not the parent) found in the aligned table within ppm / RT of the observed RT, with the rank by the largest treated area among all rows
     (`rango_tutte`) and, if `candidati` (rows that survived the filters) is given, among the candidates (`rango_candidati`)."""
-    amax = tab.massimo(colonne_trattate)
+    amax = tab.massimo(handled_columns)
     order_all = np.argsort(-amax, kind="stable")
     rango_tutte = np.empty(len(tab), int)
     rango_tutte[order_all] = np.arange(1, len(tab) + 1)
@@ -92,26 +92,26 @@ def tp_veri(ioni: list[dict], tab: Tabella, colonne_trattate, candidati=None, pp
                 d["candidato"] = g in rank_cand
                 d["rango_candidati"] = rank_cand.get(g)
         dett.append(d)
-    trovati = [d for d in dett if d["trovato"]]
-    riass = {"valutabili": len(dett), "trovati": len(trovati), "senza_rt_osservato": without_rt}
+    found = [d for d in dett if d["trovato"]]
+    riass = {"valutabili": len(dett), "trovati": len(found), "senza_rt_osservato": without_rt}
     if candidati is not None:
-        riass["nei_candidati"] = sum(1 for d in trovati if d.get("candidato"))
-        rc = sorted(d["rango_candidati"] for d in trovati if d.get("rango_candidati"))
+        riass["nei_candidati"] = sum(1 for d in found if d.get("candidato"))
+        rc = sorted(d["rango_candidati"] for d in found if d.get("rango_candidati"))
         riass["rango_candidati_mediano"] = float(np.median(rc)) if rc else None
         riass["candidati_totali"] = int(len(candidati))
     return {"riassunto": riass, "dettaglio": dett}
 
 
-def classes_intensity(area_max: np.ndarray, soglia: float) -> np.ndarray:
+def classes_intensity(area_max: np.ndarray, threshold: float) -> np.ndarray:
     """0: < 10 x threshold, 1: 10-100 x, 2: > 100 x (rows below the threshold itself fall in class 0)."""
-    return np.digitize(area_max, [10 * soglia, 100 * soglia])
+    return np.digitize(area_max, [10 * threshold, 100 * threshold])
 
 
-def jaccard(a: Tabella, b: Tabella, colonne, soglia: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+def jaccard(a: Tabella, b: Tabella, columns, threshold: float, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     """Jaccard index of two aligned tables (rows matched one-to-one within ppm / RT) overall and per intensity class of the row in `a` (of `b` when only there)."""
-    ma, mb = a.massimo(colonne), b.massimo(colonne)
+    ma, mb = a.massimo(columns), b.massimo(columns)
     ia, ib = abbina(a.mz, a.rt, b.mz, b.rt, ppm, rt_tol)
-    ca, cb = classes_intensity(ma, soglia), classes_intensity(mb, soglia)
+    ca, cb = classes_intensity(ma, threshold), classes_intensity(mb, threshold)
     match_b = np.zeros(len(b), bool)
     match_b[ib] = True
 
@@ -132,5 +132,5 @@ def righe_nel_bianco(tab: Tabella, blank_columns) -> dict | None:
     if not cols or tab.lungo:
         return None
     present = (tab.area > 0).any(1)
-    nel = (tab.area[:, cols] > 0).any(1)
-    return {"righe_nel_bianco": int(nel.sum()), "righe_con_segnale": int(present.sum()), "frazione": round(float(nel.sum() / max(present.sum(), 1)), 4)}
+    inside = (tab.area[:, cols] > 0).any(1)
+    return {"righe_nel_bianco": int(inside.sum()), "righe_con_segnale": int(present.sum()), "frazione": round(float(inside.sum() / max(present.sum(), 1)), 4)}

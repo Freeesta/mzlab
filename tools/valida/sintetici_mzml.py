@@ -265,7 +265,7 @@ def costruisci_larghi(seme: int, n_larghi: int = 18, n_stretti: int = 12, n_fond
 
     n_a, n_b = round(n_larghi * 0.45), round(n_larghi * 0.275)
     morfs = ["a_gauss", "a_emg"] * (n_a // 2) + ["a_gauss"] * (n_a % 2) + ["b_doppio"] * n_b + ["c_banda"] * (n_larghi - n_a - n_b)
-    rows, gruppi, n_nsb = [], [], 0
+    rows, groups, n_nsb = [], [], 0
     for i, morf in enumerate(morfs):
         mz = mz_free()
         if morf.startswith("a_"):
@@ -290,14 +290,14 @@ def costruisci_larghi(seme: int, n_larghi: int = 18, n_stretti: int = 12, n_fond
                 n_nsb += 1
                 rows.append(_riga(f"NSB-{n_nsb:03d}", "narrow", "stretto_su_banda", mz * (1 + float(rng.uniform(-3, 3)) * 1e-6), [st], n_campioni, su=f"BRD-{i + 1:03d}"))
                 todos.append(st)
-        gruppi.append({"mz": mz, "comps": todos})
+        groups.append({"mz": mz, "comps": todos})
     for i in range(n_stretti):
         mz = mz_free()
         st = comp(place(1.0), float(rng.uniform(6, 12)), float(rng.uniform(15, 60)))
         rows.append(_riga(f"NAR-{i + 1:03d}", "narrow", "stretto", mz, [st], n_campioni))
-        gruppi.append({"mz": mz, "comps": [st]})
+        groups.append({"mz": mz, "comps": [st]})
     fondo = [(f"LAR-BG-{i + 1:03d}", float(m), float(rng.lognormal(np.log(6e4), 0.8)), float(rng.uniform(0, 6.28))) for i, m in enumerate(bg_mz)]
-    return rows, gruppi, fondo
+    return rows, groups, fondo
 
 
 def gradiente(rt: float) -> float:
@@ -310,15 +310,15 @@ class Lotto:
     hooks `profilo` (absolute intensity of the compounds at a time), `fondo_t` (gradient on the background channels), `ciclo`, `fin`, `minimo`."""
     ioni: list = []
 
-    def __init__(self, gruppi: list, fondo: list, rt_fine: float, ciclo: float):
-        gruppi = sorted(gruppi, key=lambda g: g["comps"][0]["mu"])
-        self.n, self.fondo, self.rt_fine, self.ciclo, self.minimo = len(gruppi), fondo, rt_fine, ciclo, 100.0
-        flat = [(i, c) for i, g in enumerate(gruppi) for c in g["comps"]]
+    def __init__(self, groups: list, fondo: list, rt_fine: float, ciclo: float):
+        groups = sorted(groups, key=lambda g: g["comps"][0]["mu"])
+        self.n, self.fondo, self.rt_fine, self.ciclo, self.minimo = len(groups), fondo, rt_fine, ciclo, 100.0
+        flat = [(i, c) for i, g in enumerate(groups) for c in g["comps"]]
         self.owner = np.array([i for i, _ in flat], int)
         self.mu, self.sg, self.tau, self.h = (np.array([c[k] for _, c in flat], float) for k in ("mu", "sigma", "tau", "h"))
-        chiave = np.array([g["comps"][0]["mu"] for g in gruppi], float)
-        self.rumore = (np.array([g["mz"] for g in gruppi], float), chiave, np.ones(self.n), np.ones(self.n))
-        self.fin = max([0.5] + [max(abs(t.min() - k), abs(t.max() - k)) + 0.1 for g, k in zip(gruppi, chiave) for t in (_grid(g["comps"]),)])
+        chiave = np.array([g["comps"][0]["mu"] for g in groups], float)
+        self.rumore = (np.array([g["mz"] for g in groups], float), chiave, np.ones(self.n), np.ones(self.n))
+        self.fin = max([0.5] + [max(abs(t.min() - k), abs(t.max() - k)) + 0.1 for g, k in zip(groups, chiave) for t in (_grid(g["comps"]),)])
 
     def profilo(self, rt: float, lo: int, hi: int):
         return np.bincount(self.owner, weights=self.h * forma(rt, self.mu, self.sg, self.tau), minlength=self.n)[lo:hi]
@@ -335,14 +335,14 @@ def genera_larghi(out: Path, seme: int = 11, n_campioni: int = 3, n_larghi: int 
     (`su`) have a truth m/z within 3 ppm of it; in the file both are one centroid at the band m/z, as the instrument would merge them."""
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
-    rows, gruppi, fondo = costruisci_larghi(seme, n_larghi, n_stretti, n_fondo, n_campioni, rt_fine)
+    rows, groups, fondo = costruisci_larghi(seme, n_larghi, n_stretti, n_fondo, n_campioni, rt_fine)
     names = ["blank_01.mzML"] + [f"camp_{k:02d}.mzML" for k in range(1, n_campioni + 1)]
     for k, nome in enumerate(names):
-        scrivi_file(out / nome, k, Lotto(gruppi if k else [], fondo, rt_fine, ciclo), seme)
-    verita = {"formato": "spal-bench/1", "seme": seme, "file": names, "blank": names[0], "n0": N0, "unita": {"rt": "min", "fwhm_s": "s", "area": "intensity*min"},
+        scrivi_file(out / nome, k, Lotto(groups if k else [], fondo, rt_fine, ciclo), seme)
+    truth = {"formato": "spal-bench/1", "seme": seme, "file": names, "blank": names[0], "n0": N0, "unita": {"rt": "min", "fwhm_s": "s", "area": "intensity*min"},
               "fondo": {"canali": n_fondo, "gradiente": "G(t)=0.15+0.85/(1+exp(-(t-16)/5))", "ampiezza_mediana": 6e4}, "ioni": rows}
-    (out / "verita.json").write_text(json.dumps(verita, sort_keys=True, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    return verita
+    (out / "verita.json").write_text(json.dumps(truth, sort_keys=True, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    return truth
 
 
 def main() -> None:
