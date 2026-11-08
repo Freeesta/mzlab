@@ -287,6 +287,23 @@ impl Cdf {
     }
 
     /// The number of elements of a variable.
+    /// Elements `da..da + n` of `v` lie whole in the file (inside the variable and before the end of a copy cut short).
+    pub fn intera(&self, v: &Var, da: u64, n: u64) -> bool {
+        let Some(e) = n.checked_sub(1).and_then(|k| da.checked_add(k)) else {
+            return true;
+        };
+        let w = v.tipo.larghezza();
+        let pos = if v.record {
+            let epr = per_record(&self.dim, v).max(1);
+            v.begin
+                .saturating_add((e / epr).saturating_mul(self.recsize))
+                .saturating_add((e % epr).saturating_mul(w))
+        } else {
+            v.begin.saturating_add(e.saturating_mul(w))
+        };
+        e < self.elementi(v) && pos.saturating_add(w) <= self.dimensione
+    }
+
     pub fn elementi(&self, v: &Var) -> u64 {
         v.dims
             .iter()
