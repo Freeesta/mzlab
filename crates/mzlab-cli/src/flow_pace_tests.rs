@@ -4,7 +4,7 @@
 use mzlab_core::lettori_mzml::Picchi;
 use mzlab_core::mzmlwrite::Opzioni;
 
-use crate::convert_fixtures::{folder, makers};
+use crate::convert_fixtures::{folder, makers, wiff};
 
 fn well_formed(seen: &[(usize, usize)]) {
     assert!(
@@ -142,5 +142,33 @@ fn the_fingerprints_taken_beside_the_scans_change_no_byte_and_a_cancel_stops() {
         .unwrap_err();
         assert_eq!(e.key, "err.flow.cancelled", "{f}");
     }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_dataset_hashed_before_its_index_is_not_read_again_for_its_prints_and_gives_the_same_bytes() {
+    let d = folder("pace_prints");
+    if !wiff(&d, "w", 2) {
+        return;
+    }
+    let src = d.join("w.wiff");
+    let (a, b) = (d.join("a.mzidx"), d.join("b.mzidx"));
+    let budget = mzlab_core::mzidx::DEFAULT_BUDGET;
+    // not hashed yet: the fingerprints come from a read of their own
+    assert!(crate::flow_set::known_prints(&src).unwrap().is_none());
+    crate::build_index_of(&src, "w.wiff@2", &a, budget).unwrap();
+    crate::flow_set::digest(&src).unwrap();
+    let mut fs = crate::flow_set::file_set(&src).unwrap();
+    let read = mzlab_core::upload::impronte(&mut fs).unwrap();
+    assert_eq!(read.len(), 2);
+    assert_eq!(crate::flow_set::known_prints(&src).unwrap(), Some(read));
+    crate::build_index_of(&src, "w.wiff@2", &b, budget).unwrap();
+    assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
+    // a member that changed since `digest` (another size) is read again, never taken from the stale hash
+    let scan = d.join("w.wiff.scan");
+    let mut bytes = std::fs::read(&scan).unwrap();
+    bytes.push(0);
+    std::fs::write(&scan, bytes).unwrap();
+    assert!(crate::flow_set::known_prints(&src).unwrap().is_none());
     let _ = std::fs::remove_dir_all(&d);
 }
