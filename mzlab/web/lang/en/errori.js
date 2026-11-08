@@ -191,6 +191,7 @@ I18N.add("en", {
   "err.conv.noProfile": "This file has only centroided peaks and no profile data, so it cannot be converted to a profile mzML. Use the centroid mzML as it is.",
   "err.corsa.prov": "The provenance record of this run is missing or has an unknown format: run the analysis again.",
   "err.file.agilent": "The Agilent file cannot be read ({detail}).",
+  "err.file.agilentIms": "This .D folder is an ion-mobility (IMS) run: AcqData/MSScan.xsd describes IMS frames split into drift bins (FrameID, DriftBin), a format this program does not read yet, so nothing was loaded. Convert the folder to mzML with the instrument software and open that file.",
   "err.file.base64": "The file is damaged: a peak array is not valid base64 ({detail}). Copy the file again or export it again from the instrument software.",
   "err.file.xml": "The file is not a complete mzML: the XML cannot be read ({detail}). If the copy was interrupted, copy the whole file again.",
   "err.file.nonFinite": "The file is damaged: scan {scan} carries a number that is not finite ({what} = {value}). Copy the file again or export it again from the instrument software.",

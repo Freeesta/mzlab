@@ -146,6 +146,9 @@ impl Layout {
     pub fn from_xsd(xsd: &str) -> Result<Layout> {
         let clean = strip_comments(xsd);
         let scan = elements(&clean, "ScanRecordType")?;
+        if let Some(e) = ims(&scan) {
+            return Err(e);
+        }
         let spectrum = elements(&clean, "SpectrumParamsType")?;
         let mut head = Vec::new();
         for (name, ty) in &scan {
@@ -182,6 +185,14 @@ impl Layout {
         }
         Layout::new(&head, &tail)
     }
+}
+
+/// An ion-mobility run (`FrameID` and `DriftBin` in the scan record, no `SpectrumParamValues`): its records are drift bins of IMS frames, a layout not
+/// read yet, so it gets its own notice rather than a missing field.
+fn ims(scan: &[(String, String)]) -> Option<Error> {
+    let has = |n: &str| scan.iter().any(|(m, _)| m == n);
+    (has("FrameID") && has("DriftBin") && !has("SpectrumParamValues"))
+        .then(|| Error::new("err.file.agilentIms"))
 }
 
 fn strip_comments(s: &str) -> String {

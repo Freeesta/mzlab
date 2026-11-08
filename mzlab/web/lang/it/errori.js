@@ -191,6 +191,7 @@ I18N.add("it", {
   "err.conv.noProfile": "Questo file ha solo picchi centroidi e nessun dato di profilo, quindi non si può convertire in un mzML di profilo. Usa l'mzML centroide così com'è.",
   "err.corsa.prov": "Il registro di provenienza di questa analisi manca o ha un formato sconosciuto: rilancia l'analisi.",
   "err.file.agilent": "Il file Agilent non si legge ({detail}).",
+  "err.file.agilentIms": "Questa cartella .D è un'acquisizione a mobilità ionica (IMS): AcqData/MSScan.xsd descrive frame IMS divisi in bin di drift (FrameID, DriftBin), un formato che questo programma non legge ancora, quindi non è stato caricato nulla. Converti la cartella in mzML con il programma dello strumento e apri quel file.",
   "err.file.base64": "Il file è danneggiato: un array di picchi non è base64 valido ({detail}). Copia di nuovo il file o esportalo di nuovo dal programma dello strumento.",
   "err.file.xml": "Il file non è un mzML completo: l'XML non si legge ({detail}). Se la copia si è interrotta, copia di nuovo il file per intero.",
   "err.file.nonFinite": "Il file è danneggiato: la scansione {scan} porta un numero che non è un numero finito ({what} = {value}). Copia di nuovo il file o esportalo di nuovo dal programma dello strumento.",
