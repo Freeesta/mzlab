@@ -6,14 +6,12 @@ use js_sys::Function;
 use mzlab_core::error::Result;
 use mzlab_feat::recipe::Recipe;
 
-use crate::open_one;
 use crate::run::recipe_for;
+use crate::{open_all, open_one};
 
 /// The recipe `text` on the first of the indexes `sizes` (read with `read(k, offset, length)`), or the refusal of a series that mixes polarities or resolutions.
 pub fn series_recipe(read: &Function, sizes: &[f64], text: &str) -> Result<Recipe> {
-    let indexes = (0..sizes.len())
-        .map(|k| open_one(read, k, sizes[k]))
-        .collect::<Result<Vec<_>>>()?;
+    let indexes = open_all(read, sizes)?;
     mzlab_feat::nature::one_kind_of(&indexes)?;
     recipe_for(text, &mut open_one(read, 0, sizes[0])?)
 }

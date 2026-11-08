@@ -192,9 +192,7 @@ pub fn series_estimates(
     index_sizes: Vec<f64>,
 ) -> std::result::Result<String, wasm_bindgen::JsValue> {
     let run = || -> Result<String> {
-        let indexes = (0..index_sizes.len())
-            .map(|k| crate::open_one(&index_read, k, index_sizes[k]))
-            .collect::<Result<Vec<_>>>()?;
+        let indexes = crate::open_all(&index_read, &index_sizes)?;
         // the rule `flow run` puts on the scan inputs before the check
         if written.iter().any(|w| w == "?facets") {
             let files = indexes.iter().map(mzlab_feat::nature::index_facts);
@@ -421,9 +419,7 @@ pub fn tp_link_evidence(
             rt: file.rt,
         };
         let roles = TpRoles::for_table(samples, table)?;
-        let mut indexes = (0..index_sizes.len())
-            .map(|k| crate::open_one(&index_read, k, index_sizes[k]))
-            .collect::<Result<Vec<_>>>()?;
+        let mut indexes = crate::open_all(&index_read, &index_sizes)?;
         let mut recipe = match indexes.first_mut() {
             Some(first) => run::recipe_for(recipe, first)?,
             None => run::recipe_from_json(recipe)?,
