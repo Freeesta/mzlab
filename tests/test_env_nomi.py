@@ -38,6 +38,6 @@ def test_rust_readers_check_new_then_old(f, new, old):
     assert "".join(f'var_os("{new}").or_else(|| std::env::var_os("{old}"))'.split()) in src
 
 
-def test_mostra_ok_alias():
+def test_show_ok_alias():
     out = subprocess.run([sys.executable, str(ROOT / "tools" / "verifica.py"), "--help"], capture_output=True, text=True, cwd=ROOT).stdout
     assert "--mostra-ok, --tutto" in out

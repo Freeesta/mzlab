@@ -157,7 +157,7 @@ def synthetic(base: Path):
 
 
 @pytest.mark.parametrize("fam", ["aperti", "agilent", "waters", "shimadzu", "sciex", "thermo", "bruker", "andi"])
-def test_mzml_del_modulo_uguale_a_quello_del_cli(tools, fam):
+def test_module_mzml_equals_the_cli_one(tools, fam):
     ds = create(fam, tools["tmp"] / f"in_{fam}")
     cli = da_cli(tools, fam, ds)
     wasm = da_wasm(tools, fam, ds)
@@ -173,7 +173,7 @@ def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
-def test_wiff_con_dad_e_metodo_uguale_al_cli_con_dad(tools):
+def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
     (`mzLab metodo/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""
     d = tools["tmp"] / "in_dadmetodo"

@@ -41,7 +41,7 @@ def test_cluster_solventi_keller():
     assert any(x["adduct"] == "[M+Na-2H]-" and abs(x["mz"] - 248.9604) < 1e-3 for x in tfa_neg)
 
 
-def test_differenze_addotti_huang1999():
+def test_adduct_differences_huang1999():
     # Exact shifts calculated from elements.py
     na_h = ADDUCT_SHIFT["[M+Na]+"] - ADDUCT_SHIFT["[M+H]+"]
     nh4_h = ADDUCT_SHIFT["[M+NH4]+"] - ADDUCT_SHIFT["[M+H]+"]

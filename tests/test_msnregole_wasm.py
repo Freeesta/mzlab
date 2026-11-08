@@ -30,7 +30,7 @@ def expectations(pkg, smiles):
     return run("node", str(ROOT / "tests" / "msnregole_wasm_node.js"), str(pkg / "mzlab-msnregole-wasm"), smiles).stdout
 
 
-def test_attese_are_a_list_of_rule_formula_ion(pkg):
+def test_expectations_are_a_list_of_rule_formula_ion(pkg):
     a = json.loads(expectations(pkg, SMILES))
     assert a and all(len(x) == 3 and x[2] in (0, 1) for x in a)
 
@@ -40,7 +40,7 @@ def test_a_bad_smiles_is_a_keyed_error(pkg):
     assert r.returncode != 0 and "error_key" in r.stderr
 
 
-def test_graph_with_the_attese_of_the_wasm_is_the_graph_of_the_command(pkg):
+def test_graph_with_the_expectations_of_the_wasm_is_the_graph_of_the_command(pkg):
     base = f"formula=C14H15N3O5%2B&regole=1&smiles={quote(SMILES, safe='')}"
     query = f"{base}&attese={quote(expectations(pkg, SMILES), safe='')}"
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "mzlab-msngrafo-wasm"), str(pkg / "msn.mzidx"), str(MZML), query).stdout

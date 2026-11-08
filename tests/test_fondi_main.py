@@ -41,7 +41,7 @@ def test_generato_si_risolve(tmp_path):
     assert sh(clone, "status", "--porcelain") == "" and len(sh(clone, "log", "--merges", "--format=%h").split()) == 1
 
 
-def test_umano_si_ferma(tmp_path):
+def test_human_stops(tmp_path):
     clone = prepare(tmp_path, "motore.rs")
     rows = []
     assert f.fondi(clone, {"gen.json": ["true"]}, rows.append) == 1

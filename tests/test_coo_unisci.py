@@ -61,7 +61,7 @@ def world(tmp_path):
     return clone, pr, events
 
 
-def test_verde(world):
+def test_green(world):
     clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
     events(sha)
@@ -70,7 +70,7 @@ def test_verde(world):
     assert sh(clone, "worktree", "list").count("\n") == 0
 
 
-def test_rosso(world):
+def test_red(world):
     clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
     events(sha, rust="failure")
@@ -78,7 +78,7 @@ def test_rosso(world):
     assert not r["verde"] and not r["unire"] and r["motivo"] == "CI non verde: rust"
 
 
-def test_sha_diverso(world):
+def test_different_sha(world):
     clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
     events(sha)
@@ -86,7 +86,7 @@ def test_sha_diverso(world):
     assert not r["unire"] and "differs" in r["motivo"]
 
 
-def test_conflitto(world):
+def test_conflict(world):
     clone, pr, events = world
     n, sha = pr("a.txt", "pr\n")
     commit(clone, "a.txt", "main\n", "main cambia a")

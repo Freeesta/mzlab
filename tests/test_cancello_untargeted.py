@@ -34,7 +34,7 @@ def test_a_missing_row_fails_and_not_measured_is_null():
     assert U.vuota()["ok"] is None
 
 
-def test_scrivi_keeps_the_other_keys(tmp_path):
+def test_write_keeps_the_other_keys(tmp_path):
     p = tmp_path / "cancello.json"
     p.write_text(json.dumps({"format": "cancello/2", "vista_candidati": True}), encoding="utf-8")
     U.scrivi(U.vuota(), p)
