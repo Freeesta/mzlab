@@ -378,6 +378,7 @@ I18N.add("it", {
   "error.tpNoControls": "La tabella non ha file di controllo da confrontare con quelli trattati: segnali.",
   "warn.flow.formula.ion": "Lo ione scritto qui ha una polarità diversa da quella dei dati.",
   "warn.convert.fewerWorkers": "Si convertono {workers} file alla volta invece di {wanted}, perché ogni conversione abbia la sua parte del budget di memoria di questo computer ({budget_mb} MB). I file scritti sono gli stessi; ci vuole solo più tempo.",
+  "warn.flow.group.corrFiles": "La correlazione tra le righe richiede almeno tanti file quanti min_corr_samples (3 se non lo cambi): con meno file non è stata calcolata, quindi non ci sono archi di correlazione. Isotopi e specie ioniche restano.",
   "warn.msngrafo.rottureCapped": "Ci sono troppe rotture di legami: sono state provate solo le prime.",
   "warn.qc.mass.few_refs": "Sono stati trovati troppo pochi ioni di riferimento per giudicare l'accuratezza di massa di questo file.",
   "warn.qc.mass.is_area": "L'area dello standard interno cambia molto tra i file.",
