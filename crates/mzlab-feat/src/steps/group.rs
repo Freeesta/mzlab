@@ -74,7 +74,7 @@ pub(super) fn group() -> Step {
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
-        errors: vec!["err.flow.group.ion"],
+        errors: vec!["err.flow.group.ion", "error.memoryBudget"],
         references: vec![
             Reference {
                 doi: "10.1038/s41467-021-23953-9",

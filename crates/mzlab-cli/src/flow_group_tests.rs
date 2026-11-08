@@ -97,7 +97,10 @@ fn page_params(over: &[(&str, Value)]) -> String {
 
 fn engine(over: &[(&str, Value)]) -> String {
     let params = mzlab_feat::flow_ms2::json_params(&page_params(over)).unwrap();
-    mzlab_feat::ionnet::group_text(&params, &table()).unwrap()
+    let budget = mzlab_core::budget::MemBudget::from_request(0.0);
+    mzlab_feat::ionnet::group_text(&params, &table(), &budget)
+        .unwrap()
+        .text
 }
 
 #[test]
@@ -161,5 +164,55 @@ fn an_unknown_species_is_an_error_of_the_instance() {
     )
     .unwrap();
     assert!(prov.contains("err.flow.group.ion"), "{prov}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn fewer_files_than_min_corr_samples_are_said_in_the_record() {
+    let d = dir("few");
+    let (_, prov) = crate::flow::run_plan(
+        plan(r#"{"min_corr_samples":6}"#).as_bytes(),
+        &d,
+        &d.join("work"),
+        1,
+        None,
+    )
+    .unwrap();
+    assert!(prov.contains("warn.flow.group.corrFiles"), "{prov}");
+    let text = std::fs::read_to_string(d.join("work/grp.json")).unwrap();
+    assert!(
+        !text.contains("MS1 correlation") && text.contains("MS1 isotope"),
+        "{text}"
+    );
+    assert_eq!(text, engine(&[("min_corr_samples", Value::Num(6.0))]));
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_budget_that_cannot_hold_the_groups_is_refused_in_order() {
+    use crate::flow_run_tests::{flow_run, p};
+    let d = dir("budget");
+    std::fs::write(d.join("plan.json"), plan("{}")).unwrap();
+    let out = d.join("out");
+    let o = flow_run(&[
+        p(&d.join("plan.json")),
+        "--in",
+        p(&d),
+        "--out",
+        p(&out),
+        "--budget-mb",
+        "0.0001",
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
+    assert!(
+        prov.contains("error.memoryBudget") && prov.contains("\"fase\":\"group\""),
+        "{prov}"
+    );
+    assert!(
+        o.stderr.contains("the group phase needs about"),
+        "{}",
+        o.stderr
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
