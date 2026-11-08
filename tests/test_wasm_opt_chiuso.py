@@ -10,7 +10,6 @@ import tarfile
 from pathlib import Path
 
 import pytest
-import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "tools/wasm_opt.sh"
@@ -85,24 +84,30 @@ def test_cached_tarball_is_used_without_download(tmp_path):
     assert (tmp_path / "args").read_text().startswith("-O3 ")
 
 
+def _env_and_jobs(wf):
+    """The top-level env lines and {job: its text}, read as text: the CI Python has no YAML parser."""
+    text = (ROOT / f".github/workflows/{wf}.yml").read_text(encoding="utf-8")
+    head, body = re.split(r"^jobs:\n", text, maxsplit=1, flags=re.M)
+    parts = re.split(r"^  ([A-Za-z0-9_-]+):\n", body, flags=re.M)
+    return head, dict(zip(parts[1::2], parts[2::2]))
+
+
 def _builds_wasm(job):
-    runs = "\n".join(s.get("run", "") for s in job.get("steps", []))
-    return "tools/wasm_opt.sh" in runs or re.search(r"build_feat_wasm\.sh site/static( [ab])?\s*$", runs, re.M)
+    return "tools/wasm_opt.sh" in job or re.search(r"build_feat_wasm\.sh site/static( [ab])?\s*$", job, re.M)
+
+
+CACHE_STEP = re.compile(r"- uses: actions/cache@[0-9a-f]{40} # v[\d.]+\n\s+with:\n\s+path: \$\{\{ runner\.temp \}\}/binaryen-133\.tar\.gz\n\s+key: " + re.escape(CACHE_KEY) + r"\n")
 
 
 @pytest.mark.parametrize("wf", WORKFLOWS)
 def test_production_workflows_fail_closed_and_cache_binaryen(wf):
-    d = yaml.safe_load((ROOT / f".github/workflows/{wf}.yml").read_text(encoding="utf-8"))
-    assert d["env"]["MZLAB_WASM_OPT_STRICT"] == "1"
-    jobs = {n: j for n, j in d["jobs"].items() if _builds_wasm(j)}
-    assert jobs, wf
-    for name, job in jobs.items():
-        caches = [s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/cache@") and s["with"].get("key") == CACHE_KEY]
-        assert len(caches) == 1, (wf, name)
-        assert caches[0]["with"]["path"] == "${{ runner.temp }}/binaryen-133.tar.gz"
-        assert re.search(r"@[0-9a-f]{40}$", caches[0]["uses"]), (wf, name)
+    head, jobs = _env_and_jobs(wf)
+    assert re.search(r'^env:\n(?:  .*\n)*  MZLAB_WASM_OPT_STRICT: "1"$', head, re.M), wf
+    wasm = {n: j for n, j in jobs.items() if _builds_wasm(j)}
+    assert wasm, wf
+    for name, job in wasm.items():
+        assert len(CACHE_STEP.findall(job)) == 1, (wf, name)
 
 
 def test_the_night_stays_lenient():
-    d = yaml.safe_load((ROOT / ".github/workflows/notte.yml").read_text(encoding="utf-8"))
-    assert "MZLAB_WASM_OPT_STRICT" not in str(d)
+    assert "MZLAB_WASM_OPT_STRICT" not in (ROOT / ".github/workflows/notte.yml").read_text(encoding="utf-8")
