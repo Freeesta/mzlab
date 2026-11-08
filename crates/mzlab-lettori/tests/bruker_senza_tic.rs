@@ -7,7 +7,7 @@ use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 mod comune_sqlite;
 
 fn apri() -> Box<dyn Lettore> {
-    let (tdf, bin) = comune_sqlite::pasef::cartella(3, 3000, 800);
+    let (tdf, bin) = comune_sqlite::pasef::folder(3, 3000, 800);
     let m = |n: &str, b: Vec<u8>| Membro {
         nome: format!("x.d/{n}"),
         dim: b.len() as u64,
@@ -27,8 +27,8 @@ fn mzml(l: &mut dyn Lettore) -> Vec<u8> {
 }
 
 #[test]
-fn mzml_uguale_con_e_senza_il_tic_delle_ms2() {
-    let senza = mzml(&mut *apri());
+fn mzml_equal_with_and_without_the_ms2_tic() {
+    let without = mzml(&mut *apri());
     let mut l = apri();
     assert!(l
         .index(0)
@@ -36,28 +36,28 @@ fn mzml_uguale_con_e_senza_il_tic_delle_ms2() {
         .iter()
         .any(|v| v.livello > 1 && v.tic > 0.0));
     let con = mzml(&mut *l);
-    assert!(senza.len() > 10_000);
+    assert!(without.len() > 10_000);
     assert!(
-        senza == con,
+        without == con,
         "mzML differs: {} vs {} bytes",
-        senza.len(),
+        without.len(),
         con.len()
     );
 }
 
 #[test]
-fn indice_dopo_le_righe_leggere_ha_il_tic_delle_ms2() {
-    let pieno = apri().index(0).unwrap().to_vec();
+fn index_after_the_light_rows_has_the_ms2_tic() {
+    let full = apri().index(0).unwrap().to_vec();
     let mut l = apri();
     assert!(!mzlab_lettori::srm::ha_scansioni_srm(&mut *l, 0));
-    let leggere = l.index_without_tic(0).unwrap().to_vec();
-    assert_eq!(leggere.len(), pieno.len());
-    assert!(leggere
+    let to_read = l.index_without_tic(0).unwrap().to_vec();
+    assert_eq!(to_read.len(), full.len());
+    assert!(to_read
         .iter()
-        .zip(&pieno)
+        .zip(&full)
         .all(|(a, b)| a.id == b.id && a.rt == b.rt && a.livello == b.livello));
-    let dopo = l.index(0).unwrap().to_vec();
-    for (k, (a, b)) in dopo.iter().zip(&pieno).enumerate() {
+    let after = l.index(0).unwrap().to_vec();
+    for (k, (a, b)) in after.iter().zip(&full).enumerate() {
         assert_eq!(a.tic, b.tic, "#{k}");
         let s = l.scan(0, k).unwrap();
         let summed: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();

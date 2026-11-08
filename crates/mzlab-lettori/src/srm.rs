@@ -21,8 +21,8 @@ fn srm_filter(f: &str) -> bool {
 
 /// The collision energy of a filter: the number after `@cid` (or `@hcd`, …) of the first reaction.
 fn ce_of_the_filter(f: &str) -> Option<f64> {
-    let dopo = f.get(f.find('@')? + 1..)?;
-    let n = dopo.trim_start_matches(|c: char| c.is_ascii_alphabetic());
+    let after = f.get(f.find('@')? + 1..)?;
+    let n = after.trim_start_matches(|c: char| c.is_ascii_alphabetic());
     let fine = n
         .find(|c: char| !(c.is_ascii_digit() || c == '.'))
         .unwrap_or(n.len());
@@ -33,7 +33,7 @@ fn ce_of_the_filter(f: &str) -> Option<f64> {
 type FromMethod = (f64, f64, Option<f64>, i8);
 
 /// The number after `"key":` in `seg` (the document is written by `metodo.rs`, so keys are quoted and followed by a colon and, at most, one blank).
-fn numero_di(seg: &str, key: &str) -> Option<f64> {
+fn number_of(seg: &str, key: &str) -> Option<f64> {
     let k = seg.find(key)?;
     let rest = seg.get(k + key.len()..)?.trim_start();
     let end = rest
@@ -62,7 +62,7 @@ fn transitions_of_the_method(m: &str) -> Vec<FromMethod> {
         let Some(seg) = m.get(w[0]..w[1]) else {
             continue;
         };
-        let (Some(q1), Some(q3)) = (numero_di(seg, "\"q1\":"), numero_di(seg, "\"q3\":")) else {
+        let (Some(q1), Some(q3)) = (number_of(seg, "\"q1\":"), number_of(seg, "\"q3\":")) else {
             continue;
         };
         let pol = match seg.find("\"polarita\":").and_then(|k| seg.get(k + 11..)) {
@@ -70,7 +70,7 @@ fn transitions_of_the_method(m: &str) -> Vec<FromMethod> {
             Some(r) if r.trim_start().starts_with("\"negative\"") => -1,
             _ => 0,
         };
-        out.push((q1, q3, numero_di(seg, "\"ce_eV\":"), pol));
+        out.push((q1, q3, number_of(seg, "\"ce_eV\":"), pol));
     }
     out
 }
@@ -99,11 +99,11 @@ impl SrmDaScansioni {
         }
     }
 
-    fn tracce(&mut self, c: usize) -> Result<&Vec<Chromatogram>> {
+    fn traces(&mut self, c: usize) -> Result<&Vec<Chromatogram>> {
         let i = match self.cache.iter().position(|(k, _)| *k == c) {
             Some(i) => i,
             None => {
-                let t = self.costruisci(c)?;
+                let t = self.build(c)?;
                 self.cache.push((c, t));
                 self.cache.len() - 1
             }
@@ -111,7 +111,7 @@ impl SrmDaScansioni {
         Ok(&self.cache[i].1)
     }
 
-    fn costruisci(&mut self, c: usize) -> Result<Vec<Chromatogram>> {
+    fn build(&mut self, c: usize) -> Result<Vec<Chromatogram>> {
         if self
             .inner
             .chromatograms(c)?
@@ -120,8 +120,8 @@ impl SrmDaScansioni {
         {
             return Ok(Vec::new());
         }
-        let righe: Vec<VoceScansione> = self.inner.index_without_tic(c)?.to_vec();
-        let mut tr = transitions_from_the_scans(&mut *self.inner, c, &righe)?;
+        let rows: Vec<VoceScansione> = self.inner.index_without_tic(c)?.to_vec();
+        let mut tr = transitions_from_the_scans(&mut *self.inner, c, &rows)?;
         if tr.iter().any(|t| t.ce.is_none())
             && let Ok(m) = self.inner.method(c)
         {
@@ -135,10 +135,10 @@ impl SrmDaScansioni {
 fn transitions_from_the_scans(
     inner: &mut dyn Lettore,
     c: usize,
-    righe: &[VoceScansione],
+    rows: &[VoceScansione],
 ) -> Result<Vec<Transition>> {
     let mut tr: Vec<Transition> = Vec::new();
-    for (k, r) in righe.iter().enumerate().filter(|(_, r)| scansione_srm(r)) {
+    for (k, r) in rows.iter().enumerate().filter(|(_, r)| scansione_srm(r)) {
         let q1 = r.precursore.unwrap_or(0.0);
         let s = inner.scan(c, k)?;
         let ce = ce_of_the_filter(&r.filtro);
@@ -187,12 +187,12 @@ fn cromatogramma_di((index, t): (usize, Transition)) -> Chromatogram {
 /// The collision energy and the polarity of the transitions that the scans do not give, from the table of the method. Transitions that the
 /// table has under two polarities (or none) keep what the scans say.
 fn complete_from_method(m: &str, tr: &mut [Transition]) {
-    let tabella = transitions_of_the_method(m);
+    let table = transitions_of_the_method(m);
     for t in tr.iter_mut() {
-        let mut righe = tabella.iter().filter(|(q1, q3, _, _)| {
+        let mut rows = table.iter().filter(|(q1, q3, _, _)| {
             (q1 - t.q1).abs() <= Q1_TOLERANCE && (q3 - t.q3).abs() <= Q3_TOLERANCE
         });
-        let (Some(&(_, _, ce, pol)), None) = (righe.next(), righe.next()) else {
+        let (Some(&(_, _, ce, pol)), None) = (rows.next(), rows.next()) else {
             continue;
         };
         t.ce = t.ce.or(ce);
@@ -253,7 +253,7 @@ impl Lettore for SrmDaScansioni {
     }
     fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         let mut v = self.inner.chromatograms(c)?;
-        let extra = self.tracce(c)?;
+        let extra = self.traces(c)?;
         v.extend(extra.iter().map(|t| VoceCromatogramma {
             id: t.id.clone(),
             tipo: t.kind,
@@ -262,7 +262,7 @@ impl Lettore for SrmDaScansioni {
         Ok(v)
     }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        if let Some(t) = self.tracce(c)?.iter().find(|t| t.id == id) {
+        if let Some(t) = self.traces(c)?.iter().find(|t| t.id == id) {
             return Ok(t.clone());
         }
         self.inner.chromatogram(c, id)

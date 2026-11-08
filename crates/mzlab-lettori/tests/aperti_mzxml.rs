@@ -5,20 +5,20 @@
 mod comune;
 
 use comune::mzxml::*;
-use comune::{insieme, mzml_scritto};
+use comune::{file_set, written_mzml};
 use mzlab_core::lettori::Fiducia;
 use mzlab_core::mzml::ChromKind;
 
-fn opzioni() -> Vec<Opz> {
+fn options() -> Vec<Opz> {
     let mut v = Vec::new();
     for a64 in [false, true] {
         for zlib in [false, true] {
-            for indice in [false, true] {
+            for index in [false, true] {
                 for annidato in [false, true] {
                     v.push(Opz {
                         a64,
                         zlib,
-                        indice,
+                        index,
                         annidato,
                         attributi: true,
                     });
@@ -30,15 +30,15 @@ fn opzioni() -> Vec<Opz> {
 }
 
 #[test]
-fn ogni_forma_si_apre_e_torna_come_e_stata_scritta() {
-    let scan = corsa();
-    for o in opzioni() {
-        let sorgente = if o.annidato {
+fn every_shape_opens_and_returns_as_written() {
+    let scan = run();
+    for o in options() {
+        let source = if o.annidato {
             annida(&scan)
         } else {
             scan.clone()
         };
-        let mut l = apri_mzxml(mzxml(&sorgente, o));
+        let mut l = apri_mzxml(mzxml(&source, o));
         assert_eq!(l.samples()[0].scansioni, scan.len());
         for (k, x) in scan.iter().enumerate() {
             let s = l.scan(0, k).unwrap();
@@ -52,7 +52,7 @@ fn ogni_forma_si_apre_e_torna_come_e_stata_scritta() {
                     assert_eq!(s.intensity_f64(i), f64::from(x.it[i] as f32));
                 }
             }
-            assert_eq!(s.level, x.livello);
+            assert_eq!(s.level, x.level);
             assert_eq!(s.polarity, 1);
             assert_eq!(s.precursor, x.prec);
             assert!((s.rt - x.rt_s / 60.0).abs() < 1e-12);
@@ -63,9 +63,9 @@ fn ogni_forma_si_apre_e_torna_come_e_stata_scritta() {
 }
 
 #[test]
-fn l_indice_dice_livello_precursore_e_tic_senza_leggere_i_picchi() {
-    let scan = corsa();
-    let mut l = apri_mzxml(mzxml(&scan, PIATTO));
+fn the_index_gives_level_precursor_and_tic_without_reading_peaks() {
+    let scan = run();
+    let mut l = apri_mzxml(mzxml(&scan, FLAT));
     let ind = l.index(0).unwrap();
     assert_eq!(ind.len(), 5);
     assert_eq!(ind[1].livello, 2);
@@ -75,21 +75,21 @@ fn l_indice_dice_livello_precursore_e_tic_senza_leggere_i_picchi() {
 }
 
 #[test]
-fn tic_e_bpc_si_calcolano_dai_picchi_quando_il_file_non_li_dice() {
-    let scan = corsa();
+fn tic_and_bpc_are_computed_from_peaks_when_the_file_omits_them() {
+    let scan = run();
     let mut l = apri_mzxml(mzxml(
         &scan,
         Opz {
             attributi: false,
-            ..PIATTO
+            ..FLAT
         },
     ));
-    let voci = l.chromatograms(0).unwrap();
-    assert!(voci
+    let entries = l.chromatograms(0).unwrap();
+    assert!(entries
         .iter()
         .any(|v| v.id == "TIC" && v.tipo == ChromKind::Tic));
     let tic = l.chromatogram(0, "TIC").unwrap();
-    let one: Vec<&Sc> = scan.iter().filter(|x| x.livello == 1).collect();
+    let one: Vec<&Sc> = scan.iter().filter(|x| x.level == 1).collect();
     assert_eq!(tic.time.len(), one.len());
     for (i, x) in one.iter().enumerate() {
         assert!((tic.intensity[i] - x.it.iter().sum::<f64>()).abs() < 1e-9);
@@ -101,7 +101,7 @@ fn tic_e_bpc_si_calcolano_dai_picchi_quando_il_file_non_li_dice() {
 }
 
 #[test]
-fn le_scansioni_srm_diventano_cromatogrammi() {
+fn srm_scans_become_chromatograms() {
     let mut scan = Vec::new();
     for (k, rt) in [6.0, 7.0, 8.0].iter().enumerate() {
         for (j, (q1, q3)) in [(300.2, 150.1), (300.2, 200.3), (410.4, 120.0)]
@@ -115,7 +115,7 @@ fn le_scansioni_srm_diventano_cromatogrammi() {
             scan.push(x);
         }
     }
-    let mut l = apri_mzxml(mzxml(&scan, PIATTO));
+    let mut l = apri_mzxml(mzxml(&scan, FLAT));
     let srm: Vec<_> = l
         .chromatograms(0)
         .unwrap()
@@ -130,18 +130,18 @@ fn le_scansioni_srm_diventano_cromatogrammi() {
 }
 
 #[test]
-fn riconosce_dai_byte_non_dal_nome() {
-    let mut buono = insieme("x.mzXML", mzxml(&corsa(), PIATTO));
+fn recognises_by_bytes_not_by_name() {
+    let mut buono = file_set("x.mzXML", mzxml(&run(), FLAT));
     assert!(mzlab_lettori::riconosci(&mut buono).is_some_and(|v| v.id == "mzxml"));
-    let mut altro = insieme("x.mzXML", b"<?xml version=\"1.0\"?><altro/>".to_vec());
+    let mut altro = file_set("x.mzXML", b"<?xml version=\"1.0\"?><altro/>".to_vec());
     assert!(mzlab_lettori::riconosci(&mut altro).is_none());
-    let v = (mzlab_lettori::aperti::mzxml::VOCE.riconosci)(&mut buono);
+    let v = (mzlab_lettori::aperti::mzxml::ENTRY.riconosci)(&mut buono);
     assert_eq!(v, Fiducia::Si);
 }
 
 #[test]
-fn il_metodo_e_la_testata_portano_strumento_file_e_programmi() {
-    let mut l = apri_mzxml(mzxml(&corsa(), PIATTO));
+fn the_method_and_the_header_carry_instrument_file_and_software() {
+    let mut l = apri_mzxml(mzxml(&run(), FLAT));
     let m = l.method(0).unwrap();
     for t in [
         "\"formato\":\"mzxml\"",
@@ -166,19 +166,24 @@ fn il_metodo_e_la_testata_portano_strumento_file_e_programmi() {
         vec!["0123456789abcdef0123456789abcdef01234567".to_string()]
     );
     assert!(h.run_params.iter().any(|(k, _)| k == "mzLab metodo/1"));
-    let mzml = String::from_utf8(mzml_scritto(&mut l)).unwrap();
+    let mzml = String::from_utf8(written_mzml(&mut l)).unwrap();
     assert!(mzml.contains("<spectrumList count=\"5\""));
     assert!(mzml.contains("Q Exactive"));
 }
 
 #[test]
-fn l_intestazione_porta_ogni_attributo_della_scansione() {
-    let mut l = apri_mzxml(mzxml(&corsa(), PIATTO));
-    let campi = l.scan_header(0, 1).unwrap();
-    let valore = |n: &str| campi.iter().find(|c| c.nome == n).map(|c| c.valore.clone());
-    assert_eq!(valore("msLevel").as_deref(), Some("2"));
-    assert_eq!(valore("scanType").as_deref(), Some("Full"));
-    assert_eq!(valore("precursorMz.precursorCharge").as_deref(), Some("2"));
-    assert_eq!(valore("peaks.precision").as_deref(), Some("64"));
-    assert_eq!(valore("ion injection time").as_deref(), Some("12.5"));
+fn the_header_carries_every_scan_attribute() {
+    let mut l = apri_mzxml(mzxml(&run(), FLAT));
+    let fields = l.scan_header(0, 1).unwrap();
+    let value = |n: &str| {
+        fields
+            .iter()
+            .find(|c| c.nome == n)
+            .map(|c| c.valore.clone())
+    };
+    assert_eq!(value("msLevel").as_deref(), Some("2"));
+    assert_eq!(value("scanType").as_deref(), Some("Full"));
+    assert_eq!(value("precursorMz.precursorCharge").as_deref(), Some("2"));
+    assert_eq!(value("peaks.precision").as_deref(), Some("64"));
+    assert_eq!(value("ion injection time").as_deref(), Some("12.5"));
 }

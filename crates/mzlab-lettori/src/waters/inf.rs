@@ -8,13 +8,13 @@ use std::collections::BTreeMap;
 const ENTRIES_MAX: usize = 5000;
 
 #[derive(Debug, Clone, Default)]
-pub(super) struct Voce {
-    pub(super) sezione: String,
+pub(super) struct Entry {
+    pub(super) section: String,
     pub(super) chiave: String,
     pub(super) valore: String,
 }
 
-fn numero(v: &str) -> Option<f64> {
+fn number(v: &str) -> Option<f64> {
     v.split_whitespace()
         .next()?
         .parse::<f64>()
@@ -37,24 +37,24 @@ fn polarita(v: &str) -> Option<i8> {
 
 #[derive(Debug, Default)]
 pub(super) struct Testata {
-    pub(super) voci: Vec<(String, String)>,
+    pub(super) entries: Vec<(String, String)>,
     pub(super) tarature: BTreeMap<u32, Calibration>,
 }
 
 impl Testata {
     /// The value of `chiave` when the file gives one.
-    pub(super) fn get(&self, chiave: &str) -> Option<&str> {
-        self.voci
+    pub(super) fn get(&self, key: &str) -> Option<&str> {
+        self.entries
             .iter()
-            .find(|(k, v)| k == chiave && !v.trim().is_empty())
+            .find(|(k, v)| k == key && !v.trim().is_empty())
             .map(|(_, v)| v.trim())
     }
 }
 
 pub(super) fn file_header(t: &str) -> Testata {
     let mut h = Testata::default();
-    for riga in t.lines() {
-        let Some(r) = riga.trim().strip_prefix("$$") else {
+    for row in t.lines() {
+        let Some(r) = row.trim().strip_prefix("$$") else {
             continue;
         };
         let Some((k, v)) = r
@@ -63,7 +63,7 @@ pub(super) fn file_header(t: &str) -> Testata {
         else {
             continue;
         };
-        if h.voci.len() >= ENTRIES_MAX {
+        if h.entries.len() >= ENTRIES_MAX {
             break;
         }
         let (k, v) = (k.trim(), v.trim());
@@ -74,7 +74,7 @@ pub(super) fn file_header(t: &str) -> Testata {
         {
             h.tarature.insert(n, t);
         }
-        h.voci.push((k.to_string(), v.to_string()));
+        h.entries.push((k.to_string(), v.to_string()));
     }
     h
 }
@@ -82,7 +82,7 @@ pub(super) fn file_header(t: &str) -> Testata {
 // ---- _extern.inf ----
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub(super) enum Modo {
+pub(super) enum Mode {
     Ms,
     /// «TOF PARENT»: the survey function of MSe or SONAR.
     Parent,
@@ -96,7 +96,7 @@ pub(super) enum Modo {
 #[derive(Debug, Clone, Default)]
 pub(super) struct FunzioneExt {
     pub(super) label: String,
-    pub(super) modo: Modo,
+    pub(super) mode: Mode,
     /// The label names ion mobility (not decoded).
     pub(super) mobilita: bool,
     pub(super) polarita: Option<i8>,
@@ -108,26 +108,26 @@ pub(super) struct FunzioneExt {
 
 #[derive(Debug, Default)]
 pub(super) struct Extern {
-    pub(super) voci: Vec<Voce>,
+    pub(super) voci: Vec<Entry>,
     pub(super) funzioni: BTreeMap<u32, FunzioneExt>,
     /// The polarity of the global section (functions without their own).
     pub(super) polarita: Option<i8>,
 }
 
-fn mode_of(tail: &str) -> Modo {
+fn mode_of(tail: &str) -> Mode {
     let t = tail.to_ascii_uppercase();
     if t.contains("REFERENCE") {
-        Modo::Riferimento
+        Mode::Riferimento
     } else if t.contains("DAUGHTER") {
-        Modo::Figlie
+        Mode::Figlie
     } else if t.contains("MSMS") {
-        Modo::Msms
+        Mode::Msms
     } else if t.contains("PARENT") {
-        Modo::Parent
+        Mode::Parent
     } else if t.contains("TOF MS") {
-        Modo::Ms
+        Mode::Ms
     } else {
-        Modo::Altro
+        Mode::Altro
     }
 }
 
@@ -160,14 +160,14 @@ type Ramps = BTreeMap<u32, (Option<f64>, Option<f64>)>;
 /// One "Collision Energy" line of function `n`: an end of a ramp or a fixed value.
 fn energy(e: &mut Extern, ramps: &mut Ramps, n: u32, b: &str, v: &str) {
     if b.ends_with("Collision Energy Ramp Start") || b.ends_with("Collision Energy Low") {
-        ramps.entry(n).or_default().0 = numero(v);
+        ramps.entry(n).or_default().0 = number(v);
     } else if b.ends_with("Collision Energy Ramp End") || b.ends_with("Collision Energy High") {
-        ramps.entry(n).or_default().1 = numero(v);
+        ramps.entry(n).or_default().1 = number(v);
     } else if let Some((a, z)) = v.split_once("(Ramping to") {
-        ramps.insert(n, (numero(a), numero(z.trim_end_matches(')'))));
+        ramps.insert(n, (number(a), number(z.trim_end_matches(')'))));
     } else if !b.contains("Use ") && !b.contains("Manual") {
         let f = e.funzioni.entry(n).or_default();
-        f.ce = f.ce.or(numero(v));
+        f.ce = f.ce.or(number(v));
     }
 }
 
@@ -175,8 +175,8 @@ pub(super) fn extern_inf(t: &str) -> Extern {
     let mut e = Extern::default();
     let (mut sezione, mut funz) = (String::new(), None::<u32>);
     let mut ramps = Ramps::new();
-    for riga in t.lines() {
-        let r = riga.trim();
+    for row in t.lines() {
+        let r = row.trim();
         if r.is_empty() {
             continue;
         }
@@ -184,7 +184,7 @@ pub(super) fn extern_inf(t: &str) -> Extern {
             funz = Some(n);
             sezione = r.to_string();
             let f = e.funzioni.entry(n).or_default();
-            f.modo = mode_of(tail);
+            f.mode = mode_of(tail);
             f.mobilita = tail.to_ascii_uppercase().contains("MOBILITY");
             f.label = tail.to_string();
             continue;
@@ -211,7 +211,7 @@ pub(super) fn extern_inf(t: &str) -> Extern {
                 }
             }
             ("Set Mass", Some(n)) => {
-                e.funzioni.entry(n).or_default().set_mass = numero(&v).filter(|&m| m > 0.0);
+                e.funzioni.entry(n).or_default().set_mass = number(&v).filter(|&m| m > 0.0);
             }
             (b, Some(n)) if b.contains("Collision Energy") => {
                 energy(&mut e, &mut ramps, n, b, &v);
@@ -219,8 +219,8 @@ pub(super) fn extern_inf(t: &str) -> Extern {
             _ => {}
         }
         if e.voci.len() < ENTRIES_MAX {
-            e.voci.push(Voce {
-                sezione: sezione.clone(),
+            e.voci.push(Entry {
+                section: sezione.clone(),
                 chiave: k,
                 valore: v,
             });
@@ -240,7 +240,7 @@ pub(super) fn extern_inf(t: &str) -> Extern {
 
 #[derive(Debug, Default)]
 pub(super) struct Inlet {
-    pub(super) voci: Vec<Voce>,
+    pub(super) entries: Vec<Entry>,
     /// (time min, flow mL/min, %B) of the first gradient table.
     pub(super) gradiente: Vec<(f64, Option<f64>, Option<f64>)>,
     pub(super) duration_min: Option<f64>,
@@ -264,8 +264,8 @@ fn gradient_row(r: &str) -> Option<(f64, Option<f64>, Option<f64>)> {
 pub(super) fn inlet(t: &str) -> Inlet {
     let mut l = Inlet::default();
     let (mut sezione, mut in_table, mut done) = (String::new(), false, false);
-    for riga in t.lines() {
-        let r = riga.trim();
+    for row in t.lines() {
+        let r = row.trim();
         if r.starts_with("--") && r.ends_with("--") {
             sezione = r.trim_matches('-').trim().to_string();
             in_table = false;
@@ -294,13 +294,13 @@ pub(super) fn inlet(t: &str) -> Inlet {
             continue;
         }
         match k {
-            "Run Time" if l.duration_min.is_none() => l.duration_min = numero(v),
-            "Target Column Temperature" if l.oven_c.is_none() => l.oven_c = numero(v),
+            "Run Time" if l.duration_min.is_none() => l.duration_min = number(v),
+            "Target Column Temperature" if l.oven_c.is_none() => l.oven_c = number(v),
             _ => {}
         }
-        if l.voci.len() < ENTRIES_MAX {
-            l.voci.push(Voce {
-                sezione: sezione.clone(),
+        if l.entries.len() < ENTRIES_MAX {
+            l.entries.push(Entry {
+                section: sezione.clone(),
                 chiave: k.to_string(),
                 valore: v.to_string(),
             });

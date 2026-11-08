@@ -5,7 +5,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
 impl BrukerReader {
-    pub(super) fn traccia(&mut self, id: &str) -> Result<Chromatogram> {
+    pub(super) fn trace(&mut self, id: &str) -> Result<Chromatogram> {
         let (tic, kind, index) = match id {
             "TIC" => (true, ChromKind::Tic, 0),
             "BPC" => (false, ChromKind::Bpc, 1),
@@ -18,7 +18,7 @@ impl BrukerReader {
             .collect();
         // the TIC of a survey scan is in `Frames`: only a run without survey scans needs the points
         if tic && !ms1 {
-            self.completa()?;
+            self.complete()?;
         }
         let mut intensity = Vec::with_capacity(ks.len());
         for &k in &ks {

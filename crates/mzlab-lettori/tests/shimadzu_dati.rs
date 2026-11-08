@@ -28,7 +28,7 @@ fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
 }
 
 /// Every scan: the decoded intensities add up to the TIC of the index, the times do not go back.
-fn controlla_scansioni(l: &mut dyn Lettore) -> usize {
+fn check_scans(l: &mut dyn Lettore) -> usize {
     let idx = l.index(0).unwrap().to_vec();
     let mut before = -1.0;
     for (k, v) in idx.iter().enumerate() {
@@ -53,7 +53,7 @@ const QGD: &[&str] = &[
 fn qgd_scans_add_up_to_the_tic() {
     for f in QGD {
         let Some(mut l) = apri(f) else { return };
-        let n = controlla_scansioni(&mut *l);
+        let n = check_scans(&mut *l);
         eprintln!(
             "{f}: {n} scans, chroms {}",
             l.chromatograms(0).unwrap().len()
@@ -67,7 +67,7 @@ fn lcms2020_scans_add_up_to_the_tic() {
     let Some(mut l) = apri("lcms2020_MTBLS1960/MTBLS1960_E1.lcd") else {
         return;
     };
-    let n = controlla_scansioni(&mut *l);
+    let n = check_scans(&mut *l);
     assert_eq!(n, 2400);
     let m = l.method(0).unwrap();
     eprintln!(

@@ -9,18 +9,18 @@ use mzlab_core::lettori::Limiti;
 
 /// The bytes of one scan.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct Riga {
+pub(super) struct Row {
     pub(super) start: u64,
     pub(super) end: u64,
 }
 
 /// The block of the pass over the file.
-const BLOCCO: usize = 1 << 20;
+const BLOCK: usize = 1 << 20;
 
 /// What the pass over the file finds.
 pub(super) struct Passata {
     /// The intact scans.
-    pub(super) righe: Vec<Riga>,
+    pub(super) rows: Vec<Row>,
     /// The scans left out: they hold a NUL byte, or the file ends before their peaks close.
     pub(super) discarded: usize,
     /// The `<offset>`s of the `<index>` after the run (0: no index).
@@ -28,13 +28,13 @@ pub(super) struct Passata {
 }
 
 /// The rows of the scans of the file, from one pass over its bytes.
-pub(super) fn righe(dati: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Passata> {
-    passata(dati, dim, limits)
+pub(super) fn rows(data: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Passata> {
+    passata(data, dim, limits)
 }
 
-fn leggi(dati: &mut dyn ReadAt, da: u64, n: u64) -> Result<Vec<u8>> {
+fn read(data: &mut dyn ReadAt, da: u64, n: u64) -> Result<Vec<u8>> {
     let mut b = vec![0u8; usize::try_from(n).map_err(|_| Error::memory_budget())?];
-    dati.read_at(da, &mut b)?;
+    data.read_at(da, &mut b)?;
     Ok(b)
 }
 
@@ -55,21 +55,21 @@ fn tag(b: &[u8]) -> u8 {
 }
 
 /// The `<offset` tags in the bytes after the end of the run (at most `limiti.byte` of them read).
-fn offset_after(dati: &mut dyn ReadAt, da: u64, dim: u64, limits: &Limiti) -> Result<usize> {
-    let b = leggi(dati, da, (dim - da).min(limits.byte))?;
+fn offset_after(data: &mut dyn ReadAt, da: u64, dim: u64, limits: &Limiti) -> Result<usize> {
+    let b = read(data, da, (dim - da).min(limits.byte))?;
     Ok(b.windows(7).filter(|w| w == b"<offset").count())
 }
 
 /// One pass over the file in blocks of 1 MB: the starts of the scans, the nesting depth against the limit, the end of the run, and what is damaged.
-fn passata(dati: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Passata> {
+fn passata(data: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Passata> {
     let (mut starts, mut fine_run): (Vec<u64>, Option<u64>) = (Vec::new(), None);
     let (mut pos, mut profondita, mut closed) = (0u64, 0usize, 0u64);
     let (mut remainder, mut nul): (Vec<u8>, Vec<u64>) = (Vec::new(), Vec::new());
     'file: while pos < dim || !remainder.is_empty() {
-        let n = (dim - pos).min(BLOCCO as u64);
+        let n = (dim - pos).min(BLOCK as u64);
         let mut buf = std::mem::take(&mut remainder);
         let base = pos - buf.len() as u64;
-        buf.extend(leggi(dati, pos, n)?);
+        buf.extend(read(data, pos, n)?);
         pos += n;
         let last_one = pos >= dim;
         let mut i = 0;
@@ -115,23 +115,23 @@ fn passata(dati: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Passata> 
         }
     }
     let fine = fine_run.unwrap_or(dim);
-    let all_of_them = starts.iter().enumerate().map(|(k, &start)| Riga {
+    let all_of_them = starts.iter().enumerate().map(|(k, &start)| Row {
         start,
         end: starts.get(k + 1).copied().unwrap_or(fine).max(start),
     });
-    let intatta = |r: &Riga| {
+    let intatta = |r: &Row| {
         let k = nul.partition_point(|&p| p < r.start);
         nul.get(k).is_none_or(|&p| p >= r.end)
             && (fine_run.is_some() || r.end < dim || closed > r.start)
     };
-    let righe: Vec<Riga> = all_of_them.filter(intatta).collect();
+    let righe: Vec<Row> = all_of_them.filter(intatta).collect();
     let indicizzate = match fine_run {
-        Some(f) => offset_after(dati, f, dim, limits)?,
+        Some(f) => offset_after(data, f, dim, limits)?,
         None => 0,
     };
     Ok(Passata {
         discarded: starts.len() - righe.len(),
-        righe,
+        rows: righe,
         indicizzate,
     })
 }

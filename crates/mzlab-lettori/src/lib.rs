@@ -21,30 +21,30 @@ pub mod waters;
 
 // The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZML_NUMPRESS: VoceLettore = aperti::mzml_numpress::VOCE;
+static ENTRY_MZML_NUMPRESS: VoceLettore = aperti::mzml_numpress::ENTRY;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZXML: VoceLettore = aperti::mzxml::VOCE;
+static ENTRY_MZXML: VoceLettore = aperti::mzxml::ENTRY;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZML_GZ: VoceLettore = aperti::mzml_gz::VOCE;
+static ENTRY_MZML_GZ: VoceLettore = aperti::mzml_gz::ENTRY;
 // the page gunzips an mzXML.gz itself (OPFS): only the app and the CLI carry this voice, so the module `aperti` keeps its size
 #[cfg(feature = "tutte")]
 static ENTRY_MZXML_GZ: VoceLettore = aperti::mzml_gz::ENTRY_MZXML;
 #[cfg(any(feature = "andi", feature = "tutte"))]
-static ENTRY_ANDI: VoceLettore = andi::ms::VOCE;
+static ENTRY_ANDI: VoceLettore = andi::ms::ENTRY;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
 static ENTRY_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
 #[cfg(any(feature = "sciex", feature = "tutte"))]
 static ENTRY_SCIEX: VoceLettore = mzlab_core::wiff::lettore::VOCE;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
-static ENTRY_SHIMADZU: VoceLettore = shimadzu::VOCE;
+static ENTRY_SHIMADZU: VoceLettore = shimadzu::ENTRY;
 #[cfg(any(feature = "thermo", feature = "tutte"))]
 static ENTRY_THERMO: VoceLettore = mzlab_core::rawlettore::VOCE;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
-static ENTRY_BRUKER_TDF: VoceLettore = bruker::tdf::VOCE;
+static ENTRY_BRUKER_TDF: VoceLettore = bruker::tdf::ENTRY;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 static ENTRY_BRUKER_TSF: VoceLettore = bruker::tdf::ENTRY_TSF;
 #[cfg(any(feature = "waters", feature = "tutte"))]
-static ENTRY_WATERS: VoceLettore = waters::VOCE;
+static ENTRY_WATERS: VoceLettore = waters::ENTRY;
 
 /// The name of the family this build serves (`"tutte"` for the desktop app and for tests).
 pub fn famiglia() -> &'static str {
@@ -72,8 +72,8 @@ pub fn famiglia() -> &'static str {
 }
 
 /// The formats of the families that are on: `agilent` and `sciex` repeat the ones of the engine's registry (and serve their variants), `thermo` is the only home of the `.raw` reader of the web engine (the desktop app has it in the core with the default features).
-pub fn registro() -> Vec<&'static VoceLettore> {
-    let voci: &[Option<&'static VoceLettore>] = &[
+pub fn registry() -> Vec<&'static VoceLettore> {
+    let entries: &[Option<&'static VoceLettore>] = &[
         #[cfg(any(feature = "aperti", feature = "tutte"))]
         Some(&ENTRY_MZML_NUMPRESS),
         #[cfg(any(feature = "aperti", feature = "tutte"))]
@@ -99,13 +99,13 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         #[cfg(any(feature = "waters", feature = "tutte"))]
         Some(&ENTRY_WATERS),
     ];
-    voci.iter().flatten().copied().collect()
+    entries.iter().flatten().copied().collect()
 }
 
 /// The reader of `registro` that is surest of `fs` (the first among equals; like `lettori::riconosci_in`, which takes a slice and not this list).
 pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
     let mut best: Option<(Fiducia, &'static VoceLettore)> = None;
-    for v in registro()
+    for v in registry()
         .into_iter()
         .filter(|v| v.contratto == lettori::CONTRATTO)
     {
@@ -182,7 +182,7 @@ pub fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
 /// Every extension of the registry of this build, without repeats.
 pub fn estensioni() -> Vec<&'static str> {
     let mut out: Vec<&'static str> = Vec::new();
-    for e in registro().iter().flat_map(|v| v.estensioni.iter().copied()) {
+    for e in registry().iter().flat_map(|v| v.estensioni.iter().copied()) {
         if !out.contains(&e) {
             out.push(e);
         }

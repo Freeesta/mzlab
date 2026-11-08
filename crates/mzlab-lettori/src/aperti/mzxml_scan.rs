@@ -63,7 +63,7 @@ pub(super) fn tags<'a>(s: &'a str, f: &mut dyn FnMut(Tag<'a>, usize) -> bool) {
 }
 
 /// The name of a tag text (`/scan` for a closing tag).
-pub(super) fn nome<'a>(t: Tag<'a>) -> &'a str {
+pub(super) fn name<'a>(t: Tag<'a>) -> &'a str {
     t.split(char::is_whitespace)
         .next()
         .unwrap_or("")
@@ -102,25 +102,25 @@ pub(super) struct Testa<'a> {
     /// The `<nameValue>` tags.
     pub(super) values: Vec<Tag<'a>>,
     /// The `<peaks>` tag and its text.
-    pub(super) picchi: Option<(Tag<'a>, &'a str)>,
+    pub(super) peaks: Option<(Tag<'a>, &'a str)>,
 }
 
 /// The scan, its precursors, its `nameValue` pairs and its peaks, out of the text of a scan (at most `tetto` of each kind).
 pub(super) fn testa(t: &str, cap: usize) -> Result<Testa<'_>> {
     let mut r = Testa::default();
-    let testo = |dopo: usize| {
-        t.get(dopo..)
+    let text = |after: usize| {
+        t.get(after..)
             .and_then(|x| x.split('<').next())
             .unwrap_or("")
             .trim()
     };
-    tags(t, &mut |g, dopo| {
-        match nome(g) {
+    tags(t, &mut |g, after| {
+        match name(g) {
             "scan" if r.scan.is_empty() => r.scan = g,
-            "precursorMz" if r.precursori.len() < cap => r.precursori.push((g, testo(dopo))),
+            "precursorMz" if r.precursori.len() < cap => r.precursori.push((g, text(after))),
             "nameValue" if r.values.len() < cap => r.values.push(g),
             "peaks" => {
-                r.picchi = Some((g, if g.ends_with('/') { "" } else { testo(dopo) }));
+                r.peaks = Some((g, if g.ends_with('/') { "" } else { text(after) }));
                 // the schema puts the `nameValue` pairs after the peaks
             }
             _ => {}
@@ -134,7 +134,7 @@ pub(super) fn testa(t: &str, cap: usize) -> Result<Testa<'_>> {
 }
 
 /// The peaks of a scan: m/z, intensities, and whether the file stores 64-bit values.
-pub(super) struct Picchi {
+pub(super) struct Peaks {
     pub(super) mz: Vec<f64>,
     pub(super) intensities: Vec<f64>,
     pub(super) a_64_bit: bool,
@@ -145,8 +145,8 @@ fn xml(why: &str) -> Error {
 }
 
 /// The bytes of the `<peaks>` text: base64, then zlib when the file says so (at most `limite` bytes).
-fn raw_values(testo: &str, zlib: bool, limit: usize) -> Result<Vec<u8>> {
-    let clean: Vec<u8> = testo.bytes().filter(|c| !c.is_ascii_whitespace()).collect();
+fn raw_values(text: &str, zlib: bool, limit: usize) -> Result<Vec<u8>> {
+    let clean: Vec<u8> = text.bytes().filter(|c| !c.is_ascii_whitespace()).collect();
     let raw = base64::engine::general_purpose::STANDARD
         .decode(&clean)
         .map_err(|e| Error::new("err.file.base64").with("detail", e))?;
@@ -165,13 +165,13 @@ fn raw_values(testo: &str, zlib: bool, limit: usize) -> Result<Vec<u8>> {
 }
 
 /// Decodes the `<peaks>` of a scan with the attributes `attr`: `precision`, `byteOrder`, `contentType`/`pairOrder`, `compressionType`; `conteggio` is the `peaksCount` of the scan.
-pub(super) fn picchi(
+pub(super) fn peaks(
     tag: Tag,
-    testo: &str,
+    text: &str,
     conteggio: Option<usize>,
     limits: &Limiti,
-) -> Result<Picchi> {
-    let larghezza = match attr(tag, "precision") {
+) -> Result<Peaks> {
+    let width = match attr(tag, "precision") {
         "" | "32" => 4usize,
         "64" => 8,
         _ => return Err(xml("precision")),
@@ -179,8 +179,8 @@ pub(super) fn picchi(
     if !matches!(attr(tag, "byteOrder"), "" | "network" | "big") {
         return Err(xml("byteOrder"));
     }
-    let ordine = [attr(tag, "contentType"), attr(tag, "pairOrder")];
-    if ordine.iter().any(|o| !matches!(*o, "" | "m/z-int")) {
+    let order = [attr(tag, "contentType"), attr(tag, "pairOrder")];
+    if order.iter().any(|o| !matches!(*o, "" | "m/z-int")) {
         return Err(xml("contentType"));
     }
     let zlib = match attr(tag, "compressionType") {
@@ -194,24 +194,24 @@ pub(super) fn picchi(
     };
     let limit = usize::try_from(limits.byte)
         .unwrap_or(usize::MAX)
-        .min(cap.saturating_mul(2 * larghezza));
-    let b = raw_values(testo, zlib, limit)?;
-    let n = (b.len() / (2 * larghezza)).min(conteggio.unwrap_or(usize::MAX));
+        .min(cap.saturating_mul(2 * width));
+    let b = raw_values(text, zlib, limit)?;
+    let n = (b.len() / (2 * width)).min(conteggio.unwrap_or(usize::MAX));
     let (mut mz, mut intensities) = (Vec::new(), Vec::new());
     mz.try_reserve_exact(n)
         .map_err(|_| Error::memory_budget())?;
     intensities
         .try_reserve_exact(n)
         .map_err(|_| Error::memory_budget())?;
-    for c in b.chunks_exact(2 * larghezza).take(n) {
-        let (x, y) = c.split_at(larghezza);
+    for c in b.chunks_exact(2 * width).take(n) {
+        let (x, y) = c.split_at(width);
         mz.push(large(x));
         intensities.push(large(y));
     }
-    Ok(Picchi {
+    Ok(Peaks {
         mz,
         intensities,
-        a_64_bit: larghezza == 8,
+        a_64_bit: width == 8,
     })
 }
 

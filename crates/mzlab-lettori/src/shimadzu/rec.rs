@@ -30,7 +30,7 @@ fn u16_at(r: &[u8], at: usize) -> Option<u16> {
     Some(u16::from_le_bytes(r.get(at..at + 2)?.try_into().ok()?))
 }
 
-fn valida(r: &[u8], f: Shape) -> Option<Shape> {
+fn validate(r: &[u8], f: Shape) -> Option<Shape> {
     let ok = (1..=W_MAX).contains(&f.w)
         && f.npk.checked_mul(f.point())?.checked_add(f.testa)? == r.len();
     ok.then_some(f)
@@ -40,7 +40,7 @@ fn valida(r: &[u8], f: Shape) -> Option<Shape> {
 pub(super) fn gc_shape(r: &[u8], ko: usize) -> Option<Shape> {
     let (kind, npk) = (usize::from(u16_at(r, ko)?), usize::from(u16_at(r, ko + 2)?));
     let mrm = kind >= 100;
-    valida(
+    validate(
         r,
         Shape {
             testa: 32,
@@ -54,7 +54,7 @@ pub(super) fn gc_shape(r: &[u8], ko: usize) -> Option<Shape> {
 
 /// The layout of a record of `Mass Raw Data`: event at 8, width of the intensity at 52, point count at 54, points from 64.
 pub(super) fn lc_shape(r: &[u8]) -> Option<Shape> {
-    valida(
+    validate(
         r,
         Shape {
             testa: 64,

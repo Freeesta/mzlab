@@ -19,13 +19,13 @@ pub(super) fn errore(detail: &str) -> Error {
 pub(super) struct Folder {
     pub(super) fs: FileSet,
     /// `X.raw`, the folder the members are in.
-    pub(super) nome: String,
+    pub(super) name: String,
     pub(super) limits: Limiti,
 }
 
 impl Folder {
     pub(super) fn new(fs: FileSet, limits: Limiti) -> Folder {
-        let nome = fs
+        let name = fs
             .membri
             .iter()
             .find_map(|m| {
@@ -35,11 +35,11 @@ impl Folder {
             })
             .filter(|n| !n.is_empty())
             .unwrap_or_else(|| "MassLynx.raw".to_string());
-        Folder { fs, nome, limits }
+        Folder { fs, name, limits }
     }
 
     /// Index of the member called `file` (case ignored).
-    pub(super) fn cerca(&self, file: &str) -> Option<usize> {
+    pub(super) fn search(&self, file: &str) -> Option<usize> {
         self.fs
             .membri
             .iter()
@@ -47,8 +47,8 @@ impl Folder {
     }
 
     /// The whole member `file`, or `None` when the folder has none; a member over the limit is an error (no allocation).
-    pub(super) fn leggi(&mut self, file: &str) -> Result<Option<Vec<u8>>> {
-        let Some(i) = self.cerca(file) else {
+    pub(super) fn read(&mut self, file: &str) -> Result<Option<Vec<u8>>> {
+        let Some(i) = self.search(file) else {
             return Ok(None);
         };
         let m = &mut self.fs.membri[i];
@@ -93,7 +93,7 @@ pub(super) fn f32_at(b: &[u8], p: usize) -> f32 {
 }
 
 /// Text of a side file: Windows-1252 (the degree and micro signs) read as Latin-1, carriage returns dropped.
-pub(super) fn testo(b: &[u8]) -> String {
+pub(super) fn text(b: &[u8]) -> String {
     b.iter()
         .map(|&c| c as char)
         .filter(|&c| c != '\r')
@@ -115,6 +115,6 @@ mod tests {
                 sha1: None,
             }],
         };
-        assert_eq!(Folder::new(fs, Limiti::default()).nome, "campione.raw");
+        assert_eq!(Folder::new(fs, Limiti::default()).name, "campione.raw");
     }
 }

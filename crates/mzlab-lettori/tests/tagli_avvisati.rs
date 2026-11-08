@@ -7,10 +7,10 @@ mod comune;
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::mzml::Spectrum;
 
-fn fs(nome: &str, b: &[u8]) -> FileSet {
+fn fs(name: &str, b: &[u8]) -> FileSet {
     FileSet {
         membri: vec![Membro {
-            nome: nome.into(),
+            nome: name.into(),
             dim: b.len() as u64,
             dati: Box::new(b.to_vec()),
             sha1: None,
@@ -19,8 +19,8 @@ fn fs(nome: &str, b: &[u8]) -> FileSet {
 }
 
 /// The scans of the first sample and its missing count, or the key of the first error.
-fn read(nome: &str, b: &[u8]) -> Result<(Vec<Spectrum>, usize), &'static str> {
-    let mut l = mzlab_lettori::apri(fs(nome, b), &Limiti::sito()).map_err(|e| e.key)?;
+fn read(name: &str, b: &[u8]) -> Result<(Vec<Spectrum>, usize), &'static str> {
+    let mut l = mzlab_lettori::apri(fs(name, b), &Limiti::sito()).map_err(|e| e.key)?;
     if l.samples().is_empty() {
         return Ok((Vec::new(), 0));
     }
@@ -32,12 +32,12 @@ fn read(nome: &str, b: &[u8]) -> Result<(Vec<Spectrum>, usize), &'static str> {
     Ok((scans, l.missing(0)))
 }
 
-fn every_cut_is_told(nome: &str, file: &[u8]) {
-    let (want, m) = read(nome, file).unwrap();
-    assert!(!want.is_empty() && m == 0, "{nome}: the whole file");
+fn every_cut_is_told(name: &str, file: &[u8]) {
+    let (want, m) = read(name, file).unwrap();
+    assert!(!want.is_empty() && m == 0, "{name}: the whole file");
     for cut in (0..file.len()).step_by(16) {
-        match read(nome, &file[..cut]) {
-            Err(key) => assert!(key.starts_with("err."), "{nome} cut at {cut}: {key}"),
+        match read(name, &file[..cut]) {
+            Err(key) => assert!(key.starts_with("err."), "{name} cut at {cut}: {key}"),
             Ok((have, missing)) => {
                 let whole = have.len() <= want.len()
                     && have
@@ -46,11 +46,11 @@ fn every_cut_is_told(nome: &str, file: &[u8]) {
                         .all(|(a, b)| a.id == b.id && a.mz == b.mz && a.intensity == b.intensity);
                 assert!(
                     whole,
-                    "{nome} cut at {cut}: a scan read short or out of place"
+                    "{name} cut at {cut}: a scan read short or out of place"
                 );
                 assert!(
                     have.len() == want.len() || missing > 0,
-                    "{nome} cut at {cut}: {} of {} scans and no notice",
+                    "{name} cut at {cut}: {} of {} scans and no notice",
                     have.len(),
                     want.len()
                 );
@@ -68,7 +68,7 @@ fn a_shimadzu_file_cut_short_is_told() {
 /// A copy cut before its directory (the header points past the end, `Ole::header_cut`) gets the same `err.file.cutShort` notice as one cut after it.
 #[test]
 fn a_shimadzu_file_cut_before_its_directory_is_cut_short() {
-    for (nome, file) in [
+    for (name, file) in [
         ("x.qgd", comune::shimadzu::qgd(8)),
         ("x.lcd", comune::shimadzu::lcd2020(8)),
     ] {
@@ -76,13 +76,13 @@ fn a_shimadzu_file_cut_before_its_directory_is_cut_short() {
         for cut in (8..file.len()).step_by(16) {
             if mzlab_core::ole::Ole::header_cut(&file[..cut]).is_some() {
                 assert_eq!(
-                    read(nome, &file[..cut]).err(),
+                    read(name, &file[..cut]).err(),
                     Some("err.file.cutShort"),
-                    "{nome} cut at {cut}"
+                    "{name} cut at {cut}"
                 );
                 told += 1;
             }
         }
-        assert!(told > 0, "{nome}: no cut before the directory");
+        assert!(told > 0, "{name}: no cut before the directory");
     }
 }

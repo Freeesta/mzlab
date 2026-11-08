@@ -8,7 +8,7 @@ struct Finto {
     metodo: String,
 }
 
-fn voce(k: usize, rt: f64, filtro: &str, q1: f64) -> VoceScansione {
+fn entry(k: usize, rt: f64, filter: &str, q1: f64) -> VoceScansione {
     VoceScansione {
         id: format!("scan={k}"),
         rt,
@@ -16,7 +16,7 @@ fn voce(k: usize, rt: f64, filtro: &str, q1: f64) -> VoceScansione {
         polarita: 1,
         tic: 0.0,
         picco_base: None,
-        filtro: filtro.into(),
+        filtro: filter.into(),
         precursore: Some(q1),
         posizione: None,
     }
@@ -82,18 +82,18 @@ impl Lettore for Finto {
     }
 }
 
-fn finto(filtro: &str) -> SrmDaScansioni {
-    fake_with(filtro, 1, "")
+fn finto(filter: &str) -> SrmDaScansioni {
+    fake_with(filter, 1, "")
 }
 
 /// Four scans with `filtro` and polarity `pol`; `metodo` is the `metodo/1` document the reader gives.
-fn fake_with(filtro: &str, pol: i8, metodo: &str) -> SrmDaScansioni {
-    let indice = (0..4)
+fn fake_with(filter: &str, pol: i8, method: &str) -> SrmDaScansioni {
+    let index = (0..4)
         .map(|k| {
-            let mut v = voce(
+            let mut v = entry(
                 k,
                 k as f64 * 0.1,
-                filtro,
+                filter,
                 if k.is_multiple_of(2) { 300.0 } else { 400.0 },
             );
             v.polarita = pol;
@@ -107,8 +107,8 @@ fn fake_with(filtro: &str, pol: i8, metodo: &str) -> SrmDaScansioni {
             scansioni: 4,
             dimensione: None,
         }],
-        indice,
-        metodo: metodo.into(),
+        indice: index,
+        metodo: method.into(),
     }))
 }
 

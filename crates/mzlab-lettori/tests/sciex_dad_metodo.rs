@@ -35,10 +35,10 @@ fn fixture() -> Option<(PathBuf, Value)> {
     Some((out, json["dadmetodo"].clone()))
 }
 
-fn membro(p: &Path, nome: &str) -> Membro {
-    let b = std::fs::read(p.join(nome)).unwrap();
+fn member(p: &Path, name: &str) -> Membro {
+    let b = std::fs::read(p.join(name)).unwrap();
     Membro {
-        nome: nome.into(),
+        nome: name.into(),
         dim: b.len() as u64,
         dati: Box::new(b),
         sha1: None,
@@ -46,11 +46,11 @@ fn membro(p: &Path, nome: &str) -> Membro {
 }
 
 /// The mzML of the pair as `to_mzml` of the module writes it (indexed, no steps, the matrix on).
-fn converti(dir: &Path, dad: bool) -> Vec<u8> {
+fn convert(dir: &Path, dad: bool) -> Vec<u8> {
     let fs = FileSet {
         membri: vec![
-            membro(dir, "dadmetodo.wiff"),
-            membro(dir, "dadmetodo.wiff.scan"),
+            member(dir, "dadmetodo.wiff"),
+            member(dir, "dadmetodo.wiff.scan"),
         ],
     };
     let mut l = mzlab_lettori::apri(fs, &Limiti::sito()).unwrap();
@@ -73,7 +73,7 @@ fn converti(dir: &Path, dad: bool) -> Vec<u8> {
 #[test]
 fn the_variant_mzml_carries_the_matrix_and_the_method() {
     let Some((dir, want)) = fixture() else { return };
-    let bytes = converti(&dir, true);
+    let bytes = convert(&dir, true);
     let n = bytes.len() as u64;
     let mut m = Mzml::new(bytes, n);
     let dad = m.dad().unwrap().expect("the optical matrix is in the mzML");
@@ -120,7 +120,7 @@ fn the_variant_mzml_carries_the_matrix_and_the_method() {
 #[test]
 fn without_the_option_the_mzml_has_no_matrix_but_keeps_the_method() {
     let Some((dir, _)) = fixture() else { return };
-    let bytes = converti(&dir, false);
+    let bytes = convert(&dir, false);
     let text = String::from_utf8_lossy(&bytes);
     assert!(!text.contains("MS:1000804"));
     assert!(text.contains("name=\"mzLab metodo/1\""));

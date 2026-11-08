@@ -37,10 +37,10 @@ fn raw_files() -> Vec<PathBuf> {
 
 fn set(path: &Path) -> FileSet {
     let bytes = std::fs::read(path).unwrap();
-    let nome = path.file_name().unwrap().to_string_lossy().to_string();
+    let name = path.file_name().unwrap().to_string_lossy().to_string();
     FileSet {
         membri: vec![Membro {
-            nome,
+            nome: name,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
             sha1: None,
@@ -107,7 +107,7 @@ fn mzml(l: &mut dyn Lettore) -> (u64, u64) {
 }
 
 /// Scan `k` and its header, from the external reader and from the linked one.
-fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, nome: &str) {
+fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, name: &str) {
     let (a, b) = (ext.scan(0, k).unwrap(), diretto.scan(0, k).unwrap());
     assert_eq!(
         (
@@ -132,17 +132,17 @@ fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, nome: &
             b.precursor,
             &b.mz
         ),
-        "{nome}: scan {k}"
+        "{name}: scan {k}"
     );
     assert_eq!(
         (&a.intensity, &a.wide),
         (&b.intensity, &b.wide),
-        "{nome}: scan {k} intensities"
+        "{name}: scan {k} intensities"
     );
     assert_eq!(
         ext.scan_header(0, k).unwrap(),
         diretto.scan_header(0, k).unwrap(),
-        "{nome}: header {k}"
+        "{name}: header {k}"
     );
 }
 
@@ -158,40 +158,40 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         let mut s = Sessions::default();
         let h = s.insert(mzlab_lettori::apri_nudo(set(f), &Limiti::sito()).unwrap());
         let mut ext = ExternalReader::new(ViaSession { s, h }).unwrap();
-        let nome = f.display();
-        assert_eq!(ext.format(), diretto.format(), "{nome}");
-        assert_eq!(ext.samples(), diretto.samples(), "{nome}");
-        let indice = diretto.index(0).unwrap().to_vec();
-        assert_eq!(ext.index(0).unwrap(), &indice[..], "{nome}: index");
-        let passo = (indice.len() / 20).max(1);
-        for k in (0..indice.len()).step_by(passo) {
-            same_scan(&mut ext, &mut *diretto, k, &nome.to_string());
+        let name = f.display();
+        assert_eq!(ext.format(), diretto.format(), "{name}");
+        assert_eq!(ext.samples(), diretto.samples(), "{name}");
+        let index = diretto.index(0).unwrap().to_vec();
+        assert_eq!(ext.index(0).unwrap(), &index[..], "{name}: index");
+        let step = (index.len() / 20).max(1);
+        for k in (0..index.len()).step_by(step) {
+            same_scan(&mut ext, &mut *diretto, k, &name.to_string());
         }
         assert_eq!(
             ext.chromatograms(0).unwrap(),
             diretto.chromatograms(0).unwrap(),
-            "{nome}"
+            "{name}"
         );
         assert_eq!(
             ext.chromatogram(0, "TIC").unwrap(),
             diretto.chromatogram(0, "TIC").unwrap(),
-            "{nome}: TIC"
+            "{name}: TIC"
         );
         assert_eq!(
             ext.method(0).unwrap(),
             diretto.method(0).unwrap(),
-            "{nome}: metodo/1"
+            "{name}: metodo/1"
         );
         assert_eq!(
             format!("{:?}", ext.mzml_header(0).unwrap()),
             format!("{:?}", diretto.mzml_header(0).unwrap()),
-            "{nome}: header of the mzML"
+            "{name}: header of the mzML"
         );
         let (a, b) = (mzml(&mut ext), mzml(&mut *diretto));
-        assert_eq!(a, b, "{nome}: the mzML");
+        assert_eq!(a, b, "{name}: the mzML");
         eprintln!(
-            "{nome}: {} scans, mzML of {} bytes identical",
-            indice.len(),
+            "{name}: {} scans, mzML of {} bytes identical",
+            index.len(),
             a.1
         );
     }

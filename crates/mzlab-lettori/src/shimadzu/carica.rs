@@ -8,7 +8,7 @@ use mzlab_core::lettori::{Limiti, VoceScansione};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 use mzlab_core::ole::Ole;
 
-use super::mrm::{self, Tracce};
+use super::mrm::{self, Traces};
 use super::rec::{self, Shape};
 
 const UNITA: &str = "number of detector counts";
@@ -52,12 +52,12 @@ pub(super) fn choose(ole: &Ole) -> Option<Fam> {
 
 /// The scans that share one filter text, and the m/z range seen.
 pub(super) struct Evento {
-    pub filtro: String,
+    pub filter: String,
     pub n: usize,
     pub mz: (f64, f64),
 }
 
-pub(super) struct Dati {
+pub(super) struct Data {
     pub raw: Vec<u8>,
     /// (offset, length) in `raw` and layout of each scan of the index.
     pub pos: Vec<(usize, usize, Shape)>,
@@ -87,7 +87,7 @@ fn moment(rt: &[u8], i: usize) -> f64 {
 }
 
 /// Reads the streams of `fam` and builds the index and the chromatograms.
-pub(super) fn carica(ole: &Ole, fam: Fam, limits: &Limiti) -> Result<Dati> {
+pub(super) fn load(ole: &Ole, fam: Fam, limits: &Limiti) -> Result<Data> {
     let g = fam.storage();
     let get = |n: &str| ole.read(&format!("{g}/{n}")).ok_or_else(|| absent(n));
     let (raw, idx, rt, tic) = (
@@ -97,7 +97,7 @@ pub(super) fn carica(ole: &Ole, fam: Fam, limits: &Limiti) -> Result<Dati> {
         get("TIC Data")?,
     );
     let n = limits.voci_ok((rt.len() / 4) as u64)?;
-    let mut d = Dati {
+    let mut d = Data {
         raw: Vec::new(),
         pos: Vec::new(),
         indice: Vec::new(),
@@ -107,7 +107,7 @@ pub(super) fn carica(ole: &Ole, fam: Fam, limits: &Limiti) -> Result<Dati> {
         records: n,
         unreadable: 0,
     };
-    let mut srm = Tracce::default();
+    let mut srm = Traces::default();
     let impronte = if fam == Fam::Tlm {
         d.unreadable = tlm(&raw, &idx, &rt, n, &mut srm, limits)?;
         Vec::new()
@@ -128,7 +128,7 @@ pub(super) fn carica(ole: &Ole, fam: Fam, limits: &Limiti) -> Result<Dati> {
     }
     let da = d.cromat.len();
     d.cromat.extend(srm.chromatograms(da));
-    d.transizioni = srm.serie.iter().map(|s| (s.q1, s.q3, s.pol)).collect();
+    d.transizioni = srm.series.iter().map(|s| (s.q1, s.q3, s.pol)).collect();
     mark_sim(&mut d, &impronte);
     d.raw = raw;
     Ok(d)
@@ -140,7 +140,7 @@ fn tlm(
     idx: &[u8],
     rt: &[u8],
     n: usize,
-    srm: &mut Tracce,
+    srm: &mut Traces,
     limits: &Limiti,
 ) -> Result<usize> {
     let mut bad = 0;
@@ -155,7 +155,7 @@ fn tlm(
         };
         let pol = mrm::polarita_tlm(&r);
         for (q1, q3, y) in pts {
-            srm.aggiungi((q1, q3), 100.0, pol, moment(rt, i), y as f64, limits)?;
+            srm.add((q1, q3), 100.0, pol, moment(rt, i), y as f64, limits)?;
         }
     }
     Ok(bad)
@@ -182,10 +182,10 @@ fn offset_ko(offs: &[u64], raw: &[u8], n: usize) -> usize {
 
 /// The scan records of `.qgd` and `Mass Raw Data` into `d.pos`/`d.indice` (MRM records of a `.qgd` into `srm`); returns the hash of the m/z list and the m/z range of each scan.
 fn scansioni(
-    d: &mut Dati,
+    d: &mut Data,
     (fam, raw, idx, rt, tic): (Fam, &[u8], &[u8], &[u8], &[u8]),
     n: usize,
-    srm: &mut Tracce,
+    srm: &mut Traces,
     limits: &Limiti,
 ) -> Result<Vec<(u64, (f64, f64))>> {
     let offs = rec::offset(idx, n).ok_or_else(|| {
@@ -212,7 +212,7 @@ fn scansioni(
         if f.mrm {
             for j in 0..f.npk {
                 let (q1, q3, y) = rec::point(r, &f, j);
-                srm.aggiungi(
+                srm.add(
                     (q1.into(), q3.unwrap_or(0).into()),
                     20.0,
                     0,
@@ -225,7 +225,7 @@ fn scansioni(
         }
         let mz = (0..f.npk).map(|j| f64::from(rec::point(r, &f, j).0) / 20.0);
         let (mn, mx) = mz.fold((f64::MAX, 0.0f64), |(a, b), v| (a.min(v), b.max(v)));
-        let filtro = if fam == Fam::Gc {
+        let filter = if fam == Fam::Gc {
             "EI".to_string()
         } else {
             format!("Q1 event {}", usize::from(f.ev) + 1)
@@ -238,7 +238,7 @@ fn scansioni(
             polarita: 0,
             tic: u64_at(tic, i),
             picco_base: None,
-            filtro: format!("{filtro} scan"),
+            filtro: format!("{filter} scan"),
             precursore: None,
             posizione: None,
         });
@@ -254,7 +254,7 @@ fn scansioni(
 }
 
 /// A scan whose m/z list (at most 64 values) repeats is SIM: its filter says so, and the events are tallied with the m/z range seen.
-fn mark_sim(d: &mut Dati, impronte: &[(u64, (f64, f64))]) {
+fn mark_sim(d: &mut Data, impronte: &[(u64, (f64, f64))]) {
     let mut n: HashMap<u64, u32> = HashMap::new();
     for (h, _) in impronte.iter().filter(|(h, _)| *h != 0) {
         *n.entry(*h).or_default() += 1;
@@ -263,13 +263,13 @@ fn mark_sim(d: &mut Dati, impronte: &[(u64, (f64, f64))]) {
         if *h != 0 && n.get(h).is_some_and(|&c| c >= SIM_RIPETUTI) {
             v.filtro = v.filtro.replace(" scan", " SIM");
         }
-        match d.eventi.iter_mut().find(|e| e.filtro == v.filtro) {
+        match d.eventi.iter_mut().find(|e| e.filter == v.filtro) {
             Some(e) => {
                 e.n += 1;
                 e.mz = (e.mz.0.min(*mn), e.mz.1.max(*mx));
             }
             None => d.eventi.push(Evento {
-                filtro: v.filtro.clone(),
+                filter: v.filtro.clone(),
                 n: 1,
                 mz: (*mn, *mx),
             }),

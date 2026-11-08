@@ -39,9 +39,9 @@ pub(super) fn columns_of(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<u
         }
     }
     parts.push(cur);
-    let mut nomi: Vec<String> = Vec::new();
+    let mut names: Vec<String> = Vec::new();
     let mut alias = None;
-    let mut chiave: Vec<String> = Vec::new();
+    let mut key: Vec<String> = Vec::new();
     for p in parts {
         let t = p.trim();
         let first_one = t.split_whitespace().next().unwrap_or("");
@@ -49,7 +49,7 @@ pub(super) fn columns_of(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<u
         let tu = t.to_ascii_uppercase();
         if up == "PRIMARY" {
             if let (Some(a), Some(b)) = (t.find('('), t.rfind(')')) {
-                chiave = t[a + 1..b]
+                key = t[a + 1..b]
                     .split(',')
                     .map(|n| clean_name(n.trim()))
                     .collect();
@@ -60,25 +60,25 @@ pub(super) fn columns_of(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<u
             continue;
         }
         if tu.contains("INTEGER PRIMARY KEY") && !tu.contains("DESC") {
-            alias = Some(nomi.len());
+            alias = Some(names.len());
         }
         if tu.contains("PRIMARY KEY") {
-            chiave = vec![clean_name(first_one)];
+            key = vec![clean_name(first_one)];
         }
-        nomi.push(clean_name(first_one));
+        names.push(clean_name(first_one));
     }
     // a WITHOUT ROWID table stores its primary key first, then the other columns in table order
-    let ordine = sql.to_ascii_uppercase().contains("WITHOUT ROWID").then(|| {
-        let mut o: Vec<usize> = chiave
+    let order = sql.to_ascii_uppercase().contains("WITHOUT ROWID").then(|| {
+        let mut o: Vec<usize> = key
             .iter()
-            .filter_map(|k| nomi.iter().position(|n| n.eq_ignore_ascii_case(k)))
+            .filter_map(|k| names.iter().position(|n| n.eq_ignore_ascii_case(k)))
             .collect();
         o.dedup();
-        let remainder: Vec<usize> = (0..nomi.len()).filter(|i| !o.contains(i)).collect();
+        let remainder: Vec<usize> = (0..names.len()).filter(|i| !o.contains(i)).collect();
         o.extend(remainder);
         o
     });
-    (nomi, alias, ordine)
+    (names, alias, order)
 }
 
 fn clean_name(n: &str) -> String {

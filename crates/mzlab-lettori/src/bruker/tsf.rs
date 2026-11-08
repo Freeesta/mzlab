@@ -28,8 +28,8 @@ pub fn read_frame(
     d: &mut dyn ReadAt,
     dim: u64,
     pos: u64,
-    picchi: u64,
-    campioni: u64,
+    peaks: u64,
+    samples: u64,
     limits: &Limiti,
 ) -> Result<Lines> {
     let mut h = [0u8; 8];
@@ -37,18 +37,18 @@ pub fn read_frame(
         return Err(guasto("block past the end of the file"));
     }
     d.read_at(pos, &mut h)?;
-    let (prof, riga) = (u64::from(u32_le(&h)), u64::from(u32_le(&h[4..])));
-    if prof.saturating_add(riga).saturating_add(pos + 8) > dim || prof.max(riga) > limits.byte {
+    let (prof, row) = (u64::from(u32_le(&h)), u64::from(u32_le(&h[4..])));
+    if prof.saturating_add(row).saturating_add(pos + 8) > dim || prof.max(row) > limits.byte {
         return Err(guasto("block length"));
     }
-    let leggi = |d: &mut dyn ReadAt, da: u64, n: u64| -> Result<Vec<u8>> {
+    let read = |d: &mut dyn ReadAt, da: u64, n: u64| -> Result<Vec<u8>> {
         let mut b = vec![0u8; n as usize];
         d.read_at(da, &mut b)?;
         Ok(b)
     };
-    if riga > 0 && picchi > 0 {
-        let n = limits.voci_ok(picchi)?;
-        let z = leggi(d, pos + 8, riga)?;
+    if row > 0 && peaks > 0 {
+        let n = limits.voci_ok(peaks)?;
+        let z = read(d, pos + 8, row)?;
         return lines(&z, n, limits);
     }
     if prof == 0 {
@@ -58,8 +58,8 @@ pub fn read_frame(
             profilo: false,
         });
     }
-    let n = limits.voci_ok(campioni)?;
-    let z = leggi(d, pos + 8 + riga, prof)?;
+    let n = limits.voci_ok(samples)?;
+    let z = read(d, pos + 8 + row, prof)?;
     profilo(&z, n, limits)
 }
 

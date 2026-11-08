@@ -7,7 +7,7 @@ use super::{b64, zlib};
 #[derive(Clone)]
 pub struct Sc {
     pub num: u32,
-    pub livello: u8,
+    pub level: u8,
     pub rt_s: f64,
     pub pol: &'static str,
     pub mz: Vec<f64>,
@@ -21,16 +21,16 @@ pub struct Sc {
 pub struct Opz {
     pub a64: bool,
     pub zlib: bool,
-    pub indice: bool,
+    pub index: bool,
     pub annidato: bool,
     /// Write `totIonCurrent`, `basePeakIntensity` and `peaksCount`.
     pub attributi: bool,
 }
 
-pub const PIATTO: Opz = Opz {
+pub const FLAT: Opz = Opz {
     a64: true,
     zlib: true,
-    indice: true,
+    index: true,
     annidato: false,
     attributi: true,
 };
@@ -39,7 +39,7 @@ pub fn sc(num: u32, livello: u8, rt_s: f64, n: usize, prec: Option<f64>) -> Sc {
     let k = num as f64;
     Sc {
         num,
-        livello,
+        level: livello,
         rt_s,
         pol: "+",
         mz: (0..n).map(|i| 100.0 + i as f64 * 2.5 + k * 0.01).collect(),
@@ -53,7 +53,7 @@ pub fn sc(num: u32, livello: u8, rt_s: f64, n: usize, prec: Option<f64>) -> Sc {
 }
 
 /// The scans of a small run: MS1, MS2, MS2, MS1, MS2.
-pub fn corsa() -> Vec<Sc> {
+pub fn run() -> Vec<Sc> {
     vec![
         sc(1, 1, 6.0, 30, None),
         sc(2, 2, 6.4, 12, Some(412.25)),
@@ -71,7 +71,7 @@ pub const TESTATA: &str = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<mzX
 <software type=\"acquisition\" name=\"Xcalibur\" version=\"4.1\"/><operator first=\"Mario\" last=\"Verdi\"/></msInstrument>\n\
 <dataProcessing centroided=\"1\"><software type=\"conversion\" name=\"msconvert\" version=\"3.0\"/></dataProcessing>\n";
 
-fn picchi(mz: &[f64], it: &[f64], o: Opz) -> String {
+fn peaks(mz: &[f64], it: &[f64], o: Opz) -> String {
     let mut b = Vec::new();
     for (x, y) in mz.iter().zip(it) {
         if o.a64 {
@@ -82,13 +82,13 @@ fn picchi(mz: &[f64], it: &[f64], o: Opz) -> String {
             b.extend((*y as f32).to_be_bytes());
         }
     }
-    let dati = if o.zlib { zlib(&b) } else { b };
+    let data = if o.zlib { zlib(&b) } else { b };
     format!(
         "<peaks precision=\"{}\" byteOrder=\"network\" contentType=\"m/z-int\" compressionType=\"{}\" compressedLen=\"{}\">{}</peaks>",
         if o.a64 { 64 } else { 32 },
         if o.zlib { "zlib" } else { "none" },
-        if o.zlib { dati.len() } else { 0 },
-        b64(&dati)
+        if o.zlib { data.len() } else { 0 },
+        b64(&data)
     )
 }
 
@@ -109,7 +109,7 @@ fn emetti(s: &mut String, x: &Sc, o: Opz, pos: &mut Vec<usize>) {
         "<scan num=\"{}\" scanType=\"{}\" centroided=\"1\" msLevel=\"{}\" polarity=\"{}\" retentionTime=\"PT{}S\" lowMz=\"{}\" highMz=\"{}\"{extra}>",
         x.num,
         x.tipo,
-        x.livello,
+        x.level,
         x.pol,
         x.rt_s,
         x.mz.first().copied().unwrap_or(0.0),
@@ -120,7 +120,7 @@ fn emetti(s: &mut String, x: &Sc, o: Opz, pos: &mut Vec<usize>) {
             "<precursorMz precursorIntensity=\"1000\" precursorCharge=\"2\" activationMethod=\"CID\">{p}</precursorMz>"
         ));
     }
-    s.push_str(&picchi(&x.mz, &x.it, o));
+    s.push_str(&peaks(&x.mz, &x.it, o));
     s.push_str("<nameValue name=\"ion injection time\" value=\"12.5\"/>");
     if o.annidato {
         for f in &x.figli {
@@ -143,7 +143,7 @@ pub fn mzxml(scans: &[Sc], o: Opz) -> Vec<u8> {
         emetti(&mut s, x, o, &mut pos);
     }
     s.push_str("</msRun>\n");
-    if o.indice {
+    if o.index {
         let start = s.len();
         s.push_str("<index name=\"scan\">\n");
         for (i, p) in pos.iter().enumerate() {
@@ -161,7 +161,7 @@ pub fn mzxml(scans: &[Sc], o: Opz) -> Vec<u8> {
 pub fn annida(scans: &[Sc]) -> Vec<Sc> {
     let mut out: Vec<Sc> = Vec::new();
     for x in scans {
-        match (x.livello, out.last_mut()) {
+        match (x.level, out.last_mut()) {
             (2, Some(p)) => p.figli.push(x.clone()),
             _ => out.push(x.clone()),
         }
@@ -171,15 +171,15 @@ pub fn annida(scans: &[Sc]) -> Vec<Sc> {
 
 pub fn apri_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::lettori::Lettore> {
     mzlab_lettori::apri(
-        super::insieme("campione.mzXML", byte),
+        super::file_set("campione.mzXML", byte),
         &mzlab_core::lettori::Limiti::sito(),
     )
     .unwrap()
 }
 
-pub fn errore_mzxml(byte: Vec<u8>) -> &'static str {
+pub fn mzxml_error(byte: Vec<u8>) -> &'static str {
     match mzlab_lettori::apri(
-        super::insieme("campione.mzXML", byte),
+        super::file_set("campione.mzXML", byte),
         &mzlab_core::lettori::Limiti::sito(),
     ) {
         Err(e) => e.key,

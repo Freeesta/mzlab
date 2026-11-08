@@ -1,7 +1,7 @@
 //! The chromatograms of a folder: the TIC of all the functions (the TICs of the index, merged in the order of time), one SRM (or SIC) per channel of each SIR/MRM function, the TIC of
 //! the lock mass function, and the analog traces of the LC (`_CHROMS.INF` with `_CHROnnn.DAT`: pressure, flow, gradient, temperatures, a UV wavelength).
 
-use super::cartella::{f32_at, testo, Folder};
+use super::cartella::{f32_at, text, Folder};
 use super::idx;
 use super::lettore::{Fun, WatersReader};
 use super::mrm;
@@ -18,7 +18,7 @@ const RECORD_DAT: usize = 8;
 #[derive(Debug, Clone)]
 pub(super) struct Analogica {
     pub(super) n: u32,
-    pub(super) nome: String,
+    pub(super) name: String,
     pub(super) unita: String,
     pub(super) scale: f64,
     /// The text after the name, as the file wrote it (`$CC$,scale,type,low,high,units`).
@@ -26,7 +26,7 @@ pub(super) struct Analogica {
 }
 
 pub(super) fn analogiche(c: &mut Folder) -> Vec<Analogica> {
-    let Some(b) = c.leggi(CHROMS_INF).ok().flatten() else {
+    let Some(b) = c.read(CHROMS_INF).ok().flatten() else {
         return Vec::new();
     };
     let n = b.len().saturating_sub(INTESTAZIONE) / RECORD_INF;
@@ -36,13 +36,13 @@ pub(super) fn analogiche(c: &mut Folder) -> Vec<Analogica> {
     (0..n)
         .map(|i| {
             let r = &b[INTESTAZIONE + i * RECORD_INF..INTESTAZIONE + (i + 1) * RECORD_INF];
-            let mut campi = r[4..].split(|&x| x == 0);
-            let nome = testo(campi.next().unwrap_or(&[])).trim().to_string();
-            let raw_value = testo(campi.next().unwrap_or(&[])).trim().to_string();
+            let mut fields = r[4..].split(|&x| x == 0);
+            let nome = text(fields.next().unwrap_or(&[])).trim().to_string();
+            let raw_value = text(fields.next().unwrap_or(&[])).trim().to_string();
             let p: Vec<&str> = raw_value.split(',').collect();
             Analogica {
                 n: i as u32 + 1,
-                nome,
+                name: nome,
                 unita: p.get(5).map_or(String::new(), |u| u.trim().to_string()),
                 scale: p
                     .get(1)
@@ -56,7 +56,7 @@ pub(super) fn analogiche(c: &mut Folder) -> Vec<Analogica> {
 }
 
 fn tipo_analogico(a: &Analogica) -> ChromKind {
-    let n = a.nome.to_ascii_lowercase();
+    let n = a.name.to_ascii_lowercase();
     if n.contains("pressure") {
         ChromKind::Pressure
     } else if a.unita.eq_ignore_ascii_case("AU") || n.contains(" nm") {
@@ -66,8 +66,8 @@ fn tipo_analogico(a: &Analogica) -> ChromKind {
     }
 }
 
-fn traccia(c: &mut Folder, a: &Analogica, indice: usize) -> Result<Option<Chromatogram>> {
-    let Some(b) = c.leggi(&format!("_CHRO{:03}.DAT", a.n))? else {
+fn trace(c: &mut Folder, a: &Analogica, indice: usize) -> Result<Option<Chromatogram>> {
+    let Some(b) = c.read(&format!("_CHRO{:03}.DAT", a.n))? else {
         return Ok(None);
     };
     let n = b.len().saturating_sub(INTESTAZIONE) / RECORD_DAT;
@@ -82,7 +82,7 @@ fn traccia(c: &mut Folder, a: &Analogica, indice: usize) -> Result<Option<Chroma
     }
     Ok(Some(Chromatogram {
         index: indice,
-        id: a.nome.clone(),
+        id: a.name.clone(),
         kind: tipo_analogico(a),
         q1: None,
         q3: None,
@@ -93,7 +93,7 @@ fn traccia(c: &mut Folder, a: &Analogica, indice: usize) -> Result<Option<Chroma
 }
 
 /// The id of a channel of an SRM function: `SRM SIC Q1=277.1 Q3=71 ce=34 function=1 offset=0 name=ALA` (a SIR channel: `SIC 277.1 function=… offset=…`).
-fn channel_id(f: &Fun, j: usize, q: Option<(f32, f32)>, ce: Option<f64>, nome: &str) -> String {
+fn channel_id(f: &Fun, j: usize, q: Option<(f32, f32)>, ce: Option<f64>, name: &str) -> String {
     let mut id = match q {
         Some((q1, q3)) if q3 > 0.0 && q3 != q1 => format!("SRM SIC Q1={q1} Q3={q3}"),
         Some((q1, _)) => format!("SIC {q1}"),
@@ -103,14 +103,14 @@ fn channel_id(f: &Fun, j: usize, q: Option<(f32, f32)>, ce: Option<f64>, nome: &
         id.push_str(&format!(" ce={ce}"));
     }
     id.push_str(&format!(" function={} offset={j}", f.f.indice));
-    if !nome.is_empty() {
-        id.push_str(&format!(" name={}", nome.replace(['\r', '\n'], " ")));
+    if !name.is_empty() {
+        id.push_str(&format!(" name={}", name.replace(['\r', '\n'], " ")));
     }
     id
 }
 
 /// The chromatograms of one SIR/MRM function; `None` when its DAT cannot be read as channels.
-fn canali(l: &mut WatersReader, i: usize, first_one: usize) -> Result<Option<Vec<Chromatogram>>> {
+fn channels(l: &mut WatersReader, i: usize, first_one: usize) -> Result<Option<Vec<Chromatogram>>> {
     let f = &l.funs[i];
     let (Some(dat), Some(larg)) = (f.dat, f.larg) else {
         return Ok(None);
@@ -118,36 +118,36 @@ fn canali(l: &mut WatersReader, i: usize, first_one: usize) -> Result<Option<Vec
     if f.dat_len > l.c.limits.byte / 4 || !(larg == 2 || larg == 4) {
         return Ok(None);
     }
-    let righe: Vec<_> = f.righe.iter().copied().filter(|r| r.conta > 0).collect();
-    let n = righe.iter().map(|r| r.conta as usize).max().unwrap_or(0);
+    let rows: Vec<_> = f.righe.iter().copied().filter(|r| r.count > 0).collect();
+    let n = rows.iter().map(|r| r.count as usize).max().unwrap_or(0);
     l.c.limits
-        .voci_ok((n as u64).saturating_mul(righe.len() as u64))?;
+        .voci_ok((n as u64).saturating_mul(rows.len() as u64))?;
     let datum = l.c.read_from(dat, 0, f.dat_len)?;
     let f = &l.funs[i];
-    let mut col: Vec<Vec<f64>> = vec![Vec::with_capacity(righe.len()); n];
-    for r in &righe {
+    let mut col: Vec<Vec<f64>> = vec![Vec::with_capacity(rows.len()); n];
+    for r in &rows {
         let (o, len) = idx::extension(std::slice::from_ref(r), 0, larg, f.dat_len)?;
         let v = mrm::values(
             &datum[o as usize..(o + len) as usize],
             larg,
-            r.conta as usize,
+            r.count as usize,
         )?;
         for (j, c) in col.iter_mut().enumerate() {
             c.push(v.get(j).copied().unwrap_or(0.0));
         }
     }
-    let moment: Vec<f64> = righe.iter().map(|r| f64::from(r.rt)).collect();
-    let can = f.f.canali();
+    let moment: Vec<f64> = rows.iter().map(|r| f64::from(r.rt)).collect();
+    let can = f.f.channels();
     Ok(Some(
         col.into_iter()
             .enumerate()
             .map(|(j, intensity)| {
                 let q = can.get(j).map(|c| (c.0, c.1));
-                let ce = f.ee.as_ref().and_then(|t| t.valore("Collision Energy", j));
-                let nome = f.nomi.get(j).map_or("", String::as_str);
+                let ce = f.ee.as_ref().and_then(|t| t.value("Collision Energy", j));
+                let name = f.names.get(j).map_or("", String::as_str);
                 Chromatogram {
                     index: first_one + j,
-                    id: channel_id(f, j, q, ce, nome),
+                    id: channel_id(f, j, q, ce, name),
                     kind: if q.is_some_and(|(a, b)| b > 0.0 && b != a) {
                         ChromKind::Srm
                     } else {
@@ -202,17 +202,17 @@ pub(super) fn all_of_them(l: &mut WatersReader) -> Result<Vec<Chromatogram>> {
         if !l.funs[i].f.mirato() {
             continue;
         }
-        match canali(l, i, out.len() + 1)? {
+        match channels(l, i, out.len() + 1)? {
             Some(v) => out.extend(v),
             None => {
-                let a = format!("{}: function {} channels", l.c.nome, l.funs[i].f.indice);
+                let a = format!("{}: function {} channels", l.c.name, l.funs[i].f.indice);
                 l.warnings.push(("meta.nonDecodificato".into(), a));
             }
         }
     }
     for a in l.analogiche.clone() {
         let n = out.len();
-        out.extend(traccia(&mut l.c, &a, n)?);
+        out.extend(trace(&mut l.c, &a, n)?);
     }
     for (i, h) in out.iter_mut().enumerate() {
         h.index = i;

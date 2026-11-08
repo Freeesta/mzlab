@@ -30,7 +30,7 @@ fn zlib(b: &[u8]) -> Vec<u8> {
 }
 
 #[allow(dead_code)]
-fn insieme(name: &str, byte: Vec<u8>) -> mzlab_core::lettori::FileSet {
+fn file_set(name: &str, byte: Vec<u8>) -> mzlab_core::lettori::FileSet {
     mzlab_core::lettori::FileSet {
         membri: vec![mzlab_core::lettori::Membro {
             nome: name.into(),
@@ -43,10 +43,10 @@ fn insieme(name: &str, byte: Vec<u8>) -> mzlab_core::lettori::FileSet {
 
 /// A small mzXML of the first `n` scans of the synthetic run of the tests of `mzlab-lettori`.
 fn mzxml_file(path: &Path, n: usize) {
-    let scans: Vec<_> = mzxml::corsa().into_iter().take(n).collect();
+    let scans: Vec<_> = mzxml::run().into_iter().take(n).collect();
     let o = mzxml::Opz {
         zlib: false,
-        ..mzxml::PIATTO
+        ..mzxml::FLAT
     };
     std::fs::write(path, mzxml::mzxml(&scans, o)).unwrap();
 }

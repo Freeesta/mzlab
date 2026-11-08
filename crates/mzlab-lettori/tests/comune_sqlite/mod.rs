@@ -28,26 +28,26 @@ pub fn varint(mut v: u64) -> Vec<u8> {
 }
 
 pub fn record(vals: &[V<'_>]) -> Vec<u8> {
-    let (mut tipi, mut corpo) = (Vec::new(), Vec::new());
+    let (mut kinds, mut corpo) = (Vec::new(), Vec::new());
     for v in vals {
         match v {
-            V::N => tipi.push(0),
+            V::N => kinds.push(0),
             V::I(x) => {
-                tipi.push(6);
+                kinds.push(6);
                 corpo.extend(x.to_be_bytes());
             }
             V::R(x) => {
-                tipi.push(7);
+                kinds.push(7);
                 corpo.extend(x.to_be_bytes());
             }
             V::T(s) => {
-                tipi.extend(varint(13 + 2 * s.len() as u64));
+                kinds.extend(varint(13 + 2 * s.len() as u64));
                 corpo.extend(s.as_bytes());
             }
         }
     }
-    let mut o = vec![(tipi.len() + 1) as u8];
-    o.extend(tipi);
+    let mut o = vec![(kinds.len() + 1) as u8];
+    o.extend(kinds);
     o.extend(corpo);
     o
 }
@@ -76,18 +76,18 @@ pub fn page(tipo: u8, base: usize, cell_list: &[Vec<u8>], destra: u32) -> Vec<u8
     p
 }
 
-pub fn cella_foglia(rowid: u64, rec: &[u8]) -> Vec<u8> {
+pub fn leaf_cell(rowid: u64, rec: &[u8]) -> Vec<u8> {
     let mut c = varint(rec.len() as u64);
     c.extend(varint(rowid));
     c.extend(rec);
     c
 }
 
-pub fn foglia(righe: &[Vec<V<'_>>]) -> Vec<u8> {
-    let c: Vec<Vec<u8>> = righe
+pub fn foglia(rows: &[Vec<V<'_>>]) -> Vec<u8> {
+    let c: Vec<Vec<u8>> = rows
         .iter()
         .enumerate()
-        .map(|(i, r)| cella_foglia(i as u64 + 1, &record(r)))
+        .map(|(i, r)| leaf_cell(i as u64 + 1, &record(r)))
         .collect();
     page(13, 0, &c, 0)
 }
@@ -98,7 +98,7 @@ pub fn db(tabelle: &[(&str, &str, Vec<u8>)]) -> Vec<u8> {
         .iter()
         .enumerate()
         .map(|(i, (n, sql, _))| {
-            cella_foglia(
+            leaf_cell(
                 i as u64 + 1,
                 &record(&[
                     V::T("table"),
@@ -141,7 +141,7 @@ pub fn apri_db(b: Vec<u8>, wal: Option<Vec<u8>>) -> mzlab_core::error::Result<Sq
 
 // ---- a whole `.d` folder ----
 
-pub fn zstd_grezzo(d: &[u8]) -> Vec<u8> {
+pub fn raw_zstd(d: &[u8]) -> Vec<u8> {
     let mut z = vec![0x28, 0xb5, 0x2f, 0xfd, 0xa0];
     z.extend((d.len() as u32).to_le_bytes());
     z.extend((((d.len() as u32) << 3) | 1).to_le_bytes()[..3].iter());
@@ -156,20 +156,20 @@ pub fn blocco2() -> Vec<u8> {
     for k in 0..4 {
         piani.extend(words.iter().map(|w| (w >> (8 * k)) as u8));
     }
-    let z = zstd_grezzo(&piani);
+    let z = raw_zstd(&piani);
     let mut b = ((z.len() + 8) as u32).to_le_bytes().to_vec();
     b.extend(2u32.to_le_bytes());
     b.extend(z);
     b
 }
 
-pub fn tdf_minimo(num_peaks: i64) -> Vec<u8> {
+pub fn minimal_tdf(num_peaks: i64) -> Vec<u8> {
     tdf_frames(&[0], num_peaks)
 }
 
 /// A database of one MS1 frame per offset in `tims` (`TimsId`), each `num_peaks` peaks over 2 scans, 1 s apart.
 pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
-    let righe: Vec<Vec<V<'_>>> = tims
+    let rows: Vec<Vec<V<'_>>> = tims
         .iter()
         .enumerate()
         .map(|(i, &t)| {
@@ -191,7 +191,7 @@ pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
             ]
         })
         .collect();
-    let frames = foglia(&righe);
+    let frames = foglia(&rows);
     let cal = foglia(&[vec![
         V::N,
         V::I(1),
@@ -214,23 +214,23 @@ pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
 }
 
 /// A database of tables of any size: `(name, CREATE text, rows)`, every table its leaves of `rows` and, past one leaf, an interior root (at most one level: a few thousand rows).
-pub fn db_righe(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
+pub fn db_rows(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
     let mut pagine: Vec<Vec<u8>> = Vec::new();
     let mut radici = Vec::new();
-    for (_, _, righe) in tabelle {
-        let cell_list: Vec<Vec<u8>> = righe
+    for (_, _, rows) in tabelle {
+        let cell_list: Vec<Vec<u8>> = rows
             .iter()
             .enumerate()
-            .map(|(i, r)| cella_foglia(i as u64 + 1, &record(r)))
+            .map(|(i, r)| leaf_cell(i as u64 + 1, &record(r)))
             .collect();
         let mut foglie: Vec<(Vec<Vec<u8>>, u64)> = vec![(Vec::new(), 0)];
-        let mut usati = 8;
+        let mut used = 8;
         for (i, c) in cell_list.into_iter().enumerate() {
-            if usati + c.len() + 2 > PAG && !foglie.last().unwrap().0.is_empty() {
+            if used + c.len() + 2 > PAG && !foglie.last().unwrap().0.is_empty() {
                 foglie.push((Vec::new(), 0));
-                usati = 8;
+                used = 8;
             }
-            usati += c.len() + 2;
+            used += c.len() + 2;
             let f = foglie.last_mut().unwrap();
             f.0.push(c);
             f.1 = i as u64 + 1;
@@ -266,7 +266,7 @@ pub fn db_righe(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
         .zip(&radici)
         .enumerate()
         .map(|(i, ((n, sql, _), &r))| {
-            cella_foglia(
+            leaf_cell(
                 i as u64 + 1,
                 &record(&[
                     V::T("table"),

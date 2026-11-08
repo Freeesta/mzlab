@@ -11,20 +11,20 @@ fn put(b: &mut [u8], at: usize, v: u32) {
     b[at..at + 4].copy_from_slice(&v.to_le_bytes());
 }
 
-struct Voce {
-    nome: String,
+struct Entry {
+    name: String,
     tipo: u8,
-    padre: usize,
+    parent: usize,
     start: u32,
     dim: u32,
-    figlio: u32,
-    destro: u32,
+    child: u32,
+    right: u32,
 }
 
-fn voce(v: &Voce) -> Vec<u8> {
+fn entry(v: &Entry) -> Vec<u8> {
     let mut e = vec![0u8; 128];
     let u: Vec<u8> = v
-        .nome
+        .name
         .encode_utf16()
         .flat_map(|c| c.to_le_bytes())
         .collect();
@@ -32,8 +32,8 @@ fn voce(v: &Voce) -> Vec<u8> {
     e[0x40..0x42].copy_from_slice(&(u.len() as u16 + 2).to_le_bytes());
     e[0x42] = v.tipo;
     put(&mut e, 0x44, FREE);
-    put(&mut e, 0x48, v.destro);
-    put(&mut e, 0x4C, v.figlio);
+    put(&mut e, 0x48, v.right);
+    put(&mut e, 0x4C, v.child);
     put(&mut e, 0x74, v.start);
     put(&mut e, 0x78, v.dim);
     e
@@ -58,17 +58,17 @@ fn scan_header(nf: usize, dir0: usize) -> Vec<u8> {
 }
 
 /// The directory entries (the root, then storages and streams in order of appearance) and the bytes of each stream.
-fn voci<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Voce>, Vec<&'a Vec<u8>>) {
-    let mut v = vec![Voce {
-        nome: "Root Entry".into(),
+fn entries<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Entry>, Vec<&'a Vec<u8>>) {
+    let mut v = vec![Entry {
+        name: "Root Entry".into(),
         tipo: 5,
-        padre: 0,
+        parent: 0,
         start: END,
         dim: 0,
-        figlio: FREE,
-        destro: FREE,
+        child: FREE,
+        right: FREE,
     }];
-    let mut dati: Vec<&Vec<u8>> = Vec::new();
+    let mut data: Vec<&Vec<u8>> = Vec::new();
     for (p, b) in flussi {
         let mut padre = 0;
         let parts: Vec<&str> = p.split('/').collect();
@@ -76,45 +76,45 @@ fn voci<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Voce>, Vec<&'a Vec<u8>>) {
             let last_one = i + 1 == parts.len();
             let t = if last_one { 2 } else { 1 };
             let es =
-                (1..v.len()).find(|&j| v[j].padre == padre && v[j].nome == *n && v[j].tipo == t);
+                (1..v.len()).find(|&j| v[j].parent == padre && v[j].name == *n && v[j].tipo == t);
             padre = match es {
                 Some(j) => j,
                 None => {
-                    v.push(Voce {
-                        nome: (*n).into(),
+                    v.push(Entry {
+                        name: (*n).into(),
                         tipo: t,
-                        padre,
+                        parent: padre,
                         start: END,
                         dim: 0,
-                        figlio: FREE,
-                        destro: FREE,
+                        child: FREE,
+                        right: FREE,
                     });
                     if last_one {
-                        dati.push(b);
+                        data.push(b);
                     }
                     v.len() - 1
                 }
             };
         }
     }
-    (v, dati)
+    (v, data)
 }
 
 /// The container holding `flussi` (path, bytes).
 pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
-    let (mut v, dati) = voci(flussi);
+    let (mut v, data) = entries(flussi);
     // siblings: the first child of a parent is its `figlio`, each next one the `destro` of the one before
     let mut last_one: std::collections::HashMap<usize, usize> = Default::default();
     for j in 1..v.len() {
-        let p = v[j].padre;
+        let p = v[j].parent;
         match last_one.insert(p, j) {
-            None => v[p].figlio = j as u32,
-            Some(before) => v[before].destro = j as u32,
+            None => v[p].child = j as u32,
+            Some(before) => v[before].right = j as u32,
         }
     }
     let nd = v.len().div_ceil(4);
     let setts = |n: usize| n.div_ceil(512);
-    let ndati: usize = dati.iter().map(|b| setts(b.len())).sum();
+    let ndati: usize = data.iter().map(|b| setts(b.len())).sum();
     let mut nf = 1;
     while nf * 128 < nf + nd + ndati {
         nf += 1;
@@ -134,7 +134,7 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
     let mut at = nf + nd;
     let mut corpo: Vec<u8> = Vec::new();
     for (k, e) in v.iter_mut().skip(1).filter(|e| e.tipo == 2).enumerate() {
-        let b = dati[k];
+        let b = data[k];
         e.dim = b.len() as u32;
         let n = setts(b.len());
         if n > 0 {
@@ -148,7 +148,7 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
     let h = scan_header(nf, dir0);
     let mut out = h;
     out.extend(fat.iter().flat_map(|x| x.to_le_bytes()));
-    let mut d: Vec<u8> = v.iter().flat_map(voce).collect();
+    let mut d: Vec<u8> = v.iter().flat_map(entry).collect();
     d.resize(nd * 512, 0);
     out.extend(d);
     out.extend(corpo);

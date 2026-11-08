@@ -1,13 +1,13 @@
 //! The `Lettore` of a MassLynx `.raw` folder: the functions of `_FUNCTNS.INF`, the scans of the scanning ones (MS, MSe, DDA) by position in `_FUNCnnn.DAT`, and the SIR/MRM channels,
 //! the TIC, the lock mass and the analog traces as chromatograms (`cromi.rs`). The lock mass function is also in the spectra (level 1, filter "lock mass", as msconvert does); its correction is not applied.
 
-use super::cartella::{errore, testo, Folder};
-use super::dat::{decode, Calibration, Codifica};
+use super::cartella::{errore, text, Folder};
+use super::dat::{decode, Calibration, Encoding};
 use super::funzioni::{self, Funzione};
-use super::idx::{self, Riga};
-use super::inf::{self, Extern, FunzioneExt, Inlet, Modo, Testata};
-use super::lati::{compound_names, Tabella};
-use super::tagli::{nel_file, tagli, whole_header, whole_list};
+use super::idx::{self, Row};
+use super::inf::{self, Extern, FunzioneExt, Inlet, Mode, Testata};
+use super::lati::{compound_names, Table};
+use super::tagli::{cuts, nel_file, whole_header, whole_list};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
@@ -19,7 +19,7 @@ use mzlab_core::mzmlwrite::Header;
 const FUNCTNS: &str = "_FUNCTNS.INF";
 const FIRST_DAT: &str = "_FUNC001.DAT";
 
-pub const VOCE: VoceLettore = VoceLettore {
+pub const ENTRY: VoceLettore = VoceLettore {
     id: "waters-raw",
     contratto: CONTRATTO,
     estensioni: &[".raw"],
@@ -39,7 +39,7 @@ impl WatersReader {
                 f.righe
                     .iter()
                     .enumerate()
-                    .filter(|(_, r)| r.conta > 0)
+                    .filter(|(_, r)| r.count > 0)
                     .map(|(k, r)| (r.rt, i, k)),
             );
         }
@@ -51,7 +51,7 @@ impl WatersReader {
                 .then(|| {
                     f.sts
                         .as_ref()
-                        .and_then(|t| t.valore("Set Mass", k))
+                        .and_then(|t| t.value("Set Mass", k))
                         .filter(|&m| m > 0.0)
                         .or(f.ext.set_mass)
                 })
@@ -73,7 +73,7 @@ impl WatersReader {
                     membro: u16::try_from(m).unwrap_or(0),
                     offset: r.offset,
                     lunghezza: u32::try_from(
-                        u64::from(r.conta) * f.cod.map_or(0, |c| c.larghezza() as u64),
+                        u64::from(r.count) * f.cod.map_or(0, |c| c.width() as u64),
                     )
                     .unwrap_or(u32::MAX),
                 }),
@@ -82,7 +82,7 @@ impl WatersReader {
         }
     }
 
-    fn voce(&self, c: usize, k: usize) -> Result<(&Fun, usize, &VoceScansione)> {
+    fn entry(&self, c: usize, k: usize) -> Result<(&Fun, usize, &VoceScansione)> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
@@ -118,7 +118,7 @@ impl Lettore for WatersReader {
     }
 
     fn samples(&self) -> &[Campione] {
-        &self.campioni
+        &self.samples
     }
 
     fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
@@ -129,12 +129,12 @@ impl Lettore for WatersReader {
     }
 
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let (f, r, v) = self.voce(c, k)?;
+        let (f, r, v) = self.entry(c, k)?;
         let (cod, dat) = (
             f.cod.ok_or_else(|| errore("record width"))?,
             f.dat.ok_or_else(|| errore("no DAT"))?,
         );
-        let (off, len) = idx::extension(&f.righe, r, cod.larghezza() as u64, f.dat_len)?;
+        let (off, len) = idx::extension(&f.righe, r, cod.width() as u64, f.dat_len)?;
         let (tar, livello, polarity, rt, precursor) =
             (f.tar.clone(), v.livello, v.polarita, v.rt, v.precursore);
         let id = v.id.clone();
@@ -157,10 +157,10 @@ impl Lettore for WatersReader {
     }
 
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        let (f, r, v) = self.voce(c, k)?;
-        let field = |nome: &str, valore: String, unita: Option<&str>| Campo {
-            nome: nome.into(),
-            valore,
+        let (f, r, v) = self.entry(c, k)?;
+        let field = |name: &str, value: String, unita: Option<&str>| Campo {
+            nome: name.into(),
+            valore: value,
             unita: unita.map(Into::into),
             cv: None,
         };
@@ -168,13 +168,13 @@ impl Lettore for WatersReader {
             field("function", f.f.indice.to_string(), None),
             field("scan", (r + 1).to_string(), None),
         ];
-        if let Some((a, b)) = f.f.intervallo() {
+        if let Some((a, b)) = f.f.interval() {
             out.push(field("scan range", format!("{a}-{b}"), Some("m/z")));
         }
         let ce = f
             .sts
             .as_ref()
-            .and_then(|t| t.valore("Collision Energy", r))
+            .and_then(|t| t.value("Collision Energy", r))
             .filter(|&x| x > 0.0)
             .or(f.ext.ce);
         if let Some(ce) = ce {
@@ -201,11 +201,7 @@ impl Lettore for WatersReader {
             out.push(field("precursor", p.to_string(), Some("m/z")));
         }
         if let Some(t) = &f.sts {
-            for (n, x) in t
-                .tutti(r)
-                .into_iter()
-                .filter(|(n, _)| n.contains("ock mass"))
-            {
+            for (n, x) in t.all(r).into_iter().filter(|(n, _)| n.contains("ock mass")) {
                 out.push(field(&format!("{n} (not applied)"), x.to_string(), None));
             }
         }
@@ -278,17 +274,17 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
 pub(super) struct Fun {
     pub(super) f: Funzione,
     pub(super) ext: FunzioneExt,
-    pub(super) righe: Vec<Riga>,
+    pub(super) righe: Vec<Row>,
     /// Index of `_FUNCnnn.DAT` among the members.
     pub(super) dat: Option<usize>,
     pub(super) dat_len: u64,
     /// Bytes per record, from the index.
     pub(super) larg: Option<u64>,
-    pub(super) cod: Option<Codifica>,
+    pub(super) cod: Option<Encoding>,
     pub(super) tar: Calibration,
-    pub(super) sts: Option<Tabella>,
-    pub(super) ee: Option<Tabella>,
-    pub(super) nomi: Vec<String>,
+    pub(super) sts: Option<Table>,
+    pub(super) ee: Option<Table>,
+    pub(super) names: Vec<String>,
     pub(super) livello: u8,
     pub(super) polarita: i8,
     /// Scans of the index past the end of a DAT cut short (emptied in `righe`).
@@ -302,7 +298,7 @@ pub struct WatersReader {
     pub(super) ext: Extern,
     pub(super) inlet: Option<Inlet>,
     pub(super) analogiche: Vec<super::cromi::Analogica>,
-    campioni: Vec<Campione>,
+    samples: Vec<Campione>,
     indice: Vec<VoceScansione>,
     /// For each row of `indice`: (function, row of its IDX).
     mappa: Vec<(usize, usize)>,
@@ -312,8 +308,8 @@ pub struct WatersReader {
     chroms: Option<Vec<Chromatogram>>,
 }
 
-fn opzionale(c: &mut Folder, nome: &str) -> Option<Vec<u8>> {
-    c.leggi(nome).ok().flatten()
+fn opzionale(c: &mut Folder, name: &str) -> Option<Vec<u8>> {
+    c.read(name).ok().flatten()
 }
 
 fn level_of(funs: &[Fun], i: usize) -> u8 {
@@ -321,14 +317,14 @@ fn level_of(funs: &[Fun], i: usize) -> u8 {
     if f.riferimento() {
         return 1;
     }
-    match x.modo {
-        Modo::Riferimento => 1,
-        Modo::Msms | Modo::Figlie => 2,
-        Modo::Ms => {
+    match x.mode {
+        Mode::Riferimento => 1,
+        Mode::Msms | Mode::Figlie => 2,
+        Mode::Ms => {
             let partner = funs.iter().any(|g| {
                 g.f.indice != f.indice
                     && !g.f.riferimento()
-                    && g.ext.modo == Modo::Ms
+                    && g.ext.mode == Mode::Ms
                     && g.ext.rampa.is_none()
             });
             if x.rampa.is_some() && partner {
@@ -344,18 +340,18 @@ fn level_of(funs: &[Fun], i: usize) -> u8 {
 
 /// A folder that gives nothing (no scan, no channel, no analogue trace) because a function with data has records of a width not read yet is refused with
 /// that function named, rather than opened empty.
-fn unknown_variant(nome: &str, funs: &[Fun], without_analog: bool) -> Result<()> {
-    let dati = |f: &Fun| f.dat.is_some() && f.righe.iter().any(|r| r.conta > 0);
+fn unknown_variant(name: &str, funs: &[Fun], without_analog: bool) -> Result<()> {
+    let data = |f: &Fun| f.dat.is_some() && f.righe.iter().any(|r| r.count > 0);
     if !without_analog
         || funs
             .iter()
-            .any(|f| dati(f) && (f.f.mirato() || f.cod.is_some()))
+            .any(|f| data(f) && (f.f.mirato() || f.cod.is_some()))
     {
         return Ok(());
     }
-    match funs.iter().find(|f| dati(f) && !f.f.mirato()) {
+    match funs.iter().find(|f| data(f) && !f.f.mirato()) {
         Some(f) => Err(Error::new("err.file.recordVariant")
-            .with("name", nome)
+            .with("name", name)
             .with("function", f.f.indice.to_string())
             .with("type", format!("0x{:02X}", f.f.tipo))),
         None => Ok(()),
@@ -363,7 +359,7 @@ fn unknown_variant(nome: &str, funs: &[Fun], without_analog: bool) -> Result<()>
 }
 
 /// Everything of function `f`: its index, the DAT and the side tables.
-fn carica(
+fn load(
     c: &mut Folder,
     f: Funzione,
     ext: &Extern,
@@ -371,33 +367,32 @@ fn carica(
     spent: &mut u64,
 ) -> Result<(Fun, Option<String>)> {
     let n = f.indice;
-    let nome = |e: &str| format!("_FUNC{n:03}.{e}");
-    let idx_b = opzionale(c, &nome("IDX"));
+    let name = |e: &str| format!("_FUNC{n:03}.{e}");
+    let idx_b = opzionale(c, &name("IDX"));
     let ha_idx = idx_b.is_some();
-    let mut righe = match idx_b {
-        Some(b) => idx::leggi(&b, &c.limits)?
-            .ok_or_else(|| nel_file(c, "err.file.indexCut", &nome("IDX")))?,
+    let mut rows = match idx_b {
+        Some(b) => idx::read(&b, &c.limits)?
+            .ok_or_else(|| nel_file(c, "err.file.indexCut", &name("IDX")))?,
         None => Vec::new(),
     };
-    *spent += righe.len() as u64;
+    *spent += rows.len() as u64;
     c.limits.voci_ok(*spent)?;
-    let dat = c.cerca(&nome("DAT"));
+    let dat = c.search(&name("DAT"));
     let dat_len = dat.map_or(0, |i| c.fs.membri[i].dim);
-    let larg = idx::larghezza(&righe, dat_len);
+    let larg = idx::width(&rows, dat_len);
     let cod = if f.mirato() {
         None
     } else {
-        larg.and_then(Codifica::from_width)
+        larg.and_then(Encoding::from_width)
     };
-    let tagliate = tagli(&mut righe, larg, dat.is_some(), dat_len, ha_idx)
-        .ok_or_else(|| nel_file(c, "err.file.indexCut", &nome("IDX")))?;
+    let tagliate = cuts(&mut rows, larg, dat.is_some(), dat_len, ha_idx)
+        .ok_or_else(|| nel_file(c, "err.file.indexCut", &name("IDX")))?;
     let lim = c.limits;
-    let tab =
-        |c: &mut Folder, e: &str| opzionale(c, &nome(e)).and_then(|b| Tabella::leggi(&b, &lim));
+    let tab = |c: &mut Folder, e: &str| opzionale(c, &name(e)).and_then(|b| Table::read(&b, &lim));
     let (sts, ee) = (tab(c, "STS"), tab(c, "EE"));
-    let nomi = opzionale(c, &nome("CMP")).map_or(Vec::new(), |b| compound_names(&b, &lim));
+    let nomi = opzionale(c, &name("CMP")).map_or(Vec::new(), |b| compound_names(&b, &lim));
     let x = ext.funzioni.get(&n).cloned().unwrap_or_default();
-    let avviso = if dat.is_none() || righe.is_empty() {
+    let warning = if dat.is_none() || rows.is_empty() {
         Some(format!("function {n}: no scans"))
     } else if !f.mirato() && cod.is_none() {
         Some(format!("function {n}: record width"))
@@ -409,7 +404,7 @@ fn carica(
     let fun = Fun {
         f,
         ext: x,
-        righe,
+        righe: rows,
         dat,
         dat_len,
         larg,
@@ -417,42 +412,42 @@ fn carica(
         tar,
         sts,
         ee,
-        nomi,
+        names: nomi,
         livello: 1,
         polarita,
         tagliate,
     };
-    Ok((fun, avviso))
+    Ok((fun, warning))
 }
 
 fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
     let mut c = Folder::new(fs, *limits);
     // Every run has `_FUNCTNS.INF`: a folder without it is a copy that left files behind.
     let inf = c
-        .leggi(FUNCTNS)?
+        .read(FUNCTNS)?
         .ok_or_else(|| nel_file(&c, "err.file.folderIncomplete", FUNCTNS))?;
-    if c.cerca(FIRST_DAT).is_none() {
+    if c.search(FIRST_DAT).is_none() {
         return Err(errore("_FUNC001.DAT is missing"));
     }
     if inf.is_empty() {
-        return Err(Error::new("err.file.functionsEmpty").with("name", &c.nome));
+        return Err(Error::new("err.file.functionsEmpty").with("name", &c.name));
     }
-    let lista = funzioni::leggi(&inf, limits)?
+    let list = funzioni::read(&inf, limits)?
         .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
-    whole_list(&c, lista.len())?;
+    whole_list(&c, list.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
     whole_header(&c, header.as_deref())?;
-    let testata = header.map_or_else(Testata::default, |b| inf::file_header(&testo(&b)));
+    let testata = header.map_or_else(Testata::default, |b| inf::file_header(&text(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
-        .map_or_else(Extern::default, |b| inf::extern_inf(&testo(&b)));
-    let inlet = opzionale(&mut c, "_INLET.INF").map(|b| inf::inlet(&testo(&b)));
+        .map_or_else(Extern::default, |b| inf::extern_inf(&text(&b)));
+    let inlet = opzionale(&mut c, "_INLET.INF").map(|b| inf::inlet(&text(&b)));
     let (mut funs, mut warnings, mut spent) = (Vec::new(), Vec::new(), 0u64);
-    for f in lista {
-        let (fun, av) = carica(&mut c, f, &ext, &testata, &mut spent)?;
+    for f in list {
+        let (fun, av) = load(&mut c, f, &ext, &testata, &mut spent)?;
         if let Some(a) = av {
             warnings.push((
                 "meta.nonDecodificato".to_string(),
-                format!("{}: {a}", c.nome),
+                format!("{}: {a}", c.name),
             ));
         }
         funs.push(fun);
@@ -463,11 +458,11 @@ fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
     if funs.iter().any(|f| f.ext.mobilita) {
         warnings.push((
             "meta.nonDecodificato".into(),
-            format!("{}: ion mobility", c.nome),
+            format!("{}: ion mobility", c.name),
         ));
     }
     let analogiche = super::cromi::analogiche(&mut c);
-    unknown_variant(&c.nome, &funs, analogiche.is_empty())?;
+    unknown_variant(&c.name, &funs, analogiche.is_empty())?;
     let mut l = WatersReader {
         c,
         funs,
@@ -475,7 +470,7 @@ fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
         ext,
         inlet,
         analogiche,
-        campioni: Vec::new(),
+        samples: Vec::new(),
         indice: Vec::new(),
         mappa: Vec::new(),
         warnings,
@@ -483,13 +478,13 @@ fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
         chroms: None,
     };
     l.build_index();
-    let nome = l
+    let name = l
         .testata
         .get("Acquired Name")
-        .map_or_else(|| l.c.nome.clone(), str::to_string);
-    l.campioni = vec![Campione {
+        .map_or_else(|| l.c.name.clone(), str::to_string);
+    l.samples = vec![Campione {
         id: 0,
-        nome,
+        nome: name,
         scansioni: l.indice.len(),
         dimensione: None,
     }];

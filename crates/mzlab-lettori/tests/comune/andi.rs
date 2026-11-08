@@ -15,40 +15,40 @@ pub fn t(s: &str) -> At {
 
 #[derive(Clone)]
 pub struct Vb {
-    pub nome: String,
+    pub name: String,
     pub dims: Vec<usize>,
     /// nc_type: 1 byte, 2 char, 3 short, 4 int, 5 float, 6 double.
     pub tipo: u32,
     pub att: Vec<(String, At)>,
-    pub dati: Vec<f64>,
-    pub testo: Vec<u8>,
+    pub data: Vec<f64>,
+    pub text: Vec<u8>,
 }
 
 pub fn var(nome: &str, dims: &[usize], tipo: u32, dati: Vec<f64>) -> Vb {
     Vb {
-        nome: nome.into(),
+        name: nome.into(),
         dims: dims.to_vec(),
         tipo,
         att: Vec::new(),
-        dati,
-        testo: Vec::new(),
+        data: dati,
+        text: Vec::new(),
     }
 }
 
-pub fn car(nome: &str, dims: &[usize], testo: &str, riga: usize) -> Vb {
-    let mut b = testo.as_bytes().to_vec();
-    b.resize(riga, 0);
+pub fn car(nome: &str, dims: &[usize], text: &str, row: usize) -> Vb {
+    let mut b = text.as_bytes().to_vec();
+    b.resize(row, 0);
     Vb {
-        nome: nome.into(),
+        name: nome.into(),
         dims: dims.to_vec(),
         tipo: 2,
         att: Vec::new(),
-        dati: Vec::new(),
-        testo: b,
+        data: Vec::new(),
+        text: b,
     }
 }
 
-pub fn larghezza(tipo: u32) -> usize {
+pub fn width(tipo: u32) -> usize {
     [1, 1, 2, 4, 4, 8][tipo as usize - 1]
 }
 
@@ -58,13 +58,13 @@ fn pad(o: &mut Vec<u8>) {
     }
 }
 
-fn nome(o: &mut Vec<u8>, s: &str) {
+fn name(o: &mut Vec<u8>, s: &str) {
     o.extend((s.len() as u32).to_be_bytes());
     o.extend(s.as_bytes());
     pad(o);
 }
 
-fn elemento(o: &mut Vec<u8>, tipo: u32, x: f64) {
+fn element(o: &mut Vec<u8>, tipo: u32, x: f64) {
     match tipo {
         1 => o.push(x as i8 as u8),
         2 => o.push(x as u8),
@@ -83,7 +83,7 @@ fn attributi(o: &mut Vec<u8>, a: &[(String, At)]) {
     o.extend(0x0Cu32.to_be_bytes());
     o.extend((a.len() as u32).to_be_bytes());
     for (n, v) in a {
-        nome(o, n);
+        name(o, n);
         match v {
             At::T(s) => {
                 o.extend(2u32.to_be_bytes());
@@ -93,7 +93,7 @@ fn attributi(o: &mut Vec<u8>, a: &[(String, At)]) {
             At::N(ty, x) => {
                 o.extend(ty.to_be_bytes());
                 o.extend((x.len() as u32).to_be_bytes());
-                x.iter().for_each(|&y| elemento(o, *ty, y));
+                x.iter().for_each(|&y| element(o, *ty, y));
             }
         }
         pad(o);
@@ -101,14 +101,14 @@ fn attributi(o: &mut Vec<u8>, a: &[(String, At)]) {
 }
 
 /// The bytes of one variable's data for the elements `da..a`.
-fn dati_di(v: &Vb, da: usize, a: usize) -> Vec<u8> {
+fn data_of(v: &Vb, da: usize, a: usize) -> Vec<u8> {
     let mut o = Vec::new();
     if v.tipo == 2 {
-        o.extend(&v.testo[da..a]);
+        o.extend(&v.text[da..a]);
     } else {
-        v.dati[da..a]
+        v.data[da..a]
             .iter()
-            .for_each(|&x| elemento(&mut o, v.tipo, x));
+            .for_each(|&x| element(&mut o, v.tipo, x));
     }
     o
 }
@@ -128,14 +128,14 @@ fn testata_cdf(
     o.extend(0x0Au32.to_be_bytes());
     o.extend((dims.len() as u32).to_be_bytes());
     for (n, l) in dims {
-        nome(&mut o, n);
+        name(&mut o, n);
         o.extend(l.to_be_bytes());
     }
     attributi(&mut o, globali);
     o.extend(0x0Bu32.to_be_bytes());
     o.extend((vars.len() as u32).to_be_bytes());
     for (i, (v, &b)) in vars.iter().zip(begins).enumerate() {
-        nome(&mut o, &v.nome);
+        name(&mut o, &v.name);
         o.extend((v.dims.len() as u32).to_be_bytes());
         v.dims
             .iter()
@@ -174,13 +174,13 @@ pub fn cdf(
     };
     let record = |v: &Vb| v.dims.first().is_some_and(|&d| dims[d].1 == 0);
     let per_rec = |v: &Vb| -> usize { v.dims[1..].iter().map(|&d| dims[d].1 as usize).product() };
-    let ancora = |v: &Vb| larghezza(v.tipo) * if record(v) { per_rec(v) } else { elementi(v) };
+    let again = |v: &Vb| width(v.tipo) * if record(v) { per_rec(v) } else { elementi(v) };
     let un_record = vars.iter().filter(|v| record(v)).count() == 1;
     let vsize = |v: &Vb| {
         if record(v) && un_record {
-            ancora(v)
+            again(v)
         } else {
-            (ancora(v) + 3) & !3
+            (again(v) + 3) & !3
         }
     };
     let vsizes: Vec<usize> = vars.iter().map(vsize).collect();
@@ -199,13 +199,13 @@ pub fn cdf(
     }
     let mut o = intestazione(&begins);
     for v in vars.iter().filter(|v| !record(v)) {
-        o.extend(dati_di(v, 0, elementi(v)));
+        o.extend(data_of(v, 0, elementi(v)));
         pad(&mut o);
     }
     for k in 0..numrecs as usize {
         for v in vars.iter().filter(|v| record(v)) {
             let e = per_rec(v);
-            o.extend(dati_di(v, k * e, (k + 1) * e));
+            o.extend(data_of(v, k * e, (k + 1) * e));
             if !un_record {
                 pad(&mut o);
             }
@@ -216,25 +216,25 @@ pub fn cdf(
 
 /// The shape of a synthetic ANDI-MS run.
 #[derive(Clone)]
-pub struct Corsa {
+pub struct Run {
     pub v2: bool,
     /// nc_type of `mass_values` / `intensity_values`.
     pub tipo_mz: u32,
     pub tipo_it: u32,
-    pub scala_mz: Option<f64>,
+    pub mz_scale: Option<f64>,
     /// `(scale_factor, add_offset)` stored on `scan_acquisition_time`; the file holds `(t - offset) / factor`.
-    pub scala_tempo: Option<(f64, f64)>,
+    pub time_scale: Option<(f64, f64)>,
     pub sim: bool,
     pub profilo: bool,
     pub polarita: &'static str,
 }
 
-pub const PIATTA: Corsa = Corsa {
+pub const FLAT_RUN: Run = Run {
     v2: false,
     tipo_mz: 5,
     tipo_it: 5,
-    scala_mz: None,
-    scala_tempo: None,
+    mz_scale: None,
+    time_scale: None,
     sim: false,
     profilo: false,
     polarita: "Positive Polarity",
@@ -254,7 +254,7 @@ pub fn points(k: usize) -> Vec<(f64, f64)> {
 
 pub const SCANSIONI: usize = 6;
 
-pub fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
+pub fn globali_ms(c: &Run) -> Vec<(String, At)> {
     vec![
         ("experiment_title".to_string(), t("run one")),
         (
@@ -283,13 +283,13 @@ pub fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
     ]
 }
 
-pub fn andi_ms(c: &Corsa) -> Vec<u8> {
-    andi_ms_con(c, SCANSIONI, points, true)
+pub fn andi_ms(c: &Run) -> Vec<u8> {
+    andi_ms_with(c, SCANSIONI, points, true)
 }
 
 /// An ANDI-MS file of `scansioni` scans whose points are `punti(k)`; `tic`: whether it has `total_intensity`.
-pub fn andi_ms_con(
-    c: &Corsa,
+pub fn andi_ms_with(
+    c: &Run,
     scansioni: usize,
     points: impl Fn(usize) -> Vec<(f64, f64)>,
     tic: bool,
@@ -302,7 +302,7 @@ pub fn andi_ms_con(
     }
     let mz: Vec<f64> = (0..scansioni)
         .flat_map(|k| points(k).into_iter().map(|p| p.0))
-        .map(|x| c.scala_mz.map_or(x, |f| x / f))
+        .map(|x| c.mz_scale.map_or(x, |f| x / f))
         .collect();
     let it: Vec<f64> = (0..scansioni)
         .flat_map(|k| points(k).into_iter().map(|p| p.1))
@@ -318,7 +318,7 @@ pub fn andi_ms_con(
     let per_scan = |n: &str, ty: u32, x: Vec<f64>| var(n, &[1], ty, x);
     let mut vm = var("mass_values", &[0], c.tipo_mz, mz);
     vm.att.push(("units".into(), t("M/Z")));
-    if let Some(f) = c.scala_mz {
+    if let Some(f) = c.mz_scale {
         vm.att.push(("scale_factor".into(), At::N(6, vec![f])));
     }
     let mut vi = var("intensity_values", &[0], c.tipo_it, it.clone());
@@ -330,11 +330,11 @@ pub fn andi_ms_con(
         (0..scansioni)
             .map(|k| {
                 let t = 60.0 + 1.5 * k as f64;
-                c.scala_tempo.map_or(t, |(f, o)| (t - o) / f)
+                c.time_scale.map_or(t, |(f, o)| (t - o) / f)
             })
             .collect(),
     );
-    if let Some((f, o)) = c.scala_tempo {
+    if let Some((f, o)) = c.time_scale {
         moment.att.push(("scale_factor".into(), At::N(6, vec![f])));
         moment.att.push(("add_offset".into(), At::N(6, vec![o])));
     }
@@ -360,7 +360,7 @@ pub fn andi_ms_con(
         car("instrument_serial_no", &[2, 3], "SN-0042", 32),
     ];
     if !tic {
-        vars.retain(|v| v.nome != "total_intensity");
+        vars.retain(|v| v.name != "total_intensity");
     }
     let g = globali_ms(c);
     let _ = total;
@@ -390,11 +390,11 @@ pub fn andi_cromato(n: usize) -> Vec<u8> {
 }
 
 pub fn apri_andi(byte: Vec<u8>) -> Box<dyn Lettore> {
-    mzlab_lettori::apri(super::insieme("campione.cdf", byte), &Limiti::sito()).unwrap()
+    mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limiti::sito()).unwrap()
 }
 
-pub fn errore_andi(byte: Vec<u8>) -> &'static str {
-    match mzlab_lettori::apri(super::insieme("campione.cdf", byte), &Limiti::sito()) {
+pub fn andi_error(byte: Vec<u8>) -> &'static str {
+    match mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limiti::sito()) {
         Err(e) => e.key,
         Ok(mut l) => {
             for k in 0..l.index(0).map(|i| i.len()).unwrap_or(0) {

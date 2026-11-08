@@ -22,7 +22,7 @@
 
 ## Intensità
 Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` della tabella `Frames` sono normalizzati a 100 ms: il TIC dell'indice è `SummedIntensities·AccumulationTime/100`. Indici TOF uguali nello stesso spettro si sommano (msconvert li lascia come punti separati: stesse somme).
-- Cromatogrammi: TIC (MS1 da `Frames`, MS2 sommato dai punti alla prima chiamata di `indice`; probe, mzML, `conv/1` e prova SRM chiedono `indice_senza_tic`, senza decodificare frame: `crates/mzlab-lettori/tests/bruker_senza_tic.rs`) e BPC, il massimo delle intensità a 32 bit di ogni spettro di rilievo; il lettore tiene il massimo di ogni spettro già decodificato (`massimi`, `tracce.rs`), così il BPC dopo un giro intero (indice `.mzidx`, mzML) non decodifica di nuovo nessun frame. Prova: `bpc_uguale_prima_e_dopo_il_giro` (`tests/robustezza_bruker.rs`).
+- Cromatogrammi: TIC (MS1 da `Frames`, MS2 sommato dai punti alla prima chiamata di `indice`; probe, mzML, `conv/1` e prova SRM chiedono `indice_senza_tic`, senza decodificare frame: `crates/mzlab-lettori/tests/bruker_senza_tic.rs`) e BPC, il massimo delle intensità a 32 bit di ogni spettro di rilievo; il lettore tiene il massimo di ogni spettro già decodificato (`massimi`, `tracce.rs`), così il BPC dopo un giro intero (indice `.mzidx`, mzML) non decodifica di nuovo nessun frame. Prova: `bpc_equal_before_and_after_the_round_trip` (`tests/robustezza_bruker.rs`).
 
 ## Spettri
 - `MsMsType` 0 (MS1): un frame è uno spettro, mobilità sommata.
@@ -34,7 +34,7 @@ Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` d
 - La mobilità per punto non entra nel motore. In `campi` di ogni spettro stanno l'intervallo di scansioni TIMS e, per TDF, l'avviso `meta.nonDecodificato` (vedi sotto).
 
 ## Metodo e testata
-`metodo/1` da `GlobalMetadata`, `Properties` e dalle calibrazioni (`MzCalibration`, `TimsCalibration`); `testata_mzml` con `Header::run_params` = `("mzLab metodo/1", documento)`, strumento, seriale, software, `startTimeStamp` e SHA-1 di `analysis.tdf` (solo TDF); componenti quadrupolo + time-of-flight + rivelatore a microcanali (il file non li nomina), da cui la tabella delle scansioni legge l'alta risoluzione (`hr1`, prova `un_timstof_e_ad_alta_risoluzione`).
+`metodo/1` da `GlobalMetadata`, `Properties` e dalle calibrazioni (`MzCalibration`, `TimsCalibration`); `testata_mzml` con `Header::run_params` = `("mzLab metodo/1", documento)`, strumento, seriale, software, `startTimeStamp` e SHA-1 di `analysis.tdf` (solo TDF); componenti quadrupolo + time-of-flight + rivelatore a microcanali (il file non li nomina), da cui la tabella delle scansioni legge l'alta risoluzione (`hr1`, prova `a_timstof_is_high_resolution`).
 
 ## Prove
 - `cargo test -p mzlab-lettori --features bruker`: unitarie (varint, colonne, calibrazione, TSF) e `tests/robustezza_bruker.rs` (SQLite e `tdf_bin` costruiti nel test: WAL confermato, non confermato e con somma errata, `WITHOUT ROWID`, ciclo di pagine, varint lunghi, zstd falso e con finestra enorme, conteggi di picchi bugiardi, troncamenti a ogni passo, `tdf_bin` tagliato dentro un frame, BAF, cartella Agilent); `tests/test_lettori_parita.py` (`test_bruker_con_tdf_bin_tagliato_uguale_al_cli`): stesso mzML dal modulo e dal CLI per una cartella tagliata.

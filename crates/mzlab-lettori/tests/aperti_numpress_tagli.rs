@@ -34,7 +34,7 @@ fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
     let want: Vec<_> = (0..scan.len()).map(|k| full.scan(0, k).unwrap()).collect();
     for cut in 0..ok.len() {
         let Ok(mut l) = mzlab_lettori::apri(
-            insieme("campione.mzML", ok[..cut].to_vec()),
+            file_set("campione.mzML", ok[..cut].to_vec()),
             &Limiti::sito(),
         ) else {
             continue;
@@ -55,9 +55,10 @@ fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
         if n == 0 {
             continue;
         }
-        let voci = l.chromatograms(0).unwrap();
+        let entries = l.chromatograms(0).unwrap();
         assert!(
-            voci.iter()
+            entries
+                .iter()
                 .any(|v| v.id == "TIC" && v.tipo == ChromKind::Tic),
             "cut at {cut}: the TIC is gone"
         );

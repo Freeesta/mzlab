@@ -45,7 +45,7 @@ impl Val {
             _ => None,
         }
     }
-    pub fn testo(&self) -> Option<&str> {
+    pub fn text(&self) -> Option<&str> {
         match self {
             Val::Text(t) => Some(t),
             _ => None,
@@ -62,11 +62,11 @@ impl Val {
     }
 }
 
-impl Tabella {
-    pub fn col(&self, nome: &str) -> Option<usize> {
+impl Table {
+    pub fn col(&self, name: &str) -> Option<usize> {
         self.colonne
             .iter()
-            .position(|c| c.eq_ignore_ascii_case(nome))
+            .position(|c| c.eq_ignore_ascii_case(name))
     }
 }
 
@@ -131,27 +131,27 @@ impl Sqlite {
 
     /// The tables of `sqlite_schema` (page 1): name, root page, columns.
     fn read_schema(&mut self) -> Result<()> {
-        let mut righe = Vec::new();
+        let mut rows = Vec::new();
         self.walk(1, |_, v| {
-            righe.push(v);
+            rows.push(v);
             Ok(true)
         })?;
-        for v in righe {
-            if v.first().and_then(Val::testo) == Some("table") {
-                let (Some(nome), Some(radice), Some(sql)) = (
-                    v.get(1).and_then(Val::testo),
+        for v in rows {
+            if v.first().and_then(Val::text) == Some("table") {
+                let (Some(name), Some(root), Some(sql)) = (
+                    v.get(1).and_then(Val::text),
                     v.get(3).and_then(Val::i64),
-                    v.get(4).and_then(Val::testo),
+                    v.get(4).and_then(Val::text),
                 ) else {
                     continue;
                 };
-                let (colonne, alias_rowid, ordine) = columns_of(sql);
-                self.tabelle.push(Tabella {
-                    nome: nome.to_string(),
-                    radice: u32::try_from(radice).unwrap_or(0),
-                    colonne,
+                let (columns, alias_rowid, order) = columns_of(sql);
+                self.tabelle.push(Table {
+                    nome: name.to_string(),
+                    radice: u32::try_from(root).unwrap_or(0),
+                    colonne: columns,
                     alias_rowid,
-                    ordine,
+                    ordine: order,
                 });
             }
         }
@@ -163,10 +163,10 @@ impl Sqlite {
         mzlab_core::metodo::sha1_hex(&mut self.main, self.dim).ok()
     }
 
-    pub fn tabella(&self, nome: &str) -> Option<&Tabella> {
+    pub fn table(&self, name: &str) -> Option<&Table> {
         self.tabelle
             .iter()
-            .find(|t| t.nome.eq_ignore_ascii_case(nome))
+            .find(|t| t.nome.eq_ignore_ascii_case(name))
     }
 
     /// Whether the database came with a log whose frames were applied.
@@ -199,11 +199,11 @@ impl Sqlite {
 
     /// Calls `f(rowid, values)` for each row of the table rooted at `radice`, in rowid order; `f` returns `false` to stop. Rows are visited once: the walk is iterative, bounded in depth and
     /// in pages (a page that comes twice is a cycle). The value of an `INTEGER PRIMARY KEY` column is NULL in the record: use `righe` for the tables of the schema.
-    pub fn walk<F>(&mut self, radice: u32, mut f: F) -> Result<()>
+    pub fn walk<F>(&mut self, root: u32, mut f: F) -> Result<()>
     where
         F: FnMut(i64, Vec<Val>) -> Result<bool>,
     {
-        self.walk_with(radice, None, |rowid, v| f(rowid, std::mem::take(v)))
+        self.walk_with(root, None, |rowid, v| f(rowid, std::mem::take(v)))
     }
 
     /// The header of page `n` held in `p`: where it starts, its type, its number of cells and where the cell pointers begin.
@@ -224,22 +224,22 @@ impl Sqlite {
     }
 
     /// `scorri` that decodes only the record positions `voglio` marks `true` (the others are `Val::Null`; `None` = all) and hands `f` one vector reused from row to row, which `f` may take from.
-    pub fn walk_with<F>(&mut self, radice: u32, voglio: Option<&[bool]>, mut f: F) -> Result<()>
+    pub fn walk_with<F>(&mut self, root: u32, voglio: Option<&[bool]>, mut f: F) -> Result<()>
     where
         F: FnMut(i64, &mut Vec<Val>) -> Result<bool>,
     {
-        let mut pila: Vec<Passo> = vec![Passo::Page(radice, 0)];
+        let mut pila: Vec<Step> = vec![Step::Page(root, 0)];
         let mut views = HashSet::new();
-        let (mut p, mut q, mut riga) = (Vec::new(), Vec::new(), Vec::new());
-        while let Some(passo) = pila.pop() {
-            let (n, prof) = match passo {
-                Passo::Riga(mut v) => {
+        let (mut p, mut q, mut row) = (Vec::new(), Vec::new(), Vec::new());
+        while let Some(step) = pila.pop() {
+            let (n, prof) = match step {
+                Step::Row(mut v) => {
                     if !f(0, &mut v)? {
                         return Ok(());
                     }
                     continue;
                 }
-                Passo::Page(n, prof) => (n, prof),
+                Step::Page(n, prof) => (n, prof),
             };
             self.limits.profondita_ok(prof)?;
             if !views.insert(n) {
@@ -255,10 +255,10 @@ impl Sqlite {
             match tipo {
                 INT_TAB => {
                     let destra = u32_be(&p, base + 8).ok_or_else(|| guasto("page"))?;
-                    pila.push(Passo::Page(destra, prof + 1));
+                    pila.push(Step::Page(destra, prof + 1));
                     for i in (0..ncelle).rev() {
                         let c = cell_list(i)?;
-                        pila.push(Passo::Page(
+                        pila.push(Step::Page(
                             u32_be(&p, c).ok_or_else(|| guasto("cell"))?,
                             prof + 1,
                         ));
@@ -267,13 +267,13 @@ impl Sqlite {
                 INT_IDX => {
                     // left subtree, the key of the cell, the next left subtree, ..., the right-most child
                     let destra = u32_be(&p, base + 8).ok_or_else(|| guasto("page"))?;
-                    pila.push(Passo::Page(destra, prof + 1));
+                    pila.push(Step::Page(destra, prof + 1));
                     for i in (0..ncelle).rev() {
                         let c = cell_list(i)?;
                         let mut v = Vec::new();
                         self.cell(&p, c + 4, true, voglio, &mut q, &mut v)?;
-                        pila.push(Passo::Riga(v));
-                        pila.push(Passo::Page(
+                        pila.push(Step::Row(v));
+                        pila.push(Step::Page(
                             u32_be(&p, c).ok_or_else(|| guasto("cell"))?,
                             prof + 1,
                         ));
@@ -283,8 +283,8 @@ impl Sqlite {
                     for i in 0..ncelle {
                         let c = cell_list(i)?;
                         let rowid =
-                            self.cell(&p, c, tipo == FOGLIA_IDX, voglio, &mut q, &mut riga)?;
-                        if !f(rowid, &mut riga)? {
+                            self.cell(&p, c, tipo == FOGLIA_IDX, voglio, &mut q, &mut row)?;
+                        if !f(rowid, &mut row)? {
                             return Ok(());
                         }
                     }
@@ -301,20 +301,20 @@ impl Sqlite {
         &mut self,
         p: &[u8],
         c: usize,
-        indice: bool,
+        index: bool,
         voglio: Option<&[bool]>,
         q: &mut Vec<u8>,
         out: &mut Vec<Val>,
     ) -> Result<i64> {
         let (tot, a) = varint(p.get(c..).unwrap_or(&[])).ok_or_else(|| guasto("cell"))?;
-        let (rowid, b) = if indice {
+        let (rowid, b) = if index {
             (0, 0)
         } else {
             varint(p.get(c + a..).unwrap_or(&[])).ok_or_else(|| guasto("cell"))?
         };
         let start = c + a + b;
         let u = self.useful;
-        let x = if indice {
+        let x = if index {
             (u - 12) * 64 / 255 - 23
         } else {
             u - 35
@@ -341,26 +341,26 @@ impl Sqlite {
             record_in(local_p, &self.limits, voglio, out)?;
             return Ok(rowid as i64);
         }
-        let mut dati = local_p.to_vec();
+        let mut data = local_p.to_vec();
         let mut next = u32_be(p, start + local).ok_or_else(|| guasto("overflow"))?;
         let max_pagine = tot / (u as u64 - 4) + 2;
         let mut views = 0u64;
-        while (dati.len() as u64) < tot {
+        while (data.len() as u64) < tot {
             views += 1;
             if views > max_pagine {
                 return Err(guasto("overflow chain"));
             }
             self.page_in(next, q)?;
             next = u32_be(q, 0).ok_or_else(|| guasto("overflow"))?;
-            let remains = (tot as usize - dati.len()).min(u - 4);
-            dati.extend_from_slice(q.get(4..4 + remains).ok_or_else(|| guasto("overflow"))?);
+            let remains = (tot as usize - data.len()).min(u - 4);
+            data.extend_from_slice(q.get(4..4 + remains).ok_or_else(|| guasto("overflow"))?);
         }
-        record_in(&dati, &self.limits, voglio, out)?;
+        record_in(&data, &self.limits, voglio, out)?;
         Ok(rowid as i64)
     }
 
     /// All rows of table `t` with the `INTEGER PRIMARY KEY` column filled in from the rowid.
-    pub fn righe<F>(&mut self, t: &Tabella, mut f: F) -> Result<()>
+    pub fn rows<F>(&mut self, t: &Table, mut f: F) -> Result<()>
     where
         F: FnMut(&[Val]) -> Result<bool>,
     {
@@ -400,7 +400,7 @@ pub enum Val {
 
 /// A table of the file: its root page, the names of its columns (from the `CREATE TABLE` text) and which column is the alias of the rowid.
 #[derive(Debug, Clone)]
-pub struct Tabella {
+pub struct Table {
     pub nome: String,
     pub radice: u32,
     pub colonne: Vec<String>,
@@ -421,12 +421,12 @@ pub struct Sqlite {
     /// Bytes of a page usable by cells (page size minus the reserved space).
     useful: usize,
     pagine: u64,
-    tabelle: Vec<Tabella>,
+    tabelle: Vec<Table>,
     limits: Limiti,
 }
 
 /// Reads `n` bytes at `off` (an error when the file is shorter).
-pub(super) fn leggi(d: &mut dyn ReadAt, off: u64, n: usize) -> Result<Vec<u8>> {
+pub(super) fn read(d: &mut dyn ReadAt, off: u64, n: usize) -> Result<Vec<u8>> {
     let mut b = Vec::new();
     read_into(d, off, n, &mut b)?;
     Ok(b)
@@ -471,9 +471,9 @@ pub fn record(b: &[u8], limits: &Limiti) -> Result<Vec<Val>> {
     Ok(out)
 }
 
-enum Passo {
+enum Step {
     Page(u32, usize),
-    Riga(Vec<Val>),
+    Row(Vec<Val>),
 }
 
 #[cfg(test)]

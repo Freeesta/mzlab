@@ -12,39 +12,39 @@ use mzlab_core::mzml::{self, Chromatogram, Item};
 mod dati_percorsi;
 
 /// The folder `rel` (under `dati/formati/`) as a set of members named `X.raw/<file>`, read from disk by position.
-pub fn cartella(rel: &str) -> Option<FileSet> {
+pub fn folder(rel: &str) -> Option<FileSet> {
     let Some(d) = dati_percorsi::percorso(&format!("dati/formati/{rel}")).filter(|p| p.is_dir())
     else {
         eprintln!("SKIP waters_dati: {rel} not found");
         return None;
     };
-    let nome = d.file_name()?.to_string_lossy().to_string();
-    let mut membri = Vec::new();
+    let name = d.file_name()?.to_string_lossy().to_string();
+    let mut members = Vec::new();
     for e in std::fs::read_dir(&d).ok()? {
         let p = e.ok()?.path();
         if !p.is_file() {
             continue;
         }
         let f = std::fs::File::open(&p).ok()?;
-        membri.push(Membro {
-            nome: format!("{nome}/{}", p.file_name()?.to_string_lossy()),
+        members.push(Membro {
+            nome: format!("{name}/{}", p.file_name()?.to_string_lossy()),
             dim: f.metadata().ok()?.len(),
             dati: Box::new(f),
             sha1: None,
         });
     }
-    Some(FileSet { membri })
+    Some(FileSet { membri: members })
 }
 
 pub fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
-    let fs = cartella(rel)?;
+    let fs = folder(rel)?;
     Some(
         mzlab_lettori::apri_nudo(fs, &Limiti::sito())
             .unwrap_or_else(|e| panic!("{rel}: {}", e.key)),
     )
 }
 
-const CARTELLE: &[&str] = &[
+const FOLDERS: &[&str] = &[
     "waters/raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038.raw",
     "waters/raw/xevo_tqxs_mrm_MTBLS12109/MTBLS12109_MP189_NAD_pos_ESI_CAL_0_1.raw",
     "waters/raw/xevo_tqs_mrm_MTBLS685/MTBLS685_MousePlasma_Set1_057.raw",
@@ -62,7 +62,7 @@ const CARTELLE: &[&str] = &[
 
 #[test]
 fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
-    for rel in CARTELLE {
+    for rel in FOLDERS {
         let Some(mut l) = apri(rel) else { continue };
         let idx = l.index(0).unwrap().to_vec();
         assert!(
@@ -92,7 +92,7 @@ fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
             }
         }
         let m = l.method(0).unwrap();
-        let doc = comune_waters::controlla_schema(&m, rel);
+        let doc = comune_waters::check_schema(&m, rel);
         assert_eq!(doc["origine"]["formato"], "waters-raw", "{rel}");
         assert!(m.len() < 400_000, "{rel}: metodo of {} B", m.len());
         let h = l.mzml_header(0).unwrap().unwrap();
@@ -197,7 +197,7 @@ fn folders_without_function_table_are_refused_with_a_key() {
         "waters/raw/xevo_g2xs_lipid_MTBLS1584/MTBLS1584_USF_Oct18_LCMS_CMH_lipidomics_046n.raw",
         "waters/raw/cyclic_ims_PXD052561/20230920_NM4_1187_ECD_2_CID_25.raw",
     ] {
-        let Some(fs) = cartella(rel) else { continue };
+        let Some(fs) = folder(rel) else { continue };
         match mzlab_lettori::apri_nudo(fs, &Limiti::sito()) {
             Ok(mut l) => eprintln!("{rel}: opens, {} scans", l.index(0).map_or(0, <[_]>::len)),
             Err(e) => assert!(e.key.starts_with("err.file."), "{rel}: {}", e.key),

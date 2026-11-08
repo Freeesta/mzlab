@@ -3,14 +3,14 @@
 
 mod comune_waters;
 
-use comune_waters::{file_cartella, insieme};
+use comune_waters::{file_set, folder_file};
 use mzlab_core::lettori::Limiti;
 
 /// The error of the synthetic folder after `cambia`, with its key and its `name` and `file`.
-fn rifiuto(cambia: impl FnOnce(&mut Vec<(String, Vec<u8>)>)) -> (String, String, String) {
-    let mut f = file_cartella();
-    cambia(&mut f);
-    let e = mzlab_lettori::apri_nudo(insieme(f), &Limiti::sito())
+fn rifiuto(change: impl FnOnce(&mut Vec<(String, Vec<u8>)>)) -> (String, String, String) {
+    let mut f = folder_file();
+    change(&mut f);
+    let e = mzlab_lettori::apri_nudo(file_set(f), &Limiti::sito())
         .err()
         .expect("refused");
     let p = |n: &str| {
@@ -23,12 +23,12 @@ fn rifiuto(cambia: impl FnOnce(&mut Vec<(String, Vec<u8>)>)) -> (String, String,
     (e.key.to_string(), p("name"), p("file"))
 }
 
-fn senza(f: &mut Vec<(String, Vec<u8>)>, nome: &str) {
-    f.retain(|(n, _)| n != nome);
+fn without(f: &mut Vec<(String, Vec<u8>)>, name: &str) {
+    f.retain(|(n, _)| n != name);
 }
 
-fn accorcia(f: &mut [(String, Vec<u8>)], nome: &str, di: usize) {
-    let b = &mut f.iter_mut().find(|(n, _)| n == nome).unwrap().1;
+fn accorcia(f: &mut [(String, Vec<u8>)], name: &str, di: usize) {
+    let b = &mut f.iter_mut().find(|(n, _)| n == name).unwrap().1;
     b.truncate(b.len() - di);
 }
 
@@ -39,7 +39,7 @@ fn a_folder_without_its_function_list_is_incomplete() {
         "X.raw".into(),
         "_FUNCTNS.INF".into(),
     );
-    assert_eq!(rifiuto(|f| senza(f, "_FUNCTNS.INF")), k);
+    assert_eq!(rifiuto(|f| without(f, "_FUNCTNS.INF")), k);
 }
 
 #[test]

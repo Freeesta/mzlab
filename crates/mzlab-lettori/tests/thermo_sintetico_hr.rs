@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// The built example next to the test binary (`cargo test` builds it), else `cargo run`.
-fn genera(out: &Path, args: &[&str]) {
+fn generate(out: &Path, args: &[&str]) {
     let ex = std::env::current_exe()
         .ok()
         .and_then(|e| Some(e.parent()?.parent()?.join("examples/thermo_sintetico")))
@@ -36,9 +36,9 @@ fn genera(out: &Path, args: &[&str]) {
     assert!(st.is_ok_and(|s| s.success()), "thermo_sintetico failed");
 }
 
-fn cartella(nome: &str) -> PathBuf {
+fn folder(name: &str) -> PathBuf {
     let d = std::env::temp_dir().join(format!(
-        "mzlab_thermo_sintetico_{}_{nome}",
+        "mzlab_thermo_sintetico_{}_{name}",
         std::process::id()
     ));
     std::fs::create_dir_all(&d).unwrap();
@@ -47,9 +47,9 @@ fn cartella(nome: &str) -> PathBuf {
 
 #[test]
 fn the_synthetic_orbitrap_file_opens_with_its_cycle() {
-    let d = cartella("ciclo");
+    let d = folder("ciclo");
     let f = d.join("hr.raw");
-    genera(
+    generate(
         &f,
         &[
             "--scans",
@@ -105,10 +105,10 @@ fn the_synthetic_orbitrap_file_opens_with_its_cycle() {
 
 #[test]
 fn the_same_seed_writes_the_same_bytes() {
-    let d = cartella("seme");
+    let d = folder("seme");
     let (a, b) = (d.join("a.raw"), d.join("b.raw"));
     for f in [&a, &b] {
-        genera(
+        generate(
             f,
             &[
                 "--scans", "24", "--peaks", "30", "--ms2", "3", "--seed", "3",
@@ -138,12 +138,12 @@ fn hex(b: &[u8]) -> String {
 
 #[test]
 fn the_decoded_scans_of_a_profile_file_keep_their_pinned_hash() {
-    let d = cartella("impronta");
+    let d = folder("impronta");
     let f = d.join("p.raw");
     let args = [
         "--scans", "120", "--peaks", "300", "--bins", "16", "--ms2", "5", "--seed", "11",
     ];
-    genera(&f, &args);
+    generate(&f, &args);
     let b = std::fs::read(&f).unwrap();
     let _ = std::fs::remove_dir_all(&d);
     let file = hex(&Sha256::digest(&b));
@@ -183,9 +183,9 @@ const DECODED_SHA256: &str = "e261d343d99bf77b0137844eb261914460852073efd3f7a4ef
 #[test]
 fn the_metadata_from_the_known_trailer_fields_is_the_metadata_from_the_whole_record() {
     // `scan_metadata` (the index at open) decodes only the trailer fields `ScanParams` reads: every scan must come out as from the whole record
-    let d = cartella("campi");
+    let d = folder("campi");
     let f = d.join("hr.raw");
-    genera(
+    generate(
         &f,
         &[
             "--scans", "44", "--peaks", "20", "--ms2", "10", "--seed", "3",
@@ -218,9 +218,9 @@ fn dda_windows(
     use mzlab_core::routes::{Query, Routes};
     use mzlab_core::sorgente::SorgenteLettore;
     use mzlab_core::{lettori_mzml, mzidx, upload};
-    let d = cartella(name);
+    let d = folder(name);
     let f = d.join("dda.raw");
-    genera(&f, args);
+    generate(&f, args);
     let b = std::fs::read(&f).unwrap();
     let _ = std::fs::remove_dir_all(&d);
     let mut set = FileSet {
@@ -231,12 +231,12 @@ fn dda_windows(
             sha1: None,
         }],
     };
-    let membri = upload::impronte(&mut set).unwrap();
+    let members = upload::impronte(&mut set).unwrap();
     let mut l = mzlab_lettori::apri(set, &Limiti::desktop()).expect("open");
     let mzml = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "dda.mzML").unwrap();
     let (ia, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, mzidx::DEFAULT_BUDGET).unwrap();
-    let pb = upload::prepare_lettore(&mut *l, 0, &membri, "dda.mzML").unwrap();
+    let pb = upload::prepare_lettore(&mut *l, 0, &members, "dda.mzML").unwrap();
     let mut ib = std::io::Cursor::new(Vec::new());
     mzidx::build_lettore(&pb.table, &mut *l, 0, &mut ib, mzidx::DEFAULT_BUDGET).unwrap();
     let ib = ib.into_inner();

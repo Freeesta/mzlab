@@ -3,8 +3,8 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{Posizione, VoceScansione};
 
-use super::mzxml::numero;
-use super::mzxml_indice::Riga;
+use super::mzxml::number;
+use super::mzxml_indice::Row;
 use super::mzxml_scan::{self as scan, attr, Tag, Testa};
 
 fn polarita(t: &str) -> i8 {
@@ -16,7 +16,7 @@ fn polarita(t: &str) -> i8 {
 }
 
 /// The filter of a scan: its `filterLine`, with the scan type in front for SRM/MRM scans whose line does not say it (the SRM traces are found by it).
-fn filtro(t: Tag) -> String {
+fn filter(t: Tag) -> String {
     let line = attr(t, "filterLine").trim();
     let tipo = attr(t, "scanType").trim();
     let low = line.to_ascii_lowercase();
@@ -31,8 +31,8 @@ fn filtro(t: Tag) -> String {
 }
 
 /// The index entry of scan `k` from its attributes.
-pub(super) fn voce(k: usize, r: Riga, t: &Testa) -> Result<VoceScansione> {
-    let lunghezza = u32::try_from(r.end - r.start).map_err(|_| Error::memory_budget())?;
+pub(super) fn entry(k: usize, r: Row, t: &Testa) -> Result<VoceScansione> {
+    let length = u32::try_from(r.end - r.start).map_err(|_| Error::memory_budget())?;
     let num = attr(t.scan, "num").trim();
     Ok(VoceScansione {
         id: if num.is_empty() {
@@ -41,16 +41,16 @@ pub(super) fn voce(k: usize, r: Riga, t: &Testa) -> Result<VoceScansione> {
             format!("scan={num}")
         },
         rt: scan::minutes(attr(t.scan, "retentionTime")).unwrap_or(0.0),
-        livello: numero(t.scan, "msLevel").map_or(1, |l| l.clamp(1.0, 255.0) as u8),
+        livello: number(t.scan, "msLevel").map_or(1, |l| l.clamp(1.0, 255.0) as u8),
         polarita: polarita(attr(t.scan, "polarity")),
-        tic: numero(t.scan, "totIonCurrent").unwrap_or(0.0),
-        picco_base: numero(t.scan, "basePeakMz"),
-        filtro: filtro(t.scan),
+        tic: number(t.scan, "totIonCurrent").unwrap_or(0.0),
+        picco_base: number(t.scan, "basePeakMz"),
+        filtro: filter(t.scan),
         precursore: t.precursori.iter().rev().find_map(|p| p.1.parse().ok()),
         posizione: Some(Posizione {
             membro: 0,
             offset: r.start,
-            lunghezza,
+            lunghezza: length,
         }),
     })
 }

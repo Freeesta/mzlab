@@ -9,7 +9,7 @@ use mzlab_core::lettori::Limiti;
 mod pezzi;
 
 /// The bytes of the window the header is read through.
-const FINESTRA: u64 = 1 << 16;
+const WINDOW: u64 = 1 << 16;
 /// The longest name of a dimension, attribute or variable.
 const NAME_MAX: u64 = 1 << 12;
 const TAG_DIM: u32 = 0x0A;
@@ -29,7 +29,7 @@ impl Tipo {
             _ => return Err(guasto("unknown nc_type")),
         })
     }
-    pub fn larghezza(self) -> u64 {
+    pub fn width(self) -> u64 {
         match self {
             Tipo::Byte | Tipo::Char => 1,
             Tipo::Short => 2,
@@ -62,7 +62,7 @@ impl Tipo {
     }
 
     /// One big-endian value of this type.
-    fn valore(self, b: &[u8]) -> f64 {
+    fn value(self, b: &[u8]) -> f64 {
         let a = |n: usize| -> [u8; 8] {
             let mut x = [0u8; 8];
             x[..n].copy_from_slice(&b[..n]);
@@ -89,7 +89,7 @@ impl Cur<'_> {
         }
         let (a, f) = (self.pos, self.pos + n);
         if a < self.base || f > self.base + self.buf.len() as u64 {
-            let l = n.max(FINESTRA).min(self.dim - a);
+            let l = n.max(WINDOW).min(self.dim - a);
             self.buf = vec![0u8; usize::try_from(l).map_err(|_| Error::memory_budget())?];
             self.dati.read_at(a, &mut self.buf)?;
             self.base = a;
@@ -116,7 +116,7 @@ impl Cur<'_> {
     fn riempi(&mut self, n: u64) -> Result<()> {
         self.bytes((4 - n % 4) % 4).map(drop)
     }
-    fn nome(&mut self) -> Result<String> {
+    fn name(&mut self) -> Result<String> {
         let n = u64::from(self.u32()?);
         if n > NAME_MAX {
             return Err(guasto("name too long"));
@@ -126,7 +126,7 @@ impl Cur<'_> {
         Ok(String::from_utf8_lossy(&b).into_owned())
     }
     /// The tag and the count of a list (`ABSENT` is two zeros).
-    fn lista(&mut self, tag: u32) -> Result<usize> {
+    fn list(&mut self, tag: u32) -> Result<usize> {
         let (t, n) = (self.u32()?, self.u32()?);
         if t == 0 && n == 0 {
             return Ok(0);
@@ -137,14 +137,14 @@ impl Cur<'_> {
         self.limits.voci_ok(u64::from(n))
     }
     fn attributi(&mut self) -> Result<Vec<Attr>> {
-        let n = self.lista(TAG_ATT)?;
+        let n = self.list(TAG_ATT)?;
         let mut out = Vec::new();
         for _ in 0..n {
-            let nome = self.nome()?;
+            let name = self.name()?;
             let tipo = Tipo::da(self.u32()?)?;
             let c = u64::from(self.u32()?);
             let byte = c
-                .checked_mul(tipo.larghezza())
+                .checked_mul(tipo.width())
                 .ok_or_else(Error::memory_budget)?;
             let b = self.bytes(byte)?;
             self.riempi(byte)?;
@@ -155,10 +155,10 @@ impl Cur<'_> {
                         .to_string(),
                 )
             } else {
-                let w = tipo.larghezza() as usize;
-                Val::Num(b.chunks_exact(w).map(|x| tipo.valore(x)).collect())
+                let w = tipo.width() as usize;
+                Val::Num(b.chunks_exact(w).map(|x| tipo.value(x)).collect())
             };
-            out.push(Attr { nome, val });
+            out.push(Attr { nome: name, val });
         }
         Ok(out)
     }
@@ -166,9 +166,9 @@ impl Cur<'_> {
 
 impl Cdf {
     /// Parses the header of the file `dati` of `dim` bytes.
-    pub fn apri(dati: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Cdf> {
+    pub fn apri(data: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Cdf> {
         let mut c = Cur {
-            dati,
+            dati: data,
             dim,
             pos: 0,
             buf: Vec::new(),
@@ -190,7 +190,7 @@ impl Cdf {
             att: Vec::new(),
             var: Vec::new(),
             recsize: 0,
-            dimensione: dim,
+            size: dim,
         };
         cdf.dimensioni(&mut c)?;
         cdf.att = c.attributi()?;
@@ -200,17 +200,17 @@ impl Cdf {
     }
 
     fn dimensioni(&mut self, c: &mut Cur) -> Result<()> {
-        for _ in 0..c.lista(TAG_DIM)? {
-            c.nome()?;
-            let lunghezza = u64::from(c.u32()?);
-            self.dim.push(Dim { lunghezza });
+        for _ in 0..c.list(TAG_DIM)? {
+            c.name()?;
+            let length = u64::from(c.u32()?);
+            self.dim.push(Dim { lunghezza: length });
         }
         Ok(())
     }
 
     fn variabili(&mut self, c: &mut Cur, v64: bool) -> Result<()> {
-        for _ in 0..c.lista(TAG_VAR)? {
-            let nome = c.nome()?;
+        for _ in 0..c.list(TAG_VAR)? {
+            let name = c.name()?;
             let n = u64::from(c.u32()?);
             let nd = c.limits.voci_ok(n)?;
             let mut dims = Vec::new();
@@ -226,11 +226,11 @@ impl Cdf {
             let vsize = u64::from(c.u32()?);
             let begin = c.offset(v64)?;
             let record = dims.first().is_some_and(|&d| self.dim[d].lunghezza == 0);
-            if begin > self.dimensione && !record {
+            if begin > self.size && !record {
                 return Err(guasto("variable starts past the end of the file"));
             }
             self.var.push(Var {
-                nome,
+                nome: name,
                 dims,
                 att,
                 tipo,
@@ -246,33 +246,33 @@ impl Cdf {
     fn record(&mut self, numrecs: u64) {
         let rec: Vec<&Var> = self.var.iter().filter(|v| v.record).collect();
         self.recsize = match rec.as_slice() {
-            [v] => per_record(&self.dim, v).saturating_mul(v.tipo.larghezza()),
+            [v] => per_record(&self.dim, v).saturating_mul(v.tipo.width()),
             _ => rec.iter().map(|v| v.vsize).sum(),
         };
         if numrecs == 0xFFFF_FFFF {
             let start = rec.iter().map(|v| v.begin).min().unwrap_or(0);
-            self.numrecs = (self.dimensione.saturating_sub(start))
+            self.numrecs = (self.size.saturating_sub(start))
                 .checked_div(self.recsize)
                 .unwrap_or(0);
         }
     }
 
-    pub fn trova(&self, nome: &str) -> Option<&Var> {
-        self.var.iter().find(|v| v.nome == nome)
+    pub fn find(&self, name: &str) -> Option<&Var> {
+        self.var.iter().find(|v| v.nome == name)
     }
 
     /// A global attribute as text.
-    pub fn testo(&self, nome: &str) -> Option<&str> {
+    pub fn text(&self, name: &str) -> Option<&str> {
         self.att.iter().find_map(|a| match &a.val {
-            Val::Testo(t) if a.nome == nome => Some(t.trim()).filter(|t| !t.is_empty()),
+            Val::Testo(t) if a.nome == name => Some(t.trim()).filter(|t| !t.is_empty()),
             _ => None,
         })
     }
 
     /// A global attribute as a number.
-    pub fn numero(&self, nome: &str) -> Option<f64> {
+    pub fn number(&self, name: &str) -> Option<f64> {
         self.att.iter().find_map(|a| match &a.val {
-            Val::Num(n) if a.nome == nome => n.first().copied(),
+            Val::Num(n) if a.nome == name => n.first().copied(),
             _ => None,
         })
     }
@@ -292,7 +292,7 @@ impl Cdf {
         let Some(e) = n.checked_sub(1).and_then(|k| da.checked_add(k)) else {
             return true;
         };
-        let w = v.tipo.larghezza();
+        let w = v.tipo.width();
         let pos = if v.record {
             let epr = per_record(&self.dim, v).max(1);
             v.begin
@@ -301,7 +301,7 @@ impl Cdf {
         } else {
             v.begin.saturating_add(e.saturating_mul(w))
         };
-        e < self.elementi(v) && pos.saturating_add(w) <= self.dimensione
+        e < self.elementi(v) && pos.saturating_add(w) <= self.size
     }
 
     pub fn elementi(&self, v: &Var) -> u64 {
@@ -311,9 +311,9 @@ impl Cdf {
     }
 
     /// Elements `da..da + n` of `v` as numbers (`scale_factor` and `add_offset` are not applied here).
-    pub fn leggi(
+    pub fn read(
         &self,
-        dati: &mut dyn ReadAt,
+        data: &mut dyn ReadAt,
         limits: &Limiti,
         v: &Var,
         da: u64,
@@ -325,16 +325,16 @@ impl Cdf {
         let mut out = Vec::new();
         out.try_reserve_exact(n as usize)
             .map_err(|_| Error::memory_budget())?;
-        self.a_pezzi(dati, v, da, n, |b| v.tipo.values(b, &mut out))?;
+        self.to_pieces(data, v, da, n, |b| v.tipo.values(b, &mut out))?;
         Ok(out)
     }
 
     /// The strings of a `char` variable (rows of its last dimension, trailing NULs and spaces cut).
-    pub fn stringhe(&self, dati: &mut dyn ReadAt, limits: &Limiti, v: &Var) -> Result<Vec<String>> {
-        let riga = v.dims.last().map_or(1, |&d| self.length_dim(d)).max(1);
+    pub fn stringhe(&self, data: &mut dyn ReadAt, limits: &Limiti, v: &Var) -> Result<Vec<String>> {
+        let row = v.dims.last().map_or(1, |&d| self.length_dim(d)).max(1);
         let n = self.elementi(v);
-        let b = self.raw_values(dati, limits, v, 0, n)?;
-        Ok(b.chunks(riga as usize)
+        let b = self.raw_values(data, limits, v, 0, n)?;
+        Ok(b.chunks(row as usize)
             .map(|r| {
                 String::from_utf8_lossy(r)
                     .trim_end_matches(['\0', ' '])
@@ -347,15 +347,15 @@ impl Cdf {
 
 impl Var {
     /// An attribute of the variable as a number.
-    pub fn numero(&self, nome: &str) -> Option<f64> {
+    pub fn number(&self, name: &str) -> Option<f64> {
         self.att.iter().find_map(|a| match &a.val {
-            Val::Num(n) if a.nome == nome => n.first().copied(),
+            Val::Num(n) if a.nome == name => n.first().copied(),
             _ => None,
         })
     }
-    pub fn testo(&self, nome: &str) -> Option<&str> {
+    pub fn text(&self, name: &str) -> Option<&str> {
         self.att.iter().find_map(|a| match &a.val {
-            Val::Testo(t) if a.nome == nome => Some(t.trim()),
+            Val::Testo(t) if a.nome == name => Some(t.trim()),
             _ => None,
         })
     }
@@ -404,7 +404,7 @@ pub struct Cdf {
     pub var: Vec<Var>,
     /// Bytes of one record (all the record variables).
     pub recsize: u64,
-    pub dimensione: u64,
+    pub size: u64,
 }
 
 /// The header read through a window over the file.
@@ -431,8 +431,8 @@ fn per_record(dim: &[Dim], v: &Var) -> u64 {
 /// `x * scale_factor + add_offset` for the stored numbers of `v` (the file keeps `(t - offset) / factor`).
 pub(super) fn scale(x: &mut [f64], v: &Var) {
     let (f, o) = (
-        v.numero("scale_factor").unwrap_or(1.0),
-        v.numero("add_offset").unwrap_or(0.0),
+        v.number("scale_factor").unwrap_or(1.0),
+        v.number("add_offset").unwrap_or(0.0),
     );
     if f != 1.0 || o != 0.0 {
         x.iter_mut().for_each(|y| *y = *y * f + o);

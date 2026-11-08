@@ -7,19 +7,19 @@ use comune::andi::*;
 use mzlab_core::lettori_mzml;
 use mzlab_core::mzml::ChromKind;
 
-fn check(c: &Corsa) {
+fn check(c: &Run) {
     let mut l = apri_andi(andi_ms(c));
     assert_eq!(l.format().id(), "andi-ms");
     assert_eq!(l.samples()[0].scansioni, SCANSIONI);
-    let indice = l.index(0).unwrap().to_vec();
-    for (k, voce) in indice.iter().enumerate() {
+    let index = l.index(0).unwrap().to_vec();
+    for (k, entry) in index.iter().enumerate() {
         let s = l.scan(0, k).unwrap();
         let p = points(k);
         assert_eq!(s.mz.len(), p.len(), "scan {k}");
         for (i, (mz, it)) in p.iter().enumerate() {
             // short m/z with a scale factor keeps the precision of the factor, the others are exact (floats within f32)
             let tol = if c.tipo_mz == 3 {
-                0.5 * c.scala_mz.unwrap_or(1.0)
+                0.5 * c.mz_scale.unwrap_or(1.0)
             } else {
                 1e-3
             };
@@ -34,53 +34,53 @@ fn check(c: &Corsa) {
         assert_eq!(s.level, 1);
         assert_eq!(s.polarity, 1);
         assert_eq!(s.profile, c.profilo);
-        assert!((voce.tic - p.iter().map(|x| x.1).sum::<f64>()).abs() < 1e-9);
+        assert!((entry.tic - p.iter().map(|x| x.1).sum::<f64>()).abs() < 1e-9);
         assert_eq!(l.extra_mzml(&s).sim, c.sim);
         assert_eq!(l.extra_mzml(&s).window, Some((40.0, 400.0)));
     }
 }
 
 #[test]
-fn cdf1_e_cdf2_con_ogni_tipo_di_dato() {
+fn cdf1_and_cdf2_with_every_data_type() {
     for v2 in [false, true] {
         for (tipo_mz, tipo_it) in [(5, 5), (6, 4), (5, 3), (4, 6)] {
-            check(&Corsa {
+            check(&Run {
                 v2,
                 tipo_mz,
                 tipo_it,
-                ..PIATTA
+                ..FLAT_RUN
             });
         }
     }
 }
 
 #[test]
-fn mz_corti_con_scale_factor_sim_e_profilo() {
-    check(&Corsa {
+fn short_mz_with_scale_factor_sim_and_profile() {
+    check(&Run {
         tipo_mz: 3,
-        scala_mz: Some(0.25),
-        ..PIATTA
+        mz_scale: Some(0.25),
+        ..FLAT_RUN
     });
-    check(&Corsa {
+    check(&Run {
         sim: true,
         profilo: true,
         v2: true,
-        ..PIATTA
+        ..FLAT_RUN
     });
 }
 
 #[test]
-fn la_polarita_negativa_si_legge() {
-    let mut l = apri_andi(andi_ms(&Corsa {
+fn negative_polarity_is_read() {
+    let mut l = apri_andi(andi_ms(&Run {
         polarita: "Negative Polarity",
-        ..PIATTA
+        ..FLAT_RUN
     }));
     assert_eq!(l.scan(0, 0).unwrap().polarity, -1);
 }
 
 #[test]
-fn tic_e_bpc_vengono_dalle_scansioni() {
-    let mut l = apri_andi(andi_ms(&PIATTA));
+fn tic_and_bpc_come_from_the_scans() {
+    let mut l = apri_andi(andi_ms(&FLAT_RUN));
     let ids: Vec<String> = l
         .chromatograms(0)
         .unwrap()
@@ -100,8 +100,8 @@ fn tic_e_bpc_vengono_dalle_scansioni() {
 }
 
 #[test]
-fn l_intestazione_porta_le_variabili_della_scansione() {
-    let mut l = apri_andi(andi_ms(&PIATTA));
+fn the_header_carries_the_scan_variables() {
+    let mut l = apri_andi(andi_ms(&FLAT_RUN));
     let c = l.scan_header(0, 2).unwrap();
     let v = |n: &str| c.iter().find(|x| x.nome == n).map(|x| x.valore.clone());
     assert_eq!(v("scan_acquisition_time").as_deref(), Some("63"));
@@ -114,8 +114,8 @@ fn l_intestazione_porta_le_variabili_della_scansione() {
 }
 
 #[test]
-fn il_metodo_porta_strumento_operatore_e_ogni_attributo() {
-    let mut l = apri_andi(andi_ms(&PIATTA));
+fn the_method_carries_instrument_operator_and_every_attribute() {
+    let mut l = apri_andi(andi_ms(&FLAT_RUN));
     let m = l.method(0).unwrap();
     for t in [
         "\"formato\":\"andi-ms\"",
@@ -144,23 +144,27 @@ fn il_metodo_porta_strumento_operatore_e_ogni_attributo() {
 }
 
 #[test]
-fn si_scrive_come_mzml_e_si_rilegge() {
-    let mut l = apri_andi(andi_ms(&PIATTA));
+fn writes_as_mzml_and_reads_back() {
+    let mut l = apri_andi(andi_ms(&FLAT_RUN));
     let out = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
-    let testo = String::from_utf8(out).unwrap();
-    assert!(testo.contains("<spectrum "));
-    assert!(testo.contains("Model 7"));
+    let text = String::from_utf8(out).unwrap();
+    assert!(text.contains("<spectrum "));
+    assert!(text.contains("Model 7"));
 }
 
 #[test]
-fn un_cromatogramma_andi_e_un_campione_con_una_traccia_analogica() {
+fn an_andi_chromatogram_is_a_sample_with_an_analog_trace() {
     let mut l = apri_andi(andi_cromato(40));
     assert_eq!(l.samples()[0].scansioni, 0);
     assert!(l.index(0).unwrap().is_empty());
-    let voci = l.chromatograms(0).unwrap();
-    assert_eq!(voci.len(), 1);
+    let entries = l.chromatograms(0).unwrap();
+    assert_eq!(entries.len(), 1);
     assert_eq!(
-        (voci[0].id.as_str(), voci[0].tipo, voci[0].unita.as_str()),
+        (
+            entries[0].id.as_str(),
+            entries[0].tipo,
+            entries[0].unita.as_str()
+        ),
         ("FID1A", ChromKind::Analog, "Volts")
     );
     let c = l.chromatogram(0, "FID1A").unwrap();
@@ -173,34 +177,34 @@ fn un_cromatogramma_andi_e_un_campione_con_una_traccia_analogica() {
 }
 
 #[test]
-fn riconosce_ms_con_certezza_e_cromatografia_con_meno() {
+fn recognises_ms_with_certainty_and_chromatography_with_less() {
     use mzlab_core::lettori::Fiducia;
-    let mut a = comune::insieme("a.cdf", andi_ms(&PIATTA));
-    let mut b = comune::insieme("b.cdf", andi_cromato(5));
-    let mut c = comune::insieme("c.cdf", b"CDF\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".to_vec());
+    let mut a = comune::file_set("a.cdf", andi_ms(&FLAT_RUN));
+    let mut b = comune::file_set("b.cdf", andi_cromato(5));
+    let mut c = comune::file_set("c.cdf", b"CDF\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".to_vec());
     assert_eq!(
-        (mzlab_lettori::andi::ms::VOCE.riconosci)(&mut a),
+        (mzlab_lettori::andi::ms::ENTRY.riconosci)(&mut a),
         Fiducia::Si
     );
     assert_eq!(
-        (mzlab_lettori::andi::ms::VOCE.riconosci)(&mut b),
+        (mzlab_lettori::andi::ms::ENTRY.riconosci)(&mut b),
         Fiducia::Forse
     );
     assert_eq!(
-        (mzlab_lettori::andi::ms::VOCE.riconosci)(&mut c),
+        (mzlab_lettori::andi::ms::ENTRY.riconosci)(&mut c),
         Fiducia::No
     );
 }
 
 #[test]
-fn l_intestazione_applica_scale_factor_e_add_offset() {
-    let mut l = apri_andi(andi_ms(&Corsa {
-        scala_tempo: Some((0.5, 10.0)),
-        ..PIATTA
+fn the_header_applies_scale_factor_and_add_offset() {
+    let mut l = apri_andi(andi_ms(&Run {
+        time_scale: Some((0.5, 10.0)),
+        ..FLAT_RUN
     }));
     for k in 0..SCANSIONI {
-        let campi = l.scan_header(0, k).unwrap();
-        let t = campi
+        let fields = l.scan_header(0, k).unwrap();
+        let t = fields
             .iter()
             .find(|c| c.nome == "scan_acquisition_time")
             .unwrap();
@@ -210,17 +214,17 @@ fn l_intestazione_applica_scale_factor_e_add_offset() {
 }
 
 #[test]
-fn l_indice_e_l_asse_dei_tempi_applicano_scale_factor_e_add_offset() {
-    let mut l = apri_andi(andi_ms(&Corsa {
-        scala_tempo: Some((0.5, 10.0)),
-        ..PIATTA
+fn the_index_and_the_time_axis_apply_scale_factor_and_add_offset() {
+    let mut l = apri_andi(andi_ms(&Run {
+        time_scale: Some((0.5, 10.0)),
+        ..FLAT_RUN
     }));
     let rt = |k: usize| (60.0 + 1.5 * k as f64) / 60.0;
-    for (k, voce) in l.index(0).unwrap().to_vec().iter().enumerate() {
+    for (k, entry) in l.index(0).unwrap().to_vec().iter().enumerate() {
         assert!(
-            (voce.rt - rt(k)).abs() < 1e-9,
+            (entry.rt - rt(k)).abs() < 1e-9,
             "index scan {k}: {}",
-            voce.rt
+            entry.rt
         );
         assert!((l.scan(0, k).unwrap().rt - rt(k)).abs() < 1e-9);
     }
@@ -233,7 +237,7 @@ fn l_indice_e_l_asse_dei_tempi_applicano_scale_factor_e_add_offset() {
 }
 
 #[test]
-fn il_tempo_dei_punti_e_la_ritenzione_analogica_applicano_scale_factor_e_add_offset() {
+fn point_time_and_analog_retention_apply_scale_factor_and_add_offset() {
     let scale = |v: &mut Vb| {
         v.att.push(("scale_factor".into(), At::N(6, vec![0.5])));
         v.att.push(("add_offset".into(), At::N(6, vec![10.0])));
@@ -257,7 +261,7 @@ fn il_tempo_dei_punti_e_la_ritenzione_analogica_applicano_scale_factor_e_add_off
         var("intensity_values", &[0], 6, vec![5.0; n]),
         tv,
     ];
-    let mut l = apri_andi(cdf(false, &dims, &globali_ms(&PIATTA), &vars, n as u32));
+    let mut l = apri_andi(cdf(false, &dims, &globali_ms(&FLAT_RUN), &vars, n as u32));
     for (k, v) in l.index(0).unwrap().iter().enumerate() {
         assert!(
             (v.rt - (60.0 + 1.5 * k as f64) / 60.0).abs() < 1e-9,

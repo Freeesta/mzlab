@@ -7,8 +7,8 @@ use mzlab_core::lettori::{Limiti, Membro};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn tutto(file: Vec<(String, Vec<u8>)>) {
-    let Ok(mut l) = mzlab_lettori::apri_nudo(insieme(file), &Limiti::sito()) else {
+fn everything(file: Vec<(String, Vec<u8>)>) {
+    let Ok(mut l) = mzlab_lettori::apri_nudo(file_set(file), &Limiti::sito()) else {
         return;
     };
     let n = l.samples().len();
@@ -48,7 +48,7 @@ fn reale() -> Option<Vec<(String, Vec<u8>)>> {
 }
 
 fn semi() -> Vec<Vec<(String, Vec<u8>)>> {
-    let mut v = vec![file_cartella()];
+    let mut v = vec![folder_file()];
     v.extend(reale());
     v
 }
@@ -69,7 +69,7 @@ fn cut_and_flipped_members_do_not_panic() {
             for k in 0..12 {
                 let mut f = seme.clone();
                 f[m].1.truncate(n * k / 12);
-                tutto(f);
+                everything(f);
             }
             if n == 0 {
                 continue;
@@ -80,7 +80,7 @@ fn cut_and_flipped_members_do_not_panic() {
                     let i = rng(&mut x) as usize % n;
                     f[m].1[i] ^= 0xFF;
                 }
-                tutto(f);
+                everything(f);
             }
         }
     }
@@ -92,33 +92,33 @@ fn a_member_missing_or_empty_is_a_key_or_a_reading() {
         for m in 0..seme.len() {
             let mut f = seme.clone();
             f.remove(m);
-            tutto(f);
+            everything(f);
             let mut f = seme.clone();
             f[m].1.clear();
-            tutto(f);
+            everything(f);
         }
     }
 }
 
 #[test]
 fn absurd_index_numbers_are_refused_not_allocated() {
-    let mut f = file_cartella();
+    let mut f = folder_file();
     let idx = f.iter_mut().find(|(n, _)| n == "_FUNC001.IDX").unwrap();
     // Count of 0xFFFFFF records and an offset near the end of the address space in the first row.
     idx.1[4..8].copy_from_slice(&0x18FF_FFFFu32.to_le_bytes());
     idx.1[0..4].copy_from_slice(&0xFFFF_FFF0u32.to_le_bytes());
-    tutto(f);
-    let mut f = file_cartella();
+    everything(f);
+    let mut f = folder_file();
     let idx = f.iter_mut().find(|(n, _)| n == "_FUNC002.IDX").unwrap();
     idx.1[4..8].copy_from_slice(&0x18FF_FFFFu32.to_le_bytes());
-    tutto(f);
+    everything(f);
     // A budget of a few entries refuses the folder with a key.
     let tiny = Limiti {
         profondita: 4,
         voci: 2,
         byte: 1 << 10,
     };
-    if let Err(e) = mzlab_lettori::apri_nudo(insieme_sintetico(), &tiny) {
+    if let Err(e) = mzlab_lettori::apri_nudo(synthetic_set(), &tiny) {
         assert!(
             e.key.starts_with("err.") || e.key.starts_with("error."),
             "{}",
@@ -129,9 +129,9 @@ fn absurd_index_numbers_are_refused_not_allocated() {
 
 #[test]
 fn a_folder_without_functions_is_refused_with_a_key() {
-    let mut f = file_cartella();
+    let mut f = folder_file();
     f.retain(|(n, _)| n != "_FUNCTNS.INF");
-    let e = mzlab_lettori::apri_nudo(insieme(f), &Limiti::sito())
+    let e = mzlab_lettori::apri_nudo(file_set(f), &Limiti::sito())
         .err()
         .expect("refused");
     assert!(e.key.starts_with("err.file."), "{}", e.key);

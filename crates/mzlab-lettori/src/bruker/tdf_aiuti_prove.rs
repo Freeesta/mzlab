@@ -12,7 +12,7 @@ fn the_folder_of_a_member_name_splits_on_both_separators() {
 
 #[test]
 fn the_sum_of_the_points_is_the_sum_of_the_merged_spectrum() {
-    let p = Picchi {
+    let p = Peaks {
         // the points of scans 0, 1, 2, 2, 3, 5, 9
         start: vec![0, 1, 2, 4, 5, 5, 6, 6, 6, 6, 7],
         tof: vec![10, 10, 11, 12, 10, 13, 14],
@@ -32,7 +32,7 @@ fn the_sum_of_the_points_is_the_sum_of_the_merged_spectrum() {
 
 #[test]
 fn overlapping_ranges_count_a_point_once_and_many_points_sort_as_few() {
-    let p = Picchi {
+    let p = Peaks {
         start: vec![0, 1, 2, 4, 5, 5, 6, 6, 6, 6, 7],
         tof: vec![10, 10, 11, 12, 10, 13, 14],
         int: vec![4, 5, 6, 7, 8, 9, 1],
@@ -47,7 +47,7 @@ fn overlapping_ranges_count_a_point_once_and_many_points_sort_as_few() {
         x ^= x << 17;
         x
     };
-    let mut q = Picchi::default();
+    let mut q = Peaks::default();
     q.start.clear();
     for _ in 0..300 {
         q.start.push(q.tof.len());

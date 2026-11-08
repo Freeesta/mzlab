@@ -10,7 +10,7 @@ mod ingressi_lettori;
 use comune::*;
 use mzlab_core::numpress::Np;
 
-fn casuali(n: usize, seme: u64) -> Vec<u8> {
+fn random(n: usize, seme: u64) -> Vec<u8> {
     let mut x = seme | 1;
     (0..n)
         .map(|_| {
@@ -39,25 +39,25 @@ fn entrate() -> Vec<Entrata> {
 }
 
 #[test]
-fn ogni_bersaglio_ritorna_su_byte_qualsiasi() {
-    for (nome, f) in entrate() {
+fn every_target_returns_on_arbitrary_bytes() {
+    for (name, f) in entrate() {
         f(&[]);
         f(&[0]);
         for seme in 1..6 {
             for n in [3, 17, 4096] {
-                f(&casuali(n, seme * 7919 + n as u64));
+                f(&random(n, seme * 7919 + n as u64));
             }
         }
         // a header-like start: the readers get past `riconosci` and into their own parsing
         let mut testa = b"<mzML><spectrum>".to_vec();
-        testa.extend(casuali(512, 99));
+        testa.extend(random(512, 99));
         f(&testa);
-        eprintln!("fuzz entry {nome}: ok");
+        eprintln!("fuzz entry {name}: ok");
     }
 }
 
 #[test]
-fn un_mzml_numpress_vero_e_i_suoi_troncamenti_ritornano() {
+fn a_real_numpress_mzml_and_its_truncations_return() {
     let scan = scansioni();
     let file = mzml_di(
         &scan,
@@ -75,10 +75,10 @@ fn un_mzml_numpress_vero_e_i_suoi_troncamenti_ritornano() {
 
 // the stored crashes of the coverage-guided runs (`fuzz/regressioni/lettori_<family>/*`) return too
 #[test]
-fn i_crash_salvati_non_crashano_piu() {
-    let radice = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fuzz/regressioni");
-    for (nome, f) in entrate() {
-        let Ok(dir) = std::fs::read_dir(radice.join(format!("lettori_{nome}"))) else {
+fn saved_crashes_no_longer_crash() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fuzz/regressioni");
+    for (name, f) in entrate() {
+        let Ok(dir) = std::fs::read_dir(root.join(format!("lettori_{name}"))) else {
             continue;
         };
         for e in dir.flatten() {
