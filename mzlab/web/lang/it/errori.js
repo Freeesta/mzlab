@@ -372,6 +372,7 @@ I18N.add("it", {
   "error.tpNoBlock": "La tabella non ha un blocco di prodotti di trasformazione per questo composto di partenza.",
   "error.tpNoControls": "La tabella non ha file di controllo da confrontare con quelli trattati: segnali.",
   "warn.flow.formula.ion": "Lo ione scritto qui ha una polarità diversa da quella dei dati.",
+  "warn.convert.fewerWorkers": "Si convertono {workers} file alla volta invece di {wanted}, perché ogni conversione abbia la sua parte del budget di memoria di questo computer ({budget_mb} MB). I file scritti sono gli stessi; ci vuole solo più tempo.",
   "warn.msngrafo.rottureCapped": "Ci sono troppe rotture di legami: sono state provate solo le prime.",
   "warn.qc.mass.few_refs": "Sono stati trovati troppo pochi ioni di riferimento per giudicare l'accuratezza di massa di questo file.",
   "warn.qc.mass.is_area": "L'area dello standard interno cambia molto tra i file.",

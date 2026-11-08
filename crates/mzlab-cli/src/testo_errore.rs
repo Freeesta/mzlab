@@ -39,6 +39,16 @@ pub(crate) fn umano(msg: &str) -> String {
     if !(key.starts_with("err.") || key.starts_with("error.")) {
         return msg.to_string();
     }
+    rendi(msg, key, resto)
+}
+
+/// A calm notice (the one the desktop app gives its page as `{"key", "params"}`) as the terminal line: «text (key)».
+pub fn avviso(n: &crate::convert::Notice) -> String {
+    let resto: String = n.params.iter().map(|(k, v)| format!(" {k}={v}")).collect();
+    rendi(n.key, n.key, &resto)
+}
+
+fn rendi(msg: &str, key: &str, resto: &str) -> String {
     let Some(testo) = testo_di(key) else {
         return msg.to_string();
     };
