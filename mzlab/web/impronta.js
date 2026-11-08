@@ -4,7 +4,8 @@
 // worker of the copy at each piece. With four cores or more two hash workers share a member (SHA-256 and probe, SHA-1). At most WINDOW pieces wait for a hash worker (the copy waits for it beyond that: the memory never holds the file).
 // The hash worker is started at once, without its .wasm: its script is fetched long before the first file. Until that script has arrived once (`up`) a member
 // is hashed in place: on a slow first visit it queued behind the page's own downloads and held the copy for 10-19 s. `free`: only the SHA-1 keeps pace with the copy (the reader of a .raw
-// needs it to open the file); SHA-256 and probe read the file given at their own rate beside it (two workers) or the copy once it ends (one): the index is built meanwhile.
+// needs it to open the file); SHA-256 and probe read the file given at their own rate beside it (two workers) or the copy once it ends (one): the index is built meanwhile. `file`: a member
+// read in place (no copy), read by the workers themselves the same way.
 // A file changed during the upload fails to read (the browser refuses a changed File): no fingerprints, the builder takes them itself.
 const WINDOW = 4;
 // the hash worker closes after this long without a member to hash (the memory of its .wasm never shrinks); the next member starts one again
@@ -36,6 +37,14 @@ function freeOf({ a, b, job, ended, gone }, /** @type {number} */ size, /** @typ
   });
 }
 
+/** the fingerprints of a member read where it is (no copy: `file` is the user's File): the workers read it themselves, the SHA-1 in `b` (`onRead` told the bytes of each piece)
+ *  and SHA-256 and probe in `a` beside it, or all in one when `a` is `b` @param {{ a: Worker, b: Worker, job: (x: Worker, size: number, how: object) => { id: number, j: any }, ended: (x: Worker, o: { id: number, j: any }, file?: Blob, onRead?: (n: number) => void) => Promise<string[] | null> }} h */
+function fileOf({ a, b, job, ended }, /** @type {Blob} */ file, /** @type {((n: number) => void) | undefined} */ onRead) {
+  if (a === b) { const all = ended(a, job(a, file.size, {}), file, onRead); return { sha1: all.then(o => (o && o[1]) || null), all }; }
+  const sha1 = ended(b, job(b, file.size, { onlySha1: true }), file, onRead).then(o => (o && o[1]) || null), rest = ended(a, job(a, file.size, { noSha1: true }), file);
+  return { sha1, all: Promise.all([rest, sha1]).then(([o, x]) => o && x ? [o[0], x, o[2]] : null) };
+}
+
 /** @param {{ Passata: new (size: number, noSha1?: boolean, onlySha1?: boolean) => { aggiorna: (b: Uint8Array) => void, fine: () => string[] | undefined }, workerUrl: URL, module: () => WebAssembly.Module | null, mode?: string }} h */
 export function createImpronte({ Passata, workerUrl, module, mode }) {
   /** @type {(Worker | null)[]} */ const w = [null, null];
@@ -43,16 +52,16 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
   let dead = mode === "qui", seq = 0;
   /** @type {ReturnType<typeof setTimeout> | undefined} */ let idle;
   const rest = () => { clearTimeout(idle); idle = setTimeout(() => { if (!jobs.size) for (const k of slots) { w[k]?.terminate(); w[k] = null; } }, IDLE_MS); };
-  /** @type {Map<number, { ack: (() => void) | null, out: ((v: string[] | null) => void) | null, open: number[], got: (string[] | null)[], left: number, solo?: boolean }>} */
+  /** @type {Map<number, { ack: (() => void) | null, out: ((v: string[] | null) => void) | null, open: number[], got: (string[] | null)[], left: number, solo?: boolean, onRead?: (n: number) => void }>} */
   const jobs = new Map();
   /** a job of one worker: its id and record (`new` sent) */
   const job = (/** @type {Worker} */ x, /** @type {number} */ size, /** @type {object} */ how) => {
     const id = ++seq, j = { ack: /** @type {(() => void) | null} */ (null), out: /** @type {((v: string[] | null) => void) | null} */ (null), open: [0, 0], got: [null, null], left: 1, solo: true };
     jobs.set(id, j); x.postMessage({ op: "new", id, size, ...how }); return { id, j };
   };
-  /** the answer of a job (`end`; with `file` the worker reads the member from it) */
-  const ended = (/** @type {Worker} */ x, /** @type {{ id: number, j: any }} */ o, /** @type {Blob | undefined} */ file = undefined) =>
-    /** @type {Promise<string[] | null>} */ (new Promise(r => { o.j.out = r; x.postMessage(file ? { op: "end", id: o.id, file } : { op: "end", id: o.id }); }));
+  /** the answer of a job (`end`; with `file` the worker reads the member from it, telling `onRead` the bytes of each piece read when given) */
+  const ended = (/** @type {Worker} */ x, /** @type {{ id: number, j: any }} */ o, /** @type {Blob | undefined} */ file = undefined, /** @type {((n: number) => void) | undefined} */ onRead = undefined) =>
+    /** @type {Promise<string[] | null>} */ (new Promise(r => { o.j.out = r; o.j.onRead = onRead; x.postMessage(file ? { op: "end", id: o.id, file, tick: !!onRead } : { op: "end", id: o.id }); }));
   const fail = () => { dead = true; for (const k of slots) { w[k]?.terminate(); w[k] = null; } for (const j of jobs.values()) { j.open = [0, 0]; j.ack?.(); j.out?.(null); } jobs.clear(); };
   // the fingerprints of a member from what its workers gave: [sha256, sha1, probe], the SHA-1 from the second when there are two
   const join = (/** @type {(string[] | null)[]} */ g) => g.length < 2 ? g[0] || null : g[0] && g[1] ? [g[0][0], g[1][1], g[0][2]] : null;
@@ -63,7 +72,7 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
       x.onmessage = ev => {
         const m = ev.data, j = jobs.get(m.id);
         if (m.op === "up") { up[k] = true; return; }
-        if (!j) return;
+        if (!j) return; if (m.op === "read") { j.onRead?.(m.n); return; }
         if (m.op === "ack") { j.open[k]--; if (j.open.every(n => n < WINDOW)) { const a = j.ack; j.ack = null; a?.(); } }
         else if (m.op === "fine") { j.got[k] = m.out || null; if (--j.left === 0) { jobs.delete(m.id); j.out?.(j.solo ? m.out || null : join(j.got)); if (!jobs.size) rest(); } }
       };
@@ -80,14 +89,14 @@ export function createImpronte({ Passata, workerUrl, module, mode }) {
   }
   /** the worker `k` if its script has arrived, else null (it is started for the next member) */
   const ready = (/** @type {number} */ k) => up[k] ? worker(k) : (spawn(k), null);
+  // the two workers of a member (the same one twice with one core to spare), null each while not ready
+  const pair = () => { clearTimeout(idle); const a = ready(0); return [a, a && slots.length > 1 ? ready(1) : a]; };
   slots.forEach(spawn);
   return {
     /** `freeOf` with the workers of this page; null without a hash worker */
-    free(/** @type {number} */ size, /** @type {Blob} */ source) {
-      clearTimeout(idle);
-      const a = ready(0), b = a && slots.length > 1 ? ready(1) : a;
-      return a && b ? freeOf({ a, b, job, ended, gone: () => dead }, size, source) : null;
-    },
+    free(/** @type {number} */ size, /** @type {Blob} */ source) { const [a, b] = pair(); return a && b ? freeOf({ a, b, job, ended, gone: () => dead }, size, source) : null; },
+    /** `fileOf` with the workers of this page; null without a hash worker */
+    file(/** @type {Blob} */ file, /** @type {((n: number) => void) | undefined} */ onRead = undefined) { const [a, b] = pair(); return a && b ? fileOf({ a, b, job, ended }, file, onRead) : null; },
     /** the fingerprints of a member of `size` bytes: `add(piece)` in file order (the piece goes to the worker: do not use it afterwards), then `end()` gives [sha256, sha1, probe] or null */
     start(/** @type {number} */ size, /** @type {boolean=} */ noSha1) {
       clearTimeout(idle);
