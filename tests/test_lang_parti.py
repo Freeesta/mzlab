@@ -18,7 +18,7 @@ def test_each_area_has_the_same_keys_in_it_and_en():
 
 
 def test_no_key_twice_and_same_keys_overall():
-    it, en = lang_catalogo.catalogo("it"), lang_catalogo.catalogo("en")
+    it, en = lang_catalogo.catalog("it"), lang_catalogo.catalog("en")
     assert set(it) == set(en)
 
 
@@ -48,13 +48,13 @@ def _fake_catalog(tmp_path, monkeypatch, files_per_language):
 def test_duplicate_key_in_the_same_file_fails(tmp_path, monkeypatch):
     _fake_catalog(tmp_path, monkeypatch, {"it": {"a.js": ['  "load.slow": "uno",', '  "load.x": "x",', '  "load.slow": "due"']}})
     with __import__("pytest").raises(ValueError, match="load.slow.*twice"):
-        lang_catalogo.catalogo("it")
+        lang_catalogo.catalog("it")
 
 
 def test_duplicate_key_in_two_files_fails(tmp_path, monkeypatch):
     _fake_catalog(tmp_path, monkeypatch, {"en": {"a.js": ['  "k.one": "1"'], "b.js": ['  "k.one": "2"']}})
     with __import__("pytest").raises(ValueError, match="k.one"):
-        lang_catalogo.catalogo("en")
+        lang_catalogo.catalog("en")
 
 
 def test_controlla_i18n_reports_the_duplicate(tmp_path, monkeypatch):

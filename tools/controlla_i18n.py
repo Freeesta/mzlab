@@ -92,7 +92,7 @@ PARAM_RE = re.compile(r"\{([A-Za-z_][\w]*)")
 
 # ---------------------------------------------------------------- catalogs
 def load_catalog(lang: str) -> dict[str, str]:
-    return lang_catalogo.catalogo(lang)
+    return lang_catalogo.catalog(lang)
 
 
 def icu_signature(msg: str) -> tuple[list, list]:

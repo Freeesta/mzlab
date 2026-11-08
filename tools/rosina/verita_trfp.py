@@ -10,8 +10,8 @@ import importlib.util
 
 # the sibling `verita.py`, by path: tools/bench has a module of the same name
 _spec = importlib.util.spec_from_file_location("rosina_verita", Path(__file__).resolve().parent / "verita.py")
-verita = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(verita)
+truth = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(truth)
 
 
 def appiattisci(x, prefix="") -> dict:
@@ -35,7 +35,7 @@ def appiattisci(x, prefix="") -> dict:
 
 
 def da_trfp(mzml: Path, meta: Path, versione: str, nativo: Path | None) -> dict:
-    d = verita.da_mzml(mzml, ("ThermoRawFileParser", versione, "-f 2 -m 0"), nativo, None)
+    d = truth.da_mzml(mzml, ("ThermoRawFileParser", versione, "-f 2 -m 0"), nativo, None)
     for name, v in appiattisci(json.loads(meta.read_text(encoding="utf-8-sig"))).items():
         d["metadati"][f"trfp:{name}"] = {"valore": v if isinstance(v, (str, int, float, bool)) else str(v), "produttore": "ThermoRawFileParser"}
     return d

@@ -34,6 +34,6 @@ def test_bundled_catalog_equals_the_area_files(tmp_path):
         r = subprocess.run(["node", "-e", RUN, str(static / "lang" / f"{lang}.js"), str(static / "lang" / f"{lang}-resto.js")], capture_output=True, text=True, check=True)
         got = json.loads(r.stdout)
         assert got["writes"] == 0, lang
-        assert got["out"] == lang_catalogo.catalogo(lang), lang
+        assert got["out"] == lang_catalogo.catalog(lang), lang
         assert got["calls"] == [f"awaitRest lang/{lang}-resto.js", "done"], got["calls"]
         assert 0 < got["first"] < len(got["out"]) // 4, (lang, got["first"])

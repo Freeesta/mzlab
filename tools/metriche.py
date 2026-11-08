@@ -8,7 +8,7 @@
     python3 tools/metriche.py --rapporto [--dati DIR] [--html FILE]                    # trend table and HTML page (tools/metriche_trend.py)
 
 A line is `{v, sha, ts, part, ...}`; a commit may have several lines (parts `site`, `ci`, `manual`) and readers merge them by sha
-(`leggi_commit`). Lines are only appended; the data live on the branch `stat-ci`, never in main. The report is tools/metriche_trend.py."""
+(`read_commit`). Lines are only appended; the data live on the branch `stat-ci`, never in main. The report is tools/metriche_trend.py."""
 from __future__ import annotations
 
 import argparse
@@ -23,9 +23,9 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-RADICE = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-VERSIONE = 1   # field `v`; bump when a field changes meaning
+VERSION = 1   # field `v`; bump when a field changes meaning
 STEM = "metriche"
 
 
@@ -40,7 +40,7 @@ def comprimi(data: bytes) -> dict:
     return out
 
 
-def misura_wasm(site: Path) -> dict:
+def measure_wasm(site: Path) -> dict:
     """Every built .wasm: raw/gz/br next to its cap and the headroom in bytes and %. Caps come from tools/ci_wasm_dimensioni.py."""
     import ci_wasm_dimensioni as dim
     out = {}
@@ -52,7 +52,7 @@ def misura_wasm(site: Path) -> dict:
     return out
 
 
-def misura_avvio(radice: Path = RADICE) -> dict:
+def measure_startup(radice: Path = ROOT) -> dict:
     """Bytes of the start-up scripts (list `L` of mzlab/web/carica.js) against MAX_TOTAL of tests/test_peso_avvio.py."""
     web = radice / "mzlab" / "web"
     body = re.search(r"var L = \[(.*?)\];", (web / "carica.js").read_text(encoding="utf-8"), re.S).group(1)
@@ -66,7 +66,7 @@ def misura_avvio(radice: Path = RADICE) -> dict:
     return {"files": len(names), "raw": raw, "gz": gz, "cap": cap, "head_b": cap - raw, "head_pct": round(100 * (1 - raw / cap), 2)}
 
 
-def conta_test(radice: Path = RADICE) -> dict:
+def count_tests(radice: Path = ROOT) -> dict:
     """Test counts by reading the sources (no build, no run): pytest `def test_` (a parametrised test counts once), Rust `#[test]`, e2e scripts."""
     def count(rx, files):
         return sum(len(re.findall(rx, f.read_text(encoding="utf-8", errors="replace"), re.M)) for f in files)
@@ -76,10 +76,10 @@ def conta_test(radice: Path = RADICE) -> dict:
 
 
 def git(*args: str) -> str:
-    return subprocess.run(["git", *args], cwd=RADICE, capture_output=True, text=True, check=True).stdout.strip()
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
 
 
-def carica_bench(path: str | None, extra: list[str]) -> dict:
+def load_bench(path: str | None, extra: list[str]) -> dict:
     """Numbers from a JSON `{name: number}` file and from `name=value` pairs; anything else is refused."""
     out = {}
     if path:
@@ -94,23 +94,23 @@ def carica_bench(path: str | None, extra: list[str]) -> dict:
 
 
 def riga(part: str, sha: str, ts: str, **sections) -> dict:
-    return {"v": VERSIONE, "sha": sha, "ts": ts, "part": part, "recorded": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), **sections}
+    return {"v": VERSION, "sha": sha, "ts": ts, "part": part, "recorded": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), **sections}
 
 
 def file_active(data: str, ora: datetime | None = None, stem: str = STEM) -> str:
     return f"{data}/{stem}-{(ora or datetime.now(timezone.utc)).strftime('%Y-%m')}.jsonl"
 
 
-def copilot_righe(data: str) -> list[dict]:
+def copilot_rows(data: str) -> list[dict]:
     """Rows of the Copilot section (one per PR, the latest line of a PR wins when the report reads them)."""
     return read_rows(data, "copilot")
 
 
-def registra_copilot(data: str, api, giorni: int = 14, root: Path = RADICE, now: datetime | None = None) -> int:
+def record_copilot(data: str, api, giorni: int = 14, root: Path = ROOT, now: datetime | None = None) -> int:
     """Append a row for every PR closed in the last `giorni` days that has none yet (Copilot PRs and our chat PRs, the baseline)."""
     import metriche_copilot as mcp
     now = now or datetime.now(timezone.utc)
-    known = {r["pr"]: r for r in copilot_righe(data)}
+    known = {r["pr"]: r for r in copilot_rows(data)}
     wf = mcp.secret_workflows(root)
     righe = [r for n in mcp.recent_closed(api, now - timedelta(days=giorni), known) if (r := mcp.pr_row(n, api, wf, now))]
     os.makedirs(data, exist_ok=True)
@@ -120,7 +120,7 @@ def registra_copilot(data: str, api, giorni: int = 14, root: Path = RADICE, now:
     return len(righe)
 
 
-def accoda(righe: list[dict], data: str) -> int:
+def enqueue(righe: list[dict], data: str) -> int:
     """Append lines to this month's file; a (sha, part) that is already there with the same content is skipped."""
     os.makedirs(data, exist_ok=True)
     seen = {(r["sha"], r["part"], json.dumps({k: v for k, v in r.items() if k != "recorded"}, sort_keys=True)) for r in read_rows(data)}
@@ -139,7 +139,7 @@ def read_rows(data: str, stem: str = STEM) -> list[dict]:
     return out
 
 
-def leggi_commit(data: str) -> list[dict]:
+def read_commit(data: str) -> list[dict]:
     """One merged record per commit, oldest first: the parts are merged section by section, the latest line wins."""
     per_sha: dict[str, dict] = {}
     for r in sorted(read_rows(data), key=lambda r: r.get("recorded", "")):
@@ -170,37 +170,37 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     if a.rapporto:
         import metriche_trend as t
-        rows = t.analyse(leggi_commit(a.dati))
+        rows = t.analyse(read_commit(a.dati))
         print(t.text_report(rows))
         import metriche_copilot as mcp
-        print("\n" + mcp.summary(copilot_righe(a.dati)))
+        print("\n" + mcp.summary(copilot_rows(a.dati)))
         if a.html:
             Path(a.html).write_text(t.html_report(rows, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")), encoding="utf-8")
         return 0
     if a.copilot:
         from ci_metrics import api_get
-        print(f"{registra_copilot(a.dati, api_get, a.giorni)} PR row(s) appended")
+        print(f"{record_copilot(a.dati, api_get, a.giorni)} PR row(s) appended")
         return 0
     sha = git("rev-parse", a.sha or "HEAD")
     # commit time in UTC, so lines sort correctly whatever the committer's offset
     ts = datetime.fromisoformat(git("show", "-s", "--format=%cI", sha)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     righe = []
     if a.registra:
-        sections = {"startup": misura_avvio(), "tests": conta_test()}
+        sections = {"startup": measure_startup(), "tests": count_tests()}
         if a.sito:
-            sections["wasm"] = misura_wasm(Path(a.sito))
+            sections["wasm"] = measure_wasm(Path(a.sito))
         if a.bench:
-            sections["bench"] = carica_bench(a.bench, [])
+            sections["bench"] = load_bench(a.bench, [])
         righe.append(riga("site", sha, ts, **sections))
         if a.ci:
             import metriche_ci
             from ci_metrics import api_get
             righe.append(riga("ci", sha, ts, ci=metriche_ci.facts(sha, git("show", "-s", "--format=%s", sha), api_get)))
     if a.aggiungi:
-        righe.append(riga("manual", sha, ts, manual=carica_bench(None, a.aggiungi)))
+        righe.append(riga("manual", sha, ts, manual=load_bench(None, a.aggiungi)))
     if not righe:
         ap.error("nothing to do: use --registra or --aggiungi")
-    print(f"{accoda(righe, a.dati)} line(s) appended for {sha[:10]}")
+    print(f"{enqueue(righe, a.dati)} line(s) appended for {sha[:10]}")
     return 0
 
 

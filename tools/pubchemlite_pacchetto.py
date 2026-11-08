@@ -20,7 +20,7 @@ def main() -> int:
     a = ap.parse_args()
     src = next(s for s in g.SOURCES if s["id"] == "pubchemlite")
     try:
-        csv = g.prepara_fonti([src], a.fonte)["pubchemlite"][0]
+        csv = g.prepare_sources([src], a.fonte)["pubchemlite"][0]
     except (OSError, RuntimeError) as e:
         print(f"::warning::PubChemLite not downloaded ({e}): the site is published without the in-silico candidate package")
         return 0

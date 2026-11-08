@@ -28,7 +28,7 @@ def parte(path: Path) -> dict[str, str]:
     return json.loads("{" + "\n".join(rows[1:-1]) + "}", object_pairs_hook=lambda c: _without_duplicates(c, path))
 
 
-def catalogo(lang: str) -> dict[str, str]:
+def catalog(lang: str) -> dict[str, str]:
     """All keys of a language; a key in two areas is an error."""
     out: dict[str, str] = {}
     for p in parti(lang):

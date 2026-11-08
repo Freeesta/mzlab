@@ -25,7 +25,7 @@ def scan_rt_min(sp):
     return v / 60 if m.group(2) == "second" else v
 
 
-def ritaglia(text, rt0, rt1, run_id="run"):
+def crop(text, rt0, rt1, run_id="run"):
     spectra = [m.group(0) for m in SPECTRUM.finditer(text)]
     if not spectra:
         raise ValueError("no spectra found")
@@ -80,7 +80,7 @@ def main(argv=None):
     ap.add_argument("--id", default=None, help="run id written in the output (default: output name)")
     a = ap.parse_args(argv)
     text = Path(a.src).read_text(encoding="utf-8")
-    res = ritaglia(text, a.rt0, a.rt1, a.id or Path(a.dst).stem)
+    res = crop(text, a.rt0, a.rt1, a.id or Path(a.dst).stem)
     Path(a.dst).write_text(res, encoding="utf-8")
     print(f"{a.dst}: {len(res) / 1e6:.1f} MB", file=sys.stderr)
 

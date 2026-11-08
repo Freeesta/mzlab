@@ -41,7 +41,7 @@ def _array(values: np.ndarray, f64: bool, acc: str, name: str) -> str:
     return f'<binaryDataArray encodedLength="{len(b64)}">{bits}{_cv("MS:1000574", "zlib compression")}{_cv(acc, name, "", unit)}<binary>{b64}</binary></binaryDataArray>'
 
 
-def _spettro(i: int, rng, peaks1: int, peaks2: int, ms1_every: int, strano: bool) -> tuple[str, str]:
+def _spectrum(i: int, rng, peaks1: int, peaks2: int, ms1_every: int, strano: bool) -> tuple[str, str]:
     """(id, xml) of the spectrum `i`: an MS1 every `ms1_ogni` scans, MS2 of the strongest ions of the last MS1 for the others."""
     level = 1 if i % ms1_every == 0 else 2
     n = peaks1 if level == 1 else peaks2
@@ -97,7 +97,7 @@ def scrivi(path, scans: int = 2000, peaks1: int = 4000, peaks2: int = 400, varia
     pos = len(chunks[0])
     offsets = []
     for i in range(scans):
-        sid, xml = _spettro(i, rng, peaks1, peaks2, ms1_every, variante == "accessione_ignota" and i == scans // 2)
+        sid, xml = _spectrum(i, rng, peaks1, peaks2, ms1_every, variante == "accessione_ignota" and i == scans // 2)
         offsets.append((sid, pos + xml.index("<spectrum ")))
         b = xml.encode(); chunks.append(b); pos += len(b)
     t = np.arange(0, scans, 6) * 0.0005

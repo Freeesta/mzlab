@@ -129,7 +129,7 @@ def test_gzip_and_report_and_aggregate(tmp_path):
 
 def test_truth_from_dump():
     d = truth_scandump.da_scandump(ORACLE, ("", "", "scandump/1"))
-    assert truth_scandump._verita().valida(d) == []
+    assert truth_scandump._truth().validate(d) == []
     assert d["conteggi"] == {"spettri": {"ms1": 2, "ms2": 1}, "cromatogrammi": {"tic": 1}}
     s = d["scansioni"][1]
     assert (s["livello"], s["precursore_mz"], s["ce"], s["attivazione"], s["isolamento"]) == (2, 500.0, 30.0, "HCD", {"mz": 500.0, "inf": 1.0, "sup": 1.0})

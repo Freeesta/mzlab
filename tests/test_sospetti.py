@@ -27,7 +27,7 @@ def test_deterministic(mini):
 
 def test_read_and_merge(mini):
     _, keys, mass, form, raw, _ = mini
-    s = gs.leggi_sospetti(raw)
+    s = gs.read_suspects(raw)
     assert s.n == 45 and s.manifest["righe"] == 45
     assert list(s.masses) == sorted(s.masses)
     by = {s.hit(i).inchikey14: s.hit(i) for i in range(s.n)}
@@ -40,7 +40,7 @@ def test_read_and_merge(mini):
 
 def test_search_ppm_exact(mini):
     _, keys, mass, _, raw, _ = mini
-    s = gs.leggi_sospetti(raw)
+    s = gs.read_suspects(raw)
     for k in keys:
         for ppm in (0.0, 5.0, 5000.0):
             want = {x for x in keys if abs(mass[x] - mass[k]) <= mass[k] * ppm * 1e-6}
@@ -66,12 +66,12 @@ def test_missing_file_without_download(mini):
 
 def test_bad_files_rejected():
     with pytest.raises(ValueError):
-        gs.leggi_sospetti(b"nope" * 20)
+        gs.read_suspects(b"nope" * 20)
 
 
 def test_licenses_and_package(mini, tmp_path):
     _, _, _, _, raw, _ = mini
-    s = gs.leggi_sospetti(raw)
+    s = gs.read_suspects(raw)
     assert [f["licenza"] for f in s.manifest["fonti"]] == ["CC-BY-4.0"] * 3 and all(f["doi"] and f["sha256"] for f in s.manifest["fonti"])
     cat = gs.pacchetto(raw, tmp_path / "pk")
     pieces = [(tmp_path / "pk" / p["file"]).read_bytes() for p in cat["pezzi"]]

@@ -33,7 +33,7 @@ JS_SYNTAX = [PY, "-c", "import sys; sys.path.insert(0, 'tools'); import verifica
              "print(r[0][3]); sys.exit(r[0][1] == 'FAIL')"]
 
 
-def cambiato(*prefixes: str) -> bool:
+def changed(*prefixes: str) -> bool:
     """True when something under a `prefisso` differs from origin/main (committed, staged or not); True too when origin/main is unknown (better a check too many)."""
     r = subprocess.run(["git", "diff", "--name-only", "origin/main", "--", *prefixes], cwd=ROOT, capture_output=True, text=True)
     return r.returncode != 0 or bool(r.stdout.strip())
@@ -51,7 +51,7 @@ def files_cambiati() -> list[str]:
     return [f for f in (d.stdout + u.stdout).split("\n") if f] if d.returncode == 0 else []
 
 
-def passi_solo_doc() -> list[tuple[str, list[str]]]:
+def doc_only_steps() -> list[tuple[str, list[str]]]:
     """The checks a documents-only diff needs."""
     p = [("mappa del codice", [PY, "tools/indice.py", "--controlla"]), ("soglie di dimensione", [PY, "tools/controlla.py"]),
          ("percorsi nei documenti", [PY, "tools/controlla_link_docs.py"])]
@@ -62,14 +62,14 @@ def passi_solo_doc() -> list[tuple[str, list[str]]]:
 SELECTION_E2E = [PY, "-c", "import sys; sys.path.insert(0, 'tools'); import verifica as v; sel, why = v.changed_tests(); print(why)"]
 
 
-def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
+def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     p = [
         ("mappa del codice", [PY, "tools/indice.py", "--controlla"]),
         ("soglie di dimensione", [PY, "tools/controlla.py"]),
         ("percorsi nei documenti", [PY, "tools/controlla_link_docs.py"]),
         ("lingue (i18n)", [PY, "tools/controlla_i18n.py"]),
     ]
-    if shutil.which("node") and cambiato("mzlab/web/"):
+    if shutil.which("node") and changed("mzlab/web/"):
         p.append(("sintassi JS (job javascript)", JS_SYNTAX))
     p += [
         ("globali dei tipi", [PY, "tools/tipi/genera_globali.py", "--controlla"]),
@@ -77,15 +77,15 @@ def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     ]
     if (ROOT / "tools" / "controlla_import.py").exists():
         p.append(("import degli e2e", [PY, "tools/controlla_import.py"]))
-    if shutil.which("cargo") and cambiato("vendor/opentfraw/"):  # the crate is out of the workspace: no CI job runs its own tests
+    if shutil.which("cargo") and changed("vendor/opentfraw/"):  # the crate is out of the workspace: no CI job runs its own tests
         p.append(("test lib di opentfraw", ["cargo", "test", "-q", "--manifest-path", "vendor/opentfraw/Cargo.toml", "--lib"]))
     if veloce:
         p.append(("hash CSP", [PY, "tools/csp_hash.py", "--check"]))
-        if cambiato(*RUST):
+        if changed(*RUST):
             p.append(("cargo fmt contro la base", [PY, "tools/controlla_rust.py", "--solo-fmt"]))
         p.append(("e2e che verrebbero eseguiti", SELECTION_E2E))
         return p
-    if cambiato(*RUST):
+    if changed(*RUST):
         p += [("fmt e clippy contro la base", [PY, "tools/controlla_rust.py"])]
         if shutil.which("cargo-machete"):
             p.append(("dipendenze non usate (cargo machete)", ["cargo", "machete"]))
@@ -100,7 +100,7 @@ def main() -> int:
     solo_doc = ci_solo_doc.solo(files_cambiati())
     if solo_doc:
         print("solo documenti: only the checks the documents need")
-    listing = passi_solo_doc() if solo_doc else passi("--senza-e2e" not in sys.argv and not veloce, veloce)
+    listing = doc_only_steps() if solo_doc else steps("--senza-e2e" not in sys.argv and not veloce, veloce)
     for i, (name, cmd) in enumerate(listing, 1):
         print(f"...  [{i}/{len(listing)}] {name}", flush=True)
         t0 = time.time()
