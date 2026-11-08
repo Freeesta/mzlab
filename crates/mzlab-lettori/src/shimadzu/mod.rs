@@ -30,7 +30,7 @@ pub const VOCE: VoceLettore = VoceLettore {
 };
 
 /// What a container holds, from the names of its directory (a storage can be there and empty: the data are told by `carica::scegli`). `Ignoto` and `Rotto`: a `.qgd`/`.lcd`
-/// that is an OLE2 container of other storages (another instrument's data), or whose directory lies beyond its end (a cut copy): refused with what was found.
+/// that is an OLE2 container of other storages (another instrument's data), or whose directory lies beyond its end: refused with what was found, or as `err.file.cutShort` when its header points past the end (a cut copy).
 enum Contenuto {
     Dati,
     QTof,
@@ -102,7 +102,18 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
             )))
         }
         Contenuto::Rotto => {
-            let d = fs.membri[i].dim;
+            let m = &mut fs.membri[i];
+            // a header that points past the end is a copy cut before its directory: the same notice as a cut found after `open`
+            let mut h = vec![0u8; m.dim.min(512) as usize];
+            if m.dati.read_at(0, &mut h).is_ok() {
+                if let Some(need) = Ole::header_cut(&h).filter(|&n| n > m.dim) {
+                    return Err(Error::new("err.file.cutShort")
+                        .with("name", &m.nome)
+                        .with("size", m.dim)
+                        .with("needed", need));
+                }
+            }
+            let d = m.dim;
             return Err(rifiuto(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
         }
         _ => {}
