@@ -51,6 +51,7 @@ I18N.add("it", {
   "memory.phase.index": "indice",
   "memory.phase.indexPeaks": "picchi dell'indice",
   "memory.phase.detect": "rilevamento delle feature",
+  "memory.phase.group": "raggruppamento degli ioni",
   "pol.positive": "ESI positivo",
   "pol.negative": "ESI negativo",
   "pol.mixed": "ESI positivo e negativo nello stesso file",
