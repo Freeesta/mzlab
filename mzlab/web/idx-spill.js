@@ -1,7 +1,7 @@
 // @ts-strict
 // @ts-check
 // Scratch-file accessors of one index build (idx-worker.js): put/get over a sync access handle. get reuses one read buffer, grown on demand:
-// the builder copies the bytes out before its next call.
+// the builder copies the bytes out before its next call. put writes at once: its bytes are a view of the builder's memory, valid during the call only.
 export function makeSpill(/** @type {any} */ sh, /** @type {(off: number, n: number) => void} */ onFull, /** @type {(h: any, data: Uint8Array, off: number) => number} */ writeFull) {
   let buf = new Uint8Array(0);
   return {

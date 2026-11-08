@@ -406,24 +406,6 @@ impl Engine {
     }
 }
 
-/// Writes to JS at offsets: `write(offset, Uint8Array)` (the worker puts them in a file of OPFS).
-struct JsOutput {
-    write: Function,
-}
-
-impl mzidx::Output for JsOutput {
-    fn write_at(&mut self, offset: u64, data: &[u8]) -> mzlab_core::Result<()> {
-        self.write
-            .call2(
-                &JsValue::NULL,
-                &(offset as f64).into(),
-                &Uint8Array::from(data),
-            )
-            .map(|_| ())
-            .map_err(|_| mzlab_core::Error::new("err.file.index").with("detail", "write"))
-    }
-}
-
 fn f64s(b: &[u8]) -> Vec<f64> {
     b.chunks_exact(8)
         .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
@@ -500,7 +482,7 @@ pub fn build_mzidx(
         declared: 0,
     };
     // every call of `write` is an OPFS write and a read-back in the worker: contiguous writes go in blocks of 1 MiB (`accorpa`), same bytes
-    let mut out = Accorpa::flussi(JsOutput { write });
+    let mut out = Accorpa::flussi(nativi::JsOutput { write });
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
     let mut spill = spill_put.zip(spill_get).map(|(put, get)| Accorpa::new(nativi::JsSpill { put, get }));
     let st = mzidx::build_mzml_corriere(
