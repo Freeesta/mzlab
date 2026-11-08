@@ -597,7 +597,7 @@ const LISTE = (() => {
 
         <div id="lst-userlists-bar" style="font-size:12px;padding:4px 8px;background:var(--panel,#fff);border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
         <div id="lst-excl" class="sm" style="padding:4px 8px;border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
-        <span id="lst-count" hidden></span>
+        <span id="lst-count" class="sm muted" role="status" hidden></span>
 
         <div id="lst-table-wrap" style="flex:1;min-height:220px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-radius:6px;background:var(--panel,#fff)">
           <table class="lct" style="width:100%;border-collapse:collapse;font-size:12px">
@@ -763,7 +763,11 @@ const LISTE = (() => {
 
       const limit = 400;
       const shown = items.slice(0, limit);
-      if (elCount) elCount.innerHTML = "";
+      if (elCount) {                                          // a calm note on the cut, never a silent one
+        const cut = items.length > limit;
+        elCount.hidden = !cut;
+        elCount.textContent = cut ? I18N.t("lst.cut", { n: limit, m: items.length }) : "";
+      }
 
       if (!shown.length) {
         elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;
