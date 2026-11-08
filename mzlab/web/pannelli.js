@@ -281,7 +281,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" title="${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
+  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" tabindex="0" title="${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
     // button groups, separated by a vertical bar: [zoom + reset] | [integration] | [XIC] | [PNG / Excel] □ ×
     const lens = type === "chrom" || type === "xic" || type === "mrm";
     const fit = `<button class="bt" data-a="fit" disabled title="${I18N.t("panel.fit.title")}">${IC_FIT}</button>`;
