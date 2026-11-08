@@ -124,7 +124,7 @@ try:
             q = r["err"]["params"]
             assert q["fase"] == "detect" and int(q["stima_mb"]) > 8 and int(q["budget_mb"]) == 8, q
             det = of(r, "detect")
-            assert any(e["stato"] == "refused" for e in det) and not of(r, "align", "running"), det[-4:]
+            assert any(e["stato"] == "refused" for e in det) and not of(r, "align", "running"), (det[-4:], of(r, "align"))
             # `mb` of a detection is the peak of its worker (flow-web.md); the way says it was refused
             assert any(e["modo"] == "refused" for e in det), det[-4:]
         step("a file the budget cannot detect is refused before it starts, with its numbers", detect_refused)
