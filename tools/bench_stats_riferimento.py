@@ -52,11 +52,11 @@ def holm_exact(p: list[float], alfa: float = 0.05) -> tuple[list[float], list[bo
     return adj, [x < alfa for x in adj]
 
 
-def non_inferiore(ic_basso: float, ci_high: float, direction_up: bool, margin: float) -> bool:
+def non_inferior(ic_basso: float, ci_high: float, direction_up: bool, margin: float) -> bool:
     return bool(ic_basso > margin) if direction_up else bool(ci_high < margin)
 
 
-def superiore(ic_basso: float, ci_high: float, direction_up: bool, refused: bool) -> bool:
+def upper(ic_basso: float, ci_high: float, direction_up: bool, refused: bool) -> bool:
     side = ic_basso > 0.0 if direction_up else ci_high < 0.0
     return bool(side and refused)
 
@@ -150,8 +150,8 @@ def make_decision_cases() -> list[dict]:
     for lo, hi, margin in triplets:
         for dir_high in [True, False]:
             for rej in [True, False]:
-                ni = non_inferiore(lo, hi, dir_high, margin)
-                sup = superiore(lo, hi, dir_high, rej)
+                ni = non_inferior(lo, hi, dir_high, margin)
+                sup = upper(lo, hi, dir_high, rej)
                 cases.append({
                     "ic_basso": lo, "ic_alto": hi,
                     "direzione_alto": dir_high, "margine": margin,

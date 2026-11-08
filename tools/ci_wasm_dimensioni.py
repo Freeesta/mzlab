@@ -5,19 +5,19 @@ import re
 import sys
 from pathlib import Path
 
-RADICE = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent
 
 
-def tetti() -> dict[str, int]:
+def caps() -> dict[str, int]:
     out = {}
-    for sh in sorted(RADICE.glob("build_*_wasm.sh")):
+    for sh in sorted(ROOT.glob("build_*_wasm.sh")):
         for nome, val in re.findall(r"^\s*limit_(\w+)=(\d+)", sh.read_text(encoding="utf-8"), re.M):
             out[nome] = int(val)
     return out
 
 
 def misura(site: Path) -> dict[str, dict]:
-    cap = tetti()
+    cap = caps()
     out = {}
     for w in sorted(site.rglob("*.wasm")):
         if "vendor" in w.relative_to(site).parts:          # third-party modules (Ketcher's Indigo) have no cap of ours

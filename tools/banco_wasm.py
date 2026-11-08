@@ -23,14 +23,14 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BANCO = ROOT / "tools" / "banco_wasm"
+BENCH = ROOT / "tools" / "banco_wasm"
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_percorsi  # noqa: E402
 
 MEM = "-C link-arg=--initial-memory=33554432 -C link-arg=--max-memory=4294967296"
 SIMD = "-C target-feature=+simd128"
 # name -> (cargo profile, extra rustflags, features, wasm-opt level)
-VARIANTI = {
+VARIANTS = {
     "base": ("release", "", "", "-Oz"),
     "o3": ("o3", "", "", "-Oz"),
     "o3simd": ("o3", SIMD, "", "-Oz"),
@@ -104,7 +104,7 @@ def prepare_data(lav: Path, raw: Path | None) -> Path:
     d.mkdir(exist_ok=True)
     if not (d / "hr_prof.mzML").exists():
         env = {**os.environ, "CARGO_TARGET_DIR": str(lav / "tgt" / "host")}
-        run(["cargo", "run", "-q", "--release", "--example", "gen", "--", str(d / "hr_prof.mzML"), str(HR_SCANS), str(HR_PEAKS)], cwd=BANCO, env=env)
+        run(["cargo", "run", "-q", "--release", "--example", "gen", "--", str(d / "hr_prof.mzML"), str(HR_SCANS), str(HR_PEAKS)], cwd=BENCH, env=env)
     if not (d / "B_FullMass-t15.mzML").exists():
         sint = lav / "sint"
         run([sys.executable, str(ROOT / "tools" / "dati_sintetici.py"), str(sint)])
@@ -115,12 +115,12 @@ def prepare_data(lav: Path, raw: Path | None) -> Path:
     return d
 
 
-def costruisci(nome: str, lav: Path, thermo: bool) -> dict:
-    profile, rf, feat, level = VARIANTI[nome]
+def build(nome: str, lav: Path, thermo: bool) -> dict:
+    profile, rf, feat, level = VARIANTS[nome]
     feat = ",".join(f for f in (feat, "thermo" if thermo else "") if f)
     env = {**os.environ, "CARGO_TARGET_DIR": str(lav / "tgt" / nome), "RUSTFLAGS": f"{MEM} {rf}".strip()}
     cmd = ["cargo", "build", "-q", "--profile", profile, "--target", "wasm32-unknown-unknown"] + (["--features", feat] if feat else [])
-    run(cmd, cwd=BANCO, env=env)
+    run(cmd, cwd=BENCH, env=env)
     out = lav / "v" / nome
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
@@ -136,7 +136,7 @@ def costruisci(nome: str, lav: Path, thermo: bool) -> dict:
 
 def in_node(nome: str, lav: Path, rounds: int) -> dict:
     for f in ("suite.js", "node_bench.mjs"):
-        shutil.copy(BANCO / "js" / f, lav / f)
+        shutil.copy(BENCH / "js" / f, lav / f)
     return json.loads(run(["node", str(lav / "node_bench.mjs"), str(lav / "v" / nome), str(rounds), str(lav / "data")]).strip().splitlines()[-1])
 
 
@@ -144,7 +144,7 @@ def in_browser(motore: str, names: list[str], lav: Path, rounds: int) -> dict:
     """Run the suite of every variant in Chromium, Firefox or WebKit (compileStreaming) from a local server; its PID is saved and it is stopped by that PID."""
     from playwright.sync_api import sync_playwright
     for f in ("suite.js", "run.html"):
-        shutil.copy(BANCO / "js" / f, lav / f)
+        shutil.copy(BENCH / "js" / f, lav / f)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         porta = s.getsockname()[1]
@@ -204,7 +204,7 @@ def tabella(righe: list[dict], motore: str):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--varianti", default="base,o3", help="comma list among: " + ", ".join(VARIANTI) + " (the first is the base of the table)")
+    ap.add_argument("--varianti", default="base,o3", help="comma list among: " + ", ".join(VARIANTS) + " (the first is the base of the table)")
     ap.add_argument("--chromium", action="store_true", help="also run the suite in Chromium (Playwright)")
     ap.add_argument("--firefox", action="store_true", help="also run the suite in Firefox (Playwright)")
     ap.add_argument("--webkit", action="store_true", help="also run the suite in WebKit (Playwright)")
@@ -214,7 +214,7 @@ def main():
     a = ap.parse_args()
     names = a.varianti.split(",")
     for n in names:
-        if n not in VARIANTI:
+        if n not in VARIANTS:
             sys.exit(f"unknown variant {n}")
     check_tools()
     raw = find_raw() if a.raw else None
@@ -226,7 +226,7 @@ def main():
         prepare_data(lav, raw)
         righe = []
         for n in names:
-            r = costruisci(n, lav, raw is not None)
+            r = build(n, lav, raw is not None)
             r["node"] = in_node(n, lav, a.giri)
             righe.append(r)
         motori = [m for m in ("chromium", "firefox", "webkit") if getattr(a, m)]

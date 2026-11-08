@@ -30,7 +30,7 @@ def main() -> None:
     si.scrivi_verita(out, c, a.seme, a.profilo)
     parent = next(o for o in c.ioni if o.ruolo == "progenitore")
     series = nativo.esegui(idx, nativo.neutra_da_ione(parent.ion), parent.mz, parent.rt, out / "nativo")
-    t = adatta.da_serie(series, f"D2-{a.profilo}-{a.seme}")
+    t = adatta.from_series(series, f"D2-{a.profilo}-{a.seme}")
     (out / f"mzlab_D2_predefinita.json").write_text(adatta.a_json(dict(t, versione=series.versione_crate)), encoding="utf-8")
     print(out, len(t["righe"]), "rows,", len(list(mzml.glob('*.mzML'))), "files")
 

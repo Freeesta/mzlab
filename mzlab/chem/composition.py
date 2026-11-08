@@ -68,6 +68,18 @@ def _mass(sym: str) -> float:
     return ISOTOPES[sym][0] if sym in ISOTOPES else MASS[sym]
 
 
+def _clip_to_mass(els: dict, limit: float) -> None:
+    """Lowers the top of every element other than C and H to the count whose mass alone passes ``limit`` (ion mass + tolerance), plus one for rounding.
+    A grid row is a hit only if the ion mass minus its mass is at least -tolerance, and carbons and hydrogens only add mass: the rows cut never were hits."""
+    for sym, (lo, hi) in els.items():
+        if sym in ("C", "H"):
+            continue
+        m = _mass(sym)
+        q = limit / m if m > 0 else math.nan
+        if math.isfinite(q) and math.floor(q) + 1 < hi:          # NaN or infinity: no cut, as in Rust
+            els[sym] = (lo, max(math.floor(q) + 1, lo))
+
+
 def _base(sym: str) -> str:
     return ISOTOPES[sym][1] if sym in ISOTOPES else sym
 
@@ -167,13 +179,14 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
             hi = par.get(sym, 0)
             els[sym] = (min(els[sym][0], hi), min(els[sym][1], hi))
         els = {s: v for s, v in els.items() if v[1] >= v[0]}
+    _clip_to_mass(els, T + tol_da)
     cmin, cmax = els.get("C", (0, int(T // 12)))
     hmin, hmax = els.get("H", (0, int(T // MASS["H"]) + 1))
     others = [s for s in els if s not in ("C", "H")]
     ranges = [range(els[s][0], els[s][1] + 1) for s in others]
     size = int(np.prod([len(r) for r in ranges])) if ranges else 1
     if size > MAX_GRID:
-        raise UserError("err.comp.many", text="too many combinations: narrow the ranges of the elements")
+        raise UserError("err.comp.many", {"n": size, "max": MAX_GRID}, "too many combinations: narrow the ranges of the elements")
     grid = (np.stack(np.meshgrid(*[np.arange(r.start, r.stop, dtype=np.int32) for r in ranges], indexing="ij"), -1).reshape(size, len(others))
             if others else np.zeros((1, 0), dtype=np.int32))
     mo = np.array([_mass(s) for s in others], float)

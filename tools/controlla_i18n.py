@@ -66,7 +66,7 @@ scansione scansioni madre sconosciuto sconosciuta vicina vicino
 
 # crates that never serve the page, and the keys a student never sees (one reason per key)
 EXCLUDED_CRATES = ("mzlab-cli", "mzlab-desktop", "mzlab-llm")
-CRATE_SENZA_TESTO = {
+CRATES_WITHOUT_TEXT = {
     "err.test": "placeholder error of a unit test inside a src file",
     "err.test.interned": "string used by a unit test of the interner",
     "error.x": "key of a unit test of the JSON escaping",
@@ -471,7 +471,7 @@ def run(listing: bool = False) -> list[str]:
         if k not in used and k not in sent and not any(k.startswith(p) for p in prefixes):
             errs.append(f"orphan key (nobody uses it): {k}")
     for k, rel in sorted(crate_keys().items()):
-        if k not in CRATE_SENZA_TESTO and (k not in it or k not in en):
+        if k not in CRATES_WITHOUT_TEXT and (k not in it or k not in en):
             errs.append(f"engine message without a text in both languages: {k}  ({rel})")
     check_paramless_calls(it, errs)
     check_static_html(it, errs)

@@ -20,9 +20,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CAMPAIGN = ROOT / "tests/data/attributio/campagna_sintetica"
-USCITA = ROOT / "tests/golden/attributio/sintetica"
+OUTPUT = ROOT / "tests/golden/attributio/sintetica"
 LIBRARIES = ROOT / "tests/data/attributio/librerie_sintetiche"
-FONTI = ROOT / "tests/data/attributio/fonti_sintetiche"
+SOURCES = ROOT / "tests/data/attributio/fonti_sintetiche"
 SORBENTS = ROOT / "tests/data/attributio/campagna_sorbenti"
 OUTPUT_SORBENTS = ROOT / "tests/golden/attributio/sorbenti"
 POLS = ("POS", "NEG")
@@ -54,13 +54,13 @@ def frame_rows(df, cols=None):
     return [{c: jsonable(row[c]) for c in cols} for _, row in df.iterrows()]
 
 
-def scrivi(output: Path, nome: str, data) -> None:
+def write(output: Path, nome: str, data) -> None:
     output.mkdir(parents=True, exist_ok=True)
     text = json.dumps(jsonable(data), indent=1, sort_keys=True, ensure_ascii=False)
     (output / nome).write_text(text + "\n", encoding="utf-8")
 
 
-def carica(src: Path, campaign: Path):
+def load(src: Path, campaign: Path):
     os.environ["UNTARGET_OFFLINE"] = "1"
     os.environ.setdefault("MPLBACKEND", "Agg")
     sys.path.insert(0, str(src))
@@ -138,7 +138,7 @@ def _curation_table(percorso):
     return list(df[["pattern", "canonical_name", "category"]].itertuples(index=False, name=None))
 
 
-NOMI = [
+NAMES = [
     "Caffeine", "caffeine [M+H]+", "Caffeine M-H", "Fictacin B", "Fictamine isomer", "Fictastructin", "TestStandardA", "Fictazine isomer, RT 8.0 min",
     "Caffeine isomer, RT 7.5 min", "Massbank: Foo acid (LM6)|3-methyl-bar", "Foo bar (9CI)", "Foo (tentative) bar", "Atcardil", "ATCARDIL", "tudcabil",
     "hexaethylene glycol", "Polyethylene glycol", "PEG [C12H26O7]", "peg diol", "Oprea1_123", "ncgc00123", "Z1234567", "Compound 12", "Compound12",
@@ -159,7 +159,7 @@ def stage_names():
     cu.NONCEC_OVERRIDE = _curation_table(CAMPAIGN / "curation" / "category_override.csv")
     try:
         rows = []
-        for n in NOMI:
+        for n in NAMES:
             clean = cu.clean_library_name(n)
             r = {"name": n, "clean": clean, "classify": cu.classify_noncec(clean), "match_cec": list(cu.match_cec(clean)),
                  "noncec": cu.match_noncec_override(clean),
@@ -312,7 +312,7 @@ def _matching_sources():
         def load_sirius(self, table, pol=None, *, missing_ok=False):
             frames = []
             for p in ([pol] if pol else list(POLS)):
-                f = FONTI / f"sirius_{p}" / f"{table}.tsv"
+                f = SOURCES / f"sirius_{p}" / f"{table}.tsv"
                 if not f.exists():
                     continue
                 t = pd.read_csv(f, sep="\t", low_memory=False)
@@ -325,7 +325,7 @@ def _matching_sources():
             return pd.concat(frames, ignore_index=True)
 
         def gnps_output_dir(self, pol):
-            return FONTI / f"gnps_{pol}"
+            return SOURCES / f"gnps_{pol}"
 
     C = FakeC()
     by_key = lambda d: [{"pol": k[0], "id": k[1], "items": v} for k, v in sorted(d.items())]
@@ -552,7 +552,7 @@ def stage_fragments():
 
 
 EXPORT = ROOT / "tests/data/attributio/campagna_esportazione"
-GRADIENTE = ROOT / "tests/data/attributio/campagna_gradiente"
+GRADIENT = ROOT / "tests/data/attributio/campagna_gradiente"
 OUTPUT_EXPORT = ROOT / "tests/golden/attributio/esportazione"
 
 
@@ -564,20 +564,20 @@ def sheet(nome, df):
     return {"name": nome, "head": [str(c) for c in df.columns], "rows": righe}
 
 
-def campagna_esportazione(src: Path):
+def campaign_export(src: Path):
     """A temporary copy of the synthetic campaign with the overlay of the exports (calibration, decisions with evidence), loaded."""
     import shutil
     import tempfile
     tmp = Path(tempfile.mkdtemp())
     shutil.copytree(CAMPAIGN, tmp / "c")
     shutil.copytree(EXPORT, tmp / "c", dirs_exist_ok=True)
-    return carica(src, tmp / "c"), tmp
+    return load(src, tmp / "c"), tmp
 
 
 def stage_quantification(src):
     from attributio.annotate import load_annotations
     from attributio.quantify import quantify_lvl1, quantify_lvl1_environmental
-    C, _ = campagna_esportazione(src)
+    C, _ = campaign_export(src)
     feat = load_annotations(C)
     q = quantify_lvl1(C, feat)
     with warnings.catch_warnings(record=True) as w:
@@ -591,7 +591,7 @@ def stage_schymanski(src):
     import pandas as pd
     from attributio.diagnostics import schymanski_export as se
     from attributio.identity import identity_table
-    C, _ = campagna_esportazione(src)
+    C, _ = campaign_export(src)
     diag = C.cfg.get("diagnostics", {})
     matrix = diag.get("matrix") or next(iter(C.matrices))
     sites = C.matrix_sites(matrix)
@@ -645,7 +645,7 @@ def _without_hazard_data(pt):
 def stage_publication(src):
     import pandas as pd
     from attributio.diagnostics import publication_table as pt
-    C, _ = campagna_esportazione(src)
+    C, _ = campaign_export(src)
     _without_hazard_data(pt)
     empty = (pd.DataFrame(columns=["inchikey_first_block"]), pd.DataFrame(columns=["name", "first_block", "campaign"]))
     res = pt.build(C, "all", registry=empty)
@@ -660,7 +660,7 @@ def stage_gradient(src):
     from attributio.annotate import load_annotations
     from attributio.diagnostics import publication_table as pt
     import pandas as pd
-    C = carica(src, GRADIENTE)
+    C = load(src, GRADIENT)
     sites = list(C.sites)
     true = pt.rt_logp_flags
 
@@ -711,11 +711,11 @@ def controlla(output: Path, campaign: Path) -> int:
 
 
 def main() -> int:
-    from attributio_tox_riferimento import stadi_tox
+    from attributio_tox_riferimento import tox_stages
 
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--campagna", type=Path, default=CAMPAIGN)
-    ap.add_argument("--uscita", type=Path, default=USCITA)
+    ap.add_argument("--uscita", type=Path, default=OUTPUT)
     ap.add_argument("--sorbenti", type=Path, default=SORBENTS)
     ap.add_argument("--uscita-sorbenti", type=Path, default=OUTPUT_SORBENTS)
     ap.add_argument("--uscita-esportazione", type=Path, default=OUTPUT_EXPORT)
@@ -728,33 +728,33 @@ def main() -> int:
         print("ATTRIBUTIO_SRC=<path of Attributio's src/> is required", file=sys.stderr)
         return 2
     root = Path(src).expanduser().resolve()
-    C = carica(root, a.campagna.resolve())
+    C = load(root, a.campagna.resolve())
     from attributio.annotate import load_annotations
     feat = load_annotations(C)
     esp = a.uscita_esportazione
     stages = {
-        "quantificazione": lambda: scrivi(esp, "quantificazione.json", stage_quantification(root)),
-        "schymanski": lambda: scrivi(esp, "schymanski.json", stage_schymanski(root)),
-        "pubblicazione": lambda: scrivi(esp, "pubblicazione.json", stage_publication(root)),
-        "gradiente": lambda: scrivi(esp, "gradiente.json", stage_gradient(root)),
-        "campagna": lambda: scrivi(a.uscita, "campagna.json", stage_campaign(C)),
-        "letture": lambda: scrivi(a.uscita, "letture.json", stage_reads(C)),
-        "rilevazione": lambda: scrivi(a.uscita, "rilevazione.json", stage_detection(C)),
-        "livelli": lambda: scrivi(a.uscita, "livelli.json", stage_levels(feat)),
-        "identita": lambda: scrivi(a.uscita, "identita.json", stage_identity(feat, C)),
-        "nomi": lambda: scrivi(a.uscita, "nomi.json", stage_names()),
-        "membri": lambda: scrivi(a.uscita, "membri.json", stage_members(feat, C)),
-        "proposte": lambda: scrivi(a.uscita, "proposte.json", stage_proposals(C)),
-        "decisioni": lambda: scrivi(a.uscita, "decisioni.json", stage_decisions(C, feat)),
-        "abbinamenti": lambda: scrivi(a.uscita, "abbinamenti.json", stage_matches()),
-        "formule": lambda: scrivi(a.uscita, "formule.json", stage_formulas()),
-        "sirius": lambda: scrivi(a.uscita, "sirius.json", stage_sirius(C)),
-        "standard": lambda: scrivi(a.uscita, "standard.json", stage_standard(C)),
-        "spiegazioni": lambda: scrivi(a.uscita, "spiegazioni.json", stage_explanations()),
-        "frammenti": lambda: scrivi(a.uscita, "frammenti.json", stage_fragments()),
-        "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stage_sorbents(carica(root, a.sorbenti.resolve()))),
+        "quantificazione": lambda: write(esp, "quantificazione.json", stage_quantification(root)),
+        "schymanski": lambda: write(esp, "schymanski.json", stage_schymanski(root)),
+        "pubblicazione": lambda: write(esp, "pubblicazione.json", stage_publication(root)),
+        "gradiente": lambda: write(esp, "gradiente.json", stage_gradient(root)),
+        "campagna": lambda: write(a.uscita, "campagna.json", stage_campaign(C)),
+        "letture": lambda: write(a.uscita, "letture.json", stage_reads(C)),
+        "rilevazione": lambda: write(a.uscita, "rilevazione.json", stage_detection(C)),
+        "livelli": lambda: write(a.uscita, "livelli.json", stage_levels(feat)),
+        "identita": lambda: write(a.uscita, "identita.json", stage_identity(feat, C)),
+        "nomi": lambda: write(a.uscita, "nomi.json", stage_names()),
+        "membri": lambda: write(a.uscita, "membri.json", stage_members(feat, C)),
+        "proposte": lambda: write(a.uscita, "proposte.json", stage_proposals(C)),
+        "decisioni": lambda: write(a.uscita, "decisioni.json", stage_decisions(C, feat)),
+        "abbinamenti": lambda: write(a.uscita, "abbinamenti.json", stage_matches()),
+        "formule": lambda: write(a.uscita, "formule.json", stage_formulas()),
+        "sirius": lambda: write(a.uscita, "sirius.json", stage_sirius(C)),
+        "standard": lambda: write(a.uscita, "standard.json", stage_standard(C)),
+        "spiegazioni": lambda: write(a.uscita, "spiegazioni.json", stage_explanations()),
+        "frammenti": lambda: write(a.uscita, "frammenti.json", stage_fragments()),
+        "sorbenti": lambda: write(a.uscita_sorbenti, "sorbenti.json", stage_sorbents(load(root, a.sorbenti.resolve()))),
     }
-    stages.update(stadi_tox(frame_rows, scrivi, lambda: carica(root, CAMPAIGN)))
+    stages.update(tox_stages(frame_rows, write, lambda: load(root, CAMPAIGN)))
     for nome in a.solo or list(stages):
         stages[nome]()
     return controlla(a.uscita, a.campagna) if a.controlla else 0

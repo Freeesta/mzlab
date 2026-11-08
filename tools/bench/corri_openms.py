@@ -47,7 +47,7 @@ def align_and_merge(maps: list, par: dict) -> oms.ConsensusMap:
     return cons
 
 
-def scrivi_csv(cons: oms.ConsensusMap, names: list[str], path: Path) -> None:
+def write_csv(cons: oms.ConsensusMap, names: list[str], path: Path) -> None:
     """The map index of a consensus handle is the position of the map in the list given to the linker, i.e. the order of `names`."""
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
@@ -61,15 +61,15 @@ def scrivi_csv(cons: oms.ConsensusMap, names: list[str], path: Path) -> None:
 
 def main() -> None:
     a = corri.argomenti(__doc__)
-    par = corri.parametri("openms", a.config)
+    par = corri.parameters("openms", a.config)
     fs = corri.file_mzml(a.mzml_dir, a.solo)
     maps = []
     for f in fs:
         print(f.name, flush=True)
         maps.append(find_feature(f, par))
     cons = align_and_merge(maps, par)
-    nat = corri.cartella_nativa(a.out_dir, "openms", a.config)
-    scrivi_csv(cons, [f.stem for f in fs], nat / "consensus.csv")
+    nat = corri.native_folder(a.out_dir, "openms", a.config)
+    write_csv(cons, [f.stem for f in fs], nat / "consensus.csv")
     t = adatta.da_csv("openms", nat / "consensus.csv", [f.stem for f in fs], a.dataset, a.config)
     print(corri.salva(t, a.out_dir, oms.__version__), len(t["righe"]), "rows")
 

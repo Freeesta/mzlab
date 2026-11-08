@@ -7,14 +7,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LISTA = Path(__file__).with_name("pytest_solo_311.txt")
+LIST = Path(__file__).with_name("pytest_solo_311.txt")
 
 
 def voci() -> list[str]:
-    return [r.strip() for r in LISTA.read_text(encoding="utf-8").splitlines() if r.strip()]
+    return [r.strip() for r in LIST.read_text(encoding="utf-8").splitlines() if r.strip()]
 
 
-def raccogli(args: list[str]) -> list[str]:
+def collect(args: list[str]) -> list[str]:
     """Node ids pytest collects for these arguments (no test is run)."""
     out = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if out.returncode != 0:
@@ -37,9 +37,9 @@ def confronta(full: list[str], rest: list[str], solo: list[str], without_test: l
 def controlla() -> list[str]:
     listing = voci()
     doppie = sorted({v for v in listing if listing.count(v) > 1})
-    full = raccogli(["tests"])
-    rest = raccogli(["tests", *[a for v in listing for a in ("--deselect", v)]])
-    solo = raccogli(listing)
+    full = collect(["tests"])
+    rest = collect(["tests", *[a for v in listing for a in ("--deselect", v)]])
+    solo = collect(listing)
     without_test = [v for v in listing if not any(t == v or t.startswith(v + "::") for t in full)]
     return confronta(full, rest, solo, without_test, doppie)
 

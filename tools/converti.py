@@ -22,7 +22,7 @@ PWIZ = "chambm/pwiz-skyline-i-agree-to-the-vendor-licenses"       # MSConvert wi
 FILTER = 'peakPicking vendor msLevel=1-'
 
 
-def trova_trfp(percorso: str | None = None) -> list[str] | None:
+def find_trfp(percorso: str | None = None) -> list[str] | None:
     """The command that starts ThermoRawFileParser, or None."""
     for c in (percorso, os.environ.get("THERMORAWFILEPARSER"), shutil.which("ThermoRawFileParser"), shutil.which("ThermoRawFileParser.exe")):
         if not c:
@@ -50,7 +50,7 @@ def command_docker(folder: Path, nome: str, output: str = "/dati/mzML") -> str:
             f'--filter "{FILTER}" -o {output}')
 
 
-def converti(folder: Path, output: Path, trfp_path: str | None = None, test: bool = False, out=print) -> dict:
+def convert(folder: Path, output: Path, trfp_path: str | None = None, test: bool = False, out=print) -> dict:
     """Walks the folder. Returns {"fatti": [...], "saltati": [...], "da_fare": [comandi stampati], "errori": [...]}"""
     res = {"fatti": [], "saltati": [], "da_fare": [], "errori": []}
     folder = folder.resolve(); output = output.resolve()
@@ -61,7 +61,7 @@ def converti(folder: Path, output: Path, trfp_path: str | None = None, test: boo
         out(f"Nessun file .raw, .wiff o .d in {folder}.")
         return res
     if raws:
-        trfp = trova_trfp(trfp_path)
+        trfp = find_trfp(trfp_path)
         if trfp is None and not test:
             out("ThermoRawFileParser non trovato. Scaricalo da https://github.com/CompOmics/ThermoRawFileParser/releases e indicane il percorso con --trfp "
                 "(o nella variabile THERMORAWFILEPARSER). Fuori da Windows serve anche mono, oppure la versione per Linux/Mac.")
@@ -100,7 +100,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if not a.cartella.is_dir():
         print(f"{a.cartella} non è una cartella."); return 2
-    r = converti(a.cartella, a.uscita or a.cartella / "mzML", a.trfp, a.prova)
+    r = convert(a.cartella, a.uscita or a.cartella / "mzML", a.trfp, a.prova)
     return 1 if r["errori"] else 0
 
 

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from . import adatta
 
-PARAMETRI = Path(__file__).resolve().parent / "parametri"
+PARAMETERS = Path(__file__).resolve().parent / "parametri"
 
 
 def argomenti(descrizione: str, extra=None) -> argparse.Namespace:
@@ -35,11 +35,11 @@ def file_mzml(folder, solo=None) -> list[Path]:
     return fs
 
 
-def parametri(tool: str, config: str) -> dict:
-    return json.loads((PARAMETRI / tool / f"{config}.json").read_text(encoding="utf-8"))
+def parameters(tool: str, config: str) -> dict:
+    return json.loads((PARAMETERS / tool / f"{config}.json").read_text(encoding="utf-8"))
 
 
-def cartella_nativa(out_dir, tool: str, config: str) -> Path:
+def native_folder(out_dir, tool: str, config: str) -> Path:
     p = Path(out_dir) / tool / config
     p.mkdir(parents=True, exist_ok=True)
     return p

@@ -65,7 +65,7 @@ def test_green(world):
     clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
     events(sha)
-    r = c.valuta(clone, n, sha)
+    r = c.evaluate(clone, n, sha)
     assert r["verde"] and r["combine"] and r["unire"] and r["rischi"] == []
     assert sh(clone, "worktree", "list").count("\n") == 0
 
@@ -74,7 +74,7 @@ def test_red(world):
     clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
     events(sha, rust="failure")
-    r = c.valuta(clone, n, sha)
+    r = c.evaluate(clone, n, sha)
     assert not r["verde"] and not r["unire"] and r["motivo"] == "CI non verde: rust"
 
 
@@ -82,7 +82,7 @@ def test_different_sha(world):
     clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
     events(sha)
-    r = c.valuta(clone, n, "0" * 40)
+    r = c.evaluate(clone, n, "0" * 40)
     assert not r["unire"] and "differs" in r["motivo"]
 
 
@@ -92,7 +92,7 @@ def test_conflict(world):
     commit(clone, "a.txt", "main\n", "main cambia a")
     sh(clone, "push", "-q", "origin", "HEAD:main")
     events(sha)
-    r = c.valuta(clone, n, sha)
+    r = c.evaluate(clone, n, sha)
     assert r["verde"] and r["combine"] is False and not r["unire"] and "a.txt" in r["motivo"]
 
 
@@ -100,5 +100,5 @@ def test_rischio_cargo(world):
     clone, pr, events = world
     n, sha = pr("crates/x/Cargo.toml", "[package]\n")
     events(sha)
-    r = c.valuta(clone, n, sha)
+    r = c.evaluate(clone, n, sha)
     assert r["verde"] and r["combine"] and not r["unire"] and r["rischi"] == ["VIA richiesto: crates/x/Cargo.toml"]

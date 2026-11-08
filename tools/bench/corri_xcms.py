@@ -14,10 +14,10 @@ R = Path(__file__).with_name("corri_xcms.R")
 def main() -> None:
     a = corri.argomenti(__doc__)
     fs = corri.file_mzml(a.mzml_dir, a.solo)
-    nat = corri.cartella_nativa(a.out_dir, "xcms", a.config)
+    nat = corri.native_folder(a.out_dir, "xcms", a.config)
     csv_out = nat / "feature_values.csv"
     csv_out.unlink(missing_ok=True)
-    r = subprocess.run(["Rscript", str(R), str(corri.PARAMETRI / "xcms" / f"{a.config}.json"), str(csv_out), *map(str, fs)], capture_output=True, text=True)
+    r = subprocess.run(["Rscript", str(R), str(corri.PARAMETERS / "xcms" / f"{a.config}.json"), str(csv_out), *map(str, fs)], capture_output=True, text=True)
     (nat / "xcms.log").write_text(r.stdout + r.stderr, encoding="utf-8")
     if r.returncode != 0 or not csv_out.exists():
         raise SystemExit(f"XCMS failed (exit {r.returncode}):\n{r.stderr[-2000:]}")

@@ -6,12 +6,12 @@ import re
 import subprocess
 import sys
 
-GLOBALE = re.compile(r"^(Cargo\.(toml|lock)|rust-toolchain\.toml|vendor/|\.cargo/|crates/Cargo\.)")
+GLOBAL = re.compile(r"^(Cargo\.(toml|lock)|rust-toolchain\.toml|vendor/|\.cargo/|crates/Cargo\.)")
 
 
 def main(base: str, head: str) -> str:
     files = subprocess.run(["git", "diff", "--name-only", base, head], capture_output=True, text=True, check=True).stdout.split()
-    if any(GLOBALE.match(f) for f in files):
+    if any(GLOBAL.match(f) for f in files):
         return "ALL"
     meta = json.loads(subprocess.run(["cargo", "metadata", "--no-deps", "--format-version", "1", "--offline"], capture_output=True, text=True, check=True).stdout)
     root = meta["workspace_root"].rstrip("/") + "/"
