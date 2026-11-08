@@ -14,7 +14,7 @@ from bench import adatta, corri, versioni  # noqa: E402
 R = Path(__file__).with_name("corri_patroon.R")
 
 
-def immagine() -> str | None:
+def image() -> str | None:
     """The image reference with its digest, or None when no digest is pinned."""
     p = versioni.PATROON
     return f"{p['nome']}@{p['digest']}" if p["digest"] else None
@@ -40,17 +40,17 @@ def main() -> None:
     if not shutil.which("docker"):
         print("SKIP: Docker is not available; patRoon runs only in its Docker image")
         return
-    img = immagine()
+    img = image()
     if not img:
         raise SystemExit("patRoon image not pinned: write the digest in versioni.PATROON first")
     fs = corri.file_mzml(a.mzml_dir, a.solo)
-    nat = corri.cartella_nativa(a.out_dir, "patroon", a.config)
+    nat = corri.native_folder(a.out_dir, "patroon", a.config)
     for n in ("featureGroups.csv", "suspects.csv"):
         (nat / n).unlink(missing_ok=True)
     if a.pull:
         subprocess.run(["docker", "pull", img], check=True)
     an, so = (Path(x) if x else None for x in (a.analisi, a.sospetti))
-    r = subprocess.run(comando(img, Path(a.mzml_dir), nat, corri.PARAMETRI / "patroon" / f"{a.config}.json", an, so, [f.stem for f in fs]), capture_output=True, text=True)
+    r = subprocess.run(comando(img, Path(a.mzml_dir), nat, corri.PARAMETERS / "patroon" / f"{a.config}.json", an, so, [f.stem for f in fs]), capture_output=True, text=True)
     (nat / "patroon.log").write_text(r.stdout + r.stderr, encoding="utf-8")
     fg = nat / "featureGroups.csv"
     if r.returncode != 0 or not fg.exists():

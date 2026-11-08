@@ -14,7 +14,7 @@ from pathlib import Path
 
 import ci_metrics
 
-LISTA = Path(__file__).with_name("pytest_lenti.txt")
+LIST = Path(__file__).with_name("pytest_lenti.txt")
 
 
 def lenti(ev: list[dict], ultimi: int = 8, minimo: float = 5.0) -> list[tuple[str, float]]:
@@ -40,14 +40,14 @@ def main() -> int:
     ap.add_argument("--minimo", type=float, default=5.0)
     ap.add_argument("--scrivi", action="store_true")
     a = ap.parse_args()
-    ev = ci_metrics.leggi_tutti(a.dati) if a.dati else ci_metrics.eventi_ramo()
+    ev = ci_metrics.read_all(a.dati) if a.dati else ci_metrics.branch_events()
     listing = lenti(ev, a.ultimi, a.minimo)
     if not listing:
         sys.exit("no 3.11 run with phase data: the list is left as it is")
     text = "".join(f"{f}\t{s}\n" for f, s in listing)
     print(text, end="")
     if a.scrivi:
-        LISTA.write_text(text, encoding="utf-8")
+        LIST.write_text(text, encoding="utf-8")
     return 0
 
 

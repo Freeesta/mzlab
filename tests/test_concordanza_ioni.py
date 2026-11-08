@@ -12,7 +12,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "tools")]
 from bench import corri_mzmine, motivi_mzmine as MM, oro_mzmine  # noqa: E402
-from bench.motivi_mzmine import ListaFile  # noqa: E402
+from bench.motivi_mzmine import FileList  # noqa: E402
 from valida import cancello_misure as M  # noqa: E402
 from valida.tabelle import Tabella  # noqa: E402
 
@@ -67,7 +67,7 @@ def uno(mz: float, rt: float, alt: float = 1e5, name: str = "t") -> Tabella:
 
 
 def lista(mz, rt, a, b) -> list:
-    return [ListaFile(*(np.array(x, float) for x in (mz, rt, a, b)))]
+    return [FileList(*(np.array(x, float) for x in (mz, rt, a, b)))]
 
 
 def test_reason_family_a_row_of_mzmine_that_is_a_member_of_one_of_ours():
@@ -109,7 +109,7 @@ def test_reason_below_and_background_and_area():
 # ---- gold data of mzmine 3.9.0 ----
 
 def test_the_synthetic_files_are_written_again_with_the_same_content(tmp_path):
-    shas = oro_mzmine.genera(tmp_path)
+    shas = oro_mzmine.generate(tmp_path)
     text = (ORO / "LEGGIMI.md").read_text(encoding="utf-8")
     assert len(shas) == 4
     for name, h in shas.items():
@@ -121,7 +121,7 @@ def test_the_synthetic_files_are_written_again_with_the_same_content(tmp_path):
     if sys.platform != "linux":
         other = tmp_path / "again"
         other.mkdir()
-        assert oro_mzmine.genera(other) == shas
+        assert oro_mzmine.generate(other) == shas
 
 
 def test_the_gold_csv_have_the_documented_content():
@@ -141,7 +141,7 @@ def test_the_gold_csv_have_the_documented_content():
 # ---- the batch ----
 
 def test_the_batch_uses_the_names_of_the_parameters_of_mzmine():
-    par = corri_mzmine.corri.parametri("mzmine", "predefinita")
+    par = corri_mzmine.corri.parameters("mzmine", "predefinita")
     xml = corri_mzmine.batch_xml([Path("a.mzML")], Path("o.csv"), par)
     assert 'name="Min # of data points"' in xml and "Minimum scans (data points)" not in xml.split("MinimumSearch")[1].split("JoinAligner")[0]
 
@@ -155,5 +155,5 @@ def test_unknown_parameter_names_are_reported(tmp_path):
     xml = tmp_path / "b.xml"
     xml.write_text('<batch><batchstep method="io.github.mzmine.modules.dataprocessing.featdet_x.XModule"><parameter name="Noise level">1</parameter>'
                    '<parameter name="Noyse level">1</parameter><parameter name="m/z tolerance (sample-to-sample)"/></batchstep></batch>', encoding="utf-8")
-    assert corri_mzmine.parametri_non_letti(xml, tmp_path) == ["XModule: Noyse level"]
+    assert corri_mzmine.unread_parameters(xml, tmp_path) == ["XModule: Noyse level"]
     assert re.fullmatch(r"[0-9a-f]{64}", corri_mzmine.BIOCONDA_SHA256) and hashlib  # the digest of the package is the one of the bioconda repodata

@@ -21,6 +21,11 @@
       (r.gates || []).map((/** @type {any} */ g) => `${g.id} ${fx(g.value) || "–"} / ${fx(g.threshold)}${g.ok ? "" : " (not met)"}`).join("; ")]),
   });
 
+  /** the note of a feature: a grid over the limit says its size, the limit and the next step; other keys as written @param {any} f */
+  const note = f => f.error === "err.comp.many" && f.grid
+    ? `Not searched: these elements give ${f.grid} combinations, over the limit of ${f.max_grid}. Give fewer elements or lower maxima (the heavy ones count most).`
+    : txt(f.error);
+
   /** formulas/1 → the best candidate of each feature, or each spectrum candidate; `fragments` lists the explained peaks @param {any} j @returns {{head: string[], rows: string[][], fragments: {head: string[], rows: string[][]}}} */
   F.readFormulas = j => {
     const frag = { head: ["Query", "Formula", "Peak m/z", "Intensity", "Fragment", "Theoretical m/z", "Error (ppm)", "Neutral loss"], rows: /** @type {string[][]} */ ([]) };
@@ -34,7 +39,7 @@
     }
     const rows = (j.features || []).map((/** @type {any} */ f) => {
       const r = f.result || {}, list = r.candidates || [], best = list.find((/** @type {any} */ c) => c.formula === r.chosen) || list[0] || {};
-      return [txt(f.id), fx(f.mz, 4), fx(f.rt, 2), txt(f.file), txt(f.scan), txt(best.formula), fx(best.error_ppm, 2), fx(best.score), txt(best.confidence), txt(f.error), txt(list.length)];
+      return [txt(f.id), fx(f.mz, 4), fx(f.rt, 2), txt(f.file), txt(f.scan), txt(best.formula), fx(best.error_ppm, 2), fx(best.score), txt(best.confidence), note(f), txt(list.length)];
     });
     return { head: ["Feature", "m/z", "RT", "File", "Scan", "Best formula", "Error (ppm)", "Score", "Confidence", "Note", "Candidates"], rows, fragments: frag };
   };

@@ -41,6 +41,16 @@ pub(crate) fn map_par<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync)
     out.into_iter().map(|(_, r)| r).collect()
 }
 
+/// `flow_set::digest_for` of every path given (`None` for the inputs not read), over a few threads, in their order.
+pub(crate) fn digest_all(
+    paths: &[Option<PathBuf>],
+    sha1: bool,
+) -> Vec<Option<Result<(u64, String)>>> {
+    map_par(paths, |p| {
+        p.as_deref().map(|p| crate::flow_set::digest_for(p, sha1))
+    })
+}
+
 /// The inputs of the plan that name no hash get it from the file `locate` gives (one that names a hash must match it), and the scan inputs the facets
 /// their file gives where the plan writes none (`mzlab_feat::nature::fill_facets`).
 pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf + Sync) -> Result<()> {
@@ -55,9 +65,10 @@ pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf + Sync) -> 
         .zip(&wants)
         .map(|(f, w)| (locate(&f.name), *w))
         .collect();
+    let sha1 = crate::flow_set::wants_sha1(plan);
     let read = map_par(&jobs, |(p, w)| {
         (
-            crate::flow_set::digest(p),
+            crate::flow_set::digest_for(p, sha1),
             if *w { scan_facts(p) } else { None },
         )
     });

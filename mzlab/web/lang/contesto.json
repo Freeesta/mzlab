@@ -558,6 +558,7 @@
   "err.adduct.unknown": "{adduct} = nome dell'addotto.",
   "err.iso.element": "{symbol} = simbolo dell'elemento.",
   "err.comp.element": "{part} = testo scritto dall'utente.",
+  "err.comp.many": "{n} = numero di combinazioni degli elementi diversi da C e H; {max} = limite fisso (3000000). Errore per un solo m/z: le altre feature proseguono.",
   "err.comp.unknown": "{symbol} = simbolo.",
   "err.comp.range": "{symbol} = simbolo.",
   "err.comp.ion": "{ion} = nome dello ione.",

@@ -129,7 +129,7 @@ I18N.add("it", {
   "err.comp.ion": "Tipo di ione sconosciuto: {ion}.",
   "err.comp.charge": "La carica non è coerente con il tipo di ione.",
   "err.comp.unit": "L'unità della tolleranza è ppm o mDa.",
-  "err.comp.many": "Troppe combinazioni: restringi gli intervalli degli elementi.",
+  "err.comp.many": "Questi elementi danno {n} combinazioni, oltre il limite di {max}: per questo m/z non è stata cercata nessuna formula. Indica meno elementi o massimi più bassi (contano di più quelli pesanti).",
   "err.tree.formula": "Formula non valida: {formula}",
   "err.tree.noPath": "Il file non ha scansioni MSn con il percorso di frammentazione nel filtro (serve un file MS3 o superiore).",
   "err.tree.needStages": "L'albero serve per file MSn con almeno due stadi di frammentazione (MS3 o superiore).",

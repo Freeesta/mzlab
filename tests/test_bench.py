@@ -30,10 +30,10 @@ def test_holm_textbook():
 
 
 def test_mcnemar_exact_known_values():
-    assert S.mcnemar_esatto([1] * 5 + [0] * 3, [0] * 5 + [0] * 3)["p"] == pytest.approx(2 * 0.5 ** 5)
-    r = S.mcnemar_esatto([1] * 9 + [0] + [1] * 4, [0] * 9 + [1] + [1] * 4)             # 9 vs 1 discordant
+    assert S.mcnemar_exact([1] * 5 + [0] * 3, [0] * 5 + [0] * 3)["p"] == pytest.approx(2 * 0.5 ** 5)
+    r = S.mcnemar_exact([1] * 9 + [0] + [1] * 4, [0] * 9 + [1] + [1] * 4)             # 9 vs 1 discordant
     assert (r["solo_a"], r["solo_b"]) == (9, 1) and r["p"] == pytest.approx(2 * 11 / 1024)
-    assert S.mcnemar_esatto([1, 0, 1], [1, 0, 1])["p"] == 1.0                           # no discordant pair
+    assert S.mcnemar_exact([1, 0, 1], [1, 0, 1])["p"] == 1.0                           # no discordant pair
 
 
 def test_bootstrap_known_cases():
@@ -45,14 +45,14 @@ def test_bootstrap_known_cases():
     v = [float(s) for s in st]
     assert S.intervallo(v, strati=st)["ic_basso"] == S.intervallo(v, strati=st)["ic_alto"] == 0.5
     assert S.intervallo(v)["ic_basso"] < 0.5 < S.intervallo(v)["ic_alto"]
-    d = S.differenza([1] * 40, [0] * 40)                                                 # a wins everywhere
+    d = S.difference([1] * 40, [0] * 40)                                                 # a wins everywhere
     assert (d["valore"], d["ic_basso"], d["ic_alto"]) == (1.0, 1.0, 1.0) and d["p"] < 0.01
-    d = S.differenza(x, x)
+    d = S.difference(x, x)
     assert (d["valore"], d["ic_basso"], d["ic_alto"], d["p"]) == (0.0, 0.0, 0.0, 1.0)  # same tool: paired, so no spread at all
-    m = S.differenza([0.1, 0.2, 0.9], [0.1, 0.2, 0.3], "mediana")
+    m = S.difference([0.1, 0.2, 0.9], [0.1, 0.2, 0.3], "mediana")
     assert m["valore"] == pytest.approx(0.0)                                             # the medians are equal even if one value differs
     with pytest.raises(ValueError):
-        S.differenza([1, 0], [1])
+        S.difference([1, 0], [1])
 
 
 def test_bootstrap_deterministic_and_seed_sensitive():
@@ -64,12 +64,12 @@ def test_bootstrap_deterministic_and_seed_sensitive():
 
 def test_noninferiority_and_superiority_rules():
     d = {"valore": -0.01, "ic_basso": -0.015, "ic_alto": 0.0}
-    assert S.non_inferiore(d, "alto", -0.02) is True and S.non_inferiore(dict(d, ic_basso=-0.03), "alto", -0.02) is False
-    assert S.non_inferiore({"valore": 0.0, "ic_basso": -0.2, "ic_alto": 0.04}, "basso", 0.05) is True
-    assert S.non_inferiore({"valore": None}, "alto", -0.02) is None
-    assert S.superiore({"valore": 0.2, "ic_basso": 0.1, "ic_alto": 0.3}, "alto", True) is True
-    assert S.superiore({"valore": 0.2, "ic_basso": 0.1, "ic_alto": 0.3}, "alto", False) is False      # not significant after Holm
-    assert S.superiore({"valore": -0.2, "ic_basso": -0.3, "ic_alto": -0.1}, "basso", True) is True
+    assert S.non_inferior(d, "alto", -0.02) is True and S.non_inferior(dict(d, ic_basso=-0.03), "alto", -0.02) is False
+    assert S.non_inferior({"valore": 0.0, "ic_basso": -0.2, "ic_alto": 0.04}, "basso", 0.05) is True
+    assert S.non_inferior({"valore": None}, "alto", -0.02) is None
+    assert S.upper({"valore": 0.2, "ic_basso": 0.1, "ic_alto": 0.3}, "alto", True) is True
+    assert S.upper({"valore": 0.2, "ic_basso": 0.1, "ic_alto": 0.3}, "alto", False) is False      # not significant after Holm
+    assert S.upper({"valore": -0.2, "ic_basso": -0.3, "ic_alto": -0.1}, "basso", True) is True
 
 
 # ---------------------------------------------------------------------------------------------------------------- metrics on a hand-made table
@@ -98,7 +98,7 @@ TAB = A.tabella("x", "T", "predefinita", ["f1", "f2"], [
 
 def test_p1_p3_by_hand():
     p1 = M.p1(TRUTH, TAB)
-    ids = [c["id"] for c in V.feature_vere(TRUTH)]
+    ids = [c["id"] for c in V.true_features(TRUTH)]
     assert ids == ["par", "a", "b", "c", "i1", "i2"]
     assert p1["per_composto"] == [1, 1, 1, 0, 1, 0]                                              # c is missing, i2 loses the row to i1
     assert p1["richiamo"] == pytest.approx(4 / 6)
@@ -109,7 +109,7 @@ def test_p1_p3_by_hand():
 
 def test_p4_p5_by_hand():
     p4 = M.p4(TRUTH, TAB)
-    assert [c["id"] for c in V.prodotti(TRUTH)] == ["a", "b", "c", "i1", "i2"]
+    assert [c["id"] for c in V.products(TRUTH)] == ["a", "b", "c", "i1", "i2"]
     assert p4["per_composto"] == [1, 0, 0, 1, 0] and p4["trovati"] == 3
     assert p4["richiamo_candidati"] == pytest.approx(2 / 5)
     assert p4["ranghi"] == [1, 3] and p4["candidati"] == 5                                       # merged isomer row (7e6) first, a third
@@ -152,9 +152,9 @@ def test_secondary_and_empty_table():
 def test_truth_roles_and_multiple_rt():
     rows = [{"id": "p", "ruolo": "progenitore", "mz": 300.0, "rt_obs": [5.0], "presente": 1}, {"id": "t", "mz": 316.0, "rt_obs": [4.0, 6.0]},
              {"id": "e", "ruolo": "esca", "mz": 500.0, "rt_obs": [], "presente": 0}, {"id": "n", "ruolo": "isotopo", "mz": 301.0, "rt_obs": [5.0], "presente": 1, "note": "fascia=alta"}]
-    c = V.da_righe(rows)
+    c = V.from_rows(rows)
     assert [x["id"] for x in c] == ["p", "n", "t", "t#2", "e"] and {x["id"]: x["ruolo"] for x in c}["t#2"] == "tp1"
-    assert [x["id"] for x in V.feature_vere(c)] == ["p", "t", "t#2"] and [x["id"] for x in V.esche(c)] == ["e"]
+    assert [x["id"] for x in V.true_features(c)] == ["p", "t", "t#2"] and [x["id"] for x in V.esche(c)] == ["e"]
     assert [x["fascia"] for x in c if x["id"] == "n"] == ["alta"]
 
 
@@ -165,7 +165,7 @@ def test_truth_files(tmp_path):
     (tmp_path / "m.tsv").write_text("metabolite_identification\tmass_to_charge\tretention_time\texpected_ratio\nA\t150.05\t120\t2.5\nB\t200.1\t60\t\nC\t210.1\t30\t0.5\n")
     maf = V.da_maf(tmp_path / "m.tsv", rt_secondi=True)
     assert [(c["mz"], c["rt"], c["atteso"]) for c in maf] == [(150.05, 2.0, 2.5), (210.1, 0.5, 0.5)]
-    assert [V.rapporto_atteso(x) for x in ("1\\2", "16\\1", "4/1", "1,5", 2)] == [0.5, 16.0, 4.0, 1.5, 2.0]
+    assert [V.expected_report(x) for x in ("1\\2", "16\\1", "4/1", "1,5", 2)] == [0.5, 16.0, 4.0, 1.5, 2.0]
 
 
 def test_table_is_sorted_numbered_and_roundtrips(tmp_path):
@@ -229,14 +229,14 @@ def test_json_is_deterministic_without_dates():
 # ---------------------------------------------------------------------------------------------------------------- mzFinder on D2 (small)
 @pytest.mark.skipif(not BUILDABLE, reason="cargo not available")
 def test_mzfinder_on_small_d2_in_bench1(tmp_path):
-    t, verita = A.corri_mzfinder_sintetico(7, "piccolo", tmp_path / "a")
+    t, verita = A.run_mzfinder_synthetic(7, "piccolo", tmp_path / "a")
     assert t["formato"] == "bench/1" and t["strumento"] == "mzfinder" and len(t["file"]) == 6 and len(t["righe"]) > 100
     assert any(r["candidato"] for r in t["righe"]) and all(len(r["aree"]) == 6 for r in t["righe"])
     assert {c["ruolo"] for c in verita} >= {"progenitore", "tp1", "isomero", "esca"}
     m = R.misura(verita, t)
     assert 0.3 < m["P1"]["richiamo"] <= 1.0 and m["P5"]["falsi"] is not None and m["P4"]["n"] > 0
     r1 = R.a_json(R.rapporto("D2/piccolo/7", m))
-    t2, truth2 = A.corri_mzfinder_sintetico(7, "piccolo", tmp_path / "b")
+    t2, truth2 = A.run_mzfinder_synthetic(7, "piccolo", tmp_path / "b")
     assert A.a_json(t2) == A.a_json(t)                                                           # same series, same bytes
     assert R.a_json(R.rapporto("D2/piccolo/7", R.misura(truth2, t2))) == r1
     assert "mzfinder/predefinita" in r1
@@ -252,7 +252,7 @@ def test_cli_writes_the_files(tmp_path):
 # ---------------------------------------------------------------------------------------------------------------- B3: competitors and report from tables
 def test_mzmine_batch_has_the_seven_steps_and_the_parameter_names(tmp_path):
     from bench import corri, corri_mzmine
-    x = corri_mzmine.batch_xml([tmp_path / "a.mzML", tmp_path / "b.mzML"], tmp_path / "out.csv", corri.parametri("mzmine", "predefinita"))
+    x = corri_mzmine.batch_xml([tmp_path / "a.mzML", tmp_path / "b.mzML"], tmp_path / "out.csv", corri.parameters("mzmine", "predefinita"))
     import xml.dom.minidom
     xml.dom.minidom.parseString(x)                                                              # well-formed
     pas = re.findall(r'method="[^"]*\.(\w+)"', x)
@@ -264,16 +264,16 @@ def test_mzmine_batch_has_the_seven_steps_and_the_parameter_names(tmp_path):
 def test_mzmine410_batch_has_scan_filters_and_selected_item(tmp_path):
     from bench import oro_mzmine410 as o
     from bench import corri
-    par = corri.parametri("mzmine", "predefinita")
+    par = corri.parameters("mzmine", "predefinita")
     files = [tmp_path / "a.mzML"]
     for fin in (False, True):
-        x = o.batch_xml(files, tmp_path, par, o.VERSIONE, finder=fin)
+        x = o.batch_xml(files, tmp_path, par, o.VERSION, finder=fin)
         assert x.count('<parameter name="Scan filters" selected="true">') == 2 and '<parameter name="Scans">' not in x
         assert '<parameter name="Mass detector" selected_item="Centroid">' in x
     with pytest.raises(SystemExit):
-        o.controlla_filtro(x.replace('<parameter name="Scan filters" selected="true">', '<parameter name="Scans">'))
+        o.check_filter(x.replace('<parameter name="Scan filters" selected="true">', '<parameter name="Scans">'))
     with pytest.raises(SystemExit):
-        o.controlla_filtro(x.replace('<parameter name="Scan filters" selected="true">', '<parameter name="Scan filters">', 1))
+        o.check_filter(x.replace('<parameter name="Scan filters" selected="true">', '<parameter name="Scan filters">', 1))
 
 
 def test_report_from_tables_with_groups(tmp_path):
