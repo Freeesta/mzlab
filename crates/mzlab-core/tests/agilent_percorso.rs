@@ -67,3 +67,25 @@ fn the_module_reads_mrm_visits_as_srm_chromatograms() {
         .count();
     assert_eq!(srm, 3);
 }
+
+/// The scans and the TIC of a plain GC/MS run, as text: the engine and `agilent_ext` must give the same, so both builds compare it with one pinned value.
+fn lettura(l: &mut Box<dyn lettori::Lettore>) -> String {
+    let ix = l.index(0).unwrap().to_vec();
+    let mut out = String::new();
+    for (j, v) in ix.iter().enumerate() {
+        let s = l.scan(0, j).unwrap();
+        let i: Vec<f64> = (0..s.mz.len()).map(|k| s.intensity_f64(k)).collect();
+        out += &format!("{} {:?} {:?} {:?}\n", v.id, v.rt, s.mz, i);
+    }
+    let tic = l.chromatogram(0, "TIC").unwrap();
+    out + &format!("TIC {:?} {:?}", tic.time, tic.intensity)
+}
+
+#[test]
+fn a_plain_run_reads_the_same_on_both_builds() {
+    let (scan, peak) = encode(&sample());
+    let mut l = apri(scan, peak).expect("opens");
+    let got = lettura(&mut l);
+    eprintln!("LETTURA\n{got}");
+    assert_eq!(got, include_str!("agilent_percorso.txt").trim_end());
+}
