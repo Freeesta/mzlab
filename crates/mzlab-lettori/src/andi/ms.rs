@@ -88,7 +88,10 @@ impl LettoreAndi {
     }
 
     fn scansioni(&mut self) -> Result<usize> {
-        let n = self.punti_per_scansione()?;
+        let tutte = self.punti_per_scansione()?;
+        // a copy cut short loses the points of the last scans: the index stops before the first scan not whole in the file, and `missing` counts the rest
+        let n = (0..tutte).find(|&k| !self.intera(k)).unwrap_or(tutte);
+        self.tagliate = tutte - n;
         let col = |l: &mut Self, nome: &str| colonna(&l.cdf, &mut l.dati, &l.limiti, nome);
         let tempo = col(self, "scan_acquisition_time")?;
         let tot = col(self, "total_intensity")?;
@@ -123,6 +126,16 @@ impl LettoreAndi {
             });
         }
         Ok(n)
+    }
+
+    /// The m/z and intensities of scan `k` lie whole in the file.
+    fn intera(&self, k: usize) -> bool {
+        let (da, n) = (self.inizi[k], self.conti[k]);
+        ["mass_values", "intensity_values"].iter().all(|nome| {
+            self.cdf
+                .trova(nome)
+                .is_none_or(|v| self.cdf.intera(v, da, n))
+        })
     }
 
     /// The time (seconds) of the first point of scan `k` from `time_values`, when the file has no `scan_acquisition_time`.
@@ -257,6 +270,14 @@ impl Lettore for LettoreAndi {
         Formato::Altro("andi-ms")
     }
 
+    fn missing(&mut self, c: usize) -> usize {
+        if c == 0 {
+            self.tagliate
+        } else {
+            0
+        }
+    }
+
     fn samples(&self) -> &[Campione] {
         &self.campioni
     }
@@ -307,7 +328,7 @@ impl Lettore for LettoreAndi {
 
     fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.uno(c)?;
-        if self.indice.is_empty() {
+        if self.indice.is_empty() && self.tagliate == 0 {
             return Ok(cromato::voci(&self.cdf, &mut self.dati, &self.limiti));
         }
         Ok(["TIC", "BPC"]
@@ -323,7 +344,7 @@ impl Lettore for LettoreAndi {
 
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.uno(c)?;
-        if self.indice.is_empty() {
+        if self.indice.is_empty() && self.tagliate == 0 {
             return cromato::traccia(&self.cdf, &mut self.dati, &self.limiti, id);
         }
         self.traccia(id)
@@ -371,6 +392,8 @@ pub struct LettoreAndi {
     /// The base peak of each scan, noted at each decode (NaN: not yet); `bpc_visti` counts the noted ones.
     bpc: Vec<f64>,
     bpc_visti: usize,
+    /// Scans listed by the file whose points lie past the end of a copy cut short.
+    tagliate: usize,
     profilo: bool,
     sim: bool,
     sha1: Option<Option<String>>,
@@ -448,6 +471,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         tic_noto: false,
         bpc: Vec::new(),
         bpc_visti: 0,
+        tagliate: 0,
         profilo: false,
         sim: false,
         sha1: None,
