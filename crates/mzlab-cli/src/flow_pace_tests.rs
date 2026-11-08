@@ -147,7 +147,8 @@ fn the_fingerprints_taken_beside_the_scans_change_no_byte_and_a_cancel_stops() {
 
 #[test]
 fn a_dataset_hashed_before_its_index_is_not_read_again_for_its_prints_and_gives_the_same_bytes() {
-    let d = folder("pace_prints");
+    // a folder of its own: tests run in parallel and `folder` empties the one it is given
+    let d = folder("pace_known_prints");
     if !wiff(&d, "w", 2) {
         return;
     }
