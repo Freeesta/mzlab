@@ -539,6 +539,42 @@ impl GenericRecordStream {
 
     /// Record `i`, read from `source` and decoded; `None` when out of range or not readable.
     pub fn get<R: Read + Seek>(&self, source: &mut R, i: usize) -> Option<GenericRecord> {
+        self.with_record(source, i, |rec| {
+            GenericRecord::from_bytes(rec, &self.header, &self.labels, Some(&self.index)).ok()
+        })?
+    }
+
+    /// Record `i` with only the fields at `fields` (positions in the header, ascending): the same values `get` gives for their labels, for a caller that
+    /// reads a known few of a trailer of a few hundred fields (decoding them all was most of the cost of opening a file).
+    pub fn get_fields<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        i: usize,
+        fields: &[usize],
+    ) -> Option<GenericRecord> {
+        self.with_record(source, i, |rec| GenericRecord {
+            values: fields
+                .iter()
+                .filter_map(|&f| Some((Arc::clone(self.labels.get(f)?), self.decode(rec, f)?)))
+                .collect(),
+            index: None,
+        })
+    }
+
+    /// The positions of the fields whose label `keep` takes, in order.
+    pub fn positions(&self, keep: impl Fn(&str) -> bool) -> Vec<usize> {
+        (0..self.labels.len())
+            .filter(|&f| keep(&self.labels[f]))
+            .collect()
+    }
+
+    /// `f` over the bytes of record `i`, read with its group (`GROUP`).
+    fn with_record<R: Read + Seek, T>(
+        &self,
+        source: &mut R,
+        i: usize,
+        f: impl FnOnce(&[u8]) -> T,
+    ) -> Option<T> {
         if i >= self.n {
             return None;
         }
@@ -556,13 +592,7 @@ impl GenericRecordStream {
             *g = (first, buf);
         }
         let at = (i - first) * self.record_size;
-        GenericRecord::from_bytes(
-            &g.1[at..at + self.record_size],
-            &self.header,
-            &self.labels,
-            Some(&self.index),
-        )
-        .ok()
+        Some(f(&g.1[at..at + self.record_size]))
     }
 
     /// Calls `f(i, record)` for every record in order, reading the file `CHUNK` records at a time. Stops (and says `false`) when the file cannot be read.

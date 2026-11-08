@@ -180,6 +180,33 @@ const FILE_SHA256: &str = "e2d77e897f6c86a56a78d0f149acaf0026904a250e9d5e23f49b5
 const METHOD_SHA256: &str = "abad0fdfdb1af251aaf3a5debee54f29fa4712bb7eb772a0d6bf032a0bdced8d";
 const DECODED_SHA256: &str = "e261d343d99bf77b0137844eb261914460852073efd3f7a4efac23b241666ddb";
 
+#[test]
+fn the_metadata_from_the_known_trailer_fields_is_the_metadata_from_the_whole_record() {
+    // `scan_metadata` (the index at open) decodes only the trailer fields `ScanParams` reads: every scan must come out as from the whole record
+    let d = cartella("campi");
+    let f = d.join("hr.raw");
+    genera(
+        &f,
+        &[
+            "--scans", "44", "--peaks", "20", "--ms2", "10", "--seed", "3",
+        ],
+    );
+    let b = std::fs::read(&f).unwrap();
+    let _ = std::fs::remove_dir_all(&d);
+    let mut c = std::io::Cursor::new(b);
+    let raw = opentfraw::RawFileReader::open(&mut c).expect("open");
+    let first = raw.run_header.sample_info.first_scan_number;
+    for k in 0..raw.num_scans {
+        let whole = raw.scan_params(&mut c, first + k).expect("trailer");
+        let known = raw.scan_params_known(&mut c, first + k).expect("trailer");
+        assert!(known.record().values.len() < whole.record().values.len());
+        let a = opentfraw::mzml::scan_metadata_with(&raw, k, Some(whole));
+        let b = opentfraw::mzml::scan_metadata(&raw, &mut c, k);
+        assert_eq!(format!("{a:?}"), format!("{b:?}"), "scan {k}");
+        assert!(b.is_some_and(|m| k % 11 == 0 || m.precursor.is_some()));
+    }
+}
+
 /// `/api/dda_window` of a DDA `.raw`, whose reader gives no precursor intensity: the page (index and source = the mzML the reader writes) and the
 /// app and CLI (index and source = the reader) give the same bytes, the intensities filled from the parent survey scans.
 #[test]
