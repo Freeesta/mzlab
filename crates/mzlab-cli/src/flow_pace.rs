@@ -290,25 +290,41 @@ fn index_reader(
         stop: stop.clone(),
         halt: halt.clone(),
     };
-    let built = con_impronte_parallele(
-        move || hashing.file_set(path),
-        |imp| {
-            let r = indicizza_lettore_con(
+    // the members hashed before the index (`flow_set::digest`) are not read again: only their probes
+    let built = match flow_set::known_prints(path)? {
+        Some(prints) => {
+            let mut prints = Some(prints);
+            indicizza_lettore_con(
                 &mut l,
                 sample,
-                imp,
+                &mut || prints.take().ok_or_else(|| Error::new("err.file.unknown")),
                 &name,
                 out,
                 budget,
                 Some(&mut scratch),
                 &mut |_| {},
-            );
-            if r.is_err() {
-                halt.store(true, Ordering::Relaxed);
-            }
-            r
-        },
-    );
+            )
+        }
+        None => con_impronte_parallele(
+            move || hashing.file_set(path),
+            |imp| {
+                let r = indicizza_lettore_con(
+                    &mut l,
+                    sample,
+                    imp,
+                    &name,
+                    out,
+                    budget,
+                    Some(&mut scratch),
+                    &mut |_| {},
+                );
+                if r.is_err() {
+                    halt.store(true, Ordering::Relaxed);
+                }
+                r
+            },
+        ),
+    };
     drop(scratch);
     let _ = std::fs::remove_file(&scratch_path);
     built.map(|_| ())
