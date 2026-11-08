@@ -4,7 +4,7 @@
 
 use super::canon::value_text;
 use crate::error::{Error, Result};
-use crate::json::{parse, Out, Value};
+use crate::json::{parse_members, Out, Value};
 
 /// A named output file of the run folder.
 pub struct Uscita<'a> {
@@ -186,6 +186,16 @@ fn modules_json(o: &mut Out, modules: &[(String, String)], comma: bool) {
     o.raw("}");
 }
 
+/// The top-level members of an output file that the report and its regulatory section read.
+const OUTPUT_KEYS: &[&str] = &[
+    "schema",
+    "format",
+    "regulatory",
+    "suspect_files",
+    "hits",
+    "rows",
+];
+
 /// Builds the report from the `prov/1` of a run and the output files that go with it; a file that is not JSON of a known format is ignored.
 pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     if prov.get("schema").and_then(|s| s.str()) != Some("prov/1") {
@@ -225,7 +235,10 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     let mut levels = Livelli::default();
     let (mut report, mut regulatory) = (None, super::corsa_reg::Regulatory::default());
     for u in uscite {
-        let Ok(v) = parse(u.bytes) else { continue };
+        // only the members read below are built: a group step's `ionnet/1` of millions of edges would otherwise be a tree of gigabytes
+        let Ok(v) = parse_members(u.bytes, OUTPUT_KEYS) else {
+            continue;
+        };
         regulatory.read(&v);
         if v.get("schema").and_then(|s| s.str()) == Some("report/1") {
             report = Some(String::from_utf8_lossy(u.bytes).trim_end().to_string());
