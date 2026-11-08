@@ -385,6 +385,7 @@ I18N.add("en", {
   "error.tpNoBlock": "The table has no block of transformation products for this parent compound.",
   "error.tpNoControls": "The table has no control files to compare with the treated ones: mark them.",
   "warn.flow.formula.ion": "The ion written here has a different polarity from the data.",
+  "warn.convert.fewerWorkers": "{workers} files are converted at once instead of {wanted}, so that each conversion has its share of the memory budget of this computer ({budget_mb} MB). The files written are the same; it only takes longer.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
   "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
   "warn.msngrafo.rottureCapped": "There are too many bond cleavages: only the first ones were tried.",

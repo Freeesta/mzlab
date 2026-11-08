@@ -425,3 +425,37 @@ fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_files_are_converted_on_the_workers_of_the_computer_unless_workers_says_otherwise() {
+    let args = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    let auto = crate::convert::parse_args(args(&["a.raw", "--out", "x"]))
+        .unwrap()
+        .unwrap();
+    assert_eq!(auto.workers, None);
+    let wanted = mzlab_core::budget_auto::convert_wanted();
+    assert_eq!(crate::convert::workers_for(8192.0, None), (wanted, None));
+    let one = crate::convert::parse_args(args(&["a.raw", "--out", "x", "--workers", "1"]))
+        .unwrap()
+        .unwrap();
+    assert_eq!(one.workers, Some(1));
+    // --workers is kept even where the budget would lower the default, and says nothing
+    assert_eq!(crate::convert::workers_for(100.0, Some(3)), (3, None));
+}
+
+#[test]
+fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so() {
+    let n = crate::convert::fewer_workers(256.0, 4).unwrap();
+    assert_eq!(n.key, "warn.convert.fewerWorkers");
+    assert_eq!(
+        crate::testo_errore::avviso(&n),
+        "2 files are converted at once instead of 4, so that each conversion has its share of the memory budget of this computer (256 MB). The files written are the same; it only takes longer. (warn.convert.fewerWorkers)"
+    );
+    assert_eq!(crate::convert::fewer_workers(1024.0, 4), None);
+    let (w, note) = crate::convert::workers_for(100.0, None);
+    assert_eq!(w, 1);
+    assert_eq!(
+        note.is_some(),
+        mzlab_core::budget_auto::convert_wanted() > 1
+    );
+}

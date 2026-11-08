@@ -147,3 +147,13 @@ fn jobs_that_run_together_share_the_native_budget_but_never_drop_under_128_mb() 
     assert_eq!(share_mb(96.0, 4), 96.0);
     assert_eq!(share_mb(4096.0, 0), 4096.0);
 }
+
+#[test]
+fn conversions_share_the_budget_and_never_drop_to_zero() {
+    assert_eq!(convert_workers(1024.0, 4), 4);
+    assert_eq!(convert_workers(384.0, 4), 3);
+    assert_eq!(convert_workers(256.0, 4), 2);
+    assert_eq!(convert_workers(100.0, 4), 1);
+    assert_eq!(convert_workers(4096.0, 0), 1);
+    assert!((1..=4).contains(&convert_wanted()));
+}
