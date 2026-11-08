@@ -7,11 +7,19 @@ use std::path::{Path, PathBuf};
 use mzlab_core::flow::Plan;
 use mzlab_core::Result;
 
-/// Threads for reading the inputs: one per file, up to the cores of the machine less one (at most 4, like the live runner); 1 where the
-/// platform gives no count of its cores (WASI).
+/// Threads for reading the inputs: one per file, up to every core of the machine (no step runs while the inputs are hashed, and with one core
+/// held back 4 files on 4 cores took two rounds; the desktop window is another process the system still schedules); one file is read in place,
+/// and 1 where the platform gives no count of its cores (WASI). At most `MAX_READERS`: past a few readers one disk only seeks between the files and
+/// each reader holds its own buffers.
 fn threads(files: usize) -> usize {
-    crate::flow::live::default_workers().min(files).max(1)
+    std::thread::available_parallelism()
+        .map_or(1, |n| n.get())
+        .min(files)
+        .clamp(1, MAX_READERS)
 }
+
+/// Upper bound of the input readers, whatever the cores and the files.
+const MAX_READERS: usize = 8;
 
 /// `f` on every element of `items` over a few threads; the results come back in the order of `items`.
 pub(crate) fn map_par<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {

@@ -207,12 +207,12 @@ fn the_metadata_from_the_known_trailer_fields_is_the_metadata_from_the_whole_rec
     }
 }
 
-/// `/api/dda_window` of a DDA `.raw` written with `args`, for the queries `qs(last RT)`: (page, app and CLI, index alone) per query. The page reads
+/// `/api/dda_window` of a DDA `.raw` written with `args`, for the queries `qs(last RT, scans)`: (page, app and CLI, index alone) per query. The page reads
 /// the index and source of the mzML the reader writes, the app and CLI those of the reader.
 fn dda_windows(
     name: &str,
     args: &[&str],
-    qs: impl Fn(f64) -> Vec<String>,
+    qs: impl Fn(f64, &[mzlab_core::idxread::Scan]) -> Vec<String>,
 ) -> Vec<(String, String, String)> {
     use mzlab_core::idxread::Index;
     use mzlab_core::routes::{Query, Routes};
@@ -243,7 +243,7 @@ fn dda_windows(
     let mut ra = Routes::new(Index::open(ia.clone(), ia.len() as u64).unwrap());
     let mut rb = Routes::new(Index::open(ib.clone(), ib.len() as u64).unwrap());
     let hi = ra.idx.scans.iter().map(|s| s.rt).fold(0.0, f64::max);
-    qs(hi)
+    qs(hi, &ra.idx.scans.clone())
         .iter()
         .map(|q| {
             let q = Query::parse(q);
@@ -271,7 +271,7 @@ fn the_dda_window_of_a_raw_fills_its_precursor_intensities_alike() {
     let args = [
         "--scans", "60", "--peaks", "200", "--ms2", "5", "--seed", "7", "--dda",
     ];
-    let qs = |hi: f64| {
+    let qs = |hi: f64, _: &[mzlab_core::idxread::Scan]| {
         vec![
             format!("r0=0&r1={hi}"),
             format!("r0={}&r1={}", hi / 3.0, hi / 2.0),
@@ -296,7 +296,9 @@ fn the_dda_window_of_a_raw_says_where_it_stops_filling() {
     let args = [
         "--scans", "830", "--peaks", "20", "--ms2", "1", "--seed", "11", "--dda",
     ];
-    let qs = |hi: f64| vec![format!("r0=0&r1={hi}"), format!("r0=0&r1={}", hi / 4.0)];
+    let qs = |hi: f64, _: &[mzlab_core::idxread::Scan]| {
+        vec![format!("r0=0&r1={hi}"), format!("r0=0&r1={}", hi / 4.0)]
+    };
     let r = dda_windows("ddacut", &args, qs);
     let (a, c, plain) = &r[0];
     assert_eq!(a, c);
@@ -305,4 +307,33 @@ fn the_dda_window_of_a_raw_says_where_it_stops_filling() {
     let (a, c, _) = &r[1];
     assert_eq!(a, c);
     assert!(!a.contains("pintCut") && !a.contains("null"), "{a}");
+}
+
+/// One precursor over the whole run (`mz`, «Segui questo ione» and the precursor list of dda.js): only its parents are read, so the run that
+/// stops filling at 400 survey scans gives every intensity of that precursor, alike on every surface, and only its MS2.
+#[test]
+fn the_dda_window_of_one_precursor_reads_only_its_parents() {
+    let args = [
+        "--scans", "830", "--peaks", "20", "--ms2", "1", "--seed", "11", "--dda",
+    ];
+    let qs = |hi: f64, scans: &[mzlab_core::idxread::Scan]| {
+        let m = scans
+            .iter()
+            .find_map(|s| s.precursor.filter(|_| s.level > 1))
+            .unwrap();
+        vec![
+            format!("r0=0&r1={hi}&mz={m}"),
+            format!("r0=0&r1={hi}&mz={m}&tol=0.001"),
+            format!("r0=0&r1={hi}&mz=1e9"),
+        ]
+    };
+    let r = dda_windows("ddamz", &args, qs);
+    for (a, c, plain) in &r[..2] {
+        assert_eq!(a, c);
+        assert!(a.contains(r#""groups":[{"prec":"#), "{a}");
+        assert!(!a.contains("pintCut") && !a.contains("null"), "{a}");
+        assert!(plain.contains("null"), "{plain}");
+        assert_eq!(a.matches("\"prec\"").count(), 1, "{a}");
+    }
+    assert!(r[2].0.ends_with(r#""groups":[]}"#), "{}", r[2].0);
 }

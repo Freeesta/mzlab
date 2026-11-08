@@ -2,6 +2,7 @@
 //! MS2 profile (ppm of a high-resolution profile, else 0.5 Da, as `tolOf` in dda.js). The most intense precursor first, members in order of
 //! acquisition. Reference: `tools/dda_finestra_riferimento.py`; parity test: `tests/hr_parity.rs`. A reader that gives no precursor intensity (Thermo
 //! .raw) has it filled from the source (`dda_window_src`, every surface): the highest point of the parent survey scan in its isolation window.
+//! `mz[&tol]` keeps only the MS2 of that precursor (tol in Da, else the profile's): the whole-file picks of dda.js read only their parents.
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
@@ -25,12 +26,17 @@ impl<R: ReadAt> Routes<R> {
         let (Some(a), Some(b)) = (q.num("r0")?, q.num("r1")?) else {
             return Ok(None);
         };
-        Ok(Some(window_json(
-            &self.idx.scans,
-            a.min(b),
-            a.max(b),
-            q.get("hr") != Some("0"),
-        )))
+        Ok(Some(
+            window_with(
+                &self.idx.scans,
+                a.min(b),
+                a.max(b),
+                q.get("hr") != Some("0"),
+                near(q)?,
+                None,
+            )
+            .unwrap_or_default(),
+        ))
     }
 
     /// The same answer, the missing precursor intensities filled from the parent survey scans of `src`.
@@ -54,10 +60,17 @@ impl<R: ReadAt> Routes<R> {
             a.min(b),
             a.max(b),
             q.get("hr") != Some("0"),
+            near(q)?,
             Some(&mut fill),
         )
         .map(Some)
     }
+}
+
+/// The precursor `mz` asked for and its tolerance `tol` (Da), when given.
+fn near(q: &Query) -> Result<Option<(f64, Option<f64>)>> {
+    let tol = q.num("tol")?.filter(|t| *t > 0.0);
+    Ok(q.num("mz")?.map(|m| (m, tol)))
 }
 
 /// Half-width of the search around a precursor: its isolation window, at most 0.5 Da (a filter gives the m/z to 2 decimals, a ppm tolerance would
@@ -81,16 +94,17 @@ type Fill<'a> = dyn FnMut(usize, &[(f64, f64)]) -> Result<Vec<Option<f64>>> + 'a
 
 /// The answer for the scans of a file (also the empty answer of a file without scans).
 pub fn window_json(scans: &[crate::idxread::Scan], lo: f64, hi: f64, hr: bool) -> String {
-    window_with(scans, lo, hi, hr, None).unwrap_or_default()
+    window_with(scans, lo, hi, hr, None, None).unwrap_or_default()
 }
 
 /// `fill(parent, [(m/z, tolerance)])` gives the intensities of the MS2 whose scan has none, one parent at a time (one spectrum held at once);
-/// without a source they stay as the index has them.
+/// without a source they stay as the index has them. `near = (m/z, tol)` keeps only the MS2 of that precursor.
 fn window_with(
     scans: &[crate::idxread::Scan],
     lo: f64,
     hi: f64,
     hr: bool,
+    near: Option<(f64, Option<f64>)>,
     fill: Option<&mut Fill>,
 ) -> Result<String> {
     let p = hr_profile(scans, false, hr);
@@ -113,6 +127,7 @@ fn window_with(
     let mut kids: Vec<(f64, usize)> = (0..scans.len())
         .filter(|&i| scans[i].level > 1 && in_win(scans[i].parent))
         .filter_map(|i| key(i).map(|m| (m, i)))
+        .filter(|&(m, _)| near.is_none_or(|(c, t)| (m - c).abs() <= t.unwrap_or_else(|| tol(c))))
         .collect();
     sortc::by(&mut kids, |x, y| {
         sortc::asc_nan_last(x.0, y.0).then(x.1.cmp(&y.1))
