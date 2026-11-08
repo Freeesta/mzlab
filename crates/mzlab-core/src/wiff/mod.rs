@@ -155,19 +155,26 @@ fn bad(detail: &str) -> Error {
     Error::new("err.file.wiff").with("detail", detail)
 }
 
-/// The container of a `.wiff`; one cut short (sectors its FAT uses lie past the end) is refused whole: its streams would read empty or short,
+/// The container of a `.wiff`; one cut short (sectors its header or its FAT use lie past the end) is refused whole: its streams would read empty or short,
 /// so the samples, the index or the method would be missing unsaid.
 pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
     let size = wiff.len();
-    let ole =
-        Ole::open(wiff, name).map_err(|_| Error::new("err.file.notWiff").with("name", name))?;
+    let cut = Ole::header_cut(&wiff);
+    let ole = Ole::open(wiff, name).map_err(|_| match cut {
+        Some(needed) => truncated(name, size, needed),
+        None => Error::new("err.file.notWiff").with("name", name),
+    })?;
     match ole.cut_short() {
-        Some(needed) => Err(Error::new("err.file.wiffTruncated")
-            .with("name", name)
-            .with("size", size)
-            .with("needed", needed)),
+        Some(needed) => Err(truncated(name, size, needed)),
         None => Ok(ole),
     }
+}
+
+fn truncated(name: &str, size: usize, needed: u64) -> Error {
+    Error::new("err.file.wiffTruncated")
+        .with("name", name)
+        .with("size", size)
+        .with("needed", needed)
 }
 
 /// The numbers of the samples of the sample table, in order: an injection that acquired nothing (no `Idx` stream) is a sample with no scans,

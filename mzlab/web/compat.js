@@ -121,6 +121,11 @@ export function cappedScale(g, w, h, s) {
   return k;
 }
 
+/** Safari in a tab of its own (WebKit's GestureEvent, absent in the other engines): "mac", or "ipad" with a touch screen (several touch points, as an iPad with a trackpad; every browser there is WebKit);
+ *  "" in the other engines, the desktop app (a WebKit view on a Mac, no 7-day limit), the phone layout and a frame. "mac" and "ipad" get the first-visit
+ *  notice (avviso-safari.js, loaded after the page). @param {any} g @returns {"" | "mac" | "ipad"} */
+export const safariKind = (g) => (!g.GestureEvent || g.MZLAB_DESKTOP || g.MZLAB_PHONE || g.parent !== g ? "" : touchOnly(g) || (g.navigator && g.navigator.maxTouchPoints > 1) ? "ipad" : "mac");
+
 /** Installs every fallback the global `g` needs; returns the names installed (for the tests and the diagnosis). @param {any} g @param {{worker?: () => any}} [o] */
 export function installa(g, o = {}) {
   /** @type {string[]} */ const done = [];
@@ -153,4 +158,8 @@ export function installa(g, o = {}) {
 }
 
 const G = /** @type {any} */ (globalThis);
-if (typeof window !== "undefined" && !G.__compat) { G.__compat = installa(G); G.clipboardCopy = (/** @type {Record<string, any>} */ parts) => copyNow(G, parts); G.canvasScale = (/** @type {number} */ w, /** @type {number} */ h, /** @type {number} */ s) => cappedScale(G, w, h, s); }
+if (typeof window !== "undefined" && !G.__compat) {
+  G.__compat = installa(G); G.clipboardCopy = (/** @type {Record<string, any>} */ parts) => copyNow(G, parts); G.canvasScale = (/** @type {number} */ w, /** @type {number} */ h, /** @type {number} */ s) => cappedScale(G, w, h, s);
+  const notice = () => { if (safariKind(G) && typeof G.carica === "function") G.carica("m:avviso-safari.js").catch(() => { /* offline: no notice */ }); };
+  if (G.document && G.document.readyState === "complete") notice(); else if (typeof G.addEventListener === "function") G.addEventListener("load", notice, { once: true });
+}

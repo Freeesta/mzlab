@@ -390,6 +390,8 @@ I18N.add("it", {
   "dda.add": "Aggiungi un pannello MS2 accanto",
   "dda.add.tip": "Un altro pannello MS2 sotto la stessa Full Scan",
   "avviso.close": "Chiudi l'avviso",
+  "safari.notice.mac": "Funziona anche in Safari; per l'uso di tutti i giorni è meglio Chrome, Edge o Firefox: Safari può cancellare i dati salvati dopo 7 giorni senza visite. I tuoi file originali non si toccano.",
+  "safari.notice.ipad": "Safari può cancellare i dati salvati dopo 7 giorni senza visite; i tuoi file originali non si toccano. Se aggiungi la pagina alla schermata Home, contano solo i giorni in cui la usi.",
   "disp.menu": "Opzioni…",
   "disp.none": "Scegli un cromatogramma o uno spettro: un clic destro sul grafico apre qui le sue opzioni.",
   "disp.for": "Opzioni: {type}",
