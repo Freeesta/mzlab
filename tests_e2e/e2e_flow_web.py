@@ -124,7 +124,11 @@ try:
             q = r["err"]["params"]
             assert q["fase"] == "detect" and int(q["stima_mb"]) > 8 and int(q["budget_mb"]) == 8, q
             det = of(r, "detect")
-            assert any(e["stato"] == "refused" for e in det) and not of(r, "align", "running"), ([e["stato"] for e in det], [(e["stato"], e["parte"], e["di"]) for e in of(r, "align")])
+            # a Run first reports again what happened since the last one (flow-live.js): only what follows the last refusal of a detection is this run's
+            last = max((i for i, e in enumerate(r["ev"]) if e["passo"] == "detect" and e["stato"] == "refused"), default=None)
+            assert last is not None, [e["stato"] for e in det]
+            after = [(e["stato"], e["parte"], e["di"]) for e in r["ev"][last:] if e["passo"] == "align"]
+            assert after and all(st != "running" for st, _, _ in after) and after[-1][0] == "skipped", after
             # `mb` of a detection is the peak of its worker (flow-web.md); the way says it was refused
             assert any(e["modo"] == "refused" for e in det), det[-4:]
         step("a file the budget cannot detect is refused before it starts, with its numbers", detect_refused)
