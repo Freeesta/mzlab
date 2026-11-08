@@ -264,11 +264,13 @@
   /** the record of the run of `x` (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run @param {any} x */
   const recordOf = async (/** @type {any} */ x) => F.webProv ? F.webProv.record(x, /** @type {any[]} */ (await call(x, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
   const refused = (/** @type {any} */ x, /** @type {string} */ instance) => x.errors.get(instance) || Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: {} });
-  /** the page asks to use more memory for the blocked alignments and groupings; the user answers once, and only here (never in the middle of an edit) @param {any} x @param {any} o */
+  /** the page asks to use more memory for the blocked alignments, detections and groupings; the user answers once per phase, and only here (never in the middle of an edit) @param {any} x @param {any} o */
   const answerAsks = async (x, o) => {
+    /** @type {Map<string, boolean>} */ const answers = new Map();   // one answer per phase for the jobs blocked together (the detections of several files)
     for (const [key, a] of [...x.memAsk]) {
-      const high = kit().highMb(), q = a.err.params || {}, budget = Number(q.budget_mb) || budgetMb(), job = jobOf(key);
-      const ok = o.askMore ? await o.askMore({ fase: a.fase || "align", stima_mb: a.est.mb, budget_mb: budget, libero_mb: Number(q.libero_mb) || budget, high_mb: high }) : false;
+      const high = kit().highMb(), q = a.err.params || {}, budget = Number(q.budget_mb) || budgetMb(), job = jobOf(key), fase = a.fase || q.fase || "align";
+      if (!answers.has(fase)) answers.set(fase, o.askMore ? !!await o.askMore({ fase, stima_mb: a.est.mb, budget_mb: budget, libero_mb: Number(q.libero_mb) || budget, high_mb: high }) : false);
+      const ok = answers.get(fase);
       x.memAsk.delete(key);
       if (ok) x.allowed.add(key);
       await call(x, "unblock", { job });

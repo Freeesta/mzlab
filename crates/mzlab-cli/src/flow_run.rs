@@ -299,6 +299,10 @@ pub(crate) fn memory_advice(
             // the count may have stopped early (a lower bound): twice what it says, and never below the default
             est.next_power_of_two().max(2 * cap).max(64) << 20
         ),
+        (Some("detect"), Some(est), Some(cap)) => format!(
+            "\n    detecting this file needs about {est} MB and the budget is {cap} MB: give more working memory with --budget-mb {est}, or detect less of \
+             it with --set {instance}.rt_range=A,B or a higher --set {instance}.floor="
+        ),
         (Some(f), Some(est), Some(cap)) => format!(
             "\n    the {f} phase needs about {est} MB and the budget is {cap} MB: give more working memory with --budget-mb N, or run fewer files at once"
         ),

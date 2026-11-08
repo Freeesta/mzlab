@@ -33,7 +33,7 @@ pub const TOUCH_HEIGHT: f64 = 2e6;
 /// A slab never ends at a smaller gap (ppm) between neighbouring peaks.
 pub const SLAB_GAP_PPM: f64 = 50.0;
 /// Bytes of working memory per peak of a slab (m/z, intensity, scan, log m/z, channel, ...).
-const BYTES_PER_PEAK: usize = 64;
+pub(crate) const BYTES_PER_PEAK: usize = 64;
 
 #[derive(Clone)]
 pub struct Params {

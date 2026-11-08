@@ -113,7 +113,7 @@
   const num = (x, dec) => (x === null || x === undefined || Number.isNaN(+x)) ? "" : (dec === undefined ? String(+x) : (+x).toFixed(dec));
 
   // the texts written for the desktop app, where the limit is the memory of the computer and not of the browser
-  const NATIVE = new Set(["error.memoryBudget.native", "error.memoryBudgetFase.native", "error.memoryBudgetFase.indexPeaks.native"]);
+  const NATIVE = new Set(["error.memoryBudget.native", "error.memoryBudgetFase.native", "error.memoryBudgetFase.indexPeaks.native", "error.memoryBudgetFase.detect.native"]);
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
   function err(j) {
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));

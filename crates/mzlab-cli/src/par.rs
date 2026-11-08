@@ -98,7 +98,10 @@ fn detect_strong(
     let name = files[k]
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    run::detect(&mut open(&idxs[k])?, &name, recipe)
+    let mut ix = open(&idxs[k])?;
+    let cap = mzlab_core::budget::MemBudget::mb(mzlab_core::budget_auto::native_auto_mb()).cap();
+    mzlab_feat_wasm::stima::detect_fits(&mut ix, recipe, cap)?;
+    run::detect(&mut ix, &name, recipe)
 }
 
 /// The weak candidates of file `k`, made beside the file so the alignment does not detect it again (the Flow does the same).

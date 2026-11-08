@@ -36,3 +36,4 @@ def test_the_site_keeps_the_browser_text_with_the_numbers():
     assert "browser" in sito[0] and "computer" not in sito[0]
     assert "«scan table»" in sito[1] and "900 MB" in sito[1] and "about 500 MB short" in sito[1] and "desktop app" in sito[1]
     assert "300 MB of peaks" in sito[2] and "256 MB" in sito[2] and "browser" in sito[2]
+    assert "300 MB" in sito[3] and "browser gives the engine 192 MB" in sito[3]
