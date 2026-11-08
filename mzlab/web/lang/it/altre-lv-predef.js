@@ -50,6 +50,7 @@ I18N.add("it", {
   "memory.phase.table": "tabella delle scansioni",
   "memory.phase.index": "indice",
   "memory.phase.indexPeaks": "picchi dell'indice",
+  "memory.phase.detect": "rilevamento delle feature",
   "pol.positive": "ESI positivo",
   "pol.negative": "ESI negativo",
   "pol.mixed": "ESI positivo e negativo nello stesso file",

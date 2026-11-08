@@ -57,17 +57,30 @@
     return {};
   };
 
-  /** features.detect: one job per file, kept as <plan_key>.mzfeatf; a file already there is reused */
+  /** features.detect: one job per file, kept as <plan_key>.mzfeatf; a file already there is reused. The estimate first, with the rules of the alignment below:
+   * past the budget the job waits for `permission.memory`, past the high level it is refused with its numbers */
   const detect = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
     const k = kit(), p = await k.getPool(), it = x.item(spec.item), path = DIR + spec.key + ".mzfeatf", j = job(spec);
     if (it && x.profileHeld(it)) { await x.call("block", { job: j, by: "input.profile" }); x.waitingProfile.add(x.jk(spec)); return {}; }
     const src = x.source(it);
     if (!src) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
     if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
+    const recipe = k.recipeOf(x.plan, inst), jk = x.jk(spec), high = k.highMb(), budget = budgetMb();
+    // the estimate from the header of the index (`trace_stima`); without it the check of the .wasm still refuses in order
+    const est = k.stimaDetect ? await k.stimaDetect(src.path, recipe).catch(() => null) : null;
+    const raise = !!est && est.via === "refused" && x.allowed.has(jk);
+    if (est && est.via === "refused" && !raise) {
+      const err = refusal(est, budget, "detect");
+      if (est.mb <= high && high > budget) { x.memAsk.set(jk, { spec, est, err }); await x.call("block", { job: j, by: "permission.memory" }); return {}; }
+      x.errors.set(inst.id, err);
+      await x.call("started", { job: j });
+      await x.call("finished", { job: j, result: { error_key: "error.featMemory", params: strings(err.params) } });
+      return {};
+    }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      const out = (await p.detectAll([{ name: it.input || src.name, path: src.path, id: x.jk(spec) }], k.recipeOf(x.plan, inst)))[0];
+      const out = (await p.detectAll([{ name: it.input || src.name, path: src.path, id: jk }], recipe, raise ? high : undefined))[0];
       await p.fs.write(path, out.slice());
       // the record names the preset the files decided (unit resolution runs `lr`), as `flow run` does
       const seen = ((x.plan.inputs || []).find((/** @type {any} */ i) => i.name === (it.input || src.name)) || {}).observed;
@@ -81,8 +94,8 @@
     try { return (await has(p, DIR + key + ".mzfeat")) && new TextDecoder().decode(await p.fs.read(DIR + key + ".recipe")) === recipe; } catch (_) { return false; }
   };
 
-  /** the refusal of the budget with the numbers, as the pipeline reports it @param {any} est @param {number} budget */
-  const refusal = (est, budget) => Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: { fase: "align", stima_mb: est.mb, budget_mb: budget, libero_mb: budget } });
+  /** the refusal of the budget with the numbers of the phase, as the pipeline reports it @param {any} est @param {number} budget @param {string} [fase] */
+  const refusal = (est, budget, fase = "align") => Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: { fase, stima_mb: est.mb, budget_mb: budget, libero_mb: budget } });
 
   /** features.align, and features.gapfill when the table of the alignment was made with another recipe (the pool aligns and fills the gaps in one call): the estimate first; past the budget
    * the job is blocked by `permission.memory` until the user agrees (flow-live.js asks on Run), past the high level it is refused with its numbers @param {any} x @param {any} spec @param {any} inst */

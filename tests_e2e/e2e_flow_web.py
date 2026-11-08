@@ -1,6 +1,6 @@
 """Flow «This browser» runner (flow/lazy/flow-web-run.js, flow-web-ui.js, worker-flow-web.js): the base plan (index, detect, align, gapfill) over three synthetic .mzidx in OPFS emits
 {passo, stato, mb, via, parte, di, modo} for every step, keeps each result in OPFS (mzlab/flow/), starts again from the first step not finished (a second run reuses everything), has the SHA-256 of the native run with the same recipe (layers), refuses a
-series the budget does not hold with its numbers, and writes the note for phones and tablets. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and numpy: SKIP without).
+series the budget does not hold and a file it cannot detect with their numbers, and writes the note for phones and tablets. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -53,6 +53,9 @@ RUN = """async () => {
   return { ev, err };
 }"""
 CLEAR = """async () => { const m = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'); try { await m.removeEntry('flow', { recursive: true }); } catch (_) {} }"""
+DROP_TABLES = """async () => { const f = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow');
+  try { await f.removeEntry('series.mzfeat'); } catch (_) {}
+  const live = await f.getDirectoryHandle('live'); for await (const n of live.keys()) if (n.endsWith('.mzfeat')) await live.removeEntry(n); }"""
 def of(r, step_id, stato=None): return [e for e in r["ev"] if e["passo"] == step_id and (stato is None or e["stato"] == stato)]
 try:
     with sync_playwright() as p:
@@ -101,7 +104,8 @@ try:
         step("a second run reuses what is kept (nothing is computed again)", second_run)
 
         def refused():
-            pg.evaluate(CLEAR)
+            # the detections stay (a budget this small cannot detect: `detect_refused`), the tables go, so the alignment runs again under it
+            pg.evaluate(DROP_TABLES)
             # a budget below what even the slabs need (the estimate counts whole megabytes)
             est = 0.001
             pg.evaluate("window.__rust = window.MZLAB_RUST; window.MZLAB_RUST = { budgetMb: %r }" % est)
@@ -110,6 +114,17 @@ try:
             assert r["err"] and r["err"]["key"] == "error.featMemory", (est, r["err"], r["ev"][-3:])
             assert of(r, "align", "refused") and r["err"]["params"]["stima_mb"] > est, r
         step("a series the budget does not hold is refused with its numbers", refused)
+
+        def detect_refused():
+            pg.evaluate(CLEAR)
+            pg.evaluate("window.__rust = window.MZLAB_RUST; window.MZLAB_RUST = { budgetMb: 8 }")
+            r = pg.evaluate(RUN)
+            pg.evaluate("window.MZLAB_RUST = window.__rust")
+            assert r["err"] and r["err"]["key"] == "error.featMemory", (r["err"], r["ev"][-3:])
+            q = r["err"]["params"]
+            assert q["fase"] == "detect" and int(q["stima_mb"]) > 8 and int(q["budget_mb"]) == 8, q
+            assert of(r, "detect", "refused") and not of(r, "align", "running"), r["ev"]
+        step("a file the budget cannot detect is refused before it starts, with its numbers", detect_refused)
 
         def phone_note():
             pg.evaluate("window.MZLAB_PHONE = true")

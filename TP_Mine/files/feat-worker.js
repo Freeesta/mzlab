@@ -219,13 +219,13 @@ export function createFeatPool(opts) {
   const { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText, budget } = createCore(opts);
   return {
     notify: (k, p) => (opts.notify || (() => {}))(k, p),
-    // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx). Resolves with the .mzfeatf bytes in the order of `files`.
-    async detectAll(files, recipe) {
+    // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx), `mb` = the budget of this call (else the pool's). Resolves with the .mzfeatf bytes in the order of `files`.
+    async detectAll(files, recipe, mb) {
       let done = 0;
       return Promise.all(files.map(f => submit(async (slot, load) => {
         await load("feat");
         const t0 = performance.now();
-        const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe }, undefined, detectStep(opts, f));
+        const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe, budgetMb: mb || budgetOf(opts) }, undefined, detectStep(opts, f));   // `mb` (the high level the user agreed to), else the whole budget of the page, not a share: the Rust estimate of one detection (`trace_stima`) refuses a file it cannot hold
         if (opts.onProgress) opts.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       }, f.id)));
@@ -379,7 +379,7 @@ const OPS = {
   async alias(m) { mods[m.which] = mods[m.of]; mems[m.which] = mems[m.of]; return {}; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
-    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write, (d, t) => self.postMessage({ id: m.id, progress: [d, t] })); return { bytes: out.bytes() }; } finally { f.close(); }   // the .wasm calls back at most once per 1 %; the pool hands `progress` to the step of the call
+    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write, (d, t) => self.postMessage({ id: m.id, progress: [d, t] }), m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }   // the .wasm calls back at most once per 1 %; the pool hands `progress` to the step of the call
   },
   async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async tp_link_evidence(m) { const f = await openAll(m.paths); try { const r = mods.proofs.tp_link_evidence(m.rules, m.parent, m.structure, m.hypotheses, new Uint8Array(m.table), m.samples, m.recipe, m.polarity, m.budgetMb || 0, arrays(m.peaks), f.read, f.sizes), o = { table: r.table(), registry: r.registry(), parent: r.parent(), polarity: r.polarity(), infusion: r.infusion() }; r.free(); return o; } finally { f.close(); } },

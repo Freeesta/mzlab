@@ -54,6 +54,7 @@ impl State {
         let name = p["name"].as_str().unwrap_or("");
         let mut ix = self.open_idx(name)?;
         let r = run::recipe_for(p["recipe"].as_str().unwrap_or(""), &mut ix)?;
+        mzlab_feat_wasm::stima::detect_fits(&mut ix, &r, step_budget().cap())?;
         // The page asks for several files at once: the pool of the index builds (cores - 1, at most 4) bounds how many run together and leaves a core to the window.
         let bytes = self
             .indexer()?
@@ -62,6 +63,19 @@ impl State {
         let a = written(&bytes);
         self.feat_lock().files.insert(name.to_string(), bytes);
         a
+    }
+
+    /// `feat/estimate_detect` (`{name, recipe, budget_mb}`, the `.wasm` `estimate_detect`): `{"mb","via"}` of detecting `name` under `budget_mb`, else
+    /// under the budget of this computer.
+    fn feat_estimate_detect(&self, p: &Value) -> Result<Answer> {
+        let mut ix = self.open_idx(p["name"].as_str().unwrap_or(""))?;
+        let r = run::recipe_for(p["recipe"].as_str().unwrap_or(""), &mut ix)?;
+        let mb = p["budget_mb"]
+            .as_f64()
+            .unwrap_or_else(crate::ram::native_budget_mb);
+        text(mzlab_feat_wasm::stima::detect_estimate_json(
+            &mut ix, &r, mb,
+        )?)
     }
 
     /// `feat/files`: the names (sorted JSON array) of the files that have an `.mzidx` in the index folder: the series the Pipeline panel can run.
@@ -385,6 +399,7 @@ impl State {
     pub(crate) fn op_feat(&self, op: &str, p: &Value) -> Result<Answer> {
         match op {
             "feat/detect" => self.feat_detect(p),
+            "feat/estimate_detect" => self.feat_estimate_detect(p),
             "feat/align" => self.feat_align(p),
             "feat/untargeted/detect" => self.feat_unt_detect(p),
             "feat/untargeted/align" => self.feat_unt_align(p),

@@ -713,6 +713,7 @@
   "diag.cause.read": "Diagnosi di un errore di lettura file (blocco «Dettagli» dell'avviso).",
   "error.memoryBudgetFase": "Errore di memoria del motore con fase, stima e budget. {fase} = fase rifiutata, {stima_mb} = memoria stimata in MB, {budget_mb} = budget in MB, {eccesso_mb} = MB mancanti.",
   "error.memoryBudgetFase.indexPeaks": "Indice .mzidx rifiutato perché un intervallo di 1 Da di m/z è troppo denso. {stima_mb} = MB di picchi (almeno) di quell'intervallo, {budget_mb} = MB al massimo per un intervallo (il doppio del budget del costruttore).",
+  "error.memoryBudgetFase.detect": "Rilevamento (features.detect) rifiutato prima di partire perché la stima dall'intestazione dell'indice supera il budget. {stima_mb} = MB stimati, {budget_mb} = budget del motore in MB.",
   "error.poolLowered": "Nota unica: il pool di indicizzazione riduce i worker per memoria insufficiente. {from} = worker prima, {to} = worker dopo.",
   "diag.cause.memory": "Diagnosi di un errore di lettura file (blocco «Dettagli» dell'avviso).",
   "diag.cause.format": "Diagnosi di un errore di lettura file (blocco «Dettagli» dell'avviso).",

@@ -123,6 +123,7 @@ pub mod target;
 pub mod tp;
 pub mod transitions;
 pub mod trace;
+pub mod trace_stima;
 mod trace_text;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
