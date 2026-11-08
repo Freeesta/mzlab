@@ -156,15 +156,21 @@ fn a_cut_empty_or_foreign_container_says_what_it_is() {
     for s in semi() {
         assert_eq!(chiave(Vec::new()).unwrap().0, "err.file.empty");
         assert_eq!(chiave(s[..7].to_vec()).unwrap().0, "err.file.notThisFormat");
-        // the OLE2 header is there, the directory is not: a Shimadzu refusal that says the copy is cut, never «not accepted»
+        // the OLE2 header is there, the directory is not: the copy is told as cut, never «not accepted»; a header that
+        // says how long the file must be gives the cut-short notice with that size, a shorter one the Shimadzu refusal
         for cut in [8, 511, 600] {
             let (k, p) = chiave(s[..cut].to_vec()).unwrap();
-            assert_eq!(k, "err.file.shimadzu", "cut at {cut}");
-            assert!(
-                p.iter()
-                    .any(|(n, v)| *n == "detail" && v.contains("cut short")),
-                "{p:?}"
-            );
+            if mzlab_core::ole::Ole::header_cut(&s[..cut]).is_some() {
+                assert_eq!(k, "err.file.cutShort", "cut at {cut}");
+                assert!(p.iter().any(|(n, _)| *n == "needed"), "{p:?}");
+            } else {
+                assert_eq!(k, "err.file.shimadzu", "cut at {cut}");
+                assert!(
+                    p.iter()
+                        .any(|(n, v)| *n == "detail" && v.contains("cut short")),
+                    "{p:?}"
+                );
+            }
         }
     }
     // an OLE2 container of another program's storages, named .lcd

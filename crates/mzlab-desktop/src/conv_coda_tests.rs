@@ -222,3 +222,38 @@ fn an_index_that_starts_just_after_queueing_holds_the_job_back() {
     drop(busy);
     wait(&c, "a.mzXML", "done");
 }
+
+/// A budget that gives each conversion less than its share runs fewer at once, and the page gets the very notice `mzlab-cli convert` prints.
+#[test]
+fn a_small_budget_converts_fewer_datasets_at_once_with_the_notice_of_the_cli() {
+    let d = tempfile::tempdir().unwrap();
+    let c = Coda::with_budget(128.0);
+    c.set_folder(d.path().join("cache"));
+    let wanted = mzlab_core::budget_auto::convert_wanted();
+    assert_eq!(c.limit(), 1);
+    // an index being built keeps the three datasets queued
+    let busy = Indexing::new();
+    for n in ["a.mzXML", "b.mzXML", "c.mzXML"] {
+        c.add(n, 0, &d.path().join(n));
+    }
+    let list = c.list();
+    let cli = mzlab_cli::convert::fewer_workers(128.0, wanted);
+    assert_eq!(cli.is_some(), wanted > 1);
+    match (&cli, list.get("notice")) {
+        (Some(n), Some(page)) => {
+            assert_eq!(page["key"], n.key);
+            for (k, v) in &n.params {
+                assert_eq!(page["params"][k], v.as_str(), "{k}");
+            }
+            assert_eq!(page["params"].as_object().unwrap().len(), n.params.len());
+        }
+        (None, None) => {}
+        (cli, page) => panic!("CLI {cli:?}, page {page:?}"),
+    }
+    c.cancel(None);
+    drop(busy);
+    // the budget of a large computer runs the default and says nothing
+    let big = Coda::with_budget(8192.0);
+    assert_eq!(big.limit(), wanted);
+    assert!(big.list().get("notice").is_none());
+}

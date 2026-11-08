@@ -64,3 +64,25 @@ fn a_shimadzu_file_cut_short_is_told() {
     every_cut_is_told("x.qgd", &comune::shimadzu::qgd(8));
     every_cut_is_told("x.lcd", &comune::shimadzu::lcd2020(8));
 }
+
+/// A copy cut before its directory (the header points past the end, `Ole::header_cut`) gets the same `err.file.cutShort` notice as one cut after it.
+#[test]
+fn a_shimadzu_file_cut_before_its_directory_is_cut_short() {
+    for (nome, file) in [
+        ("x.qgd", comune::shimadzu::qgd(8)),
+        ("x.lcd", comune::shimadzu::lcd2020(8)),
+    ] {
+        let mut told = 0;
+        for cut in (8..file.len()).step_by(16) {
+            if mzlab_core::ole::Ole::header_cut(&file[..cut]).is_some() {
+                assert_eq!(
+                    read(nome, &file[..cut]).err(),
+                    Some("err.file.cutShort"),
+                    "{nome} cut at {cut}"
+                );
+                told += 1;
+            }
+        }
+        assert!(told > 0, "{nome}: no cut before the directory");
+    }
+}

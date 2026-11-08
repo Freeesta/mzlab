@@ -170,8 +170,8 @@ function specParams(p, btn) {
       apply();
     };
   });
-  const away = e => { if (!pop.contains(e.target) && !btn.contains(e.target)) { pop.remove(); document.removeEventListener("mousedown", away, true); } };
-  setTimeout(() => document.addEventListener("mousedown", away, true), 0);
+  const away = e => { if (!pop.contains(e.target) && !btn.contains(e.target)) { pop.remove(); document.removeEventListener("pointerdown", away, true); } };
+  setTimeout(() => document.addEventListener("pointerdown", away, true), 0);
 }
 
 // ---------------------------------------------------------------- linked time axes: the panels with the chain on share the interval of time

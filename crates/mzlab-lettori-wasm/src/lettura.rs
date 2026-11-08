@@ -253,7 +253,15 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
         Ok(l) => l,
         // a SCIEX file the module itself refuses (a TOF, several periods, an unknown scan type) is a variant too: the engine would read it as a 3200 and be wrong
         #[cfg(feature = "sciex")]
-        Err(e) if e.key == "err.file.wiff" => {
+        Err(e)
+            if matches!(
+                e.key,
+                "err.file.wiff"
+                    | "err.file.wiffScanType"
+                    | "err.file.wiffPeriods"
+                    | "err.file.wiffNeeds2"
+            ) =>
+        {
             return Ok(r#"{"formato":"sciex-wiff","campioni":[],"motivi":["variante"]}"#.into())
         }
         Err(e) => return Err(error_json(&e)),

@@ -42,7 +42,7 @@ export function makeNativo(h) {
       const r = await h.rpc({ op: "lr_index_cen", name: h.base(name) });
       if (r.dead || r.error) throw fail(r, "err.engine.index");
     },
-    /** desktop app: the background conversion queue (`conv_add` / `conv_list` / `conv_cancel`); `{jobs: [{name, state, error}]}` or null */
+    /** desktop app: the background conversion queue (`conv_add` / `conv_list` / `conv_cancel`); `{jobs: [{name, state, error}], notice?: {key, params}}` or null */
     async convQueue(/** @type {string} */ op, /** @type {string | undefined} */ name) {
       if (!window.MZLAB_DESKTOP) return null;
       const r = await h.rpc({ op, name: name == null ? undefined : h.base(name) });

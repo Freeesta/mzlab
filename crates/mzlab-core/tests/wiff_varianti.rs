@@ -1,5 +1,5 @@
 //! The `.wiff` reader of the readers module (feature `estesi`) against the synthetic pairs of `tools/wiff_riferimento.py`: a QTRAP 5500 with scan blocks of
-//! versions 1 and 3 and precursor-ion / neutral-loss scans, and the files that must be refused with `err.file.wiff` (the cause in `detail`), never read as a
+//! versions 1 and 3 and precursor-ion / neutral-loss scans, and the files that must be refused with `err.file.wiffScanType` / `wiffPeriods` or `err.file.wiff` (the cause in `detail`), never read as a
 //! full scan. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![cfg(feature = "sciex")]
@@ -80,13 +80,28 @@ fn open(dir: &Path, name: &str) -> Result<(Wiff, Vec<u8>), mzlab_core::error::Er
     Wiff::open(&ole, name, Some(scan.len() as u64), 1).map(|w| (w, scan))
 }
 
+/// The cause of a refusal as one text: the keys of the readers module (`wiffScanType`, `wiffPeriods`, `wiffNeeds2`) spelled as the reference writes them, else `detail`.
 fn detail(e: &mzlab_core::error::Error) -> String {
-    assert_eq!(e.key, "err.file.wiff");
-    e.params
-        .iter()
-        .find(|(k, _)| *k == "detail")
-        .map(|(_, v)| v.clone())
-        .unwrap_or_default()
+    let p = |n: &str| {
+        e.params
+            .iter()
+            .find(|(k, _)| *k == n)
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
+    };
+    match e.key {
+        "err.file.wiffScanType" => format!(
+            "scan type code {} (experiment {})",
+            p("code"),
+            p("experiment")
+        ),
+        "err.file.wiffPeriods" => format!("periods={}", p("periods")),
+        "err.file.wiffNeeds2" => "wiff2".into(),
+        k => {
+            assert_eq!(k, "err.file.wiff");
+            p("detail")
+        }
+    }
 }
 
 #[test]
