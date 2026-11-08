@@ -29,7 +29,7 @@ def test_failed_compile_is_dropped_and_retried(out):
     assert out["retry"]["compiles"] == 3  # two attempts that fail, then one compile
 
 
-def test_qualita_posts_the_module_first_and_does_not_compile_again(out):
+def test_quality_posts_the_module_first_and_does_not_compile_again(out):
     q = out["qualita"]
     assert q["posted"][0] == "module" and q["posted"].count("module") == 1
     assert q["compiles"] == 1

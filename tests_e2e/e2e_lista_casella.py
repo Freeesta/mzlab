@@ -20,7 +20,7 @@ r = Run(port=8896, wd="/tmp/wd_casella")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1300, "height": 800})
-        attendi(pg, "window.qqReady === true", 60000)
+        wait_for_js(pg, "window.qqReady === true", 60000)
         pg.set_input_files("#pick", FILES); open_first(pg); ready(pg)
         pg.locator("#flst .fgh").first.click(position={"x": 60, "y": 12}); ready(pg)
         pg.evaluate("document.querySelectorAll('#flst .pr-container').forEach(c => { c.style.display = ''; const i = c.querySelector('input'); if (i) i.checked = true })")

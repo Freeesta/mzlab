@@ -59,7 +59,7 @@ def test_hot_files_warn_from_90_percent(tmp_path, monkeypatch):
     assert any(o.startswith("docs/agenti/d.md is 23.4 KB") for o in out)
 
 
-def test_caldi_counts_first_parent_commits(tmp_path, monkeypatch):
+def test_hot_counts_first_parent_commits(tmp_path, monkeypatch):
     r = repo(tmp_path)
     for i in range(3):
         (r / "f.txt").write_text(str(i))

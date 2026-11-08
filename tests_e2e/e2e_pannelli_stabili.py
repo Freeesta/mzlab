@@ -51,11 +51,11 @@ def cold(p, vw):
     ctx = r.b.new_context(viewport={"width": vw, "height": 900}, locale="it-IT", reduced_motion="no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.barra.lr','{\"open\":true}');}catch(_){}")
-    pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "typeof E !== 'undefined' && !!document.querySelector('#pick')")
-    pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); attendi(pg, "E.files.length > 0")
+    pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined' && !!document.querySelector('#pick')")
+    pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); wait_for_js(pg, "E.files.length > 0")
     pg.click("text=Carica dati"); ready(pg)
     pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1})"); pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.evaluate("addPanel('map',{tab:'full'})")
-    ready(pg); attendi(pg, "E.panels.length >= 5 && E.panels.every(q => q.cv)"); hold(pg, 1500)      # the maps and plots finish drawing: only time brings that
+    ready(pg); wait_for_js(pg, "E.panels.length >= 5 && E.panels.every(q => q.cv)"); hold(pg, 1500)      # the maps and plots finish drawing: only time brings that
     return r, ctx, pg, errs
 
 

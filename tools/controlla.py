@@ -208,12 +208,12 @@ def comparisons_experiments() -> dict[str, int]:
     return out
 
 
-def rules_experiments(aggiorna: bool = False) -> list[str]:
+def rules_experiments(update: bool = False) -> list[str]:
     """The comparisons with the experiment names outside esperimenti.js can only go down, file by file (base: tools/esperimenti_base.json)."""
     now = comparisons_experiments()
     base = json.loads(ESP_BASE.read_text(encoding="utf-8")) if ESP_BASE.exists() else dict(now)
     bad = [f"comparisons with an experiment name grew in {f}: {n} (base {base.get(f, 0)}); read it from ESP in esperimenti.js" for f, n in sorted(now.items()) if n > base.get(f, 0)]
-    if aggiorna and not bad:
+    if update and not bad:
         ESP_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return bad
 
@@ -232,19 +232,19 @@ def calls_frame() -> dict[str, int]:
     return out
 
 
-def rules_frame(aggiorna: bool = False) -> list[str]:
+def rules_frame(update: bool = False) -> list[str]:
     """Direct frame-clock calls outside frame.js can only go down, file by file (base: tools/frame_base.json)."""
     now = calls_frame()
     base = json.loads(FRAME_BASE.read_text(encoding="utf-8")) if FRAME_BASE.exists() else dict(now)
     bad = [f"direct requestAnimationFrame/ResizeObserver calls grew in {f}: {n} (base {base.get(f, 0)}); use FRAME in frame.js" for f, n in sorted(now.items()) if n > base.get(f, 0)]
-    if aggiorna and not bad:
+    if update and not bad:
         FRAME_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return bad
 
 
 EXPECTED_BASE = indice.ROOT / "tools" / "attese_base.json"
 def fixed_expectations() -> dict[str, int]:
-    """Per e2e script of tests_e2e/: fixed pauses (wait_for_timeout / time.sleep); wait on the STATE instead (attendi() in lib.py)."""
+    """Per e2e script of tests_e2e/: fixed pauses (wait_for_timeout / time.sleep); wait on the STATE instead (wait_for_js() in lib.py)."""
     import re
     rx = re.compile(r"\bwait_for_timeout\(|\btime\.sleep\(")
     out = {}
@@ -256,12 +256,12 @@ def fixed_expectations() -> dict[str, int]:
     return out
 
 
-def rules_expected(aggiorna: bool = False) -> list[str]:
+def rules_expected(update: bool = False) -> list[str]:
     """Fixed pauses in the e2e scripts can only go down, file by file; a new script cannot have any (base: tools/attese_base.json)."""
     now = fixed_expectations()
     base = json.loads(EXPECTED_BASE.read_text(encoding="utf-8")) if EXPECTED_BASE.exists() else dict(now)
-    bad = [f"fixed pauses grew in {f}: {n} (base {base.get(f, 0)}); wait on the state with attendi() in tests_e2e/lib.py" for f, n in sorted(now.items()) if n > base.get(f, 0)]
-    if aggiorna and not bad:
+    bad = [f"fixed pauses grew in {f}: {n} (base {base.get(f, 0)}); wait on the state with wait_for_js() in tests_e2e/lib.py" for f, n in sorted(now.items()) if n > base.get(f, 0)]
+    if update and not bad:
         EXPECTED_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return bad
 

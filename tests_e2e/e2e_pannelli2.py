@@ -29,22 +29,22 @@ try:
             assert b[0]["aria"] == "Sottrai un file" and b[1]["aria"] == "Sottrai il fondo", b
             assert "<circle" not in b[0]["svg"] and "<circle" not in b[1]["svg"], "neither idle icon is the «none» ⊘"
             pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click()
-            attendi(pg, "document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")      # active state is marked
+            wait_for_js(pg, "document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")      # active state is marked
             pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click()
-            attendi(pg, "!document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")
+            wait_for_js(pg, "!document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")
         step("Correzione: the two subtract buttons have different icons and explicit names", corr_icons)
         def corr_info():
             B, M = ".pnl.chrom [data-o=cinfo]", ".pnl.chrom .corrbar"
             assert pg.is_visible(B) and not pg.is_visible(M) and pg.evaluate(f"document.querySelector('{M}').offsetHeight") == 0, "one icon, no bar taking height"
             assert pg.is_hidden(B + " .cidot"), "no dot without a correction"
             pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click()
-            attendi(pg, f"!document.querySelector('{B} .cidot').hidden")
+            wait_for_js(pg, f"!document.querySelector('{B} .cidot').hidden")
             assert pg.is_visible(B + " .cidot"), "the dot says that a correction is active"
             pg.click(B); assert pg.is_visible(M) and pg.get_attribute(B, "aria-expanded") == "true" and pg.inner_text(M).strip() not in ("", "Nessuna correzione attiva"), pg.inner_text(M)
             pg.keyboard.press("Escape"); assert pg.is_hidden(M), "Esc closes the summary"
             pg.click(B); assert pg.is_visible(M); pg.mouse.click(5, 5); assert pg.is_hidden(M), "a click outside closes the summary"
             pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click()
-            attendi(pg, f"document.querySelector('{B} .cidot').hidden")
+            wait_for_js(pg, f"document.querySelector('{B} .cidot').hidden")
         step("Correzioni: one icon opens the summary popover (Esc / click outside close it), the dot follows the state", corr_info)
         def subtract():
             pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corri", state="visible")
@@ -68,7 +68,7 @@ try:
             pg.evaluate("document.querySelector('.pnl.chrom .cpop').style.minHeight=''"); pg.evaluate(f"(()=>{{const p={CH};p._parOpen=false;ctl(p)}})()")
         step("a tall popover goes beyond the panel (not cut)", popover_out)
         def ruler():
-            pg.evaluate(f"(()=>{{const p={SPEC};p.rul=true;measClick(p,152.2);measClick(p,364.4)}})()"); attendi(pg, SPEC + ".meas && " + SPEC + ".meas.list.length === 1")
+            pg.evaluate(f"(()=>{{const p={SPEC};p.rul=true;measClick(p,152.2);measClick(p,364.4)}})()"); wait_for_js(pg, SPEC + ".meas && " + SPEC + ".meas.list.length === 1")
             assert pg.evaluate(f"{SPEC}.meas.list.length") == 1
             pg.evaluate(f"(()=>{{const p={SPEC};p.zoom=[100,300];draw(p)}})()"); frames(pg, 3)
             assert pg.evaluate(f"{SPEC}.meas") is None, "the zoom cancels the measure"
@@ -82,12 +82,12 @@ try:
             assert pg.evaluate("QADD.some(a=>a.n==='[M]-')")
         step("isotope simulation switches off when the zoom changes; [M]- exists", iso)
         def map_views():
-            pg.click("#np-map"); attendi(pg, "document.querySelectorAll('[data-o=view]').length > 0"); ready(pg)
+            pg.click("#np-map"); wait_for_js(pg, "document.querySelectorAll('[data-o=view]').length > 0"); ready(pg)
             v = pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.dataset.v)"); assert v == ["3d"], v
         step("map: only 2D and 3D (no Mirino, no Ridge)", map_views)
         def grips():
             pg.evaluate("(()=>{BARRA.setTab('file',{noFocus:true})})()")
-            pg.click("#np-spec"); attendi(pg, "E.panels.filter(q=>q.full).length >= 2"); ready(pg)
+            pg.click("#np-spec"); wait_for_js(pg, "E.panels.filter(q=>q.full).length >= 2"); ready(pg)
             ps = pg.evaluate("E.panels.filter(q=>q.full).map(q=>q.id)"); assert len(ps) >= 2, ps
             for w in (1100, 1440, 1920):
                 for fold in (False, True):
@@ -105,11 +105,11 @@ try:
             h0, p0 = h(), hp()
             pg.evaluate("id=>E.panels.find(q=>q.id===id).el.scrollIntoView({block:'center'})", i); frames(pg, 3)
             bb = pg.evaluate("id=>{const r=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}", i)
-            pg.mouse.move(bb[0], bb[1]); pg.mouse.down(); pg.mouse.move(bb[0], bb[1] - 60, steps=5); pg.mouse.up(); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === {h0 + 60}")
+            pg.mouse.move(bb[0], bb[1]); pg.mouse.down(); pg.mouse.move(bb[0], bb[1] - 60, steps=5); pg.mouse.up(); wait_for_js(pg, f"E.panels.find(q=>q.id==={i}).h === {h0 + 60}")
             assert h() == h0 + 60 and hp() == p0 - 60, (h0, h(), p0, hp())     # splitter: the panel above gives what this one gains
-            pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))", i); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === 300")
+            pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))", i); wait_for_js(pg, f"E.panels.find(q=>q.id==={i}).h === 300")
             assert h() == 300, h()                                              # double click = default height
-            pg.evaluate("id=>{const g=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.b');g.focus()}", i); pg.keyboard.press("ArrowDown"); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === 320")
+            pg.evaluate("id=>{const g=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.b');g.focus()}", i); pg.keyboard.press("ArrowDown"); wait_for_js(pg, f"E.panels.find(q=>q.id==={i}).h === 320")
             assert h() == 320, h()
         step("panels: the top grip moves the boundary with the panel above, double click = default height, arrows on the focused grip", drag_top)
         def header_free():

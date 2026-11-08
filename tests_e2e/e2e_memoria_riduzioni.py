@@ -57,11 +57,11 @@ def main():
             ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
             pg = ctx.new_page(); errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.goto(f"http://127.0.0.1:{r.port}/?perf=1"); attendi(pg, "window.qqReady === true"); ready(pg)
+            pg.goto(f"http://127.0.0.1:{r.port}/?perf=1"); wait_for_js(pg, "window.qqReady === true"); ready(pg)
             stage(pg, files); pg.click("#opbtn")
-            attendi(pg, "!document.querySelector('#v-data').hidden && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')", 90000); ready(pg)
+            wait_for_js(pg, "!document.querySelector('#v-data').hidden && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')", 90000); ready(pg)
             pg.evaluate("document.querySelector('#np-map').click()")
-            attendi(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')", 60000); ready(pg)
+            wait_for_js(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')", 60000); ready(pg)
 
             def panels_release():
                 n = pg.evaluate("""() => { window.__held = [...document.querySelectorAll('#dpanels canvas')]; return window.__held.map(c => c.width * c.height).filter(a => a > 1).length; }""")
@@ -73,7 +73,7 @@ def main():
 
             def panel_reopens():
                 pg.evaluate("document.querySelector('#np-map').click()")
-                attendi(pg, "document.querySelector('#dpanels canvas') && [...document.querySelectorAll('#dpanels canvas')].some(c => c.width > 100)", 60000); ready(pg)
+                wait_for_js(pg, "document.querySelector('#dpanels canvas') && [...document.querySelectorAll('#dpanels canvas')].some(c => c.width > 100)", 60000); ready(pg)
             step("a panel opened after the close draws again", panel_reopens)
 
             def scan_cache():

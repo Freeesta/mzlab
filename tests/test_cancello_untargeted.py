@@ -12,9 +12,9 @@ from valida import cancello_untargeted as U  # noqa: E402
 from valida.tabelle import Tabella  # noqa: E402
 
 
-def tab(mz, rt, area, nomi=("a", "b")):
+def tab(mz, rt, area, names=("a", "b")):
     a = np.array(area, float)
-    return Tabella("t", list(nomi), np.array(mz, float), np.array(rt, float), a, altezza=a / 10)
+    return Tabella("t", list(names), np.array(mz, float), np.array(rt, float), a, altezza=a / 10)
 
 
 def test_identical_tables_pass():
@@ -34,7 +34,7 @@ def test_a_missing_row_fails_and_not_measured_is_null():
     assert U.vuota()["ok"] is None
 
 
-def test_scrivi_keeps_the_other_keys(tmp_path):
+def test_write_keeps_the_other_keys(tmp_path):
     p = tmp_path / "cancello.json"
     p.write_text(json.dumps({"format": "cancello/2", "vista_candidati": True}), encoding="utf-8")
     U.scrivi(U.vuota(), p)

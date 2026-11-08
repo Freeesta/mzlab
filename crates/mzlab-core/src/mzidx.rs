@@ -10,7 +10,7 @@ use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
 use crate::mzidx_ordine::ordina_secchi;
-use crate::mzidx_spill::{leggi_parti, Parti, Spill};
+use crate::mzidx_spill::{allinea, leggi_parti, Parti, Spill};
 use crate::mzml::Spectrum;
 mod late;
 pub use late::{build_mzml_corriere, build_mzml_late};
@@ -77,7 +77,8 @@ pub(crate) trait Num: Copy + Default + Send {
     const F32: bool;
     fn from64(x: f64) -> Self;
     fn to64(self) -> f64;
-    fn put(self, out: &mut Vec<u8>);
+    /// The little-endian bytes into `out`, which is `SIZE` long.
+    fn le(self, out: &mut [u8]);
 }
 fn get0<T: Copy + Default>(v: &[T], i: usize) -> T {
     v.get(i).copied().unwrap_or_default()
@@ -93,8 +94,8 @@ impl Num for f32 {
     fn to64(self) -> f64 {
         self as f64
     }
-    fn put(self, out: &mut Vec<u8>) {
-        out.extend_from_slice(&self.to_le_bytes());
+    fn le(self, out: &mut [u8]) {
+        out.copy_from_slice(&self.to_le_bytes());
     }
 }
 impl Num for f64 {
@@ -106,8 +107,8 @@ impl Num for f64 {
     fn to64(self) -> f64 {
         self
     }
-    fn put(self, out: &mut Vec<u8>) {
-        out.extend_from_slice(&self.to_le_bytes());
+    fn le(self, out: &mut [u8]) {
+        out.copy_from_slice(&self.to_le_bytes());
     }
 }
 
@@ -252,7 +253,7 @@ impl<T: Num> Sec<T> {
         }
     }
 
-    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values.
+    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values; one column at a time into fixed-width cells (no length check or `match` per value: this loop was the biggest cost of the rounds on the site).
     fn emit(&mut self, out: &mut dyn Output, off: &Offsets, peaks: &[Peak<T>]) -> Result<()> {
         const CHUNK: usize = 1 << 16;
         let mut g = (BLOCK - self.done % BLOCK) % BLOCK;
@@ -261,26 +262,25 @@ impl<T: Num> Sec<T> {
             g += BLOCK;
         }
         for chunk in peaks.chunks(CHUNK) {
-            let at = self.done;
-            for (field, base, width) in [
-                (0, off.mz, T::SIZE),
-                (1, off.inten, T::SIZE),
-                (2, off.pos, 4),
-            ] {
-                self.bytes.clear();
-                reserve(&mut self.bytes, chunk.len() * width)?;
-                for p in chunk {
-                    match field {
-                        0 => p.mz.put(&mut self.bytes),
-                        1 => p.it.put(&mut self.bytes),
-                        _ => self.bytes.extend_from_slice(&(p.pos as i32).to_le_bytes()),
-                    }
-                }
-                out.write_at(base + at * width as u64, &self.bytes)?;
+            let (need, at) = (chunk.len() * T::SIZE, self.done);
+            let more = need.saturating_sub(self.bytes.len());
+            reserve(&mut self.bytes, more)?;
+            self.bytes.resize(self.bytes.len().max(need), 0);
+            let b = self.bytes.get_mut(..need).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
+                p.mz.le(c);
             }
-            for p in chunk {
+            out.write_at(off.mz + at * T::SIZE as u64, b)?;
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
+                p.it.le(c);
+            }
+            out.write_at(off.inten + at * T::SIZE as u64, b)?;
+            let b = self.bytes.get_mut(..chunk.len() * 4).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(4).zip(chunk) {
+                c.copy_from_slice(&(p.pos as i32).to_le_bytes());
                 self.totals.add(p.pos as usize, p.mz.to64(), p.it.to64());
             }
+            out.write_at(off.pos + at * 4, b)?;
             self.done += chunk.len() as u64;
         }
         Ok(())
@@ -395,10 +395,10 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     fn finish(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()> {
-        let mut b = Vec::new();
-        for v in &self.fence {
-            v.put(&mut b);
-        }
+        let mut b = vec![0; self.fence.len() * T::SIZE];
+        b.chunks_exact_mut(T::SIZE)
+            .zip(&self.fence)
+            .for_each(|(c, v)| v.le(c));
         out.write_at(off.fence, &b)?;
         for (at, arr) in [
             (off.sumint, &self.totals.acc),
@@ -497,7 +497,7 @@ impl Gruppo {
         } else if keep {
             self.kept.push(Peak { mz, it, pos });
         } else if let Some((parti, spill)) = scorta {
-            parti.push(spill, mz, it, pos)?;
+            parti.push(spill, mz, it, pos, self.level == 1)?;
         }
         Ok(())
     }
@@ -627,7 +627,7 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
                 // the kept values are `f32` widened: narrowing them back is exact
                 parti.push32(sp, mz as f32, it as f32, pos)?;
             } else {
-                parti.push(sp, mz, it, pos)?;
+                parti.push(sp, mz, it, pos, gruppi[i].level == 1)?;
             }
         }
     }
@@ -887,6 +887,7 @@ pub(crate) fn build_dopo(
             if hi == lo {
                 return Err(slice_refusal(cost(lo), budget));
             }
+            (hi, used) = allinea(parti.as_ref(), lo, hi, used, &cost);
             if used > 0 {
                 for sec in secs.iter_mut() {
                     sec.begin_round(lo, hi)?;
@@ -897,10 +898,9 @@ pub(crate) fn build_dopo(
                     // the peaks are in the scratch file: no decoding
                     secs.iter_mut().for_each(|s| s.per_scansione());
                     leggi_parti(p, sp, lo, hi, &mut |mz, it, pos| {
-                        for &(si, q) in &member[pos as usize] {
-                            secs[si].fill_pk(mz, it, q)?;
-                        }
-                        Ok(())
+                        member[pos as usize]
+                            .iter()
+                            .try_for_each(|&(si, q)| secs[si].fill_pk(mz, it, q))
                     })?;
                 } else {
                     let mut on = |sp: Spectrum| {

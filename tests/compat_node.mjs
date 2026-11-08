@@ -1,6 +1,6 @@
 // Checks the fallbacks of mzlab/web/compat.js on fake globals (what Safari/iPadOS lacks: AbortSignal.any, createWritable, a refused clipboard, the accept
-// list of the iPad file picker, a copy handed over inside the click, the gesture* pinch of a Mac trackpad); prints one JSON object of named checks. See tests/test_compat.py.
-import { installa, anySignal, freeAccept, copyNow, pinchWheel } from "../mzlab/web/compat.js";
+// list of the iPad file picker, a copy handed over inside the click, the gesture* pinch of a Mac trackpad, the canvas area cap); prints one JSON object of named checks. See tests/test_compat.py.
+import { installa, anySignal, freeAccept, copyNow, pinchWheel, canvasScale, MAX_CANVAS_PX } from "../mzlab/web/compat.js";
 
 const out = {};
 const check = async (name, fn) => { try { out[name] = (await fn()) === true ? true : "false"; } catch (e) { out[name] = "threw: " + (e && e.message || e); } };
@@ -175,6 +175,11 @@ await check("pinch: left alone outside a zoomable surface, when a view handles i
   P.fire("pointerdown", { pointerType: "touch" }); P.fire("gesturestart", { target: P.canvas, scale: 1 }); P.fire("gesturechange", { target: P.canvas, scale: 2 });
   P.fire("pointerup", { pointerType: "touch" }); const s2 = P.fire("gesturestart", { target: P.canvas, scale: 1 }); P.fire("gesturechange", { target: P.canvas, scale: 2 });
   return !s.defaultPrevented && !c.defaultPrevented && P.para.wheels.length === 0 && s2.defaultPrevented && P.canvas.wheels.length === 1;
+});
+
+await check("canvas: a scale that would pass Safari's 16.7 Mpx cap is lowered, a small one kept", () => {
+  const big = canvasScale(1600, 1400, 3), w = Math.round(1600 * big), h = Math.round(1400 * big);
+  return MAX_CANVAS_PX === 16777216 && big < 3 && w * h <= MAX_CANVAS_PX && w * h > 0.99 * MAX_CANVAS_PX && canvasScale(400, 300, 8) === 8 && canvasScale(0, 10, 2) === 2;
 });
 
 process.stdout.write(JSON.stringify(out));

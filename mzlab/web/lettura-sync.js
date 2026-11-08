@@ -2,9 +2,9 @@
 // @ts-strict
 // Reads a source file of the index builder (a plain mzML, a member of a maker's set) straight from its copy in OPFS with a read-only SyncAccessHandle, in blocks of any size:
 // no File object, no copy through the browser process. Without a handle (not supported, the file is taken, the size is not the Blob's) every read goes through
-// the FileReaderSync of the Blob, as before; after close() or a failing read it does the same. Used by idx-worker.js and rust-nativo.js (workers: handles exist only there).
+// the FileReaderSync of the Blob, as before; after close() or a failing read it does the same. `into` reads into a view given (a .wasm memory) instead of a buffer of its own. Used by idx-worker.js and rust-nativo.js (workers: handles exist only there).
 
-/** @typedef {{ read: (offset: number, length: number) => Uint8Array, close: () => void, hand: boolean }} Fonte */
+/** @typedef {{ read: (offset: number, length: number) => Uint8Array, into: (offset: number, view: Uint8Array) => number, close: () => void, hand: boolean }} Fonte */
 
 /**
  * @param {string} kind folder of the copy under `mzlab/` ("files")
@@ -33,7 +33,9 @@ export async function openSource(kind, name, blob) {
     ah = await fh.createSyncAccessHandle({ mode: "read-only" });
     if (ah.getSize() !== blob.size) { ah.close(); ah = null; }
   } catch (_) { ah = null; }
-  if (!ah) return { read: viaBlob, close() {}, hand: false };
+  // `into` fills a view the caller gives (a view of a .wasm memory: filled at once, never kept) and answers the bytes put
+  const intoBlob = (/** @type {number} */ o, /** @type {Uint8Array} */ v) => { const b = viaBlob(o, v.length); v.set(b); return b.length; };
+  if (!ah) return { read: viaBlob, into: intoBlob, close() {}, hand: false };
   let h = ah;   // null once closed: a reader kept after the call that opened it (a session of the engine) goes on through the Blob
   let buf = new Uint8Array(0);   // grown to the length asked
   const close = () => { const x = h; h = null; try { if (x) x.close(); } catch (_) { /* already closed */ } };
@@ -45,6 +47,10 @@ export async function openSource(kind, name, blob) {
       const out = buf.subarray(0, n);
       try { if (h.read(out, { at: o }) === n) return out; } catch (_) { close(); }      // a closed or failing handle: the Blob answers from now on
       return viaBlob(o, n);
+    },
+    into(o, v) {
+      if (h) { try { if (h.read(v, { at: o }) === v.length) return v.length; } catch (_) { close(); } }
+      return intoBlob(o, v);
     },
     close,
   };

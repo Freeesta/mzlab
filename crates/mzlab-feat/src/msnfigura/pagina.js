@@ -112,8 +112,10 @@ $("dl-svg").addEventListener("click", () => save(`${stem}-${mode}.svg`, "image/s
 $("dl-png").addEventListener("click", () => {
   const url = URL.createObjectURL(new Blob([figure()], { type: "image/svg+xml" })), img = new Image();
   img.onload = () => {
-    const c = document.createElement("canvas"), s = 2;
-    c.width = img.naturalWidth * s; c.height = img.naturalHeight * s;
+    // 2x, lowered under the 16 777 216 px canvas area that Safari and iPadOS accept (over it toBlob gives null), as compat.js canvasScale in the site
+    const w = img.naturalWidth, h = img.naturalHeight, s = w > 0 && h > 0 ? Math.min(2, Math.sqrt(16777216 / (w * h)) * 0.999) : 2, c = document.createElement("canvas");
+    c.width = Math.round(w * s); c.height = Math.round(h * s);
+    if (s < 2) say(`Image saved at ${c.width} × ${c.height} px: the browser does not allow a larger one.`);
     const g = c.getContext("2d"); g.scale(s, s); g.drawImage(img, 0, 0);
     URL.revokeObjectURL(url);
     c.toBlob(b => { if (b) { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${stem}-${mode}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); } });

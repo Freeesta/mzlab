@@ -42,11 +42,11 @@ try:
         step("side spectrum labels do not touch their bar, each other or the edge", labels)
         def small_peak():                                                      # at RT 14.3 the 386 peak is 3 % of the parent (364): under the old 5 % rule it had no label
             pos = pg.evaluate(f"(()=>{{const a={M}._a,r={M}.cv.getBoundingClientRect();return [r.left+a.X(14.3),r.top+a.Y(364.3)]}})()")
-            pg.mouse.move(pos[0], pos[1]); attendi(pg, f"({M}._mz.lbls||[]).some(l=>+l.t>380&&+l.t<392)")
+            pg.mouse.move(pos[0], pos[1]); wait_for_js(pg, f"({M}._mz.lbls||[]).some(l=>+l.t>380&&+l.t<392)")
             L = pg.evaluate(f"({M}._mz.lbls||[]).map(l=>({{...l}}))"); hi = [l for l in L if 380 < float(l["t"]) < 392]
             assert hi, ("no label for the small peak near 386", [l["t"] for l in L])
             r = pg.evaluate(f"{M}._mz.sp.getBoundingClientRect().toJSON()"); l = hi[0]
-            pg.mouse.move(r["x"] + l["x"] + l["w"] / 2, r["y"] + l["y"] + l["h"] / 2); attendi(pg, f"{M}._mz.sp.title.includes('S/N')")
+            pg.mouse.move(r["x"] + l["x"] + l["w"] / 2, r["y"] + l["y"] + l["h"] / 2); wait_for_js(pg, f"{M}._mz.sp.title.includes('S/N')")
             tip = pg.evaluate(f"{M}._mz.sp.title"); assert "S/N" in tip and l["t"] in tip, tip
         step("a small peak at higher m/z has its label, with its S/N in the tooltip", small_peak)
         def density():

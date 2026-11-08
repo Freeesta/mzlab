@@ -21,7 +21,7 @@ def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); attendi(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
+        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
         step("every file counts its SIM ions", lambda: need(pg.evaluate("E.files.every(f => f.sim === %d)" % N), pg.evaluate("E.files.map(f => f.sim)")))
         step("every file is typed SIM by the engine (a SIM file is neither «empty» nor «UV only»)", lambda: need(pg.evaluate("Promise.all(E.files.map(f => CANALI.canali(f.k).then(j => j.tipo.proposto)))") == ["lc-sim"] * pg.evaluate("E.files.length"), pg.evaluate("Promise.all(E.files.map(f => CANALI.canali(f.k).then(j => j.tipo.proposto)))")))
         def cell():
@@ -31,7 +31,7 @@ try:
         open_first(pg)
         step("the side list group is «SIM», not «MRM»", lambda: need(pg.evaluate("[...document.querySelectorAll('#flst .fgh')].map(e => e.textContent).join('|')").find("SIM") >= 0 and "MRM" not in pg.evaluate("[...document.querySelectorAll('#flst .fgh')].map(e => e.textContent).join('|')"), "group"))
         step("the toolbar button speaks of SIM ions", lambda: need("SIM" in pg.inner_text("#np-mrm"), pg.inner_text("#np-mrm")))
-        pg.click("#np-mrm"); attendi(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
+        pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         step("the panel title says SIM ions", lambda: need(pg.evaluate("E.panels.find(p => p.type === 'mrm').title") == "@sim", pg.evaluate("E.panels.find(p => p.type === 'mrm').title")))
         def colours():
             s = pg.evaluate("E.panels.find(p => p.type === 'mrm')._a.sr.map(s => [s.ion, s.color, s.k])")
@@ -74,9 +74,9 @@ try:
             need(pg.evaluate("E.panels.find(p => p.type === 'mrm').tr") == "", "all")
         step("Ctrl adds an ion, Shift takes a range, All clears the selection", ctrl_shift)
         def helpline():
-            pg.click("#np-closeall"); attendi(pg, "!E.panels.some(p => p.el)", timeout=20000)
-            attendi(pg, "(() => { const h = document.querySelector('#simhelp'); return !!h && !h.hidden && !!h.querySelector('button'); })()", timeout=20000)
-            pg.click("#simhelp button"); attendi(pg, "(() => { const t = document.querySelector('#simtab'); return t && !t.hidden; })()", timeout=30000)
+            pg.click("#np-closeall"); wait_for_js(pg, "!E.panels.some(p => p.el)", timeout=20000)
+            wait_for_js(pg, "(() => { const h = document.querySelector('#simhelp'); return !!h && !h.hidden && !!h.querySelector('button'); })()", timeout=20000)
+            pg.click("#simhelp button"); wait_for_js(pg, "(() => { const t = document.querySelector('#simtab'); return t && !t.hidden; })()", timeout=30000)
         step("with no graph the help line offers the SIM table and the button shows it", helpline)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()

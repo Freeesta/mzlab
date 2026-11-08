@@ -13,11 +13,11 @@ try:
     with sync_playwright() as p:
         for lang in ("it", "en"):
             pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 1000})
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); attendi(pg, "!!document.querySelector('#pick')", 30000)
+            pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
             pg.set_input_files("#pick", [mz(f) for f in FILES]); frames(pg, 3)
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=4", timeout=30000)
             pg.click("text=Carica dati" if lang == "it" else "text=Load data"); ready(pg)
-            open_kind(pg, "ms2"); attendi(pg, "E.panels.filter(p => p.tab === 'ms2').length >= 2", 30000); frames(pg, 6)
+            open_kind(pg, "ms2"); wait_for_js(pg, "E.panels.filter(p => p.tab === 'ms2').length >= 2", 30000); frames(pg, 6)
             def titles(lang=lang, pg=pg):
                 t = pg.evaluate("E.panels.filter(p => p.tab === 'ms2').map(p => p.el.querySelector('.ttl').textContent)")
                 want = {"it": ["TIC · MS² · precursore 229.1", "MS² di 229.1"], "en": ["TIC · MS² · precursor 229.1", "MS² of 229.1"]}[lang]  # two precursors in the files: the chromatogram names its one

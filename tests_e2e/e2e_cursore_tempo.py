@@ -12,7 +12,7 @@ def probe(pg, sel):
     P = f"E.panels.find(p=>p.type==='{sel}')"
     c = pg.evaluate(f"(()=>{{const p={P},q=p.cv.getBoundingClientRect();return {{x:q.x+q.width*0.5,y:q.y+q.height*0.5}}}})()")
     pg.mouse.move(c["x"] - 20, c["y"]); pg.mouse.move(c["x"], c["y"], steps=4)
-    attendi(pg, f"(()=>{{const t={P}.el.querySelector('.tip');return t&&!t.hidden}})()")
+    wait_for_js(pg, f"(()=>{{const t={P}.el.querySelector('.tip');return t&&!t.hidden}})()")
     tip = pg.evaluate(f"(()=>{{const t={P}.el.querySelector('.tip');return t&&!t.hidden?t.querySelector('b').textContent:null}})()")
     rd = pg.evaluate(f"{P}.rd.textContent")
     lbl = pg.evaluate(f"({P}._a.lbls||[]).filter(l=>l.etpk).map(l=>l.text)")

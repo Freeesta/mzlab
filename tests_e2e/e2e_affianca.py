@@ -68,14 +68,14 @@ try:
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
         step("Alt+arrows on the grip", keys)
         ROWS = "(() => { const l = stackOrder().slice(-3).map(q => q.id); return LAYOUT.righeDi(stackOrder()).map(r => r.filter(q => l.includes(q.id)).length).filter(n => n).join() })()"
-        def attesa(forma): attendi(pg, f"{ROWS} === '{forma}'")
+        def wait_shape(forma): wait_for_js(pg, f"{ROWS} === '{forma}'")
         def disp_menu():
             P = f"stackOrder().find(q => q.id === {pg.evaluate('stackOrder().at(-3).id')})"          # the first of the three: the last ones below the fold are not drawn yet
             def open_menu():
-                attendi(pg, f"(()=>{{const p={P};p.cv.scrollIntoView({{block:'center'}});p.cv.focus();return document.activeElement===p.cv&&!!p._a&&!!p._a.X}})()")
-                pg.keyboard.press("Shift+F10"); attendi(pg, "!document.querySelector('#ctx').hidden")
+                wait_for_js(pg, f"(()=>{{const p={P};p.cv.scrollIntoView({{block:'center'}});p.cv.focus();return document.activeElement===p.cv&&!!p._a&&!!p._a.X}})()")
+                pg.keyboard.press("Shift+F10"); wait_for_js(pg, "!document.querySelector('#ctx').hidden")
                 return pg.evaluate("[...document.querySelectorAll('#ctx [data-azione^=\\'disp.\\']')].map(d=>[d.dataset.azione,d.getAttribute('aria-disabled')==='true',d.textContent.replace(/\\u2713/g,'')])")
-            pg.evaluate("AFFIANCA.ripristina()"); attesa("1,1,1"); assert [len(x) for x in rows()] == [1, 1, 1], rows()
+            pg.evaluate("AFFIANCA.ripristina()"); wait_shape("1,1,1"); assert [len(x) for x in rows()] == [1, 1, 1], rows()
             it = open_menu(); ids = [i[0] for i in it]
             assert ids == ["disp.su", "disp.giu"], ids           # the right-click menu keeps only Move up / Move down, side by side in one row
             assert pg.evaluate("document.querySelectorAll('#ctx .mrow > [data-azione]').length") == 2
@@ -85,17 +85,17 @@ try:
             run = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; return AZIONI.pronta(AZIONI.voce('{aid}'), {{vista: p.type, p}}); }})()")
             do = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; AZIONI.esegui('{aid}', {{vista: p.type, p}}); }})()")
             assert not run("disp.uguali") and not run("disp.intera") and not run("disp.ripristina")           # alone in its row, nothing to restore
-            pg.evaluate(f"AFFIANCA.fai({P}, {{k:'dx', t:stackOrder().at(-2).id}}, false)"); attesa("2,1")
+            pg.evaluate(f"AFFIANCA.fai({P}, {{k:'dx', t:stackOrder().at(-2).id}}, false)"); wait_shape("2,1")
             assert run("disp.uguali") and run("disp.intera") and run("disp.ripristina")
-            do("disp.uguali"); attendi(pg, "(()=>{const s=stackOrder().slice(-3,-1);return Math.abs(s[0].w-s[1].w)<=8})()")
+            do("disp.uguali"); wait_for_js(pg, "(()=>{const s=stackOrder().slice(-3,-1);return Math.abs(s[0].w-s[1].w)<=8})()")
             a, b = pg.evaluate("stackOrder().slice(-3, -1).map(q => q.w)"); assert abs(a - b) <= 8, (a, b)
-            do("disp.intera"); attesa("1,1,1")
-            pg.evaluate("AFFIANCA.fai(stackOrder().at(-2), {k:'dx', t:stackOrder().at(-3).id}, false)"); attesa("2,1")
-            do("disp.ripristina"); attesa("1,1,1")
+            do("disp.intera"); wait_shape("1,1,1")
+            pg.evaluate("AFFIANCA.fai(stackOrder().at(-2), {k:'dx', t:stackOrder().at(-3).id}, false)"); wait_shape("2,1")
+            do("disp.ripristina"); wait_shape("1,1,1")
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
-            pg.keyboard.press("Control+z"); attesa("2,1"); assert [len(x) for x in rows()] == [2, 1], rows()           # the reset can be undone
+            pg.keyboard.press("Control+z"); wait_shape("2,1"); assert [len(x) for x in rows()] == [2, 1], rows()           # the reset can be undone
             # the grip menu also resets the layout
-            g = grip_box(2); pg.mouse.click(g[0], g[1]); pg.click(".aff-menu button >> nth=-1"); attesa("1,1,1")
+            g = grip_box(2); pg.mouse.click(g[0], g[1]); pg.click(".aff-menu button >> nth=-1"); wait_shape("1,1,1")
         step("right-click menu: Move up / Move down in one row; the other arrangement actions stay in the registry and the grip menu", disp_menu)
         def divider():
             pg.evaluate("(() => { const s = stackOrder().slice(-3); const a = s[1], b = s[2]; AFFIANCA.fai(b, {k:'dx', t:a.id}, false); })()"); pg.wait_for_timeout(300)

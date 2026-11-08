@@ -41,9 +41,9 @@ def _array(values: np.ndarray, f64: bool, acc: str, name: str) -> str:
     return f'<binaryDataArray encodedLength="{len(b64)}">{bits}{_cv("MS:1000574", "zlib compression")}{_cv(acc, name, "", unit)}<binary>{b64}</binary></binaryDataArray>'
 
 
-def _spettro(i: int, rng, peaks1: int, peaks2: int, ms1_ogni: int, strano: bool) -> tuple[str, str]:
+def _spettro(i: int, rng, peaks1: int, peaks2: int, ms1_every: int, strano: bool) -> tuple[str, str]:
     """(id, xml) of the spectrum `i`: an MS1 every `ms1_ogni` scans, MS2 of the strongest ions of the last MS1 for the others."""
-    level = 1 if i % ms1_ogni == 0 else 2
+    level = 1 if i % ms1_every == 0 else 2
     n = peaks1 if level == 1 else peaks2
     mz = np.sort(rng.uniform(100, 1000, n)) if level == 1 else np.sort(rng.uniform(50, 600, n))
     it = rng.lognormal(10, 1.5, n).astype(np.float32)
@@ -52,7 +52,7 @@ def _spettro(i: int, rng, peaks1: int, peaks2: int, ms1_ogni: int, strano: bool)
     prec = ""
     if level == 2:
         p = 150 + (i * 7919) % 700
-        prec = (f'<precursorList count="1"><precursor spectrumRef="controllerType=0 controllerNumber=1 scan={i - (i % ms1_ogni) + 1}"><isolationWindow>{_cv("MS:1000827", "isolation window target m/z", p, UN_MZ)}</isolationWindow>'
+        prec = (f'<precursorList count="1"><precursor spectrumRef="controllerType=0 controllerNumber=1 scan={i - (i % ms1_every) + 1}"><isolationWindow>{_cv("MS:1000827", "isolation window target m/z", p, UN_MZ)}</isolationWindow>'
                 f'<selectedIonList count="1"><selectedIon>{_cv("MS:1000744", "selected ion m/z", p, UN_MZ)}{_cv("MS:1000041", "charge state", 1)}</selectedIon></selectedIonList>'
                 f'<activation>{_cv("MS:1000422", "beam-type collision-induced dissociation")}{_cv("MS:1000045", "collision energy", 30)}</activation></precursor></precursorList>')
     extra = _cv("MS:9999999", "an accession from a newer ontology", 1) if strano else ""
@@ -67,7 +67,7 @@ def _spettro(i: int, rng, peaks1: int, peaks2: int, ms1_ogni: int, strano: bool)
     return sid, xml
 
 
-def scrivi(path, scans: int = 2000, peaks1: int = 4000, peaks2: int = 400, variante: str = "base", seed: int = 1, ms1_ogni: int = 6) -> int:
+def scrivi(path, scans: int = 2000, peaks1: int = 4000, peaks2: int = 400, variante: str = "base", seed: int = 1, ms1_every: int = 6) -> int:
     """Writes the file and returns its size in bytes."""
     path = Path(path)
     rng = np.random.default_rng(seed)
@@ -97,7 +97,7 @@ def scrivi(path, scans: int = 2000, peaks1: int = 4000, peaks2: int = 400, varia
     pos = len(chunks[0])
     offsets = []
     for i in range(scans):
-        sid, xml = _spettro(i, rng, peaks1, peaks2, ms1_ogni, variante == "accessione_ignota" and i == scans // 2)
+        sid, xml = _spettro(i, rng, peaks1, peaks2, ms1_every, variante == "accessione_ignota" and i == scans // 2)
         offsets.append((sid, pos + xml.index("<spectrum ")))
         b = xml.encode(); chunks.append(b); pos += len(b)
     t = np.arange(0, scans, 6) * 0.0005
@@ -108,9 +108,9 @@ def scrivi(path, scans: int = 2000, peaks1: int = 4000, peaks2: int = 400, varia
     chunks.append(mezzo); pos += len(mezzo)
     if avvolto:
         idx_off = pos + (7 if variante == "indice_falso" else 0)
-        lista = ('<indexList count="2"><index name="spectrum">' + "".join(f'<offset idRef="{s}">{o + (13 if variante == "indice_falso" else 0)}</offset>' for s, o in offsets)
+        entries = ('<indexList count="2"><index name="spectrum">' + "".join(f'<offset idRef="{s}">{o + (13 if variante == "indice_falso" else 0)}</offset>' for s, o in offsets)
                  + f'</index><index name="chromatogram"><offset idRef="TIC">{chrom_off}</offset></index></indexList>\n<indexListOffset>{idx_off}</indexListOffset>\n')
-        cuerpo = b"".join(chunks) + lista.encode()
+        cuerpo = b"".join(chunks) + entries.encode()
         h = hashlib.sha1(cuerpo + b"<fileChecksum>").hexdigest()
         fine = b"" if variante == "senza_checksum" else f"<fileChecksum>{h}</fileChecksum>\n".encode()
         data = cuerpo + (fine if variante != "senza_checksum" else b"") + b"</indexedmzML>\n"

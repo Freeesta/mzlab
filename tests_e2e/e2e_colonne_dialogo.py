@@ -46,11 +46,11 @@ r = Run(port=8875, wd="/tmp/wd_colonne")
 try:
     with sync_playwright() as p:
         for lang in ("it", "en"):
-            pg = r.page(p); _pg[:] = [pg]; pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); attendi(pg, "!!document.querySelector('#pick')", 30000)
+            pg = r.page(p); _pg[:] = [pg]; pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
             pg.set_viewport_size({"width": 1400, "height": 900})
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t10")])
             frames(pg, 3); pg.click("text=Carica dati" if lang == "it" else "text=Load data"); ready(pg)
-            pg.evaluate("S.table = true; syncWork()"); attendi(pg, "!!document.querySelector('#colsbtn')", 30000)
+            pg.evaluate("S.table = true; syncWork()"); wait_for_js(pg, "!!document.querySelector('#colsbtn')", 30000)
             for w in (1400, 400):
                 step(f"{lang} {w}px: aligned preset grid and one-row custom form", lambda w=w, lang=lang, pg=pg: check(pg, w, (lang, w)))
 finally:

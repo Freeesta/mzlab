@@ -29,18 +29,18 @@ def costruisci_esempio() -> None:
     subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--features", "untargeted", "--example", "untargeted"], cwd=ROOT, check=True)
 
 
-def esegui(percorsi_idx: list[str], uscita: Path, parametri: str = "") -> None:
-    """Runs the example on the indexes (in this order); writes `series.mzfeat` and the `.mzfeatf` in `uscita`."""
+def esegui(idx_paths: list[str], output: Path, parametri: str = "") -> None:
+    """Runs the example on the indexes (in this order); writes `series.mzfeat` and the `.mzfeatf` in `output`."""
     costruisci_esempio()
-    uscita.mkdir(parents=True, exist_ok=True)
-    subprocess.run([str(ESEMPIO), str(uscita), *percorsi_idx] + (["--params", parametri] if parametri else []), cwd=ROOT, check=True, capture_output=True)
+    output.mkdir(parents=True, exist_ok=True)
+    subprocess.run([str(ESEMPIO), str(output), *idx_paths] + (["--params", parametri] if parametri else []), cwd=ROOT, check=True, capture_output=True)
 
 
-def tabella(uscita: Path, nomi: list[str]):
+def tabella(output: Path, nomi: list[str]):
     """`series.mzfeat` as a table of the validation (areas in counts x s, the cells absent at zero)."""
     import numpy as np
     from valida.tabelle import Tabella
-    meta, a = nativo.apri((uscita / "series.mzfeat").read_bytes())
+    meta, a = nativo.apri((output / "series.mzfeat").read_bytes())
     n, k = meta["rows"], meta["files"]
     stato = a["state"].reshape(n, k)
     area = np.where(stato == nativo.CELLA_ASSENTE, 0.0, np.nan_to_num(a["area"].reshape(n, k)))
@@ -52,14 +52,14 @@ def _pass(c: dict, thresholds: dict) -> bool:
     return all(k in c and (c[k] >= v if op == ">=" else c[k] <= v) for k, (op, v) in thresholds.items())
 
 
-def sezione(nativa, mzmine, colonne: list[int], altezza_min: float, crate: str) -> dict:
+def sezione(native, mzmine, columns: list[int], min_height: float, crate: str) -> dict:
     """The section `untargeted` from the native table and the one of mzmine (the columns are the treated samples)."""
-    new = M.concordanza_mzmine_ioni(nativa, mzmine, colonne, altezza_min)
-    old = M.concordanza_mzmine(nativa, mzmine, colonne, 50.0)
+    new = M.concordanza_mzmine_ioni(native, mzmine, columns, min_height)
+    old = M.concordanza_mzmine(native, mzmine, columns, 50.0)
     ok = _pass(new, NEW_THRESHOLDS) and _pass(old, OLD_THRESHOLDS)
     return {"ok": ok, "crate_version": crate, "recall": new.get("richiamo"), "precision": new.get("precisione"), "spearman": new.get("spearman"), "log2": new.get("log2_mediano"),
-            "protocol": PROTOCOLLO, "old_protocol": {k: old.get(k) for k in ("richiamo", "precisione", "spearman", "log2_mediano")}, "floor": altezza_min,
-            "rows_mzmine": new.get("righe_mzmine"), "rows_native": new.get("righe_native"), "files": len(colonne)}
+            "protocol": PROTOCOLLO, "old_protocol": {k: old.get(k) for k in ("richiamo", "precisione", "spearman", "log2_mediano")}, "floor": min_height,
+            "rows_mzmine": new.get("righe_mzmine"), "rows_native": new.get("righe_native"), "files": len(columns)}
 
 
 def vuota() -> dict:
@@ -91,13 +91,13 @@ def main(argv: list[str] | None = None) -> int:
     from bench import corri
     from valida.tabelle import leggi_mzmine
     fs = corri.file_mzml(Path(a.mzml_dir), a.solo)
-    lavoro = Path(a.lavoro)
-    idx = nativo.indici(fs, lavoro / "indici")
+    work = Path(a.lavoro)
+    idx = nativo.indici(fs, work / "indici")
     nomi = [Path(x).stem for x in idx]
-    esegui(idx, lavoro / "uscita", a.params)
-    nativa, crate = tabella(lavoro / "uscita", nomi)
+    esegui(idx, work / "uscita", a.params)
+    native, crate = tabella(work / "uscita", nomi)
     mm = leggi_mzmine(a.mzmine, [{"nome": f.stem} for f in fs])      # mzmine names the columns after the mzML; the indexes may carry `min` after the time
-    sez = sezione(nativa, mm, list(range(len(nomi))), a.altezza_min, crate)
+    sez = sezione(native, mm, list(range(len(nomi))), a.altezza_min, crate)
     scrivi(sez, Path(a.json))
     print(json.dumps(sez, indent=1))
     return 0

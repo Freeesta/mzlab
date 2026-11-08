@@ -53,7 +53,7 @@ RUN = """async () => {
   return { ev, err };
 }"""
 CLEAR = """async () => { const m = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'); try { await m.removeEntry('flow', { recursive: true }); } catch (_) {} }"""
-def of(r, passo, stato=None): return [e for e in r["ev"] if e["passo"] == passo and (stato is None or e["stato"] == stato)]
+def of(r, step_id, stato=None): return [e for e in r["ev"] if e["passo"] == step_id and (stato is None or e["stato"] == stato)]
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()

@@ -21,7 +21,7 @@ writeFileSync(modDir + "/mzlab_lettori_wasm.js", "export default async () => {};
 globalThis.fetch = async u => { const b = readFileSync(fileURLToPath(u)); return { json: async () => JSON.parse(b.toString()), arrayBuffer: async () => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) }; };
 let dads = [];
 globalThis.fakeModule = (names, sizes, rd, c, dad, _comp, sink) => { dads.push(dad); return run(names, sizes, rd, c, false, sink); };
-const { createNativo, PREFIX, MAGIC } = await import(dir + "/rust-nativo.js");
+const { createNativo, reader, PREFIX, MAGIC } = await import(dir + "/rust-nativo.js");
 const { openSource } = await import(dir + "/lettura-sync.js");
 
 // a synthetic 2-member dataset in OPFS: the members as Blobs (the Files of the archive) and as handle-readable bytes
@@ -61,5 +61,19 @@ const sha = parts => createHash("sha256").update(Buffer.concat(parts.map(p => Bu
   assert.deepStrictEqual([...f.read(10, 4)], [...bytes.get(M[0].store).subarray(10, 14)]); assert.strictEqual(handleReads, 1);
   f.close(); f.close();
   assert.deepStrictEqual([...f.read(10, 4)], [...bytes.get(M[0].store).subarray(10, 14)]); assert.strictEqual(fileReads, 1);
+}
+// ---- `into`: over handles the bytes go straight into a view of a WebAssembly.Memory (the engine's or a module's), `seen` told; through Blobs there is no `into`
+{
+  fileReads = handleReads = 0;
+  const fonti = await Promise.all(M.map(m => openSource("files", m.store, m.blob)));
+  const seen = []; const rd = reader(M.map(m => m.blob), (i, end) => seen.push([i, end]), fonti);
+  const mem = new WebAssembly.Memory({ initial: 1 }), v = new Uint8Array(mem.buffer, 100, 3000);
+  assert.strictEqual(rd.into(1, 5000, v), 3000);
+  assert.deepStrictEqual([...v], [...bytes.get(M[1].store).subarray(5000, 8000)]);
+  assert.strictEqual(handleReads, 1); assert.strictEqual(fileReads, 0); assert.deepStrictEqual(seen, [[1, 8000]]);
+  fonti.forEach(f => f.close());
+  v.fill(0); assert.strictEqual(rd.into(1, 5000, v), 3000, "a closed handle: the Blob, into the same view");
+  assert.deepStrictEqual([...v], [...bytes.get(M[1].store).subarray(5000, 8000)]); assert.strictEqual(fileReads, 1);
+  assert.strictEqual(reader(M.map(m => m.blob), undefined).into, undefined);
 }
 console.log("ok");

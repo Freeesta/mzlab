@@ -21,17 +21,17 @@ try:
         pg.evaluate("window.__t = []; new MutationObserver(() => { if (document.querySelector('#flst .fl.up')) window.__t.push(performance.now()); }).observe(document.getElementById('flst'), {childList: true, subtree: true})")
         pg.evaluate("window.__t0 = performance.now()")
         stage(pg, FILES)
-        attendi(pg, "E.files.filter(f => !f.gone).length === 1 && window.__appends >= 1", 60000)
+        wait_for_js(pg, "E.files.filter(f => !f.gone).length === 1 && window.__appends >= 1", 60000)
         def first_open():
             assert pg.evaluate("OPENNOW.busy()") >= 2, pg.evaluate("OPENNOW.busy()")
-            attendi(pg, "document.getElementById('v-workspace').dataset.work === 'panels'", 30000)
+            wait_for_js(pg, "document.getElementById('v-workspace').dataset.work === 'panels'", 30000)
             assert pg.evaluate("E.files.filter(f => f.vis && !f.gone).length") == 1, "only the first file is shown while the others are read"
             pg.wait_for_selector("#dpanels .pnl canvas", timeout=60000)
         step("the first file is open and shown by itself, the others wait", first_open)
         names = [os.path.basename(f) for f in FILES]
         state = lambda: pg.evaluate("[E.files.filter(f => !f.gone).map(f => f.file), window.__sent]")
         def grey_rows():
-            if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]"); attendi(pg, "!!document.querySelector('#flst') && document.querySelector('#flst').offsetParent")
+            if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]"); wait_for_js(pg, "!!document.querySelector('#flst') && document.querySelector('#flst').offsetParent")
             rows = pg.locator("#flst .fl.pend.up[aria-busy=true]")
             assert rows.count() == 2, rows.count()
             opened, sent = state()
@@ -42,7 +42,7 @@ try:
             assert pg.evaluate("window.__t.length && window.__t[0] - window.__t0") < 5000
         step("the others are grey rows with their bar, aria-busy, under the open file", grey_rows)
         def first_click():
-            pg.click("#flst .fl:not(.up) .nm"); attendi(pg, "E.files.some(f => f.vis && !f.gone)")
+            pg.click("#flst .fl:not(.up) .nm"); wait_for_js(pg, "E.files.some(f => f.vis && !f.gone)")
             pg.wait_for_selector(".pnl.chrom canvas", timeout=60000)
             assert pg.evaluate("E.cur") == 0
         step("the first click on a file shows it while the others are still being opened", first_click)
@@ -51,12 +51,12 @@ try:
         def remove_one():
             assert len(queued) == 1, (opened, sent)
             pg.click(f"#flst [data-up-x='{queued[0]}']")
-            attendi(pg, f"!document.querySelector(\"#flst [data-up='{queued[0]}']\")", 10000)
+            wait_for_js(pg, f"!document.querySelector(\"#flst [data-up='{queued[0]}']\")", 10000)
             assert pg.locator("#flst .fl.up").count() == 1
         step("× on a waiting row: that file is not opened", remove_one)
         def release():
             pg.evaluate("window.__release()")
-            attendi(pg, "E.files.filter(f => !f.gone).length === 2 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')", 60000)
+            wait_for_js(pg, "E.files.filter(f => !f.gone).length === 2 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')", 60000)
             assert pg.get_attribute("#flst", "aria-busy") == "false"
             assert pg.evaluate("window.__appends") == 1, pg.evaluate("window.__appends")
             assert queued[0] not in pg.evaluate("E.files.map(f=>f.file).join()"), pg.evaluate("E.files.map(f=>f.file)")
@@ -71,7 +71,7 @@ try:
         step("the session is the same as opening the files in one call", same_as_all_at_once)
         def failing():
             pg.set_input_files("#pick", [BAD])
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && ST.files.some(f => f.name === 'rotto.mzML') && !document.querySelector('#flst .fl.up')", 60000)
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && ST.files.some(f => f.name === 'rotto.mzML') && !document.querySelector('#flst .fl.up')", 60000)
             assert pg.evaluate("!E.files.some(f => !f.gone && f.file === 'rotto.mzML')"), "a file with no data is not opened"
             assert pg.evaluate("E.files.filter(f => !f.gone).length") == 2, "the open files go on"
         step("a file with no data stays in the table, unopened, and its row goes; the others go on", failing)

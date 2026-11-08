@@ -11,7 +11,7 @@ from jsonschema import Draft202012Validator
 ROOT = Path(__file__).resolve().parents[1]
 MZML = ROOT / "tests" / "golden" / "ref" / "msntree_rotta" / "msn.mzML"
 SCHEMA = json.loads((ROOT / "docs/schemi/msnlib-1.json").read_text())
-GRAFO = json.loads((ROOT / "docs/schemi/msngrafo-2.json").read_text())
+GRAPH = json.loads((ROOT / "docs/schemi/msngrafo-2.json").read_text())
 pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
 
 MANIFEST = "id\tformula_neutra\taddotto_atteso\tfile\nSTD-2\tC14H14N3O5\t[M+H]+\tmsn.mzML\nSTD-1\tC14H14N3O5\t[M+H]+\tmsn.mzML\n"
@@ -33,7 +33,7 @@ def test_the_built_library_follows_the_schema(library):
 
 
 def test_the_graph_of_every_entry_follows_msngrafo(library):
-    validator = Draft202012Validator(GRAFO)
+    validator = Draft202012Validator(GRAPH)
     for v in library["voci"]:
         validator.validate(v["grafo"])
 

@@ -7,7 +7,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); D = synth("comp_stable")
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); ready(pg)
-        attendi(pg, "!!E.panels.find(p=>p.type==='spec'&&p._a&&p._a.hrp)")
+        wait_for_js(pg, "!!E.panels.find(p=>p.type==='spec'&&p._a&&p._a.hrp)")
         pg.evaluate("setActive(E.panels.find(p=>p.type==='spec'&&p._a&&p._a.hrp))"); drawer(pg, "cmp")
         pg.wait_for_selector("#cx-out table, #cx-out .muted", timeout=20000)
         pg.fill("#cx-mz", "317.16425"); pg.wait_for_selector("#cx-out tr[data-i]", timeout=20000)

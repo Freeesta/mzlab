@@ -21,16 +21,16 @@ SYNTHETIC_NEUTRAL = ("C10H12N2O3S", 241.0641, 9.0)                    # the pare
 SYNTHETIC_REFERENCE = ROOT / "tests" / "golden" / "finder_lr_riferimento.json"
 
 
-def prefissa(criteri: list[dict], p: str) -> list[dict]:
+def prefissa(criteria: list[dict], p: str) -> list[dict]:
     """The same criteria under another prefix (`lr_x` -> `<p>x`)."""
-    return [{**c, "id": p + c["id"][3:]} for c in criteri]
+    return [{**c, "id": p + c["id"][3:]} for c in criteria]
 
 
-def fullscan(files: list[dict], parent: tuple, lavoro: Path, rif: list[dict], pairs_truth=None) -> tuple[list[dict], dict, dict]:
+def fullscan(files: list[dict], parent: tuple, work: Path, rif: list[dict], pairs_truth=None) -> tuple[list[dict], dict, dict]:
     """The full scan criteria on `files` ([{name, path}]) against the reference ions `rif` ([{mz, rt, kind, label}]): (criteria, details, sha of the run).
     `parent`: (neutral formula, m/z observed, RT)."""
-    idx = N.ordina_per_tempo(N.indici_lr([Path(f["path"]) for f in files], lavoro / "indici"))
-    run = nativo.esegui(idx, parent[0], parent[1], parent[2], lavoro / "nativo")
+    idx = N.ordina_per_tempo(N.indici_lr([Path(f["path"]) for f in files], work / "indici"))
+    run = nativo.esegui(idx, parent[0], parent[1], parent[2], work / "nativo")
     pairs = pairs_truth if pairs_truth is not None else C.coppie_isomeri(rif)
     crit, det = C.criteri_fullscan(rif, run.tabella.mz, run.tabella.rt, run.identita, pairs)
     det["crate"] = run.versione_crate
@@ -49,69 +49,69 @@ def synthetic_pairs(shift: float) -> list[tuple]:
     return out
 
 
-def mrm(mzml: list[Path], lavoro: Path) -> tuple[list[dict], dict, dict]:
+def mrm(mzml: list[Path], work: Path) -> tuple[list[dict], dict, dict]:
     """The MRM criteria on `mzml` (in this order): (criteria, details, sha of the run)."""
-    r = N.esegui_mrm(mzml, lavoro / "mrm")
+    r = N.esegui_mrm(mzml, work / "mrm")
     crit, det = C.criteri_mrm(N.leggi_mrm(r["tabella"], [p.stem for p in mzml]))
     return crit, det, r["sha"]
 
 
-def sintetici(lavoro: Path, seme: int = 5) -> tuple[list[dict], dict]:
+def sintetici(work: Path, seme: int = 5) -> tuple[list[dict], dict]:
     """The criteria on the synthetic series: lr_synth (full scan) and the six-level MRM series; both run twice."""
     import lr_synth
-    files = lr_synth.write_series(lavoro / "fullscan")
+    files = lr_synth.write_series(work / "fullscan")
     neutral, mz, rt = SYNTHETIC_NEUTRAL
     parent = (neutral, mz + lr_synth.SHIFT, rt)
     rif = json.loads(SYNTHETIC_REFERENCE.read_text(encoding="utf-8"))["ioni"]
-    cf, df, sha = fullscan(files, parent, lavoro / "fs1", rif, synthetic_pairs(lr_synth.SHIFT))
-    _, _, sha2 = fullscan(files, parent, lavoro / "fs2", rif, synthetic_pairs(lr_synth.SHIFT))
-    mzml = S.serie_mrm(lavoro / "mrm_file", seme)
-    cm, dm, shm = mrm(mzml, lavoro / "m1")
-    shm2 = N.esegui_mrm(mzml, lavoro / "m2")["sha"]
+    cf, df, sha = fullscan(files, parent, work / "fs1", rif, synthetic_pairs(lr_synth.SHIFT))
+    _, _, sha2 = fullscan(files, parent, work / "fs2", rif, synthetic_pairs(lr_synth.SHIFT))
+    mzml = S.serie_mrm(work / "mrm_file", seme)
+    cm, dm, shm = mrm(mzml, work / "m1")
+    shm2 = N.esegui_mrm(mzml, work / "m2")["sha"]
     crit = cm + cf + [cancello.crit("lr_determinismo", int(sha == sha2 and shm == shm2), 1, "==")]
     return prefissa(crit, "lr_sint_"), {"mrm": dm, "fullscan": df}
 
 
-def find_real(cartella: str | None) -> Path | None:
+def find_real(folder: str | None) -> Path | None:
     """The folder of the real mzML: `--serie-lr`, else `dati/3200 qtrap/mzML` of the data repository; None when it does not exist."""
-    base = Path(cartella) if cartella else percorso("dati/3200 qtrap/mzML")
+    base = Path(folder) if folder else percorso("dati/3200 qtrap/mzML")
     return base if base and base.is_dir() else None
 
 
-def reale(cartella: Path | None, parent: tuple | None, lavoro: Path) -> tuple[list[dict], dict]:
+def reale(folder: Path | None, parent: tuple | None, work: Path) -> tuple[list[dict], dict]:
     """The criteria on the real series (`B_MRM-*`, `B_FullMass-*` + `B_MS2-*`); each part not found stays unmeasured. `parent`: (neutral formula, m/z observed, RT) of the full scan."""
     det: dict = {}
-    mrm_f = sorted(cartella.rglob("B_MRM-*.mzML")) if cartella else []
-    fs_f = sorted(cartella.rglob("B_FullMass-*.mzML")) + sorted(cartella.rglob("B_MS2-*.mzML")) if cartella else []
+    mrm_f = sorted(folder.rglob("B_MRM-*.mzML")) if folder else []
+    fs_f = sorted(folder.rglob("B_FullMass-*.mzML")) + sorted(folder.rglob("B_MS2-*.mzML")) if folder else []
     if mrm_f:
-        cm, det["mrm"], shm = mrm(mrm_f, lavoro / "mrm")
-        cm2 = N.esegui_mrm(mrm_f, lavoro / "mrm2")["sha"] == shm
+        cm, det["mrm"], shm = mrm(mrm_f, work / "mrm")
+        cm2 = N.esegui_mrm(mrm_f, work / "mrm2")["sha"] == shm
     else:
         (cm, _), cm2 = C.criteri_mrm(None), None
     cf, _ = C.criteri_fullscan(None, [], [], [], [])                  # no public reference ions for the real full scan
     if fs_f and parent:
-        idx = N.ordina_per_tempo(N.indici_lr(fs_f, lavoro / "fs1" / "indici"))
-        cf2 = nativo.esegui(idx, parent[0], parent[1], parent[2], lavoro / "fs1").sha == nativo.esegui(idx, parent[0], parent[1], parent[2], lavoro / "fs2").sha
+        idx = N.ordina_per_tempo(N.indici_lr(fs_f, work / "fs1" / "indici"))
+        cf2 = nativo.esegui(idx, parent[0], parent[1], parent[2], work / "fs1").sha == nativo.esegui(idx, parent[0], parent[1], parent[2], work / "fs2").sha
     else:
         cf2 = None
     d = None if cm2 is None and cf2 is None else int(bool(cm2 is not False and cf2 is not False))
     return cm + cf + [cancello.crit("lr_determinismo", d, 1, "==")], det
 
 
-def vista_tabella_lr(criteri: list[dict]) -> bool:
+def vista_tabella_lr(criteria: list[dict]) -> bool:
     """True when every criterion (real and synthetic) was measured and passes."""
-    return bool(criteri) and all(c["ok"] is True for c in criteri)
+    return bool(criteria) and all(c["ok"] is True for c in criteria)
 
 
-def documento(criteri: list[dict], data: str, crate: str) -> dict:
-    return {"criteri": criteri, "crate_version": crate, "data": data, "format": FORMATO, "vista_tabella_lr": vista_tabella_lr(criteri)}
+def documento(criteria: list[dict], data: str, crate: str) -> dict:
+    return {"criteri": criteria, "crate_version": crate, "data": data, "format": FORMATO, "vista_tabella_lr": vista_tabella_lr(criteria)}
 
 
-def misura(cartella_reale: str | None, parent: tuple | None, lavoro: Path, data: str, seme: int = 5) -> tuple[dict, dict]:
+def misura(real_folder: str | None, parent: tuple | None, work: Path, data: str, seme: int = 5) -> tuple[dict, dict]:
     """The whole measure: synthetic series always, real ones when found. Returns (document, details)."""
-    cs, ds = sintetici(lavoro / "sintetici", seme)
-    base = find_real(cartella_reale)
-    cr, dr = reale(base, parent, lavoro / "reale")
+    cs, ds = sintetici(work / "sintetici", seme)
+    base = find_real(real_folder)
+    cr, dr = reale(base, parent, work / "reale")
     det = {"sintetici": ds, "reale": dr, "dati_reali": "letti" if base else "saltato: nessuna cartella (MZLAB_DATI o --serie-lr)"}
     return documento(cr + cs, data, cancello.versione_crate()), det
 
@@ -130,9 +130,9 @@ def markdown(c: dict, det: dict) -> str:
     return "\n".join(out)
 
 
-def scrivi(uscita: Path, c: dict, det: dict, json_path: str | None = None) -> list[Path]:
-    uscita.mkdir(parents=True, exist_ok=True)
-    pj, pm = uscita / "cancello_lr.json", uscita / "cancello_lr_rapporto.md"
+def scrivi(output: Path, c: dict, det: dict, json_path: str | None = None) -> list[Path]:
+    output.mkdir(parents=True, exist_ok=True)
+    pj, pm = output / "cancello_lr.json", output / "cancello_lr_rapporto.md"
     pj.write_text(a_json(c), encoding="utf-8")
     pm.write_text(markdown(c, det), encoding="utf-8")
     if json_path:

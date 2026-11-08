@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
-def test_decima_matches_the_point_by_point_loop():
+def test_decimate_matches_the_point_by_point_loop():
     r = subprocess.run(["node", str(ROOT / "tests" / "decima_node.mjs")], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stderr[-2000:]
     o = json.loads(r.stdout)

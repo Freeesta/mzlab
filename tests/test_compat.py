@@ -15,6 +15,6 @@ def test_compat_fallbacks():
     r = subprocess.run(["node", str(ROOT / "tests" / "compat_node.mjs")], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stderr[-2000:]
     o = json.loads(r.stdout)
-    assert len(o) == 16, o
+    assert len(o) == 17, o
     bad = {k: v for k, v in o.items() if v is not True}
     assert not bad, bad

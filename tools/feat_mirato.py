@@ -27,10 +27,10 @@ si.PROFILI["debole"] = {**si.PROFILI["piccolo"], "debole": DEBOLI}
 PRODUCTS = ("tp1", "tp2", "isomero")
 
 
-def genera(seme: int, profilo: str, scala: float, out: Path) -> list[float]:
+def genera(seme: int, profile: str, scala: float, out: Path) -> list[float]:
     """Heights (maximum of the most abundant component over the files) of the products after the scaling."""
     out.mkdir(parents=True, exist_ok=True)
-    c = si.costruisci(seme, profilo)
+    c = si.costruisci(seme, profile)
     if c.P.get("debole"):
         rng = np.random.default_rng([seme, 77])
         n = c.P["debole"]
@@ -46,7 +46,7 @@ def genera(seme: int, profilo: str, scala: float, out: Path) -> list[float]:
         scrivi_file(out / f"SIN_{stem}.mzML", k, c, seme)
         run = Run(out / f"SIN_{stem}.mzML", index_path=out / f"SIN_{stem}.mzidx")
         mzidx.build(run, out / f"SIN_{stem}.mzidx")
-    si.scrivi_verita(out, c, seme, profilo)
+    si.scrivi_verita(out, c, seme, profile)
     return sorted(alte)
 
 

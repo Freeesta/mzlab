@@ -14,14 +14,14 @@ try:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
-        attendi(pg, "E.files.filter(f=>f&&f.kind==='mrm').length>=1&&E.panels.some(p=>p.type==='chrom'&&p.el)")
+        wait_for_js(pg, "E.files.filter(f=>f&&f.kind==='mrm').length>=1&&E.panels.some(p=>p.type==='chrom'&&p.el)")
         def marked():
             assert pg.evaluate("document.querySelectorAll('#flst .fl[aria-current=true]').length") == 1
             assert pg.evaluate("document.querySelector('#flst .fl[aria-current=true]').classList.contains('cur')")
             assert pg.evaluate("getComputedStyle(document.querySelector('#flst .fl.cur')).boxShadow") != "none"
             k = pg.evaluate("E.files.filter(f=>f&&f.kind==='full')[1].k")
             pg.click(f"#flst .fl[data-k='{k}'] .nm")
-            attendi(pg, f"document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{k}'&&document.querySelectorAll('#flst .fl[aria-current=true]').length===1")
+            wait_for_js(pg, f"document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{k}'&&document.querySelectorAll('#flst .fl[aria-current=true]').length===1")
         step("the selected file has aria-current and the marker", marked)
         def pairs():
             n = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.link!=null).length")
@@ -33,11 +33,11 @@ try:
         step("a spectrum and its chromatogram are paired (bar, tag, hover)", pairs)
         def mrm_click():
             pg.evaluate("E.files.forEach(f=>{if(f)f.vis=false});cleanupOrphanPanels();renderFileList();redrawAll()")
-            attendi(pg, "E.panels.length===0")
+            wait_for_js(pg, "E.panels.length===0")
             k = pg.evaluate("E.files.find(f=>f&&f.kind==='mrm').k")
             if not pg.is_visible(f"#flst .fl[data-k='{k}'] .nm"): pg.click("#flst .fgh[data-gt='mrm']"); pg.wait_for_selector(f"#flst .fl[data-k='{k}'] .nm", state="visible")      # only the first group starts open (#2488): open the MRM one as a student would
             pg.click(f"#flst .fl[data-k='{k}'] .nm")
-            attendi(pg, "E.panels.some(p=>p.tab==='mrm'&&p.el)")
+            wait_for_js(pg, "E.panels.some(p=>p.tab==='mrm'&&p.el)")
             assert pg.evaluate("E.panels.every(p=>E.files.some(f=>f&&f.kind===p.tab&&f.vis&&!f.gone))")
             assert pg.evaluate("E.panels.every(p=>p.tab==='mrm')")
         step("a click on a hidden MRM file: only MRM panels, none empty", mrm_click)
@@ -45,36 +45,36 @@ try:
             ks = pg.evaluate("E.files.filter(f=>f&&f.kind==='full').map(f=>f.k)"); assert len(ks) >= 3
             pg.evaluate("renderFileList()")
             # the first click of a hidden file rebuilds the list: let it settle, or the second click of a double click can land on the old row (slow runners)
-            pg.click(f"#flst .fl[data-k='{ks[0]}'] .nm"); attendi(pg, f"E.files[{ks[0]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'"); frames(pg, 3)
+            pg.click(f"#flst .fl[data-k='{ks[0]}'] .nm"); wait_for_js(pg, f"E.files[{ks[0]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'"); frames(pg, 3)
             pg.dblclick(f"#flst .fl[data-k='{ks[0]}'] .nm")
-            attendi(pg, f"E.files.filter(f=>f&&f.vis).length===1&&E.files[{ks[0]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'")
+            wait_for_js(pg, f"E.files.filter(f=>f&&f.vis).length===1&&E.files[{ks[0]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'")
             assert pg.evaluate("E.panels.length>0&&E.panels.every(p=>p.tab==='full')"), "double click: only this file, panels of its type"
             pg.click(f"#flst .fl[data-k='{ks[2]}'] .nm", modifiers=["ControlOrMeta"])
-            attendi(pg, f"E.files[{ks[2]}].vis&&E.files.filter(f=>f&&f.vis).length===2&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'")
+            wait_for_js(pg, f"E.files[{ks[2]}].vis&&E.files.filter(f=>f&&f.vis).length===2&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'")
             pg.click(f"#flst .fl[data-k='{ks[1]}'] > input")
-            attendi(pg, f"E.files[{ks[1]}].vis")
+            wait_for_js(pg, f"E.files[{ks[1]}].vis")
             pg.click(f"#flst .fl[data-k='{ks[0]}'] > input")
-            attendi(pg, f"!E.files[{ks[0]}].vis")
+            wait_for_js(pg, f"!E.files[{ks[0]}].vis")
             pg.click(f"#flst .fl[data-k='{ks[2]}'] > input", modifiers=["Shift"])
-            attendi(pg, f"!E.files[{ks[2]}].vis&&!E.files[{ks[1]}].vis")
+            wait_for_js(pg, f"!E.files[{ks[2]}].vis&&!E.files[{ks[1]}].vis")
             pg.click(f"#flst .fl[data-k='{ks[1]}'] .nm")
-            attendi(pg, f"E.files[{ks[1]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[1]}'")
+            wait_for_js(pg, f"E.files[{ks[1]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[1]}'")
         step("double click = only this file; Ctrl/Cmd+click adds; Shift+click on a box = range; click on a hidden row shows and activates it", multi)
         def derived():
             assert pg.evaluate("!document.querySelector('#fmode')"), "no mode buttons: the list is the only control"
             ks = pg.evaluate("E.files.filter(f=>f&&f.kind==='full').map(f=>f.k)")
             pg.dblclick(f"#flst .fl[data-k='{ks[0]}'] .nm")
-            attendi(pg, f"E.browse&&E.cur==={ks[0]}&&E.files.filter(f=>f&&f.vis).length===1")
+            wait_for_js(pg, f"E.browse&&E.cur==={ks[0]}&&E.files.filter(f=>f&&f.vis).length===1")
             pg.click(f"#flst .fl[data-k='{ks[1]}'] .nm", modifiers=["ControlOrMeta"])
-            attendi(pg, f"!E.browse&&E.cur==={ks[0]}")                            # two ticked: overlaid, the first stays the active one
+            wait_for_js(pg, f"!E.browse&&E.cur==={ks[0]}")                            # two ticked: overlaid, the first stays the active one
             pg.click("#fnext")
-            attendi(pg, f"E.cur==={ks[1]}&&E.files[{ks[0]}].vis&&E.files[{ks[1]}].vis")      # the arrows walk through the ticked files
-            attendi(pg, "[...document.querySelectorAll('.pscan')].length>=1")
+            wait_for_js(pg, f"E.cur==={ks[1]}&&E.files[{ks[0]}].vis&&E.files[{ks[1]}].vis")      # the arrows walk through the ticked files
+            wait_for_js(pg, "[...document.querySelectorAll('.pscan')].length>=1")
             assert pg.evaluate("[...document.querySelectorAll('.pscan')].every(x=>x.textContent.includes(E.files[E.cur].label))")
             pg.click(f"#flst .fl[data-k='{ks[1]}'] > input")                       # unticking the active file hands the role to a ticked one
-            attendi(pg, f"E.browse&&E.cur==={ks[0]}")
+            wait_for_js(pg, f"E.browse&&E.cur==={ks[0]}")
             pg.click("#fnext")
-            attendi(pg, f"E.cur!=={ks[0]}&&E.browse&&E.files.filter(f=>f&&f.vis).length===1")      # one file shown: the arrows replace it
+            wait_for_js(pg, f"E.cur!=={ks[0]}&&E.browse&&E.files.filter(f=>f&&f.vis).length===1")      # one file shown: the arrows replace it
         step("the list drives the view: browse follows the ticked files, arrows, «scan of» tag", derived)
 finally:
     r.close(); r.report()

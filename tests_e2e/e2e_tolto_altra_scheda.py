@@ -21,20 +21,20 @@ try:
         def tab():
             pg = ctx.new_page(); pg.add_init_script(INIT)
             pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-            pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "window.qqReady === true", 60000); return pg
+            pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "window.qqReady === true", 60000); return pg
         a = tab()
         files = mlm.small_files(Path("/tmp/wd_tolto_altra_scheda_in"), N)
-        a.set_input_files("#pick", files); attendi(a, f"UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === {N}", 120000)
-        b = tab(); attendi(b, f"ST.files.length === {N} && E.files.filter(f => !f.gone).length === {N}", 60000)
+        a.set_input_files("#pick", files); wait_for_js(a, f"UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === {N}", 120000)
+        b = tab(); wait_for_js(b, f"ST.files.length === {N} && E.files.filter(f => !f.gone).length === {N}", 60000)
         def removed_elsewhere():
             # B closes its open files and keeps the rows (the calls of «Switch to …», open-now-raro.js): its rows are read but not open
             b.evaluate("(async () => { closeAllPanels(); await post('api/new', {}); ST.files.forEach(f => { f.use = false; }); await bootSession(); renderFiles(); })()")
-            attendi(b, f"E.files.filter(f => !f.gone).length === 0 && ST.files.length === {N}", 30000)
-            a.evaluate("removeAllFiles(); 0"); attendi(a, "ST.files.length === 0", 30000)
+            wait_for_js(b, f"E.files.filter(f => !f.gone).length === 0 && ST.files.length === {N}", 30000)
+            a.evaluate("removeAllFiles(); 0"); wait_for_js(a, "ST.files.length === 0", 30000)
             a.wait_for_function(COPIES.replace("return n; }", "return n === 0; }"), timeout=30000)
             name = os.path.basename(files[0])
             b.evaluate(f"OPENNOW.tick(ST.files.find(f => f.name === {name!r}), true); 0")
-            attendi(b, "OPENNOW.busy() === 0 && document.getElementById('err').textContent !== ''", 30000)
+            wait_for_js(b, "OPENNOW.busy() === 0 && document.getElementById('err').textContent !== ''", 30000)
             msg = b.evaluate("document.getElementById('err').textContent")
             assert name in msg and "altra scheda" in msg, f"message: {msg!r}"
             assert b.evaluate(f"!ST.files.find(f => f.name === {name!r}).use"), "the row stays unticked"
@@ -43,7 +43,7 @@ try:
         def index_lost():
             # the copy stays and only its index is gone: «This file cannot be read» with the name filled in
             g = mlm.small_files(Path("/tmp/wd_tolto_altra_scheda_in2"), 1)[0]; name = os.path.basename(g)
-            a.set_input_files("#pick", [g]); attendi(a, f"UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone && f.file === {name!r})", 120000)
+            a.set_input_files("#pick", [g]); wait_for_js(a, f"UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone && f.file === {name!r})", 120000)
             a.evaluate(f"(async () => {{ const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx'); await d.removeEntry({name + '.mzidx'!r}); }})()")
             msg = a.evaluate(f"post('api/explore', {{ samples: [{{ file: {name!r}, time: 0, type: 'sample', conc: null, cunit: null, label: null }}], append: true }}).then(() => '', e => String(e.message || e))")
             assert name in msg and "{name}" not in msg, f"message: {msg!r}"

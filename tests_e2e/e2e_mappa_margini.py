@@ -3,19 +3,19 @@ canvas is round(layout box x ratio) when the sight is turned on, after it moves 
 baseline + narrow peak file draws its baseline just above the axis. Screenshots of every state go to tests_e2e/shots/margini_*.png (ignored by git)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-from sintesi_margini import margini_mzml
+from sintesi_margini import margins_mzml
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
 M = "E.panels.find(q=>q.type==='map')"
 SHOTS = Path(get_env("SHOTS") or ROOT / "tests_e2e" / "shots"); SHOTS.mkdir(exist_ok=True)
-F = margini_mzml(Path(tempfile.mkdtemp()) / "B_Margini-t0.mzML")
+F = margins_mzml(Path(tempfile.mkdtemp()) / "B_Margini-t0.mzML")
 r = Run(port=8899, wd="/tmp/wd_margini")
 def sizes(pg):
     return pg.evaluate("(()=>{const o={dpr:devicePixelRatio};for(const k of['sp','xc']){const c=" + M + "._mz[k];o[k]={w:c.width,h:c.height,cw:c.clientWidth,ch:c.clientHeight}}return o})()")
 def settle(pg):
-    ready(pg); frames(pg, 3); attendi(pg, "document.getAnimations().length === 0"); frames(pg, 2)               # the FLIP animation of the panel is over
+    ready(pg); frames(pg, 3); wait_for_js(pg, "document.getAnimations().length === 0"); frames(pg, 2)               # the FLIP animation of the panel is over
 def check(pg, label):
     s = sizes(pg); d = s["dpr"]
     for k in ("sp", "xc"):
@@ -36,11 +36,11 @@ def toPeak(pg):
         pg.mouse.move(b[0] + dx, b[1] + b[3] / 2); frames(pg, 2); cal.append((b[0] + dx, pg.evaluate(f"MAPPA.point({M}).rt")))
     px = cal[0][0] + (14.4 - cal[0][1]) * (cal[1][0] - cal[0][0]) / (cal[1][1] - cal[0][1])
     py = pg.evaluate(f"(()=>{{const p={M},a=p._a,c=p.cv.getBoundingClientRect();let lo=0,hi=a.H;for(let i=0;i<40;i++){{const m=(lo+hi)/2;if(a.mzAt(m)>300.1)lo=m;else hi=m}}return c.top+(lo+hi)/2}})()")
-    pg.mouse.move(px - 30, py); pg.mouse.move(px, py); ready(pg); attendi(pg, "(s => !!s && !!s.sp && !!s.xi)(" + M + "._mz.shown)")
+    pg.mouse.move(px - 30, py); pg.mouse.move(px, py); ready(pg); wait_for_js(pg, "(s => !!s && !!s.sp && !!s.xi)(" + M + "._mz.shown)")
     for _ in range(8):                                                           # a pixel is about one m/z: the arrows (one bin) bring the XIC window (centre n + 0.3) onto the ion at 300.3
         c = pg.evaluate(f"{M}._mz.xic.c")
         if abs(c - 300.3) < .01: break
-        pg.keyboard.press("ArrowUp" if c < 300.3 else "ArrowDown"); ready(pg); attendi(pg, "(s => !!s && !!s.sp && !!s.xi)(" + M + "._mz.shown)")
+        pg.keyboard.press("ArrowUp" if c < 300.3 else "ArrowDown"); ready(pg); wait_for_js(pg, "(s => !!s && !!s.sp && !!s.xi)(" + M + "._mz.shown)")
     assert abs(pg.evaluate(f"{M}._mz.xic.c") - 300.3) < .01 and abs(pg.evaluate(f"MAPPA.point({M}).rt") - 14.4) < .3, (pg.evaluate(f"MAPPA.point({M})"), pg.evaluate(f"{M}._mz.xic.c"))
 try:
     with sync_playwright() as p:
@@ -49,9 +49,9 @@ try:
             pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}, device_scale_factor=dpr).new_page()          # motion ON: the FLIP animation is what broke the bitmaps
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-            pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "typeof E !== 'undefined'")
-            pg.set_input_files("#pick", [str(F)]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
-            pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, M + "._a")
+            pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined'")
+            pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
+            pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, M + "._a")
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); ready(pg)
             def shot(tag):
                 for k in ("sp", "xc"): pg.evaluate_handle(f"{M}._mz.{k}").as_element().screenshot(path=str(SHOTS / f"margini_{dpr}_{tag}_{k}.png"))
@@ -66,8 +66,8 @@ try:
                 pg.set_viewport_size({"width": 1440, "height": 950}); settle(pg); check(pg, f"dpr {dpr}: resized back")
             step(f"dpr {dpr}: window resized and back", resize)
             def expand():
-                pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); attendi(pg, M + ".el.classList.contains('max')"); settle(pg); check(pg, f"dpr {dpr}: full screen"); shot("max")
-                pg.keyboard.press("Escape"); attendi(pg, "!" + M + ".el.classList.contains('max')"); ready(pg)
+                pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); wait_for_js(pg, M + ".el.classList.contains('max')"); settle(pg); check(pg, f"dpr {dpr}: full screen"); shot("max")
+                pg.keyboard.press("Escape"); wait_for_js(pg, "!" + M + ".el.classList.contains('max')"); ready(pg)
                 pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("m"); settle(pg); check(pg, f"dpr {dpr}: back in the page, sight on again")      # the sight follows the view: off in the page
             step(f"dpr {dpr}: panel full screen and back", expand)
             pg.context.close()
