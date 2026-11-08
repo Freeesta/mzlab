@@ -1,8 +1,9 @@
 //! The browser runs `formula.ms1`, `formula.ms2` and `annot.level` with the library functions the CLI wraps (`mzlab_feat::flow_formula_ms1`, `flow_formula_ms2`, `flow_level`). Each test runs the plan
 //! natively on the synthetic caffeine file and calls the function the page calls, with the resolved parameters the page sends, and asks for the same bytes.
 
+use mzlab_core::json::Value;
 use mzlab_feat::flow_formula_ms1::{ms1_join, ms1_rows, ms1_text};
-use mzlab_feat::flow_formula_ms2::ms2_text;
+use mzlab_feat::flow_formula_ms2::{ms2_text, WARN_SUB};
 use mzlab_feat::flow_level::level_text;
 use mzlab_feat::flow_ms2::json_params;
 
@@ -82,4 +83,38 @@ fn formulas_and_levels_in_the_libraries_give_the_bytes_of_the_cli() {
         "{level}"
     );
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+// formula.ms2 when the sub-formula grid of an ion is over max_subformulas: the candidate is kept with no fragment and names the limit in
+// both algorithms; under the limit nothing is added (synthetic caffeine spectrum, C8H10N4O2, [M+H]+).
+const MGF: &str = "BEGIN IONS\nTITLE=caf\nPEPMASS=195.08765\nCHARGE=1+\nIONMODE=Positive\n138.06619 1000\n110.07127 600\n83.06037 150\nEND IONS\n";
+const FORMULAS: &str =
+    r#"{"features":[{"id":"F1","result":{"candidates":[{"neutral":"C8H10N4O2"}]}}]}"#;
+
+fn run(alg: &str, max: f64) -> String {
+    let p: Vec<(String, Value)> = [
+        ("ppm_ion", 5.0),
+        ("ppm_frag", 5.0),
+        ("max_subformulas", max),
+    ]
+    .into_iter()
+    .map(|(k, v)| (k.to_string(), Value::Num(v)))
+    .collect();
+    ms2_text(alg, &p, ("caf.mgf", MGF.as_bytes()), &[FORMULAS.as_bytes()]).unwrap()
+}
+
+#[test]
+fn a_grid_over_the_limit_is_named_on_the_candidate() {
+    // C8H11N4O2+: 9 x 12 x 5 x 3 = 1620 cells
+    for alg in ["subformula", "h_rearrangement"] {
+        let over = run(alg, 1000.0);
+        assert!(
+            over.contains(&format!("\"warning\":\"{WARN_SUB}\"")),
+            "{alg}: {over}"
+        );
+        assert!(over.contains("\"n_explained\":0"), "{alg}: {over}");
+        let under = run(alg, 3_000_000.0);
+        assert!(!under.contains("warning"), "{alg}: {under}");
+        assert!(!under.contains("\"n_explained\":0"), "{alg}: {under}");
+    }
 }
