@@ -152,6 +152,16 @@ try:
             head = [c[1] for c in rows[0] if c]; assert len(rows) == 4 and "m/z" in head and "Δm" in head, rows[:2]
             assert len(xlsx_sheets(path)) == 3, xlsx_sheets(path)                                              # points + metadata + provenance
         step("the table goes to Excel with a metadata sheet", excel)
+        def rove():
+            R = ".pnl.map .mztab tbody tr[data-i]"
+            tabs = lambda: pg.evaluate(f"[...document.querySelectorAll('{R}')].map(t => t.tabIndex)")
+            assert sorted(tabs()) == [-1, -1, 0], ("the table is one tab stop", tabs())
+            pg.evaluate(f"[...document.querySelectorAll('{R}')].find(t => t.tabIndex === 0).focus()")         # the selected row, or the first
+            at = lambda: pg.evaluate(f"[...document.querySelectorAll('{R}')].indexOf(document.activeElement)")
+            pg.keyboard.press("Home"); assert at() == 0; pg.keyboard.press("ArrowDown"); assert at() == 1 and tabs()[1] == 0, ("ArrowDown moves to the next row", at(), tabs())
+            pg.keyboard.press("End"); assert at() == 2; pg.keyboard.press("ArrowDown"); assert at() == 2, "the last row stays"
+            pg.keyboard.press("Home"); assert at() == 0 and sorted(tabs()) == [-1, -1, 0], ("Home goes to the first, still one stop", tabs())
+        step("the table of the points is one tab stop; arrows, Home and End move between rows", rove)
         def persist():
             pg.locator(".pnl.map .mztab tbody input[data-note]").first.fill("prova"); pg.dispatch_event(".pnl.map .mztab tbody input[data-note] >> nth=0", "change")
             wait_for_js(pg, f"MAPPA.pts({M}).some(q=>q.note==='prova')"); saved(pg)
