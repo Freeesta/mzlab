@@ -173,6 +173,19 @@ def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+@pytest.mark.parametrize("membro", ["MSScan.bin", "MSPeak.bin"])
+def test_agilent_tagliata_uguale_al_cli(tools, membro):
+    """A `.D` whose index or points file ends inside the last of 60 scans: both faces write the 59 whole scans, byte for byte."""
+    import agilent_sintetico
+    ds = agilent_sintetico.write(tools["tmp"] / f"in_agilent_{membro}", "synt.D", 60)
+    f = ds / "AcqData" / membro
+    f.write_bytes(f.read_bytes()[:-7])
+    cli = da_cli(tools, "agilent", ds)
+    wasm = da_wasm(tools, "agilent", ds)
+    assert cli.count(b"<spectrum ") == 59
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
     (`mzLab metodo/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""

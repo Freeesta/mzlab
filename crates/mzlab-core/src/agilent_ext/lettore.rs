@@ -454,6 +454,13 @@ impl Lettore for LettoreAgilent {
         Ok(header_fields(&self.d, self.record(k)?.1))
     }
 
+    fn missing(&mut self, c: usize) -> usize {
+        if c == 0 {
+            self.d.missing
+        } else {
+            0
+        }
+    }
     fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.one(c)?;
         listed(self)

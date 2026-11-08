@@ -1,8 +1,8 @@
 //! `AcqData/MSScan.bin`: a header (160 bytes in the runs seen; the `i32` at +88 is the offset of the first record) and then fixed records, one per scan.
 //! The record is the `ScanRecordType` of `AcqData/MSScan.xsd` packed without padding, `SpectrumParamValues` last: the xsd that the data folder carries says which
 //! optional fields this file has, so the layout is read from it (`Layout::from_xsd`). For the three GC/MS runs the xsd gives 184 bytes and the same offsets as the
-//! built-in list (`Layout::builtin`, the fallback when the folder has no xsd). A layout that does not divide the file, a field of an unknown type or a missing
-//! required field is an error that names the numbers, never a guess.
+//! built-in list (`Layout::builtin`, the fallback when the folder has no xsd). A layout that does not divide the file (unless the copy is cut short, `parse`), a field
+//! of an unknown type or a missing required field is an error that names the numbers, never a guess.
 
 use crate::error::{Error, Result};
 
@@ -369,14 +369,16 @@ pub(super) fn record(layout: &Layout, r: &[u8]) -> ScanRec {
     }
 }
 
-/// The records of an `MSScan.bin`. `peak_len`: size of `MSPeak.bin`, to check that every spectrum lies inside it. `scans`: how many scans the other files
-/// of the folder announce (`MSTS.xml`), only to say in the error what record size the file would have.
+/// The records of an `MSScan.bin` and the scans of a copy cut short that are left out. `peak_len`: size of `MSPeak.bin`, to check that every spectrum lies
+/// inside it. `scans`: how many scans the other files of the folder announce (`MSTS.xml`). A copy cut short keeps its whole scans: fewer whole records than
+/// announced scans are a cut (a part of a record at the end is dropped only then), and the records whose points lie past the end of `MSPeak.bin` only when they
+/// are the last ones and the offsets before them never go back; any other misfit stays an error.
 pub fn parse(
     bytes: &[u8],
     layout: &Layout,
     peak_len: u64,
     scans: Option<usize>,
-) -> Result<Vec<ScanRec>> {
+) -> Result<(Vec<ScanRec>, usize)> {
     if bytes.len() < HEADER_MIN {
         return Err(bad(format!("MSScan.bin has {} bytes", bytes.len())));
     }
@@ -387,7 +389,12 @@ pub fn parse(
         bytes[DATA_OFFSET_AT + 3],
     ]) as usize;
     let n = layout.record_len;
-    if start < DATA_OFFSET_AT + 4 || start > bytes.len() || !(bytes.len() - start).is_multiple_of(n)
+    let rest = bytes.len().saturating_sub(start);
+    let whole = rest / n;
+    let frammento = !rest.is_multiple_of(n);
+    if start < DATA_OFFSET_AT + 4
+        || start > bytes.len()
+        || (frammento && !scans.is_some_and(|a| a > whole))
     {
         let seen = scans
             .filter(|s| *s > 0 && start <= bytes.len())
@@ -403,25 +410,40 @@ pub fn parse(
             bytes.len()
         )));
     }
+    let fuori = |k: usize| {
+        bad(format!(
+            "scan record {} points outside MSPeak.bin or has no time",
+            k + 1
+        ))
+    };
     let mut out = Vec::new();
-    out.try_reserve_exact((bytes.len() - start) / n)
+    out.try_reserve_exact(whole)
         .map_err(|_| Error::memory_budget())?;
+    let mut primo_fuori = None;
     for (k, r) in bytes[start..].chunks_exact(n).enumerate() {
         let rec = record(layout, r);
-        if !rec.time_min.is_finite()
-            || rec
-                .offset
-                .checked_add(rec.bytes as u64)
-                .is_none_or(|e| e > peak_len)
-        {
-            return Err(bad(format!(
-                "scan record {} points outside MSPeak.bin or has no time",
-                k + 1
-            )));
+        let dentro = rec
+            .offset
+            .checked_add(rec.bytes as u64)
+            .is_some_and(|e| e <= peak_len);
+        if !rec.time_min.is_finite() || (dentro && primo_fuori.is_some()) {
+            return Err(fuori(primo_fuori.unwrap_or(k)));
+        }
+        if !dentro && primo_fuori.is_none() {
+            primo_fuori = Some(k);
         }
         out.push(rec);
     }
-    Ok(out)
+    let tenute = primo_fuori.unwrap_or(whole);
+    if !frammento && tenute == whole && !scans.is_some_and(|a| a > whole) {
+        return Ok((out, 0));
+    }
+    if out[..tenute].windows(2).any(|w| w[1].offset < w[0].offset) {
+        return Err(fuori(tenute));
+    }
+    out.truncate(tenute);
+    let attese = scans.unwrap_or(0).max(whole + usize::from(frammento));
+    Ok((out, attese - tenute))
 }
 
 #[cfg(feature = "estesi")]
