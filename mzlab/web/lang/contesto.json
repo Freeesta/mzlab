@@ -127,7 +127,7 @@
   "err.file.empty": "Un file con l'estensione di un formato noto ma lungo 0 byte; {name} = nome del file.",
   "err.file.notThisFormat": "Un file con l'estensione di un formato che nessun lettore riconosce dall'inizio (copia troncata o rovinata); {name} = nome del file, {size} = byte del file, {ext} = estensione (.mzxml, .cdf, .qgd, ...).",
   "err.file.rawTruncated": "{stage} = struttura del .raw Thermo che il file non contiene per intero; {size} = byte del file; {needed} = byte fino a cui serve il file; {readable} = scansioni intere leggibili; {declared} = scansioni dichiarate.",
-  "err.file.rawUnfinished": "{detail} = che cosa manca nel .raw Thermo, in inglese dal lettore (no controller: nessun controller nel RawFileInfo; the run header declares no scan: intestazione della corsa senza scansioni); {size} = byte del file.",
+  "err.file.rawUnfinished": "Nessun segnaposto nel testo. L’errore porta {detail} (che cosa manca, in inglese dal lettore: no controller, the run header declares no scan) e {size} (byte del file): il CLI li scrive tra parentesi dopo la chiave, la pagina no.",
   "err.file.rawVersion": "{version} = numero di versione del formato .raw Thermo letto nell'intestazione.",
   "err.file.notAgilentD": "{name} = nome della cartella .D.",
   "error.newerFormat": "Errore quando un indice (.mzidx) o una tabella della pipeline (.mzfeat, .mzfeatf) è di un formato più nuovo del programma; {version} = versione del formato trovata (il motore aggiunge anche {kind}, {file}). Il file non si tocca.",
