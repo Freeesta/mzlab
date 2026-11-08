@@ -101,6 +101,8 @@
   "err.http": "Errore di rete senza dettagli; {status} = codice HTTP.",
   "err.file.notWiff": "{name} = nome del file.",
   "err.file.wiffNoScan": "{name} = nome del file .wiff.",
+  "err.file.wiffTruncated": "{name} = nome del file .wiff; {size} = byte del file; {needed} = byte che la tabella dei settori del file richiede.",
+  "err.file.cutShort": "File di un produttore troncato (copia interrotta). {name} = nome del file; {size} = byte del file; {needed} = byte che la tabella interna del file richiede.",
   "err.flow.param.axis": "Errore del motore di Flow: una tolleranza di m/z è scritta nell'unità dell'altro asse. {param} = nome del parametro, {axis} = asse del file (Da = risoluzione unitaria, ppm = alta risoluzione).",
   "err.flow.align.polarity": "Errore del motore di Flow: l'allineamento riceve file di polarità diverse. {positive}, {negative} = nomi dei file positivi e negativi, separati da virgole.",
   "err.flow.align.resolution": "Errore del motore di Flow: l'allineamento riceve file a risoluzione unitaria e ad alta risoluzione. {unit}, {high} = nomi dei file dei due gruppi, separati da virgole.",
