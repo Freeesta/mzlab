@@ -151,7 +151,8 @@ pub fn scan_metadata<R: Read + Seek>(
     if idx >= raw.num_scans {
         return None;
     }
-    let params = raw.scan_params(source, raw.run_header.sample_info.first_scan_number + idx);
+    // only the trailer fields the metadata reads (`scan_params_known`): the same metadata as with the whole record
+    let params = raw.scan_params_known(source, raw.run_header.sample_info.first_scan_number + idx);
     scan_metadata_with(raw, idx, params)
 }
 
