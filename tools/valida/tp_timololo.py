@@ -101,9 +101,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path)
     a = ap.parse_args()
-    radice = dati_percorsi.radice()
+    root = dati_percorsi.radice()
     truth_path = dati_percorsi.percorso("scratchpad/timolol_truth.json")
-    if radice is None or truth_path is None:
+    if root is None or truth_path is None:
         print("SKIP tp_timololo: no data repository")
         return 0
     data = run_pass()
@@ -111,7 +111,7 @@ def main() -> int:
         print("SKIP tp_timololo: the test did not write the measures (series or parent missing)")
         return 0
     text = render(measure(data, json.loads(truth_path.read_text())))
-    dest = a.out or radice / "coordinamento/consegne/TABUI_TP_TIMOLOLO_MISURE.md"
+    dest = a.out or root / "coordinamento/consegne/TABUI_TP_TIMOLOLO_MISURE.md"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(text, encoding="utf-8")
     print(f"written {dest.name} in the private repository")

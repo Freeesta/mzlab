@@ -165,7 +165,10 @@ fn the_decoded_scans_of_a_profile_file_keep_their_pinned_hash() {
         }
     }
     let got = hex(&h.finalize());
-    eprintln!("file {file} decoded {got}");
+    // the method document: the trailer passes (the field ranges and the series) are in it
+    let method = hex(&Sha256::digest(l.method(0).expect("method").as_bytes()));
+    eprintln!("file {file} decoded {got} method {method}");
+    assert_eq!(method, METHOD_SHA256, "the method document changed");
     assert_eq!(
         file, FILE_SHA256,
         "the writer changed: a new pin needs a new reason"
@@ -174,4 +177,5 @@ fn the_decoded_scans_of_a_profile_file_keep_their_pinned_hash() {
 }
 
 const FILE_SHA256: &str = "e2d77e897f6c86a56a78d0f149acaf0026904a250e9d5e23f49b554c5482099f";
+const METHOD_SHA256: &str = "abad0fdfdb1af251aaf3a5debee54f29fa4712bb7eb772a0d6bf032a0bdced8d";
 const DECODED_SHA256: &str = "e261d343d99bf77b0137844eb261914460852073efd3f7a4efac23b241666ddb";

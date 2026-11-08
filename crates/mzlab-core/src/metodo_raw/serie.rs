@@ -76,7 +76,7 @@ impl Statistiche {
     }
 }
 
-fn numero_di(v: &GenericValue) -> Option<f64> {
+pub(super) fn numero_di(v: &GenericValue) -> Option<f64> {
     if matches!(v, GenericValue::Bool(_)) {
         return None;
     }
@@ -309,8 +309,8 @@ fn scansioni(raw: &RawFileReader) -> Vec<Scansione> {
         .collect()
 }
 
-/// Every series of the file: the status log first, then the trailer.
-pub fn index<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Voce> {
+/// Every series of the file: the status log first, then the trailer, whose records `righe` gives (the single pass of `metodo_raw` over it).
+pub fn index(raw: &RawFileReader, righe: Righe) -> Vec<Voce> {
     let mut out = raw
         .status_log
         .as_ref()
@@ -319,7 +319,7 @@ pub fn index<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Voce> {
     out.extend(indice_trailer(
         &raw.scan_parameters_header,
         &scansioni(raw),
-        &mut righe_di(raw, source),
+        righe,
     ));
     out
 }
