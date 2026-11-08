@@ -125,10 +125,13 @@ const CONV = {
 const CONVQ = {
   st: /** @type {Map<string, { state: string, error: string }>} */ (new Map()),
   timer: /** @type {any} */ (0),
+  noted: false,
   on() { return typeof window !== "undefined" && !!window.MZLAB_DESKTOP && !!window.MZLAB_RUST && !!window.MZLAB_RUST.convQueue; },
   /** @param {string} op @param {string} [name] */ async call(op, name) {
     let j = null; try { j = await window.MZLAB_RUST.convQueue(op, name); } catch (_) { /* the queue is optional: the file loads without it */ }
     if (!j) return;
+    // the memory budget runs fewer conversions at once than the default: said once, calmly (the same text mzlab-cli convert prints)
+    if (j.notice && !this.noted) { this.noted = true; const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = I18N.t(j.notice.key, j.notice.params); box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
     const prev = [...this.st];
     this.st = new Map(j.jobs.map((/** @type {Bag} */ x) => [x.name, { state: x.state, error: x.error }]));
     const next = [...this.st];

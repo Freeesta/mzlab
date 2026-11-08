@@ -7,7 +7,7 @@ product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an
 tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 The variants of the readers module (feature `estesi`): `variante.wiff` (Log model QTRAP 5500; survey scan V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1,
-under "variante" in the JSON) and the files the module refuses with `err.file.wiff` (under "rifiuti": name -> text of the `detail`): two periods, a TOF scan type, a TOF block, a block version 4.
+under "variante" in the JSON) and the files the module refuses (under "rifiuti": name -> the cause as the tests spell it: `periods=N`, `scan type code C (experiment E)` for `err.file.wiffPeriods` / `wiffScanType`, else the `detail` of `err.file.wiff`): two periods, a TOF scan type, a TOF block, a block version 4.
 `dadmetodo.wiff`: a 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method (under "dadmetodo").
 """
 import json
