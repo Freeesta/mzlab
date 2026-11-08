@@ -86,6 +86,7 @@ I18N.add("en", {
   "leg.fileAll.title": "Shows or hides the file in all traces",
   "leg.files": "files:",
   "leg.ion.prompt": "Name of the ion",
+  "leg.ion.hint": "Double-click, double tap or F2 to rename.",
   "leg.traces": "{n} traces ▾",
   "leg.allHidden": "All the traces are hidden: click the legend to show them.",
   "ibk.leg": "Blank {ranges} · {level}",

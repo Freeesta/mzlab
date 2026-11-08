@@ -86,6 +86,7 @@ I18N.add("it", {
   "leg.fileAll.title": "Mostra o nasconde il file in tutte le tracce",
   "leg.files": "file:",
   "leg.ion.prompt": "Nome dell'ione",
+  "leg.ion.hint": "Doppio clic, doppio tocco o F2 per rinominare.",
   "leg.traces": "{n} tracce ▾",
   "leg.allHidden": "Tutte le tracce sono nascoste: clicca la legenda per mostrarle.",
   "ibk.leg": "Bianco {ranges} · {level}",

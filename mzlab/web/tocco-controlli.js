@@ -1,7 +1,7 @@
 // @ts-check
 // Touch and pen outside the graphs (lazy ES module, loaded by touch.js at the first touch): a double tap is a double click, as touch.js does on the canvases.
 // iOS sends no dblclick for a double tap, so renaming a panel or a trace, resetting a divider or opening a table row had no finger path.
-// The page has no double-tap zoom (app.css, html touch-action), so both taps arrive as clicks; pinch zoom stays.
+// The controls with a double-click action have no double-tap zoom (app.css, touch-action:manipulation), so both taps arrive as clicks; elsewhere the page zooms as usual.
 const MOVE = 8, DTAP = 350, NEAR = 28;
 const W = /** @type {any} */ (window);
 const dblclick = (/** @type {Element} */ el, /** @type {number} */ x, /** @type {number} */ y) =>
