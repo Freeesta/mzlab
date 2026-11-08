@@ -10,7 +10,7 @@ use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
 use crate::mzidx_ordine::ordina_secchi;
-use crate::mzidx_spill::{leggi_parti, Parti, Spill};
+use crate::mzidx_spill::{allinea, leggi_parti, Parti, Spill};
 use crate::mzml::Spectrum;
 mod late;
 pub use late::{build_mzml_corriere, build_mzml_late};
@@ -497,7 +497,7 @@ impl Gruppo {
         } else if keep {
             self.kept.push(Peak { mz, it, pos });
         } else if let Some((parti, spill)) = scorta {
-            parti.push(spill, mz, it, pos)?;
+            parti.push(spill, mz, it, pos, self.level == 1)?;
         }
         Ok(())
     }
@@ -627,7 +627,7 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
                 // the kept values are `f32` widened: narrowing them back is exact
                 parti.push32(sp, mz as f32, it as f32, pos)?;
             } else {
-                parti.push(sp, mz, it, pos)?;
+                parti.push(sp, mz, it, pos, gruppi[i].level == 1)?;
             }
         }
     }
@@ -887,6 +887,7 @@ pub(crate) fn build_dopo(
             if hi == lo {
                 return Err(slice_refusal(cost(lo), budget));
             }
+            (hi, used) = allinea(parti.as_ref(), lo, hi, used, &cost);
             if used > 0 {
                 for sec in secs.iter_mut() {
                     sec.begin_round(lo, hi)?;
@@ -897,10 +898,9 @@ pub(crate) fn build_dopo(
                     // the peaks are in the scratch file: no decoding
                     secs.iter_mut().for_each(|s| s.per_scansione());
                     leggi_parti(p, sp, lo, hi, &mut |mz, it, pos| {
-                        for &(si, q) in &member[pos as usize] {
-                            secs[si].fill_pk(mz, it, q)?;
-                        }
-                        Ok(())
+                        member[pos as usize]
+                            .iter()
+                            .try_for_each(|&(si, q)| secs[si].fill_pk(mz, it, q))
                     })?;
                 } else {
                     let mut on = |sp: Spectrum| {
