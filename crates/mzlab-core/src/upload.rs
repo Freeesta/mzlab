@@ -360,6 +360,19 @@ pub fn con_impronte_parallele<R>(
     })
 }
 
+/// WASI and the browser cannot spawn a thread: the fingerprints are taken in place when `lavoro` asks for them, the same bytes as the native build.
+#[cfg(target_arch = "wasm32")]
+pub fn con_impronte_parallele<R>(
+    recipe: impl FnOnce() -> Result<FileSet> + Send,
+    lavoro: impl FnOnce(&mut dyn FnMut() -> Result<Vec<Impronta>>) -> Result<R>,
+) -> Result<R> {
+    let mut recipe = Some(recipe);
+    lavoro(&mut || match recipe.take() {
+        Some(r) => r().and_then(|mut fs| impronte(&mut fs)),
+        None => Err(Error::new("err.file.unknown")),
+    })
+}
+
 /// Marks the members as having a SHA-1 already (empty), so the reader does not read the whole file for the header of an mzML nobody asked for: the
 /// index never uses it.
 pub fn senza_sha1(fs: &mut FileSet) {
