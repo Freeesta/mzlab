@@ -169,7 +169,7 @@ function attach(p) {
     else if (p.type !== "spec") {
       const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 12 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { if (window.DDA && DDA.onTri(p, tt)) return; goMs2(tt); return; }          // a triangle: that MS2 scan (in the DDA trio, or in the MS2 tab)
-      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); p.sel = null; p.cur = xs; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
+      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); if (p.sel && x0 >= p.sel[0] && x0 <= p.sel[1]) p._dsel = [p.sel, e ? e.timeStamp : performance.now()]; p.sel = null; p.cur = xs; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs && !p.sel) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }
   };
   addEventListener("mouseup", p._up, { signal: p._ac.signal });
@@ -198,7 +198,8 @@ function attach(p) {
       return;
     }
     // one rule for every other graph, from the registry: an annotation = edit it; zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
-    const x = xd(rect(e));
+    const x = xd(rect(e)), ds = p._dsel; p._dsel = null;
+    if (!p.sel && ds && e.timeStamp - ds[1] < 800 && x >= ds[0][0] && x <= ds[0][1]) { p.sel = ds[0]; draw(p); }      // the first click of the pair cleared the range it was in: the double click is for that range
     await AZIONI.doppio({ vista: p.type, p, x, k: p.type === "spec" ? 0 : nearestFile(p, x), near: hit && hit.ann, e, dbl: true, a: p._a, m: null, has: false });
   };
   // no dragging needed (WCAG 2.5.7): on the focused chart + and - zoom, [ and ] move the visible range, 0 shows everything
