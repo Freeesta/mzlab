@@ -18,6 +18,30 @@ fn a_key_becomes_its_english_text_with_the_key_kept() {
     );
 }
 
+/// A .raw with no finished run (`opentfraw::Error::NoRun`, a run header with last scan 0): the page's text, which names the limit, what was done and the next
+/// step without the reader's English detail; the detail and the size stay after the key for scripts.
+#[test]
+fn an_unfinished_raw_is_the_text_of_the_page() {
+    // as `mzlab_core::raw::thermo_error` builds it (its parameters: `robustezza_thermo_aperture.rs`)
+    let e = Error::new("err.file.rawUnfinished")
+        .with("detail", "the run header declares no scan")
+        .with("size", 5_670_000);
+    let t = umano(&e.to_string());
+    assert_eq!(
+        t,
+        format!(
+            "{} (err.file.rawUnfinished, detail=the run header declares no scan, size=5670000)",
+            testo_di("err.file.rawUnfinished").unwrap()
+        )
+    );
+    assert!(
+        t.contains("no scan index was written")
+            && t.contains("Nothing was opened")
+            && t.contains("instrument PC"),
+        "{t}"
+    );
+}
+
 #[test]
 fn every_key_of_the_catalogue_is_found() {
     let keys: Vec<&str> = CATALOGO

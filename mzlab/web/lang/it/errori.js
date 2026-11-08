@@ -20,7 +20,7 @@ I18N.add("it", {
   "err.file.index": "Non si riesce a costruire l'indice del file ({detail}).",
   "err.file.raw": "Il file .raw (Thermo) o la cartella .raw (Waters) non si legge: serve il file intero, con tutti i suoi file ({detail}).",
   "err.file.rawTruncated": "Il file .raw (Thermo) è troncato: è lungo {size} byte e la parte «{stage}» ne richiede almeno {needed}, quindi nessuna scansione si può leggere. Copia di nuovo il file per intero.",
-  "err.file.rawUnfinished": "Il file .raw (Thermo) non contiene una corsa conclusa ({detail}): probabilmente l’acquisizione si è fermata prima che lo strumento chiudesse il file, quindi le scansioni non hanno un indice e non si possono leggere.",
+  "err.file.rawUnfinished": "Questo file .raw (Thermo) non contiene una corsa conclusa: l’acquisizione si è fermata prima che lo strumento chiudesse il file, quindi l’indice delle scansioni non è stato scritto e le scansioni non si ritrovano. Non è stato aperto né scritto nulla. Copia di nuovo il file ad acquisizione finita, oppure esportalo o recuperalo di nuovo dal PC dello strumento.",
   "err.file.rawVersion": "La versione {version} del formato .raw Thermo non è ancora supportata: converti il file in mzML.",
   "err.file.notAgilentD": "La cartella {name} non contiene AcqData/MSScan.bin e AcqData/MSPeak.bin (né il file data.ms): serve la cartella .D intera, con la sua sottocartella AcqData.",
   "err.file.agilentNoEngine": "Le cartelle Agilent .D si aprono solo con il motore Rust del programma ({name}).",
