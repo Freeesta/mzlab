@@ -1,16 +1,16 @@
 // The tests of sessione.rs.
 use super::*;
-use crate::sessione::duro::{Duro, STRANI};
+use crate::sessione::duro::{Hard, ODD_CHARS};
 use mzlab_core::lettori::{Campione, Campo, Formato, VoceCromatogramma, VoceScansione};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use serde_json::Value;
 
-struct Finto {
+struct Fake {
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
 }
 
-impl Lettore for Finto {
+impl Lettore for Fake {
     fn format(&self) -> Formato {
         Formato::Altro("finto")
     }
@@ -68,9 +68,9 @@ impl Lettore for Finto {
 }
 
 #[test]
-fn la_sessione_risponde_e_chiude() {
-    let mut s = Sessioni::default();
-    let fin = Finto {
+fn the_session_answers_and_closes() {
+    let mut s = Sessions::default();
+    let fin = Fake {
         campioni: vec![Campione {
             id: 1,
             nome: "a".into(),
@@ -89,7 +89,7 @@ fn la_sessione_risponde_e_chiude() {
             posizione: None,
         }],
     };
-    let h = s.inserisci(Box::new(fin));
+    let h = s.insert(Box::new(fin));
     let c: serde_json::Value = serde_json::from_str(&s.samples(h).unwrap()).unwrap();
     assert_eq!(c["formato"], "finto");
     assert_eq!(c["campioni"][0]["scans"], 1);
@@ -112,13 +112,13 @@ fn la_sessione_risponde_e_chiude() {
     );
     assert_eq!(s.method(h, 0).unwrap(), "{}");
     assert_eq!(s.file_header(h, 0).unwrap(), "null");
-    s.chiudi(h);
+    s.close(h);
     assert_eq!(s.samples(h).err().map(|e| e.key), Some("error.badIndex"));
 }
 
 /// The index crosses as bytes and comes back as it was, with every column (NaN, infinities, 64-bit offsets, the repeated filter once).
 #[test]
-fn l_indice_in_byte_torna_uguale() {
+fn the_index_bytes_round_trip() {
     use mzlab_core::lettori::Posizione;
     let voci = vec![
         VoceScansione {
@@ -148,8 +148,8 @@ fn l_indice_in_byte_torna_uguale() {
             posizione: None,
         },
     ];
-    let mut s = Sessioni::default();
-    let h = s.inserisci(Box::new(Finto {
+    let mut s = Sessions::default();
+    let h = s.insert(Box::new(Fake {
         campioni: vec![],
         indice: voci.clone(),
     }));
@@ -159,14 +159,14 @@ fn l_indice_in_byte_torna_uguale() {
 
 // `3` and `3.0` are the same number for the page (`JSON.parse`): compare every number as a double
 /// Every number as a double, a non-finite one as null.
-fn norma(v: Value) -> Value {
+fn norm(v: Value) -> Value {
     match v {
         Value::Number(n) => n
             .as_f64()
             .and_then(serde_json::Number::from_f64)
             .map_or(Value::Null, Value::Number),
-        Value::Array(a) => Value::Array(a.into_iter().map(norma).collect()),
-        Value::Object(m) => Value::Object(m.into_iter().map(|(k, v)| (k, norma(v))).collect()),
+        Value::Array(a) => Value::Array(a.into_iter().map(norm).collect()),
+        Value::Object(m) => Value::Object(m.into_iter().map(|(k, v)| (k, norm(v))).collect()),
         v => v,
     }
 }
@@ -174,7 +174,7 @@ fn norma(v: Value) -> Value {
 /// A reader whose answers hold the awkward values: control characters, quotes, non-ASCII, NaN, infinities, `-0.0`, numbers at both ends of the range.
 /// The points of a trace text are the doubles the reader gave (the sign of zero included), NaN and infinities being null: read here with `f64::from_str`, because serde_json's own
 /// reader is not exact to the last bit (no `float_roundtrip`) while `JSON.parse` is.
-fn punti_identici(testo: &str, x: &Chromatogram) {
+fn identical_points(testo: &str, x: &Chromatogram) {
     let (t_txt, i_txt) = testo
         .split_once("\"time\":[")
         .unwrap()
@@ -199,13 +199,13 @@ fn punti_identici(testo: &str, x: &Chromatogram) {
 
 /// The texts of the session are what `serde_json::json!` wrote before (kept here as the reference): same parsed values for every function, and the numbers read back bit for bit.
 #[test]
-fn i_testi_json_valgono_quelli_di_serde_json() {
+fn the_json_texts_equal_serde_json() {
     use serde_json::json;
-    let parse = |t: String| -> Value { norma(serde_json::from_str(&t).expect("valid JSON")) };
-    let json = |v: Value| norma(v);
-    let mut s = Sessioni::default();
-    let h = s.inserisci(Box::new(Duro));
-    let mut r = Duro;
+    let parse = |t: String| -> Value { norm(serde_json::from_str(&t).expect("valid JSON")) };
+    let json = |v: Value| norm(v);
+    let mut s = Sessions::default();
+    let h = s.insert(Box::new(Hard));
+    let mut r = Hard;
 
     let vecchio: Vec<_> = r
         .samples()
@@ -239,11 +239,11 @@ fn i_testi_json_valgono_quelli_di_serde_json() {
         json(Value::Array(vecchio))
     );
 
-    let x = r.chromatogram(0, STRANI).unwrap();
+    let x = r.chromatogram(0, ODD_CHARS).unwrap();
     let mut vecchio = json!({ "id": x.id, "kind": format!("{:?}", x.kind), "q1": x.q1, "q3": x.q3, "unit": x.unit, "time": x.time, "intensity": x.intensity });
-    let testo = s.chromatogram(h, 0, STRANI).unwrap();
+    let testo = s.chromatogram(h, 0, ODD_CHARS).unwrap();
     let mut nuovo = parse(testo.clone());
-    punti_identici(&testo, &x);
+    identical_points(&testo, &x);
     for v in [&mut vecchio, &mut nuovo] {
         let m = v.as_object_mut().unwrap();
         m.remove("time");
@@ -263,12 +263,12 @@ fn i_testi_json_valgono_quelli_di_serde_json() {
     assert_eq!(s.file_header(h, 1).unwrap(), "null");
 }
 
-/// Speed of `cromatogramma` on a trace of 1M points (run with `cargo test -p mzlab-lettori-wasm --release -- --ignored --nocapture`).
+/// Speed of `chromatogram` on a trace of 1M points (run with `cargo test -p mzlab-lettori-wasm --release -- --ignored --nocapture`).
 #[test]
 #[ignore]
-fn misura_cromatogramma_un_milione_di_punti() {
-    struct Lungo(Vec<f64>);
-    impl Lettore for Lungo {
+fn measure_a_chromatogram_of_a_million_points() {
+    struct Long(Vec<f64>);
+    impl Lettore for Long {
         fn format(&self) -> Formato {
             Formato::Altro("lungo")
         }
@@ -306,8 +306,8 @@ fn misura_cromatogramma_un_milione_di_punti() {
     let punti: Vec<f64> = (0..1_000_000)
         .map(|i| i as f64 * 0.0013 + (i % 97) as f64 / 7.0)
         .collect();
-    let mut s = Sessioni::default();
-    let h = s.inserisci(Box::new(Lungo(punti)));
+    let mut s = Sessions::default();
+    let h = s.insert(Box::new(Long(punti)));
     let t = std::time::Instant::now();
     let n = s.chromatogram(h, 0, "TIC").unwrap().len();
     println!(

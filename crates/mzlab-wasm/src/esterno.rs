@@ -224,7 +224,7 @@ impl RisposteTracce {
         })
     }
 
-    /// The header of the mzML (`null`: the reader has none); the fields are those of `Sessioni::testata` of the module.
+    /// The header of the mzML (`null`: the reader has none); the fields are those of `Sessions::file_header` of the module.
     pub(crate) fn file_header(t: &str) -> Result<Option<Header>> {
         let v = doc(t)?;
         if v.is_null() {

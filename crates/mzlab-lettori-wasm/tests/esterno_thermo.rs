@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 use mzlab_core::{lettori_mzml, rawlettore, Result};
-use mzlab_lettori_wasm::sessione::Sessioni;
+use mzlab_lettori_wasm::sessione::Sessions;
 use mzlab_wasm::esterno::{LettoreEsterno, Modulo};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -49,12 +49,12 @@ fn set(path: &Path) -> FileSet {
 }
 
 /// The session of the module as the `Modulo` the engine sees (what `ModuloJs` does through the JS functions).
-struct ViaSessione {
-    s: Sessioni,
+struct ViaSession {
+    s: Sessions,
     h: u32,
 }
 
-impl Modulo for ViaSessione {
+impl Modulo for ViaSession {
     fn samples(&mut self) -> Result<String> {
         self.s.samples(self.h)
     }
@@ -85,9 +85,9 @@ impl Modulo for ViaSessione {
 }
 
 /// FNV-1a over what is written, and how much.
-struct Impronta(u64, u64);
+struct Fingerprint(u64, u64);
 
-impl Write for Impronta {
+impl Write for Fingerprint {
     fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
         for &x in b {
             self.0 = (self.0 ^ u64::from(x)).wrapping_mul(0x100_0000_01b3);
@@ -101,7 +101,8 @@ impl Write for Impronta {
 }
 
 fn mzml(l: &mut dyn Lettore) -> (u64, u64) {
-    let w = lettori_mzml::scrivi(l, 0, Impronta(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
+    let w =
+        lettori_mzml::scrivi(l, 0, Fingerprint(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
     (w.0, w.1)
 }
 
@@ -154,9 +155,9 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
     }
     for f in &files {
         let mut diretto = (rawlettore::VOCE.apri)(set(f), &Limiti::sito()).unwrap();
-        let mut s = Sessioni::default();
-        let h = s.inserisci(mzlab_lettori::apri_nudo(set(f), &Limiti::sito()).unwrap());
-        let mut ext = LettoreEsterno::new(ViaSessione { s, h }).unwrap();
+        let mut s = Sessions::default();
+        let h = s.insert(mzlab_lettori::apri_nudo(set(f), &Limiti::sito()).unwrap());
+        let mut ext = LettoreEsterno::new(ViaSession { s, h }).unwrap();
         let nome = f.display();
         assert_eq!(ext.format(), diretto.format(), "{nome}");
         assert_eq!(ext.samples(), diretto.samples(), "{nome}");
