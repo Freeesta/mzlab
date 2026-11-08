@@ -105,13 +105,17 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
             let m = &mut fs.membri[i];
             // a header that points past the end is a copy cut before its directory: the same notice as a cut found after `open`
             let mut h = vec![0u8; m.dim.min(512) as usize];
-            if m.dati.read_at(0, &mut h).is_ok() {
-                if let Some(need) = Ole::header_cut(&h).filter(|&n| n > m.dim) {
-                    return Err(Error::new("err.file.cutShort")
-                        .with("name", &m.nome)
-                        .with("size", m.dim)
-                        .with("needed", need));
-                }
+            let cut = m
+                .dati
+                .read_at(0, &mut h)
+                .ok()
+                .and_then(|_| Ole::header_cut(&h))
+                .filter(|&n| n > m.dim);
+            if let Some(need) = cut {
+                return Err(Error::new("err.file.cutShort")
+                    .with("name", &m.nome)
+                    .with("size", m.dim)
+                    .with("needed", need));
             }
             let d = m.dim;
             return Err(rifiuto(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
