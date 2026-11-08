@@ -140,6 +140,16 @@ impl Parti {
     }
 }
 
+/// One record (`m/z`, intensity, scan, little-endian) made on the stack and appended in one copy: pass 1 appends one per spilled peak.
+#[allow(clippy::indexing_slicing)] // `R == 2 * W + 4`, the two record widths of `REC`
+fn record<const R: usize, const W: usize>(mz: [u8; W], it: [u8; W], pos: u32) -> [u8; R] {
+    let mut r = [0; R];
+    r[..W].copy_from_slice(&mz);
+    r[W..2 * W].copy_from_slice(&it);
+    r[2 * W..].copy_from_slice(&pos.to_le_bytes());
+    r
+}
+
 fn f64_at(r: &[u8], at: usize) -> f64 {
     r.get(at..at + 8)
         .and_then(|b| b.try_into().ok())
@@ -171,9 +181,7 @@ impl Parti {
         self.ms1_larghe |= ms1;
         let p = usize::from(self.of_bucket[bucket(mz)]);
         let buf = self.buffer(0, p)?;
-        buf.extend_from_slice(&mz.to_le_bytes());
-        buf.extend_from_slice(&it.to_le_bytes());
-        buf.extend_from_slice(&pos.to_le_bytes());
+        buf.extend_from_slice(&record::<20, 8>(mz.to_le_bytes(), it.to_le_bytes(), pos));
         let full = buf.len() >= PER_CHUNK[0] * REC[0];
         self.records[p] += 1;
         if full {
@@ -186,9 +194,7 @@ impl Parti {
     pub(crate) fn push32(&mut self, sp: &mut dyn Spill, mz: f32, it: f32, pos: u32) -> Result<()> {
         let p = usize::from(self.of_bucket[bucket(f64::from(mz))]);
         let buf = self.buffer(1, p)?;
-        buf.extend_from_slice(&mz.to_le_bytes());
-        buf.extend_from_slice(&it.to_le_bytes());
-        buf.extend_from_slice(&pos.to_le_bytes());
+        buf.extend_from_slice(&record::<12, 4>(mz.to_le_bytes(), it.to_le_bytes(), pos));
         let full = buf.len() >= PER_CHUNK[1] * REC[1];
         self.records[PARTS + p] += 1;
         if full {

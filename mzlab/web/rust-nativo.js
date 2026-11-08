@@ -45,7 +45,7 @@ async function viaHandles(st, files, fn) {
   try { return fn(reader(files, undefined, fonti)); } finally { fonti.forEach(f => f.close()); }
 }
 
-/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it; `progress({frac, phase, done, total})` is told the overall fraction 0..1 and, in the phases that read the scans, how many of the sample's scans are done */
+/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it (`bytes`, and those of `spill.put` and `writeCen`, are views of the engine's memory valid during the call only: written at once, never kept, no call to the engine meanwhile); `progress({frac, phase, done, total})` is told the overall fraction 0..1 and, in the phases that read the scans, how many of the sample's scans are done */
 // the fingerprints a builder waits for once its first pass is done (`lateJob`): Int32 [state (0 waiting, 1 there, 2 none), length], then their JSON
 const LATE_BYTES = 64 << 10, LATE_WAIT_MS = 600000;
 /** the shared buffer of `lateJob` gets the fingerprints (null: none, the builder reads the members itself) */
