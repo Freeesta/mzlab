@@ -121,7 +121,7 @@ I18N.add("en", {
   "err.comp.ion": "Unknown ion type: {ion}.",
   "err.comp.charge": "The charge does not agree with the ion type.",
   "err.comp.unit": "The unit of the tolerance is ppm or mDa.",
-  "err.comp.many": "Too many combinations: narrow the ranges of the elements.",
+  "err.comp.many": "These elements give {n} combinations, over the limit of {max}: no formula was searched for this m/z. Give fewer elements or lower maxima (the heavy ones count most).",
   "err.tree.formula": "Invalid formula: {formula}",
   "err.tree.noPath": "The file has no MSn scans with the fragmentation path in the filter (an MS3 or higher file is needed).",
   "err.tree.needStages": "The tree is for MSn files with at least two stages of fragmentation (MS3 or higher).",
