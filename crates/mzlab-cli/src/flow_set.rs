@@ -9,6 +9,7 @@ use std::time::SystemTime;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::hashio::hash_read;
 use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::upload::{impronte_note, probe, Impronta};
 use mzlab_core::{Error, Result};
 
 use crate::flow::io;
@@ -82,34 +83,53 @@ pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
     Ok(FileSet { membri })
 }
 
-/// Size and SHA-256 of the file `p`; its SHA-1 comes with them in the same read and is kept for `file_set`, so the reader that writes the header of an mzML
-/// does not read the file again for it.
+/// Size and SHA-256 of the file `p`; its SHA-1 comes with them in the same read, and both are kept for `file_set` and `known_prints`, so neither the
+/// reader that writes the header of an mzML nor the index of the dataset reads the file again for them.
 fn hash_file(p: &Path) -> Result<(u64, String)> {
     let before = stamp(p);
     let (bytes, sha256, sha1) = hash_read(&mut File::open(p).map_err(io)?).map_err(io)?;
-    if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), SHA1.lock()) {
+    if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), BOTH.lock()) {
         seen.retain(|e| e.path != p);
         seen.push(Hashed {
             path: p.to_path_buf(),
             len,
             time,
-            sha: sha1,
+            sha: (sha256.clone(), sha1),
         });
     }
     Ok((bytes, sha256))
 }
 
+/// The fingerprints of the members of the dataset at `path` (`upload::impronte`) when `hash_file` has read every one of them and they are still the
+/// same files: only the 128 KB of each `probe` are read. `None` sends the caller to read the members again.
+pub(crate) fn known_prints(path: &Path) -> Result<Option<Vec<Impronta>>> {
+    let list = members(path)?;
+    let Some(pairs) = list
+        .iter()
+        .map(|(_, p)| known_pair(p))
+        .collect::<Option<Vec<_>>>()
+    else {
+        return Ok(None);
+    };
+    let mut fs = file_set(path)?;
+    let mut values = Vec::with_capacity(pairs.len());
+    for (m, (sha256, sha1)) in fs.membri.iter_mut().zip(pairs) {
+        values.push((sha256, sha1, probe(&mut m.dati, m.dim)?));
+    }
+    Ok(impronte_note(&mut fs, &values))
+}
+
 /// SHA-256 of the lone files `digest` has hashed, by path, size and modification time: the `.mzidx` build takes its source's hash from here instead of reading the file again.
 static HASHED: Mutex<Vec<Hashed>> = Mutex::new(Vec::new());
 
-/// SHA-1 of the files `hash_file` has read, in the same way.
-static SHA1: Mutex<Vec<Hashed>> = Mutex::new(Vec::new());
+/// SHA-256 and SHA-1 of the files `hash_file` has read, in the same way.
+static BOTH: Mutex<Vec<Hashed<(String, String)>>> = Mutex::new(Vec::new());
 
-struct Hashed {
+struct Hashed<T = String> {
     path: PathBuf,
     len: u64,
     time: Option<SystemTime>,
-    sha: String,
+    sha: T,
 }
 
 fn stamp(p: &Path) -> Option<(u64, Option<SystemTime>)> {
@@ -135,13 +155,18 @@ fn remember(path: &Path, before: Option<(u64, Option<SystemTime>)>, bytes: u64, 
     }
 }
 
-/// The SHA-1 `hash_file` took of `path`, if it is still the same file.
-fn known_sha1(path: &Path) -> Option<String> {
+/// The SHA-256 and SHA-1 `hash_file` took of `path`, if it is still the same file.
+fn known_pair(path: &Path) -> Option<(String, String)> {
     let (len, time) = stamp(path)?;
-    let seen = SHA1.lock().ok()?;
+    let seen = BOTH.lock().ok()?;
     seen.iter()
         .find(|e| e.path == path && e.len == len && e.time == time)
         .map(|e| e.sha.clone())
+}
+
+/// The SHA-1 `hash_file` took of `path`, if it is still the same file.
+fn known_sha1(path: &Path) -> Option<String> {
+    known_pair(path).map(|p| p.1)
 }
 
 /// Size and SHA-256 of `path`; the hash is not recomputed when the writer already took `known`.
