@@ -33,10 +33,13 @@ export function prints(/** @type {StubMember[]} */ members) {
   return members.length && members.every(m => m.sha256 && m.sha1 && m.probe) ? members.flatMap(m => [m.sha256, m.sha1, m.probe]) : undefined;
 }
 
-/** `read(member, offset, length)` over some Files, as nativi.rs wants it; `seen(i, end)` is told how far each member was read */
+/** `read(member, offset, length)` over some Files, as nativi.rs wants it (with `into` over handles); `seen(i, end)` is told how far each member was read */
 export function reader(/** @type {Blob[]} */ files, /** @type {((i: number, end: number) => void) | undefined} */ seen, /** @type {import("./lettura-sync.js").Fonte[] | undefined} */ fonti = undefined) {
   const fr = new FileReaderSync(), rd = fonti ? fonti.map(f => f.read) : files.map(f => (/** @type {number} */ o, /** @type {number} */ n) => new Uint8Array(fr.readAsArrayBuffer(f.slice(o, o + n))));
-  return (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
+  const read = (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
+  // over handles, `read.into(i, offset, view)`: the engine (nativi/membro.rs) and the readers modules (lettura.rs) give a view of their memory, the handle reads into it
+  if (fonti) read.into = (/** @type {number} */ i, /** @type {number} */ o, /** @type {Uint8Array} */ v) => { const k = fonti[i].into(o, v); if (seen) seen(i, o + k); return k; };
+  return read;
 }
 
 /** runs `fn(read)` with the members of `st` read through read-only handles of their OPFS copies, closed when it ends (a reader kept longer goes on through the Blobs) @template T @param {Stub} st @param {Blob[]} files @param {(read: ReturnType<typeof reader>) => T} fn @returns {Promise<T>} */
