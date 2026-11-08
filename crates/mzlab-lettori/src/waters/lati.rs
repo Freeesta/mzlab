@@ -25,16 +25,16 @@ pub(super) struct Tabella {
 
 impl Tabella {
     /// The table of `b`; `None` for a file that is not one (the table is optional: the scans do not depend on it).
-    pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Option<Tabella> {
-        let (inizio, rec, n) = (
+    pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Option<Tabella> {
+        let (start, rec, n) = (
             u16_at(b, 0) as usize,
             u16_at(b, 4) as usize,
             u16_at(b, 6) as usize,
         );
-        if rec == 0 || inizio != PREAMBOLO + n * DESCR || b.len() < inizio {
+        if rec == 0 || start != PREAMBOLO + n * DESCR || b.len() < start {
             return None;
         }
-        limiti.voci_ok(n as u64).ok()?;
+        limits.voci_ok(n as u64).ok()?;
         let canali: Vec<Canale> = (0..n)
             .map(|i| {
                 let d = &b[PREAMBOLO + i * DESCR..PREAMBOLO + (i + 1) * DESCR];
@@ -57,15 +57,15 @@ impl Tabella {
         {
             return None;
         }
-        let nrec = (b.len() - inizio) / rec;
+        let nrec = (b.len() - start) / rec;
         Some(Tabella {
             canali,
             rec,
-            dati: b[inizio..inizio + nrec * rec].to_vec(),
+            dati: b[start..start + nrec * rec].to_vec(),
         })
     }
 
-    fn valore_di(&self, c: &Canale, k: usize) -> Option<f64> {
+    fn value_of(&self, c: &Canale, k: usize) -> Option<f64> {
         let r = self.dati.get(k * self.rec..(k + 1) * self.rec)?;
         Some(match c.tipo {
             0 => f64::from(*r.get(c.offset)?),
@@ -78,22 +78,22 @@ impl Tabella {
     /// The value of channel `nome` in record `k`.
     pub(super) fn valore(&self, nome: &str, k: usize) -> Option<f64> {
         let c = self.canali.iter().find(|c| c.nome == nome)?;
-        self.valore_di(c, k)
+        self.value_of(c, k)
     }
 
     /// Every channel of record `k` as (name, value): what `campi` keeps of a scan.
     pub(super) fn tutti(&self, k: usize) -> Vec<(String, f64)> {
         self.canali
             .iter()
-            .filter_map(|c| Some((c.nome.clone(), self.valore_di(c, k)?)))
+            .filter_map(|c| Some((c.nome.clone(), self.value_of(c, k)?)))
             .filter(|(n, v)| !n.is_empty() && v.is_finite())
             .collect()
     }
 }
 
 /// The names of `_FUNCnnn.CMP`: 12 bytes of header, then records of 1024 bytes that begin with the name.
-pub(super) fn nomi_composti(b: &[u8], limiti: &Limiti) -> Vec<String> {
-    if b.len() < 12 || limiti.voci_ok(((b.len() - 12) / 1024) as u64).is_err() {
+pub(super) fn compound_names(b: &[u8], limits: &Limiti) -> Vec<String> {
+    if b.len() < 12 || limits.voci_ok(((b.len() - 12) / 1024) as u64).is_err() {
         return Vec::new();
     }
     b[12..]

@@ -16,13 +16,14 @@ use std::rc::Rc;
 struct Conta {
     b: Vec<u8>,
     da: u64,
-    letti: Rc<Cell<u64>>,
+    read_items: Rc<Cell<u64>>,
 }
 
 impl ReadAt for Conta {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         if off >= self.da {
-            self.letti.set(self.letti.get() + buf.len() as u64);
+            self.read_items
+                .set(self.read_items.get() + buf.len() as u64);
         }
         self.b.read_at(off, buf)
     }
@@ -30,14 +31,14 @@ impl ReadAt for Conta {
 
 /// An ANDI-MS file of float points (8 bytes a point in the records) and a reader of it that counts the bytes of points it reads.
 fn contato(
-    punti: fn(usize) -> Vec<(f64, f64)>,
+    points: fn(usize) -> Vec<(f64, f64)>,
     n: usize,
     tic: bool,
 ) -> (Box<dyn Lettore>, Rc<Cell<u64>>) {
-    let b = andi_ms_con(&PIATTA, n, punti, tic);
-    let totale: usize = (0..n).map(|k| punti(k).len()).sum();
-    let letti = Rc::new(Cell::new(0));
-    let da = (b.len() - 8 * totale) as u64;
+    let b = andi_ms_con(&PIATTA, n, points, tic);
+    let total: usize = (0..n).map(|k| points(k).len()).sum();
+    let read_items = Rc::new(Cell::new(0));
+    let da = (b.len() - 8 * total) as u64;
     let fs = FileSet {
         membri: vec![Membro {
             nome: "campione.cdf".into(),
@@ -45,34 +46,37 @@ fn contato(
             dati: Box::new(Conta {
                 b,
                 da,
-                letti: letti.clone(),
+                read_items: read_items.clone(),
             }),
             sha1: None,
         }],
     };
-    (mzlab_lettori::apri(fs, &Limiti::sito()).unwrap(), letti)
+    (
+        mzlab_lettori::apri(fs, &Limiti::sito()).unwrap(),
+        read_items,
+    )
 }
 
 /// Builds the `.mzidx` of sample 0, then asks the BPC; returns the bytes of points read by both.
-fn indice_e_bpc(l: &mut dyn Lettore, letti: &Cell<u64>) -> (u64, Vec<f64>) {
+fn indice_e_bpc(l: &mut dyn Lettore, read_items: &Cell<u64>) -> (u64, Vec<f64>) {
     // the SHA-1 of the header reads the whole file once: taken before counting
     l.method(0).unwrap();
-    letti.set(0);
+    read_items.set(0);
     let mut out = Cursor::new(Vec::new());
     indicizza_lettore(l, 0, &[], "campione.cdf", &mut out, 64 << 20, &mut |_| {}).unwrap();
     let bpc = l.chromatogram(0, "BPC").unwrap().intensity;
-    (letti.get(), bpc)
+    (read_items.get(), bpc)
 }
 
 /// The bytes of points of one decode of every scan.
-fn una_passata(punti: fn(usize) -> Vec<(f64, f64)>, n: usize) -> u64 {
-    let (mut l, letti) = contato(punti, n, true);
+fn una_passata(points: fn(usize) -> Vec<(f64, f64)>, n: usize) -> u64 {
+    let (mut l, read_items) = contato(points, n, true);
     l.index(0).unwrap();
-    letti.set(0);
+    read_items.set(0);
     for k in 0..n {
         l.scan(0, k).unwrap();
     }
-    letti.get()
+    read_items.get()
 }
 
 fn bits(v: &[f64]) -> Vec<u64> {
@@ -82,28 +86,28 @@ fn bits(v: &[f64]) -> Vec<u64> {
 #[test]
 fn indice_e_bpc_decodificano_ogni_scansione_una_volta() {
     let n = 300;
-    let passata = una_passata(punti, n);
+    let passata = una_passata(points, n);
     assert!(passata > 0);
-    let (mut l, letti) = contato(punti, n, true);
-    let (letto, _) = indice_e_bpc(&mut *l, &letti);
+    let (mut l, read_items) = contato(points, n, true);
+    let (read_one, _) = indice_e_bpc(&mut *l, &read_items);
     assert_eq!(
-        letto, passata,
-        "bytes of points read: {letto}, one pass: {passata}"
+        read_one, passata,
+        "bytes of points read: {read_one}, one pass: {passata}"
     );
     // asked again: still nothing read
-    letti.set(0);
+    read_items.set(0);
     l.chromatogram(0, "BPC").unwrap();
-    assert_eq!(letti.get(), 0);
+    assert_eq!(read_items.get(), 0);
 }
 
 #[test]
 fn senza_total_intensity_il_tic_dell_indice_lascia_anche_il_bpc() {
     let n = 300;
-    let passata = una_passata(punti, n);
-    let (mut l, letti) = contato(punti, n, false);
-    let (letto, _) = indice_e_bpc(&mut *l, &letti);
+    let passata = una_passata(points, n);
+    let (mut l, read_items) = contato(points, n, false);
+    let (read_one, _) = indice_e_bpc(&mut *l, &read_items);
     // one pass sums the TIC of the index, one builds the rows; the BPC reads nothing more
-    assert_eq!(letto, 2 * passata);
+    assert_eq!(read_one, 2 * passata);
 }
 
 /// Ties, all-zero, empty, negative and NaN points; m/z out of order every fifth scan.

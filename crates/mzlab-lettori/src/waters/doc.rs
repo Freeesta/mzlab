@@ -4,7 +4,7 @@
 
 use super::cartella::{base, errore};
 use super::inf::Voce;
-use super::lettore::{Fun, LettoreWaters};
+use super::lettore::{Fun, WatersReader};
 use mzlab_core::error::Result;
 use mzlab_core::metodo::{self, num, obj, sha1_hex, text, Source, SrcFile, V};
 use mzlab_core::metodo_campi::Campo;
@@ -12,11 +12,11 @@ use mzlab_core::mzmlwrite::Header;
 
 /// The most files named in `origine` and the most fields kept.
 const FILE_MAX: usize = 200;
-const CAMPI_MAX: usize = 4000;
-const FORMATO: &str = "waters-raw";
+const FIELDS_MAX: usize = 4000;
+const FORMAT: &str = "waters-raw";
 
 /// The SHA-1 of every member, computed once (the members are read through, none is held).
-fn impronte(l: &mut LettoreWaters) -> &[Option<String>] {
+fn impronte(l: &mut WatersReader) -> &[Option<String>] {
     if l.sha1.is_none() {
         let v =
             l.c.fs
@@ -30,7 +30,7 @@ fn impronte(l: &mut LettoreWaters) -> &[Option<String>] {
 }
 
 /// `30-Apr-2022` and `00:26:58` as `2022-04-30T00:26:58` (the clock of the acquisition PC, no zone).
-fn iso(data: &str, ora: &str) -> Option<String> {
+fn iso(data: &str, now: &str) -> Option<String> {
     let mut p = data.trim().split('-');
     let (g, m, a) = (p.next()?, p.next()?, p.next()?);
     let mese = [
@@ -40,11 +40,11 @@ fn iso(data: &str, ora: &str) -> Option<String> {
     .position(|x| m.to_ascii_lowercase().starts_with(x))?
         + 1;
     let (g, a): (u32, u32) = (g.parse().ok()?, a.parse().ok()?);
-    let ora = ora.trim();
-    (ora.len() == 8 && (1..=31).contains(&g)).then(|| format!("{a:04}-{mese:02}-{g:02}T{ora}"))
+    let now = now.trim();
+    (now.len() == 8 && (1..=31).contains(&g)).then(|| format!("{a:04}-{mese:02}-{g:02}T{now}"))
 }
 
-fn acquisito(l: &LettoreWaters) -> Option<String> {
+fn acquisito(l: &WatersReader) -> Option<String> {
     iso(
         l.testata.get("Acquired Date")?,
         l.testata.get("Acquired Time")?,
@@ -52,7 +52,7 @@ fn acquisito(l: &LettoreWaters) -> Option<String> {
 }
 
 /// «XEVO-TQXS#WBA0927» → (model, serial); «NotSet» is no serial.
-fn strumento_di(l: &LettoreWaters) -> (Option<String>, Option<String>) {
+fn strumento_di(l: &WatersReader) -> (Option<String>, Option<String>) {
     let Some(i) = l.testata.get("Instrument") else {
         return (None, None);
     };
@@ -84,10 +84,10 @@ fn polarita_v(p: i8) -> Option<V> {
     }
 }
 
-fn parametro(id: &str, etichetta: &str, valore: f64, unita: &str) -> Option<V> {
+fn param(id: &str, label: &str, valore: f64, unita: &str) -> Option<V> {
     obj(vec![
         ("id", text(id)),
-        ("etichetta", text(etichetta)),
+        ("etichetta", text(label)),
         (
             "valore",
             num(Some(valore)).filter(|_| valore.is_finite() && valore != 0.0),
@@ -96,7 +96,7 @@ fn parametro(id: &str, etichetta: &str, valore: f64, unita: &str) -> Option<V> {
     ])
 }
 
-fn esperimento(f: &Fun) -> Option<V> {
+fn experiment(f: &Fun) -> Option<V> {
     let transizioni: Vec<V> =
         f.f.canali()
             .iter()
@@ -134,8 +134,8 @@ fn esperimento(f: &Fun) -> Option<V> {
             "parametri",
             Some(V::Arr(
                 [
-                    parametro("cycle_time", "Cycle time", f64::from(f.f.ciclo_s), "s"),
-                    parametro(
+                    param("cycle_time", "Cycle time", f64::from(f.f.cycle_s), "s"),
+                    param(
                         "tof_depth",
                         "TOF bins per push",
                         f64::from(f.f.tof_depth),
@@ -151,10 +151,10 @@ fn esperimento(f: &Fun) -> Option<V> {
     ])
 }
 
-fn ms(l: &LettoreWaters) -> Option<V> {
-    let esperimenti: Vec<V> = l.funs.iter().filter_map(esperimento).collect();
-    let rif = l.funs.iter().find(|f| f.f.riferimento());
-    let lock = rif.and_then(|f| {
+fn ms(l: &WatersReader) -> Option<V> {
+    let experiments: Vec<V> = l.funs.iter().filter_map(experiment).collect();
+    let reference = l.funs.iter().find(|f| f.f.riferimento());
+    let lock = reference.and_then(|f| {
         obj(vec![
             (
                 "modo",
@@ -172,14 +172,14 @@ fn ms(l: &LettoreWaters) -> Option<V> {
         ),
         (
             "periodi",
-            obj(vec![("esperimenti", Some(V::Arr(esperimenti)))]).map(|p| V::Arr(vec![p])),
+            obj(vec![("esperimenti", Some(V::Arr(experiments)))]).map(|p| V::Arr(vec![p])),
         ),
         ("calibrazione", obj(vec![("lock_mass", lock)])),
     ])
 }
 
 /// «Type - ESI» of the section «Source Information».
-fn sorgente(l: &LettoreWaters) -> Option<String> {
+fn sorgente(l: &WatersReader) -> Option<String> {
     l.ext
         .voci
         .iter()
@@ -187,7 +187,7 @@ fn sorgente(l: &LettoreWaters) -> Option<String> {
         .map(|v| v.valore.clone())
 }
 
-fn lc(l: &LettoreWaters) -> Option<V> {
+fn lc(l: &WatersReader) -> Option<V> {
     let i = l.inlet.as_ref()?;
     let grad: Vec<V> = i
         .gradiente
@@ -204,13 +204,13 @@ fn lc(l: &LettoreWaters) -> Option<V> {
         ("gradiente", Some(V::Arr(grad))),
         ("flusso_mL_min", num(i.gradiente.first().and_then(|g| g.1))),
         ("B_iniziale_pct", num(i.gradiente.first().and_then(|g| g.2))),
-        ("forno_C", num(i.forno_c)),
-        ("durata_min", num(i.durata_min)),
+        ("forno_C", num(i.oven_c)),
+        ("durata_min", num(i.duration_min)),
     ])
 }
 
 /// A value that names the acquisition computer or one of its folders.
-fn identificativo(chiave: &str, valore: &str) -> bool {
+fn identifier(chiave: &str, valore: &str) -> bool {
     valore.contains(":\\")
         || valore.starts_with("\\\\")
         || matches!(
@@ -219,9 +219,9 @@ fn identificativo(chiave: &str, valore: &str) -> bool {
         )
 }
 
-fn campi_di(origine: &str, voci: &[Voce], dest: &mut Vec<Campo>) {
+fn fields_of(origine: &str, voci: &[Voce], dest: &mut Vec<Campo>) {
     for v in voci {
-        if dest.len() >= CAMPI_MAX {
+        if dest.len() >= FIELDS_MAX {
             return;
         }
         let o = if v.sezione.is_empty() {
@@ -230,7 +230,7 @@ fn campi_di(origine: &str, voci: &[Voce], dest: &mut Vec<Campo>) {
             format!("{origine}#{}", v.sezione)
         };
         let c = Campo::new(&o, &v.chiave, &v.valore);
-        dest.push(if identificativo(&v.chiave, &v.valore) {
+        dest.push(if identifier(&v.chiave, &v.valore) {
             c.id()
         } else {
             c
@@ -238,10 +238,10 @@ fn campi_di(origine: &str, voci: &[Voce], dest: &mut Vec<Campo>) {
     }
 }
 
-fn campi(l: &LettoreWaters) -> Vec<Campo> {
+fn campi(l: &WatersReader) -> Vec<Campo> {
     let mut out = Vec::new();
     for (k, v) in &l.testata.voci {
-        if out.len() >= CAMPI_MAX {
+        if out.len() >= FIELDS_MAX {
             break;
         }
         let mappa = match k.as_str() {
@@ -253,23 +253,23 @@ fn campi(l: &LettoreWaters) -> Vec<Campo> {
             _ => None,
         };
         let c = Campo::new("waters:_HEADER.TXT", k, v);
-        let c = if identificativo(k, v) { c.id() } else { c };
+        let c = if identifier(k, v) { c.id() } else { c };
         out.push(match mappa {
             Some(m) => c.map(m),
             None => c,
         });
     }
-    campi_di("waters:_extern.inf", &l.ext.voci, &mut out);
+    fields_of("waters:_extern.inf", &l.ext.voci, &mut out);
     if let Some(i) = &l.inlet {
-        campi_di("waters:_INLET.INF", &i.voci, &mut out);
+        fields_of("waters:_INLET.INF", &i.voci, &mut out);
     }
     for a in &l.analogiche {
-        out.push(Campo::new("waters:_CHROMS.INF", &a.nome, &a.grezzo).unit(&a.unita));
+        out.push(Campo::new("waters:_CHROMS.INF", &a.nome, &a.raw_value).unit(&a.unita));
     }
     out
 }
 
-fn origine(l: &mut LettoreWaters) -> Source {
+fn origine(l: &mut WatersReader) -> Source {
     let sha = impronte(l).to_vec();
     let mut files: Vec<SrcFile> =
         l.c.fs
@@ -285,13 +285,13 @@ fn origine(l: &mut LettoreWaters) -> Source {
     files.sort_by(|a, b| a.name.cmp(&b.name));
     files.truncate(FILE_MAX);
     Source {
-        format: FORMATO,
+        format: FORMAT,
         files,
         sample: None,
     }
 }
 
-pub(super) fn documento(l: &mut LettoreWaters) -> Result<String> {
+pub(super) fn document(l: &mut WatersReader) -> Result<String> {
     let src = origine(l);
     let (modello, serie) = strumento_di(l);
     let h = |k: &str| l.testata.get(k).and_then(text);
@@ -327,7 +327,7 @@ pub(super) fn documento(l: &mut LettoreWaters) -> Result<String> {
         (
             "avvisi",
             Some(V::Arr(
-                l.avvisi
+                l.warnings
                     .iter()
                     .filter_map(|(k, d)| obj(vec![("chiave", text(k)), ("dove", text(d))]))
                     .collect(),
@@ -338,8 +338,8 @@ pub(super) fn documento(l: &mut LettoreWaters) -> Result<String> {
 }
 
 /// The header of the mzML: the instrument, the data files with their SHA-1 and the document.
-pub(super) fn file_header(l: &mut LettoreWaters) -> Result<Header> {
-    let doc = documento(l)?;
+pub(super) fn file_header(l: &mut WatersReader) -> Result<Header> {
+    let doc = document(l)?;
     let sha = impronte(l).to_vec();
     let (modello, serie) = strumento_di(l);
     let nome = l.testata.get("Acquired Name").map_or_else(

@@ -245,14 +245,14 @@ pub fn tolleranza_di(v: &Value, base: Tol) -> Tol {
             if let Some(x) = o.get("mz_ppm") {
                 t.mz_ppm = x.as_f64();
             }
-            for (k, campo) in [
+            for (k, field) in [
                 ("mz_da", &mut t.mz_da),
                 ("rt_min", &mut t.rt_min),
                 ("intensita_rel", &mut t.intensita_rel),
                 ("cromatogramma_rel", &mut t.cromatogramma_rel),
             ] {
                 if let Some(x) = o.get(k).and_then(Value::as_f64) {
-                    *campo = x;
+                    *field = x;
                 }
             }
             t
@@ -267,9 +267,9 @@ pub fn corpus(
     famiglia: &str,
     filtro: fn(&str) -> bool,
     tol: Tol,
-    percorso: fn(&str) -> Option<PathBuf>,
+    file_path: fn(&str) -> Option<PathBuf>,
 ) {
-    let Some(dir) = percorso("scratchpad/rosina/verita") else {
+    let Some(dir) = file_path("scratchpad/rosina/verita") else {
         eprintln!("SKIP verita_{famiglia}: no data repository");
         return;
     };
@@ -284,7 +284,7 @@ pub fn corpus(
         if !filtro(&rel) {
             continue;
         }
-        let Some(nativo) = percorso(&format!("dati/formati/{rel}")) else {
+        let Some(nativo) = file_path(&format!("dati/formati/{rel}")) else {
             eprintln!("SKIP {rel}: the native file is not in this checkout");
             continue;
         };

@@ -144,13 +144,13 @@ pub fn mzxml(scans: &[Sc], o: Opz) -> Vec<u8> {
     }
     s.push_str("</msRun>\n");
     if o.indice {
-        let inizio = s.len();
+        let start = s.len();
         s.push_str("<index name=\"scan\">\n");
         for (i, p) in pos.iter().enumerate() {
             s.push_str(&format!("<offset id=\"{}\">{p}</offset>\n", i + 1));
         }
         s.push_str(&format!(
-            "</index>\n<indexOffset>{inizio}</indexOffset>\n<sha1>0000</sha1>\n"
+            "</index>\n<indexOffset>{start}</indexOffset>\n<sha1>0000</sha1>\n"
         ));
     }
     s.push_str("</mzXML>\n");

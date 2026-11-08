@@ -105,7 +105,7 @@ fn leggi_tutto(membri: &[(String, Vec<u8>)]) -> Result<(), String> {
 
 /// Runs `f` on a thread with a 5 s deadline; a panic, a hang or an `Err` is a finding.
 fn sorveglia(
-    cosa: &str,
+    what: &str,
     f: impl FnOnce() -> Result<(), String> + Send + 'static,
 ) -> Option<String> {
     let (tx, rx) = mpsc::channel();
@@ -115,15 +115,15 @@ fn sorveglia(
     });
     match rx.recv_timeout(Duration::from_secs(5)) {
         Ok(Ok(Ok(()))) => None,
-        Ok(Ok(Err(e))) => Some(format!("{cosa}: {e}")),
+        Ok(Ok(Err(e))) => Some(format!("{what}: {e}")),
         Ok(Err(p)) => Some(format!(
-            "{cosa}: panic {}",
+            "{what}: panic {}",
             p.downcast_ref::<String>()
                 .cloned()
                 .or_else(|| p.downcast_ref::<&str>().map(|s| s.to_string()))
                 .unwrap_or_default()
         )),
-        Err(_) => Some(format!("{cosa}: no answer in 5 s")),
+        Err(_) => Some(format!("{what}: no answer in 5 s")),
     }
 }
 
@@ -222,9 +222,9 @@ fn mutanti_testo(b: &[u8], caso: &mut Caso, giri: usize) -> Vec<(String, Vec<u8>
         })
         .collect();
     out.push(("crlf".into(), crlf));
-    let mut coda = b.to_vec();
-    coda.extend_from_slice(b"\0\0garbage<<<");
-    out.push(("trailing".into(), coda));
+    let mut tail = b.to_vec();
+    tail.extend_from_slice(b"\0\0garbage<<<");
+    out.push(("trailing".into(), tail));
     out
 }
 
@@ -239,7 +239,7 @@ fn mutanti_binari(b: &[u8], caso: &mut Caso, giri: usize) -> Vec<(String, Vec<u8
         let mut m = b.to_vec();
         let i = caso.sotto(m.len().saturating_sub(8)) & !3;
         let quale = caso.sotto(6);
-        let parola: Vec<u8> = match quale {
+        let word: Vec<u8> = match quale {
             0 => 0u32.to_le_bytes().to_vec(),
             1 => u32::MAX.to_le_bytes().to_vec(),
             2 => 0x7FFF_FFFFu32.to_le_bytes().to_vec(),
@@ -247,21 +247,16 @@ fn mutanti_binari(b: &[u8], caso: &mut Caso, giri: usize) -> Vec<(String, Vec<u8
             4 => (-1.0f64).to_le_bytes().to_vec(),
             _ => vec![caso.n() as u8],
         };
-        if i + parola.len() <= m.len() {
-            m[i..i + parola.len()].copy_from_slice(&parola);
+        if i + word.len() <= m.len() {
+            m[i..i + word.len()].copy_from_slice(&word);
         }
         out.push((format!("word{quale}@{i}"), m));
     }
     out
 }
 
-fn esplora(
-    etichetta: &str,
-    membri: Vec<(String, Vec<u8>)>,
-    quale: usize,
-    testo: bool,
-) -> Vec<String> {
-    let mut caso = Caso(0x9E37_79B9_7F4A_7C15 ^ etichetta.len() as u64);
+fn esplora(label: &str, membri: Vec<(String, Vec<u8>)>, quale: usize, testo: bool) -> Vec<String> {
+    let mut caso = Caso(0x9E37_79B9_7F4A_7C15 ^ label.len() as u64);
     let base = membri[quale].1.clone();
     let mutanti = if testo {
         mutanti_testo(&base, &mut caso, giri())
@@ -272,7 +267,7 @@ fn esplora(
     for (nome, m) in mutanti {
         let mut ms = membri.clone();
         ms[quale].1 = m;
-        if let Some(e) = sorveglia(&format!("{etichetta} {nome}"), move || leggi_tutto(&ms)) {
+        if let Some(e) = sorveglia(&format!("{label} {nome}"), move || leggi_tutto(&ms)) {
             trovati.push(e);
         }
     }
@@ -291,7 +286,7 @@ fn mzml_numpress_mutato() {
     let np = mzml_di(
         &scansioni(),
         Cod::Np {
-            intensita: mzlab_core::numpress::Np::Pic,
+            intensities: mzlab_core::numpress::Np::Pic,
             zlib: true,
         },
         None,
@@ -435,10 +430,10 @@ fn motore_mzml(b: &[u8]) -> Result<(), String> {
     let mut bad = None;
     let _ = mzlab_core::mzml::parse(std::io::Cursor::new(b), |it| {
         if let mzlab_core::mzml::Item::Spectrum(s) = it {
-            let fuori = !s.rt.is_finite()
+            let outside = !s.rt.is_finite()
                 || s.mz.iter().any(|x| !x.is_finite())
                 || s.intensity.iter().any(|x| !x.is_finite());
-            if bad.is_none() && fuori {
+            if bad.is_none() && outside {
                 bad = Some(format!("parse: spectrum {} not finite", s.index));
             }
         }

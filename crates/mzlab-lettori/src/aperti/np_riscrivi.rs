@@ -16,13 +16,13 @@ const PIENI: [&str; 6] = [
     "MS:1002748",
 ];
 /// The cvParams of an array that say how it is stored: they are replaced by "64-bit float" and "no compression".
-const FORMA: [&str; 4] = ["MS:1000574", "MS:1000521", "MS:1000523", "MS:1000576"];
+const SHAPE: [&str; 4] = ["MS:1000574", "MS:1000521", "MS:1000523", "MS:1000576"];
 
 fn attributo<'a>(tag: &'a str, nome: &str) -> Option<&'a str> {
     let chiave = format!(" {nome}=\"");
     let da = tag.find(&chiave)? + chiave.len();
-    let fino = tag[da..].find('"')?;
-    tag.get(da..da + fino)
+    let until = tag[da..].find('"')?;
+    tag.get(da..da + until)
 }
 
 fn errore(why: &str) -> Error {
@@ -30,14 +30,14 @@ fn errore(why: &str) -> Error {
 }
 
 /// `xml` with every numpress array decoded and written as a plain 64-bit one (borrowed when it has none).
-pub fn riscrivi<'a>(xml: &'a [u8], limiti: &Limiti) -> Result<Cow<'a, [u8]>> {
+pub fn riscrivi<'a>(xml: &'a [u8], limits: &Limiti) -> Result<Cow<'a, [u8]>> {
     let Ok(s) = std::str::from_utf8(xml) else {
         return Ok(Cow::Borrowed(xml));
     };
     if !PIENI.iter().any(|a| s.contains(a)) {
         return Ok(Cow::Borrowed(xml));
     }
-    let atteso = s
+    let expected = s
         .find("defaultArrayLength=\"")
         .and_then(|i| attributo(&s[i.saturating_sub(1)..], "defaultArrayLength"))
         .and_then(|v| v.parse::<usize>().ok())
@@ -58,7 +58,7 @@ pub fn riscrivi<'a>(xml: &'a [u8], limiti: &Limiti) -> Result<Cow<'a, [u8]>> {
             .map(|e| a + e + "</binaryDataArray>".len())
             .ok_or_else(|| errore("unclosed binaryDataArray"))?;
         out.push_str(&s[da..a]);
-        out.push_str(&blocco(&s[a..fine], atteso, limiti)?);
+        out.push_str(&blocco(&s[a..fine], expected, limits)?);
         da = fine;
     }
     out.push_str(&s[da..]);
@@ -66,7 +66,7 @@ pub fn riscrivi<'a>(xml: &'a [u8], limiti: &Limiti) -> Result<Cow<'a, [u8]>> {
 }
 
 /// One `<binaryDataArray>`; unchanged when it is not numpress.
-fn blocco<'a>(b: &'a str, atteso: usize, limiti: &Limiti) -> Result<Cow<'a, str>> {
+fn blocco<'a>(b: &'a str, expected: usize, limits: &Limiti) -> Result<Cow<'a, str>> {
     // the cvParams of the array: (start, end, accession)
     let mut cv: Vec<(usize, usize, &str)> = Vec::new();
     let mut da = 0usize;
@@ -99,17 +99,17 @@ fn blocco<'a>(b: &'a str, atteso: usize, limiti: &Limiti) -> Result<Cow<'a, str>
             None => return Ok(Cow::Borrowed(b)),
         },
     };
-    let valori = numpress::decode_text(np, zlib, testo, atteso)?;
-    if (valori.len() as u64).saturating_mul(8) > limiti.byte {
+    let values = numpress::decode_text(np, zlib, testo, expected)?;
+    if (values.len() as u64).saturating_mul(8) > limits.byte {
         return Err(Error::memory_budget());
     }
-    let mut out = String::with_capacity(b.len() + valori.len() * 11);
+    let mut out = String::with_capacity(b.len() + values.len() * 11);
     let mut da = 0usize;
     for (a, f, acc) in &cv {
         if *a >= bin_a {
             break;
         }
-        if PIENI.contains(acc) || FORMA.contains(acc) {
+        if PIENI.contains(acc) || SHAPE.contains(acc) {
             out.push_str(&b[da..*a]);
             da = *f;
         }
@@ -120,7 +120,7 @@ fn blocco<'a>(b: &'a str, atteso: usize, limiti: &Limiti) -> Result<Cow<'a, str>
          <cvParam cvRef=\"MS\" accession=\"MS:1000576\" name=\"no compression\" value=\"\"/>",
     );
     out.push_str("<binary>");
-    out.push_str(&numpress::plain_base64(&valori));
+    out.push_str(&numpress::plain_base64(&values));
     out.push_str("</binary>");
     out.push_str(&b[bin_f..]);
     Ok(Cow::Owned(out))

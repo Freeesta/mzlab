@@ -4,7 +4,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{FileSet, Limiti};
 
 /// The largest side file read whole (`_extern.inf`, an index, a table of channels).
-const PICCOLO_MAX: u64 = 8 << 20;
+const SMALL_MAX: u64 = 8 << 20;
 
 /// The last component of a logical member name.
 pub(super) fn base(n: &str) -> &str {
@@ -16,15 +16,15 @@ pub(super) fn errore(detail: &str) -> Error {
 }
 
 /// The members of one folder.
-pub(super) struct Cartella {
+pub(super) struct Folder {
     pub(super) fs: FileSet,
     /// `X.raw`, the folder the members are in.
     pub(super) nome: String,
-    pub(super) limiti: Limiti,
+    pub(super) limits: Limiti,
 }
 
-impl Cartella {
-    pub(super) fn new(fs: FileSet, limiti: Limiti) -> Cartella {
+impl Folder {
+    pub(super) fn new(fs: FileSet, limits: Limiti) -> Folder {
         let nome = fs
             .membri
             .iter()
@@ -35,7 +35,7 @@ impl Cartella {
             })
             .filter(|n| !n.is_empty())
             .unwrap_or_else(|| "MassLynx.raw".to_string());
-        Cartella { fs, nome, limiti }
+        Folder { fs, nome, limits }
     }
 
     /// Index of the member called `file` (case ignored).
@@ -52,7 +52,7 @@ impl Cartella {
             return Ok(None);
         };
         let m = &mut self.fs.membri[i];
-        if m.dim > PICCOLO_MAX.min(self.limiti.byte) {
+        if m.dim > SMALL_MAX.min(self.limits.byte) {
             return Err(Error::memory_budget());
         }
         let n = usize::try_from(m.dim).map_err(|_| Error::memory_budget())?;
@@ -62,13 +62,13 @@ impl Cartella {
     }
 
     /// `len` bytes of member `i` from `off`; the range must lie inside the member.
-    pub(super) fn leggi_a(&mut self, i: usize, off: u64, len: u64) -> Result<Vec<u8>> {
+    pub(super) fn read_from(&mut self, i: usize, off: u64, len: u64) -> Result<Vec<u8>> {
         let m = self.fs.membri.get_mut(i).ok_or_else(|| errore("member"))?;
         let fine = off.checked_add(len).ok_or_else(|| errore("range"))?;
         if fine > m.dim {
             return Err(errore("range past the end of the file"));
         }
-        if len > self.limiti.byte {
+        if len > self.limits.byte {
             return Err(Error::memory_budget());
         }
         let mut b = vec![0u8; usize::try_from(len).map_err(|_| Error::memory_budget())?];
@@ -115,6 +115,6 @@ mod tests {
                 sha1: None,
             }],
         };
-        assert_eq!(Cartella::new(fs, Limiti::default()).nome, "campione.raw");
+        assert_eq!(Folder::new(fs, Limiti::default()).nome, "campione.raw");
     }
 }

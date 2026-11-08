@@ -7,7 +7,7 @@ const W_MAX: usize = 8;
 
 /// How one record is laid out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct Forma {
+pub(super) struct Shape {
     /// Bytes of the header.
     pub testa: usize,
     /// Bytes of an intensity.
@@ -19,9 +19,9 @@ pub(super) struct Forma {
     pub ev: u16,
 }
 
-impl Forma {
+impl Shape {
     /// Bytes of one point.
-    fn punto(&self) -> usize {
+    fn point(&self) -> usize {
         (if self.mrm { 4 } else { 2 }) + self.w
     }
 }
@@ -30,19 +30,19 @@ fn u16_at(r: &[u8], at: usize) -> Option<u16> {
     Some(u16::from_le_bytes(r.get(at..at + 2)?.try_into().ok()?))
 }
 
-fn valida(r: &[u8], f: Forma) -> Option<Forma> {
+fn valida(r: &[u8], f: Shape) -> Option<Shape> {
     let ok = (1..=W_MAX).contains(&f.w)
-        && f.npk.checked_mul(f.punto())?.checked_add(f.testa)? == r.len();
+        && f.npk.checked_mul(f.point())?.checked_add(f.testa)? == r.len();
     ok.then_some(f)
 }
 
 /// The layout of a `.qgd` record: `kind` (the width of the intensity, +100 for MRM) and the point count sit at `ko` (20 in the files with a 32-bit index, 24 in the others).
-pub(super) fn forma_gc(r: &[u8], ko: usize) -> Option<Forma> {
+pub(super) fn gc_shape(r: &[u8], ko: usize) -> Option<Shape> {
     let (kind, npk) = (usize::from(u16_at(r, ko)?), usize::from(u16_at(r, ko + 2)?));
     let mrm = kind >= 100;
     valida(
         r,
-        Forma {
+        Shape {
             testa: 32,
             w: if mrm { kind - 100 } else { kind },
             npk,
@@ -53,10 +53,10 @@ pub(super) fn forma_gc(r: &[u8], ko: usize) -> Option<Forma> {
 }
 
 /// The layout of a record of `Mass Raw Data`: event at 8, width of the intensity at 52, point count at 54, points from 64.
-pub(super) fn forma_lc(r: &[u8]) -> Option<Forma> {
+pub(super) fn lc_shape(r: &[u8]) -> Option<Shape> {
     valida(
         r,
-        Forma {
+        Shape {
             testa: 64,
             w: usize::from(u16_at(r, 52)?),
             npk: usize::from(u16_at(r, 54)?),
@@ -67,8 +67,8 @@ pub(super) fn forma_lc(r: &[u8]) -> Option<Forma> {
 }
 
 /// Point `j` of a record already validated by `forma_*`: (m/z or Q1 × 20, Q3 × 20 for MRM, intensity).
-pub(super) fn punto(r: &[u8], f: &Forma, j: usize) -> (u16, Option<u16>, u64) {
-    let p = f.testa + j * f.punto();
+pub(super) fn point(r: &[u8], f: &Shape, j: usize) -> (u16, Option<u16>, u64) {
+    let p = f.testa + j * f.point();
     let a = u16_at(r, p).unwrap_or(0);
     let (q3, y0) = if f.mrm {
         (u16_at(r, p + 2), p + 4)
@@ -83,10 +83,10 @@ pub(super) fn punto(r: &[u8], f: &Forma, j: usize) -> (u16, Option<u16>, u64) {
 }
 
 /// A hash of the m/z list of a record (to tell SIM, whose list repeats, from scans).
-pub(super) fn impronta(r: &[u8], f: &Forma) -> u64 {
+pub(super) fn fingerprint(r: &[u8], f: &Shape) -> u64 {
     let mut h = 0xcbf2_9ce4_8422_2325u64;
     for j in 0..f.npk {
-        h = (h ^ u64::from(punto(r, f, j).0)).wrapping_mul(0x0100_0000_01b3);
+        h = (h ^ u64::from(point(r, f, j).0)).wrapping_mul(0x0100_0000_01b3);
     }
     h
 }
@@ -124,10 +124,10 @@ mod tests {
             r.extend_from_slice(&mz.to_le_bytes());
             r.extend_from_slice(&y.to_le_bytes());
         }
-        let f = forma_gc(&r, 20).expect("gc record");
+        let f = gc_shape(&r, 20).expect("gc record");
         assert_eq!((f.w, f.npk, f.mrm), (2, 2, false));
-        assert_eq!(punto(&r, &f, 1), (2100, None, 9));
-        assert!(forma_gc(&r[..r.len() - 1], 20).is_none());
+        assert_eq!(point(&r, &f, 1), (2100, None, 9));
+        assert!(gc_shape(&r[..r.len() - 1], 20).is_none());
         assert_eq!(offset(&[1, 0, 0, 0, 5, 0, 0, 0], 2), Some(vec![1, 5]));
         assert_eq!(offset(&[0; 7], 2), None);
     }

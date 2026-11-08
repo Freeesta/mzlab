@@ -6,9 +6,9 @@ use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 use super::carica::Fam;
-use super::{meta, rec, rifiuto, LettoreShimadzu, F32_EXACT};
+use super::{meta, rec, rifiuto, ShimadzuReader, F32_EXACT};
 
-impl Lettore for LettoreShimadzu {
+impl Lettore for ShimadzuReader {
     fn format(&self) -> Formato {
         Formato::Altro("shimadzu")
     }
@@ -27,12 +27,12 @@ impl Lettore for LettoreShimadzu {
     }
 
     fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        self.uno(c)?;
+        self.one(c)?;
         Ok(&self.d.indice)
     }
 
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.uno(c)?;
+        self.one(c)?;
         let (v, &(a, n, f)) = self
             .d
             .indice
@@ -46,7 +46,7 @@ impl Lettore for LettoreShimadzu {
             .ok_or_else(|| rifiuto("scan outside the raw stream"))?;
         let pts: Vec<(f64, u64)> = (0..f.npk)
             .map(|j| {
-                let (mz, _, y) = rec::punto(r, &f, j);
+                let (mz, _, y) = rec::point(r, &f, j);
                 (f64::from(mz) / 20.0, y)
             })
             .collect();
@@ -70,32 +70,32 @@ impl Lettore for LettoreShimadzu {
     }
 
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.uno(c)?;
+        self.one(c)?;
         let (v, &(a, _, f)) = self
             .d
             .indice
             .get(k)
             .zip(self.d.pos.get(k))
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
-        let campo = |nome: &str, valore: String| Campo {
+        let field = |nome: &str, valore: String| Campo {
             nome: nome.into(),
             valore,
             unita: None,
             cv: None,
         };
         let mut out = vec![
-            campo("record", (k + 1).to_string()),
-            campo("offset", a.to_string()),
-            campo("TIC", v.tic.to_string()),
+            field("record", (k + 1).to_string()),
+            field("offset", a.to_string()),
+            field("TIC", v.tic.to_string()),
         ];
         if self.fam == Fam::Lc {
-            out.push(campo("event", (usize::from(f.ev) + 1).to_string()));
+            out.push(field("event", (usize::from(f.ev) + 1).to_string()));
         }
         Ok(out)
     }
 
     fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        self.uno(c)?;
+        self.one(c)?;
         Ok(self
             .d
             .cromat
@@ -109,7 +109,7 @@ impl Lettore for LettoreShimadzu {
     }
 
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.uno(c)?;
+        self.one(c)?;
         self.d
             .cromat
             .iter()
@@ -119,8 +119,8 @@ impl Lettore for LettoreShimadzu {
     }
 
     fn method(&mut self, c: usize) -> Result<String> {
-        self.uno(c)?;
-        Ok(meta::documento(
+        self.one(c)?;
+        Ok(meta::document(
             self.id(),
             self.fam,
             &self.d,
@@ -130,7 +130,7 @@ impl Lettore for LettoreShimadzu {
     }
 
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
-        self.uno(c)?;
+        self.one(c)?;
         Ok(Some(meta::header(self.id(), self.fam, &self.d, &self.meta)))
     }
 

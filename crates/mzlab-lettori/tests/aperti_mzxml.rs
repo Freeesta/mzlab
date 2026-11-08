@@ -89,14 +89,14 @@ fn tic_e_bpc_si_calcolano_dai_picchi_quando_il_file_non_li_dice() {
         .iter()
         .any(|v| v.id == "TIC" && v.tipo == ChromKind::Tic));
     let tic = l.chromatogram(0, "TIC").unwrap();
-    let uno: Vec<&Sc> = scan.iter().filter(|x| x.livello == 1).collect();
-    assert_eq!(tic.time.len(), uno.len());
-    for (i, x) in uno.iter().enumerate() {
+    let one: Vec<&Sc> = scan.iter().filter(|x| x.livello == 1).collect();
+    assert_eq!(tic.time.len(), one.len());
+    for (i, x) in one.iter().enumerate() {
         assert!((tic.intensity[i] - x.it.iter().sum::<f64>()).abs() < 1e-9);
         assert!((tic.time[i] - x.rt_s / 60.0).abs() < 1e-12);
     }
     let bpc = l.chromatogram(0, "BPC").unwrap();
-    assert!((bpc.intensity[0] - uno[0].it.iter().copied().fold(0.0, f64::max)).abs() < 1e-9);
+    assert!((bpc.intensity[0] - one[0].it.iter().copied().fold(0.0, f64::max)).abs() < 1e-9);
     assert!(l.chromatogram(0, "XIC").is_err());
 }
 

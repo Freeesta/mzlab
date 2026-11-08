@@ -9,18 +9,18 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 /// Products closer than this (m/z) to the Q3 of a transition belong to it.
-pub const TOLLERANZA_Q3: f64 = 0.005;
+pub const Q3_TOLERANCE: f64 = 0.005;
 /// Precursors closer than this (m/z) to the Q1 of a transition belong to it.
-pub const TOLLERANZA_Q1: f64 = 0.005;
+pub const Q1_TOLERANCE: f64 = 0.005;
 const UNITA: &str = "number of detector counts";
 
-fn filtro_srm(f: &str) -> bool {
+fn srm_filter(f: &str) -> bool {
     let f = f.to_ascii_lowercase();
     f.contains("srm") || f.contains("mrm") || f.contains("crm")
 }
 
 /// The collision energy of a filter: the number after `@cid` (or `@hcd`, …) of the first reaction.
-fn ce_del_filtro(f: &str) -> Option<f64> {
+fn ce_of_the_filter(f: &str) -> Option<f64> {
     let dopo = f.get(f.find('@')? + 1..)?;
     let n = dopo.trim_start_matches(|c: char| c.is_ascii_alphabetic());
     let fine = n
@@ -30,7 +30,7 @@ fn ce_del_filtro(f: &str) -> Option<f64> {
 }
 
 /// A transition of the table of the method: `(q1, q3, collision energy, polarity)`.
-type DalMetodo = (f64, f64, Option<f64>, i8);
+type FromMethod = (f64, f64, Option<f64>, i8);
 
 /// The number after `"key":` in `seg` (the document is written by `metodo.rs`, so keys are quoted and followed by a colon and, at most, one blank).
 fn numero_di(seg: &str, key: &str) -> Option<f64> {
@@ -47,7 +47,7 @@ fn numero_di(seg: &str, key: &str) -> Option<f64> {
 
 /// The transitions of the `metodo/1` document `m` (`ms.periodi[].esperimenti[].transizioni[]`), read without a JSON parser (the module is size-capped): every
 /// `"q1":` opens a transition that goes on to the next one. Nothing when `m` has none or cannot be read.
-fn transizioni_del_metodo(m: &str) -> Vec<DalMetodo> {
+fn transitions_of_the_method(m: &str) -> Vec<FromMethod> {
     let Some(from) = m.find("\"transizioni\"") else {
         return Vec::new();
     };
@@ -75,7 +75,7 @@ fn transizioni_del_metodo(m: &str) -> Vec<DalMetodo> {
     out
 }
 
-struct Transizione {
+struct Transition {
     q1: f64,
     q3: f64,
     ce: Option<f64>,
@@ -121,38 +121,38 @@ impl SrmDaScansioni {
             return Ok(Vec::new());
         }
         let righe: Vec<VoceScansione> = self.inner.index_without_tic(c)?.to_vec();
-        let mut tr = transizioni_dalle_scansioni(&mut *self.inner, c, &righe)?;
+        let mut tr = transitions_from_the_scans(&mut *self.inner, c, &righe)?;
         if tr.iter().any(|t| t.ce.is_none())
             && let Ok(m) = self.inner.method(c)
         {
-            completa_dal_metodo(&m, &mut tr);
+            complete_from_method(&m, &mut tr);
         }
         Ok(tr.into_iter().enumerate().map(cromatogramma_di).collect())
     }
 }
 
 /// One transition for every distinct (Q1, Q3, polarity, collision energy) of the SRM scans of `righe`.
-fn transizioni_dalle_scansioni(
+fn transitions_from_the_scans(
     inner: &mut dyn Lettore,
     c: usize,
     righe: &[VoceScansione],
-) -> Result<Vec<Transizione>> {
-    let mut tr: Vec<Transizione> = Vec::new();
+) -> Result<Vec<Transition>> {
+    let mut tr: Vec<Transition> = Vec::new();
     for (k, r) in righe.iter().enumerate().filter(|(_, r)| scansione_srm(r)) {
         let q1 = r.precursore.unwrap_or(0.0);
         let s = inner.scan(c, k)?;
-        let ce = ce_del_filtro(&r.filtro);
+        let ce = ce_of_the_filter(&r.filtro);
         for (i, &q3) in s.mz.iter().enumerate() {
             let y = s.intensity_f64(i);
             let j = match tr.iter().position(|t| {
-                (t.q1 - q1).abs() <= TOLLERANZA_Q1
-                    && (t.q3 - q3).abs() <= TOLLERANZA_Q3
+                (t.q1 - q1).abs() <= Q1_TOLERANCE
+                    && (t.q3 - q3).abs() <= Q3_TOLERANCE
                     && t.polarita == r.polarita
                     && t.ce == ce
             }) {
                 Some(j) => j,
                 None => {
-                    tr.push(Transizione {
+                    tr.push(Transition {
                         q1,
                         // the m/z of a point is stored as f32: 246.108 would otherwise print as 246.10800170898438
                         q3: (q3 * 1e3).round() / 1e3,
@@ -171,7 +171,7 @@ fn transizioni_dalle_scansioni(
     Ok(tr)
 }
 
-fn cromatogramma_di((index, t): (usize, Transizione)) -> Chromatogram {
+fn cromatogramma_di((index, t): (usize, Transition)) -> Chromatogram {
     Chromatogram {
         index,
         id: id_di(&t),
@@ -186,11 +186,11 @@ fn cromatogramma_di((index, t): (usize, Transizione)) -> Chromatogram {
 
 /// The collision energy and the polarity of the transitions that the scans do not give, from the table of the method. Transitions that the
 /// table has under two polarities (or none) keep what the scans say.
-fn completa_dal_metodo(m: &str, tr: &mut [Transizione]) {
-    let tabella = transizioni_del_metodo(m);
+fn complete_from_method(m: &str, tr: &mut [Transition]) {
+    let tabella = transitions_of_the_method(m);
     for t in tr.iter_mut() {
         let mut righe = tabella.iter().filter(|(q1, q3, _, _)| {
-            (q1 - t.q1).abs() <= TOLLERANZA_Q1 && (q3 - t.q3).abs() <= TOLLERANZA_Q3
+            (q1 - t.q1).abs() <= Q1_TOLERANCE && (q3 - t.q3).abs() <= Q3_TOLERANCE
         });
         let (Some(&(_, _, ce, pol)), None) = (righe.next(), righe.next()) else {
             continue;
@@ -203,7 +203,7 @@ fn completa_dal_metodo(m: &str, tr: &mut [Transizione]) {
 }
 
 /// `SRM SIC Q1=… Q3=…`, then ` ce=…` and ` polarity=negative` when they are known.
-fn id_di(t: &Transizione) -> String {
+fn id_di(t: &Transition) -> String {
     let mut id = format!("SRM SIC Q1={} Q3={}", t.q1, t.q3);
     if let Some(ce) = t.ce {
         id.push_str(&format!(" ce={ce}"));
@@ -215,7 +215,7 @@ fn id_di(t: &Transizione) -> String {
 }
 
 fn scansione_srm(v: &VoceScansione) -> bool {
-    v.livello == 2 && v.precursore.is_some() && filtro_srm(&v.filtro)
+    v.livello == 2 && v.precursore.is_some() && srm_filter(&v.filtro)
 }
 
 impl Lettore for SrmDaScansioni {

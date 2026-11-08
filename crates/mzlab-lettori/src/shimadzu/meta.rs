@@ -12,25 +12,25 @@ use super::prop;
 /// The most transitions listed in the document.
 const TRANSIZIONI_MAX: usize = 5000;
 /// The most printable strings kept from one configuration stream.
-const TESTI_MAX: usize = 64;
+const TEXTS_MAX: usize = 64;
 
 #[derive(Default)]
 pub(super) struct Meta {
     pub modello: Option<String>,
     pub software: Option<String>,
-    pub creato: Option<String>,
+    pub created: Option<String>,
     pub operatore: Option<String>,
     pub campione: Option<String>,
     pub id: Option<String>,
     pub vial: Option<String>,
-    pub iniezione_ul: Option<f64>,
+    pub injection_ul: Option<f64>,
     pub metodo_file: Option<String>,
     pub campi: Vec<Campo>,
     /// The parts of the file that are not decoded (`meta.nonDecodificato`).
-    pub avvisi: Vec<String>,
+    pub warnings: Vec<String>,
 }
 
-fn ultimo(p: &str) -> &str {
+fn last_one(p: &str) -> &str {
     p.rsplit(['/', '\\']).next().unwrap_or(p)
 }
 
@@ -43,7 +43,7 @@ fn e_identita(k: &str, v: &str) -> bool {
         || v.contains(['\\', ':'])
 }
 
-fn corse(it: impl Iterator<Item = Option<char>>, out: &mut Vec<String>) {
+fn runs(it: impl Iterator<Item = Option<char>>, out: &mut Vec<String>) {
     let mut cur = String::new();
     for c in it.chain(std::iter::once(None)) {
         match c {
@@ -53,7 +53,7 @@ fn corse(it: impl Iterator<Item = Option<char>>, out: &mut Vec<String>) {
                 // at most `TESTI_MAX` strings, so a linear look-up is a few dozen comparisons
                 if t.len() >= 4 && !out.iter().any(|o| o == t) {
                     out.push(t.to_string());
-                    if out.len() >= TESTI_MAX {
+                    if out.len() >= TEXTS_MAX {
                         return;
                     }
                 }
@@ -67,13 +67,13 @@ fn corse(it: impl Iterator<Item = Option<char>>, out: &mut Vec<String>) {
 fn testi(b: &[u8]) -> Vec<String> {
     let ascii = |c: u8| (0x20..0x7f).contains(&c).then_some(c as char);
     let mut out = Vec::new();
-    corse(b.iter().map(|&c| ascii(c)), &mut out);
+    runs(b.iter().map(|&c| ascii(c)), &mut out);
     for da in [0, 1] {
-        if out.len() >= TESTI_MAX {
+        if out.len() >= TEXTS_MAX {
             break;
         }
         let pari = b.get(da..).unwrap_or(&[]).chunks_exact(2);
-        corse(
+        runs(
             pari.map(|p| if p[1] == 0 { ascii(p[0]) } else { None }),
             &mut out,
         );
@@ -82,7 +82,7 @@ fn testi(b: &[u8]) -> Vec<String> {
 }
 
 /// A model name like `GCMS-TQ8040` or `LCMS-8060NX` in `t`: `prefix`, a dash and letters and digits.
-fn nome_modello(t: &str, prefix: &str) -> Option<String> {
+fn model_name(t: &str, prefix: &str) -> Option<String> {
     let p = t.find(prefix)? + prefix.len();
     let r: String = t[p..]
         .chars()
@@ -91,7 +91,7 @@ fn nome_modello(t: &str, prefix: &str) -> Option<String> {
     (r.len() >= 3).then(|| format!("{prefix}{r}"))
 }
 
-fn campo(m: &mut Meta, origine: &str, k: &str, v: &str) {
+fn field(m: &mut Meta, origine: &str, k: &str, v: &str) {
     if v.is_empty() {
         return;
     }
@@ -121,7 +121,7 @@ pub(super) fn raccogli(ole: &Ole, fam: Fam) -> Meta {
             .filter_map(|p| Some(ole.read(p)?.len() as u64))
             .sum();
         if n > 0 {
-            m.avvisi.push(format!("{g} ({n} bytes)"));
+            m.warnings.push(format!("{g} ({n} bytes)"));
         }
     }
     let g = fam.storage();
@@ -132,7 +132,7 @@ pub(super) fn raccogli(ole: &Ole, fam: Fam) -> Meta {
         "Status Curve",
     ] {
         if let Some(b) = ole.read(&format!("{g}/{s}")).filter(|b| !b.is_empty()) {
-            m.avvisi.push(format!("{g}/{s} ({} bytes)", b.len()));
+            m.warnings.push(format!("{g}/{s} ({} bytes)", b.len()));
         }
     }
     m
@@ -147,14 +147,14 @@ fn gc(ole: &Ole, m: &mut Meta) {
     {
         match k.as_str() {
             "softwareVersion" => m.software = Some(v.clone()),
-            "generatedTime" => m.creato = Some(v.clone()),
+            "generatedTime" => m.created = Some(v.clone()),
             "sampleName" => m.campione = Some(v.clone()),
             "sampleId" => m.id = Some(v.clone()),
             "operator" => m.operatore = Some(v.clone()),
-            "methodFile" => m.metodo_file = Some(ultimo(&v).to_string()),
+            "methodFile" => m.metodo_file = Some(last_one(&v).to_string()),
             _ => {}
         }
-        campo(m, o, &k, &v);
+        field(m, o, &k, &v);
     }
     for s in ["System", "DetectorMS", "GC", "Available Modules"] {
         let n = format!("GCMS Configuration/{s}");
@@ -166,7 +166,7 @@ fn gc(ole: &Ole, m: &mut Meta) {
             .enumerate()
         {
             if m.modello.is_none() {
-                m.modello = nome_modello(&t, "GCMS-");
+                m.modello = model_name(&t, "GCMS-");
             }
             // an instrument serial is a string with digits and letters, no more than a name
             let serie = t.len() >= 8 && t.chars().any(|c| c.is_ascii_digit());
@@ -180,7 +180,7 @@ fn gc(ole: &Ole, m: &mut Meta) {
             .map(|b| testi(&b))
             .unwrap_or_default();
         // the name is followed by the number of the instrument (GCMS-QP2010 + 1)
-        m.modello = st.iter().find_map(|t| nome_modello(t, "GCMS-")).map(|n| {
+        m.modello = st.iter().find_map(|t| model_name(t, "GCMS-")).map(|n| {
             if n.len() == 12 && n.ends_with(|c: char| c.is_ascii_digit()) {
                 n[..11].to_string()
             } else {
@@ -196,7 +196,7 @@ fn lc(ole: &Ole, m: &mut Meta) {
         let o = format!("shimadzu:{s}");
         let get = |k: &str| xml.iter().find(|(n, _)| n == k).map(|(_, v)| v.as_str());
         if s == "File Property" {
-            m.creato = get("dwLowGeneratedDateTime")
+            m.created = get("dwLowGeneratedDateTime")
                 .zip(get("dwHighGeneratedDateTime"))
                 .and_then(|(l, h)| prop::filetime_xml(l, h));
             m.software = xml
@@ -207,13 +207,13 @@ fn lc(ole: &Ole, m: &mut Meta) {
             m.operatore = get("szGeneratedBy").map(str::to_string);
             m.vial = get("vial_num").map(str::to_string);
             m.id = get("smpl_id").map(str::to_string);
-            m.iniezione_ul = get("inj_vol").and_then(|v| v.parse().ok());
+            m.injection_ul = get("inj_vol").and_then(|v| v.parse().ok());
         }
         for (k, v) in &xml {
             if k.ends_with("DateTime") || k.starts_with("is_amount") {
                 continue;
             }
-            campo(m, &o, k, v);
+            field(m, &o, k, v);
         }
         if let Some(t) = get("dwLowGeneratedDateTime").zip(get("dwHighGeneratedDateTime"))
             && let Some(d) = prop::filetime_xml(t.0, t.1)
@@ -226,7 +226,7 @@ fn lc(ole: &Ole, m: &mut Meta) {
         .filter(|p| p.starts_with("GUMM_Information/Shimadzu") && p.ends_with("/GUM.CONFIG"))
     {
         let t = ole.read(p).map(|b| testi(&b)).unwrap_or_default();
-        if let Some(n) = t.iter().find_map(|t| nome_modello(t, "LCMS-")) {
+        if let Some(n) = t.iter().find_map(|t| model_name(t, "LCMS-")) {
             m.campi
                 .push(Campo::new(&format!("shimadzu:{p}"), "model", &n));
             // 2020/2050, 80xx and 90xx are instruments; the name of an older family (3030 for an 8040) is only kept as a field
@@ -250,8 +250,8 @@ fn tipo_evento(filtro: &str) -> &'static str {
 }
 
 /// The experiments of the `ms` section: one per event seen, then one MRM experiment with the transitions.
-fn esperimenti(d: &Dati) -> Vec<Option<V>> {
-    let mut esperimenti: Vec<Option<V>> = d
+fn experiments(d: &Dati) -> Vec<Option<V>> {
+    let mut experiments: Vec<Option<V>> = d
         .eventi
         .iter()
         .enumerate()
@@ -278,13 +278,13 @@ fn esperimenti(d: &Dati) -> Vec<Option<V>> {
                     ),
                 ])
             });
-        esperimenti.push(obj(vec![
-            ("indice", num(Some((esperimenti.len() + 1) as f64))),
+        experiments.push(obj(vec![
+            ("indice", num(Some((experiments.len() + 1) as f64))),
             ("tipo", Some(V::s("MRM"))),
             ("transizioni", Some(V::Arr(tr.collect()))),
         ]));
     }
-    esperimenti
+    experiments
 }
 
 /// The `strumento` section: maker, model and the software that wrote the file.
@@ -305,12 +305,12 @@ fn strumento(fam: Fam, m: &Meta) -> Option<V> {
 }
 
 /// The `metodo/1` document. `con_identita` false leaves out the operator and the fields that name a person, a computer, a serial or a path (the one inside an mzML).
-pub(super) fn documento(
+pub(super) fn document(
     (nome, dim, sha1): (&str, u64, &str),
     fam: Fam,
     d: &Dati,
     m: &Meta,
-    con_identita: bool,
+    with_identity: bool,
 ) -> String {
     let src = Source {
         format: "shimadzu",
@@ -322,8 +322,8 @@ pub(super) fn documento(
         sample: None,
     };
     let s = |t: &Option<String>| t.as_deref().and_then(text);
-    let esperimenti = esperimenti(d);
-    let avvisi = m.avvisi.iter().filter_map(|dove| {
+    let experiments = experiments(d);
+    let warnings = m.warnings.iter().filter_map(|dove| {
         obj(vec![
             ("chiave", Some(V::s("meta.nonDecodificato"))),
             ("dove", text(dove)),
@@ -331,7 +331,7 @@ pub(super) fn documento(
     });
     let doc = obj(vec![
         ("schema", Some(V::s(metodo::SCHEMA))),
-        ("origine", metodo::origin(&src, m.creato.as_deref())),
+        ("origine", metodo::origin(&src, m.created.as_deref())),
         ("strumento", strumento(fam, m)),
         (
             "campione",
@@ -339,13 +339,13 @@ pub(super) fn documento(
                 ("nome", s(&m.campione)),
                 ("id", s(&m.id)),
                 ("vial", s(&m.vial)),
-                ("iniezione_uL", num(m.iniezione_ul)),
+                ("iniezione_uL", num(m.injection_ul)),
                 ("metodo_file", s(&m.metodo_file)),
             ]),
         ),
         (
             "operatore",
-            if con_identita {
+            if with_identity {
                 obj(vec![("utente", s(&m.operatore))])
             } else {
                 None
@@ -362,7 +362,7 @@ pub(super) fn documento(
                     "periodi",
                     obj(vec![(
                         "esperimenti",
-                        Some(V::Arr(esperimenti.into_iter().flatten().collect())),
+                        Some(V::Arr(experiments.into_iter().flatten().collect())),
                     )])
                     .map(|p| V::Arr(vec![p])),
                 ),
@@ -373,12 +373,12 @@ pub(super) fn documento(
             Some(V::Arr(
                 m.campi
                     .iter()
-                    .filter(|c| con_identita || !c.identita)
+                    .filter(|c| with_identity || !c.identita)
                     .filter_map(Campo::json)
                     .collect(),
             )),
         ),
-        ("avvisi", Some(V::Arr(avvisi.collect()))),
+        ("avvisi", Some(V::Arr(warnings.collect()))),
     ]);
     doc.map_or_else(String::new, |d| d.json())
 }
@@ -401,7 +401,7 @@ pub(super) fn header(id: (&str, u64, &str), fam: Fam, d: &Dati, m: &Meta) -> Hea
             "MS:1000031".to_string(),
             m.modello.clone().unwrap_or_else(|| "Shimadzu".to_string()),
         )),
-        acquired: m.creato.clone(),
+        acquired: m.created.clone(),
         ..Header::default()
     };
     if fam == Fam::Gc {
@@ -423,7 +423,7 @@ pub(super) fn header(id: (&str, u64, &str), fam: Fam, d: &Dati, m: &Meta) -> Hea
     h.sample = m.campione.clone().map(|n| ("1".to_string(), n));
     h.run_params.push((
         metodo::USERPARAM.to_string(),
-        documento(id, fam, d, m, false),
+        document(id, fam, d, m, false),
     ));
     h
 }

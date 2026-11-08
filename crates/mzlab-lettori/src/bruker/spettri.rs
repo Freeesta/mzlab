@@ -3,7 +3,7 @@
 
 use super::blocco::Picchi;
 
-use super::tabelle::{Dati, Finestra, InfoFrame};
+use super::tabelle::{Dati, InfoFrame, Window};
 
 use std::collections::BTreeMap;
 
@@ -15,7 +15,7 @@ pub struct Desc {
     pub livello: u8,
     pub id: String,
     pub filtro: String,
-    pub iso: Option<Finestra>,
+    pub iso: Option<Window>,
     pub precursore: Option<i64>,
     pub carica: Option<i64>,
     /// Selected ion m/z (monoisotopic when the file says it) or the isolation target.
@@ -28,7 +28,7 @@ fn fmt_mz(x: f64) -> String {
 
 /// The spectra of the run, in the order of the frames.
 pub fn costruisci(d: &Dati) -> Vec<Desc> {
-    let per_frame = |righe: &[(i64, i64, Finestra)]| {
+    let per_frame = |righe: &[(i64, i64, Window)]| {
         let mut m: BTreeMap<i64, Vec<usize>> = BTreeMap::new();
         for (i, r) in righe.iter().enumerate() {
             m.entry(r.0).or_default().push(i);
@@ -40,15 +40,15 @@ pub fn costruisci(d: &Dati) -> Vec<Desc> {
     for (fi, f) in d.frames.iter().enumerate() {
         let n0 = out.len();
         match f.tipo {
-            0 => out.push(frame_intero(d, fi, None)),
+            0 => out.push(whole_frame(d, fi, None)),
             8 => dda(d, fi, pasef.get(&f.id).map_or(&[][..], |v| v), &mut out),
             9 => dia(d, fi, &mut out),
-            10 => riga_prm(d, fi, prm.get(&f.id).map_or(&[][..], |v| v), &mut out),
+            10 => prm_row(d, fi, prm.get(&f.id).map_or(&[][..], |v| v), &mut out),
             _ => {}
         }
         if out.len() == n0 {
             // a frame with its own isolation (MRM, MALDI MS/MS) or none: one spectrum
-            out.push(frame_intero(d, fi, d.info_frame.get(&f.id)));
+            out.push(whole_frame(d, fi, d.info_frame.get(&f.id)));
         }
     }
     out
@@ -59,7 +59,7 @@ fn scansioni_intere(d: &Dati, f: usize) -> Vec<(u32, u32)> {
 }
 
 /// A frame as one spectrum: MS1, or MS2 when the frame table says it has an isolation.
-fn frame_intero(d: &Dati, fi: usize, info: Option<&InfoFrame>) -> Desc {
+fn whole_frame(d: &Dati, fi: usize, info: Option<&InfoFrame>) -> Desc {
     let f = &d.frames[fi];
     let ms2 = info.is_some() || f.tipo != 0;
     Desc {
@@ -71,7 +71,7 @@ fn frame_intero(d: &Dati, fi: usize, info: Option<&InfoFrame>) -> Desc {
             Some(i) => format!("TOF MS2 {}@{}", fmt_mz(i.mz), i.ce),
             None => "TOF MS".into(),
         },
-        iso: info.map(|i| Finestra {
+        iso: info.map(|i| Window {
             scan: (0, 0),
             mz: i.mz,
             larghezza: i.larghezza,
@@ -84,7 +84,7 @@ fn frame_intero(d: &Dati, fi: usize, info: Option<&InfoFrame>) -> Desc {
 }
 
 /// A MS2 spectrum of one isolation window of a frame.
-fn ms2(fi: usize, id: String, tipo: &str, w: Finestra) -> Desc {
+fn ms2(fi: usize, id: String, tipo: &str, w: Window) -> Desc {
     Desc {
         frame: fi,
         scan: vec![w.scan],
@@ -126,7 +126,7 @@ fn dda(d: &Dati, fi: usize, righe: &[usize], out: &mut Vec<Desc>) {
 /// diaPASEF: one spectrum per window of the group of the frame.
 fn dia(d: &Dati, fi: usize, out: &mut Vec<Desc>) {
     let id = d.frames[fi].id;
-    let g = d.dia_frame.get(&id).and_then(|g| d.dia_gruppi.get(g));
+    let g = d.dia_frame.get(&id).and_then(|g| d.dia_groups.get(g));
     for (k, w) in g.into_iter().flatten().enumerate() {
         out.push(ms2(
             fi,
@@ -138,7 +138,7 @@ fn dia(d: &Dati, fi: usize, out: &mut Vec<Desc>) {
 }
 
 /// PRM-PASEF: one spectrum per row.
-fn riga_prm(d: &Dati, fi: usize, righe: &[usize], out: &mut Vec<Desc>) {
+fn prm_row(d: &Dati, fi: usize, righe: &[usize], out: &mut Vec<Desc>) {
     for &i in righe {
         let (_, t, w) = d.prm[i];
         out.push(ms2(
@@ -151,7 +151,7 @@ fn riga_prm(d: &Dati, fi: usize, righe: &[usize], out: &mut Vec<Desc>) {
 }
 
 /// The point ranges of `p` in the scan ranges `scan`, merged first so that overlapping ranges do not count a point twice.
-pub fn tratti(p: &Picchi, scan: &[(u32, u32)]) -> Vec<std::ops::Range<usize>> {
+pub fn stretches(p: &Picchi, scan: &[(u32, u32)]) -> Vec<std::ops::Range<usize>> {
     let mut r: Vec<(u32, u32)> = scan.iter().copied().filter(|x| x.0 < x.1).collect();
     r.sort_unstable();
     let mut uniti: Vec<(u32, u32)> = Vec::with_capacity(r.len());
@@ -161,17 +161,17 @@ pub fn tratti(p: &Picchi, scan: &[(u32, u32)]) -> Vec<std::ops::Range<usize>> {
             _ => uniti.push((a, b)),
         }
     }
-    uniti.into_iter().map(|(a, b)| p.punti(a, b)).collect()
+    uniti.into_iter().map(|(a, b)| p.points(a, b)).collect()
 }
 
 /// The points of `p` whose scan is in one of `scan`, added by TOF index (ordered by TOF, and so by m/z).
-pub fn somma(p: &Picchi, scan: &[(u32, u32)]) -> Vec<(u32, u64)> {
-    let t = tratti(p, scan);
+pub fn summed(p: &Picchi, scan: &[(u32, u32)]) -> Vec<(u32, u64)> {
+    let t = stretches(p, scan);
     let mut v: Vec<(u32, u32)> = Vec::with_capacity(t.iter().map(ExactSizeIterator::len).sum());
     for r in t {
         v.extend(r.map(|i| (p.tof[i], p.int[i])));
     }
-    ordina_tof(&mut v);
+    sort_tof(&mut v);
     let mut out: Vec<(u32, u64)> = Vec::with_capacity(v.len());
     for (t, y) in v {
         match out.last_mut() {
@@ -184,7 +184,7 @@ pub fn somma(p: &Picchi, scan: &[(u32, u32)]) -> Vec<(u32, u64)> {
 
 /// Sorts by TOF index: least-significant-digit radix on 11-bit digits for many points (a MS1 frame), the library sort for a few. Equal TOF indices are added
 /// afterwards, so the order among them does not matter.
-fn ordina_tof(v: &mut Vec<(u32, u32)>) {
+fn sort_tof(v: &mut Vec<(u32, u32)>) {
     const BIT: u32 = 11;
     if v.len() < 1024 {
         v.sort_unstable_by_key(|x| x.0);

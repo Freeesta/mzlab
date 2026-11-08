@@ -32,9 +32,9 @@ fn record_blob(testo: &str, blob: &[u8], n: i64) -> Vec<u8> {
 }
 
 /// Table pages: an interior page (root), two leaves and an overflow page, the whole tree placed after the earlier tables.
-fn albero(primo: u32) -> Vec<u8> {
-    let grande = "x".repeat(6000 - 40);
-    let mut rec = record_blob(&grande, &[1, 2, 3], -9);
+fn albero(first_one: u32) -> Vec<u8> {
+    let large = "x".repeat(6000 - 40);
+    let mut rec = record_blob(&large, &[1, 2, 3], -9);
     // tot = payload size, local part by the rules of the file format (usable 4096)
     let tot = rec.len() as u64;
     let (u, x) = (4096usize, 4096usize - 35);
@@ -48,12 +48,12 @@ fn albero(primo: u32) -> Vec<u8> {
         m
     };
     assert!(tot as usize > x, "the payload must overflow");
-    let resto = rec.split_off(local);
-    let mut cella = varint(tot);
-    cella.extend(varint(5));
-    cella.extend(&rec);
-    cella.extend((primo + 3).to_be_bytes());
-    let l1 = pagina(
+    let remainder = rec.split_off(local);
+    let mut cell = varint(tot);
+    cell.extend(varint(5));
+    cell.extend(&rec);
+    cell.extend((first_one + 3).to_be_bytes());
+    let l1 = page(
         13,
         0,
         &[
@@ -62,21 +62,21 @@ fn albero(primo: u32) -> Vec<u8> {
         ],
         0,
     );
-    let l2 = pagina(
+    let l2 = page(
         13,
         0,
         &[
             cella_foglia(3, &record(&[V::N, V::T("tre"), V::N, V::I(30)])),
             cella_foglia(4, &record(&[V::N])),
-            cella,
+            cell,
         ],
         0,
     );
-    let mut cel_int = (primo + 1).to_be_bytes().to_vec();
+    let mut cel_int = (first_one + 1).to_be_bytes().to_vec();
     cel_int.extend(varint(2));
-    let int = pagina(5, 0, &[cel_int], primo + 2);
+    let int = page(5, 0, &[cel_int], first_one + 2);
     let mut ov = vec![0u8; PAG];
-    ov[4..4 + resto.len()].copy_from_slice(&resto);
+    ov[4..4 + remainder.len()].copy_from_slice(&remainder);
     [int, l1, l2, ov].concat()
 }
 
@@ -88,7 +88,7 @@ fn tre_tabelle() -> Sqlite {
         vec![V::N, V::T("corta")],
     ]);
     // WITHOUT ROWID: the record is (b, a)
-    let celle: Vec<Vec<u8>> = [("x", 1), ("y", 2)]
+    let cell_list: Vec<Vec<u8>> = [("x", 1), ("y", 2)]
         .iter()
         .map(|(b, a)| {
             let r = record(&[V::T(b), V::I(*a)]);
@@ -97,7 +97,7 @@ fn tre_tabelle() -> Sqlite {
             c
         })
         .collect();
-    let w = pagina(10, 0, &celle, 0);
+    let w = page(10, 0, &cell_list, 0);
     apri_db(
         db(&[
             (
@@ -150,7 +150,7 @@ fn confronta(s: &mut Sqlite, nome: &str) {
             })
             .collect();
         let mut avute: Vec<Vec<Val>> = Vec::new();
-        s.righe_cols(&t, &idx, |r| {
+        s.rows_cols(&t, &idx, |r| {
             avute.push(r.to_vec());
             Ok(true)
         })
@@ -167,14 +167,14 @@ fn righe_cols_da_gli_stessi_valori_di_righe() {
     }
     // the tree really was walked: interior page, both leaves and the overflow chain
     let t = s.tabella("T").unwrap().clone();
-    let mut visti = Vec::new();
-    s.righe_cols(&t, &[Some(0), Some(1), Some(3)], |r| {
-        visti.push((r[0].i64().unwrap(), r[1].testo().map(str::len), r[2].i64()));
+    let mut seen = Vec::new();
+    s.rows_cols(&t, &[Some(0), Some(1), Some(3)], |r| {
+        seen.push((r[0].i64().unwrap(), r[1].testo().map(str::len), r[2].i64()));
         Ok(true)
     })
     .unwrap();
     assert_eq!(
-        visti,
+        seen,
         vec![
             (1, Some(3), Some(10)),
             (2, Some(3), Some(20)),
@@ -187,7 +187,7 @@ fn righe_cols_da_gli_stessi_valori_di_righe() {
 
 /// Timing of a full scan of a 10^6-row table: all columns (`righe`) against the two that are needed.
 /// The pages of a two-level table of `n_rows` rows: the root (page 2), then the middle pages, then the leaves.
-fn grande(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
+fn large(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
     let mut leaves: Vec<Vec<u8>> = Vec::new();
     let mut maxes: Vec<u64> = Vec::new();
     let mut cells: Vec<Vec<u8>> = Vec::new();
@@ -203,7 +203,7 @@ fn grande(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
         ]);
         let c = cella_foglia(i, &rec);
         if used + c.len() + 2 > PAG {
-            leaves.push(pagina(13, 0, &cells, 0));
+            leaves.push(page(13, 0, &cells, 0));
             maxes.push(i - 1);
             cells.clear();
             used = 8;
@@ -211,7 +211,7 @@ fn grande(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
         used += c.len() + 2;
         cells.push(c);
     }
-    leaves.push(pagina(13, 0, &cells, 0));
+    leaves.push(page(13, 0, &cells, 0));
     maxes.push(n_rows as u64);
     let per_mid = 400usize;
     let n_mid = leaves.len().div_ceil(per_mid);
@@ -227,14 +227,14 @@ fn grande(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
             c.extend(varint(*max));
             cs.push(c);
         }
-        mids.push(pagina(5, 0, &cs, first_leaf + hi as u32 - 1));
+        mids.push(page(5, 0, &cs, first_leaf + hi as u32 - 1));
         if m + 1 < n_mid {
             let mut c = (3 + m as u32).to_be_bytes().to_vec();
             c.extend(varint(maxes[hi - 1]));
             root_cells.push(c);
         }
     }
-    let root = pagina(5, 0, &root_cells, 3 + n_mid as u32 - 1);
+    let root = page(5, 0, &root_cells, 3 + n_mid as u32 - 1);
     (root, mids, leaves)
 }
 
@@ -242,7 +242,7 @@ fn grande(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
 #[ignore]
 fn timing_of_a_million_row_scan() {
     let n_rows = 1_000_000usize;
-    let (root, mids, leaves) = grande(n_rows);
+    let (root, mids, leaves) = large(n_rows);
     let sql = "CREATE TABLE B (Id INTEGER PRIMARY KEY, A INTEGER, X REAL, Name TEXT, Z INTEGER)";
     let mut img = db(&[("B", sql, root)]);
     for p in mids.iter().chain(leaves.iter()) {
@@ -264,7 +264,7 @@ fn timing_of_a_million_row_scan() {
         let t1 = std::time::Instant::now();
         let mut sum2 = 0i64;
         let mut cnt2 = 0usize;
-        s.righe_cols(&t, &[Some(1), Some(2)], |r| {
+        s.rows_cols(&t, &[Some(1), Some(2)], |r| {
             sum2 += r[0].i64().unwrap();
             cnt2 += r[1].f64().is_some() as usize;
             Ok(true)

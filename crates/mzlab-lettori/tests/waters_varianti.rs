@@ -32,7 +32,7 @@ fn funzione_ignota() -> Vec<(String, Vec<u8>)> {
     ]
 }
 
-fn parametro(e: &mzlab_core::error::Error, nome: &str) -> String {
+fn param(e: &mzlab_core::error::Error, nome: &str) -> String {
     e.params
         .iter()
         .find(|(n, _)| *n == nome)
@@ -52,7 +52,7 @@ fn an_empty_function_list_is_told_with_the_folder() {
         .err()
         .expect("refused");
     assert_eq!(e.key, "err.file.functionsEmpty");
-    assert_eq!(parametro(&e, "name"), "X.raw");
+    assert_eq!(param(&e, "name"), "X.raw");
 }
 
 #[test]
@@ -61,9 +61,9 @@ fn a_lone_function_of_unknown_records_is_told_with_its_number_and_type() {
         .err()
         .expect("refused");
     assert_eq!(e.key, "err.file.recordVariant");
-    assert_eq!(parametro(&e, "name"), "X.raw");
-    assert_eq!(parametro(&e, "function"), "1");
-    assert_eq!(parametro(&e, "type"), "0x10");
+    assert_eq!(param(&e, "name"), "X.raw");
+    assert_eq!(param(&e, "function"), "1");
+    assert_eq!(param(&e, "type"), "0x10");
 }
 
 #[test]

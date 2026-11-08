@@ -121,10 +121,10 @@ fn i_cdf_veri_si_aprono_e_i_conti_tornano() {
                 !s.mz.is_empty() && s.mz.windows(2).all(|w| w[0] <= w[1]),
                 "{nome} scan {k}"
             );
-            let somma: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+            let summed: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
             assert!(
-                (somma - indice[k].tic).abs() <= 1e-3 * somma.max(1.0),
-                "{nome} scan {k}: {somma} {}",
+                (summed - indice[k].tic).abs() <= 1e-3 * summed.max(1.0),
+                "{nome} scan {k}: {summed} {}",
                 indice[k].tic
             );
         }

@@ -30,11 +30,11 @@ pub(super) fn each<'a>(t: Tag<'a>, f: &mut dyn FnMut(&'a str, &'a str)) {
         let Some(q) = rest.chars().next().filter(|c| *c == '"' || *c == '\'') else {
             break;
         };
-        let Some((v, resto)) = rest[1..].split_once(q) else {
+        let Some((v, remainder)) = rest[1..].split_once(q) else {
             break;
         };
         f(k.trim(), v);
-        r = resto;
+        r = remainder;
     }
 }
 
@@ -71,7 +71,7 @@ pub(super) fn nome<'a>(t: Tag<'a>) -> &'a str {
 }
 
 /// A duration `PT1M30.5S` (or a plain number of seconds) in minutes.
-pub(super) fn minuti(t: &str) -> Option<f64> {
+pub(super) fn minutes(t: &str) -> Option<f64> {
     let t = t.trim();
     let Some(r) = t.strip_prefix("PT").or_else(|| t.strip_prefix("pt")) else {
         return t.parse::<f64>().ok().map(|s| s / 60.0);
@@ -100,13 +100,13 @@ pub(super) struct Testa<'a> {
     /// (tag, value) of each `<precursorMz>`.
     pub(super) precursori: Vec<(Tag<'a>, &'a str)>,
     /// The `<nameValue>` tags.
-    pub(super) valori: Vec<Tag<'a>>,
+    pub(super) values: Vec<Tag<'a>>,
     /// The `<peaks>` tag and its text.
     pub(super) picchi: Option<(Tag<'a>, &'a str)>,
 }
 
 /// The scan, its precursors, its `nameValue` pairs and its peaks, out of the text of a scan (at most `tetto` of each kind).
-pub(super) fn testa(t: &str, tetto: usize) -> Result<Testa<'_>> {
+pub(super) fn testa(t: &str, cap: usize) -> Result<Testa<'_>> {
     let mut r = Testa::default();
     let testo = |dopo: usize| {
         t.get(dopo..)
@@ -117,8 +117,8 @@ pub(super) fn testa(t: &str, tetto: usize) -> Result<Testa<'_>> {
     tags(t, &mut |g, dopo| {
         match nome(g) {
             "scan" if r.scan.is_empty() => r.scan = g,
-            "precursorMz" if r.precursori.len() < tetto => r.precursori.push((g, testo(dopo))),
-            "nameValue" if r.valori.len() < tetto => r.valori.push(g),
+            "precursorMz" if r.precursori.len() < cap => r.precursori.push((g, testo(dopo))),
+            "nameValue" if r.values.len() < cap => r.values.push(g),
             "peaks" => {
                 r.picchi = Some((g, if g.ends_with('/') { "" } else { testo(dopo) }));
                 // the schema puts the `nameValue` pairs after the peaks
@@ -136,7 +136,7 @@ pub(super) fn testa(t: &str, tetto: usize) -> Result<Testa<'_>> {
 /// The peaks of a scan: m/z, intensities, and whether the file stores 64-bit values.
 pub(super) struct Picchi {
     pub(super) mz: Vec<f64>,
-    pub(super) intensita: Vec<f64>,
+    pub(super) intensities: Vec<f64>,
     pub(super) a_64_bit: bool,
 }
 
@@ -145,20 +145,20 @@ fn xml(why: &str) -> Error {
 }
 
 /// The bytes of the `<peaks>` text: base64, then zlib when the file says so (at most `limite` bytes).
-fn grezzi(testo: &str, zlib: bool, limite: usize) -> Result<Vec<u8>> {
-    let pulito: Vec<u8> = testo.bytes().filter(|c| !c.is_ascii_whitespace()).collect();
+fn raw_values(testo: &str, zlib: bool, limit: usize) -> Result<Vec<u8>> {
+    let clean: Vec<u8> = testo.bytes().filter(|c| !c.is_ascii_whitespace()).collect();
     let raw = base64::engine::general_purpose::STANDARD
-        .decode(&pulito)
+        .decode(&clean)
         .map_err(|e| Error::new("err.file.base64").with("detail", e))?;
     if !zlib {
         return Ok(raw);
     }
     let mut out = Vec::new();
     flate2::read::ZlibDecoder::new(&raw[..])
-        .take(limite as u64 + 1)
+        .take(limit as u64 + 1)
         .read_to_end(&mut out)
         .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
-    if out.len() > limite {
+    if out.len() > limit {
         return Err(Error::memory_budget());
     }
     Ok(out)
@@ -169,7 +169,7 @@ pub(super) fn picchi(
     tag: Tag,
     testo: &str,
     conteggio: Option<usize>,
-    limiti: &Limiti,
+    limits: &Limiti,
 ) -> Result<Picchi> {
     let larghezza = match attr(tag, "precision") {
         "" | "32" => 4usize,
@@ -188,35 +188,35 @@ pub(super) fn picchi(
         "zlib" => true,
         _ => return Err(xml("compressionType")),
     };
-    let tetto = match conteggio {
-        Some(n) => limiti.voci_ok(n as u64)?,
-        None => limiti.voci,
+    let cap = match conteggio {
+        Some(n) => limits.voci_ok(n as u64)?,
+        None => limits.voci,
     };
-    let limite = usize::try_from(limiti.byte)
+    let limit = usize::try_from(limits.byte)
         .unwrap_or(usize::MAX)
-        .min(tetto.saturating_mul(2 * larghezza));
-    let b = grezzi(testo, zlib, limite)?;
+        .min(cap.saturating_mul(2 * larghezza));
+    let b = raw_values(testo, zlib, limit)?;
     let n = (b.len() / (2 * larghezza)).min(conteggio.unwrap_or(usize::MAX));
-    let (mut mz, mut intensita) = (Vec::new(), Vec::new());
+    let (mut mz, mut intensities) = (Vec::new(), Vec::new());
     mz.try_reserve_exact(n)
         .map_err(|_| Error::memory_budget())?;
-    intensita
+    intensities
         .try_reserve_exact(n)
         .map_err(|_| Error::memory_budget())?;
     for c in b.chunks_exact(2 * larghezza).take(n) {
         let (x, y) = c.split_at(larghezza);
-        mz.push(grande(x));
-        intensita.push(grande(y));
+        mz.push(large(x));
+        intensities.push(large(y));
     }
     Ok(Picchi {
         mz,
-        intensita,
+        intensities,
         a_64_bit: larghezza == 8,
     })
 }
 
 /// A big-endian float of 4 or 8 bytes.
-fn grande(b: &[u8]) -> f64 {
+fn large(b: &[u8]) -> f64 {
     match <[u8; 4]>::try_from(b) {
         Ok(q) => f64::from(f32::from_be_bytes(q)),
         Err(_) => <[u8; 8]>::try_from(b).map_or(0.0, f64::from_be_bytes),

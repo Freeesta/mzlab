@@ -27,7 +27,7 @@ pub enum Cod {
     /// 64-bit floats, no compression (every byte of the base64 is a value: the hostile-number tests flip them).
     Nudo,
     /// Linear prediction for m/z, `intensita` for the intensities, with or without zlib after.
-    Np { intensita: Np, zlib: bool },
+    Np { intensities: Np, zlib: bool },
 }
 
 /// The kind of an array: its term and whether the codec of the m/z axis (linear prediction) is the one that applies.
@@ -48,8 +48,8 @@ pub fn array(v: &[f64], cod: Cod, g: Genere) -> String {
             "<cvParam cvRef=\"MS\" accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam cvRef=\"MS\" accession=\"MS:1000576\" name=\"no compression\"/>".into(),
             v.iter().flat_map(|x| x.to_le_bytes()).collect(),
         ),
-        Cod::Np { intensita, zlib: z } => {
-            let (np, bytes) = match (g, intensita) {
+        Cod::Np { intensities, zlib: z } => {
+            let (np, bytes) = match (g, intensities) {
                 (Genere::Intensita, Np::Pic) => (Np::Pic, numpress::encode_pic(v)),
                 (Genere::Intensita, Np::Slof) => (Np::Slof, numpress::encode_slof(v, numpress::slof_fixed_point(v))),
                 _ => (Np::Linear, numpress::encode_linear(v, numpress::linear_fixed_point(v))),
@@ -79,7 +79,7 @@ pub fn array(v: &[f64], cod: Cod, g: Genere) -> String {
 /// One scan of the synthetic run.
 pub struct Scan {
     pub mz: Vec<f64>,
-    pub intensita: Vec<f64>,
+    pub intensities: Vec<f64>,
     pub livello: u8,
     pub rt_min: f64,
     pub precursore: Option<f64>,
@@ -93,7 +93,7 @@ pub fn scansioni() -> Vec<Scan> {
                 mz: (0..n)
                     .map(|i| 100.0 + f64::from(i as u32) * 3.17 + f64::from(k as u32) * 0.013)
                     .collect(),
-                intensita: (0..n)
+                intensities: (0..n)
                     .map(|i| 50.0 + f64::from(((i * 7919 + k * 31) % 997) as u32) * 11.0)
                     .collect(),
                 livello: if k % 3 == 2 { 2 } else { 1 },
@@ -133,7 +133,7 @@ pub fn mzml_di(scan: &[Scan], cod: Cod, metodo: Option<&str>) -> Vec<u8> {
             k + 1,
             x.mz.len(),
             x.livello,
-            x.intensita.iter().sum::<f64>(),
+            x.intensities.iter().sum::<f64>(),
             x.rt_min
         );
         if let Some(p) = x.precursore {
@@ -142,12 +142,12 @@ pub fn mzml_di(scan: &[Scan], cod: Cod, metodo: Option<&str>) -> Vec<u8> {
         s += &format!(
             "<binaryDataArrayList count=\"2\">\n{}{}</binaryDataArrayList></spectrum>\n",
             array(&x.mz, cod, Genere::Mz),
-            array(&x.intensita, cod, Genere::Intensita)
+            array(&x.intensities, cod, Genere::Intensita)
         );
     }
     s += "</spectrumList>\n";
     let t: Vec<f64> = scan.iter().map(|x| x.rt_min).collect();
-    let y: Vec<f64> = scan.iter().map(|x| x.intensita.iter().sum()).collect();
+    let y: Vec<f64> = scan.iter().map(|x| x.intensities.iter().sum()).collect();
     s += &format!(
         "<chromatogramList count=\"1\"><chromatogram index=\"0\" id=\"TIC\" defaultArrayLength=\"{}\"><cvParam cvRef=\"MS\" accession=\"MS:1000235\" name=\"total ion current chromatogram\"/><binaryDataArrayList count=\"2\">\n",
         t.len()

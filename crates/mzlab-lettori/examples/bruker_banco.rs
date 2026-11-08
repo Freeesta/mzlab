@@ -58,12 +58,12 @@ fn misura(dir: &Path, giri: usize) {
         let bpc = ms(t);
         let t = Instant::now();
         std::hint::black_box(l.scan(0, 0).unwrap());
-        let primo = ms(t);
+        let first_one = ms(t);
         let t = Instant::now();
-        let (mut punti, mut firma) = (0usize, 0xcbf2_9ce4_8422_2325u64);
+        let (mut points, mut firma) = (0usize, 0xcbf2_9ce4_8422_2325u64);
         for k in 0..n {
             let s = l.scan(0, k).unwrap();
-            punti += s.mz.len();
+            points += s.mz.len();
             // FNV-1a over the bits of every point: the same number before and after a change of the reader
             for (m, y) in s.mz.iter().zip(&s.intensity) {
                 for b in [m.to_bits(), u64::from(y.to_bits())] {
@@ -77,7 +77,7 @@ fn misura(dir: &Path, giri: usize) {
         mzlab_core::lettori_mzml::scrivi(&mut *l, 0, std::io::sink(), &mut |_, _| {}).unwrap();
         let mzml = ms(t);
         println!(
-            "{{\"giro\":{g},\"spettri\":{n},\"punti\":{punti},\"firma\":\"{firma:016x}\",\"apri_ms\":{apri:.1},\"indice_ms\":{indice:.1},\"tic_ms\":{tic:.1},\"bpc_ms\":{bpc:.1},\"primo_ms\":{primo:.2},\"tutti_ms\":{tutti:.1},\"mzml_ms\":{mzml:.1}}}"
+            "{{\"giro\":{g},\"spettri\":{n},\"punti\":{points},\"firma\":\"{firma:016x}\",\"apri_ms\":{apri:.1},\"indice_ms\":{indice:.1},\"tic_ms\":{tic:.1},\"bpc_ms\":{bpc:.1},\"primo_ms\":{first_one:.2},\"tutti_ms\":{tutti:.1},\"mzml_ms\":{mzml:.1}}}"
         );
     }
 }

@@ -4,33 +4,33 @@ use super::*;
 
 impl Cdf {
     /// The bytes of elements `da..da + n` of `v`.
-    pub(super) fn grezzi(
+    pub(super) fn raw_values(
         &self,
         dati: &mut dyn ReadAt,
-        limiti: &Limiti,
+        limits: &Limiti,
         v: &Var,
         da: u64,
         n: u64,
     ) -> Result<Vec<u8>> {
         let mut out = Vec::new();
-        let totale = self.controlla(limiti, v, da, n)?;
-        out.try_reserve_exact(totale)
+        let total = self.check(limits, v, da, n)?;
+        out.try_reserve_exact(total)
             .map_err(|_| Error::memory_budget())?;
         self.a_pezzi(dati, v, da, n, |b| out.extend_from_slice(b))?;
         Ok(out)
     }
 
     /// The window `da..da + n` lies inside `v` and its bytes fit the budget: the number of bytes.
-    pub(super) fn controlla(&self, limiti: &Limiti, v: &Var, da: u64, n: u64) -> Result<usize> {
+    pub(super) fn check(&self, limits: &Limiti, v: &Var, da: u64, n: u64) -> Result<usize> {
         let fine = da.checked_add(n).ok_or_else(Error::memory_budget)?;
         if fine > self.elementi(v) {
             return Err(guasto("read past the end of a variable"));
         }
-        let totale = n
+        let total = n
             .checked_mul(v.tipo.larghezza())
-            .filter(|&t| t <= limiti.byte)
+            .filter(|&t| t <= limits.byte)
             .ok_or_else(Error::memory_budget)?;
-        usize::try_from(totale).map_err(|_| Error::memory_budget())
+        usize::try_from(total).map_err(|_| Error::memory_budget())
     }
 
     /// Hands `f` the bytes of elements `da..da + n` of `v`, in order and in pieces of whole elements. A variable that is not a record one is read in pieces of `PEZZO` bytes. A record
@@ -51,8 +51,8 @@ impl Cdf {
         } else {
             u64::MAX
         };
-        let (rs, blocco_b) = (self.recsize, epr.saturating_mul(w));
-        let finestra = v.record && blocco_b <= rs && rs <= PEZZO as u64 && rs <= 16 * blocco_b;
+        let (rs, block_b) = (self.recsize, epr.saturating_mul(w));
+        let finestra = v.record && block_b <= rs && rs <= PIECE as u64 && rs <= 16 * block_b;
         let mut buf = Vec::new();
         let mut gat = Vec::new();
         let leggi =
@@ -72,13 +72,13 @@ impl Cdf {
             if finestra {
                 let (r0, i0) = (e / epr, e % epr);
                 // the records of this piece (as many as fit in `PEZZO` bytes, not past the last element asked for) and where its last element ends
-                let r1 = ((fine - 1) / epr).min(r0 + (PEZZO as u64 / rs).max(1) - 1);
+                let r1 = ((fine - 1) / epr).min(r0 + (PIECE as u64 / rs).max(1) - 1);
                 let e_fine = fine.min((r1 + 1) * epr);
                 let fine_r = (e_fine - 1) % epr + 1;
-                let inizio = v.begin.saturating_add(r0 * rs).saturating_add(i0 * w);
+                let start = v.begin.saturating_add(r0 * rs).saturating_add(i0 * w);
                 let len = ((r1 - r0) * rs + fine_r * w - i0 * w) as usize;
-                leggi(dati, inizio, len, &mut buf)?;
-                if rs == blocco_b {
+                leggi(dati, start, len, &mut buf)?;
+                if rs == block_b {
                     f(&buf);
                 } else {
                     gat.clear();
@@ -106,7 +106,7 @@ impl Cdf {
             } else {
                 (v.begin.saturating_add(e * w), fine - e)
             };
-            let blocco = blocco.min((PEZZO as u64 / w).max(1));
+            let blocco = blocco.min((PIECE as u64 / w).max(1));
             leggi(dati, pos, (blocco * w) as usize, &mut buf)?;
             f(&buf);
             e += blocco;

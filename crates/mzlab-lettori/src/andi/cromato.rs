@@ -6,13 +6,13 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{Limiti, VoceCromatogramma};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
-use super::netcdf::{scala, Cdf};
+use super::netcdf::{scale, Cdf};
 
 /// A text the file keeps as a global attribute or as a `char` variable.
-fn testo(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti, nome: &str) -> Option<String> {
+fn testo(cdf: &Cdf, dati: &mut dyn ReadAt, limits: &Limiti, nome: &str) -> Option<String> {
     cdf.testo(nome).map(str::to_string).or_else(|| {
         let v = cdf.trova(nome)?;
-        cdf.stringhe(dati, limiti, v)
+        cdf.stringhe(dati, limits, v)
             .ok()?
             .into_iter()
             .find(|s| !s.is_empty())
@@ -20,37 +20,37 @@ fn testo(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti, nome: &str) -> Optio
 }
 
 /// A scalar variable (or global attribute) as a number.
-fn scalare(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti, nome: &str) -> Option<f64> {
+fn scalare(cdf: &Cdf, dati: &mut dyn ReadAt, limits: &Limiti, nome: &str) -> Option<f64> {
     cdf.numero(nome).or_else(|| {
         let v = cdf.trova(nome)?;
-        cdf.leggi(dati, limiti, v, 0, cdf.elementi(v).min(1))
+        cdf.leggi(dati, limits, v, 0, cdf.elementi(v).min(1))
             .ok()?
             .first()
             .copied()
     })
 }
 
-fn id(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti) -> String {
-    testo(cdf, dati, limiti, "detector_name").unwrap_or_else(|| "Detector".into())
+fn id(cdf: &Cdf, dati: &mut dyn ReadAt, limits: &Limiti) -> String {
+    testo(cdf, dati, limits, "detector_name").unwrap_or_else(|| "Detector".into())
 }
 
-fn unita(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti) -> String {
+fn unita(cdf: &Cdf, dati: &mut dyn ReadAt, limits: &Limiti) -> String {
     let da_var = cdf
         .trova("ordinate_values")
         .and_then(|v| v.testo("units"))
         .map(str::to_string);
     da_var
         .filter(|u| !u.is_empty())
-        .or_else(|| testo(cdf, dati, limiti, "detector_unit"))
+        .or_else(|| testo(cdf, dati, limits, "detector_unit"))
         .unwrap_or_default()
 }
 
 /// The one chromatogram of the file.
-pub(super) fn voci(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti) -> Vec<VoceCromatogramma> {
+pub(super) fn voci(cdf: &Cdf, dati: &mut dyn ReadAt, limits: &Limiti) -> Vec<VoceCromatogramma> {
     vec![VoceCromatogramma {
-        id: id(cdf, dati, limiti),
+        id: id(cdf, dati, limits),
         tipo: ChromKind::Analog,
-        unita: unita(cdf, dati, limiti),
+        unita: unita(cdf, dati, limits),
     }]
 }
 
@@ -58,30 +58,30 @@ pub(super) fn voci(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti) -> Vec<Voc
 pub(super) fn traccia(
     cdf: &Cdf,
     dati: &mut dyn ReadAt,
-    limiti: &Limiti,
+    limits: &Limiti,
     nome: &str,
 ) -> Result<Chromatogram> {
-    let id = id(cdf, dati, limiti);
+    let id = id(cdf, dati, limits);
     let v = cdf
         .trova("ordinate_values")
         .filter(|_| nome == id)
         .ok_or_else(|| Error::new("error.badIndex").with("id", nome))?;
-    let n = limiti.voci_ok(cdf.elementi(v))? as u64;
-    let mut y = cdf.leggi(dati, limiti, v, 0, n)?;
-    scala(&mut y, v);
-    let ritenzione = cdf
+    let n = limits.voci_ok(cdf.elementi(v))? as u64;
+    let mut y = cdf.leggi(dati, limits, v, 0, n)?;
+    scale(&mut y, v);
+    let retention = cdf
         .trova("raw_data_retention")
         .filter(|r| cdf.elementi(r) == n);
-    let secondi: Vec<f64> = match ritenzione {
+    let seconds: Vec<f64> = match retention {
         Some(r) => {
-            let mut t = cdf.leggi(dati, limiti, r, 0, n)?;
-            scala(&mut t, r);
+            let mut t = cdf.leggi(dati, limits, r, 0, n)?;
+            scale(&mut t, r);
             t
         }
         None => {
             let (d, p) = (
-                scalare(cdf, dati, limiti, "actual_delay_time").unwrap_or(0.0),
-                scalare(cdf, dati, limiti, "actual_sampling_interval").unwrap_or(1.0),
+                scalare(cdf, dati, limits, "actual_delay_time").unwrap_or(0.0),
+                scalare(cdf, dati, limits, "actual_sampling_interval").unwrap_or(1.0),
             );
             (0..n).map(|i| d + i as f64 * p).collect()
         }
@@ -92,8 +92,8 @@ pub(super) fn traccia(
         kind: ChromKind::Analog,
         q1: None,
         q3: None,
-        unit: unita(cdf, dati, limiti),
-        time: secondi.iter().map(|s| s / 60.0).collect(),
+        unit: unita(cdf, dati, limits),
+        time: seconds.iter().map(|s| s / 60.0).collect(),
         intensity: y,
     })
 }

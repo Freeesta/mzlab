@@ -22,7 +22,7 @@ pub const VOCE: VoceLettore = VoceLettore {
 
 /// `x.mzXML.gz`: the same inflate, then the reader of `mzxml.rs` (registry of the app and the CLI only).
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
-pub const VOCE_MZXML: VoceLettore = VoceLettore {
+pub const ENTRY_MZXML: VoceLettore = VoceLettore {
     id: "mzxml-gz",
     contratto: CONTRATTO,
     estensioni: &[".mzxml.gz"],
@@ -31,13 +31,13 @@ pub const VOCE_MZXML: VoceLettore = VoceLettore {
 };
 
 /// A `ReadAt` seen as a `Read`, from the start.
-struct Flusso {
+struct Stream {
     dati: Box<dyn ReadAt>,
     pos: u64,
     dim: u64,
 }
 
-impl Read for Flusso {
+impl Read for Stream {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let n = buf.len().min((self.dim - self.pos).min(1 << 20) as usize);
         if n == 0 {
@@ -53,15 +53,15 @@ impl Read for Flusso {
 
 /// Yes when the member is gzip (magic bytes) and its first bytes inflate to an `<mzML` or `<indexedmzML` root.
 fn riconosci(fs: &mut FileSet) -> Fiducia {
-    vede(fs, ".mzml.gz", &["<mzML", "<indexedmzML"])
+    sees(fs, ".mzml.gz", &["<mzML", "<indexedmzML"])
 }
 
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
 fn riconosci_mzxml(fs: &mut FileSet) -> Fiducia {
-    vede(fs, ".mzxml.gz", &["<mzXML"])
+    sees(fs, ".mzxml.gz", &["<mzXML"])
 }
 
-fn vede(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
+fn sees(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
     let Some(i) = fs.trova(suffisso) else {
         return Fiducia::No;
     };
@@ -89,52 +89,54 @@ fn vede(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
     }
 }
 
-fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
-    super::mzml_numpress::apri(gonfia(fs, ".mzml.gz", limiti)?, limiti)
+fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+    super::mzml_numpress::apri(inflate(fs, ".mzml.gz", limits)?, limits)
 }
 
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
-fn apri_mzxml(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
-    (super::mzxml::VOCE.apri)(gonfia(fs, ".mzxml.gz", limiti)?, limiti)
+fn apri_mzxml(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+    (super::mzxml::VOCE.apri)(inflate(fs, ".mzxml.gz", limits)?, limits)
 }
 
 /// The set with its gzip member inflated into memory, named without `.gz`.
-fn gonfia(mut fs: FileSet, suffisso: &str, limiti: &Limiti) -> Result<FileSet> {
+fn inflate(mut fs: FileSet, suffisso: &str, limits: &Limiti) -> Result<FileSet> {
     let i = fs
         .trova(suffisso)
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
     let m = fs.membri.swap_remove(i);
     let nome = m.nome[..m.nome.len() - ".gz".len()].to_string();
-    let mut fuori = Vec::new();
-    let letto = Membri::new(std::io::BufReader::with_capacity(
+    let mut outside = Vec::new();
+    let read_one = Membri::new(std::io::BufReader::with_capacity(
         1 << 16,
-        Flusso {
+        Stream {
             dati: m.dati,
             pos: 0,
             dim: m.dim,
         },
     ))
-    .take(limiti.byte + 1)
-    .read_to_end(&mut fuori);
+    .take(limits.byte + 1)
+    .read_to_end(&mut outside);
     // a cut stream (download stopped) keeps what it inflated; the spectra it lacks are counted by `mancanti`
-    let lette = match letto {
+    let read_ones = match read_one {
         Ok(n) => n,
-        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof && !fuori.is_empty() => fuori.len(),
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof && !outside.is_empty() => {
+            outside.len()
+        }
         Err(e) => return Err(Error::new("err.file.zlib").with("detail", e)),
     };
     // nothing inflated (an empty file, the magic bytes or the header alone): the page's inflate refuses it so (`rust-carica.js` `inflate`)
-    if fuori.is_empty() {
+    if outside.is_empty() {
         return Err(Error::new("err.file.zlib").with("detail", "truncated"));
     }
-    if lette as u64 > limiti.byte {
+    if read_ones as u64 > limits.byte {
         return Err(Error::memory_budget());
     }
-    let dim = fuori.len() as u64;
+    let dim = outside.len() as u64;
     Ok(FileSet {
         membri: vec![Membro {
             nome,
             dim,
-            dati: Box::new(fuori),
+            dati: Box::new(outside),
             sha1: None,
         }],
     })

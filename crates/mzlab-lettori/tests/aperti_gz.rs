@@ -50,7 +50,7 @@ fn un_mzml_gz_con_array_piani_torna_esatto() {
 fn un_mzml_gz_con_numpress_si_apre() {
     let scan = scansioni();
     let cod = Cod::Np {
-        intensita: Np::Slof,
+        intensities: Np::Slof,
         zlib: true,
     };
     let mut l = abre(

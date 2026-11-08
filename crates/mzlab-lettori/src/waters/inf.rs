@@ -1,11 +1,11 @@
 //! The text files of the folder: `_HEADER.TXT` (`$$ key: value`, the sample and the calibrations), `_extern.inf` (the instrument parameters, global and by function) and
 //! `_INLET.INF` (the LC method). Every line is kept as a (section, key, value) so that nothing is lost; the fields that the reader uses are also parsed.
 
-use super::dat::Taratura;
+use super::dat::Calibration;
 use std::collections::BTreeMap;
 
 /// The most lines kept from one text file.
-const VOCI_MAX: usize = 5000;
+const ENTRIES_MAX: usize = 5000;
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct Voce {
@@ -38,7 +38,7 @@ fn polarita(v: &str) -> Option<i8> {
 #[derive(Debug, Default)]
 pub(super) struct Testata {
     pub(super) voci: Vec<(String, String)>,
-    pub(super) tarature: BTreeMap<u32, Taratura>,
+    pub(super) tarature: BTreeMap<u32, Calibration>,
 }
 
 impl Testata {
@@ -63,14 +63,14 @@ pub(super) fn file_header(t: &str) -> Testata {
         else {
             continue;
         };
-        if h.voci.len() >= VOCI_MAX {
+        if h.voci.len() >= ENTRIES_MAX {
             break;
         }
         let (k, v) = (k.trim(), v.trim());
         if let Some(n) = k
             .strip_prefix("Cal Function ")
             .and_then(|n| n.trim().parse::<u32>().ok())
-            && let Some(t) = Taratura::da_testo(v)
+            && let Some(t) = Calibration::from_text(v)
         {
             h.tarature.insert(n, t);
         }
@@ -95,7 +95,7 @@ pub(super) enum Modo {
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct FunzioneExt {
-    pub(super) etichetta: String,
+    pub(super) label: String,
     pub(super) modo: Modo,
     /// The label names ion mobility (not decoded).
     pub(super) mobilita: bool,
@@ -114,8 +114,8 @@ pub(super) struct Extern {
     pub(super) polarita: Option<i8>,
 }
 
-fn modo_di(coda: &str) -> Modo {
-    let t = coda.to_ascii_uppercase();
+fn mode_of(tail: &str) -> Modo {
+    let t = tail.to_ascii_uppercase();
     if t.contains("REFERENCE") {
         Modo::Riferimento
     } else if t.contains("DAUGHTER") {
@@ -134,12 +134,12 @@ fn modo_di(coda: &str) -> Modo {
 /// «Function Parameters - Function 2 - TOF MS FUNCTION» → (2, «TOF MS FUNCTION»).
 fn intestazione_funzione(r: &str) -> Option<(u32, &str)> {
     let rest = r.strip_prefix("Function Parameters - Function ")?;
-    let (n, coda) = rest.split_once('-').unwrap_or((rest, ""));
-    Some((n.trim().parse().ok()?, coda.trim()))
+    let (n, tail) = rest.split_once('-').unwrap_or((rest, ""));
+    Some((n.trim().parse().ok()?, tail.trim()))
 }
 
 /// The key and value of a line: split at the first tab, else at « - », else the whole line is a key.
-fn coppia(r: &str) -> (String, String) {
+fn pair(r: &str) -> (String, String) {
     let (k, v) = match r.split_once('\t') {
         Some((k, v)) => (k, v),
         None => r.split_once(" - ").unwrap_or((r, "")),
@@ -155,16 +155,16 @@ fn coppia(r: &str) -> (String, String) {
     )
 }
 
-type Rampe = BTreeMap<u32, (Option<f64>, Option<f64>)>;
+type Ramps = BTreeMap<u32, (Option<f64>, Option<f64>)>;
 
 /// One "Collision Energy" line of function `n`: an end of a ramp or a fixed value.
-fn energia(e: &mut Extern, rampe: &mut Rampe, n: u32, b: &str, v: &str) {
+fn energy(e: &mut Extern, ramps: &mut Ramps, n: u32, b: &str, v: &str) {
     if b.ends_with("Collision Energy Ramp Start") || b.ends_with("Collision Energy Low") {
-        rampe.entry(n).or_default().0 = numero(v);
+        ramps.entry(n).or_default().0 = numero(v);
     } else if b.ends_with("Collision Energy Ramp End") || b.ends_with("Collision Energy High") {
-        rampe.entry(n).or_default().1 = numero(v);
+        ramps.entry(n).or_default().1 = numero(v);
     } else if let Some((a, z)) = v.split_once("(Ramping to") {
-        rampe.insert(n, (numero(a), numero(z.trim_end_matches(')'))));
+        ramps.insert(n, (numero(a), numero(z.trim_end_matches(')'))));
     } else if !b.contains("Use ") && !b.contains("Manual") {
         let f = e.funzioni.entry(n).or_default();
         f.ce = f.ce.or(numero(v));
@@ -174,19 +174,19 @@ fn energia(e: &mut Extern, rampe: &mut Rampe, n: u32, b: &str, v: &str) {
 pub(super) fn extern_inf(t: &str) -> Extern {
     let mut e = Extern::default();
     let (mut sezione, mut funz) = (String::new(), None::<u32>);
-    let mut rampe = Rampe::new();
+    let mut ramps = Ramps::new();
     for riga in t.lines() {
         let r = riga.trim();
         if r.is_empty() {
             continue;
         }
-        if let Some((n, coda)) = intestazione_funzione(r) {
+        if let Some((n, tail)) = intestazione_funzione(r) {
             funz = Some(n);
             sezione = r.to_string();
             let f = e.funzioni.entry(n).or_default();
-            f.modo = modo_di(coda);
-            f.mobilita = coda.to_ascii_uppercase().contains("MOBILITY");
-            f.etichetta = coda.to_string();
+            f.modo = mode_of(tail);
+            f.mobilita = tail.to_ascii_uppercase().contains("MOBILITY");
+            f.label = tail.to_string();
             continue;
         }
         if r.ends_with(':') && !r.contains('\t') {
@@ -200,7 +200,7 @@ pub(super) fn extern_inf(t: &str) -> Extern {
             }
             continue;
         }
-        let (k, v) = coppia(r);
+        let (k, v) = pair(r);
         let base = k.split('(').next().unwrap_or(&k).trim_end().to_string();
         match (base.as_str(), funz) {
             ("Polarity", f) => {
@@ -214,11 +214,11 @@ pub(super) fn extern_inf(t: &str) -> Extern {
                 e.funzioni.entry(n).or_default().set_mass = numero(&v).filter(|&m| m > 0.0);
             }
             (b, Some(n)) if b.contains("Collision Energy") => {
-                energia(&mut e, &mut rampe, n, b, &v);
+                energy(&mut e, &mut ramps, n, b, &v);
             }
             _ => {}
         }
-        if e.voci.len() < VOCI_MAX {
+        if e.voci.len() < ENTRIES_MAX {
             e.voci.push(Voce {
                 sezione: sezione.clone(),
                 chiave: k,
@@ -226,7 +226,7 @@ pub(super) fn extern_inf(t: &str) -> Extern {
             });
         }
     }
-    for (n, (a, z)) in rampe {
+    for (n, (a, z)) in ramps {
         if let (Some(f), Some(a), Some(z)) = (e.funzioni.get_mut(&n), a, z)
             && z > a
         {
@@ -243,45 +243,45 @@ pub(super) struct Inlet {
     pub(super) voci: Vec<Voce>,
     /// (time min, flow mL/min, %B) of the first gradient table.
     pub(super) gradiente: Vec<(f64, Option<f64>, Option<f64>)>,
-    pub(super) durata_min: Option<f64>,
-    pub(super) forno_c: Option<f64>,
+    pub(super) duration_min: Option<f64>,
+    pub(super) oven_c: Option<f64>,
 }
 
 /// A row «1. Initial 0.250 65.0 35.0 Initial» or «2. 1.00 0.250 60.0 40.0 6».
-fn riga_gradiente(r: &str) -> Option<(f64, Option<f64>, Option<f64>)> {
+fn gradient_row(r: &str) -> Option<(f64, Option<f64>, Option<f64>)> {
     let t: Vec<&str> = r.split_whitespace().collect();
     if t.len() < 5 || !t[0].ends_with('.') || t[0].trim_end_matches('.').parse::<u32>().is_err() {
         return None;
     }
-    let tempo = if t[1] == "Initial" {
+    let moment = if t[1] == "Initial" {
         0.0
     } else {
         t[1].parse().ok()?
     };
-    Some((tempo, t[2].parse().ok(), t[4].parse().ok()))
+    Some((moment, t[2].parse().ok(), t[4].parse().ok()))
 }
 
 pub(super) fn inlet(t: &str) -> Inlet {
     let mut l = Inlet::default();
-    let (mut sezione, mut in_tabella, mut fatto) = (String::new(), false, false);
+    let (mut sezione, mut in_table, mut done) = (String::new(), false, false);
     for riga in t.lines() {
         let r = riga.trim();
         if r.starts_with("--") && r.ends_with("--") {
             sezione = r.trim_matches('-').trim().to_string();
-            in_tabella = false;
+            in_table = false;
             continue;
         }
         if r.starts_with('[') {
-            in_tabella = !fatto && r == "[Gradient Table]";
+            in_table = !done && r == "[Gradient Table]";
             continue;
         }
-        if in_tabella {
-            match riga_gradiente(r) {
+        if in_table {
+            match gradient_row(r) {
                 Some(g) => l.gradiente.push(g),
                 None if r.starts_with("Time") => {}
                 None => {
-                    in_tabella = false;
-                    fatto = !l.gradiente.is_empty();
+                    in_table = false;
+                    done = !l.gradiente.is_empty();
                 }
             }
             continue;
@@ -294,11 +294,11 @@ pub(super) fn inlet(t: &str) -> Inlet {
             continue;
         }
         match k {
-            "Run Time" if l.durata_min.is_none() => l.durata_min = numero(v),
-            "Target Column Temperature" if l.forno_c.is_none() => l.forno_c = numero(v),
+            "Run Time" if l.duration_min.is_none() => l.duration_min = numero(v),
+            "Target Column Temperature" if l.oven_c.is_none() => l.oven_c = numero(v),
             _ => {}
         }
-        if l.voci.len() < VOCI_MAX {
+        if l.voci.len() < ENTRIES_MAX {
             l.voci.push(Voce {
                 sezione: sezione.clone(),
                 chiave: k.to_string(),

@@ -10,7 +10,7 @@ use mzlab_core::metodo_campi::Campo;
 use mzlab_core::mzmlwrite::Header;
 
 /// The most fields kept from a run.
-const CAMPI_MAX: usize = 2000;
+const FIELDS_MAX: usize = 2000;
 
 impl Testata {
     pub fn leggi(d: &Dati, tsf: bool) -> Testata {
@@ -23,17 +23,17 @@ impl Testata {
         let mut t = Testata {
             modello: m("InstrumentName"),
             serie: m("InstrumentSerialNumber"),
-            produttore: m("InstrumentVendor"),
+            maker: m("InstrumentVendor"),
             software: m("AcquisitionSoftware").map(|s| (s, m("AcquisitionSoftwareVersion"))),
             firmware: m("AcquisitionFirmwareVersion"),
-            creato: m("AcquisitionDateTime"),
-            utente: m("OperatorName"),
+            created: m("AcquisitionDateTime"),
+            user: m("OperatorName"),
             campione: m("SampleName"),
             tsf,
             ..Testata::default()
         };
         let mut aggiungi = |c: Campo, id: bool| {
-            if t.campi.len() < CAMPI_MAX {
+            if t.campi.len() < FIELDS_MAX {
                 t.campi.push(if id { c.id() } else { c });
             }
         };
@@ -81,7 +81,7 @@ impl Testata {
     }
 
     /// The `metodo/1` document. `files`: the members read, with the SHA-1 of the database when it was computed.
-    pub fn documento(&self, files: Vec<SrcFile>) -> String {
+    pub fn document(&self, files: Vec<SrcFile>) -> String {
         let src = Source {
             format: if self.tsf { "bruker-tsf" } else { "bruker-tdf" },
             files,
@@ -101,19 +101,19 @@ impl Testata {
         ]);
         let doc = obj(vec![
             ("schema", Some(V::s(metodo::SCHEMA))),
-            ("origine", metodo::origin(&src, self.creato.as_deref())),
+            ("origine", metodo::origin(&src, self.created.as_deref())),
             ("campione", obj(vec![("nome", s(&self.campione))])),
             (
                 "strumento",
                 obj(vec![
-                    ("produttore", s(&self.produttore)),
+                    ("produttore", s(&self.maker)),
                     ("modello", s(&self.modello)),
                     ("serie", s(&self.serie)),
                     ("firmware", s(&self.firmware)),
                     ("software", sw.map(|x| V::Arr(vec![x]))),
                 ]),
             ),
-            ("operatore", obj(vec![("utente", s(&self.utente))])),
+            ("operatore", obj(vec![("utente", s(&self.user))])),
             (
                 "campi",
                 Some(V::Arr(self.campi.iter().filter_map(Campo::json).collect())),
@@ -136,7 +136,7 @@ impl Testata {
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
             instrument: self.modello.clone().map(|m| ("MS:1000031".to_string(), m)),
             serial: self.serie.clone(),
-            acquired: self.creato.clone(),
+            acquired: self.created.clone(),
             sources: files.iter().map(|f| f.0.clone()).collect(),
             source_sha1: files.iter().filter_map(|f| f.1.clone()).collect(),
             // every timsTOF is a quadrupole-TOF: the scan table reads the analyzer (high resolution) from these, the file does not name them
@@ -167,11 +167,11 @@ pub struct Testata {
     pub campi: Vec<Campo>,
     pub modello: Option<String>,
     pub serie: Option<String>,
-    pub produttore: Option<String>,
+    pub maker: Option<String>,
     pub software: Option<(String, Option<String>)>,
     pub firmware: Option<String>,
-    pub creato: Option<String>,
-    pub utente: Option<String>,
+    pub created: Option<String>,
+    pub user: Option<String>,
     pub campione: Option<String>,
     pub tsf: bool,
 }

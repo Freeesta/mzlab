@@ -1,11 +1,11 @@
 //! The column names of a `CREATE TABLE` text.
 
 /// The names of the columns of a `CREATE TABLE` text, and which one is an `INTEGER PRIMARY KEY` (the alias of the rowid). Table constraints are skipped.
-pub(super) fn colonne_di(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<usize>>) {
+pub(super) fn columns_of(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<usize>>) {
     let Some(ap) = sql.find('(') else {
         return (Vec::new(), None, None);
     };
-    let mut parti: Vec<String> = Vec::new();
+    let mut parts: Vec<String> = Vec::new();
     let (mut prof, mut cur) = (0usize, String::new());
     let mut virgolette: Option<char> = None;
     for ch in sql[ap + 1..].chars() {
@@ -34,24 +34,24 @@ pub(super) fn colonne_di(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<u
                 prof -= 1;
                 cur.push(ch);
             }
-            ',' if prof == 0 => parti.push(std::mem::take(&mut cur)),
+            ',' if prof == 0 => parts.push(std::mem::take(&mut cur)),
             c => cur.push(c),
         }
     }
-    parti.push(cur);
+    parts.push(cur);
     let mut nomi: Vec<String> = Vec::new();
     let mut alias = None;
     let mut chiave: Vec<String> = Vec::new();
-    for p in parti {
+    for p in parts {
         let t = p.trim();
-        let primo = t.split_whitespace().next().unwrap_or("");
-        let up = primo.to_ascii_uppercase();
+        let first_one = t.split_whitespace().next().unwrap_or("");
+        let up = first_one.to_ascii_uppercase();
         let tu = t.to_ascii_uppercase();
         if up == "PRIMARY" {
             if let (Some(a), Some(b)) = (t.find('('), t.rfind(')')) {
                 chiave = t[a + 1..b]
                     .split(',')
-                    .map(|n| nome_pulito(n.trim()))
+                    .map(|n| clean_name(n.trim()))
                     .collect();
             }
             continue;
@@ -63,9 +63,9 @@ pub(super) fn colonne_di(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<u
             alias = Some(nomi.len());
         }
         if tu.contains("PRIMARY KEY") {
-            chiave = vec![nome_pulito(primo)];
+            chiave = vec![clean_name(first_one)];
         }
-        nomi.push(nome_pulito(primo));
+        nomi.push(clean_name(first_one));
     }
     // a WITHOUT ROWID table stores its primary key first, then the other columns in table order
     let ordine = sql.to_ascii_uppercase().contains("WITHOUT ROWID").then(|| {
@@ -74,14 +74,14 @@ pub(super) fn colonne_di(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<u
             .filter_map(|k| nomi.iter().position(|n| n.eq_ignore_ascii_case(k)))
             .collect();
         o.dedup();
-        let resto: Vec<usize> = (0..nomi.len()).filter(|i| !o.contains(i)).collect();
-        o.extend(resto);
+        let remainder: Vec<usize> = (0..nomi.len()).filter(|i| !o.contains(i)).collect();
+        o.extend(remainder);
         o
     });
     (nomi, alias, ordine)
 }
 
-fn nome_pulito(n: &str) -> String {
+fn clean_name(n: &str) -> String {
     n.trim_matches(|c| matches!(c, '"' | '\'' | '`' | '[' | ']'))
         .to_string()
 }
@@ -91,8 +91,8 @@ mod prove {
     use super::*;
 
     #[test]
-    fn colonne_e_alias() {
-        let (c, a, _) = colonne_di(
+    fn columns_and_alias() {
+        let (c, a, _) = columns_of(
             "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL NOT NULL, \"Polarity\" CHAR(1) CHECK (Polarity IN ('+', '-')), FOREIGN KEY (Id) REFERENCES X(Id))",
         );
         assert_eq!(c, ["Id", "Time", "Polarity"]);

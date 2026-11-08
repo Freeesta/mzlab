@@ -303,7 +303,7 @@ fn probe_says_variant_for_every_lc_run() {
     };
     for dir in runs(&root) {
         let label = name(&dir);
-        let motivi = mzlab_lettori::motivi_insieme(&mut set_of(&dir));
+        let motivi = mzlab_lettori::reasons_together(&mut set_of(&dir));
         assert!(motivi.contains(&"variante"), "{label}: {motivi:?}");
     }
 }
