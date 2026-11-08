@@ -19,7 +19,7 @@ def _hrms():
 
 
 @pytest.mark.skipif(_hrms() is None, reason="MZLAB_DATI / QQQ_DATI with HRMS/ not available")
-def test_contaminanti_nei_file_orbitrap():
+def test_contaminants_in_orbitrap_files():
     from mzlab.chem.contaminants import builtin
     from mzlab.reader.mzml import Run
     items = sorted((i for i in builtin()["items"] if i["pol"] == 1), key=lambda i: i["mz"]); mzs = [i["mz"] for i in items]

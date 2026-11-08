@@ -51,7 +51,7 @@ def run(body):
     return json.loads(r.stdout.strip().splitlines()[-1])
 
 
-def test_a_14_file_load_opens_one_handle_per_item_request_and_none_for_the_campioni():
+def test_a_14_file_load_opens_one_handle_per_item_request_and_none_for_the_samples():
     got = run("await out(async () => ({ before: await load(true), after: await load(false) }));")
     first, before = got["before"]
     assert first == 14

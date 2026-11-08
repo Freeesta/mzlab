@@ -46,7 +46,7 @@ def _themes():
     return {"chiaro": light, "scuro": dark, "contrasto-chiaro": hcl, "contrasto-scuro": hcd}
 
 
-def test_riquadri_avviso_leggibili():
+def test_warning_boxes_readable():
     for name, v in _themes().items():
         for kind in ("ok", "warn", "bad"):
             box = _mix(_rgb(v["--" + kind]), _rgb(v["--panel"]))
@@ -55,7 +55,7 @@ def test_riquadri_avviso_leggibili():
                 assert r >= 4.5, f"{name}: {fg} su riquadro .avv.{kind} = {r:.2f}"
 
 
-def test_testo_su_sfondi_base():
+def test_text_on_base_backgrounds():
     for name, v in _themes().items():
         for bg in ("--bg", "--panel", "--soft", "--sel"):
             if bg not in v:
@@ -67,7 +67,7 @@ def test_testo_su_sfondi_base():
                 assert r >= 4.5, f"{name}: {fg} su {bg} = {r:.2f}"
 
 
-def test_nessuna_variabile_inventata():
+def test_no_invented_variable():
     # --fg, --border and --text are not theme variables: with their fallback they gave white-on-white notes
     for f in list(WEB.glob("*.js")) + list(WEB.glob("*.html")):
         t = f.read_text(encoding="utf-8")

@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_golden_controlla():
+def test_golden_check():
     r = subprocess.run(
         [sys.executable, str(ROOT / "tools" / "golden.py"), "--controlla", "--skip-missing"],
         capture_output=True,
@@ -37,7 +37,7 @@ def _analytical_g_integral(lo_rt: float, hi_rt: float, c: float = 14.3, s: float
     return left + right
 
 
-def test_sintetico_area_analitica():
+def test_synthetic_analytic_area():
     p = ROOT / "tests" / "golden" / "sintetico_FullScan.json"
     assert p.exists(), f"{p} not found"
     data = json.loads(p.read_text(encoding="utf-8"))
