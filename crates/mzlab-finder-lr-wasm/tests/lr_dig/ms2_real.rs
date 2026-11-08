@@ -6,12 +6,12 @@ use mzlab_feat::legacy::lr::ms2::pool;
 
 #[test]
 fn the_row_without_signal_gets_no_ms2_scans() {
-    let Some(dati) = root() else {
+    let Some(data) = root() else {
         eprintln!("SKIP lr_ms2_real: no data repository (MZLAB_DATI)");
         return;
     };
     let truth: Value = serde_json::from_str(
-        &std::fs::read_to_string(dati.join("scratchpad/tabui_ms2_lr_truth.json")).unwrap(),
+        &std::fs::read_to_string(data.join("scratchpad/tabui_ms2_lr_truth.json")).unwrap(),
     )
     .unwrap();
     let list = |k: &str| -> Vec<String> {

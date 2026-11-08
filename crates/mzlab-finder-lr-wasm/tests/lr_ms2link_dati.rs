@@ -11,12 +11,12 @@ use comune::*;
 
 #[test]
 fn the_experiments_of_the_real_series_are_found_and_matched_as_the_truth_says() {
-    let Some(dati) = root() else {
+    let Some(data) = root() else {
         eprintln!("SKIP lr_ms2link_dati: no data repository (MZLAB_DATI)");
         return;
     };
     let truth: Value = serde_json::from_str(
-        &std::fs::read_to_string(dati.join("scratchpad/tabui_ms2_lr_truth.json")).unwrap(),
+        &std::fs::read_to_string(data.join("scratchpad/tabui_ms2_lr_truth.json")).unwrap(),
     )
     .unwrap();
     let full: Vec<String> = truth["full_files"]
