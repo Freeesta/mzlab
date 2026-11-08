@@ -88,3 +88,7 @@ fn scan_facts(path: &Path) -> Option<(i8, Option<bool>)> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+#[path = "flow_inputs_tests.rs"]
+mod tests;
