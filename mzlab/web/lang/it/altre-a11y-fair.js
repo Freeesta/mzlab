@@ -350,6 +350,7 @@ I18N.add("it", {
   "dda.win.rowN": "{i}. m/z {prec} · {n} MS² · RT {rt}–{rt1}",
   "dda.win.dia1": "{i}. finestra m/z {lo}–{hi} · RT {rt}",
   "dda.win.diaN": "{i}. finestra m/z {lo}–{hi} · {n} MS² · RT {rt}–{rt1}",
+  "dda.win.cut": "Intensità del precursore lette per le prime {n} Full Scan; restringi la finestra di tempo per le altre.",
   "dda.dia.why": "File DIA: ogni MS² è una finestra di isolamento frammentata a ogni ciclo, non uno ione. Clic su un picco: la finestra che lo contiene.",
   "dda.grp.title": "Precursore {i} di {n}",
   "dda.grp.line": "m/z {prec} · {n, plural, one {# MS²} other {# MS²}} da queste scansioni",
