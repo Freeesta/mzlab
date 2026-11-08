@@ -44,6 +44,43 @@ fn da_js(read: &Function, i: u32, off: u64, n: usize) -> mzlab_core::Result<js_s
     Ok(a)
 }
 
+/// `read.into(i, offset, view)` of the page (`rust-nativo.js`, over OPFS handles): the bytes go from the handle straight into this module's memory. The view (as `lend` of
+/// `crates/mzlab-wasm/src/nativi.rs`, the other way) is valid during the call only: JS fills it at once, never keeps it, makes no call into the module meanwhile, and answers the bytes it put.
+fn into_di(read: &Function) -> Option<Function> {
+    js_sys::Reflect::get(read, &JsValue::from_str("into"))
+        .ok()?
+        .dyn_into()
+        .ok()
+}
+
+/// `buf.len()` bytes of member `i` at `off` into `buf`: through `into` when the page has it, otherwise `read` copied.
+fn leggi(
+    read: &Function,
+    into: Option<&Function>,
+    i: u32,
+    off: u64,
+    buf: &mut [u8],
+) -> mzlab_core::Result<()> {
+    let bad = || mzlab_core::Error::new("error.badIndex");
+    let Some(into) = into else {
+        da_js(read, i, off, buf.len())?.copy_to(buf);
+        return Ok(());
+    };
+    let mem: js_sys::WebAssembly::Memory = wasm_bindgen::memory().unchecked_into();
+    let (at, n) = u32::try_from(buf.as_mut_ptr() as usize)
+        .ok()
+        .zip(u32::try_from(buf.len()).ok())
+        .ok_or_else(bad)?;
+    let v = js_sys::Uint8Array::new_with_byte_offset_and_length(&mem.buffer(), at, n);
+    let k = into
+        .call3(&JsValue::NULL, &i.into(), &(off as f64).into(), &v)
+        .map_err(|_| bad())?;
+    if k.as_f64() != Some(f64::from(n)) {
+        return Err(bad());
+    }
+    Ok(())
+}
+
 /// Blocks kept by the `thermo` module: the reader alternates between the packets of the scans, the trailer records and the index, and a block thrown away by a far read is read
 /// again at the next (`raw_tempi`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145). The other families keep
 /// the one block they had: their gain is not measured and their `.wasm` limits leave no room for the cache.
@@ -62,10 +99,8 @@ fn membro_js(
     i: u32,
     dim: u64,
 ) -> mzlab_core::blocchi::BlockCache<impl FnMut(u64, &mut [u8]) -> mzlab_core::Result<()>> {
-    let fetch = move |off: u64, buf: &mut [u8]| -> mzlab_core::Result<()> {
-        da_js(&read, i, off, buf.len())?.copy_to(buf);
-        Ok(())
-    };
+    let into = into_di(&read);
+    let fetch = move |off: u64, buf: &mut [u8]| leggi(&read, into.as_ref(), i, off, buf);
     mzlab_core::blocchi::BlockCache::new(fetch, dim, LETTURA, BLOCCHI).read_ahead(LETTURA_MAX)
 }
 
@@ -73,6 +108,7 @@ fn membro_js(
 #[cfg(not(feature = "thermo"))]
 struct JsMember {
     read: Function,
+    into: Option<Function>,
     i: u32,
     dim: u64,
     inizio: u64,
@@ -82,6 +118,7 @@ struct JsMember {
 #[cfg(not(feature = "thermo"))]
 fn membro_js(read: Function, i: u32, dim: u64) -> JsMember {
     JsMember {
+        into: into_di(&read),
         read,
         i,
         dim,
@@ -98,12 +135,21 @@ impl mzlab_core::idxread::ReadAt for JsMember {
         if !dentro {
             let n = self.dim.saturating_sub(off).min(LETTURA as u64) as usize;
             if buf.len() >= LETTURA || n < buf.len() {
-                da_js(&self.read, self.i, off, buf.len())?.copy_to(buf); // big (or past the end, for JS to refuse): as asked
-                return Ok(());
+                // big (or past the end, for JS to refuse): as asked
+                return leggi(&self.read, self.into.as_ref(), self.i, off, buf);
             }
-            let a = da_js(&self.read, self.i, off, n)?;
             self.blocco.resize(n, 0);
-            a.copy_to(&mut self.blocco);
+            // a failed read leaves no block: its bytes may be half written
+            if let Err(e) = leggi(
+                &self.read,
+                self.into.as_ref(),
+                self.i,
+                off,
+                &mut self.blocco,
+            ) {
+                self.blocco.clear();
+                return Err(e);
+            }
             self.inizio = off;
         }
         let da = (off - self.inizio) as usize;
