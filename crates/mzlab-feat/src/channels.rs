@@ -59,7 +59,7 @@ pub(crate) fn by_scan_in(
     keys.clear();
     reserve(keys, e - s)?;
     keys.extend((s..e).map(|i| (u64::from(pos[i]) << 32) | i as u64));
-    keys.sort_unstable();
+    crate::sortc::ord(keys);
     order.clear();
     reserve(order, e - s)?;
     order.extend(keys.iter().map(|&k| k as u32));
