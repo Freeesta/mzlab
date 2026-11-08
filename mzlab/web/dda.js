@@ -255,6 +255,18 @@ const DDA = (() => {
       return true;
     } catch (e) { return fail("average", e); }
   }
+  // the precursor intensity of the MS2 `idx` of D (precursor mz): the index's, else (a Thermo .raw has none) read by Rust from their parent
+  // survey scans, only those of this precursor (/api/dda_window mz&tol over the parents' RT)
+  async function pints(/** @type {number} */ k, /** @type {Bag} */ D, /** @type {number[]} */ idx, /** @type {number} */ mz, /** @type {number} */ tol) {
+    const own = (/** @type {number} */ i) => D.pint[i] || 0;
+    let r0 = Infinity, r1 = -Infinity;
+    for (const i of idx) if (D.pint[i] == null && D.prt[i] != null) { r0 = Math.min(r0, D.prt[i]); r1 = Math.max(r1, D.prt[i]); }
+    if (r0 > r1) return own;
+    const w = await J(`api/dda_window?k=${k}&r0=${r0 - 1e-3}&r1=${r1 + 1e-3}&mz=${mz}&tol=${tol}` + HR.q()), m = new Map();
+    for (const g of (w && w.groups) || []) g.sid.forEach((/** @type {number} */ s, /** @type {number} */ n) => m.set(s, g.pint[n]));
+    return (/** @type {number} */ i) => D.pint[i] ?? m.get(D.sid[i]) ?? 0;
+  }
+  const top = (/** @type {number[]} */ idx, /** @type {(i: number) => number} */ v) => idx.reduce((b, i) => (v(i) > v(b) ? i : b), idx[0]);
   // "Segui questo ione nelle MS2": its XIC appears right under the chromatogram, the Full Scan and the MS2 follow the XIC, only its MS2 are shown
   async function follow(/** @type {Bag} */ s1, /** @type {number} */ mz) {
     try {
@@ -266,7 +278,7 @@ const DDA = (() => {
       s1.link = x.id; s1.src = x.id; x.ddaFollow = true;
       relayout(); fitHost(); ctl(x); ctl(s2); draw(c);
       const lst = list(s2, D).filter(i => D.prec[i] != null && Math.abs(D.prec[i] - mz) <= tolOf(E.files[s2.k], mz));
-      if (lst.length) await selectMs2(s2, D.sid[lst.reduce((b, i) => ((D.pint[i] || 0) > (D.pint[b] || 0) ? i : b), lst[0])]);        // the most intense one
+      if (lst.length) await selectMs2(s2, D.sid[top(lst, await pints(f.k, D, lst, mz, tolOf(E.files[s2.k], mz)))]);        // the most intense one
       else { draw(s2); draw(s1); }
       draw(x); uiSave(); return true;
     } catch (e) { return fail("follow", e); }
@@ -325,7 +337,7 @@ const DDA = (() => {
   // ---------------------------------------------------------------- list of the precursors (MS2 tab of a DDA file; the MSn Browser of Thermo, simplified)
   const listMode = () => E.tab === "ms2" && tabFiles("ms2").some((/** @type {FileAperto} */ f) => f.dda) && window.ms2Exps && ms2Exps().length > 8;
   const listBlock = () => `<div class="fgh"><span>${I18N.t("dda.list.head")}</span><em>${ms2Exps().length}</em></div><div class="fl pr" style="padding:6px 8px"><button id="ddalist" type="button" title="${I18N.t("dda.list.title")}">${I18N.t("dda.list.btn")}</button></div>`;
-  // precursors grouped within the tolerance of the profile (ppm for high resolution, 0.5 Da otherwise): [{mz, n, rt0, rt1, best}]
+  // precursors grouped within the tolerance of the profile (ppm for high resolution, 0.5 Da otherwise): [{mz, n, rt0, rt1, idx}]
   function groups(/** @type {Bag} */ D, /** @type {FileAperto} */ f, /** @type {number} */ t0, /** @type {number} */ t1) {
     const idx = D.sid.map((/** @type {unknown} */ _, /** @type {number} */ i) => i).filter((/** @type {number} */ i) => D.prec[i] != null && (t0 == null || (D.rt[i] >= t0 && D.rt[i] <= t1))).sort((/** @type {number} */ a, /** @type {number} */ b) => D.prec[a] - D.prec[b]), out = [];
     let g = null;
@@ -336,9 +348,8 @@ const DDA = (() => {
     }
     return out.map(g => {
       const v = new Map(); g.idx.forEach(i => v.set(D.prec[i], (v.get(D.prec[i]) || 0) + 1));
-      const best = g.idx.reduce((b, i) => ((D.pint[i] || 0) > (D.pint[b] || 0) ? i : b), g.idx[0]);
       let rt0 = Infinity, rt1 = -Infinity; for (const i of g.idx) { const t = D.rt[i]; if (t < rt0) rt0 = t; if (t > rt1) rt1 = t; }
-      return { mz: [...v.entries()].sort((a, b) => b[1] - a[1])[0][0], n: g.idx.length, rt0, rt1, best, idx: g.idx };
+      return { mz: [...v.entries()].sort((a, b) => b[1] - a[1])[0][0], n: g.idx.length, rt0, rt1, idx: g.idx };
     });
   }
   async function openList() {
@@ -374,7 +385,7 @@ const DDA = (() => {
     return true;
   }
   async function fromList(/** @type {FileAperto} */ f, /** @type {Bag} */ g) {
-    try { await showMs2(await get(f.k), g.mz, g.best); } catch (e) { fail("fromList", e); }
+    try { const D = await get(f.k); await showMs2(D, g.mz, top(g.idx, await pints(f.k, D, g.idx, g.mz, tolOf(f, g.mz)))); } catch (e) { fail("fromList", e); }
   }
   // "Mostra le MS2 accanto alla Full Scan": the entry of the right-click menu when the MS2 panel is not there (closed, or an old notebook)
   function menuShow(/** @type {Bag} */ p) {

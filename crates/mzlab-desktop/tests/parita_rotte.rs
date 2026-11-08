@@ -122,6 +122,7 @@ fn plan() -> Vec<Value> {
         json!({"op": "mzmlroute", "slot": 0, "path": "/api/spectra", "query": "?k=0&level=1&rt0=0.2&rt1=0.4"}),
         json!({"op": "mzmlroute", "slot": 0, "path": "/api/scan", "query": "?k=0&sid=3"}),
         json!({"op": "mzmlroute", "slot": 0, "path": "/api/dda_window", "query": "?k=0&r0=0&r1=5"}),
+        json!({"op": "mzmlroute", "slot": 0, "path": "/api/dda_window", "query": "?k=0&r0=0&r1=5&mz=500&tol=600"}),
         json!({"op": "scanbin", "slot": 0, "query": "?k=0&sid=3"}),
         json!({"op": "specexact", "slot": 0, "query": "?k=0&level=1&rt0=0.2&rt1=0.2"}),
         json!({"op": "map", "path": "/api/map", "items": items, "query": "?k=0&level=1"}),
@@ -298,7 +299,7 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
         fid,
         &plan,
         &wasm,
-        &[1, 11, 14, 17, 18, 25, 28, 29, 33, 34, 35, 36],
+        &[1, 11, 14, 17, 18, 24, 26, 29, 30, 34, 35, 36, 37],
     );
     // a slot that was never opened is an error with the same key in both
     for w in &wasm[wasm.len() - 3..] {
