@@ -72,23 +72,23 @@ def da_maf(path, mz: str = "mass_to_charge", rt: str = "retention_time", atteso:
     return sorted(out, key=lambda c: (c["mz"], c["rt"], c["id"]))
 
 
-def con_ruolo(verita: list[dict], ruoli) -> list[dict]:
-    return [c for c in verita if c["ruolo"] in ruoli]
+def con_ruolo(truth: list[dict], roles) -> list[dict]:
+    return [c for c in truth if c["ruolo"] in roles]
 
 
-def larghi(verita: list[dict]) -> list[dict]:
+def larghi(truth: list[dict]) -> list[dict]:
     """The compounds of the smeared-peak lot with a known RT: broad bands and narrow peaks (free or on a band)."""
-    return [c for c in con_ruolo(verita, WIDE_ROLES) if c["rt"] is not None]
+    return [c for c in con_ruolo(truth, WIDE_ROLES) if c["rt"] is not None]
 
 
-def feature_vere(verita: list[dict]) -> list[dict]:
+def feature_vere(truth: list[dict]) -> list[dict]:
     """The compounds P1, P2 and P3 are measured on: those with a known RT."""
-    return [c for c in con_ruolo(verita, RUOLI_FEATURE) if c["rt"] is not None]
+    return [c for c in con_ruolo(truth, RUOLI_FEATURE) if c["rt"] is not None]
 
 
-def prodotti(verita: list[dict]) -> list[dict]:
-    return [c for c in con_ruolo(verita, RUOLI_TP) if c["rt"] is not None]
+def prodotti(truth: list[dict]) -> list[dict]:
+    return [c for c in con_ruolo(truth, RUOLI_TP) if c["rt"] is not None]
 
 
-def esche(verita: list[dict]) -> list[dict]:
-    return con_ruolo(verita, ROLES_DECOY)
+def esche(truth: list[dict]) -> list[dict]:
+    return con_ruolo(truth, ROLES_DECOY)
