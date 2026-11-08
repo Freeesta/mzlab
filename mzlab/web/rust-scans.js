@@ -1,5 +1,5 @@
 // @ts-strict
-// Single scans for rust-bridge.js: those of a PROFILE file come from the index; those of a centroid file, and `api/scan` / `api/scanavg`, from slices
+// Single scans for rust-bridge.js: those of a PROFILE file come from the index; those of a centroid file, and `api/scan` / `api/scanavg` / `api/dda_window`, from slices
 // of the mzML read by offset in the worker (the table of the scans of the index gives where each <spectrum> starts and ends). A refusal of the engine
 // (a scan outside the file: `{"error_key",..}`) is the answer, with status 400 as the desktop's errors; null = the route is not answered here.
 export const refusal = r => !r.dead && typeof r.error === "string" && r.error.startsWith("{") ? { status: 400, text: r.error } : null;
@@ -42,7 +42,7 @@ async function scanBinRoute({ slots, rpc, stats }, k, query) {
   return { buf: r.buf };
 }
 
-const SCAN_ROUTES = /^\/api\/(spectra|scan|scanavg|scanbin|msntree)$/;
+const SCAN_ROUTES = /^\/api\/(spectra|scan|scanavg|scanbin|msntree|dda_window)$/;                // dda_window reads the parent survey scans for the precursor intensities a reader lacks
 // true for the routes of single scans (and of a spectrum with a background) that do not point to a reference file
 export const hasScan = (path, q) => !q.get("ref") && (SCAN_ROUTES.test(path) || (path === "/api/spectrum" && !!q.get("bgk")));
 

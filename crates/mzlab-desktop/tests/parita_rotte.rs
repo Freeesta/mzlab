@@ -121,6 +121,7 @@ fn plan() -> Vec<Value> {
         json!({"op": "mrmchrom", "slot": 0, "kind": "tic"}),
         json!({"op": "mzmlroute", "slot": 0, "path": "/api/spectra", "query": "?k=0&level=1&rt0=0.2&rt1=0.4"}),
         json!({"op": "mzmlroute", "slot": 0, "path": "/api/scan", "query": "?k=0&sid=3"}),
+        json!({"op": "mzmlroute", "slot": 0, "path": "/api/dda_window", "query": "?k=0&r0=0&r1=5"}),
         json!({"op": "scanbin", "slot": 0, "query": "?k=0&sid=3"}),
         json!({"op": "specexact", "slot": 0, "query": "?k=0&level=1&rt0=0.2&rt1=0.2"}),
         json!({"op": "map", "path": "/api/map", "items": items, "query": "?k=0&level=1"}),
