@@ -25,7 +25,7 @@ use mzlab_feat::{store::Slice, tp::TpRoles};
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
 mod blocks_js;
 #[cfg(any(feature = "detect", feature = "untargeted"))]
 pub mod cache;
@@ -114,7 +114,7 @@ impl ReadAt for JsReader {
     }
 }
 
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
 /// Index `k` of `together` open at the same time (their blocks share one budget, `blocks_js::shape`).
 fn open_in(read: &Function, k: usize, size: f64, together: usize) -> Result<Index<blocks_js::Blocks>> {
     let r = JsReader {
@@ -124,7 +124,7 @@ fn open_in(read: &Function, k: usize, size: f64, together: usize) -> Result<Inde
     Index::open(blocks_js::Blocks::over(r, size as u64, together), size as u64)
 }
 
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
 fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<blocks_js::Blocks>> {
     open_in(read, k, size, 1)
 }
