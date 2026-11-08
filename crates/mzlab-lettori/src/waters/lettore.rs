@@ -7,6 +7,7 @@ use super::funzioni::{self, Funzione};
 use super::idx::{self, Riga};
 use super::inf::{self, Extern, FunzioneExt, Inlet, Modo, Testata};
 use super::lati::{nomi_composti, Tabella};
+use super::tagli::{elenco_intero, tagli, testata_intera};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
@@ -106,6 +107,14 @@ impl Lettore for LettoreWaters {
             ("FUNC rows beyond Set Mass and Collision Energy, _HISTORY.INF, ramp parameters beyond _extern.inf, MALDI functions", NON_DECODIFICATO),
             ("User Name, Submitter, Laboratory Name and computer paths", IDENTITA),
         ]
+    }
+
+    fn missing(&mut self, c: usize) -> usize {
+        if c == 0 {
+            self.funs.iter().map(|f| f.tagliate).sum()
+        } else {
+            0
+        }
     }
 
     fn samples(&self) -> &[Campione] {
@@ -282,6 +291,8 @@ pub(super) struct Fun {
     pub(super) nomi: Vec<String>,
     pub(super) livello: u8,
     pub(super) polarita: i8,
+    /// Scans of the index past the end of a DAT cut short (emptied in `righe`).
+    pub(super) tagliate: usize,
 }
 
 pub struct LettoreWaters {
@@ -341,7 +352,9 @@ fn carica(
 ) -> Result<(Fun, Option<String>)> {
     let n = f.indice;
     let nome = |e: &str| format!("_FUNC{n:03}.{e}");
-    let righe = match opzionale(c, &nome("IDX")) {
+    let idx_b = opzionale(c, &nome("IDX"));
+    let ha_idx = idx_b.is_some();
+    let mut righe = match idx_b {
         Some(b) => idx::leggi(&b, &c.limiti)?,
         None => Vec::new(),
     };
@@ -355,6 +368,11 @@ fn carica(
     } else {
         larg.and_then(Codifica::da_larghezza)
     };
+    let tagliate = tagli(&mut righe, larg, dat.is_some(), dat_len, ha_idx).ok_or_else(|| {
+        Error::new("err.file.indexCut")
+            .with("name", &c.nome)
+            .with("file", nome("IDX"))
+    })?;
     let lim = c.limiti;
     let tab =
         |c: &mut Cartella, e: &str| opzionale(c, &nome(e)).and_then(|b| Tabella::leggi(&b, &lim));
@@ -384,6 +402,7 @@ fn carica(
         nomi,
         livello: 1,
         polarita,
+        tagliate,
     };
     Ok((fun, avviso))
 }
@@ -397,8 +416,10 @@ fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         return Err(errore("_FUNC001.DAT is missing"));
     }
     let lista = funzioni::leggi(&inf, limiti)?;
-    let testata = opzionale(&mut c, "_HEADER.TXT")
-        .map_or_else(Testata::default, |b| inf::file_header(&testo(&b)));
+    elenco_intero(&c, lista.len())?;
+    let header = opzionale(&mut c, "_HEADER.TXT");
+    testata_intera(&c, header.as_deref())?;
+    let testata = header.map_or_else(Testata::default, |b| inf::file_header(&testo(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
         .map_or_else(Extern::default, |b| inf::extern_inf(&testo(&b)));
     let inlet = opzionale(&mut c, "_INLET.INF").map(|b| inf::inlet(&testo(&b)));

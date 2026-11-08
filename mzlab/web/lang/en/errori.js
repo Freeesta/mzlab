@@ -1,6 +1,9 @@
 I18N.add("en", {
   "err.file.notWiff": "{name} is not a valid .wiff file.",
   "err.file.wiffNoScan": "The .wiff.scan file of {name} is missing: both are needed, with the same name.",
+  "err.file.functionsCut": "The folder {name} lists {listed} functions in _FUNCTNS.INF but holds the data of more: the list is cut short, so nothing was loaded. Copy the whole .raw folder again.",
+  "err.file.indexCut": "In the folder {name} the index {file} is cut short or damaged: it does not match its data file, so nothing was loaded. Copy the whole folder again.",
+  "err.file.headerCut": "In the folder {name} the file {file} is cut short (empty, or a calibration line incomplete): it holds the mass calibration, so the m/z could not be trusted and nothing was loaded. Copy the whole folder again.",
   "err.file.moduleLoad": "The reader of this format did not download ({family}): check the connection, then reload the page (Ctrl/Cmd+Shift+R) and try again.",
   "err.file.wiffLoad": "The calculation engine did not load: reload the page (Ctrl/Cmd+Shift+R) and try again.",
   "err.file.wiffEngine": "The calculation engine is not ready to read the .wiff: reload the page (Ctrl+Shift+R) and try again.",
