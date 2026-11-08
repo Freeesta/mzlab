@@ -174,7 +174,7 @@ def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
 
 
 @pytest.mark.parametrize("membro", ["MSScan.bin", "MSPeak.bin"])
-def test_agilent_tagliata_uguale_al_cli(tools, membro):
+def test_cropped_agilent_equals_the_cli(tools, membro):
     """A `.D` whose index or points file ends inside the last of 60 scans: both faces write the 59 whole scans, byte for byte."""
     import agilent_sintetico
     ds = agilent_sintetico.write(tools["tmp"] / f"in_agilent_{membro}", "synt.D", 60)
