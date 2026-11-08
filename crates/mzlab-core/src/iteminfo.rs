@@ -371,18 +371,45 @@ fn acq(sc1: &[&Scan], sc2: &[&Scan]) -> Vec<&'static str> {
     out
 }
 
-fn ms2_exps(ms2: &[&Scan]) -> Vec<(Option<f64>, Option<f64>, usize)> {
-    let mut cnt: Vec<((Option<f64>, Option<f64>), usize)> = vec![];
+/// A (precursor, CE) key of `ms2_exps` and its count.
+type KeyCount = ((Option<f64>, Option<f64>), usize);
+
+/// The bits of a key of `ms2_exps` that are equal exactly when the values are `==`: -0.0 is 0.0; `None` for a NaN, which equals nothing.
+fn same_key((p, ce): (Option<f64>, Option<f64>)) -> Option<(Option<u64>, Option<u64>)> {
+    let b = |x: Option<f64>| match x {
+        Some(v) if v.is_nan() => None,
+        Some(v) => Some(Some(if v == 0.0 { 0 } else { v.to_bits() })),
+        None => Some(None),
+    };
+    Some((b(p)?, b(ce)?))
+}
+
+/// The (precursor, CE) keys of the MS2 scans and their counts, in the order each key is first seen; a map finds the key (a DDA run has thousands of
+/// precursors: a scan of the list for each was quadratic).
+fn count_keys(ms2: &[&Scan]) -> Vec<KeyCount> {
+    let mut cnt: Vec<KeyCount> = vec![];
+    let mut at: std::collections::HashMap<(Option<u64>, Option<u64>), usize> =
+        std::collections::HashMap::new();
     for s in ms2 {
         let k = (
             s.precursor.filter(|p| *p != 0.0).map(|p| round(p, 1)),
             s.collision_energy,
         );
-        match cnt.iter_mut().find(|(q, _)| *q == k) {
-            Some(c) => c.1 += 1,
-            None => cnt.push((k, 1)),
+        match same_key(k).and_then(|b| at.get(&b).copied()) {
+            Some(i) => cnt[i].1 += 1,
+            None => {
+                if let Some(b) = same_key(k) {
+                    at.insert(b, cnt.len());
+                }
+                cnt.push((k, 1));
+            }
         }
     }
+    cnt
+}
+
+fn ms2_exps(ms2: &[&Scan]) -> Vec<(Option<f64>, Option<f64>, usize)> {
+    let mut cnt = count_keys(ms2);
     let key = |k: &(Option<f64>, Option<f64>)| (k.0.unwrap_or(0.0), k.1.unwrap_or(0.0));
     crate::sortc::slice_by(&mut cnt, |a, b| {
         key(&a.0)
@@ -778,3 +805,7 @@ pub fn facts_from<M: ReadAt>(
     }
     Ok(f)
 }
+
+#[cfg(test)]
+#[path = "iteminfo_tests.rs"]
+mod tests;

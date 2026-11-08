@@ -55,8 +55,8 @@ def sample(k, n):
             "tempo_min": k, "tipo": "t0" if k == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
 SAMPLES = json.dumps({"campioni": [sample(k, n) for k, n in enumerate(NAMES)], "schema": "campioni/2"}, separators=(",", ":"))
 
-def plan(group, view=False):
-    """The plan: index → detect → align by ion → gap filling, and (with `group`) the grouping, of the gap-filled table or (with `view`) of a filter view of it."""
+def plan(group, view=False, params=None):
+    """The plan: index → detect → align by ion → gap filling, and (with `group`) the grouping, of the gap-filled table or (with `view`) of a filter view of it, with `params`."""
     inputs = [{"name": n + ".mzML", "sha256": "", "type": "mzml"} for n in NAMES] + ([{"name": "samples.json", "sha256": "", "type": "samples"}] if view else [])
     st = [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in NAMES]}},
           {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},
@@ -65,7 +65,7 @@ def plan(group, view=False):
     if view:
         st += [{"id": "flt", "step": "table.filter@2", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 4, "normalize": "sum"}}]
     if group:
-        st += [{"id": "grpv" if view else "grp", "step": "features.group@1", "in": {"table": "flt.table" if view else "gap.table"}}]
+        st += [{"id": "grpv" if view else "grp", "step": "features.group@1", "in": {"table": "flt.table" if view else "gap.table"}, **({"params": params} if params else {})}]
     return {"format": "mzflow/2", "inputs": inputs, "steps": st}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_group_"))
@@ -75,14 +75,17 @@ from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
 for i, n in enumerate(NAMES): write_mzml(run / (n + ".mzML"), i, 100 + i)
+FEW = {"min_corr_samples": 7}   # more than the six files: no correlation can be tested
 (run / "group.json").write_text(json.dumps(plan(True))); (run / "view.json").write_text(json.dumps(plan(True, True))); (run / "samples.json").write_text(SAMPLES)
-out, out_view = run / "out", run / "out_view"
-for name, to in (("group.json", out), ("view.json", out_view)):
+(run / "few.json").write_text(json.dumps(plan(True, params=FEW)))
+out, out_view, out_few = run / "out", run / "out_view", run / "out_few"
+for name, to in (("group.json", out), ("view.json", out_view), ("few.json", out_few)):
     nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / name), "--in", str(run), "--out", str(to)], cwd=ROOT, capture_output=True, text=True)
     assert nat_run.returncode == 0, (name, nat_run.stderr[-1500:])
 data = site / "static" / "dati_flow_group"; data.mkdir()
 for n in NAMES: shutil.copy2(next(out.glob("*-" + n + ".mzidx")), data / (n + ".mzidx"))
-NATIVE, NATIVE_VIEW = (out / "grp.json").read_bytes(), (out_view / "grpv.json").read_bytes()
+NATIVE, NATIVE_VIEW, NATIVE_FEW = (out / "grp.json").read_bytes(), (out_view / "grpv.json").read_bytes(), (out_few / "grp.json").read_bytes()
+assert "warn.flow.group.corrFiles" in (out_few / "prov.json").read_text() and b"MS1 correlation" not in NATIVE_FEW and b"MS1 correlation" in NATIVE
 
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -161,6 +164,28 @@ try:
             assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE_VIEW).hexdigest(), (web[:300], NATIVE_VIEW[:300])
             assert NATIVE_VIEW != NATIVE and json.loads(web)["rows"] < json.loads(NATIVE)["rows"], "the view kept every row: the case proves nothing"
         step("features.group on a table.filter view gives the native ionnet/1 of the same plan", view)
+
+        def few():
+            r = pg.evaluate(RUN, [plan(True, params=FEW), SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            ev = [e for e in r["ev"] if e["passo"] == "grp" and e["stato"] == "done"]; assert ev and "min_corr_samples" in (ev[-1].get("note") or ""), r["ev"][-6:]
+            web = pg.evaluate(KEPT).get("grp.json"); assert web is not None
+            assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE_FEW).hexdigest(), (web[:300], NATIVE_FEW[:300])
+            card = pg.evaluate("() => { const v = FLOW.liveView.look(FLOW.liveView.node('grp')); return [v.word, v.tone, v.title]; }")
+            assert card[0] == "done, with a note" and card[1] == "warn" and "min_corr_samples" in card[2], card
+            # the same plan again: the text comes from OPFS and the note with it
+            r = pg.evaluate(RUN, [plan(True, params=FEW), SAMPLES]); assert not r.get("err"), r
+            assert "min_corr_samples" in (pg.evaluate("() => FLOW.liveView.node('grp').note") or ""), r["ev"][-4:]
+        step("fewer files than min_corr_samples: the native text and a note on the card", few)
+
+        def budget():
+            # the tables upstream are reused; only features.group runs again, in a budget that cannot hold it
+            pg.evaluate("() => { window.__mb = window.MZLAB_RUST.budgetMb; window.MZLAB_RUST.budgetMb = 0.0001; }")
+            try: r = pg.evaluate(RUN, [plan(True, params={"min_corr": 0.8}), SAMPLES])
+            finally: pg.evaluate("() => { window.MZLAB_RUST.budgetMb = window.__mb; }")
+            assert any(e["passo"] == "grp" and e["stato"] in ("error", "refused") for e in r["ev"]), r["ev"][-6:]
+            err = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('grp')).title")
+            assert "Not enough memory for the «group» phase" in err, err
+        step("past the budget features.group is refused as the alignment is", budget)
 
         def template():
             got = pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, F = FLOW;

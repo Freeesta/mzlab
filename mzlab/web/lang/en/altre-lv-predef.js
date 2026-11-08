@@ -79,7 +79,7 @@ I18N.add("en", {
   "panel.title.mapPda": "RT-λ map (PDA)",
   "panel.title.composite": "Composite spectrum · RT {t0}–{t1} min",
   "panel.title.xicOne": "XIC · {label}",
-  "panel.rename.hint": "Double-click to rename.",
+  "panel.rename.hint": "Double-click, double tap or F2 to rename.",
   "panel.rename.prompt": "Panel name",
   "panel.fit.title": "Back to the whole view (Backspace)",
   "panel.izoom.title": "Drag a time interval to zoom in",
